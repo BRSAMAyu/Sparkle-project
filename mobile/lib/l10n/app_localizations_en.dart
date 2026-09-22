@@ -22435,6 +22435,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatDecisionTimeline => 'Decision Timeline';
 
   @override
+  String get chatContextControlsExpand => 'Modes & context (expand)';
+
+  @override
   String get chatCitationImprove =>
       'Improvement feedback recorded for this citation';
 

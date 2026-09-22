@@ -1,0 +1,63 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP1-20260922-173358",
+  "step_id": "C1",
+  "phase": "day1",
+  "name": "today cockpit task cards",
+  "started_at": "2026-09-22T17:34:00.535806+00:00",
+  "finished_at": "2026-09-22T17:34:00.549490+00:00",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/tasks/today",
+    "body": {}
+  },
+  "response": {
+    "status": 200,
+    "body": [
+      {
+        "id": "3192c4ad-e4f8-41d4-bfb8-6d90fa2a7e00",
+        "created_at": "2026-09-22T17:33:59.559235",
+        "updated_at": "2026-09-22T17:33:59.559238",
+        "title": "Map the baseline",
+        "type": "LEARNING",
+        "status": "PENDING",
+        "tags": [
+          "goal_first_step"
+        ],
+        "estimated_minutes": 25,
+        "difficulty": 3,
+        "energy_cost": 2,
+        "priority": 0,
+        "due_date": null,
+        "user_id": "f8075e9c-de46-408c-8feb-c3ea67050b11",
+        "plan_id": "4bc51075-384d-4794-a398-879179b451d0",
+        "guide_content": "Confirm scope, weak topics, and the first measurable benchmark. Keep it tied to why this matters: 一周后期末考，目标及格并冲击 70+",
+        "started_at": null,
+        "confirmed_at": null,
+        "completed_at": null,
+        "paused_at": null,
+        "paused_reason": null,
+        "actual_minutes": null,
+        "user_note": null,
+        "knowledge_node_id": null,
+        "tool_result_id": null,
+        "execution_mode": null,
+        "order_index": 1000,
+        "subtasks_total": 0,
+        "subtasks_completed": 0,
+        "guide_json": null,
+        "ai_prompt": null,
+        "source_planning_session_id": null,
+        "phase_index": null,
+        "success_criteria": null,
+        "action_plan": null,
+        "bound_sources": []
+      }
+    ]
+  },
+  "verdict": "pass",
+  "checkpoints": [
+    "CP-04"
+  ],
+  "notes": []
+}

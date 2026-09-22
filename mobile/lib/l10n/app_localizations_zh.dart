@@ -21526,6 +21526,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatDecisionTimeline => '决策时间线';
 
   @override
+  String get chatContextControlsExpand => '模式与上下文（展开）';
+
+  @override
   String get chatCitationImprove => '已记录这条引用的改进反馈';
 
   @override

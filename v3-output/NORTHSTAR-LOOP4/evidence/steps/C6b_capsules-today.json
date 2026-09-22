@@ -1,0 +1,62 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP1-20260922-173358",
+  "step_id": "C6b",
+  "phase": "day1",
+  "name": "capsules today",
+  "started_at": "2026-09-22T17:34:56.232843+00:00",
+  "finished_at": "2026-09-22T17:35:03.683812+00:00",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/capsules/today",
+    "body": {}
+  },
+  "response": {
+    "status": 200,
+    "body": [
+      {
+        "id": "59036ccb-43c4-4a7f-9c5c-511c5315379f",
+        "title": "基线地图：为什么先测量，再行动",
+        "content": "**基线**（baseline）是一切改进工作的起点。无论是学习新技能、优化产品指标，还是训练机器学习模型，第一步几乎总是相同的：弄清楚现状到底是什么。\n\n- **为什么要建立基线**：没有基线，你无法判断变化是好是坏。比如想提升阅读速度，先测出当前的每分钟字数，之后的任何练习才有对照意义。\n- **好的基线特征**：可测量、可重复、有代表性。最好在相同条件下多测几次，取稳定值而不是偶然的最高或最低。\n- **常见的坑**：基线建立后环境变了却还在用旧数据；或者只测一个维度，忽略了其他受影响的方面。\n\n下一步可以探索：为你正在改进的那个具体目标，设计一个简单可重复的测量方法，并记录第一次的基线数据。",
+        "is_read": false,
+        "created_at": "2026-09-22T17:35:03.673330",
+        "related_subject": "Map the baseline",
+        "depth_level": "medium",
+        "generation_method": "glm_4_7_no_thinking",
+        "quality_score": 8.5,
+        "feedback_count": 0,
+        "share_count": 0,
+        "personalization_context": {
+          "depth_preference": 0.5,
+          "curiosity_preference": 0.5
+        },
+        "source_context": {
+          "depth_level": "medium",
+          "model_chain": [
+            "glm_4_7_no_thinking",
+            "glm_4_7_flash_no_thinking",
+            "deepseek_chat"
+          ],
+          "generated_at": "2026-09-22T17:35:03.672945",
+          "primary_model": "glm_4_7_no_thinking",
+          "thinking_mode": false,
+          "execution_mode": "online",
+          "selected_model": "glm_4_7_no_thinking",
+          "dominant_pattern": null,
+          "subjects_studied": [
+            "Map the baseline"
+          ],
+          "behavior_patterns": [],
+          "profile_preferences": {
+            "depth_preference": 0.5,
+            "curiosity_preference": 0.5
+          }
+        },
+        "is_favorite": false
+      }
+    ]
+  },
+  "verdict": "pass",
+  "checkpoints": [],
+  "notes": []
+}

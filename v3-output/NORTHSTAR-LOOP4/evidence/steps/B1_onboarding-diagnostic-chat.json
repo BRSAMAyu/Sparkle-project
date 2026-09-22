@@ -1,0 +1,36 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP1-20260922-173358",
+  "step_id": "B1",
+  "phase": "day0",
+  "name": "onboarding diagnostic chat",
+  "started_at": "2026-09-22T17:33:59.044679+00:00",
+  "finished_at": "2026-09-22T17:33:59.465693+00:00",
+  "request": {
+    "ws": "/ws/chat",
+    "username_sha": "9a8771785af3",
+    "message": "你好，我要开始备考：离散数学期末考试在 7 天后（闭卷，100 分卷）。我的情况：自评当前掌握度大约 42/100；最薄弱的章是图论（CH4）；一个具体的困惑：我总是分不清欧拉回路和哈密顿回路的判定条件，考试肯定考。我每天只能投入 165 分钟。请帮我建立目标并给我冲刺计划。"
+  },
+  "response": {
+    "full_text": "我先按【离散数学】冲刺来处理，范围用内置 Sprint Pack 兜底。你目前大概在哪个水平：完全没学过、上过课但没复习，还是已经学过一部分？",
+    "event_types": {
+      "ack": 1,
+      "message_ack": 1,
+      "status_update": 1,
+      "metadata": 3,
+      "full_text": 1,
+      "done": 1
+    },
+    "citations": [],
+    "errors": [],
+    "elapsed_s": 0.42,
+    "session_id": "ns001-dd6446e23e2e",
+    "llm_messages_budget_left": 23
+  },
+  "verdict": "pass",
+  "checkpoints": [
+    "CP-00",
+    "CP-01"
+  ],
+  "notes": []
+}

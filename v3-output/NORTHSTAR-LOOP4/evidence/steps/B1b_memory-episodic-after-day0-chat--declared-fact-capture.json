@@ -1,0 +1,18 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP1-20260922-173358",
+  "step_id": "B1b",
+  "phase": "day0",
+  "name": "memory episodic after Day0 chat (declared-fact capture)",
+  "started_at": "2026-09-22T17:33:59.488099+00:00",
+  "finished_at": "2026-09-22T17:33:59.488103+00:00",
+  "request": {},
+  "response": {
+    "entry_count": 0
+  },
+  "verdict": "fail",
+  "checkpoints": [],
+  "notes": [
+    "Day0 chat produced 0 episodic entries (expect >=2: exam deadline + weakness/constraint)"
+  ]
+}

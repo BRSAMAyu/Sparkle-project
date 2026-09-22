@@ -39213,6 +39213,12 @@ abstract class AppLocalizations {
   /// **'决策时间线'**
   String get chatDecisionTimeline;
 
+  /// No description provided for @chatContextControlsExpand.
+  ///
+  /// In zh, this message translates to:
+  /// **'模式与上下文（展开）'**
+  String get chatContextControlsExpand;
+
   /// No description provided for @chatCitationImprove.
   ///
   /// In zh, this message translates to:

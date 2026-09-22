@@ -1,0 +1,26 @@
+{
+  "schema": "sparkle.northstar.real-drive.gain-proof.v1",
+  "gain_proof": "GP-03",
+  "method": "galaxy graph diff vs real completion facts (2 tasks completed, 1 error-book entry + review)",
+  "real_world_facts": {
+    "task_completed": true,
+    "task_id": "3192c4ad-e4f8-41d4-bfb8-6d90fa2a7e00",
+    "error_book_entry_submitted": true,
+    "expected_node_direction": "图论/欧拉 相关节点 mastery 应变化；未学习节点不应点亮",
+    "curriculum_nodes_present": "待核对：NS-001 考纲（CH1-CH6/欧拉回路等）是否作为节点存在"
+  },
+  "galaxy_diff": {
+    "added_nodes": [],
+    "mastery_changes": {},
+    "before_count": 129,
+    "after_count": 129
+  },
+  "galaxy_state_after": {
+    "user_stats": null,
+    "learning_state_distribution": {
+      "None": 129
+    },
+    "unlocked_nodes": []
+  },
+  "at": "2026-09-22T17:37:28.854449+00:00"
+}

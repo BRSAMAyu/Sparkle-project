@@ -135,6 +135,8 @@ enum _ChatShortcutAction {
   newSession,
   openClawHub,
   causalTimeline,
+  // OVERLAY-SMALL：小屏下模式条折叠行收进「更多」菜单的展开入口。
+  contextControls,
 }
 
 class ChatScreen extends ConsumerStatefulWidget {
@@ -1200,6 +1202,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         (openClawConnection.config.isConfigured &&
             !openClawConnection.isConnected);
     final showStreamingBubble = chatState.shouldShowStreamingBubble;
+    // OVERLAY-SMALL：小屏（375×667 级，宽 <430 且高 <700 的紧凑竖屏）
+    // 将预测 dock 悬浮于消息流底部留白区、模式条折叠行收进「更多」菜单，
+    // 换回会话本体面积。390×844 canonical 面不命中此判别，
+    // 面积行为与 B3-CHAT 基线逐位一致。
+    final isCompactShort = _isCompactShortMobileContext(context);
+    final showChatPredictionDock = ref.watch(showChatPredictionDockProvider);
+    final promptStarters =
+        _buildPromptStarters(context, ref.watch(chatModeProvider).apiValue);
+    final inQuickActionsState = messages.isEmpty &&
+        chatState.streamingContent.isEmpty &&
+        !showStatusIndicator &&
+        !showReasoningIndicator;
+    // 空态（快捷建议页）内容居中铺满视口，悬浮胶囊会压住入口 chips，
+    // 因此空态保持内联 dock；非空态才悬浮。
+    final dockFloatsOverMessages = isCompactShort && !inQuickActionsState;
     final offlineUserId =
         ref.watch(offlineQueueCurrentUserIdProvider).valueOrNull;
     final offlineSnapshot = offlineUserId == null
@@ -1335,6 +1352,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       .push('${HomeRoutes.openClawHub}?section=delegate');
                 case _ChatShortcutAction.causalTimeline:
                   _showCausalTimelineSheet(context);
+                case _ChatShortcutAction.contextControls:
+                  // OVERLAY-SMALL：小屏折叠行收进菜单后的展开入口，
+                  // 折叠/展开语义不变（展开后折叠行走屏内原路径）。
+                  setState(() {
+                    _showContextControls = true;
+                  });
               }
             },
             itemBuilder: (context) => [
@@ -1371,6 +1394,26 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ],
                 ),
               ),
+              // OVERLAY-SMALL：小屏下模式条折叠行收进此处——菜单项承接
+              // 原折叠行的模式状态入口位；仅在折叠态出现（展开态屏内
+              // 折叠行回归，充当收起控制）。
+              if (isCompactShort && !_showContextControls)
+                PopupMenuItem<_ChatShortcutAction>(
+                  value: _ChatShortcutAction.contextControls,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.tune_rounded, size: 18),
+                      const SizedBox(width: DS.spacing12),
+                      Expanded(
+                        child: Text(
+                          context.l10n.chatContextControlsExpand,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
         ],
@@ -1479,13 +1522,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       ),
                     ),
                     // Messages list — takes remaining space
+                    // OVERLAY-SMALL：小屏非空态下，预测 dock 以悬浮胶囊
+                    // 叠于视口底部留白区（列表 152dp 底 padding 已为其预留
+                    // 净空，末条消息可完整滚出），不再常驻占用布局行。
                     Expanded(
-                      child: messages.isEmpty &&
-                              chatState.streamingContent.isEmpty &&
-                              !showStatusIndicator &&
-                              !showReasoningIndicator
-                          ? _buildQuickActions(context)
-                          : ListView.builder(
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          if (inQuickActionsState)
+                            _buildQuickActions(context)
+                          else
+                            ListView.builder(
                               key: const Key('chatMessagesViewport'),
                               controller: _scrollController,
                               reverse: true,
@@ -2050,6 +2097,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 );
                               },
                             ),
+                          // OVERLAY-SMALL：小屏悬浮预测 dock（折叠单行胶囊，
+                          // 叠于列表 152dp 底部留白区，不占布局行）。
+                          if (dockFloatsOverMessages)
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              bottom: DS.spacing4,
+                              child: _buildPredictionDock(
+                                chatState: chatState,
+                                visible: showChatPredictionDock,
+                                promptStarters: promptStarters,
+                                bottomGap: false,
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                     SparkleExitTransition(
                       visible: chatState.error != null,
@@ -2397,6 +2460,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         context,
                         chatState,
                         constraints,
+                        dockFloats: dockFloatsOverMessages,
+                        promptStarters: promptStarters,
                       ),
                     ),
                   ],
@@ -2739,8 +2804,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Widget _buildBottomInputArea(
     BuildContext context,
     ChatState chatState,
-    BoxConstraints constraints,
-  ) {
+    BoxConstraints constraints, {
+    required bool dockFloats,
+    required List<String> promptStarters,
+  }) {
     final aiSystemPreferences =
         ref.watch(transparencyPreferencesNotifierProvider).valueOrNull ??
             _defaultAiSystemPreferences;
@@ -2760,7 +2827,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 const <DocumentLibraryItem>[])
             .where((doc) => doc.effectiveStatus == DocumentStatus.ready)
             .length;
-    final promptStarters = _buildPromptStarters(context, currentMode.apiValue);
     final activePlanId = ref.watch(activePlanProvider);
     final activePlans =
         ref.watch(planListProvider.select((s) => s.activePlans));
@@ -2790,7 +2856,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           // S8：模式条收容——单行紧凑指示（推理·对话·计划）常驻为
           // 输入条关联区的唯一折叠行，四个模式 pill 全部收进展开态。
-          if (showChatContextToggle)
+          // OVERLAY-SMALL：小屏折叠态整行收进 AppBar「更多」菜单
+          // （_ChatShortcutAction.contextControls）；展开态屏内折叠行
+          // 回归并充当收起控制——折叠/展开语义不变。
+          if (showChatContextToggle &&
+              (!_isCompactShortMobileContext(context) || _showContextControls))
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 _chatBottomSurfaceHorizontalInset,
@@ -2923,29 +2993,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
             const SizedBox(height: DS.spacing2),
           ],
-          SparkleExitTransition(
-            visible: !chatState.hasActiveRun && showChatPredictionDock,
-            maintainSize: false,
-            child: !chatState.hasActiveRun && showChatPredictionDock
-                ? Padding(
-                    padding: const EdgeInsets.only(
-                      left: _chatBottomSurfaceHorizontalInset,
-                      right: _chatBottomSurfaceHorizontalInset,
-                      bottom: DS.spacing6,
-                    ),
-                    child: SparkleStaggerItem(
-                      index: 3,
-                      child: ChatPredictionDock(
-                        compact: isCompactMobile,
-                        promptStarters: promptStarters,
-                        // C-11 裁决：话术 chip 填入式——点 chip 只填入
-                        // 草稿+聚焦输入框（发送键随文本高亮），不直接发送。
-                        onPromptSelected: _fillDraftFromPrompt,
-                      ),
-                    ),
-                  )
-                : const SizedBox.shrink(),
-          ),
+          // OVERLAY-SMALL：小屏非空态 dock 已悬浮于视口（见消息区
+          // Stack），此处仅在大屏或空态（快捷建议页）内联渲染。
+          if (!dockFloats)
+            _buildPredictionDock(
+              chatState: chatState,
+              visible: showChatPredictionDock,
+              promptStarters: promptStarters,
+            ),
           _OfflineQueueIndicatorHost(
             snapshot: offlineSnapshot,
             connectionState: chatState.wsConnectionState,
@@ -3119,6 +3174,50 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   bool _isCompactMobileContext(BuildContext context) {
     final media = MediaQuery.of(context);
     return media.orientation == Orientation.portrait && media.size.width < 430;
+  }
+
+  /// OVERLAY-SMALL：小屏判别——紧凑竖屏且高 <700（375×667 级 SE/8）。
+  /// 390×844 canonical 面不命中，B3-CHAT 面积行为保持逐位不变。
+  bool _isCompactShortMobileContext(BuildContext context) {
+    final media = MediaQuery.of(context);
+    return media.orientation == Orientation.portrait &&
+        media.size.width < 430 &&
+        media.size.height < 700;
+  }
+
+  /// 预测 dock 构建（内联/悬浮两态共用同一渲染与出退场动画）。
+  /// [bottomGap]：内联态与输入条之间保留 spacing6 呼吸位；悬浮态
+  /// 由 Positioned.bottom 提供间距，不再叠加。
+  Widget _buildPredictionDock({
+    required ChatState chatState,
+    required bool visible,
+    required List<String> promptStarters,
+    bool bottomGap = true,
+  }) {
+    final compact = _isCompactMobileContext(context);
+    return SparkleExitTransition(
+      visible: !chatState.hasActiveRun && visible,
+      maintainSize: false,
+      child: !chatState.hasActiveRun && visible
+          ? Padding(
+              padding: EdgeInsets.only(
+                left: _chatBottomSurfaceHorizontalInset,
+                right: _chatBottomSurfaceHorizontalInset,
+                bottom: bottomGap ? DS.spacing6 : 0,
+              ),
+              child: SparkleStaggerItem(
+                index: 3,
+                child: ChatPredictionDock(
+                  compact: compact,
+                  promptStarters: promptStarters,
+                  // C-11 裁决：话术 chip 填入式——点 chip 只填入
+                  // 草稿+聚焦输入框（发送键随文本高亮），不直接发送。
+                  onPromptSelected: _fillDraftFromPrompt,
+                ),
+              ),
+            )
+          : const SizedBox.shrink(),
+    );
   }
 
   List<String> _buildPromptStarters(BuildContext context, String mode) {

@@ -1,0 +1,32 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP1-20260922-171347",
+  "step_id": "B5b-2",
+  "phase": "day0fix",
+  "name": "galaxy diagnostic-node settle check (delayed read model)",
+  "started_at": "2026-09-22T17:29:49.963402+00:00",
+  "finished_at": "2026-09-22T17:29:49.963410+00:00",
+  "request": {
+    "source": "B6-2 re-fetch",
+    "expectation": "diagnostic topics carry mastery/unlock after read-model settle"
+  },
+  "response": {
+    "diagnostic_topic_nodes": [
+      {
+        "id": "e6b46abb-d3bc-528d-b220-9472d913b64c",
+        "name": "Day1 数理逻辑 I：命题逻辑复习 + 图论弱点预习",
+        "mastery_score": 0.0,
+        "unlocked": true,
+        "is_dm_canonical": false
+      }
+    ],
+    "diagnostic_topic_count": 1,
+    "dm_canonical_nodes": [],
+    "dm_canonical_count": 0
+  },
+  "verdict": "fail",
+  "checkpoints": [],
+  "notes": [
+    "settled topic nodes=1 (dm.* canonical=0); note: mastery landed on same-name seed nodes, NOT dm.* sprint-pack canonical ids (name-resolver path hits before pack-suffix path) — CP-00 映射语义成立、规范 id 未用"
+  ]
+}

@@ -13,6 +13,9 @@ import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/providers/aurora_status_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/chat/presentation/screens/chat_screen.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_design_language_widgets.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_inline_signals.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_prediction_dock.dart';
 import 'package:sparkle/features/chat/presentation/widgets/status_awareness_bar.dart';
 import 'package:sparkle/features/chat/presentation/widgets/working_memory_drawer.dart';
 import 'package:sparkle/features/home/data/repositories/dashboard_repository.dart';
@@ -194,9 +197,9 @@ void main() {
   /// 泵真实 ChatScreen 并断言面积预算。
   ///
   /// [minRatio]：canonical 表面为 §5.1 的 0.70 硬预算；375×667 级小屏
-  /// 受固定 chrome（AppBar 56 + 输入条区 ~180dp）下限约束，实测 64.3%，
-  /// 以 0.62 作回归下限并登记 REPORT（结构性达标需输入条 overlay 化，
-  /// 属后续结构卡）。
+  /// 经 OVERLAY-SMALL overlay 化（预测 dock 悬浮于列表底部留白区 +
+  /// 模式条折叠行收进「更多」菜单）后，视口实测 76.9%，断言下限
+  /// 收紧至 0.70 与 canonical 同档（原 0.62 下限随结构卡作废）。
   Future<void> pumpChatScreen(
     WidgetTester tester, {
     required Size surface,
@@ -248,9 +251,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     }
 
-    // ① 常驻系统面板为零（S8 撤出断言）。
+    // ① 常驻系统面板为零（S8 撤出断言）；收件箱唯一入口常驻可达。
     expect(find.byType(ChatWorkingMemoryPanel), findsNothing);
     expect(find.byType(StatusAwarenessBar), findsNothing);
+    expect(find.byType(ChatInboxEntryIcon), findsOneWidget);
 
     // ② 面积预算：气泡流视口 ≥70% 屏高（§5.1 chat 条款）。
     final viewportFinder = find.byKey(const Key('chatMessagesViewport'));
@@ -261,8 +265,26 @@ void main() {
     final ratio = viewportHeight / screenHeight;
     // ignore: avoid_print
     print('AREA_BUDGET surface=$surface viewport=$viewportHeight screen=$screenHeight ratio=${(ratio * 100).toStringAsFixed(1)}%');
-    expect(ratio, greaterThanOrEqualTo(minRatio),
-        reason: '会话本体面积占比 $ratio 低于预算下限 $minRatio');
+    expect(
+      ratio,
+      greaterThanOrEqualTo(minRatio),
+      reason: '会话本体面积占比 $ratio 低于预算下限 $minRatio',
+    );
+
+    // ③ OVERLAY-SMALL 小屏形态：折叠行收进「更多」菜单、dock 悬浮于
+    // 视口底部（仍在树内=功能可达），canonical 面不受此断言约束。
+    if (surface.height < 700) {
+      expect(
+        find.byType(ChatContextToggle),
+        findsNothing,
+        reason: '小屏折叠态模式条应收进溢出菜单',
+      );
+      expect(
+        find.byType(ChatPredictionDock),
+        findsOneWidget,
+        reason: '悬浮化不等于移除：dock 胶囊必须仍在可达树内',
+      );
+    }
 
     await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
     await tester.pump(const Duration(seconds: 30));
@@ -272,11 +294,7 @@ void main() {
     await pumpChatScreen(tester, surface: const Size(390, 844));
   });
 
-  testWidgets('小屏（375×667）不劣化且披露实测值（回归下限 62%）', (tester) async {
-    await pumpChatScreen(
-      tester,
-      surface: const Size(375, 667),
-      minRatio: 0.62,
-    );
+  testWidgets('小屏（375×667）overlay 化后 ≥70% 且常驻系统面板为零', (tester) async {
+    await pumpChatScreen(tester, surface: const Size(375, 667));
   });
 }

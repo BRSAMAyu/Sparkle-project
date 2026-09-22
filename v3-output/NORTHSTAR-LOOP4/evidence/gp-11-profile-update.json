@@ -1,0 +1,26 @@
+{
+  "schema": "sparkle.northstar.real-drive.gain-proof.v1",
+  "gain_proof": "GP-11",
+  "method": "full flattened profile snapshot diff across Day0->Day1 behavior (diagnostic + tasks + error + chat)",
+  "before_field_count": 4,
+  "after_field_count": 4,
+  "before_nonempty_fields": 1,
+  "after_nonempty_fields": 1,
+  "changed_keys": [
+    ".hidden_item_count"
+  ],
+  "before_sample": {
+    ".layer_2.editable": false,
+    ".hidden_item_count": 17,
+    ".transparency.enabled": false,
+    ".transparency.level": 0
+  },
+  "after_sample": {
+    ".layer_2.editable": false,
+    ".hidden_item_count": 22,
+    ".transparency.enabled": false,
+    ".transparency.level": 0
+  },
+  "judgement": "profile updated",
+  "at": "2026-09-22T17:37:28.855005+00:00"
+}

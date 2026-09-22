@@ -1,0 +1,23 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP1-20260922-171347",
+  "step_id": "B5",
+  "phase": "day0",
+  "name": "diagnostic grade (skipped: B4 produced 0 questions)",
+  "started_at": "2026-09-22T17:24:50.932939+00:00",
+  "finished_at": "2026-09-22T17:24:50.932942+00:00",
+  "request": {},
+  "response": {
+    "status": null,
+    "body": {
+      "cascade": "B4 422 subject pack missing; nothing to grade"
+    }
+  },
+  "verdict": "blocked",
+  "checkpoints": [
+    "CP-00"
+  ],
+  "notes": [
+    "cascade of B4: diagnostic pack for 离散数学 not built in"
+  ]
+}

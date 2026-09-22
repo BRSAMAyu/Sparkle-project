@@ -12460,6 +12460,7 @@
     "chatCausalSemanticsToggleEntry": "Toggle details for {headline}",
     "chatCausalSemanticsAction": "{label} action",
     "chatDecisionTimeline": "Decision Timeline",
+    "chatContextControlsExpand": "Modes & context (expand)",
     "chatCitationImprove": "Improvement feedback recorded for this citation",
     "chatCitationPositive": "Positive feedback received for this citation",
     "chatCognitiveMode": "Cognitive Mode",

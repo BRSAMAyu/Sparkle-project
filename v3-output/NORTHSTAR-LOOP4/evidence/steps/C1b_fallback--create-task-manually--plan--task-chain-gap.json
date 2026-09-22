@@ -1,0 +1,80 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP1-20260922-171347",
+  "step_id": "C1b",
+  "phase": "day1",
+  "name": "fallback: create task manually (plan->task chain gap)",
+  "started_at": "2026-09-22T17:24:51.139284+00:00",
+  "finished_at": "2026-09-22T17:24:51.169387+00:00",
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/tasks",
+    "body": {
+      "title": "Day1 数理逻辑 I：命题逻辑复习 + 图论弱点预习",
+      "type": "review",
+      "tags": [
+        "NS-001",
+        "day1",
+        "discrete-math"
+      ],
+      "estimated_minutes": 45,
+      "difficulty": 3,
+      "due_date": "2026-09-22",
+      "success_criteria": "能复述命题逻辑等值式并区分欧拉/哈密顿回路"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "data": {
+        "id": "dd83c0b2-12d4-43bd-8fa3-91d3a6946250",
+        "created_at": "2026-09-22T17:24:51.149642",
+        "updated_at": "2026-09-22T17:24:51.149643",
+        "title": "Day1 数理逻辑 I：命题逻辑复习 + 图论弱点预习",
+        "type": "TRAINING",
+        "status": "PENDING",
+        "tags": [
+          "NS-001",
+          "day1",
+          "discrete-math"
+        ],
+        "estimated_minutes": 45,
+        "difficulty": 3,
+        "energy_cost": 1,
+        "priority": 0,
+        "due_date": "2026-09-22",
+        "user_id": "2ec7ae82-6301-4a67-8845-e12f3af2b42c",
+        "plan_id": null,
+        "guide_content": null,
+        "started_at": null,
+        "confirmed_at": null,
+        "completed_at": null,
+        "paused_at": null,
+        "paused_reason": null,
+        "actual_minutes": null,
+        "user_note": null,
+        "knowledge_node_id": null,
+        "tool_result_id": null,
+        "execution_mode": null,
+        "order_index": 1000,
+        "subtasks_total": 0,
+        "subtasks_completed": 0,
+        "guide_json": null,
+        "ai_prompt": null,
+        "source_planning_session_id": null,
+        "phase_index": null,
+        "success_criteria": "能复述命题逻辑等值式并区分欧拉/哈密顿回路",
+        "action_plan": null,
+        "bound_sources": []
+      },
+      "nudges": [],
+      "linked_documents": [],
+      "document_suggestions": []
+    }
+  },
+  "verdict": "pass",
+  "checkpoints": [
+    "CP-04"
+  ],
+  "notes": []
+}
