@@ -28,7 +28,7 @@ from app.core.event_bus import event_bus, event_bus_reliable
 from app.event_publishers.srl_events import publish_srl_event
 from app.gen.sparkle.inference.v1 import inference_pb2
 from app.gen.sparkle.signals.v1 import signals_pb2
-from app.models.task import Task, TaskStatus
+from app.models.task import Task, TaskStatus, TaskType
 from app.schemas.task import TaskCreate, TaskListQuery, TaskUpdate
 from app.services.gateway_client import GatewayClient
 from app.services.llm_dispatcher import LLMDispatcher
@@ -90,6 +90,55 @@ async def _sync_task_card_projection(db: AsyncSession, task: Task) -> None:
 
 
 class TaskService:
+    # ── PLAN-LINK · 手动任务默认关联计划（plan→task 关联链补齐）─────────────
+    # 背景（P1-4 遗留 / LOOP1 C1b）：手动创建的任务不带 plan_id，脱离计划域，
+    # 按计划维度的进度聚合（计划完成率 / 里程碑视图）对其不可见。
+    # 裁决（创建时上下文决定归属）：active sprint plan 存续期手动建的学习任务
+    # 默认关联它；无 sprint plan 回落 goal plan（goal 分解产出的计划）；两者皆无
+    # 保持 NULL——不强行造计划。多计划并存时取 is_primary 优先、创建最新
+    # （对齐 community_service 群任务→个人任务的既有默认关联先例）。
+    # 显式语义边界：TaskCreate 显式传 plan_id=null（fields_set 含 plan_id）视为
+    # 「明确不关联」（card_protocol 单卡导入等依赖此语义），不做默认解析。
+    # UI 现无「不关联」选择器（mobile task_create_screen 仅 plan 深链带 planId），
+    # 计划选择器/豁免开关属 UI 后续（见 v3-output/PLAN-LINK/REPORT.md）。
+    _DEFAULT_LINK_TASK_TYPES: frozenset[TaskType] = frozenset(
+        {
+            TaskType.LEARNING,
+            TaskType.TRAINING,
+            TaskType.ERROR_FIX,
+            TaskType.REFLECTION,
+        }
+    )
+
+    @staticmethod
+    async def resolve_default_plan_id(db: AsyncSession, user_id: UUID, task_type: TaskType) -> UUID | None:
+        """Resolve the plan a manually created learning task should default to.
+
+        sprint plan 优先，无则 goal plan（goal_id 非空的活跃计划），无则 None。
+        解析失败不阻断创建（兜底正确优先）：调用方须 catch 后保持 NULL。
+        """
+        if task_type not in TaskService._DEFAULT_LINK_TASK_TYPES:
+            return None
+
+        from app.models.plan import Plan, PlanType
+
+        async def _pick(*conditions) -> UUID | None:
+            query = (
+                select(Plan.id)
+                .where(Plan.user_id == user_id, Plan.deleted_at.is_(None), *conditions)
+                .order_by(desc(Plan.is_primary), desc(Plan.created_at))
+                .limit(1)
+            )
+            result = await db.execute(query)
+            return result.scalar_one_or_none()
+
+        # 1) active sprint plan 优先
+        sprint_plan_id = await _pick(Plan.type == PlanType.SPRINT, Plan.is_active.is_(True))
+        if sprint_plan_id is not None:
+            return sprint_plan_id
+        # 2) goal plan（goal 分解产出的计划）回落
+        return await _pick(Plan.goal_id.isnot(None), Plan.is_active.is_(True))
+
     @staticmethod
     async def get_by_id(db: AsyncSession, task_id: UUID, user_id: UUID) -> Task | None:
         """Get task by ID and verify user ownership"""
@@ -102,6 +151,15 @@ class TaskService:
         """Create new task"""
         estimated_minutes = obj_in.estimated_minutes
         difficulty = obj_in.difficulty
+
+        plan_id = obj_in.plan_id
+        if plan_id is None and "plan_id" not in obj_in.model_fields_set:
+            # PLAN-LINK：未显式声明 plan 归属的创建 → 学习型任务默认关联
+            try:
+                plan_id = await TaskService.resolve_default_plan_id(db, user_id, obj_in.type)
+            except Exception as exc:  # noqa: BLE001 — 关联失败不阻断任务创建（保持 NULL 可观测）
+                logger.warning("PLAN-LINK default plan resolution failed for user {}: {}", user_id, exc)
+                plan_id = None
 
         if estimated_minutes is None or difficulty is None:
             try:
@@ -119,7 +177,7 @@ class TaskService:
 
         db_obj = Task(
             user_id=user_id,
-            plan_id=obj_in.plan_id,
+            plan_id=plan_id,
             title=obj_in.title,
             type=obj_in.type,
             tags=obj_in.tags,

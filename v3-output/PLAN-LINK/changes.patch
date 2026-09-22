@@ -1,0 +1,787 @@
+diff --git a/backend/app/services/task_service.py b/backend/app/services/task_service.py
+index 5b5ec77a..5baa6d7b 100755
+--- a/backend/app/services/task_service.py
++++ b/backend/app/services/task_service.py
+@@ -28,7 +28,7 @@ from app.core.event_bus import event_bus, event_bus_reliable
+ from app.event_publishers.srl_events import publish_srl_event
+ from app.gen.sparkle.inference.v1 import inference_pb2
+ from app.gen.sparkle.signals.v1 import signals_pb2
+-from app.models.task import Task, TaskStatus
++from app.models.task import Task, TaskStatus, TaskType
+ from app.schemas.task import TaskCreate, TaskListQuery, TaskUpdate
+ from app.services.gateway_client import GatewayClient
+ from app.services.llm_dispatcher import LLMDispatcher
+@@ -90,6 +90,55 @@ async def _sync_task_card_projection(db: AsyncSession, task: Task) -> None:
+ 
+ 
+ class TaskService:
++    # ── PLAN-LINK · 手动任务默认关联计划（plan→task 关联链补齐）─────────────
++    # 背景（P1-4 遗留 / LOOP1 C1b）：手动创建的任务不带 plan_id，脱离计划域，
++    # 按计划维度的进度聚合（计划完成率 / 里程碑视图）对其不可见。
++    # 裁决（创建时上下文决定归属）：active sprint plan 存续期手动建的学习任务
++    # 默认关联它；无 sprint plan 回落 goal plan（goal 分解产出的计划）；两者皆无
++    # 保持 NULL——不强行造计划。多计划并存时取 is_primary 优先、创建最新
++    # （对齐 community_service 群任务→个人任务的既有默认关联先例）。
++    # 显式语义边界：TaskCreate 显式传 plan_id=null（fields_set 含 plan_id）视为
++    # 「明确不关联」（card_protocol 单卡导入等依赖此语义），不做默认解析。
++    # UI 现无「不关联」选择器（mobile task_create_screen 仅 plan 深链带 planId），
++    # 计划选择器/豁免开关属 UI 后续（见 v3-output/PLAN-LINK/REPORT.md）。
++    _DEFAULT_LINK_TASK_TYPES: frozenset[TaskType] = frozenset(
++        {
++            TaskType.LEARNING,
++            TaskType.TRAINING,
++            TaskType.ERROR_FIX,
++            TaskType.REFLECTION,
++        }
++    )
++
++    @staticmethod
++    async def resolve_default_plan_id(db: AsyncSession, user_id: UUID, task_type: TaskType) -> UUID | None:
++        """Resolve the plan a manually created learning task should default to.
++
++        sprint plan 优先，无则 goal plan（goal_id 非空的活跃计划），无则 None。
++        解析失败不阻断创建（兜底正确优先）：调用方须 catch 后保持 NULL。
++        """
++        if task_type not in TaskService._DEFAULT_LINK_TASK_TYPES:
++            return None
++
++        from app.models.plan import Plan, PlanType
++
++        async def _pick(*conditions) -> UUID | None:
++            query = (
++                select(Plan.id)
++                .where(Plan.user_id == user_id, Plan.deleted_at.is_(None), *conditions)
++                .order_by(desc(Plan.is_primary), desc(Plan.created_at))
++                .limit(1)
++            )
++            result = await db.execute(query)
++            return result.scalar_one_or_none()
++
++        # 1) active sprint plan 优先
++        sprint_plan_id = await _pick(Plan.type == PlanType.SPRINT, Plan.is_active.is_(True))
++        if sprint_plan_id is not None:
++            return sprint_plan_id
++        # 2) goal plan（goal 分解产出的计划）回落
++        return await _pick(Plan.goal_id.isnot(None), Plan.is_active.is_(True))
++
+     @staticmethod
+     async def get_by_id(db: AsyncSession, task_id: UUID, user_id: UUID) -> Task | None:
+         """Get task by ID and verify user ownership"""
+@@ -103,6 +152,15 @@ class TaskService:
+         estimated_minutes = obj_in.estimated_minutes
+         difficulty = obj_in.difficulty
+ 
++        plan_id = obj_in.plan_id
++        if plan_id is None and "plan_id" not in obj_in.model_fields_set:
++            # PLAN-LINK：未显式声明 plan 归属的创建 → 学习型任务默认关联
++            try:
++                plan_id = await TaskService.resolve_default_plan_id(db, user_id, obj_in.type)
++            except Exception as exc:  # noqa: BLE001 — 关联失败不阻断任务创建（保持 NULL 可观测）
++                logger.warning("PLAN-LINK default plan resolution failed for user {}: {}", user_id, exc)
++                plan_id = None
++
+         if estimated_minutes is None or difficulty is None:
+             try:
+                 engine = get_personalization_engine(db, cache_service.redis)
+@@ -119,7 +177,7 @@ class TaskService:
+ 
+         db_obj = Task(
+             user_id=user_id,
+-            plan_id=obj_in.plan_id,
++            plan_id=plan_id,
+             title=obj_in.title,
+             type=obj_in.type,
+             tags=obj_in.tags,
+diff --git a/backend/alembic/versions/planlink_20260922_backfill_manual_task_plan.py b/backend/alembic/versions/planlink_20260922_backfill_manual_task_plan.py
+new file mode 100644
+index 00000000..b8237820
+--- /dev/null
++++ b/backend/alembic/versions/planlink_20260922_backfill_manual_task_plan.py
+@@ -0,0 +1,264 @@
++"""PLAN-LINK · 存量 NULL plan_id 手动任务回填（plan→task 关联链补齐）
++
++Revision ID: planlink_20260922
++Revises: 463923b1704e
++Create Date: 2026-09-22
++
++Migration Contract:
++    type: reversible
++    rollback_plan: "alembic downgrade -1（按 tasks.guide_json['plan_link_backfill']
++        回填标记精确还原：只回滚本迁移回填过的行，清 plan_id + 剥标记；intake/goal
++        等原生带 plan_id 的任务永不被触碰）"
++    verification_query: "SELECT COUNT(*) FROM tasks WHERE plan_id IS NOT NULL AND guide_json ? 'plan_link_backfill';"
++    backfill_plan: "本迁移即回填——条件从严（见下），逐行带窗口守卫
++        `AND plan_id IS NULL`，可重复执行（幂等）。回填行数见迁移日志与
++        v3-output/PLAN-LINK/REPORT.md 存量统计。"
++    owner: "PLAN-LINK"
++    ticket: "P1-4 遗留根治卡 PLAN-LINK（LOOP1 证据 C1b）"
++
++背景：手动创建的任务（POST /tasks、omnibar、agent 工具、错题模板实例化等）
++plan_id 落 NULL，脱离计划域——按计划维度的进度聚合（计划完成率/里程碑视图）
++对手动任务不可见（P1-4 仪表盘事故的根子）。运行时侧由 TaskService.create 的
++默认关联兜住（PLAN-LINK 服务面修复），本迁移补存量。
++
++回填条件（从严，四条全满足才回填）：
++  1. task.plan_id IS NULL 且 task 未软删（deleted_at IS NULL）；
++  2. 同 user 存在**恰好一个** active、未软删的 SPRINT 计划（type='SPRINT'，
++     is_active，deleted_at IS NULL）——多个活跃冲刺计划并存时归属有歧义，
++     宁缺勿错（不回填）；
++  3. 任务创建时间在计划期内：task.created_at >= plan.created_at，
++     且 plan.target_date 非空时 task.created_at 的日期 <= target_date
++     （目标日期已过的计划不吸收后来任务）；
++  4. 仅 SPRINT 优先域回填——goal plan 回落只在运行时默认关联生效
++     （迁移侧只做无歧义、可精确判定的域）。
++
++可逆性设计（为何用 guide_json 标记而非按窗口条件反推）：回填窗口
++[plan.created_at, target_date] 与 intake day 卡的落窗完全重叠，downgrade 若按
++「plan_id = 冲刺计划 ∧ 窗口内」反推会把 intake 原生任务一并误清。故 upgrade
++在回填行的 guide_json 写入 plan_link_backfill 标记（bookkeeping 键，与
++pause_state/stuck_runtime 等既有运行时键同级共存，应用层各消费面按已知键
++取值、不遍历禁止），downgrade 只处理带标记的行：plan_id 仍等于标记内
++plan_id 才清空（防覆盖迁移后用户的重新挂靠），随后剥除标记。零 schema 变更，
++round-trip 后 schema 与数据语义均还原。
++
++方言可移植性：全部逐行 Python 侧判定 + 绑定参数更新（PG JSONB 用显式
++CAST，SQLite 基座直写 TEXT），不在 SQL 层做 JSON 谓词与日期运算；
++时间/日期字段以 datetime/date 或 ISO 字符串两种形态防御性解析。
++"""
++
++from __future__ import annotations
++
++import json
++import logging
++from collections import defaultdict
++from datetime import UTC, date, datetime
++from typing import Any, Sequence
++
++import sqlalchemy as sa
++
++from alembic import op
++
++revision: str = "planlink_20260922"
++down_revision: str | None = "463923b1704e"
++branch_labels: str | Sequence[str] | None = None
++depends_on: str | Sequence[str] | None = None
++
++_MARKER_KEY = "plan_link_backfill"
++_REVISION = revision
++
++
++def _log(message: str, *args: Any) -> None:
++    logging.getLogger("alembic.runtime.migration").info("PLAN-LINK: %s", message % args if args else message)
++
++
++def _as_datetime(value: Any) -> datetime | None:
++    """PG 驱动返回 datetime，SQLite 返回 ISO 字符串——统一成 naive datetime。"""
++    if value is None:
++        return None
++    if isinstance(value, datetime):
++        return value.replace(tzinfo=None) if value.tzinfo else value
++    if isinstance(value, str):
++        try:
++            parsed = datetime.fromisoformat(value)
++        except ValueError:
++            return None
++        return parsed.replace(tzinfo=None) if parsed.tzinfo else parsed
++    return None
++
++
++def _as_date(value: Any) -> date | None:
++    if value is None:
++        return None
++    if isinstance(value, datetime):
++        return value.date()
++    if isinstance(value, date):
++        return value
++    if isinstance(value, str):
++        try:
++            return date.fromisoformat(value[:10])
++        except ValueError:
++            return None
++    return None
++
++
++def _as_dict(value: Any) -> dict[str, Any]:
++    if isinstance(value, dict):
++        return value
++    if isinstance(value, (str, bytes)):
++        try:
++            parsed = json.loads(value)
++        except (ValueError, TypeError):
++            return {}
++        return parsed if isinstance(parsed, dict) else {}
++    return {}
++
++
++def _in_plan_window(
++    task_created_at: datetime | None, plan_created_at: datetime | None, target_date: date | None
++) -> bool:
++    """回填条件 3：任务创建时间落在计划期内（开始之后、目标日当天及之前）。"""
++    if task_created_at is None or plan_created_at is None:
++        return False  # 无法判定窗口 → 从严不回填
++    if task_created_at < plan_created_at:
++        return False
++    if target_date is not None and task_created_at.date() > target_date:
++        return False
++    return True
++
++
++def _update_task(bind, task_id: str, plan_id: str, guide_json_text: str) -> None:
++    dialect = bind.dialect.name
++    if dialect == "postgresql":
++        bind.execute(
++            sa.text(
++                "UPDATE tasks SET plan_id = :pid, guide_json = CAST(:gj AS jsonb) "
++                "WHERE id = :tid AND plan_id IS NULL"
++            ),
++            {"pid": plan_id, "gj": guide_json_text, "tid": task_id},
++        )
++    else:
++        bind.execute(
++            sa.text("UPDATE tasks SET plan_id = :pid, guide_json = :gj WHERE id = :tid AND plan_id IS NULL"),
++            {"pid": plan_id, "gj": guide_json_text, "tid": task_id},
++        )
++
++
++def upgrade() -> None:
++    bind = op.get_bind()
++
++    # 候选集：NULL plan 的未删任务 × 其用户的 active 未删 SPRINT 计划。
++    # SQLite 无布尔字面量歧义（is_active 存 1/0），PG 原生 boolean——裸列真值判定两方言通用。
++    rows = bind.execute(sa.text("""
++            SELECT t.id AS task_id, t.user_id AS user_id, t.created_at AS task_created_at,
++                   t.guide_json AS guide_json, p.id AS plan_id,
++                   p.created_at AS plan_created_at, p.target_date AS target_date
++            FROM tasks t
++            JOIN plans p ON p.user_id = t.user_id
++            WHERE t.plan_id IS NULL
++              AND t.deleted_at IS NULL
++              AND p.type = 'SPRINT'
++              AND p.is_active
++              AND p.deleted_at IS NULL
++            """)).mappings().all()
++
++    plans_by_user: dict[Any, list[dict[str, Any]]] = defaultdict(list)
++    for row in rows:
++        plans_by_user[row["user_id"]].append(dict(row))
++
++    backfilled = 0
++    skipped_multi_plan_users = 0
++    skipped_out_of_window = 0
++    for _user_id, user_rows in plans_by_user.items():
++        distinct_plans = {row["plan_id"] for row in user_rows}
++        if len(distinct_plans) != 1:
++            # 条件 2：多个 active SPRINT 计划并存 → 归属歧义，宁缺勿错
++            skipped_multi_plan_users += 1
++            continue
++        plan = user_rows[0]
++        plan_id = plan["plan_id"]
++        plan_created_at = _as_datetime(plan["plan_created_at"])
++        target_date = _as_date(plan["target_date"])
++        for row in user_rows:
++            task_created_at = _as_datetime(row["task_created_at"])
++            if not _in_plan_window(task_created_at, plan_created_at, target_date):
++                skipped_out_of_window += 1
++                continue
++            guide_json = _as_dict(row["guide_json"])
++            if _MARKER_KEY in guide_json:
++                continue  # 已回填过（重放幂等）
++            guide_json[_MARKER_KEY] = {
++                "plan_id": str(plan_id),
++                "migration": _REVISION,
++                "backfilled_at": datetime.now(UTC).isoformat(timespec="seconds"),
++            }
++            _update_task(bind, str(row["task_id"]), str(plan_id), json.dumps(guide_json, ensure_ascii=False))
++            backfilled += 1
++
++    _log(
++        "backfill done: rows=%d, users_skipped_multi_sprint_plan=%d, rows_skipped_out_of_window=%d",
++        backfilled,
++        skipped_multi_plan_users,
++        skipped_out_of_window,
++    )
++
++
++def downgrade() -> None:
++    bind = op.get_bind()
++    dialect = bind.dialect.name
++
++    # 只取带回填标记的行（intake/goal 等原生任务无标记，永不被触碰）
++    if dialect == "postgresql":
++        rows = (
++            bind.execute(
++                sa.text("SELECT id, plan_id, guide_json FROM tasks WHERE guide_json ? :key"),
++                {"key": _MARKER_KEY},
++            )
++            .mappings()
++            .all()
++        )
++    else:
++        rows = (
++            bind.execute(
++                sa.text("SELECT id, plan_id, guide_json FROM tasks WHERE guide_json LIKE :pattern"),
++                {"pattern": f'%"{_MARKER_KEY}"%'},
++            )
++            .mappings()
++            .all()
++        )
++
++    restored = 0
++    for row in rows:
++        guide_json = _as_dict(row["guide_json"])
++        marker = _as_dict(guide_json.get(_MARKER_KEY))
++        marked_plan_id = marker.get("plan_id")
++        current_plan_id = row["plan_id"]
++        # 防覆盖：迁移后用户/系统若已重新挂靠到别的计划，尊重现状，只剥标记
++        plan_matches = current_plan_id is None or (
++            marked_plan_id is not None and str(current_plan_id) == str(marked_plan_id)
++        )
++        guide_json.pop(_MARKER_KEY, None)
++        if dialect == "postgresql":
++            if plan_matches:
++                bind.execute(
++                    sa.text("UPDATE tasks SET plan_id = NULL, guide_json = CAST(:gj AS jsonb) WHERE id = :tid"),
++                    {"gj": json.dumps(guide_json, ensure_ascii=False), "tid": str(row["id"])},
++                )
++            else:
++                bind.execute(
++                    sa.text("UPDATE tasks SET guide_json = CAST(:gj AS jsonb) WHERE id = :tid"),
++                    {"gj": json.dumps(guide_json, ensure_ascii=False), "tid": str(row["id"])},
++                )
++        else:
++            if plan_matches:
++                bind.execute(
++                    sa.text("UPDATE tasks SET plan_id = NULL, guide_json = :gj WHERE id = :tid"),
++                    {"gj": json.dumps(guide_json, ensure_ascii=False), "tid": str(row["id"])},
++                )
++            else:
++                bind.execute(
++                    sa.text("UPDATE tasks SET guide_json = :gj WHERE id = :tid"),
++                    {"gj": json.dumps(guide_json, ensure_ascii=False), "tid": str(row["id"])},
++                )
++        restored += 1
++
++    _log("downgrade done: reverted_rows=%d (marker-guided, intake/native rows untouched)", restored)
+diff --git a/backend/tests/services/test_task_default_plan_link.py b/backend/tests/services/test_task_default_plan_link.py
+new file mode 100644
+index 00000000..37b2ab64
+--- /dev/null
++++ b/backend/tests/services/test_task_default_plan_link.py
+@@ -0,0 +1,154 @@
++"""PLAN-LINK · 手动任务默认关联计划（TaskService.create 默认解析面）红绿测试.
++
++P1-4 遗留（LOOP1 C1b）：手动创建的任务不带 plan_id，脱离计划域。本族测试锁定
++修复后的裁决语义：
++
++- 未显式给 plan_id 的学习型任务 → active SPRINT 计划优先默认关联；
++- 无 SPRINT 回落 goal plan（goal_id 非空的活跃计划）；两者皆无 → NULL（不强行造计划）；
++- 显式传 plan_id → 一字尊重（intake/goal 生成路径不受影响）；
++- 显式传 plan_id=None（fields_set 含 plan_id）→ 视为「明确不关联」保持 NULL
++  （card_protocol 单卡导入依赖此语义）；
++- 多个 SPRINT 计划 → is_primary 优先、创建最新（对齐群任务认领先例）；
++- 非学习型（SOCIAL/PLANNING/OCR）不做默认关联。
++"""
++
++from __future__ import annotations
++
++from datetime import datetime
++
++import pytest
++from sqlalchemy.ext.asyncio import AsyncSession
++
++from app.models.plan import Plan, PlanType
++from app.models.task import Task, TaskType
++from app.schemas.task import TaskCreate
++from app.services.task_service import TaskService
++
++
++def _make_plan(
++    user_id,
++    *,
++    type_: PlanType = PlanType.SPRINT,
++    goal_id=None,
++    name: str = "计划",
++    is_primary: bool = False,
++    created_at: datetime | None = None,
++    is_active: bool = True,
++) -> Plan:
++    plan = Plan(user_id=user_id, name=name, type=type_, goal_id=goal_id)
++    plan.is_primary = is_primary
++    plan.is_active = is_active
++    if created_at is not None:
++        plan.created_at = created_at
++    return plan
++
++
++async def _create_task(db: AsyncSession, user_id, *, type_: TaskType = TaskType.LEARNING, **kwargs) -> Task:
++    return await TaskService.create(db, TaskCreate(title="手动任务", type=type_, **kwargs), user_id)
++
++
++@pytest.mark.usefixtures("db_session")
++class TestManualTaskDefaultPlanLink:
++    async def test_manual_task_defaults_to_active_sprint_plan(self, db, test_user):
++        """红→绿主断言：手动学习任务默认关联唯一 active SPRINT 计划。"""
++        plan = _make_plan(test_user.id, name="冲刺计划")
++        db.add(plan)
++        await db.flush()
++
++        task = await _create_task(db, test_user.id)
++        assert task.plan_id == plan.id
++
++    async def test_explicit_plan_id_is_respected(self, db, test_user):
++        """显式传 plan_id 一字尊重（intake/goal 生成路径零影响）。"""
++        sprint = _make_plan(test_user.id, name="冲刺")
++        growth = _make_plan(test_user.id, type_=PlanType.GROWTH, name="成长")
++        db.add_all([sprint, growth])
++        await db.flush()
++
++        task = await _create_task(db, test_user.id, plan_id=growth.id)
++        assert task.plan_id == growth.id
++
++    async def test_explicit_none_keeps_unlinked(self, db, test_user):
++        """显式 plan_id=None（fields_set 含 plan_id）=「明确不关联」→ 保持 NULL。"""
++        sprint = _make_plan(test_user.id, name="冲刺")
++        db.add(sprint)
++        await db.flush()
++
++        task = await _create_task(db, test_user.id, plan_id=None)
++        assert "plan_id" in task.__dict__  # 行存在
++        assert task.plan_id is None
++
++    async def test_no_plans_stays_null(self, db, test_user):
++        """无任何计划 → 保持 NULL，不强行造计划。"""
++        task = await _create_task(db, test_user.id)
++        assert task.plan_id is None
++
++    async def test_goal_plan_fallback(self, db, test_user):
++        """无 SPRINT 计划时回落 goal plan（goal 分解产出的活跃计划）。"""
++        goal_plan = _make_plan(
++            test_user.id, type_=PlanType.GROWTH, goal_id="00000000-0000-0000-0000-00000000abcd", name="目标计划"
++        )
++        db.add(goal_plan)
++        await db.flush()
++
++        task = await _create_task(db, test_user.id)
++        assert task.plan_id == goal_plan.id
++
++    async def test_sprint_beats_goal_plan(self, db, test_user):
++        """SPRINT 优先于 goal plan。"""
++        goal_plan = _make_plan(
++            test_user.id, type_=PlanType.GROWTH, goal_id="00000000-0000-0000-0000-00000000abcd", name="目标"
++        )
++        sprint = _make_plan(test_user.id, name="冲刺")
++        db.add_all([goal_plan, sprint])
++        await db.flush()
++
++        task = await _create_task(db, test_user.id)
++        assert task.plan_id == sprint.id
++
++    async def test_inactive_or_deleted_plans_are_ignored(self, db, test_user):
++        """is_active=False 的计划不参与默认关联（回落 goal 或 NULL）。"""
++        inactive_sprint = _make_plan(test_user.id, name="旧冲刺", is_active=False)
++        db.add(inactive_sprint)
++        await db.flush()
++
++        task = await _create_task(db, test_user.id)
++        assert task.plan_id is None
++
++    async def test_multiple_sprint_plans_pick_primary_then_newest(self, db, test_user):
++        """多冲刺计划：is_primary 优先，其次创建最新（对齐群任务认领先例）。"""
++        old = _make_plan(test_user.id, name="旧冲刺", created_at=datetime(2026, 9, 1))
++        newest = _make_plan(test_user.id, name="新冲刺", created_at=datetime(2026, 9, 20))
++        primary = _make_plan(test_user.id, name="主冲刺", is_primary=True, created_at=datetime(2026, 8, 15))
++        db.add_all([old, newest, primary])
++        await db.flush()
++
++        task = await _create_task(db, test_user.id)
++        assert task.plan_id == primary.id
++
++        # 无 primary 时取最新
++        primary.is_primary = False
++        db.add(primary)
++        await db.flush()
++        task2 = await _create_task(db, test_user.id)
++        assert task2.plan_id == newest.id
++
++    @pytest.mark.parametrize("task_type", [TaskType.SOCIAL, TaskType.PLANNING, TaskType.OCR])
++    async def test_non_learning_types_not_linked(self, db, test_user, task_type):
++        """非学习型任务（社交/规划/OCR）不做默认关联。"""
++        sprint = _make_plan(test_user.id, name="冲刺")
++        db.add(sprint)
++        await db.flush()
++
++        task = await _create_task(db, test_user.id, type_=task_type)
++        assert task.plan_id is None
++
++    async def test_learning_family_types_are_linked(self, db, test_user):
++        """学习族任务（LEARNING/TRAINING/ERROR_FIX/REFLECTION）默认关联。"""
++        sprint = _make_plan(test_user.id, name="冲刺")
++        db.add(sprint)
++        await db.flush()
++
++        for task_type in (TaskType.LEARNING, TaskType.TRAINING, TaskType.ERROR_FIX, TaskType.REFLECTION):
++            task = await _create_task(db, test_user.id, type_=task_type)
++            assert task.plan_id == sprint.id, f"{task_type} 应默认关联冲刺计划"
+diff --git a/backend/tests/unit/test_planlink_backfill_migration_sqlite.py b/backend/tests/unit/test_planlink_backfill_migration_sqlite.py
+new file mode 100644
+index 00000000..fbba6e6d
+--- /dev/null
++++ b/backend/tests/unit/test_planlink_backfill_migration_sqlite.py
+@@ -0,0 +1,257 @@
++"""planlink_20260922 回填迁移在本地 sqlite 基座上的隔离重放（主库只读纪律）.
++
++不连主库 PostgreSQL：用 alembic Operations/MigrationContext 把
++planlink_20260922_backfill_manual_task_plan 的 upgrade/downgrade 单独跑在临时
++sqlite 文件库上，验证 PLAN-LINK 存量回填的从严条件与精确可逆：
++
++- 唯一 active SPRINT 计划 + 计划期内 + NULL plan_id 的手动任务 → 回填；
++- 计划期外（计划开始前 / target_date 已过）→ 不回填；
++- 多个 active SPRINT 计划并存（归属歧义）→ 不回填（宁缺勿错）；
++- 仅 goal plan（无 SPRINT）→ 不回填（goal 回落只在运行时默认关联生效）；
++- 软删任务 → 不回填；
++- intake 等原生带 plan_id 的任务 upgrade 前后原样存活；
++- downgrade 按 guide_json['plan_link_backfill'] 标记**精确还原**回填行，
++  原生任务不被触碰（按窗口反推会误伤 intake 行——本迁移的立卡理由）；
++- 重复执行 upgrade 幂等（行内标记去重 + plan_id IS NULL 守卫）。
++"""
++
++from __future__ import annotations
++
++import importlib.util
++import json
++from datetime import date, datetime, timedelta
++from pathlib import Path
++from typing import Callable
++
++import pytest
++from alembic.migration import MigrationContext
++from alembic.operations import Operations
++from sqlalchemy import create_engine, inspect
++
++BACKEND_ROOT = Path(__file__).resolve().parents[2]
++MIGRATION_PATH = BACKEND_ROOT / "alembic" / "versions" / "planlink_20260922_backfill_manual_task_plan.py"
++MARKER_KEY = "plan_link_backfill"
++
++NOW = datetime(2026, 9, 22, 12, 0, 0)
++
++
++@pytest.fixture(name="migration_env")
++def _migration_env(tmp_path):
++    engine = create_engine(f"sqlite:///{tmp_path / 'planlink_test.db'}")
++
++    # 最小 plans/tasks 基座：只含迁移 SQL 触碰的列（语义等价，非全量 schema）
++    with engine.begin() as conn:
++        conn.exec_driver_sql("""
++            CREATE TABLE plans (
++                id VARCHAR(36) PRIMARY KEY,
++                user_id VARCHAR(36) NOT NULL,
++                type VARCHAR(16) NOT NULL,
++                is_active INTEGER NOT NULL DEFAULT 1,
++                deleted_at DATETIME,
++                created_at DATETIME NOT NULL,
++                target_date DATE
++            )
++        """)
++        conn.exec_driver_sql("""
++            CREATE TABLE tasks (
++                id VARCHAR(36) PRIMARY KEY,
++                user_id VARCHAR(36) NOT NULL,
++                plan_id VARCHAR(36),
++                deleted_at DATETIME,
++                created_at DATETIME NOT NULL,
++                guide_json TEXT
++            )
++        """)
++
++    def run_migration(op_fn: Callable[[], None]) -> None:
++        # begin()：SQLAlchemy 2.x 无 commit 不落盘（DML 非隐式提交），迁移必须在事务内执行
++        with engine.begin() as conn:
++            ctx = MigrationContext.configure(conn)
++            with Operations.context(ctx):
++                op_fn()
++
++    def load_upgrade_downgrade():
++        spec = importlib.util.spec_from_file_location("planlink_migration", MIGRATION_PATH)
++        module = importlib.util.module_from_spec(spec)
++        spec.loader.exec_module(module)
++        return module.upgrade, module.downgrade
++
++    yield engine, run_migration, load_upgrade_downgrade
++    engine.dispose()
++
++
++def _seed_plan(
++    engine,
++    plan_id: str,
++    user_id: str,
++    *,
++    type_: str = "SPRINT",
++    is_active: int = 1,
++    created_at: datetime | None = None,
++    target_date: date | None = None,
++    deleted_at=None,
++) -> None:
++    with engine.begin() as conn:
++        conn.exec_driver_sql(
++            "INSERT INTO plans (id, user_id, type, is_active, deleted_at, created_at, target_date) "
++            "VALUES (?, ?, ?, ?, ?, ?, ?)",
++            (
++                plan_id,
++                user_id,
++                type_,
++                is_active,
++                deleted_at.isoformat() if deleted_at else None,
++                (created_at or NOW - timedelta(days=7)).isoformat(),
++                target_date.isoformat() if target_date else None,
++            ),
++        )
++
++
++def _seed_task(
++    engine,
++    task_id: str,
++    user_id: str,
++    *,
++    plan_id=None,
++    created_at: datetime | None = None,
++    deleted_at=None,
++    guide_json: dict | None = None,
++) -> None:
++    with engine.begin() as conn:
++        conn.exec_driver_sql(
++            "INSERT INTO tasks (id, user_id, plan_id, deleted_at, created_at, guide_json) " "VALUES (?, ?, ?, ?, ?, ?)",
++            (
++                task_id,
++                user_id,
++                plan_id,
++                deleted_at.isoformat() if deleted_at else None,
++                (created_at or NOW - timedelta(days=2)).isoformat(),
++                json.dumps(guide_json) if guide_json is not None else None,
++            ),
++        )
++
++
++def _task(engine, task_id: str) -> dict:
++    with engine.connect() as conn:
++        row = conn.exec_driver_sql("SELECT plan_id, guide_json FROM tasks WHERE id = ?", (task_id,)).fetchone()
++    assert row is not None, f"task {task_id} missing"
++    guide = json.loads(row[1]) if row[1] else {}
++    return {"plan_id": row[0], "guide_json": guide}
++
++
++def test_backfills_null_plan_task_in_unique_sprint_window(migration_env):
++    """唯一 active SPRINT + 窗口内的 NULL plan 手动任务 → 回填 + 打标记。"""
++    engine, run_migration, load = migration_env
++    upgrade, downgrade = load()
++
++    _seed_plan(
++        engine, "plan-A", "user-1", created_at=NOW - timedelta(days=7), target_date=NOW.date() + timedelta(days=7)
++    )
++    _seed_task(engine, "task-manual", "user-1", created_at=NOW - timedelta(days=2))
++
++    run_migration(upgrade)
++
++    task = _task(engine, "task-manual")
++    assert task["plan_id"] == "plan-A"
++    assert task["guide_json"][MARKER_KEY]["plan_id"] == "plan-A"
++    assert task["guide_json"][MARKER_KEY]["migration"] == "planlink_20260922"
++
++    # downgrade 精确还原：清 plan_id + 剥标记
++    run_migration(downgrade)
++    task = _task(engine, "task-manual")
++    assert task["plan_id"] is None
++    assert MARKER_KEY not in task["guide_json"]
++
++
++def test_skips_out_of_window_and_ambiguous_and_deleted(migration_env):
++    """窗口外 / 多冲刺计划歧义 / 软删 / 非唯一域 → 全部不回填。"""
++    engine, run_migration, load = migration_env
++    upgrade, _ = load()
++
++    # user-2：计划开始前的任务（窗口外）
++    _seed_plan(
++        engine, "plan-B", "user-2", created_at=NOW - timedelta(days=7), target_date=NOW.date() + timedelta(days=7)
++    )
++    _seed_task(engine, "task-before-plan", "user-2", created_at=NOW - timedelta(days=9))
++
++    # user-3：两个 active SPRINT 计划（歧义）
++    _seed_plan(
++        engine, "plan-C1", "user-3", created_at=NOW - timedelta(days=7), target_date=NOW.date() + timedelta(days=7)
++    )
++    _seed_plan(
++        engine, "plan-C2", "user-3", created_at=NOW - timedelta(days=6), target_date=NOW.date() + timedelta(days=7)
++    )
++    _seed_task(engine, "task-ambiguous", "user-3", created_at=NOW - timedelta(days=2))
++
++    # user-4：目标日期已过的 active 计划（窗口外——过期计划不吸收 target 之后的任务）
++    _seed_plan(
++        engine, "plan-D", "user-4", created_at=NOW - timedelta(days=30), target_date=NOW.date() - timedelta(days=1)
++    )
++    _seed_task(engine, "task-after-target", "user-4", created_at=NOW)
++
++    # user-5：只有 goal plan（无 SPRINT）→ 迁移侧不回填
++    _seed_plan(engine, "plan-E", "user-5", type_="GROWTH", created_at=NOW - timedelta(days=7))
++    _seed_task(engine, "task-goal-only", "user-5", created_at=NOW - timedelta(days=2))
++
++    # user-6：唯一 active SPRINT，但任务已软删
++    _seed_plan(
++        engine, "plan-F", "user-6", created_at=NOW - timedelta(days=7), target_date=NOW.date() + timedelta(days=7)
++    )
++    _seed_task(engine, "task-deleted", "user-6", created_at=NOW - timedelta(days=2), deleted_at=NOW - timedelta(days=1))
++
++    run_migration(upgrade)
++
++    for task_id in ("task-before-plan", "task-ambiguous", "task-after-target", "task-goal-only", "task-deleted"):
++        task = _task(engine, task_id)
++        assert task["plan_id"] is None, f"{task_id} 不应被回填"
++        assert MARKER_KEY not in task["guide_json"], f"{task_id} 不应带回填标记"
++
++
++def test_native_plan_tasks_survive_roundtrip_untouched(migration_env):
++    """intake 等原生带 plan_id 的任务：upgrade/downgrade 全程原样存活。"""
++    engine, run_migration, load = migration_env
++    upgrade, downgrade = load()
++
++    _seed_plan(
++        engine, "plan-G", "user-7", created_at=NOW - timedelta(days=7), target_date=NOW.date() + timedelta(days=7)
++    )
++    _seed_task(
++        engine,
++        "task-intake-native",
++        "user-7",
++        plan_id="plan-G",
++        created_at=NOW - timedelta(days=2),
++        guide_json={"day_number": 3, "sprint_mode": "exam"},
++    )
++
++    run_migration(upgrade)
++    task = _task(engine, "task-intake-native")
++    assert task["plan_id"] == "plan-G"
++    assert MARKER_KEY not in task["guide_json"]  # 原生任务不打标记
++
++    run_migration(downgrade)
++    task = _task(engine, "task-intake-native")
++    assert task["plan_id"] == "plan-G"  # downgrade 不误伤
++    assert task["guide_json"]["day_number"] == 3  # 业务键原样
++
++
++def test_upgrade_is_idempotent_and_zero_new_tables(migration_env):
++    """重复 upgrade 幂等；零 schema 变更（纯数据回填，不建平行真源）。"""
++    engine, run_migration, load = migration_env
++    upgrade, _ = load()
++
++    _seed_plan(
++        engine, "plan-H", "user-8", created_at=NOW - timedelta(days=7), target_date=NOW.date() + timedelta(days=7)
++    )
++    _seed_task(engine, "task-idem", "user-8", created_at=NOW - timedelta(days=2))
++
++    before = set(inspect(engine).get_table_names())
++    run_migration(upgrade)
++    after_upgrade = set(inspect(engine).get_table_names())
++    assert after_upgrade == before  # 零新表
++
++    # 二次执行：不重复写标记、不报错
++    run_migration(upgrade)
++    task = _task(engine, "task-idem")
++    assert task["plan_id"] == "plan-H"
++    assert len(task["guide_json"].get(MARKER_KEY, {})) == 3  # 单份标记（plan_id/migration/backfilled_at）
