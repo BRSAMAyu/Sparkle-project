@@ -1,0 +1,371 @@
+<!doctype html>
+<!--
+  ============================================================================
+  Sparkle 星火 · 扫码落地页（单文件自包含：零构建、零外链依赖、离线可开）
+  ============================================================================
+  【CONFIG —— 参展前唯一需要修改的块】
+
+  所有可配置项集中在文件末尾 <script> 顶部的 CONFIG 对象里（Ctrl+F 搜 "CONFIG"）：
+
+    apkUrl       必填  APK 下载直链（例：https://<你的域名>/downloads/sparkle-latest.apk）
+                       留空时下载按钮指向页内占位说明。
+    wechatQrPath 可选  微信公众号二维码图片路径（相对本文件，例 ./assets/qr-wechat.png）
+    groupQrPath  可选  微信群二维码图片路径（例 ./assets/qr-group.png）
+    logoPath     可选  Logo 图片路径；留空使用内联星标 SVG
+    contact      可选  联系方式文本（例 邮箱占位）；留空则整行隐藏。禁止提交真实联系方式入库。
+    channelCopy  可选  渠道码文案映射：URL 带 ?src=<key> 时，行动区显示对应一句话。
+                       例：落地页?src=expo0926 → 显示现场专码文案。
+
+  渠道码用法（GROWTH_ASSETS §1.2）：每个渠道生成独立二维码，都指向本页，
+  用 ?src= 区分来源（如 ?src=expo0926 / ?src=club01 / ?src=course01）。
+
+  色值唯一来源：mobile/lib/core/design/tokens_v2/theme_manager.dart
+               → SparkleColors.light()（normal palette，非高对比/非色盲变体）。
+  布局与对比度依据：v3-output/DL-R3/SPEC.md §1（暖纸底 / 4 级表面阶 / 唯一 accent / 冷色准入）。
+  纪律：本页零常驻动画；accent 只用于可点控件与品牌时刻；冷色只经 info 槽出现。
+  ============================================================================
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="星火 Sparkle · AI 学习成长系统。错题本 2.0：从静态收录，到状态引擎。扫码下载 APK，免注册直接体验。">
+<meta name="color-scheme" content="light">
+<title>星火 Sparkle · 错题本 2.0</title>
+<style>
+  /* ========== 设计令牌（唯一来源 theme_manager.dart SparkleColors.light()） ========== */
+  :root {
+    --surface-ambient:   #FCF8F3; /* S0 surfaceAmbient · 页面画布 */
+    --surface-primary:   #F8F4EF; /* S1 surfacePrimary  · 基础卡面 */
+    --surface-secondary: #F1EBE4; /* S2 surfaceSecondary· 浮起面 */
+    --surface-tertiary:  #E7DED4; /* S3 surfaceTertiary · 高亮浮起面 */
+    --text-primary:      #171717; /* textPrimary · 标题/正文主体 */
+    --text-secondary:    #6C655D; /* textSecondary · 次要说明 */
+    --text-tertiary:     #736F62; /* textTertiary · 辅助（B2-3a 定标 4.59:1 on S1） */
+    --accent:            #825D49; /* brandPrimary · 唯一交互色（5.31:1，只标可交互/品牌时刻） */
+    --accent-ink:        #FCF8F3; /* accent 上的文字（同 S0 纸色） */
+    --info:              #48678D; /* semanticInfo · AI 信息唯一冷色槽 */
+    --border:            #DED5CB; /* neutral300 · hairline 描边 */
+    font-size: 16px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    background: var(--surface-ambient); /* S0 画布 */
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "PingFang SC", "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", sans-serif;
+    font-size: 1rem;          /* bodyLarge 16 / 1.68 */
+    line-height: 1.68;
+    letter-spacing: 0.01em;
+  }
+
+  .wrap { max-width: 40rem; margin: 0 auto; padding: 0 1.5rem; } /* 24 = spacing.lg */
+
+  /* ---------- header ---------- */
+  header { padding: 1.5rem 0; } /* spacing.lg */
+  .brand { display: flex; align-items: center; gap: 0.5rem; }
+  .brand svg { width: 1.5rem; height: 1.5rem; color: var(--accent); } /* 品牌时刻：唯一 accent 允许 */
+  .brand strong { font-size: 1.1875rem; /* 19 = titleLarge */ font-weight: 500; letter-spacing: -0.01em; }
+
+  /* ---------- hero ---------- */
+  .hero { padding: 2rem 0 2.5rem; } /* 32 / 40 */
+  .hero h1 {
+    font-size: clamp(1.875rem, 7.5vw, 2.875rem); /* 30→46 = displayLarge 档 */
+    font-weight: 700;
+    line-height: 1.15;           /* headingLarge/displayLarge */
+    letter-spacing: -0.02em;     /* -0.4~-0.8 近似 */
+    text-wrap: balance;
+  }
+  .hero .lede {
+    margin-top: 1rem;            /* spacing.md */
+    color: var(--text-secondary);
+    font-size: 1rem;
+    max-width: 34rem;
+  }
+  .chip {
+    display: inline-flex; align-items: center; gap: 0.375rem;
+    margin-bottom: 1rem;
+    padding: 0.25rem 0.75rem;    /* 4/12 */
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 0.75rem;          /* labelSmall 12 */
+    line-height: 1.16;
+    letter-spacing: 0.18em;
+    color: var(--info);          /* 冷色准入：AI 信息走 info 槽 */
+    background: var(--surface-primary); /* S1 */
+  }
+  .chip::before { content: ""; width: 0.375rem; height: 0.375rem; border-radius: 50%; background: var(--info); }
+
+  /* ---------- 区块标题 ---------- */
+  section { padding: 1.5rem 0; }
+  section > h2 {
+    font-size: 1.5rem;           /* headingMedium 24 */
+    font-weight: 600; line-height: 1.2; letter-spacing: -0.01em;
+    margin-bottom: 1rem;
+  }
+  section > .sec-lede { color: var(--text-secondary); margin-bottom: 1.5rem; margin-top: -0.5rem; }
+
+  /* ---------- 特性卡（卡与底靠色阶，不靠阴影） ---------- */
+  .cards { display: grid; gap: 1rem; } /* spacing.md */
+  .card {
+    background: var(--surface-primary);      /* S1 基础面 on S0 画布 */
+    border: 1px solid var(--border);
+    border-radius: 1.125rem;                 /* 18 卡圆角档 */
+    padding: 1.5rem;
+  }
+  .card h3 {
+    font-size: 1.1875rem;        /* titleLarge 19 */
+    font-weight: 500; line-height: 1.35;
+    margin-bottom: 0.5rem;
+  }
+  .card h3 .no {
+    display: inline-block;
+    color: var(--text-tertiary);
+    font-size: 0.75rem; font-weight: 500; letter-spacing: 0.18em;
+    margin-right: 0.5rem;
+  }
+  .card p { color: var(--text-secondary); font-size: 0.9375rem; line-height: 1.62; }
+  .card .tag {
+    display: inline-block; margin-top: 0.75rem;
+    font-size: 0.75rem; letter-spacing: 0.12em; line-height: 1.16;
+    color: var(--info);          /* AI 状态叙述走 info 槽（系统在说话） */
+  }
+
+  @media (min-width: 45rem) {
+    .cards { grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+    .card { padding: 1.5rem 1.25rem; }
+  }
+
+  /* ---------- 行动区（S2 浮起面） ---------- */
+  .action {
+    background: var(--surface-secondary);    /* S2 */
+    border: 1px solid var(--border);
+    border-radius: 1.125rem;
+    padding: 2rem 1.5rem;
+    text-align: center;
+  }
+  .action h2 { margin-bottom: 0.5rem; }
+  .action .hint { color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1.5rem; }
+  .btn {
+    display: inline-block;
+    min-height: 3rem;
+    padding: 0.875rem 2rem;
+    border-radius: 999px;        /* pill */
+    background: var(--accent);   /* 唯一交互色：主 CTA */
+    color: var(--accent-ink);
+    font-size: 1rem; font-weight: 500; line-height: 1.35;
+    text-decoration: none;
+    border: none;
+  }
+  .btn:active { transform: translateY(1px); } /* 即时按压反馈，无动画 */
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .btn-note { margin-top: 0.75rem; font-size: 0.75rem; color: var(--text-secondary); letter-spacing: 0.06em; } /* S2 面上用 secondary（tertiary 只在 S0/S1 达标 4.5:1） */
+
+  .channel-note {
+    display: none;
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    background: var(--surface-tertiary);     /* S3 高亮容器：现场专码提示 */
+    border-radius: 0.875rem;                 /* 14 */
+    font-size: 0.875rem; line-height: 1.62;
+    color: var(--text-primary);
+    text-align: left;
+  }
+  .channel-note.show { display: block; }
+
+  /* ---------- 二维码占位 ---------- */
+  .qr-row { display: grid; gap: 1rem; margin-top: 2rem; }
+  @media (min-width: 45rem) { .qr-row { grid-template-columns: 1fr 1fr; } }
+  .qr {
+    background: var(--surface-primary);      /* 回到 S1 */
+    border: 1px dashed var(--border);
+    border-radius: 0.875rem;
+    padding: 1rem;
+    display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+  }
+  .qr .box {
+    width: 8rem; height: 8rem;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--surface-tertiary);
+    border-radius: 0.5rem;
+    color: var(--text-tertiary); font-size: 0.75rem; letter-spacing: 0.12em;
+    overflow: hidden;
+  }
+  .qr .box img { width: 100%; height: 100%; object-fit: contain; }
+  .qr figcaption { font-size: 0.875rem; color: var(--text-secondary); }
+  .qr figcaption small { display: block; color: var(--text-tertiary); font-size: 0.75rem; }
+
+  /* ---------- footer ---------- */
+  footer {
+    margin-top: 2rem;
+    padding: 2rem 0 3rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-tertiary);
+    font-size: 0.75rem; line-height: 1.6; letter-spacing: 0.04em;
+  }
+  footer .own { color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 0.75rem; }
+  footer p + p { margin-top: 0.375rem; }
+
+  /* ---------- 无障碍与基本面 ---------- */
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" role="img" aria-label="星火标志" fill="currentColor" aria-hidden="false">
+        <path d="M12 1.5c.9 4.9 4.1 8.6 10.5 10.5C16.1 13.9 12.9 17.6 12 22.5 11.1 17.6 7.9 13.9 1.5 12 7.9 10.1 11.1 6.4 12 1.5Z"/>
+      </svg>
+      <strong>星火 Sparkle</strong>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- 主叙事：错题本 2.0 方向表述（DL-R2 DECISIONS H3 附注：方向假设口径，不作品类断言） -->
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="wrap">
+      <span class="chip">AI 学习成长系统</span>
+      <h1 id="hero-title">错题本 2.0：<br>从静态收录，到状态引擎</h1>
+      <p class="lede">星火不只是帮你把错题记下来——它把你和每一道题的相处过程，变成一份活着的学习状态：哪里已经掌握、哪里正在松动、下一步最该练什么。</p>
+    </div>
+  </section>
+
+  <!-- 三特性：按 H3 裁决权重排序（记得住 &gt; 会教 &gt; 星图）；温度为及格线，不作特性卡 -->
+  <section aria-labelledby="features-title">
+    <div class="wrap">
+      <h2 id="features-title">它做三件事</h2>
+      <div class="cards">
+        <article class="card">
+          <h3><span class="no" aria-hidden="true">01</span>记得住</h3>
+          <p>上次卡住的题、三天前讲过的思路、你总容易混的知识点——下次打开，Aurora 从断点接着讲，不让你从头再来。</p>
+          <span class="tag">Aurora · 长期记忆</span>
+        </article>
+        <article class="card">
+          <h3><span class="no" aria-hidden="true">02</span>会教</h3>
+          <p>默认一步一步带你想，不直接甩答案；你要赶时间，它也能直给。哪里有把握、哪里是推测，它如实说清。</p>
+          <span class="tag">分步拆解 · 诚实边界</span>
+        </article>
+        <article class="card">
+          <h3><span class="no" aria-hidden="true">03</span>星图生长</h3>
+          <p>每个知识点是一颗星，越掌握越亮。学得越久，星图越密；期末复习，就照着最暗的地方补。</p>
+          <span class="tag">知识星图 · 掌握度点亮</span>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- 行动区 -->
+  <section id="download" aria-labelledby="action-title">
+    <div class="wrap">
+      <div class="action">
+        <h2 id="action-title">现在就试</h2>
+        <p class="hint">Android 手机扫码或点下方按钮下载安装；装好打开 App，首屏点「游客体验」——免注册，直接开玩。</p>
+        <a id="apk-btn" class="btn" href="#download">下载 Android 安装包（APK）</a>
+        <p class="btn-note" id="btn-note">下载链接上线前占位 · 见本页源码顶部 CONFIG</p>
+        <div id="channel-note" class="channel-note" role="note"></div>
+
+        <div class="qr-row">
+          <figure class="qr">
+            <div class="box" id="qr-wechat-box">二维码占位</div>
+            <figcaption>微信公众号<small>id-qr-wechat（占位）</small></figcaption>
+          </figure>
+          <figure class="qr">
+            <div class="box" id="qr-group-box">二维码占位</div>
+            <figcaption>交流群<small>id-qr-group（占位）</small></figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p class="own">你的数据永远属于你：支持一键导出与删除。</p>
+    <p>星火 Sparkle · AI 学习成长系统</p>
+    <p>团队：〔占位：团队名称〕 ｜ 参赛：〔占位：比赛名称与年份〕 ｜ 联系：〔占位：由 CONFIG 注入，不入库〕</p>
+    <p>隐私政策 · 用户协议 · 数据导出与删除说明〔占位：上线前替换为法务文档链接〕</p>
+  </div>
+</footer>
+
+<script>
+/* ============ CONFIG —— 参展前唯一需要修改的块（同文件顶部注释） ============ */
+var CONFIG = {
+  apkUrl: "",          /* 必填：APK 下载直链；留空则按钮保持占位 */
+  wechatQrPath: "",    /* 可选：公众号二维码图片路径 */
+  groupQrPath: "",     /* 可选：交流群二维码图片路径 */
+  logoPath: "",        /* 可选：Logo 图片路径（留空用内联星标） */
+  contact: "",         /* 可选：联系方式文本；留空隐藏。真实联系方式只在部署环境配置，禁止入库 */
+  channelCopy: {       /* 可选：?src=<key> 渠道文案映射 */
+    expo0926: "现场专码：连接现场 Wi-Fi 下载更快；也欢迎直接体验桌上的演示机。"
+  }
+};
+
+(function () {
+  /* APK 链接 */
+  var btn = document.getElementById("apk-btn");
+  var note = document.getElementById("btn-note");
+  if (CONFIG.apkUrl) {
+    btn.setAttribute("href", CONFIG.apkUrl);
+    if (note) { note.parentNode.removeChild(note); }
+  }
+
+  /* 二维码占位 → 图片 */
+  function fillQr(boxId, path) {
+    if (!path) { return; }
+    var box = document.getElementById(boxId);
+    if (!box) { return; }
+    box.removeChild(box.firstChild);
+    var img = document.createElement("img");
+    img.src = path;
+    img.alt = "二维码";
+    box.appendChild(img);
+  }
+  fillQr("qr-wechat-box", CONFIG.wechatQrPath);
+  fillQr("qr-group-box", CONFIG.groupQrPath);
+
+  /* Logo 替换（可选） */
+  if (CONFIG.logoPath) {
+    var brand = document.querySelector(".brand svg");
+    if (brand) {
+      var logo = document.createElement("img");
+      logo.src = CONFIG.logoPath;
+      logo.alt = "星火标志";
+      logo.style.width = "1.5rem";
+      logo.style.height = "1.5rem";
+      brand.parentNode.replaceChild(logo, brand);
+    }
+  }
+
+  /* 联系方式（占位注入，不入库） */
+  if (CONFIG.contact) {
+    var foot = document.querySelectorAll("footer p");
+    for (var i = 0; i < foot.length; i++) {
+      if (foot[i].textContent.indexOf("联系：") !== -1) {
+        foot[i].textContent = foot[i].textContent.replace("〔占位：由 CONFIG 注入，不入库〕", CONFIG.contact);
+      }
+    }
+  }
+
+  /* 渠道码文案：?src=<key> */
+  try {
+    var src = new URLSearchParams(window.location.search).get("src");
+    if (src && CONFIG.channelCopy && CONFIG.channelCopy[src]) {
+      var cn = document.getElementById("channel-note");
+      cn.textContent = CONFIG.channelCopy[src];
+      cn.className = "channel-note show";
+    }
+  } catch (e) { /* 老浏览器降级：无渠道文案，页面其余功能不受影响 */ }
+})();
+</script>
+</body>
+</html>
