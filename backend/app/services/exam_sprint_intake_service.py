@@ -16,6 +16,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
+from app.models.goal import Goal
 from app.models.plan import Plan, PlanPriority, PlanStage, PlanType
 from app.models.task import Task
 from app.orchestration.bottleneck_analyzer import bottleneck_analyzer
@@ -233,6 +234,14 @@ class ExamSprintIntakeService:
         resubmitting the same form describes the same exam, so the existing plan is
         the idempotent answer. A different subject/exam date is a different goal and
         keeps the normal creation path (quota still applies there by design).
+
+        NBP-3（v3-output/NORTHSTAR-LOOP2/REPORT.md）第二级同一性：goal 驱动创建的
+        计划（goals.py create_goal）从不写 subject，主键永不命中 → intake 另建
+        第二份 active sprint 计划（subject 为 NULL 的行不在 INTAKE-IDX 部分唯一
+        索引谓词内，不撞索引、静默双计划）。故主键未命中时按 goal→plan 关联兜底：
+        同 user + SPRINT + active + ``target_date == exam_date`` 且关联 exam 型
+        goal 的计划视为同一次考试；复用时回填 subject——此后同表单复跑走主键，
+        该计划也被纳入 INTAKE-IDX 的 DB 级并发保护（幂等语义自愈收敛）。
         """
         subject = self._strip(request.subject)[:100]
         if not subject:
@@ -251,7 +260,47 @@ class ExamSprintIntakeService:
             .limit(1)
         )
         result = await self.db.execute(query)
-        return result.scalar_one_or_none()
+        plan = result.scalar_one_or_none()
+        if plan is not None:
+            return plan
+        return await self._find_goal_linked_sprint_plan(user_id=user_id, exam_date=request.exam_date, subject=subject)
+
+    async def _find_goal_linked_sprint_plan(
+        self,
+        *,
+        user_id: UUID,
+        exam_date: date,
+        subject: str,
+    ) -> Plan | None:
+        """NBP-3 兜底：按 goal→plan 关联识别 goal 驱动创建的同考试计划。
+
+        identity = (user, SPRINT, active, target_date==exam_date, goal 关联且
+        goal_type=='exam')；同日多目标时取最新创建（与迁移 intakeidx_20260922
+        的存量收敛口径「保留最新」一致）。命中且 subject 为空时回填 intake
+        表单的 subject（get_db 成功路径自动提交；测试基座由用例显式断言）。
+        """
+        query = (
+            select(Plan)
+            .join(Goal, Goal.id == Plan.goal_id)
+            .where(
+                Plan.user_id == user_id,
+                Plan.type == PlanType.SPRINT,
+                Plan.is_active.is_(True),
+                Plan.deleted_at.is_(None),
+                Plan.target_date == exam_date,
+                Plan.goal_id.isnot(None),
+                Goal.user_id == user_id,
+                Goal.goal_type == "exam",
+                Goal.deleted_at.is_(None),
+            )
+            .order_by(desc(Plan.created_at))
+            .limit(1)
+        )
+        result = await self.db.execute(query)
+        plan = result.scalar_one_or_none()
+        if plan is not None and plan.subject is None:
+            plan.subject = subject
+        return plan
 
     async def _bundle_from_existing_plan(self, *, plan: Plan) -> GeneratedPlanBundle:
         """Rebuild the launch bundle from a reused plan without creating anything."""

@@ -8,6 +8,7 @@ API v1 Router
 """
 
 import importlib.util
+import sys
 from pathlib import Path
 
 from fastapi import APIRouter
@@ -149,7 +150,19 @@ def _include_experience_routers() -> None:
         if spec is None or spec.loader is None:
             continue
         module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        # NBP-2（v3-output/NORTHSTAR-LOOP2/REPORT.md）：importlib 契约——exec 前必须
+        # 注册 sys.modules。pydantic v2 解析 `from __future__ import annotations` 的
+        # 字符串前向引用时按 cls.__module__ 查 sys.modules；缺注册时嵌套模型
+        # __pydantic_complete__=False，首次响应校验触发 model_rebuild 失败 → 运行时
+        # 500（GET /experience/goal-detail 曾因此全量 500，而直调 handler 的单测
+        # 不走 response_model 校验全绿）。守卫：test_goal_detail_route_shadowing.py
+        # ::TestResponseModelRuntime。
+        sys.modules[module_name] = module
+        try:
+            spec.loader.exec_module(module)
+        except BaseException:
+            sys.modules.pop(module_name, None)  # 失败不留半执行模块
+            raise
         router = getattr(module, "router", None)
         if router is not None:
             _include_router_if_new(router)
