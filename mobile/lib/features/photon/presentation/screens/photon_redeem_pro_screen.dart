@@ -48,6 +48,9 @@ class _PhotonRedeemProScreenState extends ConsumerState<PhotonRedeemProScreen> {
     if (!mounted) {
       return;
     }
+    // 兑换响应后刷新快照（PHOTON-STATUS）：余额/基数/月顶回归服务端真值；
+    // _lastResult 仍持本次终态做即时反馈，刷新到达后两源收敛一致。
+    unawaited(ref.refresh(photonRedeemProOverviewProvider.future));
     setState(() {
       _redeeming = false;
       _lastResult = result;
@@ -119,16 +122,24 @@ class _PhotonRedeemProScreenState extends ConsumerState<PhotonRedeemProScreen> {
               ),
             ),
             data: (PhotonRedeemProOverview overview) {
-              // 服务端揭示值优先，展示常量只作动作前兜底。
+              // 服务端真数优先：status 快照（PHOTON-STATUS）→ 兑换响应揭示值 →
+              // 展示常量只作最后兜底。
               final balance = _lastResult?.balanceAfter ?? overview.balance;
-              final cost = _lastResult?.costPhotons ?? photonRedeemProDisplayCost;
-              final days = _lastResult?.proDays ?? photonRedeemProDisplayDays;
-              final revealedBase = _lastResult?.redeemableBase;
+              final cost = _lastResult?.costPhotons ??
+                  overview.costPhotons ??
+                  photonRedeemProDisplayCost;
+              final days =
+                  _lastResult?.proDays ?? overview.proDays ?? photonRedeemProDisplayDays;
+              // 基数真源：status 快照先行（动作前即有真数），兑换响应揭示值兜底。
+              final revealedBase = overview.redeemableBase ?? _lastResult?.redeemableBase;
               final capped = overview.redeemedThisMonth ||
                   _lastResult?.status == PhotonRedeemProStatus.monthlyCapReached ||
                   _lastResult?.status == PhotonRedeemProStatus.ok;
-              final insufficientBase =
-                  _lastResult?.status == PhotonRedeemProStatus.insufficientBase;
+              // 不足预判与引擎拒绝顺序同序（基数 → 余额）：动作前即诚实呈现，
+              // 不再等兑换失败后才揭示。
+              final insufficientBase = _lastResult?.status ==
+                      PhotonRedeemProStatus.insufficientBase ||
+                  (revealedBase != null && revealedBase < cost);
               final insufficientBalance = balance < cost;
               final canRedeem =
                   !_redeeming && !capped && !insufficientBase && !insufficientBalance;

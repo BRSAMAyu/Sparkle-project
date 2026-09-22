@@ -1,0 +1,1063 @@
+diff --git a/backend/app/api/v1/photons.py b/backend/app/api/v1/photons.py
+index 6fa891a7..e3faf827 100644
+--- a/backend/app/api/v1/photons.py
++++ b/backend/app/api/v1/photons.py
+@@ -23,7 +23,6 @@ from app.services.photon_redeem_service import (
+     REDEEM_PRO_INSUFFICIENT_BALANCE,
+     REDEEM_PRO_INSUFFICIENT_BASE,
+     REDEEM_PRO_MONTHLY_CAP,
+-    REDEEM_PRO_OK,
+ )
+ from app.services.photon_service import get_photon_service
+ 
+@@ -305,3 +304,51 @@ async def redeem_photons_for_pro(
+             ),
+         },
+     }
++
++
++# route-tier: authed
++@router.get("/redeem-pro/status", response_model=dict[str, Any])
++async def get_redeem_pro_status(
++    current_user: User = Depends(get_current_user),
++    db: AsyncSession = Depends(get_db),
++):
++    """
++    光子兑换 Pro 状态快照（PHOTON-STATUS：兑换前让用户看到真数）
++
++    与 POST /photons/redeem-pro 完全同源（同一 service 判定函数，绝无第二套算法）：
++    - redeemable_base：审计流水重放（get_redeemable_base，transfer_in 不计入）；
++    - balance：混桶总余额（与 GET /photons/balance 同源）——两数并列诚实区分；
++    - monthly_cap_used + monthly_cap_redeemed_at：redeem_pro 流水 + UTC 月窗
++      （审计即状态，与兑换路径同一判定函数）；
++    - cost_photons/pro_days/monthly_cap：settings 常量；
++    - next_window_at：下一 UTC 自然月起点（月顶重置边界）；
++    - can_redeem：服务端预判（与兑换拒绝顺序一致），最终以兑换响应终态为准。
++    """
++    snapshot = await photon_redeem_service.get_redeem_status(
++        db, user_id=str(current_user.id)
++    )
++    return {
++        "success": True,
++        "status": "ok",
++        "data": {
++            "user_id": str(current_user.id),
++            "redeemable_base": snapshot.redeemable_base,
++            "balance": snapshot.balance,
++            "cost_photons": snapshot.cost_photons,
++            "pro_days": snapshot.pro_days,
++            "monthly_cap": snapshot.monthly_cap,
++            "redeems_this_month": snapshot.redeems_this_month,
++            "monthly_cap_used": snapshot.monthly_cap_used,
++            "monthly_cap_redeemed_at": (
++                snapshot.monthly_cap_redeemed_at.isoformat()
++                if snapshot.monthly_cap_redeemed_at
++                else None
++            ),
++            "next_window_at": (
++                snapshot.next_window_at.isoformat()
++                if snapshot.next_window_at
++                else None
++            ),
++            "can_redeem": snapshot.can_redeem,
++        },
++    }
+diff --git a/backend/app/services/photon_redeem_service.py b/backend/app/services/photon_redeem_service.py
+index ddcc80bb..8163cf19 100644
+--- a/backend/app/services/photon_redeem_service.py
++++ b/backend/app/services/photon_redeem_service.py
+@@ -161,6 +161,97 @@ async def _count_redeems_in_month(
+     )
+ 
+ 
++def _next_month_start(now: datetime) -> datetime:
++    """下一个 UTC 自然月起点（月窗重置边界；naive，与 created_at 存储形一致）。"""
++    if now.month == 12:
++        return now.replace(
++            year=now.year + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0
++        )
++    return now.replace(month=now.month + 1, day=1, hour=0, minute=0, second=0, microsecond=0)
++
++
++async def _latest_redeem_at_in_month(
++    db: AsyncSession, *, user_id: str, month_start: datetime
++) -> datetime | None:
++    """当月最近一次本通道兑换时间（同真源：``redeem_pro`` 流水 + 同款 UTC 月窗过滤）。
++
++    仅作展示面时间戳；月顶**判定**不走本函数，一律走 ``_count_redeems_in_month``
++    （与兑换路径同一函数），杜绝判定/展示双算法漂移。
++    """
++    row = await db.execute(
++        select(PhotonTransactionHistory.created_at)
++        .where(
++            PhotonTransactionHistory.user_id == user_id,
++            PhotonTransactionHistory.transaction_type == REDEEM_PRO_TX_TYPE,
++            PhotonTransactionHistory.created_at >= month_start,
++        )
++        .order_by(PhotonTransactionHistory.created_at.desc())
++        .limit(1)
++    )
++    return row.scalar_one_or_none()
++
++
++@dataclass
++class PhotonRedeemStatusSnapshot:
++    """兑换前状态快照（PHOTON-STATUS：让用户在决定前看到真数）。
++
++    单一真源承诺：基数复用 ``get_redeemable_base``（与 ``redeem_pro`` 校验同一
++    函数，绝无第二套算法）；月顶判定复用 ``_count_redeems_in_month``；金额/时长/
++    上限复用 settings 常量函数。``redeemable_base``（可兑换口径）与 ``balance``
++    （混桶总余额）并列返回、诚实区分。
++    """
++
++    redeemable_base: int
++    balance: int
++    cost_photons: int
++    pro_days: int
++    monthly_cap: int
++    redeems_this_month: int
++    monthly_cap_used: bool
++    monthly_cap_redeemed_at: datetime | None = None
++    next_window_at: datetime | None = None
++    can_redeem: bool = False
++
++
++async def get_redeem_status(
++    db: AsyncSession, *, user_id: str
++) -> PhotonRedeemStatusSnapshot:
++    """兑换前状态快照：基数 + 余额 + 月顶状态 + 常量 + 下月窗边界。
++
++    纯只读（零状态变更、零写流水）；所有判定与 ``redeem_pro`` 快速失败面同源。
++    ``can_redeem`` 为服务端预判（月顶未用 ∧ 基数够 ∧ 余额够），与兑换路径的
++    拒绝顺序（月顶 → 基数 → 余额）一致，仅作动作前展示锚点——最终以兑换
++    响应终态为准（并发窗口下快照可能过期，诚实边界照实声明）。
++    """
++    now = utcnow()
++    month_start = _month_start(now)
++    cost = redeem_pro_cost()
++    days = redeem_pro_days()
++    cap = redeem_pro_monthly_cap()
++
++    base = await get_redeemable_base(db, user_id=user_id)
++    balance = await PhotonService(db).get_balance(user_id)
++    redeems_this_month = await _count_redeems_in_month(
++        db, user_id=user_id, month_start=month_start
++    )
++    capped = redeems_this_month >= cap
++
++    return PhotonRedeemStatusSnapshot(
++        redeemable_base=base,
++        balance=balance,
++        cost_photons=cost,
++        pro_days=days,
++        monthly_cap=cap,
++        redeems_this_month=redeems_this_month,
++        monthly_cap_used=capped,
++        monthly_cap_redeemed_at=await _latest_redeem_at_in_month(
++            db, user_id=user_id, month_start=month_start
++        ),
++        next_window_at=_next_month_start(now),
++        can_redeem=not capped and base >= cost and balance >= cost,
++    )
++
++
+ async def redeem_pro(db: AsyncSession, *, user_id: str) -> PhotonRedeemOutcome:
+     """光子兑换 Pro：校验月顶/基数 → 原子扣减 → 复查月顶 → 写流水 → 授予 Pro。
+ 
+diff --git a/mobile/lib/core/network/api_endpoints.dart b/mobile/lib/core/network/api_endpoints.dart
+index 5eeb95e0..5c6ebfdf 100755
+--- a/mobile/lib/core/network/api_endpoints.dart
++++ b/mobile/lib/core/network/api_endpoints.dart
+@@ -658,6 +658,7 @@ class ApiEndpoints {
+   static const String photonTransactions = '/photons/transactions';
+   static const String photonTransfer = '/photons/transfer';
+   static const String photonRedeemPro = '/photons/redeem-pro';
++  static const String photonRedeemProStatus = '/photons/redeem-pro/status';
+ 
+   // Inventory System
+   static const String inventory = '/inventory';
+diff --git a/mobile/lib/features/photon/data/models/photon_redeem_pro_model.dart b/mobile/lib/features/photon/data/models/photon_redeem_pro_model.dart
+index ca18948f..31a616fd 100644
+--- a/mobile/lib/features/photon/data/models/photon_redeem_pro_model.dart
++++ b/mobile/lib/features/photon/data/models/photon_redeem_pro_model.dart
+@@ -6,8 +6,9 @@
+ /// redeemable_base}`。手写解析（一次性动作契约，对齐 RedeemCodeResult /
+ /// PlanConfirmResult 手写风格，不进 build_runner）。
+ ///
+-/// 诚实性口径：可兑换基数（redeemable_base）只能来自服务端响应（审计流水重放，
+-/// transfer_in 排除），本模型不做任何本地推算；未揭示时不产出该数字。
++/// 诚实性口径：可兑换基数（redeemable_base）只能来自服务端（审计流水重放，
++/// transfer_in 排除）——动作前经 `GET /photons/redeem-pro/status` 快照揭示，
++/// 兑换响应再次带回校验；本模型不做任何本地推算，未揭示时不产出该数字。
+ library;
+ 
+ import 'package:dio/dio.dart';
+@@ -114,17 +115,64 @@ class PhotonRedeemProResult {
+   bool get isOk => status == PhotonRedeemProStatus.ok;
+ }
+ 
+-/// 兑换面总览快照：混桶余额 + 当月兑换资格。
++/// 兑换面总览快照：混桶余额 + 可兑换基数 + 当月兑换资格（PHOTON-STATUS 真数）。
+ ///
+-/// 月顶判定真源与引擎一致 = 审计流水（`GET /photons/transactions` 按
+-/// `transaction_type=redeem_pro` 服务端过滤，客户端只做「是否落在本 UTC 月」
+-/// 的窗口判定，不推算基数）。
++/// 数据源 = `GET /photons/redeem-pro/status`（与引擎 `POST /redeem-pro` 同一
++/// service 判定函数：基数审计流水重放、月顶流水 + UTC 月窗、settings 常量）——
++/// 客户端零本地推算，月顶窗口判定也交还引擎（原客户端 UTC 月窗自算已移除，
++/// 杜绝双端漂移）。`redeemableBase`（可兑换口径）与 `balance`（混桶总余额）
++/// 并列诚实区分。
+ class PhotonRedeemProOverview {
+   const PhotonRedeemProOverview({
+     required this.balance,
+     required this.redeemedThisMonth,
++    this.redeemableBase,
++    this.costPhotons,
++    this.proDays,
++    this.monthlyCap,
++    this.nextWindowAt,
++    this.canRedeem = false,
+   });
+ 
++  /// status 响应（`{success, status, data:{...}}` 的 data）→ 快照。
++  ///
++  /// 手写解析（对齐 [PhotonRedeemProResult] 风格）；字段缺失不猜——
++  /// `redeemableBase` 恒 nullable，缺失时 UI 走「由服务端核算」诚实空态。
++  factory PhotonRedeemProOverview.fromStatusJson(Map<String, dynamic> json) {
++    final nextRaw = json['next_window_at'] as String?;
++    return PhotonRedeemProOverview(
++      balance: (json['balance'] as num?)?.toInt() ?? 0,
++      // 引擎 `monthly_cap_used` → 客户端 `redeemedThisMonth`（同义不改名，少 churn）。
++      redeemedThisMonth: json['monthly_cap_used'] as bool? ?? false,
++      redeemableBase: (json['redeemable_base'] as num?)?.toInt(),
++      costPhotons: (json['cost_photons'] as num?)?.toInt(),
++      proDays: (json['pro_days'] as num?)?.toInt(),
++      monthlyCap: (json['monthly_cap'] as num?)?.toInt(),
++      nextWindowAt: nextRaw == null ? null : DateTime.tryParse(nextRaw),
++      canRedeem: json['can_redeem'] as bool? ?? false,
++    );
++  }
++
+   final int balance;
++
++  /// 当月是否已兑换（引擎 `monthly_cap_used`，真源 = redeem_pro 流水 + UTC 月窗）。
+   final bool redeemedThisMonth;
++
++  /// 可兑换基数（审计流水重放，transfer_in 不计入）；null = 服务端未揭示。
++  final int? redeemableBase;
++
++  /// 服务端单次兑换价（settings 常量）。
++  final int? costPhotons;
++
++  /// 服务端单次兑换 Pro 天数。
++  final int? proDays;
++
++  /// 自然月兑换硬顶次数。
++  final int? monthlyCap;
++
++  /// 下一 UTC 自然月起点（月顶重置边界）。
++  final DateTime? nextWindowAt;
++
++  /// 服务端预判能否兑换（月顶未用 ∧ 基数够 ∧ 余额够）；最终以兑换终态为准。
++  final bool canRedeem;
+ }
+diff --git a/mobile/lib/features/photon/data/repositories/photon_redeem_pro_repository.dart b/mobile/lib/features/photon/data/repositories/photon_redeem_pro_repository.dart
+index f0dcf9f3..75c075fc 100644
+--- a/mobile/lib/features/photon/data/repositories/photon_redeem_pro_repository.dart
++++ b/mobile/lib/features/photon/data/repositories/photon_redeem_pro_repository.dart
+@@ -4,74 +4,41 @@ import 'package:sparkle/core/network/api_endpoints.dart';
+ import 'package:sparkle/core/network/response_parser.dart';
+ import 'package:sparkle/core/services/demo_data_service.dart';
+ import 'package:sparkle/features/photon/data/models/photon_redeem_pro_model.dart';
+-import 'package:sparkle/shared/entities/photon_model.dart';
+ 
+ /// D-COMM-2：光子兑 Pro 仓库。
+ ///
+-/// 读面 = 快照（余额 + 当月兑换资格，autoDispose 重进即重取）；
++/// 读面 = 快照（`GET /photons/redeem-pro/status`，autoDispose 重进即重取）；
+ /// 动作面 = `POST /photons/redeem-pro`（有界终态，业务失败映射为
+ /// [PhotonRedeemProResult]，不向 UI 泄漏原始异常结构——照 RedeemCodeResult 先例）。
+ ///
+-/// 诚实性：可兑换基数不在本仓库做任何本地推算（审计流水重放是引擎侧职责），
+-/// 只随兑换响应由服务端揭示；月顶判定复用引擎同款真源（本通道流水 + UTC 自然月）。
++/// 诚实性（PHOTON-STATUS）：可兑换基数/月顶状态一律来自 status 快照（与引擎
++/// `POST /redeem-pro` 同一 service 判定函数的服务端读取），本仓库不做任何本地
++/// 推算——原客户端 UTC 月窗自算已随 status 端点上线移除，判定交还引擎同源。
+ class PhotonRedeemProRepository {
+   PhotonRedeemProRepository(this._apiClient);
+ 
+   final ApiClient _apiClient;
+ 
+-  /// 本通道月顶判定的流水类型（对齐引擎 `REDEEM_PRO_TX_TYPE`）。
+-  static const String _redeemTxType = 'redeem_pro';
+-
+   Future<PhotonRedeemProOverview> getOverview() async {
+     if (DemoDataService.isDemoMode) {
+-      // 演示态同走诚实口径：零余额 + 未兑换，不造假资产。
++      // 演示态同走诚实口径：空账本真值（零余额/零基数/未兑换），不造假资产。
+       return const PhotonRedeemProOverview(
+         balance: 0,
+         redeemedThisMonth: false,
++        redeemableBase: 0,
+       );
+     }
+ 
+-    final balanceResponse = await _apiClient.get<Map<String, dynamic>>(
+-      ApiEndpoints.photonBalance,
++    // PHOTON-STATUS：一次请求取回余额 + 基数 + 月顶 + 常量（原「余额 + 流水
++    // 过滤」两读合一），数字全部由服务端核算。
++    final response = await _apiClient.get<Map<String, dynamic>>(
++      ApiEndpoints.photonRedeemProStatus,
+     );
+-    final balancePayload = ApiResponseParser.unwrapMap(
+-      balanceResponse.data,
++    final payload = ApiResponseParser.unwrapMap(
++      response.data,
+       action: 'getRedeemOverview',
+     );
+-    final balance = PhotonBalance.fromJson(balancePayload).balance;
+-    final redeemedThisMonth = await _hasRedeemedThisMonth();
+-    return PhotonRedeemProOverview(
+-      balance: balance,
+-      redeemedThisMonth: redeemedThisMonth,
+-    );
+-  }
+-
+-  /// 当月是否已有本通道兑换流水（引擎同款真源：审计流水 + UTC 自然月窗）。
+-  Future<bool> _hasRedeemedThisMonth() async {
+-    final response = await _apiClient.get<Map<String, dynamic>>(
+-      ApiEndpoints.photonTransactions,
+-      queryParameters: <String, dynamic>{
+-        'transaction_type': _redeemTxType,
+-        'limit': 100,
+-        'offset': 0,
+-      },
+-    );
+-    final payload = response.data;
+-    final rows = payload is Map<String, dynamic>
+-        ? (payload['data'] as List<dynamic>? ?? const [])
+-        : const <dynamic>[];
+-    final now = DateTime.now().toUtc();
+-    final monthStart = DateTime.utc(now.year, now.month);
+-    for (final row in rows) {
+-      if (row is! Map<String, dynamic>) continue;
+-      final createdRaw = row['created_at'];
+-      final created =
+-          createdRaw is String ? DateTime.tryParse(createdRaw)?.toUtc() : null;
+-      if (created != null && !created.isBefore(monthStart)) {
+-        return true;
+-      }
+-    }
+-    return false;
++    return PhotonRedeemProOverview.fromStatusJson(payload);
+   }
+ 
+   /// 发起兑换。业务失败（400/409/5xx）映射为有界 [PhotonRedeemProResult]。
+diff --git a/mobile/lib/features/photon/presentation/screens/photon_redeem_pro_screen.dart b/mobile/lib/features/photon/presentation/screens/photon_redeem_pro_screen.dart
+index a6e389a9..b8d52112 100644
+--- a/mobile/lib/features/photon/presentation/screens/photon_redeem_pro_screen.dart
++++ b/mobile/lib/features/photon/presentation/screens/photon_redeem_pro_screen.dart
+@@ -48,6 +48,9 @@ class _PhotonRedeemProScreenState extends ConsumerState<PhotonRedeemProScreen> {
+     if (!mounted) {
+       return;
+     }
++    // 兑换响应后刷新快照（PHOTON-STATUS）：余额/基数/月顶回归服务端真值；
++    // _lastResult 仍持本次终态做即时反馈，刷新到达后两源收敛一致。
++    unawaited(ref.refresh(photonRedeemProOverviewProvider.future));
+     setState(() {
+       _redeeming = false;
+       _lastResult = result;
+@@ -119,16 +122,24 @@ class _PhotonRedeemProScreenState extends ConsumerState<PhotonRedeemProScreen> {
+               ),
+             ),
+             data: (PhotonRedeemProOverview overview) {
+-              // 服务端揭示值优先，展示常量只作动作前兜底。
++              // 服务端真数优先：status 快照（PHOTON-STATUS）→ 兑换响应揭示值 →
++              // 展示常量只作最后兜底。
+               final balance = _lastResult?.balanceAfter ?? overview.balance;
+-              final cost = _lastResult?.costPhotons ?? photonRedeemProDisplayCost;
+-              final days = _lastResult?.proDays ?? photonRedeemProDisplayDays;
+-              final revealedBase = _lastResult?.redeemableBase;
++              final cost = _lastResult?.costPhotons ??
++                  overview.costPhotons ??
++                  photonRedeemProDisplayCost;
++              final days =
++                  _lastResult?.proDays ?? overview.proDays ?? photonRedeemProDisplayDays;
++              // 基数真源：status 快照先行（动作前即有真数），兑换响应揭示值兜底。
++              final revealedBase = overview.redeemableBase ?? _lastResult?.redeemableBase;
+               final capped = overview.redeemedThisMonth ||
+                   _lastResult?.status == PhotonRedeemProStatus.monthlyCapReached ||
+                   _lastResult?.status == PhotonRedeemProStatus.ok;
+-              final insufficientBase =
+-                  _lastResult?.status == PhotonRedeemProStatus.insufficientBase;
++              // 不足预判与引擎拒绝顺序同序（基数 → 余额）：动作前即诚实呈现，
++              // 不再等兑换失败后才揭示。
++              final insufficientBase = _lastResult?.status ==
++                      PhotonRedeemProStatus.insufficientBase ||
++                  (revealedBase != null && revealedBase < cost);
+               final insufficientBalance = balance < cost;
+               final canRedeem =
+                   !_redeeming && !capped && !insufficientBase && !insufficientBalance;
+diff --git a/mobile/test/features/photon/presentation/screens/photon_redeem_pro_screen_test.dart b/mobile/test/features/photon/presentation/screens/photon_redeem_pro_screen_test.dart
+index 8889231b..04090f47 100644
+--- a/mobile/test/features/photon/presentation/screens/photon_redeem_pro_screen_test.dart
++++ b/mobile/test/features/photon/presentation/screens/photon_redeem_pro_screen_test.dart
+@@ -75,13 +75,54 @@ void main() {
+     });
+   });
+ 
+-  group('PhotonRedeemProScreen (D-COMM-2)', () {
+-    testWidgets('redeemable state: two numbers apart, confirm dialog, success '
+-        'feedback flips card to capped', (tester) async {
++  group('PhotonRedeemProOverview status snapshot (PHOTON-STATUS 契约钉死)', () {
++    test('status snapshot parses bounded server fields, no local math', () {
++      final overview = PhotonRedeemProOverview.fromStatusJson(const {
++        'user_id': 'u1',
++        'redeemable_base': 5200,
++        'balance': 7200,
++        'cost_photons': 3000,
++        'pro_days': 7,
++        'monthly_cap': 1,
++        'redeems_this_month': 0,
++        'monthly_cap_used': false,
++        'monthly_cap_redeemed_at': null,
++        'next_window_at': '2026-10-01T00:00:00',
++        'can_redeem': true,
++      });
++      expect(overview.balance, 7200);
++      expect(overview.redeemableBase, 5200); // 基数 ≠ 余额，两数诚实并列
++      expect(overview.redeemedThisMonth, isFalse);
++      expect(overview.costPhotons, 3000);
++      expect(overview.proDays, 7);
++      expect(overview.monthlyCap, 1);
++      expect(overview.nextWindowAt, DateTime(2026, 10)); // 下月 UTC 月初
++      expect(overview.canRedeem, isTrue);
++    });
++
++    test('capped snapshot flips redeemedThisMonth from server truth', () {
++      final overview = PhotonRedeemProOverview.fromStatusJson(const {
++        'redeemable_base': 2200,
++        'balance': 2200,
++        'monthly_cap_used': true,
++        'monthly_cap_redeemed_at': '2026-09-02T10:00:00',
++        'can_redeem': false,
++      });
++      expect(overview.redeemedThisMonth, isTrue);
++      expect(overview.canRedeem, isFalse);
++    });
++  });
++
++  group('PhotonRedeemProScreen (D-COMM-2 + PHOTON-STATUS)', () {
++    testWidgets('real base from status snapshot: two numbers apart, confirm '
++        'dialog, success feedback flips card to capped', (tester) async {
+       final repository = _FakeRedeemRepository(
+         overview: const PhotonRedeemProOverview(
+           balance: 5200,
+           redeemedThisMonth: false,
++          redeemableBase: 5200,
++          costPhotons: 3000,
++          proDays: 7,
+         ),
+         result: PhotonRedeemProResult(
+           status: PhotonRedeemProStatus.ok,
+@@ -94,13 +135,29 @@ void main() {
+       );
+       await _pumpRedeemPro(tester, repository: repository);
+ 
+-      // 必达项①：余额与基数两数分开；基数未揭示前不产数字（诚实展示）。
+-      expect(find.text('5200'), findsOneWidget);
+-      expect(find.text('由服务端核算，兑换时揭示'), findsOneWidget);
++      // 必达项①：余额与基数两数分开——动作前即由 status 快照给出真数
++      // （PHOTON-STATUS：不再是「由服务端核算」占位）。
++      expect(
++        tester
++            .widget<Text>(
++              find.byKey(const ValueKey('photon-redeem-pro-balance-value')),
++            )
++            .data,
++        '5200',
++      );
++      expect(
++        tester
++            .widget<Text>(
++              find.byKey(const ValueKey('photon-redeem-pro-base-value')),
++            )
++            .data,
++        '5200',
++      );
++      expect(find.text('由服务端核算，兑换时揭示'), findsNothing);
+       expect(find.text('仅合同/首胜/成就等学习所得计入基数，转账收入不计入'),
+           findsOneWidget,);
+ 
+-      // 必达项②：三要素 + 可兑按钮。
++      // 必达项②：三要素（服务端常量真数）+ 可兑按钮。
+       expect(find.text('3000'), findsOneWidget);
+       expect(find.text('7 天'), findsOneWidget);
+       expect(find.text('尚未使用'), findsOneWidget);
+@@ -122,7 +179,8 @@ void main() {
+       expect(find.textContaining('3000 光子'), findsOneWidget);
+       expect(find.textContaining('不退还'), findsOneWidget);
+ 
+-      // 确认 → 服务端终态 → 成功反馈 + 卡面翻转为已兑换。
++      // 确认 → 服务端终态 → 成功反馈 + 卡面翻转为已兑换 + 快照刷新。
++      final overviewCallsBefore = repository.overviewCallCount;
+       await tester.tap(
+           find.byKey(const ValueKey('photon-redeem-pro-confirm-button')),);
+       await tester.pump();
+@@ -138,14 +196,19 @@ void main() {
+             .disabled,
+         isTrue,
+       );
++      // PHOTON-STATUS：兑换响应后刷新快照（重取服务端真值）。
++      expect(repository.overviewCallCount, greaterThan(overviewCallsBefore));
+     });
+ 
+-    testWidgets('insufficient base revealed by server: base number, transfer '
+-        'note and disabled button', (tester) async {
++    testWidgets('base below cost revealed pre-action by status: transfer note '
++        'and disabled button without any redeem attempt', (tester) async {
+       final repository = _FakeRedeemRepository(
+         overview: const PhotonRedeemProOverview(
+           balance: 5200,
+           redeemedThisMonth: false,
++          redeemableBase: 1200, // 转账撑起余额，基数只有 1200
++          costPhotons: 3000,
++          proDays: 7,
+         ),
+         result: const PhotonRedeemProResult(
+           status: PhotonRedeemProStatus.insufficientBase,
+@@ -156,15 +219,8 @@ void main() {
+       );
+       await _pumpRedeemPro(tester, repository: repository);
+ 
+-      await tester.tap(
+-          find.byKey(const ValueKey('photon-redeem-pro-action-button')),);
+-      await tester.pump();
+-      await tester.tap(
+-          find.byKey(const ValueKey('photon-redeem-pro-confirm-button')),);
+-      await tester.pump();
+-      await tester.pump(const Duration(milliseconds: 400));
+-
+-      // 服务端揭示基数 1200 < 余额 5200：诚实区分，差额注明转账来源不可兑。
++      // 动作前即诚实呈现（PHOTON-STATUS 核心增量）：基数真数 + 差额转账注明 +
++      // 不可兑按钮，零兑换动作。
+       expect(find.text('1200'), findsOneWidget);
+       expect(find.text('其余 4000 光子来自转账等来源，不计入可兑换基数'),
+           findsOneWidget,);
+@@ -177,6 +233,13 @@ void main() {
+             .disabled,
+         isTrue,
+       );
++      expect(repository.redeemCallCount, 0);
++
++      // 服务端动作终态与预判同判（同源）：基数不足揭示值不变。
++      await tester.tap(
++          find.byKey(const ValueKey('photon-redeem-pro-action-button')),);
++      await tester.pump();
++      expect(find.byType(AlertDialog), findsNothing); // disabled 按钮不触发对话框
+     });
+ 
+     testWidgets('monthly cap reached: next-month note, button disabled, no '
+@@ -185,6 +248,9 @@ void main() {
+         overview: const PhotonRedeemProOverview(
+           balance: 5200,
+           redeemedThisMonth: true,
++          redeemableBase: 5200,
++          costPhotons: 3000,
++          proDays: 7,
+         ),
+         result: const PhotonRedeemProResult(
+           status: PhotonRedeemProStatus.error,
+@@ -192,6 +258,7 @@ void main() {
+       );
+       await _pumpRedeemPro(tester, repository: repository);
+ 
++      // 月顶状态真源 = 服务端（status 快照 monthly_cap_used → redeemedThisMonth）。
+       expect(find.text('本月已兑换，下月 1 日起可再兑'), findsOneWidget);
+       final button = tester.widget<SparkleButton>(
+         find.byKey(const ValueKey('photon-redeem-pro-action-button')),
+@@ -205,12 +272,16 @@ void main() {
+       expect(repository.redeemCallCount, 0);
+     });
+ 
+-    testWidgets('balance below cost disables with honest note',
++    testWidgets('base at cost but balance below cost: honest balance note',
+         (tester) async {
++      // 学得攒够基数、商城花掉余额：基数够（不误报基数不足）、余额不足如实提示。
+       final repository = _FakeRedeemRepository(
+         overview: const PhotonRedeemProOverview(
+           balance: 500,
+           redeemedThisMonth: false,
++          redeemableBase: 3000,
++          costPhotons: 3000,
++          proDays: 7,
+         ),
+         result: const PhotonRedeemProResult(
+           status: PhotonRedeemProStatus.error,
+@@ -220,6 +291,7 @@ void main() {
+ 
+       expect(find.text('500'), findsOneWidget);
+       expect(find.text('光子余额不足'), findsOneWidget);
++      expect(find.textContaining('可兑换基数不足'), findsNothing);
+       expect(
+         tester
+             .widget<SparkleButton>(
+@@ -230,12 +302,34 @@ void main() {
+       );
+     });
+ 
++    testWidgets('status without base field falls back to honest placeholder',
++        (tester) async {
++      // 降级兜底：status 未携带基数（老引擎/字段缺失）→ 不猜数，占位诚实空态。
++      final repository = _FakeRedeemRepository(
++        overview: const PhotonRedeemProOverview(
++          balance: 5200,
++          redeemedThisMonth: false,
++        ),
++        result: const PhotonRedeemProResult(
++          status: PhotonRedeemProStatus.error,
++        ),
++      );
++      await _pumpRedeemPro(tester, repository: repository);
++
++      expect(find.text('由服务端核算，兑换时揭示'), findsOneWidget);
++      expect(find.text('其余 4000 光子来自转账等来源，不计入可兑换基数'),
++          findsNothing,);
++    });
++
+     testWidgets('snapshot failure surfaces honest error with retry',
+         (tester) async {
+       final repository = _FakeRedeemRepository(
+         overview: const PhotonRedeemProOverview(
+           balance: 5200,
+           redeemedThisMonth: false,
++          redeemableBase: 5200,
++          costPhotons: 3000,
++          proDays: 7,
+         ),
+         result: const PhotonRedeemProResult(
+           status: PhotonRedeemProStatus.error,
+@@ -273,6 +367,9 @@ void main() {
+           overview: const PhotonRedeemProOverview(
+             balance: 5200,
+             redeemedThisMonth: false,
++            redeemableBase: 5200,
++            costPhotons: 3000,
++            proDays: 7,
+           ),
+           result: const PhotonRedeemProResult(
+             status: PhotonRedeemProStatus.error,
+@@ -340,9 +437,11 @@ class _FakeRedeemRepository extends PhotonRedeemProRepository {
+   PhotonRedeemProResult result;
+   Exception? failure;
+   int redeemCallCount = 0;
++  int overviewCallCount = 0;
+ 
+   @override
+   Future<PhotonRedeemProOverview> getOverview() async {
++    overviewCallCount++;
+     final currentFailure = failure;
+     if (currentFailure != null) {
+       throw currentFailure;
+diff --git a/backend/tests/unit/test_photon_redeem_pro_status.py b/backend/tests/unit/test_photon_redeem_pro_status.py
+new file mode 100644
+index 00000000..8c416727
+--- /dev/null
++++ b/backend/tests/unit/test_photon_redeem_pro_status.py
+@@ -0,0 +1,396 @@
++"""PHOTON-STATUS · 兑换前状态快照（GET /photons/redeem-pro/status）——红→绿测试面。
++
++任务卡红线逐条：
++1. **同源一致性**（红线）：同一用户 ``status.redeemable_base`` == 后续兑换响应
++   揭示值——status 复用 ``get_redeemable_base``/``_count_redeems_in_month``
++   同一函数，绝无第二套算法；服务端隔离层（service 函数与 HTTP 面分别断言）；
++2. **诚实区分**：``redeemable_base`` 与 ``balance`` 并列——transfer_in 场景
++   balance > base（转账不可兑），商城消费场景 base > balance（学得未花光）；
++3. **月顶状态翻转**：兑换前 ``monthly_cap_used=false`` → 兑换后 ``true`` +
++   当月兑换时间 + ``next_window_at`` = 下月 UTC 月初；
++4. **常量面**：cost/days/cap 随 settings 回显（【待产品校准】面可调）；
++5. **只读承诺**：status 调用零状态变更（余额/流水/权益三不动）；
++6. **API 面**：响应契约 + 零光子新用户诚实零值 + 网关同路径形状（catch-all 直透）。
++"""
++
++from __future__ import annotations
++
++from datetime import datetime, timedelta
++from uuid import uuid4
++
++import pytest_asyncio
++from fastapi import FastAPI
++from fastapi.testclient import TestClient
++from sqlalchemy import func, select
++from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
++from sqlalchemy.pool import NullPool
++
++from app.api.deps import get_current_user
++from app.config import settings
++from app.core.time_utils import utcnow
++from app.db.session import Base, get_db
++from app.models.shop import PhotonTransactionHistory
++from app.models.user import User
++from app.services import photon_redeem_service
++from app.services.photon_redeem_service import (
++    get_redeem_status,
++    redeem_pro,
++)
++from app.services.photon_service import PhotonService, PhotonTransactionType
++
++COST = 3000
++DAYS = 7
++
++
++# ---------------------------------------------------------------------------
++# 基础设施：隔离 sqlite（照 D-COMM-2 测试面同款）
++# ---------------------------------------------------------------------------
++@pytest_asyncio.fixture
++async def db_engine(tmp_path):
++    engine = create_async_engine(
++        f"sqlite+aiosqlite:///{tmp_path / 'photon_status_test.db'}",
++        connect_args={"check_same_thread": False, "timeout": 30},
++        poolclass=NullPool,
++    )
++    async with engine.begin() as conn:
++        await conn.run_sync(Base.metadata.create_all)
++    yield engine
++    await engine.dispose()
++
++
++@pytest_asyncio.fixture
++async def db(db_engine):
++    maker = async_sessionmaker(db_engine, class_=AsyncSession, expire_on_commit=False)
++    async with maker() as session:
++        yield session
++
++
++async def _make_user(db: AsyncSession) -> User:
++    user = User(
++        username=f"u-{uuid4().hex[:8]}",
++        email=f"{uuid4().hex[:8]}@example.com",
++        hashed_password="hashed",
++        entitlement="free",
++        photon_balance=0,
++    )
++    db.add(user)
++    await db.commit()
++    await db.refresh(user)
++    return user
++
++
++async def _grant_ledger(
++    db: AsyncSession,
++    user: User,
++    amount: int,
++    tx_type: str = PhotonTransactionType.GRANT_ACHIEVEMENT,
++) -> None:
++    """生产发放面同款入账（审计流水 + 余额）。"""
++    await PhotonService(db).grant_photons(
++        user_id=str(user.id),
++        amount=amount,
++        source=f"test:{tx_type}",
++        transaction_type=tx_type,
++        record_history=True,
++    )
++
++
++async def _ledger_row_count(db: AsyncSession, user: User) -> int:
++    return int(
++        (
++            await db.execute(
++                select(func.count(PhotonTransactionHistory.id)).where(
++                    PhotonTransactionHistory.user_id == user.id
++                )
++            )
++        ).scalar_one()
++    )
++
++
++# ---------------------------------------------------------------------------
++# 1. 同源一致性（红线）：status.redeemable_base == 后续兑换响应揭示值
++# ---------------------------------------------------------------------------
++async def test_status_base_equals_redeem_outcome_reveal(db):
++    """service 层同源：快照基数与兑换终态揭示的基数同值同源。"""
++    user = await _make_user(db)
++    await _grant_ledger(db, user, COST + 2200)
++
++    snapshot = await get_redeem_status(db, user_id=str(user.id))
++    assert snapshot.redeemable_base == COST + 2200
++
++    outcome = await redeem_pro(db, user_id=str(user.id))
++    await db.commit()
++    assert outcome.status == "ok"
++    # 红线断言：status 预示值 == 兑换响应揭示值（同一重放函数，绝无第二套算法）
++    assert snapshot.redeemable_base == outcome.redeemable_base
++
++
++async def test_status_base_transfer_income_excluded_same_as_redeem(db):
++    """transfer_in 计入余额不计入基数：status 的两数区分与兑换拒绝面同源一致。"""
++    alice = await _make_user(db)
++    bob = await _make_user(db)
++    await _grant_ledger(db, alice, COST)
++    await PhotonService(db).transfer_photons(
++        from_user_id=str(alice.id), to_user_id=str(bob.id), amount=COST, reason="test"
++    )
++    await db.commit()
++
++    snapshot = await get_redeem_status(db, user_id=str(bob.id))
++    assert snapshot.balance == COST  # 混桶余额含转账
++    assert snapshot.redeemable_base == 0  # 重放口径排除 transfer_in
++    assert snapshot.can_redeem is False
++
++    outcome = await redeem_pro(db, user_id=str(bob.id))
++    assert outcome.status == "insufficient_base"  # 兑换路径同判：基数不足
++
++
++async def test_api_status_base_equals_redeem_response_reveal(db_engine, api_harness):
++    """HTTP 面同源：GET status 的基数 == 随后 POST redeem 响应揭示的基数。"""
++    maker = async_sessionmaker(db_engine, class_=AsyncSession, expire_on_commit=False)
++    async with maker() as setup:
++        user = await _make_user(setup)
++        await _grant_ledger(setup, user, 5200)
++
++    client = await api_harness(user)
++
++    status_payload = client.get("/photons/redeem-pro/status").json()["data"]
++    assert status_payload["redeemable_base"] == 5200
++
++    redeem_payload = client.post("/photons/redeem-pro").json()
++    assert redeem_payload["status"] == "ok"
++    assert redeem_payload["data"]["redeemable_base"] == status_payload["redeemable_base"]
++    # 余额同源：兑换响应 balance_after == status 快照 balance − cost
++    assert (
++        redeem_payload["data"]["balance_after"]
++        == status_payload["balance"] - status_payload["cost_photons"]
++    )
++
++
++# ---------------------------------------------------------------------------
++# 2. 诚实区分：base 与 balance 并列（两方向缝隙都照实呈现）
++# ---------------------------------------------------------------------------
++async def test_status_base_above_balance_after_shop_spend(db):
++    """学得未花光：基数 > 余额（商城消费减余额不减基数）。"""
++    user = await _make_user(db)
++    await _grant_ledger(db, user, COST)
++    await PhotonService(db).deduct_photons(
++        user_id=str(user.id),
++        amount=500,
++        reason="shop:purchase",
++        transaction_type="purchase",
++        record_history=True,
++    )
++    await db.commit()
++
++    snapshot = await get_redeem_status(db, user_id=str(user.id))
++    assert snapshot.redeemable_base == COST
++    assert snapshot.balance == COST - 500
++    assert snapshot.redeemable_base > snapshot.balance  # 诚实区分：两数不同
++
++
++# ---------------------------------------------------------------------------
++# 3. 月顶状态翻转 + 月窗边界
++# ---------------------------------------------------------------------------
++async def test_monthly_cap_flips_after_redeem_with_timestamp_and_next_window(db):
++    user = await _make_user(db)
++    await _grant_ledger(db, user, COST)
++
++    before = await get_redeem_status(db, user_id=str(user.id))
++    assert before.monthly_cap_used is False
++    assert before.redeems_this_month == 0
++    assert before.monthly_cap_redeemed_at is None
++    assert before.can_redeem is True
++
++    outcome = await redeem_pro(db, user_id=str(user.id))
++    await db.commit()
++    assert outcome.status == "ok"
++
++    after = await get_redeem_status(db, user_id=str(user.id))
++    assert after.monthly_cap_used is True  # 状态翻转
++    assert after.redeems_this_month == 1
++    assert after.monthly_cap_redeemed_at is not None
++    assert after.monthly_cap_redeemed_at >= photon_redeem_service._month_start(utcnow())
++    assert after.can_redeem is False
++    # 时间戳即当月本通道流水时间（同真源交叉验证）
++    redeem_row = (
++        await db.execute(
++            select(PhotonTransactionHistory.created_at).where(
++                PhotonTransactionHistory.user_id == user.id,
++                PhotonTransactionHistory.transaction_type == "redeem_pro",
++            )
++        )
++    ).scalar_one()
++    assert after.monthly_cap_redeemed_at == redeem_row
++
++
++async def test_next_window_at_is_first_day_of_next_utc_month(db):
++    user = await _make_user(db)
++    snapshot = await get_redeem_status(db, user_id=str(user.id))
++
++    now = utcnow()
++    expected = photon_redeem_service._next_month_start(now)
++    assert snapshot.next_window_at == expected
++    assert snapshot.next_window_at > now
++    # 边界形状：月初 0 点（naive UTC）
++    assert snapshot.next_window_at.day == 1
++    assert snapshot.next_window_at.hour == 0
++    # 与当月窗衔接：next_window_at 恰在当月流水窗（>= month_start）之外的下月
++    assert snapshot.next_window_at.month != now.month or snapshot.next_window_at.year > now.year
++
++
++async def test_last_month_redeem_does_not_flip_current_cap_status(db):
++    """上月流水不翻转当月状态（月窗只看当月，与兑换路径同判）。"""
++    user = await _make_user(db)
++    await _grant_ledger(db, user, COST)
++    last_month = utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0) - timedelta(
++        days=1
++    )
++    db.add(
++        PhotonTransactionHistory(
++            id=str(uuid4()),
++            user_id=user.id,
++            transaction_type="redeem_pro",
++            amount=-COST,
++            balance_before=COST,
++            balance_after=0,
++            source="photon_redeem_pro",
++            created_at=last_month,
++        )
++    )
++    await db.commit()
++
++    snapshot = await get_redeem_status(db, user_id=str(user.id))
++    assert snapshot.monthly_cap_used is False
++    assert snapshot.monthly_cap_redeemed_at is None  # 上月时间不冒充当月
++    assert snapshot.can_redeem is True
++
++
++# ---------------------------------------------------------------------------
++# 4. 常量面 + 只读承诺 + 零光子诚实零值
++# ---------------------------------------------------------------------------
++async def test_status_echoes_settings_constants(db, monkeypatch):
++    monkeypatch.setattr(settings, "PHOTON_REDEEM_PRO_COST", 4500)
++    monkeypatch.setattr(settings, "PHOTON_REDEEM_PRO_DAYS", 5)
++    monkeypatch.setattr(settings, "PHOTON_REDEEM_PRO_MONTHLY_CAP", 2)
++
++    user = await _make_user(db)
++    snapshot = await get_redeem_status(db, user_id=str(user.id))
++    assert snapshot.cost_photons == 4500
++    assert snapshot.pro_days == 5
++    assert snapshot.monthly_cap == 2
++
++
++async def test_status_is_read_only_zero_state_change(db):
++    """只读承诺：status 前后余额/流水数/权益三不动。"""
++    user = await _make_user(db)
++    await _grant_ledger(db, user, COST)
++    await db.commit()
++
++    rows_before = await _ledger_row_count(db, user)
++    balance_before = user.photon_balance
++    entitlement_before = user.entitlement
++
++    await get_redeem_status(db, user_id=str(user.id))
++    await db.commit()
++
++    await db.refresh(user)
++    assert user.photon_balance == balance_before
++    assert user.entitlement == entitlement_before
++    assert await _ledger_row_count(db, user) == rows_before
++
++
++async def test_zero_photon_new_user_honest_zeros(db):
++    user = await _make_user(db)
++    snapshot = await get_redeem_status(db, user_id=str(user.id))
++    assert snapshot.redeemable_base == 0
++    assert snapshot.balance == 0
++    assert snapshot.monthly_cap_used is False
++    assert snapshot.can_redeem is False  # 不送任何许可（宁降不升 fail-safe 同向）
++
++
++# ---------------------------------------------------------------------------
++# 5. API 面：响应契约 + 月顶经 API 翻转
++# ---------------------------------------------------------------------------
++@pytest_asyncio.fixture
++async def api_harness(db_engine):
++    maker = async_sessionmaker(db_engine, class_=AsyncSession, expire_on_commit=False)
++
++    async def _build(current_user: User) -> TestClient:
++        from app.api.v1.photons import router as photons_router
++
++        app = FastAPI()
++        app.include_router(photons_router, prefix="/photons")
++
++        async def _override_db():
++            async with maker() as session:
++                try:
++                    yield session
++                    await session.commit()
++                except Exception:
++                    await session.rollback()
++                    raise
++
++        app.dependency_overrides[get_db] = _override_db
++        app.dependency_overrides[get_current_user] = lambda: current_user
++        return TestClient(app)
++
++    return _build
++
++
++async def test_api_status_contract_and_cap_flip(db_engine, api_harness):
++    maker = async_sessionmaker(db_engine, class_=AsyncSession, expire_on_commit=False)
++    async with maker() as setup:
++        user = await _make_user(setup)
++        await _grant_ledger(setup, user, COST)
++
++    client = await api_harness(user)
++
++    resp = client.get("/photons/redeem-pro/status")
++    assert resp.status_code == 200, resp.text
++    data = resp.json()["data"]
++    # 契约键全量（PHOTON-STATUS 卡响应面）
++    assert set(data) == {
++        "user_id",
++        "redeemable_base",
++        "balance",
++        "cost_photons",
++        "pro_days",
++        "monthly_cap",
++        "redeems_this_month",
++        "monthly_cap_used",
++        "monthly_cap_redeemed_at",
++        "next_window_at",
++        "can_redeem",
++    }
++    assert data["redeemable_base"] == COST
++    assert data["balance"] == COST
++    assert data["cost_photons"] == COST
++    assert data["pro_days"] == DAYS
++    assert data["monthly_cap"] == 1
++    assert data["monthly_cap_used"] is False
++    assert data["monthly_cap_redeemed_at"] is None
++    assert data["can_redeem"] is True
++    datetime.fromisoformat(data["next_window_at"])  # 可解析时间戳
++
++    # 月顶经 API 翻转：兑换后 status 如实呈现 used + 时间
++    assert client.post("/photons/redeem-pro").status_code == 200
++    after = client.get("/photons/redeem-pro/status").json()["data"]
++    assert after["monthly_cap_used"] is True
++    assert after["redeems_this_month"] == 1
++    assert after["monthly_cap_redeemed_at"] is not None
++    datetime.fromisoformat(after["monthly_cap_redeemed_at"])
++    assert after["can_redeem"] is False
++    assert after["balance"] == 0  # 兑换后真值刷新
++
++
++async def test_api_status_new_user_honest_zero_contract(db_engine, api_harness):
++    maker = async_sessionmaker(db_engine, class_=AsyncSession, expire_on_commit=False)
++    async with maker() as setup:
++        user = await _make_user(setup)
++
++    client = await api_harness(user)
++    data = client.get("/photons/redeem-pro/status").json()["data"]
++    assert data["redeemable_base"] == 0
++    assert data["balance"] == 0
++    assert data["monthly_cap_used"] is False
++    assert data["can_redeem"] is False

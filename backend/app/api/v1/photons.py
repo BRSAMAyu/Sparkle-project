@@ -23,7 +23,6 @@ from app.services.photon_redeem_service import (
     REDEEM_PRO_INSUFFICIENT_BALANCE,
     REDEEM_PRO_INSUFFICIENT_BASE,
     REDEEM_PRO_MONTHLY_CAP,
-    REDEEM_PRO_OK,
 )
 from app.services.photon_service import get_photon_service
 
@@ -303,5 +302,53 @@ async def redeem_photons_for_pro(
                 if outcome.entitlement_expires_at
                 else None
             ),
+        },
+    }
+
+
+# route-tier: authed
+@router.get("/redeem-pro/status", response_model=dict[str, Any])
+async def get_redeem_pro_status(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    光子兑换 Pro 状态快照（PHOTON-STATUS：兑换前让用户看到真数）
+
+    与 POST /photons/redeem-pro 完全同源（同一 service 判定函数，绝无第二套算法）：
+    - redeemable_base：审计流水重放（get_redeemable_base，transfer_in 不计入）；
+    - balance：混桶总余额（与 GET /photons/balance 同源）——两数并列诚实区分；
+    - monthly_cap_used + monthly_cap_redeemed_at：redeem_pro 流水 + UTC 月窗
+      （审计即状态，与兑换路径同一判定函数）；
+    - cost_photons/pro_days/monthly_cap：settings 常量；
+    - next_window_at：下一 UTC 自然月起点（月顶重置边界）；
+    - can_redeem：服务端预判（与兑换拒绝顺序一致），最终以兑换响应终态为准。
+    """
+    snapshot = await photon_redeem_service.get_redeem_status(
+        db, user_id=str(current_user.id)
+    )
+    return {
+        "success": True,
+        "status": "ok",
+        "data": {
+            "user_id": str(current_user.id),
+            "redeemable_base": snapshot.redeemable_base,
+            "balance": snapshot.balance,
+            "cost_photons": snapshot.cost_photons,
+            "pro_days": snapshot.pro_days,
+            "monthly_cap": snapshot.monthly_cap,
+            "redeems_this_month": snapshot.redeems_this_month,
+            "monthly_cap_used": snapshot.monthly_cap_used,
+            "monthly_cap_redeemed_at": (
+                snapshot.monthly_cap_redeemed_at.isoformat()
+                if snapshot.monthly_cap_redeemed_at
+                else None
+            ),
+            "next_window_at": (
+                snapshot.next_window_at.isoformat()
+                if snapshot.next_window_at
+                else None
+            ),
+            "can_redeem": snapshot.can_redeem,
         },
     }

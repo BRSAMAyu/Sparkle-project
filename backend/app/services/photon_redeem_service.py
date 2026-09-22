@@ -161,6 +161,97 @@ async def _count_redeems_in_month(
     )
 
 
+def _next_month_start(now: datetime) -> datetime:
+    """下一个 UTC 自然月起点（月窗重置边界；naive，与 created_at 存储形一致）。"""
+    if now.month == 12:
+        return now.replace(
+            year=now.year + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0
+        )
+    return now.replace(month=now.month + 1, day=1, hour=0, minute=0, second=0, microsecond=0)
+
+
+async def _latest_redeem_at_in_month(
+    db: AsyncSession, *, user_id: str, month_start: datetime
+) -> datetime | None:
+    """当月最近一次本通道兑换时间（同真源：``redeem_pro`` 流水 + 同款 UTC 月窗过滤）。
+
+    仅作展示面时间戳；月顶**判定**不走本函数，一律走 ``_count_redeems_in_month``
+    （与兑换路径同一函数），杜绝判定/展示双算法漂移。
+    """
+    row = await db.execute(
+        select(PhotonTransactionHistory.created_at)
+        .where(
+            PhotonTransactionHistory.user_id == user_id,
+            PhotonTransactionHistory.transaction_type == REDEEM_PRO_TX_TYPE,
+            PhotonTransactionHistory.created_at >= month_start,
+        )
+        .order_by(PhotonTransactionHistory.created_at.desc())
+        .limit(1)
+    )
+    return row.scalar_one_or_none()
+
+
+@dataclass
+class PhotonRedeemStatusSnapshot:
+    """兑换前状态快照（PHOTON-STATUS：让用户在决定前看到真数）。
+
+    单一真源承诺：基数复用 ``get_redeemable_base``（与 ``redeem_pro`` 校验同一
+    函数，绝无第二套算法）；月顶判定复用 ``_count_redeems_in_month``；金额/时长/
+    上限复用 settings 常量函数。``redeemable_base``（可兑换口径）与 ``balance``
+    （混桶总余额）并列返回、诚实区分。
+    """
+
+    redeemable_base: int
+    balance: int
+    cost_photons: int
+    pro_days: int
+    monthly_cap: int
+    redeems_this_month: int
+    monthly_cap_used: bool
+    monthly_cap_redeemed_at: datetime | None = None
+    next_window_at: datetime | None = None
+    can_redeem: bool = False
+
+
+async def get_redeem_status(
+    db: AsyncSession, *, user_id: str
+) -> PhotonRedeemStatusSnapshot:
+    """兑换前状态快照：基数 + 余额 + 月顶状态 + 常量 + 下月窗边界。
+
+    纯只读（零状态变更、零写流水）；所有判定与 ``redeem_pro`` 快速失败面同源。
+    ``can_redeem`` 为服务端预判（月顶未用 ∧ 基数够 ∧ 余额够），与兑换路径的
+    拒绝顺序（月顶 → 基数 → 余额）一致，仅作动作前展示锚点——最终以兑换
+    响应终态为准（并发窗口下快照可能过期，诚实边界照实声明）。
+    """
+    now = utcnow()
+    month_start = _month_start(now)
+    cost = redeem_pro_cost()
+    days = redeem_pro_days()
+    cap = redeem_pro_monthly_cap()
+
+    base = await get_redeemable_base(db, user_id=user_id)
+    balance = await PhotonService(db).get_balance(user_id)
+    redeems_this_month = await _count_redeems_in_month(
+        db, user_id=user_id, month_start=month_start
+    )
+    capped = redeems_this_month >= cap
+
+    return PhotonRedeemStatusSnapshot(
+        redeemable_base=base,
+        balance=balance,
+        cost_photons=cost,
+        pro_days=days,
+        monthly_cap=cap,
+        redeems_this_month=redeems_this_month,
+        monthly_cap_used=capped,
+        monthly_cap_redeemed_at=await _latest_redeem_at_in_month(
+            db, user_id=user_id, month_start=month_start
+        ),
+        next_window_at=_next_month_start(now),
+        can_redeem=not capped and base >= cost and balance >= cost,
+    )
+
+
 async def redeem_pro(db: AsyncSession, *, user_id: str) -> PhotonRedeemOutcome:
     """光子兑换 Pro：校验月顶/基数 → 原子扣减 → 复查月顶 → 写流水 → 授予 Pro。
 

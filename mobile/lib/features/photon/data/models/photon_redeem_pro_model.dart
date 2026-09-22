@@ -6,8 +6,9 @@
 /// redeemable_base}`。手写解析（一次性动作契约，对齐 RedeemCodeResult /
 /// PlanConfirmResult 手写风格，不进 build_runner）。
 ///
-/// 诚实性口径：可兑换基数（redeemable_base）只能来自服务端响应（审计流水重放，
-/// transfer_in 排除），本模型不做任何本地推算；未揭示时不产出该数字。
+/// 诚实性口径：可兑换基数（redeemable_base）只能来自服务端（审计流水重放，
+/// transfer_in 排除）——动作前经 `GET /photons/redeem-pro/status` 快照揭示，
+/// 兑换响应再次带回校验；本模型不做任何本地推算，未揭示时不产出该数字。
 library;
 
 import 'package:dio/dio.dart';
@@ -115,17 +116,64 @@ class PhotonRedeemProResult {
   bool get isOk => status == PhotonRedeemProStatus.ok;
 }
 
-/// 兑换面总览快照：混桶余额 + 当月兑换资格。
+/// 兑换面总览快照：混桶余额 + 可兑换基数 + 当月兑换资格（PHOTON-STATUS 真数）。
 ///
-/// 月顶判定真源与引擎一致 = 审计流水（`GET /photons/transactions` 按
-/// `transaction_type=redeem_pro` 服务端过滤，客户端只做「是否落在本 UTC 月」
-/// 的窗口判定，不推算基数）。
+/// 数据源 = `GET /photons/redeem-pro/status`（与引擎 `POST /redeem-pro` 同一
+/// service 判定函数：基数审计流水重放、月顶流水 + UTC 月窗、settings 常量）——
+/// 客户端零本地推算，月顶窗口判定也交还引擎（原客户端 UTC 月窗自算已移除，
+/// 杜绝双端漂移）。`redeemableBase`（可兑换口径）与 `balance`（混桶总余额）
+/// 并列诚实区分。
 class PhotonRedeemProOverview {
   const PhotonRedeemProOverview({
     required this.balance,
     required this.redeemedThisMonth,
+    this.redeemableBase,
+    this.costPhotons,
+    this.proDays,
+    this.monthlyCap,
+    this.nextWindowAt,
+    this.canRedeem = false,
   });
 
+  /// status 响应（`{success, status, data:{...}}` 的 data）→ 快照。
+  ///
+  /// 手写解析（对齐 [PhotonRedeemProResult] 风格）；字段缺失不猜——
+  /// `redeemableBase` 恒 nullable，缺失时 UI 走「由服务端核算」诚实空态。
+  factory PhotonRedeemProOverview.fromStatusJson(Map<String, dynamic> json) {
+    final nextRaw = json['next_window_at'] as String?;
+    return PhotonRedeemProOverview(
+      balance: (json['balance'] as num?)?.toInt() ?? 0,
+      // 引擎 `monthly_cap_used` → 客户端 `redeemedThisMonth`（同义不改名，少 churn）。
+      redeemedThisMonth: json['monthly_cap_used'] as bool? ?? false,
+      redeemableBase: (json['redeemable_base'] as num?)?.toInt(),
+      costPhotons: (json['cost_photons'] as num?)?.toInt(),
+      proDays: (json['pro_days'] as num?)?.toInt(),
+      monthlyCap: (json['monthly_cap'] as num?)?.toInt(),
+      nextWindowAt: nextRaw == null ? null : DateTime.tryParse(nextRaw),
+      canRedeem: json['can_redeem'] as bool? ?? false,
+    );
+  }
+
   final int balance;
+
+  /// 当月是否已兑换（引擎 `monthly_cap_used`，真源 = redeem_pro 流水 + UTC 月窗）。
   final bool redeemedThisMonth;
+
+  /// 可兑换基数（审计流水重放，transfer_in 不计入）；null = 服务端未揭示。
+  final int? redeemableBase;
+
+  /// 服务端单次兑换价（settings 常量）。
+  final int? costPhotons;
+
+  /// 服务端单次兑换 Pro 天数。
+  final int? proDays;
+
+  /// 自然月兑换硬顶次数。
+  final int? monthlyCap;
+
+  /// 下一 UTC 自然月起点（月顶重置边界）。
+  final DateTime? nextWindowAt;
+
+  /// 服务端预判能否兑换（月顶未用 ∧ 基数够 ∧ 余额够）；最终以兑换终态为准。
+  final bool canRedeem;
 }

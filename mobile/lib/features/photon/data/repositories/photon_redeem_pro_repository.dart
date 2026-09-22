@@ -4,74 +4,41 @@ import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/photon/data/models/photon_redeem_pro_model.dart';
-import 'package:sparkle/shared/entities/photon_model.dart';
 
 /// D-COMM-2：光子兑 Pro 仓库。
 ///
-/// 读面 = 快照（余额 + 当月兑换资格，autoDispose 重进即重取）；
+/// 读面 = 快照（`GET /photons/redeem-pro/status`，autoDispose 重进即重取）；
 /// 动作面 = `POST /photons/redeem-pro`（有界终态，业务失败映射为
 /// [PhotonRedeemProResult]，不向 UI 泄漏原始异常结构——照 RedeemCodeResult 先例）。
 ///
-/// 诚实性：可兑换基数不在本仓库做任何本地推算（审计流水重放是引擎侧职责），
-/// 只随兑换响应由服务端揭示；月顶判定复用引擎同款真源（本通道流水 + UTC 自然月）。
+/// 诚实性（PHOTON-STATUS）：可兑换基数/月顶状态一律来自 status 快照（与引擎
+/// `POST /redeem-pro` 同一 service 判定函数的服务端读取），本仓库不做任何本地
+/// 推算——原客户端 UTC 月窗自算已随 status 端点上线移除，判定交还引擎同源。
 class PhotonRedeemProRepository {
   PhotonRedeemProRepository(this._apiClient);
 
   final ApiClient _apiClient;
 
-  /// 本通道月顶判定的流水类型（对齐引擎 `REDEEM_PRO_TX_TYPE`）。
-  static const String _redeemTxType = 'redeem_pro';
-
   Future<PhotonRedeemProOverview> getOverview() async {
     if (DemoDataService.isDemoMode) {
-      // 演示态同走诚实口径：零余额 + 未兑换，不造假资产。
+      // 演示态同走诚实口径：空账本真值（零余额/零基数/未兑换），不造假资产。
       return const PhotonRedeemProOverview(
         balance: 0,
         redeemedThisMonth: false,
+        redeemableBase: 0,
       );
     }
 
-    final balanceResponse = await _apiClient.get<Map<String, dynamic>>(
-      ApiEndpoints.photonBalance,
+    // PHOTON-STATUS：一次请求取回余额 + 基数 + 月顶 + 常量（原「余额 + 流水
+    // 过滤」两读合一），数字全部由服务端核算。
+    final response = await _apiClient.get<Map<String, dynamic>>(
+      ApiEndpoints.photonRedeemProStatus,
     );
-    final balancePayload = ApiResponseParser.unwrapMap(
-      balanceResponse.data,
+    final payload = ApiResponseParser.unwrapMap(
+      response.data,
       action: 'getRedeemOverview',
     );
-    final balance = PhotonBalance.fromJson(balancePayload).balance;
-    final redeemedThisMonth = await _hasRedeemedThisMonth();
-    return PhotonRedeemProOverview(
-      balance: balance,
-      redeemedThisMonth: redeemedThisMonth,
-    );
-  }
-
-  /// 当月是否已有本通道兑换流水（引擎同款真源：审计流水 + UTC 自然月窗）。
-  Future<bool> _hasRedeemedThisMonth() async {
-    final response = await _apiClient.get<Map<String, dynamic>>(
-      ApiEndpoints.photonTransactions,
-      queryParameters: <String, dynamic>{
-        'transaction_type': _redeemTxType,
-        'limit': 100,
-        'offset': 0,
-      },
-    );
-    final payload = response.data;
-    final rows = payload is Map<String, dynamic>
-        ? (payload['data'] as List<dynamic>? ?? const [])
-        : const <dynamic>[];
-    final now = DateTime.now().toUtc();
-    final monthStart = DateTime.utc(now.year, now.month);
-    for (final row in rows) {
-      if (row is! Map<String, dynamic>) continue;
-      final createdRaw = row['created_at'];
-      final created =
-          createdRaw is String ? DateTime.tryParse(createdRaw)?.toUtc() : null;
-      if (created != null && !created.isBefore(monthStart)) {
-        return true;
-      }
-    }
-    return false;
+    return PhotonRedeemProOverview.fromStatusJson(payload);
   }
 
   /// 发起兑换。业务失败（400/409/5xx）映射为有界 [PhotonRedeemProResult]。

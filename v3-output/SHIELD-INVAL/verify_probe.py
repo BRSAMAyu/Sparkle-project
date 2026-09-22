@@ -95,7 +95,7 @@ def main() -> None:
         f"{base}/api/v1/auth/register",
         payload={
             "username": username,
-            "email": f"{username}@probe.local",
+            "email": f"{username}@sparkleprobe.dev",
             "password": password,
             "accepted_tos": True,
             "accepted_privacy": True,

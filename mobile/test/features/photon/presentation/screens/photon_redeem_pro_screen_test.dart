@@ -75,13 +75,54 @@ void main() {
     });
   });
 
-  group('PhotonRedeemProScreen (D-COMM-2)', () {
-    testWidgets('redeemable state: two numbers apart, confirm dialog, success '
-        'feedback flips card to capped', (tester) async {
+  group('PhotonRedeemProOverview status snapshot (PHOTON-STATUS 契约钉死)', () {
+    test('status snapshot parses bounded server fields, no local math', () {
+      final overview = PhotonRedeemProOverview.fromStatusJson(const {
+        'user_id': 'u1',
+        'redeemable_base': 5200,
+        'balance': 7200,
+        'cost_photons': 3000,
+        'pro_days': 7,
+        'monthly_cap': 1,
+        'redeems_this_month': 0,
+        'monthly_cap_used': false,
+        'monthly_cap_redeemed_at': null,
+        'next_window_at': '2026-10-01T00:00:00',
+        'can_redeem': true,
+      });
+      expect(overview.balance, 7200);
+      expect(overview.redeemableBase, 5200); // 基数 ≠ 余额，两数诚实并列
+      expect(overview.redeemedThisMonth, isFalse);
+      expect(overview.costPhotons, 3000);
+      expect(overview.proDays, 7);
+      expect(overview.monthlyCap, 1);
+      expect(overview.nextWindowAt, DateTime(2026, 10)); // 下月 UTC 月初
+      expect(overview.canRedeem, isTrue);
+    });
+
+    test('capped snapshot flips redeemedThisMonth from server truth', () {
+      final overview = PhotonRedeemProOverview.fromStatusJson(const {
+        'redeemable_base': 2200,
+        'balance': 2200,
+        'monthly_cap_used': true,
+        'monthly_cap_redeemed_at': '2026-09-02T10:00:00',
+        'can_redeem': false,
+      });
+      expect(overview.redeemedThisMonth, isTrue);
+      expect(overview.canRedeem, isFalse);
+    });
+  });
+
+  group('PhotonRedeemProScreen (D-COMM-2 + PHOTON-STATUS)', () {
+    testWidgets('real base from status snapshot: two numbers apart, confirm '
+        'dialog, success feedback flips card to capped', (tester) async {
       final repository = _FakeRedeemRepository(
         overview: const PhotonRedeemProOverview(
           balance: 5200,
           redeemedThisMonth: false,
+          redeemableBase: 5200,
+          costPhotons: 3000,
+          proDays: 7,
         ),
         result: PhotonRedeemProResult(
           status: PhotonRedeemProStatus.ok,
@@ -94,9 +135,25 @@ void main() {
       );
       await _pumpRedeemPro(tester, repository: repository);
 
-      // 必达项①：余额与基数两数分开；基数未揭示前不产数字（诚实展示）。
-      expect(find.text('5200'), findsOneWidget);
-      expect(find.text('由服务端核算，兑换时揭示'), findsOneWidget);
+      // 必达项①：余额与基数两数分开——动作前即由 status 快照给出真数
+      // （PHOTON-STATUS：不再是「由服务端核算」占位）。
+      expect(
+        tester
+            .widget<Text>(
+              find.byKey(const ValueKey('photon-redeem-pro-balance-value')),
+            )
+            .data,
+        '5200',
+      );
+      expect(
+        tester
+            .widget<Text>(
+              find.byKey(const ValueKey('photon-redeem-pro-base-value')),
+            )
+            .data,
+        '5200',
+      );
+      expect(find.text('由服务端核算，兑换时揭示'), findsNothing);
       expect(find.text('仅合同/首胜/成就等学习所得计入基数，转账收入不计入'),
           findsOneWidget,);
 
@@ -123,7 +180,8 @@ void main() {
       expect(find.textContaining('${photonRedeemProDisplayCost} 光子'), findsOneWidget);
       expect(find.textContaining('不退还'), findsOneWidget);
 
-      // 确认 → 服务端终态 → 成功反馈 + 卡面翻转为已兑换。
+      // 确认 → 服务端终态 → 成功反馈 + 卡面翻转为已兑换 + 快照刷新。
+      final overviewCallsBefore = repository.overviewCallCount;
       await tester.tap(
           find.byKey(const ValueKey('photon-redeem-pro-confirm-button')),);
       await tester.pump();
@@ -139,14 +197,19 @@ void main() {
             .disabled,
         isTrue,
       );
+      // PHOTON-STATUS：兑换响应后刷新快照（重取服务端真值）。
+      expect(repository.overviewCallCount, greaterThan(overviewCallsBefore));
     });
 
-    testWidgets('insufficient base revealed by server: base number, transfer '
-        'note and disabled button', (tester) async {
+    testWidgets('base below cost revealed pre-action by status: transfer note '
+        'and disabled button without any redeem attempt', (tester) async {
       final repository = _FakeRedeemRepository(
         overview: const PhotonRedeemProOverview(
           balance: 5200,
           redeemedThisMonth: false,
+          redeemableBase: 1200, // 转账撑起余额，基数只有 1200
+          costPhotons: 3000,
+          proDays: 7,
         ),
         result: const PhotonRedeemProResult(
           status: PhotonRedeemProStatus.insufficientBase,
@@ -157,15 +220,8 @@ void main() {
       );
       await _pumpRedeemPro(tester, repository: repository);
 
-      await tester.tap(
-          find.byKey(const ValueKey('photon-redeem-pro-action-button')),);
-      await tester.pump();
-      await tester.tap(
-          find.byKey(const ValueKey('photon-redeem-pro-confirm-button')),);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
-
-      // 服务端揭示基数 1200 < 余额 5200：诚实区分，差额注明转账来源不可兑。
+      // 动作前即诚实呈现（PHOTON-STATUS 核心增量）：基数真数 + 差额转账注明 +
+      // 不可兑按钮，零兑换动作。
       expect(find.text('1200'), findsOneWidget);
       expect(find.text('其余 4000 光子来自转账等来源，不计入可兑换基数'),
           findsOneWidget,);
@@ -178,6 +234,13 @@ void main() {
             .disabled,
         isTrue,
       );
+      expect(repository.redeemCallCount, 0);
+
+      // 服务端动作终态与预判同判（同源）：基数不足揭示值不变。
+      await tester.tap(
+          find.byKey(const ValueKey('photon-redeem-pro-action-button')),);
+      await tester.pump();
+      expect(find.byType(AlertDialog), findsNothing); // disabled 按钮不触发对话框
     });
 
     testWidgets('monthly cap reached: next-month note, button disabled, no '
@@ -186,6 +249,9 @@ void main() {
         overview: const PhotonRedeemProOverview(
           balance: 5200,
           redeemedThisMonth: true,
+          redeemableBase: 5200,
+          costPhotons: 3000,
+          proDays: 7,
         ),
         result: const PhotonRedeemProResult(
           status: PhotonRedeemProStatus.error,
@@ -193,6 +259,7 @@ void main() {
       );
       await _pumpRedeemPro(tester, repository: repository);
 
+      // 月顶状态真源 = 服务端（status 快照 monthly_cap_used → redeemedThisMonth）。
       expect(find.text('本月已兑换，下月 1 日起可再兑'), findsOneWidget);
       final button = tester.widget<SparkleButton>(
         find.byKey(const ValueKey('photon-redeem-pro-action-button')),
@@ -206,12 +273,16 @@ void main() {
       expect(repository.redeemCallCount, 0);
     });
 
-    testWidgets('balance below cost disables with honest note',
+    testWidgets('base at cost but balance below cost: honest balance note',
         (tester) async {
+      // 学得攒够基数、商城花掉余额：基数够（不误报基数不足）、余额不足如实提示。
       final repository = _FakeRedeemRepository(
         overview: const PhotonRedeemProOverview(
           balance: 500,
           redeemedThisMonth: false,
+          redeemableBase: 3000,
+          costPhotons: 3000,
+          proDays: 7,
         ),
         result: const PhotonRedeemProResult(
           status: PhotonRedeemProStatus.error,
@@ -221,6 +292,7 @@ void main() {
 
       expect(find.text('500'), findsOneWidget);
       expect(find.text('光子余额不足'), findsOneWidget);
+      expect(find.textContaining('可兑换基数不足'), findsNothing);
       expect(
         tester
             .widget<SparkleButton>(
@@ -231,12 +303,34 @@ void main() {
       );
     });
 
+    testWidgets('status without base field falls back to honest placeholder',
+        (tester) async {
+      // 降级兜底：status 未携带基数（老引擎/字段缺失）→ 不猜数，占位诚实空态。
+      final repository = _FakeRedeemRepository(
+        overview: const PhotonRedeemProOverview(
+          balance: 5200,
+          redeemedThisMonth: false,
+        ),
+        result: const PhotonRedeemProResult(
+          status: PhotonRedeemProStatus.error,
+        ),
+      );
+      await _pumpRedeemPro(tester, repository: repository);
+
+      expect(find.text('由服务端核算，兑换时揭示'), findsOneWidget);
+      expect(find.text('其余 4000 光子来自转账等来源，不计入可兑换基数'),
+          findsNothing,);
+    });
+
     testWidgets('snapshot failure surfaces honest error with retry',
         (tester) async {
       final repository = _FakeRedeemRepository(
         overview: const PhotonRedeemProOverview(
           balance: 5200,
           redeemedThisMonth: false,
+          redeemableBase: 5200,
+          costPhotons: 3000,
+          proDays: 7,
         ),
         result: const PhotonRedeemProResult(
           status: PhotonRedeemProStatus.error,
@@ -274,6 +368,9 @@ void main() {
           overview: const PhotonRedeemProOverview(
             balance: 5200,
             redeemedThisMonth: false,
+            redeemableBase: 5200,
+            costPhotons: 3000,
+            proDays: 7,
           ),
           result: const PhotonRedeemProResult(
             status: PhotonRedeemProStatus.error,
@@ -341,9 +438,11 @@ class _FakeRedeemRepository extends PhotonRedeemProRepository {
   PhotonRedeemProResult result;
   Exception? failure;
   int redeemCallCount = 0;
+  int overviewCallCount = 0;
 
   @override
   Future<PhotonRedeemProOverview> getOverview() async {
+    overviewCallCount++;
     final currentFailure = failure;
     if (currentFailure != null) {
       throw currentFailure;
