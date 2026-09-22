@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
-import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -46,7 +45,6 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
   bool _reflectionSaved = false;
   Timer? _typewriterTimer;
   String _visibleFeedback = '';
-  bool _showStreakCelebration = false;
   bool _typewriterCompleted = false;
   String? _aiReflectionResponse;
   List<Map<String, dynamic>> _linkedKnowledgeNodes = const [];
@@ -80,7 +78,9 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
   void _startCelebrationFlow() {
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
     if (_hasStreakMilestone) {
-      _showStreakCelebration = true;
+      // D17 gamification de-weighting (U-01 Step 6): visual confetti stays
+      // single-point on TaskCompletionCelebration; the feedback dialog keeps
+      // only quiet haptic feedback for streak milestones.
       unawaited(
         SensoryFeedbackService.emitSeries(
           const [
@@ -91,14 +91,6 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
           gap: const Duration(milliseconds: 150),
           enableSound: false,
         ),
-      );
-      unawaited(
-        Future<void>.delayed(const Duration(milliseconds: 1800), () {
-          if (!mounted) return;
-          setState(() {
-            _showStreakCelebration = false;
-          });
-        }),
       );
     }
     _startTypewriter();
@@ -366,24 +358,6 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
           constraints: const BoxConstraints(maxWidth: 480, maxHeight: 600),
           child: Stack(
             children: [
-              if (_showStreakCelebration)
-                const Positioned.fill(
-                  child: IgnorePointer(
-                    child: RepaintBoundary(
-                      child: SparkleConfetti(
-                        play: true,
-                        enableSensory: false,
-                        intensity: SparkleCelebrationIntensity.large,
-                        particleCount: 36,
-                        colors: [
-                          Color(0xFFFFA726),
-                          Color(0xFFFF7043),
-                          Color(0xFFFFD54F),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
               TweenAnimationBuilder<double>(
                 tween: Tween<double>(begin: 0.92, end: 1.0),
                 duration: const Duration(milliseconds: 600),
