@@ -12708,6 +12708,7 @@
     "chatPredictionUnderstandingInput": "Understanding your input",
     "chatPredictionUpdating": "Prediction updating...",
     "chatPredictionUpdatingByBehavior": "Updating suggestions based on recent behavior",
+    "chatPredictionYouCanDoFirst": "You can start with: {action}",
     "chatRunPhaseRetrieveLabel": "Searching materials",
     "chatRunPhaseThinkLabel": "Thinking",
     "chatRunPhaseGenerateLabel": "Writing answer",

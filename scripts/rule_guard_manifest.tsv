@@ -63,6 +63,7 @@ BF	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_bf_doc_context_govern
 BH	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_bh_meta_learning_safety.py"
 BG	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_bg_proto_cross_language_parity.py"
 I18N	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_i18n_coverage.py"
+L10N-PARITY	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_l10n_regen_parity.py"
 BI	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_bi_hardcoded_secrets.py"
 GOV-DATA-MIN	PYTHONPATH="${REPO_ROOT}/backend" "${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_data_minimization_coverage.py"
 FME	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_fme_kill_switch_registered.py"
