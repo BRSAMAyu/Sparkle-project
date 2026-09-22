@@ -12,6 +12,7 @@ from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import desc, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
@@ -154,16 +155,32 @@ class ExamSprintIntakeService:
         if reusable_plan is not None:
             generated = await self._bundle_from_existing_plan(plan=reusable_plan)
         else:
-            generated = await self._generate_plan_and_tasks(
-                user_id=user_id,
-                request=request,
-                session=session,
-                runtime_state=runtime_state,
-                strategy=strategy,
-                goal_model=goal_model,
-                assessment=assessment,
-                selected_pack=selected_pack,
-            )
+            try:
+                generated = await self._generate_plan_and_tasks(
+                    user_id=user_id,
+                    request=request,
+                    session=session,
+                    runtime_state=runtime_state,
+                    strategy=strategy,
+                    goal_model=goal_model,
+                    assessment=assessment,
+                    selected_pack=selected_pack,
+                )
+            except IntegrityError:
+                # INTAKE-IDX：查询-创建竞态的 DB 级关闸——并发 intake 同时通过
+                # 上面的复用查询后齐步创建，仅首者成功，其余撞
+                # uq_plans_user_sprint_goal_active（迁移 intakeidx_20260922）。
+                # 回滚本事务残渣并回查复用既有计划，与 BP-7 顺序重放的幂等
+                # 语义闭环；回查为空（他因唯一冲突）则原样上抛不吞错。
+                await self.db.rollback()
+                concurrent_plan = await self._find_reusable_sprint_plan(user_id=user_id, request=request)
+                if concurrent_plan is None:
+                    raise
+                logger.info(
+                    "Concurrent intake for the same goal detected; reusing plan {}",
+                    concurrent_plan.id,
+                )
+                generated = await self._bundle_from_existing_plan(plan=concurrent_plan)
         await self._record_north_star_intake_metrics(
             user_id=user_id,
             plan_id=generated.plan_id,

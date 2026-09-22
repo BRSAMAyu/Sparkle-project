@@ -5,7 +5,7 @@ Plan Model - 冲刺计划和成长计划
 
 import enum
 
-from sqlalchemy import JSON, Boolean, Column, Date, Enum, Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import JSON, Boolean, Column, Date, Enum, Float, ForeignKey, Index, Integer, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
@@ -140,3 +140,19 @@ Index("idx_plans_stage", Plan.plan_stage)
 # 复合索引：用户活跃计划查询优化
 Index("idx_plans_user_active", Plan.user_id, Plan.is_active)
 Index("idx_plans_goal_id", Plan.goal_id)
+# INTAKE-IDX：同目标活跃冲刺计划部分唯一索引——intake 查询-创建竞态的 DB 级关闸。
+# 键=(user_id, subject, target_date)，谓词精确对齐
+# ExamSprintIntakeService._find_reusable_sprint_plan 的同目标同一性
+# （SPRINT + is_active + 未软删，'SPRINT' 为 Enum 成员名，与基线 plantype
+# 枚举一致）。PG 走 postgresql_where，SQLite 测试基座走 sqlite_where（语义
+# 一致）；NULL subject/target_date 在唯一索引中互异、GROWTH 被谓词排除，
+# 均不受约束。存量双计划由迁移 intakeidx_20260922 先收敛（保留最新）。
+Index(
+    "uq_plans_user_sprint_goal_active",
+    Plan.user_id,
+    Plan.subject,
+    Plan.target_date,
+    unique=True,
+    postgresql_where=text("type = 'SPRINT' AND is_active AND deleted_at IS NULL"),
+    sqlite_where=text("type = 'SPRINT' AND is_active AND deleted_at IS NULL"),
+)
