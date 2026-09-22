@@ -1,10 +1,12 @@
 """
 deep_analysis 档真实路由 v4-pro（F-1）单元测试。
 
-红绿契约：
-- chat_mode=deep_analysis 的生成档决策默认落 MAX 层（deepseek_reason →
-  DEEPSEEK_REASON_MODEL=qwen3.8-flash），不再被策略路由/首触快响静默压回 flash
-- DEEP_ANALYSIS_FORCE_FAST_TIER=True（延迟逃生阀）时退回 FAST 层（deepseek_flash）
+红绿契约（2026-09 主力切 Qwen 后更新锚点）：
+- chat_mode=deep_analysis 的生成档决策默认落 MAX 层（2026-09 起 MAX 首位 =
+  qwen3_8_max/qwen3.8-max；原首位 deepseek_reason→DEEPSEEK_REASON_MODEL=
+  qwen3.8-flash 保留为降级候选），不再被策略路由/首触快响静默压回 flash
+- DEEP_ANALYSIS_FORCE_FAST_TIER=True（延迟逃生阀）时退回 FAST 层
+  （2026-09 起 FAST 首位 = dashscope_fast/qwen3.7-flash）
 - standard 档语义不变：_deep_analysis_generation_tier 返回 None，
   STANDARD_CHAT_FORCE_FAST_TIER 首触快响路径保持原样
 - 与免费层钳制正交：free 用户即使 deep_analysis 默认走 MAX，仍被钳到
@@ -122,7 +124,7 @@ def test_standard_chat_mode_returns_none():
 
 
 def test_deep_analysis_selection_lands_v4_pro(router: LLMRouter):
-    """deep_analysis 生成 selection 必须落 MAX 层首选 deepseek_reason（v4-pro 位）。"""
+    """deep_analysis 生成 selection 必须落 MAX 层首位 qwen3_8_max（2026-09 主力切 Qwen）。"""
     state = _make_state("deep_analysis")
     from app.agents.standard_workflow import (
         _deep_analysis_generation_tier,
@@ -141,12 +143,12 @@ def test_deep_analysis_selection_lands_v4_pro(router: LLMRouter):
     )
     # selection 归属高档（池条目自带 tier 标签可能是 MAX 或 PRO；本质断言是 model 与降级语义）
     assert selection.config.tier in (ModelTier.MAX, ModelTier.PRO)
-    assert selection.model_key == "deepseek_reason"  # DEEPSEEK_REASON_MODEL=qwen3.8-flash
+    assert selection.model_key == "qwen3_8_max"  # MAX 层首位（2026-09 主力切 Qwen）
     assert selection.free_tier_downgrade is False
 
 
 def test_deep_analysis_escape_hatch_selection_lands_flash(router: LLMRouter):
-    """逃生阀开启时 selection 退回 FAST 层 deepseek_fast（首 token 延迟取向）。"""
+    """逃生阀开启时 selection 退回 FAST 层 dashscope_fast（首 token 延迟取向；2026-09 切 Qwen）。"""
     from app.agents.standard_workflow import (
         _deep_analysis_generation_tier,
         _resolve_generation_task_type,
@@ -166,7 +168,7 @@ def test_deep_analysis_escape_hatch_selection_lands_flash(router: LLMRouter):
         allow_max=tier == ModelTier.MAX,
     )
     assert selection.config.tier == ModelTier.FAST
-    assert selection.model_key == "deepseek_fast"
+    assert selection.model_key == "dashscope_fast"  # FAST 首位（2026-09 主力切 Qwen）
 
 
 # ---------------------------------------------------------------------------
@@ -196,7 +198,7 @@ def test_free_user_deep_analysis_still_clamped_to_fast(router: LLMRouter):
         allow_max=tier == ModelTier.MAX,
     )
     assert selection.config.tier == ModelTier.FAST  # 但钳制仍生效
-    assert selection.model_key == "deepseek_fast"
+    assert selection.model_key == "dashscope_fast"  # FAST 首位（2026-09 主力切 Qwen）
     assert selection.free_tier_downgrade is True
     assert "free_tier_downgrade(max->fast)" in selection.reason
     assert _free_downgrade_count(labels) == pytest.approx(before + 1)

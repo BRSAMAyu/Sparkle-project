@@ -192,7 +192,11 @@ class ModelDiversityHint:
 # ============================================
 # 默认 Agent Profiles 配置
 # ============================================
-
+# 2026-09 主力模型切换（GLM → Qwen）：主聊天各 profile 的 preferred_models 里
+# dashscope_* 键即 Qwen（通义千问）车道——dashscope_chat=qwen3.7-plus（PLUS 层
+# 非思考）、dashscope_reason=qwen3.7-plus 思考（PRO 层）、dashscope_fast=
+# qwen3.7-flash（FAST/FREE_FAST 层）。GLM 系模型键全部保留待用（.env
+# LLM_PROVIDER / LLM_TIER_* 可零代码回切），详见 core/llm_router.py。
 DEFAULT_AGENT_PROFILES: dict[AgentRole, AgentProfile] = {
     # ==================== 主系统 Agents ====================
     AgentRole.ORCHESTRATOR: AgentProfile(
@@ -235,7 +239,8 @@ DEFAULT_AGENT_PROFILES: dict[AgentRole, AgentProfile] = {
         expertise_domains=["search grounding", "knowledge lookup"],
         model_tier=ModelTier.FREE_FAST,
         model_policy=AgentModelPolicy(
-            preferred_models=["glm_4_7_flash_no_thinking", "siliconflow_free", "dashscope_fast", "xiaomi_chat"],
+            # 2026-09 主力切 Qwen：dashscope_fast(qwen3.7-flash) 置首，GLM 条目保留待用
+            preferred_models=["dashscope_fast", "siliconflow_free", "glm_4_7_flash_no_thinking", "xiaomi_chat"],
             preferred_tier=ModelTier.FREE_FAST,
             fallback_tiers=[ModelTier.FAST, ModelTier.STANDARD],
         ),
@@ -250,7 +255,8 @@ DEFAULT_AGENT_PROFILES: dict[AgentRole, AgentProfile] = {
         description="意图识别与路由分发",
         model_tier=ModelTier.FREE_FAST,
         model_policy=AgentModelPolicy(
-            preferred_models=["glm_4_7_flash_no_thinking", "siliconflow_free", "dashscope_fast"],
+            # 2026-09 主力切 Qwen：GLM 条目保留待用
+            preferred_models=["dashscope_fast", "siliconflow_free", "glm_4_7_flash_no_thinking"],
             preferred_tier=ModelTier.FREE_FAST,
             fallback_tiers=[ModelTier.FAST],
         ),
@@ -511,7 +517,8 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         entry_tags=["search", "evidence", "retrieval"],
         model_tier=ModelTier.FREE_FAST,
         model_policy=AgentModelPolicy(
-            preferred_models=["glm_4_7_flash_no_thinking", "siliconflow_free", "dashscope_fast", "xiaomi_chat"],
+            # 2026-09 主力切 Qwen：GLM 条目保留待用
+            preferred_models=["dashscope_fast", "siliconflow_free", "glm_4_7_flash_no_thinking", "xiaomi_chat"],
             preferred_tier=ModelTier.FREE_FAST,
             fallback_tiers=[ModelTier.FAST, ModelTier.STANDARD],
         ),
@@ -601,7 +608,8 @@ Output: {{"route": "<specialist>", "confidence": <0-1>}}"""
         entry_tags=["chat", "coaching", "support"],
         model_tier=ModelTier.FREE_FAST,
         model_policy=AgentModelPolicy(
-            preferred_models=["glm_4_7_flash_no_thinking", "siliconflow_free", "xiaomi_chat", "dashscope_fast"],
+            # 2026-09 主力切 Qwen：GLM 条目保留待用
+            preferred_models=["dashscope_fast", "siliconflow_free", "xiaomi_chat", "glm_4_7_flash_no_thinking"],
             preferred_tier=ModelTier.FREE_FAST,
             fallback_tiers=[ModelTier.FAST, ModelTier.STANDARD],
         ),

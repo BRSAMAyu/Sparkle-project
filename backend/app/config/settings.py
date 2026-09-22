@@ -405,7 +405,7 @@ class Settings(BaseSettings):
     LLM_API_KEY: str = ""
     LLM_MODEL_NAME: str = "deepseek-flash"
     LLM_REASON_MODEL_NAME: str = "deepseek-v4-pro"
-    LLM_PROVIDER: str = "deepseek"  # 'xiaomi' | 'deepseek' | 'zhipu' | 'qwen' | 'openai' | 'hunyuan'
+    LLM_PROVIDER: str = "qwen"  # 'qwen' | 'dashscope' | 'xiaomi' | 'deepseek' | 'zhipu' | 'openai' | 'hunyuan'（2026-09 主力切 Qwen；GLM 车道保留待用）
     LLM_QUOTA_ENABLED: bool = False  # Disable token quota checks by default for demo recording
     LLM_DAILY_BUDGET_USD: float = 10.0  # Daily USD budget for LLM calls (cost_controller circuit breaker)
     RAG_DAILY_BUDGET_USD: float = 2.0  # Daily USD budget for RAG operations
@@ -551,14 +551,20 @@ class Settings(BaseSettings):
     RERANK_BACKUP_PROVIDER: str = "siliconflow"  # dashscope | siliconflow
     RERANK_MODEL: str = "qwen3-rerank"  # 重排序模型
 
-    # DashScope (Aliyun)
+    # DashScope (Aliyun) —— 2026-09 主力模型切换：GLM 系 → Qwen（通义千问）系。
+    # 分层定价基准（北京地域，元/百万Token，2026-09 官方页）：
+    #   qwen3.7-flash 0.2/0.8（≤32K 阶梯）｜qwen3.8-flash 0.8/2.7｜
+    #   qwen3.7-plus 非思考 ~2/2（限时8折），思考 8/8｜qwen3.8-max 12/36
     DASHSCOPE_API_KEY: str = ""
     DASHSCOPE_BASE_HTTP_API_URL: str = "https://dashscope.aliyuncs.com/api/v1"
     DASHSCOPE_BASE_URL_COMPATIBLE: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    DASHSCOPE_CHAT_MODEL: str = "qwen3.8-flash"  # 标准/推理模型
-    DASHSCOPE_REASON_MODEL: str = "qwen3.8-flash"
-    DASHSCOPE_FAST_MODEL: str = "qwen3.8-flash"  # 快速响应模型
-    DASHSCOPE_STANDARD_MODEL: str = "qwen3.8-flash"
+    DASHSCOPE_CHAT_MODEL: str = "qwen3.7-plus"  # PLUS 层：高质量非思考
+    DASHSCOPE_REASON_MODEL: str = "qwen3.7-plus"  # PRO 层：思考模式（enable_thinking 车道）
+    DASHSCOPE_FAST_MODEL: str = "qwen3.7-flash"  # FAST 层：轻对话/首 token 延迟取向
+    DASHSCOPE_STANDARD_MODEL: str = "qwen3.8-flash"  # STANDARD 层：甜点轻思考
+    DASHSCOPE_MAX_MODEL: str = "qwen3.8-max"  # MAX 层：旗舰深推理
+    DASHSCOPE_TOP_MODEL: str = "qwen3.8-max"  # TOP 层：超高层（同旗舰，思考默认开）
+    DASHSCOPE_BATCH_MODEL: str = "qwen3.7-flash"  # glm_batch 异步分析车道（Batch API 半价为后续优化项）
     DASHSCOPE_TEMPERATURE: float = 0.7
     DASHSCOPE_EMBEDDING_MODEL: str = "text-embedding-v4"
     DASHSCOPE_RERANK_MODEL: str = "qwen3-rerank"
@@ -1270,6 +1276,7 @@ class Settings(BaseSettings):
 
             _llm_keys = {
                 "LLM_API_KEY": self.LLM_API_KEY,
+                "DASHSCOPE_API_KEY": self.DASHSCOPE_API_KEY,
                 "ZHIPU_API_KEY": self.ZHIPU_API_KEY,
                 "DEEPSEEK_API_KEY": self.DEEPSEEK_API_KEY,
             }
@@ -1278,7 +1285,7 @@ class Settings(BaseSettings):
             )
             if not _has_any_llm:
                 raise ValueError(
-                    "At least one LLM API key must be set in production (LLM_API_KEY, ZHIPU_API_KEY, or DEEPSEEK_API_KEY)"
+                    "At least one LLM API key must be set in production (LLM_API_KEY, DASHSCOPE_API_KEY, ZHIPU_API_KEY, or DEEPSEEK_API_KEY)"
                 )
 
             if self.EMAIL_ENABLED:

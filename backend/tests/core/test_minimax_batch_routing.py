@@ -17,12 +17,17 @@ _GLM_BATCH_KEYS = ["glm_4_7_no_thinking", "glm_4_7_thinking", "glm_4_5_air_batch
 
 
 def _rebuild_router(minimax_key: str, tier_override: str = ""):
-    """以指定 MINIMAX_API_KEY 重建路由器（模拟引擎进程启动时的 settings 快照）。"""
+    """以指定 MINIMAX_API_KEY 重建路由器（模拟引擎进程启动时的 settings 快照）。
+
+    DASHSCOPE_API_KEY 一并置空：qwen3_7_flash_batch（QWEN-PLAN 合入）与 minimax
+    同为 GLM_BATCH key-gated 条目，真实 .env 的 DASHSCOPE key 会注册 qwen 批次
+    条目、污染本文件对 minimax 优先档的断言。
+    """
     from app.core.llm_router import LLMRouter
 
     with patch.object(settings, "MINIMAX_API_KEY", minimax_key), patch.object(
-        settings, "LLM_TIER_GLM_BATCH", tier_override
-    ):
+        settings, "DASHSCOPE_API_KEY", ""
+    ), patch.object(settings, "LLM_TIER_GLM_BATCH", tier_override):
         return LLMRouter()
 
 

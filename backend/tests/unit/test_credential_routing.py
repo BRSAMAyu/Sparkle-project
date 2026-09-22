@@ -177,13 +177,25 @@ def test_mimo_pro_credential_isolation_from_standard_xiaomi(router_with_known_ke
 # ── Production credential validation ────────────────────────────────────
 
 def test_production_rejects_all_llm_keys_placeholder():
-    """生产环境：三个核心 LLM key 都是占位符时拒绝启动"""
+    """生产环境：全部核心 LLM key（含 2026-09 新增的 DASHSCOPE/Qwen）都是占位符时拒绝启动"""
     with pytest.raises(ValueError, match="At least one LLM API key"):
         _settings_with_credentials(
             LLM_API_KEY="your_llm_api_key_here",
+            DASHSCOPE_API_KEY="your_dashscope_api_key",
             ZHIPU_API_KEY="your_zhipu_api_key",
             DEEPSEEK_API_KEY="changeme_deepseek",
         )
+
+
+def test_production_dashscope_key_alone_satisfies_llm_key_gate():
+    """2026-09 主力切 Qwen：仅配 DASHSCOPE_API_KEY（真实值）即可通过生产启动闸。"""
+    cfg = _settings_with_credentials(
+        LLM_API_KEY="",
+        DASHSCOPE_API_KEY="sk-real-dashscope-key-456",
+        ZHIPU_API_KEY="your_zhipu_api_key",
+        DEEPSEEK_API_KEY="changeme_deepseek",
+    )
+    assert cfg.DASHSCOPE_API_KEY == "sk-real-dashscope-key-456"
 
 
 def test_production_allows_one_valid_llm_key():

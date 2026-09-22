@@ -89,10 +89,17 @@ class FakeRedis:
 
 
 def _rebuild_router(minimax_key: str):
-    """以指定 MINIMAX_API_KEY 重建路由器（模拟进程启动 settings 快照）。"""
+    """以指定 MINIMAX_API_KEY 重建路由器（模拟进程启动 settings 快照）。
+
+    DASHSCOPE_API_KEY 一并置空：qwen3_7_flash_batch（QWEN-PLAN）与 minimax 同为
+    GLM_BATCH key-gated 条目，真实 .env 的 DASHSCOPE key 会注册 qwen 批次条目，
+    使"无 key 落 GLM 原链/车道不可用"断言失效。
+    """
     from app.core.llm_router import LLMRouter
 
-    with patch.object(settings, "MINIMAX_API_KEY", minimax_key):
+    with patch.object(settings, "MINIMAX_API_KEY", minimax_key), patch.object(
+        settings, "DASHSCOPE_API_KEY", ""
+    ):
         return LLMRouter()
 
 

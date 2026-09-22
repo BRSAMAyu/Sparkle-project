@@ -3,7 +3,8 @@ Free-tier model downgrade (free_tier_downgrade) unit tests.
 
 红绿契约：
 - free 用户请求高于 ceiling（默认 fast）的能力层时，selection 落到 ceiling 层
-  （deepseek_fast/flash），reason 含 free_tier_downgrade 标记，Prometheus 计数器自增
+  （2026-09 主力切 Qwen 后 FAST 首位 = dashscope_fast/qwen3.7-flash），reason 含
+  free_tier_downgrade 标记，Prometheus 计数器自增
 - pro / 未标记用户不受影响（付费全能力，premium → 重模型不变）
 - 网关信号：ChatRequest.user_profile.is_pro（已在链路），extra_context.user_tier 可显式覆盖
 """
@@ -66,7 +67,7 @@ def test_free_user_forced_max_clamps_to_fast_with_reason(router: LLMRouter):
     selection = router.select_model(AgentRole.GENERATION, force_tier=ModelTier.MAX)
 
     assert selection.config.tier == ModelTier.FAST
-    assert selection.model_key == "deepseek_fast"  # 默认 FAST 层首位（V3-FIX-19 同批对齐：dashscope→deepseek）
+    assert selection.model_key == "dashscope_fast"  # 默认 FAST 层首位（2026-09 主力切 Qwen）
     assert selection.free_tier_downgrade is True
     assert "free_tier_downgrade(max->fast)" in selection.reason
     assert _free_downgrade_count(labels) == pytest.approx(before + 1)
@@ -79,7 +80,7 @@ def test_pro_user_forced_max_unchanged(router: LLMRouter):
 
     # 池条目自带 tier 标签可能是 MAX 或 PRO；本质断言是 model 与钳制语义
     assert selection.config.tier in (ModelTier.MAX, ModelTier.PRO)
-    assert selection.model_key == "deepseek_reason"  # 默认 MAX 层首位（V3-FIX-19 同批对齐）
+    assert selection.model_key == "qwen3_8_max"  # 默认 MAX 层首位（2026-09 主力切 Qwen）
     assert selection.free_tier_downgrade is False
     assert "free_tier_downgrade" not in selection.reason
 

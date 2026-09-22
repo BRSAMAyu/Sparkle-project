@@ -181,6 +181,11 @@ class ModelSelectionStrategy:
         # 失败不静默偷切 GLM，fallbacks 置空（模型链耗尽 → job failed → celery 重试）。
         if model_key == "minimax_m3_batch":
             return model_key, [], False
+        # Qwen 异步车道（2026-09 QWEN-PLAN，key-gated 注册）：qwen3.7-flash 混合
+        # 思考模型，消费面 chat_json 不依赖思维链，thinking=False；失败回落
+        # MiniMax 免费档（与 GLM_BATCH 车道 minimax 优先一致），GLM 池保留待用。
+        if model_key == "qwen3_7_flash_batch":
+            return model_key, ["minimax_m3_batch"], False
         if model_key == "glm_4_5_air_batch":
             return model_key, ["glm_4_6_batch", "glm_4_7_no_thinking"], False
         if model_key == "glm_4_6_batch":

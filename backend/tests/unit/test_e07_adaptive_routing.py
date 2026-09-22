@@ -45,8 +45,8 @@ def _deterministic_router():
             setattr(_s, k, v)
 
 FAST_MODELS = list(llm_router._tier_mapping[ModelTier.FAST])
-HEAD = "deepseek_fast"  # E-02 既有 FAST 首位（与 free_tier 契约一致）
-RIVAL = "dashscope_fast"
+HEAD = "dashscope_fast"  # 2026-09 主力切 Qwen 后的 FAST 首位（原 deepseek_fast 降为次位）
+RIVAL = "deepseek_fast"
 
 
 @pytest.fixture(autouse=True)

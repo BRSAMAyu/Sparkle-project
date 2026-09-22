@@ -555,11 +555,12 @@ class LLMRouter:
                 cost_per_1k_tokens=0.008,
                 avg_latency_ms=2500,
             ),
-            # ---- GLM batch 池条目【保留待用】----
-            # 用户决策（2026-09 MM-M3 batch）：glm_batch 车道默认模型切 MiniMax M3，
-            # GLM 条目从默认档移除（配置保留、可经 LLM_TIER_GLM_BATCH env 覆盖或
-            # register_model_configs 运行时回切），仅作无 MINIMAX_API_KEY 环境的
-            # 原链兜底 —— 见下方 _tier_mapping[ModelTier.GLM_BATCH]。
+            # ---- GLM 车道（Zhipu）—— 全部「保留待用」----
+            # 用户决策（2026-09 MM-M3 + QWEN-PLAN）：glm_batch 车道默认档 = MiniMax M3
+            # 优先（免费测试用）、Qwen batch 次之；主力聊天层切 Qwen。GLM 条目保留
+            # 注册不删除：作无 MINIMAX/DASHSCOPE key 环境的原链兜底 + 降级链价值；
+            # 回切 = .env 设 LLM_PROVIDER=zhipu / LLM_TIER_* 覆盖，零代码回切
+            # —— 见下方 _tier_mapping[ModelTier.GLM_BATCH]。
             "glm_4_7_no_thinking": ModelConfig(
                 provider=ModelProvider.ZHIPU,
                 model_name=settings.ZHIPU_CHAT_MODEL,
@@ -692,6 +693,11 @@ class LLMRouter:
                 cost_per_1k_tokens=0.0,
                 avg_latency_ms=300,
             ),
+            # ---- DashScope（通义千问）—— 2026-09 主力车道 ----
+            # 定价基准（北京地域，元/百万Token，2026-09 官方页，汇率 7.1 折算 USD/1k）：
+            #   qwen3.7-flash 0.2/0.8 → blended ~$0.00007｜qwen3.8-flash 0.8/2.7 → ~$0.00025｜
+            #   qwen3.7-plus 非思考 ~2/2（限时8折）→ ~$0.00028，思考 8/8 → ~$0.0011｜
+            #   qwen3.8-max 12/36 → ~$0.0034。全部支持 1M 上下文 + Batch 半价 + 缓存折扣。
             "dashscope_fast": ModelConfig(
                 provider=ModelProvider.DASHSCOPE,
                 model_name=settings.DASHSCOPE_FAST_MODEL,
@@ -709,7 +715,7 @@ class LLMRouter:
                 api_key=settings.DASHSCOPE_API_KEY,
                 temperature=settings.DASHSCOPE_TEMPERATURE,
                 tier=ModelTier.STANDARD,
-                cost_per_1k_tokens=0.0002,
+                cost_per_1k_tokens=0.00025,
                 avg_latency_ms=260,
                 thinking_mode="enabled",
             ),
@@ -720,7 +726,7 @@ class LLMRouter:
                 api_key=settings.DASHSCOPE_API_KEY,
                 temperature=settings.DASHSCOPE_TEMPERATURE,
                 tier=ModelTier.PLUS,
-                cost_per_1k_tokens=0.0004,
+                cost_per_1k_tokens=0.0003,
                 avg_latency_ms=500,
             ),
             "dashscope_reason": ModelConfig(
@@ -730,8 +736,31 @@ class LLMRouter:
                 api_key=settings.DASHSCOPE_API_KEY,
                 temperature=0.2,
                 tier=ModelTier.PRO,
-                cost_per_1k_tokens=0.001,
+                cost_per_1k_tokens=0.0012,
                 avg_latency_ms=2000,
+                thinking_mode="enabled",
+            ),
+            # 旗舰：MAX/TOP 层（qwen3.8-max，1M 上下文，思考/非思考同价）
+            "qwen3_8_max": ModelConfig(
+                provider=ModelProvider.DASHSCOPE,
+                model_name=settings.DASHSCOPE_MAX_MODEL,
+                base_url=dashscope_base_url,
+                api_key=settings.DASHSCOPE_API_KEY,
+                temperature=0.3,
+                tier=ModelTier.MAX,
+                cost_per_1k_tokens=0.0034,
+                avg_latency_ms=2500,
+                thinking_mode="enabled",
+            ),
+            "qwen3_8_max_top": ModelConfig(
+                provider=ModelProvider.DASHSCOPE,
+                model_name=settings.DASHSCOPE_TOP_MODEL,
+                base_url=dashscope_base_url,
+                api_key=settings.DASHSCOPE_API_KEY,
+                temperature=0.3,
+                tier=ModelTier.TOP,
+                cost_per_1k_tokens=0.0034,
+                avg_latency_ms=3500,
                 thinking_mode="enabled",
             ),
             "zhipu_ocr": ModelConfig(
@@ -803,13 +832,32 @@ class LLMRouter:
                 avg_latency_ms=2500,
             )
 
+        # Qwen 异步分析车道条目：仅在配置了 DASHSCOPE_API_KEY 的环境注册（MiniMax
+        # 同款 key-gate 先例，无 key 环境零行为变化）。定位约束（2026-09 用户决策）：
+        # qwen3.7-flash 承接 glm_batch 异步分析任务（GLM 池条目保留待用，排其后），
+        # **永不**加入 fast/standard/plus/pro/max/top 等主聊天能力层（批处理走
+        # DashScope Batch API 半价为后续优化项，本条目先走 OpenAI 兼容同步路径）。
+        if (settings.DASHSCOPE_API_KEY or "").strip():
+            configs["qwen3_7_flash_batch"] = ModelConfig(
+                provider=ModelProvider.DASHSCOPE,
+                model_name=settings.DASHSCOPE_BATCH_MODEL,
+                base_url=dashscope_base_url,
+                api_key=settings.DASHSCOPE_API_KEY,
+                temperature=0.3,
+                tier=ModelTier.GLM_BATCH,
+                cost_per_1k_tokens=0.0001,
+                avg_latency_ms=300,
+            )
+
         self._available_models = configs
 
-        fast_models = ["deepseek_fast", "dashscope_fast", "xiaomi_chat", "glm_4_7_flash_no_thinking"]
+        # 2026-09 主力切换：各能力层 Qwen（dashscope）置首；deepseek/xiaomi/GLM
+        # 条目全部保留为降级候选（GLM「保留待用」，.env LLM_TIER_* 可零代码回切）。
+        fast_models = ["dashscope_fast", "deepseek_fast", "xiaomi_chat", "glm_4_7_flash_no_thinking"]
         standard_models = ["deepseek_chat", "dashscope_standard_thinking", "xiaomi_standard_thinking"]
         plus_models = ["dashscope_chat"]
         pro_models = ["dashscope_reason"]
-        max_models = ["deepseek_reason", "glm_5_max"]
+        max_models = ["qwen3_8_max", "deepseek_reason", "glm_5_max"]
 
         preferred_provider = (settings.LLM_PROVIDER or "").strip().lower()
         provider_standard_preference = {
@@ -863,23 +911,34 @@ class LLMRouter:
 
         self._tier_mapping = {
             ModelTier.FREE: ["siliconflow_free"],
-            ModelTier.FREE_FAST: ["glm_4_7_flash_thinking", "glm_4_5_air_free", "siliconflow_free"],
-            ModelTier.FREE_REASONING: ["glm_4_7_flash_thinking", "glm_4_5_air_free"],
+            # FREE_FAST：Qwen 置首（dashscope_fast=qwen3.7-flash；siliconflow_free
+            # 本就是 Qwen3.5-4B），GLM 免费通道条目「保留待用」排其后。
+            ModelTier.FREE_FAST: [
+                "dashscope_fast",
+                "siliconflow_free",
+                "glm_4_7_flash_thinking",
+                "glm_4_5_air_free",
+            ],
+            ModelTier.FREE_REASONING: ["glm_4_7_flash_thinking", "glm_4_5_air_free"],  # GLM 保留待用
             ModelTier.FAST: fast_models,
             ModelTier.STANDARD: standard_models,
             ModelTier.PLUS: plus_models + ["glm_4_7_plus"],
             ModelTier.PRO: pro_models + ["glm_4_7_pro"],
             ModelTier.REASONING: list(pro_models) + ["glm_4_7_pro"],
             ModelTier.MAX: max_models,
-            ModelTier.TOP: ["glm_5_1_top"],
-            # 用户决策（2026-09 MM-M3 batch）：GLM_BATCH 默认档 = MiniMax M3 唯一候选；
-            # GLM 条目【保留待用】默认不启用 —— 仅在 MiniMax 未注册（无
-            # MINIMAX_API_KEY）环境保留原链，保证零 key 环境零行为变化。
-            # 回切方式：LLM_TIER_GLM_BATCH=glm_4_7_no_thinking,glm_4_7_thinking,...
+            ModelTier.TOP: ["qwen3_8_max_top", "glm_5_1_top"],  # 主力 Qwen；glm-5.1 保留待用
+            # 用户决策（2026-09 MM-M3，QWEN-PLAN 合入后维持）：GLM_BATCH 车道 =
+            # MiniMax M3 优先（免费测试用）→ Qwen batch 次位（均 key-gated）；
+            # 任一注册即不启用 GLM（批任务不静默回落付费 GLM，失败走 celery 重试）；
+            # 两者均未注册（零 key 环境）保留 GLM 原链，零行为变化。
+            # 回切方式：LLM_TIER_GLM_BATCH=minimax_m3_batch,qwen3_7_flash_batch,glm_4_7_no_thinking,...
             ModelTier.GLM_BATCH: (
-                ["minimax_m3_batch"]
-                if "minimax_m3_batch" in self._available_models
-                else [
+                [
+                    key
+                    for key in ("minimax_m3_batch", "qwen3_7_flash_batch")
+                    if key in self._available_models
+                ]
+                or [
                     "glm_4_7_no_thinking",
                     "glm_4_7_thinking",
                     "glm_4_5_air_batch",
