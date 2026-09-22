@@ -1,11 +1,11 @@
 {
   "schema": "sparkle.northstar.real-drive.step.v1",
-  "run_id": "NS001-LOOP1-20260922-173358",
+  "run_id": "NS001-LOOP1-20260922-190107",
   "step_id": "B3-2",
   "phase": "day0",
   "name": "intake idempotent re-run (same form, BP-7 fix check)",
-  "started_at": "2026-09-22T17:33:59.876138+00:00",
-  "finished_at": "2026-09-22T17:33:59.956492+00:00",
+  "started_at": "2026-09-22T19:01:12.274171+00:00",
+  "finished_at": "2026-09-22T19:01:12.348417+00:00",
   "request": {
     "method": "POST",
     "path": "/api/v1/exam-sprint/intake",
@@ -24,14 +24,14 @@
         ]
       },
       "daily_study_minutes": 165,
-      "conversation_id": "ns001-dd6446e23e2e"
+      "conversation_id": "ns001-96fe24448951"
     }
   },
   "response": {
     "status": 200,
     "body": {
-      "planning_session_id": "c06bff90-c449-43fd-b1be-0ecefa21e372",
-      "conversation_id": "ns001-dd6446e23e2e",
+      "planning_session_id": "c73507d5-a8f7-4437-8e44-d94a0addd90b",
+      "conversation_id": "ns001-96fe24448951",
       "user_model": {
         "subject": "离散数学",
         "exam_scope": "闭卷 100 分卷；覆盖 CH1 数理逻辑/CH2 集合与关系/CH3 函数与基数/CH4 图论/CH5 组合数学/CH6 代数系统",
@@ -47,8 +47,8 @@
         ],
         "scope_file_ids": [],
         "scope_file_names": [],
-        "planning_session_id": "c06bff90-c449-43fd-b1be-0ecefa21e372",
-        "conversation_id": "ns001-dd6446e23e2e"
+        "planning_session_id": "c73507d5-a8f7-4437-8e44-d94a0addd90b",
+        "conversation_id": "ns001-96fe24448951"
       },
       "goal_model": {
         "exam_date": "2026-09-29",
@@ -77,14 +77,14 @@
         "first_day_output": "完成一次闭卷输出和最小检查。"
       },
       "launch": {
-        "plan_id": "4bc51075-384d-4794-a398-879179b451d0",
+        "plan_id": "07900fc1-b40a-491e-a74c-8b8e9e4900ce",
         "plan_name": "离散数学期末 7 天冲刺：及格冲 70+",
         "first_day_task_ids": [
-          "3192c4ad-e4f8-41d4-bfb8-6d90fa2a7e00"
+          "7b8e3526-e73a-4197-bdc1-df97c3502419"
         ],
-        "recommended_task_id": "3192c4ad-e4f8-41d4-bfb8-6d90fa2a7e00",
-        "plan_route": "/plans/4bc51075-384d-4794-a398-879179b451d0",
-        "recommended_task_route": "/tasks/3192c4ad-e4f8-41d4-bfb8-6d90fa2a7e00"
+        "recommended_task_id": "7b8e3526-e73a-4197-bdc1-df97c3502419",
+        "plan_route": "/plans/07900fc1-b40a-491e-a74c-8b8e9e4900ce",
+        "recommended_task_route": "/tasks/7b8e3526-e73a-4197-bdc1-df97c3502419"
       }
     }
   },

@@ -1,11 +1,11 @@
 {
   "schema": "sparkle.northstar.real-drive.step.v1",
-  "run_id": "NS001-LOOP1-20260922-173358",
+  "run_id": "NS001-LOOP1-20260922-190107",
   "step_id": "C1",
   "phase": "day1",
   "name": "today cockpit task cards",
-  "started_at": "2026-09-22T17:34:00.535806+00:00",
-  "finished_at": "2026-09-22T17:34:00.549490+00:00",
+  "started_at": "2026-09-22T19:01:13.779133+00:00",
+  "finished_at": "2026-09-22T19:01:13.808597+00:00",
   "request": {
     "method": "GET",
     "path": "/api/v1/tasks/today",
@@ -15,9 +15,9 @@
     "status": 200,
     "body": [
       {
-        "id": "3192c4ad-e4f8-41d4-bfb8-6d90fa2a7e00",
-        "created_at": "2026-09-22T17:33:59.559235",
-        "updated_at": "2026-09-22T17:33:59.559238",
+        "id": "7b8e3526-e73a-4197-bdc1-df97c3502419",
+        "created_at": "2026-09-22T19:01:11.598780",
+        "updated_at": "2026-09-22T19:01:11.598783",
         "title": "Map the baseline",
         "type": "LEARNING",
         "status": "PENDING",
@@ -29,8 +29,8 @@
         "energy_cost": 2,
         "priority": 0,
         "due_date": null,
-        "user_id": "f8075e9c-de46-408c-8feb-c3ea67050b11",
-        "plan_id": "4bc51075-384d-4794-a398-879179b451d0",
+        "user_id": "4809eae9-056d-4d66-9218-7d39d389ebd8",
+        "plan_id": "07900fc1-b40a-491e-a74c-8b8e9e4900ce",
         "guide_content": "Confirm scope, weak topics, and the first measurable benchmark. Keep it tied to why this matters: 一周后期末考，目标及格并冲击 70+",
         "started_at": null,
         "confirmed_at": null,

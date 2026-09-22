@@ -1,11 +1,11 @@
 {
   "schema": "sparkle.northstar.real-drive.step.v1",
-  "run_id": "NS001-LOOP1-20260922-173358",
+  "run_id": "NS001-LOOP1-20260922-190107",
   "step_id": "B7",
   "phase": "day0",
   "name": "profile snapshot (before Day1)",
-  "started_at": "2026-09-22T17:34:00.461833+00:00",
-  "finished_at": "2026-09-22T17:34:00.535253+00:00",
+  "started_at": "2026-09-22T19:01:13.134504+00:00",
+  "finished_at": "2026-09-22T19:01:13.778742+00:00",
   "request": {
     "method": "GET",
     "path": "/api/v1/profile/transparent",

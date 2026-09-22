@@ -1,14 +1,14 @@
 {
   "schema": "sparkle.northstar.real-drive.step.v1",
-  "run_id": "NS001-LOOP1-20260922-173358",
+  "run_id": "NS001-LOOP1-20260922-190107",
   "step_id": "B2b",
   "phase": "day0",
   "name": "goal detail real-data check (GOAL-ROUTER fix face)",
-  "started_at": "2026-09-22T17:33:59.803518+00:00",
-  "finished_at": "2026-09-22T17:33:59.803546+00:00",
+  "started_at": "2026-09-22T19:01:12.162769+00:00",
+  "finished_at": "2026-09-22T19:01:12.162814+00:00",
   "request": {
     "method": "GET",
-    "path": "/api/v1/experience/goal-detail/41430830-4745-410e-a761-0d74e69abadb"
+    "path": "/api/v1/experience/goal-detail/674d30fb-e0db-4a62-b0a8-24eee53c7ad3"
   },
   "response": {
     "status": 200,
@@ -40,7 +40,7 @@
     ],
     "body_preview": {
       "goal": {
-        "id": "41430830-4745-410e-a761-0d74e69abadb",
+        "id": "674d30fb-e0db-4a62-b0a8-24eee53c7ad3",
         "title": "离散数学期末 7 天冲刺：及格冲 70+",
         "goal_type": "academic",
         "status": "active",
@@ -116,7 +116,7 @@
       "strategy_belief": null,
       "active": true,
       "plan": {
-        "id": "4bc51075-384d-4794-a398-879179b451d0",
+        "id": "07900fc1-b40a-491e-a74c-8b8e9e4900ce",
         "name": "离散数学期末 7 天冲刺：及格冲 70+",
         "type": "sprint",
         "subject": null,
@@ -141,7 +141,7 @@
         "focus_suggestions": []
       },
       "why_this_matters": "这个目标会影响 Sparkle 今天的计划、资料选择和任务排序。",
-      "updated_at": "2026-09-22T17:33:59.801958"
+      "updated_at": "2026-09-22T19:01:12.160526"
     }
   },
   "verdict": "pass",

@@ -1,11 +1,11 @@
 {
   "schema": "sparkle.northstar.real-drive.step.v1",
-  "run_id": "NS001-LOOP1-20260922-171347",
+  "run_id": "NS001-LOOP1-20260922-190107",
   "step_id": "B7-2",
   "phase": "day0fix",
   "name": "profile snapshot re-fetch (post-diagnostic settle)",
-  "started_at": "2026-09-22T17:29:49.964340+00:00",
-  "finished_at": "2026-09-22T17:29:50.014814+00:00",
+  "started_at": "2026-09-22T19:04:55.397523+00:00",
+  "finished_at": "2026-09-22T19:04:55.987568+00:00",
   "request": {
     "method": "GET",
     "path": "/api/v1/profile/transparent",
@@ -28,7 +28,7 @@
         "patterns": [],
         "fragments": []
       },
-      "hidden_item_count": 20,
+      "hidden_item_count": 22,
       "transparency": {
         "enabled": false,
         "level": 0

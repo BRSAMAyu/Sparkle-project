@@ -1,11 +1,11 @@
 {
   "schema": "sparkle.northstar.real-drive.step.v1",
-  "run_id": "NS001-LOOP1-20260922-173358",
+  "run_id": "NS001-LOOP1-20260922-190107",
   "step_id": "B1b",
   "phase": "day0",
   "name": "memory episodic after Day0 chat (declared-fact capture)",
-  "started_at": "2026-09-22T17:33:59.488099+00:00",
-  "finished_at": "2026-09-22T17:33:59.488103+00:00",
+  "started_at": "2026-09-22T19:01:11.220059+00:00",
+  "finished_at": "2026-09-22T19:01:11.220066+00:00",
   "request": {},
   "response": {
     "entry_count": 0

@@ -1,11 +1,11 @@
 {
   "schema": "sparkle.northstar.real-drive.step.v1",
-  "run_id": "NS001-LOOP1-20260922-173358",
+  "run_id": "NS001-LOOP1-20260922-190107",
   "step_id": "E1",
   "phase": "report",
   "name": "sprint summary",
-  "started_at": "2026-09-22T17:37:28.855352+00:00",
-  "finished_at": "2026-09-22T17:37:28.882437+00:00",
+  "started_at": "2026-09-22T19:04:10.873890+00:00",
+  "finished_at": "2026-09-22T19:04:11.532579+00:00",
   "request": {
     "method": "GET",
     "path": "/api/v1/exam-sprint/sprint-summary",
@@ -14,11 +14,11 @@
   "response": {
     "status": 200,
     "body": {
-      "plan_id": "4bc51075-384d-4794-a398-879179b451d0",
+      "plan_id": "07900fc1-b40a-491e-a74c-8b8e9e4900ce",
       "plan_name": "离散数学期末 7 天冲刺：及格冲 70+",
       "subject": "离散数学",
       "exam_date": "2026-09-29",
-      "started_at": "2026-09-22T17:33:59.509562",
+      "started_at": "2026-09-22T19:01:11.346284",
       "days_used": 1,
       "headline": "你用了 1 天，完成了 1 项任务，二元关系 从 50 分提升到 50 分。",
       "task_stats": {

@@ -1,11 +1,11 @@
 {
   "schema": "sparkle.northstar.real-drive.step.v1",
-  "run_id": "NS001-LOOP1-20260922-173358",
+  "run_id": "NS001-LOOP1-20260922-190107",
   "step_id": "B5",
   "phase": "day0",
   "name": "diagnostic grade (persona: graph-theory weak)",
-  "started_at": "2026-09-22T17:34:00.083228+00:00",
-  "finished_at": "2026-09-22T17:34:00.408179+00:00",
+  "started_at": "2026-09-22T19:01:12.424459+00:00",
+  "finished_at": "2026-09-22T19:01:12.885552+00:00",
   "request": {
     "method": "POST",
     "path": "/api/v1/exam-sprint/diagnose/grade",
@@ -106,7 +106,7 @@
       "days_left": 7,
       "pass_score": 60.0,
       "update_galaxy": true,
-      "diagnostic_id": "diag-95e63e1c-af26-48e8-b865-d76192160864"
+      "diagnostic_id": "diag-75f781ad-4dbc-4773-98e0-15cd6743402c"
     }
   },
   "response": {

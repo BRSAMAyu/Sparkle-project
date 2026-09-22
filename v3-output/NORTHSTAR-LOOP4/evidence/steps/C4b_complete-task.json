@@ -1,14 +1,14 @@
 {
   "schema": "sparkle.northstar.real-drive.step.v1",
-  "run_id": "NS001-LOOP1-20260922-173358",
+  "run_id": "NS001-LOOP1-20260922-190107",
   "step_id": "C4b",
   "phase": "day1",
   "name": "complete task",
-  "started_at": "2026-09-22T17:34:52.942078+00:00",
-  "finished_at": "2026-09-22T17:34:56.190421+00:00",
+  "started_at": "2026-09-22T19:02:23.347724+00:00",
+  "finished_at": "2026-09-22T19:02:26.757540+00:00",
   "request": {
     "method": "POST",
-    "path": "/api/v1/tasks/3192c4ad-e4f8-41d4-bfb8-6d90fa2a7e00/complete",
+    "path": "/api/v1/tasks/7b8e3526-e73a-4197-bdc1-df97c3502419/complete",
     "body": {
       "note": "NS-001 Day1 执行完成"
     }
@@ -19,9 +19,9 @@
       "success": true,
       "data": {
         "task": {
-          "id": "3192c4ad-e4f8-41d4-bfb8-6d90fa2a7e00",
-          "created_at": "2026-09-22T17:33:59.559235",
-          "updated_at": "2026-09-22T17:34:52.954071",
+          "id": "7b8e3526-e73a-4197-bdc1-df97c3502419",
+          "created_at": "2026-09-22T19:01:11.598780",
+          "updated_at": "2026-09-22T19:02:23.361397",
           "title": "Map the baseline",
           "type": "LEARNING",
           "status": "COMPLETED",
@@ -33,12 +33,12 @@
           "energy_cost": 2,
           "priority": 0,
           "due_date": null,
-          "user_id": "f8075e9c-de46-408c-8feb-c3ea67050b11",
-          "plan_id": "4bc51075-384d-4794-a398-879179b451d0",
+          "user_id": "4809eae9-056d-4d66-9218-7d39d389ebd8",
+          "plan_id": "07900fc1-b40a-491e-a74c-8b8e9e4900ce",
           "guide_content": "Confirm scope, weak topics, and the first measurable benchmark. Keep it tied to why this matters: 一周后期末考，目标及格并冲击 70+",
-          "started_at": "2026-09-22T17:34:52.898181",
+          "started_at": "2026-09-22T19:02:23.282356",
           "confirmed_at": null,
-          "completed_at": "2026-09-22T17:34:52.953674",
+          "completed_at": "2026-09-22T19:02:23.360880",
           "paused_at": null,
           "paused_reason": null,
           "actual_minutes": 0,
@@ -62,7 +62,7 @@
                   }
                 ],
                 "fulfilled": false,
-                "recorded_at": "2026-09-22T17:34:52",
+                "recorded_at": "2026-09-22T19:02:23",
                 "declared_kinds": [
                   "self_report"
                 ],
@@ -115,16 +115,16 @@
               "个人主页身份条"
             ],
             "is_first": false,
-            "unlocked_at": "2026-09-22T17:34:56.174540",
+            "unlocked_at": "2026-09-22T19:02:26.736443",
             "context_snapshot": {
               "schema_version": 1,
-              "captured_at": "2026-09-22T17:34:56.173199",
+              "captured_at": "2026-09-22T19:02:26.734926",
               "event_type": "task_completed",
               "event_payload": {
-                "difficulty": 3,
+                "task_id": "7b8e3526-e73a-4197-bdc1-df97c3502419",
                 "actual_minutes": 0,
-                "estimated_minutes": 25,
-                "task_id": "3192c4ad-e4f8-41d4-bfb8-6d90fa2a7e00"
+                "difficulty": 3,
+                "estimated_minutes": 25
               },
               "achievement": {
                 "id": "tasks_1",
@@ -139,7 +139,7 @@
                 "percentage": 100
               },
               "current_plan": {
-                "id": "4bc51075-384d-4794-a398-879179b451d0",
+                "id": "07900fc1-b40a-491e-a74c-8b8e9e4900ce",
                 "name": "离散数学期末 7 天冲刺：及格冲 70+",
                 "type": "sprint",
                 "stage": "sprint",
@@ -152,7 +152,7 @@
                 "is_active": true
               },
               "task": {
-                "id": "3192c4ad-e4f8-41d4-bfb8-6d90fa2a7e00",
+                "id": "7b8e3526-e73a-4197-bdc1-df97c3502419",
                 "title": "Map the baseline",
                 "status": "COMPLETED",
                 "type": "LEARNING",
@@ -160,7 +160,7 @@
                 "actual_minutes": 0,
                 "due_date": null,
                 "days_to_due": null,
-                "plan_id": "4bc51075-384d-4794-a398-879179b451d0"
+                "plan_id": "07900fc1-b40a-491e-a74c-8b8e9e4900ce"
               },
               "is_first_unlocker": false,
               "story": "2026年9月22日，在「离散数学期末 7 天冲刺：及格冲 70+」目标日前 7 天，完成了「Map the baseline」，解锁了「第一任务」。"
@@ -185,7 +185,7 @@
           "difficulty": 3,
           "reason": "按计划推进，已完成 1 个任务",
           "quick_create_params": null,
-          "existing_task_id": "5c6bd95e-bcb8-4b1e-9fe3-e69bb5425eee",
+          "existing_task_id": "c005299e-12bd-4dc3-892d-5169a8b8d04f",
           "can_quick_create": false
         },
         {
@@ -216,16 +216,16 @@
                 "个人主页身份条"
               ],
               "is_first": false,
-              "unlocked_at": "2026-09-22T17:34:56.174540",
+              "unlocked_at": "2026-09-22T19:02:26.736443",
               "context_snapshot": {
                 "schema_version": 1,
-                "captured_at": "2026-09-22T17:34:56.173199",
+                "captured_at": "2026-09-22T19:02:26.734926",
                 "event_type": "task_completed",
                 "event_payload": {
-                  "difficulty": 3,
+                  "task_id": "7b8e3526-e73a-4197-bdc1-df97c3502419",
                   "actual_minutes": 0,
-                  "estimated_minutes": 25,
-                  "task_id": "3192c4ad-e4f8-41d4-bfb8-6d90fa2a7e00"
+                  "difficulty": 3,
+                  "estimated_minutes": 25
                 },
                 "achievement": {
                   "id": "tasks_1",
@@ -240,7 +240,7 @@
                   "percentage": 100
                 },
                 "current_plan": {
-                  "id": "4bc51075-384d-4794-a398-879179b451d0",
+                  "id": "07900fc1-b40a-491e-a74c-8b8e9e4900ce",
                   "name": "离散数学期末 7 天冲刺：及格冲 70+",
                   "type": "sprint",
                   "stage": "sprint",
@@ -253,7 +253,7 @@
                   "is_active": true
                 },
                 "task": {
-                  "id": "3192c4ad-e4f8-41d4-bfb8-6d90fa2a7e00",
+                  "id": "7b8e3526-e73a-4197-bdc1-df97c3502419",
                   "title": "Map the baseline",
                   "status": "COMPLETED",
                   "type": "LEARNING",
@@ -261,7 +261,7 @@
                   "actual_minutes": 0,
                   "due_date": null,
                   "days_to_due": null,
-                  "plan_id": "4bc51075-384d-4794-a398-879179b451d0"
+                  "plan_id": "07900fc1-b40a-491e-a74c-8b8e9e4900ce"
                 },
                 "is_first_unlocker": false,
                 "story": "2026年9月22日，在「离散数学期末 7 天冲刺：及格冲 70+」目标日前 7 天，完成了「Map the baseline」，解锁了「第一任务」。"

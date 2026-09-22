@@ -1,11 +1,11 @@
 {
   "schema": "sparkle.northstar.real-drive.run.v1",
   "meta": {
-    "run_id": "NS001-LOOP1-20260922-173358",
+    "run_id": "NS001-LOOP1-20260922-190107",
     "gateway_url": "http://127.0.0.1:8080",
-    "generated_at": "2026-09-22T17:37:28.906680+00:00",
-    "main_username": "northstar_ns001_2b85c688",
-    "control_username": "northstar_ns001_ctrl_c975adca",
+    "generated_at": "2026-09-22T19:04:11.739776+00:00",
+    "main_username": "northstar_ns001_aecf81cc",
+    "control_username": "northstar_ns001_ctrl_1067f2e3",
     "llm_messages_sent": 6,
     "llm_budget_total": 24,
     "honesty": "API compressed round (Day0+Day1) can NEVER declare north-star achievement; CP-98/99 frozen unsupported"
@@ -13,7 +13,7 @@
   "checkpoint_table": [
     {
       "checkpoint": "CP-00 baseline recorded and syllabus mapped",
-      "status": "fail",
+      "status": "blocked",
       "evidence_steps": [
         "B4",
         "B5",
@@ -98,16 +98,16 @@
   ],
   "counts": {
     "pass": 2,
-    "fail": 1,
-    "blocked": 6,
+    "fail": 0,
+    "blocked": 7,
     "unsupported": 2
   },
   "sprint_summary": {
-    "plan_id": "4bc51075-384d-4794-a398-879179b451d0",
+    "plan_id": "07900fc1-b40a-491e-a74c-8b8e9e4900ce",
     "plan_name": "离散数学期末 7 天冲刺：及格冲 70+",
     "subject": "离散数学",
     "exam_date": "2026-09-29",
-    "started_at": "2026-09-22T17:33:59.509562",
+    "started_at": "2026-09-22T19:01:11.346284",
     "days_used": 1,
     "headline": "你用了 1 天，完成了 1 项任务，二元关系 从 50 分提升到 50 分。",
     "task_stats": {
@@ -260,7 +260,7 @@
     "B4": "pass",
     "B5": "blocked",
     "B5b-2": "fail",
-    "B5b": "fail",
+    "B5b": "pass",
     "B6-2": "pass",
     "B6": "pass",
     "B7-2": "pass",

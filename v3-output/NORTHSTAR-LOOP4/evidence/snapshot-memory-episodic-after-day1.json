@@ -3,13 +3,13 @@
   "snapshot": {
     "items": [
       {
-        "id": "4c30d2a2-9dc1-4881-bb40-db2e2d60a054",
+        "id": "e59682aa-d5ac-4602-9f98-dd4f1289a32b",
         "summary": "completed Readiness check",
         "source_type": "chat_turn",
-        "source_id": "0eaa4be5b0e64107b4d81058d6827531",
+        "source_id": "0bef1c0a28c1477aa58351eead94ccb6",
         "source_lane": "direct_capture",
         "subject_type": "task_outcome",
-        "occurred_at": "2026-09-22T17:34:28.870801",
+        "occurred_at": "2026-09-22T19:01:39.850962",
         "due_at": null,
         "resolved_at": null,
         "importance_score": 0.72,
@@ -21,7 +21,7 @@
         "evidence_missing": false,
         "evidence_refs": [
           {
-            "id": "0eaa4be5b0e64107b4d81058d6827531",
+            "id": "0bef1c0a28c1477aa58351eead94ccb6",
             "type": "chat_turn",
             "user_deleted": false,
             "schema_version": "chat_turn.v1"
@@ -33,11 +33,11 @@
           "task_completed"
         ],
         "source_annotation": {
-          "turn_id": "0eaa4be5b0e64107b4d81058d6827531",
+          "turn_id": "0bef1c0a28c1477aa58351eead94ccb6",
           "label": "chat_turn",
-          "written_at": "2026-09-22T17:34:28.873316"
+          "written_at": "2026-09-22T19:01:39.855750"
         },
-        "updated_at": "2026-09-22T17:34:29.151635",
+        "updated_at": "2026-09-22T19:01:41.481959",
         "retracted_at": null,
         "revoked_at": null,
         "mentioned_entity_hash": null,
@@ -48,30 +48,30 @@
           "level": "domain",
           "domain_key": "task_outcome",
           "time_window": {
-            "occurred_at": "2026-09-22T17:34:28.870801"
+            "occurred_at": "2026-09-22T19:01:39.850962"
           }
         }
       },
       {
-        "id": "9d1a17ea-8b1f-4cb8-a837-2337c049a9c4",
+        "id": "cb29d09e-9531-41ef-a6cc-f3e40d3b7e98",
         "summary": "我每天只能投入 165 分钟",
         "source_type": "chat",
-        "source_id": "99eca206-a63e-5654-9594-ffacb46336b7",
+        "source_id": "d31a5165-5c79-59b2-bcb2-de2bf80cb775",
         "source_lane": "inferred_extraction",
         "subject_type": "self",
-        "occurred_at": "2026-09-22T17:33:59.463994",
+        "occurred_at": "2026-09-22T19:01:11.167768",
         "due_at": null,
         "resolved_at": null,
         "importance_score": 0.92,
         "confidence": 0.92,
-        "evidence_token": "c80f1d5b-623b-4b6a-9377-3b37e5d6e6c2",
+        "evidence_token": "edc7ea37-3e44-476e-b575-1219159856e0",
         "decay_policy": "30d",
         "evidence_score": 0.2,
         "correction_count": 0,
         "evidence_missing": false,
         "evidence_refs": [
           {
-            "id": "c80f1d5b-623b-4b6a-9377-3b37e5d6e6c2",
+            "id": "edc7ea37-3e44-476e-b575-1219159856e0",
             "type": "chat_turn",
             "user_deleted": false,
             "schema_version": "stage19.rule_y.v1"
@@ -82,11 +82,11 @@
           "decay:30d"
         ],
         "source_annotation": {
-          "turn_id": "c80f1d5b-623b-4b6a-9377-3b37e5d6e6c2",
+          "turn_id": "edc7ea37-3e44-476e-b575-1219159856e0",
           "label": "对话记录",
-          "written_at": "2026-09-22T17:34:00.094781"
+          "written_at": "2026-09-22T19:01:12.415233"
         },
-        "updated_at": "2026-09-22T17:34:29.151635",
+        "updated_at": "2026-09-22T19:01:41.481959",
         "retracted_at": null,
         "revoked_at": null,
         "mentioned_entity_hash": null,
@@ -97,31 +97,31 @@
           "level": "domain",
           "domain_key": "self",
           "time_window": {
-            "occurred_at": "2026-09-22T17:33:59.463994"
+            "occurred_at": "2026-09-22T19:01:11.167768"
           },
           "decay_policy": "30d"
         }
       },
       {
-        "id": "101f7a43-8444-46c4-8f6e-a2f88c24cdef",
+        "id": "b2b608ca-eec4-4063-99ad-17105495b165",
         "summary": "我的情况：自评当前掌握度大约 42/100；最薄弱的章是图论（CH4）；一个具体的困惑：我总是分不清欧拉回路和哈密顿回路的判定条件，考试肯定考",
         "source_type": "chat",
-        "source_id": "99eca206-a63e-5654-9594-ffacb46336b7",
+        "source_id": "d31a5165-5c79-59b2-bcb2-de2bf80cb775",
         "source_lane": "inferred_extraction",
         "subject_type": "self",
-        "occurred_at": "2026-09-22T17:33:59.463984",
+        "occurred_at": "2026-09-22T19:01:11.167760",
         "due_at": null,
         "resolved_at": null,
         "importance_score": 0.92,
         "confidence": 0.92,
-        "evidence_token": "c80f1d5b-623b-4b6a-9377-3b37e5d6e6c2",
+        "evidence_token": "edc7ea37-3e44-476e-b575-1219159856e0",
         "decay_policy": "30d",
         "evidence_score": 0.2,
         "correction_count": 0,
         "evidence_missing": false,
         "evidence_refs": [
           {
-            "id": "c80f1d5b-623b-4b6a-9377-3b37e5d6e6c2",
+            "id": "edc7ea37-3e44-476e-b575-1219159856e0",
             "type": "chat_turn",
             "user_deleted": false,
             "schema_version": "stage19.rule_y.v1"
@@ -132,11 +132,11 @@
           "decay:30d"
         ],
         "source_annotation": {
-          "turn_id": "c80f1d5b-623b-4b6a-9377-3b37e5d6e6c2",
+          "turn_id": "edc7ea37-3e44-476e-b575-1219159856e0",
           "label": "对话记录",
-          "written_at": "2026-09-22T17:33:59.761356"
+          "written_at": "2026-09-22T19:01:12.171798"
         },
-        "updated_at": "2026-09-22T17:34:29.151635",
+        "updated_at": "2026-09-22T19:01:41.481959",
         "retracted_at": null,
         "revoked_at": null,
         "mentioned_entity_hash": null,
@@ -147,31 +147,31 @@
           "level": "domain",
           "domain_key": "self",
           "time_window": {
-            "occurred_at": "2026-09-22T17:33:59.463984"
+            "occurred_at": "2026-09-22T19:01:11.167760"
           },
           "decay_policy": "30d"
         }
       },
       {
-        "id": "5d083601-73ac-48a0-afbe-c11db4305971",
+        "id": "195d5861-6991-49d8-9816-b5a5da2daf06",
         "summary": "你好，我要开始备考：离散数学期末考试在 7 天后（闭卷，100 分卷）",
         "source_type": "chat",
-        "source_id": "99eca206-a63e-5654-9594-ffacb46336b7",
+        "source_id": "d31a5165-5c79-59b2-bcb2-de2bf80cb775",
         "source_lane": "inferred_extraction",
         "subject_type": "commitment",
-        "occurred_at": "2026-09-22T17:33:59.463957",
+        "occurred_at": "2026-09-22T19:01:11.167744",
         "due_at": "2026-09-29T18:00:00",
         "resolved_at": null,
         "importance_score": 0.92,
         "confidence": 0.92,
-        "evidence_token": "c80f1d5b-623b-4b6a-9377-3b37e5d6e6c2",
+        "evidence_token": "edc7ea37-3e44-476e-b575-1219159856e0",
         "decay_policy": "due_at+7d",
         "evidence_score": 0.2,
         "correction_count": 0,
         "evidence_missing": false,
         "evidence_refs": [
           {
-            "id": "c80f1d5b-623b-4b6a-9377-3b37e5d6e6c2",
+            "id": "edc7ea37-3e44-476e-b575-1219159856e0",
             "type": "chat_turn",
             "user_deleted": false,
             "schema_version": "stage19.rule_y.v1"
@@ -183,11 +183,11 @@
           "m02:event_bounded"
         ],
         "source_annotation": {
-          "turn_id": "c80f1d5b-623b-4b6a-9377-3b37e5d6e6c2",
+          "turn_id": "edc7ea37-3e44-476e-b575-1219159856e0",
           "label": "对话记录",
-          "written_at": "2026-09-22T17:33:59.544827"
+          "written_at": "2026-09-22T19:01:11.399313"
         },
-        "updated_at": "2026-09-22T17:34:29.151635",
+        "updated_at": "2026-09-22T19:01:41.481959",
         "retracted_at": null,
         "revoked_at": null,
         "mentioned_entity_hash": null,
@@ -199,7 +199,7 @@
           "domain_key": "commitment",
           "time_window": {
             "due_at": "2026-09-29T18:00:00",
-            "occurred_at": "2026-09-22T17:33:59.463957"
+            "occurred_at": "2026-09-22T19:01:11.167744"
           },
           "decay_policy": "due_at+7d"
         }
@@ -210,5 +210,5 @@
     "limit": 20,
     "has_more": false
   },
-  "at": "2026-09-22T17:35:03.700667+00:00"
+  "at": "2026-09-22T19:02:34.455709+00:00"
 }

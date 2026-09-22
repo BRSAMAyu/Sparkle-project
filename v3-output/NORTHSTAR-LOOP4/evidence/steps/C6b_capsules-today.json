@@ -1,11 +1,11 @@
 {
   "schema": "sparkle.northstar.real-drive.step.v1",
-  "run_id": "NS001-LOOP1-20260922-173358",
+  "run_id": "NS001-LOOP1-20260922-190107",
   "step_id": "C6b",
   "phase": "day1",
   "name": "capsules today",
-  "started_at": "2026-09-22T17:34:56.232843+00:00",
-  "finished_at": "2026-09-22T17:35:03.683812+00:00",
+  "started_at": "2026-09-22T19:02:26.828529+00:00",
+  "finished_at": "2026-09-22T19:02:34.395434+00:00",
   "request": {
     "method": "GET",
     "path": "/api/v1/capsules/today",
@@ -15,15 +15,15 @@
     "status": 200,
     "body": [
       {
-        "id": "59036ccb-43c4-4a7f-9c5c-511c5315379f",
-        "title": "基线地图：为什么先测量，再行动",
-        "content": "**基线**（baseline）是一切改进工作的起点。无论是学习新技能、优化产品指标，还是训练机器学习模型，第一步几乎总是相同的：弄清楚现状到底是什么。\n\n- **为什么要建立基线**：没有基线，你无法判断变化是好是坏。比如想提升阅读速度，先测出当前的每分钟字数，之后的任何练习才有对照意义。\n- **好的基线特征**：可测量、可重复、有代表性。最好在相同条件下多测几次，取稳定值而不是偶然的最高或最低。\n- **常见的坑**：基线建立后环境变了却还在用旧数据；或者只测一个维度，忽略了其他受影响的方面。\n\n下一步可以探索：为你正在改进的那个具体目标，设计一个简单可重复的测量方法，并记录第一次的基线数据。",
+        "id": "9af1d623-fc1b-46c0-ae2f-020e719d8831",
+        "title": "为什么绘制基线是一切优化的起点",
+        "content": "无论是性能调优、机器学习项目还是行为分析，「map the baseline」都意味着先在不动任何变量的情况下，完整记录系统当前的状态。这条基线是你的参照系：没有它，后续任何改动都无法判断是改善还是退步。\n\n- **关键点**：基线必须在「未干预」的条件下采集，且要覆盖足够长的时间窗口，避免被偶发波动误导。\n- **关键点**：好的基线是可复现的——记录环境版本、参数配置和测量方法，否则未来对比时口径不一致。\n- **常见误区**：很多人在优化前忽略基线，结果只能靠感觉判断效果，产生「看起来变快了」的错觉。\n\n下一步可以探索「A/B 测试中的对照组设计」，它是基线思想在实验方法论中的自然延伸。",
         "is_read": false,
-        "created_at": "2026-09-22T17:35:03.673330",
+        "created_at": "2026-09-22T19:02:34.328776",
         "related_subject": "Map the baseline",
         "depth_level": "medium",
         "generation_method": "glm_4_7_no_thinking",
-        "quality_score": 8.5,
+        "quality_score": 0.86,
         "feedback_count": 0,
         "share_count": 0,
         "personalization_context": {
@@ -37,7 +37,7 @@
             "glm_4_7_flash_no_thinking",
             "deepseek_chat"
           ],
-          "generated_at": "2026-09-22T17:35:03.672945",
+          "generated_at": "2026-09-22T19:02:34.323175",
           "primary_model": "glm_4_7_no_thinking",
           "thinking_mode": false,
           "execution_mode": "online",
