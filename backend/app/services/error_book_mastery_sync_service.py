@@ -18,14 +18,17 @@ See: docs/product/implementation/ERROR_BOOK_TO_KNOWLEDGE_MASTERY_IMPLEMENTATION_
 
 from __future__ import annotations
 
+import hashlib
+import re
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import func, select
+from sqlalchemy import String, bindparam, func, select, text
 
 from app.core.event_bus import NodeMasteryUpdatedEvent
+from app.models.base import GUID
 from app.models.card_protocol import Card, CardEdge, CardType, EdgeType
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import StudyRecord, UserNodeStatus
@@ -75,6 +78,77 @@ LOW_MASTERY_REPLAN_THRESHOLD = 50
 ERROR_PRESSURE_LOOKBACK_DAYS = 7
 ERROR_PRESSURE_TRIGGER_COUNT = 3
 
+# ---------------------------------------------------------------------------
+# ERR-IDEM · re-analyze 幂等键（吸收侧）
+#
+# 同一道错题再次触发分析（POST /errors/{id}/analyze → analyze_and_link →
+# apply_error_diagnosis）此前会把 error_diagnosis 负反馈**再次**写进星图
+# ——同一错题扣两次，直接损害「星图诚实反映掌握度」（期末一周里反复看
+# 错题是正常行为）。CP-03 回执诚实申报的既有属性，本块负责去重：
+#
+# 天然键 = mastery_audit_log.request_id（每次成功的掌握度同步必留一行
+# 审计，见 galaxy_service.update_node_mastery 第 B 步），键内容确定性
+# 构造：record_type + error_id + 诊断内容指纹（+ review 表现）+ node_id。
+# 内容未变的重复分析/复盘 → 命中已有键 → 跳过；内容变了（用户改了题目/
+# 答案/图片）→ 指纹变化 → 作为新证据生效。
+#
+# 键采用紧凑编码（uuid 去连字符 + 8 位指纹段），满足 mastery_audit_log
+# request_id 的 VARCHAR(100) 列宽：edi ≤ 78、erv ≤ 89 字符。
+# ---------------------------------------------------------------------------
+
+DIAGNOSIS_SYNC_KEY_PREFIX = "edi"
+REVIEW_SYNC_KEY_PREFIX = "erv"
+CONTENT_FINGERPRINT_LENGTH = 8
+
+
+def _uuid_hex(value: Any) -> str:
+    """UUID → 32 位无连字符 hex（列宽预算内的紧凑身份段）。"""
+    return str(value).replace("-", "").lower()
+
+
+def _normalize_fingerprint_part(value: Any) -> str:
+    """指纹归一化：仅折叠空白，不做大小写折叠（改内容要能改出指纹）。"""
+    return re.sub(r"\s+", " ", str(value or "").strip())
+
+
+def diagnostic_content_fingerprint(error_record: Any) -> str:
+    """诊断输入的内容指纹：题目/图片/作答/标准答案未变 → 指纹不变。
+
+    question_image_url 参与指纹：图片错题的 OCR 文本可能有非确定性微扰，
+    图片未换（引用未变）即视为内容未变；question_text 在首次分析后被
+    OCR 回填（仅空时回填、一次性），不会造成重分析间的指纹漂移。
+    """
+    parts = [
+        _normalize_fingerprint_part(getattr(error_record, "question_text", None)),
+        _normalize_fingerprint_part(getattr(error_record, "question_image_url", None)),
+        _normalize_fingerprint_part(getattr(error_record, "user_answer", None)),
+        _normalize_fingerprint_part(getattr(error_record, "correct_answer", None)),
+    ]
+    digest = hashlib.sha256("\n".join(parts).encode("utf-8")).hexdigest()
+    return digest[:CONTENT_FINGERPRINT_LENGTH]
+
+
+def diagnosis_request_key(error_id: Any, fingerprint: str, node_id: Any) -> str:
+    """error_diagnosis 幂等键：``edi:<error_hex>:<fp>:<node_hex>``。
+
+    刻意**不含** error_type：LLM/兜底对同一内容可能给出不同错因分类，
+    分类抖动不应绕过幂等门造成二次扣分。
+    """
+    return f"{DIAGNOSIS_SYNC_KEY_PREFIX}:{_uuid_hex(error_id)}:{fingerprint}:{_uuid_hex(node_id)}"
+
+
+def review_request_key(error_id: Any, fingerprint: str, performance: str, node_id: Any) -> str:
+    """error_review 幂等键：``erv:<error_hex>:<fp>:<perf>:<node_hex>``。
+
+    表现（remembered/fuzzy/forgotten）是键的一部分：不同表现是不同的
+    逻辑证据，各自允许生效一次；同一表现重复提交（双击/重试）只生效
+    一次。内容指纹变化开启新代际（改题后可再次回升）。
+    """
+    return (
+        f"{REVIEW_SYNC_KEY_PREFIX}:{_uuid_hex(error_id)}:{fingerprint}:"
+        f"{_normalize_fingerprint_part(performance)}:{_uuid_hex(node_id)}"
+    )
+
 
 def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
@@ -114,8 +188,11 @@ class ErrorBookMasterySyncService:
             self._attach_no_linked_node_hint(error_record)
             return []
 
+        error_id = getattr(error_record, "id", None)
         error_type = self._extract_error_type(error_record)
         base_impact = ERROR_TYPE_IMPACT.get(error_type, -3)
+        # ERR-IDEM：内容指纹一次计算，循环内按 (error, fp, node) 构键去重
+        fingerprint = diagnostic_content_fingerprint(error_record) if error_id else ""
 
         results: list[dict] = []
         impacted_plan_ids: set[UUID] = set()
@@ -129,7 +206,12 @@ class ErrorBookMasterySyncService:
                 delta=delta,
                 record_type="error_diagnosis",
                 reason=f"error_diagnosis:{error_type}",
-                error_id=getattr(error_record, "id", None),
+                error_id=error_id,
+                request_key=(
+                    diagnosis_request_key(error_id, fingerprint, node_id)
+                    if error_id and fingerprint
+                    else None
+                ),
             )
             if node_result:
                 results.append(node_result)
@@ -185,6 +267,10 @@ class ErrorBookMasterySyncService:
         if delta == 0:
             return []
 
+        error_id = getattr(error_record, "id", None)
+        # ERR-IDEM：同一表现重复提交只生效一次；内容指纹开启新代际
+        fingerprint = diagnostic_content_fingerprint(error_record) if error_id else ""
+
         results: list[dict] = []
         impacted_plan_ids: set[UUID] = set()
         for node_id in linked_ids[:3]:
@@ -194,7 +280,12 @@ class ErrorBookMasterySyncService:
                 delta=delta,
                 record_type="error_review",
                 reason=f"error_review:{performance}",
-                error_id=getattr(error_record, "id", None),
+                error_id=error_id,
+                request_key=(
+                    review_request_key(error_id, fingerprint, performance, node_id)
+                    if error_id and fingerprint
+                    else None
+                ),
             )
             if node_result:
                 results.append(node_result)
@@ -259,8 +350,24 @@ class ErrorBookMasterySyncService:
         record_type: str,
         reason: str,
         error_id: UUID | None = None,
+        request_key: str | None = None,
     ) -> dict | None:
-        """Update a single node's mastery and record the change."""
+        """Update a single node's mastery and record the change.
+
+        ERR-IDEM：``request_key`` 非空时先查 mastery_audit_log 幂等门，
+        该键的同步已落账 → 直接跳过（不更新、不写 StudyRecord、不发事件、
+        不触发计划压力评估），返回 None 由调用方按「本次无变化」处理。
+        """
+        if await self._sync_already_applied(user_id, node_id, request_key):
+            logger.info(
+                "ErrorBookMasterySync: duplicate {} skipped for error {}/node {} "
+                "(idempotency key already in mastery_audit_log)",
+                record_type,
+                error_id,
+                node_id,
+            )
+            return None
+
         status = await self._get_or_create_node_status(
             user_id,
             node_id,
@@ -290,12 +397,16 @@ class ErrorBookMasterySyncService:
             return None
 
         revision = getattr(status, "revision", None)
+        # request_id：幂等键优先（审计行即天然去重账本）；无键时保持旧格式
+        request_id = request_key or (
+            f"{record_type}:{error_id}:{node_id}" if error_id else f"{record_type}:{node_id}"
+        )
         update_result = await self._write_node_mastery_via_galaxy(
             user_id=user_id,
             node_id=node_id,
             new_mastery=new_mastery,
             reason=reason,
-            request_id=f"{record_type}:{error_id}:{node_id}" if error_id else f"{record_type}:{node_id}",
+            request_id=request_id,
             revision=int(revision) if revision is not None else None,
         )
         if not update_result or update_result.get("success") is False:
@@ -372,6 +483,41 @@ class ErrorBookMasterySyncService:
             request_id=request_id,
             revision=revision,
         )
+
+    async def _sync_already_applied(self, user_id: UUID, node_id: UUID, request_key: str | None) -> bool:
+        """ERR-IDEM 幂等门：该 (user, node, request_key) 的同步是否已落账。
+
+        天然键 = mastery_audit_log.request_id——每次成功的掌握度同步都会
+        经 galaxy_service.update_node_mastery 追加一行带 request_id 的
+        append-only 审计行，键由 (record_type, error_id, 内容指纹
+        [, review 表现], node_id) 确定性构成，重放同键即同一次同步。
+
+        键为空 → 不设门（无 error_id 的合成调用保持旧行为）；门不可读
+        （表未建/查询异常）→ **fail-open 放行**并告警：宁可放行一次重复、
+        不可让门故障把掌握度同步整体静默吞掉（与 outcome_absorber
+        「audit 写失败不阻断吸收」同一降级方向）。
+        """
+        if not request_key:
+            return False
+        try:
+            stmt = text(
+                "SELECT request_id FROM mastery_audit_log "
+                "WHERE user_id = :user_id AND node_id = :node_id AND request_id = :request_key LIMIT 1"
+            ).bindparams(
+                bindparam("user_id", type_=GUID),
+                bindparam("node_id", type_=GUID),
+                bindparam("request_key", type_=String),
+            )
+            result = await self.db.execute(
+                stmt,
+                {"user_id": user_id, "node_id": node_id, "request_key": request_key},
+            )
+            return result.scalar_one_or_none() is not None
+        except Exception as exc:  # noqa: BLE001 — 门不可读时 fail-open（见 docstring）
+            logger.warning(
+                "ErrorBookMasterySync: idempotency gate unreadable, failing open: {}", exc
+            )
+            return False
 
     # -----------------------------------------------------------------------
     # Helpers
