@@ -316,6 +316,8 @@ class _TransactionItem extends StatelessWidget {
         return Icons.gavel_outlined;
       case PhotonTransactionType.adminAdjustment:
         return Icons.admin_panel_settings_outlined;
+      case PhotonTransactionType.redeemPro:
+        return Icons.redeem_rounded;
     }
   }
 }

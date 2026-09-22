@@ -13604,6 +13604,150 @@ abstract class AppLocalizations {
   /// **'创造'**
   String get cognitiveDimensionCreation;
 
+  /// No description provided for @photonRedeemProTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'光子兑换'**
+  String get photonRedeemProTitle;
+
+  /// No description provided for @photonRedeemProSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习所得的光子，随时可兑换成 Pro 时长'**
+  String get photonRedeemProSubtitle;
+
+  /// No description provided for @photonRedeemProBalanceLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'光子余额'**
+  String get photonRedeemProBalanceLabel;
+
+  /// No description provided for @photonRedeemProBaseLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'可兑换基数'**
+  String get photonRedeemProBaseLabel;
+
+  /// No description provided for @photonRedeemProBaseHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'由服务端核算，兑换时揭示'**
+  String get photonRedeemProBaseHint;
+
+  /// No description provided for @photonRedeemProBaseNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅合同/首胜/成就等学习所得计入基数，转账收入不计入'**
+  String get photonRedeemProBaseNote;
+
+  /// No description provided for @photonRedeemProTransferNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'其余 {count} 光子来自转账等来源，不计入可兑换基数'**
+  String photonRedeemProTransferNote(int count);
+
+  /// No description provided for @photonRedeemProCostLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'单次兑换'**
+  String get photonRedeemProCostLabel;
+
+  /// No description provided for @photonRedeemProDurationLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'Pro 时长'**
+  String get photonRedeemProDurationLabel;
+
+  /// No description provided for @photonRedeemProDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'{days} 天'**
+  String photonRedeemProDays(int days);
+
+  /// No description provided for @photonRedeemProCapLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'本月兑换'**
+  String get photonRedeemProCapLabel;
+
+  /// No description provided for @photonRedeemProCapAvailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'尚未使用'**
+  String get photonRedeemProCapAvailable;
+
+  /// No description provided for @photonRedeemProCapUsed.
+  ///
+  /// In zh, this message translates to:
+  /// **'本月已兑换，下月 1 日起可再兑'**
+  String get photonRedeemProCapUsed;
+
+  /// No description provided for @photonRedeemProAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'兑换 Pro'**
+  String get photonRedeemProAction;
+
+  /// No description provided for @photonRedeemProConfirmTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认兑换？'**
+  String get photonRedeemProConfirmTitle;
+
+  /// No description provided for @photonRedeemProConfirmContent.
+  ///
+  /// In zh, this message translates to:
+  /// **'将扣除 {cost} 光子，兑换 Pro {days} 天。兑换立即生效，扣除的光子不退还。'**
+  String photonRedeemProConfirmContent(int cost, int days);
+
+  /// No description provided for @photonRedeemProConfirmAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认兑换'**
+  String get photonRedeemProConfirmAction;
+
+  /// No description provided for @photonRedeemProSuccessToast.
+  ///
+  /// In zh, this message translates to:
+  /// **'兑换成功，Pro 已延长至 {date}'**
+  String photonRedeemProSuccessToast(String date);
+
+  /// No description provided for @photonRedeemProInsufficientBase.
+  ///
+  /// In zh, this message translates to:
+  /// **'可兑换基数不足：仅学习所得光子可兑换，转账收入不计入。'**
+  String get photonRedeemProInsufficientBase;
+
+  /// No description provided for @photonRedeemProInsufficientBalance.
+  ///
+  /// In zh, this message translates to:
+  /// **'光子余额不足'**
+  String get photonRedeemProInsufficientBalance;
+
+  /// No description provided for @photonRedeemProErrorToast.
+  ///
+  /// In zh, this message translates to:
+  /// **'兑换没有完成，请稍后再试'**
+  String get photonRedeemProErrorToast;
+
+  /// No description provided for @photonRedeemProLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'光子兑换加载失败：{error}'**
+  String photonRedeemProLoadFailed(Object error);
+
+  /// No description provided for @photonRedeemProRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get photonRedeemProRetry;
+
+  /// No description provided for @photonRedeemProEntryTooltip.
+  ///
+  /// In zh, this message translates to:
+  /// **'光子兑 Pro'**
+  String get photonRedeemProEntryTooltip;
+
   /// No description provided for @photonTransactionGrantAchievement.
   ///
   /// In zh, this message translates to:
@@ -13669,6 +13813,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'管理员调整'**
   String get photonTransactionAdminAdjustment;
+
+  /// No description provided for @photonTransactionRedeemPro.
+  ///
+  /// In zh, this message translates to:
+  /// **'光子兑 Pro'**
+  String get photonTransactionRedeemPro;
 
   /// No description provided for @photonTransactionsEmpty.
   ///

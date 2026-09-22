@@ -7289,6 +7289,88 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cognitiveDimensionCreation => '创造';
 
   @override
+  String get photonRedeemProTitle => '光子兑换';
+
+  @override
+  String get photonRedeemProSubtitle => '学习所得的光子，随时可兑换成 Pro 时长';
+
+  @override
+  String get photonRedeemProBalanceLabel => '光子余额';
+
+  @override
+  String get photonRedeemProBaseLabel => '可兑换基数';
+
+  @override
+  String get photonRedeemProBaseHint => '由服务端核算，兑换时揭示';
+
+  @override
+  String get photonRedeemProBaseNote => '仅合同/首胜/成就等学习所得计入基数，转账收入不计入';
+
+  @override
+  String photonRedeemProTransferNote(int count) {
+    return '其余 $count 光子来自转账等来源，不计入可兑换基数';
+  }
+
+  @override
+  String get photonRedeemProCostLabel => '单次兑换';
+
+  @override
+  String get photonRedeemProDurationLabel => 'Pro 时长';
+
+  @override
+  String photonRedeemProDays(int days) {
+    return '$days 天';
+  }
+
+  @override
+  String get photonRedeemProCapLabel => '本月兑换';
+
+  @override
+  String get photonRedeemProCapAvailable => '尚未使用';
+
+  @override
+  String get photonRedeemProCapUsed => '本月已兑换，下月 1 日起可再兑';
+
+  @override
+  String get photonRedeemProAction => '兑换 Pro';
+
+  @override
+  String get photonRedeemProConfirmTitle => '确认兑换？';
+
+  @override
+  String photonRedeemProConfirmContent(int cost, int days) {
+    return '将扣除 $cost 光子，兑换 Pro $days 天。兑换立即生效，扣除的光子不退还。';
+  }
+
+  @override
+  String get photonRedeemProConfirmAction => '确认兑换';
+
+  @override
+  String photonRedeemProSuccessToast(String date) {
+    return '兑换成功，Pro 已延长至 $date';
+  }
+
+  @override
+  String get photonRedeemProInsufficientBase => '可兑换基数不足：仅学习所得光子可兑换，转账收入不计入。';
+
+  @override
+  String get photonRedeemProInsufficientBalance => '光子余额不足';
+
+  @override
+  String get photonRedeemProErrorToast => '兑换没有完成，请稍后再试';
+
+  @override
+  String photonRedeemProLoadFailed(Object error) {
+    return '光子兑换加载失败：$error';
+  }
+
+  @override
+  String get photonRedeemProRetry => '重试';
+
+  @override
+  String get photonRedeemProEntryTooltip => '光子兑 Pro';
+
+  @override
   String get photonTransactionGrantAchievement => '成就奖励';
 
   @override
@@ -7320,6 +7402,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get photonTransactionAdminAdjustment => '管理员调整';
+
+  @override
+  String get photonTransactionRedeemPro => '光子兑 Pro';
 
   @override
   String get photonTransactionsEmpty => '暂无交易记录';

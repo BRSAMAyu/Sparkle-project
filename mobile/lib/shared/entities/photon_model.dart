@@ -39,6 +39,11 @@ enum PhotonTransactionType {
   penalty,
   @JsonValue('admin_adjustment')
   adminAdjustment,
+  // D-COMM-2：光子兑 Pro 通道扣减流水（引擎 REDEEM_PRO_TX_TYPE）。
+  // 必须与后端枚举保持同步：$enumDecode 遇未知值抛 ArgumentError，
+  // 缺成员会让交易历史解析在兑换发生后直接崩溃。
+  @JsonValue('redeem_pro')
+  redeemPro,
 }
 
 // ========== 光子余额实体 ==========
@@ -140,8 +145,10 @@ class PhotonTransaction {
         return l10n.photonTransactionPenalty;
       case PhotonTransactionType.adminAdjustment:
         return l10n.photonTransactionAdminAdjustment;
-    }
-  }
+      case PhotonTransactionType.redeemPro:
+        return l10n.photonTransactionRedeemPro;
+      }
+}
 
   PhotonTransaction copyWith({
     String? id,

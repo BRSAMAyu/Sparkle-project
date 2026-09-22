@@ -3066,6 +3066,68 @@
     "cognitiveDimensionAnalysis": "Analysis",
     "cognitiveDimensionEvaluation": "Evaluation",
     "cognitiveDimensionCreation": "Creation",
+    "photonRedeemProTitle": "Redeem Photons",
+    "photonRedeemProSubtitle": "Photons you earned can become Pro time, anytime",
+    "photonRedeemProBalanceLabel": "Photon balance",
+    "photonRedeemProBaseLabel": "Redeemable base",
+    "photonRedeemProBaseHint": "Verified by the server, revealed when you redeem",
+    "photonRedeemProBaseNote": "Only photons earned from contracts, daily first wins and achievements count — transferred-in photons don't",
+    "photonRedeemProTransferNote": "The other {count} photons came from transfers and don't count toward the redeemable base",
+    "@photonRedeemProTransferNote": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "photonRedeemProCostLabel": "Per redemption",
+    "photonRedeemProDurationLabel": "Pro duration",
+    "photonRedeemProDays": "{days} days",
+    "@photonRedeemProDays": {
+        "placeholders": {
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "photonRedeemProCapLabel": "This month",
+    "photonRedeemProCapAvailable": "Not used yet",
+    "photonRedeemProCapUsed": "Already redeemed this month — available again next month",
+    "photonRedeemProAction": "Redeem Pro",
+    "photonRedeemProConfirmTitle": "Confirm redemption",
+    "photonRedeemProConfirmContent": "This spends {cost} photons for {days} days of Pro. It takes effect immediately — photons spent are not returned.",
+    "@photonRedeemProConfirmContent": {
+        "placeholders": {
+            "cost": {
+                "type": "int"
+            },
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "photonRedeemProConfirmAction": "Redeem",
+    "photonRedeemProSuccessToast": "Redeemed — Pro now runs to {date}",
+    "@photonRedeemProSuccessToast": {
+        "placeholders": {
+            "date": {
+                "type": "String"
+            }
+        }
+    },
+    "photonRedeemProInsufficientBase": "Not enough redeemable photons: only earned photons count — transferred-in photons don't.",
+    "photonRedeemProInsufficientBalance": "Not enough photons",
+    "photonRedeemProErrorToast": "The redemption didn't go through — please try again later",
+    "photonRedeemProLoadFailed": "Failed to load photon redemption: {error}",
+    "@photonRedeemProLoadFailed": {
+        "placeholders": {
+            "error": {
+                "type": "Object"
+            }
+        }
+    },
+    "photonRedeemProRetry": "Retry",
+    "photonRedeemProEntryTooltip": "Redeem photons for Pro",
     "photonTransactionGrantAchievement": "Achievement reward",
     "photonTransactionGrantDailyFirst": "Daily first reward",
     "photonTransactionGrantContract": "Contract reward",
@@ -3077,6 +3139,7 @@
     "photonTransactionRefund": "Refund",
     "photonTransactionPenalty": "Penalty",
     "photonTransactionAdminAdjustment": "Admin adjustment",
+    "photonTransactionRedeemPro": "Photon redeem Pro",
     "photonTransactionsEmpty": "No transaction records",
     "photonTransactionsEnd": "No more records",
     "photonTransactionDaysAgo": "{days}d ago",

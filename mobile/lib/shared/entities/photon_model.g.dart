@@ -62,6 +62,7 @@ const _$PhotonTransactionTypeEnumMap = {
   PhotonTransactionType.refund: 'refund',
   PhotonTransactionType.penalty: 'penalty',
   PhotonTransactionType.adminAdjustment: 'admin_adjustment',
+  PhotonTransactionType.redeemPro: 'redeem_pro',
 };
 
 TransactionSummary _$TransactionSummaryFromJson(Map<String, dynamic> json) =>

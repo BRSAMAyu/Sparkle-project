@@ -7578,6 +7578,94 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cognitiveDimensionCreation => 'Creation';
 
   @override
+  String get photonRedeemProTitle => 'Redeem Photons';
+
+  @override
+  String get photonRedeemProSubtitle =>
+      'Photons you earned can become Pro time, anytime';
+
+  @override
+  String get photonRedeemProBalanceLabel => 'Photon balance';
+
+  @override
+  String get photonRedeemProBaseLabel => 'Redeemable base';
+
+  @override
+  String get photonRedeemProBaseHint =>
+      'Verified by the server, revealed when you redeem';
+
+  @override
+  String get photonRedeemProBaseNote =>
+      'Only photons earned from contracts, daily first wins and achievements count — transferred-in photons don\'t';
+
+  @override
+  String photonRedeemProTransferNote(int count) {
+    return 'The other $count photons came from transfers and don\'t count toward the redeemable base';
+  }
+
+  @override
+  String get photonRedeemProCostLabel => 'Per redemption';
+
+  @override
+  String get photonRedeemProDurationLabel => 'Pro duration';
+
+  @override
+  String photonRedeemProDays(int days) {
+    return '$days days';
+  }
+
+  @override
+  String get photonRedeemProCapLabel => 'This month';
+
+  @override
+  String get photonRedeemProCapAvailable => 'Not used yet';
+
+  @override
+  String get photonRedeemProCapUsed =>
+      'Already redeemed this month — available again next month';
+
+  @override
+  String get photonRedeemProAction => 'Redeem Pro';
+
+  @override
+  String get photonRedeemProConfirmTitle => 'Confirm redemption';
+
+  @override
+  String photonRedeemProConfirmContent(int cost, int days) {
+    return 'This spends $cost photons for $days days of Pro. It takes effect immediately — photons spent are not returned.';
+  }
+
+  @override
+  String get photonRedeemProConfirmAction => 'Redeem';
+
+  @override
+  String photonRedeemProSuccessToast(String date) {
+    return 'Redeemed — Pro now runs to $date';
+  }
+
+  @override
+  String get photonRedeemProInsufficientBase =>
+      'Not enough redeemable photons: only earned photons count — transferred-in photons don\'t.';
+
+  @override
+  String get photonRedeemProInsufficientBalance => 'Not enough photons';
+
+  @override
+  String get photonRedeemProErrorToast =>
+      'The redemption didn\'t go through — please try again later';
+
+  @override
+  String photonRedeemProLoadFailed(Object error) {
+    return 'Failed to load photon redemption: $error';
+  }
+
+  @override
+  String get photonRedeemProRetry => 'Retry';
+
+  @override
+  String get photonRedeemProEntryTooltip => 'Redeem photons for Pro';
+
+  @override
   String get photonTransactionGrantAchievement => 'Achievement reward';
 
   @override
@@ -7609,6 +7697,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get photonTransactionAdminAdjustment => 'Admin adjustment';
+
+  @override
+  String get photonTransactionRedeemPro => 'Photon redeem Pro';
 
   @override
   String get photonTransactionsEmpty => 'No transaction records';

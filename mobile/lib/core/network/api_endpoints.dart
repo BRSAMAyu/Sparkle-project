@@ -657,6 +657,7 @@ class ApiEndpoints {
   static const String photonBalance = '/photons/balance';
   static const String photonTransactions = '/photons/transactions';
   static const String photonTransfer = '/photons/transfer';
+  static const String photonRedeemPro = '/photons/redeem-pro';
 
   // Inventory System
   static const String inventory = '/inventory';

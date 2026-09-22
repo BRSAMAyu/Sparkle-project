@@ -3059,6 +3059,68 @@
     "cognitiveDimensionAnalysis": "分析",
     "cognitiveDimensionEvaluation": "评价",
     "cognitiveDimensionCreation": "创造",
+    "photonRedeemProTitle": "光子兑换",
+    "photonRedeemProSubtitle": "学习所得的光子，随时可兑换成 Pro 时长",
+    "photonRedeemProBalanceLabel": "光子余额",
+    "photonRedeemProBaseLabel": "可兑换基数",
+    "photonRedeemProBaseHint": "由服务端核算，兑换时揭示",
+    "photonRedeemProBaseNote": "仅合同/首胜/成就等学习所得计入基数，转账收入不计入",
+    "photonRedeemProTransferNote": "其余 {count} 光子来自转账等来源，不计入可兑换基数",
+    "@photonRedeemProTransferNote": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "photonRedeemProCostLabel": "单次兑换",
+    "photonRedeemProDurationLabel": "Pro 时长",
+    "photonRedeemProDays": "{days} 天",
+    "@photonRedeemProDays": {
+        "placeholders": {
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "photonRedeemProCapLabel": "本月兑换",
+    "photonRedeemProCapAvailable": "尚未使用",
+    "photonRedeemProCapUsed": "本月已兑换，下月 1 日起可再兑",
+    "photonRedeemProAction": "兑换 Pro",
+    "photonRedeemProConfirmTitle": "确认兑换？",
+    "photonRedeemProConfirmContent": "将扣除 {cost} 光子，兑换 Pro {days} 天。兑换立即生效，扣除的光子不退还。",
+    "@photonRedeemProConfirmContent": {
+        "placeholders": {
+            "cost": {
+                "type": "int"
+            },
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "photonRedeemProConfirmAction": "确认兑换",
+    "photonRedeemProSuccessToast": "兑换成功，Pro 已延长至 {date}",
+    "@photonRedeemProSuccessToast": {
+        "placeholders": {
+            "date": {
+                "type": "String"
+            }
+        }
+    },
+    "photonRedeemProInsufficientBase": "可兑换基数不足：仅学习所得光子可兑换，转账收入不计入。",
+    "photonRedeemProInsufficientBalance": "光子余额不足",
+    "photonRedeemProErrorToast": "兑换没有完成，请稍后再试",
+    "photonRedeemProLoadFailed": "光子兑换加载失败：{error}",
+    "@photonRedeemProLoadFailed": {
+        "placeholders": {
+            "error": {
+                "type": "Object"
+            }
+        }
+    },
+    "photonRedeemProRetry": "重试",
+    "photonRedeemProEntryTooltip": "光子兑 Pro",
     "photonTransactionGrantAchievement": "成就奖励",
     "photonTransactionGrantDailyFirst": "每日首成奖励",
     "photonTransactionGrantContract": "契约奖励",
@@ -3070,6 +3132,7 @@
     "photonTransactionRefund": "退款",
     "photonTransactionPenalty": "惩罚",
     "photonTransactionAdminAdjustment": "管理员调整",
+    "photonTransactionRedeemPro": "光子兑 Pro",
     "photonTransactionsEmpty": "暂无交易记录",
     "photonTransactionsEnd": "没有更多记录了",
     "photonTransactionDaysAgo": "{days}天前",

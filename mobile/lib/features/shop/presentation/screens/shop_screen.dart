@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/photon/photon_routes.dart';
 import 'package:sparkle/features/shop/presentation/providers/shop_provider.dart';
 import 'package:sparkle/features/shop/presentation/widgets/purchase_confirmation_dialog.dart';
 import 'package:sparkle/features/shop/presentation/widgets/shop_item_card.dart';
@@ -44,6 +46,19 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
       role: SparklePageRole.content,
       appBar: AppBar(
         title: Text(context.l10n.shopTitle),
+        // D-COMM-2：光子兑 Pro 入口（次级位置，不占内容主面积；奖励出口语义，
+        // 与商城购买面分开——不放兑换卡进商品网格）。
+        actions: [
+          Tooltip(
+            message: context.l10n.photonRedeemProEntryTooltip,
+            child: SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              icon: const Icon(Icons.redeem_rounded),
+              onPressed: () =>
+                  unawaited(context.push(PhotonRoutes.redeemPro)),
+            ),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
