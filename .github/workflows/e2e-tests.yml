@@ -84,7 +84,9 @@ jobs:
           REDIS_URL: redis://localhost:6379/0
         run: |
           cd backend
-          pytest tests_e2e/ -v \
+          # tests_e2e/ 位于仓库根（不在 backend/ 下），从 backend cwd 以相对路径指回；
+          # 保持 cwd=backend 使 --cov=app 与 coverage.xml/junitxml 的 backend/ 前缀引用有效。
+          pytest ../tests_e2e/ -v \
             --tb=short \
             --cov=app \
             --cov-report=xml \
@@ -305,7 +307,8 @@ jobs:
           GRPC_URL: localhost:50051
         run: |
           cd backend
-          pytest tests_e2e/ -v --tb=short --durations=10
+          # tests_e2e/ 位于仓库根，从 backend cwd 以 ../tests_e2e/ 指回（同 python-e2e job）。
+          pytest ../tests_e2e/ -v --tb=short --durations=10
 
       - name: Cleanup
         if: always()

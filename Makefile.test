@@ -93,7 +93,7 @@ test-e2e-report:
 	@echo "## Test Run: $$(date)" >> test_reports/e2e_report.md
 	@echo "" >> test_reports/e2e_report.md
 	@echo "### Python Tests" >> test_reports/e2e_report.md
-	@cd backend && pytest tests_e2e/ --collect-only -q >> ../test_reports/e2e_report.md
+	@cd backend && pytest ../tests_e2e/ --collect-only -q >> ../test_reports/e2e_report.md
 	@echo "" >> test_reports/e2e_report.md
 	@echo "### Go Tests" >> test_reports/e2e_report.md
 	@cd backend/gateway && go test ./internal/handler/... -list . >> ../../test_reports/e2e_report.md 2>&1
@@ -139,7 +139,7 @@ test-e2e-coverage-report:
 	@echo "$(GREEN)Generating combined coverage report...$(NC)"
 	@mkdir -p test_reports/coverage
 	# Python coverage
-	@cd backend && pytest tests_e2e/ --cov=app --cov-report=xml --cov-report=html
+	@cd backend && pytest ../tests_e2e/ --cov=app --cov-report=xml --cov-report=html
 	@mv backend/htmlcov test_reports/coverage/python_htmlcov
 	@mv backend/coverage.xml test_reports/coverage/python_coverage.xml
 	# Go coverage
@@ -171,7 +171,7 @@ watch-e2e-tests:
 
 test-smoke:
 	@echo "$(GREEN)Running smoke tests...$(NC)"
-	@cd backend && pytest tests_e2e/test_chat_e2e.py::test_e2e_simple_chat_message_flow -v
+	@cd backend && pytest ../tests_e2e/test_chat_e2e.py::test_e2e_simple_chat_message_flow -v
 	@cd backend/gateway && go test -v -tags=integration -run TestE2E_CompleteChatFlow ./internal/handler/
 	@echo "$(GREEN)✓ Smoke tests passed$(NC)"
 
@@ -181,7 +181,7 @@ test-smoke:
 
 test-performance:
 	@echo "$(GREEN)Running performance tests...$(NC)"
-	@cd backend && pytest tests_e2e/ -v -k "performance or slow" --durations=10
+	@cd backend && pytest ../tests_e2e/ -v -k "performance or slow" --durations=10
 	@echo "$(GREEN)✓ Performance tests complete$(NC)"
 
 # =============================================================================

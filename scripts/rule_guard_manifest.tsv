@@ -20,7 +20,7 @@ AF	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_rule_af_skill_share_isolation.py"
 S21-TRIGGER	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_skill_extract_trigger_purity.py"
 S21-HISTORY	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_route_history_skill_field.py"
 AG	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_rule_ag_baseline_prerequisite.py"
-S22-PROMPT	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_prompt_render_coverage.py" --write
+S22-PROMPT	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_prompt_render_coverage.py"
 S22-REPLAN	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/check_error_replan_trigger_purity.py"
 AH	PYTHONPATH="${REPO_ROOT}/backend" "${PYTHON_BIN}" "${REPO_ROOT}/scripts/stage23/check_rule_ah_dimension_registry.py"
 S23-NO-LLM	PYTHONPATH="${REPO_ROOT}/backend" "${PYTHON_BIN}" "${REPO_ROOT}/scripts/stage23/check_bayesian_no_llm_import.py"
