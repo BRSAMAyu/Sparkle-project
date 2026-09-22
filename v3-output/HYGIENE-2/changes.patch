@@ -1,0 +1,418 @@
+diff --git a/backend/app/core/tracing.py b/backend/app/core/tracing.py
+index 244a1f84..e112c728 100755
+--- a/backend/app/core/tracing.py
++++ b/backend/app/core/tracing.py
+@@ -1,4 +1,36 @@
++"""OTEL tracing bootstrap (HYGIENE-2).
++
++设计要点（2026-09 债务清理）：
++
++1. **trace export 默认关闭，除非显式配置 collector**。
++   旧实现把 endpoint 硬编码默认到 ``http://localhost:4317``，本机没有 OTEL
++   collector 时 BatchSpanProcessor 会持续刷
++   ``Failed to export traces to localhost:4317 ... UNAVAILABLE`` + retry 噪音。
++   现在只有显式设置 ``OTEL_EXPORTER_OTLP_ENDPOINT`` 的环境（docker-compose /
++   k8s / prod 全部都设置了）才挂 OTLP exporter；未设置 = 无处可导出 = 不挂。
++   **span 采集语义保持不变**：TracerProvider 照常创建并 set 为全局 provider，
++   业务代码的 start_span / span attributes / trace spine（orchestrator 的
++   O-02 trace_id 取自真实 span context）不受影响，只是不再向不存在的
++   collector 做无效导出。
++
++2. **标准开关语义保留**：
++   - ``OTEL_SDK_DISABLED=true``（OTel 官方规范开关，SDK 1.40 原生支持，
++     生效时 get_tracer 返回 NoOpTracer）→ 同时不挂 exporter；
++   - ``OTEL_TRACES_EXPORTER=none``（OTel 规范信号级开关）→ 不挂 exporter。
++
++3. **instrumentation 跨 task detach 噪音抑制**。
++   opentelemetry-instrumentation-grpc(aio) 在不同 task 里 detach 上下文时，
++   ``opentelemetry.context.detach`` 会打
++   ``Failed to detach context`` + ``ValueError: Token ... was created in a
++   different Context``（opentelemetry-contextvars 的已知库层问题，对业务
++   无影响）。按"不改库、只在应用侧滤噪"原则，模块导入时给
++   ``opentelemetry.context`` logger 挂一个精确匹配该 ValueError 的日志
++   过滤器；其它 detach 失败仍正常记录。
++"""
++
++import logging
+ import os
++from typing import Mapping
+ 
+ from opentelemetry import trace
+ from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+@@ -6,6 +38,68 @@ from opentelemetry.sdk.resources import Resource
+ from opentelemetry.sdk.trace import TracerProvider
+ from opentelemetry.sdk.trace.export import BatchSpanProcessor
+ 
++# Detach 噪音指纹：opentelemetry.context.__init__.detach 的
++# `logger.exception("Failed to detach context")` + contextvars reset 的
++# ValueError("... was created in a different Context")。
++_DETACH_NOISE_LOGGER = "opentelemetry.context"
++_DETACH_NOISE_MSG = "Failed to detach context"
++_DETACH_NOISE_EXC_MARKER = "was created in a different Context"
++
++
++class OtelCrossContextDetachNoiseFilter(logging.Filter):
++    """只吞 instrumentation 跨 task detach 的已知良性 ValueError 噪音。
++
++    匹配条件（三条全中才过滤，其余日志一律放行）：
++    - logger 名 == ``opentelemetry.context``（由 addFilter 的挂载点保证）；
++    - message == ``Failed to detach context``；
++    - exc_info 是带 "was created in a different Context" 的 ValueError。
++    """
++
++    def filter(self, record: logging.LogRecord) -> bool:
++        if record.getMessage() != _DETACH_NOISE_MSG:
++            return True
++        exc = record.exc_info[1] if record.exc_info else None
++        if isinstance(exc, ValueError) and _DETACH_NOISE_EXC_MARKER in str(exc):
++            return False
++        return True
++
++
++def suppress_otel_detach_noise() -> None:
++    """给 otel context logger 挂 detach 噪音过滤器（幂等）。"""
++    logger = logging.getLogger(_DETACH_NOISE_LOGGER)
++    for existing in logger.filters:
++        if isinstance(existing, OtelCrossContextDetachNoiseFilter):
++            return
++    logger.addFilter(OtelCrossContextDetachNoiseFilter())
++
++
++def resolve_export_settings(
++    env: Mapping[str, str] | None = None,
++) -> dict[str, object]:
++    """纯函数：解析 OTEL 环境变量，决定是否挂 OTLP trace exporter。
++
++    - ``OTEL_EXPORTER_OTLP_ENDPOINT`` 未设置/为空 → export 关闭（默认关，
++      本机无 collector，避免 localhost:4317 UNAVAILABLE 刷屏）；
++    - ``OTEL_SDK_DISABLED=true`` → export 关闭（SDK 层同时整体禁用）；
++    - ``OTEL_TRACES_EXPORTER=none`` → export 关闭；
++    - 以上都不满足（显式配了 endpoint）→ export 开启，endpoint/insecure
++      行为与旧实现完全一致。
++    """
++    env = os.environ if env is None else env
++    endpoint = (env.get("OTEL_EXPORTER_OTLP_ENDPOINT") or "").strip()
++    traces_exporter = (env.get("OTEL_TRACES_EXPORTER") or "").strip().lower()
++    sdk_disabled = (env.get("OTEL_SDK_DISABLED") or "").strip().lower() == "true"
++    insecure = (env.get("OTLP_INSECURE") or "false").strip().lower() == "true"
++    export_enabled = bool(endpoint) and not sdk_disabled and traces_exporter != "none"
++    return {
++        "export_enabled": export_enabled,
++        "endpoint": endpoint,
++        "insecure": insecure,
++    }
++
++
++suppress_otel_detach_noise()
++
+ # Configure Trace Provider
+ resource = Resource.create({
+     "service.name": "sparkle-backend",
+@@ -15,14 +109,18 @@ resource = Resource.create({
+ 
+ tracer_provider = TracerProvider(resource=resource)
+ 
+-# Configure OTLP Exporter (connects to Jaeger/Tempo via OTEL Collector)
+-otlp_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+-otlp_insecure = os.getenv("OTLP_INSECURE", "false").lower() == "true"
+-otlp_exporter = OTLPSpanExporter(endpoint=otlp_endpoint, insecure=otlp_insecure)
++# Configure OTLP Exporter (connects to Jaeger/Tempo via OTEL Collector).
++# Only attach when a collector endpoint is explicitly configured — see
++# resolve_export_settings() for the default-off rationale (HYGIENE-2).
++_export_settings = resolve_export_settings()
++TRACE_EXPORT_ENABLED = _export_settings["export_enabled"]
+ 
+-tracer_provider.add_span_processor(
+-    BatchSpanProcessor(otlp_exporter)
+-)
++if TRACE_EXPORT_ENABLED:
++    otlp_exporter = OTLPSpanExporter(
++        endpoint=str(_export_settings["endpoint"]),
++        insecure=bool(_export_settings["insecure"]),
++    )
++    tracer_provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
+ 
+ # Set global Trace Provider
+ trace.set_tracer_provider(tracer_provider)
+diff --git a/backend/tests/conftest.py b/backend/tests/conftest.py
+index b2f600cc..a531efc7 100755
+--- a/backend/tests/conftest.py
++++ b/backend/tests/conftest.py
+@@ -237,10 +237,25 @@ async def test_shop_items_fixture(db_session: AsyncSession) -> list[ShopItem]:
+     return items
+ 
+ 
++TEST_REDIS_DB = int(os.getenv("TEST_REDIS_DB", "15"))
++
++
++def _isolate_test_redis_db(raw_url: str) -> str:
++    """HYGIENE-2：把测试用 redis URL 指到隔离 DB index（默认 db15）。
++
++    旧实现直连 REDIS_URL（通常 db0）且 teardown ``flushdb()``——在主仓跑测试
++    会清空 dev redis 的真实缓存/队列数据。现统一改写到专用测试 DB（可用
++    ``TEST_REDIS_DB`` 覆盖），teardown 的 flushdb 只影响该隔离 DB。
++    """
++    parsed = urlparse(raw_url)
++    return urlunparse(parsed._replace(path=f"/{TEST_REDIS_DB}"))
++
++
+ @pytest_asyncio.fixture(name="redis_client")
+ async def redis_client_fixture():
+-    """Create Redis client for integration tests."""
++    """Create Redis client for integration tests (isolated DB index)."""
+     redis_url = _normalize_test_redis_url(os.getenv("REDIS_URL", settings.REDIS_URL or "redis://localhost:6379/0"))
++    redis_url = _isolate_test_redis_db(redis_url)
+     password, _ = resolve_redis_password(redis_url, os.getenv("REDIS_PASSWORD", settings.REDIS_PASSWORD))
+     client = redis.from_url(
+         redis_url,
+@@ -259,7 +274,7 @@ async def redis_client_fixture():
+     yield client
+ 
+     try:
+-        await client.flushdb()
++        await client.flushdb()  # 只 flush 隔离测试 DB（见 _isolate_test_redis_db）
+     except Exception:
+         pass
+     if hasattr(client, "aclose"):
+diff --git a/backend/tests/unit/test_redis_fixture_isolation.py b/backend/tests/unit/test_redis_fixture_isolation.py
+new file mode 100644
+index 00000000..3e1b373b
+--- /dev/null
++++ b/backend/tests/unit/test_redis_fixture_isolation.py
+@@ -0,0 +1,63 @@
++"""HYGIENE-2：conftest redis_client fixture 隔离 DB index 的守卫测试。
++
++旧实现直连 REDIS_URL（通常 db0）且 teardown ``flushdb()``——在主仓跑测试会
++清空 dev redis 的真实缓存/队列数据。现在 fixture 一律改写到专用测试 DB
++（默认 db15，``TEST_REDIS_DB`` 可覆盖），teardown 只 flush 该隔离 DB。
++
++涉及真 redis 的用例随 fixture 的 ping 门槛自动 skip（redis 不可用时），
++且只读写隔离 DB，绝不触碰 db0 的真实数据。
++"""
++
++from redis import Redis
++
++from tests.conftest import TEST_REDIS_DB, _isolate_test_redis_db
++
++
++class TestIsolateTestRedisDb:
++    def test_bare_host_url_gets_isolated_db(self):
++        assert _isolate_test_redis_db("redis://localhost:6379/0") == (f"redis://localhost:6379/{TEST_REDIS_DB}")
++
++    def test_no_path_url_gets_isolated_db(self):
++        assert _isolate_test_redis_db("redis://localhost:6379") == (f"redis://localhost:6379/{TEST_REDIS_DB}")
++
++    def test_explicit_db_is_overridden(self):
++        # 即使 REDIS_URL 显式带了 db，也强制改写到隔离 DB
++        assert _isolate_test_redis_db("redis://localhost:6379/5") == (f"redis://localhost:6379/{TEST_REDIS_DB}")
++
++    def test_auth_and_host_preserved(self):
++        assert (
++            _isolate_test_redis_db("redis://:secret@sparkle_redis:6379/2")
++            == f"redis://:secret@sparkle_redis:6379/{TEST_REDIS_DB}"
++        )
++
++    def test_env_override_respected(self, monkeypatch):
++        import tests.conftest as conftest_module
++
++        monkeypatch.setattr(conftest_module, "TEST_REDIS_DB", 9)
++        assert conftest_module._isolate_test_redis_db("redis://localhost:6379/0") == ("redis://localhost:6379/9")
++
++
++class TestRedisClientFixtureIsolation:
++    """功能验证：fixture 客户端落在隔离 DB（随 ping 门槛 skip）。"""
++
++    def test_fixture_client_lands_on_isolated_db(self, redis_client):
++        kwargs = redis_client.connection_pool.connection_kwargs
++        assert kwargs.get("db") == TEST_REDIS_DB
++        # 关键红线：绝不在 dev 数据所在的 db0 上操作
++        assert kwargs.get("db") != 0 or TEST_REDIS_DB == 0
++
++    async def test_fixture_writes_visible_and_scoped(self, redis_client):
++        await redis_client.set("hygiene2:isolation:probe", "ok", ex=60)
++        assert await redis_client.get("hygiene2:isolation:probe") == "ok"
++        # 用独立的裸连接核对数据确实只存在于隔离 DB
++        probe = Redis(
++            host=redis_client.connection_pool.connection_kwargs.get("host", "localhost"),
++            port=redis_client.connection_pool.connection_kwargs.get("port", 6379),
++            db=TEST_REDIS_DB,
++            decode_responses=True,
++            socket_connect_timeout=2,
++        )
++        try:
++            assert probe.get("hygiene2:isolation:probe") == "ok"
++        finally:
++            probe.close()
+diff --git a/backend/tests/unit/test_tracing_export_config.py b/backend/tests/unit/test_tracing_export_config.py
+new file mode 100644
+index 00000000..4b9812b4
+--- /dev/null
++++ b/backend/tests/unit/test_tracing_export_config.py
+@@ -0,0 +1,167 @@
++"""HYGIENE-2：otel trace export 默认关闭 + instrumentation detach 噪音过滤的单元测试。
++
++- 无 collector（未配置 OTEL_EXPORTER_OTLP_ENDPOINT）→ 不挂 OTLP exporter，
++  也不再有 ``Failed to export traces to localhost:4317`` 刷屏；
++- 显式配置 endpoint 的环境（docker-compose/k8s/prod）行为不变；
++- span 采集语义保持：TracerProvider 真实生效，span 有真实 trace_id；
++- detach 噪音（库层已知问题）按日志过滤器精确抑制。
++"""
++
++import logging
++import sys
++
++import pytest
++
++from app.core import tracing
++from app.core.tracing import (
++    OtelCrossContextDetachNoiseFilter,
++    resolve_export_settings,
++    suppress_otel_detach_noise,
++)
++
++# ---------------------------------------------------------------------------
++# resolve_export_settings（纯函数决策）
++# ---------------------------------------------------------------------------
++
++
++class TestResolveExportSettings:
++    def test_no_env_defaults_to_disabled(self):
++        # 本机无 collector：默认 localhost:4317 的无效导出必须关闭（旧债噪音源）
++        settings = resolve_export_settings(env={})
++        assert settings["export_enabled"] is False
++
++    def test_empty_endpoint_disabled(self):
++        settings = resolve_export_settings(env={"OTEL_EXPORTER_OTLP_ENDPOINT": "   "})
++        assert settings["export_enabled"] is False
++
++    def test_explicit_endpoint_enabled(self):
++        # 有 collector 的环境不受影响：显式 endpoint → 照常导出
++        settings = resolve_export_settings(env={"OTEL_EXPORTER_OTLP_ENDPOINT": "http://sparkle_tempo:4317"})
++        assert settings["export_enabled"] is True
++        assert settings["endpoint"] == "http://sparkle_tempo:4317"
++        assert settings["insecure"] is False
++
++    def test_sdk_disabled_overrides_endpoint(self):
++        # OTel 规范标准开关 OTEL_SDK_DISABLED=true 优先
++        settings = resolve_export_settings(
++            env={
++                "OTEL_EXPORTER_OTLP_ENDPOINT": "http://tempo:4317",
++                "OTEL_SDK_DISABLED": "true",
++            }
++        )
++        assert settings["export_enabled"] is False
++
++    def test_traces_exporter_none_overrides_endpoint(self):
++        # OTel 规范信号级开关 OTEL_TRACES_EXPORTER=none 优先
++        settings = resolve_export_settings(
++            env={
++                "OTEL_EXPORTER_OTLP_ENDPOINT": "http://tempo:4317",
++                "OTEL_TRACES_EXPORTER": "none",
++            }
++        )
++        assert settings["export_enabled"] is False
++
++    def test_otlp_insecure_parsing(self):
++        settings = resolve_export_settings(
++            env={
++                "OTEL_EXPORTER_OTLP_ENDPOINT": "http://tempo:4317",
++                "OTLP_INSECURE": "TRUE",
++            }
++        )
++        assert settings["insecure"] is True
++
++
++# ---------------------------------------------------------------------------
++# 活动模块状态（import 期副作用）：span 语义保留 + 无 collector 不挂 exporter
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.skipif(sys.modules.get("app.core.tracing") is None, reason="tracing module not importable")
++class TestLiveTracingModule:
++    def test_span_semantics_preserved_without_export(self):
++        """红线：默认关 export 不卸业务 trace 语义——span 真实、trace_id 可用。"""
++        span = tracing.tracer.start_span("hygiene2.semantic_check")
++        try:
++            span.set_attribute("hygiene2", True)
++            span_context = span.get_span_context()
++            # orchestrator O-02 trace spine 依赖真实 span context 的 trace_id
++            assert span_context.trace_id != 0
++            assert span.is_recording() is True
++        finally:
++            span.end()
++
++    def test_no_export_error_log_without_collector(self, caplog):
++        """红线（日志断言）：无 collector 时结束 span 不产生 export 失败日志。"""
++        exporter_loggers = [
++            "opentelemetry.exporter.otlp.proto.grpc.exporter",
++            "opentelemetry.exporter.otlp.proto.grpc._log_exporter",
++            "opentelemetry.sdk.trace.export",
++        ]
++        with caplog.at_level(logging.WARNING, logger="opentelemetry"):
++            span = tracing.tracer.start_span("hygiene2.no_export_noise")
++            span.end()
++        noise = [
++            r
++            for r in caplog.records
++            if r.name in exporter_loggers
++            and ("Failed to export" in r.getMessage() or "Transient error" in r.getMessage())
++        ]
++        assert noise == []
++
++    def test_detach_noise_filter_installed_once(self):
++        suppress_otel_detach_noise()
++        suppress_otel_detach_noise()  # 幂等：重复调用不叠加
++        filters = [
++            f
++            for f in logging.getLogger("opentelemetry.context").filters
++            if isinstance(f, OtelCrossContextDetachNoiseFilter)
++        ]
++        assert len(filters) == 1
++
++
++# ---------------------------------------------------------------------------
++# detach 噪音过滤器：只吞已知良性 ValueError，其余日志照常
++# ---------------------------------------------------------------------------
++
++
++def _make_detach_record(exc: BaseException | None) -> logging.LogRecord:
++    record = logging.LogRecord(
++        name="opentelemetry.context",
++        level=logging.ERROR,
++        pathname=__file__,
++        lineno=1,
++        msg="Failed to detach context",
++        args=(),
++        exc_info=(type(exc), exc, None) if exc else None,
++    )
++    return record
++
++
++class TestDetachNoiseFilter:
++    FILTER = OtelCrossContextDetachNoiseFilter()
++
++    def test_suppresses_known_cross_context_valueerror(self):
++        # 与 /tmp/sparkle_grpc.log 中观测到的库层噪音完全同形
++        exc = ValueError(
++            "<Token var=<ContextVar name='current_context' default={} "
++            "at 0x10b11c0e0> at 0x127f35c80> was created in a different Context"
++        )
++        assert self.FILTER.filter(_make_detach_record(exc)) is False
++
++    def test_passes_other_detach_exceptions(self):
++        assert self.FILTER.filter(_make_detach_record(RuntimeError("boom"))) is True
++
++    def test_passes_valueerror_without_marker(self):
++        assert self.FILTER.filter(_make_detach_record(ValueError("other reason"))) is True
++
++    def test_passes_non_detach_messages(self):
++        record = logging.LogRecord(
++            name="opentelemetry.context",
++            level=logging.WARNING,
++            pathname=__file__,
++            lineno=1,
++            msg="some other otel log",
++            args=(),
++            exc_info=None,
++        )
++        assert self.FILTER.filter(record) is True

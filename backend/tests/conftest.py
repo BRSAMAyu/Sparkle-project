@@ -237,10 +237,25 @@ async def test_shop_items_fixture(db_session: AsyncSession) -> list[ShopItem]:
     return items
 
 
+TEST_REDIS_DB = int(os.getenv("TEST_REDIS_DB", "15"))
+
+
+def _isolate_test_redis_db(raw_url: str) -> str:
+    """HYGIENE-2：把测试用 redis URL 指到隔离 DB index（默认 db15）。
+
+    旧实现直连 REDIS_URL（通常 db0）且 teardown ``flushdb()``——在主仓跑测试
+    会清空 dev redis 的真实缓存/队列数据。现统一改写到专用测试 DB（可用
+    ``TEST_REDIS_DB`` 覆盖），teardown 的 flushdb 只影响该隔离 DB。
+    """
+    parsed = urlparse(raw_url)
+    return urlunparse(parsed._replace(path=f"/{TEST_REDIS_DB}"))
+
+
 @pytest_asyncio.fixture(name="redis_client")
 async def redis_client_fixture():
-    """Create Redis client for integration tests."""
+    """Create Redis client for integration tests (isolated DB index)."""
     redis_url = _normalize_test_redis_url(os.getenv("REDIS_URL", settings.REDIS_URL or "redis://localhost:6379/0"))
+    redis_url = _isolate_test_redis_db(redis_url)
     password, _ = resolve_redis_password(redis_url, os.getenv("REDIS_PASSWORD", settings.REDIS_PASSWORD))
     client = redis.from_url(
         redis_url,
@@ -259,7 +274,7 @@ async def redis_client_fixture():
     yield client
 
     try:
-        await client.flushdb()
+        await client.flushdb()  # 只 flush 隔离测试 DB（见 _isolate_test_redis_db）
     except Exception:
         pass
     if hasattr(client, "aclose"):
