@@ -166,21 +166,7 @@ func convertResponseToJSON(ctx context.Context, resp *agentv1.ChatResponse) map[
 		}
 	case *agentv1.ChatResponse_Citations:
 		result["type"] = "citations"
-		citations := make([]map[string]interface{}, len(content.Citations.Citations))
-		for i, c := range content.Citations.Citations {
-			citations[i] = map[string]interface{}{
-				"id":            c.Id,
-				"title":         c.Title,
-				"content":       c.Content,
-				"source_type":   c.SourceType,
-				"score":         c.Score,
-				"url":           c.Url,
-				"file_id":       c.FileId,
-				"page_number":   c.PageNumber,
-				"chunk_index":   c.ChunkIndex,
-				"section_title": c.SectionTitle,
-			}
-		}
+		citations := citationsToMapList(content.Citations.Citations)
 		result["citations"] = citations
 		if _, ok := metadata["ux_sources"]; !ok {
 			metadata["ux_sources"] = buildSourceSummary(ctx, citations)
@@ -392,6 +378,29 @@ func buildExecutionSummaryWidget(ctx context.Context, toolName string, success b
 	}
 }
 
+// citationsToMapList converts proto citations into the JSON shape the mobile
+// client parses (ChatCitation.fromMap). Shared by the live stream forwarder
+// and the history persistence path so both channels keep one shape
+// (V13: replay must carry the same citation payload live chat delivers).
+func citationsToMapList(citations []*agentv1.Citation) []map[string]interface{} {
+	out := make([]map[string]interface{}, len(citations))
+	for i, c := range citations {
+		out[i] = map[string]interface{}{
+			"id":            c.Id,
+			"title":         c.Title,
+			"content":       c.Content,
+			"source_type":   c.SourceType,
+			"score":         c.Score,
+			"url":           c.Url,
+			"file_id":       c.FileId,
+			"page_number":   c.PageNumber,
+			"chunk_index":   c.ChunkIndex,
+			"section_title": c.SectionTitle,
+		}
+	}
+	return out
+}
+
 func buildSourceSummary(ctx context.Context, citations []map[string]interface{}) map[string]interface{} {
 	scope := "mixed"
 	if len(citations) == 0 {
@@ -420,6 +429,28 @@ func buildSourceSummary(ctx context.Context, citations []map[string]interface{})
 		"reference_scope":     scope,
 		"evidence_summary":    summary,
 		"citations":           citations,
+	}
+}
+
+// attachTurnCitationsToSave enriches a saveMessage extra payload with the
+// citations streamed during the turn (V13): meta.citations feeds the mobile
+// citation strip on replay, and a source_summary widget feeds the metadata
+// tray — the same two shapes the live turn assembly delivers. The meta map
+// is copied first so the live meta frame the client already received is
+// never mutated. No-op for turns that streamed no citations.
+func attachTurnCitationsToSave(ctx context.Context, extra map[string]interface{}, turnCitations []map[string]interface{}) {
+	if len(turnCitations) == 0 {
+		return
+	}
+	meta, _ := extra["meta"].(map[string]interface{})
+	saveMeta := make(map[string]interface{}, len(meta)+1)
+	for k, v := range meta {
+		saveMeta[k] = v
+	}
+	saveMeta["citations"] = turnCitations
+	extra["meta"] = saveMeta
+	extra["widgets"] = []map[string]interface{}{
+		{"type": "source_summary", "data": buildSourceSummary(ctx, turnCitations)},
 	}
 }
 

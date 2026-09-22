@@ -727,6 +727,9 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	var sawUpstreamFinishReason bool
 	var firstEventAt time.Time
 	var firstTokenAt time.Time
+	// V13: citations streamed this turn (latest non-empty wins), persisted
+	// with the assistant turn so history replay keeps the source cards.
+	var turnCitations []map[string]interface{}
 	segmentSize := cachedStreamTokenSegment()
 	for {
 		// Trace each streaming response
@@ -748,10 +751,12 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 				// and must still reach the history store.
 				saveCtx, cancelSave := detachedPersistCtx(ctx)
 				defer cancelSave()
-				h.saveMessage(saveCtx, userID, input.SessionID, "assistant", partialText, map[string]interface{}{
+				partialExtra := map[string]interface{}{
 					"trace_id":  traceID,
 					"truncated": true,
-				})
+				}
+				attachTurnCitationsToSave(ctx, partialExtra, turnCitations)
+				h.saveMessage(saveCtx, userID, input.SessionID, "assistant", partialText, partialExtra)
 			}
 			return false
 		}
@@ -778,6 +783,9 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		}
 		if usage := resp.GetUsage(); usage != nil {
 			usageTotalTokens = int64(usage.TotalTokens)
+		}
+		if block := resp.GetCitations(); block != nil && len(block.Citations) > 0 {
+			turnCitations = citationsToMapList(block.Citations)
 		}
 		if isAuroraRuntimeResponse(resp) {
 			sawAuroraRuntime = true
@@ -983,13 +991,18 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 
 		saveCtx, cancelSave := detachedPersistCtx(ctx)
 		defer cancelSave()
-		h.saveMessage(saveCtx, userID, sessionID, "assistant", result, map[string]interface{}{
+		// V13: the live meta frame above stays untouched — only the saved
+		// payload gains meta.citations + the source_summary widget, so
+		// history replay renders the same citation cards live chat did.
+		saveExtra := map[string]interface{}{
 			"meta":           meta,
 			"workflow_id":    doneResp.WorkflowId,
 			"prompt_version": doneResp.PromptVersion,
 			"trace_id":       traceID,
 			"response_id":    doneResp.ResponseId,
-		})
+		}
+		attachTurnCitationsToSave(ctx, saveExtra, turnCitations)
+		h.saveMessage(saveCtx, userID, sessionID, "assistant", result, saveExtra)
 
 		cacheCtx, cancelCache := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		go func() {
