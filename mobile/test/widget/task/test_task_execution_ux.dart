@@ -99,8 +99,11 @@ void main() {
       ),
     );
 
+    // 展开动画（AnimatedSize, scene=400ms）在首个 pump 帧才启动，需再推进帧
+    // 至 settle，否则后续 tap 命中的是动画中间态几何（widget-test 存量失配）。
     await tester.tap(find.byKey(const Key('task-guide-toggle')));
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.text('先写出每一步的角色和目的。'), findsOneWidget);
     expect(find.text('已完成 0/4'), findsOneWidget);
@@ -152,7 +155,8 @@ void main() {
     expect(find.text('我只需要完成一版可提交草稿。'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('task-guide-toggle')));
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('fail-safe-rule-card')), findsOneWidget);
     expect(find.text('失手时降压规则'), findsOneWidget);
@@ -163,11 +167,12 @@ void main() {
     expect(find.text('开始逃避'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('fail-safe-rule-toggle')));
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
 
     expect(find.text('失手规则：如果超过10分钟卡住，就把范围降到一个例子。'), findsOneWidget);
 
     await tester.ensureVisible(find.byKey(const Key('aurora-trigger-chip-1')));
+    await tester.pump();
     await tester.tap(find.byKey(const Key('aurora-trigger-chip-1')));
     await tester.pump();
 
@@ -293,9 +298,16 @@ void main() {
     await tester.pump();
 
     await tester.tap(find.byKey(const Key('stuck-help-fab')));
+    // sheet 入场动画同样在首个 pump 帧才启动：有限次推进帧至入场完成。
+    // 不能 pumpAndSettle——路由宿主背后 TaskExecutionScreen 有持续动画，
+    // 永远 settle 不完（widget-test 存量失配，探针实证）。
+    await tester.pump(const Duration(milliseconds: 500));
     await tester.pump(const Duration(milliseconds: 500));
     await tester.ensureVisible(find.text('和Sparkle聊聊这个问题'));
+    await tester.pump();
     await tester.tap(find.text('和Sparkle聊聊这个问题'));
+    // 聊天视图含循环动画，不能 pumpAndSettle（会超时）；一帧足以让
+    // 内联聊天面板上树，供下方 finder 断言。
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('和 Sparkle 聊聊这个卡点'), findsOneWidget);
