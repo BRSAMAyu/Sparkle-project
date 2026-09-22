@@ -611,6 +611,16 @@ class DS {
   static Color get info => _theme.colors.semanticInfo;
   static Color get primaryBase => brandPrimary;
   static Color get secondaryBase => brandSecondary;
+
+  /// 退役别名（SPEC v1.0 §1.4.2）：`brandSecondary` 退役为 AI 语义槽（info）
+  /// 的派生来源，不再是第二交互色；唯一交互色是 `brandPrimary`，语义名为
+  /// `context.colors.accent`（core/design/theme/sparkle_context_extension.dart）。
+  /// 新代码禁用本别名——DL-SPEC `dsAccentAlias` 守卫拦新增（ratchet 基线 12，
+  /// 只降不升）；存量调用点迁移属 B2-3+。
+  @Deprecated(
+    'SPEC v1.0 §1.4.2: 唯一交互色是 brandPrimary（context.colors.accent）；'
+    'brandSecondary 退役为 info 语义槽派生来源',
+  )
   static Color get accent => brandSecondary;
   static Color get primaryDark =>
       _shiftLightness(brandPrimary, _isDark ? 0.1 : -0.15);
