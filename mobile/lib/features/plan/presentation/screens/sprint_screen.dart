@@ -8,6 +8,7 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
+import 'package:sparkle/features/leaderboard/leaderboard_routes.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/data/services/plan_description_codec.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
@@ -40,6 +41,16 @@ class SprintScreen extends ConsumerWidget {
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.archive_outlined),
               onPressed: () => unawaited(context.push('/plans/history')),
+            ),
+          ),
+          // D-COMM-1：自我 7 日锚视图入口（次级位置，不占内容主面积）。
+          Tooltip(
+            message: context.l10n.leaderboardSelfAnchorViewEntry,
+            child: SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              icon: const Icon(Icons.align_vertical_bottom_outlined),
+              onPressed: () =>
+                  unawaited(context.push(LeaderboardRoutes.selfAnchor)),
             ),
           ),
           if (activeSprint != null)

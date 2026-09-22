@@ -614,6 +614,8 @@ class ApiEndpoints {
   static String leaderboardsTopThree(String type) =>
       '/leaderboards/top-three/$type';
   static const String leaderboardsRefreshCache = '/leaderboards/refresh-cache';
+  // D-COMM-1：自我 7 日锚视图（唯一按裁决路由的排行榜面，全站榜保持 D17 隐藏）。
+  static const String leaderboardsSelfAnchor = '/leaderboards/self-anchor';
 
   // Seed Libraries
   static const String seedLibraries = '/seed-libraries';

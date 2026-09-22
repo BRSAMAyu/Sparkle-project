@@ -24,6 +24,7 @@ import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/goal/goal.dart';
 import 'package:sparkle/features/home/home.dart';
 import 'package:sparkle/features/insights/insights.dart';
+import 'package:sparkle/features/leaderboard/leaderboard_routes.dart';
 import 'package:sparkle/features/memory/memory.dart';
 import 'package:sparkle/features/notification_center/notification_center.dart';
 import 'package:sparkle/features/openclaw/openclaw.dart';
@@ -383,6 +384,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ...TaskRoutes.routes,
       ...PlanRoutes.routes,
       ...InsightsRoutes.routes,
+      ...LeaderboardRoutes.routes,
       ...SimulationRoutes.routes,
       ...TheaterRoutes.routes,
       ...ReportRoutes.routes,

@@ -4372,6 +4372,54 @@ class AppLocalizationsEn extends AppLocalizations {
       'Failed to load leaderboard. Please try again.';
 
   @override
+  String get leaderboardSelfAnchorEmptyAction => 'Go to my sprint';
+
+  @override
+  String get leaderboardSelfAnchorEmptyDescription =>
+      'No completed sprint tasks or mastery changes in the last 7 days. Finish today\'s first task and your anchor will start to grow.';
+
+  @override
+  String get leaderboardSelfAnchorEmptyTitle => 'No records in this window yet';
+
+  @override
+  String leaderboardSelfAnchorLoadFailed(Object error) {
+    return 'Failed to load self anchor: $error';
+  }
+
+  @override
+  String leaderboardSelfAnchorMasteryGained(Object delta) {
+    return 'Mastery +$delta';
+  }
+
+  @override
+  String get leaderboardSelfAnchorRetry => 'Retry';
+
+  @override
+  String get leaderboardSelfAnchorSeriesTitle =>
+      'Daily completions (last 7 days)';
+
+  @override
+  String get leaderboardSelfAnchorSubtitle =>
+      'Compared only with your own history';
+
+  @override
+  String leaderboardSelfAnchorTasksCount(Object count) {
+    return '$count tasks';
+  }
+
+  @override
+  String get leaderboardSelfAnchorTasksUnit => 'sprint tasks';
+
+  @override
+  String get leaderboardSelfAnchorTitle => 'Self Anchor';
+
+  @override
+  String get leaderboardSelfAnchorWindowTotal => 'Completed in last 7 days';
+
+  @override
+  String get leaderboardSelfAnchorViewEntry => 'View self anchor';
+
+  @override
   String get omnibarListeningHint => 'Listening...';
 
   @override

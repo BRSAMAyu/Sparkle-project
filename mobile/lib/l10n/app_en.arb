@@ -1422,6 +1422,40 @@
         }
     },
     "leaderboardLoadFailed": "Failed to load leaderboard. Please try again.",
+    "leaderboardSelfAnchorEmptyAction": "Go to my sprint",
+    "leaderboardSelfAnchorEmptyDescription": "No completed sprint tasks or mastery changes in the last 7 days. Finish today's first task and your anchor will start to grow.",
+    "leaderboardSelfAnchorEmptyTitle": "No records in this window yet",
+    "leaderboardSelfAnchorLoadFailed": "Failed to load self anchor: {error}",
+    "@leaderboardSelfAnchorLoadFailed": {
+        "placeholders": {
+            "error": {
+                "type": "Object"
+            }
+        }
+    },
+    "leaderboardSelfAnchorMasteryGained": "Mastery +{delta}",
+    "@leaderboardSelfAnchorMasteryGained": {
+        "placeholders": {
+            "delta": {
+                "type": "Object"
+            }
+        }
+    },
+    "leaderboardSelfAnchorRetry": "Retry",
+    "leaderboardSelfAnchorSeriesTitle": "Daily completions (last 7 days)",
+    "leaderboardSelfAnchorSubtitle": "Compared only with your own history",
+    "leaderboardSelfAnchorTasksCount": "{count} tasks",
+    "@leaderboardSelfAnchorTasksCount": {
+        "placeholders": {
+            "count": {
+                "type": "Object"
+            }
+        }
+    },
+    "leaderboardSelfAnchorTasksUnit": "sprint tasks",
+    "leaderboardSelfAnchorTitle": "Self Anchor",
+    "leaderboardSelfAnchorWindowTotal": "Completed in last 7 days",
+    "leaderboardSelfAnchorViewEntry": "View self anchor",
     "omnibarListeningHint": "Listening...",
     "omnibarDefaultHint": "Tell me what you think...",
     "voiceInputAction": "Voice input",

@@ -4189,6 +4189,52 @@ class AppLocalizationsZh extends AppLocalizations {
   String get leaderboardLoadFailed => '排行榜加载失败，请重试';
 
   @override
+  String get leaderboardSelfAnchorEmptyAction => '去看我的冲刺';
+
+  @override
+  String get leaderboardSelfAnchorEmptyDescription =>
+      '近 7 天还没有完成的冲刺任务或掌握度变化。完成今天的第一个任务，锚点就会开始生长。';
+
+  @override
+  String get leaderboardSelfAnchorEmptyTitle => '这几天还没有记录';
+
+  @override
+  String leaderboardSelfAnchorLoadFailed(Object error) {
+    return '自我锚加载失败：$error';
+  }
+
+  @override
+  String leaderboardSelfAnchorMasteryGained(Object delta) {
+    return '掌握度 +$delta';
+  }
+
+  @override
+  String get leaderboardSelfAnchorRetry => '重试';
+
+  @override
+  String get leaderboardSelfAnchorSeriesTitle => '每日完成（近 7 天）';
+
+  @override
+  String get leaderboardSelfAnchorSubtitle => '只跟自己的历史比';
+
+  @override
+  String leaderboardSelfAnchorTasksCount(Object count) {
+    return '$count 项';
+  }
+
+  @override
+  String get leaderboardSelfAnchorTasksUnit => '冲刺任务';
+
+  @override
+  String get leaderboardSelfAnchorTitle => '自我锚';
+
+  @override
+  String get leaderboardSelfAnchorWindowTotal => '近 7 天完成';
+
+  @override
+  String get leaderboardSelfAnchorViewEntry => '查看自我锚';
+
+  @override
   String get omnibarListeningHint => '正在聆听...';
 
   @override

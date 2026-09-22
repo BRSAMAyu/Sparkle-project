@@ -1422,6 +1422,40 @@
         }
     },
     "leaderboardLoadFailed": "排行榜加载失败，请重试",
+    "leaderboardSelfAnchorEmptyAction": "去看我的冲刺",
+    "leaderboardSelfAnchorEmptyDescription": "近 7 天还没有完成的冲刺任务或掌握度变化。完成今天的第一个任务，锚点就会开始生长。",
+    "leaderboardSelfAnchorEmptyTitle": "这几天还没有记录",
+    "leaderboardSelfAnchorLoadFailed": "自我锚加载失败：{error}",
+    "@leaderboardSelfAnchorLoadFailed": {
+        "placeholders": {
+            "error": {
+                "type": "Object"
+            }
+        }
+    },
+    "leaderboardSelfAnchorMasteryGained": "掌握度 +{delta}",
+    "@leaderboardSelfAnchorMasteryGained": {
+        "placeholders": {
+            "delta": {
+                "type": "Object"
+            }
+        }
+    },
+    "leaderboardSelfAnchorRetry": "重试",
+    "leaderboardSelfAnchorSeriesTitle": "每日完成（近 7 天）",
+    "leaderboardSelfAnchorSubtitle": "只跟自己的历史比",
+    "leaderboardSelfAnchorTasksCount": "{count} 项",
+    "@leaderboardSelfAnchorTasksCount": {
+        "placeholders": {
+            "count": {
+                "type": "Object"
+            }
+        }
+    },
+    "leaderboardSelfAnchorTasksUnit": "冲刺任务",
+    "leaderboardSelfAnchorTitle": "自我锚",
+    "leaderboardSelfAnchorWindowTotal": "近 7 天完成",
+    "leaderboardSelfAnchorViewEntry": "查看自我锚",
     "omnibarListeningHint": "正在聆听...",
     "omnibarDefaultHint": "告诉我你现在在想什么...",
     "voiceInputAction": "语音输入",

@@ -7850,6 +7850,84 @@ abstract class AppLocalizations {
   /// **'排行榜加载失败，请重试'**
   String get leaderboardLoadFailed;
 
+  /// No description provided for @leaderboardSelfAnchorEmptyAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'去看我的冲刺'**
+  String get leaderboardSelfAnchorEmptyAction;
+
+  /// No description provided for @leaderboardSelfAnchorEmptyDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'近 7 天还没有完成的冲刺任务或掌握度变化。完成今天的第一个任务，锚点就会开始生长。'**
+  String get leaderboardSelfAnchorEmptyDescription;
+
+  /// No description provided for @leaderboardSelfAnchorEmptyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'这几天还没有记录'**
+  String get leaderboardSelfAnchorEmptyTitle;
+
+  /// No description provided for @leaderboardSelfAnchorLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'自我锚加载失败：{error}'**
+  String leaderboardSelfAnchorLoadFailed(Object error);
+
+  /// No description provided for @leaderboardSelfAnchorMasteryGained.
+  ///
+  /// In zh, this message translates to:
+  /// **'掌握度 +{delta}'**
+  String leaderboardSelfAnchorMasteryGained(Object delta);
+
+  /// No description provided for @leaderboardSelfAnchorRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get leaderboardSelfAnchorRetry;
+
+  /// No description provided for @leaderboardSelfAnchorSeriesTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'每日完成（近 7 天）'**
+  String get leaderboardSelfAnchorSeriesTitle;
+
+  /// No description provided for @leaderboardSelfAnchorSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'只跟自己的历史比'**
+  String get leaderboardSelfAnchorSubtitle;
+
+  /// No description provided for @leaderboardSelfAnchorTasksCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 项'**
+  String leaderboardSelfAnchorTasksCount(Object count);
+
+  /// No description provided for @leaderboardSelfAnchorTasksUnit.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺任务'**
+  String get leaderboardSelfAnchorTasksUnit;
+
+  /// No description provided for @leaderboardSelfAnchorTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'自我锚'**
+  String get leaderboardSelfAnchorTitle;
+
+  /// No description provided for @leaderboardSelfAnchorWindowTotal.
+  ///
+  /// In zh, this message translates to:
+  /// **'近 7 天完成'**
+  String get leaderboardSelfAnchorWindowTotal;
+
+  /// No description provided for @leaderboardSelfAnchorViewEntry.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看自我锚'**
+  String get leaderboardSelfAnchorViewEntry;
+
   /// No description provided for @omnibarListeningHint.
   ///
   /// In zh, this message translates to:
