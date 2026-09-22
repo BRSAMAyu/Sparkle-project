@@ -1,0 +1,266 @@
+diff --git a/backend/app/agents/standard_workflow.py b/backend/app/agents/standard_workflow.py
+index 6613f315..fd832ecf 100755
+--- a/backend/app/agents/standard_workflow.py
++++ b/backend/app/agents/standard_workflow.py
+@@ -92,6 +92,9 @@ _GENERATION_FIRST_CHUNK_TIMEOUT_SECONDS = 18.0
+ _GENERATION_CHUNK_TIMEOUT_SECONDS = 45.0
+ _STREAM_DELTA_FLUSH_CHARS = 96
+ _STREAM_DELTA_FLUSH_SECONDS = 0.12
++# TTFT-PROBE：思考档 reasoning 进度状态的节流窗口（秒）。qwen3 混合模型
++# 默认先思考后作答（实测 13-43s），按此间隔下发 THINKING 进度帧防假卡。
++_REASONING_PROGRESS_STATUS_INTERVAL_SECONDS = 3.0
+ _MAX_TOOL_LOOPS_PER_TURN = 2
+ 
+ # MR-2：slim 标准问答的记忆窗口参数（top-3 episodic，~500 token 预算）。
+@@ -1934,6 +1937,7 @@ Ask about their available time and current tasks if needed.
+             len(system_prompt or ""),
+         )
+         try:
++            _gen_reasoning_status_last = time.perf_counter()
+             async for chunk in _stream_generation_chunks_with_timeout(generation_stream):
+                 if not _gen_first_chunk_logged:
+                     logger.info(
+@@ -1942,7 +1946,36 @@ Ask about their available time and current tasks if needed.
+                         chunk.type,
+                     )
+                     _gen_first_chunk_logged = True
+-                if chunk.type == "text":
++                if chunk.type == "reasoning":
++                    # TTFT-PROBE 缓解（S18 假卡面）：qwen3 混合模型在流式下默认
++                    # 先产出 reasoning_content（实测 13-43s 才见首个可见 token），
++                    # 而引擎此前把 reasoning 块整段丢弃——前端只拿到一次静态
++                    # “思考中”状态后长时间无任何帧。这里按节流窗口把思考进度
++                    # 作为 THINKING 状态帧下发（不透传思考正文），让等待面板
++                    # 有心跳。失败绝不阻断生成主链。
++                    try:
++                        _now_mono = time.perf_counter()
++                        if (
++                            stream_callback
++                            and (_now_mono - _gen_reasoning_status_last)
++                            >= _REASONING_PROGRESS_STATUS_INTERVAL_SECONDS
++                        ):
++                            _gen_reasoning_status_last = _now_mono
++                            await stream_callback(
++                                agent_service_pb2.ChatResponse(
++                                    status_update=agent_service_pb2.AgentStatus(
++                                        state=agent_service_pb2.AgentStatus.THINKING,
++                                        details=(
++                                            "仍在深度思考中…（已思考 "
++                                            f"{max(0, int(_now_mono - _gen_t0))} 秒）"
++                                        ),
++                                        current_agent_name="Sparkle AI",
++                                    )
++                                )
++                            )
++                    except Exception as exc:
++                        logger.warning(f"Failed to emit reasoning progress status: {exc}")
++                elif chunk.type == "text":
+                     full_response += chunk.content
+                     if stream_callback:
+                         delta_buffer.append(chunk.content)
+diff --git a/backend/app/orchestration/orchestrator.py b/backend/app/orchestration/orchestrator.py
+index 9ab8d9f8..6b333011 100755
+--- a/backend/app/orchestration/orchestrator.py
++++ b/backend/app/orchestration/orchestrator.py
+@@ -453,13 +453,20 @@ class ChatOrchestrator(
+             ):
+                 planning_context["calendar_context"] = user_context_payload["cognitive_context"]["calendar_context"]
+ 
+-            planning_response = await asyncio.timeout(30)(manager.process_planning_turn)(
+-                db=active_db,  # type: ignore[arg-type]
+-                user_id=parsed_user_id,
+-                chat_session_id=session_id,
+-                message=user_message,
+-                context=planning_context,
+-            )
++            # TTFT-PROBE 修复：`asyncio.timeout(30)(...)(...)` 把 Timeout 上下文
++            # 管理器当可调用对象，必然抛 "'Timeout' object is not callable"，
++            # 随后被 except 吞掉——Aurora 规划旁路 / exam-sprint fast-track 从此
++            # 成为死代码，考试冲刺开场全部跌入 29s+ 的通用规划链路（wt126
++            # TTFT-PROBE 实测：V1A 30.6s / M7 39.8s TTFT 的主要构成）。改为
++            # 正确的 `async with asyncio.timeout(30)`，30s 超时语义不变。
++            async with asyncio.timeout(30):
++                planning_response = await manager.process_planning_turn(
++                    db=active_db,  # type: ignore[arg-type]
++                    user_id=parsed_user_id,
++                    chat_session_id=session_id,
++                    message=user_message,
++                    context=planning_context,
++                )
+             if not (planning_response and planning_response.get("bypass_planning")):
+                 return ""
+ 
+@@ -764,13 +771,20 @@ class ChatOrchestrator(
+             if fast_track_context:
+                 planning_context["exam_sprint_fast_track"] = fast_track_context
+ 
+-            planning_response = await asyncio.timeout(30)(manager.process_planning_turn)(
+-                db=active_db,  # type: ignore[arg-type]
+-                user_id=parsed_user_id,
+-                chat_session_id=session_id,
+-                message=user_message,
+-                context=planning_context,
+-            )
++            # TTFT-PROBE 修复：`asyncio.timeout(30)(...)(...)` 把 Timeout 上下文
++            # 管理器当可调用对象，必然抛 "'Timeout' object is not callable"，
++            # 随后被 except 吞掉——Aurora 规划旁路 / exam-sprint fast-track 从此
++            # 成为死代码，考试冲刺开场全部跌入 29s+ 的通用规划链路（wt126
++            # TTFT-PROBE 实测：V1A 30.6s / M7 39.8s TTFT 的主要构成）。改为
++            # 正确的 `async with asyncio.timeout(30)`，30s 超时语义不变。
++            async with asyncio.timeout(30):
++                planning_response = await manager.process_planning_turn(
++                    db=active_db,  # type: ignore[arg-type]
++                    user_id=parsed_user_id,
++                    chat_session_id=session_id,
++                    message=user_message,
++                    context=planning_context,
++                )
+             if not planning_response or planning_response.get("bypass_planning"):
+                 return False
+ 
+diff --git a/backend/tests/unit/test_generation_reasoning_progress.py b/backend/tests/unit/test_generation_reasoning_progress.py
+new file mode 100644
+index 00000000..b030b9ba
+--- /dev/null
++++ b/backend/tests/unit/test_generation_reasoning_progress.py
+@@ -0,0 +1,140 @@
++"""TTFT-PROBE: reasoning progress status emission in generation_node.
++
++背景：qwen3 混合模型流式下默认先产出 reasoning_content（实测 13-43s 才见
++首个可见 token），此前 generation_node 把 reasoning 块整段丢弃——前端只拿到
++一次静态“思考中”状态后长时间无任何帧（S18 假卡主害）。本组用例锁定：
++  1. reasoning 块按节流窗口触发 THINKING 进度状态帧（不透传思考正文）；
++  2. 节流窗口未到时不得发送进度帧；
++  3. 进度帧失败绝不阻断文本生成主链。
++"""
++from types import SimpleNamespace
++from unittest.mock import AsyncMock
++
++import pytest
++
++from app.agents.standard_workflow import generation_node
++from app.orchestration.statechart_engine import WorkflowState
++
++
++class _ReasoningThenTextLLM:
++    """先吐若干 reasoning 块再吐正文，模拟 qwen3 思考档流式行为。"""
++
++    def __init__(self, reasoning_chunks=6):
++        self.reasoning_chunks = reasoning_chunks
++
++    def is_thinking_mode(self):
++        return True
++
++    def get_current_selection(self):
++        return SimpleNamespace(
++            model_key="dashscope_standard_thinking",
++            is_fallback=False,
++            estimated_cost_per_1k=0.0003,
++            config=SimpleNamespace(
++                model_name="qwen3.8-flash",
++                provider=SimpleNamespace(value="dashscope"),
++                tier=SimpleNamespace(value="standard"),
++            ),
++        )
++
++    async def chat_stream_with_tools(self, system_prompt, user_message, tools, user_context):
++        for i in range(self.reasoning_chunks):
++            yield SimpleNamespace(type="reasoning", reasoning_content=f"思考步骤{i}")
++        yield SimpleNamespace(type="text", content="这是思考完成后的正式回答。")
++
++
++def _make_state(stream_callback) -> WorkflowState:
++    return WorkflowState(
++        messages=[{"role": "user", "content": "帮我系统讲解一下拓扑排序。"}],
++        context_data={
++            "chat_mode": "standard",
++            "reasoning_mode": "balanced",
++            "user_context": {},
++            "conversation_context": {"messages": []},
++            "tools_schema": [],
++            "stream_callback": stream_callback,
++        },
++    )
++
++
++def _patch_llm(monkeypatch, fake_llm) -> None:
++    monkeypatch.setattr(
++        "app.agents.standard_workflow.get_configured_llm_service", AsyncMock(return_value=fake_llm)
++    )
++    monkeypatch.setattr(
++        "app.agents.standard_workflow.get_configured_llm_service_for_tier",
++        AsyncMock(return_value=fake_llm),
++    )
++    monkeypatch.setattr(
++        "app.agents.standard_workflow.build_system_prompt", lambda *args, **kwargs: "SYSTEM"
++    )
++
++
++def _status_frames(callback):
++    return [
++        call.args[0]
++        for call in callback.await_args_list
++        if call.args and getattr(call.args[0], "HasField", None) and call.args[0].HasField("status_update")
++    ]
++
++
++@pytest.mark.asyncio
++async def test_reasoning_chunks_emit_throttled_thinking_progress(monkeypatch):
++    monkeypatch.setattr(
++        "app.agents.standard_workflow._REASONING_PROGRESS_STATUS_INTERVAL_SECONDS", 0.0
++    )
++    fake_llm = _ReasoningThenTextLLM(reasoning_chunks=5)
++    _patch_llm(monkeypatch, fake_llm)
++    stream_callback = AsyncMock()
++
++    new_state = await generation_node(_make_state(stream_callback))
++
++    statuses = _status_frames(stream_callback)
++    # 初始 THINKING（is_thinking_mode）+ 每个 reasoning 块触发的进度帧
++    progress = [s for s in statuses if "已思考" in (s.status_update.details or "")]
++    assert len(progress) == 5
++    assert all(
++        s.status_update.state == s.status_update.THINKING for s in progress
++    )
++    # 思考正文绝不透传：文本输出恰为 text 块内容（reasoning 不入 delta/full_response）
++    assert new_state.messages[-1]["content"] == "这是思考完成后的正式回答。"
++
++
++@pytest.mark.asyncio
++async def test_reasoning_progress_silent_within_throttle_window(monkeypatch):
++    monkeypatch.setattr(
++        "app.agents.standard_workflow._REASONING_PROGRESS_STATUS_INTERVAL_SECONDS", 999.0
++    )
++    fake_llm = _ReasoningThenTextLLM(reasoning_chunks=6)
++    _patch_llm(monkeypatch, fake_llm)
++    stream_callback = AsyncMock()
++
++    new_state = await generation_node(_make_state(stream_callback))
++
++    statuses = _status_frames(stream_callback)
++    # 窗口未到：不得出现任何“已思考 …秒”进度帧（其余既有状态帧不受此约束）
++    assert not [s for s in statuses if "已思考" in (s.status_update.details or "")]
++    assert new_state.messages[-1]["content"] == "这是思考完成后的正式回答。"
++
++
++@pytest.mark.asyncio
++async def test_reasoning_progress_failure_does_not_break_generation(monkeypatch):
++    monkeypatch.setattr(
++        "app.agents.standard_workflow._REASONING_PROGRESS_STATUS_INTERVAL_SECONDS", 0.0
++    )
++    fake_llm = _ReasoningThenTextLLM(reasoning_chunks=3)
++    _patch_llm(monkeypatch, fake_llm)
++
++    async def flaky_callback(resp):
++        if (
++            getattr(resp, "HasField", None)
++            and resp.HasField("status_update")
++            and "已思考" in (resp.status_update.details or "")
++        ):
++            raise RuntimeError("ws write failed")
++        return None
++
++    state = _make_state(flaky_callback)
++    new_state = await generation_node(state)
++
++    assert new_state.messages[-1]["content"] == "这是思考完成后的正式回答。"

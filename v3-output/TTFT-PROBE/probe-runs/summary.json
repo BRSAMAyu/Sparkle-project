@@ -1,0 +1,149 @@
+[
+ {
+  "label": "M1-new-session-sprint",
+  "request_id": "wt126-f7ea70774bba",
+  "conn_s": 0.002,
+  "first_event_any_s": 0.0,
+  "first_status_s": 11.31,
+  "ttft_first_delta_s": 11.573,
+  "total_s": 62.673,
+  "delta_events": 12,
+  "done": true,
+  "error": null,
+  "session_id": "a54c0354-7778-4211-8b2f-cbb643d202f4",
+  "text_len": 393,
+  "text_head": "suggest_focus_session(duration=60, task=&#34;推进当前最核心的复习模块&#34;, context=&#34;等待计划确认&#34;)\n\n已收到系统确认提示。我们跳过等待，直接切入专注冲刺状态。\n\n**今天先做什么**\n- 开启 60 分钟专注时段，选定手头最急需攻克的一个知识点或题型。\n- 设定物理计时器，期间只做题或整理笔记，不切换界面。\n\n**接下",
+  "max_gap_s": [
+   34.128,
+   "delta",
+   "status_update"
+  ],
+  "event_count": 40
+ },
+ {
+  "label": "M2-followup-same-session",
+  "request_id": "wt126-711ba7ddb2f9",
+  "conn_s": 0.002,
+  "first_event_any_s": 0.0,
+  "first_status_s": 0.417,
+  "ttft_first_delta_s": 42.927,
+  "total_s": 61.19,
+  "delta_events": 19,
+  "done": true,
+  "error": null,
+  "session_id": "a54c0354-7778-4211-8b2f-cbb643d202f4",
+  "text_len": 634,
+  "text_head": "你正在准备相关考试，这类图论问题确实需要快速建立直观判断力。哈密顿回路的核心难点在于其计算复杂性，实际工程中通常不会要求对大规模图进行精确求解，而是依赖特定结构性质或启发式策略。典型应用场景包括：\n- **物流与配送路径规划** 车辆需依次访问多个客户点并返回起点，不重复经过同一地点，调度系统常以哈密顿回路为底层模型进行路线优化。\n- **工业加工轨迹控制** 例如PCB板钻孔或多孔零件加工，机床",
+  "max_gap_s": [
+   42.143,
+   "status_update",
+   "status_update"
+  ],
+  "event_count": 36
+ },
+ {
+  "label": "M3-fuzzy-clarification",
+  "request_id": "wt126-f71086952d77",
+  "conn_s": 0.002,
+  "first_event_any_s": 0.0,
+  "first_status_s": 0.42,
+  "ttft_first_delta_s": 19.283,
+  "total_s": 39.91,
+  "delta_events": 28,
+  "done": true,
+  "error": null,
+  "session_id": "a54c0354-7778-4211-8b2f-cbb643d202f4",
+  "text_len": 529,
+  "text_head": "这种“脑子转不动”的感觉很常见，尤其是图论这种抽象度很高的内容。离考试还有 7 天，焦虑感会放大你的挫败感，但这不代表你学不会。\n\n我们换个节奏，先不碰那种需要大量试错的难题。我给你一个**“考场秒杀技巧”**——**必要条件判定法**。\n\n只要掌握这个逻辑，很多看似复杂的题（比如“判断某图是否存在哈密顿回路”），你只需要看一眼度数就能排除掉，不用去画路径。\n\n**核心逻辑：**\n如果一个 $n$",
+  "max_gap_s": [
+   18.707,
+   "metadata",
+   "status_update"
+  ],
+  "event_count": 44
+ },
+ {
+  "label": "M4-knowledge-lecture",
+  "request_id": "wt126-554cbeb3034d",
+  "conn_s": 0.002,
+  "first_event_any_s": 0.0,
+  "first_status_s": 0.326,
+  "ttft_first_delta_s": 30.843,
+  "total_s": 52.645,
+  "delta_events": 36,
+  "done": true,
+  "error": null,
+  "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+  "text_len": 720,
+  "text_head": "核心结论先行：一个连通图是二部图，当且仅当它不包含任何长度为奇数的回路（奇圈）。非连通图需对每个连通分量分别满足该条件。\n\n- **充要条件梳理**\n  - **无奇圈条件**：图中不存在长度为奇数的闭合路径。这是理论推导与笔试中最核心的判定依据。\n  - **独立集划分条件**：顶点集可拆分为两个子集，使得每条边的两个端点分属不同子集。子集内部无边相连。\n  - **二染色条件**：图的色数不超",
+  "max_gap_s": [
+   30.376,
+   "metadata",
+   "status_update"
+  ],
+  "event_count": 52
+ },
+ {
+  "label": "M5-quick-query",
+  "request_id": "wt126-de33862194f1",
+  "conn_s": 0.002,
+  "first_event_any_s": 0.0,
+  "first_status_s": 0.476,
+  "ttft_first_delta_s": 13.143,
+  "total_s": 13.305,
+  "delta_events": 1,
+  "done": true,
+  "error": null,
+  "session_id": "517a114f-06e4-4958-8ca8-dbcb701dc5ae",
+  "text_len": 23,
+  "text_head": "图中顶点的度数是指与该顶点直接相连的边的数量。",
+  "max_gap_s": [
+   12.485,
+   "status_update",
+   "status_update"
+  ],
+  "event_count": 18
+ },
+ {
+  "label": "M6-reasoning-fast-explicit",
+  "request_id": "wt126-3e4ad9b99cb5",
+  "conn_s": 0.002,
+  "first_event_any_s": 0.0,
+  "first_status_s": 0.286,
+  "ttft_first_delta_s": 33.445,
+  "total_s": 54.761,
+  "delta_events": 22,
+  "done": true,
+  "error": null,
+  "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+  "text_len": 693,
+  "text_head": "拓扑排序是针对有向无环图（DAG）的线性排列方法。其规则明确：对于图中的每一条有向边 u → v，顶点 u 在序列中必须严格排在 v 的前面。\n\n**核心性质**\n- **仅适用于有向无环图**。图中若存在环，则无法进行拓扑排序。这是期末考中最常出现的判定条件。\n- **结果不唯一**。只要满足所有边的先后约束，不同的合法序列都可以是有效的拓扑序。\n- **计算复杂度固定**。无论使用基于入度的 ",
+  "max_gap_s": [
+   32.952,
+   "status_update",
+   "status_update"
+  ],
+  "event_count": 40
+ },
+ {
+  "label": "M7-new-session-repro",
+  "request_id": "wt126-7cae23189536",
+  "conn_s": 0.002,
+  "first_event_any_s": 0.0,
+  "first_status_s": 39.788,
+  "ttft_first_delta_s": null,
+  "total_s": 39.809,
+  "delta_events": 0,
+  "done": true,
+  "error": null,
+  "session_id": "1d2316b8-596f-430c-bf5d-a95aa1f0c2b4",
+  "text_len": 123,
+  "text_head": "已收到你的复习需求，正在为你搭建进程调度算法的知识框架。为了制定真正可执行的冲刺计划，还需要你确认两项信息：期末考试的具体日期，以及目前剩余的有效复习时间。提供后我将立即输出按优先级排序的分阶段方案，帮你高效抓牢重点。随时补充即可，我们马上推进。",
+  "max_gap_s": [
+   39.787,
+   "message_ack",
+   "status_update"
+  ],
+  "event_count": 10
+ }
+]

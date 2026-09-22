@@ -1,0 +1,363 @@
+{
+ "label": "M6-reasoning-fast-explicit",
+ "request_id": "wt126-3e4ad9b99cb5",
+ "conn_s": 0.002,
+ "first_event_any_s": 0.0,
+ "first_status_s": 0.286,
+ "ttft_first_delta_s": 33.445,
+ "total_s": 54.761,
+ "delta_events": 22,
+ "done": true,
+ "error": null,
+ "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+ "text_len": 693,
+ "text_head": "拓扑排序是针对有向无环图（DAG）的线性排列方法。其规则明确：对于图中的每一条有向边 u → v，顶点 u 在序列中必须严格排在 v 的前面。\n\n**核心性质**\n- **仅适用于有向无环图**。图中若存在环，则无法进行拓扑排序。这是期末考中最常出现的判定条件。\n- **结果不唯一**。只要满足所有边的先后约束，不同的合法序列都可以是有效的拓扑序。\n- **计算复杂度固定**。无论使用基于入度的 ",
+ "max_gap_s": [
+  32.952,
+  "status_update",
+  "status_update"
+ ],
+ "event_count": 40,
+ "events": [
+  {
+   "t": 0.0,
+   "type": "ack",
+   "brief": {
+    "request_id": "wt126-3e4ad9b99cb5"
+   }
+  },
+  {
+   "t": 0.002,
+   "type": "message_ack",
+   "brief": {
+    "request_id": "wt126-3e4ad9b99cb5"
+   }
+  },
+  {
+   "t": 0.286,
+   "type": "status_update",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5"
+   }
+  },
+  {
+   "t": 0.287,
+   "type": "metadata",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5"
+   }
+  },
+  {
+   "t": 0.287,
+   "type": "metadata",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5"
+   }
+  },
+  {
+   "t": 0.287,
+   "type": "metadata",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5"
+   }
+  },
+  {
+   "t": 0.287,
+   "type": "status_update",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5"
+   }
+  },
+  {
+   "t": 0.287,
+   "type": "metadata",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5"
+   }
+  },
+  {
+   "t": 0.288,
+   "type": "metadata",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5"
+   }
+  },
+  {
+   "t": 0.288,
+   "type": "status_update",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5"
+   }
+  },
+  {
+   "t": 0.288,
+   "type": "metadata",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5"
+   }
+  },
+  {
+   "t": 0.339,
+   "type": "status_update",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5"
+   }
+  },
+  {
+   "t": 33.291,
+   "type": "status_update",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5"
+   }
+  },
+  {
+   "t": 33.445,
+   "type": "delta",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5",
+    "delta": "排序是针对有向无环图（DAG）的线性排列方法"
+   }
+  },
+  {
+   "t": 33.57,
+   "type": "delta",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5",
+    "delta": "。其规则明确：对于图中的每一条有向"
+   }
+  },
+  {
+   "t": 33.777,
+   "type": "delta",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5",
+    "delta": "边 u → v，顶点 u 在序列中必须严格排在 v 的前面。\n\n**核心性质**\n"
+   }
+  },
+  {
+   "t": 33.97,
+   "type": "delta",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5",
+    "delta": "- **仅适用于有向无环图**。图中若存在环，则无法进行拓扑排序。这是期末考"
+   }
+  },
+  {
+   "t": 34.138,
+   "type": "delta",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5",
+    "delta": "中最常出现的判定条件。\n- **结果不唯一**。只要满足所有边的先后约束，不同的"
+   }
+  },
+  {
+   "t": 34.35,
+   "type": "delta",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5",
+    "delta": "合法序列都可以是有效的拓扑序。\n- **计算复杂度固定**。无论使用基于入度的 Kahn "
+   }
+  },
+  {
+   "t": 34.511,
+   "type": "delta",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5",
+    "delta": "算法，还是基于深度优先搜索的 DFS 后序逆序法，时间复杂度均为 O(V"
+   }
+  },
+  {
+   "t": 34.675,
+   "type": "delta",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5",
+    "delta": " + E)。\n- **本质是依赖约束的线性化**。"
+   }
+  },
+  {
+   "t": 34.87,
+   "type": "delta",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5",
+    "delta": "它将多对多的网状依赖压缩成一条可执行的操作顺序。\n\n**典型应用场景**\n"
+   }
+  },
+  {
+   "t": 35.006,
+   "type": "delta",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5",
+    "delta": "1. **任务调度与工序安排**。项目管理中，"
+   }
+  },
+  {
+   "t": 35.164,
+   "type": "delta",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5",
+    "delta": "前置任务完成后方可启动后续任务。\n2. **编译与构建系统**。Make、C"
+   }
+  },
+  {
+   "t": 35.33,
+   "type": "delta",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5",
+    "delta": "Make 等工具据此确定源文件的依赖顺序，确保先编译被依赖项。\n3. **课程"
+   }
+  },
+  {
+   "t": 35.46,
+   "type": "delta",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5",
+    "delta": "修读规划**。大学培养方案中，先修课程与后"
+   }
+  },
+  {
+   "t": 35.621,
+   "type": "delta",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5",
+    "delta": "修课程的排课逻辑直接映射为拓扑序。\n4. **模块加载与依赖解析**。操作系统或软件"
+   }
+  },
+  {
+   "t": 35.783,
+   "type": "delta",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5",
+    "delta": "包管理器在初始化时，按依赖层级依次加载组件。\n\n距离考试只剩一周，图论部分确实"
+   }
+  },
+  {
+   "t": 35.971,
+   "type": "delta",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5",
+    "delta": "需要把抽象定义和具体模型快速对齐。拓扑排序在试卷中通常以两种形式出现："
+   }
+  },
+  {
+   "t": 36.178,
+   "type": "delta",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5",
+    "delta": "一是理论题（要求证明或解释为什么环会导致排序失败"
+   }
+  },
+  {
+   "t": 36.416,
+   "type": "delta",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5",
+    "delta": "），二是实操题（给出一个依赖图让你手写一种合法序列并分析步骤）。\n\n你可以"
+   }
+  },
+  {
+   "t": 36.544,
+   "type": "delta",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5",
+    "delta": "先挑一个节点数较少的小型 DAG，手动模拟"
+   }
+  },
+  {
+   "t": 36.68,
+   "type": "delta",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5",
+    "delta": "一遍 Kahn 算法的入度计算与队列更新过程。需要我提供一道带逐步推"
+   }
+  },
+  {
+   "t": 36.84,
+   "type": "delta",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5",
+    "delta": "演的标准例题，还是直接梳理 Kahn 算法与 DFS 算法的"
+   }
+  },
+  {
+   "t": 36.899,
+   "type": "delta",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5",
+    "delta": "考场解题模板？"
+   }
+  },
+  {
+   "t": 36.901,
+   "type": "usage",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5"
+   }
+  },
+  {
+   "t": 54.74,
+   "type": "tool_result",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": ""
+   }
+  },
+  {
+   "t": 54.76,
+   "type": "full_text",
+   "brief": {
+    "session_id": "ef90b35e-11d5-4ecb-9554-b413a16a91c4",
+    "request_id": "wt126-3e4ad9b99cb5",
+    "full_text": "拓扑排序是针对有向无环图（DAG）的线性排列方法。其规则明确：对于图中的每一条有向边 u → v，顶点 u 在序列中必须严格排在 v 的前面。\n\n**核心性质*",
+    "finish_reason": "STOP"
+   }
+  },
+  {
+   "t": 54.761,
+   "type": "meta",
+   "brief": {}
+  },
+  {
+   "t": 54.761,
+   "type": "done",
+   "brief": {
+    "session_id": "",
+    "request_id": "wt126-3e4ad9b99cb5",
+    "finish_reason": "STOP"
+   }
+  }
+ ]
+}

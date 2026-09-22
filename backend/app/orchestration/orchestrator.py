@@ -453,13 +453,20 @@ class ChatOrchestrator(
             ):
                 planning_context["calendar_context"] = user_context_payload["cognitive_context"]["calendar_context"]
 
-            planning_response = await asyncio.timeout(30)(manager.process_planning_turn)(
-                db=active_db,  # type: ignore[arg-type]
-                user_id=parsed_user_id,
-                chat_session_id=session_id,
-                message=user_message,
-                context=planning_context,
-            )
+            # TTFT-PROBE 修复：`asyncio.timeout(30)(...)(...)` 把 Timeout 上下文
+            # 管理器当可调用对象，必然抛 "'Timeout' object is not callable"，
+            # 随后被 except 吞掉——Aurora 规划旁路 / exam-sprint fast-track 从此
+            # 成为死代码，考试冲刺开场全部跌入 29s+ 的通用规划链路（wt126
+            # TTFT-PROBE 实测：V1A 30.6s / M7 39.8s TTFT 的主要构成）。改为
+            # 正确的 `async with asyncio.timeout(30)`，30s 超时语义不变。
+            async with asyncio.timeout(30):
+                planning_response = await manager.process_planning_turn(
+                    db=active_db,  # type: ignore[arg-type]
+                    user_id=parsed_user_id,
+                    chat_session_id=session_id,
+                    message=user_message,
+                    context=planning_context,
+                )
             if not (planning_response and planning_response.get("bypass_planning")):
                 return ""
 
@@ -764,13 +771,20 @@ class ChatOrchestrator(
             if fast_track_context:
                 planning_context["exam_sprint_fast_track"] = fast_track_context
 
-            planning_response = await asyncio.timeout(30)(manager.process_planning_turn)(
-                db=active_db,  # type: ignore[arg-type]
-                user_id=parsed_user_id,
-                chat_session_id=session_id,
-                message=user_message,
-                context=planning_context,
-            )
+            # TTFT-PROBE 修复：`asyncio.timeout(30)(...)(...)` 把 Timeout 上下文
+            # 管理器当可调用对象，必然抛 "'Timeout' object is not callable"，
+            # 随后被 except 吞掉——Aurora 规划旁路 / exam-sprint fast-track 从此
+            # 成为死代码，考试冲刺开场全部跌入 29s+ 的通用规划链路（wt126
+            # TTFT-PROBE 实测：V1A 30.6s / M7 39.8s TTFT 的主要构成）。改为
+            # 正确的 `async with asyncio.timeout(30)`，30s 超时语义不变。
+            async with asyncio.timeout(30):
+                planning_response = await manager.process_planning_turn(
+                    db=active_db,  # type: ignore[arg-type]
+                    user_id=parsed_user_id,
+                    chat_session_id=session_id,
+                    message=user_message,
+                    context=planning_context,
+                )
             if not planning_response or planning_response.get("bypass_planning"):
                 return False
 

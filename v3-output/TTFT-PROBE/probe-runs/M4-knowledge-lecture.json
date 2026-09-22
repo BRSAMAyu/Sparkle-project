@@ -1,0 +1,473 @@
+{
+ "label": "M4-knowledge-lecture",
+ "request_id": "wt126-554cbeb3034d",
+ "conn_s": 0.002,
+ "first_event_any_s": 0.0,
+ "first_status_s": 0.326,
+ "ttft_first_delta_s": 30.843,
+ "total_s": 52.645,
+ "delta_events": 36,
+ "done": true,
+ "error": null,
+ "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+ "text_len": 720,
+ "text_head": "核心结论先行：一个连通图是二部图，当且仅当它不包含任何长度为奇数的回路（奇圈）。非连通图需对每个连通分量分别满足该条件。\n\n- **充要条件梳理**\n  - **无奇圈条件**：图中不存在长度为奇数的闭合路径。这是理论推导与笔试中最核心的判定依据。\n  - **独立集划分条件**：顶点集可拆分为两个子集，使得每条边的两个端点分属不同子集。子集内部无边相连。\n  - **二染色条件**：图的色数不超",
+ "max_gap_s": [
+  30.376,
+  "metadata",
+  "status_update"
+ ],
+ "event_count": 52,
+ "events": [
+  {
+   "t": 0.0,
+   "type": "ack",
+   "brief": {
+    "request_id": "wt126-554cbeb3034d"
+   }
+  },
+  {
+   "t": 0.002,
+   "type": "message_ack",
+   "brief": {
+    "request_id": "wt126-554cbeb3034d"
+   }
+  },
+  {
+   "t": 0.326,
+   "type": "status_update",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d"
+   }
+  },
+  {
+   "t": 0.326,
+   "type": "metadata",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d"
+   }
+  },
+  {
+   "t": 0.326,
+   "type": "metadata",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d"
+   }
+  },
+  {
+   "t": 0.326,
+   "type": "metadata",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d"
+   }
+  },
+  {
+   "t": 0.326,
+   "type": "status_update",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d"
+   }
+  },
+  {
+   "t": 0.326,
+   "type": "metadata",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d"
+   }
+  },
+  {
+   "t": 0.327,
+   "type": "metadata",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d"
+   }
+  },
+  {
+   "t": 0.327,
+   "type": "status_update",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d"
+   }
+  },
+  {
+   "t": 0.327,
+   "type": "metadata",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d"
+   }
+  },
+  {
+   "t": 30.703,
+   "type": "status_update",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d"
+   }
+  },
+  {
+   "t": 30.843,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "：一个连通图是二部图，当且仅当"
+   }
+  },
+  {
+   "t": 31.129,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "它不包含任何长度为奇数的回路（奇圈）。非连通图需对每个连通分量分别满足该条件。"
+   }
+  },
+  {
+   "t": 31.302,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "\n\n- **充要条件梳理**\n  - **无奇"
+   }
+  },
+  {
+   "t": 31.444,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "圈条件**：图中不存在长度为奇数的闭合路径。这是理论推导与笔试中最"
+   }
+  },
+  {
+   "t": 31.581,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "核心的判定依据。"
+   }
+  },
+  {
+   "t": 31.793,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "\n  - **独立集划分条件**：顶点集可拆分为两个子集，使得每条"
+   }
+  },
+  {
+   "t": 31.93,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "边的两个端点"
+   }
+  },
+  {
+   "t": 32.149,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "分属不同子集。子集内部无边相连。\n "
+   }
+  },
+  {
+   "t": 32.367,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": " - **二染色条件**：图的色数不超过2。仅需两种颜色即可完成正常顶点着色，同"
+   }
+  },
+  {
+   "t": 32.56,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "色顶点之间绝不允许有边。\n\n- **证明"
+   }
+  },
+  {
+   "t": 32.725,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "思路拆解**\n  - **无奇圈 ⇒ 二部"
+   }
+  },
+  {
+   "t": 32.863,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "图**：采用构造法。任选一顶点作为根"
+   }
+  },
+  {
+   "t": 33.018,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "，按广度优先搜索的层次进行奇偶分层。"
+   }
+  },
+  {
+   "t": 33.153,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "将所有奇数层"
+   }
+  },
+  {
+   "t": 33.367,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "顶点归入集合A，偶数层归入集合B。若"
+   }
+  },
+  {
+   "t": 33.502,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "存在边连接A内部或B内部，则必与根"
+   }
+  },
+  {
+   "t": 33.636,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "构成奇圈，"
+   }
+  },
+  {
+   "t": 33.798,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "与前提矛盾。因此划分合法，图必为二部图"
+   }
+  },
+  {
+   "t": 33.998,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "。\n  - **二部图 ⇒ 无奇圈**：采用"
+   }
+  },
+  {
+   "t": 34.138,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "路径分析。沿二部图任意回路行进，"
+   }
+  },
+  {
+   "t": 34.282,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "顶点必然在集合A与集合B之间严格交替。要回到"
+   }
+  },
+  {
+   "t": 34.454,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "起点，必须完成整数次往返，步数必为偶数"
+   }
+  },
+  {
+   "t": 34.614,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "。故所有回路长度均为偶数。\n  - **"
+   }
+  },
+  {
+   "t": 34.885,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "二染色 ⇔ 独立集划分**：二者本质等价。"
+   }
+  },
+  {
+   "t": 35.053,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "两种颜色的色类天然构成两个独立集；"
+   }
+  },
+  {
+   "t": 35.255,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "反之，若已划分出两个独立集，将各自染上不同颜色即可满足"
+   }
+  },
+  {
+   "t": 35.476,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "二染色要求。\n\n- **备考执行建议**\n  距离期末还有7天，图论"
+   }
+  },
+  {
+   "t": 35.725,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "复习需收敛到高频考点。实际考试中极少要求手写"
+   }
+  },
+  {
+   "t": 35.864,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "完整证明，更多考查定理的直接应用与"
+   }
+  },
+  {
+   "t": 36.063,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "反证构造。面对具体图形，优先使用BFS奇"
+   }
+  },
+  {
+   "t": 36.202,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "偶分层算法快速判定，手动寻找奇圈效率低"
+   }
+  },
+  {
+   "t": 36.345,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "且易漏判"
+   }
+  },
+  {
+   "t": 36.601,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "。遇到“证明某图不是二部图”的题目，直接构造"
+   }
+  },
+  {
+   "t": 36.772,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "奇圈或利用匹配数与顶点覆盖数的"
+   }
+  },
+  {
+   "t": 37.028,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "关系即可得分。\n\n需要我发一道典型判定题，带你"
+   }
+  },
+  {
+   "t": 37.204,
+   "type": "delta",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "delta": "用分层标记法走一遍标准答题步骤吗？"
+   }
+  },
+  {
+   "t": 37.216,
+   "type": "usage",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d"
+   }
+  },
+  {
+   "t": 52.644,
+   "type": "full_text",
+   "brief": {
+    "session_id": "af0499b6-0311-4287-88cf-d2bf59063bb6",
+    "request_id": "wt126-554cbeb3034d",
+    "full_text": "核心结论先行：一个连通图是二部图，当且仅当它不包含任何长度为奇数的回路（奇圈）。非连通图需对每个连通分量分别满足该条件。\n\n- **充要条件梳理**\n  - *",
+    "finish_reason": "STOP"
+   }
+  },
+  {
+   "t": 52.645,
+   "type": "meta",
+   "brief": {}
+  },
+  {
+   "t": 52.645,
+   "type": "done",
+   "brief": {
+    "session_id": "",
+    "request_id": "wt126-554cbeb3034d",
+    "finish_reason": "STOP"
+   }
+  }
+ ]
+}

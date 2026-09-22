@@ -1,0 +1,166 @@
+{
+ "label": "M5-quick-query",
+ "request_id": "wt126-de33862194f1",
+ "conn_s": 0.002,
+ "first_event_any_s": 0.0,
+ "first_status_s": 0.476,
+ "ttft_first_delta_s": 13.143,
+ "total_s": 13.305,
+ "delta_events": 1,
+ "done": true,
+ "error": null,
+ "session_id": "517a114f-06e4-4958-8ca8-dbcb701dc5ae",
+ "text_len": 23,
+ "text_head": "图中顶点的度数是指与该顶点直接相连的边的数量。",
+ "max_gap_s": [
+  12.485,
+  "status_update",
+  "status_update"
+ ],
+ "event_count": 18,
+ "events": [
+  {
+   "t": 0.0,
+   "type": "ack",
+   "brief": {
+    "request_id": "wt126-de33862194f1"
+   }
+  },
+  {
+   "t": 0.001,
+   "type": "message_ack",
+   "brief": {
+    "request_id": "wt126-de33862194f1"
+   }
+  },
+  {
+   "t": 0.476,
+   "type": "status_update",
+   "brief": {
+    "session_id": "517a114f-06e4-4958-8ca8-dbcb701dc5ae",
+    "request_id": "wt126-de33862194f1"
+   }
+  },
+  {
+   "t": 0.476,
+   "type": "metadata",
+   "brief": {
+    "session_id": "517a114f-06e4-4958-8ca8-dbcb701dc5ae",
+    "request_id": "wt126-de33862194f1"
+   }
+  },
+  {
+   "t": 0.476,
+   "type": "metadata",
+   "brief": {
+    "session_id": "517a114f-06e4-4958-8ca8-dbcb701dc5ae",
+    "request_id": "wt126-de33862194f1"
+   }
+  },
+  {
+   "t": 0.477,
+   "type": "metadata",
+   "brief": {
+    "session_id": "517a114f-06e4-4958-8ca8-dbcb701dc5ae",
+    "request_id": "wt126-de33862194f1"
+   }
+  },
+  {
+   "t": 0.477,
+   "type": "status_update",
+   "brief": {
+    "session_id": "517a114f-06e4-4958-8ca8-dbcb701dc5ae",
+    "request_id": "wt126-de33862194f1"
+   }
+  },
+  {
+   "t": 0.477,
+   "type": "metadata",
+   "brief": {
+    "session_id": "517a114f-06e4-4958-8ca8-dbcb701dc5ae",
+    "request_id": "wt126-de33862194f1"
+   }
+  },
+  {
+   "t": 0.478,
+   "type": "metadata",
+   "brief": {
+    "session_id": "517a114f-06e4-4958-8ca8-dbcb701dc5ae",
+    "request_id": "wt126-de33862194f1"
+   }
+  },
+  {
+   "t": 0.478,
+   "type": "status_update",
+   "brief": {
+    "session_id": "517a114f-06e4-4958-8ca8-dbcb701dc5ae",
+    "request_id": "wt126-de33862194f1"
+   }
+  },
+  {
+   "t": 0.478,
+   "type": "metadata",
+   "brief": {
+    "session_id": "517a114f-06e4-4958-8ca8-dbcb701dc5ae",
+    "request_id": "wt126-de33862194f1"
+   }
+  },
+  {
+   "t": 0.534,
+   "type": "status_update",
+   "brief": {
+    "session_id": "517a114f-06e4-4958-8ca8-dbcb701dc5ae",
+    "request_id": "wt126-de33862194f1"
+   }
+  },
+  {
+   "t": 13.019,
+   "type": "status_update",
+   "brief": {
+    "session_id": "517a114f-06e4-4958-8ca8-dbcb701dc5ae",
+    "request_id": "wt126-de33862194f1"
+   }
+  },
+  {
+   "t": 13.143,
+   "type": "delta",
+   "brief": {
+    "session_id": "517a114f-06e4-4958-8ca8-dbcb701dc5ae",
+    "request_id": "wt126-de33862194f1",
+    "delta": "点的度数是指与该顶点直接相连的边的数量。"
+   }
+  },
+  {
+   "t": 13.144,
+   "type": "usage",
+   "brief": {
+    "session_id": "517a114f-06e4-4958-8ca8-dbcb701dc5ae",
+    "request_id": "wt126-de33862194f1"
+   }
+  },
+  {
+   "t": 13.304,
+   "type": "full_text",
+   "brief": {
+    "session_id": "517a114f-06e4-4958-8ca8-dbcb701dc5ae",
+    "request_id": "wt126-de33862194f1",
+    "full_text": "图中顶点的度数是指与该顶点直接相连的边的数量。",
+    "finish_reason": "STOP"
+   }
+  },
+  {
+   "t": 13.305,
+   "type": "meta",
+   "brief": {}
+  },
+  {
+   "t": 13.305,
+   "type": "done",
+   "brief": {
+    "session_id": "",
+    "request_id": "wt126-de33862194f1",
+    "finish_reason": "STOP"
+   }
+  }
+ ]
+}

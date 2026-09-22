@@ -1,0 +1,101 @@
+{
+ "label": "M7-new-session-repro",
+ "request_id": "wt126-7cae23189536",
+ "conn_s": 0.002,
+ "first_event_any_s": 0.0,
+ "first_status_s": 39.788,
+ "ttft_first_delta_s": null,
+ "total_s": 39.809,
+ "delta_events": 0,
+ "done": true,
+ "error": null,
+ "session_id": "1d2316b8-596f-430c-bf5d-a95aa1f0c2b4",
+ "text_len": 123,
+ "text_head": "已收到你的复习需求，正在为你搭建进程调度算法的知识框架。为了制定真正可执行的冲刺计划，还需要你确认两项信息：期末考试的具体日期，以及目前剩余的有效复习时间。提供后我将立即输出按优先级排序的分阶段方案，帮你高效抓牢重点。随时补充即可，我们马上推进。",
+ "max_gap_s": [
+  39.787,
+  "message_ack",
+  "status_update"
+ ],
+ "event_count": 10,
+ "events": [
+  {
+   "t": 0.0,
+   "type": "ack",
+   "brief": {
+    "request_id": "wt126-7cae23189536"
+   }
+  },
+  {
+   "t": 0.001,
+   "type": "message_ack",
+   "brief": {
+    "request_id": "wt126-7cae23189536"
+   }
+  },
+  {
+   "t": 39.788,
+   "type": "status_update",
+   "brief": {
+    "session_id": "1d2316b8-596f-430c-bf5d-a95aa1f0c2b4",
+    "request_id": "wt126-7cae23189536"
+   }
+  },
+  {
+   "t": 39.788,
+   "type": "metadata",
+   "brief": {
+    "session_id": "1d2316b8-596f-430c-bf5d-a95aa1f0c2b4",
+    "request_id": "wt126-7cae23189536"
+   }
+  },
+  {
+   "t": 39.788,
+   "type": "metadata",
+   "brief": {
+    "session_id": "1d2316b8-596f-430c-bf5d-a95aa1f0c2b4",
+    "request_id": "wt126-7cae23189536"
+   }
+  },
+  {
+   "t": 39.789,
+   "type": "metadata",
+   "brief": {
+    "session_id": "1d2316b8-596f-430c-bf5d-a95aa1f0c2b4",
+    "request_id": "wt126-7cae23189536"
+   }
+  },
+  {
+   "t": 39.789,
+   "type": "status_update",
+   "brief": {
+    "session_id": "1d2316b8-596f-430c-bf5d-a95aa1f0c2b4",
+    "request_id": "wt126-7cae23189536"
+   }
+  },
+  {
+   "t": 39.789,
+   "type": "full_text",
+   "brief": {
+    "session_id": "1d2316b8-596f-430c-bf5d-a95aa1f0c2b4",
+    "request_id": "wt126-7cae23189536",
+    "full_text": "已收到你的复习需求，正在为你搭建进程调度算法的知识框架。为了制定真正可执行的冲刺计划，还需要你确认两项信息：期末考试的具体日期，以及目前剩余的有效复习时间。提供",
+    "finish_reason": "STOP"
+   }
+  },
+  {
+   "t": 39.809,
+   "type": "meta",
+   "brief": {}
+  },
+  {
+   "t": 39.809,
+   "type": "done",
+   "brief": {
+    "session_id": "",
+    "request_id": "wt126-7cae23189536",
+    "finish_reason": "STOP"
+   }
+  }
+ ]
+}

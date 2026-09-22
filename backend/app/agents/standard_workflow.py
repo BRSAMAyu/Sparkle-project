@@ -92,6 +92,9 @@ _GENERATION_FIRST_CHUNK_TIMEOUT_SECONDS = 18.0
 _GENERATION_CHUNK_TIMEOUT_SECONDS = 45.0
 _STREAM_DELTA_FLUSH_CHARS = 96
 _STREAM_DELTA_FLUSH_SECONDS = 0.12
+# TTFT-PROBE：思考档 reasoning 进度状态的节流窗口（秒）。qwen3 混合模型
+# 默认先思考后作答（实测 13-43s），按此间隔下发 THINKING 进度帧防假卡。
+_REASONING_PROGRESS_STATUS_INTERVAL_SECONDS = 3.0
 _MAX_TOOL_LOOPS_PER_TURN = 2
 
 # MR-2：slim 标准问答的记忆窗口参数（top-3 episodic，~500 token 预算）。
@@ -1934,6 +1937,7 @@ Ask about their available time and current tasks if needed.
             len(system_prompt or ""),
         )
         try:
+            _gen_reasoning_status_last = time.perf_counter()
             async for chunk in _stream_generation_chunks_with_timeout(generation_stream):
                 if not _gen_first_chunk_logged:
                     logger.info(
@@ -1942,7 +1946,36 @@ Ask about their available time and current tasks if needed.
                         chunk.type,
                     )
                     _gen_first_chunk_logged = True
-                if chunk.type == "text":
+                if chunk.type == "reasoning":
+                    # TTFT-PROBE 缓解（S18 假卡面）：qwen3 混合模型在流式下默认
+                    # 先产出 reasoning_content（实测 13-43s 才见首个可见 token），
+                    # 而引擎此前把 reasoning 块整段丢弃——前端只拿到一次静态
+                    # “思考中”状态后长时间无任何帧。这里按节流窗口把思考进度
+                    # 作为 THINKING 状态帧下发（不透传思考正文），让等待面板
+                    # 有心跳。失败绝不阻断生成主链。
+                    try:
+                        _now_mono = time.perf_counter()
+                        if (
+                            stream_callback
+                            and (_now_mono - _gen_reasoning_status_last)
+                            >= _REASONING_PROGRESS_STATUS_INTERVAL_SECONDS
+                        ):
+                            _gen_reasoning_status_last = _now_mono
+                            await stream_callback(
+                                agent_service_pb2.ChatResponse(
+                                    status_update=agent_service_pb2.AgentStatus(
+                                        state=agent_service_pb2.AgentStatus.THINKING,
+                                        details=(
+                                            "仍在深度思考中…（已思考 "
+                                            f"{max(0, int(_now_mono - _gen_t0))} 秒）"
+                                        ),
+                                        current_agent_name="Sparkle AI",
+                                    )
+                                )
+                            )
+                    except Exception as exc:
+                        logger.warning(f"Failed to emit reasoning progress status: {exc}")
+                elif chunk.type == "text":
                     full_response += chunk.content
                     if stream_callback:
                         delta_buffer.append(chunk.content)
