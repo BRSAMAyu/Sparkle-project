@@ -121,15 +121,15 @@ void main() {
           balance: 5200,
           redeemedThisMonth: false,
           redeemableBase: 5200,
-          costPhotons: 3000,
+          costPhotons: photonRedeemProDisplayCost,
           proDays: 7,
         ),
         result: PhotonRedeemProResult(
           status: PhotonRedeemProStatus.ok,
-          costPhotons: 1500,
+          costPhotons: photonRedeemProDisplayCost,
           proDays: 7,
           redeemableBase: 5200,
-          balanceAfter: 3700,
+          balanceAfter: 5200 - photonRedeemProDisplayCost,
           entitlementExpiresAt: DateTime.utc(2026, 9, 30),
         ),
       );
@@ -187,7 +187,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.textContaining('兑换成功'), findsOneWidget);
-      expect(find.text('3700'), findsOneWidget);
+      // 兑换后余额 = 快照余额 − 成本（衍生值同引常量，防再校准）。
+      expect(find.text('${5200 - photonRedeemProDisplayCost}'), findsOneWidget);
       expect(find.text('本月已兑换，下月 1 日起可再兑'), findsOneWidget);
       expect(
         tester
@@ -208,12 +209,12 @@ void main() {
           balance: 5200,
           redeemedThisMonth: false,
           redeemableBase: 1200, // 转账撑起余额，基数只有 1200
-          costPhotons: 3000,
+          costPhotons: photonRedeemProDisplayCost,
           proDays: 7,
         ),
         result: const PhotonRedeemProResult(
           status: PhotonRedeemProStatus.insufficientBase,
-          costPhotons: 1500,
+          costPhotons: photonRedeemProDisplayCost,
           proDays: 7,
           redeemableBase: 1200,
         ),
@@ -250,7 +251,7 @@ void main() {
           balance: 5200,
           redeemedThisMonth: true,
           redeemableBase: 5200,
-          costPhotons: 3000,
+          costPhotons: photonRedeemProDisplayCost,
           proDays: 7,
         ),
         result: const PhotonRedeemProResult(
@@ -280,8 +281,8 @@ void main() {
         overview: const PhotonRedeemProOverview(
           balance: 500,
           redeemedThisMonth: false,
-          redeemableBase: 3000,
-          costPhotons: 3000,
+          redeemableBase: photonRedeemProDisplayCost,
+          costPhotons: photonRedeemProDisplayCost,
           proDays: 7,
         ),
         result: const PhotonRedeemProResult(
