@@ -555,6 +555,11 @@ class LLMRouter:
                 cost_per_1k_tokens=0.008,
                 avg_latency_ms=2500,
             ),
+            # ---- GLM batch 池条目【保留待用】----
+            # 用户决策（2026-09 MM-M3 batch）：glm_batch 车道默认模型切 MiniMax M3，
+            # GLM 条目从默认档移除（配置保留、可经 LLM_TIER_GLM_BATCH env 覆盖或
+            # register_model_configs 运行时回切），仅作无 MINIMAX_API_KEY 环境的
+            # 原链兜底 —— 见下方 _tier_mapping[ModelTier.GLM_BATCH]。
             "glm_4_7_no_thinking": ModelConfig(
                 provider=ModelProvider.ZHIPU,
                 model_name=settings.ZHIPU_CHAT_MODEL,
@@ -599,6 +604,7 @@ class LLMRouter:
                 cost_per_1k_tokens=0.0006,
                 avg_latency_ms=300,
             ),
+            # ---- GLM batch 池条目【保留待用】结束 ----
             "glm_4_7_flash_no_thinking": ModelConfig(
                 provider=ModelProvider.ZHIPU,
                 model_name=settings.ZHIPU_FLASH_MODEL,
@@ -866,13 +872,20 @@ class LLMRouter:
             ModelTier.REASONING: list(pro_models) + ["glm_4_7_pro"],
             ModelTier.MAX: max_models,
             ModelTier.TOP: ["glm_5_1_top"],
-            ModelTier.GLM_BATCH: [
-                *(["minimax_m3_batch"] if "minimax_m3_batch" in self._available_models else []),
-                "glm_4_7_no_thinking",
-                "glm_4_7_thinking",
-                "glm_4_5_air_batch",
-                "glm_4_6_batch",
-            ],
+            # 用户决策（2026-09 MM-M3 batch）：GLM_BATCH 默认档 = MiniMax M3 唯一候选；
+            # GLM 条目【保留待用】默认不启用 —— 仅在 MiniMax 未注册（无
+            # MINIMAX_API_KEY）环境保留原链，保证零 key 环境零行为变化。
+            # 回切方式：LLM_TIER_GLM_BATCH=glm_4_7_no_thinking,glm_4_7_thinking,...
+            ModelTier.GLM_BATCH: (
+                ["minimax_m3_batch"]
+                if "minimax_m3_batch" in self._available_models
+                else [
+                    "glm_4_7_no_thinking",
+                    "glm_4_7_thinking",
+                    "glm_4_5_air_batch",
+                    "glm_4_6_batch",
+                ]
+            ),
             ModelTier.SPECIALIST: specialist_models,
         }
         self._override_tier_mapping_from_env()

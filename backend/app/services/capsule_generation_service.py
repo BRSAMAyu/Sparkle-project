@@ -44,6 +44,8 @@ class CapsuleExecutionPlan:
 class ModelSelectionStrategy:
     """根据用户偏好和执行模式为胶囊生成选择模型计划。"""
 
+    # 【保留待用】GLM batch 池链（2026-09 MM-M3 batch：glm_batch 默认档已切
+    # MiniMax M3，下列链仅在无 MINIMAX_API_KEY 环境兜底生效）。
     _BATCH_NON_THINKING_MODELS = [
         "glm_4_5_air_batch",
         "glm_4_6_batch",
@@ -54,6 +56,13 @@ class ModelSelectionStrategy:
         "glm_4_7_no_thinking",
         "glm_4_6_batch",
     ]
+
+    @staticmethod
+    def _minimax_lane_registered() -> bool:
+        """MiniMax 车道条目是否已注册（= 引擎进程启动时配置了 MINIMAX_API_KEY）。"""
+        from app.core.llm_router import llm_router
+
+        return "minimax_m3_batch" in llm_router._available_models
 
     @staticmethod
     def select_depth_level(depth_preference: float) -> DepthLevel:
@@ -100,8 +109,20 @@ class ModelSelectionStrategy:
                 and generation_type in {"manual", "weekly", "push_triggered"}
             )
 
-        if use_thinking:
-            if execution_mode == "glm_batch":
+        if execution_mode == "glm_batch":
+            # 用户决策（2026-09 MM-M3 batch）：glm_batch 车道默认唯一 MiniMax M3
+            # （dispatch 侧 model_key 缺省、或手动 send_task 未带 key 时到达这里）。
+            # GLM 条目【保留待用】默认不启用：仅在 MiniMax 未注册（无 key）环境
+            # 走 glm_* 原链；MiniMax 失败不静默偷切 GLM，fallbacks 置空由 celery 重试。
+            if cls._minimax_lane_registered():
+                return CapsuleExecutionPlan(
+                    primary_model="minimax_m3_batch",
+                    fallback_models=[],
+                    depth_level=depth_level,
+                    thinking_mode=False,
+                    execution_mode=execution_mode,
+                )
+            if use_thinking:
                 return CapsuleExecutionPlan(
                     primary_model="glm_4_7_thinking",
                     fallback_models=["glm_4_7_no_thinking", "glm_4_6_batch"],
@@ -109,15 +130,6 @@ class ModelSelectionStrategy:
                     thinking_mode=True,
                     execution_mode=execution_mode,
                 )
-            return CapsuleExecutionPlan(
-                primary_model="glm_4_7_thinking",
-                fallback_models=["glm_4_7_flash_thinking", "deepseek_reason"],
-                depth_level=depth_level,
-                thinking_mode=True,
-                execution_mode=execution_mode,
-            )
-
-        if execution_mode == "glm_batch":
             if depth_level == DepthLevel.SHALLOW:
                 primary = "glm_4_5_air_batch"
                 fallbacks = ["glm_4_6_batch", "glm_4_7_no_thinking"]
@@ -132,6 +144,15 @@ class ModelSelectionStrategy:
                 fallback_models=fallbacks,
                 depth_level=depth_level,
                 thinking_mode=False,
+                execution_mode=execution_mode,
+            )
+
+        if use_thinking:
+            return CapsuleExecutionPlan(
+                primary_model="glm_4_7_thinking",
+                fallback_models=["glm_4_7_flash_thinking", "deepseek_reason"],
+                depth_level=depth_level,
+                thinking_mode=True,
                 execution_mode=execution_mode,
             )
 
@@ -156,8 +177,10 @@ class ModelSelectionStrategy:
             return None
         # MiniMax M3 异步车道（glm_batch 队列）：M3 本身是推理模型（思维链内联），
         # 消费面统一走 chat_json（宽松解析已剥离 <think> 前缀），故 thinking=False。
+        # 用户决策（2026-09 MM-M3 batch）：GLM 条目默认不启用 —— minimax_m3_batch
+        # 失败不静默偷切 GLM，fallbacks 置空（模型链耗尽 → job failed → celery 重试）。
         if model_key == "minimax_m3_batch":
-            return model_key, ["glm_4_5_air_batch", "glm_4_6_batch"], False
+            return model_key, [], False
         if model_key == "glm_4_5_air_batch":
             return model_key, ["glm_4_6_batch", "glm_4_7_no_thinking"], False
         if model_key == "glm_4_6_batch":
