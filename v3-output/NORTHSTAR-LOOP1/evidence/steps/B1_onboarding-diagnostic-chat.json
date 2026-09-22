@@ -1,0 +1,35 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP1-20260922-112401",
+  "step_id": "B1",
+  "phase": "day0",
+  "name": "onboarding diagnostic chat",
+  "started_at": "2026-09-22T11:27:01.593547+00:00",
+  "finished_at": "2026-09-22T11:27:29.818855+00:00",
+  "request": {
+    "ws": "/ws/chat",
+    "username_sha": "08b886c4da5e",
+    "message": "你好，我要开始备考：离散数学期末考试在 7 天后（闭卷，100 分卷）。我的情况：自评当前掌握度大约 42/100；最薄弱的章是图论（CH4）；一个具体的困惑：我总是分不清欧拉回路和哈密顿回路的判定条件，考试肯定考。我每天只能投入 165 分钟。请帮我建立目标并给我冲刺计划。"
+  },
+  "response": {
+    "full_text": "已开始为你整理离散数学期末冲刺目标。为了让计划更可执行，请补充两点：你希望这次考试达到多少分，或用哪些可观察标准判断备考完成（如模拟卷得分、图论题正确率）？另外，对于欧拉回路和哈密顿回路判定条件，你希望达到什么可验证水平（如独立完成10道相关题且正确率≥80%）？你补充后，我会立刻基于7天、每天165分钟给出更靠谱的阶段方案。",
+    "event_types": {
+      "ack": 1,
+      "message_ack": 1,
+      "status_update": 2,
+      "metadata": 3,
+      "full_text": 1
+    },
+    "citations": [],
+    "errors": [],
+    "elapsed_s": 27.94,
+    "session_id": "ns001-577d0e3d92e3",
+    "llm_messages_budget_left": 23
+  },
+  "verdict": "pass",
+  "checkpoints": [
+    "CP-00",
+    "CP-01"
+  ],
+  "notes": []
+}

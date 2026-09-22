@@ -1,0 +1,39 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP1-20260922-112401",
+  "step_id": "D1b",
+  "phase": "gain",
+  "name": "GP-04 control arm: same question, fresh account",
+  "started_at": "2026-09-22T11:34:49.796070+00:00",
+  "finished_at": "2026-09-22T11:35:50.063959+00:00",
+  "request": {
+    "ws": "/ws/chat",
+    "username_sha": "9db3b2dcc139",
+    "message": "欧拉回路和哈密顿回路的判定条件有什么区别？请结合我之前告诉你的我的薄弱点和困惑讲解。"
+  },
+  "response": {
+    "full_text": "：欧拉回路主要看“边能不能不重复地",
+    "event_types": {
+      "ack": 1,
+      "message_ack": 1,
+      "status_update": 5,
+      "metadata": 4,
+      "delta": 1
+    },
+    "citations": [],
+    "errors": [
+      {
+        "error_code": "client_deadline",
+        "message": "exceeded 60.0s budget"
+      }
+    ],
+    "elapsed_s": 60.0,
+    "session_id": "ns001-5733858f6a2a",
+    "llm_messages_budget_left": 22
+  },
+  "verdict": "blocked",
+  "checkpoints": [],
+  "notes": [
+    "chat errors: [{'error_code': 'client_deadline', 'message': 'exceeded 60.0s budget'}]"
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "schema": "sparkle.northstar.real-drive.gain-proof.v1",
+  "gain_proof": "GP-04",
+  "method": "compressed API proxy: personal-context differential (NOT the full blind-material protocol)",
+  "honesty_note": "GAIN_PROOFS GP-04 判据是真料/盲选双臂引用答对率；本轮以「私有上下文差分」为代理，结论仅限本轮证据",
+  "main_arm": {
+    "answer": {
+      "full_text": "点我这里没有完整记录，只记得你刚完成 Day1 数理逻辑 I 的命题逻辑复习和图论弱点预习。所以我按图论里最容易在考试里混淆的点来讲。\n\n- **欧拉回路**关心的是“每条边都走一次”。无向连通图里，欧拉回路存在的充要条件是所有顶点的度数都是偶数。它的核心是“进出平衡”：每经过一个顶点，都要从一条边进、从另一条边出，所以每个顶点被边访问的次数必须成对。\n\n- **哈密顿回路**关心的是“每个顶点都走一次”。它没有一个像欧拉回路那样简单好用的充要条件。考试里常见的是充分条件，比如每个顶点的度数都不小于顶点总数的一半，或者任意两个不相邻顶点的度数之和不小于顶点总数。满足这些条件通常可以推出存在哈密顿回路，但不满足也不能直接说没有。\n\n两者最容易被搞混的地方是：欧拉回路主要看“边和度数”，哈密顿回路主要看“顶点路径和整体结构”。欧拉回路可以局部验证，哈密顿回路则更依赖全局安排，所以考试里常考你判断“条件是否足够”，而不是只背定义。\n\n从备考角度看，这类题最容易扣分的是把欧拉回路的偶数度条件误当成哈密顿回路条件。你可以先记一句：欧拉看边，度数偶；哈密顿看点，条件弱。\n\n下一步：用两个小图各做一次判断，一个看是否所有顶点度数都是偶数，另一个看是否每个顶点度数都不小于顶点总数的一半，并写下结论依据。",
+      "delta_events": 31,
+      "event_types": {
+        "ack": 1,
+        "message_ack": 1,
+        "tool_result": 6,
+        "status_update": 5,
+        "metadata": 6,
+        "delta": 31,
+        "usage": 1
+      },
+      "citations": [],
+      "tool_calls": [],
+      "errors": [],
+      "elapsed_s": 36.1,
+      "request_id": "3944dcc1eba04a6c87b6e8d1fd4d6b39",
+      "session_id": "ns001-f02d7ff837ff"
+    },
+    "personalization_markers": [
+      "你",
+      "图论",
+      "弱",
+      "欧拉",
+      "哈密顿"
+    ],
+    "heuristic_verdict": "pass"
+  },
+  "control_arm": {
+    "answer": {
+      "full_text": "：欧拉回路主要看“边能不能不重复地",
+      "delta_events": 1,
+      "event_types": {
+        "ack": 1,
+        "message_ack": 1,
+        "status_update": 5,
+        "metadata": 4,
+        "delta": 1
+      },
+      "citations": [],
+      "tool_calls": [],
+      "errors": [
+        {
+          "error_code": "client_deadline",
+          "message": "exceeded 60.0s budget"
+        }
+      ],
+      "elapsed_s": 60.0,
+      "request_id": "0db6f30d4e9644f6a6381153c9cbc427",
+      "session_id": "ns001-5733858f6a2a"
+    },
+    "personalization_markers": [
+      "欧拉"
+    ]
+  },
+  "judgement": "positive-only-if: main arm shows private-context usage AND control arm cannot",
+  "at": "2026-09-22T11:35:50.065017+00:00",
+  "rejudged": {
+    "heuristic_verdict": "fail",
+    "markers": [
+      "没有完整记录",
+      "这里没有",
+      "我这里没有"
+    ],
+    "judge_version": "anti-recall-v2"
+  }
+}

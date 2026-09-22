@@ -1,0 +1,35 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP1-20260922-112401",
+  "step_id": "C5",
+  "phase": "day1",
+  "name": "error book entry (mistake sediment)",
+  "started_at": "2026-09-22T11:30:28.716278+00:00",
+  "finished_at": "2026-09-22T11:30:28.736887+00:00",
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/errors",
+    "body": {
+      "title": "误记：偶数度⇒连通（缺连通前提）",
+      "subject": "离散数学",
+      "chapter": "CH4 图论",
+      "knowledge_point": "欧拉回路判定：连通且所有顶点偶度，二者缺一不可",
+      "content": "我认为每顶点偶度就足够判定连通/欧拉回路，被纠正：两个不交三角形每顶点度数均为 2 但不连通。",
+      "error_type": "concept_confusion",
+      "source": "ns001-day1-chat"
+    }
+  },
+  "response": {
+    "status": 400,
+    "body": {
+      "error": "'离散数学' is not a valid SubjectEnum"
+    }
+  },
+  "verdict": "fail",
+  "checkpoints": [
+    "CP-03"
+  ],
+  "notes": [
+    "unexpected status 400"
+  ]
+}

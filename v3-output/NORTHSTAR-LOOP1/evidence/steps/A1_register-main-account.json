@@ -1,0 +1,31 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP1-20260922-112401",
+  "step_id": "A1",
+  "phase": "setup",
+  "name": "register main account",
+  "started_at": "2026-09-22T11:24:14.933536+00:00",
+  "finished_at": "2026-09-22T11:24:15.587053+00:00",
+  "request": {
+    "path": "/api/v1/auth/register",
+    "username": "northstar_ns001_9439e182",
+    "password_sha": "2bf146194740"
+  },
+  "response": {
+    "status": 200,
+    "keys": [
+      "access_token",
+      "refresh_token",
+      "token",
+      "token_type",
+      "user"
+    ]
+  },
+  "verdict": "pass",
+  "checkpoints": [
+    "CP-00"
+  ],
+  "notes": [
+    "user_id=ed1ee655-900f-4a14-b9b7-191952d6f38c"
+  ]
+}

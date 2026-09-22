@@ -1,0 +1,32 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP1-20260922-112401",
+  "step_id": "B4",
+  "phase": "day0",
+  "name": "diagnostic generate (pretest)",
+  "started_at": "2026-09-22T11:28:20.134192+00:00",
+  "finished_at": "2026-09-22T11:28:20.146342+00:00",
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/exam-sprint/diagnose/generate",
+    "body": {
+      "subject": "离散数学",
+      "question_count": 15,
+      "days_left": 7,
+      "pass_score": 60.0
+    }
+  },
+  "response": {
+    "status": 422,
+    "body": {
+      "detail": "诊断暂支持的科目：计算机网络、数据结构；「离散数学」暂未内置诊断题包"
+    }
+  },
+  "verdict": "fail",
+  "checkpoints": [
+    "CP-00"
+  ],
+  "notes": [
+    "unexpected status 422"
+  ]
+}

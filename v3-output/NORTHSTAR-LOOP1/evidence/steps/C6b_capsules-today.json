@@ -1,0 +1,62 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP1-20260922-112401",
+  "step_id": "C6b",
+  "phase": "day1",
+  "name": "capsules today",
+  "started_at": "2026-09-22T11:30:28.765942+00:00",
+  "finished_at": "2026-09-22T11:30:37.257105+00:00",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/capsules/today",
+    "body": {}
+  },
+  "response": {
+    "status": 200,
+    "body": [
+      {
+        "id": "2216f937-c6bb-4563-8293-994d2bff90fe",
+        "title": "从命题逻辑到图论：为什么「路径」是数学的共同语言",
+        "content": "命题逻辑研究的是「真与假」的组合规则，而图论研究的是「点与边」的连接结构——两者看似不同，却在底层共享同一种思维方式：把复杂系统拆成离散对象及其关系。\n\n一个有趣的交汇点是「可满足性问题（SAT）」。判断一个命题公式是否存在成真赋值，本质上可以在一个巨大的「赋值图」上搜索路径。而图论中的经典难题，比如哈密顿路径的存在性，也和逻辑可满足性一样属于 NP 完全问题——它们在计算难度上是彼此等价的。\n\n- **背景**：命题逻辑的语义（真值表）可以用图来可视化，比如 assignment 图中每个节点是一个真值赋值\n- **关键点**：NP 完全性建立了逻辑问题与图问题之间的「难度桥梁」，一个有解则全体有解\n- **下一步**：预习图论时可以重点关注连通性、遍历（DFS/BFS）与路径概念，之后学习计算复杂性时会豁然开朗",
+        "is_read": false,
+        "created_at": "2026-09-22T11:30:37.228272",
+        "related_subject": "Day1 数理逻辑 I：命题逻辑复习 + 图论弱点预习",
+        "depth_level": "medium",
+        "generation_method": "glm_4_7_no_thinking",
+        "quality_score": 0.88,
+        "feedback_count": 0,
+        "share_count": 0,
+        "personalization_context": {
+          "depth_preference": 0.5,
+          "curiosity_preference": 0.5
+        },
+        "source_context": {
+          "depth_level": "medium",
+          "model_chain": [
+            "glm_4_7_no_thinking",
+            "glm_4_7_flash_no_thinking",
+            "deepseek_chat"
+          ],
+          "generated_at": "2026-09-22T11:30:37.226440",
+          "primary_model": "glm_4_7_no_thinking",
+          "thinking_mode": false,
+          "execution_mode": "online",
+          "selected_model": "glm_4_7_no_thinking",
+          "dominant_pattern": null,
+          "subjects_studied": [
+            "Day1 数理逻辑 I：命题逻辑复习 + 图论弱点预习"
+          ],
+          "behavior_patterns": [],
+          "profile_preferences": {
+            "depth_preference": 0.5,
+            "curiosity_preference": 0.5
+          }
+        },
+        "is_favorite": false
+      }
+    ]
+  },
+  "verdict": "pass",
+  "checkpoints": [],
+  "notes": []
+}

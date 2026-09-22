@@ -1,0 +1,51 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP1-20260922-112401",
+  "step_id": "B3",
+  "phase": "day0",
+  "name": "exam-sprint intake (7-day backbone)",
+  "started_at": "2026-09-22T11:28:20.074829+00:00",
+  "finished_at": "2026-09-22T11:28:20.112189+00:00",
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/exam-sprint/intake",
+    "body": {
+      "subject": "离散数学",
+      "exam_date": "2026-09-29",
+      "target_mode": "pass",
+      "scope_context": {
+        "text": "闭卷 100 分卷；覆盖 CH1 数理逻辑/CH2 集合与关系/CH3 函数与基数/CH4 图论/CH5 组合数学/CH6 代数系统"
+      },
+      "baseline": {
+        "current_level": 42,
+        "weak_chapters": [
+          "CH4 图论",
+          "图论"
+        ]
+      },
+      "daily_study_minutes": 165,
+      "conversation_id": "ns001-577d0e3d92e3"
+    }
+  },
+  "response": {
+    "status": 403,
+    "body": {
+      "success": false,
+      "error_code": "QuotaExceededError",
+      "message": "已达计划数量上限(3个)，请归档旧计划或升级账户",
+      "detail": {
+        "plan_type": "sprint"
+      },
+      "request_id": "79225a9b-6488-4fcf-a404-fde8d086a265",
+      "trace_id": "de4a2d28be804149b28addac6d94c883"
+    }
+  },
+  "verdict": "fail",
+  "checkpoints": [
+    "CP-00",
+    "CP-01"
+  ],
+  "notes": [
+    "unexpected status 403"
+  ]
+}

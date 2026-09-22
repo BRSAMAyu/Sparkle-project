@@ -1,0 +1,25 @@
+{
+  "schema": "sparkle.northstar.real-drive.gain-proof.v1",
+  "gain_proof": "GP-11",
+  "method": "full flattened profile snapshot diff across Day0->Day1 behavior",
+  "before_field_count": 4,
+  "after_field_count": 4,
+  "before_nonempty_fields": 1,
+  "after_nonempty_fields": 1,
+  "changed_keys": [],
+  "before_sample": {
+    ".layer_2.editable": false,
+    ".hidden_item_count": 16,
+    ".transparency.enabled": false,
+    ".transparency.level": 0
+  },
+  "after_sample": {
+    ".layer_2.editable": false,
+    ".hidden_item_count": 16,
+    ".transparency.enabled": false,
+    ".transparency.level": 0
+  },
+  "judgement": "profile NOT updated: zero changed fields across full snapshot",
+  "rebuilt_without_llm": true,
+  "at": "2026-09-22T11:40:28.260264+00:00"
+}

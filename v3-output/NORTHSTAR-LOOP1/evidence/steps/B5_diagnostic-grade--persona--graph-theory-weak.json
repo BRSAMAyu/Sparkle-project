@@ -1,0 +1,51 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP1-20260922-112401",
+  "step_id": "B5",
+  "phase": "day0",
+  "name": "diagnostic grade (persona: graph-theory weak)",
+  "started_at": "2026-09-22T11:24:52.399415+00:00",
+  "finished_at": "2026-09-22T11:24:52.411192+00:00",
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/exam-sprint/diagnose/grade",
+    "body": {
+      "subject": "离散数学",
+      "answers": [],
+      "days_left": 7,
+      "pass_score": 60.0,
+      "update_galaxy": true
+    }
+  },
+  "response": {
+    "status": 400,
+    "body": {
+      "success": false,
+      "error_code": "BAD_REQUEST",
+      "message": "请求数据格式不正确",
+      "detail": [
+        {
+          "type": "too_short",
+          "loc": [
+            "body",
+            "answers"
+          ],
+          "msg": "List should have at least 1 item after validation, not 0",
+          "input": [],
+          "ctx": {
+            "field_type": "List",
+            "min_length": 1,
+            "actual_length": 0
+          }
+        }
+      ]
+    }
+  },
+  "verdict": "fail",
+  "checkpoints": [
+    "CP-00"
+  ],
+  "notes": [
+    "unexpected status 400"
+  ]
+}

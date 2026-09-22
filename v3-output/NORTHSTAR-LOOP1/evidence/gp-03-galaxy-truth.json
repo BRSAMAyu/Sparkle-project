@@ -1,0 +1,53 @@
+{
+  "schema": "sparkle.northstar.real-drive.gain-proof.v1",
+  "gain_proof": "GP-03",
+  "method": "galaxy graph diff vs real completion facts (2 tasks completed, 1 error-book entry + review)",
+  "real_world_facts": {
+    "task_completed": true,
+    "task_id": "5a83a029-e7f1-4be1-8dad-3eb80046b8c4",
+    "error_book_entry_submitted": true,
+    "expected_node_direction": "图论/欧拉 相关节点 mastery 应变化；未学习节点不应点亮"
+  },
+  "galaxy_diff": {
+    "added_nodes": [
+      "abc4e27f-9259-5eaf-a1fb-56dee58ccd9f",
+      "e6b46abb-d3bc-528d-b220-9472d913b64c"
+    ],
+    "mastery_changes": {},
+    "before_count": 140,
+    "after_count": 142
+  },
+  "galaxy_state_after": {
+    "user_stats": {
+      "total_nodes": 142,
+      "unlocked_count": 2,
+      "mastered_count": 0,
+      "total_study_minutes": 0,
+      "sector_distribution": {},
+      "streak_days": 0
+    },
+    "learning_state_distribution": {
+      "unknown": 120,
+      "blocked_by_prerequisite": 20,
+      "weak": 2
+    },
+    "unlocked_nodes": [
+      {
+        "id": "e6b46abb-d3bc-528d-b220-9472d913b64c",
+        "name": "Day1 数理逻辑 I：命题逻辑复习 + 图论弱点预习",
+        "learning_state": "weak",
+        "mastery_score": 0.0,
+        "study_minutes": 0
+      },
+      {
+        "id": "abc4e27f-9259-5eaf-a1fb-56dee58ccd9f",
+        "name": "Day 1 · 诊断分诊 - 诊断分诊",
+        "learning_state": "weak",
+        "mastery_score": 0.0,
+        "study_minutes": 0
+      }
+    ]
+  },
+  "rebuilt_without_llm": true,
+  "at": "2026-09-22T11:40:28.259663+00:00"
+}

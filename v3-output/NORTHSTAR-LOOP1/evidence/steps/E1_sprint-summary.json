@@ -1,0 +1,100 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP1-20260922-112401",
+  "step_id": "E1",
+  "phase": "report",
+  "name": "sprint summary",
+  "started_at": "2026-09-22T11:43:14.771006+00:00",
+  "finished_at": "2026-09-22T11:43:15.029251+00:00",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/exam-sprint/sprint-summary",
+    "body": {}
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "plan_id": "228093d7-3fab-42fc-aa04-2162b85cae38",
+      "plan_name": "离散数学期末 7 天冲刺：及格冲 70+",
+      "subject": null,
+      "exam_date": "2026-09-29",
+      "started_at": "2026-09-22T11:28:19.206129",
+      "days_used": 1,
+      "headline": "你用了 1 天，完成了 0 项任务。",
+      "task_stats": {
+        "total": 4,
+        "completed": 0,
+        "completion_rate": 0.0
+      },
+      "score_stats": {
+        "baseline_score": 42.0,
+        "current_score": 0.0,
+        "delta": -42.0,
+        "baseline_source": "intake"
+      },
+      "mastery_changes": [],
+      "top_improvement": null,
+      "high_frequency_coverage": {
+        "baseline_rate": 0.0,
+        "current_rate": 0.0,
+        "delta_rate": 0.0,
+        "total_topics": 0,
+        "covered_topics_before": 0,
+        "covered_topics_after": 0
+      },
+      "error_recovery": {
+        "total_errors": 1,
+        "repaired_errors": 0,
+        "repair_rate": 0.0
+      },
+      "daily_study_trend": [
+        {
+          "date": "2026-09-22",
+          "minutes": 0
+        },
+        {
+          "date": "2026-09-23",
+          "minutes": 0
+        },
+        {
+          "date": "2026-09-24",
+          "minutes": 0
+        },
+        {
+          "date": "2026-09-25",
+          "minutes": 0
+        },
+        {
+          "date": "2026-09-26",
+          "minutes": 0
+        },
+        {
+          "date": "2026-09-27",
+          "minutes": 0
+        },
+        {
+          "date": "2026-09-28",
+          "minutes": 0
+        },
+        {
+          "date": "2026-09-29",
+          "minutes": 0
+        }
+      ],
+      "narrative_highlights": [
+        "你用了 1 天，完成了 0 / 4 项任务。",
+        "错题修复率达到 0%。"
+      ],
+      "invitation_status": {
+        "eligible": false,
+        "invited_at": null,
+        "notification_id": null,
+        "completed_at": null,
+        "review_id": null
+      }
+    }
+  },
+  "verdict": "pass",
+  "checkpoints": [],
+  "notes": []
+}

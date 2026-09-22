@@ -1,0 +1,35 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP1-20260922-112401",
+  "step_id": "C5b",
+  "phase": "day1fix",
+  "name": "error book entry retry (subject=math fallback)",
+  "started_at": "2026-09-22T11:33:00.156799+00:00",
+  "finished_at": "2026-09-22T11:33:00.211912+00:00",
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/errors",
+    "body": {
+      "title": "误记：偶数度⇒连通（缺连通前提）",
+      "subject": "math",
+      "chapter": "CH4 图论",
+      "knowledge_point": "欧拉回路判定：连通且所有顶点偶度，二者缺一不可",
+      "content": "我认为每顶点偶数度就足够判定连通/欧拉回路，被纠正：两个不交三角形每顶点度数均为 2 但不连通。",
+      "error_type": "concept_confusion",
+      "source": "ns001-day1-chat"
+    }
+  },
+  "response": {
+    "status": 400,
+    "body": {
+      "error": "1 validation error for ErrorRecordCreate\n  Value error, 题目内容和图片不能同时为空 [type=value_error, input_value={'user_id': 'ed1ee655-900...analysis_summary': None}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/value_error"
+    }
+  },
+  "verdict": "fail",
+  "checkpoints": [
+    "CP-03"
+  ],
+  "notes": [
+    "unexpected status 400"
+  ]
+}

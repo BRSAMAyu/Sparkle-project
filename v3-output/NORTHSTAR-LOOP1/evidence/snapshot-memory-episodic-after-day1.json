@@ -1,0 +1,62 @@
+{
+  "schema": "sparkle.northstar.real-drive.run.v1",
+  "snapshot": {
+    "items": [
+      {
+        "id": "34660b60-d97d-4678-b110-856886d7f599",
+        "summary": "completed Day1 数理逻辑 I：命题逻辑复习 + 图论弱点预习",
+        "source_type": "chat_turn",
+        "source_id": "44ed24426e1e46139436892b3a3a6aa1",
+        "source_lane": "direct_capture",
+        "subject_type": "task_outcome",
+        "occurred_at": "2026-09-22T11:30:11.163905",
+        "due_at": null,
+        "resolved_at": null,
+        "importance_score": 0.72,
+        "confidence": 0.78,
+        "evidence_token": null,
+        "decay_policy": null,
+        "evidence_score": 0.2,
+        "correction_count": 0,
+        "evidence_missing": false,
+        "evidence_refs": [
+          {
+            "id": "44ed24426e1e46139436892b3a3a6aa1",
+            "type": "chat_turn",
+            "user_deleted": false,
+            "schema_version": "chat_turn.v1"
+          }
+        ],
+        "tags": [
+          "turn_end",
+          "task_completed",
+          "task_completed"
+        ],
+        "source_annotation": {
+          "turn_id": "44ed24426e1e46139436892b3a3a6aa1",
+          "label": "chat_turn",
+          "written_at": "2026-09-22T11:30:11.171356"
+        },
+        "updated_at": "2026-09-22T11:30:11.171362",
+        "retracted_at": null,
+        "revoked_at": null,
+        "mentioned_entity_hash": null,
+        "declaration_label": null,
+        "epistemic_class": "OBSERVATION",
+        "status": "active",
+        "scope": {
+          "level": "domain",
+          "domain_key": "task_outcome",
+          "time_window": {
+            "occurred_at": "2026-09-22T11:30:11.163905"
+          }
+        }
+      }
+    ],
+    "total": 1,
+    "offset": 0,
+    "limit": 20,
+    "has_more": false
+  },
+  "at": "2026-09-22T11:30:37.305447+00:00"
+}

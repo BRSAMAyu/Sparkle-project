@@ -1,0 +1,122 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP1-20260922-112401",
+  "step_id": "B2",
+  "phase": "day0",
+  "name": "create goal",
+  "started_at": "2026-09-22T11:28:18.902460+00:00",
+  "finished_at": "2026-09-22T11:28:20.074394+00:00",
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/goals/",
+    "body": {
+      "goal_type": "exam",
+      "title": "离散数学期末 7 天冲刺：及格冲 70+",
+      "motivation": "一周后期末考，目标及格并冲击 70+",
+      "time_horizon": "short",
+      "description": "NS-001 北极星压缩轮；考试日 2026-09-29",
+      "target_date": "2026-09-29"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "id": "08240588-028b-48cf-bf9f-d17819b7b0ae",
+      "title": "离散数学期末 7 天冲刺：及格冲 70+",
+      "goal_type": "academic",
+      "description": "NS-001 北极星压缩轮；考试日 2026-09-29",
+      "status": "active",
+      "target_date": "2026-09-29",
+      "metadata": {
+        "creation_wizard": {
+          "created_at": "2026-09-22T11:28:19.198985+00:00",
+          "milestones": [
+            {
+              "id": "m1",
+              "title": "Map the baseline",
+              "description": "Confirm scope, weak topics, and the first measurable benchmark. Keep it tied to why this matters: 一周后期末考，目标及格并冲击 70+",
+              "estimated_days": 3,
+              "acceptance_criteria": [
+                "Produce visible evidence for: Map the baseline",
+                "Review progress and decide the next adjustment."
+              ]
+            },
+            {
+              "id": "m2",
+              "title": "Repair the core gaps",
+              "description": "Practice the prerequisites that block progress most often. Keep it tied to why this matters: 一周后期末考，目标及格并冲击 70+",
+              "estimated_days": 6,
+              "acceptance_criteria": [
+                "Produce visible evidence for: Repair the core gaps",
+                "Review progress and decide the next adjustment."
+              ]
+            },
+            {
+              "id": "m3",
+              "title": "Timed practice loop",
+              "description": "Run short drills and review mistakes after each round. Keep it tied to why this matters: 一周后期末考，目标及格并冲击 70+",
+              "estimated_days": 7,
+              "acceptance_criteria": [
+                "Produce visible evidence for: Timed practice loop",
+                "Review progress and decide the next adjustment."
+              ]
+            },
+            {
+              "id": "m4",
+              "title": "Readiness check",
+              "description": "Complete a mock or rubric check before the deadline. Keep it tied to why this matters: 一周后期末考，目标及格并冲击 70+",
+              "estimated_days": 7,
+              "acceptance_criteria": [
+                "Produce visible evidence for: Readiness check",
+                "Review progress and decide the next adjustment."
+              ]
+            }
+          ],
+          "motivation": "一周后期末考，目标及格并冲击 70+",
+          "time_horizon": "short"
+        }
+      },
+      "minimum_acceptance_criteria": [
+        {
+          "id": "m1",
+          "met": false,
+          "unit": "boolean",
+          "label": "Map the baseline",
+          "metric": "milestone_completed",
+          "threshold": "1"
+        },
+        {
+          "id": "m2",
+          "met": false,
+          "unit": "boolean",
+          "label": "Repair the core gaps",
+          "metric": "milestone_completed",
+          "threshold": "1"
+        },
+        {
+          "id": "m3",
+          "met": false,
+          "unit": "boolean",
+          "label": "Timed practice loop",
+          "metric": "milestone_completed",
+          "threshold": "1"
+        },
+        {
+          "id": "m4",
+          "met": false,
+          "unit": "boolean",
+          "label": "Readiness check",
+          "metric": "milestone_completed",
+          "threshold": "1"
+        }
+      ],
+      "first_task_id": "279d7438-1d8d-4b86-b01a-df98b9b0469d",
+      "warning": "duplicate_title"
+    }
+  },
+  "verdict": "pass",
+  "checkpoints": [
+    "CP-01"
+  ],
+  "notes": []
+}
