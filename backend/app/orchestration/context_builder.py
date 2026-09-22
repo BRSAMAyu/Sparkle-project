@@ -799,6 +799,7 @@ class ContextBuilderMixin:
     #: 独立去重域——batch 内 near-duplicate 归因仍成立）。
     _EXPERIENCE_MEMORY_SECTION = "experience"
 
+    # rule-as: ignore experience_memories=memory 桶 manifest 登记面（context_sources.py USER_CONTEXT_FIELD_BUCKETS，WIRING-1/FIX-33），experience_memory_meta/selfcheck=M-05 观测面由 C-08 统一漏斗消费（agents/standard_workflow.py）——消费者均不在本守卫 routing_engine/prompts/context_builder 三文件渲染面内
     async def _attach_experience_memory_context(
         self,
         payload: dict[str, Any],

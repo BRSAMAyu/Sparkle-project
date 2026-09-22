@@ -100,6 +100,22 @@ EXPECTATIONS: dict[str, dict[Path, tuple[str, ...]]] = {
             '_format_recent_corrections_section',
         ),
     },
+    # M-05（over-personalization Self-ReCheck）：selfcheck payload 在装配面被
+    # C-08 漏斗捕获回读（internal_only 归因 selfcheck_dropped_refs）——非赋值位
+    # 读取，钉真实消费点。
+    "memory_selfcheck": {
+        CONTEXT_BUILDER: (
+            'payload.get("memory_selfcheck")',
+        ),
+    },
+    # C-08（context-eval）：记忆漏斗 metadata-only 记录；真实下游消费者是
+    # agents/standard_workflow.py 的统一 context funnel 记录（不在本守卫
+    # consumer 三文件内）——按 aurora_stage39_modes 先例钉装配面接线。
+    "context_funnel_memory": {
+        CONTEXT_BUILDER: (
+            'payload["context_funnel_memory"]',
+        ),
+    },
 }
 
 

@@ -430,6 +430,7 @@ ENGINE_ONLY: dict[str, str] = {
     "/api/v1/errors/{}/analyze": "gateway serves /errors natively via gRPC ErrorBookHandler",
     "/api/v1/errors/{}/review": "gateway serves /errors natively via gRPC ErrorBookHandler",
     "/api/v1/galaxy/documents/{}/nodes": "galaxy long tail — unreachable via gateway (P3 handoff §6.2)",
+    "/api/v1/insights/understanding-dimensions": "D-03 five-dimension diagnostic face — no client consumer yet (mobile understanding panel reads /experience/understanding-snapshot via the experience catch-all); proxy when a UI wires up, then drop this entry",
 }
 
 GATEWAY_ONLY: dict[str, str] = {

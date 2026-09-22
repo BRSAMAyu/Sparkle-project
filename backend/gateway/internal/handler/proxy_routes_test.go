@@ -129,6 +129,9 @@ func TestProxyRoutesHandler_RegisterProxyRoutes(t *testing.T) {
 		"POST /api/v1/tasks/:id/start",
 		"POST /api/v1/tasks/:id/complete",
 		"POST /api/v1/tasks/:id/abandon",
+		// GUARD-DEBT: X-04 reopen/rescope restored (engine serves both; mobile calls both)
+		"POST /api/v1/tasks/:id/reopen",
+		"POST /api/v1/tasks/:id/rescope",
 		"POST /api/v1/tasks/:id/snooze",
 		"POST /api/v1/tasks/:id/too-hard",
 		"POST /api/v1/tasks/:id/too_hard",

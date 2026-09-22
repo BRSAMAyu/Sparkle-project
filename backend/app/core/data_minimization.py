@@ -442,6 +442,12 @@ TARGET_MODEL_ALIASES: dict[str, str] = {
     "group_messages": "community_interaction",
     "intervention_request": "intervention_episode",
     "intervention_requests": "intervention_episode",
+    # D-05 生命周期事件存储（intervention_lifecycle_events 表）——干预域同族
+    # canonical scope 挂靠（GOV-DATA-MIN DM002 登记面）。content-light：
+    # 类型判别码/窗口参数/关联键/outcome 链接，零正文；check_before_store
+    # 当前无该表调用方，若将来接线需按列补细 scope。
+    "intervention_lifecycle_event": "intervention_episode",
+    "intervention_lifecycle_events": "intervention_episode",
     "intervention_record": "intervention_episode",
     "intervention_records": "intervention_episode",
     "intervention_audit_log": "intervention_episode",

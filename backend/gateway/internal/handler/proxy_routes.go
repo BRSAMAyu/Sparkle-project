@@ -149,8 +149,15 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		tasks.POST("/:id/abandon", h.proxyWithHeaders)
 		tasks.POST("/:id/pause", h.proxyWithHeaders)
 		tasks.POST("/:id/resume", h.proxyWithHeaders)
-		// R2-08 §2.2 #11: POST /:id/reopen removed — the engine has no
-		// reopen transition anywhere.
+		// R2-08 §2.2 #11 removed POST /:id/reopen ("engine has no reopen
+		// transition") — superseded by X-04: the engine now serves
+		// POST /tasks/{task_id}/reopen and mobile calls it
+		// (api_endpoints.dart reopenTask). GUARD-DEBT restored the proxy.
+		// route-tier: authed
+		tasks.POST("/:id/reopen", h.proxyWithHeaders) // rule-bm: ignore engine gained this reopen surface post-R2-08 (X-04)
+		// X-04 rescope (engine POST /tasks/{task_id}/rescope; mobile rescopeTask).
+		// route-tier: authed
+		tasks.POST("/:id/rescope", h.proxyWithHeaders)
 		tasks.POST("/:id/stuck", h.proxyWithHeaders)
 		tasks.GET("/:id/guidance", h.proxyWithHeaders)
 		tasks.POST("/:id/guidance", h.proxyWithHeaders)

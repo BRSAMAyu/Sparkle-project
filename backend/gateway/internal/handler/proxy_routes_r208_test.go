@@ -59,7 +59,13 @@ func TestProxyRoutesHandler_DeadRoutesRemoved(t *testing.T) {
 		"PUT /api/v1/cards/*path",
 		"PATCH /api/v1/cards/*path",
 		// tasks (#11, #12)
-		"POST /api/v1/tasks/:id/reopen",
+		// GUARD-DEBT: POST /tasks/:id/reopen moved out of this pin — X-04 gave
+		// the engine a real reopen transition (POST /tasks/{task_id}/reopen,
+		// tasks.py) and mobile calls it (api_endpoints.dart reopenTask), so the
+		// R2-08 #11 "engine has no reopen transition" premise no longer holds.
+		// The proxy registration is pinned positively in proxy_routes_test.go
+		// (expectedTasksRoutes) and annotated `rule-bm: ignore` in
+		// proxy_routes.go. GET /tasks/suggestions stays pinned below.
 		"GET /api/v1/tasks/suggestions",
 		// goals (#13): PATCH redundant, PUT sibling stays
 		"PATCH /api/v1/goals/:id",

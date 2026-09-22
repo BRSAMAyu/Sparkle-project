@@ -8,6 +8,8 @@ cleanup_worker 同构：sync celery task → ``asyncio.run`` 包 async 实现；
 失败只计数告警，绝不影响其它任务。
 """
 
+# rule-bj: exempt 已运行时接线——app/core/celery_app.py 以字符串引用本模块（:78 Celery include / :184 low_priority 队列路由 / :1024 beat 日程），AST 导入图看不见字符串引用
+
 from __future__ import annotations
 
 import asyncio

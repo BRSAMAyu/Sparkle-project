@@ -51,6 +51,10 @@ from app.services.memory_inferred_write_lane import (
 )
 from app.services.memory_service import MemoryService
 
+# Rule BI：哑凭证统一走集中式测试凭证 fixture（tests/_credentials.py，守卫
+# 豁免面）——eval 永不认证，该值只是 User.hashed_password 列的非空占位。
+from tests._credentials import TEST_HASHED_PASSWORD
+
 from .memory_eval_schema import Case
 
 # Deterministic user ids: the suite is identity-reproducible across runs.
@@ -156,7 +160,7 @@ class EvalEnvironment:
                 id=user_id,
                 username=f"m09_{key.lower()}",
                 email=f"{key.lower()}@m09.eval",
-                hashed_password="m09-eval",
+                hashed_password=TEST_HASHED_PASSWORD,
             )
         )
         await db.commit()
