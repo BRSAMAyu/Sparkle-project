@@ -59,6 +59,7 @@ from sqlalchemy import DateTime, String, bindparam, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.event_bus import EventBus
+from app.core.request_coalescing import notify_read_view_invalidated
 from app.core.time_utils import utcnow as _utcnow
 from app.models.base import GUID
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
@@ -629,12 +630,19 @@ async def invalidate_galaxy_graph_view_cache(user_id: UUID) -> int:
     ``{APP_NAME}:view:get_galaxy_graph:{user_id}:*``，ttl=600）。吸收真源在
     DB，本函数只删缓存：失败由调用方降级（最坏退回 TTL 自然过期），不回滚
     吸收事务。返回删除的键数（观测用；Redis 不可达时为 0）。
+
+    SHIELD-INVAL：同时经核心注册表失效 API 层进程内 shield 结果缓存
+    （``app.api.v1.galaxy`` 的 10s TTL 面）——两层各自缓存同一读面，只清
+    Redis 层时 shield 仍回写前旧值。回调未注册（API 模块未加载）时为
+    no-op；同步纯内存操作，失败不传播（notify 内部已兜底）。
     """
     from app.core.cache import cache_service
     from app.config import settings
 
     pattern = f"{settings.APP_NAME}:view:get_galaxy_graph:{user_id}:*"
-    return await cache_service.delete_pattern(pattern)
+    deleted = await cache_service.delete_pattern(pattern)
+    notify_read_view_invalidated("galaxy_graph", str(user_id))
+    return deleted
 
 
 __all__ = [

@@ -19,7 +19,7 @@ from sqlalchemy import desc, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user_id, get_db, get_optional_current_user
-from app.core.request_coalescing import EndpointShield
+from app.core.request_coalescing import EndpointShield, register_read_view_invalidation_hook
 from app.models.galaxy import KnowledgeNode, NodeRelation, UserNodeStatus
 from app.models.plan import Plan
 from app.models.task import Task
@@ -64,6 +64,23 @@ router = APIRouter(prefix="/galaxy", tags=["Knowledge Galaxy"])
 # 恢复风暴防护（engine-restore-storm）：星图全量拉取是恢复期最重端点之一
 # （structure + stats + 回填 + error/goal 聚合），同 user 并发拉取合并为一次计算。
 _galaxy_graph_shield = EndpointShield(name="galaxy_graph", max_concurrency=8, ttl=10.0, wait_timeout=8.0)
+
+
+def _invalidate_galaxy_graph_shield(user_id: str) -> int:
+    """SHIELD-INVAL：按 user 前缀失效星图 shield 的进程内结果缓存。
+
+    服务层写路径（outcome 吸收 / update_node_mastery / 诊断评分）提交后，
+    除 Redis 视图键外还须清掉本端点 shield 的 10s TTL 面——否则 Redis 键
+    已删而 shield 仍回写前旧值，星图读面最长 10s 不更新（活栈实证）。
+    经核心注册表挂接，服务层不反向 import API 层；闭包在**调用时**解析
+    模块全局 ``_galaxy_graph_shield``，测试可整体替换 shield 实例。
+    """
+    return _galaxy_graph_shield.invalidate_prefix(f"{user_id}:")
+
+
+# 路由模块导入即注册（app.main 启动链保证先于任何请求）；未导入本模块的
+# 纯服务层调用方/单测中 notify 为 no-op。
+register_read_view_invalidation_hook("galaxy_graph", _invalidate_galaxy_graph_shield)
 
 
 # ==========================================
@@ -208,6 +225,8 @@ async def get_galaxy_graph(
         )
 
     # 恢复风暴防护：single-flight 合并同 user 并发拉取 + 10s TTL 缓存 + 并发钳制
+    # （失效面：服务层写路径经 register_read_view_invalidation_hook 按 user 清缓存，
+    # 见 _invalidate_galaxy_graph_shield——SHIELD-INVAL）
     key = f"{user_id}:{sector_code or ''}:{include_locked}:{zoom_level}"
     return await _galaxy_graph_shield.run(key, _compute)
 

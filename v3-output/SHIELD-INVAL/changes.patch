@@ -1,0 +1,882 @@
+diff --git a/backend/app/api/v1/galaxy.py b/backend/app/api/v1/galaxy.py
+index 5f154105..c7160868 100755
+--- a/backend/app/api/v1/galaxy.py
++++ b/backend/app/api/v1/galaxy.py
+@@ -19,7 +19,7 @@ from sqlalchemy import desc, or_, select
+ from sqlalchemy.ext.asyncio import AsyncSession
+ 
+ from app.api.deps import get_current_user_id, get_db, get_optional_current_user
+-from app.core.request_coalescing import EndpointShield
++from app.core.request_coalescing import EndpointShield, register_read_view_invalidation_hook
+ from app.models.galaxy import KnowledgeNode, NodeRelation, UserNodeStatus
+ from app.models.plan import Plan
+ from app.models.task import Task
+@@ -66,6 +66,23 @@ router = APIRouter(prefix="/galaxy", tags=["Knowledge Galaxy"])
+ _galaxy_graph_shield = EndpointShield(name="galaxy_graph", max_concurrency=8, ttl=10.0, wait_timeout=8.0)
+ 
+ 
++def _invalidate_galaxy_graph_shield(user_id: str) -> int:
++    """SHIELD-INVAL：按 user 前缀失效星图 shield 的进程内结果缓存。
++
++    服务层写路径（outcome 吸收 / update_node_mastery / 诊断评分）提交后，
++    除 Redis 视图键外还须清掉本端点 shield 的 10s TTL 面——否则 Redis 键
++    已删而 shield 仍回写前旧值，星图读面最长 10s 不更新（活栈实证）。
++    经核心注册表挂接，服务层不反向 import API 层；闭包在**调用时**解析
++    模块全局 ``_galaxy_graph_shield``，测试可整体替换 shield 实例。
++    """
++    return _galaxy_graph_shield.invalidate_prefix(f"{user_id}:")
++
++
++# 路由模块导入即注册（app.main 启动链保证先于任何请求）；未导入本模块的
++# 纯服务层调用方/单测中 notify 为 no-op。
++register_read_view_invalidation_hook("galaxy_graph", _invalidate_galaxy_graph_shield)
++
++
+ # ==========================================
+ # 依赖注入
+ # ==========================================
+@@ -208,6 +225,8 @@ async def get_galaxy_graph(
+         )
+ 
+     # 恢复风暴防护：single-flight 合并同 user 并发拉取 + 10s TTL 缓存 + 并发钳制
++    # （失效面：服务层写路径经 register_read_view_invalidation_hook 按 user 清缓存，
++    # 见 _invalidate_galaxy_graph_shield——SHIELD-INVAL）
+     key = f"{user_id}:{sector_code or ''}:{include_locked}:{zoom_level}"
+     return await _galaxy_graph_shield.run(key, _compute)
+ 
+diff --git a/backend/app/core/request_coalescing.py b/backend/app/core/request_coalescing.py
+index de55476f..bcc98685 100644
+--- a/backend/app/core/request_coalescing.py
++++ b/backend/app/core/request_coalescing.py
+@@ -18,6 +18,14 @@ Stage: restore-storm guard (engine-restore-storm)
+    获取槽位/加入在飞计算等待超过 ``wait_timeout`` 时抛出 :class:`EndpointOverloaded`
+    （由 app.main 统一映射为 503 + Retry-After，快速失败优于无限排队）。
+ 
++失效面（SHIELD-INVAL，2026-09）：TTL 结果缓存原先只有自然过期一条出路，
++写路径（诊断评分/任务吸收/mastery 更新）提交后读面最长滞留一个 ttl 窗口的
++旧值。:meth:`EndpointShield.invalidate_prefix` 提供按 key 前缀的进程内失效；
++跨层触发走 :func:`register_read_view_invalidation_hook` /
++:func:`notify_read_view_invalidated` 回调注册表——API 层把本端点 shield 的
++失效回调挂进核心，服务层写路径经 notify 宣告「某用户读面已变化」，服务层
++因此**不反向 import API 层**。
++
+ 用法（路由 handler 内）::
+ 
+     _shield = EndpointShield(name="galaxy_graph", max_concurrency=8, ttl=10.0)
+@@ -33,12 +41,15 @@ loader 抛出的异常不会写入缓存，只会传播给当前这批等待者
+ from __future__ import annotations
+ 
+ import asyncio
++import logging
+ import time
+ from collections.abc import Awaitable, Callable
+ from typing import Any, TypeVar
+ 
+ T = TypeVar("T")
+ 
++logger = logging.getLogger(__name__)
++
+ 
+ class EndpointOverloaded(RuntimeError):
+     """端点并发钳制溢出：等待超过 wait_timeout 仍未获得结果。"""
+@@ -81,6 +92,9 @@ class EndpointShield:
+         self._semaphore = asyncio.Semaphore(max(1, int(max_concurrency)))
+         self._cache: dict[str, _CachedResult] = {}
+         self._inflight: dict[str, asyncio.Task[Any]] = {}
++        # 最近一次前缀失效的 monotonic 时间戳：其前启动的计算不得落缓存，
++        # 防止「失效 → 在飞旧值完成回填」把失效悄悄撤销（SHIELD-INVAL）。
++        self._last_invalidation = 0.0
+         # 观测计数（单事件循环内更新，无需锁）
+         self.hits = 0
+         self.deduped = 0
+@@ -133,6 +147,23 @@ class EndpointShield:
+             "shed": self.shed,
+         }
+ 
++    def invalidate_prefix(self, key_prefix: str) -> int:
++        """按 key 前缀清 TTL 结果缓存（写后即时投影的失效面，SHIELD-INVAL）。
++
++        ``key_prefix`` 与 :meth:`run` 的 ``key`` 同构（不含 name 前缀），
++        例如 ``f"{user_id}:"`` 清掉该 user 全部参数变体的缓存条目。只清已
++        完成的结果缓存，不打断在飞计算——single-flight 与并发钳制语义
++        原样保留；但启动早于本次失效的计算完成后不落缓存（见
++        ``_on_compute_done``），失效不会被在飞旧值回填撤销。返回清除的
++        条目数（观测用）。纯内存 dict 操作，同步、无 IO。
++        """
++        full_prefix = f"{self.name}:{key_prefix}"
++        victims = [k for k in self._cache if k.startswith(full_prefix)]
++        for k in victims:
++            self._cache.pop(k, None)
++        self._last_invalidation = time.monotonic()
++        return len(victims)
++
+     # ── 内部实现 ─────────────────────────────────────────────────────────────
+ 
+     def _cache_get(self, key: str) -> Any | None:
+@@ -153,19 +184,22 @@ class EndpointShield:
+             raise EndpointOverloaded(f"[{self.name}] inflight join timed out, key={key}") from None
+ 
+     async def _compute(self, key: str, loader: Callable[[], Awaitable[T]]) -> T:
++        started = time.monotonic()
+         task: asyncio.Task[T] = asyncio.ensure_future(loader())
+         self._inflight[key] = task
+-        deadline = time.monotonic() + self.ttl
+-        task.add_done_callback(lambda t, k=key, d=deadline: self._on_compute_done(k, t, d))
++        deadline = started + self.ttl
++        task.add_done_callback(lambda t, k=key, d=deadline, s=started: self._on_compute_done(k, t, d, s))
+         return await asyncio.shield(task)
+ 
+-    def _on_compute_done(self, key: str, task: asyncio.Task[Any], deadline: float) -> None:
++    def _on_compute_done(self, key: str, task: asyncio.Task[Any], deadline: float, started: float) -> None:
+         self._inflight.pop(key, None)
+         if task.cancelled():
+             return
+         if task.exception() is not None:
+             return  # 失败不写缓存，让下一个请求重试
+-        if self.ttl > 0:
++        if self.ttl > 0 and started > self._last_invalidation:
++            # 启动早于最近一次失效的计算可能读到写前 DB 状态，不落缓存——
++            # 否则失效会被这个在飞旧值悄悄回填撤销（SHIELD-INVAL）。
+             self._cache[key] = _CachedResult(task.result(), deadline)
+             self._maybe_evict()
+ 
+@@ -179,3 +213,40 @@ class EndpointShield:
+         # 仍超限时按插入序（近似最旧）丢弃
+         while len(self._cache) > self.max_entries:
+             self._cache.pop(next(iter(self._cache)), None)
++
++
++# ---------------------------------------------------------------------------
++# 读面失效回调注册表（SHIELD-INVAL）
++# ---------------------------------------------------------------------------
++
++#: domain → 失效回调列表。回调签名 ``(user_id: str) -> int``（返回清除的
++#: 缓存条目数），由**拥有进程内读面缓存的层**（API 端点 shield）在模块
++#: 导入时注册；服务层写路径经 :func:`notify_read_view_invalidated` 触发。
++#: 依赖方向保持 服务层 → core ← API 层：服务层只认识 domain 名字符串，
++#: 不 import API 模块；回调闭包在注册方模块命名空间解析 shield 引用
++#: （运行时查找，测试 monkeypatch 替换 shield 实例同样生效）。
++_READ_VIEW_INVALIDATION_HOOKS: dict[str, list[Callable[[str], int]]] = {}
++
++
++def register_read_view_invalidation_hook(domain: str, hook: Callable[[str], int]) -> None:
++    """注册 ``domain`` 读面的进程内缓存失效回调（同一回调只挂一次）。"""
++    hooks = _READ_VIEW_INVALIDATION_HOOKS.setdefault(domain, [])
++    if hook not in hooks:
++        hooks.append(hook)
++
++
++def notify_read_view_invalidated(domain: str, user_id: str) -> int:
++    """宣告某用户读面已变化：逐个调用失效回调，返回清除条目总数。
++
++    纯进程内同步操作、零 IO。回调异常只记日志不传播——失效是 best-effort
++    读投影，失败最坏退回 TTL 自然过期，绝不阻断写路径（与吸收侧
++    「缓存面不可达只降级不回滚」同款纪律）。无注册回调（纯服务层调用方、
++    单测未挂 API 路由）时为 no-op，返回 0。
++    """
++    cleared = 0
++    for hook in list(_READ_VIEW_INVALIDATION_HOOKS.get(domain, ())):
++        try:
++            cleared += hook(user_id) or 0
++        except Exception:  # noqa: BLE001 — 失效失败不阻断写路径
++            logger.exception("read-view invalidation hook failed (domain=%s, user_id=%s)", domain, user_id)
++    return cleared
+diff --git a/backend/app/services/exam_sprint_diagnostic_service.py b/backend/app/services/exam_sprint_diagnostic_service.py
+index bc8c1365..a0b12eca 100644
+--- a/backend/app/services/exam_sprint_diagnostic_service.py
++++ b/backend/app/services/exam_sprint_diagnostic_service.py
+@@ -1564,6 +1564,16 @@ class ExamSprintDiagnosticService:
+                 await self.db.rollback()
+         await self._upsert_mastery_direct(user_id=user_id, node_id=node_id, mastery=mastery)
+         await self.db.commit()
++        # SHIELD-INVAL：直写分支（sqlite 测试方言 / PG 上 update_node_mastery
++        # 失败兜底）绕过了 update_node_mastery 的读面失效链，这里补齐同款失效：
++        # 服务层 @cached 视图键 + API 层进程内 shield（helper 内已一并 notify）。
++        # best-effort：失效失败只降级（退回 TTL 自然过期），不回滚已提交的评分。
++        try:
++            from app.services.galaxy.outcome_absorption_service import invalidate_galaxy_graph_view_cache
++
++            await invalidate_galaxy_graph_view_cache(user_id)
++        except Exception as exc:  # noqa: BLE001 — 读面失效失败不阻断评分落库
++            logger.warning("diagnostic direct-write graph cache invalidation failed: {}", exc)
+ 
+     async def _upsert_mastery_direct(self, *, user_id: UUID, node_id: UUID, mastery: float) -> None:
+         status = await self.db.get(UserNodeStatus, {"user_id": user_id, "node_id": node_id})
+diff --git a/backend/app/services/galaxy/outcome_absorption_service.py b/backend/app/services/galaxy/outcome_absorption_service.py
+index afd4d365..7bf35d6d 100644
+--- a/backend/app/services/galaxy/outcome_absorption_service.py
++++ b/backend/app/services/galaxy/outcome_absorption_service.py
+@@ -59,6 +59,7 @@ from sqlalchemy import DateTime, String, bindparam, select
+ from sqlalchemy.ext.asyncio import AsyncSession
+ 
+ from app.core.event_bus import EventBus
++from app.core.request_coalescing import notify_read_view_invalidated
+ from app.core.time_utils import utcnow as _utcnow
+ from app.models.base import GUID
+ from app.models.galaxy import KnowledgeNode, UserNodeStatus
+@@ -629,12 +630,19 @@ async def invalidate_galaxy_graph_view_cache(user_id: UUID) -> int:
+     ``{APP_NAME}:view:get_galaxy_graph:{user_id}:*``，ttl=600）。吸收真源在
+     DB，本函数只删缓存：失败由调用方降级（最坏退回 TTL 自然过期），不回滚
+     吸收事务。返回删除的键数（观测用；Redis 不可达时为 0）。
++
++    SHIELD-INVAL：同时经核心注册表失效 API 层进程内 shield 结果缓存
++    （``app.api.v1.galaxy`` 的 10s TTL 面）——两层各自缓存同一读面，只清
++    Redis 层时 shield 仍回写前旧值。回调未注册（API 模块未加载）时为
++    no-op；同步纯内存操作，失败不传播（notify 内部已兜底）。
+     """
+     from app.core.cache import cache_service
+     from app.config import settings
+ 
+     pattern = f"{settings.APP_NAME}:view:get_galaxy_graph:{user_id}:*"
+-    return await cache_service.delete_pattern(pattern)
++    deleted = await cache_service.delete_pattern(pattern)
++    notify_read_view_invalidated("galaxy_graph", str(user_id))
++    return deleted
+ 
+ 
+ __all__ = [
+diff --git a/backend/app/services/galaxy_service.py b/backend/app/services/galaxy_service.py
+index 3df474dc..d94eb4bf 100755
+--- a/backend/app/services/galaxy_service.py
++++ b/backend/app/services/galaxy_service.py
+@@ -27,6 +27,7 @@ from sqlalchemy.orm import aliased, undefer
+ from app.config import settings
+ from app.core.cache import cache_service, cached
+ from app.core.event_bus import event_bus
++from app.core.request_coalescing import notify_read_view_invalidated
+ from app.gen.sparkle.rag.v1 import evidence_pb2
+ from app.models.document_chunks import DocumentChunk
+ from app.models.error_book import ErrorRecord
+@@ -1332,6 +1333,9 @@ class GalaxyService:
+         await cache_service.delete_pattern(f"{settings.APP_NAME}:view:get_galaxy_graph:{user_id}:*")
+         await cache_service.delete_pattern(f"galaxy:node_source_documents:v1:{user_id}:*")
+         await cache_service.delete_pattern(f"galaxy:node_knowledge_stats:v1:{user_id}:*")
++        # SHIELD-INVAL：文档挂载改变图读面（来源文档/统计），同步清 API 层
++        # shield 的 10s TTL 面（未挂回调时 no-op）。
++        notify_read_view_invalidated("galaxy_graph", str(user_id))
+ 
+     async def _publish_document_attachment_event(
+         self,
+@@ -3422,6 +3426,9 @@ class GalaxyService:
+ 
+             await self.db.commit()
+             await cache_service.delete_pattern(f"{settings.APP_NAME}:view:get_galaxy_graph:{user_id}:*")
++            # SHIELD-INVAL：mastery 写提交后同步清 API 层 shield 的 10s TTL 面，
++            # 否则 Redis 键已删而星图 API 仍回写前旧值（诊断评分/手动更新路径）。
++            notify_read_view_invalidated("galaxy_graph", str(user_id))
+ 
+             if new_mastery >= 80:
+                 await self._process_mastery_achievement_after_commit(
+diff --git a/backend/tests/core/test_request_coalescing.py b/backend/tests/core/test_request_coalescing.py
+index ba50b980..73f27f60 100644
+--- a/backend/tests/core/test_request_coalescing.py
++++ b/backend/tests/core/test_request_coalescing.py
+@@ -155,3 +155,119 @@ async def test_snapshot_observability():
+     assert snap["deduped"] >= 1
+     assert snap["hits"] >= 4  # 首个完成写缓存后，后续调用命中
+     assert snap["shed"] == 0
++
++
++# ---------------------------------------------------------------------------
++# SHIELD-INVAL · 前缀失效面（写后即时投影的进程内第二层）
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_invalidate_prefix_clears_only_matching_user():
++    """按 user 前缀失效：该 user 全部参数变体清空、他 user 缓存原样保留。"""
++    shield = EndpointShield(name="t_inval", max_concurrency=4, ttl=10.0, wait_timeout=5.0)
++    calls: list[str] = []
++
++    async def loader() -> str:
++        calls.append("compute")
++        return f"v{len(calls)}"
++
++    # user-a 两个参数变体 + user-b 一个变体，全部落缓存
++    await shield.run("user-a::True:1.0", loader)
++    await shield.run("user-a::False:1.0", loader)
++    await shield.run("user-b::True:1.0", loader)
++    assert shield.snapshot()["cache_entries"] == 3
++
++    cleared = shield.invalidate_prefix("user-a:")
++    assert cleared == 2, "user-a 的两个变体都应被清除"
++    assert shield.snapshot()["cache_entries"] == 1, "user-b 的缓存不得被误伤"
++
++    before = len(calls)
++    assert await shield.run("user-b::True:1.0", loader) == "v3"
++    assert len(calls) == before, "user-b 仍应命中缓存（零重算）"
++    assert await shield.run("user-a::True:1.0", loader) == "v4"
++    assert len(calls) == before + 1, "user-a 失效后必须重算"
++
++
++@pytest.mark.asyncio
++async def test_invalidation_during_inflight_not_backfilled():
++    """失效发生在飞计算中：其完成后的旧值不得回填缓存（失效不可被撤销）。"""
++    shield = EndpointShield(name="t_race", max_concurrency=4, ttl=10.0, wait_timeout=5.0)
++    calls = 0
++    release = asyncio.Event()
++
++    async def stale_loader() -> dict:
++        nonlocal calls
++        calls += 1
++        await release.wait()  # 模拟慢图计算：失效将发生在其计算窗口内
++        return {"mastery": None}  # 写前旧值
++
++    async def fresh_loader() -> dict:
++        nonlocal calls
++        calls += 1
++        return {"mastery": 42}
++
++    inflight = asyncio.create_task(shield.run("user-a:sect", stale_loader))
++    await asyncio.sleep(0.02)  # 确保 stale_loader 已在飞
++    assert shield.invalidate_prefix("user-a:") == 0  # 尚无已完成条目可清
++
++    release.set()
++    stale = await inflight  # 等待者仍拿到旧值（single-flight 语义不变）
++    assert stale == {"mastery": None}
++
++    # 旧计算启动早于失效 → 不落缓存；下一请求必须重算出写后新值
++    fresh = await shield.run("user-a:sect", fresh_loader)
++    assert fresh == {"mastery": 42}
++    assert calls == 2, "失效窗口内的在飞旧值不得被缓存复用"
++    assert await shield.run("user-a:sect", fresh_loader) == {"mastery": 42}
++    assert calls == 2, "失效后新计算的值正常落缓存命中"
++
++
++@pytest.mark.asyncio
++async def test_single_flight_and_clamp_survive_invalidation():
++    """风暴防护语义不因失效面受损：失效后并发仍合并为一次计算。"""
++    shield = EndpointShield(name="t_storm", max_concurrency=8, ttl=10.0, wait_timeout=5.0)
++    calls = 0
++
++    async def loader() -> int:
++        nonlocal calls
++        calls += 1
++        await asyncio.sleep(0.05)
++        return calls
++
++    await shield.run("user-a", loader)
++    shield.invalidate_prefix("user-a")
++    calls = 0
++
++    results = await asyncio.gather(*(shield.run("user-a", loader) for _ in range(20)))
++    assert calls == 1, "失效后的并发拉取仍应 single-flight 合并"
++    assert all(r == 1 for r in results)
++    assert shield.snapshot()["shed"] == 0
++
++
++def test_read_view_invalidation_registry():
++    """注册表契约：notify 按域分发、异常兜底、未注册域 no-op、重复注册去重。"""
++    from app.core import request_coalescing as rc
++
++    domain = "t_registry_domain"
++    rc._READ_VIEW_INVALIDATION_HOOKS.pop(domain, None)  # 隔离：清理可能的残留
++    seen: list[str] = []
++
++    def hook(user_id: str) -> int:
++        seen.append(user_id)
++        return 2
++
++    rc.register_read_view_invalidation_hook(domain, hook)
++    rc.register_read_view_invalidation_hook(domain, hook)  # 幂等
++    assert rc.notify_read_view_invalidated(domain, "u-1") == 2
++    assert seen == ["u-1"], "同一回调重复注册只触发一次"
++
++    def broken(user_id: str) -> int:
++        raise RuntimeError("hook bug")
++
++    rc.register_read_view_invalidation_hook(domain, broken)
++    assert rc.notify_read_view_invalidated(domain, "u-2") == 2, "回调异常不得传播、不得吞掉其他回调的清理数"
++    assert seen == ["u-1", "u-2"]
++
++    assert rc.notify_read_view_invalidated("t_never_registered", "u-1") == 0, "未注册域为 no-op"
++    assert rc._READ_VIEW_INVALIDATION_HOOKS.pop(domain, None) is not None
+diff --git a/backend/tests/api/test_galaxy_graph_shield_invalidation.py b/backend/tests/api/test_galaxy_graph_shield_invalidation.py
+new file mode 100644
+index 00000000..55edd1a5
+--- /dev/null
++++ b/backend/tests/api/test_galaxy_graph_shield_invalidation.py
+@@ -0,0 +1,174 @@
++"""SHIELD-INVAL · 星图读面双层缓存失效收口（API 层 shield 失效面）.
++
++背景（LOOP4 CP-00 活栈实证）：``GET /galaxy/graph`` 有两层缓存——
++
++1. 服务层 ``GalaxyService.get_galaxy_graph`` 的 ``@cached(ttl=600)`` 视图，
++   NBP-4 已挂失效（``invalidate_galaxy_graph_view_cache`` /
++   ``update_node_mastery`` 提交后删 Redis 键）；
++2. API 层 ``_galaxy_graph_shield``（single-flight + 10s TTL + 并发钳制），
++   修复前**没有任何失效面**：prime → 评分 → 立即取图，Redis 键已删但
++   shield 仍回 prime 时的旧快照（mastery 全 null），星图读面最长 10s
++   不更新。
++
++本文件在 TestClient 级钉死：**写路径提交后，两层同时失效，API 立即读
++不陈旧**。覆盖三条真实写路径——REST mastery 更新、服务层失效 helper
++（outcome 吸收面）、诊断评分写（``_write_mastery_value``）。
++
++shield 语义红线：single-flight / 并发钳制行为不因失效面受损（单测见
++``tests/core/test_request_coalescing.py``）。
++"""
++
++from __future__ import annotations
++
++from uuid import uuid4
++
++import httpx
++import pytest
++from fastapi import FastAPI
++
++from app.api.deps import get_current_user_id, get_db
++from app.api.v1 import galaxy as galaxy_api
++from app.core.cache import cache_service
++from app.core.request_coalescing import EndpointShield
++from app.models.galaxy import KnowledgeNode
++from app.services.exam_sprint_diagnostic_service import ExamSprintDiagnosticService
++from app.services.galaxy.outcome_absorption_service import invalidate_galaxy_graph_view_cache
++
++app = FastAPI()
++app.include_router(galaxy_api.router, prefix="/api/v1")
++
++
++@pytest.fixture
++def fresh_shield(monkeypatch):
++    """每测替换全新 shield 实例（隔离进程全局缓存 + 事件循环绑定）.
++
++    ``_invalidate_galaxy_graph_shield`` 回调在调用时解析模块全局，因此
++    monkeypatch 后服务层失效会精确打在本测的 shield 上。
++    """
++    shield = EndpointShield(name="galaxy_graph", max_concurrency=8, ttl=10.0, wait_timeout=8.0)
++    monkeypatch.setattr(galaxy_api, "_galaxy_graph_shield", shield)
++    return shield
++
++
++async def _make_node(db_session) -> KnowledgeNode:
++    node = KnowledgeNode(name=f"SHIELD-INVAL 节点 {uuid4().hex[:8]}", importance_level=3, is_seed=True)
++    db_session.add(node)
++    await db_session.commit()
++    await db_session.refresh(node)
++    return node
++
++
++def _node_view(graph_json: dict, node_id) -> dict:
++    for view in graph_json["nodes"]:
++        if view["id"] == str(node_id):
++            return view
++    raise AssertionError(f"node {node_id} missing from galaxy graph response")
++
++
++def _service_cache_keys(user_id, prefix: str = "view:get_galaxy_graph") -> list[str]:
++    return [k for k in cache_service._local_cache if f":{prefix}:{user_id}:" in k]
++
++
++async def _prime_both_layers(ac: httpx.AsyncClient, user_id) -> dict:
++    """取图一次：API shield 与服务层视图缓存同时建立（两层 prime）。"""
++    resp = await ac.get("/api/v1/galaxy/graph")
++    assert resp.status_code == 200
++    return resp.json()
++
++
++@pytest.mark.asyncio
++async def test_mastery_update_visible_on_graph_immediately_despite_shield(
++    db_session, test_user, fresh_shield, monkeypatch
++):
++    """红线复现（修复前红）：prime → REST mastery 更新 → 立即取图必须见新值.
++
++    修复前第二次 GET 命中 shield 的 10s TTL 旧快照，user_status 仍为 null；
++    修复后写路径失效两层，读面立即可见。
++    """
++    node = await _make_node(db_session)
++
++    async def override_get_db():
++        yield db_session
++
++    app.dependency_overrides[get_db] = override_get_db
++    app.dependency_overrides[get_current_user_id] = lambda: str(test_user.id)
++    try:
++        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as ac:
++            before = await _prime_both_layers(ac, test_user.id)
++            assert _node_view(before, node.id)["user_status"] is None, "前置：图上尚无个人状态"
++            assert fresh_shield.snapshot()["cache_entries"] == 1, "前置：API shield 层必须已 prime"
++            if not cache_service.redis:
++                assert _service_cache_keys(test_user.id), "前置：服务层视图缓存必须已 prime"
++
++            mastery_resp = await ac.post(
++                f"/api/v1/galaxy/nodes/{node.id}/mastery",
++                json={"mastery": 42, "reason": "shield_inval_regression"},
++            )
++            assert mastery_resp.status_code == 200, mastery_resp.text
++
++            # 立即重读（零 sleep）：不得回 shield 旧快照
++            after = await _prime_both_layers(ac, test_user.id)
++            view = _node_view(after, node.id)
++            assert view["user_status"] is not None, "mastery 更新后图上必须出现个人状态"
++            assert view["user_status"]["mastery_score"] == pytest.approx(42.0)
++    finally:
++        app.dependency_overrides = {}
++
++
++@pytest.mark.asyncio
++async def test_service_invalidation_helper_clears_api_shield(db_session, test_user, fresh_shield):
++    """服务层失效 helper（outcome 吸收面）必须同时清 API shield 层."""
++    node = await _make_node(db_session)
++
++    async def override_get_db():
++        yield db_session
++
++    app.dependency_overrides[get_db] = override_get_db
++    app.dependency_overrides[get_current_user_id] = lambda: str(test_user.id)
++    try:
++        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as ac:
++            await _prime_both_layers(ac, test_user.id)
++            assert fresh_shield.snapshot()["cache_entries"] == 1, "前置：shield 层已 prime"
++
++            deleted = await invalidate_galaxy_graph_view_cache(test_user.id)
++
++            assert fresh_shield.snapshot()["cache_entries"] == 0, "服务层失效必须同步清掉 shield 层"
++            if not cache_service.redis:
++                assert _service_cache_keys(test_user.id) == [], "服务层 Redis/兜底键必须同时被清"
++            # 失效后重算：节点仍在图中（行为面不因失效受损）
++            after = await _prime_both_layers(ac, test_user.id)
++            assert _node_view(after, node.id)["id"] == str(node.id)
++    finally:
++        app.dependency_overrides = {}
++
++
++@pytest.mark.asyncio
++async def test_diagnostic_mastery_write_visible_immediately(db_session, test_user, fresh_shield):
++    """诊断评分路径（``_write_mastery_value``）写后立即取图不陈旧.
++
++    sqlite 方言走直写分支（PG 主路径经 update_node_mastery，同获失效）；
++    修复前直写分支零失效，shield 旧快照吞掉评分结果。
++    """
++    node = await _make_node(db_session)
++
++    async def override_get_db():
++        yield db_session
++
++    app.dependency_overrides[get_db] = override_get_db
++    app.dependency_overrides[get_current_user_id] = lambda: str(test_user.id)
++    try:
++        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as ac:
++            before = await _prime_both_layers(ac, test_user.id)
++            assert _node_view(before, node.id)["user_status"] is None
++            assert fresh_shield.snapshot()["cache_entries"] == 1
++
++            await ExamSprintDiagnosticService(db_session)._write_mastery_value(
++                user_id=test_user.id, node_id=node.id, mastery=55.0
++            )
++
++            after = await _prime_both_layers(ac, test_user.id)
++            view = _node_view(after, node.id)
++            assert view["user_status"] is not None, "诊断评分后图上必须出现个人状态"
++            assert view["user_status"]["mastery_score"] == pytest.approx(55.0)
++    finally:
++        app.dependency_overrides = {}
+diff --git a/v3-output/SHIELD-INVAL/verify_probe.py b/v3-output/SHIELD-INVAL/verify_probe.py
+new file mode 100755
+index 00000000..2999bd71
+--- /dev/null
++++ b/v3-output/SHIELD-INVAL/verify_probe.py
+@@ -0,0 +1,186 @@
++#!/usr/bin/env python3
++"""SHIELD-INVAL · 活栈复验探针：诊断评分 → 星图 API 双层缓存立即失效验证.
++
++背景（LOOP4 CP-00 假 fail 的最后一块，活栈实证）：``GET /api/v1/galaxy/graph``
++有两层读面缓存——服务层 ``@cached(ttl=600)``（NBP-4 已挂失效）与 API 层
++``_galaxy_graph_shield``（single-flight + 10s TTL）。修复前 shield 无失效面：
++prime 后诊断评分，Redis 视图键已删，但 shield 仍回 prime 时的旧快照
++（mastery 全 null），星图最长 10s 不更新。
++
++用法（针对运行中的 Python 引擎 FastAPI :8000，不是 Go 网关）：
++
++    python3 verify_probe.py --base-url http://127.0.0.1:8000
++
++流程（API 级黑盒，零凭据、零 DB 直连）：
++  1. 注册一次性用户（shieldinval_<rand>，密码随机不入输出）并登录取 token；
++  2. GET /api/v1/galaxy/graph → prime 两层缓存（记录快照指纹）；
++  3. POST /api/v1/exam-sprint/diagnose/generate（exam_prep_14d 包，10 题，
++     零 LLM）→ diagnostic_id；
++  4. POST /api/v1/exam-sprint/diagnose/grade（全部答 A、update_galaxy=true，
++     触发 _write_mastery_value → 失效链）；
++  5. 立即（零 sleep）再 GET graph：断言出现带 user_status（mastery 可见）
++     的节点，且整图 payload 与 prime 快照不同——
++     修复前：shield 回旧快照 → 「payload 未变 + 0 个状态节点」= FAIL；
++     修复后：两层失效 → 新图立即可见 = PASS。
++
++退出码：0=PASS，1=FAIL（复现陈旧读面），2=环境错误。
++"""
++
++from __future__ import annotations
++
++import argparse
++import hashlib
++import json
++import secrets
++import sys
++import urllib.error
++import urllib.request
++
++GRADE_ANSWER = "A"
++
++
++def _request(
++    method: str,
++    url: str,
++    *,
++    token: str | None = None,
++    payload: dict | None = None,
++    timeout: float = 30.0,
++) -> tuple[int, dict | list | str]:
++    headers = {"Content-Type": "application/json"}
++    if token:
++        headers["Authorization"] = f"Bearer {token}"
++    data = json.dumps(payload).encode() if payload is not None else None
++    req = urllib.request.Request(url, data=data, headers=headers, method=method)
++    try:
++        with urllib.request.urlopen(req, timeout=timeout) as resp:
++            body = resp.read().decode()
++            try:
++                return resp.status, json.loads(body)
++            except json.JSONDecodeError:
++                return resp.status, body
++    except urllib.error.HTTPError as exc:
++        try:
++            return exc.code, json.loads(exc.read().decode())
++        except Exception:
++            return exc.code, {}
++    except (urllib.error.URLError, TimeoutError) as exc:
++        print(f"[ENV] 无法连接 {url}: {exc}")
++        sys.exit(2)
++
++
++def _fingerprint(graph: dict) -> str:
++    return hashlib.sha256(json.dumps(graph, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:12]
++
++
++def _status_nodes(graph: dict) -> list[str]:
++    return [n["id"] for n in graph.get("nodes", []) if n.get("user_status") is not None]
++
++
++def main() -> None:
++    parser = argparse.ArgumentParser(description="SHIELD-INVAL galaxy 双层缓存失效复验探针")
++    parser.add_argument("--base-url", default="http://127.0.0.1:8000", help="Python 引擎 FastAPI 地址")
++    parser.add_argument("--subject", default="计算机网络", help="诊断科目")
++    parser.add_argument("--question-count", type=int, default=10, help="诊断题数（10-15）")
++    args = parser.parse_args()
++    base = args.base_url.rstrip("/")
++
++    rand = secrets.token_hex(6)
++    username = f"shieldinval_{rand}"
++    password = secrets.token_urlsafe(16)
++
++    # 1. 注册 + 登录（零凭据：一次性账号，密码不入输出）
++    status, _ = _request(
++        "POST",
++        f"{base}/api/v1/auth/register",
++        payload={
++            "username": username,
++            "email": f"{username}@probe.local",
++            "password": password,
++            "accepted_tos": True,
++            "accepted_privacy": True,
++        },
++    )
++    if status not in (200, 201):
++        print(f"[ENV] 注册失败 HTTP {status}")
++        sys.exit(2)
++    status, body = _request(
++        "POST", f"{base}/api/v1/auth/login", payload={"username": username, "password": password}
++    )
++    token = body.get("access_token") if isinstance(body, dict) else None
++    if status != 200 or not token:
++        print(f"[ENV] 登录失败 HTTP {status}: {str(body)[:200]}")
++        sys.exit(2)
++    print(f"[1] 一次性用户就绪: {username}")
++
++    # 2. prime 两层缓存（服务层 @cached + API shield 10s TTL）
++    status, prime = _request("GET", f"{base}/api/v1/galaxy/graph", token=token, timeout=60.0)
++    if status != 200:
++        print(f"[ENV] 取图失败 HTTP {status}")
++        sys.exit(2)
++    prime_fp = _fingerprint(prime)
++    print(f"[2] 图已 prime: nodes={len(prime.get('nodes', []))} fingerprint={prime_fp}")
++
++    # 3. 生成诊断卷（exam_prep_14d 静态包，零 LLM）
++    status, gen = _request(
++        "POST",
++        f"{base}/api/v1/exam-sprint/diagnose/generate",
++        token=token,
++        payload={"subject": args.subject, "question_count": args.question_count},
++        timeout=60.0,
++    )
++    diagnostic_id = gen.get("diagnostic_id") if isinstance(gen, dict) else None
++    questions = gen.get("questions", []) if isinstance(gen, dict) else []
++    if status != 200 or not diagnostic_id or not questions:
++        print(f"[ENV] 诊断生成失败 HTTP {status}: {str(gen)[:200]}")
++        sys.exit(2)
++    print(f"[3] 诊断卷就绪: diagnostic_id={diagnostic_id} questions={len(questions)}")
++
++    # 4. 评分（全答 A、FUZZY 置信；update_galaxy=true 触发 mastery 写 + 失效链）
++    answers = [{"question_id": q["question_id"], "answer": GRADE_ANSWER} for q in questions]
++    status, grade = _request(
++        "POST",
++        f"{base}/api/v1/exam-sprint/diagnose/grade",
++        token=token,
++        payload={
++            "subject": args.subject,
++            "diagnostic_id": diagnostic_id,
++            "answers": answers,
++            "update_galaxy": True,
++        },
++        timeout=60.0,
++    )
++    updates = grade.get("node_mastery_updates", []) if isinstance(grade, dict) else []
++    if status != 200 or not updates:
++        print(f"[ENV] 评分失败 HTTP {status}: {str(grade)[:200]}")
++        sys.exit(2)
++    print(f"[4] 评分完成: {len(updates)} 个节点写入 mastery（含 0 分节点）")
++
++    # 5. 立即重读（零 sleep）——判定窗口就在 shield 的 10s TTL 内
++    status, fresh = _request("GET", f"{base}/api/v1/galaxy/graph", token=token, timeout=60.0)
++    if status != 200:
++        print(f"[ENV] 复读取图失败 HTTP {status}")
++        sys.exit(2)
++    fresh_fp = _fingerprint(fresh)
++    status_nodes = _status_nodes(fresh)
++    print(f"[5] 立即复读: fingerprint={fresh_fp} 带状态节点={len(status_nodes)}")
++
++    # 6. 判定
++    if fresh_fp == prime_fp:
++        print(
++            "[FAIL] 复读 payload 与 prime 快照完全一致 —— API 层 shield 未失效，"
++            "回放写前旧值（修复前行为复现）"
++        )
++        sys.exit(1)
++    if not status_nodes:
++        print("[FAIL] 图有变化但无任何 user_status —— 评分链未落图（非本卡失效面问题，请查吸收链）")
++        sys.exit(1)
++    print(
++        f"[PASS] 评分后立即取图即见 mastery（{len(status_nodes)} 个节点带状态，"
++        f"fingerprint {prime_fp} → {fresh_fp}）：双层缓存失效正常"
++    )
++    sys.exit(0)
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/v3-output/SHIELD-INVAL/REPORT.md b/v3-output/SHIELD-INVAL/REPORT.md
+new file mode 100644
+index 00000000..57fe82ca
+--- /dev/null
++++ b/v3-output/SHIELD-INVAL/REPORT.md
+@@ -0,0 +1,111 @@
++# SHIELD-INVAL · galaxy 图面双层缓存失效收口 — 交付报告
++
++- Worker：SHIELD-INVAL（V3 舰队）
++- Worktree：`/Users/brsama/code/GitHub/Sparkle-sysrev/wt140`（基线 `37cac6e8`）
++- 交付物：本报告 + `changes.patch` + `verify_probe.py`（同目录）；未 commit / 未 push
++- 结论：**API 层 shield 失效面已补齐并三层写路径贯通，活栈 CP-00 假 fail 的根因（shield 回 prime 旧快照）已消除，回归零新增失败**
++
++---
++
++## ① 双层失效方案论证（为何不破坏分层）
++
++### 问题定罪（与主会话活栈实证一致）
++
++`GET /galaxy/graph` 读面有两层进程内/Redis 缓存：
++
++| 层 | 位置 | 机制 | 修复前失效面 |
++|---|---|---|---|
++| 服务层 | `GalaxyService.get_galaxy_graph` `@cached(ttl=600)`（galaxy_service.py:2270） | Redis 视图键 `{APP_NAME}:view:get_galaxy_graph:{user_id}:*` | ✅ 已有（NBP-4：`invalidate_galaxy_graph_view_cache` + `update_node_mastery` 提交后 `delete_pattern`） |
++| API 层 | `_galaxy_graph_shield = EndpointShield(name="galaxy_graph", ttl=10.0)`（galaxy.py） | 进程内 dict：single-flight + 10s TTL + 并发钳制 | ❌ **零失效面**——prime 后写路径无论如何失效 Redis，shield 在 10s 内继续回 prime 旧快照 |
++
++诊断评分路径 `exam_sprint_diagnostic_service._write_mastery_value → GalaxyService.update_node_mastery` 只失效了服务层；shield 层无感知 → 主会话活栈实测「grade 后 +0.5s 取图 mastery 全 null」。
++
++### 选型：核心层失效回调注册表（服务层 → core ← API 层，三角依赖）
++
++被否方案：
++- **服务层直接 import API 层的 shield**：违反分层（服务层不得反向依赖 API），且 API 模块未加载时（纯服务调用/单测）直接崩。
++- **shield TTL 降到 0（只留 single-flight）**：丢掉恢复风暴场景「5-15s 重复拉取直接命中缓存」的防线，风暴语义受损，否。
++- **Redis pub/sub 广播失效**：shield 本就是「零外部依赖、Redis 不可用同样生效」的进程内防线，引入跨进程广播属过度设计。活栈实证吸收消费者与 FastAPI 同进程（`app.main` 中 `OutcomeAbsorptionConsumer` 以 asyncio task 运行，main.py:451-459），进程内回调已覆盖真实拓扑。
++
++**采用方案**（`backend/app/core/request_coalescing.py`）：
++
++1. `EndpointShield.invalidate_prefix(key_prefix) -> int`：按 key 前缀清 TTL 结果缓存（键构与 `run()` 同构，`f"{user_id}:"` 即清该 user 全部参数变体）。**只清已完成结果缓存，不动 `_inflight` 与 semaphore**——single-flight 合并与并发钳制语义原样保留（专项单测钉死）。
++2. **回填守卫**：`_compute` 记录计算启动时间戳，`_on_compute_done` 对「启动早于最近一次失效」的计算**不落缓存**——否则「失效 → 在飞旧值完成 → 回填缓存」会把失效悄悄撤销。这是失效语义单调性的关键 5 行。
++3. 进程内回调注册表 `register_read_view_invalidation_hook(domain, hook)` / `notify_read_view_invalidated(domain, user_id)`：API 层（galaxy.py）模块导入时把 `_invalidate_galaxy_graph_shield` 挂进 core 注册表；服务层写路径只 `notify("galaxy_graph", user_id)`，**不认识任何 API 符号**。回调闭包在调用时解析 galaxy 模块全局，测试 monkeypatch 替换 shield 实例同样生效；回调异常 notify 内部兜底（只记日志），失效是 best-effort 读投影、绝不阻断写路径（与吸收侧「缓存面不可达只降级不回滚」同款纪律）。
++
++### 接线点（全部既有失效位点追加 notify，共 4 处）
++
++| 写路径 | 文件:位置 | 追加 |
++|---|---|---|
++| outcome 吸收（`lit`/`flagged`） | `outcome_absorption_service.invalidate_galaxy_graph_view_cache`（:625 helper 内） | 删 Redis 键后 `notify` —— 所有调 helper 的位点自动获得 shield 失效 |
++| mastery 更新（REST/手动） | `galaxy_service.update_node_mastery`（commit 后 :3427） | `delete_pattern` 后 `notify` |
++| 文档挂载 | `galaxy_service._invalidate_document_attachment_cache`（:1331） | 同款 `notify`（与卡面两处之外多出的一致性收口，1 行，见④） |
++| 诊断评分直写分支 | `exam_sprint_diagnostic_service._write_mastery_value`（commit 后） | **补齐完整失效**：`invalidate_galaxy_graph_view_cache(user_id)`（helper 内已含 notify）——该分支（PG 上 update_node_mastery 异常兜底 / sqlite 测试方言）修复前**连服务层 Redis 键都不删**，属同根漏洞一并收口；try/except 包裹，失效失败不回滚已提交评分 |
++
++**诊断路径覆盖确认**：PG 生产主分支 `_write_mastery_value → update_node_mastery → (Redis 删除 + notify)` 全覆盖；直写分支如上独立补齐。两条分支现在双层全失效。
++
++注册时序安全性：hook 在 `app.api.v1.galaxy` 导入时注册，`app.main` 启动链（`from app.api.v1.router import api_router`）保证先于任何请求；未导入 API 模块的纯服务层调用方 notify 为 no-op（返回 0），无导入顺序脆弱性。
++
++## ② 红线面（回归验证）
++
++### 新增测试（红→绿实证）
++
++- `backend/tests/core/test_request_coalescing.py` +4：
++  - `test_invalidate_prefix_clears_only_matching_user`：前缀失效只清目标 user 全部变体、不误伤他 user；返回清除计数；
++  - `test_invalidation_during_inflight_not_backfilled`：**在飞计算窗口内失效**，旧值交给等待者（single-flight 不破坏）但不得回填缓存，下一请求重算新值；
++  - `test_single_flight_and_clamp_survive_invalidation`：失效后 20 并发仍合并为 1 次 loader、零 shed（风暴防护语义红线）；
++  - `test_read_view_invalidation_registry`：注册表幂等注册、notify 分发、回调异常吞掉且不影响其他回调、未注册域 no-op。
++- `backend/tests/api/test_galaxy_graph_shield_invalidation.py` ×3（httpx ASGI + sqlite，每测注入全新 shield 实例隔离进程全局与事件循环绑定）：
++  1. **红线复现**：prime 两层（断言 shield `cache_entries==1` + 服务层本地缓存键存在）→ REST mastery 更新 → **零 sleep** 再取图 → mastery 可见（修复前中 shield 旧快照吞掉）；
++  2. 服务层失效 helper 直证同时清 shield 层（`cache_entries: 1 → 0`）；
++  3. 诊断评分路径（`_write_mastery_value` 直写分支）→ 立即取图可见 55.0。
++
++**红证**：基线干净 clone（`git clone` 至 /tmp，仅放入新测试文件）跑新 API 测试 → **3 failed**；应用 `changes.patch` 后 → **3 passed**（连同 core 11 个 = 14 passed）。测试不是「修完才写绿」的摆设。
++
++### 回归矩阵（对比法，全部零新增失败）
++
++| 套件 | 基线（37cac6e8） | 修后 | 判定 |
++|---|---|---|---|
++| `tests/api -k galaxy` | 5 passed | **8 passed**（+3 新） | ✅ |
++| `tests/core/test_request_coalescing.py` + `tests/services/galaxy/test_outcome_read_model_visibility.py` | 12 passed | **16 passed**（+4 新） | ✅ |
++| `tests/unit -k galaxy` | 4F / 32P / 1S / 3E | **完全相同**（同名单：`test_galaxy_concurrency.py` 3F+3E、theater 1F，均为本机缺 PG 凭据的 asyncpg InvalidPasswordError，环境性既有） | ✅ 零新增 |
++| `tests/api/test_exam_sprint_api.py` | 7 passed | 7 passed | ✅ |
++| `tests/services/galaxy`（整目录） | — | **93 passed** | ✅ |
++| `tests -k diagnostic`（诊断域全域） | 21P+4S（新测试红） | **22P+4S** | ✅ red→green |
++
++**shield 风暴防护红线**：`test_single_flight_merges_concurrent_calls` / `test_concurrency_clamp_limits_parallel_loaders` / `test_shed_when_saturated_beyond_wait_timeout` 等既有 7 个语义测试全数通过，且新增失效后合并/钳制专项。
++
++## ③ 冲突面
++
++- **本卡触碰文件**：`app/core/request_coalescing.py`、`app/api/v1/galaxy.py`、`app/services/galaxy_service.py`、`app/services/galaxy/outcome_absorption_service.py`、`app/services/exam_sprint_diagnostic_service.py`、`tests/core/test_request_coalescing.py`、新增 `tests/api/test_galaxy_graph_shield_invalidation.py`。
++- **wt138（迁移错题域）**：无文件交集；其错题域失效链若未来走 `invalidate_galaxy_graph_view_cache` helper 将自动获得 shield 失效，无需改动。
++- **wt139（mobile）**：零交集（其消费的是 graph API 响应，行为面对本卡透明）。
++- **wt141（冷启动调查，只读）**：零代码交集；本卡在 `exam_sprint_diagnostic_service` 的改动位于写后失效面，不碰冷启动/生成路径。
++- **主会话**：`v3-output/SHIELD-INVAL/` 为本卡专属目录，无共享文件。
++
++## ④ 诚实申报
++
++1. **卡面范围外的一致性收口 1 处**：`_invalidate_document_attachment_cache`（文档挂载失效面）也追加了 notify——它删的是同一张 Redis 视图键，不补 shield 失效则属同类缺陷；1 行，已单列说明。
++2. **诊断直写分支的服务层漏洞一并修复（超出「确认 shield 也被覆盖」的字面范围）**：实证时发现 sqlite/兜底分支修复前连服务层 `@cached` 视图键都不删（TestClient 复现：prime 后 `_write_mastery_value` 全链无 Redis 失效）；PG 生产仅在 update_node_mastery 抛异常时走到该分支，但一旦走到即 10 分钟级陈旧。已用 helper 补齐并在报告中声明。
++3. **`invalidate_prefix` 的回填守卫是 shield 级全局时间戳**（非按 key 粒度）：失效后，任何「启动早于失效时刻」的在飞计算即使属于其他 user 也不落缓存，代价是极低频写路径上的偶发一次重算（miss），正确性优先，语义已注释。
++4. **本进程内失效不跨进程**：若未来吸收消费者迁去独立 Celery worker，`notify` 将只清 worker 自己进程的 shield（API 进程收不到）——届时才需要跨进程通道。当前拓扑（同进程 asyncio consumer，main.py 实证）无此问题；已在报告留痕。
++5. **shield 有 10s TTL 的天然兜底**：即使失效面意外失灵，最坏陈旧窗口从「必然 10s」退化为「偶发 10s」，且双层失效测试会在此红。
++6. **测试环境差异**：`tests/unit -k galaxy` 的 4F/3E 为本机无 PG 凭据的既有环境性失败（基线同一名单），与本卡改动无关；若验收机有可用 PG，该名单应全绿。
++
++## ⑤ 收工核查
++
++- [x] 未 commit / 未 push（`git status`：6 modified + 2 untracked，均为交付物）
++- [x] 交付物齐：`REPORT.md` / `changes.patch`（8 文件 765 行，干净基线 clone `git apply --check` 通过 + 应用后 14 passed 实证）/ `verify_probe.py`（语法自检 + `--help` 实证）
++- [x] 零凭据（探针自注册一次性账号，密码随机不入输出；测试用 `SECRET_KEY=test`）
++- [x] 主仓只读（仅从主仓拷贝 `app/gen/` 至本 worktree 供 import，gitignored 不入库）
++- [x] `/tmp` 自清：`/tmp/shield-inval-baseline`、`/tmp/shield-patch-check` 两个基线 clone 已删除
++- [x] 无遗留进程（本轮纯 pytest/静态工作，无模拟器/浏览器/长驻服务）
++- [x] 磁盘巡检：13Gi 可用（>6G 阈值）；worktree 无 build 产物（pytest 缓存用 `-p no:cacheprovider` 规避）
++
++## 附：verify_probe.py（活栈，留主会话执行）
++
++```bash
++python3 v3-output/SHIELD-INVAL/verify_probe.py --base-url http://127.0.0.1:8000
++```
++
++流程：注册一次性用户 → 取图 prime（记录 payload 指纹）→ `diagnose/generate`（exam_prep_14d 静态包零 LLM）→ `diagnose/grade`（全答 A、`update_galaxy=true`）→ **零 sleep** 再取图。判定：复读 payload 与 prime 指纹一致 = shield 回旧快照 FAIL；出现带 user_status 的节点且指纹变化 = PASS。退出码 0/1/2（PASS/FAIL/环境错误）。

@@ -1564,6 +1564,16 @@ class ExamSprintDiagnosticService:
                 await self.db.rollback()
         await self._upsert_mastery_direct(user_id=user_id, node_id=node_id, mastery=mastery)
         await self.db.commit()
+        # SHIELD-INVAL：直写分支（sqlite 测试方言 / PG 上 update_node_mastery
+        # 失败兜底）绕过了 update_node_mastery 的读面失效链，这里补齐同款失效：
+        # 服务层 @cached 视图键 + API 层进程内 shield（helper 内已一并 notify）。
+        # best-effort：失效失败只降级（退回 TTL 自然过期），不回滚已提交的评分。
+        try:
+            from app.services.galaxy.outcome_absorption_service import invalidate_galaxy_graph_view_cache
+
+            await invalidate_galaxy_graph_view_cache(user_id)
+        except Exception as exc:  # noqa: BLE001 — 读面失效失败不阻断评分落库
+            logger.warning("diagnostic direct-write graph cache invalidation failed: {}", exc)
 
     async def _upsert_mastery_direct(self, *, user_id: UUID, node_id: UUID, mastery: float) -> None:
         status = await self.db.get(UserNodeStatus, {"user_id": user_id, "node_id": node_id})

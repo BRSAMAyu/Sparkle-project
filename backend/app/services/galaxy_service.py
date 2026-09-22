@@ -27,6 +27,7 @@ from sqlalchemy.orm import aliased, undefer
 from app.config import settings
 from app.core.cache import cache_service, cached
 from app.core.event_bus import event_bus
+from app.core.request_coalescing import notify_read_view_invalidated
 from app.gen.sparkle.rag.v1 import evidence_pb2
 from app.models.base import GUID
 from app.models.document_chunks import DocumentChunk
@@ -1333,6 +1334,9 @@ class GalaxyService:
         await cache_service.delete_pattern(f"{settings.APP_NAME}:view:get_galaxy_graph:{user_id}:*")
         await cache_service.delete_pattern(f"galaxy:node_source_documents:v1:{user_id}:*")
         await cache_service.delete_pattern(f"galaxy:node_knowledge_stats:v1:{user_id}:*")
+        # SHIELD-INVAL：文档挂载改变图读面（来源文档/统计），同步清 API 层
+        # shield 的 10s TTL 面（未挂回调时 no-op）。
+        notify_read_view_invalidated("galaxy_graph", str(user_id))
 
     async def _publish_document_attachment_event(
         self,
@@ -3462,6 +3466,9 @@ class GalaxyService:
 
             await self.db.commit()
             await cache_service.delete_pattern(f"{settings.APP_NAME}:view:get_galaxy_graph:{user_id}:*")
+            # SHIELD-INVAL：mastery 写提交后同步清 API 层 shield 的 10s TTL 面，
+            # 否则 Redis 键已删而星图 API 仍回写前旧值（诊断评分/手动更新路径）。
+            notify_read_view_invalidated("galaxy_graph", str(user_id))
 
             if new_mastery >= 80:
                 await self._process_mastery_achievement_after_commit(

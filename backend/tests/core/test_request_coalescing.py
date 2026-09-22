@@ -155,3 +155,119 @@ async def test_snapshot_observability():
     assert snap["deduped"] >= 1
     assert snap["hits"] >= 4  # 首个完成写缓存后，后续调用命中
     assert snap["shed"] == 0
+
+
+# ---------------------------------------------------------------------------
+# SHIELD-INVAL · 前缀失效面（写后即时投影的进程内第二层）
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_invalidate_prefix_clears_only_matching_user():
+    """按 user 前缀失效：该 user 全部参数变体清空、他 user 缓存原样保留。"""
+    shield = EndpointShield(name="t_inval", max_concurrency=4, ttl=10.0, wait_timeout=5.0)
+    calls: list[str] = []
+
+    async def loader() -> str:
+        calls.append("compute")
+        return f"v{len(calls)}"
+
+    # user-a 两个参数变体 + user-b 一个变体，全部落缓存
+    await shield.run("user-a::True:1.0", loader)
+    await shield.run("user-a::False:1.0", loader)
+    await shield.run("user-b::True:1.0", loader)
+    assert shield.snapshot()["cache_entries"] == 3
+
+    cleared = shield.invalidate_prefix("user-a:")
+    assert cleared == 2, "user-a 的两个变体都应被清除"
+    assert shield.snapshot()["cache_entries"] == 1, "user-b 的缓存不得被误伤"
+
+    before = len(calls)
+    assert await shield.run("user-b::True:1.0", loader) == "v3"
+    assert len(calls) == before, "user-b 仍应命中缓存（零重算）"
+    assert await shield.run("user-a::True:1.0", loader) == "v4"
+    assert len(calls) == before + 1, "user-a 失效后必须重算"
+
+
+@pytest.mark.asyncio
+async def test_invalidation_during_inflight_not_backfilled():
+    """失效发生在飞计算中：其完成后的旧值不得回填缓存（失效不可被撤销）。"""
+    shield = EndpointShield(name="t_race", max_concurrency=4, ttl=10.0, wait_timeout=5.0)
+    calls = 0
+    release = asyncio.Event()
+
+    async def stale_loader() -> dict:
+        nonlocal calls
+        calls += 1
+        await release.wait()  # 模拟慢图计算：失效将发生在其计算窗口内
+        return {"mastery": None}  # 写前旧值
+
+    async def fresh_loader() -> dict:
+        nonlocal calls
+        calls += 1
+        return {"mastery": 42}
+
+    inflight = asyncio.create_task(shield.run("user-a:sect", stale_loader))
+    await asyncio.sleep(0.02)  # 确保 stale_loader 已在飞
+    assert shield.invalidate_prefix("user-a:") == 0  # 尚无已完成条目可清
+
+    release.set()
+    stale = await inflight  # 等待者仍拿到旧值（single-flight 语义不变）
+    assert stale == {"mastery": None}
+
+    # 旧计算启动早于失效 → 不落缓存；下一请求必须重算出写后新值
+    fresh = await shield.run("user-a:sect", fresh_loader)
+    assert fresh == {"mastery": 42}
+    assert calls == 2, "失效窗口内的在飞旧值不得被缓存复用"
+    assert await shield.run("user-a:sect", fresh_loader) == {"mastery": 42}
+    assert calls == 2, "失效后新计算的值正常落缓存命中"
+
+
+@pytest.mark.asyncio
+async def test_single_flight_and_clamp_survive_invalidation():
+    """风暴防护语义不因失效面受损：失效后并发仍合并为一次计算。"""
+    shield = EndpointShield(name="t_storm", max_concurrency=8, ttl=10.0, wait_timeout=5.0)
+    calls = 0
+
+    async def loader() -> int:
+        nonlocal calls
+        calls += 1
+        await asyncio.sleep(0.05)
+        return calls
+
+    await shield.run("user-a", loader)
+    shield.invalidate_prefix("user-a")
+    calls = 0
+
+    results = await asyncio.gather(*(shield.run("user-a", loader) for _ in range(20)))
+    assert calls == 1, "失效后的并发拉取仍应 single-flight 合并"
+    assert all(r == 1 for r in results)
+    assert shield.snapshot()["shed"] == 0
+
+
+def test_read_view_invalidation_registry():
+    """注册表契约：notify 按域分发、异常兜底、未注册域 no-op、重复注册去重。"""
+    from app.core import request_coalescing as rc
+
+    domain = "t_registry_domain"
+    rc._READ_VIEW_INVALIDATION_HOOKS.pop(domain, None)  # 隔离：清理可能的残留
+    seen: list[str] = []
+
+    def hook(user_id: str) -> int:
+        seen.append(user_id)
+        return 2
+
+    rc.register_read_view_invalidation_hook(domain, hook)
+    rc.register_read_view_invalidation_hook(domain, hook)  # 幂等
+    assert rc.notify_read_view_invalidated(domain, "u-1") == 2
+    assert seen == ["u-1"], "同一回调重复注册只触发一次"
+
+    def broken(user_id: str) -> int:
+        raise RuntimeError("hook bug")
+
+    rc.register_read_view_invalidation_hook(domain, broken)
+    assert rc.notify_read_view_invalidated(domain, "u-2") == 2, "回调异常不得传播、不得吞掉其他回调的清理数"
+    assert seen == ["u-1", "u-2"]
+
+    assert rc.notify_read_view_invalidated("t_never_registered", "u-1") == 0, "未注册域为 no-op"
+    assert rc._READ_VIEW_INVALIDATION_HOOKS.pop(domain, None) is not None

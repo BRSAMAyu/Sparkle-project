@@ -18,6 +18,14 @@ Stage: restore-storm guard (engine-restore-storm)
    获取槽位/加入在飞计算等待超过 ``wait_timeout`` 时抛出 :class:`EndpointOverloaded`
    （由 app.main 统一映射为 503 + Retry-After，快速失败优于无限排队）。
 
+失效面（SHIELD-INVAL，2026-09）：TTL 结果缓存原先只有自然过期一条出路，
+写路径（诊断评分/任务吸收/mastery 更新）提交后读面最长滞留一个 ttl 窗口的
+旧值。:meth:`EndpointShield.invalidate_prefix` 提供按 key 前缀的进程内失效；
+跨层触发走 :func:`register_read_view_invalidation_hook` /
+:func:`notify_read_view_invalidated` 回调注册表——API 层把本端点 shield 的
+失效回调挂进核心，服务层写路径经 notify 宣告「某用户读面已变化」，服务层
+因此**不反向 import API 层**。
+
 用法（路由 handler 内）::
 
     _shield = EndpointShield(name="galaxy_graph", max_concurrency=8, ttl=10.0)
@@ -33,11 +41,14 @@ loader 抛出的异常不会写入缓存，只会传播给当前这批等待者�
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar
 
 T = TypeVar("T")
+
+logger = logging.getLogger(__name__)
 
 
 class EndpointOverloaded(RuntimeError):
@@ -81,6 +92,9 @@ class EndpointShield:
         self._semaphore = asyncio.Semaphore(max(1, int(max_concurrency)))
         self._cache: dict[str, _CachedResult] = {}
         self._inflight: dict[str, asyncio.Task[Any]] = {}
+        # 最近一次前缀失效的 monotonic 时间戳：其前启动的计算不得落缓存，
+        # 防止「失效 → 在飞旧值完成回填」把失效悄悄撤销（SHIELD-INVAL）。
+        self._last_invalidation = 0.0
         # 观测计数（单事件循环内更新，无需锁）
         self.hits = 0
         self.deduped = 0
@@ -133,6 +147,23 @@ class EndpointShield:
             "shed": self.shed,
         }
 
+    def invalidate_prefix(self, key_prefix: str) -> int:
+        """按 key 前缀清 TTL 结果缓存（写后即时投影的失效面，SHIELD-INVAL）。
+
+        ``key_prefix`` 与 :meth:`run` 的 ``key`` 同构（不含 name 前缀），
+        例如 ``f"{user_id}:"`` 清掉该 user 全部参数变体的缓存条目。只清已
+        完成的结果缓存，不打断在飞计算——single-flight 与并发钳制语义
+        原样保留；但启动早于本次失效的计算完成后不落缓存（见
+        ``_on_compute_done``），失效不会被在飞旧值回填撤销。返回清除的
+        条目数（观测用）。纯内存 dict 操作，同步、无 IO。
+        """
+        full_prefix = f"{self.name}:{key_prefix}"
+        victims = [k for k in self._cache if k.startswith(full_prefix)]
+        for k in victims:
+            self._cache.pop(k, None)
+        self._last_invalidation = time.monotonic()
+        return len(victims)
+
     # ── 内部实现 ─────────────────────────────────────────────────────────────
 
     def _cache_get(self, key: str) -> Any | None:
@@ -153,19 +184,22 @@ class EndpointShield:
             raise EndpointOverloaded(f"[{self.name}] inflight join timed out, key={key}") from None
 
     async def _compute(self, key: str, loader: Callable[[], Awaitable[T]]) -> T:
+        started = time.monotonic()
         task: asyncio.Task[T] = asyncio.ensure_future(loader())
         self._inflight[key] = task
-        deadline = time.monotonic() + self.ttl
-        task.add_done_callback(lambda t, k=key, d=deadline: self._on_compute_done(k, t, d))
+        deadline = started + self.ttl
+        task.add_done_callback(lambda t, k=key, d=deadline, s=started: self._on_compute_done(k, t, d, s))
         return await asyncio.shield(task)
 
-    def _on_compute_done(self, key: str, task: asyncio.Task[Any], deadline: float) -> None:
+    def _on_compute_done(self, key: str, task: asyncio.Task[Any], deadline: float, started: float) -> None:
         self._inflight.pop(key, None)
         if task.cancelled():
             return
         if task.exception() is not None:
             return  # 失败不写缓存，让下一个请求重试
-        if self.ttl > 0:
+        if self.ttl > 0 and started > self._last_invalidation:
+            # 启动早于最近一次失效的计算可能读到写前 DB 状态，不落缓存——
+            # 否则失效会被这个在飞旧值悄悄回填撤销（SHIELD-INVAL）。
             self._cache[key] = _CachedResult(task.result(), deadline)
             self._maybe_evict()
 
@@ -179,3 +213,40 @@ class EndpointShield:
         # 仍超限时按插入序（近似最旧）丢弃
         while len(self._cache) > self.max_entries:
             self._cache.pop(next(iter(self._cache)), None)
+
+
+# ---------------------------------------------------------------------------
+# 读面失效回调注册表（SHIELD-INVAL）
+# ---------------------------------------------------------------------------
+
+#: domain → 失效回调列表。回调签名 ``(user_id: str) -> int``（返回清除的
+#: 缓存条目数），由**拥有进程内读面缓存的层**（API 端点 shield）在模块
+#: 导入时注册；服务层写路径经 :func:`notify_read_view_invalidated` 触发。
+#: 依赖方向保持 服务层 → core ← API 层：服务层只认识 domain 名字符串，
+#: 不 import API 模块；回调闭包在注册方模块命名空间解析 shield 引用
+#: （运行时查找，测试 monkeypatch 替换 shield 实例同样生效）。
+_READ_VIEW_INVALIDATION_HOOKS: dict[str, list[Callable[[str], int]]] = {}
+
+
+def register_read_view_invalidation_hook(domain: str, hook: Callable[[str], int]) -> None:
+    """注册 ``domain`` 读面的进程内缓存失效回调（同一回调只挂一次）。"""
+    hooks = _READ_VIEW_INVALIDATION_HOOKS.setdefault(domain, [])
+    if hook not in hooks:
+        hooks.append(hook)
+
+
+def notify_read_view_invalidated(domain: str, user_id: str) -> int:
+    """宣告某用户读面已变化：逐个调用失效回调，返回清除条目总数。
+
+    纯进程内同步操作、零 IO。回调异常只记日志不传播——失效是 best-effort
+    读投影，失败最坏退回 TTL 自然过期，绝不阻断写路径（与吸收侧
+    「缓存面不可达只降级不回滚」同款纪律）。无注册回调（纯服务层调用方、
+    单测未挂 API 路由）时为 no-op，返回 0。
+    """
+    cleared = 0
+    for hook in list(_READ_VIEW_INVALIDATION_HOOKS.get(domain, ())):
+        try:
+            cleared += hook(user_id) or 0
+        except Exception:  # noqa: BLE001 — 失效失败不阻断写路径
+            logger.exception("read-view invalidation hook failed (domain=%s, user_id=%s)", domain, user_id)
+    return cleared
