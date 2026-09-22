@@ -25,19 +25,19 @@ void main() {
         'status': 'ok',
         'data': {
           'user_id': 'u1',
-          'cost_photons': 3000,
+          'cost_photons': 1500,
           'pro_days': 7,
           'redeemable_base': 5200,
-          'balance_after': 2200,
+          'balance_after': 3700,
           'entitlement': 'pro',
           'entitlement_expires_at': '2026-09-30T00:00:00.000Z',
         },
       });
       expect(result.isOk, isTrue);
-      expect(result.costPhotons, 3000);
+      expect(result.costPhotons, 1500);
       expect(result.proDays, 7);
       expect(result.redeemableBase, 5200);
-      expect(result.balanceAfter, 2200);
+      expect(result.balanceAfter, 3700);
       expect(result.entitlementExpiresAt, isNotNull);
     });
 
@@ -52,7 +52,7 @@ void main() {
             'detail': {
               'status': 'insufficient_base',
               'message': '可兑换光子不足',
-              'cost_photons': 3000,
+              'cost_photons': 1500,
               'pro_days': 7,
               'redeemable_base': 1200,
             },
@@ -85,10 +85,10 @@ void main() {
         ),
         result: PhotonRedeemProResult(
           status: PhotonRedeemProStatus.ok,
-          costPhotons: 3000,
+          costPhotons: 1500,
           proDays: 7,
           redeemableBase: 5200,
-          balanceAfter: 2200,
+          balanceAfter: 3700,
           entitlementExpiresAt: DateTime.utc(2026, 9, 30),
         ),
       );
@@ -101,7 +101,8 @@ void main() {
           findsOneWidget,);
 
       // 必达项②：三要素 + 可兑按钮。
-      expect(find.text('3000'), findsOneWidget);
+      // 动作前成本 = 展示兜底常量（引用常量本身：下次校准零测试改动）。
+      expect(find.text('$photonRedeemProDisplayCost'), findsOneWidget);
       expect(find.text('7 天'), findsOneWidget);
       expect(find.text('尚未使用'), findsOneWidget);
       expect(
@@ -119,7 +120,7 @@ void main() {
       await tester.pump();
       expect(find.byType(AlertDialog), findsOneWidget);
       expect(find.text('确认兑换？'), findsOneWidget);
-      expect(find.textContaining('3000 光子'), findsOneWidget);
+      expect(find.textContaining('${photonRedeemProDisplayCost} 光子'), findsOneWidget);
       expect(find.textContaining('不退还'), findsOneWidget);
 
       // 确认 → 服务端终态 → 成功反馈 + 卡面翻转为已兑换。
@@ -128,7 +129,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.textContaining('兑换成功'), findsOneWidget);
-      expect(find.text('2200'), findsOneWidget);
+      expect(find.text('3700'), findsOneWidget);
       expect(find.text('本月已兑换，下月 1 日起可再兑'), findsOneWidget);
       expect(
         tester
@@ -149,7 +150,7 @@ void main() {
         ),
         result: const PhotonRedeemProResult(
           status: PhotonRedeemProStatus.insufficientBase,
-          costPhotons: 3000,
+          costPhotons: 1500,
           proDays: 7,
           redeemableBase: 1200,
         ),

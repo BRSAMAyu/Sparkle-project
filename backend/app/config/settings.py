@@ -140,8 +140,11 @@ class Settings(BaseSettings):
     MESSAGE_SEND_MAX_RETRIES: int = 3  # 消息发送最大重试次数
 
     # Photon → Pro redemption（D-COMM-2「学出会员」有界兑换通道）
-    # 汇率量级为参赛期保守拍定值【待产品校准】：上线后依兑换渗透率/付费转化校准
-    PHOTON_REDEEM_PRO_COST: int = 3000  # 单次兑换所需光子（仅合同/首胜/成就所得计入基数）
+    # 汇率校准（2026-09-22，TOUR 活栈全旅程实测依据）：诚实日均光子收入 30-80，
+    # 旧值 3000 → 兑 Pro 需约 100 天、实际无人可达（「学出会员」形同虚设）；
+    # 1500 ≈ 强投入月（25 天 × 60 均值）可达、休闲刷分不可达——即「学出」的语义边界。
+    # 下次校准数据钩子：photon status 端点上线后观测真实收入/兑换分布，30 天后复议。
+    PHOTON_REDEEM_PRO_COST: int = 1500  # 单次兑换所需光子（仅合同/首胜/成就所得计入基数）
     PHOTON_REDEEM_PRO_DAYS: int = 7  # 单次兑换授予 Pro 天数
     PHOTON_REDEEM_PRO_MONTHLY_CAP: int = 1  # 每自然月硬顶次数（设计卡裁决：月顶 1 次）
 

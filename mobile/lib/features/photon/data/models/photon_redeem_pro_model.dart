@@ -21,11 +21,12 @@ enum PhotonRedeemProStatus {
   error,
 }
 
-/// 展示用常量，对齐引擎 `settings.PHOTON_REDEEM_PRO_COST/DAYS`【待产品校准】。
+/// 展示用常量，对齐引擎 `settings.PHOTON_REDEEM_PRO_COST/DAYS`（2026-09-22
+/// 校准 3000→1500，依据 TOUR 活栈全旅程实测：诚实日均光子收入 30-80）。
 ///
 /// 仅作动作前展示；兑换响应返回服务端实际值后以响应值覆盖展示（诚实优先于
 /// 本地常量，避免双源漂移）。
-const int photonRedeemProDisplayCost = 3000;
+const int photonRedeemProDisplayCost = 1500;
 const int photonRedeemProDisplayDays = 7;
 
 PhotonRedeemProStatus _statusFromRaw(String? raw) {

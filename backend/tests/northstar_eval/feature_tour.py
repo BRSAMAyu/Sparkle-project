@@ -58,7 +58,7 @@ REDEEMABLE_INCOME_TYPES = frozenset(
     {"grant_achievement", "grant_daily_first", "grant_contract", "grant_contract_bonus", "grant_bonus"}
 )
 REDEEM_PRO_TX_TYPE = "redeem_pro"
-REDEEM_PRO_COST = 3000  # settings.PHOTON_REDEEM_PRO_COST 部署值（【待产品校准】）
+REDEEM_PRO_COST = 1500  # settings.PHOTON_REDEEM_PRO_COST 部署值（2026-09-22 校准 3000→1500，TOUR 实测日均收入 30-80）
 REDEEM_PRO_DAYS = 7
 
 GATEWAY_URL = os.environ.get("TOUR_GATEWAY_URL", "http://localhost:8090")
@@ -913,7 +913,7 @@ class Tour:
             and cap_blocked
         )
         step.note(f"审计重放基数={replay_base} ≥ 兑换价 {REDEEM_PRO_COST}（transfer_in 不计入口径已随词表排除）")
-        step.note(f"扣减 {balance_before}->{balance_after}（=3000）；redeem_pro 流水恰 {len(deduction_rows)} 条")
+        step.note(f"扣减 {balance_before}->{balance_after}（={REDEEM_PRO_COST}）；redeem_pro 流水恰 {len(deduction_rows)} 条")
         step.note(
             f"entitlement={entitlement} 到期 {expires_at}（7 天内偏差 <6h：{expires_ok}）——落库经响应+_grant_pro 语义"
         )
@@ -1024,7 +1024,7 @@ class Tour:
         if earn.get("target_hit"):
             self.phase_redeem(crew)
         else:
-            step = self.step("S8", "redeem", "D-COMM-2 兑换（被阻塞：光子未达 3000——诚实降级）")
+            step = self.step("S8", "redeem", f"D-COMM-2 兑换（被阻塞：光子未达 {REDEEM_PRO_COST}——诚实降级）")
             step.note("真实路径攒光子未达兑换价，不造假兑换；产出校准登记供主会话立卡")
             self.finish(step, False)
         self.phase_consistency(crew)

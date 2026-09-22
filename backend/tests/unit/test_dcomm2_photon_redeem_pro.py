@@ -41,7 +41,9 @@ from app.services.photon_redeem_service import (
 )
 from app.services.photon_service import PhotonService, PhotonTransactionType
 
-COST = 3000
+# 校准防再改：COST 读 settings 部署值（2026-09-22 校准 3000→1500），
+# 下次校准只改 settings，本测试族零改动。
+COST = settings.PHOTON_REDEEM_PRO_COST
 DAYS = 7
 
 
@@ -158,7 +160,7 @@ async def test_redeem_pro_success_deducts_and_grants_pro(db):
 @pytest.mark.asyncio
 async def test_base_is_net_of_contract_failure_stake(db, monkeypatch):
     user = await _make_user(db)
-    await _grant_ledger(db, user, 3000, tx_type=PhotonTransactionType.GRANT_CONTRACT)
+    await _grant_ledger(db, user, COST, tx_type=PhotonTransactionType.GRANT_CONTRACT)
     await PhotonService(db).deduct_photons(
         user_id=str(user.id),
         amount=500,
@@ -166,9 +168,10 @@ async def test_base_is_net_of_contract_failure_stake(db, monkeypatch):
         transaction_type=PhotonTransactionType.DEDUCT_CONTRACT,
         record_history=True,
     )
-    assert await get_redeemable_base(db, user_id=str(user.id)) == 2500
+    assert await get_redeemable_base(db, user_id=str(user.id)) == COST - 500
 
-    monkeypatch.setattr(settings, "PHOTON_REDEEM_PRO_COST", 2500)  # 【待产品校准】面可调
+    # 校准无关：兑换价设为当前净值（COST-500），验证「基数扣减失败押金后恰可兑」
+    monkeypatch.setattr(settings, "PHOTON_REDEEM_PRO_COST", COST - 500)
     outcome = await redeem_pro(db, user_id=str(user.id))
     await db.commit()
     assert outcome.status == REDEEM_PRO_OK
@@ -209,7 +212,7 @@ async def test_transfer_in_excluded_from_redeemable_base(db):
 async def test_balance_shortfall_rejected_even_with_base(db):
     user = await _make_user(db)
     await _grant_ledger(db, user, COST)
-    await _drain_balance(db, user, COST)  # 商城花掉：余额 0、基数仍 3000
+    await _drain_balance(db, user, COST)  # 商城花掉：余额 0、基数仍 COST
 
     outcome = await redeem_pro(db, user_id=str(user.id))
     assert outcome.status == REDEEM_PRO_INSUFFICIENT_BALANCE
