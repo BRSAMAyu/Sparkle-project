@@ -6,6 +6,7 @@ Leaderboard System Schemas
 """
 from __future__ import annotations
 
+from datetime import date as date_type
 from datetime import datetime
 from enum import StrEnum
 from typing import Any
@@ -122,3 +123,22 @@ class LeaderboardConfig(BaseModel):
     update_frequency_minutes: int = Field(default=60, description="更新频率（分钟）")
     cache_ttl_seconds: int = Field(default=300, description="缓存TTL（秒）")
     min_participants: int = Field(default=10, description="最小参与人数")
+
+
+class SelfAnchorDayPoint(BaseModel):
+    """自我锚视图单日数据点（D-COMM-1 裁决：只跟自己的历史比）"""
+
+    date: date_type = Field(description="日期（UTC 日界，旧→新排序）")
+    tasks_completed: int = Field(default=0, ge=0, description="当日完成冲刺任务数（任务账本口径）")
+    mastery_delta: float = Field(default=0.0, description="当日掌握度增量（study_records 事件流求和）")
+
+
+class SelfAnchorViewResponse(BaseModel):
+    """自我 7 日锚视图响应（全站榜保持 D17 隐藏，此为唯一路由的排行榜面）"""
+
+    window_start: date_type = Field(description="窗口起始日（含）")
+    window_end: date_type = Field(description="窗口结束日（含，今天）")
+    series: list[SelfAnchorDayPoint] = Field(description="每日序列，旧→新，无数据日如实补零")
+    total_tasks_completed: int = Field(default=0, ge=0, description="窗口内完成任务总数")
+    total_mastery_delta: float = Field(default=0.0, description="窗口内掌握度增量总和")
+    has_any_data: bool = Field(description="窗口内是否完全无记录（诚实空态，False=真零）")

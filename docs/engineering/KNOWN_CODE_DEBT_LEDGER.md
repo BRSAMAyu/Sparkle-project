@@ -27,7 +27,7 @@
 |---|---|---|---|
 | 1 | `mobile/lib/core/statistics/presentation/providers/agent_statistics_provider.dart:98-165`、`capsule_statistics_provider.dart`、`focus_statistics_provider.dart:119-141` | 三个统计仓库的 `fetchFromApi` 返回硬编码 mock（固定 successRate 0.95、engagement 4.2 等）；后端已有 `backend/app/api/v1/` 统计路由可接 | 接真实 API 或下线该模块 |
 | 2 | `mobile/lib/core/statistics/data/repositories/hybrid_statistics_repository.dart` | **mock 数据被写进 Isar 暖缓存并作为"过期兜底"长期供给 UI**（假数据比会话存活更久）；`watchStatistics` 自述占位实现（L271） | 与 #1 一并修：mock 不许进缓存 |
-| 3 | `mobile/lib/features/leaderboard/`（约 1,143 行：screen/provider/repo） | 完整实现但**未挂路由**（`app/routes.dart` 聚合处无条目，全仓无 `LeaderboardScreen` 引用）；后端 `api/v1/leaderboards.py`、`api_endpoints.dart:575-579` 5 个端点常量、20 条 l10n 均已就绪 | 产品决策：要么挂路由上线，要么整链删除（含端点常量与 l10n 键） |
+| 3 | `mobile/lib/features/leaderboard/`（约 1,143 行：screen/provider/repo） | **已裁决销账（D-COMM-1，2026-09）**：产品决策 = 全站综合榜**保持 D17 隐藏不路由**（v3-output/D-COMMUNITY/DESIGN.md §2.2/§3.2——大池/异质水平/静态综合分命中「打击中尾生」全部反面模式）；唯一路由产品面改为**自我 7 日锚视图**（后端 `GET /api/v1/leaderboards/self-anchor` 已落地：sprint 账本完成度 + study_records 掌握度增量按日序列，复用既有面零新聚合；网关经 leaderboards wildcard 代理可达）。守卫 `COMM-LB`（`scripts/guards/check_rule_comm_lb_leaderboard_unrouted.py`）固化：routes.dart 不挂 LeaderboardScreen + 网关 leaderboards 组 wildcard-only | 移动端 1,143 行死代码**仍是独立债务**：待 D-COMM-4 小队双视图榜改造时复用其 widget 层或整链删除（含端点常量与 l10n 键），本条不再跟踪该决策本身 |
 
 ## 🟡 P2 — 迁移中的集群（删除前必须核对状态）
 

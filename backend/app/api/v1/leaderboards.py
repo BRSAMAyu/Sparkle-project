@@ -21,6 +21,7 @@ from app.schemas.leaderboard import (
     LeaderboardRequest,
     LeaderboardType,
 )
+from app.services.leaderboard_self_anchor_service import LeaderboardSelfAnchorService
 from app.services.leaderboard_service import LeaderboardService
 
 router = APIRouter()
@@ -268,6 +269,42 @@ async def get_top_three(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get top three: {str(e)}"
+        ) from e
+
+
+# route-tier: authed
+@router.get("/self-anchor", response_model=dict[str, Any])
+async def get_self_anchor_view(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    自我 7 日锚视图（D-COMM-1 裁决落地）
+
+    本人近 7 日每日冲刺完成度 / 掌握度增量序列，只跟自己的历史比。
+    这是排行榜域唯一按 D-COMM-1 裁决路由的产品面；全站/学科/光子榜
+    保持 D17 隐藏（不新增入口，见 KNOWN_CODE_DEBT_LEDGER P1 #3 销账）。
+
+    Returns:
+        - window_start/window_end: UTC 7 日窗口（含今天）
+        - series: 每日 {date, tasks_completed, mastery_delta}，旧→新，无数据日如实补零
+        - total_tasks_completed / total_mastery_delta: 窗口合计
+        - has_any_data: False=窗口内完全无记录（诚实空态）
+    """
+    try:
+        service = LeaderboardSelfAnchorService(db)
+        view = await service.get_self_anchor_view(current_user.id)
+
+        return {
+            "success": True,
+            "data": view.model_dump()
+        }
+
+    except Exception as e:
+        logger.error(f"Self anchor view error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get self anchor view"
         ) from e
 
 
