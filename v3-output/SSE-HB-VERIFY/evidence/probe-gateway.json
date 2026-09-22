@@ -1,0 +1,213 @@
+{
+  "schema": "sparkle.sse-hb.probe.v1",
+  "subscribe_target": "http://localhost:8080",
+  "endpoint": "/api/v1/galaxy/events (Bearer)",
+  "started_at_utc": "2026-09-22T13:45:58.234271+00:00",
+  "finished_at_utc": "2026-09-22T13:51:59.463242+00:00",
+  "duration_s": 361.22,
+  "connect_count": 12,
+  "disconnect_count": 11,
+  "connection_held_full_duration": false,
+  "heartbeat_count": 12,
+  "heartbeat_intervals_s": [
+    31.04,
+    31.01,
+    31.04,
+    31.03,
+    31.0,
+    31.01,
+    31.03,
+    31.0,
+    31.02,
+    31.02,
+    31.02
+  ],
+  "heartbeat_gap_stats": {
+    "n": 11,
+    "min": 31.0,
+    "max": 31.04,
+    "mean": 31.02,
+    "median": 31.02
+  },
+  "event_field_lines": 0,
+  "other_lines": 0,
+  "total_bytes": 155,
+  "silence_gaps": [],
+  "disconnect_events": [
+    {
+      "at_elapsed_s": 30.01,
+      "connection_no": 1,
+      "reason": "EOFError: server closed stream (readline empty)"
+    },
+    {
+      "at_elapsed_s": 61.03,
+      "connection_no": 2,
+      "reason": "EOFError: server closed stream (readline empty)"
+    },
+    {
+      "at_elapsed_s": 92.05,
+      "connection_no": 3,
+      "reason": "EOFError: server closed stream (readline empty)"
+    },
+    {
+      "at_elapsed_s": 123.08,
+      "connection_no": 4,
+      "reason": "EOFError: server closed stream (readline empty)"
+    },
+    {
+      "at_elapsed_s": 154.09,
+      "connection_no": 5,
+      "reason": "EOFError: server closed stream (readline empty)"
+    },
+    {
+      "at_elapsed_s": 185.11,
+      "connection_no": 6,
+      "reason": "EOFError: server closed stream (readline empty)"
+    },
+    {
+      "at_elapsed_s": 216.13,
+      "connection_no": 7,
+      "reason": "EOFError: server closed stream (readline empty)"
+    },
+    {
+      "at_elapsed_s": 247.15,
+      "connection_no": 8,
+      "reason": "EOFError: server closed stream (readline empty)"
+    },
+    {
+      "at_elapsed_s": 278.16,
+      "connection_no": 9,
+      "reason": "EOFError: server closed stream (readline empty)"
+    },
+    {
+      "at_elapsed_s": 309.17,
+      "connection_no": 10,
+      "reason": "EOFError: server closed stream (readline empty)"
+    },
+    {
+      "at_elapsed_s": 340.18,
+      "connection_no": 11,
+      "reason": "EOFError: server closed stream (readline empty)"
+    }
+  ],
+  "connect_events": [
+    {
+      "connection_no": 1,
+      "at_elapsed_s": 0.0
+    },
+    {
+      "connection_no": 2,
+      "at_elapsed_s": 31.02
+    },
+    {
+      "connection_no": 3,
+      "at_elapsed_s": 62.04
+    },
+    {
+      "connection_no": 4,
+      "at_elapsed_s": 93.06
+    },
+    {
+      "connection_no": 5,
+      "at_elapsed_s": 124.09
+    },
+    {
+      "connection_no": 6,
+      "at_elapsed_s": 155.1
+    },
+    {
+      "connection_no": 7,
+      "at_elapsed_s": 186.12
+    },
+    {
+      "connection_no": 8,
+      "at_elapsed_s": 217.14
+    },
+    {
+      "connection_no": 9,
+      "at_elapsed_s": 248.15
+    },
+    {
+      "connection_no": 10,
+      "at_elapsed_s": 279.16
+    },
+    {
+      "connection_no": 11,
+      "at_elapsed_s": 310.18
+    },
+    {
+      "connection_no": 12,
+      "at_elapsed_s": 341.19
+    }
+  ],
+  "content_types_seen": [
+    "text/event-stream; charset=utf-8"
+  ],
+  "response_headers_first_connections": [
+    {
+      "Cache-Control": "no-cache",
+      "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';",
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Resource-Policy": "same-origin",
+      "Date": "Tue, 22 Sep 2026 13:45:57 GMT",
+      "Permissions-Policy": "geolocation=(), camera=(), microphone=(), payment=()",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+      "Server": "uvicorn",
+      "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+      "X-Accel-Buffering": "no",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "X-Ratelimit-Limit": "20",
+      "X-Ratelimit-Remaining": "19",
+      "X-Request-Id": "0fba0392-a991-4d6d-863c-4a2b1dac6c41",
+      "X-Trace-Id": "33ab7558ecc14fdc9ca05a406ef16ef4",
+      "X-Xss-Protection": "1; mode=block",
+      "Transfer-Encoding": "chunked"
+    },
+    {
+      "Cache-Control": "no-cache",
+      "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';",
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Resource-Policy": "same-origin",
+      "Date": "Tue, 22 Sep 2026 13:46:29 GMT",
+      "Permissions-Policy": "geolocation=(), camera=(), microphone=(), payment=()",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+      "Server": "uvicorn",
+      "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+      "X-Accel-Buffering": "no",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "X-Ratelimit-Limit": "20",
+      "X-Ratelimit-Remaining": "19",
+      "X-Request-Id": "62480884-7dab-4a51-97f2-3fb1bad80c8f",
+      "X-Trace-Id": "eb1501966bdc4f2aa6fec737d27d2c92",
+      "X-Xss-Protection": "1; mode=block",
+      "Transfer-Encoding": "chunked"
+    },
+    {
+      "Cache-Control": "no-cache",
+      "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';",
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Resource-Policy": "same-origin",
+      "Date": "Tue, 22 Sep 2026 13:46:59 GMT",
+      "Permissions-Policy": "geolocation=(), camera=(), microphone=(), payment=()",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+      "Server": "uvicorn",
+      "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+      "X-Accel-Buffering": "no",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "X-Ratelimit-Limit": "20",
+      "X-Ratelimit-Remaining": "19",
+      "X-Request-Id": "8fa20689-2ad4-4c52-b1ea-18779a7abe06",
+      "X-Trace-Id": "7afb1d92d2bf45f5ab1b275f9975d192",
+      "X-Xss-Protection": "1; mode=block",
+      "Transfer-Encoding": "chunked"
+    }
+  ],
+  "account": "northstar_sse_hb_b842879d",
+  "register_gateway": "http://localhost:8080"
+}

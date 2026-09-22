@@ -1,0 +1,61 @@
+{
+  "schema": "sparkle.sse-hb.probe.v1",
+  "subscribe_target": "http://localhost:8000",
+  "endpoint": "/api/v1/galaxy/events (Bearer)",
+  "started_at_utc": "2026-09-22T13:52:48.697610+00:00",
+  "finished_at_utc": "2026-09-22T13:55:28.717024+00:00",
+  "duration_s": 160.02,
+  "connect_count": 1,
+  "disconnect_count": 0,
+  "connection_held_full_duration": true,
+  "heartbeat_count": 8,
+  "heartbeat_intervals_s": [
+    20.0,
+    20.0,
+    20.0,
+    20.0,
+    20.0,
+    20.0,
+    20.0
+  ],
+  "heartbeat_gap_stats": {
+    "n": 7,
+    "min": 20.0,
+    "max": 20.0,
+    "mean": 20.0,
+    "median": 20.0
+  },
+  "event_field_lines": 0,
+  "other_lines": 0,
+  "total_bytes": 103,
+  "silence_gaps": [],
+  "disconnect_events": [],
+  "connect_events": [
+    {
+      "connection_no": 1,
+      "at_elapsed_s": 0.0
+    }
+  ],
+  "content_types_seen": [
+    "text/event-stream; charset=utf-8"
+  ],
+  "response_headers_first_connections": [
+    {
+      "date": "Tue, 22 Sep 2026 13:52:48 GMT",
+      "server": "uvicorn",
+      "cache-control": "no-cache",
+      "x-accel-buffering": "no",
+      "content-type": "text/event-stream; charset=utf-8",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "DENY",
+      "x-xss-protection": "1; mode=block",
+      "strict-transport-security": "max-age=31536000; includeSubDomains",
+      "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';",
+      "x-request-id": "a09fc0cd-49b3-45c0-a430-d1f076ec7dbc",
+      "x-trace-id": "3da84fd9e91e456d9e1da071598d2f17",
+      "transfer-encoding": "chunked"
+    }
+  ],
+  "account": "northstar_sse_hb_b842879d",
+  "register_gateway": "http://localhost:8080"
+}
