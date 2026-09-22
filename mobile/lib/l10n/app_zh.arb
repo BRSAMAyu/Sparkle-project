@@ -1456,6 +1456,172 @@
     "leaderboardSelfAnchorTitle": "自我锚",
     "leaderboardSelfAnchorWindowTotal": "近 7 天完成",
     "leaderboardSelfAnchorViewEntry": "查看自我锚",
+    "squadActionFailed": "操作失败：{error}",
+    "@squadActionFailed": {
+        "placeholders": {
+            "error": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadBoardLoadFailed": "榜单加载失败：{error}",
+    "@squadBoardLoadFailed": {
+        "placeholders": {
+            "error": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadCompletionPercent": "完成度 {percent}%",
+    "@squadCompletionPercent": {
+        "placeholders": {
+            "percent": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadCreateDeadlineLabel": "冲刺截止",
+    "squadCreateDeadlinePick": "选择截止日期",
+    "squadCreateEntry": "创建小队",
+    "squadCreateFailed": "创建失败：{error}",
+    "@squadCreateFailed": {
+        "placeholders": {
+            "error": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadCreateGoalHint": "例如：期末数学一周冲刺",
+    "squadCreateGoalLabel": "冲刺目标（可选）",
+    "squadCreateInvalid": "请填写小队名称（至少 2 个字）并选择截止日期",
+    "squadCreateNameHint": "例如：高数期末互助队",
+    "squadCreateNameLabel": "小队名称",
+    "squadCreateSubmit": "创建",
+    "squadCreateSuccess": "小队已创建",
+    "squadDaysRemaining": "剩 {days} 天",
+    "@squadDaysRemaining": {
+        "placeholders": {
+            "days": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadDetailFootnote": "完成度口径来自冲刺任务账本；在室时长仅作展示。",
+    "squadDetailLeaderboardDegraded": "小队不足 3 人，榜单暂不成立。先看自己的 7 日锚点。",
+    "squadDetailLeaderboardSelfAnchorAction": "查看我的自我锚",
+    "squadDetailLeaderboardTitle": "成员完成度榜",
+    "squadDetailPresenceInRoom": "{count} 人在室",
+    "@squadDetailPresenceInRoom": {
+        "placeholders": {
+            "count": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadDetailPresenceStaleHint": "心跳滞后，可能已断线",
+    "squadDetailSharedErrorsEmpty": "还没有错题分享。在错题本里打开任意一张卡，点「分享到小队」。",
+    "squadDetailSharedErrorsGoBook": "去错题本",
+    "squadDetailSharedErrorsTitle": "错题分享",
+    "squadDetailStudyRoomEnter": "进入自习",
+    "squadDetailStudyRoomExit": "退出自习",
+    "squadDetailStudyRoomInRoom": "自习中",
+    "squadDetailStudyRoomNotInRoom": "未在室",
+    "squadDetailStudyRoomTitle": "共学自习室",
+    "squadDetailStudyRoomTodayMinutes": "今日自习 {minutes} 分钟",
+    "@squadDetailStudyRoomTodayMinutes": {
+        "placeholders": {
+            "minutes": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadEntryLabel": "冲刺小队",
+    "squadJoinEntry": "加入小队",
+    "squadJoinFailed": "加入失败：{error}",
+    "@squadJoinFailed": {
+        "placeholders": {
+            "error": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadJoinIdHint": "向队长要小队 ID",
+    "squadJoinIdLabel": "小队 ID",
+    "squadJoinInvalid": "请输入小队 ID",
+    "squadJoinSubmit": "加入",
+    "squadJoinSuccess": "已加入小队",
+    "squadListEmptyAction": "创建我的小队",
+    "squadListEmptyDescription": "3-8 人组队互相看见冲刺完成度，还可以共学自习、分享错题卡。",
+    "squadListEmptyTitle": "还没有加入冲刺小队",
+    "squadLoadFailed": "加载失败：{error}",
+    "@squadLoadFailed": {
+        "placeholders": {
+            "error": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadMemberFallbackName": "成员",
+    "squadMembersCount": "{count}/{max} 人",
+    "@squadMembersCount": {
+        "placeholders": {
+            "count": {
+                "type": "Object"
+            },
+            "max": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadNoLedgerData": "无账本数据",
+    "squadPresenceLoadFailed": "在场信息加载失败：{error}",
+    "@squadPresenceLoadFailed": {
+        "placeholders": {
+            "error": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadRetry": "重试",
+    "squadRoomStatusLoadFailed": "在室状态加载失败：{error}",
+    "@squadRoomStatusLoadFailed": {
+        "placeholders": {
+            "error": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadSharedErrorBy": "{name} 分享",
+    "@squadSharedErrorBy": {
+        "placeholders": {
+            "name": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadSharedErrorsLoadFailed": "分享列表加载失败：{error}",
+    "@squadSharedErrorsLoadFailed": {
+        "placeholders": {
+            "error": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadShareConfirm": "分享",
+    "squadShareDialogEmpty": "还没有加入任何小队。先创建或加入一个小队，再把错题分享给队友。",
+    "squadShareDialogGoSquads": "去我的小队",
+    "squadShareDialogTitle": "分享到小队",
+    "squadShareErrorBookEntry": "分享到小队",
+    "squadShareFailed": "分享失败：{error}",
+    "@squadShareFailed": {
+        "placeholders": {
+            "error": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadShareSuccess": "已分享到小队",
+    "squadTitle": "冲刺小队",
     "omnibarListeningHint": "正在聆听...",
     "omnibarDefaultHint": "告诉我你现在在想什么...",
     "voiceInputAction": "语音输入",

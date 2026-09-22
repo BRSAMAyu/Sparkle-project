@@ -4420,6 +4420,217 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leaderboardSelfAnchorViewEntry => 'View self anchor';
 
   @override
+  String squadActionFailed(Object error) {
+    return 'Action failed: $error';
+  }
+
+  @override
+  String squadBoardLoadFailed(Object error) {
+    return 'Failed to load the board: $error';
+  }
+
+  @override
+  String squadCompletionPercent(Object percent) {
+    return '$percent% complete';
+  }
+
+  @override
+  String get squadCreateDeadlineLabel => 'Sprint deadline';
+
+  @override
+  String get squadCreateDeadlinePick => 'Pick a date';
+
+  @override
+  String get squadCreateEntry => 'Create squad';
+
+  @override
+  String squadCreateFailed(Object error) {
+    return 'Create failed: $error';
+  }
+
+  @override
+  String get squadCreateGoalHint => 'e.g. One-week math final sprint';
+
+  @override
+  String get squadCreateGoalLabel => 'Sprint goal (optional)';
+
+  @override
+  String get squadCreateInvalid =>
+      'Enter a name (at least 2 characters) and pick a deadline';
+
+  @override
+  String get squadCreateNameHint => 'e.g. Calculus final buddies';
+
+  @override
+  String get squadCreateNameLabel => 'Squad name';
+
+  @override
+  String get squadCreateSubmit => 'Create';
+
+  @override
+  String get squadCreateSuccess => 'Squad created';
+
+  @override
+  String squadDaysRemaining(Object days) {
+    return '$days days left';
+  }
+
+  @override
+  String get squadDetailFootnote =>
+      'Completion comes from the sprint task ledger; study-room time is display-only.';
+
+  @override
+  String get squadDetailLeaderboardDegraded =>
+      'Fewer than 3 members — the board isn\'t valid yet. Check your own 7-day anchor instead.';
+
+  @override
+  String get squadDetailLeaderboardSelfAnchorAction => 'View my self anchor';
+
+  @override
+  String get squadDetailLeaderboardTitle => 'Member completion board';
+
+  @override
+  String squadDetailPresenceInRoom(Object count) {
+    return '$count in room';
+  }
+
+  @override
+  String get squadDetailPresenceStaleHint =>
+      'Heartbeat is stale — may be disconnected';
+
+  @override
+  String get squadDetailSharedErrorsEmpty =>
+      'No shared error cards yet. Open any card in your error book and tap \"Share to squad\".';
+
+  @override
+  String get squadDetailSharedErrorsGoBook => 'Open error book';
+
+  @override
+  String get squadDetailSharedErrorsTitle => 'Shared error cards';
+
+  @override
+  String get squadDetailStudyRoomEnter => 'Enter';
+
+  @override
+  String get squadDetailStudyRoomExit => 'Leave';
+
+  @override
+  String get squadDetailStudyRoomInRoom => 'Studying';
+
+  @override
+  String get squadDetailStudyRoomNotInRoom => 'Not in room';
+
+  @override
+  String get squadDetailStudyRoomTitle => 'Co-study room';
+
+  @override
+  String squadDetailStudyRoomTodayMinutes(Object minutes) {
+    return '$minutes min today';
+  }
+
+  @override
+  String get squadEntryLabel => 'Sprint squad';
+
+  @override
+  String get squadJoinEntry => 'Join squad';
+
+  @override
+  String squadJoinFailed(Object error) {
+    return 'Join failed: $error';
+  }
+
+  @override
+  String get squadJoinIdHint => 'Ask the squad owner for the ID';
+
+  @override
+  String get squadJoinIdLabel => 'Squad ID';
+
+  @override
+  String get squadJoinInvalid => 'Enter a squad ID';
+
+  @override
+  String get squadJoinSubmit => 'Join';
+
+  @override
+  String get squadJoinSuccess => 'Joined the squad';
+
+  @override
+  String get squadListEmptyAction => 'Create my squad';
+
+  @override
+  String get squadListEmptyDescription =>
+      '3-8 members see each other\'s sprint completion, study together, and share error cards.';
+
+  @override
+  String get squadListEmptyTitle => 'No sprint squad yet';
+
+  @override
+  String squadLoadFailed(Object error) {
+    return 'Load failed: $error';
+  }
+
+  @override
+  String get squadMemberFallbackName => 'Member';
+
+  @override
+  String squadMembersCount(Object count, Object max) {
+    return '$count/$max members';
+  }
+
+  @override
+  String get squadNoLedgerData => 'No ledger data';
+
+  @override
+  String squadPresenceLoadFailed(Object error) {
+    return 'Failed to load presence: $error';
+  }
+
+  @override
+  String get squadRetry => 'Retry';
+
+  @override
+  String squadRoomStatusLoadFailed(Object error) {
+    return 'Failed to load room status: $error';
+  }
+
+  @override
+  String squadSharedErrorBy(Object name) {
+    return '$name shared';
+  }
+
+  @override
+  String squadSharedErrorsLoadFailed(Object error) {
+    return 'Failed to load shared cards: $error';
+  }
+
+  @override
+  String get squadShareConfirm => 'Share';
+
+  @override
+  String get squadShareDialogEmpty =>
+      'You haven\'t joined any squad yet. Create or join one first, then share error cards with teammates.';
+
+  @override
+  String get squadShareDialogGoSquads => 'Go to my squads';
+
+  @override
+  String get squadShareDialogTitle => 'Share to squad';
+
+  @override
+  String get squadShareErrorBookEntry => 'Share to squad';
+
+  @override
+  String squadShareFailed(Object error) {
+    return 'Share failed: $error';
+  }
+
+  @override
+  String get squadShareSuccess => 'Shared to squad';
+
+  @override
+  String get squadTitle => 'Sprint squad';
+
+  @override
   String get omnibarListeningHint => 'Listening...';
 
   @override

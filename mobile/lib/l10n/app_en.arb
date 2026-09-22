@@ -1456,6 +1456,172 @@
     "leaderboardSelfAnchorTitle": "Self Anchor",
     "leaderboardSelfAnchorWindowTotal": "Completed in last 7 days",
     "leaderboardSelfAnchorViewEntry": "View self anchor",
+    "squadActionFailed": "Action failed: {error}",
+    "@squadActionFailed": {
+        "placeholders": {
+            "error": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadBoardLoadFailed": "Failed to load the board: {error}",
+    "@squadBoardLoadFailed": {
+        "placeholders": {
+            "error": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadCompletionPercent": "{percent}% complete",
+    "@squadCompletionPercent": {
+        "placeholders": {
+            "percent": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadCreateDeadlineLabel": "Sprint deadline",
+    "squadCreateDeadlinePick": "Pick a date",
+    "squadCreateEntry": "Create squad",
+    "squadCreateFailed": "Create failed: {error}",
+    "@squadCreateFailed": {
+        "placeholders": {
+            "error": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadCreateGoalHint": "e.g. One-week math final sprint",
+    "squadCreateGoalLabel": "Sprint goal (optional)",
+    "squadCreateInvalid": "Enter a name (at least 2 characters) and pick a deadline",
+    "squadCreateNameHint": "e.g. Calculus final buddies",
+    "squadCreateNameLabel": "Squad name",
+    "squadCreateSubmit": "Create",
+    "squadCreateSuccess": "Squad created",
+    "squadDaysRemaining": "{days} days left",
+    "@squadDaysRemaining": {
+        "placeholders": {
+            "days": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadDetailFootnote": "Completion comes from the sprint task ledger; study-room time is display-only.",
+    "squadDetailLeaderboardDegraded": "Fewer than 3 members — the board isn't valid yet. Check your own 7-day anchor instead.",
+    "squadDetailLeaderboardSelfAnchorAction": "View my self anchor",
+    "squadDetailLeaderboardTitle": "Member completion board",
+    "squadDetailPresenceInRoom": "{count} in room",
+    "@squadDetailPresenceInRoom": {
+        "placeholders": {
+            "count": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadDetailPresenceStaleHint": "Heartbeat is stale — may be disconnected",
+    "squadDetailSharedErrorsEmpty": "No shared error cards yet. Open any card in your error book and tap \"Share to squad\".",
+    "squadDetailSharedErrorsGoBook": "Open error book",
+    "squadDetailSharedErrorsTitle": "Shared error cards",
+    "squadDetailStudyRoomEnter": "Enter",
+    "squadDetailStudyRoomExit": "Leave",
+    "squadDetailStudyRoomInRoom": "Studying",
+    "squadDetailStudyRoomNotInRoom": "Not in room",
+    "squadDetailStudyRoomTitle": "Co-study room",
+    "squadDetailStudyRoomTodayMinutes": "{minutes} min today",
+    "@squadDetailStudyRoomTodayMinutes": {
+        "placeholders": {
+            "minutes": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadEntryLabel": "Sprint squad",
+    "squadJoinEntry": "Join squad",
+    "squadJoinFailed": "Join failed: {error}",
+    "@squadJoinFailed": {
+        "placeholders": {
+            "error": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadJoinIdHint": "Ask the squad owner for the ID",
+    "squadJoinIdLabel": "Squad ID",
+    "squadJoinInvalid": "Enter a squad ID",
+    "squadJoinSubmit": "Join",
+    "squadJoinSuccess": "Joined the squad",
+    "squadListEmptyAction": "Create my squad",
+    "squadListEmptyDescription": "3-8 members see each other's sprint completion, study together, and share error cards.",
+    "squadListEmptyTitle": "No sprint squad yet",
+    "squadLoadFailed": "Load failed: {error}",
+    "@squadLoadFailed": {
+        "placeholders": {
+            "error": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadMemberFallbackName": "Member",
+    "squadMembersCount": "{count}/{max} members",
+    "@squadMembersCount": {
+        "placeholders": {
+            "count": {
+                "type": "Object"
+            },
+            "max": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadNoLedgerData": "No ledger data",
+    "squadPresenceLoadFailed": "Failed to load presence: {error}",
+    "@squadPresenceLoadFailed": {
+        "placeholders": {
+            "error": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadRetry": "Retry",
+    "squadRoomStatusLoadFailed": "Failed to load room status: {error}",
+    "@squadRoomStatusLoadFailed": {
+        "placeholders": {
+            "error": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadSharedErrorBy": "{name} shared",
+    "@squadSharedErrorBy": {
+        "placeholders": {
+            "name": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadSharedErrorsLoadFailed": "Failed to load shared cards: {error}",
+    "@squadSharedErrorsLoadFailed": {
+        "placeholders": {
+            "error": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadShareConfirm": "Share",
+    "squadShareDialogEmpty": "You haven't joined any squad yet. Create or join one first, then share error cards with teammates.",
+    "squadShareDialogGoSquads": "Go to my squads",
+    "squadShareDialogTitle": "Share to squad",
+    "squadShareErrorBookEntry": "Share to squad",
+    "squadShareFailed": "Share failed: {error}",
+    "@squadShareFailed": {
+        "placeholders": {
+            "error": {
+                "type": "Object"
+            }
+        }
+    },
+    "squadShareSuccess": "Shared to squad",
+    "squadTitle": "Sprint squad",
     "omnibarListeningHint": "Listening...",
     "omnibarDefaultHint": "Tell me what you think...",
     "voiceInputAction": "Voice input",

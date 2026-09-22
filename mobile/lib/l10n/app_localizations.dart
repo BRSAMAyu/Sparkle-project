@@ -7928,6 +7928,354 @@ abstract class AppLocalizations {
   /// **'查看自我锚'**
   String get leaderboardSelfAnchorViewEntry;
 
+  /// No description provided for @squadActionFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'操作失败：{error}'**
+  String squadActionFailed(Object error);
+
+  /// No description provided for @squadBoardLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'榜单加载失败：{error}'**
+  String squadBoardLoadFailed(Object error);
+
+  /// No description provided for @squadCompletionPercent.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成度 {percent}%'**
+  String squadCompletionPercent(Object percent);
+
+  /// No description provided for @squadCreateDeadlineLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺截止'**
+  String get squadCreateDeadlineLabel;
+
+  /// No description provided for @squadCreateDeadlinePick.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择截止日期'**
+  String get squadCreateDeadlinePick;
+
+  /// No description provided for @squadCreateEntry.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建小队'**
+  String get squadCreateEntry;
+
+  /// No description provided for @squadCreateFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建失败：{error}'**
+  String squadCreateFailed(Object error);
+
+  /// No description provided for @squadCreateGoalHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：期末数学一周冲刺'**
+  String get squadCreateGoalHint;
+
+  /// No description provided for @squadCreateGoalLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺目标（可选）'**
+  String get squadCreateGoalLabel;
+
+  /// No description provided for @squadCreateInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'请填写小队名称（至少 2 个字）并选择截止日期'**
+  String get squadCreateInvalid;
+
+  /// No description provided for @squadCreateNameHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：高数期末互助队'**
+  String get squadCreateNameHint;
+
+  /// No description provided for @squadCreateNameLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'小队名称'**
+  String get squadCreateNameLabel;
+
+  /// No description provided for @squadCreateSubmit.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建'**
+  String get squadCreateSubmit;
+
+  /// No description provided for @squadCreateSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'小队已创建'**
+  String get squadCreateSuccess;
+
+  /// No description provided for @squadDaysRemaining.
+  ///
+  /// In zh, this message translates to:
+  /// **'剩 {days} 天'**
+  String squadDaysRemaining(Object days);
+
+  /// No description provided for @squadDetailFootnote.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成度口径来自冲刺任务账本；在室时长仅作展示。'**
+  String get squadDetailFootnote;
+
+  /// No description provided for @squadDetailLeaderboardDegraded.
+  ///
+  /// In zh, this message translates to:
+  /// **'小队不足 3 人，榜单暂不成立。先看自己的 7 日锚点。'**
+  String get squadDetailLeaderboardDegraded;
+
+  /// No description provided for @squadDetailLeaderboardSelfAnchorAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看我的自我锚'**
+  String get squadDetailLeaderboardSelfAnchorAction;
+
+  /// No description provided for @squadDetailLeaderboardTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'成员完成度榜'**
+  String get squadDetailLeaderboardTitle;
+
+  /// No description provided for @squadDetailPresenceInRoom.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 人在室'**
+  String squadDetailPresenceInRoom(Object count);
+
+  /// No description provided for @squadDetailPresenceStaleHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'心跳滞后，可能已断线'**
+  String get squadDetailPresenceStaleHint;
+
+  /// No description provided for @squadDetailSharedErrorsEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有错题分享。在错题本里打开任意一张卡，点「分享到小队」。'**
+  String get squadDetailSharedErrorsEmpty;
+
+  /// No description provided for @squadDetailSharedErrorsGoBook.
+  ///
+  /// In zh, this message translates to:
+  /// **'去错题本'**
+  String get squadDetailSharedErrorsGoBook;
+
+  /// No description provided for @squadDetailSharedErrorsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'错题分享'**
+  String get squadDetailSharedErrorsTitle;
+
+  /// No description provided for @squadDetailStudyRoomEnter.
+  ///
+  /// In zh, this message translates to:
+  /// **'进入自习'**
+  String get squadDetailStudyRoomEnter;
+
+  /// No description provided for @squadDetailStudyRoomExit.
+  ///
+  /// In zh, this message translates to:
+  /// **'退出自习'**
+  String get squadDetailStudyRoomExit;
+
+  /// No description provided for @squadDetailStudyRoomInRoom.
+  ///
+  /// In zh, this message translates to:
+  /// **'自习中'**
+  String get squadDetailStudyRoomInRoom;
+
+  /// No description provided for @squadDetailStudyRoomNotInRoom.
+  ///
+  /// In zh, this message translates to:
+  /// **'未在室'**
+  String get squadDetailStudyRoomNotInRoom;
+
+  /// No description provided for @squadDetailStudyRoomTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'共学自习室'**
+  String get squadDetailStudyRoomTitle;
+
+  /// No description provided for @squadDetailStudyRoomTodayMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日自习 {minutes} 分钟'**
+  String squadDetailStudyRoomTodayMinutes(Object minutes);
+
+  /// No description provided for @squadEntryLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺小队'**
+  String get squadEntryLabel;
+
+  /// No description provided for @squadJoinEntry.
+  ///
+  /// In zh, this message translates to:
+  /// **'加入小队'**
+  String get squadJoinEntry;
+
+  /// No description provided for @squadJoinFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'加入失败：{error}'**
+  String squadJoinFailed(Object error);
+
+  /// No description provided for @squadJoinIdHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'向队长要小队 ID'**
+  String get squadJoinIdHint;
+
+  /// No description provided for @squadJoinIdLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'小队 ID'**
+  String get squadJoinIdLabel;
+
+  /// No description provided for @squadJoinInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入小队 ID'**
+  String get squadJoinInvalid;
+
+  /// No description provided for @squadJoinSubmit.
+  ///
+  /// In zh, this message translates to:
+  /// **'加入'**
+  String get squadJoinSubmit;
+
+  /// No description provided for @squadJoinSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'已加入小队'**
+  String get squadJoinSuccess;
+
+  /// No description provided for @squadListEmptyAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建我的小队'**
+  String get squadListEmptyAction;
+
+  /// No description provided for @squadListEmptyDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'3-8 人组队互相看见冲刺完成度，还可以共学自习、分享错题卡。'**
+  String get squadListEmptyDescription;
+
+  /// No description provided for @squadListEmptyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有加入冲刺小队'**
+  String get squadListEmptyTitle;
+
+  /// No description provided for @squadLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载失败：{error}'**
+  String squadLoadFailed(Object error);
+
+  /// No description provided for @squadMemberFallbackName.
+  ///
+  /// In zh, this message translates to:
+  /// **'成员'**
+  String get squadMemberFallbackName;
+
+  /// No description provided for @squadMembersCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count}/{max} 人'**
+  String squadMembersCount(Object count, Object max);
+
+  /// No description provided for @squadNoLedgerData.
+  ///
+  /// In zh, this message translates to:
+  /// **'无账本数据'**
+  String get squadNoLedgerData;
+
+  /// No description provided for @squadPresenceLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'在场信息加载失败：{error}'**
+  String squadPresenceLoadFailed(Object error);
+
+  /// No description provided for @squadRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get squadRetry;
+
+  /// No description provided for @squadRoomStatusLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'在室状态加载失败：{error}'**
+  String squadRoomStatusLoadFailed(Object error);
+
+  /// No description provided for @squadSharedErrorBy.
+  ///
+  /// In zh, this message translates to:
+  /// **'{name} 分享'**
+  String squadSharedErrorBy(Object name);
+
+  /// No description provided for @squadSharedErrorsLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享列表加载失败：{error}'**
+  String squadSharedErrorsLoadFailed(Object error);
+
+  /// No description provided for @squadShareConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享'**
+  String get squadShareConfirm;
+
+  /// No description provided for @squadShareDialogEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有加入任何小队。先创建或加入一个小队，再把错题分享给队友。'**
+  String get squadShareDialogEmpty;
+
+  /// No description provided for @squadShareDialogGoSquads.
+  ///
+  /// In zh, this message translates to:
+  /// **'去我的小队'**
+  String get squadShareDialogGoSquads;
+
+  /// No description provided for @squadShareDialogTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享到小队'**
+  String get squadShareDialogTitle;
+
+  /// No description provided for @squadShareErrorBookEntry.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享到小队'**
+  String get squadShareErrorBookEntry;
+
+  /// No description provided for @squadShareFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享失败：{error}'**
+  String squadShareFailed(Object error);
+
+  /// No description provided for @squadShareSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'已分享到小队'**
+  String get squadShareSuccess;
+
+  /// No description provided for @squadTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺小队'**
+  String get squadTitle;
+
   /// No description provided for @omnibarListeningHint.
   ///
   /// In zh, this message translates to:

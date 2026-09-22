@@ -23,6 +23,8 @@ import 'package:sparkle/features/community/presentation/screens/group_members_sc
 import 'package:sparkle/features/community/presentation/screens/group_moderation_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_search_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/group_tasks_screen.dart';
+import 'package:sparkle/features/community/presentation/screens/squad_detail_screen.dart';
+import 'package:sparkle/features/community/presentation/screens/squad_list_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/user_search_screen.dart';
 
 class CommunityRoutes {
@@ -48,6 +50,13 @@ class CommunityRoutes {
   static const String blockedUsers = '/community/blocked';
   static const String accountability = '/community/accountability';
   static const String accountabilityDetail = '/community/accountability/:id';
+
+  // D-COMM-3/4/5：冲刺小队（列表 + 详情；榜/自习室/错题分享都收在详情内）
+  static const String squads = '/community/squads';
+  static const String squadDetail = '/community/squads/:id';
+
+  /// 详情路径构造（列表卡跳转用；照 group 域 `push('/community/groups/$id')` 惯例）。
+  static String squadDetailPath(String groupId) => '/community/squads/$groupId';
 
   static List<RouteBase> get routes => [
         GoRoute(
@@ -376,6 +385,40 @@ class CommunityRoutes {
                   trackOverride: BgmTrack.community,
                 ),
                 child: AccountabilityDetailScreen(partnershipId: id),
+              ),
+            );
+          },
+        ),
+        // D-COMM-3/4/5: Sprint squad list（我的小队 + 创建/加入入口）
+        GoRoute(
+          path: squads,
+          name: 'squadList',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
+            state: state,
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.socialWarm.audioPolicy(
+                trackOverride: BgmTrack.community,
+              ),
+              child: const SquadListScreen(),
+            ),
+          ),
+        ),
+        // Sprint squad detail（完成度榜 + 自习室 + 错题分享段）
+        // 必须注册在 squads 精确路径之后，:id 不会吞掉列表路径。
+        GoRoute(
+          path: squadDetail,
+          name: 'squadDetail',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) {
+            final groupId = state.pathParameters['id']!;
+            return buildSparkleTransitionPage(
+              state: state,
+              child: SceneAudioScope(
+                policy: ExperienceProfiles.socialWarm.audioPolicy(
+                  trackOverride: BgmTrack.community,
+                ),
+                child: SquadDetailScreen(groupId: groupId),
               ),
             );
           },

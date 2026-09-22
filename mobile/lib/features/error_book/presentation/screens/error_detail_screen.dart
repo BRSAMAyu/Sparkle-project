@@ -7,7 +7,9 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
+import 'package:sparkle/features/community/presentation/widgets/share_error_to_squad_dialog.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/models/error_semantic_summary.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
@@ -51,6 +53,19 @@ class ErrorDetailScreen extends ConsumerWidget {
                     variant: ButtonVariant.ghost,
                     icon: const Icon(Icons.edit_outlined),
                     onPressed: () => _navigateToEdit(context, error),
+                  ),
+                ),
+              ) ??
+              const SizedBox.shrink(),
+          // D-COMM-5：分享到冲刺小队（只传 error_id，内容服务端取）。
+          errorAsync.whenOrNull(
+                data: (error) => Tooltip(
+                  message: l10n.squadShareErrorBookEntry,
+                  child: SparkleIconButton(
+                    key: const ValueKey('error-detail-share-button'),
+                    variant: ButtonVariant.ghost,
+                    icon: const Icon(Icons.ios_share),
+                    onPressed: () => _shareToSquad(context, error.id),
                   ),
                 ),
               ) ??
@@ -930,6 +945,17 @@ class ErrorDetailScreen extends ConsumerWidget {
         '/errors/${error.id}/edit',
         extra: error,
       ),
+    );
+  }
+
+  /// D-COMM-5：分享到冲刺小队——客户端只传 error_id，弹窗内选目标小队。
+  Future<void> _shareToSquad(BuildContext context, String errorId) async {
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen),
+    );
+    await showDialog<void>(
+      context: context,
+      builder: (_) => ShareErrorToSquadDialog(errorId: errorId),
     );
   }
 

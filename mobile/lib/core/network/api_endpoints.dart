@@ -390,6 +390,23 @@ class ApiEndpoints {
   static const String searchUsers = '/community/users/search';
   static const String userStatus = '/community/status';
 
+  // Community - Squads (D-COMM-3/4/5: 冲刺小队 + 自习室 + 错题分享)
+  static const String squads = '/community/squads';
+  static String squadDetail(String groupId) => '/community/squads/$groupId';
+  static String squadJoin(String groupId) => '/community/squads/$groupId/join';
+  static String squadLeaderboard(String groupId) =>
+      '/community/squads/$groupId/leaderboard';
+  static String squadStudyRoomEnter(String groupId) =>
+      '/community/squads/$groupId/study-room/enter';
+  static String squadStudyRoomExit(String groupId) =>
+      '/community/squads/$groupId/study-room/exit';
+  static String squadStudyRoomHeartbeat(String groupId) =>
+      '/community/squads/$groupId/study-room/heartbeat';
+  static String squadStudyRoomPresence(String groupId) =>
+      '/community/squads/$groupId/study-room/presence';
+  static String squadSharedErrors(String groupId) =>
+      '/community/squads/$groupId/shared-errors';
+
   // Community - Groups
   static const String groups = '/community/groups';
   static const String groupsRecommendations =

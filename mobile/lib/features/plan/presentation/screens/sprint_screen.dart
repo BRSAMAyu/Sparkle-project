@@ -8,6 +8,7 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
+import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/leaderboard/leaderboard_routes.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/data/services/plan_description_codec.dart';
@@ -51,6 +52,16 @@ class SprintScreen extends ConsumerWidget {
               icon: const Icon(Icons.align_vertical_bottom_outlined),
               onPressed: () =>
                   unawaited(context.push(LeaderboardRoutes.selfAnchor)),
+            ),
+          ),
+          // D-COMM-3：冲刺小队入口（次级位置，与自我锚并列；不占内容主面积）。
+          Tooltip(
+            message: context.l10n.squadEntryLabel,
+            child: SparkleIconButton(
+              key: const ValueKey('sprint-squad-entry-button'),
+              variant: ButtonVariant.ghost,
+              icon: const Icon(Icons.groups_outlined),
+              onPressed: () => unawaited(context.push(CommunityRoutes.squads)),
             ),
           ),
           if (activeSprint != null)

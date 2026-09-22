@@ -4235,6 +4235,210 @@ class AppLocalizationsZh extends AppLocalizations {
   String get leaderboardSelfAnchorViewEntry => '查看自我锚';
 
   @override
+  String squadActionFailed(Object error) {
+    return '操作失败：$error';
+  }
+
+  @override
+  String squadBoardLoadFailed(Object error) {
+    return '榜单加载失败：$error';
+  }
+
+  @override
+  String squadCompletionPercent(Object percent) {
+    return '完成度 $percent%';
+  }
+
+  @override
+  String get squadCreateDeadlineLabel => '冲刺截止';
+
+  @override
+  String get squadCreateDeadlinePick => '选择截止日期';
+
+  @override
+  String get squadCreateEntry => '创建小队';
+
+  @override
+  String squadCreateFailed(Object error) {
+    return '创建失败：$error';
+  }
+
+  @override
+  String get squadCreateGoalHint => '例如：期末数学一周冲刺';
+
+  @override
+  String get squadCreateGoalLabel => '冲刺目标（可选）';
+
+  @override
+  String get squadCreateInvalid => '请填写小队名称（至少 2 个字）并选择截止日期';
+
+  @override
+  String get squadCreateNameHint => '例如：高数期末互助队';
+
+  @override
+  String get squadCreateNameLabel => '小队名称';
+
+  @override
+  String get squadCreateSubmit => '创建';
+
+  @override
+  String get squadCreateSuccess => '小队已创建';
+
+  @override
+  String squadDaysRemaining(Object days) {
+    return '剩 $days 天';
+  }
+
+  @override
+  String get squadDetailFootnote => '完成度口径来自冲刺任务账本；在室时长仅作展示。';
+
+  @override
+  String get squadDetailLeaderboardDegraded => '小队不足 3 人，榜单暂不成立。先看自己的 7 日锚点。';
+
+  @override
+  String get squadDetailLeaderboardSelfAnchorAction => '查看我的自我锚';
+
+  @override
+  String get squadDetailLeaderboardTitle => '成员完成度榜';
+
+  @override
+  String squadDetailPresenceInRoom(Object count) {
+    return '$count 人在室';
+  }
+
+  @override
+  String get squadDetailPresenceStaleHint => '心跳滞后，可能已断线';
+
+  @override
+  String get squadDetailSharedErrorsEmpty => '还没有错题分享。在错题本里打开任意一张卡，点「分享到小队」。';
+
+  @override
+  String get squadDetailSharedErrorsGoBook => '去错题本';
+
+  @override
+  String get squadDetailSharedErrorsTitle => '错题分享';
+
+  @override
+  String get squadDetailStudyRoomEnter => '进入自习';
+
+  @override
+  String get squadDetailStudyRoomExit => '退出自习';
+
+  @override
+  String get squadDetailStudyRoomInRoom => '自习中';
+
+  @override
+  String get squadDetailStudyRoomNotInRoom => '未在室';
+
+  @override
+  String get squadDetailStudyRoomTitle => '共学自习室';
+
+  @override
+  String squadDetailStudyRoomTodayMinutes(Object minutes) {
+    return '今日自习 $minutes 分钟';
+  }
+
+  @override
+  String get squadEntryLabel => '冲刺小队';
+
+  @override
+  String get squadJoinEntry => '加入小队';
+
+  @override
+  String squadJoinFailed(Object error) {
+    return '加入失败：$error';
+  }
+
+  @override
+  String get squadJoinIdHint => '向队长要小队 ID';
+
+  @override
+  String get squadJoinIdLabel => '小队 ID';
+
+  @override
+  String get squadJoinInvalid => '请输入小队 ID';
+
+  @override
+  String get squadJoinSubmit => '加入';
+
+  @override
+  String get squadJoinSuccess => '已加入小队';
+
+  @override
+  String get squadListEmptyAction => '创建我的小队';
+
+  @override
+  String get squadListEmptyDescription => '3-8 人组队互相看见冲刺完成度，还可以共学自习、分享错题卡。';
+
+  @override
+  String get squadListEmptyTitle => '还没有加入冲刺小队';
+
+  @override
+  String squadLoadFailed(Object error) {
+    return '加载失败：$error';
+  }
+
+  @override
+  String get squadMemberFallbackName => '成员';
+
+  @override
+  String squadMembersCount(Object count, Object max) {
+    return '$count/$max 人';
+  }
+
+  @override
+  String get squadNoLedgerData => '无账本数据';
+
+  @override
+  String squadPresenceLoadFailed(Object error) {
+    return '在场信息加载失败：$error';
+  }
+
+  @override
+  String get squadRetry => '重试';
+
+  @override
+  String squadRoomStatusLoadFailed(Object error) {
+    return '在室状态加载失败：$error';
+  }
+
+  @override
+  String squadSharedErrorBy(Object name) {
+    return '$name 分享';
+  }
+
+  @override
+  String squadSharedErrorsLoadFailed(Object error) {
+    return '分享列表加载失败：$error';
+  }
+
+  @override
+  String get squadShareConfirm => '分享';
+
+  @override
+  String get squadShareDialogEmpty => '还没有加入任何小队。先创建或加入一个小队，再把错题分享给队友。';
+
+  @override
+  String get squadShareDialogGoSquads => '去我的小队';
+
+  @override
+  String get squadShareDialogTitle => '分享到小队';
+
+  @override
+  String get squadShareErrorBookEntry => '分享到小队';
+
+  @override
+  String squadShareFailed(Object error) {
+    return '分享失败：$error';
+  }
+
+  @override
+  String get squadShareSuccess => '已分享到小队';
+
+  @override
+  String get squadTitle => '冲刺小队';
+
+  @override
   String get omnibarListeningHint => '正在聆听...';
 
   @override
