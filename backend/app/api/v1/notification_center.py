@@ -15,6 +15,7 @@ from app.api.deps import get_current_user, get_db
 from app.core.cache import cache_service
 from app.models.user import User
 from app.schemas.unified_notification import (
+    AuroraConfirmActionRequest,
     InterventionNotificationActionRequest,
     NotificationAnalyticsResponse,
     NotificationHistoryFilters,
@@ -24,10 +25,14 @@ from app.schemas.unified_notification import (
     RecallNotificationFeedbackRequest,
     UnifiedNotificationResponse,
 )
+from app.services.aurora_calibration_card_service import AuroraCalibrationCardService
 from app.services.notification_analytics_service import NotificationAnalyticsService
 from app.services.notification_center_service import NotificationCenterService
 
 router = APIRouter(prefix="/notification-center", tags=["notification-center"])
+
+_SOURCE_TYPES = ("system", "intervention", "push", "aurora_confirm")
+_NOTIFICATION_TYPES = ("system", "intervention", "push", "aurora_confirm")
 
 
 # route-tier: authed
@@ -52,10 +57,10 @@ async def get_unified_notifications(
     service = NotificationCenterService(db)
 
     # Validate source_type
-    if source_type and source_type not in ['system', 'intervention', 'push']:
+    if source_type and source_type not in _SOURCE_TYPES:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid source_type: {source_type}. Must be 'system', 'intervention', or 'push'"
+            detail=f"Invalid source_type: {source_type}. Must be one of {', '.join(_SOURCE_TYPES)}"
         )
 
     notifications = await service.get_unified_notifications(
@@ -85,7 +90,7 @@ async def mark_notification_read(
     """
     service = NotificationCenterService(db)
 
-    if notification_type not in ['system', 'intervention', 'push']:
+    if notification_type not in _NOTIFICATION_TYPES:
         raise HTTPException(
             status_code=400,
             detail=f"Invalid notification_type: {notification_type}"
@@ -168,7 +173,7 @@ async def delete_notification(
     """
     service = NotificationCenterService(db)
 
-    if notification_type not in ['system', 'intervention', 'push']:
+    if notification_type not in _NOTIFICATION_TYPES:
         raise HTTPException(
             status_code=400,
             detail=f"Invalid notification_type: {notification_type}"
@@ -269,6 +274,40 @@ async def record_recall_notification_feedback(
             detail=f"Recall notification not found: {notification_id}",
         )
     return {"message": "Recall notification feedback recorded"}
+
+
+# route-tier: authed
+@router.post("/notifications/{notification_id}/aurora-confirm-action")
+async def transition_aurora_confirm_notification(
+    notification_id: str,
+    request: AuroraConfirmActionRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Apply a user response to an Aurora confirmation queue item (B4-INBOX).
+
+    The notification id IS the calibration card (claim) id.  Delegates to the
+    EXISTING calibration respond API — no new write path:
+    - confirm: claim confirmed
+    - incorrect: claim rejected (optionally with corrected_assumption)
+    - mute: dismissed for now
+    """
+    service = AuroraCalibrationCardService(db, cache_service.redis)
+    try:
+        result = await service.respond(
+            user_id=current_user.id,
+            card_id=notification_id,
+            response=request.action,
+            reason=request.reason,
+            corrected_assumption=request.corrected_assumption,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=f"Aurora confirm item not found: {notification_id}") from exc
+
+    return {"message": f"Aurora confirm action applied: {request.action}", "card": result.get("card")}
 
 
 # route-tier: internal

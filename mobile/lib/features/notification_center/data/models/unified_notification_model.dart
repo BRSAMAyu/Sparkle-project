@@ -49,6 +49,9 @@ class UnifiedNotification {
     if (sourceType == 'intervention') {
       return 'intervention';
     }
+    if (sourceType == 'aurora_confirm') {
+      return 'aurora_confirm';
+    }
     final normalizedType = (type ?? '').trim().toLowerCase();
     if (normalizedType == 'intervention' ||
         normalizedType == 'intervention_push') {
@@ -101,6 +104,10 @@ class UnifiedNotification {
 
   /// Get icon based on notification type
   String get icon {
+    if (sourceType == 'aurora_confirm') {
+      return '✨';
+    }
+
     if (sourceType == 'intervention') {
       switch (intentType) {
         case 'micro_restart':
@@ -179,6 +186,21 @@ class UnifiedNotification {
 
   bool get isIntervention => sourceType == 'intervention';
   bool get isPush => sourceType == 'push';
+  bool get isAuroraConfirm => sourceType == 'aurora_confirm';
+
+  /// Aurora confirmation queue item still awaiting a user response.
+  /// (Derived items leave the queue once responded, so unread == pending.)
+  bool get canRespondAuroraConfirm => isAuroraConfirm && !isRead;
+
+  String? get auroraConfidenceLabel =>
+      _stringValue(metadata['confidence_label']);
+
+  String? get auroraEvidenceSummary =>
+      _stringValue(metadata['evidence_summary']);
+
+  bool get auroraNeedsConfirmation =>
+      metadata['needs_confirmation'] as bool? ?? false;
+
   bool get isAccountabilityStruggleAlert =>
       type == 'accountability_struggle_alert' ||
       metadata['kind'] == 'accountability_struggle_alert';

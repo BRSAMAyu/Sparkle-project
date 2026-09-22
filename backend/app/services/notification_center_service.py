@@ -300,6 +300,12 @@ class NotificationCenterService:
                     )
                 )
 
+        # Aurora confirmation queue (derived from persisted calibration cards).
+        # B4-INBOX: cards are always unread until responded via the existing
+        # confirm API, so they survive an unread_only filter by design.
+        if not source_type or source_type == "aurora_confirm":
+            notifications.extend(await self._load_aurora_confirm_notifications(user_id))
+
         # Sort all by created_at descending
         notifications.sort(key=lambda x: x.created_at, reverse=True)
         notifications = self._dedupe_unified_notifications(notifications)
@@ -309,6 +315,25 @@ class NotificationCenterService:
             notifications = notifications[:limit]
 
         return notifications
+
+    async def _load_aurora_confirm_notifications(self, user_id: UUID) -> list[UnifiedNotificationResponse]:
+        """Project the persisted Aurora confirmation queue into the unified list.
+
+        B4-INBOX: pending calibration cards (self_model claims with
+        status=candidate / needs_confirmation) are the only Aurora
+        confirmation surface that survives a session.  Items are derived —
+        no Notification rows are created or mutated here; a card leaves the
+        queue when the user responds through the existing confirm API.
+        """
+        try:
+            from app.services.aurora_confirm_bridge_service import AuroraConfirmBridgeService
+
+            bridge = AuroraConfirmBridgeService(self.db)
+            cards = await bridge.pending_cards(user_id=user_id)
+            return [bridge.to_unified(card) for card in cards]
+        except Exception as exc:
+            logger.warning("Failed to load aurora confirm notifications: {}", exc)
+            return []
 
     async def mark_notification_read(self, user_id: UUID, notification_id: UUID, notification_type: str) -> bool:
         """
@@ -322,6 +347,12 @@ class NotificationCenterService:
         Returns:
             True if marked successfully, False otherwise
         """
+        if notification_type == "aurora_confirm":
+            # B4-INBOX: derived queue item — no backing Notification row.
+            # Read state lives in the queue itself: the card disappears when
+            # the user responds via aurora-confirm-action, so treat the
+            # client-side mark-read as a harmless no-op.
+            return True
         try:
             if notification_type == "system":
                 # Mark Notification as read
@@ -543,6 +574,11 @@ class NotificationCenterService:
         Returns:
             True if deleted successfully, False otherwise
         """
+        if notification_type == "aurora_confirm":
+            # B4-INBOX: derived queue item — nothing to delete.  Responding
+            # via aurora-confirm-action (confirm/incorrect/mute) is the only
+            # way to remove it from the queue.
+            return True
         try:
             if notification_type == "system":
                 stmt = select(Notification).where(

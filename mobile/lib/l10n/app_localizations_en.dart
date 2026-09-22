@@ -2800,6 +2800,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationSourceIntervention => 'Intervention';
 
   @override
+  String get notificationSourceAuroraConfirm => 'Aurora confirm';
+
+  @override
+  String get notificationAuroraConfirm => 'Confirm';
+
+  @override
+  String get notificationAuroraIncorrect => 'Not accurate';
+
+  @override
+  String get notificationAuroraNotNow => 'Not now';
+
+  @override
+  String get notificationAuroraConfirmedToast =>
+      'Aurora recorded your confirmation';
+
+  @override
+  String get notificationAuroraRespondedToast =>
+      'Aurora recorded your feedback';
+
+  @override
   String get notificationMarkedAllRead => 'Marked all notifications as read';
 
   @override

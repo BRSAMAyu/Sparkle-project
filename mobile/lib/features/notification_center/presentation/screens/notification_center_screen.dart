@@ -236,6 +236,15 @@ class _NotificationCenterScreenState
                   notification.canSendAccountabilityEncouragement
                       ? () => _sendAccountabilityEncouragement(notification)
                       : null,
+              onAuroraConfirm: notification.canRespondAuroraConfirm
+                  ? () => _respondAurora(notification, 'confirm')
+                  : null,
+              onAuroraIncorrect: notification.canRespondAuroraConfirm
+                  ? () => _respondAurora(notification, 'incorrect')
+                  : null,
+              onAuroraMute: notification.canRespondAuroraConfirm
+                  ? () => _respondAurora(notification, 'mute')
+                  : null,
             ),
           );
         },
@@ -313,6 +322,9 @@ class _NotificationCenterScreenState
             filtered.where((n) => n.sourceType == 'intervention').toList();
       case SourceTypeFilter.push:
         filtered = filtered.where((n) => n.sourceType == 'push').toList();
+      case SourceTypeFilter.auroraConfirm:
+        filtered =
+            filtered.where((n) => n.sourceType == 'aurora_confirm').toList();
       case SourceTypeFilter.all:
         break;
     }
@@ -341,6 +353,8 @@ class _NotificationCenterScreenState
         return context.l10n.notificationSourceIntervention;
       case SourceTypeFilter.push:
         return context.l10n.notificationPushReminder;
+      case SourceTypeFilter.auroraConfirm:
+        return context.l10n.notificationSourceAuroraConfirm;
     }
   }
 
@@ -476,6 +490,27 @@ class _NotificationCenterScreenState
     final message = result['message'] as String? ??
         context.l10n.notificationEncouragementSentFallback;
     AppFeedback.success(context, message);
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.success),
+    );
+  }
+
+  Future<void> _respondAurora(
+    UnifiedNotification notification,
+    String action,
+  ) async {
+    await ref
+        .read(notificationCenterProvider.notifier)
+        .respondToAuroraCard(notification, action);
+    if (!mounted) {
+      return;
+    }
+    AppFeedback.success(
+      context,
+      action == 'confirm'
+          ? context.l10n.notificationAuroraConfirmedToast
+          : context.l10n.notificationAuroraRespondedToast,
+    );
     unawaited(
       SensoryFeedbackService.emit(SensoryFeedbackEvent.success),
     );

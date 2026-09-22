@@ -87,6 +87,27 @@ class RecallNotificationFeedbackRequest(BaseModel):
     action_payload: dict[str, Any] = Field(default_factory=dict)
 
 
+class AuroraConfirmActionRequest(BaseModel):
+    """User response to an Aurora confirmation queue item (B4-INBOX).
+
+    Action values mirror the existing calibration card respond API
+    (``POST /aurora/calibration-cards/{card_id}/respond``) verbatim.
+    """
+
+    action: str = Field(
+        ...,
+        pattern="^(confirm|incorrect|mute)$",
+        description="Aurora confirmation response",
+    )
+    reason: str | None = Field(None, max_length=500, description="Optional free-text reason")
+    corrected_assumption: str | None = Field(
+        None,
+        max_length=2000,
+        description="Corrected statement when action=incorrect",
+    )
+    action_payload: dict[str, Any] = Field(default_factory=dict)
+
+
 class NotificationPreferencesUpdate(BaseModel):
     """Update notification preferences"""
 

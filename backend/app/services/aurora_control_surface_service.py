@@ -193,10 +193,23 @@ class AuroraControlSurfaceService:
             user_model_meta=user_model_meta,
         )
 
+        # B4-INBOX: unprocessed Aurora confirmation count for the chat inbox
+        # badge.  No-write lightweight read; never breaks the snapshot.
+        pending_confirm_count = 0
+        try:
+            from app.services.aurora_confirm_bridge_service import AuroraConfirmBridgeService
+
+            pending_confirm_count = await AuroraConfirmBridgeService(
+                self.db, self.redis
+            ).pending_count(user_id=user_id)
+        except Exception:
+            pending_confirm_count = 0
+
         return {
             "aurora_active": aurora_active,
             "runtime_enabled": bool(control_surface.runtime_enabled),
             "overall_status": band_status,
+            "pending_confirm_count": pending_confirm_count,
             "legacy_status": (
                 "recalibrating" if recalibrating else ("ready" if ready_count == len(facets) else "partial")
             ),

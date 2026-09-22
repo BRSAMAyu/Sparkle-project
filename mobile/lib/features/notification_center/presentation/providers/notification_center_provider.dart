@@ -257,6 +257,27 @@ class NotificationCenter extends _$NotificationCenter {
     }
   }
 
+  /// Apply a user response to an Aurora confirmation queue item (B4-INBOX).
+  ///
+  /// [action] mirrors the existing aurora calibration respond API:
+  /// 'confirm' | 'incorrect' | 'mute'.  Responded cards leave the pending
+  /// queue engine-side, so the local item is removed instead of flipped
+  /// to read.
+  Future<void> respondToAuroraCard(
+    UnifiedNotification notification,
+    String action,
+  ) async {
+    if (!notification.isAuroraConfirm) {
+      return;
+    }
+    try {
+      await _repository.sendAuroraConfirmAction(notification.id, action);
+      removeNotification(notification.id);
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+    }
+  }
+
   /// Mark all notifications as read
   Future<void> markAllAsRead() async {
     try {
@@ -536,4 +557,5 @@ enum SourceTypeFilter {
   system,
   intervention,
   push,
+  auroraConfirm,
 }

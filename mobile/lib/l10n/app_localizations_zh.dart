@@ -2665,6 +2665,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationSourceIntervention => '干预通知';
 
   @override
+  String get notificationSourceAuroraConfirm => 'Aurora 确认';
+
+  @override
+  String get notificationAuroraConfirm => '确认';
+
+  @override
+  String get notificationAuroraIncorrect => '不准确';
+
+  @override
+  String get notificationAuroraNotNow => '暂不确认';
+
+  @override
+  String get notificationAuroraConfirmedToast => 'Aurora 已记录你的确认';
+
+  @override
+  String get notificationAuroraRespondedToast => 'Aurora 已记录你的反馈';
+
+  @override
   String get notificationMarkedAllRead => '已标记所有通知为已读';
 
   @override

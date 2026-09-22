@@ -227,6 +227,7 @@ class AuroraControlSurfaceSnapshot {
     this.memoryReferences = const [],
     this.nextStepSuggestion = '',
     this.selfEvaluation = const AuroraSelfEvaluation.empty(),
+    this.pendingConfirmCount = 0,
   });
 
   factory AuroraControlSurfaceSnapshot.fromJson(Map<String, dynamic> json) {
@@ -284,6 +285,8 @@ class AuroraControlSurfaceSnapshot {
           .toList(),
       nextStepSuggestion: json['next_step_suggestion'] as String? ?? '',
       selfEvaluation: AuroraSelfEvaluation.fromJson(json['self_evaluation']),
+      pendingConfirmCount:
+          (json['pending_confirm_count'] as num?)?.toInt() ?? 0,
     );
   }
 
@@ -313,6 +316,10 @@ class AuroraControlSurfaceSnapshot {
   final String nextStepSuggestion;
   final AuroraSelfEvaluation selfEvaluation;
 
+  /// Unprocessed Aurora confirmation count (B4-INBOX).  Derived from the
+  /// persisted calibration-card queue; 0 when the engine omits the field.
+  final int pendingConfirmCount;
+
   bool get isRecalibrating => overallStatus == 'risk_found';
   bool get isReady => overallStatus == 'calibrated';
   bool get isCoolingDown => overallStatus == 'cooling_down';
@@ -326,6 +333,7 @@ class AuroraControlSurfaceSnapshot {
   AuroraControlSurfaceSnapshot copyWith({
     AuroraCorrectionEffect? lastCorrectionEffect,
     DateTime? fetchedAt,
+    int? pendingConfirmCount,
   }) =>
       AuroraControlSurfaceSnapshot(
         auroraActive: auroraActive,
@@ -352,6 +360,7 @@ class AuroraControlSurfaceSnapshot {
         memoryReferences: memoryReferences,
         nextStepSuggestion: nextStepSuggestion,
         selfEvaluation: selfEvaluation,
+        pendingConfirmCount: pendingConfirmCount ?? this.pendingConfirmCount,
       );
 }
 

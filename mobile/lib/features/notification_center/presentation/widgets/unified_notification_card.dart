@@ -20,6 +20,9 @@ class UnifiedNotificationCard extends StatelessWidget {
     this.onPushDisableCategory,
     this.onRecallInaccurate,
     this.onAccountabilityEncourage,
+    this.onAuroraConfirm,
+    this.onAuroraIncorrect,
+    this.onAuroraMute,
     super.key,
   });
 
@@ -33,6 +36,9 @@ class UnifiedNotificationCard extends StatelessWidget {
   final VoidCallback? onPushDisableCategory;
   final VoidCallback? onRecallInaccurate;
   final VoidCallback? onAccountabilityEncourage;
+  final VoidCallback? onAuroraConfirm;
+  final VoidCallback? onAuroraIncorrect;
+  final VoidCallback? onAuroraMute;
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +49,9 @@ class UnifiedNotificationCard extends StatelessWidget {
     final pushDisableCategoryAction = onPushDisableCategory;
     final recallInaccurateAction = onRecallInaccurate;
     final accountabilityEncourageAction = onAccountabilityEncourage;
+    final auroraConfirmAction = onAuroraConfirm;
+    final auroraIncorrectAction = onAuroraIncorrect;
+    final auroraMuteAction = onAuroraMute;
 
     return Dismissible(
       key: Key(notification.id),
@@ -215,6 +224,51 @@ class UnifiedNotificationCard extends StatelessWidget {
                         ],
                       ),
                     ],
+                    if (notification.isAuroraConfirm) ...[
+                      const SizedBox(height: DS.sm),
+                      if (_hasText(notification.auroraEvidenceSummary))
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: DS.sm),
+                          child: Text(
+                            notification.auroraEvidenceSummary!,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(color: DS.textSecondary),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      Wrap(
+                        spacing: DS.spacing8,
+                        runSpacing: DS.spacing8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          if (auroraConfirmAction != null)
+                            SparkleButton(
+                              onPressed: auroraConfirmAction,
+                              label: context.l10n.notificationAuroraConfirm,
+                            ),
+                          if (auroraIncorrectAction != null)
+                            SparkleButton.outline(
+                              onPressed: auroraIncorrectAction,
+                              label: context.l10n.notificationAuroraIncorrect,
+                            ),
+                          if (auroraMuteAction != null)
+                            SparkleButton.ghost(
+                              onPressed: auroraMuteAction,
+                              label: context.l10n.notificationAuroraNotNow,
+                            ),
+                          if (_hasText(notification.auroraConfidenceLabel))
+                            Text(
+                              notification.auroraConfidenceLabel!,
+                              style: DS.labelSmall.copyWith(
+                                color: DS.textTertiary,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
                     if (notification.isPush) ...[
                       const SizedBox(height: DS.sm),
                       Wrap(
@@ -287,6 +341,9 @@ class UnifiedNotificationCard extends StatelessWidget {
       case 'push':
         badgeColor = DS.success;
         badgeLabel = context.l10n.notificationPushReminder;
+      case 'aurora_confirm':
+        badgeColor = Theme.of(context).colorScheme.primary;
+        badgeLabel = context.l10n.notificationSourceAuroraConfirm;
       default:
     }
 

@@ -5042,6 +5042,42 @@ abstract class AppLocalizations {
   /// **'干预通知'**
   String get notificationSourceIntervention;
 
+  /// No description provided for @notificationSourceAuroraConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 确认'**
+  String get notificationSourceAuroraConfirm;
+
+  /// No description provided for @notificationAuroraConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认'**
+  String get notificationAuroraConfirm;
+
+  /// No description provided for @notificationAuroraIncorrect.
+  ///
+  /// In zh, this message translates to:
+  /// **'不准确'**
+  String get notificationAuroraIncorrect;
+
+  /// No description provided for @notificationAuroraNotNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂不确认'**
+  String get notificationAuroraNotNow;
+
+  /// No description provided for @notificationAuroraConfirmedToast.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 已记录你的确认'**
+  String get notificationAuroraConfirmedToast;
+
+  /// No description provided for @notificationAuroraRespondedToast.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 已记录你的反馈'**
+  String get notificationAuroraRespondedToast;
+
   /// No description provided for @notificationMarkedAllRead.
   ///
   /// In zh, this message translates to:

@@ -224,6 +224,25 @@ async def get_calibration_cards(
 
 
 # route-tier: authed
+@router.get("/calibration-cards/pending-count")
+async def get_calibration_cards_pending_count(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Unprocessed Aurora confirmation count for the inbox badge (B4-INBOX).
+
+    No-write lightweight read; uncapped (badge shows the true backlog while
+    the card sheet surfaces at most MAX_VISIBLE_CARDS entries).
+    """
+    from app.services.aurora_confirm_bridge_service import AuroraConfirmBridgeService
+
+    pending_count = await AuroraConfirmBridgeService(db, cache_service.redis).pending_count(
+        user_id=current_user.id
+    )
+    return {"pending_count": pending_count}
+
+
+# route-tier: authed
 @router.post("/calibration-cards/{card_id}/respond")
 async def respond_calibration_card(
     payload: CalibrationCardRespondRequest,

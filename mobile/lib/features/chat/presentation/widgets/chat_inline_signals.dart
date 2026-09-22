@@ -154,11 +154,26 @@ class _ChatInboxEntryIconState extends ConsumerState<ChatInboxEntryIcon> {
   Widget build(BuildContext context) {
     final snapshot = ref.watch(auroraStatusProvider);
     final actionable = auroraSnapshotActionable(snapshot);
+    // B4-INBOX: badge carries the real unprocessed confirmation count when
+    // the engine provides it; otherwise falls back to the plain dot, so the
+    // B3-CHAT containment semantics (actionable -> visible) are unchanged.
+    final pendingCount = snapshot?.pendingConfirmCount ?? 0;
+    final badgeLabel = pendingCount > 0
+        ? Text(
+            pendingCount > 99 ? '99+' : '$pendingCount',
+            style: DS.labelSmall.copyWith(
+              color: DS.onBrandPrimary,
+              fontWeight: DS.fontWeightBold,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          )
+        : null;
     return SparkleIconButton(
       icon: Badge(
         isLabelVisible: actionable,
         backgroundColor: DS.info,
         smallSize: 8,
+        label: badgeLabel,
         child: Icon(
           Icons.inbox_rounded,
           color: actionable ? DS.info : DS.textSecondary,

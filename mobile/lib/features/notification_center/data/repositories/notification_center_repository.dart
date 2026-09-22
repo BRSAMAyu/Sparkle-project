@@ -235,6 +235,39 @@ class NotificationCenterRepository {
     }
   }
 
+  /// Apply a user response to an Aurora confirmation queue item (B4-INBOX).
+  ///
+  /// Delegates to the EXISTING aurora calibration respond API — the same
+  /// endpoint [AuroraCalibrationRepository.respondToCalibrationCard] uses;
+  /// no new write path is introduced.  [action] mirrors the API values:
+  /// 'confirm' | 'incorrect' | 'mute'.
+  Future<void> sendAuroraConfirmAction(
+    String cardId,
+    String action, {
+    String? reason,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      DemoDataService().respondToDemoAuroraCalibrationCard(
+        cardId: cardId,
+        response: action,
+      );
+      return;
+    }
+
+    try {
+      await _client.post<Map<String, dynamic>>(
+        ApiEndpoints.auroraCalibrationCardRespond(cardId),
+        data: {
+          'response': action,
+          if (reason != null && reason.trim().isNotEmpty)
+            'reason': reason.trim(),
+        },
+      );
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   Future<Map<String, dynamic>> sendAccountabilityEncouragement(
     String notificationId, {
     String? presetId,
