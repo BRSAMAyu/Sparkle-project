@@ -22063,6 +22063,42 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get chatRunPhaseRetrieveLabel => '检索资料';
+
+  @override
+  String get chatRunPhaseThinkLabel => '思考中';
+
+  @override
+  String get chatRunPhaseGenerateLabel => '生成回答';
+
+  @override
+  String get chatRunPhaseDurationHint => '通常几秒到十几秒';
+
+  @override
+  String get chatRunPhaseCancelButton => '取消';
+
+  @override
+  String chatRunPhaseLiveLabel(Object stage) {
+    return '正在$stage，可取消';
+  }
+
+  @override
+  String chatMemoryInlineChip(Object count) {
+    return '已记住 $count 条';
+  }
+
+  @override
+  String get chatMemoryInlineSheetTitle => '本会话记忆';
+
+  @override
+  String chatAuroraConfirmChip(Object progress) {
+    return '待确认 $progress';
+  }
+
+  @override
+  String get chatOpenInboxButton => '打开通知收件箱';
+
+  @override
   String get chatPrivateAiAssistant => 'AI助手';
 
   @override

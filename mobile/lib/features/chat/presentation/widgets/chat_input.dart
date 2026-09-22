@@ -41,6 +41,9 @@ class ChatInput extends ConsumerStatefulWidget {
     this.onOpenStudyMaterials,
     this.onSetDocumentContextMode,
     this.onFreeformCorrection,
+    this.controller,
+    this.focusNode,
+    this.showAccessoryTray = true,
   });
   final bool enabled;
   final bool isGenerating;
@@ -60,13 +63,31 @@ class ChatInput extends ConsumerStatefulWidget {
   final ValueChanged<DocumentContextMode>? onSetDocumentContextMode;
   final FutureOr<void> Function(String text)? onFreeformCorrection;
 
+  /// C-11（建议话术「填入式」）：外部草稿控制器。传入后 chip 只填入
+  /// 草稿+聚焦输入框，不直接发送；由外部 owner 负责生命周期。
+  final TextEditingController? controller;
+
+  /// 与外部草稿控制器配套的焦点节点（填入后高亮输入区）。
+  final FocusNode? focusNode;
+
+  /// S8 面积重划：学习资料/自由纠正等 accessory pills 托盘默认收进
+  /// 模式行展开态（由外层按 `_showContextControls` 传入），不再常驻
+  /// 输入条上方（审计 S8：三 chip 建议卡层层叠压）。
+  final bool showAccessoryTray;
+
   @override
   ConsumerState<ChatInput> createState() => _ChatInputState();
 }
 
 class _ChatInputState extends ConsumerState<ChatInput> {
-  final TextEditingController _controller = TextEditingController();
-  final FocusNode _focusNode = FocusNode();
+  // C-11 填入式：外部 controller/focusNode 存在时优先使用（生命周期归
+  // 外部 owner）；否则走内部实例。_handleTextChange 等一律经 _controller
+  // getter 访问，监听器在 initState 统一挂到生效控制器上。
+  TextEditingController? _ownController;
+  FocusNode? _ownFocusNode;
+  TextEditingController get _controller =>
+      widget.controller ?? _ownController!;
+  FocusNode get _focusNode => widget.focusNode ?? _ownFocusNode!;
   final ValueNotifier<bool> _textNotEmpty = ValueNotifier<bool>(false);
   bool _isSending = false;
   bool _isAttachmentBursting = false;
@@ -158,6 +179,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   @override
   void initState() {
     super.initState();
+    _ownController ??= TextEditingController();
+    _ownFocusNode ??= FocusNode();
     _controller.addListener(_handleTextChange);
     _focusNode.addListener(() {
       if (mounted) setState(() {});
@@ -175,6 +198,10 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   @override
   void didUpdateWidget(ChatInput oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.controller != oldWidget.controller) {
+      oldWidget.controller?.removeListener(_handleTextChange);
+      _controller.addListener(_handleTextChange);
+    }
     if (widget.quotedMessage != null && oldWidget.quotedMessage == null) {
       _focusNode.requestFocus();
     }
@@ -183,10 +210,10 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   @override
   void dispose() {
     _echoGuardTimer?.cancel();
-    _controller
-      ..removeListener(_handleTextChange)
+    _ownController
+      ?..removeListener(_handleTextChange)
       ..dispose();
-    _focusNode.dispose();
+    _ownFocusNode?.dispose();
     _textNotEmpty.dispose();
     super.dispose();
   }
@@ -339,8 +366,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (widget.quotedMessage != null) _buildQuotePreview(isDark),
-          if (widget.onToggleStudyMaterials != null ||
-              widget.onFreeformCorrection != null)
+          if (widget.showAccessoryTray &&
+              (widget.onToggleStudyMaterials != null ||
+                  widget.onFreeformCorrection != null))
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 DS.spacing8,

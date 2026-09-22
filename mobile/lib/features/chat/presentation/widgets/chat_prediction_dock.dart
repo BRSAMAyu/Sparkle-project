@@ -22,6 +22,19 @@ class ChatPredictionDock extends ConsumerStatefulWidget {
   final ValueChanged<String> onPromptSelected;
   final bool compact;
 
+  /// C-11：同屏 chip 合计 ≤3——话术（填入式）优先占 2 席，预测占剩余。
+  /// 纯函数便于静态断言（返回 (预测席位数, 话术席位数)）。
+  static (int, int) resolveChipBudgets({
+    required int predictionCount,
+    required int starterCount,
+  }) {
+    const maxVisibleChips = 3;
+    final starters = starterCount.clamp(0, 2);
+    final predictions =
+        predictionCount.clamp(0, maxVisibleChips - starters);
+    return (predictions, starters);
+  }
+
   @override
   ConsumerState<ChatPredictionDock> createState() => _ChatPredictionDockState();
 }
@@ -29,7 +42,7 @@ class ChatPredictionDock extends ConsumerStatefulWidget {
 class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
   static const _expandedPrefKey = 'chat.prediction_dock.expanded';
 
-  bool _isExpanded = true;
+  bool _isExpanded = false;
   int _followupRefreshAttempts = 0;
   Timer? _followupRefreshTimer;
 
@@ -41,7 +54,7 @@ class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
 
   Future<void> _loadExpandedPreference() async {
     final prefs = await SharedPreferences.getInstance();
-    final expanded = prefs.getBool(_expandedPrefKey) ?? true;
+    final expanded = prefs.getBool(_expandedPrefKey) ?? false;
     if (!mounted) return;
     setState(() {
       _isExpanded = expanded;
@@ -77,11 +90,16 @@ class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
     final predictions = isTyping
         ? predictionState.typingPredictions
         : predictionState.idlePredictions;
-    final visiblePredictions = predictions.take(isTyping ? 3 : 4).toList();
     final promptStarters = widget.promptStarters
         .where((prompt) => prompt.trim().isNotEmpty)
-        .take(isTyping ? 2 : 2)
         .toList(growable: false);
+    final (predictionBudget, starterBudget) =
+        ChatPredictionDock.resolveChipBudgets(
+      predictionCount: predictions.length,
+      starterCount: promptStarters.length,
+    );
+    final visiblePredictions = predictions.take(predictionBudget).toList();
+    final visibleStarters = promptStarters.take(starterBudget).toList();
     final sourceBadge = _sourceBadge(insight, isTyping: isTyping);
     final compactHeadline = _buildCompactHeadline(
       insight: insight,
@@ -90,7 +108,7 @@ class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
     );
     final hasContent = insight != null ||
         visiblePredictions.isNotEmpty ||
-        promptStarters.isNotEmpty ||
+        visibleStarters.isNotEmpty ||
         dashboardState.isLoading;
 
     _ensureFollowupRefresh(
@@ -189,7 +207,7 @@ class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
               ),
             ],
           ),
-          if (visiblePredictions.isNotEmpty || promptStarters.isNotEmpty) ...[
+          if (visiblePredictions.isNotEmpty || visibleStarters.isNotEmpty) ...[
             const SizedBox(height: DS.spacing8),
             SparkleStaggerWrap(
               spacing: DS.spacing6,
@@ -204,7 +222,7 @@ class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
                     ),
                   )
                   .followedBy(
-                    promptStarters.map(
+                    visibleStarters.map(
                       (prompt) => _DockActionChip(
                         label: prompt,
                         icon: Icons.chat_bubble_outline_rounded,
@@ -218,7 +236,7 @@ class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
           ],
           if (dashboardState.isLoading &&
               visiblePredictions.isEmpty &&
-              promptStarters.isEmpty) ...[
+              visibleStarters.isEmpty) ...[
             const SizedBox(height: DS.spacing8),
             Text(
               context.l10n.chatPredictionUpdating,

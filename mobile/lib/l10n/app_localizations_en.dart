@@ -22999,8 +22999,44 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String chatPredictionYouCanDoFirst(Object action) {
-    return 'You can start with: $action';
+    return '你现在可以先做：$action';
   }
+
+  @override
+  String get chatRunPhaseRetrieveLabel => 'Searching materials';
+
+  @override
+  String get chatRunPhaseThinkLabel => 'Thinking';
+
+  @override
+  String get chatRunPhaseGenerateLabel => 'Writing answer';
+
+  @override
+  String get chatRunPhaseDurationHint => 'Usually a few to a dozen seconds';
+
+  @override
+  String get chatRunPhaseCancelButton => 'Cancel';
+
+  @override
+  String chatRunPhaseLiveLabel(Object stage) {
+    return '$stage, tap to cancel';
+  }
+
+  @override
+  String chatMemoryInlineChip(Object count) {
+    return '$count remembered';
+  }
+
+  @override
+  String get chatMemoryInlineSheetTitle => 'Session memory';
+
+  @override
+  String chatAuroraConfirmChip(Object progress) {
+    return 'Confirm $progress';
+  }
+
+  @override
+  String get chatOpenInboxButton => 'Open notification inbox';
 
   @override
   String get chatPrivateAiAssistant => 'AI Assistant';

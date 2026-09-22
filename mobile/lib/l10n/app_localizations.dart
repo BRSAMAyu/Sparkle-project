@@ -40213,6 +40213,66 @@ abstract class AppLocalizations {
   /// **'你现在可以先做：{action}'**
   String chatPredictionYouCanDoFirst(Object action);
 
+  /// No description provided for @chatRunPhaseRetrieveLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'检索资料'**
+  String get chatRunPhaseRetrieveLabel;
+
+  /// No description provided for @chatRunPhaseThinkLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'思考中'**
+  String get chatRunPhaseThinkLabel;
+
+  /// No description provided for @chatRunPhaseGenerateLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成回答'**
+  String get chatRunPhaseGenerateLabel;
+
+  /// No description provided for @chatRunPhaseDurationHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'通常几秒到十几秒'**
+  String get chatRunPhaseDurationHint;
+
+  /// No description provided for @chatRunPhaseCancelButton.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消'**
+  String get chatRunPhaseCancelButton;
+
+  /// No description provided for @chatRunPhaseLiveLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在{stage}，可取消'**
+  String chatRunPhaseLiveLabel(Object stage);
+
+  /// No description provided for @chatMemoryInlineChip.
+  ///
+  /// In zh, this message translates to:
+  /// **'已记住 {count} 条'**
+  String chatMemoryInlineChip(Object count);
+
+  /// No description provided for @chatMemoryInlineSheetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'本会话记忆'**
+  String get chatMemoryInlineSheetTitle;
+
+  /// No description provided for @chatAuroraConfirmChip.
+  ///
+  /// In zh, this message translates to:
+  /// **'待确认 {progress}'**
+  String chatAuroraConfirmChip(Object progress);
+
+  /// No description provided for @chatOpenInboxButton.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开通知收件箱'**
+  String get chatOpenInboxButton;
+
   /// No description provided for @chatPrivateAiAssistant.
   ///
   /// In zh, this message translates to:

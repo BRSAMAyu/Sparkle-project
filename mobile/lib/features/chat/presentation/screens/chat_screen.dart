@@ -38,7 +38,6 @@ import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
 import 'package:sparkle/features/chat/presentation/providers/aurora_status_provider.dart';
-import 'package:sparkle/features/chat/presentation/widgets/aurora_calibration_panel.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_workflow_panel.dart';
 import 'package:sparkle/features/chat/presentation/widgets/ai_reasoning_mode_pill.dart';
@@ -48,6 +47,8 @@ import 'package:sparkle/features/chat/presentation/widgets/chat_design_language_
 import 'package:sparkle/features/chat/presentation/widgets/comeback_banner.dart';
 import 'package:sparkle/features/chat/presentation/widgets/contextual_correction_bar.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_inline_signals.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_run_phase_indicator.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_mode_selector_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_mode_transition_banner.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_prediction_dock.dart';
@@ -65,11 +66,9 @@ import 'package:sparkle/features/chat/presentation/widgets/stale_recovery_card.d
 import 'package:sparkle/features/chat/presentation/widgets/strategy_intervention_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_selector_pill.dart';
 import 'package:sparkle/features/aurora/data/services/aurora_telemetry_service.dart';
-import 'package:sparkle/features/chat/presentation/widgets/status_awareness_bar.dart';
 import 'package:sparkle/features/chat/presentation/widgets/study_materials_sheet.dart';
 import 'package:sparkle/features/chat/presentation/widgets/transparency_floating_capsule.dart';
 import 'package:sparkle/features/chat/presentation/widgets/understanding_drawer.dart';
-import 'package:sparkle/features/chat/presentation/widgets/working_memory_drawer.dart';
 import 'package:sparkle/features/documents/data/models/document_library_models.dart';
 import 'package:sparkle/features/documents/presentation/providers/document_library_provider.dart';
 import 'package:sparkle/features/file/file.dart';
@@ -134,6 +133,8 @@ String _chatFailureActionLabel(BuildContext context, String? code) {
 
 enum _ChatShortcutAction {
   newSession,
+  openClawHub,
+  causalTimeline,
 }
 
 class ChatScreen extends ConsumerStatefulWidget {
@@ -180,6 +181,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   static const double _chatBottomSurfaceHorizontalInset = DS.spacing16;
 
   final ScrollController _scrollController = ScrollController();
+  // C-11 填入式草稿：chat 屏持有输入草稿控制器与焦点（传给 ChatInput），
+  // 建议话术 chip 点按只填入+聚焦，不直接发送。
+  final TextEditingController _draftController = TextEditingController();
+  final FocusNode _draftFocusNode = FocusNode();
   bool _showContextControls = false;
   String? _dispatchedInitialPrompt;
   String? _dispatchedInitialUserMessage;
@@ -1062,9 +1067,42 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _scrollController
       ..removeListener(_handleScroll)
       ..dispose();
+    _draftController.dispose();
+    _draftFocusNode.dispose();
     unawaited(BgmService.setReadingActivity(false));
     unawaited(BgmService.setThinkingActivity(false));
     super.dispose();
+  }
+
+  /// C-11 填入式：建议话术 chip 只写入草稿并聚焦输入框，
+  /// 发送键随文本非空自然高亮，由用户确认后才发送。
+  void _fillDraftFromPrompt(String prompt) {
+    _draftController.text = prompt;
+    _draftController.selection = TextSelection.collapsed(
+      offset: prompt.length,
+    );
+    if (_draftFocusNode.canRequestFocus) {
+      _draftFocusNode.requestFocus();
+    }
+  }
+
+  /// S8：底部信号行是否需要渲染（两个信号都无内容时零面积）。
+  bool _hasInlineSignals(ChatState chatState) {
+    final memoryCount = ref.watch(
+      chatWorkingMemoryCountProvider(chatState.conversationId),
+    ).valueOrNull;
+    final auroraActionable =
+        auroraSnapshotActionable(ref.watch(auroraStatusProvider));
+    return (memoryCount != null && memoryCount > 0) || auroraActionable;
+  }
+
+  /// S8：双核路由模式的单行人话标签（随阶段胶囊一行透明）。
+  String _dualCoreModeLabel(String mode) {
+    return switch (mode) {
+      'execution' => context.l10n.chatExecutionMode,
+      'cognitive' => context.l10n.chatCognitiveMode,
+      _ => context.l10n.chatBalancedMode,
+    };
   }
 
   void _handleScroll() {
@@ -1262,19 +1300,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ],
         ),
         actions: [
-          SparkleIconButton(
-            icon: _OpenClawAppBarIcon(
-              highlighted: showOpenClawAttention,
-              queueCount: openClawConnection.queuedRequestCount,
-            ),
-            onPressed: () =>
-                context.push('${HomeRoutes.openClawHub}?section=delegate'),
-            semanticLabel: showOpenClawAttention
-                ? context.l10n.chatOpenclawHubQueued(
-                    openClawConnection.queuedRequestCount)
-                : context.l10n.chatOpenclawHub,
-            variant: ButtonVariant.ghost,
-          ),
+          // D8-5：收件箱唯一入口（Aurora 确认/建议/预警按需取用）。
+          // 承接原常驻 StatusAwarenessBar 的轮询与感官联动生命周期。
+          ChatInboxEntryIcon(conversationId: chatState.conversationId),
           SparkleIconButton(
             icon: Icon(Icons.tune_rounded, color: DS.textSecondary),
             onPressed: () => _openChatSettings(context),
@@ -1287,24 +1315,26 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             semanticLabel: l10n.chatHistoryTitle,
             variant: ButtonVariant.ghost,
           ),
-          SparkleIconButton(
-            icon: Badge(
-              isLabelVisible: chatState.causalTraceCount > 0,
-              label: Text('${chatState.causalTraceCount}'),
-              child: Icon(Icons.timeline, color: DS.textSecondary),
-            ),
-            onPressed: () => _showCausalTimelineSheet(context),
-            semanticLabel: context.l10n.chatDecisionTimeline,
-            variant: ButtonVariant.ghost,
-          ),
+          // S15 顶栏密度收敛：openclaw 与因果时间线收进「更多」菜单
+          // （为收件箱入口腾位，同时缓解顶栏 8 元素密集无分组）。
           PopupMenuButton<_ChatShortcutAction>(
             tooltip: context.l10n.chatMoreActions,
             color: DS.surfacePrimary,
             surfaceTintColor: DS.surfacePrimary,
-            icon: Icon(Icons.more_horiz_rounded, color: DS.textSecondary),
+            icon: Badge(
+              isLabelVisible: showOpenClawAttention ||
+                  chatState.causalTraceCount > 0,
+              child: Icon(Icons.more_horiz_rounded, color: DS.textSecondary),
+            ),
             onSelected: (value) {
-              if (value == _ChatShortcutAction.newSession) {
-                ref.read(chatProvider.notifier).startNewSession();
+              switch (value) {
+                case _ChatShortcutAction.newSession:
+                  ref.read(chatProvider.notifier).startNewSession();
+                case _ChatShortcutAction.openClawHub:
+                  context
+                      .push('${HomeRoutes.openClawHub}?section=delegate');
+                case _ChatShortcutAction.causalTimeline:
+                  _showCausalTimelineSheet(context);
               }
             },
             itemBuilder: (context) => [
@@ -1315,6 +1345,29 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     Icon(Icons.add_comment_outlined, size: 18),
                     SizedBox(width: DS.spacing12),
                     Text(context.l10n.chatNewConversation),
+                  ],
+                ),
+              ),
+              PopupMenuItem<_ChatShortcutAction>(
+                value: _ChatShortcutAction.openClawHub,
+                child: Row(
+                  children: [
+                    Icon(Icons.hub_outlined, size: 18),
+                    SizedBox(width: DS.spacing12),
+                    Text(showOpenClawAttention
+                        ? context.l10n.chatOpenclawHubQueued(
+                            openClawConnection.queuedRequestCount)
+                        : context.l10n.chatOpenclawHub),
+                  ],
+                ),
+              ),
+              PopupMenuItem<_ChatShortcutAction>(
+                value: _ChatShortcutAction.causalTimeline,
+                child: Row(
+                  children: [
+                    Icon(Icons.timeline, size: 18),
+                    SizedBox(width: DS.spacing12),
+                    Text(context.l10n.chatDecisionTimeline),
                   ],
                 ),
               ),
@@ -1373,8 +1426,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 child: LayoutBuilder(builder: (context, bodyConstraints) {
                   return Column(
                   children: [
-                    // Header panels — scrollable, capped at 20% of the body
+                    // S8 面积重划：常驻系统面板全部撤出（记忆→消息旁内联
+                    // 信号、确认→收件箱入口、模式条→输入条关联区折叠行）。
+                    // 此处仅保留事件驱动的横幅（出现即有实际事件），
+                    // 无事件时零面积。
                     ConstrainedBox(
+                      key: const Key('chatHeaderPanels'),
                       constraints: BoxConstraints(
                         maxHeight: bodyConstraints.maxHeight * 0.20,
                       ),
@@ -1393,20 +1450,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 size: 2,
                                 liveRegion: false,
                               ),
-                            ChatWorkingMemoryPanel(
-                              sessionId: chatState.conversationId,
-                              onViewSource: _showWorkingMemorySource,
-                            ),
-                            StatusAwarenessBar(
-                              conversationId: chatState.conversationId,
-                              hasActiveRun: chatState.hasActiveRun,
-                            ),
-                            if (!chatPureMode) const ChatUnderstandingDrawerButton(),
                             AuroraCoreSessionResumeBanner(
                               conversationId: chatState.conversationId,
                             ),
-                            if (chatState.dualCoreMode != null)
-                              _DualCoreModeChip(mode: chatState.dualCoreMode!),
                             if (_reviewNodeLabel != null)
                               _ReviewNodeBanner(
                                 nodeLabel: _reviewNodeLabel!,
@@ -1440,6 +1486,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               !showReasoningIndicator
                           ? _buildQuickActions(context)
                           : ListView.builder(
+                              key: const Key('chatMessagesViewport'),
                               controller: _scrollController,
                               reverse: true,
                               padding: EdgeInsets.only(
@@ -1451,7 +1498,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                   chatState,
                                   aiSystemPreferences,
                                   showChatTransparencyCapsule,
-                                  showStatusIndicator,
                                 ),
                               ),
                               cacheExtent: 600,
@@ -1461,8 +1507,28 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 final isReasoningShowing =
                                     showReasoningIndicator;
                                 final isSendingShowing = showStreamingBubble;
+                                // S18 阶段胶囊：首流前（无任何已到内容）
+                                // 以单行「检索→思考→生成」胶囊承接等待，
+                                // 吸收原 AiStatusIndicator 与三点动画。
+                                final showPhaseCapsule =
+                                    chatState.hasActiveRun &&
+                                        chatState.streamingContent.isEmpty;
 
                                 if (isStatusShowing && index == 0) {
+                                  if (showPhaseCapsule) {
+                                    return ChatRunPhaseIndicator(
+                                      phase: chatState.runPhase,
+                                      aiStatus: chatState.aiStatus,
+                                      modeLabel: chatState.dualCoreMode == null
+                                          ? null
+                                          : _dualCoreModeLabel(
+                                              chatState.dualCoreMode!),
+                                      onCancel: () => ref
+                                          .read(chatProvider.notifier)
+                                          .cancelActiveRun(
+                                              reason: 'phase_capsule_cancel'),
+                                    );
+                                  }
                                   return Padding(
                                     padding: const EdgeInsets.only(
                                       bottom: DS.spacing12,
@@ -1546,10 +1612,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                   }
 
                                   if (!isStatusShowing && !isReasoningShowing) {
-                                    return const Padding(
-                                      padding:
-                                          EdgeInsets.only(bottom: DS.spacing12),
-                                      child: _TypingIndicator(),
+                                    // S18：三点 `_TypingIndicator` 退役，
+                                    // 统一走阶段胶囊（含取消与预期时长）。
+                                    return ChatRunPhaseIndicator(
+                                      phase: chatState.runPhase,
+                                      aiStatus: chatState.aiStatus,
+                                      modeLabel: chatState.dualCoreMode == null
+                                          ? null
+                                          : _dualCoreModeLabel(
+                                              chatState.dualCoreMode!),
+                                      onCancel: () => ref
+                                          .read(chatProvider.notifier)
+                                          .cancelActiveRun(
+                                              reason: 'phase_capsule_cancel'),
                                     );
                                   }
 
@@ -2617,60 +2692,34 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   /// Calculate bottom padding for ListView to prevent messages being hidden
   /// behind fixed components at the bottom.
+  ///
+  /// S8 面积重划后，底部区常驻高度 = 模式条折叠行 + 输入条 + 信号行。
+  /// 模式 pill 与理解入口已收进折叠展开态（渲染于 Column 内、不与列表
+  /// 叠压），仅在其展开时补足留白；横幅/胶囊类条件件出现时增量补足。
   double _calculateBottomPadding(
     BuildContext context,
     ChatState chatState,
     TransparencyPreferences aiSystemPreferences,
     bool showChatTransparencyCapsule,
-    bool showStatusIndicator,
   ) {
     final isCompactMobile = _isCompactMobileContext(context);
 
-    if (isCompactMobile && !_showContextControls) {
-      return 132 + MediaQuery.of(context).padding.bottom;
+    // 常驻底部：ChatContextToggle 折叠行（约 40）+ ChatInput（约 96）+
+    // 信号行留量 + 呼吸间距。
+    var padding = isCompactMobile ? 152.0 : 164.0;
+
+    // 折叠行展开时的四个模式 pill + 理解入口 + 过渡横幅。
+    if (_showContextControls) {
+      padding += isCompactMobile ? 232.0 : 248.0;
     }
 
-    // Use a more generous calculation based on actual screen height
-    final screenHeight = MediaQuery.of(context).size.height;
-    final isSmallScreen = screenHeight < 700;
-
-    // Base padding
-    var padding = isSmallScreen ? DS.spacing40 : DS.spacing64 - DS.spacing4;
-
-    // PlanSelectorPill height (can vary with content)
-    padding += isSmallScreen
-        ? DS.touchTargetMinSize - DS.spacing4
-        : DS.touchTargetMinSize + DS.spacing4;
-
-    // ChatModeSelectorPill height
-    padding += isSmallScreen
-        ? DS.spacing32 + DS.spacing4
-        : DS.touchTargetMinSize - DS.spacing4;
-
-    // AiReasoningModePill height
-    padding += isSmallScreen
-        ? DS.spacing32 + DS.spacing4
-        : DS.touchTargetMinSize - DS.spacing4;
-
-    // IntentPredictionBar height (when visible)
-    if (showStatusIndicator) {
-      padding += isSmallScreen
-          ? DS.touchTargetMinSize
-          : DS.touchTargetMinSize + DS.spacing8;
-    }
-
-    // ChatInput base height + expansion buffer
-    padding += isSmallScreen ? 80.0 : 100.0;
-
-    if (!chatState.hasActiveRun) {
-      padding += isSmallScreen ? 108.0 : 124.0;
-    }
+    // 等待期阶段胶囊在列表流内渲染（非叠压），不计入。
 
     if (showChatTransparencyCapsule &&
         aiSystemPreferences.enabled &&
         aiSystemPreferences.displayMode != TransparencyDisplayMode.detailOnly &&
         !chatState.transparencyPresentationState.isDismissed) {
-      padding += isSmallScreen ? 56.0 : DS.spacing64;
+      padding += isCompactMobile ? 56.0 : DS.spacing64;
     }
 
     // GraphRAG visualizer
@@ -2681,9 +2730,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     // SafeArea bottom padding - use actual value with more buffer
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     padding += bottomPadding.clamp(0.0, 50.0);
-
-    // Add extra buffer for safety
-    padding += isSmallScreen ? DS.spacing40 : DS.spacing20;
 
     return padding;
   }
@@ -2732,16 +2778,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     // keyboard already shrank), not of the full screen. 0.20 (header cap)
     // + 0.60 (this cap) <= 1 keeps the Expanded message list non-negative,
     // so the input bar can never be pushed off-screen by the IME again.
+    // V14：内容不溢出时禁用滚动（NeverScrollable），避免底部 dock 吞掉
+    // 本应滚动消息历史的大幅 swipe。
     return ConstrainedBox(
       constraints: BoxConstraints(
         maxHeight: constraints.maxHeight.isFinite
             ? constraints.maxHeight * 0.60
             : MediaQuery.of(context).size.height * 0.4,
       ),
-      child: SingleChildScrollView(
-        physics: const ClampingScrollPhysics(),
+      child: _BottomAreaScroll(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          if (isCompactMobile && showChatContextToggle)
+          // S8：模式条收容——单行紧凑指示（推理·对话·计划）常驻为
+          // 输入条关联区的唯一折叠行，四个模式 pill 全部收进展开态。
+          if (showChatContextToggle)
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 _chatBottomSurfaceHorizontalInset,
@@ -2763,6 +2812,34 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 },
               ),
             ),
+          if (!chatPureMode && _hasInlineSignals(chatState)) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                _chatBottomSurfaceHorizontalInset,
+                DS.spacing4,
+                _chatBottomSurfaceHorizontalInset,
+                DS.spacing4,
+              ),
+              child: Wrap(
+                spacing: DS.spacing8,
+                runSpacing: DS.spacing6,
+                children: [
+                  // §5.2 内联微件：「AI 当前记住」消息旁 chip 级信号，
+                  // 0 条时零面积（S8：「0 条」空态不再占据顶部面板）。
+                  ChatWorkingMemorySignal(
+                    sessionId: chatState.conversationId,
+                    onViewSource: _showWorkingMemorySource,
+                  ),
+                  // §5.2 收件箱形态：Aurora 确认队列按需单行入口，
+                  // 常规状态零面积；点开按需确认面板（对象可见）。
+                  ChatAuroraConfirmSignal(
+                    conversationId: chatState.conversationId,
+                    hasActiveRun: chatState.hasActiveRun,
+                  ),
+                ],
+              ),
+            ),
+          ],
           if (showAiSystemPanel &&
               showChatTransparencyCapsule &&
               !chatPureMode &&
@@ -2823,6 +2900,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               index: 3,
               child: GuidanceModeToggle(),
             ),
+            if (!chatPureMode)
+              // S8：「Sparkle 对你的理解」入口随展开态收纳（原顶部常驻
+              // 按钮条撤出）。
+              const Padding(
+                padding: EdgeInsets.only(top: DS.spacing4),
+                child: ChatUnderstandingDrawerButton(),
+              ),
             Builder(
               builder: (context) {
                 final transitions = ref.watch(modeTransitionHistoryProvider);
@@ -2854,61 +2938,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       child: ChatPredictionDock(
                         compact: isCompactMobile,
                         promptStarters: promptStarters,
-                        onPromptSelected: (prompt) => unawaited(
-                          ref.read(chatProvider.notifier).sendMessage(prompt),
-                        ),
+                        // C-11 裁决：话术 chip 填入式——点 chip 只填入
+                        // 草稿+聚焦输入框（发送键随文本高亮），不直接发送。
+                        onPromptSelected: _fillDraftFromPrompt,
                       ),
                     ),
                   )
                 : const SizedBox.shrink(),
           ),
-          Consumer(builder: (context, ref, _) {
-            final aurora = ref.watch(auroraStatusProvider);
-            if (aurora == null || !aurora.auroraActive)
-              return const SizedBox.shrink();
-            return _AuroraQuickTrigger(
-              snapshot: aurora,
-              onTap: () {
-                final wake = aurora.wakeEligibility;
-                if (wake.canUserWake &&
-                    (aurora.overallStatus == 'risk_found' ||
-                        aurora.overallStatus == 'calibration_available' ||
-                        aurora.overallStatus == 'needs_confirm')) {
-                  unawaited(showAuroraCoreSession(
-                    context: context,
-                    bandStatus: aurora.overallStatus,
-                    wakeReasons: wake.wakeReasons,
-                    entryReason: AuroraCoreSessionEntryReason.fromSnapshot(
-                      snapshot: aurora,
-                      triggerSource: 'status_bar',
-                      agendaPreview: [
-                        context.l10n.chatAgendaConfirmStatusBarJudgment,
-                        context.l10n.chatAgendaDecideAdjustNextSteps,
-                      ],
-                    ),
-                    conversationId: chatState.conversationId,
-                  ));
-                } else {
-                  showAuroraCalibration(
-                    context: context,
-                    observation: aurora.summary,
-                    judgment: aurora.summary,
-                    confirmQuestion: context.l10n.auroraCalibrationConfirm,
-                    confirmOptions: [
-                      context.l10n.chatMinutes30,
-                      context.l10n.chatMinutes45,
-                      context.l10n.chatMinutes60
-                    ],
-                    onConfirm: (option) {
-                      ref.read(chatProvider.notifier).sendMessage(
-                            '${context.l10n.auroraCorrectRecalibrate}: $option',
-                          );
-                    },
-                  );
-                }
-              },
-            );
-          }),
           _OfflineQueueIndicatorHost(
             snapshot: offlineSnapshot,
             connectionState: chatState.wsConnectionState,
@@ -2917,6 +2954,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ChatInput(
             enabled: !chatState.hasActiveRun,
             isGenerating: chatState.hasActiveRun,
+            controller: _draftController,
+            focusNode: _draftFocusNode,
+            // S8：accessory 托盘（学习资料/自由纠正 pills）收进模式行
+            // 展开态，不再常驻输入条上方。
+            showAccessoryTray: _showContextControls,
             onStop: () => ref.read(chatProvider.notifier).cancelActiveRun(reason: 'user_stop'),
             studyMaterialsEnabled: chatState.documentRetrievalEnabled,
             documentContextMode: chatState.documentContextMode,
@@ -3113,60 +3155,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ];
     }
   }
-}
-
-class _OpenClawAppBarIcon extends StatelessWidget {
-  const _OpenClawAppBarIcon({
-    required this.highlighted,
-    required this.queueCount,
-  });
-
-  final bool highlighted;
-  final int queueCount;
-
-  @override
-  Widget build(BuildContext context) => Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(DS.spacing4),
-            decoration: BoxDecoration(
-              color: highlighted
-                  ? DS.info.withValues(alpha: 0.1)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              Icons.cloud_sync_outlined,
-              color: highlighted ? DS.brandPrimaryConst : DS.textSecondary,
-            ),
-          ),
-          if (highlighted)
-            Positioned(
-              right: -2,
-              top: -2,
-              child: Container(
-                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                decoration: BoxDecoration(
-                  color: queueCount > 0 ? DS.warning : DS.semanticError,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Center(
-                  child: Text(
-                    queueCount > 0 ? '$queueCount' : '!',
-                    style: DS.bodySmall.copyWith(
-                      color: DS.onColor(
-                        queueCount > 0 ? DS.warning : DS.semanticError,
-                      ),
-                      fontWeight: DS.fontWeightBold,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      );
 }
 
 class _ChatHistorySheet extends ConsumerStatefulWidget {
@@ -3528,13 +3516,6 @@ class _OfflineQueueIndicatorHostState
   }
 }
 
-class _TypingIndicator extends StatefulWidget {
-  const _TypingIndicator();
-
-  @override
-  State<_TypingIndicator> createState() => _TypingIndicatorState();
-}
-
 class _ReviewNodeBanner extends StatelessWidget {
   const _ReviewNodeBanner({
     required this.nodeLabel,
@@ -3747,109 +3728,6 @@ class _BlinkingCursorState extends State<_BlinkingCursor>
   }
 }
 
-class _TypingIndicatorState extends State<_TypingIndicator>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 1200),
-      vsync: this,
-    );
-    unawaited(_controller.repeat());
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bubbleColor = DS.chatBubbleOther;
-    final dotColor = DS.chatBubbleOtherText.withValues(alpha: 0.7);
-    final reduceMotion = context.reduceMotion;
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 8, end: 0),
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOutCubic,
-      builder: (context, translateY, child) => Transform.translate(
-        offset: Offset(0, translateY),
-        child: child,
-      ),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing16,
-          vertical: DS.spacing12,
-        ),
-        decoration: BoxDecoration(
-          color: bubbleColor,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(DS.spacing20),
-            topRight: Radius.circular(DS.spacing20),
-            bottomRight: Radius.circular(DS.spacing20),
-            bottomLeft: Radius.circular(DS.spacing4),
-          ),
-          boxShadow: DS.shadowSm,
-          border: Border.all(color: DS.borderSubtle),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: List.generate(
-            3,
-            (index) {
-              if (reduceMotion) {
-                return Container(
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: DS.spacing4 / 2,
-                  ),
-                  width: DS.spacing8,
-                  height: DS.spacing8,
-                  decoration: BoxDecoration(
-                    color: dotColor,
-                    shape: BoxShape.circle,
-                  ),
-                );
-              }
-              return AnimatedBuilder(
-                animation: _controller,
-                builder: (context, child) {
-                  final delay = index * (1 / 3);
-                  final progress =
-                      ((_controller.value - delay + 1) % 1.0).clamp(0.0, 1.0);
-                  final opacity = 0.25 + (sin(progress * pi) * 0.75);
-                  final scale = 0.72 + (sin(progress * pi) * 0.28);
-
-                  return Opacity(
-                    opacity: opacity.clamp(0.2, 1.0),
-                    child: Transform.scale(
-                      scale: scale.clamp(0.72, 1.0),
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: DS.spacing4 / 2,
-                        ),
-                        width: DS.spacing8,
-                        height: DS.spacing8,
-                        decoration: BoxDecoration(
-                          color: dotColor,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _ReasoningBreathOverlay extends StatefulWidget {
   const _ReasoningBreathOverlay();
 
@@ -3907,168 +3785,85 @@ class _ReasoningBreathOverlayState extends State<_ReasoningBreathOverlay>
   }
 }
 
-/// Lightweight chip that shows the current dual-core routing mode sent by
-/// the backend in the `ux_turn.dual_core_mode` field of every agent_turn event.
+/// V14（底部 dock 吞大幅 swipe）：底部输入区滚动容器。
 ///
-/// Modes: "execution" → 执行模式 (amber), "cognitive" → 认知模式 (indigo),
-///        "balanced" → 均衡模式 (teal / primary)
-class _DualCoreModeChip extends StatelessWidget {
-  const _DualCoreModeChip({required this.mode});
+/// 内容不超出可用高度（常驻态的绝大多数情况）时使用
+/// [NeverScrollableScrollPhysics]——滚动视口不再捕获竖向拖拽，
+/// 用户在底部区域起手的 swipe 不被「吞掉」；仅在模式行展开等
+/// 内容真正溢出时启用滚动兜底（A-5 防溢出契约保持）。
+class _BottomAreaScroll extends StatefulWidget {
+  const _BottomAreaScroll({required this.child});
 
-  final String mode;
+  final Widget child;
 
-  (String label, Color color, IconData icon) _resolve(BuildContext context) {
-    return switch (mode) {
-      'execution' => (
-          context.l10n.chatExecutionMode,
-          DS.warning,
-          Icons.bolt_rounded
-        ),
-      'cognitive' => (
-          context.l10n.chatCognitiveMode,
-          DS.brandSecondary,
-          Icons.psychology_rounded
-        ),
-      _ => (
-          context.l10n.chatBalancedMode,
-          DS.primaryBase,
-          Icons.balance_rounded
-        ),
-    };
-  }
+  @override
+  State<_BottomAreaScroll> createState() => _BottomAreaScrollState();
+}
+
+class _BottomAreaScrollState extends State<_BottomAreaScroll> {
+  double? _contentHeight;
 
   @override
   Widget build(BuildContext context) {
-    final (label, color, icon) = _resolve(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(20),
-              border:
-                  Border.all(color: color.withValues(alpha: 0.3), width: 0.8),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, size: 12, color: color),
-                const SizedBox(width: 4),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: DS.fontWeightMedium,
-                    color: color,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-              ],
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final fits = _contentHeight == null ||
+            _contentHeight! <= constraints.maxHeight + 0.5;
+        return SingleChildScrollView(
+          physics: fits
+              ? const NeverScrollableScrollPhysics()
+              : const ClampingScrollPhysics(),
+          child: _MeasureSize(
+            onChange: (size) {
+              if ((_contentHeight ?? -1) != size.height && mounted) {
+                setState(() => _contentHeight = size.height);
+              }
+            },
+            child: widget.child,
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
 
-class _AuroraQuickTrigger extends StatelessWidget {
-  const _AuroraQuickTrigger({
-    required this.snapshot,
-    required this.onTap,
+/// 测量子内容尺寸的 RenderProxyBox（post-frame 回调，避免布局重入）。
+class _MeasureSize extends SingleChildRenderObjectWidget {
+  const _MeasureSize({
+    required this.onChange,
+    required super.child,
   });
 
-  final AuroraControlSurfaceSnapshot snapshot;
-  final VoidCallback onTap;
+  final ValueChanged<Size> onChange;
 
-  Color _statusColor() {
-    return switch (snapshot.overallStatus) {
-      'calibrated' => DS.success,
-      'risk_found' => DS.warning,
-      'needs_confirm' => DS.info,
-      'calibration_available' => DS.brandPrimary,
-      'cooling_down' => DS.textSecondary,
-      _ => DS.textSecondary,
-    };
-  }
-
-  String _statusLabel(AppLocalizations l10n) {
-    return switch (snapshot.overallStatus) {
-      'calibrated' => l10n.auroraBandCalibrated,
-      'risk_found' => l10n.auroraBandRiskFound,
-      'needs_confirm' => l10n.auroraBandNeedsConfirm,
-      'calibration_available' => l10n.auroraBandCalibrationAvailable,
-      'cooling_down' => l10n.auroraBandCoolingDown,
-      _ => l10n.auroraBandSensing,
-    };
+  @override
+  RenderObject createRenderObject(BuildContext context) {
+    return _RenderMeasureSize(onChange);
   }
 
   @override
-  Widget build(BuildContext context) {
-    final color = _statusColor();
-    final l10n = context.l10n;
-    final wake = snapshot.wakeEligibility;
-    final canWake = wake.canUserWake &&
-        (snapshot.overallStatus == 'risk_found' ||
-            snapshot.overallStatus == 'calibration_available' ||
-            snapshot.overallStatus == 'needs_confirm');
-    final statusText = canWake
-        ? '${_statusLabel(l10n)} · ${l10n.auroraWakeAvailable(wake.userQuotaRemaining)}'
-        : _statusLabel(l10n);
+  void updateRenderObject(
+    BuildContext context,
+    covariant _RenderMeasureSize renderObject,
+  ) {
+    renderObject.onChange = onChange;
+  }
+}
 
-    return Padding(
-      padding:
-          const EdgeInsets.fromLTRB(DS.spacing12, 0, DS.spacing12, DS.spacing4),
-      child: Semantics(
-        button: true,
-        label: statusText,
-        child: GestureDetector(
-          onTap: onTap,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 44),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing10,
-                vertical: DS.spacing10,
-              ),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: color.withValues(alpha: 0.2)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.auto_awesome_rounded, size: 14, color: color),
-                  const SizedBox(width: DS.spacing6),
-                  // A-5: the status label (e.g. the long duplicated
-                  // "Deep calibration available · …" composition) can exceed
-                  // the pill's width — it must ellipsize instead of
-                  // overflowing the screen by 53px.
-                  Flexible(
-                    child: Text(
-                      statusText,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: color,
-                        fontSize: 11,
-                        fontWeight: DS.fontWeightMedium,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
+class _RenderMeasureSize extends RenderProxyBox {
+  _RenderMeasureSize(this.onChange);
+
+  ValueChanged<Size> onChange;
+  Size? _lastSize;
+
+  @override
+  void performLayout() {
+    super.performLayout();
+    if (_lastSize != size) {
+      _lastSize = size;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        onChange(size);
+      });
+    }
   }
 }
