@@ -1,0 +1,117 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP2-20260922-131844",
+  "step_id": "C8c",
+  "phase": "day1fix",
+  "name": "error book list (verify entry landed)",
+  "started_at": "2026-09-22T13:39:24.937768+00:00",
+  "finished_at": "2026-09-22T13:39:24.953013+00:00",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/errors?limit=10",
+    "body": {}
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "items": [
+        {
+          "id": "e70aa41f-09d6-4426-9bb8-e0cbed4f440f",
+          "user_id": "490e5785-701e-4400-b4af-6acf4192fcfe",
+          "subject_code": "math",
+          "chapter": "CH4 图论",
+          "question_text": "判断题：只要一个图的每个顶点度数都是偶数，该图就一定是连通的（因此存在欧拉回路）。",
+          "question_image_url": "",
+          "user_answer": "对。每顶点偶度就足够判定连通/欧拉回路存在。",
+          "correct_answer": "错。欧拉回路需要「连通」且「所有顶点偶度」两个条件同时成立；反例：两个不相连的三角形，每顶点度数均为 2（偶）但整体不连通，无欧拉回路。",
+          "mastery_level": 0,
+          "review_count": 0,
+          "next_review_at": "2026-09-22T05:37:48.666632Z",
+          "last_reviewed_at": null,
+          "latest_analysis": {
+            "error_type": "concept_confusion",
+            "error_type_label": "充分/必要条件混淆",
+            "root_cause": "学生对欧拉回路判定定理的掌握不完整。欧拉定理要求同时满足两个条件：(1) 图是连通的，(2) 所有顶点度数为偶数。学生误把'所有顶点偶度'这一必要条件当成了充分条件，认为偶度就足够保证连通性和欧拉回路的存在。正确的逻辑是：偶度是单个顶点层面的度数性质，而连通性是图整体的拓扑性质，二者没有蕴含关系——偶度图完全可以由若干个不相连的偶度分量组成。",
+            "correct_approach": "1. 准确背诵欧拉回路（Eulerian Circuit）存在定理：'一个连通图存在欧拉回路，当且仅当每个顶点的度数都是偶数'。\n2. 明确两个条件缺一不可：连通性 + 全部偶度。\n3. 构造反例进行验证：取两个不相连的三角形 K₃ 和 K₃，每个顶点度数都是 2（偶数），但整图不连通，因此不存在欧拉回路。\n4. 进一步延伸：欧拉通路（trail）存在的条件是'恰好有 0 个或 2 个奇度顶点'，同样前提是图必须连通。\n5. 类似的定理要养成'逐条检查两个条件'的习惯，避免只记一半。",
+            "similar_traps": [
+              "认为'无奇度顶点 ⇒ 哈密顿回路存在'（哈密顿回路判定更复杂，无简单的度数判据）",
+              "认为'树是连通图 ⇒ 树存在欧拉回路'（树中只有叶子度数为 1，必有奇度顶点，无欧拉回路）",
+              "认为'所有顶点度数 ≥ 2 ⇒ 存在哈密顿通路'（反例：两个共顶点三角形连成的'蝴蝶图'）",
+              "把'偶度'与'二分图'、'欧拉图'等概念混为一谈"
+            ],
+            "recommended_knowledge": [
+              "欧拉回路存在定理（连通 + 全偶度）",
+              "欧拉通路存在定理（连通 + 恰 0 或 2 个奇度顶点）",
+              "充分条件与必要条件的区别",
+              "构造反例的技巧（特别是'分离小图'的反例构造法）",
+              "图论基本术语：连通分量、度数、欧拉图"
+            ],
+            "study_suggestion": "1. 制作一张'图论判定定理对比表'，把欧拉回路、欧拉通路、哈密顿回路等定理的条件并列写清楚，避免条件混淆。\n2. 对每条定理主动想 1～2 个反例（例如：不相连的小图、退化图如单个顶点或空图），检验自己是否真的理解条件。\n3. 学习'构造反例'的方法论：若怀疑一个'充分条件'不充分，就找最小反例（如本例的两个三角形），这比死记硬背更牢固。\n4. 做判断题时养成'两个条件分别检验'的习惯，而不是凭直觉选'对'。",
+            "ocr_text": ""
+          },
+          "knowledge_links": [
+            {
+              "id": "182595bc-37d2-5bbd-ac25-2587dbefc5c3",
+              "name": "二叉树性质",
+              "relevance": 1,
+              "is_primary": true
+            },
+            {
+              "id": "bd30eaa2-494a-52ad-a389-6f0d4b3f8d93",
+              "name": "差错检测（奇偶校验/CRC/校验和）",
+              "relevance": 1,
+              "is_primary": false
+            },
+            {
+              "id": "3a323b99-f0fc-5f16-ab60-85e8dc16c830",
+              "name": "链表",
+              "relevance": 1,
+              "is_primary": false
+            }
+          ],
+          "created_at": "2026-09-22T13:37:48.667836Z",
+          "updated_at": "2026-09-22T13:38:05.910085Z",
+          "cognitive_tags": [],
+          "ai_analysis_summary": "概念混淆：把「偶度」误当充分条件，漏掉连通性前提（NS-001 Day1 故意犯错被纠正）。",
+          "affected_node_id": "182595bc-37d2-5bbd-ac25-2587dbefc5c3"
+        },
+        {
+          "id": "18afce5b-f30a-4af5-b767-45189556dd82",
+          "user_id": "490e5785-701e-4400-b4af-6acf4192fcfe",
+          "subject_code": "math",
+          "chapter": "CH4 图论",
+          "question_text": "判断题：只要一个图的每个顶点度数都是偶数，该图就一定是连通的（因此存在欧拉回路）。",
+          "question_image_url": "",
+          "user_answer": "对。每顶点偶度就足够判定连通/欧拉回路存在。",
+          "correct_answer": "错。欧拉回路需要「连通」且「所有顶点偶度」两个条件同时成立；反例：两个不相连的三角形，每顶点度数均为 2（偶）但整体不连通，无欧拉回路。",
+          "mastery_level": 0,
+          "review_count": 1,
+          "next_review_at": "2026-09-23T05:39:24.745136Z",
+          "last_reviewed_at": "2026-09-22T05:39:24.745154Z",
+          "latest_analysis": {
+            "error_type": "other",
+            "error_type_label": "其他",
+            "root_cause": "暂无错因分析",
+            "correct_approach": "暂无解题思路",
+            "similar_traps": [],
+            "recommended_knowledge": [],
+            "study_suggestion": "暂无学习建议",
+            "ocr_text": ""
+          },
+          "knowledge_links": [],
+          "created_at": "2026-09-22T13:39:24.708918Z",
+          "updated_at": "2026-09-22T13:39:24.798836Z",
+          "cognitive_tags": [],
+          "ai_analysis_summary": "概念混淆：把「偶度」误当充分条件，漏掉连通性前提（NS-001 Day1 故意犯错被纠正）。"
+        }
+      ],
+      "total": "2",
+      "page": 1,
+      "page_size": 20,
+      "has_next": false
+    }
+  },
+  "verdict": "pass",
+  "checkpoints": [],
+  "notes": []
+}

@@ -1,0 +1,30 @@
+{
+  "schema": "sparkle.northstar.real-drive.probe.v1",
+  "probe": "rest-vs-ws-memory-write-discrimination",
+  "purpose": "判别 MEM-AMNESIA 修复的写账断点在 REST 还是 WS 链路：同一句 B1 明示事实，两个链路各发一次",
+  "run_id": "NS001-LOOP2-20260922-131844",
+  "at": "2026-09-22T13:41+00:00",
+  "method": "一次性账号 northstar_ns2_probe_6b88a8（注册+登录+1 条 REST 聊天，无其他行为）；WS 侧对照为主账号 B1 步（见 steps/B1b_*.json）",
+  "rest_arm": {
+    "endpoint": "POST /api/v1/chat",
+    "message": "与 B1 day0_text 同句（离散数学期末考试在 7 天后…自评 42…最薄弱的章是图论…每天只能投入 165 分钟…）",
+    "chat_status": 200,
+    "reply_preview": "我先按【离散数学】冲刺来处理，范围用内置 Sprint Pack 兜底。你目前大概在哪个水平：完全没学过、上过课但没复习，还是已经学过一部分？",
+    "episodic_after_5s": 0,
+    "episodic_after_30s": 3,
+    "episodic_entries": [
+      {"subject_type": "self", "summary": "我每天只能投入 165 分钟", "due_at": null},
+      {"subject_type": "self", "summary": "我的情况：自评当前掌握度大约 42/100；最薄弱的章是图论（CH4）；一个具体的困惑：我总是分不清欧拉回路和哈密顿回路", "due_at": null},
+      {"subject_type": "commitment", "summary": "你好，我要开始备考：离散数学期末考试在 7 天后（闭卷，100 分卷）", "due_at": "2026-09-29T18:00:00"}
+    ]
+  },
+  "ws_arm": {
+    "endpoint": "WS /ws/chat (gateway -> engine gRPC StreamChat)",
+    "message": "同上句（B1 步）",
+    "episodic_immediate": 0,
+    "episodic_after_10min": 0,
+    "evidence": "steps/B1b_memory-episodic-after-day0-chat--declared-fact-capture.json（verdict=fail, entry_count=0）"
+  },
+  "conclusion": "MEM-AMNESIA 声明事实捕获在 REST 链路全链路生效（3 条、due_at 正确）；WS/gRPC 主链路 0 条且非异步延迟 → 断点定位在 WS 流式路径的收尾写账（NBP-1），非抽取/固化逻辑本身",
+  "honesty_note": "探针账号为一次性 northstar_ns2_probe_*，仅注册+1 条聊天；WS 侧主账号当日内无其他可能写入记忆的行为（day0 各步均只读）"
+}

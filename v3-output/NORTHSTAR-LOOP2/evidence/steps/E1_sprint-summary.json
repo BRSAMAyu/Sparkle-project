@@ -1,0 +1,164 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP2-20260922-131844",
+  "step_id": "E1",
+  "phase": "report",
+  "name": "sprint summary",
+  "started_at": "2026-09-22T13:50:40.394691+00:00",
+  "finished_at": "2026-09-22T13:50:40.642332+00:00",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/exam-sprint/sprint-summary",
+    "body": {}
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "plan_id": "ad361a54-3ea0-485d-9d73-69f3776f09ab",
+      "plan_name": "7天离散数学冲刺",
+      "subject": "离散数学",
+      "exam_date": "2026-09-29",
+      "started_at": "2026-09-22T13:19:53.616986",
+      "days_used": 1,
+      "headline": "你用了 1 天，完成了 1 项任务，二元关系 从 50 分提升到 75 分。",
+      "task_stats": {
+        "total": 7,
+        "completed": 1,
+        "completion_rate": 0.1429
+      },
+      "score_stats": {
+        "baseline_score": 13.2,
+        "current_score": 21.9,
+        "delta": 8.7,
+        "baseline_source": "diagnostic"
+      },
+      "mastery_changes": [
+        {
+          "node_id": "23207874-b0a6-5799-9b32-f9e4c98cfbc4",
+          "node_name": "二元关系",
+          "before_mastery": 50.0,
+          "after_mastery": 75.0,
+          "delta": 25.0
+        },
+        {
+          "node_id": "7d2d8a06-8df1-525c-90ab-79c348a19aa2",
+          "node_name": "命题逻辑",
+          "before_mastery": 25.0,
+          "after_mastery": 50.0,
+          "delta": 25.0
+        },
+        {
+          "node_id": "c38bab26-24a0-53a7-a4e9-4a8d233b1d3a",
+          "node_name": "图的基本概念",
+          "before_mastery": 0.0,
+          "after_mastery": 25.0,
+          "delta": 25.0
+        },
+        {
+          "node_id": "3b3e9a6b-9cc0-5102-8dad-e456f20ab2b7",
+          "node_name": "谓词逻辑",
+          "before_mastery": 0.0,
+          "after_mastery": 25.0,
+          "delta": 25.0
+        },
+        {
+          "node_id": "94803ffb-d9a2-597f-af8c-ec264bb2450f",
+          "node_name": "代数系统",
+          "before_mastery": 0.0,
+          "after_mastery": 0.0,
+          "delta": 0.0
+        },
+        {
+          "node_id": "aa4e7352-d4de-5a98-a936-a36a40985411",
+          "node_name": "函数与基数",
+          "before_mastery": 0.0,
+          "after_mastery": 0.0,
+          "delta": 0.0
+        },
+        {
+          "node_id": "77c1836a-2c7c-52aa-9088-229ca9e19edf",
+          "node_name": "欧拉图与哈密顿图",
+          "before_mastery": 0.0,
+          "after_mastery": 0.0,
+          "delta": 0.0
+        },
+        {
+          "node_id": "48421124-4f4a-5a62-a872-c83875ca65cf",
+          "node_name": "组合计数",
+          "before_mastery": 0.0,
+          "after_mastery": 0.0,
+          "delta": 0.0
+        }
+      ],
+      "top_improvement": {
+        "node_id": "23207874-b0a6-5799-9b32-f9e4c98cfbc4",
+        "node_name": "二元关系",
+        "before_mastery": 50.0,
+        "after_mastery": 75.0,
+        "delta": 25.0
+      },
+      "high_frequency_coverage": {
+        "baseline_rate": 0.0,
+        "current_rate": 0.125,
+        "delta_rate": 0.125,
+        "total_topics": 8,
+        "covered_topics_before": 0,
+        "covered_topics_after": 1
+      },
+      "error_recovery": {
+        "total_errors": 2,
+        "repaired_errors": 0,
+        "repair_rate": 0.0
+      },
+      "daily_study_trend": [
+        {
+          "date": "2026-09-22",
+          "minutes": 0
+        },
+        {
+          "date": "2026-09-23",
+          "minutes": 0
+        },
+        {
+          "date": "2026-09-24",
+          "minutes": 0
+        },
+        {
+          "date": "2026-09-25",
+          "minutes": 0
+        },
+        {
+          "date": "2026-09-26",
+          "minutes": 0
+        },
+        {
+          "date": "2026-09-27",
+          "minutes": 0
+        },
+        {
+          "date": "2026-09-28",
+          "minutes": 0
+        },
+        {
+          "date": "2026-09-29",
+          "minutes": 0
+        }
+      ],
+      "narrative_highlights": [
+        "你用了 1 天，完成了 1 / 7 项任务。",
+        "二元关系 从 50 分提升到 75 分。",
+        "高频考点覆盖率从 0% 提升到 12%。"
+      ],
+      "invitation_status": {
+        "eligible": false,
+        "invited_at": null,
+        "notification_id": null,
+        "completed_at": null,
+        "review_id": null
+      }
+    }
+  },
+  "verdict": "pass",
+  "checkpoints": [],
+  "notes": []
+}

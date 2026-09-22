@@ -1,0 +1,127 @@
+{
+  "schema": "sparkle.northstar.real-drive.gain-proof.v1",
+  "gain_proof": "GP-03",
+  "method": "galaxy graph diff vs real completion facts (2 tasks completed, 1 error-book entry + review)",
+  "real_world_facts": {
+    "task_completed": true,
+    "task_id": "890a3b11-db86-40a6-b330-0fd8835df1ae",
+    "error_book_entry_submitted": true,
+    "expected_node_direction": "图论/欧拉 相关节点 mastery 应变化；未学习节点不应点亮"
+  },
+  "galaxy_diff": {
+    "added_nodes": [
+      "c578dcd0-de49-52f8-a7d8-6743db16a6aa"
+    ],
+    "mastery_changes": {
+      "c38bab26-24a0-53a7-a4e9-4a8d233b1d3a": {
+        "before": 0.0,
+        "after": 25.0
+      },
+      "3b3e9a6b-9cc0-5102-8dad-e456f20ab2b7": {
+        "before": 0.0,
+        "after": 25.0
+      },
+      "7d2d8a06-8df1-525c-90ab-79c348a19aa2": {
+        "before": 25.0,
+        "after": 50.0
+      },
+      "23207874-b0a6-5799-9b32-f9e4c98cfbc4": {
+        "before": 50.0,
+        "after": 75.0
+      }
+    },
+    "before_count": 127,
+    "after_count": 128
+  },
+  "galaxy_state_after": {
+    "user_stats": {
+      "total_nodes": 128,
+      "unlocked_count": 10,
+      "mastered_count": 0,
+      "total_study_minutes": 0,
+      "sector_distribution": {},
+      "streak_days": 0
+    },
+    "learning_state_distribution": {
+      "unknown": 98,
+      "ready_for_review": 3,
+      "learning": 6,
+      "blocked_by_prerequisite": 20,
+      "weak": 1
+    },
+    "unlocked_nodes": [
+      {
+        "id": "aa4e7352-d4de-5a98-a936-a36a40985411",
+        "name": "函数与基数",
+        "learning_state": "ready_for_review",
+        "mastery_score": 0.0,
+        "study_minutes": 0
+      },
+      {
+        "id": "c38bab26-24a0-53a7-a4e9-4a8d233b1d3a",
+        "name": "图的基本概念",
+        "learning_state": "learning",
+        "mastery_score": 25.0,
+        "study_minutes": 0
+      },
+      {
+        "id": "77c1836a-2c7c-52aa-9088-229ca9e19edf",
+        "name": "欧拉图与哈密顿图",
+        "learning_state": "ready_for_review",
+        "mastery_score": 0.0,
+        "study_minutes": 0
+      },
+      {
+        "id": "48421124-4f4a-5a62-a872-c83875ca65cf",
+        "name": "组合计数",
+        "learning_state": "ready_for_review",
+        "mastery_score": 0.0,
+        "study_minutes": 0
+      },
+      {
+        "id": "3b3e9a6b-9cc0-5102-8dad-e456f20ab2b7",
+        "name": "谓词逻辑",
+        "learning_state": "learning",
+        "mastery_score": 25.0,
+        "study_minutes": 0
+      },
+      {
+        "id": "7d2d8a06-8df1-525c-90ab-79c348a19aa2",
+        "name": "命题逻辑",
+        "learning_state": "learning",
+        "mastery_score": 50.0,
+        "study_minutes": 0
+      },
+      {
+        "id": "23207874-b0a6-5799-9b32-f9e4c98cfbc4",
+        "name": "二元关系",
+        "learning_state": "learning",
+        "mastery_score": 75.0,
+        "study_minutes": 0
+      },
+      {
+        "id": "94803ffb-d9a2-597f-af8c-ec264bb2450f",
+        "name": "代数系统",
+        "learning_state": "learning",
+        "mastery_score": 0.0,
+        "study_minutes": 0
+      },
+      {
+        "id": "c578dcd0-de49-52f8-a7d8-6743db16a6aa",
+        "name": "集合及其运算",
+        "learning_state": "learning",
+        "mastery_score": 25.0,
+        "study_minutes": 0
+      },
+      {
+        "id": "abc4e27f-9259-5eaf-a1fb-56dee58ccd9f",
+        "name": "Day 1 · 诊断分诊 - 诊断分诊",
+        "learning_state": "weak",
+        "mastery_score": 0.0,
+        "study_minutes": 0
+      }
+    ]
+  },
+  "rebuilt_without_llm": true,
+  "at": "2026-09-22T13:50:40.310423+00:00"
+}

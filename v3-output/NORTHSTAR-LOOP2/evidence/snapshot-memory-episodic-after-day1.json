@@ -1,0 +1,62 @@
+{
+  "schema": "sparkle.northstar.real-drive.run.v1",
+  "snapshot": {
+    "items": [
+      {
+        "id": "dc553287-beea-495a-937d-9d76a31bf513",
+        "summary": "completed Day 7 · 保底模拟 - 树与生成树 等3个点",
+        "source_type": "chat_turn",
+        "source_id": "614c0331daa541089fb1cf75030b2c7e",
+        "source_lane": "direct_capture",
+        "subject_type": "task_outcome",
+        "occurred_at": "2026-09-22T13:36:43.391096",
+        "due_at": null,
+        "resolved_at": null,
+        "importance_score": 0.72,
+        "confidence": 0.78,
+        "evidence_token": null,
+        "decay_policy": null,
+        "evidence_score": 0.2,
+        "correction_count": 0,
+        "evidence_missing": false,
+        "evidence_refs": [
+          {
+            "id": "614c0331daa541089fb1cf75030b2c7e",
+            "type": "chat_turn",
+            "user_deleted": false,
+            "schema_version": "chat_turn.v1"
+          }
+        ],
+        "tags": [
+          "turn_end",
+          "task_completed",
+          "task_completed"
+        ],
+        "source_annotation": {
+          "turn_id": "614c0331daa541089fb1cf75030b2c7e",
+          "label": "chat_turn",
+          "written_at": "2026-09-22T13:36:43.393971"
+        },
+        "updated_at": "2026-09-22T13:36:43.925458",
+        "retracted_at": null,
+        "revoked_at": null,
+        "mentioned_entity_hash": null,
+        "declaration_label": null,
+        "epistemic_class": "OBSERVATION",
+        "status": "active",
+        "scope": {
+          "level": "domain",
+          "domain_key": "task_outcome",
+          "time_window": {
+            "occurred_at": "2026-09-22T13:36:43.391096"
+          }
+        }
+      }
+    ],
+    "total": 1,
+    "offset": 0,
+    "limit": 20,
+    "has_more": false
+  },
+  "at": "2026-09-22T13:37:57.290882+00:00"
+}

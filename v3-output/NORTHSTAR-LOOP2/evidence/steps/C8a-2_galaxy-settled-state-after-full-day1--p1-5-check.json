@@ -1,0 +1,68 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP2-20260922-131844",
+  "step_id": "C8a-2",
+  "phase": "day1settle",
+  "name": "galaxy settled state after full Day1 (P1-5 check)",
+  "started_at": "2026-09-22T13:46:25.934648+00:00",
+  "finished_at": "2026-09-22T13:46:25.934656+00:00",
+  "request": {},
+  "response": {
+    "touched_nodes": [
+      {
+        "name": "函数与基数",
+        "mastery": 0.0
+      },
+      {
+        "name": "图的基本概念",
+        "mastery": 25.0
+      },
+      {
+        "name": "欧拉图与哈密顿图",
+        "mastery": 0.0
+      },
+      {
+        "name": "组合计数",
+        "mastery": 0.0
+      },
+      {
+        "name": "谓词逻辑",
+        "mastery": 25.0
+      },
+      {
+        "name": "命题逻辑",
+        "mastery": 50.0
+      },
+      {
+        "name": "二元关系",
+        "mastery": 75.0
+      },
+      {
+        "name": "代数系统",
+        "mastery": 0.0
+      },
+      {
+        "name": "集合及其运算",
+        "mastery": 25.0
+      },
+      {
+        "name": "Day 1 · 诊断分诊 - 诊断分诊",
+        "mastery": 0.0
+      }
+    ],
+    "touched_count": 10,
+    "user_stats": {
+      "total_nodes": 128,
+      "unlocked_count": 10,
+      "mastered_count": 0,
+      "total_study_minutes": 0,
+      "sector_distribution": {},
+      "streak_days": 0
+    }
+  },
+  "verdict": "pass",
+  "checkpoints": [],
+  "notes": [
+    "settled touched nodes=10; user_stats={'total_nodes': 128, 'unlocked_count': 10, 'mastered_count': 0, 'total_study_minutes': 0, 'sector_distribution': {}, 'streak_days': 0}"
+  ]
+}

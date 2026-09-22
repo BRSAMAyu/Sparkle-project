@@ -1,0 +1,27 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP2-20260922-131844",
+  "step_id": "A2",
+  "phase": "setup",
+  "name": "register control account (GP-04 blind arm)",
+  "started_at": "2026-09-22T13:18:48.690270+00:00",
+  "finished_at": "2026-09-22T13:18:48.917433+00:00",
+  "request": {
+    "path": "/api/v1/auth/register",
+    "username": "northstar_ns2_ctrl_7b35d181",
+    "password_sha": "4cf6fc837ac2"
+  },
+  "response": {
+    "status": 200,
+    "keys": [
+      "access_token",
+      "refresh_token",
+      "token",
+      "token_type",
+      "user"
+    ]
+  },
+  "verdict": "pass",
+  "checkpoints": [],
+  "notes": []
+}

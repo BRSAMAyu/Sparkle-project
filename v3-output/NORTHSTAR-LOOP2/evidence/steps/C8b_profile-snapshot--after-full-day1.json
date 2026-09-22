@@ -1,0 +1,41 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP2-20260922-131844",
+  "step_id": "C8b",
+  "phase": "day1fix",
+  "name": "profile snapshot (after full Day1)",
+  "started_at": "2026-09-22T13:39:24.833847+00:00",
+  "finished_at": "2026-09-22T13:39:24.937074+00:00",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/profile/transparent",
+    "body": {}
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "layer_1": {
+        "preferences": [],
+        "goals": []
+      },
+      "layer_2": {
+        "persona": {
+          "tags": []
+        },
+        "editable": false
+      },
+      "layer_3": {
+        "patterns": [],
+        "fragments": []
+      },
+      "hidden_item_count": 17,
+      "transparency": {
+        "enabled": false,
+        "level": 0
+      }
+    }
+  },
+  "verdict": "pass",
+  "checkpoints": [],
+  "notes": []
+}

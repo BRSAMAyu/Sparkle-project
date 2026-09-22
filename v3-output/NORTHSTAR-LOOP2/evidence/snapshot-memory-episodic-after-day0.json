@@ -1,0 +1,12 @@
+{
+  "schema": "sparkle.northstar.real-drive.run.v1",
+  "snapshot": {
+    "items": [],
+    "total": 0,
+    "offset": 0,
+    "limit": 20,
+    "has_more": false
+  },
+  "entry_count": 0,
+  "at": "2026-09-22T13:32:18.381385+00:00"
+}

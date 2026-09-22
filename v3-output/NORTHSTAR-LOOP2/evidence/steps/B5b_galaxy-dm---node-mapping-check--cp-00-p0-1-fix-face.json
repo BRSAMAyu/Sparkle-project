@@ -1,0 +1,22 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP2-20260922-131844",
+  "step_id": "B5b",
+  "phase": "day0",
+  "name": "galaxy dm.* node mapping check (CP-00/P0-1 fix face)",
+  "started_at": "2026-09-22T13:32:19.017646+00:00",
+  "finished_at": "2026-09-22T13:32:19.017651+00:00",
+  "request": {
+    "source": "B6 snapshot (post-grade), zero extra API call"
+  },
+  "response": {
+    "dm_node_count": 0,
+    "dm_nodes_with_mastery_gt0": 0,
+    "dm_nodes": []
+  },
+  "verdict": "fail",
+  "checkpoints": [],
+  "notes": [
+    "dm.* nodes=0, with mastery>0=0 (expect >=6 nodes touched by 15q diagnostic)"
+  ]
+}

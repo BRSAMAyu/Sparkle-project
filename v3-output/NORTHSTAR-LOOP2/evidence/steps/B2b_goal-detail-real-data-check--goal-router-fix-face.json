@@ -1,0 +1,38 @@
+{
+  "schema": "sparkle.northstar.real-drive.step.v1",
+  "run_id": "NS001-LOOP2-20260922-131844",
+  "step_id": "B2b",
+  "phase": "day0",
+  "name": "goal detail real-data check (GOAL-ROUTER fix face)",
+  "started_at": "2026-09-22T13:19:53.566509+00:00",
+  "finished_at": "2026-09-22T13:19:53.566520+00:00",
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/experience/goal-detail/a5919e9a-8d74-40ba-836a-3c141d3f934b"
+  },
+  "response": {
+    "status": 200,
+    "real_data_fields": [],
+    "body_keys": [
+      "detail",
+      "error_code",
+      "message",
+      "request_id",
+      "success",
+      "trace_id"
+    ],
+    "body_preview": {
+      "success": false,
+      "error_code": "INTERNAL_ERROR",
+      "message": "An unexpected error occurred",
+      "request_id": "3ef77a36-873d-4db1-9fd8-3b2063eba7f3",
+      "trace_id": "bef94f52c54243c7a3cc77a556de7154",
+      "detail": "`MinimumAcceptanceCriteriaPayload` is not fully defined; you should define `CriteriaThresholdPayload`, then call `MinimumAcceptanceCriteriaPayload.model_rebuild()`.\n\nFor further information visit https://errors.pydantic.dev/2.12/u/class-not-fully-defined"
+    }
+  },
+  "verdict": "fail",
+  "checkpoints": [],
+  "notes": [
+    "goal head present=False; real fields: []"
+  ]
+}
