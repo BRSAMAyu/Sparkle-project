@@ -158,6 +158,7 @@ class ApiEndpoints {
   static String generateTasks(String planId) => '/plans/$planId/generate-tasks';
   static String planArchive(String id) => '/plans/$id/archive';
   static String planRestore(String id) => '/plans/$id/restore';
+  static String planConfirm(String id) => '/plans/$id/confirm';
   static const String planPrimary = '/plans/primary';
   static String planPhases(String id) => '/plans/$id/phases';
   static String reorderPlanPhases(String id) => '/plans/$id/phases/reorder';

@@ -3784,6 +3784,25 @@
     "planArchiveMessage": "归档后计划将移至历史记录，确定要归档吗？",
     "planArchiveTitle": "归档计划",
     "planArchivedSuccess": "计划已归档",
+    "planConfirmAction": "确认这份计划",
+    "planConfirmAlready": "这份计划此前已确认生效，无需重复操作",
+    "planConfirmFailed": "确认失败：{error}",
+    "@planConfirmFailed": {
+        "placeholders": {
+            "error": {
+                "type": "Object"
+            }
+        }
+    },
+    "planConfirmSuccess": "计划已确认生效",
+    "planConfirmedAt": "已确认 · {time}",
+    "@planConfirmedAt": {
+        "placeholders": {
+            "time": {
+                "type": "Object"
+            }
+        }
+    },
     "planContextTitle": "计划上下文",
     "planDaysRemaining": "{arg0}",
     "planDetailTitle": "计划详情",

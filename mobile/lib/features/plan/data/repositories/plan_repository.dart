@@ -5,6 +5,7 @@ import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/plan/data/models/learning_path_progress_model.dart';
+import 'package:sparkle/features/plan/data/models/plan_confirm_result.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/data/models/plan_phase_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -68,6 +69,28 @@ class PlanRepository {
   }
 
   Future<List<PlanModel>> getActivePlans() async => getPlans(isActive: true);
+
+  /// CP-01：确认计划正式生效。幂等——已确认再确认返回 200 +
+  /// already_confirmed:true（保留首次时间戳），不当错误；404（他人/不存在/
+  /// 软删）与网络错按既有惯例抛 [Exception]，由上层错误面呈现。
+  Future<PlanConfirmResult> confirmPlan(String id) async {
+    if (DemoDataService.isDemoMode) {
+      return PlanConfirmResult(
+        planId: id,
+        alreadyConfirmed: false,
+        confirmedAt: DateTime.now(),
+      );
+    }
+    try {
+      final response =
+          await _apiClient.post<dynamic>(ApiEndpoints.planConfirm(id));
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'confirmPlan');
+      return PlanConfirmResult.fromJson(payload);
+    } on DioException catch (e) {
+      return _handleDioError(e, 'confirmPlan');
+    }
+  }
 
   Future<PlanModel> createPlan(PlanCreate plan) async {
     if (DemoDataService.isDemoMode) {

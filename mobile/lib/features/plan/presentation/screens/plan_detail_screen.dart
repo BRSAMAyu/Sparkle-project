@@ -21,6 +21,7 @@ import 'package:sparkle/features/plan/data/models/plan_phase_model.dart';
 import 'package:sparkle/features/plan/data/repositories/exam_sprint_repository.dart';
 import 'package:sparkle/features/plan/data/services/plan_description_codec.dart';
 import 'package:sparkle/features/plan/presentation/providers/learning_path_progress_provider.dart';
+import 'package:sparkle/features/plan/presentation/providers/plan_confirmation_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_phase_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/plan/presentation/widgets/learning_path_progress_bar.dart';
@@ -405,6 +406,10 @@ class _PlanOverviewTab extends ConsumerWidget {
                       ],
                     ),
                   ],
+                  if (plan.type == PlanType.sprint) ...[
+                    const SizedBox(height: DS.md),
+                    _PlanConfirmSection(plan: plan),
+                  ],
                 ],
               ),
             ),
@@ -610,6 +615,81 @@ class _PlanOverviewTab extends ConsumerWidget {
       if (!context.mounted) return;
       AppFeedback.error(
           context, context.l10n.planDetailAddTaskFailed(e.toString()));
+    }
+  }
+}
+
+/// CP-01-MOBILE：exam-sprint 计划的人工确认区——收进头卡的次级位置，
+/// 不新增大块面积。未确认态渲染 ghost 次级动作（accent 由主题唯一承担）；
+/// 已确认态转 success 语义槽 + 确认时间。重复确认由后端幂等兜底
+/// （already_confirmed 不当错误），404/网络错走 AppFeedback 错误面。
+class _PlanConfirmSection extends ConsumerWidget {
+  const _PlanConfirmSection({required this.plan});
+
+  final PlanModel plan;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final confirmState = ref.watch(planConfirmProvider(plan.id));
+    final l10n = context.l10n;
+
+    if (confirmState.isConfirmed) {
+      final confirmedAt = confirmState.confirmedAt;
+      return Container(
+        key: const ValueKey('plan-confirmed-badge'),
+        width: double.infinity,
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          color: DS.success.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: DS.success.withValues(alpha: 0.24)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.verified_rounded, size: 18, color: DS.success),
+            const SizedBox(width: DS.spacing8),
+            Expanded(
+              child: Text(
+                confirmedAt != null
+                    ? l10n.planConfirmedAt(
+                        Formatters.formatDateTime(confirmedAt),
+                      )
+                    : l10n.planConfirmSuccess,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: DS.success,
+                      fontWeight: DS.fontWeightBold,
+                    ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return SparkleButton(
+      key: const ValueKey('plan-confirm-button'),
+      variant: ButtonVariant.ghost,
+      onPressed: () => unawaited(_confirmPlan(context, ref)),
+      loading: confirmState.inFlight,
+      icon: const Icon(Icons.verified_outlined, size: 18),
+      label: l10n.planConfirmAction,
+    );
+  }
+
+  Future<void> _confirmPlan(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
+    final outcome =
+        await ref.read(planConfirmProvider(plan.id).notifier).confirm(plan.id);
+    if (!context.mounted) return;
+    switch (outcome) {
+      case PlanConfirmOutcome.confirmed:
+        AppFeedback.success(context, l10n.planConfirmSuccess);
+      case PlanConfirmOutcome.alreadyConfirmed:
+        AppFeedback.info(context, l10n.planConfirmAlready);
+      case PlanConfirmOutcome.failed:
+        final error =
+            ref.read(planConfirmProvider(plan.id)).error ?? '';
+        AppFeedback.error(context, l10n.planConfirmFailed(error));
     }
   }
 }

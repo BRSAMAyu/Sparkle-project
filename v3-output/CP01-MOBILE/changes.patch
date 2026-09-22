@@ -1,0 +1,1831 @@
+diff --git a/mobile/lib/core/network/api_endpoints.dart b/mobile/lib/core/network/api_endpoints.dart
+index 70e5a07c..96d59939 100755
+--- a/mobile/lib/core/network/api_endpoints.dart
++++ b/mobile/lib/core/network/api_endpoints.dart
+@@ -158,6 +158,7 @@ class ApiEndpoints {
+   static String generateTasks(String planId) => '/plans/$planId/generate-tasks';
+   static String planArchive(String id) => '/plans/$id/archive';
+   static String planRestore(String id) => '/plans/$id/restore';
++  static String planConfirm(String id) => '/plans/$id/confirm';
+   static const String planPrimary = '/plans/primary';
+   static String planPhases(String id) => '/plans/$id/phases';
+   static String reorderPlanPhases(String id) => '/plans/$id/phases/reorder';
+diff --git a/mobile/lib/features/plan/data/models/plan_confirm_result.dart b/mobile/lib/features/plan/data/models/plan_confirm_result.dart
+new file mode 100644
+index 00000000..4d27dc73
+--- /dev/null
++++ b/mobile/lib/features/plan/data/models/plan_confirm_result.dart
+@@ -0,0 +1,29 @@
++/// CP-01：`POST /plans/{id}/confirm` 的确认摘要响应。
++///
++/// 后端语义（commit 308400d1）：首次确认返回 `already_confirmed:false` 与
++/// 确认时间戳；重复确认幂等返回 `already_confirmed:true` 且保留首次时间戳；
++/// 他人/不存在/软删统一 404。手写 fromJson（一次性摘要契约，非资源模型，
++/// 对齐 PlanPhaseBundle 的手写解析风格，不进 build_runner）。
++class PlanConfirmResult {
++  const PlanConfirmResult({
++    required this.planId,
++    required this.alreadyConfirmed,
++    this.confirmedAt,
++    this.message,
++  });
++
++  factory PlanConfirmResult.fromJson(Map<String, dynamic> json) {
++    final confirmedAtRaw = json['confirmed_at'];
++    return PlanConfirmResult(
++      planId: '${json['plan_id'] ?? ''}',
++      alreadyConfirmed: json['already_confirmed'] == true,
++      confirmedAt: confirmedAtRaw is String ? DateTime.tryParse(confirmedAtRaw) : null,
++      message: json['message'] is String ? json['message'] as String : null,
++    );
++  }
++
++  final String planId;
++  final bool alreadyConfirmed;
++  final DateTime? confirmedAt;
++  final String? message;
++}
+diff --git a/mobile/lib/features/plan/data/repositories/plan_repository.dart b/mobile/lib/features/plan/data/repositories/plan_repository.dart
+index 452ea12e..763aee14 100755
+--- a/mobile/lib/features/plan/data/repositories/plan_repository.dart
++++ b/mobile/lib/features/plan/data/repositories/plan_repository.dart
+@@ -5,6 +5,7 @@ import 'package:sparkle/core/network/api_endpoints.dart';
+ import 'package:sparkle/core/network/response_parser.dart';
+ import 'package:sparkle/core/services/demo_data_service.dart';
+ import 'package:sparkle/features/plan/data/models/learning_path_progress_model.dart';
++import 'package:sparkle/features/plan/data/models/plan_confirm_result.dart';
+ import 'package:sparkle/features/plan/data/models/plan_model.dart';
+ import 'package:sparkle/features/plan/data/models/plan_phase_model.dart';
+ import 'package:sparkle/shared/entities/task_model.dart';
+@@ -69,6 +70,28 @@ class PlanRepository {
+ 
+   Future<List<PlanModel>> getActivePlans() async => getPlans(isActive: true);
+ 
++  /// CP-01：确认计划正式生效。幂等——已确认再确认返回 200 +
++  /// already_confirmed:true（保留首次时间戳），不当错误；404（他人/不存在/
++  /// 软删）与网络错按既有惯例抛 [Exception]，由上层错误面呈现。
++  Future<PlanConfirmResult> confirmPlan(String id) async {
++    if (DemoDataService.isDemoMode) {
++      return PlanConfirmResult(
++        planId: id,
++        alreadyConfirmed: false,
++        confirmedAt: DateTime.now(),
++      );
++    }
++    try {
++      final response =
++          await _apiClient.post<dynamic>(ApiEndpoints.planConfirm(id));
++      final payload =
++          ApiResponseParser.unwrapMap(response.data, action: 'confirmPlan');
++      return PlanConfirmResult.fromJson(payload);
++    } on DioException catch (e) {
++      return _handleDioError(e, 'confirmPlan');
++    }
++  }
++
+   Future<PlanModel> createPlan(PlanCreate plan) async {
+     if (DemoDataService.isDemoMode) {
+       final demoService = DemoDataService();
+diff --git a/mobile/lib/features/plan/presentation/providers/plan_confirmation_provider.dart b/mobile/lib/features/plan/presentation/providers/plan_confirmation_provider.dart
+new file mode 100644
+index 00000000..fdbbee2f
+--- /dev/null
++++ b/mobile/lib/features/plan/presentation/providers/plan_confirmation_provider.dart
+@@ -0,0 +1,78 @@
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
++
++/// CP-01-MOBILE：计划人工确认的会话内状态。
++///
++/// 为什么是会话级而非挂在 [PlanModel]：GET /plans/{id} 的响应契约不含
++/// confirmed_at（后端 CP-01 仅新增 confirm 端点，未扩资源 schema），客户端
++/// 无法从拉取侧得知已确认态；确认事实只能由本端点的幂等 200 摘要给出。
++/// 因此确认后本地记录 confirmed_at，本次会话内呈现已确认态；重复点击由
++/// 后端幂等兜底（already_confirmed 不当错误）。
++enum PlanConfirmOutcome { confirmed, alreadyConfirmed, failed }
++
++class PlanConfirmState {
++  const PlanConfirmState({
++    this.inFlight = false,
++    this.confirmed = false,
++    this.confirmedAt,
++    this.error,
++  });
++
++  /// 请求在途（按钮禁用，防双击重放）。
++  final bool inFlight;
++
++  /// 已确认（来自后端 200 摘要的幂等事实，独立于时间戳是否可解析）。
++  final bool confirmed;
++
++  /// 确认时间（来自后端摘要；重复确认时为首次确认时间戳）。
++  final DateTime? confirmedAt;
++
++  /// 最近一次失败的原因摘要（供错误面呈现）。
++  final String? error;
++
++  bool get isConfirmed => confirmed;
++
++  PlanConfirmState copyWith({
++    bool? inFlight,
++    bool? confirmed,
++    DateTime? confirmedAt,
++    String? error,
++    bool clearError = false,
++  }) =>
++      PlanConfirmState(
++        inFlight: inFlight ?? this.inFlight,
++        confirmed: confirmed ?? this.confirmed,
++        confirmedAt: confirmedAt ?? this.confirmedAt,
++        error: clearError ? null : error ?? this.error,
++      );
++}
++
++class PlanConfirmNotifier extends StateNotifier<PlanConfirmState> {
++  PlanConfirmNotifier(this._repository) : super(const PlanConfirmState());
++
++  final PlanRepository _repository;
++
++  /// 返回确认结果供 UI 反馈；failed 时错误详情在 [PlanConfirmState.error]。
++  Future<PlanConfirmOutcome> confirm(String planId) async {
++    if (state.inFlight) return PlanConfirmOutcome.failed;
++    state = state.copyWith(inFlight: true, clearError: true);
++    try {
++      final result = await _repository.confirmPlan(planId);
++      if (!mounted) return PlanConfirmOutcome.failed;
++      state = PlanConfirmState(confirmed: true, confirmedAt: result.confirmedAt);
++      return result.alreadyConfirmed
++          ? PlanConfirmOutcome.alreadyConfirmed
++          : PlanConfirmOutcome.confirmed;
++    } catch (e) {
++      if (!mounted) return PlanConfirmOutcome.failed;
++      state = state.copyWith(inFlight: false, error: e.toString());
++      return PlanConfirmOutcome.failed;
++    }
++  }
++}
++
++/// 按计划 id 家族化的确认状态（详情屏头卡消费）。
++final planConfirmProvider =
++    StateNotifierProvider.family<PlanConfirmNotifier, PlanConfirmState, String>(
++  (ref, planId) => PlanConfirmNotifier(ref.watch(planRepositoryProvider)),
++);
+diff --git a/mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart b/mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart
+index 630cf140..5c733aa7 100755
+--- a/mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart
++++ b/mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart
+@@ -21,6 +21,7 @@ import 'package:sparkle/features/plan/data/models/plan_phase_model.dart';
+ import 'package:sparkle/features/plan/data/repositories/exam_sprint_repository.dart';
+ import 'package:sparkle/features/plan/data/services/plan_description_codec.dart';
+ import 'package:sparkle/features/plan/presentation/providers/learning_path_progress_provider.dart';
++import 'package:sparkle/features/plan/presentation/providers/plan_confirmation_provider.dart';
+ import 'package:sparkle/features/plan/presentation/providers/plan_phase_provider.dart';
+ import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
+ import 'package:sparkle/features/plan/presentation/widgets/learning_path_progress_bar.dart';
+@@ -405,6 +406,10 @@ class _PlanOverviewTab extends ConsumerWidget {
+                       ],
+                     ),
+                   ],
++                  if (plan.type == PlanType.sprint) ...[
++                    const SizedBox(height: DS.md),
++                    _PlanConfirmSection(plan: plan),
++                  ],
+                 ],
+               ),
+             ),
+@@ -614,6 +619,81 @@ class _PlanOverviewTab extends ConsumerWidget {
+   }
+ }
+ 
++/// CP-01-MOBILE：exam-sprint 计划的人工确认区——收进头卡的次级位置，
++/// 不新增大块面积。未确认态渲染 ghost 次级动作（accent 由主题唯一承担）；
++/// 已确认态转 success 语义槽 + 确认时间。重复确认由后端幂等兜底
++/// （already_confirmed 不当错误），404/网络错走 AppFeedback 错误面。
++class _PlanConfirmSection extends ConsumerWidget {
++  const _PlanConfirmSection({required this.plan});
++
++  final PlanModel plan;
++
++  @override
++  Widget build(BuildContext context, WidgetRef ref) {
++    final confirmState = ref.watch(planConfirmProvider(plan.id));
++    final l10n = context.l10n;
++
++    if (confirmState.isConfirmed) {
++      final confirmedAt = confirmState.confirmedAt;
++      return Container(
++        key: const ValueKey('plan-confirmed-badge'),
++        width: double.infinity,
++        padding: const EdgeInsets.all(DS.spacing12),
++        decoration: BoxDecoration(
++          color: DS.success.withValues(alpha: 0.10),
++          borderRadius: BorderRadius.circular(12),
++          border: Border.all(color: DS.success.withValues(alpha: 0.24)),
++        ),
++        child: Row(
++          children: [
++            Icon(Icons.verified_rounded, size: 18, color: DS.success),
++            const SizedBox(width: DS.spacing8),
++            Expanded(
++              child: Text(
++                confirmedAt != null
++                    ? l10n.planConfirmedAt(
++                        Formatters.formatDateTime(confirmedAt),
++                      )
++                    : l10n.planConfirmSuccess,
++                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
++                      color: DS.success,
++                      fontWeight: DS.fontWeightBold,
++                    ),
++              ),
++            ),
++          ],
++        ),
++      );
++    }
++
++    return SparkleButton(
++      key: const ValueKey('plan-confirm-button'),
++      variant: ButtonVariant.ghost,
++      onPressed: () => unawaited(_confirmPlan(context, ref)),
++      loading: confirmState.inFlight,
++      icon: const Icon(Icons.verified_outlined, size: 18),
++      label: l10n.planConfirmAction,
++    );
++  }
++
++  Future<void> _confirmPlan(BuildContext context, WidgetRef ref) async {
++    final l10n = context.l10n;
++    final outcome =
++        await ref.read(planConfirmProvider(plan.id).notifier).confirm(plan.id);
++    if (!context.mounted) return;
++    switch (outcome) {
++      case PlanConfirmOutcome.confirmed:
++        AppFeedback.success(context, l10n.planConfirmSuccess);
++      case PlanConfirmOutcome.alreadyConfirmed:
++        AppFeedback.info(context, l10n.planConfirmAlready);
++      case PlanConfirmOutcome.failed:
++        final error =
++            ref.read(planConfirmProvider(plan.id)).error ?? '';
++        AppFeedback.error(context, l10n.planConfirmFailed(error));
++    }
++  }
++}
++
+ class _PlanExecutionSection extends StatelessWidget {
+   const _PlanExecutionSection({
+     required this.plan,
+diff --git a/mobile/lib/l10n/app_en.arb b/mobile/lib/l10n/app_en.arb
+index 44d7f870..53ae3ede 100755
+--- a/mobile/lib/l10n/app_en.arb
++++ b/mobile/lib/l10n/app_en.arb
+@@ -3791,6 +3791,25 @@
+     "planArchiveMessage": "Plan Archive Message",
+     "planArchiveTitle": "Plan Archive Title",
+     "planArchivedSuccess": "Plan Archived Success",
++    "planConfirmAction": "Confirm this plan",
++    "planConfirmAlready": "This plan was already confirmed — no action needed",
++    "planConfirmFailed": "Failed to confirm plan: {error}",
++    "@planConfirmFailed": {
++        "placeholders": {
++            "error": {
++                "type": "Object"
++            }
++        }
++    },
++    "planConfirmSuccess": "Plan confirmed and now in effect",
++    "planConfirmedAt": "Confirmed · {time}",
++    "@planConfirmedAt": {
++        "placeholders": {
++            "time": {
++                "type": "Object"
++            }
++        }
++    },
+     "planContextTitle": "Plan Context Title",
+     "planDaysRemaining": "{arg0}",
+     "planDetailTitle": "Plan Detail Title",
+diff --git a/mobile/lib/l10n/app_localizations.dart b/mobile/lib/l10n/app_localizations.dart
+index 8313a56e..c900070e 100644
+--- a/mobile/lib/l10n/app_localizations.dart
++++ b/mobile/lib/l10n/app_localizations.dart
+@@ -63,7 +63,7 @@ import 'app_localizations_zh.dart';
+ /// property.
+ abstract class AppLocalizations {
+   AppLocalizations(String locale)
+-      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
++    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+ 
+   final String localeName;
+ 
+@@ -86,16 +86,16 @@ abstract class AppLocalizations {
+   /// of delegates is preferred or required.
+   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
+       <LocalizationsDelegate<dynamic>>[
+-    delegate,
+-    GlobalMaterialLocalizations.delegate,
+-    GlobalCupertinoLocalizations.delegate,
+-    GlobalWidgetsLocalizations.delegate,
+-  ];
++        delegate,
++        GlobalMaterialLocalizations.delegate,
++        GlobalCupertinoLocalizations.delegate,
++        GlobalWidgetsLocalizations.delegate,
++      ];
+ 
+   /// A list of this localizations delegate's supported locales.
+   static const List<Locale> supportedLocales = <Locale>[
+     Locale('en'),
+-    Locale('zh')
++    Locale('zh'),
+   ];
+ 
+   /// No description provided for @appTitle.
+@@ -16928,6 +16928,36 @@ abstract class AppLocalizations {
+   /// **'计划已归档'**
+   String get planArchivedSuccess;
+ 
++  /// No description provided for @planConfirmAction.
++  ///
++  /// In zh, this message translates to:
++  /// **'确认这份计划'**
++  String get planConfirmAction;
++
++  /// No description provided for @planConfirmAlready.
++  ///
++  /// In zh, this message translates to:
++  /// **'这份计划此前已确认生效，无需重复操作'**
++  String get planConfirmAlready;
++
++  /// No description provided for @planConfirmFailed.
++  ///
++  /// In zh, this message translates to:
++  /// **'确认失败：{error}'**
++  String planConfirmFailed(Object error);
++
++  /// No description provided for @planConfirmSuccess.
++  ///
++  /// In zh, this message translates to:
++  /// **'计划已确认生效'**
++  String get planConfirmSuccess;
++
++  /// No description provided for @planConfirmedAt.
++  ///
++  /// In zh, this message translates to:
++  /// **'已确认 · {time}'**
++  String planConfirmedAt(Object time);
++
+   /// No description provided for @planContextTitle.
+   ///
+   /// In zh, this message translates to:
+@@ -19105,7 +19135,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'已处理 {count} 个候选节点，新增 {created} 个，复用 {reused} 个已有节点。'**
+   String taskDetailCandidatesApplied(
+-      Object count, Object created, Object reused);
++    Object count,
++    Object created,
++    Object reused,
++  );
+ 
+   /// No description provided for @taskDetailCandidatesReused.
+   ///
+@@ -20474,7 +20507,11 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'近 {days} 天里，当前最值得继续盯的预测动作是「{topAction}」；同时 prompt / inference 命中率分别是 {promptUtil}%/{inferenceUtil}%。'**
+   String aiOpsPredictionSummary(
+-      Object days, Object topAction, Object promptUtil, Object inferenceUtil);
++    Object days,
++    Object topAction,
++    Object promptUtil,
++    Object inferenceUtil,
++  );
+ 
+   /// No description provided for @aiOpsOpenAnalysis.
+   ///
+@@ -22761,7 +22798,11 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{progress}% · {completed}/{occurrences} 次发生 · {tasks} 个任务'**
+   String planDetailPhaseStats(
+-      Object progress, Object completed, Object occurrences, Object tasks);
++    Object progress,
++    Object completed,
++    Object occurrences,
++    Object tasks,
++  );
+ 
+   /// No description provided for @theaterTitle.
+   ///
+@@ -23476,7 +23517,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'当前阶段：{label} · {step} · {compare}'**
+   String theaterTimelinePhaseWithSteps(
+-      Object compare, Object label, Object step);
++    Object compare,
++    Object label,
++    Object step,
++  );
+ 
+   /// No description provided for @theaterTimelineWaitingDeduction.
+   ///
+@@ -23710,8 +23754,12 @@ abstract class AppLocalizations {
+   ///
+   /// In zh, this message translates to:
+   /// **'区间预测：完成率 {completionLow}%-{completionHigh}%， 掌握度 {masteryLow}%-{masteryHigh}%'**
+-  String theaterRouteRangePrediction(Object completionHigh,
+-      Object completionLow, Object masteryHigh, Object masteryLow);
++  String theaterRouteRangePrediction(
++    Object completionHigh,
++    Object completionLow,
++    Object masteryHigh,
++    Object masteryLow,
++  );
+ 
+   /// No description provided for @theaterRouteRecommendedBaseline.
+   ///
+@@ -24480,7 +24528,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{type} · {dailyMinutes} 分钟/天 · {hours} 小时'**
+   String planCreateReviewSummary(
+-      Object dailyMinutes, Object hours, Object type);
++    Object dailyMinutes,
++    Object hours,
++    Object type,
++  );
+ 
+   /// No description provided for @planCreateReviewEditDescription.
+   ///
+@@ -25615,17 +25666,22 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'原始 {originalMastery}% / {originalCompletion}%  →  调整后 {predictedMastery}% / {predictedCompletion}%'**
+   String theaterWhatIfCombinedResult(
+-      Object originalMastery,
+-      Object originalCompletion,
+-      Object predictedMastery,
+-      Object predictedCompletion);
++    Object originalMastery,
++    Object originalCompletion,
++    Object predictedMastery,
++    Object predictedCompletion,
++  );
+ 
+   /// No description provided for @theaterAccuracyPredictedActual.
+   ///
+   /// In zh, this message translates to:
+   /// **'预测 {predictedCompletion}% / {predictedMastery}%， 实际 {actualCompletion}% / {actualMastery}%'**
+-  String theaterAccuracyPredictedActual(Object predictedCompletion,
+-      Object predictedMastery, Object actualCompletion, Object actualMastery);
++  String theaterAccuracyPredictedActual(
++    Object predictedCompletion,
++    Object predictedMastery,
++    Object actualCompletion,
++    Object actualMastery,
++  );
+ 
+   /// No description provided for @theaterPerDayUnit.
+   ///
+@@ -37554,12 +37610,13 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{hashtag} 我在 Sparkle 达成了「{headline}」里程碑。累计学习 {studyDays} 天，掌握 {masteredNodes} 个知识节点，完成 {completedSprints} 次冲刺，记录 {errorCount} 道错题。'**
+   String achievementMilestoneShareText(
+-      Object completedSprints,
+-      Object errorCount,
+-      Object hashtag,
+-      Object headline,
+-      Object masteredNodes,
+-      Object studyDays);
++    Object completedSprints,
++    Object errorCount,
++    Object hashtag,
++    Object headline,
++    Object masteredNodes,
++    Object studyDays,
++  );
+ 
+   /// No description provided for @achievementMilestoneShareInProgress.
+   ///
+@@ -38010,7 +38067,11 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{month}月{day}日 {hour}:{minute}'**
+   String achievementUnlockTimeDate(
+-      Object day, Object hour, Object minute, Object month);
++    Object day,
++    Object hour,
++    Object minute,
++    Object month,
++  );
+ 
+   /// No description provided for @achievementUnlockCombo.
+   ///
+@@ -38203,7 +38264,11 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'结果：{result}，影响任务 {affected} 个，新增 {inserted} 个，收起 {hidden} 个'**
+   String notificationCompilationSummary(
+-      Object affected, Object hidden, Object inserted, Object result);
++    Object affected,
++    Object hidden,
++    Object inserted,
++    Object result,
++  );
+ 
+   /// No description provided for @notificationEvidencePlanHealthRecovered.
+   ///
+@@ -38420,7 +38485,9 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'接受率 {acceptanceRate}% · 行动率 {actionRate}%'**
+   String notificationAnalyticsAcceptanceActionRate(
+-      Object acceptanceRate, Object actionRate);
++    Object acceptanceRate,
++    Object actionRate,
++  );
+ 
+   /// No description provided for @notificationAnalyticsToneEffectivenessTitle.
+   ///
+@@ -38457,7 +38524,9 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'行动率 {actedRate}% · 有效率 {effectiveRate}%'**
+   String notificationAnalyticsActedEffectiveRate(
+-      Object actedRate, Object effectiveRate);
++    Object actedRate,
++    Object effectiveRate,
++  );
+ 
+   /// No description provided for @notificationAnalyticsTimeToActionTitle.
+   ///
+@@ -38524,7 +38593,9 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'接受率: {acceptanceRate}% · 行动率: {actionRate}%'**
+   String notificationAnalyticsRateSuffix(
+-      Object acceptanceRate, Object actionRate);
++    Object acceptanceRate,
++    Object actionRate,
++  );
+ 
+   /// No description provided for @focusNoTaskHint.
+   ///
+@@ -38567,7 +38638,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'今天的专注让你的 {nodeName} 掌握度从 {oldMastery} 提升到了 {newMastery} 分'**
+   String focusSessionMasteryUpdate(
+-      String nodeName, int oldMastery, int newMastery);
++    String nodeName,
++    int oldMastery,
++    int newMastery,
++  );
+ 
+   /// No description provided for @focusReflectionTitleLabel.
+   ///
+@@ -49115,8 +49189,12 @@ abstract class AppLocalizations {
+   ///
+   /// In zh, this message translates to:
+   /// **'我的 7 天备考冲刺完成：掌握 {masteredNodes} 个知识节点，修复 {repairedErrors} 个错误模式，完成 {completedTasks} 个任务。最强项：{strongestArea}。#Sparkle备考'**
+-  String planSprintShareText(int masteredNodes, int repairedErrors,
+-      int completedTasks, String strongestArea);
++  String planSprintShareText(
++    int masteredNodes,
++    int repairedErrors,
++    int completedTasks,
++    String strongestArea,
++  );
+ 
+   /// No description provided for @planSprintBack.
+   ///
+@@ -49159,7 +49237,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'掌握了 {masteredNodes} 个知识节点，修复了 {repairedErrors} 个错误模式，完成了 {completedTasks} 个任务。'**
+   String planSprintResultSummary(
+-      Object completedTasks, Object masteredNodes, Object repairedErrors);
++    Object completedTasks,
++    Object masteredNodes,
++    Object repairedErrors,
++  );
+ 
+   /// No description provided for @planSprintStrongest.
+   ///
+@@ -49400,7 +49481,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{mode} · 进行中（第 {currentDay} 天，还剩 {remainingDays} 天）'**
+   String planPortfolioActiveDay(
+-      Object currentDay, Object mode, Object remainingDays);
++    Object currentDay,
++    Object mode,
++    Object remainingDays,
++  );
+ 
+   /// No description provided for @planPortfolioActiveShort.
+   ///
+@@ -54789,7 +54873,11 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'prompt 命中 {prompt}% · 推理命中 {inference}% · known {promptCount}/{inferenceCount}'**
+   String aiopsPromptHit(
+-      String prompt, String inference, int promptCount, int inferenceCount);
++    String prompt,
++    String inference,
++    int promptCount,
++    int inferenceCount,
++  );
+ 
+   /// No description provided for @calTaskRescheduled.
+   ///
+@@ -56290,7 +56378,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{tone} · {verbosity}。{reason}'**
+   String understandingStyleSummary(
+-      String tone, String verbosity, String reason);
++    String tone,
++    String verbosity,
++    String reason,
++  );
+ 
+   /// No description provided for @understandingRecentlyCorrected.
+   ///
+@@ -57335,7 +57426,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'将「{title}」的状态从「{status}」改为「{nextStatus}」。\\n\\n这会影响相关计划、任务和提醒，且不会自动撤销。'**
+   String personaGoalStatusChangeContent(
+-      Object nextStatus, Object status, Object title);
++    Object nextStatus,
++    Object status,
++    Object title,
++  );
+ 
+   /// No description provided for @personaConfirmChange.
+   ///
+@@ -64002,14 +64096,20 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'你是Sparkle内置的群聊AI助手，正在协助群聊「{name}」。\n你的任务是产出一条最终可直接发送到群里的中文消息。\n只输出消息正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样发”“建议发送”，不要使用项目符号或备注，不要冒充系统说明。\n语气自然、简洁、友好，像群成员会直接发出去的话。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用 `•`、`◦`、emoji 项目符号、半残 Markdown。\n\n最近对话:\n{contextLines}\n\n用户问题:\n{input}'**
+   String communityAgentGroupPromptZh(
+-      Object contextLines, Object input, Object name);
++    Object contextLines,
++    Object input,
++    Object name,
++  );
+ 
+   /// No description provided for @communityAgentGroupPromptEn.
+   ///
+   /// In zh, this message translates to:
+   /// **'You are Sparkle\'s built-in group chat AI assistant, helping in the group \"{name}\".\nYour task is to produce a single message ready to send directly in the group.\nOutput only the message body — no explanations, no preambles, no \"I can help\" or \"You could say\" or \"Suggested reply\", no bullet points or notes, no system impersonation.\nTone: natural, concise, friendly — like something a group member would actually send.\nIf you need to list items, only use `1. ` or `- `. No `•`, `◦`, emoji bullets, or broken Markdown.\n\nRecent conversation:\n{contextLines}\n\nUser question:\n{input}'**
+   String communityAgentGroupPromptEn(
+-      Object contextLines, Object input, Object name);
++    Object contextLines,
++    Object input,
++    Object name,
++  );
+ 
+   /// No description provided for @communityAgentFriend.
+   ///
+@@ -64022,14 +64122,20 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'你是Sparkle内置的私聊AI助手，正在协助我与「{name}」的对话。\n你的任务是产出一条最终可直接发送给对方的中文私聊回复。\n只输出回复正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样回”“建议回复”，不要附带分析或备注。\n语气自然、礼貌、克制，像我会直接按下发送的内容。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用特殊项目符号或半残 Markdown。\n\n最近对话:\n{contextLines}\n\n用户问题:\n{input}'**
+   String communityAgentPrivatePromptZh(
+-      Object contextLines, Object input, Object name);
++    Object contextLines,
++    Object input,
++    Object name,
++  );
+ 
+   /// No description provided for @communityAgentPrivatePromptEn.
+   ///
+   /// In zh, this message translates to:
+   /// **'You are Sparkle\'s built-in private chat AI assistant, helping with my conversation with \"{name}\".\nYour task is to produce a single private reply ready to send directly.\nOutput only the reply body — no explanations, no preambles, no \"I can help\" or \"You could reply\" or \"Suggested reply\", no analysis or notes.\nTone: natural, polite, restrained — like something I would actually hit send on.\nIf you need to list items, only use `1. ` or `- `. No special bullets or broken Markdown.\n\nRecent conversation:\n{contextLines}\n\nUser question:\n{input}'**
+   String communityAgentPrivatePromptEn(
+-      Object contextLines, Object input, Object name);
++    Object contextLines,
++    Object input,
++    Object name,
++  );
+ 
+   /// No description provided for @communityAgentPresetSummaryGroupZh.
+   ///
+@@ -64450,7 +64556,11 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'必读 {mustLoad} · 选读 {optional} · 附件 {attached}{retrievalLabel}'**
+   String taskProtocolMaterialsCount(
+-      Object attached, Object mustLoad, Object optional, Object retrievalLabel);
++    Object attached,
++    Object mustLoad,
++    Object optional,
++    Object retrievalLabel,
++  );
+ 
+   /// No description provided for @taskProtocolUpdatesOnCompletion.
+   ///
+@@ -66479,7 +66589,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{title} ≥ {threshold} {unit}'**
+   String displayCriterionAtLeastUnitTemplate(
+-      String title, String threshold, String unit);
++    String title,
++    String threshold,
++    String unit,
++  );
+ 
+   /// No description provided for @displayCriterionAtLeastTemplate.
+   ///
+@@ -66725,8 +66838,9 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
+   }
+ 
+   throw FlutterError(
+-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+-      'an issue with the localizations generation tool. Please file an issue '
+-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+-      'that was used.');
++    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
++    'an issue with the localizations generation tool. Please file an issue '
++    'on GitHub with a reproducible sample app and the gen-l10n configuration '
++    'that was used.',
++  );
+ }
+diff --git a/mobile/lib/l10n/app_localizations_en.dart b/mobile/lib/l10n/app_localizations_en.dart
+index 34ea0f92..da522484 100644
+--- a/mobile/lib/l10n/app_localizations_en.dart
++++ b/mobile/lib/l10n/app_localizations_en.dart
+@@ -9492,6 +9492,26 @@ class AppLocalizationsEn extends AppLocalizations {
+   @override
+   String get planArchivedSuccess => 'Plan Archived Success';
+ 
++  @override
++  String get planConfirmAction => 'Confirm this plan';
++
++  @override
++  String get planConfirmAlready =>
++      'This plan was already confirmed — no action needed';
++
++  @override
++  String planConfirmFailed(Object error) {
++    return 'Failed to confirm plan: $error';
++  }
++
++  @override
++  String get planConfirmSuccess => 'Plan confirmed and now in effect';
++
++  @override
++  String planConfirmedAt(Object time) {
++    return 'Confirmed · $time';
++  }
++
+   @override
+   String get planContextTitle => 'Plan Context Title';
+ 
+@@ -10722,7 +10742,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String taskDetailCandidatesApplied(
+-      Object count, Object created, Object reused) {
++    Object count,
++    Object created,
++    Object reused,
++  ) {
+     return 'Processed $count candidates, created $created new, reused $reused existing.';
+   }
+ 
+@@ -11535,7 +11558,11 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String aiOpsPredictionSummary(
+-      Object days, Object topAction, Object promptUtil, Object inferenceUtil) {
++    Object days,
++    Object topAction,
++    Object promptUtil,
++    Object inferenceUtil,
++  ) {
+     return 'In the past $days days, the prediction action worth watching most is \"$topAction\"; prompt/inference hit rates are $promptUtil%/$inferenceUtil%.';
+   }
+ 
+@@ -12908,7 +12935,11 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String planDetailPhaseStats(
+-      Object progress, Object completed, Object occurrences, Object tasks) {
++    Object progress,
++    Object completed,
++    Object occurrences,
++    Object tasks,
++  ) {
+     return '$progress% · $completed/$occurrences occurrences · $tasks tasks';
+   }
+ 
+@@ -13335,7 +13366,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String theaterTimelinePhaseWithSteps(
+-      Object compare, Object label, Object step) {
++    Object compare,
++    Object label,
++    Object step,
++  ) {
+     return 'Current phase: $label · $step · $compare';
+   }
+ 
+@@ -13477,8 +13511,12 @@ class AppLocalizationsEn extends AppLocalizations {
+   }
+ 
+   @override
+-  String theaterRouteRangePrediction(Object completionHigh,
+-      Object completionLow, Object masteryHigh, Object masteryLow) {
++  String theaterRouteRangePrediction(
++    Object completionHigh,
++    Object completionLow,
++    Object masteryHigh,
++    Object masteryLow,
++  ) {
+     return 'Range prediction: completion $completionLow%-$completionHigh%, mastery $masteryLow%-$masteryHigh%';
+   }
+ 
+@@ -13936,7 +13974,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String planCreateReviewSummary(
+-      Object dailyMinutes, Object hours, Object type) {
++    Object dailyMinutes,
++    Object hours,
++    Object type,
++  ) {
+     return '$type · $dailyMinutes min/day · $hours hours';
+   }
+ 
+@@ -14602,16 +14643,21 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String theaterWhatIfCombinedResult(
+-      Object originalMastery,
+-      Object originalCompletion,
+-      Object predictedMastery,
+-      Object predictedCompletion) {
++    Object originalMastery,
++    Object originalCompletion,
++    Object predictedMastery,
++    Object predictedCompletion,
++  ) {
+     return 'Original $originalMastery% / $originalCompletion%  →  Adjusted $predictedMastery% / $predictedCompletion%';
+   }
+ 
+   @override
+-  String theaterAccuracyPredictedActual(Object predictedCompletion,
+-      Object predictedMastery, Object actualCompletion, Object actualMastery) {
++  String theaterAccuracyPredictedActual(
++    Object predictedCompletion,
++    Object predictedMastery,
++    Object actualCompletion,
++    Object actualMastery,
++  ) {
+     return 'Predicted $predictedCompletion% / $predictedMastery%, Actual $actualCompletion% / $actualMastery%';
+   }
+ 
+@@ -21459,12 +21505,13 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String achievementMilestoneShareText(
+-      Object completedSprints,
+-      Object errorCount,
+-      Object hashtag,
+-      Object headline,
+-      Object masteredNodes,
+-      Object studyDays) {
++    Object completedSprints,
++    Object errorCount,
++    Object hashtag,
++    Object headline,
++    Object masteredNodes,
++    Object studyDays,
++  ) {
+     return '$hashtag I reached the \"$headline\" milestone on Sparkle. Studied $studyDays days, mastered $masteredNodes nodes, completed $completedSprints sprints, recorded $errorCount errors.';
+   }
+ 
+@@ -21706,7 +21753,11 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String achievementUnlockTimeDate(
+-      Object day, Object hour, Object minute, Object month) {
++    Object day,
++    Object hour,
++    Object minute,
++    Object month,
++  ) {
+     return '$month/$day $hour:$minute';
+   }
+ 
+@@ -21813,7 +21864,11 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String notificationCompilationSummary(
+-      Object affected, Object hidden, Object inserted, Object result) {
++    Object affected,
++    Object hidden,
++    Object inserted,
++    Object result,
++  ) {
+     return 'Result: $result, affected $affected tasks, added $inserted, hidden $hidden';
+   }
+ 
+@@ -21937,7 +21992,9 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String notificationAnalyticsAcceptanceActionRate(
+-      Object acceptanceRate, Object actionRate) {
++    Object acceptanceRate,
++    Object actionRate,
++  ) {
+     return 'Acceptance rate $acceptanceRate% · Action rate $actionRate%';
+   }
+ 
+@@ -21967,7 +22024,9 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String notificationAnalyticsActedEffectiveRate(
+-      Object actedRate, Object effectiveRate) {
++    Object actedRate,
++    Object effectiveRate,
++  ) {
+     return 'Action rate $actedRate% · Effective rate $effectiveRate%';
+   }
+ 
+@@ -22004,7 +22063,9 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String notificationAnalyticsRateSuffix(
+-      Object acceptanceRate, Object actionRate) {
++    Object acceptanceRate,
++    Object actionRate,
++  ) {
+     return 'Acceptance rate: $acceptanceRate% · Action rate: $actionRate%';
+   }
+ 
+@@ -22034,7 +22095,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String focusSessionMasteryUpdate(
+-      String nodeName, int oldMastery, int newMastery) {
++    String nodeName,
++    int oldMastery,
++    int newMastery,
++  ) {
+     return 'Today\'s focus raised $nodeName mastery from $oldMastery to $newMastery';
+   }
+ 
+@@ -28041,8 +28105,12 @@ class AppLocalizationsEn extends AppLocalizations {
+   String get planSprintShareOpened => 'Share opened';
+ 
+   @override
+-  String planSprintShareText(int masteredNodes, int repairedErrors,
+-      int completedTasks, String strongestArea) {
++  String planSprintShareText(
++    int masteredNodes,
++    int repairedErrors,
++    int completedTasks,
++    String strongestArea,
++  ) {
+     return 'My 7-day exam sprint is done: mastered $masteredNodes knowledge nodes, repaired $repairedErrors error patterns, completed $completedTasks tasks. Strongest area: $strongestArea. #SparkleExam';
+   }
+ 
+@@ -28066,7 +28134,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String planSprintResultSummary(
+-      Object completedTasks, Object masteredNodes, Object repairedErrors) {
++    Object completedTasks,
++    Object masteredNodes,
++    Object repairedErrors,
++  ) {
+     return 'Mastered $masteredNodes knowledge nodes, repaired $repairedErrors error patterns, completed $completedTasks tasks.';
+   }
+ 
+@@ -28218,7 +28289,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String planPortfolioActiveDay(
+-      Object currentDay, Object mode, Object remainingDays) {
++    Object currentDay,
++    Object mode,
++    Object remainingDays,
++  ) {
+     return '$mode · In progress (Day $currentDay, $remainingDays days left)';
+   }
+ 
+@@ -31406,7 +31480,11 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String aiopsPromptHit(
+-      String prompt, String inference, int promptCount, int inferenceCount) {
++    String prompt,
++    String inference,
++    int promptCount,
++    int inferenceCount,
++  ) {
+     return 'Prompt hit $prompt% · Inference hit $inference% · Known $promptCount/$inferenceCount';
+   }
+ 
+@@ -32233,7 +32311,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String lowYieldCardMessage(
+-      String activity, String reason, String suggestion) {
++    String activity,
++    String reason,
++    String suggestion,
++  ) {
+     return 'I noticed you are doing $activity. Considering $reason, what may be more valuable now is $suggestion.';
+   }
+ 
+@@ -32295,7 +32376,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String understandingStyleSummary(
+-      String tone, String verbosity, String reason) {
++    String tone,
++    String verbosity,
++    String reason,
++  ) {
+     return '$tone · $verbosity. $reason';
+   }
+ 
+@@ -32870,7 +32954,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String personaGoalStatusChangeContent(
+-      Object nextStatus, Object status, Object title) {
++    Object nextStatus,
++    Object status,
++    Object title,
++  ) {
+     return 'Change status of \"$title\" from \"$status\" to \"$nextStatus\".\\n\\nThis will affect related plans, tasks and reminders, and cannot be auto-reverted.';
+   }
+ 
+@@ -36694,13 +36781,19 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String communityAgentGroupPromptZh(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return '你是Sparkle内置的群聊AI助手，正在协助群聊「$name」。\n你的任务是产出一条最终可直接发送到群里的中文消息。\n只输出消息正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样发”“建议发送”，不要使用项目符号或备注，不要冒充系统说明。\n语气自然、简洁、友好，像群成员会直接发出去的话。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用 `•`、`◦`、emoji 项目符号、半残 Markdown。\n\n最近对话:\n$contextLines\n\n用户问题:\n$input';
+   }
+ 
+   @override
+   String communityAgentGroupPromptEn(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return 'You are Sparkle\'s built-in group chat AI assistant, helping in the group \"$name\".\nYour task is to produce a single message ready to send directly in the group.\nOutput only the message body — no explanations, no preambles, no \"I can help\" or \"You could say\" or \"Suggested reply\", no bullet points or notes, no system impersonation.\nTone: natural, concise, friendly — like something a group member would actually send.\nIf you need to list items, only use `1. ` or `- `. No `•`, `◦`, emoji bullets, or broken Markdown.\n\nRecent conversation:\n$contextLines\n\nUser question:\n$input';
+   }
+ 
+@@ -36709,13 +36802,19 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String communityAgentPrivatePromptZh(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return '你是Sparkle内置的私聊AI助手，正在协助我与「$name」的对话。\n你的任务是产出一条最终可直接发送给对方的中文私聊回复。\n只输出回复正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样回”“建议回复”，不要附带分析或备注。\n语气自然、礼貌、克制，像我会直接按下发送的内容。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用特殊项目符号或半残 Markdown。\n\n最近对话:\n$contextLines\n\n用户问题:\n$input';
+   }
+ 
+   @override
+   String communityAgentPrivatePromptEn(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return 'You are Sparkle\'s built-in private chat AI assistant, helping with my conversation with \"$name\".\nYour task is to produce a single private reply ready to send directly.\nOutput only the reply body — no explanations, no preambles, no \"I can help\" or \"You could reply\" or \"Suggested reply\", no analysis or notes.\nTone: natural, polite, restrained — like something I would actually hit send on.\nIf you need to list items, only use `1. ` or `- `. No special bullets or broken Markdown.\n\nRecent conversation:\n$contextLines\n\nUser question:\n$input';
+   }
+ 
+@@ -37007,8 +37106,12 @@ class AppLocalizationsEn extends AppLocalizations {
+   String get taskProtocolMaterialsNeeded => 'Materials needed';
+ 
+   @override
+-  String taskProtocolMaterialsCount(Object attached, Object mustLoad,
+-      Object optional, Object retrievalLabel) {
++  String taskProtocolMaterialsCount(
++    Object attached,
++    Object mustLoad,
++    Object optional,
++    Object retrievalLabel,
++  ) {
+     return 'Required $mustLoad · Optional $optional · Attached $attached$retrievalLabel';
+   }
+ 
+@@ -38156,7 +38259,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String displayCriterionAtLeastUnitTemplate(
+-      String title, String threshold, String unit) {
++    String title,
++    String threshold,
++    String unit,
++  ) {
+     return '$title: at least $threshold $unit';
+   }
+ 
+diff --git a/mobile/lib/l10n/app_localizations_zh.dart b/mobile/lib/l10n/app_localizations_zh.dart
+index 58c30cfd..15f22a68 100644
+--- a/mobile/lib/l10n/app_localizations_zh.dart
++++ b/mobile/lib/l10n/app_localizations_zh.dart
+@@ -9144,6 +9144,25 @@ class AppLocalizationsZh extends AppLocalizations {
+   @override
+   String get planArchivedSuccess => '计划已归档';
+ 
++  @override
++  String get planConfirmAction => '确认这份计划';
++
++  @override
++  String get planConfirmAlready => '这份计划此前已确认生效，无需重复操作';
++
++  @override
++  String planConfirmFailed(Object error) {
++    return '确认失败：$error';
++  }
++
++  @override
++  String get planConfirmSuccess => '计划已确认生效';
++
++  @override
++  String planConfirmedAt(Object time) {
++    return '已确认 · $time';
++  }
++
+   @override
+   String get planContextTitle => '计划上下文';
+ 
+@@ -10330,7 +10349,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String taskDetailCandidatesApplied(
+-      Object count, Object created, Object reused) {
++    Object count,
++    Object created,
++    Object reused,
++  ) {
+     return '已处理 $count 个候选节点，新增 $created 个，复用 $reused 个已有节点。';
+   }
+ 
+@@ -11084,7 +11106,11 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String aiOpsPredictionSummary(
+-      Object days, Object topAction, Object promptUtil, Object inferenceUtil) {
++    Object days,
++    Object topAction,
++    Object promptUtil,
++    Object inferenceUtil,
++  ) {
+     return '近 $days 天里，当前最值得继续盯的预测动作是「$topAction」；同时 prompt / inference 命中率分别是 $promptUtil%/$inferenceUtil%。';
+   }
+ 
+@@ -12380,7 +12406,11 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String planDetailPhaseStats(
+-      Object progress, Object completed, Object occurrences, Object tasks) {
++    Object progress,
++    Object completed,
++    Object occurrences,
++    Object tasks,
++  ) {
+     return '$progress% · $completed/$occurrences 次发生 · $tasks 个任务';
+   }
+ 
+@@ -12789,7 +12819,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String theaterTimelinePhaseWithSteps(
+-      Object compare, Object label, Object step) {
++    Object compare,
++    Object label,
++    Object step,
++  ) {
+     return '当前阶段：$label · $step · $compare';
+   }
+ 
+@@ -12927,8 +12960,12 @@ class AppLocalizationsZh extends AppLocalizations {
+   }
+ 
+   @override
+-  String theaterRouteRangePrediction(Object completionHigh,
+-      Object completionLow, Object masteryHigh, Object masteryLow) {
++  String theaterRouteRangePrediction(
++    Object completionHigh,
++    Object completionLow,
++    Object masteryHigh,
++    Object masteryLow,
++  ) {
+     return '区间预测：完成率 $completionLow%-$completionHigh%， 掌握度 $masteryLow%-$masteryHigh%';
+   }
+ 
+@@ -13365,7 +13402,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String planCreateReviewSummary(
+-      Object dailyMinutes, Object hours, Object type) {
++    Object dailyMinutes,
++    Object hours,
++    Object type,
++  ) {
+     return '$type · $dailyMinutes 分钟/天 · $hours 小时';
+   }
+ 
+@@ -14017,16 +14057,21 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String theaterWhatIfCombinedResult(
+-      Object originalMastery,
+-      Object originalCompletion,
+-      Object predictedMastery,
+-      Object predictedCompletion) {
++    Object originalMastery,
++    Object originalCompletion,
++    Object predictedMastery,
++    Object predictedCompletion,
++  ) {
+     return '原始 $originalMastery% / $originalCompletion%  →  调整后 $predictedMastery% / $predictedCompletion%';
+   }
+ 
+   @override
+-  String theaterAccuracyPredictedActual(Object predictedCompletion,
+-      Object predictedMastery, Object actualCompletion, Object actualMastery) {
++  String theaterAccuracyPredictedActual(
++    Object predictedCompletion,
++    Object predictedMastery,
++    Object actualCompletion,
++    Object actualMastery,
++  ) {
+     return '预测 $predictedCompletion% / $predictedMastery%， 实际 $actualCompletion% / $actualMastery%';
+   }
+ 
+@@ -20584,12 +20629,13 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String achievementMilestoneShareText(
+-      Object completedSprints,
+-      Object errorCount,
+-      Object hashtag,
+-      Object headline,
+-      Object masteredNodes,
+-      Object studyDays) {
++    Object completedSprints,
++    Object errorCount,
++    Object hashtag,
++    Object headline,
++    Object masteredNodes,
++    Object studyDays,
++  ) {
+     return '$hashtag 我在 Sparkle 达成了「$headline」里程碑。累计学习 $studyDays 天，掌握 $masteredNodes 个知识节点，完成 $completedSprints 次冲刺，记录 $errorCount 道错题。';
+   }
+ 
+@@ -20829,7 +20875,11 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String achievementUnlockTimeDate(
+-      Object day, Object hour, Object minute, Object month) {
++    Object day,
++    Object hour,
++    Object minute,
++    Object month,
++  ) {
+     return '$month月$day日 $hour:$minute';
+   }
+ 
+@@ -20932,7 +20982,11 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String notificationCompilationSummary(
+-      Object affected, Object hidden, Object inserted, Object result) {
++    Object affected,
++    Object hidden,
++    Object inserted,
++    Object result,
++  ) {
+     return '结果：$result，影响任务 $affected 个，新增 $inserted 个，收起 $hidden 个';
+   }
+ 
+@@ -21051,7 +21105,9 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String notificationAnalyticsAcceptanceActionRate(
+-      Object acceptanceRate, Object actionRate) {
++    Object acceptanceRate,
++    Object actionRate,
++  ) {
+     return '接受率 $acceptanceRate% · 行动率 $actionRate%';
+   }
+ 
+@@ -21081,7 +21137,9 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String notificationAnalyticsActedEffectiveRate(
+-      Object actedRate, Object effectiveRate) {
++    Object actedRate,
++    Object effectiveRate,
++  ) {
+     return '行动率 $actedRate% · 有效率 $effectiveRate%';
+   }
+ 
+@@ -21117,7 +21175,9 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String notificationAnalyticsRateSuffix(
+-      Object acceptanceRate, Object actionRate) {
++    Object acceptanceRate,
++    Object actionRate,
++  ) {
+     return '接受率: $acceptanceRate% · 行动率: $actionRate%';
+   }
+ 
+@@ -21145,7 +21205,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String focusSessionMasteryUpdate(
+-      String nodeName, int oldMastery, int newMastery) {
++    String nodeName,
++    int oldMastery,
++    int newMastery,
++  ) {
+     return '今天的专注让你的 $nodeName 掌握度从 $oldMastery 提升到了 $newMastery 分';
+   }
+ 
+@@ -26880,8 +26943,12 @@ class AppLocalizationsZh extends AppLocalizations {
+   String get planSprintShareOpened => '分享已打开';
+ 
+   @override
+-  String planSprintShareText(int masteredNodes, int repairedErrors,
+-      int completedTasks, String strongestArea) {
++  String planSprintShareText(
++    int masteredNodes,
++    int repairedErrors,
++    int completedTasks,
++    String strongestArea,
++  ) {
+     return '我的 7 天备考冲刺完成：掌握 $masteredNodes 个知识节点，修复 $repairedErrors 个错误模式，完成 $completedTasks 个任务。最强项：$strongestArea。#Sparkle备考';
+   }
+ 
+@@ -26905,7 +26972,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String planSprintResultSummary(
+-      Object completedTasks, Object masteredNodes, Object repairedErrors) {
++    Object completedTasks,
++    Object masteredNodes,
++    Object repairedErrors,
++  ) {
+     return '掌握了 $masteredNodes 个知识节点，修复了 $repairedErrors 个错误模式，完成了 $completedTasks 个任务。';
+   }
+ 
+@@ -27049,7 +27119,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String planPortfolioActiveDay(
+-      Object currentDay, Object mode, Object remainingDays) {
++    Object currentDay,
++    Object mode,
++    Object remainingDays,
++  ) {
+     return '$mode · 进行中（第 $currentDay 天，还剩 $remainingDays 天）';
+   }
+ 
+@@ -30114,7 +30187,11 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String aiopsPromptHit(
+-      String prompt, String inference, int promptCount, int inferenceCount) {
++    String prompt,
++    String inference,
++    int promptCount,
++    int inferenceCount,
++  ) {
+     return 'prompt 命中 $prompt% · 推理命中 $inference% · known $promptCount/$inferenceCount';
+   }
+ 
+@@ -30918,7 +30995,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String lowYieldCardMessage(
+-      String activity, String reason, String suggestion) {
++    String activity,
++    String reason,
++    String suggestion,
++  ) {
+     return '我注意到你正在做 $activity。考虑到 $reason，现在更值得做的可能是 $suggestion。';
+   }
+ 
+@@ -30978,7 +31058,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String understandingStyleSummary(
+-      String tone, String verbosity, String reason) {
++    String tone,
++    String verbosity,
++    String reason,
++  ) {
+     return '$tone · $verbosity。$reason';
+   }
+ 
+@@ -31527,7 +31610,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String personaGoalStatusChangeContent(
+-      Object nextStatus, Object status, Object title) {
++    Object nextStatus,
++    Object status,
++    Object title,
++  ) {
+     return '将「$title」的状态从「$status」改为「$nextStatus」。\\n\\n这会影响相关计划、任务和提醒，且不会自动撤销。';
+   }
+ 
+@@ -35188,13 +35274,19 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String communityAgentGroupPromptZh(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return '你是Sparkle内置的群聊AI助手，正在协助群聊「$name」。\n你的任务是产出一条最终可直接发送到群里的中文消息。\n只输出消息正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样发”“建议发送”，不要使用项目符号或备注，不要冒充系统说明。\n语气自然、简洁、友好，像群成员会直接发出去的话。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用 `•`、`◦`、emoji 项目符号、半残 Markdown。\n\n最近对话:\n$contextLines\n\n用户问题:\n$input';
+   }
+ 
+   @override
+   String communityAgentGroupPromptEn(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return 'You are Sparkle\'s built-in group chat AI assistant, helping in the group \"$name\".\nYour task is to produce a single message ready to send directly in the group.\nOutput only the message body — no explanations, no preambles, no \"I can help\" or \"You could say\" or \"Suggested reply\", no bullet points or notes, no system impersonation.\nTone: natural, concise, friendly — like something a group member would actually send.\nIf you need to list items, only use `1. ` or `- `. No `•`, `◦`, emoji bullets, or broken Markdown.\n\nRecent conversation:\n$contextLines\n\nUser question:\n$input';
+   }
+ 
+@@ -35203,13 +35295,19 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String communityAgentPrivatePromptZh(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return '你是Sparkle内置的私聊AI助手，正在协助我与「$name」的对话。\n你的任务是产出一条最终可直接发送给对方的中文私聊回复。\n只输出回复正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样回”“建议回复”，不要附带分析或备注。\n语气自然、礼貌、克制，像我会直接按下发送的内容。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用特殊项目符号或半残 Markdown。\n\n最近对话:\n$contextLines\n\n用户问题:\n$input';
+   }
+ 
+   @override
+   String communityAgentPrivatePromptEn(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return 'You are Sparkle\'s built-in private chat AI assistant, helping with my conversation with \"$name\".\nYour task is to produce a single private reply ready to send directly.\nOutput only the reply body — no explanations, no preambles, no \"I can help\" or \"You could reply\" or \"Suggested reply\", no analysis or notes.\nTone: natural, polite, restrained — like something I would actually hit send on.\nIf you need to list items, only use `1. ` or `- `. No special bullets or broken Markdown.\n\nRecent conversation:\n$contextLines\n\nUser question:\n$input';
+   }
+ 
+@@ -35487,8 +35585,12 @@ class AppLocalizationsZh extends AppLocalizations {
+   String get taskProtocolMaterialsNeeded => '需要的资料';
+ 
+   @override
+-  String taskProtocolMaterialsCount(Object attached, Object mustLoad,
+-      Object optional, Object retrievalLabel) {
++  String taskProtocolMaterialsCount(
++    Object attached,
++    Object mustLoad,
++    Object optional,
++    Object retrievalLabel,
++  ) {
+     return '必读 $mustLoad · 选读 $optional · 附件 $attached$retrievalLabel';
+   }
+ 
+@@ -36575,7 +36677,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String displayCriterionAtLeastUnitTemplate(
+-      String title, String threshold, String unit) {
++    String title,
++    String threshold,
++    String unit,
++  ) {
+     return '$title ≥ $threshold $unit';
+   }
+ 
+diff --git a/mobile/lib/l10n/app_zh.arb b/mobile/lib/l10n/app_zh.arb
+index 50118f86..9a361021 100755
+--- a/mobile/lib/l10n/app_zh.arb
++++ b/mobile/lib/l10n/app_zh.arb
+@@ -3784,6 +3784,25 @@
+     "planArchiveMessage": "归档后计划将移至历史记录，确定要归档吗？",
+     "planArchiveTitle": "归档计划",
+     "planArchivedSuccess": "计划已归档",
++    "planConfirmAction": "确认这份计划",
++    "planConfirmAlready": "这份计划此前已确认生效，无需重复操作",
++    "planConfirmFailed": "确认失败：{error}",
++    "@planConfirmFailed": {
++        "placeholders": {
++            "error": {
++                "type": "Object"
++            }
++        }
++    },
++    "planConfirmSuccess": "计划已确认生效",
++    "planConfirmedAt": "已确认 · {time}",
++    "@planConfirmedAt": {
++        "placeholders": {
++            "time": {
++                "type": "Object"
++            }
++        }
++    },
+     "planContextTitle": "计划上下文",
+     "planDaysRemaining": "{arg0}",
+     "planDetailTitle": "计划详情",
+diff --git a/mobile/test/features/plan/presentation/screens/plan_detail_confirm_test.dart b/mobile/test/features/plan/presentation/screens/plan_detail_confirm_test.dart
+new file mode 100644
+index 00000000..3f6b95fb
+--- /dev/null
++++ b/mobile/test/features/plan/presentation/screens/plan_detail_confirm_test.dart
+@@ -0,0 +1,286 @@
++import 'package:dio/dio.dart';
++import 'package:flutter/material.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:go_router/go_router.dart';
++import 'package:sparkle/core/design/design_system.dart';
++import 'package:sparkle/core/network/api_client.dart';
++import 'package:sparkle/features/plan/data/models/plan_confirm_result.dart';
++import 'package:sparkle/features/plan/data/models/plan_model.dart';
++import 'package:sparkle/features/plan/data/models/plan_phase_model.dart';
++import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
++import 'package:sparkle/features/plan/presentation/screens/plan_detail_screen.dart';
++import 'package:sparkle/l10n/app_localizations.dart';
++import 'package:sparkle/shared/entities/task_model.dart';
++import '../../../../shared/i18n_test_helper.dart';
++
++void main() {
++  setUp(setUpI18nForTesting);
++
++  group('PlanDetailScreen plan confirmation (CP-01)', () {
++    testWidgets('pending sprint plan renders the confirm action',
++        (tester) async {
++      final repository = _ConfirmFakePlanRepository(plan: _sprintPlan());
++
++      await _pumpPlanDetail(tester, repository);
++
++      expect(find.byKey(const ValueKey('plan-confirm-button')), findsOneWidget);
++      expect(find.text('确认这份计划'), findsOneWidget);
++      expect(find.byKey(const ValueKey('plan-confirmed-badge')), findsNothing);
++      expect(confirmCalls, isEmpty);
++
++      await tester.pump(const Duration(seconds: 35));
++    });
++
++    testWidgets('growth plan does not render the confirm action',
++        (tester) async {
++      await _pumpPlanDetail(
++        tester,
++        _ConfirmFakePlanRepository(plan: _sprintPlan(type: PlanType.growth)),
++      );
++
++      expect(find.byKey(const ValueKey('plan-confirm-button')), findsNothing);
++      expect(find.byKey(const ValueKey('plan-confirmed-badge')), findsNothing);
++
++      await tester.pump(const Duration(seconds: 35));
++    });
++
++    testWidgets('tapping confirm calls API and flips to confirmed state',
++        (tester) async {
++      final repository = _ConfirmFakePlanRepository(
++        plan: _sprintPlan(),
++        confirmHandler: (planId) async {
++          confirmCalls.add(planId);
++          return PlanConfirmResult(
++            planId: 'plan-1',
++            alreadyConfirmed: false,
++            confirmedAt: DateTime.utc(2026, 9, 21, 10),
++          );
++        },
++      );
++
++      await _pumpPlanDetail(tester, repository);
++
++      await tester.tap(find.byKey(const ValueKey('plan-confirm-button')));
++      await tester.pump();
++      await tester.pump(const Duration(milliseconds: 400));
++
++      expect(confirmCalls, ['plan-1']);
++      expect(
++        find.byKey(const ValueKey('plan-confirmed-badge')),
++        findsOneWidget,
++      );
++      expect(find.byKey(const ValueKey('plan-confirm-button')), findsNothing);
++      // 成功反馈（snackbar）与已确认徽章（含确认时间）各出现一次。
++      expect(find.text('计划已确认生效'), findsOneWidget);
++      expect(find.textContaining('已确认 · '), findsOneWidget);
++
++      await tester.pump(const Duration(seconds: 35));
++    });
++
++    testWidgets('already_confirmed response is idempotent, not an error',
++        (tester) async {
++      final repository = _ConfirmFakePlanRepository(
++        plan: _sprintPlan(),
++        confirmHandler: (planId) async {
++          confirmCalls.add(planId);
++          return PlanConfirmResult(
++            planId: 'plan-1',
++            alreadyConfirmed: true,
++            confirmedAt: DateTime.utc(2026, 9, 20, 8, 30),
++          );
++        },
++      );
++
++      await _pumpPlanDetail(tester, repository);
++
++      await tester.tap(find.byKey(const ValueKey('plan-confirm-button')));
++      await tester.pump();
++      await tester.pump(const Duration(milliseconds: 400));
++
++      expect(confirmCalls, ['plan-1']);
++      expect(
++        find.byKey(const ValueKey('plan-confirmed-badge')),
++        findsOneWidget,
++      );
++      expect(find.byKey(const ValueKey('plan-confirm-button')), findsNothing);
++      // 幂等语义：已确认时间戳照常呈现，且不弹错误反馈。
++      expect(find.textContaining('已确认 · '), findsOneWidget);
++      expect(find.textContaining('确认失败'), findsNothing);
++
++      await tester.pump(const Duration(seconds: 35));
++    });
++
++    testWidgets('404 failure keeps the confirm action and shows error surface',
++        (tester) async {
++      final repository = _ConfirmFakePlanRepository(
++        plan: _sprintPlan(),
++        confirmHandler: (planId) async {
++          confirmCalls.add(planId);
++          throw Exception('Plan $planId not found');
++        },
++      );
++
++      await _pumpPlanDetail(tester, repository);
++
++      await tester.tap(find.byKey(const ValueKey('plan-confirm-button')));
++      await tester.pump();
++      await tester.pump(const Duration(milliseconds: 400));
++
++      expect(confirmCalls, ['plan-1']);
++      // 错误面：错误反馈出现，确认动作保留（可重试），不转已确认态。
++      expect(find.textContaining('确认失败'), findsOneWidget);
++      expect(find.byKey(const ValueKey('plan-confirm-button')), findsOneWidget);
++      expect(find.byKey(const ValueKey('plan-confirmed-badge')), findsNothing);
++
++      await tester.pump(const Duration(seconds: 35));
++    });
++  });
++}
++
++final List<String> confirmCalls = <String>[];
++
++Future<void> _pumpPlanDetail(
++  WidgetTester tester,
++  PlanRepository repository,
++) async {
++  tester.view.physicalSize = const Size(390, 1200);
++  tester.view.devicePixelRatio = 1;
++  addTearDown(tester.view.resetPhysicalSize);
++  addTearDown(tester.view.resetDevicePixelRatio);
++
++  final router = GoRouter(
++    initialLocation: '/plans/plan-1',
++    routes: [
++      GoRoute(
++        path: '/plans/:planId',
++        builder: (context, state) =>
++          const PlanDetailScreen(planId: 'plan-1'),
++      ),
++    ],
++  );
++  addTearDown(router.dispose);
++  addTearDown(confirmCalls.clear);
++
++  await tester.pumpWidget(
++    ProviderScope(
++      overrides: [
++        planRepositoryProvider.overrideWithValue(repository),
++      ],
++      child: MaterialApp.router(
++        theme: AppThemes.lightTheme,
++        darkTheme: AppThemes.darkTheme,
++        routerConfig: router,
++        locale: const Locale('zh'),
++        localizationsDelegates: AppLocalizations.localizationsDelegates,
++        supportedLocales: AppLocalizations.supportedLocales,
++      ),
++    ),
++  );
++
++  await tester.pump();
++  await tester.pump(const Duration(milliseconds: 1200));
++}
++
++PlanModel _sprintPlan({PlanType type = PlanType.sprint}) {
++  final now = DateTime.utc(2026, 4, 25);
++  final task = TaskModel(
++    id: 'task-1',
++    userId: 'user-1',
++    planId: 'plan-1',
++    title: '拿下 TCP 确认号',
++    type: TaskType.learning,
++    tags: const ['day:1'],
++    estimatedMinutes: 30,
++    difficulty: 2,
++    energyCost: 1,
++    guideJson: {
++      'why_now': '现在先处理它，是为了把今天的学习推进变成一个看得见的输出。',
++    },
++    status: TaskStatus.pending,
++    priority: 1,
++    orderIndex: 1000,
++    createdAt: now,
++    updatedAt: now,
++  );
++
++  return PlanModel(
++    id: 'plan-1',
++    userId: 'user-1',
++    name: '计算机网络冲刺',
++    type: type,
++    dailyAvailableMinutes: 45,
++    masteryLevel: 0.4,
++    progress: 0.2,
++    isActive: true,
++    createdAt: now,
++    updatedAt: now,
++    description: '今天先稳住高频节点。',
++    subject: '计算机网络',
++    tasks: [task],
++    dayHighlights: PlanDayHighlights(
++      day: 1,
++      recommendation: '今天优先拿下 TCP 确认号。',
++      tasks: [task],
++    ),
++  );
++}
++
++class _ConfirmFakePlanRepository extends PlanRepository {
++  _ConfirmFakePlanRepository({
++    required this.plan,
++    this.confirmHandler,
++  }) : super(_NoopApiClient());
++
++  final PlanModel plan;
++  final Future<PlanConfirmResult> Function(String planId)? confirmHandler;
++
++  @override
++  Future<List<PlanModel>> getPlans({PlanType? type, bool? isActive}) async {
++    if (type != null && plan.type != type) return const [];
++    if (isActive != null && plan.isActive != isActive) return const [];
++    return [plan];
++  }
++
++  @override
++  Future<List<PlanModel>> getActivePlans() async =>
++      plan.isActive ? [plan] : const [];
++
++  @override
++  Future<PlanModel> getPlan(String id) async => plan;
++
++  @override
++  Future<PlanConfirmResult> confirmPlan(String id) async =>
++      await confirmHandler?.call(id) ??
++      PlanConfirmResult(planId: id, alreadyConfirmed: false);
++
++  @override
++  Future<PlanPhaseBundle> getPlanPhases(String planId) async =>
++      PlanPhaseBundle(
++        planCardId: null,
++        currentPhaseCardId: null,
++        progressMode: 'legacy',
++        weightedProgress: null,
++        phases: const [],
++      );
++}
++
++class _NoopApiClient extends ApiClient {
++  _NoopApiClient() : super(_UnusedRef());
++
++  @override
++  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
++}
++
++class _UnusedRef implements Ref {
++  @override
++  T read<T>(ProviderListenable<T> provider) {
++    if (T == Interceptor) {
++      return InterceptorsWrapper() as T;
++    }
++    throw UnimplementedError('Unsupported read for $provider');
++  }
++
++  @override
++  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
++}

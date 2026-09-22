@@ -3791,6 +3791,25 @@
     "planArchiveMessage": "Plan Archive Message",
     "planArchiveTitle": "Plan Archive Title",
     "planArchivedSuccess": "Plan Archived Success",
+    "planConfirmAction": "Confirm this plan",
+    "planConfirmAlready": "This plan was already confirmed — no action needed",
+    "planConfirmFailed": "Failed to confirm plan: {error}",
+    "@planConfirmFailed": {
+        "placeholders": {
+            "error": {
+                "type": "Object"
+            }
+        }
+    },
+    "planConfirmSuccess": "Plan confirmed and now in effect",
+    "planConfirmedAt": "Confirmed · {time}",
+    "@planConfirmedAt": {
+        "placeholders": {
+            "time": {
+                "type": "Object"
+            }
+        }
+    },
     "planContextTitle": "Plan Context Title",
     "planDaysRemaining": "{arg0}",
     "planDetailTitle": "Plan Detail Title",
