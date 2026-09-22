@@ -1,0 +1,67 @@
+{
+  "schema": "sparkle.tour.voyage.step.v1",
+  "run_id": "f3bede64",
+  "step_id": "S5",
+  "phase": "board",
+  "name": "D-COMM-4 榜 + 口径对账：完成度排序 == sprint_task_ledger 重放",
+  "started_at": "2026-09-22T21:57:02.956879+00:00",
+  "finished_at": "2026-09-22T21:57:09.489192+00:00",
+  "request": {},
+  "response": {
+    "sprint_progress": [
+      {
+        "user_id": "af89520c-c74b-4f3a-9af1-24c13d7e7b69",
+        "completed": 1,
+        "total": 3,
+        "rate": 0.3333
+      },
+      {
+        "user_id": "38bbf99d-4498-4bb6-8c23-93f0f368b9c7",
+        "completed": 1,
+        "total": 3,
+        "rate": 0.3333
+      },
+      {
+        "user_id": "90dbb5c6-bbcb-4b73-acee-43962a870c94",
+        "completed": 1,
+        "total": 4,
+        "rate": 0.25
+      }
+    ],
+    "board_entries": [
+      {
+        "rank": 1,
+        "rate": 0.3333,
+        "completed": 1,
+        "percentile": 33
+      },
+      {
+        "rank": 1,
+        "rate": 0.3333,
+        "completed": 1,
+        "percentile": 33
+      },
+      {
+        "rank": 3,
+        "rate": 0.25,
+        "completed": 1,
+        "percentile": 0
+      }
+    ],
+    "board_valid": true,
+    "my_rank": 1,
+    "ledger_consistent": true,
+    "order_ok": true,
+    "tie_ranks": [
+      1,
+      1,
+      3
+    ]
+  },
+  "verdict": "pass",
+  "notes": [
+    "队友A 完成 Day1：200",
+    "队友B 完成 Day1：200（B 只完成一部分——剧情：掉队生）",
+    "榜序=[1, 1, 3]（并列 1,1,3 形态）；ledger 一致=True；board_valid=True"
+  ]
+}

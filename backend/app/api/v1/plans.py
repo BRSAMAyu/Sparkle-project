@@ -17,6 +17,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, Respon
 from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy import and_, case, desc, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -592,6 +593,18 @@ async def create_plan(
                 "current_count": e.current_count,
                 "max_quota": e.max_quota,
                 "error_code": "QUOTA_EXCEEDED",
+            },
+        ) from e
+    except IntegrityError as e:
+        # TOUR-FIX：uq_plans_user_sprint_goal_active（同 user+subject+target_date 仅允许
+        # 一个 active sprint）在直创路径此前裸 500 IntegrityError——intake 路径已在
+        # INTAKE-IDX 收敛（rollback+复用），本 handler 补同款关闸的最小形态：归一 409、
+        # 不泄露约束细节。会话状态由 get_db 异常路径回滚。
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "message": "同名冲刺计划已存在（同科目与目标日期），请复用既有计划或更换日期",
+                "error_code": "SPRINT_GOAL_DUPLICATE",
             },
         ) from e
 

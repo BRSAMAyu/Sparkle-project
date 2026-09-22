@@ -1,0 +1,27 @@
+{
+  "schema": "sparkle.tour.voyage.step.v1",
+  "run_id": "f3bede64",
+  "step_id": "S0",
+  "phase": "check",
+  "name": "栈健康自检（worktree 网关 + 引擎）",
+  "started_at": "2026-09-22T21:56:58.130189+00:00",
+  "finished_at": "2026-09-22T21:56:58.142672+00:00",
+  "request": {
+    "gateway": "http://localhost:8090"
+  },
+  "response": {
+    "healthz": {
+      "status": 200,
+      "body": {
+        "status": "alive",
+        "timestamp": "2026-09-22T21:56:58.136812Z"
+      },
+      "latency_ms": 7
+    },
+    "missing_routes": []
+  },
+  "verdict": "pass",
+  "notes": [
+    "网关路由探针（401=已注册/404=缺失）：缺失 0 条"
+  ]
+}

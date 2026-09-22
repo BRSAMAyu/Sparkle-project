@@ -1,0 +1,37 @@
+{
+  "schema": "sparkle.tour.voyage.step.v1",
+  "run_id": "f3bede64",
+  "step_id": "S3",
+  "phase": "squad",
+  "name": "D-COMM-3：建 3 人冲刺小队 + 队友 join",
+  "started_at": "2026-09-22T21:56:58.972064+00:00",
+  "finished_at": "2026-09-22T21:56:59.059845+00:00",
+  "request": {},
+  "response": {
+    "squad_id": "6d15b60f-b46f-4dab-98a5-38e29bfeb5cd",
+    "join_a": 200,
+    "join_b": 200,
+    "member_count": 3,
+    "sprint_progress_members": [
+      {
+        "total": 3,
+        "completed": 0,
+        "has_ledger_data": true
+      },
+      {
+        "total": 0,
+        "completed": 0,
+        "has_ledger_data": false
+      },
+      {
+        "total": 0,
+        "completed": 0,
+        "has_ledger_data": false
+      }
+    ]
+  },
+  "verdict": "pass",
+  "notes": [
+    "跨面：sprint-progress 直读 sprint_task_ledger（BP-4），3 成员账本形状完整"
+  ]
+}

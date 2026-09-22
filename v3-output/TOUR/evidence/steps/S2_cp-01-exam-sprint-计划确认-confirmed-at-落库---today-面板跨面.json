@@ -1,0 +1,40 @@
+{
+  "schema": "sparkle.tour.voyage.step.v1",
+  "run_id": "f3bede64",
+  "step_id": "S2",
+  "phase": "plan",
+  "name": "CP-01：exam-sprint 计划确认（confirmed_at 落库）+ today 面板跨面",
+  "started_at": "2026-09-22T21:56:58.804519+00:00",
+  "finished_at": "2026-09-22T21:56:58.971712+00:00",
+  "request": {
+    "intake": {
+      "subject": "高等数学",
+      "days_left": 2,
+      "pack": "exam_prep_14d@v1.0 静态包（零 LLM）"
+    }
+  },
+  "response": {
+    "plan_id": "4ac43689-61a4-4ca4-8c47-6b54623eebca",
+    "confirm": {
+      "status": 200,
+      "body": {
+        "plan_id": "4ac43689-61a4-4ca4-8c47-6b54623eebca",
+        "plan_stage": "sprint",
+        "confirmed_at": "2026-09-22T21:56:58.941005",
+        "already_confirmed": false,
+        "message": "计划已确认生效"
+      },
+      "latency_ms": 11
+    },
+    "reconfirm_already_confirmed": true,
+    "foreign_confirm_status": 404,
+    "today_status": 200,
+    "today_task_count": 1
+  },
+  "verdict": "pass",
+  "notes": [
+    "confirmed_at=2026-09-22T21:56:58.941005",
+    "幂等再确认 already_confirmed=True；他人确认=404",
+    "跨面：确认后 today 面板出 1 个任务"
+  ]
+}

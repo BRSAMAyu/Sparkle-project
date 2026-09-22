@@ -1,0 +1,68 @@
+{
+  "schema": "sparkle.tour.voyage.run.v1",
+  "run_id": "f3bede64",
+  "gateway": "http://localhost:8090",
+  "started_at": "2026-09-22T21:56:58.129939+00:00",
+  "finished_at": "2026-09-22T22:06:01.936203+00:00",
+  "elapsed_s": 543.9,
+  "conclusion": "all green",
+  "steps": [
+    {
+      "step_id": "S0",
+      "phase": "check",
+      "name": "栈健康自检（worktree 网关 + 引擎）",
+      "verdict": "pass"
+    },
+    {
+      "step_id": "S2",
+      "phase": "plan",
+      "name": "CP-01：exam-sprint 计划确认（confirmed_at 落库）+ today 面板跨面",
+      "verdict": "pass"
+    },
+    {
+      "step_id": "S3",
+      "phase": "squad",
+      "name": "D-COMM-3：建 3 人冲刺小队 + 队友 join",
+      "verdict": "pass"
+    },
+    {
+      "step_id": "S4",
+      "phase": "study",
+      "name": "D-COMM-4：自习室在场证明 + 主号完成 Day1（presence 今日累计）",
+      "verdict": "pass"
+    },
+    {
+      "step_id": "S5",
+      "phase": "board",
+      "name": "D-COMM-4 榜 + 口径对账：完成度排序 == sprint_task_ledger 重放",
+      "verdict": "pass"
+    },
+    {
+      "step_id": "S6",
+      "phase": "anchor",
+      "name": "D-COMM-1：自我锚 7 日序列（含今日）+ 跨面对账",
+      "verdict": "pass"
+    },
+    {
+      "step_id": "S7",
+      "phase": "earn",
+      "name": "攒光子：成就/首胜真实路径（sprint 归档触发 check_daily_first + 成就引擎）",
+      "verdict": "pass"
+    },
+    {
+      "step_id": "S8",
+      "phase": "redeem",
+      "name": "D-COMM-2：审计重放对账可兑换基数 → 兑 Pro 7 天 → entitlement 落库 → 月顶幂等",
+      "verdict": "pass"
+    },
+    {
+      "step_id": "S9",
+      "phase": "consistency",
+      "name": "全程跨面一致性：确认计划→today；完成度变化→榜序即时反映（零缓存失效调用）",
+      "verdict": "pass"
+    }
+  ],
+  "verdicts": {
+    "pass": 9
+  }
+}

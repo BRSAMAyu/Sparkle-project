@@ -1,0 +1,29 @@
+{
+  "schema": "sparkle.tour.voyage.step.v1",
+  "run_id": "f3bede64",
+  "step_id": "S6",
+  "phase": "anchor",
+  "name": "D-COMM-1：自我锚 7 日序列（含今日）+ 跨面对账",
+  "started_at": "2026-09-22T21:57:09.489798+00:00",
+  "finished_at": "2026-09-22T21:57:09.502755+00:00",
+  "request": {},
+  "response": {
+    "window": [
+      "2026-09-16",
+      "2026-09-22"
+    ],
+    "series_len": 7,
+    "today": {
+      "date": "2026-09-22",
+      "tasks_completed": 1,
+      "mastery_delta": 0.0
+    },
+    "has_any_data": true,
+    "total_tasks_completed": 1,
+    "utc_today": "2026-09-22"
+  },
+  "verdict": "pass",
+  "notes": [
+    "7 日窗口含今日（UTC 日界），今日完成 1 个——与 S4 真实完成对齐"
+  ]
+}

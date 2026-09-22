@@ -236,3 +236,38 @@ async def test_plan_today_exposes_compressed_recovery_task(db_session, plans_cli
     assert payload["compression_reason"] == reason
     assert payload["tasks"][0]["compressed"] is True
     assert payload["tasks"][0]["compression_reason"] == reason
+
+
+# ---------------------------------------------------------------------------
+# TOUR 回归钉：直创路径重复 sprint goal（同 user+subject+target_date 的 active
+# sprint 命中 uq_plans_user_sprint_goal_active）此前裸 500 IntegrityError——
+# intake 路径已在 INTAKE-IDX 收敛，直创 handler 漏了同款关闸（v3-output/TOUR
+# 活栈实证）。归一 409 SPRINT_GOAL_DUPLICATE。
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_duplicate_active_sprint_goal_direct_create_returns_409(db_session, plans_client):
+    client, state = plans_client
+    user = User(
+        username="plan_dup_sprint_user",
+        email="plan_dup_sprint_user@example.com",
+        hashed_password="hashed",
+    )
+    db_session.add(user)
+    await db_session.commit()
+    state["current_user"] = user
+
+    target = date.today() + timedelta(days=5)
+    body = {
+        "name": "直创冲刺计划",
+        "type": "sprint",
+        "subject": "直创科目",
+        "target_date": target.isoformat(),
+        "daily_available_minutes": 60,
+    }
+    first = client.post("/plans", json=body)
+    assert first.status_code == 201, first.text
+
+    second = client.post("/plans", json={**body, "name": "直创冲刺计划二"})
+    assert second.status_code == 409, second.text
+    detail = second.json().get("detail")
+    assert isinstance(detail, dict) and detail.get("error_code") == "SPRINT_GOAL_DUPLICATE"

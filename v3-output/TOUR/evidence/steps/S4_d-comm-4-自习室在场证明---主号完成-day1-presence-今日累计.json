@@ -1,0 +1,50 @@
+{
+  "schema": "sparkle.tour.voyage.step.v1",
+  "run_id": "f3bede64",
+  "step_id": "S4",
+  "phase": "study",
+  "name": "D-COMM-4：自习室在场证明 + 主号完成 Day1（presence 今日累计）",
+  "started_at": "2026-09-22T21:56:59.318149+00:00",
+  "finished_at": "2026-09-22T21:57:02.956451+00:00",
+  "request": {},
+  "response": {
+    "enter": {
+      "status": 200,
+      "body": {
+        "session_id": "606e8a06-22d7-4193-afd4-74ad2fc020b4",
+        "group_id": "6d15b60f-b46f-4dab-98a5-38e29bfeb5cd",
+        "user_id": "af89520c-c74b-4f3a-9af1-24c13d7e7b69",
+        "entered_at": "2026-09-22T21:56:59.325972",
+        "reentered": false,
+        "today_minutes": 0
+      },
+      "latency_ms": 20
+    },
+    "heartbeat_in_room": true,
+    "presence_in_room_count": 1,
+    "main_in_room": true,
+    "day1_complete": {
+      "status": 200,
+      "stage": "complete"
+    },
+    "exit": {
+      "status": 200,
+      "body": {
+        "session_id": "606e8a06-22d7-4193-afd4-74ad2fc020b4",
+        "exited_at": "2026-09-22T21:57:02.888606",
+        "session_minutes": 0,
+        "already_out": false,
+        "today_minutes": 0
+      },
+      "latency_ms": 32
+    },
+    "exit_today_minutes": 0,
+    "main_out_after_exit": true,
+    "heartbeat_after_exit_honest": true,
+    "presence_member_view_status": 200
+  },
+  "verdict": "pass",
+  "notes": [
+    "在场→完成任务→退出全链通；exit today_minutes=0（瞬时会话诚实为 0，不造时长）"
+  ]
+}

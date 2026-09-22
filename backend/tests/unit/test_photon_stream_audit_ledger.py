@@ -197,3 +197,32 @@ async def test_redeemable_base_includes_daily_first_and_combo(db_session, test_u
     outcome = await redeem_pro(db_session, user_id=str(test_user.id))
     await db_session.commit()
     assert outcome.status == REDEEM_PRO_OK
+
+
+# ---------------------------------------------------------------------------
+# 6. TOUR 回归钉：去重键必须落得进 related_item_id VARCHAR(50)（PG 真相）。
+#    SQLite 不 enforce 列宽——原键 "achievement_combo:"+36 位 uuid4() 共 53 字符
+#    在 PG 上每次 combo 发放都 StringDataRightTruncation，毒化事务并连带回滚
+#    同批全部光子发放（v3-output/TOUR 活栈实证）。本用例只钉长度真相。
+# ---------------------------------------------------------------------------
+async def test_combo_related_item_key_fits_varchar50(db_session, test_user, fixed_date):
+    from uuid import uuid4
+
+    from app.services.achievement_engine import AchievementEngine
+
+    engine = AchievementEngine(db_session)
+    for _ in range(8):
+        await engine._handle_achievement_combo(str(test_user.id), unlock_count=3)
+
+    rows = await _tx_rows(db_session, test_user.id)
+    assert rows, "combo bonus rows must exist"
+    for row in rows:
+        # PG 列宽真相：任何字段长度超限都会在 asyncpg 上炸 StringDataRightTruncation
+        assert len(row.related_item_id or "") <= 50, row.related_item_id
+        assert len(row.source or "") <= 255, row.source
+        assert len(row.transaction_type or "") <= 50, row.transaction_type
+        assert row.related_item_id.startswith("achievement_combo:")
+    # 每事件唯一语义保持：键互不碰撞
+    assert len({r.related_item_id for r in rows}) == len(rows)
+    probe = f"achievement_combo:{uuid4().hex[:16]}"
+    assert len(probe) <= 50

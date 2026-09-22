@@ -1,0 +1,110 @@
+{
+  "schema": "sparkle.tour.voyage.step.v1",
+  "run_id": "f3bede64",
+  "step_id": "S7",
+  "phase": "earn",
+  "name": "攒光子：成就/首胜真实路径（sprint 归档触发 check_daily_first + 成就引擎）",
+  "started_at": "2026-09-22T21:57:09.502990+00:00",
+  "finished_at": "2026-09-22T22:05:59.617804+00:00",
+  "request": {},
+  "response": {
+    "earning_log": [
+      {
+        "sprint": 1,
+        "plan_id": "507699d4-ea34-404e-b799-b17aa0b820fa",
+        "task_failures": 0,
+        "progress_before_archive": 1.0,
+        "archive_status": 200,
+        "balance": 760
+      },
+      {
+        "sprint": 2,
+        "plan_id": "c721cdfe-2066-4c05-b27e-9e29ba6dc896",
+        "task_failures": 0,
+        "progress_before_archive": 1.0,
+        "archive_status": 200,
+        "balance": 1110
+      },
+      {
+        "sprint": 3,
+        "plan_id": "77e0150b-d80d-4317-8194-49ceef753630",
+        "task_failures": 0,
+        "progress_before_archive": 1.0,
+        "archive_status": 200,
+        "balance": 1500
+      },
+      {
+        "sprint": 4,
+        "plan_id": "2296f1fd-a073-4eeb-b7aa-3697fb9c2973",
+        "task_failures": 0,
+        "progress_before_archive": 1.0,
+        "archive_status": 200,
+        "balance": 1500
+      },
+      {
+        "sprint": 5,
+        "plan_id": "4283897d-37ea-4d16-8f05-e7be2ea42421",
+        "task_failures": 0,
+        "progress_before_archive": 1.0,
+        "archive_status": 200,
+        "balance": 2330
+      },
+      {
+        "sprint": 6,
+        "plan_id": "abab4dbf-b9fc-44e5-9a56-eb394614966e",
+        "task_failures": 0,
+        "progress_before_archive": 1.0,
+        "archive_status": 200,
+        "balance": 2330
+      },
+      {
+        "sprint": 7,
+        "plan_id": "5aebd667-4b69-4245-9cff-86acd938be6d",
+        "task_failures": 0,
+        "progress_before_archive": 1.0,
+        "archive_status": 200,
+        "balance": 2560
+      },
+      {
+        "sprint": 8,
+        "plan_id": "9b2b8ec8-8d76-4bbe-90dc-93a449495df1",
+        "task_failures": 0,
+        "progress_before_archive": 1.0,
+        "archive_status": 200,
+        "balance": 2560
+      },
+      {
+        "sprint": 9,
+        "plan_id": "c40982ce-c86e-409f-a2be-aafba44628d0",
+        "task_failures": 0,
+        "progress_before_archive": 1.0,
+        "archive_status": 200,
+        "balance": 2560
+      },
+      {
+        "sprint": 10,
+        "plan_id": "175c0e00-835b-4e97-8c6b-361238dae2ea",
+        "task_failures": 0,
+        "progress_before_archive": 1.0,
+        "archive_status": 200,
+        "balance": 5050
+      }
+    ],
+    "final_balance": 5050
+  },
+  "verdict": "pass",
+  "notes": [
+    "起手里程碑余额=20",
+    "冲刺1: 7 任务完成失败 0，归档 200，余额 760",
+    "冲刺2: 7 任务完成失败 0，归档 200，余额 1110",
+    "冲刺3: 7 任务完成失败 0，归档 200，余额 1500",
+    "冲刺4: 7 任务完成失败 0，归档 200，余额 1500",
+    "冲刺5: 7 任务完成失败 0，归档 200，余额 2330",
+    "冲刺6: 7 任务完成失败 0，归档 200，余额 2330",
+    "冲刺7: 7 任务完成失败 0，归档 200，余额 2560",
+    "冲刺8: 7 任务完成失败 0，归档 200，余额 2560",
+    "冲刺9: 7 任务完成失败 0，归档 200，余额 2560",
+    "冲刺10: 7 任务完成失败 0，归档 200，余额 5050",
+    "目标 ≥3200（兑换 3000 + 余量）：达成"
+  ]
+}

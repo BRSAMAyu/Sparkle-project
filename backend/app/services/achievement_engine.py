@@ -1675,14 +1675,14 @@ class AchievementEngine:
                 quantity=quantity,
             )
             logger.info(
-                "Queued photon reward compensation for achievement %s and user %s",
+                "Queued photon reward compensation for achievement {} and user {}",
                 achievement_id,
                 user_id,
             )
             return
         except Exception as exc:
             logger.warning(
-                "Failed to enqueue photon reward compensation for achievement %s: %s. Falling back to local retry.",
+                "Failed to enqueue photon reward compensation for achievement {}: {}. Falling back to local retry.",
                 achievement_id,
                 exc,
             )
@@ -1724,7 +1724,7 @@ class AchievementEngine:
                         record_history=True,
                     )
                 logger.info(
-                    "Photon reward compensation succeeded for achievement %s on local retry attempt %s",
+                    "Photon reward compensation succeeded for achievement {} on local retry attempt {}",
                     achievement_id,
                     attempt,
                 )
@@ -1740,7 +1740,7 @@ class AchievementEngine:
                 return
             except Exception as exc:
                 logger.warning(
-                    "Photon reward local retry %s failed for achievement %s: %s",
+                    "Photon reward local retry {} failed for achievement {}: {}",
                     attempt,
                     achievement_id,
                     exc,
@@ -1761,7 +1761,7 @@ class AchievementEngine:
                 delay_seconds *= 2
 
         logger.error(
-            "Photon reward compensation exhausted retries for achievement %s and user %s",
+            "Photon reward compensation exhausted retries for achievement {} and user {}",
             achievement_id,
             user_id,
         )
@@ -1831,7 +1831,7 @@ class AchievementEngine:
                         logger.info(f"Granted {quantity} photons to user {user_id} for achievement {achievement.id}")
                     except Exception as exc:
                         logger.error(
-                            "R2-01: Photon grant failed for achievement %s user %s: %s — enqueuing compensation",
+                            "R2-01: Photon grant failed for achievement {} user {}: {} — enqueuing compensation",
                             achievement.id, user_id, exc,
                         )
                         await self._schedule_photon_reward_retry(
@@ -2678,18 +2678,24 @@ class AchievementEngine:
                             "unlock_count": unlock_count,
                             "type": "achievement_combo",
                         },
-                        related_item_id=f"achievement_combo:{uuid4()}",
+                        # TOUR-FIX：related_item_id 列宽 VARCHAR(50)。完整 uuid4() 会把键拉到
+                        # 53 字符（"achievement_combo:"+36），PG 上每次 combo 发放都
+                        # StringDataRightTruncation 失败并毒化当前事务，连带回滚同批全部光子
+                        # 发放（SQLite 单测不 enforce 列宽故未拦截，v3-output/TOUR 活栈实证）。
+                        # 截短为 16 hex（18+16=34 ≤ 50），保留文档化前缀与每事件唯一语义。
+                        related_item_id=f"achievement_combo:{uuid4().hex[:16]}",
                         record_history=True,
                         manage_transaction=False,
                     )
                     logger.info(
-                        "Granted %d combo bonus photons to user %s (combo=%d)",
+                        "Granted {} combo bonus photons to user {} (combo={})",
                         bonus_photons, user_id, combo,
                     )
                 except Exception as exc:
                     # R2-01: Upgrade from warning to error — photon loss must be visible
+                    # loguru 只认 {} 括号插值：%s 占位会把异常原文整个吞掉（本缺陷曾因此隐形）。
                     logger.error(
-                        "R2-01: Failed to grant combo bonus photons to user %s (amount=%d): %s",
+                        "R2-01: Failed to grant combo bonus photons to user {} (amount={}): {}",
                         user_id, bonus_photons, exc,
                     )
             return {
@@ -2762,7 +2768,7 @@ class AchievementEngine:
         except Exception as e:
             # R2-01: Upgrade to error with structured logging for photon loss tracking
             logger.error(
-                "R2-01: Failed to grant daily first rewards (30 photons) to user %s: %s",
+                "R2-01: Failed to grant daily first rewards (30 photons) to user {}: {}",
                 user_id, e,
             )
 
@@ -2984,7 +2990,7 @@ class ContractService:
         except Exception as e:
             # R2-01: Upgrade to structured error logging for contract photon loss
             logger.error(
-                "R2-01: Failed to grant contract rewards (%d photons) for contract %s user %s: %s",
+                "R2-01: Failed to grant contract rewards ({} photons) for contract {} user {}: {}",
                 reward_amount if 'reward_amount' in dir() else 0,
                 contract.id, contract.user_id, e,
             )

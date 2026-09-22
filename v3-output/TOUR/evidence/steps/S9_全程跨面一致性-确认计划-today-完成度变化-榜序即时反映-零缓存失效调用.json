@@ -1,0 +1,43 @@
+{
+  "schema": "sparkle.tour.voyage.step.v1",
+  "run_id": "f3bede64",
+  "step_id": "S9",
+  "phase": "consistency",
+  "name": "全程跨面一致性：确认计划→today；完成度变化→榜序即时反映（零缓存失效调用）",
+  "started_at": "2026-09-22T22:06:01.828568+00:00",
+  "finished_at": "2026-09-22T22:06:01.935384+00:00",
+  "request": {},
+  "response": {
+    "main_ledger": {
+      "total": 73,
+      "completed": 71,
+      "rate": 0.9726
+    },
+    "board_mine": {
+      "rank": 1,
+      "user_id": "af89520c-c74b-4f3a-9af1-24c13d7e7b69",
+      "display_name": "tour_voyage_main_f3bede64",
+      "role": "owner",
+      "task_total": 73,
+      "task_completed": 71,
+      "completion_rate": 0.9726,
+      "has_ledger_data": true,
+      "percentile": 67,
+      "stats": {
+        "total": 73,
+        "completed": 71,
+        "completion_rate": 0.9726
+      }
+    },
+    "board_fresh_without_invalidation": true,
+    "my_rank_after_grind": 1,
+    "intake_today_status": 200,
+    "intake_today_tasks": 1,
+    "teammate_board_view_ok": true
+  },
+  "verdict": "pass",
+  "notes": [
+    "主号账本重放 total=73 completed=71 rate=0.9726；榜直读一致=True",
+    "结论：D-COMM 面直读 sprint_task_ledger（BP-4），不挂 galaxy 缓存——零失效调用下完成度变化即时可见"
+  ]
+}

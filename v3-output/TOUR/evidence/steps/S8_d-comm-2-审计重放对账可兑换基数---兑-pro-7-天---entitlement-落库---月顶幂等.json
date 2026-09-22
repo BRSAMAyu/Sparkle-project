@@ -1,0 +1,56 @@
+{
+  "schema": "sparkle.tour.voyage.step.v1",
+  "run_id": "f3bede64",
+  "step_id": "S8",
+  "phase": "redeem",
+  "name": "D-COMM-2：审计重放对账可兑换基数 → 兑 Pro 7 天 → entitlement 落库 → 月顶幂等",
+  "started_at": "2026-09-22T22:05:59.619661+00:00",
+  "finished_at": "2026-09-22T22:06:01.827750+00:00",
+  "request": {},
+  "response": {
+    "balance_before": 5050,
+    "replay_base": 5050,
+    "replay_by_type": {
+      "grant_bonus": 13,
+      "grant_achievement": 14,
+      "grant_daily_first": 1
+    },
+    "redeem_status": 200,
+    "redeem": {
+      "success": true,
+      "message": "兑换成功",
+      "status": "ok",
+      "data": {
+        "user_id": "af89520c-c74b-4f3a-9af1-24c13d7e7b69",
+        "cost_photons": 3000,
+        "pro_days": 7,
+        "redeemable_base": 5050,
+        "balance_after": 2050,
+        "entitlement": "pro",
+        "entitlement_expires_at": "2026-09-29T22:05:59.688211"
+      }
+    },
+    "entitlement": "pro",
+    "expires_at": "2026-09-29T22:05:59.688211",
+    "expires_within_7d": true,
+    "balance_after": 2050,
+    "deduction_rows": 1,
+    "monthly_cap_retry": {
+      "status": 409,
+      "detail": {
+        "status": "monthly_cap_reached",
+        "message": "本月兑换次数已用完，下个月再来",
+        "cost_photons": 3000,
+        "pro_days": 7,
+        "redeemable_base": null
+      }
+    }
+  },
+  "verdict": "pass",
+  "notes": [
+    "审计重放基数=5050 ≥ 兑换价 3000（transfer_in 不计入口径已随词表排除）",
+    "扣减 5050->2050（=3000）；redeem_pro 流水恰 1 条",
+    "entitlement=pro 到期 2026-09-29T22:05:59.688211（7 天内偏差 <6h：True）——落库经响应+_grant_pro 语义",
+    "月顶幂等：二次兑换被拒 status=409 detail.status=monthly_cap_reached"
+  ]
+}
