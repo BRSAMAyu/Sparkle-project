@@ -19,11 +19,17 @@ results[].user_status 丢成 null，mobile
    （全零块读起来是「未解锁但存在信号」而非「无信号」）。
 
 附带的回归钉（同一行块上的前置缺陷）：semantic_search 产出的 node 是 NodeBase
-——没有 source_type / keywords 属性；补填前 servicer 直接访问
+——没有 source_type 属性；补填前 servicer 直接访问
 ``r.node.source_type``，任何非空生产搜索都会 AttributeError → INTERNAL →
 网关被迫回落 REST（gRPC 搜索分支从未成功返回过）。修复后按 REST 语义降级
 "unknown"，且本文件所有 SearchNodes 用例都走真实 SearchResultItem/NodeBase
 生产形状，防止该缺陷以任何形式复发。
+
+GALAXY-KW 回归钉：NodeBase 投影此前连 keywords 也不携带（from_model 丢弃
+KnowledgeNode.keywords 列），SearchNodes 的
+``tags=hasattr(r.node,'keywords')...`` 恒走空分支 → 移动端搜索结果永远没有
+关键词标签。修复后 keywords 由投影单点供给（REST 面同一字段同源），servicer
+直接映射；空 keywords 的节点保持诚实空 tags（不造假）。两个用例固化此契约。
 """
 
 from __future__ import annotations
@@ -47,7 +53,7 @@ from tests.unit.test_galaxy_grpc_user_status import (
 # --- fakes（production shapes only：SearchResultItem.node = NodeBase）--------
 
 
-def _build_search_result(user_status) -> SearchResultItem:
+def _build_search_result(user_status, *, keywords: list[str] | None = None) -> SearchResultItem:
     node = NodeBase(
         id=uuid4(),
         name="传输层拥塞控制",
@@ -55,6 +61,7 @@ def _build_search_result(user_status) -> SearchResultItem:
         sector_code="TECH",
         is_seed=True,
         tags=["tcp", "congestion_control"],
+        **({"keywords": keywords} if keywords is not None else {}),
     )
     return SearchResultItem(node=node, similarity=0.87, user_status=user_status)
 
@@ -149,8 +156,51 @@ async def test_search_nodes_carries_user_status_on_grpc_nodes(monkeypatch: pytes
     assert us.first_unlock_at.ToDatetime() == FIRST_UNLOCK_AT
     # 旧 int32 mastery 通道仍由批量回查填充（既有消费方 back-compat）
     assert node.mastery == 88
-    # 生产形状（NodeBase 无 source_type/keywords）按 REST 语义降级，不得抛
+    # 生产形状（NodeBase 无 source_type）按 REST 语义降级，不得抛
     assert node.node_type == "unknown"
+
+
+@pytest.mark.asyncio
+async def test_search_nodes_tags_carry_node_keywords(monkeypatch: pytest.MonkeyPatch):
+    """GALAXY-KW: 有 keywords 的节点命中搜索后，proto tags 必须非空且值正确。
+
+    缺陷复 RK：SearchResults.node 是 NodeBase 投影，旧代码
+    ``tags=...hasattr(r.node,'keywords')...`` 恒走空分支 → 移动端搜索
+    永远没有关键词标签。投影修复（from_model 供给 keywords）后，servicer
+    直接映射，值逐项一致。
+    """
+    keywords = ["tcp", "拥塞控制", "slow start"]
+    result = _build_search_result(None, keywords=keywords)
+    servicer = _make_servicer(monkeypatch, search_results=[result])
+    context = _FakeContext({"user-id": USER_ID})
+
+    response = await servicer.SearchNodes(
+        galaxy_service_pb2.SearchNodesRequest(query="拥塞控制", limit=5), context
+    )
+
+    assert context.code is None, f"SearchNodes failed: code={context.code} details={context.details!r}"
+    assert response.total_found == 1
+    assert list(response.nodes[0].tags) == keywords, (
+        "gRPC search node tags must carry the projected node keywords — "
+        "an empty tags list on keyword-rich nodes means the projection loss "
+        "regressed (mobile search shows no keyword chips)"
+    )
+
+
+@pytest.mark.asyncio
+async def test_search_nodes_empty_keywords_serve_honest_empty_tags(monkeypatch: pytest.MonkeyPatch):
+    """GALAXY-KW: 空 keywords 的节点 tags 保持诚实空 []——不造假、不崩溃。"""
+    result = _build_search_result(None, keywords=[])
+    servicer = _make_servicer(monkeypatch, search_results=[result])
+    context = _FakeContext({"user-id": USER_ID})
+
+    response = await servicer.SearchNodes(
+        galaxy_service_pb2.SearchNodesRequest(query="拥塞控制", limit=5), context
+    )
+
+    assert context.code is None
+    assert response.total_found == 1
+    assert list(response.nodes[0].tags) == []
 
 
 @pytest.mark.asyncio

@@ -245,6 +245,10 @@ class NodeBase(BaseModel):
     parent_id: UUID | None = None
     parent_name: str | None = None  # Added for context
     tags: list[str] = Field(default_factory=list)
+    # GALAXY-KW: keywords 由 from_model 从 ORM 投影（KnowledgeNode.keywords，
+    # JSONB list）。此前本投影丢弃该列，gRPC SearchNodes 的
+    # hasattr(r.node, 'keywords') 恒 False → 移动端搜索 tags 恒空。
+    keywords: list[str] = Field(default_factory=list)
     global_spark_count: int = 0
 
     model_config = ConfigDict(from_attributes=True)
@@ -268,6 +272,9 @@ class NodeBase(BaseModel):
             parent_id=node.parent_id,
             parent_name=node.parent.name if getattr(node, "parent", None) else None,
             tags=NodeWithStatus._build_auto_tags(node, sector_code),
+            # GALAXY-KW: str() 与 _build_auto_tags 的 add_tag 同款防御——
+            # JSONB 列内的脏元素不得让投影抛 ValidationError。
+            keywords=[str(k) for k in (node.keywords or [])],
             global_spark_count=node.global_spark_count,
         )
 

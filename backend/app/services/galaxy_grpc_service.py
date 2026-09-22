@@ -557,7 +557,15 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
                         # that key, so degrade to "unknown" like RecommendedNodes.
                         node_type=getattr(r.node, "source_type", None) or "unknown",
                         mastery=mastery_map.get(r.node.id, 0),
-                        tags=r.node.keywords if hasattr(r.node, 'keywords') and r.node.keywords else [],
+                        # GALAXY-KW fix: NodeBase projection now carries
+                        # keywords (from_model reads KnowledgeNode.keywords
+                        # already in memory — zero extra queries, and the REST
+                        # face serves the same field). Previously this line
+                        # tested hasattr on a projection that never had the
+                        # attribute, so mobile search hits never showed any
+                        # keyword tags. Empty keywords stay honestly empty
+                        # ([]), mirroring REST keywords=[] — no fabricated tags.
+                        tags=list(r.node.keywords),
                         # SERVICER-BACKFILL (GRAPH-GRPC-SHAPE follow-up): the
                         # graph face carries the full per-node user_status block;
                         # search answered by gRPC served null, and mobile

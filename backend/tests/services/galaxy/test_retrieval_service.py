@@ -8,7 +8,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.schemas.galaxy import NodeWithStatus
+from app.schemas.galaxy import NodeBase, NodeWithStatus
 from app.services.galaxy.retrieval_service import DocumentChunkResult, KnowledgeRetrievalService
 
 
@@ -351,6 +351,49 @@ class TestGalaxySchemaMapping:
 
         assert mapped.user_status is not None
         assert mapped.user_status.first_unlock_at == status.first_unlock_at
+
+    @staticmethod
+    def _make_node(keywords):
+        """GALAXY-KW: 与上一个用例同款的 ORM 形状（生产 KnowledgeNode 投影路径）。"""
+        node = MagicMock()
+        node.id = uuid4()
+        node.parent_id = None
+        node.name = "Linear Algebra"
+        node.name_en = "Linear Algebra"
+        node.description = "Matrices and vector spaces"
+        node.importance_level = 4
+        node.is_seed = True
+        node.global_spark_count = 0
+        node.keywords = keywords
+        node.position_x = 120.0
+        node.position_y = -48.0
+        node.parent = None
+        node.subject = MagicMock()
+        node.subject.sector_code = "TECH"
+        node.subject.position_angle = 35.0
+        node.subject.hex_color = "#5AB8CC"
+        node.subject.glow_color = "#92E1E9"
+        return node
+
+    def test_node_base_from_model_projects_keywords(self):
+        """GALAXY-KW: from_model 必须把 ORM keywords 投影进 NodeBase。
+
+        此前投影丢弃该列 → gRPC SearchNodes 的 hasattr(r.node,'keywords')
+        恒 False，移动端搜索 tags 恒空；REST 面也无 keywords 可言。
+        """
+        node = self._make_node(["math", "matrix"])
+
+        mapped = NodeBase.from_model(node)
+
+        assert mapped.keywords == ["math", "matrix"]
+
+    def test_node_base_from_model_null_keywords_stay_empty(self):
+        """GALAXY-KW: keywords 为 NULL 的节点投影为诚实空列表（列 nullable=True）。"""
+        node = self._make_node(None)
+
+        mapped = NodeBase.from_model(node)
+
+        assert mapped.keywords == []
 
 
 class TestDocumentHybridSearchExecMeta:

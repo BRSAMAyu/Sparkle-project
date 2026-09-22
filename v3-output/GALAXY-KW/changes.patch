@@ -1,0 +1,204 @@
+diff --git a/backend/app/schemas/galaxy.py b/backend/app/schemas/galaxy.py
+index 8a5e02f7..9ac6cfa5 100755
+--- a/backend/app/schemas/galaxy.py
++++ b/backend/app/schemas/galaxy.py
+@@ -245,6 +245,10 @@ class NodeBase(BaseModel):
+     parent_id: UUID | None = None
+     parent_name: str | None = None  # Added for context
+     tags: list[str] = Field(default_factory=list)
++    # GALAXY-KW: keywords 由 from_model 从 ORM 投影（KnowledgeNode.keywords，
++    # JSONB list）。此前本投影丢弃该列，gRPC SearchNodes 的
++    # hasattr(r.node, 'keywords') 恒 False → 移动端搜索 tags 恒空。
++    keywords: list[str] = Field(default_factory=list)
+     global_spark_count: int = 0
+ 
+     model_config = ConfigDict(from_attributes=True)
+@@ -268,6 +272,9 @@ class NodeBase(BaseModel):
+             parent_id=node.parent_id,
+             parent_name=node.parent.name if getattr(node, "parent", None) else None,
+             tags=NodeWithStatus._build_auto_tags(node, sector_code),
++            # GALAXY-KW: str() 与 _build_auto_tags 的 add_tag 同款防御——
++            # JSONB 列内的脏元素不得让投影抛 ValidationError。
++            keywords=[str(k) for k in (node.keywords or [])],
+             global_spark_count=node.global_spark_count,
+         )
+ 
+diff --git a/backend/app/services/galaxy_grpc_service.py b/backend/app/services/galaxy_grpc_service.py
+index 9e3b88f3..abccf0c1 100755
+--- a/backend/app/services/galaxy_grpc_service.py
++++ b/backend/app/services/galaxy_grpc_service.py
+@@ -557,7 +557,15 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
+                         # that key, so degrade to "unknown" like RecommendedNodes.
+                         node_type=getattr(r.node, "source_type", None) or "unknown",
+                         mastery=mastery_map.get(r.node.id, 0),
+-                        tags=r.node.keywords if hasattr(r.node, 'keywords') and r.node.keywords else [],
++                        # GALAXY-KW fix: NodeBase projection now carries
++                        # keywords (from_model reads KnowledgeNode.keywords
++                        # already in memory — zero extra queries, and the REST
++                        # face serves the same field). Previously this line
++                        # tested hasattr on a projection that never had the
++                        # attribute, so mobile search hits never showed any
++                        # keyword tags. Empty keywords stay honestly empty
++                        # ([]), mirroring REST keywords=[] — no fabricated tags.
++                        tags=list(r.node.keywords),
+                         # SERVICER-BACKFILL (GRAPH-GRPC-SHAPE follow-up): the
+                         # graph face carries the full per-node user_status block;
+                         # search answered by gRPC served null, and mobile
+diff --git a/backend/tests/services/galaxy/test_retrieval_service.py b/backend/tests/services/galaxy/test_retrieval_service.py
+index fc96427e..8e97b4ff 100644
+--- a/backend/tests/services/galaxy/test_retrieval_service.py
++++ b/backend/tests/services/galaxy/test_retrieval_service.py
+@@ -8,7 +8,7 @@ from uuid import uuid4
+ 
+ import pytest
+ 
+-from app.schemas.galaxy import NodeWithStatus
++from app.schemas.galaxy import NodeBase, NodeWithStatus
+ from app.services.galaxy.retrieval_service import DocumentChunkResult, KnowledgeRetrievalService
+ 
+ 
+@@ -352,6 +352,49 @@ class TestGalaxySchemaMapping:
+         assert mapped.user_status is not None
+         assert mapped.user_status.first_unlock_at == status.first_unlock_at
+ 
++    @staticmethod
++    def _make_node(keywords):
++        """GALAXY-KW: 与上一个用例同款的 ORM 形状（生产 KnowledgeNode 投影路径）。"""
++        node = MagicMock()
++        node.id = uuid4()
++        node.parent_id = None
++        node.name = "Linear Algebra"
++        node.name_en = "Linear Algebra"
++        node.description = "Matrices and vector spaces"
++        node.importance_level = 4
++        node.is_seed = True
++        node.global_spark_count = 0
++        node.keywords = keywords
++        node.position_x = 120.0
++        node.position_y = -48.0
++        node.parent = None
++        node.subject = MagicMock()
++        node.subject.sector_code = "TECH"
++        node.subject.position_angle = 35.0
++        node.subject.hex_color = "#5AB8CC"
++        node.subject.glow_color = "#92E1E9"
++        return node
++
++    def test_node_base_from_model_projects_keywords(self):
++        """GALAXY-KW: from_model 必须把 ORM keywords 投影进 NodeBase。
++
++        此前投影丢弃该列 → gRPC SearchNodes 的 hasattr(r.node,'keywords')
++        恒 False，移动端搜索 tags 恒空；REST 面也无 keywords 可言。
++        """
++        node = self._make_node(["math", "matrix"])
++
++        mapped = NodeBase.from_model(node)
++
++        assert mapped.keywords == ["math", "matrix"]
++
++    def test_node_base_from_model_null_keywords_stay_empty(self):
++        """GALAXY-KW: keywords 为 NULL 的节点投影为诚实空列表（列 nullable=True）。"""
++        node = self._make_node(None)
++
++        mapped = NodeBase.from_model(node)
++
++        assert mapped.keywords == []
++
+ 
+ class TestDocumentHybridSearchExecMeta:
+     """FIX-16 ④（E-05 D8）：document_hybrid_search 实际执行模式回填。
+diff --git a/backend/tests/unit/test_galaxy_grpc_search_recommended_user_status.py b/backend/tests/unit/test_galaxy_grpc_search_recommended_user_status.py
+index c09cc44c..bb25f95e 100644
+--- a/backend/tests/unit/test_galaxy_grpc_search_recommended_user_status.py
++++ b/backend/tests/unit/test_galaxy_grpc_search_recommended_user_status.py
+@@ -19,11 +19,17 @@ results[].user_status 丢成 null，mobile
+    （全零块读起来是「未解锁但存在信号」而非「无信号」）。
+ 
+ 附带的回归钉（同一行块上的前置缺陷）：semantic_search 产出的 node 是 NodeBase
+-——没有 source_type / keywords 属性；补填前 servicer 直接访问
++——没有 source_type 属性；补填前 servicer 直接访问
+ ``r.node.source_type``，任何非空生产搜索都会 AttributeError → INTERNAL →
+ 网关被迫回落 REST（gRPC 搜索分支从未成功返回过）。修复后按 REST 语义降级
+ "unknown"，且本文件所有 SearchNodes 用例都走真实 SearchResultItem/NodeBase
+ 生产形状，防止该缺陷以任何形式复发。
++
++GALAXY-KW 回归钉：NodeBase 投影此前连 keywords 也不携带（from_model 丢弃
++KnowledgeNode.keywords 列），SearchNodes 的
++``tags=hasattr(r.node,'keywords')...`` 恒走空分支 → 移动端搜索结果永远没有
++关键词标签。修复后 keywords 由投影单点供给（REST 面同一字段同源），servicer
++直接映射；空 keywords 的节点保持诚实空 tags（不造假）。两个用例固化此契约。
+ """
+ 
+ from __future__ import annotations
+@@ -47,7 +53,7 @@ from tests.unit.test_galaxy_grpc_user_status import (
+ # --- fakes（production shapes only：SearchResultItem.node = NodeBase）--------
+ 
+ 
+-def _build_search_result(user_status) -> SearchResultItem:
++def _build_search_result(user_status, *, keywords: list[str] | None = None) -> SearchResultItem:
+     node = NodeBase(
+         id=uuid4(),
+         name="传输层拥塞控制",
+@@ -55,6 +61,7 @@ def _build_search_result(user_status) -> SearchResultItem:
+         sector_code="TECH",
+         is_seed=True,
+         tags=["tcp", "congestion_control"],
++        **({"keywords": keywords} if keywords is not None else {}),
+     )
+     return SearchResultItem(node=node, similarity=0.87, user_status=user_status)
+ 
+@@ -149,10 +156,53 @@ async def test_search_nodes_carries_user_status_on_grpc_nodes(monkeypatch: pytes
+     assert us.first_unlock_at.ToDatetime() == FIRST_UNLOCK_AT
+     # 旧 int32 mastery 通道仍由批量回查填充（既有消费方 back-compat）
+     assert node.mastery == 88
+-    # 生产形状（NodeBase 无 source_type/keywords）按 REST 语义降级，不得抛
++    # 生产形状（NodeBase 无 source_type）按 REST 语义降级，不得抛
+     assert node.node_type == "unknown"
+ 
+ 
++@pytest.mark.asyncio
++async def test_search_nodes_tags_carry_node_keywords(monkeypatch: pytest.MonkeyPatch):
++    """GALAXY-KW: 有 keywords 的节点命中搜索后，proto tags 必须非空且值正确。
++
++    缺陷复 RK：SearchResults.node 是 NodeBase 投影，旧代码
++    ``tags=...hasattr(r.node,'keywords')...`` 恒走空分支 → 移动端搜索
++    永远没有关键词标签。投影修复（from_model 供给 keywords）后，servicer
++    直接映射，值逐项一致。
++    """
++    keywords = ["tcp", "拥塞控制", "slow start"]
++    result = _build_search_result(None, keywords=keywords)
++    servicer = _make_servicer(monkeypatch, search_results=[result])
++    context = _FakeContext({"user-id": USER_ID})
++
++    response = await servicer.SearchNodes(
++        galaxy_service_pb2.SearchNodesRequest(query="拥塞控制", limit=5), context
++    )
++
++    assert context.code is None, f"SearchNodes failed: code={context.code} details={context.details!r}"
++    assert response.total_found == 1
++    assert list(response.nodes[0].tags) == keywords, (
++        "gRPC search node tags must carry the projected node keywords — "
++        "an empty tags list on keyword-rich nodes means the projection loss "
++        "regressed (mobile search shows no keyword chips)"
++    )
++
++
++@pytest.mark.asyncio
++async def test_search_nodes_empty_keywords_serve_honest_empty_tags(monkeypatch: pytest.MonkeyPatch):
++    """GALAXY-KW: 空 keywords 的节点 tags 保持诚实空 []——不造假、不崩溃。"""
++    result = _build_search_result(None, keywords=[])
++    servicer = _make_servicer(monkeypatch, search_results=[result])
++    context = _FakeContext({"user-id": USER_ID})
++
++    response = await servicer.SearchNodes(
++        galaxy_service_pb2.SearchNodesRequest(query="拥塞控制", limit=5), context
++    )
++
++    assert context.code is None
++    assert response.total_found == 1
++    assert list(response.nodes[0].tags) == []
++
++
+ @pytest.mark.asyncio
+ async def test_search_nodes_null_status_stays_absent_not_zero(monkeypatch: pytest.MonkeyPatch):
+     """REST 面对无状态节点出 user_status=null；proto 必须镜像为缺省（非全零块）。"""
