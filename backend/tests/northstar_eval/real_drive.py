@@ -326,7 +326,18 @@ class WSChatSession:
             self.conn = None
 
     def send_message(self, text: str, deadline_s: float = WS_RECV_TIMEOUT_S) -> dict[str, Any]:
-        """发一条聊天消息，聚合事件流到 full_text。诚实契约：超时/错误原样返回不美化。"""
+        """发一条聊天消息，聚合事件流到 full_text。诚实契约：超时/错误原样返回不美化。
+
+        P1-3（BP-3 复盘）修订的终止与归因语义：
+        - ``usage`` 是引擎逐跳计量事件（网关据其在流内做配额分段），不是回合
+          终止；本回合真正的终止帧是本 request_id 的 ``full_text`` / ``error``，
+          或网关流末尾必发的 ``meta``（合成 ``done`` 视上游 finish_reason 而定）。
+        - 网关 WS 读泵按连接串行处理消息：上一回合未结束时新消息排队，上一回
+          合的残帧（含其 final full_text）会先于本回合 ack 到达。所有帧都带
+          request_id，本循环按其归因：非本请求的帧与 ack 前到达的无主帧一律
+          计入 ``stale_*`` 排干，不参与答案聚合——否则会把上一回合的答案误记
+          为本回合答案（LOOP1 C2/C3「99.5% 重放」假象的根因）。
+        """
         self._ensure()
         assert self.conn is not None
         self.messages_sent += 1
@@ -340,6 +351,8 @@ class WSChatSession:
         tool_calls: list[dict[str, Any]] = []
         errors: list[dict[str, Any]] = []
         full_text = ""
+        own_turn_started = False  # 已见到本请求的 ack/message_ack
+        stale_frames = 0
         while True:
             remaining = deadline_s - (time.monotonic() - started)
             if remaining <= 0:
@@ -363,22 +376,37 @@ class WSChatSession:
             if "payload" in event and isinstance(event["payload"], dict):
                 event = event["payload"]
             etype = str(event.get("type", ""))
+            frame_rid = str(event.get("request_id", "") or "")
+            # request_id 归因：带他人 rid 的帧、以及 ack 之前到达的无主帧，
+            # 只可能是同连接上一回合的残帧——排干并显式计数。
+            if (frame_rid and frame_rid != request_id) or (not frame_rid and not own_turn_started):
+                stale_frames += 1
+                event_types[f"stale_{etype or '(none)'}"] += 1
+                continue
+            if etype in ("ack", "message_ack"):
+                own_turn_started = True
+                event_types[etype] += 1
+                continue
             event_types[etype or "(none)"] += 1
             if etype == "delta":
                 deltas.append(str(event.get("delta", "")))
             elif etype == "full_text":
+                # 语义与网关持久化一致：后到的 full_text 覆盖前者（last wins）。
                 full_text = str(event.get("full_text", ""))
-                break
             elif etype == "citations":
                 citations.extend(event.get("citations", []) or [])
             elif etype == "tool_call":
                 tool_calls.append(event.get("tool_call", {}))
-            elif etype == "error":
-                errors.append(event.get("error", {}))
+            elif etype in ("error", "message_nack", "nack"):
+                errors.append(event.get("error") or event)
                 break
-            if not full_text and deltas and event_types.get("usage", 0) > 0:
-                full_text = "".join(deltas)  # usage 终止但缺 full_text 的降级路径（记录原样）
+            elif etype in ("meta", "done"):
+                # 网关在引擎流 EOF 后必发 meta：真正的回合终止。缺 full_text
+                # 时降级用 delta 聚合（原降级路径，现正确锚定在回合末尾）。
+                if not full_text and deltas:
+                    full_text = "".join(deltas)
                 break
+            # usage / status_update / metadata / tool_result 等为过程帧：只计数。
         return {
             "full_text": full_text or "".join(deltas),
             "delta_events": event_types.get("delta", 0),
@@ -389,6 +417,7 @@ class WSChatSession:
             "elapsed_s": round(time.monotonic() - started, 2),
             "request_id": request_id,
             "session_id": self.session_id,
+            "stale_frames_drained": stale_frames,
         }
 
 
