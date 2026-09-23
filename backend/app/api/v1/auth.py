@@ -143,7 +143,11 @@ async def _issue_auth_tokens(
         expires_delta=access_token_expires,
     )
     refresh_token = create_refresh_token(data=claims)
-    refresh_payload = await decode_token(refresh_token, expected_type="refresh")
+    # 自产 token 只为提取 jti：refresh 轮换 revoke→upsert 复用同一 sid，
+    # 此刻 Redis revoked 标记尚未被 upsert 清除，session 吊销自检必误杀。
+    refresh_payload = await decode_token(
+        refresh_token, expected_type="refresh", check_session_revocation=False
+    )
     await auth_session_service.upsert_session(
         db,
         user_id=str(user.id),

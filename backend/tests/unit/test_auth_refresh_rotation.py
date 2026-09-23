@@ -72,7 +72,7 @@ async def test_refresh_happy_path_rotates_and_returns_200(monkeypatch):
     )
     calls: list[str] = []
 
-    async def fake_decode(token, expected_type=None):  # noqa: ANN001
+    async def fake_decode(token, expected_type=None, **kwargs):  # noqa: ANN001
         return {
             "sub": str(user.id),
             "sid": "sess-1",
@@ -139,7 +139,7 @@ async def test_refresh_survives_revocation_failure_without_poisoning_token(
     user = SimpleNamespace(id=uuid4(), is_active=True)
     blacklisted: list[str] = []
 
-    async def fake_decode(token, expected_type=None):  # noqa: ANN001
+    async def fake_decode(token, expected_type=None, **kwargs):  # noqa: ANN001
         return {"sub": str(user.id), "sid": "sess-1", "jti": "j-2", "exp": 1}
 
     async def failing_revoke(db, **kwargs):  # noqa: ANN001
@@ -179,3 +179,47 @@ async def test_refresh_survives_revocation_failure_without_poisoning_token(
     assert resp.status_code == 401
     # the presented token stays usable for a retry — nothing was blacklisted
     assert blacklisted == []
+
+
+def test_issue_auth_tokens_skips_session_revocation_self_check():
+    """The issuer must not run the session-revocation check on its own token.
+
+    2026-09-23 live probe: rotation revokes the session (Redis mark set) and
+    then re-issues under the SAME sid; the issuer's internal decode_token
+    hit that stale mark and raised "Session revoked" on every refresh —
+    unit tests missed it because they mocked the cache layer.
+    """
+    src = inspect.getsource(auth_module._issue_auth_tokens)
+    assert "check_session_revocation=False" in src
+
+
+@pytest.mark.asyncio
+async def test_decode_token_session_check_semantics(monkeypatch):
+    """Default decode rejects a revoked sid; the skip flag bypasses only that."""
+    from app.core import security as security_module
+
+    user_id = str(uuid4())
+
+    async def fake_is_session_revoked(sid: str) -> bool:
+        return sid == "sess-stale"
+
+    async def fake_is_token_revoked(jti: str) -> bool:
+        return False
+
+    async def fake_revoked_before(uid: str):
+        return None
+
+    monkeypatch.setattr(security_module, "is_session_revoked", fake_is_session_revoked)
+    monkeypatch.setattr(security_module, "is_token_revoked", fake_is_token_revoked)
+    monkeypatch.setattr(security_module, "get_user_revoked_before", fake_revoked_before)
+
+    claims = {"sub": user_id, "sid": "sess-stale", "type": "refresh"}
+    token = security_module.create_refresh_token(data=claims)
+
+    with pytest.raises(Exception, match="Session revoked"):
+        await security_module.decode_token(token, expected_type="refresh")
+
+    payload = await security_module.decode_token(
+        token, expected_type="refresh", check_session_revocation=False
+    )
+    assert payload["sid"] == "sess-stale"

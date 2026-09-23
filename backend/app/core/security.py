@@ -115,9 +115,18 @@ def create_refresh_token(data: dict) -> str:
     return encoded_jwt
 
 
-async def decode_token(token: str, expected_type: str | None = None) -> dict:
+async def decode_token(
+    token: str,
+    expected_type: str | None = None,
+    *,
+    check_session_revocation: bool = True,
+) -> dict:
     """
     解码 JWT token — tries RS256 first, falls back to HS256.
+
+    check_session_revocation=False 供签发点解析自产 token（拿 jti）：
+    refresh 轮换 revoke→upsert 复用同一 sid，签发时 Redis revoked 标记
+    尚未被 upsert 清除，自检必误杀（2026-09-23 探针实证）。
     """
     audience = settings.JWT_AUDIENCE or None
     issuer = settings.JWT_ISSUER or None
@@ -168,7 +177,7 @@ async def decode_token(token: str, expected_type: str | None = None) -> dict:
                 raise JWTError("Token revoked")
 
     session_id = payload.get("sid")
-    if session_id:
+    if session_id and check_session_revocation:
         if await is_session_revoked(str(session_id)):
             raise JWTError("Session revoked")
 
