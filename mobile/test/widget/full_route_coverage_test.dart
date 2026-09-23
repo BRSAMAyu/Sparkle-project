@@ -180,14 +180,15 @@ void main() {
           ]));
     });
 
-    test('photon routes (2 paths)', () {
+    test('photon routes (2 paths, transfer withdrawn per A-SPEC2 #10)', () {
       final paths = _extractPaths(PhotonRoutes.routes);
       expect(
           paths,
           containsAll([
             PhotonRoutes.transactionHistory,
-            PhotonRoutes.transfer,
+            PhotonRoutes.redeemPro,
           ]));
+      expect(paths, isNot(contains('/photon/transfer')));
     });
 
     test('plan routes (9 paths)', () {

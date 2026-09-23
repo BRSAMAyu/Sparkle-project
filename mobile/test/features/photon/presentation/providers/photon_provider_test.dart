@@ -106,12 +106,12 @@ void main() {
 
       expect(state.isLoading, isFalse);
       expect(state.balance, balance);
-      expect(state.error, isNull);
 
       expect(mockRepository.getBalanceCalls, 2);
     });
 
-    test('handles load errors gracefully', () async {
+    test('handles load errors gracefully (N9: 诚实地「暂不可见」，异常不进状态)',
+        () async {
       mockRepository.getBalanceHandler = () async {
         throw Exception('Network error');
       };
@@ -123,7 +123,6 @@ void main() {
 
       expect(state.isLoading, isFalse);
       expect(state.balance, isNull);
-      expect(state.error, contains('Network error'));
     });
 
     test('refreshBalance updates balance', () async {
@@ -293,7 +292,65 @@ void main() {
 
       expect(state.isLoading, isFalse);
       expect(state.transactions, isEmpty);
+      expect(state.loadFailed, isFalse); // 空列表 ≠ 失败，两态互斥
       expect(state.hasMore, isFalse); // No items means no more to load
+    });
+
+    test('load failure is a bounded flag, exception text never enters state '
+        '(N9)', () async {
+      mockRepository.getTransactionHistoryHandler = ({
+        String? transactionType,
+        int limit = 20,
+        int offset = 0,
+      }) async =>
+          throw Exception('boom-secret-detail');
+
+      container.read(photonTransactionsProvider);
+      await container.read(photonTransactionsProvider.notifier)
+          .loadTransactions(refresh: true);
+
+      final state = container.read(photonTransactionsProvider);
+
+      expect(state.isLoading, isFalse);
+      expect(state.loadFailed, isTrue);
+      expect(state.transactions, isEmpty);
+    });
+
+    test('loadFailed resets when a new load starts (旧 error 粘滞边角修复)',
+        () async {
+      var shouldFail = true;
+      mockRepository.getTransactionHistoryHandler = ({
+        String? transactionType,
+        int limit = 20,
+        int offset = 0,
+      }) async {
+        if (shouldFail) {
+          throw Exception('boom');
+        }
+        return [
+          PhotonTransaction(
+            id: 'tx-1',
+            transactionType: PhotonTransactionType.grantAchievement,
+            amount: 100,
+            balanceBefore: 0,
+            balanceAfter: 100,
+            createdAt: DateTime(2024, 1, 28),
+          ),
+        ];
+      };
+
+      container.read(photonTransactionsProvider);
+      await container.read(photonTransactionsProvider.notifier)
+          .loadTransactions(refresh: true);
+      expect(container.read(photonTransactionsProvider).loadFailed, isTrue);
+
+      shouldFail = false;
+      await container.read(photonTransactionsProvider.notifier).refresh();
+      await Future<void>.delayed(Duration.zero);
+
+      final recovered = container.read(photonTransactionsProvider);
+      expect(recovered.loadFailed, isFalse);
+      expect(recovered.transactions.length, 1);
     });
   });
 
@@ -361,21 +418,18 @@ void main() {
 
       expect(updated.balance?.balance, 700);
       expect(updated.isLoading, isFalse);
-      expect(updated.error, isNull);
     });
 
-    test('copyWith with error sets error and clears loading', () {
+    test('copyWith clears loading only (N9: error 字段已退役，状态无异常载体)',
+        () {
       final state = PhotonBalanceState(
         isLoading: true,
       );
 
-      final updated = state.copyWith(
-        error: 'Network error',
-        isLoading: false,
-      );
+      final updated = state.copyWith(isLoading: false);
 
-      expect(updated.error, 'Network error');
       expect(updated.isLoading, isFalse);
+      expect(updated.balance, isNull); // 失败即「暂不可见」，不造默认值
     });
   });
 
@@ -400,12 +454,14 @@ void main() {
       final updated = state.copyWith(
         isLoading: true,
         currentOffset: 2,
+        loadFailed: true,
       );
 
       expect(updated.transactions, transactions);
       expect(updated.isLoading, isTrue);
       expect(updated.currentOffset, 2);
       expect(updated.hasMore, isTrue); // Unchanged
+      expect(updated.loadFailed, isTrue);
     });
 
     test('correctly identifies when no more items to load', () {

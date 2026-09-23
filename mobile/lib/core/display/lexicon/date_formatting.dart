@@ -50,6 +50,26 @@ String formatSparkleDateOnly(DateTime value, AppLocalizations l10n) {
   return l10n.displayDateOnly(local.month, local.day);
 }
 
+/// 日期分组头（流水/记录类列表按日分组的标题行）：今天/昨天/N天前，
+/// ≥7 天落纯日期绝对格式（无时钟）。原 photon 流水页自算实现（PHOTON 卡
+/// #7，A-SPEC2 PH-G6）收编入唯一入口；相对窗口与 [formatSparkleDateTime]
+/// 同为 7 天。
+String formatSparkleDayHeader(DateTime value, AppLocalizations l10n) {
+  final dayDelta =
+      _dateOnly(value.toLocal()).difference(_dateOnly(DateTime.now())).inDays;
+  if (dayDelta == 0) {
+    return l10n.timeToday;
+  }
+  if (dayDelta == -1) {
+    return l10n.timeYesterday;
+  }
+  if (dayDelta < -1 && dayDelta > -7) {
+    return l10n.displayDateDaysAgoOnly(-dayDelta);
+  }
+  final local = value.toLocal();
+  return l10n.displayDateOnly(local.month, local.day);
+}
+
 /// 起止时间的 Range 格式；起止相同（同点/同分钟）折叠为单点（X8）。
 String formatSparkleSceneRange(
   DateTime start,

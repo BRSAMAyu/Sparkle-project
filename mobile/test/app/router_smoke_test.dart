@@ -51,7 +51,7 @@ import 'package:sparkle/features/insights/presentation/screens/learning_forecast
 import 'package:sparkle/features/memory/presentation/screens/memory_panel_screen.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_settings_screen.dart';
 import 'package:sparkle/features/openclaw/presentation/screens/openclaw_screen.dart';
-import 'package:sparkle/features/photon/presentation/widgets/photon_balance_card.dart';
+import 'package:sparkle/features/photon/presentation/screens/transaction_history_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/growth_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/sprint_screen.dart';
 import 'package:sparkle/features/reviews/presentation/screens/review_plan_hub_screen.dart';

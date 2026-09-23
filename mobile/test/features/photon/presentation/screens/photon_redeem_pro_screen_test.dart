@@ -340,7 +340,9 @@ void main() {
 
       await _pumpRedeemPro(tester, repository: repository);
 
-      expect(find.textContaining('光子兑换加载失败'), findsOneWidget);
+      expect(find.textContaining('光子兑换加载不了'), findsOneWidget);
+      // N9：人话模板不含异常细节。
+      expect(find.textContaining('boom'), findsNothing);
       expect(
         find.byKey(const ValueKey('photon-redeem-pro-action-card')),
         findsNothing,

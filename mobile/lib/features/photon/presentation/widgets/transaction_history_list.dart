@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/error_widget.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/display/lexicon/date_formatting.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/photon/presentation/providers/photon_provider.dart';
 import 'package:sparkle/shared/entities/photon_model.dart';
@@ -48,38 +50,25 @@ class _TransactionHistoryListState
   Widget build(BuildContext context) {
     final state = ref.watch(photonTransactionsProvider);
 
+    // 首载：骨架贴布局（PHOTON 卡 #7，A-SPEC2 PH-G5——裸 spinner 出局）。
     if (state.transactions.isEmpty && state.isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
+      return const SingleChildScrollView(
+        child: SparkleListSkeleton(),
       );
     }
 
-    if (state.transactions.isEmpty && state.error != null) {
+    // 失败：人话三句式 + 重试（N9——异常细节不进 UI，provider 只给有界终态）。
+    if (state.transactions.isEmpty && state.loadFailed) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: DS.error,
-            ),
-            const SizedBox(height: DS.lg),
-            Text(
-              state.error!,
-              style: Theme.of(context).textTheme.bodyLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: DS.lg),
-            SparkleButton(
-              label: context.l10n.commonRetry,
-              onPressed: () {
-                unawaited(
-                  ref.read(photonTransactionsProvider.notifier).refresh(),
-                );
-              },
-            ),
-          ],
+        child: CustomErrorWidget(
+          key: const ValueKey('photon-transactions-error'),
+          type: ErrorType.page,
+          message: context.l10n.photonTransactionsLoadFailed,
+          onRetry: () {
+            unawaited(
+              ref.read(photonTransactionsProvider.notifier).refresh(),
+            );
+          },
         ),
       );
     }
@@ -117,13 +106,11 @@ class _TransactionHistoryListState
             (state.isLoading ? 1 : 0) +
             (state.hasMore ? 0 : 1),
         itemBuilder: (context, index) {
-          // Loading indicator at the bottom
+          // 分页尾：下一页的行骨架（贴布局，非 spinner）。
           if (index == state.transactions.length && state.isLoading) {
             return const Padding(
-              padding: EdgeInsets.all(DS.lg),
-              child: Center(
-                child: CircularProgressIndicator(),
-              ),
+              padding: EdgeInsets.symmetric(vertical: DS.lg),
+              child: SparkleCardSkeleton(),
             );
           }
 
@@ -182,23 +169,9 @@ class _TransactionHistoryListState
       date1.month == date2.month &&
       date1.day == date2.day;
 
-  String _formatDateHeader(BuildContext context, DateTime date) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final transactionDate = DateTime(date.year, date.month, date.day);
-
-    final difference = today.difference(transactionDate).inDays;
-
-    if (difference == 0) {
-      return context.l10n.timeToday;
-    } else if (difference == 1) {
-      return context.l10n.timeYesterday;
-    } else if (difference < 7) {
-      return context.l10n.photonTransactionDaysAgo(difference);
-    } else {
-      return DateFormat.yMMMd(context.locale.toLanguageTag()).format(date);
-    }
-  }
+  // 日期分组头走唯一入口（X3/PH-G6：禁自算相对日与手拼 DateFormat）。
+  String _formatDateHeader(BuildContext context, DateTime date) =>
+      formatSparkleDayHeader(date, context.l10n);
 }
 
 class _TransactionItem extends StatelessWidget {
@@ -279,7 +252,7 @@ class _TransactionItem extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  DateFormat('HH:mm').format(transaction.createdAt),
+                  formatSparkleClock(transaction.createdAt),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: DS.textSecondary,
                         fontFeatures: const [FontFeature.tabularFigures()],

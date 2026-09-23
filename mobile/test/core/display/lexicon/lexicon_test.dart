@@ -181,6 +181,37 @@ void main() {
     });
   });
 
+  group('PHOTON #7 日期分组头唯一入口 formatSparkleDayHeader', () {
+    DateTime _daysFromNow(int days, {int hour = 15, int minute = 0}) {
+      final now = DateTime.now();
+      return DateTime(now.year, now.month, now.day + days, hour, minute);
+    }
+
+    test('今天/昨天/N天前（无时钟，纯日粒度）', () {
+      expect(formatSparkleDayHeader(_daysFromNow(0), zh), '今天');
+      expect(formatSparkleDayHeader(_daysFromNow(-1), zh), '昨天');
+      expect(formatSparkleDayHeader(_daysFromNow(-2), zh), '2天前');
+      expect(formatSparkleDayHeader(_daysFromNow(-6), zh), '6天前');
+      expect(formatSparkleDayHeader(_daysFromNow(-1), en), 'Yesterday');
+    });
+
+    test('≥7 天落纯日期绝对格式（无时钟、无相对词）', () {
+      final out = formatSparkleDayHeader(_daysFromNow(-30), zh);
+      expect(out.contains('天前'), isFalse);
+      expect(out.contains(':'), isFalse); // 分组头不带钟点
+      expect(formatSparkleDayHeader(DateTime(2020, 1, 5), zh), '1月5日');
+      expect(formatSparkleDayHeader(DateTime(2020, 1, 5), en), '1/5');
+    });
+
+    test('formatSparkleClock 零点填充无毫秒', () {
+      expect(formatSparkleClock(DateTime(2026, 9, 22, 9, 5)), '09:05');
+      expect(
+        formatSparkleClock(DateTime.parse('2026-09-22 09:05:00.000')),
+        '09:05',
+      );
+    });
+  });
+
   group('§6.3 数字准入三档 band', () {
     test('场景质量与前瞻置信度走三档人话，不出小数', () {
       String sceneBand(double v) => bandLabel(

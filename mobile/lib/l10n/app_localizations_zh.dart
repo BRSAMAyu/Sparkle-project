@@ -7529,9 +7529,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get photonRedeemProErrorToast => '兑换没有完成，请稍后再试';
 
   @override
-  String photonRedeemProLoadFailed(Object error) {
-    return '光子兑换加载失败：$error';
-  }
+  String get photonRedeemProLoadFailed => '光子兑换加载不了。你的数据没有丢，稍后再试一次。';
+
+  @override
+  String get photonRedeemProViewHistory => '查看光子流水';
 
   @override
   String get photonRedeemProRetry => '重试';
@@ -7582,9 +7583,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get photonTransactionsEnd => '没有更多记录了';
 
   @override
-  String photonTransactionDaysAgo(int days) {
-    return '$days天前';
-  }
+  String get photonTransactionsLoadFailed => '光子流水暂时加载不了。你的数据没有丢，稍后再试一次。';
 
   @override
   String get photonTransactionNoNote => '无备注';
@@ -24384,11 +24383,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ptSuccess => '转账成功';
 
   @override
-  String ptFailed(String error) {
-    return '转账失败：$error';
-  }
-
-  @override
   String gdSprintCountdown(int days) {
     return '冲刺倒计时 $days 天';
   }
@@ -37067,6 +37061,11 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String displayDateOnly(int month, int day) {
     return '$month月$day日';
+  }
+
+  @override
+  String displayDateDaysAgoOnly(int days) {
+    return '$days天前';
   }
 
   @override

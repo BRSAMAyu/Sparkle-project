@@ -3249,14 +3249,8 @@
     "photonRedeemProInsufficientBase": "Not enough redeemable photons: only earned photons count — transferred-in photons don't.",
     "photonRedeemProInsufficientBalance": "Not enough photons",
     "photonRedeemProErrorToast": "The redemption didn't go through — please try again later",
-    "photonRedeemProLoadFailed": "Failed to load photon redemption: {error}",
-    "@photonRedeemProLoadFailed": {
-        "placeholders": {
-            "error": {
-                "type": "Object"
-            }
-        }
-    },
+    "photonRedeemProLoadFailed": "Photon redemption can't load right now. Your data is safe — please try again later.",
+    "photonRedeemProViewHistory": "View photon history",
     "photonRedeemProRetry": "Retry",
     "photonRedeemProEntryTooltip": "Redeem photons for Pro",
     "photonTransactionGrantAchievement": "Achievement reward",
@@ -3273,14 +3267,7 @@
     "photonTransactionRedeemPro": "Photon redeem Pro",
     "photonTransactionsEmpty": "No transaction records",
     "photonTransactionsEnd": "No more records",
-    "photonTransactionDaysAgo": "{days}d ago",
-    "@photonTransactionDaysAgo": {
-        "placeholders": {
-            "days": {
-                "type": "int"
-            }
-        }
-    },
+    "photonTransactionsLoadFailed": "Your photon history can't load right now. Your data is safe — please try again later.",
     "photonTransactionNoNote": "No note",
     "shopItemTypeSkin": "Skin",
     "shopItemTypeTitle": "Title",
@@ -11737,14 +11724,6 @@
     "ptCancel": "Cancel",
     "ptConfirm": "Confirm",
     "ptSuccess": "Transfer successful",
-    "ptFailed": "Transfer failed: {error}",
-    "@ptFailed": {
-        "placeholders": {
-            "error": {
-                "type": "String"
-            }
-        }
-    },
     "gdSprintCountdown": "Sprint countdown: {days} days",
     "@gdSprintCountdown": {
         "placeholders": {
@@ -17616,6 +17595,8 @@
     "@displayDateAbsolute": {"placeholders": {"month": {"type": "int"}, "day": {"type": "int"}, "time": {"type": "String"}}},
     "displayDateOnly": "{month}/{day}",
     "@displayDateOnly": {"placeholders": {"month": {"type": "int"}, "day": {"type": "int"}}},
+    "displayDateDaysAgoOnly": "{days} days ago",
+    "@displayDateDaysAgoOnly": {"placeholders": {"days": {"type": "int"}}},
     "displayDueLabel": "Due",
     "@displayDueLabel": {},
     "displaySceneQualityHigh": "High quality",

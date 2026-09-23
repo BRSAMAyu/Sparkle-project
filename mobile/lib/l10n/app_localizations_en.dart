@@ -7832,9 +7832,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'The redemption didn\'t go through — please try again later';
 
   @override
-  String photonRedeemProLoadFailed(Object error) {
-    return 'Failed to load photon redemption: $error';
-  }
+  String get photonRedeemProLoadFailed =>
+      'Photon redemption can\'t load right now. Your data is safe — please try again later.';
+
+  @override
+  String get photonRedeemProViewHistory => 'View photon history';
 
   @override
   String get photonRedeemProRetry => 'Retry';
@@ -7885,9 +7887,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get photonTransactionsEnd => 'No more records';
 
   @override
-  String photonTransactionDaysAgo(int days) {
-    return '${days}d ago';
-  }
+  String get photonTransactionsLoadFailed =>
+      'Your photon history can\'t load right now. Your data is safe — please try again later.';
 
   @override
   String get photonTransactionNoNote => 'No note';
@@ -25440,11 +25441,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ptSuccess => 'Transfer successful';
 
   @override
-  String ptFailed(String error) {
-    return 'Transfer failed: $error';
-  }
-
-  @override
   String gdSprintCountdown(int days) {
     return 'Sprint countdown: $days days';
   }
@@ -38671,6 +38667,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String displayDateOnly(int month, int day) {
     return '$month/$day';
+  }
+
+  @override
+  String displayDateDaysAgoOnly(int days) {
+    return '$days days ago';
   }
 
   @override

@@ -63,7 +63,7 @@ import 'app_localizations_zh.dart';
 /// property.
 abstract class AppLocalizations {
   AppLocalizations(String locale)
-      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -86,11 +86,11 @@ abstract class AppLocalizations {
   /// of delegates is preferred or required.
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
       <LocalizationsDelegate<dynamic>>[
-    delegate,
-    GlobalMaterialLocalizations.delegate,
-    GlobalCupertinoLocalizations.delegate,
-    GlobalWidgetsLocalizations.delegate,
-  ];
+        delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
@@ -14027,8 +14027,14 @@ abstract class AppLocalizations {
   /// No description provided for @photonRedeemProLoadFailed.
   ///
   /// In zh, this message translates to:
-  /// **'光子兑换加载失败：{error}'**
-  String photonRedeemProLoadFailed(Object error);
+  /// **'光子兑换加载不了。你的数据没有丢，稍后再试一次。'**
+  String get photonRedeemProLoadFailed;
+
+  /// No description provided for @photonRedeemProViewHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看光子流水'**
+  String get photonRedeemProViewHistory;
 
   /// No description provided for @photonRedeemProRetry.
   ///
@@ -14126,11 +14132,11 @@ abstract class AppLocalizations {
   /// **'没有更多记录了'**
   String get photonTransactionsEnd;
 
-  /// No description provided for @photonTransactionDaysAgo.
+  /// No description provided for @photonTransactionsLoadFailed.
   ///
   /// In zh, this message translates to:
-  /// **'{days}天前'**
-  String photonTransactionDaysAgo(int days);
+  /// **'光子流水暂时加载不了。你的数据没有丢，稍后再试一次。'**
+  String get photonTransactionsLoadFailed;
 
   /// No description provided for @photonTransactionNoNote.
   ///
@@ -44397,12 +44403,6 @@ abstract class AppLocalizations {
   /// **'转账成功'**
   String get ptSuccess;
 
-  /// No description provided for @ptFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'转账失败：{error}'**
-  String ptFailed(String error);
-
   /// No description provided for @gdSprintCountdown.
   ///
   /// In zh, this message translates to:
@@ -67253,6 +67253,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{month}月{day}日'**
   String displayDateOnly(int month, int day);
+
+  /// No description provided for @displayDateDaysAgoOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'{days}天前'**
+  String displayDateDaysAgoOnly(int days);
 
   /// No description provided for @displayDueLabel.
   ///

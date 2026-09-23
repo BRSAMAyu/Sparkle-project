@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/photon/data/models/photon_redeem_pro_model.dart';
+import 'package:sparkle/features/photon/photon_routes.dart';
 import 'package:sparkle/features/photon/presentation/providers/photon_redeem_pro_provider.dart';
 
 /// D-COMM-2：光子兑 Pro（「学出会员」有界兑换出口，`POST /photons/redeem-pro`）。
@@ -99,15 +101,17 @@ class _PhotonRedeemProScreenState extends ConsumerState<PhotonRedeemProScreen> {
           child: overviewAsync.when(
             loading: () =>
                 const _ScrollableStateFill(child: SparkleCardSkeleton()),
-            error: (Object error, StackTrace stackTrace) => _ScrollableStateFill(
+            error: (Object error, StackTrace stackTrace) {
+              // N9：异常细节只进日志，UI 走人话模板（arb 无 {error} 占位）。
+              debugPrint('[PhotonRedeemPro] overview failed: $error');
+              return _ScrollableStateFill(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: context.space.md),
                     child: CustomErrorWidget(
-                      message:
-                          context.l10n.photonRedeemProLoadFailed(error),
+                      message: context.l10n.photonRedeemProLoadFailed,
                     ),
                   ),
                   SizedBox(height: context.space.md),
@@ -120,7 +124,8 @@ class _PhotonRedeemProScreenState extends ConsumerState<PhotonRedeemProScreen> {
                   ),
                 ],
               ),
-            ),
+              );
+            },
             data: (PhotonRedeemProOverview overview) {
               // 服务端真数优先：status 快照（PHOTON-STATUS）→ 兑换响应揭示值 →
               // 展示常量只作最后兜底。
@@ -250,6 +255,51 @@ class _PhotonAssetCard extends StatelessWidget {
               style: typo.labelSmall.copyWith(color: colors.textTertiary),
             ),
           ],
+          // N13-① 资产三件套：余额/基数数字必须有可达的流水下钻（PHOTON 卡
+          // #4，A-SPEC2 PH-G1——「可兑换基数」是审计重放口径，数字要能对账）。
+          SizedBox(height: context.space.sm),
+          Material(
+            color: colors.surface.raised,
+            shape: const RoundedRectangleBorder(
+              borderRadius: DS.borderRadius8,
+            ),
+            child: InkWell(
+              key: const ValueKey('photon-redeem-pro-history-entry'),
+              borderRadius: DS.borderRadius8,
+              onTap: () => unawaited(
+                context.push(PhotonRoutes.transactionHistory),
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: context.space.md,
+                  vertical: context.space.sm,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.receipt_long_outlined,
+                      size: 18,
+                      color: colors.text.secondary,
+                    ),
+                    SizedBox(width: context.space.sm),
+                    Expanded(
+                      child: Text(
+                        l10n.photonRedeemProViewHistory,
+                        style: typo.labelLarge.copyWith(
+                          color: colors.text.secondary,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 18,
+                      color: colors.text.tertiary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
