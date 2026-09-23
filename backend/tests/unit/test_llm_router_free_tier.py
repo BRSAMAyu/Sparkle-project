@@ -166,7 +166,12 @@ def test_free_user_forced_max_candidate_chain_clamped(router: LLMRouter):
         AgentRole.GENERATION, force_tier=ModelTier.MAX
     )
 
-    assert candidates == list(router._tier_mapping[ModelTier.FAST])
+    # XIAOMI-MODEL（2026-09-22）：resolve 候选经注册过滤（key-gate 未注册键
+    # 不进候选，见 llm_router force_tier 路径），故与「已注册的 FAST 链」全等
+    # ——无 key 环境即静态链剔除 xiaomi hop 后的原序。
+    assert candidates == [
+        k for k in router._tier_mapping[ModelTier.FAST] if k in router._available_models
+    ]
 
 
 # ---------------------------------------------------------------------------

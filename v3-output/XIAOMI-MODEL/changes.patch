@@ -1,0 +1,332 @@
+diff --git a/backend/.env.example b/backend/.env.example
+index af8e1b05..4706f853 100755
+--- a/backend/.env.example
++++ b/backend/.env.example
+@@ -87,10 +87,15 @@ LLM_TIER_GLM_BATCH=
+ LLM_TIER_SPECIALIST=
+ 
+ # XiaoMi MIMO Configuration (快速响应)
++# 模型名考证（2026-09-22, v3-output/XIAOMI-MODEL）：mimo-v2-flash 已于
++# 2026-06-30 下线；现行 id 为 mimo-v2.6-pro / mimo-v2.6-flash /
++# mimo-v2.6-pro-ultraspeed（mimo-v2.5 系 2026-10-21 10:00 下线）。
+ XIAOMI_MIMO_API_KEY=your_xiaomi_mimo_api_key
+ XIAOMI_MIMO_BASE_URL=https://api.xiaomimimo.com/v1
+-XIAOMI_CHAT_MODEL=mimo-v2-flash
+-XIAOMI_STANDARD_MODEL=mimo-v2-flash
++XIAOMI_CHAT_MODEL=mimo-v2.6-flash
++XIAOMI_STANDARD_MODEL=mimo-v2.6-flash
++# 官方 id 为全小写 mimo-v2.5（"MiMo-V2.5" 是展示名非 id），且 2026-10-21 下线——
++# mimo_pro 复活前建议改 mimo-v2.6-pro。
+ XIAOMI_PRO_MODEL=MiMo-V2.5
+ XIAOMI_TEMPERATURE=0.3
+ XIAOMI_PRO_TEMPERATURE=0.3
+diff --git a/backend/app/config/settings.py b/backend/app/config/settings.py
+index 0bbf128a..a8033394 100755
+--- a/backend/app/config/settings.py
++++ b/backend/app/config/settings.py
+@@ -475,10 +475,20 @@ class Settings(BaseSettings):
+     LLM_TIER_SPECIALIST: str = ""
+ 
+     # XiaoMi MIMO Configuration
++    # XIAOMI-MODEL（2026-09-22 考证回挂）：旧名 mimo-v2-flash 已于北京时间
++    # 2026-06-30 00:00 正式下线（官方 deprecate 公告，系统替换 06-18→mimo-v2.5），
++    # 此后该名一律 404 Unsupported model（PROD-LOG2 ②-3 实测）。现挂
++    # mimo-v2.6-flash（2026-09-22 发布的 V2.6 系列，官方定位「高频调用/大规模
++    # 任务」；官方替代品 mimo-v2.5 将于 2026-10-21 10:00 下线，故不挂它）。
++    # 来源：mimo.mi.com/static/docs/{updates/deprecate.md, updates/model.md,
++    # quick-start/summary/model.md}；端点形制与下方 BASE_URL 逐字核对一致。
+     XIAOMI_MIMO_API_KEY: str = ""
+     XIAOMI_MIMO_BASE_URL: str = "https://api.xiaomimimo.com/v1"
+-    XIAOMI_CHAT_MODEL: str = "mimo-v2-flash"
+-    XIAOMI_STANDARD_MODEL: str = "mimo-v2-flash"
++    XIAOMI_CHAT_MODEL: str = "mimo-v2.6-flash"
++    XIAOMI_STANDARD_MODEL: str = "mimo-v2.6-flash"
++    # 注意：官方模型 id 为全小写 mimo-v2.5（"MiMo-V2.5" 是展示名，非 id），
++    # 且 mimo-v2.5 将于 2026-10-21 10:00 下线（无系统替换）——mimo_pro 复活前
++    # 应切 mimo-v2.6-pro（本卡不动 mimo_pro，仅登记考证事实）。
+     XIAOMI_PRO_MODEL: str = "MiMo-V2.5"
+     XIAOMI_TEMPERATURE: float = 0.3
+     XIAOMI_PRO_TEMPERATURE: float = 0.3
+diff --git a/backend/app/core/llm_router.py b/backend/app/core/llm_router.py
+index 2b2fa8be..2612ee3e 100644
+--- a/backend/app/core/llm_router.py
++++ b/backend/app/core/llm_router.py
+@@ -854,11 +854,13 @@ class LLMRouter:
+         # 无 key 环境（测试/CI/未配置部署）此前空 key 也注册，FAST/STANDARD
+         # 链上人人都挂一个必炸 hop。mimo_pro 走独立 token-plan key/端点，
+         # 无故障证据，不在此门控面。
+-        # 注意：即便 key 有效，默认 mimo-v2-flash 模型名已被小米端点本身拒绝
+-        # （404 Unsupported model，生产 3 站×2 条；活栈 key 已配置仍 404），
+-        # 故下方 FAST/STANDARD 默认链已将该 hop 摘除——小米官方更正模型名后
+-        # （改 XIAOMI_CHAT_MODEL/XIAOMI_STANDARD_MODEL）把 "xiaomi_chat"/
+-        # "xiaomi_standard_thinking" 加回 fast_models/standard_models 即恢复。
++        # XIAOMI-MODEL（2026-09-22 考证回挂）：404 根因坐实为模型名下线——
++        # mimo-v2-flash 已于北京时间 2026-06-30 00:00 正式下线（官方 deprecate
++        # 公告）。两车道模型名已更正为 mimo-v2.6-flash（V2.6 系列 2026-09-22
++        # 发布；官方替代品 mimo-v2.5 将于 2026-10-21 10:00 下线，故不挂它）；
++        # 思考控制 thinking.type=enabled/disabled 形制经官方 deep-thinking 文档
++        # 逐字核对一致。下方 FAST/STANDARD 默认链已按原位次（第 3 位）回挂；
++        # 未注册环境由消费面 _append 的注册过滤兜底（与 PROD-FIX-4 同机制）。
+         _xiaomi_key_present = bool((settings.XIAOMI_MIMO_API_KEY or "").strip())
+         if _xiaomi_key_present:
+             configs["xiaomi_chat"] = ModelConfig(
+@@ -939,12 +941,12 @@ class LLMRouter:
+ 
+         # 2026-09 主力切换：各能力层 Qwen（dashscope）置首；deepseek/GLM
+         # 条目全部保留为降级候选（GLM「保留待用」，.env LLM_TIER_* 可零代码回切）。
+-        # PROD-LOG2 ②-3（PROD-FIX-4）：xiaomi 两 hop 摘出默认链——mimo-v2-flash
+-        # 被小米端点拒绝（404 Unsupported model，与 key 是否有效无关），降级到它
+-        # 必白打一跳（网络延迟+ERROR+熔断计数）。条目仍按上方 key-gate 注册，
+-        # 显式指定/policy 选择不受影响；更正模型名后一行回挂（见上方注释）。
+-        fast_models = ["dashscope_fast", "deepseek_fast", "glm_4_7_flash_no_thinking"]
+-        standard_models = ["deepseek_chat", "dashscope_standard_thinking"]
++        # XIAOMI-MODEL（2026-09-22）：xiaomi 两 hop 按摘除前原位次（第 3 位）回挂
++        # ——死因（mimo-v2-flash 2026-06-30 下线）已随模型名更正为
++        # mimo-v2.6-flash 消除（见上方注册处注释）；key-gate 保证未注册环境
++        # （无 key）该 hop 被消费面注册过滤跳过，不产生必炸跳。
++        fast_models = ["dashscope_fast", "deepseek_fast", "xiaomi_chat", "glm_4_7_flash_no_thinking"]
++        standard_models = ["deepseek_chat", "dashscope_standard_thinking", "xiaomi_standard_thinking"]
+         plus_models = ["dashscope_chat"]
+         pro_models = ["dashscope_reason"]
+         max_models = ["qwen3_8_max", "deepseek_reason", "glm_5_max"]
+@@ -1187,16 +1189,20 @@ class LLMRouter:
+             target_tier = clamped_tier
+ 
+         # 3. 从tier中选择具体模型（跳过不健康模型）
++        # XIAOMI-MODEL（2026-09-22）：key-gate 注册 + 静态链回挂并存后，链上键
++        # 不必然已注册（无 key 环境的 xiaomi hop）——候选产出前先按注册过滤，
++        # 不变量「解析候选 ⊆ 已注册」与 _append/LLM_TIER_ override/GLM_BATCH
++        # 内联过滤同一语义。
+         candidates = [
+             k for k in self._tier_mapping.get(target_tier, [])
+-            if self._is_model_healthy(k)
++            if k in self._available_models and self._is_model_healthy(k)
+         ]
+         candidates = self._apply_provider_avoidance(candidates, avoid_providers)
+         if not candidates:
+             logger.warning(f"No healthy models for tier {target_tier}, falling back to standard")
+             candidates = [
+-                k for k in self._tier_mapping.get(ModelTier.STANDARD, ["xiaomi_standard_thinking"])
+-                if self._is_model_healthy(k)
++                k for k in self._tier_mapping.get(ModelTier.STANDARD, [])
++                if k in self._available_models and self._is_model_healthy(k)
+             ] or ["deepseek_chat"]
+             candidates = self._apply_provider_avoidance(candidates, avoid_providers)
+             reason += " → 降级到standard"
+@@ -1236,7 +1242,11 @@ class LLMRouter:
+ 
+         if force_tier:
+             target_tier, _ = self._clamp_tier_for_free_tier(self._normalize_tier_value(force_tier))
+-            return list(self._tier_mapping.get(target_tier, []))
++            # XIAOMI-MODEL：与 select_model 同一注册过滤（key-gate 未注册键不进候选）
++            return [
++                k for k in self._tier_mapping.get(target_tier, [])
++                if k in self._available_models
++            ]
+         if profile.specific_model:
+             return [profile.specific_model]
+ 
+@@ -1768,7 +1778,7 @@ class LLMRouter:
+ 
+         candidates = [
+             k for k in self._tier_mapping.get(next_tier, [])
+-            if self._is_model_healthy(k)
++            if k in self._available_models and self._is_model_healthy(k)
+         ]
+         # E-07：probation 恢复观察降权，秩内保持原序
+         candidates = self._order_candidates_by_health(candidates)
+diff --git a/backend/test_xiaomi_mimo_direct.py b/backend/test_xiaomi_mimo_direct.py
+index 2c626e64..c1252d6a 100644
+--- a/backend/test_xiaomi_mimo_direct.py
++++ b/backend/test_xiaomi_mimo_direct.py
+@@ -22,7 +22,9 @@ async def test_with_key(api_key: str) -> bool:
+ 
+         client = AsyncOpenAI(api_key=api_key, base_url="https://api.xiaomimimo.com/v1")
+         response = await client.chat.completions.create(
+-            model=os.getenv("XIAOMI_CHAT_MODEL", "mimo-v2-flash"),
++            # XIAOMI-MODEL（2026-09-22 考证）：旧默认 mimo-v2-flash 已于
++            # 2026-06-30 下线，默认改挂现行 fast 系 id（v3-output/XIAOMI-MODEL）。
++            model=os.getenv("XIAOMI_CHAT_MODEL", "mimo-v2.6-flash"),
+             messages=[{"role": "user", "content": "你好"}],
+             max_tokens=20,
+         )
+diff --git a/backend/tests/core/test_llm_router_xiaomi_lane_gate.py b/backend/tests/core/test_llm_router_xiaomi_lane_gate.py
+index e730e2e6..2dcf977d 100644
+--- a/backend/tests/core/test_llm_router_xiaomi_lane_gate.py
++++ b/backend/tests/core/test_llm_router_xiaomi_lane_gate.py
+@@ -1,22 +1,24 @@
+-"""PROD-LOG2 ②-3（PROD-FIX-4）契约测试：小米 mimo 死车道代码侧门控.
+-
+-缺陷：settings 默认 ``XIAOMI_*_MODEL="mimo-v2-flash"`` 被小米端点本身拒绝
+-（404 Unsupported model，生产 3 站×2 条），而 ``xiaomi_chat`` 挂在 FAST 降级链
+-第 3 位、``xiaomi_standard_thinking`` 挂在 STANDARD 链第 3 位——每次降级到它必
+-白打一跳（网络延迟+ERROR+熔断计数）。且无 key 环境（测试/CI）这些条目照样
+-注册（api_key=""），链上候选人人都带一个必炸 hop。
+-
+-裁决（两层叠加，B-MODEL-SWITCH 开关注册先例）：
+-1. key-gate 注册：XIAOMI_MIMO_API_KEY 非空才注册 xiaomi_chat/xiaomi_standard_
+-   thinking（mimo_pro 走独立 token-plan key/端点，无故障证据，不动）；
+-2. 死模型名摘出自动降级链：404 是模型名被端点拒绝、与 key 是否有效无关
+-   （活栈 .env key 已配置仍 404），自动链不得包含确定性失败的 hop；
+-   小米更正模型名后一行即可回挂（llm_router fast_models/standard_models）。
+-
+-钉住的契约：
+-- 无 key：条目不注册、显式选择回退 default（带「未注册」原因）、链无此 hop；
+-- 有 key：条目注册（credential_routing 契约不受影响），但默认 FAST/STANDARD
+-  链仍不含 xiaomi（模型名死）。
++"""小米 mimo 车道门控契约测试（PROD-FIX-4 立门，XIAOMI-MODEL 2026-09-22 回挂改约）.
++
++历史缺陷（PROD-LOG2 ②-3 / PROD-FIX-4）：settings 默认 ``mimo-v2-flash`` 被小米
++端点拒绝（404 Unsupported model），且无 key 环境这些条目照样注册——链上人人
++带一个必炸 hop。PROD-FIX-4 两层处置：key-gate 注册 + 死模型名摘出默认链。
++
++XIAOMI-MODEL 考证回挂（2026-09-22）：404 根因坐实为**模型名下线**——
++``mimo-v2-flash`` 已于北京时间 2026-06-30 00:00 正式下线（官方 deprecate 公告，
++mimo.mi.com/static/docs/updates/deprecate.md）。两车道模型名已更正为
++``mimo-v2.6-flash``（V2.6 系列 2026-09-22 发布；官方替代品 mimo-v2.5 将于
++2026-10-21 10:00 下线，故不挂它），FAST/STANDARD 默认链按摘除前原位次（第 3
++位）回挂。
++
++钉住的契约（新真值）：
++- 模型名契约：注册条目的 model_name 必须是官方现行 id ``mimo-v2.6-flash``
++  （防止再次漂移到不存在/已下线的 id）；
++- 有 key：条目注册 + FAST/STANDARD 链第 3 位 = xiaomi hop（原位次）+ agent
++  policy 候选可见（agent_profiles 三处 preferred_models 列 xiaomi_chat 的对齐面）；
++- 无 key：条目不注册、显式选择回退 default（带「未注册」原因）、静态链虽含
++  xiaomi 键但被消费面注册过滤跳过（候选链/策略选择均不可见）——PROD-FIX-4
++  的「必炸 hop」防线语义保持。
+ """
+ 
+ from __future__ import annotations
+@@ -31,6 +33,7 @@ from app.core.llm_router import LLMRouter, llm_router
+ 
+ XIAOMI_CHAT_KEY = "xiaomi_chat"
+ XIAOMI_STANDARD_KEY = "xiaomi_standard_thinking"
++XIAOMI_CURRENT_MODEL_ID = "mimo-v2.6-flash"  # 官方现行 id（考证见文件头）
+ 
+ 
+ def _rebuild_router(xiaomi_key: str = ""):
+@@ -57,8 +60,13 @@ def _restore_global_router():
+     llm_router.__dict__.update(saved)
+ 
+ 
++# =============================================================================
++# 1) 注册面（PROD-FIX-4 原契约，保持）
++# =============================================================================
++
++
+ def test_xiaomi_entries_not_registered_without_key():
+-    """无 key 环境：小米条目不注册（基线行为：空 key 也注册=必炸 hop）。"""
++    """无 key 环境：小米条目不注册。"""
+     router = _rebuild_router(xiaomi_key="")
+     assert XIAOMI_CHAT_KEY not in router._available_models
+     assert XIAOMI_STANDARD_KEY not in router._available_models
+@@ -71,11 +79,66 @@ def test_xiaomi_entries_registered_with_key():
+     assert XIAOMI_STANDARD_KEY in router._available_models
+ 
+ 
+-def test_dead_mimo_hop_removed_from_default_fast_and_standard_chains():
+-    """FAST/STANDARD 默认降级链不得包含小米 hop（模型名被端点拒绝，与 key 无关）。"""
++def test_registered_model_names_are_current_official_ids():
++    """模型名契约：注册条目必须挂官方现行 id mimo-v2.6-flash（防再漂移）。
++
++    已下线 id 清单实证：mimo-v2-flash（2026-06-30 下线）；mimo-v2.5/
++    mimo-v2.5-pro（2026-10-21 10:00 下线）——三者都不得再出现在小米车道。
++    """
++    router = _rebuild_router(xiaomi_key="test-xiaomi-key")
++    deprecated_ids = {"mimo-v2-flash", "mimo-v2.5", "mimo-v2.5-pro"}
++    for key in (XIAOMI_CHAT_KEY, XIAOMI_STANDARD_KEY):
++        cfg = router._available_models[key]
++        assert cfg.model_name == XIAOMI_CURRENT_MODEL_ID
++        assert cfg.model_name not in deprecated_ids
++    # settings 默认值与注册面一致（.env 未覆盖时）
++    assert settings.XIAOMI_CHAT_MODEL == XIAOMI_CURRENT_MODEL_ID
++    assert settings.XIAOMI_STANDARD_MODEL == XIAOMI_CURRENT_MODEL_ID
++
++
++# =============================================================================
++# 2) 默认链回挂（XIAOMI-MODEL 新契约：原位次回挂）
++# =============================================================================
++
++
++def test_xiaomi_hops_rehooked_at_original_third_position():
++    """有 key：FAST/STANDARD 链第 3 位 = xiaomi hop（PROD-FIX-4 摘除前原位次）。"""
++    router = _rebuild_router(xiaomi_key="test-xiaomi-key")
++    fast_chain = router._tier_mapping[ModelTier.FAST]
++    standard_chain = router._tier_mapping[ModelTier.STANDARD]
++    assert fast_chain[2] == XIAOMI_CHAT_KEY
++    assert standard_chain[2] == XIAOMI_STANDARD_KEY
++
++
++def test_unkeyed_chain_hop_is_filtered_from_resolved_candidates():
++    """无 key：静态链虽含 xiaomi 键，但解析候选链必须被注册过滤跳过。
++
++    钉的是 PROD-FIX-4 防线语义的等价物：死/未注册 hop 不进入任何实际
++    降级序列（_append 的 ``model_key not in _available_models`` 过滤）。
++    """
++    router = _rebuild_router(xiaomi_key="")
++    candidates = router.resolve_candidate_models(AgentRole.GENERATION, force_tier=ModelTier.FAST)
++    assert XIAOMI_CHAT_KEY not in candidates
++    candidates_std = router.resolve_candidate_models(AgentRole.GENERATION, force_tier=ModelTier.STANDARD)
++    assert XIAOMI_STANDARD_KEY not in candidates_std
++
++
++def test_keyed_policy_candidates_surface_xiaomi_chat():
++    """有 key：agent policy（RETRIEVAL preferred_models 尾位 xiaomi_chat）候选可见。
++
++    对齐 agent_profiles 三处（:243/:521/:612）preferred_models 列 xiaomi_chat
++    的既有面——回挂后它们在活栈（key 已配）重新成为合法候选。
++    """
+     router = _rebuild_router(xiaomi_key="test-xiaomi-key")
+-    assert XIAOMI_CHAT_KEY not in router._tier_mapping.get(ModelTier.FAST, [])
+-    assert XIAOMI_STANDARD_KEY not in router._tier_mapping.get(ModelTier.STANDARD, [])
++    candidates = router.resolve_candidate_models(AgentRole.RETRIEVAL)
++    assert XIAOMI_CHAT_KEY in candidates
++    router_unkeyed = _rebuild_router(xiaomi_key="")
++    assert XIAOMI_CHAT_KEY not in router_unkeyed.resolve_candidate_models(AgentRole.RETRIEVAL)
++
++
++# =============================================================================
++# 3) 显式选择与位次守护（PROD-FIX-4 原契约，保持/收严）
++# =============================================================================
+ 
+ 
+ def test_explicit_selection_of_unregistered_xiaomi_falls_back_cleanly():
+@@ -87,9 +150,16 @@ def test_explicit_selection_of_unregistered_xiaomi_falls_back_cleanly():
+ 
+ 
+ def test_keyed_router_keeps_other_fast_chain_order_untouched():
+-    """门控只动小米：FAST 链首位（Qwen 主力）与其余位次零变化."""
++    """回挂只恢复小米原位：FAST 首位（Qwen 主力）与其余位次零变化.
++
++    STANDARD 链经 LLM_PROVIDER=qwen 偏好把 dashscope_standard_thinking 置首
++    （既有行为），小米 hop 仍居第 3 位（原位次）。
++    """
+     router = _rebuild_router(xiaomi_key="test-xiaomi-key")
+     fast_chain = router._tier_mapping[ModelTier.FAST]
+     assert fast_chain[0] == "dashscope_fast"
+-    assert "deepseek_fast" in fast_chain
+-    assert "glm_4_7_flash_no_thinking" in fast_chain
++    assert fast_chain[1] == "deepseek_fast"
++    assert fast_chain[3] == "glm_4_7_flash_no_thinking"
++    assert len(fast_chain) == 4
++    standard_chain = router._tier_mapping[ModelTier.STANDARD]
++    assert standard_chain == ["dashscope_standard_thinking", "deepseek_chat", XIAOMI_STANDARD_KEY]
+diff --git a/backend/tests/unit/test_llm_router_free_tier.py b/backend/tests/unit/test_llm_router_free_tier.py
+index e85bb47a..265f7537 100644
+--- a/backend/tests/unit/test_llm_router_free_tier.py
++++ b/backend/tests/unit/test_llm_router_free_tier.py
+@@ -166,7 +166,12 @@ def test_free_user_forced_max_candidate_chain_clamped(router: LLMRouter):
+         AgentRole.GENERATION, force_tier=ModelTier.MAX
+     )
+ 
+-    assert candidates == list(router._tier_mapping[ModelTier.FAST])
++    # XIAOMI-MODEL（2026-09-22）：resolve 候选经注册过滤（key-gate 未注册键
++    # 不进候选，见 llm_router force_tier 路径），故与「已注册的 FAST 链」全等
++    # ——无 key 环境即静态链剔除 xiaomi hop 后的原序。
++    assert candidates == [
++        k for k in router._tier_mapping[ModelTier.FAST] if k in router._available_models
++    ]
+ 
+ 
+ # ---------------------------------------------------------------------------

@@ -475,10 +475,20 @@ class Settings(BaseSettings):
     LLM_TIER_SPECIALIST: str = ""
 
     # XiaoMi MIMO Configuration
+    # XIAOMI-MODEL（2026-09-22 考证回挂）：旧名 mimo-v2-flash 已于北京时间
+    # 2026-06-30 00:00 正式下线（官方 deprecate 公告，系统替换 06-18→mimo-v2.5），
+    # 此后该名一律 404 Unsupported model（PROD-LOG2 ②-3 实测）。现挂
+    # mimo-v2.6-flash（2026-09-22 发布的 V2.6 系列，官方定位「高频调用/大规模
+    # 任务」；官方替代品 mimo-v2.5 将于 2026-10-21 10:00 下线，故不挂它）。
+    # 来源：mimo.mi.com/static/docs/{updates/deprecate.md, updates/model.md,
+    # quick-start/summary/model.md}；端点形制与下方 BASE_URL 逐字核对一致。
     XIAOMI_MIMO_API_KEY: str = ""
     XIAOMI_MIMO_BASE_URL: str = "https://api.xiaomimimo.com/v1"
-    XIAOMI_CHAT_MODEL: str = "mimo-v2-flash"
-    XIAOMI_STANDARD_MODEL: str = "mimo-v2-flash"
+    XIAOMI_CHAT_MODEL: str = "mimo-v2.6-flash"
+    XIAOMI_STANDARD_MODEL: str = "mimo-v2.6-flash"
+    # 注意：官方模型 id 为全小写 mimo-v2.5（"MiMo-V2.5" 是展示名，非 id），
+    # 且 mimo-v2.5 将于 2026-10-21 10:00 下线（无系统替换）——mimo_pro 复活前
+    # 应切 mimo-v2.6-pro（本卡不动 mimo_pro，仅登记考证事实）。
     XIAOMI_PRO_MODEL: str = "MiMo-V2.5"
     XIAOMI_TEMPERATURE: float = 0.3
     XIAOMI_PRO_TEMPERATURE: float = 0.3

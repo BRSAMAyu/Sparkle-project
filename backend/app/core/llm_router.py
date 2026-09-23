@@ -854,11 +854,13 @@ class LLMRouter:
         # 无 key 环境（测试/CI/未配置部署）此前空 key 也注册，FAST/STANDARD
         # 链上人人都挂一个必炸 hop。mimo_pro 走独立 token-plan key/端点，
         # 无故障证据，不在此门控面。
-        # 注意：即便 key 有效，默认 mimo-v2-flash 模型名已被小米端点本身拒绝
-        # （404 Unsupported model，生产 3 站×2 条；活栈 key 已配置仍 404），
-        # 故下方 FAST/STANDARD 默认链已将该 hop 摘除——小米官方更正模型名后
-        # （改 XIAOMI_CHAT_MODEL/XIAOMI_STANDARD_MODEL）把 "xiaomi_chat"/
-        # "xiaomi_standard_thinking" 加回 fast_models/standard_models 即恢复。
+        # XIAOMI-MODEL（2026-09-22 考证回挂）：404 根因坐实为模型名下线——
+        # mimo-v2-flash 已于北京时间 2026-06-30 00:00 正式下线（官方 deprecate
+        # 公告）。两车道模型名已更正为 mimo-v2.6-flash（V2.6 系列 2026-09-22
+        # 发布；官方替代品 mimo-v2.5 将于 2026-10-21 10:00 下线，故不挂它）；
+        # 思考控制 thinking.type=enabled/disabled 形制经官方 deep-thinking 文档
+        # 逐字核对一致。下方 FAST/STANDARD 默认链已按原位次（第 3 位）回挂；
+        # 未注册环境由消费面 _append 的注册过滤兜底（与 PROD-FIX-4 同机制）。
         _xiaomi_key_present = bool((settings.XIAOMI_MIMO_API_KEY or "").strip())
         if _xiaomi_key_present:
             configs["xiaomi_chat"] = ModelConfig(
@@ -939,12 +941,12 @@ class LLMRouter:
 
         # 2026-09 主力切换：各能力层 Qwen（dashscope）置首；deepseek/GLM
         # 条目全部保留为降级候选（GLM「保留待用」，.env LLM_TIER_* 可零代码回切）。
-        # PROD-LOG2 ②-3（PROD-FIX-4）：xiaomi 两 hop 摘出默认链——mimo-v2-flash
-        # 被小米端点拒绝（404 Unsupported model，与 key 是否有效无关），降级到它
-        # 必白打一跳（网络延迟+ERROR+熔断计数）。条目仍按上方 key-gate 注册，
-        # 显式指定/policy 选择不受影响；更正模型名后一行回挂（见上方注释）。
-        fast_models = ["dashscope_fast", "deepseek_fast", "glm_4_7_flash_no_thinking"]
-        standard_models = ["deepseek_chat", "dashscope_standard_thinking"]
+        # XIAOMI-MODEL（2026-09-22）：xiaomi 两 hop 按摘除前原位次（第 3 位）回挂
+        # ——死因（mimo-v2-flash 2026-06-30 下线）已随模型名更正为
+        # mimo-v2.6-flash 消除（见上方注册处注释）；key-gate 保证未注册环境
+        # （无 key）该 hop 被消费面注册过滤跳过，不产生必炸跳。
+        fast_models = ["dashscope_fast", "deepseek_fast", "xiaomi_chat", "glm_4_7_flash_no_thinking"]
+        standard_models = ["deepseek_chat", "dashscope_standard_thinking", "xiaomi_standard_thinking"]
         plus_models = ["dashscope_chat"]
         pro_models = ["dashscope_reason"]
         max_models = ["qwen3_8_max", "deepseek_reason", "glm_5_max"]
@@ -1187,16 +1189,20 @@ class LLMRouter:
             target_tier = clamped_tier
 
         # 3. 从tier中选择具体模型（跳过不健康模型）
+        # XIAOMI-MODEL（2026-09-22）：key-gate 注册 + 静态链回挂并存后，链上键
+        # 不必然已注册（无 key 环境的 xiaomi hop）——候选产出前先按注册过滤，
+        # 不变量「解析候选 ⊆ 已注册」与 _append/LLM_TIER_ override/GLM_BATCH
+        # 内联过滤同一语义。
         candidates = [
             k for k in self._tier_mapping.get(target_tier, [])
-            if self._is_model_healthy(k)
+            if k in self._available_models and self._is_model_healthy(k)
         ]
         candidates = self._apply_provider_avoidance(candidates, avoid_providers)
         if not candidates:
             logger.warning(f"No healthy models for tier {target_tier}, falling back to standard")
             candidates = [
-                k for k in self._tier_mapping.get(ModelTier.STANDARD, ["xiaomi_standard_thinking"])
-                if self._is_model_healthy(k)
+                k for k in self._tier_mapping.get(ModelTier.STANDARD, [])
+                if k in self._available_models and self._is_model_healthy(k)
             ] or ["deepseek_chat"]
             candidates = self._apply_provider_avoidance(candidates, avoid_providers)
             reason += " → 降级到standard"
@@ -1236,7 +1242,11 @@ class LLMRouter:
 
         if force_tier:
             target_tier, _ = self._clamp_tier_for_free_tier(self._normalize_tier_value(force_tier))
-            return list(self._tier_mapping.get(target_tier, []))
+            # XIAOMI-MODEL：与 select_model 同一注册过滤（key-gate 未注册键不进候选）
+            return [
+                k for k in self._tier_mapping.get(target_tier, [])
+                if k in self._available_models
+            ]
         if profile.specific_model:
             return [profile.specific_model]
 
@@ -1768,7 +1778,7 @@ class LLMRouter:
 
         candidates = [
             k for k in self._tier_mapping.get(next_tier, [])
-            if self._is_model_healthy(k)
+            if k in self._available_models and self._is_model_healthy(k)
         ]
         # E-07：probation 恢复观察降权，秩内保持原序
         candidates = self._order_candidates_by_health(candidates)

@@ -22,7 +22,9 @@ async def test_with_key(api_key: str) -> bool:
 
         client = AsyncOpenAI(api_key=api_key, base_url="https://api.xiaomimimo.com/v1")
         response = await client.chat.completions.create(
-            model=os.getenv("XIAOMI_CHAT_MODEL", "mimo-v2-flash"),
+            # XIAOMI-MODEL（2026-09-22 考证）：旧默认 mimo-v2-flash 已于
+            # 2026-06-30 下线，默认改挂现行 fast 系 id（v3-output/XIAOMI-MODEL）。
+            model=os.getenv("XIAOMI_CHAT_MODEL", "mimo-v2.6-flash"),
             messages=[{"role": "user", "content": "你好"}],
             max_tokens=20,
         )
