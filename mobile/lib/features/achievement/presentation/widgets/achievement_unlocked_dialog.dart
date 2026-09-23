@@ -92,15 +92,16 @@ class SparkleAchievementUnlockedDialog extends StatelessWidget {
         ),
       ),
       actions: [
-        FilledButton(
+        // CAPSULE-VARIANT 对话框按钮归一：确认档 → SparkleButton primary；
+        // 稀有度色是成就庆典身份色（无 variant 等价），经 backgroundGradient
+        // 承接原实心底，白色前景与内容区稀有度图标一致。
+        SparkleButton(
           onPressed: onViewAchievements,
-          style: FilledButton.styleFrom(
-            backgroundColor: rarityColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: DS.borderRadius12,
-            ),
+          backgroundGradient: LinearGradient(
+            colors: [rarityColor, rarityColor],
           ),
-          child: Text(context.l10n.achievementViewMyAchievements),
+          foregroundColor: Colors.white,
+          label: context.l10n.achievementViewMyAchievements,
         ),
       ],
       actionsAlignment: MainAxisAlignment.center,

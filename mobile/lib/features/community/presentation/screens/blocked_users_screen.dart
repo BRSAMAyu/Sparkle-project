@@ -124,14 +124,15 @@ class _BlockedUserTile extends ConsumerWidget {
         title: Text(context.l10n.blockedUnblockConfirmTitle),
         content: Text(context.l10n.blockedUnblockConfirmBody(displayName)),
         actions: [
-          TextButton(
+          // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档；解除拉黑是恢复性
+          // 确认动作 → primary 品牌确认档（原 primaryBase 文字色语义收编）。
+          SparkleButton.ghost(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(context.l10n.blockedCancel),
+            label: context.l10n.blockedCancel,
           ),
-          TextButton(
+          SparkleButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: DS.primaryBase),
-            child: Text(context.l10n.blockedConfirm),
+            label: context.l10n.blockedConfirm,
           ),
         ],
       ),

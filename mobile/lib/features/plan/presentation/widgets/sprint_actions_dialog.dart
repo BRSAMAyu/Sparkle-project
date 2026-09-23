@@ -337,12 +337,12 @@ class _ConfirmCompleteDialog extends StatelessWidget {
             onPressed: () => Navigator.of(context).pop(false),
             label: context.l10n.cancel,
           ),
-          FilledButton(
+          // CAPSULE-VARIANT 对话框按钮归一：完成冲刺是正向确认 → primary
+          // 品牌确认档（success 语义已由内容区大图标承载，无 success 按钮
+          // variant，品牌强调即正向确认的归一表达）。
+          SparkleButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: DS.semanticSuccess,
-            ),
-            child: Text(context.l10n.sprintActionCompleteButton),
+            label: context.l10n.sprintActionCompleteButton,
           ),
         ],
       );
@@ -384,12 +384,11 @@ class _ConfirmAbandonDialog extends StatelessWidget {
             onPressed: () => Navigator.of(context).pop(false),
             label: context.l10n.cancel,
           ),
-          FilledButton(
+          // CAPSULE-VARIANT 对话框按钮归一：放弃冲刺=破坏性动作 → destructive
+          // 实心档（语义如实承接原 semanticError 实心底）。
+          SparkleButton.destructive(
             onPressed: () => Navigator.of(context).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: DS.semanticError,
-            ),
-            child: Text(context.l10n.sprintActionAbandonButton),
+            label: context.l10n.sprintActionAbandonButton,
           ),
         ],
       );
@@ -471,14 +470,11 @@ class _ExtendSprintDialogState extends State<_ExtendSprintDialog> {
             onPressed: () => Navigator.of(context).pop(),
             label: context.l10n.cancel,
           ),
-          FilledButton(
+          // CAPSULE-VARIANT 对话框按钮归一：延长冲刺是中性正向确认 → primary
+          //（info 语义已由内容区图标与天数选择器承载，无 info 按钮 variant）。
+          SparkleButton(
             onPressed: () => Navigator.of(context).pop(_selectedDays),
-            style: FilledButton.styleFrom(
-              backgroundColor: DS.info,
-            ),
-            child: Text(
-              context.l10n.sprintExtendConfirm(_selectedDays),
-            ),
+            label: context.l10n.sprintExtendConfirm(_selectedDays),
           ),
         ],
       );

@@ -654,7 +654,8 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
               onPressed: () => Navigator.of(dialogContext).pop(),
               label: context.l10n.cancel,
             ),
-            FilledButton(
+            // CAPSULE-VARIANT 对话框按钮归一：筛选确认=primary 确认档。
+            SparkleButton(
               onPressed: () {
                 ref.read(errorFilterProvider.notifier)
                   ..setChapter(
@@ -670,7 +671,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                 }
                 Navigator.of(dialogContext).pop();
               },
-              child: Text(context.l10n.confirm),
+              label: context.l10n.confirm,
             ),
           ],
         ),

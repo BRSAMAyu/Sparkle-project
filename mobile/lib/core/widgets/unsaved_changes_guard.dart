@@ -52,13 +52,17 @@ class UnsavedChangesGuard extends StatelessWidget {
         title: Text(discardTitle ?? 'Discard changes?'),
         content: Text(discardMessage ?? 'You have unsaved changes. Discard?'),
         actions: [
-          TextButton(
+          // CAPSULE-VARIANT 对话框按钮归一：继续编辑=取消类 → ghost 档；
+          // 放弃=Destructive 文字动作（破坏性但不弹实心底）→ ghost + 语义色前景。
+          SparkleButton.ghost(
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text(keepEditingLabel ?? 'Keep Editing'),
+            label: keepEditingLabel ?? 'Keep Editing',
           ),
-          TextButton(
+          SparkleButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text(discardLabel ?? 'Discard'),
+            variant: ButtonVariant.ghost,
+            foregroundColor: DS.error,
+            label: discardLabel ?? 'Discard',
           ),
         ],
       ),

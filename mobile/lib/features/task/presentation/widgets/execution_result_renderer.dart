@@ -618,7 +618,9 @@ class _ImageArtifactPreviewDialog extends StatelessWidget {
             padding: const EdgeInsets.all(DS.spacing12),
             child: Align(
               alignment: Alignment.centerRight,
-              child: TextButton.icon(
+              // CAPSULE-VARIANT 对话框按钮归一：复制链接是对话框内的轻量
+              // 工具动作 → ghost 档（图标+文字等价承接 TextButton.icon）。
+              child: SparkleButton(
                 onPressed: () {
                   unawaited(Clipboard.setData(ClipboardData(text: imageUrl)));
                   if (context.mounted) {
@@ -629,7 +631,8 @@ class _ImageArtifactPreviewDialog extends StatelessWidget {
                   }
                 },
                 icon: const Icon(Icons.copy_rounded),
-                label: Text(context.l10n.executionResultCopyLink),
+                variant: ButtonVariant.ghost,
+                label: context.l10n.executionResultCopyLink,
               ),
             ),
           ),

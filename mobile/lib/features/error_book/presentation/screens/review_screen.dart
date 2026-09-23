@@ -850,9 +850,11 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             onPressed: () => Navigator.of(context).pop(false),
             label: context.l10n.ebContinueReview,
           ),
-          FilledButton(
+          // CAPSULE-VARIANT 对话框按钮归一：确认退出=确认档 → primary
+          //（原默认 FilledButton 品牌底，语义不变，仅归一组件）。
+          SparkleButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text(context.l10n.ebExit),
+            label: context.l10n.ebExit,
           ),
         ],
       ),

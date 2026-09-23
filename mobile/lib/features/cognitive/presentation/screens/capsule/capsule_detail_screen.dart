@@ -73,8 +73,10 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
                 capsule.isFavorite ? Icons.favorite : Icons.favorite_border,
               ),
               onPressed: () => _toggleFavorite(capsule),
+              // CAPSULE-VARIANT：收藏激活态是品牌强调（positive marking），
+              // 不是删除类破坏动作——destructive 语义保留给删除/移除类操作。
               variant: capsule.isFavorite
-                  ? ButtonVariant.destructive
+                  ? ButtonVariant.primary
                   : ButtonVariant.ghost,
             ),
         ],

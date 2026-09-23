@@ -135,11 +135,13 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
           appBar: AppBar(
             title: Text(context.l10n.userModelingChatTitle),
             actions: [
-              TextButton(
-                onPressed: (_skipInFlight || _planningInFlight)
-                    ? null
-                    : () => unawaited(_skip()),
-                child: Text(context.l10n.userSkip),
+              // CAPSULE-VARIANT 归一（wt249 登记已知点）：AppBar 跳过动作是
+              // 取消类 → text 档（透明底品牌字）；进行中禁用态由 disabled 承接。
+              SparkleButton(
+                onPressed: () => unawaited(_skip()),
+                variant: ButtonVariant.text,
+                disabled: _skipInFlight || _planningInFlight,
+                label: context.l10n.userSkip,
               ),
             ],
           ),
@@ -1086,14 +1088,13 @@ class _PlanningBridgeStatus extends StatelessWidget {
             onPressed: onRetry,
           ),
           const SizedBox(height: DS.spacing8),
-          TextButton(
+          // CAPSULE-VARIANT 归一（wt249 登记已知点）：稍后=放弃类次动作 →
+          // text 档 + 次级前景色（保留原 textSecondary 弱化观感）。
+          SparkleButton(
+            label: context.l10n.userLater,
             onPressed: onSkip,
-            child: Text(
-              context.l10n.userLater,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: DS.textSecondary,
-                  ),
-            ),
+            variant: ButtonVariant.text,
+            foregroundColor: DS.textSecondary,
           ),
         ],
       ),

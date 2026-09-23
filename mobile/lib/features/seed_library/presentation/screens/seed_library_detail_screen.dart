@@ -1252,11 +1252,13 @@ class _SeedLibraryDetailScreenState
             ),
           ),
           actions: [
-            TextButton(
+            // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档；保存是表单的
+            // 确认动作 → primary（原 TextButton 品牌文字色语义升确认档）。
+            SparkleButton.ghost(
               onPressed: () => Navigator.pop(ctx),
-              child: Text(context.l10n.seedLibraryDetailEditCancel),
+              label: context.l10n.seedLibraryDetailEditCancel,
             ),
-            TextButton(
+            SparkleButton(
               onPressed: () async {
                 if (!formKey.currentState!.validate()) return;
                 Navigator.pop(ctx);
@@ -1281,7 +1283,7 @@ class _SeedLibraryDetailScreenState
                   );
                 }
               },
-              child: Text(context.l10n.seedLibraryDetailEditSave),
+              label: context.l10n.seedLibraryDetailEditSave,
             ),
           ],
         ),

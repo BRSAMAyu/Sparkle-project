@@ -1414,13 +1414,14 @@ class _CheckinTile extends ConsumerWidget {
           ),
         ),
         actions: [
-          TextButton(
+          // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档，发送=primary 确认档。
+          SparkleButton.ghost(
             onPressed: () => Navigator.pop(ctx),
-            child: Text(context.l10n.cancel),
+            label: context.l10n.cancel,
           ),
-          FilledButton(
+          SparkleButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: Text(context.l10n.accountabilitySend),
+            label: context.l10n.accountabilitySend,
           ),
         ],
       ),

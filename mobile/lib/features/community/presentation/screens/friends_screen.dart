@@ -222,14 +222,17 @@ class _MyFriendsTab extends ConsumerWidget {
         content: Text(context.l10n
             .friendsConfirmDeleteFriend(friendInfo.friend.displayName)),
         actions: [
-          TextButton(
+          // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档；删除好友是破坏性
+          // 动作，按 destructive 文字动作档承接（ghost + 语义色前景，不升实心底）。
+          SparkleButton.ghost(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(context.l10n.friendsCancel),
+            label: context.l10n.friendsCancel,
           ),
-          TextButton(
+          SparkleButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: DS.error),
-            child: Text(context.l10n.friendsDelete),
+            variant: ButtonVariant.ghost,
+            foregroundColor: DS.error,
+            label: context.l10n.friendsDelete,
           ),
         ],
       ),
@@ -318,14 +321,17 @@ class _MyFriendsTab extends ConsumerWidget {
           ],
         ),
         actions: [
-          TextButton(
+          // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档；拉黑是破坏性动作，
+          // destructive 文字动作档承接（ghost + 语义色前景）。
+          SparkleButton.ghost(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text(context.l10n.friendsCancel),
+            label: context.l10n.friendsCancel,
           ),
-          TextButton(
+          SparkleButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: DS.error),
-            child: Text(context.l10n.friendsBlock),
+            variant: ButtonVariant.ghost,
+            foregroundColor: DS.error,
+            label: context.l10n.friendsBlock,
           ),
         ],
       ),
@@ -941,13 +947,14 @@ class _RecommendationsTab extends ConsumerWidget {
             ],
           ),
           actions: [
-            TextButton(
+            // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档，发送邀请=primary。
+            SparkleButton.ghost(
               onPressed: () => Navigator.pop(ctx, false),
-              child: Text(context.l10n.friendCancel),
+              label: context.l10n.friendCancel,
             ),
-            FilledButton(
+            SparkleButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: Text(context.l10n.friendSendInvite),
+              label: context.l10n.friendSendInvite,
             ),
           ],
         ),

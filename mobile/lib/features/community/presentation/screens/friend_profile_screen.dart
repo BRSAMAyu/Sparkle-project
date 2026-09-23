@@ -329,13 +329,14 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
             ],
           ),
           actions: [
-            TextButton(
+            // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档，发送邀请=primary。
+            SparkleButton.ghost(
               onPressed: () => Navigator.pop(ctx, false),
-              child: Text(context.l10n.fpCancel),
+              label: context.l10n.fpCancel,
             ),
-            FilledButton(
+            SparkleButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: Text(context.l10n.fpSendInvite),
+              label: context.l10n.fpSendInvite,
             ),
           ],
         ),

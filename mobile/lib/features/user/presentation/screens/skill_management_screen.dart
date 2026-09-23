@@ -538,13 +538,15 @@ class _SkillEditorDialogState extends State<_SkillEditorDialog> {
           ),
         ),
         actions: [
-          TextButton(
+          // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档，保存=primary 确认档
+          //（原 ElevatedButton 同为实心确认语义，归一组件不变语义）。
+          SparkleButton.ghost(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(context.l10n.skillCancel),
+            label: context.l10n.skillCancel,
           ),
-          ElevatedButton(
+          SparkleButton(
             onPressed: () => Navigator.of(context).pop(_buildPayload()),
-            child: Text(context.l10n.skillSave),
+            label: context.l10n.skillSave,
           ),
         ],
       );
@@ -637,15 +639,19 @@ class _SkillDraftRequestDialogState
           ),
         ),
         actions: [
-          TextButton(
+          // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档，生成=primary 确认档；
+          // 提交中禁用态由 disabled 承接（原 onPressed=null 等价）。
+          SparkleButton(
             onPressed: _submitting ? null : () => Navigator.of(context).pop(),
-            child: Text(AppLocalizations.of(context)!.skillCancel),
+            variant: ButtonVariant.ghost,
+            label: AppLocalizations.of(context)!.skillCancel,
           ),
-          ElevatedButton(
-            onPressed: _submitting ? null : _submit,
-            child: Text(_submitting
+          SparkleButton(
+            onPressed: _submit,
+            disabled: _submitting,
+            label: _submitting
                 ? AppLocalizations.of(context)!.skillDraftGenerating
-                : AppLocalizations.of(context)!.skillDraftGenerate),
+                : AppLocalizations.of(context)!.skillDraftGenerate,
           ),
         ],
       );

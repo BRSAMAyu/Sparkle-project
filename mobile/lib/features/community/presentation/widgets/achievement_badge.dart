@@ -465,9 +465,10 @@ class AchievementDetailDialog extends StatelessWidget {
           ],
         ),
         actions: [
-          TextButton(
+          // CAPSULE-VARIANT 对话框按钮归一：详情关闭=取消类 → ghost 档。
+          SparkleButton.ghost(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(context.l10n.communityShareClose),
+            label: context.l10n.communityShareClose,
           ),
         ],
       );

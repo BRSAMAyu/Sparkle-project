@@ -92,7 +92,8 @@ class _TranslationHistoryScreenState
               label: context.l10n.commonCancel,
               onPressed: () => Navigator.pop(context),
             ),
-            FilledButton(
+            // CAPSULE-VARIANT 对话框按钮归一：评分确认=primary 确认档。
+            SparkleButton(
               onPressed: () async {
                 final newRating = _selectedRatings[id] ?? currentRating;
                 await ref
@@ -101,7 +102,7 @@ class _TranslationHistoryScreenState
                 _selectedRatings.remove(id);
                 if (mounted) Navigator.pop(context);
               },
-              child: Text(context.l10n.commonOk),
+              label: context.l10n.commonOk,
             ),
           ],
         ),
@@ -120,10 +121,10 @@ class _TranslationHistoryScreenState
             label: context.l10n.commonCancel,
             onPressed: () => Navigator.pop(context, false),
           ),
-          FilledButton(
+          // CAPSULE-VARIANT 对话框按钮归一：删除=破坏性动作 → destructive 实心档。
+          SparkleButton.destructive(
             onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: DS.error),
-            child: Text(context.l10n.commonDelete),
+            label: context.l10n.commonDelete,
           ),
         ],
       ),
@@ -158,11 +159,11 @@ class _TranslationHistoryScreenState
                           label: context.l10n.commonCancel,
                           onPressed: () => Navigator.pop(context, false),
                         ),
-                        FilledButton(
+                        // CAPSULE-VARIANT 对话框按钮归一：清空全部=破坏性
+                        // 动作 → destructive 实心档。
+                        SparkleButton.destructive(
                           onPressed: () => Navigator.pop(context, true),
-                          style:
-                              FilledButton.styleFrom(backgroundColor: DS.error),
-                          child: Text(context.l10n.translationClearAll),
+                          label: context.l10n.translationClearAll,
                         ),
                       ],
                     ),

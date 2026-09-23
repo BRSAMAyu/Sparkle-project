@@ -2626,14 +2626,15 @@ class _PlanPhaseSection extends ConsumerWidget {
             ),
           ),
           actions: [
-            TextButton(
+            // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档，创建=primary 确认档。
+            SparkleButton.ghost(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(l10n.cancel),
+              label: l10n.cancel,
             ),
-            FilledButton(
+            SparkleButton(
               onPressed: () =>
                   Navigator.of(dialogContext).pop(controller.text.trim()),
-              child: Text(l10n.planCreateAction),
+              label: l10n.planCreateAction,
             ),
           ],
         ),
@@ -2777,13 +2778,14 @@ class _PlanPhaseSection extends ConsumerWidget {
             ),
           ),
           actions: [
-            TextButton(
+            // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档，提交复盘=primary。
+            SparkleButton.ghost(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(l10n.cancel),
+              label: l10n.cancel,
             ),
-            FilledButton(
+            SparkleButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(l10n.commonSubmit),
+              label: l10n.commonSubmit,
             ),
           ],
         ),

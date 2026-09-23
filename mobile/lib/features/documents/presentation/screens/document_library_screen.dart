@@ -311,16 +311,15 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
           l10n.studyMaterialsDeleteMessage(document.filename),
         ),
         actions: [
-          TextButton(
+          // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档；删除=破坏性动作
+          // → destructive 实心档（语义如实承接原 error 实心底）。
+          SparkleButton.ghost(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(l10n.cancel),
+            label: l10n.cancel,
           ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: DS.error,
-            ),
+          SparkleButton.destructive(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(l10n.studyMaterialsDeleteAction),
+            label: l10n.studyMaterialsDeleteAction,
           ),
         ],
       ),
@@ -380,13 +379,14 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
         content:
             Text(context.l10n.studyMaterialsRevokeMessage(document.filename)),
         actions: [
-          TextButton(
+          // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档，撤销共享确认=primary。
+          SparkleButton.ghost(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(context.l10n.cancel),
+            label: context.l10n.cancel,
           ),
-          FilledButton(
+          SparkleButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(context.l10n.studyMaterialsRevokeConfirm),
+            label: context.l10n.studyMaterialsRevokeConfirm,
           ),
         ],
       ),

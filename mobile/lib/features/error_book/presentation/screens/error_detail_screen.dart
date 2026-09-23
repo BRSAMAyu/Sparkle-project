@@ -988,12 +988,10 @@ class ErrorDetailScreen extends ConsumerWidget {
             onPressed: () => Navigator.of(context).pop(false),
             label: context.l10n.cancel,
           ),
-          FilledButton(
+          // CAPSULE-VARIANT 对话框按钮归一：删除=破坏性动作 → destructive 实心档。
+          SparkleButton.destructive(
             onPressed: () => Navigator.of(context).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: DS.error,
-            ),
-            child: Text(context.l10n.delete),
+            label: context.l10n.delete,
           ),
         ],
       ),

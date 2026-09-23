@@ -420,13 +420,14 @@ class _GalaxyDraftReviewScreenState
           ),
         ),
         actions: [
-          TextButton(
+          // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档，保存=primary 确认档。
+          SparkleButton.ghost(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(dialogContext.l10n.cancel),
+            label: dialogContext.l10n.cancel,
           ),
-          FilledButton(
+          SparkleButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(dialogContext.l10n.galaxyDraftEditSave),
+            label: dialogContext.l10n.galaxyDraftEditSave,
           ),
         ],
       ),

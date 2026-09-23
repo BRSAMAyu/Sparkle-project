@@ -2113,11 +2113,13 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             ? '这将重置所有主题、辅助功能和偏好设置到默认值。确定继续吗？'
             : 'This will reset all theme, accessibility, and preference settings to defaults. Continue?'),
         actions: [
-          TextButton(
+          // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档；重置是破坏性动作，
+          // destructive 文字动作档承接（ghost + 语义色前景，不升实心底）。
+          SparkleButton.ghost(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(zh ? '取消' : 'Cancel'),
+            label: zh ? '取消' : 'Cancel',
           ),
-          TextButton(
+          SparkleButton(
             onPressed: () {
               Navigator.of(ctx).pop();
               final themeManager = ref.read(themeManagerProvider);
@@ -2132,10 +2134,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 );
               }
             },
-            child: Text(
-              zh ? '重置' : 'Reset',
-              style: TextStyle(color: DS.error),
-            ),
+            variant: ButtonVariant.ghost,
+            foregroundColor: DS.error,
+            label: zh ? '重置' : 'Reset',
           ),
         ],
       ),
@@ -3423,11 +3424,13 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         title: Text(context.l10n.notificationPermissionDialogTitle),
         content: Text(context.l10n.notificationPermissionDialogContent),
         actions: [
-          TextButton(
+          // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档；去开系统设置是
+          // 对话框的肯定推进动作 → primary 确认档。
+          SparkleButton.ghost(
             onPressed: () => Navigator.pop(context),
-            child: Text(context.l10n.commonCancel),
+            label: context.l10n.commonCancel,
           ),
-          TextButton(
+          SparkleButton(
             onPressed: () {
               Navigator.pop(context);
               // Open app settings
@@ -3437,7 +3440,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                     .requestPermission(),
               );
             },
-            child: Text(context.l10n.notificationOpenSettings),
+            label: context.l10n.notificationOpenSettings,
           ),
         ],
       ),

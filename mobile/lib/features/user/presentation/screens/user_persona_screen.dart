@@ -1451,13 +1451,15 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                             displayTitle, status, nextStatus),
                       ),
                       actions: [
-                        TextButton(
+                        // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档，
+                        // 高风险状态变更确认=primary 确认档。
+                        SparkleButton.ghost(
                           onPressed: () => Navigator.of(dialogCtx).pop(false),
-                          child: Text(l10n.cancel),
+                          label: l10n.cancel,
                         ),
-                        FilledButton(
+                        SparkleButton(
                           onPressed: () => Navigator.of(dialogCtx).pop(true),
-                          child: Text(l10n.personaConfirmChange),
+                          label: l10n.personaConfirmChange,
                         ),
                       ],
                     ),

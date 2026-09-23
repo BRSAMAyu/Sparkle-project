@@ -393,20 +393,19 @@ class _TaskTemplatePreviewDialogState
         ),
       ),
       actions: [
-        TextButton(
+        // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档；接受并加入=primary
+        // 确认档，loading 态由 SparkleButton.loading 承接（原手搓 spinner 等价）。
+        SparkleButton(
           onPressed: _accepting ? null : () => Navigator.of(context).pop(false),
-          child: Text(context.l10n.cancel),
+          variant: ButtonVariant.ghost,
+          label: context.l10n.cancel,
         ),
-        FilledButton.icon(
-          onPressed: _accepting ? null : _acceptTemplate,
-          icon: _accepting
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.playlist_add_check_rounded),
-          label: Text(context.l10n.acceptAndAddToday),
+        SparkleButton(
+          onPressed: _acceptTemplate,
+          icon: const Icon(Icons.playlist_add_check_rounded),
+          loading: _accepting,
+          disabled: _accepting,
+          label: context.l10n.acceptAndAddToday,
         ),
       ],
     );

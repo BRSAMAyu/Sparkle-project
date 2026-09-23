@@ -276,11 +276,12 @@ class CheckinInteraction extends StatelessWidget {
           ),
         ),
         actions: [
-          TextButton(
+          // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档，发送=primary 确认档。
+          SparkleButton.ghost(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(context.l10n.cancel),
+            label: context.l10n.cancel,
           ),
-          FilledButton(
+          SparkleButton(
             onPressed: () {
               final message = controller.text.trim();
               if (message.isNotEmpty && onEncourage != null) {
@@ -288,7 +289,7 @@ class CheckinInteraction extends StatelessWidget {
                 Navigator.of(context).pop();
               }
             },
-            child: Text(context.l10n.communitySendEncouragement),
+            label: context.l10n.communitySendEncouragement,
           ),
         ],
       ),

@@ -357,14 +357,15 @@ class _PreviewDialog extends StatelessWidget {
           ),
         ),
         actions: [
-          TextButton(
+          // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档，主操作确认=primary。
+          SparkleButton.ghost(
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text(context.l10n.auto_cancel),
+            label: context.l10n.auto_cancel,
           ),
-          FilledButton.icon(
+          SparkleButton(
             onPressed: () => Navigator.of(context).pop(true),
             icon: const Icon(Icons.check_circle_outline),
-            label: Text(primaryLabel),
+            label: primaryLabel,
           ),
         ],
       );
