@@ -248,7 +248,11 @@ async def test_rb07_empty_summary_falls_back_to_compression(monkeypatch):
         user_id="user-rb07",
     )
 
-    assert result["summary"] is None
+    # C-06（960bc498）语义升级：空 LLM 摘要回落确定性 compaction，
+    # 返回 compaction 生成的诚实摘要（非 None），且中间消息绝不静默丢弃。
+    summary = str(result["summary"] or "").strip()
+    assert summary, "empty LLM summary must fall back to the deterministic compaction digest"
+    assert "压缩" in summary
     total_kept = len(result["messages"])
     assert total_kept >= len(history) * 0.5, (
         "empty summary must not silently drop all middle history; " f"kept {total_kept} of {len(history)}"

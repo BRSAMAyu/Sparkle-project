@@ -704,7 +704,10 @@ async def test_process_stream_fast_tracks_exam_sprint_before_sufficiency(orchest
     request = _make_request(message="7天后考计算机网络，没学过，每天2小时")
 
     responses = await _collect(orchestrator, request)
-    persisted = await orchestrator.planning_workflow_manager.get_active_session(request.session_id)
+    # save_session 以 {user_id}: 前缀落键，读回必须带同一 user_id（与产品读取方一致）。
+    persisted = await orchestrator.planning_workflow_manager.get_active_session(
+        request.session_id, request.user_id
+    )
 
     assert orchestrator._check_sufficiency.await_count == 0
     assert persisted is not None
@@ -712,8 +715,14 @@ async def test_process_stream_fast_tracks_exam_sprint_before_sufficiency(orchest
     assert persisted.collected["exam_scope"].startswith("计算机网络")
     assert persisted.collected["knowledge_baseline"] == "完全没学过"
     assert persisted.collected["time_available"] == "每天约 2 小时"
-    assert responses[-1].metadata["planning_fast_track"] == "exam_sprint"
+    # 63ca1517 起 fast-track 在内容帧之后补发终端 done 标记帧（无 metadata），
+    # 业务断言面向内容帧，终端帧只验证 finish 契约。
+    content_responses = [response for response in responses if response.full_text]
+    assert content_responses, "fast-track must emit a content frame before the terminal done marker"
+    assert content_responses[-1].metadata["planning_fast_track"] == "exam_sprint"
+    assert content_responses[-1].finish_reason == agent_service_pb2.STOP
     assert responses[-1].finish_reason == agent_service_pb2.STOP
+    assert responses[-1].session_id == request.session_id
     assert state_updates[-1][0] == STATE_DONE
 
 
@@ -768,12 +777,15 @@ async def test_process_stream_modeling_complete_fast_track_returns_launch_route(
     )
 
     responses = await _collect(orchestrator, request)
-    final_response = responses[-1]
+    # 63ca1517 起 fast-track 末尾补发终端 done 标记帧（无 metadata），
+    # launch metadata 断言面向其前面的内容帧。
+    final_response = next(response for response in responses if response.full_text)
     planning_context = orchestrator.planning_workflow_manager.process_planning_turn.await_args.kwargs["context"]
     fast_track_context = planning_context["exam_sprint_fast_track"]
     fast_track_collected = fast_track_context["collected"]
 
     assert final_response.finish_reason == agent_service_pb2.STOP
+    assert responses[-1].finish_reason == agent_service_pb2.STOP
     assert final_response.metadata["plan_id"] == plan_id
     assert final_response.metadata["plan_route"] == f"/plans/{plan_id}"
     assert final_response.metadata["recommended_task_id"] == task_id

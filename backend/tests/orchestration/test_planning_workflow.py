@@ -816,17 +816,19 @@ async def test_insert_repair_task_prepends_next_day_and_deduplicates(db_session)
 async def test_irrelevant_message_during_clarifying_bypasses_without_advancing_state() -> None:
     redis = FakeRedis()
     manager = PlanningWorkflowManager(redis_client=redis)
+    # 会话归属与当轮 user_id 必须一致：save/get 均以 {user_id}: 前缀定键。
+    owner_user_id = uuid4()
     session = PlanningSession(
         planning_session_id=str(uuid4()),
         chat_session_id="chat-session-1",
-        user_id=str(uuid4()),
+        user_id=str(owner_user_id),
         state="CLARIFYING",
         goal_raw="7天后考计算机网络，帮我规划",
         collected={},
         turns_in_state=2,
     )
     await manager.save_session(session)
-    turn_user_id = uuid4()
+    turn_user_id = owner_user_id
 
     result = await manager.process_planning_turn(
         db=None,  # type: ignore[arg-type]
@@ -836,7 +838,7 @@ async def test_irrelevant_message_during_clarifying_bypasses_without_advancing_s
         context={},
     )
 
-    persisted = await manager.get_active_session("chat-session-1")
+    persisted = await manager.get_active_session("chat-session-1", turn_user_id)
     runtime_state = await manager.runtime_adapter.load_state(
         user_id=str(turn_user_id),
         conversation_id="chat-session-1",
@@ -855,17 +857,19 @@ async def test_irrelevant_message_during_clarifying_bypasses_without_advancing_s
 async def test_relevant_message_during_clarifying_advances_turn_counter() -> None:
     redis = FakeRedis()
     manager = PlanningWorkflowManager(redis_client=redis)
+    # 会话归属与当轮 user_id 必须一致：save/get 均以 {user_id}: 前缀定键。
+    owner_user_id = uuid4()
     session = PlanningSession(
         planning_session_id=str(uuid4()),
         chat_session_id="chat-session-2",
-        user_id=str(uuid4()),
+        user_id=str(owner_user_id),
         state="CLARIFYING",
         goal_raw="7天后考计算机网络，帮我规划",
         collected={},
         turns_in_state=0,
     )
     await manager.save_session(session)
-    turn_user_id = uuid4()
+    turn_user_id = owner_user_id
 
     result = await manager.process_planning_turn(
         db=None,  # type: ignore[arg-type]
@@ -875,7 +879,7 @@ async def test_relevant_message_during_clarifying_advances_turn_counter() -> Non
         context={},
     )
 
-    persisted = await manager.get_active_session("chat-session-2")
+    persisted = await manager.get_active_session("chat-session-2", turn_user_id)
     runtime_state = await manager.runtime_adapter.load_state(
         user_id=str(turn_user_id),
         conversation_id="chat-session-2",
@@ -915,7 +919,7 @@ async def test_exam_sprint_fast_track_single_message_enters_planning_with_pack_p
         context={},
     )
 
-    persisted = await manager.get_active_session(conversation_id)
+    persisted = await manager.get_active_session(conversation_id, user_id)
 
     assert result is not None
     assert persisted is not None

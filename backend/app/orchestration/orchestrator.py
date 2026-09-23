@@ -422,7 +422,9 @@ class ChatOrchestrator(
 
         manager = self.planning_workflow_manager
         try:
-            session = await manager.get_active_session(session_id)
+            # save_session 始终以 {user_id}: 前缀写 planning:session 键；此处必须带
+            # user_id 读同一命名空间，否则 sidecar 永远 miss（多轮旁路成死码）。
+            session = await manager.get_active_session(session_id, user_id)
             if session is None:
                 return ""
 
@@ -724,7 +726,9 @@ class ChatOrchestrator(
 
         manager = self.planning_workflow_manager
         try:
-            active_session = await manager.get_active_session(session_id)
+            # 与 save_session 的 {user_id}: 键前缀对齐（同 _attach_aurora_planning_sidecar），
+            # 否则既有 fast-track 会话永远读不到，多轮冲刺续聊退化为重新开场。
+            active_session = await manager.get_active_session(session_id, user_id)
             fast_track_context = None
             from_modeling_complete = self._is_truthy_metadata_flag(
                 (request_extra_context or {}).get("from_modeling_complete")

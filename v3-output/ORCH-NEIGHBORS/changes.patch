@@ -1,0 +1,167 @@
+diff --git a/backend/app/orchestration/orchestrator.py b/backend/app/orchestration/orchestrator.py
+index e8659078..a59569f5 100755
+--- a/backend/app/orchestration/orchestrator.py
++++ b/backend/app/orchestration/orchestrator.py
+@@ -422,7 +422,9 @@ class ChatOrchestrator(
+ 
+         manager = self.planning_workflow_manager
+         try:
+-            session = await manager.get_active_session(session_id)
++            # save_session 始终以 {user_id}: 前缀写 planning:session 键；此处必须带
++            # user_id 读同一命名空间，否则 sidecar 永远 miss（多轮旁路成死码）。
++            session = await manager.get_active_session(session_id, user_id)
+             if session is None:
+                 return ""
+ 
+@@ -724,7 +726,9 @@ class ChatOrchestrator(
+ 
+         manager = self.planning_workflow_manager
+         try:
+-            active_session = await manager.get_active_session(session_id)
++            # 与 save_session 的 {user_id}: 键前缀对齐（同 _attach_aurora_planning_sidecar），
++            # 否则既有 fast-track 会话永远读不到，多轮冲刺续聊退化为重新开场。
++            active_session = await manager.get_active_session(session_id, user_id)
+             fast_track_context = None
+             from_modeling_complete = self._is_truthy_metadata_flag(
+                 (request_extra_context or {}).get("from_modeling_complete")
+diff --git a/backend/tests/orchestration/test_orchestrator_process_stream_integration.py b/backend/tests/orchestration/test_orchestrator_process_stream_integration.py
+index c6f5622f..bfbd8a97 100644
+--- a/backend/tests/orchestration/test_orchestrator_process_stream_integration.py
++++ b/backend/tests/orchestration/test_orchestrator_process_stream_integration.py
+@@ -704,7 +704,10 @@ async def test_process_stream_fast_tracks_exam_sprint_before_sufficiency(orchest
+     request = _make_request(message="7天后考计算机网络，没学过，每天2小时")
+ 
+     responses = await _collect(orchestrator, request)
+-    persisted = await orchestrator.planning_workflow_manager.get_active_session(request.session_id)
++    # save_session 以 {user_id}: 前缀落键，读回必须带同一 user_id（与产品读取方一致）。
++    persisted = await orchestrator.planning_workflow_manager.get_active_session(
++        request.session_id, request.user_id
++    )
+ 
+     assert orchestrator._check_sufficiency.await_count == 0
+     assert persisted is not None
+@@ -712,8 +715,14 @@ async def test_process_stream_fast_tracks_exam_sprint_before_sufficiency(orchest
+     assert persisted.collected["exam_scope"].startswith("计算机网络")
+     assert persisted.collected["knowledge_baseline"] == "完全没学过"
+     assert persisted.collected["time_available"] == "每天约 2 小时"
+-    assert responses[-1].metadata["planning_fast_track"] == "exam_sprint"
++    # 63ca1517 起 fast-track 在内容帧之后补发终端 done 标记帧（无 metadata），
++    # 业务断言面向内容帧，终端帧只验证 finish 契约。
++    content_responses = [response for response in responses if response.full_text]
++    assert content_responses, "fast-track must emit a content frame before the terminal done marker"
++    assert content_responses[-1].metadata["planning_fast_track"] == "exam_sprint"
++    assert content_responses[-1].finish_reason == agent_service_pb2.STOP
+     assert responses[-1].finish_reason == agent_service_pb2.STOP
++    assert responses[-1].session_id == request.session_id
+     assert state_updates[-1][0] == STATE_DONE
+ 
+ 
+@@ -768,12 +777,15 @@ async def test_process_stream_modeling_complete_fast_track_returns_launch_route(
+     )
+ 
+     responses = await _collect(orchestrator, request)
+-    final_response = responses[-1]
++    # 63ca1517 起 fast-track 末尾补发终端 done 标记帧（无 metadata），
++    # launch metadata 断言面向其前面的内容帧。
++    final_response = next(response for response in responses if response.full_text)
+     planning_context = orchestrator.planning_workflow_manager.process_planning_turn.await_args.kwargs["context"]
+     fast_track_context = planning_context["exam_sprint_fast_track"]
+     fast_track_collected = fast_track_context["collected"]
+ 
+     assert final_response.finish_reason == agent_service_pb2.STOP
++    assert responses[-1].finish_reason == agent_service_pb2.STOP
+     assert final_response.metadata["plan_id"] == plan_id
+     assert final_response.metadata["plan_route"] == f"/plans/{plan_id}"
+     assert final_response.metadata["recommended_task_id"] == task_id
+diff --git a/backend/tests/orchestration/test_planning_workflow.py b/backend/tests/orchestration/test_planning_workflow.py
+index e3579371..a6523389 100644
+--- a/backend/tests/orchestration/test_planning_workflow.py
++++ b/backend/tests/orchestration/test_planning_workflow.py
+@@ -816,17 +816,19 @@ async def test_insert_repair_task_prepends_next_day_and_deduplicates(db_session)
+ async def test_irrelevant_message_during_clarifying_bypasses_without_advancing_state() -> None:
+     redis = FakeRedis()
+     manager = PlanningWorkflowManager(redis_client=redis)
++    # 会话归属与当轮 user_id 必须一致：save/get 均以 {user_id}: 前缀定键。
++    owner_user_id = uuid4()
+     session = PlanningSession(
+         planning_session_id=str(uuid4()),
+         chat_session_id="chat-session-1",
+-        user_id=str(uuid4()),
++        user_id=str(owner_user_id),
+         state="CLARIFYING",
+         goal_raw="7天后考计算机网络，帮我规划",
+         collected={},
+         turns_in_state=2,
+     )
+     await manager.save_session(session)
+-    turn_user_id = uuid4()
++    turn_user_id = owner_user_id
+ 
+     result = await manager.process_planning_turn(
+         db=None,  # type: ignore[arg-type]
+@@ -836,7 +838,7 @@ async def test_irrelevant_message_during_clarifying_bypasses_without_advancing_s
+         context={},
+     )
+ 
+-    persisted = await manager.get_active_session("chat-session-1")
++    persisted = await manager.get_active_session("chat-session-1", turn_user_id)
+     runtime_state = await manager.runtime_adapter.load_state(
+         user_id=str(turn_user_id),
+         conversation_id="chat-session-1",
+@@ -855,17 +857,19 @@ async def test_irrelevant_message_during_clarifying_bypasses_without_advancing_s
+ async def test_relevant_message_during_clarifying_advances_turn_counter() -> None:
+     redis = FakeRedis()
+     manager = PlanningWorkflowManager(redis_client=redis)
++    # 会话归属与当轮 user_id 必须一致：save/get 均以 {user_id}: 前缀定键。
++    owner_user_id = uuid4()
+     session = PlanningSession(
+         planning_session_id=str(uuid4()),
+         chat_session_id="chat-session-2",
+-        user_id=str(uuid4()),
++        user_id=str(owner_user_id),
+         state="CLARIFYING",
+         goal_raw="7天后考计算机网络，帮我规划",
+         collected={},
+         turns_in_state=0,
+     )
+     await manager.save_session(session)
+-    turn_user_id = uuid4()
++    turn_user_id = owner_user_id
+ 
+     result = await manager.process_planning_turn(
+         db=None,  # type: ignore[arg-type]
+@@ -875,7 +879,7 @@ async def test_relevant_message_during_clarifying_advances_turn_counter() -> Non
+         context={},
+     )
+ 
+-    persisted = await manager.get_active_session("chat-session-2")
++    persisted = await manager.get_active_session("chat-session-2", turn_user_id)
+     runtime_state = await manager.runtime_adapter.load_state(
+         user_id=str(turn_user_id),
+         conversation_id="chat-session-2",
+@@ -915,7 +919,7 @@ async def test_exam_sprint_fast_track_single_message_enters_planning_with_pack_p
+         context={},
+     )
+ 
+-    persisted = await manager.get_active_session(conversation_id)
++    persisted = await manager.get_active_session(conversation_id, user_id)
+ 
+     assert result is not None
+     assert persisted is not None
+diff --git a/backend/tests/orchestration/test_round1_p2_fixes.py b/backend/tests/orchestration/test_round1_p2_fixes.py
+index f52e023d..56dc72cd 100644
+--- a/backend/tests/orchestration/test_round1_p2_fixes.py
++++ b/backend/tests/orchestration/test_round1_p2_fixes.py
+@@ -248,7 +248,11 @@ async def test_rb07_empty_summary_falls_back_to_compression(monkeypatch):
+         user_id="user-rb07",
+     )
+ 
+-    assert result["summary"] is None
++    # C-06（960bc498）语义升级：空 LLM 摘要回落确定性 compaction，
++    # 返回 compaction 生成的诚实摘要（非 None），且中间消息绝不静默丢弃。
++    summary = str(result["summary"] or "").strip()
++    assert summary, "empty LLM summary must fall back to the deterministic compaction digest"
++    assert "压缩" in summary
+     total_kept = len(result["messages"])
+     assert total_kept >= len(history) * 0.5, (
+         "empty summary must not silently drop all middle history; " f"kept {total_kept} of {len(history)}"
