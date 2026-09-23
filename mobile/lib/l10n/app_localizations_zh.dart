@@ -4254,6 +4254,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get squadDetailFootnote => '完成度口径来自冲刺任务账本；在室时长仅作展示。';
 
   @override
+  String get squadDetailInviteCopyAction => '复制 ID';
+
+  @override
+  String get squadDetailInviteHint => '把小队 ID 发给同学，对方在「加入小队」里粘贴即可入队。';
+
+  @override
+  String get squadDetailInviteTitle => '邀请同学加入';
+
+  @override
   String get squadDetailLeaderboardDegraded => '小队不足 3 人，榜单暂不成立。先看自己的 7 日锚点。';
 
   @override
@@ -4269,6 +4278,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get squadDetailPresenceStaleHint => '心跳滞后，可能已断线';
+
+  @override
+  String get squadDetailSelfBadge => '我';
 
   @override
   String get squadDetailSharedErrorsEmpty => '还没有错题分享。在错题本里打开任意一张卡，点「分享到小队」。';
@@ -27657,6 +27669,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String communityMyGroupsLoadError(Object error) {
     return '我的社群加载失败: $error';
   }
+
+  @override
+  String get communitySquadsEntryHint => '组队冲刺，互盯完成度';
 
   @override
   String get communityRoleOwner => '群主';

@@ -1477,6 +1477,9 @@
         }
     },
     "squadDetailFootnote": "完成度口径来自冲刺任务账本；在室时长仅作展示。",
+    "squadDetailInviteCopyAction": "复制 ID",
+    "squadDetailInviteHint": "把小队 ID 发给同学，对方在「加入小队」里粘贴即可入队。",
+    "squadDetailInviteTitle": "邀请同学加入",
     "squadDetailLeaderboardDegraded": "小队不足 3 人，榜单暂不成立。先看自己的 7 日锚点。",
     "squadDetailLeaderboardSelfAnchorAction": "查看我的自我锚",
     "squadDetailLeaderboardTitle": "成员完成度榜",
@@ -1489,6 +1492,7 @@
         }
     },
     "squadDetailPresenceStaleHint": "心跳滞后，可能已断线",
+    "squadDetailSelfBadge": "我",
     "squadDetailSharedErrorsEmpty": "还没有错题分享。在错题本里打开任意一张卡，点「分享到小队」。",
     "squadDetailSharedErrorsGoBook": "去错题本",
     "squadDetailSharedErrorsTitle": "错题分享",
@@ -12235,6 +12239,7 @@
     "communityViewAllGroups": "查看全部",
     "communityMoreGroupsFolded": "还有 {count} 个社群已折叠，避免占用过长空间。",
     "communityMyGroupsLoadError": "我的社群加载失败: {error}",
+    "communitySquadsEntryHint": "组队冲刺，互盯完成度",
     "communityRoleOwner": "群主",
     "communityRoleAdmin": "管理员",
     "communityRoleMember": "成员",

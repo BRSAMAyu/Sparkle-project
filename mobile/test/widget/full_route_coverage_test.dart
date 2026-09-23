@@ -170,14 +170,11 @@ void main() {
           ]));
     });
 
-    test('notification center routes (2 paths)', () {
+    test('notification center routes (single mounted path)', () {
       final paths = _extractPaths(NotificationCenterRoutes.routes);
-      expect(
-          paths,
-          containsAll([
-            '/notification-center',
-            '/notification-analytics',
-          ]));
+      // NAV-IA P-3：通知落点唯一——/notification-analytics 已摘除（屏保留，
+      // 登记 KNOWN_CODE_DEBT_LEDGER #11）；仅 /notification-center 挂载。
+      expect(paths, ['/notification-center']);
     });
 
     test('photon routes (2 paths, transfer withdrawn per A-SPEC2 #10)', () {

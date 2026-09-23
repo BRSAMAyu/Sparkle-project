@@ -1,11 +1,14 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/notification_service.dart';
+import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/shared_error_models.dart';
 import 'package:sparkle/features/community/data/models/squad_board_models.dart';
@@ -14,10 +17,15 @@ import 'package:sparkle/features/community/data/models/study_room_models.dart';
 import 'package:sparkle/features/community/data/repositories/squad_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/squad_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:sparkle/shared/entities/user_model.dart';
 import '../../../../shared/i18n_test_helper.dart';
 
 void main() {
   setUp(setUpI18nForTesting);
+  setUp(() {
+    // 复制成功反馈走 SensoryFeedbackService/AppFeedback（内部读偏好）。
+    SharedPreferences.setMockInitialValues({});
+  });
   tearDown(tearDownI18n);
 
   group('SquadDetailScreen (D-COMM-4/5)', () {
@@ -178,6 +186,97 @@ void main() {
       expect(find.textContaining('我的答案'), findsNothing);
     });
   });
+
+  group('SquadDetailScreen invite loop (A-SPEC2 top10 #3 / NAV-SQUAD)', () {
+    testWidgets('invite card exposes squad id with one-tap clipboard copy',
+        (tester) async {
+      String? clipboardText;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            final arguments = call.arguments as Map<Object, Object?>?;
+            clipboardText = arguments?['text'] as String?;
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null),
+      );
+
+      await _pumpSquadDetail(
+        tester,
+        repository: _FakeSquadRepository(
+          board: _boardTies(),
+          presence: _presence(inRoomCount: 0),
+        ),
+      );
+
+      // 小队 ID 是邀请的一等公民：详情内可见（CO-G2：此前全 UI 零显示）。
+      final idWidget = tester.widget<Text>(
+        find.byKey(const ValueKey('squad-invite-id-value')),
+      );
+      expect(idWidget.data, 'sq-1');
+      expect(find.text('邀请同学加入'), findsOneWidget);
+      expect(find.textContaining('发给同学'), findsOneWidget);
+
+      // 一键复制：剪贴板内容 = 小队 ID。
+      await tester.tap(find.byKey(const ValueKey('squad-invite-copy-button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(clipboardText, 'sq-1');
+      expect(find.text('已复制到剪贴板'), findsOneWidget);
+    });
+
+    testWidgets(
+        'leaderboard highlights the self row with accent container and badge',
+        (tester) async {
+      await _pumpSquadDetail(
+        tester,
+        repository: _FakeSquadRepository(
+          board: _boardTies(),
+          presence: _presence(inRoomCount: 0),
+        ),
+        currentUserId: 'u2',
+      );
+
+      // 「我在哪」公约（CO-G3）：本人行 accent 容器高亮 + 显式「我」徽标。
+      final selfRow = find.byKey(const ValueKey('squad-leaderboard-self-row'));
+      expect(selfRow, findsOneWidget);
+      final decoration =
+          tester.widget<Container>(selfRow).decoration as BoxDecoration?;
+      expect(decoration?.color, isNotNull);
+      expect(
+        find.byKey(const ValueKey('squad-leaderboard-self-badge')),
+        findsOneWidget,
+      );
+      expect(find.text('我'), findsOneWidget);
+    });
+
+    testWidgets('no self-row highlight when current user is unknown',
+        (tester) async {
+      await _pumpSquadDetail(
+        tester,
+        repository: _FakeSquadRepository(
+          board: _boardTies(),
+          presence: _presence(inRoomCount: 0),
+        ),
+      );
+
+      // 未登录/无 id：不误亮任何行。
+      expect(
+        find.byKey(const ValueKey('squad-leaderboard-self-row')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey('squad-leaderboard-self-badge')),
+        findsNothing,
+      );
+    });
+  });
 }
 
 SquadLeaderboard _boardTies() => const SquadLeaderboard(
@@ -260,6 +359,7 @@ StudyRoomPresence _presence({required int inRoomCount}) => StudyRoomPresence(
 Future<void> _pumpSquadDetail(
   WidgetTester tester, {
   required _FakeSquadRepository repository,
+  String? currentUserId,
 }) async {
   tester.view.physicalSize = const Size(390, 2200);
   tester.view.devicePixelRatio = 1;
@@ -277,6 +377,10 @@ Future<void> _pumpSquadDetail(
     ProviderScope(
       overrides: [
         squadRepositoryProvider.overrideWithValue(repository),
+        if (currentUserId != null)
+          currentUserProvider.overrideWithValue(
+            _buildUser(currentUserId),
+          ),
       ],
       child: MaterialApp.router(
         theme: AppThemes.lightTheme,
@@ -292,6 +396,19 @@ Future<void> _pumpSquadDetail(
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 600));
 }
+
+UserModel _buildUser(String id) => UserModel(
+      id: id,
+      username: 'current_user',
+      email: 'current@example.com',
+      flameLevel: 3,
+      flameBrightness: 0.8,
+      depthPreference: 0.5,
+      curiosityPreference: 0.5,
+      isActive: true,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
 
 class _FakeSquadRepository extends SquadRepository {
   _FakeSquadRepository({

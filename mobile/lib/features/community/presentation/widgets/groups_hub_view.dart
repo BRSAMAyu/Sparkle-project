@@ -10,6 +10,7 @@ import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/group_recommendation_card.dart';
@@ -38,6 +39,12 @@ class GroupsHubView extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: padding,
         children: [
+          // NAV-IA P-4：小队入口补位——Community（同伴关系的家）内零小队
+          // 入口是结构性失衡（`/community/squads` 此前仅 sprint 屏与错题
+          // 分享弹窗两个入边）。首行一行式入口直达小队列表，把「找到小队」
+          // 从 3 跳收敛到 1 跳；sprint 屏既有入口保留不动。
+          const _SquadsEntryTile(),
+          const SizedBox(height: DS.spacing20),
           // My groups first — the primary action
           _MyGroupsSection(state: groupsAsync),
           const SizedBox(height: DS.spacing20),
@@ -49,6 +56,39 @@ class GroupsHubView extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// NAV-IA P-4：冲刺小队一行式入口（样式照 `_JoinedGroupTile` 既有家族：
+/// GraphiteCardSurface + ListTile，sprint 语义 = timer 图标 + warning 底）。
+class _SquadsEntryTile extends StatelessWidget {
+  const _SquadsEntryTile();
+
+  @override
+  Widget build(BuildContext context) => GraphiteCardSurface(
+        key: const ValueKey('community-squads-entry'),
+        surfaceRole: SparkleSurfaceRole.card,
+        padding: EdgeInsets.zero,
+        onTap: () => context.push(CommunityRoutes.squads),
+        child: ListTile(
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          leading: Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              color: DS.warning.withValues(alpha: 0.16),
+            ),
+            child: Icon(
+              Icons.timer_outlined,
+              color: DS.textPrimary,
+            ),
+          ),
+          title: Text(context.l10n.squadEntryLabel),
+          subtitle: Text(context.l10n.communitySquadsEntryHint),
+          trailing: const Icon(Icons.chevron_right),
+        ),
+      );
 }
 
 class _CommunityHero extends StatefulWidget {

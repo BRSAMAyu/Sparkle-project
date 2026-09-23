@@ -4440,6 +4440,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'Completion comes from the sprint task ledger; study-room time is display-only.';
 
   @override
+  String get squadDetailInviteCopyAction => 'Copy ID';
+
+  @override
+  String get squadDetailInviteHint =>
+      'Send the squad ID to classmates — they paste it under \"Join squad\" to join.';
+
+  @override
+  String get squadDetailInviteTitle => 'Invite classmates';
+
+  @override
   String get squadDetailLeaderboardDegraded =>
       'Fewer than 3 members — the board isn\'t valid yet. Check your own 7-day anchor instead.';
 
@@ -4457,6 +4467,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get squadDetailPresenceStaleHint =>
       'Heartbeat is stale — may be disconnected';
+
+  @override
+  String get squadDetailSelfBadge => 'You';
 
   @override
   String get squadDetailSharedErrorsEmpty =>
@@ -28854,6 +28867,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String communityMyGroupsLoadError(Object error) {
     return 'Failed to load groups: $error';
   }
+
+  @override
+  String get communitySquadsEntryHint =>
+      'Team up on sprints and track each other\'s progress';
 
   @override
   String get communityRoleOwner => 'Owner';

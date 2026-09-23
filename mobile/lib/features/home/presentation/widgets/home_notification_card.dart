@@ -60,7 +60,9 @@ class HomeNotificationCard extends ConsumerWidget {
                   ? context.l10n.homeNotificationUnreadNotifications(1)
                   : context.l10n.homeNotificationUnreadNotifications(notifications.length),
               actionLabel: context.l10n.viewDetails,
-              onTap: () => context.push('/notifications'),
+              // NAV-IA P-3：通知落点统一——与推送侧（push_navigation_service）
+              // 一致指向 /notification-center 单一落点，不再分流老路径。
+              onTap: () => context.push('/notification-center'),
             ),
           ),
         );

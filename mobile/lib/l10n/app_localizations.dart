@@ -7958,6 +7958,24 @@ abstract class AppLocalizations {
   /// **'完成度口径来自冲刺任务账本；在室时长仅作展示。'**
   String get squadDetailFootnote;
 
+  /// No description provided for @squadDetailInviteCopyAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制 ID'**
+  String get squadDetailInviteCopyAction;
+
+  /// No description provided for @squadDetailInviteHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'把小队 ID 发给同学，对方在「加入小队」里粘贴即可入队。'**
+  String get squadDetailInviteHint;
+
+  /// No description provided for @squadDetailInviteTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'邀请同学加入'**
+  String get squadDetailInviteTitle;
+
   /// No description provided for @squadDetailLeaderboardDegraded.
   ///
   /// In zh, this message translates to:
@@ -7987,6 +8005,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'心跳滞后，可能已断线'**
   String get squadDetailPresenceStaleHint;
+
+  /// No description provided for @squadDetailSelfBadge.
+  ///
+  /// In zh, this message translates to:
+  /// **'我'**
+  String get squadDetailSelfBadge;
 
   /// No description provided for @squadDetailSharedErrorsEmpty.
   ///
@@ -50439,6 +50463,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'我的社群加载失败: {error}'**
   String communityMyGroupsLoadError(Object error);
+
+  /// No description provided for @communitySquadsEntryHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'组队冲刺，互盯完成度'**
+  String get communitySquadsEntryHint;
 
   /// No description provided for @communityRoleOwner.
   ///

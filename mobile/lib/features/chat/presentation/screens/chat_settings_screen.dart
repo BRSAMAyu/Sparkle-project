@@ -264,21 +264,10 @@ class ChatSettingsScreen extends ConsumerWidget {
                 onChanged: notifier.setShowReasoningSteps,
               ),
             ],
-            const SizedBox(height: DS.lg),
-            GraphiteCardSurface(
-              surfaceRole: SparkleSurfaceRole.card,
-              child: ListTile(
-                leading: const Icon(Icons.settings_outlined),
-                title: Text(context.l10n.chatSettingsOpenAdvanced),
-                subtitle: Text(context.l10n.chatSettingsOpenAdvancedDesc),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () {
-                  unawaited(
-                    context.push('/settings/transparency'),
-                  );
-                },
-              ),
-            ),
+              // NAV-IA P-1：原「打开高级设置」入口（push 未注册的透明度设置
+              // 路由）已移除——点击必落 404 errorBuilder。半成品入口不为主干
+              // 背书；l10n arb 键（chatSettingsOpenAdvanced*）保留以防产品
+              // 确认后恢复入口时回滚。
           ],
         ),
       ),

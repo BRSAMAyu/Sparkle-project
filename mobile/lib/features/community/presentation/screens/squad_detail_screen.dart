@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -8,6 +9,8 @@ import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/community/data/models/shared_error_models.dart';
 import 'package:sparkle/features/community/data/models/squad_board_models.dart';
 import 'package:sparkle/features/community/data/models/squad_models.dart';
@@ -73,7 +76,14 @@ class SquadDetailScreen extends ConsumerWidget {
                   message: context.l10n.squadLoadFailed(error),
                   onRetry: () => ref.invalidate(squadDetailProvider(groupId)),
                 ),
-                data: (SquadInfo squad) => _SquadMetaHeader(squad: squad),
+                data: (SquadInfo squad) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _SquadMetaHeader(squad: squad),
+                    SizedBox(height: context.space.md),
+                    _SquadInviteCard(squad: squad),
+                  ],
+                ),
               ),
               SizedBox(height: context.space.md),
               _LeaderboardCard(groupId: groupId),
@@ -145,6 +155,87 @@ class _SquadMetaHeader extends StatelessWidget {
   }
 }
 
+/// 邀请环（A-SPEC2 top10 #3 / CO-G2）：小队 ID 是邀请的一等公民——详情内
+/// 可见、可一键复制；加入方凭既有「加入小队」对话框粘贴 ID 入社，邀请成本
+/// 趋零（对标 §1.1 社群公约）。纯端上改动：ID 已在下传 payload，零后端改动。
+class _SquadInviteCard extends StatelessWidget {
+  const _SquadInviteCard({required this.squad});
+
+  final SquadInfo squad;
+
+  Future<void> _copyId(BuildContext context) async {
+    await Clipboard.setData(ClipboardData(text: squad.id));
+    await SensoryFeedbackService.emit(SensoryFeedbackEvent.success);
+    if (context.mounted) {
+      AppFeedback.success(context, context.l10n.communityCopiedToClipboard);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final typo = context.typo;
+
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.card,
+      child: Padding(
+        padding: EdgeInsets.all(context.space.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionTitle(
+              context,
+              icon: Icons.person_add_alt_rounded,
+              color: colors.info,
+              title: context.l10n.squadDetailInviteTitle,
+            ),
+            SizedBox(height: context.space.sm),
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: context.space.md,
+                vertical: context.space.sm,
+              ),
+              decoration: BoxDecoration(
+                color: colors.surfaceOverlay,
+                borderRadius: BorderRadius.circular(context.radius.sm),
+                border: Border.all(color: colors.neutralOutline),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      squad.id,
+                      key: const ValueKey('squad-invite-id-value'),
+                      style: typo.bodyMedium.copyWith(
+                        color: colors.textPrimary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  SizedBox(width: context.space.sm),
+                  SparkleButton(
+                    key: const ValueKey('squad-invite-copy-button'),
+                    variant: ButtonVariant.outline,
+                    size: ButtonSize.small,
+                    label: context.l10n.squadDetailInviteCopyAction,
+                    onPressed: () => unawaited(_copyId(context)),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: context.space.sm),
+            Text(
+              context.l10n.squadDetailInviteHint,
+              style: typo.bodySmall.copyWith(color: colors.textTertiary),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// 必达项①：成员完成度榜（info 数据可视化语义；并列名次 1,1,3 如实）。
 ///
 /// 降级裁决：`self_view_only`（<3 人）→ 榜不成立——给降级提示 +
@@ -157,6 +248,9 @@ class _LeaderboardCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final boardAsync = ref.watch(squadLeaderboardProvider(groupId));
+    // 「我在哪」公约（A-SPEC2 CO-G3）：端上比对既有 Riverpod auth 状态的
+    // 当前 userId，自我行 accent 容器高亮；未登录/无 id 不误亮。
+    final currentUserId = ref.watch(currentUserProvider)?.id ?? '';
     final colors = context.colors;
     final typo = context.typo;
 
@@ -216,6 +310,8 @@ class _LeaderboardCard extends ConsumerWidget {
                   _LeaderboardRow(
                     entry: board.entries[i],
                     isLast: i == board.entries.length - 1,
+                    isSelf: currentUserId.isNotEmpty &&
+                        board.entries[i].userId == currentUserId,
                   ),
               ],
             );
@@ -228,11 +324,18 @@ class _LeaderboardCard extends ConsumerWidget {
 
 /// 单行榜条目：名次直显后端并列名次（1,1,3 不重排）；
 /// has_ledger_data=false 如实显示「无账本数据」，不把 0 伪装成 0%。
+/// isSelf 行 accent 容器高亮（唯一 accent = brandPrimary，色彩之外配
+/// 「我」徽标，不依赖纯颜色区分）。
 class _LeaderboardRow extends StatelessWidget {
-  const _LeaderboardRow({required this.entry, required this.isLast});
+  const _LeaderboardRow({
+    required this.entry,
+    required this.isLast,
+    this.isSelf = false,
+  });
 
   final SquadLeaderboardEntry entry;
   final bool isLast;
+  final bool isSelf;
 
   @override
   Widget build(BuildContext context) {
@@ -240,42 +343,89 @@ class _LeaderboardRow extends StatelessWidget {
     final typo = context.typo;
     final name = entry.displayName;
 
+    final row = Row(
+      children: [
+        SizedBox(
+          width: context.space.xl + context.space.lg,
+          child: Text(
+            '${entry.rank}',
+            key: ValueKey('squad-leaderboard-rank-${entry.userId}'),
+            style: typo.titleMedium.copyWith(color: colors.info),
+          ),
+        ),
+        Expanded(
+          child: Row(
+            children: [
+              Flexible(
+                child: Text(
+                  (name == null || name.trim().isEmpty)
+                      ? context.l10n.squadMemberFallbackName
+                      : name,
+                  style: typo.bodyMedium.copyWith(color: colors.textPrimary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (isSelf) ...[
+                SizedBox(width: context.space.xs),
+                Container(
+                  key: const ValueKey('squad-leaderboard-self-badge'),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: context.space.sm,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colors.brandPrimary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(context.radius.full),
+                  ),
+                  child: Text(
+                    context.l10n.squadDetailSelfBadge,
+                    style:
+                        typo.labelSmall.copyWith(color: colors.brandPrimary),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (entry.hasLedgerData)
+          Text(
+            context.l10n.squadCompletionPercent(
+              (entry.completionRate * 100).round(),
+            ),
+            key: ValueKey('squad-leaderboard-rate-${entry.userId}'),
+            style: typo.labelLarge.copyWith(color: colors.textSecondary),
+          )
+        else
+          Text(
+            context.l10n.squadNoLedgerData,
+            style: typo.labelMedium.copyWith(color: colors.textTertiary),
+          ),
+      ],
+    );
+
     return Column(
       children: [
-        Row(
-          children: [
-            SizedBox(
-              width: context.space.xl + context.space.lg,
-              child: Text(
-                '${entry.rank}',
-                key: ValueKey('squad-leaderboard-rank-${entry.userId}'),
-                style: typo.titleMedium.copyWith(color: colors.info),
-              ),
-            ),
-            Expanded(
-              child: Text(
-                (name == null || name.trim().isEmpty)
-                    ? context.l10n.squadMemberFallbackName
-                    : name,
-                style: typo.bodyMedium.copyWith(color: colors.textPrimary),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            if (entry.hasLedgerData)
-              Text(
-                context.l10n.squadCompletionPercent(
-                  (entry.completionRate * 100).round(),
-                ),
-                key: ValueKey('squad-leaderboard-rate-${entry.userId}'),
-                style: typo.labelLarge.copyWith(color: colors.textSecondary),
-              )
-            else
-              Text(
-                context.l10n.squadNoLedgerData,
-                style: typo.labelMedium.copyWith(color: colors.textTertiary),
-              ),
-          ],
+        Container(
+          key: isSelf ? const ValueKey('squad-leaderboard-self-row') : null,
+          width: double.infinity,
+          padding: isSelf
+              ? EdgeInsets.symmetric(
+                  horizontal: context.space.sm,
+                  vertical: context.space.xs,
+                )
+              : EdgeInsets.zero,
+          margin:
+              isSelf ? EdgeInsets.symmetric(vertical: context.space.xs) : null,
+          decoration: isSelf
+              ? BoxDecoration(
+                  color: colors.brandPrimary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(context.radius.sm),
+                  border: Border.all(
+                    color: colors.brandPrimary.withValues(alpha: 0.32),
+                  ),
+                )
+              : null,
+          child: row,
         ),
         if (!isLast) ...[
           SizedBox(height: context.space.sm),

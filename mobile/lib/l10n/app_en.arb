@@ -1477,6 +1477,9 @@
         }
     },
     "squadDetailFootnote": "Completion comes from the sprint task ledger; study-room time is display-only.",
+    "squadDetailInviteCopyAction": "Copy ID",
+    "squadDetailInviteHint": "Send the squad ID to classmates — they paste it under \"Join squad\" to join.",
+    "squadDetailInviteTitle": "Invite classmates",
     "squadDetailLeaderboardDegraded": "Fewer than 3 members — the board isn't valid yet. Check your own 7-day anchor instead.",
     "squadDetailLeaderboardSelfAnchorAction": "View my self anchor",
     "squadDetailLeaderboardTitle": "Member completion board",
@@ -1489,6 +1492,7 @@
         }
     },
     "squadDetailPresenceStaleHint": "Heartbeat is stale — may be disconnected",
+    "squadDetailSelfBadge": "You",
     "squadDetailSharedErrorsEmpty": "No shared error cards yet. Open any card in your error book and tap \"Share to squad\".",
     "squadDetailSharedErrorsGoBook": "Open error book",
     "squadDetailSharedErrorsTitle": "Shared error cards",
@@ -9959,6 +9963,7 @@
     "communityViewAllGroups": "View All",
     "communityMoreGroupsFolded": "{count} more groups folded to save space.",
     "communityMyGroupsLoadError": "Failed to load groups: {error}",
+    "communitySquadsEntryHint": "Team up on sprints and track each other's progress",
     "communityRoleOwner": "Owner",
     "communityRoleAdmin": "Admin",
     "communityRoleMember": "Member",

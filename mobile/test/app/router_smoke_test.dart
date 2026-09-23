@@ -46,10 +46,10 @@ import 'package:sparkle/features/focus/presentation/screens/focus_main_screen.da
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
 import 'package:sparkle/features/galaxy/presentation/screens/galaxy_screen.dart';
 import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart';
-import 'package:sparkle/features/home/presentation/screens/notification_list_screen.dart';
 import 'package:sparkle/features/insights/presentation/screens/learning_forecast_screen.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_panel_screen.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_settings_screen.dart';
+import 'package:sparkle/features/notification_center/notification_center.dart';
 import 'package:sparkle/features/openclaw/presentation/screens/openclaw_screen.dart';
 import 'package:sparkle/features/photon/presentation/screens/transaction_history_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/growth_screen.dart';
@@ -277,7 +277,15 @@ void main() {
       await expectRoute('/focus', FocusMainScreen);
       await expectRoute('/tasks', TaskListScreen);
       await expectRoute('/openclaw', OpenClawScreen);
-      await expectRoute('/notifications', NotificationListScreen);
+      // NAV-IA P-3：/notifications 降级为 legacy redirect → /notification-center
+      // （老路径可达且与全站通知入口落同一屏；NotificationListScreen 不再挂路由表）。
+      harness.router.go('/notifications');
+      await _pumpFrames(tester);
+      expect(
+        harness.router.routeInformationProvider.value.uri.toString(),
+        '/notification-center',
+      );
+      expect(find.byType(NotificationCenterScreen), findsOneWidget);
       await expectRoute(
         '/calendar?date=2026-03-06T00:00:00.000',
         CalendarStatsScreen,

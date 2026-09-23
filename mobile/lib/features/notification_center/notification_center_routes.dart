@@ -14,14 +14,9 @@ class NotificationCenterRoutes {
             type: SharedAxisTransitionType.scaled,
           ),
         ),
-        GoRoute(
-          path: '/notification-analytics',
-          name: 'notificationAnalytics',
-          pageBuilder: (context, state) => buildSparkleTransitionPage(
-            state: state,
-            child: const NotificationAnalyticsScreen(),
-            type: SharedAxisTransitionType.scaled,
-          ),
-        ),
+        // NAV-IA P-3：/notification-analytics 已从路由表摘除（0 入边孤儿面，
+        // 挂在路由表即可被任意深链触达的未审面）。屏与 provider 文件保留，
+        // 处置背景见 docs/engineering/KNOWN_CODE_DEBT_LEDGER.md；重新挂载
+        // 需产品裁决（如挂到 admin-operations 下）。
       ];
 }

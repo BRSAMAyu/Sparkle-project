@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/notification_service.dart';
@@ -16,6 +17,10 @@ import '../../../../shared/i18n_test_helper.dart';
 
 void main() {
   setUp(setUpI18nForTesting);
+  setUp(() {
+    // 日期选择器/ sensory 反馈路径会读 SharedPreferences。
+    SharedPreferences.setMockInitialValues({});
+  });
   tearDown(tearDownI18n);
 
   group('SquadListScreen (D-COMM-3)', () {
@@ -102,6 +107,54 @@ void main() {
 
       expect(find.byType(SquadListScreen), findsOneWidget);
       expect(find.text('高数期末互助队'), findsOneWidget);
+    });
+
+    testWidgets(
+        'create dialog deadline renders through date_formatting single entry (CO-G4/X3)',
+        (tester) async {
+      await _pumpSquadList(
+        tester,
+        repository: _FakeSquadRepository(squads: _squads()),
+        initialLocation: CommunityRoutes.squads,
+      );
+
+      // 打开创建小队对话框，选一个确定可用的日期（initialDate = 今天+7 天，
+      // 其「日」号必在当前页且可用——不依赖测试机的具体日期）。
+      // 注意：M3 日期选择器内含持续动画件，用定长 pump 驱动，不用
+      // pumpAndSettle（假时钟下会无限推进）。
+      await tester.tap(find.byKey(const ValueKey('squad-create-entry-button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(
+        find.byKey(const ValueKey('squad-create-name-field')),
+        findsOneWidget,
+      );
+
+      await tester
+          .tap(find.byKey(const ValueKey('squad-create-deadline-button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      final pickedDay =
+          DateTime.now().add(const Duration(days: 7)).day.toString();
+      await tester.tap(find.text(pickedDay).last);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(find.text('确定'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 400));
+
+      // 手工拼接 'y/m/d'（squad_list_screen 原 _formatDate）已废除：
+      // 日期一律走 core 的 date_formatting 唯一入口（「9月29日」式）。
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              RegExp(r'^\d{1,2}月\d{1,2}日$').hasMatch(widget.data ?? ''),
+        ),
+        findsOneWidget,
+      );
     });
   });
 }

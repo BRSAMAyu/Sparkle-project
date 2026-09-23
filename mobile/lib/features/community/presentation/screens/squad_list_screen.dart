@@ -8,6 +8,9 @@ import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+// X3：时间格式唯一入口——截止日为纯日期展示位，走 formatSparkleDateOnly，
+// 禁手工拼接 'y/m/d'（A-SPEC2 CO-G4）。
+import 'package:sparkle/core/display/lexicon/date_formatting.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/community_routes.dart';
@@ -333,7 +336,7 @@ class _CreateSquadDialogState extends ConsumerState<_CreateSquadDialog> {
                 child: Text(
                   _deadline == null
                       ? l10n.squadCreateDeadlinePick
-                      : _formatDate(_deadline!),
+                      : formatSparkleDateOnly(_deadline!, l10n),
                   style: typo.bodyMedium.copyWith(
                     color: _deadline == null
                         ? colors.textTertiary
@@ -368,9 +371,6 @@ class _CreateSquadDialogState extends ConsumerState<_CreateSquadDialog> {
       ],
     );
   }
-
-  static String _formatDate(DateTime date) =>
-      '${date.year}/${date.month}/${date.day}';
 }
 
 /// 凭小队 ID 加入（分享链接/面对面口传场景的最小入口）。

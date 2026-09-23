@@ -47,6 +47,7 @@
 | 9 | 网关 `internal/cqrs/outbox/repository.go:420,427`、`internal/worker/community_sync.go:319,328` 弃用构造函数仍可调用 | Deprecated 注记完备 | 小型清理，随手可做 |
 | 10 | 根 `CHANGELOG.md` 冻结在 1.0.0（2026-03-22） | 项目已演进至 5 月 | 决定：要么恢复维护，要么明示冻结 |
 | 11 | `mobile/lib/features/photon/presentation/screens/photon_transfer_screen.dart`（466 行，2026-09-22 登记，PHOTON 卡 #10 / A-SPEC2 PH-G3） | **幽灵面遗存屏**：`/photon/transfer` 路由已撤除（P2P 转账触反刷敏感区——`transfer_in` 已被排除出可兑换基数，未审计面不应对深链开放；深链现落路由 errorBuilder 兜底），全仓零 push 引用，屏文件按裁决保留未删。屏本体为旧栈实现（`Theme.of` 直取、`ActionChip` backgroundColor 直填、`DS.xl` 裸 padding），`pt*` l10n 键为其保留 | 未来真做 P2P 转账需先过 D 线价值评估 + 反刷审计，再按现行 SPEC 重写并重挂路由；否则届时整文件连同 `pt*` l10n 死键一并删除 |
+| 12 | `mobile/lib/features/notification_center/presentation/screens/notification_analytics_screen.dart` + `notification_analytics_provider.dart`（约 0.5k 行） | **孤儿面（NAV-IA P-3，2026-09-22 摘除路由挂载）**：`/notification-analytics` 从 `NotificationCenterRoutes.routes` 摘除（0 入边、纯运营分析面，挂在路由表即可被任意深链触达）；屏与 provider 文件保留未删，barrel `notification_center.dart` 导出未动 | 重新挂载需产品裁决（候选：admin-operations 下）；长期不用则连屏带 provider 删除（屏留 git 历史） |
 
 ## 明确不是债务（防止误删）
 
