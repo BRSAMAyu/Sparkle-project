@@ -37135,4 +37135,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get galaxyErrorHumanService => '星图服务正忙，暂时加载不了。你的数据没有丢，稍后再试一次。';
+
+  @override
+  String galaxyWorkViewNextTouch(String name) {
+    return '下一个建议碰：$name';
+  }
 }

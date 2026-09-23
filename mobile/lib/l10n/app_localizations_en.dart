@@ -38741,4 +38741,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get galaxyErrorHumanService =>
       'The star map service is busy right now. Your data is safe — try again in a moment.';
+
+  @override
+  String galaxyWorkViewNextTouch(String name) {
+    return 'Next up: $name';
+  }
 }

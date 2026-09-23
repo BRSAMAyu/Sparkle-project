@@ -17308,5 +17308,13 @@
     "galaxyErrorHumanNetwork": "网络好像不太顺畅，星图暂时加载不了。你的数据没有丢，稍后再试一次。",
     "@galaxyErrorHumanNetwork": {},
     "galaxyErrorHumanService": "星图服务正忙，暂时加载不了。你的数据没有丢，稍后再试一次。",
-    "@galaxyErrorHumanService": {}
+    "@galaxyErrorHumanService": {},
+    "galaxyWorkViewNextTouch": "下一个建议碰：{name}",
+    "@galaxyWorkViewNextTouch": {
+      "placeholders": {
+        "name": {
+          "type": "String"
+        }
+      }
+    }
 }

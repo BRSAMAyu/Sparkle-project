@@ -17715,5 +17715,13 @@
     "galaxyErrorHumanNetwork": "The network seems unstable, so the star map could not load. Your data is safe — try again in a moment.",
     "@galaxyErrorHumanNetwork": {},
     "galaxyErrorHumanService": "The star map service is busy right now. Your data is safe — try again in a moment.",
-    "@galaxyErrorHumanService": {}
+    "@galaxyErrorHumanService": {},
+    "galaxyWorkViewNextTouch": "Next up: {name}",
+    "@galaxyWorkViewNextTouch": {
+      "placeholders": {
+        "name": {
+          "type": "String"
+        }
+      }
+    }
 }

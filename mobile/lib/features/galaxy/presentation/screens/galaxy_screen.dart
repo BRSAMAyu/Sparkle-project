@@ -10,6 +10,7 @@ import 'package:flutter/physics.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -211,6 +212,30 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   String? _lastObservedRoutePath;
   bool _isDraftReviewOpen = false;
 
+  // SPEC-J（A-SPEC top10 #10）：galaxy 工作视图最小切片。
+  // 默认进图先聚「下一个建议碰」锚点邻域（复用既有 spotlight 机制），
+  // 并挂一枚推荐 chip（§4.1.4 ≤1 名额铁律——全屏最多一枚，见
+  // [_workViewChipNode]）。锚点只信服务端既有推荐信号
+  // （is_review_recommended / review_urgency_score），不自造算法；
+  // 无推荐节点时诚实降级：保留既有总览视野、不挂 chip。
+  static const int _workViewMaxVisibleNodes = 20;
+  // 档位升到 2.0：密集图在 ≤1.0 档可能整图皆在视野内，必须有更近档
+  // 兜住「视野 ≤20」；上限低于相机 maxScale(2.5)，仍留手动放大余地。
+  static const List<double> _workViewScaleLadder = <double>[
+    0.6,
+    0.7,
+    0.8,
+    0.9,
+    1.0,
+    1.25,
+    1.6,
+    2.0,
+  ];
+  Timer? _workViewFocusTimer;
+  String? _workViewAnchorId;
+  bool _workViewChipHandled = false;
+  bool _workViewCameraEngaged = false;
+
   // Mastery milestone subscription
   StreamSubscription<MasteryMilestoneEvent>? _milestoneSubscription;
 
@@ -377,6 +402,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _previewDismissTimer?.cancel();
     _initialBuildReplayTimer?.cancel();
     _pendingExternalFocusTimer?.cancel();
+    _workViewFocusTimer?.cancel();
     SchedulerBinding.instance.removeTimingsCallback(_handleFrameTimings);
     super.dispose();
   }
@@ -549,6 +575,195 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _showErrorImpactMessage(node, masteryDelta);
   }
 
+  /// SPEC-J：解析工作视野锚点——只信服务端既有推荐信号
+  /// （is_review_recommended + review_urgency_score，与节点预览卡
+  /// 推荐理由链 reviewUrgencyReason 同源），取分最高者；同分保持
+  /// 图序首个（稳定）。无推荐节点 → null（诚实降级，不造默认值）。
+  GalaxyNodeModel? _resolveWorkViewAnchorNode() {
+    final graph = _graph;
+    if (graph == null) {
+      return null;
+    }
+    GalaxyNodeModel? anchor;
+    for (final node in graph.nodes) {
+      if (!node.isReviewRecommended) {
+        continue;
+      }
+      if (!_positions.containsKey(node.id)) {
+        continue;
+      }
+      if (anchor == null ||
+          node.reviewUrgencyScore > anchor.reviewUrgencyScore) {
+        anchor = node;
+      }
+    }
+    return anchor;
+  }
+
+  /// SPEC-J：默认进图的工作视野聚焦——等入场编排（相机动画/构建回放/
+  /// 布局收敛）落地后执行；failsafe 40 拍（≈9.6s）后放行非回放等待，
+  /// 回放未完则继续等到回放结束（回放完成会清 spotlight，聚焦必须在
+  /// 其后执行才不会被清掉）。
+  void _scheduleWorkViewFocus() {
+    _workViewFocusTimer?.cancel();
+    var ticks = 0;
+    _workViewFocusTimer = Timer.periodic(
+      // 250ms 轮询拍（A2.1 梯内值）——等入场编排落地，非动画时长。
+      const Duration(milliseconds: 250),
+      (timer) {
+        if (!mounted) {
+          timer.cancel();
+          return;
+        }
+        ticks++;
+        final settled = !_isBuildAnimating &&
+            !_cameraAnimationController.isAnimating &&
+            !_layoutBlendController.isAnimating;
+        final tickBudget = _isBuildAnimating ? 175 : 40;
+        if (!settled && ticks < tickBudget) {
+          return;
+        }
+        timer.cancel();
+        _applyWorkViewFocus();
+      },
+    );
+  }
+
+  void _applyWorkViewFocus() {
+    final anchor = _resolveWorkViewAnchorNode();
+    if (anchor == null) {
+      // 诚实降级：无推荐节点→保留既有总览视野，不挂 chip、不造默认值。
+      return;
+    }
+    _focusWorkView(anchor.id, targetScale: _workViewScaleFor(anchor.id));
+  }
+
+  /// SPEC-J：视野内节点计数（屏幕投影 + 节点光晕屏幕容差），
+  /// 供「默认视野节点 ≤20」档位裁决与验收使用。
+  int _countVisibleNodes(
+    GalaxyCamera camera,
+    Map<String, Offset> positions,
+  ) {
+    if (_viewportSize == Size.zero) {
+      return positions.length;
+    }
+    const margin = 48.0;
+    var count = 0;
+    for (final position in positions.values) {
+      final screen = camera.worldToScreen(position);
+      if (screen.dx >= -margin &&
+          screen.dx <= _viewportSize.width + margin &&
+          screen.dy >= -margin &&
+          screen.dy <= _viewportSize.height + margin) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  /// SPEC-J：工作视野档位——取「可见节点 ≤ 上限」的最宽档
+  /// （邻域上下文最多）；全档超限时取最近档兜底（spotlight 仍高亮
+  /// 邻域）。档位集合与既有空间缩放档（0.6/0.82/0.9）同域，不新造刻度。
+  double _workViewScaleFor(String anchorId) {
+    final anchorPosition = _positions[anchorId];
+    if (anchorPosition == null) {
+      return _workViewScaleLadder.last;
+    }
+    final positions = _playbackSnapshot?.settledPositions ?? _positions;
+    for (final scale in _workViewScaleLadder) {
+      final candidate = _camera
+          .copyWith(scale: scale.clamp(_camera.minScale, _camera.maxScale))
+          .centerOnWorldPoint(worldPoint: anchorPosition);
+      if (_countVisibleNodes(candidate, positions) <=
+          _workViewMaxVisibleNodes) {
+        return scale;
+      }
+    }
+    return _workViewScaleLadder.last;
+  }
+
+  /// SPEC-J：聚焦工作视野（相机精确落位 + spotlight 邻域高亮）。
+  /// 与 [_focusOnNode] 分离：后者取 max(当前, 目标) 缩放（只进不退），
+  /// 工作视野需要精确档位以保证「可见节点 ≤20」的验收语义。
+  void _focusWorkView(String nodeId, {required double targetScale}) {
+    final position = _renderPositions[nodeId] ?? _positions[nodeId];
+    if (position == null || _viewportSize == Size.zero) {
+      return;
+    }
+    _stopFling();
+    _stopPhysicsSimulation(commitPendingNode: true);
+    final clampedScale = targetScale.clamp(_camera.minScale, _camera.maxScale);
+    final targetCamera = _camera
+        .copyWith(scale: clampedScale)
+        .centerOnWorldPoint(worldPoint: position);
+    unawaited(_accessibilityService.lightHaptic());
+    setState(() {
+      _selectedNodeId = nodeId;
+      _spotlightAnchorId = nodeId;
+      _spotlightNodeIds = _spotlightSetFor(nodeId);
+      _workViewAnchorId = nodeId;
+      _workViewCameraEngaged = false;
+      _clearPreviewState();
+    });
+    _syncProviderSelection(nodeId);
+    _animateCameraTo(
+      targetCamera,
+      // 500ms（A2.1 梯内值）：与 _focusOnNode 同级的聚焦时长量级。
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeInOutCubicEmphasized,
+      arcScaleOutFactor: 1.05,
+    );
+  }
+
+  /// SPEC-J：布局优化结果落位后，若工作视野仍处于默认态（用户未手动
+  /// 动过相机），按最终布局重定焦——防止优化把邻域拉出视野圈外。
+  void _recentreWorkViewCamera(Map<String, Offset> positions) {
+    final anchorId = _workViewAnchorId;
+    if (anchorId == null ||
+        _workViewChipHandled ||
+        _workViewCameraEngaged ||
+        _viewportSize == Size.zero) {
+      return;
+    }
+    final anchorPosition = positions[anchorId];
+    if (anchorPosition == null) {
+      return;
+    }
+    final clampedScale =
+        _workViewScaleFor(anchorId).clamp(_camera.minScale, _camera.maxScale);
+    final targetCamera = _camera
+        .copyWith(scale: clampedScale)
+        .centerOnWorldPoint(worldPoint: anchorPosition);
+    _animateCameraTo(
+      targetCamera,
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  /// SPEC-J：推荐 chip 的构建期数据源——已处理 / 目标世界模式 /
+  /// 节点消失或推荐被服务端撤回 → 返回 null（chip 诚实隐藏）。
+  /// 返回非空时全屏仅此一枚推荐承载（§4.1.4 ≤1 名额）。
+  GalaxyNodeModel? get _workViewChipNode {
+    if (_workViewAnchorId == null || _workViewChipHandled || _isGoalWorldMode) {
+      return null;
+    }
+    final node = _nodesById[_workViewAnchorId];
+    if (node == null || !node.isReviewRecommended) {
+      return null;
+    }
+    return node;
+  }
+
+  /// SPEC-J：chip 点击→既有复习流（reviewUrgencyReason→focusPrompt/
+  /// chatMode 理由链不变，路由仍走 /chat）。
+  void _startReviewFromWorkViewChip(GalaxyNodeModel node) {
+    setState(() {
+      _workViewChipHandled = true;
+    });
+    _startReviewForNode(node);
+  }
+
   void _pulseNodeWithoutNavigation(String nodeId) {
     setState(() {
       _tapFeedbackNodeId = nodeId;
@@ -667,6 +882,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
     if (!preserveCamera) {
       _startEntranceAnimationIfNeeded(playbackLaunch: playbackLaunch);
+      // SPEC-J：首次进图（非保视野刷新）才安排工作视野聚焦；
+      // 保留视野的刷新（pull-to-refresh/返回）不打断用户当前视野。
+      _scheduleWorkViewFocus();
     } else {
       _refreshSearchState();
       _syncPreviewPosition();
@@ -1203,6 +1421,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
   void _noteInteraction() {
     _lastInteractionElapsed = _ambientElapsed;
+    // SPEC-J：用户手动接管相机后，布局优化不再自动重定焦工作视野。
+    _workViewCameraEngaged = true;
     if (_microDriftOffsets.isNotEmpty && mounted) {
       setState(() {
         _microDriftOffsets = const <String, Offset>{};
@@ -2130,6 +2350,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       }
 
       _beginLayoutBlend(optimizedPositions);
+      // SPEC-J：最终布局与聚焦时的布局可能不同，默认态工作视野按
+      // 最终布局重定焦（用户已接管相机则不动）。
+      _recentreWorkViewCamera(optimizedPositions);
     }());
   }
 
@@ -2790,6 +3013,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         ref.watch(examSprintDashboardProvider).valueOrNull != null;
     final uploadState = ref.watch(galaxyDocumentUploadProvider);
     final uploadSession = uploadState.session;
+    // SPEC-J：「下一个建议碰」唯一 chip 的构建期数据源（null→不挂）。
+    final workViewChipNode = _workViewChipNode;
     final activeGoalId = ref.watch(activeGoalHeaderProvider);
     final goalOverlayData = activeGoalId != null
         ? ref.watch(goalGraphOverlayProvider(activeGoalId)).valueOrNull
@@ -3200,6 +3425,33 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                                         ],
                                       ),
                                     ),
+                                    if (workViewChipNode != null)
+                                      Positioned(
+                                        left: 0,
+                                        right: 0,
+                                        bottom: 92,
+                                        child: Center(
+                                          // SPEC-J（A-SPEC top10 #10 /
+                                          // §4.1.4 ≤1 名额铁律）：
+                                          // 「下一个建议碰：X」唯一推荐承载，
+                                          // 点击直达既有复习流（/chat）。
+                                          child: SemanticPill(
+                                            key: const ValueKey(
+                                              'galaxy_work_view_chip',
+                                            ),
+                                            tone: PillTone.brand,
+                                            icon: Icons.auto_awesome_rounded,
+                                            label: context.l10n
+                                                .galaxyWorkViewNextTouch(
+                                              workViewChipNode.name,
+                                            ),
+                                            onTap: () =>
+                                                _startReviewFromWorkViewChip(
+                                              workViewChipNode,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                     Positioned(
                                       left: 0,
                                       right: 0,

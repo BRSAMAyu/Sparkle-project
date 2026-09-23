@@ -67416,6 +67416,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'星图服务正忙，暂时加载不了。你的数据没有丢，稍后再试一次。'**
   String get galaxyErrorHumanService;
+
+  /// No description provided for @galaxyWorkViewNextTouch.
+  ///
+  /// In zh, this message translates to:
+  /// **'下一个建议碰：{name}'**
+  String galaxyWorkViewNextTouch(String name);
 }
 
 class _AppLocalizationsDelegate

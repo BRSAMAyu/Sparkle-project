@@ -1,0 +1,863 @@
+diff --git a/mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart b/mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart
+index 9c1eb3d4..dc251bdb 100644
+--- a/mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart
++++ b/mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart
+@@ -10,6 +10,7 @@ import 'package:flutter/physics.dart';
+ import 'package:flutter/scheduler.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:go_router/go_router.dart';
++import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
+ import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
+ import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+ import 'package:sparkle/core/extensions/context_l10n.dart';
+@@ -211,6 +212,30 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
+   String? _lastObservedRoutePath;
+   bool _isDraftReviewOpen = false;
+ 
++  // SPEC-J（A-SPEC top10 #10）：galaxy 工作视图最小切片。
++  // 默认进图先聚「下一个建议碰」锚点邻域（复用既有 spotlight 机制），
++  // 并挂一枚推荐 chip（§4.1.4 ≤1 名额铁律——全屏最多一枚，见
++  // [_workViewChipNode]）。锚点只信服务端既有推荐信号
++  // （is_review_recommended / review_urgency_score），不自造算法；
++  // 无推荐节点时诚实降级：保留既有总览视野、不挂 chip。
++  static const int _workViewMaxVisibleNodes = 20;
++  // 档位升到 2.0：密集图在 ≤1.0 档可能整图皆在视野内，必须有更近档
++  // 兜住「视野 ≤20」；上限低于相机 maxScale(2.5)，仍留手动放大余地。
++  static const List<double> _workViewScaleLadder = <double>[
++    0.6,
++    0.7,
++    0.8,
++    0.9,
++    1.0,
++    1.25,
++    1.6,
++    2.0,
++  ];
++  Timer? _workViewFocusTimer;
++  String? _workViewAnchorId;
++  bool _workViewChipHandled = false;
++  bool _workViewCameraEngaged = false;
++
+   // Mastery milestone subscription
+   StreamSubscription<MasteryMilestoneEvent>? _milestoneSubscription;
+ 
+@@ -377,6 +402,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
+     _previewDismissTimer?.cancel();
+     _initialBuildReplayTimer?.cancel();
+     _pendingExternalFocusTimer?.cancel();
++    _workViewFocusTimer?.cancel();
+     SchedulerBinding.instance.removeTimingsCallback(_handleFrameTimings);
+     super.dispose();
+   }
+@@ -549,6 +575,195 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
+     _showErrorImpactMessage(node, masteryDelta);
+   }
+ 
++  /// SPEC-J：解析工作视野锚点——只信服务端既有推荐信号
++  /// （is_review_recommended + review_urgency_score，与节点预览卡
++  /// 推荐理由链 reviewUrgencyReason 同源），取分最高者；同分保持
++  /// 图序首个（稳定）。无推荐节点 → null（诚实降级，不造默认值）。
++  GalaxyNodeModel? _resolveWorkViewAnchorNode() {
++    final graph = _graph;
++    if (graph == null) {
++      return null;
++    }
++    GalaxyNodeModel? anchor;
++    for (final node in graph.nodes) {
++      if (!node.isReviewRecommended) {
++        continue;
++      }
++      if (!_positions.containsKey(node.id)) {
++        continue;
++      }
++      if (anchor == null ||
++          node.reviewUrgencyScore > anchor.reviewUrgencyScore) {
++        anchor = node;
++      }
++    }
++    return anchor;
++  }
++
++  /// SPEC-J：默认进图的工作视野聚焦——等入场编排（相机动画/构建回放/
++  /// 布局收敛）落地后执行；failsafe 40 拍（≈9.6s）后放行非回放等待，
++  /// 回放未完则继续等到回放结束（回放完成会清 spotlight，聚焦必须在
++  /// 其后执行才不会被清掉）。
++  void _scheduleWorkViewFocus() {
++    _workViewFocusTimer?.cancel();
++    var ticks = 0;
++    _workViewFocusTimer = Timer.periodic(
++      // 250ms 轮询拍（A2.1 梯内值）——等入场编排落地，非动画时长。
++      const Duration(milliseconds: 250),
++      (timer) {
++        if (!mounted) {
++          timer.cancel();
++          return;
++        }
++        ticks++;
++        final settled = !_isBuildAnimating &&
++            !_cameraAnimationController.isAnimating &&
++            !_layoutBlendController.isAnimating;
++        final tickBudget = _isBuildAnimating ? 175 : 40;
++        if (!settled && ticks < tickBudget) {
++          return;
++        }
++        timer.cancel();
++        _applyWorkViewFocus();
++      },
++    );
++  }
++
++  void _applyWorkViewFocus() {
++    final anchor = _resolveWorkViewAnchorNode();
++    if (anchor == null) {
++      // 诚实降级：无推荐节点→保留既有总览视野，不挂 chip、不造默认值。
++      return;
++    }
++    _focusWorkView(anchor.id, targetScale: _workViewScaleFor(anchor.id));
++  }
++
++  /// SPEC-J：视野内节点计数（屏幕投影 + 节点光晕屏幕容差），
++  /// 供「默认视野节点 ≤20」档位裁决与验收使用。
++  int _countVisibleNodes(
++    GalaxyCamera camera,
++    Map<String, Offset> positions,
++  ) {
++    if (_viewportSize == Size.zero) {
++      return positions.length;
++    }
++    const margin = 48.0;
++    var count = 0;
++    for (final position in positions.values) {
++      final screen = camera.worldToScreen(position);
++      if (screen.dx >= -margin &&
++          screen.dx <= _viewportSize.width + margin &&
++          screen.dy >= -margin &&
++          screen.dy <= _viewportSize.height + margin) {
++        count++;
++      }
++    }
++    return count;
++  }
++
++  /// SPEC-J：工作视野档位——取「可见节点 ≤ 上限」的最宽档
++  /// （邻域上下文最多）；全档超限时取最近档兜底（spotlight 仍高亮
++  /// 邻域）。档位集合与既有空间缩放档（0.6/0.82/0.9）同域，不新造刻度。
++  double _workViewScaleFor(String anchorId) {
++    final anchorPosition = _positions[anchorId];
++    if (anchorPosition == null) {
++      return _workViewScaleLadder.last;
++    }
++    final positions = _playbackSnapshot?.settledPositions ?? _positions;
++    for (final scale in _workViewScaleLadder) {
++      final candidate = _camera
++          .copyWith(scale: scale.clamp(_camera.minScale, _camera.maxScale))
++          .centerOnWorldPoint(worldPoint: anchorPosition);
++      if (_countVisibleNodes(candidate, positions) <=
++          _workViewMaxVisibleNodes) {
++        return scale;
++      }
++    }
++    return _workViewScaleLadder.last;
++  }
++
++  /// SPEC-J：聚焦工作视野（相机精确落位 + spotlight 邻域高亮）。
++  /// 与 [_focusOnNode] 分离：后者取 max(当前, 目标) 缩放（只进不退），
++  /// 工作视野需要精确档位以保证「可见节点 ≤20」的验收语义。
++  void _focusWorkView(String nodeId, {required double targetScale}) {
++    final position = _renderPositions[nodeId] ?? _positions[nodeId];
++    if (position == null || _viewportSize == Size.zero) {
++      return;
++    }
++    _stopFling();
++    _stopPhysicsSimulation(commitPendingNode: true);
++    final clampedScale = targetScale.clamp(_camera.minScale, _camera.maxScale);
++    final targetCamera = _camera
++        .copyWith(scale: clampedScale)
++        .centerOnWorldPoint(worldPoint: position);
++    unawaited(_accessibilityService.lightHaptic());
++    setState(() {
++      _selectedNodeId = nodeId;
++      _spotlightAnchorId = nodeId;
++      _spotlightNodeIds = _spotlightSetFor(nodeId);
++      _workViewAnchorId = nodeId;
++      _workViewCameraEngaged = false;
++      _clearPreviewState();
++    });
++    _syncProviderSelection(nodeId);
++    _animateCameraTo(
++      targetCamera,
++      // 500ms（A2.1 梯内值）：与 _focusOnNode 同级的聚焦时长量级。
++      duration: const Duration(milliseconds: 500),
++      curve: Curves.easeInOutCubicEmphasized,
++      arcScaleOutFactor: 1.05,
++    );
++  }
++
++  /// SPEC-J：布局优化结果落位后，若工作视野仍处于默认态（用户未手动
++  /// 动过相机），按最终布局重定焦——防止优化把邻域拉出视野圈外。
++  void _recentreWorkViewCamera(Map<String, Offset> positions) {
++    final anchorId = _workViewAnchorId;
++    if (anchorId == null ||
++        _workViewChipHandled ||
++        _workViewCameraEngaged ||
++        _viewportSize == Size.zero) {
++      return;
++    }
++    final anchorPosition = positions[anchorId];
++    if (anchorPosition == null) {
++      return;
++    }
++    final clampedScale =
++        _workViewScaleFor(anchorId).clamp(_camera.minScale, _camera.maxScale);
++    final targetCamera = _camera
++        .copyWith(scale: clampedScale)
++        .centerOnWorldPoint(worldPoint: anchorPosition);
++    _animateCameraTo(
++      targetCamera,
++      duration: const Duration(milliseconds: 320),
++      curve: Curves.easeOutCubic,
++    );
++  }
++
++  /// SPEC-J：推荐 chip 的构建期数据源——已处理 / 目标世界模式 /
++  /// 节点消失或推荐被服务端撤回 → 返回 null（chip 诚实隐藏）。
++  /// 返回非空时全屏仅此一枚推荐承载（§4.1.4 ≤1 名额）。
++  GalaxyNodeModel? get _workViewChipNode {
++    if (_workViewAnchorId == null || _workViewChipHandled || _isGoalWorldMode) {
++      return null;
++    }
++    final node = _nodesById[_workViewAnchorId];
++    if (node == null || !node.isReviewRecommended) {
++      return null;
++    }
++    return node;
++  }
++
++  /// SPEC-J：chip 点击→既有复习流（reviewUrgencyReason→focusPrompt/
++  /// chatMode 理由链不变，路由仍走 /chat）。
++  void _startReviewFromWorkViewChip(GalaxyNodeModel node) {
++    setState(() {
++      _workViewChipHandled = true;
++    });
++    _startReviewForNode(node);
++  }
++
+   void _pulseNodeWithoutNavigation(String nodeId) {
+     setState(() {
+       _tapFeedbackNodeId = nodeId;
+@@ -667,6 +882,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
+ 
+     if (!preserveCamera) {
+       _startEntranceAnimationIfNeeded(playbackLaunch: playbackLaunch);
++      // SPEC-J：首次进图（非保视野刷新）才安排工作视野聚焦；
++      // 保留视野的刷新（pull-to-refresh/返回）不打断用户当前视野。
++      _scheduleWorkViewFocus();
+     } else {
+       _refreshSearchState();
+       _syncPreviewPosition();
+@@ -1203,6 +1421,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
+ 
+   void _noteInteraction() {
+     _lastInteractionElapsed = _ambientElapsed;
++    // SPEC-J：用户手动接管相机后，布局优化不再自动重定焦工作视野。
++    _workViewCameraEngaged = true;
+     if (_microDriftOffsets.isNotEmpty && mounted) {
+       setState(() {
+         _microDriftOffsets = const <String, Offset>{};
+@@ -2130,6 +2350,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
+       }
+ 
+       _beginLayoutBlend(optimizedPositions);
++      // SPEC-J：最终布局与聚焦时的布局可能不同，默认态工作视野按
++      // 最终布局重定焦（用户已接管相机则不动）。
++      _recentreWorkViewCamera(optimizedPositions);
+     }());
+   }
+ 
+@@ -2790,6 +3013,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
+         ref.watch(examSprintDashboardProvider).valueOrNull != null;
+     final uploadState = ref.watch(galaxyDocumentUploadProvider);
+     final uploadSession = uploadState.session;
++    // SPEC-J：「下一个建议碰」唯一 chip 的构建期数据源（null→不挂）。
++    final workViewChipNode = _workViewChipNode;
+     final activeGoalId = ref.watch(activeGoalHeaderProvider);
+     final goalOverlayData = activeGoalId != null
+         ? ref.watch(goalGraphOverlayProvider(activeGoalId)).valueOrNull
+@@ -3200,6 +3425,33 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
+                                         ],
+                                       ),
+                                     ),
++                                    if (workViewChipNode != null)
++                                      Positioned(
++                                        left: 0,
++                                        right: 0,
++                                        bottom: 92,
++                                        child: Center(
++                                          // SPEC-J（A-SPEC top10 #10 /
++                                          // §4.1.4 ≤1 名额铁律）：
++                                          // 「下一个建议碰：X」唯一推荐承载，
++                                          // 点击直达既有复习流（/chat）。
++                                          child: SemanticPill(
++                                            key: const ValueKey(
++                                              'galaxy_work_view_chip',
++                                            ),
++                                            tone: PillTone.brand,
++                                            icon: Icons.auto_awesome_rounded,
++                                            label: context.l10n
++                                                .galaxyWorkViewNextTouch(
++                                              workViewChipNode.name,
++                                            ),
++                                            onTap: () =>
++                                                _startReviewFromWorkViewChip(
++                                              workViewChipNode,
++                                            ),
++                                          ),
++                                        ),
++                                      ),
+                                     Positioned(
+                                       left: 0,
+                                       right: 0,
+diff --git a/mobile/lib/l10n/app_en.arb b/mobile/lib/l10n/app_en.arb
+index 1b754047..754f3aae 100755
+--- a/mobile/lib/l10n/app_en.arb
++++ b/mobile/lib/l10n/app_en.arb
+@@ -17715,5 +17715,13 @@
+     "galaxyErrorHumanNetwork": "The network seems unstable, so the star map could not load. Your data is safe — try again in a moment.",
+     "@galaxyErrorHumanNetwork": {},
+     "galaxyErrorHumanService": "The star map service is busy right now. Your data is safe — try again in a moment.",
+-    "@galaxyErrorHumanService": {}
++    "@galaxyErrorHumanService": {},
++    "galaxyWorkViewNextTouch": "Next up: {name}",
++    "@galaxyWorkViewNextTouch": {
++      "placeholders": {
++        "name": {
++          "type": "String"
++        }
++      }
++    }
+ }
+diff --git a/mobile/lib/l10n/app_localizations.dart b/mobile/lib/l10n/app_localizations.dart
+index a7c1f54e..a7b06af6 100644
+--- a/mobile/lib/l10n/app_localizations.dart
++++ b/mobile/lib/l10n/app_localizations.dart
+@@ -67416,6 +67416,12 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'星图服务正忙，暂时加载不了。你的数据没有丢，稍后再试一次。'**
+   String get galaxyErrorHumanService;
++
++  /// No description provided for @galaxyWorkViewNextTouch.
++  ///
++  /// In zh, this message translates to:
++  /// **'下一个建议碰：{name}'**
++  String galaxyWorkViewNextTouch(String name);
+ }
+ 
+ class _AppLocalizationsDelegate
+diff --git a/mobile/lib/l10n/app_localizations_en.dart b/mobile/lib/l10n/app_localizations_en.dart
+index cbe4fbd4..0a349dca 100644
+--- a/mobile/lib/l10n/app_localizations_en.dart
++++ b/mobile/lib/l10n/app_localizations_en.dart
+@@ -38741,4 +38741,9 @@ class AppLocalizationsEn extends AppLocalizations {
+   @override
+   String get galaxyErrorHumanService =>
+       'The star map service is busy right now. Your data is safe — try again in a moment.';
++
++  @override
++  String galaxyWorkViewNextTouch(String name) {
++    return 'Next up: $name';
++  }
+ }
+diff --git a/mobile/lib/l10n/app_localizations_zh.dart b/mobile/lib/l10n/app_localizations_zh.dart
+index d52784bc..5e2b1b82 100644
+--- a/mobile/lib/l10n/app_localizations_zh.dart
++++ b/mobile/lib/l10n/app_localizations_zh.dart
+@@ -37135,4 +37135,9 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String get galaxyErrorHumanService => '星图服务正忙，暂时加载不了。你的数据没有丢，稍后再试一次。';
++
++  @override
++  String galaxyWorkViewNextTouch(String name) {
++    return '下一个建议碰：$name';
++  }
+ }
+diff --git a/mobile/lib/l10n/app_zh.arb b/mobile/lib/l10n/app_zh.arb
+index b8ac7557..415c653d 100755
+--- a/mobile/lib/l10n/app_zh.arb
++++ b/mobile/lib/l10n/app_zh.arb
+@@ -17308,5 +17308,13 @@
+     "galaxyErrorHumanNetwork": "网络好像不太顺畅，星图暂时加载不了。你的数据没有丢，稍后再试一次。",
+     "@galaxyErrorHumanNetwork": {},
+     "galaxyErrorHumanService": "星图服务正忙，暂时加载不了。你的数据没有丢，稍后再试一次。",
+-    "@galaxyErrorHumanService": {}
++    "@galaxyErrorHumanService": {},
++    "galaxyWorkViewNextTouch": "下一个建议碰：{name}",
++    "@galaxyWorkViewNextTouch": {
++      "placeholders": {
++        "name": {
++          "type": "String"
++        }
++      }
++    }
+ }
+diff --git a/mobile/test/features/galaxy/widget/galaxy_work_view_test.dart b/mobile/test/features/galaxy/widget/galaxy_work_view_test.dart
+new file mode 100644
+index 00000000..32153286
+--- /dev/null
++++ b/mobile/test/features/galaxy/widget/galaxy_work_view_test.dart
+@@ -0,0 +1,455 @@
++import 'package:flutter/material.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:go_router/go_router.dart';
++import 'package:shared_preferences/shared_preferences.dart';
++import 'package:sparkle/core/design/design_system.dart';
++import 'package:sparkle/core/services/view_storage_service.dart';
++import 'package:sparkle/features/galaxy/galaxy.dart';
++import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart';
++import 'package:sparkle/l10n/app_localizations.dart';
++import 'package:sparkle/l10n/app_localizations_zh.dart';
++import '../../../shared/i18n_test_helper.dart';
++
++/// SPEC-J（A-SPEC-V1_1 top10 #10）：galaxy 工作视图最小切片验收。
++///
++/// 验收条款（REPORT.md §5 #10）：
++/// 1. 进图默认视野节点 ≤20；
++/// 2. 推荐 chip（「下一个建议碰：X」）同屏 ≤1；
++/// 3. chip 点击直达复习流（既有 /chat 路由 + reviewUrgencyReason 理由链）；
++/// 4. 无推荐目标用户诚实降级——不挂 chip，不造默认值。
++void main() {
++  setUp(setUpI18nForTesting);
++
++  group('SPEC-J galaxy work view', () {
++    setUp(() async {
++      SharedPreferences.setMockInitialValues({});
++      await ViewStorageService.ensureInitialized();
++    });
++
++    final zh = AppLocalizationsZh();
++
++    testWidgets(
++      'recommended node shows exactly one "next touch" chip with its name '
++      '(SPEC-J 验收 2：chip 同屏 ≤1)',
++      (tester) async {
++        final nodes = _gridNodes(count: 12, columns: 4);
++        nodes[5] = _withReviewSignal(nodes[5], score: 7.5);
++        final container = await _pumpGalaxy(tester, nodes, const []);
++
++        await _pumpUntilWorkViewSettled(tester, anchorId: nodes[5].id);
++
++        expect(
++          find.byKey(const ValueKey('galaxy_work_view_chip')),
++          findsOneWidget,
++        );
++        // ≤1 名额铁律：全屏恰好一份推荐文案承载。
++        expect(find.textContaining('下一个建议碰'), findsOneWidget);
++        expect(
++          find.text(zh.galaxyWorkViewNextTouch(nodes[5].name)),
++          findsOneWidget,
++        );
++        container.dispose();
++      },
++    );
++
++    testWidgets(
++      'chip tap goes straight into review flow via /chat with reason-chain '
++      'params (SPEC-J 验收 3：点击直达复习流)',
++      (tester) async {
++        Uri? capturedUri;
++        final nodes = _gridNodes(count: 12, columns: 4);
++        // recent_errors → 既有理由链映射 error_diagnosis 模式。
++        nodes[5] = _withReviewSignal(
++          nodes[5],
++          score: 7.5,
++          reason: 'recent_errors',
++        );
++
++        final router = GoRouter(
++          initialLocation: '/galaxy',
++          routes: [
++            GoRoute(
++              path: '/galaxy',
++              builder: (context, state) => const Scaffold(
++                body: GalaxyScreen(),
++              ),
++            ),
++            GoRoute(
++              path: '/chat',
++              redirect: (context, state) {
++                capturedUri = state.uri;
++                return '/chat-stub';
++              },
++            ),
++            GoRoute(
++              path: '/chat-stub',
++              builder: (context, state) =>
++                  const Scaffold(body: Text('chat-stub')),
++            ),
++          ],
++        );
++        addTearDown(router.dispose);
++
++        final container = ProviderContainer(
++          overrides: [
++            galaxyProvider.overrideWith(
++              (ref) => _LoadedGalaxyNotifier(nodes, const []),
++            ),
++          ],
++        );
++        addTearDown(container.dispose);
++
++        await tester.pumpWidget(
++          UncontrolledProviderScope(
++            container: container,
++            child: MaterialApp.router(
++              theme: AppThemes.lightTheme,
++              locale: const Locale('zh'),
++              localizationsDelegates: AppLocalizations.localizationsDelegates,
++              supportedLocales: AppLocalizations.supportedLocales,
++              routerConfig: router,
++            ),
++          ),
++        );
++
++        await _pumpUntilWorkViewSettled(tester, anchorId: nodes[5].id);
++
++        await tester.tap(
++          find.byKey(const ValueKey('galaxy_work_view_chip')),
++        );
++        await tester.pump();
++        await tester.pump(const Duration(milliseconds: 300));
++
++        expect(capturedUri, isNotNull);
++        expect(capturedUri!.path, '/chat');
++        expect(capturedUri!.queryParameters['target_node_id'], nodes[5].id);
++        // 既有理由链：recent_errors → error_diagnosis 模式 + 个性化 prompt。
++        expect(capturedUri!.queryParameters['chat_mode'], 'error_diagnosis');
++        expect(capturedUri!.queryParameters['prompt'], contains('Node 5'));
++      },
++    );
++
++    testWidgets(
++      'default entry view frames anchor neighborhood with at most 20 visible '
++      'nodes (SPEC-J 验收 1：进图默认视野节点 ≤20)',
++      (tester) async {
++        const total = 40;
++        final nodes = _gridNodes(count: total, columns: 8, spacing: 110);
++        nodes[22] = _withReviewSignal(nodes[22], score: 5);
++        final container = await _pumpGalaxy(tester, nodes, const []);
++
++        await _pumpUntilWorkViewSettled(tester, anchorId: nodes[22].id);
++
++        final painter = _starMapPainter(tester);
++        final viewport = painter.camera.viewportSize;
++        const margin = 48.0;
++        var visible = 0;
++        for (final position in painter.positions.values) {
++          final screen = painter.camera.worldToScreen(position);
++          if (screen.dx >= -margin &&
++              screen.dx <= viewport.width + margin &&
++              screen.dy >= -margin &&
++              screen.dy <= viewport.height + margin) {
++            visible++;
++          }
++        }
++        expect(visible, lessThanOrEqualTo(20));
++        // 聚焦的是推荐锚点且邻域高亮生效（复用 spotlight 地基）。
++        expect(painter.spotlightAnchorId, nodes[22].id);
++        expect(painter.spotlightNodeIds, contains(nodes[22].id));
++        // 聚焦态下推荐 chip 在屏（唯一承载）。
++        expect(
++          find.byKey(const ValueKey('galaxy_work_view_chip')),
++          findsOneWidget,
++        );
++        container.dispose();
++      },
++    );
++
++    testWidgets(
++      'no recommendation → honest degradation: no chip, no fake spotlight '
++      '(SPEC-J 验收 4：无目标诚实降级)',
++      (tester) async {
++        final nodes = _gridNodes(count: 12, columns: 4);
++        final container = await _pumpGalaxy(tester, nodes, const []);
++
++        await _pumpUntilWorkViewSettled(tester, anchorId: null);
++
++        expect(
++          find.byKey(const ValueKey('galaxy_work_view_chip')),
++          findsNothing,
++        );
++        expect(find.textContaining('下一个建议碰'), findsNothing);
++        // 不造默认值：无推荐时不伪挂聚焦。
++        final painter = _starMapPainter(tester);
++        expect(painter.spotlightAnchorId, isNull);
++        container.dispose();
++      },
++    );
++  });
++}
++
++Future<ProviderContainer> _pumpGalaxy(
++  WidgetTester tester,
++  List<GalaxyNodeModel> nodes,
++  List<GalaxyEdgeModel> edges,
++) async {
++  final container = ProviderContainer(
++    overrides: [
++      galaxyProvider.overrideWith((ref) => _LoadedGalaxyNotifier(nodes, edges)),
++    ],
++  );
++  await tester.pumpWidget(
++    UncontrolledProviderScope(
++      container: container,
++      child: MaterialApp(
++        theme: AppThemes.lightTheme,
++        // 断言走中文文案，显式锁 zh（test 默认 en_US）。
++        locale: const Locale('zh'),
++        localizationsDelegates: AppLocalizations.localizationsDelegates,
++        supportedLocales: AppLocalizations.supportedLocales,
++        home: const Scaffold(body: GalaxyScreen()),
++      ),
++    ),
++  );
++  return container;
++}
++
++/// 等入场编排（构建回放/相机动画/布局收敛）与工作视野聚焦全部落地：
++/// 连续 3 拍 painter 的位置与相机无变化且回放结束；带锚点时还要求
++/// spotlight 已挂到锚点（聚焦动画完成）。
++Future<void> _pumpUntilWorkViewSettled(
++  WidgetTester tester, {
++  required String? anchorId,
++  int maxIterations = 90,
++}) async {
++  var stableRuns = 0;
++  var previousPositions = <String, Offset>{};
++  var previousScale = double.nan;
++  var previousOffset = const Offset(double.nan, double.nan);
++  for (var i = 0; i < maxIterations; i++) {
++    await tester.pump(const Duration(milliseconds: 500));
++    final painter = _starMapPainter(tester);
++    final camera = painter.camera;
++    final positionsStable =
++        _samePositions(painter.positions, previousPositions);
++    final cameraStable =
++        camera.scale == previousScale && camera.offset == previousOffset;
++    if (!painter.isBuildAnimating && positionsStable && cameraStable) {
++      stableRuns++;
++      if (stableRuns >= 3 &&
++          (anchorId == null || painter.spotlightNodeIds.contains(anchorId))) {
++        return;
++      }
++    } else {
++      stableRuns = 0;
++    }
++    previousPositions = painter.positions;
++    previousScale = camera.scale;
++    previousOffset = camera.offset;
++  }
++  // 不 fail 在此——由调用方按验收条款断言实际终态。
++}
++
++StarMapPainter _starMapPainter(WidgetTester tester) {
++  final matches = tester.widgetList<CustomPaint>(
++    find.byWidgetPredicate(
++      (widget) => widget is CustomPaint && widget.painter is StarMapPainter,
++    ),
++  );
++  expect(matches, isNotEmpty, reason: 'StarMapPainter 应已上树');
++  return matches.first.painter! as StarMapPainter;
++}
++
++bool _samePositions(
++  Map<String, Offset> a,
++  Map<String, Offset> b,
++) {
++  if (a.length != b.length) {
++    return false;
++  }
++  for (final entry in a.entries) {
++    if (b[entry.key] != entry.value) {
++      return false;
++    }
++  }
++  return true;
++}
++
++/// 网格布点（带 position_x/y 稳定位），模拟真实图密度。
++List<GalaxyNodeModel> _gridNodes({
++  required int count,
++  required int columns,
++  double spacing = 100,
++}) =>
++    List<GalaxyNodeModel>.generate(count, (index) {
++      final row = index ~/ columns;
++      final column = index % columns;
++      return GalaxyNodeModel.fromJson({
++        'id': 'node_$index',
++        'name': 'Node $index',
++        'importance': (index % 5) + 1,
++        'sector_code': 'TECH',
++        'is_unlocked': true,
++        'mastery_score': (index * 7) % 100,
++        'position_x': column * spacing,
++        'position_y': row * spacing,
++      });
++    });
++
++/// 挂上服务端既有推荐信号（is_review_recommended / review_urgency_score /
++/// review_urgency_reason——与预览卡推荐理由链同一数据源）。
++GalaxyNodeModel _withReviewSignal(
++  GalaxyNodeModel node, {
++  required double score,
++  String reason = 'decay_risk',
++}) {
++  final refreshed = GalaxyNodeModel.fromJson({
++    'id': node.id,
++    'name': node.name,
++    'importance': node.importance,
++    'sector_code': node.sector.name,
++    'is_unlocked': node.isUnlocked,
++    'mastery_score': node.masteryScore,
++    'position_x': node.positionX,
++    'position_y': node.positionY,
++    'is_review_recommended': true,
++    'review_urgency_score': score,
++    'review_urgency_reason': reason,
++  });
++  return refreshed;
++}
++
++class _LoadedGalaxyNotifier extends _MockGalaxyNotifier {
++  _LoadedGalaxyNotifier(
++    List<GalaxyNodeModel> nodes,
++    List<GalaxyEdgeModel> edges,
++  ) : super(_initialState(nodes, edges));
++
++  static GalaxyState _initialState(
++    List<GalaxyNodeModel> nodes,
++    List<GalaxyEdgeModel> edges,
++  ) =>
++      GalaxyState(
++        nodes: nodes,
++        edges: edges,
++        nodePositions: <String, Offset>{
++          for (final node in nodes)
++            if (node.positionX != null && node.positionY != null)
++              node.id: Offset(node.positionX!, node.positionY!),
++        },
++        visibleNodes: nodes,
++        visibleEdges: edges,
++        userFlameIntensity: 0.4,
++      );
++
++  @override
++  Future<void> loadGalaxy({
++    bool forceRefresh = false,
++    bool showLoading = true,
++  }) async {
++    // 数据已在：刷新不改变图，只走 loading 翻转（对齐既有 mock 约定）。
++    state = state.copyWith(isLoading: true);
++    await Future<void>.delayed(const Duration(milliseconds: 10));
++    state = state.copyWith(isLoading: false);
++  }
++}
++
++class _MockGalaxyNotifier extends StateNotifier<GalaxyState>
++    implements GalaxyNotifier {
++  _MockGalaxyNotifier(super.state);
++
++  @override
++  void selectNode(String nodeId) {
++    state = state.copyWith(
++      selectedNodeId: nodeId,
++      expandedEdgeNodeIds: {nodeId},
++    );
++  }
++
++  @override
++  void deselectNode() {
++    // 本卡用例不依赖取消选中的语义（与 galaxy_screen_test mock 同位）。
++  }
++
++  @override
++  void updateScale(double scale) {
++    state = state.copyWith(currentScale: scale);
++  }
++
++  @override
++  void updateViewport(Rect viewport) {
++    state = state.copyWith(viewport: viewport);
++  }
++
++  @override
++  Stream<MasteryMilestoneEvent> get masteryMilestones => const Stream.empty();
++
++  @override
++  Future<void> loadGalaxy({
++    bool forceRefresh = false,
++    bool showLoading = true,
++  }) async {}
++
++  @override
++  Future<GalaxyError?> sparkNode(String id) async => null;
++
++  @override
++  Future<String?> predictNextNode() async => null;
++
++  @override
++  Future<List<GalaxySearchResult>> searchNodes(String query) async => [];
++
++  @override
++  Future<void> refreshForTaskCompletion({
++    Map<String, dynamic>? galaxyUpdate,
++  }) async {}
++
++  @override
++  void beginNodeDrag(String nodeId) {
++    state = state.copyWith(draggingNodeId: nodeId);
++  }
++
++  @override
++  void updateDraggedNodePosition(String nodeId, Offset newPosition) {
++    final positions = Map<String, Offset>.from(state.nodePositions)
++      ..[nodeId] = newPosition;
++    state = state.copyWith(nodePositions: positions);
++  }
++
++  @override
++  Future<void> endNodeDrag() async {
++    state = state.copyWith(draggingNodeId: null);
++  }
++
++  @override
++  void setEvidenceHighlight(Set<String> ids, {String? focusId}) {
++    state = state.copyWith(
++      highlightedNodeIdHashes: ids.map((e) => e.hashCode).toSet(),
++    );
++  }
++
++  @override
++  void clearFocusBounds() {
++    state = state.copyWith(focusBounds: null);
++  }
++
++  @override
++  void clearFocusNode() {
++    state = state.copyWith(focusNodeId: null);
++  }
++
++  @override
++  void clearEvidenceHighlight() {
++    state = state.copyWith(
++      highlightedNodeIdHashes: const {},
++      highlightRevision: state.highlightRevision + 1,
++    );
++  }
++
++  @override
++  void setFocusNode(String nodeId) {
++    state = state.copyWith(focusNodeId: nodeId);
++  }
++}
