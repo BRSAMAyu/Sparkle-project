@@ -266,7 +266,7 @@ def main():
     except KeyboardInterrupt:
         logger.info("Server interrupted by user")
     except Exception as e:
-        logger.error(f"Server error: {e}", exc_info=True)
+        logger.opt(exception=True).error(f"Server error: {e}")
         raise
 
 

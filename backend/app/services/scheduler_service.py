@@ -158,7 +158,7 @@ class SchedulerService:
                     await self._send_review_reminders(db)
 
         except Exception as e:
-            logger.error(f"Error in daily decay job: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Error in daily decay job: {e}")
 
     async def mining_implicit_behaviors_job(self):
         """
@@ -181,7 +181,7 @@ class SchedulerService:
                 logger.info(f"Implicit mining completed: {total_fragments} fragments generated across {len(users)} users.")
 
         except Exception as e:
-            logger.error(f"Error in implicit mining job: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Error in implicit mining job: {e}")
 
     async def run_event_retention_cleanup(self):
         """
@@ -197,7 +197,7 @@ class SchedulerService:
                     f"Event retention cleanup completed: events={events_pruned}, states={states_pruned}"
                 )
         except Exception as e:
-            logger.error(f"Error in event retention cleanup: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Error in event retention cleanup: {e}")
 
     async def run_offline_queue_cleanup(self):
         """清理过期离线消息，避免队列无限增长。"""
@@ -208,7 +208,7 @@ class SchedulerService:
                 await db.commit()
                 logger.info(f"Offline queue cleanup completed: expired={expired_count}")
         except Exception as e:
-            logger.error(f"Error in offline queue cleanup: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Error in offline queue cleanup: {e}")
 
     async def run_nightly_review(self):
         """
@@ -223,7 +223,7 @@ class SchedulerService:
                 for user in users:
                     await service.generate_for_user(user.id, user.timezone)
         except Exception as e:
-            logger.error(f"Error in nightly review job: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Error in nightly review job: {e}")
 
     async def run_execution_schedule_tick(self):
         logger.info("Starting execution schedule tick...")
@@ -239,7 +239,7 @@ class SchedulerService:
                     result["dispatched_count"],
                 )
         except Exception as e:
-            logger.error(f"Error in execution schedule tick: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Error in execution schedule tick: {e}")
 
     async def run_memory_evidence_health_job(self):
         if not settings.ENABLE_MEMORY_JOBS:
@@ -250,7 +250,7 @@ class SchedulerService:
                 service = MemoryJobsService(db)
                 await service.run_evidence_health_job(limit_per_type=200)
         except Exception as e:
-            logger.error(f"Error in memory evidence health job: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Error in memory evidence health job: {e}")
 
     async def run_memory_decay_job(self):
         if not settings.ENABLE_MEMORY_JOBS:
@@ -261,7 +261,7 @@ class SchedulerService:
                 service = MemoryJobsService(db)
                 await service.run_decay_job(window_days=14)
         except Exception as e:
-            logger.error(f"Error in memory decay job: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Error in memory decay job: {e}")
 
     async def run_memory_repair_job(self):
         if not settings.ENABLE_MEMORY_JOBS:
@@ -272,7 +272,7 @@ class SchedulerService:
                 service = MemoryJobsService(db)
                 await service.run_repair_job(limit=200)
         except Exception as e:
-            logger.error(f"Error in memory repair job: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Error in memory repair job: {e}")
 
     async def run_memory_daily_summary_job(self):
         if not settings.ENABLE_MEMORY_DAILY_SUMMARY:
@@ -283,7 +283,7 @@ class SchedulerService:
                 service = MemoryJobsService(db)
                 await service.run_daily_summary_job()
         except Exception as e:
-            logger.error(f"Error in memory daily summary job: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Error in memory daily summary job: {e}")
 
     async def _send_review_reminders(self, db):
         """
@@ -316,7 +316,7 @@ class SchedulerService:
                     logger.info(f"Sent review reminder to user {user.username}")
 
         except Exception as e:
-            logger.error(f"Error sending review reminders: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Error sending review reminders: {e}")
 
     async def apply_inferred_preference_decay(self):
         """
@@ -366,7 +366,7 @@ class SchedulerService:
                 )
 
         except Exception as e:
-            logger.error(f"Error in preference decay job: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Error in preference decay job: {e}")
 
     # ========== 胶囊生成任务 ==========
 
@@ -438,7 +438,7 @@ class SchedulerService:
                 )
 
         except Exception as e:
-            logger.error(f"Error in daily capsule generation: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Error in daily capsule generation: {e}")
 
     async def generate_weekly_deep_capsules(self):
         """
@@ -509,7 +509,7 @@ class SchedulerService:
                 )
 
         except Exception as e:
-            logger.error(f"Error in weekly deep capsule generation: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Error in weekly deep capsule generation: {e}")
 
     # ========== Outcome 验证任务 ==========
 
@@ -533,11 +533,11 @@ class SchedulerService:
                         resolved = await tracker.verify_pending(str(user.id))
                         total_resolved += len(resolved)
                     except Exception:
-                        logger.warning("Outcome verification failed for user {}", user.id, exc_info=True)
+                        logger.opt(exception=True).warning("Outcome verification failed for user {}", user.id)
 
             logger.info(f"Outcome verification completed: resolved={total_resolved} across {len(users)} users")
         except Exception as e:
-            logger.error(f"Error in outcome verification job: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Error in outcome verification job: {e}")
 
 
 scheduler_service = SchedulerService()

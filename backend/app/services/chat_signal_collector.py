@@ -232,7 +232,7 @@ class ChatSignalCollector:
 
                     await FusionEngine(str(user_id)).record_trace_loss(self.redis, user_id=str(user_id), error=str(exc))
                 except Exception:
-                    logger.debug("Failed to record ChatSignalCollector extraction error", exc_info=True)
+                    logger.opt(exception=True).debug("Failed to record ChatSignalCollector extraction error")
             return
         if not evidence_items:
             return
@@ -372,7 +372,7 @@ class ChatSignalCollector:
 
                 await FusionEngine(str(user_id)).record_trace_loss(self.redis, user_id=str(user_id), error=str(exc))
             except Exception:
-                logger.debug("Failed to record ChatSignalCollector belief shadow error", exc_info=True)
+                logger.opt(exception=True).debug("Failed to record ChatSignalCollector belief shadow error")
             return None
 
     async def _persist_inferred_updates(

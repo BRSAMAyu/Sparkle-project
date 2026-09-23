@@ -138,7 +138,7 @@ class SparkleSelfModelService:
                 task_id=claim_obj.claim_id,
             )
         except Exception:
-            logger.debug("Aurora self-model delegation failed (non-fatal)", exc_info=True)
+            logger.opt(exception=True).debug("Aurora self-model delegation failed (non-fatal)")
 
         logger.info(
             "SelfModel claim (→Aurora): user={} claim_id={} scope={} conf={:.2f}",
@@ -178,7 +178,7 @@ class SparkleSelfModelService:
                 task_id=directive_id,
             )
         except Exception:
-            logger.debug("Aurora outcome delegation failed (non-fatal)", exc_info=True)
+            logger.opt(exception=True).debug("Aurora outcome delegation failed (non-fatal)")
 
         logger.info(
             "SelfModel outcome (→Aurora): user={} claim={} effect={} suggestion={}",
@@ -192,7 +192,7 @@ class SparkleSelfModelService:
             aurora = self._get_aurora()
             readout = await aurora.get_readout_summary(user_id=user_id)
         except Exception:
-            logger.debug("Aurora readout failed, returning empty claims", exc_info=True)
+            logger.opt(exception=True).debug("Aurora readout failed, returning empty claims")
             return []
 
         claims: list[SelfModelClaim] = []
@@ -247,7 +247,7 @@ class SparkleSelfModelService:
                 source=source,
             )
         except Exception:
-            logger.debug("Aurora correction delegation failed (non-fatal)", exc_info=True)
+            logger.opt(exception=True).debug("Aurora correction delegation failed (non-fatal)")
 
         return await self.record_claim(
             user_id=user_id,

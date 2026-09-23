@@ -57,7 +57,7 @@ class ReplyOptionInjector:
             )
             return groups
         except Exception:
-            logger.debug("ReplyOptionInjector: generation failed", exc_info=True)
+            logger.opt(exception=True).debug("ReplyOptionInjector: generation failed")
             return []
 
     def generate_from_signal(self, signal: ActionableSignal) -> dict[str, Any] | None:
@@ -68,7 +68,7 @@ class ReplyOptionInjector:
                 return None
             return question.to_dict()
         except Exception:
-            logger.debug("ReplyOptionInjector: signal generation failed", exc_info=True)
+            logger.opt(exception=True).debug("ReplyOptionInjector: signal generation failed")
             return None
 
     def inject_into_metadata(

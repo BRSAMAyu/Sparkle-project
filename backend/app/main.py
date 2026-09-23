@@ -157,7 +157,7 @@ async def lifespan(fastapp: FastAPI):
     try:
         import app.models.pii_encryption_listeners  # noqa: F401 — side-effect import
     except Exception:
-        logger.warning("PII encryption listeners failed to activate", exc_info=True)
+        logger.opt(exception=True).warning("PII encryption listeners failed to activate")
 
     # Initialize Sentry crash reporting
     if settings.SENTRY_DSN:
@@ -397,7 +397,7 @@ async def lifespan(fastapp: FastAPI):
             episode_logger.attach_sink(redis_sink)
             logger.info("EpisodeLogger connected to RedisEpisodeSink — production persistence active")
         except Exception:
-            logger.warning("EpisodeLogger Redis sink wiring failed — falling back to in-memory", exc_info=True)
+            logger.opt(exception=True).warning("EpisodeLogger Redis sink wiring failed — falling back to in-memory")
 
     intervention_outcome_verifier_task = None
     if event_bus is not None and ENABLE_IN_PROCESS_INTERVENTION_OUTCOME_VERIFIER:

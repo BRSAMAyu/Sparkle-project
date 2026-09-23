@@ -101,6 +101,6 @@ async def get_return_case_file(
         try:
             await redis.set(user_key, json.dumps(case, default=str), ex=7 * 24 * 3600)
         except Exception:  # noqa: BLE001
-            logger.warning("growth: cache write failed for user_key={}", user_key, exc_info=True)
+            logger.opt(exception=True).warning("growth: cache write failed for user_key={}", user_key)
 
     return case

@@ -184,7 +184,7 @@ async def stream_learning_simulation(
             yield "event: error\n"
             _msg = "仿真过程出现错误，请稍后重试" if _zh(req) else "An error occurred during simulation. Please try again later."
             yield f"data: {json.dumps({'message': _msg}, ensure_ascii=False)}\n\n"
-            logger.error(f"Simulation stream error: {exc}", exc_info=True)
+            logger.opt(exception=True).error(f"Simulation stream error: {exc}")
 
     return StreamingResponse(
         event_generator(),
@@ -260,7 +260,7 @@ async def continue_learning_simulation_stream(
             yield "event: error\n"
             _msg = "仿真过程出现错误，请稍后重试" if _zh(req) else "An error occurred during simulation. Please try again later."
             yield f"data: {json.dumps({'message': _msg}, ensure_ascii=False)}\n\n"
-            logger.error(f"Simulation continue stream error: {exc}", exc_info=True)
+            logger.opt(exception=True).error(f"Simulation continue stream error: {exc}")
 
     return StreamingResponse(
         event_generator(),

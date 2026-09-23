@@ -396,7 +396,7 @@ class CorrectionFeedbackProcessor:
                 receipt=receipt,
             )
         except Exception:
-            logger.debug("CorrectionFeedback: recent correction receipt persist failed", exc_info=True)
+            logger.opt(exception=True).debug("CorrectionFeedback: recent correction receipt persist failed")
 
         if self.redis is None or not session_id:
             return
@@ -427,7 +427,7 @@ class CorrectionFeedbackProcessor:
                 source_lane="aurora_calibration_receipt",
             )
         except Exception:
-            logger.debug("CorrectionFeedback: working memory receipt write failed", exc_info=True)
+            logger.opt(exception=True).debug("CorrectionFeedback: working memory receipt write failed")
 
     def _build_user_visible_effect(
         self,
@@ -468,7 +468,7 @@ class CorrectionFeedbackProcessor:
                 is_freeform=is_freeform,
             )
         except Exception:
-            logger.debug("CorrectionFeedback: Bayesian policy update failed", exc_info=True)
+            logger.opt(exception=True).debug("CorrectionFeedback: Bayesian policy update failed")
 
     async def _process_disconfirmation(
         self,
@@ -501,10 +501,9 @@ class CorrectionFeedbackProcessor:
                     result.affected_state_keys.append(sk)
                     result.new_confidence[sk] = updated.confidence
             except Exception:
-                logger.debug(
+                logger.opt(exception=True).debug(
                     "CorrectionFeedback: state lower_confidence failed key={}",
                     sk,
-                    exc_info=True,
                 )
 
         # 2. Record in self_model
@@ -528,7 +527,7 @@ class CorrectionFeedbackProcessor:
             )
             result.self_model_updated = True
         except Exception:
-            logger.debug("CorrectionFeedback: self_model update failed", exc_info=True)
+            logger.opt(exception=True).debug("CorrectionFeedback: self_model update failed")
 
         # 3. Persist correction via AuroraSelfCorrector
         try:
@@ -550,7 +549,7 @@ class CorrectionFeedbackProcessor:
             result.correction_id = correction.correction_id
             result.correction_recorded = True
         except Exception:
-            logger.debug("CorrectionFeedback: correction persist failed", exc_info=True)
+            logger.opt(exception=True).debug("CorrectionFeedback: correction persist failed")
 
         # 4. Update routing profile so corrections change future routing behavior
         await self._update_routing_profile(user_id, semantic_value)
@@ -630,7 +629,7 @@ class CorrectionFeedbackProcessor:
                         recorded = True
                 result.routing_feedback_recorded = recorded
         except Exception:
-            logger.debug("CorrectionFeedback: route outcome backfill failed", exc_info=True)
+            logger.opt(exception=True).debug("CorrectionFeedback: route outcome backfill failed")
 
     async def _update_routing_profile(self, user_id: str, semantic_value: str) -> None:
         """Bridge correction → routing profile so disconfirmations change future routing."""
@@ -646,10 +645,9 @@ class CorrectionFeedbackProcessor:
                 svc = RoutingProfileService(session, self.redis)
                 await svc.record_session_outcome(UUID(user_id), **routing_kwargs)
         except Exception:
-            logger.debug(
+            logger.opt(exception=True).debug(
                 "CorrectionFeedback: routing profile update failed semantic={}",
                 semantic_value,
-                exc_info=True,
             )
 
     async def _process_confirmation(
@@ -676,10 +674,9 @@ class CorrectionFeedbackProcessor:
                 result.affected_state_keys.append(sk)
                 result.new_confidence[sk] = entry.confidence
             except Exception:
-                logger.debug(
+                logger.opt(exception=True).debug(
                     "CorrectionFeedback: confirmation boost failed key={}",
                     sk,
-                    exc_info=True,
                 )
 
         logger.debug(

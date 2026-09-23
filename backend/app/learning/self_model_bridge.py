@@ -50,7 +50,7 @@ class SelfModelBridge:
             )
             result["spine"] = claim.claim_id
         except Exception:
-            logger.debug("SelfModelBridge: spine write failed for user={}", user_id, exc_info=True)
+            logger.opt(exception=True).debug("SelfModelBridge: spine write failed for user={}", user_id)
 
         # ── Aurora SelfModel: record task outcome ──
         try:
@@ -67,7 +67,7 @@ class SelfModelBridge:
             )
             result["aurora"] = True
         except Exception:
-            logger.debug("SelfModelBridge: aurora write failed for user={}", user_id, exc_info=True)
+            logger.opt(exception=True).debug("SelfModelBridge: aurora write failed for user={}", user_id)
 
         return result
 
@@ -80,7 +80,7 @@ class SelfModelBridge:
             aurora_conf = summary.get("strategy_confidence")
         except Exception:
             aurora_conf = None
-            logger.debug("SelfModelBridge: aurora read failed for user={}", user_id, exc_info=True)
+            logger.opt(exception=True).debug("SelfModelBridge: aurora read failed for user={}", user_id)
 
         try:
             from app.signals.self_model import SparkleSelfModelService as SpineSM
@@ -92,7 +92,7 @@ class SelfModelBridge:
             )
         except Exception:
             spine_conf = None
-            logger.debug("SelfModelBridge: spine read failed for user={}", user_id, exc_info=True)
+            logger.opt(exception=True).debug("SelfModelBridge: spine read failed for user={}", user_id)
 
         # Return the higher-confidence value, preferring Aurora
         if aurora_conf is not None:
@@ -117,7 +117,7 @@ class SelfModelBridge:
                 source=source,
             )
         except Exception:
-            logger.debug("SelfModelBridge: correction spine write failed", exc_info=True)
+            logger.opt(exception=True).debug("SelfModelBridge: correction spine write failed")
 
         try:
             from app.aurora.runtime_v1.self_model import SparkleSelfModelService as AuroraSM
@@ -128,4 +128,4 @@ class SelfModelBridge:
                 source=source,
             )
         except Exception:
-            logger.debug("SelfModelBridge: correction aurora write failed", exc_info=True)
+            logger.opt(exception=True).debug("SelfModelBridge: correction aurora write failed")

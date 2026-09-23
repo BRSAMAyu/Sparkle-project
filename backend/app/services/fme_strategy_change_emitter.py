@@ -72,4 +72,4 @@ async def emit_strategy_change_card(
             user_id, old_strategy, new_strategy,
         )
     except Exception:
-        logger.debug("Strategy change card emit skipped", exc_info=True)
+        logger.opt(exception=True).debug("Strategy change card emit skipped")

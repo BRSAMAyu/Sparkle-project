@@ -201,7 +201,7 @@ class AchievementEngine:
                 await pipe.expire(key, 3600)
                 await pipe.execute()
         except Exception:
-            logger.debug("Failed to cache recent achievement event for user={}", user_id, exc_info=True)
+            logger.opt(exception=True).debug("Failed to cache recent achievement event for user={}", user_id)
 
     def _enqueue_after_commit(self, callback: Callable[[], Awaitable[None]]) -> None:
         callbacks = self.db.sync_session.info.setdefault(_AFTER_COMMIT_TASKS_KEY, [])
@@ -323,7 +323,7 @@ class AchievementEngine:
                 achievements = result.scalars().all()
                 logger.info("Auto-seeded {} achievement definitions on first query", len(achievements))
             except Exception:
-                logger.warning("Auto-seed of achievement definitions failed", exc_info=True)
+                logger.opt(exception=True).warning("Auto-seed of achievement definitions failed")
 
         async with self._cache_lock:
             self._achievement_cache = {a.id: a for a in achievements}
@@ -2134,10 +2134,9 @@ class AchievementEngine:
                     streak_days=quality_streak,
                 )
         except Exception:
-            logger.debug(
+            logger.opt(exception=True).debug(
                 "Quality streak calculation skipped for user={}",
                 user_id,
-                exc_info=True,
             )
             # Fallback: use raw streak counter when quality calculation fails
             if stats.current_streak in [7, 14, 30, 60, 100, 365]:

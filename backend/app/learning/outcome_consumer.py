@@ -83,9 +83,9 @@ class OutcomeConsumingService:
                     satisfaction=confidence,
                 )
             except Exception:
-                logger.debug(
+                logger.opt(exception=True).debug(
                     "OutcomeConsumingService: record_application failed for strategy={}",
-                    result.strategy.id, exc_info=True,
+                    result.strategy.id,
                 )
 
         # Synchronize outcome to both self-models via the bridge
@@ -100,9 +100,9 @@ class OutcomeConsumingService:
                 actual_outcome=actual_outcome,
             )
         except Exception:
-            logger.debug(
+            logger.opt(exception=True).debug(
                 "OutcomeConsumingService: self_model bridge sync failed for user={}",
-                user_id, exc_info=True,
+                user_id,
             )
 
         return {
@@ -163,7 +163,7 @@ class OutcomeConsumingService:
                 policy_effects=[intervention],
             )
         except Exception:
-            logger.debug("OutcomeConsumingService: _feed_self_model failed", exc_info=True)
+            logger.opt(exception=True).debug("OutcomeConsumingService: _feed_self_model failed")
 
     async def _record_policy_downgrade(
         self,
@@ -187,7 +187,7 @@ class OutcomeConsumingService:
             )
             await self.redis.ltrim(f"spine:policy_downgrades:{user_id}", 0, 49)
         except Exception:
-            logger.debug("OutcomeConsumingService: downgrade record failed", exc_info=True)
+            logger.opt(exception=True).debug("OutcomeConsumingService: downgrade record failed")
 
     async def get_distilled_strategies_for_user(
         self,

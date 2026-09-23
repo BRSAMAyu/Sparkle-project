@@ -1483,8 +1483,8 @@ async def daily_checkin(
         await accountability_achievement_service.check_streak_achievements(db, current_user.id, partnership_id)
         await accountability_achievement_service.check_partnership_achievements(db, current_user.id, partnership_id)
     except Exception as e:
-        logger.error(
-            f"Failed to check achievements for user {current_user.id}, partnership {partnership_id}: {e}", exc_info=True
+        logger.opt(exception=True).error(
+            f"Failed to check achievements for user {current_user.id}, partnership {partnership_id}: {e}"
         )
 
     await _publish_accountability_signal_update(

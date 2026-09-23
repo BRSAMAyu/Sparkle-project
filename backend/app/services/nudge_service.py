@@ -66,7 +66,7 @@ class NudgeService:
             if directive and directive.channel in ("push", "in_app", "silent"):
                 return directive.channel
         except Exception:
-            logger.debug("Spine channel resolution failed, defaulting to push", exc_info=True)
+            logger.opt(exception=True).debug("Spine channel resolution failed, defaulting to push")
         return "push"
 
     async def _create_in_app_notification(
@@ -117,7 +117,7 @@ class NudgeService:
                     spine = get_spine_orchestrator(cache_service.redis)
                     spine_directive = await spine.get_notification_directive(user_id)
             except Exception:
-                logger.debug("Spine directive fetch for push failed (non-fatal)", exc_info=True)
+                logger.opt(exception=True).debug("Spine directive fetch for push failed (non-fatal)")
 
             if spine_directive:
                 content_dict = {
@@ -158,4 +158,4 @@ class NudgeService:
                     policy=policy,
                 )
         except Exception:
-            logger.error("Failed to send push notification for nudge", exc_info=True)
+            logger.opt(exception=True).error("Failed to send push notification for nudge")

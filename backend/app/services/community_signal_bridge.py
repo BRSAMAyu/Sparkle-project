@@ -411,7 +411,7 @@ class CommunitySignalBridge:
                 return True
             return bool(settings_row.community_intelligence_enabled)
         except Exception:
-            logger.warning("community_intelligence_enabled check failed for {}", user_id, exc_info=True)
+            logger.opt(exception=True).warning("community_intelligence_enabled check failed for {}", user_id)
             return False
 
     async def _filter_opted_in_values(self, contributor_values: list[float | int | dict]) -> list[float]:

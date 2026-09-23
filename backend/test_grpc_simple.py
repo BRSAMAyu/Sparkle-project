@@ -111,7 +111,7 @@ async def test_demo_mode():
             logger.error(f"❌ gRPC error: {e.code()} - {e.details()}")
             return False
         except Exception as e:
-            logger.error(f"❌ Unexpected error: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"❌ Unexpected error: {e}")
             return False
 
 

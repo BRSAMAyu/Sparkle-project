@@ -204,7 +204,7 @@ class BudgetCircuitBreaker:
         try:
             raw = await redis.get(key)
         except Exception:
-            logger.debug("cost_controller: failed to read daily spend", exc_info=True)
+            logger.opt(exception=True).debug("cost_controller: failed to read daily spend")
             if self._fallback_enabled():
                 self._enter_degraded(category)
                 return self._local_total(category)
@@ -238,7 +238,7 @@ class BudgetCircuitBreaker:
             await redis.incrbyfloat(key, amount_usd)
             await redis.expire(key, 48 * 3600)
         except Exception:
-            logger.debug("cost_controller: failed to record spend", exc_info=True)
+            logger.opt(exception=True).debug("cost_controller: failed to record spend")
             if self._fallback_enabled():
                 self._enter_degraded(category)
                 self._local_spend[category] = self._local_total(category) + float(amount_usd)
@@ -264,7 +264,7 @@ class BudgetCircuitBreaker:
             results = await pipe.execute()
         except Exception:
             # 支率窗口失败不影响预算闸门（已记上的支出不受影响）
-            logger.debug("cost_controller: failed to update spend rate window", exc_info=True)
+            logger.opt(exception=True).debug("cost_controller: failed to update spend rate window")
             return
         window_total = sum(float(s) for _, s in results[2]) if results[2] else amount_usd
         hourly_rate = (window_total / self._SPEND_WINDOW) * 3600.0

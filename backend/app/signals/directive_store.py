@@ -58,7 +58,7 @@ class DirectiveStore:
         try:
             await self.redis.publish(channel, json.dumps(payload))
         except Exception:
-            logger.debug("directive pub/sub failed on channel={}", channel, exc_info=True)
+            logger.opt(exception=True).debug("directive pub/sub failed on channel={}", channel)
 
     # ── Per-type convenience methods ─────────────────────────────────────
 
@@ -85,7 +85,7 @@ class DirectiveStore:
                 "user_visible_reason": nd.user_visible_reason,
             })
         except Exception:
-            logger.debug("notification_directive event publish failed", exc_info=True)
+            logger.opt(exception=True).debug("notification_directive event publish failed")
 
     async def get_notification(self, user_id: str) -> NotificationDirective | None:
         return await self.retrieve(user_id, "notification", NotificationDirective)
@@ -120,7 +120,7 @@ class DirectiveStore:
                 }),
             )
         except Exception:
-            logger.debug("plan_directive pub/sub publish failed for user={}", user_id, exc_info=True)
+            logger.opt(exception=True).debug("plan_directive pub/sub publish failed for user={}", user_id)
 
     async def get_plan(self, user_id: str) -> PlanDirective | None:
         return await self.retrieve(user_id, "plan", PlanDirective)
@@ -143,7 +143,7 @@ class DirectiveStore:
                 return [json.loads(raw)] if raw else []
             return []
         except Exception:
-            logger.warning("get_model_claims: failed", exc_info=True)
+            logger.opt(exception=True).warning("get_model_claims: failed")
             return []
 
     # UXDirective

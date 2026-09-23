@@ -3161,7 +3161,7 @@ async def collaboration_node(state: WorkflowState) -> WorkflowState:
             state.next_step = "collaboration_post_process"
             return state
         except Exception as e:
-            logger.error(f"Explicit expert collaboration failed: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Explicit expert collaboration failed: {e}")
             state.context_data["collaboration_error"] = str(e)
             state.next_step = "tool_planning"
             return state
@@ -3275,7 +3275,7 @@ async def collaboration_node(state: WorkflowState) -> WorkflowState:
         state.next_step = "collaboration_post_process"
 
     except Exception as e:
-        logger.error(f"Collaboration workflow failed: {e}", exc_info=True)
+        logger.opt(exception=True).error(f"Collaboration workflow failed: {e}")
         # Fallback to standard workflow
         state.context_data["collaboration_error"] = str(e)
         state.next_step = "tool_planning"

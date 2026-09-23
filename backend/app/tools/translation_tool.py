@@ -263,7 +263,7 @@ class TranslateTextTool(BaseTool):
             )
 
         except Exception as e:
-            logger.error(f"Translation error: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Translation error: {e}")
             return ToolResult(
                 success=False,
                 tool_name=self.name,

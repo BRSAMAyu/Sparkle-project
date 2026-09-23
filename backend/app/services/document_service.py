@@ -1239,7 +1239,7 @@ class DocumentService:
                 return result
 
         except Exception as e:
-            logger.error(f"Document cleaning failed: {e}", exc_info=True)
+            logger.opt(exception=True).error(f"Document cleaning failed: {e}")
             await self.update_progress(task_id, f"Error: {str(e)}", 100, {"error": str(e)})
             return {"status": "error", "error": str(e)}
 

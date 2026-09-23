@@ -521,7 +521,7 @@ async def toggle_like_post(
                 data={"post_id": str(post_id), "liker_id": str(current_user.id)},
             )
         except Exception:
-            logger.debug("Failed to push like notification for post={}", post_id, exc_info=True)
+            logger.opt(exception=True).debug("Failed to push like notification for post={}", post_id)
 
     return {"liked": liked, "like_count": post.like_count}
 
@@ -610,8 +610,8 @@ async def create_post_comment(
                 data={"post_id": str(post_id), "comment_id": str(comment.id)},
             )
         except Exception:
-            logger.debug(
-                "Failed to push comment notification for post={}", post_id, exc_info=True
+            logger.opt(exception=True).debug(
+                "Failed to push comment notification for post={}", post_id
             )
 
     return {

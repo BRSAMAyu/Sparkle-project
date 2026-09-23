@@ -93,7 +93,7 @@ class AuroraInputAssembler:
                         })
                 ctx.state_packet = {"top_states": top_states[:10]}
         except Exception:
-            logger.debug("AuroraInputAssembler: state fetch failed", exc_info=True)
+            logger.opt(exception=True).debug("AuroraInputAssembler: state fetch failed")
 
         # 2. Recent policy decisions
         try:
@@ -103,7 +103,7 @@ class AuroraInputAssembler:
                     raw_str = raw if isinstance(raw, str) else raw.decode()
                     ctx.recent_policy_decisions.append(json.loads(raw_str))
         except Exception:
-            logger.debug("AuroraInputAssembler: effects fetch failed", exc_info=True)
+            logger.opt(exception=True).debug("AuroraInputAssembler: effects fetch failed")
 
         # 3. Recent outcomes
         try:
@@ -113,7 +113,7 @@ class AuroraInputAssembler:
                     raw_str = raw if isinstance(raw, str) else raw.decode()
                     ctx.recent_outcomes.append(json.loads(raw_str))
         except Exception:
-            logger.debug("AuroraInputAssembler: outcomes fetch failed", exc_info=True)
+            logger.opt(exception=True).debug("AuroraInputAssembler: outcomes fetch failed")
 
         # 4. User corrections
         try:
@@ -123,7 +123,7 @@ class AuroraInputAssembler:
                     raw_str = raw if isinstance(raw, str) else raw.decode()
                     ctx.user_corrections.append(json.loads(raw_str))
         except Exception:
-            logger.debug("AuroraInputAssembler: corrections fetch failed", exc_info=True)
+            logger.opt(exception=True).debug("AuroraInputAssembler: corrections fetch failed")
 
         # 5. Active self-model hypotheses
         try:
@@ -138,7 +138,7 @@ class AuroraInputAssembler:
                         claim = json.loads(claim_data if isinstance(claim_data, str) else claim_data.decode())
                         ctx.active_hypotheses.append(claim.get("claim", ""))
         except Exception:
-            logger.debug("AuroraInputAssembler: hypotheses fetch failed", exc_info=True)
+            logger.opt(exception=True).debug("AuroraInputAssembler: hypotheses fetch failed")
 
         return ctx
 
@@ -386,7 +386,7 @@ class AuroraSelfCorrector:
             await self.redis.ltrim(key, 0, 49)
             await self.redis.expire(key, 30 * 24 * 3600)
         except Exception:
-            logger.warning("AuroraSelfCorrector: persist failed", exc_info=True)
+            logger.opt(exception=True).warning("AuroraSelfCorrector: persist failed")
 
         logger.info(
             "Aurora self-correction: user={} original={} corrected={} reason={}",
@@ -448,7 +448,7 @@ class AuroraSelfModelAccessor:
                             for effect in claim.get("policy_effects", []):
                                 snapshot.strategy_confidence[effect] = claim.get("confidence", 0.5)
         except Exception:
-            logger.debug("SelfModelAccessor: claims fetch failed", exc_info=True)
+            logger.opt(exception=True).debug("SelfModelAccessor: claims fetch failed")
 
         # Open questions from active states with low confidence
         try:
@@ -469,6 +469,6 @@ class AuroraSelfModelAccessor:
                                 f"{state.get('state_key')}: {state.get('value')} (conf={conf:.2f})"
                             )
         except Exception:
-            logger.debug("SelfModelAccessor: states fetch failed", exc_info=True)
+            logger.opt(exception=True).debug("SelfModelAccessor: states fetch failed")
 
         return snapshot

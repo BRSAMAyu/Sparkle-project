@@ -65,7 +65,7 @@ class CardStore:
 
             return recovery_card
         except Exception:
-            logger.warning("build_recovery_card: failed", exc_info=True)
+            logger.opt(exception=True).warning("build_recovery_card: failed")
             return None
 
     async def build_context_receipt(
@@ -97,7 +97,7 @@ class CardStore:
                 ex=2 * 3600,
             )
         except Exception:
-            logger.warning("build_context_receipt: redis failed", exc_info=True)
+            logger.opt(exception=True).warning("build_context_receipt: redis failed")
         return receipt
 
     async def build_community_hint(
@@ -136,5 +136,5 @@ class CardStore:
             )
             return card
         except Exception:
-            logger.warning("build_community_hint: failed", exc_info=True)
+            logger.opt(exception=True).warning("build_community_hint: failed")
             return None

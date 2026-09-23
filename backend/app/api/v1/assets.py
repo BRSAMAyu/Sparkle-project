@@ -146,7 +146,7 @@ async def create_asset(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to create asset: {e}", exc_info=True)
+        logger.opt(exception=True).error(f"Failed to create asset: {e}")
         raise HTTPException(status_code=500, detail="Failed to create asset") from e
 
 
@@ -350,7 +350,7 @@ async def record_suggestion_feedback(
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     except Exception as e:
-        logger.error(f"Failed to record feedback: {e}", exc_info=True)
+        logger.opt(exception=True).error(f"Failed to record feedback: {e}")
         raise HTTPException(status_code=500, detail="Failed to record feedback") from e
 
 

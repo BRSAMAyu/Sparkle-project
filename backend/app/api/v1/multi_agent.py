@@ -141,7 +141,7 @@ async def multi_agent_chat(
         )
 
     except Exception as e:
-        logger.error(f"Multi-agent error: {e}", exc_info=True)
+        logger.opt(exception=True).error(f"Multi-agent error: {e}")
         raise HTTPException(
             status_code=500,
             detail="Multi-agent processing failed"

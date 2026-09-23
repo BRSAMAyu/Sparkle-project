@@ -255,7 +255,7 @@ def _record_token_usage(model: str, prompt_tokens: int, completion_tokens: int, 
             output_tokens=completion_tokens, endpoint=source,
         )
     except Exception:
-        logger.warning("_record_token_usage: monitoring failed for model={}", model, exc_info=True)
+        logger.opt(exception=True).warning("_record_token_usage: monitoring failed for model={}", model)
 
 
 async def _track_daily_user_tokens(user_id: str | None, total_tokens: int) -> None:
@@ -275,7 +275,7 @@ async def _track_daily_user_tokens(user_id: str | None, total_tokens: int) -> No
         if ttl is None or ttl < 0:
             await r.expire(redis_key, 48 * 3600)
     except Exception:
-        logger.debug("_track_daily_user_tokens: redis failed", exc_info=True)
+        logger.opt(exception=True).debug("_track_daily_user_tokens: redis failed")
 
 
 _FENCE_PATTERN = re.compile(r"```[a-zA-Z0-9_-]*[ \t]*\n?|```")
@@ -1842,7 +1842,7 @@ class LLMService:
             try:
                 LLM_PUSH_CONTENT_PARSE_FAILURE_TOTAL.labels(stage=stage).inc()
             except Exception:
-                logger.debug("push content parse-failure metric recording failed", exc_info=True)
+                logger.opt(exception=True).debug("push content parse-failure metric recording failed")
             logger.warning(
                 "generate_push_content: JSON parse failed at stage={} ({!r}); output preview={!r}",
                 stage,

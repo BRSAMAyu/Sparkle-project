@@ -239,7 +239,7 @@ class SpineOrchestrator:
                     user_id, "task_completed", {"task_id": task_id},
                 )
             except Exception:
-                logger.warning("on_task_completed: relationship_model failed", exc_info=True)
+                logger.opt(exception=True).warning("on_task_completed: relationship_model failed")
             return trace
 
         # Step 2: Delegate pipeline to _run_signal_pipeline (handles lock)
@@ -274,7 +274,7 @@ class SpineOrchestrator:
             trace.aurora_energy_level = energy_decision.current_level
             trace.aurora_upgrade_reason = energy_decision.upgrade_reason
         except Exception:
-            logger.warning("on_task_completed: energy decision failed for user={}", user_id, exc_info=True)
+            logger.opt(exception=True).warning("on_task_completed: energy decision failed for user={}", user_id)
 
         # Step 3b: Register expected outcome for verification loop
         try:
@@ -295,7 +295,7 @@ class SpineOrchestrator:
                 },
             )
         except Exception:
-            logger.warning("on_task_completed: outcome_tracker.register_expected failed", exc_info=True)
+            logger.opt(exception=True).warning("on_task_completed: outcome_tracker.register_expected failed")
 
         # Step 3c: Check Aurora wake eligibility for high-risk signals
         try:
@@ -324,7 +324,7 @@ class SpineOrchestrator:
                         user_id, wake_result.recommended_session_type,
                     )
         except Exception:
-            logger.warning("on_task_completed: aurora wake check failed", exc_info=True)
+            logger.opt(exception=True).warning("on_task_completed: aurora wake check failed")
 
         await self.trace_store._save_trace(trace)
 
@@ -609,7 +609,7 @@ class SpineOrchestrator:
                             json.loads(raw if isinstance(raw, str) else raw.decode())
                         ).to_dict()
                     except Exception:
-                        logger.warning("get_rendered_timeline: operation failed", exc_info=True)
+                        logger.opt(exception=True).warning("get_rendered_timeline: operation failed")
 
             # Load policy decision
             policy_data = None
@@ -621,7 +621,7 @@ class SpineOrchestrator:
                             json.loads(raw if isinstance(raw, str) else raw.decode())
                         ).to_dict()
                     except Exception:
-                        logger.warning("get_rendered_timeline: operation failed", exc_info=True)
+                        logger.opt(exception=True).warning("get_rendered_timeline: operation failed")
 
             # Load directives
             directives: list[dict[str, Any]] = []
@@ -633,7 +633,7 @@ class SpineOrchestrator:
                             json.loads(raw if isinstance(raw, str) else raw.decode())
                         )
                     except Exception:
-                        logger.warning("get_rendered_timeline: operation failed", exc_info=True)
+                        logger.opt(exception=True).warning("get_rendered_timeline: operation failed")
 
             # Load audit records (P2: previously skipped in timeline rendering)
             audits: list[dict[str, Any]] = []
@@ -645,7 +645,7 @@ class SpineOrchestrator:
                             json.loads(raw if isinstance(raw, str) else raw.decode())
                         )
                     except Exception:
-                        logger.warning("get_rendered_timeline: audit load failed", exc_info=True)
+                        logger.opt(exception=True).warning("get_rendered_timeline: audit load failed")
 
             # Load receipt
             receipt_data = None
@@ -659,7 +659,7 @@ class SpineOrchestrator:
                             json.loads(raw if isinstance(raw, str) else raw.decode())
                         ).to_dict()
                     except Exception:
-                        logger.warning("get_rendered_timeline: operation failed", exc_info=True)
+                        logger.opt(exception=True).warning("get_rendered_timeline: operation failed")
 
             # Load outcome record
             outcome_data = None
@@ -668,7 +668,7 @@ class SpineOrchestrator:
                 if outcome_record:
                     outcome_data = outcome_record.to_dict()
             except Exception:
-                logger.warning("get_rendered_timeline: outcome load failed", exc_info=True)
+                logger.opt(exception=True).warning("get_rendered_timeline: outcome load failed")
 
             # Build human-readable event summary
             event_parts = []
@@ -699,7 +699,7 @@ class SpineOrchestrator:
                 if card:
                     card_data = card.to_dict()
             except Exception:
-                logger.warning("get_rendered_timeline: operation failed", exc_info=True)
+                logger.opt(exception=True).warning("get_rendered_timeline: operation failed")
 
             cards.append({
                 "trace_id": trace.trace_id,
@@ -755,7 +755,7 @@ class SpineOrchestrator:
                     user_initiated=bool(sel.get("user_initiated", True)),
                 ))
             except Exception:
-                logger.warning("set_source_tray_selection: failed", exc_info=True)
+                logger.opt(exception=True).warning("set_source_tray_selection: failed")
                 continue
 
         state = SourceTrayState(mode=mode, selections=parsed)
@@ -926,7 +926,7 @@ class SpineOrchestrator:
                     user_id=user_id,
                 )
             except Exception:
-                logger.debug("record_outcome: receipt correct skipped for user={}", user_id, exc_info=True)
+                logger.opt(exception=True).debug("record_outcome: receipt correct skipped for user={}", user_id)
         elif action == "confirm":
             await self.metrics.record_outcome_recorded(effective=True)
             # AUR-005: Close feedback loop on user confirmation
@@ -944,7 +944,7 @@ class SpineOrchestrator:
                     user_id=user_id,
                 )
             except Exception:
-                logger.debug("record_outcome: receipt confirm skipped for user={}", user_id, exc_info=True)
+                logger.opt(exception=True).debug("record_outcome: receipt confirm skipped for user={}", user_id)
         elif action == "dismiss":
             await self.metrics.record_outcome_recorded(effective=False)
 
@@ -992,7 +992,7 @@ class SpineOrchestrator:
                 user_id=user_id, snapshot_type="goal_checkpoint",
             )
         except Exception:
-            logger.warning("on_achievement_event: save_spine_snapshot failed", exc_info=True)
+            logger.opt(exception=True).warning("on_achievement_event: save_spine_snapshot failed")
 
         # STAB-004: Wire ReturnCaseFile from GrowthChronicle into return flow
         await self._save_return_case_file(user_id)
@@ -1401,7 +1401,7 @@ class SpineOrchestrator:
                 )
                 logger.debug("L0 signal injected: {} for user={}", l0_signal.state_key, user_id)
         except Exception:
-            logger.warning("L0 rule evaluation failed for user={}", user_id, exc_info=True)
+            logger.opt(exception=True).warning("L0 rule evaluation failed for user={}", user_id)
 
         # P0-1: SignalRanker — rank primary + L0 signals together, resolve conflicts
         _ranking_context: dict[str, Any] = {}
@@ -1565,7 +1565,7 @@ class SpineOrchestrator:
                     if hasattr(directive, "task_type"):
                         directive.task_type = alt
         except Exception:
-            logger.warning("LowYieldGuard check failed for user={}", user_id, exc_info=True)
+            logger.opt(exception=True).warning("LowYieldGuard check failed for user={}", user_id)
 
         await self.trace_store.set_active_directive(user_id, directive)
         await self._link_directive_to_active_session(user_id, directive.directive_id)
@@ -1593,7 +1593,7 @@ class SpineOrchestrator:
                     logger.warning("FabricationGuard: flagged {} pattern(s) in response for user={}", len(flagged), user_id)
                     trace.raw_event_ids.append(f"fabrication:{len(flagged)}")
             except Exception:
-                logger.warning("Fabrication scan failed for user={}", user_id, exc_info=True)
+                logger.opt(exception=True).warning("Fabrication scan failed for user={}", user_id)
 
             # P1-16: Citation validation — verify citations against retrieved sources
             try:
@@ -1608,7 +1608,7 @@ class SpineOrchestrator:
                         logger.warning("CitationValidator: {} for user={}", note, user_id)
                         trace.raw_event_ids.append(f"citation_warning:{len(citation_result.unverifiable)}")
             except Exception:
-                logger.warning("Citation validation failed for user={}", user_id, exc_info=True)
+                logger.opt(exception=True).warning("Citation validation failed for user={}", user_id)
 
         # Build and store NotificationDirective
         notif_dir = self.policy_engine.build_notification_directive(decision, signal)
@@ -1629,7 +1629,7 @@ class SpineOrchestrator:
                     retrieval_mode=ret_dir.retrieval_mode,
                 )
             except Exception:
-                logger.warning("build_context_receipt failed for user={}", user_id, exc_info=True)
+                logger.opt(exception=True).warning("build_context_receipt failed for user={}", user_id)
 
         # Build and store PlanDirective
         plan_dir = self.policy_engine.build_plan_directive(decision, signal)
@@ -1681,7 +1681,7 @@ class SpineOrchestrator:
                         )
                         receipt_message = filtered.get("message", receipt_message)
             except Exception:
-                logger.warning("Research isolation filter failed for user={}", user_id, exc_info=True)
+                logger.opt(exception=True).warning("Research isolation filter failed for user={}", user_id)
 
             receipt = UserVisibleReceipt(
                 receipt_id=_uid("rcpt"),
@@ -1752,7 +1752,7 @@ class SpineOrchestrator:
                 user_id=user_id,
             )
         except Exception:
-            logger.debug("record_outcome: pipeline outcome recording skipped for user={}", user_id, exc_info=True)
+            logger.opt(exception=True).debug("record_outcome: pipeline outcome recording skipped for user={}", user_id)
 
         return trace
 
@@ -1840,7 +1840,7 @@ class SpineOrchestrator:
                     ex=24 * 3600,
                 )
         except Exception:
-            logger.warning("L1 Light Aurora failed for user={}", user_id, exc_info=True)
+            logger.opt(exception=True).warning("L1 Light Aurora failed for user={}", user_id)
 
         signal = self._detect_chat_turn_signal(
             user_id=user_id,
@@ -1912,7 +1912,7 @@ class SpineOrchestrator:
                         )
             await self.redis.set(key, now, ex=90 * 24 * 3600)
         except Exception:
-            logger.warning("chat_turn heartbeat failed for user={}", user_id, exc_info=True)
+            logger.opt(exception=True).warning("chat_turn heartbeat failed for user={}", user_id)
 
     def _detect_chat_turn_signal(
         self,
@@ -2060,7 +2060,7 @@ class SpineOrchestrator:
                 await self.save_spine_snapshot(user_id=user_id, snapshot_type="pre_ttl_expiry")
                 logger.info("Spine snapshot refreshed for user={} (was TTL={}s)", user_id, snap_ttl)
         except Exception:
-            logger.warning("on_user_return: redis failed", exc_info=True)
+            logger.opt(exception=True).warning("on_user_return: redis failed")
 
         return trace
 
@@ -2115,7 +2115,7 @@ class SpineOrchestrator:
                 user_id, snapshot.absence_level,
             )
         except Exception:
-            logger.warning("MAGIC-004 absence card emission failed", exc_info=True)
+            logger.opt(exception=True).warning("MAGIC-004 absence card emission failed")
 
         logger.info(
             "Spine absence: user={} level={} elapsed={:.0f}min",
@@ -2217,7 +2217,7 @@ class SpineOrchestrator:
                 cohort_size=cohort_size,
             )
         except Exception:
-            logger.warning("on_community_cohort_data: on_community_hint failed", exc_info=True)
+            logger.opt(exception=True).warning("on_community_cohort_data: on_community_hint failed")
 
         signal = self.community_detector.to_actionable_signal(pattern)
         return await self._run_signal_pipeline(
@@ -2524,7 +2524,7 @@ class SpineOrchestrator:
 
             return episode
         except Exception:
-            logger.warning("_generate_episode failed for user={}", user_id, exc_info=True)
+            logger.opt(exception=True).warning("_generate_episode failed for user={}", user_id)
             return None
 
     async def _store_episode(self, user_id: str, episode: InterventionEpisode) -> None:
@@ -2541,7 +2541,7 @@ class SpineOrchestrator:
             await self.redis.ltrim(f"spine:episodes:{user_id}", -100, -1)
             await self.redis.expire(f"spine:episodes:{user_id}", 90 * 24 * 3600)
         except Exception:
-            logger.warning("_store_episode failed for user={}", user_id, exc_info=True)
+            logger.opt(exception=True).warning("_store_episode failed for user={}", user_id)
 
     # ── L2 Mid Aurora: Escalation Detection ─────────────────────────────
 
@@ -2703,7 +2703,7 @@ class SpineOrchestrator:
             )
             return decision_event
         except Exception:
-            logger.warning("L2 joint decision failed for user={}", user_id, exc_info=True)
+            logger.opt(exception=True).warning("L2 joint decision failed for user={}", user_id)
             return None
 
     # ── Layer 6: Directive persistence (delegated to DirectiveStore) ────
@@ -2747,7 +2747,7 @@ class SpineOrchestrator:
                 return
             tray = SourceTrayState.from_dict(json.loads(raw if isinstance(raw, str) else raw.decode()))
         except Exception:
-            logger.warning("_enrich_retrieval_with_source_tray: failed", exc_info=True)
+            logger.opt(exception=True).warning("_enrich_retrieval_with_source_tray: failed")
             return
 
         from app.signals.source_tray_integration import SourceEffectivenessTracker
@@ -2756,7 +2756,7 @@ class SpineOrchestrator:
             tracker = SourceEffectivenessTracker(self.redis)
             blocked = set(await tracker.get_blocked_sources(user_id))
         except Exception:
-            logger.warning("_enrich_retrieval_with_source_tray: redis_op failed", exc_info=True)
+            logger.opt(exception=True).warning("_enrich_retrieval_with_source_tray: redis_op failed")
 
         plan = await compute_retrieval_plan(
             retrieval_directive=rd, source_tray=tray, blocked_source_ids=blocked or None,
@@ -2789,7 +2789,7 @@ class SpineOrchestrator:
                 return None
             return json.loads(raw if isinstance(raw, str) else raw.decode())
         except Exception:
-            logger.warning("get_source_receipt: failed", exc_info=True)
+            logger.opt(exception=True).warning("get_source_receipt: failed")
             return None
 
     async def set_source_tray(self, user_id: str, tray_state: dict[str, Any]) -> None:
@@ -2959,7 +2959,7 @@ class SpineOrchestrator:
                         user_id, goal_type, mapping.get("task_type"),
                     )
         except Exception:
-            logger.warning("_apply_exam_sprint_overlay: operation failed", exc_info=True)
+            logger.opt(exception=True).warning("_apply_exam_sprint_overlay: operation failed")
 
         return directive
 
@@ -3038,7 +3038,7 @@ class SpineOrchestrator:
                 try:
                     return json.loads(raw)
                 except Exception:
-                    logger.warning("get_latest_community_hint: operation failed", exc_info=True)
+                    logger.opt(exception=True).warning("get_latest_community_hint: operation failed")
         return None
 
     async def get_ux_risk_warning(self, user_id: str) -> dict[str, Any] | None:
@@ -3099,7 +3099,7 @@ class SpineOrchestrator:
                 "directive_id": ux_dir.directive_id,
             }
         except Exception:
-            logger.warning("get_ux_risk_warning: failed", exc_info=True)
+            logger.opt(exception=True).warning("get_ux_risk_warning: failed")
             return None
 
     # ── Layer 6: SkillDirective ──────────────────────────────────────────
@@ -3217,7 +3217,7 @@ class SpineOrchestrator:
                     beliefs.append(new_belief)
                 await self._persist_strategy_beliefs(user_id, beliefs)
             except Exception:
-                logger.warning("Auto strategy learning failed for user={}", user_id, exc_info=True)
+                logger.opt(exception=True).warning("Auto strategy learning failed for user={}", user_id)
 
         # v2.4: Record experiment trial with real outcome
         try:
@@ -3237,7 +3237,7 @@ class SpineOrchestrator:
                         )
                         break  # Only record for the most relevant running experiment
         except Exception:
-            logger.warning("record_outcome: operation failed", exc_info=True)
+            logger.opt(exception=True).warning("record_outcome: operation failed")
 
         # v2.4: Record source effectiveness if sources were involved
         try:
@@ -3250,7 +3250,7 @@ class SpineOrchestrator:
                         outcome=record.attribution,
                     )
         except Exception:
-            logger.warning("record_outcome: cache_op failed", exc_info=True)
+            logger.opt(exception=True).warning("record_outcome: cache_op failed")
 
         # v2.5: Skill extraction from effective strategies
         try:
@@ -3269,7 +3269,7 @@ class SpineOrchestrator:
                     )
                     logger.info("Skill extracted and registered: {} from policy={}", skill.skill_id, skill.source_policy_key)
         except Exception:
-            logger.warning("record_outcome: operation failed", exc_info=True)
+            logger.opt(exception=True).warning("record_outcome: operation failed")
 
         # AUR-005: Close the Outcome → ModelUpdate feedback loop
         try:
@@ -3284,9 +3284,9 @@ class SpineOrchestrator:
                     trace_id=record.causal_trace_id,
                 )
         except Exception:
-            logger.debug(
+            logger.opt(exception=True).debug(
                 "record_outcome: outcome_consumer skipped for outcome={}",
-                getattr(record, 'outcome_id', 'unknown'), exc_info=True,
+                getattr(record, 'outcome_id', 'unknown'),
             )
             # Queue for async Celery processing as fallback
             try:
@@ -3305,14 +3305,14 @@ class SpineOrchestrator:
                 )
                 await self.redis.ltrim(f"spine:pending_learning:{user_id}", 0, 99)
             except Exception:
-                logger.warning("record_outcome: async queue fallback failed", exc_info=True)
+                logger.opt(exception=True).warning("record_outcome: async queue fallback failed")
 
         # v2.5: Consume Aurora decisions for outcome attribution
         try:
             if user_id:
                 await self._consume_aurora_decisions_for_attribution(user_id, record)
         except Exception:
-            logger.warning("record_outcome: _consume_aurora_decisions_for_attribution failed", exc_info=True)
+            logger.opt(exception=True).warning("record_outcome: _consume_aurora_decisions_for_attribution failed")
 
         # v2.5: Counterfactual shadow evaluation (research-grade)
         if user_id and record.attribution in ("effective", "insufficient"):
@@ -3320,7 +3320,7 @@ class SpineOrchestrator:
                 await self._run_counterfactual_shadow(user_id, record, actual_outcome)
             except Exception:
                 # 影子评估为研究性增强，不得中断 outcome 主流程（与相邻 enricher 一致）
-                logger.warning("record_outcome: _run_counterfactual_shadow failed", exc_info=True)
+                logger.opt(exception=True).warning("record_outcome: _run_counterfactual_shadow failed")
 
         # P1: Close the episode outcome loop for counterfactual analysis
         try:
@@ -3344,7 +3344,7 @@ class SpineOrchestrator:
                 )
                 await episode_logger.record_outcome(trace.trace_id, attribution_score)
         except Exception:
-            logger.debug("episode_logger: outcome recording failed for trace={}", trace.trace_id, exc_info=True)
+            logger.opt(exception=True).debug("episode_logger: outcome recording failed for trace={}", trace.trace_id)
 
         return record
 
@@ -3387,7 +3387,7 @@ class SpineOrchestrator:
                 )
                 await self.metrics.record_spine_degradation("quality_guard_directive")
         except Exception:
-            logger.debug("Quality guard skipped for trace={}", trace.trace_id, exc_info=True)
+            logger.opt(exception=True).debug("Quality guard skipped for trace={}", trace.trace_id)
 
     # ── P0-2: Post-policy enrichment from previously orphaned modules ──
 
@@ -3416,7 +3416,7 @@ class SpineOrchestrator:
                     primary_strategy=strategy_key,
                 )
         except Exception:
-            logger.warning("_enrich_pipeline_post_policy: policy_experiments failed", exc_info=True)
+            logger.opt(exception=True).warning("_enrich_pipeline_post_policy: policy_experiments failed")
 
         # 1b. policy_experiments: check for promotion suggestions
         try:
@@ -3429,7 +3429,7 @@ class SpineOrchestrator:
                     ex=24 * 3600,
                 )
         except Exception:
-            logger.warning("_enrich_pipeline_post_policy: policy_experiments failed", exc_info=True)
+            logger.opt(exception=True).warning("_enrich_pipeline_post_policy: policy_experiments failed")
 
         # 2. relationship_model: update from interaction
         try:
@@ -3438,7 +3438,7 @@ class SpineOrchestrator:
                 interaction_type="system_proactive",
             )
         except Exception:
-            logger.warning("_enrich_pipeline_post_policy: relationship_model failed", exc_info=True)
+            logger.opt(exception=True).warning("_enrich_pipeline_post_policy: relationship_model failed")
 
         # 3. growth_chronicle: record if this is a significant event
         try:
@@ -3453,7 +3453,7 @@ class SpineOrchestrator:
                 if entry:
                     await self.growth_chronicle.add_entry(user_id=user_id, entry=entry)
         except Exception:
-            logger.warning("_enrich_pipeline_post_policy: growth_chronicle failed", exc_info=True)
+            logger.opt(exception=True).warning("_enrich_pipeline_post_policy: growth_chronicle failed")
 
         # 4. policy_analytics: record for analytics (async)
         try:
@@ -3467,7 +3467,7 @@ class SpineOrchestrator:
                         ex=24 * 3600,
                     )
         except Exception:
-            logger.warning("_enrich_pipeline_post_policy: outcome_recorder failed", exc_info=True)
+            logger.opt(exception=True).warning("_enrich_pipeline_post_policy: outcome_recorder failed")
 
         # 5. learning_base: update + persist strategy beliefs
         try:
@@ -3486,7 +3486,7 @@ class SpineOrchestrator:
                 beliefs = list(belief_map.values())
                 await self._persist_strategy_beliefs(user_id, beliefs)
         except Exception:
-            logger.warning("_enrich_pipeline_post_policy: operation failed", exc_info=True)
+            logger.opt(exception=True).warning("_enrich_pipeline_post_policy: operation failed")
 
         # 6. fatigue check: detect if user is overworked
         try:
@@ -3503,7 +3503,7 @@ class SpineOrchestrator:
                     ex=6 * 3600,
                 )
         except Exception:
-            logger.warning("_enrich_pipeline_post_policy: redis failed", exc_info=True)
+            logger.opt(exception=True).warning("_enrich_pipeline_post_policy: redis failed")
 
         # 7. crisis mode check (all goal types)
         try:
@@ -3531,7 +3531,7 @@ class SpineOrchestrator:
                         ex=12 * 3600,
                     )
         except Exception:
-            logger.warning("_enrich_pipeline_post_policy: crisis check failed", exc_info=True)
+            logger.opt(exception=True).warning("_enrich_pipeline_post_policy: crisis check failed")
 
         # 8. P4 counterfactual evaluation: store policy decision for later analysis
         try:
@@ -3550,7 +3550,7 @@ class SpineOrchestrator:
             await self.redis.ltrim(f"spine:policy_decisions:{user_id}", -100, -1)
             await self.redis.expire(f"spine:policy_decisions:{user_id}", 90 * 24 * 3600)
         except Exception:
-            logger.warning("_enrich_pipeline_post_policy: operation failed", exc_info=True)
+            logger.opt(exception=True).warning("_enrich_pipeline_post_policy: operation failed")
 
         # 9. MAGIC-003: material utilization check — detect when uploaded materials go unused
         try:
@@ -3566,7 +3566,7 @@ class SpineOrchestrator:
                     filenames=material_signal.evidence_summary,
                 )
         except Exception:
-            logger.warning("_enrich_pipeline_post_policy: material_signal check failed", exc_info=True)
+            logger.opt(exception=True).warning("_enrich_pipeline_post_policy: material_signal check failed")
 
         # 9. P4 quality guard: signal quality + directive compliance checks
         try:
@@ -3592,7 +3592,7 @@ class SpineOrchestrator:
                         ex=24 * 3600,
                     )
         except Exception:
-            logger.warning("_enrich_pipeline_post_policy: operation failed", exc_info=True)
+            logger.opt(exception=True).warning("_enrich_pipeline_post_policy: operation failed")
 
         # 10. P4 research mode: gap detection for continuous improvement
         try:
@@ -3618,7 +3618,7 @@ class SpineOrchestrator:
                     ex=24 * 3600,
                 )
         except Exception:
-            logger.warning("_enrich_pipeline_post_policy: operation failed", exc_info=True)
+            logger.opt(exception=True).warning("_enrich_pipeline_post_policy: operation failed")
 
         # 11. P4 safe experiment: bandit suggestion for strategy selection
         try:
@@ -3681,7 +3681,7 @@ class SpineOrchestrator:
                 raw_str = raw if isinstance(raw, str) else raw.decode()
                 decisions.append(json.loads(raw_str))
         except Exception:
-            logger.warning("consume_aurora_decisions: redis failed", exc_info=True)
+            logger.opt(exception=True).warning("consume_aurora_decisions: redis failed")
         return decisions
 
     async def _consume_aurora_decisions_for_attribution(
@@ -3720,7 +3720,7 @@ class SpineOrchestrator:
                 self.learning_base.update_belief(belief_map[aurora_key], "effective")
                 await self._persist_strategy_beliefs(user_id, list(belief_map.values()))
         except Exception:
-            logger.warning("_consume_aurora_decisions_for_attribution: operation failed", exc_info=True)
+            logger.opt(exception=True).warning("_consume_aurora_decisions_for_attribution: operation failed")
 
     async def _run_counterfactual_shadow(
         self,
@@ -3846,7 +3846,7 @@ class SpineOrchestrator:
                 user_id, streak_count, days,
             )
         except Exception:
-            logger.warning("_emit_milestone_growth_card failed", exc_info=True)
+            logger.opt(exception=True).warning("_emit_milestone_growth_card failed")
 
     async def _emit_correction_impact_card(
         self,
@@ -3874,7 +3874,7 @@ class SpineOrchestrator:
                 user_id, correction_type,
             )
         except Exception:
-            logger.warning("_emit_correction_impact_card failed", exc_info=True)
+            logger.opt(exception=True).warning("_emit_correction_impact_card failed")
 
     async def _emit_material_non_use_card(
         self,
@@ -3901,7 +3901,7 @@ class SpineOrchestrator:
                 "MAGIC-003 material non-use card emitted: user={}", user_id,
             )
         except Exception:
-            logger.warning("_emit_material_non_use_card failed", exc_info=True)
+            logger.opt(exception=True).warning("_emit_material_non_use_card failed")
 
     async def _emit_low_yield_card(
         self,
@@ -3940,7 +3940,7 @@ class SpineOrchestrator:
                 user_id, activity, alternative,
             )
         except Exception:
-            logger.warning("_emit_low_yield_card failed", exc_info=True)
+            logger.opt(exception=True).warning("_emit_low_yield_card failed")
 
     async def on_achievement_unlocked(
         self,
@@ -3995,7 +3995,7 @@ class SpineOrchestrator:
 
             return {"achievement_recorded": True, "streak_count": streak_count}
         except Exception:
-            logger.warning("on_achievement_unlocked: failed", exc_info=True)
+            logger.opt(exception=True).warning("on_achievement_unlocked: failed")
             return None
 
     async def on_streak_update(
@@ -4016,7 +4016,7 @@ class SpineOrchestrator:
                     user_id, "streak_maintained", {"streak_length": streak_length},
                 )
         except Exception:
-            logger.warning("on_streak_update: relationship_model failed", exc_info=True)
+            logger.opt(exception=True).warning("on_streak_update: relationship_model failed")
 
     async def on_user_correction(
         self,
@@ -4089,7 +4089,7 @@ class SpineOrchestrator:
 
             return correction_event
         except Exception:
-            logger.warning("on_user_correction: failed", exc_info=True)
+            logger.opt(exception=True).warning("on_user_correction: failed")
             return None
 
     async def on_partner_checkin(
@@ -4125,7 +4125,7 @@ class SpineOrchestrator:
                 await self.state_register.upsert_from_signal(user_id, signal)
             return result
         except Exception:
-            logger.warning("on_partner_checkin: failed", exc_info=True)
+            logger.opt(exception=True).warning("on_partner_checkin: failed")
             return None
 
     async def start_aurora_core_session(
@@ -4187,7 +4187,7 @@ class SpineOrchestrator:
 
             return session
         except Exception:
-            logger.warning("start_aurora_core_session: failed", exc_info=True)
+            logger.opt(exception=True).warning("start_aurora_core_session: failed")
             return None
 
     async def process_aurora_reply(
@@ -4298,7 +4298,7 @@ class SpineOrchestrator:
             try:
                 await self.save_spine_snapshot(user_id=user_id, snapshot_type="session_end")
             except Exception:
-                logger.warning("close_aurora_session: session_end snapshot failed", exc_info=True)
+                logger.opt(exception=True).warning("close_aurora_session: session_end snapshot failed")
             # Phase-0: log a decision episode for every regenerated directive
             for regen in regenerated:
                 try:
@@ -4319,7 +4319,7 @@ class SpineOrchestrator:
                         tags=["aurora_session_end"],
                     )
                 except Exception:
-                    logger.debug("Episode log skipped for session={}", session_id, exc_info=True)
+                    logger.opt(exception=True).debug("Episode log skipped for session={}", session_id)
         return session
 
     async def build_recovery_card(
@@ -4456,7 +4456,7 @@ class SpineOrchestrator:
                 rendered_cards = await self.get_rendered_timeline(user_id, limit=3)
                 envelope["timeline_updates"] = rendered_cards
             except Exception:
-                logger.warning("build_experience_envelope: failed", exc_info=True)
+                logger.opt(exception=True).warning("build_experience_envelope: failed")
                 # Fallback: bare trace IDs (previous behavior)
                 recent_trace_ids = await self.redis.lrange(f"spine:user_traces:{user_id}", 0, 2)
                 for tid in recent_trace_ids:
@@ -4472,7 +4472,7 @@ class SpineOrchestrator:
                 ]
 
         except Exception:
-            logger.warning("build_experience_envelope: operation failed", exc_info=True)
+            logger.opt(exception=True).warning("build_experience_envelope: operation failed")
 
         return envelope
 
@@ -4761,7 +4761,7 @@ class SpineOrchestrator:
                 if weekly:
                     snapshot["state_summary"]["growth_summary"] = weekly
             except Exception:
-                logger.warning("save_spine_snapshot: growth_chronicle failed", exc_info=True)
+                logger.opt(exception=True).warning("save_spine_snapshot: growth_chronicle failed")
 
             # Recent policy effects
             effects = await self.outcome_recorder.get_recent_policy_effects(user_id, limit=10)
@@ -4785,7 +4785,7 @@ class SpineOrchestrator:
             )
 
         except Exception:
-            logger.warning("save_spine_snapshot: operation failed", exc_info=True)
+            logger.opt(exception=True).warning("save_spine_snapshot: operation failed")
 
         return snapshot
 
@@ -4832,7 +4832,7 @@ class SpineOrchestrator:
 
             return snapshot
         except Exception:
-            logger.warning("recover_from_snapshot: failed", exc_info=True)
+            logger.opt(exception=True).warning("recover_from_snapshot: failed")
             return None
 
     # ── P2: Multi-Goal Namespace ─────────────────────────────────────
@@ -4872,7 +4872,7 @@ class SpineOrchestrator:
             if raw:
                 return json.loads(raw if isinstance(raw, str) else raw.decode())
         except Exception:
-            logger.warning("get_rolling_metrics: redis failed", exc_info=True)
+            logger.opt(exception=True).warning("get_rolling_metrics: redis failed")
         return await self.metrics.snapshot()
 
     # ── v2.4: Learning Layer ────────────────────────────────────────────
@@ -4909,7 +4909,7 @@ class SpineOrchestrator:
                 logger.info("SkillAutoDeprecation: user={} deprecated={}", user_id, deprecated)
             return deprecated
         except Exception:
-            logger.warning("run_auto_deprecation: failed", exc_info=True)
+            logger.opt(exception=True).warning("run_auto_deprecation: failed")
             return []
 
     async def record_source_outcome(
@@ -4929,7 +4929,7 @@ class SpineOrchestrator:
                 context=context,
             )
         except Exception:
-            logger.warning("record_source_outcome: failed", exc_info=True)
+            logger.opt(exception=True).warning("record_source_outcome: failed")
             return None
 
     # ── v2.5: General Goal OS ───────────────────────────────────────────
@@ -5016,7 +5016,7 @@ class SpineOrchestrator:
                 "conflicts": result.conflicts,
             }
         except Exception:
-            logger.warning("get_goal_arbitration_summary: failed", exc_info=True)
+            logger.opt(exception=True).warning("get_goal_arbitration_summary: failed")
             return None
 
     async def register_goal(

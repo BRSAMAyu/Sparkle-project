@@ -163,17 +163,15 @@ class NotificationPushService:
                             },
                         )
                 except Exception:
-                    logger.debug(
+                    logger.opt(exception=True).debug(
                         "Device push failed for user={} device={}",
                         user_id,
                         device.device_id,
-                        exc_info=True,
                     )
         except Exception:
-            logger.debug(
+            logger.opt(exception=True).debug(
                 "Device push skipped for user={}",
                 user_id,
-                exc_info=True,
             )
 
     async def push_intervention_notification(

@@ -1,0 +1,2492 @@
+diff --git a/backend/app/agents/enhanced_orchestrator.py b/backend/app/agents/enhanced_orchestrator.py
+index 816a8cf0..558fc6b7 100755
+--- a/backend/app/agents/enhanced_orchestrator.py
++++ b/backend/app/agents/enhanced_orchestrator.py
+@@ -119,7 +119,7 @@ class EnhancedOrchestratorAgent(BaseAgent):
+                 return response
+ 
+             except Exception as e:
+-                logger.error(f"[EnhancedOrchestrator] Error: {e}", exc_info=True)
++                logger.opt(exception=True).error(f"[EnhancedOrchestrator] Error: {e}")
+                 span.set_attribute("error", str(e))
+                 span.set_status(trace.Status(trace.StatusCode.ERROR, str(e)))
+ 
+diff --git a/backend/app/agents/graph/nodes/review_nodes.py b/backend/app/agents/graph/nodes/review_nodes.py
+index 27f3dc64..29c4677b 100644
+--- a/backend/app/agents/graph/nodes/review_nodes.py
++++ b/backend/app/agents/graph/nodes/review_nodes.py
+@@ -1054,7 +1054,7 @@ async def reflection_node(state: SparkleState) -> dict[str, Any]:
+         }
+ 
+     except Exception as e:
+-        logger.error(f"[ReviewNode] Reflection failed: {e}", exc_info=True)
++        logger.opt(exception=True).error(f"[ReviewNode] Reflection failed: {e}")
+         return {
+             "next_step": "__end__",
+             "review_context": {
+diff --git a/backend/app/agents/standard_workflow.py b/backend/app/agents/standard_workflow.py
+index 61e7761e..a8d174c4 100755
+--- a/backend/app/agents/standard_workflow.py
++++ b/backend/app/agents/standard_workflow.py
+@@ -3161,7 +3161,7 @@ async def collaboration_node(state: WorkflowState) -> WorkflowState:
+             state.next_step = "collaboration_post_process"
+             return state
+         except Exception as e:
+-            logger.error(f"Explicit expert collaboration failed: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"Explicit expert collaboration failed: {e}")
+             state.context_data["collaboration_error"] = str(e)
+             state.next_step = "tool_planning"
+             return state
+@@ -3275,7 +3275,7 @@ async def collaboration_node(state: WorkflowState) -> WorkflowState:
+         state.next_step = "collaboration_post_process"
+ 
+     except Exception as e:
+-        logger.error(f"Collaboration workflow failed: {e}", exc_info=True)
++        logger.opt(exception=True).error(f"Collaboration workflow failed: {e}")
+         # Fallback to standard workflow
+         state.context_data["collaboration_error"] = str(e)
+         state.next_step = "tool_planning"
+diff --git a/backend/app/api/v1/accountability.py b/backend/app/api/v1/accountability.py
+index a8756f57..f3bb82de 100644
+--- a/backend/app/api/v1/accountability.py
++++ b/backend/app/api/v1/accountability.py
+@@ -1483,8 +1483,8 @@ async def daily_checkin(
+         await accountability_achievement_service.check_streak_achievements(db, current_user.id, partnership_id)
+         await accountability_achievement_service.check_partnership_achievements(db, current_user.id, partnership_id)
+     except Exception as e:
+-        logger.error(
+-            f"Failed to check achievements for user {current_user.id}, partnership {partnership_id}: {e}", exc_info=True
++        logger.opt(exception=True).error(
++            f"Failed to check achievements for user {current_user.id}, partnership {partnership_id}: {e}"
+         )
+ 
+     await _publish_accountability_signal_update(
+diff --git a/backend/app/api/v1/assets.py b/backend/app/api/v1/assets.py
+index 9959476b..a8c1050e 100644
+--- a/backend/app/api/v1/assets.py
++++ b/backend/app/api/v1/assets.py
+@@ -146,7 +146,7 @@ async def create_asset(
+     except HTTPException:
+         raise
+     except Exception as e:
+-        logger.error(f"Failed to create asset: {e}", exc_info=True)
++        logger.opt(exception=True).error(f"Failed to create asset: {e}")
+         raise HTTPException(status_code=500, detail="Failed to create asset") from e
+ 
+ 
+@@ -350,7 +350,7 @@ async def record_suggestion_feedback(
+     except ValueError as e:
+         raise HTTPException(status_code=404, detail=str(e)) from e
+     except Exception as e:
+-        logger.error(f"Failed to record feedback: {e}", exc_info=True)
++        logger.opt(exception=True).error(f"Failed to record feedback: {e}")
+         raise HTTPException(status_code=500, detail="Failed to record feedback") from e
+ 
+ 
+diff --git a/backend/app/api/v1/community.py b/backend/app/api/v1/community.py
+index fc84e2ee..c0671a51 100755
+--- a/backend/app/api/v1/community.py
++++ b/backend/app/api/v1/community.py
+@@ -521,7 +521,7 @@ async def toggle_like_post(
+                 data={"post_id": str(post_id), "liker_id": str(current_user.id)},
+             )
+         except Exception:
+-            logger.debug("Failed to push like notification for post={}", post_id, exc_info=True)
++            logger.opt(exception=True).debug("Failed to push like notification for post={}", post_id)
+ 
+     return {"liked": liked, "like_count": post.like_count}
+ 
+@@ -610,8 +610,8 @@ async def create_post_comment(
+                 data={"post_id": str(post_id), "comment_id": str(comment.id)},
+             )
+         except Exception:
+-            logger.debug(
+-                "Failed to push comment notification for post={}", post_id, exc_info=True
++            logger.opt(exception=True).debug(
++                "Failed to push comment notification for post={}", post_id
+             )
+ 
+     return {
+diff --git a/backend/app/api/v1/growth.py b/backend/app/api/v1/growth.py
+index 86548665..34d2409f 100644
+--- a/backend/app/api/v1/growth.py
++++ b/backend/app/api/v1/growth.py
+@@ -101,6 +101,6 @@ async def get_return_case_file(
+         try:
+             await redis.set(user_key, json.dumps(case, default=str), ex=7 * 24 * 3600)
+         except Exception:  # noqa: BLE001
+-            logger.warning("growth: cache write failed for user_key={}", user_key, exc_info=True)
++            logger.opt(exception=True).warning("growth: cache write failed for user_key={}", user_key)
+ 
+     return case
+diff --git a/backend/app/api/v1/ingestion.py b/backend/app/api/v1/ingestion.py
+index 344b5992..a4a51d2a 100755
+--- a/backend/app/api/v1/ingestion.py
++++ b/backend/app/api/v1/ingestion.py
+@@ -52,7 +52,7 @@ async def _process_document_task(task_id: str, file_path: str, options: dict):
+         async with _DOCUMENT_CLEANING_SEMAPHORE:
+             await document_service.clean_and_summarize(file_path, task_id, options)
+     except Exception as e:
+-        logger.error(f"Background task {task_id} failed: {e}", exc_info=True)
++        logger.opt(exception=True).error(f"Background task {task_id} failed: {e}")
+         # 更新任务状态为失败，通知用户
+         try:
+             await cache_service.set(f"task:{task_id}", {
+@@ -139,7 +139,7 @@ async def clean_document(
+     except HTTPException:
+         raise
+     except Exception as e:
+-        logger.error(f"Failed to initiate document cleaning: {e}", exc_info=True)
++        logger.opt(exception=True).error(f"Failed to initiate document cleaning: {e}")
+         raise HTTPException(status_code=500, detail="Failed to process upload") from e
+ 
+ @router.get("/clean/{task_id}", summary="Check Cleaning Task Status")
+diff --git a/backend/app/api/v1/multi_agent.py b/backend/app/api/v1/multi_agent.py
+index 03af46d5..a9562c0a 100755
+--- a/backend/app/api/v1/multi_agent.py
++++ b/backend/app/api/v1/multi_agent.py
+@@ -141,7 +141,7 @@ async def multi_agent_chat(
+         )
+ 
+     except Exception as e:
+-        logger.error(f"Multi-agent error: {e}", exc_info=True)
++        logger.opt(exception=True).error(f"Multi-agent error: {e}")
+         raise HTTPException(
+             status_code=500,
+             detail="Multi-agent processing failed"
+diff --git a/backend/app/api/v1/scenario_packs.py b/backend/app/api/v1/scenario_packs.py
+index ebad4fbe..98cf6b45 100644
+--- a/backend/app/api/v1/scenario_packs.py
++++ b/backend/app/api/v1/scenario_packs.py
+@@ -188,7 +188,7 @@ async def assign_pack(
+             ex=90 * 24 * 3600,
+         )
+     except Exception:
+-        logger.warning("assign_pack: redis state write failed", exc_info=True)
++        logger.opt(exception=True).warning("assign_pack: redis state write failed")
+ 
+     await db.commit()
+     return PackAssignResponse(goal_id=payload.goal_id, pack_id=pack_id, assigned=True)
+diff --git a/backend/app/api/v1/simulation.py b/backend/app/api/v1/simulation.py
+index 8b301c47..40246f9b 100644
+--- a/backend/app/api/v1/simulation.py
++++ b/backend/app/api/v1/simulation.py
+@@ -184,7 +184,7 @@ async def stream_learning_simulation(
+             yield "event: error\n"
+             _msg = "仿真过程出现错误，请稍后重试" if _zh(req) else "An error occurred during simulation. Please try again later."
+             yield f"data: {json.dumps({'message': _msg}, ensure_ascii=False)}\n\n"
+-            logger.error(f"Simulation stream error: {exc}", exc_info=True)
++            logger.opt(exception=True).error(f"Simulation stream error: {exc}")
+ 
+     return StreamingResponse(
+         event_generator(),
+@@ -260,7 +260,7 @@ async def continue_learning_simulation_stream(
+             yield "event: error\n"
+             _msg = "仿真过程出现错误，请稍后重试" if _zh(req) else "An error occurred during simulation. Please try again later."
+             yield f"data: {json.dumps({'message': _msg}, ensure_ascii=False)}\n\n"
+-            logger.error(f"Simulation continue stream error: {exc}", exc_info=True)
++            logger.opt(exception=True).error(f"Simulation continue stream error: {exc}")
+ 
+     return StreamingResponse(
+         event_generator(),
+diff --git a/backend/app/aurora/core_session.py b/backend/app/aurora/core_session.py
+index 293da3a0..f3bbac4c 100644
+--- a/backend/app/aurora/core_session.py
++++ b/backend/app/aurora/core_session.py
+@@ -753,7 +753,7 @@ class AuroraCoreSessionService:
+                     apply_l3_closure_to_spine(user_id, closure)
+                 )
+         except Exception:
+-            logger.debug("L3 closure bridge skipped", exc_info=True)
++            logger.opt(exception=True).debug("L3 closure bridge skipped")
+ 
+         return session
+ 
+diff --git a/backend/app/aurora/runtime_v1/aurora_spine_confluence.py b/backend/app/aurora/runtime_v1/aurora_spine_confluence.py
+index 23208a71..0d6920b3 100644
+--- a/backend/app/aurora/runtime_v1/aurora_spine_confluence.py
++++ b/backend/app/aurora/runtime_v1/aurora_spine_confluence.py
+@@ -93,7 +93,7 @@ class AuroraInputAssembler:
+                         })
+                 ctx.state_packet = {"top_states": top_states[:10]}
+         except Exception:
+-            logger.debug("AuroraInputAssembler: state fetch failed", exc_info=True)
++            logger.opt(exception=True).debug("AuroraInputAssembler: state fetch failed")
+ 
+         # 2. Recent policy decisions
+         try:
+@@ -103,7 +103,7 @@ class AuroraInputAssembler:
+                     raw_str = raw if isinstance(raw, str) else raw.decode()
+                     ctx.recent_policy_decisions.append(json.loads(raw_str))
+         except Exception:
+-            logger.debug("AuroraInputAssembler: effects fetch failed", exc_info=True)
++            logger.opt(exception=True).debug("AuroraInputAssembler: effects fetch failed")
+ 
+         # 3. Recent outcomes
+         try:
+@@ -113,7 +113,7 @@ class AuroraInputAssembler:
+                     raw_str = raw if isinstance(raw, str) else raw.decode()
+                     ctx.recent_outcomes.append(json.loads(raw_str))
+         except Exception:
+-            logger.debug("AuroraInputAssembler: outcomes fetch failed", exc_info=True)
++            logger.opt(exception=True).debug("AuroraInputAssembler: outcomes fetch failed")
+ 
+         # 4. User corrections
+         try:
+@@ -123,7 +123,7 @@ class AuroraInputAssembler:
+                     raw_str = raw if isinstance(raw, str) else raw.decode()
+                     ctx.user_corrections.append(json.loads(raw_str))
+         except Exception:
+-            logger.debug("AuroraInputAssembler: corrections fetch failed", exc_info=True)
++            logger.opt(exception=True).debug("AuroraInputAssembler: corrections fetch failed")
+ 
+         # 5. Active self-model hypotheses
+         try:
+@@ -138,7 +138,7 @@ class AuroraInputAssembler:
+                         claim = json.loads(claim_data if isinstance(claim_data, str) else claim_data.decode())
+                         ctx.active_hypotheses.append(claim.get("claim", ""))
+         except Exception:
+-            logger.debug("AuroraInputAssembler: hypotheses fetch failed", exc_info=True)
++            logger.opt(exception=True).debug("AuroraInputAssembler: hypotheses fetch failed")
+ 
+         return ctx
+ 
+@@ -386,7 +386,7 @@ class AuroraSelfCorrector:
+             await self.redis.ltrim(key, 0, 49)
+             await self.redis.expire(key, 30 * 24 * 3600)
+         except Exception:
+-            logger.warning("AuroraSelfCorrector: persist failed", exc_info=True)
++            logger.opt(exception=True).warning("AuroraSelfCorrector: persist failed")
+ 
+         logger.info(
+             "Aurora self-correction: user={} original={} corrected={} reason={}",
+@@ -448,7 +448,7 @@ class AuroraSelfModelAccessor:
+                             for effect in claim.get("policy_effects", []):
+                                 snapshot.strategy_confidence[effect] = claim.get("confidence", 0.5)
+         except Exception:
+-            logger.debug("SelfModelAccessor: claims fetch failed", exc_info=True)
++            logger.opt(exception=True).debug("SelfModelAccessor: claims fetch failed")
+ 
+         # Open questions from active states with low confidence
+         try:
+@@ -469,6 +469,6 @@ class AuroraSelfModelAccessor:
+                                 f"{state.get('state_key')}: {state.get('value')} (conf={conf:.2f})"
+                             )
+         except Exception:
+-            logger.debug("SelfModelAccessor: states fetch failed", exc_info=True)
++            logger.opt(exception=True).debug("SelfModelAccessor: states fetch failed")
+ 
+         return snapshot
+diff --git a/backend/app/aurora/runtime_v1/correction_feedback.py b/backend/app/aurora/runtime_v1/correction_feedback.py
+index 32315d88..89d19c2a 100644
+--- a/backend/app/aurora/runtime_v1/correction_feedback.py
++++ b/backend/app/aurora/runtime_v1/correction_feedback.py
+@@ -396,7 +396,7 @@ class CorrectionFeedbackProcessor:
+                 receipt=receipt,
+             )
+         except Exception:
+-            logger.debug("CorrectionFeedback: recent correction receipt persist failed", exc_info=True)
++            logger.opt(exception=True).debug("CorrectionFeedback: recent correction receipt persist failed")
+ 
+         if self.redis is None or not session_id:
+             return
+@@ -427,7 +427,7 @@ class CorrectionFeedbackProcessor:
+                 source_lane="aurora_calibration_receipt",
+             )
+         except Exception:
+-            logger.debug("CorrectionFeedback: working memory receipt write failed", exc_info=True)
++            logger.opt(exception=True).debug("CorrectionFeedback: working memory receipt write failed")
+ 
+     def _build_user_visible_effect(
+         self,
+@@ -468,7 +468,7 @@ class CorrectionFeedbackProcessor:
+                 is_freeform=is_freeform,
+             )
+         except Exception:
+-            logger.debug("CorrectionFeedback: Bayesian policy update failed", exc_info=True)
++            logger.opt(exception=True).debug("CorrectionFeedback: Bayesian policy update failed")
+ 
+     async def _process_disconfirmation(
+         self,
+@@ -501,10 +501,9 @@ class CorrectionFeedbackProcessor:
+                     result.affected_state_keys.append(sk)
+                     result.new_confidence[sk] = updated.confidence
+             except Exception:
+-                logger.debug(
++                logger.opt(exception=True).debug(
+                     "CorrectionFeedback: state lower_confidence failed key={}",
+                     sk,
+-                    exc_info=True,
+                 )
+ 
+         # 2. Record in self_model
+@@ -528,7 +527,7 @@ class CorrectionFeedbackProcessor:
+             )
+             result.self_model_updated = True
+         except Exception:
+-            logger.debug("CorrectionFeedback: self_model update failed", exc_info=True)
++            logger.opt(exception=True).debug("CorrectionFeedback: self_model update failed")
+ 
+         # 3. Persist correction via AuroraSelfCorrector
+         try:
+@@ -550,7 +549,7 @@ class CorrectionFeedbackProcessor:
+             result.correction_id = correction.correction_id
+             result.correction_recorded = True
+         except Exception:
+-            logger.debug("CorrectionFeedback: correction persist failed", exc_info=True)
++            logger.opt(exception=True).debug("CorrectionFeedback: correction persist failed")
+ 
+         # 4. Update routing profile so corrections change future routing behavior
+         await self._update_routing_profile(user_id, semantic_value)
+@@ -630,7 +629,7 @@ class CorrectionFeedbackProcessor:
+                         recorded = True
+                 result.routing_feedback_recorded = recorded
+         except Exception:
+-            logger.debug("CorrectionFeedback: route outcome backfill failed", exc_info=True)
++            logger.opt(exception=True).debug("CorrectionFeedback: route outcome backfill failed")
+ 
+     async def _update_routing_profile(self, user_id: str, semantic_value: str) -> None:
+         """Bridge correction → routing profile so disconfirmations change future routing."""
+@@ -646,10 +645,9 @@ class CorrectionFeedbackProcessor:
+                 svc = RoutingProfileService(session, self.redis)
+                 await svc.record_session_outcome(UUID(user_id), **routing_kwargs)
+         except Exception:
+-            logger.debug(
++            logger.opt(exception=True).debug(
+                 "CorrectionFeedback: routing profile update failed semantic={}",
+                 semantic_value,
+-                exc_info=True,
+             )
+ 
+     async def _process_confirmation(
+@@ -676,10 +674,9 @@ class CorrectionFeedbackProcessor:
+                 result.affected_state_keys.append(sk)
+                 result.new_confidence[sk] = entry.confidence
+             except Exception:
+-                logger.debug(
++                logger.opt(exception=True).debug(
+                     "CorrectionFeedback: confirmation boost failed key={}",
+                     sk,
+-                    exc_info=True,
+                 )
+ 
+         logger.debug(
+diff --git a/backend/app/aurora/runtime_v1/l2_intervention.py b/backend/app/aurora/runtime_v1/l2_intervention.py
+index e17869ac..bf887235 100644
+--- a/backend/app/aurora/runtime_v1/l2_intervention.py
++++ b/backend/app/aurora/runtime_v1/l2_intervention.py
+@@ -341,4 +341,6 @@ class L2InterventionEngine:
+         try:
+             await self.redis.set(key, "1", ex=_L2_COOLDOWN_SECONDS)
+         except Exception:
+-            logger.warning("L2 intervention cooldown write failed for user={} pattern={}", user_id, pattern_name, exc_info=True)
++            logger.opt(exception=True).warning(
++                "L2 intervention cooldown write failed for user={} pattern={}", user_id, pattern_name
++            )
+diff --git a/backend/app/aurora/runtime_v1/l3_full_core.py b/backend/app/aurora/runtime_v1/l3_full_core.py
+index 8c7deb5c..69096186 100644
+--- a/backend/app/aurora/runtime_v1/l3_full_core.py
++++ b/backend/app/aurora/runtime_v1/l3_full_core.py
+@@ -215,7 +215,7 @@ class L3FullCoreEngine:
+         try:
+             session = await self.session_service.get_session(session_id)
+         except Exception:
+-            logger.warning("execute_agenda_step: get_session failed", exc_info=True)
++            logger.opt(exception=True).warning("execute_agenda_step: get_session failed")
+             return None
+         if not session:
+             return None
+@@ -233,7 +233,7 @@ class L3FullCoreEngine:
+         try:
+             updated = await self.session_service.record_reply(session_id, item_index, reply)
+         except Exception:
+-            logger.warning("execute_agenda_step: record_reply failed", exc_info=True)
++            logger.opt(exception=True).warning("execute_agenda_step: record_reply failed")
+             return None
+         if not updated:
+             return None
+diff --git a/backend/app/aurora/runtime_v1/l4_async.py b/backend/app/aurora/runtime_v1/l4_async.py
+index 06f7391b..8d706e62 100644
+--- a/backend/app/aurora/runtime_v1/l4_async.py
++++ b/backend/app/aurora/runtime_v1/l4_async.py
+@@ -226,7 +226,7 @@ class L4AsyncEngine:
+             )
+             return True
+         except Exception:
+-            logger.warning("L4: store_candidate failed", exc_info=True)
++            logger.opt(exception=True).warning("L4: store_candidate failed")
+             return False
+ 
+     async def get_candidate(self, candidate_id: str) -> L4PolicyCandidate | None:
+@@ -292,7 +292,7 @@ class L4AsyncEngine:
+             key = _CANDIDATE_KEY.format(candidate_id=candidate_id)
+             await self.redis.set(key, json.dumps(candidate.to_dict()), ex=_CANDIDATE_TTL)
+         except Exception:
+-            logger.warning("L4: promote_candidate persist failed", exc_info=True)
++            logger.opt(exception=True).warning("L4: promote_candidate persist failed")
+             return None
+ 
+         logger.info(
+diff --git a/backend/app/aurora/runtime_v1/reply_option_injector.py b/backend/app/aurora/runtime_v1/reply_option_injector.py
+index 489ccad2..3caf6e9d 100644
+--- a/backend/app/aurora/runtime_v1/reply_option_injector.py
++++ b/backend/app/aurora/runtime_v1/reply_option_injector.py
+@@ -57,7 +57,7 @@ class ReplyOptionInjector:
+             )
+             return groups
+         except Exception:
+-            logger.debug("ReplyOptionInjector: generation failed", exc_info=True)
++            logger.opt(exception=True).debug("ReplyOptionInjector: generation failed")
+             return []
+ 
+     def generate_from_signal(self, signal: ActionableSignal) -> dict[str, Any] | None:
+@@ -68,7 +68,7 @@ class ReplyOptionInjector:
+                 return None
+             return question.to_dict()
+         except Exception:
+-            logger.debug("ReplyOptionInjector: signal generation failed", exc_info=True)
++            logger.opt(exception=True).debug("ReplyOptionInjector: signal generation failed")
+             return None
+ 
+     def inject_into_metadata(
+diff --git a/backend/app/core/cost_controller.py b/backend/app/core/cost_controller.py
+index 9f7f7a09..c8694372 100644
+--- a/backend/app/core/cost_controller.py
++++ b/backend/app/core/cost_controller.py
+@@ -204,7 +204,7 @@ class BudgetCircuitBreaker:
+         try:
+             raw = await redis.get(key)
+         except Exception:
+-            logger.debug("cost_controller: failed to read daily spend", exc_info=True)
++            logger.opt(exception=True).debug("cost_controller: failed to read daily spend")
+             if self._fallback_enabled():
+                 self._enter_degraded(category)
+                 return self._local_total(category)
+@@ -238,7 +238,7 @@ class BudgetCircuitBreaker:
+             await redis.incrbyfloat(key, amount_usd)
+             await redis.expire(key, 48 * 3600)
+         except Exception:
+-            logger.debug("cost_controller: failed to record spend", exc_info=True)
++            logger.opt(exception=True).debug("cost_controller: failed to record spend")
+             if self._fallback_enabled():
+                 self._enter_degraded(category)
+                 self._local_spend[category] = self._local_total(category) + float(amount_usd)
+@@ -264,7 +264,7 @@ class BudgetCircuitBreaker:
+             results = await pipe.execute()
+         except Exception:
+             # 支率窗口失败不影响预算闸门（已记上的支出不受影响）
+-            logger.debug("cost_controller: failed to update spend rate window", exc_info=True)
++            logger.opt(exception=True).debug("cost_controller: failed to update spend rate window")
+             return
+         window_total = sum(float(s) for _, s in results[2]) if results[2] else amount_usd
+         hourly_rate = (window_total / self._SPEND_WINDOW) * 3600.0
+diff --git a/backend/app/core/cost_wvpl_metrics.py b/backend/app/core/cost_wvpl_metrics.py
+index c5271931..32ceadb7 100644
+--- a/backend/app/core/cost_wvpl_metrics.py
++++ b/backend/app/core/cost_wvpl_metrics.py
+@@ -80,7 +80,7 @@ async def _daily_spend_all_categories() -> float:
+         try:
+             total += await breaker.read_daily_spend(category)
+         except Exception as exc:  # noqa: BLE001 — 单类目读失败不拖垮整个快照
+-            logger.debug("cost_wvpl: daily spend read failed for {}", category, exc_info=True)
++            logger.opt(exception=True).debug("cost_wvpl: daily spend read failed for {}", category)
+     return total
+ 
+ 
+diff --git a/backend/app/core/security_monitor.py b/backend/app/core/security_monitor.py
+index 32cf56fb..4f00ee98 100755
+--- a/backend/app/core/security_monitor.py
++++ b/backend/app/core/security_monitor.py
+@@ -635,7 +635,7 @@ class SecurityMonitor:
+                         details={"failed_count": recent_count, "window_minutes": 5},
+                     )
+             except Exception:
+-                logger.debug("abnormal_patterns: failed login check skipped", exc_info=True)
++                logger.opt(exception=True).debug("abnormal_patterns: failed login check skipped")
+ 
+             # Check for admin access anomalies
+             try:
+@@ -649,7 +649,7 @@ class SecurityMonitor:
+                         details={"admin_action_count": admin_count},
+                     )
+             except Exception:
+-                logger.debug("abnormal_patterns: admin action check skipped", exc_info=True)
++                logger.opt(exception=True).debug("abnormal_patterns: admin action check skipped")
+ 
+         except Exception as e:
+             logger.debug("_check_abnormal_patterns failed: {}", e)
+@@ -732,7 +732,9 @@ class SecurityMonitor:
+                     async with session.post(webhook_url, json=slack_payload, timeout=aiohttp.ClientTimeout(total=5)):
+                         pass
+             except Exception:
+-                logger.warning("Security alert Slack notification failed for alert_type={}", alert_type, exc_info=True)
++                logger.opt(exception=True).warning(
++                    "Security alert Slack notification failed for alert_type={}", alert_type
++                )
+ 
+         # Email for critical and high severity alerts
+         if threat_level.value in {"critical", "high"}:
+@@ -751,7 +753,9 @@ class SecurityMonitor:
+                     )
+                     await email_service._send(security_email, subject, email_html)
+             except Exception:
+-                logger.warning("Security alert email notification failed for alert_type={}", alert_type, exc_info=True)
++                logger.opt(exception=True).warning(
++                    "Security alert email notification failed for alert_type={}", alert_type
++                )
+ 
+     async def _get_suspicious_ip_count(self) -> int:
+         """获取可疑IP数量"""
+diff --git a/backend/app/learning/outcome_consumer.py b/backend/app/learning/outcome_consumer.py
+index 225ec3e1..cf06cbed 100644
+--- a/backend/app/learning/outcome_consumer.py
++++ b/backend/app/learning/outcome_consumer.py
+@@ -83,9 +83,9 @@ class OutcomeConsumingService:
+                     satisfaction=confidence,
+                 )
+             except Exception:
+-                logger.debug(
++                logger.opt(exception=True).debug(
+                     "OutcomeConsumingService: record_application failed for strategy={}",
+-                    result.strategy.id, exc_info=True,
++                    result.strategy.id,
+                 )
+ 
+         # Synchronize outcome to both self-models via the bridge
+@@ -100,9 +100,9 @@ class OutcomeConsumingService:
+                 actual_outcome=actual_outcome,
+             )
+         except Exception:
+-            logger.debug(
++            logger.opt(exception=True).debug(
+                 "OutcomeConsumingService: self_model bridge sync failed for user={}",
+-                user_id, exc_info=True,
++                user_id,
+             )
+ 
+         return {
+@@ -163,7 +163,7 @@ class OutcomeConsumingService:
+                 policy_effects=[intervention],
+             )
+         except Exception:
+-            logger.debug("OutcomeConsumingService: _feed_self_model failed", exc_info=True)
++            logger.opt(exception=True).debug("OutcomeConsumingService: _feed_self_model failed")
+ 
+     async def _record_policy_downgrade(
+         self,
+@@ -187,7 +187,7 @@ class OutcomeConsumingService:
+             )
+             await self.redis.ltrim(f"spine:policy_downgrades:{user_id}", 0, 49)
+         except Exception:
+-            logger.debug("OutcomeConsumingService: downgrade record failed", exc_info=True)
++            logger.opt(exception=True).debug("OutcomeConsumingService: downgrade record failed")
+ 
+     async def get_distilled_strategies_for_user(
+         self,
+diff --git a/backend/app/learning/self_model_bridge.py b/backend/app/learning/self_model_bridge.py
+index d5ffbefc..7caad28f 100644
+--- a/backend/app/learning/self_model_bridge.py
++++ b/backend/app/learning/self_model_bridge.py
+@@ -50,7 +50,7 @@ class SelfModelBridge:
+             )
+             result["spine"] = claim.claim_id
+         except Exception:
+-            logger.debug("SelfModelBridge: spine write failed for user={}", user_id, exc_info=True)
++            logger.opt(exception=True).debug("SelfModelBridge: spine write failed for user={}", user_id)
+ 
+         # ── Aurora SelfModel: record task outcome ──
+         try:
+@@ -67,7 +67,7 @@ class SelfModelBridge:
+             )
+             result["aurora"] = True
+         except Exception:
+-            logger.debug("SelfModelBridge: aurora write failed for user={}", user_id, exc_info=True)
++            logger.opt(exception=True).debug("SelfModelBridge: aurora write failed for user={}", user_id)
+ 
+         return result
+ 
+@@ -80,7 +80,7 @@ class SelfModelBridge:
+             aurora_conf = summary.get("strategy_confidence")
+         except Exception:
+             aurora_conf = None
+-            logger.debug("SelfModelBridge: aurora read failed for user={}", user_id, exc_info=True)
++            logger.opt(exception=True).debug("SelfModelBridge: aurora read failed for user={}", user_id)
+ 
+         try:
+             from app.signals.self_model import SparkleSelfModelService as SpineSM
+@@ -92,7 +92,7 @@ class SelfModelBridge:
+             )
+         except Exception:
+             spine_conf = None
+-            logger.debug("SelfModelBridge: spine read failed for user={}", user_id, exc_info=True)
++            logger.opt(exception=True).debug("SelfModelBridge: spine read failed for user={}", user_id)
+ 
+         # Return the higher-confidence value, preferring Aurora
+         if aurora_conf is not None:
+@@ -117,7 +117,7 @@ class SelfModelBridge:
+                 source=source,
+             )
+         except Exception:
+-            logger.debug("SelfModelBridge: correction spine write failed", exc_info=True)
++            logger.opt(exception=True).debug("SelfModelBridge: correction spine write failed")
+ 
+         try:
+             from app.aurora.runtime_v1.self_model import SparkleSelfModelService as AuroraSM
+@@ -128,4 +128,4 @@ class SelfModelBridge:
+                 source=source,
+             )
+         except Exception:
+-            logger.debug("SelfModelBridge: correction aurora write failed", exc_info=True)
++            logger.opt(exception=True).debug("SelfModelBridge: correction aurora write failed")
+diff --git a/backend/app/main.py b/backend/app/main.py
+index e827cd61..a571c7ba 100755
+--- a/backend/app/main.py
++++ b/backend/app/main.py
+@@ -157,7 +157,7 @@ async def lifespan(fastapp: FastAPI):
+     try:
+         import app.models.pii_encryption_listeners  # noqa: F401 — side-effect import
+     except Exception:
+-        logger.warning("PII encryption listeners failed to activate", exc_info=True)
++        logger.opt(exception=True).warning("PII encryption listeners failed to activate")
+ 
+     # Initialize Sentry crash reporting
+     if settings.SENTRY_DSN:
+@@ -397,7 +397,7 @@ async def lifespan(fastapp: FastAPI):
+             episode_logger.attach_sink(redis_sink)
+             logger.info("EpisodeLogger connected to RedisEpisodeSink — production persistence active")
+         except Exception:
+-            logger.warning("EpisodeLogger Redis sink wiring failed — falling back to in-memory", exc_info=True)
++            logger.opt(exception=True).warning("EpisodeLogger Redis sink wiring failed — falling back to in-memory")
+ 
+     intervention_outcome_verifier_task = None
+     if event_bus is not None and ENABLE_IN_PROCESS_INTERVENTION_OUTCOME_VERIFIER:
+diff --git a/backend/app/services/achievement_engine.py b/backend/app/services/achievement_engine.py
+index 60b9dc87..185c78a4 100644
+--- a/backend/app/services/achievement_engine.py
++++ b/backend/app/services/achievement_engine.py
+@@ -201,7 +201,7 @@ class AchievementEngine:
+                 await pipe.expire(key, 3600)
+                 await pipe.execute()
+         except Exception:
+-            logger.debug("Failed to cache recent achievement event for user={}", user_id, exc_info=True)
++            logger.opt(exception=True).debug("Failed to cache recent achievement event for user={}", user_id)
+ 
+     def _enqueue_after_commit(self, callback: Callable[[], Awaitable[None]]) -> None:
+         callbacks = self.db.sync_session.info.setdefault(_AFTER_COMMIT_TASKS_KEY, [])
+@@ -323,7 +323,7 @@ class AchievementEngine:
+                 achievements = result.scalars().all()
+                 logger.info("Auto-seeded {} achievement definitions on first query", len(achievements))
+             except Exception:
+-                logger.warning("Auto-seed of achievement definitions failed", exc_info=True)
++                logger.opt(exception=True).warning("Auto-seed of achievement definitions failed")
+ 
+         async with self._cache_lock:
+             self._achievement_cache = {a.id: a for a in achievements}
+@@ -2134,10 +2134,9 @@ class AchievementEngine:
+                     streak_days=quality_streak,
+                 )
+         except Exception:
+-            logger.debug(
++            logger.opt(exception=True).debug(
+                 "Quality streak calculation skipped for user={}",
+                 user_id,
+-                exc_info=True,
+             )
+             # Fallback: use raw streak counter when quality calculation fails
+             if stats.current_streak in [7, 14, 30, 60, 100, 365]:
+diff --git a/backend/app/services/achievement_event_consumer.py b/backend/app/services/achievement_event_consumer.py
+index 43a407f2..de73f761 100644
+--- a/backend/app/services/achievement_event_consumer.py
++++ b/backend/app/services/achievement_event_consumer.py
+@@ -452,7 +452,7 @@ class AchievementEventConsumer:
+             await db.commit()
+             logger.debug(f"Persisted chronicle event for user {user_id}: {event.get('event_type')}")
+         except Exception:
+-            logger.warning(f"Chronicle PostgreSQL persist failed for user {user_id}", exc_info=True)
++            logger.opt(exception=True).warning(f"Chronicle PostgreSQL persist failed for user {user_id}")
+             await db.rollback()
+ 
+     async def _handle_achievement_progress(self, event: dict):
+diff --git a/backend/app/services/agent_grpc_service.py b/backend/app/services/agent_grpc_service.py
+index b272045b..bac626f6 100755
+--- a/backend/app/services/agent_grpc_service.py
++++ b/backend/app/services/agent_grpc_service.py
+@@ -125,7 +125,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+             )
+             return result.calibration_receipt or None
+         except (ImportError, TypeError, ValueError, KeyError, AttributeError, SQLAlchemyError, RedisError) as exc:
+-            logger.warning("Failed to process Aurora correction metadata: {}", exc, exc_info=True)
++            logger.opt(exception=True).warning("Failed to process Aurora correction metadata: {}", exc)
+             return None
+ 
+     @staticmethod
+@@ -257,7 +257,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                     context.set_details("Admin access required")
+                     return None
+         except (SQLAlchemyError, ValueError, TypeError) as e:
+-            logger.error("Admin authorization lookup failed for user_id={}: {}", user_id, e, exc_info=True)
++            logger.opt(exception=True).error("Admin authorization lookup failed for user_id={}: {}", user_id, e)
+             context.set_code(grpc.StatusCode.INTERNAL)
+             context.set_details("Internal error")
+             return None
+@@ -348,7 +348,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                 bandit = PromptBandit(redis_client=self.orchestrator.redis)
+                 prompt_version = await bandit.select(workflow_id, prompt_versions)
+             except (RedisError, ConnectionError, TimeoutError, KeyError, TypeError, ValueError) as e:
+-                logger.warning(f"Prompt bandit selection failed: {e}", exc_info=True)
++                logger.opt(exception=True).warning(f"Prompt bandit selection failed: {e}")
+ 
+             await self._observe_feedback_effect(user_id, workflow_id, prompt_version, trace_id=trace_id)
+ 
+@@ -436,7 +436,9 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                             yield self._normalize_v2_response(response)
+                     await db_session.commit()
+                 except Exception as exc:
+-                    logger.warning("StreamChat transaction failed; rolling back db session: {}", exc, exc_info=True)
++                    logger.opt(exception=True).warning(
++                        "StreamChat transaction failed; rolling back db session: {}", exc
++                    )
+                     await db_session.rollback()
+                     raise
+ 
+@@ -479,10 +481,10 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                 except ImportError as recall_err:
+                     logger.debug(f"Session-end recall skipped; push scheduler unavailable: {recall_err}")
+                 except (SQLAlchemyError, ValueError, TypeError, AttributeError) as recall_err:
+-                    logger.warning(f"Session-end recall check failed (non-fatal): {recall_err}", exc_info=True)
++                    logger.opt(exception=True).warning(f"Session-end recall check failed (non-fatal): {recall_err}")
+ 
+         except Exception as e:
+-            logger.error(f"StreamChat error: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"StreamChat error: {e}")
+             safe_message, error_code, retryable = build_safe_chat_error(e)
+             context.set_code(_grpc_status_for_chat_error(error_code))
+             context.set_details(safe_message)
+@@ -588,7 +590,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                 response_id=result.response_id,
+             )
+         except Exception as e:
+-            logger.error(f"SubmitResponseFeedback error: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"SubmitResponseFeedback error: {e}")
+             context.set_code(grpc.StatusCode.INTERNAL)
+             context.set_details("Internal error")
+             return agent_service_pb2.ResponseFeedbackResponse(
+@@ -635,13 +637,12 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+             )
+             await self.orchestrator.redis.delete(key)
+         except (RedisError, ConnectionError, TimeoutError, TypeError, ValueError) as exc:
+-            logger.warning(
++            logger.opt(exception=True).warning(
+                 "Failed to observe feedback effect user_id={} workflow_id={} prompt_version={}: {}",
+                 user_id,
+                 workflow_id,
+                 prompt_version,
+                 exc,
+-                exc_info=True,
+             )
+             return
+ 
+@@ -721,7 +722,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                 return agent_service_pb2.MemoryResult(items=memory_items, total_found=len(memory_items))
+ 
+         except Exception as e:
+-            logger.error(f"RetrieveMemory error: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"RetrieveMemory error: {e}")
+             context.set_code(grpc.StatusCode.INTERNAL)
+             context.set_details("Internal error retrieving memory")
+             return agent_service_pb2.MemoryResult(items=[], total_found=0)
+@@ -782,7 +783,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                     extra_context=json.dumps(extra_payload, ensure_ascii=False),
+                 )
+         except Exception as e:
+-            logger.error(f"GetUserProfile error: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"GetUserProfile error: {e}")
+             context.set_code(grpc.StatusCode.INTERNAL)
+             context.set_details("Internal error retrieving user profile")
+             return agent_service_pb2.UserProfile()
+@@ -828,7 +829,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                     tasks_completed=int(snapshot.comparisons["tasks_completed"]["current"]),
+                 )
+         except Exception as e:
+-            logger.error(f"GetWeeklyReport error: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"GetWeeklyReport error: {e}")
+             context.set_code(grpc.StatusCode.INTERNAL)
+             context.set_details("Internal error generating weekly report")
+             return agent_service_pb2.WeeklyReport()
+@@ -934,7 +935,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                 except (ValueError, TypeError) as e:
+                     logger.warning(f"Failed to track rejection for plan {plan_id}: invalid id: {e}")
+                 except (SQLAlchemyError, RedisError, ConnectionError, TimeoutError) as e:
+-                    logger.warning(f"Failed to track rejection for plan {plan_id}: {e}", exc_info=True)
++                    logger.opt(exception=True).warning(f"Failed to track rejection for plan {plan_id}: {e}")
+ 
+             if proto_decision == agent_service_pb2.APPROVE:
+                 # Resume plan execution after approval with db_session for task generation
+@@ -986,7 +987,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                 message=str(e.details()),
+             )
+         except Exception as e:
+-            logger.error(f"SubmitPlanReview error: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"SubmitPlanReview error: {e}")
+             context.set_code(grpc.StatusCode.INTERNAL)
+             context.set_details("Internal error")
+             return agent_service_pb2.PlanReviewResponse(
+@@ -1093,14 +1094,14 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                                 f"misclassification_rate={report.misclassification_rate:.2%}"
+                             )
+                         except (SQLAlchemyError, ValueError, TypeError, AttributeError) as e:
+-                            logger.warning(f"[ContentReviewFeedback] Learning analysis failed: {e}", exc_info=True)
++                            logger.opt(exception=True).warning(f"[ContentReviewFeedback] Learning analysis failed: {e}")
+ 
+                     # Don't await - run in background
+                     asyncio.create_task(run_learning())
+                 except ImportError:
+                     logger.debug("[ContentReviewFeedback] Learning service not available")
+                 except (SQLAlchemyError, ValueError, TypeError, AttributeError) as e:
+-                    logger.warning(f"[ContentReviewFeedback] Failed to trigger learning: {e}", exc_info=True)
++                    logger.opt(exception=True).warning(f"[ContentReviewFeedback] Failed to trigger learning: {e}")
+ 
+             return agent_service_pb2.ContentReviewFeedbackResponse(
+                 success=True,
+@@ -1117,7 +1118,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                 message=str(e.details()),
+             )
+         except Exception as e:
+-            logger.error(f"SubmitContentReviewFeedback error: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"SubmitContentReviewFeedback error: {e}")
+             context.set_code(grpc.StatusCode.INTERNAL)
+             context.set_details("Internal error")
+             return agent_service_pb2.ContentReviewFeedbackResponse(
+@@ -1186,7 +1187,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                 )
+ 
+         except ValueError as e:
+-            logger.error(f"SubmitReviewOverride error: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"SubmitReviewOverride error: {e}")
+             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+             context.set_details("Internal error")
+             return agent_service_pb2.ReviewOverrideResponse(
+@@ -1194,7 +1195,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                 message="Internal error processing request",
+             )
+         except Exception as e:
+-            logger.error(f"SubmitReviewOverride error: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"SubmitReviewOverride error: {e}")
+             context.set_code(grpc.StatusCode.INTERNAL)
+             context.set_details("Internal error")
+             return agent_service_pb2.ReviewOverrideResponse(
+@@ -1272,7 +1273,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                 )
+ 
+         except ValueError as e:
+-            logger.error(f"SubmitReviewAppeal error: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"SubmitReviewAppeal error: {e}")
+             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+             context.set_details("Internal error")
+             return agent_service_pb2.ReviewAppealResponse(
+@@ -1280,7 +1281,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                 message="Internal error processing request",
+             )
+         except Exception as e:
+-            logger.error(f"SubmitReviewAppeal error: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"SubmitReviewAppeal error: {e}")
+             context.set_code(grpc.StatusCode.INTERNAL)
+             context.set_details("Internal error")
+             return agent_service_pb2.ReviewAppealResponse(
+@@ -1347,7 +1348,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                 )
+ 
+         except Exception as e:
+-            logger.error(f"GetAppealStatus error: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"GetAppealStatus error: {e}")
+             context.set_code(grpc.StatusCode.INTERNAL)
+             context.set_details("Internal error")
+             return agent_service_pb2.AppealStatusResponse()
+@@ -1433,7 +1434,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                 )
+ 
+         except ValueError as e:
+-            logger.error(f"SubmitReviewFeedback error: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"SubmitReviewFeedback error: {e}")
+             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+             context.set_details("Internal error")
+             return agent_service_pb2.ReviewFeedbackResponse(
+@@ -1441,7 +1442,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                 message="Internal error processing request",
+             )
+         except Exception as e:
+-            logger.error(f"SubmitReviewFeedback error: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"SubmitReviewFeedback error: {e}")
+             context.set_code(grpc.StatusCode.INTERNAL)
+             context.set_details("Internal error")
+             return agent_service_pb2.ReviewFeedbackResponse(
+@@ -1535,7 +1536,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                 )
+ 
+         except ValueError as e:
+-            logger.error(f"RequestRegeneration error: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"RequestRegeneration error: {e}")
+             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+             context.set_details("Internal error")
+             return agent_service_pb2.RegenerationResponse(
+@@ -1543,7 +1544,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                 message="Internal error processing request",
+             )
+         except Exception as e:
+-            logger.error(f"RequestRegeneration error: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"RequestRegeneration error: {e}")
+             context.set_code(grpc.StatusCode.INTERNAL)
+             context.set_details("Internal error")
+             return agent_service_pb2.RegenerationResponse(
+@@ -1595,7 +1596,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                 )
+ 
+         except Exception as e:
+-            logger.error(f"GetFeedbackStatistics error: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"GetFeedbackStatistics error: {e}")
+             context.set_code(grpc.StatusCode.INTERNAL)
+             context.set_details("Internal error")
+             return agent_service_pb2.FeedbackStatisticsResponse()
+@@ -1683,7 +1684,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                 )
+ 
+         except Exception as e:
+-            logger.error(f"GetArbitrationQueue error: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"GetArbitrationQueue error: {e}")
+             context.set_code(grpc.StatusCode.INTERNAL)
+             context.set_details("Internal error")
+             return agent_service_pb2.GetArbitrationQueueResponse()
+@@ -1758,7 +1759,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                 )
+ 
+         except ValueError as e:
+-            logger.error(f"AssignArbitrationCase error: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"AssignArbitrationCase error: {e}")
+             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+             context.set_details("Internal error")
+             return agent_service_pb2.AssignArbitrationCaseResponse(
+@@ -1766,7 +1767,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                 message="Internal error processing request",
+             )
+         except Exception as e:
+-            logger.error(f"AssignArbitrationCase error: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"AssignArbitrationCase error: {e}")
+             context.set_code(grpc.StatusCode.INTERNAL)
+             context.set_details("Internal error")
+             return agent_service_pb2.AssignArbitrationCaseResponse(
+@@ -1873,7 +1874,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                 )
+ 
+         except ValueError as e:
+-            logger.error(f"SubmitArbitrationDecision error: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"SubmitArbitrationDecision error: {e}")
+             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+             context.set_details("Internal error")
+             return agent_service_pb2.SubmitArbitrationDecisionResponse(
+@@ -1881,7 +1882,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                 message="Internal error processing request",
+             )
+         except Exception as e:
+-            logger.error(f"SubmitArbitrationDecision error: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"SubmitArbitrationDecision error: {e}")
+             context.set_code(grpc.StatusCode.INTERNAL)
+             context.set_details("Internal error")
+             return agent_service_pb2.SubmitArbitrationDecisionResponse(
+@@ -1928,7 +1929,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
+                 )
+ 
+         except Exception as e:
+-            logger.error(f"GetArbitrationQueueStats error: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"GetArbitrationQueueStats error: {e}")
+             context.set_code(grpc.StatusCode.INTERNAL)
+             context.set_details("Internal error")
+             return agent_service_pb2.GetArbitrationQueueStatsResponse()
+diff --git a/backend/app/services/chat_signal_collector.py b/backend/app/services/chat_signal_collector.py
+index 8235792e..5cf6b867 100644
+--- a/backend/app/services/chat_signal_collector.py
++++ b/backend/app/services/chat_signal_collector.py
+@@ -232,7 +232,7 @@ class ChatSignalCollector:
+ 
+                     await FusionEngine(str(user_id)).record_trace_loss(self.redis, user_id=str(user_id), error=str(exc))
+                 except Exception:
+-                    logger.debug("Failed to record ChatSignalCollector extraction error", exc_info=True)
++                    logger.opt(exception=True).debug("Failed to record ChatSignalCollector extraction error")
+             return
+         if not evidence_items:
+             return
+@@ -372,7 +372,7 @@ class ChatSignalCollector:
+ 
+                 await FusionEngine(str(user_id)).record_trace_loss(self.redis, user_id=str(user_id), error=str(exc))
+             except Exception:
+-                logger.debug("Failed to record ChatSignalCollector belief shadow error", exc_info=True)
++                logger.opt(exception=True).debug("Failed to record ChatSignalCollector belief shadow error")
+             return None
+ 
+     async def _persist_inferred_updates(
+diff --git a/backend/app/services/community_signal_bridge.py b/backend/app/services/community_signal_bridge.py
+index a7a785a9..6585d4b8 100644
+--- a/backend/app/services/community_signal_bridge.py
++++ b/backend/app/services/community_signal_bridge.py
+@@ -411,7 +411,7 @@ class CommunitySignalBridge:
+                 return True
+             return bool(settings_row.community_intelligence_enabled)
+         except Exception:
+-            logger.warning("community_intelligence_enabled check failed for {}", user_id, exc_info=True)
++            logger.opt(exception=True).warning("community_intelligence_enabled check failed for {}", user_id)
+             return False
+ 
+     async def _filter_opted_in_values(self, contributor_values: list[float | int | dict]) -> list[float]:
+diff --git a/backend/app/services/document_service.py b/backend/app/services/document_service.py
+index 781b082c..0f04eff6 100755
+--- a/backend/app/services/document_service.py
++++ b/backend/app/services/document_service.py
+@@ -1239,7 +1239,7 @@ class DocumentService:
+                 return result
+ 
+         except Exception as e:
+-            logger.error(f"Document cleaning failed: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"Document cleaning failed: {e}")
+             await self.update_progress(task_id, f"Error: {str(e)}", 100, {"error": str(e)})
+             return {"status": "error", "error": str(e)}
+ 
+diff --git a/backend/app/services/fme_l3_closure_bridge.py b/backend/app/services/fme_l3_closure_bridge.py
+index e844fa67..4985bfec 100644
+--- a/backend/app/services/fme_l3_closure_bridge.py
++++ b/backend/app/services/fme_l3_closure_bridge.py
+@@ -67,7 +67,7 @@ async def apply_l3_closure_to_spine(
+     try:
+         spine = get_spine_orchestrator(cache_service.redis)
+     except Exception:
+-        logger.warning("L3 closure bridge: SpineOrchestrator init failed", exc_info=True)
++        logger.opt(exception=True).warning("L3 closure bridge: SpineOrchestrator init failed")
+         return None
+ 
+     patch_dicts = [p.__dict__ if hasattr(p, "__dict__") else dict(p) for p in closure.state_patches]
+@@ -104,9 +104,8 @@ async def apply_l3_closure_to_spine(
+             )
+         return result
+     except Exception:
+-        logger.warning(
++        logger.opt(exception=True).warning(
+             "L3 closure bridge: close_aurora_session failed for session={}",
+             closure.session_id,
+-            exc_info=True,
+         )
+         return None
+diff --git a/backend/app/services/fme_strategy_change_emitter.py b/backend/app/services/fme_strategy_change_emitter.py
+index 523fb850..1c6e6459 100644
+--- a/backend/app/services/fme_strategy_change_emitter.py
++++ b/backend/app/services/fme_strategy_change_emitter.py
+@@ -72,4 +72,4 @@ async def emit_strategy_change_card(
+             user_id, old_strategy, new_strategy,
+         )
+     except Exception:
+-        logger.debug("Strategy change card emit skipped", exc_info=True)
++        logger.opt(exception=True).debug("Strategy change card emit skipped")
+diff --git a/backend/app/services/llm_service.py b/backend/app/services/llm_service.py
+index 3873b6c2..3fa1a458 100755
+--- a/backend/app/services/llm_service.py
++++ b/backend/app/services/llm_service.py
+@@ -255,7 +255,7 @@ def _record_token_usage(model: str, prompt_tokens: int, completion_tokens: int,
+             output_tokens=completion_tokens, endpoint=source,
+         )
+     except Exception:
+-        logger.warning("_record_token_usage: monitoring failed for model={}", model, exc_info=True)
++        logger.opt(exception=True).warning("_record_token_usage: monitoring failed for model={}", model)
+ 
+ 
+ async def _track_daily_user_tokens(user_id: str | None, total_tokens: int) -> None:
+@@ -275,7 +275,7 @@ async def _track_daily_user_tokens(user_id: str | None, total_tokens: int) -> No
+         if ttl is None or ttl < 0:
+             await r.expire(redis_key, 48 * 3600)
+     except Exception:
+-        logger.debug("_track_daily_user_tokens: redis failed", exc_info=True)
++        logger.opt(exception=True).debug("_track_daily_user_tokens: redis failed")
+ 
+ 
+ _FENCE_PATTERN = re.compile(r"```[a-zA-Z0-9_-]*[ \t]*\n?|```")
+@@ -1842,7 +1842,7 @@ class LLMService:
+             try:
+                 LLM_PUSH_CONTENT_PARSE_FAILURE_TOTAL.labels(stage=stage).inc()
+             except Exception:
+-                logger.debug("push content parse-failure metric recording failed", exc_info=True)
++                logger.opt(exception=True).debug("push content parse-failure metric recording failed")
+             logger.warning(
+                 "generate_push_content: JSON parse failed at stage={} ({!r}); output preview={!r}",
+                 stage,
+diff --git a/backend/app/services/ml/recall_ranker.py b/backend/app/services/ml/recall_ranker.py
+index dd26d661..597c98e4 100644
+--- a/backend/app/services/ml/recall_ranker.py
++++ b/backend/app/services/ml/recall_ranker.py
+@@ -203,7 +203,7 @@ class RecallRanker:
+             await self.redis.ltrim(key, 0, 99)  # Keep last 100 per user/trigger
+             await self.redis.expire(key, 90 * 24 * 3600)  # 90 days
+         except Exception:
+-            logger.debug("recall_ranker: training example save failed", exc_info=True)
++            logger.opt(exception=True).debug("recall_ranker: training example save failed")
+ 
+     async def get_user_response_rate(
+         self,
+@@ -235,7 +235,7 @@ class RecallRanker:
+                     continue
+             return responded / total if total > 0 else 0.5
+         except Exception:
+-            logger.debug("recall_ranker: response rate lookup failed", exc_info=True)
++            logger.opt(exception=True).debug("recall_ranker: response rate lookup failed")
+             return 0.5
+ 
+     async def get_model_version(self) -> str:
+diff --git a/backend/app/services/notification_center_service.py b/backend/app/services/notification_center_service.py
+index 06cfc55a..d7549cc5 100644
+--- a/backend/app/services/notification_center_service.py
++++ b/backend/app/services/notification_center_service.py
+@@ -1282,10 +1282,9 @@ class NotificationCenterService:
+                 },
+             )
+         except Exception:
+-            logger.debug(
++            logger.opt(exception=True).debug(
+                 "Recall feedback OutcomeRecorder write skipped for notification={}",
+                 notification.id,
+-                exc_info=True,
+             )
+ 
+     async def _materialize_specialized_repair_task_if_needed(
+diff --git a/backend/app/services/notification_push_service.py b/backend/app/services/notification_push_service.py
+index 1cf820ca..1646cde6 100644
+--- a/backend/app/services/notification_push_service.py
++++ b/backend/app/services/notification_push_service.py
+@@ -163,17 +163,15 @@ class NotificationPushService:
+                             },
+                         )
+                 except Exception:
+-                    logger.debug(
++                    logger.opt(exception=True).debug(
+                         "Device push failed for user={} device={}",
+                         user_id,
+                         device.device_id,
+-                        exc_info=True,
+                     )
+         except Exception:
+-            logger.debug(
++            logger.opt(exception=True).debug(
+                 "Device push skipped for user={}",
+                 user_id,
+-                exc_info=True,
+             )
+ 
+     async def push_intervention_notification(
+diff --git a/backend/app/services/nudge_service.py b/backend/app/services/nudge_service.py
+index e9c408f6..d4da1492 100755
+--- a/backend/app/services/nudge_service.py
++++ b/backend/app/services/nudge_service.py
+@@ -66,7 +66,7 @@ class NudgeService:
+             if directive and directive.channel in ("push", "in_app", "silent"):
+                 return directive.channel
+         except Exception:
+-            logger.debug("Spine channel resolution failed, defaulting to push", exc_info=True)
++            logger.opt(exception=True).debug("Spine channel resolution failed, defaulting to push")
+         return "push"
+ 
+     async def _create_in_app_notification(
+@@ -117,7 +117,7 @@ class NudgeService:
+                     spine = get_spine_orchestrator(cache_service.redis)
+                     spine_directive = await spine.get_notification_directive(user_id)
+             except Exception:
+-                logger.debug("Spine directive fetch for push failed (non-fatal)", exc_info=True)
++                logger.opt(exception=True).debug("Spine directive fetch for push failed (non-fatal)")
+ 
+             if spine_directive:
+                 content_dict = {
+@@ -158,4 +158,4 @@ class NudgeService:
+                     policy=policy,
+                 )
+         except Exception:
+-            logger.error("Failed to send push notification for nudge", exc_info=True)
++            logger.opt(exception=True).error("Failed to send push notification for nudge")
+diff --git a/backend/app/services/scheduler_service.py b/backend/app/services/scheduler_service.py
+index 8429cdd3..78da8491 100755
+--- a/backend/app/services/scheduler_service.py
++++ b/backend/app/services/scheduler_service.py
+@@ -158,7 +158,7 @@ class SchedulerService:
+                     await self._send_review_reminders(db)
+ 
+         except Exception as e:
+-            logger.error(f"Error in daily decay job: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"Error in daily decay job: {e}")
+ 
+     async def mining_implicit_behaviors_job(self):
+         """
+@@ -181,7 +181,7 @@ class SchedulerService:
+                 logger.info(f"Implicit mining completed: {total_fragments} fragments generated across {len(users)} users.")
+ 
+         except Exception as e:
+-            logger.error(f"Error in implicit mining job: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"Error in implicit mining job: {e}")
+ 
+     async def run_event_retention_cleanup(self):
+         """
+@@ -197,7 +197,7 @@ class SchedulerService:
+                     f"Event retention cleanup completed: events={events_pruned}, states={states_pruned}"
+                 )
+         except Exception as e:
+-            logger.error(f"Error in event retention cleanup: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"Error in event retention cleanup: {e}")
+ 
+     async def run_offline_queue_cleanup(self):
+         """清理过期离线消息，避免队列无限增长。"""
+@@ -208,7 +208,7 @@ class SchedulerService:
+                 await db.commit()
+                 logger.info(f"Offline queue cleanup completed: expired={expired_count}")
+         except Exception as e:
+-            logger.error(f"Error in offline queue cleanup: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"Error in offline queue cleanup: {e}")
+ 
+     async def run_nightly_review(self):
+         """
+@@ -223,7 +223,7 @@ class SchedulerService:
+                 for user in users:
+                     await service.generate_for_user(user.id, user.timezone)
+         except Exception as e:
+-            logger.error(f"Error in nightly review job: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"Error in nightly review job: {e}")
+ 
+     async def run_execution_schedule_tick(self):
+         logger.info("Starting execution schedule tick...")
+@@ -239,7 +239,7 @@ class SchedulerService:
+                     result["dispatched_count"],
+                 )
+         except Exception as e:
+-            logger.error(f"Error in execution schedule tick: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"Error in execution schedule tick: {e}")
+ 
+     async def run_memory_evidence_health_job(self):
+         if not settings.ENABLE_MEMORY_JOBS:
+@@ -250,7 +250,7 @@ class SchedulerService:
+                 service = MemoryJobsService(db)
+                 await service.run_evidence_health_job(limit_per_type=200)
+         except Exception as e:
+-            logger.error(f"Error in memory evidence health job: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"Error in memory evidence health job: {e}")
+ 
+     async def run_memory_decay_job(self):
+         if not settings.ENABLE_MEMORY_JOBS:
+@@ -261,7 +261,7 @@ class SchedulerService:
+                 service = MemoryJobsService(db)
+                 await service.run_decay_job(window_days=14)
+         except Exception as e:
+-            logger.error(f"Error in memory decay job: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"Error in memory decay job: {e}")
+ 
+     async def run_memory_repair_job(self):
+         if not settings.ENABLE_MEMORY_JOBS:
+@@ -272,7 +272,7 @@ class SchedulerService:
+                 service = MemoryJobsService(db)
+                 await service.run_repair_job(limit=200)
+         except Exception as e:
+-            logger.error(f"Error in memory repair job: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"Error in memory repair job: {e}")
+ 
+     async def run_memory_daily_summary_job(self):
+         if not settings.ENABLE_MEMORY_DAILY_SUMMARY:
+@@ -283,7 +283,7 @@ class SchedulerService:
+                 service = MemoryJobsService(db)
+                 await service.run_daily_summary_job()
+         except Exception as e:
+-            logger.error(f"Error in memory daily summary job: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"Error in memory daily summary job: {e}")
+ 
+     async def _send_review_reminders(self, db):
+         """
+@@ -316,7 +316,7 @@ class SchedulerService:
+                     logger.info(f"Sent review reminder to user {user.username}")
+ 
+         except Exception as e:
+-            logger.error(f"Error sending review reminders: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"Error sending review reminders: {e}")
+ 
+     async def apply_inferred_preference_decay(self):
+         """
+@@ -366,7 +366,7 @@ class SchedulerService:
+                 )
+ 
+         except Exception as e:
+-            logger.error(f"Error in preference decay job: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"Error in preference decay job: {e}")
+ 
+     # ========== 胶囊生成任务 ==========
+ 
+@@ -438,7 +438,7 @@ class SchedulerService:
+                 )
+ 
+         except Exception as e:
+-            logger.error(f"Error in daily capsule generation: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"Error in daily capsule generation: {e}")
+ 
+     async def generate_weekly_deep_capsules(self):
+         """
+@@ -509,7 +509,7 @@ class SchedulerService:
+                 )
+ 
+         except Exception as e:
+-            logger.error(f"Error in weekly deep capsule generation: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"Error in weekly deep capsule generation: {e}")
+ 
+     # ========== Outcome 验证任务 ==========
+ 
+@@ -533,11 +533,11 @@ class SchedulerService:
+                         resolved = await tracker.verify_pending(str(user.id))
+                         total_resolved += len(resolved)
+                     except Exception:
+-                        logger.warning("Outcome verification failed for user {}", user.id, exc_info=True)
++                        logger.opt(exception=True).warning("Outcome verification failed for user {}", user.id)
+ 
+             logger.info(f"Outcome verification completed: resolved={total_resolved} across {len(users)} users")
+         except Exception as e:
+-            logger.error(f"Error in outcome verification job: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"Error in outcome verification job: {e}")
+ 
+ 
+ scheduler_service = SchedulerService()
+diff --git a/backend/app/signals/aurora_core_session.py b/backend/app/signals/aurora_core_session.py
+index 717de327..3e3f6cc0 100644
+--- a/backend/app/signals/aurora_core_session.py
++++ b/backend/app/signals/aurora_core_session.py
+@@ -613,7 +613,7 @@ class AuroraCoreSessionService:
+                 ex=_SESSION_TTL,
+             )
+         except Exception:
+-            logger.warning("AuroraCoreSession: transition persist failed", exc_info=True)
++            logger.opt(exception=True).warning("AuroraCoreSession: transition persist failed")
+             return None
+ 
+         # Clear active pointer for terminal states
+diff --git a/backend/app/signals/card_store.py b/backend/app/signals/card_store.py
+index af608328..1a8b10a3 100644
+--- a/backend/app/signals/card_store.py
++++ b/backend/app/signals/card_store.py
+@@ -65,7 +65,7 @@ class CardStore:
+ 
+             return recovery_card
+         except Exception:
+-            logger.warning("build_recovery_card: failed", exc_info=True)
++            logger.opt(exception=True).warning("build_recovery_card: failed")
+             return None
+ 
+     async def build_context_receipt(
+@@ -97,7 +97,7 @@ class CardStore:
+                 ex=2 * 3600,
+             )
+         except Exception:
+-            logger.warning("build_context_receipt: redis failed", exc_info=True)
++            logger.opt(exception=True).warning("build_context_receipt: redis failed")
+         return receipt
+ 
+     async def build_community_hint(
+@@ -136,5 +136,5 @@ class CardStore:
+             )
+             return card
+         except Exception:
+-            logger.warning("build_community_hint: failed", exc_info=True)
++            logger.opt(exception=True).warning("build_community_hint: failed")
+             return None
+diff --git a/backend/app/signals/causal_trace_store.py b/backend/app/signals/causal_trace_store.py
+index c5ca25cc..9acd81f5 100644
+--- a/backend/app/signals/causal_trace_store.py
++++ b/backend/app/signals/causal_trace_store.py
+@@ -144,7 +144,7 @@ class CausalTraceStore:
+             if current_count > _MAX_USER_TRACES:
+                 await self.compact_old_traces(user_id)
+         except Exception:
+-            logger.warning("Trace compaction failed for user={}", user_id, exc_info=True)
++            logger.opt(exception=True).warning("Trace compaction failed for user={}", user_id)
+         await self.redis.ltrim(key, 0, _MAX_USER_TRACES - 1)
+         await self.redis.expire(key, _TRACE_TTL)
+ 
+diff --git a/backend/app/signals/directive_store.py b/backend/app/signals/directive_store.py
+index 5994475d..46b37a52 100644
+--- a/backend/app/signals/directive_store.py
++++ b/backend/app/signals/directive_store.py
+@@ -58,7 +58,7 @@ class DirectiveStore:
+         try:
+             await self.redis.publish(channel, json.dumps(payload))
+         except Exception:
+-            logger.debug("directive pub/sub failed on channel={}", channel, exc_info=True)
++            logger.opt(exception=True).debug("directive pub/sub failed on channel={}", channel)
+ 
+     # ── Per-type convenience methods ─────────────────────────────────────
+ 
+@@ -85,7 +85,7 @@ class DirectiveStore:
+                 "user_visible_reason": nd.user_visible_reason,
+             })
+         except Exception:
+-            logger.debug("notification_directive event publish failed", exc_info=True)
++            logger.opt(exception=True).debug("notification_directive event publish failed")
+ 
+     async def get_notification(self, user_id: str) -> NotificationDirective | None:
+         return await self.retrieve(user_id, "notification", NotificationDirective)
+@@ -120,7 +120,7 @@ class DirectiveStore:
+                 }),
+             )
+         except Exception:
+-            logger.debug("plan_directive pub/sub publish failed for user={}", user_id, exc_info=True)
++            logger.opt(exception=True).debug("plan_directive pub/sub publish failed for user={}", user_id)
+ 
+     async def get_plan(self, user_id: str) -> PlanDirective | None:
+         return await self.retrieve(user_id, "plan", PlanDirective)
+@@ -143,7 +143,7 @@ class DirectiveStore:
+                 return [json.loads(raw)] if raw else []
+             return []
+         except Exception:
+-            logger.warning("get_model_claims: failed", exc_info=True)
++            logger.opt(exception=True).warning("get_model_claims: failed")
+             return []
+ 
+     # UXDirective
+diff --git a/backend/app/signals/low_yield_guard.py b/backend/app/signals/low_yield_guard.py
+index 78c4ad05..b38cf9f3 100644
+--- a/backend/app/signals/low_yield_guard.py
++++ b/backend/app/signals/low_yield_guard.py
+@@ -132,7 +132,7 @@ class LowYieldGuard:
+                 )
+             return adj
+         except Exception:
+-            logger.debug("LowYieldGuard: personalization lookup failed user={}", user_id, exc_info=True)
++            logger.opt(exception=True).debug("LowYieldGuard: personalization lookup failed user={}", user_id)
+             return 0.0
+ 
+     async def check_activity(
+diff --git a/backend/app/signals/outcome_recorder.py b/backend/app/signals/outcome_recorder.py
+index 8d9d6b88..b2f1f035 100644
+--- a/backend/app/signals/outcome_recorder.py
++++ b/backend/app/signals/outcome_recorder.py
+@@ -139,7 +139,7 @@ class OutcomeRecorder:
+                     )
+                     return existing
+         except Exception:
+-            logger.debug("OutcomeRecorder idem check failed, proceeding", exc_info=True)
++            logger.opt(exception=True).debug("OutcomeRecorder idem check failed, proceeding")
+         attribution, confidence, hypothesis, next_policy = self._attribute(
+             expected_outcome, actual_outcome,
+         )
+@@ -166,7 +166,7 @@ class OutcomeRecorder:
+         try:
+             await self.redis.set(idem_key, record.outcome_id, nx=True, ex=720 * 3600)
+         except Exception:
+-            logger.debug("OutcomeRecorder idem marker set failed", exc_info=True)
++            logger.opt(exception=True).debug("OutcomeRecorder idem marker set failed")
+ 
+         # Write PolicyEffectLedger entry for learning loop
+         if record.attribution not in ("inconclusive", "needs_confirmation"):
+diff --git a/backend/app/signals/self_model.py b/backend/app/signals/self_model.py
+index e6a75608..e9f89cbe 100644
+--- a/backend/app/signals/self_model.py
++++ b/backend/app/signals/self_model.py
+@@ -138,7 +138,7 @@ class SparkleSelfModelService:
+                 task_id=claim_obj.claim_id,
+             )
+         except Exception:
+-            logger.debug("Aurora self-model delegation failed (non-fatal)", exc_info=True)
++            logger.opt(exception=True).debug("Aurora self-model delegation failed (non-fatal)")
+ 
+         logger.info(
+             "SelfModel claim (→Aurora): user={} claim_id={} scope={} conf={:.2f}",
+@@ -178,7 +178,7 @@ class SparkleSelfModelService:
+                 task_id=directive_id,
+             )
+         except Exception:
+-            logger.debug("Aurora outcome delegation failed (non-fatal)", exc_info=True)
++            logger.opt(exception=True).debug("Aurora outcome delegation failed (non-fatal)")
+ 
+         logger.info(
+             "SelfModel outcome (→Aurora): user={} claim={} effect={} suggestion={}",
+@@ -192,7 +192,7 @@ class SparkleSelfModelService:
+             aurora = self._get_aurora()
+             readout = await aurora.get_readout_summary(user_id=user_id)
+         except Exception:
+-            logger.debug("Aurora readout failed, returning empty claims", exc_info=True)
++            logger.opt(exception=True).debug("Aurora readout failed, returning empty claims")
+             return []
+ 
+         claims: list[SelfModelClaim] = []
+@@ -247,7 +247,7 @@ class SparkleSelfModelService:
+                 source=source,
+             )
+         except Exception:
+-            logger.debug("Aurora correction delegation failed (non-fatal)", exc_info=True)
++            logger.opt(exception=True).debug("Aurora correction delegation failed (non-fatal)")
+ 
+         return await self.record_claim(
+             user_id=user_id,
+diff --git a/backend/app/signals/skill_lifecycle.py b/backend/app/signals/skill_lifecycle.py
+index d4126467..f741e46f 100644
+--- a/backend/app/signals/skill_lifecycle.py
++++ b/backend/app/signals/skill_lifecycle.py
+@@ -237,10 +237,9 @@ class SkillLifecycleManager:
+                 await MarketplacePersistenceService(session).register_system_skill(skill, user_id=user_id)
+                 await session.commit()
+         except Exception:
+-            logger.warning(
++            logger.opt(exception=True).warning(
+                 "SkillLifecycle: marketplace registration failed for system skill={}",
+                 skill.skill_id,
+-                exc_info=True,
+             )
+ 
+     async def deprecate_skill(self, user_id: str, skill_id: str, reason: str) -> None:
+diff --git a/backend/app/signals/spine_orchestrator.py b/backend/app/signals/spine_orchestrator.py
+index 5cc45ea5..e09f52e5 100644
+--- a/backend/app/signals/spine_orchestrator.py
++++ b/backend/app/signals/spine_orchestrator.py
+@@ -239,7 +239,7 @@ class SpineOrchestrator:
+                     user_id, "task_completed", {"task_id": task_id},
+                 )
+             except Exception:
+-                logger.warning("on_task_completed: relationship_model failed", exc_info=True)
++                logger.opt(exception=True).warning("on_task_completed: relationship_model failed")
+             return trace
+ 
+         # Step 2: Delegate pipeline to _run_signal_pipeline (handles lock)
+@@ -274,7 +274,7 @@ class SpineOrchestrator:
+             trace.aurora_energy_level = energy_decision.current_level
+             trace.aurora_upgrade_reason = energy_decision.upgrade_reason
+         except Exception:
+-            logger.warning("on_task_completed: energy decision failed for user={}", user_id, exc_info=True)
++            logger.opt(exception=True).warning("on_task_completed: energy decision failed for user={}", user_id)
+ 
+         # Step 3b: Register expected outcome for verification loop
+         try:
+@@ -295,7 +295,7 @@ class SpineOrchestrator:
+                 },
+             )
+         except Exception:
+-            logger.warning("on_task_completed: outcome_tracker.register_expected failed", exc_info=True)
++            logger.opt(exception=True).warning("on_task_completed: outcome_tracker.register_expected failed")
+ 
+         # Step 3c: Check Aurora wake eligibility for high-risk signals
+         try:
+@@ -324,7 +324,7 @@ class SpineOrchestrator:
+                         user_id, wake_result.recommended_session_type,
+                     )
+         except Exception:
+-            logger.warning("on_task_completed: aurora wake check failed", exc_info=True)
++            logger.opt(exception=True).warning("on_task_completed: aurora wake check failed")
+ 
+         await self.trace_store._save_trace(trace)
+ 
+@@ -609,7 +609,7 @@ class SpineOrchestrator:
+                             json.loads(raw if isinstance(raw, str) else raw.decode())
+                         ).to_dict()
+                     except Exception:
+-                        logger.warning("get_rendered_timeline: operation failed", exc_info=True)
++                        logger.opt(exception=True).warning("get_rendered_timeline: operation failed")
+ 
+             # Load policy decision
+             policy_data = None
+@@ -621,7 +621,7 @@ class SpineOrchestrator:
+                             json.loads(raw if isinstance(raw, str) else raw.decode())
+                         ).to_dict()
+                     except Exception:
+-                        logger.warning("get_rendered_timeline: operation failed", exc_info=True)
++                        logger.opt(exception=True).warning("get_rendered_timeline: operation failed")
+ 
+             # Load directives
+             directives: list[dict[str, Any]] = []
+@@ -633,7 +633,7 @@ class SpineOrchestrator:
+                             json.loads(raw if isinstance(raw, str) else raw.decode())
+                         )
+                     except Exception:
+-                        logger.warning("get_rendered_timeline: operation failed", exc_info=True)
++                        logger.opt(exception=True).warning("get_rendered_timeline: operation failed")
+ 
+             # Load audit records (P2: previously skipped in timeline rendering)
+             audits: list[dict[str, Any]] = []
+@@ -645,7 +645,7 @@ class SpineOrchestrator:
+                             json.loads(raw if isinstance(raw, str) else raw.decode())
+                         )
+                     except Exception:
+-                        logger.warning("get_rendered_timeline: audit load failed", exc_info=True)
++                        logger.opt(exception=True).warning("get_rendered_timeline: audit load failed")
+ 
+             # Load receipt
+             receipt_data = None
+@@ -659,7 +659,7 @@ class SpineOrchestrator:
+                             json.loads(raw if isinstance(raw, str) else raw.decode())
+                         ).to_dict()
+                     except Exception:
+-                        logger.warning("get_rendered_timeline: operation failed", exc_info=True)
++                        logger.opt(exception=True).warning("get_rendered_timeline: operation failed")
+ 
+             # Load outcome record
+             outcome_data = None
+@@ -668,7 +668,7 @@ class SpineOrchestrator:
+                 if outcome_record:
+                     outcome_data = outcome_record.to_dict()
+             except Exception:
+-                logger.warning("get_rendered_timeline: outcome load failed", exc_info=True)
++                logger.opt(exception=True).warning("get_rendered_timeline: outcome load failed")
+ 
+             # Build human-readable event summary
+             event_parts = []
+@@ -699,7 +699,7 @@ class SpineOrchestrator:
+                 if card:
+                     card_data = card.to_dict()
+             except Exception:
+-                logger.warning("get_rendered_timeline: operation failed", exc_info=True)
++                logger.opt(exception=True).warning("get_rendered_timeline: operation failed")
+ 
+             cards.append({
+                 "trace_id": trace.trace_id,
+@@ -755,7 +755,7 @@ class SpineOrchestrator:
+                     user_initiated=bool(sel.get("user_initiated", True)),
+                 ))
+             except Exception:
+-                logger.warning("set_source_tray_selection: failed", exc_info=True)
++                logger.opt(exception=True).warning("set_source_tray_selection: failed")
+                 continue
+ 
+         state = SourceTrayState(mode=mode, selections=parsed)
+@@ -926,7 +926,7 @@ class SpineOrchestrator:
+                     user_id=user_id,
+                 )
+             except Exception:
+-                logger.debug("record_outcome: receipt correct skipped for user={}", user_id, exc_info=True)
++                logger.opt(exception=True).debug("record_outcome: receipt correct skipped for user={}", user_id)
+         elif action == "confirm":
+             await self.metrics.record_outcome_recorded(effective=True)
+             # AUR-005: Close feedback loop on user confirmation
+@@ -944,7 +944,7 @@ class SpineOrchestrator:
+                     user_id=user_id,
+                 )
+             except Exception:
+-                logger.debug("record_outcome: receipt confirm skipped for user={}", user_id, exc_info=True)
++                logger.opt(exception=True).debug("record_outcome: receipt confirm skipped for user={}", user_id)
+         elif action == "dismiss":
+             await self.metrics.record_outcome_recorded(effective=False)
+ 
+@@ -992,7 +992,7 @@ class SpineOrchestrator:
+                 user_id=user_id, snapshot_type="goal_checkpoint",
+             )
+         except Exception:
+-            logger.warning("on_achievement_event: save_spine_snapshot failed", exc_info=True)
++            logger.opt(exception=True).warning("on_achievement_event: save_spine_snapshot failed")
+ 
+         # STAB-004: Wire ReturnCaseFile from GrowthChronicle into return flow
+         await self._save_return_case_file(user_id)
+@@ -1401,7 +1401,7 @@ class SpineOrchestrator:
+                 )
+                 logger.debug("L0 signal injected: {} for user={}", l0_signal.state_key, user_id)
+         except Exception:
+-            logger.warning("L0 rule evaluation failed for user={}", user_id, exc_info=True)
++            logger.opt(exception=True).warning("L0 rule evaluation failed for user={}", user_id)
+ 
+         # P0-1: SignalRanker — rank primary + L0 signals together, resolve conflicts
+         _ranking_context: dict[str, Any] = {}
+@@ -1565,7 +1565,7 @@ class SpineOrchestrator:
+                     if hasattr(directive, "task_type"):
+                         directive.task_type = alt
+         except Exception:
+-            logger.warning("LowYieldGuard check failed for user={}", user_id, exc_info=True)
++            logger.opt(exception=True).warning("LowYieldGuard check failed for user={}", user_id)
+ 
+         await self.trace_store.set_active_directive(user_id, directive)
+         await self._link_directive_to_active_session(user_id, directive.directive_id)
+@@ -1593,7 +1593,7 @@ class SpineOrchestrator:
+                     logger.warning("FabricationGuard: flagged {} pattern(s) in response for user={}", len(flagged), user_id)
+                     trace.raw_event_ids.append(f"fabrication:{len(flagged)}")
+             except Exception:
+-                logger.warning("Fabrication scan failed for user={}", user_id, exc_info=True)
++                logger.opt(exception=True).warning("Fabrication scan failed for user={}", user_id)
+ 
+             # P1-16: Citation validation — verify citations against retrieved sources
+             try:
+@@ -1608,7 +1608,7 @@ class SpineOrchestrator:
+                         logger.warning("CitationValidator: {} for user={}", note, user_id)
+                         trace.raw_event_ids.append(f"citation_warning:{len(citation_result.unverifiable)}")
+             except Exception:
+-                logger.warning("Citation validation failed for user={}", user_id, exc_info=True)
++                logger.opt(exception=True).warning("Citation validation failed for user={}", user_id)
+ 
+         # Build and store NotificationDirective
+         notif_dir = self.policy_engine.build_notification_directive(decision, signal)
+@@ -1629,7 +1629,7 @@ class SpineOrchestrator:
+                     retrieval_mode=ret_dir.retrieval_mode,
+                 )
+             except Exception:
+-                logger.warning("build_context_receipt failed for user={}", user_id, exc_info=True)
++                logger.opt(exception=True).warning("build_context_receipt failed for user={}", user_id)
+ 
+         # Build and store PlanDirective
+         plan_dir = self.policy_engine.build_plan_directive(decision, signal)
+@@ -1681,7 +1681,7 @@ class SpineOrchestrator:
+                         )
+                         receipt_message = filtered.get("message", receipt_message)
+             except Exception:
+-                logger.warning("Research isolation filter failed for user={}", user_id, exc_info=True)
++                logger.opt(exception=True).warning("Research isolation filter failed for user={}", user_id)
+ 
+             receipt = UserVisibleReceipt(
+                 receipt_id=_uid("rcpt"),
+@@ -1752,7 +1752,7 @@ class SpineOrchestrator:
+                 user_id=user_id,
+             )
+         except Exception:
+-            logger.debug("record_outcome: pipeline outcome recording skipped for user={}", user_id, exc_info=True)
++            logger.opt(exception=True).debug("record_outcome: pipeline outcome recording skipped for user={}", user_id)
+ 
+         return trace
+ 
+@@ -1840,7 +1840,7 @@ class SpineOrchestrator:
+                     ex=24 * 3600,
+                 )
+         except Exception:
+-            logger.warning("L1 Light Aurora failed for user={}", user_id, exc_info=True)
++            logger.opt(exception=True).warning("L1 Light Aurora failed for user={}", user_id)
+ 
+         signal = self._detect_chat_turn_signal(
+             user_id=user_id,
+@@ -1912,7 +1912,7 @@ class SpineOrchestrator:
+                         )
+             await self.redis.set(key, now, ex=90 * 24 * 3600)
+         except Exception:
+-            logger.warning("chat_turn heartbeat failed for user={}", user_id, exc_info=True)
++            logger.opt(exception=True).warning("chat_turn heartbeat failed for user={}", user_id)
+ 
+     def _detect_chat_turn_signal(
+         self,
+@@ -2060,7 +2060,7 @@ class SpineOrchestrator:
+                 await self.save_spine_snapshot(user_id=user_id, snapshot_type="pre_ttl_expiry")
+                 logger.info("Spine snapshot refreshed for user={} (was TTL={}s)", user_id, snap_ttl)
+         except Exception:
+-            logger.warning("on_user_return: redis failed", exc_info=True)
++            logger.opt(exception=True).warning("on_user_return: redis failed")
+ 
+         return trace
+ 
+@@ -2115,7 +2115,7 @@ class SpineOrchestrator:
+                 user_id, snapshot.absence_level,
+             )
+         except Exception:
+-            logger.warning("MAGIC-004 absence card emission failed", exc_info=True)
++            logger.opt(exception=True).warning("MAGIC-004 absence card emission failed")
+ 
+         logger.info(
+             "Spine absence: user={} level={} elapsed={:.0f}min",
+@@ -2217,7 +2217,7 @@ class SpineOrchestrator:
+                 cohort_size=cohort_size,
+             )
+         except Exception:
+-            logger.warning("on_community_cohort_data: on_community_hint failed", exc_info=True)
++            logger.opt(exception=True).warning("on_community_cohort_data: on_community_hint failed")
+ 
+         signal = self.community_detector.to_actionable_signal(pattern)
+         return await self._run_signal_pipeline(
+@@ -2524,7 +2524,7 @@ class SpineOrchestrator:
+ 
+             return episode
+         except Exception:
+-            logger.warning("_generate_episode failed for user={}", user_id, exc_info=True)
++            logger.opt(exception=True).warning("_generate_episode failed for user={}", user_id)
+             return None
+ 
+     async def _store_episode(self, user_id: str, episode: InterventionEpisode) -> None:
+@@ -2541,7 +2541,7 @@ class SpineOrchestrator:
+             await self.redis.ltrim(f"spine:episodes:{user_id}", -100, -1)
+             await self.redis.expire(f"spine:episodes:{user_id}", 90 * 24 * 3600)
+         except Exception:
+-            logger.warning("_store_episode failed for user={}", user_id, exc_info=True)
++            logger.opt(exception=True).warning("_store_episode failed for user={}", user_id)
+ 
+     # ── L2 Mid Aurora: Escalation Detection ─────────────────────────────
+ 
+@@ -2703,7 +2703,7 @@ class SpineOrchestrator:
+             )
+             return decision_event
+         except Exception:
+-            logger.warning("L2 joint decision failed for user={}", user_id, exc_info=True)
++            logger.opt(exception=True).warning("L2 joint decision failed for user={}", user_id)
+             return None
+ 
+     # ── Layer 6: Directive persistence (delegated to DirectiveStore) ────
+@@ -2747,7 +2747,7 @@ class SpineOrchestrator:
+                 return
+             tray = SourceTrayState.from_dict(json.loads(raw if isinstance(raw, str) else raw.decode()))
+         except Exception:
+-            logger.warning("_enrich_retrieval_with_source_tray: failed", exc_info=True)
++            logger.opt(exception=True).warning("_enrich_retrieval_with_source_tray: failed")
+             return
+ 
+         from app.signals.source_tray_integration import SourceEffectivenessTracker
+@@ -2756,7 +2756,7 @@ class SpineOrchestrator:
+             tracker = SourceEffectivenessTracker(self.redis)
+             blocked = set(await tracker.get_blocked_sources(user_id))
+         except Exception:
+-            logger.warning("_enrich_retrieval_with_source_tray: redis_op failed", exc_info=True)
++            logger.opt(exception=True).warning("_enrich_retrieval_with_source_tray: redis_op failed")
+ 
+         plan = await compute_retrieval_plan(
+             retrieval_directive=rd, source_tray=tray, blocked_source_ids=blocked or None,
+@@ -2789,7 +2789,7 @@ class SpineOrchestrator:
+                 return None
+             return json.loads(raw if isinstance(raw, str) else raw.decode())
+         except Exception:
+-            logger.warning("get_source_receipt: failed", exc_info=True)
++            logger.opt(exception=True).warning("get_source_receipt: failed")
+             return None
+ 
+     async def set_source_tray(self, user_id: str, tray_state: dict[str, Any]) -> None:
+@@ -2959,7 +2959,7 @@ class SpineOrchestrator:
+                         user_id, goal_type, mapping.get("task_type"),
+                     )
+         except Exception:
+-            logger.warning("_apply_exam_sprint_overlay: operation failed", exc_info=True)
++            logger.opt(exception=True).warning("_apply_exam_sprint_overlay: operation failed")
+ 
+         return directive
+ 
+@@ -3038,7 +3038,7 @@ class SpineOrchestrator:
+                 try:
+                     return json.loads(raw)
+                 except Exception:
+-                    logger.warning("get_latest_community_hint: operation failed", exc_info=True)
++                    logger.opt(exception=True).warning("get_latest_community_hint: operation failed")
+         return None
+ 
+     async def get_ux_risk_warning(self, user_id: str) -> dict[str, Any] | None:
+@@ -3099,7 +3099,7 @@ class SpineOrchestrator:
+                 "directive_id": ux_dir.directive_id,
+             }
+         except Exception:
+-            logger.warning("get_ux_risk_warning: failed", exc_info=True)
++            logger.opt(exception=True).warning("get_ux_risk_warning: failed")
+             return None
+ 
+     # ── Layer 6: SkillDirective ──────────────────────────────────────────
+@@ -3217,7 +3217,7 @@ class SpineOrchestrator:
+                     beliefs.append(new_belief)
+                 await self._persist_strategy_beliefs(user_id, beliefs)
+             except Exception:
+-                logger.warning("Auto strategy learning failed for user={}", user_id, exc_info=True)
++                logger.opt(exception=True).warning("Auto strategy learning failed for user={}", user_id)
+ 
+         # v2.4: Record experiment trial with real outcome
+         try:
+@@ -3237,7 +3237,7 @@ class SpineOrchestrator:
+                         )
+                         break  # Only record for the most relevant running experiment
+         except Exception:
+-            logger.warning("record_outcome: operation failed", exc_info=True)
++            logger.opt(exception=True).warning("record_outcome: operation failed")
+ 
+         # v2.4: Record source effectiveness if sources were involved
+         try:
+@@ -3250,7 +3250,7 @@ class SpineOrchestrator:
+                         outcome=record.attribution,
+                     )
+         except Exception:
+-            logger.warning("record_outcome: cache_op failed", exc_info=True)
++            logger.opt(exception=True).warning("record_outcome: cache_op failed")
+ 
+         # v2.5: Skill extraction from effective strategies
+         try:
+@@ -3269,7 +3269,7 @@ class SpineOrchestrator:
+                     )
+                     logger.info("Skill extracted and registered: {} from policy={}", skill.skill_id, skill.source_policy_key)
+         except Exception:
+-            logger.warning("record_outcome: operation failed", exc_info=True)
++            logger.opt(exception=True).warning("record_outcome: operation failed")
+ 
+         # AUR-005: Close the Outcome → ModelUpdate feedback loop
+         try:
+@@ -3284,9 +3284,9 @@ class SpineOrchestrator:
+                     trace_id=record.causal_trace_id,
+                 )
+         except Exception:
+-            logger.debug(
++            logger.opt(exception=True).debug(
+                 "record_outcome: outcome_consumer skipped for outcome={}",
+-                getattr(record, 'outcome_id', 'unknown'), exc_info=True,
++                getattr(record, 'outcome_id', 'unknown'),
+             )
+             # Queue for async Celery processing as fallback
+             try:
+@@ -3305,14 +3305,14 @@ class SpineOrchestrator:
+                 )
+                 await self.redis.ltrim(f"spine:pending_learning:{user_id}", 0, 99)
+             except Exception:
+-                logger.warning("record_outcome: async queue fallback failed", exc_info=True)
++                logger.opt(exception=True).warning("record_outcome: async queue fallback failed")
+ 
+         # v2.5: Consume Aurora decisions for outcome attribution
+         try:
+             if user_id:
+                 await self._consume_aurora_decisions_for_attribution(user_id, record)
+         except Exception:
+-            logger.warning("record_outcome: _consume_aurora_decisions_for_attribution failed", exc_info=True)
++            logger.opt(exception=True).warning("record_outcome: _consume_aurora_decisions_for_attribution failed")
+ 
+         # v2.5: Counterfactual shadow evaluation (research-grade)
+         if user_id and record.attribution in ("effective", "insufficient"):
+@@ -3320,7 +3320,7 @@ class SpineOrchestrator:
+                 await self._run_counterfactual_shadow(user_id, record, actual_outcome)
+             except Exception:
+                 # 影子评估为研究性增强，不得中断 outcome 主流程（与相邻 enricher 一致）
+-                logger.warning("record_outcome: _run_counterfactual_shadow failed", exc_info=True)
++                logger.opt(exception=True).warning("record_outcome: _run_counterfactual_shadow failed")
+ 
+         # P1: Close the episode outcome loop for counterfactual analysis
+         try:
+@@ -3344,7 +3344,7 @@ class SpineOrchestrator:
+                 )
+                 await episode_logger.record_outcome(trace.trace_id, attribution_score)
+         except Exception:
+-            logger.debug("episode_logger: outcome recording failed for trace={}", trace.trace_id, exc_info=True)
++            logger.opt(exception=True).debug("episode_logger: outcome recording failed for trace={}", trace.trace_id)
+ 
+         return record
+ 
+@@ -3387,7 +3387,7 @@ class SpineOrchestrator:
+                 )
+                 await self.metrics.record_spine_degradation("quality_guard_directive")
+         except Exception:
+-            logger.debug("Quality guard skipped for trace={}", trace.trace_id, exc_info=True)
++            logger.opt(exception=True).debug("Quality guard skipped for trace={}", trace.trace_id)
+ 
+     # ── P0-2: Post-policy enrichment from previously orphaned modules ──
+ 
+@@ -3416,7 +3416,7 @@ class SpineOrchestrator:
+                     primary_strategy=strategy_key,
+                 )
+         except Exception:
+-            logger.warning("_enrich_pipeline_post_policy: policy_experiments failed", exc_info=True)
++            logger.opt(exception=True).warning("_enrich_pipeline_post_policy: policy_experiments failed")
+ 
+         # 1b. policy_experiments: check for promotion suggestions
+         try:
+@@ -3429,7 +3429,7 @@ class SpineOrchestrator:
+                     ex=24 * 3600,
+                 )
+         except Exception:
+-            logger.warning("_enrich_pipeline_post_policy: policy_experiments failed", exc_info=True)
++            logger.opt(exception=True).warning("_enrich_pipeline_post_policy: policy_experiments failed")
+ 
+         # 2. relationship_model: update from interaction
+         try:
+@@ -3438,7 +3438,7 @@ class SpineOrchestrator:
+                 interaction_type="system_proactive",
+             )
+         except Exception:
+-            logger.warning("_enrich_pipeline_post_policy: relationship_model failed", exc_info=True)
++            logger.opt(exception=True).warning("_enrich_pipeline_post_policy: relationship_model failed")
+ 
+         # 3. growth_chronicle: record if this is a significant event
+         try:
+@@ -3453,7 +3453,7 @@ class SpineOrchestrator:
+                 if entry:
+                     await self.growth_chronicle.add_entry(user_id=user_id, entry=entry)
+         except Exception:
+-            logger.warning("_enrich_pipeline_post_policy: growth_chronicle failed", exc_info=True)
++            logger.opt(exception=True).warning("_enrich_pipeline_post_policy: growth_chronicle failed")
+ 
+         # 4. policy_analytics: record for analytics (async)
+         try:
+@@ -3467,7 +3467,7 @@ class SpineOrchestrator:
+                         ex=24 * 3600,
+                     )
+         except Exception:
+-            logger.warning("_enrich_pipeline_post_policy: outcome_recorder failed", exc_info=True)
++            logger.opt(exception=True).warning("_enrich_pipeline_post_policy: outcome_recorder failed")
+ 
+         # 5. learning_base: update + persist strategy beliefs
+         try:
+@@ -3486,7 +3486,7 @@ class SpineOrchestrator:
+                 beliefs = list(belief_map.values())
+                 await self._persist_strategy_beliefs(user_id, beliefs)
+         except Exception:
+-            logger.warning("_enrich_pipeline_post_policy: operation failed", exc_info=True)
++            logger.opt(exception=True).warning("_enrich_pipeline_post_policy: operation failed")
+ 
+         # 6. fatigue check: detect if user is overworked
+         try:
+@@ -3503,7 +3503,7 @@ class SpineOrchestrator:
+                     ex=6 * 3600,
+                 )
+         except Exception:
+-            logger.warning("_enrich_pipeline_post_policy: redis failed", exc_info=True)
++            logger.opt(exception=True).warning("_enrich_pipeline_post_policy: redis failed")
+ 
+         # 7. crisis mode check (all goal types)
+         try:
+@@ -3531,7 +3531,7 @@ class SpineOrchestrator:
+                         ex=12 * 3600,
+                     )
+         except Exception:
+-            logger.warning("_enrich_pipeline_post_policy: crisis check failed", exc_info=True)
++            logger.opt(exception=True).warning("_enrich_pipeline_post_policy: crisis check failed")
+ 
+         # 8. P4 counterfactual evaluation: store policy decision for later analysis
+         try:
+@@ -3550,7 +3550,7 @@ class SpineOrchestrator:
+             await self.redis.ltrim(f"spine:policy_decisions:{user_id}", -100, -1)
+             await self.redis.expire(f"spine:policy_decisions:{user_id}", 90 * 24 * 3600)
+         except Exception:
+-            logger.warning("_enrich_pipeline_post_policy: operation failed", exc_info=True)
++            logger.opt(exception=True).warning("_enrich_pipeline_post_policy: operation failed")
+ 
+         # 9. MAGIC-003: material utilization check — detect when uploaded materials go unused
+         try:
+@@ -3566,7 +3566,7 @@ class SpineOrchestrator:
+                     filenames=material_signal.evidence_summary,
+                 )
+         except Exception:
+-            logger.warning("_enrich_pipeline_post_policy: material_signal check failed", exc_info=True)
++            logger.opt(exception=True).warning("_enrich_pipeline_post_policy: material_signal check failed")
+ 
+         # 9. P4 quality guard: signal quality + directive compliance checks
+         try:
+@@ -3592,7 +3592,7 @@ class SpineOrchestrator:
+                         ex=24 * 3600,
+                     )
+         except Exception:
+-            logger.warning("_enrich_pipeline_post_policy: operation failed", exc_info=True)
++            logger.opt(exception=True).warning("_enrich_pipeline_post_policy: operation failed")
+ 
+         # 10. P4 research mode: gap detection for continuous improvement
+         try:
+@@ -3618,7 +3618,7 @@ class SpineOrchestrator:
+                     ex=24 * 3600,
+                 )
+         except Exception:
+-            logger.warning("_enrich_pipeline_post_policy: operation failed", exc_info=True)
++            logger.opt(exception=True).warning("_enrich_pipeline_post_policy: operation failed")
+ 
+         # 11. P4 safe experiment: bandit suggestion for strategy selection
+         try:
+@@ -3681,7 +3681,7 @@ class SpineOrchestrator:
+                 raw_str = raw if isinstance(raw, str) else raw.decode()
+                 decisions.append(json.loads(raw_str))
+         except Exception:
+-            logger.warning("consume_aurora_decisions: redis failed", exc_info=True)
++            logger.opt(exception=True).warning("consume_aurora_decisions: redis failed")
+         return decisions
+ 
+     async def _consume_aurora_decisions_for_attribution(
+@@ -3720,7 +3720,7 @@ class SpineOrchestrator:
+                 self.learning_base.update_belief(belief_map[aurora_key], "effective")
+                 await self._persist_strategy_beliefs(user_id, list(belief_map.values()))
+         except Exception:
+-            logger.warning("_consume_aurora_decisions_for_attribution: operation failed", exc_info=True)
++            logger.opt(exception=True).warning("_consume_aurora_decisions_for_attribution: operation failed")
+ 
+     async def _run_counterfactual_shadow(
+         self,
+@@ -3846,7 +3846,7 @@ class SpineOrchestrator:
+                 user_id, streak_count, days,
+             )
+         except Exception:
+-            logger.warning("_emit_milestone_growth_card failed", exc_info=True)
++            logger.opt(exception=True).warning("_emit_milestone_growth_card failed")
+ 
+     async def _emit_correction_impact_card(
+         self,
+@@ -3874,7 +3874,7 @@ class SpineOrchestrator:
+                 user_id, correction_type,
+             )
+         except Exception:
+-            logger.warning("_emit_correction_impact_card failed", exc_info=True)
++            logger.opt(exception=True).warning("_emit_correction_impact_card failed")
+ 
+     async def _emit_material_non_use_card(
+         self,
+@@ -3901,7 +3901,7 @@ class SpineOrchestrator:
+                 "MAGIC-003 material non-use card emitted: user={}", user_id,
+             )
+         except Exception:
+-            logger.warning("_emit_material_non_use_card failed", exc_info=True)
++            logger.opt(exception=True).warning("_emit_material_non_use_card failed")
+ 
+     async def _emit_low_yield_card(
+         self,
+@@ -3940,7 +3940,7 @@ class SpineOrchestrator:
+                 user_id, activity, alternative,
+             )
+         except Exception:
+-            logger.warning("_emit_low_yield_card failed", exc_info=True)
++            logger.opt(exception=True).warning("_emit_low_yield_card failed")
+ 
+     async def on_achievement_unlocked(
+         self,
+@@ -3995,7 +3995,7 @@ class SpineOrchestrator:
+ 
+             return {"achievement_recorded": True, "streak_count": streak_count}
+         except Exception:
+-            logger.warning("on_achievement_unlocked: failed", exc_info=True)
++            logger.opt(exception=True).warning("on_achievement_unlocked: failed")
+             return None
+ 
+     async def on_streak_update(
+@@ -4016,7 +4016,7 @@ class SpineOrchestrator:
+                     user_id, "streak_maintained", {"streak_length": streak_length},
+                 )
+         except Exception:
+-            logger.warning("on_streak_update: relationship_model failed", exc_info=True)
++            logger.opt(exception=True).warning("on_streak_update: relationship_model failed")
+ 
+     async def on_user_correction(
+         self,
+@@ -4089,7 +4089,7 @@ class SpineOrchestrator:
+ 
+             return correction_event
+         except Exception:
+-            logger.warning("on_user_correction: failed", exc_info=True)
++            logger.opt(exception=True).warning("on_user_correction: failed")
+             return None
+ 
+     async def on_partner_checkin(
+@@ -4125,7 +4125,7 @@ class SpineOrchestrator:
+                 await self.state_register.upsert_from_signal(user_id, signal)
+             return result
+         except Exception:
+-            logger.warning("on_partner_checkin: failed", exc_info=True)
++            logger.opt(exception=True).warning("on_partner_checkin: failed")
+             return None
+ 
+     async def start_aurora_core_session(
+@@ -4187,7 +4187,7 @@ class SpineOrchestrator:
+ 
+             return session
+         except Exception:
+-            logger.warning("start_aurora_core_session: failed", exc_info=True)
++            logger.opt(exception=True).warning("start_aurora_core_session: failed")
+             return None
+ 
+     async def process_aurora_reply(
+@@ -4298,7 +4298,7 @@ class SpineOrchestrator:
+             try:
+                 await self.save_spine_snapshot(user_id=user_id, snapshot_type="session_end")
+             except Exception:
+-                logger.warning("close_aurora_session: session_end snapshot failed", exc_info=True)
++                logger.opt(exception=True).warning("close_aurora_session: session_end snapshot failed")
+             # Phase-0: log a decision episode for every regenerated directive
+             for regen in regenerated:
+                 try:
+@@ -4319,7 +4319,7 @@ class SpineOrchestrator:
+                         tags=["aurora_session_end"],
+                     )
+                 except Exception:
+-                    logger.debug("Episode log skipped for session={}", session_id, exc_info=True)
++                    logger.opt(exception=True).debug("Episode log skipped for session={}", session_id)
+         return session
+ 
+     async def build_recovery_card(
+@@ -4456,7 +4456,7 @@ class SpineOrchestrator:
+                 rendered_cards = await self.get_rendered_timeline(user_id, limit=3)
+                 envelope["timeline_updates"] = rendered_cards
+             except Exception:
+-                logger.warning("build_experience_envelope: failed", exc_info=True)
++                logger.opt(exception=True).warning("build_experience_envelope: failed")
+                 # Fallback: bare trace IDs (previous behavior)
+                 recent_trace_ids = await self.redis.lrange(f"spine:user_traces:{user_id}", 0, 2)
+                 for tid in recent_trace_ids:
+@@ -4472,7 +4472,7 @@ class SpineOrchestrator:
+                 ]
+ 
+         except Exception:
+-            logger.warning("build_experience_envelope: operation failed", exc_info=True)
++            logger.opt(exception=True).warning("build_experience_envelope: operation failed")
+ 
+         return envelope
+ 
+@@ -4761,7 +4761,7 @@ class SpineOrchestrator:
+                 if weekly:
+                     snapshot["state_summary"]["growth_summary"] = weekly
+             except Exception:
+-                logger.warning("save_spine_snapshot: growth_chronicle failed", exc_info=True)
++                logger.opt(exception=True).warning("save_spine_snapshot: growth_chronicle failed")
+ 
+             # Recent policy effects
+             effects = await self.outcome_recorder.get_recent_policy_effects(user_id, limit=10)
+@@ -4785,7 +4785,7 @@ class SpineOrchestrator:
+             )
+ 
+         except Exception:
+-            logger.warning("save_spine_snapshot: operation failed", exc_info=True)
++            logger.opt(exception=True).warning("save_spine_snapshot: operation failed")
+ 
+         return snapshot
+ 
+@@ -4832,7 +4832,7 @@ class SpineOrchestrator:
+ 
+             return snapshot
+         except Exception:
+-            logger.warning("recover_from_snapshot: failed", exc_info=True)
++            logger.opt(exception=True).warning("recover_from_snapshot: failed")
+             return None
+ 
+     # ── P2: Multi-Goal Namespace ─────────────────────────────────────
+@@ -4872,7 +4872,7 @@ class SpineOrchestrator:
+             if raw:
+                 return json.loads(raw if isinstance(raw, str) else raw.decode())
+         except Exception:
+-            logger.warning("get_rolling_metrics: redis failed", exc_info=True)
++            logger.opt(exception=True).warning("get_rolling_metrics: redis failed")
+         return await self.metrics.snapshot()
+ 
+     # ── v2.4: Learning Layer ────────────────────────────────────────────
+@@ -4909,7 +4909,7 @@ class SpineOrchestrator:
+                 logger.info("SkillAutoDeprecation: user={} deprecated={}", user_id, deprecated)
+             return deprecated
+         except Exception:
+-            logger.warning("run_auto_deprecation: failed", exc_info=True)
++            logger.opt(exception=True).warning("run_auto_deprecation: failed")
+             return []
+ 
+     async def record_source_outcome(
+@@ -4929,7 +4929,7 @@ class SpineOrchestrator:
+                 context=context,
+             )
+         except Exception:
+-            logger.warning("record_source_outcome: failed", exc_info=True)
++            logger.opt(exception=True).warning("record_source_outcome: failed")
+             return None
+ 
+     # ── v2.5: General Goal OS ───────────────────────────────────────────
+@@ -5016,7 +5016,7 @@ class SpineOrchestrator:
+                 "conflicts": result.conflicts,
+             }
+         except Exception:
+-            logger.warning("get_goal_arbitration_summary: failed", exc_info=True)
++            logger.opt(exception=True).warning("get_goal_arbitration_summary: failed")
+             return None
+ 
+     async def register_goal(
+diff --git a/backend/app/tasks/absence_scan_task.py b/backend/app/tasks/absence_scan_task.py
+index f560e99c..956da289 100644
+--- a/backend/app/tasks/absence_scan_task.py
++++ b/backend/app/tasks/absence_scan_task.py
+@@ -51,7 +51,7 @@ def scan_absent_users() -> dict[str, int]:
+                 )
+             except Exception:
+                 counts["errors"] += 1
+-                logger.warning("Absence scan failed for user={}", str(snap.user_id)[:8] + "***", exc_info=True)
++                logger.opt(exception=True).warning("Absence scan failed for user={}", str(snap.user_id)[:8] + "***")
+ 
+         logger.info("Absence scan complete: {}", counts)
+         return counts
+diff --git a/backend/app/tools/translation_tool.py b/backend/app/tools/translation_tool.py
+index fdba0337..5d9307b0 100644
+--- a/backend/app/tools/translation_tool.py
++++ b/backend/app/tools/translation_tool.py
+@@ -263,7 +263,7 @@ class TranslateTextTool(BaseTool):
+             )
+ 
+         except Exception as e:
+-            logger.error(f"Translation error: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"Translation error: {e}")
+             return ToolResult(
+                 success=False,
+                 tool_name=self.name,
+diff --git a/backend/grpc_server.py b/backend/grpc_server.py
+index 3693b241..e11552bb 100755
+--- a/backend/grpc_server.py
++++ b/backend/grpc_server.py
+@@ -266,7 +266,7 @@ def main():
+     except KeyboardInterrupt:
+         logger.info("Server interrupted by user")
+     except Exception as e:
+-        logger.error(f"Server error: {e}", exc_info=True)
++        logger.opt(exception=True).error(f"Server error: {e}")
+         raise
+ 
+ 
+diff --git a/backend/test_grpc_client.py b/backend/test_grpc_client.py
+index 744e8eb5..58ec21e1 100755
+--- a/backend/test_grpc_client.py
++++ b/backend/test_grpc_client.py
+@@ -87,7 +87,7 @@ async def test_stream_chat():
+             logger.error(f"❌ gRPC error: {e.code()} - {e.details()}")
+             return False
+         except Exception as e:
+-            logger.error(f"❌ Unexpected error: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"❌ Unexpected error: {e}")
+             return False
+ 
+ 
+diff --git a/backend/test_grpc_simple.py b/backend/test_grpc_simple.py
+index 64268fb3..5960c1ff 100755
+--- a/backend/test_grpc_simple.py
++++ b/backend/test_grpc_simple.py
+@@ -111,7 +111,7 @@ async def test_demo_mode():
+             logger.error(f"❌ gRPC error: {e.code()} - {e.details()}")
+             return False
+         except Exception as e:
+-            logger.error(f"❌ Unexpected error: {e}", exc_info=True)
++            logger.opt(exception=True).error(f"❌ Unexpected error: {e}")
+             return False
+ 
+ 
+diff --git a/backend/test_websocket_client.py b/backend/test_websocket_client.py
+index 3eebb437..c1ee04f0 100755
+--- a/backend/test_websocket_client.py
++++ b/backend/test_websocket_client.py
+@@ -140,7 +140,7 @@ async def test_websocket_chat():
+             return True
+ 
+     except Exception as e:
+-        logger.error(f"❌ Test failed: {e}", exc_info=True)
++        logger.opt(exception=True).error(f"❌ Test failed: {e}")
+         return False
+ 
+ 
+diff --git a/backend/tests/unit/test_loguru_exc_info_migration.py b/backend/tests/unit/test_loguru_exc_info_migration.py
+new file mode 100644
+index 00000000..12877657
+--- /dev/null
++++ b/backend/tests/unit/test_loguru_exc_info_migration.py
+@@ -0,0 +1,146 @@
++"""EXC-TRACEBACK · loguru ``exc_info=True`` 死参清零回归测试。
++
++背景（wt187 LOGURU-BATCH 申报、本卡全量修复）：
++- loguru 的 logger 不认 ``exc_info=``（未知 kwarg 被静默吞进 extra），
++  传了 ``exc_info=True`` **堆栈也从不落日志**——与 stdlib logging 语义不同。
++- 正确形制：``logger.opt(exception=True).<level>(...)``（except 块内、有活跃
++  异常时）；``logger.exception`` 仅限 except 块内直呼场景。
++- stdlib logging（``logging.getLogger`` 绑定）文件的 ``exc_info=True`` 是
++  正确用法，不在本卡范围（守卫按 import 绑定甄别，不会误伤）。
++
++本文件三层断言：
++1. 守卫：全仓 loguru 绑定文件不得再出现 exc_info kwarg（AST 精确判定）。
++2. 行为：迁移后的真实代码路径（cost_wvpl 除道路径）必须把 traceback 帧确实
++   附到日志记录与渲染文本上。
++3. 死参语义存档：证明旧写法（``exc_info=True`` 直传 loguru）堆栈确实丢失，
++   防止回潮者误以为"传了就行"。
++"""
++
++from __future__ import annotations
++
++import ast
++from pathlib import Path
++from typing import Any
++
++from loguru import logger
++
++BACKEND_ROOT = Path(__file__).resolve().parents[2]
++
++
++def _loguru_bound_names(tree: ast.AST) -> set[str]:
++    """文件内绑定到 loguru logger 的名字（``from loguru import logger [as x]``）。"""
++    names: set[str] = set()
++    for node in ast.walk(tree):
++        if isinstance(node, ast.ImportFrom) and node.module == "loguru":
++            for alias in node.names:
++                if alias.name == "logger":
++                    names.add(alias.asname or alias.name)
++    return names
++
++
++# ---------------------------------------------------------------------------
++# 1) 守卫：loguru 源文件 exc_info 清零
++# ---------------------------------------------------------------------------
++
++
++def test_no_loguru_exc_info_in_loguru_sources():
++    """loguru 绑定的 logger 调用不得再带 exc_info kwarg（stdlib 文件自动豁免）。"""
++    targets = set(BACKEND_ROOT.glob("app/**/*.py")) | {
++        p for p in BACKEND_ROOT.glob("*.py") if p.is_file()
++    }
++    offenders: list[str] = []
++    for path in sorted(targets):
++        src = path.read_text(encoding="utf-8")
++        if "exc_info" not in src:
++            continue
++        tree = ast.parse(src, filename=str(path))
++        loguru_names = _loguru_bound_names(tree)
++        if not loguru_names:
++            continue  # stdlib logging 文件：exc_info 是正确用法
++        for node in ast.walk(tree):
++            if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)):
++                continue
++            root = node.func.value
++            if not (isinstance(root, ast.Name) and root.id in loguru_names):
++                continue
++            if any(kw.arg == "exc_info" for kw in node.keywords):
++                rel = path.relative_to(BACKEND_ROOT)
++                offenders.append(f"{rel}:{node.lineno}")
++    assert offenders == [], (
++        "loguru 不支持 exc_info=（kwarg 被吞，堆栈静默丢失）；"
++        f"请改用 logger.opt(exception=True).<level>(...)，位置：{offenders}"
++    )
++
++
++# ---------------------------------------------------------------------------
++# 2) 行为：迁移后真实路径堆栈确实附加
++# ---------------------------------------------------------------------------
++
++
++class _ExplodingBreaker:
++    """read_daily_spend 必炸的预算闸门替身（驱动 cost_wvpl 除道路径）。"""
++
++    async def read_daily_spend(self, category: Any) -> float:
++        raise ValueError("simulated redis down (EXC-TRACEBACK)")
++
++
++async def test_migrated_path_attaches_traceback(monkeypatch, caplog) -> None:
++    """cost_wvpl 读失败路径：loguru 记录必须携带活跃异常的完整 traceback 帧。"""
++    import traceback
++
++    from app.core import cost_wvpl_metrics
++
++    monkeypatch.setattr(
++        cost_wvpl_metrics, "get_budget_breaker", lambda: _ExplodingBreaker()
++    )
++
++    records: list[Any] = []
++    handler_id = logger.add(lambda msg: records.append(msg.record), level="DEBUG")
++    rendered: list[str] = []
++    text_id = logger.add(rendered.append, level="DEBUG")
++    try:
++        total = await cost_wvpl_metrics._daily_spend_all_categories()
++    finally:
++        logger.remove(handler_id)
++        logger.remove(text_id)
++
++    assert total == 0.0  # 单类目失败不拖垮聚合
++    assert records, "迁移后的调用必须产出日志记录"
++    exc_records = [r for r in records if r["level"].name == "DEBUG" and r["exception"]]
++    assert exc_records, (
++        "logger.opt(exception=True) 必须把活跃异常附到记录上（record.exception 非空）"
++    )
++    exc_type, exc_value, exc_tb = exc_records[0]["exception"]
++    assert exc_type is ValueError
++    assert "simulated redis down (EXC-TRACEBACK)" in str(exc_value)
++    # traceback 帧确实出现：除道路径函数名必须出现在格式化帧序列里
++    tb_text = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
++    assert "_daily_spend_all_categories" in tb_text or "read_daily_spend" in tb_text
++    # 渲染文本（真正落 sink 的东西）也必须带 traceback，而不是只有消息行
++    assert any("Traceback" in text or "ValueError" in text for text in rendered), (
++        f"渲染文本缺少 traceback：{rendered[:1]}"
++    )
++
++
++def test_dead_kwarg_exc_info_is_swallowed_by_loguru():
++    """存档断言：旧写法 ``logger.debug(..., exc_info=True)`` 在 loguru 下堆栈丢失。
++
++    这是 wt187 申报的缺陷语义本尊——未知 kwarg 被吞进 extra，record.exception
++    始终为 None。若未来有人改回直传 exc_info=，此测试红。
++    """
++
++    records: list[Any] = []
++    handler_id = logger.add(lambda msg: records.append(msg.record), level="DEBUG")
++    try:
++        try:
++            raise RuntimeError("boom for dead-kwarg archive")
++        except RuntimeError:
++            logger.debug("legacy dead-kwarg call", exc_info=True)  # noqa: LOG015
++    finally:
++        logger.remove(handler_id)
++
++    assert records, "记录应存在"
++    assert records[0]["exception"] is None, (
++        "loguru 直传 exc_info=True 不会附加堆栈（这正是要清零的死参）；"
++        "若此断言变红说明 loguru 语义变化，需重审本卡全部迁移"
++    )

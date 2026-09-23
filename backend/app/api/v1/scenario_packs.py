@@ -188,7 +188,7 @@ async def assign_pack(
             ex=90 * 24 * 3600,
         )
     except Exception:
-        logger.warning("assign_pack: redis state write failed", exc_info=True)
+        logger.opt(exception=True).warning("assign_pack: redis state write failed")
 
     await db.commit()
     return PackAssignResponse(goal_id=payload.goal_id, pack_id=pack_id, assigned=True)

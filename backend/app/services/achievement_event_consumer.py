@@ -452,7 +452,7 @@ class AchievementEventConsumer:
             await db.commit()
             logger.debug(f"Persisted chronicle event for user {user_id}: {event.get('event_type')}")
         except Exception:
-            logger.warning(f"Chronicle PostgreSQL persist failed for user {user_id}", exc_info=True)
+            logger.opt(exception=True).warning(f"Chronicle PostgreSQL persist failed for user {user_id}")
             await db.rollback()
 
     async def _handle_achievement_progress(self, event: dict):

@@ -67,7 +67,7 @@ async def apply_l3_closure_to_spine(
     try:
         spine = get_spine_orchestrator(cache_service.redis)
     except Exception:
-        logger.warning("L3 closure bridge: SpineOrchestrator init failed", exc_info=True)
+        logger.opt(exception=True).warning("L3 closure bridge: SpineOrchestrator init failed")
         return None
 
     patch_dicts = [p.__dict__ if hasattr(p, "__dict__") else dict(p) for p in closure.state_patches]
@@ -104,9 +104,8 @@ async def apply_l3_closure_to_spine(
             )
         return result
     except Exception:
-        logger.warning(
+        logger.opt(exception=True).warning(
             "L3 closure bridge: close_aurora_session failed for session={}",
             closure.session_id,
-            exc_info=True,
         )
         return None

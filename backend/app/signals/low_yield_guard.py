@@ -132,7 +132,7 @@ class LowYieldGuard:
                 )
             return adj
         except Exception:
-            logger.debug("LowYieldGuard: personalization lookup failed user={}", user_id, exc_info=True)
+            logger.opt(exception=True).debug("LowYieldGuard: personalization lookup failed user={}", user_id)
             return 0.0
 
     async def check_activity(

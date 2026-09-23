@@ -52,7 +52,7 @@ async def _process_document_task(task_id: str, file_path: str, options: dict):
         async with _DOCUMENT_CLEANING_SEMAPHORE:
             await document_service.clean_and_summarize(file_path, task_id, options)
     except Exception as e:
-        logger.error(f"Background task {task_id} failed: {e}", exc_info=True)
+        logger.opt(exception=True).error(f"Background task {task_id} failed: {e}")
         # 更新任务状态为失败，通知用户
         try:
             await cache_service.set(f"task:{task_id}", {
@@ -139,7 +139,7 @@ async def clean_document(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to initiate document cleaning: {e}", exc_info=True)
+        logger.opt(exception=True).error(f"Failed to initiate document cleaning: {e}")
         raise HTTPException(status_code=500, detail="Failed to process upload") from e
 
 @router.get("/clean/{task_id}", summary="Check Cleaning Task Status")

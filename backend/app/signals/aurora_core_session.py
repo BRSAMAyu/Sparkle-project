@@ -613,7 +613,7 @@ class AuroraCoreSessionService:
                 ex=_SESSION_TTL,
             )
         except Exception:
-            logger.warning("AuroraCoreSession: transition persist failed", exc_info=True)
+            logger.opt(exception=True).warning("AuroraCoreSession: transition persist failed")
             return None
 
         # Clear active pointer for terminal states

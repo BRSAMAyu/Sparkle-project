@@ -140,7 +140,7 @@ async def test_websocket_chat():
             return True
 
     except Exception as e:
-        logger.error(f"❌ Test failed: {e}", exc_info=True)
+        logger.opt(exception=True).error(f"❌ Test failed: {e}")
         return False
 
 

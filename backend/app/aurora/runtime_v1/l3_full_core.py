@@ -215,7 +215,7 @@ class L3FullCoreEngine:
         try:
             session = await self.session_service.get_session(session_id)
         except Exception:
-            logger.warning("execute_agenda_step: get_session failed", exc_info=True)
+            logger.opt(exception=True).warning("execute_agenda_step: get_session failed")
             return None
         if not session:
             return None
@@ -233,7 +233,7 @@ class L3FullCoreEngine:
         try:
             updated = await self.session_service.record_reply(session_id, item_index, reply)
         except Exception:
-            logger.warning("execute_agenda_step: record_reply failed", exc_info=True)
+            logger.opt(exception=True).warning("execute_agenda_step: record_reply failed")
             return None
         if not updated:
             return None

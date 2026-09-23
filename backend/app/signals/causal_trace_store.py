@@ -144,7 +144,7 @@ class CausalTraceStore:
             if current_count > _MAX_USER_TRACES:
                 await self.compact_old_traces(user_id)
         except Exception:
-            logger.warning("Trace compaction failed for user={}", user_id, exc_info=True)
+            logger.opt(exception=True).warning("Trace compaction failed for user={}", user_id)
         await self.redis.ltrim(key, 0, _MAX_USER_TRACES - 1)
         await self.redis.expire(key, _TRACE_TTL)
 

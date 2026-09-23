@@ -139,7 +139,7 @@ class OutcomeRecorder:
                     )
                     return existing
         except Exception:
-            logger.debug("OutcomeRecorder idem check failed, proceeding", exc_info=True)
+            logger.opt(exception=True).debug("OutcomeRecorder idem check failed, proceeding")
         attribution, confidence, hypothesis, next_policy = self._attribute(
             expected_outcome, actual_outcome,
         )
@@ -166,7 +166,7 @@ class OutcomeRecorder:
         try:
             await self.redis.set(idem_key, record.outcome_id, nx=True, ex=720 * 3600)
         except Exception:
-            logger.debug("OutcomeRecorder idem marker set failed", exc_info=True)
+            logger.opt(exception=True).debug("OutcomeRecorder idem marker set failed")
 
         # Write PolicyEffectLedger entry for learning loop
         if record.attribution not in ("inconclusive", "needs_confirmation"):

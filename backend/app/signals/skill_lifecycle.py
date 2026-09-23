@@ -237,10 +237,9 @@ class SkillLifecycleManager:
                 await MarketplacePersistenceService(session).register_system_skill(skill, user_id=user_id)
                 await session.commit()
         except Exception:
-            logger.warning(
+            logger.opt(exception=True).warning(
                 "SkillLifecycle: marketplace registration failed for system skill={}",
                 skill.skill_id,
-                exc_info=True,
             )
 
     async def deprecate_skill(self, user_id: str, skill_id: str, reason: str) -> None:

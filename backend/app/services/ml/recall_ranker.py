@@ -203,7 +203,7 @@ class RecallRanker:
             await self.redis.ltrim(key, 0, 99)  # Keep last 100 per user/trigger
             await self.redis.expire(key, 90 * 24 * 3600)  # 90 days
         except Exception:
-            logger.debug("recall_ranker: training example save failed", exc_info=True)
+            logger.opt(exception=True).debug("recall_ranker: training example save failed")
 
     async def get_user_response_rate(
         self,
@@ -235,7 +235,7 @@ class RecallRanker:
                     continue
             return responded / total if total > 0 else 0.5
         except Exception:
-            logger.debug("recall_ranker: response rate lookup failed", exc_info=True)
+            logger.opt(exception=True).debug("recall_ranker: response rate lookup failed")
             return 0.5
 
     async def get_model_version(self) -> str:

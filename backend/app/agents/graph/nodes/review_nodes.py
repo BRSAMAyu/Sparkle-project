@@ -1054,7 +1054,7 @@ async def reflection_node(state: SparkleState) -> dict[str, Any]:
         }
 
     except Exception as e:
-        logger.error(f"[ReviewNode] Reflection failed: {e}", exc_info=True)
+        logger.opt(exception=True).error(f"[ReviewNode] Reflection failed: {e}")
         return {
             "next_step": "__end__",
             "review_context": {

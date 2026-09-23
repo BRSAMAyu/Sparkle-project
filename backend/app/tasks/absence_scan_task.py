@@ -51,7 +51,7 @@ def scan_absent_users() -> dict[str, int]:
                 )
             except Exception:
                 counts["errors"] += 1
-                logger.warning("Absence scan failed for user={}", str(snap.user_id)[:8] + "***", exc_info=True)
+                logger.opt(exception=True).warning("Absence scan failed for user={}", str(snap.user_id)[:8] + "***")
 
         logger.info("Absence scan complete: {}", counts)
         return counts

@@ -226,7 +226,7 @@ class L4AsyncEngine:
             )
             return True
         except Exception:
-            logger.warning("L4: store_candidate failed", exc_info=True)
+            logger.opt(exception=True).warning("L4: store_candidate failed")
             return False
 
     async def get_candidate(self, candidate_id: str) -> L4PolicyCandidate | None:
@@ -292,7 +292,7 @@ class L4AsyncEngine:
             key = _CANDIDATE_KEY.format(candidate_id=candidate_id)
             await self.redis.set(key, json.dumps(candidate.to_dict()), ex=_CANDIDATE_TTL)
         except Exception:
-            logger.warning("L4: promote_candidate persist failed", exc_info=True)
+            logger.opt(exception=True).warning("L4: promote_candidate persist failed")
             return None
 
         logger.info(

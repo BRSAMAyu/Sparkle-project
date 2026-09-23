@@ -119,7 +119,7 @@ class EnhancedOrchestratorAgent(BaseAgent):
                 return response
 
             except Exception as e:
-                logger.error(f"[EnhancedOrchestrator] Error: {e}", exc_info=True)
+                logger.opt(exception=True).error(f"[EnhancedOrchestrator] Error: {e}")
                 span.set_attribute("error", str(e))
                 span.set_status(trace.Status(trace.StatusCode.ERROR, str(e)))
 

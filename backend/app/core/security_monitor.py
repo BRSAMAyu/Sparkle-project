@@ -635,7 +635,7 @@ class SecurityMonitor:
                         details={"failed_count": recent_count, "window_minutes": 5},
                     )
             except Exception:
-                logger.debug("abnormal_patterns: failed login check skipped", exc_info=True)
+                logger.opt(exception=True).debug("abnormal_patterns: failed login check skipped")
 
             # Check for admin access anomalies
             try:
@@ -649,7 +649,7 @@ class SecurityMonitor:
                         details={"admin_action_count": admin_count},
                     )
             except Exception:
-                logger.debug("abnormal_patterns: admin action check skipped", exc_info=True)
+                logger.opt(exception=True).debug("abnormal_patterns: admin action check skipped")
 
         except Exception as e:
             logger.debug("_check_abnormal_patterns failed: {}", e)
@@ -732,7 +732,9 @@ class SecurityMonitor:
                     async with session.post(webhook_url, json=slack_payload, timeout=aiohttp.ClientTimeout(total=5)):
                         pass
             except Exception:
-                logger.warning("Security alert Slack notification failed for alert_type={}", alert_type, exc_info=True)
+                logger.opt(exception=True).warning(
+                    "Security alert Slack notification failed for alert_type={}", alert_type
+                )
 
         # Email for critical and high severity alerts
         if threat_level.value in {"critical", "high"}:
@@ -751,7 +753,9 @@ class SecurityMonitor:
                     )
                     await email_service._send(security_email, subject, email_html)
             except Exception:
-                logger.warning("Security alert email notification failed for alert_type={}", alert_type, exc_info=True)
+                logger.opt(exception=True).warning(
+                    "Security alert email notification failed for alert_type={}", alert_type
+                )
 
     async def _get_suspicious_ip_count(self) -> int:
         """获取可疑IP数量"""

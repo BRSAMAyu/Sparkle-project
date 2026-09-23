@@ -753,7 +753,7 @@ class AuroraCoreSessionService:
                     apply_l3_closure_to_spine(user_id, closure)
                 )
         except Exception:
-            logger.debug("L3 closure bridge skipped", exc_info=True)
+            logger.opt(exception=True).debug("L3 closure bridge skipped")
 
         return session
 

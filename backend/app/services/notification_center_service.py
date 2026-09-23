@@ -1282,10 +1282,9 @@ class NotificationCenterService:
                 },
             )
         except Exception:
-            logger.debug(
+            logger.opt(exception=True).debug(
                 "Recall feedback OutcomeRecorder write skipped for notification={}",
                 notification.id,
-                exc_info=True,
             )
 
     async def _materialize_specialized_repair_task_if_needed(
