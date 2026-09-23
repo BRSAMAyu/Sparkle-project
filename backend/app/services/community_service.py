@@ -398,6 +398,23 @@ class GroupService:
     """群组服务"""
 
     @staticmethod
+    async def _find_any_membership(
+        db: AsyncSession,
+        group_id: UUID,
+        user_id: UUID,
+    ) -> GroupMember | None:
+        """查任意状态的成员行（含软删）——SQUAD-REJOIN 重加入门。
+
+        活跃行 → join 拒绝；软删行 → join 复活。返回 None 才走首插路径。"""
+        result = await db.execute(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.user_id == user_id,
+            )
+        )
+        return result.scalar_one_or_none()
+
+    @staticmethod
     async def _get_active_member(
         db: AsyncSession,
         group_id: UUID,
@@ -784,15 +801,10 @@ class GroupService:
         if not group:
             raise ValueError("群组不存在")
 
-        # 检查是否已是成员
-        existing = await db.execute(
-            select(GroupMember).where(
-                GroupMember.group_id == group_id,
-                GroupMember.user_id == user_id,
-                GroupMember.not_deleted_filter()
-            )
-        )
-        if existing.scalar_one_or_none():
+        # 检查是否已是成员（SQUAD-REJOIN：查任意状态行——活跃即拒；软删行
+        # 是可复活的重加入资格，见下方复活分支）
+        existing_member = await GroupService._find_any_membership(db, group_id, user_id)
+        if existing_member is not None and existing_member.deleted_at is None:
             raise ValueError("已是群组成员")
 
         # 检查成员上限
@@ -806,20 +818,42 @@ class GroupService:
         if member_count >= group.max_members:
             raise ValueError("群组已满")
 
-        member = GroupMember(
-            group_id=group_id,
-            user_id=user_id,
-            role=GroupRole.MEMBER,
-            joined_at=_utcnow(),
-            last_active_at=_utcnow()
-        )
-        try:
-            async with db.begin_nested():
-                db.add(member)
-                await db.flush()
-        except IntegrityError:
-            raise ValueError("已是群组成员") from None
-        await db.refresh(member)
+        # SQUAD-REJOIN 重加入：退队/被踢的软删行不再占死唯一键（活跃行部分
+        # 唯一索引 uq_group_member_active 仲裁），此处复活原行——
+        # - 继承本人累计统计（flame_contribution/tasks_completed/checkin_streak）：
+        #   反刷分裁决「重加入不得清零连胜重刷」；行键=user_id，不涉他人数据；
+        #   连胜是否延续仍由 CheckinService 的 last_checkin_date 日历语义诚实
+        #   衰减（断签者下一次打卡如实归 1）；
+        # - 角色复位 MEMBER：被踢/退出的管理员不得带特权回归，群主可再行晋升；
+        # - joined_at 刷新为本次入队时刻（当前成员周期起点，join 信号时间戳诚实）。
+        if existing_member is not None:
+            try:
+                async with db.begin_nested():
+                    existing_member.restore()
+                    existing_member.role = GroupRole.MEMBER
+                    existing_member.joined_at = _utcnow()
+                    existing_member.last_active_at = _utcnow()
+                    await db.flush()
+            except IntegrityError:
+                # 并发竞态：另一条同键活跃行恰已落定（唯一部分索引仲裁），
+                # 败者与「已是成员」同结局
+                raise ValueError("已是群组成员") from None
+            member = existing_member
+        else:
+            member = GroupMember(
+                group_id=group_id,
+                user_id=user_id,
+                role=GroupRole.MEMBER,
+                joined_at=_utcnow(),
+                last_active_at=_utcnow()
+            )
+            try:
+                async with db.begin_nested():
+                    db.add(member)
+                    await db.flush()
+            except IntegrityError:
+                raise ValueError("已是群组成员") from None
+            await db.refresh(member)
         _record_community_signal(
             user_id=user_id,
             action="join",
@@ -1118,7 +1152,10 @@ class GroupService:
         await GroupMessageService.send_system_message(
             db,
             group_id,
-            f"成员已被移出群组：{target.nickname or target.username}",
+            # GroupMember 无 nickname/username 列（原写法必 AttributeError→500，
+            # SQUAD-REJOIN 盘点 kick 路径时修复）；照 promote/demote 的系统消息
+            # 惯例用 user_id 标识，不触发 user 关系的异步懒加载
+            f"成员已被移出群组：{target.user_id}",
         )
         return True
 

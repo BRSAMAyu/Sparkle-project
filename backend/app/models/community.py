@@ -30,6 +30,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import relationship
 
@@ -279,7 +280,21 @@ class GroupMember(BaseModel):
     user = relationship("User")
 
     __table_args__ = (
-        UniqueConstraint('group_id', 'user_id', name='uq_group_member'),
+        # SQUAD-REJOIN：原全列唯一约束 uq_group_member(group_id, user_id) 与软删
+        # 语义相克——leave/kick 软删行依然占键，重加入 INSERT 撞键被误报
+        # 「已是群组成员」，退出即永久无法回归。改为活跃行部分唯一索引：
+        # 同组同用户至多一行 deleted_at IS NULL 的活跃成员，软删历史行让出键位
+        # 供 join_group 复活原行。谓词与全仓 not_deleted_filter() 读口径严格
+        # 同域。PG/SQLite 双 where（INTAKE-IDX 先例）；存量由迁移
+        # sqrejoin_20260923 收敛（全列约束下不可能有重复对，防御性预检）。
+        Index(
+            'uq_group_member_active',
+            'group_id',
+            'user_id',
+            unique=True,
+            postgresql_where=text('deleted_at IS NULL'),
+            sqlite_where=text('deleted_at IS NULL'),
+        ),
         Index('idx_member_group', 'group_id'),
         Index('idx_member_user', 'user_id'),
     )
