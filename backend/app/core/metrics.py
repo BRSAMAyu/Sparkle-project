@@ -446,6 +446,31 @@ AURORA_CORRECTION_FAILURE_TOTAL = get_or_create_metric(
     ["surface", "reason"],
 )
 
+# PROD-LOG2 ②-6：Aurora profile 集成失败计数（原 catch 只有一行 warning，
+# 属性漂移静默吞掉整个关系状态维度——失败必须可观测）。
+AURORA_PROFILE_INTEGRATION_FAILURE_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_aurora_profile_integration_failure_total",
+    "Aurora profile context integration failures in the LLM profile bundle",
+)
+
+# PROD-LOG2 ②-7：网关 slug 实验 → UUID 后端记录的解析面。
+# slug 是有界封闭集（网关 getDefaultExperimentID 的三个车道）；未知 slug
+# 一律记 "unknown"，防 X-Experiment-ID 头任意值打爆基数。
+AB_EXPERIMENT_SLUG_RESOLUTION_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_ab_experiment_slug_resolution_total",
+    "Gateway slug experiment resolution outcomes (resolved/provisioned/provision_failed/unknown_slug)",
+    ["slug", "outcome"],
+)
+
+AB_EXPERIMENT_METRIC_SKIP_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_ab_experiment_metric_skip_total",
+    "Experiment metric recordings skipped with reason (non_uuid_assignment/unresolved_experiment)",
+    ["reason"],
+)
+
 BAYESIAN_RECOMMENDATION_TOTAL = get_or_create_metric(
     Counter,
     "sparkle_bayesian_recommendation_total",

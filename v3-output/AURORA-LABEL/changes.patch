@@ -1,0 +1,862 @@
+diff --git a/backend/app/api/v1/experiments.py b/backend/app/api/v1/experiments.py
+index b59233f9..429fed36 100644
+--- a/backend/app/api/v1/experiments.py
++++ b/backend/app/api/v1/experiments.py
+@@ -11,6 +11,7 @@ RESTful API endpoints for managing A/B test experiments including:
+ - Statistical analysis
+ - Metric recording
+ """
++import asyncio
+ from datetime import datetime
+ from uuid import UUID
+ 
+@@ -23,6 +24,10 @@ from sqlalchemy.orm import selectinload
+ 
+ from app.api.deps import get_current_user, get_db
+ from app.core.cache import cache_service
++from app.core.metrics import (
++    AB_EXPERIMENT_METRIC_SKIP_TOTAL,
++    AB_EXPERIMENT_SLUG_RESOLUTION_TOTAL,
++)
+ from app.learning.ab_test_framework_enhanced import ABTestFrameworkEnhanced
+ from app.learning.statistics import ABTestStatistics
+ from app.models.experiment import (
+@@ -35,6 +40,21 @@ from app.models.user import User
+ 
+ router = APIRouter(tags=["experiments"])
+ 
++# PROD-LOG2 ②-7：Go 网关 ABTestMiddleware.getDefaultExperimentID 把车道映射到
++# slug 实验 id（gateway/internal/middleware/ab_test_middleware.go）。这些 slug
++# 过去走进 UUID 接口后全部回退 control、指标全部静默跳过——该车道 A/B 数据面
++# 整体失效。这里是 slug → UUID 后端记录的桥：按名字解析既有实验，缺失时为
++# 白名单内的车道 slug 幂等补建。白名单封闭：任意 X-Experiment-ID 头不得造行。
++GATEWAY_EXPERIMENT_SLUGS = frozenset(
++    {
++        "default-chat-experiment",
++        "planning-experiment",
++        "recommendation-experiment",
++    }
++)
++
++_SLUG_PROVISION_LOCK_TTL_SECONDS = 15
++
+ 
+ def _get_redis_client_or_503():
+     redis_client = cache_service.redis
+@@ -74,9 +94,93 @@ async def _get_owned_experiment(
+     return experiment
+ 
+ 
++def _slug_metric_label(slug: str) -> str:
++    """Bounded label value: known lane slugs only, everything else "unknown"."""
++    return slug if slug in GATEWAY_EXPERIMENT_SLUGS else "unknown"
++
++
++async def _find_experiment_by_name(db: AsyncSession, name: str) -> ABExperiment | None:
++    result = await db.execute(
++        select(ABExperiment)
++        .where(ABExperiment.name == name, ABExperiment.not_deleted_filter())
++        .order_by(ABExperiment.created_at.desc())
++        .limit(1)
++    )
++    return result.scalar_one_or_none()
++
++
++async def _ensure_uuid_backed_experiment(db: AsyncSession, redis_client, slug: str) -> ABExperiment | None:
++    """Resolve a gateway lane slug to a UUID-backed experiment (PROD-LOG2 ②-7).
++
++    Resolution order:
++    1. an operator-authored experiment named exactly ``slug`` (latest wins);
++    2. an idempotently auto-provisioned control/treatment record for the
++       whitelisted gateway lane slugs.
++
++    Returns None when the slug is unknown (not whitelisted) or provisioning
++    failed — callers keep their honest fallback and the skip/fallback is
++    counted via ``AB_EXPERIMENT_SLUG_RESOLUTION_TOTAL``.
++    """
++    existing = await _find_experiment_by_name(db, slug)
++    if existing:
++        AB_EXPERIMENT_SLUG_RESOLUTION_TOTAL.labels(slug=_slug_metric_label(slug), outcome="resolved").inc()
++        return existing
++
++    if slug not in GATEWAY_EXPERIMENT_SLUGS:
++        AB_EXPERIMENT_SLUG_RESOLUTION_TOTAL.labels(slug="unknown", outcome="unknown_slug").inc()
++        return None
++
++    lock_key = f"ab:experiment:slug-provision:{slug}"
++    acquired = await redis_client.set(lock_key, "1", nx=True, ex=_SLUG_PROVISION_LOCK_TTL_SECONDS)
++    if not acquired:
++        # A concurrent request is provisioning this slug — give it a moment to
++        # commit, then re-read instead of racing a duplicate into the table.
++        await asyncio.sleep(0.2)
++        existing = await _find_experiment_by_name(db, slug)
++        if existing:
++            AB_EXPERIMENT_SLUG_RESOLUTION_TOTAL.labels(slug=slug, outcome="resolved").inc()
++            return existing
++        logger.warning("Slug experiment {} provisioning lock held but record still missing", slug)
++        AB_EXPERIMENT_SLUG_RESOLUTION_TOTAL.labels(slug=slug, outcome="provision_failed").inc()
++        return None
++
++    try:
++        framework = ABTestFrameworkEnhanced(db, redis_client)
++        experiment = await framework.create_experiment(
++            name=slug,
++            description=(
++                "Auto-provisioned gateway lane experiment (slug → UUID bridge; "
++                "see ab_test_middleware.getDefaultExperimentID). An "
++                "operator-authored experiment with this name takes precedence."
++            ),
++            hypothesis=(
++                "Gateway lane telemetry: measure success/latency across the "
++                "control/treatment split for this lane until an "
++                "operator-authored experiment takes over the name."
++            ),
++            variants=[
++                {"name": "control", "is_control": True, "weight": 0.5},
++                {"name": "treatment", "is_control": False, "weight": 0.5},
++            ],
++            metrics=["success", "latency"],
++            created_by=None,
++            sample_size_target=None,
++        )
++    except Exception as exc:
++        await db.rollback()
++        logger.error("Failed to auto-provision UUID-backed experiment for slug {}: {}", slug, exc)
++        AB_EXPERIMENT_SLUG_RESOLUTION_TOTAL.labels(slug=slug, outcome="provision_failed").inc()
++        return None
++
++    logger.info("Auto-provisioned UUID-backed experiment {} for gateway slug {}", experiment.id, slug)
++    AB_EXPERIMENT_SLUG_RESOLUTION_TOTAL.labels(slug=slug, outcome="provisioned").inc()
++    return experiment
++
++
+ # Request/Response Models
+ class VariantConfig(BaseModel):
+     """Variant configuration"""
++
+     name: str = Field(..., description="Variant name")
+     is_control: bool = Field(False, description="Whether this is the control variant")
+     weight: float = Field(1.0, description="Allocation weight")
+@@ -87,6 +191,7 @@ class VariantConfig(BaseModel):
+ 
+ class CreateExperimentRequest(BaseModel):
+     """Request to create a new experiment"""
++
+     name: str = Field(..., max_length=200, description="Experiment name")
+     description: str | None = Field(None, description="Experiment description")
+     hypothesis: str = Field(..., description="Research hypothesis")
+@@ -110,6 +215,7 @@ class CreateExperimentRequest(BaseModel):
+ 
+ class UpdateExperimentRequest(BaseModel):
+     """Request to update an experiment"""
++
+     name: str | None = Field(None, max_length=200)
+     description: str | None = None
+     hypothesis: str | None = None
+@@ -117,12 +223,14 @@ class UpdateExperimentRequest(BaseModel):
+ 
+ class CompleteExperimentRequest(BaseModel):
+     """Request to complete an experiment"""
++
+     conclusion: str = Field(..., description="Experiment conclusion")
+     winning_variant_id: str | None = Field(None, description="ID of winning variant")
+ 
+ 
+ class RecordMetricRequest(BaseModel):
+     """Request to record a metric"""
++
+     metric_name: str = Field(..., description="Metric name")
+     metric_value: float = Field(..., description="Metric value")
+     metric_type: str = Field(..., description="Metric type: success, latency, engagement, etc.")
+@@ -131,6 +239,7 @@ class RecordMetricRequest(BaseModel):
+ 
+ class VariantResponse(BaseModel):
+     """Variant response"""
++
+     id: UUID
+     variant_name: str
+     description: str | None
+@@ -145,6 +254,7 @@ class VariantResponse(BaseModel):
+ 
+ class ExperimentResponse(BaseModel):
+     """Experiment response"""
++
+     id: UUID
+     name: str
+     description: str | None
+@@ -168,6 +278,7 @@ class ExperimentResponse(BaseModel):
+ 
+ class ExperimentStatsResponse(BaseModel):
+     """Experiment statistics response"""
++
+     experiment_id: str
+     experiment_name: str
+     status: str
+@@ -408,20 +519,25 @@ async def assign_variant(
+     """
+     redis_client = _get_redis_client_or_503()
+ 
+-    framework = ABTestFrameworkEnhanced(db, redis_client)
+-
++    # PROD-LOG2 ②-7：slug 实验（如网关 planning-experiment）先解析/补建成
++    # UUID 后端记录，再走正常指派——不再永久回退 control。
+     if not _is_uuid_like(experiment_id):
+-        logger.warning(
+-            "Experiment {} is not UUID-backed; falling back to control cohort",
+-            experiment_id,
+-        )
+-        return {
+-            "variant_id": "control",
+-            "variant_name": "control",
+-            "is_control": True,
+-            "is_new_assignment": False,
+-            "fallback": True,
+-        }
++        experiment = await _ensure_uuid_backed_experiment(db, redis_client, experiment_id)
++        if experiment is None:
++            logger.warning(
++                "Experiment {} is not UUID-backed and could not be resolved; falling back to control cohort",
++                experiment_id,
++            )
++            return {
++                "variant_id": "control",
++                "variant_name": "control",
++                "is_control": True,
++                "is_new_assignment": False,
++                "fallback": True,
++            }
++        experiment_id = str(experiment.id)
++
++    framework = ABTestFrameworkEnhanced(db, redis_client)
+ 
+     try:
+         variant, is_new = await framework.assign_variant(
+@@ -453,7 +569,11 @@ async def record_metric(
+     """
+     redis_client = _get_redis_client_or_503()
+ 
+-    if not _is_uuid_like(experiment_id) or not _is_uuid_like(variant_id):
++    # PROD-LOG2 ②-7：指标真上报。variant 非 UUID（如网关旧兜底的 "control"
++    # 字符串）无法落 FK，跳过且必须留下计数痕迹；experiment 为 slug 时先解析
++    # 成 UUID 后端记录再落库——解析失败也要可观测，不再无声蒸发。
++    if not _is_uuid_like(variant_id):
++        AB_EXPERIMENT_METRIC_SKIP_TOTAL.labels(reason="non_uuid_assignment").inc()
+         logger.warning(
+             "Skipping metric for non-UUID experiment assignment: experiment_id={}, variant_id={}",
+             experiment_id,
+@@ -461,6 +581,18 @@ async def record_metric(
+         )
+         return {"status": "skipped", "reason": "non_uuid_assignment"}
+ 
++    if not _is_uuid_like(experiment_id):
++        experiment = await _ensure_uuid_backed_experiment(db, redis_client, experiment_id)
++        if experiment is None:
++            AB_EXPERIMENT_METRIC_SKIP_TOTAL.labels(reason="unresolved_experiment").inc()
++            logger.warning(
++                "Skipping metric for unresolvable slug experiment: experiment_id={}, variant_id={}",
++                experiment_id,
++                variant_id,
++            )
++            return {"status": "skipped", "reason": "unresolved_experiment"}
++        experiment_id = str(experiment.id)
++
+     framework = ABTestFrameworkEnhanced(db, redis_client)
+ 
+     await framework.record_metric(
+diff --git a/backend/app/core/metrics.py b/backend/app/core/metrics.py
+index 17d344c3..1d8c9361 100755
+--- a/backend/app/core/metrics.py
++++ b/backend/app/core/metrics.py
+@@ -446,6 +446,31 @@ AURORA_CORRECTION_FAILURE_TOTAL = get_or_create_metric(
+     ["surface", "reason"],
+ )
+ 
++# PROD-LOG2 ②-6：Aurora profile 集成失败计数（原 catch 只有一行 warning，
++# 属性漂移静默吞掉整个关系状态维度——失败必须可观测）。
++AURORA_PROFILE_INTEGRATION_FAILURE_TOTAL = get_or_create_metric(
++    Counter,
++    "sparkle_aurora_profile_integration_failure_total",
++    "Aurora profile context integration failures in the LLM profile bundle",
++)
++
++# PROD-LOG2 ②-7：网关 slug 实验 → UUID 后端记录的解析面。
++# slug 是有界封闭集（网关 getDefaultExperimentID 的三个车道）；未知 slug
++# 一律记 "unknown"，防 X-Experiment-ID 头任意值打爆基数。
++AB_EXPERIMENT_SLUG_RESOLUTION_TOTAL = get_or_create_metric(
++    Counter,
++    "sparkle_ab_experiment_slug_resolution_total",
++    "Gateway slug experiment resolution outcomes (resolved/provisioned/provision_failed/unknown_slug)",
++    ["slug", "outcome"],
++)
++
++AB_EXPERIMENT_METRIC_SKIP_TOTAL = get_or_create_metric(
++    Counter,
++    "sparkle_ab_experiment_metric_skip_total",
++    "Experiment metric recordings skipped with reason (non_uuid_assignment/unresolved_experiment)",
++    ["reason"],
++)
++
+ BAYESIAN_RECOMMENDATION_TOTAL = get_or_create_metric(
+     Counter,
+     "sparkle_bayesian_recommendation_total",
+diff --git a/backend/app/core/security_monitor.py b/backend/app/core/security_monitor.py
+index 339b7ae2..c78a7289 100755
+--- a/backend/app/core/security_monitor.py
++++ b/backend/app/core/security_monitor.py
+@@ -416,8 +416,11 @@ class SecurityMonitor:
+             since_time = _utcnow() - timedelta(hours=hours)
+ 
+             # 查询失败登录次数
++            # AURORA-LABEL 同型修复：``not <column>`` 是 Python 布尔取反——
++            # 列对象恒真值，``not`` 得到 Python False，被 and_/where 编译成
++            # SQL ``false`` 字面量，失败登录计数恒为 0。SQL NOT 必须用 ``~``。
+             failed_logins_stmt = select(func.count(LoginAttempt.id)).where(
+-                not LoginAttempt.success,
++                ~LoginAttempt.success,
+                 LoginAttempt.attempted_at >= since_time
+             )
+             failed_logins_result = await db.execute(failed_logins_stmt)
+diff --git a/backend/app/learning/ab_test_framework_enhanced.py b/backend/app/learning/ab_test_framework_enhanced.py
+index f83d777b..6c5a72c5 100644
+--- a/backend/app/learning/ab_test_framework_enhanced.py
++++ b/backend/app/learning/ab_test_framework_enhanced.py
+@@ -225,13 +225,18 @@ class ABTestFrameworkEnhanced:
+         Returns:
+             Tuple of (variant, is_new_assignment)
+         """
+-        # Check if already assigned
++        # Check if already assigned.
++        # AURORA-LABEL bonus fix: ``not <column>`` evaluated to a plain Python
++        # ``False`` (SQLA column objects are always truthy), which and_() compiles
++        # to a SQL ``false`` literal — the dedup lookup was ``WHERE … AND false``
++        # and never matched, so every call inserted a duplicate assignment row
++        # and reported is_new_assignment=True. Use the SQL NOT operator (~).
+         assignment = await self.db.execute(
+             select(ABExperimentAssignment).where(
+                 and_(
+                     ABExperimentAssignment.experiment_id == experiment_id,
+                     ABExperimentAssignment.user_id == user_id,
+-                    not ABExperimentAssignment.is_excluded,
++                    ~ABExperimentAssignment.is_excluded,
+                 )
+             )
+         )
+diff --git a/backend/app/orchestration/context_builder.py b/backend/app/orchestration/context_builder.py
+index 8a19fe23..e05d0a00 100644
+--- a/backend/app/orchestration/context_builder.py
++++ b/backend/app/orchestration/context_builder.py
+@@ -28,7 +28,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
+ from app.config import settings
+ from app.core.experience_memory import ExperienceContextQuery
+ from app.core.i18n import I18n
+-from app.core.metrics import AURORA_RETURNING_CONTEXT_TIER_TOTAL, CONTEXT_CACHE_VERSION_DECISIONS
++from app.core.metrics import (
++    AURORA_PROFILE_INTEGRATION_FAILURE_TOTAL,
++    AURORA_RETURNING_CONTEXT_TIER_TOTAL,
++    CONTEXT_CACHE_VERSION_DECISIONS,
++)
+ from app.core.time_utils import utcnow
+ from app.gen.agent.v1 import agent_service_pb2
+ from app.models.chat import ChatMessage, ChatSession, MessageRole
+@@ -65,6 +69,71 @@ from app.state_aggregator.service import StateAggregatorService
+ # Helpers (duplicated from orchestrator to avoid circular imports)
+ # ---------------------------------------------------------------------------
+ 
++
++def _collect_aurora_relationship_profile_data(user_id: str, ledger: Any | None = None) -> dict[str, Any]:
++    """Derive the Aurora relationship-profile keys for the LLM profile bundle.
++
++    Extracted from ``_build_llm_profile_bundle`` so the attribute contract with
++    ``SparkleRelationshipState`` is unit-testable (PROD-LOG2 ②-6: the ghost
++    ``rel_state.label`` reference blew up here on every call and the surrounding
++    catch reduced the whole integration to one warning line).
++
++    All labels come from the aurora domain's own public derivation
++    (``SparkleRelationshipStateManager.derive_view`` → ``maturity_label``:
++    exploring/forming/stable/trusted) — never from ad-hoc field guesses on the
++    schema.
++    """
++    from app.aurora.ledger import AppendOnlyLedgerStore
++    from app.aurora.profile_translator import ProfileTranslator
++    from app.aurora.relationship_state import SparkleRelationshipStateManager
++    from app.aurora.schemas.primitives import IdentityEvidence, InsightClaim
++
++    # Instantiate ledger (defaults to memory-based if no storage path is mapped)
++    if ledger is None:
++        ledger = AppendOnlyLedgerStore(storage_path=settings.AURORA_LEDGER_PATH)
++    raw_records = ledger.list_records(user_id=user_id, record_types={"insight_claim", "identity_evidence"})
++
++    claims = []
++    for r in raw_records:
++        if r["record_type"] == "insight_claim":
++            try:
++                claims.append(InsightClaim.model_validate(r["payload"]))
++            except Exception:
++                continue
++
++    evidence = []
++    for r in raw_records:
++        if r["record_type"] == "identity_evidence":
++            try:
++                evidence.append(IdentityEvidence.model_validate(r["payload"]))
++            except Exception:
++                continue
++
++    rel_manager = SparkleRelationshipStateManager()
++    # Derive maturity from interaction history count + claims
++    interaction_metadata = {"interaction_count": len(raw_records)}
++    rel_view = rel_manager.derive_view(
++        user_id=uuid.UUID(user_id),
++        claims=claims,
++        identity_evidence=evidence,
++        interaction_metadata=interaction_metadata,
++    )
++    rel_state = rel_view.state
++
++    translator = ProfileTranslator()
++    translation = translator.translate(claims=claims, evidence=evidence, relationship_state=rel_state)
++
++    # Inject into profile context for prompt building. PROD-LOG2 ②-6:
++    # ``SparkleRelationshipState`` has no ``label`` field — the collaborator
++    # label is the domain-derived maturity label, consumed by
++    # prompts._format_aurora_profile_section.
++    return {
++        "aurora_profile_summary": translation.summary,
++        "relationship_maturity": rel_state.relationship_maturity,
++        "relationship_label": rel_view.maturity_label,
++    }
++
++
+ # ---------------------------------------------------------------------------
+ # Mixin
+ # ---------------------------------------------------------------------------
+@@ -1113,54 +1182,17 @@ class ContextBuilderMixin:
+ 
+                     # --- Aurora Profile Integration ---
+                     try:
+-                        from app.aurora.ledger import AppendOnlyLedgerStore
+-                        from app.aurora.profile_translator import ProfileTranslator
+-                        from app.aurora.relationship_state import SparkleRelationshipStateManager
+-                        from app.aurora.schemas.primitives import IdentityEvidence, InsightClaim
+-
+-                        # Instantiate ledger (defaults to memory-based if no storage path is mapped)
+-                        ledger = AppendOnlyLedgerStore(storage_path=settings.AURORA_LEDGER_PATH)
+-                        raw_records = ledger.list_records(
+-                            user_id=user_id, record_types={"insight_claim", "identity_evidence"}
+-                        )
+-
+-                        claims = []
+-                        for r in raw_records:
+-                            if r["record_type"] == "insight_claim":
+-                                try:
+-                                    claims.append(InsightClaim.model_validate(r["payload"]))
+-                                except Exception:
+-                                    continue
+-
+-                        evidence = []
+-                        for r in raw_records:
+-                            if r["record_type"] == "identity_evidence":
+-                                try:
+-                                    evidence.append(IdentityEvidence.model_validate(r["payload"]))
+-                                except Exception:
+-                                    continue
+-
+-                        rel_manager = SparkleRelationshipStateManager()
+-                        # Derive maturity from interaction history count + claims
+-                        interaction_metadata = {"interaction_count": len(raw_records)}
+-                        rel_state = rel_manager.derive_state(
+-                            user_id=uuid.UUID(user_id),
+-                            claims=claims,
+-                            identity_evidence=evidence,
+-                            interaction_metadata=interaction_metadata,
+-                        )
+-
+-                        translator = ProfileTranslator()
+-                        translation = translator.translate(
+-                            claims=claims, evidence=evidence, relationship_state=rel_state
+-                        )
+-
+-                        # Inject into profile context for prompt building
+-                        bundle_profile_data["aurora_profile_summary"] = translation.summary
+-                        bundle_profile_data["relationship_maturity"] = rel_state.relationship_maturity
+-                        bundle_profile_data["relationship_label"] = rel_state.label
++                        bundle_profile_data.update(_collect_aurora_relationship_profile_data(user_id))
+                     except Exception as aurora_err:
+-                        logger.warning(f"Failed to integrate Aurora profile context: {aurora_err}")
++                        # PROD-LOG2 ②-6：属性漂移类失败曾只留一行 warning（无
++                        # traceback、无计数），AI 静默丢失关系状态维度。失败
++                        # 必须可观测：ERROR 级 + 异常栈 + 计数。
++                        AURORA_PROFILE_INTEGRATION_FAILURE_TOTAL.inc()
++                        logger.opt(exception=True).error(
++                            "Failed to integrate Aurora profile context user_id={} error={}",
++                            user_id,
++                            aurora_err,
++                        )
+                 except Exception as e:
+                     logger.warning(f"Failed to build LLM profile: {e}")
+                 return bundle_profile_data, bundle_version
+diff --git a/backend/tests/api/test_experiments_slug_uuid_bridge.py b/backend/tests/api/test_experiments_slug_uuid_bridge.py
+new file mode 100644
+index 00000000..e1b36902
+--- /dev/null
++++ b/backend/tests/api/test_experiments_slug_uuid_bridge.py
+@@ -0,0 +1,249 @@
++"""AURORA-LABEL (PROD-LOG2 ②-7): gateway slug experiments must be UUID-backed.
++
++The Go gateway's ABTestMiddleware maps lanes to slug experiment ids
++(``planning-experiment`` / ``default-chat-experiment`` /
++``recommendation-experiment``, see
++``gateway/internal/middleware/ab_test_middleware.go:getDefaultExperimentID``).
++The engine experiments API used to treat any non-UUID id as fallback-to-control
++and silently skipped every metric — the whole A/B data plane for those lanes
++was dead (production: "Experiment planning-experiment is not UUID-backed" x8 +
++"Skipping metric for non-UUID experiment assignment" x8).
++
++Contract under test:
++- assign on a known gateway slug resolves/provisions a UUID-backed experiment
++  and returns a real variant UUID (no ``fallback``);
++- metrics posted with that variant UUID are actually recorded (no skip);
++- provisioning is idempotent (one experiment per slug, deterministic
++  assignment);
++- an operator-created experiment named exactly like the slug is resolved
++  instead of shadow-provisioned;
++- unknown slugs keep the honest fallback + never create rows + are counted
++  (``sparkle_ab_experiment_metric_skip_total``).
++"""
++
++from __future__ import annotations
++
++from uuid import UUID
++
++import pytest
++from fastapi import FastAPI
++from fastapi.testclient import TestClient
++from prometheus_client import REGISTRY
++from sqlalchemy import select
++
++from app.api.deps import get_current_user, get_db
++from app.api.v1.experiments import router as experiments_router
++from app.core.cache import cache_service
++from app.learning.ab_test_framework_enhanced import ABTestFrameworkEnhanced
++from app.models.experiment import ABExperiment, ABExperimentMetric, ABExperimentVariant
++from app.models.user import User
++
++KNOWN_SLUG = "planning-experiment"
++
++
++class _FakeProvisionLockRedis:
++    """Minimal async redis stub supporting the SET NX EX provisioning lock."""
++
++    def __init__(self) -> None:
++        self.store: dict[str, str] = {}
++
++    async def set(self, key: str, value: str, nx: bool = False, ex: int | None = None) -> bool:
++        if nx and key in self.store:
++            return False
++        self.store[key] = value
++        return True
++
++
++@pytest.fixture
++def slug_client(db_session, monkeypatch):
++    app = FastAPI()
++    app.include_router(experiments_router, prefix="/experiments")
++
++    state = {"current_user": None}
++
++    async def _override_get_db():
++        yield db_session
++
++    def _override_get_current_user():
++        return state["current_user"]
++
++    app.dependency_overrides[get_db] = _override_get_db
++    app.dependency_overrides[get_current_user] = _override_get_current_user
++
++    monkeypatch.setattr(cache_service, "redis", _FakeProvisionLockRedis())
++
++    with TestClient(app) as client:
++        yield client, state, db_session
++
++
++async def _create_user(db_session, username: str) -> User:
++    user = User(
++        username=username,
++        email=f"{username}@example.com",
++        hashed_password="hashed",
++    )
++    db_session.add(user)
++    await db_session.commit()
++    await db_session.refresh(user)
++    return user
++
++
++def _skip_counter(reason: str) -> float:
++    value = REGISTRY.get_sample_value("sparkle_ab_experiment_metric_skip_total", {"reason": reason})
++    return value or 0.0
++
++
++@pytest.mark.asyncio
++async def test_gateway_slug_assign_provisions_uuid_backed_experiment(slug_client) -> None:
++    client, state, db_session = slug_client
++    state["current_user"] = await _create_user(db_session, "slug_probe_user")
++
++    response = client.post(f"/experiments/{KNOWN_SLUG}/assign")
++
++    assert response.status_code == 200
++    body = response.json()
++    # Real UUID-backed variant, not the dead "control" string fallback.
++    assert "fallback" not in body
++    assert body["is_new_assignment"] is True
++    variant_id = UUID(body["variant_id"])
++
++    experiments = (
++        (await db_session.execute(select(ABExperiment).where(ABExperiment.name == KNOWN_SLUG))).scalars().all()
++    )
++    assert len(experiments) == 1
++    experiment = experiments[0]
++    variants = (
++        (
++            await db_session.execute(
++                select(ABExperimentVariant).where(ABExperimentVariant.experiment_id == experiment.id)
++            )
++        )
++        .scalars()
++        .all()
++    )
++    variant_ids = {str(v.id) for v in variants}
++    assert str(variant_id) in variant_ids
++    assert len(variants) == 2
++    assert any(v.is_control for v in variants)
++
++
++@pytest.mark.asyncio
++async def test_gateway_slug_assign_is_idempotent(slug_client) -> None:
++    client, state, db_session = slug_client
++    state["current_user"] = await _create_user(db_session, "slug_probe_user2")
++
++    first = client.post(f"/experiments/{KNOWN_SLUG}/assign").json()
++    second = client.post(f"/experiments/{KNOWN_SLUG}/assign").json()
++
++    assert first["variant_id"] == second["variant_id"]
++    assert second["is_new_assignment"] is False
++    experiments = (
++        (await db_session.execute(select(ABExperiment).where(ABExperiment.name == KNOWN_SLUG))).scalars().all()
++    )
++    assert len(experiments) == 1
++
++
++@pytest.mark.asyncio
++async def test_gateway_slug_metric_is_actually_recorded(slug_client) -> None:
++    client, state, db_session = slug_client
++    user = await _create_user(db_session, "slug_probe_user3")
++    state["current_user"] = user
++
++    assign_body = client.post(f"/experiments/{KNOWN_SLUG}/assign").json()
++    variant_id = assign_body["variant_id"]
++
++    response = client.post(
++        f"/experiments/{KNOWN_SLUG}/metrics",
++        params={"variant_id": variant_id},
++        json={
++            "metric_name": "success",
++            "metric_value": 1.0,
++            "metric_type": "success",
++            "context_data": {"path": "/api/v1/plans"},
++        },
++    )
++
++    assert response.status_code == 200
++    assert response.json() == {"status": "recorded"}
++
++    experiment = (await db_session.execute(select(ABExperiment).where(ABExperiment.name == KNOWN_SLUG))).scalars().one()
++    metrics = (
++        (await db_session.execute(select(ABExperimentMetric).where(ABExperimentMetric.experiment_id == experiment.id)))
++        .scalars()
++        .all()
++    )
++    assert len(metrics) == 1
++    assert metrics[0].variant_id == UUID(variant_id)
++    assert metrics[0].metric_name == "success"
++
++
++@pytest.mark.asyncio
++async def test_existing_named_experiment_is_resolved_not_shadow_provisioned(slug_client) -> None:
++    client, state, db_session = slug_client
++    user = await _create_user(db_session, "slug_probe_user4")
++    state["current_user"] = user
++
++    redis_stub = _FakeProvisionLockRedis()
++    framework = ABTestFrameworkEnhanced(db_session, redis_stub)
++    operator_experiment = await framework.create_experiment(
++        name=KNOWN_SLUG,
++        description="Operator-authored planning experiment",
++        hypothesis="Personalized plan preview raises plan completion",
++        variants=[
++            {"name": "control", "is_control": True, "weight": 0.5},
++            {"name": "treatment", "is_control": False, "weight": 0.5},
++        ],
++        metrics=["success"],
++        created_by=str(user.id),
++    )
++
++    body = client.post(f"/experiments/{KNOWN_SLUG}/assign").json()
++
++    assert "fallback" not in body
++    operator_variants = (
++        (
++            await db_session.execute(
++                select(ABExperimentVariant).where(ABExperimentVariant.experiment_id == operator_experiment.id)
++            )
++        )
++        .scalars()
++        .all()
++    )
++    operator_variant_ids = {str(v.id) for v in operator_variants}
++    assert body["variant_id"] in operator_variant_ids
++
++    experiments = (
++        (await db_session.execute(select(ABExperiment).where(ABExperiment.name == KNOWN_SLUG))).scalars().all()
++    )
++    assert len(experiments) == 1
++    assert experiments[0].id == operator_experiment.id
++
++
++@pytest.mark.asyncio
++async def test_unknown_slug_falls_back_counted_and_creates_no_rows(slug_client) -> None:
++    client, state, db_session = slug_client
++    user = await _create_user(db_session, "slug_probe_user5")
++    state["current_user"] = user
++
++    response = client.post("/experiments/rogue-lane/assign")
++
++    assert response.status_code == 200
++    body = response.json()
++    assert body["fallback"] is True
++    assert body["variant_id"] == "control"
++
++    rogue = (await db_session.execute(select(ABExperiment).where(ABExperiment.name == "rogue-lane"))).scalars().all()
++    assert rogue == []
++
++    before = _skip_counter("non_uuid_assignment")
++    metric_response = client.post(
++        "/experiments/rogue-lane/metrics",
++        params={"variant_id": "control"},
++        json={"metric_name": "success", "metric_value": 0.0, "metric_type": "success"},
++    )
++    after = _skip_counter("non_uuid_assignment")
++
++    assert metric_response.status_code == 200
++    assert metric_response.json() == {"status": "skipped", "reason": "non_uuid_assignment"}
++    # 上报失败可观测：静默跳过必须留下计数痕迹。
++    assert after == pytest.approx(before + 1.0)
+diff --git a/backend/tests/unit/test_context_builder_aurora_relationship_label.py b/backend/tests/unit/test_context_builder_aurora_relationship_label.py
+new file mode 100644
+index 00000000..aae9de41
+--- /dev/null
++++ b/backend/tests/unit/test_context_builder_aurora_relationship_label.py
+@@ -0,0 +1,104 @@
++"""AURORA-LABEL (PROD-LOG2 ②-6): the LLM profile bundle's Aurora integration.
++
++Production defect: ``context_builder`` read ``rel_state.label`` although
++``SparkleRelationshipState`` (``aurora/schemas/primitives.py``) has no ``label``
++field — every call raised ``AttributeError`` and the surrounding catch reduced
++the whole Aurora profile integration to one warning line (×6 in the PROD-LOG2
++window), silently dropping the ``relationship_label`` prompt dimension.
++
++Contract under test (extracted helper ``_collect_aurora_relationship_profile_data``):
++- returns all three bundle keys with REAL schema-backed values;
++- ``relationship_label`` is the aurora domain's own public derivation
++  (``SparkleRelationshipStateManager.derive_view`` → ``maturity_label``),
++  never an ad-hoc attribute on the schema;
++- a malformed ledger payload must not poison the derived state.
++"""
++
++from __future__ import annotations
++
++from datetime import UTC, datetime
++from uuid import uuid4
++
++from app.aurora.ledger import AppendOnlyLedgerStore
++from app.aurora.schemas.primitives import (
++    ClaimSource,
++    InsightClaim,
++    ProjectionPolicy,
++    SparkleRelationshipState,
++)
++from app.orchestration.context_builder import _collect_aurora_relationship_profile_data
++
++MATURITY_LABELS = {"exploring", "forming", "stable", "trusted"}
++
++
++def _insight_claim_payload(user_id) -> dict:
++    claim = InsightClaim(
++        id=uuid4(),
++        user_id=user_id,
++        created_at=datetime.now(UTC).replace(tzinfo=None),
++        updated_at=datetime.now(UTC).replace(tzinfo=None),
++        claim_type="study_preference",
++        content="偏好在晚上进行深度学习",
++        source=ClaimSource.USER_REPORT,
++        confidence=0.8,
++        projection_policy=ProjectionPolicy.OPEN_EDITABLE,
++    )
++    return {
++        "record_type": "insight_claim",
++        "user_id": str(user_id),
++        "payload": claim.model_dump(mode="json"),
++    }
++
++
++def test_schema_has_no_label_field_regression_guard() -> None:
++    # The ghost attribute must stay a ghost: if someone adds ``label`` to the
++    # schema, this contract test should be revisited (the bundle key must then
++    # be re-pointed deliberately, not by accident).
++    assert "label" not in SparkleRelationshipState.model_fields
++
++
++async def test_empty_ledger_still_yields_full_bundle_keys() -> None:
++    ledger = AppendOnlyLedgerStore()
++
++    data = _collect_aurora_relationship_profile_data(str(uuid4()), ledger=ledger)
++
++    assert set(data) == {"aurora_profile_summary", "relationship_maturity", "relationship_label"}
++    assert isinstance(data["aurora_profile_summary"], str) and data["aurora_profile_summary"].strip()
++    assert isinstance(data["relationship_maturity"], float)
++    assert data["relationship_label"] in MATURITY_LABELS
++
++
++async def test_label_is_domain_derived_maturity_label() -> None:
++    user_id = uuid4()
++    ledger = AppendOnlyLedgerStore(records=[_insight_claim_payload(user_id)])
++
++    data = _collect_aurora_relationship_profile_data(str(user_id), ledger=ledger)
++
++    # Single confirmed-ish claim + one interaction → low maturity bucket.
++    assert data["relationship_label"] in MATURITY_LABELS
++    assert data["relationship_maturity"] > 0.0
++    assert "协作成熟度" in data["aurora_profile_summary"]
++
++
++async def test_high_maturity_maps_to_trusted_label() -> None:
++    user_id = uuid4()
++    records = [_insight_claim_payload(user_id) for _ in range(6)]
++    records.extend({"record_type": "identity_evidence", "user_id": str(user_id)} for _ in range(2))
++    ledger = AppendOnlyLedgerStore(records=records)
++
++    data = _collect_aurora_relationship_profile_data(str(user_id), ledger=ledger)
++
++    # interaction_count = len(raw_records) drives maturity up the label ladder.
++    assert data["relationship_maturity"] > 0.2
++    assert data["relationship_label"] != "exploring"
++
++
++async def test_malformed_claim_payload_does_not_poison_bundle() -> None:
++    user_id = uuid4()
++    good = _insight_claim_payload(user_id)
++    bad = {"record_type": "insight_claim", "user_id": str(user_id), "payload": {"nonsense": True}}
++    ledger = AppendOnlyLedgerStore(records=[good, bad])
++
++    data = _collect_aurora_relationship_profile_data(str(user_id), ledger=ledger)
++
++    assert data["relationship_label"] in MATURITY_LABELS

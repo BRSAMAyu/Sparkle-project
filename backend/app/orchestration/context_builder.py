@@ -28,7 +28,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.core.experience_memory import ExperienceContextQuery
 from app.core.i18n import I18n
-from app.core.metrics import AURORA_RETURNING_CONTEXT_TIER_TOTAL, CONTEXT_CACHE_VERSION_DECISIONS
+from app.core.metrics import (
+    AURORA_PROFILE_INTEGRATION_FAILURE_TOTAL,
+    AURORA_RETURNING_CONTEXT_TIER_TOTAL,
+    CONTEXT_CACHE_VERSION_DECISIONS,
+)
 from app.core.time_utils import utcnow
 from app.gen.agent.v1 import agent_service_pb2
 from app.models.chat import ChatMessage, ChatSession, MessageRole
@@ -64,6 +68,71 @@ from app.state_aggregator.service import StateAggregatorService
 # ---------------------------------------------------------------------------
 # Helpers (duplicated from orchestrator to avoid circular imports)
 # ---------------------------------------------------------------------------
+
+
+def _collect_aurora_relationship_profile_data(user_id: str, ledger: Any | None = None) -> dict[str, Any]:
+    """Derive the Aurora relationship-profile keys for the LLM profile bundle.
+
+    Extracted from ``_build_llm_profile_bundle`` so the attribute contract with
+    ``SparkleRelationshipState`` is unit-testable (PROD-LOG2 ②-6: the ghost
+    ``rel_state.label`` reference blew up here on every call and the surrounding
+    catch reduced the whole integration to one warning line).
+
+    All labels come from the aurora domain's own public derivation
+    (``SparkleRelationshipStateManager.derive_view`` → ``maturity_label``:
+    exploring/forming/stable/trusted) — never from ad-hoc field guesses on the
+    schema.
+    """
+    from app.aurora.ledger import AppendOnlyLedgerStore
+    from app.aurora.profile_translator import ProfileTranslator
+    from app.aurora.relationship_state import SparkleRelationshipStateManager
+    from app.aurora.schemas.primitives import IdentityEvidence, InsightClaim
+
+    # Instantiate ledger (defaults to memory-based if no storage path is mapped)
+    if ledger is None:
+        ledger = AppendOnlyLedgerStore(storage_path=settings.AURORA_LEDGER_PATH)
+    raw_records = ledger.list_records(user_id=user_id, record_types={"insight_claim", "identity_evidence"})
+
+    claims = []
+    for r in raw_records:
+        if r["record_type"] == "insight_claim":
+            try:
+                claims.append(InsightClaim.model_validate(r["payload"]))
+            except Exception:
+                continue
+
+    evidence = []
+    for r in raw_records:
+        if r["record_type"] == "identity_evidence":
+            try:
+                evidence.append(IdentityEvidence.model_validate(r["payload"]))
+            except Exception:
+                continue
+
+    rel_manager = SparkleRelationshipStateManager()
+    # Derive maturity from interaction history count + claims
+    interaction_metadata = {"interaction_count": len(raw_records)}
+    rel_view = rel_manager.derive_view(
+        user_id=uuid.UUID(user_id),
+        claims=claims,
+        identity_evidence=evidence,
+        interaction_metadata=interaction_metadata,
+    )
+    rel_state = rel_view.state
+
+    translator = ProfileTranslator()
+    translation = translator.translate(claims=claims, evidence=evidence, relationship_state=rel_state)
+
+    # Inject into profile context for prompt building. PROD-LOG2 ②-6:
+    # ``SparkleRelationshipState`` has no ``label`` field — the collaborator
+    # label is the domain-derived maturity label, consumed by
+    # prompts._format_aurora_profile_section.
+    return {
+        "aurora_profile_summary": translation.summary,
+        "relationship_maturity": rel_state.relationship_maturity,
+        "relationship_label": rel_view.maturity_label,
+    }
+
 
 # ---------------------------------------------------------------------------
 # Mixin
@@ -1113,54 +1182,17 @@ class ContextBuilderMixin:
 
                     # --- Aurora Profile Integration ---
                     try:
-                        from app.aurora.ledger import AppendOnlyLedgerStore
-                        from app.aurora.profile_translator import ProfileTranslator
-                        from app.aurora.relationship_state import SparkleRelationshipStateManager
-                        from app.aurora.schemas.primitives import IdentityEvidence, InsightClaim
-
-                        # Instantiate ledger (defaults to memory-based if no storage path is mapped)
-                        ledger = AppendOnlyLedgerStore(storage_path=settings.AURORA_LEDGER_PATH)
-                        raw_records = ledger.list_records(
-                            user_id=user_id, record_types={"insight_claim", "identity_evidence"}
-                        )
-
-                        claims = []
-                        for r in raw_records:
-                            if r["record_type"] == "insight_claim":
-                                try:
-                                    claims.append(InsightClaim.model_validate(r["payload"]))
-                                except Exception:
-                                    continue
-
-                        evidence = []
-                        for r in raw_records:
-                            if r["record_type"] == "identity_evidence":
-                                try:
-                                    evidence.append(IdentityEvidence.model_validate(r["payload"]))
-                                except Exception:
-                                    continue
-
-                        rel_manager = SparkleRelationshipStateManager()
-                        # Derive maturity from interaction history count + claims
-                        interaction_metadata = {"interaction_count": len(raw_records)}
-                        rel_state = rel_manager.derive_state(
-                            user_id=uuid.UUID(user_id),
-                            claims=claims,
-                            identity_evidence=evidence,
-                            interaction_metadata=interaction_metadata,
-                        )
-
-                        translator = ProfileTranslator()
-                        translation = translator.translate(
-                            claims=claims, evidence=evidence, relationship_state=rel_state
-                        )
-
-                        # Inject into profile context for prompt building
-                        bundle_profile_data["aurora_profile_summary"] = translation.summary
-                        bundle_profile_data["relationship_maturity"] = rel_state.relationship_maturity
-                        bundle_profile_data["relationship_label"] = rel_state.label
+                        bundle_profile_data.update(_collect_aurora_relationship_profile_data(user_id))
                     except Exception as aurora_err:
-                        logger.warning(f"Failed to integrate Aurora profile context: {aurora_err}")
+                        # PROD-LOG2 ②-6：属性漂移类失败曾只留一行 warning（无
+                        # traceback、无计数），AI 静默丢失关系状态维度。失败
+                        # 必须可观测：ERROR 级 + 异常栈 + 计数。
+                        AURORA_PROFILE_INTEGRATION_FAILURE_TOTAL.inc()
+                        logger.opt(exception=True).error(
+                            "Failed to integrate Aurora profile context user_id={} error={}",
+                            user_id,
+                            aurora_err,
+                        )
                 except Exception as e:
                     logger.warning(f"Failed to build LLM profile: {e}")
                 return bundle_profile_data, bundle_version

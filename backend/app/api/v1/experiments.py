@@ -11,6 +11,7 @@ RESTful API endpoints for managing A/B test experiments including:
 - Statistical analysis
 - Metric recording
 """
+import asyncio
 from datetime import datetime
 from uuid import UUID
 
@@ -23,6 +24,10 @@ from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user, get_db
 from app.core.cache import cache_service
+from app.core.metrics import (
+    AB_EXPERIMENT_METRIC_SKIP_TOTAL,
+    AB_EXPERIMENT_SLUG_RESOLUTION_TOTAL,
+)
 from app.learning.ab_test_framework_enhanced import ABTestFrameworkEnhanced
 from app.learning.statistics import ABTestStatistics
 from app.models.experiment import (
@@ -34,6 +39,21 @@ from app.models.experiment import (
 from app.models.user import User
 
 router = APIRouter(tags=["experiments"])
+
+# PROD-LOG2 ②-7：Go 网关 ABTestMiddleware.getDefaultExperimentID 把车道映射到
+# slug 实验 id（gateway/internal/middleware/ab_test_middleware.go）。这些 slug
+# 过去走进 UUID 接口后全部回退 control、指标全部静默跳过——该车道 A/B 数据面
+# 整体失效。这里是 slug → UUID 后端记录的桥：按名字解析既有实验，缺失时为
+# 白名单内的车道 slug 幂等补建。白名单封闭：任意 X-Experiment-ID 头不得造行。
+GATEWAY_EXPERIMENT_SLUGS = frozenset(
+    {
+        "default-chat-experiment",
+        "planning-experiment",
+        "recommendation-experiment",
+    }
+)
+
+_SLUG_PROVISION_LOCK_TTL_SECONDS = 15
 
 
 def _get_redis_client_or_503():
@@ -74,9 +94,93 @@ async def _get_owned_experiment(
     return experiment
 
 
+def _slug_metric_label(slug: str) -> str:
+    """Bounded label value: known lane slugs only, everything else "unknown"."""
+    return slug if slug in GATEWAY_EXPERIMENT_SLUGS else "unknown"
+
+
+async def _find_experiment_by_name(db: AsyncSession, name: str) -> ABExperiment | None:
+    result = await db.execute(
+        select(ABExperiment)
+        .where(ABExperiment.name == name, ABExperiment.not_deleted_filter())
+        .order_by(ABExperiment.created_at.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
+async def _ensure_uuid_backed_experiment(db: AsyncSession, redis_client, slug: str) -> ABExperiment | None:
+    """Resolve a gateway lane slug to a UUID-backed experiment (PROD-LOG2 ②-7).
+
+    Resolution order:
+    1. an operator-authored experiment named exactly ``slug`` (latest wins);
+    2. an idempotently auto-provisioned control/treatment record for the
+       whitelisted gateway lane slugs.
+
+    Returns None when the slug is unknown (not whitelisted) or provisioning
+    failed — callers keep their honest fallback and the skip/fallback is
+    counted via ``AB_EXPERIMENT_SLUG_RESOLUTION_TOTAL``.
+    """
+    existing = await _find_experiment_by_name(db, slug)
+    if existing:
+        AB_EXPERIMENT_SLUG_RESOLUTION_TOTAL.labels(slug=_slug_metric_label(slug), outcome="resolved").inc()
+        return existing
+
+    if slug not in GATEWAY_EXPERIMENT_SLUGS:
+        AB_EXPERIMENT_SLUG_RESOLUTION_TOTAL.labels(slug="unknown", outcome="unknown_slug").inc()
+        return None
+
+    lock_key = f"ab:experiment:slug-provision:{slug}"
+    acquired = await redis_client.set(lock_key, "1", nx=True, ex=_SLUG_PROVISION_LOCK_TTL_SECONDS)
+    if not acquired:
+        # A concurrent request is provisioning this slug — give it a moment to
+        # commit, then re-read instead of racing a duplicate into the table.
+        await asyncio.sleep(0.2)
+        existing = await _find_experiment_by_name(db, slug)
+        if existing:
+            AB_EXPERIMENT_SLUG_RESOLUTION_TOTAL.labels(slug=slug, outcome="resolved").inc()
+            return existing
+        logger.warning("Slug experiment {} provisioning lock held but record still missing", slug)
+        AB_EXPERIMENT_SLUG_RESOLUTION_TOTAL.labels(slug=slug, outcome="provision_failed").inc()
+        return None
+
+    try:
+        framework = ABTestFrameworkEnhanced(db, redis_client)
+        experiment = await framework.create_experiment(
+            name=slug,
+            description=(
+                "Auto-provisioned gateway lane experiment (slug → UUID bridge; "
+                "see ab_test_middleware.getDefaultExperimentID). An "
+                "operator-authored experiment with this name takes precedence."
+            ),
+            hypothesis=(
+                "Gateway lane telemetry: measure success/latency across the "
+                "control/treatment split for this lane until an "
+                "operator-authored experiment takes over the name."
+            ),
+            variants=[
+                {"name": "control", "is_control": True, "weight": 0.5},
+                {"name": "treatment", "is_control": False, "weight": 0.5},
+            ],
+            metrics=["success", "latency"],
+            created_by=None,
+            sample_size_target=None,
+        )
+    except Exception as exc:
+        await db.rollback()
+        logger.error("Failed to auto-provision UUID-backed experiment for slug {}: {}", slug, exc)
+        AB_EXPERIMENT_SLUG_RESOLUTION_TOTAL.labels(slug=slug, outcome="provision_failed").inc()
+        return None
+
+    logger.info("Auto-provisioned UUID-backed experiment {} for gateway slug {}", experiment.id, slug)
+    AB_EXPERIMENT_SLUG_RESOLUTION_TOTAL.labels(slug=slug, outcome="provisioned").inc()
+    return experiment
+
+
 # Request/Response Models
 class VariantConfig(BaseModel):
     """Variant configuration"""
+
     name: str = Field(..., description="Variant name")
     is_control: bool = Field(False, description="Whether this is the control variant")
     weight: float = Field(1.0, description="Allocation weight")
@@ -87,6 +191,7 @@ class VariantConfig(BaseModel):
 
 class CreateExperimentRequest(BaseModel):
     """Request to create a new experiment"""
+
     name: str = Field(..., max_length=200, description="Experiment name")
     description: str | None = Field(None, description="Experiment description")
     hypothesis: str = Field(..., description="Research hypothesis")
@@ -110,6 +215,7 @@ class CreateExperimentRequest(BaseModel):
 
 class UpdateExperimentRequest(BaseModel):
     """Request to update an experiment"""
+
     name: str | None = Field(None, max_length=200)
     description: str | None = None
     hypothesis: str | None = None
@@ -117,12 +223,14 @@ class UpdateExperimentRequest(BaseModel):
 
 class CompleteExperimentRequest(BaseModel):
     """Request to complete an experiment"""
+
     conclusion: str = Field(..., description="Experiment conclusion")
     winning_variant_id: str | None = Field(None, description="ID of winning variant")
 
 
 class RecordMetricRequest(BaseModel):
     """Request to record a metric"""
+
     metric_name: str = Field(..., description="Metric name")
     metric_value: float = Field(..., description="Metric value")
     metric_type: str = Field(..., description="Metric type: success, latency, engagement, etc.")
@@ -131,6 +239,7 @@ class RecordMetricRequest(BaseModel):
 
 class VariantResponse(BaseModel):
     """Variant response"""
+
     id: UUID
     variant_name: str
     description: str | None
@@ -145,6 +254,7 @@ class VariantResponse(BaseModel):
 
 class ExperimentResponse(BaseModel):
     """Experiment response"""
+
     id: UUID
     name: str
     description: str | None
@@ -168,6 +278,7 @@ class ExperimentResponse(BaseModel):
 
 class ExperimentStatsResponse(BaseModel):
     """Experiment statistics response"""
+
     experiment_id: str
     experiment_name: str
     status: str
@@ -408,20 +519,25 @@ async def assign_variant(
     """
     redis_client = _get_redis_client_or_503()
 
-    framework = ABTestFrameworkEnhanced(db, redis_client)
-
+    # PROD-LOG2 ②-7：slug 实验（如网关 planning-experiment）先解析/补建成
+    # UUID 后端记录，再走正常指派——不再永久回退 control。
     if not _is_uuid_like(experiment_id):
-        logger.warning(
-            "Experiment {} is not UUID-backed; falling back to control cohort",
-            experiment_id,
-        )
-        return {
-            "variant_id": "control",
-            "variant_name": "control",
-            "is_control": True,
-            "is_new_assignment": False,
-            "fallback": True,
-        }
+        experiment = await _ensure_uuid_backed_experiment(db, redis_client, experiment_id)
+        if experiment is None:
+            logger.warning(
+                "Experiment {} is not UUID-backed and could not be resolved; falling back to control cohort",
+                experiment_id,
+            )
+            return {
+                "variant_id": "control",
+                "variant_name": "control",
+                "is_control": True,
+                "is_new_assignment": False,
+                "fallback": True,
+            }
+        experiment_id = str(experiment.id)
+
+    framework = ABTestFrameworkEnhanced(db, redis_client)
 
     try:
         variant, is_new = await framework.assign_variant(
@@ -453,13 +569,29 @@ async def record_metric(
     """
     redis_client = _get_redis_client_or_503()
 
-    if not _is_uuid_like(experiment_id) or not _is_uuid_like(variant_id):
+    # PROD-LOG2 ②-7：指标真上报。variant 非 UUID（如网关旧兜底的 "control"
+    # 字符串）无法落 FK，跳过且必须留下计数痕迹；experiment 为 slug 时先解析
+    # 成 UUID 后端记录再落库——解析失败也要可观测，不再无声蒸发。
+    if not _is_uuid_like(variant_id):
+        AB_EXPERIMENT_METRIC_SKIP_TOTAL.labels(reason="non_uuid_assignment").inc()
         logger.warning(
             "Skipping metric for non-UUID experiment assignment: experiment_id={}, variant_id={}",
             experiment_id,
             variant_id,
         )
         return {"status": "skipped", "reason": "non_uuid_assignment"}
+
+    if not _is_uuid_like(experiment_id):
+        experiment = await _ensure_uuid_backed_experiment(db, redis_client, experiment_id)
+        if experiment is None:
+            AB_EXPERIMENT_METRIC_SKIP_TOTAL.labels(reason="unresolved_experiment").inc()
+            logger.warning(
+                "Skipping metric for unresolvable slug experiment: experiment_id={}, variant_id={}",
+                experiment_id,
+                variant_id,
+            )
+            return {"status": "skipped", "reason": "unresolved_experiment"}
+        experiment_id = str(experiment.id)
 
     framework = ABTestFrameworkEnhanced(db, redis_client)
 

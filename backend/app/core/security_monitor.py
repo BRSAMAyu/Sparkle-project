@@ -416,8 +416,11 @@ class SecurityMonitor:
             since_time = _utcnow() - timedelta(hours=hours)
 
             # 查询失败登录次数
+            # AURORA-LABEL 同型修复：``not <column>`` 是 Python 布尔取反——
+            # 列对象恒真值，``not`` 得到 Python False，被 and_/where 编译成
+            # SQL ``false`` 字面量，失败登录计数恒为 0。SQL NOT 必须用 ``~``。
             failed_logins_stmt = select(func.count(LoginAttempt.id)).where(
-                not LoginAttempt.success,
+                ~LoginAttempt.success,
                 LoginAttempt.attempted_at >= since_time
             )
             failed_logins_result = await db.execute(failed_logins_stmt)

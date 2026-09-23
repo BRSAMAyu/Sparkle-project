@@ -225,13 +225,18 @@ class ABTestFrameworkEnhanced:
         Returns:
             Tuple of (variant, is_new_assignment)
         """
-        # Check if already assigned
+        # Check if already assigned.
+        # AURORA-LABEL bonus fix: ``not <column>`` evaluated to a plain Python
+        # ``False`` (SQLA column objects are always truthy), which and_() compiles
+        # to a SQL ``false`` literal — the dedup lookup was ``WHERE … AND false``
+        # and never matched, so every call inserted a duplicate assignment row
+        # and reported is_new_assignment=True. Use the SQL NOT operator (~).
         assignment = await self.db.execute(
             select(ABExperimentAssignment).where(
                 and_(
                     ABExperimentAssignment.experiment_id == experiment_id,
                     ABExperimentAssignment.user_id == user_id,
-                    not ABExperimentAssignment.is_excluded,
+                    ~ABExperimentAssignment.is_excluded,
                 )
             )
         )
