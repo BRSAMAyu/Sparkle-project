@@ -38800,7 +38800,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashboardBriefingToggle => 'Expand or collapse today\'s briefing';
 
   @override
-  String get dashboardUpdatesToggle => 'Expand or collapse updates and insights';
+  String get dashboardUpdatesToggle =>
+      'Expand or collapse updates and insights';
 
   @override
   String get communityCreatePost => 'Create a post';
@@ -38822,4 +38823,40 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get toolsHeaderCollapse => 'Collapse or expand tool info';
+
+  @override
+  String get friendsAcceptRequest => 'Accept friend request';
+
+  @override
+  String get friendsDeclineRequest => 'Decline friend request';
+
+  @override
+  String get friendPartnerAcceptInvite => 'Accept partner invite';
+
+  @override
+  String get friendPartnerDeclineInvite => 'Decline partner invite';
+
+  @override
+  String get friendsViewProfile => 'View profile';
+
+  @override
+  String get friendsPartnerEntry => 'Accountability partner entry';
+
+  @override
+  String get sprintOpenPlan => 'Open sprint plan';
+
+  @override
+  String get syncCenterCopyEntityId => 'Copy entity ID';
+
+  @override
+  String get syncCenterCopyTraceId => 'Copy trace ID';
+
+  @override
+  String get metacognitionPanelExpand => 'Expand metacognition panel';
+
+  @override
+  String get metacognitionPanelCollapse => 'Collapse metacognition panel';
+
+  @override
+  String get openclawCopyPairingCode => 'Copy pairing code';
 }

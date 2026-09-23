@@ -37209,4 +37209,40 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get toolsHeaderCollapse => '收起或展开工具信息';
+
+  @override
+  String get friendsAcceptRequest => '接受好友申请';
+
+  @override
+  String get friendsDeclineRequest => '拒绝好友申请';
+
+  @override
+  String get friendPartnerAcceptInvite => '接受伙伴邀请';
+
+  @override
+  String get friendPartnerDeclineInvite => '拒绝伙伴邀请';
+
+  @override
+  String get friendsViewProfile => '查看主页';
+
+  @override
+  String get friendsPartnerEntry => '责任伙伴入口';
+
+  @override
+  String get sprintOpenPlan => '打开冲刺计划';
+
+  @override
+  String get syncCenterCopyEntityId => '复制实体 ID';
+
+  @override
+  String get syncCenterCopyTraceId => '复制链路 ID';
+
+  @override
+  String get metacognitionPanelExpand => '展开自我认识面板';
+
+  @override
+  String get metacognitionPanelCollapse => '收起自我认识面板';
+
+  @override
+  String get openclawCopyPairingCode => '复制配对码';
 }

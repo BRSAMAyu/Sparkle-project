@@ -77,6 +77,9 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: Icon(Icons.refresh_rounded, color: DS.textSecondary),
+              // Tooltip 只挂 semantics.tooltip，读屏按钮名仍缺——与
+              // Tooltip 同源补名（N31 图标钮必有名）。
+              semanticLabel: l10n.personaRefreshPersona,
               onPressed: () => unawaited(_refreshPersona(ref)),
             ),
           ),

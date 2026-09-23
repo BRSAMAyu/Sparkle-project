@@ -30,6 +30,7 @@ class SprintHistoryScreen extends ConsumerWidget {
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
+          semanticLabel: l10n.back,
           onPressed: () => context.pop(),
         ),
         title: Text(l10n.sprintHistory),
@@ -37,6 +38,7 @@ class SprintHistoryScreen extends ConsumerWidget {
           SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: const Icon(Icons.refresh),
+            semanticLabel: l10n.refresh,
             onPressed: () => ref.read(sprintHistoryProvider.notifier).refresh(),
           ),
         ],

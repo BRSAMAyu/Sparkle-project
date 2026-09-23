@@ -80,6 +80,9 @@ class _SkillManagementScreenState extends ConsumerState<SkillManagementScreen>
                   Icons.auto_awesome_outlined,
                   color: DS.textSecondary,
                 ),
+                // Tooltip 只挂 semantics.tooltip，读屏按钮名仍缺——与
+                // Tooltip 同源补名（N31 图标钮必有名）。
+                semanticLabel: context.l10n.skillFromDraft,
                 onPressed: _openDraftExtractor,
               ),
             ),
@@ -88,12 +91,14 @@ class _SkillManagementScreenState extends ConsumerState<SkillManagementScreen>
               child: SparkleIconButton(
                 variant: ButtonVariant.ghost,
                 icon: Icon(Icons.add_rounded, color: DS.textSecondary),
+                semanticLabel: context.l10n.skillNewSkill,
                 onPressed: () => _openEditor(),
               ),
             ),
             SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: Icon(Icons.refresh_rounded, color: DS.textSecondary),
+              semanticLabel: context.l10n.refresh,
               onPressed: _load,
             ),
           ],

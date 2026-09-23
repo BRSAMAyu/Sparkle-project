@@ -324,6 +324,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
                                         color: Colors.white,
                                       )
                                     : const Icon(Icons.send_rounded),
+                                semanticLabel: context.l10n.chatSendMessage,
                                 onPressed: _skipInFlight ? null : _handleSubmit,
                               ),
                             ],

@@ -109,6 +109,7 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
+          semanticLabel: context.l10n.back,
           onPressed: () => context.pop(),
         ),
         title: TextField(
@@ -127,6 +128,7 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
           SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: const Icon(Icons.search),
+            semanticLabel: context.l10n.commonSearch,
             onPressed: _handleSearch,
           ),
         ],

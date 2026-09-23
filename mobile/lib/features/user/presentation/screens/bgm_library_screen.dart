@@ -184,6 +184,7 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: Icon(Icons.arrow_back_rounded, color: DS.textSecondary),
+          semanticLabel: context.l10n.back,
           onPressed: () => context.pop(),
         ),
         actions: [
@@ -192,6 +193,9 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: Icon(Icons.refresh_rounded, color: DS.textSecondary),
+              // Tooltip 只挂 semantics.tooltip，读屏按钮名仍缺——与
+              // Tooltip 同源补名（N31 图标钮必有名）。
+              semanticLabel: context.l10n.bgmLibraryRefresh,
               onPressed: _loading ? null : () => unawaited(_loadData()),
             ),
           ),

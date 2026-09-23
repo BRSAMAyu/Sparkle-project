@@ -1025,16 +1025,23 @@ class _OpenClawConnectionPanelState
                                   ),
                             ),
                           ),
-                          IconButton(
-                            onPressed: () async {
-                              await Clipboard.setData(
-                                ClipboardData(text: pairingSession.code),
-                              );
-                              if (!mounted) return;
-                              _showSnackBar(
-                                  context.l10n.openclawPairingCodeCopied);
-                            },
-                            icon: const Icon(Icons.copy_rounded),
+                          // N31 图标钮必有名：Semantics label 承载读屏名
+                          // （find.bySemanticsLabel 可断言），tooltip 保留
+                          // 悬停提示——同一事实源（l10n）。
+                          Semantics(
+                            label: context.l10n.openclawCopyPairingCode,
+                            child: IconButton(
+                              tooltip: context.l10n.openclawCopyPairingCode,
+                              onPressed: () async {
+                                await Clipboard.setData(
+                                  ClipboardData(text: pairingSession.code),
+                                );
+                                if (!mounted) return;
+                                _showSnackBar(
+                                    context.l10n.openclawPairingCodeCopied);
+                              },
+                              icon: const Icon(Icons.copy_rounded),
+                            ),
                           ),
                         ],
                       ),

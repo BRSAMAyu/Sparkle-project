@@ -144,6 +144,7 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
+          semanticLabel: context.l10n.back,
           onPressed: () => context.pop(),
         ),
         title: Text(l10n.guestUpgradeTitle),

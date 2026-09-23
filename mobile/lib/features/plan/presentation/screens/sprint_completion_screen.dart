@@ -231,6 +231,9 @@ class _SprintCompletionScreenState
                       child: SparkleIconButton(
                         variant: ButtonVariant.ghost,
                         icon: const Icon(Icons.close_rounded),
+                        // Tooltip 只挂 semantics.tooltip 属性，读屏按钮名
+                        // 仍缺——semanticLabel 与 Tooltip 同源（N31）。
+                        semanticLabel: context.l10n.planSprintBack,
                         onPressed: _closeScreen,
                       ),
                     ),

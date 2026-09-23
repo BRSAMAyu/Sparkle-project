@@ -37,6 +37,7 @@ class SprintScreen extends ConsumerWidget {
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
+          semanticLabel: context.l10n.back,
           onPressed: () => context.pop(),
         ),
         title: Text(context.l10n.sprintMySprint),
@@ -46,6 +47,9 @@ class SprintScreen extends ConsumerWidget {
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.archive_outlined),
+              // Tooltip 只挂 semantics.tooltip 属性，读屏按钮名仍缺——
+              // 显式 semanticLabel 与 Tooltip 同源（N31 图标钮必有名）。
+              semanticLabel: context.l10n.planHistoryPlans,
               onPressed: () => unawaited(context.push('/plans/history')),
             ),
           ),
@@ -55,6 +59,7 @@ class SprintScreen extends ConsumerWidget {
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.align_vertical_bottom_outlined),
+              semanticLabel: context.l10n.leaderboardSelfAnchorViewEntry,
               onPressed: () =>
                   unawaited(context.push(LeaderboardRoutes.selfAnchor)),
             ),
@@ -66,6 +71,7 @@ class SprintScreen extends ConsumerWidget {
               key: const ValueKey('sprint-squad-entry-button'),
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.groups_outlined),
+              semanticLabel: context.l10n.squadEntryLabel,
               onPressed: () => unawaited(context.push(CommunityRoutes.squads)),
             ),
           ),
@@ -73,6 +79,7 @@ class SprintScreen extends ConsumerWidget {
             SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.open_in_new),
+              semanticLabel: context.l10n.sprintOpenPlan,
               onPressed: () {
                 unawaited(context.push('/plans/${activeSprint.id}'));
               },
@@ -81,6 +88,7 @@ class SprintScreen extends ConsumerWidget {
             SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.edit_outlined),
+              semanticLabel: context.l10n.editPlan,
               onPressed: () {
                 unawaited(context.push('/plans/${activeSprint.id}/edit'));
               },

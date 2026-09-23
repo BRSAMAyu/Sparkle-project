@@ -44,6 +44,7 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
           leading: SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: Icon(Icons.arrow_back, color: DS.textPrimary),
+            semanticLabel: context.l10n.back,
             onPressed: () => context.pop(),
           ),
           title: Text(widget.displayName ?? context.l10n.fpTitle),

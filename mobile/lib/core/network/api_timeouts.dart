@@ -13,7 +13,14 @@
 /// | 统计三 provider 兜底 Dio | 10s | 30s | 未设 | 同上（引用默认） |
 /// | 文件缓存 Dio | 10s | 30s | 未设 | 同上（引用默认） |
 /// | 上传面 Dio | **15s** | 30s | 未设 | `uploadConnectTimeout` + 默认 receive |
-/// | galaxy SSE（请求级覆写） | 继承 10s | **null（显式关）** | — | `sseReceiveTimeout` |
+/// | SSE 流（ApiClient getStream/postStream + galaxy 请求级覆写） | 继承 10s | **Duration.zero（dio 零值=不挂接收看门）** | — | `sseReceiveTimeout` |
+///
+/// SSE 豁免覆盖面（全库 getStream/postStream/dio.get(stream) 消费方 @ 基线
+/// a7733e2a）：task_monitor（`/background-tasks/stream/events`）、simulation
+/// （run/stream + sessions/{id}/continue/stream）、enhanced_galaxy（事件流）、
+/// galaxy（galaxy_repository 自带同源请求级覆写）。A11Y-BATCH2（wt260）前三方
+/// 未接豁免，静默 >30s 会被全局 receiveTimeout 掐断；同卡修正了 null 先例
+/// 因 dio compose 合并回落 30s 的无效豁免——详见 v3-output/A11Y-BATCH2/REPORT.md。
 ///
 /// sendTimeout：全库所有 Dio 实例均未设（Dio 默认无限制）——**不存在已生效的
 /// sendTimeout 值，故不立常量**；新面若要设，必须先在此登记（见下）。
@@ -46,9 +53,19 @@ class ApiTimeouts {
   /// 默认值的 live 面；file_upload_service.dart）。
   static const Duration uploadConnectTimeout = Duration(seconds: 15);
 
-  /// 流式面请求级关闭 receiveTimeout（Dio `Duration?` 位传 null）。
+  /// 流式面请求级关闭 receiveTimeout（dio 零值 = 不挂接收看门）。
   ///
   /// 先例：galaxy 事件流（galaxy_repository.dart）——SSE 事件稀疏，全局 30s
-  /// receiveTimeout 会把静默期误判为超时断流。存活性交给心跳/事件超时表达。
-  static const Duration? sseReceiveTimeout = null;
+  /// receiveTimeout 会把静默期误判为超时断流（dio 按数据块间隔计时）。存活
+  /// 性交给心跳/事件超时表达。现统一收口在 ApiClient.getStream/postStream
+  /// （全部 SSE 消费方：task_monitor / simulation / enhanced_galaxy / galaxy）。
+  ///
+  /// 为什么是 `Duration.zero` 而非 `null`（A11Y-BATCH2/wt260 修正，dio 5.9.0
+  /// 实测源码）：`Options.compose` 合并规则是
+  /// `receiveTimeout: perRequest ?? baseOptions.receiveTimeout`——请求级传
+  /// 显式 `null` 会**回落到全局 30s**（此前 null 先例实为无效豁免的潜伏债，
+  /// galaxy 靠引擎 20s 心跳掩盖）；而 dio `handleResponseStream` 对
+  /// `receiveTimeout <= Duration.zero` 直接不挂接收超时看门。故「关闭」的
+  /// 有效表示是零值。禁止改成裸 `Duration(...)` 字面量（N37 dim1）。
+  static const Duration sseReceiveTimeout = Duration.zero;
 }

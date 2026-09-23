@@ -137,13 +137,21 @@ class _MetacognitionPanelCardState extends State<MetacognitionPanelCard> {
                 ),
                 Semantics(
                   button: true,
+                  // A11Y-BATCH2：原为硬编码英文标签（中文用户读屏听到
+                  // 英文）——l10n 化，zh/en 同源。
                   label: _isExpanded
-                      ? 'Collapse metacognition panel'
-                      : 'Expand metacognition panel',
+                      ? context.l10n.metacognitionPanelCollapse
+                      : context.l10n.metacognitionPanelExpand,
                   child: AnimatedRotation(
                     turns: _isExpanded ? 0.5 : 0,
                     duration: DS.quick,
                     child: IconButton(
+                      // N31 图标钮必有名：tooltip 并入语义名（读屏可念），
+                      // 与右侧隐藏钮同形制；外层 Semantics 保留按钮角色与
+                      // 展开态标签。
+                      tooltip: _isExpanded
+                          ? context.l10n.metacognitionPanelCollapse
+                          : context.l10n.metacognitionPanelExpand,
                       onPressed: () => setState(() => _isExpanded = !_isExpanded),
                       icon: Icon(
                         Icons.expand_more_rounded,

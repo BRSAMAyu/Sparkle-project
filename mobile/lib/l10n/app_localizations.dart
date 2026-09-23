@@ -67578,6 +67578,78 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'收起或展开工具信息'**
   String get toolsHeaderCollapse;
+
+  /// No description provided for @friendsAcceptRequest.
+  ///
+  /// In zh, this message translates to:
+  /// **'接受好友申请'**
+  String get friendsAcceptRequest;
+
+  /// No description provided for @friendsDeclineRequest.
+  ///
+  /// In zh, this message translates to:
+  /// **'拒绝好友申请'**
+  String get friendsDeclineRequest;
+
+  /// No description provided for @friendPartnerAcceptInvite.
+  ///
+  /// In zh, this message translates to:
+  /// **'接受伙伴邀请'**
+  String get friendPartnerAcceptInvite;
+
+  /// No description provided for @friendPartnerDeclineInvite.
+  ///
+  /// In zh, this message translates to:
+  /// **'拒绝伙伴邀请'**
+  String get friendPartnerDeclineInvite;
+
+  /// No description provided for @friendsViewProfile.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看主页'**
+  String get friendsViewProfile;
+
+  /// No description provided for @friendsPartnerEntry.
+  ///
+  /// In zh, this message translates to:
+  /// **'责任伙伴入口'**
+  String get friendsPartnerEntry;
+
+  /// No description provided for @sprintOpenPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开冲刺计划'**
+  String get sprintOpenPlan;
+
+  /// No description provided for @syncCenterCopyEntityId.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制实体 ID'**
+  String get syncCenterCopyEntityId;
+
+  /// No description provided for @syncCenterCopyTraceId.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制链路 ID'**
+  String get syncCenterCopyTraceId;
+
+  /// No description provided for @metacognitionPanelExpand.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开自我认识面板'**
+  String get metacognitionPanelExpand;
+
+  /// No description provided for @metacognitionPanelCollapse.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起自我认识面板'**
+  String get metacognitionPanelCollapse;
+
+  /// No description provided for @openclawCopyPairingCode.
+  ///
+  /// In zh, this message translates to:
+  /// **'复制配对码'**
+  String get openclawCopyPairingCode;
 }
 
 class _AppLocalizationsDelegate

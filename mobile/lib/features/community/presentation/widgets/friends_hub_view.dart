@@ -621,6 +621,7 @@ class _FriendCard extends StatelessWidget {
                 SparkleIconButton(
                   variant: ButtonVariant.ghost,
                   icon: const Icon(Icons.person_outline),
+                  semanticLabel: context.l10n.friendsViewProfile,
                   onPressed: () => context.pushNamed(
                     'userProfile',
                     pathParameters: {'id': friend.id},
@@ -635,6 +636,7 @@ class _FriendCard extends StatelessWidget {
                           ? Icons.mark_email_unread_outlined
                           : Icons.handshake_outlined,
                     ),
+                    semanticLabel: context.l10n.friendsPartnerEntry,
                     onPressed: () {
                       if (accountability?.isPending == true) {
                         unawaited(context.pushNamed('friendRequests'));

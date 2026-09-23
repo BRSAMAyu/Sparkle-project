@@ -38,6 +38,7 @@ class FriendsScreen extends StatelessWidget {
           leading: SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: const Icon(Icons.arrow_back),
+            semanticLabel: context.l10n.back,
             onPressed: () => context.pop(),
           ),
           title: Text(l10n.community),
@@ -72,6 +73,7 @@ class FriendRequestsScreen extends StatelessWidget {
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
+          semanticLabel: context.l10n.back,
           onPressed: () => context.canPop()
               ? context.pop()
               : context.go(CommunityRoutes.home),
@@ -96,6 +98,7 @@ class FriendsDiscoverScreen extends StatelessWidget {
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
+          semanticLabel: context.l10n.back,
           onPressed: () => context.canPop()
               ? context.pop()
               : context.go(CommunityRoutes.home),
@@ -425,6 +428,7 @@ class _PendingRequestsTab extends ConsumerWidget {
                           variant: ButtonVariant.ghost,
                           size: 36,
                           icon: Icon(Icons.check, color: DS.success),
+                          semanticLabel: context.l10n.friendsAcceptRequest,
                           onPressed: () {
                             ref
                                 .read(pendingRequestsProvider.notifier)
@@ -436,6 +440,7 @@ class _PendingRequestsTab extends ConsumerWidget {
                           variant: ButtonVariant.ghost,
                           size: 36,
                           icon: Icon(Icons.close, color: DS.error),
+                          semanticLabel: context.l10n.friendsDeclineRequest,
                           onPressed: () {
                             ref
                                 .read(pendingRequestsProvider.notifier)
@@ -481,6 +486,7 @@ class _PendingRequestsTab extends ConsumerWidget {
                         variant: ButtonVariant.ghost,
                         size: 36,
                         icon: Icon(Icons.check, color: DS.success),
+                        semanticLabel: context.l10n.friendPartnerAcceptInvite,
                         onPressed: () async {
                           try {
                             final repo =
@@ -531,6 +537,7 @@ class _PendingRequestsTab extends ConsumerWidget {
                         variant: ButtonVariant.ghost,
                         size: 36,
                         icon: Icon(Icons.close, color: DS.error),
+                        semanticLabel: context.l10n.friendPartnerDeclineInvite,
                         onPressed: () async {
                           try {
                             await declineAccountabilityInviteWithRefresh(

@@ -139,6 +139,7 @@ class _SmartPushSettingsScreenState
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
+          semanticLabel: context.l10n.back,
           onPressed: () => context.pop(),
         ),
         title: Text(l10n.smartPushSettings),
@@ -154,6 +155,7 @@ class _SmartPushSettingsScreenState
             SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.save),
+              semanticLabel: l10n.commonSave,
               onPressed: _savePreferences,
             ),
         ],
@@ -396,6 +398,7 @@ class _SmartPushSettingsScreenState
                 variant: ButtonVariant.ghost,
                 size: DS.spacing32,
                 icon: Icon(Icons.delete, color: DS.errorAccent),
+                semanticLabel: context.l10n.delete,
                 onPressed: () => _removeSlot(index),
               ),
             ],

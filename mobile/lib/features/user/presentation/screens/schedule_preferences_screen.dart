@@ -144,6 +144,7 @@ class _SchedulePreferencesScreenState
           leading: SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: const Icon(Icons.arrow_back),
+            semanticLabel: context.l10n.back,
             onPressed: () => context.pop(),
           ),
           title: Text(context.l10n.schedulePreferences),
@@ -152,6 +153,7 @@ class _SchedulePreferencesScreenState
               variant: ButtonVariant.ghost,
               onPressed: _save,
               icon: const Icon(Icons.save),
+              semanticLabel: context.l10n.commonSave,
             ),
           ],
         ),

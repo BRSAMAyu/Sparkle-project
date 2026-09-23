@@ -73,6 +73,12 @@ class ApiClient {
   }
 
   /// SSE 流式 GET 请求
+  ///
+  /// N37 流式豁免（A11Y-BATCH2 补齐，先例：galaxy_repository 请求级覆写）：
+  /// 请求级 `receiveTimeout: ApiTimeouts.sseReceiveTimeout`（dio 零值=不挂
+  /// 接收看门）——本方法只服务事件流（task_monitor / enhanced_galaxy），流式
+  /// 静默期可大于全局 30s receiveTimeout，存活性交给心跳/事件超时表达
+  /// （登记：core/network/api_timeouts.dart）。
   Stream<SSEEvent> getStream(
     String path, {
     Map<String, dynamic>? queryParameters,
@@ -84,6 +90,7 @@ class ApiClient {
         queryParameters: queryParameters,
         options: Options(
           responseType: ResponseType.stream,
+          receiveTimeout: ApiTimeouts.sseReceiveTimeout,
           headers: {
             'Accept': 'text/event-stream',
             'Cache-Control': 'no-cache',
@@ -149,6 +156,11 @@ class ApiClient {
   ///
   /// 返回一个 Stream，每次 yield 一个 SSE 事件
   /// 支持容错：网络断开时不会抛出异常，而是优雅地结束流
+  ///
+  /// N37 流式豁免（同 [getStream]）：请求级 `receiveTimeout:
+  /// ApiTimeouts.sseReceiveTimeout`（dio 零值=不挂接收看门）——simulation
+  /// 两条流式端点静默期可大于全局 30s，禁以 receiveTimeout 表达流式超时
+  /// （登记：core/network/api_timeouts.dart）。
   Stream<SSEEvent> postStream(String path, {Object? data}) async* {
     try {
       final response = await _dio.post<ResponseBody>(
@@ -156,6 +168,7 @@ class ApiClient {
         data: data,
         options: Options(
           responseType: ResponseType.stream,
+          receiveTimeout: ApiTimeouts.sseReceiveTimeout,
           headers: {
             'Accept': 'text/event-stream',
             'Cache-Control': 'no-cache',

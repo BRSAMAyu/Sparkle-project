@@ -93,6 +93,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
+          semanticLabel: context.l10n.back,
           onPressed: () => context.pop(),
         ),
         title:
@@ -222,6 +223,10 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
                     : Icons.visibility_outlined,
                 size: 20,
               ),
+              // 读屏名跟随当前动作（而非图标外观）：密文态点击是「显示」。
+              semanticLabel: obscureText
+                  ? context.l10n.authShowPassword
+                  : context.l10n.authHidePassword,
               onPressed: onToggle,
             ),
             filled: true,
