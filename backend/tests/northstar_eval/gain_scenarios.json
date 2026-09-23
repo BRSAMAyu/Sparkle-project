@@ -1,0 +1,763 @@
+{
+  "schema": "sparkle.northstar_eval.gain_ab.pack.v1",
+  "context": {
+    "persona": "大二学生小陈，期末周前 7 天，正在用 Sparkle 冲刺《离散数学》",
+    "subject": "离散数学",
+    "sprint_window": "期末倒计时 7 天",
+    "design_notes": [
+      "三类别：memory=记忆依赖（前轮/跨会话事实被后轮引用）、profile=画像依赖（按自评弱项/掌握度定制）、baseline=基线（两类依赖都不需要，作污染守卫）。",
+      "每场景自带独立 seed：运行器为每场景播种一个全新用户，经真实装配链（chat.get_user_context → ContextPackBuilder.build → build_system_prompt）装配各臂提示词。",
+      "memory 场景的 query 刻意与 seed 事实共享显著词元（如「图论」「考试」「目标」），保证 M-05 Self-ReCheck 的 relevance 词法检查在臂 A 下不会误切割记忆——这是生产真行为，臂 A 装配探针（probe_terms）会验证事实确实进了 prompt。",
+      "baseline 场景零 seed：所有提示词臂在数据面上等价，A/B 分差只反映 LLM 噪声与提示词结构效应——作为「能力关闭不伤及无辜」的污染守卫。",
+      "judging 契约：确定性规则优先（expect_groups 命中率，forbidden 罚分）；规则不可判的才用 LLM judge（kind=llm，profile_eval_llm_judge 先例同款严格 JSON）。"
+    ]
+  },
+  "scenarios": [
+    {
+      "id": "mem-01-exam-date",
+      "category": "memory",
+      "title": "跨会话记忆：考试日期回忆",
+      "user_message": "帮我定一下这周的复习安排，我记得下周有个考试？",
+      "seed": {
+        "episodic": [
+          {
+            "summary": "下周四有离散数学期末考试，重点范围是数理逻辑和图论",
+            "hours_ago": 20,
+            "subject_type": "self",
+            "tags": [
+              "考试",
+              "离散数学"
+            ]
+          }
+        ]
+      },
+      "judge": {
+        "kind": "deterministic",
+        "expect_groups": [
+          [
+            "下周四"
+          ],
+          [
+            "离散",
+            "数理逻辑",
+            "图论"
+          ]
+        ],
+        "forbidden": [],
+        "note": "回答必须说出「下周四」并落在离散数学语境，才证明跨会话事实被引用。"
+      },
+      "probe_terms": [
+        "下周四"
+      ],
+      "scoring_note": "依赖能力：episodic 记忆注入。B-MEM 臂应答不出日期。"
+    },
+    {
+      "id": "mem-02-hard-topic",
+      "category": "memory",
+      "title": "跨会话记忆：卡点话题续接",
+      "user_message": "图论这块我想再补一补，之前哪个知识点卡住了来着？",
+      "seed": {
+        "episodic": [
+          {
+            "summary": "图论里的欧拉路径一直学不懂，之前练习错了三道题",
+            "hours_ago": 26,
+            "subject_type": "self",
+            "tags": [
+              "图论",
+              "错题"
+            ]
+          }
+        ]
+      },
+      "judge": {
+        "kind": "deterministic",
+        "expect_groups": [
+          [
+            "欧拉"
+          ],
+          [
+            "三道",
+            "3道",
+            "三题",
+            "3题"
+          ]
+        ],
+        "forbidden": [],
+        "note": "必须点名「欧拉（路径）」这个具体卡点（错题数可选加分），泛泛说「多练」即失分。"
+      },
+      "probe_terms": [
+        "欧拉"
+      ],
+      "scoring_note": "依赖能力：episodic 记忆注入。"
+    },
+    {
+      "id": "mem-03-goal-recall",
+      "category": "memory",
+      "title": "记忆目标：本周目标回忆",
+      "user_message": "帮我盯一下本周目标，数理逻辑刷到哪了？",
+      "seed": {
+        "goals": [
+          {
+            "title": "本周完成数理逻辑专项刷题 40 题",
+            "status": "active",
+            "days_ahead": 5
+          }
+        ]
+      },
+      "judge": {
+        "kind": "deterministic",
+        "expect_groups": [
+          [
+            "数理逻辑"
+          ],
+          [
+            "40"
+          ]
+        ],
+        "forbidden": [],
+        "note": "必须复述出目标内容（数理逻辑 + 40 题），「我没有你的目标记录」即记忆缺失证据。"
+      },
+      "probe_terms": [
+        "数理逻辑"
+      ],
+      "scoring_note": "依赖能力：goals 注入（记忆域存储行）。"
+    },
+    {
+      "id": "mem-04-pref-example-first",
+      "category": "memory",
+      "title": "记忆偏好：例题先行讲解",
+      "user_message": "偏序集是什么？按我之前说的先例题后定义的讲法来",
+      "seed": {
+        "preferences": [
+          {
+            "pref_key": "explanation_style",
+            "pref_value": {
+              "value": "先讲一道具体例题，再给抽象定义"
+            }
+          }
+        ]
+      },
+      "judge": {
+        "kind": "llm",
+        "rubric": "用户此前明确表达过讲解偏好：先给一道具体例题，再给抽象定义。判断本次回答是否体现了该顺序（先具体例子后定义）。完全体现=1.0；顺序反了或只有定义=0.2；完全无视且纯抽象=0.0。",
+        "note": "风格类偏好无法用关键词可靠判定，走 LLM judge（profile_eval 先例同款）。"
+      },
+      "probe_terms": [
+        "例题"
+      ],
+      "scoring_note": "依赖能力：memory_preferences 注入。"
+    },
+    {
+      "id": "mem-05-continuation-opening",
+      "category": "memory",
+      "title": "跨会话记忆：续接开场自然衔接",
+      "user_message": "早上好，今天从哪里开始？",
+      "seed": {
+        "episodic": [
+          {
+            "summary": "昨天开始复习集合论，已经看完前两章",
+            "hours_ago": 14,
+            "subject_type": "self",
+            "tags": [
+              "集合论",
+              "复习"
+            ]
+          }
+        ]
+      },
+      "judge": {
+        "kind": "deterministic",
+        "expect_groups": [
+          [
+            "集合论"
+          ]
+        ],
+        "forbidden": [
+          "没有找到相关记忆",
+          "没有记录",
+          "我无法访问"
+        ],
+        "note": "续接开场（CTX-PACK v3 保守放行形状）应自然衔接昨天的集合论进度；答「没有记录」= 记忆链断裂实证。"
+      },
+      "probe_terms": [
+        "集合论"
+      ],
+      "scoring_note": "依赖能力：episodic 记忆注入 + M-05 续接保守放行。"
+    },
+    {
+      "id": "mem-06-exam-scope",
+      "category": "memory",
+      "title": "跨会话记忆：考试范围确认",
+      "user_message": "期末范围帮我再确认一下，怕复习多了白费劲",
+      "seed": {
+        "episodic": [
+          {
+            "summary": "用户确认过期末只考数理逻辑、集合论、图论三章，代数系统不考",
+            "hours_ago": 40,
+            "subject_type": "self",
+            "tags": [
+              "考试",
+              "范围"
+            ]
+          }
+        ]
+      },
+      "judge": {
+        "kind": "deterministic",
+        "expect_groups": [
+          [
+            "数理逻辑"
+          ],
+          [
+            "集合论"
+          ],
+          [
+            "图论"
+          ]
+        ],
+        "forbidden": [],
+        "note": "三个章节都报出来才算引用了范围事实；编造新章节（如代数系统）不入罚分（回答可能提及「不考代数系统」属正确引用）。"
+      },
+      "probe_terms": [
+        "数理逻辑",
+        "图论"
+      ],
+      "scoring_note": "依赖能力：episodic 记忆注入。"
+    },
+    {
+      "id": "mem-07-weak-confession",
+      "category": "memory",
+      "title": "跨会话记忆：自述弱项被记住",
+      "user_message": "要不要先补排列组合？我有点没底",
+      "seed": {
+        "episodic": [
+          {
+            "summary": "用户自述排列组合基础差，从高中起就没学好",
+            "hours_ago": 50,
+            "subject_type": "self",
+            "tags": [
+              "排列组合",
+              "弱项"
+            ]
+          }
+        ]
+      },
+      "judge": {
+        "kind": "deterministic",
+        "expect_groups": [
+          [
+            "排列组合"
+          ],
+          [
+            "基础",
+            "底子",
+            "从头",
+            "先补",
+            "补"
+          ]
+        ],
+        "forbidden": [],
+        "note": "回答应呼应「基础差」的自述（建议从基础补起），而不是当成全新问题泛泛而谈。"
+      },
+      "probe_terms": [
+        "排列组合"
+      ],
+      "scoring_note": "依赖能力：episodic 记忆注入。"
+    },
+    {
+      "id": "mem-08-evening-rhythm",
+      "category": "memory",
+      "title": "记忆偏好：晚间高效节奏",
+      "user_message": "今天剩下的时间怎么安排比较好？",
+      "seed": {
+        "preferences": [
+          {
+            "pref_key": "study_time_preference",
+            "pref_value": {
+              "value": "晚上学习效率高，难的内容喜欢安排在晚上"
+            }
+          }
+        ]
+      },
+      "judge": {
+        "kind": "deterministic",
+        "expect_groups": [
+          [
+            "晚上",
+            "晚间"
+          ]
+        ],
+        "forbidden": [],
+        "note": "安排建议应把难点放到晚上（命中「晚上/晚间」即视为引用了节奏事实；弱判分已申报）。"
+      },
+      "probe_terms": [
+        "晚上"
+      ],
+      "scoring_note": "依赖能力：memory_preferences 注入。"
+    },
+    {
+      "id": "prof-01-weak-logic",
+      "category": "profile",
+      "title": "画像：弱项驱动的复习建议",
+      "user_message": "离散数学整体我该怎么复习？",
+      "seed": {
+        "knowledge": {
+          "subject": "离散数学",
+          "nodes": [
+            {
+              "name": "数理逻辑",
+              "mastery": 35
+            },
+            {
+              "name": "集合论",
+              "mastery": 85
+            }
+          ],
+          "study": [
+            {
+              "node": "数理逻辑",
+              "delta": 2
+            },
+            {
+              "node": "集合论",
+              "delta": 1
+            }
+          ]
+        }
+      },
+      "judge": {
+        "kind": "deterministic",
+        "expect_groups": [
+          [
+            "数理逻辑",
+            "逻辑"
+          ]
+        ],
+        "forbidden": [],
+        "note": "画像里数理逻辑明显弱（35% vs 85%）：针对性建议必须点名数理逻辑优先。"
+      },
+      "probe_terms": [
+        "数理逻辑"
+      ],
+      "scoring_note": "依赖能力：profile_context.knowledge_summary 注入。C-PROF 臂无画像应给不出针对性。"
+    },
+    {
+      "id": "prof-02-weak-first-drill",
+      "category": "profile",
+      "title": "画像：今日专项选题",
+      "user_message": "今天就练一个专项，练哪个好？",
+      "seed": {
+        "knowledge": {
+          "subject": "离散数学",
+          "nodes": [
+            {
+              "name": "图论",
+              "mastery": 40
+            },
+            {
+              "name": "数理逻辑",
+              "mastery": 55
+            },
+            {
+              "name": "集合论",
+              "mastery": 85
+            }
+          ],
+          "study": [
+            {
+              "node": "图论",
+              "delta": 3
+            },
+            {
+              "node": "数理逻辑",
+              "delta": 2
+            },
+            {
+              "node": "集合论",
+              "delta": 1
+            }
+          ]
+        }
+      },
+      "judge": {
+        "kind": "deterministic",
+        "expect_groups": [
+          [
+            "图论",
+            "数理逻辑"
+          ]
+        ],
+        "forbidden": [
+          "集合论专项",
+          "练集合论",
+          "巩固集合"
+        ],
+        "note": "应选最弱项（图论 40% 或数理逻辑 55%）；若把已掌握 85% 的集合论作为专项推荐即画像失配（forbidden 短语罚分，误伤风险已申报）。"
+      },
+      "probe_terms": [
+        "图论"
+      ],
+      "scoring_note": "依赖能力：knowledge_summary 注入。"
+    },
+    {
+      "id": "prof-03-order-plan",
+      "category": "profile",
+      "title": "画像：学习顺序按掌握度排布",
+      "user_message": "帮我排一下今天的学习顺序",
+      "seed": {
+        "knowledge": {
+          "subject": "离散数学",
+          "nodes": [
+            {
+              "name": "图论",
+              "mastery": 30
+            },
+            {
+              "name": "集合论",
+              "mastery": 90
+            }
+          ],
+          "study": [
+            {
+              "node": "图论",
+              "delta": 2
+            },
+            {
+              "node": "集合论",
+              "delta": 1
+            }
+          ]
+        }
+      },
+      "judge": {
+        "kind": "deterministic",
+        "expect_groups": [
+          [
+            "图论"
+          ]
+        ],
+        "forbidden": [],
+        "note": "顺序安排应把最弱的图论排在优先位置；完全没提图论=未用画像。"
+      },
+      "probe_terms": [
+        "图论"
+      ],
+      "scoring_note": "依赖能力：knowledge_summary 注入。"
+    },
+    {
+      "id": "prof-04-mastery-diagnosis",
+      "category": "profile",
+      "title": "画像：整体掌握度诊断",
+      "user_message": "我现在离散数学整体掌握得怎么样？",
+      "seed": {
+        "knowledge": {
+          "subject": "离散数学",
+          "nodes": [
+            {
+              "name": "数理逻辑",
+              "mastery": 35
+            },
+            {
+              "name": "图论",
+              "mastery": 45
+            },
+            {
+              "name": "集合论",
+              "mastery": 90
+            }
+          ],
+          "study": [
+            {
+              "node": "数理逻辑",
+              "delta": 2
+            },
+            {
+              "node": "图论",
+              "delta": 3
+            },
+            {
+              "node": "集合论",
+              "delta": 1
+            }
+          ]
+        }
+      },
+      "judge": {
+        "kind": "deterministic",
+        "expect_groups": [
+          [
+            "数理逻辑"
+          ],
+          [
+            "图论"
+          ],
+          [
+            "集合论"
+          ]
+        ],
+        "forbidden": [],
+        "note": "诚实的掌握度诊断应区分强弱：弱项（数理逻辑/图论）与强项（集合论）至少被点名（三组全对才满分）。"
+      },
+      "probe_terms": [
+        "数理逻辑",
+        "图论"
+      ],
+      "scoring_note": "依赖能力：knowledge_summary 注入。"
+    },
+    {
+      "id": "prof-05-progress-recognition",
+      "category": "profile",
+      "title": "画像：近期进步识别",
+      "user_message": "我最近图论是不是有进步？",
+      "seed": {
+        "knowledge": {
+          "subject": "离散数学",
+          "nodes": [
+            {
+              "name": "图论",
+              "mastery": 45
+            },
+            {
+              "name": "集合论",
+              "mastery": 85
+            }
+          ],
+          "study": [
+            {
+              "node": "图论",
+              "delta": 7
+            },
+            {
+              "node": "集合论",
+              "delta": 1
+            }
+          ]
+        }
+      },
+      "judge": {
+        "kind": "deterministic",
+        "expect_groups": [
+          [
+            "图论"
+          ],
+          [
+            "进步",
+            "提升",
+            "上升",
+            "提高",
+            "涨"
+          ]
+        ],
+        "forbidden": [],
+        "note": "学习记录显示图论近期 +7%：确认进步应落在图论上；「没有你的学习数据」= 画像断链。"
+      },
+      "probe_terms": [
+        "图论"
+      ],
+      "scoring_note": "依赖能力：knowledge_summary.recent_mastery_changes 注入。"
+    },
+    {
+      "id": "prof-06-final-three-days",
+      "category": "profile",
+      "title": "画像：最后三天主攻选择",
+      "user_message": "时间不多了，最后三天该主攻什么？",
+      "seed": {
+        "knowledge": {
+          "subject": "离散数学",
+          "nodes": [
+            {
+              "name": "数理逻辑",
+              "mastery": 35
+            },
+            {
+              "name": "图论",
+              "mastery": 60
+            },
+            {
+              "name": "集合论",
+              "mastery": 88
+            }
+          ],
+          "study": [
+            {
+              "node": "数理逻辑",
+              "delta": 2
+            },
+            {
+              "node": "图论",
+              "delta": 4
+            },
+            {
+              "node": "集合论",
+              "delta": 1
+            }
+          ]
+        }
+      },
+      "judge": {
+        "kind": "deterministic",
+        "expect_groups": [
+          [
+            "数理逻辑",
+            "逻辑"
+          ]
+        ],
+        "forbidden": [],
+        "note": "性价比排序应指向最弱的数理逻辑（35%）；按画像主攻它才算个性化。"
+      },
+      "probe_terms": [
+        "数理逻辑"
+      ],
+      "scoring_note": "依赖能力：knowledge_summary 注入。"
+    },
+    {
+      "id": "base-01-group-def",
+      "category": "baseline",
+      "title": "基线：群的定义",
+      "user_message": "离散数学里的「群」是什么意思？给我讲讲",
+      "seed": {},
+      "judge": {
+        "kind": "deterministic",
+        "expect_groups": [
+          [
+            "结合律"
+          ],
+          [
+            "单位元"
+          ],
+          [
+            "封闭"
+          ],
+          [
+            "逆元"
+          ]
+        ],
+        "forbidden": [],
+        "note": "纯知识点，四要素（封闭/结合/单位元/逆元）命中数即质量分；任何臂都应能答好。"
+      },
+      "scoring_note": "污染守卫：与记忆/画像无关，臂间大分差=能力关闭伤及无辜或装配污染。"
+    },
+    {
+      "id": "base-02-equivalence-relation",
+      "category": "baseline",
+      "title": "基线：等价关系三性质",
+      "user_message": "等价关系需要满足哪几条性质？",
+      "seed": {},
+      "judge": {
+        "kind": "deterministic",
+        "expect_groups": [
+          [
+            "自反"
+          ],
+          [
+            "对称"
+          ],
+          [
+            "传递"
+          ]
+        ],
+        "forbidden": [],
+        "note": "标准三性质，确定性可判。"
+      },
+      "scoring_note": "污染守卫。"
+    },
+    {
+      "id": "base-03-pigeonhole",
+      "category": "baseline",
+      "title": "基线：鸽笼原理思路",
+      "user_message": "用鸽笼原理做题是什么思路？",
+      "seed": {},
+      "judge": {
+        "kind": "deterministic",
+        "expect_groups": [
+          [
+            "鸽笼",
+            "抽屉",
+            "抽屉原理"
+          ],
+          [
+            "至少"
+          ]
+        ],
+        "forbidden": [],
+        "note": "原理名 + 「至少有一个」核心表述。"
+      },
+      "scoring_note": "污染守卫。"
+    },
+    {
+      "id": "base-04-tree-vs-graph",
+      "category": "baseline",
+      "title": "基线：树与图的区别",
+      "user_message": "树和一般的图有什么区别？",
+      "seed": {},
+      "judge": {
+        "kind": "deterministic",
+        "expect_groups": [
+          [
+            "连通"
+          ],
+          [
+            "环",
+            "回路",
+            "圈",
+            "无回路"
+          ]
+        ],
+        "forbidden": [],
+        "note": "树=连通+无环，两个判别要点。"
+      },
+      "scoring_note": "污染守卫。"
+    },
+    {
+      "id": "base-05-de-morgan",
+      "category": "baseline",
+      "title": "基线：德摩根定律",
+      "user_message": "德摩根定律讲的是什么？",
+      "seed": {},
+      "judge": {
+        "kind": "deterministic",
+        "expect_groups": [
+          [
+            "德摩根",
+            "De Morgan",
+            "摩根"
+          ],
+          [
+            "非",
+            "¬",
+            "取反",
+            "否定"
+          ]
+        ],
+        "forbidden": [],
+        "note": "定律名 + 否定/取反核心词。"
+      },
+      "scoring_note": "污染守卫。"
+    },
+    {
+      "id": "base-06-sprint-pacing",
+      "category": "baseline",
+      "title": "基线：冲刺节奏通用建议",
+      "user_message": "期末冲刺阶段每天学多久比较合理？",
+      "seed": {},
+      "judge": {
+        "kind": "deterministic",
+        "expect_groups": [
+          [
+            "小时",
+            "分钟"
+          ],
+          [
+            "休息",
+            "疲劳",
+            "效率",
+            "状态"
+          ]
+        ],
+        "forbidden": [],
+        "note": "通用学习建议（给出时长量级 + 提及休息/效率权衡），不依赖任何个人数据。"
+      },
+      "scoring_note": "污染守卫。"
+    }
+  ]
+}
