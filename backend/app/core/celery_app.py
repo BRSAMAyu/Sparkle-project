@@ -70,6 +70,9 @@ celery_app = Celery(
         # 该模块必须随 worker 加载，否则消息按 unregistered task 被静默丢弃。
         "app.tasks.community_checkin_reminder",
         "app.tasks.policy_tasks",
+        # SESSION-GC: user_sessions 过期行清理（AUTH-DEEP A-2 末行 P2）。
+        # beat 静态条目引用其任务名，模块必须随 worker 加载（EI-02 守卫）。
+        "app.tasks.user_session_cleanup",
         # EI-11: signals_learning_worker 已从 backend/workers/ 顶层包并入 app/workers/，
         # include 用 app.* 全路径，消除双根歧义（pytest 进程内顶层 `workers` 名
         # 会被 conftest 的 sys.path 前排抢占为 app.workers）。
@@ -139,6 +142,8 @@ celery_app.conf.update(
         "batch_error_analysis": {"queue": "glm_batch"},
         "analyze_error_batch": {"queue": "glm_batch"},
         "cleanup_old_data": {"queue": "low_priority"},
+        # SESSION-GC: user_sessions 过期清理（纯 DB 批删，可延迟，走 low 车道）
+        "tasks.cleanup_expired_user_sessions": {"queue": "low_priority"},
         "app.core.celery_tasks.health_check_task": {"queue": "high_priority"},
         "generate_capsules_batch": {"queue": "glm_batch"},
         "analyze_cognitive_fragment_batch": {"queue": "glm_batch"},
@@ -1030,6 +1035,13 @@ celery_app.conf.beat_schedule = {
         "task": "cleanup_old_data",
         "schedule": 86400.0,  # 24小时
         "args": (30,),  # 保留30天
+        "options": {"queue": "low_priority"},
+    },
+    # SESSION-GC · user_sessions 保留期日清（AUTH-DEEP A-2 末行：行只增不减）。
+    # 04:45 UTC 低峰，与 04:00/04:30 的邻居任务错峰；路由与 beat 双处显式 low_priority。
+    "cleanup-expired-user-sessions-daily": {
+        "task": "tasks.cleanup_expired_user_sessions",
+        "schedule": crontab(hour=4, minute=45),
         "options": {"queue": "low_priority"},
     },
     # 每天早上8点生成日报
