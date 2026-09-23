@@ -1,0 +1,7 @@
+{
+  "comment": "Frozen ratchet baseline for check_finally_error_carry.py (wt241 auth finally-erase disease; FINALLY-SCAN wt247 sweep found zero live sites outside auth — the two pinned faces are safe because ChatState/PlanListState copyWith are null-merge with explicit clear flags, see v3-output/FINALLY-SCAN/REPORT.md). Registered from measured values at HEAD 1ebcfe09. Counts may only go down; refresh via --update-baseline only after a cleanup batch, never raise.",
+  "finallyErrorCopyWith": {
+    "mobile/lib/features/chat/presentation/providers/chat_provider.dart": 1,
+    "mobile/lib/features/plan/presentation/providers/plan_provider.dart": 1
+  }
+}

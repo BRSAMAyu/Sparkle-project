@@ -40,8 +40,14 @@ def _scan_mobile_routes() -> list[str]:
     if not MOBILE_ROUTES_PATH.exists():
         failures.append(f"required file missing: {MOBILE_ROUTES_PATH.relative_to(REPO_ROOT)}")
         return failures
-    for lineno, raw in enumerate(MOBILE_ROUTES_PATH.read_text(encoding="utf-8").splitlines(), 1):
+    lines = MOBILE_ROUTES_PATH.read_text(encoding="utf-8").splitlines()
+    for lineno, raw in enumerate(lines, 1):
         if IGNORE_RE.search(raw):
+            continue
+        # 豁免也认匹配行的紧邻上一行注释：dart format 会把带长行内注释的
+        # 链式调用拆行，ignore 标记与匹配 token 可能分居两行（wt244 后实踩）。
+        prev = lines[lineno - 2] if lineno >= 2 else ""
+        if IGNORE_RE.search(prev):
             continue
         if LEADERBOARD_UI_RE.search(raw):
             failures.append(

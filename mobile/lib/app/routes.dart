@@ -415,8 +415,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ...PlanRoutes.routes,
       ...InsightsRoutes.routes,
       // 仅挂自我锚路由（D-COMM-1 唯一路由产品面），无全站榜
-      ...LeaderboardRoutes
-          .routes, // rule-comm-lb: ignore D-COMM-1 自我锚=唯一裁决路由面，非全站榜
+      // rule-comm-lb: ignore D-COMM-1 self-anchor only, no global board
+      ...LeaderboardRoutes.routes,
       ...SimulationRoutes.routes,
       ...TheaterRoutes.routes,
       ...ReportRoutes.routes,

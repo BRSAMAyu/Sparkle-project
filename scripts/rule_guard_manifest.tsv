@@ -81,3 +81,4 @@ BN	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_bn_prod_db_age_parity
 BA-ROUTES	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_ba_routes_parity.py"
 DB-HEAD	PYTHONPATH="${REPO_ROOT}/backend" "${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_alembic_single_head.py"
 COMM-LB	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_comm_lb_leaderboard_unrouted.py"
+FS-CARRY	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_finally_error_carry.py"
