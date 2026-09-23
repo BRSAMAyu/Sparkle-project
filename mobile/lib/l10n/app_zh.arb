@@ -2339,7 +2339,6 @@
     "errorBookNoReviewDescription": "做得很好！继续保持。先补记最近做错的一题，系统才会安排后续复习。",
     "errorBookRecordFirstError": "去记录第一道错题",
     "errorBookDeleteSuccess": "删除成功",
-    "errorBookDeleteFailed": "删除失败",
     "errorBookDeleteConfirmTitle": "确认删除",
     "errorBookDeleteConfirmMessage": "删除后无法恢复，确定要删除这道错题吗？",
     "errorBookDetailTitle": "错题详情",
@@ -2347,7 +2346,6 @@
     "errorBookReanalyze": "重新分析",
     "errorBookDelete": "删除",
     "errorBookCreatedAt": "创建于 {date}",
-    "errorBookMasteryPercent": "{percent}%掌握",
     "errorBookSimilarSummary": "同类错因分析",
     "errorBookRootCause": "根本原因",
     "errorBookStrategySuggestions": "策略建议",
@@ -2366,11 +2364,22 @@
     "errorBookLastReview": "上次复习",
     "errorBookNextReview": "下次复习",
     "errorBookStartReview": "开始复习",
-    "errorBookLoadFailed": "加载失败",
+    "errorBookLoadFailedHuman": "错题内容暂时加载不了。你的错题没有丢，点重试再试一次。",
     "errorBookEditInProgress": "编辑功能即将上线",
     "errorBookReanalyzing": "正在重新分析...",
     "errorBookReviewInProgress": "复习功能即将上线",
-    "errorBookDeleteFailedMessage": "删除失败：{error}",
+    "errorBookDeleteFailedHuman": "删除没有成功。这道错题还在你的错题本里，稍后再试一次。",
+    "errorBookMasteryBandHigh": "已掌握",
+    "errorBookMasteryBandMid": "巩固中",
+    "errorBookMasteryBandLow": "还在学",
+    "errorBookMasteryScoreCaption": "掌握度 {percent}%",
+    "@errorBookMasteryScoreCaption": {
+        "placeholders": {
+            "percent": {
+                "type": "String"
+            }
+        }
+    },
     "@errorBookCreatedAt": {
         "placeholders": {
             "date": {
@@ -2378,23 +2387,9 @@
             }
         }
     },
-    "@errorBookMasteryPercent": {
-        "placeholders": {
-            "percent": {
-                "type": "Object"
-            }
-        }
-    },
     "@errorBookKnowledgeLinkSnack": {
         "placeholders": {
             "nodeName": {
-                "type": "Object"
-            }
-        }
-    },
-    "@errorBookDeleteFailedMessage": {
-        "placeholders": {
-            "error": {
                 "type": "Object"
             }
         }

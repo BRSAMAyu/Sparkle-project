@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/display/lexicon/mastery_band.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
@@ -183,7 +184,7 @@ class ErrorCard extends StatelessWidget {
                 ],
                 const SizedBox(height: DS.spacing12),
 
-                // Mastery progress.
+                // Mastery progress（N12：档位人话为主，百分数降为次级显示）。
                 if (showReviewStatus) ...[
                   Row(
                     children: [
@@ -196,18 +197,31 @@ class ErrorCard extends StatelessWidget {
                             backgroundColor:
                                 theme.colorScheme.surfaceContainerHighest,
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              _getMasteryColor(error.masteryLevel),
+                              // 单一 owner：core/display/lexicon/mastery_band.dart。
+                              masteryBandColor(error.masteryLevel),
                             ),
                           ),
                         ),
                       ),
                       const SizedBox(width: DS.spacing12),
-                      Text(
-                        '${(error.masteryLevel * 100).toInt()}%',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontWeight: DS.fontWeightSemibold,
-                          color: _getMasteryColor(error.masteryLevel),
-                        ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            masteryBandLabel(error.masteryLevel, context.l10n),
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              fontWeight: DS.fontWeightSemibold,
+                              color: masteryBandColor(error.masteryLevel),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${(error.masteryLevel * 100).toInt()}%',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -276,12 +290,6 @@ class ErrorCard extends StatelessWidget {
       }
     }
     return error.knowledgeLinks.isNotEmpty ? error.knowledgeLinks.first : null;
-  }
-
-  Color _getMasteryColor(double mastery) {
-    if (mastery >= 0.8) return DS.semanticSuccess;
-    if (mastery >= 0.5) return DS.semanticWarning;
-    return DS.semanticError;
   }
 
   String _formatTime(BuildContext context, DateTime time) {

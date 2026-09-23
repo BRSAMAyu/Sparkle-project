@@ -2339,7 +2339,6 @@
     "errorBookNoReviewDescription": "Great job! Keep it up. Record a recent missed question first, then Sparkle can schedule future reviews.",
     "errorBookRecordFirstError": "Record first error",
     "errorBookDeleteSuccess": "Deleted",
-    "errorBookDeleteFailed": "Delete Failed",
     "errorBookDeleteConfirmTitle": "Confirm Delete",
     "errorBookDeleteConfirmMessage": "This cannot be undone. Delete this error?",
     "errorBookDetailTitle": "Error Details",
@@ -2347,7 +2346,6 @@
     "errorBookReanalyze": "Reanalyze",
     "errorBookDelete": "Delete",
     "errorBookCreatedAt": "Created at {date}",
-    "errorBookMasteryPercent": "{percent}% Mastery",
     "errorBookSimilarSummary": "Similar Error Analysis",
     "errorBookRootCause": "Root Cause",
     "errorBookStrategySuggestions": "Strategy Suggestions",
@@ -2366,11 +2364,22 @@
     "errorBookLastReview": "Last Review",
     "errorBookNextReview": "Next Review",
     "errorBookStartReview": "Start Review",
-    "errorBookLoadFailed": "Load Failed",
+    "errorBookLoadFailedHuman": "Your error records could not load right now. Nothing is lost — tap retry to try again.",
     "errorBookEditInProgress": "Edit feature coming soon",
     "errorBookReanalyzing": "Reanalyzing...",
     "errorBookReviewInProgress": "Review feature coming soon",
-    "errorBookDeleteFailedMessage": "Delete failed: {error}",
+    "errorBookDeleteFailedHuman": "The deletion did not go through. The record is still in your error book — try again in a moment.",
+    "errorBookMasteryBandHigh": "Mastered",
+    "errorBookMasteryBandMid": "Getting there",
+    "errorBookMasteryBandLow": "Still learning",
+    "errorBookMasteryScoreCaption": "Mastery {percent}%",
+    "@errorBookMasteryScoreCaption": {
+        "placeholders": {
+            "percent": {
+                "type": "String"
+            }
+        }
+    },
     "@errorBookCreatedAt": {
         "placeholders": {
             "date": {
@@ -2378,23 +2387,9 @@
             }
         }
     },
-    "@errorBookMasteryPercent": {
-        "placeholders": {
-            "percent": {
-                "type": "Object"
-            }
-        }
-    },
     "@errorBookKnowledgeLinkSnack": {
         "placeholders": {
             "nodeName": {
-                "type": "Object"
-            }
-        }
-    },
-    "@errorBookDeleteFailedMessage": {
-        "placeholders": {
-            "error": {
                 "type": "Object"
             }
         }

@@ -1,11 +1,14 @@
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/compact_error_card.dart';
+import 'package:sparkle/core/display/lexicon/mastery_band.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
@@ -118,8 +121,9 @@ class ErrorDetailScreen extends ConsumerWidget {
       child: errorAsync.when(
         data: (error) => _buildDetailContent(context, ref, error),
         loading: () => const SparkleListSkeleton(),
+        // N9：异常细节只进 UserFacingError 的日志（debug）与分类码，不进 UI。
         error: (error, stack) =>
-            _buildErrorState(context, ref, error.toString()),
+            _buildErrorState(context, ref, UserFacingError.from(error)),
       ),
     );
   }
@@ -258,11 +262,8 @@ class ErrorDetailScreen extends ConsumerWidget {
     ThemeData theme,
     double mastery,
   ) {
-    final color = mastery >= 0.8
-        ? DS.success
-        : mastery >= 0.5
-            ? DS.warningLight
-            : DS.error;
+    // N12：取色/分档唯一 owner（mastery_band.dart），error 槽不参与掌握度。
+    final color = masteryBandColor(mastery);
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -278,22 +279,28 @@ class ErrorDetailScreen extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            mastery >= 0.8
-                ? Icons.star
-                : mastery >= 0.5
-                    ? Icons.star_half
-                    : Icons.star_outline,
+            switch (masteryBandOf(mastery)) {
+              MasteryBand.high => Icons.star,
+              MasteryBand.mid => Icons.star_half,
+              MasteryBand.low => Icons.star_outline,
+            },
             size: 16,
             color: color,
           ),
           const SizedBox(width: 4),
+          // 档位人话为主（「还在学」级），百分数降为次级显示（EB-G5）。
           Text(
-            context.l10n.errorBookMasteryPercent(
-              (mastery * 100).toInt(),
-            ),
+            masteryBandLabel(mastery, context.l10n),
             style: theme.textTheme.labelMedium?.copyWith(
               color: color,
               fontWeight: DS.fontWeightSemibold,
+            ),
+          ),
+          const SizedBox(width: DS.spacing4),
+          Text(
+            '${(mastery * 100).toInt()}%',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -724,14 +731,12 @@ class ErrorDetailScreen extends ConsumerWidget {
                 const SizedBox(height: DS.spacing12),
                 _buildStatCard(
                   context: context,
-                  label: context.l10n.masteryScore,
-                  value: '${(error.masteryLevel * 100).toInt()}%',
+                  label: context.l10n.errorBookMasteryScoreCaption(
+                    '${(error.masteryLevel * 100).toInt()}',
+                  ),
+                  value: masteryBandLabel(error.masteryLevel, context.l10n),
                   icon: Icons.trending_up,
-                  color: error.masteryLevel >= 0.8
-                      ? DS.success
-                      : error.masteryLevel >= 0.5
-                          ? DS.warningLight
-                          : DS.error,
+                  color: masteryBandColor(error.masteryLevel),
                 ),
               ],
             )
@@ -751,14 +756,12 @@ class ErrorDetailScreen extends ConsumerWidget {
                 Expanded(
                   child: _buildStatCard(
                     context: context,
-                    label: context.l10n.masteryScore,
-                    value: '${(error.masteryLevel * 100).toInt()}%',
+                    label: context.l10n.errorBookMasteryScoreCaption(
+                      '${(error.masteryLevel * 100).toInt()}',
+                    ),
+                    value: masteryBandLabel(error.masteryLevel, context.l10n),
                     icon: Icons.trending_up,
-                    color: error.masteryLevel >= 0.8
-                        ? DS.success
-                        : error.masteryLevel >= 0.5
-                            ? DS.warningLight
-                            : DS.error,
+                    color: masteryBandColor(error.masteryLevel),
                   ),
                 ),
               ],
@@ -891,6 +894,9 @@ class ErrorDetailScreen extends ConsumerWidget {
         ),
       );
 
+  /// N9：错误态=人话模板（发生了什么+影响+重试指引）+安全分类话术。
+  /// [error] 是 `UserFacingError.from` 的产物（本地化分类消息 + [ERR-*] 码），
+  /// 原始异常文本永不进入本组件。
   Widget _buildErrorState(BuildContext context, WidgetRef ref, String error) =>
       Center(
         child: Column(
@@ -903,19 +909,18 @@ class ErrorDetailScreen extends ConsumerWidget {
             ),
             const SizedBox(height: DS.spacing16),
             Text(
-              context.l10n.errorBookLoadFailed,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: DS.fontWeightMedium,
-              ),
+              context.l10n.errorBookLoadFailedHuman,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: DS.fontWeightMedium,
+                  ),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: DS.spacing8),
             Text(
               error,
-              style: TextStyle(
-                fontSize: 14,
-                color: DS.textSecondary,
-              ),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.textSecondary,
+                  ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: DS.spacing24),
@@ -1003,10 +1008,14 @@ class ErrorDetailScreen extends ConsumerWidget {
           AppFeedback.success(context, context.l10n.errorBookDeleteSuccess);
         }
       } catch (e) {
+        // N9：异常细节只进日志，不进用户文案。
+        if (kDebugMode) {
+          debugPrint('[ErrorDetail] delete failed: $e');
+        }
         if (context.mounted) {
           AppFeedback.error(
             context,
-            context.l10n.errorBookDeleteFailedMessage(e.toString()),
+            context.l10n.errorBookDeleteFailedHuman,
           );
         }
       }

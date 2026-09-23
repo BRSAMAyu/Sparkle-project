@@ -1,6 +1,7 @@
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -460,44 +461,49 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
         ),
       );
 
+  /// N9：错误态=人话模板（发生了什么+影响+重试指引）+安全分类话术。
+  /// [error] 是 `UserFacingError.from` 的产物（本地化分类消息 + [ERR-*] 码），
+  /// 原始异常文本不再双份直出（存量 :475 `{error}` 插值 + :483 裸显示已清）。
   Widget _buildErrorState(String error, ErrorListQuery query) => Builder(
-        builder: (context) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 80,
-                color: DS.error,
-              ),
-              const SizedBox(height: DS.spacing16),
-              Text(
-                context.l10n.loadingFailed(error),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: DS.fontWeightMedium,
+        builder: (context) {
+          final theme = Theme.of(context);
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 80,
+                  color: DS.error,
                 ),
-              ),
-              const SizedBox(height: DS.spacing8),
-              Text(
-                error,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: DS.textSecondary,
+                const SizedBox(height: DS.spacing16),
+                Text(
+                  context.l10n.errorBookLoadFailedHuman,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: DS.fontWeightMedium,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: DS.spacing24),
-              FilledButton.icon(
-                onPressed: () {
-                  ref.invalidate(errorListProvider(query));
-                },
-                icon: const Icon(Icons.refresh),
-                label: Text(context.l10n.commonRetry),
-              ),
-            ],
-          ),
-        ),
+                const SizedBox(height: DS.spacing8),
+                Text(
+                  error,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: DS.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: DS.spacing24),
+                FilledButton.icon(
+                  onPressed: () {
+                    ref.invalidate(errorListProvider(query));
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: Text(context.l10n.commonRetry),
+                ),
+              ],
+            ),
+          );
+        },
       );
 
   Future<void> _navigateToAddError(BuildContext context) async {
@@ -545,8 +551,12 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
         AppFeedback.success(context, context.l10n.errorBookDeleteSuccess);
       }
     } catch (e) {
+      // N9：异常细节只进日志，不进用户文案。
+      if (kDebugMode) {
+        debugPrint('[ErrorList] delete failed: $e');
+      }
       if (mounted) {
-        AppFeedback.error(context, '${context.l10n.errorBookDeleteFailed}: $e');
+        AppFeedback.error(context, context.l10n.errorBookDeleteFailedHuman);
       }
     }
   }
