@@ -8,14 +8,15 @@ import 'package:sparkle/core/design/components/atoms/task_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sparkle_tappable.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/task/presentation/widgets/paused_task_status_panel.dart';
-import 'package:sparkle/features/task/presentation/widgets/task_restore_dialog.dart';
 import 'package:sparkle/features/task/presentation/widgets/source_lifecycle_badge.dart';
 import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_quick_action_menu.dart';
+import 'package:sparkle/features/task/presentation/widgets/task_restore_dialog.dart';
 import 'package:sparkle/features/task/presentation/widgets/why_this_today_panel.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
