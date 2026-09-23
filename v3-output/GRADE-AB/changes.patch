@@ -1,0 +1,2283 @@
+diff --git a/backend/tests/northstar_eval/grade_ab.py b/backend/tests/northstar_eval/grade_ab.py
+new file mode 100644
+index 00000000..a9416c22
+--- /dev/null
++++ b/backend/tests/northstar_eval/grade_ab.py
+@@ -0,0 +1,701 @@
++"""NORTHSTAR · GRADE-AB 判卷档 A/B 评测运行器（B-QWEN 假设 A 备弹）。
++
++使命（v3-output/B-QWEN/REPORT.md §4 假设 A）：判卷/诊断结构化面上，
++qwen3.8-flash 档（blended $0.00025/1k）可替代现役 PRO 档 qwen3.7-plus 思考
++（$0.0012/1k，-79% 成本），采纳门槛 = 「≥100 题一致率差 ≤3pp」。本模块把这个
++门槛变成可执行资产：静态金标题包（grade_ab_pack.json，离散数学 100 题）+
++双档对照运行器。**不切流**：零 env 改动、零产品代码改动，两档均经
++LLMRouter ``select_model(force_tier=…)`` 显式 tier 参数直调。
++
++臂定义（与假设 A 的 `LLM_TIER_PRO=dashscope_standard_thinking` 切换 wire 等价）：
++- 档 A（现役，对照臂）：force_tier=PRO  → dashscope_reason（qwen3.7-plus 思考），
++  wire 不注入 enable_thinking（provider 默认思考开）；
++- 档 B（候选臂）：force_tier=STANDARD → dashscope_standard_thinking（qwen3.8-flash），
++  wire 注入 enable_thinking=false（``dashscope_enable_thinking_param`` 键于
++  ``config.tier``，与 env 换 PRO 池首位后的生产 wire 行为一致——即假设 A 实际
++  上线形态）。
++
++判卷契约（一次判卷）：输入=题干/标准答案/学生作答/学生自报置信度（镜像
++``exam_sprint_diagnostic_service`` 诊断判卷面 confidence 口径）；输出=对错判定
++verdict + 分数 score + 错误类型 error_type（ERROR_ANALYST 枚举：知识性/理解性/
++计算性/粗心，另加 none/blank）+ 根因要点。JSON 解析消费
++``LLMService._parse_json_payload`` 同口径（`<think>` 剥离 + 块提取）。
++
++纯净性红线（评测有效性）：live 路径**绕过 llm_fallback_manager / 熔断器**，
++router 解析后直调 ``OpenAICompatibleProvider.chat``——降级链若介入会把 B 臂
++污染成其他模型，A/B 即失效。失败按题记 error，不换模型。
++
++判定门槛（B-QWEN §4 冻结，防事后合理化）：
++- gate ①：错误类型分类一致率（vs 金标）差 ≤ 3.0pp → pass；
++- gate ②：JSON 解析成功率差 ≤ 2.0pp → pass；
++- 两条全过 → adoption_signal=pass（成本锚点比另报，不参与判定）。
++
++用法（backend/ 下）::
++
++    # 无 key 装配自检（纪律：绝不调真实 LLM）
++    SECRET_KEY=test DATABASE_URL="sqlite+aiosqlite:///:memory:" \
++        python3.11 tests/northstar_eval/grade_ab.py --dry-run
++
++    # 真实 key 冒烟（主会话执行；worktree 无 .env）：
++    SECRET_KEY=test DATABASE_URL="sqlite+aiosqlite:///:memory:" \
++        DASHSCOPE_API_KEY=sk-... python3.11 tests/northstar_eval/grade_ab.py \
++        --limit 5            # 先 5 题冒烟再全量
++
++    # 全量（100 题 ×2 臂；串行，预计 A 臂 ~8min + B 臂 ~2min）
++    SECRET_KEY=test DATABASE_URL="sqlite+aiosqlite:///:memory:" \
++        DASHSCOPE_API_KEY=sk-... python3.11 tests/northstar_eval/grade_ab.py
++
++输出：控制台逐题对照表 + 汇总/gate 判定；JSON 落盘
++``$GRADE_AB_OUT_DIR``（默认 <repo>/v3-output/GRADE-AB/runs）/
++``grade_ab_run_<ts>.json``（逐题两臂判定/一致项/分歧清单/成本估算/时延）。
++凭据不落盘：api_key 只以是否在场布尔出现在证据里。
++"""
++
++from __future__ import annotations
++
++import argparse
++import asyncio
++import hashlib
++import json
++import math
++import os
++import sys
++import time
++from collections import Counter
++from datetime import UTC, datetime
++from pathlib import Path
++from typing import Any
++
++# 模块可被 `python3 -m tests.northstar_eval.grade_ab` 与
++# `python3.11 tests/northstar_eval/grade_ab.py`（卡面 dry-run 命令）两种方式调起：
++# 后者 sys.path[0] 是本目录，需先把 backend/ 挂上才能 import app.*。
++BACKEND_DIR = Path(__file__).resolve().parents[2]
++if str(BACKEND_DIR) not in sys.path:
++    sys.path.insert(0, str(BACKEND_DIR))
++
++SCHEMA_RUN = "sparkle.northstar_eval.grade_ab.run.v1"
++
++#: 判定门槛（B-QWEN 假设 A 冻结值，单位：百分点 pp）
++GATE_ERROR_TYPE_PP = 3.0
++GATE_PARSE_RATE_PP = 2.0
++
++#: 判卷协议常量（两臂同参，保证 A/B 单变量）
++GRADING_TEMPERATURE = 0.3  # ERROR_ANALYST profile 温度（agent_profiles.py:415）
++CALL_TIMEOUT_S_DEFAULT = 120.0  # PRO 思考档单题上限（real_drive WS 上限同量级）
++RAW_HEAD_KEEP = 200  # 逐题原始输出截断留存（分歧取证用，证据瘦身）
++
++SYSTEM_PROMPT = """你是 Sparkle 的错题判卷引擎（评测专用、只读）。给定题目、标准答案、学生作答与学生自报置信度，请判卷并只输出一个 JSON 对象（无其他文本、无 markdown 围栏）：
++{"verdict":"correct|partial|wrong","score":<0到1的小数>,"error_type":"none|knowledge|understanding|calculation|careless|blank","brief":"不超过40字的根因要点"}
++字段规则：
++- verdict：correct=完全正确；partial=仅简答题部分正确（主结论对、次要部分缺失或有误）；wrong=错误或空白。
++- score：1.0=全对；0.0=全错或空白；partial 按要点比例给 0~1 之间。
++- error_type（学生错误类型，verdict=correct 时恒为 none）：none=无错；knowledge=概念/定理/公式记错；understanding=概念知道但理解或应用偏差；calculation=方法思路对但运算错；careless=笔误/漏看条件/抄写滑笔（实质思路正确）；blank=未作答（作答为空时必为 blank 且 verdict=wrong）。
++- brief：一句话定位错在哪一步/哪个概念；correct 时写"无"。"""
++
++
++# ---------------------------------------------------------------------------
++# app 模块延迟导入（--help / json 校验不触发 settings 装配）
++# ---------------------------------------------------------------------------
++
++
++def _app_imports():
++    """按需导入 app.core.*：返回 (AgentRole, ModelTier, TaskType, llm_router, enable_thinking_param)。"""
++    from app.core.agent_profiles import AgentRole, ModelTier, TaskType
++    from app.core.llm_router import dashscope_enable_thinking_param, llm_router
++
++    return AgentRole, ModelTier, TaskType, llm_router, dashscope_enable_thinking_param
++
++
++# ---------------------------------------------------------------------------
++# 题包：加载 + 校验 + 构成表
++# ---------------------------------------------------------------------------
++
++VERDICT_VOCAB = ("correct", "partial", "wrong")
++ERROR_TYPE_VOCAB = ("none", "knowledge", "understanding", "calculation", "careless", "blank")
++QTYPE_VOCAB = ("single_choice", "judge", "short_answer")
++CONFIDENCE_VOCAB = ("certain", "fuzzy", "guess")
++#: 部分正确的评测分档约定（产品确定性 grader 是连续分；本包金标按 0.5 档）
++GOLD_SCORE = {"correct": 1.0, "partial": 0.5, "wrong": 0.0}
++MIN_PACK_QUESTIONS = 100  # B-QWEN 假设 A 门槛的题量下限
++
++
++def load_pack(path: Path) -> dict[str, Any]:
++    pack = json.loads(path.read_text(encoding="utf-8"))
++    problems = validate_pack(pack)
++    if problems:
++        raise SystemExit("pack validation failed:\n  - " + "\n  - ".join(problems))
++    return pack
++
++
++def validate_pack(pack: dict[str, Any]) -> list[str]:
++    """结构+语义校验（dry-run 与 live 同门：坏包不许进评测）。"""
++    problems: list[str] = []
++    if pack.get("schema") != "sparkle.northstar_eval.grade_ab.pack.v1":
++        problems.append(f"unexpected schema: {pack.get('schema')!r}")
++    questions = pack.get("questions") or []
++    if len(questions) < MIN_PACK_QUESTIONS:
++        problems.append(f"question count {len(questions)} < {MIN_PACK_QUESTIONS} (B-QWEN gate floor)")
++    seen: set[str] = set()
++    for q in questions:
++        qid = str(q.get("id", ""))
++        where = f"[{qid or '?'}]"
++        if qid in seen:
++            problems.append(f"{where} duplicate id")
++        seen.add(qid)
++        if q.get("qtype") not in QTYPE_VOCAB:
++            problems.append(f"{where} bad qtype {q.get('qtype')!r}")
++        if q.get("student_confidence") not in CONFIDENCE_VOCAB:
++            problems.append(f"{where} bad student_confidence {q.get('student_confidence')!r}")
++        gold = q.get("gold") or {}
++        if gold.get("verdict") not in VERDICT_VOCAB:
++            problems.append(f"{where} bad gold.verdict {gold.get('verdict')!r}")
++        if gold.get("error_type") not in ERROR_TYPE_VOCAB:
++            problems.append(f"{where} bad gold.error_type {gold.get('error_type')!r}")
++        if not str(gold.get("brief") or "").strip():
++            problems.append(f"{where} gold.brief empty")
++        if q.get("author_confidence") not in ("high", "medium"):
++            problems.append(f"{where} author_confidence must be high|medium（诚实申报面）")
++        answer = str(q.get("student_answer") or "")
++        if q["qtype"] == "single_choice":
++            choices = q.get("choices") or []
++            if q.get("standard_answer") not in choices:
++                problems.append(f"{where} standard_answer not among choices")
++            if answer and answer not in choices:
++                problems.append(f"{where} student_answer not among choices")
++        elif q["qtype"] == "judge":
++            if q.get("standard_answer") not in ("对", "错"):
++                problems.append(f"{where} judge standard_answer must be 对/错")
++            if answer and answer not in ("对", "错"):
++                problems.append(f"{where} judge student_answer must be 对/错")
++        # 语义互锁：correct↔none、blank↔空作答
++        if gold.get("verdict") == "correct" and gold.get("error_type") != "none":
++            problems.append(f"{where} correct verdict must pair error_type=none")
++        if gold.get("error_type") == "blank" and answer != "":
++            problems.append(f"{where} blank gold but non-empty student_answer")
++        if answer == "" and gold.get("error_type") != "blank":
++            problems.append(f"{where} empty student_answer must pair error_type=blank")
++    return problems
++
++
++def pack_composition(pack: dict[str, Any]) -> dict[str, Any]:
++    questions = pack["questions"]
++    return {
++        "question_count": len(questions),
++        "verdicts": dict(Counter(q["gold"]["verdict"] for q in questions)),
++        "error_types": dict(Counter(q["gold"]["error_type"] for q in questions)),
++        "qtypes": dict(Counter(q["qtype"] for q in questions)),
++        "domains": dict(Counter(q["domain"] for q in questions)),
++        "confidences": dict(Counter(q["student_confidence"] for q in questions)),
++        "boundaries": dict(Counter(str(q.get("boundary")) for q in questions)),
++        "author_confidence": dict(Counter(q["author_confidence"] for q in questions)),
++    }
++
++
++def build_messages(q: dict[str, Any]) -> list[dict[str, str]]:
++    """一次判卷的输入装配（两臂逐字节相同——A/B 单变量=模型档位）。"""
++    item: dict[str, Any] = {
++        "题目类型": q["qtype"],
++        "题干": q["stem"],
++        "标准答案": q["standard_answer"],
++        "学生作答": q["student_answer"] if q["student_answer"] else "（空白，未作答）",
++        "学生自报置信度": q["student_confidence"],
++    }
++    if q["qtype"] == "single_choice":
++        item["选项"] = " | ".join(q["choices"])
++    user = json.dumps(item, ensure_ascii=False)
++    return [
++        {"role": "system", "content": SYSTEM_PROMPT},
++        {"role": "user", "content": f"请判卷：\n{user}"},
++    ]
++
++
++# ---------------------------------------------------------------------------
++# 双档路由解析（LLMRouter 显式 tier 参数直调——不依赖 env 切换）
++# ---------------------------------------------------------------------------
++
++
++def resolve_arm(tier_name: str) -> dict[str, Any]:
++    """tier → 实际模型解析证据（model_key/价格/wire 思考参数/key 在场）。"""
++    AgentRole, ModelTier, TaskType, llm_router, enable_thinking_param = _app_imports()
++    tier = ModelTier[tier_name]
++    selection = llm_router.select_model(
++        AgentRole.ERROR_ANALYST,
++        task_type=TaskType.ERROR_DIAGNOSIS,
++        force_tier=tier,  # 显式 tier 直调：生产同一入口（llm_router.select_model），env 不动
++    )
++    client_kwargs = llm_router.get_openai_client_kwargs(selection)
++    wire = enable_thinking_param(selection.config.tier, selection.config.thinking_mode)
++    return {
++        "arm_tier_requested": tier_name,
++        "resolved_tier": selection.config.tier.value,
++        "model_key": selection.model_key,
++        "model_name": selection.config.model_name,
++        "provider": selection.config.provider.value,
++        "cost_per_1k_usd": selection.config.cost_per_1k_tokens,
++        "avg_latency_ms_registered": selection.config.avg_latency_ms,
++        "thinking_wire": wire if wire is not None else "not-injected(provider-default-thinking-on)",
++        "extra_body": client_kwargs.get("extra_body"),
++        "api_key_present": bool(client_kwargs.get("api_key")),
++        "selection_reason": selection.reason,
++    }
++
++
++def est_tokens(text: str) -> int:
++    """诚实粗估（heuristic）：CJK≈0.6 token/字，非 CJK≈0.25 token/字符。仅供两臂相对比较。"""
++    cjk = sum(1 for ch in text if "\u4e00" <= ch <= "\u9fff")
++    return int(round(cjk * 0.6 + (len(text) - cjk) * 0.25))
++
++
++# ---------------------------------------------------------------------------
++# live 判卷（provider 直调，零 fallback——纯净性红线）
++# ---------------------------------------------------------------------------
++
++
++def _parse_grader_output(raw: str) -> tuple[dict[str, Any] | None, str | None]:
++    """消费 LLMService._parse_json_payload 同口径（<think> 剥离 + JSON 块提取）。
++
++    返回 (payload, parse_error)。payload 存在时再做枚举归一。
++    """
++    from app.services.llm_service import LLMService
++
++    payload = LLMService._parse_json_payload(raw, response_kind="reasoning")
++    if not isinstance(payload, dict):
++        return None, "json_not_object" if payload is not None else "json_unparseable"
++    return payload, None
++
++
++def _normalize_judgement(payload: dict[str, Any]) -> dict[str, Any]:
++    verdict = str(payload.get("verdict", "")).strip().lower()
++    error_type = str(payload.get("error_type", "")).strip().lower()
++    try:
++        score = max(0.0, min(1.0, float(payload.get("score"))))
++    except (TypeError, ValueError):
++        score = None
++    return {
++        "verdict": verdict if verdict in VERDICT_VOCAB else f"invalid:{verdict or 'missing'}",
++        "score": score,
++        "error_type": error_type if error_type in ERROR_TYPE_VOCAB else f"invalid:{error_type or 'missing'}",
++        "brief": str(payload.get("brief") or "")[:120],
++        "enum_valid": verdict in VERDICT_VOCAB and error_type in ERROR_TYPE_VOCAB,
++    }
++
++
++async def grade_arm_live(
++    arm_label: str,
++    arm: dict[str, Any],
++    questions: list[dict[str, Any]],
++    call_timeout_s: float,
++) -> list[dict[str, Any]]:
++    """单臂串行判卷。失败按题记 error（不降级、不换模型——评测纯净性红线）。"""
++    from app.core.llm_router import llm_router
++    from app.services.llm.providers import OpenAICompatibleProvider
++
++    # 由本臂解析证据重建 selection 级 kwargs（与 _build_provider_for_selection 同构）
++    AgentRole, ModelTier, TaskType, _llm_router, _etp = _app_imports()
++    selection = llm_router.select_model(
++        AgentRole.ERROR_ANALYST, task_type=TaskType.ERROR_DIAGNOSIS, force_tier=ModelTier[arm["arm_tier_requested"]]
++    )
++    client_kwargs = llm_router.get_openai_client_kwargs(selection)
++    request_kwargs = {
++        k: v for k, v in client_kwargs.items() if k not in {"api_key", "base_url", "model", "temperature"}
++    }
++    provider = OpenAICompatibleProvider(
++        api_key=client_kwargs["api_key"], base_url=client_kwargs["base_url"], timeout_seconds=call_timeout_s
++    )
++    if not provider.has_api_key:
++        raise SystemExit(
++            f"arm {arm_label}: DASHSCOPE_API_KEY 为空——真实运行需主会话注入 key"
++            "（worktree 无 .env，属预期；--dry-run 不需要 key）"
++        )
++
++    results: list[dict[str, Any]] = []
++    for q in questions:
++        messages = build_messages(q)
++        prompt_text = messages[0]["content"] + messages[1]["content"]
++        started = time.monotonic()
++        entry: dict[str, Any] = {"id": q["id"], "latency_ms": None, "est_prompt_tokens": est_tokens(prompt_text)}
++        try:
++            raw = await asyncio.wait_for(
++                provider.chat(
++                    messages,
++                    model=client_kwargs["model"],
++                    temperature=GRADING_TEMPERATURE,
++                    **request_kwargs,
++                ),
++                timeout=call_timeout_s,
++            )
++            entry["latency_ms"] = int((time.monotonic() - started) * 1000)
++            entry["raw_head"] = raw[:RAW_HEAD_KEEP]
++            entry["est_completion_tokens"] = est_tokens(raw)
++            payload, parse_error = _parse_grader_output(raw)
++            if payload is None:
++                entry.update({"parse_ok": False, "parse_error": parse_error, "judgement": None})
++            else:
++                judgement = _normalize_judgement(payload)
++                entry.update({"parse_ok": True, "parse_error": None, "judgement": judgement})
++            entry["est_cost_usd"] = round(
++                (entry["est_prompt_tokens"] + entry.get("est_completion_tokens", 0)) / 1000.0 * arm["cost_per_1k_usd"],
++                6,
++            )
++        except Exception as exc:  # noqa: BLE001 — 单题失败原样入证据，绝不降级重试换模型
++            entry["latency_ms"] = int((time.monotonic() - started) * 1000)
++            entry.update(
++                {
++                    "parse_ok": False,
++                    "parse_error": f"call_failed:{type(exc).__name__}",
++                    "judgement": None,
++                    "error": repr(exc)[:300],
++                    "est_cost_usd": 0.0,
++                }
++            )
++        results.append(entry)
++        mark = entry["judgement"]["verdict"] if entry.get("judgement") else (entry.get("parse_error") or "?")
++        print(f"  [{arm_label}] {q['id']}: {mark} ({entry['latency_ms']}ms)")
++    return results
++
++
++# ---------------------------------------------------------------------------
++# 对照与判定
++# ---------------------------------------------------------------------------
++
++
++def _pctl(values: list[float], p: float) -> float:
++    if not values:
++        return 0.0
++    ordered = sorted(values)
++    idx = max(0, math.ceil(p * len(ordered)) - 1)
++    return round(ordered[idx], 1)
++
++
++def judge_question(entry: dict[str, Any], gold: dict[str, Any]) -> dict[str, Any]:
++    """单题单臂 vs 金标：verdict/error_type 命中 + score 绝对误差。"""
++    j = entry.get("judgement")
++    if not entry.get("parse_ok") or j is None:
++        return {"verdict_match": False, "error_type_match": False, "score_abs_err": None}
++    return {
++        "verdict_match": j["verdict"] == gold["verdict"],
++        "error_type_match": j["error_type"] == gold["error_type"],
++        "score_abs_err": (None if j["score"] is None else round(abs(j["score"] - GOLD_SCORE[gold["verdict"]]), 3)),
++    }
++
++
++def build_report(pack: dict[str, Any], runs: dict[str, list[dict[str, Any]]]) -> dict[str, Any]:
++    """对照表 + 汇总 + gate 判定（runs: arm_label -> 逐题结果）。"""
++    questions = pack["questions"]
++    gold_by_id = {q["id"]: q for q in questions}
++    per_question: list[dict[str, Any]] = []
++    arm_labels = sorted(runs)
++
++    def _arm_metrics(label: str) -> dict[str, Any]:
++        entries = runs[label]
++        judged = [judge_question(e, gold_by_id[e["id"]]["gold"]) for e in entries]
++        n = len(entries)
++        parse_ok = sum(1 for e in entries if e.get("parse_ok"))
++        latencies = [e["latency_ms"] for e in entries if e.get("latency_ms") is not None]
++        return {
++            "questions": n,
++            "parse_ok": parse_ok,
++            "parse_rate": round(parse_ok / max(n, 1), 4),
++            "verdict_accuracy": round(sum(1 for j in judged if j["verdict_match"]) / max(n, 1), 4),
++            "error_type_match_rate": round(sum(1 for j in judged if j["error_type_match"]) / max(n, 1), 4),
++            "score_mae": (
++                round(
++                    sum(j["score_abs_err"] for j in judged if j["score_abs_err"] is not None)
++                    / max(sum(1 for j in judged if j["score_abs_err"] is not None), 1),
++                    4,
++                )
++            ),
++            "total_est_cost_usd": round(sum(e.get("est_cost_usd", 0.0) for e in entries), 4),
++            "latency_ms_p50": _pctl([float(x) for x in latencies], 0.50),
++            "latency_ms_p95": _pctl([float(x) for x in latencies], 0.95),
++            "call_failures": sum(1 for e in entries if e.get("parse_error", "").startswith("call_failed")),
++        }
++
++    metrics = {label: _arm_metrics(label) for label in arm_labels}
++    for q in questions:
++        row: dict[str, Any] = {
++            "id": q["id"],
++            "domain": q["domain"],
++            "qtype": q["qtype"],
++            "boundary": q.get("boundary"),
++            "gold": {"verdict": q["gold"]["verdict"], "error_type": q["gold"]["error_type"]},
++        }
++        for label in arm_labels:
++            entry = next(e for e in runs[label] if e["id"] == q["id"])
++            row[label] = {
++                "verdict": (entry.get("judgement") or {}).get("verdict"),
++                "error_type": (entry.get("judgement") or {}).get("error_type"),
++                "parse_ok": entry.get("parse_ok", False),
++                "vs_gold": judge_question(entry, q["gold"]),
++            }
++        if len(arm_labels) == 2:
++            a, b = runs[arm_labels[0]], runs[arm_labels[1]]
++            ea = next(e for e in a if e["id"] == q["id"])
++            eb = next(e for e in b if e["id"] == q["id"])
++            ja, jb = ea.get("judgement"), eb.get("judgement")
++            row["mutual"] = {
++                "verdict_agree": bool(ja and jb and ja["verdict"] == jb["verdict"]),
++                "error_type_agree": bool(ja and jb and ja["error_type"] == jb["error_type"]),
++            }
++        per_question.append(row)
++
++    summary: dict[str, Any] = {"arms": metrics}
++    gate: dict[str, Any] = {"evaluated": False, "adoption_signal": "not-evaluated"}
++    if len(arm_labels) == 2:
++        m_a, m_b = metrics[arm_labels[0]], metrics[arm_labels[1]]
++        etype_diff_pp = round(abs(m_a["error_type_match_rate"] - m_b["error_type_match_rate"]) * 100, 2)
++        parse_diff_pp = round(abs(m_a["parse_rate"] - m_b["parse_rate"]) * 100, 2)
++        gate_1_pass = etype_diff_pp <= GATE_ERROR_TYPE_PP
++        gate_2_pass = parse_diff_pp <= GATE_PARSE_RATE_PP
++        mutual_verdict = round(sum(1 for r in per_question if r["mutual"]["verdict_agree"]) / len(per_question), 4)
++        mutual_etype = round(sum(1 for r in per_question if r["mutual"]["error_type_agree"]) / len(per_question), 4)
++        summary["delta"] = {
++            "error_type_match_diff_pp": etype_diff_pp,
++            "parse_rate_diff_pp": parse_diff_pp,
++            "mutual_verdict_agree_rate": mutual_verdict,
++            "mutual_error_type_agree_rate": mutual_etype,
++            "cost_ratio_b_over_a": (
++                round(m_b["total_est_cost_usd"] / m_a["total_est_cost_usd"], 4)
++                if m_a["total_est_cost_usd"] > 0
++                else None
++            ),
++        }
++        gate = {
++            "evaluated": True,
++            "gate_1_error_type_pp": {"threshold": GATE_ERROR_TYPE_PP, "actual": etype_diff_pp, "pass": gate_1_pass},
++            "gate_2_parse_rate_pp": {"threshold": GATE_PARSE_RATE_PP, "actual": parse_diff_pp, "pass": gate_2_pass},
++            "adoption_signal": "pass" if (gate_1_pass and gate_2_pass) else "reject",
++        }
++    disagreements = [
++        {
++            "id": r["id"],
++            "gold": r["gold"],
++            "mutual": r.get("mutual"),
++            "arms": {label: r[label] for label in arm_labels},
++        }
++        for r in per_question
++        if (len(arm_labels) == 2 and not (r["mutual"]["verdict_agree"] and r["mutual"]["error_type_agree"]))
++        or any(not r[label]["vs_gold"]["verdict_match"] for label in arm_labels)
++    ]
++    return {"per_question": per_question, "summary": summary, "gate": gate, "disagreements": disagreements}
++
++
++# ---------------------------------------------------------------------------
++# 控制台呈现
++# ---------------------------------------------------------------------------
++
++
++def print_table(report: dict[str, Any], arm_labels: list[str]) -> None:
++    head = (
++        f"{'id':6} {'domain':8} {'gold(v/e)':22} "
++        + " ".join(f"{f'{label}(v/e)':30} {'ok':4}" for label in arm_labels)
++        + ("  eq" if len(arm_labels) == 2 else "")
++    )
++    print(head)
++    print("-" * len(head))
++    for row in report["per_question"]:
++        gold = f"{row['gold']['verdict']}/{row['gold']['error_type']}"
++        cells = []
++        for label in arm_labels:
++            cell = row[label]
++            v = (cell["verdict"] or "null")[:18]
++            e = (cell["error_type"] or "null")[:9]
++            cells.append(f"{v:18} {e:9} {str(cell['parse_ok'])[0]:1}")
++        eq = ""
++        if len(arm_labels) == 2:
++            eq = "v" if row["mutual"]["verdict_agree"] else ("e" if row["mutual"]["error_type_agree"] else "-")
++        print(
++            f"{row['id']:6} {row['domain'][:7]:8} {gold:22} {cells[0]:30} {cells[1]:30}  {eq}"
++            if len(arm_labels) == 2
++            else f"{row['id']:6} {row['domain'][:7]:8} {gold:22} {cells[0]:30}"
++        )
++
++
++def print_summary(arm_evidence: dict[str, dict[str, Any]], report: dict[str, Any], arm_labels: list[str]) -> None:
++    print("\n=== 汇总（metrics vs 金标） ===")
++    for label in arm_labels:
++        m = report["summary"]["arms"][label]
++        ev = arm_evidence[label]
++        print(
++            f"  档 {label}: {ev['model_key']} ({ev['model_name']}, tier={ev['resolved_tier']}, "
++            f"${ev['cost_per_1k_usd']}/1k, thinking_wire={ev['thinking_wire']})\n"
++            f"        verdict_acc={m['verdict_accuracy']}  etype_match={m['error_type_match_rate']}  "
++            f"parse_rate={m['parse_rate']}  score_MAE={m['score_mae']}\n"
++            f"        cost_est=${m['total_est_cost_usd']}  latency p50={m['latency_ms_p50']}ms "
++            f"p95={m['latency_ms_p95']}ms  call_fail={m['call_failures']}"
++        )
++    if report["gate"]["evaluated"]:
++        d = report["summary"]["delta"]
++        g = report["gate"]
++        print(
++            f"\n  gate ①错误类型一致率差: {d['error_type_match_diff_pp']}pp (≤{GATE_ERROR_TYPE_PP}) → "
++            f"{'PASS' if g['gate_1_error_type_pp']['pass'] else 'FAIL'}\n"
++            f"  gate ②JSON 解析成功率差: {d['parse_rate_diff_pp']}pp (≤{GATE_PARSE_RATE_PP}) → "
++            f"{'PASS' if g['gate_2_parse_rate_pp']['pass'] else 'FAIL'}\n"
++            f"  互判一致率: verdict={d['mutual_verdict_agree_rate']} etype={d['mutual_error_type_agree_rate']}\n"
++            f"  成本估算比 B/A: {d['cost_ratio_b_over_a']}\n"
++            f"  ⇒ adoption_signal = {g['adoption_signal']}"
++        )
++    if report["disagreements"]:
++        ids = ", ".join(d["id"] for d in report["disagreements"])
++        print(f"\n  分歧/错判清单（{len(report['disagreements'])} 题）: {ids}")
++
++
++# ---------------------------------------------------------------------------
++# 主流程
++# ---------------------------------------------------------------------------
++
++
++def default_out_dir() -> Path:
++    env = os.environ.get("GRADE_AB_OUT_DIR")
++    if env:
++        return Path(env)
++    return BACKEND_DIR.parent / "v3-output" / "GRADE-AB" / "runs"
++
++
++def run(args: argparse.Namespace) -> int:
++    started = time.monotonic()
++    AgentRole, ModelTier, TaskType, llm_router, _ = _app_imports()  # noqa: F841 — 装配自检
++    pack_path = Path(args.pack)
++    pack = load_pack(pack_path)
++    questions = pack["questions"][: args.limit] if args.limit else pack["questions"]
++    composition = pack_composition(pack)
++
++    arm_labels = [a.strip().upper() for a in args.arm.split(",") if a.strip()]
++    tier_by_arm = {"A": "PRO", "B": "STANDARD"}
++    arm_evidence = {label: resolve_arm(tier_by_arm[label]) for label in arm_labels}
++
++    print("=== GRADE-AB 判卷档 A/B 评测（B-QWEN 假设 A 备弹） ===")
++    print(
++        f"mode={'dry-run' if args.dry_run else 'live'}  pack={pack_path.name}  "
++        f"questions={len(questions)}/{composition['question_count']}  out={args.out_dir}"
++    )
++    for label in arm_labels:
++        ev = arm_evidence[label]
++        print(
++            f"  档 {label}: force_tier={ev['arm_tier_requested']} → {ev['model_key']} ({ev['model_name']}, "
++            f"${ev['cost_per_1k_usd']}/1k, thinking_wire={ev['thinking_wire']}, key={'有' if ev['api_key_present'] else '无'})"
++        )
++    if len(arm_evidence) == 2 and all(arm_evidence[l].get("cost_per_1k_usd") for l in arm_evidence):
++        ratio = arm_evidence["B"]["cost_per_1k_usd"] / arm_evidence["A"]["cost_per_1k_usd"]
++        print(f"  成本锚点比 B/A = {ratio:.4f}（{-100 * (1 - ratio):.1f}%，B-QWEN 预期 -79%）")
++    print(f"  gates: ①错误类型一致率差 ≤ {GATE_ERROR_TYPE_PP}pp；②JSON 解析成功率差 ≤ {GATE_PARSE_RATE_PP}pp")
++    print("  题包构成: " + json.dumps(composition, ensure_ascii=False, sort_keys=True))
++
++    if args.dry_run:
++        # 装配自检：全量题渲染判卷提示词（模板/字段完整性），不调任何 LLM。
++        rendered = 0
++        prompt_sha = hashlib.sha256()
++        for q in questions:
++            messages = build_messages(q)
++            if len(messages) != 2 or not messages[1]["content"]:
++                raise SystemExit(f"prompt assembly failed for {q['id']}")
++            prompt_sha.update(json.dumps(messages, ensure_ascii=False).encode())
++            rendered += 1
++        run_payload = {
++            "schema": SCHEMA_RUN,
++            "meta": _meta(pack_path, "dry-run", questions, arm_evidence, prompt_sha.hexdigest()),
++            "composition": composition,
++            "summary": {
++                "arms": {},
++                "note": "dry-run 装配骨架：无 LLM 结果，仅证明题包加载/双档路由解析/提示词装配/落盘通路",
++            },
++            "gate": {"evaluated": False, "adoption_signal": "not-evaluated"},
++            "disagreements": [],
++            "per_question": [{"id": q["id"], "arm_a": None, "arm_b": None} for q in questions],
++        }
++        out_path = _write_run(args.out_dir, run_payload)
++        print(
++            f"\n[dry-run] 提示词装配 {rendered} 题 OK（prompt_sha256={prompt_sha.hexdigest()[:16]}…）；"
++            f"双档路由解析 OK；输出骨架已落盘：{out_path}"
++        )
++        return 0
++
++    # live：key 预检（诚实拒绝，不半跑）
++    if not arm_evidence[arm_labels[0]]["api_key_present"]:
++        raise SystemExit(
++            "DASHSCOPE_API_KEY 为空——live 运行需注入 key。worktree 无 .env 属预期，"
++            "由主会话执行（见模块 docstring 冒烟命令）；或先 --dry-run。"
++        )
++
++    runs: dict[str, list[dict[str, Any]]] = {}
++    for label in arm_labels:
++        print(f"\n--- 档 {label} 判卷中（{len(questions)} 题，串行、零 fallback） ---")
++        runs[label] = asyncio.run(grade_arm_live(label, arm_evidence[label], questions, args.timeout))
++
++    report = build_report(pack, runs)
++    prompt_sha = hashlib.sha256()
++    for q in questions:
++        prompt_sha.update(json.dumps(build_messages(q), ensure_ascii=False).encode())
++    run_payload = {
++        "schema": SCHEMA_RUN,
++        "meta": _meta(pack_path, "live", questions, arm_evidence, prompt_sha.hexdigest()),
++        "composition": composition,
++        **report,
++    }
++    out_path = _write_run(args.out_dir, run_payload)
++    print_table(report, arm_labels)
++    print_summary(arm_evidence, report, arm_labels)
++    print(f"\n证据已落盘: {out_path}  (耗时 {time.monotonic() - started:.1f}s)")
++    return 0
++
++
++def _meta(
++    pack_path: Path,
++    mode: str,
++    questions: list[dict[str, Any]],
++    arm_evidence: dict[str, dict[str, Any]],
++    prompt_sha: str,
++) -> dict[str, Any]:
++    from app.core.llm_router import llm_router
++
++    return {
++        "run_id": f"GRADE-AB-{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}",
++        "created_at": datetime.now(UTC).isoformat(),
++        "mode": mode,
++        "pack_path": str(pack_path),
++        "pack_sha256": hashlib.sha256(pack_path.read_bytes()).hexdigest(),
++        "question_count": len(questions),
++        "grading_temperature": GRADING_TEMPERATURE,
++        "agent_role": "ERROR_ANALYST",
++        "task_type": "ERROR_DIAGNOSIS",
++        "routing_entry": "llm_router.select_model(force_tier=…)，env 未切换",
++        "arms": arm_evidence,
++        "registered_model_configs": len(llm_router._available_models),
++        "gates": {"error_type_pp": GATE_ERROR_TYPE_PP, "parse_rate_pp": GATE_PARSE_RATE_PP},
++        "prompt_sha256": prompt_sha,
++        "cost_estimation": "est_tokens=CJK*0.6+other*0.25（heuristic，两臂同提示词故相对可比）；单价取 router 注册锚点",
++        "credentials": "api_key 仅以布尔在场记录，绝不落盘",
++    }
++
++
++def _write_run(out_dir: Path, payload: dict[str, Any]) -> Path:
++    out = Path(out_dir)
++    out.mkdir(parents=True, exist_ok=True)
++    path = out / f"grade_ab_run_{datetime.now(UTC).strftime('%Y%m%d-%H%M%S')}.json"
++    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
++    return path
++
++
++def main(argv: list[str] | None = None) -> int:
++    parser = argparse.ArgumentParser(description="GRADE-AB 判卷档 A/B 评测运行器（B-QWEN 假设 A 备弹；不切流）")
++    parser.add_argument(
++        "--dry-run", action="store_true", help="无 key 装配自检：题包加载/双档路由解析/提示词装配/落盘，不调 LLM"
++    )
++    parser.add_argument(
++        "--pack",
++        default=str(BACKEND_DIR / "tests" / "northstar_eval" / "grade_ab_pack.json"),
++        help="题包路径（默认同目录 grade_ab_pack.json）",
++    )
++    parser.add_argument("--out-dir", default=str(default_out_dir()), help="证据目录（默认 v3-output/GRADE-AB/runs）")
++    parser.add_argument("--arm", default="A,B", help="跑哪些臂（默认 A,B）")
++    parser.add_argument("--limit", type=int, default=None, help="只跑前 N 题（冒烟用）")
++    parser.add_argument("--timeout", type=float, default=CALL_TIMEOUT_S_DEFAULT, help="单题调用上限秒")
++    args = parser.parse_args(argv)
++    if args.limit is not None and args.limit <= 0:
++        parser.error("--limit must be positive")
++    return run(args)
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
+diff --git a/backend/tests/northstar_eval/grade_ab_pack.json b/backend/tests/northstar_eval/grade_ab_pack.json
+new file mode 100644
+index 00000000..74047980
+--- /dev/null
++++ b/backend/tests/northstar_eval/grade_ab_pack.json
+@@ -0,0 +1,1359 @@
++{
++  "schema": "sparkle.northstar_eval.grade_ab.pack.v1",
++  "subject": "离散数学",
++  "purpose": "GRADE-AB：B-QWEN 假设 A（判卷/诊断结构化面 PRO 档换 qwen3.8-flash 档）双档 A/B 评测静态题包。题目为组卡 agent 自拟并逐题验算，author_confidence 为学科置信度自评；金标（verdict/error_type/brief）即 A/B 方案中的『人工标注』锚点。",
++  "error_type_vocab": ["none", "knowledge", "understanding", "calculation", "careless", "blank"],
++  "verdict_vocab": ["correct", "partial", "wrong"],
++  "qtype_vocab": ["single_choice", "judge", "short_answer"],
++  "confidence_vocab": ["certain", "fuzzy", "guess"],
++  "field_notes": {
++    "qtype": "single_choice=四选一；judge=判断题（对/错）；short_answer=简答（可部分正确）",
++    "student_confidence": "学生自报置信度，作为判卷输入上下文（镜像 exam_sprint 诊断面 confidence 口径 certain/fuzzy/guess）",
++    "gold.brief": "金标根因要点（供人工复核分歧，不进 LLM 提示词）",
++    "boundary": "边界例标记：partial=部分正确 / slip=笔误滑笔 / blank=空白作答；null=常规题"
++  },
++  "questions": [
++    {
++      "id": "L01",
++      "domain": "数理逻辑",
++      "topic": "蕴含真值表",
++      "qtype": "single_choice",
++      "stem": "已知命题公式 p→q 为真，且 q 为假。问 p 的真值是？",
++      "choices": ["真", "假", "无法确定", "不存在满足条件的赋值"],
++      "standard_answer": "假",
++      "student_answer": "假",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "p→q 真且 q 假时 p 必假"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "L02",
++      "domain": "数理逻辑",
++      "topic": "蕴含为假条件",
++      "qtype": "single_choice",
++      "stem": "命题公式 p→q 为假的充要条件是？",
++      "choices": ["p 为真且 q 为假", "p 为假且 q 为真", "p 与 q 真值相同", "p 与 q 真值相反"],
++      "standard_answer": "p 为真且 q 为假",
++      "student_answer": "p 与 q 真值相反",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "knowledge", "brief": "把蕴含与异或混淆：p→q 仅在 p 真时可能假，且仅当 q 假"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "L03",
++      "domain": "数理逻辑",
++      "topic": "相容或",
++      "qtype": "judge",
++      "stem": "「若 p∨q 为真且 p 为假，则 q 必为真」。此论断对吗？",
++      "standard_answer": "对",
++      "student_answer": "对",
++      "student_confidence": "fuzzy",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "相容或定义直接推得"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "L04",
++      "domain": "数理逻辑",
++      "topic": "量词否定",
++      "qtype": "single_choice",
++      "stem": "「所有素数都是奇数」的否定是？",
++      "choices": ["所有素数都不是奇数", "存在素数不是奇数", "存在奇数不是素数", "所有奇数都不是素数"],
++      "standard_answer": "存在素数不是奇数",
++      "student_answer": "所有素数都不是奇数",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "understanding", "brief": "全称命题否定时量词未翻转（¬∀x P ≡ ∃x ¬P）"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "L05",
++      "domain": "数理逻辑",
++      "topic": "谓词符号化",
++      "qtype": "short_answer",
++      "stem": "论域为自然数集 N，只用量词、变量与关系符号 > 符号化「没有最大的自然数」。",
++      "standard_answer": "∀x∃y(y > x)（等价形式 ¬∃x∀y(x≥y) 亦可）",
++      "student_answer": "∀x∃y (y > x)",
++      "student_confidence": "fuzzy",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "标准符号化"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "L06",
++      "domain": "数理逻辑",
++      "topic": "真值函数计数",
++      "qtype": "single_choice",
++      "stem": "含 3 个命题变元的公式按真值表分类，共有多少个互不等价的真值函数？",
++      "choices": ["8", "16", "256", "64"],
++      "standard_answer": "256",
++      "student_answer": "16",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "calculation", "brief": "真值表 8 行、每行二选一，应为 2^8=256；学生把指数当行数乘子"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "L07",
++      "domain": "数理逻辑",
++      "topic": "重言式判定",
++      "qtype": "judge",
++      "stem": "「p∧q→p 是重言式」。对吗？",
++      "standard_answer": "对",
++      "student_answer": "对",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "化简 ¬(p∧q)∨p ≡ T"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "L08",
++      "domain": "数理逻辑",
++      "topic": "蕴含的否定",
++      "qtype": "short_answer",
++      "stem": "写出 ¬(p→q) 的等值简化式（只用 p、q 与联结词 ¬、∧、∨）。",
++      "standard_answer": "p ∧ ¬q",
++      "student_answer": "¬p ∨ ¬q",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "knowledge", "brief": "对蕴含的否定误用德摩根律；¬(p→q)≡p∧¬q"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "L09",
++      "domain": "数理逻辑",
++      "topic": "矛盾式",
++      "qtype": "single_choice",
++      "stem": "下列公式中是矛盾式的是？",
++      "choices": ["p∨¬p", "p∧¬p", "p→p", "¬(p∧¬p)"],
++      "standard_answer": "p∧¬p",
++      "student_answer": "p∧¬p",
++      "student_confidence": "fuzzy",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "p∧¬p 恒假"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "L10",
++      "domain": "数理逻辑",
++      "topic": "蕴含与逆换",
++      "qtype": "judge",
++      "stem": "「对任意命题 p、q，公式 p→q 与 q→p 等值」。对吗？",
++      "standard_answer": "错",
++      "student_answer": "对",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "knowledge", "brief": "把蕴含与其逆换式混同（p 真 q 假即反例）"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "L11",
++      "domain": "数理逻辑",
++      "topic": "量词否定等值式",
++      "qtype": "short_answer",
++      "stem": "写出 ¬∀x(P(x)→Q(x)) 的等值式。",
++      "standard_answer": "∃x(P(x) ∧ ¬Q(x))",
++      "student_answer": "∃x(P(x) ∧ ¬Q(x))",
++      "student_confidence": "fuzzy",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "量词否定+蕴含等值链正确"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "L12",
++      "domain": "数理逻辑",
++      "topic": "必要条件符号化",
++      "qtype": "single_choice",
++      "stem": "设 p=努力学习，q=通过考试。符号化「只有努力学习才能通过考试」。",
++      "choices": ["q→p", "p→q", "p↔q", "¬q→¬p"],
++      "standard_answer": "q→p",
++      "student_answer": "p→q",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "understanding", "brief": "「只有 p 才 q」= q→p（p 是必要条件），方向理解反"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "L13",
++      "domain": "数理逻辑",
++      "topic": "真值表行数",
++      "qtype": "short_answer",
++      "stem": "一个含 4 个命题变元的公式，其真值表共有多少行？",
++      "standard_answer": "2^4 = 16 行",
++      "student_answer": "2^4 = 8 行",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "calculation", "brief": "2^4 幂运算错为 8"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "L14",
++      "domain": "数理逻辑",
++      "topic": "等价真值",
++      "qtype": "single_choice",
++      "stem": "p↔q 为真当且仅当？",
++      "choices": ["p 与 q 真值相同", "p 与 q 真值相反", "p 真 q 假", "p 假"],
++      "standard_answer": "p 与 q 真值相同",
++      "student_answer": "p 与 q 真值相同",
++      "student_confidence": "guess",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "等价定义"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "L15",
++      "domain": "数理逻辑",
++      "topic": "量词次序",
++      "qtype": "judge",
++      "stem": "论域为 N。「∀x∃y(y>x) 与 ∃y∀x(y>x) 等值」。对吗？",
++      "standard_answer": "错",
++      "student_answer": "对",
++      "student_confidence": "fuzzy",
++      "gold": {"verdict": "wrong", "error_type": "understanding", "brief": "量词次序交换语义偏差：前者真后者假"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "L16",
++      "domain": "数理逻辑",
++      "topic": "蕴含等值形式",
++      "qtype": "short_answer",
++      "stem": "写出与 ¬p∨q 等值的蕴含式。",
++      "standard_answer": "p→q",
++      "student_answer": "p→q",
++      "student_confidence": "fuzzy",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "蕴含展开式"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "S01",
++      "domain": "集合论",
++      "topic": "幂集基数",
++      "qtype": "single_choice",
++      "stem": "集合 A={1,2,3}，幂集 P(A) 的元素个数是？",
++      "choices": ["6", "8", "9", "3"],
++      "standard_answer": "8",
++      "student_answer": "8",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "2^3=8"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "S02",
++      "domain": "集合论",
++      "topic": "幂集元素判定",
++      "qtype": "single_choice",
++      "stem": "A={1,2,3}。下列哪个是 P(A) 的元素？",
++      "choices": ["{1,2}", "1", "{{2}}", "3"],
++      "standard_answer": "{1,2}",
++      "student_answer": "{{2}}",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "understanding", "brief": "幂集层级混淆：{2}∉A，故 {{2}} 不是 A 的子集"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "S03",
++      "domain": "集合论",
++      "topic": "空集子集",
++      "qtype": "judge",
++      "stem": "「对任意集合 A，∅⊆A」。对吗？",
++      "standard_answer": "对",
++      "student_answer": "对",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "空集是任意集合的子集"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "S04",
++      "domain": "集合论",
++      "topic": "容斥原理",
++      "qtype": "single_choice",
++      "stem": "有限集 |A|=m，|B|=n，|A∩B|=k。则 |A∪B| = ？",
++      "choices": ["m+n", "m+n−k", "m+n+k", "m×n−k"],
++      "standard_answer": "m+n−k",
++      "student_answer": "m+n+k",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "calculation", "brief": "容斥符号错：交集应减去"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "S05",
++      "domain": "集合论",
++      "topic": "三集合容斥",
++      "qtype": "short_answer",
++      "stem": "写出 |A∪B∪C| 关于两两交与三交的一般公式。",
++      "standard_answer": "|A|+|B|+|C|−|A∩B|−|A∩C|−|B∩C|+|A∩B∩C|",
++      "student_answer": "|A|+|B|+|C|−|A∩B|−|A∩C|−|B∩C|+|A∩B∩C|",
++      "student_confidence": "fuzzy",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "三集合容斥完整式"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "S06",
++      "domain": "集合论",
++      "topic": "交集计数",
++      "qtype": "short_answer",
++      "stem": "A={1,2,3,4,5}，B={2,4,6,8}。求 A∩B 及其基数。",
++      "standard_answer": "A∩B={2,4}，|A∩B|=2",
++      "student_answer": "A∩B={2,4}，|A∩B|=3",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "careless", "brief": "集合写对、基数计数笔误（2 误为 3）"},
++      "author_confidence": "high",
++      "boundary": "slip"
++    },
++    {
++      "id": "S07",
++      "domain": "集合论",
++      "topic": "真子集与基数",
++      "qtype": "single_choice",
++      "stem": "有限集满足 A⊆B 且 |A|=|B|。则必有？",
++      "choices": ["A 是 B 的真子集", "A=B", "无法确定", "A∩B=∅"],
++      "standard_answer": "A=B",
++      "student_answer": "A 是 B 的真子集",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "understanding", "brief": "有限集等基数包含必相等，真子集理解偏差"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "S08",
++      "domain": "集合论",
++      "topic": "空集归属",
++      "qtype": "judge",
++      "stem": "「∅ 是任意集合的元素」。对吗？",
++      "standard_answer": "错",
++      "student_answer": "对",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "knowledge", "brief": "子集与元素混淆：∅⊆A 恒真，∅∈A 不然（如 A={1,2}）"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "S09",
++      "domain": "集合论",
++      "topic": "定基数子集",
++      "qtype": "short_answer",
++      "stem": "A={a,b,c,d}。求 A 的恰含 3 个元素的子集个数。",
++      "standard_answer": "C(4,3)=4",
++      "student_answer": "C(4,3)=4",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "组合计数正确"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "S10",
++      "domain": "集合论",
++      "topic": "笛卡尔积基数",
++      "qtype": "single_choice",
++      "stem": "|A|=3，|B|=4。|A×B| = ？",
++      "choices": ["7", "12", "81", "34"],
++      "standard_answer": "12",
++      "student_answer": "",
++      "student_confidence": "guess",
++      "gold": {"verdict": "wrong", "error_type": "blank", "brief": "未作答"},
++      "author_confidence": "high",
++      "boundary": "blank"
++    },
++    {
++      "id": "S11",
++      "domain": "集合论",
++      "topic": "差集表示",
++      "qtype": "short_answer",
++      "stem": "全集 U 下，用交与补表示 A\\B。",
++      "standard_answer": "A∩B̄（即 A∩(U\\B)）",
++      "student_answer": "A ∩ B̄",
++      "student_confidence": "fuzzy",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "差集的交补表示"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "S12",
++      "domain": "集合论",
++      "topic": "集合元素计数",
++      "qtype": "single_choice",
++      "stem": "集合 {1, {2,3}} 的元素个数是？",
++      "choices": ["2", "3", "1", "4"],
++      "standard_answer": "2",
++      "student_answer": "3",
++      "student_confidence": "fuzzy",
++      "gold": {"verdict": "wrong", "error_type": "understanding", "brief": "把内层集合的元素也计入；{2,3} 作为一个元素"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "R01",
++      "domain": "二元关系",
++      "topic": "关系计数",
++      "qtype": "single_choice",
++      "stem": "A={1,2,3}。A 上的二元关系（即 A×A 的子集）共有多少个？",
++      "choices": ["9", "18", "81", "512"],
++      "standard_answer": "512",
++      "student_answer": "512",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "|A×A|=9，子集数 2^9=512"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "R02",
++      "domain": "二元关系",
++      "topic": "自反定义",
++      "qtype": "single_choice",
++      "stem": "A 上关系 R 自反的充要条件是？",
++      "choices": ["∀x(xRx)", "∀x∀y(xRy→yRx)", "∀x∀y∀z(xRy∧yRz→xRz)", "∀x∀y(xRy∨yRx)"],
++      "standard_answer": "∀x(xRx)",
++      "student_answer": "∀x∀y(xRy→yRx)",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "knowledge", "brief": "自反与对称定义混淆"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "R03",
++      "domain": "二元关系",
++      "topic": "恒等关系对称性",
++      "qtype": "judge",
++      "stem": "「A 上恒等关系 I_A 既是对称的也是反对称的」。对吗？",
++      "standard_answer": "对",
++      "student_answer": "对",
++      "student_confidence": "fuzzy",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "x=y 时两定义同时满足"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "R04",
++      "domain": "二元关系",
++      "topic": "等价关系计数",
++      "qtype": "short_answer",
++      "stem": "A={a,b,c}。A 上恰有 2 个等价类的等价关系有几个？",
++      "standard_answer": "3 个（对应划分 {ab|c},{ac|b},{bc|a}，即 S(3,2)=3）",
++      "student_answer": "6 个",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "calculation", "brief": "把划分数当排列数算成 A(3,2)=6"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "R05",
++      "domain": "二元关系",
++      "topic": "偏序定义",
++      "qtype": "single_choice",
++      "stem": "偏序关系须满足？",
++      "choices": ["自反、对称、传递", "自反、反对称、传递", "自反、反对称、完全", "对称、传递"],
++      "standard_answer": "自反、反对称、传递",
++      "student_answer": "自反、反对称、传递",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "偏序三性质"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "R06",
++      "domain": "二元关系",
++      "topic": "传递闭包",
++      "qtype": "short_answer",
++      "stem": "A={1,2,3}，R={(1,1),(1,2),(2,2),(2,3),(3,3)}。求传递闭包 t(R)。",
++      "standard_answer": "{(1,1),(1,2),(1,3),(2,2),(2,3),(3,3)}",
++      "student_answer": "R 本身已是传递关系，t(R)=R",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "understanding", "brief": "漏看 1R2∧2R3 需补 (1,3)"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "R07",
++      "domain": "二元关系",
++      "topic": "等价关系与划分",
++      "qtype": "single_choice",
++      "stem": "关于等价关系与划分，下列说法正确的是？",
++      "choices": ["一个划分唯一确定一个等价关系，且二者一一对应", "等价关系个数等于划分个数减一", "划分的不同块可以相交", "同一等价类的元素可以属于不同的块"],
++      "standard_answer": "一个划分唯一确定一个等价关系，且二者一一对应",
++      "student_answer": "划分的不同块可以相交",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "knowledge", "brief": "划分定义：块两两不相交且并为全集"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "R08",
++      "domain": "二元关系",
++      "topic": "对称传递非自反",
++      "qtype": "judge",
++      "stem": "「若 A 上关系 R 对称且传递，则 R 必自反」。对吗？",
++      "standard_answer": "错",
++      "student_answer": "对",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "knowledge", "brief": "经典误证：默认每个 x 存在 y 使 xRy；反例 R=∅"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "R09",
++      "domain": "二元关系",
++      "topic": "整除关系枚举",
++      "qtype": "short_answer",
++      "stem": "A={1,2,3,4}，R 为 A 上的整除关系。写出 R 的全部有序对。",
++      "standard_answer": "8 对：{(1,1),(1,2),(1,3),(1,4),(2,2),(2,4),(3,3),(4,4)}",
++      "student_answer": "{(1,1),(1,2),(1,3),(1,4),(2,2),(2,4),(3,3),(4,4)}，共 8 对",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "整除关系完整枚举"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "R10",
++      "domain": "二元关系",
++      "topic": "相容关系",
++      "qtype": "single_choice",
++      "stem": "相容关系（自反且对称）比等价关系少哪一条性质？",
++      "choices": ["传递", "反对称", "完全", "反自反"],
++      "standard_answer": "传递",
++      "student_answer": "反对称",
++      "student_confidence": "fuzzy",
++      "gold": {"verdict": "wrong", "error_type": "understanding", "brief": "等价=自反+对称+传递，相容差传递"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "R11",
++      "domain": "二元关系",
++      "topic": "极大元与最大元",
++      "qtype": "short_answer",
++      "stem": "A={1,2,3,4}，偏序为整除关系。求偏序集的极大元与最大元。",
++      "standard_answer": "极大元为 3 和 4；无最大元",
++      "student_answer": "极大元为 3 和 4；最大元为 4",
++      "student_confidence": "fuzzy",
++      "gold": {"verdict": "partial", "error_type": "understanding", "brief": "极大元正确；4 不整除 3 故无最大元，混淆极大与最大"},
++      "author_confidence": "high",
++      "boundary": "partial"
++    },
++    {
++      "id": "R12",
++      "domain": "二元关系",
++      "topic": "逆关系运算",
++      "qtype": "single_choice",
++      "stem": "对关系 R 与 S 的合成，(R∘S)⁻¹ = ？",
++      "choices": ["S⁻¹∘R⁻¹", "R⁻¹∘S⁻¹", "R∘S", "无法确定"],
++      "standard_answer": "S⁻¹∘R⁻¹",
++      "student_answer": "S⁻¹∘R⁻¹",
++      "student_confidence": "guess",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "合成的逆：序反转（袜子-鞋子律）"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "R13",
++      "domain": "二元关系",
++      "topic": "传递性判定",
++      "qtype": "short_answer",
++      "stem": "A={a,b}，R={(a,a)}。R 是否为 A 上的传递关系？说明理由。",
++      "standard_answer": "是。唯一可复合的情形 aRa∧aRa→aRa 已在 R 中，无违反传递性的反例",
++      "student_answer": "",
++      "student_confidence": "guess",
++      "gold": {"verdict": "wrong", "error_type": "blank", "brief": "未作答"},
++      "author_confidence": "high",
++      "boundary": "blank"
++    },
++    {
++      "id": "R14",
++      "domain": "二元关系",
++      "topic": "自反包含恒等",
++      "qtype": "judge",
++      "stem": "「A 上自反关系必包含恒等关系 I_A」。对吗？",
++      "standard_answer": "对",
++      "student_answer": "对",
++      "student_confidence": "fuzzy",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "自反定义即 ∀x xRx"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "F01",
++      "domain": "函数与基数",
++      "topic": "函数计数",
++      "qtype": "single_choice",
++      "stem": "|A|=3，|B|=2。从 A 到 B 的函数共有多少个？",
++      "choices": ["6", "8", "9", "5"],
++      "standard_answer": "8",
++      "student_answer": "8",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "每个像点二选一，2^3=8"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "F02",
++      "domain": "函数与基数",
++      "topic": "双射充要条件",
++      "qtype": "single_choice",
++      "stem": "f:A→B 为双射的充要条件是？",
++      "choices": ["存在 g:B→A 使 g∘f=I_A 且 f∘g=I_B", "f 是单射", "f 是满射", "|A|=|B|"],
++      "standard_answer": "存在 g:B→A 使 g∘f=I_A 且 f∘g=I_B",
++      "student_answer": "|A|=|B|",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "knowledge", "brief": "等基数只是存在双射的必要条件，不保证该 f 双射"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "F03",
++      "domain": "函数与基数",
++      "topic": "有限集单射",
++      "qtype": "judge",
++      "stem": "「有限集 A 上单射 f:A→A 必是双射」。对吗？",
++      "standard_answer": "对",
++      "student_answer": "对",
++      "student_confidence": "fuzzy",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "抽屉原理：有限集自映射单射即满射"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "F04",
++      "domain": "函数与基数",
++      "topic": "单射计数",
++      "qtype": "short_answer",
++      "stem": "|A|=3，|B|=5。从 A 到 B 的单射函数有多少个？",
++      "standard_answer": "5×4×3=60",
++      "student_answer": "5^3=125",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "calculation", "brief": "误用乘方计数单射；应为降幂连乘 5×4×3"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "F05",
++      "domain": "函数与基数",
++      "topic": "可数等势",
++      "qtype": "single_choice",
++      "stem": "自然数集 N 与整数集 Z 的基数关系是？",
++      "choices": ["相等（存在双射）", "|N|<|Z|", "|N|>|Z|", "不可比较"],
++      "standard_answer": "相等（存在双射）",
++      "student_answer": "|N|<|Z|",
++      "student_confidence": "fuzzy",
++      "gold": {"verdict": "wrong", "error_type": "understanding", "brief": "「整数比自然数多」的有限直觉错误；两者可数等势"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "F06",
++      "domain": "函数与基数",
++      "topic": "可数性枚举",
++      "qtype": "short_answer",
++      "stem": "给出 N×N 可数的一种枚举思路（一句话）。",
++      "standard_answer": "按反对角线依次枚举 (0,0),(0,1),(1,0),(2,0),(1,1),(0,2),…，可与 N 建立双射",
++      "student_answer": "按对角线法逐条枚举所有数对，即可与 N 一一对应",
++      "student_confidence": "fuzzy",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "对角线枚举思路正确"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "F07",
++      "domain": "函数与基数",
++      "topic": "不可数性",
++      "qtype": "judge",
++      "stem": "「实数集 R 与自然数集 N 等势」。对吗？",
++      "standard_answer": "错",
++      "student_answer": "对",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "knowledge", "brief": "Cantor 对角线法：R 不可数"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "F08",
++      "domain": "函数与基数",
++      "topic": "单射满射判定",
++      "qtype": "single_choice",
++      "stem": "f:R→R，f(x)=x²。f 是？",
++      "choices": ["双射", "单射但非满射", "满射但非单射", "既非单射也非满射"],
++      "standard_answer": "既非单射也非满射",
++      "student_answer": "既非单射也非满射",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "f(−1)=f(1) 非单射；负数无原像非满射"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "F09",
++      "domain": "函数与基数",
++      "topic": "双射计数",
++      "qtype": "short_answer",
++      "stem": "A={1,2,3} 到 B={a,b,c} 的双射有多少个？并说明它与排列的关系。",
++      "standard_answer": "3!=6 个；双射与 B 上全排列一一对应",
++      "student_answer": "3!=6 个",
++      "student_confidence": "fuzzy",
++      "gold": {"verdict": "partial", "error_type": "understanding", "brief": "结论正确，未答与排列的关系部分"},
++      "author_confidence": "high",
++      "boundary": "partial"
++    },
++    {
++      "id": "F10",
++      "domain": "函数与基数",
++      "topic": "满射计数",
++      "qtype": "short_answer",
++      "stem": "B={a,b,c} 到 A={1,2} 的满射函数有多少个？",
++      "standard_answer": "2^3−2=6（总函数数减去两个退化映射）",
++      "student_answer": "2^3−2=6",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "容斥/补集计数正确"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "G01",
++      "domain": "图论",
++      "topic": "完全图边数",
++      "qtype": "single_choice",
++      "stem": "8 个顶点的无向完全图 K8 有多少条边？",
++      "choices": ["28", "16", "56", "64"],
++      "standard_answer": "28",
++      "student_answer": "28",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "n(n−1)/2=8×7/2=28"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "G02",
++      "domain": "图论",
++      "topic": "欧拉回路条件",
++      "qtype": "judge",
++      "stem": "「连通图若每个顶点度数都是偶数，则存在欧拉回路」。对吗？",
++      "standard_answer": "对",
++      "student_answer": "错",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "knowledge", "brief": "欧拉回路充要条件（连通+全偶度）记反"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "G03",
++      "domain": "图论",
++      "topic": "欧拉回路实例",
++      "qtype": "short_answer",
++      "stem": "K5 是否有欧拉回路？说明理由。",
++      "standard_answer": "有。K5 连通且每个顶点度数为 4（偶数）",
++      "student_answer": "有，K5 连通且每个顶点度数为 4，全为偶度",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "条件核验正确"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "G04",
++      "domain": "图论",
++      "topic": "欧拉回路充要",
++      "qtype": "single_choice",
++      "stem": "非平凡无向图存在欧拉回路的充要条件是？",
++      "choices": ["连通且所有顶点度数为偶", "连通且恰有两个奇度顶点", "所有顶点度数为偶", "连通"],
++      "standard_answer": "连通且所有顶点度数为偶",
++      "student_answer": "连通且恰有两个奇度顶点",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "understanding", "brief": "与欧拉路径（半欧拉图）条件混淆"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "G05",
++      "domain": "图论",
++      "topic": "度数序列",
++      "qtype": "short_answer",
++      "stem": "无向图 V={a,b,c,d}，E={ab,ac,bc,bd,cd}。写出各顶点度数（按 a,b,c,d 顺序）。",
++      "standard_answer": "2,3,3,2",
++      "student_answer": "2,3,3,3",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "careless", "brief": "d 的度数笔误：关联边 bd、cd 共 2 条，误写 3"},
++      "author_confidence": "high",
++      "boundary": "slip"
++    },
++    {
++      "id": "G06",
++      "domain": "图论",
++      "topic": "树的边数",
++      "qtype": "single_choice",
++      "stem": "n 个顶点（n≥2）的树有多少条边？",
++      "choices": ["n", "n−1", "n+1", "n(n−1)/2"],
++      "standard_answer": "n−1",
++      "student_answer": "n−1",
++      "student_confidence": "guess",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "树的基本性质"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "G07",
++      "domain": "图论",
++      "topic": "度数之和",
++      "qtype": "short_answer",
++      "stem": "一棵树有 10 个顶点。求它的边数与度数之和。",
++      "standard_answer": "9 条边；度数之和 18",
++      "student_answer": "边数 9，度数之和 16",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "calculation", "brief": "2×9 运算错为 16"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "G08",
++      "domain": "图论",
++      "topic": "简单图最大边数",
++      "qtype": "single_choice",
++      "stem": "5 个顶点的无向简单图最多有多少条边？",
++      "choices": ["10", "20", "5", "25"],
++      "standard_answer": "10",
++      "student_answer": "20",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "knowledge", "brief": "n(n−1) 忘除以 2（完全图公式记忆错）"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "G09",
++      "domain": "图论",
++      "topic": "度序列实现",
++      "qtype": "short_answer",
++      "stem": "度序列 (1,2,2,3) 能否实现为 4 顶点简单图？给出一个边集。",
++      "standard_answer": "能，例如 {(4,1),(4,2),(4,3),(2,3)}",
++      "student_answer": "能，例如边集 {(4,1),(4,2),(4,3),(2,3)}",
++      "student_confidence": "fuzzy",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "构造实现度序列"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "G10",
++      "domain": "图论",
++      "topic": "欧拉公式",
++      "qtype": "single_choice",
++      "stem": "平面图 K4（含外部面）的面数是多少？",
++      "choices": ["2", "3", "4", "6"],
++      "standard_answer": "4",
++      "student_answer": "",
++      "student_confidence": "guess",
++      "gold": {"verdict": "wrong", "error_type": "blank", "brief": "未作答"},
++      "author_confidence": "high",
++      "boundary": "blank"
++    },
++    {
++      "id": "G11",
++      "domain": "图论",
++      "topic": "树与二部图",
++      "qtype": "judge",
++      "stem": "「任何树都是二部图」。对吗？",
++      "standard_answer": "对",
++      "student_answer": "对",
++      "student_confidence": "fuzzy",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "无圈即无奇圈，按层二染色"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "G12",
++      "domain": "图论",
++      "topic": "强连通",
++      "qtype": "single_choice",
++      "stem": "强连通有向图中，每个结点满足？",
++      "choices": ["既可达其他结点也可由其他结点到达", "只能到达其他结点", "只能被其他结点到达", "度数必为偶数"],
++      "standard_answer": "既可达其他结点也可由其他结点到达",
++      "student_answer": "只能到达其他结点",
++      "student_confidence": "fuzzy",
++      "gold": {"verdict": "wrong", "error_type": "understanding", "brief": "强连通双向可达概念单向化"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "G13",
++      "domain": "图论",
++      "topic": "点连通度与边连通度",
++      "qtype": "short_answer",
++      "stem": "星形图 K1,3（中心 1 度 3，三个叶）的点连通度 κ 与边连通度 λ 各是多少？",
++      "standard_answer": "κ=1，λ=1",
++      "student_answer": "κ=3，λ=3",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "understanding", "brief": "连通度与叶数混淆：去中心即断，κ=λ=1"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "G14",
++      "domain": "图论",
++      "topic": "Dijkstra 适用条件",
++      "qtype": "single_choice",
++      "stem": "Dijkstra 最短路算法要求图满足？",
++      "choices": ["任意图", "边权非负", "图为树", "图为有向无环图"],
++      "standard_answer": "边权非负",
++      "student_answer": "边权非负",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "贪心正确性依赖非负权"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "G15",
++      "domain": "图论",
++      "topic": "完全图度数",
++      "qtype": "short_answer",
++      "stem": "K6 中每个顶点的度数是多少？边数是多少？",
++      "standard_answer": "度数 5；边数 15",
++      "student_answer": "度数 6，边数 15",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "careless", "brief": "度数 off-by-one 笔误（应为 n−1=5）"},
++      "author_confidence": "high",
++      "boundary": "slip"
++    },
++    {
++      "id": "G16",
++      "domain": "图论",
++      "topic": "二部图哈密顿回路",
++      "qtype": "judge",
++      "stem": "「顶点数为奇数的二部图不存在哈密顿回路」。对吗？",
++      "standard_answer": "对",
++      "student_answer": "错",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "knowledge", "brief": "二部图圈上两部交替、点数必偶，定理记反"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "G17",
++      "domain": "图论",
++      "topic": "度序列实例",
++      "qtype": "short_answer",
++      "stem": "给出度序列 (2,2,2,2) 的一个 4 顶点简单图。",
++      "standard_answer": "4-圈 C4（四边形）",
++      "student_answer": "C4（四边形图）",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "2-正则连通图即圈"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "G18",
++      "domain": "图论",
++      "topic": "2-正则图顶点数",
++      "qtype": "short_answer",
++      "stem": "无向简单图每个顶点度数都是 2，共有 8 条边。该图有几个顶点？",
++      "standard_answer": "8 个（度数和=2×8=16，顶点数=16÷2=8）",
++      "student_answer": "16 个",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "careless", "brief": "度和 16 直接当作顶点数，漏除 2"},
++      "author_confidence": "high",
++      "boundary": "slip"
++    },
++    {
++      "id": "G19",
++      "domain": "图论",
++      "topic": "生成树删边",
++      "qtype": "short_answer",
++      "stem": "连通图有 6 个顶点、9 条边。任取其一生成树，需保留几条边、删去几条边？",
++      "standard_answer": "保留 5 条（n−1）；删去 4 条（m−n+1）",
++      "student_answer": "保留 5 条，删去 3 条",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "calculation", "brief": "9−5=4 运算错为 3"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "G20",
++      "domain": "图论",
++      "topic": "有向图度和",
++      "qtype": "single_choice",
++      "stem": "有向图中，所有顶点的入度之和与出度之和的关系是？",
++      "choices": ["相等（都等于边数）", "入度和=出度和+1", "无恒等关系", "都等于边数的一半"],
++      "standard_answer": "相等（都等于边数）",
++      "student_answer": "相等（都等于边数）",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "每条边恰贡献一个入度一个出度"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "G21",
++      "domain": "图论",
++      "topic": "完全二部图判定",
++      "qtype": "short_answer",
++      "stem": "图 G：二部分 X={a,b,c}，Y={1,2}，边集 E={a1,a2,b2,c1,c2}。G 是否为二部图？是否为完全二部图？",
++      "standard_answer": "是二部图（边全跨部）；不是完全二部图（缺边 b1）",
++      "student_answer": "是二部图，分部 X={a,b,c}，Y={1,2}；是完全二部图 K3,2",
++      "student_confidence": "fuzzy",
++      "gold": {"verdict": "partial", "error_type": "understanding", "brief": "二部判定正确；漏查缺边 b1，完全二部判定错"},
++      "author_confidence": "high",
++      "boundary": "partial"
++    },
++    {
++      "id": "G22",
++      "domain": "图论",
++      "topic": "握手定理",
++      "qtype": "judge",
++      "stem": "「无向图所有顶点度数之和等于边数的两倍」。对吗？",
++      "standard_answer": "对",
++      "student_answer": "对",
++      "student_confidence": "guess",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "握手定理"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "C01",
++      "domain": "组合数学",
++      "topic": "全排列",
++      "qtype": "single_choice",
++      "stem": "5 个人排成一排照相，共有多少种排法？",
++      "choices": ["24", "120", "25", "60"],
++      "standard_answer": "120",
++      "student_answer": "120",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "5!=120"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "C02",
++      "domain": "组合数学",
++      "topic": "组合计数",
++      "qtype": "short_answer",
++      "stem": "从 10 人中选 3 人组成委员会（无序），有多少种选法？",
++      "standard_answer": "C(10,3)=120",
++      "student_answer": "10×9×8÷3=240",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "understanding", "brief": "混淆排列与组合：应除以 3!=6 而非 3"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "C03",
++      "domain": "组合数学",
++      "topic": "二项式定理",
++      "qtype": "judge",
++      "stem": "「C(n,0)+C(n,1)+…+C(n,n) = 2^n」。对吗？",
++      "standard_answer": "对",
++      "student_answer": "对",
++      "student_confidence": "fuzzy",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "二项式定理取 x=y=1"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "C04",
++      "domain": "组合数学",
++      "topic": "隔板法",
++      "qtype": "short_answer",
++      "stem": "方程 x1+x2+x3=6 的非负整数解有多少个？",
++      "standard_answer": "C(8,2)=28",
++      "student_answer": "C(8,2)=26",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "careless", "brief": "隔板式正确，组合数算术笔误（28 误为 26）"},
++      "author_confidence": "high",
++      "boundary": "slip"
++    },
++    {
++      "id": "C05",
++      "domain": "组合数学",
++      "topic": "组合数值",
++      "qtype": "single_choice",
++      "stem": "C(6,4) = ？",
++      "choices": ["15", "360", "24", "30"],
++      "standard_answer": "15",
++      "student_answer": "15",
++      "student_confidence": "guess",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "C(6,2)=15"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "C06",
++      "domain": "组合数学",
++      "topic": "受限排列",
++      "qtype": "short_answer",
++      "stem": "用数字 0,1,2,3,4 组成无重复数字的三位数，共有多少个？其中奇数有多少个？",
++      "standard_answer": "共 48 个；奇数 18 个",
++      "student_answer": "共 48 个；奇数 16 个",
++      "student_confidence": "certain",
++      "gold": {"verdict": "partial", "error_type": "calculation", "brief": "总数正确；奇数应为 2×3×3=18，分类计数有误"},
++      "author_confidence": "high",
++      "boundary": "partial"
++    },
++    {
++      "id": "C07",
++      "domain": "组合数学",
++      "topic": "相同球入盒",
++      "qtype": "single_choice",
++      "stem": "8 个相同的球放入 3 个不同的盒子（允许空盒），共有多少种放法？",
++      "choices": ["45", "56", "28", "66"],
++      "standard_answer": "45",
++      "student_answer": "",
++      "student_confidence": "guess",
++      "gold": {"verdict": "wrong", "error_type": "blank", "brief": "未作答"},
++      "author_confidence": "high",
++      "boundary": "blank"
++    },
++    {
++      "id": "C08",
++      "domain": "组合数学",
++      "topic": "捆绑法",
++      "qtype": "judge",
++      "stem": "「n 个元素的全排列中，指定 2 个元素相邻的排法有 2·(n−1)! 种」。对吗？",
++      "standard_answer": "对",
++      "student_answer": "对",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "捆绑整体+内部 2 种"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "C09",
++      "domain": "组合数学",
++      "topic": "错位容斥",
++      "qtype": "short_answer",
++      "stem": "{1,2,…,7} 的全排列中，1 不在首位且 2 不在末位的排列有多少个？",
++      "standard_answer": "7!−2·6!+5! = 5040−1440+120 = 3720",
++      "student_answer": "7!−2·6! = 5040−1440 = 3600",
++      "student_confidence": "fuzzy",
++      "gold": {"verdict": "partial", "error_type": "understanding", "brief": "容斥主式正确，漏加交集修正项 5!"},
++      "author_confidence": "high",
++      "boundary": "partial"
++    },
++    {
++      "id": "C10",
++      "domain": "组合数学",
++      "topic": "鸽笼原理",
++      "qtype": "single_choice",
++      "stem": "一年 12 个月。13 人中「至少两人同月出生」的结论？",
++      "choices": ["必然成立", "不一定成立", "恰好两人同月", "至少三人同月"],
++      "standard_answer": "必然成立",
++      "student_answer": "必然成立",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "13>12 鸽笼原理"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "C11",
++      "domain": "组合数学",
++      "topic": "拉姆齐数",
++      "qtype": "short_answer",
++      "stem": "至少需要多少人，才能保证存在 3 人互相认识或 3 人互相不认识？",
++      "standard_answer": "6 人（拉姆齐数 R(3,3)=6）",
++      "student_answer": "R(3,3)=6，至少 6 人",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "R(3,3)=6"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "C12",
++      "domain": "组合数学",
++      "topic": "组合数计算",
++      "qtype": "short_answer",
++      "stem": "求 C(9,2) 的值。",
++      "standard_answer": "36",
++      "student_answer": "9×8/2 = 72",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "careless", "brief": "式含除 2 但运算中漏除（9×8 直接得 72）"},
++      "author_confidence": "high",
++      "boundary": "slip"
++    },
++    {
++      "id": "C13",
++      "domain": "组合数学",
++      "topic": "多重集排列",
++      "qtype": "short_answer",
++      "stem": "多重集 {3·a, 2·b}（3 个 a、2 个 b）的全排列有多少个？",
++      "standard_answer": "5!/(3!·2!) = 10",
++      "student_answer": "5!/(3!·2!) = 12",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "calculation", "brief": "120/12 运算错为 12"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "C14",
++      "domain": "组合数学",
++      "topic": "分组选取",
++      "qtype": "single_choice",
++      "stem": "从 5 名男生和 4 名女生中选 2 男 2 女，共有多少种选法？",
++      "choices": ["60", "30", "120", "90"],
++      "standard_answer": "60",
++      "student_answer": "60",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "C(5,2)×C(4,2)=10×6=60"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "A01",
++      "domain": "代数系统",
++      "topic": "群判定",
++      "qtype": "single_choice",
++      "stem": "下列代数系统中哪个是群？",
++      "choices": ["(N, +)", "(Z, +)", "(Z, ×)", "(Q, ×)"],
++      "standard_answer": "(Z, +)",
++      "student_answer": "(Z, +)",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "N 无逆元；Z× 无逆；Q× 中 0 无逆"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "A02",
++      "domain": "代数系统",
++      "topic": "单位元唯一性",
++      "qtype": "judge",
++      "stem": "「群中单位元唯一」。对吗？",
++      "standard_answer": "对",
++      "student_answer": "对",
++      "student_confidence": "fuzzy",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "群公理直接推论"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "A03",
++      "domain": "代数系统",
++      "topic": "循环群生成元",
++      "qtype": "single_choice",
++      "stem": "6 阶循环群的生成元个数是多少？",
++      "choices": ["1", "2", "3", "6"],
++      "standard_answer": "2",
++      "student_answer": "2",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "φ(6)=2，生成元 1 和 5"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "A04",
++      "domain": "代数系统",
++      "topic": "元素的幂",
++      "qtype": "short_answer",
++      "stem": "群 G 中元素 a 的阶为 6。问 a^100 = e 吗？写出推理。",
++      "standard_answer": "a^100 = a^(100 mod 6) = a^4 ≠ e",
++      "student_answer": "100 mod 6 = 6，故 a^100 = a^6 = e",
++      "student_confidence": "certain",
++      "gold": {"verdict": "wrong", "error_type": "calculation", "brief": "带余除法余数算错：100 mod 6 = 4，方法正确"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "A05",
++      "domain": "代数系统",
++      "topic": "格的定义",
++      "qtype": "single_choice",
++      "stem": "关于格，下列说法正确的是？",
++      "choices": ["任意两元素有最小上界与最大下界", "只是偏序集，无需上界下界", "任意两元素可比", "一定是全序集"],
++      "standard_answer": "任意两元素有最小上界与最大下界",
++      "student_answer": "任意两元素有最小上界与最大下界",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "格的定义"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "A06",
++      "domain": "代数系统",
++      "topic": "半群与幺元",
++      "qtype": "short_answer",
++      "stem": "代数系统 ({0,1}, ∧)（按位与）是否为半群？若有幺元，幺元是什么？",
++      "standard_answer": "是半群（∧ 可结合）；幺元为 1",
++      "student_answer": "是半群；幺元是 1",
++      "student_confidence": "fuzzy",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "结合性与幺元判定正确"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "A07",
++      "domain": "代数系统",
++      "topic": "Abel 群子群正规",
++      "qtype": "judge",
++      "stem": "「交换群（Abel 群）的子群必为正规子群」。对吗？",
++      "standard_answer": "对",
++      "student_answer": "对",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "交换性使 gh=hg，共轭类恒等"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "A08",
++      "domain": "代数系统",
++      "topic": "半群与群",
++      "qtype": "single_choice",
++      "stem": "从半群到群，还需要补充？",
++      "choices": ["结合律", "单位元与逆元的存在性", "交换律", "封闭性"],
++      "standard_answer": "单位元与逆元的存在性",
++      "student_answer": "单位元与逆元的存在性",
++      "student_confidence": "fuzzy",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "半群有结合律，群另需幺元与逆元"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "A09",
++      "domain": "代数系统",
++      "topic": "正规子群举例",
++      "qtype": "short_answer",
++      "stem": "除 {e} 与 G 本身外，给出 Z6（加法群）的一个非平凡子群，并说明它为何正规。",
++      "standard_answer": "{0,2,4}（3 阶子群）；Z6 交换，任何子群都正规",
++      "student_answer": "{e}、G 是平凡的；Z6 中 {0,1,2} 也是非平凡子群",
++      "student_confidence": "certain",
++      "gold": {"verdict": "partial", "error_type": "understanding", "brief": "知道平凡子群；举例错误：{0,1,2} 对加法不封闭（1+2=3∉）"},
++      "author_confidence": "high",
++      "boundary": "partial"
++    },
++    {
++      "id": "A10",
++      "domain": "代数系统",
++      "topic": "吸收律",
++      "qtype": "single_choice",
++      "stem": "布尔代数中 a∨(a∧b) = ？",
++      "choices": ["a", "b", "a∧b", "1"],
++      "standard_answer": "a",
++      "student_answer": "a",
++      "student_confidence": "guess",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "吸收律"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "A11",
++      "domain": "代数系统",
++      "topic": "布尔化简",
++      "qtype": "short_answer",
++      "stem": "化简布尔式 a·b + a·b̄。",
++      "standard_answer": "a（提取 a 后 b+b̄=1）",
++      "student_answer": "a(b+b̄) = a·1 = a",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "分配+补律化简正确"},
++      "author_confidence": "high",
++      "boundary": null
++    },
++    {
++      "id": "A12",
++      "domain": "代数系统",
++      "topic": "循环子群阶",
++      "qtype": "single_choice",
++      "stem": "循环群 Z12（加法）中，由 3 生成的子群 ⟨3⟩ 的阶是多少？",
++      "choices": ["3", "4", "6", "12"],
++      "standard_answer": "4",
++      "student_answer": "4",
++      "student_confidence": "certain",
++      "gold": {"verdict": "correct", "error_type": "none", "brief": "12/gcd(12,3)=4，子群 {0,3,6,9}"},
++      "author_confidence": "high",
++      "boundary": null
++    }
++  ]
++}
+diff --git a/backend/tests/northstar_eval/test_grade_ab.py b/backend/tests/northstar_eval/test_grade_ab.py
+new file mode 100644
+index 00000000..73690630
+--- /dev/null
++++ b/backend/tests/northstar_eval/test_grade_ab.py
+@@ -0,0 +1,205 @@
++"""NORTHSTAR · GRADE-AB 题包与双档装配守卫（pytest 断言面，零 LLM 调用）。
++
++钉住 GRADE-AB 卡验收：
++- **题包**：100 题下限、schema/枚举/语义互锁（load_pack 有坏即拒）、
++  对错分布与边界例在场（partial/slip/blank）；
++- **双档路由解析**：档 A=PRO→dashscope_reason（qwen3.7-plus 思考，$0.0012/1k）、
++  档 B=STANDARD→dashscope_standard_thinking（qwen3.8-flash，$0.00025/1k、
++  wire enable_thinking=false——与假设 A env 切换后的生产 wire 行为一致）；
++  成本锚点比 = 0.2083（-79%，B-QWEN §4 预期）；
++- **判卷提示词装配**：100 题全量可渲染、两臂同文（A/B 单变量=模型档位）；
++- **对照判定数学**：build_report 的 gate ①(≤3pp)/②(≤2pp) 在合成判定上方向正确
++  （全一致→pass，注入分歧超限→reject），分歧清单落名。
++
++红线：本文件不发起任何网络请求；live 路径（grade_arm_live）不在测试面内。
++"""
++
++from __future__ import annotations
++
++import json
++from pathlib import Path
++
++import pytest
++
++from tests.northstar_eval.grade_ab import (
++    GATE_ERROR_TYPE_PP,
++    GATE_PARSE_RATE_PP,
++    MIN_PACK_QUESTIONS,
++    build_messages,
++    build_report,
++    load_pack,
++    pack_composition,
++    resolve_arm,
++)
++
++PACK_PATH = Path(__file__).resolve().parent / "grade_ab_pack.json"
++
++
++@pytest.fixture(scope="module")
++def pack() -> dict:
++    return load_pack(PACK_PATH)
++
++
++def test_pack_meets_floor_and_split(pack: dict) -> None:
++    composition = pack_composition(pack)
++    assert composition["question_count"] >= MIN_PACK_QUESTIONS
++    # 对错各半 + 部分正确边界（卡面要求：对错各半 + 边界例）
++    assert composition["verdicts"] == {"correct": 50, "wrong": 44, "partial": 6}
++    # 边界例三类齐备：部分正确 / 笔误 / 空白
++    assert composition["boundaries"] == {"None": 84, "partial": 6, "slip": 6, "blank": 4}
++    # 学科点分布：离散数学七大域，图论最重（与 JOURNEY NS-001 同科同弱点）
++    assert set(composition["domains"]) == {
++        "数理逻辑",
++        "集合论",
++        "二元关系",
++        "函数与基数",
++        "图论",
++        "组合数学",
++        "代数系统",
++    }
++    assert composition["domains"]["图论"] == 22
++    # 全部题目自拟置信度申报为 high（诚实申报：无 medium 存疑题入包）
++    assert composition["author_confidence"] == {"high": 100}
++
++
++def test_pack_semantic_interlocks(pack: dict) -> None:
++    for q in pack["questions"]:
++        gold = q["gold"]
++        if gold["verdict"] == "correct":
++            assert gold["error_type"] == "none", q["id"]
++        if q["student_answer"] == "":
++            assert gold["error_type"] == "blank", q["id"]
++        if q["qtype"] == "single_choice":
++            assert q["standard_answer"] in q["choices"], q["id"]
++
++
++def test_arm_resolution_matches_bqwen_hypothesis_a() -> None:
++    arm_a = resolve_arm("PRO")
++    arm_b = resolve_arm("STANDARD")
++    assert arm_a["model_key"] == "dashscope_reason"
++    assert arm_a["model_name"] == "qwen3.7-plus"
++    assert arm_a["cost_per_1k_usd"] == pytest.approx(0.0012)
++    # PRO 层不注入思考参数（provider 默认思考开）——现役判卷档 wire 行为
++    assert arm_a["thinking_wire"] == "not-injected(provider-default-thinking-on)"
++    assert arm_b["model_key"] == "dashscope_standard_thinking"
++    assert arm_b["model_name"] == "qwen3.8-flash"
++    assert arm_b["cost_per_1k_usd"] == pytest.approx(0.00025)
++    # 档 B wire 注入 enable_thinking=false：与 LLM_TIER_PRO=dashscope_standard_thinking
++    # 切换后的生产行为一致（wire 键于 config.tier=standard）
++    assert arm_b["extra_body"] == {"enable_thinking": False}
++    # B-QWEN §4 预期：$0.00025/$0.0012 ≈ 0.2083（-79%）
++    ratio = arm_b["cost_per_1k_usd"] / arm_a["cost_per_1k_usd"]
++    assert ratio == pytest.approx(0.2083, abs=1e-3)
++
++
++def test_prompt_assembly_identical_across_arms(pack: dict) -> None:
++    """两臂逐字节同提示词——A/B 单变量=模型档位（评测有效性前提）。"""
++    for q in pack["questions"]:
++        messages = build_messages(q)
++        assert len(messages) == 2
++        assert messages[0]["role"] == "system" and messages[1]["role"] == "user"
++        # 判卷契约输入面：题干/标准答案/学生作答/置信度全进提示词
++        user_payload = json.loads(messages[1]["content"].removeprefix("请判卷：\n"))
++        assert user_payload["题干"] == q["stem"]
++        assert user_payload["标准答案"] == q["standard_answer"]
++        assert user_payload["学生自报置信度"] == q["student_confidence"]
++
++
++def _synthetic_runs(
++    verdicts_a: list[str],
++    verdicts_b: list[str],
++    etypes: list[str],
++    etypes_b: list[str] | None = None,
++) -> dict:
++    questions = [
++        {"id": f"T{i:02d}", "gold": {"verdict": verdicts_a[i], "error_type": etypes[i]}} for i in range(len(verdicts_a))
++    ]
++    # verdict 判定命中=与金标同词；B 臂错误类型可按参数制造分歧（gate ① 的输入）
++    etypes_arm_b = etypes_b if etypes_b is not None else etypes
++
++    def _entries(verdicts: list[str], arm_etypes: list[str]) -> list[dict]:
++        return [
++            {
++                "id": f"T{i:02d}",
++                "latency_ms": 100,
++                "est_prompt_tokens": 10,
++                "est_completion_tokens": 5,
++                "est_cost_usd": 0.001,
++                "parse_ok": True,
++                "judgement": {
++                    "verdict": verdicts[i],
++                    "score": 1.0,
++                    "error_type": arm_etypes[i],
++                    "brief": "",
++                    "enum_valid": True,
++                },
++            }
++            for i in range(len(verdicts))
++        ]
++
++    return questions, {"A": _entries(verdicts_a, etypes), "B": _entries(verdicts_b, etypes_arm_b)}
++
++
++def test_report_gate_pass_when_arms_agree() -> None:
++    verdicts = ["correct", "wrong"] * 5
++    etypes = ["none", "calculation"] * 5
++    questions, runs = _synthetic_runs(verdicts, verdicts, etypes)
++    pack = {"questions": [{**q, "domain": "d", "qtype": "judge", "boundary": None} for q in questions]}
++    report = build_report(pack, runs)
++    assert report["gate"]["evaluated"] is True
++    assert report["gate"]["adoption_signal"] == "pass"
++    assert report["summary"]["delta"]["error_type_match_diff_pp"] == 0
++    assert report["summary"]["delta"]["mutual_verdict_agree_rate"] == 1.0
++    assert report["disagreements"] == []
++
++
++def test_report_gate_rejects_over_threshold_divergence() -> None:
++    verdicts = ["correct", "wrong"] * 5
++    etypes = ["none", "calculation"] * 5
++    # B 臂在 3/10 题上错标错误类型（none→knowledge 等）→ vs 金标命中率差 30pp > 3pp 阈
++    etypes_b = [
++        "knowledge",
++        "calculation",
++        "knowledge",
++        "wrong_placeholder",
++        "knowledge",
++        "none",
++        "calculation",
++        "none",
++        "calculation",
++        "none",
++    ]
++    etypes_b = [e if e != "wrong_placeholder" else "careless" for e in etypes_b]
++    questions, runs = _synthetic_runs(verdicts, verdicts, etypes, etypes_b)
++    pack = {"questions": [{**q, "domain": "d", "qtype": "judge", "boundary": None} for q in questions]}
++    report = build_report(pack, runs)
++    assert report["gate"]["evaluated"] is True
++    assert report["gate"]["gate_1_error_type_pp"]["actual"] > GATE_ERROR_TYPE_PP
++    assert report["gate"]["adoption_signal"] == "reject"
++    assert len(report["disagreements"]) >= 3
++
++
++def test_gate_thresholds_frozen() -> None:
++    assert GATE_ERROR_TYPE_PP == 3.0
++    assert GATE_PARSE_RATE_PP == 2.0
++
++
++def test_cli_dry_run_end_to_end(tmp_path, capsys) -> None:
++    """卡面验收命令的等价面：无 key 全链装配 + 骨架落盘。"""
++    from tests.northstar_eval.grade_ab import main
++
++    rc = main(["--dry-run", "--out-dir", str(tmp_path)])
++    assert rc == 0
++    out_files = list(tmp_path.glob("grade_ab_run_*.json"))
++    assert len(out_files) == 1
++    payload = json.loads(out_files[0].read_text(encoding="utf-8"))
++    assert payload["schema"] == "sparkle.northstar_eval.grade_ab.run.v1"
++    assert payload["meta"]["mode"] == "dry-run"
++    assert payload["meta"]["question_count"] == 100
++    assert payload["meta"]["arms"]["A"]["model_key"] == "dashscope_reason"
++    assert payload["meta"]["arms"]["B"]["model_key"] == "dashscope_standard_thinking"
++    assert len(payload["per_question"]) == 100
++    # 诚实红线：dry-run 证据里 key 只以布尔在场
++    assert payload["meta"]["arms"]["A"]["api_key_present"] is False
++    assert "adoption_signal" in payload["gate"] and payload["gate"]["adoption_signal"] == "not-evaluated"
++    _ = capsys  # 装配打印进 captured 输出，不 assert 文案
