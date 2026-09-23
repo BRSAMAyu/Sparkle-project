@@ -22,6 +22,21 @@ class ChatRepository {
   final Dio _dio;
   final WebSocketChatServiceV2 _wsService;
 
+  /// V13 D-04：建模访谈的内部控制串（进入访谈/跳过访谈的哨兵消息）会以
+  /// 普通用户消息身份落库（引擎不区分控制消息），重启拉历史时经 markdown
+  /// 斜体渲染成 `_onboarding_skip_` 用户气泡泄漏给用户。
+  /// 历史解析单点过滤——首次加载（loadConversationHistory）与分页
+  /// （loadMoreHistory）都经由 [getConversationHistory]，一处过滤两路生效。
+  static const Set<String> _onboardingControlMessages = {
+    '_onboarding_start_',
+    '_onboarding_skip_',
+  };
+
+  /// 该内容是否为不应向用户展示的引导期内部控制串。
+  static bool isOnboardingControlMessage(String content) =>
+      _onboardingControlMessages.contains(content.trim());
+
+
   List<Map<String, dynamic>> _historyWidgetsFromActions(dynamic rawActions) {
     if (rawActions is! List) {
       return const [];
@@ -231,7 +246,13 @@ class ChatRepository {
         if (historyWidgets.isNotEmpty && (existingWidgets?.isEmpty ?? true)) {
           normalizedItem['widgets'] = historyWidgets;
         }
-        messages.add(ChatMessageModel.fromJson(normalizedItem));
+        final message = ChatMessageModel.fromJson(normalizedItem);
+        // V13 D-04：控制串用户气泡在渲染前剔除（见类注释）。
+        if (message.role == MessageRole.user &&
+            isOnboardingControlMessage(message.content)) {
+          continue;
+        }
+        messages.add(message);
       } catch (error, stackTrace) {
         debugPrint(
           'ChatRepository.getConversationHistory: failed to parse history item '

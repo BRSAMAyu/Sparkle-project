@@ -523,7 +523,10 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
-      expect(find.text('我先把瓶颈整理出来…'), findsOneWidget);
+      // V13-RETEST：访谈面已统一走 SparkleMarkdown 管道，消息以 RichText
+      // 呈现——用 findRichText 断言同一语义（内容在场）。
+      expect(find.textContaining('我先把瓶颈整理出来…', findRichText: true),
+          findsOneWidget);
 
       // 75s 中段无任何帧 → 必须从「无反馈」升级为可见错误 + 重试。
       await tester.pump(const Duration(seconds: 77));
@@ -539,6 +542,48 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
 
       expect(repository.sentRequests.last.message, '我卡在图论了');
+    });
+
+    testWidgets(
+        'V13-RETEST: 访谈流式草稿与终态共用历史渲染管道（markdown 不裸奔、实体解码）',
+        (tester) async {
+      final onboardingController = StreamController<ChatStreamEvent>();
+      controllers.add(onboardingController);
+      repository.enqueueController(onboardingController);
+
+      await _pumpModelingScreen(
+          tester, repository: repository, sharedPrefs: sharedPrefs);
+
+      // 复测截图 08/12 的泄漏形态：粗体原文 + HTML 实体箭头/比较符。
+      const leakedChunk =
+          '**真实观察**：\n路径 A-&gt;B-&gt;C，阈值 x &lt; 10。';
+      onboardingController.add(TextEvent(content: leakedChunk));
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // 流式草稿态（isStreaming=true，尚未 Done）：内容已被管道解析。
+      expect(find.textContaining('真实观察', findRichText: true), findsOneWidget);
+      expect(find.textContaining('**'), findsNothing);
+      expect(find.textContaining('&lt;'), findsNothing);
+      expect(find.textContaining('&gt;'), findsNothing);
+      expect(
+        find.textContaining('A->B->C', findRichText: true),
+        findsOneWidget,
+      );
+      expect(find.textContaining('x < 10', findRichText: true), findsOneWidget);
+
+      // 回合收束后终态同样保持解析形态（与重启后历史面一致）。
+      onboardingController.add(DoneEvent(finishReason: 'STOP'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(find.textContaining('**'), findsNothing);
+      expect(find.textContaining('&lt;'), findsNothing);
+      expect(
+        find.textContaining('A->B->C', findRichText: true),
+        findsOneWidget,
+      );
     });
   });
 }

@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/navigation/route_resilience.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
@@ -194,22 +195,32 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    message.text,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(
-                                          // A-3: brand-on-brand was unreadable
-                                          // (brown text on the brown primary
-                                          // bubble). Use the contrast-safe
-                                          // on-primary token like the main
-                                          // chat bubbles do.
-                                          color: isUser
-                                              ? DS.textOnPrimary
-                                              : DS.textPrimary,
-                                          height: 1.45,
-                                        ),
+                                  // V13-RETEST Minor（D-03 完整形态）：访谈面
+                                  // 曾用裸 Text 渲染消息——markdown 原文裸奔
+                                  // （`**真实观察**`）且 HTML 实体不解码（
+                                  // `&lt;`/`-&gt;` 原文显示），与重启后历史面的
+                                  // SparkleMarkdown 管道行为不一致。统一走同一
+                                  // 管道：实体泄漏源头=未解析（链路无二次转义，
+                                  // markdown 包 DecodeHtmlSyntax 按 CommonMark
+                                  // 解码）；流式草稿开 isStreaming 补全未闭合
+                                  // 语法，与主聊 _StreamingBubble 对齐。
+                                  SparkleMarkdown(
+                                    content: message.text,
+                                    isStreaming: message.isStreaming,
+                                    textColor: isUser
+                                        ? DS.textOnPrimary
+                                        : DS.textPrimary,
+                                    codeBackgroundColor: isUser
+                                        ? DS.textOnPrimary.withValues(
+                                            alpha: 0.12,
+                                          )
+                                        : DS.surfaceTertiary,
+                                    linkColor: isUser
+                                        ? DS.textOnPrimary
+                                        : DS.brandPrimary,
+                                    fontSize: 14,
+                                    contentRole:
+                                        SparkleMarkdownRole.chatBubble,
                                   ),
                                   if (!isUser && message.isStreaming)
                                     Padding(

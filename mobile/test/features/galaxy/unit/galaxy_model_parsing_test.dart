@@ -87,4 +87,50 @@ void main() {
     expect(node.id, 'node-42');
     expect(node.name, isEmpty);
   });
+
+  group('sanitizeGalaxyNodeLabel（V13-RETEST 星图节点标签 raw ID 泄漏）', () {
+    test('V13 实测的三类泄漏形态被清洗', () {
+      // 复测 21 相邻帧：前缀含短 hash 的复合名 → 取冒号后的人类标题。
+      expect(
+        sanitizeGalaxyNodeLabel('验证专题2-83ffe1: 真题演练'),
+        '真题演练',
+      );
+      // 复测：「专题6-2-462e51: …」→ 标题（保留章节号「专题6-2」结构）。
+      expect(
+        sanitizeGalaxyNodeLabel('专题6-2-462e51: 错因回看'),
+        '错因回看',
+      );
+      // 无冒号的尾缀 ID 片段 → 剥离片段本身。
+      expect(sanitizeGalaxyNodeLabel('专题6-2-462e51'), '专题6-2');
+      // 复测：近乎全 ID 的名字清洗后无字母/汉字 → 诚实回退原名。
+      expect(
+        sanitizeGalaxyNodeLabel('d91d5df0-9-dd0bad'),
+        'd91d5df0-9-dd0bad',
+      );
+    });
+
+    test('正常业务名零改动（防误伤回归钉）', () {
+      expect(sanitizeGalaxyNodeLabel('离散数学'), '离散数学');
+      // 章节号短数字不是 hex 片段。
+      expect(sanitizeGalaxyNodeLabel('专题6-2'), '专题6-2');
+      // 全字母英文词（hex 字符组成但无数字）不是 ID。
+      expect(sanitizeGalaxyNodeLabel('decade'), 'decade');
+      expect(sanitizeGalaxyNodeLabel('facade 原则'), 'facade 原则');
+      // 「12」太短，不构成 ID 片段，整名保留。
+      expect(sanitizeGalaxyNodeLabel('Chapter 12: Graph Theory'),
+          'Chapter 12: Graph Theory');
+      expect(sanitizeGalaxyNodeLabel('  带空白的标题  '), '带空白的标题');
+      expect(sanitizeGalaxyNodeLabel(''), '');
+    });
+
+    test('GalaxyNodeModel.fromJson 在解析单点应用清洗', () {
+      final node = GalaxyNodeModel.fromJson({
+        'id': 'node-leak',
+        'name': '验证专题2-83ffe1: 真题演练',
+        'importance_level': 3,
+        'sector_code': 'LIFE',
+      });
+      expect(node.name, '真题演练');
+    });
+  });
 }

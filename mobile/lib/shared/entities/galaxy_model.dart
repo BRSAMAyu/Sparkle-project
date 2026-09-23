@@ -3,6 +3,127 @@ import 'package:sparkle/shared/models/compact_knowledge_node.dart';
 
 part 'galaxy_model.g.dart';
 
+// ---------------------------------------------------------------------------
+// V13-RETEST（原测 D-10/11/12 批）：星图节点标签 raw ID 泄漏。
+//
+// 运行期数据（内置兜底包/旅程驱动器/去重命名流）会产生形如
+// 「验证专题2-83ffe1: 真题演练」「专题6-2-462e51」的节点名——内部 ID 片段
+// （UUID 截断/短 hash）直接渲染在星图上。此处在**展示名解析单点**清洗：
+// GalaxyNodeModel.fromJson 是全部图数据的唯一入口，画笔、节点详情、
+// work-view chip、搜索、无障碍标签均消费清洗后的 name。
+// ---------------------------------------------------------------------------
+
+/// hex 片段：长度 6+ 的连续十六进制字符（UUID 截断/短 hash 的形态）。
+final RegExp _galaxyHexRun = RegExp('[0-9a-fA-F]{6,}');
+
+bool _isHexChar(int codeUnit) =>
+    (codeUnit >= 0x30 && codeUnit <= 0x39) || // 0-9
+    (codeUnit >= 0x41 && codeUnit <= 0x46) || // A-F
+    (codeUnit >= 0x61 && codeUnit <= 0x66); // a-f
+
+bool _isAsciiAlphanumeric(int codeUnit) =>
+    (codeUnit >= 0x30 && codeUnit <= 0x39) || // 0-9
+    (codeUnit >= 0x41 && codeUnit <= 0x5A) || // A-Z
+    (codeUnit >= 0x61 && codeUnit <= 0x7A); // a-z
+
+bool _isLabelConnector(int codeUnit) =>
+    codeUnit == 0x2D || codeUnit == 0x5F || codeUnit == 0x20; // - _ 空格
+
+/// 一个独立 hex token 是否「像 ID 片段」：长度 6-36、且同时含数字与字母
+/// （排除「专题6-2」的章节号、'decade'/'facade' 类全字母英文词）。
+bool _looksLikeIdFragment(String token) {
+  if (token.length < 6 || token.length > 36) {
+    return false;
+  }
+  var hasDigit = false;
+  var hasLetter = false;
+  for (final codeUnit in token.codeUnits) {
+    if (!_isHexChar(codeUnit)) {
+      return false;
+    }
+    if (codeUnit <= 0x39) {
+      hasDigit = true;
+    } else {
+      hasLetter = true;
+    }
+  }
+  return hasDigit && hasLetter;
+}
+
+bool _hasIdFragment(String text) {
+  for (final match in _galaxyHexRun.allMatches(text)) {
+    final start = match.start;
+    final end = match.end;
+    final isolated = (start == 0 ||
+            !_isAsciiAlphanumeric(text.codeUnitAt(start - 1))) &&
+        (end == text.length || !_isAsciiAlphanumeric(text.codeUnitAt(end)));
+    if (isolated && _looksLikeIdFragment(match[0]!)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+String _stripIdFragments(String input) {
+  if (!_galaxyHexRun.hasMatch(input)) {
+    return input;
+  }
+  final out = StringBuffer();
+  var consumed = 0;
+  for (final match in _galaxyHexRun.allMatches(input)) {
+    final token = match[0]!;
+    final start = match.start;
+    final end = match.end;
+    // 只处理独立 token：两侧不得紧贴字母数字（否则是普通单词的一部分）。
+    final attachedToLeft =
+        start > 0 && _isAsciiAlphanumeric(input.codeUnitAt(start - 1));
+    final attachedToRight =
+        end < input.length && _isAsciiAlphanumeric(input.codeUnitAt(end));
+    if (attachedToLeft || attachedToRight || !_looksLikeIdFragment(token)) {
+      continue;
+    }
+    // 丢掉片段及其紧邻的前导连接符（避免残留「-/ _」尾巴）。
+    var pieceStart = start;
+    while (pieceStart > consumed &&
+        _isLabelConnector(input.codeUnitAt(pieceStart - 1))) {
+      pieceStart--;
+    }
+    out.write(input.substring(consumed, pieceStart));
+    consumed = end;
+  }
+  out.write(input.substring(consumed));
+  return out.toString().trim();
+}
+
+/// 清洗星图节点展示名：剥掉内嵌的 ID 片段；若清洗结果不含任何字母/汉字
+/// （说明原名基本就是 ID），诚实回退原名——宁可用原始名也不错标。
+String sanitizeGalaxyNodeLabel(String raw) {
+  final trimmed = raw.trim();
+  if (trimmed.isEmpty || !_galaxyHexRun.hasMatch(trimmed)) {
+    return trimmed;
+  }
+
+  // 「前缀-<id>: 标题」复合名：前缀含 ID 片段时优先取冒号后的人类标题。
+  //   「验证专题2-83ffe1: 真题演练」→「真题演练」
+  final colonMatch = RegExp(r'^(.+?)\s*[:：]\s*(\S.*)$').firstMatch(trimmed);
+  if (colonMatch != null) {
+    final prefix = colonMatch.group(1)!;
+    if (_galaxyHexRun.hasMatch(prefix) && _hasIdFragment(prefix)) {
+      final title = _stripIdFragments(colonMatch.group(2)!);
+      return title.isEmpty ? trimmed : title;
+    }
+  }
+
+  final stripped = _stripIdFragments(trimmed);
+  if (stripped.isEmpty ||
+      !RegExp(
+        r'[A-Za-z\u00C0-\u02AF\u0370-\u1FFF\u3040-\uD7FF\uF900-\uFA6F]',
+      ).hasMatch(stripped)) {
+    return trimmed;
+  }
+  return stripped;
+}
+
 enum SectorEnum {
   @JsonValue('COSMOS')
   cosmos,
@@ -201,7 +322,10 @@ class GalaxyNodeModel {
       id: (json['id'] ?? json['node_id'])?.toString() ?? '', // P1-13 fix: null-safety for id field
       parentId: json['parent_id']?.toString(),
       // F7-10: name 与 id 同样防御，避免缓存/旧版本响应缺字段时抛 TypeError
-      name: (json['name'] ?? json['label'])?.toString() ?? '',
+      // V13-RETEST: 展示名清洗（星图节点标签 raw ID 泄漏，见文件头注释）。
+      name: sanitizeGalaxyNodeLabel(
+        (json['name'] ?? json['label'])?.toString() ?? '',
+      ),
       importance:
           ((json['importance'] ?? json['importance_level']) as num?)?.toInt() ??
               1,

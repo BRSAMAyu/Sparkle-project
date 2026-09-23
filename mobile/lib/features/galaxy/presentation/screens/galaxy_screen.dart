@@ -3330,16 +3330,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                                               ),
                                       ),
                                     ),
-                                    if (overviewStats != null &&
-                                        _camera.scale < 0.32)
-                                      Positioned(
-                                        top: 14,
-                                        right: 16,
-                                        child: _GalaxyOverviewStats(
-                                          stats: overviewStats,
-                                          isDarkMode: isDarkMode,
-                                        ),
-                                      ),
                                     Positioned(
                                       top: 112,
                                       right: 16,
@@ -3362,13 +3352,29 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                                       ),
                                     ),
                                     Positioned(
-                                      top: 56,
+                                      top: 48,
                                       left: 16,
                                       right: 16,
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.stretch,
                                         children: [
+                                          // V13 D-10：总览统计从固定 top:14
+                                          // 改挂为本列流式首行（右对齐）——
+                                          // 与引导卡/掌握卡/种子审核卡共用
+                                          // 一条纵向流，任何字号下互不遮压。
+                                          if (overviewStats != null &&
+                                              _camera.scale < 0.32) ...[
+                                            Align(
+                                              alignment:
+                                                  Alignment.centerRight,
+                                              child: _GalaxyOverviewStats(
+                                                stats: overviewStats,
+                                                isDarkMode: isDarkMode,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 12),
+                                          ],
                                           contributionStats.when(
                                             data: (stats) =>
                                                 GalaxyContributionBanner(
@@ -3590,8 +3596,11 @@ class _GalaxyDraftPromptCard extends StatelessWidget {
     final theme = Theme.of(context);
     return Material(
       color: Colors.transparent,
+      // V13 D-12：整卡 InkWell 曾挂 onTap: onReview——卡片非按钮区域的任何
+      // 触点（含「稍后再看」按钮周边 padding）都会被整卡热区吞掉、误入审核
+      // 流；置空后动作收敛为「现在审核 / 稍后再看 / 关闭」三个显式按钮。
       child: InkWell(
-        onTap: onReview,
+        onTap: null,
         borderRadius: BorderRadius.circular(24),
         child: Ink(
           decoration: BoxDecoration(

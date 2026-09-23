@@ -43,6 +43,25 @@ double galaxyLodFade(double value, double start, double end) {
 double galaxyMasteryRatio(int masteryScore) =>
     (masteryScore / 100).clamp(0.0, 1.0).toDouble();
 
+/// V13 D-11：扇区标签左缘的水平收敛。
+///
+/// 画布右缘为缩放控件栏预留 [sectorLabelRightRail] 宽度；标签矩形整体落在
+/// `[8, canvasWidth - 右栏 - labelWidth]` 内。画布极窄（区间倒挂）时退回
+/// 左缘 8px。纯函数，供 painter 与单测共用。
+const double sectorLabelRightRail = 96;
+
+double clampSectorLabelLeft({
+  required double canvasWidth,
+  required double labelLeft,
+  required double labelWidth,
+}) {
+  final maxLeft = canvasWidth - sectorLabelRightRail - labelWidth;
+  if (maxLeft < 8) {
+    return 8;
+  }
+  return labelLeft.clamp(8, maxLeft);
+}
+
 Color galaxyMasteryNodeColor({
   required int masteryScore,
   required bool isDarkMode,
@@ -768,10 +787,17 @@ class StarMapPainter extends CustomPainter {
         textDirection: TextDirection.ltr,
       )..layout();
 
+      // V13 D-11：扇区标签锚点靠近画布右缘时，「Inspiration」等长标签会
+      // 被右侧缩放控件栏截断成「Inspiratio…」。把标签矩形水平收敛进可视
+      // 区（右侧预留控件栏宽度），wedge 氛围不改、只移动文本。
       textPainter.paint(
         canvas,
         Offset(
-          labelPosition.dx - textPainter.width / 2,
+          clampSectorLabelLeft(
+            canvasWidth: size.width,
+            labelLeft: labelPosition.dx - textPainter.width / 2,
+            labelWidth: textPainter.width,
+          ),
           labelPosition.dy - textPainter.height / 2,
         ),
       );

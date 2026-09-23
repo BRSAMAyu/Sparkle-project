@@ -595,8 +595,12 @@ String _normalize(String raw) {
   s = lines.join('\n');
 
   // Ensure space after list markers
+  // V13-RETEST：负向断言排除 `*`/`_`/`~` —— 行首 `**真实观察**` 这类
+  // 强调开头曾被当作缺空格的列表标记强插空格（`** 真实观察**`），粗体
+  // 随之失效、星号原文泄漏（访谈/历史两面同源）。`-文本`/`*文本` 的
+  // 列表修复语义保持不变。
   s = s.replaceAllMapped(
-    RegExp(r'(^|\n)([-*+])(?=\S)', multiLine: true),
+    RegExp(r'(^|\n)([-*+])(?![\s*_~])'),
     (m) => '${m.group(1)}${m.group(2)} ',
   );
   // Ensure space after ordered list markers

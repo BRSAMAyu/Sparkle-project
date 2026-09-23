@@ -127,40 +127,45 @@ class _ChatRunPhaseIndicatorState extends State<ChatRunPhaseIndicator>
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Flexible(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (var i = 0; i < ChatRunStage.values.length; i++) ...[
-                    if (i > 0)
-                      Padding(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: DS.spacing4),
-                        child: Icon(
-                          Icons.chevron_right_rounded,
-                          size: DS.iconSizeXs,
-                          color: DS.info.withValues(alpha: 0.5),
-                        ),
+            // V13-RETEST Minor（debug overflow 14px）：三段阶段标签是胶囊的
+            // 主内容，按固有宽度参与布局（~200px，远小于最小支持屏宽）；
+            // 收敛压力全部交给下方 Flexible 的时长提示（可省略号截断）。
+            // 此前三段与提示混排（提示 Text 非弹性、不受约束地取固有宽），
+            // 412dp 窄屏上整行超出 14px 触发 OVERFLOWED BY 14 PIXELS。
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < ChatRunStage.values.length; i++) ...[
+                  if (i > 0)
+                    Padding(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: DS.spacing4),
+                      child: Icon(
+                        Icons.chevron_right_rounded,
+                        size: DS.iconSizeXs,
+                        color: DS.info.withValues(alpha: 0.5),
                       ),
-                    _stageSegment(
-                      context,
-                      index: i,
-                      label: stageLabels[ChatRunStage.values[i]]!,
-                      active: ChatRunStage.values[i] == stage,
-                      reduceMotion: reduceMotion,
                     ),
-                  ],
+                  _stageSegment(
+                    context,
+                    index: i,
+                    label: stageLabels[ChatRunStage.values[i]]!,
+                    active: ChatRunStage.values[i] == stage,
+                    reduceMotion: reduceMotion,
+                  ),
                 ],
-              ),
+              ],
             ),
             const SizedBox(width: DS.spacing8),
-            Text(
-              l10n.chatRunPhaseDurationHint,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: DS.textTertiary,
-                fontSize: DS.fontSizeXs,
+            Flexible(
+              child: Text(
+                l10n.chatRunPhaseDurationHint,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: DS.textTertiary,
+                  fontSize: DS.fontSizeXs,
+                ),
               ),
             ),
             const SizedBox(width: DS.spacing4),

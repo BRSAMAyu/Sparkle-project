@@ -178,4 +178,69 @@ void main() {
       semantics.dispose();
     });
   });
+
+  group('V13-RETEST：阶段胶囊行窄屏收敛（debug overflow 14px 修复钉）', () {
+    // 复测环境 Medium_Phone_API_36.1（412dp）：列表左右 padding 16×2 后
+    // 胶囊可用宽 ≈380px，原布局（三段 Flexible + 提示 Text 非弹性）恰超
+    // 14px 触发 OVERFLOWED BY 14 PIXELS 条纹（复测截图 07/09b/11）。
+    Widget narrowHost(WidgetTester tester, double width,
+        {required VoidCallback onCancel}) {
+      return ProviderScope(
+        child: testMaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: width,
+                child: ChatRunPhaseIndicator(
+                  phase: ChatRunPhase.streaming,
+                  aiStatus: null,
+                  onCancel: onCancel,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('380px（V13 实测溢出面）不再产生 overflow 异常', (tester) async {
+      var cancelled = false;
+      await tester.pumpWidget(
+        narrowHost(tester, 380, onCancel: () => cancelled = true),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      // 溢出在 debug 测试环境以 FlutterError 形式浮出；无异常即收敛。
+      expect(tester.takeException(), isNull);
+      // 三段与取消钮仍然完整在场（收敛不牺牲功能）。
+      expect(find.text('检索资料'), findsOneWidget);
+      expect(find.text('思考中'), findsOneWidget);
+      expect(find.text('生成回答'), findsOneWidget);
+      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.pump();
+      expect(cancelled, isTrue);
+    });
+
+    testWidgets('320px（最小支持宽）仍收敛且时长提示可截断', (tester) async {
+      await tester.pumpWidget(narrowHost(tester, 320, onCancel: () {}));
+      await tester.pump();
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      // 时长提示挂 Flexible：被截断时以省略号收敛，Text 本体（全串）在场。
+      expect(find.text('通常几秒到十几秒'), findsOneWidget);
+    });
+
+    testWidgets('宽屏（600px）时长提示完整不截断', (tester) async {
+      await tester.pumpWidget(narrowHost(tester, 600, onCancel: () {}));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      final hintRect = tester.getRect(find.text('通常几秒到十几秒'));
+      // 宽屏下提示应有完整固有宽度（8 个全角字符 @fontSizeXs 远大于省略态）。
+      expect(hintRect.width, greaterThan(70));
+    });
+  });
 }
