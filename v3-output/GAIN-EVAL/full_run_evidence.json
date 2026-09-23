@@ -1,0 +1,2249 @@
+{
+  "schema": "sparkle.northstar_eval.gain_ab.run.v1",
+  "meta": {
+    "run_id": "GAIN-EVAL-20260923-022127",
+    "created_at": "2026-09-23T02:21:27.486675+00:00",
+    "mode": "live",
+    "pack_path": "/Users/brsama/code/GitHub/Sparkle-project/backend/tests/northstar_eval/gain_scenarios.json",
+    "pack_sha256": "af93d8103b210b8f51adfe94b2f8dfa35f57e253538e30b73584fa30de31c7df",
+    "scenario_count": 20,
+    "composition": {
+      "scenario_count": 20,
+      "categories": {
+        "memory": 8,
+        "profile": 6,
+        "baseline": 6
+      },
+      "judge_kinds": {
+        "deterministic": 19,
+        "llm": 1
+      }
+    },
+    "prompt_arms": {
+      "A": "FULL 生产默认装配（USE_CONTEXT_PACK=True + 记忆预算原样 + 画像附加）",
+      "B-MEM": "记忆消融（评测杠杆：MemoryService 召回源置空——无产品开关，申报项）",
+      "C-PROF": "画像消融（评测杠杆：get_profile_context 抛错→生产 fail-soft 不附加——无产品开关，申报项）",
+      "E-NOPACK": "全个性化消融参照（真实总开关 USE_CONTEXT_PACK=False legacy 路径 + 画像消融）"
+    },
+    "probe_arms": {
+      "D-VEC": "探针：ENABLE_DOCUMENT_CONTEXT_INJECTION=False（真实开关）→ pack document_context_controls 传播验证",
+      "G-GALAXY": "探针：AURORA_STAGE39_GALAXY_INJECT_MODE=off（真实开关）→ stage39 kill-switch 读回验证"
+    },
+    "ablation_entry_disclosure": {
+      "B-MEM": "无产品开关——评测杠杆（MemoryService 三个召回源读方法置空）；ENABLE_CONTEXT_SOURCE_* 只控 manifest 计量不控注入",
+      "C-PROF": "无产品开关——评测杠杆（get_profile_context 抛错→生产 fail-soft 分支）",
+      "E-NOPACK": "真实总开关 USE_CONTEXT_PACK=False（进程内 settings 置换，生产零改动）",
+      "D-VEC": "真实开关 ENABLE_DOCUMENT_CONTEXT_INJECTION=False（进程内 settings 置换，生产零改动）",
+      "G-GALAXY": "真实开关 AURORA_STAGE39_GALAXY_INJECT_MODE=off（进程内 settings 置换，生产零改动）"
+    },
+    "chat_model": {
+      "model_key": "dashscope_standard_thinking",
+      "model_name": "qwen3.8-flash",
+      "cost_per_1k_usd": 0.00025,
+      "api_key_present": true
+    },
+    "chat_temperature": 0.3,
+    "routing_entry": "llm_router.select_model(force_tier=PRO)，env 未切换；provider 直调零 fallback",
+    "judge_protocol": "确定性规则优先（expect_groups+forbidden）；llm kind 照 profile_eval_llm_judge 先例（STANDARD 档严格 JSON）",
+    "gates": {
+      "gain_positive": 0.15,
+      "baseline_drift": 0.15
+    },
+    "credentials": "api_key 仅以布尔在场记录，绝不落盘"
+  },
+  "switch_probes": {
+    "D-VEC": {
+      "switch": "ENABLE_DOCUMENT_CONTEXT_INJECTION",
+      "default": {
+        "mode": "live",
+        "enabled": true
+      },
+      "off": {
+        "mode": "off",
+        "enabled": false
+      },
+      "pass": true
+    },
+    "G-GALAXY": {
+      "switch": "AURORA_STAGE39_GALAXY_INJECT_MODE",
+      "default": "live",
+      "off": "off",
+      "pass": true
+    }
+  },
+  "differentiator_failures": [],
+  "capabilities": [
+    {
+      "capability": "memory（跨会话记忆/偏好/目标注入）",
+      "ablated_arm": "B-MEM",
+      "dependent_mean_a": 1.0,
+      "dependent_mean_ablated": 0.3125,
+      "gain_a_minus_ablated": 0.6875,
+      "positive_threshold": 0.15,
+      "verdict": "positive（gain=0.6875 ≥ +0.15）",
+      "baseline_mean_a": 1.0,
+      "baseline_mean_ablated": 1.0
+    },
+    {
+      "capability": "profile（用户画像 knowledge_summary 注入）",
+      "ablated_arm": "C-PROF",
+      "dependent_mean_a": 1.0,
+      "dependent_mean_ablated": 0.5,
+      "gain_a_minus_ablated": 0.5,
+      "positive_threshold": 0.15,
+      "verdict": "positive（gain=0.5 ≥ +0.15）",
+      "baseline_mean_a": 1.0,
+      "baseline_mean_ablated": 1.0
+    },
+    {
+      "capability": "context-pack 全个性化面（总开关）",
+      "ablated_arm": "E-NOPACK",
+      "dependent_mean_a": 1.0,
+      "dependent_mean_ablated": 0.3452,
+      "gain_a_minus_ablated": 0.6548,
+      "positive_threshold": 0.15,
+      "verdict": "positive（gain=0.6548 ≥ +0.15）",
+      "baseline_mean_a": 1.0,
+      "baseline_mean_ablated": 1.0
+    }
+  ],
+  "red_flags": [
+    {
+      "kind": "per_scenario_regression",
+      "capability": "memory（跨会话记忆/偏好/目标注入）",
+      "detail": "mem-01-exam-date: A=1.0 vs B-MEM=0.0（消融后显著退化，符合正增益方向的单场景证据）"
+    },
+    {
+      "kind": "per_scenario_regression",
+      "capability": "context-pack 全个性化面（总开关）",
+      "detail": "mem-01-exam-date: A=1.0 vs E-NOPACK=0.0（消融后显著退化，符合正增益方向的单场景证据）"
+    },
+    {
+      "kind": "per_scenario_regression",
+      "capability": "memory（跨会话记忆/偏好/目标注入）",
+      "detail": "mem-02-hard-topic: A=1.0 vs B-MEM=0.0（消融后显著退化，符合正增益方向的单场景证据）"
+    },
+    {
+      "kind": "per_scenario_regression",
+      "capability": "context-pack 全个性化面（总开关）",
+      "detail": "mem-02-hard-topic: A=1.0 vs E-NOPACK=0.0（消融后显著退化，符合正增益方向的单场景证据）"
+    },
+    {
+      "kind": "per_scenario_regression",
+      "capability": "memory（跨会话记忆/偏好/目标注入）",
+      "detail": "mem-03-goal-recall: A=1.0 vs B-MEM=0.5（消融后显著退化，符合正增益方向的单场景证据）"
+    },
+    {
+      "kind": "per_scenario_regression",
+      "capability": "context-pack 全个性化面（总开关）",
+      "detail": "mem-03-goal-recall: A=1.0 vs E-NOPACK=0.5（消融后显著退化，符合正增益方向的单场景证据）"
+    },
+    {
+      "kind": "per_scenario_regression",
+      "capability": "memory（跨会话记忆/偏好/目标注入）",
+      "detail": "mem-05-continuation-opening: A=1.0 vs B-MEM=0.0（消融后显著退化，符合正增益方向的单场景证据）"
+    },
+    {
+      "kind": "per_scenario_regression",
+      "capability": "context-pack 全个性化面（总开关）",
+      "detail": "mem-05-continuation-opening: A=1.0 vs E-NOPACK=0.0（消融后显著退化，符合正增益方向的单场景证据）"
+    },
+    {
+      "kind": "per_scenario_regression",
+      "capability": "memory（跨会话记忆/偏好/目标注入）",
+      "detail": "mem-06-exam-scope: A=1.0 vs B-MEM=0.0（消融后显著退化，符合正增益方向的单场景证据）"
+    },
+    {
+      "kind": "per_scenario_regression",
+      "capability": "context-pack 全个性化面（总开关）",
+      "detail": "mem-06-exam-scope: A=1.0 vs E-NOPACK=0.0（消融后显著退化，符合正增益方向的单场景证据）"
+    },
+    {
+      "kind": "per_scenario_regression",
+      "capability": "memory（跨会话记忆/偏好/目标注入）",
+      "detail": "mem-08-evening-rhythm: A=1.0 vs B-MEM=0.0（消融后显著退化，符合正增益方向的单场景证据）"
+    },
+    {
+      "kind": "per_scenario_regression",
+      "capability": "context-pack 全个性化面（总开关）",
+      "detail": "mem-08-evening-rhythm: A=1.0 vs E-NOPACK=0.0（消融后显著退化，符合正增益方向的单场景证据）"
+    },
+    {
+      "kind": "per_scenario_regression",
+      "capability": "profile（用户画像 knowledge_summary 注入）",
+      "detail": "prof-02-weak-first-drill: A=1.0 vs C-PROF=0.0（消融后显著退化，符合正增益方向的单场景证据）"
+    },
+    {
+      "kind": "per_scenario_regression",
+      "capability": "context-pack 全个性化面（总开关）",
+      "detail": "prof-02-weak-first-drill: A=1.0 vs E-NOPACK=0.0（消融后显著退化，符合正增益方向的单场景证据）"
+    },
+    {
+      "kind": "per_scenario_regression",
+      "capability": "profile（用户画像 knowledge_summary 注入）",
+      "detail": "prof-03-order-plan: A=1.0 vs C-PROF=0.0（消融后显著退化，符合正增益方向的单场景证据）"
+    },
+    {
+      "kind": "per_scenario_regression",
+      "capability": "context-pack 全个性化面（总开关）",
+      "detail": "prof-03-order-plan: A=1.0 vs E-NOPACK=0.0（消融后显著退化，符合正增益方向的单场景证据）"
+    },
+    {
+      "kind": "per_scenario_regression",
+      "capability": "profile（用户画像 knowledge_summary 注入）",
+      "detail": "prof-04-mastery-diagnosis: A=1.0 vs C-PROF=0.0（消融后显著退化，符合正增益方向的单场景证据）"
+    },
+    {
+      "kind": "per_scenario_regression",
+      "capability": "context-pack 全个性化面（总开关）",
+      "detail": "prof-04-mastery-diagnosis: A=1.0 vs E-NOPACK=0.3333（消融后显著退化，符合正增益方向的单场景证据）"
+    },
+    {
+      "kind": "per_scenario_regression",
+      "capability": "context-pack 全个性化面（总开关）",
+      "detail": "prof-06-final-three-days: A=1.0 vs E-NOPACK=0.0（消融后显著退化，符合正增益方向的单场景证据）"
+    }
+  ],
+  "per_scenario": [
+    {
+      "id": "mem-01-exam-date",
+      "category": "memory",
+      "seeded_faces": {
+        "episodic": 1,
+        "preferences": 0,
+        "goals": 0,
+        "knowledge_nodes": 0
+      },
+      "differentiator_failures": [],
+      "baseline_profile_structure_diff_chars": null,
+      "arms": {
+        "A": {
+          "prompt_sha256": "e12cfbc60df1b2202886d0f1e7f7b4fc17bed9c8ada09f2b1decb95fe8608f16",
+          "prompt_chars": 4671,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 118
+          },
+          "assembly_ms": 396,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "下周四的离散数学期末考试确实是个关键节点，重点在数理逻辑和图论。既然这周任务密度不高，我们正好可以把复习节奏铺得从容一些，避免考前突击带来的慌乱。\n\n为了帮你生成一份贴合当前进度的计划，我需要先确认一下你手头已有的学习状态。\n\n- **当前进度**：这两块内容你是已经过完一轮了，还是刚开始系统复习？\n- **薄弱点**：有没有哪类题型或概念是你觉得特别没底的？\n\n你可以简单说说现状，或者我直接基于“从零开始梳理”的假设，为你生成一个包含基础回顾、专项突破和模拟演练的通用框架，你看哪种方式更顺手？",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "B-MEM": {
+          "prompt_sha256": "c55212bc264965b3324b3cb271444c52374c4215c613e15d73e5bca1fee08bda",
+          "prompt_chars": 3863,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 288,
+          "assembly_error": null,
+          "score": 0.0,
+          "answer_head": "我注意到你提到下周有考试，但当前画像里还没有记录具体的考试科目和日期。为了帮你安排得靠谱一点，我先确认两件事：\n\n- **考试科目**：是哪一科或哪几科？\n- **考试日期**：具体是周几？\n\n另外，你之前提到“累计错题 0”，这通常意味着最近没有新产生的错题记录——如果这是事实，那复习重点可能不在纠错，而在知识梳理和模拟练习；如果你其实有错题但没同步进来，也可以告诉我大概情况。\n\n等你补充这两点，我就直接给你一份可执行、不超载的本周复习节奏。",
+          "judge": {
+            "kind": "deterministic",
+            "score": 0.0,
+            "groups_hit": 0,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "C-PROF": {
+          "prompt_sha256": "e38565e6e35ce989978f0116b40e885218498226a5fb471234b31f145f763756",
+          "prompt_chars": 4349,
+          "profile_attached": false,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 118
+          },
+          "assembly_ms": 94,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "下周四的离散数学期末考试，重点在数理逻辑和图论。既然这周任务密度不高，我们可以把复习拆得细一点，避免考前突击带来的慌乱。\n\n建议这样安排：\n\n- **周一到周二**：主攻数理逻辑。把命题逻辑、谓词逻辑的等价式推导和推理规则过一遍，找几道典型证明题手写练手，确保步骤规范。\n- **周三到周四**：转向图论。重点梳理图的连通性、欧拉图/哈密顿图的判定条件，以及树的基本性质。这部分概念多，适合用思维导图串联。\n- **周五**：混合练习。挑一套往年真题或综合习题，限时模拟，专门查漏补缺。\n- **周末**：轻量回顾。只看错题和模糊的概念点，不引入新知识，保持手感即可。\n\n这个节奏你觉得合适吗？如果某部分特别薄弱，我们可以调整时间分配。",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "E-NOPACK": {
+          "prompt_sha256": "bf760fda1e416984d13ad70865d4adb3ab5d3608ae6cedad8598a639e50a094f",
+          "prompt_chars": 3854,
+          "profile_attached": false,
+          "doc_controls_enabled": null,
+          "token_usage": {},
+          "assembly_ms": 20,
+          "assembly_error": null,
+          "score": 0.0,
+          "answer_head": "听到下周有考试，这确实是个需要稍微收紧节奏的信号。不过我注意到你最近几天的专注时间记录是 0 分钟，任务完成数也是 0。\n\n这可能意味着之前的计划不太适合当下的状态，或者只是还没来得及开始。与其直接抛给你一个高强度的复习表，不如我们先做一个“最小启动”的校准。\n\n为了帮你定出这周真正能落地的安排，我需要确认两个关键点：\n\n1. **考试科目与现状**：是哪门课？目前感觉最薄弱或最需要过一遍的部分是什么？\n2. **可用时间块**：除去上课和休息，你每天大概能拿出几个完整的、不被打扰的小时段（比如 45-60 分钟）？\n\n你可以先简单说说这两点，我会基于你的实际情况，生成一个低门槛、可执行的初步方案，而不是那种看起来很美但很难坚持的计划。",
+          "judge": {
+            "kind": "deterministic",
+            "score": 0.0,
+            "groups_hit": 0,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        }
+      }
+    },
+    {
+      "id": "mem-02-hard-topic",
+      "category": "memory",
+      "seeded_faces": {
+        "episodic": 1,
+        "preferences": 0,
+        "goals": 0,
+        "knowledge_nodes": 0
+      },
+      "differentiator_failures": [],
+      "baseline_profile_structure_diff_chars": null,
+      "arms": {
+        "A": {
+          "prompt_sha256": "63865c4f41dc6a72fb203f84d9328e19adf90012b56fc4135266159e05670631",
+          "prompt_chars": 4663,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 103
+          },
+          "assembly_ms": 650,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "昨天你提到图论里的欧拉路径一直学不懂，之前练习错了三道题。\n\n要不要我们从欧拉路径的判定条件开始，把那个卡点重新捋一遍？",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "B-MEM": {
+          "prompt_sha256": "11e98ee6d5d30eba1c74875660cbaa30cc254e7b1ba3db06105385fb65e8bde6",
+          "prompt_chars": 3905,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 240,
+          "assembly_error": null,
+          "score": 0.0,
+          "answer_head": "图论这块，你之前卡在“最短路径算法的适用场景辨析”上——特别是 Dijkstra 和 Bellman-Ford 在负权边处理上的边界条件容易混。\n\n这不是记不住公式的问题，而是两个算法背后的“贪心 vs 动态规划”思维切换没完全打通。Dijkstra 依赖“当前已确定节点的最短距离不会再被更新”，这个前提在有负权边时直接失效；Bellman-Ford 则靠反复松弛来兜底，代价是时间复杂度更高。\n\n如果你愿意，我们可以用一个具体的小图（比如带一条负权边的三节点图）走一遍两种算法的执行过程，看看它们在哪一步分叉。这样比背结论更容易内化。",
+          "judge": {
+            "kind": "deterministic",
+            "score": 0.0,
+            "groups_hit": 0,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "C-PROF": {
+          "prompt_sha256": "6749db02022328007b7298c439b0c8657dcc50526186022638752269a2f6ccac",
+          "prompt_chars": 4341,
+          "profile_attached": false,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 103
+          },
+          "assembly_ms": 100,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "欧拉路径。\n\n昨天你提到这块一直学不懂，练习时错了三道题。既然想补一补，我们是从定义和判定条件重新梳理，还是直接拿那几道错题来分析卡点？",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "E-NOPACK": {
+          "prompt_sha256": "bf760fda1e416984d13ad70865d4adb3ab5d3608ae6cedad8598a639e50a094f",
+          "prompt_chars": 3854,
+          "profile_attached": false,
+          "doc_controls_enabled": null,
+          "token_usage": {},
+          "assembly_ms": 9,
+          "assembly_error": null,
+          "score": 0.0,
+          "answer_head": "图论这块，我这边还没看到具体的卡点记录。不过既然你想补一补，我们可以先快速定位一下：\n\n- 你最近是在看**最短路径算法**（比如 Dijkstra、Bellman-Ford）时觉得绕？\n- 还是**图的遍历与搜索**（BFS/DFS 的应用场景）不太清楚什么时候该用哪个？\n- 或者是**网络流 / 匹配问题**这类偏应用的部分让你有点头大？\n\n你随便挑一个方向，或者说说当时做题/看书时具体卡在哪儿了，咱们就从那儿接着往下捋。",
+          "judge": {
+            "kind": "deterministic",
+            "score": 0.0,
+            "groups_hit": 0,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        }
+      }
+    },
+    {
+      "id": "mem-03-goal-recall",
+      "category": "memory",
+      "seeded_faces": {
+        "episodic": 0,
+        "preferences": 0,
+        "goals": 1,
+        "knowledge_nodes": 0
+      },
+      "differentiator_failures": [],
+      "baseline_profile_structure_diff_chars": null,
+      "arms": {
+        "A": {
+          "prompt_sha256": "209f4bb934ab9b7b5adf32cb23c4957dc3c42adf4bf93898ac93469ca445c0b5",
+          "prompt_chars": 3970,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 43,
+            "episodic": 1
+          },
+          "assembly_ms": 670,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "收到，我来帮你看看数理逻辑专项刷题的进度。\n\n- **当前目标**：本周完成 40 题\n- **累计错题**：0（说明目前做对的题还没被系统标记为错题，或者刚开始）\n- **任务密度**：low（节奏比较宽松）\n\n不过，我手头没有实时的“已做题数”具体数字，只知道目标是 40 题。为了给你更准确的反馈，我需要查一下具体的任务状态。\n\n稍等，我去调取最新的计划状态和任务摘要。",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "B-MEM": {
+          "prompt_sha256": "c55212bc264965b3324b3cb271444c52374c4215c613e15d73e5bca1fee08bda",
+          "prompt_chars": 3863,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 331,
+          "assembly_error": null,
+          "score": 0.5,
+          "answer_head": "收到，我来帮你确认一下当前的进度状态。\n\n- **当前观察**：根据系统记录，本周的任务密度被标记为“低”，且累计错题数为 0。这通常意味着要么你还没开始做数理逻辑相关的练习，要么之前的任务尚未同步到最新状态。\n- **可纠正判断**：我推测你可能刚准备开始，或者之前完成的练习没有正确关联到“数理逻辑”这个标签下。如果实际情况是“已经刷了一部分但没记录”，请告诉我大概的数量或章节，我可以帮你补录或调整计划。\n- **下一步建议**：为了给你更准确的反馈，我先调用工具查询一下具体的任务列表和计划状态。",
+          "judge": {
+            "kind": "deterministic",
+            "score": 0.5,
+            "groups_hit": 1,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "C-PROF": {
+          "prompt_sha256": "6428607274dcb94994a902fb8c87e328dc2ef0aa87a3733fc8da80f46a347dcf",
+          "prompt_chars": 3648,
+          "profile_attached": false,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 43,
+            "episodic": 1
+          },
+          "assembly_ms": 139,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "让我先看看你本周数理逻辑刷题的进度。\n\n- **当前目标**：本周完成数理逻辑专项刷题 40 题\n- **时间约束**：本周任务密度 low，今日可用时间段 07:00-22:00\n\n不过我这边没有实时接入你的刷题记录系统，所以没法直接告诉你“已经刷到第几题”。你可以告诉我：\n\n1. 今天或这周已经完成了多少题？\n2. 有没有卡住的知识点或题型？\n\n这样我可以帮你判断节奏是否合理，或者调整一下剩余任务的分配。",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "E-NOPACK": {
+          "prompt_sha256": "bf760fda1e416984d13ad70865d4adb3ab5d3608ae6cedad8598a639e50a094f",
+          "prompt_chars": 3854,
+          "profile_attached": false,
+          "doc_controls_enabled": null,
+          "token_usage": {},
+          "assembly_ms": 15,
+          "assembly_error": null,
+          "score": 0.5,
+          "answer_head": "我这边先帮你把本周数理逻辑的进度拉出来看一眼，稍等。",
+          "judge": {
+            "kind": "deterministic",
+            "score": 0.5,
+            "groups_hit": 1,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        }
+      }
+    },
+    {
+      "id": "mem-04-pref-example-first",
+      "category": "memory",
+      "seeded_faces": {
+        "episodic": 0,
+        "preferences": 1,
+        "goals": 0,
+        "knowledge_nodes": 0
+      },
+      "differentiator_failures": [],
+      "baseline_profile_structure_diff_chars": null,
+      "arms": {
+        "A": {
+          "prompt_sha256": "94e9d950ad3ae7a3232fee04d11a81869b874f8a8905af05f87bc9af6c0dd0c9",
+          "prompt_chars": 4020,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 26,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 707,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "好，那我们先看一个具体的例子，把“偏序”的感觉找出来。\n\n**例题：集合的包含关系**\n\n想象你有三个集合：\n- A = {1}\n- B = {1, 2}\n- C = {3}\n\n我们定义一种关系：“是子集”。也就是说，如果 X 里的所有元素都在 Y 里，我们就说 X ≤ Y（这里用 ≤ 代表“小于等于”这种顺序感）。\n\n来看看这三者之间的关系：\n1. **A 和 B**：因为 {1} 里的元素都在 {1, 2} 里，所以 A ≤ B。这很直观，A “比” B “小”或“早”。\n2. **B 和 C**：{1, 2} 不是 {3} 的子集，{3} 也不是 {1, 2} 的子集。它们之间**没有**大小关系。在普通数字里，5 和 7 总能比出个高低，但在这里，B 和 C 是“不可比较”的。\n3. **A 和 A**：{1} 当然是 {1} 的子集，所以 A ≤ A。自己和自己也是成立的。\n\n在",
+          "judge": {
+            "kind": "llm",
+            "score": 1.0,
+            "rationale": "回答严格遵循用户偏好，先通过集合包含的具体例子直观展示偏序概念，再给出抽象定义及性质，顺序完全正确。",
+            "fallback_used": false,
+            "latency_ms": 2295
+          },
+          "call_error": null
+        },
+        "B-MEM": {
+          "prompt_sha256": "c55212bc264965b3324b3cb271444c52374c4215c613e15d73e5bca1fee08bda",
+          "prompt_chars": 3863,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 308,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "我注意到你希望采用“先例题后定义”的方式，这确实很适合抽象概念。不过，在我当前的记录里，还没有找到你之前具体指定过这个偏好（可能是我们刚开始这段对话，或者之前的设置没同步过来）。\n\n既然你现在明确了这个需求，我就按这个节奏来：先带你摸到一个具体的“感觉”，再给它贴上数学标签。\n\n### 第一步：看一个例子——“整除关系”\n\n想象一下数字集合：**{1, 2, 3, 4, 6, 12}**。\n\n在这个集合里，我们定义一种关系叫 **“a 能整除 b”**（记作 a | b），意思是 b 除以 a 没有余数。\n\n我们来挑几对数字看看它们的关系：\n\n- **1 和 2**：1 能整除 2。✅\n- **2 和 4**：2 能整除 4。✅\n- **3 和 12**：3 能整除 12。✅\n- **2 和 3**：2 不能整除 3，3 也不能整除 2。❌（它们之间没关系）\n- **4 和 6**：4 不",
+          "judge": {
+            "kind": "llm",
+            "score": 1.0,
+            "rationale": "回答严格遵循“先例后定义”结构，通过整除关系直观展示偏序概念，再给出形式化定义，完全体现要点。",
+            "fallback_used": false,
+            "latency_ms": 2287
+          },
+          "call_error": null
+        },
+        "C-PROF": {
+          "prompt_sha256": "d3d214ac47a46293eddcd70cbaafab1408a38e127dabc452f31345afa1aea4e3",
+          "prompt_chars": 3698,
+          "profile_attached": false,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 26,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 163,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "想象一下，你正在整理一个公司的员工汇报关系。\n\n假设公司有四个员工：Alice、Bob、Charlie 和 Dave。\n- Alice 是 Bob 的直属上级。\n- Bob 是 Charlie 的直属上级。\n- Alice 也是 Dave 的直属上级。\n- Charlie 和 Dave 之间没有上下级关系，他们是平级的同事。\n\n在这个场景里，如果我们用符号 `≤` 表示“是……的上级或本人”（即“在层级上不低于”），那么：\n- Alice ≤ Bob 成立（Alice 是 Bob 的上级）。\n- Bob ≤ Charlie 成立（Bob 是 Charlie 的上级）。\n- Alice ≤ Charlie 也成立（因为 Alice 是 Bob 的上级，Bob 又是 Charlie 的上级，所以 Alice 间接也是 Charlie 的上级）。\n- 但是，Charlie ≤ Dave **不成",
+          "judge": {
+            "kind": "llm",
+            "score": 1.0,
+            "rationale": "回答严格遵循用户偏好，先通过员工汇报关系的具体例子引入概念，再给出偏序集的抽象定义。",
+            "fallback_used": false,
+            "latency_ms": 2077
+          },
+          "call_error": null
+        },
+        "E-NOPACK": {
+          "prompt_sha256": "bf760fda1e416984d13ad70865d4adb3ab5d3608ae6cedad8598a639e50a094f",
+          "prompt_chars": 3854,
+          "profile_attached": false,
+          "doc_controls_enabled": null,
+          "token_usage": {},
+          "assembly_ms": 32,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "既然你偏好“先例题后定义”的路径，那我们就从一个具体的、甚至有点反直觉的场景切入，把抽象的数学结构具象化。\n\n### 1. 场景引入：谁比谁“强”？\n\n想象一下，我们在讨论**“整除关系”**。\n\n- **例子 A**：数字 2 和 4。\n  - 2 能整除 4（$4 \\div 2 = 2$），所以我们可以说 **2 “小于等于” 4**。\n  - 这种关系是有方向的：2 $\\le$ 4。\n\n- **例子 B**：数字 3 和 5。\n  - 3 不能整除 5，5 也不能整除 3。\n  - 在这种情况下，它们之间**没有可比性**。我们既不能说 $3 \\le 5$，也不能说 $5 \\le 3$。\n\n- **例子 C**：数字 6 和 6。\n  - 6 能整除 6。\n  - 所以 $6 \\le 6$ 成立。这叫**自反性**。\n\n现在，如果我们把所有正整数放在一起，并且只保留那些满足“能整除”",
+          "judge": {
+            "kind": "llm",
+            "score": 1.0,
+            "rationale": "回答严格遵循“先例后定义”路径，通过整除关系引入偏序集概念，随后给出形式化定义并解析性质，完全体现要点。",
+            "fallback_used": false,
+            "latency_ms": 2533
+          },
+          "call_error": null
+        }
+      }
+    },
+    {
+      "id": "mem-05-continuation-opening",
+      "category": "memory",
+      "seeded_faces": {
+        "episodic": 1,
+        "preferences": 0,
+        "goals": 0,
+        "knowledge_nodes": 0
+      },
+      "differentiator_failures": [],
+      "baseline_profile_structure_diff_chars": null,
+      "arms": {
+        "A": {
+          "prompt_sha256": "aac68af1ca5d6fe294f3609655fcb9f1efe7b5127c60b1019d963aa5f2b5b429",
+          "prompt_chars": 4555,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 96
+          },
+          "assembly_ms": 60482,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "早上好！既然昨天已经顺利啃下了集合论的前两章，今天的节奏可以稍微稳一点。\n\n我建议从**第三章的开头**开始，先花 10-15 分钟快速浏览一下本章的核心概念和结构，不用急着做题或深究细节。这样能帮你建立对这一章的整体印象，避免一上来就陷入局部难点。\n\n你觉得这个起步方式怎么样？或者你更想直接切入某个具体的知识点？",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 1,
+            "groups_total": 1,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "B-MEM": {
+          "prompt_sha256": "c55212bc264965b3324b3cb271444c52374c4215c613e15d73e5bca1fee08bda",
+          "prompt_chars": 3863,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 402,
+          "assembly_error": null,
+          "score": 0.0,
+          "answer_head": "早上好。\n\n目前你的累计错题数为 0，且本周任务密度较低，这意味着你处于一个相对轻松、适合建立节奏或探索新知识的窗口期。不过，系统显示当前的“规划就绪度”较低，可能意味着具体的学习路径还没有完全铺好。\n\n既然没有紧迫的错题压力，我们可以从以下两个方向之一开始，你看哪个更符合你当下的心情：\n\n1. **梳理现状**：如果你不确定接下来该学什么，我可以先帮你查看一下当前的计划状态和最近的任务摘要，看看是否有未完成的里程碑或推荐的新起点。\n2. **直接行动**：如果你心里已经有想学的主题，或者想尝试一个新的知识点，可以直接告诉我，我来为你生成一个低门槛的起步任务。\n\n你想先看看目前的进度情况，还是直接定一个小目标？",
+          "judge": {
+            "kind": "deterministic",
+            "score": 0.0,
+            "groups_hit": 0,
+            "groups_total": 1,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "C-PROF": {
+          "prompt_sha256": "8677bf1547f36811af156e3adf1c9ab14e28f67f7f863217a52dcc6536054a67",
+          "prompt_chars": 4277,
+          "profile_attached": false,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 96
+          },
+          "assembly_ms": 150,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "早上好。\n\n昨天你刚把集合论的前两章看完，节奏挺稳的。今天可以从第三章开始，或者如果前两章有些概念（比如映射、基数）还没完全吃透，也可以先花点时间回顾一下。\n\n你想直接推进新内容，还是先做个小复盘？",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 1,
+            "groups_total": 1,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "E-NOPACK": {
+          "prompt_sha256": "bf760fda1e416984d13ad70865d4adb3ab5d3608ae6cedad8598a639e50a094f",
+          "prompt_chars": 3854,
+          "profile_attached": false,
+          "doc_controls_enabled": null,
+          "token_usage": {},
+          "assembly_ms": 21,
+          "assembly_error": null,
+          "score": 0.0,
+          "answer_head": "早上好。\n\n目前你的学习记录显示，过去七天没有产生新的专注时间或已完成的任务。这本身不是问题，只是说明我们可能需要一个更轻的起点，而不是直接跳进复杂的计划里。\n\n既然你问“从哪里开始”，我建议先确认一下当前的状态，看看是否有未完成的旧任务，或者是否需要创建一个极小的新目标。\n\n我可以帮你查一下当前计划里的任务情况，这样我们就知道是继续之前的进度，还是重新设定一个小步骤。你觉得这样可以吗？",
+          "judge": {
+            "kind": "deterministic",
+            "score": 0.0,
+            "groups_hit": 0,
+            "groups_total": 1,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        }
+      }
+    },
+    {
+      "id": "mem-06-exam-scope",
+      "category": "memory",
+      "seeded_faces": {
+        "episodic": 1,
+        "preferences": 0,
+        "goals": 0,
+        "knowledge_nodes": 0
+      },
+      "differentiator_failures": [],
+      "baseline_profile_structure_diff_chars": null,
+      "arms": {
+        "A": {
+          "prompt_sha256": "1d5f18e89f6d989bffb18a55e8c02dcaeeb2720aa7571013a60f2c10961e5f5f",
+          "prompt_chars": 4645,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 106
+          },
+          "assembly_ms": 775,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "期末范围其实已经定得很清楚了，不用太担心复习偏了。\n\n咱们之前确认过，这次只考 **数理逻辑**、**集合论** 和 **图论** 这三章，**代数系统** 是不考的。\n\n既然范围锁定在这三块，复习时就可以放心把精力集中在这些核心章节上，不用去啃代数系统那些内容了。这样能省下不少时间，效率也会更高。",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 3,
+            "groups_total": 3,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "B-MEM": {
+          "prompt_sha256": "c55212bc264965b3324b3cb271444c52374c4215c613e15d73e5bca1fee08bda",
+          "prompt_chars": 3863,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 383,
+          "assembly_error": null,
+          "score": 0.0,
+          "answer_head": "我理解你的担心，复习范围如果没对齐，确实容易把精力花在低效的地方。\n\n不过目前我这边还没有你具体的期末科目或考试信息，所以没法直接帮你“确认”官方范围。为了不让咱们白费劲，我们可以先做个简单的**范围对齐检查**。\n\n你可以告诉我：\n1. **哪门课**？（比如：高等数学、近代史纲要等）\n2. **老师有没有给过明确的考点清单、PPT 重点页码，或者往年真题？**\n3. **你现在手头正在复习的资料是什么？**（比如：教材第几章到第几章、笔记、还是刷题？）\n\n如果你能提供上面任意一点信息，我可以帮你快速梳理一下：\n- 哪些是**核心必考区**（优先保证）\n- 哪些是**边缘模糊区**（根据剩余时间决定取舍）\n- 哪些可能是**重复劳动**（可以跳过）\n\n这样我们就能确保每一分钟都花在刀刃上。你先说说看，是哪门课让你最拿不准？",
+          "judge": {
+            "kind": "deterministic",
+            "score": 0.0,
+            "groups_hit": 0,
+            "groups_total": 3,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "C-PROF": {
+          "prompt_sha256": "1d624201a4800f32aa3aa545003409e20ec54290b1e0d15ef8922c8270382ab7",
+          "prompt_chars": 4323,
+          "profile_attached": false,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 106
+          },
+          "assembly_ms": 165,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "期末范围确认过了，只考数理逻辑、集合论和图论这三章。代数系统不考，这部分可以放心跳过，不用花时间在它上面。",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 3,
+            "groups_total": 3,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "E-NOPACK": {
+          "prompt_sha256": "bf760fda1e416984d13ad70865d4adb3ab5d3608ae6cedad8598a639e50a094f",
+          "prompt_chars": 3854,
+          "profile_attached": false,
+          "doc_controls_enabled": null,
+          "token_usage": {},
+          "assembly_ms": 27,
+          "assembly_error": null,
+          "score": 0.0,
+          "answer_head": "听到你担心“复习多了白费劲”，这种对效率的在意很真实。毕竟期末时间宝贵，每一分钟都想花在刀刃上。\n\n不过，我目前手头没有你具体的课程清单或老师发布的最新考纲细节。为了帮你精准划定范围，避免盲目复习，我们需要先对齐一下信息。\n\n你可以告诉我：\n1. **具体是哪几门课**？（例如：高等数学、西方经济学、数据结构等）\n2. **有没有老师强调的重点章节或题型变化**？（如果有上传的课件或笔记摘要，我可以基于此分析；如果没有，请简单描述一下老师最后几节课讲了什么）\n\n如果你暂时不确定，我们可以先从一个你最没底气的科目开始。你愿意先说说哪门课让你最焦虑吗？",
+          "judge": {
+            "kind": "deterministic",
+            "score": 0.0,
+            "groups_hit": 0,
+            "groups_total": 3,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        }
+      }
+    },
+    {
+      "id": "mem-07-weak-confession",
+      "category": "memory",
+      "seeded_faces": {
+        "episodic": 1,
+        "preferences": 0,
+        "goals": 0,
+        "knowledge_nodes": 0
+      },
+      "differentiator_failures": [],
+      "baseline_profile_structure_diff_chars": null,
+      "arms": {
+        "A": {
+          "prompt_sha256": "26ac7cc1b4e893dae55fac994c22252503cff75727299bb8651464502f14f2fd",
+          "prompt_chars": 4617,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 100
+          },
+          "assembly_ms": 690,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "排列组合确实是很多后续知识（比如概率、算法复杂度分析）的“地基”，如果这里没底，后面学起来容易卡壳。\n\n不过，“补”不等于从头把高中课本再啃一遍。我们可以先做个小测试，看看你的“没底”具体卡在哪儿：是分不清什么时候用 $A$ 什么时候用 $C$？还是对“捆绑法/插空法”这类技巧感到陌生？\n\n**建议第一步：**\n花 5 分钟，试着回答下面这个最基础的问题，不用查资料，凭直觉说思路：\n\n> **场景**：你有 3 本不同的书，要分给甲、乙、丙 3 个人，每人一本。有多少种分法？\n> **追问**：如果这 3 本书是**相同**的，分法又是多少？\n\n你试着说说看，或者告诉我你现在的困惑点，我们再决定是从概念辨析开始，还是直接进典型题型。",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "B-MEM": {
+          "prompt_sha256": "c55212bc264965b3324b3cb271444c52374c4215c613e15d73e5bca1fee08bda",
+          "prompt_chars": 3863,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 356,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "听到你说“没底”，我猜这可能是因为排列组合的题型变数多，或者之前有些概念（比如分类与分步、重复排列）卡在了模糊地带。这种不确定感很真实，先停下来确认一下基础是明智的，而不是硬着头皮往下走。\n\n不过，是否要“现在”立刻补，取决于你接下来的目标是什么。如果后续内容强依赖排列组合（比如概率统计），那确实需要先把地基夯实；如果只是暂时遇到难点，或许可以先标记下来，通过做几道典型题来快速验证掌握程度，而不必从头重学。\n\n我们可以做一个低成本的试探：\n- 找一道你觉得最典型的排列组合错题或难题，试着拆解一下思路。\n- 看看卡点是在“模型识别”（不知道用哪个公式/方法）还是“计算细节”。\n\n这样能更精准地判断你是需要系统补课，还是只需要针对性点拨。你想试试吗？",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "C-PROF": {
+          "prompt_sha256": "23d8f91d6009c4c9732bd95dbbb6e4edf1b88a91467481f8e348af6a229ebb68",
+          "prompt_chars": 4295,
+          "profile_attached": false,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 100
+          },
+          "assembly_ms": 159,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "排列组合确实是很多概率统计或离散数学内容的“地基”，基础不牢的话，后面遇到稍微复杂一点的计数问题容易卡壳。既然你之前提到这块从高中起就没太理顺，现在重新捡起来是很明智的选择。\n\n不过，“补”的方式很重要。如果直接去刷难题，很容易因为挫败感而放弃；如果只看定义，又可能觉得枯燥且不知道怎么用。\n\n我们可以先做一个极小范围的“诊断”，看看你的“没底”具体卡在哪里：\n\n1. **概念混淆**：分不清什么时候用排列（有序），什么时候用组合（无序）？\n2. **公式记忆**：记得住 $A_n^m$ 和 $C_n^m$ 的公式，但不知道它们背后的逻辑是什么？\n3. **应用困难**：懂原理，但一看到实际题目（比如排队、选人、分组）就不知道如何拆解？\n\n你可以挑一个最接近的感觉告诉我，或者我们直接从一个最简单的例子开始热身？比如：**“从3个人里选2个人去扫地，有多少种选法？”** 这种题你能立刻反应出答",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "E-NOPACK": {
+          "prompt_sha256": "bf760fda1e416984d13ad70865d4adb3ab5d3608ae6cedad8598a639e50a094f",
+          "prompt_chars": 3854,
+          "profile_attached": false,
+          "doc_controls_enabled": null,
+          "token_usage": {},
+          "assembly_ms": 22,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "听到你说“没底”，这通常意味着之前的知识链条里可能有个小缺口，或者只是单纯需要一点确认感。排列组合确实是很多后续内容（比如概率、算法复杂度）的地基，地基不稳，上面盖楼确实会晃。\n\n不过，在决定“补”之前，我想先确认一下你现在的状态，避免把时间花在不必要的重复上：\n\n1. **具体卡在哪？** 是分不清什么时候用 $A_n^m$ 什么时候用 $C_n^m$？还是遇到稍微复杂点的限制条件（比如相邻、不相邻）就头大？\n2. **当前任务依赖度：** 你手头正在学的东西，是不是马上就要用到它？如果还没到那一步，也许可以先带着疑问往下走，遇到具体问题再回头精准修补，效率可能更高。\n\n如果你愿意，可以告诉我一个具体的例子或困惑点，我帮你判断是真需要系统重学，还是只需要理清几个关键概念。",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        }
+      }
+    },
+    {
+      "id": "mem-08-evening-rhythm",
+      "category": "memory",
+      "seeded_faces": {
+        "episodic": 0,
+        "preferences": 1,
+        "goals": 0,
+        "knowledge_nodes": 0
+      },
+      "differentiator_failures": [],
+      "baseline_profile_structure_diff_chars": null,
+      "arms": {
+        "A": {
+          "prompt_sha256": "509cdc492fd205d34c09f01f06f23db2c9a476620ddcece5a26e950645abbc85",
+          "prompt_chars": 4015,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 34,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 858,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "现在是下午时段，距离你习惯的“晚间高效学习窗口”还有一小段缓冲。既然本周任务密度不高，今天不需要把日程排得太满，保持节奏感比堆时长更重要。\n\n基于你偏好晚上处理难点、且当前没有错题压力的情况，建议这样安排剩下的时间：\n\n- **17:00 - 19:00（低强度预热）**\n  利用这段过渡时间做一些不需要高度专注的事。比如整理一下今天的笔记，或者回顾一下之前学过的简单概念。这能帮你从白天的状态平滑切换到晚上的深度模式，避免一上来就啃硬骨头导致疲劳。\n\n- **19:30 - 21:30（核心攻坚）**\n  这是你的黄金时间。挑选一个你觉得稍微有点难、需要逻辑梳理的知识点或题目进行突破。因为累计错题是 0，你可以放心地尝试一些新内容，不用有心理负担。如果中途卡住，先标记下来，不要死磕超过 15 分钟，保持流畅感。\n\n- **21:30 - 22:00（收尾与复盘）**\n  快速浏览今晚学到的",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 1,
+            "groups_total": 1,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "B-MEM": {
+          "prompt_sha256": "c55212bc264965b3324b3cb271444c52374c4215c613e15d73e5bca1fee08bda",
+          "prompt_chars": 3863,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 434,
+          "assembly_error": null,
+          "score": 0.0,
+          "answer_head": "现在是下午时段，你今天的可用时间窗口是 07:00-22:00。考虑到本周任务密度较低且没有累积错题压力，我们不需要把日程排得太满，保持轻松但有效的节奏即可。\n\n基于你目前的“低过载风险”和“适中探索倾向”，建议这样安排剩下的时间：\n\n1. **轻量启动（30-45分钟）**\n   - 既然规划就绪度目前偏低，先花一点时间确认一下当前计划里有没有待办的小任务。\n   - 如果有，挑一个最简单的开始；如果没有，我们可以一起定一个微小的目标，比如复习一个旧概念或阅读一篇短文。\n\n2. **自由探索或休息（剩余时间）**\n   - 因为今天没有硬性的高压任务，你可以选择按自己的兴趣随意浏览一些知识点，或者干脆彻底放松。\n   - 这种“无目的”的学习有时能带来意想不到的连接感。\n\n**下一步小动作：**\n你想让我帮你查一下当前计划里有没有什么适合现在做的轻量级任务吗？还是说你更想自己决定今天学点",
+          "judge": {
+            "kind": "deterministic",
+            "score": 0.0,
+            "groups_hit": 0,
+            "groups_total": 1,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "C-PROF": {
+          "prompt_sha256": "1e3cf126c38e1ac92e7ed2cd3871b98e386fc17589b361c5bc77676fbb981800",
+          "prompt_chars": 3693,
+          "profile_attached": false,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 34,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 148,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "现在是晚上，正好是你效率较高的时段。既然本周任务密度不高，我们不必把日程排得太满，重点放在“深度”和“节奏感”上会更舒服。\n\n我注意到你倾向于在晚上处理较难的内容，所以建议把剩余的精力留给需要动脑子的部分，而不是机械性的重复练习。\n\n我们可以这样安排：\n\n1. **先花 5 分钟确认一下**：看看当前计划里有没有哪个知识点是最近卡住或者一直想啃但没下手的？如果有，把它作为今晚的主菜。\n2. **设定一个 45-60 分钟的专注块**：只攻这一个难点，中间不看手机，不切换任务。\n3. **留白收尾**：如果做完还有余力，可以简单回顾一下今天学到的核心概念；如果累了，就直接休息，不用强行加量。\n\n你觉得这个节奏怎么样？或者，你想让我帮你查一下当前计划里有哪些待办任务，从中挑一个最适合今晚攻坚的？",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 1,
+            "groups_total": 1,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "E-NOPACK": {
+          "prompt_sha256": "bf760fda1e416984d13ad70865d4adb3ab5d3608ae6cedad8598a639e50a094f",
+          "prompt_chars": 3854,
+          "profile_attached": false,
+          "doc_controls_enabled": null,
+          "token_usage": {},
+          "assembly_ms": 26,
+          "assembly_error": null,
+          "score": 0.0,
+          "answer_head": "我注意到你最近几天的专注时间记录是 0，这可能意味着还没开始计时，或者今天确实比较空闲。\n\n既然问的是“剩下的时间”，我们可以先做一个极小的启动动作，而不是直接规划一整天。\n\n**建议的第一步：**\n- **选一件最小的事**：从你手头最轻的任务里挑一个，比如“读一页书”或“整理5分钟笔记”。\n- **设定25分钟倒计时**：不需要多，就25分钟。\n- **结束后立刻停**：不管做完没做完，都停下来喝口水。\n\n如果这25分钟跑通了，我们再决定要不要加下一轮。你觉得这个起步方式可行吗？",
+          "judge": {
+            "kind": "deterministic",
+            "score": 0.0,
+            "groups_hit": 0,
+            "groups_total": 1,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        }
+      }
+    },
+    {
+      "id": "prof-01-weak-logic",
+      "category": "profile",
+      "seeded_faces": {
+        "episodic": 0,
+        "preferences": 0,
+        "goals": 0,
+        "knowledge_nodes": 2
+      },
+      "differentiator_failures": [],
+      "baseline_profile_structure_diff_chars": null,
+      "arms": {
+        "A": {
+          "prompt_sha256": "f20a3f0b365e614681dbfe5c0369a283393d8ecc898b94f0dbb6481d4161a5ab",
+          "prompt_chars": 4073,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 317,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "听到你问“整体怎么复习”，我感觉到你可能面对着一堆知识点，有点无从下手。离散数学确实内容多且逻辑性强，容易让人觉得“学了后面忘前面”。\n\n结合你目前的掌握情况——**集合论很稳（85%）**，但**数理逻辑偏弱（35%）**，我建议不要平均用力，而是采用“补强短板 + 串联主线”的策略。\n\n以下是为你定制的复习思路：\n\n### 1. 优先攻克：数理逻辑（当前瓶颈）\n这是你目前最大的失分风险点，也是后续学习证明方法的基础。\n- **核心痛点自查**：你是否清楚命题逻辑与谓词逻辑的区别？是否熟练掌握真值表、等价演算和推理规则？\n- **建议动作**：\n    - 花少量时间重新梳理**基本逻辑联结词**的定义和真值表。\n    - 重点练习**量词否定**的转换（例如 $\\neg \\forall x P(x) \\equiv \\exists x \\neg P(x)$），这往往是错题高发区。\n  ",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 1,
+            "groups_total": 1,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "B-MEM": {
+          "prompt_sha256": "f20a3f0b365e614681dbfe5c0369a283393d8ecc898b94f0dbb6481d4161a5ab",
+          "prompt_chars": 4073,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 337,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "离散数学的复习确实容易让人头大，尤其是当数理逻辑这块基础还比较薄弱（目前掌握度约 35%）时。不过别担心，你的集合论基础很扎实（85%），这已经帮你扫清了一大块障碍。\n\n既然本周任务密度不高，我们可以把复习拆解成几个小步骤，先不追求面面俱到，而是抓住“主要瓶颈”。\n\n**1. 先稳住基本盘：从集合论过渡**\n你现在的集合论状态很好，可以把它当作复习的“锚点”。很多离散数学的概念（如关系、函数、图论中的顶点集）都建立在集合之上。\n- **建议动作**：花 20-30 分钟快速过一遍集合的基本运算和性质，确认自己能用集合语言描述问题。这能增强信心，也为后续内容做铺垫。\n\n**2. 攻克核心难点：数理逻辑的基础重建**\n数理逻辑是目前的短板，也是后续学习证明方法、算法分析的基础。直接啃难题可能会挫败感强，我们换个策略。\n- **建议动作**：不要急着做复杂推理题。先回到最基础的定义：命题、联结词",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 1,
+            "groups_total": 1,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "C-PROF": {
+          "prompt_sha256": "49d424b6c3ec017819d6ab9c4c37ccd1c056724ce161b0bdd02e2baaad814c8d",
+          "prompt_chars": 3541,
+          "profile_attached": false,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 113,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "离散数学的复习确实容易让人头大，因为它不像微积分那样有连续的“感觉”，而是由一堆看似独立的定义和定理组成的。但好消息是，它的结构非常清晰，只要抓住主线，就能把散落的知识点串起来。\n\n考虑到你本周任务密度不高，我们可以用一种**“模块化 + 高频考点优先”**的策略来复习，避免陷入细节泥潭。\n\n### 1. 先理清四大模块（建立地图）\n离散数学通常分为四个核心板块，建议按这个顺序或根据你薄弱项调整：\n\n- **数理逻辑**：命题逻辑、谓词逻辑、推理规则。这是基础，重点在于**等价演算**和**推理有效性判断**。\n- **集合论与二元关系**：集合运算、关系的性质（自反、对称、传递等）、函数。重点在于**关系的闭包**和**等价类/划分**。\n- **代数结构**：群、环、域、格。这部分最抽象，如果时间紧，可以只抓**群的判定**和**子群/陪集**的基本概念，除非你的课程特别侧重这里。\n-",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 1,
+            "groups_total": 1,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "E-NOPACK": {
+          "prompt_sha256": "bf760fda1e416984d13ad70865d4adb3ab5d3608ae6cedad8598a639e50a094f",
+          "prompt_chars": 3854,
+          "profile_attached": false,
+          "doc_controls_enabled": null,
+          "token_usage": {},
+          "assembly_ms": 5,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "离散数学的复习确实容易让人头大，因为它不像微积分那样有连续的逻辑链条，而更像是一堆“积木”——集合、图论、逻辑、代数结构各自独立，但考试时又喜欢把它们混在一起考。\n\n考虑到你目前的专注时长和任务记录还是空白（这很正常，刚开始嘛），我们不需要一上来就搞个宏大的“7天通关计划”，那只会增加焦虑。我们可以先定一个**最小可行复习策略**。\n\n### 1. 核心思路：抓大放小，模块化突破\n离散数学通常分为四大块，建议按这个优先级复习：\n- **第一梯队（必拿分）**：命题逻辑与谓词逻辑、集合论基础。这两块是地基，题目套路固定，性价比高。\n- **第二梯队（难点但高频）**：图论（最短路径、欧拉/哈密顿回路）、关系与函数（等价关系、偏序集）。这块概念抽象，但一旦通了，解题很爽。\n- **第三梯队（看情况）**：代数结构（群环域）、组合计数。如果时间紧，可以只记定义和典型例题，放弃复杂证明。\n\n###",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 1,
+            "groups_total": 1,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        }
+      }
+    },
+    {
+      "id": "prof-02-weak-first-drill",
+      "category": "profile",
+      "seeded_faces": {
+        "episodic": 0,
+        "preferences": 0,
+        "goals": 0,
+        "knowledge_nodes": 3
+      },
+      "differentiator_failures": [],
+      "baseline_profile_structure_diff_chars": null,
+      "arms": {
+        "A": {
+          "prompt_sha256": "d9bf7cd4abc039ba11fdde0ef96b34e5ea3890048bae083eefaeaa61bc5c5ae5",
+          "prompt_chars": 4112,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 523,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "看你这周节奏挺松，正好可以挑一个“投入产出比”最高的点突破。\n\n我注意到图论最近涨得最快（+3%），虽然掌握度还低，但势头不错；而数理逻辑也稳中有升。集合论已经接近熟练区，边际收益可能不如前两者大。\n\n如果今天只想练一个，我建议选 **图论**。\n理由很简单：它现在是你的主要瓶颈，且刚起步阶段进步最明显，容易建立信心。哪怕只花半小时搞懂一个基础概念（比如树的性质或最短路径算法），对整体进度拉动都很实在。\n\n你觉得这个方向 OK 吗？还是说今天更想巩固一下数理逻辑的某个具体卡点？",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 1,
+            "groups_total": 1,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "B-MEM": {
+          "prompt_sha256": "d9bf7cd4abc039ba11fdde0ef96b34e5ea3890048bae083eefaeaa61bc5c5ae5",
+          "prompt_chars": 4112,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 372,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "看你最近图论涨得最猛（+3%），虽然掌握度还在 40%，但势头不错。数理逻辑也稳中有升。\n\n既然今天任务密度低，建议**主攻图论**。趁热打铁，把刚建立起来的直觉巩固一下，比去啃已经比较熟的集合论更能带来“突破感”。\n\n你想从哪个具体点切入？比如：\n- **基础概念辨析**（如：树 vs 森林、连通分量）\n- **经典算法手推**（如：Dijkstra 或 Prim 的小例子）\n- **性质判断**（如：欧拉回路/哈密顿路径的判定条件）\n\n挑一个，我陪你练。",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 1,
+            "groups_total": 1,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "C-PROF": {
+          "prompt_sha256": "49d424b6c3ec017819d6ab9c4c37ccd1c056724ce161b0bdd02e2baaad814c8d",
+          "prompt_chars": 3541,
+          "profile_attached": false,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 118,
+          "assembly_error": null,
+          "score": 0.0,
+          "answer_head": "让我先看看你当前的任务情况，这样能给你更靠谱的建议。\n\n<tool_call>\n{\"name\": \"get_situation_brief\", \"arguments\": {}}\n</tool_call>",
+          "judge": {
+            "kind": "deterministic",
+            "score": 0.0,
+            "groups_hit": 0,
+            "groups_total": 1,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "E-NOPACK": {
+          "prompt_sha256": "bf760fda1e416984d13ad70865d4adb3ab5d3608ae6cedad8598a639e50a094f",
+          "prompt_chars": 3854,
+          "profile_attached": false,
+          "doc_controls_enabled": null,
+          "token_usage": {},
+          "assembly_ms": 12,
+          "assembly_error": null,
+          "score": 0.0,
+          "answer_head": "Sparkle 注意到你最近七天的专注时长和任务完成数都是零。这通常意味着计划可能太庞大，或者启动阻力比预期高。\n\n既然只想练一个专项，建议从**“最小可执行单元”**入手，而不是选一个宏大的主题。\n\n基于你目前的深度偏好（0.50）和好奇心（0.50），我推荐以下两个方向之一，请根据你的直觉选择：\n\n- **选项 A：概念澄清**\n  挑出你最近学习中**最模糊的一个术语或概念**，花 15 分钟只搞懂它是什么、为什么存在。不延伸，不刷题，只求“心里有底”。\n\n- **选项 B：微习惯重启**\n  设定一个**仅需 5 分钟**的学习动作（如打开书读一页、写一行代码、背三个单词）。重点不是学多少，而是打破“零记录”，让系统重新感知到你的节奏。\n\n你想选哪个？或者告诉我你手头正在学的具体科目，我可以帮你拆解出一个更具体的“今日专项”。",
+          "judge": {
+            "kind": "deterministic",
+            "score": 0.0,
+            "groups_hit": 0,
+            "groups_total": 1,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        }
+      }
+    },
+    {
+      "id": "prof-03-order-plan",
+      "category": "profile",
+      "seeded_faces": {
+        "episodic": 0,
+        "preferences": 0,
+        "goals": 0,
+        "knowledge_nodes": 2
+      },
+      "differentiator_failures": [],
+      "baseline_profile_structure_diff_chars": null,
+      "arms": {
+        "A": {
+          "prompt_sha256": "dfc89651066fb0bf7b3926d461a2d32725d8ae531c6a55b38e4e664bb2d673f0",
+          "prompt_chars": 4065,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 575,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "今天的学习安排，我建议优先处理图论的基础概念，因为这是你当前的主要瓶颈。集合论虽然掌握度很高，但可以作为热身或穿插练习来保持手感。\n\n考虑到本周任务密度较低，且你有充足的时间段（07:00-22:00），我们可以把重点放在“理解”而非“刷题”上。以下是建议的顺序：\n\n1. **上午时段：图论基础重建**\n   - 先花 30-45 分钟回顾图的基本定义（顶点、边、度数）。\n   - 接着用 20 分钟尝试用自己的话解释“握手定理”，如果卡住，再查阅资料。这一步是为了确认你是否真的理解了底层逻辑，而不仅仅是记住了公式。\n\n2. **下午时段：集合论轻量复习 + 图论应用**\n   - 花 15-20 分钟快速过一遍集合运算律，作为大脑的“切换休息”。\n   - 然后回到图论，尝试解决一个简单的问题，比如判断一个给定的序列是否是某个图的度数序列。这能帮你把抽象定义和具体计算联系起来。\n\n3. ",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 1,
+            "groups_total": 1,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "B-MEM": {
+          "prompt_sha256": "dfc89651066fb0bf7b3926d461a2d32725d8ae531c6a55b38e4e664bb2d673f0",
+          "prompt_chars": 4065,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 355,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "看到你今天的时间段是 07:00-22:00，任务密度较低，这给了我们从容安排的空间。\n\n目前你的主要瓶颈在**图论**（掌握度 30%），而**集合论**已经非常稳固（90%）。根据“先啃硬骨头、再巩固优势”的策略，我建议把精力优先分配给图论的基础概念梳理，避免让难点积压。\n\n以下是为你定制的学习顺序建议：\n\n1. **上午时段（08:00 - 10:00）：图论基础突破**\n   - **重点**：从最基础的定义入手，比如“什么是顶点、边、路径”。因为掌握度只有 30%，我们需要先建立直觉，而不是直接做题。\n   - **动作**：阅读教材中关于图的基本术语章节，尝试用自己的话画出几个简单的图（如完全图、树），并标注出顶点和边。\n\n2. **下午时段（14:00 - 15:30）：图论简单应用/例题**\n   - **重点**：将上午的概念应用到极简单的场景中，例如判断一个图是否连通，",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 1,
+            "groups_total": 1,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "C-PROF": {
+          "prompt_sha256": "49d424b6c3ec017819d6ab9c4c37ccd1c056724ce161b0bdd02e2baaad814c8d",
+          "prompt_chars": 3541,
+          "profile_attached": false,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 120,
+          "assembly_error": null,
+          "score": 0.0,
+          "answer_head": "收到，今天任务密度不高，正好可以按“先啃硬骨头、再收尾”的节奏来安排。\n\n不过我这边还没看到具体的待办清单。要不你先告诉我今天手头有哪几项学习任务？或者如果你已经建好了计划，我可以帮你看看怎么排最顺手。",
+          "judge": {
+            "kind": "deterministic",
+            "score": 0.0,
+            "groups_hit": 0,
+            "groups_total": 1,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "E-NOPACK": {
+          "prompt_sha256": "bf760fda1e416984d13ad70865d4adb3ab5d3608ae6cedad8598a639e50a094f",
+          "prompt_chars": 3854,
+          "profile_attached": false,
+          "doc_controls_enabled": null,
+          "token_usage": {},
+          "assembly_ms": 11,
+          "assembly_error": null,
+          "score": 0.0,
+          "answer_head": "我注意到你最近几天的专注时间和完成任务数都是 0，这通常意味着计划可能有点“悬空”，或者还没找到那个让你愿意坐下来开始的切入点。\n\n既然要排今天的顺序，我们得先看看手里有什么牌。我先帮你查一下当前计划里有哪些待办任务，这样排出来的顺序才是有依据的，而不是凭空想象。",
+          "judge": {
+            "kind": "deterministic",
+            "score": 0.0,
+            "groups_hit": 0,
+            "groups_total": 1,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        }
+      }
+    },
+    {
+      "id": "prof-04-mastery-diagnosis",
+      "category": "profile",
+      "seeded_faces": {
+        "episodic": 0,
+        "preferences": 0,
+        "goals": 0,
+        "knowledge_nodes": 3
+      },
+      "differentiator_failures": [],
+      "baseline_profile_structure_diff_chars": null,
+      "arms": {
+        "A": {
+          "prompt_sha256": "b0c7df01d01cc18f7dae8e93fac12c757eca9547a59dd5bf32f733cf1653ac21",
+          "prompt_chars": 4112,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 681,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "听到你问“整体掌握得怎么样”，我感觉到你可能正在寻找一个清晰的定位，或者想确认最近的投入是否带来了实质性的变化。这种对全局状态的审视，本身就是学习节奏中很重要的一环。\n\n基于我们共同推进的记录，目前的离散数学状态可以概括为：**基础稳固，但逻辑内核仍在爬坡**。\n\n具体来说，你的知识版图呈现出明显的“阶梯状”分布：\n\n- **集合论**是你的强项，掌握度已经稳定在 90%。这说明你对定义、运算和证明的基本框架非常熟悉，这部分内容目前不需要额外占用精力，可以作为你建立信心的锚点。\n- **图论**最近有了不错的起色，从 42% 提升到了 45%。虽然绝对数值还不高，但这 +3% 的增长表明你开始找到处理节点与边关系的直觉，这是一个积极的信号。\n- **数理逻辑**则是当前的主要瓶颈，掌握度停留在 35%。这通常是因为逻辑符号的抽象性与日常思维习惯存在冲突，导致你在推导或理解复杂命题时容易卡壳",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 3,
+            "groups_total": 3,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "B-MEM": {
+          "prompt_sha256": "b0c7df01d01cc18f7dae8e93fac12c757eca9547a59dd5bf32f733cf1653ac21",
+          "prompt_chars": 4112,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 366,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "看到你问起离散数学的整体情况，我刚好翻看了你最近的记录。\n\n目前你的状态其实挺有意思的：集合论已经非常扎实（90%），图论也在稳步上升（45%），但数理逻辑这块稍微有点“拖后腿”（35%）。这就像盖房子，地基（集合）很稳，房间结构（图论）在搭建，但电路系统（逻辑）还没完全通顺。\n\n虽然最近没有错题积累，说明你做题时的准确率不错，但主要瓶颈确实卡在数理逻辑上。考虑到你这周任务密度不高，我们不需要急着赶进度。\n\n要不要我们先花 10 分钟，挑一个数理逻辑里最让你头疼的小概念（比如命题公式的等价变换或者量词嵌套），把它彻底理顺？这样既能补上短板，又不会给你太大压力。",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 3,
+            "groups_total": 3,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "C-PROF": {
+          "prompt_sha256": "49d424b6c3ec017819d6ab9c4c37ccd1c056724ce161b0bdd02e2baaad814c8d",
+          "prompt_chars": 3541,
+          "profile_attached": false,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 126,
+          "assembly_error": null,
+          "score": 0.0,
+          "answer_head": "让我先看看你当前的学习状态和离散数学相关的任务进展。",
+          "judge": {
+            "kind": "deterministic",
+            "score": 0.0,
+            "groups_hit": 0,
+            "groups_total": 3,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "E-NOPACK": {
+          "prompt_sha256": "bf760fda1e416984d13ad70865d4adb3ab5d3608ae6cedad8598a639e50a094f",
+          "prompt_chars": 3854,
+          "profile_attached": false,
+          "doc_controls_enabled": null,
+          "token_usage": {},
+          "assembly_ms": 11,
+          "assembly_error": null,
+          "score": 0.3333,
+          "answer_head": "我注意到你最近七天的专注时间记录为零，也没有完成任何任务。基于这个客观数据，目前很难评估你对离散数学的实际掌握程度，因为系统里还没有足够的学习行为作为判断依据。\n\n这不代表你学得不好，只是说明我们还没开始积累“证据”。也许你正在看书或做题，但没有在应用里打卡；或者你刚准备开始，还没迈出第一步。\n\n我们可以先做一个小动作来校准状态：\n- 告诉我一个你最近看过的离散数学概念（比如集合、逻辑连接词、图论基础等），用你自己的话简单解释一下它是什么。\n\n这样我能通过你的表达，初步判断你的理解深度，并给出更贴合的反馈。",
+          "judge": {
+            "kind": "deterministic",
+            "score": 0.3333,
+            "groups_hit": 1,
+            "groups_total": 3,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        }
+      }
+    },
+    {
+      "id": "prof-05-progress-recognition",
+      "category": "profile",
+      "seeded_faces": {
+        "episodic": 0,
+        "preferences": 0,
+        "goals": 0,
+        "knowledge_nodes": 2
+      },
+      "differentiator_failures": [],
+      "baseline_profile_structure_diff_chars": null,
+      "arms": {
+        "A": {
+          "prompt_sha256": "2d372b86922528efc4bd66d63488e0d6a6b68e44b63b5e0156a6b08d4f73121b",
+          "prompt_chars": 4065,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 60322,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "是的，图论确实有进步。\n\n根据记录，你的图论掌握度从 38% 提升到了 45%，增加了 7 个百分点。这是你近期进展中幅度最大的一项，说明之前的练习或学习方向是有效的。\n\n虽然目前它仍然是你的主要瓶颈（相比集合论的 85%），但这 7% 的提升是一个很好的信号。\n\n要不要趁热打铁，看看接下来针对图论可以安排一个什么样的小任务来巩固这个势头？",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "B-MEM": {
+          "prompt_sha256": "2d372b86922528efc4bd66d63488e0d6a6b68e44b63b5e0156a6b08d4f73121b",
+          "prompt_chars": 4065,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 389,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "是的，图论确实有进步。\n\n从数据上看，你的掌握度从 38% 提升到了 45%，涨了 7 个百分点。虽然这个绝对数值还不算高，但在离散数学的初期阶段，这种起步时的跃升往往意味着你开始建立起对基本概念（比如顶点、边、路径）的直觉连接了。\n\n相比之下，集合论目前稳定在 85%，说明那边的基础已经打得很牢。现在的瓶颈主要集中在图论上，这其实是个好消息——因为目标明确，只要把这块短板补上来，整体进度就会快很多。\n\n既然本周任务密度不高，要不要我们挑一个具体的图论小概念（比如“连通性”或者“树的性质”），花十几分钟简单过一遍？这样能趁热打铁，看看能不能把那 7% 的增长势头保持下去。",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "C-PROF": {
+          "prompt_sha256": "49d424b6c3ec017819d6ab9c4c37ccd1c056724ce161b0bdd02e2baaad814c8d",
+          "prompt_chars": 3541,
+          "profile_attached": false,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 84,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "我这边没有直接记录你图论学习的具体数据，所以没法凭空说“有进步”或“没进步”。不过我可以帮你查一下最近的任务完成情况和学习报告，这样咱们就能基于实际进度来判断了。\n\n你想让我现在去拉取一下最近的图论相关任务摘要和阶段复盘吗？",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "E-NOPACK": {
+          "prompt_sha256": "bf760fda1e416984d13ad70865d4adb3ab5d3608ae6cedad8598a639e50a094f",
+          "prompt_chars": 3854,
+          "profile_attached": false,
+          "doc_controls_enabled": null,
+          "token_usage": {},
+          "assembly_ms": 4,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "我查了一下你最近的学习记录，发现过去七天里你的专注时间、完成任务数都是 0。\n\n所以从数据上看，目前还没有图论相关的练习或学习痕迹被记录下来。这不代表你没有进步，也许是你私下看了书、做了题但没有在系统里打卡，或者这段时间确实比较忙，暂时没顾上。\n\n如果你愿意，我们可以先做一个小动作来确认一下现在的状态：\n- **快速自测**：你能试着用一句话解释“最短路径算法”的核心思路吗？或者随便聊聊你最近在看哪个具体的图论概念（比如 Dijkstra、最小生成树等）。\n\n这样我能更准确地判断你的掌握程度，也能帮你把接下来的节奏调得更舒服。",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        }
+      }
+    },
+    {
+      "id": "prof-06-final-three-days",
+      "category": "profile",
+      "seeded_faces": {
+        "episodic": 0,
+        "preferences": 0,
+        "goals": 0,
+        "knowledge_nodes": 3
+      },
+      "differentiator_failures": [],
+      "baseline_profile_structure_diff_chars": null,
+      "arms": {
+        "A": {
+          "prompt_sha256": "8f0fa1da9eacd7bed978543aadbd2493e2ee371a0d931ad8884b65f086c3c11e",
+          "prompt_chars": 4068,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 60351,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "听到“时间不多了”，能感觉到你现在的紧迫感。这种时候，贪多嚼不烂，策略上必须做减法。\n\n基于你目前的掌握度数据，**数理逻辑（35%）** 是明显的短板，也是提分性价比最高的区域；而 **集合论（88%）** 已经非常稳固，不需要再花大块时间复习。\n\n建议最后三天主攻以下两个方向：\n\n1. **数理逻辑的基础题型突破**\n   - 既然掌握度只有 35%，说明基础概念或常见推理规则可能有断层。\n   - **行动**：不要看难题。只抓最核心的考点，比如命题符号化、真值表计算、简单的谓词逻辑翻译。确保这些“送分题”不再丢分。\n   - **理由**：从 35% 提升到 60% 比从 80% 提升到 90% 容易得多，且对总分贡献大。\n\n2. **图论的中等难度应用**\n   - 掌握度 60% 处于中间地带，通常意味着基本概念懂了，但复杂路径或特定算法（如最短路径、最小生成树）可能卡壳。\n ",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 1,
+            "groups_total": 1,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "B-MEM": {
+          "prompt_sha256": "6935b170a54bc30c62b017ac332f52b8f794ba76075ab3c59fd0d3d916417d83",
+          "prompt_chars": 4112,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 343,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "听到“时间不多了”和“最后三天”，我能感觉到你此刻的紧迫感。这种压力很真实，但也很常见。\n\n基于你目前的离散数学学习状态，有一个比较明确的观察：**数理逻辑**是你目前最大的瓶颈（掌握度 35%），而图论和集合论相对稳固（60% 和 88%）。在考前冲刺阶段，试图全面补齐所有短板往往效率不高，不如集中火力攻克那个“最薄弱且可能占分不少”的板块，或者巩固那些“容易拿分但容易粗心丢分”的部分。\n\n这里有一个可纠正的判断：如果考试题型中数理逻辑占比不小，那么这三天主攻数理逻辑的基础概念和典型例题，性价比最高；如果数理逻辑题目偏难且分值分散，转而通过刷图论基础题来确保稳拿分，可能更稳妥。\n\n建议的第一步非常小：\n- **花 15 分钟，快速浏览一下数理逻辑中最基础的三个概念（命题、联结词、真值表），看看自己是否能独立写出一个简单命题的真值表。**\n\n这个动作能帮你立刻判断：是“完全看不懂”还是“只",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 1,
+            "groups_total": 1,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "C-PROF": {
+          "prompt_sha256": "49d424b6c3ec017819d6ab9c4c37ccd1c056724ce161b0bdd02e2baaad814c8d",
+          "prompt_chars": 3541,
+          "profile_attached": false,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 73,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "听到“时间不多了”这几个字，能感觉到你现在的节奏有点紧。这种时候，最忌讳的是试图把整本书重新读一遍，或者去啃那些从未搞懂过的硬骨头。\n\n既然只剩最后三天，我们的策略必须从“全面覆盖”切换到“精准止损”。我不确定你具体面临的是哪门考试或考核，但通用的“抢分逻辑”通常遵循以下优先级：\n\n1. **高频考点与核心概念**\n   放弃冷门知识点。只抓那些在往年真题、课堂重点或大纲中反复出现的核心内容。这些是拿分的基石，性价比最高。\n\n2. **错题本与易错点回顾**\n   这是提分最快的地方。不要做新题，而是看旧题。特别是那些你曾经做错、或者做题时犹豫不决的题目。搞清楚当时为什么错，比再刷十道新题更有用。\n\n3. **答题模板与规范流程**\n   对于主观题或复杂计算题，确保你知道“第一步写什么、第二步写什么”。有时候，即使最终答案算错了，规范的步骤也能拿到大部分过程分。\n\n4. **基础分保底*",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 1,
+            "groups_total": 1,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "E-NOPACK": {
+          "prompt_sha256": "bf760fda1e416984d13ad70865d4adb3ab5d3608ae6cedad8598a639e50a094f",
+          "prompt_chars": 3854,
+          "profile_attached": false,
+          "doc_controls_enabled": null,
+          "token_usage": {},
+          "assembly_ms": 9,
+          "assembly_error": null,
+          "score": 0.0,
+          "answer_head": "听到“时间不多了”，我能感觉到你此刻的紧迫和压力。这种时候，最忌讳的是试图从头到尾再学一遍，那只会增加焦虑且效率极低。\n\n基于你目前的专注记录（近7天无显著投入）和中等深度的学习偏好，最后三天的核心策略应该是：**放弃全面覆盖，转向高频考点与基础得分点的精准打击。**\n\n以下是针对最后三天的具体主攻建议：\n\n1. **第一天：梳理骨架，锁定“必拿分”**\n   - 不要看细节，只看目录、大纲或老师强调的重点章节。\n   - 找出那些“只要背了/看了就能拿分”的基础知识点（如定义、公式、固定搭配）。\n   - 目标：确保基础题不失分，建立信心。\n\n2. **第二天：真题/例题逆向突破**\n   - 直接做最近3-5年的真题或典型例题，而不是看书。\n   - 做完后立刻对答案，只分析错题和蒙对的题。\n   - 重点看解题思路中的“关键步骤”，忽略繁琐的计算过程。\n   - 目标：熟悉出题套路，",
+          "judge": {
+            "kind": "deterministic",
+            "score": 0.0,
+            "groups_hit": 0,
+            "groups_total": 1,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        }
+      }
+    },
+    {
+      "id": "base-01-group-def",
+      "category": "baseline",
+      "seeded_faces": {
+        "episodic": 0,
+        "preferences": 0,
+        "goals": 0,
+        "knowledge_nodes": 0
+      },
+      "differentiator_failures": [],
+      "baseline_profile_structure_diff_chars": -322,
+      "arms": {
+        "A": {
+          "prompt_sha256": "11e98ee6d5d30eba1c74875660cbaa30cc254e7b1ba3db06105385fb65e8bde6",
+          "prompt_chars": 3905,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 319,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "离散数学里的“群”（Group）其实没那么玄乎，你可以把它想象成一个**“自带规则的小宇宙”**。\n\n在这个宇宙里，有一堆东西（元素），还有一个操作（比如加法、乘法、或者某种变换）。只要这个操作满足下面四条铁律，这个小宇宙就叫“群”。\n\n### 1. 封闭性：别跑出去\n你在群里随便挑两个元素做运算，结果必须还在群里。\n- **例子**：整数集合 + 加法。你拿 3 和 -5 相加，结果是 -2，还是整数。没跑到小数或分数那边去。\n- **反例**：正整数集合 + 减法。你拿 3 减 5，结果是 -2，不是正整数了。这就“漏”出去了，所以正整数对减法不构成群。\n\n### 2. 结合律：先算谁都一样\n三个元素一起运算时，怎么加括号不影响结果。\n- **公式**：(a * b) * c = a * (b * c)\n- **例子**：数字乘法大家都熟，(2×3)×4 和 2×(3×4) 都是 24",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 4,
+            "groups_total": 4,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "B-MEM": {
+          "prompt_sha256": "11e98ee6d5d30eba1c74875660cbaa30cc254e7b1ba3db06105385fb65e8bde6",
+          "prompt_chars": 3905,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 200,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "离散数学里的「群」其实没那么玄乎，你可以把它想象成一个**自带规则的小宇宙**。\n\n在这个宇宙里，有一堆元素（比如数字、矩阵、或者某种操作），它们必须同时满足四条铁律，才能被称为“群”。只要有一条不满足，它就只是普通的集合或半群，进不了群的圈子。\n\n这四条铁律是：\n\n- **封闭性**：你在群里随便挑两个元素做运算，结果还得留在这个群里。不能算着算着，“跑”到外面去了。\n- **结合律**：三个元素一起运算时，先算前两个还是先算后两个，结果一样。也就是 `(a*b)*c = a*(b*c)`。这保证了运算顺序不会改变最终结果。\n- **单位元存在**：群里得有一个“透明人”，叫单位元（通常记作 e）。任何元素跟它运算，都保持原样。就像乘法里的 1，加法里的 0。\n- **逆元存在**：群里每个元素都得有个“解药”，叫逆元。元素和它的逆元一运算，就能变回那个“透明人”（单位元）。就像 5 的",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 4,
+            "groups_total": 4,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "C-PROF": {
+          "prompt_sha256": "efbbfbaaeacf2bdfee4c7007db3fe8bcf449d7cabd1892c0d8c3ee762d83d2c8",
+          "prompt_chars": 3583,
+          "profile_attached": false,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 75,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "离散数学里的“群”（Group）其实没那么玄乎，你可以把它想象成一个**自带规则的小世界**。\n\n在这个世界里，有一堆东西（我们叫它集合），还有一个操作（比如加法、乘法，或者某种变换）。只要满足下面这 **4 条铁律**，这个小世界就叫“群”。\n\n### 1. 封闭性 (Closure)\n**意思：** 不管你怎么折腾，结果还在圈子里。\n**例子：** 整数集 + 加法。你拿任意两个整数相加（比如 3 + 5 = 8），结果 8 还是整数。不会突然蹦出一个分数或字母来。\n**反例：** 正整数集 + 减法。3 - 5 = -2，-2 不是正整数，跑出去了。所以正整数和减法构不成群。\n\n### 2. 结合律 (Associativity)\n**意思：** 先算哪一对无所谓，只要顺序不变。\n**例子：** (a + b) + c = a + (b + c)。\n**注意：** 这个很常见，大多数",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 4,
+            "groups_total": 4,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "E-NOPACK": {
+          "prompt_sha256": "bf760fda1e416984d13ad70865d4adb3ab5d3608ae6cedad8598a639e50a094f",
+          "prompt_chars": 3854,
+          "profile_attached": false,
+          "doc_controls_enabled": null,
+          "token_usage": {},
+          "assembly_ms": 6,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "群是抽象代数里最基础的结构之一。你可以把它想象成一套“规则严明的操作体系”。\n\n简单来说，一个集合加上一种运算，如果满足四条规矩，就叫群：\n\n1. **封闭性**：随便挑两个元素做运算，结果还在集合里。\n2. **结合律**：先算哪一对都一样，(a·b)·c = a·(b·c)。\n3. **单位元**：存在一个特殊元素 e，跟谁运算都不改变对方（像乘法里的 1）。\n4. **逆元**：每个元素都有个“解药”，跟它一运算就变回单位元（像加法里的相反数）。\n\n举个最直观的例子：整数集 + 普通加法。\n- 任意两整数相加还是整数（封闭）\n- (1+2)+3 = 1+(2+3)（结合）\n- 0 加谁都等于谁（单位元）\n- 5 的逆元是 -5，因为 5+(-5)=0（逆元）\n\n所以 (Z, +) 是一个群。\n\n反过来，自然数集 + 加法就不是群——因为 3 没有逆元（-3 不在自然数里）。\n\n群的概",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 4,
+            "groups_total": 4,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        }
+      }
+    },
+    {
+      "id": "base-02-equivalence-relation",
+      "category": "baseline",
+      "seeded_faces": {
+        "episodic": 0,
+        "preferences": 0,
+        "goals": 0,
+        "knowledge_nodes": 0
+      },
+      "differentiator_failures": [],
+      "baseline_profile_structure_diff_chars": -322,
+      "arms": {
+        "A": {
+          "prompt_sha256": "c55212bc264965b3324b3cb271444c52374c4215c613e15d73e5bca1fee08bda",
+          "prompt_chars": 3863,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 349,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "等价关系是数学中用来刻画“分类”或“同一性”的核心概念。要成为一个等价关系，一个定义在集合上的二元关系必须同时满足以下三条性质：\n\n1. **自反性 (Reflexivity)**\n   对于集合中的每一个元素 $a$，都有 $a \\sim a$。\n   *直观理解*：每个对象都和自己“等价”。比如，“身高相同”这个关系里，你的身高当然和你自己的身高相同。\n\n2. **对称性 (Symmetry)**\n   如果 $a \\sim b$，那么必然有 $b \\sim a$。\n   *直观理解*：关系的方向不重要。如果 A 和 B 是朋友（假设友谊是对称的），那 B 也是 A 的朋友。\n\n3. **传递性 (Transitivity)**\n   如果 $a \\sim b$ 且 $b \\sim c$，那么必然有 $a \\sim c$。\n   *直观理解*：等价可以“接力”。如果 A 等于 B，B ",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 3,
+            "groups_total": 3,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "B-MEM": {
+          "prompt_sha256": "c55212bc264965b3324b3cb271444c52374c4215c613e15d73e5bca1fee08bda",
+          "prompt_chars": 3863,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 194,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "等价关系需要满足以下三条性质：\n\n- **自反性** (Reflexivity)\n  对于集合中的任意元素 $a$，都有 $a \\sim a$。即每个元素都与自己相关。\n\n- **对称性** (Symmetry)\n  如果 $a \\sim b$，那么必然有 $b \\sim a$。即关系的方向可以互换。\n\n- **传递性** (Transitivity)\n  如果 $a \\sim b$ 且 $b \\sim c$，那么必然有 $a \\sim c$。即关系可以通过中间元素连接起来。\n\n只有同时满足这三条性质的二元关系，才能被称为等价关系。",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 3,
+            "groups_total": 3,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "C-PROF": {
+          "prompt_sha256": "49d424b6c3ec017819d6ab9c4c37ccd1c056724ce161b0bdd02e2baaad814c8d",
+          "prompt_chars": 3541,
+          "profile_attached": false,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 68,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "等价关系需要满足以下三条性质：\n\n1. **自反性**：集合中的每个元素都与自身相关。\n2. **对称性**：如果元素 a 与 b 相关，那么 b 也与 a 相关。\n3. **传递性**：如果 a 与 b 相关，且 b 与 c 相关，那么 a 也与 c 相关。",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 3,
+            "groups_total": 3,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "E-NOPACK": {
+          "prompt_sha256": "bf760fda1e416984d13ad70865d4adb3ab5d3608ae6cedad8598a639e50a094f",
+          "prompt_chars": 3854,
+          "profile_attached": false,
+          "doc_controls_enabled": null,
+          "token_usage": {},
+          "assembly_ms": 6,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "等价关系需要满足三条性质：\n\n1. **自反性**：每个元素都与自己相关。\n2. **对称性**：如果 a 与 b 相关，那么 b 也与 a 相关。\n3. **传递性**：如果 a 与 b 相关，且 b 与 c 相关，那么 a 与 c 也相关。",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 3,
+            "groups_total": 3,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        }
+      }
+    },
+    {
+      "id": "base-03-pigeonhole",
+      "category": "baseline",
+      "seeded_faces": {
+        "episodic": 0,
+        "preferences": 0,
+        "goals": 0,
+        "knowledge_nodes": 0
+      },
+      "differentiator_failures": [],
+      "baseline_profile_structure_diff_chars": -322,
+      "arms": {
+        "A": {
+          "prompt_sha256": "11e98ee6d5d30eba1c74875660cbaa30cc254e7b1ba3db06105385fb65e8bde6",
+          "prompt_chars": 3905,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 248,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "鸽笼原理（Pigeonhole Principle）的核心思路其实非常直观，可以概括为：**“东西比坑多，必有坑里挤着两个。”**\n\n在解题时，通常遵循以下三步思维路径：\n\n### 1. 识别“鸽子”和“鸽笼”\n这是最关键的一步。你需要从题目中抽象出两个集合：\n- **鸽子（对象）**：你要分配的东西，通常是数量较多的一方（如：人、数、点、线段等）。\n- **鸽笼（类别/位置）**：用来容纳对象的容器，通常是数量较少的一方（如：颜色、余数、区间、格子等）。\n\n**判断标准**：如果 `鸽子数量 > 鸽笼数量`，那么至少有一个鸽笼里包含不止一只鸽子。\n\n### 2. 构造合适的“鸽笼”\n很多难题的突破口在于**如何定义鸽笼**。不同的定义方式会导致完全不同的结论。常见的构造方法有：\n- **按属性分类**：例如，人的生日月份（12个鸽笼）、数的奇偶性（2个鸽笼）、模运算的余数（k个鸽笼）。\n",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "B-MEM": {
+          "prompt_sha256": "11e98ee6d5d30eba1c74875660cbaa30cc254e7b1ba3db06105385fb65e8bde6",
+          "prompt_chars": 3905,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 200,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "鸽笼原理（也叫抽屉原理）的核心思路其实非常直观：**当东西比容器多时，至少有一个容器里会装不止一个东西。**\n\n做题时，你可以把它拆解为三个步骤：\n\n1. **找“鸽子”和“鸽笼”**\n   - 这是最关键的一步。你需要识别题目中什么是被分配的对象（鸽子），什么是分类标准或位置（鸽笼）。\n   - 比如：“任意367个人中，必有两人同一天生日。”\n     - 鸽子 = 人（367个）\n     - 鸽笼 = 生日日期（最多366个）\n\n2. **计算“密度”**\n   - 用公式判断是否必然发生重叠：如果 `鸽子数 > 鸽笼数`，则至少有一个鸽笼里有 ≥2 只鸽子。\n   - 更通用的形式是：如果要把 $n$ 个物体放入 $m$ 个盒子，那么至少有一个盒子里有 $\\lceil n/m \\rceil$ 个物体（向上取整）。\n   - 比如：把10本书放进3个抽屉，$\\lceil 10/3 ",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "C-PROF": {
+          "prompt_sha256": "efbbfbaaeacf2bdfee4c7007db3fe8bcf449d7cabd1892c0d8c3ee762d83d2c8",
+          "prompt_chars": 3583,
+          "profile_attached": false,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 68,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "鸽笼原理（也叫抽屉原理）的核心思路其实非常朴素：**把“东西”塞进“格子”，只要东西比格子多，就一定有某个格子里不止一个东西。**\n\n做题时，可以按这三步走：\n\n1. **找“鸽子”和“笼子”**\n   - 这是最关键的一步。你需要明确题目中谁是“被分配的对象”（鸽子），谁是“分类标准”（笼子）。\n   - 比如：“任意367个人中，必有两人同一天生日”。这里人是鸽子（367只），一年最多366天是笼子。\n\n2. **构造合适的“笼子”**\n   - 有时候笼子不是现成的，需要你自己设计。\n   - 常见技巧包括：按余数分类、按区间分段、按奇偶性分组、或者利用对称性配对。\n   - 例如：证明“从1到10中选6个数，必有两个数之和为11”。你可以构造5个笼子：{1,10}, {2,9}, {3,8}, {4,7}, {5,6}。选6个数（鸽子）放进5个笼子，必有一个笼子被选中两次，即两个数",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "E-NOPACK": {
+          "prompt_sha256": "bf760fda1e416984d13ad70865d4adb3ab5d3608ae6cedad8598a639e50a094f",
+          "prompt_chars": 3854,
+          "profile_attached": false,
+          "doc_controls_enabled": null,
+          "token_usage": {},
+          "assembly_ms": 6,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "鸽笼原理（也叫抽屉原理）的核心思路其实非常直观，可以概括为一句话：**如果东西比容器多，那至少有一个容器里会装不止一个东西。**\n\n做题时，你可以按照这个“三步走”的思路来拆解：\n\n1. **找“鸽子”**：题目中要分配的对象是谁？（比如人、数、点等）\n2. **找“笼子”**：用来分类或容纳这些对象的类别是什么？（比如余数、区间、颜色等）\n3. **算账**：比较鸽子和笼子的数量。只要 `鸽子数 > 笼子数`，结论就成立了。\n\n### 举个栗子 🌰\n\n> **题目**：从 1 到 10 这十个整数中，任意取出 6 个数，证明其中必有两个数的和是 11。\n\n- **找鸽子**：取出的 6 个数 → 6 只鸽子\n- **找笼子**：把 1~10 按和为 11 配对 → (1,10), (2,9), (3,8), (4,7), (5,6) → 5 个笼子\n- **算账**：6 只鸽子放进 5 ",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        }
+      }
+    },
+    {
+      "id": "base-04-tree-vs-graph",
+      "category": "baseline",
+      "seeded_faces": {
+        "episodic": 0,
+        "preferences": 0,
+        "goals": 0,
+        "knowledge_nodes": 0
+      },
+      "differentiator_failures": [],
+      "baseline_profile_structure_diff_chars": -322,
+      "arms": {
+        "A": {
+          "prompt_sha256": "c55212bc264965b3324b3cb271444c52374c4215c613e15d73e5bca1fee08bda",
+          "prompt_chars": 3863,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 60373,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "树和图在数据结构中确实容易混淆，但它们的区别非常明确。简单来说：**树是一种特殊的图**。\n\n如果把“图”比作一张任意连接的城市交通网（可能有环、可能不连通），那么“树”就是其中一种最规整的形态——它像一棵倒置的家谱或文件目录，没有回路，且所有节点都从一个根出发。\n\n以下是核心区别的详细对比：\n\n### 1. 定义与结构关系\n- **图 (Graph)**：由顶点（Vertices）和边（Edges）组成。任意两个顶点之间都可以有边相连，没有方向限制（除非是有向图）。\n- **树 (Tree)**：是**无环连通图**。它必须满足两个条件：\n  - **连通性**：任意两个节点之间都有路径可达。\n  - **无环性**：不存在任何回路（即不能从 A 走到 B 再绕回 A）。\n\n### 2. 关键特性对比\n\n| 特性 | 一般图 (General Graph) | 树 (Tree) |\n| ",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "B-MEM": {
+          "prompt_sha256": "c55212bc264965b3324b3cb271444c52374c4215c613e15d73e5bca1fee08bda",
+          "prompt_chars": 3863,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 280,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "树和图在数据结构中有着本质的联系，但它们的定义范围和约束条件不同。简单来说：**树是一种特殊的图**。\n\n以下是它们的核心区别：\n\n1. **连通性与环路**\n   - **树**：必须是无环的连通图。也就是说，任意两个节点之间有且仅有一条路径。\n   - **一般图**：可以有环（Cycle），也可以不连通（即存在孤立的部分）。\n\n2. **根节点与方向性**\n   - **树**：通常有一个明确的“根”（Root），数据流向是从上到下（父到子）。虽然有无向树的概念，但在计算机科学应用中，树大多隐含了层级关系。\n   - **一般图**：没有固定的根，节点之间的关系是平等的或双向的（除非是有向图，但即便有向图也不一定有唯一的源点作为根）。\n\n3. **父子关系的唯一性**\n   - **树**：除了根节点外，每个节点有且仅有一个父节点。\n   - **一般图**：一个节点可以有多个邻居，",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "C-PROF": {
+          "prompt_sha256": "49d424b6c3ec017819d6ab9c4c37ccd1c056724ce161b0bdd02e2baaad814c8d",
+          "prompt_chars": 3541,
+          "profile_attached": false,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 91,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "树和图的关系，其实可以理解为“特殊”与“一般”的关系。所有的树都是图，但并非所有的图都是树。\n\n要区分它们，主要看以下几个核心特征：\n\n- **连通性与环路**\n  - **树**：必须是一棵连通的无环图。也就是说，任意两个节点之间都有且仅有一条路径相连，绝对不允许出现闭环（cycle）。\n  - **图**：可以是连通的，也可以是不连通的；可以有环，也可以没有环。如果一张图里有环，那它肯定不是树。\n\n- **边的数量**\n  - **树**：如果有 $n$ 个节点，那么边数一定是 $n-1$。这是树的硬性指标。\n  - **图**：边数可以是任意值，只要不超过完全图的边数上限即可。\n\n- **根节点与方向性**\n  - **树**：通常有一个明确的“根”（Root），数据流向往往是从上到下（父到子），具有层级结构。虽然也有无根树的概念，但在计算机算法中，树大多指有根树。\n  - **图*",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "E-NOPACK": {
+          "prompt_sha256": "bf760fda1e416984d13ad70865d4adb3ab5d3608ae6cedad8598a639e50a094f",
+          "prompt_chars": 3854,
+          "profile_attached": false,
+          "doc_controls_enabled": null,
+          "token_usage": {},
+          "assembly_ms": 5,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "树和图在数据结构中确实容易混淆，毕竟从定义上看，树其实就是一种特殊的图。但它们在结构约束、遍历逻辑和应用场景上有几个关键区别，我们可以像剥洋葱一样一层层来看。\n\n**1. 连通性与环路（最核心的区别）**\n- **图**：可以包含环（Cycle），即从一个节点出发，沿着边走一圈能回到原点。图也不一定非要是连通的，可能存在孤立的子图。\n- **树**：绝对没有环。任意两个节点之间有且仅有一条路径。如果一棵树是“无向”的，它必须是连通的；如果是“有向”的（如二叉树），通常隐含了从根到叶子的单向流动。\n\n**2. 方向性与根节点**\n- **图**：边可以是有向的，也可以是无向的。图中没有天然的“起点”，任何节点都可以作为搜索的起始点。\n- **树**：通常有一个明确的“根节点”（Root）。在有向树中，边总是从父指向子（或反之），形成层级关系。即使我们讨论无向树，一旦选定一个根，它就变成了有向",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        }
+      }
+    },
+    {
+      "id": "base-05-de-morgan",
+      "category": "baseline",
+      "seeded_faces": {
+        "episodic": 0,
+        "preferences": 0,
+        "goals": 0,
+        "knowledge_nodes": 0
+      },
+      "differentiator_failures": [],
+      "baseline_profile_structure_diff_chars": -322,
+      "arms": {
+        "A": {
+          "prompt_sha256": "c55212bc264965b3324b3cb271444c52374c4215c613e15d73e5bca1fee08bda",
+          "prompt_chars": 3863,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 381,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "德摩根定律（De Morgan's Laws）是逻辑学和集合论中关于“否定”如何与“连接词”相互转换的两条基本规则。\n\n简单来说，它讲的是：**当你否定一个组合条件时，这个否定会“拆开”原来的连接关系，并改变连接方式。**\n\n### 核心内容\n\n#### 1. 在逻辑命题中\n- **非 (A 且 B) = (非 A) 或 (非 B)**\n  - 如果“既下雨又刮风”是假的，那么意味着：要么没下雨，要么没刮风，或者两者都没发生。\n- **非 (A 或 B) = (非 A) 且 (非 B)**\n  - 如果“下雨或刮风”是假的，那么意味着：既没下雨，也没刮风。\n\n#### 2. 在集合运算中\n- **补集 (A ∩ B) = (补集 A) ∪ (补集 B)**\n  - “不属于 A 和 B 的交集”的元素，等于“不属于 A”或“不属于 B”的元素合在一起。\n- **补集 (A ∪ B) = (",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "B-MEM": {
+          "prompt_sha256": "c55212bc264965b3324b3cb271444c52374c4215c613e15d73e5bca1fee08bda",
+          "prompt_chars": 3863,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 203,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "德摩根定律（De Morgan's Laws）是逻辑学和集合论中非常基础且重要的规则，它描述了“非”（NOT）操作如何与“与”（AND）、“或”（OR）操作相互转换。\n\n简单来说，它的核心思想是：**否定一个组合条件，等于分别否定各个条件后，再改变连接词。**\n\n### 1. 在逻辑命题中\n假设有两个命题 P 和 Q：\n\n- **定律一**：`非 (P 且 Q)` 等价于 `(非 P) 或 (非 Q)`\n  - 意思是：如果“P和Q同时成立”是假的，那么至少有一个不成立。\n  - 例子：“并非（我是学生 且 我有钱）” 等价于 “我不是学生 或者 我没钱”。\n\n- **定律二**：`非 (P 或 Q)` 等价于 `(非 P) 且 (非 Q)`\n  - 意思是：如果“P或Q至少有一个成立”是假的，那么两个都不成立。\n  - 例子：“并非（下雨 或 下雪）” 等价于 “没下雨 并且 没下雪”。",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "C-PROF": {
+          "prompt_sha256": "49d424b6c3ec017819d6ab9c4c37ccd1c056724ce161b0bdd02e2baaad814c8d",
+          "prompt_chars": 3541,
+          "profile_attached": false,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 69,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "德摩根定律（De Morgan's Laws）是逻辑学和集合论中一组非常基础且重要的规则，它描述了“非”（否定/补集）与“与”（交集/合取）、“或”（并集/析取）之间的转换关系。\n\n简单来说，它的核心思想是：**否定一个组合条件，等于分别否定各个条件后，再改变连接词。**\n\n### 1. 在逻辑命题中\n假设有两个命题 $A$ 和 $B$：\n\n- **第一定律**：$\\neg (A \\land B) \\iff (\\neg A) \\lor (\\neg B)$\n  - 中文解释：“并非（A 且 B）” 等价于 “非 A 或者 非 B”。\n  - 例子：“我没有既吃苹果又吃香蕉” = “我没吃苹果，或者我没吃香蕉”。\n\n- **第二定律**：$\\neg (A \\lor B) \\iff (\\neg A) \\land (\\neg B)$\n  - 中文解释：“并非（A 或 B）” 等价于 “非 A 且 ",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "E-NOPACK": {
+          "prompt_sha256": "bf760fda1e416984d13ad70865d4adb3ab5d3608ae6cedad8598a639e50a094f",
+          "prompt_chars": 3854,
+          "profile_attached": false,
+          "doc_controls_enabled": null,
+          "token_usage": {},
+          "assembly_ms": 6,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "德摩根定律（De Morgan's Laws）是逻辑学和集合论中非常基础且重要的规则。简单来说，它描述了“非”（否定）操作如何与“与”（交集/合取）、“或”（并集/析取）操作相互转换。\n\n你可以把它理解为：**把括号拆开时，不仅里面的符号要变，外面的否定也要分配进去。**\n\n### 核心内容\n\n德摩根定律包含两个对称的公式：\n\n1. **“非 (A 且 B)” 等于 “(非 A) 或 (非 B)”**\n   - 逻辑表达：`¬(A ∧ B) ≡ ¬A ∨ ¬B`\n   - 集合表达：`(A ∩ B)^c = A^c ∪ B^c`\n   - **通俗理解**：如果你想说“我不喜欢苹果和香蕉”，意思是“我讨厌苹果，或者我讨厌香蕉”（至少讨厌其中一个）。\n\n2. **“非 (A 或 B)” 等于 “(非 A) 且 (非 B)”**\n   - 逻辑表达：`¬(A ∨ B) ≡ ¬A ∧ ¬B`\n ",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        }
+      }
+    },
+    {
+      "id": "base-06-sprint-pacing",
+      "category": "baseline",
+      "seeded_faces": {
+        "episodic": 0,
+        "preferences": 0,
+        "goals": 0,
+        "knowledge_nodes": 0
+      },
+      "differentiator_failures": [],
+      "baseline_profile_structure_diff_chars": -322,
+      "arms": {
+        "A": {
+          "prompt_sha256": "90e85893bdbeceb2792a8632b0b2a2f782a0fe6aee6853eae34881c09fdc6eb3",
+          "prompt_chars": 3903,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 279,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "期末冲刺期的时长没有标准答案，关键看你的“有效专注”能撑多久。\n\n观察到你本周任务密度较低，且目前处于低过载风险状态，这说明你还有调整空间。如果强行拉长战线，容易陷入“假努力”的疲劳战；如果太短，又可能覆盖不全考点。\n\n一个可校准的判断是：对于大多数学生，每天 **4-6 小时** 的高强度深度学习（非被动阅读）是比较合理的上限。超过这个时间，边际效益会急剧下降，甚至产生厌学情绪。\n\n建议你先尝试设定 **3 个 90 分钟** 的专注块，中间穿插休息。如果感觉余力充足，再逐步增加；如果感到疲惫，就维持现状并优化效率。你觉得这个节奏适合你现在的状态吗？",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "B-MEM": {
+          "prompt_sha256": "90e85893bdbeceb2792a8632b0b2a2f782a0fe6aee6853eae34881c09fdc6eb3",
+          "prompt_chars": 3903,
+          "profile_attached": true,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 199,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "期末冲刺阶段，每天的学习时长并没有一个绝对的“标准答案”，它高度依赖于你当前的知识掌握程度、剩余天数以及个人的精力恢复能力。不过，基于认知科学和高效学习的原则，我们可以找到一个相对合理的区间和节奏。\n\n**一般建议的合理时长：**\n\n对于大多数学生来说，在冲刺阶段，每天 **4 到 6 小时** 的高质量专注学习通常是比较可持续且高效的范围。如果超过 8 小时，边际效益往往会急剧递减，甚至因为疲劳导致记忆巩固效率下降。\n\n**关键不在于“总时长”，而在于“有效结构”：**\n\n1.  **分块学习（Pomodoro 变体）**\n    不要试图连续坐 5 个小时不动。建议采用 **45-90 分钟专注 + 10-15 分钟休息** 的节奏。冲刺期大脑负荷大，短周期的切换能保持注意力峰值。\n\n2.  **主动回忆优于被动阅读**\n    冲刺期的核心任务是“提取”而非“输入”。花 1 小时做题",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "C-PROF": {
+          "prompt_sha256": "92757a64e7adbf0acb3cb5a013bded2a5d0419d45d6e71c5c64015236405294c",
+          "prompt_chars": 3581,
+          "profile_attached": false,
+          "doc_controls_enabled": true,
+          "token_usage": {
+            "preferences": 1,
+            "goals": 1,
+            "episodic": 1
+          },
+          "assembly_ms": 70,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "期末冲刺阶段，每天的学习时长并没有一个绝对的“标准答案”，它高度依赖于你的剩余复习量、当前掌握程度以及个人的精力恢复能力。不过，基于认知科学和大多数高效学习者的经验，我们可以梳理出一个合理的区间和调整策略。\n\n### 1. 核心建议：有效时长而非绝对时长\n在冲刺期，**4-6 小时的高强度专注学习**通常比 10 小时的低效磨洋工更有价值。\n*   **新手/基础薄弱者**：建议从每天 3-4 小时开始，避免一开始就设定过高目标导致挫败感或过早疲劳。\n*   **中等水平/常规复习**：每天 5-7 小时是比较常见的节奏，分为上午、下午、晚上三个时段。\n*   **高强度/最后几天**：部分人可能会拉到 8-10 小时，但这通常是不可持续的，且对睡眠剥夺敏感的人效果会急剧下降。\n\n### 2. 时间分配策略：番茄工作法与深度工作\n不要连续坐着学几小时。大脑的注意力资源是有限的。\n*   *",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        },
+        "E-NOPACK": {
+          "prompt_sha256": "bf760fda1e416984d13ad70865d4adb3ab5d3608ae6cedad8598a639e50a094f",
+          "prompt_chars": 3854,
+          "profile_attached": false,
+          "doc_controls_enabled": null,
+          "token_usage": {},
+          "assembly_ms": 6,
+          "assembly_error": null,
+          "score": 1.0,
+          "answer_head": "期末冲刺阶段，每天的学习时长并没有一个绝对的“标准答案”，它更多取决于你的**剩余时间**、**当前掌握程度**以及**身心状态**。不过，基于认知科学和高效学习的原则，我们可以找到一个比较合理的区间。\n\n### 1. 一般建议：6-8 小时有效学习时间\n对于大多数大学生或备考者来说，**每天 6 到 8 小时的“深度专注”时间**通常是一个可持续且高效的范围。\n*   **注意是“有效时间”**：这指的是真正集中注意力、主动思考的时间，而不是坐在书桌前玩手机或发呆的总时长。\n*   **为什么不是越多越好？** 超过 8-9 小时后，边际效益会急剧递减，疲劳会导致记忆巩固效率下降，甚至引发焦虑和 burnout（倦怠）。\n\n### 2. 关键变量：根据你的情况调整\n你可以参考以下三个维度来微调自己的计划：\n\n*   **距离考试的天数**\n    *   **剩 1-3 天**：可能需要",
+          "judge": {
+            "kind": "deterministic",
+            "score": 1.0,
+            "groups_hit": 2,
+            "groups_total": 2,
+            "forbidden_hits": []
+          },
+          "call_error": null
+        }
+      }
+    }
+  ]
+}
