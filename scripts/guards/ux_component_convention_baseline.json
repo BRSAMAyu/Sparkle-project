@@ -1,5 +1,5 @@
 {
-  "comment": "Frozen ratchet baseline for check_ux_component_convention.py (U-01 CONVENTION, mobile/lib/core/design/README.md). Only lower via --update-baseline after a consolidation batch; never raise.",
+  "comment": "Frozen ratchet baseline for check_ux_component_convention.py (U-01 CONVENTION, mobile/lib/core/design/README.md). Only lower via --update-baseline after a consolidation batch; never raise. Roots +3 (community/photon/error_book presentation, A-SPEC2 N11 / top10 #5) and squad-domain witness entries (top10 #9) registered from measured values at HEAD a025e82a (GUARDS card wt227, 2026-09-23).",
   "files": {
     "mobile/lib/features/chat/presentation/screens/group_chat_screen.dart": {
       "colorLiteral": 0,
@@ -293,6 +293,286 @@
       "parallelClass": 1,
       "rawButton": 0,
       "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/community/presentation/pages/accountability_hub_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 1,
+      "rawSpinner": 2
+    },
+    "mobile/lib/features/community/presentation/screens/accountability_detail_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 2,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/community/presentation/screens/accountability_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/community/presentation/screens/blocked_users_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 4,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/community/presentation/screens/friend_profile_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 2,
+      "rawChip": 1,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/community/presentation/screens/friends_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 8,
+      "rawChip": 2,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/community/presentation/screens/group_detail_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 1,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/community/presentation/screens/group_discover_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 3,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/community/presentation/screens/group_members_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 1,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/community/presentation/screens/group_moderation_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 1,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/community/presentation/screens/squad_detail_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 5,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/community/presentation/screens/squad_list_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/community/presentation/widgets/accountability/accountability_partner_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 1,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/community/presentation/widgets/accountability_heatmap.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 1,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/community/presentation/widgets/accountability_hub/commitment_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 2,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/accountability_hub/partner_observation_control.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 1,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/community/presentation/widgets/achievement_badge.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 1,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/checkin_interaction.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 2,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/community/presentation/widgets/comment_bottom_sheet.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 1,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/community/presentation/widgets/feed_post_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/feed_tab_content.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/community/presentation/widgets/friends_hub_view.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 4,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/community/presentation/widgets/group_knowledge_base_view.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 5,
+      "rawButton": 0,
+      "rawChip": 2,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/community/presentation/widgets/partners_tab.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/recommendation_feedback_widgets.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 2,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/community/presentation/widgets/share_cards/capsule_share_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/community/presentation/widgets/share_cards/node_share_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/share_cards/plan_share_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/share_error_to_squad_dialog.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/community/presentation/widgets/shared_resource_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 1,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/community/presentation/widgets/similar_goal_pursuers_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 2,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/error_book/presentation/screens/add_error_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 2,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/error_book/presentation/screens/error_detail_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 1,
+      "rawChip": 1,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/error_book/presentation/screens/error_list_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 2,
+      "rawButton": 1,
+      "rawChip": 2,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/error_book/presentation/screens/review_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 1,
+      "rawChip": 1,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/error_book/presentation/widgets/analysis_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 2,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/error_book/presentation/widgets/error_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 2,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/error_book/presentation/widgets/error_question_image.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/error_book/presentation/widgets/remediable_patterns_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 1,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/error_book/presentation/widgets/subject_chips.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 2,
+      "rawButton": 0,
+      "rawChip": 2,
       "rawSpinner": 0
     },
     "mobile/lib/features/galaxy/presentation/screens/galaxy_draft_review_screen.dart": {
@@ -595,6 +875,27 @@
       "rawButton": 3,
       "rawChip": 0,
       "rawSpinner": 0
+    },
+    "mobile/lib/features/photon/presentation/screens/photon_transfer_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 1,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/photon/presentation/widgets/photon_balance_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/photon/presentation/widgets/transaction_history_list.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 2
     },
     "mobile/lib/features/plan/presentation/screens/diagnostic_quiz_screen.dart": {
       "colorLiteral": 0,

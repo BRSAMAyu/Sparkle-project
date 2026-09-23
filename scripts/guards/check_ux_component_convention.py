@@ -22,10 +22,19 @@ Per-file counts are pinned against a frozen baseline
   counts, run with `--update-baseline` and commit the JSON diff.
 
 Scanned roots (V3 reachable surfaces only — see v3-output/U-01/INVENTORY.md §1;
-10th root per A-SPEC V1.1 N1):
+10th root per A-SPEC V1.1 N1; 11th-13th roots per A-SPEC2 N10/N11 / top10 #5+#9):
   onboarding/home/chat/goal/task/memory/galaxy/plan presentation dirs,
   profile + persona-onboarding + unified-settings user screens,
-  settings presentation dir.
+  settings presentation dir,
+  community/photon/error_book presentation dirs (GUARDS card wt227 @a025e82a —
+  these three domains were previously unscanned "free-inspection channels";
+  current raw-component debt is frozen in the baseline, only-down).
+
+The squad domain additionally carries explicit ZERO/high-water WITNESS entries
+(ZERO_WITNESS_FILES below, top10 #9): squad_list_screen.dart was measured
+all-zero at registration; squad_detail_screen.dart / share_error_to_squad_dialog.dart
+carry only parallelClass naming-collision stock (class names containing
+Error/Pill, incl. 「错题」-domain naming) — frozen as measured, only-down.
 
 Exit 0 on pass, 1 on violations.
 """
@@ -56,6 +65,23 @@ SCAN_ROOTS: list[str] = [
     "features/user/presentation/screens/profile_screen.dart",
     "features/user/presentation/screens/persona_onboarding_screen.dart",
     "features/user/presentation/screens/unified_settings_screen.dart",
+    # 第 11-13 治理面（A-SPEC2 N10/N11 / GUARDS 卡 wt227，top10 #5+#9）：
+    # 社群 / 光子经济 / 错题本 presentation 层——此前不在扫描根，裸组件免检
+    # （「新功能免检通道」重演第一轮 sprint 剧本）。存量裸件按登记时点实测值
+    # 冻入基线只降不升，本卡不做组件迁移。
+    "features/community/presentation",
+    "features/photon/presentation",
+    "features/error_book/presentation",
+]
+
+# squad 域高水位见证（top10 #9）：登记时点 @a025e82a 实测——squad_list_screen
+# 五个模式全零（出现任何一档即超标）；squad_detail_screen（parallelClass=5）与
+# share_error_to_squad_dialog（parallelClass=1，主公开类名 ShareErrorToSquadDialog
+# 中 Error 为「错题」域语义碰撞）按实测值冻入基线。见 REPORT 诚实申报节。
+ZERO_WITNESS_FILES = [
+    "features/community/presentation/screens/squad_list_screen.dart",
+    "features/community/presentation/screens/squad_detail_screen.dart",
+    "features/community/presentation/widgets/share_error_to_squad_dialog.dart",
 ]
 
 PATTERNS: dict[str, re.Pattern[str]] = {
@@ -117,6 +143,12 @@ def scan_all() -> dict[str, dict[str, int]]:
         c = count_file(f)
         if any(c.values()):
             counts["mobile/lib/" + f.relative_to(MOBILE_LIB).as_posix()] = c
+    # zero/high-water witness rows (top10 #9): emitted even when clean so the
+    # explicit all-zero baseline entries survive --update-baseline refreshes.
+    for rel in ZERO_WITNESS_FILES:
+        key = "mobile/lib/" + rel
+        if key not in counts and (MOBILE_LIB / rel).is_file():
+            counts[key] = {name: 0 for name in PATTERNS}
     return counts
 
 
@@ -145,7 +177,10 @@ def main() -> int:
             "comment": (
                 "Frozen ratchet baseline for check_ux_component_convention.py "
                 "(U-01 CONVENTION, mobile/lib/core/design/README.md). Only lower via "
-                "--update-baseline after a consolidation batch; never raise."
+                "--update-baseline after a consolidation batch; never raise. "
+                "Roots +3 (community/photon/error_book presentation, A-SPEC2 N11 / "
+                "top10 #5) and squad-domain witness entries (top10 #9) registered "
+                "from measured values at HEAD a025e82a (GUARDS card wt227, 2026-09-23)."
             ),
             "files": current,
         }
@@ -196,7 +231,7 @@ def main() -> int:
     print(
         f"[ux-component-convention] PASS — ratchet holds: "
         + ", ".join(f"{k}={current_totals[k]}/{baseline_totals[k]}" for k in PATTERNS)
-        + f" ({len(current)} files with debt)"
+        + f" ({len(current)} files tracked, incl. zero-baseline witnesses)"
     )
     return 0
 

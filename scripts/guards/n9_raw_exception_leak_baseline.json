@@ -1,0 +1,655 @@
+{
+  "arb": {
+    "mobile/lib/l10n/app_en.arb": {
+      "accountabilityLoadFailed": 1,
+      "auroraFeedbackFailed": 1,
+      "auto_loadfailedrror": 1,
+      "blockedOperationFailed": 1,
+      "capsuleLoadFailed": 1,
+      "capsuleSubmitFailed": 1,
+      "chaosModeSwitchFailed": 1,
+      "chatConfirmFailed": 1,
+      "chatFileSaveFailed": 1,
+      "chatGroupFavoriteFailed": 1,
+      "chatGroupForwardFailed": 1,
+      "chatGroupReportFailed": 1,
+      "chatHistoryLoadFailed": 1,
+      "chatHistoryLoadMoreFailed": 1,
+      "chatShareResourceAdoptError": 1,
+      "communityAdoptFailed": 1,
+      "communityAdoptFailedWithError": 1,
+      "communityCreateGroupFailed": 1,
+      "communityCreateTaskFailed": 1,
+      "communityLoadFailed": 1,
+      "communityMyGroupsLoadError": 1,
+      "communityNudgeFailed": 1,
+      "communityOperationFailed": 1,
+      "communitySaveFailed": 1,
+      "ebLoadErrorFailed": 1,
+      "editProfileUpdateFailed": 1,
+      "editProfileUploadFailed": 1,
+      "errorBookDeleteFailedMessage": 1,
+      "favoritesLoadFailed": 1,
+      "favoritesOperationFailed": 1,
+      "fileUploadFailed": 1,
+      "flashCapsuleLoadError": 1,
+      "flashCapsuleSaveFailed": 1,
+      "focusLoadFailed": 1,
+      "focusReflectionSaveFailed": 1,
+      "focusSaveFailed": 1,
+      "fpInviteFailed": 1,
+      "friendActionFailed": 1,
+      "friendSubmitFailed": 1,
+      "friendsBlockFailed": 1,
+      "friendsDeleteFailed": 1,
+      "gdJoinFailed": 1,
+      "gdUpdateFailed": 1,
+      "generationFailedWithDetail": 1,
+      "gmActionFailed": 1,
+      "gmDemoteFailed": 1,
+      "gmPromoteFailed": 1,
+      "gmTransferFailed": 1,
+      "intentAnalysisFailed": 1,
+      "intentExecutionFailedWithDetail": 1,
+      "leaderboardSelfAnchorLoadFailed": 1,
+      "learningModeSaveFailed": 1,
+      "learningPreferenceSaveFailed": 1,
+      "loadingFailed": 1,
+      "loadingFailedWithError": 1,
+      "loginFailedWithError": 1,
+      "lpLoadFailed": 1,
+      "memoryCorrectionFailedWithDetail": 1,
+      "memoryGovFailed": 1,
+      "memoryPanelConflictFailed": 1,
+      "memoryPanelDismissFailed": 1,
+      "memoryPanelLoadFailed": 1,
+      "memoryPanelMarkFailed": 1,
+      "memoryPanelRevokeFailed": 1,
+      "memorySettingsLoadError": 1,
+      "memorySettingsSaveError": 1,
+      "modelChatPlanIssue": 1,
+      "modelChatSkipFailed": 1,
+      "modelChatTempFailed": 1,
+      "notificationAnalyticsLoadFailed": 1,
+      "notificationPermissionDeniedTitle": 1,
+      "notificationUpdateFailed": 1,
+      "passwordResetFailed": 1,
+      "personaAdjustFailed": 1,
+      "personaAdjustmentFailed": 1,
+      "personaCorrectionSubmitFailed": 1,
+      "personaGoalUpdateFailed": 1,
+      "personaLoadFailed": 1,
+      "personaLoadFailedError": 1,
+      "personaPreferenceUpdateFailed": 1,
+      "personaRestoreFailed": 1,
+      "personaRollbackFailed": 1,
+      "photonRedeemProLoadFailed": 1,
+      "planConfirmFailed": 1,
+      "planCreateFailed": 1,
+      "planDetailActivatePhaseFailed": 1,
+      "planDetailAddTaskFailed": 1,
+      "planDetailCompletePhaseFailed": 1,
+      "planDetailCreatePhaseFailed": 1,
+      "planDetailLearningPathLoadError": 1,
+      "planDetailLoadErrorGeneric": 1,
+      "planDetailPhasesLoadError": 1,
+      "planDetailSubmitFeedbackFailed": 1,
+      "planDetailTaskLoadFailed": 1,
+      "planGuideGenerationFailed": 1,
+      "planLoadFailedError": 1,
+      "posterPreviewErrorWith": 1,
+      "profileExportFailed": 1,
+      "ptFailed": 1,
+      "remediableGenerateFailed": 1,
+      "reviewPlanHubLoadFailed": 1,
+      "reviewSubmitFailed": 1,
+      "saveFailed": 1,
+      "schedulePreferencesSaveFailed": 1,
+      "seedLibraryDeleteFailed": 1,
+      "seedLibraryDetailAddItemFailed": 1,
+      "seedLibraryDetailApplyFailed": 1,
+      "seedLibraryDetailImportFailed": 1,
+      "seedLibraryDetailMarkNotSuitableFailed": 1,
+      "seedLibraryDetailRatingFailed": 1,
+      "seedLibraryDetailSetPrimaryFailed": 1,
+      "sendFailedWithError": 1,
+      "shareCardPrepareFailed": 1,
+      "shareFailed": 1,
+      "shareResourceFailed": 1,
+      "simulationReportGenerationFailed": 1,
+      "skillActionFailed": 1,
+      "skillDraftFailed": 1,
+      "skillLoadFailed": 1,
+      "skillSaveFailed": 1,
+      "smartPushSaveFailed": 1,
+      "squadActionFailed": 1,
+      "squadBoardLoadFailed": 1,
+      "squadCreateFailed": 1,
+      "squadJoinFailed": 1,
+      "squadLoadFailed": 1,
+      "squadPresenceLoadFailed": 1,
+      "squadRoomStatusLoadFailed": 1,
+      "squadShareFailed": 1,
+      "squadSharedErrorsLoadFailed": 1,
+      "statisticsExportFailed": 1,
+      "statisticsLoadingFailed": 1,
+      "studyMaterialsArchiveFailed": 1,
+      "studyMaterialsDeleteFailure": 1,
+      "studyMaterialsRestoreFailed": 1,
+      "studyMaterialsRevokeFailed": 1,
+      "studyMaterialsShareFailure": 1,
+      "submitFailedWithError": 1,
+      "syncCenterLoadFailed": 1,
+      "systemUpdatesLoadFailed": 1,
+      "taskDetailGuideGenerateFailed": 1,
+      "taskDetailSubtaskLoadFailed": 1,
+      "taskExecutionAuroraDiagnosticUnavailable": 1,
+      "taskGuidanceFailed": 1,
+      "taskLoadFailed": 1,
+      "taskReminderRefreshFailed": 1,
+      "taskReminderTimeFailed": 1,
+      "taskReminderUpdateFailed": 1,
+      "thoughtCapsuleCaptureFailed": 1,
+      "userCannotSkipNow": 1,
+      "userModelingFailed": 1,
+      "userPlanGenerationError": 1,
+      "utilLoadingFailed": 1,
+      "visualElementShareFailed": 1,
+      "vocabularyLookupOfflineDownloadFailed": 1,
+      "vocabularyLookupOfflineRemoveFailed": 1,
+      "voiceInputSpeechFailed": 1,
+      "voiceInputStartFailed": 1
+    },
+    "mobile/lib/l10n/app_zh.arb": {
+      "accountabilityLoadFailed": 1,
+      "auroraFeedbackFailed": 1,
+      "auto_loadfailedrror": 1,
+      "blockedOperationFailed": 1,
+      "capsuleLoadFailed": 1,
+      "capsuleSubmitFailed": 1,
+      "chaosModeSwitchFailed": 1,
+      "chatConfirmFailed": 1,
+      "chatFileSaveFailed": 1,
+      "chatGroupFavoriteFailed": 1,
+      "chatGroupForwardFailed": 1,
+      "chatGroupReportFailed": 1,
+      "chatHistoryLoadFailed": 1,
+      "chatHistoryLoadMoreFailed": 1,
+      "chatShareResourceAdoptError": 1,
+      "communityAdoptFailed": 1,
+      "communityAdoptFailedWithError": 1,
+      "communityCreateGroupFailed": 1,
+      "communityCreateTaskFailed": 1,
+      "communityLoadFailed": 1,
+      "communityMyGroupsLoadError": 1,
+      "communityNudgeFailed": 1,
+      "communityOperationFailed": 1,
+      "communitySaveFailed": 1,
+      "ebLoadErrorFailed": 1,
+      "editProfileUpdateFailed": 1,
+      "editProfileUploadFailed": 1,
+      "errorBookDeleteFailedMessage": 1,
+      "favoritesLoadFailed": 1,
+      "favoritesOperationFailed": 1,
+      "fileUploadFailed": 1,
+      "flashCapsuleLoadError": 1,
+      "flashCapsuleSaveFailed": 1,
+      "focusLoadFailed": 1,
+      "focusReflectionSaveFailed": 1,
+      "focusSaveFailed": 1,
+      "fpInviteFailed": 1,
+      "friendActionFailed": 1,
+      "friendSubmitFailed": 1,
+      "friendsBlockFailed": 1,
+      "friendsDeleteFailed": 1,
+      "gdJoinFailed": 1,
+      "gdUpdateFailed": 1,
+      "generationFailedWithDetail": 1,
+      "gmActionFailed": 1,
+      "gmDemoteFailed": 1,
+      "gmPromoteFailed": 1,
+      "gmTransferFailed": 1,
+      "intentAnalysisFailed": 1,
+      "intentExecutionFailedWithDetail": 1,
+      "leaderboardSelfAnchorLoadFailed": 1,
+      "learningModeSaveFailed": 1,
+      "learningPreferenceSaveFailed": 1,
+      "loadingFailed": 1,
+      "loadingFailedWithError": 1,
+      "loginFailedWithError": 1,
+      "lpLoadFailed": 1,
+      "memoryCorrectionFailedWithDetail": 1,
+      "memoryGovFailed": 1,
+      "memoryPanelConflictFailed": 1,
+      "memoryPanelDismissFailed": 1,
+      "memoryPanelLoadFailed": 1,
+      "memoryPanelMarkFailed": 1,
+      "memoryPanelRevokeFailed": 1,
+      "memorySettingsLoadError": 1,
+      "memorySettingsSaveError": 1,
+      "modelChatPlanIssue": 1,
+      "modelChatSkipFailed": 1,
+      "modelChatTempFailed": 1,
+      "notificationAnalyticsLoadFailed": 1,
+      "notificationPermissionDeniedTitle": 1,
+      "notificationUpdateFailed": 1,
+      "passwordResetFailed": 1,
+      "personaAdjustFailed": 1,
+      "personaAdjustmentFailed": 1,
+      "personaCorrectionSubmitFailed": 1,
+      "personaGoalUpdateFailed": 1,
+      "personaLoadFailed": 1,
+      "personaLoadFailedError": 1,
+      "personaPreferenceUpdateFailed": 1,
+      "personaRestoreFailed": 1,
+      "personaRollbackFailed": 1,
+      "photonRedeemProLoadFailed": 1,
+      "planConfirmFailed": 1,
+      "planCreateFailed": 1,
+      "planDetailActivatePhaseFailed": 1,
+      "planDetailAddTaskFailed": 1,
+      "planDetailCompletePhaseFailed": 1,
+      "planDetailCreatePhaseFailed": 1,
+      "planDetailLearningPathLoadError": 1,
+      "planDetailLoadErrorGeneric": 1,
+      "planDetailPhasesLoadError": 1,
+      "planDetailSubmitFeedbackFailed": 1,
+      "planDetailTaskLoadFailed": 1,
+      "planGuideGenerationFailed": 1,
+      "planLoadFailedError": 1,
+      "posterPreviewErrorWith": 1,
+      "profileExportFailed": 1,
+      "ptFailed": 1,
+      "remediableGenerateFailed": 1,
+      "reviewPlanHubLoadFailed": 1,
+      "reviewSubmitFailed": 1,
+      "saveFailed": 1,
+      "schedulePreferencesSaveFailed": 1,
+      "seedLibraryDeleteFailed": 1,
+      "seedLibraryDetailAddItemFailed": 1,
+      "seedLibraryDetailApplyFailed": 1,
+      "seedLibraryDetailImportFailed": 1,
+      "seedLibraryDetailMarkNotSuitableFailed": 1,
+      "seedLibraryDetailRatingFailed": 1,
+      "seedLibraryDetailSetPrimaryFailed": 1,
+      "sendFailedWithError": 1,
+      "shareCardPrepareFailed": 1,
+      "shareFailed": 1,
+      "shareResourceFailed": 1,
+      "simulationReportGenerationFailed": 1,
+      "skillActionFailed": 1,
+      "skillDraftFailed": 1,
+      "skillLoadFailed": 1,
+      "skillSaveFailed": 1,
+      "smartPushSaveFailed": 1,
+      "squadActionFailed": 1,
+      "squadBoardLoadFailed": 1,
+      "squadCreateFailed": 1,
+      "squadJoinFailed": 1,
+      "squadLoadFailed": 1,
+      "squadPresenceLoadFailed": 1,
+      "squadRoomStatusLoadFailed": 1,
+      "squadShareFailed": 1,
+      "squadSharedErrorsLoadFailed": 1,
+      "statisticsExportFailed": 1,
+      "statisticsLoadingFailed": 1,
+      "studyMaterialsArchiveFailed": 1,
+      "studyMaterialsDeleteFailure": 1,
+      "studyMaterialsRestoreFailed": 1,
+      "studyMaterialsRevokeFailed": 1,
+      "studyMaterialsShareFailure": 1,
+      "submitFailedWithError": 1,
+      "syncCenterLoadFailed": 1,
+      "systemUpdatesLoadFailed": 1,
+      "taskDetailGuideGenerateFailed": 1,
+      "taskDetailSubtaskLoadFailed": 1,
+      "taskExecutionAuroraDiagnosticUnavailable": 1,
+      "taskGuidanceFailed": 1,
+      "taskLoadFailed": 1,
+      "taskReminderRefreshFailed": 1,
+      "taskReminderTimeFailed": 1,
+      "taskReminderUpdateFailed": 1,
+      "thoughtCapsuleCaptureFailed": 1,
+      "userCannotSkipNow": 1,
+      "userModelingFailed": 1,
+      "userPlanGenerationError": 1,
+      "utilLoadingFailed": 1,
+      "visualElementShareFailed": 1,
+      "vocabularyLookupOfflineDownloadFailed": 1,
+      "vocabularyLookupOfflineRemoveFailed": 1,
+      "voiceInputSpeechFailed": 1,
+      "voiceInputStartFailed": 1
+    }
+  },
+  "callSites": {
+    "mobile/lib/core/statistics/presentation/widgets/export/statistics_export_bottom_sheet.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/core/utils/chaos/chaos_control_dialog.dart": {
+      "bareCatchVar": 1,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/achievement/presentation/screens/achievement_list_screen.dart": {
+      "bareCatchVar": 1,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/calendar/presentation/screens/calendar_stats_screen.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/chat/data/services/audio_recording_service.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 4
+    },
+    "mobile/lib/features/chat/presentation/providers/voice_input_provider.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/chat/presentation/screens/group_chat_screen.dart": {
+      "bareCatchVar": 6,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/chat/presentation/screens/private_chat_screen.dart": {
+      "bareCatchVar": 1,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/agent_message_renderer.dart": {
+      "bareCatchVar": 1,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/chat_bubble.dart": {
+      "bareCatchVar": 2,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/file_message_bubble.dart": {
+      "bareCatchVar": 1,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/chat/presentation/widgets/intent_analysis_button.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/intent_preview_dialog.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/voice_input_button.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/community/presentation/screens/accountability_screen.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/community/presentation/screens/blocked_users_screen.dart": {
+      "bareCatchVar": 1,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/community/presentation/screens/create_group_screen.dart": {
+      "bareCatchVar": 1,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/community/presentation/screens/favorites_screen.dart": {
+      "bareCatchVar": 2,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/community/presentation/screens/friend_profile_screen.dart": {
+      "bareCatchVar": 1,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/community/presentation/screens/friends_screen.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 5
+    },
+    "mobile/lib/features/community/presentation/screens/group_detail_screen.dart": {
+      "bareCatchVar": 2,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/community/presentation/screens/group_discover_screen.dart": {
+      "bareCatchVar": 1,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/community/presentation/screens/group_members_screen.dart": {
+      "bareCatchVar": 5,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/community/presentation/screens/group_moderation_screen.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 2
+    },
+    "mobile/lib/features/community/presentation/screens/group_tasks_screen.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/community/presentation/screens/squad_detail_screen.dart": {
+      "bareCatchVar": 6,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/community/presentation/screens/squad_list_screen.dart": {
+      "bareCatchVar": 3,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/community/presentation/widgets/group_chat_bubble.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/group_knowledge_base_view.dart": {
+      "bareCatchVar": 1,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/groups_hub_view.dart": {
+      "bareCatchVar": 1,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/community/presentation/widgets/private_chat_bubble.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/share_error_to_squad_dialog.dart": {
+      "bareCatchVar": 2,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/community/presentation/widgets/share_resource_sheet.dart": {
+      "bareCatchVar": 3,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/documents/presentation/screens/document_library_screen.dart": {
+      "bareCatchVar": 2,
+      "catchVarToString": 3
+    },
+    "mobile/lib/features/error_book/presentation/screens/add_error_screen.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 3
+    },
+    "mobile/lib/features/error_book/presentation/screens/error_detail_screen.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/error_book/presentation/screens/error_list_screen.dart": {
+      "bareCatchVar": 1,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/error_book/presentation/widgets/remediable_patterns_card.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/file/presentation/widgets/file_picker_with_presigned.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/focus/presentation/screens/mindfulness_mode_screen.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/focus/presentation/widgets/reflection_dialog.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/galaxy/data/services/galaxy_llm_service.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/home/presentation/screens/notification_list_screen.dart": {
+      "bareCatchVar": 1,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/home/presentation/widgets/thought_capsule_dialog.dart": {
+      "bareCatchVar": 1,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/home/presentation/widgets/unified_omni_bar.dart": {
+      "bareCatchVar": 3,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/insights/presentation/screens/learning_forecast_screen.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/insights/presentation/widgets/learning_path_dialog.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 5
+    },
+    "mobile/lib/features/leaderboard/presentation/screens/self_anchor_screen.dart": {
+      "bareCatchVar": 1,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/memory/presentation/screens/memory_settings_screen.dart": {
+      "bareCatchVar": 2,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/memory/presentation/widgets/understanding_overview_view.dart": {
+      "bareCatchVar": 6,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/memory/presentation/widgets/why_this_receipt_sheet.dart": {
+      "bareCatchVar": 1,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/notification_center/presentation/screens/notification_analytics_screen.dart": {
+      "bareCatchVar": 1,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/notification_center/presentation/screens/notification_center_screen.dart": {
+      "bareCatchVar": 1,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/photon/presentation/screens/photon_redeem_pro_screen.dart": {
+      "bareCatchVar": 1,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/plan/presentation/screens/plan_create_screen.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart": {
+      "bareCatchVar": 1,
+      "catchVarToString": 7
+    },
+    "mobile/lib/features/plan/presentation/screens/plan_edit_screen.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/plan/presentation/screens/sprint_history_screen.dart": {
+      "bareCatchVar": 1,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/reviews/presentation/screens/review_plan_hub_screen.dart": {
+      "bareCatchVar": 1,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/seed_library/presentation/screens/seed_library_detail_screen.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 3
+    },
+    "mobile/lib/features/simulation/presentation/screens/simulation_screen.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/task/presentation/screens/task_detail_screen.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/task/presentation/screens/task_execution_screen.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/task/presentation/screens/task_reminder_settings_screen.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 3
+    },
+    "mobile/lib/features/task/presentation/widgets/blocking_interceptor_dialog.dart": {
+      "bareCatchVar": 1,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/task/presentation/widgets/guidance/task_guidance_surface.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/task/presentation/widgets/task_feedback_dialog.dart": {
+      "bareCatchVar": 1,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/tools/presentation/widgets/flash_capsule_tool.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 2
+    },
+    "mobile/lib/features/tools/presentation/widgets/translator_tool.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 2
+    },
+    "mobile/lib/features/tools/presentation/widgets/vocabulary_lookup_tool.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 2
+    },
+    "mobile/lib/features/translation/presentation/widgets/translation_popover.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/user/presentation/screens/edit_profile_screen.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/user/presentation/screens/export_data_screen.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/user/presentation/screens/learning_mode_screen.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/user/presentation/screens/modeling_chat_screen.dart": {
+      "bareCatchVar": 4,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/user/presentation/screens/poster_studio_screen.dart": {
+      "bareCatchVar": 1,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/user/presentation/screens/schedule_preferences_screen.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    },
+    "mobile/lib/features/user/presentation/screens/sync_center_screen.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 2
+    },
+    "mobile/lib/features/user/presentation/screens/unified_settings_screen.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 2
+    },
+    "mobile/lib/features/user/presentation/screens/user_persona_screen.dart": {
+      "bareCatchVar": 6,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/visual_elements/presentation/screens/visual_elements_screen.dart": {
+      "bareCatchVar": 1,
+      "catchVarToString": 0
+    },
+    "mobile/lib/features/visual_elements/presentation/widgets/visual_element_preview_dialog.dart": {
+      "bareCatchVar": 0,
+      "catchVarToString": 1
+    }
+  },
+  "comment": "Frozen ratchet baseline for check_n9_raw_exception_leak.py (SPEC v1.2 N9: arb {error} placeholder + raw-exception l10n call args). Registered from measured values at HEAD a025e82a (GUARDS card wt227, 2026-09-23). Only lower via --update-baseline after a cleanup batch; never raise. arb edits additionally follow the §6.5-4 serial arb window discipline."
+}

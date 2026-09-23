@@ -218,7 +218,6 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
                                     linkColor: isUser
                                         ? DS.textOnPrimary
                                         : DS.brandPrimary,
-                                    fontSize: 14,
                                     contentRole:
                                         SparkleMarkdownRole.chatBubble,
                                   ),

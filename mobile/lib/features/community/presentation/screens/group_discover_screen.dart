@@ -252,7 +252,7 @@ class _GroupDiscoverScreenState extends ConsumerState<GroupDiscoverScreen> {
               Text(
                 UserFacingError.from(error),
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: DS.textTertiary),
+                style: TextStyle(fontSize: DS.fontSizeXs, color: DS.textTertiary),
               ),
             ],
           ),
@@ -657,7 +657,7 @@ class _DirectoryGroupCard extends StatelessWidget {
                           group.memberCount,
                           group.todayCheckinCount,
                           group.totalFlamePower.toStringAsFixed(0)),
-                      style: TextStyle(color: DS.textSecondary, fontSize: 12),
+                      style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeXs),
                     ),
                   ],
                 ),
@@ -704,7 +704,7 @@ class _DirectoryGroupCard extends StatelessWidget {
                       ? context.l10n.gdPublicGroup
                       : context.l10n.gdActivityScore(
                           group.activityScore!.toStringAsFixed(1)),
-                  style: TextStyle(color: DS.textSecondary, fontSize: 12),
+                  style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeXs),
                 ),
               ),
               SparkleButton(
