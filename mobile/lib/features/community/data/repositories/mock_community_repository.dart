@@ -2,6 +2,7 @@
 
 import 'dart:async';
 
+import 'package:sparkle/core/offline/list_read_cache.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/models/community_models.dart';
@@ -1676,9 +1677,16 @@ class MockCommunityRepository implements CommunityRepository {
   @override
   Future<List<Post>> getFeed(
       {int page = 1, int limit = 20, String? scope}) async {
+    return (await getFeedCached(page: page, limit: limit, scope: scope)).data;
+  }
+
+  // N34：demo/mock 仓库不做本地快照（mock 数据永不入缓存）。
+  @override
+  Future<CacheAwareResult<List<Post>>> getFeedCached(
+      {int page = 1, int limit = 20, String? scope}) async {
     final l10n = I18nService.instance.l10n;
     final now = DateTime.now();
-    return [
+    return CacheAwareResult([
       Post(
         id: 'post_001',
         userId: _mockUsers[0].id,
@@ -1715,7 +1723,8 @@ class MockCommunityRepository implements CommunityRepository {
         likeCount: 23,
         topic: l10n.communityTopicErrorReview,
       ),
-    ];
+      ],
+    );
   }
 
   @override

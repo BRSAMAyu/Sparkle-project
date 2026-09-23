@@ -7,7 +7,7 @@ part of 'agent_statistics_provider.dart';
 // **************************************************************************
 
 String _$agentStatsRepositoryHash() =>
-    r'd4c28e02220695393f031d5a6861f967ef98cd4c';
+    r'df4bc459f905125b1fc89d98863a9c7cfccf0818';
 
 /// Provider for agent statistics repository
 ///
@@ -25,7 +25,7 @@ final agentStatsRepositoryProvider =
 );
 
 typedef AgentStatsRepositoryRef = AutoDisposeProviderRef<AgentStatsRepository>;
-String _$agentStatisticsHash() => r'bda6d77ea741ed9b97a52594bcbde8ad5e3a818d';
+String _$agentStatisticsHash() => r'6892903504f410b59fbe7ea510e8d1c40ccf5144';
 
 /// Provider for agent statistics state
 ///

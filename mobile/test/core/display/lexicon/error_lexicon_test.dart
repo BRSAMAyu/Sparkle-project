@@ -7,6 +7,7 @@ import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
+import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/l10n/app_localizations_en.dart';
 import 'package:sparkle/l10n/app_localizations_zh.dart';
 
@@ -72,6 +73,13 @@ void main() {
       const FormatException('bad sample payload'),
       UiErrorCategory.format,
       '[ERR-FORMAT]',
+    ),
+    // N35（A-SPEC6）：离线入队成功是「已排队」三态——类型化自报类别经
+    // 判定表短路，绝不再落 unknown 通用错误通道（「报了错但实际成功了」）。
+    (
+      OfflineEnqueuedException('pauseTask queued for sync'),
+      UiErrorCategory.offlineQueued,
+      '[ERR-QUEUED]',
     ),
     (
       Exception('mystery opening-line failure'),

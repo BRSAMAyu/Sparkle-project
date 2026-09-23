@@ -1,9 +1,12 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
+import 'package:sparkle/core/offline/list_read_cache.dart';
+import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/offline/offline_providers.dart';
 import 'package:sparkle/core/offline/sync_engine.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
@@ -17,6 +20,7 @@ import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/features/task/data/models/task_feedback_response.dart';
 import 'package:sparkle/features/task/data/models/task_feedback_submission.dart';
 import 'package:sparkle/features/task/data/models/task_nudge.dart';
+import 'package:sparkle/features/task/data/services/task_offline_queue.dart';
 import 'package:sparkle/shared/entities/subtask_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/models/api_response_model.dart';
@@ -24,11 +28,18 @@ import 'package:sparkle/shared/models/api_response_model.dart';
 /// TASK-013: Thrown when an offline-eligible task op was successfully queued
 /// for later sync rather than executed immediately. Callers should treat this
 /// as success but with an "Offline — will sync when reconnected" UX hint.
-class OfflineEnqueuedException implements Exception {
+///
+/// N35（A-SPEC6）：实现 [TypedUiError] 类型化自报类别——「入队成功」
+/// 经词典落 `offlineQueued` 人话（「已保存，恢复网络后自动同步」），
+/// 禁再落 unknown 通用错误通道（「报了错但实际成功了」腐蚀信任）。
+class OfflineEnqueuedException implements Exception, TypedUiError {
   OfflineEnqueuedException(this.message);
   final String message;
   @override
   String toString() => 'OfflineEnqueuedException: $message';
+
+  @override
+  UiErrorCategory get uiErrorCategory => UiErrorCategory.offlineQueued;
 }
 
 enum TaskGuidanceAudience { human, ai }
@@ -209,11 +220,26 @@ class TaskStuckResult {
 }
 
 class TaskRepository {
-  TaskRepository(this._apiClient, {SyncEngine? offlineSync})
-      : _offlineSync = offlineSync;
+  TaskRepository(this._apiClient, {SyncEngine? offlineSync, ListReadCache? readCache})
+      : _offlineSync = offlineSync,
+        _readCache = readCache;
 
   final ApiClient _apiClient;
   final SyncEngine? _offlineSync;
+
+  /// N34：本地读缓存（列表/今日任务快照），离线冷启动兜底。
+  final ListReadCache? _readCache;
+
+  /// N35（死代码接线令）：task 生命周期离线入队统一走 [TaskOfflineQueue]
+  /// ——start/pause/resume/complete/abandon 五操作同制，回放端
+  ///（sync_engine._sendTaskOperation）本就支持全部五类。
+  TaskOfflineQueue? _offlineQueue;
+
+  TaskOfflineQueue? get _offlineQueueOrNull {
+    final engine = _offlineSync;
+    if (engine == null) return null;
+    return _offlineQueue ??= TaskOfflineQueue(engine, LocalDatabase());
+  }
 
   /// TASK-013: Returns true if the DioException looks like an offline / network
   /// failure and the request can safely be enqueued for later replay.
@@ -224,26 +250,39 @@ class TaskRepository {
         e.type == DioExceptionType.receiveTimeout;
   }
 
-  /// TASK-013: Enqueue a task lifecycle op for later replay if SyncEngine is
-  /// available; rethrow otherwise so the caller falls back to legacy error UX.
+  /// TASK-013/N35: Enqueue a task lifecycle op for later replay via the
+  /// shared [TaskOfflineQueue] (dedupeKey/priority 与回放端口径一致).
+  /// SyncEngine unavailable → no-op so the caller falls back to legacy error UX.
   Future<void> _enqueueTaskOp({
     required String taskId,
     required String opType,
     Map<String, dynamic>? extras,
   }) async {
-    final engine = _offlineSync;
-    if (engine == null) return;
-    final payload = <String, dynamic>{'task_id': taskId};
-    if (extras != null) payload.addAll(extras);
-    await engine.enqueue(
-      topic: 'task',
-      opType: opType,
-      payload: payload,
-      entityType: 'task',
-      entityId: taskId,
-      dedupeKey: 'task:$taskId:$opType',
-      priority: opType == 'complete' ? 2 : 1,
-    );
+    final queue = _offlineQueueOrNull;
+    if (queue == null) return;
+    switch (opType) {
+      case 'start':
+        await queue.enqueueStart(taskId);
+      case 'pause':
+        await queue.enqueuePause(
+          taskId,
+          reason: extras?['reason'] as String?,
+        );
+      case 'resume':
+        await queue.enqueueResume(taskId);
+      case 'complete':
+        await queue.enqueueComplete(
+          taskId,
+          completion: extras?['completion'] as Map<String, dynamic>?,
+        );
+      case 'abandon':
+        await queue.enqueueAbandon(
+          taskId,
+          reason: extras?['reason'] as String?,
+        );
+      default:
+        throw ArgumentError('Unknown task op type: $opType');
+    }
   }
 
   // A generic error handler for Dio exceptions
@@ -327,17 +366,30 @@ class TaskRepository {
     Map<String, dynamic>? filters,
     int page = 1,
     int pageSize = 50,
+  }) async =>
+      (await getTasksCached(filters: filters, page: page, pageSize: pageSize))
+          .data;
+
+  /// N34：任务列表读（缓存感知）——成功响应落本地快照，连接类失败回读，
+  /// `fromCache/asOf` 传导 UI 挂「截至 X」标记。demo/mock 数据永不入库。
+  Future<CacheAwareResult<PaginatedResponse<TaskModel>>> getTasksCached({
+    Map<String, dynamic>? filters,
+    int page = 1,
+    int pageSize = 50,
   }) async {
     if (DemoDataService.isDemoMode) {
       final tasks = DemoDataService().demoTasks;
       // Simple mock pagination
-      return PaginatedResponse(
-        items: tasks,
-        total: tasks.length,
-        page: 1,
-        pageSize: pageSize,
+      return CacheAwareResult(
+        PaginatedResponse(
+          items: tasks,
+          total: tasks.length,
+          page: 1,
+          pageSize: pageSize,
+        ),
       );
     }
+    final cacheKey = _taskListCacheKey(filters: filters, page: page, pageSize: pageSize);
     try {
       final queryParams = <String, dynamic>{
         'page': page,
@@ -352,14 +404,58 @@ class TaskRepository {
         ApiEndpoints.tasks,
         queryParameters: queryParams,
       );
-      return ApiResponseParser.parsePaginated(
-        response.data,
-        (json) => TaskModel.fromJson(json as Map<String, dynamic>),
-        action: 'getTasks',
+
+      await _readCache?.put(cacheKey, response.data);
+      return CacheAwareResult(
+        ApiResponseParser.parsePaginated(
+          response.data,
+          (json) => TaskModel.fromJson(json as Map<String, dynamic>),
+          action: 'getTasks',
+        ),
       );
     } on DioException catch (e) {
+      final snapshot = await _readSnapshotOnNetworkFailure(e, cacheKey);
+      if (snapshot != null) {
+        return CacheAwareResult(
+          ApiResponseParser.parsePaginated(
+            snapshot.payload,
+            (json) => TaskModel.fromJson(json as Map<String, dynamic>),
+            action: 'getTasks',
+          ),
+          fromCache: true,
+          asOf: snapshot.fetchedAt,
+        );
+      }
       return _handleDioError(e, 'getTasks');
     }
+  }
+
+  /// N34：任务列表查询指纹（缓存键）。
+  String _taskListCacheKey({
+    Map<String, dynamic>? filters,
+    required int page,
+    required int pageSize,
+  }) {
+    final filterPart = (filters == null || filters.isEmpty)
+        ? '-'
+        : (Map<String, String>.fromIterable(
+            filters.keys,
+            value: (key) => filters[key].toString(),
+          )..remove('page'))
+            .toString();
+    return 'task:list:$filterPart:p$page:s$pageSize';
+  }
+
+  /// N34：连接类失败时回读同键快照；其余情况返回 null（原始错误照常上抛）。
+  Future<SnapshotData?> _readSnapshotOnNetworkFailure(
+    DioException e,
+    String cacheKey,
+  ) async {
+    final cache = _readCache;
+    if (cache == null || !ListReadCache.isNetworkFailure(e)) {
+      return null;
+    }
+    return cache.get(cacheKey);
   }
 
   Future<TaskModel> getTask(String id) async {
@@ -630,24 +726,47 @@ class TaskRepository {
     }
   }
 
-  Future<List<TaskModel>> getTodayTasks() async {
+  Future<List<TaskModel>> getTodayTasks() async =>
+      (await getTodayTasksCached()).data;
+
+  /// N34：今日任务读（缓存感知）——断网冷启动今日任务仍可见，
+  /// `fromCache/asOf` 传导 UI 挂「截至 X」标记。demo/mock 数据永不入库。
+  Future<CacheAwareResult<List<TaskModel>>> getTodayTasksCached() async {
     if (DemoDataService.isDemoMode) {
       // Return tasks that are pending or in progress, or recently completed
-      return DemoDataService()
-          .demoTasks
-          .where((t) => t.status != TaskStatus.abandoned)
-          .toList();
+      return CacheAwareResult(
+        DemoDataService()
+            .demoTasks
+            .where((t) => t.status != TaskStatus.abandoned)
+            .toList(),
+      );
     }
+    const cacheKey = 'task:today:v1';
     try {
       final response = await _apiClient.get<Map<String, dynamic>>(
         ApiEndpoints.todayTasks,
       );
       final data =
           ApiResponseParser.unwrapList(response.data, action: 'getTodayTasks');
-      return data
+      final tasks = data
           .map((json) => TaskModel.fromJson(json as Map<String, dynamic>))
           .toList();
+
+      await _readCache?.put(cacheKey, data);
+      return CacheAwareResult(tasks);
     } on DioException catch (e) {
+      final snapshot = await _readSnapshotOnNetworkFailure(e, cacheKey);
+      if (snapshot != null) {
+        final data = ApiResponseParser.unwrapList(
+          snapshot.payload,
+          action: 'getTodayTasks',
+        );
+        return CacheAwareResult(
+          data.map((json) => TaskModel.fromJson(json as Map<String, dynamic>)).toList(),
+          fromCache: true,
+          asOf: snapshot.fetchedAt,
+        );
+      }
       return _handleDioError(e, 'getTodayTasks');
     }
   }
@@ -1230,6 +1349,11 @@ Clarify the core output and completion criteria.
           ApiResponseParser.unwrapMap(response.data, action: 'startTask');
       return TaskModel.fromJson(payload);
     } on DioException catch (e) {
+      // N35（死代码接线令）：start 与 pause/resume 同制离线入队。
+      if (_isOfflineError(e) && _offlineSync != null) {
+        await _enqueueTaskOp(taskId: id, opType: 'start');
+        throw OfflineEnqueuedException('startTask queued for sync');
+      }
       return _handleDioError(e, 'startTask');
     }
   }
@@ -1430,6 +1554,23 @@ Clarify the core output and completion criteria.
           ApiResponseParser.unwrapMap(response.data, action: 'completeTask');
       return TaskCompletionResult.fromJson(payload);
     } on DioException catch (e) {
+      // N35（死代码接线令）：complete 离线入队（回放端按 completion 体
+      // 重放 POST /tasks/{id}/complete）。provider 侧已乐观置位，收到
+      // OfflineEnqueuedException 后保持 pending 同步态即可，绝不报错。
+      if (_isOfflineError(e) && _offlineSync != null) {
+        await _enqueueTaskOp(
+          taskId: id,
+          opType: 'complete',
+          extras: {
+            'completion': {
+              // X-04：只传实测分钟；null 字段不落 payload（服务端按真实起止推算）。
+              if (actualMinutes != null) 'actual_minutes': actualMinutes,
+              if (note != null && note.isNotEmpty) 'user_note': note,
+            },
+          },
+        );
+        throw OfflineEnqueuedException('completeTask queued for sync');
+      }
       return _handleDioError(e, 'completeTask');
     }
   }
@@ -1455,6 +1596,11 @@ Clarify the core output and completion criteria.
           ApiResponseParser.unwrapMap(response.data, action: 'abandonTask');
       return TaskModel.fromJson(payload);
     } on DioException catch (e) {
+      // N35（死代码接线令）：abandon 与 pause/resume 同制离线入队。
+      if (_isOfflineError(e) && _offlineSync != null) {
+        await _enqueueTaskOp(taskId: id, opType: 'abandon');
+        throw OfflineEnqueuedException('abandonTask queued for sync');
+      }
       return _handleDioError(e, 'abandonTask');
     }
   }
@@ -1707,5 +1853,12 @@ final taskRepositoryProvider = Provider<TaskRepository>((ref) {
   } catch (_) {
     engine = null;
   }
-  return TaskRepository(apiClient, offlineSync: engine);
+  // N34：注入本地读缓存——任务列表/今日任务断网冷启动有数据兜底。
+  ListReadCache? readCache;
+  try {
+    readCache = ref.read(listReadCacheProvider);
+  } catch (_) {
+    readCache = null;
+  }
+  return TaskRepository(apiClient, offlineSync: engine, readCache: readCache);
 });

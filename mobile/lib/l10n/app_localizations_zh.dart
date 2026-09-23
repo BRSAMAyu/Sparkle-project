@@ -1996,6 +1996,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorNetworkDetail => '请检查您的网络连接';
 
   @override
+  String get errorOfflineQueuedDetail => '当前离线：操作已保存，恢复网络后会自动同步';
+
+  @override
+  String staleSnapshotAsOf(Object time) {
+    return '离线数据 · 截至 $time';
+  }
+
+  @override
   String get errorServer => '服务器错误';
 
   @override

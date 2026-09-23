@@ -696,6 +696,8 @@
     "streakFreezeCharges": "冻结次数",
     "errorNetwork": "网络错误",
     "errorNetworkDetail": "请检查您的网络连接",
+    "errorOfflineQueuedDetail": "当前离线：操作已保存，恢复网络后会自动同步",
+    "staleSnapshotAsOf": "离线数据 · 截至 {time}",
     "errorServer": "服务器错误",
     "errorServerDetail": "服务器出现问题",
     "errorUnknown": "未知错误",

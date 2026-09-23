@@ -10,6 +10,7 @@ import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/offline/widgets/stale_snapshot_banner.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
@@ -44,6 +45,24 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
     ref.listenManual(
       taskListProvider,
       (TaskListState? previous, TaskListState next) {
+        // N35：离线入队成功信号优先播报——「已保存待同步」是排队态不是
+        // 错误态，绝不与报错 SnackBar 混同（诚实三态）。
+        final queuedOp = next.offlineQueuedOp;
+        final queuedTaskId = next.offlineQueuedTaskId;
+        final isNewQueuedOp = queuedOp != null &&
+            (queuedOp != previous?.offlineQueuedOp ||
+                queuedTaskId != previous?.offlineQueuedTaskId);
+        if (!mounted) return;
+        if (isNewQueuedOp) {
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              SparkleSnackBar.info(
+                uiErrorMessage(context.l10n, UiErrorCategory.offlineQueued),
+              ),
+            );
+          return;
+        }
         final error = next.error;
         if (!mounted || error == null || error == previous?.error) {
           return;
@@ -262,6 +281,10 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
           child: Column(
             children: [
               const TaskOfflineIndicator(),
+              // N34/N36：本地快照读（离线兜底）时挂「截至 X」时点标记。
+              if (taskListState.tasksFromCache &&
+                  taskListState.cachedAsOf != null)
+                StaleSnapshotBanner(fetchedAt: taskListState.cachedAsOf!),
               if (!_isSearching) const _FilterChips(),
               if (taskListState.error != null && tasks.isNotEmpty)
                 Container(

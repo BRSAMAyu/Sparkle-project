@@ -696,6 +696,8 @@
     "streakFreezeCharges": "Freeze Charges",
     "errorNetwork": "Network error",
     "errorNetworkDetail": "Please check your internet connection",
+    "errorOfflineQueuedDetail": "You're offline — your action has been saved and will sync automatically once you're back online",
+    "staleSnapshotAsOf": "Offline data · as of {time}",
     "errorServer": "Server error",
     "errorServerDetail": "Something went wrong on our end",
     "errorUnknown": "Unknown error",

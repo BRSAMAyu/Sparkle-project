@@ -36,6 +36,7 @@ class UserFacingError {
   static const String _codeNotFound = 'ERR-NOTFOUND';
   static const String _codeRateLimit = 'ERR-RATELIMIT';
   static const String _codeFormat = 'ERR-FORMAT';
+  static const String _codeOfflineQueued = 'ERR-QUEUED';
   static const String _codeUnknown = 'ERR-UNKNOWN';
 
   /// Categories of errors that map to user-friendly messages.
@@ -64,6 +65,8 @@ class UserFacingError {
         UiErrorCategory.notFound => _codeNotFound,
         UiErrorCategory.rateLimit => _codeRateLimit,
         UiErrorCategory.format => _codeFormat,
+        // N35：排队成功不是故障，码也区别于一切错误码。
+        UiErrorCategory.offlineQueued => _codeOfflineQueued,
         UiErrorCategory.unknown => _codeUnknown,
       };
 

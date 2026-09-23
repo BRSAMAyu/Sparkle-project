@@ -12,6 +12,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/offline/list_read_cache.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
@@ -81,6 +82,26 @@ class _FakeTaskRepository extends TaskRepository {
 
   @override
   Future<List<TaskModel>> getTodayTasks() async => [_seedTask()];
+
+  // N34：provider 走缓存感知读——fake 覆盖 Cached 变体（真实请求零依赖）。
+  @override
+  Future<CacheAwareResult<PaginatedResponse<TaskModel>>> getTasksCached({
+    Map<String, dynamic>? filters,
+    int page = 1,
+    int pageSize = 50,
+  }) async =>
+      CacheAwareResult(
+        PaginatedResponse<TaskModel>(
+          items: [_seedTask()],
+          total: 1,
+          page: 1,
+          pageSize: pageSize,
+        ),
+      );
+
+  @override
+  Future<CacheAwareResult<List<TaskModel>>> getTodayTasksCached() async =>
+      CacheAwareResult<List<TaskModel>>([_seedTask()]);
 
   @override
   Future<List<TaskModel>> getRecommendedTasks({int limit = 5}) async =>

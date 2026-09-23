@@ -9,6 +9,7 @@ import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/offline/widgets/stale_snapshot_banner.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/presentation/providers/community_providers.dart';
@@ -60,7 +61,8 @@ class _FeedTabContentState extends ConsumerState<FeedTabContent> {
       child: SparkleRefreshIndicator(
         onRefresh: () => ref.read(feedProvider.notifier).refresh(),
         child: feedState.when(
-          data: (posts) {
+          data: (page) {
+            final posts = page.posts;
             if (posts.isEmpty) {
               return _buildEmptyState(context, ref);
             }
@@ -72,7 +74,15 @@ class _FeedTabContentState extends ConsumerState<FeedTabContent> {
                 itemCount: posts.length + 1,
                 itemBuilder: (context, index) {
                   if (index == 0) {
-                    return _buildFilterHeader(context, ref);
+                    // N34/N36：本地快照读（离线兜底）时在筛选头下挂
+                    // 「截至 X」时点标记。
+                    return Column(
+                      children: [
+                        _buildFilterHeader(context, ref),
+                        if (page.fromCache && page.asOf != null)
+                          StaleSnapshotBanner(fetchedAt: page.asOf!),
+                      ],
+                    );
                   }
                   final post = posts[index - 1];
                   return SparkleStaggerItem(

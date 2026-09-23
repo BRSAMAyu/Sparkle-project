@@ -1,5 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sparkle/core/network/dio_provider.dart';
+import 'package:sparkle/core/offline/list_read_cache.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
@@ -25,7 +26,10 @@ part 'error_book_provider.g.dart';
 @riverpod
 ErrorBookRepository errorBookRepository(ErrorBookRepositoryRef ref) {
   final dio = ref.watch(dioProvider);
-  return ErrorBookRepository(dio);
+  // N34：注入本地读缓存——断网冷启动仍可翻上次加载过的错题（第一回
+  // 找资产），回读快照带「截至 X」时点标记。
+  final readCache = ref.watch(listReadCacheProvider);
+  return ErrorBookRepository(dio, readCache: readCache);
 }
 
 final remediablePatternsProvider =
@@ -97,8 +101,11 @@ class ErrorListQuery {
 ///   ErrorListQuery(subject: 'math', needReview: true)
 /// ));
 /// ```
+///
+/// N34：走缓存感知读——离线命中快照时 `fromCache/asOf` 有值，UI 据此
+/// 挂「截至 X」stale 徽标（N36 口径）。
 @riverpod
-Future<ErrorListResponse> errorList(
+Future<CacheAwareResult<ErrorListResponse>> errorList(
   ErrorListRef ref,
   ErrorListQuery query,
 ) async {
@@ -129,17 +136,19 @@ Future<ErrorListResponse> errorList(
           keywordMatches;
     }).toList();
 
-    return ErrorListResponse(
-      items: items,
-      total: items.length,
-      page: query.page,
-      pageSize: query.pageSize,
-      hasNext: false,
+    return CacheAwareResult(
+      ErrorListResponse(
+        items: items,
+        total: items.length,
+        page: query.page,
+        pageSize: query.pageSize,
+        hasNext: false,
+      ),
     );
   }
 
   final repository = ref.watch(errorBookRepositoryProvider);
-  return repository.getErrors(
+  return repository.getErrorsCached(
     subject: query.subject,
     chapter: query.chapter,
     nodeId: query.nodeId,
@@ -219,8 +228,9 @@ Future<List<ErrorRecord>> todayReviewList(TodayReviewListRef ref) async {
   }
 
   final repository = ref.watch(errorBookRepositoryProvider);
-  final response = await repository.getTodayReviewList();
-  return response.items;
+  // N34：走缓存感知读（离线回读快照），今日复习面断网仍有数据。
+  final result = await repository.getTodayReviewListCached();
+  return result.data.items;
 }
 
 // ============================================
@@ -254,7 +264,9 @@ Future<ReviewStats> errorStats(ErrorStatsRef ref) async {
   }
 
   final repository = ref.watch(errorBookRepositoryProvider);
-  return repository.getStats();
+  // N34：走缓存感知读（离线回读快照），徽标计数断网仍有数据。
+  final result = await repository.getStatsCached();
+  return result.data;
 }
 
 List<ErrorRecord> _demoErrorRecords() => DemoDataService()

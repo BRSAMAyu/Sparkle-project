@@ -182,12 +182,19 @@ TaskComplete _$TaskCompleteFromJson(Map<String, dynamic> json) => TaskComplete(
       userNote: json['user_note'] as String?,
     );
 
-Map<String, dynamic> _$TaskCompleteToJson(TaskComplete instance) =>
-    <String, dynamic>{
-      if (instance.actualMinutes != null)
-        'actual_minutes': instance.actualMinutes,
-      'user_note': instance.userNote,
-    };
+Map<String, dynamic> _$TaskCompleteToJson(TaskComplete instance) {
+  final val = <String, dynamic>{};
+
+  void writeNotNull(String key, dynamic value) {
+    if (value != null) {
+      val[key] = value;
+    }
+  }
+
+  writeNotNull('actual_minutes', instance.actualMinutes);
+  val['user_note'] = instance.userNote;
+  return val;
+}
 
 SuggestedNode _$SuggestedNodeFromJson(Map<String, dynamic> json) =>
     SuggestedNode(

@@ -57,6 +57,11 @@ class TaskListState {
     this.error,
     this.executionQueued = false,
     this.recentlyDeletedTask,
+    this.tasksFromCache = false,
+    this.todayTasksFromCache = false,
+    this.cachedAsOf,
+    this.offlineQueuedTaskId,
+    this.offlineQueuedOp,
   });
   final bool isLoading;
   final List<TaskModel> tasks;
@@ -81,6 +86,17 @@ class TaskListState {
   final bool executionQueued;
   final TaskModel? recentlyDeletedTask;
 
+  /// N34/N36：本次任务列表/今日任务是否来自本地快照（离线兜底），
+  /// [cachedAsOf] 为数据时点戳——UI 据此挂「截至 X」stale 徽标。
+  final bool tasksFromCache;
+  final bool todayTasksFromCache;
+  final DateTime? cachedAsOf;
+
+  /// N35：最近一次离线入队的任务操作（任务 id + op 类型）。排队成功是
+  /// 「已排队」态而非错误——UI 据此播报「已保存待同步」提示，不进 error 位。
+  final String? offlineQueuedTaskId;
+  final String? offlineQueuedOp;
+
   TaskListState copyWith({
     bool? isLoading,
     List<TaskModel>? tasks,
@@ -100,6 +116,12 @@ class TaskListState {
     bool? executionQueued,
     TaskModel? recentlyDeletedTask,
     bool clearRecentlyDeleted = false,
+    bool? tasksFromCache,
+    bool? todayTasksFromCache,
+    DateTime? cachedAsOf,
+    bool clearCachedAsOf = false,
+    String? offlineQueuedTaskId,
+    String? offlineQueuedOp,
   }) =>
       TaskListState(
         isLoading: isLoading ?? this.isLoading,
@@ -123,6 +145,12 @@ class TaskListState {
         recentlyDeletedTask: clearRecentlyDeleted
             ? null
             : recentlyDeletedTask ?? this.recentlyDeletedTask,
+        tasksFromCache: tasksFromCache ?? this.tasksFromCache,
+        todayTasksFromCache: todayTasksFromCache ?? this.todayTasksFromCache,
+        cachedAsOf:
+            clearCachedAsOf ? null : cachedAsOf ?? this.cachedAsOf,
+        offlineQueuedTaskId: offlineQueuedTaskId ?? this.offlineQueuedTaskId,
+        offlineQueuedOp: offlineQueuedOp ?? this.offlineQueuedOp,
       );
 }
 
@@ -155,22 +183,31 @@ class TaskNotifier extends StateNotifier<TaskListState> {
 
   Future<void> loadTasks({TaskFilter? filter}) async {
     await _runWithErrorHandling(() async {
-      final paginatedResponse =
-          await _taskRepository.getTasks(filters: {}); // Add filter logic later
+      // N34：缓存感知读——离线回读本地快照，UI 据此挂「截至 X」标记。
+      final result = await _taskRepository.getTasksCached(filters: {});
       if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
-        tasks: paginatedResponse.items,
+        tasks: result.data.items,
         currentFilter: filter,
+        tasksFromCache: result.fromCache,
+        cachedAsOf: result.asOf,
+        clearCachedAsOf: !result.fromCache,
       );
     });
   }
 
   Future<void> loadTodayTasks() async {
     await _runWithErrorHandling(() async {
-      final tasks = await _taskRepository.getTodayTasks();
+      final result = await _taskRepository.getTodayTasksCached();
       if (!mounted) return;
-      state = state.copyWith(isLoading: false, todayTasks: tasks);
+      state = state.copyWith(
+        isLoading: false,
+        todayTasks: result.data,
+        todayTasksFromCache: result.fromCache,
+        cachedAsOf: result.asOf,
+        clearCachedAsOf: !result.fromCache,
+      );
     });
   }
 
@@ -411,41 +448,83 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     });
   }
 
+  /// N35：离线入队成功 =「已排队」而非失败——本地乐观置位目标状态 +
+  /// `syncStatus: pending`（任务卡右上待同步标记），并挂排队信号供 UI
+  /// 播报「已保存，恢复网络后自动同步」。绝不进 error 位。
+  void _markTaskOfflineQueued(String id, TaskStatus targetStatus, String op) {
+    _updateTask(
+      id,
+      (task) => task.copyWith(
+        status: targetStatus,
+        syncStatus: TaskSyncStatus.pending,
+        updatedAt: DateTime.now(),
+      ),
+    );
+    final activeTask = _ref.read(activeTaskProvider);
+    if (activeTask?.id == id) {
+      _ref.read(activeTaskProvider.notifier).state = activeTask!.copyWith(
+        status: targetStatus,
+        syncStatus: TaskSyncStatus.pending,
+        updatedAt: DateTime.now(),
+      );
+    }
+    state = state.copyWith(
+      isLoading: false,
+      offlineQueuedTaskId: id,
+      offlineQueuedOp: op,
+    );
+  }
+
   Future<void> startTask(String id) async {
     await _runWithErrorHandling(() async {
-      final updatedTask = await _taskRepository.startTask(id);
-      // Also update the task in the list locally to avoid a full refresh
-      _updateTaskInState(updatedTask);
-      final activeTask = _ref.read(activeTaskProvider);
-      if (activeTask?.id == id) {
-        _ref.read(activeTaskProvider.notifier).state = updatedTask;
+      try {
+        final updatedTask = await _taskRepository.startTask(id);
+        // Also update the task in the list locally to avoid a full refresh
+        _updateTaskInState(updatedTask);
+        final activeTask = _ref.read(activeTaskProvider);
+        if (activeTask?.id == id) {
+          _ref.read(activeTaskProvider.notifier).state = updatedTask;
+        }
+        state = state.copyWith(isLoading: false);
+      } on OfflineEnqueuedException {
+        // N35：离线入队成功，乐观置位 + 待同步标记（非错误）。
+        _markTaskOfflineQueued(id, TaskStatus.inProgress, 'start');
       }
-      state = state.copyWith(isLoading: false);
     });
   }
 
   Future<void> pauseTask(String id, {String? reason}) async {
     await _runWithErrorHandling(() async {
-      final updatedTask = await _taskRepository.pauseTask(id, reason: reason);
-      _updateTaskInState(updatedTask);
-      final activeTask = _ref.read(activeTaskProvider);
-      if (activeTask?.id == id) {
-        _ref.read(activeTaskProvider.notifier).state = updatedTask;
+      try {
+        final updatedTask = await _taskRepository.pauseTask(id, reason: reason);
+        _updateTaskInState(updatedTask);
+        final activeTask = _ref.read(activeTaskProvider);
+        if (activeTask?.id == id) {
+          _ref.read(activeTaskProvider.notifier).state = updatedTask;
+        }
+        await _notificationScheduler.showTaskResumeReminder(updatedTask);
+        state = state.copyWith(isLoading: false);
+      } on OfflineEnqueuedException {
+        // N35：离线暂停实际已入队（outbox 成熟）——UI 兑现「已暂停 +
+        // 待同步」，不再把排队成功报成「出错了」。
+        _markTaskOfflineQueued(id, TaskStatus.paused, 'pause');
       }
-      await _notificationScheduler.showTaskResumeReminder(updatedTask);
-      state = state.copyWith(isLoading: false);
     });
   }
 
   Future<void> resumeTask(String id) async {
     await _runWithErrorHandling(() async {
-      final updatedTask = await _taskRepository.resumeTask(id);
-      _updateTaskInState(updatedTask);
-      final activeTask = _ref.read(activeTaskProvider);
-      if (activeTask?.id == id) {
-        _ref.read(activeTaskProvider.notifier).state = updatedTask;
+      try {
+        final updatedTask = await _taskRepository.resumeTask(id);
+        _updateTaskInState(updatedTask);
+        final activeTask = _ref.read(activeTaskProvider);
+        if (activeTask?.id == id) {
+          _ref.read(activeTaskProvider.notifier).state = updatedTask;
+        }
+        state = state.copyWith(isLoading: false);
+      } on OfflineEnqueuedException {
+        _markTaskOfflineQueued(id, TaskStatus.inProgress, 'resume');
       }
-      state = state.copyWith(isLoading: false);
     });
   }
 
@@ -520,6 +599,11 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       );
 
       return result;
+    } on OfflineEnqueuedException {
+      // N35：离线完成已入队（outbox 回放端按 completion 体重放）——
+      // 步骤 1 的乐观置位（completed + pending）即最终呈现，绝不标失败。
+      _markTaskOfflineQueued(id, TaskStatus.completed, 'complete');
+      return null;
     } catch (e) {
       // 5. 🆕 失败：标记为失败状态（不直接回滚）
       var errorMsg = S.taskOpFailed;
@@ -662,6 +746,10 @@ class TaskNotifier extends StateNotifier<TaskListState> {
         minutes: minutes,
         note: note,
       );
+    } on OfflineEnqueuedException {
+      // N35：重试路径上的离线入队同样按「已排队」呈现——保持乐观置位，
+      // 不落失败条（syncStatus 已是 pending）。
+      _markTaskOfflineQueued(id, TaskStatus.completed, 'complete');
     } catch (e) {
       var errorMsg = S.taskRetryFailed;
       if (e is DioException) {
@@ -707,9 +795,14 @@ class TaskNotifier extends StateNotifier<TaskListState> {
 
   Future<void> abandonTask(String id) async {
     await _runWithErrorHandling(() async {
-      final updatedTask = await _taskRepository.abandonTask(id);
-      _updateTaskInState(updatedTask);
-      state = state.copyWith(isLoading: false);
+      try {
+        final updatedTask = await _taskRepository.abandonTask(id);
+        _updateTaskInState(updatedTask);
+        state = state.copyWith(isLoading: false);
+      } on OfflineEnqueuedException {
+        // N35（死代码接线令）：abandon 离线入队 → 乐观置位 + 待同步标记。
+        _markTaskOfflineQueued(id, TaskStatus.abandoned, 'abandon');
+      }
       _ref
         ..invalidate(learningPortfolioProvider)
         ..invalidate(achievementProvider)

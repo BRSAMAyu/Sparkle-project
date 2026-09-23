@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:sparkle/core/offline/list_read_cache.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/models/error_semantic_summary.dart';
@@ -12,10 +13,18 @@ import 'package:sparkle/shared/entities/cognitive_analysis.dart';
 /// - 单一数据源：所有网络请求从这里发起
 /// - 异常统一处理：转换 HTTP 异常为业务异常
 /// - 可测试性：通过依赖注入 Dio 实例便于 mock
+///
+/// N34（A-SPEC6）：列表/统计/今日复习三个读接口带本地 warm 快照层——
+/// 成功响应落本地（[ListReadCache.put]），网络不可达时回读快照并以
+/// [CacheAwareResult.fromCache] 标记（UI 据此挂「截至 X」stale 徽标）。
+/// 写路径不入缓存、仍走唯一后端口径；写成功后失效同域快照。
 class ErrorBookRepository {
-  ErrorBookRepository(this._dio);
+  ErrorBookRepository(this._dio, {ListReadCache? readCache})
+      : _readCache = readCache;
   final Dio _dio;
+  final ListReadCache? _readCache;
   static const String _basePath = '/errors';
+  static const String _cachePrefix = 'eb:';
 
   /// 创建错题
   ///
@@ -51,7 +60,11 @@ class ErrorBookRepository {
         },
       );
 
-      return ErrorRecord.fromJson(response.data as Map<String, dynamic>);
+      final created =
+          ErrorRecord.fromJson(response.data as Map<String, dynamic>);
+      // N34：写成功即失效同域快照，防离线回读出已删除/已改写的旧行。
+      await _readCache?.invalidatePrefix(_cachePrefix);
+      return created;
     } on DioException catch (e) {
       throw _handleError(e, S.errorBookCreateFailedMsg);
     }
@@ -77,7 +90,50 @@ class ErrorBookRepository {
     CognitiveDimension? cognitiveDimension,
     int page = 1,
     int pageSize = 20,
+  }) async =>
+      (await getErrorsCached(
+        subject: subject,
+        chapter: chapter,
+        nodeId: nodeId,
+        needReview: needReview,
+        keyword: keyword,
+        masteryMin: masteryMin,
+        masteryMax: masteryMax,
+        cognitiveDimension: cognitiveDimension,
+        page: page,
+        pageSize: pageSize,
+      ))
+          .data;
+
+  /// N34：错题列表读（缓存感知）。
+  ///
+  /// 成功响应按查询指纹落本地快照；连接类失败时回读同指纹快照并以
+  /// `fromCache/asOf` 标记返回——断网冷启动仍可翻上次加载过的错题
+  ///（第一回找资产），绝不以旧快照掩盖服务端语义错误（4xx/5xx 照常上抛）。
+  Future<CacheAwareResult<ErrorListResponse>> getErrorsCached({
+    String? subject,
+    String? chapter,
+    String? nodeId,
+    bool? needReview,
+    String? keyword,
+    double? masteryMin,
+    double? masteryMax,
+    CognitiveDimension? cognitiveDimension,
+    int page = 1,
+    int pageSize = 20,
   }) async {
+    final cacheKey = _errorListCacheKey(
+      subject: subject,
+      chapter: chapter,
+      nodeId: nodeId,
+      needReview: needReview,
+      keyword: keyword,
+      masteryMin: masteryMin,
+      masteryMax: masteryMax,
+      cognitiveDimension: cognitiveDimension,
+      page: page,
+      pageSize: pageSize,
+    );
     try {
       final queryParams = <String, dynamic>{
         'page': page,
@@ -98,10 +154,49 @@ class ErrorBookRepository {
         queryParameters: queryParams,
       );
 
-      return ErrorListResponse.fromJson(response.data as Map<String, dynamic>);
+      await _readCache?.put(cacheKey, response.data);
+      return CacheAwareResult(
+        ErrorListResponse.fromJson(response.data as Map<String, dynamic>),
+      );
     } on DioException catch (e) {
+      final snapshot = await _readSnapshotOnNetworkFailure(e, cacheKey);
+      if (snapshot != null) {
+        return CacheAwareResult(
+          ErrorListResponse.fromJson(snapshot.payload as Map<String, dynamic>),
+          fromCache: true,
+          asOf: snapshot.fetchedAt,
+        );
+      }
       throw _handleError(e, S.errorBookListFailedMsg);
     }
+  }
+
+  /// N34：错题列表查询指纹（缓存键）。
+  String _errorListCacheKey({
+    String? subject,
+    String? chapter,
+    String? nodeId,
+    bool? needReview,
+    String? keyword,
+    double? masteryMin,
+    double? masteryMax,
+    CognitiveDimension? cognitiveDimension,
+    required int page,
+    required int pageSize,
+  }) {
+    final parts = [
+      subject ?? '-',
+      chapter ?? '-',
+      nodeId ?? '-',
+      needReview == true ? '1' : '0',
+      keyword ?? '-',
+      masteryMin?.toStringAsFixed(2) ?? '-',
+      masteryMax?.toStringAsFixed(2) ?? '-',
+      cognitiveDimension?.code ?? '-',
+      'p$page',
+      's$pageSize',
+    ];
+    return '${_cachePrefix}list:${parts.join('|')}';
   }
 
   /// 获取错题详情
@@ -146,7 +241,10 @@ class ErrorBookRepository {
         data: data,
       );
 
-      return ErrorRecord.fromJson(response.data as Map<String, dynamic>);
+      final updated =
+          ErrorRecord.fromJson(response.data as Map<String, dynamic>);
+      await _readCache?.invalidatePrefix(_cachePrefix);
+      return updated;
     } on DioException catch (e) {
       throw _handleError(e, S.errorBookUpdateFailedMsg);
     }
@@ -159,6 +257,7 @@ class ErrorBookRepository {
   Future<void> deleteError(String errorId) async {
     try {
       await _dio.delete<void>('$_basePath/$errorId');
+      await _readCache?.invalidatePrefix(_cachePrefix);
     } on DioException catch (e) {
       throw _handleError(e, S.errorBookDeleteFailedMsg);
     }
@@ -202,7 +301,10 @@ class ErrorBookRepository {
         },
       );
 
-      return ErrorRecord.fromJson(response.data as Map<String, dynamic>);
+      final reviewed =
+          ErrorRecord.fromJson(response.data as Map<String, dynamic>);
+      await _readCache?.invalidatePrefix(_cachePrefix);
+      return reviewed;
     } on DioException catch (e) {
       throw _handleError(e, S.errorBookReviewFailedMsg);
     }
@@ -215,7 +317,15 @@ class ErrorBookRepository {
   Future<ErrorListResponse> getTodayReviewList({
     int page = 1,
     int pageSize = 20,
+  }) async =>
+      (await getTodayReviewListCached(page: page, pageSize: pageSize)).data;
+
+  /// N34：今日待复习读（缓存感知），快照机制同 [getErrorsCached]。
+  Future<CacheAwareResult<ErrorListResponse>> getTodayReviewListCached({
+    int page = 1,
+    int pageSize = 20,
   }) async {
+    final cacheKey = '${_cachePrefix}today-review:p$page:s$pageSize';
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         '$_basePath/today-review',
@@ -225,8 +335,19 @@ class ErrorBookRepository {
         },
       );
 
-      return ErrorListResponse.fromJson(response.data as Map<String, dynamic>);
+      await _readCache?.put(cacheKey, response.data);
+      return CacheAwareResult(
+        ErrorListResponse.fromJson(response.data as Map<String, dynamic>),
+      );
     } on DioException catch (e) {
+      final snapshot = await _readSnapshotOnNetworkFailure(e, cacheKey);
+      if (snapshot != null) {
+        return CacheAwareResult(
+          ErrorListResponse.fromJson(snapshot.payload as Map<String, dynamic>),
+          fromCache: true,
+          asOf: snapshot.fetchedAt,
+        );
+      }
       throw _handleError(e, S.errorBookTodayReviewFailedMsg);
     }
   }
@@ -240,11 +361,26 @@ class ErrorBookRepository {
   /// - 今日需复习数
   /// - 连续复习天数
   /// - 各科目分布
-  Future<ReviewStats> getStats() async {
+  Future<ReviewStats> getStats() async => (await getStatsCached()).data;
+
+  /// N34：错题统计读（缓存感知），快照机制同 [getErrorsCached]。
+  Future<CacheAwareResult<ReviewStats>> getStatsCached() async {
+    const cacheKey = '${_cachePrefix}stats';
     try {
       final response = await _dio.get<Map<String, dynamic>>('$_basePath/stats');
-      return ReviewStats.fromJson(response.data ?? <String, dynamic>{});
+      await _readCache?.put(cacheKey, response.data);
+      return CacheAwareResult(
+        ReviewStats.fromJson(response.data ?? <String, dynamic>{}),
+      );
     } on DioException catch (e) {
+      final snapshot = await _readSnapshotOnNetworkFailure(e, cacheKey);
+      if (snapshot != null) {
+        return CacheAwareResult(
+          ReviewStats.fromJson(snapshot.payload as Map<String, dynamic>),
+          fromCache: true,
+          asOf: snapshot.fetchedAt,
+        );
+      }
       throw _handleError(e, S.errorBookStatsFailedMsg);
     }
   }
@@ -329,6 +465,19 @@ class ErrorBookRepository {
         S.errorBookAcceptFailedMsg,
       );
     }
+  }
+
+  /// N34：连接类失败时回读同键快照；其余（存储不可用/服务端语义错误）
+  /// 返回 null，由调用方照常上抛原始错误。
+  Future<SnapshotData?> _readSnapshotOnNetworkFailure(
+    DioException e,
+    String cacheKey,
+  ) async {
+    final cache = _readCache;
+    if (cache == null || !ListReadCache.isNetworkFailure(e)) {
+      return null;
+    }
+    return cache.get(cacheKey);
   }
 
   /// 统一错误处理

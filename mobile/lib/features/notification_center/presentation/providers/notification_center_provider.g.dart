@@ -7,7 +7,7 @@ part of 'notification_center_provider.dart';
 // **************************************************************************
 
 String _$notificationCenterHash() =>
-    r'd2673c9fee21bdbacd62b23c9e78de00a906e27e';
+    r'94e36bfc2caca6f838f198286f5bf22df28fac0f';
 
 /// Notification Center Notifier
 ///

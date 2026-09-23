@@ -2,12 +2,27 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/offline/list_read_cache.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/community/data/models/community_models.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 
+/// N34/N36：feed 页数据 + 溯源——[fromCache] 表示本次（或其中一页）来自
+/// 本地快照回读，[asOf] 为数据时点戳，UI 据此挂「截至 X」stale 徽标。
+class FeedPageData {
+  const FeedPageData({
+    required this.posts,
+    this.fromCache = false,
+    this.asOf,
+  });
+
+  final List<Post> posts;
+  final bool fromCache;
+  final DateTime? asOf;
+}
+
 // Feed State Controller
-class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
+class FeedNotifier extends StateNotifier<AsyncValue<FeedPageData>> {
   FeedNotifier(this._repository, this._currentUserId)
       : super(const AsyncValue.loading()) {
     unawaited(refresh());
@@ -19,6 +34,8 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
   int _currentPage = 1;
   bool _hasMore = true;
   bool _isLoadingMore = false;
+  bool _fromCache = false;
+  DateTime? _asOf;
   static const int _pageSize = 20;
 
   bool get hasMore => _hasMore;
@@ -34,9 +51,18 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
       state = const AsyncValue.loading();
       _currentPage = 1;
       _hasMore = true;
-      final posts = await _repository.getFeed(page: 1, scope: _scope);
-      _hasMore = posts.length >= _pageSize;
-      state = AsyncValue.data(posts);
+      // N34：缓存感知读——离线回读快照并带「截至 X」溯源。
+      final result = await _repository.getFeedCached(page: 1, scope: _scope);
+      _hasMore = result.data.length >= _pageSize;
+      _fromCache = result.fromCache;
+      _asOf = result.asOf;
+      state = AsyncValue.data(
+        FeedPageData(
+          posts: result.data,
+          fromCache: result.fromCache,
+          asOf: result.asOf,
+        ),
+      );
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
@@ -45,22 +71,36 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
   Future<void> loadMore() async {
     if (_isLoadingMore || !_hasMore) return;
 
-    final currentPosts = state.value ?? [];
+    final currentPosts = state.value?.posts ?? [];
     if (currentPosts.isEmpty) return;
 
     _isLoadingMore = true;
     final nextPage = _currentPage + 1;
     try {
-      final morePosts = await _repository.getFeed(
+      final result = await _repository.getFeedCached(
         page: nextPage,
         scope: _scope,
       );
-      if (morePosts.isEmpty) {
+      if (result.data.isEmpty) {
         _hasMore = false;
       } else {
         _currentPage = nextPage;
-        _hasMore = morePosts.length >= _pageSize;
-        state = AsyncValue.data([...currentPosts, ...morePosts]);
+        _hasMore = result.data.length >= _pageSize;
+        // N36：任一页来自快照即整体标记 stale，时点取更早者。
+        if (result.fromCache) {
+          _fromCache = true;
+          final incoming = result.asOf;
+          if (incoming != null && (_asOf == null || incoming.isBefore(_asOf!))) {
+            _asOf = incoming;
+          }
+        }
+        state = AsyncValue.data(
+          FeedPageData(
+            posts: [...currentPosts, ...result.data],
+            fromCache: _fromCache,
+            asOf: _asOf,
+          ),
+        );
       }
     } catch (e) {
       // Silently fail on load-more to avoid disrupting the existing list
@@ -71,7 +111,7 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
   }
 
   Future<void> toggleLike(String postId) async {
-    final currentList = state.value ?? [];
+    final currentList = state.value?.posts ?? [];
     final idx = currentList.indexWhere((p) => p.id == postId);
     if (idx == -1) return;
 
@@ -80,19 +120,31 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
     final int newCount = wasLiked ? post.likeCount - 1 : post.likeCount + 1;
 
     // Optimistic update
-    state = AsyncValue.data([
-      for (int i = 0; i < currentList.length; i++)
-        if (i == idx)
-          post.copyWith(likeCount: newCount, isLiked: !wasLiked)
-        else
-          currentList[i],
-    ]);
+    state = AsyncValue.data(
+      FeedPageData(
+        posts: [
+          for (int i = 0; i < currentList.length; i++)
+            if (i == idx)
+              post.copyWith(likeCount: newCount, isLiked: !wasLiked)
+            else
+              currentList[i],
+        ],
+        fromCache: _fromCache,
+        asOf: _asOf,
+      ),
+    );
 
     try {
       await _repository.likePost(postId, _currentUserId ?? '');
     } catch (_) {
       // Revert on failure
-      state = AsyncValue.data(currentList);
+      state = AsyncValue.data(
+        FeedPageData(
+          posts: currentList,
+          fromCache: _fromCache,
+          asOf: _asOf,
+        ),
+      );
     }
   }
 
@@ -121,8 +173,14 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
     );
 
     // 2. Insert at top of list
-    final currentList = state.value ?? [];
-    state = AsyncValue.data([tempPost, ...currentList]);
+    final currentList = state.value?.posts ?? [];
+    state = AsyncValue.data(
+      FeedPageData(
+        posts: [tempPost, ...currentList],
+        fromCache: _fromCache,
+        asOf: _asOf,
+      ),
+    );
 
     try {
       // 3. Perform Actual API Call
@@ -144,14 +202,20 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
       await refresh();
     } catch (e) {
       // Revert if failed
-      state = AsyncValue.data(currentList);
+      state = AsyncValue.data(
+        FeedPageData(
+          posts: currentList,
+          fromCache: _fromCache,
+          asOf: _asOf,
+        ),
+      );
       rethrow;
     }
   }
 }
 
 final feedProvider =
-    StateNotifierProvider<FeedNotifier, AsyncValue<List<Post>>>((ref) {
+    StateNotifierProvider<FeedNotifier, AsyncValue<FeedPageData>>((ref) {
   final repository = ref.watch(communityRepositoryProvider);
   final user = ref.watch(currentUserProvider);
   return FeedNotifier(repository, user?.id);

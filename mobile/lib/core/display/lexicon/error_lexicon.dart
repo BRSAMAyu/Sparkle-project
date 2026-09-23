@@ -43,6 +43,10 @@ enum UiErrorCategory {
   /// 格式/校验错误。
   format,
 
+  /// N35（A-SPEC6）：离线写操作已入队——这不是错误，是「已排队待同步」
+  /// 的诚实三态（排队成功必须有排队的样子，禁落 unknown 通用错误通道）。
+  offlineQueued,
+
   /// 未分类。
   unknown,
 }
@@ -80,6 +84,9 @@ String uiErrorMessage(AppLocalizations l10n, UiErrorCategory category) {
     case UiErrorCategory.format:
       // 格式/校验错误不向用户暴露技术细节，落通用兜底（与既有口径一致）。
       return l10n.errorUnknownDetail;
+    case UiErrorCategory.offlineQueued:
+      // N35：入队成功的人话=「什么发生了+接下来会怎样+无需用户动作」。
+      return l10n.errorOfflineQueuedDetail;
     case UiErrorCategory.unknown:
       return l10n.errorDefaultTitle;
   }
@@ -95,6 +102,11 @@ String uiErrorMessage(AppLocalizations l10n, UiErrorCategory category) {
 UiErrorCategory categorizeUiError(Object? error) {
   if (error == null) {
     return UiErrorCategory.unknown;
+  }
+  // 类型化错误自报类别优先（N16 正解形制；N35：OfflineEnqueuedException
+  // 据此落 offlineQueued，不再被字符串判定表误判成 unknown 通用错误）。
+  if (error is TypedUiError) {
+    return error.uiErrorCategory;
   }
   final message = error.toString();
 

@@ -7,7 +7,7 @@ part of 'error_book_provider.dart';
 // **************************************************************************
 
 String _$errorBookRepositoryHash() =>
-    r'c94bc66a98f61ff461ea42fc9b90adf00c9c18fb';
+    r'2ae98d28959dae927e7e72b7276c28199ffa43e1';
 
 /// ErrorBookRepository Provider
 ///
@@ -27,7 +27,7 @@ final errorBookRepositoryProvider =
 );
 
 typedef ErrorBookRepositoryRef = AutoDisposeProviderRef<ErrorBookRepository>;
-String _$errorListHash() => r'487088870ec88fe0bce30f476786517782d8a19f';
+String _$errorListHash() => r'aa4d557b713221b619679f7b5e05283a3def2c7d';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -59,6 +59,9 @@ class _SystemHash {
 /// ));
 /// ```
 ///
+/// N34：走缓存感知读——离线命中快照时 `fromCache/asOf` 有值，UI 据此
+/// 挂「截至 X」stale 徽标（N36 口径）。
+///
 /// Copied from [errorList].
 @ProviderFor(errorList)
 const errorListProvider = ErrorListFamily();
@@ -72,8 +75,12 @@ const errorListProvider = ErrorListFamily();
 /// ));
 /// ```
 ///
+/// N34：走缓存感知读——离线命中快照时 `fromCache/asOf` 有值，UI 据此
+/// 挂「截至 X」stale 徽标（N36 口径）。
+///
 /// Copied from [errorList].
-class ErrorListFamily extends Family<AsyncValue<ErrorListResponse>> {
+class ErrorListFamily
+    extends Family<AsyncValue<CacheAwareResult<ErrorListResponse>>> {
   /// 错题列表 Provider（支持参数化查询）
   ///
   /// 使用方式：
@@ -82,6 +89,9 @@ class ErrorListFamily extends Family<AsyncValue<ErrorListResponse>> {
   ///   ErrorListQuery(subject: 'math', needReview: true)
   /// ));
   /// ```
+  ///
+  /// N34：走缓存感知读——离线命中快照时 `fromCache/asOf` 有值，UI 据此
+  /// 挂「截至 X」stale 徽标（N36 口径）。
   ///
   /// Copied from [errorList].
   const ErrorListFamily();
@@ -94,6 +104,9 @@ class ErrorListFamily extends Family<AsyncValue<ErrorListResponse>> {
   ///   ErrorListQuery(subject: 'math', needReview: true)
   /// ));
   /// ```
+  ///
+  /// N34：走缓存感知读——离线命中快照时 `fromCache/asOf` 有值，UI 据此
+  /// 挂「截至 X」stale 徽标（N36 口径）。
   ///
   /// Copied from [errorList].
   ErrorListProvider call(
@@ -137,8 +150,12 @@ class ErrorListFamily extends Family<AsyncValue<ErrorListResponse>> {
 /// ));
 /// ```
 ///
+/// N34：走缓存感知读——离线命中快照时 `fromCache/asOf` 有值，UI 据此
+/// 挂「截至 X」stale 徽标（N36 口径）。
+///
 /// Copied from [errorList].
-class ErrorListProvider extends AutoDisposeFutureProvider<ErrorListResponse> {
+class ErrorListProvider
+    extends AutoDisposeFutureProvider<CacheAwareResult<ErrorListResponse>> {
   /// 错题列表 Provider（支持参数化查询）
   ///
   /// 使用方式：
@@ -147,6 +164,9 @@ class ErrorListProvider extends AutoDisposeFutureProvider<ErrorListResponse> {
   ///   ErrorListQuery(subject: 'math', needReview: true)
   /// ));
   /// ```
+  ///
+  /// N34：走缓存感知读——离线命中快照时 `fromCache/asOf` 有值，UI 据此
+  /// 挂「截至 X」stale 徽标（N36 口径）。
   ///
   /// Copied from [errorList].
   ErrorListProvider(
@@ -181,7 +201,9 @@ class ErrorListProvider extends AutoDisposeFutureProvider<ErrorListResponse> {
 
   @override
   Override overrideWith(
-    FutureOr<ErrorListResponse> Function(ErrorListRef provider) create,
+    FutureOr<CacheAwareResult<ErrorListResponse>> Function(
+            ErrorListRef provider)
+        create,
   ) {
     return ProviderOverride(
       origin: this,
@@ -198,7 +220,8 @@ class ErrorListProvider extends AutoDisposeFutureProvider<ErrorListResponse> {
   }
 
   @override
-  AutoDisposeFutureProviderElement<ErrorListResponse> createElement() {
+  AutoDisposeFutureProviderElement<CacheAwareResult<ErrorListResponse>>
+      createElement() {
     return _ErrorListProviderElement(this);
   }
 
@@ -216,14 +239,14 @@ class ErrorListProvider extends AutoDisposeFutureProvider<ErrorListResponse> {
   }
 }
 
-mixin ErrorListRef on AutoDisposeFutureProviderRef<ErrorListResponse> {
+mixin ErrorListRef
+    on AutoDisposeFutureProviderRef<CacheAwareResult<ErrorListResponse>> {
   /// The parameter `query` of this provider.
   ErrorListQuery get query;
 }
 
-class _ErrorListProviderElement
-    extends AutoDisposeFutureProviderElement<ErrorListResponse>
-    with ErrorListRef {
+class _ErrorListProviderElement extends AutoDisposeFutureProviderElement<
+    CacheAwareResult<ErrorListResponse>> with ErrorListRef {
   _ErrorListProviderElement(super.provider);
 
   @override
@@ -382,7 +405,7 @@ class _ErrorDetailProviderElement
   String get errorId => (origin as ErrorDetailProvider).errorId;
 }
 
-String _$todayReviewListHash() => r'30908742423f34b3cf3f8827c50ff2b6f30b2eed';
+String _$todayReviewListHash() => r'e0183b9f0172e487553f12e3ea7e4bfe4f981675';
 
 /// 今日待复习列表 Provider
 ///
@@ -402,7 +425,7 @@ final todayReviewListProvider =
 );
 
 typedef TodayReviewListRef = AutoDisposeFutureProviderRef<List<ErrorRecord>>;
-String _$errorStatsHash() => r'08961dd36bbc7355652401fdbda09136e15b7ffc';
+String _$errorStatsHash() => r'bb2b71add250cb060e3e69ef88e0d5164ef82008';
 
 /// 错题统计数据 Provider
 ///

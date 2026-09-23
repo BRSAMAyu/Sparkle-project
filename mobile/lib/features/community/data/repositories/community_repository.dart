@@ -1,7 +1,9 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
+import 'package:sparkle/core/offline/list_read_cache.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/models/community_models.dart';
@@ -14,35 +16,70 @@ final communityRepositoryProvider = Provider<CommunityRepository>((ref) {
   }
 
   final apiClient = ref.watch(apiClientProvider);
-  return CommunityRepository(apiClient);
+  // N34：注入本地读缓存——社区 feed 断网冷启动回读快照（带时点标记）。
+  final readCache = ref.watch(listReadCacheProvider);
+  return CommunityRepository(apiClient, readCache: readCache);
 });
 
 class CommunityRepository {
-  CommunityRepository(this._apiClient);
+  CommunityRepository(this._apiClient, {ListReadCache? readCache})
+      : _readCache = readCache;
   final ApiClient _apiClient;
+  final ListReadCache? _readCache;
 
   Future<List<Post>> getFeed({
     int page = 1,
     int limit = 20,
     String? scope,
-  }) async {
-    final response = await _apiClient.get<dynamic>(
-      ApiEndpoints.communityFeed,
-      queryParameters: {
-        'page': page,
-        'limit': limit,
-        if (scope != null) 'scope': scope,
-      },
-    );
+  }) async =>
+      (await getFeedCached(page: page, limit: limit, scope: scope)).data;
 
-    if (response.statusCode == 200) {
-      final data =
-          ApiResponseParser.unwrapList(response.data, action: 'getFeed');
-      return data
-          .map((e) => Post.fromJson(e as Map<String, dynamic>))
-          .toList();
+  /// N34：社区 feed 读（缓存感知）——成功响应落本地快照，连接类失败回读，
+  /// `fromCache/asOf` 传导 UI 挂「截至 X」标记。写路径不入缓存。
+  Future<CacheAwareResult<List<Post>>> getFeedCached({
+    int page = 1,
+    int limit = 20,
+    String? scope,
+  }) async {
+    final cacheKey = 'community:feed:${scope ?? 'all'}:p$page:l$limit';
+    try {
+      final response = await _apiClient.get<dynamic>(
+        ApiEndpoints.communityFeed,
+        queryParameters: {
+          'page': page,
+          'limit': limit,
+          if (scope != null) 'scope': scope,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data =
+            ApiResponseParser.unwrapList(response.data, action: 'getFeed');
+        await _readCache?.put(cacheKey, data);
+        return CacheAwareResult(
+          data.map((e) => Post.fromJson(e as Map<String, dynamic>)).toList(),
+        );
+      }
+      throw Exception('Failed to load community feed');
+    } on DioException catch (e) {
+      if (ListReadCache.isNetworkFailure(e)) {
+        final snapshot = await _readCache?.get(cacheKey);
+        if (snapshot != null) {
+          final data = ApiResponseParser.unwrapList(
+            snapshot.payload,
+            action: 'getFeed',
+          );
+          return CacheAwareResult(
+            data
+                .map((e) => Post.fromJson(e as Map<String, dynamic>))
+                .toList(),
+            fromCache: true,
+            asOf: snapshot.fetchedAt,
+          );
+        }
+      }
+      rethrow;
     }
-    throw Exception('Failed to load community feed');
   }
 
   Future<String> createPost(CreatePostRequest request) async {

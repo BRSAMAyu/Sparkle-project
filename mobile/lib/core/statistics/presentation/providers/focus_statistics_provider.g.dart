@@ -7,7 +7,7 @@ part of 'focus_statistics_provider.dart';
 // **************************************************************************
 
 String _$focusStatsRepositoryHash() =>
-    r'2e6ac603aefe5be045f6152183d7bdb191fee0e9';
+    r'5ee698e9c0b56a19144c9397af178e7ef90dac8f';
 
 /// Provider for focus statistics repository
 ///
@@ -25,7 +25,7 @@ final focusStatsRepositoryProvider =
 );
 
 typedef FocusStatsRepositoryRef = AutoDisposeProviderRef<FocusStatsRepository>;
-String _$focusStatisticsHash() => r'b8a0685d49dcf4b4e41ab5870d08067288a3e5d6';
+String _$focusStatisticsHash() => r'aa2eb89f1ad16bdb76aa2ed0a21d0f47d633701b';
 
 /// Provider for focus statistics state
 ///

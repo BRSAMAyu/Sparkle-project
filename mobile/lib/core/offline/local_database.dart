@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 import 'package:sparkle/core/analytics/models/user_analytics_event.dart';
 import 'package:sparkle/core/offline/local_database_store.dart';
+import 'package:sparkle/core/offline/models/cached_list_snapshot.dart';
 import 'package:sparkle/core/offline/models/focus_session_record.dart';
 import 'package:sparkle/core/offline/models/offline_chat_message.dart';
 import 'package:sparkle/core/offline/models/translation_record.dart';
@@ -183,6 +184,7 @@ class LocalDatabase {
       VocabReviewSchema,
       FocusSessionRecordSchema, // Added for focus statistics
       CachedStatisticsModelSchema, // Added for unified statistics caching
+      CachedListSnapshotSchema, // N34: warm read snapshots for task/error_book/community
       OfflineChatMessageSchema, // Added for offline message queue
     ]);
   }
@@ -200,6 +202,7 @@ class LocalDatabase {
       await isar.userAnalyticsEvents.clear();
       await isar.focusSessionRecords.clear();
       await isar.cachedStatisticsModels.clear();
+      await isar.cachedListSnapshots.clear();
       await isar.offlineChatMessages.clear();
       await isar.translationWordLinks.clear();
       await isar.translationRecords.clear();
@@ -220,5 +223,6 @@ class LocalDatabase {
   IsarCollection<UserAnalyticsEvent> get analyticsEvents => isar.userAnalyticsEvents;
   IsarCollection<FocusSessionRecord> get focusSessionRecords => isar.focusSessionRecords;
   IsarCollection<CachedStatisticsModel> get cachedStatistics => isar.cachedStatisticsModels;
+  IsarCollection<CachedListSnapshot> get cachedListSnapshots => isar.cachedListSnapshots;
   IsarCollection<OfflineChatMessage> get offlineChatMessages => isar.offlineChatMessages;
 }

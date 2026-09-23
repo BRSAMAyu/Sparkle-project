@@ -331,7 +331,16 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
         }
         if (result == null) {
           _finishCompletionFlow(showFeedbackDialog: false);
-          AppFeedback.error(context, context.l10n.taskExecutionSyncFailed);
+          // N35：离线完成已入队（outbox 成熟）时按「已保存待同步」反馈，
+          // 绝不把排队成功报成同步失败（诚实三态）。
+          final taskState = ref.read(taskListProvider);
+          final queuedOffline = taskState.offlineQueuedOp == 'complete' &&
+              taskState.offlineQueuedTaskId == task.id;
+          if (queuedOffline) {
+            AppFeedback.info(context, context.l10n.errorOfflineQueuedDetail);
+          } else {
+            AppFeedback.error(context, context.l10n.taskExecutionSyncFailed);
+          }
           return;
         }
         if (_finishCompletionWhenReady) {

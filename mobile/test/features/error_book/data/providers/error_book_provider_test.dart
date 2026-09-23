@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:sparkle/core/offline/list_read_cache.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -153,12 +154,14 @@ void main() {
     });
 
     test('errorList serves demo records in demo mode', () async {
-      final response = await container
+      // N34：provider 返回缓存感知结果，demo 分支 fromCache=false。
+      final result = await container
           .read(errorListProvider(const ErrorListQuery()).future);
 
-      expect(response.items, isNotEmpty);
+      expect(result.fromCache, isFalse);
+      expect(result.data.items, isNotEmpty);
       expect(
-        response.items.every((item) => item.id.startsWith('error_')),
+        result.data.items.every((item) => item.id.startsWith('error_')),
         isTrue,
       );
     });
@@ -230,6 +233,33 @@ class _ThrowingErrorBookRepository extends ErrorBookRepository {
   _ThrowingErrorBookRepository() : super(Dio());
 
   static const _failure = 'network unavailable';
+
+  // N34：provider 走缓存感知读——fake 覆盖 Cached 变体（真实请求零依赖）。
+  @override
+  Future<CacheAwareResult<ErrorListResponse>> getErrorsCached({
+    String? subject,
+    String? chapter,
+    String? nodeId,
+    bool? needReview,
+    String? keyword,
+    double? masteryMin,
+    double? masteryMax,
+    CognitiveDimension? cognitiveDimension,
+    int page = 1,
+    int pageSize = 20,
+  }) async =>
+      throw Exception(_failure);
+
+  @override
+  Future<CacheAwareResult<ErrorListResponse>> getTodayReviewListCached({
+    int page = 1,
+    int pageSize = 20,
+  }) async =>
+      throw Exception(_failure);
+
+  @override
+  Future<CacheAwareResult<ReviewStats>> getStatsCached() async =>
+      throw Exception(_failure);
 
   @override
   Future<ErrorListResponse> getErrors({

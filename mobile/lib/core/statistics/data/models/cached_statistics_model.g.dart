@@ -43,49 +43,54 @@ const CachedStatisticsModelSchema = CollectionSchema(
       name: r'isFullySynced',
       type: IsarType.bool,
     ),
-    r'jsonData': PropertySchema(
+    r'isLegacyEntry': PropertySchema(
       id: 5,
+      name: r'isLegacyEntry',
+      type: IsarType.bool,
+    ),
+    r'jsonData': PropertySchema(
+      id: 6,
       name: r'jsonData',
       type: IsarType.longList,
     ),
     r'lastAccessedAt': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'lastAccessedAt',
       type: IsarType.dateTime,
     ),
     r'metadata': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'metadata',
       type: IsarType.string,
     ),
     r'period': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'period',
       type: IsarType.string,
       enumMap: _CachedStatisticsModelperiodEnumValueMap,
     ),
     r'periodEnd': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'periodEnd',
       type: IsarType.dateTime,
     ),
     r'periodStart': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'periodStart',
       type: IsarType.dateTime,
     ),
     r'priority': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'priority',
       type: IsarType.long,
     ),
     r'ttlSeconds': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'ttlSeconds',
       type: IsarType.long,
     ),
     r'type': PropertySchema(
-      id: 13,
+      id: 14,
       name: r'type',
       type: IsarType.string,
       enumMap: _CachedStatisticsModeltypeEnumValueMap,
@@ -175,15 +180,16 @@ void _cachedStatisticsModelSerialize(
   writer.writeDateTime(offsets[2], object.createdAt);
   writer.writeLong(offsets[3], object.dataSize);
   writer.writeBool(offsets[4], object.isFullySynced);
-  writer.writeLongList(offsets[5], object.jsonData);
-  writer.writeDateTime(offsets[6], object.lastAccessedAt);
-  writer.writeString(offsets[7], object.metadata);
-  writer.writeString(offsets[8], object.period.name);
-  writer.writeDateTime(offsets[9], object.periodEnd);
-  writer.writeDateTime(offsets[10], object.periodStart);
-  writer.writeLong(offsets[11], object.priority);
-  writer.writeLong(offsets[12], object.ttlSeconds);
-  writer.writeString(offsets[13], object.type.name);
+  writer.writeBool(offsets[5], object.isLegacyEntry);
+  writer.writeLongList(offsets[6], object.jsonData);
+  writer.writeDateTime(offsets[7], object.lastAccessedAt);
+  writer.writeString(offsets[8], object.metadata);
+  writer.writeString(offsets[9], object.period.name);
+  writer.writeDateTime(offsets[10], object.periodEnd);
+  writer.writeDateTime(offsets[11], object.periodStart);
+  writer.writeLong(offsets[12], object.priority);
+  writer.writeLong(offsets[13], object.ttlSeconds);
+  writer.writeString(offsets[14], object.type.name);
 }
 
 CachedStatisticsModel _cachedStatisticsModelDeserialize(
@@ -197,18 +203,18 @@ CachedStatisticsModel _cachedStatisticsModelDeserialize(
   object.createdAt = reader.readDateTime(offsets[2]);
   object.id = id;
   object.isFullySynced = reader.readBool(offsets[4]);
-  object.jsonData = reader.readLongList(offsets[5]) ?? [];
-  object.lastAccessedAt = reader.readDateTime(offsets[6]);
-  object.metadata = reader.readStringOrNull(offsets[7]);
+  object.jsonData = reader.readLongList(offsets[6]) ?? [];
+  object.lastAccessedAt = reader.readDateTime(offsets[7]);
+  object.metadata = reader.readStringOrNull(offsets[8]);
   object.period = _CachedStatisticsModelperiodValueEnumMap[
-          reader.readStringOrNull(offsets[8])] ??
+          reader.readStringOrNull(offsets[9])] ??
       StatisticsPeriod.today;
-  object.periodEnd = reader.readDateTime(offsets[9]);
-  object.periodStart = reader.readDateTime(offsets[10]);
-  object.priority = reader.readLong(offsets[11]);
-  object.ttlSeconds = reader.readLongOrNull(offsets[12]);
+  object.periodEnd = reader.readDateTime(offsets[10]);
+  object.periodStart = reader.readDateTime(offsets[11]);
+  object.priority = reader.readLong(offsets[12]);
+  object.ttlSeconds = reader.readLongOrNull(offsets[13]);
   object.type = _CachedStatisticsModeltypeValueEnumMap[
-          reader.readStringOrNull(offsets[13])] ??
+          reader.readStringOrNull(offsets[14])] ??
       StatisticsType.focus;
   return object;
 }
@@ -231,24 +237,26 @@ P _cachedStatisticsModelDeserializeProp<P>(
     case 4:
       return (reader.readBool(offset)) as P;
     case 5:
-      return (reader.readLongList(offset) ?? []) as P;
+      return (reader.readBool(offset)) as P;
     case 6:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readLongList(offset) ?? []) as P;
     case 7:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 8:
+      return (reader.readStringOrNull(offset)) as P;
+    case 9:
       return (_CachedStatisticsModelperiodValueEnumMap[
               reader.readStringOrNull(offset)] ??
           StatisticsPeriod.today) as P;
-    case 9:
-      return (reader.readDateTime(offset)) as P;
     case 10:
       return (reader.readDateTime(offset)) as P;
     case 11:
-      return (reader.readLong(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 12:
-      return (reader.readLongOrNull(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 13:
+      return (reader.readLongOrNull(offset)) as P;
+    case 14:
       return (_CachedStatisticsModeltypeValueEnumMap[
               reader.readStringOrNull(offset)] ??
           StatisticsType.focus) as P;
@@ -1055,6 +1063,16 @@ extension CachedStatisticsModelQueryFilter on QueryBuilder<
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'isFullySynced',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<CachedStatisticsModel, CachedStatisticsModel,
+      QAfterFilterCondition> isLegacyEntryEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isLegacyEntry',
         value: value,
       ));
     });
@@ -2015,6 +2033,20 @@ extension CachedStatisticsModelQuerySortBy
   }
 
   QueryBuilder<CachedStatisticsModel, CachedStatisticsModel, QAfterSortBy>
+      sortByIsLegacyEntry() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isLegacyEntry', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CachedStatisticsModel, CachedStatisticsModel, QAfterSortBy>
+      sortByIsLegacyEntryDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isLegacyEntry', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CachedStatisticsModel, CachedStatisticsModel, QAfterSortBy>
       sortByLastAccessedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'lastAccessedAt', Sort.asc);
@@ -2214,6 +2246,20 @@ extension CachedStatisticsModelQuerySortThenBy
   }
 
   QueryBuilder<CachedStatisticsModel, CachedStatisticsModel, QAfterSortBy>
+      thenByIsLegacyEntry() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isLegacyEntry', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CachedStatisticsModel, CachedStatisticsModel, QAfterSortBy>
+      thenByIsLegacyEntryDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isLegacyEntry', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CachedStatisticsModel, CachedStatisticsModel, QAfterSortBy>
       thenByLastAccessedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'lastAccessedAt', Sort.asc);
@@ -2364,6 +2410,13 @@ extension CachedStatisticsModelQueryWhereDistinct
   }
 
   QueryBuilder<CachedStatisticsModel, CachedStatisticsModel, QDistinct>
+      distinctByIsLegacyEntry() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isLegacyEntry');
+    });
+  }
+
+  QueryBuilder<CachedStatisticsModel, CachedStatisticsModel, QDistinct>
       distinctByJsonData() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'jsonData');
@@ -2467,6 +2520,13 @@ extension CachedStatisticsModelQueryProperty on QueryBuilder<
       isFullySyncedProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'isFullySynced');
+    });
+  }
+
+  QueryBuilder<CachedStatisticsModel, bool, QQueryOperations>
+      isLegacyEntryProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isLegacyEntry');
     });
   }
 

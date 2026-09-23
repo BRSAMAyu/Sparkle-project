@@ -7,7 +7,7 @@ part of 'capsule_statistics_provider.dart';
 // **************************************************************************
 
 String _$capsuleStatsRepositoryHash() =>
-    r'6e9311758a3b2a8d876edabca185933a0ac0ad65';
+    r'b83ecd7380f888c593335ddfc85c2840c01299cc';
 
 /// Provider for capsule statistics repository
 ///
@@ -26,7 +26,7 @@ final capsuleStatsRepositoryProvider =
 
 typedef CapsuleStatsRepositoryRef
     = AutoDisposeProviderRef<CapsuleStatsRepository>;
-String _$capsuleStatisticsHash() => r'8616e494137159205342fad51428beecf33c20df';
+String _$capsuleStatisticsHash() => r'ad61ae7883de53140faccaeff69dc1558d7622bb';
 
 /// Provider for capsule statistics state
 ///

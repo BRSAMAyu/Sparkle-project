@@ -10,6 +10,8 @@ import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/offline/list_read_cache.dart';
+import 'package:sparkle/core/offline/widgets/stale_snapshot_banner.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
@@ -377,39 +379,50 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
       );
 
   Widget _buildErrorList(
-    AsyncValue<ErrorListResponse> errorListAsync,
+    AsyncValue<CacheAwareResult<ErrorListResponse>> errorListAsync,
     ErrorListQuery query,
   ) => errorListAsync.when(
-    data: (response) {
+    data: (result) {
+      final response = result.data;
       if (response.items.isEmpty) {
         return _buildEmptyState(query.needReview ?? false, query.keyword);
       }
 
-      return SparkleRefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(errorListProvider(query));
-        },
-        child: ListView.builder(
-          padding: const EdgeInsets.only(bottom: 80),
-          itemCount: response.items.length,
-          itemBuilder: (context, index) {
-            final error = response.items[index];
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                ErrorCard(
-                  error: error,
-                  onTap: () => _navigateToDetail(context, error.id),
-                  onKnowledgeNodeTap: (nodeId, masteryDelta) =>
-                      _navigateToGalaxyNode(context, nodeId, masteryDelta),
-                  onDelete: () => _deleteError(error.id),
-                ),
-                if (_shouldShowLinkingHint(error))
-                  _buildLinkingHintCard(error.latestAnalysis!.linkingHint!),
-              ],
-            );
-          },
-        ),
+      // N34/N36：离线命中本地快照——列表上方挂「截至 X」stale 徽标，
+      // 让用户知道这是上次加载过的数据而非实时数据。
+      return Column(
+        children: [
+          if (result.fromCache && result.asOf != null)
+            StaleSnapshotBanner(fetchedAt: result.asOf!),
+          Expanded(
+            child: SparkleRefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(errorListProvider(query));
+              },
+              child: ListView.builder(
+                padding: const EdgeInsets.only(bottom: 80),
+                itemCount: response.items.length,
+                itemBuilder: (context, index) {
+                  final error = response.items[index];
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ErrorCard(
+                        error: error,
+                        onTap: () => _navigateToDetail(context, error.id),
+                        onKnowledgeNodeTap: (nodeId, masteryDelta) =>
+                            _navigateToGalaxyNode(context, nodeId, masteryDelta),
+                        onDelete: () => _deleteError(error.id),
+                      ),
+                      if (_shouldShowLinkingHint(error))
+                        _buildLinkingHintCard(error.latestAnalysis!.linkingHint!),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
       );
     },
     loading: () => const SparkleListSkeleton(),

@@ -3842,6 +3842,18 @@ abstract class AppLocalizations {
   /// **'请检查您的网络连接'**
   String get errorNetworkDetail;
 
+  /// No description provided for @errorOfflineQueuedDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前离线：操作已保存，恢复网络后会自动同步'**
+  String get errorOfflineQueuedDetail;
+
+  /// No description provided for @staleSnapshotAsOf.
+  ///
+  /// In zh, this message translates to:
+  /// **'离线数据 · 截至 {time}'**
+  String staleSnapshotAsOf(Object time);
+
   /// No description provided for @errorServer.
   ///
   /// In zh, this message translates to:

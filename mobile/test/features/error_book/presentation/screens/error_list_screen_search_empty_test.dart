@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/offline/list_read_cache.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
 import 'package:sparkle/features/error_book/data/repositories/error_book_repository.dart';
@@ -130,6 +131,40 @@ class _KeywordFilteringErrorBookRepository extends ErrorBookRepository {
       hasNext: false,
     );
   }
+
+  // N34（OFFLINE-READ）：provider 走缓存感知读——替身按同一 ILIKE 过滤
+  // 语义覆写 Cached 变体（wt254 零命中语义原样保留，断言未弱化）。
+  @override
+  Future<CacheAwareResult<ErrorListResponse>> getErrorsCached({
+    String? subject,
+    String? chapter,
+    String? nodeId,
+    bool? needReview,
+    String? keyword,
+    double? masteryMin,
+    double? masteryMax,
+    CognitiveDimension? cognitiveDimension,
+    int page = 1,
+    int pageSize = 20,
+  }) async =>
+      CacheAwareResult(
+        await getErrors(
+          subject: subject,
+          chapter: chapter,
+          nodeId: nodeId,
+          needReview: needReview,
+          keyword: keyword,
+          masteryMin: masteryMin,
+          masteryMax: masteryMax,
+          cognitiveDimension: cognitiveDimension,
+          page: page,
+          pageSize: pageSize,
+        ),
+      );
+
+  @override
+  Future<CacheAwareResult<ReviewStats>> getStatsCached() async =>
+      CacheAwareResult(await getStats());
 
   @override
   Future<ReviewStats> getStats() async => const ReviewStats(

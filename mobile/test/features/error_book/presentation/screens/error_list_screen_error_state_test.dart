@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sparkle/core/offline/list_read_cache.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
 import 'package:sparkle/features/error_book/data/repositories/error_book_repository.dart';
@@ -61,6 +62,27 @@ class _ThrowingErrorBookRepository extends ErrorBookRepository {
     int pageSize = 20,
   }) async =>
       throw Exception('boom-detector- internals');
+
+  // N34（OFFLINE-READ）：provider 走缓存感知读——替身同语义覆写 Cached
+  // 变体（异常注入原样保留，错误态断言未弱化）。
+  @override
+  Future<CacheAwareResult<ErrorListResponse>> getErrorsCached({
+    String? subject,
+    String? chapter,
+    String? nodeId,
+    bool? needReview,
+    String? keyword,
+    double? masteryMin,
+    double? masteryMax,
+    CognitiveDimension? cognitiveDimension,
+    int page = 1,
+    int pageSize = 20,
+  }) async =>
+      throw Exception('boom-detector- internals');
+
+  @override
+  Future<CacheAwareResult<ReviewStats>> getStatsCached() async =>
+      CacheAwareResult(await getStats());
 
   @override
   Future<ReviewStats> getStats() async => const ReviewStats(

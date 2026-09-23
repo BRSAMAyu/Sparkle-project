@@ -2040,6 +2040,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorNetworkDetail => 'Please check your internet connection';
 
   @override
+  String get errorOfflineQueuedDetail =>
+      'You\'re offline — your action has been saved and will sync automatically once you\'re back online';
+
+  @override
+  String staleSnapshotAsOf(Object time) {
+    return 'Offline data · as of $time';
+  }
+
+  @override
   String get errorServer => 'Server error';
 
   @override
