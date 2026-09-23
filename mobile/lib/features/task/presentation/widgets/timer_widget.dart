@@ -84,8 +84,8 @@ class _TimerWidgetState extends State<TimerWidget>
       _pulseController
         ..stop()
         ..value = 0; // 静止终态：pulse Tween begin=1.0 → 表盘 scale 1.0
-    } else if (!_pulseController.isAnimating) {
-      unawaited(_pulseController.repeat(reverse: true));
+    } else {
+      _ensurePulse();
     }
   }
 
@@ -144,6 +144,14 @@ class _TimerWidgetState extends State<TimerWidget>
         widget.mode == TimerMode.countDown && widget.initialSeconds == 0;
   }
 
+  /// 装饰性脉动的唯一启动点（persistentRepeatLoop 守卫口径：单调用点）。
+  /// 启动与开关恢复两路生命周期都经此，幂等（已在播不重启）。
+  void _ensurePulse() {
+    if (!_pulseController.isAnimating) {
+      unawaited(_pulseController.repeat(reverse: true));
+    }
+  }
+
   void _startTimer() {
     if (_isRunning) return;
     _didComplete = false;
@@ -152,7 +160,7 @@ class _TimerWidgetState extends State<TimerWidget>
     widget.onStateChange?.call(true);
     if (!_reduceMotion) {
       // N33：减弱动效下不启动装饰性脉动，表盘静止（计时功能照常）。
-      unawaited(_pulseController.repeat(reverse: true));
+      _ensurePulse();
     }
     _syncFromClock();
     _startPeriodicTicker();
