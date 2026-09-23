@@ -630,12 +630,27 @@ async def refresh_token(
         if not user or not user.is_active:
             raise HTTPException(status_code=401, detail="登录令牌无效，请重新登录")
 
-        # Rotate refresh token: revoke old refresh token jti
-        await blacklist_token(payload.get("jti"), payload.get("exp"))
-        # R1A1-P0-3: Also revoke the old session so existing access tokens are invalidated
+        # R1A1-P0-3 fix (COMMUNITY-401): the old session must be revoked with
+        # the by-id variant BEFORE blacklisting the presented refresh JTI.
+        # The previous code called revoke_session(str(session_id)) — a
+        # TypeError (method needs db + UserSession + ttl_seconds) raised AFTER
+        # blacklist_token had already run: every refresh returned 401 while
+        # the presented refresh JTI stayed blacklisted, so the client's next
+        # attempt hit "Token revoked" and force-logged-out. That cascade is
+        # the restart-401 regression the field retest observed.
         if session_id:
             from app.services.auth_session_service import auth_session_service
-            await auth_session_service.revoke_session(str(session_id))
+
+            await auth_session_service.revoke_session_by_id(
+                db,
+                user_id=str(user.id),
+                session_id=str(session_id),
+                ttl_seconds=SESSION_TTL_SECONDS,
+            )
+        # Rotate refresh token: revoke old refresh token jti — only after the
+        # session revocation succeeded, so a partial failure never poisons
+        # the presented token (a retry then stays possible).
+        await blacklist_token(payload.get("jti"), payload.get("exp"))
         auth_audit_service.schedule_log(
             AuthAuditAction.TOKEN_REFRESH,
             user_id=str(user.id),

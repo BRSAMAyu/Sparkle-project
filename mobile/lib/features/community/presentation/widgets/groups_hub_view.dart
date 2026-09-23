@@ -1,13 +1,15 @@
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/group_recommendation_card.dart';
@@ -294,13 +296,13 @@ class _RecommendationsSection extends ConsumerWidget {
       );
 }
 
-class _MyGroupsSection extends StatelessWidget {
+class _MyGroupsSection extends ConsumerWidget {
   const _MyGroupsSection({required this.state});
 
   final AsyncValue<List<GroupListItem>> state;
 
   @override
-  Widget build(BuildContext context) => state.when(
+  Widget build(BuildContext context, WidgetRef ref) => state.when(
         data: (groups) {
           if (groups.isEmpty) {
             return CompactEmptyState(
@@ -352,9 +354,24 @@ class _MyGroupsSection extends StatelessWidget {
           );
         },
         loading: () => const SparkleListSkeleton(),
-        error: (error, _) => Text(
-          context.l10n.communityMyGroupsLoadError(error.toString()),
-          style: TextStyle(color: DS.textSecondary),
+        // COMMUNITY-401: the raw DioException text (401 textbook dump with a
+        // mozilla link) used to be interpolated verbatim here. Humanize via
+        // UserFacingError (SPEC-C precedent) and give the section a visible
+        // tap-to-retry so a transient auth/network failure can recover.
+        error: (error, _) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              context.l10n.communityMyGroupsLoadError(
+                UserFacingError.from(error),
+              ),
+              style: TextStyle(color: DS.textSecondary),
+            ),
+            const SizedBox(height: DS.spacing8),
+            CompactErrorCard(
+              onRetry: () => ref.invalidate(myGroupsProvider),
+            ),
+          ],
         ),
       );
 }

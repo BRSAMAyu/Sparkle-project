@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
-import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -226,11 +226,35 @@ class _GroupDiscoverScreenState extends ConsumerState<GroupDiscoverScreen> {
           ),
         ),
         loading: () => const SparkleListSkeleton(),
-        error: (error, stackTrace) => Center(
-          child: CustomErrorWidget.page(
-            context: context,
-            message: UserFacingError.from(error),
-            onRetry: notifier.refresh,
+        // COMMUNITY-401: the plaza used to die into a fullscreen ERR-AUTH
+        // page. Degrade to an in-panel face instead: the search bar and the
+        // tap-to-retry stay alive so the surface remains usable and a
+        // transient auth/network failure recovers in place (partners-tab
+        // CompactErrorCard precedent).
+        error: (error, stackTrace) => ContentConstraint(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              SparkleStaggerItem(
+                index: 0,
+                child: _SearchBar(
+                  controller: _searchController,
+                  onSubmitted: _submitSearch,
+                  onClear: () async {
+                    _searchController.clear();
+                    await notifier.setKeyword('');
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+              CompactErrorCard(onRetry: notifier.refresh),
+              const SizedBox(height: 12),
+              Text(
+                UserFacingError.from(error),
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: DS.textTertiary),
+              ),
+            ],
           ),
         ),
       ),

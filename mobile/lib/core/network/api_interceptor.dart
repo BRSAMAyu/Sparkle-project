@@ -148,19 +148,23 @@ class AuthInterceptor extends Interceptor {
       try {
         final authHeader =
             err.requestOptions.headers['Authorization']?.toString();
-        if (authHeader == null || authHeader.isEmpty) {
-          debugPrint(
-            '🔐 Skipping token refresh for unauthenticated request: $path',
-          );
-          return super.onError(err, handler);
-        }
-
         final authRepo = _ref.read(authRepositoryProvider);
         final refreshToken = await authRepo.getRefreshToken();
         if (refreshToken == null || refreshToken.isEmpty) {
           // Unauthenticated requests can legitimately receive 401 before login.
           // Do not force a logout loop when the client has no session to refresh.
           return super.onError(err, handler);
+        }
+        // COMMUNITY-401: a missing Authorization header no longer hard-skips
+        // recovery. After any token-state loss, every retry used to go out
+        // header-less and 401 forever ("轻触重试" could never recover). When a
+        // session exists (refresh token present), attempt one refresh + retry
+        // exactly like the with-header path; the no-logout-loop guarantee is
+        // kept by the early return above.
+        if (authHeader == null || authHeader.isEmpty) {
+          debugPrint(
+            '🔐 Recovering header-less 401 via token refresh: $path',
+          );
         }
 
         // Check if there's already a refresh in progress
@@ -193,6 +197,11 @@ class AuthInterceptor extends Interceptor {
           return handler.resolve(response);
         } catch (e) {
           _refreshCompleter?.completeError(e);
+          // COMMUNITY-401: when no concurrent 401 is awaiting the completer,
+          // its error would surface as an unhandled async exception. ignore()
+          // marks it handled for the no-listener case while real waiters
+          // (concurrent 401s above) still receive it.
+          _refreshCompleter?.future.ignore();
           // Refresh token failed, logout user
           unawaited(
             _ref.read(authRepositoryProvider).logout(
