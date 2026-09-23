@@ -244,3 +244,97 @@ async def test_context_pack_no_dual_source_note_without_overlap(db_session):
 
     assert "depth_preference" in pack.preferences
     assert "preference_dual_source_keys" not in pack.metadata
+
+
+# ---------------------------------------------------------------------------
+# GAIN-FIX 红旗2 守卫：预算裁剪的内容不得经 evidence_summary 回灌 prompt（M-05）
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_evidence_summary_never_resurrects_budget_clipped_content(db_session):
+    """goals/episodic 被预算整体裁掉时，evidence_summary 不得带回其正文。"""
+    memory_service = MemoryService(db_session)
+    user_id = uuid4()
+    db_session.add(
+        User(
+            id=user_id,
+            username=f"user_{user_id.hex[:8]}",
+            email=f"{user_id.hex[:8]}@example.com",
+            hashed_password="test",
+        )
+    )
+    await memory_service.create_goal(
+        user_id=user_id,
+        title="绝密目标GAINFIX-91",
+        status="active",
+        evidence_refs=[{"type": "event", "id": "evt_gf1"}],
+    )
+    await memory_service.create_episodic_memory(
+        user_id=user_id,
+        summary="绝密记忆GAINFIX-77 " + ("z" * 120),
+        source_type="analysis",
+        source_id="src_gf1",
+        occurred_at=_utcnow(),
+        importance_score=0.6,
+        tags=["execution"],
+        evidence_refs=[{"type": "event", "id": "evt_gf2"}],
+    )
+    await db_session.commit()
+
+    scheduler = ContextBudgetScheduler(budgets={"chat": {"preferences": 0, "goals": 0, "episodic": 0}})
+    pack = await ContextPackBuilder(db_session, scheduler=scheduler).build(user_id, intent="chat")
+    ctx = pack.to_prompt_context()
+
+    assert ctx["active_goals"] == []
+    assert ctx["episodic_memories"] == []
+    evidence = (ctx["context_pack"]["metadata"] or {}).get("evidence_summary") or {}
+    assert [g.get("title") for g in evidence.get("goals") or []] == []
+    assert [e.get("summary") for e in evidence.get("episodic") or []] == []
+
+    from app.orchestration.prompts import format_user_context
+
+    prompt = format_user_context(ctx)
+    assert "绝密目标GAINFIX-91" not in prompt
+    assert "绝密记忆GAINFIX-77" not in prompt
+    # 诚实空态：无内容不落节头
+    assert "【画像证据摘要】" not in prompt
+
+
+@pytest.mark.asyncio
+async def test_evidence_summary_stays_subset_of_surfaced_faces_under_partial_clip(db_session):
+    """部分裁剪：evidence_summary 只保留注入面仍在场的条目（对齐而非杀观测面）。"""
+    memory_service = MemoryService(db_session)
+    user_id = uuid4()
+    db_session.add(
+        User(
+            id=user_id,
+            username=f"user_{user_id.hex[:8]}",
+            email=f"{user_id.hex[:8]}@example.com",
+            hashed_password="test",
+        )
+    )
+    await memory_service.create_goal(
+        user_id=user_id,
+        title="Goal KEEP-1",
+        status="active",
+        evidence_refs=[{"type": "event", "id": "evt_k1"}],
+    )
+    for index in range(6):
+        await memory_service.create_goal(
+            user_id=user_id,
+            title=f"Goal FILLER-{index} " + ("x" * 60),
+            status="active",
+            evidence_refs=[{"type": "event", "id": f"evt_f{index}"}],
+        )
+    await db_session.commit()
+
+    scheduler = ContextBudgetScheduler(budgets={"chat": {"preferences": 0, "goals": 40, "episodic": 0}})
+    pack = await ContextPackBuilder(db_session, scheduler=scheduler).build(user_id, intent="chat")
+    ctx = pack.to_prompt_context()
+
+    surfaced_ids = {str(g.get("id")) for g in ctx["active_goals"]}
+    assert surfaced_ids, "前置：预算应允许部分 goal 在场"
+    evidence = (ctx["context_pack"]["metadata"] or {}).get("evidence_summary") or {}
+    evidence_ids = {str(g.get("id")) for g in evidence.get("goals") or []}
+    assert evidence_ids <= surfaced_ids

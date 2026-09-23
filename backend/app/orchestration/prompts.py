@@ -3786,34 +3786,57 @@ def _render_user_context_content(
         metadata = context_pack.get("metadata") if isinstance(context_pack, dict) else None
         evidence = metadata.get("evidence_summary") if isinstance(metadata, dict) else None
         if isinstance(evidence, dict):
-            lines.append("【画像证据摘要】")
-            prefs = evidence.get("preferences") or []
+            # GAIN-FIX 红旗2（M-05 回灌对齐）：本节是回灌面，口径必须与预算裁剪
+            # 一致——只渲染仍在本包注入面（surfaced）的条目，被裁掉的正文
+            # （goal 标题/事件摘要/偏好 key）不回灌；全部为空时不落节头（诚实空态）。
+            surfaced_pref_keys = {
+                str(key) for key in (normalized.get("preferences") or {})
+            } if isinstance(normalized.get("preferences"), dict) else set()
+            evidence_lines: list[str] = []
+            prefs = [
+                item
+                for item in (evidence.get("preferences") or [])
+                if isinstance(item, dict) and str(item.get("key") or "") in surfaced_pref_keys
+            ]
             if prefs:
-                lines.append("偏好证据(Top 3):")
+                evidence_lines.append("偏好证据(Top 3):")
                 for item in prefs[:3]:
                     score = item.get("score", 0) or 0
                     if score < 0.3:
                         continue
                     updated = item.get("updated_at")
-                    lines.append(f"- {item.get('key')}: score={score}, updated_at={updated}")
-            goals = evidence.get("goals") or []
+                    evidence_lines.append(f"- {item.get('key')}: score={score}, updated_at={updated}")
+            surfaced_goal_ids = {str(_memory_field(goal, "id", default="")) for goal in active_goals}
+            goals = [
+                item
+                for item in (evidence.get("goals") or [])
+                if isinstance(item, dict) and str(item.get("id") or "") in surfaced_goal_ids
+            ]
             if goals:
-                lines.append("目标证据(Top 3):")
+                evidence_lines.append("目标证据(Top 3):")
                 for item in goals[:3]:
                     score = item.get("score", 0) or 0
                     if score < 0.3:
                         continue
                     updated = item.get("updated_at")
-                    lines.append(f"- {item.get('title')}: score={score}, updated_at={updated}")
-            episodic = evidence.get("episodic") or []
+                    evidence_lines.append(f"- {item.get('title')}: score={score}, updated_at={updated}")
+            surfaced_episodic_ids = {str(_memory_field(item, "id", default="")) for item in episodic_memories}
+            episodic = [
+                item
+                for item in (evidence.get("episodic") or [])
+                if isinstance(item, dict) and str(item.get("id") or "") in surfaced_episodic_ids
+            ]
             if episodic:
-                lines.append("事件证据(Top 3):")
+                evidence_lines.append("事件证据(Top 3):")
                 for item in episodic[:3]:
                     score = item.get("score", 0) or 0
                     if score < 0.3:
                         continue
                     occurred = item.get("occurred_at")
-                    lines.append(f"- {item.get('summary')}: score={score}, occurred_at={occurred}")
+                    evidence_lines.append(f"- {item.get('summary')}: score={score}, occurred_at={occurred}")
+            if evidence_lines:
+                lines.append("【画像证据摘要】")
+                lines.extend(evidence_lines)
 
     for key, meta in telemetry["high_value_fields"].items():
         if meta.get("collected") and not meta.get("rendered"):

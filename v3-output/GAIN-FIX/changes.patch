@@ -1,0 +1,484 @@
+diff --git a/backend/app/api/v1/chat.py b/backend/app/api/v1/chat.py
+index 6ccf61e9..2d53d7fd 100755
+--- a/backend/app/api/v1/chat.py
++++ b/backend/app/api/v1/chat.py
+@@ -1000,7 +1000,7 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
+             {
+                 "id": str(task.id),
+                 "title": task.title,
+-                "type": task.task_type,
++                "type": task.type,
+                 "status": task.status,
+                 "estimated_minutes": task.estimated_minutes,
+                 "actual_minutes": task.actual_minutes,
+@@ -1009,9 +1009,19 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
+         ]
+ 
+         # 3. 获取活跃计划（未完成的计划）
++        # GAIN-FIX 红旗3：Plan 模型无 is_completed 列（此前 `not Plan.is_completed`
++        # 在查询构造期即 AttributeError，被外层 except 静默吞掉，plans/knowledge_stats
++        # 整段丢失——总开关 legacy 分支处于「半坏」态）。活跃计划口径对齐全仓惯例：
++        # is_active + 软删过滤（见 aurora PlanScope / celery_tasks 同款谓词）。
+         plans_stmt = (
+             select(Plan)
+-            .where(and_(Plan.user_id == user_id, not Plan.is_completed))
++            .where(
++                and_(
++                    Plan.user_id == user_id,
++                    Plan.is_active.is_(True),
++                    Plan.not_deleted_filter(),
++                )
++            )
+             .order_by(Plan.created_at.desc())
+             .limit(5)  # 最多返回5个计划
+         )
+@@ -1021,8 +1031,8 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
+         context["active_plans"] = [
+             {
+                 "id": str(plan.id),
+-                "title": plan.title,
+-                "type": plan.plan_type,
++                "title": plan.name,
++                "type": plan.type,
+                 "target_date": plan.target_date.isoformat() if plan.target_date else None,
+                 "progress": plan.progress or 0,
+             }
+@@ -1030,13 +1040,14 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
+         ]
+ 
+         # 4. 获取知识星图统计
++        # GAIN-FIX 红旗3 同块对齐：UserNodeStatus 的掌握度列名为 mastery_score。
+         nodes_stmt = select(UserNodeStatus).where(UserNodeStatus.user_id == user_id)
+         nodes_result = await db.execute(nodes_stmt)
+         nodes = nodes_result.scalars().all()
+ 
+         total_nodes = len(nodes)
+-        mastered_nodes = sum(1 for n in nodes if n.mastery_level >= 0.8)
+-        learning_nodes = sum(1 for n in nodes if 0.3 <= n.mastery_level < 0.8)
++        mastered_nodes = sum(1 for n in nodes if n.mastery_score >= 0.8)
++        learning_nodes = sum(1 for n in nodes if 0.3 <= n.mastery_score < 0.8)
+ 
+         context["knowledge_stats"] = {
+             "total_nodes": total_nodes,
+diff --git a/backend/app/core/context_pack.py b/backend/app/core/context_pack.py
+index 765f035c..023b03f0 100644
+--- a/backend/app/core/context_pack.py
++++ b/backend/app/core/context_pack.py
+@@ -1670,7 +1670,6 @@ class ContextPackBuilder:
+         decision_tier_preferences = trimmed_preferences
+         decision_tier_goals = list(trimmed_goals)
+         decision_tier_episodic = list(trimmed_episodic)
+-        memory_selfcheck_internal_ids: frozenset[str] = frozenset()
+         if settings.ENABLE_MEMORY_USE_SELFCHECK:
+             selfcheck = evaluate_memory_use_gate(
+                 preferences=[
+@@ -1712,7 +1711,6 @@ class ContextPackBuilder:
+                     payload for payload in trimmed_episodic if str(payload.get("id")) in surfaced_episodic
+                 ]
+                 internal_entries = selfcheck.internal_only_entries()
+-                memory_selfcheck_internal_ids = frozenset(entry["id"] for entry in internal_entries)
+                 metadata["memory_selfcheck"] = {
+                     **selfcheck.to_metric_payload(),
+                     "internal_only": internal_entries,
+@@ -1846,20 +1844,24 @@ class ContextPackBuilder:
+         preference_source_records = resolved_pref_records if conflict_enabled else preference_records
+         goal_source_records = resolved_goals if conflict_enabled else goals
+         episodic_source_records = resolved_episodic if conflict_enabled else episodic
+-        # M-05：降档（内部档）条目不得经 evidence_summary 把 title/summary
+-        # 带回 prompt 面——top-evidence 观测面只保留 surfaced 条目
+-        # （preferences 只暴露 key/score，属 identity 级，不过滤）。
+-        if memory_selfcheck_internal_ids:
+-            goal_source_records = [
+-                record
+-                for record in goal_source_records
+-                if str(getattr(record, "id", "")) not in memory_selfcheck_internal_ids
+-            ]
+-            episodic_source_records = [
+-                record
+-                for record in episodic_source_records
+-                if str(getattr(record, "id", "")) not in memory_selfcheck_internal_ids
+-            ]
++        # M-05 + GAIN-FIX 红旗2：evidence_summary（top-evidence 观测面）经
++        # to_prompt_context 进 prompt，口径必须与最终注入面同源——不仅 selfcheck
++        # 降档（内部档）条目不得经此把 title/summary/key 带回 prompt 面，
++        # **预算裁剪**（trim/focus 后未在场）的条目同样不得回灌（此前仅过滤
++        # selfcheck 内部档、预算维度有缺口）。实现：源记录一律收敛到最终
++        # trimmed_*（=预算+focus+selfcheck 后的 surfaced 集）中仍在场的 id/key。
++        surfaced_pref_keys = set(trimmed_preferences.keys())
++        surfaced_goal_ids = {str(payload.get("id")) for payload in trimmed_goals}
++        surfaced_episodic_ids = {str(payload.get("id")) for payload in trimmed_episodic}
++        preference_source_records = [
++            record for record in preference_source_records if getattr(record, "pref_key", None) in surfaced_pref_keys
++        ]
++        goal_source_records = [
++            record for record in goal_source_records if str(getattr(record, "id", "")) in surfaced_goal_ids
++        ]
++        episodic_source_records = [
++            record for record in episodic_source_records if str(getattr(record, "id", "")) in surfaced_episodic_ids
++        ]
+ 
+         def _iso(dt_value):
+             return dt_value.isoformat() if dt_value else None
+diff --git a/backend/app/orchestration/prompts.py b/backend/app/orchestration/prompts.py
+index 1c7200ef..d7877764 100755
+--- a/backend/app/orchestration/prompts.py
++++ b/backend/app/orchestration/prompts.py
+@@ -3786,34 +3786,57 @@ def _render_user_context_content(
+         metadata = context_pack.get("metadata") if isinstance(context_pack, dict) else None
+         evidence = metadata.get("evidence_summary") if isinstance(metadata, dict) else None
+         if isinstance(evidence, dict):
+-            lines.append("【画像证据摘要】")
+-            prefs = evidence.get("preferences") or []
++            # GAIN-FIX 红旗2（M-05 回灌对齐）：本节是回灌面，口径必须与预算裁剪
++            # 一致——只渲染仍在本包注入面（surfaced）的条目，被裁掉的正文
++            # （goal 标题/事件摘要/偏好 key）不回灌；全部为空时不落节头（诚实空态）。
++            surfaced_pref_keys = {
++                str(key) for key in (normalized.get("preferences") or {})
++            } if isinstance(normalized.get("preferences"), dict) else set()
++            evidence_lines: list[str] = []
++            prefs = [
++                item
++                for item in (evidence.get("preferences") or [])
++                if isinstance(item, dict) and str(item.get("key") or "") in surfaced_pref_keys
++            ]
+             if prefs:
+-                lines.append("偏好证据(Top 3):")
++                evidence_lines.append("偏好证据(Top 3):")
+                 for item in prefs[:3]:
+                     score = item.get("score", 0) or 0
+                     if score < 0.3:
+                         continue
+                     updated = item.get("updated_at")
+-                    lines.append(f"- {item.get('key')}: score={score}, updated_at={updated}")
+-            goals = evidence.get("goals") or []
++                    evidence_lines.append(f"- {item.get('key')}: score={score}, updated_at={updated}")
++            surfaced_goal_ids = {str(_memory_field(goal, "id", default="")) for goal in active_goals}
++            goals = [
++                item
++                for item in (evidence.get("goals") or [])
++                if isinstance(item, dict) and str(item.get("id") or "") in surfaced_goal_ids
++            ]
+             if goals:
+-                lines.append("目标证据(Top 3):")
++                evidence_lines.append("目标证据(Top 3):")
+                 for item in goals[:3]:
+                     score = item.get("score", 0) or 0
+                     if score < 0.3:
+                         continue
+                     updated = item.get("updated_at")
+-                    lines.append(f"- {item.get('title')}: score={score}, updated_at={updated}")
+-            episodic = evidence.get("episodic") or []
++                    evidence_lines.append(f"- {item.get('title')}: score={score}, updated_at={updated}")
++            surfaced_episodic_ids = {str(_memory_field(item, "id", default="")) for item in episodic_memories}
++            episodic = [
++                item
++                for item in (evidence.get("episodic") or [])
++                if isinstance(item, dict) and str(item.get("id") or "") in surfaced_episodic_ids
++            ]
+             if episodic:
+-                lines.append("事件证据(Top 3):")
++                evidence_lines.append("事件证据(Top 3):")
+                 for item in episodic[:3]:
+                     score = item.get("score", 0) or 0
+                     if score < 0.3:
+                         continue
+                     occurred = item.get("occurred_at")
+-                    lines.append(f"- {item.get('summary')}: score={score}, occurred_at={occurred}")
++                    evidence_lines.append(f"- {item.get('summary')}: score={score}, occurred_at={occurred}")
++            if evidence_lines:
++                lines.append("【画像证据摘要】")
++                lines.extend(evidence_lines)
+ 
+     for key, meta in telemetry["high_value_fields"].items():
+         if meta.get("collected") and not meta.get("rendered"):
+diff --git a/backend/app/services/user_insight_compiler.py b/backend/app/services/user_insight_compiler.py
+index da8bda92..dfaabac9 100644
+--- a/backend/app/services/user_insight_compiler.py
++++ b/backend/app/services/user_insight_compiler.py
+@@ -413,19 +413,37 @@ class UserInsightCompiler:
+         )
+ 
+     def _apply_error_signals(self, state: UserInsightState, profile_context: ProfileContext) -> None:
+-        if profile_context.error_summary:
++        # GAIN-FIX 红旗1（诚实空态）：`error_summary` 对零错题用户也是全零非空 dict
++        # （get_review_stats 恒返 {total_errors:0,...}），直接按真值判断会把
++        # 「Recent error pressure remains elevated.」这条**状态断言**注入零数据
++        # 用户的 prompt（经 recent_pain_points → inline snapshot 【画像快照】）。
++        # 注入面按真实数据门控：仅当存在实际错题压力（累计>0 / 待复习>0 /
++        # 科目分布非空）才生成该痛点；计数本身（累计错题 0）走 error_summary
++        # 渲染面，保持诚实零值，不无中生有。
++        error_summary = dict(profile_context.error_summary or {})
++        has_real_error_pressure = bool(
++            error_summary
++            and (
++                int(error_summary.get("total_errors") or 0) > 0
++                or int(error_summary.get("need_review_count") or 0) > 0
++                or int(error_summary.get("due_for_review") or 0) > 0
++                or bool(error_summary.get("subject_distribution"))
++            )
++        )
++        if has_real_error_pressure:
+             state.recent_pain_points.append(
+                 {
+                     "id": "pain:error_summary",
+                     "type": "error_pressure",
+                     "label": "Recent error pressure remains elevated.",
+-                    "details": dict(profile_context.error_summary),
++                    "details": error_summary,
+                 }
+             )
++        if error_summary:
+             self._append_signal(
+                 state,
+                 "error_summary",
+-                value=dict(profile_context.error_summary),
++                value=error_summary,
+                 confidence=0.92,
+                 freshness="high",
+             )
+diff --git a/backend/tests/unit/services/test_user_insight_compiler.py b/backend/tests/unit/services/test_user_insight_compiler.py
+index d7c1f1ca..b8f0ecae 100644
+--- a/backend/tests/unit/services/test_user_insight_compiler.py
++++ b/backend/tests/unit/services/test_user_insight_compiler.py
+@@ -332,3 +332,69 @@ async def test_profile_context_service_user_correction_removes_signal_influence_
+     assert "peak_focus_hours" not in state.inferred_work_style
+     assert state.multi_span_analysis["short_span"]["focus_alignment"] == "unclear"
+     assert state.prediction_summaries["schedule_fit"]["level"] == "low"
++
++
++# ---------------------------------------------------------------------------
++# GAIN-FIX 红旗1 守卫：零错题用户不得被注入捏造痛点状态断言（诚实空态）
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_zero_error_user_gets_no_fabricated_error_pressure_pain_point(db_session, test_user):
++    """零数据用户（error_summary 全零快照）不得生成「错误压力升高」捏造痛点。"""
++    from app.core.profile_context import CognitiveSummary, KnowledgeSummary, ProfileContext
++    from app.services.user_insight_compiler import UserInsightCompiler
++
++    # get_review_stats 对零错题用户返回的真实形状：全零但非空 dict
++    zero_summary = {
++        "total_errors": 0,
++        "mastered_count": 0,
++        "need_review_count": 0,
++        "review_streak_days": 0,
++        "subject_distribution": {},
++    }
++    context = ProfileContext(
++        preferences={},
++        preference_version=0,
++        knowledge_summary=KnowledgeSummary(),
++        cognitive_summary=CognitiveSummary(),
++        error_summary=zero_summary,
++        recent_errors=[],
++    )
++    contract = await UserInsightCompiler(db_session).compile(user_id=test_user.id, profile_context=context)
++    state = contract.canonical_state
++
++    pain_labels = [str(pain.get("label") or "") for pain in state.recent_pain_points]
++    assert not any("error pressure" in label.lower() for label in pain_labels)
++    snapshot = state.to_inline_snapshot()
++    assert "Recent error pressure remains elevated." not in snapshot["body"]
++
++    # 全零快照仍是真实数据：error_summary 信号（计数字段）保留诚实零值
++    assert any(signal.signal_id == "error_summary" for signal in state.signal_evidence)
++
++
++@pytest.mark.asyncio
++async def test_real_error_pressure_still_yields_pain_point(db_session, test_user):
++    """阳性对照：存在真实错题（total_errors>0）时痛点标签照常生成（门控不误伤）。"""
++    from app.core.profile_context import CognitiveSummary, KnowledgeSummary, ProfileContext
++    from app.services.user_insight_compiler import UserInsightCompiler
++
++    context = ProfileContext(
++        preferences={},
++        preference_version=0,
++        knowledge_summary=KnowledgeSummary(),
++        cognitive_summary=CognitiveSummary(),
++        error_summary={
++            "total_errors": 3,
++            "mastered_count": 0,
++            "need_review_count": 2,
++            "review_streak_days": 0,
++            "subject_distribution": {"math": 3},
++        },
++        recent_errors=[],
++    )
++    contract = await UserInsightCompiler(db_session).compile(user_id=test_user.id, profile_context=context)
++    state = contract.canonical_state
++
++    pain_labels = [str(pain.get("label") or "") for pain in state.recent_pain_points]
++    assert any("error pressure" in label.lower() for label in pain_labels)
+diff --git a/backend/tests/unit/test_context_pack.py b/backend/tests/unit/test_context_pack.py
+index 06f7958b..5e80fa3a 100644
+--- a/backend/tests/unit/test_context_pack.py
++++ b/backend/tests/unit/test_context_pack.py
+@@ -244,3 +244,97 @@ async def test_context_pack_no_dual_source_note_without_overlap(db_session):
+ 
+     assert "depth_preference" in pack.preferences
+     assert "preference_dual_source_keys" not in pack.metadata
++
++
++# ---------------------------------------------------------------------------
++# GAIN-FIX 红旗2 守卫：预算裁剪的内容不得经 evidence_summary 回灌 prompt（M-05）
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_evidence_summary_never_resurrects_budget_clipped_content(db_session):
++    """goals/episodic 被预算整体裁掉时，evidence_summary 不得带回其正文。"""
++    memory_service = MemoryService(db_session)
++    user_id = uuid4()
++    db_session.add(
++        User(
++            id=user_id,
++            username=f"user_{user_id.hex[:8]}",
++            email=f"{user_id.hex[:8]}@example.com",
++            hashed_password="test",
++        )
++    )
++    await memory_service.create_goal(
++        user_id=user_id,
++        title="绝密目标GAINFIX-91",
++        status="active",
++        evidence_refs=[{"type": "event", "id": "evt_gf1"}],
++    )
++    await memory_service.create_episodic_memory(
++        user_id=user_id,
++        summary="绝密记忆GAINFIX-77 " + ("z" * 120),
++        source_type="analysis",
++        source_id="src_gf1",
++        occurred_at=_utcnow(),
++        importance_score=0.6,
++        tags=["execution"],
++        evidence_refs=[{"type": "event", "id": "evt_gf2"}],
++    )
++    await db_session.commit()
++
++    scheduler = ContextBudgetScheduler(budgets={"chat": {"preferences": 0, "goals": 0, "episodic": 0}})
++    pack = await ContextPackBuilder(db_session, scheduler=scheduler).build(user_id, intent="chat")
++    ctx = pack.to_prompt_context()
++
++    assert ctx["active_goals"] == []
++    assert ctx["episodic_memories"] == []
++    evidence = (ctx["context_pack"]["metadata"] or {}).get("evidence_summary") or {}
++    assert [g.get("title") for g in evidence.get("goals") or []] == []
++    assert [e.get("summary") for e in evidence.get("episodic") or []] == []
++
++    from app.orchestration.prompts import format_user_context
++
++    prompt = format_user_context(ctx)
++    assert "绝密目标GAINFIX-91" not in prompt
++    assert "绝密记忆GAINFIX-77" not in prompt
++    # 诚实空态：无内容不落节头
++    assert "【画像证据摘要】" not in prompt
++
++
++@pytest.mark.asyncio
++async def test_evidence_summary_stays_subset_of_surfaced_faces_under_partial_clip(db_session):
++    """部分裁剪：evidence_summary 只保留注入面仍在场的条目（对齐而非杀观测面）。"""
++    memory_service = MemoryService(db_session)
++    user_id = uuid4()
++    db_session.add(
++        User(
++            id=user_id,
++            username=f"user_{user_id.hex[:8]}",
++            email=f"{user_id.hex[:8]}@example.com",
++            hashed_password="test",
++        )
++    )
++    await memory_service.create_goal(
++        user_id=user_id,
++        title="Goal KEEP-1",
++        status="active",
++        evidence_refs=[{"type": "event", "id": "evt_k1"}],
++    )
++    for index in range(6):
++        await memory_service.create_goal(
++            user_id=user_id,
++            title=f"Goal FILLER-{index} " + ("x" * 60),
++            status="active",
++            evidence_refs=[{"type": "event", "id": f"evt_f{index}"}],
++        )
++    await db_session.commit()
++
++    scheduler = ContextBudgetScheduler(budgets={"chat": {"preferences": 0, "goals": 40, "episodic": 0}})
++    pack = await ContextPackBuilder(db_session, scheduler=scheduler).build(user_id, intent="chat")
++    ctx = pack.to_prompt_context()
++
++    surfaced_ids = {str(g.get("id")) for g in ctx["active_goals"]}
++    assert surfaced_ids, "前置：预算应允许部分 goal 在场"
++    evidence = (ctx["context_pack"]["metadata"] or {}).get("evidence_summary") or {}
++    evidence_ids = {str(g.get("id")) for g in evidence.get("goals") or []}
++    assert evidence_ids <= surfaced_ids
+diff --git a/backend/tests/api/test_chat_legacy_user_context.py b/backend/tests/api/test_chat_legacy_user_context.py
+new file mode 100644
+index 00000000..38d67cd9
+--- /dev/null
++++ b/backend/tests/api/test_chat_legacy_user_context.py
+@@ -0,0 +1,64 @@
++"""GAIN-FIX 红旗3 守卫：USE_CONTEXT_PACK=False legacy 分支必须可走通。
++
++基线（80f5db3d）上该分支在 `not Plan.is_completed` 处 AttributeError（Plan 无此
++列），异常被外层 except 静默吞掉——plans/knowledge_stats 段整体丢失，总开关
++处于「半坏」态。本守卫钉住：legacy 路径四段（recent_tasks/active_plans/
++knowledge_stats）在零数据与有数据用户上都完整产出。
++"""
++
++from __future__ import annotations
++
++import pytest
++from sqlalchemy.ext.asyncio import AsyncSession
++
++from app.config import settings
++from app.models.plan import Plan, PlanType
++from app.models.user import User
++
++
++@pytest.mark.asyncio
++async def test_legacy_user_context_survives_zero_data_user(db_session: AsyncSession, test_user: User):
++    """零数据用户：legacy 分支不得中途夭折，各段返回诚实空结构。"""
++    from app.api.v1.chat import get_user_context
++
++    saved = settings.USE_CONTEXT_PACK
++    try:
++        settings.USE_CONTEXT_PACK = False
++        context = await get_user_context(db_session, test_user.id, None)
++    finally:
++        settings.USE_CONTEXT_PACK = saved
++
++    assert context["recent_tasks"] == []
++    assert context["active_plans"] == []
++    # 关键：knowledge_stats 必须被真实装配（基线上此键因 AttributeError 停留在默认 {}）
++    assert context["knowledge_stats"] == {"total_nodes": 0, "mastered_nodes": 0, "learning_nodes": 0}
++
++
++@pytest.mark.asyncio
++async def test_legacy_user_context_maps_plan_rows_with_real_columns(db_session: AsyncSession, test_user: User):
++    """有数据用户：活跃计划查询/映射使用真实列（is_active/name/type）可走通。"""
++    from app.api.v1.chat import get_user_context
++
++    db_session.add(
++        Plan(
++            user_id=test_user.id,
++            name="期末冲刺计划",
++            type=PlanType.SPRINT,
++            is_active=True,
++            progress=0.25,
++        )
++    )
++    await db_session.commit()
++
++    saved = settings.USE_CONTEXT_PACK
++    try:
++        settings.USE_CONTEXT_PACK = False
++        context = await get_user_context(db_session, test_user.id, None)
++    finally:
++        settings.USE_CONTEXT_PACK = saved
++
++    plans = context["active_plans"]
++    assert len(plans) == 1
++    assert plans[0]["title"] == "期末冲刺计划"
++    assert plans[0]["progress"] == 0.25
++    assert context["knowledge_stats"]["total_nodes"] >= 0

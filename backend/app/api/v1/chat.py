@@ -1000,7 +1000,7 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
             {
                 "id": str(task.id),
                 "title": task.title,
-                "type": task.task_type,
+                "type": task.type,
                 "status": task.status,
                 "estimated_minutes": task.estimated_minutes,
                 "actual_minutes": task.actual_minutes,
@@ -1009,9 +1009,19 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
         ]
 
         # 3. 获取活跃计划（未完成的计划）
+        # GAIN-FIX 红旗3：Plan 模型无 is_completed 列（此前 `not Plan.is_completed`
+        # 在查询构造期即 AttributeError，被外层 except 静默吞掉，plans/knowledge_stats
+        # 整段丢失——总开关 legacy 分支处于「半坏」态）。活跃计划口径对齐全仓惯例：
+        # is_active + 软删过滤（见 aurora PlanScope / celery_tasks 同款谓词）。
         plans_stmt = (
             select(Plan)
-            .where(and_(Plan.user_id == user_id, not Plan.is_completed))
+            .where(
+                and_(
+                    Plan.user_id == user_id,
+                    Plan.is_active.is_(True),
+                    Plan.not_deleted_filter(),
+                )
+            )
             .order_by(Plan.created_at.desc())
             .limit(5)  # 最多返回5个计划
         )
@@ -1021,8 +1031,8 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
         context["active_plans"] = [
             {
                 "id": str(plan.id),
-                "title": plan.title,
-                "type": plan.plan_type,
+                "title": plan.name,
+                "type": plan.type,
                 "target_date": plan.target_date.isoformat() if plan.target_date else None,
                 "progress": plan.progress or 0,
             }
@@ -1030,13 +1040,14 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
         ]
 
         # 4. 获取知识星图统计
+        # GAIN-FIX 红旗3 同块对齐：UserNodeStatus 的掌握度列名为 mastery_score。
         nodes_stmt = select(UserNodeStatus).where(UserNodeStatus.user_id == user_id)
         nodes_result = await db.execute(nodes_stmt)
         nodes = nodes_result.scalars().all()
 
         total_nodes = len(nodes)
-        mastered_nodes = sum(1 for n in nodes if n.mastery_level >= 0.8)
-        learning_nodes = sum(1 for n in nodes if 0.3 <= n.mastery_level < 0.8)
+        mastered_nodes = sum(1 for n in nodes if n.mastery_score >= 0.8)
+        learning_nodes = sum(1 for n in nodes if 0.3 <= n.mastery_score < 0.8)
 
         context["knowledge_stats"] = {
             "total_nodes": total_nodes,

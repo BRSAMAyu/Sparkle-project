@@ -413,19 +413,37 @@ class UserInsightCompiler:
         )
 
     def _apply_error_signals(self, state: UserInsightState, profile_context: ProfileContext) -> None:
-        if profile_context.error_summary:
+        # GAIN-FIX 红旗1（诚实空态）：`error_summary` 对零错题用户也是全零非空 dict
+        # （get_review_stats 恒返 {total_errors:0,...}），直接按真值判断会把
+        # 「Recent error pressure remains elevated.」这条**状态断言**注入零数据
+        # 用户的 prompt（经 recent_pain_points → inline snapshot 【画像快照】）。
+        # 注入面按真实数据门控：仅当存在实际错题压力（累计>0 / 待复习>0 /
+        # 科目分布非空）才生成该痛点；计数本身（累计错题 0）走 error_summary
+        # 渲染面，保持诚实零值，不无中生有。
+        error_summary = dict(profile_context.error_summary or {})
+        has_real_error_pressure = bool(
+            error_summary
+            and (
+                int(error_summary.get("total_errors") or 0) > 0
+                or int(error_summary.get("need_review_count") or 0) > 0
+                or int(error_summary.get("due_for_review") or 0) > 0
+                or bool(error_summary.get("subject_distribution"))
+            )
+        )
+        if has_real_error_pressure:
             state.recent_pain_points.append(
                 {
                     "id": "pain:error_summary",
                     "type": "error_pressure",
                     "label": "Recent error pressure remains elevated.",
-                    "details": dict(profile_context.error_summary),
+                    "details": error_summary,
                 }
             )
+        if error_summary:
             self._append_signal(
                 state,
                 "error_summary",
-                value=dict(profile_context.error_summary),
+                value=error_summary,
                 confidence=0.92,
                 freshness="high",
             )

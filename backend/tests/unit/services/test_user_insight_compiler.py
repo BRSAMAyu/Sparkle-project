@@ -332,3 +332,69 @@ async def test_profile_context_service_user_correction_removes_signal_influence_
     assert "peak_focus_hours" not in state.inferred_work_style
     assert state.multi_span_analysis["short_span"]["focus_alignment"] == "unclear"
     assert state.prediction_summaries["schedule_fit"]["level"] == "low"
+
+
+# ---------------------------------------------------------------------------
+# GAIN-FIX 红旗1 守卫：零错题用户不得被注入捏造痛点状态断言（诚实空态）
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_zero_error_user_gets_no_fabricated_error_pressure_pain_point(db_session, test_user):
+    """零数据用户（error_summary 全零快照）不得生成「错误压力升高」捏造痛点。"""
+    from app.core.profile_context import CognitiveSummary, KnowledgeSummary, ProfileContext
+    from app.services.user_insight_compiler import UserInsightCompiler
+
+    # get_review_stats 对零错题用户返回的真实形状：全零但非空 dict
+    zero_summary = {
+        "total_errors": 0,
+        "mastered_count": 0,
+        "need_review_count": 0,
+        "review_streak_days": 0,
+        "subject_distribution": {},
+    }
+    context = ProfileContext(
+        preferences={},
+        preference_version=0,
+        knowledge_summary=KnowledgeSummary(),
+        cognitive_summary=CognitiveSummary(),
+        error_summary=zero_summary,
+        recent_errors=[],
+    )
+    contract = await UserInsightCompiler(db_session).compile(user_id=test_user.id, profile_context=context)
+    state = contract.canonical_state
+
+    pain_labels = [str(pain.get("label") or "") for pain in state.recent_pain_points]
+    assert not any("error pressure" in label.lower() for label in pain_labels)
+    snapshot = state.to_inline_snapshot()
+    assert "Recent error pressure remains elevated." not in snapshot["body"]
+
+    # 全零快照仍是真实数据：error_summary 信号（计数字段）保留诚实零值
+    assert any(signal.signal_id == "error_summary" for signal in state.signal_evidence)
+
+
+@pytest.mark.asyncio
+async def test_real_error_pressure_still_yields_pain_point(db_session, test_user):
+    """阳性对照：存在真实错题（total_errors>0）时痛点标签照常生成（门控不误伤）。"""
+    from app.core.profile_context import CognitiveSummary, KnowledgeSummary, ProfileContext
+    from app.services.user_insight_compiler import UserInsightCompiler
+
+    context = ProfileContext(
+        preferences={},
+        preference_version=0,
+        knowledge_summary=KnowledgeSummary(),
+        cognitive_summary=CognitiveSummary(),
+        error_summary={
+            "total_errors": 3,
+            "mastered_count": 0,
+            "need_review_count": 2,
+            "review_streak_days": 0,
+            "subject_distribution": {"math": 3},
+        },
+        recent_errors=[],
+    )
+    contract = await UserInsightCompiler(db_session).compile(user_id=test_user.id, profile_context=context)
+    state = contract.canonical_state
+
+    pain_labels = [str(pain.get("label") or "") for pain in state.recent_pain_points]
+    assert any("error pressure" in label.lower() for label in pain_labels)

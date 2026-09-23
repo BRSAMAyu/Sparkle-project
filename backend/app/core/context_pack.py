@@ -1670,7 +1670,6 @@ class ContextPackBuilder:
         decision_tier_preferences = trimmed_preferences
         decision_tier_goals = list(trimmed_goals)
         decision_tier_episodic = list(trimmed_episodic)
-        memory_selfcheck_internal_ids: frozenset[str] = frozenset()
         if settings.ENABLE_MEMORY_USE_SELFCHECK:
             selfcheck = evaluate_memory_use_gate(
                 preferences=[
@@ -1712,7 +1711,6 @@ class ContextPackBuilder:
                     payload for payload in trimmed_episodic if str(payload.get("id")) in surfaced_episodic
                 ]
                 internal_entries = selfcheck.internal_only_entries()
-                memory_selfcheck_internal_ids = frozenset(entry["id"] for entry in internal_entries)
                 metadata["memory_selfcheck"] = {
                     **selfcheck.to_metric_payload(),
                     "internal_only": internal_entries,
@@ -1846,20 +1844,24 @@ class ContextPackBuilder:
         preference_source_records = resolved_pref_records if conflict_enabled else preference_records
         goal_source_records = resolved_goals if conflict_enabled else goals
         episodic_source_records = resolved_episodic if conflict_enabled else episodic
-        # M-05：降档（内部档）条目不得经 evidence_summary 把 title/summary
-        # 带回 prompt 面——top-evidence 观测面只保留 surfaced 条目
-        # （preferences 只暴露 key/score，属 identity 级，不过滤）。
-        if memory_selfcheck_internal_ids:
-            goal_source_records = [
-                record
-                for record in goal_source_records
-                if str(getattr(record, "id", "")) not in memory_selfcheck_internal_ids
-            ]
-            episodic_source_records = [
-                record
-                for record in episodic_source_records
-                if str(getattr(record, "id", "")) not in memory_selfcheck_internal_ids
-            ]
+        # M-05 + GAIN-FIX 红旗2：evidence_summary（top-evidence 观测面）经
+        # to_prompt_context 进 prompt，口径必须与最终注入面同源——不仅 selfcheck
+        # 降档（内部档）条目不得经此把 title/summary/key 带回 prompt 面，
+        # **预算裁剪**（trim/focus 后未在场）的条目同样不得回灌（此前仅过滤
+        # selfcheck 内部档、预算维度有缺口）。实现：源记录一律收敛到最终
+        # trimmed_*（=预算+focus+selfcheck 后的 surfaced 集）中仍在场的 id/key。
+        surfaced_pref_keys = set(trimmed_preferences.keys())
+        surfaced_goal_ids = {str(payload.get("id")) for payload in trimmed_goals}
+        surfaced_episodic_ids = {str(payload.get("id")) for payload in trimmed_episodic}
+        preference_source_records = [
+            record for record in preference_source_records if getattr(record, "pref_key", None) in surfaced_pref_keys
+        ]
+        goal_source_records = [
+            record for record in goal_source_records if str(getattr(record, "id", "")) in surfaced_goal_ids
+        ]
+        episodic_source_records = [
+            record for record in episodic_source_records if str(getattr(record, "id", "")) in surfaced_episodic_ids
+        ]
 
         def _iso(dt_value):
             return dt_value.isoformat() if dt_value else None
