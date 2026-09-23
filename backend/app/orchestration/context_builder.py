@@ -2001,6 +2001,21 @@ class ContextBuilderMixin:
         flush 已分配 PK，同会话内后续读取同样可见。
         """
         try:
+            # B-01：首条用户消息落库前幂等补建 chat_sessions 头（与消息同事务，
+            # 由 agent_grpc_service 流末统一提交）。头行缺失时网关 sessions 列表
+            # （getRecentSessionsFromDB 只读 chat_sessions）永远为空，移动端重启
+            # 后拿不到 conversationId——V13「发了但看不见」的后端根因。
+            # 失败非致命：吞掉告警后继续持久化消息本身（保持本函数既有语义）。
+            try:
+                from app.orchestration.persistence_layer import ensure_chat_session_header
+
+                await ensure_chat_session_header(
+                    active_db,
+                    user_id=uuid.UUID(str(user_id)),
+                    session_id=self._coerce_session_uuid(session_id),
+                )
+            except Exception as header_err:
+                logger.warning(f"Failed to ensure chat session header (non-fatal): {header_err}")
             user_msg = ChatMessage(
                 user_id=uuid.UUID(str(user_id)),
                 session_id=self._coerce_session_uuid(session_id),

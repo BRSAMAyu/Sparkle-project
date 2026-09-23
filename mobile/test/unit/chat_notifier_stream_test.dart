@@ -278,7 +278,7 @@ void main() {
       expect(notifier.state.runPhase, ChatRunPhase.failed);
     });
 
-    test('cancels the previous run before accepting a new stream', () async {
+    test('B-01 in-flight guard: ignores a new send while the previous run is in flight', () async {
       final firstController = StreamController<ChatStreamEvent>();
       final secondController = StreamController<ChatStreamEvent>();
       final controllers = <StreamController<ChatStreamEvent>>[
@@ -301,31 +301,35 @@ void main() {
       await _settleChat();
       expect(notifier.state.isSending, isTrue);
 
-      final secondFuture = notifier.sendMessage('second');
+      // B-01 次生面（V13 重复消息+重复计费）：在途期间新发送被静默丢弃，
+      // 不再 cancel+supersede 旧流。
+      await notifier.sendMessage('second');
       await _settleChat();
+      expect(notifier.state.isSending, isTrue);
+      expect(
+        notifier.state.messages
+            .where((message) => message.role == MessageRole.user)
+            .map((message) => message.content),
+        ['first'],
+      );
 
       firstController.add(TextEvent(content: 'stale'));
       await firstController.close();
       await firstFuture;
-
-      secondController
-        ..add(TextEvent(content: 'fresh'))
-        ..add(DoneEvent(finishReason: 'STOP'));
-      await secondFuture;
       await _settleChat();
 
       final assistantMessages = notifier.state.messages
           .where((message) => message.role == MessageRole.assistant)
           .toList();
       expect(assistantMessages, hasLength(1));
-      expect(assistantMessages.single.content, 'fresh');
-      expect(assistantMessages.single.content, isNot(contains('stale')));
+      expect(assistantMessages.single.content, 'stale');
+      expect(assistantMessages.single.content, isNot(contains('fresh')));
     });
   });
 
   group('M6-09 interrupt-preserve semantics', () {
     test(
-        'sending a new message mid-stream preserves the partial reply as an interrupted assistant message',
+        'B-01 in-flight guard: a new send mid-stream is dropped and the partial reply keeps streaming',
         () async {
       final firstController = StreamController<ChatStreamEvent>();
       final secondController = StreamController<ChatStreamEvent>();
@@ -351,55 +355,37 @@ void main() {
       await _settleChat();
       expect(notifier.state.streamingContent, 'partial answer');
 
-      // 用户在流式中发送新消息 → 旧流取消，但已生成部分必须保留。
-      final secondFuture = notifier.sendMessage('second');
+      // B-01 在途禁发：流式中新消息被丢弃，正在输出的一轮不受影响。
+      // M6-09 的「中断保留」语义仍可经显式 cancelActiveRun（user stop）触发，
+      // 见下方 'user stop keeps the partial reply' 用例。
+      await notifier.sendMessage('second');
+      await _settleChat();
 
-      final interruptedMessages = notifier.state.messages
-          .where(
-            (message) =>
-                message.role == MessageRole.assistant && message.isInterrupted,
-          )
-          .toList();
-      expect(interruptedMessages, hasLength(1));
-      expect(interruptedMessages.single.content, 'partial answer');
-      expect(notifier.state.isSending, isFalse);
-      expect(notifier.state.runPhase, ChatRunPhase.interrupted);
+      expect(notifier.state.isSending, isTrue);
+      expect(notifier.state.streamingContent, 'partial answer');
+      expect(
+        notifier.state.messages
+            .where((message) => message.role == MessageRole.user)
+            .map((message) => message.content),
+        ['first'],
+      );
+      expect(
+        notifier.state.messages.where((message) => message.isInterrupted),
+        isEmpty,
+      );
 
-      // 旧流迟到的事件不得改写已保留内容，也不得生成重复消息。
+      // 旧流继续正常收束，已生成部分完整落地。
       firstController.add(TextEvent(content: ' MORE'));
       await firstController.close();
       await firstFuture;
-      expect(
-        notifier.state.messages
-            .where((message) => message.isInterrupted)
-            .map((message) => message.content),
-        ['partial answer'],
-      );
-
-      // 新一轮正常完成后，被中断的部分回复仍在对话历史中。
-      secondController
-        ..add(TextEvent(content: 'fresh'))
-        ..add(DoneEvent(finishReason: 'STOP'));
-      await secondFuture;
       await _settleChat();
 
       final assistantMessages = notifier.state.messages
           .where((message) => message.role == MessageRole.assistant)
           .toList();
       expect(assistantMessages.map((message) => message.content),
-          ['partial answer', 'fresh']);
-      expect(assistantMessages.first.isInterrupted, isTrue);
-      expect(assistantMessages.last.isInterrupted, isFalse);
-      // 对话顺序：旧用户消息 → 中断的部分回复 → 新用户消息 → 新回复
-      expect(
-        notifier.state.messages.map((message) => message.role),
-        [
-          MessageRole.user,
-          MessageRole.assistant,
-          MessageRole.user,
-          MessageRole.assistant,
-        ],
-      );
+          ['partial answer MORE']);
+      expect(assistantMessages.single.isInterrupted, isFalse);
     });
 
     test('user stop keeps the partial reply and marks it interrupted',
@@ -462,17 +448,21 @@ void main() {
 
       final firstFuture = notifier.sendMessage('first');
       await _settleChat();
-      final secondFuture = notifier.sendMessage('second');
+      // B-01 后中断的唯一入口是显式取消（输入条 onStop → cancelActiveRun）。
+      notifier.cancelActiveRun(reason: 'user_stop');
       expect(
         notifier.state.messages.where((message) => message.isInterrupted),
         isEmpty,
       );
+      // 取消收束后允许新一轮发送。
+      final secondFuture = notifier.sendMessage('second');
       secondController
         ..add(TextEvent(content: 'fresh'))
         ..add(DoneEvent(finishReason: 'STOP'));
       await secondFuture;
       await firstController.close();
       await firstFuture;
+      await _settleChat();
       expect(
         notifier.state.messages
             .where((message) => message.role == MessageRole.assistant)

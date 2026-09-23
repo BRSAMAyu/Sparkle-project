@@ -46,6 +46,18 @@ extension ChatNotifierHistory on ChatNotifier {
       '${date.day.toString().padLeft(2, '0')}';
 
   Future<void> loadConversationHistory(String conversationId) async {
+    // B-01 次生面（V13 实测「发了但看不见」的移动端共因）：发送/流式在途时
+    // 禁止历史回拉——该方法会把 isSending、streamingContent 与乐观上屏的
+    // 用户气泡整体冲掉（换成的往往是尚未落库的空服务端历史）。在途流才是
+    // 事实源；轮次收束后（isSending=false）的回拉不受影响。
+    // 计划切换路径不受伤：switchPlanSession 先 cancelActiveRun 置
+    // isSending=false，再进入本方法。
+    if (state.isSending) {
+      debugPrint(
+        '[ChatHistory] skip reload while a run is in flight ($conversationId)',
+      );
+      return;
+    }
     final previousMessages = state.messages;
     final previousConversationId = state.conversationId;
 

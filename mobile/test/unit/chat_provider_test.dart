@@ -247,4 +247,68 @@ void main() {
       ),
     );
   });
+
+  test('B-01: loadConversationHistory skips while a run is in flight',
+      () async {
+    I18nService.instance.reset();
+    final container = ProviderContainer(
+      overrides: [
+        chatRepositoryProvider.overrideWithValue(mockChatRepository),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final notifier = container.read(chatProvider.notifier);
+    final optimisticMessage = ChatMessageModel(
+      id: 'temp_user_1',
+      userId: 'u1',
+      conversationId: 'session-live',
+      role: MessageRole.user,
+      content: '7天后考离散数学',
+      createdAt: DateTime.now(),
+    );
+    notifier.state = notifier.state.copyWith(
+      conversationId: 'session-live',
+      messages: [optimisticMessage],
+      isSending: true,
+      activeRunId: 'run_1',
+    );
+
+    await notifier.loadConversationHistory('session-live');
+
+    // V13「发了但看不见」的移动端共因：在途回拉会冲掉乐观气泡与流式态。
+    final state = container.read(chatProvider);
+    expect(state.isSending, isTrue, reason: '在途轮次不得被打断');
+    expect(state.messages, [optimisticMessage], reason: '乐观气泡不得被冲掉');
+    expect(state.streamingContent, isEmpty);
+    verifyNever(
+      mockChatRepository.getConversationHistory(
+        'session-live',
+        limit: anyNamed('limit'),
+      ),
+    );
+  });
+
+  test('B-01: sendMessage is blocked while a run is in flight', () async {
+    final container = ProviderContainer(
+      overrides: [
+        chatRepositoryProvider.overrideWithValue(mockChatRepository),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final notifier = container.read(chatProvider.notifier);
+    notifier.state = notifier.state.copyWith(
+      isSending: true,
+      activeRunId: 'run_in_flight',
+    );
+
+    // in-flight 禁发：早退于 auth/guest 读取之前，重复触发静默丢弃，
+    // 不再 cancel+supersede 造成重复消息与重复 LLM 回复。
+    await notifier.sendMessage('重复发送');
+
+    final state = container.read(chatProvider);
+    expect(state.activeRunId, 'run_in_flight', reason: '在途 run 不得被顶替');
+    expect(state.messages, isEmpty, reason: '不得追加第二条用户消息');
+  });
 }

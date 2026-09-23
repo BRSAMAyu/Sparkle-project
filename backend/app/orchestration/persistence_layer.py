@@ -8,11 +8,40 @@ from typing import Any
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.time_utils import utcnow
 from app.gen.agent.v1 import agent_service_pb2
-from app.models.chat import ChatMessage, MessageRole
+from app.models.chat import ChatMessage, ChatSession, MessageRole
 from app.orchestration.schemas import ExecutablePlan
 from app.services.llm_service import llm_service
 from app.services.memory_inferred_write_lane import MemoryInferredWriteLaneService
+
+
+# B-01（V13「发了但看不见」）：WS/gRPC 主链此前只写 chat_messages、从不写
+# chat_sessions 头——网关 Redis persister（chat_history_persister.go 的
+# chatSessionUpsertSQL）是 WS 路径唯一的 session 头写入者，但
+# CHAT_PERSISTER_ENABLED 默认 false（engine 是 single authoritative writer），
+# 于是 onboarding→chat 的第一个 session 在 chat_sessions 永远缺行：
+# 网关 GET /api/v1/chat/sessions（getRecentSessionsFromDB）只读该表 →
+# 空列表 → 移动端重启后拿不到 conversationId，历史不可达。
+# 修法与 REST api/v1/chat.py save_chat_message 的 get-or-create 同构：
+# 幂等补建头行；零 UUID（context_builder 对 legacy label 的降级产物）
+# 跳过——它跨用户共用主键，且 sessions 列表查询本就排除它。
+async def ensure_chat_session_header(
+    db: AsyncSession,
+    *,
+    user_id: uuid.UUID,
+    session_id: uuid.UUID,
+) -> None:
+    """Idempotently ensure the chat_sessions header row exists (B-01)."""
+    if session_id == uuid.UUID(int=0):
+        return
+    now = utcnow()
+    session_meta = await db.get(ChatSession, session_id)
+    if session_meta is None:
+        db.add(ChatSession(id=session_id, user_id=user_id, is_active=True, last_message_at=now))
+    else:
+        session_meta.is_active = True
+        session_meta.last_message_at = now
 
 
 class PersistenceLayerMixin:
@@ -41,6 +70,17 @@ class PersistenceLayerMixin:
             from app.db.session import AsyncSessionLocal
 
             async with AsyncSessionLocal() as persist_session:
+                # B-01：turn 收尾在独立 session 内幂等补建 session 头，与
+                # assistant 行同事务提交——即使共享流 session 回滚（此路径
+                # 存在的既有语义），消息与头也不出现"有消息无会话"的孤儿态。
+                try:
+                    await ensure_chat_session_header(
+                        persist_session,
+                        user_id=uuid.UUID(str(user_id)),
+                        session_id=self._coerce_session_uuid(session_id),
+                    )
+                except Exception as header_err:
+                    logger.warning(f"Failed to ensure chat session header (non-fatal): {header_err}")
                 assistant_msg = ChatMessage(
                     user_id=uuid.UUID(str(user_id)),
                     session_id=self._coerce_session_uuid(session_id),

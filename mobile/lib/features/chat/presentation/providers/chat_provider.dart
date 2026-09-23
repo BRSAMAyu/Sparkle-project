@@ -961,8 +961,15 @@ class ChatNotifier extends StateNotifier<ChatState> {
       return;
     }
 
+    // B-01 次生面（V13 实测）：无反馈窗口的重复发送真实发生（同一 prompt 两条
+    // USER + 两条重复 LLM 回复，重复计费）。改为 in-flight 禁发：上一轮在途时
+    // 不再隐式 cancel+supersede，静默丢弃重复触发，等本轮收束或用户主动取消。
     if (state.isSending) {
-      cancelActiveRun(reason: 'new_message');
+      debugPrint(
+        '[Chat] sendMessage blocked: run in flight (in-flight guard, '
+        'runId=${state.activeRunId})',
+      );
+      return;
     }
 
     // 获取当前用户信息

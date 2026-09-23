@@ -1,0 +1,601 @@
+diff --git a/backend/app/orchestration/context_builder.py b/backend/app/orchestration/context_builder.py
+index b7bd53f3..8a19fe23 100644
+--- a/backend/app/orchestration/context_builder.py
++++ b/backend/app/orchestration/context_builder.py
+@@ -2001,6 +2001,21 @@ class ContextBuilderMixin:
+         flush 已分配 PK，同会话内后续读取同样可见。
+         """
+         try:
++            # B-01：首条用户消息落库前幂等补建 chat_sessions 头（与消息同事务，
++            # 由 agent_grpc_service 流末统一提交）。头行缺失时网关 sessions 列表
++            # （getRecentSessionsFromDB 只读 chat_sessions）永远为空，移动端重启
++            # 后拿不到 conversationId——V13「发了但看不见」的后端根因。
++            # 失败非致命：吞掉告警后继续持久化消息本身（保持本函数既有语义）。
++            try:
++                from app.orchestration.persistence_layer import ensure_chat_session_header
++
++                await ensure_chat_session_header(
++                    active_db,
++                    user_id=uuid.UUID(str(user_id)),
++                    session_id=self._coerce_session_uuid(session_id),
++                )
++            except Exception as header_err:
++                logger.warning(f"Failed to ensure chat session header (non-fatal): {header_err}")
+             user_msg = ChatMessage(
+                 user_id=uuid.UUID(str(user_id)),
+                 session_id=self._coerce_session_uuid(session_id),
+diff --git a/backend/app/orchestration/persistence_layer.py b/backend/app/orchestration/persistence_layer.py
+index 1cc3752a..55a78ec6 100644
+--- a/backend/app/orchestration/persistence_layer.py
++++ b/backend/app/orchestration/persistence_layer.py
+@@ -8,13 +8,42 @@ from typing import Any
+ from loguru import logger
+ from sqlalchemy.ext.asyncio import AsyncSession
+ 
++from app.core.time_utils import utcnow
+ from app.gen.agent.v1 import agent_service_pb2
+-from app.models.chat import ChatMessage, MessageRole
++from app.models.chat import ChatMessage, ChatSession, MessageRole
+ from app.orchestration.schemas import ExecutablePlan
+ from app.services.llm_service import llm_service
+ from app.services.memory_inferred_write_lane import MemoryInferredWriteLaneService
+ 
+ 
++# B-01（V13「发了但看不见」）：WS/gRPC 主链此前只写 chat_messages、从不写
++# chat_sessions 头——网关 Redis persister（chat_history_persister.go 的
++# chatSessionUpsertSQL）是 WS 路径唯一的 session 头写入者，但
++# CHAT_PERSISTER_ENABLED 默认 false（engine 是 single authoritative writer），
++# 于是 onboarding→chat 的第一个 session 在 chat_sessions 永远缺行：
++# 网关 GET /api/v1/chat/sessions（getRecentSessionsFromDB）只读该表 →
++# 空列表 → 移动端重启后拿不到 conversationId，历史不可达。
++# 修法与 REST api/v1/chat.py save_chat_message 的 get-or-create 同构：
++# 幂等补建头行；零 UUID（context_builder 对 legacy label 的降级产物）
++# 跳过——它跨用户共用主键，且 sessions 列表查询本就排除它。
++async def ensure_chat_session_header(
++    db: AsyncSession,
++    *,
++    user_id: uuid.UUID,
++    session_id: uuid.UUID,
++) -> None:
++    """Idempotently ensure the chat_sessions header row exists (B-01)."""
++    if session_id == uuid.UUID(int=0):
++        return
++    now = utcnow()
++    session_meta = await db.get(ChatSession, session_id)
++    if session_meta is None:
++        db.add(ChatSession(id=session_id, user_id=user_id, is_active=True, last_message_at=now))
++    else:
++        session_meta.is_active = True
++        session_meta.last_message_at = now
++
++
+ class PersistenceLayerMixin:
+     """Mixin that groups persistence / side-effect helpers used by ChatOrchestrator."""
+ 
+@@ -41,6 +70,17 @@ class PersistenceLayerMixin:
+             from app.db.session import AsyncSessionLocal
+ 
+             async with AsyncSessionLocal() as persist_session:
++                # B-01：turn 收尾在独立 session 内幂等补建 session 头，与
++                # assistant 行同事务提交——即使共享流 session 回滚（此路径
++                # 存在的既有语义），消息与头也不出现"有消息无会话"的孤儿态。
++                try:
++                    await ensure_chat_session_header(
++                        persist_session,
++                        user_id=uuid.UUID(str(user_id)),
++                        session_id=self._coerce_session_uuid(session_id),
++                    )
++                except Exception as header_err:
++                    logger.warning(f"Failed to ensure chat session header (non-fatal): {header_err}")
+                 assistant_msg = ChatMessage(
+                     user_id=uuid.UUID(str(user_id)),
+                     session_id=self._coerce_session_uuid(session_id),
+diff --git a/backend/tests/core/test_b01_ws_turn_creates_chat_session_header.py b/backend/tests/core/test_b01_ws_turn_creates_chat_session_header.py
+new file mode 100644
+index 00000000..e5930ace
+--- /dev/null
++++ b/backend/tests/core/test_b01_ws_turn_creates_chat_session_header.py
+@@ -0,0 +1,230 @@
++"""B-01（CHAT-VISIBLE，V13 实测）红证：WS/gRPC 主链轮次落库必须同时建立
++``chat_sessions`` 头行。
++
++复现路径（v3-output/V13/REPORT.md B-01）：新号注册 → 完成画像引导 → 跳过建模
++访谈 → 主聊天发送首条 WS 消息。引擎把 USER/ASSISTANT 行写进 ``chat_messages``
++（``context_builder._persist_user_message`` /
++``persistence_layer._persist_assistant_message``），但整条链无人写
++``chat_sessions``：网关 Redis persister（``chat_history_persister.go`` 的
++``chatSessionUpsertSQL``）是 WS 路径唯一的 session 头写入者，而
++``CHAT_PERSISTER_ENABLED`` 默认 false（engine 是 single authoritative
++writer，gateway setup.go:208 / config.go:562）→ ``chat_sessions`` 永远缺行 →
++网关 ``GET /api/v1/chat/sessions``（``getRecentSessionsFromDB`` 只读该表）
++返回空 → 移动端重启后拿不到 conversationId，历史永不可达。
++
++本测试在真实 sqlite 引擎上验证：轮次持久化（user + assistant 两个落库点）
++之后——
++1. ``chat_sessions`` 头行存在（session 列表可发现的充要条件）；
++2. ``chat_messages`` 行引用同一 session_id（历史可回放的充要条件）；
++3. 幂等：同 session 第二轮不重复建头；
++4. legacy label（零 UUID 降级）保持既有语义：不建头、不报错。
++"""
++
++from __future__ import annotations
++
++import uuid
++from unittest.mock import MagicMock
++
++import pytest
++from sqlalchemy import select
++from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
++from sqlalchemy.pool import StaticPool
++
++from app.models.chat import ChatMessage, ChatSession, MessageRole
++from app.orchestration.context_builder import ContextBuilderMixin
++from app.orchestration.orchestrator import ChatOrchestrator
++from app.orchestration.persistence_layer import PersistenceLayerMixin
++
++SESSION_ID = str(uuid.uuid4())
++
++
++def _build_engine_sessionmaker():
++    engine = create_async_engine(
++        "sqlite+aiosqlite:///:memory:",
++        connect_args={"check_same_thread": False},
++        poolclass=StaticPool,
++    )
++    return engine, async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
++
++
++async def _make_schema(engine) -> None:
++    from app.db.session import Base
++
++    async with engine.begin() as conn:
++        await conn.run_sync(Base.metadata.create_all)
++
++
++def _bare_context_builder_mixin() -> ContextBuilderMixin:
++    return object.__new__(ContextBuilderMixin)
++
++
++def _bare_persistence_layer_mixin() -> PersistenceLayerMixin:
++    """裸 PersistenceLayerMixin，绑定 ChatOrchestrator 的 _coerce_session_uuid
++    语义（uuid5 fallback），与生产组合一致。"""
++    mixin = object.__new__(PersistenceLayerMixin)
++    mixin._coerce_session_uuid = staticmethod(  # type: ignore[method-assign]
++        lambda sid: ChatOrchestrator._coerce_session_uuid(mixin, sid)
++    )
++    return mixin
++
++
++@pytest.mark.asyncio
++async def test_user_turn_persistence_creates_session_header() -> None:
++    """B-01 主断言：_persist_user_message 落库后 chat_sessions 头必须存在。
++
++    修复前：只有 chat_messages 行（V13 DB 铁证：消息 4 行 / sessions 0 行）。
++    """
++    engine, sessionmaker = _build_engine_sessionmaker()
++    await _make_schema(engine)
++    user_id = uuid.uuid4()
++    mixin = _bare_context_builder_mixin()
++
++    async with sessionmaker() as db:
++        await mixin._persist_user_message(
++            active_db=db,
++            user_id=str(user_id),
++            session_id=SESSION_ID,
++            user_message="7天后考离散数学，最弱图论，每天2小时",
++            request_id="req-b01-1",
++        )
++        await db.flush()
++
++        header = (
++            await db.execute(select(ChatSession).where(ChatSession.id == uuid.UUID(SESSION_ID)))
++        ).scalar_one_or_none()
++        assert header is not None, (
++            "B-01 红证：WS 轮次用户消息落库后 chat_sessions 头缺失——"
++            "sessions 列表永远为空，移动端重启后历史不可达"
++        )
++        assert str(header.user_id) == str(user_id)
++        assert header.is_active is True
++        assert header.last_message_at is not None
++
++        msg = (
++            await db.execute(
++                select(ChatMessage).where(ChatMessage.session_id == uuid.UUID(SESSION_ID))
++            )
++        ).scalar_one()
++        assert msg.role == MessageRole.USER
++        assert str(msg.user_id) == str(user_id)
++
++    await engine.dispose()
++
++
++@pytest.mark.asyncio
++async def test_assistant_turn_persistence_creates_session_header(
++    monkeypatch: pytest.MonkeyPatch,
++) -> None:
++    """B-01 收尾断言：_persist_assistant_message 的独立 session 同样幂等补建头。
++
++    该路径自带提交（既有语义：共享流 session 可能被更早异常毒化），头行
++    必须与 assistant 行同事务落地，避免任何「有消息无会话」的孤儿态。
++    """
++    import app.db.session as dbs
++    import app.orchestration.persistence_layer as pl
++
++    engine, sessionmaker = _build_engine_sessionmaker()
++    await _make_schema(engine)
++
++    # _persist_assistant_message 通过模块级 AsyncSessionLocal 自建 session——
++    # 打桩到本测试的内存引擎（StaticPool 共享连接）。
++    monkeypatch.setattr(dbs, "AsyncSessionLocal", sessionmaker)
++    lane_probe = MagicMock(return_value=None)
++    monkeypatch.setattr(
++        pl.MemoryInferredWriteLaneService, "enqueue_from_session", lane_probe
++    )
++    monkeypatch.setattr(
++        pl.MemoryInferredWriteLaneService, "enqueue_from_chat_turn", lane_probe
++    )
++    monkeypatch.setattr(pl, "llm_service", MagicMock(default_model="unit-model"))
++
++    user_id = uuid.uuid4()
++    mixin = _bare_persistence_layer_mixin()
++
++    async with sessionmaker() as shared_db:
++        await mixin._persist_assistant_message(
++            active_db=shared_db,
++            user_id=str(user_id),
++            session_id=SESSION_ID,
++            full_response="我按你的反馈把策略收紧了一版，你确认后我就开始生成任务卡。",
++        )
++
++    async with sessionmaker() as db:
++        header = (
++            await db.execute(select(ChatSession).where(ChatSession.id == uuid.UUID(SESSION_ID)))
++        ).scalar_one_or_none()
++        assert header is not None, "B-01 红证：assistant 落库后 chat_sessions 头缺失"
++        assert header.is_active is True
++
++        msg = (
++            await db.execute(
++                select(ChatMessage)
++                .where(
++                    ChatMessage.session_id == uuid.UUID(SESSION_ID),
++                    ChatMessage.role == MessageRole.ASSISTANT,
++                )
++            )
++        ).scalar_one()
++        assert msg.content.startswith("我按你的反馈")
++
++    await engine.dispose()
++
++
++@pytest.mark.asyncio
++async def test_session_header_is_idempotent_across_turns() -> None:
++    """同一 session 连续两轮：头行只有一条，不重复建头。"""
++    engine, sessionmaker = _build_engine_sessionmaker()
++    await _make_schema(engine)
++    user_id = uuid.uuid4()
++    mixin = _bare_context_builder_mixin()
++
++    async with sessionmaker() as db:
++        for i, text in enumerate(("第一轮", "第二轮")):
++            await mixin._persist_user_message(
++                active_db=db,
++                user_id=str(user_id),
++                session_id=SESSION_ID,
++                user_message=text,
++                request_id=f"req-b01-{i}",
++            )
++            await db.flush()
++
++        headers = (
++            (await db.execute(select(ChatSession).where(ChatSession.id == uuid.UUID(SESSION_ID))))
++            .scalars()
++            .all()
++        )
++        assert len(headers) == 1, "幂等性破坏：同 session 出现多头"
++        assert headers[0].is_active is True
++
++    await engine.dispose()
++
++
++@pytest.mark.asyncio
++async def test_legacy_label_session_skips_header() -> None:
++    """legacy label（非 UUID）→ 零 UUID 降级 → 不建头（跨用户 PK，保持既有语义）。"""
++    engine, sessionmaker = _build_engine_sessionmaker()
++    await _make_schema(engine)
++    user_id = uuid.uuid4()
++    mixin = _bare_context_builder_mixin()
++
++    async with sessionmaker() as db:
++        await mixin._persist_user_message(
++            active_db=db,
++            user_id=str(user_id),
++            session_id="df-d2-s1",
++            user_message="legacy label 消息",
++            request_id="req-b01-4",
++        )
++        await db.flush()
++
++        headers = (await db.execute(select(ChatSession))).scalars().all()
++        assert headers == [], "零 UUID 降级不应产生头行（PK 跨用户冲突风险）"
++        msg = (
++            await db.execute(
++                select(ChatMessage).where(ChatMessage.session_id == uuid.UUID(int=0))
++            )
++        ).scalar_one()
++        assert msg.content == "legacy label 消息"
++
++    await engine.dispose()
+diff --git a/mobile/lib/features/chat/presentation/providers/chat_notifier_history.dart b/mobile/lib/features/chat/presentation/providers/chat_notifier_history.dart
+index 48d1c87f..f058584f 100644
+--- a/mobile/lib/features/chat/presentation/providers/chat_notifier_history.dart
++++ b/mobile/lib/features/chat/presentation/providers/chat_notifier_history.dart
+@@ -46,6 +46,18 @@ extension ChatNotifierHistory on ChatNotifier {
+       '${date.day.toString().padLeft(2, '0')}';
+ 
+   Future<void> loadConversationHistory(String conversationId) async {
++    // B-01 次生面（V13 实测「发了但看不见」的移动端共因）：发送/流式在途时
++    // 禁止历史回拉——该方法会把 isSending、streamingContent 与乐观上屏的
++    // 用户气泡整体冲掉（换成的往往是尚未落库的空服务端历史）。在途流才是
++    // 事实源；轮次收束后（isSending=false）的回拉不受影响。
++    // 计划切换路径不受伤：switchPlanSession 先 cancelActiveRun 置
++    // isSending=false，再进入本方法。
++    if (state.isSending) {
++      debugPrint(
++        '[ChatHistory] skip reload while a run is in flight ($conversationId)',
++      );
++      return;
++    }
+     final previousMessages = state.messages;
+     final previousConversationId = state.conversationId;
+ 
+diff --git a/mobile/lib/features/chat/presentation/providers/chat_provider.dart b/mobile/lib/features/chat/presentation/providers/chat_provider.dart
+index 620f6e4a..874508bd 100755
+--- a/mobile/lib/features/chat/presentation/providers/chat_provider.dart
++++ b/mobile/lib/features/chat/presentation/providers/chat_provider.dart
+@@ -961,8 +961,15 @@ class ChatNotifier extends StateNotifier<ChatState> {
+       return;
+     }
+ 
++    // B-01 次生面（V13 实测）：无反馈窗口的重复发送真实发生（同一 prompt 两条
++    // USER + 两条重复 LLM 回复，重复计费）。改为 in-flight 禁发：上一轮在途时
++    // 不再隐式 cancel+supersede，静默丢弃重复触发，等本轮收束或用户主动取消。
+     if (state.isSending) {
+-      cancelActiveRun(reason: 'new_message');
++      debugPrint(
++        '[Chat] sendMessage blocked: run in flight (in-flight guard, '
++        'runId=${state.activeRunId})',
++      );
++      return;
+     }
+ 
+     // 获取当前用户信息
+diff --git a/mobile/test/unit/chat_notifier_stream_test.dart b/mobile/test/unit/chat_notifier_stream_test.dart
+index 050f388e..6f2ad1d5 100644
+--- a/mobile/test/unit/chat_notifier_stream_test.dart
++++ b/mobile/test/unit/chat_notifier_stream_test.dart
+@@ -278,7 +278,7 @@ void main() {
+       expect(notifier.state.runPhase, ChatRunPhase.failed);
+     });
+ 
+-    test('cancels the previous run before accepting a new stream', () async {
++    test('B-01 in-flight guard: ignores a new send while the previous run is in flight', () async {
+       final firstController = StreamController<ChatStreamEvent>();
+       final secondController = StreamController<ChatStreamEvent>();
+       final controllers = <StreamController<ChatStreamEvent>>[
+@@ -301,31 +301,35 @@ void main() {
+       await _settleChat();
+       expect(notifier.state.isSending, isTrue);
+ 
+-      final secondFuture = notifier.sendMessage('second');
++      // B-01 次生面（V13 重复消息+重复计费）：在途期间新发送被静默丢弃，
++      // 不再 cancel+supersede 旧流。
++      await notifier.sendMessage('second');
+       await _settleChat();
++      expect(notifier.state.isSending, isTrue);
++      expect(
++        notifier.state.messages
++            .where((message) => message.role == MessageRole.user)
++            .map((message) => message.content),
++        ['first'],
++      );
+ 
+       firstController.add(TextEvent(content: 'stale'));
+       await firstController.close();
+       await firstFuture;
+-
+-      secondController
+-        ..add(TextEvent(content: 'fresh'))
+-        ..add(DoneEvent(finishReason: 'STOP'));
+-      await secondFuture;
+       await _settleChat();
+ 
+       final assistantMessages = notifier.state.messages
+           .where((message) => message.role == MessageRole.assistant)
+           .toList();
+       expect(assistantMessages, hasLength(1));
+-      expect(assistantMessages.single.content, 'fresh');
+-      expect(assistantMessages.single.content, isNot(contains('stale')));
++      expect(assistantMessages.single.content, 'stale');
++      expect(assistantMessages.single.content, isNot(contains('fresh')));
+     });
+   });
+ 
+   group('M6-09 interrupt-preserve semantics', () {
+     test(
+-        'sending a new message mid-stream preserves the partial reply as an interrupted assistant message',
++        'B-01 in-flight guard: a new send mid-stream is dropped and the partial reply keeps streaming',
+         () async {
+       final firstController = StreamController<ChatStreamEvent>();
+       final secondController = StreamController<ChatStreamEvent>();
+@@ -351,55 +355,37 @@ void main() {
+       await _settleChat();
+       expect(notifier.state.streamingContent, 'partial answer');
+ 
+-      // 用户在流式中发送新消息 → 旧流取消，但已生成部分必须保留。
+-      final secondFuture = notifier.sendMessage('second');
+-
+-      final interruptedMessages = notifier.state.messages
+-          .where(
+-            (message) =>
+-                message.role == MessageRole.assistant && message.isInterrupted,
+-          )
+-          .toList();
+-      expect(interruptedMessages, hasLength(1));
+-      expect(interruptedMessages.single.content, 'partial answer');
+-      expect(notifier.state.isSending, isFalse);
+-      expect(notifier.state.runPhase, ChatRunPhase.interrupted);
++      // B-01 在途禁发：流式中新消息被丢弃，正在输出的一轮不受影响。
++      // M6-09 的「中断保留」语义仍可经显式 cancelActiveRun（user stop）触发，
++      // 见下方 'user stop keeps the partial reply' 用例。
++      await notifier.sendMessage('second');
++      await _settleChat();
+ 
+-      // 旧流迟到的事件不得改写已保留内容，也不得生成重复消息。
+-      firstController.add(TextEvent(content: ' MORE'));
+-      await firstController.close();
+-      await firstFuture;
++      expect(notifier.state.isSending, isTrue);
++      expect(notifier.state.streamingContent, 'partial answer');
+       expect(
+         notifier.state.messages
+-            .where((message) => message.isInterrupted)
++            .where((message) => message.role == MessageRole.user)
+             .map((message) => message.content),
+-        ['partial answer'],
++        ['first'],
++      );
++      expect(
++        notifier.state.messages.where((message) => message.isInterrupted),
++        isEmpty,
+       );
+ 
+-      // 新一轮正常完成后，被中断的部分回复仍在对话历史中。
+-      secondController
+-        ..add(TextEvent(content: 'fresh'))
+-        ..add(DoneEvent(finishReason: 'STOP'));
+-      await secondFuture;
++      // 旧流继续正常收束，已生成部分完整落地。
++      firstController.add(TextEvent(content: ' MORE'));
++      await firstController.close();
++      await firstFuture;
+       await _settleChat();
+ 
+       final assistantMessages = notifier.state.messages
+           .where((message) => message.role == MessageRole.assistant)
+           .toList();
+       expect(assistantMessages.map((message) => message.content),
+-          ['partial answer', 'fresh']);
+-      expect(assistantMessages.first.isInterrupted, isTrue);
+-      expect(assistantMessages.last.isInterrupted, isFalse);
+-      // 对话顺序：旧用户消息 → 中断的部分回复 → 新用户消息 → 新回复
+-      expect(
+-        notifier.state.messages.map((message) => message.role),
+-        [
+-          MessageRole.user,
+-          MessageRole.assistant,
+-          MessageRole.user,
+-          MessageRole.assistant,
+-        ],
+-      );
++          ['partial answer MORE']);
++      expect(assistantMessages.single.isInterrupted, isFalse);
+     });
+ 
+     test('user stop keeps the partial reply and marks it interrupted',
+@@ -462,17 +448,21 @@ void main() {
+ 
+       final firstFuture = notifier.sendMessage('first');
+       await _settleChat();
+-      final secondFuture = notifier.sendMessage('second');
++      // B-01 后中断的唯一入口是显式取消（输入条 onStop → cancelActiveRun）。
++      notifier.cancelActiveRun(reason: 'user_stop');
+       expect(
+         notifier.state.messages.where((message) => message.isInterrupted),
+         isEmpty,
+       );
++      // 取消收束后允许新一轮发送。
++      final secondFuture = notifier.sendMessage('second');
+       secondController
+         ..add(TextEvent(content: 'fresh'))
+         ..add(DoneEvent(finishReason: 'STOP'));
+       await secondFuture;
+       await firstController.close();
+       await firstFuture;
++      await _settleChat();
+       expect(
+         notifier.state.messages
+             .where((message) => message.role == MessageRole.assistant)
+diff --git a/mobile/test/unit/chat_provider_test.dart b/mobile/test/unit/chat_provider_test.dart
+index dc206fb0..f41865a4 100755
+--- a/mobile/test/unit/chat_provider_test.dart
++++ b/mobile/test/unit/chat_provider_test.dart
+@@ -247,4 +247,68 @@ void main() {
+       ),
+     );
+   });
++
++  test('B-01: loadConversationHistory skips while a run is in flight',
++      () async {
++    I18nService.instance.reset();
++    final container = ProviderContainer(
++      overrides: [
++        chatRepositoryProvider.overrideWithValue(mockChatRepository),
++      ],
++    );
++    addTearDown(container.dispose);
++
++    final notifier = container.read(chatProvider.notifier);
++    final optimisticMessage = ChatMessageModel(
++      id: 'temp_user_1',
++      userId: 'u1',
++      conversationId: 'session-live',
++      role: MessageRole.user,
++      content: '7天后考离散数学',
++      createdAt: DateTime.now(),
++    );
++    notifier.state = notifier.state.copyWith(
++      conversationId: 'session-live',
++      messages: [optimisticMessage],
++      isSending: true,
++      activeRunId: 'run_1',
++    );
++
++    await notifier.loadConversationHistory('session-live');
++
++    // V13「发了但看不见」的移动端共因：在途回拉会冲掉乐观气泡与流式态。
++    final state = container.read(chatProvider);
++    expect(state.isSending, isTrue, reason: '在途轮次不得被打断');
++    expect(state.messages, [optimisticMessage], reason: '乐观气泡不得被冲掉');
++    expect(state.streamingContent, isEmpty);
++    verifyNever(
++      mockChatRepository.getConversationHistory(
++        'session-live',
++        limit: anyNamed('limit'),
++      ),
++    );
++  });
++
++  test('B-01: sendMessage is blocked while a run is in flight', () async {
++    final container = ProviderContainer(
++      overrides: [
++        chatRepositoryProvider.overrideWithValue(mockChatRepository),
++      ],
++    );
++    addTearDown(container.dispose);
++
++    final notifier = container.read(chatProvider.notifier);
++    notifier.state = notifier.state.copyWith(
++      isSending: true,
++      activeRunId: 'run_in_flight',
++    );
++
++    // in-flight 禁发：早退于 auth/guest 读取之前，重复触发静默丢弃，
++    // 不再 cancel+supersede 造成重复消息与重复 LLM 回复。
++    await notifier.sendMessage('重复发送');
++
++    final state = container.read(chatProvider);
++    expect(state.activeRunId, 'run_in_flight', reason: '在途 run 不得被顶替');
++    expect(state.messages, isEmpty, reason: '不得追加第二条用户消息');
++  });
+ }
