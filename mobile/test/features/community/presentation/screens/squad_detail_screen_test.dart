@@ -81,6 +81,28 @@ void main() {
     });
 
     testWidgets(
+        'study room renews presence via foreground polling while card visible',
+        (tester) async {
+      // ROOM-PRESENCE：服务端 TTL(90s) 真源——卡片前台可见期间每 30s 一拍
+      // 心跳+在场轮询作续期信号（看着自习室 = 在自习室）；绝不后台续期。
+      final repository = _FakeSquadRepository(
+        board: _boardTies(),
+        presence: _presence(inRoomCount: 1),
+      );
+      await _pumpSquadDetail(tester, repository: repository);
+      expect(repository.heartbeatCalls, 1); // 初次进屏拉一次本人状态
+      expect(repository.presenceCalls, 1);
+
+      await tester.pump(const Duration(seconds: 30));
+      expect(repository.heartbeatCalls, 2, reason: '30s 续期拍重放心跳（服务端 TTL 续命）');
+      expect(repository.presenceCalls, 2, reason: '30s 续期拍同时刷新全员在场列表');
+
+      await tester.pump(const Duration(seconds: 30));
+      expect(repository.heartbeatCalls, 3);
+      expect(repository.presenceCalls, 3);
+    });
+
+    testWidgets(
         'self_view_only degrade shows notice and self-anchor switch, not a broken board',
         (tester) async {
       await _pumpSquadDetail(
@@ -282,6 +304,8 @@ class _FakeSquadRepository extends SquadRepository {
   final StudyRoomPresence? presence;
   final List<SharedErrorEntry> sharedErrors;
   int enterCalls = 0;
+  int heartbeatCalls = 0;
+  int presenceCalls = 0;
 
   @override
   Future<List<SquadListItem>> listMySquads() async => const [];
@@ -305,12 +329,16 @@ class _FakeSquadRepository extends SquadRepository {
       board ?? (throw Exception('no board fixture'));
 
   @override
-  Future<StudyRoomPresence> getPresence(String groupId) async =>
-      presence ?? (throw Exception('no presence fixture'));
+  Future<StudyRoomPresence> getPresence(String groupId) async {
+    presenceCalls++;
+    return presence ?? (throw Exception('no presence fixture'));
+  }
 
   @override
-  Future<StudyRoomMyStatus> heartbeatStudyRoom(String groupId) async =>
-      StudyRoomMyStatus(inRoom: enterCalls > 0, todayMinutes: 12);
+  Future<StudyRoomMyStatus> heartbeatStudyRoom(String groupId) async {
+    heartbeatCalls++;
+    return StudyRoomMyStatus(inRoom: enterCalls > 0, todayMinutes: 12);
+  }
 
   @override
   Future<StudyRoomMyStatus> enterStudyRoom(String groupId) async {

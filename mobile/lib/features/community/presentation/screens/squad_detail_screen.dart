@@ -288,6 +288,12 @@ class _LeaderboardRow extends StatelessWidget {
 }
 
 /// 必达项②：自习室（在室 = success 在线语义；显式进出 + 今日累计）。
+///
+/// 在场续期（ROOM-PRESENCE）：服务端以「最后活性证明 + TTL(90s)」判在场，
+/// 本卡片在**前台可见**期间每 30s 轮询一次心跳+在场列表作续期拍——
+/// 看着自习室 = 在自习室（最省的诚实信号源）。绝不要求后台 Timer：
+/// AppLifecycleState 一离开 resumed 即停拍，后台/杀进程后在场由服务端
+/// TTL 如实衰减为离场（最多 90s 残留），回到前台立即拉一次诚实状态。
 class _StudyRoomCard extends ConsumerStatefulWidget {
   const _StudyRoomCard({required this.groupId});
 
@@ -297,8 +303,54 @@ class _StudyRoomCard extends ConsumerStatefulWidget {
   ConsumerState<_StudyRoomCard> createState() => _StudyRoomCardState();
 }
 
-class _StudyRoomCardState extends ConsumerState<_StudyRoomCard> {
+class _StudyRoomCardState extends ConsumerState<_StudyRoomCard>
+    with WidgetsBindingObserver {
   bool _actionInFlight = false;
+  Timer? _renewalTimer;
+
+  /// 轮询周期（30s）：TTL 90s 内至少两次续期拍，单拍网络失败不失联。
+  static const Duration _renewalInterval = Duration(seconds: 30);
+
+  void _renewPresence() {
+    ref
+      ..invalidate(squadMyRoomStatusProvider(widget.groupId))
+      ..invalidate(squadPresenceProvider(widget.groupId));
+  }
+
+  void _startRenewalTimer() {
+    _renewalTimer ??= Timer.periodic(_renewalInterval, (_) => _renewPresence());
+  }
+
+  void _stopRenewalTimer() {
+    _renewalTimer?.cancel();
+    _renewalTimer = null;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _startRenewalTimer();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // 回前台立即拉一次（后台期间服务端 TTL 可能已诚实衰减），再恢复轮询。
+      _renewPresence();
+      _startRenewalTimer();
+    } else {
+      // 前台-only：退到后台即停拍，绝不后台续期（在场诚实衰减）。
+      _stopRenewalTimer();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _stopRenewalTimer();
+    super.dispose();
+  }
 
   Future<void> _toggleRoom(bool enter) async {
     if (_actionInFlight) {
@@ -369,7 +421,8 @@ class _StudyRoomCardState extends ConsumerState<_StudyRoomCard> {
               ],
             ),
             SizedBox(height: context.space.md),
-            // 本人状态（心跳诚实上报：不在场不自动重开，进出以按钮为准）。
+            // 本人状态（心跳端点诚实上报：不在场不自动重开，进出以按钮为准；
+            // 服务端 TTL 过期即如实判离场，前台轮询拍负责续期）。
             myStatusAsync.when(
               loading: () => const Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
@@ -444,7 +497,8 @@ class _StudyRoomCardState extends ConsumerState<_StudyRoomCard> {
   }
 }
 
-/// 在室状态徽标：success 语义（在线），心跳滞后只作弱提示不降级。
+/// 在室状态徽标：success 语义（在线）。服务端 TTL 真源：在室=心跳在
+/// 90s TTL 内；过期即如实判离场（is_stale 只作弱提示不降级）。
 class _RoomStatusPill extends StatelessWidget {
   const _RoomStatusPill({required this.inRoom});
 
@@ -529,6 +583,8 @@ class _PresenceRow extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  // is_stale = 开放会话但 TTL 已过期（异常退出待回收）——
+                  // 崩溃恢复线索的弱提示，不改变灰点「离场」判定。
                   if (entry.isStale) ...[
                     SizedBox(width: context.space.xs),
                     Tooltip(

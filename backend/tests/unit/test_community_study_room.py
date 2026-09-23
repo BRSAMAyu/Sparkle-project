@@ -2,10 +2,14 @@
 
 钉六条验收面：
 1. 在场进出/时长：显式进出为主（enter/exit），会话时长与「今日累计」
-   如实结算（跨日会话只计入今日重叠部分，本地日界照督促域时区惯例）；
+   如实结算（跨日会话只计入今日重叠部分，本地日界照督促域时区惯例；
+   时长按最后活性证明 + TTL 诚实封顶，decay 不虚增）；
    enter 幂等（重复进入不建重复会话）、exit 幂等诚实（already_out）；
-2. 在室视图：谁在自习 + 今日累计，未入场成员如实为 0（不缺席惩罚）；
-   心跳仅兜底崩溃恢复（陈旧标 is_stale，不强制结算）；
+2. 在室视图（ROOM-PRESENCE 服务端 TTL 真源）：读路径只认未过期——
+   in_room = 开放会话且心跳在 TTL（90s）内，TTL 过期=诚实离场（杀进程
+   后最多 TTL 内残留）；is_stale = 有开放会话但已过期（崩溃恢复线索）；
+   未入场成员如实为 0（不缺席惩罚）；心跳是显式续期信号（前台房间
+   轮询拍，绝不要求后台 Timer）；
 3. 小队榜：榜分零新口径——唯一消费 D-COMM-3 聚合面（get_squad_sprint_progress
    → sprint_task_ledger，BP-4 SSOT），排序正确（并列同名次）、percentile
    区间、分页包装；成员 <3 人 board_valid=False / self_view_only=True
@@ -289,51 +293,195 @@ async def test_today_minutes_local_day_window_and_cross_midnight_overlap(db_sess
 
 
 @pytest.mark.asyncio
-async def test_presence_lists_members_with_room_state_and_stale_flag(db_session, monkeypatch):
+async def test_presence_lists_members_with_ttl_and_stale_flag(db_session, monkeypatch):
+    """在室视图（ROOM-PRESENCE TTL 语义）：读路径只认未过期——
+    在场=A 新鲜心跳；TTL 过期=B 诚实离场+is_stale（崩溃恢复线索）；
+    显式退出=C 立即清档（连 is_stale 都不留）；未入场=D 如实为 0。"""
+    from app.schemas.community_study_room import STUDY_ROOM_PRESENCE_TTL_SECONDS
+
     owner = await _make_user(db_session, "pown")
     insider = await _make_user(db_session, "pins")
-    outsider_member = await _make_user(db_session, "pout")
+    lapsed = await _make_user(db_session, "plap")
+    leaver = await _make_user(db_session, "pleave")
     stranger = await _make_user(db_session, "str")
     squad = await _make_squad(db_session, owner)
     await _join(db_session, squad, insider)
-    await _join(db_session, squad, outsider_member)
+    await _join(db_session, squad, lapsed)
+    await _join(db_session, squad, leaver)
     await db_session.commit()
 
     frozen = datetime(2026, 9, 23, 6, 0, 0)
     _freeze_now(monkeypatch, frozen)
-    await StudyRoomService.enter_room(db_session, squad.id, insider.id)  # 在场（新鲜心跳）
-    stale = await StudyRoomService.enter_room(db_session, squad.id, outsider_member.id)
-    # 把 stale 会话心跳拨回 20 分钟前（> 阈值 15 分钟）→ is_stale
-    row = (
-        await db_session.execute(select(StudyRoomSession).where(StudyRoomSession.user_id == outsider_member.id))
+    await StudyRoomService.enter_room(db_session, squad.id, insider.id)  # 在场（心跳新鲜）
+    await StudyRoomService.enter_room(db_session, squad.id, lapsed.id)
+    lapsed_row = (
+        await db_session.execute(select(StudyRoomSession).where(StudyRoomSession.user_id == lapsed.id))
     ).scalar_one()
-    stale_session_id = stale["session_id"]
-    assert row.id == stale_session_id
-    row.last_heartbeat_at = frozen - timedelta(minutes=20)
+    # 心跳拨回 TTL+1s 前 → 过期：读路径诚实判离场（旧语义只标 is_stale 仍算在场）
+    lapsed_row.last_heartbeat_at = frozen - timedelta(seconds=STUDY_ROOM_PRESENCE_TTL_SECONDS + 1)
     await db_session.flush()
+    await StudyRoomService.enter_room(db_session, squad.id, leaver.id)
+    exited = await StudyRoomService.exit_room(db_session, squad.id, leaver.id)
+    assert exited["already_out"] is False
 
     presence = await StudyRoomService.get_presence(db_session, squad.id, owner.id)
-    assert presence["member_count"] == 3 and presence["in_room_count"] == 2
+    assert presence["member_count"] == 4 and presence["in_room_count"] == 1
     by_user = {m.user_id: m for m in presence["members"]}
-    assert set(by_user) == {owner.id, insider.id, outsider_member.id}, "非成员不得出现在在室视图"
+    assert set(by_user) == {owner.id, insider.id, lapsed.id, leaver.id}, "非成员不得出现在在室视图"
 
     assert by_user[owner.id].in_room is False and by_user[owner.id].today_minutes == 0, "未入场成员如实为 0"
     assert by_user[insider.id].in_room is True and by_user[insider.id].is_stale is False
-    assert by_user[outsider_member.id].in_room is True and by_user[outsider_member.id].is_stale is True
+    assert by_user[lapsed.id].in_room is False and by_user[lapsed.id].is_stale is True, "TTL 过期=诚实离场"
+    assert by_user[lapsed.id].entered_at is None and by_user[lapsed.id].current_session_minutes == 0
+    assert by_user[leaver.id].in_room is False and by_user[leaver.id].is_stale is False, "显式退出立即清、无残留"
 
-    # 心跳兜底：在场刷新；不在场如实上报
-    beat = await StudyRoomService.heartbeat(db_session, squad.id, outsider_member.id)
-    assert beat["in_room"] is True
-    row.last_heartbeat_at = frozen - timedelta(minutes=20)
-    await db_session.flush()
-    beat2 = await StudyRoomService.heartbeat(db_session, squad.id, outsider_member.id)
-    assert beat2["in_room"] is True and beat2["last_heartbeat_at"] == frozen
+    # 心跳续期：房间 UI 的活性证明把 decayed 开放记录续命回在场（非自动重开）
+    beat = await StudyRoomService.heartbeat(db_session, squad.id, lapsed.id)
+    assert beat["in_room"] is True and beat["last_heartbeat_at"] == frozen
+    renewed = await StudyRoomService.get_presence(db_session, squad.id, owner.id)
+    by_user2 = {m.user_id: m for m in renewed["members"]}
+    assert by_user2[lapsed.id].in_room is True and by_user2[lapsed.id].is_stale is False
+
+    # 无开放会话的心跳：诚实上报（不自动重开）
     beat_out = await StudyRoomService.heartbeat(db_session, squad.id, owner.id)
     assert beat_out["in_room"] is False and beat_out["today_minutes"] == 0
 
     await db_session.commit()
     with pytest.raises(SquadPermissionError):
         await StudyRoomService.get_presence(db_session, squad.id, stranger.id)
+
+
+# ---------------------------------------------------------------------------
+# 2.5 TTL 真源：过期=诚实离场 / exit 即清 / 续期信号 / decay 收档（ROOM-PRESENCE）
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_ttl_expiry_is_honest_departure_and_minutes_stop_accruing(db_session, monkeypatch):
+    """红证：enter 后 TTL 过期 → 读路径不再判在场（杀进程后最多 TTL 内残留，
+    TTL 后诚实消失）；今日累计同步封顶于最后活性证明 + TTL（decay 不虚增）。"""
+    from app.schemas.community_study_room import STUDY_ROOM_PRESENCE_TTL_SECONDS
+
+    owner = await _make_user(db_session)
+    squad = await _make_squad(db_session, owner)
+    t0 = datetime(2026, 9, 23, 8, 0, 0)
+    _freeze_now(monkeypatch, t0)
+    entered = await StudyRoomService.enter_room(db_session, squad.id, owner.id)
+    assert entered["reentered"] is False
+
+    # 回拨进入时刻 10 分钟（模拟在场已 10 分钟的稳态），心跳仍为 t0
+    row = (await db_session.execute(select(StudyRoomSession).where(StudyRoomSession.user_id == owner.id))).scalar_one()
+    row.entered_at = t0 - timedelta(minutes=10)
+    await db_session.flush()
+
+    # 恰在 TTL 边界（age == TTL）仍算在场：今日累计 = 10min + 90s → 地板 11 分钟
+    boundary = t0 + timedelta(seconds=STUDY_ROOM_PRESENCE_TTL_SECONDS)
+    _freeze_now(monkeypatch, boundary)
+    at_edge = await StudyRoomService.get_presence(db_session, squad.id, owner.id)
+    assert at_edge["members"][0].in_room is True and at_edge["in_room_count"] == 1
+    assert at_edge["members"][0].today_minutes == 10 + STUDY_ROOM_PRESENCE_TTL_SECONDS // 60
+
+    # 越界 1 秒：诚实离场 + 今日累计封顶不再虚增（失联期不算自习时长）
+    _freeze_now(monkeypatch, boundary + timedelta(seconds=1))
+    after = await StudyRoomService.get_presence(db_session, squad.id, owner.id)
+    entry = after["members"][0]
+    assert entry.in_room is False and entry.is_stale is True
+    assert entry.entered_at is None and entry.current_session_minutes == 0
+    assert entry.today_minutes == 10 + STUDY_ROOM_PRESENCE_TTL_SECONDS // 60, "decay 后时长封顶、不随墙钟虚增"
+    assert after["in_room_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_heartbeat_renews_ttl_for_active_only(db_session, monkeypatch):
+    """续期信号续命：前台房间轮询（心跳）给活跃者续命——总 120s > TTL 仍在场；
+    同一小队无续期的队友在同一时刻诚实衰减为离场（对照组）。"""
+    owner = await _make_user(db_session, "renew")
+    mate = await _make_user(db_session, "quiet")
+    squad = await _make_squad(db_session, owner)
+    await _join(db_session, squad, mate)
+    t0 = datetime(2026, 9, 23, 8, 0, 0)
+    _freeze_now(monkeypatch, t0)
+    await StudyRoomService.enter_room(db_session, squad.id, owner.id)
+    await StudyRoomService.enter_room(db_session, squad.id, mate.id)
+
+    # +60s：只有 owner 发心跳（前台轮询拍）
+    _freeze_now(monkeypatch, t0 + timedelta(seconds=60))
+    beat = await StudyRoomService.heartbeat(db_session, squad.id, owner.id)
+    assert beat["in_room"] is True
+
+    # +120s（> TTL）：owner 被续命仍在场；mate 无续期诚实衰减
+    _freeze_now(monkeypatch, t0 + timedelta(seconds=120))
+    presence = await StudyRoomService.get_presence(db_session, squad.id, owner.id)
+    by_user = {m.user_id: m for m in presence["members"]}
+    assert by_user[owner.id].in_room is True and by_user[owner.id].is_stale is False
+    assert by_user[mate.id].in_room is False and by_user[mate.id].is_stale is True
+    assert presence["in_room_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_exit_clears_presence_immediately_even_fresh(db_session, monkeypatch):
+    """exit 立即清：刚 enter（TTL 远未过期）即退出 → 读路径立即不在场，
+    无 is_stale 残留、无时长时间（诚实为 0 分钟）。"""
+    owner = await _make_user(db_session)
+    squad = await _make_squad(db_session, owner)
+    t0 = datetime(2026, 9, 23, 8, 0, 0)
+    _freeze_now(monkeypatch, t0)
+    await StudyRoomService.enter_room(db_session, squad.id, owner.id)
+    fresh = await StudyRoomService.get_presence(db_session, squad.id, owner.id)
+    assert fresh["members"][0].in_room is True
+
+    exited = await StudyRoomService.exit_room(db_session, squad.id, owner.id)
+    assert exited["already_out"] is False and exited["session_minutes"] == 0
+    presence = await StudyRoomService.get_presence(db_session, squad.id, owner.id)
+    entry = presence["members"][0]
+    assert entry.in_room is False and entry.is_stale is False, "显式退出立即清档、零残留"
+    assert entry.today_minutes == 0 and presence["in_room_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_enter_after_ttl_decay_rearchives_and_preserves_proven_minutes(db_session, monkeypatch):
+    """decay 后 re-enter：旧档按诚实离场时刻（最后活性证明 + TTL）收档，
+    新档从现在起算——「一记录一进出场」不变，已证明的今日时长保留。"""
+    from app.schemas.community_study_room import STUDY_ROOM_PRESENCE_TTL_SECONDS
+
+    owner = await _make_user(db_session)
+    squad = await _make_squad(db_session, owner)
+    t0 = datetime(2026, 9, 23, 8, 0, 0)
+    _freeze_now(monkeypatch, t0)
+    first = await StudyRoomService.enter_room(db_session, squad.id, owner.id)
+    row = (await db_session.execute(select(StudyRoomSession).where(StudyRoomSession.user_id == owner.id))).scalar_one()
+    row.entered_at = t0 - timedelta(minutes=30)  # 已自习 30 分钟的稳态（心跳 t0）
+    await db_session.flush()
+
+    # 失联超过 TTL：诚实衰减
+    t1 = t0 + timedelta(minutes=10)
+    _freeze_now(monkeypatch, t1)
+    decayed = await StudyRoomService.get_presence(db_session, squad.id, owner.id)
+    assert decayed["members"][0].in_room is False and decayed["members"][0].is_stale is True
+
+    # 回来自动重新进场：不要求用户先手动退出；旧档收档于 hb+TTL，新档 now 起算
+    second = await StudyRoomService.enter_room(db_session, squad.id, owner.id)
+    assert second["reentered"] is False and second["session_id"] != first["session_id"]
+    assert second["entered_at"] == t1
+    # 今日累计 = 旧档已证明部分 [t0-30m, t0+90s] → 地板 31 分钟（不因收档丢失）
+    assert second["today_minutes"] == 30 + STUDY_ROOM_PRESENCE_TTL_SECONDS // 60
+
+    rows = (
+        (
+            await db_session.execute(
+                select(StudyRoomSession)
+                .where(StudyRoomSession.user_id == owner.id)
+                .order_by(StudyRoomSession.entered_at.asc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(rows) == 2
+    assert rows[0].id == first["session_id"] and rows[0].exited_at == t0 + timedelta(
+        seconds=STUDY_ROOM_PRESENCE_TTL_SECONDS
+    ), "旧档收档于诚实离场时刻（最后活性证明 + TTL）"
+    assert rows[1].id == second["session_id"] and rows[1].exited_at is None
+    open_count = sum(1 for r in rows if r.exited_at is None)
+    assert open_count == 1, "decay 收档后仍只有一个开放会话"
 
 
 # ---------------------------------------------------------------------------

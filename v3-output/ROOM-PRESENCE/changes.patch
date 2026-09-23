@@ -1,0 +1,751 @@
+diff --git a/backend/app/models/study_room.py b/backend/app/models/study_room.py
+index e3e29697..316b1a3a 100644
+--- a/backend/app/models/study_room.py
++++ b/backend/app/models/study_room.py
+@@ -1,4 +1,4 @@
+-"""共学自习室在场证明模型（D-COMM-4 · beacon 式在场）。
++"""共学自习室在场证明模型（D-COMM-4 · beacon 式在场，服务端 TTL 真源）。
+ 
+ 复用裁决（vs 既有表）：社群域无 presence/session 类模型——
+ ``GroupMember.last_active_at`` 是成员级单时间戳（无会话语义、算不出时长）、
+@@ -6,11 +6,16 @@
+ end_time/duration，无群组归属，撑不起「谁正在自习」的活体在场面）、
+ ``User.status`` 是全局在线状态（非小队作用域）。故按设计卡 §3.3
+ 「落库最小记录」立最小新表：一条记录 = 一次进出场（entered_at →
+-exited_at），exited_at IS NULL 即在场；心跳只做崩溃恢复（显式进出为主、
+-心跳兜底，离开不惩罚——在场时长如实记录，设计裁决）。
++exited_at），exited_at IS NULL 即开放记录。
+ 
+-「在场时长」只作展示、不进任何榜分（小队榜口径唯一是 sprint 完成度，
++ROOM-PRESENCE 修订：在场判定 = 开放记录 **且** last_heartbeat_at 在
++``STUDY_ROOM_PRESENCE_TTL_SECONDS``（90s）内——TTL 过期即诚实离场
++（读路径惰性判定，无需后台清理任务），杀进程/切后台后最多 TTL 内残留。
++续期信号 = 前台房间轮询（30s 一拍，绝不要求后台 Timer）；显式进出为主、
++心跳续命。离开不惩罚——在场时长如实记录（时长按 last_heartbeat_at + TTL
++诚实封顶，decay 不虚增），不进任何榜分（小队榜口径唯一是 sprint 完成度，
+ 见 services/community_squad_board_service.py；防 Duolingo 式挂机刷时长）。
++零迁移：TTL 复用既有 ``last_heartbeat_at`` 列，无 schema 变更。
+ """
+ 
+ from __future__ import annotations
+@@ -24,8 +29,9 @@ class StudyRoomSession(BaseModel):
+     """一次自习进出场（beacon 式在场证明，最小记录）。
+ 
+     - ``entered_at``：进入时刻（naive UTC，与社群域既有列约定一致）；
+-    - ``exited_at``：离开时刻；NULL = 仍在场；
+-    - ``last_heartbeat_at``：最近心跳（显式进出为主，心跳仅兜底崩溃恢复）。
++    - ``exited_at``：离开时刻；NULL = 开放记录（在场与否由 TTL 判定）；
++    - ``last_heartbeat_at``：最后活性证明（前台房间轮询/显式心跳续写；
++      也是 TTL 时间戳与时长封顶基准——零迁移复用本列）。
+     """
+ 
+     __tablename__ = "study_room_sessions"
+diff --git a/backend/app/schemas/community_study_room.py b/backend/app/schemas/community_study_room.py
+index 20694447..993cc428 100644
+--- a/backend/app/schemas/community_study_room.py
++++ b/backend/app/schemas/community_study_room.py
+@@ -1,8 +1,10 @@
+-"""共学自习室 schemas（D-COMM-4 · beacon 式在场证明）。
++"""共学自习室 schemas（D-COMM-4 · beacon 式在场证明，服务端 TTL 真源）。
+ 
+-在场证明的展示语义：
+-- ``in_room``：有开放会话（exited_at IS NULL）即在场；
+-- ``is_stale``：在场但心跳超过阈值（崩溃恢复线索，非惩罚）；
++在场证明的展示语义（ROOM-PRESENCE 修订：TTL 过期=诚实离场）：
++- ``in_room``：有开放会话（exited_at IS NULL）**且** 心跳在 TTL 内——
++  杀进程/切后台后最多 TTL 内残留，过期后读路径如实判离场（不造假在场）；
++- ``is_stale``：开放会话但 TTL 已过期（异常退出待回收的崩溃恢复线索，
++  非惩罚；展示层弱提示，不作状态降级）；
+ - 时长一律分钟粒度、地板取整，「今日」按成员本地日界（复用督促域
+   的时区惯例：push_preference.timezone，默认 Asia/Shanghai）。
+ """
+@@ -14,9 +16,11 @@ from uuid import UUID
+ 
+ from pydantic import BaseModel, ConfigDict, Field
+ 
+-# 心跳陈旧阈值：超过即标 is_stale（在场但客户端可能已失联）。
+-# beacon 式在场以显式进出为主，心跳只兜底崩溃恢复，阈值放宽以降低误伤。
+-STUDY_ROOM_STALE_MINUTES = 15
++# 在场 TTL（秒）：最后活性证明（last_heartbeat_at）超过此时长即诚实离场。
++# 续期信号 = 前台房间轮询（详情屏可见 + app 前台时 30s 一拍，绝不要求
++# 后台 Timer）；显式 enter/exit 仍是主信号。90s 给前台 30s 轮询留两次
++# 失手余量；移动端字号级别的小 JSON 调用，功耗可忽略。
++STUDY_ROOM_PRESENCE_TTL_SECONDS = 90
+ 
+ 
+ class StudyRoomEnterResponse(BaseModel):
+@@ -41,7 +45,8 @@ class StudyRoomExitResponse(BaseModel):
+ 
+ 
+ class StudyRoomHeartbeatResponse(BaseModel):
+-    """心跳（仅兜底崩溃恢复）：在场则刷新 last_heartbeat_at。"""
++    """心跳（续期信号）：有开放会话即刷新 last_heartbeat_at（TTL 续命，
++    含已 decayed 的开放记录——房间 UI 发来的活性证明）；无开放会话不自动重开。"""
+ 
+     in_room: bool
+     last_heartbeat_at: datetime | None = None
+@@ -54,11 +59,14 @@ class StudyRoomPresenceEntry(BaseModel):
+     user_id: UUID
+     display_name: str | None = Field(default=None, description="昵称或用户名（缺失为 None）")
+     role: str
+-    in_room: bool
+-    is_stale: bool = Field(default=False, description="在场但心跳超过阈值（崩溃恢复线索）")
++    in_room: bool = Field(description="开放会话且心跳在 TTL 内（TTL 过期=诚实离场）")
++    is_stale: bool = Field(
++        default=False,
++        description="有开放会话但 TTL 已过期（异常退出待回收的崩溃恢复线索，非惩罚）",
++    )
+     entered_at: datetime | None = Field(default=None, description="当前在场会话的进入时刻（不在场为 None）")
+     current_session_minutes: int = Field(default=0, ge=0, description="当前在场会话已持续分钟数（不在场为 0）")
+-    today_minutes: int = Field(default=0, ge=0, description="今日累计自习分钟数（本地日界，跨会话求和）")
++    today_minutes: int = Field(default=0, ge=0, description="今日累计自习分钟数（本地日界，跨会话求和；decay 不虚增）")
+ 
+     model_config = ConfigDict(from_attributes=True)
+ 
+diff --git a/backend/app/services/community_study_room_service.py b/backend/app/services/community_study_room_service.py
+index 36a57607..3e975f17 100644
+--- a/backend/app/services/community_study_room_service.py
++++ b/backend/app/services/community_study_room_service.py
+@@ -1,4 +1,4 @@
+-"""共学自习室服务（D-COMM-4 · beacon 式在场证明，纯在场、零音视频）。
++"""共学自习室服务（D-COMM-4 · beacon 式在场证明，服务端 TTL 真源）。
+ 
+ 复用裁决（vs 既有结构）：社群域**无** presence/session 类模型可复用——
+ ``GroupMember.last_active_at`` 是成员级单时间戳（无会话边界、算不出时长）、
+@@ -9,12 +9,27 @@ end_time/duration_minutes，无群组归属）、``User.status`` 是全局在线
+ 挂唯一 head）。小队与成员鉴权全部委托 D-COMM-3 的 SquadService
+ （Group(type=SPRINT) 场景门面），不复制第二套成员语义。
+ 
+-在场语义（设计裁决逐条落地）：
+-- 显式进出为主（enter/exit），心跳只兜底崩溃恢复（陈旧仅标记 is_stale）；
++在场语义（ROOM-PRESENCE 修订：服务端 TTL 真源，读路径只认未过期）：
++- **在场判定** = 开放会话（exited_at IS NULL）且 ``last_heartbeat_at``
++  在 ``STUDY_ROOM_PRESENCE_TTL_SECONDS``（90s）内；TTL 过期 = 诚实离场
++  （读路径惰性判定，无需后台清理任务）——杀进程/切后台后最多 TTL 内
++  残留，过期后其他成员看到的是如实缺席，绝不造假在场；
++- **续期信号 = 前台房间轮询**（详情屏可见 + app 前台时 30s 一拍心跳，
++  移动端轻配合；绝不要求后台 Timer——前台 Timer 在 AppLifecycleState
++  paused 即停，后台期间在场如实衰减）。备选否决：学习活动（语义最弱，
++  在 A 队聊天不该续 B 队自习室在场，且要挂多个写路径不省）、WS 帧
++  （自习室屏不持 WS，为此建连接更重）；
++- 显式进出为主：enter 建档/续命、exit 立即清档；心跳端点是显式续期
++  （房间 UI 发来的活性证明，对 decayed 开放记录也续命——不是自动重开，
++  无开放会话时仍诚实上报不建档）；
++- enter 撞上 decayed 开放会话：按模型定义的诚实离场时刻收档
++  （exited_at = last_heartbeat_at + TTL），再建新记录重新进场——
++  「一记录一进出场」历史不变，已证明的今日时长保留；
+ - 离开**不惩罚**（无 Forest 枯死机制）：时长如实记录，stale 会话不强制
+-  结算、不伪造 exited_at；
+-- enter 幂等：已有开放会话（含 stale）→ 刷新心跳并原样返回，不建重复
+-  记录（sqlite 测试路径无部分唯一索引，幂等语义即唯一性保证）；
++  结算、不伪造用户发出的 exit；
++- **时长诚实封顶**：会话计入终点不得晚于 ``last_heartbeat_at + TTL``
++  （开放会话 decay 后今日累计不再虚增；显式退出的会话按退出前最后
++  活性证明封顶，不把失联期算成自习时长）；
+ - 「今日累计」按成员本地日界（复用督促域时区惯例：push_preference.timezone
+   默认 Asia/Shanghai，naive-UTC 存储）；跨日会话只计入今日重叠部分；
+ - 时长仅展示，**不进任何榜分**（小队榜口径唯一是 sprint 完成度，见
+@@ -25,7 +40,7 @@ end_time/duration_minutes，无群组归属）、``User.status`` 是全局在线
+ 
+ from __future__ import annotations
+ 
+-from datetime import UTC, datetime
++from datetime import UTC, datetime, timedelta
+ from uuid import UUID
+ from zoneinfo import ZoneInfo
+ 
+@@ -37,7 +52,7 @@ from app.core.datetime_utils import _utcnow
+ from app.models.community import GroupMember
+ from app.models.study_room import StudyRoomSession
+ from app.models.user import PushPreference
+-from app.schemas.community_study_room import STUDY_ROOM_STALE_MINUTES, StudyRoomPresenceEntry
++from app.schemas.community_study_room import STUDY_ROOM_PRESENCE_TTL_SECONDS, StudyRoomPresenceEntry
+ from app.services.community_squad_service import SquadService
+ 
+ DEFAULT_USER_TIMEZONE = "Asia/Shanghai"
+@@ -80,6 +95,23 @@ def overlap_minutes(start: datetime, end: datetime, window_start: datetime, wind
+     return max(0, int((e - s).total_seconds() // 60))
+ 
+ 
++def _is_alive(session: StudyRoomSession, now: datetime) -> bool:
++    """TTL 在场判定：最后活性证明距今不超过 TTL（naive UTC 入参）。"""
++    age = (_naive_utc(now) - _naive_utc(session.last_heartbeat_at)).total_seconds()
++    return age <= STUDY_ROOM_PRESENCE_TTL_SECONDS
++
++
++def _effective_end(session: StudyRoomSession, now: datetime) -> datetime:
++    """会话的诚实计入终点：min(退出时刻或现在, 最后活性证明 + TTL)。
++
++    开放会话 decay 后不再虚增时长；显式退出的会话按退出前最后活性证明
++    封顶（失联期不算自习时长）。时钟回拨防御：终点不早于进入时刻。
++    """
++    wall_end = session.exited_at if session.exited_at is not None else _naive_utc(now)
++    ttl_cap = _naive_utc(session.last_heartbeat_at) + timedelta(seconds=STUDY_ROOM_PRESENCE_TTL_SECONDS)
++    return max(min(_naive_utc(wall_end), ttl_cap), _naive_utc(session.entered_at))
++
++
+ class StudyRoomService:
+     """小队自习室：在场证明的进出/心跳/聚合门面（鉴权委托 SquadService）。"""
+ 
+@@ -124,23 +156,31 @@ class StudyRoomService:
+         )
+         total = 0
+         for session in result.scalars().all():
+-            end = session.exited_at or now
++            # TTL 诚实封顶：decay 的开放会话停算于最后活性证明 + TTL，
++            # 显式退出的会话停算于 min(退出时刻, 活性证明 + TTL)。
++            end = _effective_end(session, now)
+             total += overlap_minutes(session.entered_at, end, start_utc, end_utc)
+         return total
+ 
+     # ------------------------------------------------------------------
+-    # 进出/心跳（beacon：显式进出为主，心跳兜底）
++    # 进出/心跳（beacon：显式进出为主，TTL 过期=诚实离场）
+     # ------------------------------------------------------------------
+     @staticmethod
+     async def enter_room(db: AsyncSession, group_id: UUID, user_id: UUID) -> dict:
+-        """进入自习室。幂等：已有开放会话 → 刷新心跳并返回（reentered=True）。"""
++        """进入自习室。幂等：命中 TTL 内的开放会话 → 刷新心跳原样返回（reentered=True）；
++        撞上 decayed 开放会话 → 按诚实离场时刻收档并新建记录（reentered=False）。"""
+         await StudyRoomService._squad_and_member(db, group_id, user_id)
+         now = _utcnow()
+         session = await StudyRoomService._get_open_session(db, group_id, user_id)
+-        reentered = session is not None
+-        if reentered:
+-            session.last_heartbeat_at = now  # type: ignore[union-attr]
++        reentered = False
++        if session is not None and _is_alive(session, now):
++            session.last_heartbeat_at = now
++            reentered = True
+         else:
++            if session is not None:
++                # decayed 开放记录：按模型定义的诚实离场时刻收档（最后一次
++                # 活性证明 + TTL），已证明的时长保留在历史里、不虚报不丢失。
++                session.exited_at = _effective_end(session, now)
+             session = StudyRoomSession(
+                 group_id=group_id,
+                 user_id=user_id,
+@@ -162,7 +202,8 @@ class StudyRoomService:
+ 
+     @staticmethod
+     async def exit_room(db: AsyncSession, group_id: UUID, user_id: UUID) -> dict:
+-        """退出自习室。幂等诚实：无开放会话 → already_out=True（不报错、不造记录）。"""
++        """退出自习室。幂等诚实：无开放会话 → already_out=True（不报错、不造记录）。
++        显式退出立即清档（含 decayed 记录的回收）；时长按退出前最后活性证明封顶。"""
+         await StudyRoomService._squad_and_member(db, group_id, user_id)
+         now = _utcnow()
+         session = await StudyRoomService._get_open_session(db, group_id, user_id)
+@@ -175,8 +216,11 @@ class StudyRoomService:
+                 "already_out": True,
+                 "today_minutes": today_minutes,
+             }
+-        # 防御：时钟回拨等极端情况下 exited_at 不得早于 entered_at。
+-        exited_at = max(_naive_utc(now), _naive_utc(session.entered_at))
++        # 防御：时钟回拨等极端情况下 exited_at 不得早于 entered_at；
++        # 时长按退出前最后活性证明 + TTL 封顶（失联期不算自习时长）。
++        entered_at = _naive_utc(session.entered_at)
++        exited_at = max(_naive_utc(now), entered_at)
++        session_minutes = overlap_minutes(entered_at, _effective_end(session, now), entered_at, exited_at)
+         session.exited_at = exited_at
+         session.last_heartbeat_at = exited_at
+         await db.flush()
+@@ -184,14 +228,15 @@ class StudyRoomService:
+         return {
+             "session_id": session.id,
+             "exited_at": session.exited_at,
+-            "session_minutes": int((exited_at - _naive_utc(session.entered_at)).total_seconds() // 60),
++            "session_minutes": session_minutes,
+             "already_out": False,
+             "today_minutes": today_minutes,
+         }
+ 
+     @staticmethod
+     async def heartbeat(db: AsyncSession, group_id: UUID, user_id: UUID) -> dict:
+-        """心跳兜底：在场则刷新 last_heartbeat_at；不在场诚实上报（不自动重开）。"""
++        """续期信号（前台房间轮询/显式心跳）：有开放会话（含 decayed）即刷新
++        last_heartbeat_at 续命并如实上报在场；无开放会话诚实上报（不自动重开）。"""
+         await StudyRoomService._squad_and_member(db, group_id, user_id)
+         now = _utcnow()
+         session = await StudyRoomService._get_open_session(db, group_id, user_id)
+@@ -209,7 +254,9 @@ class StudyRoomService:
+     async def get_presence(db: AsyncSession, group_id: UUID, requester_id: UUID) -> dict:
+         """小队在室视图：全部在册成员 + 各自在场状态与今日累计（非成员 403）。
+ 
+-        - in_room：有开放会话；is_stale：在场但心跳超过 STUDY_ROOM_STALE_MINUTES；
++        - in_room：开放会话且心跳在 TTL 内（TTL 过期=诚实离场，读路径只认
++          未过期——杀进程/切后台后最多 TTL 内残留，过期如实判缺席）；
++        - is_stale：有开放会话但 TTL 已过期（异常退出待回收的崩溃恢复线索）；
+         - 「今日」按各成员本地日界（跨时区小队各自如实）；
+         - 未入场成员照常列出（today_minutes=0）——如实记录、不缺席惩罚。
+         """
+@@ -233,13 +280,12 @@ class StudyRoomService:
+             user = member.user
+             display_name = (user.nickname if user else None) or (user.username if user else None)
+             session = await StudyRoomService._get_open_session(db, group_id, member.user_id)
+-            in_room = session is not None
++            in_room = session is not None and _is_alive(session, now)
++            # decayed 开放记录：不在场（诚实）但标 stale（崩溃恢复线索，
++            # 下次显式 enter/exit 会回收该记录）。
++            is_stale = session is not None and not in_room
+             if in_room:
+                 in_room_count += 1
+-            is_stale = bool(
+-                in_room
+-                and (now - _naive_utc(session.last_heartbeat_at)).total_seconds() > STUDY_ROOM_STALE_MINUTES * 60
+-            )
+             today_minutes = await StudyRoomService._today_minutes_for(db, group_id, member.user_id, now=now)
+             entries.append(
+                 StudyRoomPresenceEntry(
+@@ -248,9 +294,16 @@ class StudyRoomService:
+                     role=str(member.role.value),
+                     in_room=in_room,
+                     is_stale=is_stale,
+-                    entered_at=session.entered_at if session else None,
++                    entered_at=session.entered_at if in_room else None,
+                     current_session_minutes=(
+-                        overlap_minutes(session.entered_at, now, session.entered_at, now) if session else 0
++                        overlap_minutes(
++                            session.entered_at,
++                            _effective_end(session, now),
++                            session.entered_at,
++                            now,
++                        )
++                        if in_room
++                        else 0
+                     ),
+                     today_minutes=today_minutes,
+                 )
+diff --git a/backend/tests/unit/test_community_study_room.py b/backend/tests/unit/test_community_study_room.py
+index d9613373..da70046e 100644
+--- a/backend/tests/unit/test_community_study_room.py
++++ b/backend/tests/unit/test_community_study_room.py
+@@ -2,10 +2,14 @@
+ 
+ 钉六条验收面：
+ 1. 在场进出/时长：显式进出为主（enter/exit），会话时长与「今日累计」
+-   如实结算（跨日会话只计入今日重叠部分，本地日界照督促域时区惯例）；
++   如实结算（跨日会话只计入今日重叠部分，本地日界照督促域时区惯例；
++   时长按最后活性证明 + TTL 诚实封顶，decay 不虚增）；
+    enter 幂等（重复进入不建重复会话）、exit 幂等诚实（already_out）；
+-2. 在室视图：谁在自习 + 今日累计，未入场成员如实为 0（不缺席惩罚）；
+-   心跳仅兜底崩溃恢复（陈旧标 is_stale，不强制结算）；
++2. 在室视图（ROOM-PRESENCE 服务端 TTL 真源）：读路径只认未过期——
++   in_room = 开放会话且心跳在 TTL（90s）内，TTL 过期=诚实离场（杀进程
++   后最多 TTL 内残留）；is_stale = 有开放会话但已过期（崩溃恢复线索）；
++   未入场成员如实为 0（不缺席惩罚）；心跳是显式续期信号（前台房间
++   轮询拍，绝不要求后台 Timer）；
+ 3. 小队榜：榜分零新口径——唯一消费 D-COMM-3 聚合面（get_squad_sprint_progress
+    → sprint_task_ledger，BP-4 SSOT），排序正确（并列同名次）、percentile
+    区间、分页包装；成员 <3 人 board_valid=False / self_view_only=True
+@@ -289,45 +293,56 @@ async def test_today_minutes_local_day_window_and_cross_midnight_overlap(db_sess
+ 
+ 
+ @pytest.mark.asyncio
+-async def test_presence_lists_members_with_room_state_and_stale_flag(db_session, monkeypatch):
++async def test_presence_lists_members_with_ttl_and_stale_flag(db_session, monkeypatch):
++    """在室视图（ROOM-PRESENCE TTL 语义）：读路径只认未过期——
++    在场=A 新鲜心跳；TTL 过期=B 诚实离场+is_stale（崩溃恢复线索）；
++    显式退出=C 立即清档（连 is_stale 都不留）；未入场=D 如实为 0。"""
++    from app.schemas.community_study_room import STUDY_ROOM_PRESENCE_TTL_SECONDS
++
+     owner = await _make_user(db_session, "pown")
+     insider = await _make_user(db_session, "pins")
+-    outsider_member = await _make_user(db_session, "pout")
++    lapsed = await _make_user(db_session, "plap")
++    leaver = await _make_user(db_session, "pleave")
+     stranger = await _make_user(db_session, "str")
+     squad = await _make_squad(db_session, owner)
+     await _join(db_session, squad, insider)
+-    await _join(db_session, squad, outsider_member)
++    await _join(db_session, squad, lapsed)
++    await _join(db_session, squad, leaver)
+     await db_session.commit()
+ 
+     frozen = datetime(2026, 9, 23, 6, 0, 0)
+     _freeze_now(monkeypatch, frozen)
+-    await StudyRoomService.enter_room(db_session, squad.id, insider.id)  # 在场（新鲜心跳）
+-    stale = await StudyRoomService.enter_room(db_session, squad.id, outsider_member.id)
+-    # 把 stale 会话心跳拨回 20 分钟前（> 阈值 15 分钟）→ is_stale
+-    row = (
+-        await db_session.execute(select(StudyRoomSession).where(StudyRoomSession.user_id == outsider_member.id))
++    await StudyRoomService.enter_room(db_session, squad.id, insider.id)  # 在场（心跳新鲜）
++    await StudyRoomService.enter_room(db_session, squad.id, lapsed.id)
++    lapsed_row = (
++        await db_session.execute(select(StudyRoomSession).where(StudyRoomSession.user_id == lapsed.id))
+     ).scalar_one()
+-    stale_session_id = stale["session_id"]
+-    assert row.id == stale_session_id
+-    row.last_heartbeat_at = frozen - timedelta(minutes=20)
++    # 心跳拨回 TTL+1s 前 → 过期：读路径诚实判离场（旧语义只标 is_stale 仍算在场）
++    lapsed_row.last_heartbeat_at = frozen - timedelta(seconds=STUDY_ROOM_PRESENCE_TTL_SECONDS + 1)
+     await db_session.flush()
++    await StudyRoomService.enter_room(db_session, squad.id, leaver.id)
++    exited = await StudyRoomService.exit_room(db_session, squad.id, leaver.id)
++    assert exited["already_out"] is False
+ 
+     presence = await StudyRoomService.get_presence(db_session, squad.id, owner.id)
+-    assert presence["member_count"] == 3 and presence["in_room_count"] == 2
++    assert presence["member_count"] == 4 and presence["in_room_count"] == 1
+     by_user = {m.user_id: m for m in presence["members"]}
+-    assert set(by_user) == {owner.id, insider.id, outsider_member.id}, "非成员不得出现在在室视图"
++    assert set(by_user) == {owner.id, insider.id, lapsed.id, leaver.id}, "非成员不得出现在在室视图"
+ 
+     assert by_user[owner.id].in_room is False and by_user[owner.id].today_minutes == 0, "未入场成员如实为 0"
+     assert by_user[insider.id].in_room is True and by_user[insider.id].is_stale is False
+-    assert by_user[outsider_member.id].in_room is True and by_user[outsider_member.id].is_stale is True
+-
+-    # 心跳兜底：在场刷新；不在场如实上报
+-    beat = await StudyRoomService.heartbeat(db_session, squad.id, outsider_member.id)
+-    assert beat["in_room"] is True
+-    row.last_heartbeat_at = frozen - timedelta(minutes=20)
+-    await db_session.flush()
+-    beat2 = await StudyRoomService.heartbeat(db_session, squad.id, outsider_member.id)
+-    assert beat2["in_room"] is True and beat2["last_heartbeat_at"] == frozen
++    assert by_user[lapsed.id].in_room is False and by_user[lapsed.id].is_stale is True, "TTL 过期=诚实离场"
++    assert by_user[lapsed.id].entered_at is None and by_user[lapsed.id].current_session_minutes == 0
++    assert by_user[leaver.id].in_room is False and by_user[leaver.id].is_stale is False, "显式退出立即清、无残留"
++
++    # 心跳续期：房间 UI 的活性证明把 decayed 开放记录续命回在场（非自动重开）
++    beat = await StudyRoomService.heartbeat(db_session, squad.id, lapsed.id)
++    assert beat["in_room"] is True and beat["last_heartbeat_at"] == frozen
++    renewed = await StudyRoomService.get_presence(db_session, squad.id, owner.id)
++    by_user2 = {m.user_id: m for m in renewed["members"]}
++    assert by_user2[lapsed.id].in_room is True and by_user2[lapsed.id].is_stale is False
++
++    # 无开放会话的心跳：诚实上报（不自动重开）
+     beat_out = await StudyRoomService.heartbeat(db_session, squad.id, owner.id)
+     assert beat_out["in_room"] is False and beat_out["today_minutes"] == 0
+ 
+@@ -336,6 +351,139 @@ async def test_presence_lists_members_with_room_state_and_stale_flag(db_session,
+         await StudyRoomService.get_presence(db_session, squad.id, stranger.id)
+ 
+ 
++# ---------------------------------------------------------------------------
++# 2.5 TTL 真源：过期=诚实离场 / exit 即清 / 续期信号 / decay 收档（ROOM-PRESENCE）
++# ---------------------------------------------------------------------------
++@pytest.mark.asyncio
++async def test_ttl_expiry_is_honest_departure_and_minutes_stop_accruing(db_session, monkeypatch):
++    """红证：enter 后 TTL 过期 → 读路径不再判在场（杀进程后最多 TTL 内残留，
++    TTL 后诚实消失）；今日累计同步封顶于最后活性证明 + TTL（decay 不虚增）。"""
++    from app.schemas.community_study_room import STUDY_ROOM_PRESENCE_TTL_SECONDS
++
++    owner = await _make_user(db_session)
++    squad = await _make_squad(db_session, owner)
++    t0 = datetime(2026, 9, 23, 8, 0, 0)
++    _freeze_now(monkeypatch, t0)
++    entered = await StudyRoomService.enter_room(db_session, squad.id, owner.id)
++    assert entered["reentered"] is False
++
++    # 回拨进入时刻 10 分钟（模拟在场已 10 分钟的稳态），心跳仍为 t0
++    row = (await db_session.execute(select(StudyRoomSession).where(StudyRoomSession.user_id == owner.id))).scalar_one()
++    row.entered_at = t0 - timedelta(minutes=10)
++    await db_session.flush()
++
++    # 恰在 TTL 边界（age == TTL）仍算在场：今日累计 = 10min + 90s → 地板 11 分钟
++    boundary = t0 + timedelta(seconds=STUDY_ROOM_PRESENCE_TTL_SECONDS)
++    _freeze_now(monkeypatch, boundary)
++    at_edge = await StudyRoomService.get_presence(db_session, squad.id, owner.id)
++    assert at_edge["members"][0].in_room is True and at_edge["in_room_count"] == 1
++    assert at_edge["members"][0].today_minutes == 10 + STUDY_ROOM_PRESENCE_TTL_SECONDS // 60
++
++    # 越界 1 秒：诚实离场 + 今日累计封顶不再虚增（失联期不算自习时长）
++    _freeze_now(monkeypatch, boundary + timedelta(seconds=1))
++    after = await StudyRoomService.get_presence(db_session, squad.id, owner.id)
++    entry = after["members"][0]
++    assert entry.in_room is False and entry.is_stale is True
++    assert entry.entered_at is None and entry.current_session_minutes == 0
++    assert entry.today_minutes == 10 + STUDY_ROOM_PRESENCE_TTL_SECONDS // 60, "decay 后时长封顶、不随墙钟虚增"
++    assert after["in_room_count"] == 0
++
++
++@pytest.mark.asyncio
++async def test_heartbeat_renews_ttl_for_active_only(db_session, monkeypatch):
++    """续期信号续命：前台房间轮询（心跳）给活跃者续命——总 120s > TTL 仍在场；
++    同一小队无续期的队友在同一时刻诚实衰减为离场（对照组）。"""
++    owner = await _make_user(db_session, "renew")
++    mate = await _make_user(db_session, "quiet")
++    squad = await _make_squad(db_session, owner)
++    await _join(db_session, squad, mate)
++    t0 = datetime(2026, 9, 23, 8, 0, 0)
++    _freeze_now(monkeypatch, t0)
++    await StudyRoomService.enter_room(db_session, squad.id, owner.id)
++    await StudyRoomService.enter_room(db_session, squad.id, mate.id)
++
++    # +60s：只有 owner 发心跳（前台轮询拍）
++    _freeze_now(monkeypatch, t0 + timedelta(seconds=60))
++    beat = await StudyRoomService.heartbeat(db_session, squad.id, owner.id)
++    assert beat["in_room"] is True
++
++    # +120s（> TTL）：owner 被续命仍在场；mate 无续期诚实衰减
++    _freeze_now(monkeypatch, t0 + timedelta(seconds=120))
++    presence = await StudyRoomService.get_presence(db_session, squad.id, owner.id)
++    by_user = {m.user_id: m for m in presence["members"]}
++    assert by_user[owner.id].in_room is True and by_user[owner.id].is_stale is False
++    assert by_user[mate.id].in_room is False and by_user[mate.id].is_stale is True
++    assert presence["in_room_count"] == 1
++
++
++@pytest.mark.asyncio
++async def test_exit_clears_presence_immediately_even_fresh(db_session, monkeypatch):
++    """exit 立即清：刚 enter（TTL 远未过期）即退出 → 读路径立即不在场，
++    无 is_stale 残留、无时长时间（诚实为 0 分钟）。"""
++    owner = await _make_user(db_session)
++    squad = await _make_squad(db_session, owner)
++    t0 = datetime(2026, 9, 23, 8, 0, 0)
++    _freeze_now(monkeypatch, t0)
++    await StudyRoomService.enter_room(db_session, squad.id, owner.id)
++    fresh = await StudyRoomService.get_presence(db_session, squad.id, owner.id)
++    assert fresh["members"][0].in_room is True
++
++    exited = await StudyRoomService.exit_room(db_session, squad.id, owner.id)
++    assert exited["already_out"] is False and exited["session_minutes"] == 0
++    presence = await StudyRoomService.get_presence(db_session, squad.id, owner.id)
++    entry = presence["members"][0]
++    assert entry.in_room is False and entry.is_stale is False, "显式退出立即清档、零残留"
++    assert entry.today_minutes == 0 and presence["in_room_count"] == 0
++
++
++@pytest.mark.asyncio
++async def test_enter_after_ttl_decay_rearchives_and_preserves_proven_minutes(db_session, monkeypatch):
++    """decay 后 re-enter：旧档按诚实离场时刻（最后活性证明 + TTL）收档，
++    新档从现在起算——「一记录一进出场」不变，已证明的今日时长保留。"""
++    from app.schemas.community_study_room import STUDY_ROOM_PRESENCE_TTL_SECONDS
++
++    owner = await _make_user(db_session)
++    squad = await _make_squad(db_session, owner)
++    t0 = datetime(2026, 9, 23, 8, 0, 0)
++    _freeze_now(monkeypatch, t0)
++    first = await StudyRoomService.enter_room(db_session, squad.id, owner.id)
++    row = (await db_session.execute(select(StudyRoomSession).where(StudyRoomSession.user_id == owner.id))).scalar_one()
++    row.entered_at = t0 - timedelta(minutes=30)  # 已自习 30 分钟的稳态（心跳 t0）
++    await db_session.flush()
++
++    # 失联超过 TTL：诚实衰减
++    t1 = t0 + timedelta(minutes=10)
++    _freeze_now(monkeypatch, t1)
++    decayed = await StudyRoomService.get_presence(db_session, squad.id, owner.id)
++    assert decayed["members"][0].in_room is False and decayed["members"][0].is_stale is True
++
++    # 回来自动重新进场：不要求用户先手动退出；旧档收档于 hb+TTL，新档 now 起算
++    second = await StudyRoomService.enter_room(db_session, squad.id, owner.id)
++    assert second["reentered"] is False and second["session_id"] != first["session_id"]
++    assert second["entered_at"] == t1
++    # 今日累计 = 旧档已证明部分 [t0-30m, t0+90s] → 地板 31 分钟（不因收档丢失）
++    assert second["today_minutes"] == 30 + STUDY_ROOM_PRESENCE_TTL_SECONDS // 60
++
++    rows = (
++        (
++            await db_session.execute(
++                select(StudyRoomSession)
++                .where(StudyRoomSession.user_id == owner.id)
++                .order_by(StudyRoomSession.entered_at.asc())
++            )
++        )
++        .scalars()
++        .all()
++    )
++    assert len(rows) == 2
++    assert rows[0].id == first["session_id"] and rows[0].exited_at == t0 + timedelta(
++        seconds=STUDY_ROOM_PRESENCE_TTL_SECONDS
++    ), "旧档收档于诚实离场时刻（最后活性证明 + TTL）"
++    assert rows[1].id == second["session_id"] and rows[1].exited_at is None
++    open_count = sum(1 for r in rows if r.exited_at is None)
++    assert open_count == 1, "decay 收档后仍只有一个开放会话"
++
++
+ # ---------------------------------------------------------------------------
+ # 3. 小队榜：排序 / 并列名次 / 分页 / <3 人降级
+ # ---------------------------------------------------------------------------
+diff --git a/mobile/lib/features/community/data/models/study_room_models.dart b/mobile/lib/features/community/data/models/study_room_models.dart
+index e2e43e5b..883cbd34 100644
+--- a/mobile/lib/features/community/data/models/study_room_models.dart
++++ b/mobile/lib/features/community/data/models/study_room_models.dart
+@@ -2,7 +2,9 @@
+ ///
+ /// 后端契约（app/schemas/community_study_room.py）：
+ /// - 在场 = study_room_sessions 的进出记录（口径词典「在场」，时长仅展示）；
+-/// - in_room：有开放会话即在室；is_stale：在室但心跳超阈值（崩溃恢复线索，
++/// - in_room：开放会话且心跳在服务端 TTL（90s）内——TTL 过期=诚实离场
++///   （ROOM-PRESENCE：杀进程/切后台后最多 TTL 内残留，读路径只认未过期）；
++/// - is_stale：开放会话但 TTL 已过期（异常退出待回收的崩溃恢复线索，
+ ///   非惩罚——展示层只作弱提示，不作状态降级）；
+ /// - 时长分钟粒度、地板取整；「今日累计」按成员本地日界（服务端算好，
+ ///   客户端不自算不换算）。
+@@ -36,10 +38,10 @@ class StudyRoomPresenceEntry {
+   final String? displayName;
+   final String? role;
+ 
+-  /// 是否在室（有开放会话）。
++  /// 是否在室（开放会话且心跳在服务端 TTL 内；过期=诚实离场）。
+   final bool inRoom;
+ 
+-  /// 在室但心跳超阈值（崩溃恢复线索，非惩罚）。
++  /// 有开放会话但 TTL 已过期（异常退出待回收的崩溃恢复线索，非惩罚）。
+   final bool isStale;
+   final int currentSessionMinutes;
+ 
+diff --git a/mobile/lib/features/community/presentation/screens/squad_detail_screen.dart b/mobile/lib/features/community/presentation/screens/squad_detail_screen.dart
+index 7fb88bd7..933f28b4 100644
+--- a/mobile/lib/features/community/presentation/screens/squad_detail_screen.dart
++++ b/mobile/lib/features/community/presentation/screens/squad_detail_screen.dart
+@@ -288,6 +288,12 @@ class _LeaderboardRow extends StatelessWidget {
+ }
+ 
+ /// 必达项②：自习室（在室 = success 在线语义；显式进出 + 今日累计）。
++///
++/// 在场续期（ROOM-PRESENCE）：服务端以「最后活性证明 + TTL(90s)」判在场，
++/// 本卡片在**前台可见**期间每 30s 轮询一次心跳+在场列表作续期拍——
++/// 看着自习室 = 在自习室（最省的诚实信号源）。绝不要求后台 Timer：
++/// AppLifecycleState 一离开 resumed 即停拍，后台/杀进程后在场由服务端
++/// TTL 如实衰减为离场（最多 90s 残留），回到前台立即拉一次诚实状态。
+ class _StudyRoomCard extends ConsumerStatefulWidget {
+   const _StudyRoomCard({required this.groupId});
+ 
+@@ -297,8 +303,54 @@ class _StudyRoomCard extends ConsumerStatefulWidget {
+   ConsumerState<_StudyRoomCard> createState() => _StudyRoomCardState();
+ }
+ 
+-class _StudyRoomCardState extends ConsumerState<_StudyRoomCard> {
++class _StudyRoomCardState extends ConsumerState<_StudyRoomCard>
++    with WidgetsBindingObserver {
+   bool _actionInFlight = false;
++  Timer? _renewalTimer;
++
++  /// 轮询周期（30s）：TTL 90s 内至少两次续期拍，单拍网络失败不失联。
++  static const Duration _renewalInterval = Duration(seconds: 30);
++
++  void _renewPresence() {
++    ref
++      ..invalidate(squadMyRoomStatusProvider(widget.groupId))
++      ..invalidate(squadPresenceProvider(widget.groupId));
++  }
++
++  void _startRenewalTimer() {
++    _renewalTimer ??= Timer.periodic(_renewalInterval, (_) => _renewPresence());
++  }
++
++  void _stopRenewalTimer() {
++    _renewalTimer?.cancel();
++    _renewalTimer = null;
++  }
++
++  @override
++  void initState() {
++    super.initState();
++    WidgetsBinding.instance.addObserver(this);
++    _startRenewalTimer();
++  }
++
++  @override
++  void didChangeAppLifecycleState(AppLifecycleState state) {
++    if (state == AppLifecycleState.resumed) {
++      // 回前台立即拉一次（后台期间服务端 TTL 可能已诚实衰减），再恢复轮询。
++      _renewPresence();
++      _startRenewalTimer();
++    } else {
++      // 前台-only：退到后台即停拍，绝不后台续期（在场诚实衰减）。
++      _stopRenewalTimer();
++    }
++  }
++
++  @override
++  void dispose() {
++    WidgetsBinding.instance.removeObserver(this);
++    _stopRenewalTimer();
++    super.dispose();
++  }
+ 
+   Future<void> _toggleRoom(bool enter) async {
+     if (_actionInFlight) {
+@@ -369,7 +421,8 @@ class _StudyRoomCardState extends ConsumerState<_StudyRoomCard> {
+               ],
+             ),
+             SizedBox(height: context.space.md),
+-            // 本人状态（心跳诚实上报：不在场不自动重开，进出以按钮为准）。
++            // 本人状态（心跳端点诚实上报：不在场不自动重开，进出以按钮为准；
++            // 服务端 TTL 过期即如实判离场，前台轮询拍负责续期）。
+             myStatusAsync.when(
+               loading: () => const Padding(
+                 padding: EdgeInsets.symmetric(vertical: 8),
+@@ -444,7 +497,8 @@ class _StudyRoomCardState extends ConsumerState<_StudyRoomCard> {
+   }
+ }
+ 
+-/// 在室状态徽标：success 语义（在线），心跳滞后只作弱提示不降级。
++/// 在室状态徽标：success 语义（在线）。服务端 TTL 真源：在室=心跳在
++/// 90s TTL 内；过期即如实判离场（is_stale 只作弱提示不降级）。
+ class _RoomStatusPill extends StatelessWidget {
+   const _RoomStatusPill({required this.inRoom});
+ 
+@@ -529,6 +583,8 @@ class _PresenceRow extends StatelessWidget {
+                       overflow: TextOverflow.ellipsis,
+                     ),
+                   ),
++                  // is_stale = 开放会话但 TTL 已过期（异常退出待回收）——
++                  // 崩溃恢复线索的弱提示，不改变灰点「离场」判定。
+                   if (entry.isStale) ...[
+                     SizedBox(width: context.space.xs),
+                     Tooltip(
+diff --git a/mobile/test/features/community/presentation/screens/squad_detail_screen_test.dart b/mobile/test/features/community/presentation/screens/squad_detail_screen_test.dart
+index 721b77c5..5d08de94 100644
+--- a/mobile/test/features/community/presentation/screens/squad_detail_screen_test.dart
++++ b/mobile/test/features/community/presentation/screens/squad_detail_screen_test.dart
+@@ -80,6 +80,28 @@ void main() {
+       );
+     });
+ 
++    testWidgets(
++        'study room renews presence via foreground polling while card visible',
++        (tester) async {
++      // ROOM-PRESENCE：服务端 TTL(90s) 真源——卡片前台可见期间每 30s 一拍
++      // 心跳+在场轮询作续期信号（看着自习室 = 在自习室）；绝不后台续期。
++      final repository = _FakeSquadRepository(
++        board: _boardTies(),
++        presence: _presence(inRoomCount: 1),
++      );
++      await _pumpSquadDetail(tester, repository: repository);
++      expect(repository.heartbeatCalls, 1); // 初次进屏拉一次本人状态
++      expect(repository.presenceCalls, 1);
++
++      await tester.pump(const Duration(seconds: 30));
++      expect(repository.heartbeatCalls, 2, reason: '30s 续期拍重放心跳（服务端 TTL 续命）');
++      expect(repository.presenceCalls, 2, reason: '30s 续期拍同时刷新全员在场列表');
++
++      await tester.pump(const Duration(seconds: 30));
++      expect(repository.heartbeatCalls, 3);
++      expect(repository.presenceCalls, 3);
++    });
++
+     testWidgets(
+         'self_view_only degrade shows notice and self-anchor switch, not a broken board',
+         (tester) async {
+@@ -282,6 +304,8 @@ class _FakeSquadRepository extends SquadRepository {
+   final StudyRoomPresence? presence;
+   final List<SharedErrorEntry> sharedErrors;
+   int enterCalls = 0;
++  int heartbeatCalls = 0;
++  int presenceCalls = 0;
+ 
+   @override
+   Future<List<SquadListItem>> listMySquads() async => const [];
+@@ -305,12 +329,16 @@ class _FakeSquadRepository extends SquadRepository {
+       board ?? (throw Exception('no board fixture'));
+ 
+   @override
+-  Future<StudyRoomPresence> getPresence(String groupId) async =>
+-      presence ?? (throw Exception('no presence fixture'));
++  Future<StudyRoomPresence> getPresence(String groupId) async {
++    presenceCalls++;
++    return presence ?? (throw Exception('no presence fixture'));
++  }
+ 
+   @override
+-  Future<StudyRoomMyStatus> heartbeatStudyRoom(String groupId) async =>
+-      StudyRoomMyStatus(inRoom: enterCalls > 0, todayMinutes: 12);
++  Future<StudyRoomMyStatus> heartbeatStudyRoom(String groupId) async {
++    heartbeatCalls++;
++    return StudyRoomMyStatus(inRoom: enterCalls > 0, todayMinutes: 12);
++  }
+ 
+   @override
+   Future<StudyRoomMyStatus> enterStudyRoom(String groupId) async {

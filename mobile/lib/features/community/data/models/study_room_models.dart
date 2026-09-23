@@ -2,7 +2,9 @@
 ///
 /// 后端契约（app/schemas/community_study_room.py）：
 /// - 在场 = study_room_sessions 的进出记录（口径词典「在场」，时长仅展示）；
-/// - in_room：有开放会话即在室；is_stale：在室但心跳超阈值（崩溃恢复线索，
+/// - in_room：开放会话且心跳在服务端 TTL（90s）内——TTL 过期=诚实离场
+///   （ROOM-PRESENCE：杀进程/切后台后最多 TTL 内残留，读路径只认未过期）；
+/// - is_stale：开放会话但 TTL 已过期（异常退出待回收的崩溃恢复线索，
 ///   非惩罚——展示层只作弱提示，不作状态降级）；
 /// - 时长分钟粒度、地板取整；「今日累计」按成员本地日界（服务端算好，
 ///   客户端不自算不换算）。
@@ -36,10 +38,10 @@ class StudyRoomPresenceEntry {
   final String? displayName;
   final String? role;
 
-  /// 是否在室（有开放会话）。
+  /// 是否在室（开放会话且心跳在服务端 TTL 内；过期=诚实离场）。
   final bool inRoom;
 
-  /// 在室但心跳超阈值（崩溃恢复线索，非惩罚）。
+  /// 有开放会话但 TTL 已过期（异常退出待回收的崩溃恢复线索，非惩罚）。
   final bool isStale;
   final int currentSessionMinutes;
 

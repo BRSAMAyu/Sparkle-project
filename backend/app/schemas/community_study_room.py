@@ -1,8 +1,10 @@
-"""共学自习室 schemas（D-COMM-4 · beacon 式在场证明）。
+"""共学自习室 schemas（D-COMM-4 · beacon 式在场证明，服务端 TTL 真源）。
 
-在场证明的展示语义：
-- ``in_room``：有开放会话（exited_at IS NULL）即在场；
-- ``is_stale``：在场但心跳超过阈值（崩溃恢复线索，非惩罚）；
+在场证明的展示语义（ROOM-PRESENCE 修订：TTL 过期=诚实离场）：
+- ``in_room``：有开放会话（exited_at IS NULL）**且** 心跳在 TTL 内——
+  杀进程/切后台后最多 TTL 内残留，过期后读路径如实判离场（不造假在场）；
+- ``is_stale``：开放会话但 TTL 已过期（异常退出待回收的崩溃恢复线索，
+  非惩罚；展示层弱提示，不作状态降级）；
 - 时长一律分钟粒度、地板取整，「今日」按成员本地日界（复用督促域
   的时区惯例：push_preference.timezone，默认 Asia/Shanghai）。
 """
@@ -14,9 +16,11 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-# 心跳陈旧阈值：超过即标 is_stale（在场但客户端可能已失联）。
-# beacon 式在场以显式进出为主，心跳只兜底崩溃恢复，阈值放宽以降低误伤。
-STUDY_ROOM_STALE_MINUTES = 15
+# 在场 TTL（秒）：最后活性证明（last_heartbeat_at）超过此时长即诚实离场。
+# 续期信号 = 前台房间轮询（详情屏可见 + app 前台时 30s 一拍，绝不要求
+# 后台 Timer）；显式 enter/exit 仍是主信号。90s 给前台 30s 轮询留两次
+# 失手余量；移动端字号级别的小 JSON 调用，功耗可忽略。
+STUDY_ROOM_PRESENCE_TTL_SECONDS = 90
 
 
 class StudyRoomEnterResponse(BaseModel):
@@ -41,7 +45,8 @@ class StudyRoomExitResponse(BaseModel):
 
 
 class StudyRoomHeartbeatResponse(BaseModel):
-    """心跳（仅兜底崩溃恢复）：在场则刷新 last_heartbeat_at。"""
+    """心跳（续期信号）：有开放会话即刷新 last_heartbeat_at（TTL 续命，
+    含已 decayed 的开放记录——房间 UI 发来的活性证明）；无开放会话不自动重开。"""
 
     in_room: bool
     last_heartbeat_at: datetime | None = None
@@ -54,11 +59,14 @@ class StudyRoomPresenceEntry(BaseModel):
     user_id: UUID
     display_name: str | None = Field(default=None, description="昵称或用户名（缺失为 None）")
     role: str
-    in_room: bool
-    is_stale: bool = Field(default=False, description="在场但心跳超过阈值（崩溃恢复线索）")
+    in_room: bool = Field(description="开放会话且心跳在 TTL 内（TTL 过期=诚实离场）")
+    is_stale: bool = Field(
+        default=False,
+        description="有开放会话但 TTL 已过期（异常退出待回收的崩溃恢复线索，非惩罚）",
+    )
     entered_at: datetime | None = Field(default=None, description="当前在场会话的进入时刻（不在场为 None）")
     current_session_minutes: int = Field(default=0, ge=0, description="当前在场会话已持续分钟数（不在场为 0）")
-    today_minutes: int = Field(default=0, ge=0, description="今日累计自习分钟数（本地日界，跨会话求和）")
+    today_minutes: int = Field(default=0, ge=0, description="今日累计自习分钟数（本地日界，跨会话求和；decay 不虚增）")
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -1,4 +1,4 @@
-"""共学自习室在场证明模型（D-COMM-4 · beacon 式在场）。
+"""共学自习室在场证明模型（D-COMM-4 · beacon 式在场，服务端 TTL 真源）。
 
 复用裁决（vs 既有表）：社群域无 presence/session 类模型——
 ``GroupMember.last_active_at`` 是成员级单时间戳（无会话语义、算不出时长）、
@@ -6,11 +6,16 @@
 end_time/duration，无群组归属，撑不起「谁正在自习」的活体在场面）、
 ``User.status`` 是全局在线状态（非小队作用域）。故按设计卡 §3.3
 「落库最小记录」立最小新表：一条记录 = 一次进出场（entered_at →
-exited_at），exited_at IS NULL 即在场；心跳只做崩溃恢复（显式进出为主、
-心跳兜底，离开不惩罚——在场时长如实记录，设计裁决）。
+exited_at），exited_at IS NULL 即开放记录。
 
-「在场时长」只作展示、不进任何榜分（小队榜口径唯一是 sprint 完成度，
+ROOM-PRESENCE 修订：在场判定 = 开放记录 **且** last_heartbeat_at 在
+``STUDY_ROOM_PRESENCE_TTL_SECONDS``（90s）内——TTL 过期即诚实离场
+（读路径惰性判定，无需后台清理任务），杀进程/切后台后最多 TTL 内残留。
+续期信号 = 前台房间轮询（30s 一拍，绝不要求后台 Timer）；显式进出为主、
+心跳续命。离开不惩罚——在场时长如实记录（时长按 last_heartbeat_at + TTL
+诚实封顶，decay 不虚增），不进任何榜分（小队榜口径唯一是 sprint 完成度，
 见 services/community_squad_board_service.py；防 Duolingo 式挂机刷时长）。
+零迁移：TTL 复用既有 ``last_heartbeat_at`` 列，无 schema 变更。
 """
 
 from __future__ import annotations
@@ -24,8 +29,9 @@ class StudyRoomSession(BaseModel):
     """一次自习进出场（beacon 式在场证明，最小记录）。
 
     - ``entered_at``：进入时刻（naive UTC，与社群域既有列约定一致）；
-    - ``exited_at``：离开时刻；NULL = 仍在场；
-    - ``last_heartbeat_at``：最近心跳（显式进出为主，心跳仅兜底崩溃恢复）。
+    - ``exited_at``：离开时刻；NULL = 开放记录（在场与否由 TTL 判定）；
+    - ``last_heartbeat_at``：最后活性证明（前台房间轮询/显式心跳续写；
+      也是 TTL 时间戳与时长封顶基准——零迁移复用本列）。
     """
 
     __tablename__ = "study_room_sessions"
