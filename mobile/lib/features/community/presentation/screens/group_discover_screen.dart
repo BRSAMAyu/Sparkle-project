@@ -67,6 +67,7 @@ class _GroupDiscoverScreenState extends ConsumerState<GroupDiscoverScreen> {
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
+          semanticLabel: context.l10n.back,
           onPressed: () => context.pop(),
         ),
         title: Text(context.l10n.gdTitle),
@@ -75,6 +76,7 @@ class _GroupDiscoverScreenState extends ConsumerState<GroupDiscoverScreen> {
           SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: const Icon(Icons.add_circle_outline),
+            semanticLabel: context.l10n.groupDiscoverCreateGroup,
             onPressed: () {
               unawaited(
                 SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
@@ -428,6 +430,7 @@ class _SearchBar extends StatelessWidget {
               SparkleIconButton(
                 variant: ButtonVariant.ghost,
                 icon: const Icon(Icons.close),
+                semanticLabel: context.l10n.commonClear,
                 onPressed: () {
                   onClear();
                 },

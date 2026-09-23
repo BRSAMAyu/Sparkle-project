@@ -109,6 +109,7 @@ class _GroupModerationScreenState
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
+          semanticLabel: context.l10n.back,
           onPressed: () => context.pop(),
         ),
         title: Text(context.l10n.communityGroupModeration),
@@ -116,6 +117,7 @@ class _GroupModerationScreenState
           SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: const Icon(Icons.save_outlined),
+            semanticLabel: context.l10n.commonSave,
             onPressed: _save,
           ),
         ],
@@ -285,6 +287,7 @@ class _GroupModerationScreenState
                             const SizedBox(width: DS.spacing8),
                             SparkleIconButton(
                               icon: const Icon(Icons.add),
+                              semanticLabel: context.l10n.commonAdd,
                               onPressed: () {
                                 unawaited(
                                   SensoryFeedbackService.emit(

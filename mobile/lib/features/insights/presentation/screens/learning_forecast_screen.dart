@@ -96,6 +96,7 @@ class _LearningForecastScreenState
         appBar: AppBar(
           leading: SparkleIconButton(
             icon: const Icon(Icons.arrow_back),
+            semanticLabel: context.l10n.back,
             onPressed: () => context.pop(),
             variant: ButtonVariant.ghost,
           ),
@@ -107,6 +108,7 @@ class _LearningForecastScreenState
           actions: [
             SparkleIconButton(
               icon: const Icon(Icons.refresh),
+              semanticLabel: context.l10n.commonRefresh,
               onPressed: _loadDashboard,
               variant: ButtonVariant.ghost,
             ),

@@ -477,6 +477,7 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
           leading: SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: const Icon(Icons.arrow_back),
+            semanticLabel: l10n.back,
             onPressed: () => Navigator.of(context).maybePop(),
           ),
         ),
@@ -1165,8 +1166,15 @@ class _PlanTasksStepState extends State<_PlanTasksStep> {
                           entry.value.difficulty.toString()),
                     ),
                     trailing: IconButton(
+                      // A11Y-BATCH3 同源形制：tooltip 与 Icon semanticLabel
+                      // 同一 l10n 键——隐藏期 Tooltip 只挂 semantics.tooltip
+                      //（非按钮名），名字由 Icon semanticLabel 反推上提。
+                      tooltip: l10n.planCreateRemoveTask,
                       onPressed: () => widget.onRemoveTask(entry.key),
-                      icon: const Icon(Icons.delete_outline_rounded),
+                      icon: Icon(
+                        Icons.delete_outline_rounded,
+                        semanticLabel: l10n.planCreateRemoveTask,
+                      ),
                     ),
                   ),
                 ),

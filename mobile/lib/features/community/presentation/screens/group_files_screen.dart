@@ -21,6 +21,7 @@ class GroupFilesScreen extends ConsumerWidget {
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
+          semanticLabel: context.l10n.back,
           onPressed: () => context.pop(),
         ),
         title: Text(context.l10n.groupKnowledgeBase),

@@ -46,6 +46,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                 leading: SparkleIconButton(
                   variant: ButtonVariant.ghost,
                   icon: Icon(Icons.arrow_back, color: DS.textPrimary),
+                  semanticLabel: context.l10n.back,
                   onPressed: () => context.pop(),
                 ),
                 title: Text(context.l10n.communityGroupDetails),
@@ -140,6 +141,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
       leading: SparkleIconButton(
         variant: ButtonVariant.ghost,
         icon: Icon(Icons.arrow_back, color: DS.textPrimary),
+        semanticLabel: context.l10n.back,
         onPressed: () => context.pop(),
       ),
       expandedHeight: 160,
@@ -225,6 +227,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
           SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: Icon(Icons.more_vert, color: DS.textPrimary),
+            semanticLabel: context.l10n.groupDetailMoreOptions,
             onPressed: () => _showGroupOptions(context, ref, group),
           ),
       ],
@@ -369,6 +372,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
               if (group.isAdmin)
                 SparkleIconButton(
                   icon: const Icon(Icons.edit_outlined, size: 18),
+                  semanticLabel: context.l10n.groupDetailEditAnnouncement,
                   onPressed: () => _showEditAnnouncementDialog(
                     context,
                     ref,

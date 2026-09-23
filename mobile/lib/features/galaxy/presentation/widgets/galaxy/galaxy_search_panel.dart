@@ -92,9 +92,17 @@ class GalaxySearchPanel extends StatelessWidget {
                           ),
                         ),
                       ),
+                      // A11Y-BATCH3 同源形制：tooltip 与 Icon semanticLabel
+                      // 同一 l10n 键——隐藏期 Tooltip 只挂 semantics.tooltip
+                      //（非按钮名），名字由 Icon semanticLabel 反推上提。
                       IconButton(
+                        tooltip: l10n.commonClose,
                         onPressed: onClose,
-                        icon: Icon(Icons.close_rounded, color: secondary),
+                        icon: Icon(
+                          Icons.close_rounded,
+                          color: secondary,
+                          semanticLabel: l10n.commonClose,
+                        ),
                         visualDensity: VisualDensity.compact,
                       ),
                     ],

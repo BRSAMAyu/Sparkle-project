@@ -89,6 +89,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
           leading: SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: const Icon(Icons.arrow_back),
+            semanticLabel: l10n.back,
             onPressed: () => RouteResilience.popOrGo(
               context,
               fallbackRoute: '/home',
@@ -96,12 +97,16 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
           ),
           title: Text(l10n.planDetailTitle),
           actions: [
+            // A11Y-BATCH3 同源形制：semanticLabel 与 Tooltip message 同一
+            // l10n 键——Tooltip 只挂 semantics.tooltip 不构成按钮名，按钮
+            // 名由 semanticLabel 承载（sprint_screen 批 2 同款先例）。
             planAsync.maybeWhen(
               data: (plan) => Tooltip(
                 message: l10n.planShare,
                 child: SparkleIconButton(
                   variant: ButtonVariant.ghost,
                   icon: const Icon(Icons.share_outlined),
+                  semanticLabel: l10n.planShare,
                   onPressed: () => unawaited(_showShareSheet(context, plan)),
                 ),
               ),
@@ -113,6 +118,7 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
                 child: SparkleIconButton(
                   variant: ButtonVariant.ghost,
                   icon: const Icon(Icons.edit_outlined),
+                  semanticLabel: l10n.planDetailEdit,
                   onPressed: () => context.push('/plans/${plan.id}/edit'),
                 ),
               ),

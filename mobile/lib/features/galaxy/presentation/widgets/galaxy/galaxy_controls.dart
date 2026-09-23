@@ -256,6 +256,7 @@ class _ControlButton extends StatelessWidget {
             ],
           ),
           child: IconButton(
+            tooltip: tooltip,
             onPressed: () {
               unawaited(
                 SensoryFeedbackService.emit(
@@ -266,7 +267,15 @@ class _ControlButton extends StatelessWidget {
               );
               onPressed();
             },
-            icon: Icon(icon, color: iconColor, size: 20),
+            // A11Y-BATCH3 同源形制：tooltip 与 Icon semanticLabel 同一
+            // 事实源（本字段）——隐藏期 Tooltip 只挂 semantics.tooltip
+            //（非按钮名），名字由 Icon semanticLabel 反推上提到按钮节点。
+            icon: Icon(
+              icon,
+              color: iconColor,
+              size: 20,
+              semanticLabel: tooltip,
+            ),
             visualDensity: VisualDensity.compact,
           ),
         ),

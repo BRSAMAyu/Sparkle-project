@@ -2,11 +2,14 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// A11Y-BATCH2（N32 续 · 无名钮下批）域内 ratchet 守卫。
+/// A11Y-BATCH2/3（N32 续 · 无名钮下批）域内 ratchet 守卫。
 ///
-/// 卡面验收「本批域内无名钮清零」：对下批三域——friends 族 / sprint 族 /
-/// user 设置族（features/user + features/settings presentation 全量）——做
-/// 静态扫描，任何 `SparkleIconButton` / `IconButton` 调用点必须可命名：
+/// 卡面验收「本批域内无名钮清零」：批 2 三域——friends 族 / sprint 族 /
+/// user 设置族（features/user + features/settings presentation 全量），
+/// 批 3 四域（A11Y-BATCH3 扩域）——群组族（group 相关屏 + 群组件 +
+/// group_chat）/ galaxy 域 / insights 域 / plan_create 族——做静态扫描，
+/// 任何 `SparkleIconButton` / `IconButton` 调用点（含 `.fabGeometry` 等
+/// 命名构造，批 3 起入扫）必须可命名：
 ///
 /// 1. `semanticLabel:`（首选，l10n）；
 /// 2. `tooltip:`（material IconButton 并入语义名；SparkleIconButton 需
@@ -35,6 +38,32 @@ void main() {
     'lib/features/user/presentation/widgets',
     'lib/features/settings/presentation/screens',
     'lib/features/settings/presentation/widgets',
+    // ── 批 3（A11Y-BATCH3）扩域 ────────────────────────────────────────
+    // 群组族（group 相关屏 + 群组件 + 群聊）
+    'lib/features/community/presentation/screens/group_list_screen.dart',
+    'lib/features/community/presentation/screens/create_group_screen.dart',
+    'lib/features/community/presentation/screens/group_detail_screen.dart',
+    'lib/features/community/presentation/screens/group_members_screen.dart',
+    'lib/features/community/presentation/screens/group_moderation_screen.dart',
+    'lib/features/community/presentation/screens/group_tasks_screen.dart',
+    'lib/features/community/presentation/screens/group_search_screen.dart',
+    'lib/features/community/presentation/screens/group_discover_screen.dart',
+    'lib/features/community/presentation/screens/group_files_screen.dart',
+    'lib/features/community/presentation/screens/squad_list_screen.dart',
+    'lib/features/community/presentation/widgets/groups_hub_view.dart',
+    'lib/features/community/presentation/widgets/groups_tab.dart',
+    'lib/features/community/presentation/widgets/group_knowledge_base_view.dart',
+    'lib/features/community/presentation/widgets/group_recommendation_card.dart',
+    'lib/features/community/presentation/widgets/group_chat_bubble.dart',
+    'lib/features/chat/presentation/screens/group_chat_screen.dart',
+    // galaxy 域（presentation 全量）
+    'lib/features/galaxy/presentation',
+    // insights 域（presentation 全量）
+    'lib/features/insights/presentation',
+    // plan_create 族（创建/编辑/详情同簇）
+    'lib/features/plan/presentation/screens/plan_create_screen.dart',
+    'lib/features/plan/presentation/screens/plan_edit_screen.dart',
+    'lib/features/plan/presentation/screens/plan_detail_screen.dart',
   ];
 
   test('批域内图标按钮全部有语义名（N31 ratchet 只降不升）', () {
@@ -91,7 +120,7 @@ final _blockComment = RegExp(r'/\*.*?\*/', dotAll: true);
 /// 行注释：`//` 前面不是 `:`（放行 'https://' 类 scheme 字面量）。
 final _lineComment = RegExp(r'(?<!:)//[^\n]*');
 
-final _buttonCall = RegExp(r'\b(SparkleIconButton|IconButton)\s*\(');
+final _buttonCall = RegExp(r'\b(SparkleIconButton|IconButton)(\.\w+)?\s*\(');
 final _iconCall = RegExp(r'\bIcon\s*\(');
 
 /// 返回未命名钮所在行号清单（基于注释剥离后的文本）。

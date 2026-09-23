@@ -245,9 +245,16 @@ class _GalaxyUploadStatusCard extends StatelessWidget {
                 ),
               ),
               if (session.phase == GalaxyDocumentUploadPhase.success)
+                // A11Y-BATCH3 同源形制：tooltip 与 Icon semanticLabel 同一
+                // l10n 键——隐藏期 Tooltip 只挂 semantics.tooltip（非按钮
+                // 名），名字由 Icon semanticLabel 反推上提到按钮节点。
                 IconButton(
+                  tooltip: l10n.commonClose,
                   onPressed: onDismiss,
-                  icon: const Icon(Icons.close_rounded),
+                  icon: Icon(
+                    Icons.close_rounded,
+                    semanticLabel: l10n.commonClose,
+                  ),
                   color: DS.neutral0.withValues(alpha: 0.72),
                 ),
             ],

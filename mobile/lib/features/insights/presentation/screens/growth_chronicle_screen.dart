@@ -20,6 +20,7 @@ class GrowthChronicleScreen extends ConsumerWidget {
       appBar: AppBar(
         leading: SparkleIconButton(
           icon: const Icon(Icons.arrow_back_rounded),
+          semanticLabel: context.l10n.back,
           onPressed: () => context.pop(),
           variant: ButtonVariant.ghost,
         ),

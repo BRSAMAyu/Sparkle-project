@@ -154,6 +154,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
             leading: SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.arrow_back),
+              semanticLabel: context.l10n.back,
               // maybePop 走 PopScope 通道，脏态时由 guard 拦截确认；
               // context.pop() 是硬 pop，会绕过 guard。
               onPressed: () => context.canPop()

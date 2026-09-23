@@ -87,6 +87,7 @@ class GroupRecommendationCard extends StatelessWidget {
                   SparkleIconButton(
                     variant: ButtonVariant.ghost,
                     icon: const Icon(Icons.close),
+                    semanticLabel: context.l10n.commonClose,
                     onPressed: onDismiss,
                   ),
               ],

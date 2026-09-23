@@ -27,6 +27,7 @@ class LearningPathScreen extends ConsumerWidget {
         ),
         leading: SparkleIconButton(
           icon: const Icon(Icons.arrow_back_rounded),
+          semanticLabel: context.l10n.back,
           onPressed: () => context.pop(),
           variant: ButtonVariant.ghost,
         ),

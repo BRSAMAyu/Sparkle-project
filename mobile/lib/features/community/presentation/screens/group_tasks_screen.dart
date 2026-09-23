@@ -28,6 +28,7 @@ class GroupTasksScreen extends ConsumerWidget {
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
+          semanticLabel: context.l10n.back,
           onPressed: () => context.pop(),
         ),
         title: Text(context.l10n.communityGroupTasks),
@@ -36,6 +37,7 @@ class GroupTasksScreen extends ConsumerWidget {
       // 活口（组件只带 min 约束时会被 FAB 槽拉成全屏 InkWell 吞整页 tap）。
       floatingActionButton: SparkleIconButton.fabGeometry(
         icon: const Icon(Icons.add),
+        semanticLabel: context.l10n.commonAdd,
         onPressed: () {
           unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
           _showCreateTaskDialog(context, ref);

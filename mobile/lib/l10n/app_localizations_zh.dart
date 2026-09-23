@@ -37264,4 +37264,31 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get openclawCopyPairingCode => '复制配对码';
+
+  @override
+  String get groupMembersInvite => '邀请成员';
+
+  @override
+  String get groupDetailMoreOptions => '更多群组操作';
+
+  @override
+  String get groupDetailEditAnnouncement => '编辑公告';
+
+  @override
+  String get groupDiscoverCreateGroup => '创建群组';
+
+  @override
+  String get groupKnowledgeMarkOfficial => '设为官方资料';
+
+  @override
+  String get groupKnowledgeUnmarkOfficial => '取消官方资料';
+
+  @override
+  String get groupKnowledgeSwitchToList => '切换为列表视图';
+
+  @override
+  String get groupKnowledgeSwitchToGrid => '切换为网格视图';
+
+  @override
+  String get planCreateRemoveTask => '移除该任务';
 }

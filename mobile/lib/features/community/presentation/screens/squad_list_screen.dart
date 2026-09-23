@@ -35,17 +35,22 @@ class SquadListScreen extends ConsumerWidget {
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
+          semanticLabel: context.l10n.back,
           onPressed: () => context.pop(),
         ),
         title: Text(context.l10n.squadTitle),
         actions: [
           // 必达项②：创建/加入入口（次级位置，空态时仍可达）。
+          // A11Y-BATCH3 同源形制：Tooltip 只挂 semantics.tooltip 不构成
+          // 按钮名——按钮名由 semanticLabel 承载，与 Tooltip message 同一
+          // l10n 键（单一事实源）。
           Tooltip(
             message: context.l10n.squadCreateEntry,
             child: SparkleIconButton(
               key: const ValueKey('squad-create-entry-button'),
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.add),
+              semanticLabel: context.l10n.squadCreateEntry,
               onPressed: () => unawaited(_showCreateDialog(context, ref)),
             ),
           ),
@@ -55,6 +60,7 @@ class SquadListScreen extends ConsumerWidget {
               key: const ValueKey('squad-join-entry-button'),
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.group_add_outlined),
+              semanticLabel: context.l10n.squadJoinEntry,
               onPressed: () => unawaited(_showJoinDialog(context, ref)),
             ),
           ),

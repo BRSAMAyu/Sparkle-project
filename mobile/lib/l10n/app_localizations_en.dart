@@ -38880,4 +38880,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get openclawCopyPairingCode => 'Copy pairing code';
+
+  @override
+  String get groupMembersInvite => 'Invite members';
+
+  @override
+  String get groupDetailMoreOptions => 'More group actions';
+
+  @override
+  String get groupDetailEditAnnouncement => 'Edit announcement';
+
+  @override
+  String get groupDiscoverCreateGroup => 'Create group';
+
+  @override
+  String get groupKnowledgeMarkOfficial => 'Mark as official';
+
+  @override
+  String get groupKnowledgeUnmarkOfficial => 'Unmark official';
+
+  @override
+  String get groupKnowledgeSwitchToList => 'Switch to list view';
+
+  @override
+  String get groupKnowledgeSwitchToGrid => 'Switch to grid view';
+
+  @override
+  String get planCreateRemoveTask => 'Remove this task';
 }

@@ -482,6 +482,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
           SparkleIconButton(
             icon: const Icon(Icons.search),
             onPressed: _showSearchSheet,
+            semanticLabel: context.l10n.commonSearch,
             variant: ButtonVariant.ghost,
           ),
           SparkleIconButton(
@@ -496,6 +497,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                 ),
               );
             },
+            semanticLabel: context.l10n.communityGroupDetails,
             variant: ButtonVariant.ghost,
           ),
         ],
@@ -1101,8 +1103,16 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                           valueListenable: controller,
                           builder: (context, value, _) => value.text.isEmpty
                               ? const SizedBox.shrink()
+                              // A11Y-BATCH3 同源形制：tooltip 与 Icon
+                              // semanticLabel 同一 l10n 键——隐藏期 Tooltip
+                              // 只挂 semantics.tooltip（非按钮名），名字由
+                              // Icon semanticLabel 反推上提到按钮节点。
                               : IconButton(
-                                  icon: const Icon(Icons.clear),
+                                  tooltip: context.l10n.commonClear,
+                                  icon: Icon(
+                                    Icons.clear,
+                                    semanticLabel: context.l10n.commonClear,
+                                  ),
                                   onPressed: () {
                                     controller.clear();
                                     setSheetState(() {

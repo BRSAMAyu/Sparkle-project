@@ -72,6 +72,7 @@ class _GalaxyDraftReviewScreenState
             leading: SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: Icon(Icons.arrow_back_rounded, color: DS.textPrimary),
+              semanticLabel: l10n.back,
               onPressed: () => context.pop(),
             ),
             titleSpacing: 0,

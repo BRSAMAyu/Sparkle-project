@@ -62,6 +62,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
+          semanticLabel: context.l10n.back,
           onPressed: () => context.pop(),
         ),
         title: Text(context.l10n.gmMembersTitle(widget.groupName)),
@@ -77,6 +78,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
             SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.person_add),
+              semanticLabel: context.l10n.groupMembersInvite,
               onPressed: () {
                 AppFeedback.info(context, 'Invite feature coming soon');
               },
@@ -102,6 +104,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                               variant: ButtonVariant.ghost,
                               size: 32,
                               icon: const Icon(Icons.clear),
+                              semanticLabel: context.l10n.commonClear,
                               onPressed: () {
                                 _searchController.clear();
                                 setState(() => _searchQuery = '');

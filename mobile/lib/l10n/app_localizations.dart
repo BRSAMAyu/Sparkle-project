@@ -67686,6 +67686,60 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'复制配对码'**
   String get openclawCopyPairingCode;
+
+  /// No description provided for @groupMembersInvite.
+  ///
+  /// In zh, this message translates to:
+  /// **'邀请成员'**
+  String get groupMembersInvite;
+
+  /// No description provided for @groupDetailMoreOptions.
+  ///
+  /// In zh, this message translates to:
+  /// **'更多群组操作'**
+  String get groupDetailMoreOptions;
+
+  /// No description provided for @groupDetailEditAnnouncement.
+  ///
+  /// In zh, this message translates to:
+  /// **'编辑公告'**
+  String get groupDetailEditAnnouncement;
+
+  /// No description provided for @groupDiscoverCreateGroup.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建群组'**
+  String get groupDiscoverCreateGroup;
+
+  /// No description provided for @groupKnowledgeMarkOfficial.
+  ///
+  /// In zh, this message translates to:
+  /// **'设为官方资料'**
+  String get groupKnowledgeMarkOfficial;
+
+  /// No description provided for @groupKnowledgeUnmarkOfficial.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消官方资料'**
+  String get groupKnowledgeUnmarkOfficial;
+
+  /// No description provided for @groupKnowledgeSwitchToList.
+  ///
+  /// In zh, this message translates to:
+  /// **'切换为列表视图'**
+  String get groupKnowledgeSwitchToList;
+
+  /// No description provided for @groupKnowledgeSwitchToGrid.
+  ///
+  /// In zh, this message translates to:
+  /// **'切换为网格视图'**
+  String get groupKnowledgeSwitchToGrid;
+
+  /// No description provided for @planCreateRemoveTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'移除该任务'**
+  String get planCreateRemoveTask;
 }
 
 class _AppLocalizationsDelegate

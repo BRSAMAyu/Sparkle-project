@@ -391,6 +391,10 @@ class _GroupKnowledgeBaseViewState
                       if (_isAdmin)
                         SparkleIconButton(
                           variant: ButtonVariant.ghost,
+                          // N31：两态动作按当前态命名（读屏念出将执行的动作）。
+                          semanticLabel: _isOfficial(file)
+                              ? context.l10n.groupKnowledgeUnmarkOfficial
+                              : context.l10n.groupKnowledgeMarkOfficial,
                           icon: Icon(
                             _isOfficial(file)
                                 ? Icons.star_rounded
@@ -527,6 +531,10 @@ class _GroupKnowledgeBaseViewState
                   ),
                   const SizedBox(width: DS.spacing12),
                   SparkleIconButton(
+                    // N31：两态视图开关按目标视图命名（当前是网格→「切换为列表」）。
+                    semanticLabel: _gridView
+                        ? context.l10n.groupKnowledgeSwitchToList
+                        : context.l10n.groupKnowledgeSwitchToGrid,
                     icon: Icon(
                       _gridView
                           ? Icons.view_list_rounded
