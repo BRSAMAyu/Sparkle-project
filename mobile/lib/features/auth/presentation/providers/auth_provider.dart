@@ -127,6 +127,43 @@ class AuthNotifier extends StateNotifier<AuthState> {
     );
   }
 
+  /// IR-G12（A-SPEC4）：基础设施抖动/离线不可清会话——仅服务端明确拒绝
+  /// （401/403）才 reset。原实现 catch 不分类型一律
+  /// _resetInvalidStoredSession：离线冷启动时 getCurrentUser 的网络错
+  /// 也清 token+本地数据 = 强制登出（数据信任灾难）。与
+  /// TokenRefreshCoordinator 的 sessionTerminal/retryable 分级咬合。
+  bool _isSessionTerminalError(Object error) {
+    // AppFailureMapper 已含 Dio 状态码感知分类；无 response 的网络层
+    // 异常（连接失败/超时）与 5xx 都是 retryable——保留会话等重试。
+    final failure = AppFailureMapper.from(
+      error,
+      fallbackMessage: 'auth status check failed',
+    );
+    final code = failure.code;
+    // 403 在 AppFailureMapper 的码是 AUTH_REQUIRED（failures.dart:256）。
+    return code == 'TOKEN_EXPIRED' ||
+        code == 'UNAUTHORIZED' ||
+        code == 'AUTH_REQUIRED';
+  }
+
+  Future<void> _handleSessionCheckFailure(
+    Object error, {
+    required int generation,
+  }) async {
+    if (_isSessionTerminalError(error)) {
+      await _resetInvalidStoredSession(error, generation: generation);
+      return;
+    }
+    if (_isStaleSessionOp(generation)) return;
+    debugPrint('⚠️ Auth status check failed (retryable, session kept): $error');
+    // 会话保留：以已存储身份进入 app，数据面走各自的离线/重试路径。
+    state = state.copyWith(
+      isLoading: false,
+      // isAuthenticated 维持当前值（有 token 场景下为默认 true 假设），
+      // 不主动改写；clearUser 绝不触发。
+    );
+  }
+
   Future<void> checkAuthStatus() async {
     final generation = _beginSessionOp();
     state = state.copyWith(isLoading: true);
@@ -165,13 +202,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
           );
           SessionRefreshService.refreshSessionBoundProviders(_ref);
         } catch (e) {
-          await _resetInvalidStoredSession(e, generation: generation);
+          await _handleSessionCheckFailure(e, generation: generation);
         }
       } else {
         state = state.copyWith(isLoading: false, isAuthenticated: false);
       }
     } catch (e) {
-      await _resetInvalidStoredSession(e, generation: generation);
+      await _handleSessionCheckFailure(e, generation: generation);
     }
   }
 

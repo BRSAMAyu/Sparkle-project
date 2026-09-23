@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
@@ -129,6 +130,41 @@ void main() {
       expect(rebuiltContainer.read(onboardingCompletedProvider), isTrue);
     });
 
+    test(
+        'IR-G12: network-layer failure keeps stored session (offline cold start must not logout)',
+        () async {
+      final prefs = await initPrefs(onboardingCompleted: false);
+      final storage = _MemorySecureStorage();
+      final authRepo = _NetworkFailingAuthRepository(storage);
+      final userRepo = _FakeUserRepository();
+
+      await authRepo.saveTokens(
+        TokenResponse(
+          accessToken: 'stored-access-token',
+          refreshToken: 'stored-refresh-token',
+          expiresIn: 3600,
+        ),
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(authRepo),
+          userRepositoryProvider.overrideWithValue(userRepo),
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          sessionBoundProvidersProvider.overrideWithValue(const []),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await _waitFor(
+        () => container.read(authProvider).isLoading == false,
+      );
+
+      final authState = container.read(authProvider);
+      expect(authRepo.clearTokensCallCount, 0);
+      expect(await authRepo.getAccessToken(), isNotNull);
+    });
+
     test('expired stored session falls back to logged-out state quietly',
         () async {
       final prefs = await initPrefs(onboardingCompleted: false);
@@ -210,6 +246,19 @@ class _FakeAuthRepository extends AuthRepository {
   }
 }
 
+/// IR-G12：无 response 的连接层异常（离线/超时）——retryable，不得清会话。
+class _NetworkFailingAuthRepository extends _FailingAuthRepository {
+  _NetworkFailingAuthRepository(super.storage);
+
+  @override
+  Future<UserModel> getCurrentUser() async {
+    throw DioException(
+      requestOptions: RequestOptions(path: '/api/v1/users/me'),
+      type: DioExceptionType.connectionError,
+    );
+  }
+}
+
 class _FailingAuthRepository extends _FakeAuthRepository {
   _FailingAuthRepository(FlutterSecureStorage storage)
       : super(storage, _expiredUser);
@@ -233,7 +282,14 @@ class _FailingAuthRepository extends _FakeAuthRepository {
 
   @override
   Future<UserModel> getCurrentUser() async {
-    throw Exception('Could not fetch user profile.');
+    // IR-G12 契约：401（服务端明确拒绝）才是会话终局。
+    throw DioException(
+      requestOptions: RequestOptions(path: '/api/v1/users/me'),
+      response: Response(
+        statusCode: 401,
+        requestOptions: RequestOptions(path: '/api/v1/users/me'),
+      ),
+    );
   }
 
   @override
