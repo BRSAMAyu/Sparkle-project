@@ -12,10 +12,11 @@ Orchestrator FSM State Transitions Test Suite
 from __future__ import annotations
 
 import asyncio
+import math
+import time
 import pytest
 import pytest_asyncio
 import uuid
-import redis.asyncio as redis
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -41,26 +42,95 @@ from app.models.user import User
 # =============================================================================
 
 
+class _FakeRedis:
+    """进程内 Redis 桩：只覆盖 SessionStateManager 与本文件用到的最小命令面。
+
+    与套件既有惯例一致（test_fsm_state_real.FakeRedis、test_r2_orchestration_fixes
+    经 r2 helpers 引入的 _MemoryRedis）：编排域单测不连真实 Redis。替换旧的本地
+    真实客户端 fixture（初版直连 localhost:6379 且 teardown flushdb），原因：
+    - 本机 docker redis 带 --requirepass，裸 worktree 无 REDIS_PASSWORD →
+      每条命令 NOAUTH，SessionStateManager 按设计吞错降级 → load_state 返回
+      None，25 个体断言全塌；teardown flushdb 未捕获 → 26 个 teardown error
+      （即存量 25F+26E）。
+    - 旧 fixture 直连 db0 并 flushdb，正是 conftest HYGIENE-2 明令禁止的行为
+      （会清洗共享开发库）。
+    - TTL 采用单调钟过期模型（setex/expire 记 deadline，get/ttl/eval 先判定），
+      使「状态 TTL 过期」可确定性测试；ttl() 与真实 redis 一致向上取整为秒。
+    """
+
+    def __init__(self) -> None:
+        self._values: dict[str, str] = {}
+        self._expires_at: dict[str, float] = {}  # monotonic deadline；缺省 = 无过期
+
+    def _expire_if_due(self, key: str) -> None:
+        deadline = self._expires_at.get(key)
+        if deadline is not None and time.monotonic() >= deadline:
+            self._expires_at.pop(key, None)
+            self._values.pop(key, None)
+
+    async def set(self, key: str, value: str, nx: bool = False, ex: int | None = None) -> bool:
+        self._expire_if_due(key)
+        if nx and key in self._values:
+            return False
+        self._values[key] = value
+        if ex is not None:
+            self._expires_at[key] = time.monotonic() + ex
+        else:
+            self._expires_at.pop(key, None)
+        return True
+
+    async def setex(self, key: str, ttl: int, value: str) -> bool:
+        self._values[key] = value
+        self._expires_at[key] = time.monotonic() + ttl
+        return True
+
+    async def get(self, key: str) -> str | None:
+        self._expire_if_due(key)
+        return self._values.get(key)
+
+    async def delete(self, *keys: str) -> int:
+        deleted = 0
+        for key in keys:
+            self._expire_if_due(key)
+            if key in self._values:
+                self._values.pop(key, None)
+                self._expires_at.pop(key, None)
+                deleted += 1
+        return deleted
+
+    async def ttl(self, key: str) -> int:
+        self._expire_if_due(key)
+        if key not in self._values:
+            return -2
+        deadline = self._expires_at.get(key)
+        if deadline is None:
+            return -1
+        return math.ceil(deadline - time.monotonic())
+
+    async def eval(self, script: str, numkeys: int, key: str, *args) -> int:
+        # release_lock 用 compare-and-del 脚本；renew_lock 用 compare-and-expire 脚本。
+        if "del" in script:
+            if self._values.get(key) == args[0]:
+                self._values.pop(key, None)
+                self._expires_at.pop(key, None)
+                return 1
+            return 0
+        if "expire" in script:
+            if self._values.get(key) == args[0]:
+                self._expires_at[key] = time.monotonic() + int(args[1])
+                return 1
+            return 0
+        raise AssertionError(f"测试桩未实现的 Lua 脚本: {script[:80]!r}")
+
+    async def flushdb(self) -> None:
+        self._values.clear()
+        self._expires_at.clear()
+
+
 @pytest_asyncio.fixture
 async def redis_client():
-    """创建 Redis 客户端 fixture"""
-    from app.core.redis_utils import resolve_redis_password
-    import os
-    from app.config import settings
-
-    redis_url = os.getenv("REDIS_URL", settings.REDIS_URL or "redis://localhost:6379/0")
-    password, _ = resolve_redis_password(redis_url, os.getenv("REDIS_PASSWORD", settings.REDIS_PASSWORD))
-    client = redis.from_url(
-        redis_url,
-        encoding="utf-8",
-        decode_responses=True,
-        password=password,
-    )
-    try:
-        yield client
-    finally:
-        await client.flushdb()
-        await client.aclose()
+    """进程内 FakeRedis fixture（见 _FakeRedis 文档：不再依赖真实 Redis）。"""
+    yield _FakeRedis()
 
 
 @pytest_asyncio.fixture
