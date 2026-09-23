@@ -1,5 +1,14 @@
 """Regression test for ISSUE-20260503-1700-F1: EventBus.subscribe() must raise
 on non-BUSYGROUP ResponseError instead of silently returning.
+
+Lifecycle note (EVENTBUS-HANG): any test that drives subscribe() to the point
+of spawning a _consume_loop task MUST drain it via ``await bus.close()`` before
+``asyncio.run`` tears the loop down — the same shutdown shape every real caller
+goes through (app/main.py lifespan: ``begin_shutdown()`` then ``await close()``).
+With ``bus.redis = AsyncMock()`` every await inside _consume_loop resolves
+without ever yielding to the event loop, so an undrained task hot-spins inside
+its first Task._step, monopolizes the loop thread, and asyncio.run can never
+enter its shutdown phase (cancellation cannot be delivered) — an infinite hang.
 """
 
 import asyncio
@@ -49,19 +58,25 @@ class TestEventBusSubscribeRaiseOnNonBusygroup:
 
         async def _run():
             try:
-                await bus.subscribe(
-                    stream="test_stream",
-                    group_name="test_group",
-                    consumer_name="test_consumer",
-                    callback=mock.AsyncMock(),
-                )
-            except ResponseError as e:
-                if "BUSYGROUP" in str(e):
-                    pytest.fail("BUSYGROUP should not propagate out of subscribe")
-            except Exception:
-                pass
-            assert bus._running is True
-            assert len(bus._consumer_tasks) == 1
+                try:
+                    await bus.subscribe(
+                        stream="test_stream",
+                        group_name="test_group",
+                        consumer_name="test_consumer",
+                        callback=mock.AsyncMock(),
+                    )
+                except ResponseError as e:
+                    if "BUSYGROUP" in str(e):
+                        pytest.fail("BUSYGROUP should not propagate out of subscribe")
+                except Exception:
+                    pass
+                assert bus._running is True
+                assert len(bus._consumer_tasks) == 1
+            finally:
+                # EVENTBUS-HANG: drain the consumer task exactly like the app
+                # lifespan does; leaving it alive hangs asyncio.run (see module
+                # docstring).
+                await bus.close()
 
         asyncio.run(_run())
 
@@ -86,25 +101,31 @@ class TestEventBusSubscribeRaiseOnNonBusygroup:
         async def _run():
             nonlocal retry_count, got_response_error
             max_retries = 3
-            while retry_count < max_retries:
-                try:
-                    await bus.subscribe(
-                        stream="test_stream",
-                        group_name="test_group",
-                        consumer_name="test_consumer",
-                        callback=mock.AsyncMock(),
-                    )
-                    break
-                except ResponseError as e:
-                    if "NOGROUP" in str(e):
-                        retry_count += 1
-                        got_response_error = True
-                        continue
-                    if "BUSYGROUP" in str(e):
-                        pytest.fail("BUSYGROUP should not propagate")
-                    raise
-                except Exception:
-                    break
+            try:
+                while retry_count < max_retries:
+                    try:
+                        await bus.subscribe(
+                            stream="test_stream",
+                            group_name="test_group",
+                            consumer_name="test_consumer",
+                            callback=mock.AsyncMock(),
+                        )
+                        break
+                    except ResponseError as e:
+                        if "NOGROUP" in str(e):
+                            retry_count += 1
+                            got_response_error = True
+                            continue
+                        if "BUSYGROUP" in str(e):
+                            pytest.fail("BUSYGROUP should not propagate")
+                        raise
+                    except Exception:
+                        break
+            finally:
+                # EVENTBUS-HANG: the second subscribe() spawned a _consume_loop
+                # task; drain it like the app lifespan does or asyncio.run hangs
+                # (see module docstring).
+                await bus.close()
 
             assert got_response_error, "Consumer should have caught a ResponseError"
             assert retry_count == 1, "Should have retried exactly once"
