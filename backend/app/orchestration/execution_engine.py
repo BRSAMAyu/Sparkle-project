@@ -2238,7 +2238,7 @@ class ExecutionEngineMixin:
             )
             if conflict.has_conflict:
                 logger.warning(
-                    "Version conflict detected: type=%s domains=%s",
+                    "Version conflict detected: type={} domains={}",
                     conflict.conflict_type,
                     conflict.conflicted_domains,
                 )
@@ -2302,7 +2302,7 @@ class ExecutionEngineMixin:
             )
             if not validation_result.is_valid:
                 logger.warning(
-                    "LangGraph validation failed, falling back to direct mode: %s",
+                    "LangGraph validation failed, falling back to direct mode: {}",
                     validation_result.failure_reason,
                 )
                 await self.observability.log_validation_failed(
@@ -2501,7 +2501,7 @@ class ExecutionEngineMixin:
                         )
                         state.context_data["plan_review"] = review_result.to_dict()
                         logger.info(
-                            "Plan %s bounced to clarification by Phase B quality gate",
+                            "Plan {} bounced to clarification by Phase B quality gate",
                             executable_plan.plan_id,
                         )
                         return route_decision, executable_plan, snapshot, True

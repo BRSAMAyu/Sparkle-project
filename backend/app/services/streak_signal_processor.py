@@ -80,7 +80,7 @@ class StreakSignalProcessor:
                 source="ai_inferred",
             )
         except Exception as exc:
-            logger.warning("StreakSignalProcessor failed to update inferred prefs: %s", exc)
+            logger.warning("StreakSignalProcessor failed to update inferred prefs: {}", exc)
 
     async def _filter_noop_updates(self, user_id: UUID, updates: dict[str, object]) -> dict[str, object]:
         try:

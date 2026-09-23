@@ -211,8 +211,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         request_user_id = (request_user_id or "").strip()
         if request_user_id and meta_user_id and request_user_id != meta_user_id:
             logger.error(
-                "SECURITY: user_id spoofing attempt — request.user_id=%s "
-                "metadata user-id=%s; blocking request",
+                "SECURITY: user_id spoofing attempt — request.user_id={} "
+                "metadata user-id={}; blocking request",
                 request_user_id,
                 meta_user_id,
             )
@@ -221,7 +221,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         if request_user_id and not meta_user_id:
             logger.error(
                 "SECURITY: request.user_id present without metadata user-id "
-                "(value=%s); gateway must authenticate first",
+                "(value={}); gateway must authenticate first",
                 request_user_id,
             )
             # R5-P0-2: Block unauthenticated requests with user_id in body
@@ -409,7 +409,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                         async for response in stream_gen:
                             if context.cancelled():
                                 logger.info(
-                                    "StreamChat: client disconnected, stopping stream for request=%s",
+                                    "StreamChat: client disconnected, stopping stream for request={}",
                                     request.request_id,
                                 )
                                 break

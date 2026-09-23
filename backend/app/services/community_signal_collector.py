@@ -68,7 +68,7 @@ class CommunitySignalCollector:
                     source="ai_inferred",
                 )
         except Exception as exc:
-            logger.warning("CommunitySignalCollector failed to persist updates: %s", exc)
+            logger.warning("CommunitySignalCollector failed to persist updates: {}", exc)
 
     async def _store_entry(self, user_id: UUID, entry: dict[str, Any]) -> None:
         key = f"user:community:signals:{user_id}"
@@ -77,7 +77,7 @@ class CommunitySignalCollector:
             await self.redis.ltrim(key, 0, self.WINDOW_SIZE - 1)
             await self.redis.expire(key, self.WINDOW_TTL_SECONDS)
         except Exception as exc:
-            logger.warning("Failed to cache community signal entry: %s", exc)
+            logger.warning("Failed to cache community signal entry: {}", exc)
 
     async def _increment_counter(self, user_id: UUID) -> int:
         key = f"user:community:signals:count:{user_id}"
@@ -86,7 +86,7 @@ class CommunitySignalCollector:
             await self.redis.expire(key, self.WINDOW_TTL_SECONDS)
             return int(counter)
         except Exception as exc:
-            logger.warning("Failed to increment community signal counter: %s", exc)
+            logger.warning("Failed to increment community signal counter: {}", exc)
             return 0
 
     async def _load_entries(self, user_id: UUID) -> list[dict[str, Any]]:
@@ -94,7 +94,7 @@ class CommunitySignalCollector:
         try:
             raw_entries = await self.redis.lrange(key, 0, self.WINDOW_SIZE - 1)
         except Exception as exc:
-            logger.warning("Failed to load community signal entries: %s", exc)
+            logger.warning("Failed to load community signal entries: {}", exc)
             return []
         entries: list[dict[str, Any]] = []
         for raw in raw_entries or []:

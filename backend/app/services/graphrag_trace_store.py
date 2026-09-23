@@ -79,7 +79,7 @@ async def cache_trace(trace: RetrievalTrace, user_id: str | None) -> None:
     payload = _serialize_trace(trace)
     raw = json.dumps(payload, ensure_ascii=True)
     if len(raw.encode("utf-8")) > settings.GRAPHRAG_TRACE_MAX_BYTES:
-        logger.warning("GraphRAG trace too large to cache trace_id=%s", trace.trace_id)
+        logger.warning("GraphRAG trace too large to cache trace_id={}", trace.trace_id)
         return
 
     trace_key = _trace_key(trace.trace_id)

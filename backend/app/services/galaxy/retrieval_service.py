@@ -304,7 +304,7 @@ class KnowledgeRetrievalService:
             )
             RAG_RETRIEVAL_LATENCY.labels(source="redis_hybrid", stage="retrieve").observe(time.time() - start_time)
         except TimeoutError:
-            logger.warning("Redis hybrid search timed out, fallback_enabled=%s", settings.ENABLE_REDIS_HYBRID_FALLBACK)
+            logger.warning("Redis hybrid search timed out, fallback_enabled={}", settings.ENABLE_REDIS_HYBRID_FALLBACK)
             RETRIEVAL_TIMEOUT_TOTAL.labels(source="redis_hybrid", stage="retrieve").inc()
             if settings.ENABLE_REDIS_HYBRID_FALLBACK:
                 return await self._pgvector_fallback(user_id_uuid, query_str, subject_id, limit, threshold, use_reranker)

@@ -158,4 +158,4 @@ class FocusSignalProcessor:
                 source_event_id=f"focus.low_completion:{user_id}:{now.date().isoformat()}",
             )
         except Exception as exc:
-            logger.warning("Failed to create focus completion fragment: %s", exc)
+            logger.warning("Failed to create focus completion fragment: {}", exc)

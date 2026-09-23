@@ -1109,7 +1109,7 @@ def run_counterfactual_evaluations(self, limit_users: int = 500):
         from app.core.metrics import COUNTERFACTUAL_EVALUATION_FAILURE_TOTAL
 
         COUNTERFACTUAL_EVALUATION_FAILURE_TOTAL.labels(source="celery_daily").inc()
-        logger.error("run_counterfactual_evaluations failed: %s", exc)
+        logger.error("run_counterfactual_evaluations failed: {}", exc)
         raise self.retry(exc=exc, countdown=300) from exc
 
 
@@ -1652,7 +1652,7 @@ def retry_achievement_photon_reward(
             )
         )
         logger.info(
-            "Retried achievement photon reward successfully for achievement %s and user %s",
+            "Retried achievement photon reward successfully for achievement {} and user {}",
             achievement_id,
             user_id,
         )
@@ -1674,7 +1674,7 @@ def retry_achievement_photon_reward(
             )
         )
         logger.error(
-            "Failed to retry achievement photon reward for achievement %s and user %s: %s",
+            "Failed to retry achievement photon reward for achievement {} and user {}: {}",
             achievement_id,
             user_id,
             exc,
@@ -1840,10 +1840,10 @@ def spaced_repetition_reminder_task(self, user_id: str, now_iso: str | None = No
 
     try:
         result = _run_async(_run())
-        logger.info("✅ Spaced repetition reminder task finished for user %s: %s", user_id, result)
+        logger.info("✅ Spaced repetition reminder task finished for user {}: {}", user_id, result)
         return result
     except Exception as exc:
-        logger.error("❌ spaced_repetition_reminder_task failed for user %s: %s", user_id, exc)
+        logger.error("❌ spaced_repetition_reminder_task failed for user {}: {}", user_id, exc)
         raise self.retry(exc=exc, countdown=60) from exc
 
 
@@ -1893,13 +1893,13 @@ def scan_spaced_repetition_reminders(self, limit: int = 500):
                     break
                 offset += batch_size
 
-            logger.info("✅ Dispatched %d spaced repetition reminder tasks", dispatched)
+            logger.info("✅ Dispatched {} spaced repetition reminder tasks", dispatched)
             return {"dispatched": dispatched}
 
     try:
         return _run_async(_run())
     except Exception as exc:
-        logger.error("❌ scan_spaced_repetition_reminders failed: %s", exc)
+        logger.error("❌ scan_spaced_repetition_reminders failed: {}", exc)
         raise self.retry(exc=exc, countdown=120) from exc
 
 
@@ -1934,14 +1934,14 @@ def daily_sprint_reminder_task(self, user_id: str, plan_id: str):
 
             if not dashboard.active or str(dashboard.plan_id) != plan_id:
                 logger.debug(
-                    "daily_sprint_reminder_task: no active sprint or plan mismatch for user %s",
+                    "daily_sprint_reminder_task: no active sprint or plan mismatch for user {}",
                     user_id,
                 )
                 return {"status": "skipped", "reason": "no_active_sprint"}
 
             if dashboard.days_left <= 0:
                 logger.debug(
-                    "daily_sprint_reminder_task: exam day, skipping for user %s",
+                    "daily_sprint_reminder_task: exam day, skipping for user {}",
                     user_id,
                 )
                 return {"status": "skipped", "reason": "exam_day"}
@@ -1949,7 +1949,7 @@ def daily_sprint_reminder_task(self, user_id: str, plan_id: str):
             completion_rate = dashboard.today_progress.completion_rate
             if completion_rate >= 0.6:
                 logger.debug(
-                    "daily_sprint_reminder_task: completion %.0f%% ok, skipping for user %s",
+                    "daily_sprint_reminder_task: completion {:.0f}%% ok, skipping for user {}",
                     completion_rate * 100,
                     user_id,
                 )
@@ -1978,7 +1978,7 @@ def daily_sprint_reminder_task(self, user_id: str, plan_id: str):
                 now=reference_time,
             ):
                 logger.debug(
-                    "daily_sprint_reminder_task: duplicate reminder suppressed for user %s plan %s",
+                    "daily_sprint_reminder_task: duplicate reminder suppressed for user {} plan {}",
                     user_id,
                     plan_id,
                 )
@@ -2016,7 +2016,7 @@ def daily_sprint_reminder_task(self, user_id: str, plan_id: str):
             )
 
             logger.info(
-                "✅ Sprint reminder sent to user %s (plan %s, completion=%.0f%%)",
+                "✅ Sprint reminder sent to user {} (plan {}, completion={:.0f}%%)",
                 user_id,
                 plan_id,
                 completion_rate * 100,
@@ -2032,7 +2032,7 @@ def daily_sprint_reminder_task(self, user_id: str, plan_id: str):
     try:
         return _run_async(_run())
     except Exception as exc:
-        logger.error("❌ daily_sprint_reminder_task failed for user %s: %s", user_id, exc)
+        logger.error("❌ daily_sprint_reminder_task failed for user {}: {}", user_id, exc)
         raise self.retry(exc=exc, countdown=60) from exc
 
 
@@ -2074,13 +2074,13 @@ def scan_daily_sprint_reminders(self, limit: int = 500):
                 if dispatched_ok:
                     dispatched += 1
 
-            logger.info("✅ Dispatched %d sprint reminder tasks", dispatched)
+            logger.info("✅ Dispatched {} sprint reminder tasks", dispatched)
             return {"dispatched": dispatched}
 
     try:
         return _run_async(_run())
     except Exception as exc:
-        logger.error("❌ scan_daily_sprint_reminders failed: %s", exc)
+        logger.error("❌ scan_daily_sprint_reminders failed: {}", exc)
         raise self.retry(exc=exc, countdown=120) from exc
 
 
@@ -2123,7 +2123,7 @@ def comeback_nudge_task(self, user_id: str):
                 match_data={"plan_id": plan_id} if plan_id else None,
                 now=reference_time,
             ):
-                logger.debug("comeback_nudge_task: duplicate reminder suppressed for user %s", user_id)
+                logger.debug("comeback_nudge_task: duplicate reminder suppressed for user {}", user_id)
                 return {
                     "status": "skipped",
                     "reason": "duplicate_recent",
@@ -2153,7 +2153,7 @@ def comeback_nudge_task(self, user_id: str):
             )
 
             logger.info(
-                "✅ Comeback nudge sent to user %s (plan %s, days_remaining=%d)",
+                "✅ Comeback nudge sent to user {} (plan {}, days_remaining={})",
                 user_id,
                 payload.get("plan_id"),
                 int(payload.get("days_remaining") or 0),
@@ -2168,7 +2168,7 @@ def comeback_nudge_task(self, user_id: str):
     try:
         return _run_async(_run())
     except Exception as exc:
-        logger.error("❌ comeback_nudge_task failed for user %s: %s", user_id, exc)
+        logger.error("❌ comeback_nudge_task failed for user {}: {}", user_id, exc)
         raise self.retry(exc=exc, countdown=60) from exc
 
 
@@ -2229,13 +2229,13 @@ def scan_comeback_nudges(self, limit: int = 500):
                 if dispatched_ok:
                     dispatched += 1
 
-            logger.info("✅ Dispatched %d comeback nudge tasks", dispatched)
+            logger.info("✅ Dispatched {} comeback nudge tasks", dispatched)
             return {"dispatched": dispatched}
 
     try:
         return _run_async(_run())
     except Exception as exc:
-        logger.error("❌ scan_comeback_nudges failed: %s", exc)
+        logger.error("❌ scan_comeback_nudges failed: {}", exc)
         raise self.retry(exc=exc, countdown=120) from exc
 
 
@@ -2319,7 +2319,7 @@ def weekly_growth_narrative_task(self, user_id: str):
                 match_data={"week_start": narrative.week_start},
                 now=generated_at,
             ):
-                logger.debug("weekly_growth_narrative_task: duplicate narrative suppressed for user %s", user_id)
+                logger.debug("weekly_growth_narrative_task: duplicate narrative suppressed for user {}", user_id)
                 return {
                     "status": "skipped",
                     "reason": "duplicate_recent",
@@ -2353,7 +2353,7 @@ def weekly_growth_narrative_task(self, user_id: str):
             )
 
             logger.info(
-                "✅ Weekly growth narrative sent to user %s (placeholder=%s)",
+                "✅ Weekly growth narrative sent to user {} (placeholder={})",
                 user_id,
                 narrative.is_placeholder,
             )
@@ -2369,7 +2369,7 @@ def weekly_growth_narrative_task(self, user_id: str):
     try:
         return _run_async(_run())
     except Exception as exc:
-        logger.error("❌ weekly_growth_narrative_task failed for user %s: %s", user_id, exc)
+        logger.error("❌ weekly_growth_narrative_task failed for user {}: {}", user_id, exc)
         raise self.retry(exc=exc, countdown=60) from exc
 
 
@@ -2443,13 +2443,13 @@ def scan_weekly_growth_narratives(self, limit: int = 500):
                 if dispatched_ok:
                     dispatched += 1
 
-            logger.info("✅ Dispatched %d weekly growth narrative tasks", dispatched)
+            logger.info("✅ Dispatched {} weekly growth narrative tasks", dispatched)
             return {"dispatched": dispatched}
 
     try:
         return _run_async(_run())
     except Exception as exc:
-        logger.error("❌ scan_weekly_growth_narratives failed: %s", exc)
+        logger.error("❌ scan_weekly_growth_narratives failed: {}", exc)
         raise self.retry(exc=exc, countdown=120) from exc
 
 
@@ -2644,7 +2644,7 @@ def aurora_wake_deliver_task(self, wake_id: str, user_id: str):
             await scheduler.mark_executed(wake_id)
 
             logger.info(
-                "Aurora wake delivered: user=%s wake=%s surface=%s",
+                "Aurora wake delivered: user={} wake={} surface={}",
                 user_id,
                 wake_id,
                 surface,
@@ -2654,7 +2654,7 @@ def aurora_wake_deliver_task(self, wake_id: str, user_id: str):
     try:
         return _run_async(_run())
     except Exception as exc:
-        logger.error("aurora_wake_deliver_task failed for wake %s: %s", wake_id, exc)
+        logger.error("aurora_wake_deliver_task failed for wake {}: {}", wake_id, exc)
         raise self.retry(exc=exc, countdown=60) from exc
 
 
@@ -2680,7 +2680,7 @@ def scan_aurora_scheduled_wakes(self, limit: int = 200):
                 if dispatched_ok:
                     dispatched += 1
             logger.info(
-                "Aurora wake scan: %d due wakes found, %d dispatched",
+                "Aurora wake scan: {} due wakes found, {} dispatched",
                 len(due),
                 dispatched,
             )
@@ -2689,7 +2689,7 @@ def scan_aurora_scheduled_wakes(self, limit: int = 200):
     try:
         return _run_async(_run())
     except Exception as exc:
-        logger.error("scan_aurora_scheduled_wakes failed: %s", exc)
+        logger.error("scan_aurora_scheduled_wakes failed: {}", exc)
         raise self.retry(exc=exc, countdown=120) from exc
 
 
@@ -2730,7 +2730,7 @@ def recall_notification_task(self, user_id: str, trigger_type: str, context: str
                 **parsed_context,
             )
         except Exception:
-            logger.debug("Spine on_recall_check skipped for user=%s", user_id)
+            logger.debug("Spine on_recall_check skipped for user={}", user_id)
 
         message = await spine.build_recall_notification(
             user_id=user_id,
@@ -2768,7 +2768,7 @@ def recall_notification_task(self, user_id: str, trigger_type: str, context: str
             )
 
         logger.info(
-            "Recall notification sent: user=%s trigger=%s strategy=%s",
+            "Recall notification sent: user={} trigger={} strategy={}",
             user_id,
             trigger_type,
             message.strategy,
@@ -2778,7 +2778,7 @@ def recall_notification_task(self, user_id: str, trigger_type: str, context: str
     try:
         return _run_async(_run())
     except Exception as exc:
-        logger.error("recall_notification_task failed for user %s: %s", user_id, exc)
+        logger.error("recall_notification_task failed for user {}: {}", user_id, exc)
         raise self.retry(exc=exc, countdown=120) from exc
 
 
@@ -2863,7 +2863,7 @@ def scan_recall_notifications(self, limit: int = 500):
                     dispatched += 1
 
         logger.info(
-            "Recall scan: %d users × %d triggers = %d tasks dispatched (cap=%d)",
+            "Recall scan: {} users × {} triggers = {} tasks dispatched (cap={})",
             len(user_ids),
             len(TRIGGER_TYPES),
             dispatched,
@@ -2874,7 +2874,7 @@ def scan_recall_notifications(self, limit: int = 500):
     try:
         return _run_async(_run())
     except Exception as exc:
-        logger.error("scan_recall_notifications failed: %s", exc)
+        logger.error("scan_recall_notifications failed: {}", exc)
         raise self.retry(exc=exc, countdown=300) from exc
 
 
@@ -2924,7 +2924,7 @@ def spine_snapshot_task(self, user_id: str):
     try:
         return _run_async(_run())
     except Exception as exc:
-        logger.error("spine_snapshot_task failed for user %s: %s", user_id, exc)
+        logger.error("spine_snapshot_task failed for user {}: {}", user_id, exc)
         raise self.retry(exc=exc, countdown=120) from exc
 
 
@@ -2981,13 +2981,13 @@ def scan_spine_snapshots(self, limit: int = 500):
             if dispatched_ok:
                 dispatched += 1
 
-        logger.info("Spine snapshot scan: %d users, %d tasks dispatched", len(user_ids), dispatched)
+        logger.info("Spine snapshot scan: {} users, {} tasks dispatched", len(user_ids), dispatched)
         return {"users": len(user_ids), "dispatched": dispatched}
 
     try:
         return _run_async(_run())
     except Exception as exc:
-        logger.error("scan_spine_snapshots failed: %s", exc)
+        logger.error("scan_spine_snapshots failed: {}", exc)
         raise self.retry(exc=exc, countdown=300) from exc
 
 
@@ -3014,7 +3014,7 @@ def compact_user_traces(self, user_id: str):
     try:
         return _run_async(_run())
     except Exception as exc:
-        logger.error("compact_user_traces failed for user %s: %s", user_id, exc)
+        logger.error("compact_user_traces failed for user {}: {}", user_id, exc)
         raise self.retry(exc=exc, countdown=120) from exc
 
 
@@ -3053,13 +3053,13 @@ def scan_trace_compaction(self, limit: int = 500):
             if cursor == 0 or dispatched >= limit:
                 break
 
-        logger.info("Trace compaction scan: %d users dispatched", dispatched)
+        logger.info("Trace compaction scan: {} users dispatched", dispatched)
         return {"dispatched": dispatched}
 
     try:
         return _run_async(_run())
     except Exception as exc:
-        logger.error("scan_trace_compaction failed: %s", exc)
+        logger.error("scan_trace_compaction failed: {}", exc)
         raise self.retry(exc=exc, countdown=300) from exc
 
 
@@ -3105,7 +3105,7 @@ def community_cohort_signal_task(self, user_id: str, knowledge_node_id: str):
     try:
         return _run_async(_run())
     except Exception as exc:
-        logger.error("community_cohort_signal_task failed: %s", exc)
+        logger.error("community_cohort_signal_task failed: {}", exc)
         raise self.retry(exc=exc, countdown=120) from exc
 
 
@@ -3153,7 +3153,7 @@ def scan_community_cohort_signals(self, limit: int = 200):
     try:
         return _run_async(_run())
     except Exception as exc:
-        logger.error("scan_community_cohort_signals failed: %s", exc)
+        logger.error("scan_community_cohort_signals failed: {}", exc)
         raise self.retry(exc=exc, countdown=120) from exc
 
 
@@ -3184,7 +3184,7 @@ def spine_expire_stale_states(self, limit: int = 500):
     try:
         return _run_async(_run())
     except Exception as exc:
-        logger.error("spine_expire_stale_states failed: %s", exc)
+        logger.error("spine_expire_stale_states failed: {}", exc)
         raise self.retry(exc=exc, countdown=120) from exc
 
 
@@ -3210,7 +3210,7 @@ def spine_auto_deprecate_skills(self, limit: int = 500):
     try:
         return _run_async(_run())
     except Exception as exc:
-        logger.error("spine_auto_deprecate_skills failed: %s", exc)
+        logger.error("spine_auto_deprecate_skills failed: {}", exc)
         raise self.retry(exc=exc, countdown=120) from exc
 
 
@@ -3240,7 +3240,7 @@ def apply_memory_decay(self, batch_size: int = 200):
     try:
         return _run_async(_run())
     except Exception as exc:
-        logger.error("apply_memory_decay failed: %s", exc)
+        logger.error("apply_memory_decay failed: {}", exc)
         raise self.retry(exc=exc, countdown=300) from exc
 
 
@@ -3266,7 +3266,7 @@ def run_weekly_benchmark(self, suite_name: str = "full"):
     try:
         return _run_async(_run())
     except Exception as exc:
-        logger.error("run_weekly_benchmark failed: %s", exc)
+        logger.error("run_weekly_benchmark failed: {}", exc)
         raise self.retry(exc=exc, countdown=900) from exc
 
 
@@ -3353,7 +3353,7 @@ def monitor_safe_experiment_guardrails(self):
     try:
         return _run_async(_run())
     except Exception as exc:
-        logger.error("monitor_safe_experiment_guardrails failed: %s", exc)
+        logger.error("monitor_safe_experiment_guardrails failed: {}", exc)
         raise self.retry(exc=exc, countdown=300) from exc
 
 

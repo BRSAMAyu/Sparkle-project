@@ -411,7 +411,7 @@ class AuroraCoreSessionStore:
         try:
             return AuroraCoreSession.from_dict(json.loads(raw))
         except Exception as exc:
-            logger.warning("Failed to deserialize AuroraCoreSession from JSON: %s", exc)
+            logger.warning("Failed to deserialize AuroraCoreSession from JSON: {}", exc)
             return None
 
     async def load_active(self, user_id: str) -> AuroraCoreSession | None:
@@ -547,7 +547,7 @@ class AuroraCoreSessionStore:
         try:
             return AuroraCoreSession.from_dict(payload)
         except Exception as exc:
-            logger.warning("Failed to deserialize AuroraCoreSession from record payload: %s", exc)
+            logger.warning("Failed to deserialize AuroraCoreSession from record payload: {}", exc)
             return None
 
     async def _call(self, method: str, *args, **kwargs):

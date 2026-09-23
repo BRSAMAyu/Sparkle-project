@@ -74,7 +74,7 @@ class SafetyDegradationManager:
             reason = self._build_reason(quality_score, error_count, anomaly_flags)
             await self.record_degradation_event(user_id, level, reason)
             logger.warning(
-                "safety_degradation uid=%s level=%s reason=%s",
+                "safety_degradation uid={} level={} reason={}",
                 user_id,
                 level.value,
                 reason,

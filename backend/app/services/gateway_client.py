@@ -40,7 +40,7 @@ class GatewayClient:
                     headers=headers,
                 )
             if resp.status_code >= 300:
-                logger.warning("Gateway push failed: %s %s", resp.status_code, resp.text)
+                logger.warning("Gateway push failed: {} {}", resp.status_code, resp.text)
                 return False
         except Exception as exc:
             logger.warning(f"Gateway push failed: {exc}")

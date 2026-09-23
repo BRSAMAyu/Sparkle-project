@@ -98,7 +98,7 @@ class NotificationCenterService:
             notification_type=SPACED_REPETITION_NOTIFICATION_TYPE,
             category=SPACED_REPETITION_CATEGORY,
         ):
-            logger.info("Skipped spaced repetition reminder for user %s: disabled by preferences", user_id)
+            logger.info("Skipped spaced repetition reminder for user {}: disabled by preferences", user_id)
             return None
         if await self.has_recent_spaced_repetition_reminder(
             user_id=user_id,

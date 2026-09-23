@@ -161,8 +161,8 @@ class ProfileContextService:
                         )
                         return context
                     logger.info(
-                        "ProfileContext cache stale for %s: cached_version=%s current_version=%s "
-                        "cached_epoch=%s current_epoch=%s has_insight=%s",
+                        "ProfileContext cache stale for {}: cached_version={} current_version={} "
+                        "cached_epoch={} current_epoch={} has_insight={}",
                         user_id,
                         context.preference_version,
                         current_version,
@@ -436,7 +436,7 @@ class ProfileContextService:
                 current_epoch = await self._get_memory_epoch(user_id)
                 if int(payload.get("memory_epoch") or 0) != current_epoch:
                     logger.info(
-                        "Inline snapshot stale for %s: cached_epoch=%s current_epoch=%s",
+                        "Inline snapshot stale for {}: cached_epoch={} current_epoch={}",
                         user_id,
                         payload.get("memory_epoch"),
                         current_epoch,

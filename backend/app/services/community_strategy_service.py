@@ -41,7 +41,7 @@ class CommunityStrategyService:
         await self.db.flush()
         await self.db.refresh(outcome)
         logger.info(
-            "CommunityStrategyOutcome recorded: user=%s directive=%s decision=%s trigger=%s",
+            "CommunityStrategyOutcome recorded: user={} directive={} decision={} trigger={}",
             user_id, directive_id, decision, trigger_type,
         )
         return outcome

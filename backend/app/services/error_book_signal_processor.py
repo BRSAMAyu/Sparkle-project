@@ -71,7 +71,7 @@ class ErrorBookSignalProcessor:
                 source="ai_inferred",
             )
         except Exception as exc:
-            logger.warning("ErrorBookSignalProcessor failed to update inferred prefs: %s", exc)
+            logger.warning("ErrorBookSignalProcessor failed to update inferred prefs: {}", exc)
 
     async def _filter_noop_updates(self, user_id: UUID, updates: dict[str, object]) -> dict[str, object]:
         if not updates:

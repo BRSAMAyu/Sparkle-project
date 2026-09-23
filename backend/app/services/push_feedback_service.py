@@ -45,7 +45,7 @@ class PushFeedbackService:
     ) -> None:
         action = self._normalize_action(action)
         if action is None:
-            logger.warning("Unknown push interaction action=%s user_id=%s", action, user_id)
+            logger.warning("Unknown push interaction action={} user_id={}", action, user_id)
             return
 
         ts = timestamp or _utcnow()
@@ -148,7 +148,7 @@ class PushFeedbackService:
             await self.redis.rpush(key, json.dumps(entry, ensure_ascii=False))
             await self.redis.expire(key, self.WINDOW_DAYS * 24 * 3600)
         except Exception as exc:
-            logger.warning("Failed to cache push interaction: %s", exc)
+            logger.warning("Failed to cache push interaction: {}", exc)
 
     async def _load_recent_interactions(self, user_id: UUID) -> list[dict[str, object]]:
         if not self.redis:
@@ -161,7 +161,7 @@ class PushFeedbackService:
             try:
                 values = await self.redis.lrange(key, 0, -1)
             except Exception as exc:
-                logger.warning("Failed to load push interactions: %s", exc)
+                logger.warning("Failed to load push interactions: {}", exc)
                 continue
             for raw in values or []:
                 try:

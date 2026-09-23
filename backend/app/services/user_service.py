@@ -167,7 +167,7 @@ class UserService:
                         logger.debug(f"Cache HIT for user {user_id}")
                         return context
                     logger.info(
-                        "User context cache stale for %s: cached_version=%s current_version=%s",
+                        "User context cache stale for {}: cached_version={} current_version={}",
                         user_id,
                         context.preference_version,
                         current_version,

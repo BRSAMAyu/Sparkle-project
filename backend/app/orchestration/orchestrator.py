@@ -1446,7 +1446,7 @@ class ChatOrchestrator(
             )
         except Exception:
             logger.opt(exception=True).warning(
-                "feed_aurora_decision failed for user=%s action=%s",
+                "feed_aurora_decision failed for user={} action={}",
                 user_id,
                 plan.action or "emit_message",
             )
@@ -1502,7 +1502,7 @@ class ChatOrchestrator(
         try:
             return uuid.UUID(raw)
         except Exception:
-            logger.debug("Non-standard session_id format, using uuid5 fallback: %s", raw[:50])
+            logger.debug("Non-standard session_id format, using uuid5 fallback: {}", raw[:50])
             return uuid.uuid5(uuid.NAMESPACE_URL, f"sparkle-session:{raw}")
 
     @staticmethod
@@ -2138,7 +2138,7 @@ class ChatOrchestrator(
             return payload
         except Exception:
             logger.opt(exception=True).warning(
-                "friction decision wiring failed for user=%s session=%s", user_id, session_id
+                "friction decision wiring failed for user={} session={}", user_id, session_id
             )
             return None
 
@@ -2566,13 +2566,13 @@ class ChatOrchestrator(
                             if _spine_resp_dir:
                                 request_extra_context["spine_response_directive"] = _spine_resp_dir.to_dict()
                         except Exception:
-                            logger.opt(exception=True).warning("Redis/spine get_response_directive failed for user=%s", user_id)
+                            logger.opt(exception=True).warning("Redis/spine get_response_directive failed for user={}", user_id)
                         try:
                             _spine_ret_dir = await _spine.get_retrieval_directive(user_id)
                             if _spine_ret_dir:
                                 request_extra_context["spine_retrieval_directive"] = _spine_ret_dir.to_dict()
                         except Exception:
-                            logger.opt(exception=True).warning("Redis/spine get_retrieval_directive failed for user=%s", user_id)
+                            logger.opt(exception=True).warning("Redis/spine get_retrieval_directive failed for user={}", user_id)
                         try:
                             from app.signals.growth_chronicle import GrowthChronicleService
                             _chronicle_svc = GrowthChronicleService(self.redis)
@@ -2583,7 +2583,7 @@ class ChatOrchestrator(
                                 )
                         except Exception:
                             logger.opt(exception=True).warning(
-                                "GrowthChronicleService.get_chronicle failed for user=%s",
+                                "GrowthChronicleService.get_chronicle failed for user={}",
                                 user_id,
                             )
                         try:
@@ -2601,7 +2601,7 @@ class ChatOrchestrator(
                                 request_extra_context["spine_fatigue_context"] = _fatigue
                         except Exception:
                             logger.opt(exception=True).warning(
-                                "Spine fatigue check failed for user=%s",
+                                "Spine fatigue check failed for user={}",
                                 user_id,
                             )
                         try:
@@ -2609,19 +2609,19 @@ class ChatOrchestrator(
                             if _spine_ux:
                                 request_extra_context["spine_ux_directive"] = _spine_ux.to_dict()
                         except Exception:
-                            logger.opt(exception=True).warning("Redis/spine get_ux_directive failed for user=%s", user_id)
+                            logger.opt(exception=True).warning("Redis/spine get_ux_directive failed for user={}", user_id)
                         try:
                             _spine_comm = await _spine.get_community_directive(user_id)
                             if _spine_comm:
                                 request_extra_context["spine_community_directive"] = _spine_comm.to_dict()
                         except Exception:
-                            logger.opt(exception=True).warning("Redis/spine get_community_directive failed for user=%s", user_id)
+                            logger.opt(exception=True).warning("Redis/spine get_community_directive failed for user={}", user_id)
                         try:
                             _spine_skill = await _spine.get_skill_directive(user_id)
                             if _spine_skill:
                                 request_extra_context["spine_skill_directive"] = _spine_skill.to_dict()
                         except Exception:
-                            logger.opt(exception=True).warning("Redis/spine get_skill_directive failed for user=%s", user_id)
+                            logger.opt(exception=True).warning("Redis/spine get_skill_directive failed for user={}", user_id)
                     except Exception as _spine_err:
                         from app.core.business_metrics import record_spine_degradation
 
@@ -2898,7 +2898,7 @@ class ChatOrchestrator(
                                 )
                         except Exception:
                             logger.debug(
-                                "stream_callback failed for spine_divine_moment type=%s", _dm_type,
+                                "stream_callback failed for spine_divine_moment type={}", _dm_type,
                             )
 
                 # STAB-012: Emit spine degraded flag when Spine pipeline failed
@@ -3932,16 +3932,16 @@ class ChatOrchestrator(
                                                 )
                                             _skill_svc.record_draft_outcome(accepted=True)
                                             logger.info(
-                                                "Skill extracted and persisted: user=%s name=%s",
+                                                "Skill extracted and persisted: user={} name={}",
                                                 user_id, draft.name,
                                             )
                                         except ValueError as _ve:
                                             _skill_svc.record_draft_outcome(accepted=False)
-                                            logger.debug("Skill extract skipped for user=%s: %s", user_id, _ve)
+                                            logger.debug("Skill extract skipped for user={}: {}", user_id, _ve)
                                         except Exception as _persist_exc:
                                             _skill_svc.record_draft_outcome(accepted=False)
                                             logger.warning(
-                                                "Skill extract persistence failed for user=%s: %s",
+                                                "Skill extract persistence failed for user={}: {}",
                                                 user_id, _persist_exc,
                                             )
 
@@ -3954,7 +3954,7 @@ class ChatOrchestrator(
                             except Exception as _skill_exc:
                                 logger.debug("Skill extract schedule skipped: {}", _skill_exc)
                     except Exception as exc:
-                        logger.warning("Failed to schedule chat signal collection: %s", exc)
+                        logger.warning("Failed to schedule chat signal collection: {}", exc)
                     if executable_plan and executable_plan.collaboration_mode != "single":
                         await self.observability.log_collaboration_end(
                             user_id=user_id,

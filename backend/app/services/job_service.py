@@ -198,7 +198,7 @@ class JobService:
     async def _handle_generate_tasks(self, db: AsyncSession, job: Job) -> None:
         """Task generation — deferred to v2 (requires plan→task decomposition engine)."""
         logger.warning(
-            "job_type=generate_tasks job_id=%s — deferred to v2, task decomposition engine not yet wired",
+            "job_type=generate_tasks job_id={} — deferred to v2, task decomposition engine not yet wired",
             job.id,
         )
         job.status = JobStatus.COMPLETED
@@ -213,7 +213,7 @@ class JobService:
     async def _handle_execute_actions(self, db: AsyncSession, job: Job) -> None:
         """Action execution — deferred to v2 (requires OpenClaw action runtime)."""
         logger.warning(
-            "job_type=execute_actions job_id=%s — deferred to v2, OpenClaw action runtime not yet wired",
+            "job_type=execute_actions job_id={} — deferred to v2, OpenClaw action runtime not yet wired",
             job.id,
         )
         job.status = JobStatus.COMPLETED
@@ -228,7 +228,7 @@ class JobService:
     async def _handle_generate_plan(self, db: AsyncSession, job: Job) -> None:
         """Plan generation — deferred to v2 (requires async plan synthesis pipeline)."""
         logger.warning(
-            "job_type=generate_plan job_id=%s — deferred to v2, async plan synthesis not yet wired",
+            "job_type=generate_plan job_id={} — deferred to v2, async plan synthesis not yet wired",
             job.id,
         )
         job.status = JobStatus.COMPLETED

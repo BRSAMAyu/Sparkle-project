@@ -412,7 +412,7 @@ async def assign_variant(
 
     if not _is_uuid_like(experiment_id):
         logger.warning(
-            "Experiment %s is not UUID-backed; falling back to control cohort",
+            "Experiment {} is not UUID-backed; falling back to control cohort",
             experiment_id,
         )
         return {
@@ -455,7 +455,7 @@ async def record_metric(
 
     if not _is_uuid_like(experiment_id) or not _is_uuid_like(variant_id):
         logger.warning(
-            "Skipping metric for non-UUID experiment assignment: experiment_id=%s, variant_id=%s",
+            "Skipping metric for non-UUID experiment assignment: experiment_id={}, variant_id={}",
             experiment_id,
             variant_id,
         )

@@ -215,7 +215,7 @@ class ResponseFeedbackService:
             logger.warning(f"Auto-seed evaluation failed: {exc}")
 
         logger.info(
-            "Response feedback stored trace_id=%s response_id=%s workflow_id=%s prompt_version=%s",
+            "Response feedback stored trace_id={} response_id={} workflow_id={} prompt_version={}",
             trace_id,
             response_id,
             workflow_id,

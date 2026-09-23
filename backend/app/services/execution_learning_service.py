@@ -481,7 +481,7 @@ class ExecutionLearningService:
                 source_event_id=f"execution_learning:{signal_key}",
             )
         except Exception as exc:
-            logger.warning("Execution learning fragment creation failed for %s: %s", intent.id, exc)
+            logger.warning("Execution learning fragment creation failed for {}: {}", intent.id, exc)
 
     async def _trusted_success_streak(self, user_id: UUID) -> int:
         result = await self.db.execute(
@@ -779,7 +779,7 @@ class ExecutionLearningService:
                     pattern_name=pattern_name,
                 )
             except Exception as exc:
-                logger.warning("Execution learning replanner trigger failed for plan %s: %s", plan_id, exc)
+                logger.warning("Execution learning replanner trigger failed for plan {}: {}", plan_id, exc)
 
 
 def extract_multiplier_from_description(description: str | None) -> float | None:

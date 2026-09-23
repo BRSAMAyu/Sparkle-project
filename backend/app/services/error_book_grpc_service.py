@@ -44,8 +44,8 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
         request_user_id = (request_user_id or "").strip()
         if request_user_id and meta_user_id and request_user_id != meta_user_id:
             logger.error(
-                "SECURITY: user_id spoofing attempt — request.user_id=%s "
-                "metadata user-id=%s; blocking request",
+                "SECURITY: user_id spoofing attempt — request.user_id={} "
+                "metadata user-id={}; blocking request",
                 request_user_id,
                 meta_user_id,
             )
@@ -53,7 +53,7 @@ class ErrorBookGrpcServiceImpl(error_book_pb2_grpc.ErrorBookServiceServicer):
         if request_user_id and not meta_user_id:
             logger.error(
                 "SECURITY: request.user_id present without metadata user-id "
-                "(value=%s); gateway must authenticate first",
+                "(value={}); gateway must authenticate first",
                 request_user_id,
             )
             raise ValueError("missing authentication metadata")

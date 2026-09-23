@@ -369,7 +369,7 @@ class AuroraRuntimePlanningAdapter:
                     return AuroraRuntimePlanningState.from_dict(_as_dict(json.loads(raw)))
                 except Exception:
                     logger.warning(
-                        "Failed to decode Aurora planning runtime state for user=%s conversation=%s",
+                        "Failed to decode Aurora planning runtime state for user={} conversation={}",
                         user_id,
                         conversation_id,
                     )
@@ -380,7 +380,7 @@ class AuroraRuntimePlanningAdapter:
             snapshot = await AuroraPersistenceStore(db, enabled=True).load_cognitive_snapshot(user_id)
         except Exception as exc:
             await db.rollback()
-            logger.warning("Failed to load Aurora planning snapshot for user=%s error=%s", user_id, exc)
+            logger.warning("Failed to load Aurora planning snapshot for user={} error={}", user_id, exc)
             return None
         if snapshot is None:
             return None
@@ -1124,7 +1124,7 @@ class AuroraRuntimePlanningAdapter:
             )
         except Exception as exc:
             await db.rollback()
-            logger.warning("Failed to persist Aurora planning snapshot for user=%s error=%s", state.user_id, exc)
+            logger.warning("Failed to persist Aurora planning snapshot for user={} error={}", state.user_id, exc)
 
     @staticmethod
     def _to_persisted_state(state: AuroraRuntimePlanningState) -> PersistedAuroraState:

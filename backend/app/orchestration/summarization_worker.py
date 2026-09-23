@@ -219,7 +219,7 @@ class SummarizationWorker:
             )
         except Exception as exc:
             logger.warning(
-                "LLM summarization unavailable for user %s, using local fallback: %s",
+                "LLM summarization unavailable for user {}, using local fallback: {}",
                 user_id,
                 exc,
             )
@@ -230,7 +230,7 @@ class SummarizationWorker:
 
         fallback_summary = self._build_local_fallback_summary(history)
         logger.warning(
-            "Using local fallback summary for user %s because LLM summary was empty or too short",
+            "Using local fallback summary for user {} because LLM summary was empty or too short",
             user_id,
         )
         return fallback_summary

@@ -3366,7 +3366,7 @@ class PlanningWorkflowManager:
             records = (await db.execute(stmt)).scalars().all()
         except Exception as exc:
             await db.rollback()
-            logger.warning("Failed to load previous exam weak nodes for user=%s error=%s", user_id, exc)
+            logger.warning("Failed to load previous exam weak nodes for user={} error={}", user_id, exc)
             return []
 
         weak_nodes: list[str] = []

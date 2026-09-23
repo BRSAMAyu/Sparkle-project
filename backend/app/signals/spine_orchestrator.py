@@ -1629,7 +1629,7 @@ class SpineOrchestrator:
                     retrieval_mode=ret_dir.retrieval_mode,
                 )
             except Exception:
-                logger.warning("build_context_receipt failed for user=%s", user_id, exc_info=True)
+                logger.warning("build_context_receipt failed for user={}", user_id, exc_info=True)
 
         # Build and store PlanDirective
         plan_dir = self.policy_engine.build_plan_directive(decision, signal)

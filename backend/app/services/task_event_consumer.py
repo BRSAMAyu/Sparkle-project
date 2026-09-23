@@ -49,7 +49,7 @@ class TaskEventConsumer:
             elif asyncio.iscoroutinefunction(coro_fn):
                 await coro_fn()
         except Exception as exc:
-            logger.warning("%s failed for %s: %s", label, ctx_id, exc)
+            logger.warning("{} failed for {}: {}", label, ctx_id, exc)
 
     async def start(self):
         """启动事件消费循环"""
@@ -221,7 +221,7 @@ class TaskEventConsumer:
                         plan_id = result.scalar_one_or_none()
                         await db.commit()
                 except Exception as exc:
-                    logger.warning("Failed to fetch plan_id for task %s: %s", task_id, exc)
+                    logger.warning("Failed to fetch plan_id for task {}: {}", task_id, exc)
 
             if plan_id:
                 try:
@@ -235,7 +235,7 @@ class TaskEventConsumer:
                         )
                         await db.commit()
                 except Exception as exc:
-                    logger.warning("AdaptiveReplanner failed for plan %s: %s", plan_id, exc)
+                    logger.warning("AdaptiveReplanner failed for plan {}: {}", plan_id, exc)
 
             # Goal progress update: independent session
             try:
@@ -265,9 +265,9 @@ class TaskEventConsumer:
                             goal.progress = (completed / total) if total and total > 0 else 0.0
                             db.add(goal)
                             await db.commit()
-                            logger.debug("Updated Goal %s progress to %.2f", goal.id, goal.progress)
+                            logger.debug("Updated Goal {} progress to {:.2f}", goal.id, goal.progress)
             except Exception as goal_exc:
-                logger.warning("Failed to update goal progress: %s", goal_exc)
+                logger.warning("Failed to update goal progress: {}", goal_exc)
 
         except Exception as e:
             logger.error(f"Failed to handle task.completed: {e}")

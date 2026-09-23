@@ -225,7 +225,7 @@ class ChatSignalCollector:
                 timestamp=timestamp,
             )
         except Exception as exc:
-            logger.warning("ChatSignalCollector evidence extraction failed: %s", exc)
+            logger.warning("ChatSignalCollector evidence extraction failed: {}", exc)
             if self.redis:
                 try:
                     from app.services.evidence import FusionEngine
@@ -366,7 +366,7 @@ class ChatSignalCollector:
             await engine.append_trace(self.redis, user_id=str(user_id), trace=trace)
             return trace
         except Exception as exc:
-            logger.warning("ChatSignalCollector belief shadow fusion failed: %s", exc)
+            logger.warning("ChatSignalCollector belief shadow fusion failed: {}", exc)
             try:
                 from app.services.evidence import FusionEngine
 
@@ -413,7 +413,7 @@ class ChatSignalCollector:
             async with AsyncSessionLocal() as db:
                 await operation(db)
         except Exception as exc:
-            logger.warning("ChatSignalCollector failed to persist %s: %s", label, exc)
+            logger.warning("ChatSignalCollector failed to persist {}: {}", label, exc)
 
     async def _store_entry(self, user_id: UUID, entry: dict[str, Any]) -> None:
         key = f"user:chat:signals:{user_id}"
@@ -422,7 +422,7 @@ class ChatSignalCollector:
             await self.redis.ltrim(key, 0, self.WINDOW_SIZE - 1)
             await self.redis.expire(key, self.WINDOW_TTL_SECONDS)
         except Exception as exc:
-            logger.warning("Failed to cache chat signal entry: %s", exc)
+            logger.warning("Failed to cache chat signal entry: {}", exc)
 
     async def _get_latest_entry(self, user_id: UUID) -> dict[str, Any] | None:
         key = f"user:chat:signals:{user_id}"
@@ -445,7 +445,7 @@ class ChatSignalCollector:
             await self.redis.expire(key, self.WINDOW_TTL_SECONDS)
             return int(counter)
         except Exception as exc:
-            logger.warning("Failed to increment chat signal counter: %s", exc)
+            logger.warning("Failed to increment chat signal counter: {}", exc)
             return 0
 
     async def _load_entries(self, user_id: UUID) -> list[dict[str, Any]]:
@@ -453,7 +453,7 @@ class ChatSignalCollector:
         try:
             raw_entries = await self.redis.lrange(key, 0, self.WINDOW_SIZE - 1)
         except Exception as exc:
-            logger.warning("Failed to load chat signal entries: %s", exc)
+            logger.warning("Failed to load chat signal entries: {}", exc)
             return []
         entries: list[dict[str, Any]] = []
         for raw in raw_entries or []:

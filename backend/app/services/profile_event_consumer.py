@@ -292,7 +292,7 @@ class ProfileEventConsumer:
         try:
             return await db.get(SeedLibrary, UUID(str(library_id)))
         except Exception as db_exc:
-            logger.warning("Failed to load SeedLibrary %s: %s", library_id, db_exc)
+            logger.warning("Failed to load SeedLibrary {}: {}", library_id, db_exc)
             return None
 
     async def _invalidate_context_cache(self, user_id: str) -> None:

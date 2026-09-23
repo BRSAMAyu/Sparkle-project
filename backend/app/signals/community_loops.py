@@ -263,7 +263,7 @@ class CommunityLoopManager:
         key = f"spine:community_outcome:{user_id}:{directive_id}"
         await redis_client.set(key, json.dumps(outcome), ex=90 * 24 * 3600)
         logger.info(
-            "CommunityLoopManager: strategy outcome recorded user=%s directive=%s decision=%s",
+            "CommunityLoopManager: strategy outcome recorded user={} directive={} decision={}",
             user_id, directive_id, decision,
         )
         return {"recorded": True, "outcome": outcome}

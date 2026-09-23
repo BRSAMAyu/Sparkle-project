@@ -494,7 +494,7 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
             )
         except TimeoutError:
             logger.warning(
-                "Explicit expert collaboration timed out for expert=%s after %.1fs",
+                "Explicit expert collaboration timed out for expert={} after {:.1f}s",
                 expert_id,
                 _EXPLICIT_COLLAB_LLM_TIMEOUT_SECONDS,
             )
@@ -504,7 +504,7 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
             )
         except Exception as exc:
             logger.warning(
-                "Explicit expert collaboration degraded for expert=%s: %s",
+                "Explicit expert collaboration degraded for expert={}: {}",
                 expert_id,
                 exc,
             )
@@ -618,7 +618,7 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
         )
     except TimeoutError:
         logger.warning(
-            "Explicit expert collaboration synthesis timed out for target=%s after %.1fs",
+            "Explicit expert collaboration synthesis timed out for target={} after {:.1f}s",
             synthesis_target,
             _EXPLICIT_COLLAB_LLM_TIMEOUT_SECONDS,
         )
@@ -631,7 +631,7 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
             + "\n\n最终建议：先按以上共识执行；如果你需要，我可以继续补一版更完整的综合说明。"
         )
     except Exception as exc:
-        logger.warning("Explicit expert collaboration synthesis degraded: %s", exc)
+        logger.warning("Explicit expert collaboration synthesis degraded: {}", exc)
         final_response = (
             "这轮多专家综合出现波动，我先把已经稳定拿到的观点整理给你：\n\n"
             + "\n".join(

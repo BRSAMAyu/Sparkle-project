@@ -1376,7 +1376,7 @@ class ExecutionService:
                     async with asyncio.timeout(300):
                         results = list(await asyncio.gather(*[_dispatch_isolated(intent.id) for intent in intents]))
                 except TimeoutError:
-                    logger.warning("dispatch_batch timed out after 300s for batch %s", batch_id)
+                    logger.warning("dispatch_batch timed out after 300s for batch {}", batch_id)
                     raise ValueError("Batch dispatch timed out")
         else:
             for intent in intents:
@@ -3215,7 +3215,7 @@ class ExecutionService:
                     token_usage=token_usage,
                 )
             except Exception as exc:
-                logger.warning("Failed to record token usage for failed intent %s: %s", intent.id, exc)
+                logger.warning("Failed to record token usage for failed intent {}: {}", intent.id, exc)
         await self._publish_status_event(intent, old_status=old_status)
         await self._publish_monitor_progress(
             intent=intent,

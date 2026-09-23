@@ -1306,7 +1306,7 @@ def build_system_prompt(
             if _mc and hasattr(_mc, "tier"):
                 _model_tier_str = _mc.tier.value
         except Exception:
-            logger.opt(exception=True).debug("Failed to resolve model tier for key=%s", model_key)
+            logger.opt(exception=True).debug("Failed to resolve model tier for key={}", model_key)
     _prompt_budget = _TIER_PROMPT_BUDGET.get(_model_tier_str or "", PROMPT_SECTION_SOFT_LIMIT_TOKENS)
 
     pre_budget_section_map = dict(section_map)

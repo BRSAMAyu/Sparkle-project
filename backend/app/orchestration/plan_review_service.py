@@ -1923,7 +1923,7 @@ Please review this plan and provide your assessment."""
         """
         # This would integrate with a plan storage system
         # For now, plans are stored in orchestrator state
-        logger.info("Retrieving stored plan %s for user %s", plan_id, user_id)
+        logger.info("Retrieving stored plan {} for user {}", plan_id, user_id)
         logger.debug("get_stored_plan: plan storage integration not yet implemented")
         return None
 
@@ -2291,7 +2291,7 @@ Please review this plan and provide your assessment."""
         def _log_replan_exception(task: asyncio.Task) -> None:
             if not task.cancelled() and task.exception():
                 logger.opt(exception=task.exception()).error(
-                    "Replan background task failed: %s",
+                    "Replan background task failed: {}",
                     task.exception(),
                 )
 

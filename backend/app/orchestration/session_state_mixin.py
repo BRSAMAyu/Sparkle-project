@@ -982,7 +982,7 @@ class SessionStateMixin:
 
         if healed:
             await self._save_context_versions(user_id, previous)
-            logger.info("Context self-heal versions user=%s healed=%s", user_id, healed)
+            logger.info("Context self-heal versions user={} healed={}", user_id, healed)
 
     async def _hydrate_evolution_context(
         self,

@@ -1986,7 +1986,7 @@ class AdaptiveReplanner:
                 )
         except Exception as exc:
             # R2-03: Plan adjustment failures must be visible at error level
-            logger.error("R2-03: PlanAdjustmentApplier failed for plan %s: %s", report.plan_id, exc)
+            logger.error("R2-03: PlanAdjustmentApplier failed for plan {}: {}", report.plan_id, exc)
 
         # --- Card protocol writeback (breakpoint fix 1) ---
         try:
@@ -2004,7 +2004,7 @@ class AdaptiveReplanner:
                 )
         except Exception as exc:
             # R2-03: Card protocol writeback failures must be visible at error level
-            logger.error("R2-03: Card protocol writeback failed for plan %s: %s", report.plan_id, exc)
+            logger.error("R2-03: Card protocol writeback failed for plan {}: {}", report.plan_id, exc)
 
         if not patch_result or not (
             patch_result.affected_task_ids or patch_result.inserted_task_ids or patch_result.hidden_task_ids

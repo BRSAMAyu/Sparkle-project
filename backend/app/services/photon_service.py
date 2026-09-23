@@ -352,7 +352,7 @@ class PhotonService:
             )
             if existing_transaction is not None:
                 logger.info(
-                    "Skipped duplicate photon grant for user %s, source=%s, type=%s, related_item_id=%s",
+                    "Skipped duplicate photon grant for user {}, source={}, type={}, related_item_id={}",
                     user_id,
                     source,
                     transaction_type,
@@ -399,7 +399,7 @@ class PhotonService:
                     if race_winner is not None:
                         logger.info(
                             "Lost daily-first idempotency race (unique index arbitration) "
-                            "for user %s, related_item_id=%s",
+                            "for user {}, related_item_id={}",
                             user_id,
                             related_item_id,
                         )
@@ -414,7 +414,7 @@ class PhotonService:
                     # 防御性兜底（理论上不可达）：零发放终局，余额原样返回，
                     # 不伪造胜者账目。
                     logger.warning(
-                        "Daily-first conflict winner row not visible for user %s, related_item_id=%s",
+                        "Daily-first conflict winner row not visible for user {}, related_item_id={}",
                         user_id,
                         related_item_id,
                     )

@@ -206,7 +206,7 @@ class BillingWorker:
                     await self._move_to_dead_letter(record, str(exc))
                 except Exception as dl_exc:
                     logger.error(
-                        "Failed to enqueue dead letter for request_id=%s: %s",
+                        "Failed to enqueue dead letter for request_id={}: {}",
                         record.get("request_id"),
                         dl_exc,
                     )
@@ -227,7 +227,7 @@ class BillingWorker:
                     await self.redis.lpush(self.BILLING_QUEUE, json.dumps(record, ensure_ascii=False))
                 except Exception as push_exc:
                     logger.error(
-                        "Failed to requeue billing record request_id=%s: %s",
+                        "Failed to requeue billing record request_id={}: {}",
                         record.get("request_id"),
                         push_exc,
                     )
@@ -235,7 +235,7 @@ class BillingWorker:
                         await self._move_to_dead_letter(record, f"requeue failed: {push_exc}")
                     except Exception as dl_exc:
                         logger.error(
-                            "Failed to enqueue dead letter for request_id=%s: %s",
+                            "Failed to enqueue dead letter for request_id={}: {}",
                             record.get("request_id"),
                             dl_exc,
                         )
@@ -250,7 +250,7 @@ class BillingWorker:
         }
         await self.redis.rpush(self._dead_letter_queue, json.dumps(payload, ensure_ascii=False))
         logger.warning(
-            "Moved billing record to dead letter queue: request_id=%s queue=%s",
+            "Moved billing record to dead letter queue: request_id={} queue={}",
             record.get("request_id"),
             self._dead_letter_queue,
         )

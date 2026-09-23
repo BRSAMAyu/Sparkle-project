@@ -103,7 +103,7 @@ class ProfileWriteService:
             except Exception as exc:
                 await self.db.rollback()
                 logger.warning(
-                    "Preference history write failed user_id=%s pref_key=%s error=%s",
+                    "Preference history write failed user_id={} pref_key={} error={}",
                     user_id,
                     pref_key,
                     exc,
@@ -142,7 +142,7 @@ class ProfileWriteService:
                 )
         except Exception as exc:
             logger.warning(
-                "Preference history delete failed user_id=%s pref_key=%s error=%s",
+                "Preference history delete failed user_id={} pref_key={} error={}",
                 user_id,
                 pref_key,
                 exc,
@@ -181,7 +181,7 @@ class ProfileWriteService:
             if decision.allowed:
                 filtered_updates[key] = value
             else:
-                logger.debug("Inferred pref %s blocked by memory policy: %s", key, decision.reason)
+                logger.debug("Inferred pref {} blocked by memory policy: {}", key, decision.reason)
 
         if not filtered_updates:
             prefs = await self.pref_service.get_preferences(user_id)
@@ -194,7 +194,7 @@ class ProfileWriteService:
         ]
         for key in explicit_protected_keys:
             filtered_updates.pop(key, None)
-            logger.debug("Skipping inferred pref %s: explicit override exists", key)
+            logger.debug("Skipping inferred pref {}: explicit override exists", key)
 
         if not filtered_updates:
             prefs = await self.pref_service.get_preferences(user_id)
@@ -219,7 +219,7 @@ class ProfileWriteService:
                 )
             except Exception as exc:
                 logger.warning(
-                    "Inferred preference history write failed user_id=%s pref_key=%s error=%s",
+                    "Inferred preference history write failed user_id={} pref_key={} error={}",
                     user_id,
                     key,
                     exc,
@@ -383,7 +383,7 @@ class ProfileWriteService:
         try:
             raw_map = await self.redis.hgetall(self._override_backup_key(user_id))
         except Exception as exc:
-            logger.warning("Failed to list inferred backups for %s: %s", user_id, exc)
+            logger.warning("Failed to list inferred backups for {}: {}", user_id, exc)
             return {}
         backups: dict[str, dict[str, Any]] = {}
         for key, raw in (raw_map or {}).items():
@@ -469,7 +469,7 @@ class ProfileWriteService:
             await event_bus.publish(event.to_dict()["event_type"], event.to_dict())
         except Exception as exc:
             # R2-02: Event publish failures must be visible at error level
-            logger.error("R2-02: ProfilePreferenceUpdated publish failed for user %s: %s", user_id, exc)
+            logger.error("R2-02: ProfilePreferenceUpdated publish failed for user {}: {}", user_id, exc)
 
     async def _publish_preference_deleted_event(
         self,
@@ -487,7 +487,7 @@ class ProfileWriteService:
             await event_bus.publish(event.to_dict()["event_type"], event.to_dict())
         except Exception as exc:
             # R2-02: Event publish failures must be visible at error level
-            logger.error("R2-02: ProfilePreferenceDeleted publish failed for user %s key %s: %s", user_id, pref_key, exc)
+            logger.error("R2-02: ProfilePreferenceDeleted publish failed for user {} key {}: {}", user_id, pref_key, exc)
 
     @staticmethod
     def _to_history_payload(pref_value: Any) -> dict[str, Any]:
@@ -529,7 +529,7 @@ class ProfileWriteService:
             )
             await self.redis.expire(self._override_backup_key(user_id), self._override_backup_ttl_seconds)
         except Exception as exc:
-            logger.warning("Failed to backup inferred preference %s: %s", pref_key, exc)
+            logger.warning("Failed to backup inferred preference {}: {}", pref_key, exc)
 
     async def _load_inferred_backup(self, user_id: UUID, pref_key: str) -> Any | None:
         if not self.redis:
@@ -537,14 +537,14 @@ class ProfileWriteService:
         try:
             raw = await self.redis.hget(self._override_backup_key(user_id), pref_key)
         except Exception as exc:
-            logger.warning("Failed to load inferred backup %s: %s", pref_key, exc)
+            logger.warning("Failed to load inferred backup {}: {}", pref_key, exc)
             return None
         if not raw:
             return None
         try:
             payload = json.loads(raw)
         except Exception as json_exc:
-            logger.warning("Failed to parse inferred backup %s: %s", pref_key, json_exc)
+            logger.warning("Failed to parse inferred backup {}: {}", pref_key, json_exc)
             return None
         if isinstance(payload, dict):
             return payload.get("value")
@@ -556,7 +556,7 @@ class ProfileWriteService:
         try:
             await self.redis.hdel(self._override_backup_key(user_id), pref_key)
         except Exception as exc:
-            logger.warning("Failed to delete inferred backup %s: %s", pref_key, exc)
+            logger.warning("Failed to delete inferred backup {}: {}", pref_key, exc)
 
     async def _get_stored_explicit_preferences(self, user_id: UUID) -> dict[str, Any]:
         result = await self.db.execute(

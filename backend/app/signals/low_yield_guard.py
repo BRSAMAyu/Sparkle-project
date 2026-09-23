@@ -127,12 +127,12 @@ class LowYieldGuard:
             adj = adjustments.get(activity_type, 0.0)
             if adj:
                 logger.debug(
-                    "LowYieldGuard: personalization user=%s style=%s activity=%s adj=%+.2f",
+                    "LowYieldGuard: personalization user={} style={} activity={} adj={:+.2f}",
                     user_id, learning_style, activity_type, adj,
                 )
             return adj
         except Exception:
-            logger.debug("LowYieldGuard: personalization lookup failed user=%s", user_id, exc_info=True)
+            logger.debug("LowYieldGuard: personalization lookup failed user={}", user_id, exc_info=True)
             return 0.0
 
     async def check_activity(
@@ -180,7 +180,7 @@ class LowYieldGuard:
         )
 
         logger.info(
-            "LowYieldGuard: blocked activity=%s yield=%.2f (base=%.2f adj=%+.2f) deadline_hours=%.0f",
+            "LowYieldGuard: blocked activity={} yield={:.2f} (base={:.2f} adj={:+.2f}) deadline_hours={:.0f}",
             activity_type, yield_score, base_yield, adj, deadline_hours,
         )
 

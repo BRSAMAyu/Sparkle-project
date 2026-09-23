@@ -89,7 +89,7 @@ class UnifiedAnalysisService:
             evidence_refs=[ref.model_dump() for ref in result.evidence_refs],
         )
         if record is None:
-            logger.info("Episodic memory write blocked for analysis task %s", result.task_id)
+            logger.info("Episodic memory write blocked for analysis task {}", result.task_id)
             return None
         logger.info(f"Wrote episodic memory from analysis {result.task_id}: {record.id}")
         return str(record.id)

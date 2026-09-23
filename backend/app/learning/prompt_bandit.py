@@ -82,7 +82,7 @@ class PromptBandit:
 
     async def update(self, workflow_id: str, arm: str, reward: int) -> None:
         if reward not in (0, 1):
-            logger.warning("PromptBandit received invalid reward=%s", reward)
+            logger.warning("PromptBandit received invalid reward={}", reward)
             return
         state = await self._load_state(workflow_id, [arm])
         params = state["arms"].get(arm, {"alpha": 1.0, "beta": 1.0})
