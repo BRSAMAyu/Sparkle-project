@@ -671,28 +671,29 @@ services:
       - MINIO_BACKUPS_ACCESS_KEY=${MINIO_BACKUPS_ACCESS_KEY:-sparkle_backups}
       - MINIO_BACKUPS_SECRET_KEY=${MINIO_BACKUPS_SECRET_KEY:-${MINIO_SECRET_KEY}}
     entrypoint: ["/bin/sh", "-c"]
-    command: |
-      set -eu
-      mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
-      mc mb -p "local/$$MINIO_UPLOADS_BUCKET" "local/$$MINIO_EXPORTS_BUCKET" "local/$$MINIO_BACKUPS_BUCKET"
-      cat >/tmp/uploads-policy.json <<EOF
-      {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetObject","s3:PutObject","s3:DeleteObject","s3:ListBucket"],"Resource":["arn:aws:s3:::$$MINIO_UPLOADS_BUCKET","arn:aws:s3:::$$MINIO_UPLOADS_BUCKET/*"]}]}
-      EOF
-      cat >/tmp/exports-policy.json <<EOF
-      {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetObject","s3:PutObject","s3:DeleteObject","s3:ListBucket"],"Resource":["arn:aws:s3:::$$MINIO_EXPORTS_BUCKET","arn:aws:s3:::$$MINIO_EXPORTS_BUCKET/*"]}]}
-      EOF
-      cat >/tmp/backups-policy.json <<EOF
-      {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetObject","s3:PutObject","s3:DeleteObject","s3:ListBucket"],"Resource":["arn:aws:s3:::$$MINIO_BACKUPS_BUCKET","arn:aws:s3:::$$MINIO_BACKUPS_BUCKET/*"]}]}
-      EOF
-      mc admin user add local "$$MINIO_UPLOADS_ACCESS_KEY" "$$MINIO_UPLOADS_SECRET_KEY" || true
-      mc admin user add local "$$MINIO_EXPORTS_ACCESS_KEY" "$$MINIO_EXPORTS_SECRET_KEY" || true
-      mc admin user add local "$$MINIO_BACKUPS_ACCESS_KEY" "$$MINIO_BACKUPS_SECRET_KEY" || true
-      mc admin policy create local sparkle-uploads /tmp/uploads-policy.json || mc admin policy update local sparkle-uploads /tmp/uploads-policy.json
-      mc admin policy create local sparkle-exports /tmp/exports-policy.json || mc admin policy update local sparkle-exports /tmp/exports-policy.json
-      mc admin policy create local sparkle-backups /tmp/backups-policy.json || mc admin policy update local sparkle-backups /tmp/backups-policy.json
-      mc admin policy attach local sparkle-uploads --user "$$MINIO_UPLOADS_ACCESS_KEY"
-      mc admin policy attach local sparkle-exports --user "$$MINIO_EXPORTS_ACCESS_KEY"
-      mc admin policy attach local sparkle-backups --user "$$MINIO_BACKUPS_ACCESS_KEY"
+    command:
+      - |
+              set -eu
+              mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
+              mc mb -p "local/$$MINIO_UPLOADS_BUCKET" "local/$$MINIO_EXPORTS_BUCKET" "local/$$MINIO_BACKUPS_BUCKET"
+              cat >/tmp/uploads-policy.json <<EOF
+              {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetObject","s3:PutObject","s3:DeleteObject","s3:ListBucket"],"Resource":["arn:aws:s3:::$$MINIO_UPLOADS_BUCKET","arn:aws:s3:::$$MINIO_UPLOADS_BUCKET/*"]}]}
+              EOF
+              cat >/tmp/exports-policy.json <<EOF
+              {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetObject","s3:PutObject","s3:DeleteObject","s3:ListBucket"],"Resource":["arn:aws:s3:::$$MINIO_EXPORTS_BUCKET","arn:aws:s3:::$$MINIO_EXPORTS_BUCKET/*"]}]}
+              EOF
+              cat >/tmp/backups-policy.json <<EOF
+              {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetObject","s3:PutObject","s3:DeleteObject","s3:ListBucket"],"Resource":["arn:aws:s3:::$$MINIO_BACKUPS_BUCKET","arn:aws:s3:::$$MINIO_BACKUPS_BUCKET/*"]}]}
+              EOF
+              mc admin user add local "$$MINIO_UPLOADS_ACCESS_KEY" "$$MINIO_UPLOADS_SECRET_KEY" || true
+              mc admin user add local "$$MINIO_EXPORTS_ACCESS_KEY" "$$MINIO_EXPORTS_SECRET_KEY" || true
+              mc admin user add local "$$MINIO_BACKUPS_ACCESS_KEY" "$$MINIO_BACKUPS_SECRET_KEY" || true
+              mc admin policy create local sparkle-uploads /tmp/uploads-policy.json || mc admin policy update local sparkle-uploads /tmp/uploads-policy.json
+              mc admin policy create local sparkle-exports /tmp/exports-policy.json || mc admin policy update local sparkle-exports /tmp/exports-policy.json
+              mc admin policy create local sparkle-backups /tmp/backups-policy.json || mc admin policy update local sparkle-backups /tmp/backups-policy.json
+              mc admin policy attach local sparkle-uploads --user "$$MINIO_UPLOADS_ACCESS_KEY"
+              mc admin policy attach local sparkle-exports --user "$$MINIO_EXPORTS_ACCESS_KEY"
+              mc admin policy attach local sparkle-backups --user "$$MINIO_BACKUPS_ACCESS_KEY"
     networks:
       - app
 
