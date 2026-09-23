@@ -408,11 +408,13 @@ def build_report(pack: dict[str, Any], runs: dict[str, list[dict[str, Any]]]) ->
             "total_est_cost_usd": round(sum(e.get("est_cost_usd", 0.0) for e in entries), 4),
             "latency_ms_p50": _pctl([float(x) for x in latencies], 0.50),
             "latency_ms_p95": _pctl([float(x) for x in latencies], 0.95),
-            "call_failures": sum(1 for e in entries if e.get("parse_error", "").startswith("call_failed")),
+            "call_failures": sum(1 for e in entries if (e.get("parse_error") or "").startswith("call_failed")),
         }
 
     metrics = {label: _arm_metrics(label) for label in arm_labels}
-    for q in questions:
+    # --limit 子集跑时报告只覆盖实际运行过的题（run 条目为真源，包仅供给字段）。
+    ran_ids = {e["id"] for e in runs[arm_labels[0]]}
+    for q in (item for item in questions if item["id"] in ran_ids):
         row: dict[str, Any] = {
             "id": q["id"],
             "domain": q["domain"],
