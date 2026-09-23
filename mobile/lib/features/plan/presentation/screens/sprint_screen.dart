@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
@@ -290,45 +291,39 @@ class _SprintHeader extends ConsumerWidget {
             ),
             const SizedBox(height: DS.lg),
             if (serverDaysLeft != null)
-              Chip(
-                label: Text(
-                  serverDaysLeft > 0
-                      ? context.l10n.sprintDaysLeft(serverDaysLeft)
-                      : serverDaysLeft == 0
-                          ? context.l10n.examDay
-                          : context.l10n.sprintEnded,
-                ),
-                avatar: const Icon(Icons.timelapse),
+              // SPEC-GUARD（N1/改造#7）：裸 Chip 迁入 SemanticPill owner。
+              // 倒计时是冲刺身份锚点数字，tone 走 brand；考日/已结束同 pill
+              // 收敛，不在本卡引入 N5 紧迫色阶（那是 exam 卡 header+倒计时的条款）。
+              SemanticPill(
+                label: serverDaysLeft > 0
+                    ? context.l10n.sprintDaysLeft(serverDaysLeft)
+                    : serverDaysLeft == 0
+                        ? context.l10n.examDay
+                        : context.l10n.sprintEnded,
+                icon: Icons.timelapse,
+                tone: PillTone.brand,
               )
             else if (plan.targetDate != null)
-              Chip(
-                label: Text(
-                  context.l10n.sprintEndsOn(
-                    formatSparkleDateOnly(plan.targetDate!, context.l10n),
-                  ),
+              // 目标日降级展示：中性信息位。
+              SemanticPill(
+                label: context.l10n.sprintEndsOn(
+                  formatSparkleDateOnly(plan.targetDate!, context.l10n),
                 ),
-                avatar: const Icon(Icons.timelapse),
+                icon: Icons.timelapse,
+                tone: PillTone.neutral,
               ),
             const SizedBox(height: DS.md),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
-                  unawaited(context.push('/plans/${plan.id}/review'));
-                },
-                icon: const Icon(Icons.rate_review_outlined, size: 18),
-                label: Text(context.l10n.sprintReviewBtn),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: DS.brandPrimary,
-                  side:
-                      BorderSide(color: DS.brandPrimary.withValues(alpha: 0.4)),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-              ),
+            // SPEC-GUARD（改造#7）：裸 OutlinedButton.icon 迁入 SparkleButton
+            // outline owner（brandPrimary 前景+描边为 owner 正典样式，去手写
+            // styleFrom 的边框/圆角/内边距复刻）。
+            SparkleButton.outline(
+              onPressed: () {
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+                unawaited(context.push('/plans/${plan.id}/review'));
+              },
+              icon: const Icon(Icons.rate_review_outlined, size: 18),
+              label: context.l10n.sprintReviewBtn,
+              expand: true,
             ),
           ],
         ),
@@ -408,11 +403,12 @@ class _SprintAchievementsProgressState
         Padding(
           padding:
               const EdgeInsets.symmetric(horizontal: DS.lg, vertical: DS.sm),
-          child: Card(
-            elevation: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(DS.md),
-              child: Column(
+          // SPEC-GUARD（改造#7）：裸 Card(elevation:2) 去 elevation，迁入
+          // GraphiteCardSurface owner（描边+表面角色色），padding 保持原密度。
+          child: GraphiteCardSurface(
+            surfaceRole: SparkleSurfaceRole.card,
+            padding: const EdgeInsets.all(DS.md),
+            child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
@@ -447,7 +443,6 @@ class _SprintAchievementsProgressState
                       ),
                 ],
               ),
-            ),
           ),
         ),
       ],

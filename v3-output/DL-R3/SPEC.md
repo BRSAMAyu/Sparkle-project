@@ -24,6 +24,8 @@
 
 9 surface 必达项分配矩阵见 §8 开篇。
 
+> **【v1.1 N1 增补 @A-SPEC，落地 @SPEC-GUARD】**：冲刺仪表盘（sprint surface）为**第 10 治理面**——`features/plan/presentation/screens/sprint_screen.dart`（冲刺屏）与 `features/home/presentation/widgets/exam_sprint_dashboard_card.dart`（home 内嵌冲刺仪表卡）合称 sprint surface，期末一周北极星主场景。必达项（≤2，与第一硬条款同制）：①剩余时间与今日完成度一眼可信（口径走 §9.4 单一事实源）②下一步动作单一 CTA。守卫落点：`check_ux_component_convention.py` 扫描根 +1 `features/plan/presentation`（§9.1 已同步）。【依据：§1.2 结构性发现；§0.2 矩阵无 sprint 行的空白；FLEET-BRIEF「冲刺完成度=sprint_task_ledger 唯一定义」】
+
 ### 0.3 气质定位
 
 - **底层气质**：暖纸（calm/paper）+ 诚实（honest）。暖纸由色彩系统的 seed 承载（§1），诚实由四态规范（§4.5）与数字准入（§6.3）承载。对照 AUDIT §2 的判决：丑的主因是「系统性失控」而非「审美差」，底子保留、系统立规。
@@ -542,7 +544,7 @@ lib/core/display/lexicon/
 
 ---
 
-## §8 屏级蓝图（9 surfaces）
+## §8 屏级蓝图（9 surfaces；v1.1 N1 增补第 10 治理面 sprint，见 §8.10）
 
 > 每屏：必达项 ≤2（§0.2 矩阵落地）+ 首要改动 Top5（引罪状编号）+ 验收清单（条款号指向 ACCEPTANCE）。现状落点为真实文件路径。
 > **实施状态（v1.0，R4 P1-9）**：Top5 各项的已落地/未开工状态统一见 **§10.5 实施状态台账**，本章不另维护副本；下文仅对已落地项就地标注【已落地】防重复立卡。
@@ -560,6 +562,7 @@ lib/core/display/lexicon/
 | profile | ①画像与进度诚实 ②图表有轴有单位 | 懂状态 |
 | settings | ①改即生效无需找保存 ②偏好与无障碍集中一处 | ——（系统屏） |
 | onboarding | ①首见星图仪式 ②≤5 步到 home | 有温度 |
+| sprint【v1.1 N1 增补】 | ①剩余时间与今日完成度一眼可信 ②下一步动作单一 CTA | 懂状态 |
 
 ### 8.1 home（`features/home/presentation/screens/dashboard_screen.dart`）
 
@@ -661,13 +664,20 @@ lib/core/display/lexicon/
   5. 首见星图仪式（D5 增补）衔接：完成目标创建后一次性展示全局星图，随后落工作视图——**一次性触发维持（品牌资产），但仪式预算按下调档执行（§7.2）**。
 - 验收：A8.9。
 
+### 8.10 sprint（冲刺仪表盘，`features/plan/presentation/screens/sprint_screen.dart` + `features/home/presentation/widgets/exam_sprint_dashboard_card.dart`）【v1.1 N1 增补 @A-SPEC，守卫落地 @SPEC-GUARD】
+
+- 必达：①剩余时间与今日完成度一眼可信（口径走 §9.4 单一事实源，服务端下传优先）②下一步动作单一 CTA。
+- 结构说明：sprint surface 由两文件合称——冲刺屏本体 + home 内嵌冲刺仪表卡；四角归属懂状态。跨面派生值（剩余天数/完成度）全 app 单算（v1.1 N2）。
+- 守卫：`check_ux_component_convention.py` 扫描根 +1 `features/plan/presentation`（2026-09 @SPEC-GUARD 落地，基线登记现值、ratchet 只降不升）；`features/community`、`features/leaderboard` 域另立卡评估，本条不动。
+- 验收：A-SPEC V1.1 §5 改造 #7——守卫跑绿 + manifest 登记 + 新文件零容忍。
+
 ---
 
 ## §9 门禁与工具链
 
 ### 9.1 lint/guard 规则草案清单（对照现有 ratchet 模式扩展）
 
-现有底座（维持，只降不升）：`check_ux_component_convention.py`（rawButton/rawSpinner/rawChip/parallelClass/colorLiteral，9 surfaces 扫描根）＋ `check_ui_design_tokens_ratchet.py`（colorLiteral/fontSize 全仓）＋ **DL-SPEC `check_dl_spec_ratchet.py`（已落地 @B2-GUARDS：12 维守卫，基线冻结于 d87d42ea，含 2 个批 2 维提前落地）**。扩展新维度：
+现有底座（维持，只降不升）：`check_ux_component_convention.py`（rawButton/rawSpinner/rawChip/parallelClass/colorLiteral，扫描根 9 surfaces＋v1.1 N1 增补 `features/plan/presentation` 共 10 治理面，plan 根基线登记 @SPEC-GUARD）＋ `check_ui_design_tokens_ratchet.py`（colorLiteral/fontSize 全仓）＋ **DL-SPEC `check_dl_spec_ratchet.py`（已落地 @B2-GUARDS：12 维守卫，基线冻结于 d87d42ea，含 2 个批 2 维提前落地）**。扩展新维度：
 
 | # | 守卫 | 扫描 pattern（描述） | 基线策略 | 抓的规范 |
 |---|---|---|---|---|

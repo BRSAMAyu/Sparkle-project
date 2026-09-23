@@ -1,13 +1,6 @@
 {
   "comment": "Frozen ratchet baseline for check_ux_component_convention.py (U-01 CONVENTION, mobile/lib/core/design/README.md). Only lower via --update-baseline after a consolidation batch; never raise.",
   "files": {
-    "mobile/lib/features/chat/presentation/screens/chat_screen.dart": {
-      "colorLiteral": 0,
-      "parallelClass": 1,
-      "rawButton": 0,
-      "rawChip": 0,
-      "rawSpinner": 0
-    },
     "mobile/lib/features/chat/presentation/screens/group_chat_screen.dart": {
       "colorLiteral": 0,
       "parallelClass": 1,
@@ -602,6 +595,104 @@
       "rawButton": 3,
       "rawChip": 0,
       "rawSpinner": 0
+    },
+    "mobile/lib/features/plan/presentation/screens/diagnostic_quiz_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 2,
+      "rawButton": 1,
+      "rawChip": 1,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/plan/presentation/screens/exam_sprint_setup_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 4,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/plan/presentation/screens/growth_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/plan/presentation/screens/learning_portfolio_screen.dart": {
+      "colorLiteral": 15,
+      "parallelClass": 4,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/plan/presentation/screens/plan_create_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 1,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 4,
+      "rawButton": 4,
+      "rawChip": 0,
+      "rawSpinner": 3
+    },
+    "mobile/lib/features/plan/presentation/screens/post_exam_review_screen.dart": {
+      "colorLiteral": 6,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/plan/presentation/screens/sprint_history_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/plan/presentation/screens/sprint_review_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 1,
+      "rawButton": 3,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/plan/presentation/screens/sprint_screen.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 3
+    },
+    "mobile/lib/features/plan/presentation/widgets/plan_card.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
+    },
+    "mobile/lib/features/plan/presentation/widgets/plan_context_summary.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 3
+    },
+    "mobile/lib/features/plan/presentation/widgets/sprint_actions_dialog.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 3,
+      "rawChip": 0,
+      "rawSpinner": 0
+    },
+    "mobile/lib/features/plan/presentation/widgets/sprint_history_detail.dart": {
+      "colorLiteral": 0,
+      "parallelClass": 0,
+      "rawButton": 0,
+      "rawChip": 0,
+      "rawSpinner": 1
     },
     "mobile/lib/features/settings/presentation/screens/accessibility_settings_screen.dart": {
       "colorLiteral": 0,

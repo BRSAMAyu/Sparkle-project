@@ -3,7 +3,9 @@
 
 Companion to `check_ui_design_tokens_ratchet.py` (which already ratchets
 hardcoded colors / fontSize literals repo-wide). This guard enforces the
-mobile/lib/core/design/README.md CONVENTION on the 9 V3 canonical surfaces:
+mobile/lib/core/design/README.md CONVENTION on the V3 canonical surfaces
+(9 surfaces of U-01 + sprint surface as the 10th governance surface, A-SPEC
+V1.1 N1 / 改造#7):
 
 - raw Material buttons (ElevatedButton/FilledButton/OutlinedButton/TextButton)
 - raw progress spinners (CircularProgressIndicator/LinearProgressIndicator)
@@ -19,8 +21,9 @@ Per-file counts are pinned against a frozen baseline
 - counts may only go down (ratchet). After a consolidation batch lowers
   counts, run with `--update-baseline` and commit the JSON diff.
 
-Scanned roots (V3 reachable surfaces only — see v3-output/U-01/INVENTORY.md §1):
-  onboarding/home/chat/goal/task/memory/galaxy presentation dirs,
+Scanned roots (V3 reachable surfaces only — see v3-output/U-01/INVENTORY.md §1;
+10th root per A-SPEC V1.1 N1):
+  onboarding/home/chat/goal/task/memory/galaxy/plan presentation dirs,
   profile + persona-onboarding + unified-settings user screens,
   settings presentation dir.
 
@@ -46,6 +49,9 @@ SCAN_ROOTS: list[str] = [
     "features/task/presentation",
     "features/memory/presentation",
     "features/galaxy/presentation",
+    # 第 10 治理面（A-SPEC V1.1 N1 / 改造#7）：冲刺仪表盘——期末一周
+    # 北极星主场景，含 sprint_screen 及同目录全部 plan 呈现代码。
+    "features/plan/presentation",
     "features/settings/presentation",
     "features/user/presentation/screens/profile_screen.dart",
     "features/user/presentation/screens/persona_onboarding_screen.dart",

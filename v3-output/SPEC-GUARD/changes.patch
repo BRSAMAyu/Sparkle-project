@@ -1,0 +1,324 @@
+diff --git a/mobile/lib/features/plan/presentation/screens/sprint_screen.dart b/mobile/lib/features/plan/presentation/screens/sprint_screen.dart
+index 93b2b673..0775e990 100755
+--- a/mobile/lib/features/plan/presentation/screens/sprint_screen.dart
++++ b/mobile/lib/features/plan/presentation/screens/sprint_screen.dart
+@@ -3,6 +3,7 @@ import 'dart:async';
+ import 'package:flutter/material.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:go_router/go_router.dart';
++import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
+ import 'package:sparkle/core/design/design_system.dart';
+ import 'package:sparkle/core/design/widgets/empty_state.dart';
+ import 'package:sparkle/core/design/widgets/error_widget.dart';
+@@ -290,45 +291,39 @@ class _SprintHeader extends ConsumerWidget {
+             ),
+             const SizedBox(height: DS.lg),
+             if (serverDaysLeft != null)
+-              Chip(
+-                label: Text(
+-                  serverDaysLeft > 0
+-                      ? context.l10n.sprintDaysLeft(serverDaysLeft)
+-                      : serverDaysLeft == 0
+-                          ? context.l10n.examDay
+-                          : context.l10n.sprintEnded,
+-                ),
+-                avatar: const Icon(Icons.timelapse),
++              // SPEC-GUARD（N1/改造#7）：裸 Chip 迁入 SemanticPill owner。
++              // 倒计时是冲刺身份锚点数字，tone 走 brand；考日/已结束同 pill
++              // 收敛，不在本卡引入 N5 紧迫色阶（那是 exam 卡 header+倒计时的条款）。
++              SemanticPill(
++                label: serverDaysLeft > 0
++                    ? context.l10n.sprintDaysLeft(serverDaysLeft)
++                    : serverDaysLeft == 0
++                        ? context.l10n.examDay
++                        : context.l10n.sprintEnded,
++                icon: Icons.timelapse,
++                tone: PillTone.brand,
+               )
+             else if (plan.targetDate != null)
+-              Chip(
+-                label: Text(
+-                  context.l10n.sprintEndsOn(
+-                    formatSparkleDateOnly(plan.targetDate!, context.l10n),
+-                  ),
++              // 目标日降级展示：中性信息位。
++              SemanticPill(
++                label: context.l10n.sprintEndsOn(
++                  formatSparkleDateOnly(plan.targetDate!, context.l10n),
+                 ),
+-                avatar: const Icon(Icons.timelapse),
++                icon: Icons.timelapse,
++                tone: PillTone.neutral,
+               ),
+             const SizedBox(height: DS.md),
+-            SizedBox(
+-              width: double.infinity,
+-              child: OutlinedButton.icon(
+-                onPressed: () {
+-                  SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+-                  unawaited(context.push('/plans/${plan.id}/review'));
+-                },
+-                icon: const Icon(Icons.rate_review_outlined, size: 18),
+-                label: Text(context.l10n.sprintReviewBtn),
+-                style: OutlinedButton.styleFrom(
+-                  foregroundColor: DS.brandPrimary,
+-                  side:
+-                      BorderSide(color: DS.brandPrimary.withValues(alpha: 0.4)),
+-                  padding: const EdgeInsets.symmetric(vertical: 12),
+-                  shape: RoundedRectangleBorder(
+-                    borderRadius: BorderRadius.circular(14),
+-                  ),
+-                ),
+-              ),
++            // SPEC-GUARD（改造#7）：裸 OutlinedButton.icon 迁入 SparkleButton
++            // outline owner（brandPrimary 前景+描边为 owner 正典样式，去手写
++            // styleFrom 的边框/圆角/内边距复刻）。
++            SparkleButton.outline(
++              onPressed: () {
++                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
++                unawaited(context.push('/plans/${plan.id}/review'));
++              },
++              icon: const Icon(Icons.rate_review_outlined, size: 18),
++              label: context.l10n.sprintReviewBtn,
++              expand: true,
+             ),
+           ],
+         ),
+@@ -408,11 +403,12 @@ class _SprintAchievementsProgressState
+         Padding(
+           padding:
+               const EdgeInsets.symmetric(horizontal: DS.lg, vertical: DS.sm),
+-          child: Card(
+-            elevation: 2,
+-            child: Padding(
+-              padding: const EdgeInsets.all(DS.md),
+-              child: Column(
++          // SPEC-GUARD（改造#7）：裸 Card(elevation:2) 去 elevation，迁入
++          // GraphiteCardSurface owner（描边+表面角色色），padding 保持原密度。
++          child: GraphiteCardSurface(
++            surfaceRole: SparkleSurfaceRole.card,
++            padding: const EdgeInsets.all(DS.md),
++            child: Column(
+                 crossAxisAlignment: CrossAxisAlignment.start,
+                 children: [
+                   Row(
+@@ -447,7 +443,6 @@ class _SprintAchievementsProgressState
+                       ),
+                 ],
+               ),
+-            ),
+           ),
+         ),
+       ],
+diff --git a/scripts/guards/check_ux_component_convention.py b/scripts/guards/check_ux_component_convention.py
+index 73fc46d6..5051bb1a 100644
+--- a/scripts/guards/check_ux_component_convention.py
++++ b/scripts/guards/check_ux_component_convention.py
+@@ -3,7 +3,9 @@
+ 
+ Companion to `check_ui_design_tokens_ratchet.py` (which already ratchets
+ hardcoded colors / fontSize literals repo-wide). This guard enforces the
+-mobile/lib/core/design/README.md CONVENTION on the 9 V3 canonical surfaces:
++mobile/lib/core/design/README.md CONVENTION on the V3 canonical surfaces
++(9 surfaces of U-01 + sprint surface as the 10th governance surface, A-SPEC
++V1.1 N1 / 改造#7):
+ 
+ - raw Material buttons (ElevatedButton/FilledButton/OutlinedButton/TextButton)
+ - raw progress spinners (CircularProgressIndicator/LinearProgressIndicator)
+@@ -19,8 +21,9 @@ Per-file counts are pinned against a frozen baseline
+ - counts may only go down (ratchet). After a consolidation batch lowers
+   counts, run with `--update-baseline` and commit the JSON diff.
+ 
+-Scanned roots (V3 reachable surfaces only — see v3-output/U-01/INVENTORY.md §1):
+-  onboarding/home/chat/goal/task/memory/galaxy presentation dirs,
++Scanned roots (V3 reachable surfaces only — see v3-output/U-01/INVENTORY.md §1;
++10th root per A-SPEC V1.1 N1):
++  onboarding/home/chat/goal/task/memory/galaxy/plan presentation dirs,
+   profile + persona-onboarding + unified-settings user screens,
+   settings presentation dir.
+ 
+@@ -46,6 +49,9 @@ SCAN_ROOTS: list[str] = [
+     "features/task/presentation",
+     "features/memory/presentation",
+     "features/galaxy/presentation",
++    # 第 10 治理面（A-SPEC V1.1 N1 / 改造#7）：冲刺仪表盘——期末一周
++    # 北极星主场景，含 sprint_screen 及同目录全部 plan 呈现代码。
++    "features/plan/presentation",
+     "features/settings/presentation",
+     "features/user/presentation/screens/profile_screen.dart",
+     "features/user/presentation/screens/persona_onboarding_screen.dart",
+diff --git a/scripts/guards/ux_component_convention_baseline.json b/scripts/guards/ux_component_convention_baseline.json
+index e9c9b9cb..c9cc495b 100644
+--- a/scripts/guards/ux_component_convention_baseline.json
++++ b/scripts/guards/ux_component_convention_baseline.json
+@@ -1,13 +1,6 @@
+ {
+   "comment": "Frozen ratchet baseline for check_ux_component_convention.py (U-01 CONVENTION, mobile/lib/core/design/README.md). Only lower via --update-baseline after a consolidation batch; never raise.",
+   "files": {
+-    "mobile/lib/features/chat/presentation/screens/chat_screen.dart": {
+-      "colorLiteral": 0,
+-      "parallelClass": 1,
+-      "rawButton": 0,
+-      "rawChip": 0,
+-      "rawSpinner": 0
+-    },
+     "mobile/lib/features/chat/presentation/screens/group_chat_screen.dart": {
+       "colorLiteral": 0,
+       "parallelClass": 1,
+@@ -603,6 +596,104 @@
+       "rawChip": 0,
+       "rawSpinner": 0
+     },
++    "mobile/lib/features/plan/presentation/screens/diagnostic_quiz_screen.dart": {
++      "colorLiteral": 0,
++      "parallelClass": 2,
++      "rawButton": 1,
++      "rawChip": 1,
++      "rawSpinner": 1
++    },
++    "mobile/lib/features/plan/presentation/screens/exam_sprint_setup_screen.dart": {
++      "colorLiteral": 0,
++      "parallelClass": 0,
++      "rawButton": 0,
++      "rawChip": 4,
++      "rawSpinner": 0
++    },
++    "mobile/lib/features/plan/presentation/screens/growth_screen.dart": {
++      "colorLiteral": 0,
++      "parallelClass": 1,
++      "rawButton": 0,
++      "rawChip": 0,
++      "rawSpinner": 1
++    },
++    "mobile/lib/features/plan/presentation/screens/learning_portfolio_screen.dart": {
++      "colorLiteral": 15,
++      "parallelClass": 4,
++      "rawButton": 0,
++      "rawChip": 0,
++      "rawSpinner": 0
++    },
++    "mobile/lib/features/plan/presentation/screens/plan_create_screen.dart": {
++      "colorLiteral": 0,
++      "parallelClass": 1,
++      "rawButton": 1,
++      "rawChip": 0,
++      "rawSpinner": 0
++    },
++    "mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart": {
++      "colorLiteral": 0,
++      "parallelClass": 4,
++      "rawButton": 4,
++      "rawChip": 0,
++      "rawSpinner": 3
++    },
++    "mobile/lib/features/plan/presentation/screens/post_exam_review_screen.dart": {
++      "colorLiteral": 6,
++      "parallelClass": 0,
++      "rawButton": 0,
++      "rawChip": 0,
++      "rawSpinner": 0
++    },
++    "mobile/lib/features/plan/presentation/screens/sprint_history_screen.dart": {
++      "colorLiteral": 0,
++      "parallelClass": 1,
++      "rawButton": 0,
++      "rawChip": 0,
++      "rawSpinner": 0
++    },
++    "mobile/lib/features/plan/presentation/screens/sprint_review_screen.dart": {
++      "colorLiteral": 0,
++      "parallelClass": 1,
++      "rawButton": 3,
++      "rawChip": 0,
++      "rawSpinner": 1
++    },
++    "mobile/lib/features/plan/presentation/screens/sprint_screen.dart": {
++      "colorLiteral": 0,
++      "parallelClass": 0,
++      "rawButton": 0,
++      "rawChip": 0,
++      "rawSpinner": 3
++    },
++    "mobile/lib/features/plan/presentation/widgets/plan_card.dart": {
++      "colorLiteral": 0,
++      "parallelClass": 0,
++      "rawButton": 0,
++      "rawChip": 0,
++      "rawSpinner": 1
++    },
++    "mobile/lib/features/plan/presentation/widgets/plan_context_summary.dart": {
++      "colorLiteral": 0,
++      "parallelClass": 0,
++      "rawButton": 0,
++      "rawChip": 0,
++      "rawSpinner": 3
++    },
++    "mobile/lib/features/plan/presentation/widgets/sprint_actions_dialog.dart": {
++      "colorLiteral": 0,
++      "parallelClass": 0,
++      "rawButton": 3,
++      "rawChip": 0,
++      "rawSpinner": 0
++    },
++    "mobile/lib/features/plan/presentation/widgets/sprint_history_detail.dart": {
++      "colorLiteral": 0,
++      "parallelClass": 0,
++      "rawButton": 0,
++      "rawChip": 0,
++      "rawSpinner": 1
++    },
+     "mobile/lib/features/settings/presentation/screens/accessibility_settings_screen.dart": {
+       "colorLiteral": 0,
+       "parallelClass": 0,
+diff --git a/v3-output/DL-R3/SPEC.md b/v3-output/DL-R3/SPEC.md
+index 6b406858..b6b7bfd2 100644
+--- a/v3-output/DL-R3/SPEC.md
++++ b/v3-output/DL-R3/SPEC.md
+@@ -24,6 +24,8 @@
+ 
+ 9 surface 必达项分配矩阵见 §8 开篇。
+ 
++> **【v1.1 N1 增补 @A-SPEC，落地 @SPEC-GUARD】**：冲刺仪表盘（sprint surface）为**第 10 治理面**——`features/plan/presentation/screens/sprint_screen.dart`（冲刺屏）与 `features/home/presentation/widgets/exam_sprint_dashboard_card.dart`（home 内嵌冲刺仪表卡）合称 sprint surface，期末一周北极星主场景。必达项（≤2，与第一硬条款同制）：①剩余时间与今日完成度一眼可信（口径走 §9.4 单一事实源）②下一步动作单一 CTA。守卫落点：`check_ux_component_convention.py` 扫描根 +1 `features/plan/presentation`（§9.1 已同步）。【依据：§1.2 结构性发现；§0.2 矩阵无 sprint 行的空白；FLEET-BRIEF「冲刺完成度=sprint_task_ledger 唯一定义」】
++
+ ### 0.3 气质定位
+ 
+ - **底层气质**：暖纸（calm/paper）+ 诚实（honest）。暖纸由色彩系统的 seed 承载（§1），诚实由四态规范（§4.5）与数字准入（§6.3）承载。对照 AUDIT §2 的判决：丑的主因是「系统性失控」而非「审美差」，底子保留、系统立规。
+@@ -542,7 +544,7 @@ lib/core/display/lexicon/
+ 
+ ---
+ 
+-## §8 屏级蓝图（9 surfaces）
++## §8 屏级蓝图（9 surfaces；v1.1 N1 增补第 10 治理面 sprint，见 §8.10）
+ 
+ > 每屏：必达项 ≤2（§0.2 矩阵落地）+ 首要改动 Top5（引罪状编号）+ 验收清单（条款号指向 ACCEPTANCE）。现状落点为真实文件路径。
+ > **实施状态（v1.0，R4 P1-9）**：Top5 各项的已落地/未开工状态统一见 **§10.5 实施状态台账**，本章不另维护副本；下文仅对已落地项就地标注【已落地】防重复立卡。
+@@ -560,6 +562,7 @@ lib/core/display/lexicon/
+ | profile | ①画像与进度诚实 ②图表有轴有单位 | 懂状态 |
+ | settings | ①改即生效无需找保存 ②偏好与无障碍集中一处 | ——（系统屏） |
+ | onboarding | ①首见星图仪式 ②≤5 步到 home | 有温度 |
++| sprint【v1.1 N1 增补】 | ①剩余时间与今日完成度一眼可信 ②下一步动作单一 CTA | 懂状态 |
+ 
+ ### 8.1 home（`features/home/presentation/screens/dashboard_screen.dart`）
+ 
+@@ -661,13 +664,20 @@ lib/core/display/lexicon/
+   5. 首见星图仪式（D5 增补）衔接：完成目标创建后一次性展示全局星图，随后落工作视图——**一次性触发维持（品牌资产），但仪式预算按下调档执行（§7.2）**。
+ - 验收：A8.9。
+ 
++### 8.10 sprint（冲刺仪表盘，`features/plan/presentation/screens/sprint_screen.dart` + `features/home/presentation/widgets/exam_sprint_dashboard_card.dart`）【v1.1 N1 增补 @A-SPEC，守卫落地 @SPEC-GUARD】
++
++- 必达：①剩余时间与今日完成度一眼可信（口径走 §9.4 单一事实源，服务端下传优先）②下一步动作单一 CTA。
++- 结构说明：sprint surface 由两文件合称——冲刺屏本体 + home 内嵌冲刺仪表卡；四角归属懂状态。跨面派生值（剩余天数/完成度）全 app 单算（v1.1 N2）。
++- 守卫：`check_ux_component_convention.py` 扫描根 +1 `features/plan/presentation`（2026-09 @SPEC-GUARD 落地，基线登记现值、ratchet 只降不升）；`features/community`、`features/leaderboard` 域另立卡评估，本条不动。
++- 验收：A-SPEC V1.1 §5 改造 #7——守卫跑绿 + manifest 登记 + 新文件零容忍。
++
+ ---
+ 
+ ## §9 门禁与工具链
+ 
+ ### 9.1 lint/guard 规则草案清单（对照现有 ratchet 模式扩展）
+ 
+-现有底座（维持，只降不升）：`check_ux_component_convention.py`（rawButton/rawSpinner/rawChip/parallelClass/colorLiteral，9 surfaces 扫描根）＋ `check_ui_design_tokens_ratchet.py`（colorLiteral/fontSize 全仓）＋ **DL-SPEC `check_dl_spec_ratchet.py`（已落地 @B2-GUARDS：12 维守卫，基线冻结于 d87d42ea，含 2 个批 2 维提前落地）**。扩展新维度：
++现有底座（维持，只降不升）：`check_ux_component_convention.py`（rawButton/rawSpinner/rawChip/parallelClass/colorLiteral，扫描根 9 surfaces＋v1.1 N1 增补 `features/plan/presentation` 共 10 治理面，plan 根基线登记 @SPEC-GUARD）＋ `check_ui_design_tokens_ratchet.py`（colorLiteral/fontSize 全仓）＋ **DL-SPEC `check_dl_spec_ratchet.py`（已落地 @B2-GUARDS：12 维守卫，基线冻结于 d87d42ea，含 2 个批 2 维提前落地）**。扩展新维度：
+ 
+ | # | 守卫 | 扫描 pattern（描述） | 基线策略 | 抓的规范 |
+ |---|---|---|---|---|
