@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:sparkle/core/network/api_timeouts.dart';
 import 'package:sparkle/core/services/smart_cache.dart';
 
 final fileCacheServiceProvider =
@@ -14,8 +15,9 @@ class FileCacheService {
   FileCacheService()
       : _dio = Dio(
           BaseOptions(
-            connectTimeout: const Duration(seconds: 10),
-            receiveTimeout: const Duration(seconds: 30),
+            // N37 单一事实源：core/network/api_timeouts.dart（数值守恒 10s/30s）。
+            connectTimeout: ApiTimeouts.defaultConnectTimeout,
+            receiveTimeout: ApiTimeouts.defaultReceiveTimeout,
           ),
         ) {
     _cache = SmartCache<String, _CachedFile>(

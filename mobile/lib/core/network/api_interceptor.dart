@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
+import 'package:sparkle/core/network/api_timeouts.dart';
 import 'package:sparkle/core/network/http_client_pinning.dart';
 import 'package:sparkle/core/network/token_refresh_coordinator.dart';
 import 'package:sparkle/core/services/client_observability_service.dart';
@@ -77,8 +78,9 @@ class AuthInterceptor extends Interceptor {
       _retryDio = Dio(
         BaseOptions(
           baseUrl: ApiConstants.baseUrl,
-          connectTimeout: const Duration(seconds: 10),
-          receiveTimeout: const Duration(seconds: 30),
+          // N37 单一事实源：core/network/api_timeouts.dart（数值守恒 10s/30s）。
+          connectTimeout: ApiTimeouts.defaultConnectTimeout,
+          receiveTimeout: ApiTimeouts.defaultReceiveTimeout,
           contentType: 'application/json',
         ),
       );

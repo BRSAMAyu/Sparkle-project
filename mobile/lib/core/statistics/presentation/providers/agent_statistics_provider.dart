@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/network/api_timeouts.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/statistics/data/statistics_data.dart';
@@ -105,8 +106,9 @@ class AgentStatsRepository extends HybridStatisticsRepository<AgentStatisticsDat
             Dio(
               BaseOptions(
                 baseUrl: ApiEndpoints.baseUrl,
-                connectTimeout: const Duration(seconds: 10),
-                receiveTimeout: const Duration(seconds: 30),
+                // N37 单一事实源：core/network/api_timeouts.dart（数值守恒 10s/30s）。
+                connectTimeout: ApiTimeouts.defaultConnectTimeout,
+                receiveTimeout: ApiTimeouts.defaultReceiveTimeout,
               ),
             );
 

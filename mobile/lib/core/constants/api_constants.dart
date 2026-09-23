@@ -90,10 +90,10 @@ class ApiConstants {
   static const String plans = '/plans';
   static const String statistics = '/statistics';
 
-  // Timeout
-  static const Duration connectTimeout = Duration(seconds: 30);
-  static const Duration receiveTimeout = Duration(seconds: 30);
-  static const Duration sendTimeout = Duration(seconds: 30);
+  // Timeout — N37 单一事实源在 core/network/api_timeouts.dart（ApiTimeouts）。
+  // 原此处自立且零引用的 30/30/30 死常量已删（TIMEOUT-SOURCE 卡矛盾裁决：
+  // 与全局 Dio 事实值 connect 10s/receive 30s 冲突，且从未生效——删除而非
+  // 迁移，避免把死值升级为生效值）。
 
   // gRPC Configuration
   /// gRPC server host (Python backend)

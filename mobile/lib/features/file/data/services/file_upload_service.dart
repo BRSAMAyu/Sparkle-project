@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:path/path.dart' as p;
+import 'package:sparkle/core/network/api_timeouts.dart';
 import 'package:sparkle/features/file/data/models/file_models.dart';
 import 'package:sparkle/features/file/data/repositories/file_repository.dart';
 
@@ -28,8 +29,10 @@ class FileUploadService {
   FileUploadService(this._repository)
       : _uploadDio = Dio(
           BaseOptions(
-            connectTimeout: const Duration(seconds: 15),
-            receiveTimeout: const Duration(seconds: 30),
+            // N37 单一事实源：core/network/api_timeouts.dart（数值守恒 15s/30s，
+            // 上传面 connect 覆写为唯一偏离默认的 live 面）。
+            connectTimeout: ApiTimeouts.uploadConnectTimeout,
+            receiveTimeout: ApiTimeouts.defaultReceiveTimeout,
           ),
         );
 

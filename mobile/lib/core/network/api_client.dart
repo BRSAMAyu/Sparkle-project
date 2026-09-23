@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/network/api_timeouts.dart';
 import 'package:sparkle/core/network/api_interceptor.dart';
 import 'package:sparkle/core/network/http_client_pinning.dart';
 import 'package:sparkle/core/network/idempotency_interceptor.dart';
@@ -15,8 +16,9 @@ class ApiClient {
   ApiClient(this._ref) {
     final options = BaseOptions(
       baseUrl: ApiEndpoints.baseUrl,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 30),
+      // N37 单一事实源：core/network/api_timeouts.dart（数值守恒 10s/30s）。
+      connectTimeout: ApiTimeouts.defaultConnectTimeout,
+      receiveTimeout: ApiTimeouts.defaultReceiveTimeout,
       contentType: 'application/json',
     );
     _dio = Dio(options);

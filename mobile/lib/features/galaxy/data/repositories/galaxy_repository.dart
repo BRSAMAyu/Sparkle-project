@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/network/api_timeouts.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/galaxy/data/models/node_expansion_models.dart';
@@ -83,7 +84,9 @@ class GalaxyRepository {
           responseType: ResponseType.stream,
           // SSE 事件稀疏，客户端全局 receiveTimeout(30s) 会把静默期误判为
           // 超时断流；请求级关闭，事件间隔不再受 30s 上限约束。
-          receiveTimeout: null,
+          // N37 登记：ApiTimeouts.sseReceiveTimeout（流式域禁依赖
+          // receiveTimeout 表达超时，存活性交给心跳/事件超时）。
+          receiveTimeout: ApiTimeouts.sseReceiveTimeout,
           headers: {'Accept': 'text/event-stream'},
         ),
       );
