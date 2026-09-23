@@ -470,7 +470,7 @@ class Tour:
         ]
         missing: list[str] = []
         for path in need:
-            probe = self.client.get(path, token="tour-route-probe-invalid")
+            probe = self.client.get(path, token="tour-route-probe-invalid")  # guard-bi-allow: 404 route probe
             if probe["status"] == 404:
                 missing.append(path)
         step.response["missing_routes"] = missing

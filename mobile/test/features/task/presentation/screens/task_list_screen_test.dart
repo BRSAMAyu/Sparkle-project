@@ -2,9 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/notification_service.dart';
@@ -46,8 +45,34 @@ void main() {
 
   testWidgets('task list shows retry state and recovers after retry',
       (tester) async {
-    await tester.binding.setSurfaceSize(const Size(900, 1600));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    // HYGIENE-DEBT（wt239 登记）修复：
+    // 1) FAB 抢 tap——撤掉 900x1600 大视口（重试钮命中区被悬浮钮遮挡的根因），
+    //    默认 800x600 下居中错误页的重试钮位于 FAB 命中区之外，真 tap 走用户路径；
+    // 2) harness 缺 GoRouter——TaskListScreen 的返回/FAB/空态动作全走
+    //    context.push/go/pop 扩展，testMaterialApp 挂上 router 配置（含存根路由），
+    //    使 tap 路径下任何导航都合法可达，不再「GoRouter was not found」。
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => const TaskListScreen(),
+        ),
+        GoRoute(
+          path: '/home',
+          builder: (context, state) => const Text('home-stub'),
+        ),
+        GoRoute(
+          path: '/tasks/new',
+          builder: (context, state) => const Text('new-task-stub'),
+        ),
+        GoRoute(
+          path: '/tasks/:id',
+          builder: (context, state) =>
+              Text('task-stub:${state.pathParameters['id']}'),
+        ),
+      ],
+    );
 
     final notifier = _RecoveryTaskNotifier(
       TaskListState(error: UiErrorCategory.server),
@@ -60,27 +85,28 @@ void main() {
         ],
         child: testMaterialApp(
           theme: AppThemes.lightTheme,
-          home: const TaskListScreen(),
+          routerConfig: router,
         ),
       ),
     );
 
     await tester.pump();
+    // 让错误页的 SparkleStaggerItem 入场动画落定，重试钮进入可命中状态。
+    await tester.pump(const Duration(milliseconds: 300));
 
     // N15/EE-G1 契约（A-SPEC3 改造#2）：原始异常文本不入 UI——错误经唯一
-    // 映射 owner 人话化（'task list 500' 命中 500 → ERR-SERVER 人话+稳定码）。
+    // 映射 owner 人话化（'task list 500' 命中 500 → ERR-SERVER 人话）。
+    // ERR-CANAL（9cbad7a9）后 [ERR-*] 码由 user_facing_error.dart 作为次级
+    // 尾缀附加，TaskListScreen 走 uiErrorMessage 首读文案，不含码——断言
+    // 与现行 lexicon owner 契约对齐。
     expect(find.textContaining('task list 500'), findsNothing);
     expect(find.textContaining('Exception'), findsNothing);
-    expect(find.textContaining('[ERR-SERVER]'), findsOneWidget);
     // N15：类别经 lexicon owner 出人话（zh 测试环境映射「服务器出现问题」）。
     expect(find.textContaining('服务器出现问题'), findsOneWidget);
     expect(find.text('重试'), findsOneWidget);
 
-    // 触发重试：900x1600 视口下 FAB 会遮住重试钮的命中区（几何问题，
-    // 与本卡契约无关），故直接调用 owner 面板的 onRetry 接线断言恢复路径。
-    tester.widget<CustomErrorWidget>(
-      find.byType(CustomErrorWidget),
-    ).onRetry!();
+    // 触发重试：真 tap 用户路径（不再直调 onRetry 回调的弱断言）。
+    await tester.tap(find.text('重试'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 

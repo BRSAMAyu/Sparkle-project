@@ -60,13 +60,21 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
     return SparklePageScaffold(
       role: SparklePageRole.content,
       safeArea: false,
+      // HYGIENE-DEBT：SparkleIconButton 只带 min 触控约束，直接当 FAB 会被
+      // Scaffold 整屏槽位拉成全屏 InkWell 吞掉全页 tap——SizedBox 钉死几何。
       floatingActionButton: _currentIndex == 1
-          ? SparkleIconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () {
-                unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
-                unawaited(context.push(CommunityRoutes.postsCreate));
-              },
+          ? SizedBox(
+              width: DS.touchTargetMinSize,
+              height: DS.touchTargetMinSize,
+              child: SparkleIconButton(
+                icon: const Icon(Icons.edit),
+                onPressed: () {
+                  unawaited(
+                    SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
+                  );
+                  unawaited(context.push(CommunityRoutes.postsCreate));
+                },
+              ),
             )
           : null,
       child: SafeArea(

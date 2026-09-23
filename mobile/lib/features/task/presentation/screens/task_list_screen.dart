@@ -241,17 +241,25 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
           ),
         ],
       ),
-      floatingActionButton: SparkleIconButton(
-        size: 60,
-        semanticLabel: context.l10n.taskAddNew,
-        onPressed: () {
-          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
-          unawaited(context.push('/tasks/new'));
-        },
-        icon: Icon(
-          Icons.add_rounded,
-          color: DS.textPrimary,
-          size: 32,
+      // HYGIENE-DEBT（wt239 登记「FAB 抢 tap」根因修复）：SparkleIconButton
+      // 只带 min 触控约束，直接当 FAB 时被 Scaffold 的整屏 loose/tight 槽位
+      // 拉成全屏 InkWell，遮住页面一切命中区（重试钮/列表项均被吞 tap）。
+      // SizedBox 钉死 FAB 实际几何，与 size: 60 一致。
+      floatingActionButton: SizedBox(
+        width: 60,
+        height: 60,
+        child: SparkleIconButton(
+          size: 60,
+          semanticLabel: context.l10n.taskAddNew,
+          onPressed: () {
+            unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
+            unawaited(context.push('/tasks/new'));
+          },
+          icon: Icon(
+            Icons.add_rounded,
+            color: DS.textPrimary,
+            size: 32,
+          ),
         ),
       ),
       child: SparkleRefreshIndicator(

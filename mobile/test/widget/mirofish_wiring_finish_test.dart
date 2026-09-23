@@ -2,14 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:sparkle/features/settings/presentation/providers/accessibility_provider.dart';
 import '../shared/i18n_test_helper.dart';
+
+/// 泡沫鱼（MiroFish）wiring 收口 harness 债（wt234 报告 §4 登记）：
+/// ChatBubble 的行动钮（SparkleButton 家族）watch accessibilitySettingsProvider，
+/// 其真实 notifier 构造即 SharedPreferences + 服务端同步（Dio）——widget 测试里
+/// stub 掉，保持 wiring 断言纯 UI、零网络依赖（否则 fake_async 收尾报
+/// pending Timer / 触网异常）。
+class _StubAccessibilitySettingsNotifier extends AccessibilitySettingsNotifier {
+  _StubAccessibilitySettingsNotifier(super.ref);
+
+  @override
+  Future<void> load() async {}
+}
 
 void main() {
 
-  setUp(setUpI18nForTesting);
+  setUp(() {
+    setUpI18nForTesting();
+    SharedPreferences.setMockInitialValues({});
+  });
   group('MiroFish wiring finish', () {
     testWidgets(
         'chat bubble renders inline mirofish bridge cards and chat follow-ups',
@@ -96,12 +112,13 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp.router(
-            routerConfig: router,
-            locale: const Locale('zh'),
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-          ),
+          overrides: [
+            accessibilitySettingsProvider
+                .overrideWith(_StubAccessibilitySettingsNotifier.new),
+          ],
+          // testMaterialApp：注册 SparkleThemeExtension（SemanticPill 等 owner
+          // 组件构建即读 context.sparkle，裸 MaterialApp 直接断言失败）。
+          child: testMaterialApp(routerConfig: router),
         ),
       );
 

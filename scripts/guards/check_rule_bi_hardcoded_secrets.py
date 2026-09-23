@@ -6,15 +6,27 @@ that match the CLAUDE.md Security Checklist item:
 "No hardcoded tokens or passwords (including test files)"
 
 Exit 0 on clean, non-zero on findings.
+
+Allow marker: a line whose raw text contains `guard-bi-allow:` is exempt
+(inline form — `# guard-bi-allow: <reason>` in Python, `// guard-bi-allow:`
+in Go/Dart). Use it only for deliberate non-secret probe/fixture values the
+patterns cannot distinguish from real credentials; every marker must carry a
+reason. Run `--self-test` for the fixture round-trip (marker exempts, marker-
+less twin still caught).
 """
 
 from __future__ import annotations
 
+import argparse
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+
+# Inline allow marker, checked against the RAW line (before comment stripping).
+_ALLOW_MARKER = "guard-bi-allow"
 
 # ── Direct patterns (independent of assignment syntax) ─────────────────
 _OPENAI_KEY = re.compile(r"\bsk-(?:proj-)?[A-Za-z0-9_-]{20,}\b")
@@ -129,9 +141,17 @@ def scan_file(filepath: Path) -> list[str]:
     except (OSError, UnicodeDecodeError):
         return violations
 
-    rel = filepath.relative_to(REPO_ROOT)
+    try:
+        rel = filepath.relative_to(REPO_ROOT)
+    except ValueError:  # fixtures outside the repo (self-test tempdir)
+        rel = filepath
 
     for lineno, raw_line in enumerate(lines, start=1):
+        # Inline allow marker wins first: check the raw line so the marker
+        # survives even though `_strip_inline_comment` would drop the comment.
+        if _ALLOW_MARKER in raw_line:
+            continue
+
         line = _strip_inline_comment(raw_line, ext)
         stripped = line.strip()
 
@@ -197,7 +217,79 @@ def _should_skip(filepath: Path) -> bool:
     return suffix not in (".py", ".go", ".dart")
 
 
+# --- self-test (fixtures only; never touches the real tree) -----------------
+
+def _self_test() -> int:
+    failures: list[str] = []
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp) / "backend"
+        root.mkdir(parents=True)
+
+        def _violations(source: str) -> list[str]:
+            f = root / "fixture_tour.py"
+            f.write_text(source, encoding="utf-8")
+            out = scan_file(f)
+            f.unlink()
+            return out
+
+        # 1) The exact registered false-positive shape, now marked:
+        #    marker line must pass.
+        marked = (
+            'probe = self.client.get(path, token="tour-route-probe-invalid")'
+            "  # guard-bi-allow: deliberate 404 route probe, not a secret\n"
+        )
+        if _violations(marked):
+            failures.append(f"allow-marked probe line should pass: {_violations(marked)}")
+
+        # 2) Marker-less twin of the same line must STILL be caught
+        #    (allow is per-line, never blanket).
+        bare = 'probe = self.client.get(path, token="tour-route-probe-invalid")\n'
+        v = _violations(bare)
+        if len(v) != 1 or "hardcoded 'token' assignment" not in v[0]:
+            failures.append(f"marker-less twin should still violate: {v}")
+
+        # 3) A different secret on a non-marked line in the same file is caught
+        #    even when another line carries the marker.
+        mixed = (
+            'ok = client.get(path, token="tour-route-probe-invalid")'
+            "  # guard-bi-allow: route probe\n"
+            'password = "hunter2hunter2!"\n'
+        )
+        v = _violations(mixed)
+        if len(v) != 1 or ":2:" not in v[0]:
+            failures.append(f"unmarked sibling violation must be caught: {v}")
+
+        # 4) Direct credential patterns are also exempted by the marker.
+        marked_key = 'cfg = {"k": "sk-proj-abcdefghijklmnopqrstuvwx"}  # guard-bi-allow: fixture pattern\n'
+        if _violations(marked_key):
+            failures.append(f"allow-marked direct-pattern line should pass: {_violations(marked_key)}")
+
+        bare_key = 'cfg = {"k": "sk-proj-abcdefghijklmnopqrstuvwx"}\n'
+        v = _violations(bare_key)
+        if len(v) != 1 or "OpenAI API key" not in v[0]:
+            failures.append(f"marker-less direct pattern should still violate: {v}")
+
+    if failures:
+        print("[bi-hardcoded-secrets] SELF-TEST FAIL")
+        for f in failures:
+            print(f"  {f}")
+        return 1
+    print(
+        "[bi-hardcoded-secrets] SELF-TEST PASS "
+        "(guard-bi-allow marker exempts its own line only; marker-less twins "
+        "and unmarked siblings still caught, direct patterns covered)"
+    )
+    return 0
+
+
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--self-test", action="store_true", help="run fixture self-test in a temp dir")
+    args = parser.parse_args()
+
+    if args.self_test:
+        return _self_test()
+
     all_violations: list[str] = []
 
     backend = REPO_ROOT / "backend"

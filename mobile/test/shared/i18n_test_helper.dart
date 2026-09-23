@@ -30,19 +30,50 @@ void tearDownI18n() {
 /// SparkleThemeExtension —— owner 组件（SemanticPill/SparkleRefreshIndicator
 /// 等）构建即读 `context.sparkle`，未注册直接断言失败。传入的 [theme] 仍可
 /// 覆盖/追加。
+///
+/// HYGIENE-DEBT（wt239 登记）：支持 [routerConfig]（GoRouter）——feature 屏
+/// （TaskListScreen 等）build/交互走 `context.push/go/pop` 扩展，harness 缺
+/// GoRouter 时 tap 路径必炸。传 [routerConfig] 走 MaterialApp.router（go_router
+/// 的 GoRouter 即 RouterConfig<Object>），与 [home] 二选一。
 Widget testMaterialApp({
-  required Widget home,
+  Widget? home,
   ThemeData? theme,
   GlobalKey<NavigatorState>? navigatorKey,
+  RouterConfig<Object>? routerConfig,
 }) {
-  return MaterialApp(
-    theme: (theme ?? ThemeData()).copyWith(
-      extensions: [
-        ...?(theme?.extensions.values.toList()),
-        SparkleThemeExtension.light(),
+  assert(
+    (home != null) != (routerConfig != null),
+    'testMaterialApp: exactly one of home/routerConfig is required',
+  );
+  final themeData = (theme ?? ThemeData()).copyWith(
+    extensions: [
+      ...?(theme?.extensions.values.toList()),
+      SparkleThemeExtension.light(),
+    ],
+  );
+  if (routerConfig != null) {
+    return MaterialApp.router(
+      routerConfig: routerConfig,
+      theme: themeData,
+      locale: const Locale('zh'),
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
       ],
-    ),
-    home: home,
+      supportedLocales: AppLocalizations.supportedLocales,
+    );
+  }
+  final resolvedHome = home;
+  if (resolvedHome == null) {
+    throw StateError(
+      'testMaterialApp: home is required when routerConfig is absent',
+    );
+  }
+  return MaterialApp(
+    theme: themeData,
+    home: resolvedHome,
     navigatorKey: navigatorKey,
     locale: const Locale('zh'),
     localizationsDelegates: const [

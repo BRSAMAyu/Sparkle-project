@@ -282,7 +282,7 @@ class GalaxyContributionDetailSheet extends StatelessWidget {
               context.l10n.galaxyContribDetailIntro,
               style: TextStyle(
                 color: secondary,
-                fontSize: 13,
+                fontSize: DS.fontSizeXs,
                 height: 1.45,
               ),
             ),
@@ -360,7 +360,7 @@ class _ContributionSection extends StatelessWidget {
               emptyText,
               style: TextStyle(
                 color: secondary,
-                fontSize: 13,
+                fontSize: DS.fontSizeXs,
               ),
             )
           else
