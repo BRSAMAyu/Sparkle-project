@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/error_widget.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/photon/photon_routes.dart';
@@ -105,6 +107,17 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
       );
     }
 
+    // N15/EE-G6（A-SPEC3）：空态与错误态拆为互斥分支——空态不再混排
+    // 原始异常红字；错误态走 owner（CustomErrorWidget）+ 人话化文案。
+    if (items.isEmpty && state.error != null) {
+      return CustomErrorWidget.page(
+        context: context,
+        message: UserFacingError.from(state.error!),
+        onRetry: () =>
+            ref.read(shopItemsProvider.notifier).refresh(),
+      );
+    }
+
     if (items.isEmpty) {
       return Center(
         child: Column(
@@ -122,13 +135,6 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
                     color: DS.textSecondary,
                   ),
             ),
-            if (state.error != null) ...[
-              const SizedBox(height: DS.spacing8),
-              Text(
-                state.error!,
-                style: TextStyle(color: DS.error),
-              ),
-            ],
           ],
         ),
       );

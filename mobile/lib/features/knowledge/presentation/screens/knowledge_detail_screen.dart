@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -46,8 +47,9 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                 style: DS.titleLarge.copyWith(color: DS.textPrimary),
               ),
               const SizedBox(height: DS.lg),
+              // N15（A-SPEC3 EE-G1）：异常文本禁直出，经唯一映射 owner 人话化
               Text(
-                '$error',
+                UserFacingError.from(error),
                 style: DS.bodyMedium.copyWith(color: DS.textSecondary),
                 textAlign: TextAlign.center,
               ),
@@ -838,8 +840,9 @@ class _NodeExpansionSheetState extends ConsumerState<_NodeExpansionSheet> {
       if (!mounted) {
         return;
       }
+      // N15（A-SPEC3 EE-G1）：state 错误字段只存人话文案，不存 e.toString()
       setState(() {
-        _error = e.toString().replaceFirst('Exception: ', '').trim();
+        _error = UserFacingError.from(e);
       });
     } finally {
       if (mounted) {
@@ -882,8 +885,9 @@ class _NodeExpansionSheetState extends ConsumerState<_NodeExpansionSheet> {
       if (!mounted) {
         return;
       }
+      // N15（A-SPEC3 EE-G1）：state 错误字段只存人话文案，不存 e.toString()
       setState(() {
-        _error = e.toString().replaceFirst('Exception: ', '').trim();
+        _error = UserFacingError.from(e);
       });
     } finally {
       if (mounted) {

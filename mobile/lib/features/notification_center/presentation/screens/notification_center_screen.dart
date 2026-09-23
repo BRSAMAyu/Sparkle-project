@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
@@ -259,11 +260,20 @@ class _NotificationCenterScreenState
             Icon(Icons.error_outline, size: DS.spacing64, color: DS.error),
             const SizedBox(height: DS.spacing16),
             Text(
-              context.l10n.loadingFailed(error),
+              context.l10n.notificationLoadFailed,
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: DS.spacing8),
-            Text(error),
+            // N15/EE-G2（A-SPEC3）：双份错误显示清偿——裸 Text(error) 行删除，
+            // 标题不再经 loadingFailed({error}) 占位符内插原始异常，
+            // 详情行改经唯一映射 owner 人话化。
+            Text(
+              UserFacingError.from(error),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: DS.textSecondary,
+                  ),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: DS.spacing16),
             SparkleButton(
               onPressed: _refresh,

@@ -3387,8 +3387,14 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                                                     .loading(
                                               isDarkMode: isDarkMode,
                                             ),
+                                            // EE-G7（A-SPEC3）：error 态不再静默
+                                            // 消失，补单行微形（与 loading 同高度，
+                                            // 无布局跳变）
                                             error: (_, __) =>
-                                                const SizedBox.shrink(),
+                                                const GalaxyContributionBanner
+                                                    .error(
+                                              isDarkMode: isDarkMode,
+                                            ),
                                           ),
                                           if (showMasteryEmptyBanner) ...[
                                             const SizedBox(height: 12),

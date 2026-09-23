@@ -14,11 +14,15 @@ class _NoopApiClient implements ApiClient {
 }
 
 class _FakeDiagnosticRepository extends ExamSprintRepository {
-  _FakeDiagnosticRepository({this.generated, this.graded})
-      : super(_NoopApiClient());
+  _FakeDiagnosticRepository({
+    this.generated,
+    this.graded,
+    this.gradeError,
+  }) : super(_NoopApiClient());
 
   final DiagnosticGenerateResult? generated;
   final DiagnosticGradeResult? graded;
+  final Object? gradeError;
 
   int generateCalls = 0;
   int gradeCalls = 0;
@@ -45,6 +49,10 @@ class _FakeDiagnosticRepository extends ExamSprintRepository {
     required List<DiagnosticAnswerInput> answers,
   }) async {
     gradeCalls += 1;
+    final error = gradeError;
+    if (error != null) {
+      throw error;
+    }
     lastDiagnosticId = diagnosticId;
     lastAnswers = answers;
     return graded!;
@@ -155,5 +163,46 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('诊断加载失败，请稍后重试'), findsOneWidget);
+  });
+
+  testWidgets(
+      'grade failure shows owner snackbar with humanized copy — '
+      'no raw error.toString()', (tester) async {
+    final repository = _FakeDiagnosticRepository(
+      generated: _makeGenerated(),
+      graded: _makeGraded(),
+      gradeError: Exception('grade failed upstream'),
+    );
+
+    await tester.pumpWidget(_wrapScreen(repository));
+    await tester.pumpAndSettle();
+
+    // answer both questions
+    await tester.tap(find.text('可靠'));
+    await tester.pump();
+    await tester.enterText(find.byType(TextField), '域名解析');
+    await tester.pump();
+
+    await tester.scrollUntilVisible(
+      find.text('交卷并查看结果'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('交卷并查看结果'));
+
+    // SnackBar 进场动画内保持可见（owner error 时长 4s）。
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+
+    // N15/EE-G1 契约：SnackBar 直出 toString 已清零——人话 + 稳定码。
+    expect(find.textContaining('grade failed'), findsNothing);
+    expect(find.textContaining('Exception'), findsNothing);
+    expect(find.textContaining('哎呀，出错了'), findsOneWidget);
+    expect(find.textContaining('[ERR-UNKNOWN]'), findsOneWidget);
+
+    // 排空 SnackBar 自动关闭计时器，避免 pending timer 拖挂测试。
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pump();
   });
 }

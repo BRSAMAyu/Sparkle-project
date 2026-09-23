@@ -125,6 +125,11 @@ class TestContractCreation:
             scalar_one_or_none=MagicMock(return_value=None),
         ))
         db.refresh = AsyncMock()
+        # MINT-FIX：创建即托管预扣（flush 取 id + escrow 扣款）。本测试只验
+        # 契约构造本身，托管扣款以 AsyncMock 替身隔离（托管闭环行为见
+        # test_mintfix_contract_stake_escrow.py 的真库测试面）。
+        db.flush = AsyncMock()
+        service._escrow_stake = AsyncMock()
 
         contract = await service.create_contract("u1", study_minutes=30, days=7, photon_stake=100)
         db.add.assert_called_once()
@@ -133,6 +138,9 @@ class TestContractCreation:
         assert added_contract.target_study_minutes == 30
         assert added_contract.target_days == 7
         assert added_contract.photon_stake == 100
+        service._escrow_stake.assert_awaited_once_with(
+            user_id="u1", amount=100, contract_id=str(added_contract.id),
+        )
 
     @pytest.mark.asyncio
     async def test_rejects_duplicate_active(self):

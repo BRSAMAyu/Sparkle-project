@@ -10,17 +10,30 @@ class GalaxyContributionBanner extends StatelessWidget {
     required this.stats,
     super.key,
     this.isLoading = false,
+    this.isError = false,
   });
 
   const GalaxyContributionBanner.loading({
     required this.isDarkMode,
     super.key,
   })  : stats = UserGalaxyContribution.empty,
-        isLoading = true;
+        isLoading = true,
+        isError = false;
+
+  /// EE-G7（A-SPEC3）：error 态单行微形——出错不再静默消失（SizedBox.shrink）。
+  /// 与 .loading 同高度（同行高图标 + 同内边距），loading→error 无布局跳变；
+  /// 不可点开详情（无数据可看）。
+  const GalaxyContributionBanner.error({
+    required this.isDarkMode,
+    super.key,
+  })  : stats = UserGalaxyContribution.empty,
+        isLoading = false,
+        isError = true;
 
   final bool isDarkMode;
   final UserGalaxyContribution stats;
   final bool isLoading;
+  final bool isError;
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +48,7 @@ class GalaxyContributionBanner extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: isLoading
+        onTap: isLoading || isError
             ? null
             : () => showSensoryModalBottomSheet<void>(
                   context: context,
@@ -86,7 +99,24 @@ class GalaxyContributionBanner extends StatelessWidget {
                       ),
                     ],
                   )
-                : stats.isEmpty
+                : isError
+                    ? Row(
+                        children: [
+                          Icon(Icons.error_outline, size: 18, color: DS.error),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              context.l10n.galaxyContribError,
+                              style: TextStyle(
+                                color: secondary,
+                                fontSize: 14,
+                                fontWeight: DS.fontWeightSemibold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : stats.isEmpty
                     ? Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [

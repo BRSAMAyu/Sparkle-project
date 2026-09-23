@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
 import 'package:sparkle/features/plan/data/repositories/exam_sprint_repository.dart';
@@ -106,8 +108,9 @@ class _DiagnosticQuizScreenState extends ConsumerState<DiagnosticQuizScreen> {
       setState(() {
         _submitting = false;
       });
+      // N15（A-SPEC3 EE-G1）：裸 SnackBar 直出 toString → owner SnackBar + 人话文案
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
+        SparkleSnackBar.error(UserFacingError.from(error)),
       );
     }
   }

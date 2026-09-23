@@ -259,3 +259,47 @@ async def test_guest_seed_heals_existing_demo_node_sector_mapping(db_session):
     assert stale_node.position_y is not None
     assert status is not None
     assert status.is_unlocked is True
+
+
+# ---------------------------------------------------------------------------
+# MINT-FIX（D-MONETIZE 审计 §1.5-R3）：访客种子以专有类型 guest_seed 入账，
+# 出「可兑换基数」词表（REDEEMABLE_INCOME_TYPES）——营销补贴 ≠ 学习所得，
+# 转正后不得顶替学习收入兑 Pro。存量误标行由迁移 gseed_20260923 回填改型。
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_guest_seed_photon_row_uses_dedicated_type_out_of_redeem_base(db_session):
+    from app.models.shop import PhotonTransactionHistory
+    from app.services.photon_redeem_service import get_redeemable_base
+
+    guest = User(
+        username="guest_seed_txtype_test",
+        email="guest_seed_txtype_test@guest.local",
+        hashed_password="hashed",
+        password_login_enabled=False,
+        nickname="访客",
+        registration_source="guest",
+        is_active=True,
+    )
+    db_session.add(guest)
+    await db_session.flush()
+
+    await seed_guest_user_data(db_session, guest)
+    await db_session.commit()
+
+    seed_rows = (
+        await db_session.execute(
+            select(PhotonTransactionHistory).where(
+                PhotonTransactionHistory.user_id == guest.id,
+                PhotonTransactionHistory.related_item_id == "guest_welcome",
+            )
+        )
+    ).scalars().all()
+    assert len(seed_rows) == 1
+    row = seed_rows[0]
+    assert row.amount == 1000
+    assert row.transaction_type == "guest_seed"  # 专有类型，非 grant_achievement 误标
+    assert row.source == "guest_seed:welcome_bonus"
+
+    # 出审计重放基数：转正用户可兑换基数不被这 1000 补贴污染
+    base = await get_redeemable_base(db_session, user_id=str(guest.id))
+    assert base == 0

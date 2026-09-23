@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -148,13 +149,21 @@ class _SeedLibraryDetailScreenState
           children: [
             Icon(Icons.error_outline, size: DS.spacing64, color: DS.error),
             const SizedBox(height: DS.spacing16),
-            Text(state.error!),
+            // N15/EE-G1+G3（A-SPEC3）：直出改经映射 owner 人话化；
+            // 重试是恢复性动作，variant 归位（destructive 仅破坏性动作）
+            Text(
+              UserFacingError.from(state.error!),
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: DS.textSecondary,
+                  ),
+            ),
             const SizedBox(height: DS.spacing16),
             SparkleButton(
               onPressed: () => ref
                   .read(seedLibraryDetailProvider(widget.libraryId).notifier)
                   .loadLibrary(),
-              variant: ButtonVariant.destructive,
+              variant: ButtonVariant.outline,
               icon: const Icon(Icons.refresh),
               label: context.l10n.commonRetry,
             ),

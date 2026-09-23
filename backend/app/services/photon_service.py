@@ -49,6 +49,13 @@ class PhotonTransactionType:
     DEDUCT_CONTRACT_STAKE = "deduct_contract_stake"
     DEDUCT_PENALTY = "penalty"                   # 惩罚扣除
     REFUND = "refund"                            # 退款
+    # MINT-FIX：契约押金托管预扣（创建时真实扣款入托管，完成结算含还本，失败即没收）。
+    # 不进可兑换收入词表（photon_redeem_service.REDEEMABLE_INCOME_TYPES），
+    # 同 transfer_in 排除先例——自有本金进出不构成「学出」收入。
+    CONTRACT_ESCROW = "contract_escrow"
+    # MINT-FIX：访客体验种子（原误标 grant_achievement 混入可兑换基数，审计 §1.5-R3）。
+    # 营销补贴非学习所得，出审计重放基数。
+    GUEST_SEED = "guest_seed"
 
 
 class PhotonService:

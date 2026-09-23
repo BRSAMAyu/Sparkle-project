@@ -148,6 +148,14 @@ class Settings(BaseSettings):
     PHOTON_REDEEM_PRO_DAYS: int = 7  # 单次兑换授予 Pro 天数
     PHOTON_REDEEM_PRO_MONTHLY_CAP: int = 1  # 每自然月硬顶次数（设计卡裁决：月顶 1 次）
 
+    # 契约押金托管（MINT-FIX 关铸币洞，D-MONETIZE 审计 §1.5-R1/§1.6-1）
+    # 创建契约即预扣 stake 入托管（流水类型 contract_escrow）：完成发 stake×multiplier
+    # （其中 1 份是还本，净得 stake×(multiplier−1)，与既有 stake×2.0 语义对齐）；
+    # 失败/取消即没收托管本金，不再碰余额。上限兜住单契约通胀面：1000 ≈ 诚实日均
+    # 收入（30-80）两周量级、低于单次兑 Pro 价 1500，与 schema `ge=10` 下限成界。
+    # 调参属审计建议另卡（D-MONETIZE §1.6-1），本默认值只堵洞不调参。
+    PHOTON_CONTRACT_STAKE_MAX: int = 1000
+
     COMMUNITY_INTELLIGENCE_ENABLED: bool = True
     COMMUNITY_INTELLIGENCE_MIN_COHORT_SIZE: int = 5
     COMMUNITY_INTELLIGENCE_DP_ENABLED: bool = True

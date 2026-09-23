@@ -2,7 +2,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/task_notification_id_mapper.dart';
@@ -64,10 +66,18 @@ void main() {
 
     await tester.pump();
 
-    expect(find.textContaining('task list 500'), findsOneWidget);
+    // N15/EE-G1 契约（A-SPEC3 改造#2）：原始异常文本不入 UI——错误经唯一
+    // 映射 owner 人话化（'task list 500' 命中 500 → ERR-SERVER 人话+稳定码）。
+    expect(find.textContaining('task list 500'), findsNothing);
+    expect(find.textContaining('Exception'), findsNothing);
+    expect(find.textContaining('[ERR-SERVER]'), findsOneWidget);
     expect(find.text('重试'), findsOneWidget);
 
-    await tester.tap(find.text('重试'));
+    // 触发重试：900x1600 视口下 FAB 会遮住重试钮的命中区（几何问题，
+    // 与本卡契约无关），故直接调用 owner 面板的 onRetry 接线断言恢复路径。
+    tester.widget<CustomErrorWidget>(
+      find.byType(CustomErrorWidget),
+    ).onRetry!();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 

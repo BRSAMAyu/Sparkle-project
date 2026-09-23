@@ -41,6 +41,7 @@ from app.models.achievement import (
 from app.models.community import GroupTaskClaim
 from app.models.galaxy import KnowledgeNode, StudyRecord, UserNodeStatus
 from app.models.session_completion import SessionCompletion
+from app.models.shop import PhotonTransactionHistory
 from app.models.subject import Subject
 from app.services.achievement_reward_observability import AchievementRewardObservability
 from app.services.system_update_service import SystemUpdateService, build_system_update
@@ -2874,11 +2875,29 @@ class ContractService:
         self.db = db
 
     async def create_contract(self, user_id: str, study_minutes: int, days: int, photon_stake: int) -> SparkContract:
-        """创建学习契约"""
+        """创建学习契约
+
+        MINT-FIX 押金托管闭环（D-MONETIZE 审计 §1.5-R1）：创建即预扣 stake 入托管
+        （``contract_escrow`` 流水行，真实扣款 + 审计账），余额不足 / 超上限直接
+        ValueError（API 面映射 400）。契约落库与托管预扣同事务：预扣失败则整体
+        不落库，杜绝「无本立约」。完成时发 ``stake × reward_multiplier``（其中
+        1 份是托管还本，净得 ``stake × (multiplier − 1)``，与既有 stake×2.0
+        净效果语义对齐）；失败/取消即没收托管本金。
+        """
         # 检查是否已有活跃契约
         existing = await self._get_active_contract(user_id)
         if existing:
             raise ValueError("User already has an active contract")
+
+        # 上限钳制（settings.PHOTON_CONTRACT_STAKE_MAX，默认 1000）：封住
+        # 「巨额 stake → 完成双倍」的通胀面。schema 仅保留下限 ge=10，
+        # 上限单点在 service 强制（settings 动态值不进 pydantic Field）。
+        stake_max = max(1, int(settings.PHOTON_CONTRACT_STAKE_MAX))
+        if photon_stake > stake_max:
+            raise ValueError(
+                f"Contract stake {photon_stake} exceeds the maximum allowed {stake_max}. "
+                "Please lower the stake amount."
+            )
 
         contract = SparkContract(
             user_id=user_id,
@@ -2890,9 +2909,81 @@ class ContractService:
             status=ContractStatus.ACTIVE,
         )
         self.db.add(contract)
+        # flush 先取 id（Python 端 default=uuid4 落库时填充），托管流水以
+        # related_item_id=contract_id 挂账；预扣失败抛错时本事务未 commit，
+        # 契约行随回滚消失——押金与契约原子同生。
+        await self.db.flush()
+        await self._escrow_stake(
+            user_id=str(user_id),
+            amount=photon_stake,
+            contract_id=str(contract.id),
+        )
         await self.db.commit()
         await self.db.refresh(contract)
         return contract
+
+    async def _escrow_stake(self, user_id: str, amount: int, contract_id: str) -> None:
+        """创建契约时预扣押金入托管（MINT-FIX，流水对账实现）。
+
+        选型：托管不落 ``spark_contracts`` 状态列，由 ``photon_transaction_history``
+        一条 ``contract_escrow`` 流水行承载——流水即账（balance_before/after 记录
+        预扣瞬间的真实余额变动），结算侧按 related_item_id 对账（``_escrowed_amount``）。
+        前置余额校验给出人话文案；真正的并发守卫是 ``deduct_photons`` 内部的
+        条件原子 UPDATE（余额不足抛 ValueError，语义同 400）。
+        """
+        from app.models.user import User
+        from app.services.photon_service import PhotonService, PhotonTransactionType
+
+        result = await self.db.execute(select(User.photon_balance).where(User.id == user_id))
+        current_balance = result.scalar_one_or_none()
+        if current_balance is None:
+            raise ValueError(f"User {user_id} not found")
+        if int(current_balance) < amount:
+            raise ValueError(
+                f"Insufficient photon balance to stake: need {amount}, have {int(current_balance)}. "
+                "Earn more photons or create a contract with a lower stake."
+            )
+
+        photon_service = PhotonService(self.db)
+        deduct_result = await photon_service.deduct_photons(
+            user_id=user_id,
+            amount=amount,
+            reason=f"contract_escrow:{contract_id}",
+            transaction_type=PhotonTransactionType.CONTRACT_ESCROW,
+            metadata={"contract_id": contract_id, "kind": "escrow"},
+            related_item_id=contract_id,
+            record_history=True,
+            manage_transaction=False,
+        )
+        # 身份图同步：扣款走条件原子 UPDATE（core 语句，不经 ORM 实例同步），
+        # 同会话内的后续余额读写（如完成结算的 grant）会命中陈旧实例——
+        # 把实例对齐到扣款返回的权威 new_balance，杜绝托管被陈旧值吞掉。
+        user_instance = await self.db.get(User, user_id)
+        if user_instance is not None:
+            user_instance.photon_balance = int(deduct_result["new_balance"])
+        logger.info(
+            "Contract stake escrowed: {} photons for user {} contract {}",
+            amount,
+            user_id,
+            contract_id,
+        )
+
+    async def _escrowed_amount(self, contract: SparkContract) -> int:
+        """契约创建时已托管预扣的押金（负数形，与流水 amount 存储形一致）。
+
+        返回 0 表示存量在途契约（托管机制上线前创建、无 escrow 流水）——
+        结算侧据此走旧路径，保证升级瞬间 in-flight 契约行为不突变。
+        """
+        from app.services.photon_service import PhotonTransactionType
+
+        result = await self.db.execute(
+            select(func.coalesce(func.sum(PhotonTransactionHistory.amount), 0)).where(
+                PhotonTransactionHistory.user_id == contract.user_id,
+                PhotonTransactionHistory.transaction_type == PhotonTransactionType.CONTRACT_ESCROW,
+                PhotonTransactionHistory.related_item_id == str(contract.id),
+            )
+        )
+        return int(result.scalar_one() or 0)
 
     async def _get_active_contract(self, user_id: str) -> SparkContract | None:
         """获取活跃契约"""
@@ -2963,7 +3054,13 @@ class ContractService:
         )
 
     async def _grant_rewards(self, contract: SparkContract):
-        """发放契约奖励"""
+        """发放契约奖励
+
+        MINT-FIX 语义：托管契约完成时发放 ``stake × multiplier``，其中 1 份是
+        托管还本（创建时已真实预扣）、净得 ``stake × (multiplier − 1)``——
+        流水类型与金额面不变（``grant_contract``），消灭的是「无本双倍」。
+        存量在途契约（无托管）同式发放，行为不变。
+        """
         try:
             from app.services.photon_service import PhotonService, PhotonTransactionType
 
@@ -2995,9 +3092,26 @@ class ContractService:
             )
 
     async def _deduct_photons(self, contract: SparkContract):
-        """扣除光子积分"""
+        """契约失败扣押金（MINT-FIX：托管没收优先，不再碰余额）
+
+        托管契约（创建时已有 ``contract_escrow`` 流水）：押金在创建时已真实
+        预扣，失败即没收托管本金——此处不再扣余额，彻底消灭旧路径「余额不足
+        时 deduct 抛错被吞 → 静默豁免」的铸币洞尾巴。存量在途契约（托管机制
+        上线前创建、无 escrow 流水）保留旧扣款路径，升级瞬间行为不突变。
+        """
         try:
             from app.services.photon_service import PhotonService, PhotonTransactionType
+
+            escrowed = await self._escrowed_amount(contract)
+            if -escrowed >= int(contract.photon_stake or 0):
+                logger.info(
+                    "Contract stake forfeited from escrow: {} photons for contract {} user {} "
+                    "(balance untouched; escrow debited at creation)",
+                    contract.photon_stake,
+                    contract.id,
+                    contract.user_id,
+                )
+                return
 
             photon_service = PhotonService(self.db)
 

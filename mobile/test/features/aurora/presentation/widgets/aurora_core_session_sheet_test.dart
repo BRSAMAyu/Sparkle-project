@@ -118,6 +118,51 @@ void main() {
   });
 
   testWidgets(
+      'freeform send failure surfaces humanized feedback — '
+      'failure is no longer swallowed (N15)', (tester) async {
+    final fake = _ThrowingOnRespondClient(
+      startResult: _session(
+        optionGroups: [
+          _simpleGroup(),
+        ],
+      ),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [auroraCoreSessionServiceProvider.overrideWithValue(fake)],
+        child: testMaterialApp(
+          home: const Scaffold(
+            body: AuroraCoreSessionSheet(
+              bandStatus: 'needs_confirm',
+              wakeReasons: ['standard_layer_uncertainty'],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('都不对，我解释一下'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '不是任务太大，是我还不会。');
+    await tester.tap(find.text('发送'));
+
+    // AppFeedback owner SnackBar 进场动画内保持可见。
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+
+    // 坏了但要说：人话失败反馈出现；异常文本不入 UI。
+    expect(find.text('发送失败，请稍后重试。'), findsOneWidget);
+    expect(find.textContaining('session respond blew up'), findsNothing);
+    expect(find.textContaining('Exception'), findsNothing);
+
+    // 排空 SnackBar 计时器。
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pump();
+  });
+
+  testWidgets(
       'completed session shows summary, state patches, and next changes',
       (tester) async {
     final fake = _FakeCoreSessionClient(
@@ -369,6 +414,22 @@ class _FakeCoreSessionClient implements AuroraCoreSessionClient {
 
   @override
   Future<AuroraCoreSession> closeSession(String sessionId) async => startResult;
+}
+
+/// respond 抛错变体：驱动 freeform 发送失败路径（N15 人话错误反馈）。
+class _ThrowingOnRespondClient extends _FakeCoreSessionClient {
+  _ThrowingOnRespondClient({required super.startResult});
+
+  @override
+  Future<AuroraCoreSession> respond({
+    required String sessionId,
+    required String content,
+    String? optionId,
+    String? semanticValue,
+    Map<String, dynamic>? modelWriteEffect,
+    bool isFreeform = false,
+  }) async =>
+      throw Exception('session respond blew up');
 }
 
 AuroraCoreSession _session({

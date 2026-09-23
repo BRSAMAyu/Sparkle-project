@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_core_session.dart';
@@ -482,6 +483,9 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
     } catch (e) {
       if (mounted) {
         setState(() => _sending = false);
+        // N15（A-SPEC3 EE-G1 同面清偿）：发送失败此前被静默吞掉（坏了但不说），
+        // 补人话错误反馈；异常文本本身不入 UI，经 AppFeedback/SparkleSnackBar owner。
+        AppFeedback.error(context, context.l10n.auroraSendFailed);
       }
     }
   }
@@ -874,6 +878,8 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
           children: [
             Icon(Icons.error_outline, color: DS.error, size: 40),
             const SizedBox(height: DS.spacing12),
+            // N15（A-SPEC3 EE-G1）内容契约：_error 全部写入点均为人话
+            // arb 文案（auroraStartFailed，见 :429），异常文本不入 state。
             Text(_error!,
                 textAlign: TextAlign.center,
                 style: TextStyle(color: DS.textSecondary)),

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -59,7 +60,9 @@ class MarketplaceScreen extends ConsumerWidget {
                 Expanded(
                   child: CustomErrorWidget.page(
                     context: context,
-                    message: state.error!,
+                    // N15/EE-G1（A-SPEC3）：owner 面板不豁免内容契约——
+                    // message 经唯一映射 owner 人话化，不直出原始异常
+                    message: UserFacingError.from(state.error!),
                     onRetry: notifier.refresh,
                   ),
                 )

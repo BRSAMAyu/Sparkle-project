@@ -31,6 +31,8 @@ class PhotonTransactionType(enum.StrEnum):
     PENALTY = "penalty"                           # 惩罚
     ADMIN_ADJUSTMENT = "admin_adjustment"         # 管理员调整
     REDEEM_PRO = "redeem_pro"                     # 光子兑换 Pro（D-COMM-2 学出会员）
+    CONTRACT_ESCROW = "contract_escrow"           # 契约押金托管预扣（MINT-FIX：创建时扣，完成结算含还本，失败即没收）
+    GUEST_SEED = "guest_seed"                     # 访客体验种子（MINT-FIX：营销补贴出「可兑换基数」词表，非学习所得）
 
 
 class ShopItemType(enum.StrEnum):

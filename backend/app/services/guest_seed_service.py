@@ -1522,7 +1522,11 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
             PhotonTransactionHistory(
                 id=uuid.uuid4(),
                 user_id=user.id,
-                transaction_type=PhotonTransactionType.GRANT_ACHIEVEMENT.value,
+                # MINT-FIX（审计 §1.5-R3）：访客种子是营销补贴非学习所得，
+                # 改专有类型出「可兑换基数」词表（REDEEMABLE_INCOME_TYPES 不含
+                # guest_seed），修复转正用户基数混入 1000 补贴的口径缝隙。
+                # 存量 grant_achievement 误标行由迁移 gseed_20260923 回填改型。
+                transaction_type=PhotonTransactionType.GUEST_SEED.value,
                 amount=1000,
                 balance_before=0,
                 balance_after=1000,
