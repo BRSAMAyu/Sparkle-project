@@ -13,10 +13,13 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+import asyncio
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from jose.exceptions import JWTError
 from loguru import logger
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import _zh, get_current_user
@@ -33,6 +36,7 @@ from app.core.security import (
     create_refresh_token,
     decode_token,
     get_password_hash,
+    is_token_revoked,
     set_user_revoked_before,
     verify_password,
 )
@@ -651,10 +655,10 @@ async def refresh_token(
                 session_id=str(session_id),
                 ttl_seconds=SESSION_TTL_SECONDS,
             )
-        # Rotate refresh token: revoke old refresh token jti — only after the
-        # session revocation succeeded, so a partial failure never poisons
-        # the presented token (a retry then stays possible).
-        await blacklist_token(payload.get("jti"), payload.get("exp"))
+        # AUTH-DEEP A4 输者检测：并发双 refresh 时，对手若已把本 jti 拉黑，
+        # 此请求为重放——恰一成功（single-use 语义），输者拿 401。
+        if await is_token_revoked(str(payload.get("jti"))):
+            raise HTTPException(status_code=401, detail="刷新令牌已被使用，请使用最新令牌重试")
         auth_audit_service.schedule_log(
             AuthAuditAction.TOKEN_REFRESH,
             user_id=str(user.id),
@@ -662,13 +666,35 @@ async def refresh_token(
             metadata={"session_id": session_id},
         )
         extra_claims = {"is_guest": True} if payload.get("is_guest") else None
-        return await _issue_auth_tokens(
+        issued = await _issue_auth_tokens(
             db=db,
             user=user,
             request=request,
             session_id=str(session_id) if session_id else None,
             extra_claims=extra_claims,
         )
+        # AUTH-DEEP A4：blacklist 后置到签发成功之后——「任何失败都不消耗已呈递的
+        # token」成为不变量（原序在签发前写黑名单，签发阶段抖动=DB 回滚但 Redis
+        # 标记已落，重试必 401 强登出）。此处失败仅 log：fail-open 的复用窗口由
+        # refresh 限流（10/15min）兜底。
+        try:
+            await blacklist_token(payload.get("jti"), payload.get("exp"))
+        except Exception as exc:
+            logger.error("refresh rotation blacklist failed (fail-open, rate-limit guards): {}", exc)
+        return issued
+    except HTTPException:
+        raise
+    except JWTError as e:
+        raise HTTPException(status_code=401, detail="刷新令牌无效，请重新登录") from e
+    except (OperationalError, ConnectionError, TimeoutError, asyncio.TimeoutError) as e:
+        # AUTH-DEEP A3'：基础设施抖动不可伪装成 401——否则移动端清 token 强登出
+        # （一次 Redis/DB 抖动 = 全舰队重登）。503 + retryable 语义让客户端保会话重试。
+        logger.error("refresh failed on infrastructure: {}", e)
+        raise HTTPException(
+            status_code=503,
+            detail="服务暂时不可用，请稍后重试",
+            headers={"Retry-After": "3"},
+        ) from e
     except Exception as e:
         logger.warning(f"Refresh token request failed: {e}")
         raise HTTPException(status_code=401, detail="刷新令牌无效，请重新登录") from e
@@ -708,8 +734,11 @@ async def logout(
         if access_token:
             try:
                 payload = await decode_token(access_token, expected_type="access")
-                from app.core.token_revocation import token_revocation_service
-                await token_revocation_service.blacklist_token(payload.get("jti"), payload.get("exp"))
+                # AUTH-DEEP A2：token_revocation_service 写 token:blacklist: 前缀——
+                # decode_token 与 Go 网关只读 token_blacklist:，拉黑对 gRPC/SSE/STT/
+                # 网关不可见；且其第二参是时长，传 exp 绝对值 ≈ 55 年 TTL。
+                # security.blacklist_token 是唯一正确写入口（前缀+TTL=exp−now）。
+                await blacklist_token(payload.get("jti"), payload.get("exp"))
                 if payload.get("sid"):
                     await auth_session_service.revoke_session_by_id(
                         db,

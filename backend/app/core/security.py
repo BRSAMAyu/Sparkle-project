@@ -17,6 +17,7 @@ from sqlalchemy import select
 from app.config import settings
 from app.core import logsafe
 from app.core.cache import cache_service
+from app.core.time_utils import to_epoch_seconds
 from app.services.auth_session_service import auth_session_service
 
 TOKEN_BLACKLIST_PREFIX = "token_blacklist:"
@@ -173,7 +174,8 @@ async def decode_token(
                 iat_ts = int(token_iat)
             except Exception:
                 iat_ts = None
-            if iat_ts is not None and iat_ts < revoked_before:
+            # <=（非 <）：iat 与水位同秒签发的 token 一并作废——改密/重置语义下宁可多杀。
+            if iat_ts is not None and iat_ts <= revoked_before:
                 raise JWTError("Token revoked")
 
     session_id = payload.get("sid")
@@ -241,7 +243,7 @@ async def get_user_revoked_before(user_id: str) -> int | None:
             user = await session.get(User, user_id)
             if not user or user.token_revoked_before is None:
                 return None
-            revoked_before_ts = int(user.token_revoked_before.timestamp())
+            revoked_before_ts = to_epoch_seconds(user.token_revoked_before)
             await set_user_revoked_before(user_id, user.token_revoked_before)
             return revoked_before_ts
     except Exception as exc:
@@ -290,7 +292,7 @@ async def set_user_revoked_before(user_id: str, revoked_before: datetime) -> Non
     if not user_id or revoked_before is None:
         return
     try:
-        ts = int(revoked_before.timestamp())
+        ts = to_epoch_seconds(revoked_before)
     except Exception as exc:
         logger.warning("Invalid revoked_before timestamp for user {}: {}", logsafe.user_id_hash(user_id), exc)
         return

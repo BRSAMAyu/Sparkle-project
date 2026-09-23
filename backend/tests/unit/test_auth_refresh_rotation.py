@@ -223,3 +223,137 @@ async def test_decode_token_session_check_semantics(monkeypatch):
         token, expected_type="refresh", check_session_revocation=False
     )
     assert payload["sid"] == "sess-stale"
+
+
+# ---------- AUTH-DEEP immediate-fix pins (2026-09-23) ----------
+
+
+def test_change_password_revokes_sessions_with_correct_signature():
+    """A1: change_password must call revoke_all_sessions_for_user correctly.
+
+    The old call passed str(id) positionally into db and dropped the two
+    keyword-only params -> TypeError AFTER the password commit: password
+    changed, sessions alive, tokens valid. The endpoint's only security job.
+    """
+    import inspect
+
+    from app.api.v1 import users as users_module
+
+    src = inspect.getsource(users_module.change_password)
+    assert "revoke_all_sessions_for_user(\n        db, user_id=" in src or (
+        "revoke_all_sessions_for_user(" in src and "db, user_id=" in src
+    )
+    assert "ttl_seconds=SESSION_TTL_SECONDS" in src
+
+
+def test_watermark_epoch_is_timezone_independent():
+    """A3: naive-UTC watermarks must convert via timegm, not .timestamp().
+
+    On a +0800 host datetime.timestamp() shifts naive-UTC values by -28800s,
+    letting tokens issued up to 8h before a password reset survive.
+    """
+    import calendar
+    from datetime import datetime as dt
+
+    from app.core.time_utils import to_epoch_seconds
+
+    naive_utc = dt(2026, 9, 23, 6, 0, 0)  # canonical naive-UTC form
+    expected = calendar.timegm(naive_utc.utctimetuple())
+    assert to_epoch_seconds(naive_utc) == expected
+    # The bug this pins: naive .timestamp() interprets via LOCAL tz.
+    # Only assert divergence when host tz is actually offset (CI UTC is fine).
+    if abs(naive_utc.timestamp() - expected) > 1:
+        assert to_epoch_seconds(naive_utc) != naive_utc.timestamp()
+
+
+@pytest.mark.asyncio
+async def test_refresh_infrastructure_failure_returns_503_not_401(monkeypatch):
+    """A3': DB/Redis/timeout failures must surface as 503 retryable, never 401.
+
+    401-for-everything made the mobile layer clear tokens: one infra hiccup
+    = fleet-wide forced logout.
+    """
+    from sqlalchemy.exc import OperationalError
+
+    user = SimpleNamespace(id=uuid4(), is_active=True)
+
+    async def fake_decode(token, expected_type=None, **kwargs):  # noqa: ANN001
+        return {"sub": str(user.id), "sid": "sess-1", "jti": "j-infra", "exp": 1}
+
+    async def fake_revoke(db, **kwargs):  # noqa: ANN001
+        return None
+
+    async def fake_not_revoked(jti):  # noqa: ANN001
+        return False
+
+    async def failing_issue(**kwargs):  # noqa: ANN001
+        raise OperationalError("stmt", {}, Exception("db down"))
+
+    monkeypatch.setattr(auth_module, "decode_token", fake_decode)
+    monkeypatch.setattr(auth_module.auth_session_service, "revoke_session_by_id", fake_revoke)
+    monkeypatch.setattr(auth_module, "is_token_revoked", fake_not_revoked)
+    monkeypatch.setattr(auth_module, "_issue_auth_tokens", failing_issue)
+
+    app = FastAPI()
+    setup_rate_limiting(app)
+    app.include_router(auth_module.router, prefix="/api/v1/auth")
+
+    async def override_db():
+        yield _FakeDB(user)
+
+    app.dependency_overrides[auth_module.get_db] = override_db
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        resp = await ac.post("/api/v1/auth/refresh", json={"refresh_token": "tok"})
+
+    assert resp.status_code == 503, resp.text
+    assert resp.headers.get("retry-after") == "3"
+
+
+@pytest.mark.asyncio
+async def test_refresh_blacklist_runs_after_successful_issue(monkeypatch):
+    """A4: blacklist moved post-issue — issue failure must NOT consume token."""
+    from sqlalchemy.exc import OperationalError
+
+    user = SimpleNamespace(id=uuid4(), is_active=True)
+    blacklisted: list[str] = []
+
+    async def fake_decode(token, expected_type=None, **kwargs):  # noqa: ANN001
+        return {"sub": str(user.id), "sid": "sess-1", "jti": "j-a4", "exp": 1}
+
+    async def fake_revoke(db, **kwargs):  # noqa: ANN001
+        return None
+
+    async def fake_not_revoked(jti):  # noqa: ANN001
+        return False
+
+    async def fake_blacklist(jti, exp):  # noqa: ANN001
+        blacklisted.append(jti)
+
+    async def failing_issue(**kwargs):  # noqa: ANN001
+        raise OperationalError("stmt", {}, Exception("redis delete blew up"))
+
+    monkeypatch.setattr(auth_module, "decode_token", fake_decode)
+    monkeypatch.setattr(auth_module.auth_session_service, "revoke_session_by_id", fake_revoke)
+    monkeypatch.setattr(auth_module, "is_token_revoked", fake_not_revoked)
+    monkeypatch.setattr(auth_module, "blacklist_token", fake_blacklist)
+    monkeypatch.setattr(auth_module, "_issue_auth_tokens", failing_issue)
+
+    app = FastAPI()
+    setup_rate_limiting(app)
+    app.include_router(auth_module.router, prefix="/api/v1/auth")
+
+    async def override_db():
+        yield _FakeDB(user)
+
+    app.dependency_overrides[auth_module.get_db] = override_db
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        resp = await ac.post("/api/v1/auth/refresh", json={"refresh_token": "tok"})
+
+    assert resp.status_code == 503
+    assert blacklisted == []  # token stays retryable — nothing consumed

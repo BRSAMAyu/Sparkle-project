@@ -41,3 +41,18 @@ def ensure_naive_utc(value: datetime | None) -> datetime | None:
 def utcnow_iso() -> str:
     """Return the current UTC time as an ISO 8601 string."""
     return datetime.now(UTC).isoformat()
+
+
+def to_epoch_seconds(value: datetime) -> int:
+    """Convert a datetime (naive-UTC canonical or tz-aware) to true UTC epoch seconds.
+
+    Naive datetimes are interpreted as UTC — the codebase canonical form —
+    NOT as local time (which is what ``.timestamp()`` does on a naive value;
+    on a +0800 host that shifted revocation watermarks by -28800s, letting
+    tokens issued within 8h before a password reset survive the watermark).
+    """
+    import calendar
+
+    if value.tzinfo is None:
+        return calendar.timegm(value.utctimetuple())
+    return int(value.timestamp())

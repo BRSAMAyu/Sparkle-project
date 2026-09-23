@@ -237,10 +237,19 @@ class AuthRepository {
       await saveTokens(tokenResponse);
       return tokenResponse;
     } on DioException catch (e) {
-      await clearTokens(); // Clear tokens if refresh fails
+      // AUTH-DEEP B-3：仅服务端明确拒绝（401/403）才清 token——网络抖动/5xx/超时
+      // 保会话向上抛 retryable，拦截器将退避重试。任何异常都 clearTokens 是
+      // 「一次基础设施抖动 = 全舰队强制重登」放大链的仓库层半边。
+      final status = e.response?.statusCode ?? 0;
+      final serverRejected = status == 401 || status == 403;
+      if (serverRejected) {
+        await clearTokens();
+      }
       throw AppFailureMapper.fromDio(
         e,
-        fallbackMessage: I18nService.instance.l10n.authErrorSessionExpired,
+        fallbackMessage: serverRejected
+            ? I18nService.instance.l10n.authErrorSessionExpired
+            : I18nService.instance.l10n.networkErrorRetry,
       );
     } catch (e) {
       await clearTokens();

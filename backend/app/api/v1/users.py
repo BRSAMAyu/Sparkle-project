@@ -291,8 +291,13 @@ async def change_password(
     await db.refresh(current_user)
 
     # Invalidate all existing sessions after password change
+    # AUTH-DEEP A1：原为 revoke_all_sessions_for_user(str(id)) —— 位置参数填进 db、
+    # 两个 keyword-only 参数缺失 → TypeError → 500，且炸点在密码 commit 之后：
+    # 改密生效但会话全不吊销、水位不设，旧 token 继续有效（该端点唯一安全职责失效）。
     from app.services.auth_session_service import auth_session_service
-    await auth_session_service.revoke_all_sessions_for_user(str(current_user.id))
+    await auth_session_service.revoke_all_sessions_for_user(
+        db, user_id=str(current_user.id), ttl_seconds=SESSION_TTL_SECONDS
+    )
     current_user.token_revoked_before = _utcnow_naive()
     await set_user_revoked_before(str(current_user.id), current_user.token_revoked_before)
 
