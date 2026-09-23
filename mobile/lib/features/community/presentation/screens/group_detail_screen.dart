@@ -42,8 +42,10 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
           child: Column(
             children: [
               AppBar(
+                // APPBAR-VARIANT：返回钮降档 ghost（AppBar 归轻量档，实心 primary 留给页面主 CTA）。
                 leading: SparkleIconButton(
-                  icon: const Icon(Icons.arrow_back),
+                  variant: ButtonVariant.ghost,
+                  icon: Icon(Icons.arrow_back, color: DS.textPrimary),
                   onPressed: () => context.pop(),
                 ),
                 title: Text(context.l10n.communityGroupDetails),
@@ -134,8 +136,10 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
     final isSprint = group.isSprint;
 
     return SliverAppBar(
+      // APPBAR-VARIANT：返回钮降档 ghost（导航工具类不占实心强调档）。
       leading: SparkleIconButton(
-        icon: const Icon(Icons.arrow_back),
+        variant: ButtonVariant.ghost,
+        icon: Icon(Icons.arrow_back, color: DS.textPrimary),
         onPressed: () => context.pop(),
       ),
       expandedHeight: 160,
@@ -217,7 +221,9 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
       ),
       actions: [
         if (isMember)
+          // APPBAR-VARIANT：更多菜单降档 ghost（工具类动作，AppBar 归轻量档）。
           SparkleIconButton(
+            variant: ButtonVariant.ghost,
             icon: Icon(Icons.more_vert, color: DS.textPrimary),
             onPressed: () => _showGroupOptions(context, ref, group),
           ),

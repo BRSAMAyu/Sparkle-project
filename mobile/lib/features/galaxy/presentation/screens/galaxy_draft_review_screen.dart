@@ -68,8 +68,10 @@ class _GalaxyDraftReviewScreenState
             backgroundColor: Colors.transparent,
             surfaceTintColor: Colors.transparent,
             elevation: 0,
+            // APPBAR-VARIANT：返回钮降档 ghost（导航工具类不占实心强调档）。
             leading: SparkleIconButton(
-              icon: const Icon(Icons.arrow_back_rounded),
+              variant: ButtonVariant.ghost,
+              icon: Icon(Icons.arrow_back_rounded, color: DS.textPrimary),
               onPressed: () => context.pop(),
             ),
             titleSpacing: 0,

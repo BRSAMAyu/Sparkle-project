@@ -130,13 +130,10 @@ class _TaskCardState extends ConsumerState<TaskCard> {
           Positioned(
             top: DS.spacing12,
             right: DS.spacing12,
-            child: SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: DS.brandPrimary,
-              ),
+            child: LoadingIndicator.circular(
+              size: 16,
+              strokeWidth: 2,
+              color: DS.brandPrimary,
             ),
           ),
         ],

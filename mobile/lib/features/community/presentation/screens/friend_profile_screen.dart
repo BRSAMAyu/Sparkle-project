@@ -40,8 +40,10 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
   Widget build(BuildContext context) => SparklePageScaffold(
         role: SparklePageRole.content,
         appBar: AppBar(
+          // APPBAR-VARIANT：返回钮降档 ghost（导航工具类不占实心强调档）。
           leading: SparkleIconButton(
-            icon: const Icon(Icons.arrow_back),
+            variant: ButtonVariant.ghost,
+            icon: Icon(Icons.arrow_back, color: DS.textPrimary),
             onPressed: () => context.pop(),
           ),
           title: Text(widget.displayName ?? context.l10n.fpTitle),
