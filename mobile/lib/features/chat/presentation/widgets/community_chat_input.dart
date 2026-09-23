@@ -869,7 +869,7 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
           return Semantics(
             button: true,
             enabled: canSend,
-            label: 'Send message',
+            label: context.l10n.chatSendMessage,
             child: AnimatedScale(
               scale: _isButtonPressed ? 0.9 : 1.0,
               duration: reduceMotion ? Duration.zero : DS.quick,

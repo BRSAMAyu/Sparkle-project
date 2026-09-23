@@ -129,6 +129,7 @@ class _SubtaskListWidgetState extends ConsumerState<SubtaskListWidget> {
                 child: SparkleIconButton(
                   variant: ButtonVariant.ghost,
                   size: 36,
+                  semanticLabel: context.l10n.subtaskAddTooltip,
                   onPressed: () {
                     if (_titleController.text.trim().isNotEmpty) {
                       _addSubtask(ref, _titleController.text.trim());
@@ -363,6 +364,7 @@ class SubtaskItemWidget extends StatelessWidget {
                 child: SparkleIconButton(
                   variant: ButtonVariant.ghost,
                   size: 32,
+                  semanticLabel: context.l10n.delete,
                   icon: Icon(
                     Icons.close,
                     color: DS.brandPrimary38Const,

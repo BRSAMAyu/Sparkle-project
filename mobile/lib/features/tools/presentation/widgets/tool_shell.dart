@@ -234,6 +234,7 @@ class _ToolShellState extends State<ToolShell> {
                       SparkleIconButton(
                         variant: ButtonVariant.ghost,
                         size: 32,
+                        semanticLabel: context.l10n.close,
                         onPressed: _dismissSheet,
                         icon: const Icon(
                           Icons.close_rounded,
@@ -244,6 +245,7 @@ class _ToolShellState extends State<ToolShell> {
                     SparkleIconButton(
                       variant: ButtonVariant.ghost,
                       size: 32,
+                      semanticLabel: context.l10n.toolsHeaderCollapse,
                       onPressed: _toggleHeaderCollapsed,
                       icon: Icon(
                         _headerCollapsed

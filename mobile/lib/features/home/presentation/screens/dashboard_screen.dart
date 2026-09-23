@@ -1686,6 +1686,7 @@ class _CommunityAccountabilitySurface extends StatelessWidget {
                 trailing: SparkleIconButton(
                   variant: ButtonVariant.ghost,
                   size: 48,
+                  semanticLabel: context.l10n.dashboardAccountabilityOpen,
                   onPressed: () => context.push('/community/accountability'),
                   icon: const Icon(Icons.chevron_right_rounded, size: 18),
                 ),
@@ -2514,6 +2515,7 @@ class _DailyBriefingCard extends StatelessWidget {
                   key: const ValueKey('dashboard-briefing-toggle'),
                   variant: ButtonVariant.ghost,
                   size: 48,
+                  semanticLabel: context.l10n.dashboardBriefingToggle,
                   onPressed: onToggleExpanded,
                   icon: AnimatedRotation(
                     turns: isExpanded ? 0.5 : 0,
@@ -3021,6 +3023,7 @@ class _DashboardUpdatesSectionState
                         key: const ValueKey('dashboard-updates-toggle'),
                         variant: ButtonVariant.ghost,
                         size: 48,
+                        semanticLabel: context.l10n.dashboardUpdatesToggle,
                         onPressed: _toggleExpanded,
                         icon: AnimatedRotation(
                           turns: _isExpanded ? 0.5 : 0,

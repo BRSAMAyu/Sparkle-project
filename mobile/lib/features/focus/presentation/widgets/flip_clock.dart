@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/text_rendering.dart';
 
@@ -58,6 +59,8 @@ class _FlipDigitState extends State<_FlipDigit>
   late Animation<double> _topFlipAnimation;
   late Animation<double> _bottomFlipAnimation;
 
+  bool _reduceMotion = false;
+
   int _currentDigit = 0;
   int _nextDigit = 0;
 
@@ -94,6 +97,16 @@ class _FlipDigitState extends State<_FlipDigit>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // N33 reduce-motion 守护：口径统一走 MediaQuery——`context.reduceMotion`
+    // （= disableAnimations ∨ accessibleNavigation，系统 ∨ in-app 叠加），
+    // 禁 platformDispatcher 直读（A-SPEC6 N32 双源分裂统一令）。
+    // 减弱动效下翻页退化为「数字直接换」（功能保留，翻转动效停）。
+    _reduceMotion = context.reduceMotion;
+  }
+
+  @override
   void didUpdateWidget(covariant _FlipDigit oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.digit != widget.digit) {
@@ -104,11 +117,18 @@ class _FlipDigitState extends State<_FlipDigit>
           enableSound: false,
         ),
       );
-      _controller.forward(from: 0).then((_) {
+      if (_reduceMotion) {
+        // 减弱动效：跳过翻转，数字立即落到新值（静止终态）。
         setState(() {
           _currentDigit = _nextDigit;
         });
-      });
+      } else {
+        _controller.forward(from: 0).then((_) {
+          setState(() {
+            _currentDigit = _nextDigit;
+          });
+        });
+      }
     }
   }
 
@@ -246,7 +266,25 @@ class _ColonState extends State<_Colon> with SingleTickerProviderStateMixin {
     );
     _opacityAnimation =
         Tween<double>(begin: 1.0, end: 0.3).animate(_controller);
-    _controller.repeat(reverse: true);
+    // 闪烁 repeat 与否由 didChangeDependencies 按减弱动效口径决定
+    // （initState 里拿不到 InheritedWidget）。
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // N33 reduce-motion 守护：口径统一走 MediaQuery——`context.reduceMotion`
+    // （= disableAnimations ∨ accessibleNavigation，系统 ∨ in-app 叠加），
+    // 禁 platformDispatcher 直读（A-SPEC6 N32 双源分裂统一令）。
+    // 减弱动效下冒号常亮（静止终态 value 0 = 满透明度），恢复后自动续播
+    // （maybeOf 内部 dependOn：开关变化时本方法重入）。
+    final reduceMotion = context.reduceMotion;
+    if (reduceMotion) {
+      if (_controller.isAnimating) _controller.stop();
+      _controller.value = 0.0;
+    } else if (!_controller.isAnimating) {
+      unawaited(_controller.repeat(reverse: true));
+    }
   }
 
   @override

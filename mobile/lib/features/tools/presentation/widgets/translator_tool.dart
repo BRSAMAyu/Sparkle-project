@@ -318,6 +318,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
           }
         },
         icon: Icon(Icons.history_rounded),
+        semanticLabel: context.l10n.translationHistoryTitle,
         variant: ButtonVariant.ghost,
       ),
       heroChips: [

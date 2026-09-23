@@ -28,6 +28,7 @@ class NotificationListScreen extends ConsumerWidget {
         leading: SparkleIconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
+          semanticLabel: context.l10n.back,
           variant: ButtonVariant.ghost,
         ),
         title: Text(context.l10n.auto_notifications),

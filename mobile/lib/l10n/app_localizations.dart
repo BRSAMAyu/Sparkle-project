@@ -67500,6 +67500,66 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'还没有学习记录——完成第一次学习后，你的成长曲线会出现在这里。'**
   String get statisticsTrendEmptyHint;
+
+  /// No description provided for @dashboardAccountabilityOpen.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看监督搭子'**
+  String get dashboardAccountabilityOpen;
+
+  /// No description provided for @dashboardBriefingToggle.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开或收起今日简报'**
+  String get dashboardBriefingToggle;
+
+  /// No description provided for @dashboardUpdatesToggle.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开或收起动态洞察'**
+  String get dashboardUpdatesToggle;
+
+  /// No description provided for @communityCreatePost.
+  ///
+  /// In zh, this message translates to:
+  /// **'发布帖子'**
+  String get communityCreatePost;
+
+  /// No description provided for @chatAttachmentOptions.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开附件选项'**
+  String get chatAttachmentOptions;
+
+  /// No description provided for @chatSendMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送消息'**
+  String get chatSendMessage;
+
+  /// No description provided for @chatStopGeneration.
+  ///
+  /// In zh, this message translates to:
+  /// **'停止生成'**
+  String get chatStopGeneration;
+
+  /// No description provided for @chatCancelQuote.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消引用回复'**
+  String get chatCancelQuote;
+
+  /// No description provided for @taskMoveToPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'移动到计划'**
+  String get taskMoveToPlan;
+
+  /// No description provided for @toolsHeaderCollapse.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起或展开工具信息'**
+  String get toolsHeaderCollapse;
 }
 
 class _AppLocalizationsDelegate

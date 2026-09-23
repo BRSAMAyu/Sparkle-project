@@ -419,6 +419,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
         leading: SparkleIconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
+          semanticLabel: context.l10n.back,
           variant: ButtonVariant.ghost,
         ),
         title: groupInfoState.when(

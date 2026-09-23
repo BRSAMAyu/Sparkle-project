@@ -258,6 +258,7 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
                       variant: ButtonVariant.ghost,
                       size: 36,
                       icon: Icon(Icons.send, color: DS.primaryBase),
+                      semanticLabel: context.l10n.send,
                       onPressed: _sendMessage,
                     ),
                 ],

@@ -38778,4 +38778,34 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get statisticsTrendEmptyHint =>
       'No study records yet — your growth curve will appear here after your first study session.';
+
+  @override
+  String get dashboardAccountabilityOpen => 'View accountability partner';
+
+  @override
+  String get dashboardBriefingToggle => 'Expand or collapse today\'s briefing';
+
+  @override
+  String get dashboardUpdatesToggle => 'Expand or collapse updates and insights';
+
+  @override
+  String get communityCreatePost => 'Create a post';
+
+  @override
+  String get chatAttachmentOptions => 'Open attachment options';
+
+  @override
+  String get chatSendMessage => 'Send message';
+
+  @override
+  String get chatStopGeneration => 'Stop generating';
+
+  @override
+  String get chatCancelQuote => 'Cancel quoted reply';
+
+  @override
+  String get taskMoveToPlan => 'Move to plan';
+
+  @override
+  String get toolsHeaderCollapse => 'Collapse or expand tool info';
 }

@@ -121,6 +121,7 @@ class ToolHostScreen extends StatelessWidget {
                       ),
                       child: SparkleIconButton(
                         variant: ButtonVariant.ghost,
+                        semanticLabel: context.l10n.back,
                         onPressed: () {
                           if (context.canPop()) {
                             context.pop();
@@ -144,6 +145,7 @@ class ToolHostScreen extends StatelessWidget {
                         ),
                         child: SparkleIconButton(
                           variant: ButtonVariant.ghost,
+                          semanticLabel: context.l10n.auto_toollibrary,
                           onPressed: () {
                             if (context.mounted) {
                               context.push('/tools/library');

@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 
 /// 星星数据
 class _Star {
@@ -53,11 +54,26 @@ class _StarBackgroundState extends State<StarBackground>
       duration: const Duration(seconds: 3),
     );
 
-    if (widget.enableTwinkle) {
-      unawaited(_controller.repeat());
-    }
-
     _generateStars();
+    // 闪烁 repeat 与否由 didChangeDependencies 按减弱动效口径决定
+    // （initState 里拿不到 InheritedWidget）。
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // N33 reduce-motion 守护：口径统一走 MediaQuery——`context.reduceMotion`
+    // （= disableAnimations ∨ accessibleNavigation，系统 ∨ in-app 叠加），
+    // 禁 platformDispatcher 直读（A-SPEC6 N32 双源分裂统一令）。
+    // maybeOf 内部 dependOn：系统/应用内开关变化时本方法自动重入，
+    // 减弱动效即时静默、恢复后自动续播。减弱动效下星星保持静止终态
+    // （画面仍在，只是不闪）。
+    final shouldTwinkle = widget.enableTwinkle && !context.reduceMotion;
+    if (shouldTwinkle && !_controller.isAnimating) {
+      unawaited(_controller.repeat());
+    } else if (!shouldTwinkle && _controller.isAnimating) {
+      _controller.stop();
+    }
   }
 
   void _generateStars() {

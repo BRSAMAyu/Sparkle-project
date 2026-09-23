@@ -445,7 +445,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                         scale: _isAttachmentBursting ? 1.08 : 1,
                         child: Semantics(
                           button: true,
-                          label: 'Open attachment options',
+                          label: context.l10n.chatAttachmentOptions,
                           child: IconButton(
                             icon: Icon(
                               Icons.add_circle_outline_rounded,
@@ -578,7 +578,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           return Semantics(
             button: true,
             enabled: canSend || canStop,
-            label: isGenerating ? 'Stop AI generation' : 'Send message',
+            label: isGenerating
+                ? context.l10n.chatStopGeneration
+                : context.l10n.chatSendMessage,
             child: AnimatedScale(
               scale: _isButtonPressed ? 0.9 : 1.0,
               duration: reduceMotion ? Duration.zero : DS.quick,
@@ -605,12 +607,14 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                         ]
                       : null,
                 ),
-                child: Material(
+                  child: Material(
                   color: Colors.transparent,
                   shape: const CircleBorder(),
                   child: Semantics(
                     button: true,
-                    label: isGenerating ? 'Stop AI generation' : 'Send message',
+                    label: isGenerating
+                        ? context.l10n.chatStopGeneration
+                        : context.l10n.chatSendMessage,
                     child: InkWell(
                       customBorder: const CircleBorder(),
                       onTap: canStop
@@ -697,8 +701,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               height: DS.touchTargetMinSize,
               child: Semantics(
                 button: true,
-                label: 'Cancel quoted message',
+                label: context.l10n.chatCancelQuote,
                 child: IconButton(
+                  tooltip: context.l10n.chatCancelQuote,
                   icon: Icon(
                     Icons.close_rounded,
                     size: DS.iconSizeSm,

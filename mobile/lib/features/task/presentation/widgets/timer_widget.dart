@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/utils/text_rendering.dart';
 
 enum TimerMode { countUp, countDown }
@@ -37,6 +38,9 @@ class _TimerWidgetState extends State<TimerWidget>
   bool _isRunning = false;
   DateTime? _runStartedAt;
   bool _didComplete = false;
+  // N33 reduce-motion 守护口径（didChangeDependencies 内经 MediaQuery 读取，
+  // 系统 ∨ in-app 叠加；禁 platformDispatcher 直读——A-SPEC6 N32 统一令）。
+  bool _reduceMotion = false;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
@@ -63,6 +67,26 @@ class _TimerWidgetState extends State<TimerWidget>
         _startTimer();
       }
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // N33 reduce-motion 守护：`context.reduceMotion` 为 MediaQuery 口径
+    // （maybeOf 内部 dependOn，系统/应用内减弱动效开关变化时自动重入）。
+    // 装饰性脉动（表盘呼吸缩放）随开关启停；秒级计时本体是功能
+    // （Timer.periodic），不受减弱动效影响。
+    _reduceMotion = context.reduceMotion;
+    if (!_isRunning) {
+      return;
+    }
+    if (_reduceMotion) {
+      _pulseController
+        ..stop()
+        ..value = 0; // 静止终态：pulse Tween begin=1.0 → 表盘 scale 1.0
+    } else if (!_pulseController.isAnimating) {
+      unawaited(_pulseController.repeat(reverse: true));
+    }
   }
 
   @override
@@ -126,7 +150,10 @@ class _TimerWidgetState extends State<TimerWidget>
     _runStartedAt = DateTime.now();
     setState(() => _isRunning = true);
     widget.onStateChange?.call(true);
-    unawaited(_pulseController.repeat(reverse: true));
+    if (!_reduceMotion) {
+      // N33：减弱动效下不启动装饰性脉动，表盘静止（计时功能照常）。
+      unawaited(_pulseController.repeat(reverse: true));
+    }
     _syncFromClock();
     _startPeriodicTicker();
   }

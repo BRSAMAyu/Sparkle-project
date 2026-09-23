@@ -3680,6 +3680,7 @@ class _GalaxyDraftPromptCard extends StatelessWidget {
                     ),
                     IconButton(
                       onPressed: onDismiss,
+                      tooltip: context.l10n.close,
                       icon: Icon(
                         Icons.close_rounded,
                         color: DS.neutral0.withValues(alpha: 0.8),

@@ -94,11 +94,33 @@ class SparkleMotion {
 
   /// 呼吸动画控制器配置 (Helper)
   /// return AnimationController configured for breathing
-  static AnimationController createBreathingController(TickerProvider vsync) {
+  ///
+  /// N33 持续动效守护（A-SPEC6 AX-G4）：DS 层唯一防御点——呼吸类
+  /// `repeat(reverse: true)` 在此统一认减弱动效，调用方无法绕过。
+  ///
+  /// 口径单一（A-SPEC6 N32/AX-G5，双源分裂统一令）：一律读 **MediaQuery**
+  /// ——调用方传 `disableAnimations: context.reduceMotion`
+  /// （sparkle_context_extension 的 MediaQuery 口径扩展，
+  /// `disableAnimations ∨ accessibleNavigation`，系统 ∨ in-app 叠加，
+  /// 与 statistics_heatmap 正解范本同源）；
+  /// **禁 `platformDispatcher.accessibilityFeatures` 直读**（只认系统、
+  /// 漏 in-app 半边，触碰即迁不专项）。
+  ///
+  /// [disableAnimations] = true 时不启动 ticker，静止在呼吸中点 0.5
+  /// （WCAG 2.3.3 / HIG Reduce Motion：持续运动停、静止终态可留）。
+  static AnimationController createBreathingController(
+    TickerProvider vsync, {
+    bool disableAnimations = false,
+  }) {
     final controller = AnimationController(
       vsync: vsync,
       duration: const Duration(seconds: 4), // 4秒一个周期
     );
+    if (disableAnimations) {
+      // 静止终态：呼吸中点，不启动 ticker（controller 不 repeat）。
+      controller.value = 0.5;
+      return controller;
+    }
     unawaited(controller.repeat(reverse: true));
     return controller;
   }

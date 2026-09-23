@@ -37166,4 +37166,34 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get statisticsTrendEmptyHint => '还没有学习记录——完成第一次学习后，你的成长曲线会出现在这里。';
+
+  @override
+  String get dashboardAccountabilityOpen => '查看监督搭子';
+
+  @override
+  String get dashboardBriefingToggle => '展开或收起今日简报';
+
+  @override
+  String get dashboardUpdatesToggle => '展开或收起动态洞察';
+
+  @override
+  String get communityCreatePost => '发布帖子';
+
+  @override
+  String get chatAttachmentOptions => '打开附件选项';
+
+  @override
+  String get chatSendMessage => '发送消息';
+
+  @override
+  String get chatStopGeneration => '停止生成';
+
+  @override
+  String get chatCancelQuote => '取消引用回复';
+
+  @override
+  String get taskMoveToPlan => '移动到计划';
+
+  @override
+  String get toolsHeaderCollapse => '收起或展开工具信息';
 }

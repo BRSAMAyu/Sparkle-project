@@ -145,7 +145,8 @@ void main() {
 
       await tester.enterText(find.byType(TextField).first, '本地联调发送测试');
       await tester.pumpAndSettle();
-      await tester.tap(find.bySemanticsLabel('Send message').first);
+      // A11Y-ICONS：发送钮语义标签已 l10n 化（chatSendMessage，zh 断言）。
+      await tester.tap(find.bySemanticsLabel('发送消息').first);
       await tester.pumpAndSettle();
 
       expect(sent, '本地联调发送测试');

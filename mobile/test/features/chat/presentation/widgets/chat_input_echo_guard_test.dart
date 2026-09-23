@@ -46,7 +46,8 @@ void main() {
     await tester.enterText(find.byType(TextField).first, '你好，请用一句话介绍你自己');
     await tester.pump();
 
-    final sendButton = find.bySemanticsLabel('Send message').first;
+    // A11Y-ICONS：发送钮语义标签已 l10n 化（chatSendMessage，zh 断言）。
+    final sendButton = find.bySemanticsLabel('发送消息').first;
     expect(sendButton, findsOneWidget);
     // 只推进一帧：回声防护窗口（200ms）必须在注入回灌文本时仍然未到期。
     await tester.tap(sendButton, warnIfMissed: false);
@@ -76,7 +77,7 @@ void main() {
 
     await tester.enterText(find.byType(TextField).first, '第一条');
     await tester.pump();
-    await tester.tap(find.bySemanticsLabel('Send message').first, warnIfMissed: false);
+    await tester.tap(find.bySemanticsLabel('发送消息').first, warnIfMissed: false);
     await tester.pumpAndSettle();
     expect(controller.text, isEmpty);
 

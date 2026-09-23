@@ -366,6 +366,7 @@ class _TaskDetailView extends ConsumerWidget {
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
+          semanticLabel: context.l10n.back,
           onPressed: () => context.pop(),
         ),
         expandedHeight: DS.spacing40 * 5, // 200 = 40 * 5
@@ -374,11 +375,13 @@ class _TaskDetailView extends ConsumerWidget {
           SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: const Icon(Icons.drive_file_move_outline),
+            semanticLabel: context.l10n.taskMoveToPlan,
             onPressed: () => unawaited(_showMoveToPlanPicker(context, ref)),
           ),
           SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: const Icon(Icons.share_outlined),
+            semanticLabel: context.l10n.share,
             onPressed: () => unawaited(_showShareSheet(context)),
           ),
         ],
@@ -1009,6 +1012,7 @@ class _BottomActionBar extends ConsumerWidget {
                     variant: ButtonVariant.ghost,
                     size: 40,
                     icon: Icon(Icons.delete_outline, color: DS.error),
+                    semanticLabel: context.l10n.delete,
                     onPressed: () {
                       unawaited(
                         SensoryFeedbackService.emit(

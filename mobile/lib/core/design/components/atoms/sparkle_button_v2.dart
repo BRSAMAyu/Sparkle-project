@@ -453,6 +453,16 @@ class SparkleButtonGroup extends StatelessWidget {
 /// 视觉档内，不再依赖调用方自觉包 SizedBox。
 ///
 /// FAB 用途请用 [SparkleIconButton.fabGeometry] 命名构造（56 方档）。
+///
+/// 语义名（N31 图标钮必有名 / A-SPEC6 AX-G1）：解析顺序——
+/// 1. 显式 [semanticLabel]（首选：调用点最懂自己的用途，走 l10n）；
+/// 2. **反推**：icon 为 Flutter `Icon` 且自带 `semanticLabel` 时上提为
+///    按钮语义名（与视觉标注同一事实源，零新增登记；上提后按钮角色与
+///    名字合并在同一语义节点播报，不再出现「无名按钮+内部孤名」）；
+/// 3. 两者皆无 → debug 下输出一次登记诊断（非致命）。存量无名钮走
+///    登记制清偿（ratchet 只降不升），新调用点在 debug/测试期即可见。
+///    不采「强制 required 参数」方案：存量 ~170 处无名调用点跨 ~130 文件，
+///    一次编译期铺开破坏面最大（评估记录见 v3-output/A11Y-ICONS/REPORT.md）。
 class SparkleIconButton extends ConsumerWidget {
   /// 默认（AppBar/工具栏）视觉档。
   static const double defaultSize = DS.touchTargetMinSize; // 48
@@ -517,6 +527,37 @@ class SparkleIconButton extends ConsumerWidget {
     );
   }
 
+  /// 反推语义名：调用方未显式给 [semanticLabel] 时，从 Flutter `Icon`
+  /// 自带的 `semanticLabel` 上提（同一事实源，非第二套命名表）。
+  String? get _iconProvidedSemanticLabel {
+    final iconWidget = icon;
+    if (iconWidget is Icon) {
+      return iconWidget.semanticLabel;
+    }
+    return null;
+  }
+
+  /// N31 登记守卫（debug-only，非致命）：无名 icon-only 钮在 debug/测试期
+  /// 输出一次诊断——存量走登记制清偿，新增破口当场可见。assert 块在
+  /// release/profile 整体剔除，零生产开销。
+  void _debugReportUnnamedLabel(String? effectiveLabel) {
+    assert(() {
+      if (effectiveLabel != null) {
+        return true;
+      }
+      final iconWidget = icon;
+      final codePoint = iconWidget is Icon && iconWidget.icon != null
+          ? '0x${iconWidget.icon!.codePoint.toRadixString(16)}'
+          : 'custom';
+      debugPrint(
+        'SparkleIconButton (N31 a11y): icon-only button without semanticLabel '
+        '(icon: $codePoint). Add semanticLabel (l10n) so screen readers can '
+        'announce the button purpose.',
+      );
+      return true;
+    }());
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = context.sparkleTheme;
@@ -527,8 +568,12 @@ class SparkleIconButton extends ConsumerWidget {
     final geometry = _resolveConstraints(minTouchTarget);
     final visualSide = math.max(size, minTouchTarget);
 
+    // N31 语义名解析：显式 semanticLabel > icon 自带 semanticLabel（反推）。
+    final effectiveLabel = semanticLabel ?? _iconProvidedSemanticLabel;
+    _debugReportUnnamedLabel(effectiveLabel);
+
     return Semantics(
-      label: semanticLabel,
+      label: effectiveLabel,
       button: true,
       enabled: !disabled && onPressed != null,
       child: Material(
@@ -552,12 +597,34 @@ class SparkleIconButton extends ConsumerWidget {
                 color: _getTextColor(theme.colors),
                 size: size * 0.5,
               ),
-              child: icon,
+              child: _resolveIconWidget(),
             ),
           ),
         ),
       ),
     );
+  }
+
+  /// 反推生效时把 Icon 自带的 semanticLabel 置空：标签已由按钮级 Semantics
+  /// 承载（显式或反推上提），Icon 级残留会在扁平化时拼串/重复播报
+  /// （widget test 实测：「返回\n返回」导致 bySemanticsLabel 精确匹配失败）。
+  /// effectiveLabel 为空时 Icon 必无自带标签（否则已反推），透传等价。
+  Widget _resolveIconWidget() {
+    final iconWidget = icon;
+    if (iconWidget is Icon) {
+      return Icon(
+        iconWidget.icon,
+        size: iconWidget.size,
+        fill: iconWidget.fill,
+        weight: iconWidget.weight,
+        grade: iconWidget.grade,
+        opticalSize: iconWidget.opticalSize,
+        color: iconWidget.color,
+        shadows: iconWidget.shadows,
+        textDirection: iconWidget.textDirection,
+      );
+    }
+    return icon;
   }
 
   Color _getBackgroundColor(SparkleColors colors) {

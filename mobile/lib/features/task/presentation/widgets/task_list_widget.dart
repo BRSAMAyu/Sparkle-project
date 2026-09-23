@@ -205,6 +205,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
           SparkleIconButton(
             variant: ButtonVariant.ghost,
             size: 32,
+            semanticLabel: context.l10n.viewDetails,
             icon: const Icon(Icons.info_outline, size: 20),
             onPressed: () {
               // 导航到任务详情页面

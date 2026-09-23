@@ -69,6 +69,7 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
       compactHeader: true,
       headerAction: SparkleIconButton(
         icon: const Icon(Icons.refresh_rounded),
+        semanticLabel: context.l10n.refresh,
         onPressed: _refresh,
         variant: ButtonVariant.ghost,
       ),

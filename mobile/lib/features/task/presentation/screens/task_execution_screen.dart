@@ -924,6 +924,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
               leading: SparkleIconButton(
                 variant: ButtonVariant.ghost,
                 icon: const Icon(Icons.arrow_back),
+                semanticLabel: context.l10n.back,
                 onPressed: () async {
                   final shouldPop = await _onWillPop();
                   if (mounted && shouldPop) {

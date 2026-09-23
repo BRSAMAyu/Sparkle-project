@@ -66,6 +66,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
           ? SparkleIconButton.fabGeometry(
               size: DS.touchTargetMinSize,
               icon: const Icon(Icons.edit),
+              semanticLabel: context.l10n.communityCreatePost,
               onPressed: () {
                 unawaited(
                   SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
