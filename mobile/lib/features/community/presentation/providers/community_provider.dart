@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/network/token_refresh_coordinator.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -1077,9 +1078,16 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
   }
 
   bool _disposed = false;
-  bool _isRefreshingToken = false;
+
+  // AUTH-DEEP B-1：旧布尔旗标 `_isRefreshingToken` 不是单飞——并发 401
+  // 调用者在入口被直接 return，请求被静默丢弃。现刷新统一走全局
+  // TokenRefreshCoordinator（与 HTTP 拦截器 / WS Chat 共享同一单飞口），
+  // 并发 401 合流为一轮处理、等待者共享结果。本地仅保留循环预算。
   int _error401Count = 0;
   static const int _max401Retries = 1;
+
+  /// 在途的 401 处理轮次；并发 401 等待同一轮次并共享结果。
+  Future<void>? _handle401InFlight;
 
   // M-3：终态连接失败（网关透传 retryable:false / 上游 403/404）。
   // 置位后自动重连彻底停止；原因暴露给 UI surfaced（用户仍可通过
@@ -1153,13 +1161,56 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
     }
   }
 
+  /// 处理401错误：刷新决策交全局 [TokenRefreshCoordinator]。
+  ///
+  /// AUTH-DEEP B-1 收敛：并发 401 合流——首个调用者驱动整轮（预算检查 →
+  /// 全局单飞刷新 → 分级善后 → 重连），后续调用者等待同一轮次结束并共享
+  /// 结果（旧布尔旗标会把并发请求静默丢弃）。永不向外抛错（调用方
+  /// `unawaited`）。
   Future<void> _handle401Error() async {
-    if (_isRefreshingToken || _disposed) return;
-
-    if (_error401Count >= _max401Retries) {
-      debugPrint('❌ Max 401 retry attempts exceeded, logging out...');
+    if (_disposed) return;
+    final inFlight = _handle401InFlight;
+    if (inFlight != null) {
+      debugPrint('⏳ Token refresh cycle already in progress, awaiting...');
       try {
-        await _authRepository.logout();
+        await inFlight;
+      } catch (_) {
+        // 驱动者已按分级完成善后；等待者仅共享结果，不再静默丢弃。
+      }
+      return;
+    }
+    final cycle = _runHandle401Cycle();
+    _handle401InFlight = cycle;
+    try {
+      await cycle;
+    } catch (e) {
+      // 兜底：401 轮次的任何未预期异常都不向外传播（unawaited 调用方）。
+      debugPrint('❌ 401 cycle failed unexpectedly: $e');
+      _connectionState = WebSocketConnectionState.disconnected;
+      _retryCount = _maxRetries;
+    } finally {
+      if (identical(_handle401InFlight, cycle)) {
+        _handle401InFlight = null;
+      }
+    }
+  }
+
+  /// 一轮 401 处理：预算检查 → 全局单飞刷新 → 按失败分级善后。
+  Future<void> _runHandle401Cycle() async {
+    // 循环预算（防病态死循环）。预算耗尽不再无条件登出（AUTH-DEEP B-3：
+    // 抖动 ≠ 会话终局）——仅当本地凭据已被清（会话已死）才登出兜底；
+    // 会话仍活着时停止自动循环，用户可经 manualReconnect 显式重试
+    //（显式重试会复位预算）。
+    if (_error401Count >= _max401Retries) {
+      debugPrint(
+        '❌ Max 401 retry attempts exceeded, stopping auth recovery...',
+      );
+      try {
+        final sessionDead = await _authRepository.getRefreshToken() == null;
+        if (sessionDead) {
+          await _authRepository.logout(
+              keepDemoMode: DemoDataService.isDemoMode);
+        }
       } catch (e) {
         debugPrint('❌ Logout failed: $e');
       }
@@ -1168,38 +1219,55 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
       return;
     }
 
-    _isRefreshingToken = true;
     _error401Count++;
-
     debugPrint(
       '🔑 Refreshing token... ($_error401Count/$_max401Retries)',
     );
 
     try {
-      await _authRepository.refreshToken();
-      debugPrint('✅ Token refreshed successfully');
-      _error401Count = 0;
-      _retryCount = 0;
-      await _connectWebSocket(isRetry: false);
-    } catch (e) {
+      // 全局单飞刷新（与 HTTP / WS Chat 共享同一次刷新）
+      await _ref
+          .read(tokenRefreshCoordinatorProvider)
+          .refreshOnce(reason: 'community-ws-401');
+    } on TokenRefreshException catch (e) {
       debugPrint('❌ Token refresh failed: $e');
-      try {
-        await _authRepository.logout();
-      } catch (logoutErr) {
-        debugPrint('❌ Logout failed: $logoutErr');
+      if (e.isSessionTerminal) {
+        // 会话终局（401/403 被拒 / 本地凭据已失效）：登出（保 demo 模式，
+        // 与 HTTP/WS 口对齐；demo 下 community WS 本就禁用）+ 停自动重连。
+        try {
+          await _authRepository.logout(
+              keepDemoMode: DemoDataService.isDemoMode);
+        } catch (logoutErr) {
+          debugPrint('❌ Logout failed: $logoutErr');
+        }
+        _connectionState = WebSocketConnectionState.disconnected;
+        _retryCount = _maxRetries;
+      } else {
+        // 可重试失败（网络抖动/5xx）：会话仍有效——不登出，交给既有
+        // 连接级指数退避重连（AUTH-DEEP B-3）。
+        _handleConnectionError();
       }
-      _connectionState = WebSocketConnectionState.disconnected;
-      _retryCount = _maxRetries;
-    } finally {
-      _isRefreshingToken = false;
+      return;
     }
+
+    debugPrint('✅ Token refreshed successfully');
+    _error401Count = 0;
+    _retryCount = 0;
+    await _connectWebSocket(isRetry: false);
   }
+
+  /// AUTH-DEEP B-1 回归测试缝隙：并发 401 等待者共享结果（不再静默丢弃）。
+  @visibleForTesting
+  Future<void> debugHandle401Error() => _handle401Error();
 
   Future<void> manualReconnect() async {
     _retryCount = 0;
     // 用户显式重试：清除终态标记，恢复自动重连资格。
     _terminalConnectionFailure = false;
     _connectionFailureReason = null;
+    // AUTH-DEEP B-1：give-up 不再登出（抖动不强杀会话），显式重试 =
+    // 新一轮 401 预算，否则恢复后的首个 401 会被旧预算直接判死。
+    _error401Count = 0;
     await _connectWebSocket();
   }
 

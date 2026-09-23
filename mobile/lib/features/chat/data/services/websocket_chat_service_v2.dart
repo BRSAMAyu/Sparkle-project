@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/models/user_state_models.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/network/token_refresh_coordinator.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';
@@ -549,7 +550,8 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
 
         // Spine: Divine Moment Card — MAGIC-002 through MAGIC-006
         if (metadata != null && metadata['spine_divine_moment'] != null) {
-          final divineData = _decodeMapOrString(metadata['spine_divine_moment']);
+          final divineData =
+              _decodeMapOrString(metadata['spine_divine_moment']);
           if (divineData != null) {
             return DivineMomentEvent(
               cardData: divineData,
@@ -1308,8 +1310,10 @@ typedef WebSocketChannelFactory = WebSocketChannel Function(
   Uri uri, {
   Map<String, dynamic>? headers,
 });
+
 /// Safe int coercion: JSON numbers may arrive as double (e.g. 150.0).
-int? _safeInt(dynamic v) => v == null ? null : (v is int ? v : (v is num ? v.toInt() : null));
+int? _safeInt(dynamic v) =>
+    v == null ? null : (v is int ? v : (v is num ? v.toInt() : null));
 
 /// WebSocket 聊天服务 V2（完整的连接复用和状态管理）
 class WebSocketChatServiceV2 with WidgetsBindingObserver {
@@ -1320,6 +1324,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     bool enableReconnect = true,
     bool autoConnect = true,
     Duration terminalDoneFallbackDelay = const Duration(seconds: 2),
+
     /// 测试注入：覆盖重连退避表（长度需 ≥ [_maxReconnectAttempts]），
     /// 便于秒级验证退避升级与 failed 终态可达性（M6-R2-01）。
     List<Duration>? reconnectSchedule,
@@ -1420,10 +1425,14 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
   // Offline persistent queue (R3 O-01: survive app kill)
   late final OfflineMessageQueueService _offlineQueue;
 
-  // 401错误处理和Token刷新
-  Completer<String>? _refreshCompleter;
+  // 401错误处理：刷新决策统一走全局 TokenRefreshCoordinator（AUTH-DEEP
+  // B-1 收敛，与 HTTP 拦截器 / Community 共享同一单飞口），本地不再持有
+  // 独立 Completer。本地仅保留 401→刷新→重连 的循环预算与并发 401 合流。
   int _error401Count = 0;
   static const int _max401Retries = 1;
+
+  /// 在途的 401 处理轮次；并发 401 等待同一轮次并共享结果。
+  Future<void>? _handle401InFlight;
 
   /// Exposed for testing
   @visibleForTesting
@@ -1759,14 +1768,16 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       // _handleConnectionError 走 401 检测/错误广播/重连排程。
       final channel = _channel!;
       unawaited(
-        channel.ready
-            .timeout(const Duration(seconds: 10))
-            .then((_) {
+        channel.ready.timeout(const Duration(seconds: 10)).then((_) {
           if (_disposed || !identical(_channel, channel)) {
             return;
           }
           _connectedAt = DateTime.now();
           _updateConnectionState(WsConnectionState.connected);
+          // AUTH-DEEP B-1：握手成功即恢复 401 刷新预算——give-up 不再登出
+          // （抖动不强杀会话），预算必须随「下一次成功建连」复位，否则
+          // 恢复后的首个瞬时 401 会被旧预算直接判死。
+          _error401Count = 0;
 
           // 启动心跳
           _startHeartbeat();
@@ -2156,6 +2167,10 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     }
   }
 
+  /// AUTH-DEEP B-1 回归测试缝隙：并发 401 合流与全局单飞计数。
+  @visibleForTesting
+  Future<void> debugHandle401Error() => _handle401Error();
+
   /// 检测错误是否为401认证失败
   bool _is401Error(dynamic error) => looksLikeAuthFailure(error);
 
@@ -2175,28 +2190,59 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         errorStr.contains('4401');
   }
 
-  /// 处理401错误：自动刷新Token并重连
+  /// 处理401错误：刷新决策交全局 [TokenRefreshCoordinator]，成功后重连。
+  ///
+  /// AUTH-DEEP B-1 收敛：并发 401 合流——首个调用者驱动整轮
+  /// （预算检查 → 全局单飞刷新 → 分级善后 → 重连），后续调用者等待同一
+  /// 轮次结束即返回（等待者共享结果，善后由驱动者完成）。永不向外抛错
+  /// （调用方 `unawaited`）。
   Future<void> _handle401Error() async {
-    final l10n = I18nService.instance.l10n;
     if (_disposed) return;
-
-    // 并发调用者等待正在进行的刷新完成
-    if (_refreshCompleter != null) {
-      _log('⏳ Token refresh already in progress, awaiting...');
+    final inFlight = _handle401InFlight;
+    if (inFlight != null) {
+      _log('⏳ Token refresh cycle already in progress, awaiting...');
       try {
-        await _refreshCompleter!.future;
-        _log('✅ Concurrent caller: token refreshed successfully');
-      } catch (e) {
-        _log('❌ Concurrent caller: token refresh failed: $e');
+        await inFlight;
+      } catch (_) {
+        // 驱动者已按分级完成善后；等待者仅共享结果，不再重复登出。
       }
       return;
     }
+    final cycle = _runHandle401Cycle();
+    _handle401InFlight = cycle;
+    try {
+      await cycle;
+    } catch (e) {
+      // 兜底：401 轮次的任何未预期异常都不向外传播（调用方 unawaited）。
+      _log('❌ 401 cycle failed unexpectedly: $e');
+    } finally {
+      if (identical(_handle401InFlight, cycle)) {
+        _handle401InFlight = null;
+      }
+    }
+  }
 
-    // 检查是否超过最大重试次数
+  /// 一轮 401 处理（总不抛错）：预算检查 → 全局单飞刷新 → 按失败分级善后。
+  Future<void> _runHandle401Cycle() async {
+    final l10n = I18nService.instance.l10n;
+    if (_disposed) return;
+
+    // 检查是否超过最大重试次数（防「刷新成功但服务端仍拒新 token」等
+    // 病态场景死循环）。预算耗尽不再无条件登出（AUTH-DEEP B-3 放大链：
+    // 抖动 ≠ 会话终局）——仅当本地凭据确实已被清（会话已死）才登出兜底；
+    // 会话仍活着时停用自动循环，用户下一条消息经 ensureConnected 可恢复
+    //（握手成功后预算复位，见 _onChannelReady）。
     if (_error401Count >= _max401Retries) {
-      _log('❌ Max 401 retry attempts exceeded, logging out...');
-
-      // 发送友好错误提示
+      _log('❌ Max 401 retry attempts exceeded, stopping auth recovery...');
+      try {
+        final authRepo = _container.read(authRepositoryProvider);
+        final sessionDead = await authRepo.getRefreshToken() == null;
+        if (sessionDead) {
+          await authRepo.logout(keepDemoMode: DemoDataService.isDemoMode);
+        }
+      } catch (e) {
+        _log('❌ Logout failed: $e');
+      }
       _broadcastErrorToActiveRequests(
         ErrorEvent(
           code: 'AUTH_FAILED',
@@ -2204,25 +2250,12 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
           retryable: false,
         ),
       );
-
-      // 执行登出
-      try {
-        await _container
-            .read(authRepositoryProvider)
-            .logout(keepDemoMode: DemoDataService.isDemoMode);
-      } catch (e) {
-        _log('❌ Logout failed: $e');
-      }
-
-      // 更新连接状态，禁用重连
       _updateConnectionState(WsConnectionState.failed);
       _enableReconnectLocal = false;
-
-      // 🔧 P0-2: 通知用户有消息未发送
       if (_pendingMessages.isNotEmpty) {
         final droppedCount = _pendingMessages.length;
         _log(
-          '⚠️ Discarding $droppedCount pending messages due to auth failure',
+          '⚠️ Discarding $droppedCount pending messages: auth recovery exhausted',
         );
         _failPendingMessages(
           code: 'MESSAGES_LOST',
@@ -2232,39 +2265,78 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       return;
     }
 
-    _refreshCompleter = Completer<String>();
     _error401Count++;
 
     _log(
       '🔑 Detected 401 error, refreshing token... ($_error401Count/$_max401Retries)',
     );
 
-    try {
-      // 发送刷新中的提示
-      _broadcastErrorToActiveRequests(
-        ErrorEvent(
-          code: 'TOKEN_REFRESHING',
-          message: l10n.chatAuthRefreshing,
-          retryable: false,
-        ),
-      );
+    // 发送刷新中的提示
+    _broadcastErrorToActiveRequests(
+      ErrorEvent(
+        code: 'TOKEN_REFRESHING',
+        message: l10n.chatAuthRefreshing,
+        retryable: false,
+      ),
+    );
 
-      // 刷新Token
-      final authRepo = _container.read(authRepositoryProvider);
-      final newTokenResponse = await authRepo.refreshToken();
+    try {
+      // 刷新 Token（全局单飞：与 HTTP / Community 共享同一次刷新）
+      final newToken = await _container
+          .read(tokenRefreshCoordinatorProvider)
+          .refreshOnce(reason: 'ws-chat-401');
 
       _log('✅ Token refreshed successfully');
 
-      _refreshCompleter!.complete(newTokenResponse.accessToken);
-
       // ✅ Fix H1: Restore connection state after successful token refresh
-      _onTokenRefreshSuccess(newTokenResponse.accessToken);
-    } catch (e) {
+      _onTokenRefreshSuccess(newToken);
+    } on TokenRefreshException catch (e) {
       _log('❌ Token refresh failed: $e');
-
-      _refreshCompleter!.completeError(e);
-
-      // Token刷新失败，发送友好错误并登出
+      if (e.isSessionTerminal) {
+        // 会话终局（401/403 被拒 / 本地凭据已失效）：友好提示 + 登出 +
+        // 禁用重连 + pending 消息定向失败（原善后路径，仅终局触发）。
+        _broadcastErrorToActiveRequests(
+          ErrorEvent(
+            code: 'AUTH_FAILED',
+            message: l10n.chatAuthExpired,
+            retryable: false,
+          ),
+        );
+        try {
+          await _container
+              .read(authRepositoryProvider)
+              .logout(keepDemoMode: DemoDataService.isDemoMode);
+        } catch (logoutErr) {
+          _log('❌ Logout failed: $logoutErr');
+        }
+        _updateConnectionState(WsConnectionState.failed);
+        _enableReconnectLocal = false;
+        if (_pendingMessages.isNotEmpty) {
+          final droppedCount = _pendingMessages.length;
+          _log(
+            '⚠️ Discarding $droppedCount pending messages due to token refresh failure',
+          );
+          _failPendingMessages(
+            code: 'MESSAGES_LOST',
+            message: l10n.chatPendingMessagesRefreshFailed(droppedCount),
+          );
+        }
+      } else {
+        // 可重试失败（网络抖动/5xx）：会话仍有效——不登出、不禁连，
+        // 走既有连接级退避重连（AUTH-DEEP B-3）。
+        _broadcastErrorToActiveRequests(
+          ErrorEvent(
+            code: 'CONNECTION_ERROR',
+            message: S.chatErrorConnectionFailed,
+            retryable: true,
+          ),
+        );
+        _triggerReconnect();
+      }
+    } catch (e) {
+      // 未预期的非 AppFailure 异常：保守按会话终局善后（与旧行为一致），
+      // 避免消息流悬挂在刷新中状态。
+      _log('❌ Token refresh failed unexpectedly: $e');
       _broadcastErrorToActiveRequests(
         ErrorEvent(
           code: 'AUTH_FAILED',
@@ -2272,8 +2344,6 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
           retryable: false,
         ),
       );
-
-      // 执行登出
       try {
         await _container
             .read(authRepositoryProvider)
@@ -2281,12 +2351,8 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       } catch (logoutErr) {
         _log('❌ Logout failed: $logoutErr');
       }
-
-      // 禁用重连
       _updateConnectionState(WsConnectionState.failed);
       _enableReconnectLocal = false;
-
-      // 🔧 P0-2: 通知用户有消息未发送
       if (_pendingMessages.isNotEmpty) {
         final droppedCount = _pendingMessages.length;
         _log(
@@ -2297,8 +2363,6 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
           message: l10n.chatPendingMessagesRefreshFailed(droppedCount),
         );
       }
-    } finally {
-      _refreshCompleter = null;
     }
   }
 
@@ -2309,7 +2373,6 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     _enableReconnectLocal = true;
     _reconnectAttempts = 0;
     _error401Count = 0;
-    _refreshCompleter = null;
   }
 
   /// ✅ Fix H1: Handle successful token refresh and restore connection state
@@ -2425,7 +2488,8 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         );
         _failPendingMessages(
           code: 'MESSAGES_LOST',
-          message: l10n.chatPendingMessagesConnectionFailed(droppedCount, _maxReconnectAttempts),
+          message: l10n.chatPendingMessagesConnectionFailed(
+              droppedCount, _maxReconnectAttempts),
         );
       }
 
@@ -2639,8 +2703,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         'session_id': msg.sessionId,
         'request_id': msg.requestId,
         if (msg.nickname != null) 'nickname': msg.nickname,
-        if (restoredExtraContext != null)
-          'extra_context': restoredExtraContext,
+        if (restoredExtraContext != null) 'extra_context': restoredExtraContext,
         if (msg.fileIds != null && msg.fileIds!.isNotEmpty)
           'file_ids': msg.parsedFileIds,
         if (msg.chatMode != null) 'chat_mode': msg.chatMode,

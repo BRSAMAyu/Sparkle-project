@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/network/http_client_pinning.dart';
+import 'package:sparkle/core/network/token_refresh_coordinator.dart';
 import 'package:sparkle/core/services/client_observability_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/device_identity_service.dart';
@@ -62,8 +63,9 @@ class AuthInterceptor extends Interceptor {
       : _retryDio = retryDioForTesting;
   final Ref _ref;
 
-  // Lock for preventing concurrent token refresh
-  Completer<String>? _refreshCompleter;
+  // AUTH-DEEP B-1：本地 Completer 单飞已移除——刷新决策统一走全局
+  // TokenRefreshCoordinator（与 WS Chat / Community 共享同一单飞口），
+  // 拦截器只保留 Dio 拦截职责：401 识别 → 请求刷新 → 用新 token 重放。
 
   // Lazy-initialized Dio instance for retry (without auth interceptor to avoid recursion)
   Dio? _retryDio;
@@ -167,51 +169,31 @@ class AuthInterceptor extends Interceptor {
           );
         }
 
-        // Check if there's already a refresh in progress
-        if (_refreshCompleter != null) {
-          try {
-            // Wait for the existing refresh to complete
-            final newToken = await _refreshCompleter!.future;
-            err.requestOptions.headers['Authorization'] = 'Bearer $newToken';
-            final dio = _getRetryDio();
-            final response = await dio.fetch<dynamic>(err.requestOptions);
-            return handler.resolve(response);
-          } catch (e) {
-            // The concurrent refresh failed, fall through to logout
-            return super.onError(err, handler);
-          }
-        }
-
-        // Start a new refresh operation
-        _refreshCompleter = Completer<String>();
+        // AUTH-DEEP B-1：并发 401 全部 join 协调器的同一刷新 Future
+        // （跨 HTTP/WS/Community 全局单飞），完成后各自带新 token 重放。
         try {
-          final newToken = await authRepo.refreshToken();
-          _refreshCompleter!.complete(newToken.accessToken);
-
-          // Clone the request and retry using a Dio instance without auth interceptor
-          // This ensures SSL pinning is still used while avoiding infinite recursion
-          err.requestOptions.headers['Authorization'] =
-              'Bearer ${newToken.accessToken}';
+          final newToken = await _ref
+              .read(tokenRefreshCoordinatorProvider)
+              .refreshOnce(reason: 'http-401');
+          // Clone the request and retry using a Dio instance without auth
+          // interceptor. This ensures SSL pinning is still used while
+          // avoiding infinite recursion.
+          err.requestOptions.headers['Authorization'] = 'Bearer $newToken';
           final dio = _getRetryDio();
           final response = await dio.fetch<dynamic>(err.requestOptions);
           return handler.resolve(response);
-        } catch (e) {
-          _refreshCompleter?.completeError(e);
-          // COMMUNITY-401: when no concurrent 401 is awaiting the completer,
-          // its error would surface as an unhandled async exception. ignore()
-          // marks it handled for the no-listener case while real waiters
-          // (concurrent 401s above) still receive it.
-          _refreshCompleter?.future.ignore();
-          // Refresh token failed, logout user
-          unawaited(
-            _ref.read(authRepositoryProvider).logout(
-                  keepDemoMode: DemoDataService.isDemoMode,
-                ),
-          );
+        } on TokenRefreshException catch (e) {
+          // 分级善后：仅会话终局（401/403 被拒、本地凭据已失效）登出；
+          // 可重试失败（网络/5xx）保留会话，原 401 放行给业务层
+          // （AUTH-DEEP B-3：一次基础设施抖动 ≠ 强登出）。
+          if (e.isSessionTerminal) {
+            unawaited(
+              _ref.read(authRepositoryProvider).logout(
+                    keepDemoMode: DemoDataService.isDemoMode,
+                  ),
+            );
+          }
           return super.onError(err, handler);
-        } finally {
-          // Clear immediately so concurrent 401s after a failed refresh start a new cycle
-          _refreshCompleter = null;
         }
       } on StateError {
         return super.onError(err, handler);
@@ -263,10 +245,10 @@ class LoggingInterceptor extends Interceptor {
     }
     return <String, dynamic>{
       for (final entry in data.entries)
-        entry.key.toString(): _sensitiveBodyFields
-                .contains(entry.key.toString().toLowerCase())
-            ? '***'
-            : entry.value,
+        entry.key.toString():
+            _sensitiveBodyFields.contains(entry.key.toString().toLowerCase())
+                ? '***'
+                : entry.value,
     };
   }
 
