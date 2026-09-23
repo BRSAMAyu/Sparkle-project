@@ -13,6 +13,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/file/file.dart';
@@ -3790,19 +3791,19 @@ class _GalaxyDraftPendingIndicator extends StatelessWidget {
 /// （`e.toString()` 级）与任何 Object 插值永不进入用户可见文案。
 /// 模板统一传达两件事——发生了什么（人话）+ 数据安全（不丢档）；
 /// 重试入口由 [_StatusPanel] 的 actionLabel/onAction 承载，不在此重复。
-String _galaxyLoadErrorMessage(AppLocalizations l10n, GalaxyError? error) {
-  if (error == null) {
-    return l10n.galaxyErrorHumanDefault;
-  }
-  switch (error.type) {
-    case GalaxyErrorType.network:
-      return l10n.galaxyErrorHumanNetwork;
-    case GalaxyErrorType.circuitBreakerOpen:
-      return l10n.galaxyErrorHumanService;
-    case GalaxyErrorType.unknown:
-      return l10n.galaxyErrorHumanDefault;
-  }
-}
+///
+/// N16（A-SPEC3）映射单源改造：原「GalaxyErrorType → arb key」私有映射
+/// 已迁 core 作类型化 owner（core/display/lexicon/error_lexicon.dart，
+/// `TypedUiError` + `uiErrorMessage`）；本函数降为**纯绑定**——经
+/// [GalaxyError.uiErrorCategory] 自报类别后 switch 直出 galaxy 域词条
+/// （星图文案含数据安全承诺句，与通用 `error*` 家族并存），不含任何
+/// 判定逻辑。galaxy 为登记过的存量特例（§6.4 owner 表），新域禁仿照。
+String _galaxyLoadErrorMessage(AppLocalizations l10n, GalaxyError? error) =>
+    switch (error?.uiErrorCategory ?? UiErrorCategory.unknown) {
+      UiErrorCategory.network => l10n.galaxyErrorHumanNetwork,
+      UiErrorCategory.serviceDegraded => l10n.galaxyErrorHumanService,
+      _ => l10n.galaxyErrorHumanDefault,
+    };
 
 class _StatusPanel extends StatelessWidget {
   const _StatusPanel({

@@ -8,7 +8,8 @@ import 'package:sparkle/l10n/app_localizations.dart';
 /// 未收录原值由调用方决定回退行为（通常回退原值，并应补录词条）。
 ///
 /// 各域词典一域一文件：`goal_status_lexicon.dart`、`criterion_lexicon.dart`、
-/// `memory_event_lexicon.dart`、`date_formatting.dart`。
+/// `memory_event_lexicon.dart`、`date_formatting.dart`、`error_lexicon.dart`
+/// （N16 异常→人话映射单一 owner，类型化枚举为正解形制）。
 
 /// arb 间接引用的标签解析器。
 ///

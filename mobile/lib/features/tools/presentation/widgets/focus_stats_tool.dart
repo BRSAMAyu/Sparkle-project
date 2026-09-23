@@ -8,6 +8,7 @@ import 'package:sparkle/features/focus/presentation/providers/focus_statistics_p
 import 'package:sparkle/features/focus/presentation/widgets/focus_stats_chart.dart';
 import 'package:sparkle/features/focus/presentation/widgets/focus_stats_session_list.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
+import 'package:sparkle/features/tools/presentation/widgets/tool_body_skeleton.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -83,8 +84,14 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
           icon: Icons.history_rounded,
         ),
       ],
+      // EE-G5（A-SPEC3 §4.4.2 改造 #5）：首路径加载从 body 级裸 spinner
+      // 换为贴内容布局的骨架（指标卡 3 + 图表区 168 + 最近记录区 120），
+      // 骨架→内容同构过渡，弱网首帧即有结构。
       body: state.isLoading
-          ? Center(child: CircularProgressIndicator(color: accent))
+          ? const ToolBodySkeleton(
+              metricCount: 3,
+              sectionContentHeights: [168, 120],
+            )
           : Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [

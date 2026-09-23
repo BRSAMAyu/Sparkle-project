@@ -10,6 +10,16 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 /// Default state: collapsed — shows a compact chip with icon + label.
 /// Tapped: expands to reveal the full widget content.
 /// Has a collapse button (top-right) when expanded.
+///
+/// **N17（A-SPEC3 §4.2）owner 登记**：展开/披露族唯一 owner 是 core 的
+/// `ExpandableSection`（core/design/components/organisms/expandable_section.dart，
+/// 统一语法：标题行+chevron 旋转 / AnimationSystem.quick 动画档 /
+/// Semantics(button+expanded)）。本组件登记为 **chat 域特化**——chip 形态
+/// 折叠态、横排 chip 行与消息内展开态持久化（persistId）为 chat 消息面
+/// 专属语法；按「触碰即迁」暂缓物理收编（PD-G1 裁决：强迁=工艺债，
+/// 不立项）。**新披露件一律走 `ExpandableSection`**，不得仿照本组件
+/// 以 AnimatedSize 自装折叠门面；本类既有 AnimatedSize 用法属存量，
+/// 改造触碰时再收编。
 class CollapsibleWidgetWrapper extends StatefulWidget {
   const CollapsibleWidgetWrapper({
     required this.label,

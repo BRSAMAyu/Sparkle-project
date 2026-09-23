@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 
 /// Strips internal error details and returns a user-safe error message.
@@ -7,6 +8,13 @@ import 'package:sparkle/core/services/i18n_service.dart';
 /// stack traces, class names, and internal details from reaching the UI.
 ///
 /// All user-facing messages are localized via ARB keys (error*).
+///
+/// **N16（A-SPEC3 §6.2/§6.4）映射单源条款**：异常→人话映射的唯一 owner 是
+/// core/display/lexicon/error_lexicon.dart（类型化枚举映射 = 正解形制，
+/// 判定表 [categorizeUiError] / 文案表 [uiErrorMessage]）。本类降为
+/// **遗留兼容层**——吃任意 `Object` 的入口：判定走共享判定表、文案走
+/// 共享词条表，仅额外附加 `[ERR-*]` 类别码。新域禁再建私有映射；
+/// 类型化错误请实现 `TypedUiError` 自报类别。
 ///
 /// A-3 diagnosability (client-side aid): every mapped message carries a
 /// stable `[ERR-*]` category code so field reports — even a bare
@@ -31,73 +39,33 @@ class UserFacingError {
   static const String _codeUnknown = 'ERR-UNKNOWN';
 
   /// Categories of errors that map to user-friendly messages.
+  ///
+  /// N16：判定与文案均单源自 error_lexicon（共享判定表，两入口一致性由
+  /// `mobile/test/core/display/lexicon/error_lexicon_test.dart` 钉住）；
+  /// 本方法只保留「文案 + `[ERR-*]` 码」拼装职责。
   static String from(Object error) {
     // Debug-only root-cause aid: the raw exception never reaches the UI,
     // but a developer/tester running a debug build gets it in the log.
     if (kDebugMode) {
       debugPrint('[UserFacingError] ${error.runtimeType}: $error');
     }
-    final message = error.toString();
-
-    // Common network patterns
-    if (_containsAny(message, [
-      'SocketException',
-      'Connection refused',
-      'Connection timed out',
-      'network',
-      'Network',
-      'CLIENT_CLOSED',
-    ])) {
-      return _withCode(S.errorNetworkDetail, _codeNetwork);
-    }
-
-    // Auth patterns
-    if (_containsAny(message, [
-      '401',
-      '403',
-      'Unauthorized',
-      'Forbidden',
-      'token',
-      'Token expired',
-    ])) {
-      return _withCode(S.errorAuthDetail, _codeAuth);
-    }
-
-    // Timeout patterns
-    if (_containsAny(message, ['TimeoutException', 'timed out', 'timeout'])) {
-      return _withCode(S.errorTimeoutDetail, _codeTimeout);
-    }
-
-    // Server errors
-    if (_containsAny(message, ['500', '502', '503', '504', 'Internal Server'])) {
-      return _withCode(S.errorServerDetail, _codeServer);
-    }
-
-    // Not found
-    if (_containsAny(message, ['404', 'Not Found', 'not found'])) {
-      return _withCode(S.errorNotFoundDetail, _codeNotFound);
-    }
-
-    // Rate limiting
-    if (_containsAny(message, ['429', 'rate limit', 'Rate limit', 'too many'])) {
-      return _withCode(S.errorRateLimitDetail, _codeRateLimit);
-    }
-
-    // Format/validation errors
-    if (_containsAny(message, ['FormatException', 'invalid', 'Invalid'])) {
-      return _withCode(S.errorUnknownDetail, _codeFormat);
-    }
-
-    // Default: return a generic message, still traceable via its code.
-    return _withCode(S.errorDefaultTitle, _codeUnknown);
+    final category = categorizeUiError(error);
+    return _withCode(uiErrorMessage(S, category), _codeFor(category));
   }
+
+  /// 类别 → `[ERR-*]` 稳定码（A-3）。`serviceDegraded` 仅由类型化错误
+  /// 自报产生（字符串判定表不产出），归入服务端故障同码。
+  static String _codeFor(UiErrorCategory category) => switch (category) {
+        UiErrorCategory.network => _codeNetwork,
+        UiErrorCategory.auth => _codeAuth,
+        UiErrorCategory.timeout => _codeTimeout,
+        UiErrorCategory.server => _codeServer,
+        UiErrorCategory.serviceDegraded => _codeServer,
+        UiErrorCategory.notFound => _codeNotFound,
+        UiErrorCategory.rateLimit => _codeRateLimit,
+        UiErrorCategory.format => _codeFormat,
+        UiErrorCategory.unknown => _codeUnknown,
+      };
 
   static String _withCode(String message, String code) => '$message [$code]';
-
-  static bool _containsAny(String source, List<String> patterns) {
-    for (final pattern in patterns) {
-      if (source.contains(pattern)) return true;
-    }
-    return false;
-  }
 }

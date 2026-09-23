@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
 import 'package:sparkle/features/tools/data/repositories/tool_history_repository.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
+import 'package:sparkle/features/tools/presentation/widgets/tool_body_skeleton.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_context_effect_feedback.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -215,60 +216,68 @@ class _NotesToolState extends ConsumerState<NotesTool> {
           icon: Icons.psychology_alt_rounded,
         ),
       ],
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: accent))
-          : LayoutBuilder(
-              builder: (context, constraints) {
-                final editorHeight = (MediaQuery.sizeOf(context).height * 0.3)
-                    .clamp(180.0, 360.0);
+      // EE-G5（A-SPEC3 §4.4.2 改造 #5）：首路径加载从 body 级裸 spinner
+      // 换为贴内容布局的骨架；LayoutBuilder 上提使骨架与内容共用同一
+      // editorHeight 计算（同 clamp 公式），区块等高、零布局跳变。
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final editorHeight = (MediaQuery.sizeOf(context).height * 0.3)
+              .clamp(180.0, 360.0);
 
-                return Column(
-                  children: [
-                    ToolMetricRow(
-                      children: [
-                        ToolMetricCard(
-                          label: context.l10n.toolsNotesCharLabel,
-                          value: '$_charCount',
-                          accentColor: accent,
-                          icon: Icons.text_fields_rounded,
-                        ),
-                        ToolMetricCard(
-                          label: context.l10n.toolsNotesLineLabel,
-                          value: '$_lineCount',
-                          accentColor: accent,
-                          icon: Icons.subject_rounded,
-                        ),
-                      ],
+          if (_isLoading) {
+            return ToolBodySkeleton(
+              metricCount: 2,
+              sectionContentHeights: [editorHeight],
+            );
+          }
+
+          return Column(
+            children: [
+              ToolMetricRow(
+                children: [
+                  ToolMetricCard(
+                    label: context.l10n.toolsNotesCharLabel,
+                    value: '$_charCount',
+                    accentColor: accent,
+                    icon: Icons.text_fields_rounded,
+                  ),
+                  ToolMetricCard(
+                    label: context.l10n.toolsNotesLineLabel,
+                    value: '$_lineCount',
+                    accentColor: accent,
+                    icon: Icons.subject_rounded,
+                  ),
+                ],
+              ),
+              const SizedBox(height: DS.spacing16),
+              ToolSectionCard(
+                accentColor: accent,
+                title: context.l10n.toolsNotesContent,
+                subtitle: context.l10n.toolsNotesContentDesc,
+                child: SizedBox(
+                  height: editorHeight,
+                  child: TextField(
+                    controller: _controller,
+                    maxLines: null,
+                    expands: true,
+                    textAlignVertical: TextAlignVertical.top,
+                    decoration: InputDecoration(
+                      hintText: context.l10n.toolsNotesHint,
+                      border: InputBorder.none,
                     ),
-                    const SizedBox(height: DS.spacing16),
-                    ToolSectionCard(
-                      accentColor: accent,
-                      title: context.l10n.toolsNotesContent,
-                      subtitle: context.l10n.toolsNotesContentDesc,
-                      child: SizedBox(
-                        height: editorHeight,
-                        child: TextField(
-                          controller: _controller,
-                          maxLines: null,
-                          expands: true,
-                          textAlignVertical: TextAlignVertical.top,
-                          decoration: InputDecoration(
-                            hintText: context.l10n.toolsNotesHint,
-                            border: InputBorder.none,
-                          ),
-                          style:
-                              Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                    color: DS.textPrimary,
-                                    height: 1.65,
-                                  ),
-                          onChanged: (_) => _saveNotes(),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
+                    style:
+                        Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: DS.textPrimary,
+                              height: 1.65,
+                            ),
+                    onChanged: (_) => _saveNotes(),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
       footer: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 620;

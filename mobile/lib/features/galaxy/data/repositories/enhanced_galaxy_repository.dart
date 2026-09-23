@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
@@ -606,7 +607,11 @@ class GalaxyGraphContractException implements Exception {
 }
 
 /// Galaxy错误类型
-class GalaxyError implements Exception {
+///
+/// N16（A-SPEC3）：实现 [TypedUiError] 类型化自报类别——「异常 → 人话」
+/// 的判定与文案翻译单源 core/display/lexicon/error_lexicon.dart，本类不再
+/// 被任何 UI 用字符串匹配/toString 形态做私有映射。
+class GalaxyError implements Exception, TypedUiError {
   GalaxyError._({
     required this.type,
     required this.message,
@@ -650,6 +655,15 @@ class GalaxyError implements Exception {
   final GalaxyErrorType type;
   final String message;
   final Object? originalError;
+
+  /// N16：类型化自报类别（零异常文本嗅探）。文案翻译统一走
+  /// core `uiErrorMessage`；galaxy 屏保留「类别→galaxy arb 词条」纯绑定。
+  @override
+  UiErrorCategory get uiErrorCategory => switch (type) {
+        GalaxyErrorType.network => UiErrorCategory.network,
+        GalaxyErrorType.circuitBreakerOpen => UiErrorCategory.serviceDegraded,
+        GalaxyErrorType.unknown => UiErrorCategory.unknown,
+      };
 
   /// 是否可重试
   bool get isRetryable => type == GalaxyErrorType.network;
