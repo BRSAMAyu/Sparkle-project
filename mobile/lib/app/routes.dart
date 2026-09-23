@@ -24,7 +24,8 @@ import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/goal/goal.dart';
 import 'package:sparkle/features/home/home.dart';
 import 'package:sparkle/features/insights/insights.dart';
-import 'package:sparkle/features/leaderboard/leaderboard_routes.dart';
+// 自我锚视图是 D-COMM-1 裁决唯一路由产品面，非全站榜
+import 'package:sparkle/features/leaderboard/leaderboard_routes.dart'; // rule-comm-lb: ignore D-COMM-1 自我锚=唯一裁决路由面，非全站榜
 import 'package:sparkle/features/memory/memory.dart';
 import 'package:sparkle/features/notification_center/notification_center.dart';
 import 'package:sparkle/features/openclaw/openclaw.dart';
@@ -384,7 +385,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ...TaskRoutes.routes,
       ...PlanRoutes.routes,
       ...InsightsRoutes.routes,
-      ...LeaderboardRoutes.routes,
+      // 仅挂自我锚路由（D-COMM-1 唯一路由产品面），无全站榜
+      ...LeaderboardRoutes.routes, // rule-comm-lb: ignore D-COMM-1 自我锚=唯一裁决路由面，非全站榜
       ...SimulationRoutes.routes,
       ...TheaterRoutes.routes,
       ...ReportRoutes.routes,

@@ -4332,46 +4332,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get leaderboardTitle => 'Leaderboard';
-
-  @override
-  String get leaderboardGlobal => 'Global';
-
-  @override
-  String get leaderboardFriends => 'Friends';
-
-  @override
-  String get leaderboardGroup => 'Groups';
-
-  @override
-  String get leaderboardSubject => 'Subjects';
-
-  @override
-  String get leaderboardWeekly => 'Weekly';
-
-  @override
-  String get leaderboardStreak => 'Streak';
-
-  @override
-  String leaderboardMyRank(Object rank) {
-    return 'My rank: $rank';
-  }
-
-  @override
-  String leaderboardPoints(Object value) {
-    return '$value pts';
-  }
-
-  @override
-  String leaderboardNoData(Object label) {
-    return 'No $label data yet';
-  }
-
-  @override
-  String get leaderboardLoadFailed =>
-      'Failed to load leaderboard. Please try again.';
-
-  @override
   String get leaderboardSelfAnchorEmptyAction => 'Go to my sprint';
 
   @override

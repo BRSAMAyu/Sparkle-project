@@ -1392,36 +1392,6 @@
             "error": {}
         }
     },
-    "leaderboardTitle": "Leaderboard",
-    "leaderboardGlobal": "Global",
-    "leaderboardFriends": "Friends",
-    "leaderboardGroup": "Groups",
-    "leaderboardSubject": "Subjects",
-    "leaderboardWeekly": "Weekly",
-    "leaderboardStreak": "Streak",
-    "leaderboardMyRank": "My rank: {rank}",
-    "@leaderboardMyRank": {
-        "placeholders": {
-            "rank": {
-                "type": "Object"
-            }
-        }
-    },
-    "leaderboardPoints": "{value} pts",
-    "@leaderboardPoints": {
-        "placeholders": {
-            "value": {
-                "type": "Object"
-            }
-        }
-    },
-    "leaderboardNoData": "No {label} data yet",
-    "@leaderboardNoData": {
-        "placeholders": {
-            "label": {}
-        }
-    },
-    "leaderboardLoadFailed": "Failed to load leaderboard. Please try again.",
     "leaderboardSelfAnchorEmptyAction": "Go to my sprint",
     "leaderboardSelfAnchorEmptyDescription": "No completed sprint tasks or mastery changes in the last 7 days. Finish today's first task and your anchor will start to grow.",
     "leaderboardSelfAnchorEmptyTitle": "No records in this window yet",

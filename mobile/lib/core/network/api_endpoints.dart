@@ -623,14 +623,8 @@ class ApiEndpoints {
       '/recommendations/record-interaction';
   static const String recommendationsStats = '/recommendations/stats';
 
-  // Leaderboards
-  static const String leaderboards = '/leaderboards';
-  static const String leaderboardsSummary = '/leaderboards/summary';
-  static const String leaderboardsMyRank = '/leaderboards/my-rank';
-  static const String leaderboardsTypes = '/leaderboards/types';
-  static String leaderboardsTopThree(String type) =>
-      '/leaderboards/top-three/$type';
-  static const String leaderboardsRefreshCache = '/leaderboards/refresh-cache';
+  // Leaderboards —— 全站榜死代码已整链删除（LEADERBOARD-DEBT，2026-09），
+  // 仅保留 D-COMM-1 裁决唯一路由产品面的端点。
   // D-COMM-1：自我 7 日锚视图（唯一按裁决路由的排行榜面，全站榜保持 D17 隐藏）。
   static const String leaderboardsSelfAnchor = '/leaderboards/self-anchor';
 

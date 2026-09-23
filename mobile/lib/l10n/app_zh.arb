@@ -1392,36 +1392,6 @@
             "error": {}
         }
     },
-    "leaderboardTitle": "排行榜",
-    "leaderboardGlobal": "全局榜",
-    "leaderboardFriends": "好友榜",
-    "leaderboardGroup": "群组榜",
-    "leaderboardSubject": "学科榜",
-    "leaderboardWeekly": "本周榜",
-    "leaderboardStreak": "连胜榜",
-    "leaderboardMyRank": "我的排名：{rank}",
-    "@leaderboardMyRank": {
-        "placeholders": {
-            "rank": {
-                "type": "Object"
-            }
-        }
-    },
-    "leaderboardPoints": "{value}分",
-    "@leaderboardPoints": {
-        "placeholders": {
-            "value": {
-                "type": "Object"
-            }
-        }
-    },
-    "leaderboardNoData": "暂无{label}数据",
-    "@leaderboardNoData": {
-        "placeholders": {
-            "label": {}
-        }
-    },
-    "leaderboardLoadFailed": "排行榜加载失败，请重试",
     "leaderboardSelfAnchorEmptyAction": "去看我的冲刺",
     "leaderboardSelfAnchorEmptyDescription": "近 7 天还没有完成的冲刺任务或掌握度变化。完成今天的第一个任务，锚点就会开始生长。",
     "leaderboardSelfAnchorEmptyTitle": "这几天还没有记录",

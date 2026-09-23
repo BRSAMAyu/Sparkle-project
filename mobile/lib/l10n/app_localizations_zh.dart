@@ -4150,45 +4150,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get leaderboardTitle => '排行榜';
-
-  @override
-  String get leaderboardGlobal => '全局榜';
-
-  @override
-  String get leaderboardFriends => '好友榜';
-
-  @override
-  String get leaderboardGroup => '群组榜';
-
-  @override
-  String get leaderboardSubject => '学科榜';
-
-  @override
-  String get leaderboardWeekly => '本周榜';
-
-  @override
-  String get leaderboardStreak => '连胜榜';
-
-  @override
-  String leaderboardMyRank(Object rank) {
-    return '我的排名：$rank';
-  }
-
-  @override
-  String leaderboardPoints(Object value) {
-    return '$value分';
-  }
-
-  @override
-  String leaderboardNoData(Object label) {
-    return '暂无$label数据';
-  }
-
-  @override
-  String get leaderboardLoadFailed => '排行榜加载失败，请重试';
-
-  @override
   String get leaderboardSelfAnchorEmptyAction => '去看我的冲刺';
 
   @override

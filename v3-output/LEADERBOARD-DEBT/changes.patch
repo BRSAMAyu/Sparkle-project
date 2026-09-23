@@ -1,0 +1,2600 @@
+diff --git a/docs/engineering/KNOWN_CODE_DEBT_LEDGER.md b/docs/engineering/KNOWN_CODE_DEBT_LEDGER.md
+index ab58b61c..38103c88 100644
+--- a/docs/engineering/KNOWN_CODE_DEBT_LEDGER.md
++++ b/docs/engineering/KNOWN_CODE_DEBT_LEDGER.md
+@@ -27,7 +27,7 @@
+ |---|---|---|---|
+ | 1 | `mobile/lib/core/statistics/presentation/providers/agent_statistics_provider.dart:98-165`、`capsule_statistics_provider.dart`、`focus_statistics_provider.dart:119-141` | 三个统计仓库的 `fetchFromApi` 返回硬编码 mock（固定 successRate 0.95、engagement 4.2 等）；后端已有 `backend/app/api/v1/` 统计路由可接 | 接真实 API 或下线该模块 |
+ | 2 | `mobile/lib/core/statistics/data/repositories/hybrid_statistics_repository.dart` | **mock 数据被写进 Isar 暖缓存并作为"过期兜底"长期供给 UI**（假数据比会话存活更久）；`watchStatistics` 自述占位实现（L271） | 与 #1 一并修：mock 不许进缓存 |
+-| 3 | `mobile/lib/features/leaderboard/`（约 1,143 行：screen/provider/repo） | **已裁决销账（D-COMM-1，2026-09）**：产品决策 = 全站综合榜**保持 D17 隐藏不路由**（v3-output/D-COMMUNITY/DESIGN.md §2.2/§3.2——大池/异质水平/静态综合分命中「打击中尾生」全部反面模式）；唯一路由产品面改为**自我 7 日锚视图**（后端 `GET /api/v1/leaderboards/self-anchor` 已落地：sprint 账本完成度 + study_records 掌握度增量按日序列，复用既有面零新聚合；网关经 leaderboards wildcard 代理可达）。守卫 `COMM-LB`（`scripts/guards/check_rule_comm_lb_leaderboard_unrouted.py`）固化：routes.dart 不挂 LeaderboardScreen + 网关 leaderboards 组 wildcard-only | 移动端 1,143 行死代码**仍是独立债务**：待 D-COMM-4 小队双视图榜改造时复用其 widget 层或整链删除（含端点常量与 l10n 键），本条不再跟踪该决策本身 |
++| 3 | `mobile/lib/features/leaderboard/`（约 1,143 行：screen/provider/repo） | **已裁决销账（D-COMM-1，2026-09）**：产品决策 = 全站综合榜**保持 D17 隐藏不路由**（v3-output/D-COMMUNITY/DESIGN.md §2.2/§3.2——大池/异质水平/静态综合分命中「打击中尾生」全部反面模式）；唯一路由产品面改为**自我 7 日锚视图**（后端 `GET /api/v1/leaderboards/self-anchor` 已落地：sprint 账本完成度 + study_records 掌握度增量按日序列，复用既有面零新聚合；网关经 leaderboards wildcard 代理可达）。守卫 `COMM-LB`（`scripts/guards/check_rule_comm_lb_leaderboard_unrouted.py`）固化：routes.dart 不挂 LeaderboardScreen + 网关 leaderboards 组 wildcard-only | 移动端尾巴**已销账（LEADERBOARD-DEBT，D-COMM-4 收官，2026-09）**：D-COMM-4 小队详情榜落地后经能力对比裁决——widget 层无可复用增量（小队榜已覆盖并列名次/无账本态/<3 人降级/完成度口径全部诚实面，死链的 XP/连胜口径反命中反刷分红线；podium/我的排名横幅属被裁决禁入的「大池比较」视觉）→ 三件套 screen/provider/repo 共 1,143 行整链删除，连带 `ApiEndpoints.leaderboards*` 6 个死常量（保留 `leaderboardsSelfAnchor`）、l10n `leaderboard*` 11 个死键（保留 `leaderboardSelfAnchor*` 12 键）、session_refresh_service 两处 provider 登记；COMM-LB 守卫绿（routes.dart 自我锚接线行按守卫自带 escape hatch 注 ignore） |
+ 
+ ## 🟡 P2 — 迁移中的集群（删除前必须核对状态）
+ 
+diff --git a/mobile/lib/app/routes.dart b/mobile/lib/app/routes.dart
+index 3826bb6b..cc925019 100755
+--- a/mobile/lib/app/routes.dart
++++ b/mobile/lib/app/routes.dart
+@@ -24,7 +24,8 @@ import 'package:sparkle/features/galaxy/galaxy.dart';
+ import 'package:sparkle/features/goal/goal.dart';
+ import 'package:sparkle/features/home/home.dart';
+ import 'package:sparkle/features/insights/insights.dart';
+-import 'package:sparkle/features/leaderboard/leaderboard_routes.dart';
++// 自我锚视图是 D-COMM-1 裁决唯一路由产品面，非全站榜
++import 'package:sparkle/features/leaderboard/leaderboard_routes.dart'; // rule-comm-lb: ignore D-COMM-1 自我锚=唯一裁决路由面，非全站榜
+ import 'package:sparkle/features/memory/memory.dart';
+ import 'package:sparkle/features/notification_center/notification_center.dart';
+ import 'package:sparkle/features/openclaw/openclaw.dart';
+@@ -384,7 +385,8 @@ final routerProvider = Provider<GoRouter>((ref) {
+       ...TaskRoutes.routes,
+       ...PlanRoutes.routes,
+       ...InsightsRoutes.routes,
+-      ...LeaderboardRoutes.routes,
++      // 仅挂自我锚路由（D-COMM-1 唯一路由产品面），无全站榜
++      ...LeaderboardRoutes.routes, // rule-comm-lb: ignore D-COMM-1 自我锚=唯一裁决路由面，非全站榜
+       ...SimulationRoutes.routes,
+       ...TheaterRoutes.routes,
+       ...ReportRoutes.routes,
+diff --git a/mobile/lib/core/network/api_endpoints.dart b/mobile/lib/core/network/api_endpoints.dart
+index 30e864f2..8fe141fb 100755
+--- a/mobile/lib/core/network/api_endpoints.dart
++++ b/mobile/lib/core/network/api_endpoints.dart
+@@ -623,14 +623,8 @@ class ApiEndpoints {
+       '/recommendations/record-interaction';
+   static const String recommendationsStats = '/recommendations/stats';
+ 
+-  // Leaderboards
+-  static const String leaderboards = '/leaderboards';
+-  static const String leaderboardsSummary = '/leaderboards/summary';
+-  static const String leaderboardsMyRank = '/leaderboards/my-rank';
+-  static const String leaderboardsTypes = '/leaderboards/types';
+-  static String leaderboardsTopThree(String type) =>
+-      '/leaderboards/top-three/$type';
+-  static const String leaderboardsRefreshCache = '/leaderboards/refresh-cache';
++  // Leaderboards —— 全站榜死代码已整链删除（LEADERBOARD-DEBT，2026-09），
++  // 仅保留 D-COMM-1 裁决唯一路由产品面的端点。
+   // D-COMM-1：自我 7 日锚视图（唯一按裁决路由的排行榜面，全站榜保持 D17 隐藏）。
+   static const String leaderboardsSelfAnchor = '/leaderboards/self-anchor';
+ 
+diff --git a/mobile/lib/core/services/session_refresh_service.dart b/mobile/lib/core/services/session_refresh_service.dart
+index 7349700b..cd8794dd 100644
+--- a/mobile/lib/core/services/session_refresh_service.dart
++++ b/mobile/lib/core/services/session_refresh_service.dart
+@@ -21,7 +21,6 @@ import 'package:sparkle/features/home/presentation/providers/notification_provid
+ import 'package:sparkle/features/home/presentation/providers/spine_status_band_provider.dart';
+ import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
+ import 'package:sparkle/features/home/presentation/providers/understanding_snapshot_provider.dart';
+-import 'package:sparkle/features/leaderboard/presentation/providers/leaderboard_provider.dart';
+ import 'package:sparkle/features/notification_center/presentation/providers/notification_center_provider.dart';
+ import 'package:sparkle/features/plan/presentation/providers/active_goal_provider.dart';
+ import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
+@@ -73,8 +72,6 @@ final sessionBoundProvidersProvider = Provider<List<ProviderOrFamily>>(
+     myGroupsProvider,
+     achievementProvider,
+     streakHistoryProvider,
+-    leaderboardProvider,
+-    myRankProvider,
+     focusStatisticsProvider,
+     galaxyProvider,
+     enhancedGalaxyRepositoryProvider,
+diff --git a/mobile/lib/features/leaderboard/data/repositories/leaderboard_repository.dart b/mobile/lib/features/leaderboard/data/repositories/leaderboard_repository.dart
+deleted file mode 100644
+index b35af4ca..00000000
+--- a/mobile/lib/features/leaderboard/data/repositories/leaderboard_repository.dart
++++ /dev/null
+@@ -1,375 +0,0 @@
+-import 'package:sparkle/core/network/api_client.dart';
+-import 'package:sparkle/core/network/response_parser.dart';
+-import 'package:sparkle/core/services/demo_data_service.dart';
+-import 'package:sparkle/features/leaderboard/presentation/providers/leaderboard_provider.dart';
+-
+-/// String extension for capitalization
+-extension StringCapitalize on String {
+-  String capitalize() {
+-    if (isEmpty) return this;
+-    return this[0].toUpperCase() + substring(1);
+-  }
+-}
+-
+-/// Leaderboard Repository
+-class LeaderboardRepository {
+-  LeaderboardRepository(this._apiClient);
+-
+-  final ApiClient _apiClient;
+-
+-  /// Get leaderboard
+-  Future<LeaderboardData> getLeaderboard({
+-    required LeaderboardType type,
+-    required LeaderboardPeriod period,
+-    int limit = 50,
+-    int offset = 0,
+-    String? subjectId,
+-    String? groupId,
+-  }) async {
+-    if (DemoDataService.isDemoMode) {
+-      final myEntry = LeaderboardEntry(
+-        rank: 5,
+-        userId: DemoDataService.demoUserId,
+-        username: 'Mika',
+-        avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=${DemoDataService.demoAvatarSeed}',
+-        score: 750.0,
+-        scoreLabel: '750 XP',
+-        isMe: true,
+-        change: 2,
+-        stats: {'tasks_completed': 18, 'streak_days': 7},
+-        badge: 'steady_climber',
+-      );
+-      final entries = <LeaderboardEntry>[
+-        LeaderboardEntry(
+-          rank: 1,
+-          userId: 'user_alice',
+-          username: 'Lena_Words',
+-          avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=Alice',
+-          score: 980.0,
+-          scoreLabel: '980 XP',
+-          change: 1,
+-          stats: {'tasks_completed': 26, 'streak_days': 12},
+-          badge: 'top_streak',
+-        ),
+-        LeaderboardEntry(
+-          rank: 2,
+-          userId: 'user_charlie',
+-          username: 'Mori_Creative',
+-          avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=Carol',
+-          score: 920.0,
+-          scoreLabel: '920 XP',
+-          change: -1,
+-          stats: {'tasks_completed': 24, 'streak_days': 10},
+-          badge: 'consistent',
+-        ),
+-        LeaderboardEntry(
+-          rank: 3,
+-          userId: 'user_emma',
+-          username: 'Rina_Path',
+-          avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=Emma',
+-          score: 880.0,
+-          scoreLabel: '880 XP',
+-          change: 0,
+-          stats: {'tasks_completed': 22, 'streak_days': 9},
+-          badge: 'focus_master',
+-        ),
+-        LeaderboardEntry(
+-          rank: 4,
+-          userId: 'user_david',
+-          username: 'Nora_Reset',
+-          avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=David',
+-          score: 810.0,
+-          scoreLabel: '810 XP',
+-          change: 1,
+-          stats: {'tasks_completed': 20, 'streak_days': 8},
+-        ),
+-        myEntry,
+-        LeaderboardEntry(
+-          rank: 6,
+-          userId: 'user_bob',
+-          username: 'Owen_Field',
+-          avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=Bob',
+-          score: 710.0,
+-          scoreLabel: '710 XP',
+-          change: -1,
+-          stats: {'tasks_completed': 17, 'streak_days': 6},
+-        ),
+-      ];
+-      return LeaderboardData(
+-        type: type,
+-        title: '${type.value.capitalize()} Leaderboard',
+-        period: period,
+-        entries: entries.take(limit).skip(offset).toList(),
+-        totalParticipants: 42,
+-        lastUpdated: DateTime.now(),
+-        myRank: myEntry.rank,
+-        myScore: myEntry.score,
+-      );
+-    }
+-
+-    final queryParams = {
+-      'type': type.value,
+-      'limit': limit.toString(),
+-      'offset': offset.toString(),
+-      'period': period.value,
+-      if (subjectId != null) 'subject_id': subjectId,
+-      if (groupId != null) 'group_id': groupId,
+-    };
+-
+-    final response = await _apiClient.get<Map<String, dynamic>>(
+-      '/leaderboards',
+-      queryParameters: queryParams,
+-    );
+-
+-    final payload = ApiResponseParser.unwrapMap(response.data, action: 'getLeaderboard');
+-    final data = payload['data'] as Map<String, dynamic>?;
+-    if (data == null) {
+-      throw Exception('getLeaderboard: data field is missing');
+-    }
+-
+-    return LeaderboardData.fromJson(data);
+-  }
+-
+-  /// Get my rank
+-  Future<MyRankState> getMyRank({
+-    required LeaderboardType type,
+-    LeaderboardPeriod? period,
+-  }) async {
+-    if (DemoDataService.isDemoMode) {
+-      final nearbyUsers = [
+-        LeaderboardEntry(
+-          rank: 3,
+-          userId: 'user_emma',
+-          username: 'Rina_Path',
+-          avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=Emma',
+-          score: 880.0,
+-          scoreLabel: '880 XP',
+-          change: 0,
+-        ),
+-        LeaderboardEntry(
+-          rank: 4,
+-          userId: 'user_david',
+-          username: 'Nora_Reset',
+-          avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=David',
+-          score: 810.0,
+-          scoreLabel: '810 XP',
+-          change: 1,
+-        ),
+-        LeaderboardEntry(
+-          rank: 5,
+-          userId: DemoDataService.demoUserId,
+-          username: 'Mika',
+-          avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=${DemoDataService.demoAvatarSeed}',
+-          score: 750.0,
+-          scoreLabel: '750 XP',
+-          change: 2,
+-          isMe: true,
+-        ),
+-        LeaderboardEntry(
+-          rank: 6,
+-          userId: 'user_bob',
+-          username: 'Owen_Field',
+-          avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=Bob',
+-          score: 710.0,
+-          scoreLabel: '710 XP',
+-          change: -1,
+-        ),
+-      ];
+-      return MyRankState(
+-        rank: 5,
+-        score: 750.0,
+-        scoreLabel: '750 XP',
+-        totalParticipants: 100,
+-        percentile: 95.0,
+-        changeFromLastPeriod: 2,
+-        nearbyUsers: nearbyUsers,
+-      );
+-    }
+-
+-    final queryParams = {
+-      'type': type.value,
+-      if (period != null) 'period': period.value,
+-    };
+-
+-    final response = await _apiClient.get<Map<String, dynamic>>(
+-      '/leaderboards/my-rank',
+-      queryParameters: queryParams,
+-    );
+-
+-    final payload = ApiResponseParser.unwrapMap(response.data, action: 'getMyRank');
+-    final data = payload['data'] as Map<String, dynamic>?;
+-
+-    if (data == null) {
+-      throw Exception('getMyRank: data field is missing');
+-    }
+-
+-    final nearbyUsers = (data['nearby_users'] as List<dynamic>?)
+-            ?.map((e) => LeaderboardEntry.fromJson(e as Map<String, dynamic>))
+-            .toList() ?? [];
+-
+-    return MyRankState(
+-      rank: data['rank'] as int?,
+-      score: (data['score'] as num?)?.toDouble(),
+-      scoreLabel: data['score_label'] as String?,
+-      totalParticipants: data['total_participants'] as int?,
+-      percentile: (data['percentile'] as num?)?.toDouble(),
+-      changeFromLastPeriod: data['change_from_last_period'] as int?,
+-      nearbyUsers: nearbyUsers,
+-    );
+-  }
+-
+-  /// Get top three for podium display
+-  Future<List<LeaderboardEntry>> getTopThree(LeaderboardType type) async {
+-    if (DemoDataService.isDemoMode) {
+-      // Return mock top three for demo mode
+-      return [
+-        LeaderboardEntry(
+-          rank: 1,
+-          userId: 'user_alice',
+-          username: 'Lena_Words',
+-          avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=Alice',
+-          score: 980.0,
+-          scoreLabel: '980 XP',
+-          change: 0,
+-        ),
+-        LeaderboardEntry(
+-          rank: 2,
+-          userId: 'user_charlie',
+-          username: 'Mori_Creative',
+-          avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=Carol',
+-          score: 920.0,
+-          scoreLabel: '920 XP',
+-          change: 1,
+-        ),
+-        LeaderboardEntry(
+-          rank: 3,
+-          userId: 'user_emma',
+-          username: 'Rina_Path',
+-          avatarUrl: 'https://api.dicebear.com/9.x/avataaars/png?seed=Emma',
+-          score: 880.0,
+-          scoreLabel: '880 XP',
+-          change: -1,
+-        ),
+-      ];
+-    }
+-
+-    final response = await _apiClient.get<Map<String, dynamic>>(
+-      '/leaderboards/top-three/${type.value}',
+-    );
+-
+-    final payload = ApiResponseParser.unwrapMap(response.data, action: 'getTopThree');
+-    final data = payload['data'] as Map<String, dynamic>?;
+-
+-    if (data == null) {
+-      throw Exception('getTopThree: data field is missing');
+-    }
+-
+-    final entries = <LeaderboardEntry>[];
+-
+-    for (final key in ['first', 'second', 'third']) {
+-      final entryData = data[key];
+-      if (entryData != null) {
+-        entries.add(LeaderboardEntry.fromJson(entryData as Map<String, dynamic>));
+-      }
+-    }
+-
+-    return entries;
+-  }
+-
+-  /// Get leaderboard summary
+-  Future<Map<LeaderboardType, LeaderboardData>> getSummary() async {
+-    if (DemoDataService.isDemoMode) {
+-      // Return mock summary for demo mode
+-      return {
+-        LeaderboardType.global: LeaderboardData(
+-          type: LeaderboardType.global,
+-          title: 'Global Leaderboard',
+-          period: LeaderboardPeriod.allTime,
+-          entries: [
+-            LeaderboardEntry(rank: 1, userId: 'user_alice', username: 'Lena_Words', score: 980.0, scoreLabel: '980 XP'),
+-            LeaderboardEntry(rank: 2, userId: 'user_charlie', username: 'Mori_Creative', score: 920.0, scoreLabel: '920 XP'),
+-            LeaderboardEntry(rank: 3, userId: 'user_emma', username: 'Rina_Path', score: 880.0, scoreLabel: '880 XP'),
+-          ],
+-          totalParticipants: 42,
+-          lastUpdated: DateTime.now(),
+-        ),
+-        LeaderboardType.friends: LeaderboardData(
+-          type: LeaderboardType.friends,
+-          title: 'Friends Leaderboard',
+-          period: LeaderboardPeriod.allTime,
+-          entries: [
+-            LeaderboardEntry(rank: 1, userId: 'friend_1', username: 'Lena_Words', score: 980.0, scoreLabel: '980 XP'),
+-            LeaderboardEntry(rank: 2, userId: 'friend_3', username: 'Mori_Creative', score: 920.0, scoreLabel: '920 XP'),
+-            LeaderboardEntry(rank: 3, userId: DemoDataService.demoUserId, username: 'Mika', score: 750.0, scoreLabel: '750 XP', isMe: true),
+-          ],
+-          totalParticipants: 6,
+-          lastUpdated: DateTime.now(),
+-        ),
+-        LeaderboardType.weekly: LeaderboardData(
+-          type: LeaderboardType.weekly,
+-          title: 'Weekly Leaderboard',
+-          period: LeaderboardPeriod.weekly,
+-          entries: [
+-            LeaderboardEntry(rank: 1, userId: 'user_emma', username: 'Rina_Path', score: 320.0, scoreLabel: '320 XP'),
+-            LeaderboardEntry(rank: 2, userId: DemoDataService.demoUserId, username: 'Mika', score: 300.0, scoreLabel: '300 XP', isMe: true),
+-            LeaderboardEntry(rank: 3, userId: 'user_david', username: 'Nora_Reset', score: 260.0, scoreLabel: '260 XP'),
+-          ],
+-          totalParticipants: 18,
+-          lastUpdated: DateTime.now(),
+-        ),
+-        LeaderboardType.streak: LeaderboardData(
+-          type: LeaderboardType.streak,
+-          title: 'Streak Leaderboard',
+-          period: LeaderboardPeriod.daily,
+-          entries: [
+-            LeaderboardEntry(rank: 1, userId: 'user_alice', username: 'Lena_Words', score: 12.0, scoreLabel: '12 days'),
+-            LeaderboardEntry(rank: 2, userId: DemoDataService.demoUserId, username: 'Mika', score: 7.0, scoreLabel: '7 days', isMe: true),
+-          ],
+-          totalParticipants: 12,
+-          lastUpdated: DateTime.now(),
+-        ),
+-      };
+-    }
+-
+-    final response = await _apiClient.get<Map<String, dynamic>>('/leaderboards/summary');
+-
+-    final payload = ApiResponseParser.unwrapMap(response.data, action: 'getSummary');
+-    final data = payload['data'] as Map<String, dynamic>?;
+-
+-    if (data == null) {
+-      throw Exception('getSummary: data field is missing');
+-    }
+-
+-    final summary = <LeaderboardType, LeaderboardData>{};
+-
+-    for (final key in ['global', 'friends', 'weekly', 'streak']) {
+-      final leaderboardData = data[key];
+-      if (leaderboardData != null) {
+-        summary[LeaderboardType.fromString(key)] =
+-            LeaderboardData.fromJson(leaderboardData as Map<String, dynamic>);
+-      }
+-    }
+-
+-    return summary;
+-  }
+-
+-  /// Refresh leaderboard cache
+-  Future<bool> refreshCache({LeaderboardType? type}) async {
+-    if (DemoDataService.isDemoMode) {
+-      // Return success for demo mode
+-      return true;
+-    }
+-
+-    final queryParams = {
+-      if (type != null) 'type': type.value,
+-    };
+-
+-    final response = await _apiClient.post<Map<String, dynamic>>(
+-      '/leaderboards/refresh-cache',
+-      queryParameters: queryParams,
+-    );
+-
+-    final payload = ApiResponseParser.unwrapMap(response.data, action: 'refreshCache');
+-    return payload['success'] == true;
+-  }
+-}
+diff --git a/mobile/lib/features/leaderboard/presentation/providers/leaderboard_provider.dart b/mobile/lib/features/leaderboard/presentation/providers/leaderboard_provider.dart
+deleted file mode 100644
+index e4b0cb6c..00000000
+--- a/mobile/lib/features/leaderboard/presentation/providers/leaderboard_provider.dart
++++ /dev/null
+@@ -1,348 +0,0 @@
+-import 'package:flutter/foundation.dart';
+-import 'package:flutter_riverpod/flutter_riverpod.dart';
+-import 'package:sparkle/core/network/api_client.dart';
+-import 'package:sparkle/features/leaderboard/data/repositories/leaderboard_repository.dart';
+-
+-// ========== Leaderboard Types ==========
+-
+-enum LeaderboardType {
+-  global('global'),
+-  friends('friends'),
+-  group('group'),
+-  subject('subject'),
+-  weekly('weekly'),
+-  streak('streak');
+-
+-  const LeaderboardType(this.value);
+-  final String value;
+-
+-  static LeaderboardType fromString(String value) => LeaderboardType.values.firstWhere(
+-      (type) => type.value == value,
+-      orElse: () => LeaderboardType.global,
+-    );
+-}
+-
+-enum LeaderboardPeriod {
+-  allTime('all_time'),
+-  weekly('weekly'),
+-  monthly('monthly'),
+-  daily('daily');
+-
+-  const LeaderboardPeriod(this.value);
+-  final String value;
+-
+-  static LeaderboardPeriod fromString(String value) => LeaderboardPeriod.values.firstWhere(
+-      (type) => type.value == value,
+-      orElse: () => LeaderboardPeriod.allTime,
+-    );
+-}
+-
+-// ========== Leaderboard State ==========
+-
+-class LeaderboardEntry {
+-  LeaderboardEntry({
+-    required this.rank,
+-    required this.userId,
+-    required this.username,
+-    required this.score,
+-    required this.scoreLabel,
+-    this.avatarUrl,
+-    this.isMe = false,
+-    this.change,
+-    this.stats = const {},
+-    this.badge,
+-  });
+-
+-  factory LeaderboardEntry.fromJson(Map<String, dynamic> json) => LeaderboardEntry(
+-      rank: json['rank'] as int,
+-      userId: json['user_id'] as String,
+-      username: json['username'] as String,
+-      avatarUrl: json['avatar_url'] as String?,
+-      score: (json['score'] as num).toDouble(),
+-      scoreLabel: json['score_label'] as String,
+-      isMe: json['is_me'] as bool? ?? false,
+-      change: json['change'] as int?,
+-      stats: json['stats'] as Map<String, dynamic>? ?? {},
+-      badge: json['badge'] as String?,
+-    );
+-
+-  final int rank;
+-  final String userId;
+-  final String username;
+-  final String? avatarUrl;
+-  final double score;
+-  final String scoreLabel;
+-  final bool isMe;
+-  final int? change;
+-  final Map<String, dynamic> stats;
+-  final String? badge;
+-
+-  Map<String, dynamic> toJson() => {
+-      'rank': rank,
+-      'user_id': userId,
+-      'username': username,
+-      'avatar_url': avatarUrl,
+-      'score': score,
+-      'score_label': scoreLabel,
+-      'is_me': isMe,
+-      'change': change,
+-      'stats': stats,
+-      'badge': badge,
+-    };
+-}
+-
+-class LeaderboardData {
+-  LeaderboardData({
+-    required this.type,
+-    required this.title,
+-    required this.entries,
+-    required this.lastUpdated, required this.totalParticipants, required this.period, this.myRank,
+-    this.myScore,
+-  });
+-
+-  factory LeaderboardData.fromJson(Map<String, dynamic> json) => LeaderboardData(
+-      type: LeaderboardType.fromString(json['type'] as String),
+-      title: json['title'] as String,
+-      entries: (json['entries'] as List<dynamic>)
+-          .map((e) => LeaderboardEntry.fromJson(e as Map<String, dynamic>))
+-          .toList(),
+-      myRank: json['my_rank'] as int?,
+-      myScore: (json['my_score'] as num?)?.toDouble(),
+-      lastUpdated: DateTime.parse(json['last_updated'] as String),
+-      totalParticipants: json['total_participants'] as int,
+-      period: LeaderboardPeriod.fromString(json['period'] as String? ?? 'all_time'),
+-    );
+-
+-  final LeaderboardType type;
+-  final String title;
+-  final List<LeaderboardEntry> entries;
+-  final int? myRank;
+-  final double? myScore;
+-  final DateTime lastUpdated;
+-  final int totalParticipants;
+-  final LeaderboardPeriod period;
+-}
+-
+-class LeaderboardState {
+-  LeaderboardState({
+-    required this.leaderboards,
+-    this.isLoading = false,
+-    this.error,
+-    this.lastUpdated,
+-  });
+-
+-  LeaderboardState.loading()
+-      : leaderboards = {},
+-        isLoading = true,
+-        error = null,
+-        lastUpdated = null;
+-
+-  LeaderboardState.error(String errorMessage)
+-      : leaderboards = {},
+-        isLoading = false,
+-        error = errorMessage,
+-        lastUpdated = null;
+-
+-  final Map<LeaderboardType, LeaderboardData> leaderboards;
+-  final bool isLoading;
+-  final String? error;
+-  final DateTime? lastUpdated;
+-
+-  LeaderboardState copyWith({
+-    Map<LeaderboardType, LeaderboardData>? leaderboards,
+-    bool? isLoading,
+-    String? error,
+-    DateTime? lastUpdated,
+-  }) =>
+-      LeaderboardState(
+-        leaderboards: leaderboards ?? this.leaderboards,
+-        isLoading: isLoading ?? this.isLoading,
+-        error: error ?? this.error,
+-        lastUpdated: lastUpdated ?? this.lastUpdated,
+-      );
+-
+-  LeaderboardData? getLeaderboard(LeaderboardType type) => leaderboards[type];
+-}
+-
+-class MyRankState {
+-  MyRankState({
+-    this.rank,
+-    this.score,
+-    this.scoreLabel,
+-    this.totalParticipants,
+-    this.percentile,
+-    this.changeFromLastPeriod,
+-    this.nearbyUsers = const [],
+-    this.isLoading = false,
+-    this.error,
+-  });
+-
+-  MyRankState.loading()
+-      : rank = null,
+-        score = null,
+-        scoreLabel = null,
+-        totalParticipants = null,
+-        percentile = null,
+-        changeFromLastPeriod = null,
+-        nearbyUsers = const [],
+-        isLoading = true,
+-        error = null;
+-
+-  MyRankState.error(String errorMessage)
+-      : rank = null,
+-        score = null,
+-        scoreLabel = null,
+-        totalParticipants = null,
+-        percentile = null,
+-        changeFromLastPeriod = null,
+-        nearbyUsers = const [],
+-        isLoading = false,
+-        error = errorMessage;
+-
+-  final int? rank;
+-  final double? score;
+-  final String? scoreLabel;
+-  final int? totalParticipants;
+-  final double? percentile;
+-  final int? changeFromLastPeriod;
+-  final List<LeaderboardEntry> nearbyUsers;
+-  final bool isLoading;
+-  final String? error;
+-}
+-
+-// ========== Providers ==========
+-
+-/// Leaderboard Repository Provider
+-final leaderboardRepositoryProvider = Provider<LeaderboardRepository>((ref) {
+-  final apiClient = ref.watch(apiClientProvider);
+-  return LeaderboardRepository(apiClient);
+-});
+-
+-/// Main Leaderboard Provider
+-final leaderboardProvider =
+-    StateNotifierProvider<LeaderboardNotifier, LeaderboardState>(
+-  (ref) => LeaderboardNotifier(ref.watch(leaderboardRepositoryProvider)),
+-);
+-
+-/// My Rank Provider
+-final myRankProvider =
+-    StateNotifierProvider<MyRankNotifier, MyRankState>(
+-  (ref) => MyRankNotifier(ref.watch(leaderboardRepositoryProvider)),
+-);
+-
+-// ========== Notifiers ==========
+-
+-class LeaderboardNotifier extends StateNotifier<LeaderboardState> {
+-  LeaderboardNotifier(this._repository) : super(LeaderboardState.loading());
+-
+-  final LeaderboardRepository _repository;
+-
+-  /// Load all leaderboards
+-  Future<void> loadAllLeaderboards() async {
+-    try {
+-      state = LeaderboardState.loading();
+-
+-      final types = [
+-        LeaderboardType.global,
+-        LeaderboardType.friends,
+-        LeaderboardType.weekly,
+-        LeaderboardType.streak,
+-      ];
+-
+-      final results = await Future.wait(
+-        types.map((type) => _repository.getLeaderboard(
+-          type: type,
+-          period: LeaderboardPeriod.allTime,
+-        ),),
+-      );
+-
+-      final leaderboards = <LeaderboardType, LeaderboardData>{};
+-      for (var i = 0; i < types.length; i++) {
+-        leaderboards[types[i]] = results[i];
+-      }
+-
+-      state = LeaderboardState(
+-        leaderboards: leaderboards,
+-        lastUpdated: DateTime.now(),
+-      );
+-    } catch (e) {
+-      debugPrint('Error loading leaderboards: $e');
+-      state = LeaderboardState.error(e.toString());
+-    }
+-  }
+-
+-  /// Load specific leaderboard
+-  Future<void> loadLeaderboard(
+-    LeaderboardType type, {
+-    LeaderboardPeriod? period,
+-    int limit = 50,
+-    String? subjectId,
+-    String? groupId,
+-  }) async {
+-    try {
+-      final leaderboard = await _repository.getLeaderboard(
+-        type: type,
+-        period: period ?? LeaderboardPeriod.allTime,
+-        limit: limit,
+-        subjectId: subjectId,
+-        groupId: groupId,
+-      );
+-
+-      final newLeaderboards = Map<LeaderboardType, LeaderboardData>.from(state.leaderboards);
+-      newLeaderboards[type] = leaderboard;
+-
+-      state = state.copyWith(leaderboards: newLeaderboards);
+-    } catch (e) {
+-      debugPrint('Error loading leaderboard $type: $e');
+-    }
+-  }
+-
+-  /// Refresh current leaderboard
+-  Future<void> refresh(LeaderboardType type) async {
+-    await loadLeaderboard(type);
+-  }
+-
+-  /// Get leaderboard data
+-  LeaderboardData? getData(LeaderboardType type) => state.leaderboards[type];
+-}
+-
+-class MyRankNotifier extends StateNotifier<MyRankState> {
+-  MyRankNotifier(this._repository) : super(MyRankState.loading());
+-
+-  final LeaderboardRepository _repository;
+-
+-  /// Load my rank for a specific leaderboard
+-  Future<void> loadMyRank(
+-    LeaderboardType type, {
+-    LeaderboardPeriod? period,
+-  }) async {
+-    try {
+-      state = MyRankState.loading();
+-
+-      final myRank = await _repository.getMyRank(
+-        type: type,
+-        period: period ?? LeaderboardPeriod.allTime,
+-      );
+-
+-      state = MyRankState(
+-        rank: myRank.rank,
+-        score: myRank.score,
+-        scoreLabel: myRank.scoreLabel,
+-        totalParticipants: myRank.totalParticipants,
+-        percentile: myRank.percentile,
+-        changeFromLastPeriod: myRank.changeFromLastPeriod,
+-        nearbyUsers: myRank.nearbyUsers,
+-      );
+-    } catch (e) {
+-      debugPrint('Error loading my rank: $e');
+-      state = MyRankState.error(e.toString());
+-    }
+-  }
+-
+-  /// Refresh my rank
+-  Future<void> refresh() async {
+-    // Reuse the last type that was loaded
+-    // For simplicity, we're not tracking the last type here
+-    // In production, you'd want to cache this
+-  }
+-}
+diff --git a/mobile/lib/features/leaderboard/presentation/screens/leaderboard_screen.dart b/mobile/lib/features/leaderboard/presentation/screens/leaderboard_screen.dart
+deleted file mode 100644
+index 49ca3f71..00000000
+--- a/mobile/lib/features/leaderboard/presentation/screens/leaderboard_screen.dart
++++ /dev/null
+@@ -1,420 +0,0 @@
+-import 'package:cached_network_image/cached_network_image.dart';
+-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+-import 'dart:async';
+-
+-import 'package:flutter/material.dart';
+-import 'package:flutter_riverpod/flutter_riverpod.dart';
+-import 'package:sparkle/core/design/design_system.dart';
+-import 'package:sparkle/core/extensions/context_l10n.dart';
+-import 'package:sparkle/core/services/sensory_feedback_service.dart';
+-import 'package:sparkle/features/leaderboard/presentation/providers/leaderboard_provider.dart';
+-
+-/// Leaderboard Screen
+-///
+-/// Displays various leaderboards with tab navigation
+-class LeaderboardScreen extends ConsumerStatefulWidget {
+-  const LeaderboardScreen({super.key});
+-
+-  @override
+-  ConsumerState<LeaderboardScreen> createState() => _LeaderboardScreenState();
+-}
+-
+-class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
+-    with SingleTickerProviderStateMixin {
+-  late TabController _tabController;
+-
+-  final List<LeaderboardType> _tabs = [
+-    LeaderboardType.global,
+-    LeaderboardType.friends,
+-    LeaderboardType.weekly,
+-    LeaderboardType.streak,
+-  ];
+-
+-  @override
+-  void initState() {
+-    super.initState();
+-    _tabController = TabController(length: _tabs.length, vsync: this);
+-    // Load initial data
+-    unawaited(
+-      Future.microtask(() {
+-        unawaited(ref.read(leaderboardProvider.notifier).loadAllLeaderboards());
+-      }),
+-    );
+-  }
+-
+-  @override
+-  void dispose() {
+-    _tabController.dispose();
+-    super.dispose();
+-  }
+-
+-  @override
+-  Widget build(BuildContext context) {
+-    final state = ref.watch(leaderboardProvider);
+-
+-    return SparklePageScaffold(
+-      role: SparklePageRole.content,
+-      appBar: AppBar(
+-        title: Text(context.l10n.leaderboardTitle),
+-        bottom: TabBar(
+-          controller: _tabController,
+-          isScrollable: true,
+-          onTap: (_) {
+-            unawaited(
+-              SensoryFeedbackService.emit(
+-                SensoryFeedbackEvent.selection,
+-              ),
+-            );
+-          },
+-          tabs: _tabs.map((type) => Tab(text: _getTabLabel(type))).toList(),
+-        ),
+-        actions: [
+-          SparkleIconButton(
+-            variant: ButtonVariant.ghost,
+-            icon: const Icon(Icons.refresh),
+-            onPressed: () {
+-              unawaited(_refreshCurrentTab());
+-            },
+-          ),
+-        ],
+-      ),
+-      child: state.isLoading
+-          ? const SparkleListSkeleton()
+-          : state.error != null
+-              ? _buildErrorView()
+-              : TabBarView(
+-                  controller: _tabController,
+-                  children: _tabs.map(_buildLeaderboardTab).toList(),
+-                ),
+-    );
+-  }
+-
+-  Widget _buildLeaderboardTab(LeaderboardType type) {
+-    final state = ref.watch(leaderboardProvider);
+-    final leaderboard = state.getLeaderboard(type);
+-
+-    if (leaderboard == null) {
+-      return _buildEmptyView(type);
+-    }
+-
+-    return SparkleRefreshIndicator(
+-      onRefresh: () => _refreshLeaderboard(type),
+-      child: ContentConstraint(
+-        child: CustomScrollView(
+-          slivers: [
+-            // Podium for top 3
+-            if (leaderboard.entries.isNotEmpty)
+-              SliverToBoxAdapter(
+-                child: _buildPodium(leaderboard.entries.take(3).toList()),
+-              ),
+-
+-            // My rank banner
+-            SliverToBoxAdapter(
+-              child: _buildMyRankBanner(leaderboard),
+-            ),
+-
+-            // Full leaderboard
+-            SliverList(
+-              delegate: SliverChildBuilderDelegate(
+-                (context, index) {
+-                  if (index >= leaderboard.entries.length) return null;
+-                  return SparkleStaggerItem(
+-                    index: index,
+-                    child: _buildLeaderboardEntry(leaderboard.entries[index]),
+-                  );
+-                },
+-                childCount: leaderboard.entries.length,
+-              ),
+-            ),
+-          ],
+-        ),
+-      ),
+-    );
+-  }
+-
+-  Widget _buildPodium(List<LeaderboardEntry> topThree) => Container(
+-        height: 180,
+-        padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
+-        child: Row(
+-          mainAxisAlignment: MainAxisAlignment.center,
+-          crossAxisAlignment: CrossAxisAlignment.end,
+-          children: [
+-            // Second place
+-            if (topThree.length > 1)
+-              Expanded(
+-                child: _buildPodiumItem(
+-                  topThree[1],
+-                  120,
+-                  DS.rarityCommon,
+-                  '🥈',
+-                ),
+-              ),
+-            const SizedBox(width: DS.spacing8),
+-
+-            // First place
+-            if (topThree.isNotEmpty)
+-              Expanded(
+-                child: _buildPodiumItem(
+-                  topThree[0],
+-                  160,
+-                  DS.rarityRare,
+-                  '🥇',
+-                ),
+-              ),
+-            const SizedBox(width: DS.spacing8),
+-
+-            // Third place
+-            if (topThree.length > 2)
+-              Expanded(
+-                child: _buildPodiumItem(
+-                  topThree[2],
+-                  100,
+-                  DS.warning,
+-                  '🥉',
+-                ),
+-              ),
+-          ],
+-        ),
+-      );
+-
+-  Widget _buildPodiumItem(
+-    LeaderboardEntry entry,
+-    double height,
+-    Color color,
+-    String emoji,
+-  ) =>
+-      Column(
+-        mainAxisAlignment: MainAxisAlignment.end,
+-        children: [
+-          Container(
+-            width: 60,
+-            height: 60,
+-            decoration: BoxDecoration(
+-              shape: BoxShape.circle,
+-              image: entry.avatarUrl != null
+-                  ? DecorationImage(
+-                      image: CachedNetworkImageProvider(entry.avatarUrl!),
+-                      fit: BoxFit.cover,
+-                    )
+-                  : null,
+-            ),
+-            child: entry.avatarUrl == null
+-                ? CircleAvatar(
+-                    backgroundColor: color.withValues(alpha: 0.3),
+-                    child: Text(
+-                      entry.username.isNotEmpty
+-                          ? entry.username[0].toUpperCase()
+-                          : '?',
+-                      style: TextStyle(
+-                        color: color,
+-                        fontWeight: DS.fontWeightBold,
+-                        fontSize: 24,
+-                      ),
+-                    ),
+-                  )
+-                : null,
+-          ),
+-          const SizedBox(height: DS.spacing8),
+-          Text(
+-            emoji,
+-            style: const TextStyle(fontSize: 32),
+-          ),
+-          const SizedBox(height: DS.spacing4),
+-          Container(
+-            width: double.infinity,
+-            height: height,
+-            decoration: BoxDecoration(
+-              color: color,
+-              borderRadius: const BorderRadius.vertical(
+-                top: Radius.circular(DS.spacing8),
+-              ),
+-            ),
+-            child: Column(
+-              mainAxisAlignment: MainAxisAlignment.center,
+-              children: [
+-                Text(
+-                  entry.username,
+-                  style: const TextStyle(
+-                    fontWeight: DS.fontWeightBold,
+-                    fontSize: 12,
+-                  ),
+-                  maxLines: 1,
+-                  overflow: TextOverflow.ellipsis,
+-                ),
+-                const SizedBox(height: DS.spacing4),
+-                Text(
+-                  entry.scoreLabel,
+-                  style: const TextStyle(fontSize: 12),
+-                ),
+-              ],
+-            ),
+-          ),
+-        ],
+-      );
+-
+-  Widget _buildMyRankBanner(LeaderboardData leaderboard) {
+-    if (leaderboard.myRank == null) return const SizedBox.shrink();
+-
+-    return SparkleAttentionPulse(
+-      glowColor: Theme.of(context).colorScheme.primary,
+-      child: Container(
+-        margin: const EdgeInsets.all(DS.spacing16),
+-        padding: const EdgeInsets.symmetric(
+-          horizontal: DS.spacing16,
+-          vertical: DS.spacing12,
+-        ),
+-        decoration: BoxDecoration(
+-          color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+-          borderRadius: DS.borderRadius12,
+-        ),
+-        child: Row(
+-          children: [
+-            Expanded(
+-              child: Text(
+-                context.l10n.leaderboardMyRank(leaderboard.myRank!),
+-                style: const TextStyle(
+-                  fontWeight: DS.fontWeightBold,
+-                  fontSize: 16,
+-                ),
+-                overflow: TextOverflow.ellipsis,
+-              ),
+-            ),
+-            const Spacer(),
+-            Text(
+-              leaderboard.myScore != null
+-                  ? context.l10n.leaderboardPoints(
+-                      leaderboard.myScore!.toInt(),
+-                    )
+-                  : '-',
+-              style: const TextStyle(
+-                fontSize: 16,
+-                fontWeight: DS.fontWeightBold,
+-                fontFeatures: [FontFeature.tabularFigures()],
+-              ),
+-            ),
+-          ],
+-        ),
+-      ),
+-    );
+-  }
+-
+-  Widget _buildLeaderboardEntry(LeaderboardEntry entry) => ListTile(
+-        leading: CircleAvatar(
+-          backgroundColor: _getRankColor(entry.rank),
+-          backgroundImage: entry.avatarUrl != null
+-              ? CachedNetworkImageProvider(entry.avatarUrl!)
+-              : null,
+-          child: entry.avatarUrl == null
+-              ? Text(
+-                  entry.rank.toString(),
+-                  style: TextStyle(
+-                    color: DS.textOnPrimary,
+-                    fontWeight: DS.fontWeightBold,
+-                    fontFeatures: const [FontFeature.tabularFigures()],
+-                  ),
+-                )
+-              : null,
+-        ),
+-        title: Text(
+-          entry.username,
+-          style: TextStyle(
+-            fontWeight: entry.isMe ? DS.fontWeightBold : FontWeight.normal,
+-          ),
+-        ),
+-        trailing: Row(
+-          mainAxisSize: MainAxisSize.min,
+-          children: [
+-            if (entry.badge != null)
+-              Text(
+-                entry.badge!,
+-                style: const TextStyle(fontSize: 20),
+-              ),
+-            const SizedBox(width: DS.spacing8),
+-            Text(
+-              entry.scoreLabel,
+-              style: const TextStyle(
+-                fontWeight: DS.fontWeightBold,
+-                fontFeatures: [FontFeature.tabularFigures()],
+-              ),
+-            ),
+-          ],
+-        ),
+-      );
+-
+-  Widget _buildEmptyView(LeaderboardType type) => Center(
+-        child: Column(
+-          mainAxisAlignment: MainAxisAlignment.center,
+-          children: [
+-            Icon(
+-              Icons.leaderboard_outlined,
+-              size: 64,
+-              color: DS.textSecondary,
+-            ),
+-            const SizedBox(height: DS.spacing16),
+-            Text(
+-              context.l10n.leaderboardNoData(_getTabLabel(type)),
+-              style: TextStyle(
+-                fontSize: 16,
+-                color: DS.textSecondary,
+-              ),
+-            ),
+-          ],
+-        ),
+-      );
+-
+-  Widget _buildErrorView() => Center(
+-        child: Column(
+-          mainAxisAlignment: MainAxisAlignment.center,
+-          children: [
+-            Icon(Icons.error_outline, size: 64, color: DS.error),
+-            const SizedBox(height: DS.spacing16),
+-            Text(
+-              context.l10n.leaderboardLoadFailed,
+-              style: const TextStyle(fontSize: 16),
+-            ),
+-            const SizedBox(height: DS.spacing8),
+-            SparkleButton.primary(
+-              onPressed: () {
+-                unawaited(
+-                  ref.read(leaderboardProvider.notifier).loadAllLeaderboards(),
+-                );
+-              },
+-              label: context.l10n.retry,
+-            ),
+-          ],
+-        ),
+-      );
+-
+-  Color _getRankColor(int rank) {
+-    if (rank == 1) return DS.rarityRare;
+-    if (rank == 2) return DS.rarityCommon;
+-    if (rank == 3) return DS.warning;
+-    return DS.info;
+-  }
+-
+-  String _getTabLabel(LeaderboardType type) {
+-    switch (type) {
+-      case LeaderboardType.global:
+-        return context.l10n.leaderboardGlobal;
+-      case LeaderboardType.friends:
+-        return context.l10n.leaderboardFriends;
+-      case LeaderboardType.group:
+-        return context.l10n.leaderboardGroup;
+-      case LeaderboardType.subject:
+-        return context.l10n.leaderboardSubject;
+-      case LeaderboardType.weekly:
+-        return context.l10n.leaderboardWeekly;
+-      case LeaderboardType.streak:
+-        return context.l10n.leaderboardStreak;
+-    }
+-  }
+-
+-  Future<void> _refreshCurrentTab() async {
+-    final type = _tabs[_tabController.index];
+-    await ref.read(leaderboardProvider.notifier).refresh(type);
+-  }
+-
+-  Future<void> _refreshLeaderboard(LeaderboardType type) async {
+-    await ref.read(leaderboardProvider.notifier).refresh(type);
+-  }
+-}
+diff --git a/mobile/lib/l10n/app_en.arb b/mobile/lib/l10n/app_en.arb
+index 1b754047..9431ede1 100755
+--- a/mobile/lib/l10n/app_en.arb
++++ b/mobile/lib/l10n/app_en.arb
+@@ -1392,36 +1392,6 @@
+             "error": {}
+         }
+     },
+-    "leaderboardTitle": "Leaderboard",
+-    "leaderboardGlobal": "Global",
+-    "leaderboardFriends": "Friends",
+-    "leaderboardGroup": "Groups",
+-    "leaderboardSubject": "Subjects",
+-    "leaderboardWeekly": "Weekly",
+-    "leaderboardStreak": "Streak",
+-    "leaderboardMyRank": "My rank: {rank}",
+-    "@leaderboardMyRank": {
+-        "placeholders": {
+-            "rank": {
+-                "type": "Object"
+-            }
+-        }
+-    },
+-    "leaderboardPoints": "{value} pts",
+-    "@leaderboardPoints": {
+-        "placeholders": {
+-            "value": {
+-                "type": "Object"
+-            }
+-        }
+-    },
+-    "leaderboardNoData": "No {label} data yet",
+-    "@leaderboardNoData": {
+-        "placeholders": {
+-            "label": {}
+-        }
+-    },
+-    "leaderboardLoadFailed": "Failed to load leaderboard. Please try again.",
+     "leaderboardSelfAnchorEmptyAction": "Go to my sprint",
+     "leaderboardSelfAnchorEmptyDescription": "No completed sprint tasks or mastery changes in the last 7 days. Finish today's first task and your anchor will start to grow.",
+     "leaderboardSelfAnchorEmptyTitle": "No records in this window yet",
+diff --git a/mobile/lib/l10n/app_localizations.dart b/mobile/lib/l10n/app_localizations.dart
+index a7c1f54e..7d67cde1 100644
+--- a/mobile/lib/l10n/app_localizations.dart
++++ b/mobile/lib/l10n/app_localizations.dart
+@@ -63,7 +63,7 @@ import 'app_localizations_zh.dart';
+ /// property.
+ abstract class AppLocalizations {
+   AppLocalizations(String locale)
+-      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
++    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+ 
+   final String localeName;
+ 
+@@ -86,16 +86,16 @@ abstract class AppLocalizations {
+   /// of delegates is preferred or required.
+   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
+       <LocalizationsDelegate<dynamic>>[
+-    delegate,
+-    GlobalMaterialLocalizations.delegate,
+-    GlobalCupertinoLocalizations.delegate,
+-    GlobalWidgetsLocalizations.delegate,
+-  ];
++        delegate,
++        GlobalMaterialLocalizations.delegate,
++        GlobalCupertinoLocalizations.delegate,
++        GlobalWidgetsLocalizations.delegate,
++      ];
+ 
+   /// A list of this localizations delegate's supported locales.
+   static const List<Locale> supportedLocales = <Locale>[
+     Locale('en'),
+-    Locale('zh')
++    Locale('zh'),
+   ];
+ 
+   /// No description provided for @appTitle.
+@@ -7784,72 +7784,6 @@ abstract class AppLocalizations {
+   /// **'捕捉失败：{error}'**
+   String thoughtCapsuleCaptureFailed(Object error);
+ 
+-  /// No description provided for @leaderboardTitle.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'排行榜'**
+-  String get leaderboardTitle;
+-
+-  /// No description provided for @leaderboardGlobal.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'全局榜'**
+-  String get leaderboardGlobal;
+-
+-  /// No description provided for @leaderboardFriends.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'好友榜'**
+-  String get leaderboardFriends;
+-
+-  /// No description provided for @leaderboardGroup.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'群组榜'**
+-  String get leaderboardGroup;
+-
+-  /// No description provided for @leaderboardSubject.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'学科榜'**
+-  String get leaderboardSubject;
+-
+-  /// No description provided for @leaderboardWeekly.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'本周榜'**
+-  String get leaderboardWeekly;
+-
+-  /// No description provided for @leaderboardStreak.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'连胜榜'**
+-  String get leaderboardStreak;
+-
+-  /// No description provided for @leaderboardMyRank.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'我的排名：{rank}'**
+-  String leaderboardMyRank(Object rank);
+-
+-  /// No description provided for @leaderboardPoints.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'{value}分'**
+-  String leaderboardPoints(Object value);
+-
+-  /// No description provided for @leaderboardNoData.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'暂无{label}数据'**
+-  String leaderboardNoData(Object label);
+-
+-  /// No description provided for @leaderboardLoadFailed.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'排行榜加载失败，请重试'**
+-  String get leaderboardLoadFailed;
+-
+   /// No description provided for @leaderboardSelfAnchorEmptyAction.
+   ///
+   /// In zh, this message translates to:
+@@ -19747,7 +19681,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'已处理 {count} 个候选节点，新增 {created} 个，复用 {reused} 个已有节点。'**
+   String taskDetailCandidatesApplied(
+-      Object count, Object created, Object reused);
++    Object count,
++    Object created,
++    Object reused,
++  );
+ 
+   /// No description provided for @taskDetailCandidatesReused.
+   ///
+@@ -21116,7 +21053,11 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'近 {days} 天里，当前最值得继续盯的预测动作是「{topAction}」；同时 prompt / inference 命中率分别是 {promptUtil}%/{inferenceUtil}%。'**
+   String aiOpsPredictionSummary(
+-      Object days, Object topAction, Object promptUtil, Object inferenceUtil);
++    Object days,
++    Object topAction,
++    Object promptUtil,
++    Object inferenceUtil,
++  );
+ 
+   /// No description provided for @aiOpsOpenAnalysis.
+   ///
+@@ -23403,7 +23344,11 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{progress}% · {completed}/{occurrences} 次发生 · {tasks} 个任务'**
+   String planDetailPhaseStats(
+-      Object progress, Object completed, Object occurrences, Object tasks);
++    Object progress,
++    Object completed,
++    Object occurrences,
++    Object tasks,
++  );
+ 
+   /// No description provided for @theaterTitle.
+   ///
+@@ -24118,7 +24063,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'当前阶段：{label} · {step} · {compare}'**
+   String theaterTimelinePhaseWithSteps(
+-      Object compare, Object label, Object step);
++    Object compare,
++    Object label,
++    Object step,
++  );
+ 
+   /// No description provided for @theaterTimelineWaitingDeduction.
+   ///
+@@ -24352,8 +24300,12 @@ abstract class AppLocalizations {
+   ///
+   /// In zh, this message translates to:
+   /// **'区间预测：完成率 {completionLow}%-{completionHigh}%， 掌握度 {masteryLow}%-{masteryHigh}%'**
+-  String theaterRouteRangePrediction(Object completionHigh,
+-      Object completionLow, Object masteryHigh, Object masteryLow);
++  String theaterRouteRangePrediction(
++    Object completionHigh,
++    Object completionLow,
++    Object masteryHigh,
++    Object masteryLow,
++  );
+ 
+   /// No description provided for @theaterRouteRecommendedBaseline.
+   ///
+@@ -25122,7 +25074,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{type} · {dailyMinutes} 分钟/天 · {hours} 小时'**
+   String planCreateReviewSummary(
+-      Object dailyMinutes, Object hours, Object type);
++    Object dailyMinutes,
++    Object hours,
++    Object type,
++  );
+ 
+   /// No description provided for @planCreateReviewEditDescription.
+   ///
+@@ -26257,17 +26212,22 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'原始 {originalMastery}% / {originalCompletion}%  →  调整后 {predictedMastery}% / {predictedCompletion}%'**
+   String theaterWhatIfCombinedResult(
+-      Object originalMastery,
+-      Object originalCompletion,
+-      Object predictedMastery,
+-      Object predictedCompletion);
++    Object originalMastery,
++    Object originalCompletion,
++    Object predictedMastery,
++    Object predictedCompletion,
++  );
+ 
+   /// No description provided for @theaterAccuracyPredictedActual.
+   ///
+   /// In zh, this message translates to:
+   /// **'预测 {predictedCompletion}% / {predictedMastery}%， 实际 {actualCompletion}% / {actualMastery}%'**
+-  String theaterAccuracyPredictedActual(Object predictedCompletion,
+-      Object predictedMastery, Object actualCompletion, Object actualMastery);
++  String theaterAccuracyPredictedActual(
++    Object predictedCompletion,
++    Object predictedMastery,
++    Object actualCompletion,
++    Object actualMastery,
++  );
+ 
+   /// No description provided for @theaterPerDayUnit.
+   ///
+@@ -38208,12 +38168,13 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{hashtag} 我在 Sparkle 达成了「{headline}」里程碑。累计学习 {studyDays} 天，掌握 {masteredNodes} 个知识节点，完成 {completedSprints} 次冲刺，记录 {errorCount} 道错题。'**
+   String achievementMilestoneShareText(
+-      Object completedSprints,
+-      Object errorCount,
+-      Object hashtag,
+-      Object headline,
+-      Object masteredNodes,
+-      Object studyDays);
++    Object completedSprints,
++    Object errorCount,
++    Object hashtag,
++    Object headline,
++    Object masteredNodes,
++    Object studyDays,
++  );
+ 
+   /// No description provided for @achievementMilestoneShareInProgress.
+   ///
+@@ -38664,7 +38625,11 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{month}月{day}日 {hour}:{minute}'**
+   String achievementUnlockTimeDate(
+-      Object day, Object hour, Object minute, Object month);
++    Object day,
++    Object hour,
++    Object minute,
++    Object month,
++  );
+ 
+   /// No description provided for @achievementUnlockCombo.
+   ///
+@@ -38857,7 +38822,11 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'结果：{result}，影响任务 {affected} 个，新增 {inserted} 个，收起 {hidden} 个'**
+   String notificationCompilationSummary(
+-      Object affected, Object hidden, Object inserted, Object result);
++    Object affected,
++    Object hidden,
++    Object inserted,
++    Object result,
++  );
+ 
+   /// No description provided for @notificationEvidencePlanHealthRecovered.
+   ///
+@@ -39074,7 +39043,9 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'接受率 {acceptanceRate}% · 行动率 {actionRate}%'**
+   String notificationAnalyticsAcceptanceActionRate(
+-      Object acceptanceRate, Object actionRate);
++    Object acceptanceRate,
++    Object actionRate,
++  );
+ 
+   /// No description provided for @notificationAnalyticsToneEffectivenessTitle.
+   ///
+@@ -39111,7 +39082,9 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'行动率 {actedRate}% · 有效率 {effectiveRate}%'**
+   String notificationAnalyticsActedEffectiveRate(
+-      Object actedRate, Object effectiveRate);
++    Object actedRate,
++    Object effectiveRate,
++  );
+ 
+   /// No description provided for @notificationAnalyticsTimeToActionTitle.
+   ///
+@@ -39178,7 +39151,9 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'接受率: {acceptanceRate}% · 行动率: {actionRate}%'**
+   String notificationAnalyticsRateSuffix(
+-      Object acceptanceRate, Object actionRate);
++    Object acceptanceRate,
++    Object actionRate,
++  );
+ 
+   /// No description provided for @focusNoTaskHint.
+   ///
+@@ -39221,7 +39196,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'今天的专注让你的 {nodeName} 掌握度从 {oldMastery} 提升到了 {newMastery} 分'**
+   String focusSessionMasteryUpdate(
+-      String nodeName, int oldMastery, int newMastery);
++    String nodeName,
++    int oldMastery,
++    int newMastery,
++  );
+ 
+   /// No description provided for @focusReflectionTitleLabel.
+   ///
+@@ -49775,8 +49753,12 @@ abstract class AppLocalizations {
+   ///
+   /// In zh, this message translates to:
+   /// **'我的 7 天备考冲刺完成：掌握 {masteredNodes} 个知识节点，修复 {repairedErrors} 个错误模式，完成 {completedTasks} 个任务。最强项：{strongestArea}。#Sparkle备考'**
+-  String planSprintShareText(int masteredNodes, int repairedErrors,
+-      int completedTasks, String strongestArea);
++  String planSprintShareText(
++    int masteredNodes,
++    int repairedErrors,
++    int completedTasks,
++    String strongestArea,
++  );
+ 
+   /// No description provided for @planSprintBack.
+   ///
+@@ -49819,7 +49801,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'掌握了 {masteredNodes} 个知识节点，修复了 {repairedErrors} 个错误模式，完成了 {completedTasks} 个任务。'**
+   String planSprintResultSummary(
+-      Object completedTasks, Object masteredNodes, Object repairedErrors);
++    Object completedTasks,
++    Object masteredNodes,
++    Object repairedErrors,
++  );
+ 
+   /// No description provided for @planSprintStrongest.
+   ///
+@@ -50060,7 +50045,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{mode} · 进行中（第 {currentDay} 天，还剩 {remainingDays} 天）'**
+   String planPortfolioActiveDay(
+-      Object currentDay, Object mode, Object remainingDays);
++    Object currentDay,
++    Object mode,
++    Object remainingDays,
++  );
+ 
+   /// No description provided for @planPortfolioActiveShort.
+   ///
+@@ -55449,7 +55437,11 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'prompt 命中 {prompt}% · 推理命中 {inference}% · known {promptCount}/{inferenceCount}'**
+   String aiopsPromptHit(
+-      String prompt, String inference, int promptCount, int inferenceCount);
++    String prompt,
++    String inference,
++    int promptCount,
++    int inferenceCount,
++  );
+ 
+   /// No description provided for @calTaskRescheduled.
+   ///
+@@ -56950,7 +56942,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{tone} · {verbosity}。{reason}'**
+   String understandingStyleSummary(
+-      String tone, String verbosity, String reason);
++    String tone,
++    String verbosity,
++    String reason,
++  );
+ 
+   /// No description provided for @understandingRecentlyCorrected.
+   ///
+@@ -57995,7 +57990,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'将「{title}」的状态从「{status}」改为「{nextStatus}」。\\n\\n这会影响相关计划、任务和提醒，且不会自动撤销。'**
+   String personaGoalStatusChangeContent(
+-      Object nextStatus, Object status, Object title);
++    Object nextStatus,
++    Object status,
++    Object title,
++  );
+ 
+   /// No description provided for @personaConfirmChange.
+   ///
+@@ -64698,14 +64696,20 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'你是Sparkle内置的群聊AI助手，正在协助群聊「{name}」。\n你的任务是产出一条最终可直接发送到群里的中文消息。\n只输出消息正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样发”“建议发送”，不要使用项目符号或备注，不要冒充系统说明。\n语气自然、简洁、友好，像群成员会直接发出去的话。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用 `•`、`◦`、emoji 项目符号、半残 Markdown。\n\n最近对话:\n{contextLines}\n\n用户问题:\n{input}'**
+   String communityAgentGroupPromptZh(
+-      Object contextLines, Object input, Object name);
++    Object contextLines,
++    Object input,
++    Object name,
++  );
+ 
+   /// No description provided for @communityAgentGroupPromptEn.
+   ///
+   /// In zh, this message translates to:
+   /// **'You are Sparkle\'s built-in group chat AI assistant, helping in the group \"{name}\".\nYour task is to produce a single message ready to send directly in the group.\nOutput only the message body — no explanations, no preambles, no \"I can help\" or \"You could say\" or \"Suggested reply\", no bullet points or notes, no system impersonation.\nTone: natural, concise, friendly — like something a group member would actually send.\nIf you need to list items, only use `1. ` or `- `. No `•`, `◦`, emoji bullets, or broken Markdown.\n\nRecent conversation:\n{contextLines}\n\nUser question:\n{input}'**
+   String communityAgentGroupPromptEn(
+-      Object contextLines, Object input, Object name);
++    Object contextLines,
++    Object input,
++    Object name,
++  );
+ 
+   /// No description provided for @communityAgentFriend.
+   ///
+@@ -64718,14 +64722,20 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'你是Sparkle内置的私聊AI助手，正在协助我与「{name}」的对话。\n你的任务是产出一条最终可直接发送给对方的中文私聊回复。\n只输出回复正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样回”“建议回复”，不要附带分析或备注。\n语气自然、礼貌、克制，像我会直接按下发送的内容。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用特殊项目符号或半残 Markdown。\n\n最近对话:\n{contextLines}\n\n用户问题:\n{input}'**
+   String communityAgentPrivatePromptZh(
+-      Object contextLines, Object input, Object name);
++    Object contextLines,
++    Object input,
++    Object name,
++  );
+ 
+   /// No description provided for @communityAgentPrivatePromptEn.
+   ///
+   /// In zh, this message translates to:
+   /// **'You are Sparkle\'s built-in private chat AI assistant, helping with my conversation with \"{name}\".\nYour task is to produce a single private reply ready to send directly.\nOutput only the reply body — no explanations, no preambles, no \"I can help\" or \"You could reply\" or \"Suggested reply\", no analysis or notes.\nTone: natural, polite, restrained — like something I would actually hit send on.\nIf you need to list items, only use `1. ` or `- `. No special bullets or broken Markdown.\n\nRecent conversation:\n{contextLines}\n\nUser question:\n{input}'**
+   String communityAgentPrivatePromptEn(
+-      Object contextLines, Object input, Object name);
++    Object contextLines,
++    Object input,
++    Object name,
++  );
+ 
+   /// No description provided for @communityAgentPresetSummaryGroupZh.
+   ///
+@@ -65146,7 +65156,11 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'必读 {mustLoad} · 选读 {optional} · 附件 {attached}{retrievalLabel}'**
+   String taskProtocolMaterialsCount(
+-      Object attached, Object mustLoad, Object optional, Object retrievalLabel);
++    Object attached,
++    Object mustLoad,
++    Object optional,
++    Object retrievalLabel,
++  );
+ 
+   /// No description provided for @taskProtocolUpdatesOnCompletion.
+   ///
+@@ -67175,7 +67189,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{title} ≥ {threshold} {unit}'**
+   String displayCriterionAtLeastUnitTemplate(
+-      String title, String threshold, String unit);
++    String title,
++    String threshold,
++    String unit,
++  );
+ 
+   /// No description provided for @displayCriterionAtLeastTemplate.
+   ///
+@@ -67445,8 +67462,9 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
+   }
+ 
+   throw FlutterError(
+-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+-      'an issue with the localizations generation tool. Please file an issue '
+-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+-      'that was used.');
++    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
++    'an issue with the localizations generation tool. Please file an issue '
++    'on GitHub with a reproducible sample app and the gen-l10n configuration '
++    'that was used.',
++  );
+ }
+diff --git a/mobile/lib/l10n/app_localizations_en.dart b/mobile/lib/l10n/app_localizations_en.dart
+index cbe4fbd4..1148651c 100644
+--- a/mobile/lib/l10n/app_localizations_en.dart
++++ b/mobile/lib/l10n/app_localizations_en.dart
+@@ -4331,46 +4331,6 @@ class AppLocalizationsEn extends AppLocalizations {
+     return 'Capture failed: $error';
+   }
+ 
+-  @override
+-  String get leaderboardTitle => 'Leaderboard';
+-
+-  @override
+-  String get leaderboardGlobal => 'Global';
+-
+-  @override
+-  String get leaderboardFriends => 'Friends';
+-
+-  @override
+-  String get leaderboardGroup => 'Groups';
+-
+-  @override
+-  String get leaderboardSubject => 'Subjects';
+-
+-  @override
+-  String get leaderboardWeekly => 'Weekly';
+-
+-  @override
+-  String get leaderboardStreak => 'Streak';
+-
+-  @override
+-  String leaderboardMyRank(Object rank) {
+-    return 'My rank: $rank';
+-  }
+-
+-  @override
+-  String leaderboardPoints(Object value) {
+-    return '$value pts';
+-  }
+-
+-  @override
+-  String leaderboardNoData(Object label) {
+-    return 'No $label data yet';
+-  }
+-
+-  @override
+-  String get leaderboardLoadFailed =>
+-      'Failed to load leaderboard. Please try again.';
+-
+   @override
+   String get leaderboardSelfAnchorEmptyAction => 'Go to my sprint';
+ 
+@@ -11112,7 +11072,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String taskDetailCandidatesApplied(
+-      Object count, Object created, Object reused) {
++    Object count,
++    Object created,
++    Object reused,
++  ) {
+     return 'Processed $count candidates, created $created new, reused $reused existing.';
+   }
+ 
+@@ -11925,7 +11888,11 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String aiOpsPredictionSummary(
+-      Object days, Object topAction, Object promptUtil, Object inferenceUtil) {
++    Object days,
++    Object topAction,
++    Object promptUtil,
++    Object inferenceUtil,
++  ) {
+     return 'In the past $days days, the prediction action worth watching most is \"$topAction\"; prompt/inference hit rates are $promptUtil%/$inferenceUtil%.';
+   }
+ 
+@@ -13298,7 +13265,11 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String planDetailPhaseStats(
+-      Object progress, Object completed, Object occurrences, Object tasks) {
++    Object progress,
++    Object completed,
++    Object occurrences,
++    Object tasks,
++  ) {
+     return '$progress% · $completed/$occurrences occurrences · $tasks tasks';
+   }
+ 
+@@ -13725,7 +13696,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String theaterTimelinePhaseWithSteps(
+-      Object compare, Object label, Object step) {
++    Object compare,
++    Object label,
++    Object step,
++  ) {
+     return 'Current phase: $label · $step · $compare';
+   }
+ 
+@@ -13867,8 +13841,12 @@ class AppLocalizationsEn extends AppLocalizations {
+   }
+ 
+   @override
+-  String theaterRouteRangePrediction(Object completionHigh,
+-      Object completionLow, Object masteryHigh, Object masteryLow) {
++  String theaterRouteRangePrediction(
++    Object completionHigh,
++    Object completionLow,
++    Object masteryHigh,
++    Object masteryLow,
++  ) {
+     return 'Range prediction: completion $completionLow%-$completionHigh%, mastery $masteryLow%-$masteryHigh%';
+   }
+ 
+@@ -14326,7 +14304,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String planCreateReviewSummary(
+-      Object dailyMinutes, Object hours, Object type) {
++    Object dailyMinutes,
++    Object hours,
++    Object type,
++  ) {
+     return '$type · $dailyMinutes min/day · $hours hours';
+   }
+ 
+@@ -14992,16 +14973,21 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String theaterWhatIfCombinedResult(
+-      Object originalMastery,
+-      Object originalCompletion,
+-      Object predictedMastery,
+-      Object predictedCompletion) {
++    Object originalMastery,
++    Object originalCompletion,
++    Object predictedMastery,
++    Object predictedCompletion,
++  ) {
+     return 'Original $originalMastery% / $originalCompletion%  →  Adjusted $predictedMastery% / $predictedCompletion%';
+   }
+ 
+   @override
+-  String theaterAccuracyPredictedActual(Object predictedCompletion,
+-      Object predictedMastery, Object actualCompletion, Object actualMastery) {
++  String theaterAccuracyPredictedActual(
++    Object predictedCompletion,
++    Object predictedMastery,
++    Object actualCompletion,
++    Object actualMastery,
++  ) {
+     return 'Predicted $predictedCompletion% / $predictedMastery%, Actual $actualCompletion% / $actualMastery%';
+   }
+ 
+@@ -21857,12 +21843,13 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String achievementMilestoneShareText(
+-      Object completedSprints,
+-      Object errorCount,
+-      Object hashtag,
+-      Object headline,
+-      Object masteredNodes,
+-      Object studyDays) {
++    Object completedSprints,
++    Object errorCount,
++    Object hashtag,
++    Object headline,
++    Object masteredNodes,
++    Object studyDays,
++  ) {
+     return '$hashtag I reached the \"$headline\" milestone on Sparkle. Studied $studyDays days, mastered $masteredNodes nodes, completed $completedSprints sprints, recorded $errorCount errors.';
+   }
+ 
+@@ -22104,7 +22091,11 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String achievementUnlockTimeDate(
+-      Object day, Object hour, Object minute, Object month) {
++    Object day,
++    Object hour,
++    Object minute,
++    Object month,
++  ) {
+     return '$month/$day $hour:$minute';
+   }
+ 
+@@ -22211,7 +22202,11 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String notificationCompilationSummary(
+-      Object affected, Object hidden, Object inserted, Object result) {
++    Object affected,
++    Object hidden,
++    Object inserted,
++    Object result,
++  ) {
+     return 'Result: $result, affected $affected tasks, added $inserted, hidden $hidden';
+   }
+ 
+@@ -22335,7 +22330,9 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String notificationAnalyticsAcceptanceActionRate(
+-      Object acceptanceRate, Object actionRate) {
++    Object acceptanceRate,
++    Object actionRate,
++  ) {
+     return 'Acceptance rate $acceptanceRate% · Action rate $actionRate%';
+   }
+ 
+@@ -22365,7 +22362,9 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String notificationAnalyticsActedEffectiveRate(
+-      Object actedRate, Object effectiveRate) {
++    Object actedRate,
++    Object effectiveRate,
++  ) {
+     return 'Action rate $actedRate% · Effective rate $effectiveRate%';
+   }
+ 
+@@ -22402,7 +22401,9 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String notificationAnalyticsRateSuffix(
+-      Object acceptanceRate, Object actionRate) {
++    Object acceptanceRate,
++    Object actionRate,
++  ) {
+     return 'Acceptance rate: $acceptanceRate% · Action rate: $actionRate%';
+   }
+ 
+@@ -22432,7 +22433,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String focusSessionMasteryUpdate(
+-      String nodeName, int oldMastery, int newMastery) {
++    String nodeName,
++    int oldMastery,
++    int newMastery,
++  ) {
+     return 'Today\'s focus raised $nodeName mastery from $oldMastery to $newMastery';
+   }
+ 
+@@ -28442,8 +28446,12 @@ class AppLocalizationsEn extends AppLocalizations {
+   String get planSprintShareOpened => 'Share opened';
+ 
+   @override
+-  String planSprintShareText(int masteredNodes, int repairedErrors,
+-      int completedTasks, String strongestArea) {
++  String planSprintShareText(
++    int masteredNodes,
++    int repairedErrors,
++    int completedTasks,
++    String strongestArea,
++  ) {
+     return 'My 7-day exam sprint is done: mastered $masteredNodes knowledge nodes, repaired $repairedErrors error patterns, completed $completedTasks tasks. Strongest area: $strongestArea. #SparkleExam';
+   }
+ 
+@@ -28467,7 +28475,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String planSprintResultSummary(
+-      Object completedTasks, Object masteredNodes, Object repairedErrors) {
++    Object completedTasks,
++    Object masteredNodes,
++    Object repairedErrors,
++  ) {
+     return 'Mastered $masteredNodes knowledge nodes, repaired $repairedErrors error patterns, completed $completedTasks tasks.';
+   }
+ 
+@@ -28619,7 +28630,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String planPortfolioActiveDay(
+-      Object currentDay, Object mode, Object remainingDays) {
++    Object currentDay,
++    Object mode,
++    Object remainingDays,
++  ) {
+     return '$mode · In progress (Day $currentDay, $remainingDays days left)';
+   }
+ 
+@@ -31807,7 +31821,11 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String aiopsPromptHit(
+-      String prompt, String inference, int promptCount, int inferenceCount) {
++    String prompt,
++    String inference,
++    int promptCount,
++    int inferenceCount,
++  ) {
+     return 'Prompt hit $prompt% · Inference hit $inference% · Known $promptCount/$inferenceCount';
+   }
+ 
+@@ -32634,7 +32652,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String lowYieldCardMessage(
+-      String activity, String reason, String suggestion) {
++    String activity,
++    String reason,
++    String suggestion,
++  ) {
+     return 'I noticed you are doing $activity. Considering $reason, what may be more valuable now is $suggestion.';
+   }
+ 
+@@ -32696,7 +32717,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String understandingStyleSummary(
+-      String tone, String verbosity, String reason) {
++    String tone,
++    String verbosity,
++    String reason,
++  ) {
+     return '$tone · $verbosity. $reason';
+   }
+ 
+@@ -33271,7 +33295,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String personaGoalStatusChangeContent(
+-      Object nextStatus, Object status, Object title) {
++    Object nextStatus,
++    Object status,
++    Object title,
++  ) {
+     return 'Change status of \"$title\" from \"$status\" to \"$nextStatus\".\\n\\nThis will affect related plans, tasks and reminders, and cannot be auto-reverted.';
+   }
+ 
+@@ -37117,13 +37144,19 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String communityAgentGroupPromptZh(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return '你是Sparkle内置的群聊AI助手，正在协助群聊「$name」。\n你的任务是产出一条最终可直接发送到群里的中文消息。\n只输出消息正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样发”“建议发送”，不要使用项目符号或备注，不要冒充系统说明。\n语气自然、简洁、友好，像群成员会直接发出去的话。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用 `•`、`◦`、emoji 项目符号、半残 Markdown。\n\n最近对话:\n$contextLines\n\n用户问题:\n$input';
+   }
+ 
+   @override
+   String communityAgentGroupPromptEn(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return 'You are Sparkle\'s built-in group chat AI assistant, helping in the group \"$name\".\nYour task is to produce a single message ready to send directly in the group.\nOutput only the message body — no explanations, no preambles, no \"I can help\" or \"You could say\" or \"Suggested reply\", no bullet points or notes, no system impersonation.\nTone: natural, concise, friendly — like something a group member would actually send.\nIf you need to list items, only use `1. ` or `- `. No `•`, `◦`, emoji bullets, or broken Markdown.\n\nRecent conversation:\n$contextLines\n\nUser question:\n$input';
+   }
+ 
+@@ -37132,13 +37165,19 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String communityAgentPrivatePromptZh(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return '你是Sparkle内置的私聊AI助手，正在协助我与「$name」的对话。\n你的任务是产出一条最终可直接发送给对方的中文私聊回复。\n只输出回复正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样回”“建议回复”，不要附带分析或备注。\n语气自然、礼貌、克制，像我会直接按下发送的内容。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用特殊项目符号或半残 Markdown。\n\n最近对话:\n$contextLines\n\n用户问题:\n$input';
+   }
+ 
+   @override
+   String communityAgentPrivatePromptEn(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return 'You are Sparkle\'s built-in private chat AI assistant, helping with my conversation with \"$name\".\nYour task is to produce a single private reply ready to send directly.\nOutput only the reply body — no explanations, no preambles, no \"I can help\" or \"You could reply\" or \"Suggested reply\", no analysis or notes.\nTone: natural, polite, restrained — like something I would actually hit send on.\nIf you need to list items, only use `1. ` or `- `. No special bullets or broken Markdown.\n\nRecent conversation:\n$contextLines\n\nUser question:\n$input';
+   }
+ 
+@@ -37430,8 +37469,12 @@ class AppLocalizationsEn extends AppLocalizations {
+   String get taskProtocolMaterialsNeeded => 'Materials needed';
+ 
+   @override
+-  String taskProtocolMaterialsCount(Object attached, Object mustLoad,
+-      Object optional, Object retrievalLabel) {
++  String taskProtocolMaterialsCount(
++    Object attached,
++    Object mustLoad,
++    Object optional,
++    Object retrievalLabel,
++  ) {
+     return 'Required $mustLoad · Optional $optional · Attached $attached$retrievalLabel';
+   }
+ 
+@@ -38579,7 +38622,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String displayCriterionAtLeastUnitTemplate(
+-      String title, String threshold, String unit) {
++    String title,
++    String threshold,
++    String unit,
++  ) {
+     return '$title: at least $threshold $unit';
+   }
+ 
+diff --git a/mobile/lib/l10n/app_localizations_zh.dart b/mobile/lib/l10n/app_localizations_zh.dart
+index d52784bc..25fb9f64 100644
+--- a/mobile/lib/l10n/app_localizations_zh.dart
++++ b/mobile/lib/l10n/app_localizations_zh.dart
+@@ -4149,45 +4149,6 @@ class AppLocalizationsZh extends AppLocalizations {
+     return '捕捉失败：$error';
+   }
+ 
+-  @override
+-  String get leaderboardTitle => '排行榜';
+-
+-  @override
+-  String get leaderboardGlobal => '全局榜';
+-
+-  @override
+-  String get leaderboardFriends => '好友榜';
+-
+-  @override
+-  String get leaderboardGroup => '群组榜';
+-
+-  @override
+-  String get leaderboardSubject => '学科榜';
+-
+-  @override
+-  String get leaderboardWeekly => '本周榜';
+-
+-  @override
+-  String get leaderboardStreak => '连胜榜';
+-
+-  @override
+-  String leaderboardMyRank(Object rank) {
+-    return '我的排名：$rank';
+-  }
+-
+-  @override
+-  String leaderboardPoints(Object value) {
+-    return '$value分';
+-  }
+-
+-  @override
+-  String leaderboardNoData(Object label) {
+-    return '暂无$label数据';
+-  }
+-
+-  @override
+-  String get leaderboardLoadFailed => '排行榜加载失败，请重试';
+-
+   @override
+   String get leaderboardSelfAnchorEmptyAction => '去看我的冲刺';
+ 
+@@ -10702,7 +10663,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String taskDetailCandidatesApplied(
+-      Object count, Object created, Object reused) {
++    Object count,
++    Object created,
++    Object reused,
++  ) {
+     return '已处理 $count 个候选节点，新增 $created 个，复用 $reused 个已有节点。';
+   }
+ 
+@@ -11456,7 +11420,11 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String aiOpsPredictionSummary(
+-      Object days, Object topAction, Object promptUtil, Object inferenceUtil) {
++    Object days,
++    Object topAction,
++    Object promptUtil,
++    Object inferenceUtil,
++  ) {
+     return '近 $days 天里，当前最值得继续盯的预测动作是「$topAction」；同时 prompt / inference 命中率分别是 $promptUtil%/$inferenceUtil%。';
+   }
+ 
+@@ -12752,7 +12720,11 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String planDetailPhaseStats(
+-      Object progress, Object completed, Object occurrences, Object tasks) {
++    Object progress,
++    Object completed,
++    Object occurrences,
++    Object tasks,
++  ) {
+     return '$progress% · $completed/$occurrences 次发生 · $tasks 个任务';
+   }
+ 
+@@ -13161,7 +13133,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String theaterTimelinePhaseWithSteps(
+-      Object compare, Object label, Object step) {
++    Object compare,
++    Object label,
++    Object step,
++  ) {
+     return '当前阶段：$label · $step · $compare';
+   }
+ 
+@@ -13299,8 +13274,12 @@ class AppLocalizationsZh extends AppLocalizations {
+   }
+ 
+   @override
+-  String theaterRouteRangePrediction(Object completionHigh,
+-      Object completionLow, Object masteryHigh, Object masteryLow) {
++  String theaterRouteRangePrediction(
++    Object completionHigh,
++    Object completionLow,
++    Object masteryHigh,
++    Object masteryLow,
++  ) {
+     return '区间预测：完成率 $completionLow%-$completionHigh%， 掌握度 $masteryLow%-$masteryHigh%';
+   }
+ 
+@@ -13737,7 +13716,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String planCreateReviewSummary(
+-      Object dailyMinutes, Object hours, Object type) {
++    Object dailyMinutes,
++    Object hours,
++    Object type,
++  ) {
+     return '$type · $dailyMinutes 分钟/天 · $hours 小时';
+   }
+ 
+@@ -14389,16 +14371,21 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String theaterWhatIfCombinedResult(
+-      Object originalMastery,
+-      Object originalCompletion,
+-      Object predictedMastery,
+-      Object predictedCompletion) {
++    Object originalMastery,
++    Object originalCompletion,
++    Object predictedMastery,
++    Object predictedCompletion,
++  ) {
+     return '原始 $originalMastery% / $originalCompletion%  →  调整后 $predictedMastery% / $predictedCompletion%';
+   }
+ 
+   @override
+-  String theaterAccuracyPredictedActual(Object predictedCompletion,
+-      Object predictedMastery, Object actualCompletion, Object actualMastery) {
++  String theaterAccuracyPredictedActual(
++    Object predictedCompletion,
++    Object predictedMastery,
++    Object actualCompletion,
++    Object actualMastery,
++  ) {
+     return '预测 $predictedCompletion% / $predictedMastery%， 实际 $actualCompletion% / $actualMastery%';
+   }
+ 
+@@ -20962,12 +20949,13 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String achievementMilestoneShareText(
+-      Object completedSprints,
+-      Object errorCount,
+-      Object hashtag,
+-      Object headline,
+-      Object masteredNodes,
+-      Object studyDays) {
++    Object completedSprints,
++    Object errorCount,
++    Object hashtag,
++    Object headline,
++    Object masteredNodes,
++    Object studyDays,
++  ) {
+     return '$hashtag 我在 Sparkle 达成了「$headline」里程碑。累计学习 $studyDays 天，掌握 $masteredNodes 个知识节点，完成 $completedSprints 次冲刺，记录 $errorCount 道错题。';
+   }
+ 
+@@ -21207,7 +21195,11 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String achievementUnlockTimeDate(
+-      Object day, Object hour, Object minute, Object month) {
++    Object day,
++    Object hour,
++    Object minute,
++    Object month,
++  ) {
+     return '$month月$day日 $hour:$minute';
+   }
+ 
+@@ -21310,7 +21302,11 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String notificationCompilationSummary(
+-      Object affected, Object hidden, Object inserted, Object result) {
++    Object affected,
++    Object hidden,
++    Object inserted,
++    Object result,
++  ) {
+     return '结果：$result，影响任务 $affected 个，新增 $inserted 个，收起 $hidden 个';
+   }
+ 
+@@ -21429,7 +21425,9 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String notificationAnalyticsAcceptanceActionRate(
+-      Object acceptanceRate, Object actionRate) {
++    Object acceptanceRate,
++    Object actionRate,
++  ) {
+     return '接受率 $acceptanceRate% · 行动率 $actionRate%';
+   }
+ 
+@@ -21459,7 +21457,9 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String notificationAnalyticsActedEffectiveRate(
+-      Object actedRate, Object effectiveRate) {
++    Object actedRate,
++    Object effectiveRate,
++  ) {
+     return '行动率 $actedRate% · 有效率 $effectiveRate%';
+   }
+ 
+@@ -21495,7 +21495,9 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String notificationAnalyticsRateSuffix(
+-      Object acceptanceRate, Object actionRate) {
++    Object acceptanceRate,
++    Object actionRate,
++  ) {
+     return '接受率: $acceptanceRate% · 行动率: $actionRate%';
+   }
+ 
+@@ -21523,7 +21525,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String focusSessionMasteryUpdate(
+-      String nodeName, int oldMastery, int newMastery) {
++    String nodeName,
++    int oldMastery,
++    int newMastery,
++  ) {
+     return '今天的专注让你的 $nodeName 掌握度从 $oldMastery 提升到了 $newMastery 分';
+   }
+ 
+@@ -27261,8 +27266,12 @@ class AppLocalizationsZh extends AppLocalizations {
+   String get planSprintShareOpened => '分享已打开';
+ 
+   @override
+-  String planSprintShareText(int masteredNodes, int repairedErrors,
+-      int completedTasks, String strongestArea) {
++  String planSprintShareText(
++    int masteredNodes,
++    int repairedErrors,
++    int completedTasks,
++    String strongestArea,
++  ) {
+     return '我的 7 天备考冲刺完成：掌握 $masteredNodes 个知识节点，修复 $repairedErrors 个错误模式，完成 $completedTasks 个任务。最强项：$strongestArea。#Sparkle备考';
+   }
+ 
+@@ -27286,7 +27295,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String planSprintResultSummary(
+-      Object completedTasks, Object masteredNodes, Object repairedErrors) {
++    Object completedTasks,
++    Object masteredNodes,
++    Object repairedErrors,
++  ) {
+     return '掌握了 $masteredNodes 个知识节点，修复了 $repairedErrors 个错误模式，完成了 $completedTasks 个任务。';
+   }
+ 
+@@ -27430,7 +27442,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String planPortfolioActiveDay(
+-      Object currentDay, Object mode, Object remainingDays) {
++    Object currentDay,
++    Object mode,
++    Object remainingDays,
++  ) {
+     return '$mode · 进行中（第 $currentDay 天，还剩 $remainingDays 天）';
+   }
+ 
+@@ -30495,7 +30510,11 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String aiopsPromptHit(
+-      String prompt, String inference, int promptCount, int inferenceCount) {
++    String prompt,
++    String inference,
++    int promptCount,
++    int inferenceCount,
++  ) {
+     return 'prompt 命中 $prompt% · 推理命中 $inference% · known $promptCount/$inferenceCount';
+   }
+ 
+@@ -31299,7 +31318,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String lowYieldCardMessage(
+-      String activity, String reason, String suggestion) {
++    String activity,
++    String reason,
++    String suggestion,
++  ) {
+     return '我注意到你正在做 $activity。考虑到 $reason，现在更值得做的可能是 $suggestion。';
+   }
+ 
+@@ -31359,7 +31381,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String understandingStyleSummary(
+-      String tone, String verbosity, String reason) {
++    String tone,
++    String verbosity,
++    String reason,
++  ) {
+     return '$tone · $verbosity。$reason';
+   }
+ 
+@@ -31908,7 +31933,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String personaGoalStatusChangeContent(
+-      Object nextStatus, Object status, Object title) {
++    Object nextStatus,
++    Object status,
++    Object title,
++  ) {
+     return '将「$title」的状态从「$status」改为「$nextStatus」。\\n\\n这会影响相关计划、任务和提醒，且不会自动撤销。';
+   }
+ 
+@@ -35589,13 +35617,19 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String communityAgentGroupPromptZh(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return '你是Sparkle内置的群聊AI助手，正在协助群聊「$name」。\n你的任务是产出一条最终可直接发送到群里的中文消息。\n只输出消息正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样发”“建议发送”，不要使用项目符号或备注，不要冒充系统说明。\n语气自然、简洁、友好，像群成员会直接发出去的话。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用 `•`、`◦`、emoji 项目符号、半残 Markdown。\n\n最近对话:\n$contextLines\n\n用户问题:\n$input';
+   }
+ 
+   @override
+   String communityAgentGroupPromptEn(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return 'You are Sparkle\'s built-in group chat AI assistant, helping in the group \"$name\".\nYour task is to produce a single message ready to send directly in the group.\nOutput only the message body — no explanations, no preambles, no \"I can help\" or \"You could say\" or \"Suggested reply\", no bullet points or notes, no system impersonation.\nTone: natural, concise, friendly — like something a group member would actually send.\nIf you need to list items, only use `1. ` or `- `. No `•`, `◦`, emoji bullets, or broken Markdown.\n\nRecent conversation:\n$contextLines\n\nUser question:\n$input';
+   }
+ 
+@@ -35604,13 +35638,19 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String communityAgentPrivatePromptZh(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return '你是Sparkle内置的私聊AI助手，正在协助我与「$name」的对话。\n你的任务是产出一条最终可直接发送给对方的中文私聊回复。\n只输出回复正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样回”“建议回复”，不要附带分析或备注。\n语气自然、礼貌、克制，像我会直接按下发送的内容。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用特殊项目符号或半残 Markdown。\n\n最近对话:\n$contextLines\n\n用户问题:\n$input';
+   }
+ 
+   @override
+   String communityAgentPrivatePromptEn(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return 'You are Sparkle\'s built-in private chat AI assistant, helping with my conversation with \"$name\".\nYour task is to produce a single private reply ready to send directly.\nOutput only the reply body — no explanations, no preambles, no \"I can help\" or \"You could reply\" or \"Suggested reply\", no analysis or notes.\nTone: natural, polite, restrained — like something I would actually hit send on.\nIf you need to list items, only use `1. ` or `- `. No special bullets or broken Markdown.\n\nRecent conversation:\n$contextLines\n\nUser question:\n$input';
+   }
+ 
+@@ -35888,8 +35928,12 @@ class AppLocalizationsZh extends AppLocalizations {
+   String get taskProtocolMaterialsNeeded => '需要的资料';
+ 
+   @override
+-  String taskProtocolMaterialsCount(Object attached, Object mustLoad,
+-      Object optional, Object retrievalLabel) {
++  String taskProtocolMaterialsCount(
++    Object attached,
++    Object mustLoad,
++    Object optional,
++    Object retrievalLabel,
++  ) {
+     return '必读 $mustLoad · 选读 $optional · 附件 $attached$retrievalLabel';
+   }
+ 
+@@ -36976,7 +37020,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String displayCriterionAtLeastUnitTemplate(
+-      String title, String threshold, String unit) {
++    String title,
++    String threshold,
++    String unit,
++  ) {
+     return '$title ≥ $threshold $unit';
+   }
+ 
+diff --git a/mobile/lib/l10n/app_zh.arb b/mobile/lib/l10n/app_zh.arb
+index b8ac7557..1161db0e 100755
+--- a/mobile/lib/l10n/app_zh.arb
++++ b/mobile/lib/l10n/app_zh.arb
+@@ -1392,36 +1392,6 @@
+             "error": {}
+         }
+     },
+-    "leaderboardTitle": "排行榜",
+-    "leaderboardGlobal": "全局榜",
+-    "leaderboardFriends": "好友榜",
+-    "leaderboardGroup": "群组榜",
+-    "leaderboardSubject": "学科榜",
+-    "leaderboardWeekly": "本周榜",
+-    "leaderboardStreak": "连胜榜",
+-    "leaderboardMyRank": "我的排名：{rank}",
+-    "@leaderboardMyRank": {
+-        "placeholders": {
+-            "rank": {
+-                "type": "Object"
+-            }
+-        }
+-    },
+-    "leaderboardPoints": "{value}分",
+-    "@leaderboardPoints": {
+-        "placeholders": {
+-            "value": {
+-                "type": "Object"
+-            }
+-        }
+-    },
+-    "leaderboardNoData": "暂无{label}数据",
+-    "@leaderboardNoData": {
+-        "placeholders": {
+-            "label": {}
+-        }
+-    },
+-    "leaderboardLoadFailed": "排行榜加载失败，请重试",
+     "leaderboardSelfAnchorEmptyAction": "去看我的冲刺",
+     "leaderboardSelfAnchorEmptyDescription": "近 7 天还没有完成的冲刺任务或掌握度变化。完成今天的第一个任务，锚点就会开始生长。",
+     "leaderboardSelfAnchorEmptyTitle": "这几天还没有记录",

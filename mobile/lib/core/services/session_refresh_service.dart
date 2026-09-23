@@ -21,7 +21,6 @@ import 'package:sparkle/features/home/presentation/providers/notification_provid
 import 'package:sparkle/features/home/presentation/providers/spine_status_band_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/understanding_snapshot_provider.dart';
-import 'package:sparkle/features/leaderboard/presentation/providers/leaderboard_provider.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_center_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_goal_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
@@ -73,8 +72,6 @@ final sessionBoundProvidersProvider = Provider<List<ProviderOrFamily>>(
     myGroupsProvider,
     achievementProvider,
     streakHistoryProvider,
-    leaderboardProvider,
-    myRankProvider,
     focusStatisticsProvider,
     galaxyProvider,
     enhancedGalaxyRepositoryProvider,
