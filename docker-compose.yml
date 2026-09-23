@@ -7,6 +7,11 @@ services:
       args:
         AGE_REF: PG16/v1.6.0-rc0
     container_name: sparkle_db
+    # 基础镜像 CMD 即 postgres，此处显式重申以追加慢查询日志面（OPS-QUIRKS 裁决 1 最小修 S）
+    command:
+      - "postgres"
+      - "-c"
+      - "log_min_duration_statement=500"
     ports:
       - "127.0.0.1:${SPARKLE_DB_PORT:-5432}:5432"
     environment:
@@ -26,6 +31,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    logging:
+      # OPS-QUIRKS 裁决 1：无上限 json 日志在错误风暴下耗尽磁盘（09-19 前科），且撕裂后 docker logs 静默失败
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
 
   sparkle_age_init:
     build:
@@ -71,6 +82,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
 
   minio:
     image: minio/minio:RELEASE.2025-09-07T16-13-09Z
@@ -100,6 +116,11 @@ services:
           memory: 512M
         reservations:
           memory: 128M
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
 
   sparkle_api:
     build:

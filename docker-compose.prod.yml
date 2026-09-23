@@ -568,6 +568,8 @@ services:
       - "wal_compression=on"
       - "-c"
       - "max_wal_size=${POSTGRES_MAX_WAL_SIZE:-2GB}"
+      - "-c"
+      - "log_min_duration_statement=${POSTGRES_LOG_MIN_DURATION_STATEMENT:-500}"
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
@@ -584,6 +586,12 @@ services:
       start_period: 30s
     deploy:
       resources: *resources_db
+    logging:
+      # OPS-QUIRKS 裁决 1：审计面有界轮转（上限 500MB）——09-19 磁盘事故中日志文件撕裂导致审计黑洞，错误风暴复发不再威胁磁盘
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "5"
 
   redis:
     image: redis/redis-stack-server:7.4.0-v8
@@ -595,14 +603,19 @@ services:
       - REDIS_ENGINE_PASSWORD=${SPARKLE_ENGINE_REDIS_PASSWORD:-${REDIS_PASSWORD}}
       - REDIS_CELERY_PASSWORD=${SPARKLE_CELERY_REDIS_PASSWORD:-${REDIS_PASSWORD}}
     entrypoint: ["/bin/sh", "-c"]
-    command: |
-      cat >/tmp/users.acl <<EOF
-      user default on >$${REDIS_PASSWORD} ~* +@all
-      user gateway on >$${REDIS_GATEWAY_PASSWORD} ~gateway:* ~chat:* ~session:* ~auth:* ~ws:* ~file:* ~cqrs:* ~rate:* ~ratelimit:* ~health:* +@read +@write +@connection +@pubsub -@admin -@dangerous
-      user engine on >$${REDIS_ENGINE_PASSWORD} ~engine:* ~aurora:* ~galaxy:* ~signals:* ~context:* ~user:* ~cache:* ~memory:* ~llm:* ~health:* +@read +@write +@connection +@pubsub -@admin -@dangerous
-      user celery on >$${REDIS_CELERY_PASSWORD} ~celery* ~_kombu* ~kombu* ~engine:* ~aurora:* ~signals:* ~jobs:* ~health:* +@read +@write +@connection +@pubsub +@stream -@admin -@dangerous
-      EOF
-      exec redis-stack-server /redis-stack.conf
+    # 必须用列表形式（单元素脚本串）：字符串形式的 `command: |` 会被 compose 在加载期按空格/换行
+    # shell-split 成词表（实测：容器只执行首词 `cat`，exit 1），整段脚本从未运行（OPS-QUIRKS 裁决 2 落地时发现并修复）。
+    command:
+      - |
+        cat >/tmp/users.acl <<EOF
+        user default on >$${REDIS_PASSWORD} ~* +@all
+        user gateway on >$${REDIS_GATEWAY_PASSWORD} ~gateway:* ~chat:* ~session:* ~auth:* ~ws:* ~file:* ~cqrs:* ~rate:* ~ratelimit:* ~health:* +@read +@write +@connection +@pubsub -@admin -@dangerous
+        user engine on >$${REDIS_ENGINE_PASSWORD} ~engine:* ~aurora:* ~galaxy:* ~signals:* ~context:* ~user:* ~cache:* ~memory:* ~llm:* ~health:* +@read +@write +@connection +@pubsub -@admin -@dangerous
+        user celery on >$${REDIS_CELERY_PASSWORD} ~celery* ~_kombu* ~kombu* ~engine:* ~aurora:* ~signals:* ~jobs:* ~health:* +@read +@write +@connection +@pubsub +@stream -@admin -@dangerous
+        EOF
+        # redis-stack-server 包装脚本强制 --dir /var/lib/redis-stack（容器层，重建即失，绕过 ./redis_data 挂载）。
+        # 其 $* 透传在尾部，redis-server CLI 参数后到者生效：此处 --dir /data 把 RDB+AOF 落回挂载卷（OPS-QUIRKS 裁决 2，实测探针已验证）。
+        exec redis-stack-server /redis-stack.conf --dir /data
     volumes:
       - ./redis_data:/data
       - ./redis.conf:/redis-stack.conf
