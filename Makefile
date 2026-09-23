@@ -54,7 +54,7 @@ db-migrate:
 	cd backend && ( \
 		set -e; \
 		heads_output="$$(../$(ALEMBIC) heads 2>&1)" || { echo "❌ Failed to read Alembic heads."; echo "$$heads_output"; exit 1; }; \
-		heads_count="$$(printf "%s\n" "$$heads_output" | rg -c "^[0-9a-f]" || true)"; \
+		heads_count="$$(printf "%s\n" "$$heads_output" | rg -c "\(head\)" || true)"; \
 		if [ "$$heads_count" -ne 1 ]; then \
 			echo "❌ Alembic head mismatch detected (expected 1 head, got $$heads_count)."; \
 			echo "alembic heads:"; printf "%s\n" "$$heads_output"; \
