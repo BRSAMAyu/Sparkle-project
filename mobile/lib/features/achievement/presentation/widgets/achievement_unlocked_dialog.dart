@@ -34,7 +34,7 @@ class SparkleAchievementUnlockedDialog extends StatelessWidget {
               width: 64,
               height: 64,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
+                gradient: LinearGradient( // dl-spec: ignore rarity identity gradient (dynamic color)
                   colors: [rarityColor, rarityColor.withValues(alpha: 0.6)],
                 ),
                 shape: BoxShape.circle,
@@ -97,7 +97,7 @@ class SparkleAchievementUnlockedDialog extends StatelessWidget {
         // 承接原实心底，白色前景与内容区稀有度图标一致。
         SparkleButton(
           onPressed: onViewAchievements,
-          backgroundGradient: LinearGradient(
+          backgroundGradient: LinearGradient( // dl-spec: ignore rarity identity gradient (dynamic color)
             colors: [rarityColor, rarityColor],
           ),
           foregroundColor: Colors.white,

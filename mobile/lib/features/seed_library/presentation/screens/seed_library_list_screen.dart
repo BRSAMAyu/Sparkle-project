@@ -56,9 +56,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
   }
 
   void _applyFilters() {
-    unawaited(
-      SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
-    );
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     unawaited(
       ref.read(seedLibraryListProvider(_currentParams).notifier).refresh(
             category: _selectedCategory,
@@ -89,9 +87,8 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
           SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: const Icon(Icons.storefront_outlined),
-            onPressed: () => unawaited(
-              context.push(SeedLibraryRoutes.marketplace),
-            ),
+            onPressed: () =>
+                unawaited(context.push(SeedLibraryRoutes.marketplace)),
           ),
           SparkleIconButton(
             variant: ButtonVariant.ghost,
@@ -117,8 +114,9 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
           unawaited(
             SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen),
           );
-          final result =
-              await context.push<bool>(SeedLibraryRoutes.createLibrary);
+          final result = await context.push<bool>(
+            SeedLibraryRoutes.createLibrary,
+          );
           if (result ?? false) {
             _applyFilters();
           }
@@ -156,7 +154,13 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
                     filled: true,
                     fillColor: DS.surfaceRoleColor(SparkleSurfaceRole.panel),
                   ),
-                  onSubmitted: (_) => _applyFilters(),
+                  onSubmitted: (_) {
+                    // SEARCH-EMPTY：提交后先重建——_currentParams 携带新词
+                    // 重算 family 键，否则 watch 仍停在旧参数实例上，
+                    // 搜索结果与无结果专用态都不会渲染。
+                    setState(() {});
+                    _applyFilters();
+                  },
                 ),
               ),
             ),
@@ -220,9 +224,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
               ),
 
             // Library list
-            Expanded(
-              child: _buildLibraryList(context, state, notifier),
-            ),
+            Expanded(child: _buildLibraryList(context, state, notifier)),
           ],
         ),
       ),
@@ -248,28 +250,46 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
     }
 
     if (state.libraries.isEmpty) {
-      final hasFilters = _searchController.text.isNotEmpty ||
-          _selectedCategory != null ||
+      final hasSearch = _searchController.text.isNotEmpty;
+      final hasOtherFilters = _selectedCategory != null ||
           _selectedVisibility != null ||
           _showOfficialOnly ||
           _showFeaturedOnly;
+      // N28-③：区分「搜了没有」与「没搜过」两态——搜过零命中一律走
+      // EmptyState.noResults（回显关键词+清空搜索），禁与筛选/空库态混用；
+      // 原硬编码英文四句迁 l10n（seedLibraryNoMatch*/EmptyDescription/
+      // ClearFilters），并拆分 clear 语义：搜过清词、筛过清筛选。
+      if (hasSearch) {
+        return EmptyState.noResults(
+          searchQuery: _searchController.text,
+          customAction: SparkleButton.ghost(
+            label: context.l10n.commonClearSearch,
+            onPressed: () {
+              // 同步重建让 family 键回落到无参实例（否则专用态残留）。
+              setState(() => _searchController.clear());
+              _applyFilters();
+            },
+          ),
+        );
+      }
       return EmptyState(
-        title: hasFilters
-            ? 'No seed libraries match this filter'
+        title: hasOtherFilters
+            ? context.l10n.seedLibraryNoMatchTitle
             : context.l10n.seedLibraryEmpty,
-        description: hasFilters
-            ? 'Try clearing a filter or broadening the keyword to discover more reusable growth patterns.'
-            : 'Create the first seed library and turn a great prompt, workflow, or strategy into something reusable.',
+        description: hasOtherFilters
+            ? context.l10n.seedLibraryNoMatchDescription
+            : context.l10n.seedLibraryEmptyDescription,
         icon: Icons.library_books_outlined,
-        actionText: hasFilters ? 'Clear filters' : 'Create seed library',
+        actionText: hasOtherFilters
+            ? context.l10n.seedLibraryClearFilters
+            : context.l10n.seedLibraryCreate,
         onAction: () {
-          if (hasFilters) {
+          if (hasOtherFilters) {
             setState(() {
               _selectedCategory = null;
               _selectedVisibility = null;
               _showOfficialOnly = false;
               _showFeaturedOnly = false;
-              _searchController.clear();
             });
             _applyFilters();
             return;
@@ -306,9 +326,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
                 library: library,
                 onTap: () {
                   unawaited(
-                    SensoryFeedbackService.emit(
-                      SensoryFeedbackEvent.selection,
-                    ),
+                    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
                   );
                   unawaited(context.push(SeedLibraryRoutes.detail(library.id)));
                 },

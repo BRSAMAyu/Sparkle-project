@@ -44,6 +44,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _searchController = TextEditingController();
+  Timer? _searchDebounce;
   bool _showSearch = false;
 
   @override
@@ -67,6 +68,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _tabController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -78,9 +80,9 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
     final filterState = ref.watch(errorFilterProvider);
     final hasAdvancedFilters =
         (filterState.chapterFilter?.trim().isNotEmpty ?? false) ||
-            (filterState.nodeId?.trim().isNotEmpty ?? false) ||
-            filterState.showOnlyNeedReview ||
-            filterState.cognitiveDimension != null;
+        (filterState.nodeId?.trim().isNotEmpty ?? false) ||
+        filterState.showOnlyNeedReview ||
+        filterState.cognitiveDimension != null;
 
     // Build query parameters.
     final query = filterState.toQuery();
@@ -177,8 +179,9 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                   horizontal: DS.spacing16,
                   vertical: DS.spacing8,
                 ),
-                color:
-                    theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                color: theme.colorScheme.primaryContainer.withValues(
+                  alpha: 0.3,
+                ),
                 child: Row(
                   children: [
                     Icon(
@@ -218,8 +221,9 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                   horizontal: DS.spacing16,
                   vertical: DS.spacing8,
                 ),
-                color:
-                    theme.colorScheme.secondaryContainer.withValues(alpha: 0.3),
+                color: theme.colorScheme.secondaryContainer.withValues(
+                  alpha: 0.3,
+                ),
                 child: Row(
                   children: [
                     Icon(
@@ -286,9 +290,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                   // Errors due for review.
                   _buildErrorList(
                     ref.watch(
-                      errorListProvider(
-                        query.copyWith(needReview: true),
-                      ),
+                      errorListProvider(query.copyWith(needReview: true)),
                     ),
                     query.copyWith(needReview: true),
                   ),
@@ -302,36 +304,50 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
   }
 
   Widget _buildSearchField() => Builder(
-        builder: (context) => TextField(
-          controller: _searchController,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: context.l10n.errorBookSearchHint,
-            border: InputBorder.none,
-          ),
-          onChanged: (value) {
-            // Debounced search.
-            unawaited(
-              Future.delayed(
-                const Duration(milliseconds: 500),
-                () {
-                  if (value == _searchController.text) {
-                    ref
-                        .read(errorFilterProvider.notifier)
-                        .setSearchKeyword(value);
-                  }
-                },
-              ),
-            );
-          },
+    builder: (context) => TextField(
+      controller: _searchController,
+      autofocus: true,
+      decoration: InputDecoration(
+        hintText: context.l10n.errorBookSearchHint,
+        border: InputBorder.none,
+        // N28-④：有词即显 clear 钮（ValueListenable 驱动，免整页 setState）。
+        suffixIcon: ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _searchController,
+          builder: (context, value, _) => value.text.isEmpty
+              ? const SizedBox.shrink()
+              : SparkleIconButton(
+                  variant: ButtonVariant.ghost,
+                  icon: const Icon(Icons.clear),
+                  onPressed: _clearSearch,
+                ),
         ),
-      );
+      ),
+      onChanged: _onSearchChanged,
+    ),
+  );
+
+  /// N28-②：服务端域统一 300ms Timer 防抖（模式照 task_create_screen 的
+  /// 正规 Timer 范本），替换原 Future.delayed 文本比对式伪防抖——
+  /// 旧法不可取消，快速输入时请求堆积且乱序返回。
+  void _onSearchChanged(String value) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      ref.read(errorFilterProvider.notifier).setSearchKeyword(value);
+    });
+  }
+
+  void _clearSearch() {
+    _searchDebounce?.cancel();
+    _searchController.clear();
+    ref.read(errorFilterProvider.notifier).setSearchKeyword('');
+  }
 
   Widget _buildStatsBadge(AsyncValue<ReviewStats> statsAsync, String type) =>
       statsAsync.when(
         data: (stats) {
-          final count =
-              type == 'total' ? stats.totalErrors : stats.needReviewCount;
+          final count = type == 'total'
+              ? stats.totalErrors
+              : stats.needReviewCount;
 
           if (count == 0) return const SizedBox.shrink();
 
@@ -363,43 +379,43 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
   Widget _buildErrorList(
     AsyncValue<ErrorListResponse> errorListAsync,
     ErrorListQuery query,
-  ) =>
-      errorListAsync.when(
-        data: (response) {
-          if (response.items.isEmpty) {
-            return _buildEmptyState(query.needReview ?? false);
-          }
+  ) => errorListAsync.when(
+    data: (response) {
+      if (response.items.isEmpty) {
+        return _buildEmptyState(query.needReview ?? false, query.keyword);
+      }
 
-          return SparkleRefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(errorListProvider(query));
-            },
-            child: ListView.builder(
-              padding: const EdgeInsets.only(bottom: 80),
-              itemCount: response.items.length,
-              itemBuilder: (context, index) {
-                final error = response.items[index];
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    ErrorCard(
-                      error: error,
-                      onTap: () => _navigateToDetail(context, error.id),
-                      onKnowledgeNodeTap: (nodeId, masteryDelta) =>
-                          _navigateToGalaxyNode(context, nodeId, masteryDelta),
-                      onDelete: () => _deleteError(error.id),
-                    ),
-                    if (_shouldShowLinkingHint(error))
-                      _buildLinkingHintCard(error.latestAnalysis!.linkingHint!),
-                  ],
-                );
-              },
-            ),
-          );
+      return SparkleRefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(errorListProvider(query));
         },
-        loading: () => const SparkleListSkeleton(),
-        error: (error, stack) => _buildErrorState(UserFacingError.from(error), query),
+        child: ListView.builder(
+          padding: const EdgeInsets.only(bottom: 80),
+          itemCount: response.items.length,
+          itemBuilder: (context, index) {
+            final error = response.items[index];
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ErrorCard(
+                  error: error,
+                  onTap: () => _navigateToDetail(context, error.id),
+                  onKnowledgeNodeTap: (nodeId, masteryDelta) =>
+                      _navigateToGalaxyNode(context, nodeId, masteryDelta),
+                  onDelete: () => _deleteError(error.id),
+                ),
+                if (_shouldShowLinkingHint(error))
+                  _buildLinkingHintCard(error.latestAnalysis!.linkingHint!),
+              ],
+            );
+          },
+        ),
       );
+    },
+    loading: () => const SparkleListSkeleton(),
+    error: (error, stack) =>
+        _buildErrorState(UserFacingError.from(error), query),
+  );
 
   bool _shouldShowLinkingHint(ErrorRecord error) {
     final affectedNodeId = error.affectedNodeId?.trim();
@@ -409,102 +425,112 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
   }
 
   Widget _buildLinkingHintCard(ErrorLinkingHint hint) => Builder(
-        builder: (context) {
-          final theme = Theme.of(context);
-          return Card(
-            margin: const EdgeInsets.fromLTRB(
-              DS.spacing16,
-              0,
-              DS.spacing16,
-              DS.spacing8,
-            ),
-            color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.45),
-            child: Padding(
-              padding: const EdgeInsets.all(DS.spacing12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    Icons.account_tree_outlined,
-                    color: theme.colorScheme.onSecondaryContainer,
-                    size: 20,
-                  ),
-                  const SizedBox(width: DS.spacing10),
-                  Expanded(
-                    child: Text(
-                      hint.message,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSecondaryContainer,
-                      ),
-                    ),
-                  ),
-                ],
+    builder: (context) {
+      final theme = Theme.of(context);
+      return Card(
+        margin: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          0,
+          DS.spacing16,
+          DS.spacing8,
+        ),
+        color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.45),
+        child: Padding(
+          padding: const EdgeInsets.all(DS.spacing12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.account_tree_outlined,
+                color: theme.colorScheme.onSecondaryContainer,
+                size: 20,
               ),
-            ),
-          );
-        },
-      );
-
-  Widget _buildEmptyState(bool isReviewTab) => Builder(
-        builder: (context) => EmptyState(
-          icon: isReviewTab ? Icons.check_circle_outline : Icons.inbox_outlined,
-          title: isReviewTab
-              ? context.l10n.errorBookNoReview
-              : context.l10n.errorBookNoErrors,
-          description: isReviewTab
-              ? context.l10n.errorBookNoReviewDescription
-              : context.l10n.errorBookNoErrorsHint,
-          actionText: isReviewTab
-              ? context.l10n.errorBookRecordFirstError
-              : context.l10n.errorBookAddFirst,
-          onAction: () => _navigateToAddError(context),
+              const SizedBox(width: DS.spacing10),
+              Expanded(
+                child: Text(
+                  hint.message,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSecondaryContainer,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       );
+    },
+  );
+
+  Widget _buildEmptyState(bool isReviewTab, String? keyword) => Builder(
+    builder: (context) {
+      // N28-③：搜过+零命中=「没有匹配关键词」专用态，禁与空库态混用
+      // ——「搜了没有」被读成「库里没有」会诱发误建重复错题。
+      final trimmedKeyword = keyword?.trim() ?? '';
+      if (trimmedKeyword.isNotEmpty) {
+        return EmptyState.noResults(
+          searchQuery: trimmedKeyword,
+          customAction: SparkleButton.ghost(
+            label: context.l10n.commonClearSearch,
+            onPressed: _clearSearch,
+          ),
+        );
+      }
+      return EmptyState(
+        icon: isReviewTab ? Icons.check_circle_outline : Icons.inbox_outlined,
+        title: isReviewTab
+            ? context.l10n.errorBookNoReview
+            : context.l10n.errorBookNoErrors,
+        description: isReviewTab
+            ? context.l10n.errorBookNoReviewDescription
+            : context.l10n.errorBookNoErrorsHint,
+        actionText: isReviewTab
+            ? context.l10n.errorBookRecordFirstError
+            : context.l10n.errorBookAddFirst,
+        onAction: () => _navigateToAddError(context),
+      );
+    },
+  );
 
   /// N9：错误态=人话模板（发生了什么+影响+重试指引）+安全分类话术。
   /// [error] 是 `UserFacingError.from` 的产物（本地化分类消息 + [ERR-*] 码），
   /// 原始异常文本不再双份直出（存量 :475 `{error}` 插值 + :483 裸显示已清）。
   Widget _buildErrorState(String error, ErrorListQuery query) => Builder(
-        builder: (context) {
-          final theme = Theme.of(context);
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.error_outline,
-                  size: 80,
-                  color: DS.error,
-                ),
-                const SizedBox(height: DS.spacing16),
-                Text(
-                  context.l10n.errorBookLoadFailedHuman,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: DS.fontWeightMedium,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: DS.spacing8),
-                Text(
-                  error,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: DS.textSecondary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: DS.spacing24),
-                FilledButton.icon(
-                  onPressed: () {
-                    ref.invalidate(errorListProvider(query));
-                  },
-                  icon: const Icon(Icons.refresh),
-                  label: Text(context.l10n.commonRetry),
-                ),
-              ],
+    builder: (context) {
+      final theme = Theme.of(context);
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 80, color: DS.error),
+            const SizedBox(height: DS.spacing16),
+            Text(
+              context.l10n.errorBookLoadFailedHuman,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: DS.fontWeightMedium,
+              ),
+              textAlign: TextAlign.center,
             ),
-          );
-        },
+            const SizedBox(height: DS.spacing8),
+            Text(
+              error,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: DS.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: DS.spacing24),
+            FilledButton.icon(
+              onPressed: () {
+                ref.invalidate(errorListProvider(query));
+              },
+              icon: const Icon(Icons.refresh),
+              label: Text(context.l10n.commonRetry),
+            ),
+          ],
+        ),
       );
+    },
+  );
 
   Future<void> _navigateToAddError(BuildContext context) async {
     final result = await context.push<bool>('/errors/new');
@@ -604,8 +630,8 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                 Text(
                   context.l10n.errorBookCognitiveDimension,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: DS.fontWeightSemibold,
-                      ),
+                    fontWeight: DS.fontWeightSemibold,
+                  ),
                 ),
                 const SizedBox(height: DS.spacing12),
                 Wrap(
@@ -664,8 +690,9 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                         : chapterController.text.trim(),
                   )
                   ..setCognitiveDimension(cognitiveDimension);
-                final currentNeedReview =
-                    ref.read(errorFilterProvider).showOnlyNeedReview;
+                final currentNeedReview = ref
+                    .read(errorFilterProvider)
+                    .showOnlyNeedReview;
                 if (currentNeedReview != needReviewOnly) {
                   ref.read(errorFilterProvider.notifier).toggleNeedReview();
                 }
@@ -692,15 +719,14 @@ extension ErrorListQueryCopyWith on ErrorListQuery {
     CognitiveDimension? cognitiveDimension,
     int? page,
     int? pageSize,
-  }) =>
-      ErrorListQuery(
-        subject: subject ?? this.subject,
-        chapter: chapter ?? this.chapter,
-        nodeId: nodeId ?? this.nodeId,
-        needReview: needReview ?? this.needReview,
-        keyword: keyword ?? this.keyword,
-        cognitiveDimension: cognitiveDimension ?? this.cognitiveDimension,
-        page: page ?? this.page,
-        pageSize: pageSize ?? this.pageSize,
-      );
+  }) => ErrorListQuery(
+    subject: subject ?? this.subject,
+    chapter: chapter ?? this.chapter,
+    nodeId: nodeId ?? this.nodeId,
+    needReview: needReview ?? this.needReview,
+    keyword: keyword ?? this.keyword,
+    cognitiveDimension: cognitiveDimension ?? this.cognitiveDimension,
+    page: page ?? this.page,
+    pageSize: pageSize ?? this.pageSize,
+  );
 }

@@ -39,6 +39,7 @@ class GroupChatBubble extends ConsumerStatefulWidget {
     this.onFavorite,
     this.onForward,
     this.onReport,
+    this.highlighted = false,
     super.key,
   });
   final MessageInfo message;
@@ -51,6 +52,10 @@ class GroupChatBubble extends ConsumerStatefulWidget {
   final void Function(MessageInfo message)? onFavorite;
   final void Function(MessageInfo message)? onForward;
   final void Function(MessageInfo message)? onReport;
+
+  /// SEARCH-EMPTY：搜索命中定位时的短高亮（品牌色淡底+描边），
+  /// 由屏侧定时清除，容器经 AnimatedContainer 平滑淡出。
+  final bool highlighted;
 
   @override
   ConsumerState<GroupChatBubble> createState() => _GroupChatBubbleState();
@@ -77,12 +82,14 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
-    _scaleAnimation = Tween<double>(begin: 0.985, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    _scaleAnimation = Tween<double>(
+      begin: 0.985,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
 
     unawaited(_controller.forward());
   }
@@ -257,79 +264,101 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
 
     final timeStr = DateFormat('HH:mm').format(widget.message.createdAt);
 
-    return SlideTransition(
-      position: _slideAnimation,
-      child: FadeTransition(
-        opacity: _fadeAnimation,
-        child: ScaleTransition(
-          scale: _scaleAnimation,
-          child: GestureDetector(
-            onLongPress: () => _showContextMenu(context, isMe),
-            child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
-              child: Row(
-                mainAxisAlignment:
-                    isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  if (!isMe) ...[
-                    _buildAvatar(widget.message.sender),
-                    const SizedBox(width: DS.sm),
-                  ],
-                  Flexible(
-                    child: Column(
-                      crossAxisAlignment: isMe
-                          ? CrossAxisAlignment.end
-                          : CrossAxisAlignment.start,
-                      children: [
-                        if (!isMe &&
-                            (widget.message.sender != null ||
-                                isCommunityAgentMessage(widget.message)))
-                          Padding(
-                            padding: const EdgeInsets.only(left: 4, bottom: 4),
-                            child: Text(
-                              widget.message.sender?.displayName ??
-                                  (isCommunityAgentMessage(widget.message)
-                                      ? kCommunityAgentDisplayName
-                                      : ''),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: DS.neutral500,
+    // SEARCH-EMPTY：命中定位短高亮容器——平时透明无边框，不改变既有视觉；
+    // highlighted 时品牌色淡底+描边，经 AnimatedContainer 平滑过渡。
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      decoration: BoxDecoration(
+        color:
+            widget.highlighted ? DS.brandPrimary.withValues(alpha: 0.10) : null,
+        borderRadius: DS.borderRadius12,
+        border: Border.all(
+          color: widget.highlighted
+              ? DS.brandPrimary.withValues(alpha: 0.40)
+              : Colors.transparent,
+        ),
+      ),
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: ScaleTransition(
+            scale: _scaleAnimation,
+            child: GestureDetector(
+              onLongPress: () => _showContextMenu(context, isMe),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 8.0,
+                  horizontal: 8.0,
+                ),
+                child: Row(
+                  mainAxisAlignment:
+                      isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (!isMe) ...[
+                      _buildAvatar(widget.message.sender),
+                      const SizedBox(width: DS.sm),
+                    ],
+                    Flexible(
+                      child: Column(
+                        crossAxisAlignment: isMe
+                            ? CrossAxisAlignment.end
+                            : CrossAxisAlignment.start,
+                        children: [
+                          if (!isMe &&
+                              (widget.message.sender != null ||
+                                  isCommunityAgentMessage(widget.message)))
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                left: 4,
+                                bottom: 4,
+                              ),
+                              child: Text(
+                                widget.message.sender?.displayName ??
+                                    (isCommunityAgentMessage(widget.message)
+                                        ? kCommunityAgentDisplayName
+                                        : ''),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: DS.neutral500,
+                                ),
                               ),
                             ),
-                          ),
-                        _buildContent(context, isMe),
-                        _buildReactions(context),
-                        const SizedBox(height: DS.xs),
-                        // Timestamp and read status
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                timeStr,
-                                style: TextStyle(
-                                    fontSize: 10, color: DS.neutral500),
-                              ),
-                              if (isMe && widget.message.readCount > 0) ...[
-                                const SizedBox(width: DS.sm),
-                                _buildReadByIndicator(),
+                          _buildContent(context, isMe),
+                          _buildReactions(context),
+                          const SizedBox(height: DS.xs),
+                          // Timestamp and read status
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  timeStr,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: DS.neutral500,
+                                  ),
+                                ),
+                                if (isMe && widget.message.readCount > 0) ...[
+                                  const SizedBox(width: DS.sm),
+                                  _buildReadByIndicator(),
+                                ],
                               ],
-                            ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  if (isMe) ...[
-                    const SizedBox(width: DS.sm),
-                    _buildAvatar(widget.message.sender),
+                    if (isMe) ...[
+                      const SizedBox(width: DS.sm),
+                      _buildAvatar(widget.message.sender),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),
@@ -413,8 +442,10 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                     height: 18,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border:
-                          Border.all(color: DS.brandPrimaryConst, width: 1.5),
+                      border: Border.all(
+                        color: DS.brandPrimaryConst,
+                        width: 1.5,
+                      ),
                       color: DS.neutral200,
                     ),
                     child: ClipOval(
@@ -429,8 +460,10 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                         errorWidget: Center(
                           child: Text(
                             '?',
-                            style:
-                                TextStyle(fontSize: 11, color: DS.neutral500),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: DS.neutral500,
+                            ),
                           ),
                         ),
                       ),
@@ -629,8 +662,9 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: (isMe ? DS.chatBubbleUser : DS.brandSecondary)
-                .withValues(alpha: 0.18),
+            color: (isMe ? DS.chatBubbleUser : DS.brandSecondary).withValues(
+              alpha: 0.18,
+            ),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -805,10 +839,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
               (progress * 100).toStringAsFixed(0),
             )
           : null,
-      metadata: {
-        'progress': progress,
-        'deadline': meta['target_date'],
-      },
+      metadata: {'progress': progress, 'deadline': meta['target_date']},
     );
 
     return _buildRichCardWrapper(
@@ -1003,10 +1034,9 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       final resourceType =
           result['resource_type']?.toString() ?? fallbackResourceType;
       final entityCard = result['entity_card'] is Map<String, dynamic>
-          ? EntityCardPayload.fromRaw(
-              {'entity_card': result['entity_card'] as Map<String, dynamic>},
-              fallbackType: resourceType,
-            )
+          ? EntityCardPayload.fromRaw({
+              'entity_card': result['entity_card'] as Map<String, dynamic>,
+            }, fallbackType: resourceType)
           : null;
       final newId = result['new_resource_id']?.toString();
       if (resourceType == 'plan') {
@@ -1226,13 +1256,12 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
             if (data['rarity'] != null) ...[
               const SizedBox(height: DS.sm),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: DS.sm,
-                  vertical: 2,
-                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: DS.sm, vertical: 2),
                 decoration: BoxDecoration(
-                  color: _getRarityColor(data['rarity'] as String)
-                      .withValues(alpha: 0.15),
+                  color: _getRarityColor(
+                    data['rarity'] as String,
+                  ).withValues(alpha: 0.15),
                   borderRadius: DS.borderRadius4,
                 ),
                 child: Text(

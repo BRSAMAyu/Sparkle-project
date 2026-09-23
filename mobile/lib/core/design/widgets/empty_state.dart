@@ -77,15 +77,20 @@ class EmptyState extends StatelessWidget {
       );
 
   /// 无搜索结果空状态
+  ///
+  /// SEARCH-EMPTY：透传 [customAction]——无结果态的「清空搜索」动作
+  /// 经 owner 按钮承载（SparkleButton.ghost），不再被迫落到外层包装。
   factory EmptyState.noResults({
     Key? key,
     String? searchQuery,
+    Widget? customAction,
   }) =>
       EmptyState(
         key: key,
         type: EmptyStateType.noResults,
         icon: Icons.search_off_rounded,
         searchQuery: searchQuery,
+        customAction: customAction,
       );
 
   /// 空状态类型

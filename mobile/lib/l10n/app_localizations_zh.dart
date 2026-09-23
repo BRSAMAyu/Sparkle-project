@@ -2430,6 +2430,9 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get commonClearSearch => '清空搜索';
+
+  @override
   String get emptyStateGeneralTitle => '这里还没有内容';
 
   @override
@@ -6444,6 +6447,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get seedLibraryClear => '清除';
 
   @override
+  String get seedLibraryNoMatchTitle => '没有符合筛选条件的种子库';
+
+  @override
+  String get seedLibraryNoMatchDescription => '试试清空筛选或放宽关键词，发现更多可复用的成长模式。';
+
+  @override
+  String get seedLibraryEmptyDescription => '创建第一个种子库，把好的提示词、工作流或策略变成可复用的资产。';
+
+  @override
+  String get seedLibraryClearFilters => '清空筛选';
+
+  @override
   String get seedLibraryApply => '应用';
 
   @override
@@ -8900,6 +8915,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get communitySearchGroupMessages => '搜索群消息';
+
+  @override
+  String get communityGroupSearchEmptyHint => '输入关键词，回车搜索群消息';
+
+  @override
+  String get communityGroupSearchFailed => '群消息搜索失败，请重试';
+
+  @override
+  String get chatGroupLocateUnavailable => '该消息不在已加载的聊天记录里，向上翻阅可查看更早消息';
 
   @override
   String get deleteAccountChecklistItem1 => '您的所有个人数据将被永久删除';

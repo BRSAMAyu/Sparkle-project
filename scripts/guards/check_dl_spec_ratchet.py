@@ -121,8 +121,16 @@ class Dimension:
 # ── per-dimension counters (line-based, comment lines skipped, like UX-COMP) ──
 
 def _count_regex(pattern: re.Pattern[str]):
+    # 行级豁免：`dl-spec: ignore <reason>` 标记行不计（BI/COMM-LB 守卫同款先例；
+    # 动态身份色渐变等合法场景用，标记须带理由可审计）。
+    _ignore = re.compile(r"dl-spec:\s*ignore\s+\S+")
+
     def counter(_path: Path, lines: list[str]) -> int:
-        return sum(len(pattern.findall(ln)) for ln in lines)
+        return sum(
+            len(pattern.findall(ln))
+            for i, ln in enumerate(lines)
+            if not (_ignore.search(ln) or (i > 0 and _ignore.search(lines[i - 1])))
+        )
 
     return counter
 

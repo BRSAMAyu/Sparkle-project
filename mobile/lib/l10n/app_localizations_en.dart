@@ -2552,6 +2552,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get commonClearSearch => 'Clear search';
+
+  @override
   String get emptyStateGeneralTitle => 'Nothing here yet';
 
   @override
@@ -6702,6 +6705,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get seedLibraryClear => 'Clear';
 
   @override
+  String get seedLibraryNoMatchTitle => 'No seed libraries match this filter';
+
+  @override
+  String get seedLibraryNoMatchDescription =>
+      'Try clearing a filter or broadening the keyword to discover more reusable growth patterns.';
+
+  @override
+  String get seedLibraryEmptyDescription =>
+      'Create the first seed library and turn a great prompt, workflow, or strategy into something reusable.';
+
+  @override
+  String get seedLibraryClearFilters => 'Clear filters';
+
+  @override
   String get seedLibraryApply => 'Apply';
 
   @override
@@ -9236,6 +9253,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get communitySearchGroupMessages => 'Community Search Group Messages';
+
+  @override
+  String get communityGroupSearchEmptyHint =>
+      'Type a keyword and submit to search group messages';
+
+  @override
+  String get communityGroupSearchFailed =>
+      'Failed to search group messages. Please try again';
+
+  @override
+  String get chatGroupLocateUnavailable =>
+      'This message is not in the loaded chat history. Scroll up to see earlier messages';
 
   @override
   String get deleteAccountChecklistItem1 =>

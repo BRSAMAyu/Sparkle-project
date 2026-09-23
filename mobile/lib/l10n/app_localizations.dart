@@ -4592,6 +4592,12 @@ abstract class AppLocalizations {
   /// **'没有找到与“{query}”相关的内容'**
   String emptyStateNoResultsQuery(Object query);
 
+  /// No description provided for @commonClearSearch.
+  ///
+  /// In zh, this message translates to:
+  /// **'清空搜索'**
+  String get commonClearSearch;
+
   /// No description provided for @emptyStateGeneralTitle.
   ///
   /// In zh, this message translates to:
@@ -11966,6 +11972,30 @@ abstract class AppLocalizations {
   /// **'清除'**
   String get seedLibraryClear;
 
+  /// No description provided for @seedLibraryNoMatchTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有符合筛选条件的种子库'**
+  String get seedLibraryNoMatchTitle;
+
+  /// No description provided for @seedLibraryNoMatchDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'试试清空筛选或放宽关键词，发现更多可复用的成长模式。'**
+  String get seedLibraryNoMatchDescription;
+
+  /// No description provided for @seedLibraryEmptyDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建第一个种子库，把好的提示词、工作流或策略变成可复用的资产。'**
+  String get seedLibraryEmptyDescription;
+
+  /// No description provided for @seedLibraryClearFilters.
+  ///
+  /// In zh, this message translates to:
+  /// **'清空筛选'**
+  String get seedLibraryClearFilters;
+
   /// No description provided for @seedLibraryApply.
   ///
   /// In zh, this message translates to:
@@ -16435,6 +16465,24 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'搜索群消息'**
   String get communitySearchGroupMessages;
+
+  /// No description provided for @communityGroupSearchEmptyHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入关键词，回车搜索群消息'**
+  String get communityGroupSearchEmptyHint;
+
+  /// No description provided for @communityGroupSearchFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'群消息搜索失败，请重试'**
+  String get communityGroupSearchFailed;
+
+  /// No description provided for @chatGroupLocateUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'该消息不在已加载的聊天记录里，向上翻阅可查看更早消息'**
+  String get chatGroupLocateUnavailable;
 
   /// No description provided for @deleteAccountChecklistItem1.
   ///

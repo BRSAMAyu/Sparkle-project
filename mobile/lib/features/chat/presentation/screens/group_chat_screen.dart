@@ -1,10 +1,13 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
@@ -37,6 +40,12 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   late final ScrollController _scrollController;
   String? _lastNewestMessageId;
 
+  // SEARCH-EMPTY：命中定位基建——照 chat_screen 的「GlobalKey 表 +
+  // Scrollable.ensureVisible」同款形制；短高亮由屏侧 Timer 收敛。
+  final Map<String, GlobalKey> _messageKeys = <String, GlobalKey>{};
+  String? _highlightedMessageId;
+  Timer? _highlightTimer;
+
   @override
   void initState() {
     super.initState();
@@ -45,11 +54,20 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
 
   @override
   void dispose() {
+    _highlightTimer?.cancel();
     _scrollController
       ..removeListener(_handleScroll)
       ..dispose();
     super.dispose();
   }
+
+  void _pruneMessageKeys(List<MessageInfo> messages) {
+    final ids = messages.map((message) => message.id).toSet();
+    _messageKeys.removeWhere((id, _) => !ids.contains(id));
+  }
+
+  GlobalKey _messageKeyFor(String id) =>
+      _messageKeys.putIfAbsent(id, () => GlobalKey());
 
   void _handleScroll() {
     if (!_scrollController.hasClients) {
@@ -58,7 +76,9 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     final position = _scrollController.position;
     if (position.pixels >= position.maxScrollExtent - 240) {
       unawaited(
-        ref.read(groupChatProvider(widget.groupId).notifier).loadOlderMessages(),
+        ref
+            .read(groupChatProvider(widget.groupId).notifier)
+            .loadOlderMessages(),
       );
     }
   }
@@ -91,7 +111,10 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
         AppFeedback.success(context, context.l10n.chatGroupFavorited);
       }).catchError((Object e) {
         if (!mounted) return;
-        AppFeedback.error(context, context.l10n.chatGroupFavoriteFailed(UserFacingError.from(e)));
+        AppFeedback.error(
+          context,
+          context.l10n.chatGroupFavoriteFailed(UserFacingError.from(e)),
+        );
       }),
     );
   }
@@ -124,7 +147,9 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                 Text(
                   context.l10n.chatGroupForwardToGroup,
                   style: TextStyle(
-                      fontWeight: DS.fontWeightBold, fontSize: DS.fontSizeLg,),
+                    fontWeight: DS.fontWeightBold,
+                    fontSize: DS.fontSizeLg,
+                  ),
                 ),
                 const SizedBox(height: DS.spacing16),
                 SizedBox(
@@ -135,7 +160,9 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                       final g = groups[i];
                       return ListTile(
                         title: Text(g.name),
-                        subtitle: Text(context.l10n.chatGroupMemberCount(g.memberCount)),
+                        subtitle: Text(
+                          context.l10n.chatGroupMemberCount(g.memberCount),
+                        ),
                         onTap: () async {
                           Navigator.pop(ctx);
                           try {
@@ -147,10 +174,18 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                                   targetGroupId: g.id,
                                 );
                             if (!mounted) return;
-                            AppFeedback.success(context, context.l10n.chatGroupForwardedTo(g.name));
+                            AppFeedback.success(
+                              context,
+                              context.l10n.chatGroupForwardedTo(g.name),
+                            );
                           } catch (e) {
                             if (!mounted) return;
-                            AppFeedback.error(context, context.l10n.chatGroupForwardFailed(UserFacingError.from(e)));
+                            AppFeedback.error(
+                              context,
+                              context.l10n.chatGroupForwardFailed(
+                                UserFacingError.from(e),
+                              ),
+                            );
                           }
                         },
                       );
@@ -199,7 +234,9 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   Text(
                     context.l10n.chatGroupReportMessage,
                     style: TextStyle(
-                        fontWeight: DS.fontWeightBold, fontSize: DS.fontSizeLg,),
+                      fontWeight: DS.fontWeightBold,
+                      fontSize: DS.fontSizeLg,
+                    ),
                   ),
                   const SizedBox(height: DS.spacing8),
                   RadioGroup<ReportReason>(
@@ -211,12 +248,30 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                       children: [
                         ...[
                           (ReportReason.spam, context.l10n.chatGroupReportSpam),
-                          (ReportReason.harassment, context.l10n.chatGroupReportHarassment),
-                          (ReportReason.violence, context.l10n.chatGroupReportViolence),
-                          (ReportReason.hateSpeech, context.l10n.chatGroupReportHate),
-                          (ReportReason.inappropriate, context.l10n.chatGroupReportInappropriate),
-                          (ReportReason.misinformation, context.l10n.chatGroupReportMisinfo),
-                          (ReportReason.other, context.l10n.chatGroupReportOther),
+                          (
+                            ReportReason.harassment,
+                            context.l10n.chatGroupReportHarassment,
+                          ),
+                          (
+                            ReportReason.violence,
+                            context.l10n.chatGroupReportViolence,
+                          ),
+                          (
+                            ReportReason.hateSpeech,
+                            context.l10n.chatGroupReportHate,
+                          ),
+                          (
+                            ReportReason.inappropriate,
+                            context.l10n.chatGroupReportInappropriate,
+                          ),
+                          (
+                            ReportReason.misinformation,
+                            context.l10n.chatGroupReportMisinfo,
+                          ),
+                          (
+                            ReportReason.other,
+                            context.l10n.chatGroupReportOther,
+                          ),
                         ].map(
                           (entry) => RadioListTile<ReportReason>(
                             title: Text(entry.$2),
@@ -253,10 +308,18 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                                     : descController.text.trim(),
                               );
                           if (!mounted) return;
-                          AppFeedback.success(context, context.l10n.chatGroupReportSubmitted);
+                          AppFeedback.success(
+                            context,
+                            context.l10n.chatGroupReportSubmitted,
+                          );
                         } catch (e) {
                           if (!mounted) return;
-                          AppFeedback.error(context, context.l10n.chatGroupReportFailed(UserFacingError.from(e)));
+                          AppFeedback.error(
+                            context,
+                            context.l10n.chatGroupReportFailed(
+                              UserFacingError.from(e),
+                            ),
+                          );
                         }
                       },
                     ),
@@ -329,7 +392,9 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   if (!context.mounted) return;
                   AppFeedback.error(
                     context,
-                    context.l10n.communityCheckInFailed(UserFacingError.from(e)),
+                    context.l10n.communityCheckInFailed(
+                      UserFacingError.from(e),
+                    ),
                   );
                 }
               },
@@ -385,8 +450,10 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
             onPressed: () {
               unawaited(
                 context.push(
-                  CommunityRoutes.groupFiles
-                      .replaceFirst(':id', widget.groupId),
+                  CommunityRoutes.groupFiles.replaceFirst(
+                    ':id',
+                    widget.groupId,
+                  ),
                 ),
               );
             },
@@ -419,8 +486,10 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
             onPressed: () {
               unawaited(
                 context.push(
-                  CommunityRoutes.groupDetail
-                      .replaceFirst(':id', widget.groupId),
+                  CommunityRoutes.groupDetail.replaceFirst(
+                    ':id',
+                    widget.groupId,
+                  ),
                 ),
               );
             },
@@ -446,10 +515,9 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                       agentState.streamingContent.isEmpty;
 
                   if (mergedMessages.isEmpty) {
-                    return Center(
-                      child: Text(context.l10n.communityChatEmpty),
-                    );
+                    return Center(child: Text(context.l10n.communityChatEmpty));
                   }
+                  _pruneMessageKeys(mergedMessages);
                   return Align(
                     alignment: Alignment.topCenter,
                     child: ListView.builder(
@@ -462,7 +530,9 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                       itemBuilder: (context, index) {
                         if (showAgentStatus && index == 0) {
                           return Padding(
-                            padding: const EdgeInsets.only(bottom: DS.spacing16),
+                            padding: const EdgeInsets.only(
+                              bottom: DS.spacing16,
+                            ),
                             child: AiStatusIndicator(
                               status: 'THINKING',
                               details: context.l10n.communityAgentThinking,
@@ -475,16 +545,19 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                             showAgentStatus ? index - 1 : index;
                         final message = mergedMessages[messageIndex];
                         return GroupChatBubble(
+                          key: _messageKeyFor(message.id),
                           message: message,
                           groupId: widget.groupId,
+                          highlighted: message.id == _highlightedMessageId,
                           onQuote: isCommunityAgentMessage(message)
                               ? null
                               : (msg) => setState(() {
                                     _quotedMessage = msg;
                                     ref
                                         .read(
-                                          groupChatProvider(widget.groupId)
-                                              .notifier,
+                                          groupChatProvider(
+                                            widget.groupId,
+                                          ).notifier,
                                         )
                                         .setQuote(msg);
                                   }),
@@ -492,21 +565,27 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                               ? null
                               : (msg) => ref
                                   .read(
-                                    groupChatProvider(widget.groupId).notifier,
+                                    groupChatProvider(
+                                      widget.groupId,
+                                    ).notifier,
                                   )
                                   .revokeMessage(msg.id),
                           onEdit: isCommunityAgentMessage(message)
                               ? null
                               : (msg, content) => ref
                                   .read(
-                                    groupChatProvider(widget.groupId).notifier,
+                                    groupChatProvider(
+                                      widget.groupId,
+                                    ).notifier,
                                   )
                                   .editMessage(msg.id, content),
                           onReaction: isCommunityAgentMessage(message)
                               ? null
                               : (msg, emoji) => ref
                                   .read(
-                                    groupChatProvider(widget.groupId).notifier,
+                                    groupChatProvider(
+                                      widget.groupId,
+                                    ).notifier,
                                   )
                                   .toggleReaction(msg.id, emoji),
                           onThread: _openThread,
@@ -564,17 +643,17 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                         ),
                       ),
                     ),
-                                        SparkleButton(
+                    SparkleButton(
                       label: context.l10n.communityChatReconnect,
                       variant: ButtonVariant.text,
                       size: ButtonSize.small,
                       minWidth: 64,
                       minHeight: 40,
                       onPressed: () => unawaited(
- ref
- .read(groupChatProvider(widget.groupId).notifier)
- .manualReconnect(),
- ),
+                        ref
+                            .read(groupChatProvider(widget.groupId).notifier)
+                            .manualReconnect(),
+                      ),
                     ),
                   ],
                 ),
@@ -606,10 +685,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
               onFileUploaded: (file) async {
                 try {
                   final repo = ref.read(fileRepositoryProvider);
-                  await repo.shareToGroup(
-                    widget.groupId,
-                    file.id,
-                  );
+                  await repo.shareToGroup(widget.groupId, file.id);
                   ref.invalidate(groupChatProvider(widget.groupId));
                   if (!context.mounted) return;
                   AppFeedback.success(
@@ -620,7 +696,9 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   if (!context.mounted) return;
                   AppFeedback.error(
                     context,
-                    context.l10n.communityFileSharedFailed(UserFacingError.from(e)),
+                    context.l10n.communityFileSharedFailed(
+                      UserFacingError.from(e),
+                    ),
                   );
                 }
               },
@@ -663,10 +741,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                 unawaited(
                   ref
                       .read(groupChatProvider(widget.groupId).notifier)
-                      .sendMessage(
-                        content: text,
-                        replyToId: actualReplyId,
-                      ),
+                      .sendMessage(content: text, replyToId: actualReplyId),
                 );
               },
               onQuickShare: _handleQuickShare,
@@ -701,7 +776,8 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
         id: 'agent_streaming_${DateTime.now().millisecondsSinceEpoch}',
         messageType: MessageType.text,
         sender: buildCommunityAgentUser(
-            localizedName: context.l10n.communityAgentName,),
+          localizedName: context.l10n.communityAgentName,
+        ),
         content: content,
         contentData: {kAgentMetadataKey: true, 'agent_streaming': true},
         createdAt: DateTime.now(),
@@ -734,16 +810,16 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     try {
       if (payload.contentType == ShareableContentType.achievement) {
         await ref.read(communityRepositoryProvider).sendMessage(
-              widget.groupId,
-              type: MessageType.achievement,
-              content: payload.shareMessage,
-              contentData: {
-                'achievement_id': payload.resourceId,
-                'name': payload.title,
-                'description': payload.subtitle,
-                ...?payload.metadata,
-              },
-            );
+          widget.groupId,
+          type: MessageType.achievement,
+          content: payload.shareMessage,
+          contentData: {
+            'achievement_id': payload.resourceId,
+            'name': payload.title,
+            'description': payload.subtitle,
+            ...?payload.metadata,
+          },
+        );
       } else {
         await ref.read(communityShareRepositoryProvider).shareResource(
               resourceType: payload.contentType.stringValue,
@@ -804,9 +880,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   Text(
                     context.l10n.communityAgentOnlyYou,
                     style: TextStyle(
-                      fontSize: DS.fontSizeSm,
-                      color: DS.neutral500,
-                    ),
+                        fontSize: DS.fontSizeSm, color: DS.neutral500),
                   ),
                 const Spacer(),
                 if (agentState.isSending)
@@ -885,23 +959,110 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     );
   }
 
+  /// SEARCH-EMPTY（N28-⑤ 命中可达）：点搜索结果→关 sheet→消息列表滚动
+  /// 定位+短高亮——替换原「tap 只 pop」的 pop-only 死链。
+  void _locateSearchHit(MessageInfo msg) {
+    _highlightTimer?.cancel();
+    setState(() => _highlightedMessageId = msg.id);
+    // 高亮驻留窗（非动画时长，seconds 形制照 openclaw_connection_panel
+    // 的 _saveHighlightTimer 先例）：2s 后收敛，容器经 300ms 淡出。
+    _highlightTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() => _highlightedMessageId = null);
+      }
+    });
+    unawaited(_scrollToMessage(msg.id));
+  }
+
+  Future<void> _scrollToMessage(String messageId) async {
+    final notifier = ref.read(groupChatProvider(widget.groupId).notifier);
+    // 目标可能在未加载的更早分页里：有界向前翻页直至命中或翻尽。
+    var guard = 0;
+    while (!_loadedMessagesContain(messageId) &&
+        notifier.hasMoreMessages &&
+        guard < 30) {
+      guard++;
+      await notifier.loadOlderMessages();
+    }
+    if (!mounted) {
+      return;
+    }
+    if (!_loadedMessagesContain(messageId)) {
+      AppFeedback.info(context, context.l10n.chatGroupLocateUnavailable);
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_revealMessage(messageId));
+    });
+  }
+
+  bool _loadedMessagesContain(String messageId) =>
+      (ref.read(groupChatProvider(widget.groupId)).valueOrNull ?? const []).any(
+        (message) => message.id == messageId,
+      );
+
+  /// 复用 chat_screen 的 ensureVisible 定位；因 ListView 懒构建，目标
+  /// 未物化时按平均项高 jumpTo 逼近（N28-⑤ 一期：滚动定位即达标），
+  /// 有界重试直至可见。
+  Future<void> _revealMessage(String messageId, {int attempt = 0}) async {
+    if (!mounted) {
+      return;
+    }
+    final targetContext = _messageKeys[messageId]?.currentContext;
+    if (targetContext != null) {
+      await Scrollable.ensureVisible(
+        targetContext,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
+        alignment: 0.22,
+      );
+      return;
+    }
+    if (attempt >= 12 || !_scrollController.hasClients) {
+      return;
+    }
+    final messages =
+        ref.read(groupChatProvider(widget.groupId)).valueOrNull ?? const [];
+    final index = messages.indexWhere((message) => message.id == messageId);
+    if (index < 0) {
+      return;
+    }
+    final position = _scrollController.position;
+    final itemCount = messages.length + 1;
+    final averageExtent = itemCount > 1 && position.maxScrollExtent > 0
+        ? position.maxScrollExtent / (itemCount - 1)
+        : 240.0;
+    // reverse 列表：index 0 贴 offset 0（最新在底部），越旧 offset 越大。
+    final target = (index * averageExtent - position.viewportDimension * 0.5)
+        .clamp(0.0, position.maxScrollExtent);
+    _scrollController.jumpTo(target);
+    await WidgetsBinding.instance.endOfFrame;
+    await _revealMessage(messageId, attempt: attempt + 1);
+  }
+
   Future<void> _showSearchSheet() async {
     final notifier = ref.read(groupChatProvider(widget.groupId).notifier);
     final controller = TextEditingController();
     var results = <MessageInfo>[];
     var isLoading = false;
+    // N28-③：区分「没搜过」（引导提示）与「搜了没有」（专用无结果态）
+    // 与「搜失败」（人话错误）三态——替换原静默空白。
+    var hasSearched = false;
+    var searchFailed = false;
+    var lastQuery = '';
 
     try {
       await showSensoryModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-        builder: (context) => StatefulBuilder(
-          builder: (context, setState) => DecoratedBox(
+        builder: (sheetContext) => StatefulBuilder(
+          builder: (sheetContext, setSheetState) => DecoratedBox(
             decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(24)),
+              color: Theme.of(sheetContext).scaffoldBackgroundColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
             ),
             child: SafeArea(
               top: false,
@@ -910,8 +1071,8 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   left: DS.spacing16,
                   right: DS.spacing16,
                   top: DS.spacing16,
-                  bottom:
-                      MediaQuery.of(context).viewInsets.bottom + DS.spacing16,
+                  bottom: MediaQuery.of(sheetContext).viewInsets.bottom +
+                      DS.spacing16,
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -926,26 +1087,89 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                     ),
                     const SizedBox(height: DS.spacing16),
                     TextField(
+                      key: const ValueKey('group-chat-search-field'),
                       controller: controller,
                       decoration: InputDecoration(
-                        hintText: context.l10n.communitySearchGroupMessages,
+                        hintText:
+                            sheetContext.l10n.communitySearchGroupMessages,
                         prefixIcon: const Icon(Icons.search),
+                        // N28-④：有词即显 clear 钮（清词并回到未搜过态）。
+                        suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                          valueListenable: controller,
+                          builder: (context, value, _) => value.text.isEmpty
+                              ? const SizedBox.shrink()
+                              : IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () {
+                                    controller.clear();
+                                    setSheetState(() {
+                                      results = [];
+                                      hasSearched = false;
+                                      searchFailed = false;
+                                      lastQuery = '';
+                                    });
+                                  },
+                                ),
+                        ),
                       ),
                       onSubmitted: (value) async {
-                        if (value.trim().isEmpty) return;
-                        setState(() => isLoading = true);
+                        final keyword = value.trim();
+                        if (keyword.isEmpty) return;
+                        setSheetState(() {
+                          isLoading = true;
+                          searchFailed = false;
+                        });
                         try {
-                          results = await notifier.searchMessages(value.trim());
-                        } catch (_) {
+                          results = await notifier.searchMessages(keyword);
+                          hasSearched = true;
+                          lastQuery = keyword;
+                        } catch (e) {
+                          // SR-G1：不再静默吞错——人话映射（N16 单源）入 sheet 态。
                           results = [];
+                          hasSearched = true;
+                          lastQuery = keyword;
+                          searchFailed = true;
+                          if (kDebugMode) {
+                            debugPrint('[GroupChatSearch] search failed: $e');
+                          }
                         } finally {
-                          setState(() => isLoading = false);
+                          setSheetState(() => isLoading = false);
                         }
                       },
                     ),
                     const SizedBox(height: DS.spacing16),
-                    if (isLoading) const LoadingIndicator(),
-                    if (!isLoading)
+                    if (isLoading)
+                      const LoadingIndicator()
+                    else if (searchFailed)
+                      SizedBox(
+                        height: 280,
+                        child: CompactEmptyState(
+                          icon: Icons.error_outline,
+                          message: sheetContext.l10n.communityGroupSearchFailed,
+                        ),
+                      )
+                    else if (hasSearched && results.isEmpty)
+                      SizedBox(
+                        height: 280,
+                        // 小视口防溢出：空态内容高于 280 时可滚动。
+                        child: SingleChildScrollView(
+                          child: EmptyState.noResults(
+                            searchQuery: lastQuery,
+                            customAction: SparkleButton.ghost(
+                              label: sheetContext.l10n.commonClearSearch,
+                              onPressed: () {
+                                controller.clear();
+                                setSheetState(() {
+                                  results = [];
+                                  hasSearched = false;
+                                  lastQuery = '';
+                                });
+                              },
+                            ),
+                          ),
+                        ),
+                      )
+                    else if (results.isNotEmpty)
                       SizedBox(
                         height: 280,
                         child: ListView.builder(
@@ -955,14 +1179,33 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                             return ListTile(
                               title: Text(
                                 msg.content ??
-                                    context.l10n.communityMessageFallback,
+                                    sheetContext.l10n.communityMessageFallback,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
                               subtitle: Text(
-                                '${msg.sender?.displayName ?? context.l10n.communityMemberFallback} • ${msg.createdAt}',
+                                '${msg.sender?.displayName ?? sheetContext.l10n.communityMemberFallback} • '
+                                '${DateFormat('MM/dd HH:mm').format(msg.createdAt)}',
                               ),
-                              onTap: () => Navigator.pop(context),
+                              onTap: () {
+                                Navigator.pop(sheetContext);
+                                _locateSearchHit(msg);
+                              },
                             );
                           },
+                        ),
+                      )
+                    else
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: DS.spacing40,
+                        ),
+                        child: Text(
+                          sheetContext.l10n.communityGroupSearchEmptyHint,
+                          style: TextStyle(
+                            color: DS.textSecondary,
+                            fontSize: DS.fontSizeSm,
+                          ),
                         ),
                       ),
                   ],
