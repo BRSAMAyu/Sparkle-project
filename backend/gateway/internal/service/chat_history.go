@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -29,6 +30,33 @@ const (
 	breakerRetryInterval = 5 * time.Second
 	breakerRetryMaxAge   = 2 * time.Minute // 超过此时间的消息丢弃（防止堆积无限增长）
 	breakerRetryBufMax   = 500             // 本地重试缓冲上限
+)
+
+// HISTORY-TAIL (V13-RETEST Major residual): the Redis cache only receives
+// messages the gateway appends (SaveMessage), while the engine persists to
+// PostgreSQL independently. When an append is missed (app killed mid-run,
+// lost run-finalization event) the cache-hit short-circuit served a truncated
+// history — and a truncated AI context — until the TTL healed it (~15min).
+// The read path therefore re-checks the authoritative DB tail behind a live
+// cache, bounded by a per-session probe watermark:
+const (
+	// How often a cache hit may be re-checked against the DB tail. Within
+	// this window a hit is served from Redis only (zero added DB cost).
+	chatHistoryTailProbeInterval = 30 * time.Second
+	// Per-probe DB timeout: a stale check must never stall the read path.
+	chatHistoryTailProbeTimeout = 2 * time.Second
+	// Max DB rows fetched per probe (index-backed range scan on
+	// idx_chat_user_session_created_at).
+	chatHistoryTailProbeRowLimit = 50
+	// Lookback before the oldest cached timestamp so rows whose engine-side
+	// created_at sits just below the cache window still take part in matching.
+	chatHistoryTailLookback = 5 * time.Second
+	// Max |Δt| between a cached message and a DB row treated as the same
+	// logical message (gateway append time vs engine created_at drift; the
+	// two writers use unrelated message IDs).
+	chatHistoryTailMatchTolerance = 2 * time.Minute
+	// session_meta field holding the last successful tail-probe stamp.
+	chatHistoryTailCheckedAtField = "tail_checked_at"
 )
 
 var errRetryBufferOverflow = errors.New("chat history retry buffer overflow")
@@ -68,6 +96,12 @@ type ChatHistoryService struct {
 	// dropped (the cache is self-healing on the next read).
 	backfillSem chan struct{}
 	backfillWg  sync.WaitGroup
+
+	// HISTORY-TAIL: probes the authoritative DB tail behind a live cache.
+	// Production wiring sets it to (*ChatHistoryService).probeTailFromDB when
+	// a DB pool is available; nil keeps the historical cache-hit
+	// short-circuit (tests and pool-less deployments).
+	tailProbeFn func(ctx context.Context, sessionID, userID string, since time.Time) ([]ChatHistoryMessage, error)
 }
 
 func NewChatHistoryServiceWithPool(rdb *redis.Client, pool *pgxpool.Pool, ttl time.Duration) *ChatHistoryService {
@@ -77,6 +111,9 @@ func NewChatHistoryServiceWithPool(rdb *redis.Client, pool *pgxpool.Pool, ttl ti
 		chatHistoryTTL: ttl,
 		retryStopCh:    make(chan struct{}),
 		backfillSem:    make(chan struct{}, chatHistoryBackfillMaxConcurrent),
+	}
+	if pool != nil {
+		s.tailProbeFn = s.probeTailFromDB
 	}
 	s.breakerThreshold.Store(DefaultMaxQueueSize)
 	s.persistQueueEnabled.Store(true)
@@ -507,7 +544,7 @@ func (s *ChatHistoryService) GetMessages(ctx context.Context, userID, sessionID 
 	}
 
 	// 1. Try Redis first
-	messages, err := s.getMessagesFromRedis(ctx, userID, sessionID, limit, offset)
+	messages, err := s.getMessagesFromRedis(ctx, userID, sessionID)
 	if err != nil {
 		// Security errors must not be swallowed — never fallback to DB on access denial
 		if errors.Is(err, errChatHistoryForbidden) {
@@ -518,8 +555,11 @@ func (s *ChatHistoryService) GetMessages(ctx context.Context, userID, sessionID 
 			zap.Error(err),
 		)
 	} else if len(messages) > 0 {
-		// Cache hit - return immediately
-		return messages, nil
+		// Cache hit. HISTORY-TAIL: before trusting the cache, repair a
+		// truncated tail against the authoritative DB (bounded by the
+		// per-session probe watermark), then page the merged window.
+		messages = s.repairTailFromDB(ctx, userID, sessionID, messages)
+		return sliceMessagesPage(messages, limit, offset), nil
 	}
 
 	// 2. Fallback to PostgreSQL if Redis is empty or failed
@@ -545,8 +585,10 @@ func (s *ChatHistoryService) GetMessages(ctx context.Context, userID, sessionID 
 	return []ChatHistoryMessage{}, nil
 }
 
-// getMessagesFromRedis fetches messages from Redis cache
-func (s *ChatHistoryService) getMessagesFromRedis(ctx context.Context, userID, sessionID string, limit, offset int) ([]ChatHistoryMessage, error) {
+// getMessagesFromRedis fetches the full message list from Redis cache (the
+// ownership filter applied). Paging is applied by sliceMessagesPage AFTER the
+// HISTORY-TAIL tail repair, so offset windows are computed on the merged view.
+func (s *ChatHistoryService) getMessagesFromRedis(ctx context.Context, userID, sessionID string) ([]ChatHistoryMessage, error) {
 	metaKey := fmt.Sprintf("chat:session_meta:%s", sessionID)
 	owner, err := s.rdb.HGet(ctx, metaKey, "user_id").Result()
 	if err != nil && err != redis.Nil {
@@ -577,9 +619,15 @@ func (s *ChatHistoryService) getMessagesFromRedis(ctx context.Context, userID, s
 		}
 		messages = append(messages, msg)
 	}
+	return messages, nil
+}
 
+// sliceMessagesPage applies the history paging window (limit/offset counted
+// from the newest message backwards). Semantics are extracted verbatim from
+// the old getMessagesFromRedis slicing.
+func sliceMessagesPage(messages []ChatHistoryMessage, limit, offset int) []ChatHistoryMessage {
 	if offset >= len(messages) {
-		return []ChatHistoryMessage{}, nil
+		return []ChatHistoryMessage{}
 	}
 	start := len(messages) - offset - limit
 	if start < 0 {
@@ -590,9 +638,9 @@ func (s *ChatHistoryService) getMessagesFromRedis(ctx context.Context, userID, s
 		end = 0
 	}
 	if start >= end {
-		return []ChatHistoryMessage{}, nil
+		return []ChatHistoryMessage{}
 	}
-	return messages[start:end], nil
+	return messages[start:end]
 }
 
 // getMessagesFromDB fetches messages from PostgreSQL as fallback
@@ -648,7 +696,22 @@ func (s *ChatHistoryService) getMessagesFromDB(ctx context.Context, userID, sess
 	}
 	defer rows.Close()
 
-	messages := make([]ChatHistoryMessage, 0, limit)
+	messages, err := scanChatMessageRows(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	for left, right := 0, len(messages)-1; left < right; left, right = left+1, right-1 {
+		messages[left], messages[right] = messages[right], messages[left]
+	}
+	return messages, nil
+}
+
+// scanChatMessageRows maps chat_messages rows (newest-first or oldest-first
+// per the caller's ORDER BY) into history messages. Shared by the DB fallback
+// reader and the HISTORY-TAIL tail probe.
+func scanChatMessageRows(rows pgx.Rows) ([]ChatHistoryMessage, error) {
+	messages := make([]ChatHistoryMessage, 0, 16)
 	for rows.Next() {
 		var (
 			id        pgtype.UUID
@@ -674,11 +737,40 @@ func (s *ChatHistoryService) getMessagesFromDB(ctx context.Context, userID, sess
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-
-	for left, right := 0, len(messages)-1; left < right; left, right = left+1, right-1 {
-		messages[left], messages[right] = messages[right], messages[left]
-	}
 	return messages, nil
+}
+
+// probeTailFromDB fetches the authoritative messages the engine persisted
+// after `since` (oldest-first). It is the production tailProbeFn; the query is
+// a range scan on idx_chat_user_session_created_at.
+func (s *ChatHistoryService) probeTailFromDB(ctx context.Context, sessionID, userID string, since time.Time) ([]ChatHistoryMessage, error) {
+	if s.pool == nil {
+		return nil, fmt.Errorf("database pool not initialized")
+	}
+
+	var sessionUUID, userUUID pgtype.UUID
+	if err := sessionUUID.Scan(sessionID); err != nil {
+		// Session labels resolve to the engine's derived pseudo UUID, same as
+		// getMessagesFromDB (P2-E).
+		derived := resolveSessionUUID(sessionID)
+		sessionUUID = pgtype.UUID{Bytes: derived, Valid: true}
+	}
+	if err := userUUID.Scan(userID); err != nil {
+		return nil, fmt.Errorf("invalid user_id: %w", err)
+	}
+
+	rows, err := s.pool.Query(ctx, `
+		SELECT id, session_id, user_id, role, content, created_at
+		FROM chat_messages
+		WHERE session_id = $1 AND user_id = $2 AND created_at > $3
+		ORDER BY created_at ASC
+		LIMIT $4
+	`, sessionUUID, userUUID, since, chatHistoryTailProbeRowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanChatMessageRows(rows)
 }
 
 func (s *ChatHistoryService) userOwnsSessionInDB(ctx context.Context, userUUID, sessionUUID pgtype.UUID) (bool, error) {
@@ -761,6 +853,206 @@ func (s *ChatHistoryService) backfillRedisMessages(sessionID string, messages []
 		zap.Int("success_count", successCount),
 		zap.Int("message_count", len(messages)),
 	)
+}
+
+// repairTailFromDB closes the HISTORY-TAIL gap on a cache hit: the cache only
+// receives gateway-appended messages while the engine persists to PostgreSQL
+// independently, so a live-but-truncated cache must be re-checked against the
+// authoritative DB tail. Probes are bounded by a per-session watermark
+// (chatHistoryTailProbeInterval): within the window the hit is served from
+// Redis only, past it the DB tail is probed once, missing messages are merged
+// into the returned window and the cache is rewritten. Every failure path
+// degrades to the plain cache view (the historical behaviour).
+func (s *ChatHistoryService) repairTailFromDB(ctx context.Context, userID, sessionID string, cached []ChatHistoryMessage) []ChatHistoryMessage {
+	if s.tailProbeFn == nil {
+		return cached
+	}
+
+	// Per-session probe watermark: fresh hits stay pure-Redis (no added DB
+	// cost, no latency regression); stale ones re-check the DB tail once.
+	metaKey := fmt.Sprintf("chat:session_meta:%s", sessionID)
+	if checkedAt, err := s.rdb.HGet(ctx, metaKey, chatHistoryTailCheckedAtField).Result(); err == nil {
+		if t, perr := time.Parse(time.RFC3339, checkedAt); perr == nil && time.Since(t) < chatHistoryTailProbeInterval {
+			return cached
+		}
+	} else if err != redis.Nil {
+		zap.L().Warn("Chat history tail watermark read failed; serving cache",
+			zap.String("session_id", sessionID),
+			zap.Error(err),
+		)
+		return cached
+	}
+	// Stamp BEFORE probing so a slow or failing DB cannot turn every read
+	// into a probe; worst-case staleness is bounded by the probe interval.
+	_ = s.rdb.HSet(ctx, metaKey, chatHistoryTailCheckedAtField, time.Now().UTC().Format(time.RFC3339)).Err()
+	_ = s.rdb.Expire(ctx, metaKey, s.chatHistoryTTL).Err()
+
+	oldest := parseUnixString(cached[0].Timestamp)
+	for _, msg := range cached[1:] {
+		if t := parseUnixString(msg.Timestamp); t.Before(oldest) {
+			oldest = t
+		}
+	}
+
+	probeCtx, cancelProbe := context.WithTimeout(ctx, chatHistoryTailProbeTimeout)
+	dbRows, err := s.tailProbeFn(probeCtx, sessionID, userID, oldest.Add(-chatHistoryTailLookback))
+	cancelProbe()
+	if err != nil {
+		zap.L().Warn("Chat history tail probe failed; serving cache",
+			zap.String("session_id", sessionID),
+			zap.Error(err),
+		)
+		return cached
+	}
+
+	merged, dbOnly, matched := mergeCacheAndDBTail(cached, dbRows)
+	if len(dbOnly) == 0 {
+		return cached
+	}
+	if matched == 0 {
+		// Not a single cached message matches any probed DB row: the two
+		// sources carry incompatible content shapes and a merge would
+		// duplicate every turn. The DB is the single-writer authoritative
+		// view — serve it and rewrite the cache from it instead.
+		authoritative, dbErr := s.getMessagesFromDB(ctx, userID, sessionID, chatHistoryTailProbeRowLimit, 0)
+		if dbErr != nil || len(authoritative) == 0 {
+			zap.L().Warn("Chat history tail sources diverged; DB fallback failed",
+				zap.String("session_id", sessionID),
+				zap.Error(dbErr),
+			)
+			return cached
+		}
+		zap.L().Info("Chat history cache diverged from DB; serving authoritative view",
+			zap.String("session_id", sessionID),
+			zap.Int("cached", len(cached)),
+			zap.Int("authoritative", len(authoritative)),
+		)
+		s.startBackfill(func() { s.replaceRedisMessages(sessionID, authoritative) })
+		return authoritative
+	}
+
+	zap.L().Info("Repaired truncated chat history tail from DB",
+		zap.String("session_id", sessionID),
+		zap.Int("cached", len(cached)),
+		zap.Int("merged", len(merged)),
+	)
+	s.startBackfill(func() { s.replaceRedisMessages(sessionID, merged) })
+	s.refreshSessionMetaTail(ctx, sessionID, merged)
+	return merged
+}
+
+// mergeCacheAndDBTail folds DB rows probed behind the cache into the cached
+// view. A DB row counts as already-covered when an unconsumed cache message
+// carries the same (role, content) within chatHistoryTailMatchTolerance —
+// gateway appends and engine persists are the same logical message under
+// unrelated IDs, matched by content. Legitimate identical retries (V13 B-02)
+// are paired in timestamp order, nearest first. Returns the merged view
+// (cached ∪ dbOnly, stable-sorted by timestamp), the DB-only tail messages
+// and how many cache messages a DB row was matched to.
+func mergeCacheAndDBTail(cached, dbRows []ChatHistoryMessage) (merged, dbOnly []ChatHistoryMessage, matched int) {
+	consumed := make([]bool, len(cached))
+	dbOnly = make([]ChatHistoryMessage, 0, len(dbRows))
+	tolerance := int64(chatHistoryTailMatchTolerance / time.Second)
+
+	for _, row := range dbRows {
+		rowTs := chatMessageTs(row)
+		best := -1
+		var bestDelta int64
+		for i, cm := range cached {
+			if consumed[i] || cm.Role != row.Role || cm.Content != row.Content {
+				continue
+			}
+			delta := chatMessageTs(cm) - rowTs
+			if delta < 0 {
+				delta = -delta
+			}
+			if best != -1 && delta >= bestDelta {
+				continue
+			}
+			best, bestDelta = i, delta
+		}
+		if best != -1 && bestDelta <= tolerance {
+			consumed[best] = true
+			matched++
+			continue
+		}
+		dbOnly = append(dbOnly, row)
+	}
+
+	if len(dbOnly) == 0 {
+		return cached, dbOnly, matched
+	}
+	merged = make([]ChatHistoryMessage, 0, len(cached)+len(dbOnly))
+	merged = append(merged, cached...)
+	merged = append(merged, dbOnly...)
+	sort.SliceStable(merged, func(i, j int) bool {
+		return chatMessageTs(merged[i]) < chatMessageTs(merged[j])
+	})
+	return merged, dbOnly, matched
+}
+
+func chatMessageTs(msg ChatHistoryMessage) int64 {
+	return parseUnixString(msg.Timestamp).Unix()
+}
+
+// replaceRedisMessages rewrites the cached history with the given view in one
+// transaction (DEL+RPUSH+LTRIM+EXPIRE), so a tail repair can never append on
+// top of a stale list the way a plain RPush backfill would.
+func (s *ChatHistoryService) replaceRedisMessages(sessionID string, messages []ChatHistoryMessage) {
+	ctx := context.Background()
+	cacheKey := "chat:history:" + sessionID
+	pipe := s.rdb.TxPipeline()
+	pipe.Del(ctx, cacheKey)
+	for _, msg := range messages {
+		msgBytes, err := json.Marshal(msg)
+		if err != nil {
+			zap.L().Error("Failed to marshal chat history message for cache repair",
+				zap.String("session_id", sessionID),
+				zap.Error(err),
+			)
+			continue
+		}
+		pipe.RPush(ctx, cacheKey, msgBytes)
+	}
+	pipe.LTrim(ctx, cacheKey, -20, -1)
+	pipe.Expire(ctx, cacheKey, s.chatHistoryTTL)
+	if _, err := pipe.Exec(ctx); err != nil {
+		zap.L().Error("Failed to rewrite chat history cache after tail repair",
+			zap.String("session_id", sessionID),
+			zap.Error(err),
+		)
+	}
+}
+
+// refreshSessionMetaTail aligns the cached session metadata with the repaired
+// tail so the session list no longer advertises a stale last message (part of
+// the V13-RETEST dual-metadata contradiction). The title is intentionally left
+// to the SaveMessage writer (title = first user prompt there).
+func (s *ChatHistoryService) refreshSessionMetaTail(ctx context.Context, sessionID string, merged []ChatHistoryMessage) {
+	if len(merged) == 0 {
+		return
+	}
+	last := merged[len(merged)-1]
+	preview := strings.TrimSpace(last.Content)
+	if preview == "" {
+		return
+	}
+	if len(preview) > 120 {
+		preview = preview[:120]
+	}
+	metaKey := fmt.Sprintf("chat:session_meta:%s", sessionID)
+	fields := map[string]interface{}{
+		"last_preview":    preview,
+		"last_message":    preview,
+		"last_message_at": parseUnixString(last.Timestamp).UTC().Format(time.RFC3339),
+	}
+	if err := s.rdb.HSet(ctx, metaKey, fields).Err(); err != nil {
+		zap.L().Warn("Failed to refresh chat session meta after tail repair",
+			zap.String("session_id", sessionID),
+			zap.Error(err),
+		)
+	}
+	_ = s.rdb.Expire(ctx, metaKey, s.chatHistoryTTL).Err()
 }
 
 func (s *ChatHistoryService) GetRecentSessions(ctx context.Context, userID string, limit int) ([]ChatSessionSummary, error) {
