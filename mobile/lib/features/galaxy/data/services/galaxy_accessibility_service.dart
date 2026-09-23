@@ -362,6 +362,9 @@ class GalaxyNodeSemantics extends StatelessWidget {
     this.onTap,
     this.onDoubleTap,
     this.onLongPress,
+    this.focusNode,
+    this.onDidGainAccessibilityFocus,
+    this.onDidLoseAccessibilityFocus,
     super.key,
   });
 
@@ -371,6 +374,17 @@ class GalaxyNodeSemantics extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onDoubleTap;
   final VoidCallback? onLongPress;
+
+  /// GALAXY-KEYNAV：与语义条目绑定的 FocusNode。挂上后 framework 的
+  /// Focus 语义包装自动给语义节点补 focusable/focused 标志（键盘焦点
+  /// →读屏焦点同步）与 onFocus 输入动作（读屏聚焦→requestFocus；iOS
+  /// 除外，framework #150030），键盘遍历与读屏遍历共享同一焦点事实源。
+  final FocusNode? focusNode;
+
+  /// GALAXY-KEYNAV：读屏焦点移入/移出（SemanticsAction.didGain/
+  /// didLoseAccessibilityFocus）→ 屏层借它反向驱动键盘焦点。
+  final VoidCallback? onDidGainAccessibilityFocus;
+  final VoidCallback? onDidLoseAccessibilityFocus;
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -385,7 +399,14 @@ class GalaxyNodeSemantics extends StatelessWidget {
         button: true,
         onTap: onTap,
         onLongPress: onLongPress,
-        child: child,
+        onDidGainAccessibilityFocus: onDidGainAccessibilityFocus,
+        onDidLoseAccessibilityFocus: onDidLoseAccessibilityFocus,
+        child: focusNode == null
+            ? child
+            // 焦点可视化不在此处：条目本体视觉隐身（Opacity(0) 清单），
+            // 焦点环画在画布上（StarMapPainter.keyboardFocusNodeId，
+            // 与 wt254 命中高亮同形制），Focus 只承担焦点事实源与语义同步。
+            : Focus(focusNode: focusNode, child: child),
       );
 }
 
@@ -393,14 +414,46 @@ class GalaxyNodeSemantics extends StatelessWidget {
 class GalaxyFocusManager {
   GalaxyFocusManager();
 
+  /// GALAXY-KEYNAV：键盘焦点变化回调（null = 焦点已清空）。
+  ///
+  /// 星图屏挂此回调做两件事：焦点环参数同步（StarMapPainter 重绘）与
+  /// 读屏播报（节点名+掌握度，announceNodeSelection 既有链路）。
+  void Function(String? nodeId)? onFocusedNodeChanged;
+
   final Map<String, FocusNode> _focusNodes = {};
   String? _currentFocusedNodeId;
 
   /// Get or create focus node for a galaxy node
-  FocusNode getFocusNode(String nodeId) {
-    _focusNodes.putIfAbsent(nodeId, FocusNode.new);
-    return _focusNodes[nodeId]!;
-  }
+  ///
+  /// GALAXY-KEYNAV 补齐：建条目时挂焦点监听。原设计只在 [focusNode]
+  /// 手动路径更新 `_currentFocusedNodeId`——Tab/读屏等框架路径把焦点
+  /// 移入条目时管理器不知情，方向键遍历会从过期位置续走。现在任意
+  /// 路径的焦点移入都同步到管理器并触发 [onFocusedNodeChanged]；
+  /// 焦点移出到清单外（Tab 去控件/模态抢焦点）同样上报清空，
+  /// 焦点环不残留。
+  FocusNode getFocusNode(String nodeId) => _focusNodes.putIfAbsent(nodeId, () {
+        final node = FocusNode();
+        node.addListener(() {
+          if (node.hasFocus) {
+            _currentFocusedNodeId = nodeId;
+            onFocusedNodeChanged?.call(nodeId);
+            return;
+          }
+          // 失焦：当前记录不是本条目（清理已先走）则不管；遍历换位时
+          // 框架先失焦旧条目后聚焦新条目，此刻查「是否仍有受管条目持有
+          // 焦点」防误报清空。
+          if (_currentFocusedNodeId != nodeId) {
+            return;
+          }
+          final anyTrackedFocused = _focusNodes.values
+              .any((tracked) => tracked.hasFocus);
+          if (!anyTrackedFocused) {
+            _currentFocusedNodeId = null;
+            onFocusedNodeChanged?.call(null);
+          }
+        });
+        return node;
+      });
 
   /// Focus a specific node
   void focusNode(String nodeId) {
@@ -449,6 +502,26 @@ class GalaxyFocusManager {
     _currentFocusedNodeId = null;
     for (final node in _focusNodes.values) {
       node.unfocus();
+    }
+    onFocusedNodeChanged?.call(null);
+  }
+
+  /// GALAXY-KEYNAV 补齐：图变更后回收失效条目的 FocusNode（防随图换代
+  /// 无界累积）。当前焦点条目失效时清空并回调 null。
+  ///
+  /// 只允许在旧语义清单卸载后的 post-frame 调用：disposed node 若仍被
+  /// 挂载中的 Focus widget 持有，会触发 framework 断言。
+  void pruneExcept(Set<String> validNodeIds) {
+    final staleIds = _focusNodes.keys
+        .where((id) => !validNodeIds.contains(id))
+        .toList(growable: false);
+    for (final nodeId in staleIds) {
+      _focusNodes.remove(nodeId)?.dispose();
+    }
+    final current = _currentFocusedNodeId;
+    if (current != null && !validNodeIds.contains(current)) {
+      _currentFocusedNodeId = null;
+      onFocusedNodeChanged?.call(null);
     }
   }
 

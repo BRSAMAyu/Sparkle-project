@@ -293,6 +293,7 @@ class StarMapPainter extends CustomPainter {
     this.tapFeedbackNodeId,
     this.tapFeedbackProgress = 0,
     this.tapFeedbackPhase = 0,
+    this.keyboardFocusNodeId,
     this.ambientPhase = 0,
     this.isBuildAnimating = false,
     this.examSprintActive = false,
@@ -330,6 +331,11 @@ class StarMapPainter extends CustomPainter {
   final String? tapFeedbackNodeId;
   final double tapFeedbackProgress;
   final double tapFeedbackPhase;
+
+  /// GALAXY-KEYNAV：当前键盘焦点的节点 id（GalaxyFocusManager 的画布
+  /// 镜像）——焦点环绘制参数，null = 无键盘焦点不画环。
+  final String? keyboardFocusNodeId;
+
   final double ambientPhase;
   final bool isBuildAnimating;
   final bool examSprintActive;
@@ -428,6 +434,7 @@ class StarMapPainter extends CustomPainter {
       oldDelegate.tapFeedbackNodeId != tapFeedbackNodeId ||
       oldDelegate.tapFeedbackProgress != tapFeedbackProgress ||
       oldDelegate.tapFeedbackPhase != tapFeedbackPhase ||
+      oldDelegate.keyboardFocusNodeId != keyboardFocusNodeId ||
       oldDelegate.isDarkMode != isDarkMode ||
       oldDelegate.worldBounds != worldBounds ||
       oldDelegate.blendedColors != blendedColors ||
@@ -1750,6 +1757,16 @@ class StarMapPainter extends CustomPainter {
         );
       }
 
+      if (keyboardFocusNodeId == node.id) {
+        _drawKeyboardFocusRing(
+          canvas: canvas,
+          center: nodeCenter,
+          radius: radius,
+          color: style.baseColor.withValues(alpha: nodeAlpha),
+          nodeId: node.id,
+        );
+      }
+
       if (selectedNodeId == node.id) {
         final selectedColor = Color.lerp(
           style.baseColor,
@@ -2490,6 +2507,44 @@ class StarMapPainter extends CustomPainter {
         ..color = color
         ..strokeWidth = 1
         ..style = PaintingStyle.stroke,
+    );
+  }
+
+  /// GALAXY-KEYNAV：键盘焦点环——与命中高亮（[_drawTapRipples]，wt254）
+  /// 同形制：节点中心同心圆环、sector baseColor、细描边；区别于选中环
+  /// （中性色 lerp）保持原色以示层级。持久呈现 + ambientPhase 慢脉冲
+  /// （呼吸提示键盘焦点所在；ambientPhase 已在 shouldRepaint 白名单），
+  /// 外圈借 [_drawOrbitRing] 既有虚线形制收尾。
+  void _drawKeyboardFocusRing({
+    required Canvas canvas,
+    required Offset center,
+    required double radius,
+    required Color color,
+    required String nodeId,
+  }) {
+    final pulse = 0.5 + 0.5 * math.sin(ambientPhase * 2.2 + _nodeSeed(nodeId));
+    canvas
+      ..drawCircle(
+        center,
+        radius * (1.5 + 0.1 * pulse),
+        Paint()
+          ..color = color.withValues(alpha: 0.10 + 0.05 * pulse)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12),
+      )
+      ..drawCircle(
+        center,
+        radius + 3.2,
+        Paint()
+          ..color = color.withValues(alpha: 0.88)
+          ..strokeWidth = 1.6
+          ..style = PaintingStyle.stroke,
+      );
+    _drawOrbitRing(
+      canvas: canvas,
+      center: center,
+      radius: radius * 1.9 + 2 * pulse,
+      color: color.withValues(alpha: 0.40 + 0.15 * pulse),
+      dashed: true,
     );
   }
 

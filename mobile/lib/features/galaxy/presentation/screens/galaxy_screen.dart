@@ -8,6 +8,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
@@ -219,6 +220,22 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   Widget? _nodeSemanticsOverlay;
   Locale? _nodeSemanticsLocale;
 
+  // GALAXY-KEYNAV：星图键盘导航——激活 wt259 登记保留的
+  // GalaxyFocusManager/GalaxyKeyboardNavigation 设计件（桌面/外接键盘路径）。
+  // 焦点事实源在管理器；[GALAXY-KEYNAV] 一节持有方向键遍历序、Enter 激活
+  // 链、Esc 分层、缩放/平移与焦点环/播报回调。
+  late final GalaxyFocusManager _galaxyFocusManager = GalaxyFocusManager();
+  late final GalaxyKeyboardNavigation _galaxyKeyboardNavigation =
+      GalaxyKeyboardNavigation(
+    focusManager: _galaxyFocusManager,
+    onNodeSelected: _activateNodeFromKeyboard,
+    onZoom: _handleKeyboardZoom,
+    onPan: _handleKeyboardPan,
+  );
+  // 键盘焦点节点的画布镜像：StarMapPainter 焦点环参数（经
+  // onFocusedNodeChanged 回调同步并触发重绘，真实源在管理器）。
+  String? _keyboardFocusedNodeId;
+
   // SPEC-J（A-SPEC top10 #10）：galaxy 工作视图最小切片。
   // 默认进图先聚「下一个建议碰」锚点邻域（复用既有 spotlight 机制），
   // 并挂一枚推荐 chip（§4.1.4 ≤1 名额铁律——全屏最多一枚，见
@@ -340,6 +357,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         setState(() {});
       });
     _tapFeedbackController.addStatusListener(_handleTapFeedbackStatus);
+    // GALAXY-KEYNAV：键盘焦点变化 → 焦点环重绘 + 读屏播报（节点名+掌握度）。
+    _galaxyFocusManager.onFocusedNodeChanged =
+        _handleGalaxyKeyboardFocusChanged;
     SchedulerBinding.instance.addTimingsCallback(_handleFrameTimings);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -410,6 +430,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _initialBuildReplayTimer?.cancel();
     _pendingExternalFocusTimer?.cancel();
     _workViewFocusTimer?.cancel();
+    // GALAXY-KEYNAV：条目 FocusNode 全量回收（屏卸载即无挂载者，安全）。
+    _galaxyFocusManager.dispose();
     SchedulerBinding.instance.removeTimingsCallback(_handleFrameTimings);
     super.dispose();
   }
@@ -889,6 +911,16 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       basePositions: positions,
     );
 
+    // GALAXY-KEYNAV：图已换代——旧清单条目的 FocusNode 随之作废。
+    // post-frame 回收：此刻旧 overlay 元素仍挂载，立即 dispose 会触发
+    // framework「disposed while attached」断言；帧后旧条目已卸载。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _galaxyFocusManager.pruneExcept(_nodesById.keys.toSet());
+    });
+
     if (!preserveCamera) {
       _startEntranceAnimationIfNeeded(playbackLaunch: playbackLaunch);
       // SPEC-J：首次进图（非保视野刷新）才安排工作视野聚焦；
@@ -1237,18 +1269,31 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       // 可被读屏线性遍历；同位重叠时遍历顺序即图序（兄弟序）。
       child: SizedBox.fromSize(
         size: const Size(48, 48),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: <Widget>[
-            for (final node in graph.nodes)
-              GalaxyNodeSemantics(
-                key: ValueKey<String>('galaxy-a11y-node-${node.id}'),
-                node: node,
-                accessibilityService: _accessibilityService,
-                onTap: () => _activateNodeFromSemantics(node),
-                child: const SizedBox.expand(),
-              ),
-          ],
+        // GALAXY-KEYNAV：OrderedTraversalPolicy + NumericFocusOrder 把 Tab
+        // 遍历序钉到图序——条目锚同位（rect 全等），默认
+        // ReadingOrderTraversalPolicy 对同位条目走 List.sort（非稳定排序），
+        // 顺序不保证；显式定序后 Tab 与方向键、读屏共用同一图序。
+        child: FocusTraversalGroup(
+          policy: OrderedTraversalPolicy(),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: <Widget>[
+              for (final (index, node) in graph.nodes.indexed)
+                FocusTraversalOrder(
+                  order: NumericFocusOrder(index.toDouble()),
+                  child: GalaxyNodeSemantics(
+                    key: ValueKey<String>('galaxy-a11y-node-${node.id}'),
+                    node: node,
+                    accessibilityService: _accessibilityService,
+                    focusNode: _galaxyFocusManager.getFocusNode(node.id),
+                    onTap: () => _activateNodeFromSemantics(node),
+                    onDidGainAccessibilityFocus: () =>
+                        _galaxyFocusManager.focusNode(node.id),
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -1277,6 +1322,110 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         ),
       );
     }
+  }
+
+  // ============================================
+  // GALAXY-KEYNAV：星图键盘导航接线（wt259 登记保留的 GalaxyFocusManager/
+  // GalaxyKeyboardNavigation 设计件激活——桌面/外接键盘路径）。
+  // 方向键/Tab 按语义清单图序遍历节点；Enter/空格与语义 tap 同链路
+  // （解锁→详情 sheet / 锁定→预览卡）；Esc 分层（预览卡在屏先关，否则
+  // 清键盘焦点）；±缩放、WASD 平移与手势命令同参数；焦点环由画布绘制
+  // （与 wt254 命中高亮同形制）；焦点变化播报走既有 galaxyA11yNode* 文案。
+  // ============================================
+
+  /// 键盘遍历序 = 语义清单节点序（图序），与读屏遍历同源。
+  List<String> get _orderedGalaxyNodeIds {
+    final graph = _graph;
+    if (graph == null) {
+      return const <String>[];
+    }
+    return <String>[for (final node in graph.nodes) node.id];
+  }
+
+  /// 画布键盘导航的按键拦截面（挂在语义清单外层，见 Stack 装配处）。
+  ///
+  /// 只有焦点在节点条目内时按键才经此处冒泡：搜索框等外部控件的按键
+  /// 不经过本子树，方向键在文本框里仍移动光标。Esc 在此先行截获做
+  /// 覆盖层分层（设计件的 escape 分支只清焦点，不改设计件）；其余按键
+  /// 交 [GalaxyKeyboardNavigation.handleKeyEvent]（方向键遍历/Enter 激活/
+  /// ±缩放/WASD 平移）。Tab 不截获——交给框架遍历（清单内建
+  /// OrderedTraversalPolicy 图序，见 [_buildNodeSemanticsOverlay]）。
+  KeyEventResult _handleGalaxyCanvasKeyEvent(FocusNode node, KeyEvent event) {
+    final graph = _graph;
+    if (graph == null || graph.nodes.isEmpty) {
+      return KeyEventResult.ignored;
+    }
+    if (event is KeyDownEvent &&
+        event.logicalKey == LogicalKeyboardKey.escape &&
+        _previewNode != null) {
+      // Esc 关预览卡（TapCommand 空命中分支同款清理），节点焦点保留。
+      setState(() {
+        _cancelTapFeedbackState();
+        _clearPreviewState();
+        _selectedNodeId = null;
+        _spotlightAnchorId = null;
+        _spotlightNodeIds = const <String>{};
+      });
+      _syncProviderSelection(null);
+      return KeyEventResult.handled;
+    }
+    return _galaxyKeyboardNavigation.handleKeyEvent(
+      event,
+      _orderedGalaxyNodeIds,
+    );
+  }
+
+  /// 键盘 Enter/空格 → 与语义 tap/画布点按同链路（[_activateNodeFromSemantics]）。
+  void _activateNodeFromKeyboard(String nodeId) {
+    final node = _nodesById[nodeId];
+    if (node == null) {
+      return;
+    }
+    _activateNodeFromSemantics(node);
+  }
+
+  /// 键盘焦点变化（含 Tab/读屏 didGain 等任意路径）：焦点环参数同步
+  /// （触发画布重绘）+ 读屏播报既有语义全标签（名称+解锁态+掌握度+
+  /// 学习次数，galaxyA11yNode* 家族，wt259 登记保留的 announce 接线）。
+  void _handleGalaxyKeyboardFocusChanged(String? nodeId) {
+    if (!mounted || _keyboardFocusedNodeId == nodeId) {
+      return;
+    }
+    setState(() {
+      _keyboardFocusedNodeId = nodeId;
+    });
+    final node = nodeId == null ? null : _nodesById[nodeId];
+    if (node != null) {
+      unawaited(_accessibilityService.announceNodeSelection(node));
+    }
+  }
+
+  /// ± 缩放（ZoomCommand 同参数：视口中心为焦点）。
+  void _handleKeyboardZoom(double deltaScale) {
+    _stopFling();
+    _stopPhysicsSimulation(commitPendingNode: true);
+    setState(() {
+      _cancelTapFeedbackState();
+      _clearPreviewState();
+      _camera = _camera.applyZoom(
+        deltaScale,
+        Offset(_viewportSize.width / 2, _viewportSize.height / 2),
+      );
+      _microDriftOffsets = const <String, Offset>{};
+    });
+    _syncProviderScale(_camera.scale);
+  }
+
+  /// WASD 平移（PanCommand 同参数）。
+  void _handleKeyboardPan(Offset delta) {
+    _stopFling();
+    _stopPhysicsSimulation(commitPendingNode: true);
+    setState(() {
+      _cancelTapFeedbackState();
+      _clearPreviewState();
+      _camera = _camera.applyPan(delta);
+      _microDriftOffsets = const <String, Offset>{};
+    });
   }
 
   void _handleGestureCommand(GalaxyGestureCommand command) {
@@ -3286,8 +3435,19 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                               // 容器摘要 → 节点清单 → 操作控件。实例按图
                               // 缓存不随帧重建（性能红线见方法注释）。
                               // graph 非空由本分支前置早退保证（空图走 _StatusPanel）。
+                              //
+                              // GALAXY-KEYNAV：外层 Focus 是键盘导航拦截面——
+                              // canRequestFocus=false（自身不是 Tab 停靠点，
+                              // Tab 直落第一个节点条目），includeSemantics=false
+                              // （零语义、零每帧包装成本），仅当焦点在条目内
+                              // 时 onKeyEvent 才随冒泡被调用。
                               if (graph.nodes.isNotEmpty)
-                                _buildNodeSemanticsOverlay(),
+                                Focus(
+                                  includeSemantics: false,
+                                  canRequestFocus: false,
+                                  onKeyEvent: _handleGalaxyCanvasKeyEvent,
+                                  child: _buildNodeSemanticsOverlay(),
+                                ),
                               Listener(
                                 behavior: HitTestBehavior.opaque,
                                 onPointerDown: _handlePointerDown,
@@ -3318,6 +3478,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                                           _tapFeedbackAnimation.value,
                                       tapFeedbackPhase:
                                           _tapFeedbackController.value,
+                                      keyboardFocusNodeId:
+                                          _keyboardFocusedNodeId,
                                       isDarkMode: isDarkMode,
                                       worldBounds: _computeWorldBounds(),
                                       blendedColors: blendedColors,
