@@ -21107,11 +21107,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String examTodayCompleted(Object completed, Object total) {
-    return 'Today $completed/$total done';
-  }
-
-  @override
   String examShowNextDays(Object count) {
     return 'Show next $count days';
   }
@@ -28621,9 +28616,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get planStartExamSprint => 'Start Exam Sprint';
-
-  @override
-  String get planLoadSprintFailed => 'Failed to load sprint plan';
 
   @override
   String get planSoonUnlock => 'Almost unlocked!';

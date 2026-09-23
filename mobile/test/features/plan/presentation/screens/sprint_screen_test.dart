@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
@@ -54,9 +55,13 @@ void main() {
     Object Function()? planDetail,
     ExamSprintDashboardData? examData,
     AchievementNotifier Function()? achievement,
+    Key? scopeKey,
   }) {
     final effectivePlanState = planListState ?? PlanListState();
     return ProviderScope(
+      // scopeKey：同一 tester 上二次 pumpWidget 换 examData 档位时必须换 key，
+      // 否则 ProviderScope 元素原位复用、overrides 不重建（Riverpod 已知行为）。
+      key: scopeKey,
       overrides: [
         planListProvider.overrideWith(
           (ref) => _StaticPlanNotifier(effectivePlanState),
@@ -258,6 +263,79 @@ void main() {
     }
     // 稀有度色只允许留在图标环身份位：进度条 hero 区不得出现 epic 紫。
     expect(DS.rarityEpic, isNot(anyOf(DS.neutral500, DS.success)));
+  });
+
+  // ─────────── SPEC-FIX（复审闭环 · R4=N5 三档 urgency 收敛到 sprint pill） ───────────
+
+  group('SPEC-FIX R4 — 倒计时 pill 与 exam 卡同款 N5 三档色阶', () {
+    /// 倒计时 pill（带 timelapse 图标的 SemanticPill）的 tone 与其文字色。
+    ({PillTone tone, Color textColor}) countdownPill(WidgetTester tester) {
+      final pill = tester.widget<SemanticPill>(
+        find.byWidgetPredicate(
+          (w) => w is SemanticPill && w.icon == Icons.timelapse,
+        ),
+      );
+      final text = tester.widget<Text>(
+        find.descendant(of: find.byWidget(pill), matching: find.byType(Text)),
+      );
+      return (tone: pill.tone, textColor: text.style!.color!);
+    }
+
+    Future<void> pumpScreenAt(WidgetTester tester, int daysLeft) async {
+      await tester.pumpWidget(
+        host(
+          planListState: PlanListState(activePlans: [PlanModelStub.plan]),
+          planDetail: () => PlanModelStub.plan,
+          examData: examPayload(daysLeft: daysLeft),
+          achievement: _StaticAchievementNotifier.new,
+          scopeKey: UniqueKey(),
+          child: const SprintScreen(),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    testWidgets('中性档（daysLeft=10 > 7）：brand tone，文字色 = brandPrimary',
+        (tester) async {
+      await pumpScreenAt(tester, 10);
+      final pill = countdownPill(tester);
+      expect(pill.tone, PillTone.brand);
+      expect(pill.textColor, DS.brandPrimary);
+    });
+
+    testWidgets('档位边界：daysLeft=7 warning / daysLeft=8 brand（N5 口径 >7 中性）',
+        (tester) async {
+      await pumpScreenAt(tester, 7);
+      expect(countdownPill(tester).tone, PillTone.warning);
+      expect(countdownPill(tester).textColor, DS.warning);
+
+      await pumpScreenAt(tester, 8);
+      expect(countdownPill(tester).tone, PillTone.brand);
+      expect(countdownPill(tester).textColor, DS.brandPrimary);
+    });
+
+    testWidgets('warning 档（daysLeft=5）：文字色 = warning 槽（与 home exam 卡同橙）',
+        (tester) async {
+      await pumpScreenAt(tester, 5);
+      expect(find.text('剩余 5 天'), findsOneWidget);
+      final pill = countdownPill(tester);
+      expect(pill.tone, PillTone.warning);
+      expect(pill.textColor, DS.warning);
+    });
+
+    testWidgets('danger 档（daysLeft=1 / 考日 0）：文字色 = error 槽（「不可挽回节点临近」）',
+        (tester) async {
+      await pumpScreenAt(tester, 1);
+      expect(countdownPill(tester).tone, PillTone.danger);
+      expect(countdownPill(tester).textColor, DS.error);
+
+      await pumpScreenAt(tester, 0);
+      expect(find.text('今天考试'), findsOneWidget);
+      expect(countdownPill(tester).tone, PillTone.danger);
+      expect(countdownPill(tester).textColor, DS.error);
+    });
   });
 }
 

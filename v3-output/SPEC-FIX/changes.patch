@@ -1,0 +1,2328 @@
+diff --git a/mobile/lib/features/home/presentation/widgets/exam_sprint_dashboard_card.dart b/mobile/lib/features/home/presentation/widgets/exam_sprint_dashboard_card.dart
+index 75230ab4..f7471b37 100644
+--- a/mobile/lib/features/home/presentation/widgets/exam_sprint_dashboard_card.dart
++++ b/mobile/lib/features/home/presentation/widgets/exam_sprint_dashboard_card.dart
+@@ -3,6 +3,7 @@ import 'dart:math' as math;
+ import 'package:flutter/material.dart';
+ import 'package:sparkle/core/design/design_system.dart';
+ import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
++import 'package:sparkle/core/display/lexicon/date_formatting.dart';
+ import 'package:sparkle/core/extensions/context_l10n.dart';
+ import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
+ import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
+@@ -41,8 +42,9 @@ class _ExamSprintDashboardCardState extends State<ExamSprintDashboardCard> {
+         .toLowerCase()
+         .startsWith('zh');
+     final data = widget.data;
+-    // SPEC v1.1 N5（改造 #9）：截止临近三档色阶 —— ≥7d 中性层（brandPrimary）
+-    // → ≤7d warning → ≤1d error。error 槽在本上下文扩展为「不可挽回节点临近」，
++    // SPEC v1.1 N5（改造 #9；「>7d 中性」勘误 @SPEC-REVIEW）：截止临近三档
++    // 色阶 —— >7d 中性层（brandPrimary）→ ≤7d warning → ≤1d error。
++    // error 槽在本上下文扩展为「不可挽回节点临近」，
+     // 禁再泛化；翻转范围收敛至 header（图标+模式 pill）与倒计时数字两处，
+     // 计划 chip / 任务组等其余位不再随 urgency 翻色。
+     final urgencyColor = _urgencyAccentColor(context.colors, data.daysLeft);
+@@ -473,8 +475,8 @@ class _HeadlineBlock extends StatelessWidget {
+   final ExamSprintDashboardData data;
+   final bool isChinese;
+ 
+-  /// N5：倒计时数字位＝翻转收敛的两处之一（另一处是 header）。
+-  /// ≥7d 档为中性 brandPrimary，≤7d warning，≤1d error。
++  /// N5（「>7d 中性」勘误 @SPEC-REVIEW）：倒计时数字位＝翻转收敛的两处之一
++  /// （另一处是 header）。>7d 档为中性 brandPrimary，≤7d warning，≤1d error。
+   final Color urgencyColor;
+ 
+   @override
+@@ -644,16 +646,11 @@ class _PassProbabilityArcState extends State<_PassProbabilityArc>
+                     fontWeight: DS.fontWeightMedium,
+                   ),
+                 ),
+-                const SizedBox(height: DS.spacing6),
+-                Text(
+-                  context.l10n.examTodayCompleted(
+-                      widget.data.todayProgress.completed,
+-                      widget.data.todayProgress.total),
+-                  style: context.typo.bodySmall.copyWith(
+-                    color: DS.textSecondary,
+-                  ),
+-                ),
+-                const SizedBox(height: DS.spacing4),
++                // S-G9 清偿（复审 R5/SPEC-FIX）：今日进度文案同卡二出——
++                // 弧旁「今日 x/y 完成」块删除，保留 _HeadlineBlock 主位
++                // `examTodayProgress`（「今天已完成 x/y 项任务」）：
++                // 该措辞带单位与宾语（项任务），x/y 的分母语义（今日任务总数）
++                // 就地可读，符合 §6.1「结论+数字」；弧旁仅保留 N6② 口径行。
+                 // N6②：预测数口径一行，就地可见（「按当前进度估算」级）。
+                 Text(
+                   context.l10n.examPassProbabilityEstimate,
+@@ -854,8 +851,11 @@ class _TaskGroupCard extends StatelessWidget {
+     final title = group.isToday
+         ? context.l10n.examDay
+         : context.l10n.examDayIndex(group.dayIndex);
+-    final subtitle =
+-        group.date == null ? null : '${group.date!.month}/${group.date!.day}';
++    // S-G10 清偿（复审 R5/SPEC-FIX）：日期手工拼接 `'${m}/${d}'` 退役，
++    // 走 date_formatting.dart 唯一入口（X3 防复发，双语各自地道）。
++    final subtitle = group.date == null
++        ? null
++        : formatSparkleDateOnly(group.date!, context.l10n);
+ 
+     return Container(
+       width: double.infinity,
+diff --git a/mobile/lib/features/home/presentation/widgets/prism_card.dart b/mobile/lib/features/home/presentation/widgets/prism_card.dart
+index f4988007..d7f0ea5b 100755
+--- a/mobile/lib/features/home/presentation/widgets/prism_card.dart
++++ b/mobile/lib/features/home/presentation/widgets/prism_card.dart
+@@ -7,6 +7,7 @@ import 'package:sparkle/core/design/design_system.dart';
+ import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+ import 'package:sparkle/core/extensions/context_l10n.dart';
+ import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
++import 'package:sparkle/features/home/presentation/widgets/decoration_policy.dart';
+ 
+ /// PrismCard - Cognitive Prism Card (2x1 wide)
+ class PrismCard extends ConsumerStatefulWidget {
+@@ -18,25 +19,48 @@ class PrismCard extends ConsumerStatefulWidget {
+ 
+ class _PrismCardState extends ConsumerState<PrismCard>
+     with SingleTickerProviderStateMixin {
+-  late AnimationController _breathingController;
+-  late Animation<double> _breathingAnimation;
++  /// SPEC v1.1 N3（SPEC-FIX 复审 R4 处置，C-G2 预言的「home 同型」清偿）：
++  /// 2000ms repeat(reverse) 无门控常驻呼吸退役——改**单次入场**（SPEC v1.1
++  /// A2.1 正典集 320ms，forward 一次后静止定帧，折射辉光停在 0.3 定值），
++  /// 不再占 home 屏 §2.6 持续动画源名额。DecorationMode 门控保留
++  /// （SPEC-B #8 DayZero 同款范式）：staticFrame/off 档直接钉在入场完成位，
++  /// 低性能/reduce-motion 设备零 frame 回调。
++  late final AnimationController _entranceController;
++  late final Animation<double> _glowOpacity;
+ 
+   @override
+   void initState() {
+     super.initState();
+-    _breathingController = AnimationController(
++    _entranceController = AnimationController(
+       vsync: this,
+-      duration: const Duration(milliseconds: 2000),
++      duration: const Duration(milliseconds: 320),
+     );
+-    unawaited(_breathingController.repeat(reverse: true));
+-    _breathingAnimation = Tween<double>(begin: 0.1, end: 0.3).animate(
+-      CurvedAnimation(parent: _breathingController, curve: Curves.easeInOut),
++    _glowOpacity = Tween<double>(begin: 0.1, end: 0.3).animate(
++      CurvedAnimation(parent: _entranceController, curve: Curves.easeOutCubic),
+     );
+   }
+ 
++  @override
++  void didChangeDependencies() {
++    super.didChangeDependencies();
++    final mode = resolveDecorationMode(context);
++    if (mode == DecorationMode.animated) {
++      // 单次入场：只播一次，依赖重建（主题/媒体变化）不重播。
++      if (!_entranceController.isAnimating &&
++          !_entranceController.isCompleted) {
++        unawaited(_entranceController.forward());
++      }
++    } else {
++      // 静止定帧＝入场完成位（辉光 0.3 定值，无循环往返）。
++      _entranceController
++        ..stop()
++        ..value = 1.0;
++    }
++  }
++
+   @override
+   void dispose() {
+-    _breathingController.dispose();
++    _entranceController.dispose();
+     super.dispose();
+   }
+ 
+@@ -72,12 +96,12 @@ class _PrismCardState extends ConsumerState<PrismCard>
+           child: Stack(
+             clipBehavior: Clip.antiAlias,
+             children: [
+-              // Prism refraction effect (animated)
++              // Prism refraction effect（单次入场后静止定帧，见 _PrismCardState）
+               Positioned(
+                 right: -10,
+                 bottom: -10,
+                 child: AnimatedBuilder(
+-                  animation: _breathingAnimation,
++                  animation: _glowOpacity,
+                   builder: (context, child) => Container(
+                     width: 60,
+                     height: 60,
+@@ -86,7 +110,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
+                       gradient: RadialGradient(
+                         colors: [
+                           DS.prismPurple.withValues(
+-                            alpha: _breathingAnimation.value * 0.5,
++                            alpha: _glowOpacity.value * 0.5,
+                           ),
+                           DS.surfacePrimary.withValues(alpha: 0),
+                         ],
+diff --git a/mobile/lib/features/plan/presentation/screens/sprint_screen.dart b/mobile/lib/features/plan/presentation/screens/sprint_screen.dart
+index 0775e990..30f4dcfb 100755
+--- a/mobile/lib/features/plan/presentation/screens/sprint_screen.dart
++++ b/mobile/lib/features/plan/presentation/screens/sprint_screen.dart
+@@ -292,8 +292,10 @@ class _SprintHeader extends ConsumerWidget {
+             const SizedBox(height: DS.lg),
+             if (serverDaysLeft != null)
+               // SPEC-GUARD（N1/改造#7）：裸 Chip 迁入 SemanticPill owner。
+-              // 倒计时是冲刺身份锚点数字，tone 走 brand；考日/已结束同 pill
+-              // 收敛，不在本卡引入 N5 紧迫色阶（那是 exam 卡 header+倒计时的条款）。
++              // SPEC-FIX（复审 R4/N5 口径统一）：倒计时 pill 与 exam 卡
++              // `_urgencyAccentColor` 同款三档（≤1d danger / ≤7d warning /
++              // 其余 brand），终结同一 sprint surface 内「home 卡橙 / sprint
++              // 屏恒 brand」的色语义分叉——N1 已把两文件定义为一个 surface。
+               SemanticPill(
+                 label: serverDaysLeft > 0
+                     ? context.l10n.sprintDaysLeft(serverDaysLeft)
+@@ -301,7 +303,7 @@ class _SprintHeader extends ConsumerWidget {
+                         ? context.l10n.examDay
+                         : context.l10n.sprintEnded,
+                 icon: Icons.timelapse,
+-                tone: PillTone.brand,
++                tone: _sprintCountdownTone(serverDaysLeft),
+               )
+             else if (plan.targetDate != null)
+               // 目标日降级展示：中性信息位。
+@@ -471,6 +473,17 @@ Color _rarityColor(AchievementRarity rarity) {
+ Color _progressValueColor({required bool completed}) =>
+     completed ? DS.success : DS.neutral500;
+ 
++/// SPEC v1.1 N5（SPEC-FIX 复审 R4 收敛）：sprint 屏倒计时 pill 与 exam 卡
++/// `_urgencyAccentColor`（exam_sprint_dashboard_card.dart）同款三档色阶——
++/// ≤1d（含考日/已结束）danger→error 槽（「不可挽回节点临近」扩展语义）、
++/// ≤7d warning→warning 槽、其余 brand→中性 brandPrimary。PillTone 六值
++/// 映射见 SemanticPill（§1.5.1）；同一 sprint surface 两屏语义由此归一。
++PillTone _sprintCountdownTone(int daysLeft) {
++  if (daysLeft <= 1) return PillTone.danger;
++  if (daysLeft <= 7) return PillTone.warning;
++  return PillTone.brand;
++}
++
+ /// P0功能: 成就临界提示横幅
+ /// 显示接近解锁的成就（80%以上进度）
+ class _CloseToUnlockBanner extends StatelessWidget {
+diff --git a/mobile/lib/l10n/app_en.arb b/mobile/lib/l10n/app_en.arb
+index d6abcaab..fcddea82 100755
+--- a/mobile/lib/l10n/app_en.arb
++++ b/mobile/lib/l10n/app_en.arb
+@@ -9508,7 +9508,6 @@
+     "examDaysUntil": "{days} days until exam",
+     "examTodayProgress": "Today: {completed}/{total} tasks",
+     "examDaysLeft": "{days} days left",
+-    "examTodayCompleted": "Today {completed}/{total} done",
+     "examShowNextDays": "Show next {count} days",
+     "examStreakDays": "{count} d",
+     "examTaskMinutes": "{minutes} min",
+@@ -11084,7 +11083,6 @@
+     "planModeExam": "Exam Sprint",
+     "planDateTbd": "Date TBD",
+     "planStartExamSprint": "Start Exam Sprint",
+-    "planLoadSprintFailed": "Failed to load sprint plan",
+     "planSoonUnlock": "Almost unlocked!",
+     "planDaysMore": "{remaining} more",
+     "planCompletedExclaim": "Done!",
+diff --git a/mobile/lib/l10n/app_localizations.dart b/mobile/lib/l10n/app_localizations.dart
+index df943e89..ca2e6fd7 100644
+--- a/mobile/lib/l10n/app_localizations.dart
++++ b/mobile/lib/l10n/app_localizations.dart
+@@ -63,7 +63,7 @@ import 'app_localizations_zh.dart';
+ /// property.
+ abstract class AppLocalizations {
+   AppLocalizations(String locale)
+-      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
++    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+ 
+   final String localeName;
+ 
+@@ -86,16 +86,16 @@ abstract class AppLocalizations {
+   /// of delegates is preferred or required.
+   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
+       <LocalizationsDelegate<dynamic>>[
+-    delegate,
+-    GlobalMaterialLocalizations.delegate,
+-    GlobalCupertinoLocalizations.delegate,
+-    GlobalWidgetsLocalizations.delegate,
+-  ];
++        delegate,
++        GlobalMaterialLocalizations.delegate,
++        GlobalCupertinoLocalizations.delegate,
++        GlobalWidgetsLocalizations.delegate,
++      ];
+ 
+   /// A list of this localizations delegate's supported locales.
+   static const List<Locale> supportedLocales = <Locale>[
+     Locale('en'),
+-    Locale('zh')
++    Locale('zh'),
+   ];
+ 
+   /// No description provided for @appTitle.
+@@ -19681,7 +19681,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'已处理 {count} 个候选节点，新增 {created} 个，复用 {reused} 个已有节点。'**
+   String taskDetailCandidatesApplied(
+-      Object count, Object created, Object reused);
++    Object count,
++    Object created,
++    Object reused,
++  );
+ 
+   /// No description provided for @taskDetailCandidatesReused.
+   ///
+@@ -21050,7 +21053,11 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'近 {days} 天里，当前最值得继续盯的预测动作是「{topAction}」；同时 prompt / inference 命中率分别是 {promptUtil}%/{inferenceUtil}%。'**
+   String aiOpsPredictionSummary(
+-      Object days, Object topAction, Object promptUtil, Object inferenceUtil);
++    Object days,
++    Object topAction,
++    Object promptUtil,
++    Object inferenceUtil,
++  );
+ 
+   /// No description provided for @aiOpsOpenAnalysis.
+   ///
+@@ -23337,7 +23344,11 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{progress}% · {completed}/{occurrences} 次发生 · {tasks} 个任务'**
+   String planDetailPhaseStats(
+-      Object progress, Object completed, Object occurrences, Object tasks);
++    Object progress,
++    Object completed,
++    Object occurrences,
++    Object tasks,
++  );
+ 
+   /// No description provided for @theaterTitle.
+   ///
+@@ -24052,7 +24063,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'当前阶段：{label} · {step} · {compare}'**
+   String theaterTimelinePhaseWithSteps(
+-      Object compare, Object label, Object step);
++    Object compare,
++    Object label,
++    Object step,
++  );
+ 
+   /// No description provided for @theaterTimelineWaitingDeduction.
+   ///
+@@ -24286,8 +24300,12 @@ abstract class AppLocalizations {
+   ///
+   /// In zh, this message translates to:
+   /// **'区间预测：完成率 {completionLow}%-{completionHigh}%， 掌握度 {masteryLow}%-{masteryHigh}%'**
+-  String theaterRouteRangePrediction(Object completionHigh,
+-      Object completionLow, Object masteryHigh, Object masteryLow);
++  String theaterRouteRangePrediction(
++    Object completionHigh,
++    Object completionLow,
++    Object masteryHigh,
++    Object masteryLow,
++  );
+ 
+   /// No description provided for @theaterRouteRecommendedBaseline.
+   ///
+@@ -25056,7 +25074,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{type} · {dailyMinutes} 分钟/天 · {hours} 小时'**
+   String planCreateReviewSummary(
+-      Object dailyMinutes, Object hours, Object type);
++    Object dailyMinutes,
++    Object hours,
++    Object type,
++  );
+ 
+   /// No description provided for @planCreateReviewEditDescription.
+   ///
+@@ -26191,17 +26212,22 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'原始 {originalMastery}% / {originalCompletion}%  →  调整后 {predictedMastery}% / {predictedCompletion}%'**
+   String theaterWhatIfCombinedResult(
+-      Object originalMastery,
+-      Object originalCompletion,
+-      Object predictedMastery,
+-      Object predictedCompletion);
++    Object originalMastery,
++    Object originalCompletion,
++    Object predictedMastery,
++    Object predictedCompletion,
++  );
+ 
+   /// No description provided for @theaterAccuracyPredictedActual.
+   ///
+   /// In zh, this message translates to:
+   /// **'预测 {predictedCompletion}% / {predictedMastery}%， 实际 {actualCompletion}% / {actualMastery}%'**
+-  String theaterAccuracyPredictedActual(Object predictedCompletion,
+-      Object predictedMastery, Object actualCompletion, Object actualMastery);
++  String theaterAccuracyPredictedActual(
++    Object predictedCompletion,
++    Object predictedMastery,
++    Object actualCompletion,
++    Object actualMastery,
++  );
+ 
+   /// No description provided for @theaterPerDayUnit.
+   ///
+@@ -36883,12 +36909,6 @@ abstract class AppLocalizations {
+   /// **'还有 {days} 天'**
+   String examDaysLeft(Object days);
+ 
+-  /// No description provided for @examTodayCompleted.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'今日 {completed}/{total} 完成'**
+-  String examTodayCompleted(Object completed, Object total);
+-
+   /// No description provided for @examShowNextDays.
+   ///
+   /// In zh, this message translates to:
+@@ -38142,12 +38162,13 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{hashtag} 我在 Sparkle 达成了「{headline}」里程碑。累计学习 {studyDays} 天，掌握 {masteredNodes} 个知识节点，完成 {completedSprints} 次冲刺，记录 {errorCount} 道错题。'**
+   String achievementMilestoneShareText(
+-      Object completedSprints,
+-      Object errorCount,
+-      Object hashtag,
+-      Object headline,
+-      Object masteredNodes,
+-      Object studyDays);
++    Object completedSprints,
++    Object errorCount,
++    Object hashtag,
++    Object headline,
++    Object masteredNodes,
++    Object studyDays,
++  );
+ 
+   /// No description provided for @achievementMilestoneShareInProgress.
+   ///
+@@ -38598,7 +38619,11 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{month}月{day}日 {hour}:{minute}'**
+   String achievementUnlockTimeDate(
+-      Object day, Object hour, Object minute, Object month);
++    Object day,
++    Object hour,
++    Object minute,
++    Object month,
++  );
+ 
+   /// No description provided for @achievementUnlockCombo.
+   ///
+@@ -38791,7 +38816,11 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'结果：{result}，影响任务 {affected} 个，新增 {inserted} 个，收起 {hidden} 个'**
+   String notificationCompilationSummary(
+-      Object affected, Object hidden, Object inserted, Object result);
++    Object affected,
++    Object hidden,
++    Object inserted,
++    Object result,
++  );
+ 
+   /// No description provided for @notificationEvidencePlanHealthRecovered.
+   ///
+@@ -39008,7 +39037,9 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'接受率 {acceptanceRate}% · 行动率 {actionRate}%'**
+   String notificationAnalyticsAcceptanceActionRate(
+-      Object acceptanceRate, Object actionRate);
++    Object acceptanceRate,
++    Object actionRate,
++  );
+ 
+   /// No description provided for @notificationAnalyticsToneEffectivenessTitle.
+   ///
+@@ -39045,7 +39076,9 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'行动率 {actedRate}% · 有效率 {effectiveRate}%'**
+   String notificationAnalyticsActedEffectiveRate(
+-      Object actedRate, Object effectiveRate);
++    Object actedRate,
++    Object effectiveRate,
++  );
+ 
+   /// No description provided for @notificationAnalyticsTimeToActionTitle.
+   ///
+@@ -39112,7 +39145,9 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'接受率: {acceptanceRate}% · 行动率: {actionRate}%'**
+   String notificationAnalyticsRateSuffix(
+-      Object acceptanceRate, Object actionRate);
++    Object acceptanceRate,
++    Object actionRate,
++  );
+ 
+   /// No description provided for @focusNoTaskHint.
+   ///
+@@ -39155,7 +39190,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'今天的专注让你的 {nodeName} 掌握度从 {oldMastery} 提升到了 {newMastery} 分'**
+   String focusSessionMasteryUpdate(
+-      String nodeName, int oldMastery, int newMastery);
++    String nodeName,
++    int oldMastery,
++    int newMastery,
++  );
+ 
+   /// No description provided for @focusReflectionTitleLabel.
+   ///
+@@ -49709,8 +49747,12 @@ abstract class AppLocalizations {
+   ///
+   /// In zh, this message translates to:
+   /// **'我的 7 天备考冲刺完成：掌握 {masteredNodes} 个知识节点，修复 {repairedErrors} 个错误模式，完成 {completedTasks} 个任务。最强项：{strongestArea}。#Sparkle备考'**
+-  String planSprintShareText(int masteredNodes, int repairedErrors,
+-      int completedTasks, String strongestArea);
++  String planSprintShareText(
++    int masteredNodes,
++    int repairedErrors,
++    int completedTasks,
++    String strongestArea,
++  );
+ 
+   /// No description provided for @planSprintBack.
+   ///
+@@ -49753,7 +49795,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'掌握了 {masteredNodes} 个知识节点，修复了 {repairedErrors} 个错误模式，完成了 {completedTasks} 个任务。'**
+   String planSprintResultSummary(
+-      Object completedTasks, Object masteredNodes, Object repairedErrors);
++    Object completedTasks,
++    Object masteredNodes,
++    Object repairedErrors,
++  );
+ 
+   /// No description provided for @planSprintStrongest.
+   ///
+@@ -49994,7 +50039,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{mode} · 进行中（第 {currentDay} 天，还剩 {remainingDays} 天）'**
+   String planPortfolioActiveDay(
+-      Object currentDay, Object mode, Object remainingDays);
++    Object currentDay,
++    Object mode,
++    Object remainingDays,
++  );
+ 
+   /// No description provided for @planPortfolioActiveShort.
+   ///
+@@ -50062,12 +50110,6 @@ abstract class AppLocalizations {
+   /// **'开始考试冲刺'**
+   String get planStartExamSprint;
+ 
+-  /// No description provided for @planLoadSprintFailed.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'加载冲刺计划失败'**
+-  String get planLoadSprintFailed;
+-
+   /// No description provided for @planSoonUnlock.
+   ///
+   /// In zh, this message translates to:
+@@ -55383,7 +55425,11 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'prompt 命中 {prompt}% · 推理命中 {inference}% · known {promptCount}/{inferenceCount}'**
+   String aiopsPromptHit(
+-      String prompt, String inference, int promptCount, int inferenceCount);
++    String prompt,
++    String inference,
++    int promptCount,
++    int inferenceCount,
++  );
+ 
+   /// No description provided for @calTaskRescheduled.
+   ///
+@@ -56884,7 +56930,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{tone} · {verbosity}。{reason}'**
+   String understandingStyleSummary(
+-      String tone, String verbosity, String reason);
++    String tone,
++    String verbosity,
++    String reason,
++  );
+ 
+   /// No description provided for @understandingRecentlyCorrected.
+   ///
+@@ -57929,7 +57978,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'将「{title}」的状态从「{status}」改为「{nextStatus}」。\\n\\n这会影响相关计划、任务和提醒，且不会自动撤销。'**
+   String personaGoalStatusChangeContent(
+-      Object nextStatus, Object status, Object title);
++    Object nextStatus,
++    Object status,
++    Object title,
++  );
+ 
+   /// No description provided for @personaConfirmChange.
+   ///
+@@ -64632,14 +64684,20 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'你是Sparkle内置的群聊AI助手，正在协助群聊「{name}」。\n你的任务是产出一条最终可直接发送到群里的中文消息。\n只输出消息正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样发”“建议发送”，不要使用项目符号或备注，不要冒充系统说明。\n语气自然、简洁、友好，像群成员会直接发出去的话。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用 `•`、`◦`、emoji 项目符号、半残 Markdown。\n\n最近对话:\n{contextLines}\n\n用户问题:\n{input}'**
+   String communityAgentGroupPromptZh(
+-      Object contextLines, Object input, Object name);
++    Object contextLines,
++    Object input,
++    Object name,
++  );
+ 
+   /// No description provided for @communityAgentGroupPromptEn.
+   ///
+   /// In zh, this message translates to:
+   /// **'You are Sparkle\'s built-in group chat AI assistant, helping in the group \"{name}\".\nYour task is to produce a single message ready to send directly in the group.\nOutput only the message body — no explanations, no preambles, no \"I can help\" or \"You could say\" or \"Suggested reply\", no bullet points or notes, no system impersonation.\nTone: natural, concise, friendly — like something a group member would actually send.\nIf you need to list items, only use `1. ` or `- `. No `•`, `◦`, emoji bullets, or broken Markdown.\n\nRecent conversation:\n{contextLines}\n\nUser question:\n{input}'**
+   String communityAgentGroupPromptEn(
+-      Object contextLines, Object input, Object name);
++    Object contextLines,
++    Object input,
++    Object name,
++  );
+ 
+   /// No description provided for @communityAgentFriend.
+   ///
+@@ -64652,14 +64710,20 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'你是Sparkle内置的私聊AI助手，正在协助我与「{name}」的对话。\n你的任务是产出一条最终可直接发送给对方的中文私聊回复。\n只输出回复正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样回”“建议回复”，不要附带分析或备注。\n语气自然、礼貌、克制，像我会直接按下发送的内容。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用特殊项目符号或半残 Markdown。\n\n最近对话:\n{contextLines}\n\n用户问题:\n{input}'**
+   String communityAgentPrivatePromptZh(
+-      Object contextLines, Object input, Object name);
++    Object contextLines,
++    Object input,
++    Object name,
++  );
+ 
+   /// No description provided for @communityAgentPrivatePromptEn.
+   ///
+   /// In zh, this message translates to:
+   /// **'You are Sparkle\'s built-in private chat AI assistant, helping with my conversation with \"{name}\".\nYour task is to produce a single private reply ready to send directly.\nOutput only the reply body — no explanations, no preambles, no \"I can help\" or \"You could reply\" or \"Suggested reply\", no analysis or notes.\nTone: natural, polite, restrained — like something I would actually hit send on.\nIf you need to list items, only use `1. ` or `- `. No special bullets or broken Markdown.\n\nRecent conversation:\n{contextLines}\n\nUser question:\n{input}'**
+   String communityAgentPrivatePromptEn(
+-      Object contextLines, Object input, Object name);
++    Object contextLines,
++    Object input,
++    Object name,
++  );
+ 
+   /// No description provided for @communityAgentPresetSummaryGroupZh.
+   ///
+@@ -65080,7 +65144,11 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'必读 {mustLoad} · 选读 {optional} · 附件 {attached}{retrievalLabel}'**
+   String taskProtocolMaterialsCount(
+-      Object attached, Object mustLoad, Object optional, Object retrievalLabel);
++    Object attached,
++    Object mustLoad,
++    Object optional,
++    Object retrievalLabel,
++  );
+ 
+   /// No description provided for @taskProtocolUpdatesOnCompletion.
+   ///
+@@ -67109,7 +67177,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{title} ≥ {threshold} {unit}'**
+   String displayCriterionAtLeastUnitTemplate(
+-      String title, String threshold, String unit);
++    String title,
++    String threshold,
++    String unit,
++  );
+ 
+   /// No description provided for @displayCriterionAtLeastTemplate.
+   ///
+@@ -67385,8 +67456,9 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
+   }
+ 
+   throw FlutterError(
+-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+-      'an issue with the localizations generation tool. Please file an issue '
+-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+-      'that was used.');
++    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
++    'an issue with the localizations generation tool. Please file an issue '
++    'on GitHub with a reproducible sample app and the gen-l10n configuration '
++    'that was used.',
++  );
+ }
+diff --git a/mobile/lib/l10n/app_localizations_en.dart b/mobile/lib/l10n/app_localizations_en.dart
+index 1600518a..0d336330 100644
+--- a/mobile/lib/l10n/app_localizations_en.dart
++++ b/mobile/lib/l10n/app_localizations_en.dart
+@@ -11072,7 +11072,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String taskDetailCandidatesApplied(
+-      Object count, Object created, Object reused) {
++    Object count,
++    Object created,
++    Object reused,
++  ) {
+     return 'Processed $count candidates, created $created new, reused $reused existing.';
+   }
+ 
+@@ -11885,7 +11888,11 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String aiOpsPredictionSummary(
+-      Object days, Object topAction, Object promptUtil, Object inferenceUtil) {
++    Object days,
++    Object topAction,
++    Object promptUtil,
++    Object inferenceUtil,
++  ) {
+     return 'In the past $days days, the prediction action worth watching most is \"$topAction\"; prompt/inference hit rates are $promptUtil%/$inferenceUtil%.';
+   }
+ 
+@@ -13258,7 +13265,11 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String planDetailPhaseStats(
+-      Object progress, Object completed, Object occurrences, Object tasks) {
++    Object progress,
++    Object completed,
++    Object occurrences,
++    Object tasks,
++  ) {
+     return '$progress% · $completed/$occurrences occurrences · $tasks tasks';
+   }
+ 
+@@ -13685,7 +13696,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String theaterTimelinePhaseWithSteps(
+-      Object compare, Object label, Object step) {
++    Object compare,
++    Object label,
++    Object step,
++  ) {
+     return 'Current phase: $label · $step · $compare';
+   }
+ 
+@@ -13827,8 +13841,12 @@ class AppLocalizationsEn extends AppLocalizations {
+   }
+ 
+   @override
+-  String theaterRouteRangePrediction(Object completionHigh,
+-      Object completionLow, Object masteryHigh, Object masteryLow) {
++  String theaterRouteRangePrediction(
++    Object completionHigh,
++    Object completionLow,
++    Object masteryHigh,
++    Object masteryLow,
++  ) {
+     return 'Range prediction: completion $completionLow%-$completionHigh%, mastery $masteryLow%-$masteryHigh%';
+   }
+ 
+@@ -14286,7 +14304,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String planCreateReviewSummary(
+-      Object dailyMinutes, Object hours, Object type) {
++    Object dailyMinutes,
++    Object hours,
++    Object type,
++  ) {
+     return '$type · $dailyMinutes min/day · $hours hours';
+   }
+ 
+@@ -14952,16 +14973,21 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String theaterWhatIfCombinedResult(
+-      Object originalMastery,
+-      Object originalCompletion,
+-      Object predictedMastery,
+-      Object predictedCompletion) {
++    Object originalMastery,
++    Object originalCompletion,
++    Object predictedMastery,
++    Object predictedCompletion,
++  ) {
+     return 'Original $originalMastery% / $originalCompletion%  →  Adjusted $predictedMastery% / $predictedCompletion%';
+   }
+ 
+   @override
+-  String theaterAccuracyPredictedActual(Object predictedCompletion,
+-      Object predictedMastery, Object actualCompletion, Object actualMastery) {
++  String theaterAccuracyPredictedActual(
++    Object predictedCompletion,
++    Object predictedMastery,
++    Object actualCompletion,
++    Object actualMastery,
++  ) {
+     return 'Predicted $predictedCompletion% / $predictedMastery%, Actual $actualCompletion% / $actualMastery%';
+   }
+ 
+@@ -21106,11 +21132,6 @@ class AppLocalizationsEn extends AppLocalizations {
+     return '$days days left';
+   }
+ 
+-  @override
+-  String examTodayCompleted(Object completed, Object total) {
+-    return 'Today $completed/$total done';
+-  }
+-
+   @override
+   String examShowNextDays(Object count) {
+     return 'Show next $count days';
+@@ -21817,12 +21838,13 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String achievementMilestoneShareText(
+-      Object completedSprints,
+-      Object errorCount,
+-      Object hashtag,
+-      Object headline,
+-      Object masteredNodes,
+-      Object studyDays) {
++    Object completedSprints,
++    Object errorCount,
++    Object hashtag,
++    Object headline,
++    Object masteredNodes,
++    Object studyDays,
++  ) {
+     return '$hashtag I reached the \"$headline\" milestone on Sparkle. Studied $studyDays days, mastered $masteredNodes nodes, completed $completedSprints sprints, recorded $errorCount errors.';
+   }
+ 
+@@ -22064,7 +22086,11 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String achievementUnlockTimeDate(
+-      Object day, Object hour, Object minute, Object month) {
++    Object day,
++    Object hour,
++    Object minute,
++    Object month,
++  ) {
+     return '$month/$day $hour:$minute';
+   }
+ 
+@@ -22171,7 +22197,11 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String notificationCompilationSummary(
+-      Object affected, Object hidden, Object inserted, Object result) {
++    Object affected,
++    Object hidden,
++    Object inserted,
++    Object result,
++  ) {
+     return 'Result: $result, affected $affected tasks, added $inserted, hidden $hidden';
+   }
+ 
+@@ -22295,7 +22325,9 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String notificationAnalyticsAcceptanceActionRate(
+-      Object acceptanceRate, Object actionRate) {
++    Object acceptanceRate,
++    Object actionRate,
++  ) {
+     return 'Acceptance rate $acceptanceRate% · Action rate $actionRate%';
+   }
+ 
+@@ -22325,7 +22357,9 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String notificationAnalyticsActedEffectiveRate(
+-      Object actedRate, Object effectiveRate) {
++    Object actedRate,
++    Object effectiveRate,
++  ) {
+     return 'Action rate $actedRate% · Effective rate $effectiveRate%';
+   }
+ 
+@@ -22362,7 +22396,9 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String notificationAnalyticsRateSuffix(
+-      Object acceptanceRate, Object actionRate) {
++    Object acceptanceRate,
++    Object actionRate,
++  ) {
+     return 'Acceptance rate: $acceptanceRate% · Action rate: $actionRate%';
+   }
+ 
+@@ -22392,7 +22428,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String focusSessionMasteryUpdate(
+-      String nodeName, int oldMastery, int newMastery) {
++    String nodeName,
++    int oldMastery,
++    int newMastery,
++  ) {
+     return 'Today\'s focus raised $nodeName mastery from $oldMastery to $newMastery';
+   }
+ 
+@@ -28402,8 +28441,12 @@ class AppLocalizationsEn extends AppLocalizations {
+   String get planSprintShareOpened => 'Share opened';
+ 
+   @override
+-  String planSprintShareText(int masteredNodes, int repairedErrors,
+-      int completedTasks, String strongestArea) {
++  String planSprintShareText(
++    int masteredNodes,
++    int repairedErrors,
++    int completedTasks,
++    String strongestArea,
++  ) {
+     return 'My 7-day exam sprint is done: mastered $masteredNodes knowledge nodes, repaired $repairedErrors error patterns, completed $completedTasks tasks. Strongest area: $strongestArea. #SparkleExam';
+   }
+ 
+@@ -28427,7 +28470,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String planSprintResultSummary(
+-      Object completedTasks, Object masteredNodes, Object repairedErrors) {
++    Object completedTasks,
++    Object masteredNodes,
++    Object repairedErrors,
++  ) {
+     return 'Mastered $masteredNodes knowledge nodes, repaired $repairedErrors error patterns, completed $completedTasks tasks.';
+   }
+ 
+@@ -28579,7 +28625,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String planPortfolioActiveDay(
+-      Object currentDay, Object mode, Object remainingDays) {
++    Object currentDay,
++    Object mode,
++    Object remainingDays,
++  ) {
+     return '$mode · In progress (Day $currentDay, $remainingDays days left)';
+   }
+ 
+@@ -28622,9 +28671,6 @@ class AppLocalizationsEn extends AppLocalizations {
+   @override
+   String get planStartExamSprint => 'Start Exam Sprint';
+ 
+-  @override
+-  String get planLoadSprintFailed => 'Failed to load sprint plan';
+-
+   @override
+   String get planSoonUnlock => 'Almost unlocked!';
+ 
+@@ -31767,7 +31813,11 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String aiopsPromptHit(
+-      String prompt, String inference, int promptCount, int inferenceCount) {
++    String prompt,
++    String inference,
++    int promptCount,
++    int inferenceCount,
++  ) {
+     return 'Prompt hit $prompt% · Inference hit $inference% · Known $promptCount/$inferenceCount';
+   }
+ 
+@@ -32594,7 +32644,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String lowYieldCardMessage(
+-      String activity, String reason, String suggestion) {
++    String activity,
++    String reason,
++    String suggestion,
++  ) {
+     return 'I noticed you are doing $activity. Considering $reason, what may be more valuable now is $suggestion.';
+   }
+ 
+@@ -32656,7 +32709,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String understandingStyleSummary(
+-      String tone, String verbosity, String reason) {
++    String tone,
++    String verbosity,
++    String reason,
++  ) {
+     return '$tone · $verbosity. $reason';
+   }
+ 
+@@ -33231,7 +33287,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String personaGoalStatusChangeContent(
+-      Object nextStatus, Object status, Object title) {
++    Object nextStatus,
++    Object status,
++    Object title,
++  ) {
+     return 'Change status of \"$title\" from \"$status\" to \"$nextStatus\".\\n\\nThis will affect related plans, tasks and reminders, and cannot be auto-reverted.';
+   }
+ 
+@@ -37077,13 +37136,19 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String communityAgentGroupPromptZh(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return '你是Sparkle内置的群聊AI助手，正在协助群聊「$name」。\n你的任务是产出一条最终可直接发送到群里的中文消息。\n只输出消息正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样发”“建议发送”，不要使用项目符号或备注，不要冒充系统说明。\n语气自然、简洁、友好，像群成员会直接发出去的话。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用 `•`、`◦`、emoji 项目符号、半残 Markdown。\n\n最近对话:\n$contextLines\n\n用户问题:\n$input';
+   }
+ 
+   @override
+   String communityAgentGroupPromptEn(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return 'You are Sparkle\'s built-in group chat AI assistant, helping in the group \"$name\".\nYour task is to produce a single message ready to send directly in the group.\nOutput only the message body — no explanations, no preambles, no \"I can help\" or \"You could say\" or \"Suggested reply\", no bullet points or notes, no system impersonation.\nTone: natural, concise, friendly — like something a group member would actually send.\nIf you need to list items, only use `1. ` or `- `. No `•`, `◦`, emoji bullets, or broken Markdown.\n\nRecent conversation:\n$contextLines\n\nUser question:\n$input';
+   }
+ 
+@@ -37092,13 +37157,19 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String communityAgentPrivatePromptZh(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return '你是Sparkle内置的私聊AI助手，正在协助我与「$name」的对话。\n你的任务是产出一条最终可直接发送给对方的中文私聊回复。\n只输出回复正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样回”“建议回复”，不要附带分析或备注。\n语气自然、礼貌、克制，像我会直接按下发送的内容。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用特殊项目符号或半残 Markdown。\n\n最近对话:\n$contextLines\n\n用户问题:\n$input';
+   }
+ 
+   @override
+   String communityAgentPrivatePromptEn(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return 'You are Sparkle\'s built-in private chat AI assistant, helping with my conversation with \"$name\".\nYour task is to produce a single private reply ready to send directly.\nOutput only the reply body — no explanations, no preambles, no \"I can help\" or \"You could reply\" or \"Suggested reply\", no analysis or notes.\nTone: natural, polite, restrained — like something I would actually hit send on.\nIf you need to list items, only use `1. ` or `- `. No special bullets or broken Markdown.\n\nRecent conversation:\n$contextLines\n\nUser question:\n$input';
+   }
+ 
+@@ -37390,8 +37461,12 @@ class AppLocalizationsEn extends AppLocalizations {
+   String get taskProtocolMaterialsNeeded => 'Materials needed';
+ 
+   @override
+-  String taskProtocolMaterialsCount(Object attached, Object mustLoad,
+-      Object optional, Object retrievalLabel) {
++  String taskProtocolMaterialsCount(
++    Object attached,
++    Object mustLoad,
++    Object optional,
++    Object retrievalLabel,
++  ) {
+     return 'Required $mustLoad · Optional $optional · Attached $attached$retrievalLabel';
+   }
+ 
+@@ -38539,7 +38614,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String displayCriterionAtLeastUnitTemplate(
+-      String title, String threshold, String unit) {
++    String title,
++    String threshold,
++    String unit,
++  ) {
+     return '$title: at least $threshold $unit';
+   }
+ 
+diff --git a/mobile/lib/l10n/app_localizations_zh.dart b/mobile/lib/l10n/app_localizations_zh.dart
+index 178fbf9f..8571868b 100644
+--- a/mobile/lib/l10n/app_localizations_zh.dart
++++ b/mobile/lib/l10n/app_localizations_zh.dart
+@@ -10663,7 +10663,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String taskDetailCandidatesApplied(
+-      Object count, Object created, Object reused) {
++    Object count,
++    Object created,
++    Object reused,
++  ) {
+     return '已处理 $count 个候选节点，新增 $created 个，复用 $reused 个已有节点。';
+   }
+ 
+@@ -11417,7 +11420,11 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String aiOpsPredictionSummary(
+-      Object days, Object topAction, Object promptUtil, Object inferenceUtil) {
++    Object days,
++    Object topAction,
++    Object promptUtil,
++    Object inferenceUtil,
++  ) {
+     return '近 $days 天里，当前最值得继续盯的预测动作是「$topAction」；同时 prompt / inference 命中率分别是 $promptUtil%/$inferenceUtil%。';
+   }
+ 
+@@ -12713,7 +12720,11 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String planDetailPhaseStats(
+-      Object progress, Object completed, Object occurrences, Object tasks) {
++    Object progress,
++    Object completed,
++    Object occurrences,
++    Object tasks,
++  ) {
+     return '$progress% · $completed/$occurrences 次发生 · $tasks 个任务';
+   }
+ 
+@@ -13122,7 +13133,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String theaterTimelinePhaseWithSteps(
+-      Object compare, Object label, Object step) {
++    Object compare,
++    Object label,
++    Object step,
++  ) {
+     return '当前阶段：$label · $step · $compare';
+   }
+ 
+@@ -13260,8 +13274,12 @@ class AppLocalizationsZh extends AppLocalizations {
+   }
+ 
+   @override
+-  String theaterRouteRangePrediction(Object completionHigh,
+-      Object completionLow, Object masteryHigh, Object masteryLow) {
++  String theaterRouteRangePrediction(
++    Object completionHigh,
++    Object completionLow,
++    Object masteryHigh,
++    Object masteryLow,
++  ) {
+     return '区间预测：完成率 $completionLow%-$completionHigh%， 掌握度 $masteryLow%-$masteryHigh%';
+   }
+ 
+@@ -13698,7 +13716,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String planCreateReviewSummary(
+-      Object dailyMinutes, Object hours, Object type) {
++    Object dailyMinutes,
++    Object hours,
++    Object type,
++  ) {
+     return '$type · $dailyMinutes 分钟/天 · $hours 小时';
+   }
+ 
+@@ -14350,16 +14371,21 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String theaterWhatIfCombinedResult(
+-      Object originalMastery,
+-      Object originalCompletion,
+-      Object predictedMastery,
+-      Object predictedCompletion) {
++    Object originalMastery,
++    Object originalCompletion,
++    Object predictedMastery,
++    Object predictedCompletion,
++  ) {
+     return '原始 $originalMastery% / $originalCompletion%  →  调整后 $predictedMastery% / $predictedCompletion%';
+   }
+ 
+   @override
+-  String theaterAccuracyPredictedActual(Object predictedCompletion,
+-      Object predictedMastery, Object actualCompletion, Object actualMastery) {
++  String theaterAccuracyPredictedActual(
++    Object predictedCompletion,
++    Object predictedMastery,
++    Object actualCompletion,
++    Object actualMastery,
++  ) {
+     return '预测 $predictedCompletion% / $predictedMastery%， 实际 $actualCompletion% / $actualMastery%';
+   }
+ 
+@@ -20233,11 +20259,6 @@ class AppLocalizationsZh extends AppLocalizations {
+     return '还有 $days 天';
+   }
+ 
+-  @override
+-  String examTodayCompleted(Object completed, Object total) {
+-    return '今日 $completed/$total 完成';
+-  }
+-
+   @override
+   String examShowNextDays(Object count) {
+     return '展开后续 $count 天';
+@@ -20923,12 +20944,13 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String achievementMilestoneShareText(
+-      Object completedSprints,
+-      Object errorCount,
+-      Object hashtag,
+-      Object headline,
+-      Object masteredNodes,
+-      Object studyDays) {
++    Object completedSprints,
++    Object errorCount,
++    Object hashtag,
++    Object headline,
++    Object masteredNodes,
++    Object studyDays,
++  ) {
+     return '$hashtag 我在 Sparkle 达成了「$headline」里程碑。累计学习 $studyDays 天，掌握 $masteredNodes 个知识节点，完成 $completedSprints 次冲刺，记录 $errorCount 道错题。';
+   }
+ 
+@@ -21168,7 +21190,11 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String achievementUnlockTimeDate(
+-      Object day, Object hour, Object minute, Object month) {
++    Object day,
++    Object hour,
++    Object minute,
++    Object month,
++  ) {
+     return '$month月$day日 $hour:$minute';
+   }
+ 
+@@ -21271,7 +21297,11 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String notificationCompilationSummary(
+-      Object affected, Object hidden, Object inserted, Object result) {
++    Object affected,
++    Object hidden,
++    Object inserted,
++    Object result,
++  ) {
+     return '结果：$result，影响任务 $affected 个，新增 $inserted 个，收起 $hidden 个';
+   }
+ 
+@@ -21390,7 +21420,9 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String notificationAnalyticsAcceptanceActionRate(
+-      Object acceptanceRate, Object actionRate) {
++    Object acceptanceRate,
++    Object actionRate,
++  ) {
+     return '接受率 $acceptanceRate% · 行动率 $actionRate%';
+   }
+ 
+@@ -21420,7 +21452,9 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String notificationAnalyticsActedEffectiveRate(
+-      Object actedRate, Object effectiveRate) {
++    Object actedRate,
++    Object effectiveRate,
++  ) {
+     return '行动率 $actedRate% · 有效率 $effectiveRate%';
+   }
+ 
+@@ -21456,7 +21490,9 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String notificationAnalyticsRateSuffix(
+-      Object acceptanceRate, Object actionRate) {
++    Object acceptanceRate,
++    Object actionRate,
++  ) {
+     return '接受率: $acceptanceRate% · 行动率: $actionRate%';
+   }
+ 
+@@ -21484,7 +21520,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String focusSessionMasteryUpdate(
+-      String nodeName, int oldMastery, int newMastery) {
++    String nodeName,
++    int oldMastery,
++    int newMastery,
++  ) {
+     return '今天的专注让你的 $nodeName 掌握度从 $oldMastery 提升到了 $newMastery 分';
+   }
+ 
+@@ -27222,8 +27261,12 @@ class AppLocalizationsZh extends AppLocalizations {
+   String get planSprintShareOpened => '分享已打开';
+ 
+   @override
+-  String planSprintShareText(int masteredNodes, int repairedErrors,
+-      int completedTasks, String strongestArea) {
++  String planSprintShareText(
++    int masteredNodes,
++    int repairedErrors,
++    int completedTasks,
++    String strongestArea,
++  ) {
+     return '我的 7 天备考冲刺完成：掌握 $masteredNodes 个知识节点，修复 $repairedErrors 个错误模式，完成 $completedTasks 个任务。最强项：$strongestArea。#Sparkle备考';
+   }
+ 
+@@ -27247,7 +27290,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String planSprintResultSummary(
+-      Object completedTasks, Object masteredNodes, Object repairedErrors) {
++    Object completedTasks,
++    Object masteredNodes,
++    Object repairedErrors,
++  ) {
+     return '掌握了 $masteredNodes 个知识节点，修复了 $repairedErrors 个错误模式，完成了 $completedTasks 个任务。';
+   }
+ 
+@@ -27391,7 +27437,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String planPortfolioActiveDay(
+-      Object currentDay, Object mode, Object remainingDays) {
++    Object currentDay,
++    Object mode,
++    Object remainingDays,
++  ) {
+     return '$mode · 进行中（第 $currentDay 天，还剩 $remainingDays 天）';
+   }
+ 
+@@ -27434,9 +27483,6 @@ class AppLocalizationsZh extends AppLocalizations {
+   @override
+   String get planStartExamSprint => '开始考试冲刺';
+ 
+-  @override
+-  String get planLoadSprintFailed => '加载冲刺计划失败';
+-
+   @override
+   String get planSoonUnlock => '即将解锁！';
+ 
+@@ -30456,7 +30502,11 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String aiopsPromptHit(
+-      String prompt, String inference, int promptCount, int inferenceCount) {
++    String prompt,
++    String inference,
++    int promptCount,
++    int inferenceCount,
++  ) {
+     return 'prompt 命中 $prompt% · 推理命中 $inference% · known $promptCount/$inferenceCount';
+   }
+ 
+@@ -31260,7 +31310,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String lowYieldCardMessage(
+-      String activity, String reason, String suggestion) {
++    String activity,
++    String reason,
++    String suggestion,
++  ) {
+     return '我注意到你正在做 $activity。考虑到 $reason，现在更值得做的可能是 $suggestion。';
+   }
+ 
+@@ -31320,7 +31373,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String understandingStyleSummary(
+-      String tone, String verbosity, String reason) {
++    String tone,
++    String verbosity,
++    String reason,
++  ) {
+     return '$tone · $verbosity。$reason';
+   }
+ 
+@@ -31869,7 +31925,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String personaGoalStatusChangeContent(
+-      Object nextStatus, Object status, Object title) {
++    Object nextStatus,
++    Object status,
++    Object title,
++  ) {
+     return '将「$title」的状态从「$status」改为「$nextStatus」。\\n\\n这会影响相关计划、任务和提醒，且不会自动撤销。';
+   }
+ 
+@@ -35550,13 +35609,19 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String communityAgentGroupPromptZh(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return '你是Sparkle内置的群聊AI助手，正在协助群聊「$name」。\n你的任务是产出一条最终可直接发送到群里的中文消息。\n只输出消息正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样发”“建议发送”，不要使用项目符号或备注，不要冒充系统说明。\n语气自然、简洁、友好，像群成员会直接发出去的话。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用 `•`、`◦`、emoji 项目符号、半残 Markdown。\n\n最近对话:\n$contextLines\n\n用户问题:\n$input';
+   }
+ 
+   @override
+   String communityAgentGroupPromptEn(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return 'You are Sparkle\'s built-in group chat AI assistant, helping in the group \"$name\".\nYour task is to produce a single message ready to send directly in the group.\nOutput only the message body — no explanations, no preambles, no \"I can help\" or \"You could say\" or \"Suggested reply\", no bullet points or notes, no system impersonation.\nTone: natural, concise, friendly — like something a group member would actually send.\nIf you need to list items, only use `1. ` or `- `. No `•`, `◦`, emoji bullets, or broken Markdown.\n\nRecent conversation:\n$contextLines\n\nUser question:\n$input';
+   }
+ 
+@@ -35565,13 +35630,19 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String communityAgentPrivatePromptZh(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return '你是Sparkle内置的私聊AI助手，正在协助我与「$name」的对话。\n你的任务是产出一条最终可直接发送给对方的中文私聊回复。\n只输出回复正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样回”“建议回复”，不要附带分析或备注。\n语气自然、礼貌、克制，像我会直接按下发送的内容。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用特殊项目符号或半残 Markdown。\n\n最近对话:\n$contextLines\n\n用户问题:\n$input';
+   }
+ 
+   @override
+   String communityAgentPrivatePromptEn(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return 'You are Sparkle\'s built-in private chat AI assistant, helping with my conversation with \"$name\".\nYour task is to produce a single private reply ready to send directly.\nOutput only the reply body — no explanations, no preambles, no \"I can help\" or \"You could reply\" or \"Suggested reply\", no analysis or notes.\nTone: natural, polite, restrained — like something I would actually hit send on.\nIf you need to list items, only use `1. ` or `- `. No special bullets or broken Markdown.\n\nRecent conversation:\n$contextLines\n\nUser question:\n$input';
+   }
+ 
+@@ -35849,8 +35920,12 @@ class AppLocalizationsZh extends AppLocalizations {
+   String get taskProtocolMaterialsNeeded => '需要的资料';
+ 
+   @override
+-  String taskProtocolMaterialsCount(Object attached, Object mustLoad,
+-      Object optional, Object retrievalLabel) {
++  String taskProtocolMaterialsCount(
++    Object attached,
++    Object mustLoad,
++    Object optional,
++    Object retrievalLabel,
++  ) {
+     return '必读 $mustLoad · 选读 $optional · 附件 $attached$retrievalLabel';
+   }
+ 
+@@ -36937,7 +37012,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String displayCriterionAtLeastUnitTemplate(
+-      String title, String threshold, String unit) {
++    String title,
++    String threshold,
++    String unit,
++  ) {
+     return '$title ≥ $threshold $unit';
+   }
+ 
+diff --git a/mobile/lib/l10n/app_zh.arb b/mobile/lib/l10n/app_zh.arb
+index 378ef081..c39abf4e 100755
+--- a/mobile/lib/l10n/app_zh.arb
++++ b/mobile/lib/l10n/app_zh.arb
+@@ -9310,7 +9310,6 @@
+     "examDaysUntil": "距考试还有 {days} 天",
+     "examTodayProgress": "今天已完成 {completed}/{total} 项任务",
+     "examDaysLeft": "还有 {days} 天",
+-    "examTodayCompleted": "今日 {completed}/{total} 完成",
+     "examShowNextDays": "展开后续 {count} 天",
+     "examStreakDays": "{count} 天",
+     "examTaskMinutes": "{minutes} 分钟",
+@@ -12209,7 +12208,6 @@
+     "planModeExam": "考试冲刺",
+     "planDateTbd": "日期待定",
+     "planStartExamSprint": "开始考试冲刺",
+-    "planLoadSprintFailed": "加载冲刺计划失败",
+     "planSoonUnlock": "即将解锁！",
+     "planDaysMore": "再{remaining}",
+     "planCompletedExclaim": "完成!",
+diff --git a/mobile/test/features/home/presentation/widgets/exam_sprint_dashboard_card_test.dart b/mobile/test/features/home/presentation/widgets/exam_sprint_dashboard_card_test.dart
+index ad593d74..8cc118a3 100644
+--- a/mobile/test/features/home/presentation/widgets/exam_sprint_dashboard_card_test.dart
++++ b/mobile/test/features/home/presentation/widgets/exam_sprint_dashboard_card_test.dart
+@@ -79,7 +79,10 @@ void main() {
+ 
+       // Side text shows days and task completion
+       expect(find.text('还有 5 天'), findsOneWidget);
+-      expect(find.text('今日 2/3 完成'), findsOneWidget);
++      // S-G9 清偿后：进度文案只走 _HeadlineBlock 主位（examTodayProgress），
++      // 弧旁副本（examTodayCompleted「今日 2/3 完成」）清零。
++      expect(find.text('今天已完成 2/3 项任务'), findsOneWidget);
++      expect(find.text('今日 2/3 完成'), findsNothing);
+     });
+ 
+     testWidgets('pass_probability = 0.35 shows red-tinted percentage', (tester) async {
+@@ -98,7 +101,8 @@ void main() {
+       expect(find.text('--'), findsOneWidget);
+       // Side text still renders
+       expect(find.text('还有 5 天'), findsOneWidget);
+-      expect(find.text('今日 2/3 完成'), findsOneWidget);
++      expect(find.text('今天已完成 2/3 项任务'), findsOneWidget);
++      expect(find.text('今日 2/3 完成'), findsNothing);
+     });
+ 
+     testWidgets('animation starts at 0 and ends near target value', (tester) async {
+@@ -219,7 +223,7 @@ void main() {
+   // ───────────────────────── SPEC-B（北极星全旅程 · A 纵队） ─────────────────────────
+   // 验收依据：v3-output/A-SPEC-V1_1/REPORT.md §4 N3/N5/N6 + §5 改造 #2/#8/#9。
+ 
+-  group('SPEC-B #9 — N5 urgency 三档色阶（≥7d 中性 / ≤7d warning / ≤1d error）', () {
++  group('SPEC-B #9 — N5 urgency 三档色阶（>7d 中性【勘误后】 / ≤7d warning / ≤1d error）', () {
+     final standard = SparkleColors.light();
+ 
+     Future<void> pumpCardAt(WidgetTester tester, int daysLeft) async {
+@@ -468,6 +472,75 @@ void main() {
+       expect(bannerTranslateY(tester), 0.0);
+     });
+   });
++
++  // ───────────────── SPEC-FIX（复审闭环 · R5=S-G9/日期拼接清偿） ─────────────────
++
++  group('SPEC-FIX R5 — S-G9 同卡二出去重 + 日期走 date_formatting 唯一入口', () {
++    testWidgets('S-G9：今日进度文案只保留 _HeadlineBlock 主位一种措辞', (tester) async {
++      await tester.pumpWidget(_buildCard(_makeData(passProbability: 0.72)));
++      await tester.pumpAndSettle();
++
++      // 主位（examTodayProgress）恰 1 处；弧旁副本（examTodayCompleted）
++      // 与其中文措辞均不出现——同一数字两种措辞并排清零。
++      expect(find.text('今天已完成 2/3 项任务'), findsOneWidget);
++      expect(find.textContaining('今日 2/3'), findsNothing);
++      expect(find.textContaining('2/3 完成'), findsNothing);
++    });
++
++    testWidgets('S-G10：任务组日期经 formatSparkleDateOnly 输出（zh：9月20日）',
++        (tester) async {
++      final data = ExamSprintDashboardData(
++        planId: 'test-plan',
++        planName: 'Test Sprint',
++        subject: 'Math',
++        daysLeft: 5,
++        targetMode: 'pass',
++        todayProgress: const ExamSprintTodayProgress(
++          completed: 2,
++          total: 3,
++          completionRate: 0.667,
++        ),
++        highFreqCoverage: 0.75,
++        highFreqCoveredCount: 15,
++        highFreqTotalCount: 20,
++        mistakeFixRate: 0.6,
++        fixedMistakeCount: 6,
++        totalMistakeCount: 10,
++        streakDays: 3,
++        passProbability: 0.72,
++        taskGroups: [
++          // DateTime 非 const 构造，组实例不能标 const。
++          // today 组（主位渲染）+ 未来组（折叠区渲染）——todayGroup getter
++          // 在无 isToday 组时会 fallback 到 first，单组会被渲染两次。
++          const ExamSprintTaskGroup(
++            dayIndex: 1,
++            isToday: true,
++            completedCount: 2,
++            totalCount: 3,
++            tasks: [],
++          ),
++          ExamSprintTaskGroup(
++            dayIndex: 2,
++            isToday: false,
++            completedCount: 0,
++            totalCount: 4,
++            tasks: const [],
++            date: DateTime(2026, 9, 20),
++          ),
++        ],
++      );
++      await tester.pumpWidget(_buildCard(data));
++      await tester.pumpAndSettle();
++
++      // 未来任务组默认折叠：先展开（_TaskSectionHeader 的 CTA），日期随组卡可见。
++      await tester.tap(find.text('展开后续 1 天'));
++      await tester.pumpAndSettle();
++
++      // 旧手工拼接「9/20」清零；date_formatting 令牌输出（zh「9月20日」）在。
++      expect(find.text('9/20'), findsNothing);
++      expect(find.text('9月20日'), findsOneWidget);
++    });
++  });
+ }
+ 
+ /// 提取通过率弧 CustomPaint 的画家色值（画家为私有类，经 runtimeType 定位）。
+diff --git a/mobile/test/features/plan/presentation/screens/sprint_screen_test.dart b/mobile/test/features/plan/presentation/screens/sprint_screen_test.dart
+index 5ec7cc82..ab35cc5d 100644
+--- a/mobile/test/features/plan/presentation/screens/sprint_screen_test.dart
++++ b/mobile/test/features/plan/presentation/screens/sprint_screen_test.dart
+@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
+ import 'package:flutter/material.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:flutter_test/flutter_test.dart';
++import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
+ import 'package:sparkle/core/design/design_system.dart';
+ import 'package:sparkle/core/design/widgets/empty_state.dart';
+ import 'package:sparkle/core/design/widgets/error_widget.dart';
+@@ -54,9 +55,13 @@ void main() {
+     Object Function()? planDetail,
+     ExamSprintDashboardData? examData,
+     AchievementNotifier Function()? achievement,
++    Key? scopeKey,
+   }) {
+     final effectivePlanState = planListState ?? PlanListState();
+     return ProviderScope(
++      // scopeKey：同一 tester 上二次 pumpWidget 换 examData 档位时必须换 key，
++      // 否则 ProviderScope 元素原位复用、overrides 不重建（Riverpod 已知行为）。
++      key: scopeKey,
+       overrides: [
+         planListProvider.overrideWith(
+           (ref) => _StaticPlanNotifier(effectivePlanState),
+@@ -259,6 +264,79 @@ void main() {
+     // 稀有度色只允许留在图标环身份位：进度条 hero 区不得出现 epic 紫。
+     expect(DS.rarityEpic, isNot(anyOf(DS.neutral500, DS.success)));
+   });
++
++  // ─────────── SPEC-FIX（复审闭环 · R4=N5 三档 urgency 收敛到 sprint pill） ───────────
++
++  group('SPEC-FIX R4 — 倒计时 pill 与 exam 卡同款 N5 三档色阶', () {
++    /// 倒计时 pill（带 timelapse 图标的 SemanticPill）的 tone 与其文字色。
++    ({PillTone tone, Color textColor}) countdownPill(WidgetTester tester) {
++      final pill = tester.widget<SemanticPill>(
++        find.byWidgetPredicate(
++          (w) => w is SemanticPill && w.icon == Icons.timelapse,
++        ),
++      );
++      final text = tester.widget<Text>(
++        find.descendant(of: find.byWidget(pill), matching: find.byType(Text)),
++      );
++      return (tone: pill.tone, textColor: text.style!.color!);
++    }
++
++    Future<void> pumpScreenAt(WidgetTester tester, int daysLeft) async {
++      await tester.pumpWidget(
++        host(
++          planListState: PlanListState(activePlans: [PlanModelStub.plan]),
++          planDetail: () => PlanModelStub.plan,
++          examData: examPayload(daysLeft: daysLeft),
++          achievement: _StaticAchievementNotifier.new,
++          scopeKey: UniqueKey(),
++          child: const SprintScreen(),
++        ),
++      );
++      await tester.pump();
++      await tester.pump(const Duration(milliseconds: 300));
++      await tester.pump(const Duration(milliseconds: 300));
++    }
++
++    testWidgets('中性档（daysLeft=10 > 7）：brand tone，文字色 = brandPrimary',
++        (tester) async {
++      await pumpScreenAt(tester, 10);
++      final pill = countdownPill(tester);
++      expect(pill.tone, PillTone.brand);
++      expect(pill.textColor, DS.brandPrimary);
++    });
++
++    testWidgets('档位边界：daysLeft=7 warning / daysLeft=8 brand（N5 口径 >7 中性）',
++        (tester) async {
++      await pumpScreenAt(tester, 7);
++      expect(countdownPill(tester).tone, PillTone.warning);
++      expect(countdownPill(tester).textColor, DS.warning);
++
++      await pumpScreenAt(tester, 8);
++      expect(countdownPill(tester).tone, PillTone.brand);
++      expect(countdownPill(tester).textColor, DS.brandPrimary);
++    });
++
++    testWidgets('warning 档（daysLeft=5）：文字色 = warning 槽（与 home exam 卡同橙）',
++        (tester) async {
++      await pumpScreenAt(tester, 5);
++      expect(find.text('剩余 5 天'), findsOneWidget);
++      final pill = countdownPill(tester);
++      expect(pill.tone, PillTone.warning);
++      expect(pill.textColor, DS.warning);
++    });
++
++    testWidgets('danger 档（daysLeft=1 / 考日 0）：文字色 = error 槽（「不可挽回节点临近」）',
++        (tester) async {
++      await pumpScreenAt(tester, 1);
++      expect(countdownPill(tester).tone, PillTone.danger);
++      expect(countdownPill(tester).textColor, DS.error);
++
++      await pumpScreenAt(tester, 0);
++      expect(find.text('今天考试'), findsOneWidget);
++      expect(countdownPill(tester).tone, PillTone.danger);
++      expect(countdownPill(tester).textColor, DS.error);
++    });
++  });
+ }
+ 
+ // ---------- 测试桩 ----------
+diff --git a/scripts/guards/check_dl_spec_ratchet.py b/scripts/guards/check_dl_spec_ratchet.py
+index 98211a13..88302f7e 100644
+--- a/scripts/guards/check_dl_spec_ratchet.py
++++ b/scripts/guards/check_dl_spec_ratchet.py
+@@ -30,6 +30,15 @@ ratchet guards, which are left untouched:
+                                brandSecondary gradient, alias family of the retired
+                                DS.accent — SPEC §1.4.2)
+   errorCopyOops        A6.6    Oops|something went wrong in mobile/lib (ratchet to zero)
++  persistentRepeatLoop A2.3/N3 `.repeat(reverse: true)` + bare `.repeat()` when the file
++                               declares a ≥2000ms duration, in features files lacking
++                               a DecorationMode/PerformanceTier gate (ratchet;
++                               whitelist registry with registered reasons — the
++                               implementation-agnostic breathing ban, N3)
++
++Whitelist (persistentRepeatLoop only): `PERSISTENT_REPEAT_WHITELIST` below maps
++file path → registered reason. Entries are the N3「白名单登记制」: a surviving
++legal persistent loop must be registered WITH its reason or it counts.
+ 
+ Ratchet discipline (same as UX-COMP): per-file counts frozen in
+ `dl_spec_ratchet_baseline.json` — a file exceeding its baseline count, or a NEW
+@@ -181,6 +190,58 @@ def _non_galaxy(path: Path) -> bool:
+     return "galaxy" not in path.as_posix()
+ 
+ 
++# ── N3 persistent-repeat (implementation-agnostic breathing ban, SPEC-FIX) ────
++#   pattern A: `.repeat(reverse: true)` — oscillating loop, any period (the
++#              handwritten breathing/float pattern D-1's old guard could not see)
++#   pattern B: bare `.repeat()` — counted only when the file also declares a
++#              ≥2000ms duration (long-period single-direction loop)
++#   gate:      any DecorationMode/resolveDecorationMode/PerformanceTier
++#              reference marks the file gated (N3 ①) → counts 0
++_P_REPEAT_REVERSE = re.compile(r"\.repeat\(\s*reverse:\s*true")
++_P_REPEAT_BARE = re.compile(r"\.repeat\(\s*\)")
++_P_MS_DURATION = re.compile(r"\bDuration\(\s*milliseconds:\s*(\d+)")
++_P_S_DURATION = re.compile(r"\bDuration\(\s*seconds:\s*(\d+)")
++_P_MOTION_GATE = re.compile(
++    r"\b(?:DecorationMode|resolveDecorationMode|PerformanceTier)\b"
++)
++
++# N3 白名单（登记制，SPEC-FIX @wt204 首批）：path → registered reason。
++# 每个存续合法持续循环必须登记理由，否则计为违规（N3「白名单机制」落地点）。
++PERSISTENT_REPEAT_WHITELIST: dict[str, str] = {
++    # _BlinkingCursor 500ms repeat(reverse)：流式应答的输入光标（caret）闪烁
++    # ——全平台文本输入惯例周期（≈500–530ms），语义是「正在书写」而非装饰呼吸；
++    # 事件窗口绑定（仅流式光标位挂载，流结束随消息落位卸载），渲染层另有
++    # reduce-motion 门控（build 内 context.reduceMotion → 静态定帧 Container）。
++    "mobile/lib/features/chat/presentation/screens/chat_screen.dart": (
++        "_BlinkingCursor streaming caret: platform text-input convention "
++        "(~500ms blink), event-window bound (mounted only at the streaming "
++        "caret), reduce-motion render gate (static frame)"
++    ),
++    # 阶段胶囊 700ms repeat()：N3 等待窗豁免——事件驱动等待期恰好 1 个持续源，
++    # 窗口结束即归还名额；reduce-motion 下 pulse=null（_StageDot 门控）。
++    # （700ms 非 reverse 且 <2s，本不在扫描口径内；登记以昭豁免依据。）
++    "mobile/lib/features/chat/presentation/widgets/chat_run_phase_indicator.dart": (
++        "N3 waiting-window exemption: the exactly-1 persistent source during "
++        "the event-driven wait phase (700ms pulse, quota returned on close)"
++    ),
++}
++
++
++def _count_persistent_repeat(_path: Path, lines: list[str]) -> int:
++    text = "\n".join(lines)
++    # N3 ① file-level gate: DecorationMode/PerformanceTier-gated files are
++    # compliant (SPEC-B #8 / SPEC-C #6 范式：门控覆盖的循环不计).
++    if _P_MOTION_GATE.search(text):
++        return 0
++    count = len(_P_REPEAT_REVERSE.findall(text))
++    has_long_period = any(
++        int(m.group(1)) >= 2000 for m in _P_MS_DURATION.finditer(text)
++    ) or any(int(m.group(1)) >= 2 for m in _P_S_DURATION.finditer(text))
++    if has_long_period:
++        count += len(_P_REPEAT_BARE.findall(text))
++    return count
++
++
+ DIMENSIONS: list[Dimension] = [
+     Dimension("competitionNarrative", "A0.1", "competition", _count_regex(_P_COMPETITION), zero_tolerance=True),
+     Dimension("colorsDotNative", "A1.2", "features", _count_regex(_P_COLORS_DOT)),
+@@ -196,6 +257,13 @@ DIMENSIONS: list[Dimension] = [
+     Dimension("dsGradientApiCalls", "A5.3", "mobile-lib", _count_regex(_P_DS_GRADIENT_API)),
+     Dimension("dsAccentGradientForbidden", "A1.5", "mobile-lib", _count_regex(_P_DS_ACCENT_GRADIENT)),
+     Dimension("errorCopyOops", "A6.6", "mobile-lib", _count_regex(_P_ERROR_OOPS)),
++    Dimension(
++        "persistentRepeatLoop",
++        "A2.3/N3",
++        "features",
++        _count_persistent_repeat,
++        exempt_files=set(PERSISTENT_REPEAT_WHITELIST),
++    ),
+ ]
+ 
+ DIM_IDS = [d.id for d in DIMENSIONS]
+@@ -597,6 +665,91 @@ def self_test() -> int:
+     finally:
+         shutil.rmtree(tmp, ignore_errors=True)
+ 
++    # Case 5 — N3 persistentRepeatLoop: reverse loops counted (any period);
++    # bare repeat counted only with a ≥2s period declared in the file;
++    # DecorationMode-gated files and whitelist-registered files exempt.
++    tmp = make_fixture()
++    try:
++        import contextlib
++        import io
++
++        def run_capture5() -> tuple[int, str]:
++            buf = io.StringIO()
++            with contextlib.redirect_stdout(buf):
++                code = run_guard(tmp, bp)
++            return code, buf.getvalue()
++
++        # a) ungated file: 1 reverse loop + 1 bare repeat with a 2000ms
++        #    duration present → count 2, pinned at baseline 2.
++        legacy = "mobile/lib/features/demo/presentation/legacy_breath.dart"
++        f = tmp / legacy
++        f.write_text(
++            "final c = AnimationController(vsync: v, duration: Duration(milliseconds: 2000));\n"
++            "unawaited(c.repeat(reverse: true));\n"
++            "unawaited(d.repeat());\n",
++            encoding="utf-8",
++        )
++        # (the 2000ms duration itself is an offLadderDuration hit — pin it too)
++        bp = write_baseline(
++            tmp, {legacy: {"persistentRepeatLoop": 2, "offLadderDuration": 1}}
++        )
++        code, out = run_capture5()
++        if code != 0:
++            failures.append("case5a pinned persistent-repeat file should PASS")
++
++        # a2) raise: second reverse loop appears → ratchet refuses.
++        f.write_text(
++            "final c = AnimationController(vsync: v, duration: Duration(milliseconds: 2000));\n"
++            "unawaited(c.repeat(reverse: true));\n"
++            "unawaited(d.repeat());\n"
++            "unawaited(e.repeat(reverse: true));\n",
++            encoding="utf-8",
++        )
++        code, out = run_capture5()
++        if code != 1 or "persistentRepeatLoop 3 > baseline 2" not in out:
++            failures.append("case5a2 persistent-repeat raise should FAIL")
++
++        # b) bare repeat WITHOUT any ≥2s duration in file: not counted (fast
++        #    pulses/progress loops are off-ladder durations' business, not N3).
++        (tmp / legacy).parent.joinpath("fast_pulse.dart").write_text(
++            "final c = AnimationController(vsync: v, duration: Duration(milliseconds: 700));\n"
++            "unawaited(c.repeat());\n",
++            encoding="utf-8",
++        )
++        f.write_text(
++            "final c = AnimationController(vsync: v, duration: Duration(milliseconds: 2000));\n"
++            "unawaited(c.repeat(reverse: true));\n"
++            "unawaited(d.repeat());\n",
++            encoding="utf-8",
++        )
++        code, out = run_capture5()
++        if code != 0:
++            failures.append("case5b sub-2s bare repeat should not count")
++
++        # c) DecorationMode-gated file: loops present but file counts 0 (N3 ①).
++        gated = tmp / "mobile/lib/features/demo/presentation/gated_card.dart"
++        gated.write_text(
++            "final mode = resolveDecorationMode(context);\n"
++            "unawaited(c.repeat(reverse: true));\n",
++            encoding="utf-8",
++        )
++        code, out = run_capture5()
++        if code != 0 or "gated_card" in out:
++            failures.append("case5c gated file should be exempt from N3 dim")
++
++        # d) whitelisted real path (chat cursor): loops present, zero count.
++        chat_dir = tmp / "mobile/lib/features/chat/presentation/screens"
++        chat_dir.mkdir(parents=True, exist_ok=True)
++        (chat_dir / "chat_screen.dart").write_text(
++            "unawaited(_controller.repeat(reverse: true));\n",
++            encoding="utf-8",
++        )
++        code, out = run_capture5()
++        if code != 0 or "chat_screen" in out:
++            failures.append("case5d whitelisted caret file should count 0")
++    finally:
++        shutil.rmtree(tmp, ignore_errors=True)
++
+     if failures:
+         print(f"[dl-spec-ratchet] SELF-TEST FAIL — {len(failures)} case(s):")
+         for f in failures:
+diff --git a/scripts/guards/dl_spec_ratchet_baseline.json b/scripts/guards/dl_spec_ratchet_baseline.json
+index 216c0a3b..80b9318d 100644
+--- a/scripts/guards/dl_spec_ratchet_baseline.json
++++ b/scripts/guards/dl_spec_ratchet_baseline.json
+@@ -38,21 +38,25 @@
+       "bannedCurve": 1,
+       "gradientLiteral": 2,
+       "offLadderDuration": 4,
+-      "particleBypass": 2
++      "particleBypass": 2,
++      "persistentRepeatLoop": 3
+     },
+     "mobile/lib/features/achievement/presentation/screens/achievement_detail_screen.dart": {
+       "bannedCurve": 1,
+       "gradientLiteral": 10,
+       "offLadderDuration": 4,
+-      "particleBypass": 4
++      "particleBypass": 4,
++      "persistentRepeatLoop": 2
+     },
+     "mobile/lib/features/achievement/presentation/screens/achievement_list_screen.dart": {
+       "gradientLiteral": 3,
+-      "offLadderDuration": 2
++      "offLadderDuration": 2,
++      "persistentRepeatLoop": 1
+     },
+     "mobile/lib/features/achievement/presentation/screens/achievement_map_screen.dart": {
+       "bannedCurve": 1,
+-      "gradientLiteral": 1
++      "gradientLiteral": 1,
++      "persistentRepeatLoop": 6
+     },
+     "mobile/lib/features/achievement/presentation/screens/milestone_celebration_screen.dart": {
+       "coldColorLiteral": 6,
+@@ -63,7 +67,8 @@
+     "mobile/lib/features/achievement/presentation/screens/streak_details_screen.dart": {
+       "bannedCurve": 1,
+       "gradientLiteral": 1,
+-      "offLadderDuration": 1
++      "offLadderDuration": 1,
++      "persistentRepeatLoop": 1
+     },
+     "mobile/lib/features/achievement/presentation/widgets/achievement_card.dart": {
+       "gradientLiteral": 6
+@@ -85,7 +90,8 @@
+       "confettiPerFile": 1,
+       "gradientLiteral": 3,
+       "offLadderDuration": 4,
+-      "particleBypass": 8
++      "particleBypass": 8,
++      "persistentRepeatLoop": 6
+     },
+     "mobile/lib/features/achievement/presentation/widgets/achievement_unlocked_dialog.dart": {
+       "bannedCurve": 1,
+@@ -96,7 +102,8 @@
+     },
+     "mobile/lib/features/achievement/presentation/widgets/streak_indicator.dart": {
+       "gradientLiteral": 4,
+-      "offLadderDuration": 3
++      "offLadderDuration": 3,
++      "persistentRepeatLoop": 2
+     },
+     "mobile/lib/features/aurora/presentation/widgets/aurora_core_session_sheet.dart": {
+       "offLadderDuration": 2
+@@ -139,19 +146,23 @@
+       "coldColorLiteral": 6,
+       "dsGradientApiCalls": 19,
+       "gradientLiteral": 9,
+-      "offLadderDuration": 1
++      "offLadderDuration": 1,
++      "persistentRepeatLoop": 1
+     },
+     "mobile/lib/features/chat/presentation/widgets/agent_avatar_stack.dart": {
+-      "offLadderDuration": 1
++      "offLadderDuration": 1,
++      "persistentRepeatLoop": 1
+     },
+     "mobile/lib/features/chat/presentation/widgets/agent_avatar_switcher.dart": {
+-      "offLadderDuration": 1
++      "offLadderDuration": 1,
++      "persistentRepeatLoop": 1
+     },
+     "mobile/lib/features/chat/presentation/widgets/agent_reasoning_bubble.dart": {
+       "gradientLiteral": 1
+     },
+     "mobile/lib/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart": {
+-      "gradientLiteral": 2
++      "gradientLiteral": 2,
++      "persistentRepeatLoop": 1
+     },
+     "mobile/lib/features/chat/presentation/widgets/ai_reasoning_mode_pill.dart": {
+       "gradientLiteral": 1
+@@ -240,7 +251,8 @@
+     },
+     "mobile/lib/features/chat/presentation/widgets/plan_review_card.dart": {
+       "dsGradientApiCalls": 4,
+-      "gradientLiteral": 1
++      "gradientLiteral": 1,
++      "persistentRepeatLoop": 1
+     },
+     "mobile/lib/features/chat/presentation/widgets/plan_selector_pill.dart": {
+       "gradientLiteral": 1
+@@ -251,8 +263,12 @@
+     "mobile/lib/features/chat/presentation/widgets/profile_front_door_card.dart": {
+       "coldColorLiteral": 2
+     },
++    "mobile/lib/features/chat/presentation/widgets/regeneration_prompt.dart": {
++      "persistentRepeatLoop": 2
++    },
+     "mobile/lib/features/chat/presentation/widgets/review_appeal_card.dart": {
+-      "offLadderDuration": 1
++      "offLadderDuration": 1,
++      "persistentRepeatLoop": 1
+     },
+     "mobile/lib/features/chat/presentation/widgets/review_rating_dialog.dart": {
+       "gradientLiteral": 1
+@@ -283,7 +299,8 @@
+       "gradientLiteral": 1
+     },
+     "mobile/lib/features/chat/widgets/typing_text.dart": {
+-      "offLadderDuration": 4
++      "offLadderDuration": 4,
++      "persistentRepeatLoop": 1
+     },
+     "mobile/lib/features/cognitive/data/repositories/mock_cognitive_repository.dart": {
+       "offLadderDuration": 2
+@@ -332,7 +349,8 @@
+       "gradientLiteral": 1
+     },
+     "mobile/lib/features/community/presentation/widgets/bonfire_widget.dart": {
+-      "gradientLiteral": 2
++      "gradientLiteral": 2,
++      "persistentRepeatLoop": 1
+     },
+     "mobile/lib/features/community/presentation/widgets/community_widgets.dart": {
+       "offLadderDuration": 1
+@@ -389,7 +407,8 @@
+       "dsGradientApiCalls": 1
+     },
+     "mobile/lib/features/focus/presentation/widgets/flip_clock.dart": {
+-      "gradientLiteral": 3
++      "gradientLiteral": 3,
++      "persistentRepeatLoop": 1
+     },
+     "mobile/lib/features/focus/presentation/widgets/focus_agent_sheet.dart": {
+       "dsGradientApiCalls": 1
+@@ -398,11 +417,13 @@
+       "gradientLiteral": 1
+     },
+     "mobile/lib/features/focus/presentation/widgets/star_background.dart": {
+-      "gradientLiteral": 1
++      "gradientLiteral": 1,
++      "persistentRepeatLoop": 1
+     },
+     "mobile/lib/features/galaxy/data/services/galaxy_edge_animation.dart": {
+       "offLadderDuration": 1,
+-      "particleBypass": 2
++      "particleBypass": 2,
++      "persistentRepeatLoop": 2
+     },
+     "mobile/lib/features/galaxy/data/services/galaxy_gesture_recognizer.dart": {
+       "offLadderDuration": 2
+@@ -441,7 +462,8 @@
+       "gradientLiteral": 1
+     },
+     "mobile/lib/features/galaxy/presentation/widgets/galaxy/graphrag_visualizer.dart": {
+-      "offLadderDuration": 2
++      "offLadderDuration": 2,
++      "persistentRepeatLoop": 1
+     },
+     "mobile/lib/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart": {
+       "particleBypass": 3
+@@ -472,7 +494,8 @@
+     },
+     "mobile/lib/features/home/presentation/screens/weather_guide_screen.dart": {
+       "gradientLiteral": 1,
+-      "offLadderDuration": 2
++      "offLadderDuration": 2,
++      "persistentRepeatLoop": 2
+     },
+     "mobile/lib/features/home/presentation/widgets/active_bottleneck_alert.dart": {
+       "gradientLiteral": 1
+@@ -530,8 +553,7 @@
+       "offLadderDuration": 1
+     },
+     "mobile/lib/features/home/presentation/widgets/prism_card.dart": {
+-      "gradientLiteral": 2,
+-      "offLadderDuration": 1
++      "gradientLiteral": 2
+     },
+     "mobile/lib/features/home/presentation/widgets/seed_library_dashboard_card.dart": {
+       "gradientLiteral": 1
+@@ -543,7 +565,8 @@
+       "offLadderDuration": 1
+     },
+     "mobile/lib/features/home/presentation/widgets/unified_omni_bar.dart": {
+-      "offLadderDuration": 2
++      "offLadderDuration": 2,
++      "persistentRepeatLoop": 1
+     },
+     "mobile/lib/features/home/presentation/widgets/weather_header.dart": {
+       "gradientLiteral": 7,
+@@ -564,7 +587,8 @@
+     },
+     "mobile/lib/features/onboarding/presentation/widgets/architecture_animation.dart": {
+       "gradientLiteral": 1,
+-      "offLadderDuration": 2
++      "offLadderDuration": 2,
++      "persistentRepeatLoop": 1
+     },
+     "mobile/lib/features/openclaw/presentation/widgets/openclaw_primitives.dart": {
+       "gradientLiteral": 2
+@@ -625,7 +649,8 @@
+     "mobile/lib/features/task/presentation/widgets/execution_status_indicator.dart": {
+       "bannedCurve": 1,
+       "gradientLiteral": 1,
+-      "offLadderDuration": 2
++      "offLadderDuration": 2,
++      "persistentRepeatLoop": 2
+     },
+     "mobile/lib/features/task/presentation/widgets/task_card.dart": {
+       "gradientLiteral": 3
+@@ -644,7 +669,8 @@
+     },
+     "mobile/lib/features/task/presentation/widgets/timer_widget.dart": {
+       "gradientLiteral": 1,
+-      "offLadderDuration": 1
++      "offLadderDuration": 1,
++      "persistentRepeatLoop": 1
+     },
+     "mobile/lib/features/task/presentation/widgets/why_this_today_panel.dart": {
+       "offLadderDuration": 2
+@@ -655,11 +681,13 @@
+     "mobile/lib/features/theater/presentation/screens/knowledge_theater_screen.dart": {
+       "confettiPerFile": 1,
+       "gradientLiteral": 5,
+-      "offLadderDuration": 3
++      "offLadderDuration": 3,
++      "persistentRepeatLoop": 1
+     },
+     "mobile/lib/features/theater/presentation/widgets/knowledge_theater_graph.dart": {
+       "gradientLiteral": 2,
+-      "offLadderDuration": 2
++      "offLadderDuration": 2,
++      "persistentRepeatLoop": 1
+     },
+     "mobile/lib/features/tools/presentation/screens/tool_host_screen.dart": {
+       "gradientLiteral": 1
+@@ -749,17 +777,20 @@
+     "mobile/lib/features/visual_elements/presentation/widgets/visual_element_card.dart": {
+       "gradientLiteral": 9,
+       "offLadderDuration": 1,
+-      "particleBypass": 3
++      "particleBypass": 3,
++      "persistentRepeatLoop": 2
+     },
+     "mobile/lib/features/visual_elements/presentation/widgets/visual_element_preview_dialog.dart": {
+       "gradientLiteral": 3,
+       "offLadderDuration": 4,
+-      "particleBypass": 2
++      "particleBypass": 2,
++      "persistentRepeatLoop": 4
+     },
+     "mobile/lib/features/visual_elements/presentation/widgets/visual_element_unlock_dialog.dart": {
+       "bannedCurve": 4,
+       "gradientLiteral": 7,
+-      "offLadderDuration": 2
++      "offLadderDuration": 2,
++      "persistentRepeatLoop": 5
+     },
+     "mobile/lib/l10n/app_localizations_en.dart": {
+       "errorCopyOops": 4
+diff --git a/v3-output/DL-R3/SPEC.md b/v3-output/DL-R3/SPEC.md
+index b6b7bfd2..3022ae34 100644
+--- a/v3-output/DL-R3/SPEC.md
++++ b/v3-output/DL-R3/SPEC.md
+@@ -100,6 +100,12 @@
+ - **规则 1.5.2 冷色准入**：冷色（蓝/青/紫系）只允许经 info 槽出现，且只用于「系统在说话」的内容（AI 状态、数据可视化、确认动作）。禁装饰。现状越界冷色全部改造：home「50%」蓝 chip→语义重评（是 AI 判断→info 槽；是进度→中性层+字重）；profile「亮度 50%」与折线图→数据可视化走 info；chat 蓝底建议 chip→归 §4.2 chip 语法。**判定口诀：这个蓝色在替系统说话，还是在替设计说话？**【依据：D6；AUDIT S1「像从另一套设计里掉进来」；C-06#5】
+   - **存量清偿目标（v1.0 增补，R4 P2-7）**：DL-SPEC `coldColorLiteral` 基线 **90 处/19 文件**（冻结于 d87d42ea，最大户 `visual_element_palette.dart` 31 处）为批 2 palette 迁移的清偿对象：批 2 验收含该基线**下降 ≥50%**，批 3 清零。降基线靠 token 化替换，不扩守卫启发式面（已知漏报：低饱和冷色 sat<0.15，见 A1.3）。扫描域（features）外已知单点：`app/routes.dart:113 @9ca4cd0c` 的 `Colors.grey`，登记 §10.5 台账，批 2 随 B2-2 顺手清。
+ 
++> **【v1.1 N5 增补 @A-SPEC，落地 @SPEC-B（exam 卡）/ @SPEC-FIX（sprint pill 收敛）】**· 截止临近色阶（倒计时上下文专用）
++> - 倒计时类语义分三档：**≥7 天中性层 → ≤7 天 warning → ≤1 天/考日 error**。error 槽语义在本上下文扩展为「不可挽回节点临近」，仅限倒计时位使用，禁泛化为普通过程色；§1.5 原四槽定义不变。
++> - 现行 `daysLeft <= 3 → error`（exam_sprint_dashboard_card.dart:41）为存量靶，迁移时同步收敛翻转范围（整卡翻转 → header+倒计时数字两处）。
++> - 【依据：§2.2 S-G7 辩论（惯例采纳+语义修正）；对标 §1.2 考试倒计时品类惯例】
++> - **【v1.1 勘误 @SPEC-REVIEW/R4，执行 @SPEC-FIX】**：首档「≥7 天中性」与次档「≤7 天 warning」在 7 天处自相重叠，统一为「**>7 天中性**」（7 天归 warning 档；实现与测试边界 @SPEC-B 已按此执行，daysLeft=8 中性 / 7 warning）。
++
+ ### 1.6 对比度验收数字
+ 
+ | 对象 | 要求 | 依据 |
+@@ -220,6 +226,12 @@
+ - **计数规则**：每屏同时活跃的持续源 ≤1。shimmer 骨架在屏时占用该唯一名额（加载期通常无其他持续源，天然满足）；加载完成骨架消失，名额归还。
+ - **galaxy 豁免区合计预算**（锤内规范，仪式模式）：豁免不是免检——仪式模式同屏预算 = 持续源 **1**（星空缓转/闪烁二选一）+ particle ≤80（GlobalParticleCounter 口径）+ glow ≤2 + 节点入场 stagger 一次性（不计）。**工作视图（Tab 默认）持续源 = 0**（纯静态 + 交互瞬间动效）。合计预算超限时优先砍 glow，再砍 particle 密度，最后砍持续源——顺序固定。【依据：D5 增补「豁免区立锤内规范+同屏合计预算」；AUDIT S5/S17（豁免区从未做过同屏合计）；H3 后预算下调见 §0.1】
+ 
++> **【v1.1 N3 增补 @A-SPEC，存量靶清偿 @SPEC-B/#8+@SPEC-C/#6，守卫扩维 @SPEC-FIX】**· 呼吸禁令按「实现无关」口径执行
++> - D-1 的禁令对象是**模式**（常驻循环呼吸/浮动），不是 `createBreathingController` 一个函数。features 域内任何 `AnimationController.repeat(reverse: true)` 或 ≥2s 周期 `repeat()` 计为持续动画源，必须：①过 DecorationMode/PerformanceTier 门控；②占用 §2.6 唯一名额。
++> - 等待窗口豁免细则：事件驱动的等待期（阶段胶囊类）允许**恰好 1 个**持续源，窗口结束即归还名额。
++> - 守卫：`breathingController` 维扩为「长周期 repeat 模式」扫描（含既有合法件白名单登记，防误伤进度环/物理动画）。
++> - 【依据：§2.1 C-G1/C-G2；§2.5 G-4 门控规格先例；存量靶 chat_screen.dart:3845-3849、exam_sprint_dashboard_card.dart:250-253】
++
+ ---
+ 
+ ## §3 排版与密度
+@@ -283,6 +295,10 @@ Owner：`SparkleTypography`（`tokens_v2/theme_manager.dart`，符号 `SparkleTy
+ - **规则 4.1.4 数量上限/屏**：同屏可点 chip ≤6；**AI 一条回答之后同屏 chip ≤3**（建议话术类，§7.1）；确认请求类不占 chip 名额（走收件箱/内联确认，§7.3）。【依据：AUDIT S9「一答十 chip」；CONFLICTS C-11（chips ≤3）】
+ - **规则 4.1.5 tone 准入**：PillTone 六值按 §1.5 映射；「brand」tone 仅用于 accent 语义（可交互/品牌），禁作状态色。
+ 
++> **【v1.1 N7 增补 @A-SPEC；tile 语义归位 @SPEC-A，exam 卡 `_MetricPill`/`_ModePill` 冻结未迁（parallelClass=2）】**· 指标瓦片非 pill
++> - 数据展示卡（metric tile：标签+主数+口径小字三段式）不适用 SemanticPill 归一——pill 是扫视件，tile 是读数件。但私有类命名禁用 `*Pill` 后缀（防与 §4.1.1 守卫语义冲突），owner 归 SparkleCard/DashboardSectionShell 家族；存量 `_MetricPill`/`_ModePill` 更名随触碰迁移，不设专项。
++> - 【依据：§2.2 S-G1 辩论中的部分砍单；防守卫误判】
++
+ ### 4.2 控件层级语法（解 S14/S15）
+ 
+ 三类控件视觉语法必须可区分：
+@@ -326,6 +342,11 @@ Owner：`SparkleTypography`（`tokens_v2/theme_manager.dart`，符号 `SparkleTy
+ 
+ **错误态是四态规范的倾斜重点**（现状 1.7/5 全 app 最差项）。**诚实层是 H3 后的签名特性**（DECISIONS 附录 #3）：不确定时明说（§6.3 三档）、改口承认、推荐附一行「为什么是它」——见 §10.1 B1-6。【依据：DECISIONS D9；CONFLICTS C-09 全条 + steelman 驳回（禁的是预填结论非流式）；EDU 原则 5；AUDIT §5；DECISIONS 附录 H3 裁决 #3】
+ 
++> **【v1.1 N4 增补 @A-SPEC，落地 @SPEC-A/#3（sprint）+ @SPEC-C/#4（galaxy）】**· 屏级错误面板三件套硬性 + Object 插值禁令例证
++> - 屏级（非组件级）错误面板必须同时具备：人话标题 + 影响一句 + **重试钮**（可发现性不低于屏内首屏可见）。存量靶：`sprint_screen.dart:195-205`。
++> - `'$_loadError'` / `'$error'` 类 `Object?` 插值直出为 X6 新增例证（机检可扩 `'\$_\w*[eE]rr'` 模式），存量靶：`galaxy_screen.dart:2870`。
++> - 【依据：§2.2 S-G2；§2.3 X-G1；对标 §1.1-1.3 错误态共性 5】
++
+ ---
+ 
+ ## §5 空间纪律
+@@ -408,6 +429,10 @@ Owner：`SparkleTypography`（`tokens_v2/theme_manager.dart`，符号 `SparkleTy
+ 
+ 不出百分比。完整数据（历史轨迹/口径）走 §7.1 过程折叠出口，不堵死信息。【依据：CONFLICTS C-07 裁决＋steelman 驳回（伪精度非透明）】
+ 
++> **【v1.1 N6 增补 @A-SPEC，落地 @SPEC-B/#2（通过率弧四件）】**· 模型预测数准入四件
++> - 模型预测类数字（通过概率/预估分/覆盖率预测）准入须同时满足：①单一事实源可溯（§9.4）；②**口径一行就地可见**（「按你当前进度估算」级）；③低档分档文案兜底（概率 <0.4 时附「还来得及，先攻高頻考点」类动作语）；④编码色走 theme CB-safe 变体（含 colorBlindFriendly 适配），入场动画 ≤M3（320ms）。
++> - 【依据：§2.2 S-G8 辩论（规范化保留裁决）；对标 §1.1 Claude 免责行、§1.2 Duolingo 概率小字；存量靶 exam_sprint_dashboard_card.dart:599/:644-648/:539-543】
++
+ ### 6.4 数据词典 schema（S2 施工图）
+ 
+ **结构**（每域一文件，共享基础设施一处；**已落地 @B1-B，以下为已实现形态**）：
+@@ -715,6 +740,7 @@ Linear 式工具链（INTL 原则 16），最低需求集：
+ 2. **注册可达性测试（防 router 遮蔽连坐）**：引擎新增/迁移端点必须带**注册面断言**（路由可达＋形状键集）——router 级去重（如 `_include_router_if_new` 按 (path, methods) 键集不重叠才整体挂载）会使一条路由冲突连坐整 router 死代码，且消费方按被遮蔽形状编写解析器时空态长期无人察觉（事故档案：GOAL-ROUTER REPORT §1——goal-detail GET 被 readouts 遮蔽、PUT 405 长期存在；范本：`backend/tests/unit/test_goal_detail_route_shadowing.py`，9 用例）。此为口径断裂的新根因类型，静态 linter 不可见，只能靠注册面断言拦截。
+ 3. **跨账本对账**：口径不止在跨屏一致，还要跨账本一致（任务账本 vs sprint 仪表盘，NORTHSTAR-LOOP1 BP-4 形态：completed=2 vs completed=0）——S7 修复只是同域收敛，跨账本矛盾是同类问题的第二形态。§6.3 准入②按此改写（已同步）。
+ 4. **验收**：A9.5（机检）；新口径入账前回答「谁是唯一产出函数、谁在委托引用、断言测试在哪」三问。
++5. **【v1.1 N2 增补 @A-SPEC（本条为回写后半——规则条文；sprint 侧工程收敛已落地 @SPEC-A/#1，旁路双算存量归 R6）】**· 跨面派生值规则：同一派生值（剩余天数/完成度%/进度差）全 app 只准一处计算：**服务端下传值优先，客户端本地 `DateTime.now()` 推算类派生禁新增**；存量靶：`sprint_screen.dart:216`（daysLeft 客户端自算，@A-SPEC 时点）。验收沿用 A9.5 范式：跨屏断言测试断言 sprint 屏与 exam 卡两处剩余天数同源同值。【依据：§2.2 S-G6；§9.4-3 跨账本对账的同型前移】
+ 
+ ---
+ 
+@@ -779,6 +805,22 @@ home 减法（§8.1）→ chat 面积重划（§8.2，D3 ≥70%）→ galaxy 双
+ | 批 2 B2-1~B2-5 | 未开工（守卫 12 维已提前） | §10.2 |
+ | routes.dart Colors.grey 单点（§1.5.2） | 未开工（登记待清） | 批 2 随 B2-2 |
+ 
++**v1.1 N8 台账行（@A-SPEC 提案原文回写 @SPEC-FIX，表内状态为提案时点值）**：
++
++| 条目 | 状态 | 剩余量 |
++|---|---|---|
++| N1 sprint surface 入守卫根 | 未开工 | 改造 #7 |
++| N2 daysLeft 双算收敛 | 未开工 | 改造 #1 |
++| N3 chat breath overlay + DayZero float | 未开工 | 改造 #6/#8 |
++| N4 sprint 错误态重试 / galaxy 裸异常 | 未开工 | 改造 #3/#4 |
++| N5 urgency 色阶迁移 | 未开工 | 改造 #9 |
++| N6 通过率弧规范化 | 未开工 | 改造 #2 |
++| N7 metric tile 更名 | 未开工（触碰即迁） | —— |
++| 锤内规范 3 扩展半句（覆盖件不遮节点）+ 0xE6101929 token 化 | 未开工（触碰即迁） | —— |
++| v1.0 遗留备忘：shell 底导航已从 4 Tab 变 5 Tab（community 加入），v1.0 §7.2 锤内规范 2 的落点描述需随批 3 主卡更新 | 登记即闭环 | —— |
++
++> **【v1.1 N8 回写时点状态勘定 @SPEC-REVIEW §1.1/1.2 + @SPEC-FIX】**：上表为 A-SPEC 提案原文（逐字，不回写状态改判）。落地实测：N1 已入守卫根（@SPEC-GUARD，plan 域 14 文件基线登记）；N2 sprint 侧已收敛（@SPEC-A/#1，跨屏同源测试在）；N3 两只点名存量靶已灭（@SPEC-C/#6 + @SPEC-B/#8），守卫扩维 `persistentRepeatLoop` 维 + 白名单登记制已落地（@SPEC-FIX）；N4 已落地（@SPEC-A/#3 + @SPEC-C/#4）；N5 已落地（@SPEC-B/#9，7 天档勘误见 §1.5）；N6 已落地（@SPEC-B/#2）；N7 规则成立（sprint 侧 tile 归 GraphiteCardSurface 家族；exam 卡 `_MetricPill`/`_ModePill` parallelClass=2 冻结，触碰即迁）；0xE6101929 字面量仍在 `galaxy_screen.dart`（未触碰，台账行续挂）；5-Tab 备忘待批 3 主卡。
++
+ ### 10.6 H2/H3 验证并行项（上报用户，不阻塞规范）
+ 
+ H3 teardown **已完成并裁决**（DECISIONS 附录：部分成立——四合一空位整体证伪、「懂状态×过程透明」双缺位实证成立；温度降为及格线；叙事改「错题本 2.0：静态收录 → 状态引擎」；「诚实」落批 1——本规范 §0.1/§0.3/§6.1/§7.2/§7.4/§8.9/§10.1 B1-6 已同步）。H2 卡片排序访谈（5–8 人×30min）+fake-door 建议与批 1 并行执行；结果决定仪式层是否进一步降为薄层（§0.1）。【依据：DECISIONS 附录；DECISIONS H2】
+diff --git a/mobile/test/features/home/presentation/widgets/prism_card_test.dart b/mobile/test/features/home/presentation/widgets/prism_card_test.dart
+new file mode 100644
+index 00000000..4c2460a9
+--- /dev/null
++++ b/mobile/test/features/home/presentation/widgets/prism_card_test.dart
+@@ -0,0 +1,123 @@
++// SPEC-FIX（复审闭环 · R4=N3 守卫扩维缺位清偿）：prism_card 2000ms 无门控
++// repeat(reverse) 常驻呼吸退役验收——单次入场（正典集 320ms）+ 静止定帧 +
++// DecorationMode 门控（SPEC-B #8 DayZero / SPEC-C #6 呼吸层同款范式）。
++// 旧实现（2s repeat(reverse)）在本文件所有时间窗断言上必失败：其 ticker 永不
++// 终止、辉光 alpha 永在 0.05–0.15 间摆动。
++import 'package:flutter/material.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:sparkle/core/design/theme/performance_tier.dart';
++import 'package:sparkle/core/network/api_client.dart';
++import 'package:sparkle/core/services/performance_service.dart';
++import 'package:sparkle/features/home/data/repositories/dashboard_repository.dart';
++import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
++import 'package:sparkle/features/home/presentation/widgets/prism_card.dart';
++import '../../../../shared/i18n_test_helper.dart';
++
++/// 采样 prism 折射辉光（RadialGradient 装饰的 Container）当前首色 alpha。
++double _sampleGlowAlpha(WidgetTester tester) {
++  final containers = tester.widgetList<Container>(find.byType(Container));
++  for (final c in containers) {
++    final decoration = c.decoration;
++    if (decoration is BoxDecoration && decoration.gradient is RadialGradient) {
++      return (decoration.gradient! as RadialGradient).colors.first.a;
++    }
++  }
++  fail('prism 辉光容器未找到');
++}
++
++class _FakeApiClient extends Fake implements ApiClient {}
++
++class _SilentDashboardRepository extends DashboardRepository {
++  _SilentDashboardRepository() : super(_FakeApiClient());
++}
++
++/// 恒定初始态的 dashboard 桩：不拉数据，cognitive/weather 全默认。
++class _StaticPrismDashboardNotifier extends DashboardNotifier {
++  _StaticPrismDashboardNotifier() : super(_SilentDashboardRepository()) {
++    state = DashboardState.loading();
++  }
++
++  @override
++  Future<void> fetchData() async {}
++
++  @override
++  Future<void> refresh() async {}
++}
++
++void main() {
++  setUp(setUpI18nForTesting);
++  TestWidgetsFlutterBinding.ensureInitialized();
++
++  /// 测试宿主默认解析为 medium 档（60Hz + dpr 3.0 → staticFrame），
++  /// 强制 high 档才能走进 animated 分支验证入场行为。
++  void forceHighTier() {
++    PerformanceService.instance.currentTier.value = PerformanceTier.high;
++    addTearDown(() =>
++        PerformanceService.instance.currentTier.value =
++            defaultPerformanceTier());
++  }
++
++  Widget host({bool disableAnimations = false,}) => ProviderScope(
++        overrides: [
++          dashboardProvider.overrideWith(
++            (ref) => _StaticPrismDashboardNotifier(),
++          ),
++        ],
++        child: MediaQuery(
++          data: MediaQueryData(disableAnimations: disableAnimations),
++          child: testMaterialApp(home: const Scaffold(body: PrismCard())),
++        ),
++      );
++
++  group('SPEC-FIX R4 — prism 辉光单次入场 + 静止定帧（N3 呼吸禁令）', () {
++    testWidgets('单次入场：320ms 到静止位（alpha 0.15），之后 2s 观察窗恒定',
++        (tester) async {
++      forceHighTier();
++      await tester.pumpWidget(host());
++      await tester.pump(); // 首帧：入场起跑（0.1→0.3 在途，alpha < 0.15）
++      final alphaDuringEntrance = _sampleGlowAlpha(tester);
++      expect(
++        alphaDuringEntrance,
++        lessThan(0.15),
++        reason: '入场在途应低于静止位（旧 repeat 实现首帧同值，此处只做在途佐证）',
++      );
++
++      // 正典档 320ms 到点：静止位（Tween 终值 0.3 × 0.5 = 0.15）。
++      await tester.pump(const Duration(milliseconds: 320));
++      expect(_sampleGlowAlpha(tester), moreOrLessEquals(0.15, epsilon: 1e-6));
++
++      // 持续观察 2.5s（覆盖旧 2000ms repeat 的一个完整往返周期）：
++      // alpha 恒 0.15——旧实现此刻必在振荡相位上（2820ms → ~0.109）。
++      await tester.pump(const Duration(milliseconds: 1000));
++      expect(_sampleGlowAlpha(tester), moreOrLessEquals(0.15, epsilon: 1e-6));
++      await tester.pump(const Duration(milliseconds: 1500));
++      expect(_sampleGlowAlpha(tester), moreOrLessEquals(0.15, epsilon: 1e-6));
++
++      // ticker 终止性：入场完成后 prism 内无活跃 frame 源（旧 repeat 永不归零）。
++      expect(tester.binding.transientCallbackCount, 0);
++    });
++
++    testWidgets('staticFrame 档（medium tier）：首帧即钉静止位，无入场播放',
++        (tester) async {
++      // 不 force tier：测试宿主默认 medium → resolveDecorationMode = staticFrame。
++      await tester.pumpWidget(host());
++      await tester.pump();
++      expect(_sampleGlowAlpha(tester), moreOrLessEquals(0.15, epsilon: 1e-6));
++      await tester.pump(const Duration(milliseconds: 500));
++      expect(_sampleGlowAlpha(tester), moreOrLessEquals(0.15, epsilon: 1e-6));
++      expect(tester.binding.transientCallbackCount, 0);
++    });
++
++    testWidgets('reduce-motion（high tier + disableAnimations）：首帧即钉静止位',
++        (tester) async {
++      forceHighTier(); // 排除 tier 降档干扰：此路径专验 reduce-motion 门控
++      await tester.pumpWidget(host(disableAnimations: true));
++      await tester.pump();
++      expect(_sampleGlowAlpha(tester), moreOrLessEquals(0.15, epsilon: 1e-6));
++      await tester.pump(const Duration(milliseconds: 500));
++      expect(_sampleGlowAlpha(tester), moreOrLessEquals(0.15, epsilon: 1e-6));
++      expect(tester.binding.transientCallbackCount, 0);
++    });
++  });
++}

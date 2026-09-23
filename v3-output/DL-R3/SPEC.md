@@ -100,6 +100,12 @@
 - **规则 1.5.2 冷色准入**：冷色（蓝/青/紫系）只允许经 info 槽出现，且只用于「系统在说话」的内容（AI 状态、数据可视化、确认动作）。禁装饰。现状越界冷色全部改造：home「50%」蓝 chip→语义重评（是 AI 判断→info 槽；是进度→中性层+字重）；profile「亮度 50%」与折线图→数据可视化走 info；chat 蓝底建议 chip→归 §4.2 chip 语法。**判定口诀：这个蓝色在替系统说话，还是在替设计说话？**【依据：D6；AUDIT S1「像从另一套设计里掉进来」；C-06#5】
   - **存量清偿目标（v1.0 增补，R4 P2-7）**：DL-SPEC `coldColorLiteral` 基线 **90 处/19 文件**（冻结于 d87d42ea，最大户 `visual_element_palette.dart` 31 处）为批 2 palette 迁移的清偿对象：批 2 验收含该基线**下降 ≥50%**，批 3 清零。降基线靠 token 化替换，不扩守卫启发式面（已知漏报：低饱和冷色 sat<0.15，见 A1.3）。扫描域（features）外已知单点：`app/routes.dart:113 @9ca4cd0c` 的 `Colors.grey`，登记 §10.5 台账，批 2 随 B2-2 顺手清。
 
+> **【v1.1 N5 增补 @A-SPEC，落地 @SPEC-B（exam 卡）/ @SPEC-FIX（sprint pill 收敛）】**· 截止临近色阶（倒计时上下文专用）
+> - 倒计时类语义分三档：**≥7 天中性层 → ≤7 天 warning → ≤1 天/考日 error**。error 槽语义在本上下文扩展为「不可挽回节点临近」，仅限倒计时位使用，禁泛化为普通过程色；§1.5 原四槽定义不变。
+> - 现行 `daysLeft <= 3 → error`（exam_sprint_dashboard_card.dart:41）为存量靶，迁移时同步收敛翻转范围（整卡翻转 → header+倒计时数字两处）。
+> - 【依据：§2.2 S-G7 辩论（惯例采纳+语义修正）；对标 §1.2 考试倒计时品类惯例】
+> - **【v1.1 勘误 @SPEC-REVIEW/R4，执行 @SPEC-FIX】**：首档「≥7 天中性」与次档「≤7 天 warning」在 7 天处自相重叠，统一为「**>7 天中性**」（7 天归 warning 档；实现与测试边界 @SPEC-B 已按此执行，daysLeft=8 中性 / 7 warning）。
+
 ### 1.6 对比度验收数字
 
 | 对象 | 要求 | 依据 |
@@ -220,6 +226,12 @@
 - **计数规则**：每屏同时活跃的持续源 ≤1。shimmer 骨架在屏时占用该唯一名额（加载期通常无其他持续源，天然满足）；加载完成骨架消失，名额归还。
 - **galaxy 豁免区合计预算**（锤内规范，仪式模式）：豁免不是免检——仪式模式同屏预算 = 持续源 **1**（星空缓转/闪烁二选一）+ particle ≤80（GlobalParticleCounter 口径）+ glow ≤2 + 节点入场 stagger 一次性（不计）。**工作视图（Tab 默认）持续源 = 0**（纯静态 + 交互瞬间动效）。合计预算超限时优先砍 glow，再砍 particle 密度，最后砍持续源——顺序固定。【依据：D5 增补「豁免区立锤内规范+同屏合计预算」；AUDIT S5/S17（豁免区从未做过同屏合计）；H3 后预算下调见 §0.1】
 
+> **【v1.1 N3 增补 @A-SPEC，存量靶清偿 @SPEC-B/#8+@SPEC-C/#6，守卫扩维 @SPEC-FIX】**· 呼吸禁令按「实现无关」口径执行
+> - D-1 的禁令对象是**模式**（常驻循环呼吸/浮动），不是 `createBreathingController` 一个函数。features 域内任何 `AnimationController.repeat(reverse: true)` 或 ≥2s 周期 `repeat()` 计为持续动画源，必须：①过 DecorationMode/PerformanceTier 门控；②占用 §2.6 唯一名额。
+> - 等待窗口豁免细则：事件驱动的等待期（阶段胶囊类）允许**恰好 1 个**持续源，窗口结束即归还名额。
+> - 守卫：`breathingController` 维扩为「长周期 repeat 模式」扫描（含既有合法件白名单登记，防误伤进度环/物理动画）。
+> - 【依据：§2.1 C-G1/C-G2；§2.5 G-4 门控规格先例；存量靶 chat_screen.dart:3845-3849、exam_sprint_dashboard_card.dart:250-253】
+
 ---
 
 ## §3 排版与密度
@@ -283,6 +295,10 @@ Owner：`SparkleTypography`（`tokens_v2/theme_manager.dart`，符号 `SparkleTy
 - **规则 4.1.4 数量上限/屏**：同屏可点 chip ≤6；**AI 一条回答之后同屏 chip ≤3**（建议话术类，§7.1）；确认请求类不占 chip 名额（走收件箱/内联确认，§7.3）。【依据：AUDIT S9「一答十 chip」；CONFLICTS C-11（chips ≤3）】
 - **规则 4.1.5 tone 准入**：PillTone 六值按 §1.5 映射；「brand」tone 仅用于 accent 语义（可交互/品牌），禁作状态色。
 
+> **【v1.1 N7 增补 @A-SPEC；tile 语义归位 @SPEC-A，exam 卡 `_MetricPill`/`_ModePill` 冻结未迁（parallelClass=2）】**· 指标瓦片非 pill
+> - 数据展示卡（metric tile：标签+主数+口径小字三段式）不适用 SemanticPill 归一——pill 是扫视件，tile 是读数件。但私有类命名禁用 `*Pill` 后缀（防与 §4.1.1 守卫语义冲突），owner 归 SparkleCard/DashboardSectionShell 家族；存量 `_MetricPill`/`_ModePill` 更名随触碰迁移，不设专项。
+> - 【依据：§2.2 S-G1 辩论中的部分砍单；防守卫误判】
+
 ### 4.2 控件层级语法（解 S14/S15）
 
 三类控件视觉语法必须可区分：
@@ -325,6 +341,11 @@ Owner：`SparkleTypography`（`tokens_v2/theme_manager.dart`，符号 `SparkleTy
 | **回归时刻**（距上次打开 ≥72h【定标待实测，区间 48–96h】或连胜中断后回归） | **易赢 + 少东西 + 小礼物** | 首屏 ≤2 卡、首动作是低难度复习（复述昨日 1 个概念级）、问候含进度肯定（「回来啦，你的图论星图已点亮 12 个节点」）；禁堆功能、禁横幅轰炸。现状 ComebackBanner 是 chat 顶部 8 件之一（TRIAGE S8 清单），批 3 迁为独立回归接管屏 |
 
 **错误态是四态规范的倾斜重点**（现状 1.7/5 全 app 最差项）。**诚实层是 H3 后的签名特性**（DECISIONS 附录 #3）：不确定时明说（§6.3 三档）、改口承认、推荐附一行「为什么是它」——见 §10.1 B1-6。【依据：DECISIONS D9；CONFLICTS C-09 全条 + steelman 驳回（禁的是预填结论非流式）；EDU 原则 5；AUDIT §5；DECISIONS 附录 H3 裁决 #3】
+
+> **【v1.1 N4 增补 @A-SPEC，落地 @SPEC-A/#3（sprint）+ @SPEC-C/#4（galaxy）】**· 屏级错误面板三件套硬性 + Object 插值禁令例证
+> - 屏级（非组件级）错误面板必须同时具备：人话标题 + 影响一句 + **重试钮**（可发现性不低于屏内首屏可见）。存量靶：`sprint_screen.dart:195-205`。
+> - `'$_loadError'` / `'$error'` 类 `Object?` 插值直出为 X6 新增例证（机检可扩 `'\$_\w*[eE]rr'` 模式），存量靶：`galaxy_screen.dart:2870`。
+> - 【依据：§2.2 S-G2；§2.3 X-G1；对标 §1.1-1.3 错误态共性 5】
 
 ---
 
@@ -407,6 +428,10 @@ Owner：`SparkleTypography`（`tokens_v2/theme_manager.dart`，符号 `SparkleTy
 | <0.50 | 「这部分我不确定，建议核对教材」 | 弱化结论 + 核对入口 |
 
 不出百分比。完整数据（历史轨迹/口径）走 §7.1 过程折叠出口，不堵死信息。【依据：CONFLICTS C-07 裁决＋steelman 驳回（伪精度非透明）】
+
+> **【v1.1 N6 增补 @A-SPEC，落地 @SPEC-B/#2（通过率弧四件）】**· 模型预测数准入四件
+> - 模型预测类数字（通过概率/预估分/覆盖率预测）准入须同时满足：①单一事实源可溯（§9.4）；②**口径一行就地可见**（「按你当前进度估算」级）；③低档分档文案兜底（概率 <0.4 时附「还来得及，先攻高頻考点」类动作语）；④编码色走 theme CB-safe 变体（含 colorBlindFriendly 适配），入场动画 ≤M3（320ms）。
+> - 【依据：§2.2 S-G8 辩论（规范化保留裁决）；对标 §1.1 Claude 免责行、§1.2 Duolingo 概率小字；存量靶 exam_sprint_dashboard_card.dart:599/:644-648/:539-543】
 
 ### 6.4 数据词典 schema（S2 施工图）
 
@@ -715,6 +740,7 @@ Linear 式工具链（INTL 原则 16），最低需求集：
 2. **注册可达性测试（防 router 遮蔽连坐）**：引擎新增/迁移端点必须带**注册面断言**（路由可达＋形状键集）——router 级去重（如 `_include_router_if_new` 按 (path, methods) 键集不重叠才整体挂载）会使一条路由冲突连坐整 router 死代码，且消费方按被遮蔽形状编写解析器时空态长期无人察觉（事故档案：GOAL-ROUTER REPORT §1——goal-detail GET 被 readouts 遮蔽、PUT 405 长期存在；范本：`backend/tests/unit/test_goal_detail_route_shadowing.py`，9 用例）。此为口径断裂的新根因类型，静态 linter 不可见，只能靠注册面断言拦截。
 3. **跨账本对账**：口径不止在跨屏一致，还要跨账本一致（任务账本 vs sprint 仪表盘，NORTHSTAR-LOOP1 BP-4 形态：completed=2 vs completed=0）——S7 修复只是同域收敛，跨账本矛盾是同类问题的第二形态。§6.3 准入②按此改写（已同步）。
 4. **验收**：A9.5（机检）；新口径入账前回答「谁是唯一产出函数、谁在委托引用、断言测试在哪」三问。
+5. **【v1.1 N2 增补 @A-SPEC（本条为回写后半——规则条文；sprint 侧工程收敛已落地 @SPEC-A/#1，旁路双算存量归 R6）】**· 跨面派生值规则：同一派生值（剩余天数/完成度%/进度差）全 app 只准一处计算：**服务端下传值优先，客户端本地 `DateTime.now()` 推算类派生禁新增**；存量靶：`sprint_screen.dart:216`（daysLeft 客户端自算，@A-SPEC 时点）。验收沿用 A9.5 范式：跨屏断言测试断言 sprint 屏与 exam 卡两处剩余天数同源同值。【依据：§2.2 S-G6；§9.4-3 跨账本对账的同型前移】
 
 ---
 
@@ -778,6 +804,22 @@ home 减法（§8.1）→ chat 面积重划（§8.2，D3 ≥70%）→ galaxy 双
 | memory tags 词典化 | 未开工（B1-B 申报防误伤用户内容） | memory 域下一卡 |
 | 批 2 B2-1~B2-5 | 未开工（守卫 12 维已提前） | §10.2 |
 | routes.dart Colors.grey 单点（§1.5.2） | 未开工（登记待清） | 批 2 随 B2-2 |
+
+**v1.1 N8 台账行（@A-SPEC 提案原文回写 @SPEC-FIX，表内状态为提案时点值）**：
+
+| 条目 | 状态 | 剩余量 |
+|---|---|---|
+| N1 sprint surface 入守卫根 | 未开工 | 改造 #7 |
+| N2 daysLeft 双算收敛 | 未开工 | 改造 #1 |
+| N3 chat breath overlay + DayZero float | 未开工 | 改造 #6/#8 |
+| N4 sprint 错误态重试 / galaxy 裸异常 | 未开工 | 改造 #3/#4 |
+| N5 urgency 色阶迁移 | 未开工 | 改造 #9 |
+| N6 通过率弧规范化 | 未开工 | 改造 #2 |
+| N7 metric tile 更名 | 未开工（触碰即迁） | —— |
+| 锤内规范 3 扩展半句（覆盖件不遮节点）+ 0xE6101929 token 化 | 未开工（触碰即迁） | —— |
+| v1.0 遗留备忘：shell 底导航已从 4 Tab 变 5 Tab（community 加入），v1.0 §7.2 锤内规范 2 的落点描述需随批 3 主卡更新 | 登记即闭环 | —— |
+
+> **【v1.1 N8 回写时点状态勘定 @SPEC-REVIEW §1.1/1.2 + @SPEC-FIX】**：上表为 A-SPEC 提案原文（逐字，不回写状态改判）。落地实测：N1 已入守卫根（@SPEC-GUARD，plan 域 14 文件基线登记）；N2 sprint 侧已收敛（@SPEC-A/#1，跨屏同源测试在）；N3 两只点名存量靶已灭（@SPEC-C/#6 + @SPEC-B/#8），守卫扩维 `persistentRepeatLoop` 维 + 白名单登记制已落地（@SPEC-FIX）；N4 已落地（@SPEC-A/#3 + @SPEC-C/#4）；N5 已落地（@SPEC-B/#9，7 天档勘误见 §1.5）；N6 已落地（@SPEC-B/#2）；N7 规则成立（sprint 侧 tile 归 GraphiteCardSurface 家族；exam 卡 `_MetricPill`/`_ModePill` parallelClass=2 冻结，触碰即迁）；0xE6101929 字面量仍在 `galaxy_screen.dart`（未触碰，台账行续挂）；5-Tab 备忘待批 3 主卡。
 
 ### 10.6 H2/H3 验证并行项（上报用户，不阻塞规范）
 

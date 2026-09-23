@@ -36883,12 +36883,6 @@ abstract class AppLocalizations {
   /// **'还有 {days} 天'**
   String examDaysLeft(Object days);
 
-  /// No description provided for @examTodayCompleted.
-  ///
-  /// In zh, this message translates to:
-  /// **'今日 {completed}/{total} 完成'**
-  String examTodayCompleted(Object completed, Object total);
-
   /// No description provided for @examShowNextDays.
   ///
   /// In zh, this message translates to:
@@ -50061,12 +50055,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'开始考试冲刺'**
   String get planStartExamSprint;
-
-  /// No description provided for @planLoadSprintFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'加载冲刺计划失败'**
-  String get planLoadSprintFailed;
 
   /// No description provided for @planSoonUnlock.
   ///

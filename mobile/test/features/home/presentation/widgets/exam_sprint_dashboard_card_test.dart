@@ -79,7 +79,10 @@ void main() {
 
       // Side text shows days and task completion
       expect(find.text('还有 5 天'), findsOneWidget);
-      expect(find.text('今日 2/3 完成'), findsOneWidget);
+      // S-G9 清偿后：进度文案只走 _HeadlineBlock 主位（examTodayProgress），
+      // 弧旁副本（examTodayCompleted「今日 2/3 完成」）清零。
+      expect(find.text('今天已完成 2/3 项任务'), findsOneWidget);
+      expect(find.text('今日 2/3 完成'), findsNothing);
     });
 
     testWidgets('pass_probability = 0.35 shows red-tinted percentage', (tester) async {
@@ -98,7 +101,8 @@ void main() {
       expect(find.text('--'), findsOneWidget);
       // Side text still renders
       expect(find.text('还有 5 天'), findsOneWidget);
-      expect(find.text('今日 2/3 完成'), findsOneWidget);
+      expect(find.text('今天已完成 2/3 项任务'), findsOneWidget);
+      expect(find.text('今日 2/3 完成'), findsNothing);
     });
 
     testWidgets('animation starts at 0 and ends near target value', (tester) async {
@@ -219,7 +223,7 @@ void main() {
   // ───────────────────────── SPEC-B（北极星全旅程 · A 纵队） ─────────────────────────
   // 验收依据：v3-output/A-SPEC-V1_1/REPORT.md §4 N3/N5/N6 + §5 改造 #2/#8/#9。
 
-  group('SPEC-B #9 — N5 urgency 三档色阶（≥7d 中性 / ≤7d warning / ≤1d error）', () {
+  group('SPEC-B #9 — N5 urgency 三档色阶（>7d 中性【勘误后】 / ≤7d warning / ≤1d error）', () {
     final standard = SparkleColors.light();
 
     Future<void> pumpCardAt(WidgetTester tester, int daysLeft) async {
@@ -466,6 +470,75 @@ void main() {
       expect(bannerTranslateY(tester), 0.0);
       await tester.pump(const Duration(milliseconds: 500));
       expect(bannerTranslateY(tester), 0.0);
+    });
+  });
+
+  // ───────────────── SPEC-FIX（复审闭环 · R5=S-G9/日期拼接清偿） ─────────────────
+
+  group('SPEC-FIX R5 — S-G9 同卡二出去重 + 日期走 date_formatting 唯一入口', () {
+    testWidgets('S-G9：今日进度文案只保留 _HeadlineBlock 主位一种措辞', (tester) async {
+      await tester.pumpWidget(_buildCard(_makeData(passProbability: 0.72)));
+      await tester.pumpAndSettle();
+
+      // 主位（examTodayProgress）恰 1 处；弧旁副本（examTodayCompleted）
+      // 与其中文措辞均不出现——同一数字两种措辞并排清零。
+      expect(find.text('今天已完成 2/3 项任务'), findsOneWidget);
+      expect(find.textContaining('今日 2/3'), findsNothing);
+      expect(find.textContaining('2/3 完成'), findsNothing);
+    });
+
+    testWidgets('S-G10：任务组日期经 formatSparkleDateOnly 输出（zh：9月20日）',
+        (tester) async {
+      final data = ExamSprintDashboardData(
+        planId: 'test-plan',
+        planName: 'Test Sprint',
+        subject: 'Math',
+        daysLeft: 5,
+        targetMode: 'pass',
+        todayProgress: const ExamSprintTodayProgress(
+          completed: 2,
+          total: 3,
+          completionRate: 0.667,
+        ),
+        highFreqCoverage: 0.75,
+        highFreqCoveredCount: 15,
+        highFreqTotalCount: 20,
+        mistakeFixRate: 0.6,
+        fixedMistakeCount: 6,
+        totalMistakeCount: 10,
+        streakDays: 3,
+        passProbability: 0.72,
+        taskGroups: [
+          // DateTime 非 const 构造，组实例不能标 const。
+          // today 组（主位渲染）+ 未来组（折叠区渲染）——todayGroup getter
+          // 在无 isToday 组时会 fallback 到 first，单组会被渲染两次。
+          const ExamSprintTaskGroup(
+            dayIndex: 1,
+            isToday: true,
+            completedCount: 2,
+            totalCount: 3,
+            tasks: [],
+          ),
+          ExamSprintTaskGroup(
+            dayIndex: 2,
+            isToday: false,
+            completedCount: 0,
+            totalCount: 4,
+            tasks: const [],
+            date: DateTime(2026, 9, 20),
+          ),
+        ],
+      );
+      await tester.pumpWidget(_buildCard(data));
+      await tester.pumpAndSettle();
+
+      // 未来任务组默认折叠：先展开（_TaskSectionHeader 的 CTA），日期随组卡可见。
+      await tester.tap(find.text('展开后续 1 天'));
+      await tester.pumpAndSettle();
+
+      // 旧手工拼接「9/20」清零；date_formatting 令牌输出（zh「9月20日」）在。
+      expect(find.text('9/20'), findsNothing);
+      expect(find.text('9月20日'), findsOneWidget);
     });
   });
 }

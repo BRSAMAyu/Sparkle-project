@@ -30,6 +30,15 @@ ratchet guards, which are left untouched:
                                brandSecondary gradient, alias family of the retired
                                DS.accent — SPEC §1.4.2)
   errorCopyOops        A6.6    Oops|something went wrong in mobile/lib (ratchet to zero)
+  persistentRepeatLoop A2.3/N3 `.repeat(reverse: true)` + bare `.repeat()` when the file
+                               declares a ≥2000ms duration, in features files lacking
+                               a DecorationMode/PerformanceTier gate (ratchet;
+                               whitelist registry with registered reasons — the
+                               implementation-agnostic breathing ban, N3)
+
+Whitelist (persistentRepeatLoop only): `PERSISTENT_REPEAT_WHITELIST` below maps
+file path → registered reason. Entries are the N3「白名单登记制」: a surviving
+legal persistent loop must be registered WITH its reason or it counts.
 
 Ratchet discipline (same as UX-COMP): per-file counts frozen in
 `dl_spec_ratchet_baseline.json` — a file exceeding its baseline count, or a NEW
@@ -181,6 +190,58 @@ def _non_galaxy(path: Path) -> bool:
     return "galaxy" not in path.as_posix()
 
 
+# ── N3 persistent-repeat (implementation-agnostic breathing ban, SPEC-FIX) ────
+#   pattern A: `.repeat(reverse: true)` — oscillating loop, any period (the
+#              handwritten breathing/float pattern D-1's old guard could not see)
+#   pattern B: bare `.repeat()` — counted only when the file also declares a
+#              ≥2000ms duration (long-period single-direction loop)
+#   gate:      any DecorationMode/resolveDecorationMode/PerformanceTier
+#              reference marks the file gated (N3 ①) → counts 0
+_P_REPEAT_REVERSE = re.compile(r"\.repeat\(\s*reverse:\s*true")
+_P_REPEAT_BARE = re.compile(r"\.repeat\(\s*\)")
+_P_MS_DURATION = re.compile(r"\bDuration\(\s*milliseconds:\s*(\d+)")
+_P_S_DURATION = re.compile(r"\bDuration\(\s*seconds:\s*(\d+)")
+_P_MOTION_GATE = re.compile(
+    r"\b(?:DecorationMode|resolveDecorationMode|PerformanceTier)\b"
+)
+
+# N3 白名单（登记制，SPEC-FIX @wt204 首批）：path → registered reason。
+# 每个存续合法持续循环必须登记理由，否则计为违规（N3「白名单机制」落地点）。
+PERSISTENT_REPEAT_WHITELIST: dict[str, str] = {
+    # _BlinkingCursor 500ms repeat(reverse)：流式应答的输入光标（caret）闪烁
+    # ——全平台文本输入惯例周期（≈500–530ms），语义是「正在书写」而非装饰呼吸；
+    # 事件窗口绑定（仅流式光标位挂载，流结束随消息落位卸载），渲染层另有
+    # reduce-motion 门控（build 内 context.reduceMotion → 静态定帧 Container）。
+    "mobile/lib/features/chat/presentation/screens/chat_screen.dart": (
+        "_BlinkingCursor streaming caret: platform text-input convention "
+        "(~500ms blink), event-window bound (mounted only at the streaming "
+        "caret), reduce-motion render gate (static frame)"
+    ),
+    # 阶段胶囊 700ms repeat()：N3 等待窗豁免——事件驱动等待期恰好 1 个持续源，
+    # 窗口结束即归还名额；reduce-motion 下 pulse=null（_StageDot 门控）。
+    # （700ms 非 reverse 且 <2s，本不在扫描口径内；登记以昭豁免依据。）
+    "mobile/lib/features/chat/presentation/widgets/chat_run_phase_indicator.dart": (
+        "N3 waiting-window exemption: the exactly-1 persistent source during "
+        "the event-driven wait phase (700ms pulse, quota returned on close)"
+    ),
+}
+
+
+def _count_persistent_repeat(_path: Path, lines: list[str]) -> int:
+    text = "\n".join(lines)
+    # N3 ① file-level gate: DecorationMode/PerformanceTier-gated files are
+    # compliant (SPEC-B #8 / SPEC-C #6 范式：门控覆盖的循环不计).
+    if _P_MOTION_GATE.search(text):
+        return 0
+    count = len(_P_REPEAT_REVERSE.findall(text))
+    has_long_period = any(
+        int(m.group(1)) >= 2000 for m in _P_MS_DURATION.finditer(text)
+    ) or any(int(m.group(1)) >= 2 for m in _P_S_DURATION.finditer(text))
+    if has_long_period:
+        count += len(_P_REPEAT_BARE.findall(text))
+    return count
+
+
 DIMENSIONS: list[Dimension] = [
     Dimension("competitionNarrative", "A0.1", "competition", _count_regex(_P_COMPETITION), zero_tolerance=True),
     Dimension("colorsDotNative", "A1.2", "features", _count_regex(_P_COLORS_DOT)),
@@ -196,6 +257,13 @@ DIMENSIONS: list[Dimension] = [
     Dimension("dsGradientApiCalls", "A5.3", "mobile-lib", _count_regex(_P_DS_GRADIENT_API)),
     Dimension("dsAccentGradientForbidden", "A1.5", "mobile-lib", _count_regex(_P_DS_ACCENT_GRADIENT)),
     Dimension("errorCopyOops", "A6.6", "mobile-lib", _count_regex(_P_ERROR_OOPS)),
+    Dimension(
+        "persistentRepeatLoop",
+        "A2.3/N3",
+        "features",
+        _count_persistent_repeat,
+        exempt_files=set(PERSISTENT_REPEAT_WHITELIST),
+    ),
 ]
 
 DIM_IDS = [d.id for d in DIMENSIONS]
@@ -594,6 +662,91 @@ def self_test() -> int:
         code, out = run_capture4()
         if code != 0:
             failures.append("case4d restored pinned file should PASS")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+    # Case 5 — N3 persistentRepeatLoop: reverse loops counted (any period);
+    # bare repeat counted only with a ≥2s period declared in the file;
+    # DecorationMode-gated files and whitelist-registered files exempt.
+    tmp = make_fixture()
+    try:
+        import contextlib
+        import io
+
+        def run_capture5() -> tuple[int, str]:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                code = run_guard(tmp, bp)
+            return code, buf.getvalue()
+
+        # a) ungated file: 1 reverse loop + 1 bare repeat with a 2000ms
+        #    duration present → count 2, pinned at baseline 2.
+        legacy = "mobile/lib/features/demo/presentation/legacy_breath.dart"
+        f = tmp / legacy
+        f.write_text(
+            "final c = AnimationController(vsync: v, duration: Duration(milliseconds: 2000));\n"
+            "unawaited(c.repeat(reverse: true));\n"
+            "unawaited(d.repeat());\n",
+            encoding="utf-8",
+        )
+        # (the 2000ms duration itself is an offLadderDuration hit — pin it too)
+        bp = write_baseline(
+            tmp, {legacy: {"persistentRepeatLoop": 2, "offLadderDuration": 1}}
+        )
+        code, out = run_capture5()
+        if code != 0:
+            failures.append("case5a pinned persistent-repeat file should PASS")
+
+        # a2) raise: second reverse loop appears → ratchet refuses.
+        f.write_text(
+            "final c = AnimationController(vsync: v, duration: Duration(milliseconds: 2000));\n"
+            "unawaited(c.repeat(reverse: true));\n"
+            "unawaited(d.repeat());\n"
+            "unawaited(e.repeat(reverse: true));\n",
+            encoding="utf-8",
+        )
+        code, out = run_capture5()
+        if code != 1 or "persistentRepeatLoop 3 > baseline 2" not in out:
+            failures.append("case5a2 persistent-repeat raise should FAIL")
+
+        # b) bare repeat WITHOUT any ≥2s duration in file: not counted (fast
+        #    pulses/progress loops are off-ladder durations' business, not N3).
+        (tmp / legacy).parent.joinpath("fast_pulse.dart").write_text(
+            "final c = AnimationController(vsync: v, duration: Duration(milliseconds: 700));\n"
+            "unawaited(c.repeat());\n",
+            encoding="utf-8",
+        )
+        f.write_text(
+            "final c = AnimationController(vsync: v, duration: Duration(milliseconds: 2000));\n"
+            "unawaited(c.repeat(reverse: true));\n"
+            "unawaited(d.repeat());\n",
+            encoding="utf-8",
+        )
+        code, out = run_capture5()
+        if code != 0:
+            failures.append("case5b sub-2s bare repeat should not count")
+
+        # c) DecorationMode-gated file: loops present but file counts 0 (N3 ①).
+        gated = tmp / "mobile/lib/features/demo/presentation/gated_card.dart"
+        gated.write_text(
+            "final mode = resolveDecorationMode(context);\n"
+            "unawaited(c.repeat(reverse: true));\n",
+            encoding="utf-8",
+        )
+        code, out = run_capture5()
+        if code != 0 or "gated_card" in out:
+            failures.append("case5c gated file should be exempt from N3 dim")
+
+        # d) whitelisted real path (chat cursor): loops present, zero count.
+        chat_dir = tmp / "mobile/lib/features/chat/presentation/screens"
+        chat_dir.mkdir(parents=True, exist_ok=True)
+        (chat_dir / "chat_screen.dart").write_text(
+            "unawaited(_controller.repeat(reverse: true));\n",
+            encoding="utf-8",
+        )
+        code, out = run_capture5()
+        if code != 0 or "chat_screen" in out:
+            failures.append("case5d whitelisted caret file should count 0")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 

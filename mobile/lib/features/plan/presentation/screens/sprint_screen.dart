@@ -292,8 +292,10 @@ class _SprintHeader extends ConsumerWidget {
             const SizedBox(height: DS.lg),
             if (serverDaysLeft != null)
               // SPEC-GUARD（N1/改造#7）：裸 Chip 迁入 SemanticPill owner。
-              // 倒计时是冲刺身份锚点数字，tone 走 brand；考日/已结束同 pill
-              // 收敛，不在本卡引入 N5 紧迫色阶（那是 exam 卡 header+倒计时的条款）。
+              // SPEC-FIX（复审 R4/N5 口径统一）：倒计时 pill 与 exam 卡
+              // `_urgencyAccentColor` 同款三档（≤1d danger / ≤7d warning /
+              // 其余 brand），终结同一 sprint surface 内「home 卡橙 / sprint
+              // 屏恒 brand」的色语义分叉——N1 已把两文件定义为一个 surface。
               SemanticPill(
                 label: serverDaysLeft > 0
                     ? context.l10n.sprintDaysLeft(serverDaysLeft)
@@ -301,7 +303,7 @@ class _SprintHeader extends ConsumerWidget {
                         ? context.l10n.examDay
                         : context.l10n.sprintEnded,
                 icon: Icons.timelapse,
-                tone: PillTone.brand,
+                tone: _sprintCountdownTone(serverDaysLeft),
               )
             else if (plan.targetDate != null)
               // 目标日降级展示：中性信息位。
@@ -470,6 +472,17 @@ Color _rarityColor(AchievementRarity rarity) {
 /// 未满中性层、已满 success 语义槽；稀有度色不进进度位。
 Color _progressValueColor({required bool completed}) =>
     completed ? DS.success : DS.neutral500;
+
+/// SPEC v1.1 N5（SPEC-FIX 复审 R4 收敛）：sprint 屏倒计时 pill 与 exam 卡
+/// `_urgencyAccentColor`（exam_sprint_dashboard_card.dart）同款三档色阶——
+/// ≤1d（含考日/已结束）danger→error 槽（「不可挽回节点临近」扩展语义）、
+/// ≤7d warning→warning 槽、其余 brand→中性 brandPrimary。PillTone 六值
+/// 映射见 SemanticPill（§1.5.1）；同一 sprint surface 两屏语义由此归一。
+PillTone _sprintCountdownTone(int daysLeft) {
+  if (daysLeft <= 1) return PillTone.danger;
+  if (daysLeft <= 7) return PillTone.warning;
+  return PillTone.brand;
+}
 
 /// P0功能: 成就临界提示横幅
 /// 显示接近解锁的成就（80%以上进度）

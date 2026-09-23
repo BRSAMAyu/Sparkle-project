@@ -20234,11 +20234,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String examTodayCompleted(Object completed, Object total) {
-    return '今日 $completed/$total 完成';
-  }
-
-  @override
   String examShowNextDays(Object count) {
     return '展开后续 $count 天';
   }
@@ -27433,9 +27428,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get planStartExamSprint => '开始考试冲刺';
-
-  @override
-  String get planLoadSprintFailed => '加载冲刺计划失败';
 
   @override
   String get planSoonUnlock => '即将解锁！';

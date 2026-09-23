@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+import 'package:sparkle/core/display/lexicon/date_formatting.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
@@ -41,8 +42,9 @@ class _ExamSprintDashboardCardState extends State<ExamSprintDashboardCard> {
         .toLowerCase()
         .startsWith('zh');
     final data = widget.data;
-    // SPEC v1.1 N5（改造 #9）：截止临近三档色阶 —— ≥7d 中性层（brandPrimary）
-    // → ≤7d warning → ≤1d error。error 槽在本上下文扩展为「不可挽回节点临近」，
+    // SPEC v1.1 N5（改造 #9；「>7d 中性」勘误 @SPEC-REVIEW）：截止临近三档
+    // 色阶 —— >7d 中性层（brandPrimary）→ ≤7d warning → ≤1d error。
+    // error 槽在本上下文扩展为「不可挽回节点临近」，
     // 禁再泛化；翻转范围收敛至 header（图标+模式 pill）与倒计时数字两处，
     // 计划 chip / 任务组等其余位不再随 urgency 翻色。
     final urgencyColor = _urgencyAccentColor(context.colors, data.daysLeft);
@@ -473,8 +475,8 @@ class _HeadlineBlock extends StatelessWidget {
   final ExamSprintDashboardData data;
   final bool isChinese;
 
-  /// N5：倒计时数字位＝翻转收敛的两处之一（另一处是 header）。
-  /// ≥7d 档为中性 brandPrimary，≤7d warning，≤1d error。
+  /// N5（「>7d 中性」勘误 @SPEC-REVIEW）：倒计时数字位＝翻转收敛的两处之一
+  /// （另一处是 header）。>7d 档为中性 brandPrimary，≤7d warning，≤1d error。
   final Color urgencyColor;
 
   @override
@@ -644,16 +646,11 @@ class _PassProbabilityArcState extends State<_PassProbabilityArc>
                     fontWeight: DS.fontWeightMedium,
                   ),
                 ),
-                const SizedBox(height: DS.spacing6),
-                Text(
-                  context.l10n.examTodayCompleted(
-                      widget.data.todayProgress.completed,
-                      widget.data.todayProgress.total),
-                  style: context.typo.bodySmall.copyWith(
-                    color: DS.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: DS.spacing4),
+                // S-G9 清偿（复审 R5/SPEC-FIX）：今日进度文案同卡二出——
+                // 弧旁「今日 x/y 完成」块删除，保留 _HeadlineBlock 主位
+                // `examTodayProgress`（「今天已完成 x/y 项任务」）：
+                // 该措辞带单位与宾语（项任务），x/y 的分母语义（今日任务总数）
+                // 就地可读，符合 §6.1「结论+数字」；弧旁仅保留 N6② 口径行。
                 // N6②：预测数口径一行，就地可见（「按当前进度估算」级）。
                 Text(
                   context.l10n.examPassProbabilityEstimate,
@@ -854,8 +851,11 @@ class _TaskGroupCard extends StatelessWidget {
     final title = group.isToday
         ? context.l10n.examDay
         : context.l10n.examDayIndex(group.dayIndex);
-    final subtitle =
-        group.date == null ? null : '${group.date!.month}/${group.date!.day}';
+    // S-G10 清偿（复审 R5/SPEC-FIX）：日期手工拼接 `'${m}/${d}'` 退役，
+    // 走 date_formatting.dart 唯一入口（X3 防复发，双语各自地道）。
+    final subtitle = group.date == null
+        ? null
+        : formatSparkleDateOnly(group.date!, context.l10n);
 
     return Container(
       width: double.infinity,

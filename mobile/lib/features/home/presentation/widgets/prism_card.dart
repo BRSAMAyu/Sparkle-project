@@ -7,6 +7,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/home/presentation/widgets/decoration_policy.dart';
 
 /// PrismCard - Cognitive Prism Card (2x1 wide)
 class PrismCard extends ConsumerStatefulWidget {
@@ -18,25 +19,48 @@ class PrismCard extends ConsumerStatefulWidget {
 
 class _PrismCardState extends ConsumerState<PrismCard>
     with SingleTickerProviderStateMixin {
-  late AnimationController _breathingController;
-  late Animation<double> _breathingAnimation;
+  /// SPEC v1.1 N3（SPEC-FIX 复审 R4 处置，C-G2 预言的「home 同型」清偿）：
+  /// 2000ms repeat(reverse) 无门控常驻呼吸退役——改**单次入场**（SPEC v1.1
+  /// A2.1 正典集 320ms，forward 一次后静止定帧，折射辉光停在 0.3 定值），
+  /// 不再占 home 屏 §2.6 持续动画源名额。DecorationMode 门控保留
+  /// （SPEC-B #8 DayZero 同款范式）：staticFrame/off 档直接钉在入场完成位，
+  /// 低性能/reduce-motion 设备零 frame 回调。
+  late final AnimationController _entranceController;
+  late final Animation<double> _glowOpacity;
 
   @override
   void initState() {
     super.initState();
-    _breathingController = AnimationController(
+    _entranceController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 320),
     );
-    unawaited(_breathingController.repeat(reverse: true));
-    _breathingAnimation = Tween<double>(begin: 0.1, end: 0.3).animate(
-      CurvedAnimation(parent: _breathingController, curve: Curves.easeInOut),
+    _glowOpacity = Tween<double>(begin: 0.1, end: 0.3).animate(
+      CurvedAnimation(parent: _entranceController, curve: Curves.easeOutCubic),
     );
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final mode = resolveDecorationMode(context);
+    if (mode == DecorationMode.animated) {
+      // 单次入场：只播一次，依赖重建（主题/媒体变化）不重播。
+      if (!_entranceController.isAnimating &&
+          !_entranceController.isCompleted) {
+        unawaited(_entranceController.forward());
+      }
+    } else {
+      // 静止定帧＝入场完成位（辉光 0.3 定值，无循环往返）。
+      _entranceController
+        ..stop()
+        ..value = 1.0;
+    }
+  }
+
+  @override
   void dispose() {
-    _breathingController.dispose();
+    _entranceController.dispose();
     super.dispose();
   }
 
@@ -72,12 +96,12 @@ class _PrismCardState extends ConsumerState<PrismCard>
           child: Stack(
             clipBehavior: Clip.antiAlias,
             children: [
-              // Prism refraction effect (animated)
+              // Prism refraction effect（单次入场后静止定帧，见 _PrismCardState）
               Positioned(
                 right: -10,
                 bottom: -10,
                 child: AnimatedBuilder(
-                  animation: _breathingAnimation,
+                  animation: _glowOpacity,
                   builder: (context, child) => Container(
                     width: 60,
                     height: 60,
@@ -86,7 +110,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
                       gradient: RadialGradient(
                         colors: [
                           DS.prismPurple.withValues(
-                            alpha: _breathingAnimation.value * 0.5,
+                            alpha: _glowOpacity.value * 0.5,
                           ),
                           DS.surfacePrimary.withValues(alpha: 0),
                         ],
