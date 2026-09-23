@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/text_rendering.dart';
@@ -41,13 +42,12 @@ class _SeedLibraryDetailScreenState
   DifficultyLevel? _selectedDifficulty;
   bool _showInactiveItems = false;
 
-  String _friendlyActionError(Object error) {
-    final raw = error.toString().replaceFirst('Exception: ', '').trim();
-    if (raw.isEmpty || raw.toLowerCase() == 'null') {
-      return context.l10n.seedLibraryDetailFriendlyError;
-    }
-    return raw;
-  }
+  /// N15/EE-G1 残靶清偿（ERR-SECONDARY 批）：原实现
+  /// `error.toString().replaceFirst('Exception: ', '')` 属 A-SPEC3 N15
+  /// 明禁的洗文本通道（PH-G4 同型）——改经唯一映射 owner
+  /// [UserFacingError.from] 人话化（内附 [ERR-*] 稳定码），原始异常
+  /// 仅 debug 构建日志可见。
+  String _friendlyActionError(Object error) => UserFacingError.from(error);
 
   @override
   Widget build(BuildContext context) {

@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
-import 'package:sparkle/core/utils/error_messages.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -86,14 +86,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     ref.listen<AuthState>(authProvider, (previous, next) {
       if (next.error != null && (previous?.error != next.error)) {
         final failure = next.failure;
+        // N15/N16（A-SPEC3）：error 字段已类型化——优先读 failure 自带的
+        // 服务端人话；无 failure 时经 error_lexicon owner 按类别出 arb 词条，
+        // 不再经 ErrorMessages 对原始异常串做文本嗅探。
         AppFeedback.error(
           context,
-          failure?.userMessage ??
-              ErrorMessages.getLocalizedMessage(
-                l10n,
-                next.errorCode ?? 'AUTH_ERROR',
-                next.error,
-              ),
+          failure?.userMessage ?? uiErrorMessage(l10n, next.error!),
         );
       }
       // Successful registration is handled by router redirect

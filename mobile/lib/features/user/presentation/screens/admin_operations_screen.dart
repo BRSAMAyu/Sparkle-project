@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -43,7 +44,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
                   ),
                   error: (error, _) => _buildErrorCard(
                     context.l10n.userAdminCapacityLoadFailed,
-                    '$error',
+                    error,
                   ),
                 ),
               ),
@@ -57,7 +58,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
                   ),
                   error: (error, _) => _buildErrorCard(
                     context.l10n.userAdminAlertsLoadFailed,
-                    '$error',
+                    error,
                   ),
                 ),
               ),
@@ -71,7 +72,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
                   ),
                   error: (error, _) => _buildErrorCard(
                     context.l10n.userAdminClientLoadFailed,
-                    '$error',
+                    error,
                   ),
                 ),
               ),
@@ -402,7 +403,11 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
     );
   }
 
-  Widget _buildErrorCard(String title, String error) => GraphiteCardSurface(
+  /// N15（A-SPEC3 EE-G1 残靶，ERR-SECONDARY 批）：管理面错误卡不再直出
+  /// `'$error'` 洗文本/裸异常——内容经唯一映射 owner 人话化并附 [ERR-*]
+  /// 稳定码（A-3 diagnosability），原始异常仅在 debug 构建的日志可见
+  /// （UserFacingError.from 内建 debugPrint）。
+  Widget _buildErrorCard(String title, Object error) => GraphiteCardSurface(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -413,7 +418,10 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
                   ),
             ),
             const SizedBox(height: DS.spacing8),
-            Text(error, style: Theme.of(context).textTheme.bodySmall),
+            Text(
+              UserFacingError.from(error),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           ],
         ),
       );

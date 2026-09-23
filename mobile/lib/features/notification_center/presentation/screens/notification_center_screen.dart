@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/errors/user_facing_error.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
@@ -253,7 +253,10 @@ class _NotificationCenterScreenState
     );
   }
 
-  Widget _buildError(String error) => Center(
+  /// N15/N16（A-SPEC3）：state.error 已类型化——详情行经 error_lexicon
+  /// owner 按类别出 arb 词条（ERR-SECONDARY 批：原 UserFacingError.from
+  /// 对 raw 串做文本嗅探的过渡形态随类型化一并退役）。
+  Widget _buildError(UiErrorCategory category) => Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -268,7 +271,7 @@ class _NotificationCenterScreenState
             // 标题不再经 loadingFailed({error}) 占位符内插原始异常，
             // 详情行改经唯一映射 owner 人话化。
             Text(
-              UserFacingError.from(error),
+              uiErrorMessage(context.l10n, category),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: DS.textSecondary,
                   ),

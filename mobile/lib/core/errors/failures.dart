@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 
 enum FailureKind {
@@ -51,7 +52,12 @@ extension FailureKindCode on FailureKind {
   }
 }
 
-sealed class AppFailure implements Exception {
+/// N15/N16（A-SPEC3）：AppFailure 是本库的领域类型化错误，实现
+/// [TypedUiError] 自报用户可感知类别——`kind` → 类别是**纯绑定**
+/// （switch 直出，零文本嗅探），文案翻译统一走 error_lexicon 的
+/// [uiErrorMessage]；provider 错误状态因此只存类别枚举，不再存
+/// 异常文本（第三逃逸通道封堵）。
+sealed class AppFailure implements Exception, TypedUiError {
   const AppFailure({
     required this.kind,
     required this.message,
@@ -80,6 +86,19 @@ sealed class AppFailure implements Exception {
       };
 
   bool get requiresLogin => kind == FailureKind.auth;
+
+  @override
+  UiErrorCategory get uiErrorCategory => switch (kind) {
+        FailureKind.network => UiErrorCategory.network,
+        // 离线的用户可感知口径与网络不通同族（「连不上」）。
+        FailureKind.offline => UiErrorCategory.network,
+        FailureKind.auth => UiErrorCategory.auth,
+        FailureKind.server => UiErrorCategory.server,
+        // 格式/校验错误的用户面归 format 类（error_lexicon 落通用兜底，
+        // 不向用户暴露技术细节，与既有口径一致）。
+        FailureKind.validation => UiErrorCategory.format,
+        FailureKind.unknown => UiErrorCategory.unknown,
+      };
 
   String get userMessage {
     final zh = I18nService.instance.isChinese;

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/errors/failures.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
@@ -29,7 +30,10 @@ class AuthState {
   final bool isLoading;
   final bool isAuthenticated;
   final UserModel? user;
-  final String? error;
+
+  /// N15（A-SPEC3）：UI 可达错误字段只存类型化类别（渲染侧经
+  /// error_lexicon owner 出人话）；原始异常细节只进 debugPrint 日志。
+  final UiErrorCategory? error;
   final AppFailure? failure;
   String? get errorCode => failure?.errorCode;
 
@@ -38,7 +42,7 @@ class AuthState {
     bool? isAuthenticated,
     UserModel? user,
     bool clearUser = false,
-    String? error,
+    UiErrorCategory? error,
     AppFailure? failure,
   }) =>
       AuthState(
@@ -78,7 +82,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     return state.copyWith(
       isLoading: isLoading,
       isAuthenticated: isAuthenticated,
-      error: failure.userMessage,
+      // N15：错误字段只存类型化类别（AppFailure 自报，零文本嗅探）；
+      // 具体人话仍由 failure.userMessage 承载（登录/注册监听优先读它）。
+      error: failure.uiErrorCategory,
       failure: failure,
     );
   }
@@ -352,10 +358,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(user: user);
       SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别（经 AppFailure
+      // 类型化判定，勿存 e.toString()）。
+      debugPrint('[auth] account-security op failed: $e');
+      state = state.copyWith(error: AppFailureMapper.from(e).uiErrorCategory);
       rethrow;
     } finally {
-      state = state.copyWith(isLoading: false);
+      // carry-over 与 login 家族 finally 同型：copyWith 对 error 是直接
+      // 赋值语义，不显式带旧值会把刚写入的类别抹回 null。
+      state = state.copyWith(
+        isLoading: false,
+        error: state.error,
+        failure: state.failure,
+      );
     }
   }
 
@@ -366,10 +381,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(user: user);
       SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别（经 AppFailure
+      // 类型化判定，勿存 e.toString()）。
+      debugPrint('[auth] account-security op failed: $e');
+      state = state.copyWith(error: AppFailureMapper.from(e).uiErrorCategory);
       rethrow;
     } finally {
-      state = state.copyWith(isLoading: false);
+      // carry-over 与 login 家族 finally 同型：copyWith 对 error 是直接
+      // 赋值语义，不显式带旧值会把刚写入的类别抹回 null。
+      state = state.copyWith(
+        isLoading: false,
+        error: state.error,
+        failure: state.failure,
+      );
     }
   }
 
@@ -379,10 +403,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _authRepository.changePassword(oldPassword, newPassword);
       // No state change needed other than loading
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别（经 AppFailure
+      // 类型化判定，勿存 e.toString()）。
+      debugPrint('[auth] account-security op failed: $e');
+      state = state.copyWith(error: AppFailureMapper.from(e).uiErrorCategory);
       rethrow;
     } finally {
-      state = state.copyWith(isLoading: false);
+      // carry-over 与 login 家族 finally 同型：copyWith 对 error 是直接
+      // 赋值语义，不显式带旧值会把刚写入的类别抹回 null。
+      state = state.copyWith(
+        isLoading: false,
+        error: state.error,
+        failure: state.failure,
+      );
     }
   }
 
@@ -391,10 +424,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       return await _authRepository.setPassword(newPassword);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别（经 AppFailure
+      // 类型化判定，勿存 e.toString()）。
+      debugPrint('[auth] account-security op failed: $e');
+      state = state.copyWith(error: AppFailureMapper.from(e).uiErrorCategory);
       rethrow;
     } finally {
-      state = state.copyWith(isLoading: false);
+      // carry-over 与 login 家族 finally 同型：copyWith 对 error 是直接
+      // 赋值语义，不显式带旧值会把刚写入的类别抹回 null。
+      state = state.copyWith(
+        isLoading: false,
+        error: state.error,
+        failure: state.failure,
+      );
     }
   }
 
@@ -403,10 +445,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       return await _authRepository.forgotPassword(email);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别（经 AppFailure
+      // 类型化判定，勿存 e.toString()）。
+      debugPrint('[auth] account-security op failed: $e');
+      state = state.copyWith(error: AppFailureMapper.from(e).uiErrorCategory);
       rethrow;
     } finally {
-      state = state.copyWith(isLoading: false);
+      // carry-over 与 login 家族 finally 同型：copyWith 对 error 是直接
+      // 赋值语义，不显式带旧值会把刚写入的类别抹回 null。
+      state = state.copyWith(
+        isLoading: false,
+        error: state.error,
+        failure: state.failure,
+      );
     }
   }
 
@@ -418,10 +469,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       return await _authRepository.resetPasswordWithToken(token, newPassword);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别（经 AppFailure
+      // 类型化判定，勿存 e.toString()）。
+      debugPrint('[auth] account-security op failed: $e');
+      state = state.copyWith(error: AppFailureMapper.from(e).uiErrorCategory);
       rethrow;
     } finally {
-      state = state.copyWith(isLoading: false);
+      // carry-over 与 login 家族 finally 同型：copyWith 对 error 是直接
+      // 赋值语义，不显式带旧值会把刚写入的类别抹回 null。
+      state = state.copyWith(
+        isLoading: false,
+        error: state.error,
+        failure: state.failure,
+      );
     }
   }
 
@@ -430,10 +490,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       return await _authRepository.sendVerificationEmail();
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别（经 AppFailure
+      // 类型化判定，勿存 e.toString()）。
+      debugPrint('[auth] account-security op failed: $e');
+      state = state.copyWith(error: AppFailureMapper.from(e).uiErrorCategory);
       rethrow;
     } finally {
-      state = state.copyWith(isLoading: false);
+      // carry-over 与 login 家族 finally 同型：copyWith 对 error 是直接
+      // 赋值语义，不显式带旧值会把刚写入的类别抹回 null。
+      state = state.copyWith(
+        isLoading: false,
+        error: state.error,
+        failure: state.failure,
+      );
     }
   }
 
@@ -444,10 +513,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await refreshUser();
       return message;
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别（经 AppFailure
+      // 类型化判定，勿存 e.toString()）。
+      debugPrint('[auth] account-security op failed: $e');
+      state = state.copyWith(error: AppFailureMapper.from(e).uiErrorCategory);
       rethrow;
     } finally {
-      state = state.copyWith(isLoading: false);
+      // carry-over 与 login 家族 finally 同型：copyWith 对 error 是直接
+      // 赋值语义，不显式带旧值会把刚写入的类别抹回 null。
+      state = state.copyWith(
+        isLoading: false,
+        error: state.error,
+        failure: state.failure,
+      );
     }
   }
 
@@ -469,10 +547,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await refreshUser();
       return message;
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别（经 AppFailure
+      // 类型化判定，勿存 e.toString()）。
+      debugPrint('[auth] account-security op failed: $e');
+      state = state.copyWith(error: AppFailureMapper.from(e).uiErrorCategory);
       rethrow;
     } finally {
-      state = state.copyWith(isLoading: false);
+      // carry-over 与 login 家族 finally 同型：copyWith 对 error 是直接
+      // 赋值语义，不显式带旧值会把刚写入的类别抹回 null。
+      state = state.copyWith(
+        isLoading: false,
+        error: state.error,
+        failure: state.failure,
+      );
     }
   }
 
@@ -483,10 +570,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await refreshUser();
       return message;
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别（经 AppFailure
+      // 类型化判定，勿存 e.toString()）。
+      debugPrint('[auth] account-security op failed: $e');
+      state = state.copyWith(error: AppFailureMapper.from(e).uiErrorCategory);
       rethrow;
     } finally {
-      state = state.copyWith(isLoading: false);
+      // carry-over 与 login 家族 finally 同型：copyWith 对 error 是直接
+      // 赋值语义，不显式带旧值会把刚写入的类别抹回 null。
+      state = state.copyWith(
+        isLoading: false,
+        error: state.error,
+        failure: state.failure,
+      );
     }
   }
 
@@ -497,10 +593,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       return await _authRepository.revokeSession(sessionId);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别（经 AppFailure
+      // 类型化判定，勿存 e.toString()）。
+      debugPrint('[auth] account-security op failed: $e');
+      state = state.copyWith(error: AppFailureMapper.from(e).uiErrorCategory);
       rethrow;
     } finally {
-      state = state.copyWith(isLoading: false);
+      // carry-over 与 login 家族 finally 同型：copyWith 对 error 是直接
+      // 赋值语义，不显式带旧值会把刚写入的类别抹回 null。
+      state = state.copyWith(
+        isLoading: false,
+        error: state.error,
+        failure: state.failure,
+      );
     }
   }
 
@@ -509,10 +614,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       return await _authRepository.revokeOtherSessions();
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别（经 AppFailure
+      // 类型化判定，勿存 e.toString()）。
+      debugPrint('[auth] account-security op failed: $e');
+      state = state.copyWith(error: AppFailureMapper.from(e).uiErrorCategory);
       rethrow;
     } finally {
-      state = state.copyWith(isLoading: false);
+      // carry-over 与 login 家族 finally 同型：copyWith 对 error 是直接
+      // 赋值语义，不显式带旧值会把刚写入的类别抹回 null。
+      state = state.copyWith(
+        isLoading: false,
+        error: state.error,
+        failure: state.failure,
+      );
     }
   }
 
@@ -538,10 +652,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
       );
       await logout();
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别（经 AppFailure
+      // 类型化判定，勿存 e.toString()）。
+      debugPrint('[auth] account-security op failed: $e');
+      state = state.copyWith(error: AppFailureMapper.from(e).uiErrorCategory);
       rethrow;
     } finally {
-      state = state.copyWith(isLoading: false);
+      // carry-over 与 login 家族 finally 同型：copyWith 对 error 是直接
+      // 赋值语义，不显式带旧值会把刚写入的类别抹回 null。
+      state = state.copyWith(
+        isLoading: false,
+        error: state.error,
+        failure: state.failure,
+      );
     }
   }
 
@@ -575,10 +698,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(isAuthenticated: true, user: user);
       SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别（经 AppFailure
+      // 类型化判定，勿存 e.toString()）。
+      debugPrint('[auth] account-security op failed: $e');
+      state = state.copyWith(error: AppFailureMapper.from(e).uiErrorCategory);
       rethrow;
     } finally {
-      state = state.copyWith(isLoading: false);
+      // carry-over 与 login 家族 finally 同型：copyWith 对 error 是直接
+      // 赋值语义，不显式带旧值会把刚写入的类别抹回 null。
+      state = state.copyWith(
+        isLoading: false,
+        error: state.error,
+        failure: state.failure,
+      );
     }
   }
 
@@ -612,10 +744,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(isAuthenticated: true, user: user);
       SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别（经 AppFailure
+      // 类型化判定，勿存 e.toString()）。
+      debugPrint('[auth] account-security op failed: $e');
+      state = state.copyWith(error: AppFailureMapper.from(e).uiErrorCategory);
       rethrow;
     } finally {
-      state = state.copyWith(isLoading: false);
+      // carry-over 与 login 家族 finally 同型：copyWith 对 error 是直接
+      // 赋值语义，不显式带旧值会把刚写入的类别抹回 null。
+      state = state.copyWith(
+        isLoading: false,
+        error: state.error,
+        failure: state.failure,
+      );
     }
   }
 

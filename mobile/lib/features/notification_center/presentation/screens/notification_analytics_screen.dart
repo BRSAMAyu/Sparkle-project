@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/notification_center/data/models/notification_analytics_model.dart';
@@ -80,23 +81,28 @@ class _NotificationAnalyticsScreenState
     );
   }
 
-  Widget _buildError(String error) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: DS.spacing64, color: DS.error),
-            const SizedBox(height: DS.spacing16),
-            Text(context.l10n.notificationAnalyticsLoadFailed(error)),
-            const SizedBox(height: DS.spacing16),
-            SparkleButton(
-              onPressed: () => ref
-                  .read(providers.notificationAnalyticsProvider.notifier)
-                  .refresh(),
-              label: context.l10n.retry,
-            ),
-          ],
-        ),
-      );
+  /// N15/N16（A-SPEC3）：state.error 已类型化——占位符只喂 error_lexicon
+  /// owner 出的人话，不再内插原始异常（ERR-SECONDARY 批）。
+  Widget _buildError(UiErrorCategory category) {
+    final message = uiErrorMessage(context.l10n, category);
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: DS.spacing64, color: DS.error),
+          const SizedBox(height: DS.spacing16),
+          Text(context.l10n.notificationAnalyticsLoadFailed(message)),
+          const SizedBox(height: DS.spacing16),
+          SparkleButton(
+            onPressed: () => ref
+                .read(providers.notificationAnalyticsProvider.notifier)
+                .refresh(),
+            label: context.l10n.retry,
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildContent(NotificationAnalytics analytics) =>
       SingleChildScrollView(

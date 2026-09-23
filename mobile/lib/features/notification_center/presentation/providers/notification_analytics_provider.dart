@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/features/notification_center/data/models/notification_analytics_model.dart'
     as model;
 import 'package:sparkle/features/notification_center/data/repositories/notification_center_repository.dart';
@@ -17,13 +19,16 @@ class NotificationAnalyticsState {
   final model.NotificationAnalytics? analytics;
   final String period;
   final bool isLoading;
-  final String? error;
+
+  /// N15（A-SPEC3）：UI 可达错误字段只存类型化类别（渲染侧经
+  /// error_lexicon owner 出人话）；原始异常细节只进 debugPrint 日志。
+  final UiErrorCategory? error;
 
   NotificationAnalyticsState copyWith({
     model.NotificationAnalytics? analytics,
     String? period,
     bool? isLoading,
-    String? error,
+    UiErrorCategory? error,
   }) =>
       NotificationAnalyticsState(
         analytics: analytics ?? this.analytics,
@@ -57,9 +62,10 @@ class NotificationAnalytics extends _$NotificationAnalytics {
         period: period,
       );
     } catch (e) {
+      debugPrint('[notification_center] loadAnalytics failed: $e');
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: categorizeUiError(e),
       );
     }
   }

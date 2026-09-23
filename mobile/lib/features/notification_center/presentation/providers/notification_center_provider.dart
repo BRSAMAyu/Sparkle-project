@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
 import 'package:sparkle/features/notification_center/data/repositories/notification_center_repository.dart';
 
@@ -14,13 +16,16 @@ class NotificationCenterState {
   });
   final List<UnifiedNotification> notifications;
   final bool isLoading;
-  final String? error;
+
+  /// N15（A-SPEC3）：UI 可达错误字段只存类型化类别（渲染侧经
+  /// error_lexicon owner 出人话）；原始异常细节只进 debugPrint 日志。
+  final UiErrorCategory? error;
   final int unreadCount;
 
   NotificationCenterState copyWith({
     List<UnifiedNotification>? notifications,
     bool? isLoading,
-    String? error,
+    UiErrorCategory? error,
     int? unreadCount,
   }) =>
       NotificationCenterState(
@@ -64,9 +69,10 @@ class NotificationCenter extends _$NotificationCenter {
         unreadCount: unreadCount,
       );
     } catch (e) {
+      debugPrint('[notification_center] loadNotifications failed: $e');
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: categorizeUiError(e),
       );
     }
   }
@@ -91,7 +97,9 @@ class NotificationCenter extends _$NotificationCenter {
         unreadCount: unreadCount,
       );
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别。
+      debugPrint('[notification_center] op failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
     }
   }
 
@@ -110,7 +118,9 @@ class NotificationCenter extends _$NotificationCenter {
       );
       _updateInterventionLocalState(notification.id, 'seen');
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别。
+      debugPrint('[notification_center] op failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
     }
   }
 
@@ -130,7 +140,9 @@ class NotificationCenter extends _$NotificationCenter {
       );
       _updateInterventionLocalState(notification.id, 'accepted');
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别。
+      debugPrint('[notification_center] op failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
     }
   }
 
@@ -150,7 +162,9 @@ class NotificationCenter extends _$NotificationCenter {
       );
       _updateInterventionLocalState(notification.id, 'snoozed');
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别。
+      debugPrint('[notification_center] op failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
     }
   }
 
@@ -175,7 +189,9 @@ class NotificationCenter extends _$NotificationCenter {
       );
       _updateInterventionLocalState(notification.id, 'acted');
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别。
+      debugPrint('[notification_center] op failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
     }
   }
 
@@ -194,7 +210,9 @@ class NotificationCenter extends _$NotificationCenter {
       );
       _updatePushLocalState(notification.id, 'dismissed');
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别。
+      debugPrint('[notification_center] op failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
     }
   }
 
@@ -213,7 +231,9 @@ class NotificationCenter extends _$NotificationCenter {
       );
       _updatePushLocalState(notification.id, 'disable_category');
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别。
+      debugPrint('[notification_center] op failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
     }
   }
 
@@ -235,7 +255,9 @@ class NotificationCenter extends _$NotificationCenter {
       );
       _updateRecallFeedbackLocalState(notification.id, 'inaccurate');
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别。
+      debugPrint('[notification_center] op failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
     }
   }
 
@@ -252,7 +274,9 @@ class NotificationCenter extends _$NotificationCenter {
       _updateAccountabilityEncouragementLocalState(notification.id);
       return result;
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志（调用方 rethrow 后自行兜底提示）。
+      debugPrint('[notification_center] sendEncouragement failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
       rethrow;
     }
   }
@@ -274,7 +298,9 @@ class NotificationCenter extends _$NotificationCenter {
       await _repository.sendAuroraConfirmAction(notification.id, action);
       removeNotification(notification.id);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别。
+      debugPrint('[notification_center] op failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
     }
   }
 
@@ -292,7 +318,9 @@ class NotificationCenter extends _$NotificationCenter {
         unreadCount: 0,
       );
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别。
+      debugPrint('[notification_center] op failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
     }
   }
 
@@ -312,7 +340,9 @@ class NotificationCenter extends _$NotificationCenter {
         unreadCount: unreadCount,
       );
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别。
+      debugPrint('[notification_center] op failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
     }
   }
 
@@ -329,7 +359,9 @@ class NotificationCenter extends _$NotificationCenter {
         notifications: updatedNotifications,
       );
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      // N15：原始异常只进日志；错误字段存类型化类别。
+      debugPrint('[notification_center] op failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
     }
   }
 
