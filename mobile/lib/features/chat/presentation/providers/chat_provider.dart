@@ -23,6 +23,7 @@ import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
+import 'package:sparkle/features/chat/data/models/notification_interrupt_policy.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/causal_timeline_panel.dart';
 import 'package:sparkle/features/chat/data/repositories/chat_repository.dart';

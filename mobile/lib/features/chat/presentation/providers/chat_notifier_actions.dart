@@ -642,6 +642,12 @@ extension ChatNotifierActions on ChatNotifier {
   }
 
   /// 处理成就解锁事件
+  ///
+  /// IR-G4/N22 庆典单通道：**保留 dialog、去除同事件 toast**。
+  /// dialog（AchievementUnlockDialog）是设计好的庆典签名位——combo 队列、
+  /// 分享、查看奖励都在其中，是庆典类打断的最强通道；lastActionStatus
+  /// 'achievement_unlocked' 的 toast 通道与之同事件重复打断，属冗余
+  /// （A-SPEC4 §3 IR-G4 辩论裁决：庆典保留最强通道，toast 侧冗余）。
   void _handleAchievementUnlock(AchievementUnlockEvent event) {
     debugPrint('🏆 Achievement unlocked: ${event.name}');
 
@@ -651,35 +657,25 @@ extension ChatNotifierActions on ChatNotifier {
 
     if (result != null) {
       // Write to global provider so any screen can show the dialog
+      // （单一庆典通道：shell_navigation 监听 pending 后弹 dialog；
+      // focusMode 豁免同消息横幅制，见 MainNavigationShell。）
       _ref.read(pendingAchievementUnlockProvider.notifier).setPending(
             event: result.event,
             comboCount: result.comboCount,
           );
-
-      // Show toast feedback
-      state = state.copyWith(
-        lastActionStatus: 'achievement_unlocked',
-        lastActionMessage:
-            I18nService.instance.l10n.chatAchievementUnlocked(event.name),
-      );
-      Future.delayed(const Duration(seconds: 3), () {
-        if (mounted) state = state.copyWith(clearActionFeedback: true);
-      });
     } else {
       debugPrint('🏆 Achievement queued for combo: ${event.name}');
     }
   }
 
   /// 处理成就里程碑事件
+  ///
+  /// N22 分级：里程碑事件以 priority=medium（摘要档）进通知中心——
+  /// 只进中心，不再写 lastActionStatus 触发 toast（进度播报不是
+  /// 需要立刻知道的即时档信息，A-SPEC4 §1.2「练习中零打断」）。
   void _handleAchievementMilestone(AchievementMilestoneEvent event) {
     debugPrint(
       '📊 Achievement milestone: ${event.achievementName} - ${event.milestonePercent}%',
-    );
-
-    // 显示里程碑通知（可以作为轻量级提示）
-    state = state.copyWith(
-      lastActionStatus: 'milestone_reached',
-      lastActionMessage: event.message,
     );
 
     final now = DateTime.now();
@@ -709,15 +705,6 @@ extension ChatNotifierActions on ChatNotifier {
     unawaited(
       _ref.read(homeCloseToUnlockProvider.notifier).fetch(forceRefresh: true),
     );
-
-    // Clear after delay
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        state = state.copyWith(
-          clearActionFeedback: true,
-        );
-      }
-    });
   }
 
   void dismissStaleCard() {
@@ -766,12 +753,18 @@ extension ChatNotifierActions on ChatNotifier {
   }
 
   /// 处理 Notification Event (实时通知推送)
+  ///
+  /// IR-G3/N22 打断三档分级：**通知中心是全量落点，toast 是即时档特权**。
+  /// 分级门控落点唯一（本处，原「toast+进中心」双写直通点）：先入中心，
+  /// 再按 [NotificationInterruptPolicy.resolve] 判档——仅 immediate 档
+  /// （high priority / 被@/小队事件 / intervention·aurora_confirm 保守
+  /// 白名单）写 lastActionStatus 触发 toast；digest/silent 只进中心。
   void _handleNotificationEvent(NotificationEvent event) {
     debugPrint(
       '🔔 Notification event received: ${event.title} (type: ${event.notificationType})',
     );
 
-    // 直接将通知添加到通知中心
+    // 通知中心全量落点（无论何档都进中心）
     try {
       _ref.read(notificationCenterProvider.notifier).handleNewNotification(
             notificationData: event.fullNotificationData,
@@ -784,7 +777,20 @@ extension ChatNotifierActions on ChatNotifier {
       debugPrint('⚠️ Failed to add notification to center: $e');
     }
 
-    // 显示 toast 提示
+    // N22：分级门控（常量映射表，priority 字段接真判定）
+    final tier = NotificationInterruptPolicy.resolve(
+      sourceType: event.notificationType,
+      contentType: event.type,
+      priority: event.priority,
+    );
+    if (tier != NotificationInterruptTier.immediate) {
+      debugPrint(
+        '🔕 Notification tier=$tier, center only: ${event.notificationId}',
+      );
+      return;
+    }
+
+    // 即时档：显示 toast 提示
     final title = event.title.isNotEmpty ? event.title : event.content;
     if (title.isNotEmpty) {
       state = state.copyWith(

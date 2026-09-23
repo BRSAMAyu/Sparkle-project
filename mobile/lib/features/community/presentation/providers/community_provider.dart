@@ -1504,14 +1504,20 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
     if (target == null) {
       return;
     }
-    final hasUnreadVisible = messages.any((message) {
-      final isVisibleRange = !message.createdAt.isAfter(target!.createdAt);
+    // IR-G2/N24：统计本批真正被标记已读的未读消息数，成功后对
+    // unreadMessageCountProvider 做 decrementBy 精确抵消——正在看会话
+    // 收到消息时 increment（上方消息分支）随即被本方法抵消，badge 不计数。
+    var unreadVisibleCount = 0;
+    for (final message in messages) {
+      final isVisibleRange = !message.createdAt.isAfter(target.createdAt);
       final isFromSomeoneElse = message.sender?.id != currentUserId;
       final isUnread =
           !(message.readBy ?? const <String>[]).contains(currentUserId);
-      return isVisibleRange && isFromSomeoneElse && isUnread;
-    });
-    if (!hasUnreadVisible) {
+      if (isVisibleRange && isFromSomeoneElse && isUnread) {
+        unreadVisibleCount++;
+      }
+    }
+    if (unreadVisibleCount == 0) {
       return;
     }
     try {
@@ -1519,6 +1525,11 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
         _groupId,
         upToMessageId: upToMessageId,
       );
+      // 已读事实落地后逐条抵消（decrementBy 钳制 ≥0，历史载入场景
+      // 从未 increment 过的消息不会被负抵消）。
+      _ref
+          .read(unreadMessageCountProvider.notifier)
+          .decrementBy(unreadVisibleCount);
     } catch (e) {
       debugPrint('Mark group messages read failed: $e');
     }

@@ -16,12 +16,16 @@ import 'package:sparkle/features/chat/data/models/chat_stream_events.dart'
     as chat;
 import 'package:sparkle/features/chat/data/services/message_notification_service.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
+import 'package:sparkle/features/community/presentation/providers/focus_mode_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/providers/visual_element_provider.dart';
 
 /// Signal incremented when the active tab is re-tapped, triggering
 /// [TapToTopListener] to scroll the tab's primary scroll view to top.
 final scrollToTopSignalProvider = StateProvider<int>((ref) => 0);
+
+///社群分支在 StatefulShellRoute.branches 中的下标（badge 进入即清用）。
+const int _communityBranchIndex = 3;
 
 /// Main navigation shell for StatefulShellRoute
 ///
@@ -61,6 +65,10 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
       }
       return;
     }
+    if (index == _communityBranchIndex) {
+      // IR-G2/N24：点 tab 进入社群 = badge「进入即清」主路径。
+      ref.read(unreadMessageCountProvider.notifier).reset();
+    }
     unawaited(
       SensoryFeedbackService.emit(
         SensoryFeedbackEvent.selection,
@@ -75,7 +83,31 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _setupAchievementListener();
+      // N24（IR-G2）：冷启动/深链直接落在社群分支时，badge「进入即清」。
+      _clearCommunityUnreadBadgeIfEntered();
     });
+  }
+
+  @override
+  void didUpdateWidget(MainNavigationShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // N24：路由驱动进入社群分支（如 home 横幅 go('/community')、深链切换）
+    // 与 tab 点击（_handleDestinationSelected）同一清除语义。
+    _clearCommunityUnreadBadgeIfEntered();
+  }
+
+  /// IR-G2/N24 badge 生命周期「清除时机」：进入社群 tab 即清。
+  ///
+  /// 角标是召回钩子不是资产（对标 Linear「打开即清」/ iOS「进 app 即清」）：
+  /// 用户到达 /community 分支后钩子已 discharged，聚合计数归零；
+  /// 群聊会话内逐条已读另由 GroupChatNotifier._markVisibleMessagesAsRead
+  /// 走 decrementBy 精确抵消。三声明全文钉在
+  /// unreadMessageCountProvider 定义处（message_notification_service.dart）。
+  void _clearCommunityUnreadBadgeIfEntered() {
+    if (widget.navigationShell.currentIndex != _communityBranchIndex) {
+      return;
+    }
+    ref.read(unreadMessageCountProvider.notifier).reset();
   }
 
   void _setupAchievementListener() {
@@ -94,8 +126,29 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
           if (next != null &&
               next != previous &&
               mounted &&
+              // N22 庆典单通道·专注豁免：focusMode 对庆典类打断拥有
+              // 一票否决权（与消息横幅 message_notification_service
+              // 的豁免同制）；挂起的庆典在专注结束时补放（见下方监听）。
+              !ref.read(focusModeProvider) &&
               !_isShowingAchievementDialog) {
             unawaited(_showAchievementDialog(next.event, next.comboCount));
+          }
+        },
+      )
+      // N22：专注结束时补放专注期间挂起的成就庆典（pending 仍在）。
+      ..listenManual(
+        focusModeProvider,
+        (previous, next) {
+          if ((previous ?? false) &&
+              next == false &&
+              mounted &&
+              !_isShowingAchievementDialog) {
+            final pending = ref.read(pendingAchievementUnlockProvider);
+            if (pending != null) {
+              unawaited(
+                _showAchievementDialog(pending.event, pending.comboCount),
+              );
+            }
           }
         },
       );

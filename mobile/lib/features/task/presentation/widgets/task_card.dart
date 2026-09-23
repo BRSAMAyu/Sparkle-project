@@ -118,7 +118,30 @@ class _TaskCardState extends ConsumerState<TaskCard> {
         );
       });
     }
-    final card = _buildCardContent(context);
+    // N23：快操作在飞的内联表达——卡片角部小 spinner（等待必须有形状），
+    // 替代已删除的 loading toast；在飞中重复长按由菜单入口的守卫忽略。
+    final quickActionInFlight =
+        ref.watch(taskQuickActionInFlightProvider) == widget.task.id;
+    var card = _buildCardContent(context);
+    if (quickActionInFlight) {
+      card = Stack(
+        children: [
+          card,
+          Positioned(
+            top: DS.spacing12,
+            right: DS.spacing12,
+            child: SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: DS.brandPrimary,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
     if (!widget.enableSwipeComplete ||
         widget.onComplete == null ||
         widget.task.status == TaskStatus.completed ||

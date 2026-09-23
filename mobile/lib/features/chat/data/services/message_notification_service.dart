@@ -29,7 +29,20 @@ class NotificationMessage {
 
 enum NotificationType { privateMessage, groupMessage, mention }
 
-// Unread message count provider
+/// Unread message count provider
+///
+/// N24（A-SPEC4 v1.4 §4.2/§9.1）· 打断面生命周期三声明（badge 计数类）：
+/// - **触发**：community WS 收到他人消息（群聊/私聊/被@）时 increment——
+///   community_provider.dart 三处（群聊消息、mention、私聊）。
+/// - **清除**：①进入社群 tab 即 reset（MainNavigationShell：tab 点击、
+///   路由驱动进入、冷启动深链落地三入口）——角标是召回钩子不是资产，
+///   到达目标面即清（对标 Linear「打开即清」/ iOS「进 app 即清」）；
+///   ②群聊会话内消息被标记已读时 decrementBy 精确抵消
+///   （GroupChatNotifier._markVisibleMessagesAsRead，正在看会话不计数）。
+///   只增不清的计数器禁新增（N24 机检：本文件必须含清除方法且有调用点）。
+/// - **到达**：community tab 角标（shell_navigation `_buildBadgedIcon`）→
+///   点达 /community 分支；home 横幅（home_notification_card，未读时
+///   整卡指向 go('/community')）；dashboard 摘要计数（dashboard_screen）。
 final unreadMessageCountProvider =
     StateNotifierProvider<UnreadMessageCountNotifier, int>(
   (ref) => UnreadMessageCountNotifier(),
@@ -42,6 +55,13 @@ class UnreadMessageCountNotifier extends StateNotifier<int> {
   void add(int count) => state += count;
   void reset() => state = 0;
   void decrement() => state = state > 0 ? state - 1 : 0;
+
+  /// N24 逐条已读清除：一次标记已读 n 条即抵消 n（钳制 ≥0，防止
+  /// 冷启动从历史载入时对从未 increment 过的消息负抵消）。
+  void decrementBy(int count) {
+    if (count <= 0) return;
+    state = state > count ? state - count : 0;
+  }
 }
 
 // In-app notification stream provider
