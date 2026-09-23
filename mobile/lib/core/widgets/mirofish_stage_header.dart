@@ -94,7 +94,7 @@ class MirofishStageHeader extends StatelessWidget {
                         eyebrow!,
                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
                               color: headerAccent,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                             ),
                       ),
                       const SizedBox(height: 6),
@@ -102,7 +102,7 @@ class MirofishStageHeader extends StatelessWidget {
                     Text(
                       title,
                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                             height: 1.15,
                           ),
                     ),
@@ -217,7 +217,7 @@ class _MirofishMetricCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: accent,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
           ),
         ],

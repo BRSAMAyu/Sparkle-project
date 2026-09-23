@@ -57,7 +57,7 @@ class _StrategyMigrationWizardState
                 child: Text(
                   context.l10n.smwTitle,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                 ),
               ),
@@ -299,7 +299,7 @@ class _StrategyOptionTile extends StatelessWidget {
               '+${(strategy.estimatedLift * 100).round()}%',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: DS.warning,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
             ),
           ],
@@ -331,7 +331,7 @@ class _ConfirmStep extends StatelessWidget {
         Text(
           selected.title,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
               ),
         ),
         const SizedBox(height: 8),

@@ -1657,7 +1657,7 @@ class _RecommendedSeedStrip extends StatelessWidget {
                     child: Text(
                       context.l10n.simRecommended,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                     ),
                   ),
@@ -1772,7 +1772,7 @@ class _RecommendedSeedCard extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
             ),
             const SizedBox(height: 6),
@@ -1868,7 +1868,7 @@ class _SimulationImmersiveTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final titleStyle = Theme.of(context).textTheme.titleSmall?.copyWith(
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.w700,
         );
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -2016,7 +2016,7 @@ class _SimulationInlineInteractionSection extends StatelessWidget {
                     Text(
                       context.l10n.simulationAdjustSimulation,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                     ),
                     const SizedBox(height: 4),
@@ -2155,7 +2155,7 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
                 child: Text(
                   context.l10n.simulationDiscussionRounds,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                 ),
               ),
@@ -2179,7 +2179,7 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
           Text(
             context.l10n.simulationFacilitationStyleTitle,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
           ),
           const SizedBox(height: 8),
@@ -2217,7 +2217,7 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
                 child: Text(
                   context.l10n.simulationParticipantsTitle,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                 ),
               ),
@@ -2352,7 +2352,7 @@ class _SimulationStatusCard extends StatelessWidget {
                                 : context.l10n.simulationGatheringParticipants
                             : context.l10n.simulationAwaitingStart,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                             ),
                       ),
                       const SizedBox(height: 4),
@@ -2587,7 +2587,7 @@ class _SimulationTimelineCard extends StatelessWidget {
                       Text(
                         context.l10n.simulationImmersiveDiscussion,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                             ),
                       ),
                       const SizedBox(height: 4),
@@ -2633,7 +2633,7 @@ class _SimulationTimelineCard extends StatelessWidget {
                           ? context.l10n.simulationImmersiveDiscussion
                           : context.l10n.simulationRoleCurrentDiscussionTitle,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                     ),
                     const SizedBox(height: 4),
@@ -2755,7 +2755,7 @@ class _SimulationInsightTray extends StatelessWidget {
                           context.l10n.simulationInsightSummaryTitle,
                           style:
                               Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight: FontWeight.w700,
                                   ),
                         ),
                         const SizedBox(height: 4),
@@ -3017,7 +3017,7 @@ class _SimulationInsightSection extends StatelessWidget {
                 Text(
                   title,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                 ),
               ],
@@ -3128,7 +3128,7 @@ class _AnimatedParticipantChipState extends State<_AnimatedParticipantChip> {
                   widget.participant.name,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         fontWeight: widget.isActive
-                            ? FontWeight.w800
+                            ? FontWeight.w700
                             : DS.fontWeightSemibold,
                       ),
                 ),
@@ -3179,7 +3179,7 @@ class _SimulationMiniParticipantPill extends StatelessWidget {
               style: TextStyle(
                 fontSize: 10,
                 color: accent,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -3189,7 +3189,7 @@ class _SimulationMiniParticipantPill extends StatelessWidget {
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   color: accent,
                   fontWeight:
-                      isActive ? FontWeight.w800 : DS.fontWeightSemibold,
+                      isActive ? FontWeight.w700 : DS.fontWeightSemibold,
                 ),
           ),
         ],
@@ -3255,7 +3255,7 @@ class _ParticipantSnapshotPill extends StatelessWidget {
                   participant.name,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: accent,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                 ),
               ),
@@ -3383,7 +3383,7 @@ class _SimulationInteractionCard extends StatelessWidget {
           Text(
             context.l10n.simulationYourTurnTitle,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
           ),
           const SizedBox(height: 8),

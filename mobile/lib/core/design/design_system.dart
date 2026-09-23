@@ -1135,10 +1135,15 @@ class DS {
   @Deprecated('Use context.typo.titleLarge instead.')
   static TextStyle get titleLarge => _typography.titleLarge;
 
-  /// Shim: SparkleTypography has no separate titleMedium role yet; this
-  /// forwards to [SparkleTypography.titleLarge] until the 15-role expansion.
-  @Deprecated('Use context.typo.titleLarge instead.')
-  static TextStyle get titleMedium => _typography.titleLarge;
+  /// 同名同值收敛（TYPE-RHYTHM 卡，N41 首案）：此前本 shim 转发
+  /// [SparkleTypography.titleLarge]（19px），与 textTheme.titleMedium
+  /// （M3 派生角色 16/w500，见 theme_manager.dart titleMedium getter）同名
+  /// 不同值——同名漂移是通道分裂最尖锐的缺陷源。现转发 M3 派生角色
+  /// titleMedium（16/w500），与 Theme.of(context).textTheme.titleMedium 恒等
+  /// （断言见 test/core/design/typography_rhythm_convergence_test.dart）。
+  /// 调用点若依赖 19px 的视觉重量，应显式改用 [titleLarge]，而非借道本 shim。
+  @Deprecated('Use context.typo.titleMedium instead.')
+  static TextStyle get titleMedium => _typography.titleMedium;
   @Deprecated('Use context.typo.bodyLarge instead.')
   static TextStyle get bodyLarge => _typography.bodyLarge;
   @Deprecated('Use context.typo.bodyMedium instead.')

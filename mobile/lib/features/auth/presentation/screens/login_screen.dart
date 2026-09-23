@@ -442,7 +442,7 @@ class _BrandWordmark extends StatelessWidget {
     // mapped by _buildTextTheme, so the wordmark previously fell back to
     // the M3 default scale instead of the design system's.
     final baseStyle = context.typo.headingMedium.copyWith(
-      fontWeight: FontWeight.w800,
+      fontWeight: FontWeight.w700,
       letterSpacing: 0.2,
       height: 1.05,
       color: secondaryDeep,

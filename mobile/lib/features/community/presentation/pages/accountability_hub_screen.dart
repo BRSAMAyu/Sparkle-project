@@ -578,7 +578,7 @@ class _MetricTile extends StatelessWidget {
           Text(
             value,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
           ),
           const SizedBox(height: 2),
@@ -617,7 +617,7 @@ class _Section extends StatelessWidget {
         Text(
           title,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
               ),
         ),
         if (subtitle != null) ...[

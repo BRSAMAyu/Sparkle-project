@@ -37,7 +37,7 @@ class ModelUpdateReceipt extends StatelessWidget {
                   child: Text(
                     context.l10n.gdModelReceiptTitle,
                     style: textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),

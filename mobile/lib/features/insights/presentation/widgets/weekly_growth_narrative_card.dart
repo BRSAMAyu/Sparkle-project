@@ -99,7 +99,7 @@ class _NarrativeSurface extends StatelessWidget {
                     Text(
                       narrative.period,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                     ),
                     const SizedBox(height: DS.spacing4),

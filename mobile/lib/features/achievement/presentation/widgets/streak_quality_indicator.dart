@@ -100,7 +100,7 @@ class _StreakQualityContent extends StatelessWidget {
                           style:
                               Theme.of(context).textTheme.titleLarge?.copyWith(
                                     color: scheme.onSurface,
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight: FontWeight.w700,
                                     fontFeatures: const [
                                       FontFeature.tabularFigures(),
                                     ],
@@ -183,7 +183,7 @@ class _StreakQualityFallback extends StatelessWidget {
                 '$currentStreak',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       color: scheme.onSurface,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                     ),
               ),
               Text(
@@ -222,7 +222,7 @@ void _showQualitySheet(
                 l10n.streakQualityTitle,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       color: scheme.onSurface,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                     ),
               ),
               const SizedBox(height: 6),
@@ -368,7 +368,7 @@ class _BreakdownTile extends StatelessWidget {
                   value,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: scheme.onSurface,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                 ),
               ],
@@ -474,7 +474,7 @@ class _EvidenceCard extends StatelessWidget {
             l10n.streakQualityEvidence,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   color: scheme.onTertiaryContainer,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
           ),
           const SizedBox(height: 6),

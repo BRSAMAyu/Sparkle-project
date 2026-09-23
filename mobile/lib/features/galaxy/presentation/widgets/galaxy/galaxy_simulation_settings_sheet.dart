@@ -109,7 +109,7 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
                                 style: TextStyle(
                                   color: titleColor,
                                   fontSize: 18,
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -267,7 +267,7 @@ class _SectionTitle extends StatelessWidget {
                     color: isDarkMode
                         ? DS.neutral0
                         : DS.neutral900.withValues(alpha: 0.87),
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
             ),
             const SizedBox(height: 2),

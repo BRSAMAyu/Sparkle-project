@@ -166,7 +166,7 @@ class _CommunityHeroState extends State<_CommunityHero> {
                     Text(
                       context.l10n.communityGroupEntry,
                       style: theme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     Text(
@@ -195,7 +195,7 @@ class _CommunityHeroState extends State<_CommunityHero> {
             const SizedBox(height: 12),
             Text(
               context.l10n.communityDiscoverCampusGroups,
-              style: theme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+              style: theme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             Text(

@@ -579,7 +579,7 @@ class _LibraryHeroCard extends StatelessWidget {
                       style:
                           Theme.of(context).textTheme.headlineSmall?.copyWith(
                                 color: Colors.white,
-                                fontWeight: FontWeight.w800,
+                                fontWeight: FontWeight.w700,
                                 height: 1.1,
                               ),
                     ),
@@ -675,7 +675,7 @@ class _HeroMetric extends StatelessWidget {
             value,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   color: Colors.white,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
           ),
           const SizedBox(height: DS.spacing4),
@@ -1465,7 +1465,7 @@ class _DocumentGlyph extends StatelessWidget {
             fileType.toUpperCase(),
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: accent,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
           ),
         ],
@@ -1838,7 +1838,7 @@ class _StatPanel extends StatelessWidget {
             value,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   color: DS.textPrimary,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
           ),
           const SizedBox(height: DS.spacing4),
@@ -1888,7 +1888,7 @@ class _DocumentsEmptyState extends StatelessWidget {
             title,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   color: DS.textPrimary,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
             textAlign: TextAlign.center,
           ),

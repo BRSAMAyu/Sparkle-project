@@ -70,7 +70,9 @@ class _OpenClawPairingScannerSheetState
               const SizedBox(height: DS.spacing16),
               Text(
                 '扫码连接 OpenClaw',
-                style: DS.titleMedium.copyWith(fontWeight: DS.fontWeightBold),
+                // sheet 主标题：依赖 19px 视觉重量，显式升 titleLarge
+                // （N41 同名同值收敛后 DS.titleMedium=16/w500——TYPE-RHYTHM 卡）。
+                style: DS.titleLarge.copyWith(fontWeight: DS.fontWeightBold),
               ),
               const SizedBox(height: DS.spacing6),
               Text(

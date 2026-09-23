@@ -380,7 +380,7 @@ class _MilestoneHeroCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final titleStyle = Theme.of(context).textTheme.headlineMedium?.copyWith(
           color: Colors.white,
-          fontWeight: FontWeight.w800,
+          fontWeight: FontWeight.w700,
           height: 1.08,
         );
     final bodyStyle = Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -552,7 +552,7 @@ class _StatChip extends StatelessWidget {
               value,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     color: Colors.white,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
             ),
           ],

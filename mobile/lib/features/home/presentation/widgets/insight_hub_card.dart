@@ -98,7 +98,7 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
             Text(
               context.l10n.insightHubTitle,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
             ),
             const SizedBox(height: DS.spacing8),

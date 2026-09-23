@@ -141,7 +141,7 @@ class _WeeklyStoryCard extends StatelessWidget {
                 child: Text(
                   context.l10n.gdGrowthStory,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                 ),
               ),
@@ -171,7 +171,7 @@ class _WeeklyStoryCard extends StatelessWidget {
               context.l10n.gdKeyInsights,
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
                     color: colors.onSurface,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
             ),
             const SizedBox(height: DS.spacing6),
@@ -285,7 +285,7 @@ class _ChronicleTimelineItemState extends State<_ChronicleTimelineItem> {
                   Text(
                     widget.entry.title,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                   ),
                   const SizedBox(height: DS.spacing6),
@@ -305,7 +305,7 @@ class _ChronicleTimelineItemState extends State<_ChronicleTimelineItem> {
                     Text(
                       context.l10n.gdEvidenceChain,
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                     ),
                     const SizedBox(height: DS.spacing6),
@@ -386,7 +386,7 @@ class _StatusPill extends StatelessWidget {
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: color,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             ),
       ),
     );

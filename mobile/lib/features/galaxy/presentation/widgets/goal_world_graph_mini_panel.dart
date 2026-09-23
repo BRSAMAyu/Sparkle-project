@@ -341,7 +341,7 @@ class _GapAnalysisSummary extends StatelessWidget {
             context.l10n.goalGraphGapAnalysis,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   color: scheme.onSurface,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
           ),
           const SizedBox(height: 8),
@@ -402,7 +402,7 @@ class _GapStat extends StatelessWidget {
             value,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: color,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
           ),
           const SizedBox(height: 2),
@@ -646,7 +646,7 @@ void _showNodeDetails(BuildContext context, GoalGraphOverlayNode node) {
               node.label,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: scheme.onSurface,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
             ),
             const SizedBox(height: 12),

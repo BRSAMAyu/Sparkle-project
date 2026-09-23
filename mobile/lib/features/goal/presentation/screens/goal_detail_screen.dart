@@ -207,7 +207,7 @@ class _GoalHeader extends StatelessWidget {
                         '${(progress * 100).round()}%',
                         style: textTheme.labelLarge?.copyWith(
                           color: DS.textPrimary,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
@@ -224,7 +224,7 @@ class _GoalHeader extends StatelessWidget {
                     data.goal.title,
                     style: textTheme.titleLarge?.copyWith(
                       color: DS.textPrimary,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -349,7 +349,7 @@ class _TodayStepCard extends ConsumerWidget {
                     l10n.goalDetailTodayStep,
                     style: textTheme.titleMedium?.copyWith(
                       color: DS.textPrimary,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),

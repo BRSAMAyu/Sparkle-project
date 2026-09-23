@@ -64,7 +64,7 @@ class ChatContinuityBanner extends StatelessWidget {
                 Text(
                   resolvedTitle,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                 ),
                 const SizedBox(height: DS.spacing4),

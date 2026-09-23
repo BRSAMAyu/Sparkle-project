@@ -162,7 +162,9 @@ class _SheetSection extends StatelessWidget {
         children: [
           Text(
             title,
-            style: DS.titleMedium.copyWith(
+            // sheet 主标题：依赖 19px 视觉重量，显式升 titleLarge（DS.titleMedium
+            // 已收敛为 16/w500，见 N41 同名同值收敛——TYPE-RHYTHM 卡）。
+            style: DS.titleLarge.copyWith(
               color: DS.textPrimary,
               fontWeight: DS.fontWeightBold,
             ),

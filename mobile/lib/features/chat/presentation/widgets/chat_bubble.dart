@@ -691,7 +691,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                             style: Theme.of(dialogContext)
                                 .textTheme
                                 .titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w800),
+                                ?.copyWith(fontWeight: FontWeight.w700),
                           ),
                         ),
                         Semantics(
@@ -724,7 +724,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                         .textTheme
                                         .titleSmall
                                         ?.copyWith(
-                                          fontWeight: FontWeight.w800,
+                                          fontWeight: FontWeight.w700,
                                         ),
                                   ),
                                   const SizedBox(height: 4),

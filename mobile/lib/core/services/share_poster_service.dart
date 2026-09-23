@@ -207,7 +207,7 @@ class _SharePosterCanvas extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 32,
                     height: 1.08,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                     color: posterTheme.textPrimary,
                     letterSpacing: 0,
                   ),
@@ -654,7 +654,7 @@ class _PosterIdentity extends StatelessWidget {
                 displayName.substring(0, 1).toUpperCase(),
                 style: const TextStyle(
                   color: Colors.white,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),

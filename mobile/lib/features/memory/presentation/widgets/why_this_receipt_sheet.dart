@@ -108,7 +108,9 @@ class _WhyThisSheetState extends ConsumerState<_WhyThisSheet> {
             const SizedBox(height: DS.lg),
             Text(
               l10n.whyThisSheetTitle,
-              style: DS.titleMedium.copyWith(fontWeight: DS.fontWeightBold),
+              // sheet 主标题：依赖 19px 视觉重量，显式升 titleLarge（N41 同名
+              // 同值收敛后 DS.titleMedium=16/w500——TYPE-RHYTHM 卡）。
+              style: DS.titleLarge.copyWith(fontWeight: DS.fontWeightBold),
             ),
             const SizedBox(height: DS.md),
             Flexible(

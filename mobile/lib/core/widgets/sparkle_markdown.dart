@@ -27,6 +27,24 @@ double _defaultLineHeightForRole(SparkleMarkdownRole role) => switch (role) {
       SparkleMarkdownRole.standard => 1.5,
     };
 
+/// N44 长文段距显式令（A-SPEC7 §4，TYPE-RHYTHM 卡）：段距是排版节奏的一半。
+///
+/// 目标段间空隙 = 0.5 × 标准角色行盒（16 × 1.5 = 24 → 12，spacing12 档）。
+/// flutter_markdown 0.6.23 的 pPadding/h\*Padding 缺省为 null→零
+/// （style_sheet.dart:14），多段长文会完全黏连；采用「半隙对称」形制：
+/// 每个块上下各贡献一半，相邻块合计出目标空隙，块首/块尾只多出半个
+/// 档位的呼吸，不与卡片内边距双重叠加。
+///
+/// 聊天域豁免（N44 条款明文）：aurora 多消息分组已按消息拆卡、组间以
+/// spacing6 分隔（aurora_message_group.dart），chatBubble 角色的段内块距
+/// 保持 0，避免与分组补偿双重叠加。
+const double _kParagraphGap = 12.0;
+
+EdgeInsets _blockPaddingForRole(SparkleMarkdownRole role, double gap) {
+  if (role == SparkleMarkdownRole.chatBubble) return EdgeInsets.zero;
+  return EdgeInsets.symmetric(vertical: gap / 2);
+}
+
 /// Unified markdown rendering widget for the entire Sparkle app.
 ///
 /// Handles both static content and streaming AI responses with proper
@@ -193,12 +211,22 @@ class SparkleMarkdown extends StatelessWidget {
       height: resolvedLineHeight,
       fontFamilyFallback: sparkleFontFallback,
     );
+    // N44 段距：段 p=spacing12 档（12）；标题块距略大以先于正文脱行——
+    // h2 上下 0.75×（9）、h3 上下 0.5×（6）。chatBubble 角色全豁免为 0
+    // （聊天段距由 aurora 分组承担，见 _kParagraphGap 处注释）。
+    final pPadding = _blockPaddingForRole(contentRole, _kParagraphGap);
+    final h2Padding = _blockPaddingForRole(contentRole, _kParagraphGap * 1.5);
+    final h3Padding = _blockPaddingForRole(contentRole, _kParagraphGap);
 
     return MarkdownStyleSheet(
       p: base,
+      pPadding: pPadding,
       h1: base.copyWith(fontSize: fontSize + 8, fontWeight: DS.fontWeightBold),
+      h1Padding: h2Padding,
       h2: base.copyWith(fontSize: fontSize + 6, fontWeight: DS.fontWeightBold),
+      h2Padding: h2Padding,
       h3: base.copyWith(fontSize: fontSize + 4, fontWeight: FontWeight.w600),
+      h3Padding: h3Padding,
       h4: base.copyWith(fontSize: fontSize + 2, fontWeight: FontWeight.w600),
       h5: base.copyWith(fontSize: fontSize + 1, fontWeight: FontWeight.w600),
       h6: base.copyWith(fontWeight: FontWeight.w600),

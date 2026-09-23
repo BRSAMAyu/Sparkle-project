@@ -366,7 +366,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                     Text(
                       context.l10n.reportMasteryTrendTitle,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                     ),
                     const SizedBox(height: 8),
@@ -378,7 +378,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                       Text(
                         report.trendOverview!.headline,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                             ),
                       ),
                       const SizedBox(height: 4),
@@ -515,7 +515,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                     Text(
                       context.l10n.reportKeyMetricsTitle,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                     ),
                     const SizedBox(height: 12),
@@ -587,7 +587,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                     Text(
                       context.l10n.reportKeyDimensionsTitle,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                     ),
                     const SizedBox(height: 12),
@@ -1010,7 +1010,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                   item.nodeName,
                   style:
                       Theme.of(sheetContext).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                 ),
                 const SizedBox(height: 10),
@@ -1097,7 +1097,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                   card.headline,
                   style:
                       Theme.of(sheetContext).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                 ),
                 const SizedBox(height: 12),
@@ -1114,7 +1114,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                     context.l10n.reportEvidenceAndAdvice,
                     style:
                         Theme.of(sheetContext).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                             ),
                   ),
                   const SizedBox(height: 10),
@@ -1403,7 +1403,7 @@ class _MasteryTrendChartState extends State<_MasteryTrendChart> {
               Text(
                 selectedLabel,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                     ),
               ),
               Text(
@@ -1664,7 +1664,7 @@ class _ReportDiagnosisStrip extends StatelessWidget {
           Text(
             context.l10n.reportDiagnosisSummaryTitle,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
           ),
           const SizedBox(height: 8),
@@ -1831,7 +1831,7 @@ class _DiagnosisCard extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                     ),
               ),
               const SizedBox(height: 6),
@@ -1896,7 +1896,7 @@ class _ReportTriggerBanner extends StatelessWidget {
                 Text(
                   triggerSummary.title,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                 ),
                 const SizedBox(height: 6),
@@ -1941,7 +1941,7 @@ class _ReportDataStatusBanner extends StatelessWidget {
                   Text(
                     label,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                   ),
                   const SizedBox(height: 6),
@@ -2015,7 +2015,7 @@ class _ReportActionCard extends StatelessWidget {
             Text(
               context.l10n.reportActionTitle,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
             ),
             const SizedBox(height: 8),
@@ -2150,7 +2150,7 @@ class _ActionSuggestionTile extends StatelessWidget {
           Text(
             actionCard.title,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
           ),
           const SizedBox(height: 8),
@@ -2258,7 +2258,7 @@ class _TrendHistoryEmptyState extends StatelessWidget {
               Text(
                 title ?? context.l10n.reportTrendAutoFillTitle,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                     ),
               ),
             ],
@@ -2308,7 +2308,7 @@ class _ReportEmptyPanel extends StatelessWidget {
           Text(
             title,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
           ),
           const SizedBox(height: 8),
@@ -2770,7 +2770,7 @@ class _MetricCard extends StatelessWidget {
                 return Text(
                   displayValue,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                 );
               },

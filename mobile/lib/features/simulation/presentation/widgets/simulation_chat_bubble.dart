@@ -263,7 +263,7 @@ class _SimulationChatBubbleState extends State<SimulationChatBubble> {
                                   .textTheme
                                   .titleSmall
                                   ?.copyWith(
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight: FontWeight.w700,
                                     color: accent,
                                   ),
                             ),

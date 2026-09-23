@@ -404,7 +404,7 @@ class _SimplifiedTodayTaskCard extends StatelessWidget {
           Text(
             task.title,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                   height: 1.25,
                 ),
           ),
@@ -440,7 +440,7 @@ class _SimplifiedTodayTaskCard extends StatelessWidget {
               '⚠️ 常见误区',
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     color: DS.warning,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
             ),
             const SizedBox(height: DS.spacing8),

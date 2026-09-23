@@ -1,0 +1,338 @@
+{
+  "comment": "Frozen ratchet baseline for check_typography_rhythm_ratchet.py (A-SPEC7 N41 sub-12 floor + N42 weight cap; frozen by the TYPE-RHYTHM card). Only lower via --update-baseline after a burn batch lowers counts; never raise.",
+  "files": {
+    "mobile/lib/features/achievement/presentation/screens/achievement_map_screen.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/achievement/presentation/screens/milestone_celebration_screen.dart": {
+      "fontWeightW900": 1
+    },
+    "mobile/lib/features/achievement/presentation/widgets/achievement_progress_card.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/achievement/presentation/widgets/streak_indicator.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/aurora/presentation/widgets/aurora_core_session_sheet.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/calendar/presentation/screens/calendar_stats_screen.dart": {
+      "sub12FontSize": 3
+    },
+    "mobile/lib/features/calendar/presentation/screens/daily_detail_screen.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/calendar/presentation/widgets/agent_stats_dashboard.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/calendar/presentation/widgets/smart_schedule_chip.dart": {
+      "sub12FontSize": 3
+    },
+    "mobile/lib/features/chat/data/services/message_notification_service.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/agent_reasoning_bubble.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart": {
+      "sub12FontSize": 3
+    },
+    "mobile/lib/features/chat/presentation/widgets/agent_workflow_panel.dart": {
+      "sub12FontSize": 12
+    },
+    "mobile/lib/features/chat/presentation/widgets/aurora_calibration_panel.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/aurora_receipt_chip.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/aurora_status_layer_card.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/causal_timeline_panel.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/chat_bubble.dart": {
+      "sub12FontSize": 11
+    },
+    "mobile/lib/features/chat/presentation/widgets/chat_prediction_dock.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/collaboration_timeline.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/content_review_card.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/contextual_correction_bar.dart": {
+      "sub12FontSize": 5
+    },
+    "mobile/lib/features/chat/presentation/widgets/divine_moment_card.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/experience_envelope_indicator.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/file_message_bubble.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/goal_arbitration_card.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/intent_preview_dialog.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/memory_reference_receipt.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/message_detail_view.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/review_appeal_card.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/status_awareness_bar.dart": {
+      "sub12FontSize": 11
+    },
+    "mobile/lib/features/chat/presentation/widgets/study_materials_sheet.dart": {
+      "sub12FontSize": 4
+    },
+    "mobile/lib/features/cognitive/presentation/screens/capsule/capsule_detail_screen.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/cognitive/presentation/screens/pattern_list_screen.dart": {
+      "sub12FontSize": 3
+    },
+    "mobile/lib/features/cognitive/presentation/widgets/interactive_decay_timeline.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/cognitive/presentation/widgets/prism_behavior_card.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/community/presentation/screens/create_post_screen.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/community/presentation/screens/group_members_screen.dart": {
+      "sub12FontSize": 3
+    },
+    "mobile/lib/features/community/presentation/widgets/accountability_hub/partner_observation_settings.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/bonfire_widget.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/comment_bottom_sheet.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/community_widgets.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/feed_post_card.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/group_chat_bubble.dart": {
+      "sub12FontSize": 7
+    },
+    "mobile/lib/features/community/presentation/widgets/partners_tab.dart": {
+      "sub12FontSize": 4
+    },
+    "mobile/lib/features/community/presentation/widgets/private_chat_bubble.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/shared_resource_card.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/similar_goal_pursuers_card.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/error_book/presentation/screens/error_list_screen.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/error_book/presentation/widgets/error_card.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/experience/presentation/widgets/goal_detail_snapshot_card.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/experience/presentation/widgets/growth_quality_card.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/file/presentation/widgets/file_picker_with_presigned.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/focus/presentation/widgets/candidate_action_sheet.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/focus/presentation/widgets/focus_stats_chart.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/focus/presentation/widgets/focus_stats_heatmap.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/focus/presentation/widgets/focus_stats_overview_cards.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/focus/presentation/widgets/focus_stats_session_list.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/galaxy/data/services/galaxy_monitoring_integration.dart": {
+      "sub12FontSize": 4
+    },
+    "mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_node_preview_card.dart": {
+      "sub12FontSize": 3
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy/graphrag_visualizer.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy_contribution_banner.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/goal/presentation/widgets/goal_conflict_dialog.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/goal/presentation/widgets/intent_confirmation_card.dart": {
+      "sub12FontSize": 3
+    },
+    "mobile/lib/features/home/presentation/screens/task_monitor_screen.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/aurora_status_band.dart": {
+      "sub12FontSize": 6
+    },
+    "mobile/lib/features/home/presentation/widgets/calendar/compact_task_card.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/calendar_heatmap_card.dart": {
+      "sub12FontSize": 8
+    },
+    "mobile/lib/features/home/presentation/widgets/curiosity_capsule_card.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/expanded_toolbar_section.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/focus_card.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/home/presentation/widgets/learning_heatmap_widget.dart": {
+      "sub12FontSize": 5
+    },
+    "mobile/lib/features/home/presentation/widgets/next_actions_card.dart": {
+      "sub12FontSize": 3
+    },
+    "mobile/lib/features/home/presentation/widgets/prism_card.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/home/presentation/widgets/seed_library_dashboard_card.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/sprint_card.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/home/presentation/widgets/task_board/interactive_task_card.dart": {
+      "sub12FontSize": 3
+    },
+    "mobile/lib/features/home/presentation/widgets/task_board/sprint_view.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/insights/presentation/screens/learning_dashboard_screen.dart": {
+      "fontWeightW900": 1
+    },
+    "mobile/lib/features/insights/presentation/widgets/return_case_file_card.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/notification_center/presentation/screens/notification_analytics_screen.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/notification_center/presentation/screens/notification_center_screen.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart": {
+      "sub12FontSize": 4
+    },
+    "mobile/lib/features/plan/presentation/screens/sprint_completion_screen.dart": {
+      "fontWeightW900": 4
+    },
+    "mobile/lib/features/plan/presentation/screens/sprint_history_screen.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/plan/presentation/widgets/learning_path_progress_bar.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/plan/presentation/widgets/sprint_history_detail.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/plan/presentation/widgets/sprint_statistics_card.dart": {
+      "sub12FontSize": 3
+    },
+    "mobile/lib/features/seed_library/presentation/widgets/seed_item_card.dart": {
+      "sub12FontSize": 3
+    },
+    "mobile/lib/features/settings/presentation/screens/data_usage_dashboard_screen.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/shop/presentation/widgets/shop_item_card.dart": {
+      "sub12FontSize": 3
+    },
+    "mobile/lib/features/shop/presentation/widgets/user_title_widget.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/simulation/presentation/screens/simulation_screen.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/task/presentation/screens/task_create_screen.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/task/presentation/widgets/execution_status_indicator.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/task/presentation/widgets/execution_template_card.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/task/presentation/widgets/quick_tools_panel.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/task/presentation/widgets/subtask_list_widget.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/task/presentation/widgets/task_chat_panel.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/task/presentation/widgets/task_feedback_dialog.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/task/presentation/widgets/why_this_today_panel.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/translation/presentation/screens/translation_history_screen.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/translation/presentation/widgets/inline_translation_block.dart": {
+      "sub12FontSize": 3
+    },
+    "mobile/lib/features/translation/presentation/widgets/translation_drawer.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/translation/presentation/widgets/translation_popover.dart": {
+      "sub12FontSize": 2
+    },
+    "mobile/lib/features/user/presentation/screens/smart_push_settings_screen.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/user/presentation/widgets/learning_mode_control.dart": {
+      "sub12FontSize": 4
+    },
+    "mobile/lib/features/user/presentation/widgets/preference_controller_2d.dart": {
+      "sub12FontSize": 1
+    },
+    "mobile/lib/features/user/presentation/widgets/weekly_agenda_grid.dart": {
+      "sub12FontSize": 1
+    }
+  }
+}

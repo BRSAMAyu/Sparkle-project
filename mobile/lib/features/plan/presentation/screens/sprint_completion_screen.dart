@@ -417,7 +417,7 @@ class _ShareableCompletionCard extends StatelessWidget {
               context.l10n.planSprintResultSummary(summary.masteredNodesCount, summary.repairedErrorsCount, summary.completedTasksCount),
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     height: 1.45,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                     color: DS.textPrimary,
                   ),
             ),
@@ -632,7 +632,7 @@ class _CompletionUnavailable extends StatelessWidget {
               Text(
                 context.l10n.planSprintStillSummarizingTitle,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                     ),
               ),
               const SizedBox(height: DS.spacing8),

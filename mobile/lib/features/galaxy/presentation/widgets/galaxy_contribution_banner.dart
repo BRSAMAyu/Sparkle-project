@@ -125,7 +125,7 @@ class GalaxyContributionBanner extends StatelessWidget {
                             style: TextStyle(
                               color: foreground,
                               fontSize: 16,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                           const SizedBox(height: 6),
@@ -227,7 +227,7 @@ class _ContributionMetricPill extends StatelessWidget {
                 style: TextStyle(
                   color: foreground,
                   fontSize: 14,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
@@ -274,7 +274,7 @@ class GalaxyContributionDetailSheet extends StatelessWidget {
               style: TextStyle(
                 color: foreground,
                 fontSize: 20,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 6),
@@ -351,7 +351,7 @@ class _ContributionSection extends StatelessWidget {
             style: TextStyle(
               color: foreground,
               fontSize: 15,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 10),

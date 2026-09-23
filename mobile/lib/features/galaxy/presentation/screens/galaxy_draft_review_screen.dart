@@ -122,7 +122,7 @@ class _GalaxyDraftReviewScreenState
                         style:
                             Theme.of(context).textTheme.headlineSmall?.copyWith(
                                   color: DS.neutral0,
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w700,
                                   height: 1.15,
                                 ),
                       ),
@@ -321,7 +321,7 @@ class _GalaxyDraftReviewScreenState
             ),
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   color: DS.neutral0,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
           ),
           const SizedBox(height: DS.spacing8),
@@ -509,7 +509,7 @@ class _ReviewStatePanel extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         color: DS.neutral0,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                 ),
                 const SizedBox(height: DS.spacing12),
@@ -714,7 +714,7 @@ class _DraftReviewCard extends StatelessWidget {
                           draft.currentName,
                           style: theme.textTheme.headlineSmall?.copyWith(
                             color: DS.neutral0,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                             height: 1.15,
                           ),
                         ),

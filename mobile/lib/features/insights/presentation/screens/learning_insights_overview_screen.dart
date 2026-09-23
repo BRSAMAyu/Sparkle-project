@@ -441,7 +441,7 @@ class _OverviewHero extends StatelessWidget {
           Text(
             context.l10n.insFlowTitle,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                   height: 1.2,
                 ),
           ),
@@ -518,7 +518,7 @@ class _InsightModuleCard extends StatelessWidget {
                   child: Text(
                     title,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                   ),
                 ),

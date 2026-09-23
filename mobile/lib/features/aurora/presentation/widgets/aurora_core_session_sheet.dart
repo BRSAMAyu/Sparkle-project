@@ -644,7 +644,9 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
               children: [
                 Text(
                   l10n.auroraCoreSessionTitle,
-                  style: DS.titleMedium.copyWith(
+                  // sheet 主标题：依赖 19px 视觉重量，显式升 titleLarge
+                  // （N41 同名同值收敛后 DS.titleMedium=16/w500——TYPE-RHYTHM 卡）。
+                  style: DS.titleLarge.copyWith(
                     color: DS.textPrimary,
                     fontWeight: DS.fontWeightBold,
                   ),

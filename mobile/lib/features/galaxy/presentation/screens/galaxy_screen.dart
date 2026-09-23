@@ -3957,7 +3957,7 @@ class _GalaxyDraftPromptCard extends StatelessWidget {
                             ),
                             style: theme.textTheme.titleMedium?.copyWith(
                               color: DS.neutral0,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                               height: 1.2,
                             ),
                           ),
@@ -4176,7 +4176,7 @@ class _StatusPanel extends StatelessWidget {
                       style: TextStyle(
                         color: foregroundColor,
                         fontSize: 20,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                         letterSpacing: 0.2,
                       ),
                       textAlign: TextAlign.center,
@@ -4358,7 +4358,7 @@ class _OverviewMetric extends StatelessWidget {
             style: TextStyle(
               color: foreground,
               fontSize: 13,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             ),
           )
         else
@@ -4371,7 +4371,7 @@ class _OverviewMetric extends StatelessWidget {
               style: TextStyle(
                 color: foreground,
                 fontSize: 15,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -4419,7 +4419,7 @@ class _GalaxyMasteryEmptyBanner extends StatelessWidget {
                       style: TextStyle(
                         color: DS.neutral0,
                         fontSize: 14,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 4),

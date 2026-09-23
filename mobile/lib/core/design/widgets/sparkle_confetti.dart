@@ -208,7 +208,7 @@ class _SparkleConfettiState extends State<SparkleConfetti> {
                                 .titleSmall
                                 ?.copyWith(
                                   color: scheme.onSurface,
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w700,
                                 ),
                           ),
                         if (message != null &&

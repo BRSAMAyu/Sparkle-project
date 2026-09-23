@@ -1046,7 +1046,7 @@ class _Last24hSprintBanner extends StatelessWidget {
                 Text(
                   context.l10n.planDetailSprintModeLabel,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                         color: DS.textPrimary,
                       ),
                 ),
@@ -1199,7 +1199,7 @@ class _TodayTaskCard extends StatelessWidget {
                                 .titleMedium
                                 ?.copyWith(
                                   color: accentColor,
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w700,
                                 ),
                           ),
               ),
@@ -1208,7 +1208,7 @@ class _TodayTaskCard extends StatelessWidget {
                 child: Text(
                   task.title,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                         height: 1.25,
                       ),
                 ),
@@ -1326,7 +1326,7 @@ class _PlanDayExpansion extends StatelessWidget {
           title: Text(
             context.l10n.planDetailDayLabel(group.day),
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
           ),
           subtitle: Text(
@@ -1472,7 +1472,7 @@ class _CommonMistakesToWatch extends StatelessWidget {
             context.l10n.planDetailCommonMistakes,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   color: DS.warning,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                   height: 1.25,
                 ),
           ),

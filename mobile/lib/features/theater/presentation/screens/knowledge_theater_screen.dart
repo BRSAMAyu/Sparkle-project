@@ -668,7 +668,7 @@ class _KnowledgeTheaterScreenState
               Text(
                 sheetContext.l10n.theaterRecordActualTitle,
                 style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                     ),
               ),
               const SizedBox(height: 8),
@@ -806,7 +806,7 @@ class _KnowledgeTheaterScreenState
                         .textTheme
                         .headlineSmall
                         ?.copyWith(
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                   ),
                   const SizedBox(height: 8),
@@ -851,7 +851,7 @@ class _KnowledgeTheaterScreenState
                       sheetContext.l10n.theaterNodeRoleInPath,
                       style:
                           Theme.of(sheetContext).textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w800,
+                                fontWeight: FontWeight.w700,
                               ),
                     ),
                     const SizedBox(height: 10),
@@ -1152,7 +1152,7 @@ class _NodeStatChip extends StatelessWidget {
           Text(
             value,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                   color: chipAccent,
                 ),
           ),
@@ -1203,7 +1203,7 @@ class _SelectedNodeBanner extends StatelessWidget {
           Text(
             context.l10n.theaterSelectedNode(node.name),
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                   color: accent,
                 ),
           ),
@@ -1451,7 +1451,7 @@ class _TheaterImmersiveTopBar extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                 ),
               ),
@@ -1550,7 +1550,7 @@ class _TheaterSettingsDrawer extends StatelessWidget {
                         context.l10n.theaterSettingsTitle,
                         style:
                             Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w700,
                                 ),
                       ),
                       const SizedBox(height: 4),
@@ -1619,7 +1619,7 @@ class _TheaterSettingsDrawer extends StatelessWidget {
                   Text(
                     context.l10n.theaterSettingsSuggestions,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                   ),
                   const SizedBox(height: 10),
@@ -1804,7 +1804,7 @@ class _TheaterIntroState extends StatelessWidget {
               Text(
                 context.l10n.theaterIntroTitle,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                     ),
               ),
               const SizedBox(height: 10),
@@ -2478,7 +2478,7 @@ class _PredictionLoadingStateState extends State<_PredictionLoadingState>
           Text(
             context.l10n.theaterLoadingTitle,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
           ),
           const SizedBox(height: 10),
@@ -2777,7 +2777,7 @@ class _TimelineSection extends StatelessWidget {
                         context.l10n.theaterTimelineCurrentPhase,
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
                           color: DS.brandPrimary,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                   ),
                   const SizedBox(height: 6),
@@ -2785,7 +2785,7 @@ class _TimelineSection extends StatelessWidget {
                     currentFrame?.activeStepTitle ??
                         context.l10n.theaterTimelineWaitingPath,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                   ),
                   const SizedBox(height: 6),
@@ -3278,7 +3278,7 @@ class _RouteListView extends StatelessWidget {
                             style: Theme.of(context)
                                 .textTheme
                                 .titleSmall
-                                ?.copyWith(fontWeight: FontWeight.w800),
+                                ?.copyWith(fontWeight: FontWeight.w700),
                           ),
                           if (isRecommended)
                             _MetricPill(
@@ -3468,7 +3468,7 @@ class _RouteComparePager extends StatelessWidget {
                                   .textTheme
                                   .titleSmall
                                   ?.copyWith(
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight: FontWeight.w700,
                                   ),
                             ),
                             if (isRecommended) ...[
@@ -3592,7 +3592,7 @@ class _RouteComparePager extends StatelessWidget {
                                         .textTheme
                                         .titleSmall
                                         ?.copyWith(
-                                          fontWeight: FontWeight.w800,
+                                          fontWeight: FontWeight.w700,
                                         ),
                                   ),
                                   if (isRecommended) ...[
@@ -4000,7 +4000,7 @@ class _CompactRoutePreviewCard extends StatelessWidget {
           Text(
             context.l10n.theaterCompactComparisonTitle,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
           ),
           const SizedBox(height: 6),
@@ -4097,7 +4097,7 @@ class _TimelineMetricTile extends StatelessWidget {
             Text(
               value,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                     color: accent,
                   ),
             ),
@@ -4131,7 +4131,7 @@ class _RouteComparisonCard extends StatelessWidget {
           Text(
             context.l10n.theaterComparisonTitle,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
           ),
           const SizedBox(height: 6),
@@ -4202,7 +4202,7 @@ class _RouteComparisonCard extends StatelessWidget {
   }) {
     final style = header
         ? Theme.of(context).textTheme.labelLarge?.copyWith(
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             )
         : Theme.of(context).textTheme.bodySmall?.copyWith(
               height: 1.4,
@@ -4267,7 +4267,7 @@ class _BranchDeltaCard extends StatelessWidget {
           Text(
             context.l10n.theaterBranchDeltaTitle,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
           ),
           const SizedBox(height: 8),
@@ -4412,7 +4412,7 @@ class _WhatIfSectionState extends State<_WhatIfSection> {
                 Text(
                   context.l10n.theaterWhatIfPreviewTitle,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                 ),
                 const SizedBox(height: 10),
@@ -4480,7 +4480,7 @@ class _WhatIfSectionState extends State<_WhatIfSection> {
                           .toString(),
                     ),
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                   ),
                   if ((widget.result!.branchLabel ?? '').isNotEmpty) ...[
@@ -4940,7 +4940,7 @@ class _AdoptionSuccessOverlay extends StatelessWidget {
                   Text(
                     context.l10n.theaterAdoptionSynced,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                     textAlign: TextAlign.center,
                   ),
@@ -4971,7 +4971,7 @@ class _AdoptionSuccessOverlay extends StatelessWidget {
                             style: Theme.of(context)
                                 .textTheme
                                 .titleSmall
-                                ?.copyWith(fontWeight: FontWeight.w800),
+                                ?.copyWith(fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 8),
                           ...createdTasks.take(3).map(

@@ -146,7 +146,7 @@ class _SectionCard extends StatelessWidget {
                 child: Text(
                   title,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                 ),
               ),
@@ -207,7 +207,7 @@ class _TimeDistributionChart extends StatelessWidget {
               Text(
                 context.l10n.gdTimeHours(item.hours.toStringAsFixed(1)),
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                     ),
               ),
             ],
@@ -342,7 +342,7 @@ class _KnowledgeChanges extends StatelessWidget {
                 context.l10n.gdMasteryMove(before, after),
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
                       color: colors.onSurfaceVariant,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                     ),
               ),
             ],
@@ -429,7 +429,7 @@ class _MetricChip extends StatelessWidget {
         label,
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
               color: colors.onSecondaryContainer,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             ),
       ),
     );

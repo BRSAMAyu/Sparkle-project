@@ -230,7 +230,7 @@ class _GalaxyUploadStatusCard extends StatelessWidget {
                       _title(context),
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: DS.neutral0,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -283,7 +283,7 @@ class _GalaxyUploadStatusCard extends StatelessWidget {
                 '${(session.overallProgress * 100).round()}%',
                 style: theme.textTheme.labelLarge?.copyWith(
                   color: accentColor,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],

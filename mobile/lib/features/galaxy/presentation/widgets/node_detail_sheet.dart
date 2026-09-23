@@ -360,7 +360,7 @@ class _HistoryContent extends StatelessWidget {
                     : '$percent%',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       color: history.mastery <= 0 ? DS.textSecondary : DS.info,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                     ),
               ),
             ],

@@ -812,7 +812,7 @@ class _GoalConfirmStep extends StatelessWidget {
         Text(
           title,
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
               ),
         ),
         const SizedBox(height: 8),
