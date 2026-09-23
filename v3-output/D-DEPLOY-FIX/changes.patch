@@ -1,0 +1,395 @@
+diff --git a/monitoring/prometheus.yml b/monitoring/prometheus.yml
+index 04050a4d..94c11a7e 100755
+--- a/monitoring/prometheus.yml
++++ b/monitoring/prometheus.yml
+@@ -14,6 +14,21 @@ rule_files:
+   - "sparkle_recording_rules.yml"
+   - "sqam_alerts.yml"
+ 
++# ── 抓取目标命名对齐（D-DEPLOY-FIX G1）────────────────────────────────────────
++# 本文件同时被 dev（docker-compose.yml）与 prod（docker-compose.prod.yml）的
++# prometheus 服务挂载。目标名以 **prod 服务真实名** 为准——Docker 的 user-defined
++# 网络按「服务名 + container_name」双轨解析，prometheus 与被抓目标同在 app 内网：
++#   - 网关为蓝绿双实例：gateway_blue + gateway_green（同挂 edge/app 网络），
++#     **两个都要抓**——任一实例掉线都能在 up{job="sparkle_gateway"} 序列上可见，
++#     单实例 down 即告警（蓝绿冗余已降半，值得知道）；
++#   - 引擎 FastAPI 的服务名是 backend（container_name 为 sparkle_backend）。
++# 旧目标名 sparkle_gateway / sparkle_api 在 prod 网络内解析不到，是上云监控
++# 全面 no-data 的根因；dev 形制的等价服务名恰是旧名——dev 侧如需恢复抓取，
++# 用文件服务发现（file_sd）按形制生成目标（登记债务，本轮未实现）。
++# job_name 一律不变：告警规则（sparkle_slo_alerts.yml 等）与 Grafana 面板按
++# job 标签取数，改 job 名会连锁破坏告警与面板。
++# ─────────────────────────────────────────────────────────────────────────────
++
+ scrape_configs:
+   - job_name: 'prometheus'
+     static_configs:
+@@ -21,31 +36,31 @@ scrape_configs:
+ 
+   - job_name: 'sparkle_gateway'
+     static_configs:
+-      - targets: ['sparkle_gateway:8080']
++      - targets: ['gateway_blue:8080', 'gateway_green:8080']
+ 
+   - job_name: 'sparkle_backend'
+     static_configs:
+-      - targets: ['sparkle_api:8000']
++      - targets: ['backend:8000']
+ 
+   - job_name: 'sparkle_counterfactual'
+     metrics_path: /metrics
+     static_configs:
+-      - targets: ['sparkle_api:8000']
++      - targets: ['backend:8000']
+ 
+   - job_name: 'sparkle_simulation_lab'
+     metrics_path: /metrics
+     static_configs:
+-      - targets: ['sparkle_api:8000']
++      - targets: ['backend:8000']
+ 
+   - job_name: 'sparkle_safe_experiments'
+     metrics_path: /metrics
+     static_configs:
+-      - targets: ['sparkle_api:8000']
++      - targets: ['backend:8000']
+ 
+   - job_name: 'sparkle_community_privacy'
+     metrics_path: /metrics
+     static_configs:
+-      - targets: ['sparkle_api:8000']
++      - targets: ['backend:8000']
+ 
+   - job_name: 'alertmanager'
+     static_configs:
+@@ -60,9 +75,14 @@ scrape_configs:
+       - targets: ['cadvisor:8080']
+ 
+   - job_name: 'sparkle_agent_grpc'
++    # sparkle_agent 在两种形制下均可解析（prod container_name 与 dev 服务名同名），保持不变
+     static_configs:
+       - targets: ['sparkle_agent:50051']
+ 
+-  - job_name: 'sparkle_celery'
+-    static_configs:
+-      - targets: ['sparkle_celery:9808']
++  # 待部署：全仓不存在 celery metrics exporter（9808 无任何监听者），保留目标只会
++  # 产生永久 down 序列。接入 prometheus-community/celery-exporter（celery_worker
++  # 侧开启 --metrics 端口）后取消注释；在此之前 celery_alerts.yml（按
++  # job="celery_worker"/"celery_beat" 取数）持续 no-data 空转（登记债务）。
++  # - job_name: 'sparkle_celery'
++  #   static_configs:
++  #     - targets: ['sparkle_celery:9808']
+diff --git a/scripts/backup_prod_data.sh b/scripts/backup_prod_data.sh
+index 4ba278ca..349f8369 100644
+--- a/scripts/backup_prod_data.sh
++++ b/scripts/backup_prod_data.sh
+@@ -13,6 +13,26 @@ MINIO_DATA_PATH="${MINIO_DATA_PATH:-/data}"
+ KEEP_DAYS="${KEEP_DAYS:-7}"
+ REDIS_PASSWORD="${REDIS_PASSWORD:-}"
+ 
++# prod Redis 三账号 ACL 形制下 default 账号也带密码（docker-compose.prod.yml users.acl）。
++# cron 调度环境没有 shell profile，未显式传 REDIS_PASSWORD 时从仓库根 .env 提取一次——
++# 只取值、不 source（避免执行 .env 内容）；去引号语义与 scripts/deploy/bootstrap.sh env_get 一致。
++if [[ -z "${REDIS_PASSWORD}" ]]; then
++  _backup_script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
++  _env_file="${_backup_script_dir}/../.env"
++  if [[ -f "${_env_file}" ]]; then
++    _val="$(grep -E '^REDIS_PASSWORD=' "${_env_file}" | tail -n 1 | cut -d= -f2- | tr -d '\r')"
++    if [[ ${#_val} -ge 2 ]]; then
++      if [[ "${_val:0:1}" == '"' && "${_val: -1}" == '"' ]]; then _val="${_val:1:${#_val}-2}"; fi
++      if [[ "${_val:0:1}" == "'" && "${_val: -1}" == "'" ]]; then _val="${_val:1:${#_val}-2}"; fi
++    fi
++    if [[ -n "${_val}" ]]; then
++      REDIS_PASSWORD="${_val}"
++      export REDIS_PASSWORD
++    fi
++  fi
++  unset _backup_script_dir _env_file _val
++fi
++
+ checksum_file() {
+   if command -v sha256sum >/dev/null 2>&1; then
+     sha256sum "$@"
+diff --git a/scripts/deploy/bootstrap.sh b/scripts/deploy/bootstrap.sh
+index 4a4c2e48..e727bc93 100755
+--- a/scripts/deploy/bootstrap.sh
++++ b/scripts/deploy/bootstrap.sh
+@@ -16,6 +16,7 @@
+ #   --with-demo-seed       部署后灌入参展演示数据（默认关；演示账号密码自动生成并写入 .env）
+ #   --skip-smoke           跳过端到端 smoke 探针（HTTP health + 一条最小 chat 探测）
+ #   --lean-observability   8G 单机建议：裁掉 loki/promtail/tempo/cadvisor（--scale 0）
++#   --skip-backup-check    跳过「备份 cron 安装 + 首次备份校验」步（G2，默认执行）
+ #   --env-file PATH        云上 .env 路径（默认 ./ .env，即仓库根 .env）
+ #   --image-tag TAG        覆盖镜像 tag（默认读 .env 的 IMAGE_TAG）
+ #   --domain HOST          对外域名（默认读 .env 的 PRODUCTION_URL host）
+@@ -45,8 +46,11 @@ DOMAIN_OVERRIDE=""
+ DOMAIN=""
+ WITH_DEMO_SEED=false
+ SKIP_SMOKE=false
++SKIP_BACKUP_CHECK=false
+ LEAN_OBS=false
+ PLAN_MODE=false
++# 摘要用状态面（步骤 9.5 就地更新；未跑到的形制保持诚实空态）
++BACKUP_CRON_STATUS="未安装（手动: bash scripts/install_backup_cron.sh）"
+ 
+ MIN_DISK_MB=20480      # 20G（CLOUD_DEPLOY.md §3.0）
+ MIN_MEM_MB=7168        # 7G
+@@ -439,22 +443,27 @@ step4_migrate() {
+ step5_extensions() {
+   info "[5/9] 扩展初始化（pgvector/Apache AGE + RAG 向量索引）"
+   if [[ "$PLAN_MODE" == "true" ]]; then
+-    plan_emit "优先路径: 若 compose 已定义 age_init 类 one-shot 服务（D-AGE 卡合入后）→ up + 等 exit 0"
+-    plan_emit "当前路径: up backend（running 即可）→ exec: python scripts/init_age_extension.py（ensure vector+age，幂等）"
++    plan_emit "优先路径: compose 内已定义 AGE one-shot（db_age_init，D-AGE 已合入）→ up + 等 exit 0"
++    plan_emit "          db_age_init 缺席的形制才走 fallback: up backend（running 即可）"
++    plan_emit "          → exec: python scripts/init_age_extension.py（ensure vector+age，幂等）"
+     plan_emit "          exec: python scripts/init_redis_index.py（RAG 向量索引）"
+-    plan_emit "现状提示: prod db 镜像暂未内置 AGE（缺口#1，D-AGE 卡并行修复中）——AGE 段失败按 WARN 处理不阻塞上线，TODO 钩子见脚本内注释"
++    plan_emit "兜底事实: 即使探测落空，AGE 初始化仍由 backend/agent/celery 的 depends_on(db_age_init=service_completed_successfully) 强制先行，功能无损"
+     return 0
+   fi
+-  # D-AGE 撞面规避钩子：若 prod compose 未来合入 age_init one-shot（与 dev compose 同名语义），
+-  # 自动走 compose 路径；否则 exec 既有脚本。不硬编码任何新路径，两形态互不冲突。
++  # D-AGE 撞面规避钩子：prod compose 的 AGE one-shot 服务名叫 db_age_init（dev 侧是
++  # sparkle_age_init），正则两者都认；即使未来再改名导致探测落空，AGE 初始化也有
++  # depends_on(db_age_init: service_completed_successfully) 兜底强制先行，功能无损。
+   local age_svc
+-  age_svc="$(compose config --services 2>/dev/null | grep -xE '(sparkle_)?age_init' | head -n 1 || true)"
++  age_svc="$(compose config --services 2>/dev/null | grep -xE '(sparkle_)?age_init|db_age_init' | head -n 1 || true)"
+   if [[ -n "$age_svc" ]]; then
+     info "检测到 compose 内 AGE 初始化服务: ${age_svc}（D-AGE 已合入形态），走 compose 路径"
+     compose up -d "$age_svc"
+     wait_exit0 "AGE 扩展初始化(${age_svc})" "$age_svc" 300
++    # 下方共享的 RAG 初始化要 exec 进 backend——compose 路径下 backend 尚未被步骤 7
++    # 拉起，先确保其 running（依赖的 db_migrate/db_age_init/redis 此时均已完成，秒级）。
++    compose up -d backend
+   else
+-    # TODO(D-AGE): prod compose db 镜像切 pgvector-age + age_init 接线后，本分支自然退役。
++    # 仅当形制真的没有 AGE one-shot 时才走这里（起 backend 再 exec，幂等）。
+     compose up -d backend
+     local cid st waited=0
+     cid="$(compose ps -aq backend | tail -n 1)"
+@@ -474,9 +483,10 @@ step5_extensions() {
+     if compose exec -T backend python scripts/init_age_extension.py; then
+       ok "AGE/pgvector 扩展初始化完成"
+     else
+-      warn "AGE 扩展初始化失败——大概率是当前 prod db 镜像(pgvector/pgvector:pg16)未内置 Apache AGE（仓库缺口#1）"
++      warn "AGE 扩展初始化失败——大概率是当前 db 镜像未内置 Apache AGE"
+       warn "  影响: 星图/知识图谱（AGE 面）暂不可用，其余功能不受阻"
+-      warn "  修复: 等 D-AGE 卡合入（db 镜像换 docker/pgvector-age.Dockerfile 产物 + age_init 接进 prod compose），重跑本脚本即自动走 compose 路径"
++      warn "  说明: prod 形制的 db 镜像已是 pgvector-age（db_age_init one-shot 先行）；"
++      warn "        走到本 fallback 说明所在形制缺 AGE one-shot，属非常规形态，请核对 compose 文件"
+     fi
+   fi
+   if compose exec -T backend python scripts/init_redis_index.py; then
+@@ -692,6 +702,41 @@ PYEOF
+   fi
+ }
+ 
++# ----------------------------------------------------------------------------
++# 步骤 9.5：备份 cron 调度面（D-DEPLOY G2 最小解①；--skip-backup-check 跳过）
++# ----------------------------------------------------------------------------
++step_backup_cron() {
++  if [[ "$SKIP_BACKUP_CHECK" == "true" ]]; then
++    info "[9.5] 备份 cron 调度面：已按 --skip-backup-check 跳过"
++    return 0
++  fi
++  info "[9.5] 备份 cron 调度面（install_backup_cron.sh：幂等安装 + 首次备份校验）"
++  if [[ "$PLAN_MODE" == "true" ]]; then
++    plan_emit "幂等安装宿主 crontab（只动 marker 管理块，不碰其它条目）:"
++    plan_emit "  15 3 * * * cd ${ROOT_DIR} && bash scripts/backup_prod_data.sh >> ${ROOT_DIR}/backups/backup.log 2>&1"
++    plan_emit "随后 --run-now 跑一次首次备份校验三件套链路（--skip-backup-check 可跳过；失败仅 WARN 不阻塞上线）"
++    BACKUP_CRON_STATUS="[PLAN] 将由步骤 9.5 幂等安装（15 3 * * *）"
++    return 0
++  fi
++  local rc=0
++  # 退出码契约（见 install_backup_cron.sh 头注）: 0=装好且备份过 ｜ 2=装好但首次备份失败 ｜ 1=安装失败
++  bash scripts/install_backup_cron.sh --run-now || rc=$?
++  case "$rc" in
++    0)
++      ok "备份 cron 已安装并通过首次备份校验"
++      BACKUP_CRON_STATUS="已安装: 15 3 * * * bash scripts/backup_prod_data.sh（日志 backups/backup.log）"
++      ;;
++    2)
++      warn "备份 cron 已安装，但首次备份未通过（不阻塞上线；排查: bash scripts/install_backup_cron.sh --run-now）"
++      BACKUP_CRON_STATUS="已安装: 15 3 * * *（首次备份未过，需排查）"
++      ;;
++    *)
++      warn "备份 cron 安装失败（不阻塞上线）——手动安装: bash scripts/install_backup_cron.sh"
++      BACKUP_CRON_STATUS="未安装（安装失败，手动: bash scripts/install_backup_cron.sh）"
++      ;;
++  esac
++}
++
+ # ----------------------------------------------------------------------------
+ # 摘要（含回滚提示）
+ # ----------------------------------------------------------------------------
+@@ -717,10 +762,11 @@ step_summary() {
+   log ""
+   log " 日常发版   : IMAGE_TAG=<新tag> bash scripts/deploy-prod.sh   （蓝绿切换+健康门）"
+   log " 回滚·应用  : IMAGE_TAG=<旧tag> 重跑 deploy-prod.sh，蓝绿自动回切"
+-  log " 回滚·数据  : bash scripts/backup_prod_data.sh（建议 cron 化）→ bash scripts/restore_prod_data.sh <备份包>"
++  log " 回滚·数据  : bash scripts/backup_prod_data.sh → bash scripts/restore_prod_data.sh <备份包>"
+   log " 停止全栈   : docker compose -f ${COMPOSE_FILE} down （注意：不加 -v；数据在 ./postgres_data 等 bind mount）"
+   log ""
+-  log " 备份 cron  : 15 3 * * * cd ${ROOT_DIR} && bash scripts/backup_prod_data.sh >> /var/log/sparkle-backup.log 2>&1"
++  log " 备份 cron   : ${BACKUP_CRON_STATUS}"
++  log " 备份·异地   : 登记待办（未实现）：定期把 backups/ 最新包 mc mirror 到对象存储（约 ¥5-10/月）"
+   log " 移动端出包 : cd mobile && flutter build apk --release \\"
+   log "              --dart-define=API_BASE_URL=https://${DOMAIN:-api.example.com} \\"
+   log "              --dart-define=WS_BASE_URL=wss://${DOMAIN:-api.example.com} \\"
+@@ -743,6 +789,7 @@ while [[ $# -gt 0 ]]; do
+     --plan)                 PLAN_MODE=true ;;
+     --with-demo-seed)       WITH_DEMO_SEED=true ;;
+     --skip-smoke)           SKIP_SMOKE=true ;;
++    --skip-backup-check)    SKIP_BACKUP_CHECK=true ;;
+     --lean-observability)   LEAN_OBS=true ;;
+     --env-file)             ENV_FILE="$2"; shift ;;
+     --image-tag)            IMAGE_TAG_OVERRIDE="$2"; shift ;;
+@@ -774,6 +821,7 @@ step7_up
+ step_seed
+ step8_readiness
+ step9_smoke
++step_backup_cron
+ step_summary
+ if [[ "$PLAN_MODE" != "true" ]]; then
+   ok "全部完成 —— 系统已可演示"
+diff --git a/scripts/install_backup_cron.sh b/scripts/install_backup_cron.sh
+new file mode 100755
+index 00000000..fb68b720
+--- /dev/null
++++ b/scripts/install_backup_cron.sh
+@@ -0,0 +1,132 @@
++#!/usr/bin/env bash
++# =============================================================================
++# scripts/install_backup_cron.sh — 备份 cron 调度面安装器（D-DEPLOY-FIX G2）
++# =============================================================================
++# 对应 D-DEPLOY 报告 §2 G2 最小解①：「bootstrap 加一步安装 cron 条目 + 校验首次备份」。
++# 背景：备份脚本（scripts/backup_prod_data.sh，PG dump + Redis RDB + MinIO tar，
++#       sha256sums + 7 天滚动清理）早已在库，但 cron 只是摘要里的一行建议——
++#       没有落地机制等于没有备份。本脚本把「建议」变成「装机即有」。
++#
++# 载体选择：宿主 crontab（每台 Linux VPS 自带，零新容器、零 systemd 单元放置权限）。
++#           否决 prod compose 内 cron 服务形态：需要把 docker.sock 挂进调度容器，
++#           攻击面与镜像依赖都不划算（D-DEPLOY-FIX 报告 §G2 有记录）。
++# 幂等：只管理本脚本 marker 注释块内的条目，重装先摘旧块再写新块，
++#       不碰用户 crontab 里的其它条目。
++# 异地化：登记待办、未实现（单机磁盘损坏 = 备份同损）——后续把 ./backups 最新包
++#         mc mirror 到对象存储（约 ¥5-10/月；可先用 MinIO 的 sparkle-backups 桶过渡）。
++#
++# 用法：
++#   bash scripts/install_backup_cron.sh [--print] [--run-now] [--remove]
++#
++#   --print    干跑：只打印将写入的 crontab 条目，不做任何变更
++#   --run-now  安装后立即跑一次备份，校验 PG+Redis+MinIO 三件套链路
++#              （演示期数据量级为 MB 级；失败以退出码 2 区分，不掩蔽安装成败）
++#   --remove   摘除本管理块（其余 crontab 条目原样保留）
++#
++# 退出码：0 = 安装成功且（若 --run-now）首次备份通过；2 = 安装成功但首次备份失败；
++#         1 = 安装本身失败。
++# 环境变量：SPARKLE_BACKUP_REPO_DIR（默认脚本上级目录）、SPARKLE_BACKUP_SCHEDULE（默认 15 3 * * *）。
++# =============================================================================
++set -euo pipefail
++
++SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
++REPO_DIR="${SPARKLE_BACKUP_REPO_DIR:-$(cd "${SCRIPT_DIR}/.." && pwd)}"
++SCHEDULE="${SPARKLE_BACKUP_SCHEDULE:-15 3 * * *}"
++LOG_FILE="${REPO_DIR}/backups/backup.log"
++
++BEGIN_MARK="# === sparkle-backup cron (managed by scripts/install_backup_cron.sh; do not edit inline) ==="
++END_MARK="# === sparkle-backup cron end ==="
++
++log()  { printf '[backup-cron] %s\n' "$*"; }
++warn() { printf '[backup-cron] ⚠️  %s\n' "$*" >&2; }
++die()  { printf '[backup-cron] ❌ %s\n' "$*" >&2; exit 1; }
++
++# 管理块全文（crontab 条目用绝对仓库路径；cron 默认 PATH 可找到 bash/docker）
++managed_block() {
++  printf '%s\n' "${BEGIN_MARK}"
++  printf '%s cd %s && bash scripts/backup_prod_data.sh >> %s 2>&1\n' "${SCHEDULE}" "${REPO_DIR}" "${LOG_FILE}"
++  printf '%s\n' "${END_MARK}"
++}
++
++current_crontab() {
++  crontab -l 2>/dev/null || true
++}
++
++# stdin -> stdout：摘除管理块，其余条目原样透传（awk 字符串匹配，免正则转义坑）
++strip_managed_block() {
++  awk -v b="${BEGIN_MARK}" -v e="${END_MARK}" \
++    'index($0, b) == 1 { skip = 1; next } index($0, e) == 1 { skip = 0; next } !skip { print }'
++}
++
++do_print() {
++  log "将写入 crontab（用户: $(id -un)）的管理块："
++  managed_block | sed 's/^/    /'
++}
++
++do_install() {
++  command -v crontab >/dev/null 2>&1 ||
++    die "宿主机没有 crontab 命令（cron 未安装？）。手动安装一行即可: $(managed_block | sed -n 2p)"
++  # 备份日志的重定向先于备份脚本执行，目录必须先存在
++  mkdir -p "${REPO_DIR}/backups"
++  local rest merged
++  rest="$(current_crontab | strip_managed_block)"
++  if [[ -n "${rest}" ]]; then
++    merged="$(printf '%s\n%s\n' "${rest}" "$(managed_block)")"
++  else
++    merged="$(managed_block)"
++  fi
++  printf '%s\n' "${merged}" | crontab -
++  log "crontab 条目已安装（用户: $(id -un)，调度: ${SCHEDULE}）:"
++  managed_block | sed -n 2p | sed 's/^/    /'
++  log "日志: ${LOG_FILE}；备份保留 KEEP_DAYS=7 天滚动"
++}
++
++do_remove() {
++  local rest
++  rest="$(current_crontab | strip_managed_block)"
++  if [[ -z "${rest}" ]]; then
++    crontab -r 2>/dev/null || true
++    log "管理块已摘除；crontab 无其它条目，已整体移除"
++  else
++    printf '%s\n' "${rest}" | crontab -
++    log "管理块已摘除（其余条目原样保留）"
++  fi
++}
++
++do_run_now() {
++  log "首次备份校验（PG dump + Redis RDB + MinIO tar + sha256sums）…"
++  if (cd "${REPO_DIR}" && bash scripts/backup_prod_data.sh); then
++    log "首次备份通过（包位于 ${REPO_DIR}/backups/，还原演练: bash scripts/restore_prod_data.sh <包>）"
++    return 0
++  fi
++  warn "首次备份失败（不阻塞上线）。排查: cd ${REPO_DIR} && bash scripts/backup_prod_data.sh"
++  warn "常见原因: docker 权限（cron 用户需能 docker exec sparkle_db）/ .env 缺 REDIS_PASSWORD"
++  return 2
++}
++
++MODE="install"
++RUN_NOW=false
++while [[ $# -gt 0 ]]; do
++  case "$1" in
++    --print)  MODE="print" ;;
++    --remove) MODE="remove" ;;
++    --run-now) RUN_NOW=true ;;
++    -h | --help)
++      grep -E '^#   ' "$BASH_SOURCE" | head -12 | sed 's/^#   //'
++      exit 0
++      ;;
++    *) die "未知参数: $1（--help 看用法）" ;;
++  esac
++  shift
++done
++
++case "${MODE}" in
++  print)  do_print ;;
++  remove) do_remove ;;
++  install)
++    do_install
++    if [[ "${RUN_NOW}" == "true" ]]; then
++      do_run_now || exit 2   # 安装成功、首次备份失败 → 退出码 2
++    fi
++    ;;
++esac

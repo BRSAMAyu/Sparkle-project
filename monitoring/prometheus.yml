@@ -14,6 +14,21 @@ rule_files:
   - "sparkle_recording_rules.yml"
   - "sqam_alerts.yml"
 
+# ── 抓取目标命名对齐（D-DEPLOY-FIX G1）────────────────────────────────────────
+# 本文件同时被 dev（docker-compose.yml）与 prod（docker-compose.prod.yml）的
+# prometheus 服务挂载。目标名以 **prod 服务真实名** 为准——Docker 的 user-defined
+# 网络按「服务名 + container_name」双轨解析，prometheus 与被抓目标同在 app 内网：
+#   - 网关为蓝绿双实例：gateway_blue + gateway_green（同挂 edge/app 网络），
+#     **两个都要抓**——任一实例掉线都能在 up{job="sparkle_gateway"} 序列上可见，
+#     单实例 down 即告警（蓝绿冗余已降半，值得知道）；
+#   - 引擎 FastAPI 的服务名是 backend（container_name 为 sparkle_backend）。
+# 旧目标名 sparkle_gateway / sparkle_api 在 prod 网络内解析不到，是上云监控
+# 全面 no-data 的根因；dev 形制的等价服务名恰是旧名——dev 侧如需恢复抓取，
+# 用文件服务发现（file_sd）按形制生成目标（登记债务，本轮未实现）。
+# job_name 一律不变：告警规则（sparkle_slo_alerts.yml 等）与 Grafana 面板按
+# job 标签取数，改 job 名会连锁破坏告警与面板。
+# ─────────────────────────────────────────────────────────────────────────────
+
 scrape_configs:
   - job_name: 'prometheus'
     static_configs:
@@ -21,31 +36,31 @@ scrape_configs:
 
   - job_name: 'sparkle_gateway'
     static_configs:
-      - targets: ['sparkle_gateway:8080']
+      - targets: ['gateway_blue:8080', 'gateway_green:8080']
 
   - job_name: 'sparkle_backend'
     static_configs:
-      - targets: ['sparkle_api:8000']
+      - targets: ['backend:8000']
 
   - job_name: 'sparkle_counterfactual'
     metrics_path: /metrics
     static_configs:
-      - targets: ['sparkle_api:8000']
+      - targets: ['backend:8000']
 
   - job_name: 'sparkle_simulation_lab'
     metrics_path: /metrics
     static_configs:
-      - targets: ['sparkle_api:8000']
+      - targets: ['backend:8000']
 
   - job_name: 'sparkle_safe_experiments'
     metrics_path: /metrics
     static_configs:
-      - targets: ['sparkle_api:8000']
+      - targets: ['backend:8000']
 
   - job_name: 'sparkle_community_privacy'
     metrics_path: /metrics
     static_configs:
-      - targets: ['sparkle_api:8000']
+      - targets: ['backend:8000']
 
   - job_name: 'alertmanager'
     static_configs:
@@ -60,9 +75,14 @@ scrape_configs:
       - targets: ['cadvisor:8080']
 
   - job_name: 'sparkle_agent_grpc'
+    # sparkle_agent 在两种形制下均可解析（prod container_name 与 dev 服务名同名），保持不变
     static_configs:
       - targets: ['sparkle_agent:50051']
 
-  - job_name: 'sparkle_celery'
-    static_configs:
-      - targets: ['sparkle_celery:9808']
+  # 待部署：全仓不存在 celery metrics exporter（9808 无任何监听者），保留目标只会
+  # 产生永久 down 序列。接入 prometheus-community/celery-exporter（celery_worker
+  # 侧开启 --metrics 端口）后取消注释；在此之前 celery_alerts.yml（按
+  # job="celery_worker"/"celery_beat" 取数）持续 no-data 空转（登记债务）。
+  # - job_name: 'sparkle_celery'
+  #   static_configs:
+  #     - targets: ['sparkle_celery:9808']

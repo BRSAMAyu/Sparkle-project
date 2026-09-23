@@ -16,6 +16,7 @@
 #   --with-demo-seed       部署后灌入参展演示数据（默认关；演示账号密码自动生成并写入 .env）
 #   --skip-smoke           跳过端到端 smoke 探针（HTTP health + 一条最小 chat 探测）
 #   --lean-observability   8G 单机建议：裁掉 loki/promtail/tempo/cadvisor（--scale 0）
+#   --skip-backup-check    跳过「备份 cron 安装 + 首次备份校验」步（G2，默认执行）
 #   --env-file PATH        云上 .env 路径（默认 ./ .env，即仓库根 .env）
 #   --image-tag TAG        覆盖镜像 tag（默认读 .env 的 IMAGE_TAG）
 #   --domain HOST          对外域名（默认读 .env 的 PRODUCTION_URL host）
@@ -45,8 +46,11 @@ DOMAIN_OVERRIDE=""
 DOMAIN=""
 WITH_DEMO_SEED=false
 SKIP_SMOKE=false
+SKIP_BACKUP_CHECK=false
 LEAN_OBS=false
 PLAN_MODE=false
+# 摘要用状态面（步骤 9.5 就地更新；未跑到的形制保持诚实空态）
+BACKUP_CRON_STATUS="未安装（手动: bash scripts/install_backup_cron.sh）"
 
 MIN_DISK_MB=20480      # 20G（CLOUD_DEPLOY.md §3.0）
 MIN_MEM_MB=7168        # 7G
@@ -439,22 +443,27 @@ step4_migrate() {
 step5_extensions() {
   info "[5/9] 扩展初始化（pgvector/Apache AGE + RAG 向量索引）"
   if [[ "$PLAN_MODE" == "true" ]]; then
-    plan_emit "优先路径: 若 compose 已定义 age_init 类 one-shot 服务（D-AGE 卡合入后）→ up + 等 exit 0"
-    plan_emit "当前路径: up backend（running 即可）→ exec: python scripts/init_age_extension.py（ensure vector+age，幂等）"
+    plan_emit "优先路径: compose 内已定义 AGE one-shot（db_age_init，D-AGE 已合入）→ up + 等 exit 0"
+    plan_emit "          db_age_init 缺席的形制才走 fallback: up backend（running 即可）"
+    plan_emit "          → exec: python scripts/init_age_extension.py（ensure vector+age，幂等）"
     plan_emit "          exec: python scripts/init_redis_index.py（RAG 向量索引）"
-    plan_emit "现状提示: prod db 镜像暂未内置 AGE（缺口#1，D-AGE 卡并行修复中）——AGE 段失败按 WARN 处理不阻塞上线，TODO 钩子见脚本内注释"
+    plan_emit "兜底事实: 即使探测落空，AGE 初始化仍由 backend/agent/celery 的 depends_on(db_age_init=service_completed_successfully) 强制先行，功能无损"
     return 0
   fi
-  # D-AGE 撞面规避钩子：若 prod compose 未来合入 age_init one-shot（与 dev compose 同名语义），
-  # 自动走 compose 路径；否则 exec 既有脚本。不硬编码任何新路径，两形态互不冲突。
+  # D-AGE 撞面规避钩子：prod compose 的 AGE one-shot 服务名叫 db_age_init（dev 侧是
+  # sparkle_age_init），正则两者都认；即使未来再改名导致探测落空，AGE 初始化也有
+  # depends_on(db_age_init: service_completed_successfully) 兜底强制先行，功能无损。
   local age_svc
-  age_svc="$(compose config --services 2>/dev/null | grep -xE '(sparkle_)?age_init' | head -n 1 || true)"
+  age_svc="$(compose config --services 2>/dev/null | grep -xE '(sparkle_)?age_init|db_age_init' | head -n 1 || true)"
   if [[ -n "$age_svc" ]]; then
     info "检测到 compose 内 AGE 初始化服务: ${age_svc}（D-AGE 已合入形态），走 compose 路径"
     compose up -d "$age_svc"
     wait_exit0 "AGE 扩展初始化(${age_svc})" "$age_svc" 300
+    # 下方共享的 RAG 初始化要 exec 进 backend——compose 路径下 backend 尚未被步骤 7
+    # 拉起，先确保其 running（依赖的 db_migrate/db_age_init/redis 此时均已完成，秒级）。
+    compose up -d backend
   else
-    # TODO(D-AGE): prod compose db 镜像切 pgvector-age + age_init 接线后，本分支自然退役。
+    # 仅当形制真的没有 AGE one-shot 时才走这里（起 backend 再 exec，幂等）。
     compose up -d backend
     local cid st waited=0
     cid="$(compose ps -aq backend | tail -n 1)"
@@ -474,9 +483,10 @@ step5_extensions() {
     if compose exec -T backend python scripts/init_age_extension.py; then
       ok "AGE/pgvector 扩展初始化完成"
     else
-      warn "AGE 扩展初始化失败——大概率是当前 prod db 镜像(pgvector/pgvector:pg16)未内置 Apache AGE（仓库缺口#1）"
+      warn "AGE 扩展初始化失败——大概率是当前 db 镜像未内置 Apache AGE"
       warn "  影响: 星图/知识图谱（AGE 面）暂不可用，其余功能不受阻"
-      warn "  修复: 等 D-AGE 卡合入（db 镜像换 docker/pgvector-age.Dockerfile 产物 + age_init 接进 prod compose），重跑本脚本即自动走 compose 路径"
+      warn "  说明: prod 形制的 db 镜像已是 pgvector-age（db_age_init one-shot 先行）；"
+      warn "        走到本 fallback 说明所在形制缺 AGE one-shot，属非常规形态，请核对 compose 文件"
     fi
   fi
   if compose exec -T backend python scripts/init_redis_index.py; then
@@ -693,6 +703,41 @@ PYEOF
 }
 
 # ----------------------------------------------------------------------------
+# 步骤 9.5：备份 cron 调度面（D-DEPLOY G2 最小解①；--skip-backup-check 跳过）
+# ----------------------------------------------------------------------------
+step_backup_cron() {
+  if [[ "$SKIP_BACKUP_CHECK" == "true" ]]; then
+    info "[9.5] 备份 cron 调度面：已按 --skip-backup-check 跳过"
+    return 0
+  fi
+  info "[9.5] 备份 cron 调度面（install_backup_cron.sh：幂等安装 + 首次备份校验）"
+  if [[ "$PLAN_MODE" == "true" ]]; then
+    plan_emit "幂等安装宿主 crontab（只动 marker 管理块，不碰其它条目）:"
+    plan_emit "  15 3 * * * cd ${ROOT_DIR} && bash scripts/backup_prod_data.sh >> ${ROOT_DIR}/backups/backup.log 2>&1"
+    plan_emit "随后 --run-now 跑一次首次备份校验三件套链路（--skip-backup-check 可跳过；失败仅 WARN 不阻塞上线）"
+    BACKUP_CRON_STATUS="[PLAN] 将由步骤 9.5 幂等安装（15 3 * * *）"
+    return 0
+  fi
+  local rc=0
+  # 退出码契约（见 install_backup_cron.sh 头注）: 0=装好且备份过 ｜ 2=装好但首次备份失败 ｜ 1=安装失败
+  bash scripts/install_backup_cron.sh --run-now || rc=$?
+  case "$rc" in
+    0)
+      ok "备份 cron 已安装并通过首次备份校验"
+      BACKUP_CRON_STATUS="已安装: 15 3 * * * bash scripts/backup_prod_data.sh（日志 backups/backup.log）"
+      ;;
+    2)
+      warn "备份 cron 已安装，但首次备份未通过（不阻塞上线；排查: bash scripts/install_backup_cron.sh --run-now）"
+      BACKUP_CRON_STATUS="已安装: 15 3 * * *（首次备份未过，需排查）"
+      ;;
+    *)
+      warn "备份 cron 安装失败（不阻塞上线）——手动安装: bash scripts/install_backup_cron.sh"
+      BACKUP_CRON_STATUS="未安装（安装失败，手动: bash scripts/install_backup_cron.sh）"
+      ;;
+  esac
+}
+
+# ----------------------------------------------------------------------------
 # 摘要（含回滚提示）
 # ----------------------------------------------------------------------------
 step_summary() {
@@ -717,10 +762,11 @@ step_summary() {
   log ""
   log " 日常发版   : IMAGE_TAG=<新tag> bash scripts/deploy-prod.sh   （蓝绿切换+健康门）"
   log " 回滚·应用  : IMAGE_TAG=<旧tag> 重跑 deploy-prod.sh，蓝绿自动回切"
-  log " 回滚·数据  : bash scripts/backup_prod_data.sh（建议 cron 化）→ bash scripts/restore_prod_data.sh <备份包>"
+  log " 回滚·数据  : bash scripts/backup_prod_data.sh → bash scripts/restore_prod_data.sh <备份包>"
   log " 停止全栈   : docker compose -f ${COMPOSE_FILE} down （注意：不加 -v；数据在 ./postgres_data 等 bind mount）"
   log ""
-  log " 备份 cron  : 15 3 * * * cd ${ROOT_DIR} && bash scripts/backup_prod_data.sh >> /var/log/sparkle-backup.log 2>&1"
+  log " 备份 cron   : ${BACKUP_CRON_STATUS}"
+  log " 备份·异地   : 登记待办（未实现）：定期把 backups/ 最新包 mc mirror 到对象存储（约 ¥5-10/月）"
   log " 移动端出包 : cd mobile && flutter build apk --release \\"
   log "              --dart-define=API_BASE_URL=https://${DOMAIN:-api.example.com} \\"
   log "              --dart-define=WS_BASE_URL=wss://${DOMAIN:-api.example.com} \\"
@@ -743,6 +789,7 @@ while [[ $# -gt 0 ]]; do
     --plan)                 PLAN_MODE=true ;;
     --with-demo-seed)       WITH_DEMO_SEED=true ;;
     --skip-smoke)           SKIP_SMOKE=true ;;
+    --skip-backup-check)    SKIP_BACKUP_CHECK=true ;;
     --lean-observability)   LEAN_OBS=true ;;
     --env-file)             ENV_FILE="$2"; shift ;;
     --image-tag)            IMAGE_TAG_OVERRIDE="$2"; shift ;;
@@ -774,6 +821,7 @@ step7_up
 step_seed
 step8_readiness
 step9_smoke
+step_backup_cron
 step_summary
 if [[ "$PLAN_MODE" != "true" ]]; then
   ok "全部完成 —— 系统已可演示"
