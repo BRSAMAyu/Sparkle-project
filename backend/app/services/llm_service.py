@@ -797,7 +797,11 @@ class LLMService:
                 raise HTTPException(status_code=503, detail="LLM Service Temporarily Unavailable (Circuit Open)") from None
             except Exception as e:
                 await circuit_breaker_service.record_failure("primary_llm")
-                logger.error(f"LLM Chat Error: {e}")
+                # BATCH-CAP（PROD-LOG2 ②-2）：str(e) 为空的异常（如 TimeoutError()）
+                # 曾产出 23 条不可诊断的 "LLM Chat Error: " —— 兜底出类型名并附
+                # traceback（照 wt182 reviewer 先例 + EXC-TRACEBACK 迁移同法）。
+                error_detail = str(e).strip() or type(e).__name__
+                logger.opt(exception=True).error(f"LLM Chat Error: {error_detail}")
                 raise e
 
     def _get_provider_name_from_url(self) -> str:

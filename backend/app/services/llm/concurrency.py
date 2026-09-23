@@ -7,6 +7,7 @@ LLM 并发控制模块
 3. 在 429 后立即退避，并逐步恢复到更优并发
 4. 提供可观测的运行时状态，供 batch 分发决策使用
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -119,11 +120,18 @@ PROVIDER_CONFIGS: dict[ProviderType, ConcurrencyConfig] = {
     ),
     # MiniMax 异步分析车道：token plan 并发硬上限 = MINIMAX_MAX_CONCURRENCY（默认 8）。
     # 走 OpenAI 兼容路径的 glm_batch 执行面（switch_to_specific_model → provider.chat）
-    # 经此池钳制；直连 lane（minimax_provider.analyze）另有同值 semaphore 双保险。
+    # 经此池钳制；直连 lane（minimax_provider.analyze）另有同值 semaphore（注意：
+    # 两池独立、相加可到 2×配额，见 MINIMAX_QUEUE_TIMEOUT_SECONDS 注释）。
+    # 队列超时（BATCH-CAP，PROD-LOG2 ②-2）：原 45s 固定值在双 batch worker 载荷下
+    # 被打穿（实测 34 次 45s 超时 → 熔断 OPEN）。等槽期望 ≈ (排队深度/槽位)×单调用
+    # 时长，饱和态下深度无界，任何固定超时都会被打穿；而本池所有 in-engine 消费者
+    # （batch_worklane 3 次重试+死信、长程预测锁释放重试、capsule fallback）都有
+    # 降级/重试面——按直连车道同语义 fast-fail（默认 5s ≈ 2×聊天车道 p95 2.2s，
+    # 覆盖正常瞬态排队），不再把 45s 拥堵传染给事件循环。
     ProviderType.MINIMAX: ConcurrencyConfig(
         max_concurrent=settings.MINIMAX_MAX_CONCURRENCY,
         min_concurrent=1,
-        queue_timeout=45.0,
+        queue_timeout=settings.MINIMAX_QUEUE_TIMEOUT_SECONDS,
     ),
 }
 
@@ -217,9 +225,7 @@ class LLMConcurrencyManager:
         default_limit = self._default_glm_limit()
         async with state.condition:
             state.last_bucket = bucket
-            state.current_limit = self._clamp_glm_limit(
-                learned_limit if learned_limit is not None else default_limit
-            )
+            state.current_limit = self._clamp_glm_limit(learned_limit if learned_limit is not None else default_limit)
             state.hydrated = True
             state.condition.notify_all()
 
@@ -268,9 +274,7 @@ class LLMConcurrencyManager:
             return
 
         learned_limit = await self._load_learned_limit(bucket)
-        next_limit = self._clamp_glm_limit(
-            learned_limit if learned_limit is not None else self._default_glm_limit()
-        )
+        next_limit = self._clamp_glm_limit(learned_limit if learned_limit is not None else self._default_glm_limit())
         async with state.condition:
             state.last_bucket = bucket
             if current_time >= state.cooldown_until:
@@ -294,13 +298,27 @@ class LLMConcurrencyManager:
                 while state.active >= state.current_limit:
                     remaining = deadline - loop.time()
                     if remaining <= 0:
-                        raise TimeoutError(
-                            f"LLM API {provider_type.value} is busy. Please try again later."
-                        )
-                    await asyncio.wait_for(state.condition.wait(), timeout=remaining)
+                        raise TimeoutError(self._slot_timeout_message(provider_type, state, timeout))
+                    try:
+                        await asyncio.wait_for(state.condition.wait(), timeout=remaining)
+                    except TimeoutError:
+                        # BATCH-CAP（PROD-LOG2 ②-2）：wait_for 到点抛出的是空 str()
+                        # 的 TimeoutError——实测 22 条 "LLM Chat Error: " 空消息即
+                        # 此源头（消费端既不可诊断，也无法被 fallback 的字符串匹配
+                        # 归类为可重试）。统一转带池快照的诊断消息再上抛。
+                        raise TimeoutError(self._slot_timeout_message(provider_type, state, timeout)) from None
                 state.active += 1
             finally:
                 state.waiting = max(0, state.waiting - 1)
+
+    @staticmethod
+    def _slot_timeout_message(provider_type: ProviderType, state: ProviderRuntimeState, timeout: float) -> str:
+        """槽等待超时的诊断消息（含池水位快照，保证 str(e) 非空）。"""
+        return (
+            f"LLM API {provider_type.value} is busy: no free concurrency slot within "
+            f"{timeout}s (limit={state.current_limit}, active={state.active}, "
+            f"waiting={state.waiting}). Please try again later."
+        )
 
     async def _release_slot(self, provider_type: ProviderType) -> None:
         await self._ensure_loop_state()
@@ -455,8 +473,7 @@ class _ConcurrencyLimiter:
             return self
         except TimeoutError:
             logger.warning(
-                f"[LLMConcurrency] Timeout waiting for {self.provider_type.value} "
-                f"(timeout={self.timeout}s)"
+                f"[LLMConcurrency] Timeout waiting for {self.provider_type.value} " f"(timeout={self.timeout}s)"
             )
             raise
 

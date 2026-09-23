@@ -207,6 +207,13 @@ class LLMModelFallbackManager:
         error_str = str(error).lower()
         error_type = type(error).__name__
 
+        # BATCH-CAP（PROD-LOG2 ②-2）：类型先行。信号量排队超时 / asyncio.timeout
+        # 的 TimeoutError 的 str() 常为空——空字符串匹配不到下面任何分支，被误判
+        # 为 Non-retryable 直接抛出（实测 23 条空消息 error：45s 排队白等后连
+        # fallback 都不进）。TimeoutError 一律归类为可重试 TIMEOUT。
+        if isinstance(error, TimeoutError):
+            return FallbackReason.TIMEOUT
+
         # 429 Too Many Requests / Rate Limit
         if "429" in error_str or error_type == "RateLimitError":
             return FallbackReason.RATE_LIMIT_429
@@ -488,7 +495,14 @@ class LLMModelFallbackManager:
 
                 if fallback_reason is None:
                     # 非回退类型的错误，直接抛出
-                    logger.error(f"[LLMFallback] Non-retryable error: {e}")
+                    # BATCH-CAP（PROD-LOG2 ②-2）：str(e) 为空的异常（如某些
+                    # TimeoutError/APIError 子类）曾产出 23 条不可诊断的
+                    # "Non-retryable error: " —— 兜底出类型名并附 traceback
+                    # （照 wt182 reviewer 先例 + EXC-TRACEBACK 迁移同法）。
+                    error_detail = str(e).strip() or type(e).__name__
+                    logger.opt(exception=True).error(
+                        f"[LLMFallback] Non-retryable error: {error_detail}"
+                    )
                     raise
 
                 # 记录失败

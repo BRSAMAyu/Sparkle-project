@@ -1,0 +1,676 @@
+diff --git a/backend/app/config/settings.py b/backend/app/config/settings.py
+index 42a558b2..a0112062 100755
+--- a/backend/app/config/settings.py
++++ b/backend/app/config/settings.py
+@@ -444,6 +444,10 @@ class Settings(BaseSettings):
+     QUEUE_BACKPRESSURE_DEFAULT_MAX_DEPTH: int = 1000
+     QUEUE_BACKPRESSURE_LIMITS_JSON: str = '{"glm_batch": 200}'
+     QUEUE_BACKPRESSURE_PROBE_TIMEOUT_SECONDS: float = 1.5
++    # BATCH-CAP（PROD-LOG2 ②-2）：饱和聚合告警间隔（秒）。饱和期首条 ERROR +
++    # 每隔该间隔一条 ERROR 汇总（含 episode 时长与累计丢弃数）+ 恢复 INFO——
++    # 丢弃可观测为「速率/时长」而非 103 条逐条 WARNING。
++    QUEUE_BACKPRESSURE_SATURATION_LOG_INTERVAL_SECONDS: float = 30.0
+     # SECTOR-BACKFILL-Dedup · 星域回填在途去重 TTL（秒）：同用户回填批次入队后
+     # 在该窗口内不重复入队（get_galaxy_graph 每次取图都触发 ensure_backfill，
+     # 活栈实证无去重时同一批节点 0.7s 内被重复 enqueue、队列恒满 200/200）。
+@@ -500,6 +504,11 @@ class Settings(BaseSettings):
+     MINIMAX_BASE_URL: str = "https://api.minimaxi.com/v1"
+     MINIMAX_CHAT_MODEL: str = "MiniMax-M3"
+     MINIMAX_MAX_CONCURRENCY: int = 8
++    # BATCH-CAP（PROD-LOG2 ②-2）：llm_concurrency MINIMAX 池的等槽超时（秒）。
++    # 原 45s 固定值在双 batch worker 载荷下被打穿（34 次超时→熔断 OPEN）。本池
++    # 全部 in-engine 消费者都有降级/重试面，按直连车道同语义 fast-fail；5s ≈
++    # 2×聊天车道 p95 2.2s，覆盖正常瞬态排队，饱和时快速失败走 fallback/重试。
++    MINIMAX_QUEUE_TIMEOUT_SECONDS: float = 5.0
+     # glm_batch 车道执行 provider 开关（B 线模型切换 2026-09-22，测试替换语义）：
+     # - "glm"（默认，回滚位）：batch 类调用走 GLM 原链；MINIMAX/DASHSCOPE key 即便
+     #   已配置，batch 专用条目（minimax_m3_batch/qwen3_7_flash_batch）也不注册
+diff --git a/backend/app/core/queue_backpressure.py b/backend/app/core/queue_backpressure.py
+index 4377e5d9..168b54ad 100644
+--- a/backend/app/core/queue_backpressure.py
++++ b/backend/app/core/queue_backpressure.py
+@@ -20,6 +20,9 @@ O-07 · Celery 队列背压 —— 上限 / 丢弃策略 / 可观测（FIX-49 
+   并记 ``sparkle_queue_backpressure_drops_total{queue}`` + WARNING（含深度/
+   上限，可审计）。丢弃是显式结果而非延迟堆积：上游「投递失败」分支本就
+   存在（restore-storm 修复后 dispatch 永不抛异常），丢弃与既有失败语义同形。
++  BATCH-CAP 增补饱和 episode 聚合告警（饱和开始 ERROR / 周期性 ERROR 汇总 /
++  恢复 INFO）——持续满载时丢弃可观测为速率与时长，而非 103 条不可行动的单条
++  WARNING（PROD-LOG2 ②-2）。
+ - **可观测**：每次探测回写 ``sparkle_queue_depth{queue}`` gauge（OBSERVABILITY
+   的 queue depth 面板数据源）；探测失败记
+   ``sparkle_queue_backpressure_probe_failures_total{queue}``。
+@@ -40,13 +43,15 @@ from __future__ import annotations
+ 
+ import asyncio
+ import json
++import threading
++import time
+ from dataclasses import dataclass
+ 
+ from loguru import logger
++from prometheus_client import Counter, Gauge
+ 
+ from app.config import settings
+ from app.core.metrics import get_or_create_metric
+-from prometheus_client import Counter, Gauge
+ 
+ #: 队列当前深度（OBSERVABILITY「queue depth/Celery health」面板数据源）。
+ QUEUE_DEPTH = get_or_create_metric(
+@@ -75,6 +80,54 @@ QUEUE_BACKPRESSURE_PROBE_FAILURES_TOTAL = get_or_create_metric(
+ #: O-07 · queue backpressure 语义版本（行为变更需过 reviewer）。
+ QUEUE_BACKPRESSURE_VERSION = "queue_backpressure.v1"
+ 
++# ---------------------------------------------------------------------------
++# BATCH-CAP（PROD-LOG2 ②-2）· 饱和 episode 聚合告警
++#
++# 实测：glm_batch 恒顶 cap=200 时 88 分钟内 103 条逐条 WARNING——单条不可行动、
++# 无速率/时长语义。本段把丢弃升级为「episode」语义：
++# - 饱和开始：第一条 drop 触发 ERROR（SATURATION START）；
++# - 饱和持续：每 QUEUE_BACKPRESSURE_SATURATION_LOG_INTERVAL_SECONDS 一条 ERROR
++#   汇总（含 episode 时长 + 累计丢弃数）；逐条 WARNING 保留作审计轨迹；
++# - 恢复：深度回到 cap 下的首次成功探测触发 INFO（RECOVERED，含时长+总数）。
++# 状态按队列分桶；async/sync 两版共用本尾段（事件循环线程 + executor 线程
++# 可能并发进入），故用 threading.Lock（临界区仅字典读写，无 I/O）。
++# ---------------------------------------------------------------------------
++
++#: 饱和 episode 状态（queue → {started, last_alert, drops}，monotonic 时间轴）。
++_SATURATION_LOCK = threading.Lock()
++_SATURATION_STATE: dict[str, dict] = {}
++
++
++def _saturation_log_interval() -> float:
++    return float(getattr(settings, "QUEUE_BACKPRESSURE_SATURATION_LOG_INTERVAL_SECONDS", 30.0) or 30.0)
++
++
++def _record_saturation_drop(queue: str) -> tuple[str, dict]:
++    """记一次丢弃，返回 (告警种类, episode 快照)。种类 ∈ {start, ongoing, drop}。"""
++    now = time.monotonic()
++    interval = _saturation_log_interval()
++    with _SATURATION_LOCK:
++        episode = _SATURATION_STATE.get(queue)
++        if episode is None:
++            _SATURATION_STATE[queue] = {"started": now, "last_alert": now, "drops": 1}
++            return "start", {"drops": 1, "duration": 0.0}
++        episode["drops"] += 1
++        duration = now - episode["started"]
++        if now - episode["last_alert"] >= interval:
++            episode["last_alert"] = now
++            return "ongoing", {"drops": episode["drops"], "duration": duration}
++        return "drop", {"drops": episode["drops"], "duration": duration}
++
++
++def _record_saturation_recovery(queue: str) -> dict | None:
++    """深度回到 cap 下的首次成功探测：结束 episode，返回快照（无 episode → None）。"""
++    now = time.monotonic()
++    with _SATURATION_LOCK:
++        episode = _SATURATION_STATE.pop(queue, None)
++    if episode is None:
++        return None
++    return {"drops": episode["drops"], "duration": now - episode["started"]}
++
+ 
+ @dataclass(frozen=True)
+ class QueueBackpressureDecision:
+@@ -146,6 +199,16 @@ def _depth_decision(queue: str, limit: int, depth: int) -> QueueBackpressureDeci
+             allowed=False,
+             reason=f"queue_depth={depth}>=cap={limit}",
+         )
++    # BATCH-CAP：真实深度回到 cap 下 → 结束饱和 episode（若有）并留恢复痕迹。
++    recovery = _record_saturation_recovery(queue)
++    if recovery is not None:
++        logger.info(
++            "[QueueBackpressure] SATURATION RECOVERED queue={} duration={:.0f}s "
++            "drops_in_episode={} — depth back under cap",
++            queue,
++            recovery["duration"],
++            recovery["drops"],
++        )
+     return QueueBackpressureDecision(queue=queue, depth=depth, limit=limit, allowed=True, reason="within_cap")
+ 
+ 
+@@ -230,16 +293,43 @@ def enforce_queue_backpressure_sync(queue: str) -> bool:
+ 
+ 
+ def _enforce_from_decision(decision: QueueBackpressureDecision) -> bool:
+-    """丢弃记账共用尾段（async/sync 两版同形：超限 → drops 指标 + WARNING + 拒绝）。"""
++    """丢弃记账共用尾段（async/sync 两版同形：超限 → drops 指标 + WARNING + 拒绝）。
++
++    BATCH-CAP 追加饱和 episode 语义：首条 drop ERROR（SATURATION START）、
++    每隔 QUEUE_BACKPRESSURE_SATURATION_LOG_INTERVAL_SECONDS 一条 ERROR 汇总、
++    恢复时 INFO（见 _depth_decision）；逐条 WARNING 保留作审计轨迹。
++    """
+     if decision.allowed:
+         return True
+     QUEUE_BACKPRESSURE_DROPS_TOTAL.labels(queue=decision.queue).inc()
++    kind, episode = _record_saturation_drop(decision.queue)
++    if kind == "start":
++        logger.error(
++            "[QueueBackpressure] SATURATION START queue={} depth={} cap={} — "
++            "dispatches now dropped until depth recovers; retry is upstream's "
++            "(lock release / next trigger); recovery will be logged",
++            decision.queue,
++            decision.depth,
++            decision.limit,
++        )
++    elif kind == "ongoing":
++        logger.error(
++            "[QueueBackpressure] SATURATION ONGOING queue={} depth={} cap={} "
++            "duration={:.0f}s drops_in_episode={} (aggregated every {:.0f}s)",
++            decision.queue,
++            decision.depth,
++            decision.limit,
++            episode["duration"],
++            episode["drops"],
++            _saturation_log_interval(),
++        )
+     logger.warning(
+         "[QueueBackpressure] drop dispatch queue={} depth={} cap={} ({}); "
+-        "task NOT enqueued (bounded backlog policy)",
++        "task NOT enqueued (bounded backlog policy; episode drops={})",
+         decision.queue,
+         decision.depth,
+         decision.limit,
+         decision.reason,
++        episode["drops"],
+     )
+     return False
+diff --git a/backend/app/services/llm/concurrency.py b/backend/app/services/llm/concurrency.py
+index 4546d444..87f53591 100644
+--- a/backend/app/services/llm/concurrency.py
++++ b/backend/app/services/llm/concurrency.py
+@@ -7,6 +7,7 @@ LLM 并发控制模块
+ 3. 在 429 后立即退避，并逐步恢复到更优并发
+ 4. 提供可观测的运行时状态，供 batch 分发决策使用
+ """
++
+ from __future__ import annotations
+ 
+ import asyncio
+@@ -119,11 +120,18 @@ PROVIDER_CONFIGS: dict[ProviderType, ConcurrencyConfig] = {
+     ),
+     # MiniMax 异步分析车道：token plan 并发硬上限 = MINIMAX_MAX_CONCURRENCY（默认 8）。
+     # 走 OpenAI 兼容路径的 glm_batch 执行面（switch_to_specific_model → provider.chat）
+-    # 经此池钳制；直连 lane（minimax_provider.analyze）另有同值 semaphore 双保险。
++    # 经此池钳制；直连 lane（minimax_provider.analyze）另有同值 semaphore（注意：
++    # 两池独立、相加可到 2×配额，见 MINIMAX_QUEUE_TIMEOUT_SECONDS 注释）。
++    # 队列超时（BATCH-CAP，PROD-LOG2 ②-2）：原 45s 固定值在双 batch worker 载荷下
++    # 被打穿（实测 34 次 45s 超时 → 熔断 OPEN）。等槽期望 ≈ (排队深度/槽位)×单调用
++    # 时长，饱和态下深度无界，任何固定超时都会被打穿；而本池所有 in-engine 消费者
++    # （batch_worklane 3 次重试+死信、长程预测锁释放重试、capsule fallback）都有
++    # 降级/重试面——按直连车道同语义 fast-fail（默认 5s ≈ 2×聊天车道 p95 2.2s，
++    # 覆盖正常瞬态排队），不再把 45s 拥堵传染给事件循环。
+     ProviderType.MINIMAX: ConcurrencyConfig(
+         max_concurrent=settings.MINIMAX_MAX_CONCURRENCY,
+         min_concurrent=1,
+-        queue_timeout=45.0,
++        queue_timeout=settings.MINIMAX_QUEUE_TIMEOUT_SECONDS,
+     ),
+ }
+ 
+@@ -217,9 +225,7 @@ class LLMConcurrencyManager:
+         default_limit = self._default_glm_limit()
+         async with state.condition:
+             state.last_bucket = bucket
+-            state.current_limit = self._clamp_glm_limit(
+-                learned_limit if learned_limit is not None else default_limit
+-            )
++            state.current_limit = self._clamp_glm_limit(learned_limit if learned_limit is not None else default_limit)
+             state.hydrated = True
+             state.condition.notify_all()
+ 
+@@ -268,9 +274,7 @@ class LLMConcurrencyManager:
+             return
+ 
+         learned_limit = await self._load_learned_limit(bucket)
+-        next_limit = self._clamp_glm_limit(
+-            learned_limit if learned_limit is not None else self._default_glm_limit()
+-        )
++        next_limit = self._clamp_glm_limit(learned_limit if learned_limit is not None else self._default_glm_limit())
+         async with state.condition:
+             state.last_bucket = bucket
+             if current_time >= state.cooldown_until:
+@@ -294,14 +298,28 @@ class LLMConcurrencyManager:
+                 while state.active >= state.current_limit:
+                     remaining = deadline - loop.time()
+                     if remaining <= 0:
+-                        raise TimeoutError(
+-                            f"LLM API {provider_type.value} is busy. Please try again later."
+-                        )
+-                    await asyncio.wait_for(state.condition.wait(), timeout=remaining)
++                        raise TimeoutError(self._slot_timeout_message(provider_type, state, timeout))
++                    try:
++                        await asyncio.wait_for(state.condition.wait(), timeout=remaining)
++                    except TimeoutError:
++                        # BATCH-CAP（PROD-LOG2 ②-2）：wait_for 到点抛出的是空 str()
++                        # 的 TimeoutError——实测 22 条 "LLM Chat Error: " 空消息即
++                        # 此源头（消费端既不可诊断，也无法被 fallback 的字符串匹配
++                        # 归类为可重试）。统一转带池快照的诊断消息再上抛。
++                        raise TimeoutError(self._slot_timeout_message(provider_type, state, timeout)) from None
+                 state.active += 1
+             finally:
+                 state.waiting = max(0, state.waiting - 1)
+ 
++    @staticmethod
++    def _slot_timeout_message(provider_type: ProviderType, state: ProviderRuntimeState, timeout: float) -> str:
++        """槽等待超时的诊断消息（含池水位快照，保证 str(e) 非空）。"""
++        return (
++            f"LLM API {provider_type.value} is busy: no free concurrency slot within "
++            f"{timeout}s (limit={state.current_limit}, active={state.active}, "
++            f"waiting={state.waiting}). Please try again later."
++        )
++
+     async def _release_slot(self, provider_type: ProviderType) -> None:
+         await self._ensure_loop_state()
+         state = self._runtime[provider_type]
+@@ -455,8 +473,7 @@ class _ConcurrencyLimiter:
+             return self
+         except TimeoutError:
+             logger.warning(
+-                f"[LLMConcurrency] Timeout waiting for {self.provider_type.value} "
+-                f"(timeout={self.timeout}s)"
++                f"[LLMConcurrency] Timeout waiting for {self.provider_type.value} " f"(timeout={self.timeout}s)"
+             )
+             raise
+ 
+diff --git a/backend/app/services/llm/fallback.py b/backend/app/services/llm/fallback.py
+index e7362194..81a4f6a5 100644
+--- a/backend/app/services/llm/fallback.py
++++ b/backend/app/services/llm/fallback.py
+@@ -207,6 +207,13 @@ class LLMModelFallbackManager:
+         error_str = str(error).lower()
+         error_type = type(error).__name__
+ 
++        # BATCH-CAP（PROD-LOG2 ②-2）：类型先行。信号量排队超时 / asyncio.timeout
++        # 的 TimeoutError 的 str() 常为空——空字符串匹配不到下面任何分支，被误判
++        # 为 Non-retryable 直接抛出（实测 23 条空消息 error：45s 排队白等后连
++        # fallback 都不进）。TimeoutError 一律归类为可重试 TIMEOUT。
++        if isinstance(error, TimeoutError):
++            return FallbackReason.TIMEOUT
++
+         # 429 Too Many Requests / Rate Limit
+         if "429" in error_str or error_type == "RateLimitError":
+             return FallbackReason.RATE_LIMIT_429
+@@ -488,7 +495,14 @@ class LLMModelFallbackManager:
+ 
+                 if fallback_reason is None:
+                     # 非回退类型的错误，直接抛出
+-                    logger.error(f"[LLMFallback] Non-retryable error: {e}")
++                    # BATCH-CAP（PROD-LOG2 ②-2）：str(e) 为空的异常（如某些
++                    # TimeoutError/APIError 子类）曾产出 23 条不可诊断的
++                    # "Non-retryable error: " —— 兜底出类型名并附 traceback
++                    # （照 wt182 reviewer 先例 + EXC-TRACEBACK 迁移同法）。
++                    error_detail = str(e).strip() or type(e).__name__
++                    logger.opt(exception=True).error(
++                        f"[LLMFallback] Non-retryable error: {error_detail}"
++                    )
+                     raise
+ 
+                 # 记录失败
+diff --git a/backend/app/services/llm_service.py b/backend/app/services/llm_service.py
+index 3fa1a458..bc28b590 100755
+--- a/backend/app/services/llm_service.py
++++ b/backend/app/services/llm_service.py
+@@ -797,7 +797,11 @@ class LLMService:
+                 raise HTTPException(status_code=503, detail="LLM Service Temporarily Unavailable (Circuit Open)") from None
+             except Exception as e:
+                 await circuit_breaker_service.record_failure("primary_llm")
+-                logger.error(f"LLM Chat Error: {e}")
++                # BATCH-CAP（PROD-LOG2 ②-2）：str(e) 为空的异常（如 TimeoutError()）
++                # 曾产出 23 条不可诊断的 "LLM Chat Error: " —— 兜底出类型名并附
++                # traceback（照 wt182 reviewer 先例 + EXC-TRACEBACK 迁移同法）。
++                error_detail = str(e).strip() or type(e).__name__
++                logger.opt(exception=True).error(f"LLM Chat Error: {error_detail}")
+                 raise e
+ 
+     def _get_provider_name_from_url(self) -> str:
+diff --git a/backend/tests/unit/test_batch_capacity_fault_chain.py b/backend/tests/unit/test_batch_capacity_fault_chain.py
+new file mode 100644
+index 00000000..85579123
+--- /dev/null
++++ b/backend/tests/unit/test_batch_capacity_fault_chain.py
+@@ -0,0 +1,345 @@
++"""BATCH-CAP（PROD-LOG2 ②-2）· MiniMax 车道故障级联 + 队列饱和丢任务修复面.
++
++覆盖卡面四类验收（模拟双 worker 竞争，不真起双 worker 压测）：
++- 信号量超时源头可诊断：wait_for 到点的空 str TimeoutError 统一转带池快照
++  的消息（实测 22 条空消息 error 的源头）；
++- 双 worker 竞争语义：池满时新 waiter 快速失败（MINIMAX fast-fail），持槽
++  释放后 waiter 被唤醒（不丢唤醒、不永久卡死）；
++- fallback 分类：TimeoutError 类型先行 → 可重试 TIMEOUT（空 str 不再被误判
++  Non-retryable 直接抛出，45s 排队白等后连 fallback 都不进）；
++- 队列饱和可观测：饱和开始 ERROR / 周期性 ERROR 汇总 / 恢复 INFO，丢弃
++  可观测为速率与时长而非逐条 WARNING。
++"""
++
++from __future__ import annotations
++
++import asyncio
++
++import pytest
++from loguru import logger as loguru_logger
++
++from app.config import settings
++from app.core import queue_backpressure as qbp
++from app.services.llm import concurrency as llm_concurrency_module
++from app.services.llm.concurrency import (
++    PROVIDER_CONFIGS,
++    ConcurrencyConfig,
++    LLMConcurrencyManager,
++    ProviderType,
++)
++from app.services.llm.fallback import LLMModelFallbackManager, LLMSelection
++
++
++def _fresh_manager(limit: int, timeout: float) -> LLMConcurrencyManager:
++    """构造独立 MINIMAX 配置的 manager（不依赖 settings/redis 的自适应面）。"""
++    original = llm_concurrency_module.PROVIDER_CONFIGS
++    llm_concurrency_module.PROVIDER_CONFIGS = {
++        ProviderType.MINIMAX: ConcurrencyConfig(
++            max_concurrent=limit,
++            min_concurrent=1,
++            queue_timeout=timeout,
++        ),
++    }
++    try:
++        return LLMConcurrencyManager()
++    finally:
++        llm_concurrency_module.PROVIDER_CONFIGS = original
++
++
++# ---------------------------------------------------------------------------
++# 1. 信号量超时源头可诊断 + 配置对齐
++# ---------------------------------------------------------------------------
++
++
++class TestSemaphoreTimeoutDiagnostics:
++    async def test_timeout_message_nonempty_with_pool_snapshot(self):
++        """池满 + 等待到点 → TimeoutError 消息非空且含 provider/池水位。"""
++        manager = _fresh_manager(limit=1, timeout=0.05)
++        async with manager.acquire("minimax", timeout=30.0):
++            with pytest.raises(TimeoutError) as exc_info:
++                async with manager.acquire("minimax", timeout=0.05):
++                    pass
++        message = str(exc_info.value)
++        assert message.strip(), "timeout message must not be empty (PROD-LOG2 empty-message disease)"
++        assert "minimax" in message
++        assert "limit=1" in message
++
++    async def test_wait_for_expiry_path_also_diagnostic(self):
++        """持槽者永不释放 → wait_for 到点路径同样产出带快照的消息（原空 str 源头）。"""
++        manager = _fresh_manager(limit=1, timeout=30.0)
++        async with manager.acquire("minimax", timeout=30.0):
++            with pytest.raises(TimeoutError) as exc_info:
++                async with manager.acquire("minimax", timeout=0.05):
++                    pass
++        message = str(exc_info.value)
++        assert message.strip()
++        assert "minimax" in message
++
++    async def test_minimax_config_aligned_to_settings(self):
++        """MINIMAX 池超时/上限对齐 settings（45s 固定值 → settings 化 fast-fail）。"""
++        config = PROVIDER_CONFIGS[ProviderType.MINIMAX]
++        assert config.queue_timeout == settings.MINIMAX_QUEUE_TIMEOUT_SECONDS
++        assert config.max_concurrent == settings.MINIMAX_MAX_CONCURRENCY
++        assert settings.MINIMAX_QUEUE_TIMEOUT_SECONDS < 45.0
++
++    def test_minimax_route_string_maps_to_minimax_pool(self):
++        """minimax_m3_batch 路由名必须落 MINIMAX 池（provider 隔离回归钉）。"""
++        manager = LLMConcurrencyManager()
++        assert manager._get_provider_type("minimax_m3_batch") is ProviderType.MINIMAX
++
++
++# ---------------------------------------------------------------------------
++# 2. 双 worker 竞争（进程内模拟：N 并发任务抢同一池）
++# ---------------------------------------------------------------------------
++
++
++class TestDualWorkerContention:
++    async def test_waiters_wake_on_release_no_loss(self):
++        """4 个并发任务抢 2 槽：分批成功、无超时、无唤醒丢失。"""
++        manager = _fresh_manager(limit=2, timeout=5.0)
++        done: list[int] = []
++
++        async def worker(idx: int):
++            async with manager.acquire("minimax", timeout=5.0):
++                await asyncio.sleep(0.05)
++                done.append(idx)
++
++        await asyncio.gather(*(worker(i) for i in range(4)))
++        assert sorted(done) == [0, 1, 2, 3]
++        state = manager.get_provider_runtime_state("minimax")
++        assert state["active"] == 0
++
++    async def test_saturated_pool_fails_fast(self):
++        """持槽者挂住 + 队列饱和 → waiter 快速失败（不再挂 45s），消息可诊断。"""
++        manager = _fresh_manager(limit=1, timeout=0.05)
++        async with manager.acquire("minimax", timeout=30.0):
++            state = manager.get_provider_runtime_state("minimax")
++            assert state["active"] == 1
++            with pytest.raises(TimeoutError):
++                async with manager.acquire("minimax", timeout=0.05):
++                    pass
++        # 槽释放后可复用（泄漏回归钉）
++        async with manager.acquire("minimax", timeout=1.0):
++            state = manager.get_provider_runtime_state("minimax")
++            assert state["active"] == 1
++
++    async def test_release_wakes_blocked_waiter(self):
++        """持槽释放精确唤醒一个阻塞 waiter（condition notify 面回归）。"""
++        manager = _fresh_manager(limit=1, timeout=5.0)
++        acquired = asyncio.Event()
++
++        async def holder():
++            async with manager.acquire("minimax", timeout=5.0):
++                acquired.set()
++                await asyncio.sleep(0.1)
++
++        async def waiter():
++            await acquired.wait()
++            async with manager.acquire("minimax", timeout=5.0):
++                pass
++
++        await asyncio.gather(holder(), waiter())
++        state = manager.get_provider_runtime_state("minimax")
++        assert state["active"] == 0
++
++
++# ---------------------------------------------------------------------------
++# 3. fallback：TimeoutError 类型先行 → 可重试 TIMEOUT
++# ---------------------------------------------------------------------------
++
++
++class _EmptyStrError(Exception):
++    def __str__(self) -> str:  # pragma: no cover - trivially empty
++        return ""
++
++
++def _make_manager_with_candidate(monkeypatch) -> LLMModelFallbackManager:
++    """fallback manager：健康面全绿（不依赖 redis/router）。"""
++    manager = LLMModelFallbackManager(max_fallback_attempts=3)
++
++    async def _healthy(model_key: str) -> bool:
++        return True
++
++    monkeypatch.setattr(manager.health_tracker, "is_healthy", _healthy)
++    return manager
++
++
++class TestFallbackTimeoutClassification:
++    def test_bare_timeout_error_classified_retryable(self):
++        """空 str 的 TimeoutError() 必须归类 TIMEOUT（原误判 Non-retryable 的病灶）。"""
++        manager = LLMModelFallbackManager()
++        assert manager._detect_fallback_reason(TimeoutError()) == "timeout"
++
++    def test_descriptive_timeout_error_classified_retryable(self):
++        manager = LLMModelFallbackManager()
++        reason = manager._detect_fallback_reason(TimeoutError("LLM API minimax is busy: no free concurrency slot"))
++        assert reason == "timeout"
++
++    async def test_semaphore_timeout_now_falls_back(self, monkeypatch):
++        """端到端：首选抛信号量 TimeoutError → 切候选成功（不再直接抛出）。"""
++        manager = _make_manager_with_candidate(monkeypatch)
++        selection = LLMSelection(
++            model_key="minimax_m3_batch",
++            config=SimpleNamespaceConfig(),
++            agent_role=None,
++            task_type=None,
++            reason="test",
++        )
++        fallback_selection = LLMSelection(
++            model_key="glm_4_7_no_thinking",
++            config=SimpleNamespaceConfig(),
++            agent_role=None,
++            task_type=None,
++            reason="test-fallback",
++        )
++        candidates = [fallback_selection]
++        manager._get_fallback_candidates = lambda *a, **kw: candidates  # type: ignore[method-assign]
++
++        calls: list[str] = []
++
++        async def call_fn(sel):
++            calls.append(sel.model_key)
++            if sel.model_key == "minimax_m3_batch":
++                raise TimeoutError()  # 空 str：原路径直接 Non-retryable 抛出
++            return "ok"
++
++        result = await manager.execute_with_fallback(selection, call_fn)
++        assert result == "ok"
++        assert calls == ["minimax_m3_batch", "glm_4_7_no_thinking"]
++
++    async def test_non_retryable_empty_error_logs_type_name(self, monkeypatch):
++        """str(e) 为空的 Non-retryable 异常：日志兜底出类型名（不产出空消息）。"""
++        manager = _make_manager_with_candidate(monkeypatch)
++        selection = LLMSelection(
++            model_key="minimax_m3_batch",
++            config=SimpleNamespaceConfig(),
++            agent_role=None,
++            task_type=None,
++            reason="test",
++        )
++
++        lines: list[str] = []
++        sink_id = loguru_logger.add(lines.append, level="ERROR", format="{message}")
++        try:
++            with pytest.raises(_EmptyStrError):
++                await manager.execute_with_fallback(selection, _raise_empty_error)
++        finally:
++            loguru_logger.remove(sink_id)
++
++        target = [line for line in lines if "Non-retryable error" in line]
++        assert target, f"expected non-retryable error log, got: {lines!r}"
++        # 原病灶形态是行尾悬空冒号（"Non-retryable error: "）——必须消失
++        assert all("_EmptyStrError" in line and not line.rstrip().endswith(":") for line in target)
++
++
++class SimpleNamespaceConfig:
++    """最小 ModelConfig 替身（execute_with_fallback 只读 provider/model_name）。"""
++
++    provider = None
++    model_name = "test-model"
++    tier = None
++    base_url = ""
++    clear_thinking = False
++
++
++async def _raise_empty_error(_selection):
++    raise _EmptyStrError()
++
++
++# ---------------------------------------------------------------------------
++# 4. 队列饱和可观测（首条 ERROR / 周期汇总 / 恢复 INFO）
++# ---------------------------------------------------------------------------
++
++
++@pytest.fixture()
++def _clean_saturation_state():
++    qbp._SATURATION_STATE.clear()
++    yield
++    qbp._SATURATION_STATE.clear()
++
++
++class TestQueueSaturationObservability:
++    def _capture(self, cap=200):
++        def _llen(queue: str) -> int:
++            return cap
++
++        return _llen
++
++    @staticmethod
++    def _sink(records: list[str]):
++        """loguru sink：level 前缀 + message（Message 是 str 子类，format 内插值）。"""
++        return loguru_logger.add(
++            lambda msg: records.append(str(msg)),
++            level="INFO",
++            format="{level.name}|{message}",
++        )
++
++    async def test_saturation_start_error_then_recovery_info(self, monkeypatch, _clean_saturation_state):
++        records: list[str] = []
++        sink_id = self._sink(records)
++        try:
++            monkeypatch.setattr(qbp, "_llen_via_celery", self._capture(200))
++            allowed = await qbp.enforce_queue_backpressure("glm_batch")
++            assert allowed is False
++            assert any("SATURATION START" in r for r in records)
++
++            monkeypatch.setattr(qbp, "_llen_via_celery", self._capture(199))
++            allowed = await qbp.enforce_queue_backpressure("glm_batch")
++            assert allowed is True
++            assert any("SATURATION RECOVERED" in r for r in records)
++            assert qbp._SATURATION_STATE == {}
++        finally:
++            loguru_logger.remove(sink_id)
++
++    async def test_periodic_summary_within_episode(self, monkeypatch, _clean_saturation_state):
++        monkeypatch.setattr(settings, "QUEUE_BACKPRESSURE_SATURATION_LOG_INTERVAL_SECONDS", 0.05)
++        records: list[str] = []
++        sink_id = self._sink(records)
++        try:
++            monkeypatch.setattr(qbp, "_llen_via_celery", self._capture(200))
++            await qbp.enforce_queue_backpressure("glm_batch")  # START
++            await qbp.enforce_queue_backpressure("glm_batch")  # drop (suppressed)
++            await asyncio.sleep(0.06)
++            await qbp.enforce_queue_backpressure("glm_batch")  # ONGOING summary
++        finally:
++            loguru_logger.remove(sink_id)
++
++        starts = [r for r in records if "SATURATION START" in r]
++        ongoing = [r for r in records if "SATURATION ONGOING" in r]
++        assert len(starts) == 1
++        assert len(ongoing) == 1
++        assert "drops_in_episode=3" in ongoing[0]
++
++    async def test_every_drop_counts_and_returns_false(self, monkeypatch, _clean_saturation_state):
++        monkeypatch.setattr(qbp, "_llen_via_celery", self._capture(200))
++        for _ in range(3):
++            assert await qbp.enforce_queue_backpressure("glm_batch") is False
++        episode = qbp._SATURATION_STATE["glm_batch"]
++        assert episode["drops"] == 3
++
++    def test_sync_enforce_shares_episode_semantics(self, monkeypatch, _clean_saturation_state):
++        records: list[str] = []
++        sink_id = self._sink(records)
++        try:
++            monkeypatch.setattr(qbp, "_llen_via_celery", self._capture(200))
++            assert qbp.enforce_queue_backpressure_sync("glm_batch") is False
++            assert any("SATURATION START" in r for r in records)
++
++            monkeypatch.setattr(qbp, "_llen_via_celery", self._capture(10))
++            assert qbp.enforce_queue_backpressure_sync("glm_batch") is True
++            assert any("SATURATION RECOVERED" in r for r in records)
++        finally:
++            loguru_logger.remove(sink_id)
++
++    async def test_probe_failure_does_not_end_episode(self, monkeypatch, _clean_saturation_state):
++        """探测失败（broker 不可达）≠ 恢复：episode 必须保留。"""
++        monkeypatch.setattr(qbp, "_llen_via_celery", self._capture(200))
++        assert await qbp.enforce_queue_backpressure("glm_batch") is False
++        assert "glm_batch" in qbp._SATURATION_STATE
++
++        def _boom(queue: str) -> int:
++            raise ConnectionError("broker down")
++
++        monkeypatch.setattr(qbp, "_llen_via_celery", _boom)
++        assert await qbp.enforce_queue_backpressure("glm_batch") is True  # 有界降级放行
++        assert "glm_batch" in qbp._SATURATION_STATE  # 但不误报恢复

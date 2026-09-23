@@ -444,6 +444,10 @@ class Settings(BaseSettings):
     QUEUE_BACKPRESSURE_DEFAULT_MAX_DEPTH: int = 1000
     QUEUE_BACKPRESSURE_LIMITS_JSON: str = '{"glm_batch": 200}'
     QUEUE_BACKPRESSURE_PROBE_TIMEOUT_SECONDS: float = 1.5
+    # BATCH-CAP（PROD-LOG2 ②-2）：饱和聚合告警间隔（秒）。饱和期首条 ERROR +
+    # 每隔该间隔一条 ERROR 汇总（含 episode 时长与累计丢弃数）+ 恢复 INFO——
+    # 丢弃可观测为「速率/时长」而非 103 条逐条 WARNING。
+    QUEUE_BACKPRESSURE_SATURATION_LOG_INTERVAL_SECONDS: float = 30.0
     # SECTOR-BACKFILL-Dedup · 星域回填在途去重 TTL（秒）：同用户回填批次入队后
     # 在该窗口内不重复入队（get_galaxy_graph 每次取图都触发 ensure_backfill，
     # 活栈实证无去重时同一批节点 0.7s 内被重复 enqueue、队列恒满 200/200）。
@@ -500,6 +504,11 @@ class Settings(BaseSettings):
     MINIMAX_BASE_URL: str = "https://api.minimaxi.com/v1"
     MINIMAX_CHAT_MODEL: str = "MiniMax-M3"
     MINIMAX_MAX_CONCURRENCY: int = 8
+    # BATCH-CAP（PROD-LOG2 ②-2）：llm_concurrency MINIMAX 池的等槽超时（秒）。
+    # 原 45s 固定值在双 batch worker 载荷下被打穿（34 次超时→熔断 OPEN）。本池
+    # 全部 in-engine 消费者都有降级/重试面，按直连车道同语义 fast-fail；5s ≈
+    # 2×聊天车道 p95 2.2s，覆盖正常瞬态排队，饱和时快速失败走 fallback/重试。
+    MINIMAX_QUEUE_TIMEOUT_SECONDS: float = 5.0
     # glm_batch 车道执行 provider 开关（B 线模型切换 2026-09-22，测试替换语义）：
     # - "glm"（默认，回滚位）：batch 类调用走 GLM 原链；MINIMAX/DASHSCOPE key 即便
     #   已配置，batch 专用条目（minimax_m3_batch/qwen3_7_flash_batch）也不注册

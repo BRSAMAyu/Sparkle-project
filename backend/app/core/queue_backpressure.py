@@ -20,6 +20,9 @@ O-07 · Celery 队列背压 —— 上限 / 丢弃策略 / 可观测（FIX-49 �
   并记 ``sparkle_queue_backpressure_drops_total{queue}`` + WARNING（含深度/
   上限，可审计）。丢弃是显式结果而非延迟堆积：上游「投递失败」分支本就
   存在（restore-storm 修复后 dispatch 永不抛异常），丢弃与既有失败语义同形。
+  BATCH-CAP 增补饱和 episode 聚合告警（饱和开始 ERROR / 周期性 ERROR 汇总 /
+  恢复 INFO）——持续满载时丢弃可观测为速率与时长，而非 103 条不可行动的单条
+  WARNING（PROD-LOG2 ②-2）。
 - **可观测**：每次探测回写 ``sparkle_queue_depth{queue}`` gauge（OBSERVABILITY
   的 queue depth 面板数据源）；探测失败记
   ``sparkle_queue_backpressure_probe_failures_total{queue}``。
@@ -40,13 +43,15 @@ from __future__ import annotations
 
 import asyncio
 import json
+import threading
+import time
 from dataclasses import dataclass
 
 from loguru import logger
+from prometheus_client import Counter, Gauge
 
 from app.config import settings
 from app.core.metrics import get_or_create_metric
-from prometheus_client import Counter, Gauge
 
 #: 队列当前深度（OBSERVABILITY「queue depth/Celery health」面板数据源）。
 QUEUE_DEPTH = get_or_create_metric(
@@ -74,6 +79,54 @@ QUEUE_BACKPRESSURE_PROBE_FAILURES_TOTAL = get_or_create_metric(
 
 #: O-07 · queue backpressure 语义版本（行为变更需过 reviewer）。
 QUEUE_BACKPRESSURE_VERSION = "queue_backpressure.v1"
+
+# ---------------------------------------------------------------------------
+# BATCH-CAP（PROD-LOG2 ②-2）· 饱和 episode 聚合告警
+#
+# 实测：glm_batch 恒顶 cap=200 时 88 分钟内 103 条逐条 WARNING——单条不可行动、
+# 无速率/时长语义。本段把丢弃升级为「episode」语义：
+# - 饱和开始：第一条 drop 触发 ERROR（SATURATION START）；
+# - 饱和持续：每 QUEUE_BACKPRESSURE_SATURATION_LOG_INTERVAL_SECONDS 一条 ERROR
+#   汇总（含 episode 时长 + 累计丢弃数）；逐条 WARNING 保留作审计轨迹；
+# - 恢复：深度回到 cap 下的首次成功探测触发 INFO（RECOVERED，含时长+总数）。
+# 状态按队列分桶；async/sync 两版共用本尾段（事件循环线程 + executor 线程
+# 可能并发进入），故用 threading.Lock（临界区仅字典读写，无 I/O）。
+# ---------------------------------------------------------------------------
+
+#: 饱和 episode 状态（queue → {started, last_alert, drops}，monotonic 时间轴）。
+_SATURATION_LOCK = threading.Lock()
+_SATURATION_STATE: dict[str, dict] = {}
+
+
+def _saturation_log_interval() -> float:
+    return float(getattr(settings, "QUEUE_BACKPRESSURE_SATURATION_LOG_INTERVAL_SECONDS", 30.0) or 30.0)
+
+
+def _record_saturation_drop(queue: str) -> tuple[str, dict]:
+    """记一次丢弃，返回 (告警种类, episode 快照)。种类 ∈ {start, ongoing, drop}。"""
+    now = time.monotonic()
+    interval = _saturation_log_interval()
+    with _SATURATION_LOCK:
+        episode = _SATURATION_STATE.get(queue)
+        if episode is None:
+            _SATURATION_STATE[queue] = {"started": now, "last_alert": now, "drops": 1}
+            return "start", {"drops": 1, "duration": 0.0}
+        episode["drops"] += 1
+        duration = now - episode["started"]
+        if now - episode["last_alert"] >= interval:
+            episode["last_alert"] = now
+            return "ongoing", {"drops": episode["drops"], "duration": duration}
+        return "drop", {"drops": episode["drops"], "duration": duration}
+
+
+def _record_saturation_recovery(queue: str) -> dict | None:
+    """深度回到 cap 下的首次成功探测：结束 episode，返回快照（无 episode → None）。"""
+    now = time.monotonic()
+    with _SATURATION_LOCK:
+        episode = _SATURATION_STATE.pop(queue, None)
+    if episode is None:
+        return None
+    return {"drops": episode["drops"], "duration": now - episode["started"]}
 
 
 @dataclass(frozen=True)
@@ -145,6 +198,16 @@ def _depth_decision(queue: str, limit: int, depth: int) -> QueueBackpressureDeci
             limit=limit,
             allowed=False,
             reason=f"queue_depth={depth}>=cap={limit}",
+        )
+    # BATCH-CAP：真实深度回到 cap 下 → 结束饱和 episode（若有）并留恢复痕迹。
+    recovery = _record_saturation_recovery(queue)
+    if recovery is not None:
+        logger.info(
+            "[QueueBackpressure] SATURATION RECOVERED queue={} duration={:.0f}s "
+            "drops_in_episode={} — depth back under cap",
+            queue,
+            recovery["duration"],
+            recovery["drops"],
         )
     return QueueBackpressureDecision(queue=queue, depth=depth, limit=limit, allowed=True, reason="within_cap")
 
@@ -230,16 +293,43 @@ def enforce_queue_backpressure_sync(queue: str) -> bool:
 
 
 def _enforce_from_decision(decision: QueueBackpressureDecision) -> bool:
-    """丢弃记账共用尾段（async/sync 两版同形：超限 → drops 指标 + WARNING + 拒绝）。"""
+    """丢弃记账共用尾段（async/sync 两版同形：超限 → drops 指标 + WARNING + 拒绝）。
+
+    BATCH-CAP 追加饱和 episode 语义：首条 drop ERROR（SATURATION START）、
+    每隔 QUEUE_BACKPRESSURE_SATURATION_LOG_INTERVAL_SECONDS 一条 ERROR 汇总、
+    恢复时 INFO（见 _depth_decision）；逐条 WARNING 保留作审计轨迹。
+    """
     if decision.allowed:
         return True
     QUEUE_BACKPRESSURE_DROPS_TOTAL.labels(queue=decision.queue).inc()
+    kind, episode = _record_saturation_drop(decision.queue)
+    if kind == "start":
+        logger.error(
+            "[QueueBackpressure] SATURATION START queue={} depth={} cap={} — "
+            "dispatches now dropped until depth recovers; retry is upstream's "
+            "(lock release / next trigger); recovery will be logged",
+            decision.queue,
+            decision.depth,
+            decision.limit,
+        )
+    elif kind == "ongoing":
+        logger.error(
+            "[QueueBackpressure] SATURATION ONGOING queue={} depth={} cap={} "
+            "duration={:.0f}s drops_in_episode={} (aggregated every {:.0f}s)",
+            decision.queue,
+            decision.depth,
+            decision.limit,
+            episode["duration"],
+            episode["drops"],
+            _saturation_log_interval(),
+        )
     logger.warning(
         "[QueueBackpressure] drop dispatch queue={} depth={} cap={} ({}); "
-        "task NOT enqueued (bounded backlog policy)",
+        "task NOT enqueued (bounded backlog policy; episode drops={})",
         decision.queue,
         decision.depth,
         decision.limit,
         decision.reason,
+        episode["drops"],
     )
     return False
