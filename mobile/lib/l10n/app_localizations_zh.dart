@@ -37093,4 +37093,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String galaxyWorkViewNextTouch(String name) {
     return '下一个建议碰：$name';
   }
+
+  @override
+  String get userOnboardingSubmitFailed =>
+      '这一步暂时没有完成，你的设置可能已经保存。可以重试一次，或先跳过进入下一步。';
+
+  @override
+  String get statisticsTrendEmptyHint => '还没有学习记录——完成第一次学习后，你的成长曲线会出现在这里。';
 }

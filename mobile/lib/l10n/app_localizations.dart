@@ -67344,6 +67344,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'下一个建议碰：{name}'**
   String galaxyWorkViewNextTouch(String name);
+
+  /// No description provided for @userOnboardingSubmitFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'这一步暂时没有完成，你的设置可能已经保存。可以重试一次，或先跳过进入下一步。'**
+  String get userOnboardingSubmitFailed;
+
+  /// No description provided for @statisticsTrendEmptyHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有学习记录——完成第一次学习后，你的成长曲线会出现在这里。'**
+  String get statisticsTrendEmptyHint;
 }
 
 class _AppLocalizationsDelegate

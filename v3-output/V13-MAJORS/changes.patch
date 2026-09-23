@@ -1,0 +1,1277 @@
+diff --git a/backend/app/services/galaxy_bootstrap_service.py b/backend/app/services/galaxy_bootstrap_service.py
+index e3d0159f..57f96f03 100644
+--- a/backend/app/services/galaxy_bootstrap_service.py
++++ b/backend/app/services/galaxy_bootstrap_service.py
+@@ -15,95 +15,124 @@ from app.services.galaxy_service import GalaxyService
+ 
+ # Seed templates by goal type — abstract enough to apply to any subject,
+ # specific enough to feel relevant to the user's goal.
+-_GOAL_TYPE_SEEDS: dict[str, list[dict[str, str]]] = {
++#
++# V13-MAJORS (M-01 hot-path): every seed carries curated `sector_weights` so
++# ExpansionService._resolve_visual_data skips the per-node LLM sector
++# classification (NodeSectorService.classify_payload → llm.chat_json, unbounded
++# latency). 5 scaffold nodes × ~5-6s LLM each was the dominant chunk of the
++# measured 29s `POST /profile/onboarding` (V13 live log: node creations spaced
++# ~9-12s apart). Scaffold titles are template constants — a deterministic
++# template-level classification is honest and instant; user-authored nodes
++# still go through the LLM classifier.
++_GOAL_TYPE_SEEDS: dict[str, list[dict[str, object]]] = {
+     "exam": [
+         {
+             "title": "核心概念理解",
+             "summary": "目标学科的基础概念与定义，是所有题型的底层支撑。",
++            "sector_weights": {"WISDOM": 70, "TECH": 30},
+         },
+         {
+             "title": "典型题型训练",
+             "summary": "高频考题结构与解题方法，建立答题的肌肉记忆。",
++            "sector_weights": {"TECH": 55, "WISDOM": 45},
+         },
+         {
+             "title": "错题归因分析",
+             "summary": "分析失分原因，找到可以立即改进的具体卡点。",
++            "sector_weights": {"WISDOM": 75, "TECH": 25},
+         },
+         {
+             "title": "阶段性自测",
+             "summary": "通过模拟测验评估当前水平，识别与目标的差距。",
++            "sector_weights": {"WISDOM": 70, "TECH": 30},
+         },
+         {
+             "title": "备考节奏规划",
+             "summary": "复习周期与时间分配策略，让努力不内耗。",
++            "sector_weights": {"WISDOM": 60, "LIFE": 40},
+         },
+     ],
+     "skill": [
+         {
+             "title": "基础技能搭建",
+             "summary": "该技能的核心入门知识，没有这层基础后面容易卡住。",
++            "sector_weights": {"TECH": 60, "WISDOM": 40},
+         },
+         {
+             "title": "实践项目练习",
+-            "summary": "通过具体项目积累经验，学得再多不如做一个项目深。",
++            "summary": "用具体项目积累经验，学得再多不如做一个项目深。",
++            "sector_weights": {"TECH": 75, "WISDOM": 25},
+         },
+         {
+             "title": "难点突破",
+             "summary": "当前阶段最容易卡住的地方，提前预判可以节省大量时间。",
++            "sector_weights": {"TECH": 55, "WISDOM": 45},
+         },
+         {
+             "title": "进阶技巧",
+             "summary": "区分初级和中级水平的关键能力，值得专项投入。",
++            "sector_weights": {"TECH": 70, "WISDOM": 30},
+         },
+         {
+             "title": "应用场景拓展",
+             "summary": "把技能用到真实场景中，巩固理解并建立信心。",
++            "sector_weights": {"TECH": 50, "LIFE": 30, "WISDOM": 20},
+         },
+     ],
+     "interest": [
+         {
+             "title": "领域全景概览",
+             "summary": "这个兴趣领域的整体地图，先知道边界再决定去哪里深挖。",
++            "sector_weights": {"WISDOM": 40, "COSMOS": 35, "ART": 25},
+         },
+         {
+             "title": "入门资源精选",
+             "summary": "最值得先接触的内容，避免信息过载从错误地方开始。",
++            "sector_weights": {"WISDOM": 45, "LIFE": 30, "ART": 25},
+         },
+         {
+             "title": "核心概念",
+             "summary": "真正理解这个领域绕不开的几个核心概念。",
++            "sector_weights": {"WISDOM": 70, "COSMOS": 30},
+         },
+         {
+             "title": "深度探索方向",
+-            "summary": "最有深度可挖的几个方向，根据你的兴趣点选一个先突破。",
++            "summary": "这个领域最有深度可挖的几个方向，值得专项投入。",
++            "sector_weights": {"WISDOM": 50, "COSMOS": 30, "ART": 20},
+         },
+         {
+             "title": "实践与表达",
+             "summary": "用行动加深理解，兴趣只有落地才能持续。",
++            "sector_weights": {"ART": 45, "LIFE": 35, "WISDOM": 20},
+         },
+     ],
+ }
+ 
+-_DEFAULT_SEEDS: list[dict[str, str]] = [
++_DEFAULT_SEEDS: list[dict[str, object]] = [
+     {
+         "title": "目标拆解",
+         "summary": "将大目标分解为可执行的小步骤，每个步骤都能在一次专注中完成。",
++        "sector_weights": {"WISDOM": 75, "LIFE": 25},
+     },
+     {
+         "title": "基础知识盘点",
+         "summary": "梳理已知与未知的边界，让学习从已知的地方开始延伸。",
++        "sector_weights": {"WISDOM": 80, "COSMOS": 20},
+     },
+     {
+         "title": "核心难点识别",
+         "summary": "找出最需要突破的卡点，集中火力比全面铺开更有效。",
++        "sector_weights": {"WISDOM": 85, "TECH": 15},
+     },
+     {
+         "title": "学习节奏建立",
+         "summary": "建立稳定、可持续的学习习惯，节奏比强度更重要。",
++        "sector_weights": {"WISDOM": 60, "LIFE": 40},
+     },
+     {
+         "title": "进展追踪",
+         "summary": "定期回顾目标与实际进度，及时发现偏差并调整。",
++        "sector_weights": {"WISDOM": 70, "LIFE": 30},
+     },
+ ]
+ 
+@@ -141,9 +170,13 @@ class GalaxyBootstrapService:
+             try:
+                 node = await self._galaxy.create_node(
+                     user_id=user_id,
+-                    title=seed["title"],
+-                    summary=seed["summary"],
++                    title=str(seed["title"]),
++                    summary=str(seed["summary"]),
+                     tags=[*tags, f"seed_rank:{i}"],
++                    # Curated template-level classification: non-empty weights
++                    # short-circuit the per-node LLM classifier in
++                    # ExpansionService (see module comment — M-01 hot path).
++                    sector_weights=dict(seed.get("sector_weights") or {}) or None,
+                 )
+                 created.append(node)
+             except Exception as exc:
+diff --git a/backend/tests/test_galaxy_bootstrap_seed_weights.py b/backend/tests/test_galaxy_bootstrap_seed_weights.py
+new file mode 100644
+index 00000000..efe6a99a
+--- /dev/null
++++ b/backend/tests/test_galaxy_bootstrap_seed_weights.py
+@@ -0,0 +1,142 @@
++"""V13-MAJORS M-01: onboarding hot path — galaxy seed nodes must not hit the LLM.
++
++`POST /profile/onboarding` was measured at ~29s (V13 real-device report B-side).
++Live log evidence: the 5 scaffold node creations were spaced ~9-12s apart —
++each `GalaxyService.create_node` synchronously awaited the LLM sector
++classifier (`NodeSectorService.classify_payload → llm.chat_json`) because the
++seed templates carried no `sector_weights`.
++
++Fix contract:
++1. Every seed template carries curated, valid, non-VOID-dominant
++   `sector_weights` so `_resolve_visual_data` short-circuits the classifier.
++2. With weights provided (and a non-VOID dominant), `_resolve_visual_data`
++   must NOT invoke the LLM classifier at all.
++"""
++
++from __future__ import annotations
++
++import pytest
++
++from app.services.galaxy_bootstrap_service import (
++    _DEFAULT_SEEDS,
++    _GOAL_TYPE_SEEDS,
++    GalaxyBootstrapService,
++)
++from app.services.node_sector_service import (
++    SectorCode,
++    dominant_sector_from_weights,
++    normalize_sector_weights,
++)
++
++
++def _all_seed_groups() -> dict[str, list[dict[str, object]]]:
++    groups = dict(_GOAL_TYPE_SEEDS)
++    groups["__default__"] = _DEFAULT_SEEDS
++    return groups
++
++
++class TestSeedTemplatesCarryDeterministicWeights:
++    """Every seed must be classifiable without the LLM classifier."""
++
++    def test_all_goal_types_covered_by_bootstrap_dispatch(self):
++        # seed_from_goal falls back to _DEFAULT_SEEDS for unknown goal types;
++        # the known types must all be template-covered.
++        assert set(_GOAL_TYPE_SEEDS) >= {"exam", "skill", "interest"}
++
++    @pytest.mark.parametrize(
++        "group_name", ["exam", "skill", "interest", "__default__"]
++    )
++    def test_each_seed_has_non_void_dominant_weights(self, group_name):
++        seeds = _all_seed_groups()[group_name]
++        assert len(seeds) == 5, f"{group_name} must keep 5 scaffold seeds"
++        for seed in seeds:
++            raw = seed.get("sector_weights")
++            assert isinstance(raw, dict) and raw, (
++                f"{group_name}/{seed['title']}: seed weights missing — "
++                "scaffold node would fall back to the LLM classifier"
++            )
++            normalized = normalize_sector_weights(raw, fallback_sector=SectorCode.VOID)
++            dominant = dominant_sector_from_weights(normalized)
++            assert dominant is not None and dominant != SectorCode.VOID, (
++                f"{group_name}/{seed['title']}: dominant sector is VOID — "
++                "would still trigger the LLM classifier"
++            )
++
++    def test_bootstrap_service_uses_the_same_templates(self):
++        # Guard against the service growing its own seed copy that silently
++        # drops the weights again.
++        assert GalaxyBootstrapService is not None
++        for seeds in _GOAL_TYPE_SEEDS.values():
++            for seed in seeds:
++                assert "sector_weights" in seed
++
++
++class TestResolveVisualDataSkipsClassifier:
++    """With provided weights and a non-VOID dominant, no LLM call happens."""
++
++    async def test_provided_weights_bypass_classification(self, monkeypatch):
++        from app.services.expansion_service import ExpansionService
++
++        service = ExpansionService(db=None)  # db unused on this path
++
++        def _forbidden(*args, **kwargs):  # pragma: no cover - tripwire
++            raise AssertionError(
++                "LLM sector classifier invoked for a seed with provided weights"
++            )
++
++        monkeypatch.setattr(
++            "app.services.node_sector_service.NodeSectorService.classify_payload",
++            _forbidden,
++        )
++
++        visual, model = await service._resolve_visual_data(
++            {
++                "candidate_id": "核心概念理解_1",
++                "name": "核心概念理解",
++                "description": "目标学科的基础概念与定义。",
++                "sector_weights": {"WISDOM": 70, "TECH": 30},
++                "sector_weights_provided": True,
++            },
++            context_node=None,
++            subject=None,
++            fallback_sector=SectorCode.VOID,
++        )
++
++        assert visual.dominant_sector_code == SectorCode.WISDOM
++        assert visual.sector_weights, "normalized weights must survive"
++
++    async def test_missing_weights_still_classify_via_llm(self, monkeypatch):
++        """The classifier must stay wired for genuinely unclassified nodes."""
++        from app.services.expansion_service import ExpansionService
++
++        service = ExpansionService(db=None)
++        called = {"count": 0}
++
++        async def _fake_classify(*args, **kwargs):
++            called["count"] += 1
++            from app.services.node_sector_service import build_sector_visuals
++
++            return build_sector_visuals(
++                kwargs.get("name") or (args[0] if args else "x"),
++                importance_level=3,
++                sector_weights={"WISDOM": 100},
++            )
++
++        monkeypatch.setattr(
++            "app.services.node_sector_service.NodeSectorService.classify_payload",
++            _fake_classify,
++        )
++
++        visual, model = await service._resolve_visual_data(
++            {
++                "candidate_id": "用户自建节点_1",
++                "name": "用户自建节点",
++                "description": "没有权重信息的节点。",
++            },
++            context_node=None,
++            subject=None,
++            fallback_sector=SectorCode.VOID,
++        )
++
++        assert called["count"] == 1
++        assert visual.dominant_sector_code == SectorCode.WISDOM
+diff --git a/mobile/lib/features/user/presentation/screens/modeling_chat_screen.dart b/mobile/lib/features/user/presentation/screens/modeling_chat_screen.dart
+index 274afa71..b8d0d9c4 100644
+--- a/mobile/lib/features/user/presentation/screens/modeling_chat_screen.dart
++++ b/mobile/lib/features/user/presentation/screens/modeling_chat_screen.dart
+@@ -13,6 +13,8 @@ import 'package:sparkle/features/auth/auth.dart';
+ import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
+ import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
+ import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
++import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
++import 'package:sparkle/features/chat/presentation/widgets/chat_run_phase_indicator.dart';
+ import 'package:sparkle/features/home/home_routes.dart';
+ import 'package:sparkle/features/plan/data/models/plan_model.dart';
+ import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
+@@ -42,6 +44,12 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
+   /// starts; anything longer is indistinguishable from a dead run.
+   static const Duration _firstEventTimeout = Duration(seconds: 45);
+ 
++  /// V13 B-02: 建模访谈多消息回合中段（Aurora 上一条已送达、下一条还在
++  /// 生成）曾出现 50s+ 无任何帧的窗口——首事件看门狗此时已撤销，用户唯一
++  /// 出路是「跳过」。中段看门狗按 V13 实测的 50s+ 留出余量取 75s：期间由
++  /// 阶段胶囊显示「思考中」，超时则转为可见错误 + 重试。
++  static const Duration _midRunEventTimeout = Duration(seconds: 75);
++
+   final TextEditingController _inputController = TextEditingController();
+   final ScrollController _scrollController = ScrollController();
+   final List<_ModelingMessage> _messages = <_ModelingMessage>[];
+@@ -50,6 +58,14 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
+   final Map<String, String> _draftMessageIdsByRequest = <String, String>{};
+   final Map<String, Timer> _firstEventTimers = <String, Timer>{};
+ 
++  /// V13 B-02: 每个在跑 run 的「任意帧」看门狗——任何事件（含 meta/status）
++  /// 都会重置；触发即视为流已死，转可见错误 + 重试。
++  final Map<String, Timer> _activityTimers = <String, Timer>{};
++
++  /// 最近一次用户真实发送的文本（不含 `_onboarding_start_` 控制串），
++  /// 供超时/错误后的「重试」重发。
++  String? _lastUserMessage;
++
+   String? _conversationId;
+   bool _completed = false;
+   bool _planningInFlight = false;
+@@ -62,6 +78,21 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
+ 
+   bool get _hasActiveAuroraRun => _runSubscriptions.isNotEmpty;
+ 
++  /// V13 B-02 / D-15: 是否有正在流式输出的助手草稿——区分「生成中」与
++  /// 「两条消息之间的长思考」，驱动阶段胶囊的阶段位。
++  bool get _isDraftStreaming =>
++      _messages.any((message) => !message.isUser && message.isStreaming);
++
++  /// V13 B-02: 用户主动取消在跑的 run（阶段胶囊的取消动作）。
++  /// 已生成的部分消息保留，输入框立即可用。
++  void _cancelActiveRuns() {
++    final requestIds = List<String>.from(_runSubscriptions.keys);
++    for (final requestId in requestIds) {
++      _finalizeAssistantDraft(requestId);
++      _cleanupRun(requestId, cancelSubscription: true);
++    }
++  }
++
+   @override
+   void initState() {
+     super.initState();
+@@ -85,6 +116,10 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
+       timer.cancel();
+     }
+     _firstEventTimers.clear();
++    for (final timer in _activityTimers.values) {
++      timer.cancel();
++    }
++    _activityTimers.clear();
+     _draftMessageIdsByRequest.clear();
+     _inputController.dispose();
+     _scrollController.dispose();
+@@ -223,6 +258,19 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
+                       child: Column(
+                         mainAxisSize: MainAxisSize.min,
+                         children: [
++                          // V13 B-02：长思考回合的阶段胶囊（复用 SPEC-C §5.2
++                          // 单行阶段指示器）——流式输出时停在「生成」，两条
++                          // 消息之间的静默窗口停在「思考」，并常驻可取消；
++                          // 取代此前「被晾着」的无反馈状态。
++                          if (_hasActiveAuroraRun)
++                            ChatRunPhaseIndicator(
++                              phase: _isDraftStreaming
++                                  ? ChatRunPhase.streaming
++                                  : ChatRunPhase.sending,
++                              aiStatus:
++                                  _isDraftStreaming ? null : 'THINKING',
++                              onCancel: _cancelActiveRuns,
++                            ),
+                           if (_hasActiveAuroraRun)
+                             Container(
+                               width: double.infinity,
+@@ -298,6 +346,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
+     }
+ 
+     if (addUserMessage) {
++      _lastUserMessage = trimmed;
+       setState(() {
+         _messages.add(
+           _ModelingMessage(
+@@ -373,6 +422,9 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
+           'no stream events within ${_firstEventTimeout.inSeconds}s',
+         );
+       });
++      // V13 B-02: 中段看门狗——任意事件都会重置（见 _handleStreamEvent），
++      // 触发即本轮 run 已 75s 无任何帧。
++      _armActivityTimer(requestId);
+     } catch (error) {
+       if (!mounted) {
+         return;
+@@ -381,6 +433,24 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
+     }
+   }
+ 
++  /// V13 B-02: 任意帧重置的中段看门狗。首事件前由首事件定时器（45s）先管，
++  /// 之后本定时器接管多消息回合的静默窗口。
++  void _armActivityTimer(String requestId) {
++    _activityTimers.remove(requestId)?.cancel();
++    _activityTimers[requestId] = Timer(_midRunEventTimeout, () {
++      if (!mounted) {
++        return;
++      }
++      if (!_runSubscriptions.containsKey(requestId)) {
++        return; // Run already finished normally.
++      }
++      _handleStreamError(
++        requestId,
++        'no stream events within ${_midRunEventTimeout.inSeconds}s mid-turn',
++      );
++    });
++  }
++
+   void _handleStreamEvent(String requestId, ChatStreamEvent event) {
+     if (!mounted) {
+       return;
+@@ -388,6 +458,8 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
+ 
+     // A-3: any event (even metadata-only) proves the stream is alive.
+     _firstEventTimers.remove(requestId)?.cancel();
++    // V13 B-02: same liveness proof feeds the mid-turn watchdog.
++    _armActivityTimer(requestId);
+ 
+     final sessionId = event.sessionId?.trim();
+     if (sessionId != null && sessionId.isNotEmpty) {
+@@ -443,7 +515,28 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
+     }
+     _finalizeAssistantDraft(requestId);
+     _cleanupRun(requestId, cancelSubscription: true);
+-    AppFeedback.error(context, context.l10n.modelChatTempFailed(UserFacingError.from(error).toString()));
++    // V13 B-02: 错误必须可见且可重试——重试重发最近一条用户消息
++    // （初始 `_onboarding_start_` run 无用户消息，此时只提示，不提供重发）。
++    final canRetry =
++        !_completed && !_skipInFlight && (_lastUserMessage?.trim().isNotEmpty ?? false);
++    ScaffoldMessenger.of(context).showSnackBar(
++      SparkleSnackBar.error(
++        context.l10n.modelChatTempFailed(UserFacingError.from(error).toString()),
++        onRetry: canRetry
++            ? () {
++                final text = _lastUserMessage?.trim();
++                if (mounted &&
++                    text != null &&
++                    text.isNotEmpty &&
++                    !_skipInFlight &&
++                    !_completed) {
++                  unawaited(_startModelingStream(text));
++                }
++              }
++            : null,
++        retryLabel: context.l10n.retry,
++      ),
++    );
+   }
+ 
+   void _appendAssistantChunk(String requestId, String chunk) {
+@@ -558,6 +651,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
+   }) {
+     final subscription = _runSubscriptions.remove(requestId);
+     _firstEventTimers.remove(requestId)?.cancel();
++    _activityTimers.remove(requestId)?.cancel();
+     _draftMessageIdsByRequest.remove(requestId);
+     if (cancelSubscription && subscription != null) {
+       unawaited(subscription.cancel());
+diff --git a/mobile/lib/features/user/presentation/screens/persona_onboarding_screen.dart b/mobile/lib/features/user/presentation/screens/persona_onboarding_screen.dart
+index bb59525a..8275f19b 100644
+--- a/mobile/lib/features/user/presentation/screens/persona_onboarding_screen.dart
++++ b/mobile/lib/features/user/presentation/screens/persona_onboarding_screen.dart
+@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:go_router/go_router.dart';
+ import 'package:sparkle/core/design/design_system.dart';
++import 'package:sparkle/core/design/widgets/app_feedback.dart';
+ import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
+ import 'package:sparkle/core/experience/experience_profile.dart';
+ import 'package:sparkle/core/extensions/context_l10n.dart';
+@@ -436,6 +437,24 @@ class _PersonaOnboardingScreenState
+           extra: {'post_onboarding_message': firstMessage},
+         );
+       }
++    } catch (error) {
++      // V13-MAJORS M-01 连带面：提交超时/失败原先只有 try/finally——按钮转圈
++      // 结束后原地复活，用户对成败零反馈（V13 实测 30s 超时静默）。现在给出
++      // 可见反馈 + 重试动作；重试即重新提交（服务端写路径为 upsert，幂等）。
++      if (!mounted) {
++        return;
++      }
++      ScaffoldMessenger.of(context).showSnackBar(
++        SparkleSnackBar.error(
++          context.l10n.userOnboardingSubmitFailed,
++          onRetry: () {
++            if (mounted) {
++              unawaited(_handleContinue(totalSteps));
++            }
++          },
++          retryLabel: context.l10n.retry,
++        ),
++      );
+     } finally {
+       if (mounted) {
+         setState(() => _submitting = false);
+diff --git a/mobile/lib/features/user/presentation/screens/profile_screen.dart b/mobile/lib/features/user/presentation/screens/profile_screen.dart
+index faeef158..1e15775b 100755
+--- a/mobile/lib/features/user/presentation/screens/profile_screen.dart
++++ b/mobile/lib/features/user/presentation/screens/profile_screen.dart
+@@ -13,6 +13,7 @@ import 'package:sparkle/features/achievement/achievement_routes.dart';
+ import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
+ import 'package:sparkle/features/auth/auth.dart';
+ import 'package:sparkle/features/documents/documents_routes.dart';
++import 'package:sparkle/features/photon/photon_routes.dart';
+ import 'package:sparkle/features/plan/plan_routes.dart';
+ import 'package:sparkle/features/user/data/repositories/user_repository.dart';
+ import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
+@@ -677,6 +678,21 @@ class ProfileScreen extends ConsumerWidget {
+                   onTap: () => context.push(AchievementRoutes.basePath),
+                 ),
+                 const Divider(height: 1, indent: 68),
++                // V13-MAJORS M-03：光子面直达入口。此前唯一链路是
++                // 首页 metrics_row → 成就 → 连续记录 → 商城 → 兑换（深埋且
++                // 新用户空态连 metrics_row 都不渲染，实际不可达）。「我的」
++                // 是底部常驻 tab，此 tile 对所有用户无条件渲染（空态新用户
++                // 也能 1 跳到达光子/学出会员出口）。文案复用既有
++                // photonRedeemPro* l10n，accent 复用既有金色 token。
++                _buildSettingsTile(
++                  context,
++                  icon: Icons.diamond_outlined,
++                  title: l10n.photonRedeemProTitle,
++                  subtitle: l10n.photonRedeemProSubtitle,
++                  accentColor: DS.profileAccentAchievementEntry,
++                  onTap: () => context.push(PhotonRoutes.redeemPro),
++                ),
++                const Divider(height: 1, indent: 68),
+                 _buildSettingsTile(
+                   context,
+                   icon: Icons.photo_library_outlined,
+diff --git a/mobile/lib/features/user/presentation/widgets/statistics_card.dart b/mobile/lib/features/user/presentation/widgets/statistics_card.dart
+index 07853fe4..b1c8cf59 100644
+--- a/mobile/lib/features/user/presentation/widgets/statistics_card.dart
++++ b/mobile/lib/features/user/presentation/widgets/statistics_card.dart
+@@ -1,10 +1,12 @@
+-import 'package:fl_chart/fl_chart.dart';
+ import 'package:flutter/material.dart';
+-import 'package:intl/intl.dart';
+ import 'package:sparkle/core/design/design_system.dart';
+ import 'package:sparkle/core/extensions/context_l10n.dart';
+-import 'package:sparkle/core/services/i18n_service.dart';
+ 
++/// V13-MAJORS M-02（诚实性红线）：本卡原先用一组硬编码 FlSpot(3,5,2,8,4,7,9)
++/// 画出完整 7 天曲线——零行为的新注册用户也会看到一条"假的成长曲线"。
++/// 该卡片没有任何真实数据源（后端无 7 日学习指数序列端点；自造口径违反
++/// 口径单一事实源约束），因此零数据时只渲染诚实空态：不画曲线、不造数字。
++/// 未来接入真实日粒度序列时，在 [_WeeklyTrendBody] 按 has_data 分支渲染。
+ class StatisticsCard extends StatelessWidget {
+   const StatisticsCard({super.key});
+ 
+@@ -13,8 +15,6 @@ class StatisticsCard extends StatelessWidget {
+     final isDark = Theme.of(context).brightness == Brightness.dark;
+     final trendAccent =
+         isDark ? const Color(0xFF94AFD2) : const Color(0xFF7A93B4);
+-    final trendAccentSoft =
+-        isDark ? const Color(0xFF8EA18E) : const Color(0xFF9DB1C9);
+ 
+     return Container(
+       padding: const EdgeInsets.all(DS.spacing16),
+@@ -55,10 +55,7 @@ class StatisticsCard extends StatelessWidget {
+           const SizedBox(height: DS.spacing16),
+           SizedBox(
+             height: 120,
+-            child: _WeeklyTrendChart(
+-              trendAccent: trendAccent,
+-              trendAccentSoft: trendAccentSoft,
+-            ),
++            child: _WeeklyTrendBody(trendAccent: trendAccent),
+           ),
+         ],
+       ),
+@@ -66,128 +63,42 @@ class StatisticsCard extends StatelessWidget {
+   }
+ }
+ 
+-class _WeeklyTrendChart extends StatelessWidget {
+-  const _WeeklyTrendChart({
+-    required this.trendAccent,
+-    required this.trendAccentSoft,
+-  });
++/// 空数据诚实态占位。当前该卡无任何真实数据源，恒为空态；
++/// 接入真实序列后在此按数据有无分支（空态/曲线），禁止回落到伪造数据。
++class _WeeklyTrendBody extends StatelessWidget {
++  const _WeeklyTrendBody({required this.trendAccent});
+ 
+   final Color trendAccent;
+-  final Color trendAccentSoft;
+ 
+   @override
+   Widget build(BuildContext context) {
+     final isDark = Theme.of(context).brightness == Brightness.dark;
+-    final locale = I18nService.instance.currentLocale.languageCode;
+-    final shortDays = List.generate(
+-      7,
+-      (index) => DateFormat.E(locale).format(DateTime(2026, 1, 5 + index)),
+-    );
+-    final longDays = List.generate(
+-      7,
+-      (index) => DateFormat.EEEE(locale).format(DateTime(2026, 1, 5 + index)),
+-    );
+-    final spots = [
+-      const FlSpot(0, 3),
+-      const FlSpot(1, 5),
+-      const FlSpot(2, 2),
+-      const FlSpot(3, 8),
+-      const FlSpot(4, 4),
+-      const FlSpot(5, 7),
+-      const FlSpot(6, 9),
+-    ];
+-
+-    return RepaintBoundary(
+-      child: LineChart(
+-        LineChartData(
+-          gridData: const FlGridData(show: false),
+-          titlesData: FlTitlesData(
+-            leftTitles: const AxisTitles(),
+-            rightTitles: const AxisTitles(),
+-            topTitles: const AxisTitles(),
+-            bottomTitles: AxisTitles(
+-              sideTitles: SideTitles(
+-                showTitles: true,
+-                getTitlesWidget: (value, meta) {
+-                  if (value.toInt() >= 0 && value.toInt() < shortDays.length) {
+-                    return Padding(
+-                      padding: const EdgeInsets.only(top: 8),
+-                      child: Text(
+-                        shortDays[value.toInt()],
+-                        style: TextStyle(
+-                          color: DS.textSecondary,
+-                          fontSize: 10,
+-                          fontWeight: DS.fontWeightSemibold,
+-                        ),
+-                      ),
+-                    );
+-                  }
+-                  return const Text('');
+-                },
+-                interval: 1,
+-              ),
+-            ),
++    return Container(
++      width: double.infinity,
++      padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
++      decoration: BoxDecoration(
++        color: trendAccent.withValues(alpha: isDark ? 0.06 : 0.05),
++        borderRadius: DS.borderRadius12,
++        border: Border.all(color: trendAccent.withValues(alpha: 0.10)),
++      ),
++      child: Column(
++        mainAxisAlignment: MainAxisAlignment.center,
++        children: [
++          Icon(
++            Icons.insights_outlined,
++            size: 22,
++            color: trendAccent.withValues(alpha: 0.8),
+           ),
+-          borderData: FlBorderData(show: false),
+-          lineTouchData: LineTouchData(
+-            touchTooltipData: LineTouchTooltipData(
+-              tooltipBgColor: isDark
+-                  ? DS.surfacePrimaryElevated.withValues(alpha: 0.94)
+-                  : DS.surfacePrimary.withValues(alpha: 0.98),
+-              tooltipRoundedRadius: 14,
+-              tooltipPadding:
+-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+-              tooltipMargin: 10,
+-              fitInsideHorizontally: true,
+-              fitInsideVertically: true,
+-              getTooltipItems: (touchedSpots) => touchedSpots.map((spot) => LineTooltipItem(
+-                  '${longDays[spot.x.toInt()]}\n${context.l10n.statisticsLearningIndex(spot.y.toStringAsFixed(0))}',
+-                  TextStyle(
+-                    color: DS.textPrimary,
+-                    fontSize: 12,
+-                    fontWeight: DS.fontWeightMedium,
+-                    height: 1.35,
+-                  ),
+-                ),).toList(),
++          const SizedBox(height: DS.spacing8),
++          Text(
++            context.l10n.statisticsTrendEmptyHint,
++            textAlign: TextAlign.center,
++            style: DS.bodySmall.copyWith(
++              color: DS.textSecondary,
++              height: 1.4,
+             ),
+           ),
+-          lineBarsData: [
+-            LineChartBarData(
+-              spots: spots,
+-              isCurved: true,
+-              gradient: LinearGradient(
+-                colors: [trendAccent, trendAccentSoft],
+-              ),
+-              barWidth: 3,
+-              isStrokeCapRound: true,
+-              dotData: FlDotData(
+-                getDotPainter: (spot, percent, barData, index) =>
+-                    FlDotCirclePainter(
+-                  radius: 4,
+-                  color: DS.surfacePrimary,
+-                  strokeWidth: 2,
+-                  strokeColor: trendAccent,
+-                ),
+-              ),
+-              belowBarData: BarAreaData(
+-                show: true,
+-                gradient: LinearGradient(
+-                  colors: [
+-                    trendAccent.withValues(alpha: 0.20),
+-                    trendAccentSoft.withValues(alpha: 0.06),
+-                    trendAccentSoft.withValues(alpha: 0),
+-                  ],
+-                  begin: Alignment.topCenter,
+-                  end: Alignment.bottomCenter,
+-                ),
+-              ),
+-            ),
+-          ],
+-          minX: 0,
+-          maxX: 6,
+-          minY: 0,
+-          maxY: 10,
+-        ),
++        ],
+       ),
+     );
+   }
+diff --git a/mobile/lib/l10n/app_en.arb b/mobile/lib/l10n/app_en.arb
+index d6abcaab..7e188210 100755
+--- a/mobile/lib/l10n/app_en.arb
++++ b/mobile/lib/l10n/app_en.arb
+@@ -17693,5 +17693,9 @@
+           "type": "String"
+         }
+       }
+-    }
++    },
++    "userOnboardingSubmitFailed": "This step didn't finish in time — your settings may already be saved. You can retry once, or skip ahead for now.",
++    "@userOnboardingSubmitFailed": {},
++    "statisticsTrendEmptyHint": "No study records yet — your growth curve will appear here after your first study session.",
++    "@statisticsTrendEmptyHint": {}
+ }
+diff --git a/mobile/lib/l10n/app_localizations.dart b/mobile/lib/l10n/app_localizations.dart
+index df943e89..c95becc4 100644
+--- a/mobile/lib/l10n/app_localizations.dart
++++ b/mobile/lib/l10n/app_localizations.dart
+@@ -67356,6 +67356,18 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'下一个建议碰：{name}'**
+   String galaxyWorkViewNextTouch(String name);
++
++  /// No description provided for @userOnboardingSubmitFailed.
++  ///
++  /// In zh, this message translates to:
++  /// **'这一步暂时没有完成，你的设置可能已经保存。可以重试一次，或先跳过进入下一步。'**
++  String get userOnboardingSubmitFailed;
++
++  /// No description provided for @statisticsTrendEmptyHint.
++  ///
++  /// In zh, this message translates to:
++  /// **'还没有学习记录——完成第一次学习后，你的成长曲线会出现在这里。'**
++  String get statisticsTrendEmptyHint;
+ }
+ 
+ class _AppLocalizationsDelegate
+diff --git a/mobile/lib/l10n/app_localizations_en.dart b/mobile/lib/l10n/app_localizations_en.dart
+index 1600518a..3107f9a6 100644
+--- a/mobile/lib/l10n/app_localizations_en.dart
++++ b/mobile/lib/l10n/app_localizations_en.dart
+@@ -38706,4 +38706,12 @@ class AppLocalizationsEn extends AppLocalizations {
+   String galaxyWorkViewNextTouch(String name) {
+     return 'Next up: $name';
+   }
++
++  @override
++  String get userOnboardingSubmitFailed =>
++      'This step didn\'t finish in time — your settings may already be saved. You can retry once, or skip ahead for now.';
++
++  @override
++  String get statisticsTrendEmptyHint =>
++      'No study records yet — your growth curve will appear here after your first study session.';
+ }
+diff --git a/mobile/lib/l10n/app_localizations_zh.dart b/mobile/lib/l10n/app_localizations_zh.dart
+index 178fbf9f..5b784408 100644
+--- a/mobile/lib/l10n/app_localizations_zh.dart
++++ b/mobile/lib/l10n/app_localizations_zh.dart
+@@ -37101,4 +37101,11 @@ class AppLocalizationsZh extends AppLocalizations {
+   String galaxyWorkViewNextTouch(String name) {
+     return '下一个建议碰：$name';
+   }
++
++  @override
++  String get userOnboardingSubmitFailed =>
++      '这一步暂时没有完成，你的设置可能已经保存。可以重试一次，或先跳过进入下一步。';
++
++  @override
++  String get statisticsTrendEmptyHint => '还没有学习记录——完成第一次学习后，你的成长曲线会出现在这里。';
+ }
+diff --git a/mobile/lib/l10n/app_zh.arb b/mobile/lib/l10n/app_zh.arb
+index 378ef081..4f862ec4 100755
+--- a/mobile/lib/l10n/app_zh.arb
++++ b/mobile/lib/l10n/app_zh.arb
+@@ -17286,5 +17286,9 @@
+           "type": "String"
+         }
+       }
+-    }
++    },
++    "userOnboardingSubmitFailed": "这一步暂时没有完成，你的设置可能已经保存。可以重试一次，或先跳过进入下一步。",
++    "@userOnboardingSubmitFailed": {},
++    "statisticsTrendEmptyHint": "还没有学习记录——完成第一次学习后，你的成长曲线会出现在这里。",
++    "@statisticsTrendEmptyHint": {}
+ }
+diff --git a/mobile/test/features/user/persona_onboarding_submit_feedback_test.dart b/mobile/test/features/user/persona_onboarding_submit_feedback_test.dart
+new file mode 100644
+index 00000000..da7ab8da
+--- /dev/null
++++ b/mobile/test/features/user/persona_onboarding_submit_feedback_test.dart
+@@ -0,0 +1,109 @@
++import 'package:dio/dio.dart';
++import 'package:flutter/material.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:shared_preferences/shared_preferences.dart';
++import 'package:sparkle/core/network/api_client.dart';
++import 'package:sparkle/features/user/data/repositories/user_repository.dart';
++import 'package:sparkle/features/user/presentation/screens/persona_onboarding_screen.dart';
++
++import '../../shared/i18n_test_helper.dart';
++
++/// V13-MAJORS M-01 连带面：onboarding 提交原先只有 try/finally——服务端
++/// 慢/超时（V13 实测 30s receive timeout）后按钮原地复活，用户对成败
++/// 零反馈。本卡加 catch-UI：可见错误文案 + 重试动作。本测试钉住：
++/// 提交抛错时必须出现「这一步暂时没有完成…」反馈条，且重试会再次提交。
++void main() {
++  setUp(() {
++    setUpI18nForTesting();
++    SharedPreferences.setMockInitialValues({});
++  });
++  TestWidgetsFlutterBinding.ensureInitialized();
++
++  testWidgets('submit failure surfaces visible feedback with retry',
++      (tester) async {
++    final failingRepo = _FailingUserRepository();
++
++    await tester.pumpWidget(
++      ProviderScope(
++        overrides: [
++          userRepositoryProvider.overrideWithValue(failingRepo),
++        ],
++        child: testMaterialApp(home: const PersonaOnboardingScreen()),
++      ),
++    );
++    await tester.pump();
++    await tester.pump(const Duration(milliseconds: 200));
++
++    // 走到最后一步（5 步引导）。Stepper 的隐藏步控件仍留在树里，逐个尝试
++    // 直到 currentStep 推进到 4（最后一步的按钮文案为「完成」）。
++    int currentStep() =>
++        tester.widgetList<Stepper>(find.byType(Stepper)).first.currentStep;
++    var guard = 0;
++    while (currentStep() < 4 && guard < 24) {
++      final candidates = find.text('下一步');
++      final count = tester.widgetList(candidates).length;
++      final before = currentStep();
++      final tappable = candidates.hitTestable();
++      final tappableCount = tester.widgetList(tappable).length;
++      for (var i = 0; i < tappableCount; i++) {
++        await tester.tap(tappable.at(i), warnIfMissed: false);
++        await tester.pump(const Duration(milliseconds: 50));
++        if (currentStep() > before) {
++          // 等步进切换动画结束，否则新步按钮尚未可点。
++          await tester.pump(const Duration(milliseconds: 400));
++          break;
++        }
++      }
++      guard += 1;
++    }
++    expect(currentStep(), 4);
++    expect(find.text('完成'), findsWidgets);
++
++    // 最后一步的按钮可能被 Stepper 滚出视口，先拖到可见再点。
++    for (var d = 0; d < 8; d++) {
++      if (tester.widgetList(find.text('完成').hitTestable()).isNotEmpty) {
++        break;
++      }
++      await tester.drag(find.byType(Stepper), const Offset(0, -150));
++      await tester.pump(const Duration(milliseconds: 200));
++    }
++
++    // 提交 → 仓库抛超时错误 → 必须有可见反馈。
++    await tester.tap(find.text('完成').hitTestable().first, warnIfMissed: false);
++    await tester.pump();
++    await tester.pump(const Duration(milliseconds: 300));
++
++    expect(failingRepo.calls, 1);
++    expect(find.textContaining('这一步暂时没有完成'), findsOneWidget);
++    expect(find.text('重试'), findsOneWidget);
++
++    // 重试动作会再次提交。
++    await tester.tap(find.text('重试'), warnIfMissed: false);
++    await tester.pump();
++    await tester.pump(const Duration(milliseconds: 100));
++
++    expect(failingRepo.calls, 2);
++    expect(tester.takeException(), isNull);
++  });
++}
++
++class _FailingUserRepository extends UserRepository {
++  _FailingUserRepository() : super(_UnusedApiClient());
++
++  int calls = 0;
++
++  @override
++  Future<String?> submitOnboarding(Map<String, dynamic> payload) async {
++    calls += 1;
++    throw DioException(
++      requestOptions: RequestOptions(path: '/profile/onboarding'),
++      type: DioExceptionType.receiveTimeout,
++    );
++  }
++}
++
++class _UnusedApiClient implements ApiClient {
++  @override
++  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
++}
+diff --git a/mobile/test/features/user/profile_photon_entry_test.dart b/mobile/test/features/user/profile_photon_entry_test.dart
+new file mode 100644
+index 00000000..635d9b6a
+--- /dev/null
++++ b/mobile/test/features/user/profile_photon_entry_test.dart
+@@ -0,0 +1,162 @@
++import 'package:flutter/material.dart';
++import 'package:flutter_localizations/flutter_localizations.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:go_router/go_router.dart';
++import 'package:shared_preferences/shared_preferences.dart';
++import 'package:sparkle/core/network/api_client.dart';
++import 'package:sparkle/core/services/view_storage_service.dart';
++import 'package:sparkle/core/storage/token_storage.dart';
++import 'package:sparkle/features/achievement/data/repositories/achievement_repository.dart';
++import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
++import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
++import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
++import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
++import 'package:sparkle/features/user/presentation/screens/profile_screen.dart';
++import 'package:sparkle/l10n/app_localizations.dart';
++import 'package:sparkle/shared/entities/user_model.dart';
++import 'package:sparkle/shared/providers/visual_element_provider.dart';
++
++import '../../shared/i18n_test_helper.dart';
++
++/// V13-MAJORS M-03：光子面此前唯一链路是
++/// 首页 metrics_row → 成就 → 连续记录 → 商城 → 兑换（深埋，且新用户空态连
++/// metrics_row 都不渲染，实际不可达）。本卡在「我的」页个人成长区加直达
++/// tile。本测试钉住：tile 可见（新用户空 profileContext 也渲染）且点击
++/// 1 跳直达 /photon/redeem-pro。
++void main() {
++  setUp(setUpI18nForTesting);
++  TestWidgetsFlutterBinding.ensureInitialized();
++
++  testWidgets('profile growth section exposes one-hop photon redeem entry',
++      (tester) async {
++    SharedPreferences.setMockInitialValues({});
++    await ViewStorageService.ensureInitialized();
++
++    final container = ProviderContainer(
++      overrides: [
++        authProvider.overrideWith((ref) => _FakeAuthNotifier()),
++        achievementProvider.overrideWith(
++          (ref) => _FakeAchievementNotifier(
++            AchievementState.loading().copyWith(
++              achievements: const [],
++              isLoading: false,
++            ),
++          ),
++        ),
++        visualElementProvider.overrideWith(
++          (ref) => VisualElementNotifier(_UnusedApiClient()),
++        ),
++        // 空上下文 = 新注册零数据用户的面貌。
++        profileContextProvider.overrideWith((ref) async => <String, dynamic>{}),
++      ],
++    );
++    addTearDown(container.dispose);
++
++    final router = GoRouter(
++      initialLocation: '/profile',
++      routes: [
++        GoRoute(
++          path: '/profile',
++          builder: (context, state) => const ProfileScreen(),
++        ),
++        GoRoute(
++          path: '/photon/redeem-pro',
++          pageBuilder: (context, state) => const NoTransitionPage<void>(
++            child: Scaffold(body: Center(child: Text('PHOTON_REDEEM_STUB'))),
++          ),
++        ),
++      ],
++    );
++
++    await tester.pumpWidget(
++      UncontrolledProviderScope(
++        container: container,
++        child: MaterialApp.router(
++          routerConfig: router,
++          locale: const Locale('zh'),
++          localizationsDelegates: const [
++            AppLocalizations.delegate,
++            GlobalMaterialLocalizations.delegate,
++            GlobalWidgetsLocalizations.delegate,
++            GlobalCupertinoLocalizations.delegate,
++          ],
++          supportedLocales: AppLocalizations.supportedLocales,
++        ),
++      ),
++    );
++    for (var i = 0; i < 8; i++) {
++      await tester.pump(const Duration(milliseconds: 100));
++    }
++
++    // 空数据新用户也能看到入口（无条件渲染，不依赖任何学习状态）。
++    final tile = find.text('光子兑换');
++    expect(tile, findsOneWidget);
++
++    // 1 跳直达光子兑 Pro。
++    await tester.ensureVisible(tile);
++    await tester.pump();
++    await tester.tap(tile);
++    for (var i = 0; i < 6; i++) {
++      await tester.pump(const Duration(milliseconds: 100));
++    }
++    expect(find.text('PHOTON_REDEEM_STUB'), findsOneWidget);
++    expect(tester.takeException(), isNull);
++  });
++}
++
++class _FakeAchievementNotifier extends AchievementNotifier {
++  _FakeAchievementNotifier(AchievementState initialState)
++      : super(_UnusedAchievementRepository(), _UnusedRef()) {
++    state = initialState;
++  }
++
++  @override
++  Future<void> loadInitialData() async {}
++}
++
++class _FakeAuthNotifier extends AuthNotifier {
++  _FakeAuthNotifier() : super(_UnusedRef(), _UnusedAuthRepository()) {
++    state = AuthState(isAuthenticated: true, user: _buildUser());
++  }
++
++  @override
++  Future<void> checkAuthStatus() async {}
++}
++
++class _UnusedAchievementRepository extends AchievementRepository {
++  _UnusedAchievementRepository() : super(_UnusedApiClient());
++}
++
++class _UnusedAuthRepository extends AuthRepository {
++  _UnusedAuthRepository() : super(_UnusedApiClient(), _UnusedTokenStorage());
++}
++
++class _UnusedRef implements Ref<Object?> {
++  @override
++  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
++}
++
++class _UnusedApiClient implements ApiClient {
++  @override
++  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
++}
++
++class _UnusedTokenStorage implements TokenStorage {
++  @override
++  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
++}
++
++UserModel _buildUser() => UserModel(
++      id: '00000000-0000-0000-0000-000000000043',
++      username: 'photon_entry_user',
++      email: 'photon@example.com',
++      nickname: 'Photon Entry',
++      flameLevel: 1,
++      flameBrightness: 0.5,
++      depthPreference: 0.5,
++      curiosityPreference: 0.5,
++      isActive: true,
++      createdAt: DateTime(2026),
++      updatedAt: DateTime(2026),
++    );
+diff --git a/mobile/test/features/user/statistics_card_honest_empty_test.dart b/mobile/test/features/user/statistics_card_honest_empty_test.dart
+new file mode 100644
+index 00000000..fd613aa4
+--- /dev/null
++++ b/mobile/test/features/user/statistics_card_honest_empty_test.dart
+@@ -0,0 +1,46 @@
++import 'package:fl_chart/fl_chart.dart';
++import 'package:flutter/material.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:sparkle/features/user/presentation/widgets/statistics_card.dart';
++
++import '../../shared/i18n_test_helper.dart';
++
++/// V13-MAJORS M-02（诚实性红线）：驾驶舱/我的页「本周成长趋势」原先渲染一组
++/// 硬编码 FlSpot(3,5,2,8,4,7,9)——当天注册、零学习行为的用户也看到完整
++/// 7 天假曲线。本卡改为诚实空态（该卡无任何真实数据源），此测试钉住：
++/// 1) 空态文案在场；2) 不再渲染任何折线图。
++void main() {
++  setUp(setUpI18nForTesting);
++  TestWidgetsFlutterBinding.ensureInitialized();
++
++  group('StatisticsCard honest empty state', () {
++    testWidgets('renders header and honest empty hint, no fabricated curve',
++        (tester) async {
++      await tester.pumpWidget(
++        testMaterialApp(
++          home: const Scaffold(body: StatisticsCard()),
++        ),
++      );
++      await tester.pump();
++
++      expect(find.text('本周成长趋势'), findsOneWidget);
++      expect(find.textContaining('还没有学习记录'), findsOneWidget);
++
++      // 诚实红线：任何折线图（含伪造数据）都不得出现。
++      expect(find.byType(LineChart), findsNothing);
++    });
++
++    testWidgets('empty state stays stable across rebuilds', (tester) async {
++      await tester.pumpWidget(
++        testMaterialApp(
++          home: const Scaffold(body: StatisticsCard()),
++        ),
++      );
++      await tester.pump();
++      await tester.pump();
++
++      expect(find.textContaining('还没有学习记录'), findsOneWidget);
++      expect(tester.takeException(), isNull);
++    });
++  });
++}
+diff --git a/mobile/test/widget/modeling_chat_screen_test.dart b/mobile/test/widget/modeling_chat_screen_test.dart
+index 2c134b1b..f533e00f 100644
+--- a/mobile/test/widget/modeling_chat_screen_test.dart
++++ b/mobile/test/widget/modeling_chat_screen_test.dart
+@@ -14,6 +14,7 @@ import 'package:sparkle/features/auth/auth.dart';
+ import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
+ import 'package:sparkle/features/chat/data/repositories/chat_repository.dart';
+ import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
++import 'package:sparkle/features/chat/presentation/widgets/chat_run_phase_indicator.dart';
+ import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
+ import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
+ import 'package:sparkle/features/user/presentation/screens/modeling_chat_screen.dart';
+@@ -450,5 +451,94 @@ void main() {
+         lessThan(tester.getTopLeft(secondBubble).dy),
+       );
+     });
++
++    testWidgets(
++        'V13 B-02: phase capsule shows during active run and can cancel it',
++        (tester) async {
++      final onboardingController = StreamController<ChatStreamEvent>();
++      final nextController = StreamController<ChatStreamEvent>();
++      controllers.addAll([onboardingController, nextController]);
++      repository
++        ..enqueueController(onboardingController)
++        ..enqueueController(nextController);
++
++      await _pumpModelingScreen(tester, repository: repository, sharedPrefs: sharedPrefs);
++
++      // 初始 run 在跑、尚无任何帧——胶囊必须在场（长思考等待期可见），
++      // 阶段位停在「思考中」而不是什么都没有。
++      expect(find.byType(ChatRunPhaseIndicator), findsOneWidget);
++      expect(find.text('思考中'), findsOneWidget);
++
++      // 用户可从胶囊直接取消该 run，输入框恢复可用。
++      await tester.tap(find.byTooltip('取消'));
++      await tester.pump();
++
++      expect(find.byType(ChatRunPhaseIndicator), findsNothing);
++      expect(find.text('思考中'), findsNothing);
++
++      await tester.enterText(find.byType(TextField), '继续聊');
++      await tester.tap(find.byIcon(Icons.send_rounded));
++      await tester.pump();
++
++      expect(
++        repository.sentRequests.last.message,
++        '继续聊',
++      );
++    });
++
++    testWidgets(
++        'V13 B-02: mid-turn silence escalates to visible error with retry',
++        (tester) async {
++      final onboardingController = StreamController<ChatStreamEvent>();
++      final replyController = StreamController<ChatStreamEvent>();
++      final retryController = StreamController<ChatStreamEvent>();
++      controllers.addAll([
++        onboardingController,
++        replyController,
++        retryController,
++      ]);
++      repository
++        ..enqueueController(onboardingController)
++        ..enqueueController(replyController)
++        ..enqueueController(retryController);
++
++      await _pumpModelingScreen(tester, repository: repository, sharedPrefs: sharedPrefs);
++
++      // 先让初始 run 正常结束（回一条 + Done），避免其看门狗干扰本场景。
++      onboardingController
++        ..add(TextEvent(content: '你好，我是 Aurora。'))
++        ..add(DoneEvent(finishReason: 'STOP'));
++      await tester.pump();
++      await tester.pump(const Duration(milliseconds: 50));
++      expect(find.byType(ChatRunPhaseIndicator), findsNothing);
++
++      // 用户发送一条消息（重试语义必须有真实用户消息可重发）。
++      await tester.enterText(find.byType(TextField), '我卡在图论了');
++      await tester.tap(find.byIcon(Icons.send_rounded));
++      await tester.pump();
++
++      // Aurora 只回了半句就静默（多消息回合中段，V13 实测 50s+ 无帧）。
++      replyController.add(TextEvent(content: '我先把瓶颈整理出来…'));
++
++      await tester.pump();
++      await tester.pump(const Duration(milliseconds: 50));
++
++      expect(find.text('我先把瓶颈整理出来…'), findsOneWidget);
++
++      // 75s 中段无任何帧 → 必须从「无反馈」升级为可见错误 + 重试。
++      await tester.pump(const Duration(seconds: 77));
++      await tester.pump(const Duration(milliseconds: 100));
++      await tester.pump(const Duration(milliseconds: 100));
++
++      expect(find.textContaining('建模对话暂时失败'), findsOneWidget);
++      expect(find.text('重试'), findsOneWidget);
++
++      // 重试 = 重发最近一条用户消息。
++      await tester.tap(find.text('重试'), warnIfMissed: false);
++      await tester.pump();
++      await tester.pump(const Duration(milliseconds: 50));
++
++      expect(repository.sentRequests.last.message, '我卡在图论了');
++    });
+   });
+ }

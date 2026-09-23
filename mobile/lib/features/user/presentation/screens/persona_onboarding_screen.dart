@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -436,6 +437,24 @@ class _PersonaOnboardingScreenState
           extra: {'post_onboarding_message': firstMessage},
         );
       }
+    } catch (error) {
+      // V13-MAJORS M-01 连带面：提交超时/失败原先只有 try/finally——按钮转圈
+      // 结束后原地复活，用户对成败零反馈（V13 实测 30s 超时静默）。现在给出
+      // 可见反馈 + 重试动作；重试即重新提交（服务端写路径为 upsert，幂等）。
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SparkleSnackBar.error(
+          context.l10n.userOnboardingSubmitFailed,
+          onRetry: () {
+            if (mounted) {
+              unawaited(_handleContinue(totalSteps));
+            }
+          },
+          retryLabel: context.l10n.retry,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() => _submitting = false);

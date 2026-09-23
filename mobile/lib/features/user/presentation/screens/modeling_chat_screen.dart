@@ -13,6 +13,8 @@ import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
+import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_run_phase_indicator.dart';
 import 'package:sparkle/features/home/home_routes.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
@@ -42,6 +44,12 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
   /// starts; anything longer is indistinguishable from a dead run.
   static const Duration _firstEventTimeout = Duration(seconds: 45);
 
+  /// V13 B-02: 建模访谈多消息回合中段（Aurora 上一条已送达、下一条还在
+  /// 生成）曾出现 50s+ 无任何帧的窗口——首事件看门狗此时已撤销，用户唯一
+  /// 出路是「跳过」。中段看门狗按 V13 实测的 50s+ 留出余量取 75s：期间由
+  /// 阶段胶囊显示「思考中」，超时则转为可见错误 + 重试。
+  static const Duration _midRunEventTimeout = Duration(seconds: 75);
+
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<_ModelingMessage> _messages = <_ModelingMessage>[];
@@ -49,6 +57,14 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
       <String, StreamSubscription<ChatStreamEvent>>{};
   final Map<String, String> _draftMessageIdsByRequest = <String, String>{};
   final Map<String, Timer> _firstEventTimers = <String, Timer>{};
+
+  /// V13 B-02: 每个在跑 run 的「任意帧」看门狗——任何事件（含 meta/status）
+  /// 都会重置；触发即视为流已死，转可见错误 + 重试。
+  final Map<String, Timer> _activityTimers = <String, Timer>{};
+
+  /// 最近一次用户真实发送的文本（不含 `_onboarding_start_` 控制串），
+  /// 供超时/错误后的「重试」重发。
+  String? _lastUserMessage;
 
   String? _conversationId;
   bool _completed = false;
@@ -61,6 +77,21 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
   String? _planningErrorMessage;
 
   bool get _hasActiveAuroraRun => _runSubscriptions.isNotEmpty;
+
+  /// V13 B-02 / D-15: 是否有正在流式输出的助手草稿——区分「生成中」与
+  /// 「两条消息之间的长思考」，驱动阶段胶囊的阶段位。
+  bool get _isDraftStreaming =>
+      _messages.any((message) => !message.isUser && message.isStreaming);
+
+  /// V13 B-02: 用户主动取消在跑的 run（阶段胶囊的取消动作）。
+  /// 已生成的部分消息保留，输入框立即可用。
+  void _cancelActiveRuns() {
+    final requestIds = List<String>.from(_runSubscriptions.keys);
+    for (final requestId in requestIds) {
+      _finalizeAssistantDraft(requestId);
+      _cleanupRun(requestId, cancelSubscription: true);
+    }
+  }
 
   @override
   void initState() {
@@ -85,6 +116,10 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
       timer.cancel();
     }
     _firstEventTimers.clear();
+    for (final timer in _activityTimers.values) {
+      timer.cancel();
+    }
+    _activityTimers.clear();
     _draftMessageIdsByRequest.clear();
     _inputController.dispose();
     _scrollController.dispose();
@@ -223,6 +258,19 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          // V13 B-02：长思考回合的阶段胶囊（复用 SPEC-C §5.2
+                          // 单行阶段指示器）——流式输出时停在「生成」，两条
+                          // 消息之间的静默窗口停在「思考」，并常驻可取消；
+                          // 取代此前「被晾着」的无反馈状态。
+                          if (_hasActiveAuroraRun)
+                            ChatRunPhaseIndicator(
+                              phase: _isDraftStreaming
+                                  ? ChatRunPhase.streaming
+                                  : ChatRunPhase.sending,
+                              aiStatus:
+                                  _isDraftStreaming ? null : 'THINKING',
+                              onCancel: _cancelActiveRuns,
+                            ),
                           if (_hasActiveAuroraRun)
                             Container(
                               width: double.infinity,
@@ -298,6 +346,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
     }
 
     if (addUserMessage) {
+      _lastUserMessage = trimmed;
       setState(() {
         _messages.add(
           _ModelingMessage(
@@ -373,12 +422,33 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
           'no stream events within ${_firstEventTimeout.inSeconds}s',
         );
       });
+      // V13 B-02: 中段看门狗——任意事件都会重置（见 _handleStreamEvent），
+      // 触发即本轮 run 已 75s 无任何帧。
+      _armActivityTimer(requestId);
     } catch (error) {
       if (!mounted) {
         return;
       }
       AppFeedback.error(context, context.l10n.modelChatTempFailed(UserFacingError.from(error).toString()));
     }
+  }
+
+  /// V13 B-02: 任意帧重置的中段看门狗。首事件前由首事件定时器（45s）先管，
+  /// 之后本定时器接管多消息回合的静默窗口。
+  void _armActivityTimer(String requestId) {
+    _activityTimers.remove(requestId)?.cancel();
+    _activityTimers[requestId] = Timer(_midRunEventTimeout, () {
+      if (!mounted) {
+        return;
+      }
+      if (!_runSubscriptions.containsKey(requestId)) {
+        return; // Run already finished normally.
+      }
+      _handleStreamError(
+        requestId,
+        'no stream events within ${_midRunEventTimeout.inSeconds}s mid-turn',
+      );
+    });
   }
 
   void _handleStreamEvent(String requestId, ChatStreamEvent event) {
@@ -388,6 +458,8 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
 
     // A-3: any event (even metadata-only) proves the stream is alive.
     _firstEventTimers.remove(requestId)?.cancel();
+    // V13 B-02: same liveness proof feeds the mid-turn watchdog.
+    _armActivityTimer(requestId);
 
     final sessionId = event.sessionId?.trim();
     if (sessionId != null && sessionId.isNotEmpty) {
@@ -443,7 +515,28 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
     }
     _finalizeAssistantDraft(requestId);
     _cleanupRun(requestId, cancelSubscription: true);
-    AppFeedback.error(context, context.l10n.modelChatTempFailed(UserFacingError.from(error).toString()));
+    // V13 B-02: 错误必须可见且可重试——重试重发最近一条用户消息
+    // （初始 `_onboarding_start_` run 无用户消息，此时只提示，不提供重发）。
+    final canRetry =
+        !_completed && !_skipInFlight && (_lastUserMessage?.trim().isNotEmpty ?? false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SparkleSnackBar.error(
+        context.l10n.modelChatTempFailed(UserFacingError.from(error).toString()),
+        onRetry: canRetry
+            ? () {
+                final text = _lastUserMessage?.trim();
+                if (mounted &&
+                    text != null &&
+                    text.isNotEmpty &&
+                    !_skipInFlight &&
+                    !_completed) {
+                  unawaited(_startModelingStream(text));
+                }
+              }
+            : null,
+        retryLabel: context.l10n.retry,
+      ),
+    );
   }
 
   void _appendAssistantChunk(String requestId, String chunk) {
@@ -558,6 +651,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
   }) {
     final subscription = _runSubscriptions.remove(requestId);
     _firstEventTimers.remove(requestId)?.cancel();
+    _activityTimers.remove(requestId)?.cancel();
     _draftMessageIdsByRequest.remove(requestId);
     if (cancelSubscription && subscription != null) {
       unawaited(subscription.cancel());

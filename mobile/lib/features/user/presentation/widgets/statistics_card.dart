@@ -1,10 +1,12 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
+/// V13-MAJORS M-02（诚实性红线）：本卡原先用一组硬编码 FlSpot(3,5,2,8,4,7,9)
+/// 画出完整 7 天曲线——零行为的新注册用户也会看到一条"假的成长曲线"。
+/// 该卡片没有任何真实数据源（后端无 7 日学习指数序列端点；自造口径违反
+/// 口径单一事实源约束），因此零数据时只渲染诚实空态：不画曲线、不造数字。
+/// 未来接入真实日粒度序列时，在 [_WeeklyTrendBody] 按 has_data 分支渲染。
 class StatisticsCard extends StatelessWidget {
   const StatisticsCard({super.key});
 
@@ -13,8 +15,6 @@ class StatisticsCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final trendAccent =
         isDark ? const Color(0xFF94AFD2) : const Color(0xFF7A93B4);
-    final trendAccentSoft =
-        isDark ? const Color(0xFF8EA18E) : const Color(0xFF9DB1C9);
 
     return Container(
       padding: const EdgeInsets.all(DS.spacing16),
@@ -55,10 +55,7 @@ class StatisticsCard extends StatelessWidget {
           const SizedBox(height: DS.spacing16),
           SizedBox(
             height: 120,
-            child: _WeeklyTrendChart(
-              trendAccent: trendAccent,
-              trendAccentSoft: trendAccentSoft,
-            ),
+            child: _WeeklyTrendBody(trendAccent: trendAccent),
           ),
         ],
       ),
@@ -66,128 +63,42 @@ class StatisticsCard extends StatelessWidget {
   }
 }
 
-class _WeeklyTrendChart extends StatelessWidget {
-  const _WeeklyTrendChart({
-    required this.trendAccent,
-    required this.trendAccentSoft,
-  });
+/// 空数据诚实态占位。当前该卡无任何真实数据源，恒为空态；
+/// 接入真实序列后在此按数据有无分支（空态/曲线），禁止回落到伪造数据。
+class _WeeklyTrendBody extends StatelessWidget {
+  const _WeeklyTrendBody({required this.trendAccent});
 
   final Color trendAccent;
-  final Color trendAccentSoft;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final locale = I18nService.instance.currentLocale.languageCode;
-    final shortDays = List.generate(
-      7,
-      (index) => DateFormat.E(locale).format(DateTime(2026, 1, 5 + index)),
-    );
-    final longDays = List.generate(
-      7,
-      (index) => DateFormat.EEEE(locale).format(DateTime(2026, 1, 5 + index)),
-    );
-    final spots = [
-      const FlSpot(0, 3),
-      const FlSpot(1, 5),
-      const FlSpot(2, 2),
-      const FlSpot(3, 8),
-      const FlSpot(4, 4),
-      const FlSpot(5, 7),
-      const FlSpot(6, 9),
-    ];
-
-    return RepaintBoundary(
-      child: LineChart(
-        LineChartData(
-          gridData: const FlGridData(show: false),
-          titlesData: FlTitlesData(
-            leftTitles: const AxisTitles(),
-            rightTitles: const AxisTitles(),
-            topTitles: const AxisTitles(),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                getTitlesWidget: (value, meta) {
-                  if (value.toInt() >= 0 && value.toInt() < shortDays.length) {
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        shortDays[value.toInt()],
-                        style: TextStyle(
-                          color: DS.textSecondary,
-                          fontSize: 10,
-                          fontWeight: DS.fontWeightSemibold,
-                        ),
-                      ),
-                    );
-                  }
-                  return const Text('');
-                },
-                interval: 1,
-              ),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+      decoration: BoxDecoration(
+        color: trendAccent.withValues(alpha: isDark ? 0.06 : 0.05),
+        borderRadius: DS.borderRadius12,
+        border: Border.all(color: trendAccent.withValues(alpha: 0.10)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.insights_outlined,
+            size: 22,
+            color: trendAccent.withValues(alpha: 0.8),
+          ),
+          const SizedBox(height: DS.spacing8),
+          Text(
+            context.l10n.statisticsTrendEmptyHint,
+            textAlign: TextAlign.center,
+            style: DS.bodySmall.copyWith(
+              color: DS.textSecondary,
+              height: 1.4,
             ),
           ),
-          borderData: FlBorderData(show: false),
-          lineTouchData: LineTouchData(
-            touchTooltipData: LineTouchTooltipData(
-              tooltipBgColor: isDark
-                  ? DS.surfacePrimaryElevated.withValues(alpha: 0.94)
-                  : DS.surfacePrimary.withValues(alpha: 0.98),
-              tooltipRoundedRadius: 14,
-              tooltipPadding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              tooltipMargin: 10,
-              fitInsideHorizontally: true,
-              fitInsideVertically: true,
-              getTooltipItems: (touchedSpots) => touchedSpots.map((spot) => LineTooltipItem(
-                  '${longDays[spot.x.toInt()]}\n${context.l10n.statisticsLearningIndex(spot.y.toStringAsFixed(0))}',
-                  TextStyle(
-                    color: DS.textPrimary,
-                    fontSize: 12,
-                    fontWeight: DS.fontWeightMedium,
-                    height: 1.35,
-                  ),
-                ),).toList(),
-            ),
-          ),
-          lineBarsData: [
-            LineChartBarData(
-              spots: spots,
-              isCurved: true,
-              gradient: LinearGradient(
-                colors: [trendAccent, trendAccentSoft],
-              ),
-              barWidth: 3,
-              isStrokeCapRound: true,
-              dotData: FlDotData(
-                getDotPainter: (spot, percent, barData, index) =>
-                    FlDotCirclePainter(
-                  radius: 4,
-                  color: DS.surfacePrimary,
-                  strokeWidth: 2,
-                  strokeColor: trendAccent,
-                ),
-              ),
-              belowBarData: BarAreaData(
-                show: true,
-                gradient: LinearGradient(
-                  colors: [
-                    trendAccent.withValues(alpha: 0.20),
-                    trendAccentSoft.withValues(alpha: 0.06),
-                    trendAccentSoft.withValues(alpha: 0),
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
-            ),
-          ],
-          minX: 0,
-          maxX: 6,
-          minY: 0,
-          maxY: 10,
-        ),
+        ],
       ),
     );
   }

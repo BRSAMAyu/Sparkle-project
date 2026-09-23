@@ -38698,4 +38698,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String galaxyWorkViewNextTouch(String name) {
     return 'Next up: $name';
   }
+
+  @override
+  String get userOnboardingSubmitFailed =>
+      'This step didn\'t finish in time — your settings may already be saved. You can retry once, or skip ahead for now.';
+
+  @override
+  String get statisticsTrendEmptyHint =>
+      'No study records yet — your growth curve will appear here after your first study session.';
 }

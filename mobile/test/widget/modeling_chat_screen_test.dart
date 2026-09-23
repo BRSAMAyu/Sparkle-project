@@ -14,6 +14,7 @@ import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/repositories/chat_repository.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_run_phase_indicator.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/features/user/presentation/screens/modeling_chat_screen.dart';
@@ -449,6 +450,95 @@ void main() {
         tester.getTopLeft(firstBubble).dy,
         lessThan(tester.getTopLeft(secondBubble).dy),
       );
+    });
+
+    testWidgets(
+        'V13 B-02: phase capsule shows during active run and can cancel it',
+        (tester) async {
+      final onboardingController = StreamController<ChatStreamEvent>();
+      final nextController = StreamController<ChatStreamEvent>();
+      controllers.addAll([onboardingController, nextController]);
+      repository
+        ..enqueueController(onboardingController)
+        ..enqueueController(nextController);
+
+      await _pumpModelingScreen(tester, repository: repository, sharedPrefs: sharedPrefs);
+
+      // 初始 run 在跑、尚无任何帧——胶囊必须在场（长思考等待期可见），
+      // 阶段位停在「思考中」而不是什么都没有。
+      expect(find.byType(ChatRunPhaseIndicator), findsOneWidget);
+      expect(find.text('思考中'), findsOneWidget);
+
+      // 用户可从胶囊直接取消该 run，输入框恢复可用。
+      await tester.tap(find.byTooltip('取消'));
+      await tester.pump();
+
+      expect(find.byType(ChatRunPhaseIndicator), findsNothing);
+      expect(find.text('思考中'), findsNothing);
+
+      await tester.enterText(find.byType(TextField), '继续聊');
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pump();
+
+      expect(
+        repository.sentRequests.last.message,
+        '继续聊',
+      );
+    });
+
+    testWidgets(
+        'V13 B-02: mid-turn silence escalates to visible error with retry',
+        (tester) async {
+      final onboardingController = StreamController<ChatStreamEvent>();
+      final replyController = StreamController<ChatStreamEvent>();
+      final retryController = StreamController<ChatStreamEvent>();
+      controllers.addAll([
+        onboardingController,
+        replyController,
+        retryController,
+      ]);
+      repository
+        ..enqueueController(onboardingController)
+        ..enqueueController(replyController)
+        ..enqueueController(retryController);
+
+      await _pumpModelingScreen(tester, repository: repository, sharedPrefs: sharedPrefs);
+
+      // 先让初始 run 正常结束（回一条 + Done），避免其看门狗干扰本场景。
+      onboardingController
+        ..add(TextEvent(content: '你好，我是 Aurora。'))
+        ..add(DoneEvent(finishReason: 'STOP'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.byType(ChatRunPhaseIndicator), findsNothing);
+
+      // 用户发送一条消息（重试语义必须有真实用户消息可重发）。
+      await tester.enterText(find.byType(TextField), '我卡在图论了');
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pump();
+
+      // Aurora 只回了半句就静默（多消息回合中段，V13 实测 50s+ 无帧）。
+      replyController.add(TextEvent(content: '我先把瓶颈整理出来…'));
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(find.text('我先把瓶颈整理出来…'), findsOneWidget);
+
+      // 75s 中段无任何帧 → 必须从「无反馈」升级为可见错误 + 重试。
+      await tester.pump(const Duration(seconds: 77));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.textContaining('建模对话暂时失败'), findsOneWidget);
+      expect(find.text('重试'), findsOneWidget);
+
+      // 重试 = 重发最近一条用户消息。
+      await tester.tap(find.text('重试'), warnIfMissed: false);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(repository.sentRequests.last.message, '我卡在图论了');
     });
   });
 }

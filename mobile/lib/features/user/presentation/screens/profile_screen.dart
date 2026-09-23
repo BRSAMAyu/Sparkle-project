@@ -13,6 +13,7 @@ import 'package:sparkle/features/achievement/achievement_routes.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/documents/documents_routes.dart';
+import 'package:sparkle/features/photon/photon_routes.dart';
 import 'package:sparkle/features/plan/plan_routes.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
@@ -675,6 +676,21 @@ class ProfileScreen extends ConsumerWidget {
                   title: l10n.achievementTitle,
                   accentColor: DS.profileAccentAchievementEntry,
                   onTap: () => context.push(AchievementRoutes.basePath),
+                ),
+                const Divider(height: 1, indent: 68),
+                // V13-MAJORS M-03：光子面直达入口。此前唯一链路是
+                // 首页 metrics_row → 成就 → 连续记录 → 商城 → 兑换（深埋且
+                // 新用户空态连 metrics_row 都不渲染，实际不可达）。「我的」
+                // 是底部常驻 tab，此 tile 对所有用户无条件渲染（空态新用户
+                // 也能 1 跳到达光子/学出会员出口）。文案复用既有
+                // photonRedeemPro* l10n，accent 复用既有金色 token。
+                _buildSettingsTile(
+                  context,
+                  icon: Icons.diamond_outlined,
+                  title: l10n.photonRedeemProTitle,
+                  subtitle: l10n.photonRedeemProSubtitle,
+                  accentColor: DS.profileAccentAchievementEntry,
+                  onTap: () => context.push(PhotonRoutes.redeemPro),
                 ),
                 const Divider(height: 1, indent: 68),
                 _buildSettingsTile(
