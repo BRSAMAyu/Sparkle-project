@@ -32929,48 +32929,6 @@ abstract class AppLocalizations {
   /// **'精准修复'**
   String get stuckHelpFix;
 
-  /// No description provided for @taskQuickActionSnoozed.
-  ///
-  /// In zh, this message translates to:
-  /// **'已推迟到明天，今天轻一点。'**
-  String get taskQuickActionSnoozed;
-
-  /// No description provided for @taskQuickActionTooHard.
-  ///
-  /// In zh, this message translates to:
-  /// **'拆好了，先做第一小步。'**
-  String get taskQuickActionTooHard;
-
-  /// No description provided for @taskQuickActionSkipped.
-  ///
-  /// In zh, this message translates to:
-  /// **'已跳过，这张卡先不打扰你。'**
-  String get taskQuickActionSkipped;
-
-  /// No description provided for @taskQuickActionAdjusted.
-  ///
-  /// In zh, this message translates to:
-  /// **'已经帮你调整好了。'**
-  String get taskQuickActionAdjusted;
-
-  /// No description provided for @taskQuickActionSnoozing.
-  ///
-  /// In zh, this message translates to:
-  /// **'好，我先把它挪到明天。'**
-  String get taskQuickActionSnoozing;
-
-  /// No description provided for @taskQuickActionSimplifying.
-  ///
-  /// In zh, this message translates to:
-  /// **'我来把这张卡拆小一点。'**
-  String get taskQuickActionSimplifying;
-
-  /// No description provided for @taskQuickActionSkipping.
-  ///
-  /// In zh, this message translates to:
-  /// **'收到，我先把它从今天拿开。'**
-  String get taskQuickActionSkipping;
-
   /// No description provided for @executionResultNoText.
   ///
   /// In zh, this message translates to:

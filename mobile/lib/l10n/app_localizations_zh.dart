@@ -18110,27 +18110,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get stuckHelpFix => '精准修复';
 
   @override
-  String get taskQuickActionSnoozed => '已推迟到明天，今天轻一点。';
-
-  @override
-  String get taskQuickActionTooHard => '拆好了，先做第一小步。';
-
-  @override
-  String get taskQuickActionSkipped => '已跳过，这张卡先不打扰你。';
-
-  @override
-  String get taskQuickActionAdjusted => '已经帮你调整好了。';
-
-  @override
-  String get taskQuickActionSnoozing => '好，我先把它挪到明天。';
-
-  @override
-  String get taskQuickActionSimplifying => '我来把这张卡拆小一点。';
-
-  @override
-  String get taskQuickActionSkipping => '收到，我先把它从今天拿开。';
-
-  @override
   String get executionResultNoText => '暂无文本结果。';
 
   @override

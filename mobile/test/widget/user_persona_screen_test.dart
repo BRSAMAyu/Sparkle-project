@@ -387,10 +387,18 @@ void main() {
     await tester.pumpWidget(_buildTestApp(repository));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('掌握概率论'), findsOneWidget);
-    expect(find.textContaining('图文混合'), findsOneWidget);
-    expect(find.textContaining('深入分析'), findsOneWidget);
-    expect(find.textContaining('�'), findsNothing);
+    // 「画像解读」（readable summary）区默认折叠——不展开时 summary 卡
+    // 根本不进树（_buildCollapsibleSection 仅 expanded 才挂载 child），
+    // 本用例基线即败的第一个根因。
+    await _expandSection(tester, '画像解读');
+
+    // V13-RETEST 同源事实：SparkleMarkdown 渲染为 RichText，
+    // 默认 finder 不命中——必须 findRichText: true（第二个根因）。
+    // 负向断言同步加 findRichText，否则 FFFD 残留也会假绿。
+    expect(find.textContaining('掌握概率论', findRichText: true), findsOneWidget);
+    expect(find.textContaining('图文混合', findRichText: true), findsOneWidget);
+    expect(find.textContaining('深入分析', findRichText: true), findsOneWidget);
+    expect(find.textContaining('\uFFFD', findRichText: true), findsNothing);
   });
 
   testWidgets(

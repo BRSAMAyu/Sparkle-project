@@ -18908,31 +18908,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get stuckHelpFix => 'Precise Fix';
 
   @override
-  String get taskQuickActionSnoozed =>
-      'Snoozed until tomorrow. Lighter day ahead.';
-
-  @override
-  String get taskQuickActionTooHard =>
-      'Broken down. Start with the first small step.';
-
-  @override
-  String get taskQuickActionSkipped =>
-      'Skipped. This card won\'t bother you for now.';
-
-  @override
-  String get taskQuickActionAdjusted => 'All set.';
-
-  @override
-  String get taskQuickActionSnoozing => 'Moving it to tomorrow...';
-
-  @override
-  String get taskQuickActionSimplifying =>
-      'Breaking this card into smaller pieces...';
-
-  @override
-  String get taskQuickActionSkipping => 'Got it, removing it from today...';
-
-  @override
   String get executionResultNoText => 'No text result available.';
 
   @override
