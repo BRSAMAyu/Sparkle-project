@@ -139,6 +139,11 @@ _runtime_redis_url = os.getenv("REDIS_URL", settings.REDIS_URL or "redis://local
 _runtime_redis_url = _normalize_test_redis_url(_runtime_redis_url)
 os.environ["REDIS_URL"] = _runtime_redis_url
 settings.REDIS_URL = _runtime_redis_url
+# AUTH-FOLLOWUP：单测进程环境判据。cache_service 对三个安全前缀
+# （token_blacklist:/session_revoked:/user_revoked_before:）在 Redis 缺席时禁用
+# 本地兜底（AUTH-DEEP A-2 P1），豁免判据读 settings.ENVIRONMENT（见 cache.py
+# _TESTING_ENVIRONMENTS）；测试进程在此显式置为 "test" 以保持既有单测行为。
+settings.ENVIRONMENT = "test"
 
 
 @pytest_asyncio.fixture(name="db_session")

@@ -24,6 +24,37 @@ from pydantic import BaseModel
 from app.config import settings
 from app.core.redis_utils import format_redis_url_for_log, resolve_redis_password
 
+# AUTH-DEEP A-2 专项（P1）：安全键前缀。Redis 缺席（init_redis 失败 → redis=None）
+# 时这些键绝不允许落进程内 dict——多 worker/多实例互不可见（实例 A 拉黑的 token
+# 在实例 B 有效），且本地路径不抛异常导致 prod fail-closed 永不触发（静默 fail-open）。
+# 与 app.core.security.TOKEN_BLACKLIST_PREFIX / USER_REVOKED_BEFORE_PREFIX、
+# app.services.auth_session_service.SESSION_REVOKED_PREFIX 保持字面一致
+# （不能 import：cache 处于被依赖层，反向引入会循环；一致性由
+# tests/unit/test_cache_security_prefix_failclosed.py 钉住）。
+SECURITY_KEY_PREFIXES = ("token_blacklist:", "session_revoked:", "user_revoked_before:")
+
+# 测试豁免判据：与 settings 现有环境判据同源（ENVIRONMENT），单测进程由
+# tests/conftest.py 置为 "test"，保持本地兜底不破坏既有用例。
+_TESTING_ENVIRONMENTS = {"test", "testing"}
+
+
+class CacheUnavailableError(ConnectionError):
+    """Redis 缺席时安全键拒绝本地兜底的显式失败。
+
+    继承 ConnectionError：refresh 端点的基础设施分级（auth.py 的
+    OperationalError/ConnectionError/TimeoutError → 503 retryable）天然接住，
+    不会伪装成 401 强登出。
+    """
+
+
+def _is_security_key(key: str) -> bool:
+    return isinstance(key, str) and key.startswith(SECURITY_KEY_PREFIXES)
+
+
+def _testing_environment() -> bool:
+    env = (settings.ENVIRONMENT or "").strip().lower()
+    return env in _TESTING_ENVIRONMENTS
+
 
 class CacheService:
     def __init__(self):
@@ -118,6 +149,13 @@ end
 
     async def get(self, key: str) -> Any:
         if not self.redis:
+            # AUTH-DEEP A-2（P1）：安全前缀禁用本地兜底——读抛错，交由调用方既有
+            # fail-closed 语义裁决（如 security.is_token_revoked：prod 判 revoked，
+            # 非 prod fail-open 但留下 error 日志）。业务缓存前缀保持本地兜底。
+            if _is_security_key(key) and not _testing_environment():
+                raise CacheUnavailableError(
+                    f"redis unavailable; local fallback forbidden for security key namespace {key.split(':', 1)[0]}"
+                )
             self._maybe_cleanup_local_cache()
             cached = self._local_cache.get(key)
             if cached is None:
@@ -139,6 +177,12 @@ end
         # Support both 'ttl' and 'ex' parameter names (standard Redis naming)
         ttl_value = ttl or ex
         if not self.redis:
+            # AUTH-DEEP A-2（P1）：安全前缀（黑名单/吊销标记/水位）写直接抛错——
+            # 写进进程内 dict 会造成多 worker 互不可见的假吊销，必须显式暴露。
+            if _is_security_key(key) and not _testing_environment():
+                raise CacheUnavailableError(
+                    f"redis unavailable; refusing local write for security key namespace {key.split(':', 1)[0]}"
+                )
             self._maybe_cleanup_local_cache()
             expires_at = None
             effective_ttl = ttl_value or self.default_ttl

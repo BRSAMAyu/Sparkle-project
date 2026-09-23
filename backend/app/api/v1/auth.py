@@ -130,6 +130,24 @@ def _default_community_permissions() -> list[str]:
     )
 
 
+def _access_delta_from_payload(payload: dict[str, Any]) -> timedelta | None:
+    """AUTH-DEEP A7：按签发时嵌入的 access_ttl（秒）重建 access 寿命。
+
+    访客签发 access=7 天，轮换前不透传会在首次 refresh 时缩回默认 30 分钟。
+    无该 claim（旧 token / 普通用户）返回 None 走默认值，向后兼容；
+    上界钳到 refresh 寿命，异常 claim（非正数/不可解析）同样走默认。
+    """
+    raw = payload.get("access_ttl") if payload else None
+    try:
+        ttl_seconds = int(raw)
+    except (TypeError, ValueError):
+        return None
+    if ttl_seconds <= 0:
+        return None
+    max_ttl = int(settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60)
+    return timedelta(seconds=min(ttl_seconds, max_ttl))
+
+
 async def _issue_auth_tokens(
     *,
     db: AsyncSession,
@@ -142,6 +160,9 @@ async def _issue_auth_tokens(
     effective_session_id = session_id or uuid.uuid4().hex
     claims = {"sub": str(user.id), "sid": effective_session_id, **(extra_claims or {})}
     access_token_expires = access_expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    # AUTH-DEEP A7：把 access 寿命（秒）写进 claims，refresh 轮换据此重建，
+    # 访客 7 天 access 不再在首次刷新时缩成 30 分钟。
+    claims["access_ttl"] = int(access_token_expires.total_seconds())
     access_token = create_access_token(
         data=claims,
         expires_delta=access_token_expires,
@@ -671,6 +692,7 @@ async def refresh_token(
             user=user,
             request=request,
             session_id=str(session_id) if session_id else None,
+            access_expires_delta=_access_delta_from_payload(payload),
             extra_claims=extra_claims,
         )
         # AUTH-DEEP A4：blacklist 后置到签发成功之后——「任何失败都不消耗已呈递的
@@ -734,10 +756,9 @@ async def logout(
         if access_token:
             try:
                 payload = await decode_token(access_token, expected_type="access")
-                # AUTH-DEEP A2：token_revocation_service 写 token:blacklist: 前缀——
-                # decode_token 与 Go 网关只读 token_blacklist:，拉黑对 gRPC/SSE/STT/
-                # 网关不可见；且其第二参是时长，传 exp 绝对值 ≈ 55 年 TTL。
-                # security.blacklist_token 是唯一正确写入口（前缀+TTL=exp−now）。
+                # AUTH-DEEP A2：黑名单唯一正确写入口是 security.blacklist_token
+                # （token_blacklist: 命名空间 + TTL=exp−now，decode_token 与 Go 网关同源可读）。
+                # 旧 token_revocation_service 因命名空间/TTL 双错已退役删除（AUTH-FOLLOWUP）。
                 await blacklist_token(payload.get("jti"), payload.get("exp"))
                 if payload.get("sid"):
                     await auth_session_service.revoke_session_by_id(

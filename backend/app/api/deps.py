@@ -10,7 +10,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AuthenticationError
-from app.core.security import decode_token
+from app.core.security import decode_token, is_token_revoked
 from app.db.session import get_db
 from app.models.user import User  # Added import
 from app.services.auth_session_service import auth_session_service
@@ -33,8 +33,10 @@ async def get_current_user_id(
         token = credentials.credentials
         payload = await decode_token(token, expected_type="access")
 
-        from app.core.token_revocation import token_revocation_service
-        if await token_revocation_service.is_token_blacklisted(payload.get("jti")):
+        # AUTH-DEEP A2 收敛：黑名单唯一读口是 security.is_token_revoked
+        # （token_blacklist: 命名空间，prod fail-closed）——旧 token_revocation_service
+        # 写错命名空间，其拉黑对 decode_token/网关不可见，已退役删除。
+        if await is_token_revoked(payload.get("jti")):
             raise AuthenticationError("登录已失效，请重新登录")
 
         request.state.token_payload = payload
@@ -94,8 +96,9 @@ async def get_optional_current_user(
         token = credentials.credentials
         payload = await decode_token(token, expected_type="access")
 
-        from app.core.token_revocation import token_revocation_service
-        if await token_revocation_service.is_token_blacklisted(payload.get("jti")):
+        # AUTH-DEEP A2 收敛：同 get_current_user_id，黑名单读口统一到
+        # security.is_token_revoked（旧 token_revocation_service 已退役）。
+        if await is_token_revoked(payload.get("jti")):
             raise AuthenticationError("登录已失效，请重新登录")
 
         request.state.token_payload = payload
