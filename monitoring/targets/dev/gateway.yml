@@ -1,0 +1,5 @@
+# sparkle_gateway 抓取目标 — dev 形制（docker-compose.yml 基座挂载本目录到
+# /etc/prometheus/targets/）。dev 网关为单实例服务，服务名/container_name
+# 同为 sparkle_gateway，容器端口 8080。
+- targets:
+    - 'sparkle_gateway:8080'

@@ -1,0 +1,5 @@
+# sparkle_backend 及四个模块 metrics job（counterfactual / simulation_lab /
+# safe_experiments / community_privacy）共用本目标文件 — prod 形制。
+# prod 引擎 FastAPI 服务名为 backend（container_name sparkle_backend），容器端口 8000。
+- targets:
+    - 'backend:8000'

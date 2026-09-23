@@ -735,6 +735,9 @@ services:
       - ./monitoring/sparkle_t6_slo_alerts.yml:/etc/prometheus/sparkle_t6_slo_alerts.yml:ro
       - ./monitoring/sparkle_recording_rules.yml:/etc/prometheus/sparkle_recording_rules.yml:ro
       - ./monitoring/sqam_alerts.yml:/etc/prometheus/sqam_alerts.yml:ro
+      # file_sd 目标目录 — prod 形制（dev 基座 compose 挂 targets/dev 到同一路径，
+      # 见 monitoring/prometheus.yml 头注）
+      - ./monitoring/targets/prod:/etc/prometheus/targets:ro
       - sparkle_prometheus_data:/prometheus
     ports:
       - "127.0.0.1:9090:9090"

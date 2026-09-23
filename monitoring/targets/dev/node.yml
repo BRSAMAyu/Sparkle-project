@@ -1,0 +1,3 @@
+# dev 形制无 node_exporter 服务（docker-compose.yml 基座不部署宿主指标导出器）。
+# 目标留空：node job 无任何抓取序列（no-data），不会产生常驻 down 目标。
+[]

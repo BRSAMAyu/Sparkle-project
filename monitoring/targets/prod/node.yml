@@ -1,0 +1,3 @@
+# prod 形制有 node_exporter（docker-compose.prod.yml 部署，宿主机指标）。
+- targets:
+    - 'node_exporter:9100'

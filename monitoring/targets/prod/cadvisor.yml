@@ -1,0 +1,3 @@
+# prod 形制有 cadvisor（docker-compose.prod.yml 部署，容器指标）。
+- targets:
+    - 'cadvisor:8080'

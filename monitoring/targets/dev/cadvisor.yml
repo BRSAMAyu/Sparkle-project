@@ -1,0 +1,3 @@
+# dev 形制无 cadvisor 服务（docker-compose.yml 基座不部署容器指标导出器）。
+# 目标留空：cadvisor job 无任何抓取序列（no-data），不会产生常驻 down 目标。
+[]

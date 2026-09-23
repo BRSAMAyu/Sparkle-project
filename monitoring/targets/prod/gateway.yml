@@ -1,0 +1,7 @@
+# sparkle_gateway 抓取目标 — prod 形制（docker-compose.prod.yml 挂载本目录到
+# /etc/prometheus/targets/）。prod 网关为蓝绿双实例（同挂 edge/app 网络），
+# 两个都要抓：任一实例掉线即有 up==0 序列（D-DEPLOY-FIX G1 口径——蓝绿冗余
+# 减半是应该知道的事；deploy-prod.sh 排空 ~90s < 告警 for: 2m，发版不误报）。
+- targets:
+    - 'gateway_blue:8080'
+    - 'gateway_green:8080'

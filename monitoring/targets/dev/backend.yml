@@ -1,0 +1,5 @@
+# sparkle_backend 及四个模块 metrics job（counterfactual / simulation_lab /
+# safe_experiments / community_privacy）共用本目标文件 — dev 形制。
+# dev 引擎 FastAPI 的服务名/container_name 同为 sparkle_api，容器端口 8000。
+- targets:
+    - 'sparkle_api:8000'
