@@ -67284,6 +67284,168 @@ abstract class AppLocalizations {
   /// **'相关度 {percent}%'**
   String goalDetailRelevance(int percent);
 
+  /// No description provided for @goalDetailSuggestedMinimum.
+  ///
+  /// In zh, this message translates to:
+  /// **'这是 Sparkle 为你建议的最低标准'**
+  String get goalDetailSuggestedMinimum;
+
+  /// No description provided for @goalDetailConfirmedMinimum.
+  ///
+  /// In zh, this message translates to:
+  /// **'已确认的最低标准'**
+  String get goalDetailConfirmedMinimum;
+
+  /// No description provided for @goalDetailConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认'**
+  String get goalDetailConfirm;
+
+  /// No description provided for @goalDetailModify.
+  ///
+  /// In zh, this message translates to:
+  /// **'修改'**
+  String get goalDetailModify;
+
+  /// No description provided for @goalDetailConfirmedSnack.
+  ///
+  /// In zh, this message translates to:
+  /// **'已确认最低达标线'**
+  String get goalDetailConfirmedSnack;
+
+  /// No description provided for @goalDetailModifySnack.
+  ///
+  /// In zh, this message translates to:
+  /// **'修改入口已保留给收口整合'**
+  String get goalDetailModifySnack;
+
+  /// No description provided for @goalDetailNoCriteria.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有最低达标线，先从今天的最小一步开始。'**
+  String get goalDetailNoCriteria;
+
+  /// No description provided for @goalDetailNoBottlenecks.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时没有检测到瓶颈节点。'**
+  String get goalDetailNoBottlenecks;
+
+  /// No description provided for @goalDetailOpenGalaxy.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开星图'**
+  String get goalDetailOpenGalaxy;
+
+  /// No description provided for @goalDetailPhaseHealth.
+  ///
+  /// In zh, this message translates to:
+  /// **'阶段健康'**
+  String get goalDetailPhaseHealth;
+
+  /// No description provided for @goalDetailTaskCompletion.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务完成率'**
+  String get goalDetailTaskCompletion;
+
+  /// No description provided for @goalDetailCurrentPhase.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前阶段'**
+  String get goalDetailCurrentPhase;
+
+  /// No description provided for @goalDetailNoCheckin.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无打卡'**
+  String get goalDetailNoCheckin;
+
+  /// No description provided for @goalDetailOpenCommunity.
+  ///
+  /// In zh, this message translates to:
+  /// **'进入责任伙伴空间'**
+  String get goalDetailOpenCommunity;
+
+  /// No description provided for @goalDetailNoSources.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无关联资料。'**
+  String get goalDetailNoSources;
+
+  /// No description provided for @goalDetailRefresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新目标详情'**
+  String get goalDetailRefresh;
+
+  /// No description provided for @goalDetailLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标详情加载失败'**
+  String get goalDetailLoadFailed;
+
+  /// No description provided for @goalDetailRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get goalDetailRetry;
+
+  /// No description provided for @goalDetailEdit.
+  ///
+  /// In zh, this message translates to:
+  /// **'编辑目标'**
+  String get goalDetailEdit;
+
+  /// No description provided for @goalDetailEditTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'标题'**
+  String get goalDetailEditTitle;
+
+  /// No description provided for @goalDetailEditDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'描述'**
+  String get goalDetailEditDescription;
+
+  /// No description provided for @goalDetailEditSave.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存'**
+  String get goalDetailEditSave;
+
+  /// No description provided for @goalDetailEditHintTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入目标标题...'**
+  String get goalDetailEditHintTitle;
+
+  /// No description provided for @goalDetailEditHintDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入目标描述（可选）...'**
+  String get goalDetailEditHintDescription;
+
+  /// No description provided for @goalDetailEditSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标已更新'**
+  String get goalDetailEditSuccess;
+
+  /// No description provided for @goalDetailEditFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标更新失败'**
+  String get goalDetailEditFailed;
+
+  /// No description provided for @goalDetailBack.
+  ///
+  /// In zh, this message translates to:
+  /// **'返回'**
+  String get goalDetailBack;
+
   /// No description provided for @redeemCodeTitle.
   ///
   /// In zh, this message translates to:

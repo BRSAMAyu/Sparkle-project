@@ -5,9 +5,11 @@
 //   NoSuchMethodError: Class 'AppLocalizationsEn' has no instance getter
 //   'goalDetailNoTargetDate'
 // because `_buildTargetDateChip` typed its `l10n` parameter `dynamic`, which
-// bypasses extension resolution for the goalDetail* getters defined in
-// goal_detail_l10n.dart. The fix types the parameter as AppLocalizations so
-// the GoalDetailLocalizations extension applies statically.
+// bypassed static resolution for the goalDetail* getters that then lived in
+// the goal_detail_l10n.dart extension. The fix types the parameter as
+// AppLocalizations; since the L10N-ZH batch the goalDetail* copy lives
+// directly on AppLocalizations as arb keys, so the getters resolve statically
+// even without any extension.
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

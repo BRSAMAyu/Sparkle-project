@@ -75,6 +75,7 @@ UI-TOKENS	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_ui_design_tokens_ra
 UX-COMP	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_ux_component_convention.py"
 DL-SPEC	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_dl_spec_ratchet.py"
 N9-LEAK	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_n9_raw_exception_leak.py"
+N18-BILINGUAL	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_n18_presentation_bilingual.py"
 BM	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_bm_r208_dead_routes.py"
 BN	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_bn_prod_db_age_parity.py"
 BA-ROUTES	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_ba_routes_parity.py"

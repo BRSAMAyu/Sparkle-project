@@ -37099,6 +37099,87 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get goalDetailSuggestedMinimum => '这是 Sparkle 为你建议的最低标准';
+
+  @override
+  String get goalDetailConfirmedMinimum => '已确认的最低标准';
+
+  @override
+  String get goalDetailConfirm => '确认';
+
+  @override
+  String get goalDetailModify => '修改';
+
+  @override
+  String get goalDetailConfirmedSnack => '已确认最低达标线';
+
+  @override
+  String get goalDetailModifySnack => '修改入口已保留给收口整合';
+
+  @override
+  String get goalDetailNoCriteria => '还没有最低达标线，先从今天的最小一步开始。';
+
+  @override
+  String get goalDetailNoBottlenecks => '暂时没有检测到瓶颈节点。';
+
+  @override
+  String get goalDetailOpenGalaxy => '打开星图';
+
+  @override
+  String get goalDetailPhaseHealth => '阶段健康';
+
+  @override
+  String get goalDetailTaskCompletion => '任务完成率';
+
+  @override
+  String get goalDetailCurrentPhase => '当前阶段';
+
+  @override
+  String get goalDetailNoCheckin => '暂无打卡';
+
+  @override
+  String get goalDetailOpenCommunity => '进入责任伙伴空间';
+
+  @override
+  String get goalDetailNoSources => '暂无关联资料。';
+
+  @override
+  String get goalDetailRefresh => '刷新目标详情';
+
+  @override
+  String get goalDetailLoadFailed => '目标详情加载失败';
+
+  @override
+  String get goalDetailRetry => '重试';
+
+  @override
+  String get goalDetailEdit => '编辑目标';
+
+  @override
+  String get goalDetailEditTitle => '标题';
+
+  @override
+  String get goalDetailEditDescription => '描述';
+
+  @override
+  String get goalDetailEditSave => '保存';
+
+  @override
+  String get goalDetailEditHintTitle => '输入目标标题...';
+
+  @override
+  String get goalDetailEditHintDescription => '输入目标描述（可选）...';
+
+  @override
+  String get goalDetailEditSuccess => '目标已更新';
+
+  @override
+  String get goalDetailEditFailed => '目标更新失败';
+
+  @override
+  String get goalDetailBack => '返回';
+
+  @override
   String get redeemCodeTitle => '兑换码';
 
   @override

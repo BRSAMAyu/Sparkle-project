@@ -38698,6 +38698,91 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get goalDetailSuggestedMinimum =>
+      'Sparkle suggested this minimum standard';
+
+  @override
+  String get goalDetailConfirmedMinimum => 'Confirmed minimum standard';
+
+  @override
+  String get goalDetailConfirm => 'Confirm';
+
+  @override
+  String get goalDetailModify => 'Modify';
+
+  @override
+  String get goalDetailConfirmedSnack => 'Minimum bar confirmed';
+
+  @override
+  String get goalDetailModifySnack =>
+      'Edit entry is reserved for closeout integration';
+
+  @override
+  String get goalDetailNoCriteria =>
+      'No minimum bar yet. Start with the smallest step for today.';
+
+  @override
+  String get goalDetailNoBottlenecks => 'No bottleneck nodes detected yet.';
+
+  @override
+  String get goalDetailOpenGalaxy => 'Open galaxy';
+
+  @override
+  String get goalDetailPhaseHealth => 'Phase health';
+
+  @override
+  String get goalDetailTaskCompletion => 'Task completion';
+
+  @override
+  String get goalDetailCurrentPhase => 'Current phase';
+
+  @override
+  String get goalDetailNoCheckin => 'No check-in yet';
+
+  @override
+  String get goalDetailOpenCommunity => 'Open accountability';
+
+  @override
+  String get goalDetailNoSources => 'No related sources yet.';
+
+  @override
+  String get goalDetailRefresh => 'Refresh goal detail';
+
+  @override
+  String get goalDetailLoadFailed => 'Goal detail failed to load';
+
+  @override
+  String get goalDetailRetry => 'Retry';
+
+  @override
+  String get goalDetailEdit => 'Edit goal';
+
+  @override
+  String get goalDetailEditTitle => 'Title';
+
+  @override
+  String get goalDetailEditDescription => 'Description';
+
+  @override
+  String get goalDetailEditSave => 'Save';
+
+  @override
+  String get goalDetailEditHintTitle => 'Enter goal title...';
+
+  @override
+  String get goalDetailEditHintDescription =>
+      'Enter goal description (optional)...';
+
+  @override
+  String get goalDetailEditSuccess => 'Goal updated';
+
+  @override
+  String get goalDetailEditFailed => 'Failed to update goal';
+
+  @override
+  String get goalDetailBack => 'Back';
+
+  @override
   String get redeemCodeTitle => 'Redeem Code';
 
   @override

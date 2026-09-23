@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/goal/presentation/providers/goal_detail_provider.dart';
-import 'package:sparkle/features/goal/presentation/widgets/goal_detail_l10n.dart';
 
 class GoalBottleneckStrip extends StatelessWidget {
   const GoalBottleneckStrip({

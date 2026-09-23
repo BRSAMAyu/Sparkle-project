@@ -1,0 +1,31 @@
+{
+  "comment": "Frozen ratchet baseline for check_n18_presentation_bilingual.py (SPEC v1.3 N18: presentation inline bilingual ternary `zh ? '…' : '…'`). First registered from measured values at HEAD 835e91d7 (L10N-ZH card wt236, 2026-09-23): 152 hits / 26 files, regex caliber multiline-inclusive over the features/*/presentation root; the same card then migrated goal_detail_l10n.dart (34 ternaries) to arb and re-froze lower via --update-baseline. Only lower via --update-baseline after a cleanup batch; never raise. data/mock layers and core/ are outside the presentation scan root.",
+  "files": {
+    "mobile/lib/features/cognitive/presentation/screens/capsule/capsule_detail_screen.dart": 1,
+    "mobile/lib/features/community/presentation/providers/community_agent_provider.dart": 2,
+    "mobile/lib/features/experience/presentation/widgets/understanding_snapshot_card.dart": 6,
+    "mobile/lib/features/focus/presentation/widgets/reflection_dialog.dart": 4,
+    "mobile/lib/features/goal/presentation/screens/goal_detail_screen.dart": 1,
+    "mobile/lib/features/home/presentation/screens/notification_list_screen.dart": 2,
+    "mobile/lib/features/home/presentation/widgets/calendar/task_preview_panel.dart": 12,
+    "mobile/lib/features/home/presentation/widgets/dashboard_edit_sheet.dart": 1,
+    "mobile/lib/features/home/presentation/widgets/multi_goal_dashboard_card.dart": 11,
+    "mobile/lib/features/home/presentation/widgets/sprint_card.dart": 5,
+    "mobile/lib/features/home/presentation/widgets/today_growth_status_card.dart": 11,
+    "mobile/lib/features/memory/presentation/widgets/evidence_drawer.dart": 11,
+    "mobile/lib/features/memory/presentation/widgets/memory_evidence_badge.dart": 2,
+    "mobile/lib/features/openclaw/presentation/widgets/openclaw_primitives.dart": 4,
+    "mobile/lib/features/seed_library/presentation/screens/create_library_screen.dart": 3,
+    "mobile/lib/features/task/presentation/screens/task_detail_screen.dart": 10,
+    "mobile/lib/features/theater/presentation/providers/theater_provider.dart": 1,
+    "mobile/lib/features/tools/presentation/widgets/calculator_tool.dart": 1,
+    "mobile/lib/features/tools/presentation/widgets/focus_stats_tool.dart": 2,
+    "mobile/lib/features/tools/presentation/widgets/notes_tool.dart": 3,
+    "mobile/lib/features/tools/presentation/widgets/speech_to_text_tool.dart": 3,
+    "mobile/lib/features/user/presentation/providers/ws6_profile_mirror_provider.dart": 6,
+    "mobile/lib/features/user/presentation/screens/unified_settings_screen.dart": 5,
+    "mobile/lib/features/visual_elements/presentation/widgets/visual_element_card.dart": 2,
+    "mobile/lib/features/visual_elements/presentation/widgets/visual_element_preview_dialog.dart": 9
+  },
+  "whitelist": []
+}

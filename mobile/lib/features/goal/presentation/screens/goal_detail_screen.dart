@@ -18,7 +18,6 @@ import 'package:sparkle/features/goal/data/models/scenario_pack_models.dart';
 import 'package:sparkle/features/goal/data/services/scenario_pack_service.dart';
 import 'package:sparkle/features/goal/presentation/providers/goal_detail_provider.dart';
 import 'package:sparkle/features/goal/presentation/widgets/goal_bottleneck_strip.dart';
-import 'package:sparkle/features/goal/presentation/widgets/goal_detail_l10n.dart';
 import 'package:sparkle/features/goal/presentation/widgets/journey_progress_card.dart';
 import 'package:sparkle/features/goal/presentation/widgets/minimum_criteria_card.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
@@ -274,10 +273,11 @@ class _GoalHeader extends StatelessWidget {
   static Widget _buildTargetDateChip(
     BuildContext context,
     String? targetDate,
-    // A-6: must be statically typed as AppLocalizations. The goalDetail*
-    // getters live in the GoalDetailLocalizations extension; a `dynamic`
-    // receiver bypasses extension resolution and crashed the page with
-    // NoSuchMethodError (android-round1.md A-6).
+    // A-6: keep the parameter statically typed as AppLocalizations. The
+    // goalDetail* copy now lives directly on AppLocalizations (arb keys,
+    // L10N-ZH batch); the old inline-bilingual extension is gone, but a
+    // `dynamic` receiver would still bypass static resolution and crash the
+    // page with NoSuchMethodError (android-round1.md A-6).
     AppLocalizations l10n,
   ) {
     if (targetDate == null) {
