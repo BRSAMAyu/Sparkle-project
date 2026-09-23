@@ -445,22 +445,77 @@ class SparkleButtonGroup extends StatelessWidget {
 }
 
 /// 图标按钮
+///
+/// 几何语义（FAB-UNIFY 根治）：组件自带**最大尺寸约束**——默认渲染为
+/// `max(size, 触控下限)` 的正方形（48-56 视觉档）。只带 min 约束的历史
+/// 实现在 bounded-loose 槽位（如 Scaffold 的 floatingActionButton 槽）
+/// 会被拉伸成全屏 InkWell 吞掉整页 tap；现在任何槽位下几何都钉死在
+/// 视觉档内，不再依赖调用方自觉包 SizedBox。
+///
+/// FAB 用途请用 [SparkleIconButton.fabGeometry] 命名构造（56 方档）。
 class SparkleIconButton extends ConsumerWidget {
+  /// 默认（AppBar/工具栏）视觉档。
+  static const double defaultSize = DS.touchTargetMinSize; // 48
+
+  /// FAB 视觉档（48 触控档 + 8 间距 = 56 方档）。
+  static const double fabSize = DS.touchTargetMinSize + DS.spacing8; // 56
+
   const SparkleIconButton({
     required this.icon,
     super.key,
     this.onPressed,
     this.variant = ButtonVariant.primary,
-    this.size = 48.0,
+    this.size = defaultSize,
     this.disabled = false,
     this.semanticLabel,
+    this.constraints,
   });
+
+  /// FAB 用途命名构造：把自身钉死在方形几何（默认 [fabSize] 方档），
+  /// Scaffold 的 FAB 槽位（bounded-loose）不可再拉伸。不接受自由
+  /// [constraints]——FAB 的方形几何语义不可被调用方放宽。
+  const SparkleIconButton.fabGeometry({
+    required this.icon,
+    super.key,
+    this.onPressed,
+    this.variant = ButtonVariant.primary,
+    this.size = fabSize,
+    this.disabled = false,
+    this.semanticLabel,
+  }) : constraints = null;
+
   final Widget icon;
   final VoidCallback? onPressed;
   final ButtonVariant variant;
   final double size;
   final bool disabled;
   final String? semanticLabel;
+
+  /// 可选：覆盖默认方形几何。仍强制触控下限（a11y 不可破），且不会
+  /// 在调用方未显式声明时引入无上限方向——上限语义默认常在。
+  final BoxConstraints? constraints;
+
+  BoxConstraints _resolveConstraints(double minTouchTarget) {
+    final caller = constraints;
+    if (caller != null) {
+      final minW = math.max(caller.minWidth, minTouchTarget);
+      final minH = math.max(caller.minHeight, minTouchTarget);
+      return BoxConstraints(
+        minWidth: minW,
+        maxWidth: math.max(caller.maxWidth, minW),
+        minHeight: minH,
+        maxHeight: math.max(caller.maxHeight, minH),
+      );
+    }
+    // 默认：正方形视觉档（min==max → 任何槽位都不变形）。
+    final side = math.max(size, minTouchTarget);
+    return BoxConstraints(
+      minWidth: side,
+      maxWidth: side,
+      minHeight: side,
+      maxHeight: side,
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -469,6 +524,8 @@ class SparkleIconButton extends ConsumerWidget {
     final minTouchTarget = accessibility.isLoaded
         ? accessibility.minimumTouchTargetSize
         : DS.touchTargetMinSize;
+    final geometry = _resolveConstraints(minTouchTarget);
+    final visualSide = math.max(size, minTouchTarget);
 
     return Semantics(
       label: semanticLabel,
@@ -476,9 +533,7 @@ class SparkleIconButton extends ConsumerWidget {
       enabled: !disabled && onPressed != null,
       child: Material(
         color: _getBackgroundColor(theme.colors),
-        borderRadius: BorderRadius.circular(
-          math.max(size, minTouchTarget) / 2,
-        ),
+        borderRadius: BorderRadius.circular(visualSide / 2),
         child: InkWell(
           onTap: disabled
               ? null
@@ -488,14 +543,9 @@ class SparkleIconButton extends ConsumerWidget {
                   );
                   onPressed?.call();
                 },
-          borderRadius: BorderRadius.circular(
-            math.max(size, minTouchTarget) / 2,
-          ),
+          borderRadius: BorderRadius.circular(visualSide / 2),
           child: Container(
-            constraints: BoxConstraints(
-              minWidth: minTouchTarget,
-              minHeight: minTouchTarget,
-            ),
+            constraints: geometry,
             alignment: Alignment.center,
             child: IconTheme(
               data: IconThemeData(

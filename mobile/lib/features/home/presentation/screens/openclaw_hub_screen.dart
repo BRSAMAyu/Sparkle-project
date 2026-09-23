@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
@@ -374,11 +375,14 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
       appBar: AppBar(
         title: Text(context.l10n.openclawHubAppBarTitle),
         actions: [
+          // FAB-UNIFY：M3 IconButton → 组件归一（ghost 档，几何走组件默认档；
+          // 状态角标 Stack 由 Container 居中承载，clipBehavior: none 不裁切）。
           Padding(
             padding: const EdgeInsets.only(right: DS.spacing12),
             child: Tooltip(
               message: _statusIndicatorTooltip(connection),
-              child: IconButton(
+              child: SparkleIconButton(
+                variant: ButtonVariant.ghost,
                 onPressed: () => _openDiagnostics(connection),
                 icon: Stack(
                   clipBehavior: Clip.none,

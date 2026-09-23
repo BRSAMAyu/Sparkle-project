@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart' as share_plus;
+import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
@@ -346,10 +347,12 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
       appBar: AppBar(
         title: Text(context.l10n.simulationTitle),
         actions: [
+          // FAB-UNIFY：M3 IconButton → 组件归一（ghost 档，几何走组件默认档）。
           if (session != null)
-            IconButton(
+            SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              icon: Icon(Icons.ios_share_rounded, color: DS.textSecondary),
               onPressed: () => unawaited(_showSimulationShareSheet(session)),
-              icon: const Icon(Icons.ios_share_rounded),
             ),
         ],
       ),

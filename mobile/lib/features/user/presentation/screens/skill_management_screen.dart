@@ -3,6 +3,7 @@ import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -70,18 +71,29 @@ class _SkillManagementScreenState extends ConsumerState<SkillManagementScreen>
         appBar: AppBar(
           title: Text(context.l10n.skillTitle),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.auto_awesome_outlined),
-              tooltip: context.l10n.skillFromDraft,
-              onPressed: _openDraftExtractor,
+            // FAB-UNIFY：M3 IconButton → 组件归一（ghost 档，几何走组件默认档）。
+            Tooltip(
+              message: context.l10n.skillFromDraft,
+              child: SparkleIconButton(
+                variant: ButtonVariant.ghost,
+                icon: Icon(
+                  Icons.auto_awesome_outlined,
+                  color: DS.textSecondary,
+                ),
+                onPressed: _openDraftExtractor,
+              ),
             ),
-            IconButton(
-              icon: const Icon(Icons.add_rounded),
-              tooltip: context.l10n.skillNewSkill,
-              onPressed: () => _openEditor(),
+            Tooltip(
+              message: context.l10n.skillNewSkill,
+              child: SparkleIconButton(
+                variant: ButtonVariant.ghost,
+                icon: Icon(Icons.add_rounded, color: DS.textSecondary),
+                onPressed: () => _openEditor(),
+              ),
             ),
-            IconButton(
-              icon: const Icon(Icons.refresh_rounded),
+            SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              icon: Icon(Icons.refresh_rounded, color: DS.textSecondary),
               onPressed: _load,
             ),
           ],

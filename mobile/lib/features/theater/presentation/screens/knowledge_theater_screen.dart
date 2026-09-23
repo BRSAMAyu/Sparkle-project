@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -250,15 +251,19 @@ class _KnowledgeTheaterScreenState
       appBar: AppBar(
         title: Text(context.l10n.theaterTitle),
         actions: [
-          IconButton(
+          // FAB-UNIFY：M3 IconButton → 组件归一（ghost 档，几何走组件默认档；
+          // onPressed null 的禁用态由组件 Semantics enabled:false 承接）。
+          SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            icon: Icon(Icons.share_outlined, color: DS.textSecondary),
             onPressed: prediction == null
                 ? null
                 : () => unawaited(_showTheaterShareSheet()),
-            icon: const Icon(Icons.share_outlined),
           ),
-          IconButton(
+          SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            icon: Icon(Icons.auto_graph_rounded, color: DS.textSecondary),
             onPressed: prediction == null ? null : () => context.go('/galaxy'),
-            icon: const Icon(Icons.auto_graph_rounded),
           ),
         ],
       ),

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
@@ -199,9 +200,11 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
       appBar: AppBar(
         title: Text(context.l10n.reportLearningAnalysisReport),
         actions: [
-          IconButton(
+          // FAB-UNIFY：M3 IconButton → 组件归一（ghost 档，几何走组件默认档）。
+          SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            icon: Icon(Icons.share_outlined, color: DS.textSecondary),
             onPressed: () => unawaited(_showReportShareSheet(report)),
-            icon: const Icon(Icons.share_outlined),
           ),
         ],
       ),

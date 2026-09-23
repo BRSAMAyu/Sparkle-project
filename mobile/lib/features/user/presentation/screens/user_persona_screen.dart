@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
+import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
@@ -70,10 +71,14 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
       appBar: AppBar(
         title: Text(l10n.personaMyProfile),
         actions: [
-          IconButton(
-            tooltip: l10n.personaRefreshPersona,
-            onPressed: () => unawaited(_refreshPersona(ref)),
-            icon: const Icon(Icons.refresh_rounded),
+          // FAB-UNIFY：M3 IconButton → 组件归一（ghost 档，几何走组件默认档）。
+          Tooltip(
+            message: l10n.personaRefreshPersona,
+            child: SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              icon: Icon(Icons.refresh_rounded, color: DS.textSecondary),
+              onPressed: () => unawaited(_refreshPersona(ref)),
+            ),
           ),
         ],
       ),

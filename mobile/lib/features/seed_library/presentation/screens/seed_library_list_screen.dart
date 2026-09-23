@@ -110,25 +110,20 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
           ),
         ],
       ),
-      // HYGIENE-DEBT：SparkleIconButton 只带 min 触控约束，直接当 FAB 会被
-      // Scaffold 整屏槽位拉成全屏 InkWell 吞掉全页 tap——SizedBox 钉死几何。
-      floatingActionButton: SizedBox(
-        width: DS.touchTargetMinSize + DS.spacing8,
-        height: DS.touchTargetMinSize + DS.spacing8,
-        child: SparkleIconButton(
-          size: DS.touchTargetMinSize + DS.spacing8,
-          onPressed: () async {
-            unawaited(
-              SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen),
-            );
-            final result =
-                await context.push<bool>(SeedLibraryRoutes.createLibrary);
-            if (result ?? false) {
-              _applyFilters();
-            }
-          },
-          icon: const Icon(Icons.add),
-        ),
+      // FAB-UNIFY：组件已自带最大尺寸语义（fabGeometry 钉死方形几何，
+      // 默认 56 方档=touchTargetMinSize+spacing8），急救 SizedBox 去重。
+      floatingActionButton: SparkleIconButton.fabGeometry(
+        onPressed: () async {
+          unawaited(
+            SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen),
+          );
+          final result =
+              await context.push<bool>(SeedLibraryRoutes.createLibrary);
+          if (result ?? false) {
+            _applyFilters();
+          }
+        },
+        icon: const Icon(Icons.add),
       ),
       child: ContentConstraint(
         child: Column(

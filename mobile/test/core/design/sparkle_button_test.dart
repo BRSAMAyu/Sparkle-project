@@ -1,9 +1,20 @@
 import 'dart:ui' show SemanticsFlag;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/settings/presentation/providers/accessibility_provider.dart';
+
+/// SparkleIconButton watch accessibilitySettingsProvider，真实 notifier
+/// 构造即发起服务端同步（Dio）——widget 测试里 stub 掉，保持纯 UI 断言。
+class _StubAccessibilitySettingsNotifier extends AccessibilitySettingsNotifier {
+  _StubAccessibilitySettingsNotifier(super.ref);
+
+  @override
+  Future<void> load() async {}
+}
 
 Widget _host(Widget child) => MaterialApp(
       home: Scaffold(
@@ -189,6 +200,125 @@ void main() {
         40,
         reason: 'text 变体（small）按钮与 M3 TextButton 视觉高等价',
       );
+    });
+  });
+
+  group('SparkleIconButton 几何根治（FAB-UNIFY）：最大尺寸语义钉死', () {
+    Widget host(Widget fab) => ProviderScope(
+          overrides: [
+            accessibilitySettingsProvider
+                .overrideWith(_StubAccessibilitySettingsNotifier.new),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: const Center(child: Text('page content')),
+              floatingActionButton: fab,
+            ),
+          ),
+        );
+
+    testWidgets('放入 Scaffold FAB 槽（bounded-loose）不超方形上限，页心 tap 不被吞',
+        (tester) async {
+      var taps = 0;
+      await tester.pumpWidget(host(SparkleIconButton(
+        icon: const Icon(Icons.edit),
+        onPressed: () => taps++,
+      )));
+
+      // 根治前：组件只带 min 触控约束，FAB 槽的 bounded-loose 约束把
+      // Container(alignment) 拉满整屏（默认 800x600）InkWell，吞掉整页 tap。
+      final size = tester.getSize(find.byType(SparkleIconButton));
+      expect(size.width, 48, reason: '默认视觉档 48 方形，不随槽位拉伸');
+      expect(size.height, 48);
+
+      // 页心 tap 落在按钮命中区之外——不再被全屏命中区吞掉。
+      await tester.tapAt(const Offset(400, 300));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(taps, 0, reason: 'FAB 槽位的按钮不再撑满全屏命中区');
+
+      // 按钮本体仍可点。
+      await tester.tap(find.byType(SparkleIconButton));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(taps, 1);
+    });
+
+    testWidgets('fabGeometry：FAB 槽位钉死 56 方档且 tap 只命中按钮区域',
+        (tester) async {
+      var taps = 0;
+      await tester.pumpWidget(host(SparkleIconButton.fabGeometry(
+        icon: const Icon(Icons.add),
+        onPressed: () => taps++,
+      )));
+
+      final size = tester.getSize(find.byType(SparkleIconButton));
+      expect(size.width, SparkleIconButton.fabSize,
+          reason: 'fabGeometry 默认 56 方档（touchTargetMinSize+spacing8）');
+      expect(size.height, SparkleIconButton.fabSize);
+
+      // 按钮外框之外（顶部中点，远离右下角 FAB）tap 不应命中。
+      await tester.tapAt(const Offset(400, 60));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(taps, 0);
+
+      await tester.tap(find.byType(SparkleIconButton));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(taps, 1);
+    });
+
+    testWidgets('constraints 参数：可上调档位，触控下限不可破', (tester) async {
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          accessibilitySettingsProvider
+              .overrideWith(_StubAccessibilitySettingsNotifier.new),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SparkleIconButton(
+                icon: const Icon(Icons.close),
+                constraints: const BoxConstraints(maxWidth: 72, maxHeight: 72),
+                onPressed: () {},
+              ),
+            ),
+          ),
+        ),
+      ));
+      var size = tester.getSize(find.byType(SparkleIconButton));
+      expect(size, const Size(72, 72), reason: '调用方显式档位被尊重');
+
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          accessibilitySettingsProvider
+              .overrideWith(_StubAccessibilitySettingsNotifier.new),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SparkleIconButton(
+                icon: const Icon(Icons.close),
+                constraints:
+                    const BoxConstraints.tightFor(width: 24, height: 24),
+                onPressed: () {},
+              ),
+            ),
+          ),
+        ),
+      ));
+      size = tester.getSize(find.byType(SparkleIconButton));
+      expect(size, const Size(48, 48), reason: 'a11y 触控下限 48 不可被调用方压破');
+    });
+
+    testWidgets('a11y：默认档与 fabGeometry 触控目标 ≥ 48', (tester) async {
+      for (final fab in [
+        SparkleIconButton(icon: const Icon(Icons.add), onPressed: () {}),
+        SparkleIconButton.fabGeometry(
+            icon: const Icon(Icons.add), onPressed: () {}),
+      ]) {
+        await tester.pumpWidget(host(fab));
+        final size = tester.getSize(find.byType(SparkleIconButton));
+        expect(size.width, greaterThanOrEqualTo(DS.touchTargetMinSize));
+        expect(size.height, greaterThanOrEqualTo(DS.touchTargetMinSize));
+      }
     });
   });
 }

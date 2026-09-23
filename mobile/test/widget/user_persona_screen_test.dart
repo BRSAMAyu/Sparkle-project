@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/features/user/data/models/redeem_code_result.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/features/user/presentation/screens/user_persona_screen.dart';
@@ -9,6 +10,13 @@ import 'package:sparkle/shared/entities/user_model.dart';
 import '../shared/i18n_test_helper.dart';
 
 class _FakeUserRepository implements UserRepository {
+  // FAB-UNIFY 收口：D-REDEEM（e375ed62）给 UserRepository 增加 redeemCode
+  // 时未同步此 fake（基线即编译失败），补最小桩恢复本文件可编译——
+  // 本测试不触达兑换路径，桩永远返回 error 态。
+  @override
+  Future<RedeemCodeResult> redeemCode(String code) async =>
+      const RedeemCodeResult(status: RedeemCodeStatus.error);
+
   _FakeUserRepository({
     Map<String, dynamic>? transparentProfile,
     Map<String, dynamic>? profileContext,

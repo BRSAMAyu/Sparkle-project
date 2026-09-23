@@ -32,7 +32,9 @@ class GroupTasksScreen extends ConsumerWidget {
         ),
         title: Text(context.l10n.communityGroupTasks),
       ),
-      floatingActionButton: SparkleIconButton(
+      // FAB-UNIFY：fabGeometry 钉死方形几何——此处是 HYGIENE-DEBT 漏钉的
+      // 活口（组件只带 min 约束时会被 FAB 槽拉成全屏 InkWell 吞整页 tap）。
+      floatingActionButton: SparkleIconButton.fabGeometry(
         icon: const Icon(Icons.add),
         onPressed: () {
           unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));

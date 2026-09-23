@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
+import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/display/lexicon/goal_status_lexicon.dart'
     show goalPriorityLabel, goalStatusLabel;
@@ -38,37 +39,33 @@ class GoalDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leading: Semantics(
-          button: true,
-          label: l10n.goalDetailBack,
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded),
-            onPressed: () => context.pop(),
-          ),
+        // FAB-UNIFY：M3 IconButton+Semantics 包装 → 组件归一（自带按钮
+        // 语义与 semanticLabel），ghost 档，几何走组件默认档。
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          semanticLabel: l10n.goalDetailBack,
+          icon: Icon(Icons.arrow_back_rounded, color: DS.textSecondary),
+          onPressed: () => context.pop(),
         ),
         title: Text(l10n.goalDetailTitle),
         actions: [
-          Semantics(
-            button: true,
-            label: l10n.goalDetailEdit,
-            child: IconButton(
-              icon: const Icon(Icons.edit_rounded),
-              onPressed: () {
-                final data = state.valueOrNull;
-                if (data == null) return;
-                _showEditDialog(
-                    context, ref, goalId, data.goal.title, data.goal.goalType);
-              },
-            ),
+          SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            semanticLabel: l10n.goalDetailEdit,
+            icon: Icon(Icons.edit_rounded, color: DS.textSecondary),
+            onPressed: () {
+              final data = state.valueOrNull;
+              if (data == null) return;
+              _showEditDialog(
+                  context, ref, goalId, data.goal.title, data.goal.goalType);
+            },
           ),
-          Semantics(
-            button: true,
-            label: l10n.goalDetailRefresh,
-            child: IconButton(
-              icon: const Icon(Icons.refresh_rounded),
-              onPressed: () =>
-                  ref.read(goalDetailProvider(goalId).notifier).load(),
-            ),
+          SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            semanticLabel: l10n.goalDetailRefresh,
+            icon: Icon(Icons.refresh_rounded, color: DS.textSecondary),
+            onPressed: () =>
+                ref.read(goalDetailProvider(goalId).notifier).load(),
           ),
         ],
       ),

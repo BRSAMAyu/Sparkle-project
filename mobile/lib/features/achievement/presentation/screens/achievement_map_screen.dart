@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
@@ -50,7 +51,9 @@ class _AchievementMapScreenState extends ConsumerState<AchievementMapScreen> {
             fontWeight: DS.fontWeightSemibold,
           ),
         ),
-        leading: IconButton(
+        // FAB-UNIFY：M3 IconButton → 组件归一（ghost 档，几何走组件默认档）。
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
           icon: Icon(Icons.arrow_back, color: DS.textPrimary),
           onPressed: () => context.pop(),
         ),
@@ -58,12 +61,15 @@ class _AchievementMapScreenState extends ConsumerState<AchievementMapScreen> {
         elevation: 0,
         actions: [
           // Focus button - navigate to nearest unlocked achievement
-          IconButton(
-            icon: Icon(Icons.my_location, color: DS.textPrimary),
-            tooltip: l10n.achievementMapFocusTooltip,
-            onPressed: state.isLoading || state.nodes.isEmpty
-                ? null
-                : () => _showFocusTooltip(context, state.nodes),
+          Tooltip(
+            message: l10n.achievementMapFocusTooltip,
+            child: SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              icon: Icon(Icons.my_location, color: DS.textPrimary),
+              onPressed: state.isLoading || state.nodes.isEmpty
+                  ? null
+                  : () => _showFocusTooltip(context, state.nodes),
+            ),
           ),
         ],
       ),
