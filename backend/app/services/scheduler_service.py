@@ -230,8 +230,11 @@ class SchedulerService:
         try:
             async with AsyncSessionLocal() as db:
                 result = await ExecutionScheduleService(db).tick_due_schedules()
+                # PROD-LOG #9: loguru 只认 {} / f-string 形制；原 %s 逗号参数被静默
+                # 丢弃，调度吞吐（due/dispatched）永远不可见。同型修复先例见
+                # achievement_engine 的 %s→{} 批。
                 logger.info(
-                    "Execution schedule tick completed: due=%s dispatched=%s",
+                    "Execution schedule tick completed: due={} dispatched={}",
                     result["due_count"],
                     result["dispatched_count"],
                 )

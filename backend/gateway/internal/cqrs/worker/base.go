@@ -25,6 +25,27 @@ import (
 	"github.com/sparkle/gateway/internal/cqrs/outbox"
 )
 
+// LogRunnerStopped logs the termination of a background runner at the right level.
+//
+// PROD-LOG #8: on graceful shutdown every runner exits with "context canceled"
+// (its ctx is done). That is the expected exit path, so it must not flood the log
+// with fake ERRORs (~13 per restart); log INFO instead. Only a failure while the
+// process context is still alive stays ERROR — including a context.Canceled that
+// surfaces while ctx is not done (non-shutdown cancellation).
+func LogRunnerStopped(log *zap.Logger, ctx context.Context, name string, err error) {
+	if log == nil {
+		return
+	}
+	switch {
+	case err == nil:
+		log.Info(name + " stopped")
+	case ctx.Err() != nil:
+		log.Info(name+" stopped (graceful shutdown)", zap.Error(err))
+	default:
+		log.Error(name+" stopped", zap.Error(err))
+	}
+}
+
 // BaseWorker provides common functionality for event workers.
 type BaseWorker struct {
 	redis           *redis.Client
@@ -143,6 +164,13 @@ func (w *BaseWorker) Run(ctx context.Context, handler event.EventHandler) error 
 			return ctx.Err()
 		default:
 			if err := w.processMessages(ctx, handler); err != nil {
+				if ctx.Err() != nil {
+					// PROD-LOG #8: graceful shutdown 会打断阻塞中的 XReadGroup，
+					// 以 "context canceled" 出错——属预期退出方式，降 INFO 且不再
+					// 退避重试；仅进程上下文仍存活时的失败保持 ERROR。
+					w.logger.Info("Worker stopping", zap.Error(err))
+					return ctx.Err()
+				}
 				w.logger.Error("Error processing messages", zap.Error(err))
 				w.metrics.RecordWorkerError(w.consumerGroup, "process_batch")
 				time.Sleep(time.Second) // Backoff on error

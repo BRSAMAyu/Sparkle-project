@@ -1,0 +1,1081 @@
+diff --git a/backend/app/agents/reviewer_agent.py b/backend/app/agents/reviewer_agent.py
+index e8bc14f8..cf6f3e9a 100644
+--- a/backend/app/agents/reviewer_agent.py
++++ b/backend/app/agents/reviewer_agent.py
+@@ -15,6 +15,7 @@ Reviewer Agent - AI内容质量审查系统
+ 
+ import asyncio
+ import json
++import time
+ import uuid
+ from dataclasses import dataclass
+ from enum import Enum, StrEnum
+@@ -389,15 +390,32 @@ class ReviewerAgent:
+             timeout = float(self.DEFAULT_LLM_TIMEOUT_SECONDS)
+         return max(timeout, 0.01)
+ 
+-    async def _chat_json_with_timeout(self, *, messages: list[dict[str, str]], temperature: float = 0.2) -> Any:
++    async def _chat_json_with_timeout(
++        self,
++        *,
++        messages: list[dict[str, str]],
++        temperature: float = 0.2,
++        operation: str = "review",
++    ) -> Any:
+         timeout_seconds = self.llm_timeout_seconds
+-        return await asyncio.wait_for(
+-            self.llm.chat_json(
+-                messages=messages,
+-                temperature=temperature,
+-            ),
+-            timeout=timeout_seconds,
+-        )
++        started_at = time.monotonic()
++        try:
++            return await asyncio.wait_for(
++                self.llm.chat_json(
++                    messages=messages,
++                    temperature=temperature,
++                ),
++                timeout=timeout_seconds,
++            )
++        except TimeoutError:
++            # PROD-LOG #4: asyncio.TimeoutError 的 str() 为空串，裸抛会让上层打出
++            # "Review failed: "（空尾巴，无法诊断）。这里统一包装可诊断上下文：
++            # 哪个 review、实际等了多久、超时阈值、所用模型。
++            elapsed = time.monotonic() - started_at
++            raise TimeoutError(
++                f"reviewer LLM timeout on {operation}: waited {elapsed:.1f}s"
++                f" > threshold {timeout_seconds:.1f}s (reviewer_model={self.reviewer_model})"
++            ) from None
+ 
+     async def review_llm_response(
+         self,
+@@ -440,6 +458,7 @@ class ReviewerAgent:
+             workflow_context=workflow_context,
+         )
+ 
++        review_started_at = time.monotonic()
+         try:
+             # 调用LLM进行审查
+             response = await self._chat_json_with_timeout(
+@@ -448,6 +467,7 @@ class ReviewerAgent:
+                     {"role": "user", "content": prompt},
+                 ],
+                 temperature=0.2,
++                operation=f"response review {review_id}",
+             )
+ 
+             return self._parse_review_result(
+@@ -458,36 +478,54 @@ class ReviewerAgent:
+                 workflow_context=workflow_context,
+             )
+ 
+-        except Exception as e:
+-            logger.error(f"[ReviewerAgent] Review failed: {e}")
+-            # R6-P0-3: Fail-closed on review errors - require reflection instead of auto-approving
+-            return ReviewResult(
+-                review_id=review_id,
+-                target_type="response",
+-                target_id=review_id,
+-                decision=ReviewDecision.FAILED.value,
+-                overall_score=0.0,
+-                metrics=[
+-                    QuantifiedMetric(ReviewMetric.SAFETY, 0.0),
+-                    QuantifiedMetric(ReviewMetric.ACCURACY, 0.0),
+-                ],
+-                issues=[Issue(
+-                    category="system",
+-                    severity="critical",
+-                    location="reviewer_agent",
+-                    description=f"审查过程出错，无法验证内容安全性: {str(e)}",
+-                    affected_content="",
+-                    suggested_fix="审查系统异常，必须人工复核或拒绝此内容",
+-                    confidence=1.0
+-                )],
+-                improvement_suggestions=["审查系统出现错误，内容已被拒绝，请人工复核或重新生成"],
+-                requires_reflection=True,
+-                reviewer_model=self.reviewer_model,
+-                review_timestamp=context.get("timestamp", "") if context else "",
+-                review_profile_id=profile.id,
+-                workflow_context=workflow_context or {},
+-                review_error=True,
++        except TimeoutError:
++            # PROD-LOG #4: 超时单独分级——记录哪个 review、等了多久、阈值与模型，
++            # 不再以空消息 ERROR 落日志。语义仍为 R6-P0-3 fail-closed。
++            elapsed = time.monotonic() - review_started_at
++            logger.error(
++                f"[ReviewerAgent] Response review {review_id} timed out after "
++                f"{elapsed:.1f}s "
++                f"(threshold={self.llm_timeout_seconds:.1f}s, reviewer_model={self.reviewer_model}); "
++                "fail-closed -> FAILED (requires_reflection)"
+             )
++            error_detail = (
++                f"reviewer LLM 超时: 等待 {elapsed:.1f}s"
++                f" 超过阈值 {self.llm_timeout_seconds:.1f}s (reviewer_model={self.reviewer_model})"
++            )
++        except Exception as e:
++            # PROD-LOG #4: str() 为空的异常（如未包装的 asyncio.TimeoutError）兜底用
++            # 异常类名，避免日志出现空尾巴不可诊断。
++            error_detail = str(e).strip() or type(e).__name__
++            logger.error(f"[ReviewerAgent] Review failed: {error_detail}")
++
++        # R6-P0-3: Fail-closed on review errors - require reflection instead of auto-approving
++        return ReviewResult(
++            review_id=review_id,
++            target_type="response",
++            target_id=review_id,
++            decision=ReviewDecision.FAILED.value,
++            overall_score=0.0,
++            metrics=[
++                QuantifiedMetric(ReviewMetric.SAFETY, 0.0),
++                QuantifiedMetric(ReviewMetric.ACCURACY, 0.0),
++            ],
++            issues=[Issue(
++                category="system",
++                severity="critical",
++                location="reviewer_agent",
++                description=f"审查过程出错，无法验证内容安全性: {error_detail}",
++                affected_content="",
++                suggested_fix="审查系统异常，必须人工复核或拒绝此内容",
++                confidence=1.0
++            )],
++            improvement_suggestions=["审查系统出现错误，内容已被拒绝，请人工复核或重新生成"],
++            requires_reflection=True,
++            reviewer_model=self.reviewer_model,
++            review_timestamp=context.get("timestamp", "") if context else "",
++            review_profile_id=profile.id,
++            workflow_context=workflow_context or {},
++            review_error=True,
++        )
+ 
+     async def review_plan(
+         self,
+@@ -540,6 +578,7 @@ class ReviewerAgent:
+             workflow_context=workflow_context,
+         )
+ 
++        plan_review_started_at = time.monotonic()
+         try:
+             response = await self._chat_json_with_timeout(
+                 messages=[
+@@ -547,6 +586,7 @@ class ReviewerAgent:
+                     {"role": "user", "content": prompt},
+                 ],
+                 temperature=0.2,
++                operation=f"plan review {review_id}",
+             )
+ 
+             return self._parse_review_result(
+@@ -557,36 +597,52 @@ class ReviewerAgent:
+                 workflow_context=workflow_context,
+             )
+ 
+-        except Exception as e:
+-            logger.error(f"[ReviewerAgent] Plan review failed: {e}")
+-            # R6-P0-3: Fail-closed on review errors - require reflection instead of auto-approving
+-            return ReviewResult(
+-                review_id=review_id,
+-                target_type="plan",
+-                target_id=review_id,
+-                decision=ReviewDecision.FAILED.value,
+-                overall_score=0.0,
+-                metrics=[
+-                    QuantifiedMetric(ReviewMetric.SAFETY, 0.0),
+-                    QuantifiedMetric(ReviewMetric.FEASIBILITY, 0.0)
+-                ],
+-                issues=[Issue(
+-                    category="system",
+-                    severity="critical",
+-                    location="reviewer_agent",
+-                    description=f"计划审查出错，无法验证安全性: {str(e)}",
+-                    affected_content="",
+-                    suggested_fix="计划必须重新生成并接受审查",
+-                    confidence=1.0
+-                )],
+-                improvement_suggestions=["计划审查系统错误，计划已被拒绝，请重新生成"],
+-                requires_reflection=True,
+-                reviewer_model=self.reviewer_model,
+-                review_timestamp="",
+-                review_profile_id=profile.id,
+-                workflow_context=workflow_context or {},
+-                review_error=True,
++        except TimeoutError:
++            # PROD-LOG #4: 超时单独分级（哪个 review / 等了多久 / 阈值），语义仍 fail-closed。
++            elapsed = time.monotonic() - plan_review_started_at
++            logger.error(
++                f"[ReviewerAgent] Plan review {review_id} timed out after "
++                f"{elapsed:.1f}s "
++                f"(threshold={self.llm_timeout_seconds:.1f}s, reviewer_model={self.reviewer_model}); "
++                "fail-closed -> FAILED"
+             )
++            error_detail = (
++                f"reviewer LLM 超时: 等待 {elapsed:.1f}s"
++                f" 超过阈值 {self.llm_timeout_seconds:.1f}s (reviewer_model={self.reviewer_model})"
++            )
++        except Exception as e:
++            # PROD-LOG #4: str() 为空的异常兜底用异常类名，避免空尾巴。
++            error_detail = str(e).strip() or type(e).__name__
++            logger.error(f"[ReviewerAgent] Plan review failed: {error_detail}")
++
++        # R6-P0-3: Fail-closed on review errors - require reflection instead of auto-approving
++        return ReviewResult(
++            review_id=review_id,
++            target_type="plan",
++            target_id=review_id,
++            decision=ReviewDecision.FAILED.value,
++            overall_score=0.0,
++            metrics=[
++                QuantifiedMetric(ReviewMetric.SAFETY, 0.0),
++                QuantifiedMetric(ReviewMetric.FEASIBILITY, 0.0)
++            ],
++            issues=[Issue(
++                category="system",
++                severity="critical",
++                location="reviewer_agent",
++                description=f"计划审查出错，无法验证安全性: {error_detail}",
++                affected_content="",
++                suggested_fix="计划必须重新生成并接受审查",
++                confidence=1.0
++            )],
++            improvement_suggestions=["计划审查系统错误，计划已被拒绝，请重新生成"],
++            requires_reflection=True,
++            reviewer_model=self.reviewer_model,
++            review_timestamp="",
++            review_profile_id=profile.id,
++            workflow_context=workflow_context or {},
++            review_error=True,
++        )
+ 
+     async def review_tool_result(
+         self,
+diff --git a/backend/app/checkpoint/redis_checkpointer.py b/backend/app/checkpoint/redis_checkpointer.py
+index e7183810..a4a7dc72 100755
+--- a/backend/app/checkpoint/redis_checkpointer.py
++++ b/backend/app/checkpoint/redis_checkpointer.py
+@@ -8,6 +8,27 @@ from loguru import logger
+ 
+ from app.orchestration.statechart_engine import WorkflowState
+ 
++# 已知不可序列化的 context key（PROD-LOG #7）：存档路径上有意注入的运行期依赖
++# 对象/回调，本就不应（也无法）进 checkpoint。与当前代码面对齐：
++#   - execution_engine._inject_runtime_dependencies: db_session / stream_callback /
++#     tools_schema / transparency_generator / emit_transparency_event / redis_client / run_ledger
++#   - orchestrator.py: run_ledger
++#   - routing_engine.py: grounding_validator
++# 清单外的 key 序列化失败仍走 WARNING（可能是该序列化却坏掉的对象，或新增的
++# 运行期依赖——后者确认后登记到此清单）。
++KNOWN_NON_SERIALIZABLE_CONTEXT_KEYS = frozenset(
++    {
++        "db_session",
++        "stream_callback",
++        "tools_schema",
++        "run_ledger",
++        "transparency_generator",
++        "emit_transparency_event",
++        "redis_client",
++        "grounding_validator",
++    }
++)
++
+ 
+ class RedisCheckpointer:
+     """
+@@ -34,13 +55,18 @@ class RedisCheckpointer:
+         # Filter out non-serializable objects from context
+         safe_context = {}
+         for k, v in state.context_data.items():
+-            if k in ["db_session", "stream_callback", "tools_schema"]:
++            if k in KNOWN_NON_SERIALIZABLE_CONTEXT_KEYS:
++                logger.debug(f"Skipping non-serializable context key (known runtime dependency): {k}")
+                 continue
+             try:
+                 json.dumps(v)
+                 safe_context[k] = v
+             except (TypeError, OverflowError):
+-                logger.warning(f"Skipping non-serializable context key: {k}")
++                # PROD-LOG #7: 清单外 key 才值得告警——真坏对象或未登记的新运行期依赖
++                logger.warning(
++                    f"Skipping non-serializable context key: {k} "
++                    "(not in KNOWN_NON_SERIALIZABLE_CONTEXT_KEYS; register it if it is a runtime dependency)"
++                )
+ 
+         data = {
+             "node_id": node_id,
+diff --git a/backend/app/services/scheduler_service.py b/backend/app/services/scheduler_service.py
+index 7fc0844e..8429cdd3 100755
+--- a/backend/app/services/scheduler_service.py
++++ b/backend/app/services/scheduler_service.py
+@@ -230,8 +230,11 @@ class SchedulerService:
+         try:
+             async with AsyncSessionLocal() as db:
+                 result = await ExecutionScheduleService(db).tick_due_schedules()
++                # PROD-LOG #9: loguru 只认 {} / f-string 形制；原 %s 逗号参数被静默
++                # 丢弃，调度吞吐（due/dispatched）永远不可见。同型修复先例见
++                # achievement_engine 的 %s→{} 批。
+                 logger.info(
+-                    "Execution schedule tick completed: due=%s dispatched=%s",
++                    "Execution schedule tick completed: due={} dispatched={}",
+                     result["due_count"],
+                     result["dispatched_count"],
+                 )
+diff --git a/backend/gateway/cmd/server/setup.go b/backend/gateway/cmd/server/setup.go
+index 0d6b6a02..164540a8 100644
+--- a/backend/gateway/cmd/server/setup.go
++++ b/backend/gateway/cmd/server/setup.go
+@@ -409,9 +409,9 @@ func initCQRS(ctx context.Context, cfg *config.Config, dbh *databaseHandles, rdb
+ 
+ 	fileGC := service.NewFileGCService(services.fileMetadata, services.fileStorage, cfg, logger)
+ 	go func() {
+-		if err := fileGC.Run(ctx); err != nil {
+-			logger.Error("File GC stopped", zap.Error(err))
+-		}
++		// PROD-LOG #8: graceful-shutdown cancellations log INFO, only live-process
++		// failures stay ERROR.
++		cqrsWorker.LogRunnerStopped(logger, ctx, "File GC", fileGC.Run(ctx))
+ 	}()
+ 
+ 	if cfg.RabbitMQURL != "" {
+@@ -437,19 +437,14 @@ func initCQRS(ctx context.Context, cfg *config.Config, dbh *databaseHandles, rdb
+ 		taskSyncWorker:    taskSyncWorker,
+ 		galaxySyncWorker:  galaxySyncWorker,
+ 		outboxPublisherRun: func() {
+-			if err := outboxPublisher.Run(ctx); err != nil {
+-				logger.Error("Outbox publisher stopped", zap.Error(err))
+-			}
++			// PROD-LOG #8: shutdown-period "context canceled" → INFO, not ERROR.
++			cqrsWorker.LogRunnerStopped(logger, ctx, "Outbox publisher", outboxPublisher.Run(ctx))
+ 		},
+ 		outboxCleanerRun: func() {
+-			if err := outboxCleaner.Run(ctx); err != nil {
+-				logger.Error("Outbox cleaner stopped", zap.Error(err))
+-			}
++			cqrsWorker.LogRunnerStopped(logger, ctx, "Outbox cleaner", outboxCleaner.Run(ctx))
+ 		},
+ 		dlqCleanerRun: func() {
+-			if err := dlqCleaner.Run(ctx); err != nil {
+-				logger.Error("DLQ cleaner stopped", zap.Error(err))
+-			}
++			cqrsWorker.LogRunnerStopped(logger, ctx, "DLQ cleaner", dlqCleaner.Run(ctx))
+ 		},
+ 	}
+ }
+@@ -459,20 +454,16 @@ func startCQRSWorkers(ctx context.Context, cqrs *cqrsBundle, log *zap.Logger) {
+ 	go cqrs.outboxCleanerRun()
+ 	go cqrs.dlqCleanerRun()
+ 
++	// PROD-LOG #8: runner stop logging is level-graded by LogRunnerStopped —
++	// shutdown-period cancellations are INFO, live-process failures stay ERROR.
+ 	go func() {
+-		if err := cqrs.commSyncWorker.Run(ctx); err != nil {
+-			log.Error("Community sync worker stopped", zap.Error(err))
+-		}
++		cqrsWorker.LogRunnerStopped(log, ctx, "Community sync worker", cqrs.commSyncWorker.Run(ctx))
+ 	}()
+ 	go func() {
+-		if err := cqrs.taskSyncWorker.Run(ctx); err != nil {
+-			log.Error("Task sync worker stopped", zap.Error(err))
+-		}
++		cqrsWorker.LogRunnerStopped(log, ctx, "Task sync worker", cqrs.taskSyncWorker.Run(ctx))
+ 	}()
+ 	go func() {
+-		if err := cqrs.galaxySyncWorker.Run(ctx); err != nil {
+-			log.Error("Galaxy sync worker stopped", zap.Error(err))
+-		}
++		cqrsWorker.LogRunnerStopped(log, ctx, "Galaxy sync worker", cqrs.galaxySyncWorker.Run(ctx))
+ 	}()
+ }
+ 
+diff --git a/backend/gateway/internal/cqrs/worker/base.go b/backend/gateway/internal/cqrs/worker/base.go
+index 547cbb8f..e5b532b1 100755
+--- a/backend/gateway/internal/cqrs/worker/base.go
++++ b/backend/gateway/internal/cqrs/worker/base.go
+@@ -25,6 +25,27 @@ import (
+ 	"github.com/sparkle/gateway/internal/cqrs/outbox"
+ )
+ 
++// LogRunnerStopped logs the termination of a background runner at the right level.
++//
++// PROD-LOG #8: on graceful shutdown every runner exits with "context canceled"
++// (its ctx is done). That is the expected exit path, so it must not flood the log
++// with fake ERRORs (~13 per restart); log INFO instead. Only a failure while the
++// process context is still alive stays ERROR — including a context.Canceled that
++// surfaces while ctx is not done (non-shutdown cancellation).
++func LogRunnerStopped(log *zap.Logger, ctx context.Context, name string, err error) {
++	if log == nil {
++		return
++	}
++	switch {
++	case err == nil:
++		log.Info(name + " stopped")
++	case ctx.Err() != nil:
++		log.Info(name+" stopped (graceful shutdown)", zap.Error(err))
++	default:
++		log.Error(name+" stopped", zap.Error(err))
++	}
++}
++
+ // BaseWorker provides common functionality for event workers.
+ type BaseWorker struct {
+ 	redis           *redis.Client
+@@ -143,6 +164,13 @@ func (w *BaseWorker) Run(ctx context.Context, handler event.EventHandler) error
+ 			return ctx.Err()
+ 		default:
+ 			if err := w.processMessages(ctx, handler); err != nil {
++				if ctx.Err() != nil {
++					// PROD-LOG #8: graceful shutdown 会打断阻塞中的 XReadGroup，
++					// 以 "context canceled" 出错——属预期退出方式，降 INFO 且不再
++					// 退避重试；仅进程上下文仍存活时的失败保持 ERROR。
++					w.logger.Info("Worker stopping", zap.Error(err))
++					return ctx.Err()
++				}
+ 				w.logger.Error("Error processing messages", zap.Error(err))
+ 				w.metrics.RecordWorkerError(w.consumerGroup, "process_batch")
+ 				time.Sleep(time.Second) // Backoff on error
+diff --git a/backend/gateway/internal/cqrs/worker/base_test.go b/backend/gateway/internal/cqrs/worker/base_test.go
+new file mode 100644
+index 00000000..9a004a47
+--- /dev/null
++++ b/backend/gateway/internal/cqrs/worker/base_test.go
+@@ -0,0 +1,163 @@
++package worker
++
++// PROD-LOG #8 契约测试：关停窗口内的 "context canceled" 必须以 INFO（或更低）
++// 级别落日志，不得伪装成 ERROR（每次重启 ~13 条假错误的根因）；仅进程上下文
++// 仍存活时的失败保持 ERROR。
++
++import (
++	"context"
++	"errors"
++	"sync"
++	"testing"
++	"time"
++
++	"github.com/alicebob/miniredis/v2"
++	"github.com/redis/go-redis/v9"
++	"go.uber.org/zap"
++	"go.uber.org/zap/zapcore"
++	"go.uber.org/zap/zaptest/observer"
++
++	"github.com/sparkle/gateway/internal/cqrs/event"
++	"github.com/sparkle/gateway/internal/cqrs/metrics"
++)
++
++var (
++	sharedMetricsOnce sync.Once
++	sharedMetrics     *metrics.CQRSMetrics
++)
++
++// testMetrics 返回测试二进制内共享的单例 CQRSMetrics：NewCQRSMetrics 会向
++// prometheus 默认注册表注册，第二个实例会 panic（duplicate collector）。
++func testMetrics(t *testing.T) *metrics.CQRSMetrics {
++	t.Helper()
++	sharedMetricsOnce.Do(func() {
++		sharedMetrics = metrics.NewCQRSMetrics("test_cqrs_worker")
++	})
++	return sharedMetrics
++}
++
++var noopHandler event.EventHandler = func(_ context.Context, _ event.DomainEvent, _ string) error {
++	return nil
++}
++
++func waitForLogEntry(t *testing.T, observed *observer.ObservedLogs, msg string, timeout time.Duration) {
++	t.Helper()
++	deadline := time.Now().Add(timeout)
++	for time.Now().Before(deadline) {
++		for _, entry := range observed.TakeAll() {
++			if entry.Message == msg {
++				return
++			}
++		}
++		time.Sleep(10 * time.Millisecond)
++	}
++	t.Fatalf("log entry %q not observed within %s", msg, timeout)
++}
++
++func TestRunGracefulShutdownLogsNoError(t *testing.T) {
++	mr := miniredis.RunT(t)
++	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
++	t.Cleanup(func() { _ = rdb.Close() })
++
++	core, observed := observer.New(zapcore.InfoLevel)
++	w := NewBaseWorker(rdb, nil, testMetrics(t), zap.New(core),
++		"cqrs:stream:shutdown-test", "grp-shutdown", "consumer-1")
++
++	ctx, cancel := context.WithCancel(context.Background())
++	runResult := make(chan error, 1)
++	go func() {
++		runResult <- w.Run(ctx, noopHandler)
++	}()
++
++	waitForLogEntry(t, observed, "Worker started", 2*time.Second)
++	cancel()
++
++	select {
++	case err := <-runResult:
++		if !errors.Is(err, context.Canceled) {
++			t.Fatalf("Run() = %v, want context.Canceled", err)
++		}
++	case <-time.After(5 * time.Second):
++		t.Fatal("Run did not return after context cancel")
++	}
++
++	for _, entry := range observed.TakeAll() {
++		if entry.Level >= zapcore.ErrorLevel {
++			t.Fatalf("graceful shutdown must not log ERROR, got %q: %s", entry.Level, entry.Message)
++		}
++	}
++}
++
++func TestRunLiveProcessFailureStillLogsError(t *testing.T) {
++	mr := miniredis.RunT(t)
++	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
++
++	core, observed := observer.New(zapcore.InfoLevel)
++	w := NewBaseWorker(rdb, nil, testMetrics(t), zap.New(core),
++		"cqrs:stream:failure-test", "grp-failure", "consumer-1",
++		WorkerOptions{
++			BatchSize:        10,
++			BlockTimeout:     20 * time.Millisecond,
++			IdempotencyCheck: false,
++			EnableDLQ:        true,
++			MaxRetries:       1,
++		},
++	)
++
++	ctx, cancel := context.WithCancel(context.Background())
++	defer cancel()
++	runResult := make(chan error, 1)
++	go func() {
++		runResult <- w.Run(ctx, noopHandler)
++	}()
++
++	waitForLogEntry(t, observed, "Worker started", 2*time.Second)
++
++	// Redis 变不可达而进程上下文仍存活：processMessages 的失败必须保持 ERROR。
++	mr.Close()
++	waitForLogEntry(t, observed, "Error processing messages", 5*time.Second)
++
++	select {
++	case <-runResult:
++		t.Fatal("Run returned before context cancel")
++	default:
++	}
++}
++
++func TestLogRunnerStoppedGradesByShutdownState(t *testing.T) {
++	core, observed := observer.New(zapcore.InfoLevel)
++	log := zap.New(core)
++
++	// err == nil → INFO（无错误收尾）
++	LogRunnerStopped(log, context.Background(), "runner-a", nil)
++
++	// 关停窗口（ctx 已取消）→ INFO，即使 err == context.Canceled
++	shutdownCtx, cancel := context.WithCancel(context.Background())
++	cancel()
++	LogRunnerStopped(log, shutdownCtx, "runner-b", context.Canceled)
++
++	// 进程仍存活时失败 → ERROR
++	LogRunnerStopped(log, context.Background(), "runner-c", errors.New("boom"))
++
++	// 非关停期出现的 canceled → 保持 ERROR（卡语义：仅关停期 canceled 降级）
++	LogRunnerStopped(log, context.Background(), "runner-d", context.Canceled)
++
++	entries := observed.TakeAll()
++	if len(entries) != 4 {
++		t.Fatalf("got %d log entries, want 4", len(entries))
++	}
++	wantLevels := []zapcore.Level{
++		zapcore.InfoLevel,
++		zapcore.InfoLevel,
++		zapcore.ErrorLevel,
++		zapcore.ErrorLevel,
++	}
++	for i, want := range wantLevels {
++		if entries[i].Level != want {
++			t.Fatalf("entry %d (%s) = %s, want %s", i, entries[i].Message, entries[i].Level, want)
++		}
++	}
++	if entries[1].Message != "runner-b stopped (graceful shutdown)" {
++		t.Fatalf("shutdown entry message = %q", entries[1].Message)
++	}
++}
+diff --git a/backend/tests/unit/test_redis_checkpointer_allowlist.py b/backend/tests/unit/test_redis_checkpointer_allowlist.py
+new file mode 100644
+index 00000000..bdcf7955
+--- /dev/null
++++ b/backend/tests/unit/test_redis_checkpointer_allowlist.py
+@@ -0,0 +1,125 @@
++"""PROD-LOG #7 契约测试：checkpoint 允许清单收敛.
++
++背景（v3-output/PROD-LOG/REPORT.md ②-7）：
++- 旧实现硬编码豁免 ``["db_session", "stream_callback", "tools_schema"]``，
++  新增的运行期依赖 key（run_ledger / transparency_generator / emit_transparency_event /
++  redis_client / grounding_validator）每次存档都打 WARNING，5 天 585 条，是引擎
++  日志最大噪音簇。
++- 契约：已知运行期依赖（模块级常量 ``KNOWN_NON_SERIALIZABLE_CONTEXT_KEYS``）
++  静默跳过（DEBUG）；清单外 key 序列化失败仍 WARNING；可序列化 key 正常入档。
++"""
++
++from __future__ import annotations
++
++import json
++
++import pytest
++from loguru import logger
++
++from app.checkpoint.redis_checkpointer import (
++    KNOWN_NON_SERIALIZABLE_CONTEXT_KEYS,
++    RedisCheckpointer,
++)
++from app.orchestration.statechart_engine import WorkflowState
++
++
++class _RecordingRedis:
++    def __init__(self) -> None:
++        self.stored: dict[str, str] = {}
++
++    async def set(self, key, value, ex=None):
++        self.stored[key] = value
++        return True
++
++
++class _RuntimeObject:
++    """模拟 redis client / db session 一类不可序列化的运行期对象."""
++
++    def __repr__(self) -> str:  # pragma: no cover
++        return "<runtime-object>"
++
++
++@pytest.fixture
++def checkpoint_records():
++    records: list = []
++    sink_id = logger.add(lambda msg: records.append(msg.record), level="DEBUG")
++    yield records
++    logger.remove(sink_id)
++
++
++def _state(context_data: dict) -> WorkflowState:
++    return WorkflowState(
++        messages=[],
++        context_data=context_data,
++        next_step=None,
++        errors=[],
++        is_finished=False,
++    )
++
++
++def test_allowlist_covers_production_observed_runtime_keys():
++    """允许清单必须对齐当前代码面：旧 3 key + 生产日志实证的 5 个新 key."""
++    assert {
++        "db_session",
++        "stream_callback",
++        "tools_schema",
++        "run_ledger",
++        "transparency_generator",
++        "emit_transparency_event",
++        "redis_client",
++        "grounding_validator",
++    } <= KNOWN_NON_SERIALIZABLE_CONTEXT_KEYS
++
++
++@pytest.mark.asyncio
++async def test_known_runtime_keys_saved_silently(checkpoint_records: list):
++    """已知运行期 key：静默（至多 DEBUG）跳过，不产生 WARNING；可序列化 key 照常入档."""
++    rdb = _RecordingRedis()
++    checkpointer = RedisCheckpointer(rdb)
++
++    state = _state(
++        {
++            "session_id": "s1",
++            "request_id": "r1",
++            "run_ledger": _RuntimeObject(),
++            "transparency_generator": _RuntimeObject(),
++            "emit_transparency_event": lambda *a, **k: None,
++            "redis_client": _RuntimeObject(),
++            "grounding_validator": _RuntimeObject(),
++            "db_session": _RuntimeObject(),
++            "stream_callback": lambda *a, **k: None,
++            "tools_schema": _RuntimeObject(),
++            "answer": "可序列化内容",
++        }
++    )
++
++    await checkpointer.save(state, "node_1")
++
++    warnings = [r for r in checkpoint_records if r["level"].name == "WARNING"]
++    assert warnings == [], f"已知 key 不得产生 WARNING: {[r['message'] for r in warnings]}"
++
++    payload = json.loads(rdb.stored["checkpoint:s1"])
++    assert payload["context_data"] == {"session_id": "s1", "request_id": "r1", "answer": "可序列化内容"}
++    debug_msgs = [r["message"] for r in checkpoint_records if r["level"].name == "DEBUG"]
++    assert any("run_ledger" in m for m in debug_msgs), "已知 key 跳过应留 DEBUG 痕迹"
++
++
++@pytest.mark.asyncio
++async def test_unknown_non_serializable_key_still_warns(checkpoint_records: list):
++    """清单外 key 序列化失败：保持 WARNING（真坏对象/未登记新依赖的信号）."""
++    rdb = _RecordingRedis()
++    checkpointer = RedisCheckpointer(rdb)
++
++    state = _state(
++        {
++            "session_id": "s2",
++            "brand_new_runtime_thing": _RuntimeObject(),
++        }
++    )
++
++    await checkpointer.save(state, "node_1")
++
++    warning_msgs = [
++        r["message"] for r in checkpoint_records if r["level"].name == "WARNING"
++    ]
++    assert any("brand_new_runtime_thing" in m for m in warning_msgs)
+diff --git a/backend/tests/unit/test_reviewer_agent_timeout_diagnostics.py b/backend/tests/unit/test_reviewer_agent_timeout_diagnostics.py
+new file mode 100644
+index 00000000..d0d5773c
+--- /dev/null
++++ b/backend/tests/unit/test_reviewer_agent_timeout_diagnostics.py
+@@ -0,0 +1,146 @@
++"""PROD-LOG #4 契约测试：ReviewerAgent 超时与空消息异常必须可诊断.
++
++背景（v3-output/PROD-LOG/REPORT.md ②-4）：
++- ``asyncio.wait_for`` 抛出的 ``asyncio.TimeoutError`` 的 ``str()`` 为空串，
++  通用 ``except Exception as e: logger.error(f"... {e}")`` 落出
++  ``[ReviewerAgent] Review failed: ``（空尾巴），6 条 ERROR 全部不可诊断。
++- 契约：① 超时单独分级记录——哪个 review、等了多久、阈值、模型；② ``str()``
++  为空的异常兜底用异常类名（不再有空尾巴）；③ R6-P0-3 fail-closed 语义不变
++  （超时/异常 -> FAILED + requires_reflection，见 test_reviewer_agent_phase62）。
++"""
++
++from __future__ import annotations
++
++import asyncio
++
++import pytest
++from loguru import logger
++
++from app.agents.reviewer_agent import ReviewerAgent
++
++
++class _SleepyReviewerLLM:
++    """慢响应 LLM：用于触发 wait_for 超时。"""
++
++    default_model = "review-model"
++    model_key = "review_model_key"
++    provider_name = "dashscope"
++
++    async def chat_json(self, messages, temperature=0.2):
++        await asyncio.sleep(0.05)
++        return {"decision": "passed", "overall_score": 0.9, "issues": []}
++
++
++class _EmptyErrorReviewerLLM:
++    """抛出 str() 为空串异常的 LLM：复现原缺陷的空尾巴场景。"""
++
++    default_model = "review-model"
++    model_key = "review_model_key"
++    provider_name = "dashscope"
++
++    async def chat_json(self, messages, temperature=0.2):
++        raise ValueError()  # str(ValueError()) == ""
++
++
++@pytest.fixture
++def loguru_records():
++    records: list = []
++    sink_id = logger.add(lambda msg: records.append(msg.record), level="DEBUG")
++    yield records
++    logger.remove(sink_id)
++
++
++def _error_records(records: list) -> list:
++    return [r for r in records if r["level"].name == "ERROR"]
++
++
++@pytest.mark.asyncio
++async def test_timeout_log_carries_context_and_fails_closed(
++    monkeypatch: pytest.MonkeyPatch, loguru_records: list
++):
++    """超时 ERROR 必须带：哪个 review、等了多久、阈值、模型；fail-closed 不回退."""
++    monkeypatch.setattr("app.agents.reviewer_agent.settings.REVIEWER_LLM_TIMEOUT_SECONDS", 0.01)
++    reviewer = ReviewerAgent(reviewer_llm=_SleepyReviewerLLM())
++
++    result = await reviewer.review_llm_response(user_query="讲讲梯度下降", llm_response="梯度下降是…")
++
++    # fail-closed 语义保持（R6-P0-3）
++    assert result.decision == "failed"
++    assert result.review_error is True
++    assert result.requires_reflection is True
++
++    errors = _error_records(loguru_records)
++    assert errors, "超时必须留下 ERROR 级日志"
++    msg = errors[-1]["message"]
++    assert msg.startswith("[ReviewerAgent] Response review review_"), msg
++    assert "timed out after" in msg  # 实际等待时长
++    assert "threshold=" in msg  # 超时阈值
++    assert "reviewer_model=" in msg  # 所用模型
++    # 问题单描述可诊断（且兼容既有 '审查过程出错' 契约）
++    assert "审查过程出错" in result.issues[0].description
++    assert "reviewer LLM 超时" in result.issues[0].description
++
++
++@pytest.mark.asyncio
++async def test_timeout_wrapper_message_includes_operation_and_threshold(
++    monkeypatch: pytest.MonkeyPatch,
++):
++    """_chat_json_with_timeout 抛出的 TimeoutError 自带操作名/等待时长/阈值."""
++    monkeypatch.setattr("app.agents.reviewer_agent.settings.REVIEWER_LLM_TIMEOUT_SECONDS", 0.01)
++    reviewer = ReviewerAgent(reviewer_llm=_SleepyReviewerLLM())
++
++    with pytest.raises(asyncio.TimeoutError) as exc_info:
++        await reviewer._chat_json_with_timeout(
++            messages=[{"role": "user", "content": "x"}],
++            temperature=0.2,
++            operation="response review review_fixedid",
++        )
++
++    detail = str(exc_info.value)
++    assert detail, "TimeoutError 的 str() 不得为空串（原缺陷根因）"
++    assert "response review review_fixedid" in detail  # 哪个 review
++    assert "waited" in detail  # 等了多久
++    assert "threshold" in detail  # 阈值
++
++
++@pytest.mark.asyncio
++async def test_empty_exception_message_falls_back_to_class_name(
++    monkeypatch: pytest.MonkeyPatch, loguru_records: list
++):
++    """str() 为空的异常：日志与问题单描述兜底异常类名，不再出现空尾巴."""
++    reviewer = ReviewerAgent(reviewer_llm=_EmptyErrorReviewerLLM())
++
++    result = await reviewer.review_llm_response(user_query="q", llm_response="r")
++
++    assert result.decision == "failed"
++    assert result.review_error is True
++    assert result.requires_reflection is True
++
++    errors = _error_records(loguru_records)
++    assert errors, "异常必须留下 ERROR 级日志"
++    msg = errors[-1]["message"]
++    assert msg.endswith("Review failed: ValueError"), f"空消息未兜底: {msg!r}"
++    assert "ValueError" in result.issues[0].description
++
++
++@pytest.mark.asyncio
++async def test_plan_review_timeout_log_carries_context(
++    monkeypatch: pytest.MonkeyPatch, loguru_records: list
++):
++    """plan review 路径同样钉：超时上下文 + fail-closed."""
++    monkeypatch.setattr("app.agents.reviewer_agent.settings.REVIEWER_LLM_TIMEOUT_SECONDS", 0.01)
++    reviewer = ReviewerAgent(reviewer_llm=_SleepyReviewerLLM())
++
++    result = await reviewer.review_plan(plan={}, user_query="帮我定复习计划")
++
++    assert result.decision == "failed"
++    assert result.review_error is True
++    assert result.requires_reflection is True
++
++    errors = _error_records(loguru_records)
++    assert errors, "超时必须留下 ERROR 级日志"
++    msg = errors[-1]["message"]
++    assert msg.startswith("[ReviewerAgent] Plan review plan_review_"), msg
++    assert "timed out after" in msg
++    assert "threshold=" in msg
++    assert "计划审查出错" in result.issues[0].description
+diff --git a/backend/tests/unit/test_scheduler_execution_tick_log.py b/backend/tests/unit/test_scheduler_execution_tick_log.py
+new file mode 100644
+index 00000000..b20a2a1e
+--- /dev/null
++++ b/backend/tests/unit/test_scheduler_execution_tick_log.py
+@@ -0,0 +1,78 @@
++"""PROD-LOG #9 契约测试：执行调度 tick 的 due/dispatched 必须真实可见.
++
++背景（v3-output/PROD-LOG/REPORT.md ②-9）：
++- ``run_execution_schedule_tick`` 曾用 stdlib logging 的 ``%s`` 逗号参数风格调
++  loguru；loguru 只认 ``{}``/f-string，两个参数被静默丢弃，调度吞吐永远不可见
++  （日志里是字面量 ``due=%s dispatched=%s``）。
++- 契约：完成日志必须携带真实数值，且不得再出现字面量 ``%s``。
++"""
++
++from __future__ import annotations
++
++from types import SimpleNamespace
++
++import pytest
++from loguru import logger
++
++from app.services.scheduler_service import SchedulerService
++
++
++class _AsyncSessionContext:
++    def __init__(self, session) -> None:
++        self._session = session
++
++    async def __aenter__(self):
++        return self._session
++
++    async def __aexit__(self, exc_type, exc, tb):
++        return False
++
++
++class _FakeExecutionScheduleService:
++    instances: list[_FakeExecutionScheduleService] = []
++
++    def __init__(self, db) -> None:
++        self.db = db
++        _FakeExecutionScheduleService.instances.append(self)
++
++    async def tick_due_schedules(self) -> dict:
++        return {"due_count": 3, "dispatched_count": 2}
++
++
++@pytest.fixture
++def tick_records():
++    records: list = []
++    sink_id = logger.add(lambda msg: records.append(msg.record), level="DEBUG")
++    yield records
++    logger.remove(sink_id)
++
++
++@pytest.mark.asyncio
++async def test_execution_tick_log_shows_due_and_dispatched(
++    monkeypatch: pytest.MonkeyPatch, tick_records: list
++):
++    _FakeExecutionScheduleService.instances = []
++    fake_session = SimpleNamespace()
++    monkeypatch.setattr(
++        "app.services.scheduler_service.AsyncSessionLocal",
++        lambda: _AsyncSessionContext(fake_session),
++    )
++    monkeypatch.setattr(
++        "app.services.scheduler_service.ExecutionScheduleService",
++        _FakeExecutionScheduleService,
++    )
++
++    service = SchedulerService()
++    await service.run_execution_schedule_tick()
++
++    assert _FakeExecutionScheduleService.instances, "tick 应构造 ExecutionScheduleService"
++    completed = [
++        r["message"]
++        for r in tick_records
++        if r["level"].name == "INFO" and "Execution schedule tick completed" in r["message"]
++    ]
++    assert completed, "缺少 tick 完成日志"
++    msg = completed[-1]
++    assert "due=3" in msg, f"due 数值不可见: {msg!r}"
++    assert "dispatched=2" in msg, f"dispatched 数值不可见: {msg!r}"
++    assert "%s" not in msg, f"loguru 日志不得残留 %s 形制: {msg!r}"
+diff --git a/v3-output/PROD-FIX-3/REPORT.md b/v3-output/PROD-FIX-3/REPORT.md
+new file mode 100644
+index 00000000..e447d345
+--- /dev/null
++++ b/v3-output/PROD-FIX-3/REPORT.md
+@@ -0,0 +1,105 @@
++# PROD-FIX-3 — 巡检剩余 4 小件（可诊断性 + 降噪）
++
++- 卡号：PROD-FIX-3（北极星全旅程战役 · C 纵队生产级线）
++- Worker worktree：`/Users/brsama/code/GitHub/Sparkle-sysrev/wt182`（基线 `a338d989`，未 commit/push）
++- 缺陷依据：`v3-output/PROD-LOG/REPORT.md`（wt175，基线 2b2bb68c）②-4 / ②-7 / ②-8 / ②-9 + ③降噪建议段
++- 交付物：本报告 + `changes.patch`（`git diff` 生成，含 5 个修改文件 + 4 个新增文件，零凭据）
++- 日期：2026-09-23
++
++---
++
++## ① 四件修法（对照报告验收）
++
++### 1.（报告 ②-4）ReviewerAgent 超时空错误消息 —— 修法与验收
++
++**报告裁决**：`reviewer_agent.py:392-400` 的 `asyncio.wait_for` 抛出的 `asyncio.TimeoutError` `str()` 为空串，`:462` `logger.error(f"... {e}")` 落出 `[ReviewerAgent] Review failed: ` 空尾巴，6 条 ERROR 不可诊断；R6-P0-3 fail-closed 使超时=审查失败。
++
++**修法**：三层收口。
++1. `_chat_json_with_timeout` 增加 `operation` 参数（调用方传 `"response review {review_id}"` / `"plan review {review_id}"`），捕获 `TimeoutError` 后测实际等待时长，re-raise 带完整上下文的 `TimeoutError`：`reviewer LLM timeout on {operation}: waited {elapsed}s > threshold {threshold}s (reviewer_model=...)`——py311 下 `asyncio.TimeoutError` 即内建 `TimeoutError`（ruff target=py311，UP041），类不变、所有 `except` 行为不变。
++2. `review_llm_response` / `review_plan` 各增加独立 `except TimeoutError` 分支：ERROR 日志带哪个 review（review_id）、等了多久（elapsed）、阈值、模型，并显式标注 `fail-closed -> FAILED`；问题单 description 同步带超时细节（保留既有 `"审查过程出错"` / `"计划审查出错"` 前缀契约）。
++3. 通用 `except Exception` 分支：`str(e).strip() or type(e).__name__` 空消息兜底，日志与 description 均不再出现空尾巴。
++
++**验收**：新测试 4 条全绿——超时 ERROR 必含 review_id/timed out after/threshold=/reviewer_model=；包装消息含 operation+waited+threshold 且 `str()` 非空；`ValueError()`（str 为空）场景日志 `Review failed: ValueError`、description 含类名；plan review 路径同钉。既有 `test_reviewer_agent_phase62.py`（R6-P0-3 fail-closed 契约，含超时场景断言 `"审查过程出错"`）6 条全绿，fail-closed 语义零回退。卡内"评估超时重试"属报告修复思路的建议项，本卡不改 fail-closed 语义（见 ④）。
++
++### 2.（报告 ②-7）checkpoint 允许清单过期 —— 修法与验收
++
++**报告裁决**：`redis_checkpointer.py:37` 硬编码豁免 `["db_session","stream_callback","tools_schema"]`，新增非序列化 context key 走 `:43` WARNING，5 天 585 条（key 集：run_ledger / transparency_generator / emit_transparency_event / redis_client / grounding_validator）；报告修复思路=静态"已知不可序列化"清单（模块级常量）+已知 key 静默/DEBUG，未知 key 才 warn。
++
++**修法**（按"清单需对齐当前代码面"的真实刷新，非照抄日志）：
++- 模块级常量 `KNOWN_NON_SERIALIZABLE_CONTEXT_KEYS`（frozenset）：旧 3 key + 日志实证 5 key，每个 key 都在当前代码面核实过写入点——`execution_engine._inject_runtime_dependencies`（execution_engine.py:1824-1838：db_session/stream_callback/tools_schema/transparency_generator/emit_transparency_event/redis_client/run_ledger）、`orchestrator.py:2807`（run_ledger）、`routing_engine.py:2236`（grounding_validator），均为有意注入的运行期依赖对象/回调，本就不应入档。
++- 已知 key → `logger.debug`（生产 INFO 面静默，调试可开）；**清单外** key 序列化失败仍 `logger.warning`，并提示"若是运行期依赖请登记"——保留"真有该序列化却坏掉的对象"的信号（降噪建议段原文语义）。
++- 顺带全 context_data 写入点扫描：其余写入均为可序列化 payload（dict/list/str/数值），无漏网运行期对象。
++
++**验收**：新测试 3 条——8 key 全量注入（不可序列化对象/lambda）时零 WARNING、payload 正确剔除且可序列化 key 照常入档、DEBUG 留痕；未知 key 场景 WARNING 仍在且带 key 名；常量覆盖 8 key 的对齐断言。
++
++### 3.（报告 ②-8）关停期 `context canceled` 记 ERROR —— 修法与验收
++
++**报告裁决**：`worker/base.go:145-148` processMessages 返回后不判 `ctx.Err()` 即 ERROR+1s 退避；`cmd/server/setup.go:405-451` 四个后台任务关停 error 同理——每次重启 ~13 条假 ERROR。报告修复思路=`if ctx.Err() != nil { log.Info("stopping"); return }` 模式套用到 worker/base.go 与 setup.go 关停分支。
++
++**修法**（证据与根因全部在网关 Go 侧，逐点落地）：
++- `worker/base.go` Run 循环：processMessages 失败后先判 `ctx.Err() != nil` → INFO `Worker stopping` 并立即 `return ctx.Err()`（不打错误指标、不再 1s 退避）；ctx 仍存活时的失败保持原 ERROR+指标+退避——即"仅非关停期 canceled 保持 ERROR"的卡语义。
++- `worker/base.go` 新增导出助手 `LogRunnerStopped(log, ctx, name, err)`：err==nil → INFO；ctx 已取消（关停窗口）→ INFO `(graceful shutdown)`；ctx 存活时失败（含非关停期 canceled）→ ERROR。
++- `cmd/server/setup.go` 全部 8 个 "stopped" 站点接入助手：File GC(:411)、Outbox publisher/cleaner、DLQ cleaner（cqrsBundle 三闭包）、Community/Task/Galaxy sync worker（startCQRSWorkers 三站点）——与报告"每次重启 ~13 条"的构成（4 runner + 3 sync worker + base.go 内部 ×3 组）一一对应。
++- **main.py 关停段未动**：报告 ②-8 的证据/根因不含 Python 侧；main.py 关停段已由 R2-EI 系列与 PROD-FIX-1 改造为 `task.cancel() + suppress(asyncio.CancelledError)` 模式（20+ 消费者任务），不存在 canceled-as-ERROR 路径。wt179（9ba67176）的 SecurityMonitor shutdown 段原样保留。
++
++**验收**：新 Go 测试 3 条（miniredis + zap observer）——①graceful 关停：取消 ctx 后 Run 返回 `context.Canceled` 且全程零 ERROR 级日志；②活进程故障：miniredis 关闭而 ctx 存活时 `Error processing messages` ERROR 仍在（分级不误伤）；③`LogRunnerStopped` 四态分级表（nil/INFO、关停 canceled/INFO、boom/ERROR、非关停 canceled/ERROR）。`CGO_ENABLED=0 go build ./...` 与 `go vet` 零输出。
++
++### 4.（报告 ②-9）scheduler `%s` 参数被 loguru 静默丢弃 —— 修法与验收
++
++**报告裁决**：`scheduler_service.py:233-237` 用 stdlib logging 的逗号参数风格调 loguru（只认 `{}`/f-string），`due=%s dispatched=%s` 两个字面量每分钟一条，调度吞吐不可见。
++
++**修法**：改 loguru `{}` 位置参数形制（对齐 fleet achievement_engine %s→{} 批先例，如 achievement_engine.py:65/324），并留 PROD-LOG #9 注释。
++
++**验收**：新测试 1 条——monkeypatch `AsyncSessionLocal`/`ExecutionScheduleService` 后跑 `run_execution_schedule_tick`，断言完成日志含 `due=3`、`dispatched=2` 真实数值且不含字面量 `%s`。
++
++---
++
++## ② 实现清单
++
++修改（5）：
++- `backend/app/agents/reviewer_agent.py` —— #4：`import time`；`_chat_json_with_timeout` 超时包装（operation/elapsed/threshold/model）；两个 review 方法独立超时分支 + 空消息类名兜底；共享 fail-closed 返回（R6-P0-3 语义不变）
++- `backend/app/checkpoint/redis_checkpointer.py` —— #7：`KNOWN_NON_SERIALIZABLE_CONTEXT_KEYS`（8 key，含代码面对齐注释）；已知 key DEBUG 跳过、未知 key WARNING 保留
++- `backend/app/services/scheduler_service.py` —— #9：`%s,` → `{}` 位置参数（1 处）
++- `backend/gateway/internal/cqrs/worker/base.go` —— #8：Run 循环关停分支（ctx.Err() 判定，免 ERROR/免退避）；新增 `LogRunnerStopped` 分级助手
++- `backend/gateway/cmd/server/setup.go` —— #8：8 个 runner 停止站点接入 `cqrsWorker.LogRunnerStopped`
++
++新增（4，全为测试）：
++- `backend/tests/unit/test_reviewer_agent_timeout_diagnostics.py`（4 测试）
++- `backend/tests/unit/test_redis_checkpointer_allowlist.py`（3 测试）
++- `backend/tests/unit/test_scheduler_execution_tick_log.py`（1 测试）
++- `backend/gateway/internal/cqrs/worker/base_test.go`（3 测试）
++
++## ③ 冲突面声明（逐个）
++
++- **wt176/wt178（mobile）**：本卡零 mobile 文件，零重叠。
++- **wt180（event_bus.py + chat_orchestrator.go + outbox）**：本卡文件=reviewer_agent.py / redis_checkpointer.py / scheduler_service.py / worker/base.go / setup.go + 测试，与三者零交集（outbox/publisher.go 只读未动；其 :99 的无退避缺陷属 wt180 卡，未触碰）。
++- **wt181（community 模型/service + 迁移）**：零重叠。
++- **main.py 关停段（wt179/9ba67176 刚改）**：本卡 #3 经核实为纯网关 Go 侧缺陷（报告 file:line 全部指向 worker/base.go 与 setup.go），**未改 main.py**；其关停段 `suppress(CancelledError)` + SecurityMonitor shutdown 现状完整保留，无回退。
++
++## ④ 诚实申报
++
++1. **报告 ②-9 "本仓 loguru 面上唯一一例"结论不准确**：全仓扫描发现 loguru+`%s` 同型缺陷面远不止 scheduler 一例——`core/celery_tasks.py`（28 处，如 :1112/:1843/:1846/:1902 抽验均为真丢参）、`services/profile_write_service.py`（9）、`services/chat_signal_collector.py`（6）、`services/task_event_consumer.py`（5）、`api/v1/growth.py`、`orchestration/orchestrator.py`（3）等 30+ 文件（部分需逐条甄别 f-string/printf 预格式化的假阳性）。stdlib logging 的 `%s`（pending_actions/budget_matrix 等）为正确用法不属缺陷。**本卡按卡面只修 scheduler 一处**（其余多在他人活跃域，超范围批量改动有冲突风险），建议开后续 `%s→{}` 批量卡（同 achievement_engine 先例）。
++2. **checkpoint 域基线既有失败**：`tests/orchestration/test_orchestrator_state_transitions.py` 在基线 a338d989 即有 25 failed + 26 errors（对基线克隆复跑同一集合，失败名单 diff 为空、完全一致）。非本卡引入、也非 checkpoint 修复破坏；该文件失败集建议舰队另行立卡排查。
++3. **black 状态**：仓库无 `[tool.black]` 配置（默认 88 列，与 AGENTS 的 120 列现状不符），基线 3 个 app 文件 `black --check` 本就不通过；本卡改动后与基线同态（非新引入）。ruff（项目配置 120 列）改动文件全绿，且修掉了自己引入的 4 处 UP041；gofmt/go vet 零违规。
++4. **LogRunnerStopped 行为增量**：原 8 站点在 err==nil 时静默，现在会打一行 INFO "X stopped"（对齐同文件 :407 File event subscriber 既有模式），属降噪/可观测改进，非语义破坏。
++5. **超时重试未做**：报告 ②-4 修复思路中"评估超时阈值/重试一次"涉入 R6-P0-3 fail-closed 语义变更（有 phase62 契约测试钉住），超出本卡"可诊断性+降噪"边界，未实施；现日志已带阈值数据，后续卡可据此评估。
++6. **gen/**：worktree 缺 `backend/app/gen`、`backend/gateway/gen`，已从主仓拷贝用于测试/构建；gen/ 均 gitignored，不入 patch。
++7. 本卡未改 proto/DB schema/分层边界；零凭据；未 commit 未 push。
++
++## ⑤ 收工核查
++
++**对比法回归（基线 = `git clone wt182` → /tmp 基线克隆，仅含 HEAD a338d989；双侧同集合）**：
++
++| 域 | 基线 | 本卡 worktree | 新增失败 |
++|---|---|---|---|
++| reviewer（5 文件） | 23 passed / 0 failed | 27 passed / 0 failed（+4 新测试） | **0** |
++| checkpoint（orchestrator_state_transitions + statechart_engine + 新测试） | 25F/39P/26E | 25F/42P/26E（失败名单 diff 为空，+3 新测试） | **0** |
++| scheduler（5 文件） | 15 passed / 0 failed | 16 passed / 0 failed（+1 新测试） | **0** |
++| lifespan/main（3 文件，含 PROD-FIX-1 回归） | 23 passed | 23 passed | **0** |
++| Go `go build ./...` + `go test ./internal/cqrs/...` | build ok / 全 ok（worker 无测试） | build ok / 全 ok（worker 3 新测试 ok） | **0** |
++
++**测试统计**：新增 Python 8 条 + Go 3 条全绿；既有 reviewer 域 23、scheduler 域 15、lifespan 域 23 条全绿；`SECRET_KEY=test DATABASE_URL="sqlite+aiosqlite:///:memory:" python3.11 -m pytest` 环境逐命令显式 cd。
++
++**tmp 清理**：/tmp/prodfix3-baseline（基线克隆）、/tmp/prodfix3-wt-fails.txt、/tmp/prodfix3-base-fails.txt、backend/.pytest_cache（worktree 与克隆内）均已删除；未起模拟器/浏览器/Gradle，无 HEAVY 资源占用。
++
++**交付物**：`v3-output/PROD-FIX-3/REPORT.md`（本文件）+ `v3-output/PROD-FIX-3/changes.patch`。

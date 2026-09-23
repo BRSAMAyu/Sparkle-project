@@ -8,6 +8,27 @@ from loguru import logger
 
 from app.orchestration.statechart_engine import WorkflowState
 
+# 已知不可序列化的 context key（PROD-LOG #7）：存档路径上有意注入的运行期依赖
+# 对象/回调，本就不应（也无法）进 checkpoint。与当前代码面对齐：
+#   - execution_engine._inject_runtime_dependencies: db_session / stream_callback /
+#     tools_schema / transparency_generator / emit_transparency_event / redis_client / run_ledger
+#   - orchestrator.py: run_ledger
+#   - routing_engine.py: grounding_validator
+# 清单外的 key 序列化失败仍走 WARNING（可能是该序列化却坏掉的对象，或新增的
+# 运行期依赖——后者确认后登记到此清单）。
+KNOWN_NON_SERIALIZABLE_CONTEXT_KEYS = frozenset(
+    {
+        "db_session",
+        "stream_callback",
+        "tools_schema",
+        "run_ledger",
+        "transparency_generator",
+        "emit_transparency_event",
+        "redis_client",
+        "grounding_validator",
+    }
+)
+
 
 class RedisCheckpointer:
     """
@@ -34,13 +55,18 @@ class RedisCheckpointer:
         # Filter out non-serializable objects from context
         safe_context = {}
         for k, v in state.context_data.items():
-            if k in ["db_session", "stream_callback", "tools_schema"]:
+            if k in KNOWN_NON_SERIALIZABLE_CONTEXT_KEYS:
+                logger.debug(f"Skipping non-serializable context key (known runtime dependency): {k}")
                 continue
             try:
                 json.dumps(v)
                 safe_context[k] = v
             except (TypeError, OverflowError):
-                logger.warning(f"Skipping non-serializable context key: {k}")
+                # PROD-LOG #7: 清单外 key 才值得告警——真坏对象或未登记的新运行期依赖
+                logger.warning(
+                    f"Skipping non-serializable context key: {k} "
+                    "(not in KNOWN_NON_SERIALIZABLE_CONTEXT_KEYS; register it if it is a runtime dependency)"
+                )
 
         data = {
             "node_id": node_id,

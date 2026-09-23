@@ -15,6 +15,7 @@ Reviewer Agent - AI内容质量审查系统
 
 import asyncio
 import json
+import time
 import uuid
 from dataclasses import dataclass
 from enum import Enum, StrEnum
@@ -389,15 +390,32 @@ class ReviewerAgent:
             timeout = float(self.DEFAULT_LLM_TIMEOUT_SECONDS)
         return max(timeout, 0.01)
 
-    async def _chat_json_with_timeout(self, *, messages: list[dict[str, str]], temperature: float = 0.2) -> Any:
+    async def _chat_json_with_timeout(
+        self,
+        *,
+        messages: list[dict[str, str]],
+        temperature: float = 0.2,
+        operation: str = "review",
+    ) -> Any:
         timeout_seconds = self.llm_timeout_seconds
-        return await asyncio.wait_for(
-            self.llm.chat_json(
-                messages=messages,
-                temperature=temperature,
-            ),
-            timeout=timeout_seconds,
-        )
+        started_at = time.monotonic()
+        try:
+            return await asyncio.wait_for(
+                self.llm.chat_json(
+                    messages=messages,
+                    temperature=temperature,
+                ),
+                timeout=timeout_seconds,
+            )
+        except TimeoutError:
+            # PROD-LOG #4: asyncio.TimeoutError 的 str() 为空串，裸抛会让上层打出
+            # "Review failed: "（空尾巴，无法诊断）。这里统一包装可诊断上下文：
+            # 哪个 review、实际等了多久、超时阈值、所用模型。
+            elapsed = time.monotonic() - started_at
+            raise TimeoutError(
+                f"reviewer LLM timeout on {operation}: waited {elapsed:.1f}s"
+                f" > threshold {timeout_seconds:.1f}s (reviewer_model={self.reviewer_model})"
+            ) from None
 
     async def review_llm_response(
         self,
@@ -440,6 +458,7 @@ class ReviewerAgent:
             workflow_context=workflow_context,
         )
 
+        review_started_at = time.monotonic()
         try:
             # 调用LLM进行审查
             response = await self._chat_json_with_timeout(
@@ -448,6 +467,7 @@ class ReviewerAgent:
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.2,
+                operation=f"response review {review_id}",
             )
 
             return self._parse_review_result(
@@ -458,36 +478,54 @@ class ReviewerAgent:
                 workflow_context=workflow_context,
             )
 
-        except Exception as e:
-            logger.error(f"[ReviewerAgent] Review failed: {e}")
-            # R6-P0-3: Fail-closed on review errors - require reflection instead of auto-approving
-            return ReviewResult(
-                review_id=review_id,
-                target_type="response",
-                target_id=review_id,
-                decision=ReviewDecision.FAILED.value,
-                overall_score=0.0,
-                metrics=[
-                    QuantifiedMetric(ReviewMetric.SAFETY, 0.0),
-                    QuantifiedMetric(ReviewMetric.ACCURACY, 0.0),
-                ],
-                issues=[Issue(
-                    category="system",
-                    severity="critical",
-                    location="reviewer_agent",
-                    description=f"审查过程出错，无法验证内容安全性: {str(e)}",
-                    affected_content="",
-                    suggested_fix="审查系统异常，必须人工复核或拒绝此内容",
-                    confidence=1.0
-                )],
-                improvement_suggestions=["审查系统出现错误，内容已被拒绝，请人工复核或重新生成"],
-                requires_reflection=True,
-                reviewer_model=self.reviewer_model,
-                review_timestamp=context.get("timestamp", "") if context else "",
-                review_profile_id=profile.id,
-                workflow_context=workflow_context or {},
-                review_error=True,
+        except TimeoutError:
+            # PROD-LOG #4: 超时单独分级——记录哪个 review、等了多久、阈值与模型，
+            # 不再以空消息 ERROR 落日志。语义仍为 R6-P0-3 fail-closed。
+            elapsed = time.monotonic() - review_started_at
+            logger.error(
+                f"[ReviewerAgent] Response review {review_id} timed out after "
+                f"{elapsed:.1f}s "
+                f"(threshold={self.llm_timeout_seconds:.1f}s, reviewer_model={self.reviewer_model}); "
+                "fail-closed -> FAILED (requires_reflection)"
             )
+            error_detail = (
+                f"reviewer LLM 超时: 等待 {elapsed:.1f}s"
+                f" 超过阈值 {self.llm_timeout_seconds:.1f}s (reviewer_model={self.reviewer_model})"
+            )
+        except Exception as e:
+            # PROD-LOG #4: str() 为空的异常（如未包装的 asyncio.TimeoutError）兜底用
+            # 异常类名，避免日志出现空尾巴不可诊断。
+            error_detail = str(e).strip() or type(e).__name__
+            logger.error(f"[ReviewerAgent] Review failed: {error_detail}")
+
+        # R6-P0-3: Fail-closed on review errors - require reflection instead of auto-approving
+        return ReviewResult(
+            review_id=review_id,
+            target_type="response",
+            target_id=review_id,
+            decision=ReviewDecision.FAILED.value,
+            overall_score=0.0,
+            metrics=[
+                QuantifiedMetric(ReviewMetric.SAFETY, 0.0),
+                QuantifiedMetric(ReviewMetric.ACCURACY, 0.0),
+            ],
+            issues=[Issue(
+                category="system",
+                severity="critical",
+                location="reviewer_agent",
+                description=f"审查过程出错，无法验证内容安全性: {error_detail}",
+                affected_content="",
+                suggested_fix="审查系统异常，必须人工复核或拒绝此内容",
+                confidence=1.0
+            )],
+            improvement_suggestions=["审查系统出现错误，内容已被拒绝，请人工复核或重新生成"],
+            requires_reflection=True,
+            reviewer_model=self.reviewer_model,
+            review_timestamp=context.get("timestamp", "") if context else "",
+            review_profile_id=profile.id,
+            workflow_context=workflow_context or {},
+            review_error=True,
+        )
 
     async def review_plan(
         self,
@@ -540,6 +578,7 @@ class ReviewerAgent:
             workflow_context=workflow_context,
         )
 
+        plan_review_started_at = time.monotonic()
         try:
             response = await self._chat_json_with_timeout(
                 messages=[
@@ -547,6 +586,7 @@ class ReviewerAgent:
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.2,
+                operation=f"plan review {review_id}",
             )
 
             return self._parse_review_result(
@@ -557,36 +597,52 @@ class ReviewerAgent:
                 workflow_context=workflow_context,
             )
 
-        except Exception as e:
-            logger.error(f"[ReviewerAgent] Plan review failed: {e}")
-            # R6-P0-3: Fail-closed on review errors - require reflection instead of auto-approving
-            return ReviewResult(
-                review_id=review_id,
-                target_type="plan",
-                target_id=review_id,
-                decision=ReviewDecision.FAILED.value,
-                overall_score=0.0,
-                metrics=[
-                    QuantifiedMetric(ReviewMetric.SAFETY, 0.0),
-                    QuantifiedMetric(ReviewMetric.FEASIBILITY, 0.0)
-                ],
-                issues=[Issue(
-                    category="system",
-                    severity="critical",
-                    location="reviewer_agent",
-                    description=f"计划审查出错，无法验证安全性: {str(e)}",
-                    affected_content="",
-                    suggested_fix="计划必须重新生成并接受审查",
-                    confidence=1.0
-                )],
-                improvement_suggestions=["计划审查系统错误，计划已被拒绝，请重新生成"],
-                requires_reflection=True,
-                reviewer_model=self.reviewer_model,
-                review_timestamp="",
-                review_profile_id=profile.id,
-                workflow_context=workflow_context or {},
-                review_error=True,
+        except TimeoutError:
+            # PROD-LOG #4: 超时单独分级（哪个 review / 等了多久 / 阈值），语义仍 fail-closed。
+            elapsed = time.monotonic() - plan_review_started_at
+            logger.error(
+                f"[ReviewerAgent] Plan review {review_id} timed out after "
+                f"{elapsed:.1f}s "
+                f"(threshold={self.llm_timeout_seconds:.1f}s, reviewer_model={self.reviewer_model}); "
+                "fail-closed -> FAILED"
             )
+            error_detail = (
+                f"reviewer LLM 超时: 等待 {elapsed:.1f}s"
+                f" 超过阈值 {self.llm_timeout_seconds:.1f}s (reviewer_model={self.reviewer_model})"
+            )
+        except Exception as e:
+            # PROD-LOG #4: str() 为空的异常兜底用异常类名，避免空尾巴。
+            error_detail = str(e).strip() or type(e).__name__
+            logger.error(f"[ReviewerAgent] Plan review failed: {error_detail}")
+
+        # R6-P0-3: Fail-closed on review errors - require reflection instead of auto-approving
+        return ReviewResult(
+            review_id=review_id,
+            target_type="plan",
+            target_id=review_id,
+            decision=ReviewDecision.FAILED.value,
+            overall_score=0.0,
+            metrics=[
+                QuantifiedMetric(ReviewMetric.SAFETY, 0.0),
+                QuantifiedMetric(ReviewMetric.FEASIBILITY, 0.0)
+            ],
+            issues=[Issue(
+                category="system",
+                severity="critical",
+                location="reviewer_agent",
+                description=f"计划审查出错，无法验证安全性: {error_detail}",
+                affected_content="",
+                suggested_fix="计划必须重新生成并接受审查",
+                confidence=1.0
+            )],
+            improvement_suggestions=["计划审查系统错误，计划已被拒绝，请重新生成"],
+            requires_reflection=True,
+            reviewer_model=self.reviewer_model,
+            review_timestamp="",
+            review_profile_id=profile.id,
+            workflow_context=workflow_context or {},
+            review_error=True,
+        )
 
     async def review_tool_result(
         self,

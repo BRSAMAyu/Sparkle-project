@@ -409,9 +409,9 @@ func initCQRS(ctx context.Context, cfg *config.Config, dbh *databaseHandles, rdb
 
 	fileGC := service.NewFileGCService(services.fileMetadata, services.fileStorage, cfg, logger)
 	go func() {
-		if err := fileGC.Run(ctx); err != nil {
-			logger.Error("File GC stopped", zap.Error(err))
-		}
+		// PROD-LOG #8: graceful-shutdown cancellations log INFO, only live-process
+		// failures stay ERROR.
+		cqrsWorker.LogRunnerStopped(logger, ctx, "File GC", fileGC.Run(ctx))
 	}()
 
 	if cfg.RabbitMQURL != "" {
@@ -437,19 +437,14 @@ func initCQRS(ctx context.Context, cfg *config.Config, dbh *databaseHandles, rdb
 		taskSyncWorker:    taskSyncWorker,
 		galaxySyncWorker:  galaxySyncWorker,
 		outboxPublisherRun: func() {
-			if err := outboxPublisher.Run(ctx); err != nil {
-				logger.Error("Outbox publisher stopped", zap.Error(err))
-			}
+			// PROD-LOG #8: shutdown-period "context canceled" → INFO, not ERROR.
+			cqrsWorker.LogRunnerStopped(logger, ctx, "Outbox publisher", outboxPublisher.Run(ctx))
 		},
 		outboxCleanerRun: func() {
-			if err := outboxCleaner.Run(ctx); err != nil {
-				logger.Error("Outbox cleaner stopped", zap.Error(err))
-			}
+			cqrsWorker.LogRunnerStopped(logger, ctx, "Outbox cleaner", outboxCleaner.Run(ctx))
 		},
 		dlqCleanerRun: func() {
-			if err := dlqCleaner.Run(ctx); err != nil {
-				logger.Error("DLQ cleaner stopped", zap.Error(err))
-			}
+			cqrsWorker.LogRunnerStopped(logger, ctx, "DLQ cleaner", dlqCleaner.Run(ctx))
 		},
 	}
 }
@@ -459,20 +454,16 @@ func startCQRSWorkers(ctx context.Context, cqrs *cqrsBundle, log *zap.Logger) {
 	go cqrs.outboxCleanerRun()
 	go cqrs.dlqCleanerRun()
 
+	// PROD-LOG #8: runner stop logging is level-graded by LogRunnerStopped —
+	// shutdown-period cancellations are INFO, live-process failures stay ERROR.
 	go func() {
-		if err := cqrs.commSyncWorker.Run(ctx); err != nil {
-			log.Error("Community sync worker stopped", zap.Error(err))
-		}
+		cqrsWorker.LogRunnerStopped(log, ctx, "Community sync worker", cqrs.commSyncWorker.Run(ctx))
 	}()
 	go func() {
-		if err := cqrs.taskSyncWorker.Run(ctx); err != nil {
-			log.Error("Task sync worker stopped", zap.Error(err))
-		}
+		cqrsWorker.LogRunnerStopped(log, ctx, "Task sync worker", cqrs.taskSyncWorker.Run(ctx))
 	}()
 	go func() {
-		if err := cqrs.galaxySyncWorker.Run(ctx); err != nil {
-			log.Error("Galaxy sync worker stopped", zap.Error(err))
-		}
+		cqrsWorker.LogRunnerStopped(log, ctx, "Galaxy sync worker", cqrs.galaxySyncWorker.Run(ctx))
 	}()
 }
 
