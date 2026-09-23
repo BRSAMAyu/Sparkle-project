@@ -139,9 +139,10 @@ class _SparkleAppState extends ConsumerState<SparkleApp> {
                         style: const TextStyle(
                           fontFamilyFallback: sparkleFontFallback,
                         ),
-                        child: _ColdStartFade(
-                          child: child ?? const SizedBox.shrink(),
-                        ),
+                        // N20（A-SPEC4）：原 _ColdStartFade 320ms 全壳渐显
+                        // 已并入 splash 首段（logo fade 即首帧渐显），冷启动
+                        // 表现层不再叠加 app 级一段。
+                        child: child ?? const SizedBox.shrink(),
                       ),
                     ),
                   ),
@@ -156,10 +157,7 @@ class _SparkleAppState extends ConsumerState<SparkleApp> {
 }
 
 class _ThemeTransitionShell extends StatelessWidget {
-  const _ThemeTransitionShell({
-    required this.theme,
-    required this.child,
-  });
+  const _ThemeTransitionShell({required this.theme, required this.child});
 
   static const _duration = Duration(milliseconds: 280);
 
@@ -205,47 +203,6 @@ class _ThemeTransitionShell extends StatelessWidget {
       ),
     );
   }
-}
-
-class _ColdStartFade extends StatefulWidget {
-  const _ColdStartFade({required this.child});
-
-  final Widget child;
-
-  @override
-  State<_ColdStartFade> createState() => _ColdStartFadeState();
-}
-
-class _ColdStartFadeState extends State<_ColdStartFade>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _opacity;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 320),
-    );
-    unawaited(_controller.forward());
-    _opacity = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutCubic,
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => FadeTransition(
-        opacity: _opacity,
-        child: widget.child,
-      );
 }
 
 /// Sync accessibility settings to ThemeManager (high contrast, color blind mode).

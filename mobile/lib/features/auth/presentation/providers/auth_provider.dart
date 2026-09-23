@@ -157,10 +157,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
     if (_isStaleSessionOp(generation)) return;
     debugPrint('⚠️ Auth status check failed (retryable, session kept): $error');
     // 会话保留：以已存储身份进入 app，数据面走各自的离线/重试路径。
+    // N20 stale-while-revalidate 下 isAuthenticated 保有 checkAuthStatus
+    // 先放行写入的 true（有 token 场景），网络错不把它打回 false。
     state = state.copyWith(
       isLoading: false,
-      // isAuthenticated 维持当前值（有 token 场景下为默认 true 假设），
-      // 不主动改写；clearUser 绝不触发。
+      // isAuthenticated 维持当前值，不主动改写；clearUser 绝不触发。
     );
   }
 
@@ -176,9 +177,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final isLoggedIn = await _authRepository.isLoggedIn();
       if (_isStaleSessionOp(generation)) return;
       if (isLoggedIn) {
+        // N20（A-SPEC4）splash 去网络门控 · stale-while-revalidate：有 token
+        // 即先放行（isAuthenticated=true、isLoading=false），splash 由路由
+        // 品牌窗放行进 app；getCurrentUser 转后台校验，成功后仅补写 user。
+        // 会话判定仍走 _isSessionTerminalError（401/403 才 reset），网络层
+        // 失败保留会话——splash 不再被 auth 网络往返门控。
+        //
+        // 有真实 token 时，强制关闭 isDemoMode，确保从后端读取真实数据
+        DemoDataService.isDemoMode = false;
+        state = state.copyWith(
+          isLoading: false,
+          isAuthenticated: true,
+        );
         try {
-          // 有真实 token 时，强制关闭 isDemoMode，确保从后端读取真实数据
-          DemoDataService.isDemoMode = false;
           var user = await _authRepository.getCurrentUser();
           if (_isStaleSessionOp(generation)) return;
           if (user.registrationSource == 'guest') {
@@ -379,7 +390,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         debugPrint('[Auth] refreshUser: network error, keeping current state');
       } catch (e) {
         // Only logout on auth failures, not transient errors
-        if (e.toString().contains('401') || e.toString().contains('unauthorized')) {
+        if (e.toString().contains('401') ||
+            e.toString().contains('unauthorized')) {
           await logout();
         } else {
           debugPrint('[Auth] refreshUser: non-auth error, keeping state: $e');

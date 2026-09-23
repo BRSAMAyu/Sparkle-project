@@ -2,6 +2,7 @@ import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/navigation/cold_start_motion.dart';
 
 Widget buildSharedAxisCompatibleTransition({
   required Animation<double> animation,
@@ -124,14 +125,19 @@ Page<dynamic> buildColdStartTransitionPage({
   final reduceMotion = WidgetsBinding
       .instance.platformDispatcher.accessibilityFeatures.disableAnimations;
 
-  return CustomTransitionPage<void>(
+  // 具名类型：splash/auth→shell 的落地面与深链冷入场专用（N20 唯一许可
+  // 使用方），供结构断言与审计识别——tab 分支禁复用本页（IR-G9）。
+  return ColdStartLandingPage(
     key: state.pageKey,
+    // N20（A-SPEC4）：落地转场 400ms → ColdStartMotion.landing（standard 档
+    // 220ms）。总账 = splash 品牌窗 250ms + 落地 220ms = 470ms ≤ 600ms 预算；
+    // 放行时 splash 尾段仍在播，本转场与其交叠（crossfade 盖入）。
     transitionDuration: reduceMotion
-        ? const Duration(milliseconds: 140)
-        : const Duration(milliseconds: 400),
+        ? ColdStartMotion.landingReduceMotion
+        : ColdStartMotion.landing,
     reverseTransitionDuration: reduceMotion
-        ? const Duration(milliseconds: 120)
-        : const Duration(milliseconds: 220),
+        ? ColdStartMotion.landingReverseReduceMotion
+        : ColdStartMotion.landingReverse,
     child: child,
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
       if (reduceMotion) {
@@ -150,6 +156,17 @@ Page<dynamic> buildColdStartTransitionPage({
       );
     },
   );
+}
+
+/// splash/auth→shell 落地段专用 Page（N20：唯一许可转场域）。
+class ColdStartLandingPage extends CustomTransitionPage<void> {
+  const ColdStartLandingPage({
+    required super.child,
+    required super.transitionDuration,
+    required super.reverseTransitionDuration,
+    required super.transitionsBuilder,
+    super.key,
+  });
 }
 
 class ColdStartRouteTransition extends StatefulWidget {

@@ -5,6 +5,7 @@ import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/navigation/sensory_navigation_observer.dart';
+import 'package:sparkle/core/navigation/cold_start_motion.dart';
 import 'package:sparkle/core/navigation/shell_navigation.dart';
 import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
@@ -93,6 +94,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         routerRefreshNotifier.value++;
       },
     )
+    ..listen<bool>(
+      // N20：splash 品牌窗走完时触发重判，放行落地段（同时让 provider
+      // 在路由创建即实例化，品牌窗计时与 splash 首帧同步起跑）。
+      coldStartBrandWindowProvider,
+      (_, __) {
+        routerRefreshNotifier.value++;
+      },
+    )
     ..listen<bool?>(
       onboardingCompletedProvider,
       (_, __) {
@@ -121,9 +130,11 @@ final routerProvider = Provider<GoRouter>((ref) {
               color: context.colors.neutralOutline,
             ),
             const SizedBox(height: 16),
-            Text(context.l10n.routerPageNotFoundMessage(
-              state.error?.message ?? state.uri.path,
-            ), style: Theme.of(context).textTheme.bodyLarge),
+            Text(
+                context.l10n.routerPageNotFoundMessage(
+                  state.error?.message ?? state.uri.path,
+                ),
+                style: Theme.of(context).textTheme.bodyLarge),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: () => context.go('/'),
@@ -151,11 +162,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isOnPersonaOnboarding =
           state.uri.path == UserRoutes.personaOnboarding ||
               state.uri.path.startsWith('${UserRoutes.personaOnboarding}/');
-      final isOnModelingChat =
-          state.uri.path == UserRoutes.modelingChat ||
-              state.uri.path.startsWith('${UserRoutes.modelingChat}/');
+      final isOnModelingChat = state.uri.path == UserRoutes.modelingChat ||
+          state.uri.path.startsWith('${UserRoutes.modelingChat}/');
       final onboardingCompleted = ref.read(onboardingCompletedProvider);
       final isGuestUser = authState.user?.registrationSource == 'guest';
+
+      // N20：splash 品牌窗——splash 不是加载闸也不是闪光。认证判定与
+      // splash 并行（auth 侧 stale-while-revalidate，不再钉在 isLoading
+      // 上等网络往返）；品牌窗未走完前一律停留 splash，窗走完后按认证
+      // 结果放行（login / home / 还原深链）。认证结果既不延长也不缩短
+      // 品牌一瞬。
+      if (isOnSplash && !ref.read(coldStartBrandWindowProvider)) {
+        return null;
+      }
 
       // Still loading authentication state
       if (isLoading) {
@@ -191,7 +210,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/home';
       }
 
+      // N20 stale-while-revalidate：先放行期 user 尚在后台校验（可能为
+      // null），此时 onboardingCompleted 已被 syncForUser(null) 置 false
+      // ——身份未决不得当 false（M6-07 同源），否则老用户会被闪跳进引导。
+      // user 就位后 onboardingCompleted 按真实存值重判，再跳不迟。
       if (isAuthenticated &&
+          authState.user != null &&
           !isGuestUser &&
           onboardingCompleted == false &&
           !isOnPersonaOnboarding &&
@@ -318,8 +342,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                         state.uri.queryParameters['related_error_count']!,
                       ),
                   };
-                  return buildColdStartTransitionPage(
-                    state: state,
+                  // N20 / IR-G9：tab 切换零转场是唯一语法——chat 分支不再
+                  // 复用 buildColdStartTransitionPage（400ms 档是落地面与
+                  // 深链冷入场专用）；深链冷启动进 chat 的落地动效由 shell
+                  // 层的 buildColdStartTransitionPage 承载（整个 shell 一起
+                  // 渐显），tab 内切换即时。
+                  return NoTransitionPage<void>(
+                    key: state.pageKey,
                     child: SceneAudioScope(
                       policy: ExperienceProfiles.assistantFlow.audioPolicy(),
                       child: ChatScreen(
@@ -386,7 +415,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ...PlanRoutes.routes,
       ...InsightsRoutes.routes,
       // 仅挂自我锚路由（D-COMM-1 唯一路由产品面），无全站榜
-      ...LeaderboardRoutes.routes, // rule-comm-lb: ignore D-COMM-1 自我锚=唯一裁决路由面，非全站榜
+      ...LeaderboardRoutes
+          .routes, // rule-comm-lb: ignore D-COMM-1 自我锚=唯一裁决路由面，非全站榜
       ...SimulationRoutes.routes,
       ...TheaterRoutes.routes,
       ...ReportRoutes.routes,

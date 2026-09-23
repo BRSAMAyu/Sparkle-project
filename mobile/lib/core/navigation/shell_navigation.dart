@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/achievement/presentation/providers/home_close_to_unlock_provider.dart';
@@ -300,8 +299,10 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
         label: l10n.chat,
       ),
       NavigationDestination(
-        icon: _buildBadgedIcon(Icons.groups_outlined, unreadCount, badgeOverflowLabel),
-        selectedIcon: _buildBadgedIcon(Icons.groups, unreadCount, badgeOverflowLabel),
+        icon: _buildBadgedIcon(
+            Icons.groups_outlined, unreadCount, badgeOverflowLabel),
+        selectedIcon:
+            _buildBadgedIcon(Icons.groups, unreadCount, badgeOverflowLabel),
         label: l10n.community,
       ),
       NavigationDestination(
@@ -318,10 +319,11 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
             title: l10n.appTitle,
             body: PrimaryScrollController(
               controller: _shellScrollController,
-              child: _ShellBranchTransition(
-                currentIndex: widget.navigationShell.currentIndex,
-                child: widget.navigationShell,
-              ),
+              // N20（A-SPEC4）：tab 切换零转场是唯一语法——原
+              // _ShellBranchTransition（240ms opacity+slide，chat 另有
+              // 方向特判）已删；tab 感知「重」的 IR-G9 同源问题由
+              // chat 分支改 NoTransitionPage 一并收口。
+              child: widget.navigationShell,
             ),
             destinations: destinations,
             currentIndex: widget.navigationShell.currentIndex,
@@ -375,43 +377,5 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
     unawaited(_communityEventsSub?.cancel());
     _shellScrollController.dispose();
     super.dispose();
-  }
-}
-
-class _ShellBranchTransition extends StatelessWidget {
-  const _ShellBranchTransition({
-    required this.currentIndex,
-    required this.child,
-  });
-
-  final int currentIndex;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    if (context.reduceMotion) {
-      return child;
-    }
-
-    final entersChat = currentIndex == 2;
-    return TweenAnimationBuilder<double>(
-      key: ValueKey<int>(currentIndex),
-      tween: Tween<double>(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 240),
-      curve: Curves.easeOutCubic,
-      child: child,
-      builder: (context, value, child) {
-        final scale = MediaQuery.of(context).devicePixelRatio;
-        final slide =
-            (1 - value) * (entersChat ? 12 : -10) / scale.clamp(1.0, 4.0);
-        return Opacity(
-          opacity: value,
-          child: Transform.translate(
-            offset: Offset(slide, 0),
-            child: child,
-          ),
-        );
-      },
-    );
   }
 }
