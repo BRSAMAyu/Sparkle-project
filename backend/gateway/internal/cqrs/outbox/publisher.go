@@ -29,9 +29,14 @@ type Publisher struct {
 	// Configuration
 	batchSize    int
 	pollInterval time.Duration
+	maxBackoff   time.Duration
 
 	// State
 	running atomic.Bool
+
+	// Backoff state — owned exclusively by the Run loop goroutine.
+	consecutiveFailures int
+	firstFailureAt      time.Time
 }
 
 // PublisherConfig configures the outbox publisher.
@@ -41,13 +46,23 @@ type PublisherConfig struct {
 
 	// PollInterval is how often to poll for new events.
 	PollInterval time.Duration
+
+	// MaxBackoff caps the exponential retry delay after consecutive publish
+	// failures (PROD-FIX-2 defect #6). Zero means DefaultMaxBackoff.
+	MaxBackoff time.Duration
 }
+
+// DefaultMaxBackoff caps the failure backoff: a persistent outage settles at
+// one poll attempt per minute instead of the historical 10/s error storm
+// (8,494 spurious "Failed to publish batch" logs during a 16h DB outage).
+const DefaultMaxBackoff = time.Minute
 
 // DefaultPublisherConfig returns sensible defaults for production.
 func DefaultPublisherConfig() PublisherConfig {
 	return PublisherConfig{
 		BatchSize:    100,
 		PollInterval: 100 * time.Millisecond,
+		MaxBackoff:   DefaultMaxBackoff,
 	}
 }
 
@@ -63,6 +78,9 @@ func NewPublisher(
 	if len(config) > 0 {
 		cfg = config[0]
 	}
+	if cfg.MaxBackoff <= 0 {
+		cfg.MaxBackoff = DefaultMaxBackoff
+	}
 
 	return &Publisher{
 		repo:         repo,
@@ -71,10 +89,17 @@ func NewPublisher(
 		logger:       logger.Named("outbox-publisher"),
 		batchSize:    cfg.BatchSize,
 		pollInterval: cfg.PollInterval,
+		maxBackoff:   cfg.MaxBackoff,
 	}
 }
 
 // Run starts the publisher loop. Blocks until context is cancelled.
+//
+// Failure cadence (PROD-FIX-2 defect #6): consecutive publishBatch failures
+// back off exponentially (pollInterval → 2× → 4× … capped at maxBackoff) and
+// the error log is rate-limited to the first failure plus every 10th
+// consecutive one; the OutboxPublishErrors counter still ticks per attempt.
+// Any success resets the cadence to the normal pollInterval.
 func (p *Publisher) Run(ctx context.Context) error {
 	if !p.running.CompareAndSwap(false, true) {
 		return nil // Already running
@@ -84,23 +109,76 @@ func (p *Publisher) Run(ctx context.Context) error {
 	p.logger.Info("Outbox publisher started",
 		zap.Int("batch_size", p.batchSize),
 		zap.Duration("poll_interval", p.pollInterval),
+		zap.Duration("max_backoff", p.maxBackoff),
 	)
 
-	ticker := time.NewTicker(p.pollInterval)
-	defer ticker.Stop()
-
+	delay := p.pollInterval
 	for {
 		select {
 		case <-ctx.Done():
 			p.logger.Info("Outbox publisher stopping")
 			return ctx.Err()
-		case <-ticker.C:
-			if err := p.publishBatch(ctx); err != nil {
-				p.logger.Error("Failed to publish batch", zap.Error(err))
-				p.metrics.OutboxPublishErrors.Inc()
-			}
+		case <-time.After(delay):
+		}
+
+		if err := p.publishBatch(ctx); err != nil {
+			delay = p.noteFailure(err)
+			continue
+		}
+		delay = p.pollInterval
+		p.noteSuccess()
+	}
+}
+
+// noteFailure records a failed publishBatch, returns the delay before the
+// next attempt, and rate-limits the error log for persistent outages.
+func (p *Publisher) noteFailure(err error) time.Duration {
+	p.metrics.OutboxPublishErrors.Inc()
+	if p.consecutiveFailures == 0 {
+		p.firstFailureAt = time.Now()
+	}
+	p.consecutiveFailures++
+	delay := p.backoffDelay()
+
+	// Same-cause log aggregation: first failure and every 10th consecutive
+	// failure are logged at Error; the in-between attempts stay silent here
+	// (the metric above keeps the true rate). "Still failing" lines make a
+	// 16h outage visible without an error per attempt.
+	if p.consecutiveFailures == 1 || p.consecutiveFailures%10 == 0 {
+		p.logger.Error("Failed to publish batch",
+			zap.Error(err),
+			zap.Int("consecutive_failures", p.consecutiveFailures),
+			zap.Duration("next_retry_in", delay),
+		)
+	}
+	return delay
+}
+
+// noteSuccess resets the backoff cadence and reports recovery from a failure
+// streak with its duration.
+func (p *Publisher) noteSuccess() {
+	if p.consecutiveFailures > 0 {
+		p.logger.Info("Outbox publish recovered",
+			zap.Int("consecutive_failures", p.consecutiveFailures),
+			zap.Duration("failure_duration", time.Since(p.firstFailureAt)),
+		)
+	}
+	p.consecutiveFailures = 0
+	p.firstFailureAt = time.Time{}
+}
+
+// backoffDelay returns the wait before the next attempt after
+// p.consecutiveFailures consecutive failures: pollInterval doubled per
+// failure, capped at maxBackoff.
+func (p *Publisher) backoffDelay() time.Duration {
+	d := p.pollInterval
+	for i := 0; i < p.consecutiveFailures; i++ {
+		d *= 2
+		if d >= p.maxBackoff {
+			return p.maxBackoff
 		}
 	}
+	return d
 }
 
 // publishBatch fetches and publishes a batch of events.

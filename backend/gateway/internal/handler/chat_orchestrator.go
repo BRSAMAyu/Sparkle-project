@@ -206,6 +206,24 @@ func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, ui service.UserIde
 	return h
 }
 
+// logWebSocketReadError classifies a WebSocket read error into the right log
+// level. A client-initiated close with status 1000 (normal) is expected
+// traffic on the chat channel — every deliberate user exit used to emit a
+// Warn here (PROD-FIX-2 defect #5: 223 false "websocket: close 1000
+// (normal)" warns in 5 days), drowning real anomalies. Normal closes go to
+// DEBUG; GoingAway/AbnormalClosure keep their historical silent treatment
+// (closeCode already carries the teardown); every other close code — or a
+// non-close read error — stays a Warn.
+func logWebSocketReadError(err error) {
+	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
+		zap.L().Debug("WebSocket closed normally by client", zap.Error(err))
+		return
+	}
+	if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+		zap.L().Warn("WebSocket read error", zap.Error(err))
+	}
+}
+
 func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	if h.IsDraining() {
 		c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"error": "Server shutting down"})
@@ -383,9 +401,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				closeCode = websocket.ClosePolicyViolation
 				closeReason = "Message too large"
 			}
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				zap.L().Warn("WebSocket read error", zap.Error(err))
-			}
+			logWebSocketReadError(err)
 			break
 		}
 

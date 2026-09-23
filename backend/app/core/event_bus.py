@@ -1234,7 +1234,14 @@ class EventBus:
 
             # Use _original_message_id for idempotency when present (retry case)
             effective_id = parsed_data.get("_original_message_id", message_id)
-            idempotency_key = f"evt:{stream}:{effective_id}"
+            # Idempotency scope is (stream, consumer group, event) — PROD-FIX-2
+            # defect #3. The stream carries 30+ consumer groups and every group
+            # gets its own delivery of the same message; a stream-scoped key made
+            # groups contend on one lock (≥5s fan-out delay, ~129 false
+            # "Could not acquire lock" warns / 5d) and let group A's done-marker
+            # make group B skip its callback as a "duplicate". Within one group
+            # the key still deduplicates redeliveries/retries as before.
+            idempotency_key = f"evt:{stream}:{group_name}:{effective_id}"
             idempotency = await self._get_idempotency_store()
             existing = await idempotency.get(idempotency_key)
             if existing:
@@ -1243,7 +1250,11 @@ class EventBus:
                 return
 
             if not await idempotency.lock(idempotency_key):
-                logger.warning(f"Could not acquire lock for message: {message_id}")
+                # Same-group contention is a normal transient (redelivery while
+                # another consumer of THIS group is mid-callback): DEBUG, not
+                # the alert baseline. Cross-group contention no longer exists
+                # now that keys are group-scoped.
+                logger.debug(f"Could not acquire lock for message: {message_id}")
                 return
 
             try:

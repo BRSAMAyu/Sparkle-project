@@ -1,0 +1,733 @@
+diff --git a/backend/app/core/event_bus.py b/backend/app/core/event_bus.py
+index 3e6537bf..5c1c4528 100755
+--- a/backend/app/core/event_bus.py
++++ b/backend/app/core/event_bus.py
+@@ -1234,7 +1234,14 @@ class EventBus:
+ 
+             # Use _original_message_id for idempotency when present (retry case)
+             effective_id = parsed_data.get("_original_message_id", message_id)
+-            idempotency_key = f"evt:{stream}:{effective_id}"
++            # Idempotency scope is (stream, consumer group, event) — PROD-FIX-2
++            # defect #3. The stream carries 30+ consumer groups and every group
++            # gets its own delivery of the same message; a stream-scoped key made
++            # groups contend on one lock (≥5s fan-out delay, ~129 false
++            # "Could not acquire lock" warns / 5d) and let group A's done-marker
++            # make group B skip its callback as a "duplicate". Within one group
++            # the key still deduplicates redeliveries/retries as before.
++            idempotency_key = f"evt:{stream}:{group_name}:{effective_id}"
+             idempotency = await self._get_idempotency_store()
+             existing = await idempotency.get(idempotency_key)
+             if existing:
+@@ -1243,7 +1250,11 @@ class EventBus:
+                 return
+ 
+             if not await idempotency.lock(idempotency_key):
+-                logger.warning(f"Could not acquire lock for message: {message_id}")
++                # Same-group contention is a normal transient (redelivery while
++                # another consumer of THIS group is mid-callback): DEBUG, not
++                # the alert baseline. Cross-group contention no longer exists
++                # now that keys are group-scoped.
++                logger.debug(f"Could not acquire lock for message: {message_id}")
+                 return
+ 
+             try:
+diff --git a/backend/gateway/internal/cqrs/outbox/publisher.go b/backend/gateway/internal/cqrs/outbox/publisher.go
+index df3ad5b1..e53ba263 100755
+--- a/backend/gateway/internal/cqrs/outbox/publisher.go
++++ b/backend/gateway/internal/cqrs/outbox/publisher.go
+@@ -29,9 +29,14 @@ type Publisher struct {
+ 	// Configuration
+ 	batchSize    int
+ 	pollInterval time.Duration
++	maxBackoff   time.Duration
+ 
+ 	// State
+ 	running atomic.Bool
++
++	// Backoff state — owned exclusively by the Run loop goroutine.
++	consecutiveFailures int
++	firstFailureAt      time.Time
+ }
+ 
+ // PublisherConfig configures the outbox publisher.
+@@ -41,13 +46,23 @@ type PublisherConfig struct {
+ 
+ 	// PollInterval is how often to poll for new events.
+ 	PollInterval time.Duration
++
++	// MaxBackoff caps the exponential retry delay after consecutive publish
++	// failures (PROD-FIX-2 defect #6). Zero means DefaultMaxBackoff.
++	MaxBackoff time.Duration
+ }
+ 
++// DefaultMaxBackoff caps the failure backoff: a persistent outage settles at
++// one poll attempt per minute instead of the historical 10/s error storm
++// (8,494 spurious "Failed to publish batch" logs during a 16h DB outage).
++const DefaultMaxBackoff = time.Minute
++
+ // DefaultPublisherConfig returns sensible defaults for production.
+ func DefaultPublisherConfig() PublisherConfig {
+ 	return PublisherConfig{
+ 		BatchSize:    100,
+ 		PollInterval: 100 * time.Millisecond,
++		MaxBackoff:   DefaultMaxBackoff,
+ 	}
+ }
+ 
+@@ -63,6 +78,9 @@ func NewPublisher(
+ 	if len(config) > 0 {
+ 		cfg = config[0]
+ 	}
++	if cfg.MaxBackoff <= 0 {
++		cfg.MaxBackoff = DefaultMaxBackoff
++	}
+ 
+ 	return &Publisher{
+ 		repo:         repo,
+@@ -71,10 +89,17 @@ func NewPublisher(
+ 		logger:       logger.Named("outbox-publisher"),
+ 		batchSize:    cfg.BatchSize,
+ 		pollInterval: cfg.PollInterval,
++		maxBackoff:   cfg.MaxBackoff,
+ 	}
+ }
+ 
+ // Run starts the publisher loop. Blocks until context is cancelled.
++//
++// Failure cadence (PROD-FIX-2 defect #6): consecutive publishBatch failures
++// back off exponentially (pollInterval → 2× → 4× … capped at maxBackoff) and
++// the error log is rate-limited to the first failure plus every 10th
++// consecutive one; the OutboxPublishErrors counter still ticks per attempt.
++// Any success resets the cadence to the normal pollInterval.
+ func (p *Publisher) Run(ctx context.Context) error {
+ 	if !p.running.CompareAndSwap(false, true) {
+ 		return nil // Already running
+@@ -84,23 +109,76 @@ func (p *Publisher) Run(ctx context.Context) error {
+ 	p.logger.Info("Outbox publisher started",
+ 		zap.Int("batch_size", p.batchSize),
+ 		zap.Duration("poll_interval", p.pollInterval),
++		zap.Duration("max_backoff", p.maxBackoff),
+ 	)
+ 
+-	ticker := time.NewTicker(p.pollInterval)
+-	defer ticker.Stop()
+-
++	delay := p.pollInterval
+ 	for {
+ 		select {
+ 		case <-ctx.Done():
+ 			p.logger.Info("Outbox publisher stopping")
+ 			return ctx.Err()
+-		case <-ticker.C:
+-			if err := p.publishBatch(ctx); err != nil {
+-				p.logger.Error("Failed to publish batch", zap.Error(err))
+-				p.metrics.OutboxPublishErrors.Inc()
+-			}
++		case <-time.After(delay):
++		}
++
++		if err := p.publishBatch(ctx); err != nil {
++			delay = p.noteFailure(err)
++			continue
++		}
++		delay = p.pollInterval
++		p.noteSuccess()
++	}
++}
++
++// noteFailure records a failed publishBatch, returns the delay before the
++// next attempt, and rate-limits the error log for persistent outages.
++func (p *Publisher) noteFailure(err error) time.Duration {
++	p.metrics.OutboxPublishErrors.Inc()
++	if p.consecutiveFailures == 0 {
++		p.firstFailureAt = time.Now()
++	}
++	p.consecutiveFailures++
++	delay := p.backoffDelay()
++
++	// Same-cause log aggregation: first failure and every 10th consecutive
++	// failure are logged at Error; the in-between attempts stay silent here
++	// (the metric above keeps the true rate). "Still failing" lines make a
++	// 16h outage visible without an error per attempt.
++	if p.consecutiveFailures == 1 || p.consecutiveFailures%10 == 0 {
++		p.logger.Error("Failed to publish batch",
++			zap.Error(err),
++			zap.Int("consecutive_failures", p.consecutiveFailures),
++			zap.Duration("next_retry_in", delay),
++		)
++	}
++	return delay
++}
++
++// noteSuccess resets the backoff cadence and reports recovery from a failure
++// streak with its duration.
++func (p *Publisher) noteSuccess() {
++	if p.consecutiveFailures > 0 {
++		p.logger.Info("Outbox publish recovered",
++			zap.Int("consecutive_failures", p.consecutiveFailures),
++			zap.Duration("failure_duration", time.Since(p.firstFailureAt)),
++		)
++	}
++	p.consecutiveFailures = 0
++	p.firstFailureAt = time.Time{}
++}
++
++// backoffDelay returns the wait before the next attempt after
++// p.consecutiveFailures consecutive failures: pollInterval doubled per
++// failure, capped at maxBackoff.
++func (p *Publisher) backoffDelay() time.Duration {
++	d := p.pollInterval
++	for i := 0; i < p.consecutiveFailures; i++ {
++		d *= 2
++		if d >= p.maxBackoff {
++			return p.maxBackoff
+ 		}
+ 	}
++	return d
+ }
+ 
+ // publishBatch fetches and publishes a batch of events.
+diff --git a/backend/gateway/internal/cqrs/outbox/publisher_test.go b/backend/gateway/internal/cqrs/outbox/publisher_test.go
+new file mode 100644
+index 00000000..5a867db1
+--- /dev/null
++++ b/backend/gateway/internal/cqrs/outbox/publisher_test.go
+@@ -0,0 +1,183 @@
++package outbox
++
++// PROD-FIX-2 defect #6 regression pins: the outbox publisher must back off
++// exponentially under a persistent downstream outage instead of erroring at
++// the fixed poll cadence (production evidence: 8,494 "Failed to publish
++// batch" logs — 10/s — during a 16h DB outage), rate-limit the same-cause
++// error log, and reset to the normal cadence with a recovery log line on
++// first success.
++
++import (
++	"context"
++	"errors"
++	"testing"
++	"time"
++
++	"github.com/google/uuid"
++	"github.com/jackc/pgx/v5"
++	"github.com/stretchr/testify/require"
++	"go.uber.org/zap"
++	"go.uber.org/zap/zapcore"
++	"go.uber.org/zap/zaptest/observer"
++
++	"github.com/sparkle/gateway/internal/cqrs/event"
++	"github.com/sparkle/gateway/internal/cqrs/metrics"
++)
++
++// --- fakes -----------------------------------------------------------------
++
++type fakeRepo struct {
++	getUnpublishedErr error
++	entries           []*event.OutboxEntry
++	getCalls          int
++}
++
++func (f *fakeRepo) InsertWithTx(context.Context, pgx.Tx, *event.OutboxEntry) error { return nil }
++func (f *fakeRepo) Insert(context.Context, *event.OutboxEntry) error               { return nil }
++func (f *fakeRepo) GetUnpublished(context.Context, int) ([]*event.OutboxEntry, error) {
++	f.getCalls++
++	return f.entries, f.getUnpublishedErr
++}
++func (f *fakeRepo) MarkPublished(context.Context, []uuid.UUID) error { return nil }
++func (f *fakeRepo) DeleteOld(context.Context, int) (int64, error)    { return 0, nil }
++func (f *fakeRepo) GetPendingCount(context.Context) (int64, error)   { return 0, nil }
++
++type fakeBus struct {
++	publishErr error
++	publishes  int
++}
++
++func (f *fakeBus) Publish(context.Context, event.DomainEvent) error {
++	f.publishes++
++	return f.publishErr
++}
++func (f *fakeBus) PublishBatch(ctx context.Context, events []event.DomainEvent) error {
++	for range events {
++		if err := f.Publish(ctx, event.DomainEvent{}); err != nil {
++			return err
++		}
++	}
++	return nil
++}
++func (f *fakeBus) Close() error { return nil }
++
++// testMetrics is shared across tests: NewCQRSMetrics registers on the
++// default prometheus registerer via promauto, which panics on duplicates.
++var testMetrics = metrics.NewCQRSMetrics("sparkle_test_outbox")
++
++func newTestPublisher(repo Repository, bus event.EventBus) (*Publisher, *observer.ObservedLogs) {
++	core, logs := observer.New(zapcore.DebugLevel)
++	logger := zap.New(core)
++	p := NewPublisher(repo, bus, testMetrics, logger, PublisherConfig{
++		BatchSize:    10,
++		PollInterval: 10 * time.Millisecond,
++		MaxBackoff:   80 * time.Millisecond,
++	})
++	return p, logs
++}
++
++// --- unit pins: backoff curve ----------------------------------------------
++
++func TestBackoffDelay_DoublesPerFailureAndCaps(t *testing.T) {
++	p, _ := newTestPublisher(&fakeRepo{}, &fakeBus{})
++	require.Equal(t, 80*time.Millisecond, p.maxBackoff)
++
++	want := []time.Duration{20 * time.Millisecond, 40 * time.Millisecond, 80 * time.Millisecond}
++	for i, w := range want {
++		p.consecutiveFailures = i + 1
++		require.Equal(t, w, p.backoffDelay(), "failure #%d", i+1)
++	}
++	// Saturated outage: stays pinned at the cap.
++	p.consecutiveFailures = 50
++	require.Equal(t, p.maxBackoff, p.backoffDelay())
++}
++
++// --- unit pins: log rate limiting and metrics ------------------------------
++
++func TestNoteFailure_LogsFirstAndEveryTenthOnly(t *testing.T) {
++	p, logs := newTestPublisher(&fakeRepo{getUnpublishedErr: errors.New("dial tcp: connection refused")}, &fakeBus{})
++
++	for i := 0; i < 25; i++ {
++		p.noteFailure(errors.New("dial tcp: connection refused"))
++	}
++
++	errLogs := logs.FilterMessage("Failed to publish batch").All()
++	require.Len(t, errLogs, 3, "only failure #1, #10, #20 may log Error at Error level")
++	require.Equal(t, zapcore.ErrorLevel, errLogs[0].Level)
++	require.Equal(t, 25, p.consecutiveFailures)
++}
++
++func TestNoteSuccess_ResetsCadenceAndLogsRecovery(t *testing.T) {
++	p, logs := newTestPublisher(&fakeRepo{}, &fakeBus{})
++
++	p.noteFailure(errors.New("boom"))
++	p.noteFailure(errors.New("boom"))
++	require.Equal(t, 2, p.consecutiveFailures)
++
++	p.noteSuccess()
++
++	require.Equal(t, 0, p.consecutiveFailures)
++	require.True(t, p.firstFailureAt.IsZero())
++	recoveries := logs.FilterMessage("Outbox publish recovered").All()
++	require.Len(t, recoveries, 1)
++	require.Equal(t, zapcore.InfoLevel, recoveries[0].Level)
++
++	// Clean baseline: no spurious recovery log when nothing failed.
++	p.noteSuccess()
++	require.Len(t, logs.FilterMessage("Outbox publish recovered").All(), 1)
++}
++
++// --- loop behavior: outage cadence + recovery + clean shutdown -------------
++
++func TestRun_BacksoffDuringOutageAndKeepsContextCancellationResponsive(t *testing.T) {
++	repo := &fakeRepo{getUnpublishedErr: errors.New("dial tcp: connection refused")}
++	p, logs := newTestPublisher(repo, &fakeBus{})
++
++	ctx, cancel := context.WithCancel(context.Background())
++	done := make(chan error, 1)
++	go func() { done <- p.Run(ctx) }()
++
++	// Naive cadence (no backoff, 10ms poll) would attempt ~24 times in 150ms.
++	time.Sleep(150 * time.Millisecond)
++	cancel()
++	require.ErrorIs(t, <-done, context.Canceled)
++
++	attempts := repo.getCalls
++	require.GreaterOrEqual(t, attempts, 3, "must still retry during outage")
++	require.LessOrEqual(t, attempts, 10,
++		"persistent outage must back off, not poll at the fixed cadence (got %d attempts in 150ms)", attempts)
++
++	errLogs := logs.FilterMessage("Failed to publish batch").All()
++	require.LessOrEqual(t, len(errLogs), attempts/5+1, "same-cause error log must be rate-limited")
++}
++
++func TestRun_RecoversToNormalCadenceAfterOutage(t *testing.T) {
++	repo := &fakeRepo{getUnpublishedErr: errors.New("connection refused")}
++	bus := &fakeBus{}
++	p, logs := newTestPublisher(repo, bus)
++
++	ctx, cancel := context.WithCancel(context.Background())
++	done := make(chan error, 1)
++	go func() { done <- p.Run(ctx) }()
++
++	// Let it fail a few times, then heal the downstream with a pending entry.
++	time.Sleep(40 * time.Millisecond)
++	repo.getUnpublishedErr = nil
++	repo.entries = []*event.OutboxEntry{{
++		ID:        uuid.New(),
++		EventType: event.EventTaskCreated,
++		Payload:   []byte("{}"),
++		CreatedAt: time.Now(),
++	}}
++	time.Sleep(60 * time.Millisecond)
++	cancel()
++	require.ErrorIs(t, <-done, context.Canceled)
++
++	require.Len(t, logs.FilterMessage("Outbox publish recovered").All(), 1,
++		"first success after the failure streak must log recovery")
++
++	// Post-recovery cadence is the normal pollInterval: enough attempts to
++	// prove liveness, none of them failing.
++	require.Greater(t, bus.publishes, 0)
++	require.Empty(t, logs.FilterMessage("Failed to publish event").All())
++}
+diff --git a/backend/gateway/internal/handler/chat_orchestrator.go b/backend/gateway/internal/handler/chat_orchestrator.go
+index 93d7a3a2..00eb158d 100755
+--- a/backend/gateway/internal/handler/chat_orchestrator.go
++++ b/backend/gateway/internal/handler/chat_orchestrator.go
+@@ -206,6 +206,24 @@ func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, ui service.UserIde
+ 	return h
+ }
+ 
++// logWebSocketReadError classifies a WebSocket read error into the right log
++// level. A client-initiated close with status 1000 (normal) is expected
++// traffic on the chat channel — every deliberate user exit used to emit a
++// Warn here (PROD-FIX-2 defect #5: 223 false "websocket: close 1000
++// (normal)" warns in 5 days), drowning real anomalies. Normal closes go to
++// DEBUG; GoingAway/AbnormalClosure keep their historical silent treatment
++// (closeCode already carries the teardown); every other close code — or a
++// non-close read error — stays a Warn.
++func logWebSocketReadError(err error) {
++	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
++		zap.L().Debug("WebSocket closed normally by client", zap.Error(err))
++		return
++	}
++	if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
++		zap.L().Warn("WebSocket read error", zap.Error(err))
++	}
++}
++
+ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
+ 	if h.IsDraining() {
+ 		c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"error": "Server shutting down"})
+@@ -383,9 +401,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
+ 				closeCode = websocket.ClosePolicyViolation
+ 				closeReason = "Message too large"
+ 			}
+-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+-				zap.L().Warn("WebSocket read error", zap.Error(err))
+-			}
++			logWebSocketReadError(err)
+ 			break
+ 		}
+ 
+diff --git a/backend/gateway/internal/handler/chat_orchestrator_closelog_test.go b/backend/gateway/internal/handler/chat_orchestrator_closelog_test.go
+new file mode 100644
+index 00000000..e7841145
+--- /dev/null
++++ b/backend/gateway/internal/handler/chat_orchestrator_closelog_test.go
+@@ -0,0 +1,71 @@
++package handler
++
++// PROD-FIX-2 defect #5 regression pins: a client-initiated WebSocket close
++// with status 1000 (normal) is expected traffic and must stay out of the warn
++// baseline (production evidence: 223 false "websocket: close 1000 (normal)"
++// warns in 5 days, chat_orchestrator.go). Only genuinely unexpected close
++// codes warn.
++
++import (
++	"errors"
++	"testing"
++
++	"github.com/gorilla/websocket"
++	"github.com/stretchr/testify/require"
++	"go.uber.org/zap"
++	"go.uber.org/zap/zapcore"
++	"go.uber.org/zap/zaptest/observer"
++)
++
++func closeErrOf(code int) error { return &websocket.CloseError{Code: code, Text: "test"} }
++
++func TestLogWebSocketReadError_NormalCloseIsDebugNotWarn(t *testing.T) {
++	core, logs := observer.New(zapcore.DebugLevel)
++	restore := zap.ReplaceGlobals(zap.New(core))
++	defer restore()
++
++	logWebSocketReadError(closeErrOf(websocket.CloseNormalClosure)) // close 1000
++
++	require.Empty(t, logs.FilterMessage("WebSocket read error").All(),
++		"close 1000 (normal) must never warn — it is the alert-baseline defect")
++	debugs := logs.FilterMessage("WebSocket closed normally by client").All()
++	require.Len(t, debugs, 1)
++	require.Equal(t, zapcore.DebugLevel, debugs[0].Level)
++}
++
++func TestLogWebSocketReadError_GoingAwayAndAbnormalStaySilent(t *testing.T) {
++	core, logs := observer.New(zapcore.DebugLevel)
++	restore := zap.ReplaceGlobals(zap.New(core))
++	defer restore()
++
++	// Historical behavior kept: these two carry no signal (teardown is driven
++	// by closeCode) and were never logged.
++	logWebSocketReadError(closeErrOf(websocket.CloseGoingAway))
++	logWebSocketReadError(closeErrOf(websocket.CloseAbnormalClosure))
++
++	require.Empty(t, logs.All())
++}
++
++func TestLogWebSocketReadError_UnexpectedCloseWarns(t *testing.T) {
++	core, logs := observer.New(zapcore.DebugLevel)
++	restore := zap.ReplaceGlobals(zap.New(core))
++	defer restore()
++
++	logWebSocketReadError(closeErrOf(websocket.CloseInternalServerErr)) // 1011
++
++	warns := logs.FilterMessage("WebSocket read error").All()
++	require.Len(t, warns, 1)
++	require.Equal(t, zapcore.WarnLevel, warns[0].Level)
++}
++
++func TestLogWebSocketReadError_NonCloseErrorStaysUnlogged(t *testing.T) {
++	core, logs := observer.New(zapcore.DebugLevel)
++	restore := zap.ReplaceGlobals(zap.New(core))
++	defer restore()
++
++	// Pre-existing semantics: non-close read errors are handled by the caller
++	// (stream cancel / close code), the classifier must not invent a log.
++	logWebSocketReadError(errors.New("read: connection reset by peer"))
++
++	require.Empty(t, logs.All())
++}
+diff --git a/backend/tests/unit/test_event_bus_group_scoped_idempotency.py b/backend/tests/unit/test_event_bus_group_scoped_idempotency.py
+new file mode 100644
+index 00000000..f32b3a4b
+--- /dev/null
++++ b/backend/tests/unit/test_event_bus_group_scoped_idempotency.py
+@@ -0,0 +1,232 @@
++"""PROD-FIX-2 缺陷 #3：事件总线幂等锁/去重标记必须按消费组隔离。
++
++生产实证（PROD-LOG REPORT ②-3）：``event_bus.py`` 的幂等键
++``evt:{stream}:{effective_id}`` 仅按 stream 作用域；``sparkle_events`` 上 30+
++个消费组每条消息各投递一份，却在同一把锁 / 同一个 done 标记上互斥——
++后果：① 抢锁失败方 return 不 ACK，消息滞留本组 PEL 等 5s autoclaim（扇出延迟）；
++② 组 A 完成处理后组 B 命中 done 标记被误判"重复"直接跳过，回调永不执行；
++③ 每条消息放大出 ~129 条 "Could not acquire lock" 假告警。
++
++红证（修复前全部失败）：
++- test_two_groups_both_consume_same_event            —— 误判重复面
++- test_two_groups_concurrent_same_event_no_mutual_block —— 锁互斥面
++- test_lock_failure_log_is_not_warning               —— 告警噪音面
++绿证（语义不回退）：
++- test_same_group_duplicate_still_skipped            —— 组内幂等语义保持
++- test_idempotency_keys_are_group_scoped             —— 键形状钉死
++"""
++
++from __future__ import annotations
++
++import asyncio
++from types import SimpleNamespace
++from unittest.mock import AsyncMock
++
++import pytest
++from loguru import logger as loguru_logger
++
++from app.core.event_bus import EventBus
++
++STREAM = "sparkle_events"
++MSG_ID = "1790115091978-0"
++_EVENT_DATA = {"event_type": "task.completed", "user_id": "user-1"}
++
++
++class _GroupAwareStore:
++    """按真实 RedisIdempotencyStore 语义建模的幂等存储（SET NX 锁 + TTL done 标记）。"""
++
++    def __init__(self) -> None:
++        self._done: dict[str, dict] = {}
++        self._locks: set[str] = set()
++        self.keys_seen: list[str] = []
++
++    async def get(self, key: str):
++        self.keys_seen.append(key)
++        return self._done.get(key)
++
++    async def set(self, key: str, value: dict, ttl: int) -> None:
++        self._done[key] = value
++
++    async def lock(self, key: str) -> bool:
++        if key in self._locks:
++            return False
++        self._locks.add(key)
++        return True
++
++    async def unlock(self, key: str) -> None:
++        self._locks.discard(key)
++
++
++def _make_bus(store: _GroupAwareStore) -> EventBus:
++    bus = EventBus()
++    bus.redis = SimpleNamespace(xack=AsyncMock())
++    bus._get_idempotency_store = AsyncMock(return_value=store)  # type: ignore[method-assign]
++    return bus
++
++
++def _process(bus: EventBus, store: _GroupAwareStore, group: str, callback, message_id: str = MSG_ID):
++    return bus._process_stream_message(
++        stream=STREAM,
++        group_name=group,
++        consumer_name=f"{group}-consumer",
++        callback=callback,
++        message_id=message_id,
++        data=dict(_EVENT_DATA),
++    )
++
++
++# ---------------------------------------------------------------------------
++# 红证 ①：组 A 完成 → 组 B 不得被 done 标记误判为"重复"而跳过
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_two_groups_both_consume_same_event() -> None:
++    store = _GroupAwareStore()
++    bus = _make_bus(store)
++
++    calls: dict[str, int] = {"group_a": 0, "group_b": 0}
++
++    async def cb_a(event: dict) -> None:
++        calls["group_a"] += 1
++
++    async def cb_b(event: dict) -> None:
++        calls["group_b"] += 1
++
++    await _process(bus, store, "group_a", cb_a)
++    await _process(bus, store, "group_b", cb_b)
++
++    assert calls["group_a"] == 1, "group A 应正常消费"
++    assert calls["group_b"] == 1, (
++        "group B 必须独立消费同一事件：组 A 的 done 标记不得跨组判重（修复前 "
++        "idempotency 键仅按 stream 作用域，B 被误判 duplicate 直接跳过）"
++    )
++
++
++# ---------------------------------------------------------------------------
++# 红证 ②：组 A 持锁处理中 → 组 B 不得在同一把锁上被阻塞/拒斥
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_two_groups_concurrent_same_event_no_mutual_block() -> None:
++    store = _GroupAwareStore()
++    bus = _make_bus(store)
++
++    group_a_entered = asyncio.Event()
++    calls = {"group_a": 0, "group_b": 0}
++
++    async def cb_a(event: dict) -> None:
++        calls["group_a"] += 1
++        group_a_entered.set()
++        await asyncio.sleep(0.05)  # 模拟慢回调：持锁窗口
++
++    async def cb_b(event: dict) -> None:
++        calls["group_b"] += 1
++
++    task_a = asyncio.create_task(_process(bus, store, "group_a", cb_a))
++    await group_a_entered.wait()  # group A 已拿锁并进入回调
++
++    # group B 在 A 持锁期间处理自己的投递副本：必须不被共享锁拒斥
++    await _process(bus, store, "group_b", cb_b)
++    await task_a
++
++    assert calls["group_a"] == 1
++    assert calls["group_b"] == 1, (
++        "group B 在 group A 持锁期间不得被共享锁拒斥（修复前锁键仅按 stream，"
++        "B 抢锁失败 return 不 ACK，滞留 PEL 等 5s autoclaim）"
++    )
++    # B 处理成功后必须 ACK 自己的投递（修复前拒斥路径不 ACK）
++    assert bus.redis.xack.await_count == 2
++
++
++# ---------------------------------------------------------------------------
++# 红证 ③：抢锁失败降为 DEBUG（同组竞争是正常态，不进告警基线）
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_lock_failure_log_is_not_warning() -> None:
++    store = _GroupAwareStore()
++    bus = _make_bus(store)
++
++    entered = asyncio.Event()
++
++    async def cb_slow(event: dict) -> None:
++        entered.set()
++        await asyncio.sleep(0.05)
++
++    async def cb_fast(event: dict) -> None:
++        pass
++
++    task = asyncio.create_task(_process(bus, store, "group_a", cb_slow))
++    await entered.wait()
++
++    records: list[str] = []
++    sink_id = loguru_logger.add(lambda msg: records.append(str(msg)), level="DEBUG", format="{level}|{message}")
++    try:
++        await _process(bus, store, "group_a", cb_fast)
++    finally:
++        loguru_logger.remove(sink_id)
++    await task
++
++    warnings = [r for r in records if r.startswith("WARNING") and "Could not acquire lock" in r]
++    assert not warnings, "组内抢锁失败是正常竞争态，不得以 WARNING 进告警基线（生产 ~129 条假告警）"
++
++
++# ---------------------------------------------------------------------------
++# 绿证：组内幂等语义不回退（同组重复投递仍跳过 + ACK）
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_same_group_duplicate_still_skipped() -> None:
++    store = _GroupAwareStore()
++    bus = _make_bus(store)
++
++    calls = 0
++
++    async def cb(event: dict) -> None:
++        nonlocal calls
++        calls += 1
++
++    # 首次投递（原始 id 1-0）
++    await _process(bus, store, "group_a", cb, message_id="1-0")
++    # 同组重投递：autoclaim/重试副本携带 _original_message_id 指回原始 id
++    bus.redis.xack.reset_mock()
++    await bus._process_stream_message(
++        stream=STREAM,
++        group_name="group_a",
++        consumer_name="group_a-consumer",
++        callback=cb,
++        message_id="9-9",
++        data={"event_type": "task.completed", "user_id": "user-1", "_original_message_id": "1-0"},
++    )
++
++    assert calls == 1, "同组重复投递必须仍被幂等跳过（at-least-once 去重语义不回退）"
++    bus.redis.xack.assert_awaited_once_with(STREAM, "group_a", "9-9")
++
++
++# ---------------------------------------------------------------------------
++# 绿证：幂等键形状钉死为组作用域（跨组键互不相同）
++# ---------------------------------------------------------------------------
++
++
++@pytest.mark.asyncio
++async def test_idempotency_keys_are_group_scoped() -> None:
++    store = _GroupAwareStore()
++    bus = _make_bus(store)
++
++    async def cb(event: dict) -> None:
++        pass
++
++    await _process(bus, store, "group_a", cb)
++    keys_a = list(store.keys_seen)
++    store.keys_seen.clear()
++    await _process(bus, store, "group_b", cb)
++    keys_b = list(store.keys_seen)
++
++    assert keys_a and keys_b
++    assert all(k.startswith(f"evt:{STREAM}:group_a:") for k in keys_a), f"group A 键应含组维度: {keys_a}"
++    assert all(k.startswith(f"evt:{STREAM}:group_b:") for k in keys_b), f"group B 键应含组维度: {keys_b}"
++    assert not set(keys_a) & set(keys_b), "两消费组的幂等键集合不得相交"
