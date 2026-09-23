@@ -1,0 +1,706 @@
+diff --git a/backend/app/checkpoint/redis_checkpointer.py b/backend/app/checkpoint/redis_checkpointer.py
+index a4a7dc72..af79b12a 100755
+--- a/backend/app/checkpoint/redis_checkpointer.py
++++ b/backend/app/checkpoint/redis_checkpointer.py
+@@ -14,6 +14,15 @@ from app.orchestration.statechart_engine import WorkflowState
+ #     tools_schema / transparency_generator / emit_transparency_event / redis_client / run_ledger
+ #   - orchestrator.py: run_ledger
+ #   - routing_engine.py: grounding_validator
++# PROD-LOG2 ②-5（PROD-FIX-4）：二轮巡检新暴露的 4 个计划/上下文工作面 key——
++#   - snapshot: execution_engine 注入 StateSnapshotManager.create_snapshot 产物
++#     （StateSnapshot 对象，execution_engine.py:2598）
++#   - executable_plan: LangGraph 计划对象（execution_engine.py:2597 /
++#     standard_workflow.py；清理位写 None 可序列化，故仅计划存活期告警）
++#   - user_context / focused_memory: session_state_mixin.py 合并上下文 dict，
++#     内嵌运行期对象（episodic memories / context_pack 等）序列化必炸
++#   恢复面安全：全部消费点走 .get(...) or 默认值 / 真值判断（standard_workflow
++#   generation_node 等按需重建计划），checkpoint 缺失不破坏恢复路径。
+ # 清单外的 key 序列化失败仍走 WARNING（可能是该序列化却坏掉的对象，或新增的
+ # 运行期依赖——后者确认后登记到此清单）。
+ KNOWN_NON_SERIALIZABLE_CONTEXT_KEYS = frozenset(
+@@ -26,6 +35,10 @@ KNOWN_NON_SERIALIZABLE_CONTEXT_KEYS = frozenset(
+         "emit_transparency_event",
+         "redis_client",
+         "grounding_validator",
++        "snapshot",
++        "user_context",
++        "focused_memory",
++        "executable_plan",
+     }
+ )
+ 
+diff --git a/backend/app/core/llm_router.py b/backend/app/core/llm_router.py
+index 15cbf51e..2b2fa8be 100644
+--- a/backend/app/core/llm_router.py
++++ b/backend/app/core/llm_router.py
+@@ -546,28 +546,6 @@ class LLMRouter:
+         ocr_backup = (settings.OCR_BACKUP_PROVIDER or "siliconflow").strip().lower()
+ 
+         configs = {
+-            "xiaomi_chat": ModelConfig(
+-                provider=ModelProvider.XIAOMI,
+-                model_name=settings.XIAOMI_CHAT_MODEL,
+-                base_url=settings.XIAOMI_MIMO_BASE_URL,
+-                api_key=settings.XIAOMI_MIMO_API_KEY,
+-                temperature=settings.XIAOMI_TEMPERATURE,
+-                tier=ModelTier.FAST,
+-                cost_per_1k_tokens=0.0001,
+-                avg_latency_ms=200,
+-                thinking_mode="disabled",
+-            ),
+-            "xiaomi_standard_thinking": ModelConfig(
+-                provider=ModelProvider.XIAOMI,
+-                model_name=settings.XIAOMI_STANDARD_MODEL,
+-                base_url=settings.XIAOMI_MIMO_BASE_URL,
+-                api_key=settings.XIAOMI_MIMO_API_KEY,
+-                temperature=settings.XIAOMI_TEMPERATURE,
+-                tier=ModelTier.STANDARD,
+-                cost_per_1k_tokens=0.0002,
+-                avg_latency_ms=350,
+-                thinking_mode="enabled",
+-            ),
+             "mimo_pro": ModelConfig(
+                 provider=ModelProvider.XIAOMI,
+                 model_name=settings.XIAOMI_PRO_MODEL,
+@@ -871,6 +849,46 @@ class LLMRouter:
+             ),
+         }
+ 
++        # 小米 mimo 主端点条目（PROD-LOG2 ②-3，PROD-FIX-4 裁决）：仅
++        # XIAOMI_MIMO_API_KEY 非空才注册（B-MODEL-SWITCH 开关注册先例）——
++        # 无 key 环境（测试/CI/未配置部署）此前空 key 也注册，FAST/STANDARD
++        # 链上人人都挂一个必炸 hop。mimo_pro 走独立 token-plan key/端点，
++        # 无故障证据，不在此门控面。
++        # 注意：即便 key 有效，默认 mimo-v2-flash 模型名已被小米端点本身拒绝
++        # （404 Unsupported model，生产 3 站×2 条；活栈 key 已配置仍 404），
++        # 故下方 FAST/STANDARD 默认链已将该 hop 摘除——小米官方更正模型名后
++        # （改 XIAOMI_CHAT_MODEL/XIAOMI_STANDARD_MODEL）把 "xiaomi_chat"/
++        # "xiaomi_standard_thinking" 加回 fast_models/standard_models 即恢复。
++        _xiaomi_key_present = bool((settings.XIAOMI_MIMO_API_KEY or "").strip())
++        if _xiaomi_key_present:
++            configs["xiaomi_chat"] = ModelConfig(
++                provider=ModelProvider.XIAOMI,
++                model_name=settings.XIAOMI_CHAT_MODEL,
++                base_url=settings.XIAOMI_MIMO_BASE_URL,
++                api_key=settings.XIAOMI_MIMO_API_KEY,
++                temperature=settings.XIAOMI_TEMPERATURE,
++                tier=ModelTier.FAST,
++                cost_per_1k_tokens=0.0001,
++                avg_latency_ms=200,
++                thinking_mode="disabled",
++            )
++            configs["xiaomi_standard_thinking"] = ModelConfig(
++                provider=ModelProvider.XIAOMI,
++                model_name=settings.XIAOMI_STANDARD_MODEL,
++                base_url=settings.XIAOMI_MIMO_BASE_URL,
++                api_key=settings.XIAOMI_MIMO_API_KEY,
++                temperature=settings.XIAOMI_TEMPERATURE,
++                tier=ModelTier.STANDARD,
++                cost_per_1k_tokens=0.0002,
++                avg_latency_ms=350,
++                thinking_mode="enabled",
++            )
++        else:
++            logger.info(
++                "XIAOMI_MIMO_API_KEY not configured: xiaomi mimo entries kept out of "
++                "registry (无 key 不注册); explicit selection falls back to default lane"
++            )
++
+         # MiniMax 异步分析池条目：BATCH_LLM_PROVIDER=minimax 且配置了 MINIMAX_API_KEY
+         # 的环境注册（B 线模型切换 2026-09-22：开关为 batch 车道 provider 唯一裁决位）。
+         # 定位约束（用户决策）：MiniMax M3（token plan 免费档，并发硬上限
+@@ -919,10 +937,14 @@ class LLMRouter:
+ 
+         self._available_models = configs
+ 
+-        # 2026-09 主力切换：各能力层 Qwen（dashscope）置首；deepseek/xiaomi/GLM
++        # 2026-09 主力切换：各能力层 Qwen（dashscope）置首；deepseek/GLM
+         # 条目全部保留为降级候选（GLM「保留待用」，.env LLM_TIER_* 可零代码回切）。
+-        fast_models = ["dashscope_fast", "deepseek_fast", "xiaomi_chat", "glm_4_7_flash_no_thinking"]
+-        standard_models = ["deepseek_chat", "dashscope_standard_thinking", "xiaomi_standard_thinking"]
++        # PROD-LOG2 ②-3（PROD-FIX-4）：xiaomi 两 hop 摘出默认链——mimo-v2-flash
++        # 被小米端点拒绝（404 Unsupported model，与 key 是否有效无关），降级到它
++        # 必白打一跳（网络延迟+ERROR+熔断计数）。条目仍按上方 key-gate 注册，
++        # 显式指定/policy 选择不受影响；更正模型名后一行回挂（见上方注释）。
++        fast_models = ["dashscope_fast", "deepseek_fast", "glm_4_7_flash_no_thinking"]
++        standard_models = ["deepseek_chat", "dashscope_standard_thinking"]
+         plus_models = ["dashscope_chat"]
+         pro_models = ["dashscope_reason"]
+         max_models = ["qwen3_8_max", "deepseek_reason", "glm_5_max"]
+diff --git a/backend/app/core/security_monitor.py b/backend/app/core/security_monitor.py
+index 4f00ee98..339b7ae2 100755
+--- a/backend/app/core/security_monitor.py
++++ b/backend/app/core/security_monitor.py
+@@ -628,7 +628,7 @@ class SecurityMonitor:
+                 failed_key = "security:failed_logins_recent"
+                 recent_count = await self.redis.llen(failed_key) if self.redis else 0
+                 if recent_count >= 10:
+-                    await self._send_alert_notification(
++                    await self._send_alert_with_cooldown(
+                         alert_type="brute_force_attempt",
+                         message=f"{recent_count} failed login attempts in 5 minutes",
+                         threat_level=ThreatLevel.HIGH,
+@@ -642,7 +642,7 @@ class SecurityMonitor:
+                 admin_key = "security:admin_actions_recent"
+                 admin_count = await self.redis.llen(admin_key) if self.redis else 0
+                 if admin_count >= 20:
+-                    await self._send_alert_notification(
++                    await self._send_alert_with_cooldown(
+                         alert_type="unusual_admin_activity",
+                         message=f"{admin_count} admin actions in 5 minutes",
+                         threat_level=ThreatLevel.MEDIUM,
+@@ -654,6 +654,26 @@ class SecurityMonitor:
+         except Exception as e:
+             logger.debug("_check_abnormal_patterns failed: {}", e)
+ 
++    async def _send_alert_with_cooldown(
++        self,
++        alert_type: str,
++        message: str,
++        threat_level: ThreatLevel,
++        details: dict | None = None,
++    ) -> None:
++        """经 trigger_security_alert 的 300s 冷却通道发告警（PROD-LOG2 ②-4）。
++
++        此前 _check_system_security / _check_abnormal_patterns 直调
++        _send_alert_notification 绕过冷却（trigger_security_alert 内现成的
++        security:alert_cooldown:{type} + ALERT_COOLDOWN=300s）——DEBUG 开发
++        环境每分钟重发高危告警（生产实测 88 分钟 90+90 条）。redis 不可用时
++        退回直发（无冷却通道可吃，保持基线可观测，不因 AttributeError 炸）。
++        """
++        if self.redis is None:
++            await self._send_alert_notification(alert_type, message, threat_level, details)
++            return
++        await self.trigger_security_alert(alert_type, message, threat_level, details)
++
+     async def _check_system_security(self):
+         """Check system security state — config, services, TLS."""
+         try:
+@@ -662,7 +682,9 @@ class SecurityMonitor:
+             # Verify DEBUG mode is off
+             if getattr(settings, 'DEBUG', False):
+                 issues.append("DEBUG mode is enabled")
+-                logger.warning("SecurityMonitor: DEBUG mode is ON — this is insecure for production")
++                # PROD-LOG2 ②-4：常态说明降 DEBUG——状态由下方冷却告警承载，
++                # WARNING 级在开发环境=每分钟一条刷屏（88 分钟 90 条）。
++                logger.debug("SecurityMonitor: DEBUG mode is ON — this is insecure for production")
+ 
+             # Check for insecure defaults
+             secret_key = getattr(settings, 'SECRET_KEY', '')
+@@ -670,7 +692,7 @@ class SecurityMonitor:
+                 issues.append(f"SECRET_KEY too short ({len(secret_key)} chars, min 32 required)")
+ 
+             if issues:
+-                await self._send_alert_notification(
++                await self._send_alert_with_cooldown(
+                     alert_type="system_security_issue",
+                     message="; ".join(issues),
+                     threat_level=ThreatLevel.HIGH,
+diff --git a/backend/app/services/metacognition_registry.py b/backend/app/services/metacognition_registry.py
+index 75726bca..494bbd55 100644
+--- a/backend/app/services/metacognition_registry.py
++++ b/backend/app/services/metacognition_registry.py
+@@ -239,80 +239,6 @@ DASHBOARD_LANGUAGE_TEMPLATES: tuple[LanguageTemplate, ...] = (
+ )
+ 
+ 
+-DASHBOARD_LANGUAGE_TEMPLATES: tuple[LanguageTemplate, ...] = (
+-    LanguageTemplate(
+-        template_id="mc_dashboard_time_more_support",
+-        kind="dashboard_body",
+-        dim="time_estimation_bias",
+-        direction="more_support",
+-        template="你过去 {sample_size} 次对完成时间估得偏乐观 {display_value} 小时。",
+-    ),
+-    LanguageTemplate(
+-        template_id="mc_dashboard_time_less_support",
+-        kind="dashboard_body",
+-        dim="time_estimation_bias",
+-        direction="less_support",
+-        template="你过去 {sample_size} 次通常比自己的时间预估更早完成 {display_value} 小时。",
+-    ),
+-    LanguageTemplate(
+-        template_id="mc_dashboard_completion_more_support",
+-        kind="dashboard_body",
+-        dim="completion_bias",
+-        direction="more_support",
+-        template="你过去 {sample_size} 次对完成比例估得偏乐观 {display_value} 个百分点。",
+-    ),
+-    LanguageTemplate(
+-        template_id="mc_dashboard_completion_less_support",
+-        kind="dashboard_body",
+-        dim="completion_bias",
+-        direction="less_support",
+-        template="你过去 {sample_size} 次对完成比例估得偏保守 {display_value} 个百分点。",
+-    ),
+-    LanguageTemplate(
+-        template_id="mc_dashboard_mastery_more_support",
+-        kind="dashboard_body",
+-        dim="mastery_bias",
+-        direction="more_support",
+-        template="你过去 {sample_size} 次对掌握度估得偏乐观 {display_value} 个百分点。",
+-    ),
+-    LanguageTemplate(
+-        template_id="mc_dashboard_mastery_less_support",
+-        kind="dashboard_body",
+-        dim="mastery_bias",
+-        direction="less_support",
+-        template="你过去 {sample_size} 次对掌握度估得偏保守 {display_value} 个百分点。",
+-    ),
+-    LanguageTemplate(
+-        template_id="mc_dashboard_insufficient",
+-        kind="dashboard_body",
+-        dim="shared",
+-        direction="insufficient",
+-        template="样本不足，继续观察中。",
+-    ),
+-    LanguageTemplate(
+-        template_id="mc_dashboard_trend_improving",
+-        kind="dashboard_trend",
+-        dim="shared",
+-        direction="improving",
+-        template="最近几周正在变稳。",
+-    ),
+-    LanguageTemplate(
+-        template_id="mc_dashboard_trend_stable",
+-        kind="dashboard_trend",
+-        dim="shared",
+-        direction="stable",
+-        template="最近几周基本稳定。",
+-    ),
+-    LanguageTemplate(
+-        template_id="mc_dashboard_trend_worsening",
+-        kind="dashboard_trend",
+-        dim="shared",
+-        direction="worsening",
+-        template="最近几周的波动又放大了一些。",
+-    ),
+-)
+-
+-
+ def get_confidence_proxy(proxy_id: str) -> ConfidenceProxyDefinition:
+     try:
+         return CONFIDENCE_PROXY_REGISTRY[proxy_id]
+diff --git a/backend/tests/unit/test_confidence_proxy_registry.py b/backend/tests/unit/test_confidence_proxy_registry.py
+index 954aadba..fdf6ca60 100644
+--- a/backend/tests/unit/test_confidence_proxy_registry.py
++++ b/backend/tests/unit/test_confidence_proxy_registry.py
+@@ -2,9 +2,14 @@ from __future__ import annotations
+ 
+ import pytest
+ 
++from app.core.i18n import I18n
+ from app.services.metacognition_registry import (
+     CONFIDENCE_PROXY_REGISTRY,
++    DASHBOARD_LANGUAGE_TEMPLATES,
++    PROCESS_SCAFFOLDING_TEMPLATES,
+     ensure_registered_proxies,
++    render_guard_samples,
++    render_template,
+ )
+ 
+ 
+@@ -32,3 +37,62 @@ def test_ensure_registered_proxies_preserves_registered_values() -> None:
+ def test_ensure_registered_proxies_rejects_unknown_proxy() -> None:
+     with pytest.raises(ValueError):
+         ensure_registered_proxies(["freeform_confidence_proxy"])
++
++
++# ---------------------------------------------------------------------------
++# PROD-LOG2 ②-1（PROD-FIX-4）：语言模板必须是 i18n key，不得把字面句子当 key
++#
++# 缺陷：metacognition_registry.py 第二个 DASHBOARD_LANGUAGE_TEMPLATES 定义（遮蔽
++# 前一个）把中文句子当 template 塞给 I18n.t 当 key 查 → 每条消息打 "Translation
++# key not found" WARNING（生产 88min 5739 条，占引擎 WARNING 93%），且 i18n 未命中
++# 兜底返回 key 本身（输出碰巧正确）掩盖配置错误。
++# ---------------------------------------------------------------------------
++
++
++def test_every_language_template_is_a_dotted_i18n_key() -> None:
++    """模板字段必须形如 i18n key：含 '.'、无空白、不含 CJK 字面句."""
++    for registry in (PROCESS_SCAFFOLDING_TEMPLATES, DASHBOARD_LANGUAGE_TEMPLATES):
++        for item in registry:
++            assert "." in item.template, f"{item.template_id}: template 不是 i18n key: {item.template}"
++            assert not any(ch.isspace() for ch in item.template), (
++                f"{item.template_id}: template 含空白（不像 i18n key）: {item.template}"
++            )
++            assert not any("\u4e00" <= ch <= "\u9fff" for ch in item.template), (
++                f"{item.template_id}: 字面句子当 key（PROD-LOG2 ②-1 同型）: {item.template}"
++            )
++
++
++@pytest.mark.parametrize("locale", ["zh", "en"])
++def test_every_template_key_resolves_in_i18n(locale: str) -> None:
++    """所有模板 key 必须在两个 locale 的 i18n 数据中命中（未命中=兜底返回 key 本身）."""
++    for registry in (PROCESS_SCAFFOLDING_TEMPLATES, DASHBOARD_LANGUAGE_TEMPLATES):
++        for item in registry:
++            rendered = I18n.t(item.template, locale=locale)
++            assert rendered != item.template, (
++                f"{item.template_id}: key '{item.template}' 在 {locale} 未命中（回退返回 key 本身）"
++            )
++
++
++def test_render_all_dashboard_templates_emits_no_translation_warnings() -> None:
++    """完整渲染 dashboard 模板不得产生任何 'Translation key not found' WARNING.
++
++    生产面：batch 评测流每条消息触发多次，88 分钟 5739 条（引擎 WARNING 93%）。
++    """
++    from loguru import logger
++
++    records: list = []
++    sink_id = logger.add(lambda msg: records.append(msg.record), level="WARNING")
++    try:
++        for item in DASHBOARD_LANGUAGE_TEMPLATES:
++            render_template(item.template_id, locale="zh", sample_size=10, display_value="2.3")
++        samples = render_guard_samples(locale="zh")
++        assert samples
++    finally:
++        logger.remove(sink_id)
++
++    misses = [
++        r["message"]
++        for r in records
++        if "Translation key not found" in str(r["message"])
++    ]
++    assert misses == [], f"渲染模板触发 i18n 未命中 WARNING: {misses[:5]}"
+diff --git a/backend/tests/unit/test_e07_adaptive_routing.py b/backend/tests/unit/test_e07_adaptive_routing.py
+index b495ec2e..efe94d61 100644
+--- a/backend/tests/unit/test_e07_adaptive_routing.py
++++ b/backend/tests/unit/test_e07_adaptive_routing.py
+@@ -133,7 +133,9 @@ def test_reorder_output_is_permutation_never_introduces_models():
+     """输出必须是输入的排列——重排永不引入被策略剔除的候选（红线）。"""
+     _feed(HEAD, 10, latency_ms=8000.0)
+     _feed(RIVAL, 10, latency_ms=50.0)
+-    candidates = [HEAD, RIVAL, "xiaomi_chat"]
++    # PROD-FIX-4：xiaomi_chat 已摘出 FAST 默认链（无 key 也不注册），第三候选
++    # 改用仍在链上的 glm_4_7_flash_no_thinking——本用例钉的是「不引入/不跨层」。
++    candidates = [HEAD, RIVAL, "glm_4_7_flash_no_thinking"]
+     result = adaptive_routing_engine.reorder_candidates(candidates)
+     assert sorted(result) == sorted(candidates)
+     assert set(result) <= set(llm_router._tier_mapping[ModelTier.FAST])  # 未跨 tier
+diff --git a/backend/tests/unit/test_llm_router_health_tracking.py b/backend/tests/unit/test_llm_router_health_tracking.py
+index 62cb5cba..8b3bac5d 100644
+--- a/backend/tests/unit/test_llm_router_health_tracking.py
++++ b/backend/tests/unit/test_llm_router_health_tracking.py
+@@ -23,7 +23,9 @@ def llm_router():
+ 
+ def test_router_tracks_model_health_success(llm_router):
+     """Test that successful model calls are tracked."""
+-    model_key = "xiaomi_chat"
++    # PROD-FIX-4：xiaomi_chat 无 key 环境不再注册（health report 忽略未注册
++    # key），改用恒注册的 Qwen 主力键——本组用例钉的是健康追踪机制本身。
++    model_key = "dashscope_fast"
+ 
+     # First failure to create health state entry
+     llm_router.report_model_failure(model_key)
+@@ -39,7 +41,8 @@ def test_router_tracks_model_health_success(llm_router):
+ 
+ def test_router_tracks_model_health_failure(llm_router):
+     """Test that failed model calls are tracked."""
+-    model_key = "xiaomi_chat"
++    # PROD-FIX-4：xiaomi_chat 无 key 环境不再注册，改用恒注册键（见上）。
++    model_key = "dashscope_fast"
+ 
+     # Report failures below threshold
+     for _ in range(3):
+@@ -81,7 +84,8 @@ def test_router_skips_unhealthy_models_in_selection(llm_router):
+ 
+ def test_router_auto_recovers_model_after_cooldown(llm_router):
+     """Test that unhealthy models auto-recover after cooldown period."""
+-    model_key = "xiaomi_chat"
++    # PROD-FIX-4：xiaomi_chat 无 key 环境不再注册，改用恒注册键（见上）。
++    model_key = "dashscope_fast"
+ 
+     # Mark model as unhealthy
+     for _ in range(5):
+@@ -161,7 +165,8 @@ def test_model_health_state_recovers_after_success():
+ 
+ def test_router_reports_success_clears_previous_failures(llm_router):
+     """Test that reporting success after failures resets the state."""
+-    model_key = "xiaomi_chat"
++    # PROD-FIX-4：xiaomi_chat 无 key 环境不再注册，改用恒注册键（见上）。
++    model_key = "dashscope_fast"
+ 
+     # Report failures
+     for _ in range(3):
+diff --git a/backend/tests/unit/test_redis_checkpointer_allowlist.py b/backend/tests/unit/test_redis_checkpointer_allowlist.py
+index bdcf7955..e1f8a561 100644
+--- a/backend/tests/unit/test_redis_checkpointer_allowlist.py
++++ b/backend/tests/unit/test_redis_checkpointer_allowlist.py
+@@ -71,6 +71,55 @@ def test_allowlist_covers_production_observed_runtime_keys():
+     } <= KNOWN_NON_SERIALIZABLE_CONTEXT_KEYS
+ 
+ 
++def test_allowlist_covers_prodfix4_plan_context_working_keys():
++    """PROD-LOG2 ②-5（PROD-FIX-4）：二轮巡检新暴露的 4 个 key 必须登记.
++
++    生产证据（wt208 09:10 实例 88min 窗口）：snapshot×10 / user_context×7 /
++    focused_memory×7 / executable_plan×7 条 WARNING。写入点核实：
++    - snapshot: execution_engine.py（StateSnapshotManager.create_snapshot 产物，
++      StateSnapshot pydantic 对象）注入 context_data
++    - executable_plan: execution_engine.py / standard_workflow.py（LangGraph
++      计划对象，Python 对象不可 json.dumps；清理位写 None 可序列化）
++    - user_context / focused_memory: session_state_mixin.py 合并上下文 dict，
++      内嵌运行期对象（episodic memories / context_pack 等）序列化必炸
++    """
++    assert {
++        "snapshot",
++        "user_context",
++        "focused_memory",
++        "executable_plan",
++    } <= KNOWN_NON_SERIALIZABLE_CONTEXT_KEYS
++
++
++@pytest.mark.asyncio
++async def test_prodfix4_plan_context_working_keys_saved_silently(checkpoint_records: list):
++    """PROD-FIX-4：4 个计划/上下文工作面 key 静默跳过（DEBUG），不产生 WARNING."""
++    rdb = _RecordingRedis()
++    checkpointer = RedisCheckpointer(rdb)
++
++    state = _state(
++        {
++            "session_id": "s3",
++            "request_id": "r3",
++            "snapshot": _RuntimeObject(),
++            "executable_plan": _RuntimeObject(),
++            "user_context": {"preferences": {"style": "concise"}, "raw": _RuntimeObject()},
++            "focused_memory": {"episodic_memories": [_RuntimeObject()]},
++            "answer": "可序列化内容",
++        }
++    )
++
++    await checkpointer.save(state, "node_3")
++
++    warnings = [r for r in checkpoint_records if r["level"].name == "WARNING"]
++    assert warnings == [], f"已登记 key 不得产生 WARNING: {[r['message'] for r in warnings]}"
++
++    payload = json.loads(rdb.stored["checkpoint:s3"])
++    assert payload["context_data"] == {"session_id": "s3", "request_id": "r3", "answer": "可序列化内容"}
++    debug_msgs = [r["message"] for r in checkpoint_records if r["level"].name == "DEBUG"]
++    assert any("snapshot" in m for m in debug_msgs), "已知 key 跳过应留 DEBUG 痕迹"
++
++
+ @pytest.mark.asyncio
+ async def test_known_runtime_keys_saved_silently(checkpoint_records: list):
+     """已知运行期 key：静默（至多 DEBUG）跳过，不产生 WARNING；可序列化 key 照常入档."""
+diff --git a/backend/tests/core/test_llm_router_xiaomi_lane_gate.py b/backend/tests/core/test_llm_router_xiaomi_lane_gate.py
+new file mode 100644
+index 00000000..e730e2e6
+--- /dev/null
++++ b/backend/tests/core/test_llm_router_xiaomi_lane_gate.py
+@@ -0,0 +1,95 @@
++"""PROD-LOG2 ②-3（PROD-FIX-4）契约测试：小米 mimo 死车道代码侧门控.
++
++缺陷：settings 默认 ``XIAOMI_*_MODEL="mimo-v2-flash"`` 被小米端点本身拒绝
++（404 Unsupported model，生产 3 站×2 条），而 ``xiaomi_chat`` 挂在 FAST 降级链
++第 3 位、``xiaomi_standard_thinking`` 挂在 STANDARD 链第 3 位——每次降级到它必
++白打一跳（网络延迟+ERROR+熔断计数）。且无 key 环境（测试/CI）这些条目照样
++注册（api_key=""），链上候选人人都带一个必炸 hop。
++
++裁决（两层叠加，B-MODEL-SWITCH 开关注册先例）：
++1. key-gate 注册：XIAOMI_MIMO_API_KEY 非空才注册 xiaomi_chat/xiaomi_standard_
++   thinking（mimo_pro 走独立 token-plan key/端点，无故障证据，不动）；
++2. 死模型名摘出自动降级链：404 是模型名被端点拒绝、与 key 是否有效无关
++   （活栈 .env key 已配置仍 404），自动链不得包含确定性失败的 hop；
++   小米更正模型名后一行即可回挂（llm_router fast_models/standard_models）。
++
++钉住的契约：
++- 无 key：条目不注册、显式选择回退 default（带「未注册」原因）、链无此 hop；
++- 有 key：条目注册（credential_routing 契约不受影响），但默认 FAST/STANDARD
++  链仍不含 xiaomi（模型名死）。
++"""
++
++from __future__ import annotations
++
++from unittest.mock import patch
++
++import pytest
++
++from app.config import settings
++from app.core.agent_profiles import AgentRole, ModelTier
++from app.core.llm_router import LLMRouter, llm_router
++
++XIAOMI_CHAT_KEY = "xiaomi_chat"
++XIAOMI_STANDARD_KEY = "xiaomi_standard_thinking"
++
++
++def _rebuild_router(xiaomi_key: str = ""):
++    """以指定小米 key 重建路由器（模拟引擎进程启动时的 settings 快照）。"""
++    with patch.object(settings, "XIAOMI_MIMO_API_KEY", xiaomi_key):
++        return LLMRouter()
++
++
++@pytest.fixture(autouse=True)
++def _deterministic_env(monkeypatch):
++    """环境无关化：清空 .env 注入的 *_API_KEY 与 LLM_TIER_* override."""
++    field_names = set(getattr(settings, "model_fields", None) or getattr(settings, "__fields__", {}))
++    for k in field_names:
++        if k.endswith("_API_KEY") or k.startswith("LLM_TIER_"):
++            monkeypatch.setattr(settings, k, "")
++
++
++@pytest.fixture(autouse=True)
++def _restore_global_router():
++    """恢复全局单例快照，防 key-gated 重建污染同进程后续测试。"""
++    saved = dict(llm_router.__dict__)
++    yield
++    llm_router.__dict__.clear()
++    llm_router.__dict__.update(saved)
++
++
++def test_xiaomi_entries_not_registered_without_key():
++    """无 key 环境：小米条目不注册（基线行为：空 key 也注册=必炸 hop）。"""
++    router = _rebuild_router(xiaomi_key="")
++    assert XIAOMI_CHAT_KEY not in router._available_models
++    assert XIAOMI_STANDARD_KEY not in router._available_models
++
++
++def test_xiaomi_entries_registered_with_key():
++    """有 key 环境：条目照常注册（credential_routing 契约保持）。"""
++    router = _rebuild_router(xiaomi_key="test-xiaomi-key")
++    assert XIAOMI_CHAT_KEY in router._available_models
++    assert XIAOMI_STANDARD_KEY in router._available_models
++
++
++def test_dead_mimo_hop_removed_from_default_fast_and_standard_chains():
++    """FAST/STANDARD 默认降级链不得包含小米 hop（模型名被端点拒绝，与 key 无关）。"""
++    router = _rebuild_router(xiaomi_key="test-xiaomi-key")
++    assert XIAOMI_CHAT_KEY not in router._tier_mapping.get(ModelTier.FAST, [])
++    assert XIAOMI_STANDARD_KEY not in router._tier_mapping.get(ModelTier.STANDARD, [])
++
++
++def test_explicit_selection_of_unregistered_xiaomi_falls_back_cleanly():
++    """无 key 时显式指定 xiaomi_chat：回退 default 并声明未注册（不炸、不误标）。"""
++    router = _rebuild_router(xiaomi_key="")
++    selection = router.select_specific_model(XIAOMI_CHAT_KEY, agent_role=AgentRole.ROUTER)
++    assert selection.model_key != XIAOMI_CHAT_KEY
++    assert "未注册" in selection.reason
++
++
++def test_keyed_router_keeps_other_fast_chain_order_untouched():
++    """门控只动小米：FAST 链首位（Qwen 主力）与其余位次零变化."""
++    router = _rebuild_router(xiaomi_key="test-xiaomi-key")
++    fast_chain = router._tier_mapping[ModelTier.FAST]
++    assert fast_chain[0] == "dashscope_fast"
++    assert "deepseek_fast" in fast_chain
++    assert "glm_4_7_flash_no_thinking" in fast_chain
+diff --git a/backend/tests/unit/test_prodfix4_security_alert_cooldown.py b/backend/tests/unit/test_prodfix4_security_alert_cooldown.py
+new file mode 100644
+index 00000000..0f68ee5e
+--- /dev/null
++++ b/backend/tests/unit/test_prodfix4_security_alert_cooldown.py
+@@ -0,0 +1,114 @@
++"""PROD-LOG2 ②-4（PROD-FIX-4）契约测试：安全告警必须走 300s 冷却通道.
++
++缺陷：``_check_system_security`` 直调 ``_send_alert_notification``，绕过
++``trigger_security_alert`` 内现成的冷却机制（``security:alert_cooldown:{type}``
+++ ALERT_COOLDOWN=300s）→ DEBUG 开发环境下「DEBUG mode is enabled」高危告警
++每分钟重发（生产实测 88 分钟 90+90 条）。
++
++钉住的契约：
++1. _check_system_security 告警经冷却通道：查冷却键、只发一次、写冷却键；
++2. _check_abnormal_patterns 的 brute_force / admin 告警同规（同型扫描补钉）；
++3. redis 不可用时退回直发（无冷却通道可吃，保持基线可观测）；
++4. DEBUG 常态说明不再以 WARNING 级每分钟刷屏（降 DEBUG，由告警通道承载）。
++"""
++
++from __future__ import annotations
++
++from unittest.mock import AsyncMock
++
++import pytest
++from loguru import logger
++
++from app.config import settings
++from app.core.security_monitor import SecurityMonitor
++
++
++def _monitor_with_redis(redis: AsyncMock) -> SecurityMonitor:
++    monitor = SecurityMonitor()
++    monitor.redis = redis
++    return monitor
++
++
++@pytest.fixture
++def no_warning_noise():
++    """捕获 WARNING 级日志（用后清理 sink）。"""
++    records: list = []
++    sink_id = logger.add(lambda msg: records.append(msg.record), level="WARNING")
++    yield records
++    logger.remove(sink_id)
++
++
++@pytest.mark.asyncio
++async def test_system_security_alert_goes_through_cooldown_channel(monkeypatch):
++    """system_security 告警必须查/写冷却键且冷却期内只发一次."""
++    monkeypatch.setattr(settings, "DEBUG", True, raising=False)
++    redis = AsyncMock()
++    redis.get = AsyncMock(return_value=None)  # 首次：无冷却键
++    monitor = _monitor_with_redis(redis)
++    sends = AsyncMock()
++    monitor._send_alert_notification = sends
++
++    await monitor._check_system_security()
++
++    cooldown_key = "security:alert_cooldown:system_security_issue"
++    redis.get.assert_awaited_with(cooldown_key)
++    assert sends.await_count == 1, "无冷却时应恰好发送一次"
++    redis.setex.assert_awaited_once()
++    assert redis.setex.await_args.args[0] == cooldown_key
++    assert redis.setex.await_args.args[1] == monitor.ALERT_COOLDOWN
++
++    # 冷却期内第二次检查：不再发送
++    redis.get = AsyncMock(return_value="1")
++    await monitor._check_system_security()
++    assert sends.await_count == 1, "300s 冷却期内不得重发"
++
++
++@pytest.mark.asyncio
++async def test_abnormal_pattern_alerts_go_through_cooldown_channel(monkeypatch):
++    """brute_force / admin 异常告警同走冷却通道（同型扫描补钉）."""
++    redis = AsyncMock()
++    redis.get = AsyncMock(return_value=None)
++    redis.llen = AsyncMock(return_value=25)  # 同时超 brute(10)/admin(20) 阈值
++    monitor = _monitor_with_redis(redis)
++    sends = AsyncMock()
++    monitor._send_alert_notification = sends
++
++    await monitor._check_abnormal_patterns()
++
++    cooldown_prefix = "security:alert_cooldown:"
++    checked_keys = [call.args[0] for call in redis.get.await_args_list]
++    assert f"{cooldown_prefix}brute_force_attempt" in checked_keys
++    assert f"{cooldown_prefix}unusual_admin_activity" in checked_keys
++    assert sends.await_count == 2, "无冷却时 brute+admin 各发一次"
++    assert redis.setex.await_count == 2, "每类告警各自写冷却键"
++
++
++@pytest.mark.asyncio
++async def test_system_security_alert_falls_back_to_direct_send_without_redis(monkeypatch):
++    """redis 不可用：退回直发（无冷却通道可吃），保持基线可观测不抛错."""
++    monkeypatch.setattr(settings, "DEBUG", True, raising=False)
++    monitor = SecurityMonitor()
++    monitor.redis = None
++    sends = AsyncMock()
++    monitor._send_alert_notification = sends
++
++    await monitor._check_system_security()  # 不得抛 AttributeError
++
++    assert sends.await_count == 1
++
++
++@pytest.mark.asyncio
++async def test_debug_mode_notice_not_emitted_at_warning_level(monkeypatch, no_warning_noise):
++    """DEBUG 常态说明不得以 WARNING 级每分钟刷屏——状态由冷却后的告警承载."""
++    monkeypatch.setattr(settings, "DEBUG", True, raising=False)
++    redis = AsyncMock()
++    redis.get = AsyncMock(return_value="1")  # 冷却命中：告警静默
++    monitor = _monitor_with_redis(redis)
++
++    await monitor._check_system_security()
++
++    warning_texts = [str(r["message"]) for r in no_warning_noise]
++    debug_on = [t for t in warning_texts if "DEBUG mode is ON" in t]
++    assert debug_on == [], (
++        f"DEBUG 常态说明不得打 WARNING（生产每分钟一条）: {debug_on[:3]}"
++    )

@@ -14,6 +14,15 @@ from app.orchestration.statechart_engine import WorkflowState
 #     tools_schema / transparency_generator / emit_transparency_event / redis_client / run_ledger
 #   - orchestrator.py: run_ledger
 #   - routing_engine.py: grounding_validator
+# PROD-LOG2 ②-5（PROD-FIX-4）：二轮巡检新暴露的 4 个计划/上下文工作面 key——
+#   - snapshot: execution_engine 注入 StateSnapshotManager.create_snapshot 产物
+#     （StateSnapshot 对象，execution_engine.py:2598）
+#   - executable_plan: LangGraph 计划对象（execution_engine.py:2597 /
+#     standard_workflow.py；清理位写 None 可序列化，故仅计划存活期告警）
+#   - user_context / focused_memory: session_state_mixin.py 合并上下文 dict，
+#     内嵌运行期对象（episodic memories / context_pack 等）序列化必炸
+#   恢复面安全：全部消费点走 .get(...) or 默认值 / 真值判断（standard_workflow
+#   generation_node 等按需重建计划），checkpoint 缺失不破坏恢复路径。
 # 清单外的 key 序列化失败仍走 WARNING（可能是该序列化却坏掉的对象，或新增的
 # 运行期依赖——后者确认后登记到此清单）。
 KNOWN_NON_SERIALIZABLE_CONTEXT_KEYS = frozenset(
@@ -26,6 +35,10 @@ KNOWN_NON_SERIALIZABLE_CONTEXT_KEYS = frozenset(
         "emit_transparency_event",
         "redis_client",
         "grounding_validator",
+        "snapshot",
+        "user_context",
+        "focused_memory",
+        "executable_plan",
     }
 )
 

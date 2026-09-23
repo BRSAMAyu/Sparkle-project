@@ -628,7 +628,7 @@ class SecurityMonitor:
                 failed_key = "security:failed_logins_recent"
                 recent_count = await self.redis.llen(failed_key) if self.redis else 0
                 if recent_count >= 10:
-                    await self._send_alert_notification(
+                    await self._send_alert_with_cooldown(
                         alert_type="brute_force_attempt",
                         message=f"{recent_count} failed login attempts in 5 minutes",
                         threat_level=ThreatLevel.HIGH,
@@ -642,7 +642,7 @@ class SecurityMonitor:
                 admin_key = "security:admin_actions_recent"
                 admin_count = await self.redis.llen(admin_key) if self.redis else 0
                 if admin_count >= 20:
-                    await self._send_alert_notification(
+                    await self._send_alert_with_cooldown(
                         alert_type="unusual_admin_activity",
                         message=f"{admin_count} admin actions in 5 minutes",
                         threat_level=ThreatLevel.MEDIUM,
@@ -654,6 +654,26 @@ class SecurityMonitor:
         except Exception as e:
             logger.debug("_check_abnormal_patterns failed: {}", e)
 
+    async def _send_alert_with_cooldown(
+        self,
+        alert_type: str,
+        message: str,
+        threat_level: ThreatLevel,
+        details: dict | None = None,
+    ) -> None:
+        """经 trigger_security_alert 的 300s 冷却通道发告警（PROD-LOG2 ②-4）。
+
+        此前 _check_system_security / _check_abnormal_patterns 直调
+        _send_alert_notification 绕过冷却（trigger_security_alert 内现成的
+        security:alert_cooldown:{type} + ALERT_COOLDOWN=300s）——DEBUG 开发
+        环境每分钟重发高危告警（生产实测 88 分钟 90+90 条）。redis 不可用时
+        退回直发（无冷却通道可吃，保持基线可观测，不因 AttributeError 炸）。
+        """
+        if self.redis is None:
+            await self._send_alert_notification(alert_type, message, threat_level, details)
+            return
+        await self.trigger_security_alert(alert_type, message, threat_level, details)
+
     async def _check_system_security(self):
         """Check system security state — config, services, TLS."""
         try:
@@ -662,7 +682,9 @@ class SecurityMonitor:
             # Verify DEBUG mode is off
             if getattr(settings, 'DEBUG', False):
                 issues.append("DEBUG mode is enabled")
-                logger.warning("SecurityMonitor: DEBUG mode is ON — this is insecure for production")
+                # PROD-LOG2 ②-4：常态说明降 DEBUG——状态由下方冷却告警承载，
+                # WARNING 级在开发环境=每分钟一条刷屏（88 分钟 90 条）。
+                logger.debug("SecurityMonitor: DEBUG mode is ON — this is insecure for production")
 
             # Check for insecure defaults
             secret_key = getattr(settings, 'SECRET_KEY', '')
@@ -670,7 +692,7 @@ class SecurityMonitor:
                 issues.append(f"SECRET_KEY too short ({len(secret_key)} chars, min 32 required)")
 
             if issues:
-                await self._send_alert_notification(
+                await self._send_alert_with_cooldown(
                     alert_type="system_security_issue",
                     message="; ".join(issues),
                     threat_level=ThreatLevel.HIGH,

@@ -546,28 +546,6 @@ class LLMRouter:
         ocr_backup = (settings.OCR_BACKUP_PROVIDER or "siliconflow").strip().lower()
 
         configs = {
-            "xiaomi_chat": ModelConfig(
-                provider=ModelProvider.XIAOMI,
-                model_name=settings.XIAOMI_CHAT_MODEL,
-                base_url=settings.XIAOMI_MIMO_BASE_URL,
-                api_key=settings.XIAOMI_MIMO_API_KEY,
-                temperature=settings.XIAOMI_TEMPERATURE,
-                tier=ModelTier.FAST,
-                cost_per_1k_tokens=0.0001,
-                avg_latency_ms=200,
-                thinking_mode="disabled",
-            ),
-            "xiaomi_standard_thinking": ModelConfig(
-                provider=ModelProvider.XIAOMI,
-                model_name=settings.XIAOMI_STANDARD_MODEL,
-                base_url=settings.XIAOMI_MIMO_BASE_URL,
-                api_key=settings.XIAOMI_MIMO_API_KEY,
-                temperature=settings.XIAOMI_TEMPERATURE,
-                tier=ModelTier.STANDARD,
-                cost_per_1k_tokens=0.0002,
-                avg_latency_ms=350,
-                thinking_mode="enabled",
-            ),
             "mimo_pro": ModelConfig(
                 provider=ModelProvider.XIAOMI,
                 model_name=settings.XIAOMI_PRO_MODEL,
@@ -871,6 +849,46 @@ class LLMRouter:
             ),
         }
 
+        # 小米 mimo 主端点条目（PROD-LOG2 ②-3，PROD-FIX-4 裁决）：仅
+        # XIAOMI_MIMO_API_KEY 非空才注册（B-MODEL-SWITCH 开关注册先例）——
+        # 无 key 环境（测试/CI/未配置部署）此前空 key 也注册，FAST/STANDARD
+        # 链上人人都挂一个必炸 hop。mimo_pro 走独立 token-plan key/端点，
+        # 无故障证据，不在此门控面。
+        # 注意：即便 key 有效，默认 mimo-v2-flash 模型名已被小米端点本身拒绝
+        # （404 Unsupported model，生产 3 站×2 条；活栈 key 已配置仍 404），
+        # 故下方 FAST/STANDARD 默认链已将该 hop 摘除——小米官方更正模型名后
+        # （改 XIAOMI_CHAT_MODEL/XIAOMI_STANDARD_MODEL）把 "xiaomi_chat"/
+        # "xiaomi_standard_thinking" 加回 fast_models/standard_models 即恢复。
+        _xiaomi_key_present = bool((settings.XIAOMI_MIMO_API_KEY or "").strip())
+        if _xiaomi_key_present:
+            configs["xiaomi_chat"] = ModelConfig(
+                provider=ModelProvider.XIAOMI,
+                model_name=settings.XIAOMI_CHAT_MODEL,
+                base_url=settings.XIAOMI_MIMO_BASE_URL,
+                api_key=settings.XIAOMI_MIMO_API_KEY,
+                temperature=settings.XIAOMI_TEMPERATURE,
+                tier=ModelTier.FAST,
+                cost_per_1k_tokens=0.0001,
+                avg_latency_ms=200,
+                thinking_mode="disabled",
+            )
+            configs["xiaomi_standard_thinking"] = ModelConfig(
+                provider=ModelProvider.XIAOMI,
+                model_name=settings.XIAOMI_STANDARD_MODEL,
+                base_url=settings.XIAOMI_MIMO_BASE_URL,
+                api_key=settings.XIAOMI_MIMO_API_KEY,
+                temperature=settings.XIAOMI_TEMPERATURE,
+                tier=ModelTier.STANDARD,
+                cost_per_1k_tokens=0.0002,
+                avg_latency_ms=350,
+                thinking_mode="enabled",
+            )
+        else:
+            logger.info(
+                "XIAOMI_MIMO_API_KEY not configured: xiaomi mimo entries kept out of "
+                "registry (无 key 不注册); explicit selection falls back to default lane"
+            )
+
         # MiniMax 异步分析池条目：BATCH_LLM_PROVIDER=minimax 且配置了 MINIMAX_API_KEY
         # 的环境注册（B 线模型切换 2026-09-22：开关为 batch 车道 provider 唯一裁决位）。
         # 定位约束（用户决策）：MiniMax M3（token plan 免费档，并发硬上限
@@ -919,10 +937,14 @@ class LLMRouter:
 
         self._available_models = configs
 
-        # 2026-09 主力切换：各能力层 Qwen（dashscope）置首；deepseek/xiaomi/GLM
+        # 2026-09 主力切换：各能力层 Qwen（dashscope）置首；deepseek/GLM
         # 条目全部保留为降级候选（GLM「保留待用」，.env LLM_TIER_* 可零代码回切）。
-        fast_models = ["dashscope_fast", "deepseek_fast", "xiaomi_chat", "glm_4_7_flash_no_thinking"]
-        standard_models = ["deepseek_chat", "dashscope_standard_thinking", "xiaomi_standard_thinking"]
+        # PROD-LOG2 ②-3（PROD-FIX-4）：xiaomi 两 hop 摘出默认链——mimo-v2-flash
+        # 被小米端点拒绝（404 Unsupported model，与 key 是否有效无关），降级到它
+        # 必白打一跳（网络延迟+ERROR+熔断计数）。条目仍按上方 key-gate 注册，
+        # 显式指定/policy 选择不受影响；更正模型名后一行回挂（见上方注释）。
+        fast_models = ["dashscope_fast", "deepseek_fast", "glm_4_7_flash_no_thinking"]
+        standard_models = ["deepseek_chat", "dashscope_standard_thinking"]
         plus_models = ["dashscope_chat"]
         pro_models = ["dashscope_reason"]
         max_models = ["qwen3_8_max", "deepseek_reason", "glm_5_max"]

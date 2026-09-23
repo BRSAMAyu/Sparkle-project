@@ -133,7 +133,9 @@ def test_reorder_output_is_permutation_never_introduces_models():
     """输出必须是输入的排列——重排永不引入被策略剔除的候选（红线）。"""
     _feed(HEAD, 10, latency_ms=8000.0)
     _feed(RIVAL, 10, latency_ms=50.0)
-    candidates = [HEAD, RIVAL, "xiaomi_chat"]
+    # PROD-FIX-4：xiaomi_chat 已摘出 FAST 默认链（无 key 也不注册），第三候选
+    # 改用仍在链上的 glm_4_7_flash_no_thinking——本用例钉的是「不引入/不跨层」。
+    candidates = [HEAD, RIVAL, "glm_4_7_flash_no_thinking"]
     result = adaptive_routing_engine.reorder_candidates(candidates)
     assert sorted(result) == sorted(candidates)
     assert set(result) <= set(llm_router._tier_mapping[ModelTier.FAST])  # 未跨 tier

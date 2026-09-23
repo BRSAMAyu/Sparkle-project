@@ -23,7 +23,9 @@ def llm_router():
 
 def test_router_tracks_model_health_success(llm_router):
     """Test that successful model calls are tracked."""
-    model_key = "xiaomi_chat"
+    # PROD-FIX-4：xiaomi_chat 无 key 环境不再注册（health report 忽略未注册
+    # key），改用恒注册的 Qwen 主力键——本组用例钉的是健康追踪机制本身。
+    model_key = "dashscope_fast"
 
     # First failure to create health state entry
     llm_router.report_model_failure(model_key)
@@ -39,7 +41,8 @@ def test_router_tracks_model_health_success(llm_router):
 
 def test_router_tracks_model_health_failure(llm_router):
     """Test that failed model calls are tracked."""
-    model_key = "xiaomi_chat"
+    # PROD-FIX-4：xiaomi_chat 无 key 环境不再注册，改用恒注册键（见上）。
+    model_key = "dashscope_fast"
 
     # Report failures below threshold
     for _ in range(3):
@@ -81,7 +84,8 @@ def test_router_skips_unhealthy_models_in_selection(llm_router):
 
 def test_router_auto_recovers_model_after_cooldown(llm_router):
     """Test that unhealthy models auto-recover after cooldown period."""
-    model_key = "xiaomi_chat"
+    # PROD-FIX-4：xiaomi_chat 无 key 环境不再注册，改用恒注册键（见上）。
+    model_key = "dashscope_fast"
 
     # Mark model as unhealthy
     for _ in range(5):
@@ -161,7 +165,8 @@ def test_model_health_state_recovers_after_success():
 
 def test_router_reports_success_clears_previous_failures(llm_router):
     """Test that reporting success after failures resets the state."""
-    model_key = "xiaomi_chat"
+    # PROD-FIX-4：xiaomi_chat 无 key 环境不再注册，改用恒注册键（见上）。
+    model_key = "dashscope_fast"
 
     # Report failures
     for _ in range(3):
