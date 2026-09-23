@@ -67398,6 +67398,24 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'兑换失败，请稍后再试'**
   String get redeemCodeError;
+
+  /// No description provided for @galaxyErrorHumanDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'星图出了点小状况，暂时加载不了。你的数据没有丢，稍后再试一次。'**
+  String get galaxyErrorHumanDefault;
+
+  /// No description provided for @galaxyErrorHumanNetwork.
+  ///
+  /// In zh, this message translates to:
+  /// **'网络好像不太顺畅，星图暂时加载不了。你的数据没有丢，稍后再试一次。'**
+  String get galaxyErrorHumanNetwork;
+
+  /// No description provided for @galaxyErrorHumanService.
+  ///
+  /// In zh, this message translates to:
+  /// **'星图服务正忙，暂时加载不了。你的数据没有丢，稍后再试一次。'**
+  String get galaxyErrorHumanService;
 }
 
 class _AppLocalizationsDelegate

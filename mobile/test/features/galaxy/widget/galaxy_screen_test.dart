@@ -12,6 +12,7 @@ import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/galaxy/data/models/user_galaxy_contribution.dart';
 import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:sparkle/l10n/app_localizations_zh.dart';
 import '../../../shared/i18n_test_helper.dart';
 
 void main() {
@@ -268,6 +269,8 @@ void main() {
           // 错误文案与重试按钮均不可见）。
           child: MaterialApp(
             theme: AppThemes.lightTheme,
+            // 断言走中文人话模板，显式锁 zh（否则 test 默认 en_US）。
+            locale: const Locale('zh'),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: const GalaxyScreen(),
@@ -278,7 +281,13 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 1200));
 
-      expect(find.textContaining('galaxy 500'), findsOneWidget);
+      // SPEC-C #4（N4）：裸异常不再直出——原始错误文本（'galaxy 500'）
+      // 永不出现在任何 Text；错误面板只出现人话模板（错误→人话映射输出）。
+      expect(find.textContaining('galaxy 500'), findsNothing);
+      expect(
+        find.text(AppLocalizationsZh().galaxyErrorHumanDefault),
+        findsOneWidget,
+      );
       expect(find.byType(FilledButton), findsWidgets);
 
       await tester.tap(find.byType(FilledButton).first);
@@ -288,6 +297,95 @@ void main() {
       expect(notifier.loadCalls, equals(2));
       expect(find.textContaining('galaxy 500'), findsNothing);
     });
+
+    testWidgets(
+      'load error panel speaks human copy; raw unknown error text never '
+      'surfaces in any Text (SPEC-C #4 / N4)',
+      (tester) async {
+        final notifier = _RawErrorGalaxyScreenNotifier();
+        final container = ProviderContainer(
+          overrides: [
+            galaxyProvider.overrideWith((ref) => notifier),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              theme: AppThemes.lightTheme,
+              // 断言走中文人话模板，显式锁 zh（否则 test 默认 en_US）。
+              locale: const Locale('zh'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: const GalaxyScreen(),
+            ),
+          ),
+        );
+
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 1200));
+
+        // 验收 1：Object/裸异常值不出现于 Text——构造态注入的是
+        // `Exception: pg Connection refused ...` 级原始异常文本。
+        expect(find.textContaining('SocketException'), findsNothing);
+        expect(find.textContaining('Connection refused'), findsNothing);
+        expect(find.textContaining('Exception'), findsNothing);
+        // 验收 2：快照断言文案 = 人话模板输出（unknown → 默认模板），
+        // 重试动作保留。
+        expect(
+          find.text(AppLocalizationsZh().galaxyErrorHumanDefault),
+          findsOneWidget,
+        );
+        expect(find.text(AppLocalizationsZh().retry), findsWidgets);
+      },
+    );
+
+    testWidgets(
+      'circuit-breaker error maps to service-busy human template '
+      '(SPEC-C #4 / N4)',
+      (tester) async {
+        final notifier = _CircuitOpenGalaxyScreenNotifier();
+        final container = ProviderContainer(
+          overrides: [
+            galaxyProvider.overrideWith((ref) => notifier),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              theme: AppThemes.lightTheme,
+              // 断言走中文人话模板，显式锁 zh（否则 test 默认 en_US）。
+              locale: const Locale('zh'),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: const GalaxyScreen(),
+            ),
+          ),
+        );
+
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 1200));
+
+        expect(
+          find.text(AppLocalizationsZh().galaxyErrorHumanService),
+          findsOneWidget,
+        );
+        // 网络模板与默认模板都不应串档。
+        expect(
+          find.text(AppLocalizationsZh().galaxyErrorHumanNetwork),
+          findsNothing,
+        );
+        expect(
+          find.text(AppLocalizationsZh().galaxyErrorHumanDefault),
+          findsNothing,
+        );
+      },
+    );
   });
 
   group('GalaxyState Tests', () {
@@ -717,6 +815,30 @@ class _RetryGalaxyScreenNotifier extends _MockGalaxyNotifier {
       visibleNodes: nodes,
       visibleEdges: edges,
       userFlameIntensity: 0.4,
+    );
+  }
+}
+
+/// SPEC-C #4 验收：unknown 错误携带典型裸异常文本（`e.toString()` 级），
+/// 断言该原文永不进入任何 Text。
+class _RawErrorGalaxyScreenNotifier extends _MockGalaxyNotifier {
+  _RawErrorGalaxyScreenNotifier() : super(GalaxyState()) {
+    state = state.copyWith(
+      isLoading: false,
+      lastError: GalaxyError.unknown(
+        'Exception: SocketException: Connection refused (os error: 61), '
+        'address = galaxy.internal',
+      ),
+    );
+  }
+}
+
+/// SPEC-C #4 验收：熔断错误 → 服务繁忙人话模板（分档不串）。
+class _CircuitOpenGalaxyScreenNotifier extends _MockGalaxyNotifier {
+  _CircuitOpenGalaxyScreenNotifier() : super(GalaxyState()) {
+    state = state.copyWith(
+      isLoading: false,
+      lastError: GalaxyError.circuitBreakerOpen(),
     );
   }
 }

@@ -37126,4 +37126,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get redeemCodeError => '兑换失败，请稍后再试';
+
+  @override
+  String get galaxyErrorHumanDefault => '星图出了点小状况，暂时加载不了。你的数据没有丢，稍后再试一次。';
+
+  @override
+  String get galaxyErrorHumanNetwork => '网络好像不太顺畅，星图暂时加载不了。你的数据没有丢，稍后再试一次。';
+
+  @override
+  String get galaxyErrorHumanService => '星图服务正忙，暂时加载不了。你的数据没有丢，稍后再试一次。';
 }

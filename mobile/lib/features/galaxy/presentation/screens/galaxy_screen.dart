@@ -49,6 +49,7 @@ import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboa
 import 'package:sparkle/features/plan/presentation/providers/active_goal_provider.dart';
 import 'package:sparkle/features/task/task_routes.dart';
 import 'package:sparkle/features/theater/presentation/providers/theater_provider.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
 final galaxyBuildPlaybackSessionProvider = StateProvider<bool>(
@@ -155,7 +156,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   GalaxyCamera? _cameraAnimationEnd;
   Curve _cameraAnimationCurve = Curves.easeInOutCubic;
   double _cameraAnimationArcScaleOutFactor = 1.0;
-  Object? _loadError;
+  // SPEC-C #4（N4）：存储类型收窄为 GalaxyError?——原 Object? 允许任意
+  // 对象落位，配合 `'$_loadError'` 直出曾把 `Instance of ...` / 裸异常
+  // 文本喂给用户；现在错误只经 [_galaxyLoadErrorMessage] 人话映射进文案。
+  GalaxyError? _loadError;
   String? _selectedNodeId;
   String? _draggingNodeId;
   String? _tapFeedbackNodeId;
@@ -399,7 +403,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       }
       setState(() {
         _isLoading = false;
-        _loadError = next.lastError!.message;
+        _loadError = next.lastError;
       });
     }
 
@@ -2867,7 +2871,13 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                           foregroundColor:
                               isDarkMode ? DS.neutral0 : DS.neutral900,
                           title: context.l10n.galaxyLoadFailedTitle,
-                          message: '$_loadError',
+                          // SPEC-C #4（N4）：裸异常直出退役——错误面板文案
+                          // 只经人话映射（类型→模板），原始异常文本永不入
+                          // 用户可见面；重试动作保持既有入口。
+                          message: _galaxyLoadErrorMessage(
+                            context.l10n,
+                            _loadError,
+                          ),
                           actionLabel: context.l10n.retry,
                           onAction: _loadGraph,
                         );
@@ -3511,6 +3521,26 @@ class _GalaxyDraftPendingIndicator extends StatelessWidget {
           ),
         ),
       );
+}
+
+/// SPEC-C #4（N4）：error→人话局部映射（先局部函数，后续收编 lexicon）。
+///
+/// 只做「错误类型→模板」分类：`GalaxyError.unknown` 携带的原始异常文本
+/// （`e.toString()` 级）与任何 Object 插值永不进入用户可见文案。
+/// 模板统一传达两件事——发生了什么（人话）+ 数据安全（不丢档）；
+/// 重试入口由 [_StatusPanel] 的 actionLabel/onAction 承载，不在此重复。
+String _galaxyLoadErrorMessage(AppLocalizations l10n, GalaxyError? error) {
+  if (error == null) {
+    return l10n.galaxyErrorHumanDefault;
+  }
+  switch (error.type) {
+    case GalaxyErrorType.network:
+      return l10n.galaxyErrorHumanNetwork;
+    case GalaxyErrorType.circuitBreakerOpen:
+      return l10n.galaxyErrorHumanService;
+    case GalaxyErrorType.unknown:
+      return l10n.galaxyErrorHumanDefault;
+  }
 }
 
 class _StatusPanel extends StatelessWidget {

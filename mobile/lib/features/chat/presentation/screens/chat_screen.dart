@@ -3842,11 +3842,16 @@ class _ReasoningBreathOverlayState extends State<_ReasoningBreathOverlay>
   @override
   void initState() {
     super.initState();
+    // N3/SPEC-C #6（呼吸禁令，实现无关口径）：常驻 3s repeat(reverse)
+    // 呼吸退役——等待窗内它曾与阶段胶囊 700ms 脉冲构成双持续动画源。
+    // 改为单次入场脉冲（M3 320ms，forward 一次后静止定帧，ticker 随即
+    // 归零）：等待态唯一持续源 = 阶段胶囊（N3 等待窗豁免的恰好 1 个）。
+    // reduce-motion 门控维持既有行为（直接缺席）。
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 3),
+      duration: const Duration(milliseconds: 320),
     );
-    unawaited(_controller.repeat(reverse: true));
+    unawaited(_controller.forward());
   }
 
   @override
@@ -3864,6 +3869,8 @@ class _ReasoningBreathOverlayState extends State<_ReasoningBreathOverlay>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, _) {
+        // 单次入场：透明度 0.03→0.08 随 forward 一次到位，之后静止在
+        // 0.08 定帧（controller 已 complete，不再产生 frame 回调）。
         final opacity = lerpDouble(0.03, 0.08, _controller.value) ?? 0.05;
         return DecoratedBox(
           decoration: BoxDecoration(

@@ -17709,5 +17709,11 @@
     "redeemCodeExhausted": "This code has already been used",
     "@redeemCodeExhausted": {},
     "redeemCodeError": "Redemption failed, please try again later",
-    "@redeemCodeError": {}
+    "@redeemCodeError": {},
+    "galaxyErrorHumanDefault": "Something went wrong with the star map. Your data is safe — try again in a moment.",
+    "@galaxyErrorHumanDefault": {},
+    "galaxyErrorHumanNetwork": "The network seems unstable, so the star map could not load. Your data is safe — try again in a moment.",
+    "@galaxyErrorHumanNetwork": {},
+    "galaxyErrorHumanService": "The star map service is busy right now. Your data is safe — try again in a moment.",
+    "@galaxyErrorHumanService": {}
 }

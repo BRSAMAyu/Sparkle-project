@@ -38729,4 +38729,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get redeemCodeError => 'Redemption failed, please try again later';
+
+  @override
+  String get galaxyErrorHumanDefault =>
+      'Something went wrong with the star map. Your data is safe — try again in a moment.';
+
+  @override
+  String get galaxyErrorHumanNetwork =>
+      'The network seems unstable, so the star map could not load. Your data is safe — try again in a moment.';
+
+  @override
+  String get galaxyErrorHumanService =>
+      'The star map service is busy right now. Your data is safe — try again in a moment.';
 }

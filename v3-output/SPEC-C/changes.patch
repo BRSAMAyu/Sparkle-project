@@ -1,0 +1,597 @@
+# SPEC-C changes.patch — wt178 (基线 575c267b)
+# #4 galaxy 错误态人话 + #6 chat 等待期持续源裁 1
+# 应用：git apply --3way changes.patch（含 gen-l10n 产物与新增测试文件）
+
+diff --git a/mobile/lib/features/chat/presentation/screens/chat_screen.dart b/mobile/lib/features/chat/presentation/screens/chat_screen.dart
+index 6ac1ad7b..0f7734d4 100755
+--- a/mobile/lib/features/chat/presentation/screens/chat_screen.dart
++++ b/mobile/lib/features/chat/presentation/screens/chat_screen.dart
+@@ -3842,11 +3842,16 @@ class _ReasoningBreathOverlayState extends State<_ReasoningBreathOverlay>
+   @override
+   void initState() {
+     super.initState();
++    // N3/SPEC-C #6（呼吸禁令，实现无关口径）：常驻 3s repeat(reverse)
++    // 呼吸退役——等待窗内它曾与阶段胶囊 700ms 脉冲构成双持续动画源。
++    // 改为单次入场脉冲（M3 320ms，forward 一次后静止定帧，ticker 随即
++    // 归零）：等待态唯一持续源 = 阶段胶囊（N3 等待窗豁免的恰好 1 个）。
++    // reduce-motion 门控维持既有行为（直接缺席）。
+     _controller = AnimationController(
+       vsync: this,
+-      duration: const Duration(seconds: 3),
++      duration: const Duration(milliseconds: 320),
+     );
+-    unawaited(_controller.repeat(reverse: true));
++    unawaited(_controller.forward());
+   }
+ 
+   @override
+@@ -3864,6 +3869,8 @@ class _ReasoningBreathOverlayState extends State<_ReasoningBreathOverlay>
+     return AnimatedBuilder(
+       animation: _controller,
+       builder: (context, _) {
++        // 单次入场：透明度 0.03→0.08 随 forward 一次到位，之后静止在
++        // 0.08 定帧（controller 已 complete，不再产生 frame 回调）。
+         final opacity = lerpDouble(0.03, 0.08, _controller.value) ?? 0.05;
+         return DecoratedBox(
+           decoration: BoxDecoration(
+diff --git a/mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart b/mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart
+index 7c7aa982..9c1eb3d4 100644
+--- a/mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart
++++ b/mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart
+@@ -49,6 +49,7 @@ import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboa
+ import 'package:sparkle/features/plan/presentation/providers/active_goal_provider.dart';
+ import 'package:sparkle/features/task/task_routes.dart';
+ import 'package:sparkle/features/theater/presentation/providers/theater_provider.dart';
++import 'package:sparkle/l10n/app_localizations.dart';
+ import 'package:sparkle/shared/entities/galaxy_model.dart';
+ 
+ final galaxyBuildPlaybackSessionProvider = StateProvider<bool>(
+@@ -155,7 +156,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
+   GalaxyCamera? _cameraAnimationEnd;
+   Curve _cameraAnimationCurve = Curves.easeInOutCubic;
+   double _cameraAnimationArcScaleOutFactor = 1.0;
+-  Object? _loadError;
++  // SPEC-C #4（N4）：存储类型收窄为 GalaxyError?——原 Object? 允许任意
++  // 对象落位，配合 `'$_loadError'` 直出曾把 `Instance of ...` / 裸异常
++  // 文本喂给用户；现在错误只经 [_galaxyLoadErrorMessage] 人话映射进文案。
++  GalaxyError? _loadError;
+   String? _selectedNodeId;
+   String? _draggingNodeId;
+   String? _tapFeedbackNodeId;
+@@ -399,7 +403,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
+       }
+       setState(() {
+         _isLoading = false;
+-        _loadError = next.lastError!.message;
++        _loadError = next.lastError;
+       });
+     }
+ 
+@@ -2867,7 +2871,13 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
+                           foregroundColor:
+                               isDarkMode ? DS.neutral0 : DS.neutral900,
+                           title: context.l10n.galaxyLoadFailedTitle,
+-                          message: '$_loadError',
++                          // SPEC-C #4（N4）：裸异常直出退役——错误面板文案
++                          // 只经人话映射（类型→模板），原始异常文本永不入
++                          // 用户可见面；重试动作保持既有入口。
++                          message: _galaxyLoadErrorMessage(
++                            context.l10n,
++                            _loadError,
++                          ),
+                           actionLabel: context.l10n.retry,
+                           onAction: _loadGraph,
+                         );
+@@ -3513,6 +3523,26 @@ class _GalaxyDraftPendingIndicator extends StatelessWidget {
+       );
+ }
+ 
++/// SPEC-C #4（N4）：error→人话局部映射（先局部函数，后续收编 lexicon）。
++///
++/// 只做「错误类型→模板」分类：`GalaxyError.unknown` 携带的原始异常文本
++/// （`e.toString()` 级）与任何 Object 插值永不进入用户可见文案。
++/// 模板统一传达两件事——发生了什么（人话）+ 数据安全（不丢档）；
++/// 重试入口由 [_StatusPanel] 的 actionLabel/onAction 承载，不在此重复。
++String _galaxyLoadErrorMessage(AppLocalizations l10n, GalaxyError? error) {
++  if (error == null) {
++    return l10n.galaxyErrorHumanDefault;
++  }
++  switch (error.type) {
++    case GalaxyErrorType.network:
++      return l10n.galaxyErrorHumanNetwork;
++    case GalaxyErrorType.circuitBreakerOpen:
++      return l10n.galaxyErrorHumanService;
++    case GalaxyErrorType.unknown:
++      return l10n.galaxyErrorHumanDefault;
++  }
++}
++
+ class _StatusPanel extends StatelessWidget {
+   const _StatusPanel({
+     required this.backgroundColor,
+diff --git a/mobile/lib/l10n/app_en.arb b/mobile/lib/l10n/app_en.arb
+index 47a76beb..2d0a2df3 100755
+--- a/mobile/lib/l10n/app_en.arb
++++ b/mobile/lib/l10n/app_en.arb
+@@ -17698,5 +17698,11 @@
+     "redeemCodeExhausted": "This code has already been used",
+     "@redeemCodeExhausted": {},
+     "redeemCodeError": "Redemption failed, please try again later",
+-    "@redeemCodeError": {}
++    "@redeemCodeError": {},
++    "galaxyErrorHumanDefault": "Something went wrong with the star map. Your data is safe — try again in a moment.",
++    "@galaxyErrorHumanDefault": {},
++    "galaxyErrorHumanNetwork": "The network seems unstable, so the star map could not load. Your data is safe — try again in a moment.",
++    "@galaxyErrorHumanNetwork": {},
++    "galaxyErrorHumanService": "The star map service is busy right now. Your data is safe — try again in a moment.",
++    "@galaxyErrorHumanService": {}
+ }
+diff --git a/mobile/lib/l10n/app_localizations.dart b/mobile/lib/l10n/app_localizations.dart
+index b4204ae8..770e4cf0 100644
+--- a/mobile/lib/l10n/app_localizations.dart
++++ b/mobile/lib/l10n/app_localizations.dart
+@@ -67344,6 +67344,24 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'兑换失败，请稍后再试'**
+   String get redeemCodeError;
++
++  /// No description provided for @galaxyErrorHumanDefault.
++  ///
++  /// In zh, this message translates to:
++  /// **'星图出了点小状况，暂时加载不了。你的数据没有丢，稍后再试一次。'**
++  String get galaxyErrorHumanDefault;
++
++  /// No description provided for @galaxyErrorHumanNetwork.
++  ///
++  /// In zh, this message translates to:
++  /// **'网络好像不太顺畅，星图暂时加载不了。你的数据没有丢，稍后再试一次。'**
++  String get galaxyErrorHumanNetwork;
++
++  /// No description provided for @galaxyErrorHumanService.
++  ///
++  /// In zh, this message translates to:
++  /// **'星图服务正忙，暂时加载不了。你的数据没有丢，稍后再试一次。'**
++  String get galaxyErrorHumanService;
+ }
+ 
+ class _AppLocalizationsDelegate
+diff --git a/mobile/lib/l10n/app_localizations_en.dart b/mobile/lib/l10n/app_localizations_en.dart
+index 3f364d17..89b82383 100644
+--- a/mobile/lib/l10n/app_localizations_en.dart
++++ b/mobile/lib/l10n/app_localizations_en.dart
+@@ -38694,4 +38694,16 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String get redeemCodeError => 'Redemption failed, please try again later';
++
++  @override
++  String get galaxyErrorHumanDefault =>
++      'Something went wrong with the star map. Your data is safe — try again in a moment.';
++
++  @override
++  String get galaxyErrorHumanNetwork =>
++      'The network seems unstable, so the star map could not load. Your data is safe — try again in a moment.';
++
++  @override
++  String get galaxyErrorHumanService =>
++      'The star map service is busy right now. Your data is safe — try again in a moment.';
+ }
+diff --git a/mobile/lib/l10n/app_localizations_zh.dart b/mobile/lib/l10n/app_localizations_zh.dart
+index 5f3f0817..268c6501 100644
+--- a/mobile/lib/l10n/app_localizations_zh.dart
++++ b/mobile/lib/l10n/app_localizations_zh.dart
+@@ -37095,4 +37095,13 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String get redeemCodeError => '兑换失败，请稍后再试';
++
++  @override
++  String get galaxyErrorHumanDefault => '星图出了点小状况，暂时加载不了。你的数据没有丢，稍后再试一次。';
++
++  @override
++  String get galaxyErrorHumanNetwork => '网络好像不太顺畅，星图暂时加载不了。你的数据没有丢，稍后再试一次。';
++
++  @override
++  String get galaxyErrorHumanService => '星图服务正忙，暂时加载不了。你的数据没有丢，稍后再试一次。';
+ }
+diff --git a/mobile/lib/l10n/app_zh.arb b/mobile/lib/l10n/app_zh.arb
+index d7d2928f..e86c8daf 100755
+--- a/mobile/lib/l10n/app_zh.arb
++++ b/mobile/lib/l10n/app_zh.arb
+@@ -17291,5 +17291,11 @@
+     "redeemCodeExhausted": "兑换码已被使用",
+     "@redeemCodeExhausted": {},
+     "redeemCodeError": "兑换失败，请稍后再试",
+-    "@redeemCodeError": {}
++    "@redeemCodeError": {},
++    "galaxyErrorHumanDefault": "星图出了点小状况，暂时加载不了。你的数据没有丢，稍后再试一次。",
++    "@galaxyErrorHumanDefault": {},
++    "galaxyErrorHumanNetwork": "网络好像不太顺畅，星图暂时加载不了。你的数据没有丢，稍后再试一次。",
++    "@galaxyErrorHumanNetwork": {},
++    "galaxyErrorHumanService": "星图服务正忙，暂时加载不了。你的数据没有丢，稍后再试一次。",
++    "@galaxyErrorHumanService": {}
+ }
+diff --git a/mobile/test/features/galaxy/widget/galaxy_screen_test.dart b/mobile/test/features/galaxy/widget/galaxy_screen_test.dart
+index 9f370324..22454d6f 100755
+--- a/mobile/test/features/galaxy/widget/galaxy_screen_test.dart
++++ b/mobile/test/features/galaxy/widget/galaxy_screen_test.dart
+@@ -12,6 +12,7 @@ import 'package:sparkle/features/galaxy/galaxy.dart';
+ import 'package:sparkle/features/galaxy/data/models/user_galaxy_contribution.dart';
+ import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
+ import 'package:sparkle/l10n/app_localizations.dart';
++import 'package:sparkle/l10n/app_localizations_zh.dart';
+ import '../../../shared/i18n_test_helper.dart';
+ 
+ void main() {
+@@ -268,6 +269,8 @@ void main() {
+           // 错误文案与重试按钮均不可见）。
+           child: MaterialApp(
+             theme: AppThemes.lightTheme,
++            // 断言走中文人话模板，显式锁 zh（否则 test 默认 en_US）。
++            locale: const Locale('zh'),
+             localizationsDelegates: AppLocalizations.localizationsDelegates,
+             supportedLocales: AppLocalizations.supportedLocales,
+             home: const GalaxyScreen(),
+@@ -278,7 +281,13 @@ void main() {
+       await tester.pump();
+       await tester.pump(const Duration(milliseconds: 1200));
+ 
+-      expect(find.textContaining('galaxy 500'), findsOneWidget);
++      // SPEC-C #4（N4）：裸异常不再直出——原始错误文本（'galaxy 500'）
++      // 永不出现在任何 Text；错误面板只出现人话模板（错误→人话映射输出）。
++      expect(find.textContaining('galaxy 500'), findsNothing);
++      expect(
++        find.text(AppLocalizationsZh().galaxyErrorHumanDefault),
++        findsOneWidget,
++      );
+       expect(find.byType(FilledButton), findsWidgets);
+ 
+       await tester.tap(find.byType(FilledButton).first);
+@@ -288,6 +297,95 @@ void main() {
+       expect(notifier.loadCalls, equals(2));
+       expect(find.textContaining('galaxy 500'), findsNothing);
+     });
++
++    testWidgets(
++      'load error panel speaks human copy; raw unknown error text never '
++      'surfaces in any Text (SPEC-C #4 / N4)',
++      (tester) async {
++        final notifier = _RawErrorGalaxyScreenNotifier();
++        final container = ProviderContainer(
++          overrides: [
++            galaxyProvider.overrideWith((ref) => notifier),
++          ],
++        );
++        addTearDown(container.dispose);
++
++        await tester.pumpWidget(
++          UncontrolledProviderScope(
++            container: container,
++            child: MaterialApp(
++              theme: AppThemes.lightTheme,
++              // 断言走中文人话模板，显式锁 zh（否则 test 默认 en_US）。
++              locale: const Locale('zh'),
++              localizationsDelegates: AppLocalizations.localizationsDelegates,
++              supportedLocales: AppLocalizations.supportedLocales,
++              home: const GalaxyScreen(),
++            ),
++          ),
++        );
++
++        await tester.pump();
++        await tester.pump(const Duration(milliseconds: 1200));
++
++        // 验收 1：Object/裸异常值不出现于 Text——构造态注入的是
++        // `Exception: pg Connection refused ...` 级原始异常文本。
++        expect(find.textContaining('SocketException'), findsNothing);
++        expect(find.textContaining('Connection refused'), findsNothing);
++        expect(find.textContaining('Exception'), findsNothing);
++        // 验收 2：快照断言文案 = 人话模板输出（unknown → 默认模板），
++        // 重试动作保留。
++        expect(
++          find.text(AppLocalizationsZh().galaxyErrorHumanDefault),
++          findsOneWidget,
++        );
++        expect(find.text(AppLocalizationsZh().retry), findsWidgets);
++      },
++    );
++
++    testWidgets(
++      'circuit-breaker error maps to service-busy human template '
++      '(SPEC-C #4 / N4)',
++      (tester) async {
++        final notifier = _CircuitOpenGalaxyScreenNotifier();
++        final container = ProviderContainer(
++          overrides: [
++            galaxyProvider.overrideWith((ref) => notifier),
++          ],
++        );
++        addTearDown(container.dispose);
++
++        await tester.pumpWidget(
++          UncontrolledProviderScope(
++            container: container,
++            child: MaterialApp(
++              theme: AppThemes.lightTheme,
++              // 断言走中文人话模板，显式锁 zh（否则 test 默认 en_US）。
++              locale: const Locale('zh'),
++              localizationsDelegates: AppLocalizations.localizationsDelegates,
++              supportedLocales: AppLocalizations.supportedLocales,
++              home: const GalaxyScreen(),
++            ),
++          ),
++        );
++
++        await tester.pump();
++        await tester.pump(const Duration(milliseconds: 1200));
++
++        expect(
++          find.text(AppLocalizationsZh().galaxyErrorHumanService),
++          findsOneWidget,
++        );
++        // 网络模板与默认模板都不应串档。
++        expect(
++          find.text(AppLocalizationsZh().galaxyErrorHumanNetwork),
++          findsNothing,
++        );
++        expect(
++          find.text(AppLocalizationsZh().galaxyErrorHumanDefault),
++          findsNothing,
++        );
++      },
++    );
+   });
+ 
+   group('GalaxyState Tests', () {
+@@ -721,6 +819,30 @@ class _RetryGalaxyScreenNotifier extends _MockGalaxyNotifier {
+   }
+ }
+ 
++/// SPEC-C #4 验收：unknown 错误携带典型裸异常文本（`e.toString()` 级），
++/// 断言该原文永不进入任何 Text。
++class _RawErrorGalaxyScreenNotifier extends _MockGalaxyNotifier {
++  _RawErrorGalaxyScreenNotifier() : super(GalaxyState()) {
++    state = state.copyWith(
++      isLoading: false,
++      lastError: GalaxyError.unknown(
++        'Exception: SocketException: Connection refused (os error: 61), '
++        'address = galaxy.internal',
++      ),
++    );
++  }
++}
++
++/// SPEC-C #4 验收：熔断错误 → 服务繁忙人话模板（分档不串）。
++class _CircuitOpenGalaxyScreenNotifier extends _MockGalaxyNotifier {
++  _CircuitOpenGalaxyScreenNotifier() : super(GalaxyState()) {
++    state = state.copyWith(
++      isLoading: false,
++      lastError: GalaxyError.circuitBreakerOpen(),
++    );
++  }
++}
++
+ /// Generate mock nodes
+ List<GalaxyNodeModel> _generateMockNodes(int count) {
+   final nodes = <GalaxyNodeModel>[];
+
+diff --git a/mobile/test/widget/chat_wait_pulse_source_test.dart b/mobile/test/widget/chat_wait_pulse_source_test.dart
+new file mode 100644
+index 00000000..28594b11
+--- /dev/null
++++ b/mobile/test/widget/chat_wait_pulse_source_test.dart
+@@ -0,0 +1,214 @@
++import 'package:flutter/material.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:shared_preferences/shared_preferences.dart';
++import 'package:sparkle/core/services/view_storage_service.dart';
++import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
++import 'package:sparkle/features/chat/chat.dart';
++import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
++import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
++import 'package:sparkle/features/chat/presentation/widgets/chat_run_phase_indicator.dart';
++import '../shared/i18n_test_helper.dart';
++
++/// SPEC-C #6（N3 呼吸禁令，实现无关口径）验收：
++/// 等待窗（runPhase active + streaming 空）内「活跃持续动画源」必须恰好 1 个
++/// ——阶段胶囊 700ms 脉冲；呼吸层改单次入场脉冲（320ms forward 后静止），
++/// 不得再有常驻 repeat。reduce-motion 行为不回退（呼吸层直接缺席）。
++final overlayFinder = find.byWidgetPredicate(
++  (widget) => widget.runtimeType.toString() == '_ReasoningBreathOverlay',
++  description: 'reasoning breath overlay',
++);
++
++/// 采样呼吸层当前渲染的渐变首色 alpha（= 驱动透明度），用于静止定帧断言。
++double _sampleBreathOverlayOpacity(WidgetTester tester) {
++  final decoratedBox = tester.widget<DecoratedBox>(
++    find.descendant(of: overlayFinder, matching: find.byType(DecoratedBox)),
++  );
++  final gradient = (decoratedBox.decoration as BoxDecoration).gradient!;
++  return (gradient as RadialGradient).colors.first.a;
++}
++
++class _FakeChatRepository extends Fake implements ChatRepository {
++  @override
++  Stream<WsConnectionState> get connectionStateStream => const Stream.empty();
++  @override
++  WsConnectionState get connectionState => WsConnectionState.disconnected;
++  @override
++  void dispose() {}
++  @override
++  Future<List<Map<String, dynamic>>> getRecentConversations() async => [];
++}
++
++/// 直接把 ChatState 置入等待窗：run 活跃（sending + THINKING）、流内容为空。
++/// _shouldShowReasoningAtmosphere == true 且阶段胶囊（index 0）在。
++///
++/// 注意：ChatScreen 首帧后 post-frame 会调 switchPlanSession →
++/// cancelActiveRun（复位 runPhase），因此测试须在 init settle 后调
++/// [enterWaitWindow] 重新进入等待窗。
++class _WaitWindowChatNotifier extends ChatNotifier {
++  _WaitWindowChatNotifier(super.chatRepository, super.ref);
++
++  void enterWaitWindow() {
++    state = state.copyWith(
++      activeRunId: 'pulse-test-run-1',
++      runPhase: ChatRunPhase.sending,
++      aiStatus: 'THINKING',
++    );
++  }
++
++  /// 退出等待窗：run 全清（胶囊卸载、ticker 释放）+ 落一条种子消息
++  /// （退出快捷建议页，屏内不再有 per-frame 动画源），供测试收工清 timer。
++  void resetIdle() {
++    state = ChatState(
++      messages: [
++        ChatMessageModel(
++          id: 'seed-end',
++          conversationId: 'pulse-test-session',
++          content: 'seed',
++          role: MessageRole.user,
++          createdAt: DateTime.now(),
++        ),
++      ],
++    );
++  }
++
++  @override
++  Future<void> warmUpConnection() async {}
++}
++
++void main() {
++  setUp(setUpI18nForTesting);
++
++  Future<_WaitWindowChatNotifier> pumpWaitingChat(WidgetTester tester) async {
++    SharedPreferences.setMockInitialValues({});
++    final preferences = await SharedPreferences.getInstance();
++    await ViewStorageService.ensureInitialized();
++
++    // 用 ProviderScope（而非手动 ProviderContainer + addTearDown(dispose)）：
++    // 后者在 teardown 阶段 dispose 会额外落 Timer，触发 timersPending
++    // 不变量；ProviderScope 的容器随树释放，ChatScreen 现有绿色测试同款。
++    await tester.pumpWidget(
++      ProviderScope(
++        overrides: [
++          sharedPreferencesProvider.overrideWithValue(preferences),
++          chatProvider.overrideWith(
++            (ref) => _WaitWindowChatNotifier(_FakeChatRepository(), ref),
++          ),
++        ],
++        child: testMaterialApp(home: const ChatScreen()),
++      ),
++    );
++
++    // 初始化 settle（禁 pumpAndSettle：常驻 repeat 源永不 settle），
++    // 含首帧 post-frame 的 switchPlanSession / hydrate 异步链。
++    for (var i = 0; i < 10; i++) {
++      await tester.pump(const Duration(milliseconds: 50));
++    }
++    return tester.state<ConsumerState>(find.byType(ChatScreen))
++        .ref
++        .read(chatProvider.notifier) as _WaitWindowChatNotifier;
++  }
++
++  testWidgets(
++    '等待态活跃持续动画源净增=1（阶段胶囊唯一），呼吸层单次入场后静止定帧 '
++    '(SPEC-C #6 / N3)',
++    (tester) async {
++      final notifier = await pumpWaitingChat(tester);
++
++      // init 链会 cancelActiveRun 复位 runPhase——重新进入等待窗。
++      notifier.enterWaitWindow();
++      await tester.pump();
++
++      // 等待窗已建立：呼吸层挂载 + 阶段胶囊在。
++      expect(overlayFinder, findsOneWidget);
++      expect(find.byType(ChatRunPhaseIndicator), findsOneWidget);
++
++      // 入场脉冲窗口内（320ms）：呼吸层 ticker 仍活跃。
++      // 说明：chat 层存在与等待窗无关的既有氛围 ticker（如 _BlinkingCursor，
++      // 本卡不触碰），绝对计数不稳，故用「入场终止性」+「静止定帧」两个
++      // 噪声免疫断言裁决唯一持续源，而不用裸总数。
++      await tester.pump(const Duration(milliseconds: 100));
++      final tickersDuringEntrance = tester.binding.transientCallbackCount;
++
++      // 越过 320ms 入场脉冲：呼吸层 controller complete、ticker 终止。
++      // 旧实现（3s repeat(reverse)）的 ticker 永不终止——本断言必失败，
++      // 是新旧实现的可判别点。
++      await tester.pump(const Duration(milliseconds: 500));
++      final tickersAfterEntrance = tester.binding.transientCallbackCount;
++      expect(
++        tickersAfterEntrance,
++        lessThan(tickersDuringEntrance),
++        reason: '入场脉冲结束后活跃 frame 源必须减少（呼吸层 ticker 终止）；'
++            '旧 repeat 实现此处不会减少',
++      );
++
++      // 呼吸层静止定帧：间隔 800ms 两次采样，渐变透明度零变化
++      //（旧 3s repeat 会持续在 0.03–0.08 间摆动，必失败）。
++      final opacityAtT1 = _sampleBreathOverlayOpacity(tester);
++      await tester.pump(const Duration(milliseconds: 800));
++      final opacityAtT2 = _sampleBreathOverlayOpacity(tester);
++      expect(opacityAtT2, opacityAtT1, reason: '呼吸层入场后必须静止定帧');
++
++      // 唯一持续源：等待窗内仍有 frame 在被调度（阶段胶囊 700ms repeat
++      // 在跑），而呼吸层已被上面两条证明静止——持续源恰为胶囊一个。
++      expect(tester.binding.hasScheduledFrame, isTrue);
++      expect(find.byType(ChatRunPhaseIndicator), findsOneWidget);
++      expect(overlayFinder, findsOneWidget);
++
++      // 收工：退出等待窗（胶囊 ticker 释放、会话存档链停摆），
++      // 大步 pump 清掉 init 链与会话存档 debounce 的 pending Timer，
++      // 避免 teardown 的 timersPending 不变量误伤。
++      notifier.resetIdle();
++      await tester.pump(const Duration(seconds: 30));
++    },
++  );
++
++  testWidgets('reduce-motion 下呼吸层直接缺席（行为不回退）(SPEC-C #6 / N3)',
++      (tester) async {
++    tester.platformDispatcher.accessibilityFeaturesTestValue =
++        const FakeAccessibilityFeatures(disableAnimations: true);
++    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
++
++    // 已知存量测试环境怪癖（与本卡改动无关的预存行为）：系统级
++    // disableAnimations 下，屏幕里某些 AnimatedSize 零时长完成时会在
++    // performLayout 内触发 markNeedsLayout 断言。在框架收集层吸收该类
++    // 异常（其余异常照常转发，不会被吞）。
++    final bindingOnError = FlutterError.onError;
++    FlutterError.onError = (details) {
++      if (details.exception.toString().contains('RenderAnimatedSize')) {
++        return;
++      }
++      bindingOnError?.call(details);
++    };
++    addTearDown(() {
++      FlutterError.onError = bindingOnError;
++    });
++
++    final notifier = await pumpWaitingChat(tester);
++
++    notifier.enterWaitWindow();
++    await tester.pump();
++    for (var i = 0; i < 4; i++) {
++      await tester.pump(const Duration(milliseconds: 50));
++    }
++
++    // reduce-motion：呼吸层构建为 SizedBox.shrink——挂载点保留但无渐变
++    // 装饰、无 AnimatedBuilder 动画消费（旧行为逐字保留）。
++    expect(overlayFinder, findsOneWidget);
++    expect(
++      find.descendant(of: overlayFinder, matching: find.byType(AnimatedBuilder)),
++      findsNothing,
++    );
++    expect(
++      find.descendant(of: overlayFinder, matching: find.byType(DecoratedBox)),
++      findsNothing,
++    );
++    // 阶段胶囊照常在（reduce-motion 下其脉冲对点静止，见
++    // chat_run_phase_indicator _StageDot 门控——本卡不触碰该行为）。
++    expect(find.byType(ChatRunPhaseIndicator), findsOneWidget);
++
++    // 收工：退出等待窗并清残留 pending Timer。
++    notifier.resetIdle();
++    await tester.pump(const Duration(seconds: 30));
++  });
++}
