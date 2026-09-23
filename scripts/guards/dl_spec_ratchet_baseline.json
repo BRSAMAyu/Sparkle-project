@@ -493,8 +493,7 @@
       "gradientLiteral": 2
     },
     "mobile/lib/features/home/presentation/widgets/exam_sprint_dashboard_card.dart": {
-      "gradientLiteral": 1,
-      "offLadderDuration": 2
+      "gradientLiteral": 1
     },
     "mobile/lib/features/home/presentation/widgets/focus_card.dart": {
       "gradientLiteral": 2,
@@ -585,9 +584,6 @@
       "confettiPerFile": 1,
       "gradientLiteral": 1,
       "offLadderDuration": 1
-    },
-    "mobile/lib/features/plan/presentation/screens/sprint_screen.dart": {
-      "gradientLiteral": 1
     },
     "mobile/lib/features/plan/presentation/widgets/plan_context_summary.dart": {
       "gradientLiteral": 1
