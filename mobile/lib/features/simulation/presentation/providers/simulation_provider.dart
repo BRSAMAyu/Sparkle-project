@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
@@ -31,7 +33,10 @@ class SimulationState {
   final bool isContinuing;
   final bool isLoadingRecommendations;
   final SimulationSessionModel? session;
-  final String? error;
+
+  /// N15（A-SPEC3）：UI 可达错误字段只存类型化类别（渲染侧经
+  /// error_lexicon owner 出人话）；原始异常细节只进 debugPrint 日志。
+  final UiErrorCategory? error;
   final String? sessionId;
   final String? engineState;
   final double progress;
@@ -52,7 +57,7 @@ class SimulationState {
     bool? isContinuing,
     bool? isLoadingRecommendations,
     SimulationSessionModel? session,
-    String? error,
+    UiErrorCategory? error,
     String? sessionId,
     String? engineState,
     double? progress,
@@ -114,7 +119,7 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
   void _hydrateFromSession(
     SimulationSessionModel session, {
     bool clearError = false,
-    String? error,
+    UiErrorCategory? error,
   }) {
     state = state.copyWith(
       isLoading: false,
@@ -136,20 +141,16 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
     );
   }
 
-  Future<bool> _recoverSession(
-    String? sessionId, {
-    required String fallbackMessage,
-  }) async {
+  Future<bool> _recoverSession(String? sessionId) async {
     final normalizedSessionId = (sessionId ?? '').trim();
     if (normalizedSessionId.isEmpty) {
       return false;
     }
     try {
       final session = await _repository.getSession(normalizedSessionId);
-      _hydrateFromSession(
-        session,
-        error: fallbackMessage,
-      );
+      // 恢复成功即回到实时会话，不再借错误横幅播报恢复提示（N15：
+      // error 位只承载错误类别；「已恢复」是成功态，由恢复后的会话本体自证）。
+      _hydrateFromSession(session, clearError: true);
       return true;
     } catch (_) {
       return false;
@@ -175,9 +176,10 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
         recommendedSeeds: seeds,
       );
     } catch (e) {
+      debugPrint('[simulation] load recommendations failed: $e');
       state = state.copyWith(
         isLoadingRecommendations: false,
-        error: e.toString(),
+        error: categorizeUiError(e),
       );
     }
   }
@@ -253,12 +255,11 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
         state = state.copyWith(isLoading: false);
       }
     } catch (e) {
-      final recovered = await _recoverSession(
-        state.sessionId,
-        fallbackMessage: S.simRealtimeConnectionRecovered,
-      );
+      final recovered = await _recoverSession(state.sessionId);
       if (!recovered) {
-        state = state.copyWith(isLoading: false, error: e.toString());
+        debugPrint('[simulation] realtime load failed: $e');
+        state = state.copyWith(
+            isLoading: false, error: categorizeUiError(e));
       }
     }
   }
@@ -277,9 +278,10 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
       final session = await _repository.getSession(normalizedSessionId);
       _hydrateFromSession(session, clearError: true);
     } catch (e) {
+      debugPrint('[simulation] restore session failed: $e');
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: categorizeUiError(e),
       );
     }
   }
@@ -344,15 +346,13 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
       }
       return true;
     } catch (e) {
-      final recovered = await _recoverSession(
-        sessionId,
-        fallbackMessage: S.simInteractionStreamRecovered,
-      );
+      final recovered = await _recoverSession(sessionId);
       if (!recovered) {
+        debugPrint('[simulation] continue stream failed: $e');
         state = state.copyWith(
           isLoading: false,
           isContinuing: false,
-          error: e.toString(),
+          error: categorizeUiError(e),
         );
       }
       return recovered;
@@ -494,10 +494,12 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
         );
         return;
       case 'error':
+        debugPrint('[simulation] engine error event: ${event.message}');
         state = state.copyWith(
           isLoading: false,
           isContinuing: false,
-          error: event.message ?? S.simGenFailed,
+          // 后端事件文本不进 UI（N15）；统一落服务故障类别。
+          error: UiErrorCategory.serviceDegraded,
         );
         return;
       case 'done':

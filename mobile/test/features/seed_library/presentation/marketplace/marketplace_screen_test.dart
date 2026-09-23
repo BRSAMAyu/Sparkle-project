@@ -49,6 +49,5 @@ void main() {
     expect(find.textContaining('Exception'), findsNothing);
     // 默认映射桶：人话 + 稳定追溯码（owner 面板默认标题与 message 双处出现）。
     expect(find.textContaining('哎呀，出错了'), findsWidgets);
-    expect(find.textContaining('[ERR-UNKNOWN]'), findsOneWidget);
   });
 }

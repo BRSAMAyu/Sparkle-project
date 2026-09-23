@@ -9,6 +9,7 @@ import 'package:sparkle/features/seed_library/seed_library_routes.dart';
 import 'package:sparkle/features/settings/presentation/screens/transparency_settings_screen.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 
 const _defaultAiSystemPreferences = TransparencyPreferences(
   enabled: true,
@@ -172,7 +173,7 @@ class ChatSettingsScreen extends ConsumerWidget {
                           const SizedBox(width: DS.spacing8),
                           Expanded(
                             child: Text(
-                              subscriptionState.error!,
+                              uiErrorMessage(context.l10n, subscriptionState.error!),
                               style: DS.bodySmall.copyWith(color: DS.error),
                             ),
                           ),

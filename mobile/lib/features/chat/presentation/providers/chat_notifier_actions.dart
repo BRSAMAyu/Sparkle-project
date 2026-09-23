@@ -170,12 +170,13 @@ extension ChatNotifierActions on ChatNotifier {
                       : null,
                 );
         if (intent == null) {
-          final message =
-              _ref.read(taskListProvider).error ?? S.chatExecutionLaunchFailed;
-          if (message.contains(S.chatWaitingInQueue)) {
+          // N15：排队与否看显式 executionQueued 信号（不再嗅探错误文案，
+          // zh/en 两种语言下判定一致）；失败文案由 lexicon owner 出人话。
+          final taskList = _ref.read(taskListProvider);
+          if (taskList.executionQueued) {
             state = state.copyWith(
               lastActionStatus: 'queued',
-              lastActionMessage: message,
+              lastActionMessage: S.chatWaitingInQueue,
             );
             _queueNavigation(
               _actionString(payload, 'route').isNotEmpty
@@ -184,9 +185,12 @@ extension ChatNotifierActions on ChatNotifier {
             );
             return;
           }
+          final error = taskList.error;
           state = state.copyWith(
             lastActionStatus: 'failed',
-            lastActionMessage: message,
+            lastActionMessage: error == null
+                ? S.chatExecutionLaunchFailed
+                : uiErrorMessage(S, error),
           );
           return;
         }

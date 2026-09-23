@@ -15,6 +15,7 @@ import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/notification_service.dart' show navigatorKey;
@@ -274,8 +275,10 @@ class _TaskDetailView extends ConsumerWidget {
                   )
                 : subtaskState.error != null && subtaskState.total == 0
                     ? Text(
+                        // N15：error 位为类别，arb 槽位喂 lexicon owner 出的人话。
                         context.l10n.taskDetailSubtaskLoadFailed(
-                            subtaskState.error ?? ''),
+                          uiErrorMessage(context.l10n, subtaskState.error!),
+                        ),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: DS.error,
                             ),

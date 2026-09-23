@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/features/task/data/repositories/subtask_repository.dart';
 import 'package:sparkle/shared/entities/subtask_model.dart';
 
@@ -12,7 +14,10 @@ class SubtaskState {
 
   final List<SubTaskModel> subtasks;
   final bool isLoading;
-  final String? error;
+
+  /// N15（A-SPEC3）：UI 可达错误字段只存类型化类别（渲染侧经
+  /// error_lexicon owner 出人话）；原始异常细节只进 debugPrint 日志。
+  final UiErrorCategory? error;
 
   int get total => subtasks.length;
   int get completed => subtasks.where((s) => s.isCompleted).length;
@@ -21,7 +26,7 @@ class SubtaskState {
   SubtaskState copyWith({
     List<SubTaskModel>? subtasks,
     bool? isLoading,
-    String? error,
+    UiErrorCategory? error,
     bool clearError = false,
   }) =>
       SubtaskState(
@@ -50,9 +55,10 @@ class SubtaskNotifier extends StateNotifier<SubtaskState> {
         isLoading: false,
       );
     } catch (e) {
+      debugPrint('[subtask] load failed: $e');
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: categorizeUiError(e),
       );
     }
   }
@@ -65,7 +71,8 @@ class SubtaskNotifier extends StateNotifier<SubtaskState> {
         subtasks: [...state.subtasks, newSubtask],
       );
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      debugPrint('[subtask] add failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
     }
   }
 
@@ -87,7 +94,8 @@ class SubtaskNotifier extends StateNotifier<SubtaskState> {
             .toList(),
       );
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      debugPrint('[subtask] toggle failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
     }
   }
 
@@ -101,7 +109,8 @@ class SubtaskNotifier extends StateNotifier<SubtaskState> {
             .toList(),
       );
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      debugPrint('[subtask] update failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
     }
   }
 
@@ -113,7 +122,8 @@ class SubtaskNotifier extends StateNotifier<SubtaskState> {
         subtasks: state.subtasks.where((s) => s.id != subtaskId).toList(),
       );
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      debugPrint('[subtask] delete failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
     }
   }
 
@@ -140,7 +150,8 @@ class SubtaskNotifier extends StateNotifier<SubtaskState> {
       await _repository.reorderSubtasks(reorderItems);
     } catch (e) {
       // Revert on error by reloading
-      state = state.copyWith(error: e.toString());
+      debugPrint('[subtask] reorder failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
       await loadSubtasks();
     }
   }

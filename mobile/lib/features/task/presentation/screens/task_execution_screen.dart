@@ -9,6 +9,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
@@ -1360,11 +1361,13 @@ class _ExecutionAssistPanel extends ConsumerWidget {
     if (!context.mounted) return;
 
     if (intent == null) {
-      final message = ref.read(taskListProvider).error ??
-          context.l10n.taskExecutionAiHandoffFailed;
+      final error = ref.read(taskListProvider).error;
       AppFeedback.error(
         context,
-        message.replaceFirst('Exception: ', ''),
+        // N15：类别经 lexicon owner 出人话，无异常原文可洗。
+        error == null
+            ? context.l10n.taskExecutionAiHandoffFailed
+            : uiErrorMessage(context.l10n, error),
       );
       return;
     }
@@ -1425,9 +1428,13 @@ class _ExecutionAssistPanel extends ConsumerWidget {
     if (!context.mounted) return;
 
     if (record == null) {
-      final message = ref.read(taskListProvider).error ??
-          context.l10n.taskExecutionAiConfirmFailed;
-      AppFeedback.error(context, message.replaceFirst('Exception: ', ''));
+      final error = ref.read(taskListProvider).error;
+      AppFeedback.error(
+        context,
+        error == null
+            ? context.l10n.taskExecutionAiConfirmFailed
+            : uiErrorMessage(context.l10n, error),
+      );
       return;
     }
 
@@ -1447,9 +1454,13 @@ class _ExecutionAssistPanel extends ConsumerWidget {
         .rejectTaskExecutionResult(task.id, reason: selectedReason);
     if (!context.mounted) return;
     if (record == null) {
-      final message = ref.read(taskListProvider).error ??
-          context.l10n.taskExecutionRejectFailed;
-      AppFeedback.error(context, message.replaceFirst('Exception: ', ''));
+      final error = ref.read(taskListProvider).error;
+      AppFeedback.error(
+        context,
+        error == null
+            ? context.l10n.taskExecutionRejectFailed
+            : uiErrorMessage(context.l10n, error),
+      );
       return;
     }
     AppFeedback.info(context, context.l10n.taskExecutionTaskReturned);

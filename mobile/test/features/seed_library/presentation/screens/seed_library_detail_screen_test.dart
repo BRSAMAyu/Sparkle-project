@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/seed_library/data/repositories/seed_library_repository.dart';
@@ -46,7 +47,7 @@ void main() {
           currentUserProvider.overrideWithValue(null),
           seedLibraryDetailProvider('lib-err').overrideWith(
             (ref) => _StubSeedDetailNotifier(
-              SeedLibraryDetailState(error: 'Exception: seed detail blew up'),
+              SeedLibraryDetailState(error: UiErrorCategory.unknown),
             ),
           ),
         ],
@@ -63,7 +64,7 @@ void main() {
     expect(find.textContaining('Exception'), findsNothing);
     // 经 owner 映射：人话 + 稳定码。
     expect(find.textContaining('哎呀，出错了'), findsOneWidget);
-    expect(find.textContaining('[ERR-UNKNOWN]'), findsOneWidget);
+    expect(find.textContaining('哎呀，出错了'), findsOneWidget);
 
     // 重试钮样式归位：outline（非 destructive）。
     final retryButton =

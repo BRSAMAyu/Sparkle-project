@@ -73,7 +73,7 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
             ),
           )
         : null;
-    final hasRefreshError = (simulationState.error?.isNotEmpty ?? false) ||
+    final hasRefreshError = (simulationState.error != null) ||
         systemUpdatesAsync.hasError;
 
     if (widget.compact) {

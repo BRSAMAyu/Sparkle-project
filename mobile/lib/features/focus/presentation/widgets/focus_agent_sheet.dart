@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
@@ -139,7 +140,7 @@ class FocusAgentSheet extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: DS.sm),
               child: Text(
-                chatState.error!,
+                uiErrorMessage(context.l10n, chatState.error!),
                 style: TextStyle(color: DS.error, fontSize: 12),
               ),
             ),

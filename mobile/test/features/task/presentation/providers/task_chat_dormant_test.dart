@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/features/chat/data/repositories/chat_repository.dart';
 import 'package:sparkle/features/task/presentation/providers/task_chat_provider.dart';
 
@@ -24,8 +25,9 @@ void main() {
     });
 
     test('should copy with error and clear error', () {
-      var state = TaskChatState().copyWith(error: 'network error');
-      expect(state.error, equals('network error'));
+      // N15：error 位改存类型化类别（原直存异常文本）。
+      var state = TaskChatState().copyWith(error: UiErrorCategory.network);
+      expect(state.error, equals(UiErrorCategory.network));
 
       state = state.copyWith(clearError: true);
       expect(state.error, isNull);

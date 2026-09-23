@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/shop/data/repositories/shop_repository.dart';
 import 'package:sparkle/features/shop/data/repositories/shop_repository_provider.dart';
@@ -17,13 +19,16 @@ class ShopItemsState {
   });
   final List<ShopItem> items;
   final bool isLoading;
-  final String? error;
+
+  /// N15（A-SPEC3）：UI 可达错误字段只存类型化类别（渲染侧经
+  /// error_lexicon owner 出人话）；原始异常细节只进 debugPrint 日志。
+  final UiErrorCategory? error;
   final Map<String, List<ShopItem>> itemsByCategory;
 
   ShopItemsState copyWith({
     List<ShopItem>? items,
     bool? isLoading,
-    String? error,
+    UiErrorCategory? error,
     Map<String, List<ShopItem>>? itemsByCategory,
   }) =>
       ShopItemsState(
@@ -77,9 +82,10 @@ class ShopItemsNotifier extends StateNotifier<ShopItemsState> {
         isLoading: false,
       );
     } catch (e) {
+      debugPrint('[shop] loadShopItems failed: $e');
       state = state.copyWith(
         isLoading: false,
-        error: e.toString().replaceAll('Exception: ', ''),
+        error: categorizeUiError(e),
       );
     }
   }
@@ -97,8 +103,9 @@ class ShopItemsNotifier extends StateNotifier<ShopItemsState> {
       await _ref.read(authProvider.notifier).refreshUser();
       return true;
     } catch (e) {
+      debugPrint('[shop] purchaseItem failed: $e');
       state = state.copyWith(
-        error: e.toString().replaceAll('Exception: ', ''),
+        error: categorizeUiError(e),
       );
       return false;
     }
@@ -121,12 +128,15 @@ class InventoryState {
   });
   final Map<String, List<InventoryItem>> inventory;
   final bool isLoading;
-  final String? error;
+
+  /// N15（A-SPEC3）：UI 可达错误字段只存类型化类别（渲染侧经
+  /// error_lexicon owner 出人话）；原始异常细节只进 debugPrint 日志。
+  final UiErrorCategory? error;
 
   InventoryState copyWith({
     Map<String, List<InventoryItem>>? inventory,
     bool? isLoading,
-    String? error,
+    UiErrorCategory? error,
   }) =>
       InventoryState(
         inventory: inventory ?? this.inventory,
@@ -160,9 +170,10 @@ class InventoryNotifier extends StateNotifier<InventoryState> {
         isLoading: false,
       );
     } catch (e) {
+      debugPrint('[shop] loadInventory failed: $e');
       state = state.copyWith(
         isLoading: false,
-        error: e.toString().replaceAll('Exception: ', ''),
+        error: categorizeUiError(e),
       );
     }
   }
@@ -180,9 +191,10 @@ class InventoryNotifier extends StateNotifier<InventoryState> {
       await _ref.read(authProvider.notifier).refreshUser();
       return true;
     } catch (e) {
+      debugPrint('[shop] equipItem failed: $e');
       state = state.copyWith(
         isLoading: false,
-        error: e.toString().replaceAll('Exception: ', ''),
+        error: categorizeUiError(e),
       );
       return false;
     }
@@ -211,14 +223,17 @@ class PurchaseHistoryState {
   });
   final List<ShopPurchase> purchases;
   final bool isLoading;
-  final String? error;
+
+  /// N15（A-SPEC3）：UI 可达错误字段只存类型化类别（渲染侧经
+  /// error_lexicon owner 出人话）；原始异常细节只进 debugPrint 日志。
+  final UiErrorCategory? error;
   final int currentOffset;
   final bool hasMore;
 
   PurchaseHistoryState copyWith({
     List<ShopPurchase>? purchases,
     bool? isLoading,
-    String? error,
+    UiErrorCategory? error,
     int? currentOffset,
     bool? hasMore,
   }) =>
@@ -257,9 +272,10 @@ class PurchaseHistoryNotifier extends StateNotifier<PurchaseHistoryState> {
         hasMore: purchases.length >= limit,
       );
     } catch (e) {
+      debugPrint('[shop] loadPurchaseHistory failed: $e');
       state = state.copyWith(
         isLoading: false,
-        error: e.toString().replaceAll('Exception: ', ''),
+        error: categorizeUiError(e),
       );
     }
   }
@@ -278,8 +294,9 @@ class PurchaseHistoryNotifier extends StateNotifier<PurchaseHistoryState> {
         hasMore: more.length >= limit,
       );
     } catch (e) {
+      debugPrint('[shop] loadMore purchase history failed: $e');
       state = state.copyWith(
-        error: e.toString().replaceAll('Exception: ', ''),
+        error: categorizeUiError(e),
       );
     }
   }

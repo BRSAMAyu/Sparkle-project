@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 
@@ -51,14 +53,17 @@ class TaskChatState {
   });
   final bool isLoading;
   final List<ChatMessageModel> messages;
-  final String? error;
+
+  /// N15（A-SPEC3）：UI 可达错误字段只存类型化类别（渲染侧经
+  /// error_lexicon owner 出人话）；原始异常细节只进 debugPrint 日志。
+  final UiErrorCategory? error;
   final DormantInjectionState? dormantInjection;
   final int turnCount;
 
   TaskChatState copyWith({
     bool? isLoading,
     List<ChatMessageModel>? messages,
-    String? error,
+    UiErrorCategory? error,
     bool clearError = false,
     DormantInjectionState? dormantInjection,
     int? turnCount,
@@ -158,9 +163,10 @@ class TaskChatNotifier extends StateNotifier<TaskChatState> {
         dormantInjection: dormantState,
       );
     } catch (e) {
+      debugPrint('[task_chat] send failed: $e');
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: categorizeUiError(e),
       );
     }
   }

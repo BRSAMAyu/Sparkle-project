@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/task_notification_id_mapper.dart';
@@ -49,7 +50,7 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     final notifier = _RecoveryTaskNotifier(
-      TaskListState(error: 'task list 500'),
+      TaskListState(error: UiErrorCategory.server),
     );
 
     await tester.pumpWidget(
@@ -71,6 +72,8 @@ void main() {
     expect(find.textContaining('task list 500'), findsNothing);
     expect(find.textContaining('Exception'), findsNothing);
     expect(find.textContaining('[ERR-SERVER]'), findsOneWidget);
+    // N15：类别经 lexicon owner 出人话（zh 测试环境映射「服务器出现问题」）。
+    expect(find.textContaining('服务器出现问题'), findsOneWidget);
     expect(find.text('重试'), findsOneWidget);
 
     // 触发重试：900x1600 视口下 FAB 会遮住重试钮的命中区（几何问题，

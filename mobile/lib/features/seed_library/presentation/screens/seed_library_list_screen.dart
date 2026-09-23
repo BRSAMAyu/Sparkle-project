@@ -8,7 +8,7 @@ import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
-import 'package:sparkle/core/errors/user_facing_error.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -240,7 +240,8 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
     if (state.error != null && state.libraries.isEmpty) {
       return CustomErrorWidget.page(
         context: context,
-        message: UserFacingError.from(state.error!),
+        // N15：error 位已是类别，直接走 owner 文案表（不再喂 Object 判定）。
+        message: uiErrorMessage(context.l10n, state.error!),
         onRetry: _applyFilters,
       );
     }

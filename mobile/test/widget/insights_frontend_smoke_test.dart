@@ -10,6 +10,7 @@ import 'package:sparkle/features/home/presentation/widgets/insight_hub_card.dart
 import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/presentation/screens/learning_report_screen.dart';
 import 'package:sparkle/features/report/presentation/widgets/mastery_radar_chart.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
 import 'package:sparkle/features/simulation/data/repositories/simulation_repository.dart';
 import 'package:sparkle/features/simulation/presentation/providers/simulation_provider.dart';
@@ -514,7 +515,7 @@ void main() {
             simulationProvider.overrideWith(
               (ref) => _StaticSimulationNotifier(
                 const SimulationState(
-                  error: 'network failed',
+                  error: UiErrorCategory.network,
                   recommendedSeeds: <SimulationSeedModel>[
                     SimulationSeedModel(
                       topic: '特征值与特征向量',

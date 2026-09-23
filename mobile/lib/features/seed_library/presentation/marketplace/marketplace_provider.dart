@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/features/seed_library/presentation/marketplace/marketplace_models.dart';
 import 'package:sparkle/features/seed_library/presentation/marketplace/marketplace_repository.dart';
 
@@ -16,14 +18,17 @@ class MarketplaceState {
   final List<MarketplaceSkillCard> skills;
   final List<MarketplacePackCard> packs;
   final bool isLoading;
-  final String? error;
+
+  /// N15（A-SPEC3）：UI 可达错误字段只存类型化类别（渲染侧经
+  /// error_lexicon owner 出人话）；原始异常细节只进 debugPrint 日志。
+  final UiErrorCategory? error;
   final MarketplaceAdoption? lastAdoption;
 
   MarketplaceState copyWith({
     List<MarketplaceSkillCard>? skills,
     List<MarketplacePackCard>? packs,
     bool? isLoading,
-    String? error,
+    UiErrorCategory? error,
     MarketplaceAdoption? lastAdoption,
   }) =>
       MarketplaceState(
@@ -53,9 +58,10 @@ class MarketplaceNotifier extends StateNotifier<MarketplaceState> {
         isLoading: false,
       );
     } catch (error) {
+      debugPrint('[marketplace] refresh failed: $error');
       state = state.copyWith(
         isLoading: false,
-        error: error.toString().replaceFirst('Exception: ', ''),
+        error: categorizeUiError(error),
       );
     }
   }

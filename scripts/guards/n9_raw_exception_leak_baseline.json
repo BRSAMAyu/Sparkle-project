@@ -28,7 +28,6 @@
       "ebLoadErrorFailed": 1,
       "editProfileUpdateFailed": 1,
       "editProfileUploadFailed": 1,
-      "errorBookDeleteFailedMessage": 1,
       "favoritesLoadFailed": 1,
       "favoritesOperationFailed": 1,
       "fileUploadFailed": 1,
@@ -83,7 +82,6 @@
       "personaPreferenceUpdateFailed": 1,
       "personaRestoreFailed": 1,
       "personaRollbackFailed": 1,
-      "photonRedeemProLoadFailed": 1,
       "planConfirmFailed": 1,
       "planCreateFailed": 1,
       "planDetailActivatePhaseFailed": 1,
@@ -99,7 +97,6 @@
       "planLoadFailedError": 1,
       "posterPreviewErrorWith": 1,
       "profileExportFailed": 1,
-      "ptFailed": 1,
       "remediableGenerateFailed": 1,
       "reviewPlanHubLoadFailed": 1,
       "reviewSubmitFailed": 1,
@@ -188,7 +185,6 @@
       "ebLoadErrorFailed": 1,
       "editProfileUpdateFailed": 1,
       "editProfileUploadFailed": 1,
-      "errorBookDeleteFailedMessage": 1,
       "favoritesLoadFailed": 1,
       "favoritesOperationFailed": 1,
       "fileUploadFailed": 1,
@@ -243,7 +239,6 @@
       "personaPreferenceUpdateFailed": 1,
       "personaRestoreFailed": 1,
       "personaRollbackFailed": 1,
-      "photonRedeemProLoadFailed": 1,
       "planConfirmFailed": 1,
       "planCreateFailed": 1,
       "planDetailActivatePhaseFailed": 1,
@@ -259,7 +254,6 @@
       "planLoadFailedError": 1,
       "posterPreviewErrorWith": 1,
       "profileExportFailed": 1,
-      "ptFailed": 1,
       "remediableGenerateFailed": 1,
       "reviewPlanHubLoadFailed": 1,
       "reviewSubmitFailed": 1,
@@ -320,6 +314,21 @@
       "voiceInputSpeechFailed": 1,
       "voiceInputStartFailed": 1
     }
+  },
+  "assignmentFace": {
+    "mobile/lib/core/offline/sync_queue.dart": 1,
+    "mobile/lib/core/services/universal_share_service.dart": 2,
+    "mobile/lib/features/auth/presentation/providers/auth_provider.dart": 15,
+    "mobile/lib/features/calendar/presentation/providers/calendar_provider.dart": 2,
+    "mobile/lib/features/calendar/presentation/providers/unified_calendar_provider.dart": 1,
+    "mobile/lib/features/cognitive/presentation/providers/cognitive_provider.dart": 3,
+    "mobile/lib/features/error_book/data/providers/error_book_provider.dart": 5,
+    "mobile/lib/features/home/presentation/screens/task_monitor_screen.dart": 1,
+    "mobile/lib/features/knowledge/presentation/providers/vocabulary_provider.dart": 1,
+    "mobile/lib/features/notification_center/presentation/providers/notification_analytics_provider.dart": 1,
+    "mobile/lib/features/notification_center/presentation/providers/notification_center_provider.dart": 14,
+    "mobile/lib/features/plan/presentation/providers/plan_confirmation_provider.dart": 1,
+    "mobile/lib/features/plan/presentation/providers/plan_provider.dart": 1
   },
   "callSites": {
     "mobile/lib/core/statistics/presentation/widgets/export/statistics_export_bottom_sheet.dart": {
@@ -462,14 +471,6 @@
       "bareCatchVar": 0,
       "catchVarToString": 3
     },
-    "mobile/lib/features/error_book/presentation/screens/error_detail_screen.dart": {
-      "bareCatchVar": 0,
-      "catchVarToString": 1
-    },
-    "mobile/lib/features/error_book/presentation/screens/error_list_screen.dart": {
-      "bareCatchVar": 1,
-      "catchVarToString": 0
-    },
     "mobile/lib/features/error_book/presentation/widgets/remediable_patterns_card.dart": {
       "bareCatchVar": 0,
       "catchVarToString": 1
@@ -531,10 +532,6 @@
       "catchVarToString": 0
     },
     "mobile/lib/features/notification_center/presentation/screens/notification_center_screen.dart": {
-      "bareCatchVar": 1,
-      "catchVarToString": 0
-    },
-    "mobile/lib/features/photon/presentation/screens/photon_redeem_pro_screen.dart": {
       "bareCatchVar": 1,
       "catchVarToString": 0
     },
@@ -651,5 +648,5 @@
       "catchVarToString": 1
     }
   },
-  "comment": "Frozen ratchet baseline for check_n9_raw_exception_leak.py (SPEC v1.2 N9: arb {error} placeholder + raw-exception l10n call args). Registered from measured values at HEAD a025e82a (GUARDS card wt227, 2026-09-23). Only lower via --update-baseline after a cleanup batch; never raise. arb edits additionally follow the §6.5-4 serial arb window discipline."
+  "comment": "Frozen ratchet baseline for check_n9_raw_exception_leak.py (SPEC v1.2 N9: arb {error} placeholder + raw-exception l10n call args; SPEC v1.3 N15: error-field assignment face). arb/callSites registered from measured values at HEAD a025e82a (GUARDS card wt227, 2026-09-23); assignmentFace registered by the ERR-CANAL batch (wt239) after lowering it from 87 to the frozen value. Only lower via --update-baseline after a cleanup batch; never raise. arb edits additionally follow the §6.5-4 serial arb window discipline."
 }

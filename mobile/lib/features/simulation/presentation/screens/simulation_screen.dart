@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart' as share_plus;
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
@@ -773,7 +774,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
               if (state.error != null) ...[
                 const SizedBox(height: 12),
                 Text(
-                  state.error!,
+                  uiErrorMessage(context.l10n, state.error!),
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.error,
                   ),
@@ -974,7 +975,9 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                   if (state.error != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 12),
-                      child: _InlineErrorBanner(message: state.error!),
+                      child: _InlineErrorBanner(
+                        message: uiErrorMessage(context.l10n, state.error!),
+                      ),
                     ),
                   if (_settingsDrawerOpen)
                     Padding(

@@ -6,6 +6,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/plan/presentation/providers/sprint_actions_provider.dart';
@@ -94,7 +95,11 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
 
     if (actionsState.error != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        AppFeedback.error(context, actionsState.error!);
+        // N15：error 位为类别，经 lexicon owner 出人话。
+        AppFeedback.error(
+          context,
+          uiErrorMessage(context.l10n, actionsState.error!),
+        );
         ref.read(sprintActionsProvider.notifier).clearMessages();
       });
     }

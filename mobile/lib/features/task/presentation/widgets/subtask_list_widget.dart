@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/task/presentation/providers/subtask_provider.dart';
@@ -178,8 +179,9 @@ class _SubtaskListWidgetState extends ConsumerState<SubtaskListWidget> {
                   children: [
                     Icon(Icons.error_outline, color: DS.semanticError, size: 32),
                     const SizedBox(height: DS.sm),
+                    // N15：类别经 lexicon owner 出人话，无 "Error: <raw>" 直出。
                     Text(
-                      'Error: ${state.error}',
+                      uiErrorMessage(context.l10n, state.error!),
                       style: TextStyle(color: DS.semanticError, fontSize: 14),
                       textAlign: TextAlign.center,
                     ),

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
@@ -286,7 +287,7 @@ void main() {
 
       expect(state.isLoading, isFalse);
       expect(state.items, isEmpty);
-      expect(state.error, contains('Network error'));
+      expect(state.error, UiErrorCategory.network);
     });
 
     test('purchaseItem updates items and returns success', () async {
@@ -356,7 +357,7 @@ void main() {
       expect(result, isFalse);
 
       final state = container.read(shopItemsProvider);
-      expect(state.error, contains('Insufficient balance'));
+      expect(state.error, UiErrorCategory.unknown);
     });
 
     test('refresh reloads items', () async {
@@ -645,7 +646,7 @@ void main() {
       expect(result, isFalse);
 
       final state = container.read(inventoryProvider);
-      expect(state.error, contains('Item not owned'));
+      expect(state.error, UiErrorCategory.unknown);
     });
 
     test('provides convenient getters for item categories', () async {

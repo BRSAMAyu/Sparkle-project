@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
@@ -31,7 +32,6 @@ import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/features/task/data/models/task_feedback_response.dart';
 import 'package:sparkle/features/task/data/models/task_feedback_submission.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
-import 'package:sparkle/features/task/presentation/execution_copy.dart';
 import 'package:sparkle/features/task/utils/task_identity.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -55,6 +55,7 @@ class TaskListState {
     this.executionDecisionInFlight = const <String>{},
     this.currentFilter,
     this.error,
+    this.executionQueued = false,
     this.recentlyDeletedTask,
   });
   final bool isLoading;
@@ -70,7 +71,14 @@ class TaskListState {
   final Set<String> handoffInFlight;
   final Set<String> executionDecisionInFlight;
   final TaskFilter? currentFilter;
-  final String? error;
+
+  /// N15（A-SPEC3）：UI 可达错误字段只存类型化类别（经 error_lexicon owner
+  /// 在渲染侧出人话）；原始异常细节只进 debugPrint 日志，不入 state。
+  final UiErrorCategory? error;
+
+  /// 最近一次执行派发是否走了离线等待队列（排队不是失败；chat 侧
+  /// queued 状态与任务列表排队提示以本显式信号判定，不再嗅探错误文案）。
+  final bool executionQueued;
   final TaskModel? recentlyDeletedTask;
 
   TaskListState copyWith({
@@ -87,8 +95,9 @@ class TaskListState {
     Set<String>? handoffInFlight,
     Set<String>? executionDecisionInFlight,
     TaskFilter? currentFilter,
-    String? error,
+    UiErrorCategory? error,
     bool clearError = false,
+    bool? executionQueued,
     TaskModel? recentlyDeletedTask,
     bool clearRecentlyDeleted = false,
   }) =>
@@ -110,6 +119,7 @@ class TaskListState {
             executionDecisionInFlight ?? this.executionDecisionInFlight,
         currentFilter: currentFilter ?? this.currentFilter,
         error: clearError ? null : error ?? this.error,
+        executionQueued: executionQueued ?? this.executionQueued,
         recentlyDeletedTask: clearRecentlyDeleted
             ? null
             : recentlyDeletedTask ?? this.recentlyDeletedTask,
@@ -138,7 +148,8 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       await action();
     } catch (e) {
       if (!mounted) return;
-      state = state.copyWith(isLoading: false, error: e.toString());
+      debugPrint('[task] load failed: $e');
+      state = state.copyWith(isLoading: false, error: categorizeUiError(e));
     }
   }
 
@@ -886,7 +897,8 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     String? source,
   }) async {
     if (!isServerTaskId(taskId)) {
-      state = state.copyWith(error: S.taskLocalNoAiExec);
+      // 本地任务不支持 AI 执行——业务校验类，落 format 类别（N15）。
+      state = state.copyWith(error: UiErrorCategory.format);
       return null;
     }
 
@@ -918,13 +930,17 @@ class TaskNotifier extends StateNotifier<TaskListState> {
           );
           if (mounted) {
             state = state.copyWith(
-                error: ExecutionCopy.engineOfflineQueuedMessage());
+              error: UiErrorCategory.serviceDegraded,
+              executionQueued: true,
+            );
           }
           return null;
         }
         if (mounted) {
-          state =
-              state.copyWith(error: ExecutionCopy.engineNotConnectedMessage());
+          state = state.copyWith(
+            error: UiErrorCategory.network,
+            executionQueued: false,
+          );
         }
         return null;
       }
@@ -962,7 +978,11 @@ class TaskNotifier extends StateNotifier<TaskListState> {
         error: e,
       );
       if (!queued && mounted) {
-        state = state.copyWith(error: _normalizeErrorMessage(e));
+        debugPrint('[task] handoff failed: $e');
+        state = state.copyWith(
+          error: categorizeUiError(e),
+          executionQueued: false,
+        );
       }
       return null;
     } finally {
@@ -999,7 +1019,11 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       } catch (e) {
         connection.markExecutionUnavailable(_normalizeErrorMessage(e));
         if (mounted) {
-          state = state.copyWith(error: _normalizeErrorMessage(e));
+          debugPrint('[task] queued handoff dispatch failed: $e');
+          state = state.copyWith(
+            error: categorizeUiError(e),
+            executionQueued: false,
+          );
         }
         break;
       }
@@ -1021,7 +1045,11 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       return intent;
     } catch (e) {
       if (mounted) {
-        state = state.copyWith(error: _normalizeErrorMessage(e));
+        debugPrint('[task] retry execution failed: $e');
+        state = state.copyWith(
+          error: categorizeUiError(e),
+          executionQueued: false,
+        );
       }
       return null;
     }
@@ -1066,8 +1094,13 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     );
     connection.markExecutionUnavailable(message);
     if (mounted) {
+      // N15：排队不是失败——错误位记类别，排队信号走显式 executionQueued；
+      // 原始原因只进日志与 openclaw 连接状态（markExecutionUnavailable）。
+      debugPrint('[task] execution queued (infra degraded): $error');
       state = state.copyWith(
-          error: '$message${S.taskOpQueuedSuffix}');
+        error: UiErrorCategory.serviceDegraded,
+        executionQueued: true,
+      );
     }
     return true;
   }
@@ -1093,7 +1126,9 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       );
       state = state.copyWith(tasks: persisted);
     } catch (e) {
-      state = state.copyWith(tasks: originalTasks, error: e.toString());
+      debugPrint('[task] reorder failed: $e');
+      state = state.copyWith(
+          tasks: originalTasks, error: categorizeUiError(e));
     }
   }
 
@@ -1251,14 +1286,14 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     final intent =
         state.taskExecutions[taskId] ?? await loadTaskExecutionState(taskId);
     if (intent == null) {
-      state = state.copyWith(error: S.taskNoExecRecord);
+      state = state.copyWith(error: UiErrorCategory.notFound);
       return null;
     }
 
     var record = state.taskExecutionRecords[taskId];
     record ??= await _taskRepository.getExecutionRecord(intent.id);
     if (record == null) {
-      state = state.copyWith(error: S.taskExecRecordUnavailable);
+      state = state.copyWith(error: UiErrorCategory.notFound);
       return null;
     }
 
@@ -1276,7 +1311,8 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       return updatedRecord;
     } catch (e) {
       if (mounted) {
-        state = state.copyWith(error: e.toString());
+        debugPrint('[task] execution decision failed: $e');
+        state = state.copyWith(error: categorizeUiError(e));
       }
       return null;
     } finally {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
 import 'package:sparkle/features/simulation/data/repositories/simulation_repository.dart';
 import 'package:sparkle/features/simulation/presentation/providers/simulation_provider.dart';
@@ -404,7 +405,7 @@ class _FailingContinueNotifier extends SimulationNotifier {
     state = state.copyWith(
       isLoading: false,
       isContinuing: false,
-      error: '模拟继续失败',
+      error: UiErrorCategory.serviceDegraded,
     );
     return false;
   }
@@ -650,6 +651,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('我先做一道题试试看'), findsOneWidget);
-    expect(notifier.state.error, '模拟继续失败');
+    // N15：error 位改存类型化类别（原直存中文异常串）。
+    expect(notifier.state.error, UiErrorCategory.serviceDegraded);
   });
 }

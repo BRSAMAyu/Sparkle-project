@@ -1,7 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
 import 'package:sparkle/features/seed_library/data/repositories/seed_library_repository.dart';
 
@@ -16,14 +17,17 @@ class SeedLibraryListState {
   });
   final List<SeedLibrary> libraries;
   final bool isLoading;
-  final String? error;
+
+  /// N15（A-SPEC3）：UI 可达错误字段只存类型化类别（渲染侧经
+  /// error_lexicon owner 出人话）；原始异常细节只进 debugPrint 日志。
+  final UiErrorCategory? error;
   final int page;
   final bool hasMore;
 
   SeedLibraryListState copyWith({
     List<SeedLibrary>? libraries,
     bool? isLoading,
-    String? error,
+    UiErrorCategory? error,
     int? page,
     bool? hasMore,
   }) =>
@@ -88,9 +92,10 @@ class SeedLibraryListNotifier extends StateNotifier<SeedLibraryListState> {
         hasMore: response.page < response.totalPages,
       );
     } catch (e) {
+      debugPrint('[seed_library] loadLibraries failed: $e');
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: categorizeUiError(e),
       );
     }
   }
@@ -142,7 +147,10 @@ class SeedLibraryDetailState {
   final List<SeedItem> items;
   final bool isLoadingLibrary;
   final bool isLoadingItems;
-  final String? error;
+
+  /// N15（A-SPEC3）：UI 可达错误字段只存类型化类别（渲染侧经
+  /// error_lexicon owner 出人话）；原始异常细节只进 debugPrint 日志。
+  final UiErrorCategory? error;
   final bool isSubscribed;
   final UserLibrarySubscription? subscription;
   final List<UserLibrarySubscription> activeSubscriptions;
@@ -154,7 +162,7 @@ class SeedLibraryDetailState {
     List<SeedItem>? items,
     bool? isLoadingLibrary,
     bool? isLoadingItems,
-    String? error,
+    UiErrorCategory? error,
     bool? isSubscribed,
     UserLibrarySubscription? subscription,
     List<UserLibrarySubscription>? activeSubscriptions,
@@ -186,14 +194,6 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
   final SeedLibraryRepository _repository;
   final String libraryId;
 
-  String _friendlyError(Object error, String fallbackMessage) {
-    final raw = error.toString().replaceFirst('Exception: ', '').trim();
-    if (raw.isEmpty || raw.toLowerCase() == 'null') {
-      return fallbackMessage;
-    }
-    return raw;
-  }
-
   Future<void> loadLibrary() async {
     state = state.copyWith(
       isLoadingLibrary: true,
@@ -208,9 +208,10 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
         error: null,
       );
     } catch (e) {
+      debugPrint('[seed_library] loadLibrary failed: $e');
       state = state.copyWith(
         isLoadingLibrary: false,
-        error: _friendlyError(e, S.seedLibLoadFailed),
+        error: categorizeUiError(e),
       );
       return;
     }
@@ -233,13 +234,12 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
         error: null,
       );
     } catch (e) {
+      debugPrint('[seed_library] load subscription status failed: $e');
       state = state.copyWith(
         isSubscribed: false,
         subscription: null,
         activeSubscriptions: const [],
-        error: state.library == null
-            ? _friendlyError(e, S.seedLibStatusFailed)
-            : null,
+        error: state.library == null ? categorizeUiError(e) : null,
       );
     }
   }
@@ -266,9 +266,10 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
         hasMoreItems: response.page < response.totalPages,
       );
     } catch (e) {
+      debugPrint('[seed_library] loadItems failed: $e');
       state = state.copyWith(
         isLoadingItems: false,
-        error: e.toString(),
+        error: categorizeUiError(e),
       );
     }
   }
@@ -290,8 +291,9 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
       await loadLibrary();
     } catch (e) {
       // Revert on error
+      debugPrint('[seed_library] toggleSubscription failed: $e');
       state = state.copyWith(isSubscribed: wasSubscribed);
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: categorizeUiError(e));
     }
   }
 
@@ -373,7 +375,8 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
         }
       }
       await loadLibrary();
-      state = state.copyWith(error: e.toString());
+      debugPrint('[seed_library] operation failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
       rethrow;
     }
   }
@@ -403,7 +406,8 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
       }
       await loadLibrary();
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      debugPrint('[seed_library] operation failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
       rethrow;
     }
   }
@@ -438,7 +442,8 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
         error: null,
       );
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      debugPrint('[seed_library] operation failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
       rethrow;
     }
   }
@@ -455,7 +460,8 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
       state = state.copyWith(library: updatedLibrary);
       await loadLibrary();
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      debugPrint('[seed_library] operation failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
       rethrow;
     }
   }
@@ -471,7 +477,8 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
       );
       state = state.copyWith(library: updated);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      debugPrint('[seed_library] operation failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
       rethrow;
     }
   }
@@ -480,7 +487,8 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
     try {
       await _repository.deleteLibrary(libraryId);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      debugPrint('[seed_library] operation failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
       rethrow;
     }
   }
@@ -522,7 +530,8 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
 
       return item;
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      debugPrint('[seed_library] operation failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
       rethrow;
     }
   }
@@ -541,7 +550,8 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
       await loadItems(refresh: true);
       return result;
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      debugPrint('[seed_library] operation failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
       rethrow;
     }
   }
@@ -556,12 +566,14 @@ class SubscriptionsState {
   });
   final List<UserLibrarySubscription> subscriptions;
   final bool isLoading;
-  final String? error;
+  /// N15（A-SPEC3）：UI 可达错误字段只存类型化类别（渲染侧经
+  /// error_lexicon owner 出人话）；原始异常细节只进 debugPrint 日志。
+  final UiErrorCategory? error;
 
   SubscriptionsState copyWith({
     List<UserLibrarySubscription>? subscriptions,
     bool? isLoading,
-    String? error,
+    UiErrorCategory? error,
   }) =>
       SubscriptionsState(
         subscriptions: subscriptions ?? this.subscriptions,
@@ -599,9 +611,10 @@ class SubscriptionsNotifier extends StateNotifier<SubscriptionsState> {
         isLoading: false,
       );
     } catch (e) {
+      debugPrint('[seed_library] loadSubscriptions failed: $e');
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: categorizeUiError(e),
       );
     }
   }
@@ -621,11 +634,12 @@ class SubscriptionsNotifier extends StateNotifier<SubscriptionsState> {
         await _repository.unsubscribeFromLibrary(libraryId);
       } catch (e) {
         // Revert on error
+        debugPrint('[seed_library] unsubscribe failed: $e');
         state = state.copyWith(
           subscriptions: List.from(state.subscriptions)
             ..insert(existingIndex, subscription),
         );
-        state = state.copyWith(error: e.toString());
+        state = state.copyWith(error: categorizeUiError(e));
       }
     } else {
       // Subscribe
@@ -639,7 +653,8 @@ class SubscriptionsNotifier extends StateNotifier<SubscriptionsState> {
           ],
         );
       } catch (e) {
-        state = state.copyWith(error: e.toString());
+        debugPrint('[seed_library] subscribe failed: $e');
+        state = state.copyWith(error: categorizeUiError(e));
       }
     }
   }

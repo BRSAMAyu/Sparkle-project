@@ -5,6 +5,7 @@ import 'package:sparkle/features/task/data/models/execution_template_model.dart'
 import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
 import 'package:sparkle/features/task/data/models/next_action.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import '../../../../shared/i18n_test_helper.dart';
@@ -108,13 +109,14 @@ void main() {
       });
 
       test('should update error state', () {
-        final state = TaskListState().copyWith(error: 'Test error');
+        // N15：error 位改存类型化类别（原直存异常文本）。
+        final state = TaskListState().copyWith(error: UiErrorCategory.server);
 
-        expect(state.error, equals('Test error'));
+        expect(state.error, equals(UiErrorCategory.server));
       });
 
       test('should clear error state', () {
-        final state1 = TaskListState().copyWith(error: 'Some error');
+        final state1 = TaskListState().copyWith(error: UiErrorCategory.server);
         expect(state1.error, isNotNull);
 
         final state2 = state1.copyWith(clearError: true);

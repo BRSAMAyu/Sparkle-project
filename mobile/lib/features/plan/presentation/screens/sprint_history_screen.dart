@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/features/plan/presentation/providers/sprint_history_provider.dart';
@@ -60,7 +61,12 @@ class SprintHistoryScreen extends ConsumerWidget {
     }
 
     if (state.error != null && state.items.isEmpty) {
-      return _buildErrorState(context, state.error!, l10n);
+      // N15：error 位为类别，arb 槽位喂 lexicon owner 出的人话。
+      return _buildErrorState(
+        context,
+        uiErrorMessage(l10n, state.error!),
+        l10n,
+      );
     }
 
     if (state.items.isEmpty) {

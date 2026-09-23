@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/core/services/prediction_attribution_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
@@ -17,12 +19,15 @@ class SprintActionsState {
   });
 
   final bool isProcessing;
-  final String? error;
+
+  /// N15（A-SPEC3）：UI 可达错误字段只存类型化类别（渲染侧经
+  /// error_lexicon owner 出人话）；原始异常细节只进 debugPrint 日志。
+  final UiErrorCategory? error;
   final String? successMessage;
 
   SprintActionsState copyWith({
     bool? isProcessing,
-    String? error,
+    UiErrorCategory? error,
     String? successMessage,
     bool clearError = false,
     bool clearSuccess = false,
@@ -82,9 +87,10 @@ class SprintActionsNotifier extends StateNotifier<SprintActionsState> {
       );
       return true;
     } catch (e) {
+      debugPrint('[sprint_actions] action failed: $e');
       state = state.copyWith(
         isProcessing: false,
-        error: e.toString(),
+        error: categorizeUiError(e),
       );
       return false;
     }
@@ -122,9 +128,10 @@ class SprintActionsNotifier extends StateNotifier<SprintActionsState> {
       );
       return true;
     } catch (e) {
+      debugPrint('[sprint_actions] action failed: $e');
       state = state.copyWith(
         isProcessing: false,
-        error: e.toString(),
+        error: categorizeUiError(e),
       );
       return false;
     }
@@ -148,9 +155,10 @@ class SprintActionsNotifier extends StateNotifier<SprintActionsState> {
       );
       return true;
     } catch (e) {
+      debugPrint('[sprint_actions] action failed: $e');
       state = state.copyWith(
         isProcessing: false,
-        error: e.toString(),
+        error: categorizeUiError(e),
       );
       return false;
     }

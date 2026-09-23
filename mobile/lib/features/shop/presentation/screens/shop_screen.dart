@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -135,6 +136,13 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
                     color: DS.textSecondary,
                   ),
             ),
+            if (state.error != null) ...[
+              const SizedBox(height: DS.spacing8),
+              Text(
+                uiErrorMessage(context.l10n, state.error!),
+                style: TextStyle(color: DS.error),
+              ),
+            ],
           ],
         ),
       );
@@ -183,10 +191,12 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
               context.l10n.shopPurchaseSuccess(item.name),
             );
           } else {
+            final error = ref.read(shopItemsProvider).error;
             AppFeedback.error(
               context,
-              ref.read(shopItemsProvider).error ??
-                  context.l10n.shopPurchaseFailed,
+              error == null
+                  ? context.l10n.shopPurchaseFailed
+                  : uiErrorMessage(context.l10n, error),
             );
           }
         },
