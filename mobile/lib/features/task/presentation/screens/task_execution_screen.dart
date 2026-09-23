@@ -13,11 +13,13 @@ import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/services/guest_conversion_service.dart';
 import 'package:sparkle/core/services/intervention_action_service.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_core_session.dart';
 import 'package:sparkle/features/aurora/presentation/widgets/aurora_core_session_sheet.dart';
+import 'package:sparkle/features/auth/presentation/providers/guest_conversion_provider.dart';
 import 'package:sparkle/features/focus/presentation/providers/focus_statistics_provider.dart'
     as focus_stats;
 import 'package:sparkle/features/focus/presentation/widgets/focus_agent_sheet.dart';
@@ -283,6 +285,16 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
 
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.focusComplete));
     unawaited(BgmService.duckTemporarily());
+
+    // N40（A-SPEC7 §4）访客唯一转化点：首个任务完成是合法价值信号。
+    // 这里只**记录**不展示——价值动作当下用户仍在庆祝/反馈流程内，
+    // 展示时机由 home 挂载点的派生可见性在安全窗口裁决（永不打断
+    // 进行中任务；注册用户为 no-op，免费闭环零变化）。
+    unawaited(
+      ref
+          .read(guestConversionControllerProvider.notifier)
+          .recordValueSignal(GuestValueSignal.firstTaskCompleted),
+    );
 
     final task = ref.read(activeTaskProvider);
     if (task != null) {

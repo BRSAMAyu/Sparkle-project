@@ -1122,6 +1122,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 dashboardState: dashboardState,
               ),
             ),
+            // N40（A-SPEC7 §4）访客唯一转化点：home 是访客落地面，也是
+            // 「进行中任务之外」的安全窗口——卡内联于此，非弹窗；派生
+            // 可见性四条守门（仅访客/已有价值信号/未被点掉/无进行中任务），
+            // 注册用户与无信号访客渲染 SizedBox.shrink（零布局影响）。
+            _staggeredSection(
+              index: growthSectionIndex++,
+              child: const GuestConversionCard(),
+            ),
             _staggeredSection(
               index: growthSectionIndex++,
               child: _buildAuroraStatusBandSlot(dashboardState),

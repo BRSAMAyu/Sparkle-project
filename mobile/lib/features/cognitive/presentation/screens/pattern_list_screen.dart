@@ -152,6 +152,23 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
                 height: 1.5,
               ),
             ),
+            // N39（A-SPEC7 §4）空态必答下一步：诊断空态曾是「图标+标题+
+            // 副标题」死胡同；补「开始首次诊断」直达入口——聊天即诊断输入
+            // （S4 建模访谈已证可行），prompt 预填照 home 首目标空态模式。
+            const SizedBox(height: DS.lg),
+            SparkleButton.primary(
+              label: context.l10n.patternListEmptyCta,
+              icon: const Icon(Icons.psychology_alt_rounded, size: 18),
+              expand: true,
+              onPressed: () {
+                unawaited(
+                  SensoryFeedbackService.emit(SensoryFeedbackEvent.navigation),
+                );
+                context.go(
+                  '/chat?prompt=${Uri.encodeComponent(context.l10n.patternListEmptyDiagnosisPrompt)}',
+                );
+              },
+            ),
           ],
         ),
       );

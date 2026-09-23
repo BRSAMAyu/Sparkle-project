@@ -9776,6 +9776,42 @@ abstract class AppLocalizations {
   /// **'继续记录想法和复盘后，这里会把这些信号整理成真正有用的行为模式。'**
   String get patternListEmptySubtitle;
 
+  /// No description provided for @patternListEmptyCta.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始首次诊断'**
+  String get patternListEmptyCta;
+
+  /// No description provided for @patternListEmptyDiagnosisPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'我想做一次学习现状诊断：请结合我的目标和近期记录，分析我的学习模式与薄弱环节，并给出针对性的提升建议。'**
+  String get patternListEmptyDiagnosisPrompt;
+
+  /// No description provided for @guestConversionCardTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'你的备考进度已保存在本机'**
+  String get guestConversionCardTitle;
+
+  /// No description provided for @guestConversionCardBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'注册后，学习记录、错题本与星图进度会同步到你的所有设备，随时接着学。'**
+  String get guestConversionCardBody;
+
+  /// No description provided for @guestConversionCardCta.
+  ///
+  /// In zh, this message translates to:
+  /// **'注册并同步进度'**
+  String get guestConversionCardCta;
+
+  /// No description provided for @guestConversionCardDismiss.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂不'**
+  String get guestConversionCardDismiss;
+
   /// No description provided for @patternArchived.
   ///
   /// In zh, this message translates to:

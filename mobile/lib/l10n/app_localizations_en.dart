@@ -5491,6 +5491,27 @@ class AppLocalizationsEn extends AppLocalizations {
       'Keep logging thoughts and reviewing your work. This space will turn those signals into meaningful patterns.';
 
   @override
+  String get patternListEmptyCta => 'Start your first diagnosis';
+
+  @override
+  String get patternListEmptyDiagnosisPrompt =>
+      'I\'d like a learning status diagnosis: based on my goals and recent activity, analyze my study patterns and weak spots, and suggest targeted improvements.';
+
+  @override
+  String get guestConversionCardTitle =>
+      'Your exam prep progress is saved on this device';
+
+  @override
+  String get guestConversionCardBody =>
+      'Create an account to sync your learning history, error book, and star map progress across all your devices.';
+
+  @override
+  String get guestConversionCardCta => 'Register to sync progress';
+
+  @override
+  String get guestConversionCardDismiss => 'Not now';
+
+  @override
   String get patternArchived => 'Resolved';
 
   @override

@@ -5265,6 +5265,25 @@ class AppLocalizationsZh extends AppLocalizations {
   String get patternListEmptySubtitle => '继续记录想法和复盘后，这里会把这些信号整理成真正有用的行为模式。';
 
   @override
+  String get patternListEmptyCta => '开始首次诊断';
+
+  @override
+  String get patternListEmptyDiagnosisPrompt =>
+      '我想做一次学习现状诊断：请结合我的目标和近期记录，分析我的学习模式与薄弱环节，并给出针对性的提升建议。';
+
+  @override
+  String get guestConversionCardTitle => '你的备考进度已保存在本机';
+
+  @override
+  String get guestConversionCardBody => '注册后，学习记录、错题本与星图进度会同步到你的所有设备，随时接着学。';
+
+  @override
+  String get guestConversionCardCta => '注册并同步进度';
+
+  @override
+  String get guestConversionCardDismiss => '暂不';
+
+  @override
   String get patternArchived => '已克服';
 
   @override
