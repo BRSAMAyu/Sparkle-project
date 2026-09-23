@@ -7,8 +7,12 @@ MiniMax M3 异步分析通道（async analysis lane）。
   跑在 MiniMax token plan 免费档（MiniMax-M3）上，换Token成本为零；
 - 端点为 OpenAI 兼容 chat completions：``{base}/text/chatcompletion_v2``。
 
-并发语义：
-- 全局 semaphore 钳制（``MINIMAX_MAX_CONCURRENCY``，默认 8，token plan 并发上限）；
+并发语义（DIST-SEMAPHORE 口径校正，依据 v3-output/MINIMAX-QUOTA）：
+- MiniMax 官方按**账户**（主+子账号共享）限 RPM/TPM——免费 20 RPM / 1M TPM，
+  充值 200 RPM / 10M TPM，**无文档化并发数**；
+- 全局 semaphore 钳制（``MINIMAX_MAX_CONCURRENCY``，默认 8）是进程内自保护阀，
+  非官方配额口径；跨进程 RPM 预算收敛见 ``MINIMAX_RPM_BUDGET``（llm_concurrency
+  acquire 路径前置，本直连 lane 不经过该路径）；
 - **快速拒绝、不排队**：车道满时调用方立即收到 :class:`MinimaxLaneBusyError`，
   而不是排队等待——异步任务应由消费方决定「现在降级」还是「下个周期重试」，
   排队只会把免费车道的拥堵传染给调用方的事件循环。

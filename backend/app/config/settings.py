@@ -498,12 +498,23 @@ class Settings(BaseSettings):
     DEEPSEEK_CHAT_MODEL: str = "deepseek-flash"
     DEEPSEEK_REASON_MODEL: str = "deepseek-v4-pro"
 
-    # MiniMax 异步分析通道（token plan 免费档；只承接后台/离线、非用户直面分析，
-    # 不进主聊天路由；并发钳制 = token plan 并发上限，车道满时快速拒绝）
+    # MiniMax 异步分析通道（DIST-SEMAPHORE 口径校正，依据 v3-output/MINIMAX-QUOTA：
+    # MiniMax 官方按**账户**（主+子账号共享）限 RPM/TPM——免费 20 RPM / 1M TPM，
+    # 充值 200 RPM / 10M TPM，无文档化并发数；MINIMAX_MAX_CONCURRENCY 是进程内
+    # 自保护阀，不是官方配额口径。只承接后台/离线、非用户直面分析，不进主聊天
+    # 路由；车道满时快速拒绝）
     MINIMAX_API_KEY: str = ""
     MINIMAX_BASE_URL: str = "https://api.minimaxi.com/v1"
     MINIMAX_CHAT_MODEL: str = "MiniMax-M3"
     MINIMAX_MAX_CONCURRENCY: int = 8
+    # DIST-SEMAPHORE：跨进程 MiniMax 账户级 RPM 预算（Redis 60s 固定窗口，容量 =
+    # 本值/分钟，引擎与全部 celery worker 共享一份）。官方按账户限 RPM（免费 20 /
+    # 充值 200，主+子账号共享），三进程各持本地 asyncio 池时 RPM 预算无全局面。
+    # - 0（默认，回滚位）= 禁用：仅本地并发池，行为与本设置引入前完全一致
+    #   （与 BATCH-CAP 的 env 分摊路径兼容，二者可叠加）；
+    # - >0 = 启用；Redis 缺席/出错时诚实降级回本地池并限频告警（不阻断）。
+    # 本地并发池保留为第二道防线：RPM 桶通过后仍过 MINIMAX_MAX_CONCURRENCY 槽。
+    MINIMAX_RPM_BUDGET: int = 0
     # BATCH-CAP（PROD-LOG2 ②-2）：llm_concurrency MINIMAX 池的等槽超时（秒）。
     # 原 45s 固定值在双 batch worker 载荷下被打穿（34 次超时→熔断 OPEN）。本池
     # 全部 in-engine 消费者都有降级/重试面，按直连车道同语义 fast-fail；5s ≈
@@ -1374,6 +1385,8 @@ class Settings(BaseSettings):
         self.GLM_BATCH_SPILLOVER_BACKLOG_FACTOR = max(1, int(self.GLM_BATCH_SPILLOVER_BACKLOG_FACTOR or 2))
 
         self.MINIMAX_MAX_CONCURRENCY = max(1, int(self.MINIMAX_MAX_CONCURRENCY or 8))
+        # DIST-SEMAPHORE：RPM 预算非负（0 = 禁用回滚位；负值视为未配置）
+        self.MINIMAX_RPM_BUDGET = max(0, int(self.MINIMAX_RPM_BUDGET or 0))
 
         return self
 

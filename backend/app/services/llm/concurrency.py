@@ -22,6 +22,7 @@ from loguru import logger
 
 from app.config import settings
 from app.core.cache import cache_service
+from app.services.llm.minimax_rpm_gate import get_minimax_rpm_gate
 
 
 class ProviderType(StrEnum):
@@ -118,10 +119,13 @@ PROVIDER_CONFIGS: dict[ProviderType, ConcurrencyConfig] = {
         max_concurrent=10,
         queue_timeout=30.0,
     ),
-    # MiniMax 异步分析车道：token plan 并发硬上限 = MINIMAX_MAX_CONCURRENCY（默认 8）。
-    # 走 OpenAI 兼容路径的 glm_batch 执行面（switch_to_specific_model → provider.chat）
-    # 经此池钳制；直连 lane（minimax_provider.analyze）另有同值 semaphore（注意：
-    # 两池独立、相加可到 2×配额，见 MINIMAX_QUEUE_TIMEOUT_SECONDS 注释）。
+    # MiniMax 异步分析车道（DIST-SEMAPHORE 口径校正，依据 v3-output/MINIMAX-QUOTA）：
+    # MiniMax 官方按**账户**（主+子账号共享）限 RPM/TPM——免费 20 RPM / 1M TPM，
+    # 充值 200 RPM / 10M TPM，**无文档化并发数**；本值是进程内自保护阀，不是官方
+    # 配额口径。走 OpenAI 兼容路径的 glm_batch 执行面（switch_to_specific_model →
+    # provider.chat）经此池钳制；直连 lane（minimax_provider.analyze）另有同值
+    # semaphore（两池独立、相加可到 2×env，见 MINIMAX_QUEUE_TIMEOUT_SECONDS 注释）。
+    # 跨进程 RPM 预算收敛见 MINIMAX_RPM_BUDGET（Redis 固定窗口，acquire 路径前置）。
     # 队列超时（BATCH-CAP，PROD-LOG2 ②-2）：原 45s 固定值在双 batch worker 载荷下
     # 被打穿（实测 34 次 45s 超时 → 熔断 OPEN）。等槽期望 ≈ (排队深度/槽位)×单调用
     # 时长，饱和态下深度无界，任何固定超时都会被打穿；而本池所有 in-engine 消费者
@@ -468,7 +472,21 @@ class _ConcurrencyLimiter:
 
     async def __aenter__(self):
         try:
-            await self.manager._acquire_slot(self.provider_type, self.timeout)
+            slot_timeout = self.timeout
+            if self.provider_type is ProviderType.MINIMAX:
+                # DIST-SEMAPHORE：MiniMax 账户级 RPM 预算闸（Redis 固定窗口），
+                # 本地并发池之前的全局面第一道防线。仅 MINIMAX 生效；禁用
+                # （MINIMAX_RPM_BUDGET=0，默认）或 Redis 缺席时 gate 为 None /
+                # 内部诚实降级，行为与此前完全一致。
+                gate = get_minimax_rpm_gate()
+                if gate is not None:
+                    loop = asyncio.get_running_loop()
+                    deadline = loop.time() + self.timeout
+                    await gate.acquire(self.timeout)
+                    # 剩余等待预算交给本地池（第二道防线），总等待 ≤ queue_timeout，
+                    # 不放宽 BATCH-CAP 的 fast-fail 契约。
+                    slot_timeout = max(0.05, deadline - loop.time())
+            await self.manager._acquire_slot(self.provider_type, slot_timeout)
             self._acquired = True
             return self
         except TimeoutError:
