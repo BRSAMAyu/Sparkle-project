@@ -374,6 +374,10 @@ class GalaxyNodeSemantics extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
+        // container: true——每个节点是独立语义边界，读屏线性遍历按清单
+        // 逐节点朗读（GALAXY-A11Y 接线：零尺寸条目并排时无边界会被
+        // 合并成一整块，节点粒度即丢失）。
+        container: true,
         label: accessibilityService.getNodeSemanticLabel(node),
         hint: node.isUnlocked
             ? I18nService.instance.l10n.galaxyA11yHintStartLearning

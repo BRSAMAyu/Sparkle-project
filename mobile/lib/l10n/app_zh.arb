@@ -3886,17 +3886,28 @@
     "fileStatusUploaded": "已上传",
     "galaxyA11yActionStartLearning": "开始学习",
     "galaxyA11yActionUnlockNode": "解锁节点",
+    "galaxyA11yCanvasSummary": "知识星图：{nodeCount} 个知识点，覆盖 {domainCount} 个领域",
+    "@galaxyA11yCanvasSummary": {
+      "placeholders": {
+        "nodeCount": {
+          "type": "int"
+        },
+        "domainCount": {
+          "type": "int"
+        }
+      }
+    },
     "galaxyA11yClusterLabel": "{arg0} {arg1} {arg2}",
     "galaxyA11yHintStartLearning": "点击开始学习此知识点",
     "galaxyA11yHintUnlockNode": "点击解锁此节点",
     "galaxyA11yNavigateTo": "{arg0}",
     "galaxyA11yNavigationHint": "使用手势导航知识星图",
-    "galaxyA11yNodeImportance": "{arg0}",
-    "galaxyA11yNodeLocked": "节点已锁定",
-    "galaxyA11yNodeMastery": "{arg0}",
+    "galaxyA11yNodeImportance": "，重要度{arg0}）",
+    "galaxyA11yNodeLocked": "（未解锁",
+    "galaxyA11yNodeMastery": "，掌握度 {arg0} 分",
     "galaxyA11yNodePrefix": "{arg0} {arg1}",
-    "galaxyA11yNodeStudyCount": "{arg0}",
-    "galaxyA11yNodeUnlocked": "节点已解锁",
+    "galaxyA11yNodeStudyCount": "，已学习 {arg0} 次",
+    "galaxyA11yNodeUnlocked": "（已解锁",
     "galaxyA11ySectorLabel": "{arg0} {arg1}",
     "galaxyA11yZoomLevel": "{arg0}",
     "galaxyControlOverview": "概览",

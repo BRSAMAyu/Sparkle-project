@@ -9077,6 +9077,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get galaxyA11yActionUnlockNode => '解锁节点';
 
   @override
+  String galaxyA11yCanvasSummary(int nodeCount, int domainCount) {
+    return '知识星图：$nodeCount 个知识点，覆盖 $domainCount 个领域';
+  }
+
+  @override
   String galaxyA11yClusterLabel(Object arg0, Object arg1, Object arg2) {
     return '$arg0 $arg1 $arg2';
   }
@@ -9097,15 +9102,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String galaxyA11yNodeImportance(Object arg0) {
-    return '$arg0';
+    return '，重要度$arg0）';
   }
 
   @override
-  String get galaxyA11yNodeLocked => '节点已锁定';
+  String get galaxyA11yNodeLocked => '（未解锁';
 
   @override
   String galaxyA11yNodeMastery(Object arg0) {
-    return '$arg0';
+    return '，掌握度 $arg0 分';
   }
 
   @override
@@ -9115,11 +9120,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String galaxyA11yNodeStudyCount(Object arg0) {
-    return '$arg0';
+    return '，已学习 $arg0 次';
   }
 
   @override
-  String get galaxyA11yNodeUnlocked => '节点已解锁';
+  String get galaxyA11yNodeUnlocked => '（已解锁';
 
   @override
   String galaxyA11ySectorLabel(Object arg0, Object arg1) {

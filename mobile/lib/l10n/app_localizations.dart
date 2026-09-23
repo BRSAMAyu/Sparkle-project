@@ -16778,6 +16778,12 @@ abstract class AppLocalizations {
   /// **'解锁节点'**
   String get galaxyA11yActionUnlockNode;
 
+  /// No description provided for @galaxyA11yCanvasSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识星图：{nodeCount} 个知识点，覆盖 {domainCount} 个领域'**
+  String galaxyA11yCanvasSummary(int nodeCount, int domainCount);
+
   /// No description provided for @galaxyA11yClusterLabel.
   ///
   /// In zh, this message translates to:
@@ -16811,19 +16817,19 @@ abstract class AppLocalizations {
   /// No description provided for @galaxyA11yNodeImportance.
   ///
   /// In zh, this message translates to:
-  /// **'{arg0}'**
+  /// **'，重要度{arg0}）'**
   String galaxyA11yNodeImportance(Object arg0);
 
   /// No description provided for @galaxyA11yNodeLocked.
   ///
   /// In zh, this message translates to:
-  /// **'节点已锁定'**
+  /// **'（未解锁'**
   String get galaxyA11yNodeLocked;
 
   /// No description provided for @galaxyA11yNodeMastery.
   ///
   /// In zh, this message translates to:
-  /// **'{arg0}'**
+  /// **'，掌握度 {arg0} 分'**
   String galaxyA11yNodeMastery(Object arg0);
 
   /// No description provided for @galaxyA11yNodePrefix.
@@ -16835,13 +16841,13 @@ abstract class AppLocalizations {
   /// No description provided for @galaxyA11yNodeStudyCount.
   ///
   /// In zh, this message translates to:
-  /// **'{arg0}'**
+  /// **'，已学习 {arg0} 次'**
   String galaxyA11yNodeStudyCount(Object arg0);
 
   /// No description provided for @galaxyA11yNodeUnlocked.
   ///
   /// In zh, this message translates to:
-  /// **'节点已解锁'**
+  /// **'（已解锁'**
   String get galaxyA11yNodeUnlocked;
 
   /// No description provided for @galaxyA11ySectorLabel.

@@ -9432,6 +9432,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyA11yActionUnlockNode => 'Galaxy A11y Action Unlock Node';
 
   @override
+  String galaxyA11yCanvasSummary(int nodeCount, int domainCount) {
+    return 'Knowledge galaxy: $nodeCount nodes across $domainCount domains';
+  }
+
+  @override
   String galaxyA11yClusterLabel(Object arg0, Object arg1, Object arg2) {
     return '$arg0 $arg1 $arg2';
   }
@@ -9452,15 +9457,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String galaxyA11yNodeImportance(Object arg0) {
-    return '$arg0';
+    return ', importance: $arg0)';
   }
 
   @override
-  String get galaxyA11yNodeLocked => 'Galaxy A11y Node Locked';
+  String get galaxyA11yNodeLocked => ' (locked';
 
   @override
   String galaxyA11yNodeMastery(Object arg0) {
-    return '$arg0';
+    return ', mastery $arg0';
   }
 
   @override
@@ -9470,11 +9475,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String galaxyA11yNodeStudyCount(Object arg0) {
-    return '$arg0';
+    return ', studied $arg0 times';
   }
 
   @override
-  String get galaxyA11yNodeUnlocked => 'Galaxy A11y Node Unlocked';
+  String get galaxyA11yNodeUnlocked => ' (unlocked';
 
   @override
   String galaxyA11ySectorLabel(Object arg0, Object arg1) {

@@ -213,6 +213,12 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   String? _lastObservedRoutePath;
   bool _isDraftReviewOpen = false;
 
+  // GALAXY-A11Y：星图节点语义清单的实例缓存（见 [_buildNodeSemanticsOverlay]）。
+  // 按图缓存一次构建产物：物理/相机每帧 setState 重跑 build 时，元素树对
+  // identical widget 直接短路，语义子树不进热路径；图变更或语言切换时置空重建。
+  Widget? _nodeSemanticsOverlay;
+  Locale? _nodeSemanticsLocale;
+
   // SPEC-J（A-SPEC top10 #10）：galaxy 工作视图最小切片。
   // 默认进图先聚「下一个建议碰」锚点邻域（复用既有 spotlight 机制），
   // 并挂一枚推荐 chip（§4.1.4 ≤1 名额铁律——全屏最多一枚，见
@@ -864,6 +870,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _lightBlendedColors = lightBlendedColors;
       _pendingPersistNodeId = null;
       _isLoading = false;
+      // GALAXY-A11Y：图已换——节点语义清单随新图重建（节点增删/名称/掌握度）。
+      _nodeSemanticsOverlay = null;
       _didFitInitialCamera = preserveCamera;
       if (playbackLaunch != null) {
         _primePlaybackState(
@@ -1174,6 +1182,100 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _syncProviderSelection(node.id);
     if (scheduleDismiss) {
       _schedulePreviewDismiss();
+    }
+  }
+
+  // ============================================
+  // GALAXY-A11Y：星图读屏语义化（激活既有 GalaxyAccessibilityService/
+  // GalaxyNodeSemantics 死代码——A-SPEC6 AX-G3/N38 一期接线令）
+  // ============================================
+
+  /// 星图节点语义清单（读屏线性遍历的替代路径）。
+  ///
+  /// 背景：画布本体是 CustomPaint（StarMapPainter 零语义），4266 行绘制
+  /// 对读屏完全不可见（A-SPEC6 AX-G3「读屏黑洞」）。本清单把图内全部节点
+  /// 按图序暴露为线性语义节点：名称/解锁态/掌握度/学习次数/重要度文案
+  /// 复用 [GalaxyAccessibilityService.getNodeSemanticLabel] 既有 l10n 全套
+  /// （galaxyA11yNode* 家族，本次激活前 0 引用）；tap 语义动作走
+  /// [_activateNodeFromSemantics]（与画布点按同链路）。
+  ///
+  /// 性能红线（语义子树不得拖慢画布帧率）的实现口径：
+  /// - 视觉完全隐身：`Opacity(0)` 保语义剔除绘制、`IgnorePointer` 剔除命中
+  ///   ——每节点仅一个 48×48 隐形语义锚点，无可见 paint 无 hit-test 参与；
+  /// - 条目锚在同位矩形（Stack 叠放）：滚动视口对 rect 不与可视区相交
+  ///   （含零尺寸 rect）的语义节点会打 invisible 标并禁用动作，叠放保证
+  ///   任意规模下每个条目都可选可激活，同位时读屏遍历顺序=图序；
+  /// - 实例按图缓存：返回值缓存进 `_nodeSemanticsOverlay`，图变更/语言
+  ///   切换才重建。物理引擎与相机动画每帧 setState 重跑 build 时，元素树
+  ///   对 identical widget 直接短路（不重建、不再生成 label 字符串），
+  ///   语义子树不进每帧热路径；每次 flush 的语义树遍历是纯树走查，
+  ///   O(节点数) 微秒级，相对 painter 重绘可忽略（实测见本卡 REPORT）。
+  /// - 规模口径：取全量节点而非「首屏可见」——可见集随相机每帧变化，
+  ///   按帧重建语义正是要避免的热路径；语义条目本身零视觉成本，全量
+  ///   不构成规模问题。
+  Widget _buildNodeSemanticsOverlay() {
+    final locale = Localizations.localeOf(context);
+    final cached = _nodeSemanticsOverlay;
+    if (cached != null && _nodeSemanticsLocale == locale) {
+      return cached;
+    }
+    final graph = _graph;
+    if (graph == null || graph.nodes.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    // 视觉隐身靠 Opacity(0)（alwaysIncludeSemantics 保语义存活）；
+    // 不用 IgnorePointer——新版 framework 会把 IgnorePointer 后代的语义
+    // 用户动作整体 blocked（读屏 tap 不可激活）。指针安全由挂载位置保证：
+    // 清单在 Stack 最底层，画布 Listener（HitTestBehavior.opaque、后绘）
+    // 命中测试先行吸收全部指针事件，清单永不被真实手势触达。
+    final overlay = Opacity(
+      opacity: 0,
+      alwaysIncludeSemantics: true,
+      // 用 Stack 让全部条目锚在同一个小矩形内：滚动视口会把 rect 不与
+      // 可视区相交（含零尺寸）的语义节点标记为 invisible 并禁用其动作
+      // （实测 tap🚫️），叠放可保证任意节点规模下每个条目都在视口内、
+      // 可被读屏线性遍历；同位重叠时遍历顺序即图序（兄弟序）。
+      child: SizedBox.fromSize(
+        size: const Size(48, 48),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: <Widget>[
+            for (final node in graph.nodes)
+              GalaxyNodeSemantics(
+                key: ValueKey<String>('galaxy-a11y-node-${node.id}'),
+                node: node,
+                accessibilityService: _accessibilityService,
+                onTap: () => _activateNodeFromSemantics(node),
+                child: const SizedBox.expand(),
+              ),
+          ],
+        ),
+      ),
+    );
+    _nodeSemanticsLocale = locale;
+    _nodeSemanticsOverlay = overlay;
+    return overlay;
+  }
+
+  /// 读屏 tap 语义动作 → 复用画布点按同链路（TapCommand 的分发语义）：
+  /// 解锁节点走 [_startTapFeedback]（反馈动画完成自动开详情 sheet），
+  /// 锁定节点走 [_showPreviewForNode]（预览卡）。语义激活没有屏幕坐标，
+  /// anchor 取视口中心落卡。
+  void _activateNodeFromSemantics(GalaxyNodeModel node) {
+    _noteInteraction();
+    _stopBuildReplay();
+    _stopPhysicsSimulation(commitPendingNode: true);
+    unawaited(_accessibilityService.selectionHaptic());
+    if (node.isUnlocked) {
+      _startTapFeedback(node.id);
+    } else {
+      _showPreviewForNode(
+        node,
+        anchor: Offset(
+          _viewportSize.width / 2,
+          _viewportSize.height / 2,
+        ),
+      );
     }
   }
 
@@ -3038,9 +3140,23 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       ),
     );
 
+    // GALAXY-A11Y：容器级语义从裸「星图」升级为可理解的画布摘要
+    // 「知识星图：N 个知识点，覆盖 M 个领域」——读屏用户开口即知全图规模。
+    // 领域口径 = 节点 sector 去重计数（SectorConfig 既有领域体系，不自造）；
+    // 空图/加载态退回既有「星图」标签，不造默认值。
+    final canvasDomainCount =
+        graph?.nodes.map((node) => node.sector).toSet().length ?? 0;
+    final canvasSemanticsLabel =
+        graph == null || graph.nodes.isEmpty || canvasDomainCount == 0
+            ? context.l10n.galaxy
+            : context.l10n.galaxyA11yCanvasSummary(
+                graph.nodes.length,
+                canvasDomainCount,
+              );
+
     return Semantics(
       container: true,
-      label: context.l10n.galaxy,
+      label: canvasSemanticsLabel,
       child: Theme(
         data: galaxyTheme,
         child: Scaffold(
@@ -3143,6 +3259,13 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                               ),
                               child: Opacity(
                                 opacity: progress,
+                                // GALAXY-A11Y：入场渐变期语义必须存活。
+                                // RenderOpacity 在 alpha==0 时默认整树丢弃
+                                // 语义（framework proxy_box
+                                // visitChildrenForSemantics）——不挂本参数，
+                                // 入场 620ms 内（及进度停驻的场景）整屏对
+                                // 读屏不存在，画布语义化在根上就失效。
+                                alwaysIncludeSemantics: true,
                                 child: Transform.scale(
                                   scale: 0.9 +
                                       0.1 *
@@ -3156,6 +3279,15 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                           child: Stack(
                             key: const ValueKey<bool>(isDarkMode),
                             children: [
+                              // GALAXY-A11Y：节点语义清单——读屏替代路径。
+                              // 挂在最底层（画布 Listener 之前）：命中测试
+                              // 自后向前，不透明的画布 Listener 先吸收全部
+                              // 真实手势，清单只留语义；读屏线性遍历顺序为
+                              // 容器摘要 → 节点清单 → 操作控件。实例按图
+                              // 缓存不随帧重建（性能红线见方法注释）。
+                              // graph 非空由本分支前置早退保证（空图走 _StatusPanel）。
+                              if (graph.nodes.isNotEmpty)
+                                _buildNodeSemanticsOverlay(),
                               Listener(
                                 behavior: HitTestBehavior.opaque,
                                 onPointerDown: _handlePointerDown,
