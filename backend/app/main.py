@@ -38,6 +38,7 @@ from app.consumers.welcome_onboarding_consumer import WelcomeOnboardingConsumer
 from app.core.cache import cache_service
 from app.core.exceptions import SparkleException
 from app.core.idempotency import get_idempotency_store
+from app.core.logging_setup import add_rotating_file_sink_if_configured
 from app.core.pending_actions import pending_actions_store
 from app.core.rate_limiting import setup_rate_limiting
 from app.core.redis_search_client import redis_search_client
@@ -83,6 +84,18 @@ logger.add(
     level=settings.LOG_LEVEL,
     serialize=not settings.DEBUG,  # JSON format in production
 )
+# ENGINE-LOGROT: 可选轮转文件 sink——仅在显式配置 LOG_FILE_PATH 时挂载（默认
+# 关闭，未配置时引擎行为与本段之前逐位一致）；失败只降级告警，不拖垮启动。
+try:
+    add_rotating_file_sink_if_configured(
+        settings.LOG_FILE_PATH,
+        rotation_mb=settings.LOG_ROTATION_MB,
+        retention=settings.LOG_RETENTION,
+        level=settings.LOG_LEVEL,
+        serialize=not settings.DEBUG,
+    )
+except Exception as exc:  # 日志落盘配置错误不应阻止引擎启动
+    logger.warning("Optional rotating log file sink not mounted: {}", exc)
 
 INTERVENTION_OUTCOME_VERIFIER_INTERVAL_SECONDS = int(os.getenv("INTERVENTION_OUTCOME_VERIFIER_INTERVAL_SECONDS", "900"))
 ENABLE_IN_PROCESS_INTERVENTION_OUTCOME_VERIFIER = (

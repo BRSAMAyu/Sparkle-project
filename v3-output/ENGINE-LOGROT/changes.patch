@@ -1,0 +1,313 @@
+diff --git a/backend/app/config/settings.py b/backend/app/config/settings.py
+index 42a558b2..036ea2c6 100755
+--- a/backend/app/config/settings.py
++++ b/backend/app/config/settings.py
+@@ -1015,6 +1015,12 @@ class Settings(BaseSettings):
+ 
+     # Logging
+     LOG_LEVEL: str = "INFO"
++    # ENGINE-LOGROT: 可选轮转文件 sink——默认空串 = 关闭（行为与未合入本配置前一致）。
++    # 仅 uvicorn 进程消费（gRPC 进程在 grpc_server.py 自带轮转文件 sink）；
++    # rotation=LOG_ROTATION_MB（MB 尺寸），retention=LOG_RETENTION（保留文件数）。
++    LOG_FILE_PATH: str = ""
++    LOG_ROTATION_MB: float = 20.0
++    LOG_RETENTION: int = 10
+ 
+     # Sentry crash reporting
+     SENTRY_DSN: str = ""
+diff --git a/backend/app/main.py b/backend/app/main.py
+index a571c7ba..63d1ad0d 100755
+--- a/backend/app/main.py
++++ b/backend/app/main.py
+@@ -38,6 +38,7 @@ from app.consumers.welcome_onboarding_consumer import WelcomeOnboardingConsumer
+ from app.core.cache import cache_service
+ from app.core.exceptions import SparkleException
+ from app.core.idempotency import get_idempotency_store
++from app.core.logging_setup import add_rotating_file_sink_if_configured
+ from app.core.pending_actions import pending_actions_store
+ from app.core.rate_limiting import setup_rate_limiting
+ from app.core.redis_search_client import redis_search_client
+@@ -83,6 +84,18 @@ logger.add(
+     level=settings.LOG_LEVEL,
+     serialize=not settings.DEBUG,  # JSON format in production
+ )
++# ENGINE-LOGROT: 可选轮转文件 sink——仅在显式配置 LOG_FILE_PATH 时挂载（默认
++# 关闭，未配置时引擎行为与本段之前逐位一致）；失败只降级告警，不拖垮启动。
++try:
++    add_rotating_file_sink_if_configured(
++        settings.LOG_FILE_PATH,
++        rotation_mb=settings.LOG_ROTATION_MB,
++        retention=settings.LOG_RETENTION,
++        level=settings.LOG_LEVEL,
++        serialize=not settings.DEBUG,
++    )
++except Exception as exc:  # 日志落盘配置错误不应阻止引擎启动
++    logger.warning("Optional rotating log file sink not mounted: {}", exc)
+ 
+ INTERVENTION_OUTCOME_VERIFIER_INTERVAL_SECONDS = int(os.getenv("INTERVENTION_OUTCOME_VERIFIER_INTERVAL_SECONDS", "900"))
+ ENABLE_IN_PROCESS_INTERVENTION_OUTCOME_VERIFIER = (
+diff --git a/backend/app/core/logging_setup.py b/backend/app/core/logging_setup.py
+new file mode 100644
+index 00000000..2ff8df01
+--- /dev/null
++++ b/backend/app/core/logging_setup.py
+@@ -0,0 +1,66 @@
++"""ENGINE-LOGROT · loguru 可选轮转文件 sink。
++
++背景（PROD-LOG2 ④-P3）：引擎 uvicorn 进程的日志只挂 stderr sink，主会话以
++nohup 重定向到 /tmp/*.log——每次重启旧文件被顶掉，证据链断裂（2026-09-23
++巡检中 09:10 实例的日志即因此丢失）。gRPC 进程不受影响：``grpc_server.py``
++自带 ``logs/grpc_server_{time}.log``（1 天轮转 / 7 天保留）。
++
++设计裁决（显式开，非默认开）：
++- ``LOG_FILE_PATH`` 默认空串 = **不挂载**，引擎行为与本卡合入前逐位一致；
++- 仅当主会话在 .env（或启动 env）显式配置路径时才挂载文件 sink，且 stderr
++  sink 一律保留（双写）；
++- rotation/retention 由 ``LOG_ROTATION_MB``（默认 20）/``LOG_RETENTION``
++  （默认 10 个文件）控制，与日志现量级匹配；
++- 显式开而非默认开的理由：磁盘纪律（AGENTS.md 2026-09-19 立规）要求运行时
++  数据可归口管理，默认落盘会让测试/CI/子 agent 环境意外产生文件；主会话是
++  唯一合入方，由它决定路径（推荐 backend/logs/ 下，已被 .gitignore 覆盖，
++  且不随 /tmp 清理丢失）。
++"""
++
++from __future__ import annotations
++
++from typing import Any
++
++from loguru import logger
++
++
++def format_rotation_size(rotation_mb: float) -> str:
++    """把 MB 数值转成 loguru rotation 尺寸串。
++
++    整数归一为 ``"20 MB"`` 形制；非整数保留小数（如 ``"0.05 MB"``），
++    以便用小阈值在单测里真实触发轮转。非正数直接拒绝。
++    """
++    value = float(rotation_mb)
++    if value <= 0:
++        raise ValueError(f"rotation_mb must be > 0, got {rotation_mb!r}")
++    if value.is_integer():
++        return f"{int(value)} MB"
++    return f"{value} MB"
++
++
++def add_rotating_file_sink_if_configured(
++    path: str,
++    *,
++    rotation_mb: float = 20,
++    retention: int = 10,
++    level: str = "INFO",
++    serialize: bool = False,
++    sink_logger: Any = logger,
++) -> int | None:
++    """按配置挂载轮转文件 sink；未配置路径时是严格 no-op。
++
++    - ``path`` 空/空白 → 返回 ``None``，不触碰任何既有 handler（默认行为
++      与本卡之前逐位一致）；
++    - 配置了路径 → 以 ``"<N> MB"`` 尺寸轮转、保留 ``retention`` 个文件，
++      与 stderr sink 同 level/serialize 语义；loguru 会自动创建父目录；
++    - 返回挂载成功的 handler id（进程生命周期内有效，调用方无需持有）。
++    """
++    if not path or not path.strip():
++        return None
++    return sink_logger.add(
++        path.strip(),
++        level=level,
++        serialize=serialize,
++        rotation=format_rotation_size(rotation_mb),
++        retention=retention,
++    )
+diff --git a/backend/tests/unit/test_logging_file_sink.py b/backend/tests/unit/test_logging_file_sink.py
+new file mode 100644
+index 00000000..9cec3987
+--- /dev/null
++++ b/backend/tests/unit/test_logging_file_sink.py
+@@ -0,0 +1,187 @@
++"""ENGINE-LOGROT · 引擎可选轮转文件 sink 回归测试。
++
++覆盖三份契约（对应卡片验收口径）：
++1. 配置了 ``LOG_FILE_PATH`` → 文件 sink 挂载成功，rotation/retention 参数
++   按 settings 生效（小阈值真实触发轮转，证据行数零丢失）；
++2. 未配置 → 严格 no-op，handler 集合不变——uvicorn 进程行为与本卡之前
++   逐位一致；
++3. 接线不回潮：``app/main.py`` 的 stderr sink 形制不被本卡改动，helper
++   以 settings 字段挂载；``grpc_server.py`` 自带轮转文件 sink 保持原样
++   （本卡明确不动 gRPC 进程）。
++"""
++
++from __future__ import annotations
++
++import ast
++from pathlib import Path
++
++from loguru import logger as loguru_logger
++
++from app.config.settings import Settings
++from app.core.logging_setup import add_rotating_file_sink_if_configured, format_rotation_size
++
++BACKEND_ROOT = Path(__file__).resolve().parents[2]
++
++
++def _handler_ids() -> set[int]:
++    # loguru 0.7 稳定内部结构；仅测试内用于 handler 集合对比
++    return set(loguru_logger._core.handlers.keys())
++
++
++# ---------------------------------------------------------------------------
++# 1) rotation 参数形制
++# ---------------------------------------------------------------------------
++
++
++def test_format_rotation_size_integer_normalizes():
++    assert format_rotation_size(20) == "20 MB"
++    assert format_rotation_size(20.0) == "20 MB"
++
++
++def test_format_rotation_size_decimal_kept_for_small_threshold_tests():
++    assert format_rotation_size(0.05) == "0.05 MB"
++
++
++def test_format_rotation_size_rejects_non_positive():
++    for bad in (0, 0.0, -1, -0.5):
++        try:
++            format_rotation_size(bad)
++        except ValueError:
++            continue
++        raise AssertionError(f"expected ValueError for {bad!r}")
++
++
++# ---------------------------------------------------------------------------
++# 2) 未配置 → 严格 no-op（与现状逐位一致）
++# ---------------------------------------------------------------------------
++
++
++def test_unconfigured_path_is_strict_noop():
++    ids_before = _handler_ids()
++    for empty in ("", "   "):
++        assert add_rotating_file_sink_if_configured(empty) is None
++    assert _handler_ids() == ids_before, "未配置路径时不得新增/改动任何 handler"
++
++
++# ---------------------------------------------------------------------------
++# 3) 配置了 → 文件 sink 挂载 + 参数正确
++# ---------------------------------------------------------------------------
++
++
++def test_configured_path_mounts_file_sink(tmp_path):
++    log_file = tmp_path / "engine.log"
++    ids_before = _handler_ids()
++    hid = add_rotating_file_sink_if_configured(str(log_file), level="INFO", serialize=False)
++    try:
++        assert hid is not None
++        assert hid in _handler_ids() and hid not in ids_before
++        loguru_logger.info("LOGROT-MOUNT-PROBE {}", 1)
++        loguru_logger.warning("LOGROT-MOUNT-PROBE {}", 2)
++    finally:
++        loguru_logger.remove(hid)
++
++    text = log_file.read_text(encoding="utf-8")
++    assert "LOGROT-MOUNT-PROBE 1" in text and "LOGROT-MOUNT-PROBE 2" in text
++
++
++def test_file_sink_respects_level_filter(tmp_path):
++    log_file = tmp_path / "engine_warn.log"
++    hid = add_rotating_file_sink_if_configured(str(log_file), level="WARNING", serialize=False)
++    try:
++        loguru_logger.info("LOGROT-FILTERED-OUT")
++        loguru_logger.warning("LOGROT-KEPT-IN")
++    finally:
++        loguru_logger.remove(hid)
++
++    text = log_file.read_text(encoding="utf-8")
++    assert "LOGROT-KEPT-IN" in text
++    assert "LOGROT-FILTERED-OUT" not in text
++
++
++def test_rotation_triggers_with_small_threshold_and_no_line_loss(tmp_path):
++    log_file = tmp_path / "engine.log"
++    hid = add_rotating_file_sink_if_configured(
++        str(log_file), rotation_mb=0.05, retention=3, level="INFO", serialize=False
++    )
++    # 每行约 240B（默认格式 + 120 字符负载）：300 行 ≈ 72KB，恰好跨过一次
++    # 0.05MB(≈52KB) 阈值、远低于第二次（≈104KB）——确定性单次轮转。
++    total_lines = 300
++    try:
++        for i in range(total_lines):
++            loguru_logger.info("LOGROT-ROTATE-PROBE {:04d} {}", i, "p" * 120)
++    finally:
++        loguru_logger.remove(hid)
++
++    rotated = sorted(tmp_path.glob("engine*.log"))
++    assert len(rotated) == 2, f"expected exactly one rotation (rotated + active), got {rotated}"
++    # 轮转不得丢行——证据链完整的本质断言
++    kept = sum(len(f.read_text(encoding="utf-8").splitlines()) for f in rotated)
++    assert kept == total_lines
++
++
++# ---------------------------------------------------------------------------
++# 4) settings 缺省契约：默认关闭
++# ---------------------------------------------------------------------------
++
++
++def test_settings_defaults_keep_file_sink_disabled():
++    fields = Settings.model_fields
++    assert fields["LOG_FILE_PATH"].default == ""
++    assert fields["LOG_ROTATION_MB"].default == 20.0
++    assert fields["LOG_RETENTION"].default == 10
++
++
++# ---------------------------------------------------------------------------
++# 5) 接线不回潮（AST 精确判定，不 import app.main 避免全应用副作用）
++# ---------------------------------------------------------------------------
++
++
++def _iter_calls(tree: ast.AST):
++    for node in ast.walk(tree):
++        if isinstance(node, ast.Call):
++            yield node
++
++
++def test_main_stderr_sink_form_unchanged():
++    src = (BACKEND_ROOT / "app" / "main.py").read_text(encoding="utf-8")
++    tree = ast.parse(src)
++    stderr_adds = [
++        node
++        for node in _iter_calls(tree)
++        if isinstance(node.func, ast.Attribute)
++        and node.func.attr == "add"
++        and node.args
++        and isinstance(node.args[0], ast.Attribute)
++        and node.args[0].attr == "stderr"
++    ]
++    assert len(stderr_adds) == 1, "uvicorn 进程 stderr sink 必须有且仅有一处"
++    assert {kw.arg for kw in stderr_adds[0].keywords} == {"level", "serialize"}, (
++        "stderr sink 形制（level/serialize）不得被本卡改动"
++    )
++
++
++def test_main_wires_optional_file_sink_via_settings():
++    src = (BACKEND_ROOT / "app" / "main.py").read_text(encoding="utf-8")
++    tree = ast.parse(src)
++    calls = [
++        node
++        for node in _iter_calls(tree)
++        if getattr(node.func, "id", None) == "add_rotating_file_sink_if_configured"
++    ]
++    assert len(calls) == 1, "helper 在 main.py 必须有且仅有一处挂载调用"
++    call = calls[0]
++    assert len(call.args) == 1 and call.args[0].attr == "LOG_FILE_PATH"
++    kw = {k.arg: getattr(k.value, "attr", None) for k in call.keywords}
++    assert kw == {
++        "rotation_mb": "LOG_ROTATION_MB",
++        "retention": "LOG_RETENTION",
++        "level": "LOG_LEVEL",
++        "serialize": None,  # 表达式 not settings.DEBUG，非裸属性
++    }
++
++
++def test_grpc_entry_keeps_own_rotating_sink_untouched():
++    src = (BACKEND_ROOT / "grpc_server.py").read_text(encoding="utf-8")
++    assert "grpc_server_{time}.log" in src
++    assert 'rotation="1 day"' in src
++    assert "retention=" in src

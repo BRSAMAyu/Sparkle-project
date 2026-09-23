@@ -1024,6 +1024,12 @@ class Settings(BaseSettings):
 
     # Logging
     LOG_LEVEL: str = "INFO"
+    # ENGINE-LOGROT: 可选轮转文件 sink——默认空串 = 关闭（行为与未合入本配置前一致）。
+    # 仅 uvicorn 进程消费（gRPC 进程在 grpc_server.py 自带轮转文件 sink）；
+    # rotation=LOG_ROTATION_MB（MB 尺寸），retention=LOG_RETENTION（保留文件数）。
+    LOG_FILE_PATH: str = ""
+    LOG_ROTATION_MB: float = 20.0
+    LOG_RETENTION: int = 10
 
     # Sentry crash reporting
     SENTRY_DSN: str = ""
