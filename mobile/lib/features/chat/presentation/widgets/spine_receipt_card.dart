@@ -141,15 +141,19 @@ class _Header extends StatelessWidget {
                 ),
               ),
             ),
-            Semantics(
-              button: true,
-              label: 'Chat spine receipt card control 1',
-              child: IconButton(
-                icon: Icon(Icons.close, size: 15, color: DS.textTertiary),
-                onPressed: onDismiss,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            // 乙式（A11Y-BATCH4）：单节点按钮名；原外挂 Semantics 为硬编码
+            // 英文占位标签（'...control 1'）且拆节点，废除。
+            IconButton(
+              tooltip: context.l10n.commonClose,
+              icon: Icon(
+                Icons.close,
+                semanticLabel: context.l10n.commonClose,
+                size: 15,
+                color: DS.textTertiary,
               ),
+              onPressed: onDismiss,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             ),
           ],
         ),

@@ -95,6 +95,8 @@ class CommunityStrategyCard extends StatelessWidget {
                 if (onDismiss != null)
                   SparkleIconButton(
                     variant: ButtonVariant.ghost,
+                    // N31 图标钮必有名（A11Y-BATCH4）。
+                    semanticLabel: context.l10n.commonDismiss,
                     icon: const Icon(Icons.close, size: 16),
                     onPressed: onDismiss,
                   ),

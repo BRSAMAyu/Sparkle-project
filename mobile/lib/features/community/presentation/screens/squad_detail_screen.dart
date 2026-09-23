@@ -44,6 +44,8 @@ class SquadDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
+          // N31 图标钮必有名（A11Y-BATCH4）。
+          semanticLabel: context.l10n.back,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),

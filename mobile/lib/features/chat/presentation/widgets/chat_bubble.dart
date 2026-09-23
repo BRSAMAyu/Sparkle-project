@@ -694,12 +694,15 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                 ?.copyWith(fontWeight: FontWeight.w700),
                           ),
                         ),
-                        Semantics(
-                          button: true,
-                          label: 'Close exploration panel',
-                          child: IconButton(
-                            onPressed: () => Navigator.of(dialogContext).pop(),
-                            icon: const Icon(Icons.close_rounded),
+                        // 乙式（A11Y-BATCH4）：tooltip+Icon semanticLabel
+                        // 同键单节点；原外挂 Semantics(label:) 是硬编码英文
+                        // 且把 label 与按钮拆成两个语义节点，一并废除。
+                        IconButton(
+                          tooltip: dialogContext.l10n.commonClose,
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          icon: Icon(
+                            Icons.close_rounded,
+                            semanticLabel: dialogContext.l10n.commonClose,
                           ),
                         ),
                       ],

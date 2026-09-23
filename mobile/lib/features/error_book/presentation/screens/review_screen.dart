@@ -99,15 +99,18 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
+          semanticLabel: context.l10n.back,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
         title: Text(widget.mode.label(context.l10n)),
         actions: [
+          // 甲式（A11Y-BATCH4）：semanticLabel 与 Tooltip message 同键。
           Tooltip(
             message: context.l10n.ebExitReview,
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
+              semanticLabel: context.l10n.ebExitReview,
               icon: const Icon(Icons.close),
               onPressed: () => _confirmExit(context),
             ),

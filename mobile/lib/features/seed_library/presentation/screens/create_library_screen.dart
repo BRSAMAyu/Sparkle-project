@@ -281,6 +281,8 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
                     const SizedBox(width: DS.spacing8),
                     SparkleIconButton(
                       variant: ButtonVariant.secondary,
+                      // N31 图标钮必有名（A11Y-BATCH4）。
+                      semanticLabel: context.l10n.seedTagAdd,
                       icon: const Icon(Icons.add),
                       onPressed: _addTag,
                     ),

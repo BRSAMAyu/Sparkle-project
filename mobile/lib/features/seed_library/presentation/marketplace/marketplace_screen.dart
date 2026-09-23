@@ -28,6 +28,8 @@ class MarketplaceScreen extends ConsumerWidget {
         actions: [
           SparkleIconButton(
             variant: ButtonVariant.ghost,
+            // N31 图标钮必有名（A11Y-BATCH4）：semanticLabel 承载按钮名。
+            semanticLabel: context.l10n.commonRefresh,
             icon: const Icon(Icons.refresh_rounded),
             onPressed: notifier.refresh,
           ),

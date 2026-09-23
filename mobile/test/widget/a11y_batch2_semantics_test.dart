@@ -95,21 +95,23 @@ void main() {
       semantics.dispose();
     });
 
-    testWidgets('metacognition 展开/收起钮：外层 Semantics label + tooltip 同源可定位',
-        (tester) async {
+    testWidgets('metacognition 展开/收起钮：tooltip+Icon semanticLabel 同键，'
+        '单节点有名按钮（A11Y-BATCH4 修正双节点反形制）', (tester) async {
       final semantics = tester.ensureSemantics();
-      // 与真实 widget（metacognition_panel_card）同形：外层 Semantics 挂
-      // label，内层 material IconButton 挂 tooltip（悬停提示）。
+      // 与真实 widget（metacognition_panel_card）同形（A11Y-BATCH4 起）：
+      // 乙式——tooltip 与 Icon semanticLabel 同键，名字/按钮角色/tap
+      // 合并在同一语义节点播报；原「外层 Semantics label + 内层 tooltip」
+      // 会把 label 与按钮拆成两个节点，已废除。
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: Center(
-              child: Semantics(
-                label: zh.metacognitionPanelCollapse,
-                child: IconButton(
-                  tooltip: zh.metacognitionPanelCollapse,
-                  onPressed: () {},
-                  icon: const Icon(Icons.expand_more_rounded),
+              child: IconButton(
+                tooltip: zh.metacognitionPanelCollapse,
+                onPressed: () {},
+                icon: Icon(
+                  Icons.expand_more_rounded,
+                  semanticLabel: zh.metacognitionPanelCollapse,
                 ),
               ),
             ),
@@ -120,6 +122,7 @@ void main() {
 
       final handle = find.bySemanticsLabel('收起自我认识面板');
       expect(handle, findsOneWidget);
+      expect(tester.getSemantics(handle).flagsCollection.isButton, isTrue);
       semantics.dispose();
     });
   });

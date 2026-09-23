@@ -135,28 +135,24 @@ class _MetacognitionPanelCardState extends State<MetacognitionPanelCard> {
                     ),
                   ),
                 ),
-                Semantics(
-                  button: true,
-                  // A11Y-BATCH2：原为硬编码英文标签（中文用户读屏听到
-                  // 英文）——l10n 化，zh/en 同源。
-                  label: _isExpanded
-                      ? context.l10n.metacognitionPanelCollapse
-                      : context.l10n.metacognitionPanelExpand,
-                  child: AnimatedRotation(
-                    turns: _isExpanded ? 0.5 : 0,
-                    duration: DS.quick,
-                    child: IconButton(
-                      // N31 图标钮必有名：tooltip 并入语义名（读屏可念），
-                      // 与右侧隐藏钮同形制；外层 Semantics 保留按钮角色与
-                      // 展开态标签。
-                      tooltip: _isExpanded
+                // 乙式（A11Y-BATCH4 双节点形制修正）：tooltip+Icon
+                // semanticLabel 同键，名字、按钮角色与 tap 合并在同一语义
+                // 节点播报；原外挂 Semantics(label:) 把 label 与按钮拆成
+                // 两个节点，废除。两态钮按当前态命名（展开/收起）。
+                AnimatedRotation(
+                  turns: _isExpanded ? 0.5 : 0,
+                  duration: DS.quick,
+                  child: IconButton(
+                    tooltip: _isExpanded
+                        ? context.l10n.metacognitionPanelCollapse
+                        : context.l10n.metacognitionPanelExpand,
+                    onPressed: () => setState(() => _isExpanded = !_isExpanded),
+                    icon: Icon(
+                      Icons.expand_more_rounded,
+                      semanticLabel: _isExpanded
                           ? context.l10n.metacognitionPanelCollapse
                           : context.l10n.metacognitionPanelExpand,
-                      onPressed: () => setState(() => _isExpanded = !_isExpanded),
-                      icon: Icon(
-                        Icons.expand_more_rounded,
-                        color: DS.textSecondary,
-                      ),
+                      color: DS.textSecondary,
                     ),
                   ),
                 ),

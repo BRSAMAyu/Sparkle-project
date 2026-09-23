@@ -158,9 +158,15 @@ class _CommentSheetContentState extends ConsumerState<_CommentSheetContent> {
                   style: theme.textTheme.titleMedium,
                 ),
                 const Spacer(),
+                // 乙式（A11Y-BATCH4）：tooltip+Icon semanticLabel 同键单节点。
                 IconButton(
+                  tooltip: l10n.commonClose,
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close, size: 20),
+                  icon: Icon(
+                    Icons.close,
+                    semanticLabel: l10n.commonClose,
+                    size: 20,
+                  ),
                 ),
               ],
             ),
@@ -345,10 +351,14 @@ class _CommentSheetContentState extends ConsumerState<_CommentSheetContent> {
                     ),
                     Padding(
                       padding: const EdgeInsets.only(right: 4),
+                      // 乙式（A11Y-BATCH4）：发送钮有名（单节点）。
                       child: IconButton(
+                        tooltip: l10n.send,
                         onPressed: _submitting ? null : _submitComment,
                         icon: Icon(Icons.send,
-                            color: _submitting ? DS.textTertiary : DS.brandPrimary),
+                            semanticLabel: l10n.send,
+                            color:
+                                _submitting ? DS.textTertiary : DS.brandPrimary),
                         iconSize: 20,
                       ),
                     ),

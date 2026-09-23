@@ -90,14 +90,14 @@ class ChatModeSelectorSheet extends ConsumerWidget {
                     ),
                   ),
                   const Spacer(),
-                  Semantics(
-                    button: true,
-                    label: 'Chat chat mode selector sheet control 1',
-                    child: SparkleIconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                      variant: ButtonVariant.ghost,
-                    ),
+                  // 甲式（A11Y-BATCH4）：semanticLabel 单节点按钮名；
+                  // 原外挂 Semantics 硬编码英文占位标签（'...control 1'）
+                  // 且拆节点，废除。
+                  SparkleIconButton(
+                    icon: const Icon(Icons.close),
+                    semanticLabel: context.l10n.commonClose,
+                    onPressed: () => Navigator.pop(context),
+                    variant: ButtonVariant.ghost,
                   ),
                 ],
               ),

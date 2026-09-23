@@ -2,12 +2,15 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// A11Y-BATCH2/3（N32 续 · 无名钮下批）域内 ratchet 守卫。
+/// A11Y-BATCH2/3/4（N32 续 · 无名钮下批）域内 ratchet 守卫。
 ///
 /// 卡面验收「本批域内无名钮清零」：批 2 三域——friends 族 / sprint 族 /
 /// user 设置族（features/user + features/settings presentation 全量），
 /// 批 3 四域（A11Y-BATCH3 扩域）——群组族（group 相关屏 + 群组件 +
-/// group_chat）/ galaxy 域 / insights 域 / plan_create 族——做静态扫描，
+/// group_chat）/ galaxy 域 / insights 域 / plan_create 族，批 4 四域
+/// （A11Y-BATCH4 扩域）——seed_library 域 / error_book 域 / chat 域
+/// （presentation 全量 + data 层通知浮窗；群聊批 3 已清零）/
+/// community 域（presentation 全量，群组批 3 已清零）——做静态扫描，
 /// 任何 `SparkleIconButton` / `IconButton` 调用点（含 `.fabGeometry` 等
 /// 命名构造，批 3 起入扫）必须可命名：
 ///
@@ -64,6 +67,17 @@ void main() {
     'lib/features/plan/presentation/screens/plan_create_screen.dart',
     'lib/features/plan/presentation/screens/plan_edit_screen.dart',
     'lib/features/plan/presentation/screens/plan_detail_screen.dart',
+    // ── 批 4（A11Y-BATCH4）扩域 ────────────────────────────────────────
+    // seed_library 域（presentation 全量：screens + marketplace）
+    'lib/features/seed_library/presentation',
+    // error_book 域（presentation 全量）
+    'lib/features/error_book/presentation',
+    // chat 域（presentation 全量；group_chat 批 3 已清零）
+    'lib/features/chat/presentation',
+    // chat data 层通知浮窗（服务内嵌 UI，静态扫描同样入扫）
+    'lib/features/chat/data/services/message_notification_service.dart',
+    // community 域（presentation 全量；群组批 3 已清零）
+    'lib/features/community/presentation',
   ];
 
   test('批域内图标按钮全部有语义名（N31 ratchet 只降不升）', () {

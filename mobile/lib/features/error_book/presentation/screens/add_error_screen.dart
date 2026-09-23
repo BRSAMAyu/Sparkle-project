@@ -367,6 +367,8 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
         appBar: AppBar(
           leading: SparkleIconButton(
             variant: ButtonVariant.ghost,
+            // N31 图标钮必有名（A11Y-BATCH4）：三处返回钮统一点名。
+            semanticLabel: context.l10n.back,
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
@@ -401,6 +403,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
           appBar: AppBar(
             leading: SparkleIconButton(
               variant: ButtonVariant.ghost,
+              semanticLabel: context.l10n.back,
               icon: const Icon(Icons.arrow_back),
               onPressed: () => context.pop(),
             ),
@@ -426,6 +429,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
         appBar: AppBar(
           leading: SparkleIconButton(
             variant: ButtonVariant.ghost,
+            semanticLabel: context.l10n.back,
             icon: const Icon(Icons.arrow_back),
             // maybePop 走 PopScope 通道，脏态时由 guard 拦截确认；
             // 原 context.pop() 是硬 pop，会绕过 guard。

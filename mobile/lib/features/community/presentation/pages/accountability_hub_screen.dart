@@ -30,10 +30,13 @@ class AccountabilityHubScreen extends ConsumerWidget {
         centerTitle: false,
         actions: [
           // FAB-UNIFY：M3 IconButton → 组件归一（ghost 档，几何走组件默认档）。
+          // 甲式（A11Y-BATCH4 漂移修正①）：semanticLabel 与 Tooltip message
+          // 同键——原只挂 Tooltip（隐藏期不构成按钮名）属单源漂移。
           Tooltip(
             message: context.l10n.cahRetry,
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
+              semanticLabel: context.l10n.cahRetry,
               icon: Icon(Icons.refresh_rounded, color: DS.textSecondary),
               onPressed: () =>
                   ref.read(accountabilityHubProvider.notifier).refresh(),

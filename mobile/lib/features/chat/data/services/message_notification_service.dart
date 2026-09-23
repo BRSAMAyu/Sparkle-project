@@ -276,6 +276,8 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
                       SparkleIconButton(
                         variant: ButtonVariant.ghost,
                         size: 28,
+                        // N31 图标钮必有名（A11Y-BATCH4）。
+                        semanticLabel: context.l10n.commonClose,
                         icon: const Icon(Icons.close, size: 18),
                         onPressed: widget.onDismiss,
                       ),

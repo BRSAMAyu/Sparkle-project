@@ -443,22 +443,23 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                         duration: DS.durationFast,
                         curve: Curves.easeOutBack,
                         scale: _isAttachmentBursting ? 1.08 : 1,
-                        child: Semantics(
-                          button: true,
-                          label: context.l10n.chatAttachmentOptions,
-                          child: IconButton(
-                            icon: Icon(
-                              Icons.add_circle_outline_rounded,
-                              color: DS.textSecondary,
-                            ),
-                            iconSize: attachmentIconSize,
-                            onPressed:
-                                widget.enabled ? _showAttachmentSheet : null,
-                            padding: EdgeInsets.all(attachmentPadding),
-                            constraints: BoxConstraints.tightFor(
-                              width: attachmentVisualSize,
-                              height: attachmentVisualSize,
-                            ),
+                        // 乙式（A11Y-BATCH4）：tooltip+Icon semanticLabel
+                        // 同键单节点；原外挂 Semantics(label:) 把 label 与
+                        // 按钮拆成两个语义节点，废除。
+                        child: IconButton(
+                          tooltip: context.l10n.chatAttachmentOptions,
+                          icon: Icon(
+                            Icons.add_circle_outline_rounded,
+                            semanticLabel: context.l10n.chatAttachmentOptions,
+                            color: DS.textSecondary,
+                          ),
+                          iconSize: attachmentIconSize,
+                          onPressed:
+                              widget.enabled ? _showAttachmentSheet : null,
+                          padding: EdgeInsets.all(attachmentPadding),
+                          constraints: BoxConstraints.tightFor(
+                            width: attachmentVisualSize,
+                            height: attachmentVisualSize,
                           ),
                         ),
                       ),

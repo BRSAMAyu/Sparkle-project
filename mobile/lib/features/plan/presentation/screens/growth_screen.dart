@@ -35,10 +35,13 @@ class GrowthScreen extends ConsumerWidget {
         ),
         title: Text(context.l10n.growthPlansTitle),
         actions: [
+          // 甲式（A11Y-BATCH4 漂移修正②）：semanticLabel 与 Tooltip message
+          // 同键——原只挂 Tooltip（隐藏期不构成按钮名）属单源漂移。
           Tooltip(
             message: context.l10n.planHistoryPlans,
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
+              semanticLabel: context.l10n.planHistoryPlans,
               icon: const Icon(Icons.archive_outlined),
               onPressed: () => context.push('/plans/history'),
             ),

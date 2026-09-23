@@ -129,6 +129,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         appBar: AppBar(
           leading: SparkleIconButton(
             variant: ButtonVariant.ghost,
+            // N31 图标钮必有名（A11Y-BATCH4）。
+            semanticLabel: context.l10n.commonClose,
             icon: const Icon(Icons.close_rounded),
             // maybePop 走 PopScope 通道，脏态时由 guard 拦截确认；
             // 原 context.pop() 是硬 pop，会绕过 guard。
@@ -246,6 +248,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                             const Spacer(),
                             SparkleIconButton(
                               variant: ButtonVariant.ghost,
+                              semanticLabel: context.l10n.commonRemove,
                               icon: Icon(Icons.close_rounded,
                                   size: 18, color: DS.textTertiary),
                               onPressed: _removeImage,
@@ -393,6 +396,9 @@ class _ToolbarButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SparkleIconButton(
         variant: ButtonVariant.ghost,
+        // N31 图标钮必有名（A11Y-BATCH4）：label 本就是可见文案，单点
+        // 补挂 semanticLabel 即覆盖图片/话题两个工具钮。
+        semanticLabel: label,
         icon: Icon(icon, size: 20, color: DS.textSecondary),
         onPressed: onPressed,
       );

@@ -43,17 +43,21 @@ class ErrorDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
+          semanticLabel: l10n.back,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
         title: Text(l10n.errorBookDetailTitle),
         actions: [
-          // 编辑按钮
+          // 编辑按钮——甲式：semanticLabel 与 Tooltip message 同一 l10n 键
+          // （A11Y-BATCH3 发现：隐藏期 Tooltip 只挂 semantics.tooltip 不构成
+          // 按钮名，semanticLabel 是按钮名唯一事实源）。
           errorAsync.whenOrNull(
                 data: (error) => Tooltip(
                   message: l10n.errorBookEdit,
                   child: SparkleIconButton(
                     variant: ButtonVariant.ghost,
+                    semanticLabel: l10n.errorBookEdit,
                     icon: const Icon(Icons.edit_outlined),
                     onPressed: () => _navigateToEdit(context, error),
                   ),
@@ -67,6 +71,7 @@ class ErrorDetailScreen extends ConsumerWidget {
                   child: SparkleIconButton(
                     key: const ValueKey('error-detail-share-button'),
                     variant: ButtonVariant.ghost,
+                    semanticLabel: l10n.squadShareErrorBookEntry,
                     icon: const Icon(Icons.ios_share),
                     onPressed: () => _shareToSquad(context, error.id),
                   ),

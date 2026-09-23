@@ -64,6 +64,8 @@ class _SeedLibraryDetailScreenState
           if (state.library != null)
             SparkleIconButton(
               variant: ButtonVariant.ghost,
+              // N31 图标钮必有名（A11Y-BATCH4）： AppBar 五钮逐一点名。
+              semanticLabel: context.l10n.share,
               icon: const Icon(Icons.share_outlined),
               onPressed: () {
                 unawaited(
@@ -85,24 +87,28 @@ class _SeedLibraryDetailScreenState
           if (canManageLibrary)
             SparkleIconButton(
               variant: ButtonVariant.ghost,
+              semanticLabel: context.l10n.seedLibraryAddItem,
               icon: const Icon(Icons.playlist_add),
               onPressed: () => _showAddItemSheet(context),
             ),
           if (canManageLibrary)
             SparkleIconButton(
               variant: ButtonVariant.ghost,
+              semanticLabel: context.l10n.seedLibraryImportItems,
               icon: const Icon(Icons.upload_file_outlined),
               onPressed: _importJsonItems,
             ),
           if (canManageLibrary)
             SparkleIconButton(
               variant: ButtonVariant.ghost,
+              semanticLabel: context.l10n.commonEdit,
               icon: const Icon(Icons.edit),
               onPressed: () => _showEditDialog(context, state.library!),
             ),
           if (canManageLibrary)
             SparkleIconButton(
               variant: ButtonVariant.ghost,
+              semanticLabel: context.l10n.delete,
               icon: const Icon(Icons.delete),
               onPressed: () => _showDeleteDialog(context),
             ),

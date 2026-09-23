@@ -194,10 +194,14 @@ class TransparencyFloatingCapsule extends StatelessWidget {
                     ),
                   ),
                   if (preferences.allowPerTurnDismiss && onDismiss != null)
+                    // 乙式（A11Y-BATCH4）：tooltip+Icon semanticLabel 同键
+                    // 单节点，读屏可念按钮名。
                     IconButton(
+                      tooltip: context.l10n.commonClose,
                       onPressed: onDismiss,
                       icon: Icon(
                         Icons.close_rounded,
+                        semanticLabel: context.l10n.commonClose,
                         size: DS.iconSizeSm,
                         color: secondaryText,
                       ),

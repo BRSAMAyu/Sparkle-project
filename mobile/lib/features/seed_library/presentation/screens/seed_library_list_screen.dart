@@ -86,17 +86,21 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
         actions: [
           SparkleIconButton(
             variant: ButtonVariant.ghost,
+            // N31 图标钮必有名（A11Y-BATCH4）： AppBar 三钮 + FAB + 清词钮。
+            semanticLabel: context.l10n.seedMarketplaceTitle,
             icon: const Icon(Icons.storefront_outlined),
             onPressed: () =>
                 unawaited(context.push(SeedLibraryRoutes.marketplace)),
           ),
           SparkleIconButton(
             variant: ButtonVariant.ghost,
+            semanticLabel: context.l10n.commonRefresh,
             icon: const Icon(Icons.refresh),
             onPressed: _applyFilters,
           ),
           SparkleIconButton(
             variant: ButtonVariant.ghost,
+            semanticLabel: context.l10n.seedLibraryFilter,
             icon: Icon(
               Icons.filter_list,
               color: hasActiveFilters
@@ -110,6 +114,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
       // FAB-UNIFY：组件已自带最大尺寸语义（fabGeometry 钉死方形几何，
       // 默认 56 方档=touchTargetMinSize+spacing8），急救 SizedBox 去重。
       floatingActionButton: SparkleIconButton.fabGeometry(
+        semanticLabel: context.l10n.seedLibraryCreate,
         onPressed: () async {
           unawaited(
             SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen),
@@ -141,6 +146,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
                         ? SparkleIconButton(
                             variant: ButtonVariant.ghost,
                             size: DS.spacing32,
+                            semanticLabel: context.l10n.commonClear,
                             icon: const Icon(Icons.clear),
                             onPressed: () {
                               _searchController.clear();

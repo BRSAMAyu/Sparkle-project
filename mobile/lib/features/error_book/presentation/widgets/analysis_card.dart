@@ -59,6 +59,7 @@ class AnalysisCard extends StatelessWidget {
                   SparkleIconButton(
                     variant: ButtonVariant.ghost,
                     size: DS.spacing32,
+                    semanticLabel: context.l10n.errorBookReanalyze,
                     icon: const Icon(Icons.refresh, size: DS.iconSizeSm),
                     onPressed: onReAnalyze,
                   ),

@@ -100,6 +100,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
+          semanticLabel: context.l10n.back,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
@@ -107,8 +108,12 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
             ? _buildSearchField()
             : Text(context.l10n.errorBookTitle),
         actions: [
+          // 两态钮按当前态命名（A11Y-BATCH4）：搜索开启时是「关闭」，
+          // 关闭时是「搜索」。
           SparkleIconButton(
             variant: ButtonVariant.ghost,
+            semanticLabel:
+                _showSearch ? context.l10n.commonClose : context.l10n.commonSearch,
             icon: Icon(_showSearch ? Icons.close : Icons.search),
             onPressed: () {
               unawaited(
@@ -125,6 +130,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
           ),
           SparkleIconButton(
             variant: ButtonVariant.ghost,
+            semanticLabel: context.l10n.commonFilter,
             icon: Icon(
               Icons.filter_list,
               color: hasAdvancedFilters ? theme.colorScheme.primary : null,
@@ -319,6 +325,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
               ? const SizedBox.shrink()
               : SparkleIconButton(
                   variant: ButtonVariant.ghost,
+                  semanticLabel: context.l10n.commonClear,
                   icon: const Icon(Icons.clear),
                   onPressed: _clearSearch,
                 ),

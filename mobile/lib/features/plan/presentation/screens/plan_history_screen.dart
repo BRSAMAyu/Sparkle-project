@@ -123,10 +123,14 @@ class _PlanHistorySection extends ConsumerWidget {
                             (entry.value.progress * 100).toStringAsFixed(0),
                           ),
                         ),
+                        // 甲式（A11Y-BATCH4 漂移修正③）：semanticLabel 与
+                        // Tooltip message 同键——原只挂 Tooltip（隐藏期不构成
+                        // 按钮名）属单源漂移。
                         trailing: Tooltip(
                           message: context.l10n.planHistoryRestore,
                           child: SparkleIconButton(
                             variant: ButtonVariant.ghost,
+                            semanticLabel: context.l10n.planHistoryRestore,
                             icon: const Icon(Icons.restore_rounded),
                             onPressed: () async {
                               unawaited(

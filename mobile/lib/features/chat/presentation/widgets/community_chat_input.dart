@@ -495,21 +495,21 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
               width: DS.touchTargetMinSize,
               height: DS.touchTargetMinSize,
               child: Center(
-                child: Semantics(
-                  button: true,
-                  label: 'Open message tools',
-                  child: IconButton(
-                    icon: Icon(
-                      Icons.add_circle_outline_rounded,
-                      color: DS.textSecondary,
-                    ),
-                    iconSize: DS.iconSizeSm,
-                    onPressed: widget.enabled ? _toggleToolbar : null,
-                    padding: const EdgeInsets.all(12),
-                    constraints: const BoxConstraints.tightFor(
-                      width: DS.touchTargetMinSize,
-                      height: DS.touchTargetMinSize,
-                    ),
+                // 乙式（A11Y-BATCH4）：tooltip+Icon semanticLabel 同键单节点；
+                // 原外挂 Semantics 硬编码英文且拆节点，废除。
+                child: IconButton(
+                  tooltip: context.l10n.communityChatOpenTools,
+                  icon: Icon(
+                    Icons.add_circle_outline_rounded,
+                    semanticLabel: context.l10n.communityChatOpenTools,
+                    color: DS.textSecondary,
+                  ),
+                  iconSize: DS.iconSizeSm,
+                  onPressed: widget.enabled ? _toggleToolbar : null,
+                  padding: const EdgeInsets.all(12),
+                  constraints: const BoxConstraints.tightFor(
+                    width: DS.touchTargetMinSize,
+                    height: DS.touchTargetMinSize,
                   ),
                 ),
               ),
@@ -519,7 +519,8 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
             Expanded(
               child: Semantics(
                 button: true,
-                label: 'Swipe text input to switch input modes',
+                // A11Y-BATCH4 顺手 l10n 化：原为硬编码英文标签。
+                label: context.l10n.communityChatSwipeToSwitch,
                 child: GestureDetector(
                   onHorizontalDragEnd: (details) {
                     if (details.primaryVelocity == null) return;
@@ -611,25 +612,25 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
             SizedBox(
               width: DS.touchTargetMinSize,
               height: DS.touchTargetMinSize,
-              child: Semantics(
-                button: true,
-                label: 'Return to text input',
-                child: IconButton(
-                  icon: Icon(
-                    Icons.close,
-                    color: DS.textSecondary,
-                    size: DS.iconSizeMd,
-                  ),
-                  onPressed: _switchToTextMode,
-                  padding: const EdgeInsets.all(12),
+              // 乙式（A11Y-BATCH4）：单节点按钮名，废除外挂 Semantics。
+              child: IconButton(
+                tooltip: context.l10n.communityChatBackToText,
+                icon: Icon(
+                  Icons.close,
+                  semanticLabel: context.l10n.communityChatBackToText,
+                  color: DS.textSecondary,
+                  size: DS.iconSizeMd,
                 ),
+                onPressed: _switchToTextMode,
+                padding: const EdgeInsets.all(12),
               ),
             ),
             // 放大的语音按钮（居中）- 可滑动区域
             Expanded(
               child: Semantics(
                 button: true,
-                label: 'Swipe voice input to switch input modes',
+                // A11Y-BATCH4 顺手 l10n 化：原为硬编码英文标签。
+                label: context.l10n.communityChatSwipeToSwitch,
                 child: GestureDetector(
                   onHorizontalDragEnd: (details) {
                     if (details.primaryVelocity == null) return;
@@ -716,25 +717,25 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
             SizedBox(
               width: DS.touchTargetMinSize,
               height: DS.touchTargetMinSize,
-              child: Semantics(
-                button: true,
-                label: 'Return to text input',
-                child: IconButton(
-                  icon: Icon(
-                    Icons.close,
-                    color: DS.textSecondary,
-                    size: DS.iconSizeMd,
-                  ),
-                  onPressed: _switchToTextMode,
-                  padding: const EdgeInsets.all(12),
+              // 乙式（A11Y-BATCH4）：单节点按钮名，废除外挂 Semantics。
+              child: IconButton(
+                tooltip: context.l10n.communityChatBackToText,
+                icon: Icon(
+                  Icons.close,
+                  semanticLabel: context.l10n.communityChatBackToText,
+                  color: DS.textSecondary,
+                  size: DS.iconSizeMd,
                 ),
+                onPressed: _switchToTextMode,
+                padding: const EdgeInsets.all(12),
               ),
             ),
             // 分享提示区域（居中）- 可滑动区域
             Expanded(
               child: Semantics(
                 button: true,
-                label: 'Open quick share options',
+                // A11Y-BATCH4 顺手 l10n 化：原为硬编码英文标签。
+                label: context.l10n.communityChatQuickShare,
                 child: GestureDetector(
                   onHorizontalDragEnd: (details) {
                     if (details.primaryVelocity == null) return;
@@ -979,18 +980,17 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
             SizedBox(
               width: DS.touchTargetMinSize,
               height: DS.touchTargetMinSize,
-              child: Semantics(
-                button: true,
-                label: 'Cancel quoted message',
-                child: IconButton(
-                  icon: Icon(
-                    Icons.close_rounded,
-                    size: DS.iconSizeSm,
-                    color: DS.textSecondary,
-                  ),
-                  onPressed: widget.onCancelQuote,
-                  padding: const EdgeInsets.all(12),
+              // 乙式（A11Y-BATCH4）：单节点按钮名，废除外挂 Semantics。
+              child: IconButton(
+                tooltip: context.l10n.communityChatCancelQuote,
+                icon: Icon(
+                  Icons.close_rounded,
+                  semanticLabel: context.l10n.communityChatCancelQuote,
+                  size: DS.iconSizeSm,
+                  color: DS.textSecondary,
                 ),
+                onPressed: widget.onCancelQuote,
+                padding: const EdgeInsets.all(12),
               ),
             ),
           ],

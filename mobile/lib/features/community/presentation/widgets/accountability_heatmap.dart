@@ -164,14 +164,19 @@ class _AccountabilityHeatmapState extends State<AccountabilityHeatmap> {
 
   Widget _buildPagerHeader(BuildContext context) => Row(
         children: [
+          // 乙式（A11Y-BATCH4）：tooltip+Icon semanticLabel 同键单节点。
           IconButton(
+            tooltip: context.l10n.communityPreviousMonth,
             onPressed: _currentMonthPage == 0
                 ? null
                 : () => _pageController.previousPage(
                       duration: const Duration(milliseconds: 220),
                       curve: Curves.easeOutCubic,
                     ),
-            icon: const Icon(Icons.chevron_left_rounded),
+            icon: Icon(
+              Icons.chevron_left_rounded,
+              semanticLabel: context.l10n.communityPreviousMonth,
+            ),
           ),
           Expanded(
             child: Center(
@@ -185,13 +190,17 @@ class _AccountabilityHeatmapState extends State<AccountabilityHeatmap> {
             ),
           ),
           IconButton(
+            tooltip: context.l10n.communityNextMonth,
             onPressed: _currentMonthPage == 11
                 ? null
                 : () => _pageController.nextPage(
                       duration: const Duration(milliseconds: 220),
                       curve: Curves.easeOutCubic,
                     ),
-            icon: const Icon(Icons.chevron_right_rounded),
+            icon: Icon(
+              Icons.chevron_right_rounded,
+              semanticLabel: context.l10n.communityNextMonth,
+            ),
           ),
         ],
       );
