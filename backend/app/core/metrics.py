@@ -1217,3 +1217,26 @@ TASK_GENERATION_E2E_LATENCY = get_or_create_metric(
     ["source"],
     buckets=[0.5, 1.0, 2.0, 3.0, 5.0, 8.0, 13.0],
 )
+
+# PHOTON-TUNE 经济仪表三指标（D-MONETIZE 审计 §1.6-5/R5）：日铸币量 / 日消耗量 /
+# 活跃用户人均余额。由日级 celery 快照任务（tasks.economy_metrics_snapshot）按
+# photon_transaction_history 审计流水重放置值（Gauge 幂等可重跑，任务重试不
+# 重复累计）；告警阈值占位读 settings.PHOTON_ECONOMY_ALERT_*（默认 0=静默）。
+# 数据真源即审计流水，零新埋点（审计衡量指标口径：经济行三项直出）。
+PHOTON_ECONOMY_DAILY_MINT = get_or_create_metric(
+    Gauge,
+    "sparkle_photon_economy_daily_mint",
+    "Photon units minted (sum of positive ledger amounts) in the last closed UTC day",
+)
+
+PHOTON_ECONOMY_DAILY_BURN = get_or_create_metric(
+    Gauge,
+    "sparkle_photon_economy_daily_burn",
+    "Photon units burned (abs sum of negative ledger amounts) in the last closed UTC day",
+)
+
+PHOTON_ECONOMY_AVG_BALANCE_PER_ACTIVE_USER = get_or_create_metric(
+    Gauge,
+    "sparkle_photon_economy_avg_balance_per_active_user",
+    "Average photon balance across users with at least one ledger transaction in the last closed UTC day",
+)

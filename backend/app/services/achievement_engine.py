@@ -447,9 +447,16 @@ class AchievementEngine:
                         unlocked.append(unlock_data)
 
             # 4. 处理连击检测
+            # PHOTON-TUNE（D-MONETIZE 审计 §1.6-2/R2）：combo 只由带真实学习
+            # 行为的解锁事件累积（效果门槛），批量归档（actual_minutes≈0）不再
+            # 计入 combo——旧行为（纯解锁计数）由 PHOTON_COMBO_EFFECT_GATE_ENABLED
+            # =False 保留作回滚路径，测试以新旧对照钉住。
             combo_info = None
             if unlocked:
-                combo_info = await self._handle_achievement_combo(user_id, len(unlocked))
+                effective_unlocks = self._combo_effective_unlock_count(event_type, len(unlocked), kwargs)
+                combo_info = await self._handle_achievement_combo(
+                    user_id, len(unlocked), effective_unlock_count=effective_unlocks
+                )
                 # 将连击信息添加到每个解锁的成就中
                 if combo_info:
                     for unlock_data in unlocked:
@@ -2640,24 +2647,98 @@ class AchievementEngine:
                 }
         return None
 
-    async def _handle_achievement_combo(self, user_id: str, unlock_count: int) -> dict[str, Any] | None:
+    def _combo_effective_unlock_count(self, event_type: str, unlock_count: int, event_payload: dict[str, Any]) -> int:
+        """效果门槛（PHOTON-TUNE，D-MONETIZE 审计 §1.6-2/R2）：本次事件贡献多少
+        「有效解锁」进 combo 计数。
+
+        - task_completed 事件按真实学习时长判据（actual_minutes ≥
+          settings.PHOTON_COMBO_EFFECT_MIN_MINUTES，默认 1 分钟）——批量归档
+          （actual_minutes≈0，TOUR 实测刷量路径）贡献 0。缺省/不可解析一律按
+          0 处理：缺证据不算有效（生产两个调用点 tasks.py / 事件消费者都显式
+          传 actual_minutes，只有测试与未知调用方会缺省——宁可少发不多发）。
+        - 其余事件（契约完成/失败、签到、节点掌握、冲刺等）自带多日/真实行为
+          判据（契约天数推进本就由 actual_minutes 驱动），不设门槛，照旧计入。
+        - 开关关闭（PHOTON_COMBO_EFFECT_GATE_ENABLED=False）= 旧行为：全部解锁
+          计入（刷量路径保留作回滚，语义由新旧对照测试钉住）。
+        """
+        if not settings.PHOTON_COMBO_EFFECT_GATE_ENABLED:
+            return unlock_count
+        if event_type == AchievementEvent.TASK_COMPLETED:
+            raw_minutes = event_payload.get("actual_minutes")
+            try:
+                actual_minutes = int(float(raw_minutes)) if raw_minutes is not None else 0
+            except (TypeError, ValueError):
+                actual_minutes = 0
+            threshold = max(0, int(settings.PHOTON_COMBO_EFFECT_MIN_MINUTES))
+            return unlock_count if actual_minutes >= threshold else 0
+        return unlock_count
+
+    async def _combo_bonus_daily_usage(self, user_id: str) -> tuple[int, int]:
+        """当日（UTC）已发放的 combo 加成 (总额, 次数)。
+
+        真源 = photon_transaction_history 审计流水（grant_bonus），不引入第二套
+        Redis 计数——Redis 失守只会让 5min 窗口 combo 重建，不会击穿日上限。
+        """
+        from app.models.shop import PhotonTransactionHistory
+        from app.services.photon_service import PhotonTransactionType
+
+        day_start = datetime.combine(date.today(), datetime.min.time())
+        result = await self.db.execute(
+            select(
+                func.count(PhotonTransactionHistory.id),
+                func.coalesce(func.sum(PhotonTransactionHistory.amount), 0),
+            ).where(
+                PhotonTransactionHistory.user_id == user_id,
+                PhotonTransactionHistory.transaction_type == PhotonTransactionType.GRANT_BONUS,
+                PhotonTransactionHistory.created_at >= day_start,
+            )
+        )
+        row = result.one()
+        return int(row[1] or 0), int(row[0] or 0)
+
+    async def _handle_achievement_combo(
+        self,
+        user_id: str,
+        unlock_count: int,
+        effective_unlock_count: int | None = None,
+    ) -> dict[str, Any] | None:
         """
         处理成就连击检测
+
+        PHOTON-TUNE（D-MONETIZE 审计 §1.6-2）：金额锚「当笔效果增量」
+        （effective×10，触发分档 combo≥3 不变），叠加日上限
+        （PHOTON_COMBO_DAILY_CAP，发满即停）与边际递减（同日第 n 次发放
+        ×max(floor, factor^n)）——诚实日 2-3 轮连击几乎无感（首笔金额不变），
+        批量刷量脉冲被衰减+硬顶压到数百级以内。
+        effective_unlock_count=None 时按旧语义全量计入（兼容直调；
+        process_event 主路径恒传门槛过滤后的有效数）。
 
         Returns:
             连击信息，如果触发连击则返回数据，否则返回None
         """
+        effective = unlock_count if effective_unlock_count is None else max(0, int(effective_unlock_count))
+
+        # 效果门槛：本事件无有效解锁（如批量归档 actual_minutes=0）不进 combo
+        if effective <= 0:
+            return None
+
         session_key = f"{settings.APP_NAME}:achievement_combo:{user_id}"
         combo = await cache_service.get(session_key) or 0
 
-        # 更新连击计数
-        combo += unlock_count
+        # 更新连击计数（只累积有效解锁）
+        combo += effective
         await cache_service.set(session_key, combo, ttl=300)  # 5分钟内有效
 
         # 只在连击>=2时返回信息
         if combo >= 2:
-            bonus_photons = combo * 10 if combo >= 3 else 0
-            # P1-A1: Actually grant combo bonus photons via PhotonService
+            # PHOTON-TUNE：金额锚「当笔效果增量」（effective×10）而非累计
+            # combo×10——旧行式对窗口内前序解锁重复计价（纯计数刷量锚点）；
+            # 触发分档（combo≥3 才发）保持不变。当日首笔 combo=effective，
+            # 金额与旧式一致；同日重复触发按边际递减衰减（见下）。
+            bonus_photons = effective * 10 if combo >= 3 else 0
+            capped = False
+            if bonus_photons > 0:
+                bonus_photons, capped = await self._apply_combo_daily_cap(user_id, bonus_photons)
             if bonus_photons > 0:
                 try:
                     from app.services.photon_service import PhotonService, PhotonTransactionType
@@ -2676,6 +2757,7 @@ class AchievementEngine:
                         extra_data={
                             "combo": combo,
                             "unlock_count": unlock_count,
+                            "effective_unlock_count": effective,
                             "type": "achievement_combo",
                         },
                         # TOUR-FIX：related_item_id 列宽 VARCHAR(50)。完整 uuid4() 会把键拉到
@@ -2702,9 +2784,33 @@ class AchievementEngine:
                 "combo": combo,
                 "message": f"🔥 {combo}连击解锁！",
                 "bonus_photons": bonus_photons,
+                "capped": capped,
                 "type": "achievement_combo",
             }
         return None
+
+    async def _apply_combo_daily_cap(self, user_id: str, base_bonus: int) -> tuple[int, bool]:
+        """combo 加成的日上限 + 边际递减（PHOTON-TUNE，返回 (实发, 是否被削)）。
+
+        base_bonus = 当笔效果增量（有效解锁数×10）。递减：实发 =
+        base × max(floor, factor^n)，n = 当日已发放次数；上限：实发再与
+        「日上限 − 当日已发总额」取小（cap≤0 = 不设上限）；削到 0 即本笔
+        停发（连击展示不受影响）。均读 settings，零硬编码。
+        """
+        granted_sum, granted_count = await self._combo_bonus_daily_usage(user_id)
+
+        amount = base_bonus
+        factor = float(settings.PHOTON_COMBO_DAILY_DECAY_FACTOR)
+        if 0 < factor < 1.0:
+            floor = float(settings.PHOTON_COMBO_DAILY_DECAY_FLOOR)
+            decay = max(floor, factor**granted_count)
+            amount = int(base_bonus * decay)
+
+        daily_cap = int(settings.PHOTON_COMBO_DAILY_CAP)
+        if daily_cap > 0:
+            amount = min(amount, max(0, daily_cap - granted_sum))
+
+        return max(0, amount), amount < base_bonus
 
     async def _notify_milestones(self, user_id: str, milestones: list[dict[str, Any]]):
         """发送里程碑通知"""
@@ -2904,6 +3010,10 @@ class ContractService:
             target_study_minutes=study_minutes,
             target_days=days,
             photon_stake=photon_stake,
+            # PHOTON-TUNE：倍率配置化（settings.PHOTON_CONTRACT_REWARD_MULTIPLIER，
+            # 默认 2.0 与旧列默认一致）。倍率随契约落库，存量在途契约按落库值
+            # 结算——改配置不追溯在途，结算语义可预期。
+            reward_multiplier=float(settings.PHOTON_CONTRACT_REWARD_MULTIPLIER),
             start_date=_utcnow(),
             end_date=_utcnow() + timedelta(days=days),
             status=ContractStatus.ACTIVE,

@@ -166,18 +166,24 @@ async def test_combo_bonus_writes_audit_row_with_dedicated_enum(db_session, test
 
 
 async def test_combo_bonus_repeated_triggers_never_swallow_each_other(db_session, test_user):
-    """连击窗口内第二次达标（combo=3 → combo=6）：键每事件唯一，两次都入流水。"""
+    """连击窗口内第二次达标（combo=3 → combo=6）：键每事件唯一，两次都入流水。
+
+    PHOTON-TUNE 语义变更（D-MONETIZE 审计 §1.6-2）：金额锚「当笔效果增量」
+    并叠边际递减——第二笔 = 3×10×factor^1（默认 0.5）= 15（旧式为累计
+    combo×10=60）。本测试钉的是「合法重复触发不互吞」的幂等键语义，
+    两次发放均在案。
+    """
     engine = AchievementEngine(db_session)
 
     await engine._handle_achievement_combo(str(test_user.id), unlock_count=3)  # combo=3 → 30
-    await engine._handle_achievement_combo(str(test_user.id), unlock_count=3)  # combo=6 → 60
+    await engine._handle_achievement_combo(str(test_user.id), unlock_count=3)  # combo=6 → 15（递减）
     await db_session.commit()
 
     rows = await _tx_rows(db_session, test_user.id)
     assert len(rows) == 2
-    assert sorted(r.amount for r in rows) == [30, 60]
+    assert sorted(r.amount for r in rows) == [15, 30]
     assert len({r.related_item_id for r in rows}) == 2  # 键互不碰撞
-    assert await get_redeemable_base(db_session, user_id=str(test_user.id)) == 90
+    assert await get_redeemable_base(db_session, user_id=str(test_user.id)) == 45
 
 
 # ---------------------------------------------------------------------------

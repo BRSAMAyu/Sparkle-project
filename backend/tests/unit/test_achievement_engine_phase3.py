@@ -323,9 +323,13 @@ async def test_combo_info_added_when_multiple_achievements_unlock(db_session, te
 
     engine = AchievementEngine(db_session)
     db_session.sync_session.info["external_transaction_managed"] = True
+    # PHOTON-TUNE 效果门槛（D-MONETIZE 审计 §1.6-2）：task_completed 事件须带
+    # 真实学习时长（actual_minutes ≥ 1）才进 combo——本测试验证 combo 管线，
+    # 故传有效时长；门槛拦截语义在 test_photon_combo_effect_gate.py 专测。
     unlocked = await engine.process_event(
         user_id=test_user.id,
         event_type=AchievementEvent.TASK_COMPLETED,
+        actual_minutes=25,
     )
 
     assert len(unlocked) == 2

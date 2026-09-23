@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger
-from sqlalchemy import and_, select
+from sqlalchemy import and_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -346,24 +346,27 @@ class InventoryService:
         if consumable.is_expired:
             raise ValueError(f"Consumable {consumable_id} has expired")
 
-        # 3. 检查数量
+        # 3. 检查数量（预检给人话文案；真守卫是下方原子条件扣减）
         if consumable.quantity < quantity:
             raise ValueError(
                 f"Insufficient consumable quantity: {consumable.quantity} < {quantity}"
             )
 
-        # 4. 应用效果
+        # 4. 原子条件扣减（PHOTON-TUNE：幂等/并发纪律——条件 UPDATE 只有一个
+        #    事务能赢，杜绝旧「读-改-写」并发双用双发货；rowcount=0 即数量不足）。
+        #    扣减与发货同事务：任一步失败整体回滚，不会出现「扣了卡没效果」。
+        decrement = await self.db.execute(
+            update(UserConsumable)
+            .where(and_(UserConsumable.id == consumable.id, UserConsumable.quantity >= quantity))
+            .values(quantity=UserConsumable.quantity - quantity, updated_at=_utcnow())
+        )
+        if decrement.rowcount == 0:
+            raise ValueError(
+                f"Insufficient consumable quantity: {consumable.quantity} < {quantity}"
+            )
+
+        # 5. 应用效果
         effect_result = await self._apply_consumable_effect(user_id, consumable, quantity)
-
-        # 5. 更新数量
-        consumable.quantity -= quantity
-        consumable.updated_at = _utcnow()
-
-        # 如果数量为0，可以选择删除记录或保留为0
-        if consumable.quantity == 0:
-            # 可选：删除记录
-            # await self.db.delete(consumable)
-            pass
 
         await self.db.commit()
         await self.db.refresh(consumable)
@@ -414,13 +417,47 @@ class InventoryService:
             return {"effect": "photon_boost", "duration_hours": 24, "multiplier": 1.5}
 
         elif effect_type == ConsumableEffectType.STREAK_FREEZE:
-            # 连击冻结：增加冻结次数
-            # TRACKED(TD-006): 实现 streak freeze 效果
-            return {"effect": "streak_freeze", "charges_added": quantity}
+            # 连击冻结：真实发货（PHOTON-TUNE，D-MONETIZE 审计 §1.6-4/R4——
+            # 「已展示可兑换但未发货」缺口接线）。写入 user_streak_stats.
+            # freeze_charges（真实消费点：断连保护 achievement_engine，
+            # 上限纪律与其 achievement freeze_charge 奖励路径一致：
+            # min(charges+quantity, max_freeze_charges)），诚实回报实发数。
+            from app.models.achievement import UserStreakStats
+
+            stats_result = await self.db.execute(
+                select(UserStreakStats).where(UserStreakStats.user_id == user_id)
+            )
+            stats = stats_result.scalar_one_or_none()
+            if stats is None:
+                stats = UserStreakStats(user_id=user_id)
+                self.db.add(stats)
+                await self.db.flush()
+
+            before = int(stats.freeze_charges or 0)
+            max_charges = int(stats.max_freeze_charges or 0)
+            stats.freeze_charges = min(before + quantity, max_charges)
+            stats.updated_at = _utcnow()
+            await self.db.flush()
+            charges_added = int(stats.freeze_charges) - before
+
+            logger.info(
+                "Streak freeze consumable delivered: user={} charges={} (before={}, after={}, cap={})",
+                user_id, charges_added, before, stats.freeze_charges, max_charges,
+            )
+            return {
+                "effect": "streak_freeze",
+                "charges_added": charges_added,
+                "charges_capped": charges_added < quantity,
+                "freeze_charges": int(stats.freeze_charges),
+                "max_freeze_charges": max_charges,
+            }
 
         elif effect_type == ConsumableEffectType.HINT_REVEAL:
             # 提示解锁：增加提示次数
             # TRACKED(TD-006): 实现 hint reveal 效果
+            # PHOTON-TUNE 裁决：后端无提示次数的消费系统（全仓无 hint 计数
+            # 模型/字段），本卡不造假发货面——桩保留，登记审计报告（其余
+            # 四类效果同属「需产品面先行」，下架与否属产品裁决）。
             return {"effect": "hint_reveal", "hints_added": quantity}
 
         elif effect_type == ConsumableEffectType.ENERGY_RESTORE:

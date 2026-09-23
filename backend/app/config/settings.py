@@ -148,13 +148,55 @@ class Settings(BaseSettings):
     PHOTON_REDEEM_PRO_DAYS: int = 7  # 单次兑换授予 Pro 天数
     PHOTON_REDEEM_PRO_MONTHLY_CAP: int = 1  # 每自然月硬顶次数（设计卡裁决：月顶 1 次）
 
-    # 契约押金托管（MINT-FIX 关铸币洞，D-MONETIZE 审计 §1.5-R1/§1.6-1）
-    # 创建契约即预扣 stake 入托管（流水类型 contract_escrow）：完成发 stake×multiplier
-    # （其中 1 份是还本，净得 stake×(multiplier−1)，与既有 stake×2.0 语义对齐）；
-    # 失败/取消即没收托管本金，不再碰余额。上限兜住单契约通胀面：1000 ≈ 诚实日均
-    # 收入（30-80）两周量级、低于单次兑 Pro 价 1500，与 schema `ge=10` 下限成界。
-    # 调参属审计建议另卡（D-MONETIZE §1.6-1），本默认值只堵洞不调参。
+    # 契约押金托管（MINT-FIX 关铸币洞，D-MONETIZE 审计 §1.5-R1/§1.6-1；
+    # 参数面收尾 PHOTON-TUNE）。押金参数全部单点在 settings，运维改值即生效，
+    # 代码零硬编码：
+    #
+    # - PHOTON_CONTRACT_STAKE_MAX：单契约押金上限。创建时 service 层强制
+    #   （achievement_engine.ContractService.create_contract，超限 ValueError→API 400），
+    #   schema 仅保留下限 `ge=10`——上限是经济参数，单点留在本文件（动态值不进
+    #   pydantic Field）。1000 ≈ 诚实日均收入（30-80）两周量级、低于单次兑 Pro 价
+    #   1500，兜住「完成双倍返还」的单契约通胀面。
+    # - PHOTON_CONTRACT_REWARD_MULTIPLIER：完成奖励倍率（默认 2.0 = 还本 + 等额
+    #   奖励，净得 stake×(multiplier−1)）。创建契约时从本值写入
+    #   spark_contracts.reward_multiplier（存量契约按落库值结算，改配置不改在途）。
+    # - 托管流转：创建即预扣（contract_escrow 流水）→ 完成发 stake×multiplier
+    #   （grant_contract，其中 1 份还本）→ 失败/取消没收托管本金，不碰余额。
+    #
+    # 审计建议 1 的其余子项裁决（PHOTON-TUNE 登记不做）：审计原文未提议
+    # 「押金日利率/超时罚则」，且二者会引入新的铸币/扣款语义（利息=无行为
+    # 铸币、罚则=托管没收之外重复惩罚），无审计依据不落码。
     PHOTON_CONTRACT_STAKE_MAX: int = 1000
+    PHOTON_CONTRACT_REWARD_MULTIPLIER: float = 2.0
+
+    # 连击加成效果门槛 + 日上限/边际递减（PHOTON-TUNE，D-MONETIZE 审计 §1.6-2/R2：
+    # 批量归档刷出 5050 光子 vs 诚实日均 30-80，激励须从「归档吞吐」改锚「学习效果」）
+    # - PHOTON_COMBO_EFFECT_GATE_ENABLED：效果门槛总开关。开启后 combo 计数只由
+    #   「带真实学习行为」的解锁事件累积（task_completed 事件按
+    #   actual_minutes ≥ PHOTON_COMBO_EFFECT_MIN_MINUTES 判定；契约/签到/掌握度等
+    #   事件自带真实行为判据，不设门槛）。关闭=旧行为（纯解锁计数，刷量路径，
+    #   仅供回滚，测试以新旧对照钉住）。
+    # - PHOTON_COMBO_DAILY_CAP：单用户单 UTC 日 combo 加成总额上限（发满即停，
+    #   本笔 bonus_photons=0，连击展示不受影响）；≤0 表示不设上限。
+    # - PHOTON_COMBO_DAILY_DECAY_FACTOR / _FLOOR：金额锚「当笔效果增量」
+    #   （有效解锁数×10；旧式 combo×10 对窗口内前序解锁重复计价，属纯计数
+    #   刷量锚点），同日第 n 次发放金额 = 增量×10×max(floor, factor^n)
+    #   （n=当日已发放次数）；factor≥1 或 ≤0 语义视为不加衰减（=1.0）。
+    #   诚实日 2-3 轮连击几乎无感，批量刷量迅速衰减。
+    #   默认 100 日上限 ≈ 诚实日均总收入（30-80）上界，脉冲压到数百级。
+    PHOTON_COMBO_EFFECT_GATE_ENABLED: bool = True
+    PHOTON_COMBO_EFFECT_MIN_MINUTES: int = 1
+    PHOTON_COMBO_DAILY_CAP: int = 100
+    PHOTON_COMBO_DAILY_DECAY_FACTOR: float = 0.5
+    PHOTON_COMBO_DAILY_DECAY_FLOOR: float = 0.1
+
+    # 经济仪表告警阈值占位（PHOTON-TUNE，D-MONETIZE 审计 §1.6-5）。三个阈值
+    # 对应 sparkle_photon_economy_daily_mint / _daily_burn /
+    # _avg_balance_per_active_user 三仪表；0=默认静默不响（仅记仪表不告警），
+    # >0 后日快照超限走 loguru 告警日志（alertmanager 接线的占位面）。
+    PHOTON_ECONOMY_ALERT_DAILY_MINT_MAX: int = 0
+    PHOTON_ECONOMY_ALERT_DAILY_BURN_MAX: int = 0
+    PHOTON_ECONOMY_ALERT_AVG_BALANCE_MAX: int = 0
 
     COMMUNITY_INTELLIGENCE_ENABLED: bool = True
     COMMUNITY_INTELLIGENCE_MIN_COHORT_SIZE: int = 5
