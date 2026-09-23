@@ -5526,6 +5526,28 @@ CREATE TABLE spark_contracts (
 ALTER TABLE spark_contracts OWNER TO postgres;
 
 --
+-- Name: squad_shared_errors; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE squad_shared_errors (
+    id uuid NOT NULL,
+    group_id uuid NOT NULL,
+    error_id uuid NOT NULL,
+    sharer_id uuid NOT NULL,
+    content jsonb NOT NULL,
+    snapshot_note text,
+    mastery_level double precision NOT NULL,
+    mastery_delta double precision,
+    review_count integer NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE squad_shared_errors OWNER TO postgres;
+
+--
 -- Name: srl_phase_states; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -5666,6 +5688,25 @@ CREATE TABLE study_records (
 
 
 ALTER TABLE study_records OWNER TO postgres;
+
+--
+-- Name: study_room_sessions; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE study_room_sessions (
+    id uuid NOT NULL,
+    group_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    entered_at timestamp without time zone NOT NULL,
+    exited_at timestamp without time zone,
+    last_heartbeat_at timestamp without time zone NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE study_room_sessions OWNER TO postgres;
 
 --
 -- Name: subjects; Type: TABLE; Schema: public; Owner: postgres
@@ -8765,6 +8806,14 @@ ALTER TABLE ONLY spark_contracts
 
 
 --
+-- Name: squad_shared_errors squad_shared_errors_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY squad_shared_errors
+    ADD CONSTRAINT squad_shared_errors_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: srl_phase_states srl_phase_states_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -8826,6 +8875,14 @@ ALTER TABLE ONLY study_buddies
 
 ALTER TABLE ONLY study_records
     ADD CONSTRAINT study_records_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: study_room_sessions study_room_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY study_room_sessions
+    ADD CONSTRAINT study_room_sessions_pkey PRIMARY KEY (id);
 
 
 --
@@ -9066,14 +9123,6 @@ ALTER TABLE ONLY friendships
 
 ALTER TABLE ONLY group_files
     ADD CONSTRAINT uq_group_files_group_file UNIQUE (group_id, file_id);
-
-
---
--- Name: group_members uq_group_member; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY group_members
-    ADD CONSTRAINT uq_group_member UNIQUE (group_id, user_id);
 
 
 --
@@ -11207,10 +11256,38 @@ CREATE INDEX idx_skill_share_queue_owner_created ON skill_share_moderation_queue
 
 
 --
+-- Name: idx_squad_shared_error_group_time; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_squad_shared_error_group_time ON squad_shared_errors USING btree (group_id, created_at);
+
+
+--
+-- Name: idx_squad_shared_error_sharer; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_squad_shared_error_sharer ON squad_shared_errors USING btree (sharer_id, group_id);
+
+
+--
 -- Name: idx_strategy_belief_user_score_inputs; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_strategy_belief_user_score_inputs ON strategy_belief_snapshots USING btree (user_id, strategy_key, evidence_count);
+
+
+--
+-- Name: idx_study_room_group_entered; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_study_room_group_entered ON study_room_sessions USING btree (group_id, entered_at);
+
+
+--
+-- Name: idx_study_room_user_entered; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_study_room_user_entered ON study_room_sessions USING btree (user_id, entered_at);
 
 
 --
@@ -16184,6 +16261,34 @@ CREATE INDEX ix_spark_contracts_deleted_at ON spark_contracts USING btree (delet
 
 
 --
+-- Name: ix_squad_shared_errors_deleted_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_squad_shared_errors_deleted_at ON squad_shared_errors USING btree (deleted_at);
+
+
+--
+-- Name: ix_squad_shared_errors_error_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_squad_shared_errors_error_id ON squad_shared_errors USING btree (error_id);
+
+
+--
+-- Name: ix_squad_shared_errors_group_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_squad_shared_errors_group_id ON squad_shared_errors USING btree (group_id);
+
+
+--
+-- Name: ix_squad_shared_errors_sharer_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_squad_shared_errors_sharer_id ON squad_shared_errors USING btree (sharer_id);
+
+
+--
 -- Name: ix_srl_phase_states_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -16335,6 +16440,27 @@ CREATE INDEX ix_study_records_node_id ON study_records USING btree (node_id);
 --
 
 CREATE INDEX ix_study_records_user_id ON study_records USING btree (user_id);
+
+
+--
+-- Name: ix_study_room_sessions_deleted_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_study_room_sessions_deleted_at ON study_room_sessions USING btree (deleted_at);
+
+
+--
+-- Name: ix_study_room_sessions_group_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_study_room_sessions_group_id ON study_room_sessions USING btree (group_id);
+
+
+--
+-- Name: ix_study_room_sessions_user_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_study_room_sessions_user_id ON study_room_sessions USING btree (user_id);
 
 
 --
@@ -17486,6 +17612,20 @@ CREATE UNIQUE INDEX uq_execution_intents_active_task ON execution_intents USING 
 
 
 --
+-- Name: uq_group_member_active; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX uq_group_member_active ON group_members USING btree (group_id, user_id) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: uq_mastery_audit_log_idem_key; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX uq_mastery_audit_log_idem_key ON mastery_audit_log USING btree (user_id, node_id, request_id) WHERE (((request_id)::text ~~ 'edi:%'::text) OR ((request_id)::text ~~ 'erv:%'::text));
+
+
+--
 -- Name: uq_memory_preferences_version; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -17497,6 +17637,13 @@ CREATE UNIQUE INDEX uq_memory_preferences_version ON memory_preferences USING bt
 --
 
 CREATE UNIQUE INDEX uq_memory_rank_policies_scope ON memory_rank_policies USING btree (scope_type, scope_key);
+
+
+--
+-- Name: uq_photon_tx_daily_first_idem; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX uq_photon_tx_daily_first_idem ON photon_transaction_history USING btree (user_id, related_item_id) WHERE ((related_item_id)::text ~~ 'daily_first:%'::text);
 
 
 --
@@ -17518,6 +17665,20 @@ CREATE UNIQUE INDEX uq_plans_user_sprint_goal_active ON plans USING btree (user_
 --
 
 CREATE UNIQUE INDEX uq_research_consent_active_protocol ON research_consent_records USING btree (user_id, protocol_id) WHERE (revoked_at IS NULL);
+
+
+--
+-- Name: uq_squad_shared_error_active; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX uq_squad_shared_error_active ON squad_shared_errors USING btree (group_id, error_id) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: uq_study_room_open_session; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE UNIQUE INDEX uq_study_room_open_session ON study_room_sessions USING btree (group_id, user_id) WHERE ((exited_at IS NULL) AND (deleted_at IS NULL));
 
 
 --
@@ -19648,6 +19809,30 @@ ALTER TABLE ONLY spark_contracts
 
 
 --
+-- Name: squad_shared_errors squad_shared_errors_error_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY squad_shared_errors
+    ADD CONSTRAINT squad_shared_errors_error_id_fkey FOREIGN KEY (error_id) REFERENCES error_records(id) ON DELETE CASCADE;
+
+
+--
+-- Name: squad_shared_errors squad_shared_errors_group_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY squad_shared_errors
+    ADD CONSTRAINT squad_shared_errors_group_id_fkey FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE;
+
+
+--
+-- Name: squad_shared_errors squad_shared_errors_sharer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY squad_shared_errors
+    ADD CONSTRAINT squad_shared_errors_sharer_id_fkey FOREIGN KEY (sharer_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: srl_phase_states srl_phase_states_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -19709,6 +19894,22 @@ ALTER TABLE ONLY study_records
 
 ALTER TABLE ONLY study_records
     ADD CONSTRAINT study_records_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+
+
+--
+-- Name: study_room_sessions study_room_sessions_group_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY study_room_sessions
+    ADD CONSTRAINT study_room_sessions_group_id_fkey FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE;
+
+
+--
+-- Name: study_room_sessions study_room_sessions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY study_room_sessions
+    ADD CONSTRAINT study_room_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -21865,6 +22066,13 @@ GRANT SELECT ON TABLE spark_contracts TO sparkle_readonly;
 
 
 --
+-- Name: TABLE squad_shared_errors; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE squad_shared_errors TO sparkle_readonly;
+
+
+--
 -- Name: TABLE srl_phase_states; Type: ACL; Schema: public; Owner: postgres
 --
 
@@ -21915,6 +22123,13 @@ GRANT SELECT ON TABLE study_buddies TO sparkle_readonly;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE study_records TO sparkle_engine;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE study_records TO sparkle_celery;
 GRANT SELECT ON TABLE study_records TO sparkle_readonly;
+
+
+--
+-- Name: TABLE study_room_sessions; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE study_room_sessions TO sparkle_readonly;
 
 
 --

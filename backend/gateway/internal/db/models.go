@@ -5089,6 +5089,21 @@ type SparkContract struct {
 	DeletedAt          pgtype.Timestamp   `json:"deleted_at"`
 }
 
+type SquadSharedError struct {
+	ID           pgtype.UUID      `json:"id"`
+	GroupID      pgtype.UUID      `json:"group_id"`
+	ErrorID      pgtype.UUID      `json:"error_id"`
+	SharerID     pgtype.UUID      `json:"sharer_id"`
+	Content      []byte           `json:"content"`
+	SnapshotNote pgtype.Text      `json:"snapshot_note"`
+	MasteryLevel float64          `json:"mastery_level"`
+	MasteryDelta pgtype.Float8    `json:"mastery_delta"`
+	ReviewCount  int32            `json:"review_count"`
+	CreatedAt    pgtype.Timestamp `json:"created_at"`
+	UpdatedAt    pgtype.Timestamp `json:"updated_at"`
+	DeletedAt    pgtype.Timestamp `json:"deleted_at"`
+}
+
 type SrlPhaseState struct {
 	UserID                pgtype.UUID      `json:"user_id"`
 	CurrentPhase          string           `json:"current_phase"`
@@ -5186,6 +5201,18 @@ type StudyRecord struct {
 	CreatedAt      pgtype.Timestamp `json:"created_at"`
 	UpdatedAt      pgtype.Timestamp `json:"updated_at"`
 	DeletedAt      pgtype.Timestamp `json:"deleted_at"`
+}
+
+type StudyRoomSession struct {
+	ID              pgtype.UUID      `json:"id"`
+	GroupID         pgtype.UUID      `json:"group_id"`
+	UserID          pgtype.UUID      `json:"user_id"`
+	EnteredAt       pgtype.Timestamp `json:"entered_at"`
+	ExitedAt        pgtype.Timestamp `json:"exited_at"`
+	LastHeartbeatAt pgtype.Timestamp `json:"last_heartbeat_at"`
+	CreatedAt       pgtype.Timestamp `json:"created_at"`
+	UpdatedAt       pgtype.Timestamp `json:"updated_at"`
+	DeletedAt       pgtype.Timestamp `json:"deleted_at"`
 }
 
 type Subject struct {
