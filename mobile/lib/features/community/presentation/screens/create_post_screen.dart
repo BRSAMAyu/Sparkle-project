@@ -130,7 +130,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           leading: SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: const Icon(Icons.close_rounded),
-            onPressed: () => context.pop(),
+            // maybePop 走 PopScope 通道，脏态时由 guard 拦截确认；
+            // 原 context.pop() 是硬 pop，会绕过 guard。
+            onPressed: () => Navigator.of(context).maybePop(),
           ),
           title: Text(context.l10n.communityNewPost),
           actions: [
@@ -138,10 +140,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
               padding: const EdgeInsets.only(right: DS.md),
               child: SparkleButton.primary(
                 label: context.l10n.communityPost,
-                onPressed:
-                    _contentController.text.trim().isEmpty || _isPosting
-                        ? () {}
-                        : _submit,
+                onPressed: _contentController.text.trim().isEmpty || _isPosting
+                    ? () {}
+                    : _submit,
                 loading: _isPosting,
               ),
             ),
@@ -331,8 +332,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           padding: const EdgeInsets.only(right: DS.spacing8),
           child: GestureDetector(
             onTap: () {
-              unawaited(SensoryFeedbackService.emit(
-                  SensoryFeedbackEvent.selection));
+              unawaited(
+                  SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
               setState(() {
                 _moodIndex = selected ? -1 : index;
               });

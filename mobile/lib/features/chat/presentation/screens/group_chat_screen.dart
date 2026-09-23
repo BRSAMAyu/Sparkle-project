@@ -14,6 +14,7 @@ import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
+import 'package:sparkle/core/utils/input_formatters.dart';
 import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
 import 'package:sparkle/features/chat/presentation/widgets/community_chat_input.dart';
 import 'package:sparkle/features/community/community_routes.dart';
@@ -353,6 +354,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   suffixText: context.l10n.commonMinutesShort,
                 ),
                 keyboardType: TextInputType.number,
+                inputFormatters: SparkleInputFormatters.digitsOnly,
               ),
               const SizedBox(height: DS.lg),
               TextField(

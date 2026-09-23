@@ -27,6 +27,10 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
+  /// N25（A-SPEC5 v1.5）校验三段制：未提交前不提前报错（disabled），
+  /// 首次提交失败后转即时校验（onUserInteraction），提交时全量兜底。
+  AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
+
   @override
   void initState() {
     super.initState();
@@ -42,7 +46,13 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      if (_autovalidateMode != AutovalidateMode.onUserInteraction) {
+        // N25 三段制：首次提交失败后，输入/失焦即校验，改错即时消错。
+        setState(() => _autovalidateMode = AutovalidateMode.onUserInteraction);
+      }
+      return;
+    }
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
 
     try {
@@ -82,6 +92,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
             surfaceRole: SparkleSurfaceRole.card,
             child: Form(
               key: _formKey,
+              autovalidateMode: _autovalidateMode,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -95,89 +106,90 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                   SparkleStaggerItem(
                     index: 1,
                     child: TextFormField(
-                    controller: _tokenController,
-                    decoration: InputDecoration(
-                      labelText: context.l10n.authResetCode,
-                      border: const OutlineInputBorder(),
-                      prefixIcon: const Icon(Icons.mark_email_read_outlined),
-                    ),
-                    validator: (value) =>
-                        (value == null || value.trim().isEmpty)
-                            ? context.l10n.authResetCodeRequired
-                            : null,
+                      controller: _tokenController,
+                      decoration: InputDecoration(
+                        labelText: context.l10n.authResetCode,
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.mark_email_read_outlined),
+                      ),
+                      validator: (value) =>
+                          (value == null || value.trim().isEmpty)
+                              ? context.l10n.authResetCodeRequired
+                              : null,
                     ),
                   ),
                   const SizedBox(height: DS.spacing16),
                   SparkleStaggerItem(
                     index: 2,
                     child: TextFormField(
-                    controller: _passwordController,
-                    autofillHints: const [AutofillHints.newPassword],
-                    obscureText: _obscurePassword,
-                    decoration: InputDecoration(
-                      labelText: context.l10n.authNewPassword,
-                      border: const OutlineInputBorder(),
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
+                      controller: _passwordController,
+                      autofillHints: const [AutofillHints.newPassword],
+                      obscureText: _obscurePassword,
+                      decoration: InputDecoration(
+                        labelText: context.l10n.authNewPassword,
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                          ),
+                          onPressed: () {
+                            unawaited(
+                              SensoryFeedbackService.emit(
+                                SensoryFeedbackEvent.selection,
+                              ),
+                            );
+                            setState(
+                                () => _obscurePassword = !_obscurePassword);
+                          },
                         ),
-                        onPressed: () {
-                          unawaited(
-                            SensoryFeedbackService.emit(
-                              SensoryFeedbackEvent.selection,
-                            ),
-                          );
-                          setState(() => _obscurePassword = !_obscurePassword);
-                        },
                       ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.length < 6) {
-                        return context.l10n.authPasswordMinLength;
-                      }
-                      return null;
-                    },
+                      validator: (value) {
+                        if (value == null || value.length < 6) {
+                          return context.l10n.authPasswordMinLength;
+                        }
+                        return null;
+                      },
                     ),
                   ),
                   const SizedBox(height: DS.spacing16),
                   SparkleStaggerItem(
                     index: 3,
                     child: TextFormField(
-                    controller: _confirmPasswordController,
-                    autofillHints: const [AutofillHints.newPassword],
-                    obscureText: _obscureConfirmPassword,
-                    decoration: InputDecoration(
-                      labelText: context.l10n.authConfirmNewPassword,
-                      border: const OutlineInputBorder(),
-                      prefixIcon: const Icon(Icons.lock_person_outlined),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscureConfirmPassword
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
+                      controller: _confirmPasswordController,
+                      autofillHints: const [AutofillHints.newPassword],
+                      obscureText: _obscureConfirmPassword,
+                      decoration: InputDecoration(
+                        labelText: context.l10n.authConfirmNewPassword,
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.lock_person_outlined),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureConfirmPassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                          ),
+                          onPressed: () {
+                            unawaited(
+                              SensoryFeedbackService.emit(
+                                SensoryFeedbackEvent.selection,
+                              ),
+                            );
+                            setState(
+                              () => _obscureConfirmPassword =
+                                  !_obscureConfirmPassword,
+                            );
+                          },
                         ),
-                        onPressed: () {
-                          unawaited(
-                            SensoryFeedbackService.emit(
-                              SensoryFeedbackEvent.selection,
-                            ),
-                          );
-                          setState(
-                            () => _obscureConfirmPassword =
-                                !_obscureConfirmPassword,
-                          );
-                        },
                       ),
-                    ),
-                    validator: (value) {
-                      if (value != _passwordController.text) {
-                        return context.l10n.authPasswordsDoNotMatch;
-                      }
-                      return null;
-                    },
+                      validator: (value) {
+                        if (value != _passwordController.text) {
+                          return context.l10n.authPasswordsDoNotMatch;
+                        }
+                        return null;
+                      },
                     ),
                   ),
                   const SizedBox(height: DS.spacing24),

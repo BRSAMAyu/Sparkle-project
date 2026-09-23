@@ -7,6 +7,7 @@ import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/widgets/unsaved_changes_guard.dart';
 import 'package:sparkle/features/goal/data/models/goal_creation_models.dart';
 import 'package:sparkle/features/goal/data/models/goal_intent_models.dart';
 import 'package:sparkle/features/goal/data/models/scenario_pack_models.dart';
@@ -63,6 +64,10 @@ class _GoalCreationWizardScreenState
     super.initState();
     // N-7 UX 旁路：底部继续键要跟随意图输入文本实时点亮/熄灭。
     _intentController.addListener(_onIntentTextChanged);
+    // N27：监听输入变化并重建，保证 UnsavedChangesGuard 的 canPop 实时生效。
+    _titleController.addListener(_onIntentTextChanged);
+    _motivationController.addListener(_onIntentTextChanged);
+    _descriptionController.addListener(_onIntentTextChanged);
   }
 
   void _onIntentTextChanged() {
@@ -71,14 +76,28 @@ class _GoalCreationWizardScreenState
     }
   }
 
+  /// N27（A-SPEC5 v1.5）脏态：意图文本、标题、动机、描述任一非空即为脏——
+  /// 目标向导退出丢掉已跑的意图分析结果是报告点名的「输入是劳动」损害。
+  bool get _isDirty =>
+      _intentController.text.trim().isNotEmpty ||
+      _titleController.text.trim().isNotEmpty ||
+      _motivationController.text.trim().isNotEmpty ||
+      _descriptionController.text.trim().isNotEmpty;
+
   @override
   void dispose() {
     _intentController
       ..removeListener(_onIntentTextChanged)
       ..dispose();
-    _titleController.dispose();
-    _motivationController.dispose();
-    _descriptionController.dispose();
+    _titleController
+      ..removeListener(_onIntentTextChanged)
+      ..dispose();
+    _motivationController
+      ..removeListener(_onIntentTextChanged)
+      ..dispose();
+    _descriptionController
+      ..removeListener(_onIntentTextChanged)
+      ..dispose();
     super.dispose();
   }
 
@@ -94,78 +113,85 @@ class _GoalCreationWizardScreenState
     ];
     final currentStepLabel = titles[_step];
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.goalWizardTitle),
-      ),
-      body: SafeArea(
-        child: Semantics(
-          container: true,
-          explicitChildNodes: true,
-          label: l10n.goalWizardAccessibility(
-            (_step + 1).toString(),
-            titles.length.toString(),
-            currentStepLabel,
-          ),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
-            children: [
-              _WizardProgress(step: _step, titles: titles),
-              const SizedBox(height: 18),
-              if (_error != null) ...[
-                _ErrorBanner(
-                    message: _error!,
-                    onClose: () => setState(() => _error = null)),
-                const SizedBox(height: 14),
-              ],
-              Semantics(
-                container: true,
-                label: currentStepLabel,
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 180),
-                  child: _buildStep(context),
-                ),
-              ),
-            ],
-          ),
+    // N27（A-SPEC5 v1.5）：脏态离开确认。AppBar 默认返回键走 maybePop，
+    // guard 可正常拦截——退出丢掉意图分析结果不再静默发生。
+    return UnsavedChangesGuard(
+      isDirty: _isDirty,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(l10n.goalWizardTitle),
         ),
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-          child: Row(
-            children: [
-              if (_step > 0)
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _creating ? null : () => setState(() => _step--),
-                    icon: const Icon(Icons.arrow_back_rounded,
-                        semanticLabel: 'Back'),
-                    label: Text(l10n.goalWizardBack),
+        body: SafeArea(
+          child: Semantics(
+            container: true,
+            explicitChildNodes: true,
+            label: l10n.goalWizardAccessibility(
+              (_step + 1).toString(),
+              titles.length.toString(),
+              currentStepLabel,
+            ),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+              children: [
+                _WizardProgress(step: _step, titles: titles),
+                const SizedBox(height: 18),
+                if (_error != null) ...[
+                  _ErrorBanner(
+                      message: _error!,
+                      onClose: () => setState(() => _error = null)),
+                  const SizedBox(height: 14),
+                ],
+                Semantics(
+                  container: true,
+                  label: currentStepLabel,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 180),
+                    child: _buildStep(context),
                   ),
                 ),
-              if (_step > 0) const SizedBox(width: 12),
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed:
-                      _primaryActionEnabled ? () => unawaited(_next()) : null,
-                  icon: _creating || _loadingPreview
-                      ? LoadingIndicator.circular(
-                          size: 16,
-                          color: DS.neutral0,
-                        )
-                      : Icon(
-                          _step == 4
-                              ? Icons.check_rounded
-                              : Icons.arrow_forward_rounded,
-                          semanticLabel: _step == 4
-                              ? l10n.goalWizardCreate
-                              : l10n.goalWizardContinue),
-                  label: Text(
-                      _step == 4 ? l10n.goalWizardCreate : l10n.goalWizardContinue),
+              ],
+            ),
+          ),
+        ),
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+            child: Row(
+              children: [
+                if (_step > 0)
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed:
+                          _creating ? null : () => setState(() => _step--),
+                      icon: const Icon(Icons.arrow_back_rounded,
+                          semanticLabel: 'Back'),
+                      label: Text(l10n.goalWizardBack),
+                    ),
+                  ),
+                if (_step > 0) const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed:
+                        _primaryActionEnabled ? () => unawaited(_next()) : null,
+                    icon: _creating || _loadingPreview
+                        ? LoadingIndicator.circular(
+                            size: 16,
+                            color: DS.neutral0,
+                          )
+                        : Icon(
+                            _step == 4
+                                ? Icons.check_rounded
+                                : Icons.arrow_forward_rounded,
+                            semanticLabel: _step == 4
+                                ? l10n.goalWizardCreate
+                                : l10n.goalWizardContinue),
+                    label: Text(_step == 4
+                        ? l10n.goalWizardCreate
+                        : l10n.goalWizardContinue),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -432,7 +458,8 @@ class _GoalCreationWizardScreenState
             ? _milestones.first.title
             : context.l10n.goalWizardGettingStarted;
         final packDuration = _matchedPack != null
-            ? context.l10n.goalWizardDaysLabel(_matchedPack!.horizonDays.toString())
+            ? context.l10n
+                .goalWizardDaysLabel(_matchedPack!.horizonDays.toString())
             : null;
         unawaited(
           SparkleGoalCreatedDialog.show(
@@ -725,7 +752,8 @@ class _MilestoneEditorCard extends StatelessWidget {
             TextFormField(
               initialValue: milestone.title,
               decoration: InputDecoration(
-                labelText: l10n.goalWizardMilestoneLabel((index + 1).toString()),
+                labelText:
+                    l10n.goalWizardMilestoneLabel((index + 1).toString()),
                 prefixIcon: const Icon(Icons.route_outlined),
               ),
               onChanged: (value) => onChanged(milestone.copyWith(title: value)),

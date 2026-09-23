@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/openclaw_automation_service.dart';
+import 'package:sparkle/core/utils/input_formatters.dart';
 import 'package:sparkle/features/openclaw/presentation/widgets/openclaw_primitives.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/utils/task_identity.dart';
@@ -172,7 +173,7 @@ class _OpenClawAutomationPanelState
                           strokeWidth: 2,
                           color: DS.textOnPrimary,
                           liveRegion: false,
-                      )
+                        )
                       : const Icon(Icons.playlist_add_check_circle_rounded),
                   label: Text(context.l10n.openclawStartBatchDelegation),
                 ),
@@ -322,6 +323,7 @@ class _OpenClawAutomationPanelState
                   TextFormField(
                     controller: _intervalController,
                     keyboardType: TextInputType.number,
+                    inputFormatters: SparkleInputFormatters.digitsOnly,
                     decoration: InputDecoration(
                       labelText: context.l10n.openclawPollingInterval,
                     ),
@@ -339,7 +341,7 @@ class _OpenClawAutomationPanelState
                           strokeWidth: 2,
                           color: DS.textOnPrimary,
                           liveRegion: false,
-                      )
+                        )
                       : const Icon(Icons.add_alarm_rounded),
                   label: Text(context.l10n.openclawCreateAutomation),
                 ),

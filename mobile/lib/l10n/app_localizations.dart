@@ -743,7 +743,7 @@ abstract class AppLocalizations {
   /// No description provided for @invalidEmail.
   ///
   /// In zh, this message translates to:
-  /// **'请输入有效的邮箱地址'**
+  /// **'邮箱格式不正确，请按 name@example.com 的格式填写'**
   String get invalidEmail;
 
   /// No description provided for @passwordMinLength.
@@ -4441,6 +4441,30 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'可选'**
   String get commonOptional;
+
+  /// No description provided for @formUnsavedTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'放弃更改？'**
+  String get formUnsavedTitle;
+
+  /// No description provided for @formUnsavedMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'你有未保存的输入，离开后将丢失。'**
+  String get formUnsavedMessage;
+
+  /// No description provided for @formUnsavedKeepEditing.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续编辑'**
+  String get formUnsavedKeepEditing;
+
+  /// No description provided for @formUnsavedDiscard.
+  ///
+  /// In zh, this message translates to:
+  /// **'放弃更改'**
+  String get formUnsavedDiscard;
 
   /// No description provided for @commonEnabled.
   ///
@@ -11549,7 +11573,7 @@ abstract class AppLocalizations {
   /// No description provided for @authInvalidEmail.
   ///
   /// In zh, this message translates to:
-  /// **'请输入有效邮箱'**
+  /// **'邮箱格式不正确，请按 name@example.com 的格式填写'**
   String get authInvalidEmail;
 
   /// No description provided for @authHaveResetCode.

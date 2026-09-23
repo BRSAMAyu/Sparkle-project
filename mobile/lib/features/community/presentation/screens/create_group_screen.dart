@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/widgets/unsaved_changes_guard.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 
@@ -37,14 +37,33 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
     _descController = TextEditingController();
     _tagsController = TextEditingController();
     _goalController = TextEditingController();
+    // N27：监听输入变化并重建，保证 UnsavedChangesGuard 的 canPop 实时生效
+    //（控制器文本变化本身不触发重建，isDirty 会滞留旧值）。
+    for (final controller in [
+      _nameController,
+      _descController,
+      _tagsController,
+      _goalController,
+    ]) {
+      controller.addListener(_onFormEdited);
+    }
+  }
+
+  void _onFormEdited() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _descController.dispose();
-    _tagsController.dispose();
-    _goalController.dispose();
+    for (final controller in [
+      _nameController,
+      _descController,
+      _tagsController,
+      _goalController,
+    ]) {
+      controller.removeListener(_onFormEdited);
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -52,35 +71,8 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
       _nameController.text.isNotEmpty ||
       _descController.text.isNotEmpty ||
       _tagsController.text.isNotEmpty ||
-      _goalController.text.isNotEmpty;
-
-  Future<bool> _onWillPop() async {
-    if (!_isDirty || _isSubmitting) return true;
-
-    final shouldPop = await showSensoryDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: DS.surfacePrimary,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: DS.border.withValues(alpha: 0.5)),
-        ),
-        title: Text(context.l10n.communityDiscardGroupCreation),
-        content: Text(context.l10n.communityUnsavedChanges),
-        actions: [
-          SparkleButton.ghost(
-            label: context.l10n.communityKeepEditing,
-            onPressed: () => Navigator.of(context).pop(false),
-          ),
-          SparkleButton.destructive(
-            label: context.l10n.communityDiscard,
-            onPressed: () => Navigator.of(context).pop(true),
-          ),
-        ],
-      ),
-    );
-    return shouldPop ?? false;
-  }
+      _goalController.text.isNotEmpty ||
+      _deadline != null;
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -132,7 +124,8 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
     } catch (e) {
       if (mounted) {
         await SensoryFeedbackService.emit(SensoryFeedbackEvent.error);
-        AppFeedback.error(context, context.l10n.communityCreateGroupFailed(UserFacingError.from(e)));
+        AppFeedback.error(context,
+            context.l10n.communityCreateGroupFailed(UserFacingError.from(e)));
       }
     } finally {
       if (mounted) {
@@ -144,16 +137,15 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => PopScope(
-        onPopInvokedWithResult: (didPop, result) async {
-          if (didPop) return;
-          final shouldPop = await _onWillPop();
-          if (shouldPop && mounted) {
-            if (context.mounted) {
-              Navigator.of(context).pop();
-            }
-          }
-        },
+  Widget build(BuildContext context) => UnsavedChangesGuard(
+        // N27：脏态离开确认。原手写 PopScope 未设 canPop: !isDirty，
+        // didPop 恒为 true，确认弹窗从未出现过（死 guard）——改挂统一
+        // UnsavedChangesGuard 组件并沿用原有社群域文案。
+        isDirty: _isDirty && !_isSubmitting,
+        discardTitle: context.l10n.communityDiscardGroupCreation,
+        discardMessage: context.l10n.communityUnsavedChanges,
+        keepEditingLabel: context.l10n.communityKeepEditing,
+        discardLabel: context.l10n.communityDiscard,
         child: Scaffold(
           appBar: AppBar(
             backgroundColor: DS.surfaceOverlay.withValues(alpha: 0.94),
@@ -162,8 +154,11 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
             leading: SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.arrow_back),
-              onPressed: () =>
-                  context.canPop() ? context.pop() : context.go('/community'),
+              // maybePop 走 PopScope 通道，脏态时由 guard 拦截确认；
+              // context.pop() 是硬 pop，会绕过 guard。
+              onPressed: () => context.canPop()
+                  ? Navigator.of(context).maybePop()
+                  : context.go('/community'),
             ),
             title: Text(context.l10n.communityCreateGroupTitle),
           ),
@@ -186,7 +181,8 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                         if (value == null || value.trim().isEmpty) {
                           return context.l10n.communityGroupNameRequired;
                         }
-                        if (value.length < 2) return context.l10n.communityGroupNameMinLength;
+                        if (value.length < 2)
+                          return context.l10n.communityGroupNameMinLength;
                         return null;
                       },
                     ),

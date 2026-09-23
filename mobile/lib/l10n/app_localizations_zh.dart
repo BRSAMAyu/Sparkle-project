@@ -330,7 +330,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get usernameMinLength => '用户名至少需要3个字符';
 
   @override
-  String get invalidEmail => '请输入有效的邮箱地址';
+  String get invalidEmail => '邮箱格式不正确，请按 name@example.com 的格式填写';
 
   @override
   String get passwordMinLength => '密码至少需要6个字符';
@@ -2351,6 +2351,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get commonOptional => '可选';
+
+  @override
+  String get formUnsavedTitle => '放弃更改？';
+
+  @override
+  String get formUnsavedMessage => '你有未保存的输入，离开后将丢失。';
+
+  @override
+  String get formUnsavedKeepEditing => '继续编辑';
+
+  @override
+  String get formUnsavedDiscard => '放弃更改';
 
   @override
   String get commonEnabled => '已启用';
@@ -6210,7 +6222,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authForgotPasswordHint => '输入注册邮箱，我们会发送一封包含重置码的邮件给你。';
 
   @override
-  String get authInvalidEmail => '请输入有效邮箱';
+  String get authInvalidEmail => '邮箱格式不正确，请按 name@example.com 的格式填写';
 
   @override
   String get authHaveResetCode => '我已经有重置码';

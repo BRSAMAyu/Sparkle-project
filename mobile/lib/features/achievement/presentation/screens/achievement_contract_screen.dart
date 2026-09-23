@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
+import 'package:sparkle/core/utils/input_formatters.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
@@ -75,15 +76,15 @@ class _AchievementContractScreenState
           switchInCurve: Curves.easeOutCubic,
           switchOutCurve: Curves.easeInCubic,
           transitionBuilder: (child, animation) => FadeTransition(
-              opacity: animation,
-              child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0, 0.04),
-                  end: Offset.zero,
-                ).animate(animation),
-                child: child,
-              ),
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 0.04),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
             ),
+          ),
           child: contract == null
               ? _buildCreateSection(l10n)
               : _buildActiveSection(contract, l10n),
@@ -97,47 +98,47 @@ class _AchievementContractScreenState
   // ---------------------------------------------------------------------------
 
   Widget _buildCreateSection(AppLocalizations l10n) => Column(
-      key: const ValueKey('create'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          l10n.contractCreateTitle,
-          style: const TextStyle(
-            fontSize: DS.fontSizeLg,
-            fontWeight: DS.fontWeightSemibold,
+        key: const ValueKey('create'),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.contractCreateTitle,
+            style: const TextStyle(
+              fontSize: DS.fontSizeLg,
+              fontWeight: DS.fontWeightSemibold,
+            ),
           ),
-        ),
-        const SizedBox(height: DS.spacing8),
-        Text(
-          l10n.contractCreateSubtitle,
-          style: TextStyle(color: DS.textSecondary),
-        ),
-        const SizedBox(height: DS.spacing16),
-        _buildNumberField(
-          label: l10n.contractTargetMinutes,
-          controller: _minutesController,
-        ),
-        const SizedBox(height: DS.spacing12),
-        _buildNumberField(
-          label: l10n.contractTargetDays,
-          controller: _daysController,
-        ),
-        const SizedBox(height: DS.spacing12),
-        _buildNumberField(
-          label: l10n.contractPhotonStake,
-          controller: _stakeController,
-        ),
-        const SizedBox(height: DS.spacing20),
-        SizedBox(
-          width: double.infinity,
-          child: SparkleButton.primary(
-            label: l10n.contractCreateAction,
-            onPressed: _submitting ? () {} : _createContract,
-            loading: _submitting,
+          const SizedBox(height: DS.spacing8),
+          Text(
+            l10n.contractCreateSubtitle,
+            style: TextStyle(color: DS.textSecondary),
           ),
-        ),
-      ],
-    );
+          const SizedBox(height: DS.spacing16),
+          _buildNumberField(
+            label: l10n.contractTargetMinutes,
+            controller: _minutesController,
+          ),
+          const SizedBox(height: DS.spacing12),
+          _buildNumberField(
+            label: l10n.contractTargetDays,
+            controller: _daysController,
+          ),
+          const SizedBox(height: DS.spacing12),
+          _buildNumberField(
+            label: l10n.contractPhotonStake,
+            controller: _stakeController,
+          ),
+          const SizedBox(height: DS.spacing20),
+          SizedBox(
+            width: double.infinity,
+            child: SparkleButton.primary(
+              label: l10n.contractCreateAction,
+              onPressed: _submitting ? () {} : _createContract,
+              loading: _submitting,
+            ),
+          ),
+        ],
+      );
 
   // ---------------------------------------------------------------------------
   // Active section
@@ -246,28 +247,28 @@ class _AchievementContractScreenState
   // ---------------------------------------------------------------------------
 
   Widget _buildContractRow(String label, String value) => Padding(
-      padding: const EdgeInsets.only(top: DS.spacing8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: DS.fontSizeSm,
-              color: DS.textSecondary,
+        padding: const EdgeInsets.only(top: DS.spacing8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: DS.fontSizeSm,
+                color: DS.textSecondary,
+              ),
             ),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: DS.fontSizeSm,
-              fontWeight: DS.fontWeightSemibold,
-              color: DS.textPrimary,
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: DS.fontSizeSm,
+                fontWeight: DS.fontWeightSemibold,
+                color: DS.textPrimary,
+              ),
             ),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
 
   Widget _buildDeadlineRow(int daysRemaining, AppLocalizations l10n) {
     final Color deadlineColor;
@@ -325,10 +326,11 @@ class _AchievementContractScreenState
   Widget _buildNumberField({
     required String label,
     required TextEditingController controller,
-  }) => _FocusHighlightField(
-      label: label,
-      controller: controller,
-    );
+  }) =>
+      _FocusHighlightField(
+        label: label,
+        controller: controller,
+      );
 
   // ---------------------------------------------------------------------------
   // Contract actions
@@ -455,7 +457,9 @@ class _ContractCelebrationState extends State<_ContractCelebration>
     );
 
     final rng = math.Random();
-    _particles = List.generate(20, (_) => _ConfettiParticle(
+    _particles = List.generate(
+      20,
+      (_) => _ConfettiParticle(
         angle: rng.nextDouble() * 2 * math.pi,
         speed: 80 + rng.nextDouble() * 160,
         size: 4 + rng.nextDouble() * 6,
@@ -466,7 +470,8 @@ class _ContractCelebrationState extends State<_ContractCelebration>
           DS.brandSecondary,
         ][rng.nextInt(4)],
         rotationSpeed: (rng.nextDouble() - 0.5) * 6,
-      ),);
+      ),
+    );
 
     // Start sequence
     _iconController.forward();
@@ -491,76 +496,76 @@ class _ContractCelebrationState extends State<_ContractCelebration>
 
   @override
   Widget build(BuildContext context) => Material(
-      color: Colors.black.withValues(alpha: 0.4),
-      child: Semantics(
-        button: true,
-        label: context.l10n.celebrationDismiss,
-        child: GestureDetector(
-          onTap: widget.onDismiss,
-          behavior: HitTestBehavior.opaque,
-          child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: 200,
-                height: 200,
-                child: AnimatedBuilder(
-                  animation: Listenable.merge([
-                    _iconController,
-                    _confettiController,
-                  ]),
-                  builder: (context, child) => CustomPaint(
-                      painter: _ConfettiPainter(
-                        particles: _particles,
-                        progress: _confettiController.value,
+        color: Colors.black.withValues(alpha: 0.4),
+        child: Semantics(
+          button: true,
+          label: context.l10n.celebrationDismiss,
+          child: GestureDetector(
+            onTap: widget.onDismiss,
+            behavior: HitTestBehavior.opaque,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 200,
+                    height: 200,
+                    child: AnimatedBuilder(
+                      animation: Listenable.merge([
+                        _iconController,
+                        _confettiController,
+                      ]),
+                      builder: (context, child) => CustomPaint(
+                        painter: _ConfettiPainter(
+                          particles: _particles,
+                          progress: _confettiController.value,
+                        ),
+                        child: child,
                       ),
-                      child: child,
-                    ),
-                  child: ScaleTransition(
-                    scale: _iconScale,
-                    child: Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: DS.semanticSuccess,
-                        boxShadow: [
-                          BoxShadow(
-                            color:
-                                DS.semanticSuccess.withValues(alpha: 0.4),
-                            blurRadius: 24,
-                            spreadRadius: 4,
+                      child: ScaleTransition(
+                        scale: _iconScale,
+                        child: Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: DS.semanticSuccess,
+                            boxShadow: [
+                              BoxShadow(
+                                color:
+                                    DS.semanticSuccess.withValues(alpha: 0.4),
+                                blurRadius: 24,
+                                spreadRadius: 4,
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.check_rounded,
-                        color: Colors.white,
-                        size: 44,
+                          child: const Icon(
+                            Icons.check_rounded,
+                            color: Colors.white,
+                            size: 44,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(height: DS.spacing16),
-              FadeTransition(
-                opacity: _textOpacity,
-                child: Text(
-                  widget.celebrationLabel,
-                  style: const TextStyle(
-                    fontSize: DS.fontSizeXl,
-                    fontWeight: DS.fontWeightBold,
-                    color: Colors.white,
+                  const SizedBox(height: DS.spacing16),
+                  FadeTransition(
+                    opacity: _textOpacity,
+                    child: Text(
+                      widget.celebrationLabel,
+                      style: const TextStyle(
+                        fontSize: DS.fontSizeXl,
+                        fontWeight: DS.fontWeightBold,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
-      ),
-      ),
-    );
+      );
 }
 
 // =============================================================================
@@ -620,7 +625,8 @@ class _ConfettiPainter extends CustomPainter {
       // Draw small rectangles for confetti effect
       canvas.drawRRect(
         RRect.fromRectAndRadius(
-          Rect.fromCenter(center: Offset.zero, width: p.size, height: p.size * 0.6),
+          Rect.fromCenter(
+              center: Offset.zero, width: p.size, height: p.size * 0.6),
           Radius.circular(p.size * 0.15),
         ),
         paint,
@@ -682,10 +688,10 @@ class _AnimatedProgressBarState extends State<_AnimatedProgressBar>
 
   @override
   Widget build(BuildContext context) => TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0, end: widget.progress),
-      duration: const Duration(milliseconds: 800),
-      curve: Curves.easeOutCubic,
-      builder: (context, animatedProgress, _) => AnimatedBuilder(
+        tween: Tween<double>(begin: 0, end: widget.progress),
+        duration: const Duration(milliseconds: 800),
+        curve: Curves.easeOutCubic,
+        builder: (context, animatedProgress, _) => AnimatedBuilder(
           animation: _glowController,
           builder: (context, _) {
             final glowOpacity =
@@ -698,8 +704,8 @@ class _AnimatedProgressBarState extends State<_AnimatedProgressBar>
                 boxShadow: glowOpacity > 0
                     ? [
                         BoxShadow(
-                          color: DS.semanticSuccess
-                              .withValues(alpha: glowOpacity),
+                          color:
+                              DS.semanticSuccess.withValues(alpha: glowOpacity),
                           blurRadius: 12,
                           spreadRadius: 2,
                         ),
@@ -721,7 +727,7 @@ class _AnimatedProgressBarState extends State<_AnimatedProgressBar>
             );
           },
         ),
-    );
+      );
 }
 
 class _ProgressBarPainter extends CustomPainter {
@@ -780,7 +786,10 @@ class _ProgressBarPainter extends CustomPainter {
       final dotPaint = Paint()
         ..color = isReached ? activeMilestoneColor : milestoneColor;
 
-      canvas.drawCircle(Offset(x.clamp(dotRadius, size.width - dotRadius), size.height / 2), dotRadius, dotPaint);
+      canvas.drawCircle(
+          Offset(x.clamp(dotRadius, size.width - dotRadius), size.height / 2),
+          dotRadius,
+          dotPaint);
     }
   }
 
@@ -806,17 +815,17 @@ class _AnimatedRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0, end: 1),
-      duration: Duration(milliseconds: 400 + index * 80),
-      curve: Curves.easeOutCubic,
-      builder: (context, value, _) => Opacity(
+        tween: Tween<double>(begin: 0, end: 1),
+        duration: Duration(milliseconds: 400 + index * 80),
+        curve: Curves.easeOutCubic,
+        builder: (context, value, _) => Opacity(
           opacity: value.clamp(0.0, 1.0),
           child: Transform.translate(
             offset: Offset(20 * (1 - value), 0),
             child: child,
           ),
         ),
-    );
+      );
 }
 
 // =============================================================================
@@ -962,10 +971,12 @@ class _FocusHighlightFieldState extends State<_FocusHighlightField>
     _borderColor = ColorTween(
       begin: DS.border,
       end: DS.brandPrimary,
-    ).animate(CurvedAnimation(
-      parent: _borderController,
-      curve: Curves.easeOut,
-    ),);
+    ).animate(
+      CurvedAnimation(
+        parent: _borderController,
+        curve: Curves.easeOut,
+      ),
+    );
   }
 
   void _onFocusChanged() {
@@ -986,31 +997,32 @@ class _FocusHighlightFieldState extends State<_FocusHighlightField>
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
-      animation: _borderColor,
-      builder: (context, child) {
-        final currentBorder = _borderColor.value ?? DS.border;
-        return TextField(
-          controller: widget.controller,
-          focusNode: _focusNode,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(
-            labelText: widget.label,
-            filled: true,
-            fillColor: DS.surfaceSecondary,
-            border: OutlineInputBorder(
-              borderRadius: DS.borderRadius12,
-              borderSide: BorderSide(color: currentBorder),
+        animation: _borderColor,
+        builder: (context, child) {
+          final currentBorder = _borderColor.value ?? DS.border;
+          return TextField(
+            controller: widget.controller,
+            focusNode: _focusNode,
+            keyboardType: TextInputType.number,
+            inputFormatters: SparkleInputFormatters.digitsOnly,
+            decoration: InputDecoration(
+              labelText: widget.label,
+              filled: true,
+              fillColor: DS.surfaceSecondary,
+              border: OutlineInputBorder(
+                borderRadius: DS.borderRadius12,
+                borderSide: BorderSide(color: currentBorder),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: DS.borderRadius12,
+                borderSide: BorderSide(color: currentBorder),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: DS.borderRadius12,
+                borderSide: BorderSide(color: currentBorder, width: 1.5),
+              ),
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: DS.borderRadius12,
-              borderSide: BorderSide(color: currentBorder),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: DS.borderRadius12,
-              borderSide: BorderSide(color: currentBorder, width: 1.5),
-            ),
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
 }

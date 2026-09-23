@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
+import 'package:sparkle/core/widgets/unsaved_changes_guard.dart';
 import 'package:sparkle/features/file/data/models/file_models.dart';
 import 'package:sparkle/features/file/presentation/widgets/file_picker_with_presigned.dart';
 import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
@@ -48,7 +49,29 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
       _chapterSuggestionsFor(_subjectController.text.trim());
 
   @override
+  void initState() {
+    super.initState();
+    // N27：监听输入变化并重建，保证 guard 的 canPop 实时生效。
+    _subjectController.addListener(_onFormEdited);
+    _scopeController.addListener(_onFormEdited);
+  }
+
+  void _onFormEdited() {
+    if (mounted) setState(() {});
+  }
+
+  /// N27（A-SPEC5 v1.5）脏态：科目/范围文本、上传材料、勾选薄弱章节都是
+  /// 用户劳动；考试日期出厂即有默认值，不算脏。
+  bool get _isDirty =>
+      _subjectController.text.isNotEmpty ||
+      _scopeController.text.isNotEmpty ||
+      _uploadedFiles.isNotEmpty ||
+      _selectedWeakChapters.isNotEmpty;
+
+  @override
   void dispose() {
+    _subjectController.removeListener(_onFormEdited);
+    _scopeController.removeListener(_onFormEdited);
     _subjectController.dispose();
     _scopeController.dispose();
     super.dispose();
@@ -56,315 +79,326 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final probabilityLabel = context.l10n.planSprintDailyChipLabel(_dailyMinutes.round());
+    final probabilityLabel =
+        context.l10n.planSprintDailyChipLabel(_dailyMinutes.round());
 
-    return SparklePageScaffold(
-      role: SparklePageRole.content,
-      appBar: AppBar(
-        leading: SparkleIconButton(
-          variant: ButtonVariant.ghost,
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+    return UnsavedChangesGuard(
+      isDirty: _isDirty,
+      child: SparklePageScaffold(
+        role: SparklePageRole.content,
+        appBar: AppBar(
+          leading: SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            icon: const Icon(Icons.arrow_back),
+            // maybePop 走 PopScope 通道，脏态时由 guard 拦截确认；
+            // context.pop() 是硬 pop，会绕过 guard。
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
+          title: Text(context.l10n.planSprintSetupTitle),
         ),
-        title: Text(context.l10n.planSprintSetupTitle),
-      ),
-      child: ContentConstraint(
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(DS.spacing16),
-            children: [
-              _buildHeroCard(context),
-              const SizedBox(height: DS.spacing16),
-              _buildSection(
-                context,
-                title: context.l10n.planSprintStep1Title,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TextFormField(
-                      controller: _subjectController,
-                      textInputAction: TextInputAction.next,
-                      decoration: InputDecoration(
-                        hintText: context.l10n.planSprintStep1Hint,
-                        prefixIcon: Icon(Icons.menu_book_outlined),
+        child: ContentConstraint(
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.all(DS.spacing16),
+              children: [
+                _buildHeroCard(context),
+                const SizedBox(height: DS.spacing16),
+                _buildSection(
+                  context,
+                  title: context.l10n.planSprintStep1Title,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextFormField(
+                        controller: _subjectController,
+                        textInputAction: TextInputAction.next,
+                        decoration: InputDecoration(
+                          hintText: context.l10n.planSprintStep1Hint,
+                          prefixIcon: Icon(Icons.menu_book_outlined),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return context.l10n.planSprintStep1Required;
+                          }
+                          return null;
+                        },
+                        onChanged: (_) => setState(() {}),
                       ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return context.l10n.planSprintStep1Required;
-                        }
-                        return null;
-                      },
-                      onChanged: (_) => setState(() {}),
-                    ),
-                    const SizedBox(height: DS.spacing12),
-                    Wrap(
-                      spacing: DS.spacing8,
-                      runSpacing: DS.spacing8,
-                      children: _subjectSuggestions.map((String subject) {
-                        final selected =
-                            _subjectController.text.trim() == subject;
-                        return ChoiceChip(
-                          label: Text(subject),
-                          selected: selected,
-                          onSelected: (_) {
-                            setState(() {
-                              _subjectController.text = subject;
-                              _selectedWeakChapters.clear();
-                            });
-                          },
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: DS.spacing12),
-              _buildSection(
-                context,
-                title: context.l10n.planSprintStep2Title,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(18),
-                  onTap: _pickExamDate,
-                  child: Container(
-                    padding: const EdgeInsets.all(DS.spacing16),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: DS.surfaceTertiary),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.event_outlined),
-                        const SizedBox(width: DS.spacing12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _examDate == null
-                                    ? context.l10n.planSprintSelectDate
-                                    : MaterialLocalizations.of(context)
-                                        .formatMediumDate(_examDate!),
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: DS.spacing4),
-                              Text(
-                                _examDate == null
-                                    ? context.l10n.planSprintDateDecides
-                                    : context.l10n.planSprintDaysLeft(_daysLeftLabel(_examDate!)),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(color: DS.textSecondary),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(Icons.chevron_right_rounded),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: DS.spacing12),
-              _buildSection(
-                context,
-                title: context.l10n.planSprintStep3Title,
-                child: Wrap(
-                  spacing: DS.spacing8,
-                  runSpacing: DS.spacing8,
-                  children: targetOptions(context.l10n)
-                      .map(
-                        (option) => ChoiceChip(
-                          label: Text(option.label),
-                          selected: _targetMode == option.value,
-                          onSelected: (_) {
-                            setState(() => _targetMode = option.value);
-                          },
-                        ),
-                      )
-                      .toList(),
-                ),
-              ),
-              const SizedBox(height: DS.spacing12),
-              _buildSection(
-                context,
-                title: context.l10n.planSprintStep4Title,
-                subtitle: context.l10n.planSprintStep4Subtitle,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TextFormField(
-                      controller: _scopeController,
-                      maxLines: 5,
-                      minLines: 4,
-                      decoration: InputDecoration(
-                        hintText: context.l10n.planSprintStep4Hint,
-                        alignLabelWithHint: true,
-                      ),
-                    ),
-                    const SizedBox(height: DS.spacing12),
-                    Row(
-                      children: [
-                        SparkleButton.outline(
-                          label: context.l10n.planSprintUploadMaterials,
-                          icon: const Icon(Icons.upload_file_outlined),
-                          onPressed: _openUploadSheet,
-                        ),
-                        const SizedBox(width: DS.spacing8),
-                        Text(
-                          _uploadedFiles.isEmpty
-                              ? context.l10n.planSprintNoUpload
-                              : context.l10n.planSprintUploadedCount(_uploadedFiles.length),
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: DS.textSecondary),
-                        ),
-                      ],
-                    ),
-                    if (_uploadedFiles.isNotEmpty) ...[
                       const SizedBox(height: DS.spacing12),
                       Wrap(
                         spacing: DS.spacing8,
                         runSpacing: DS.spacing8,
-                        children: _uploadedFiles
-                            .map(
-                              (StoredFile file) => InputChip(
-                                label: Text(file.fileName),
-                                avatar: const Icon(
-                                  Icons.description_outlined,
-                                  size: 18,
-                                ),
-                                onDeleted: () {
-                                  setState(() {
-                                    _uploadedFiles.removeWhere(
-                                      (StoredFile item) => item.id == file.id,
-                                    );
-                                  });
-                                },
-                              ),
-                            )
-                            .toList(),
+                        children: _subjectSuggestions.map((String subject) {
+                          final selected =
+                              _subjectController.text.trim() == subject;
+                          return ChoiceChip(
+                            label: Text(subject),
+                            selected: selected,
+                            onSelected: (_) {
+                              setState(() {
+                                _subjectController.text = subject;
+                                _selectedWeakChapters.clear();
+                              });
+                            },
+                          );
+                        }).toList(),
                       ),
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: DS.spacing12),
-              _buildSection(
-                context,
-                title: context.l10n.planSprintStep5Title,
-                subtitle: _baselineLabel(_currentLevel.round()),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          '${_currentLevel.round()} / 100',
-                          style: Theme.of(context).textTheme.titleMedium,
+                const SizedBox(height: DS.spacing12),
+                _buildSection(
+                  context,
+                  title: context.l10n.planSprintStep2Title,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(18),
+                    onTap: _pickExamDate,
+                    child: Container(
+                      padding: const EdgeInsets.all(DS.spacing16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: DS.surfaceTertiary),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.event_outlined),
+                          const SizedBox(width: DS.spacing12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _examDate == null
+                                      ? context.l10n.planSprintSelectDate
+                                      : MaterialLocalizations.of(context)
+                                          .formatMediumDate(_examDate!),
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: DS.spacing4),
+                                Text(
+                                  _examDate == null
+                                      ? context.l10n.planSprintDateDecides
+                                      : context.l10n.planSprintDaysLeft(
+                                          _daysLeftLabel(_examDate!)),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(color: DS.textSecondary),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right_rounded),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: DS.spacing12),
+                _buildSection(
+                  context,
+                  title: context.l10n.planSprintStep3Title,
+                  child: Wrap(
+                    spacing: DS.spacing8,
+                    runSpacing: DS.spacing8,
+                    children: targetOptions(context.l10n)
+                        .map(
+                          (option) => ChoiceChip(
+                            label: Text(option.label),
+                            selected: _targetMode == option.value,
+                            onSelected: (_) {
+                              setState(() => _targetMode = option.value);
+                            },
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+                const SizedBox(height: DS.spacing12),
+                _buildSection(
+                  context,
+                  title: context.l10n.planSprintStep4Title,
+                  subtitle: context.l10n.planSprintStep4Subtitle,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextFormField(
+                        controller: _scopeController,
+                        maxLines: 5,
+                        minLines: 4,
+                        decoration: InputDecoration(
+                          hintText: context.l10n.planSprintStep4Hint,
+                          alignLabelWithHint: true,
                         ),
-                        const Spacer(),
-                        Text(
-                          _baselineLabel(_currentLevel.round()),
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: DS.textSecondary),
+                      ),
+                      const SizedBox(height: DS.spacing12),
+                      Row(
+                        children: [
+                          SparkleButton.outline(
+                            label: context.l10n.planSprintUploadMaterials,
+                            icon: const Icon(Icons.upload_file_outlined),
+                            onPressed: _openUploadSheet,
+                          ),
+                          const SizedBox(width: DS.spacing8),
+                          Text(
+                            _uploadedFiles.isEmpty
+                                ? context.l10n.planSprintNoUpload
+                                : context.l10n.planSprintUploadedCount(
+                                    _uploadedFiles.length),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(color: DS.textSecondary),
+                          ),
+                        ],
+                      ),
+                      if (_uploadedFiles.isNotEmpty) ...[
+                        const SizedBox(height: DS.spacing12),
+                        Wrap(
+                          spacing: DS.spacing8,
+                          runSpacing: DS.spacing8,
+                          children: _uploadedFiles
+                              .map(
+                                (StoredFile file) => InputChip(
+                                  label: Text(file.fileName),
+                                  avatar: const Icon(
+                                    Icons.description_outlined,
+                                    size: 18,
+                                  ),
+                                  onDeleted: () {
+                                    setState(() {
+                                      _uploadedFiles.removeWhere(
+                                        (StoredFile item) => item.id == file.id,
+                                      );
+                                    });
+                                  },
+                                ),
+                              )
+                              .toList(),
                         ),
                       ],
-                    ),
-                    Slider(
-                      value: _currentLevel,
-                      max: 100,
-                      divisions: 20,
-                      label: _currentLevel.round().toString(),
-                      onChanged: (double value) {
-                        setState(() => _currentLevel = value);
-                      },
-                    ),
-                    const SizedBox(height: DS.spacing8),
-                    Text(
-                      context.l10n.planSprintWeakestChaptersLabel,
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: DS.spacing8),
-                    Wrap(
-                      spacing: DS.spacing8,
-                      runSpacing: DS.spacing8,
-                      children: _chapterSuggestions.map((String chapter) {
-                        final selected =
-                            _selectedWeakChapters.contains(chapter);
-                        return FilterChip(
-                          label: Text(chapter),
-                          selected: selected,
-                          onSelected: (bool value) {
-                            setState(() {
-                              if (value) {
-                                _selectedWeakChapters.add(chapter);
-                              } else {
-                                _selectedWeakChapters.remove(chapter);
-                              }
-                            });
-                          },
-                        );
-                      }).toList(),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: DS.spacing12),
-              _buildSection(
-                context,
-                title: context.l10n.planSprintStep6Title,
-                subtitle: probabilityLabel,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      context.l10n.planSprintDailySliderLabel(_dailyMinutes.round()),
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    Slider(
-                      value: _dailyMinutes,
-                      min: 30,
-                      max: 360,
-                      divisions: 11,
-                      label: context.l10n.planSprintDailyChipLabel(_dailyMinutes.round()),
-                      onChanged: (double value) {
-                        setState(() => _dailyMinutes = value);
-                      },
-                    ),
-                    Text(
-                      context.l10n.planSprintRealisticTimeHint,
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodySmall
-                          ?.copyWith(color: DS.textSecondary),
-                    ),
-                  ],
+                const SizedBox(height: DS.spacing12),
+                _buildSection(
+                  context,
+                  title: context.l10n.planSprintStep5Title,
+                  subtitle: _baselineLabel(_currentLevel.round()),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            '${_currentLevel.round()} / 100',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const Spacer(),
+                          Text(
+                            _baselineLabel(_currentLevel.round()),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(color: DS.textSecondary),
+                          ),
+                        ],
+                      ),
+                      Slider(
+                        value: _currentLevel,
+                        max: 100,
+                        divisions: 20,
+                        label: _currentLevel.round().toString(),
+                        onChanged: (double value) {
+                          setState(() => _currentLevel = value);
+                        },
+                      ),
+                      const SizedBox(height: DS.spacing8),
+                      Text(
+                        context.l10n.planSprintWeakestChaptersLabel,
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: DS.spacing8),
+                      Wrap(
+                        spacing: DS.spacing8,
+                        runSpacing: DS.spacing8,
+                        children: _chapterSuggestions.map((String chapter) {
+                          final selected =
+                              _selectedWeakChapters.contains(chapter);
+                          return FilterChip(
+                            label: Text(chapter),
+                            selected: selected,
+                            onSelected: (bool value) {
+                              setState(() {
+                                if (value) {
+                                  _selectedWeakChapters.add(chapter);
+                                } else {
+                                  _selectedWeakChapters.remove(chapter);
+                                }
+                              });
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: DS.spacing20),
-              SparkleButton(
-                label: context.l10n.planSprintGenerateFirstDay,
-                icon: const Icon(Icons.rocket_launch_outlined),
-                loading: _isSubmitting,
-                expand: true,
-                onPressed: _isSubmitting ? null : _submit,
-              ),
-              const SizedBox(height: DS.spacing12),
-              Text(
-                context.l10n.planSprintSubmitHint,
-                textAlign: TextAlign.center,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: DS.textSecondary),
-              ),
-              const SizedBox(height: DS.spacing20),
-            ],
+                const SizedBox(height: DS.spacing12),
+                _buildSection(
+                  context,
+                  title: context.l10n.planSprintStep6Title,
+                  subtitle: probabilityLabel,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        context.l10n
+                            .planSprintDailySliderLabel(_dailyMinutes.round()),
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      Slider(
+                        value: _dailyMinutes,
+                        min: 30,
+                        max: 360,
+                        divisions: 11,
+                        label: context.l10n
+                            .planSprintDailyChipLabel(_dailyMinutes.round()),
+                        onChanged: (double value) {
+                          setState(() => _dailyMinutes = value);
+                        },
+                      ),
+                      Text(
+                        context.l10n.planSprintRealisticTimeHint,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: DS.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: DS.spacing20),
+                SparkleButton(
+                  label: context.l10n.planSprintGenerateFirstDay,
+                  icon: const Icon(Icons.rocket_launch_outlined),
+                  loading: _isSubmitting,
+                  expand: true,
+                  onPressed: _isSubmitting ? null : _submit,
+                ),
+                const SizedBox(height: DS.spacing12),
+                Text(
+                  context.l10n.planSprintSubmitHint,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodySmall
+                      ?.copyWith(color: DS.textSecondary),
+                ),
+                const SizedBox(height: DS.spacing20),
+              ],
+            ),
           ),
         ),
       ),
@@ -585,12 +619,15 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
                   _buildResultChip(
                     context,
                     Icons.flag_outlined,
-                    context.l10n.planSprintPassProbability((result.initialAssessment.passProbability * 100).round()),
+                    context.l10n.planSprintPassProbability(
+                        (result.initialAssessment.passProbability * 100)
+                            .round()),
                   ),
                   _buildResultChip(
                     context,
                     Icons.tune_rounded,
-                    context.l10n.planSprintRecommendedMode(result.initialAssessment.recommendedModeLabel),
+                    context.l10n.planSprintRecommendedMode(
+                        result.initialAssessment.recommendedModeLabel),
                   ),
                   _buildResultChip(
                     context,
@@ -624,7 +661,9 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
               ),
               const SizedBox(height: DS.spacing16),
               SparkleButton(
-                label: canOpenTask ? context.l10n.planSprintStartFirstDay : context.l10n.planSprintViewPlanAction,
+                label: canOpenTask
+                    ? context.l10n.planSprintStartFirstDay
+                    : context.l10n.planSprintViewPlanAction,
                 icon: Icon(
                   canOpenTask
                       ? Icons.play_circle_outline_rounded
@@ -701,7 +740,9 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
   List<String> _chapterSuggestionsFor(String subject) {
     final normalized = subject.toLowerCase();
     final l10n = context.l10n;
-    if (normalized.contains('计算机网络') || normalized.contains('计网') || normalized.contains('computer net')) {
+    if (normalized.contains('计算机网络') ||
+        normalized.contains('计网') ||
+        normalized.contains('computer net')) {
       return l10n.examChaptersComputerNetworks.split('|');
     }
     if (normalized.contains('操作系统') || normalized.contains('operating')) {
@@ -733,8 +774,10 @@ class _TargetModeOption {
   final String label;
 }
 
-List<_TargetModeOption> targetOptions(AppLocalizations l10n) => <_TargetModeOption>[
+List<_TargetModeOption> targetOptions(AppLocalizations l10n) =>
+    <_TargetModeOption>[
       _TargetModeOption(value: 'pass', label: l10n.planSprintTargetPass),
       _TargetModeOption(value: 'hold', label: l10n.planSprintTargetHold),
-      _TargetModeOption(value: 'high_score', label: l10n.planSprintTargetHighScore),
+      _TargetModeOption(
+          value: 'high_score', label: l10n.planSprintTargetHighScore),
     ];

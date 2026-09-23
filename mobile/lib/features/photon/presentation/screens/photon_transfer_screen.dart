@@ -6,6 +6,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/utils/input_formatters.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
@@ -170,6 +171,9 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                     TextFormField(
                       controller: _amountController,
                       keyboardType: TextInputType.number,
+                      // N26：键盘是建议、formatter 是拦截——金融语义域
+                      // 粘贴的字母必须在输入层拦下。
+                      inputFormatters: SparkleInputFormatters.digitsOnly,
                       decoration: InputDecoration(
                         hintText: context.l10n.ptAmountHint,
                         prefixIcon: const Icon(Icons.flash_on_outlined),

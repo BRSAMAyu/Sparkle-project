@@ -45,6 +45,10 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
 
   String _selectedSubject = 'math';
 
+  /// N25（A-SPEC5 v1.5）校验三段制：未提交前不提前报错（disabled），
+  /// 首次提交失败后转即时校验（onUserInteraction），提交时全量兜底。
+  AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
+
   bool get _isDirty =>
       _questionController.text.isNotEmpty ||
       _userAnswerController.text.isNotEmpty ||
@@ -186,7 +190,13 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      if (_autovalidateMode != AutovalidateMode.onUserInteraction) {
+        // N25 三段制：首次提交失败后，输入/失焦即校验，改错即时消错。
+        setState(() => _autovalidateMode = AutovalidateMode.onUserInteraction);
+      }
+      return;
+    }
     if (_isSubmitting) return;
     if (_isUploadingImage) {
       AppFeedback.info(context, context.l10n.ebImageStillUploading);
@@ -332,7 +342,8 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
             LinearProgressIndicator(value: _uploadProgress),
             const SizedBox(height: DS.spacing8),
             Text(
-              context.l10n.ebUploadProgress('${(_uploadProgress * 100).toStringAsFixed(0)}%'),
+              context.l10n.ebUploadProgress(
+                  '${(_uploadProgress * 100).toStringAsFixed(0)}%'),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -342,7 +353,9 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
           FilledButton.icon(
             onPressed: _isUploadingImage ? null : _pickQuestionImage,
             icon: const Icon(Icons.upload_file_outlined),
-            label: Text(_hasQuestionImage ? context.l10n.ebReuploadImage : context.l10n.ebUploadImage),
+            label: Text(_hasQuestionImage
+                ? context.l10n.ebReuploadImage
+                : context.l10n.ebUploadImage),
           ),
         ],
       ),
@@ -357,7 +370,9 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
-          title: Text(widget.isEditMode ? context.l10n.ebEditError : context.l10n.ebAddError),
+          title: Text(widget.isEditMode
+              ? context.l10n.ebEditError
+              : context.l10n.ebAddError),
         ),
         child: const SparkleListSkeleton(),
       );
@@ -412,154 +427,160 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
           leading: SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.pop(),
+            // maybePop 走 PopScope 通道，脏态时由 guard 拦截确认；
+            // 原 context.pop() 是硬 pop，会绕过 guard。
+            onPressed: () => Navigator.of(context).maybePop(),
           ),
-          title: Text(widget.isEditMode ? context.l10n.ebEditError : context.l10n.ebAddError),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: DS.spacing8),
-            child: SparkleButton(
-              variant: ButtonVariant.ghost,
-              onPressed: _isSubmitting ? null : _submit,
-              loading: _isSubmitting,
-              icon: const Icon(Icons.check),
-              label: _isSubmitting ? context.l10n.ebSaving : context.l10n.ebSave,
-            ),
-          ),
-        ],
-      ),
-      child: ContentConstraint(
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(DS.spacing16),
-            children: [
-              _buildInfoCard(context),
-              const SizedBox(height: 20),
-              Text(
-                context.l10n.ebSubjectLabel,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: DS.fontWeightSemibold,
-                ),
-              ),
-              const SizedBox(height: DS.spacing12),
-              SubjectFilterChips(
-                selectedSubject: _selectedSubject,
-                onSelected: (subject) {
-                  unawaited(
-                    SensoryFeedbackService.emit(
-                      SensoryFeedbackEvent.selection,
-                    ),
-                  );
-                  setState(() {
-                    _selectedSubject = subject ?? 'math';
-                  });
-                },
-              ),
-              const SizedBox(height: DS.spacing24),
-              TextFormField(
-                controller: _chapterController,
-                decoration: InputDecoration(
-                  labelText: context.l10n.ebChapterOptional,
-                  hintText: context.l10n.ebChapterHint,
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.folder_outlined),
-                  helperText: context.l10n.ebChapterHelper,
-                ),
-                textInputAction: TextInputAction.next,
-              ),
-              const SizedBox(height: 20),
-              _buildImagePreview(context),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _questionController,
-                decoration: InputDecoration(
-                  labelText: context.l10n.ebQuestionContent,
-                  hintText: context.l10n.ebQuestionHint,
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.quiz_outlined),
-                  alignLabelWithHint: true,
-                  helperText: context.l10n.ebQuestionHelper,
-                ),
-                maxLines: 6,
-                textInputAction: TextInputAction.newline,
-                validator: _validateQuestionText,
-              ),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _userAnswerController,
-                decoration: InputDecoration(
-                  labelText: context.l10n.ebYourAnswer,
-                  hintText: context.l10n.ebYourAnswerHint,
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.edit_outlined),
-                  alignLabelWithHint: true,
-                ),
-                maxLines: 4,
-                textInputAction: TextInputAction.newline,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return context.l10n.ebEnterAnswer;
-                  }
-                  if (value.trim().length > 2000) {
-                    return context.l10n.ebAnswerTooLong;
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _correctAnswerController,
-                decoration: InputDecoration(
-                  labelText: context.l10n.ebCorrectAnswer,
-                  hintText: context.l10n.ebCorrectAnswerHint,
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.check_circle_outline),
-                  alignLabelWithHint: true,
-                ),
-                maxLines: 4,
-                textInputAction: TextInputAction.done,
-                onFieldSubmitted: (_) => _submit(),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return context.l10n.ebCorrectAnswerRequired;
-                  }
-                  if (value.trim().length > 2000) {
-                    return context.l10n.ebAnswerTooLong;
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: DS.spacing32),
-              FilledButton.icon(
+          title: Text(widget.isEditMode
+              ? context.l10n.ebEditError
+              : context.l10n.ebAddError),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: DS.spacing8),
+              child: SparkleButton(
+                variant: ButtonVariant.ghost,
                 onPressed: _isSubmitting ? null : _submit,
-                icon: _isSubmitting
-                    ? LoadingIndicator.circular(
-                        size: 20,
-                      )
-                    : const Icon(Icons.save),
-                label: Text(
-                  _isSubmitting
-                      ? context.l10n.ebSavingPleaseWait
-                      : (widget.isEditMode
-                          ? context.l10n.ebSaveChanges
-                          : context.l10n.ebSaveError),
-                ),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
-                  textStyle: const TextStyle(
-                    fontSize: 16,
+                loading: _isSubmitting,
+                icon: const Icon(Icons.check),
+                label:
+                    _isSubmitting ? context.l10n.ebSaving : context.l10n.ebSave,
+              ),
+            ),
+          ],
+        ),
+        child: ContentConstraint(
+          child: Form(
+            key: _formKey,
+            autovalidateMode: _autovalidateMode,
+            child: ListView(
+              padding: const EdgeInsets.all(DS.spacing16),
+              children: [
+                _buildInfoCard(context),
+                const SizedBox(height: 20),
+                Text(
+                  context.l10n.ebSubjectLabel,
+                  style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: DS.fontWeightSemibold,
                   ),
                 ),
-              ),
-              const SizedBox(height: DS.spacing16),
-            ],
+                const SizedBox(height: DS.spacing12),
+                SubjectFilterChips(
+                  selectedSubject: _selectedSubject,
+                  onSelected: (subject) {
+                    unawaited(
+                      SensoryFeedbackService.emit(
+                        SensoryFeedbackEvent.selection,
+                      ),
+                    );
+                    setState(() {
+                      _selectedSubject = subject ?? 'math';
+                    });
+                  },
+                ),
+                const SizedBox(height: DS.spacing24),
+                TextFormField(
+                  controller: _chapterController,
+                  decoration: InputDecoration(
+                    labelText: context.l10n.ebChapterOptional,
+                    hintText: context.l10n.ebChapterHint,
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.folder_outlined),
+                    helperText: context.l10n.ebChapterHelper,
+                  ),
+                  textInputAction: TextInputAction.next,
+                ),
+                const SizedBox(height: 20),
+                _buildImagePreview(context),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: _questionController,
+                  decoration: InputDecoration(
+                    labelText: context.l10n.ebQuestionContent,
+                    hintText: context.l10n.ebQuestionHint,
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.quiz_outlined),
+                    alignLabelWithHint: true,
+                    helperText: context.l10n.ebQuestionHelper,
+                  ),
+                  maxLines: 6,
+                  textInputAction: TextInputAction.newline,
+                  validator: _validateQuestionText,
+                ),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: _userAnswerController,
+                  decoration: InputDecoration(
+                    labelText: context.l10n.ebYourAnswer,
+                    hintText: context.l10n.ebYourAnswerHint,
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.edit_outlined),
+                    alignLabelWithHint: true,
+                  ),
+                  maxLines: 4,
+                  textInputAction: TextInputAction.newline,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return context.l10n.ebEnterAnswer;
+                    }
+                    if (value.trim().length > 2000) {
+                      return context.l10n.ebAnswerTooLong;
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: _correctAnswerController,
+                  decoration: InputDecoration(
+                    labelText: context.l10n.ebCorrectAnswer,
+                    hintText: context.l10n.ebCorrectAnswerHint,
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.check_circle_outline),
+                    alignLabelWithHint: true,
+                  ),
+                  maxLines: 4,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _submit(),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return context.l10n.ebCorrectAnswerRequired;
+                    }
+                    if (value.trim().length > 2000) {
+                      return context.l10n.ebAnswerTooLong;
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: DS.spacing32),
+                FilledButton.icon(
+                  onPressed: _isSubmitting ? null : _submit,
+                  icon: _isSubmitting
+                      ? LoadingIndicator.circular(
+                          size: 20,
+                        )
+                      : const Icon(Icons.save),
+                  label: Text(
+                    _isSubmitting
+                        ? context.l10n.ebSavingPleaseWait
+                        : (widget.isEditMode
+                            ? context.l10n.ebSaveChanges
+                            : context.l10n.ebSaveError),
+                  ),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
+                    textStyle: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: DS.fontWeightSemibold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: DS.spacing16),
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
   }
 
   Widget _buildInfoCard(BuildContext context) {

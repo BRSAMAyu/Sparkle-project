@@ -12,6 +12,7 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
+import 'package:sparkle/core/widgets/unsaved_changes_guard.dart';
 import 'package:sparkle/features/task/data/models/task_nudge.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
@@ -65,6 +66,36 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
   void initState() {
     super.initState();
     _titleController.addListener(_onTitleChanged);
+    // N27：监听输入变化并重建，保证 UnsavedChangesGuard 的 canPop 实时生效。
+    _titleController.addListener(_onFormEdited);
+    _tagsController.addListener(_onFormEdited);
+    _userNoteController.addListener(_onFormEdited);
+  }
+
+  void _onFormEdited() {
+    if (mounted) setState(() {});
+  }
+
+  // N27（A-SPEC5 v1.5）脏态基线：编辑模式水合后记录已存值，
+  // 与基线一致不算脏（打开编辑页立即返回不应误弹确认）。
+  String? _baselineTitle;
+  String? _baselineTags;
+  String? _baselineNote;
+
+  /// 「输入是劳动」：标题/标签/备注任一有用户内容即为脏。
+  /// 创建模式看非空；编辑模式与水合基线比对。
+  bool get _isDirty {
+    final title = _titleController.text;
+    final tags = _tagsController.text;
+    final note = _userNoteController.text;
+    if (_isEditMode) {
+      return title != (_baselineTitle ?? '') ||
+          tags != (_baselineTags ?? '') ||
+          note != (_baselineNote ?? '');
+    }
+    return title.trim().isNotEmpty ||
+        tags.trim().isNotEmpty ||
+        note.trim().isNotEmpty;
   }
 
   @override
@@ -112,6 +143,10 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
       if (task.userNote != null && task.userNote!.isNotEmpty) {
         _userNoteController.text = task.userNote!;
       }
+      // N27：水合完成后记录基线，未做修改就返回不触发脏态确认。
+      _baselineTitle = _titleController.text;
+      _baselineTags = _tagsController.text;
+      _baselineNote = _userNoteController.text;
       setState(() {});
     } catch (e) {
       if (mounted) {
@@ -137,8 +172,11 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
     _debounce?.cancel();
     _titleController
       ..removeListener(_onTitleChanged)
+      ..removeListener(_onFormEdited)
       ..dispose();
+    _tagsController.removeListener(_onFormEdited);
     _tagsController.dispose();
+    _userNoteController.removeListener(_onFormEdited);
     _userNoteController.dispose();
     super.dispose();
   }
@@ -316,579 +354,599 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return SparklePageScaffold(
-      role: SparklePageRole.content,
-      appBar: AppBar(
-        title: Text(_isEditMode ? context.l10n.taskEditTitle : l10n.taskCreateTitle),
-      ),
-      child: ContentConstraint(
-        child: _isLoadingExistingTask
-            ? const SparkleListSkeleton()
-            : Form(
-                key: _formKey,
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(
-                    DS.spacing16,
-                    DS.spacing16,
-                    DS.spacing16,
-                    DS.spacing24,
-                  ),
-                  children: [
-                    if (_isEditMode) ...[
-                      Container(
-                        margin: const EdgeInsets.only(bottom: DS.lg),
-                        padding: const EdgeInsets.all(DS.spacing12),
-                        decoration: BoxDecoration(
-                          color: DS.info.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: DS.info.withValues(alpha: 0.18),
+    // N27（A-SPEC5 v1.5）：脏态离开确认——半填任务返回必确认；
+    // AppBar 默认返回键走 maybePop，guard 可正常拦截。
+    return UnsavedChangesGuard(
+      isDirty: _isDirty,
+      child: SparklePageScaffold(
+        role: SparklePageRole.content,
+        appBar: AppBar(
+          title: Text(
+              _isEditMode ? context.l10n.taskEditTitle : l10n.taskCreateTitle),
+        ),
+        child: ContentConstraint(
+          child: _isLoadingExistingTask
+              ? const SparkleListSkeleton()
+              : Form(
+                  key: _formKey,
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(
+                      DS.spacing16,
+                      DS.spacing16,
+                      DS.spacing16,
+                      DS.spacing24,
+                    ),
+                    children: [
+                      if (_isEditMode) ...[
+                        Container(
+                          margin: const EdgeInsets.only(bottom: DS.lg),
+                          padding: const EdgeInsets.all(DS.spacing12),
+                          decoration: BoxDecoration(
+                            color: DS.info.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: DS.info.withValues(alpha: 0.18),
+                            ),
+                          ),
+                          child: Text(
+                            context.l10n.taskEditHint,
+                            style:
+                                TextStyle(color: DS.textSecondary, height: 1.4),
                           ),
                         ),
-                        child: Text(
-                          context.l10n.taskEditHint,
-                          style:
-                              TextStyle(color: DS.textSecondary, height: 1.4),
-                        ),
-                      ),
-                    ],
-                    if (_selectedPlanId != null && !_isEditMode) ...[
-                      Container(
-                        margin: const EdgeInsets.only(bottom: DS.lg),
-                        padding: const EdgeInsets.all(DS.spacing12),
-                        decoration: BoxDecoration(
-                          color: DS.brandPrimary.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: DS.brandPrimary.withValues(alpha: 0.18),
+                      ],
+                      if (_selectedPlanId != null && !_isEditMode) ...[
+                        Container(
+                          margin: const EdgeInsets.only(bottom: DS.lg),
+                          padding: const EdgeInsets.all(DS.spacing12),
+                          decoration: BoxDecoration(
+                            color: DS.brandPrimary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: DS.brandPrimary.withValues(alpha: 0.18),
+                            ),
                           ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.account_tree_rounded,
-                              color: DS.brandPrimaryConst,
-                            ),
-                            const SizedBox(width: DS.spacing10),
-                            Expanded(
-                              child: Text(
-                                context.l10n.taskJoinPlan(_selectedPlanName ?? _selectedPlanId ?? ''),
-                                style: TextStyle(
-                                  color: DS.textPrimary,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                    // Title
-                    TextFormField(
-                      controller: _titleController,
-                      decoration: InputDecoration(
-                        labelText: l10n.taskTitleLabel,
-                        hintText: l10n.taskTitleHint,
-                        border: const OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return l10n.taskTitleRequired;
-                        }
-                        return null;
-                      },
-                    ),
-                    if (_isLoadingSuggestions)
-                      Padding(
-                        // U-01 Step 3：裸 LinearProgressIndicator 迁 owner。
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: LoadingIndicator.linear(
-                          size: 2,
-                          liveRegion: false,
-                        ),
-                      ),
-                    if (_suggestions != null &&
-                        _suggestions!.suggestedNodes.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              l10n.taskSuggestedKnowledge,
-                              style: const TextStyle(
-                                fontWeight: DS.fontWeightBold,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            SparkleStaggerWrap(
-                              children: _suggestions!.suggestedNodes
-                                  .map(
-                                    (node) => Tooltip(
-                                      message: node.reason,
-                                      child: SemanticPill(
-                                        label: node.name,
-                                        tone: node.isNew
-                                            ? PillTone.success
-                                            : PillTone.brand,
-                                        icon: node.isNew
-                                            ? Icons.add_circle_outline
-                                            : Icons.link,
-                                        onTap: () => _applySuggestion(node),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                            ),
-                          ],
-                        ),
-                      ),
-                    const SizedBox(height: DS.lg),
-
-                    // Type Selector
-                    DropdownButtonFormField<TaskType>(
-                      initialValue: _selectedType,
-                      decoration: InputDecoration(
-                        labelText: l10n.taskTypeLabel,
-                        border: const OutlineInputBorder(),
-                      ),
-                      items: TaskType.values
-                          .map(
-                            (type) => DropdownMenuItem(
-                              value: type,
-                              child: Row(
-                                children: [
-                                  Icon(getTypeIcon(type), size: 18),
-                                  const SizedBox(width: DS.sm),
-                                  Text(getTypeLabel(l10n, type)),
-                                ],
-                              ),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        if (value != null) {
-                          unawaited(
-                            SensoryFeedbackService.emit(
-                              SensoryFeedbackEvent.selection,
-                            ),
-                          );
-                          setState(() => _selectedType = value);
-                        }
-                      },
-                    ),
-                    const SizedBox(height: DS.lg),
-
-                    // Tags
-                    TextFormField(
-                      controller: _tagsController,
-                      decoration: InputDecoration(
-                        labelText: l10n.taskTagsLabel,
-                        hintText: l10n.taskTagsHint,
-                        border: const OutlineInputBorder(),
-                        prefixIcon: const Icon(Icons.label_outline),
-                      ),
-                    ),
-                    const SizedBox(height: DS.lg),
-
-                    // Estimated Time & Difficulty - Responsive layout
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final isNarrow = constraints.maxWidth < 500;
-                        if (isNarrow) {
-                          // Narrow screen: Column layout
-                          return Column(
+                          child: Row(
                             children: [
-                              DropdownButtonFormField<int>(
-                                initialValue: _estimatedMinutes,
-                                decoration: InputDecoration(
-                                  labelText: l10n.taskEstimatedDurationLabel,
-                                  border: const OutlineInputBorder(),
-                                  prefixIcon: const Icon(Icons.timer_outlined),
-                                ),
-                                items: ({
-                                  15,
-                                  25,
-                                  45,
-                                  60,
-                                  90,
-                                  120,
-                                  _estimatedMinutes,
-                                }.toList()
-                                      ..sort())
-                                    .map(
-                                      (m) => DropdownMenuItem(
-                                        value: m,
-                                        child: Text(l10n.taskMinutesOption(m)),
-                                      ),
-                                    )
-                                    .toList(),
-                                onChanged: (v) {
-                                  if (v != null) {
-                                    setState(() => _estimatedMinutes = v);
-                                  }
-                                },
+                              Icon(
+                                Icons.account_tree_rounded,
+                                color: DS.brandPrimaryConst,
                               ),
-                              const SizedBox(height: DS.lg),
-                              DropdownButtonFormField<int>(
-                                initialValue: _difficulty,
-                                decoration: InputDecoration(
-                                  labelText: l10n.taskDifficultyLabel,
-                                  border: const OutlineInputBorder(),
-                                  prefixIcon: const Icon(Icons.bar_chart),
+                              const SizedBox(width: DS.spacing10),
+                              Expanded(
+                                child: Text(
+                                  context.l10n.taskJoinPlan(_selectedPlanName ??
+                                      _selectedPlanId ??
+                                      ''),
+                                  style: TextStyle(
+                                    color: DS.textPrimary,
+                                    height: 1.4,
+                                  ),
                                 ),
-                                items: [1, 2, 3, 4, 5]
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      // Title
+                      TextFormField(
+                        controller: _titleController,
+                        decoration: InputDecoration(
+                          labelText: l10n.taskTitleLabel,
+                          hintText: l10n.taskTitleHint,
+                          border: const OutlineInputBorder(),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return l10n.taskTitleRequired;
+                          }
+                          return null;
+                        },
+                      ),
+                      if (_isLoadingSuggestions)
+                        Padding(
+                          // U-01 Step 3：裸 LinearProgressIndicator 迁 owner。
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: LoadingIndicator.linear(
+                            size: 2,
+                            liveRegion: false,
+                          ),
+                        ),
+                      if (_suggestions != null &&
+                          _suggestions!.suggestedNodes.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                l10n.taskSuggestedKnowledge,
+                                style: const TextStyle(
+                                  fontWeight: DS.fontWeightBold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              SparkleStaggerWrap(
+                                children: _suggestions!.suggestedNodes
                                     .map(
-                                      (l) => DropdownMenuItem(
-                                        value: l,
-                                        child:
-                                            Text(l10n.taskDifficultyLevel(l)),
+                                      (node) => Tooltip(
+                                        message: node.reason,
+                                        child: SemanticPill(
+                                          label: node.name,
+                                          tone: node.isNew
+                                              ? PillTone.success
+                                              : PillTone.brand,
+                                          icon: node.isNew
+                                              ? Icons.add_circle_outline
+                                              : Icons.link,
+                                          onTap: () => _applySuggestion(node),
+                                        ),
                                       ),
                                     )
                                     .toList(),
-                                onChanged: (v) {
-                                  if (v != null) {
-                                    setState(() => _difficulty = v);
-                                  }
-                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: DS.lg),
+
+                      // Type Selector
+                      DropdownButtonFormField<TaskType>(
+                        initialValue: _selectedType,
+                        decoration: InputDecoration(
+                          labelText: l10n.taskTypeLabel,
+                          border: const OutlineInputBorder(),
+                        ),
+                        items: TaskType.values
+                            .map(
+                              (type) => DropdownMenuItem(
+                                value: type,
+                                child: Row(
+                                  children: [
+                                    Icon(getTypeIcon(type), size: 18),
+                                    const SizedBox(width: DS.sm),
+                                    Text(getTypeLabel(l10n, type)),
+                                  ],
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            unawaited(
+                              SensoryFeedbackService.emit(
+                                SensoryFeedbackEvent.selection,
+                              ),
+                            );
+                            setState(() => _selectedType = value);
+                          }
+                        },
+                      ),
+                      const SizedBox(height: DS.lg),
+
+                      // Tags
+                      TextFormField(
+                        controller: _tagsController,
+                        decoration: InputDecoration(
+                          labelText: l10n.taskTagsLabel,
+                          hintText: l10n.taskTagsHint,
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.label_outline),
+                        ),
+                      ),
+                      const SizedBox(height: DS.lg),
+
+                      // Estimated Time & Difficulty - Responsive layout
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final isNarrow = constraints.maxWidth < 500;
+                          if (isNarrow) {
+                            // Narrow screen: Column layout
+                            return Column(
+                              children: [
+                                DropdownButtonFormField<int>(
+                                  initialValue: _estimatedMinutes,
+                                  decoration: InputDecoration(
+                                    labelText: l10n.taskEstimatedDurationLabel,
+                                    border: const OutlineInputBorder(),
+                                    prefixIcon:
+                                        const Icon(Icons.timer_outlined),
+                                  ),
+                                  items: ({
+                                    15,
+                                    25,
+                                    45,
+                                    60,
+                                    90,
+                                    120,
+                                    _estimatedMinutes,
+                                  }.toList()
+                                        ..sort())
+                                      .map(
+                                        (m) => DropdownMenuItem(
+                                          value: m,
+                                          child:
+                                              Text(l10n.taskMinutesOption(m)),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (v) {
+                                    if (v != null) {
+                                      setState(() => _estimatedMinutes = v);
+                                    }
+                                  },
+                                ),
+                                const SizedBox(height: DS.lg),
+                                DropdownButtonFormField<int>(
+                                  initialValue: _difficulty,
+                                  decoration: InputDecoration(
+                                    labelText: l10n.taskDifficultyLabel,
+                                    border: const OutlineInputBorder(),
+                                    prefixIcon: const Icon(Icons.bar_chart),
+                                  ),
+                                  items: [1, 2, 3, 4, 5]
+                                      .map(
+                                        (l) => DropdownMenuItem(
+                                          value: l,
+                                          child:
+                                              Text(l10n.taskDifficultyLevel(l)),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (v) {
+                                    if (v != null) {
+                                      setState(() => _difficulty = v);
+                                    }
+                                  },
+                                ),
+                              ],
+                            );
+                          }
+                          // Wide screen: Row layout
+                          return Row(
+                            children: [
+                              Expanded(
+                                child: DropdownButtonFormField<int>(
+                                  initialValue: _estimatedMinutes,
+                                  decoration: InputDecoration(
+                                    labelText: l10n.taskEstimatedDurationLabel,
+                                    border: const OutlineInputBorder(),
+                                    prefixIcon:
+                                        const Icon(Icons.timer_outlined),
+                                  ),
+                                  items: ({
+                                    15,
+                                    25,
+                                    45,
+                                    60,
+                                    90,
+                                    120,
+                                    _estimatedMinutes,
+                                  }.toList()
+                                        ..sort())
+                                      .map(
+                                        (m) => DropdownMenuItem(
+                                          value: m,
+                                          child:
+                                              Text(l10n.taskMinutesOption(m)),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (v) {
+                                    if (v != null) {
+                                      setState(() => _estimatedMinutes = v);
+                                    }
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: DS.lg),
+                              Expanded(
+                                child: DropdownButtonFormField<int>(
+                                  initialValue: _difficulty,
+                                  decoration: InputDecoration(
+                                    labelText: l10n.taskDifficultyLabel,
+                                    border: const OutlineInputBorder(),
+                                    prefixIcon: const Icon(Icons.bar_chart),
+                                  ),
+                                  items: [1, 2, 3, 4, 5]
+                                      .map(
+                                        (l) => DropdownMenuItem(
+                                          value: l,
+                                          child:
+                                              Text(l10n.taskDifficultyLevel(l)),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (v) {
+                                    if (v != null) {
+                                      setState(() => _difficulty = v);
+                                    }
+                                  },
+                                ),
                               ),
                             ],
                           );
-                        }
-                        // Wide screen: Row layout
-                        return Row(
-                          children: [
-                            Expanded(
-                              child: DropdownButtonFormField<int>(
-                                initialValue: _estimatedMinutes,
-                                decoration: InputDecoration(
-                                  labelText: l10n.taskEstimatedDurationLabel,
-                                  border: const OutlineInputBorder(),
-                                  prefixIcon: const Icon(Icons.timer_outlined),
-                                ),
-                                items: ({
-                                  15,
-                                  25,
-                                  45,
-                                  60,
-                                  90,
-                                  120,
-                                  _estimatedMinutes,
-                                }.toList()
-                                      ..sort())
-                                    .map(
-                                      (m) => DropdownMenuItem(
-                                        value: m,
-                                        child: Text(l10n.taskMinutesOption(m)),
-                                      ),
-                                    )
-                                    .toList(),
-                                onChanged: (v) {
-                                  if (v != null) {
-                                    setState(() => _estimatedMinutes = v);
-                                  }
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: DS.lg),
-                            Expanded(
-                              child: DropdownButtonFormField<int>(
-                                initialValue: _difficulty,
-                                decoration: InputDecoration(
-                                  labelText: l10n.taskDifficultyLabel,
-                                  border: const OutlineInputBorder(),
-                                  prefixIcon: const Icon(Icons.bar_chart),
-                                ),
-                                items: [1, 2, 3, 4, 5]
-                                    .map(
-                                      (l) => DropdownMenuItem(
-                                        value: l,
-                                        child:
-                                            Text(l10n.taskDifficultyLevel(l)),
-                                      ),
-                                    )
-                                    .toList(),
-                                onChanged: (v) {
-                                  if (v != null) {
-                                    setState(() => _difficulty = v);
-                                  }
-                                },
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                    const SizedBox(height: DS.lg),
+                        },
+                      ),
+                      const SizedBox(height: DS.lg),
 
-                    // Energy Cost
-                    DropdownButtonFormField<int>(
-                      initialValue: _energyCost,
-                      decoration: InputDecoration(
-                        labelText: l10n.taskEnergyCostLabel,
-                        border: const OutlineInputBorder(),
-                        prefixIcon: const Icon(Icons.bolt),
-                      ),
-                      items: [1, 2, 3, 4, 5]
-                          .map(
-                            (l) => DropdownMenuItem(
-                              value: l,
-                              child: Text(l10n.taskEnergyCostValue(l)),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) => setState(() => _energyCost = v!),
-                    ),
-                    const SizedBox(height: DS.lg),
-
-                    // Due Date
-                    ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: DS.spacing12,
-                        vertical: DS.spacing4,
-                      ),
-                      title: Text(l10n.taskDeadlineLabel),
-                      subtitle: Text(
-                        _dueDate == null
-                            ? l10n.taskDueDateUnset
-                            : Formatters.formatDateShort(_dueDate!),
-                      ),
-                      leading: const Icon(Icons.calendar_today),
-                      shape: RoundedRectangleBorder(
-                        side: BorderSide(
-                          color: DS.brandPrimary.withValues(alpha: 0.4),
+                      // Energy Cost
+                      DropdownButtonFormField<int>(
+                        initialValue: _energyCost,
+                        decoration: InputDecoration(
+                          labelText: l10n.taskEnergyCostLabel,
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.bolt),
                         ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      onTap: () async {
-                        final now = DateTime.now();
-                        final initialDate =
-                            _dueDate != null && _dueDate!.isAfter(now)
-                                ? _dueDate!
-                                : now;
-                        final date = await showDatePicker(
-                          context: context,
-                          initialDate: initialDate,
-                          firstDate: now,
-                          lastDate: now.add(const Duration(days: 365)),
-                        );
-                        if (date != null) {
-                          setState(() => _dueDate = date);
-                        }
-                      },
-                      trailing: _dueDate != null
-                          ? SizedBox(
-                              width: 40,
-                              child: SparkleIconButton(
-                                variant: ButtonVariant.ghost,
-                                size: 32,
-                                icon: const Icon(Icons.clear),
-                                onPressed: () => setState(() => _dueDate = null),
+                        items: [1, 2, 3, 4, 5]
+                            .map(
+                              (l) => DropdownMenuItem(
+                                value: l,
+                                child: Text(l10n.taskEnergyCostValue(l)),
                               ),
                             )
-                          : null,
-                    ),
-                    const SizedBox(height: DS.lg),
+                            .toList(),
+                        onChanged: (v) => setState(() => _energyCost = v!),
+                      ),
+                      const SizedBox(height: DS.lg),
 
-                    if (_isEditMode) ...[
-                      TextFormField(
-                        controller: _userNoteController,
-                        decoration: InputDecoration(
-                          labelText:
-                              _isZhText(context, '备注', 'Note'),
-                          hintText: _isZhText(
-                              context, '添加备注（可选）...', 'Add a note (optional)...'),
-                          border: const OutlineInputBorder(),
-                          prefixIcon: const Icon(Icons.notes_rounded),
+                      // Due Date
+                      ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: DS.spacing12,
+                          vertical: DS.spacing4,
                         ),
-                        maxLines: 3,
-                        minLines: 1,
-                      ),
-                      const SizedBox(height: DS.lg),
-                    ],
-
-                    if (!_isEditMode)
-                      SwitchListTile(
-                        title: Text(l10n.taskGenerateGuideTitle),
-                        subtitle: Text(l10n.taskGenerateGuideSubtitle),
-                        value: _generateGuide,
-                        onChanged: (v) => setState(() => _generateGuide = v),
-                        secondary: const Icon(Icons.auto_awesome),
-                      ),
-
-                    // Nudge Suggestions (shown after task creation)
-                    if (_showNudgesAfterCreation && _nudges.isNotEmpty) ...[
-                      const SizedBox(height: DS.lg),
-                      Container(
-                        padding: const EdgeInsets.all(DS.md),
-                        decoration: BoxDecoration(
-                          color: DS.prismPurple.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: DS.prismPurple.withValues(alpha: 0.3),
+                        title: Text(l10n.taskDeadlineLabel),
+                        subtitle: Text(
+                          _dueDate == null
+                              ? l10n.taskDueDateUnset
+                              : Formatters.formatDateShort(_dueDate!),
+                        ),
+                        leading: const Icon(Icons.calendar_today),
+                        shape: RoundedRectangleBorder(
+                          side: BorderSide(
+                            color: DS.brandPrimary.withValues(alpha: 0.4),
                           ),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.lightbulb,
-                                  color: DS.prismPurple,
-                                  size: 20,
+                        onTap: () async {
+                          final now = DateTime.now();
+                          final initialDate =
+                              _dueDate != null && _dueDate!.isAfter(now)
+                                  ? _dueDate!
+                                  : now;
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: initialDate,
+                            firstDate: now,
+                            lastDate: now.add(const Duration(days: 365)),
+                          );
+                          if (date != null) {
+                            setState(() => _dueDate = date);
+                          }
+                        },
+                        trailing: _dueDate != null
+                            ? SizedBox(
+                                width: 40,
+                                child: SparkleIconButton(
+                                  variant: ButtonVariant.ghost,
+                                  size: 32,
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () =>
+                                      setState(() => _dueDate = null),
                                 ),
-                                const SizedBox(width: DS.sm),
-                                Text(
-                                  l10n.taskNudgeTitle,
-                                  style: const TextStyle(
-                                    fontWeight: DS.fontWeightBold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
+                              )
+                            : null,
+                      ),
+                      const SizedBox(height: DS.lg),
+
+                      if (_isEditMode) ...[
+                        TextFormField(
+                          controller: _userNoteController,
+                          decoration: InputDecoration(
+                            labelText: _isZhText(context, '备注', 'Note'),
+                            hintText: _isZhText(context, '添加备注（可选）...',
+                                'Add a note (optional)...'),
+                            border: const OutlineInputBorder(),
+                            prefixIcon: const Icon(Icons.notes_rounded),
+                          ),
+                          maxLines: 3,
+                          minLines: 1,
+                        ),
+                        const SizedBox(height: DS.lg),
+                      ],
+
+                      if (!_isEditMode)
+                        SwitchListTile(
+                          title: Text(l10n.taskGenerateGuideTitle),
+                          subtitle: Text(l10n.taskGenerateGuideSubtitle),
+                          value: _generateGuide,
+                          onChanged: (v) => setState(() => _generateGuide = v),
+                          secondary: const Icon(Icons.auto_awesome),
+                        ),
+
+                      // Nudge Suggestions (shown after task creation)
+                      if (_showNudgesAfterCreation && _nudges.isNotEmpty) ...[
+                        const SizedBox(height: DS.lg),
+                        Container(
+                          padding: const EdgeInsets.all(DS.md),
+                          decoration: BoxDecoration(
+                            color: DS.prismPurple.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: DS.prismPurple.withValues(alpha: 0.3),
                             ),
-                            const SizedBox(height: DS.sm),
-                            ..._nudges.map(
-                              (nudge) => Padding(
-                                padding: const EdgeInsets.only(bottom: DS.sm),
-                                child: Card(
-                                  elevation: 0,
-                                  color: DS.prismPurple.withValues(alpha: 0.05),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(DS.sm),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        LayoutBuilder(
-                                          builder: (context, constraints) {
-                                            final compact =
-                                                constraints.maxWidth < 340;
-                                            final actionButton =
-                                                nudge.suggestedValue != null
-                                                    ? SparkleButton(
-                                                        label:
-                                                            l10n.taskNudgeApply,
-                                                        variant:
-                                                            ButtonVariant.ghost,
-                                                        onPressed: () =>
-                                                            _applyNudge(nudge),
-                                                      )
-                                                    : null;
-                                            if (compact) {
-                                              return Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.lightbulb,
+                                    color: DS.prismPurple,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: DS.sm),
+                                  Text(
+                                    l10n.taskNudgeTitle,
+                                    style: const TextStyle(
+                                      fontWeight: DS.fontWeightBold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: DS.sm),
+                              ..._nudges.map(
+                                (nudge) => Padding(
+                                  padding: const EdgeInsets.only(bottom: DS.sm),
+                                  child: Card(
+                                    elevation: 0,
+                                    color:
+                                        DS.prismPurple.withValues(alpha: 0.05),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(DS.sm),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          LayoutBuilder(
+                                            builder: (context, constraints) {
+                                              final compact =
+                                                  constraints.maxWidth < 340;
+                                              final actionButton = nudge
+                                                          .suggestedValue !=
+                                                      null
+                                                  ? SparkleButton(
+                                                      label:
+                                                          l10n.taskNudgeApply,
+                                                      variant:
+                                                          ButtonVariant.ghost,
+                                                      onPressed: () =>
+                                                          _applyNudge(nudge),
+                                                    )
+                                                  : null;
+                                              if (compact) {
+                                                return Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      nudge.title,
+                                                      style: const TextStyle(
+                                                        fontWeight: DS
+                                                            .fontWeightSemibold,
+                                                        fontSize: 13,
+                                                      ),
+                                                    ),
+                                                    if (actionButton !=
+                                                        null) ...[
+                                                      const SizedBox(height: 6),
+                                                      Align(
+                                                        alignment: Alignment
+                                                            .centerLeft,
+                                                        child: actionButton,
+                                                      ),
+                                                    ],
+                                                  ],
+                                                );
+                                              }
+                                              return Row(
                                                 children: [
-                                                  Text(
-                                                    nudge.title,
-                                                    style: const TextStyle(
-                                                      fontWeight:
-                                                          DS.fontWeightSemibold,
-                                                      fontSize: 13,
+                                                  Expanded(
+                                                    child: Text(
+                                                      nudge.title,
+                                                      style: const TextStyle(
+                                                        fontWeight: DS
+                                                            .fontWeightSemibold,
+                                                        fontSize: 13,
+                                                      ),
                                                     ),
                                                   ),
-                                                  if (actionButton != null) ...[
-                                                    const SizedBox(height: 6),
-                                                    Align(
-                                                      alignment:
-                                                          Alignment.centerLeft,
-                                                      child: actionButton,
+                                                  if (actionButton != null)
+                                                    Flexible(
+                                                      child: Align(
+                                                        alignment: Alignment
+                                                            .centerRight,
+                                                        child: actionButton,
+                                                      ),
                                                     ),
-                                                  ],
                                                 ],
                                               );
-                                            }
-                                            return Row(
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    nudge.title,
-                                                    style: const TextStyle(
-                                                      fontWeight:
-                                                          DS.fontWeightSemibold,
-                                                      fontSize: 13,
-                                                    ),
-                                                  ),
-                                                ),
-                                                if (actionButton != null)
-                                                  Flexible(
-                                                    child: Align(
-                                                      alignment:
-                                                          Alignment.centerRight,
-                                                      child: actionButton,
-                                                    ),
-                                                  ),
-                                              ],
-                                            );
-                                          },
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          nudge.message,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: DS.textSecondary,
+                                            },
                                           ),
-                                        ),
-                                        if (nudge.confidence != null) ...[
                                           const SizedBox(height: 4),
                                           Text(
-                                            l10n.taskNudgeConfidence(
-                                              (nudge.confidence! * 100).toInt(),
-                                            ),
+                                            nudge.message,
                                             style: TextStyle(
-                                              fontSize: 10,
-                                              color: DS.textTertiary,
+                                              fontSize: 12,
+                                              color: DS.textSecondary,
                                             ),
                                           ),
+                                          if (nudge.confidence != null) ...[
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              l10n.taskNudgeConfidence(
+                                                (nudge.confidence! * 100)
+                                                    .toInt(),
+                                              ),
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                color: DS.textTertiary,
+                                              ),
+                                            ),
+                                          ],
                                         ],
-                                      ],
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: DS.sm),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                SparkleButton(
-                                  label: l10n.taskNudgeDismiss,
-                                  variant: ButtonVariant.ghost,
-                                  onPressed: _dismissNudges,
-                                ),
-                              ],
-                            ),
-                          ],
+                              const SizedBox(height: DS.sm),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  SparkleButton(
+                                    label: l10n.taskNudgeDismiss,
+                                    variant: ButtonVariant.ghost,
+                                    onPressed: _dismissNudges,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: DS.xxl),
+
+                      // Submit Button
+                      FilledButton.icon(
+                        onPressed: _isSubmitting ? null : _submitTask,
+                        icon: _isSubmitting
+                            ? LoadingIndicator.circular(
+                                size: 16,
+                                color: DS.textOnPrimary,
+                              )
+                            : const Icon(Icons.check),
+                        label: Text(
+                          _isSubmitting
+                              ? (_isEditMode
+                                  ? context.l10n.taskSaving
+                                  : l10n.taskCreating)
+                              : (_isEditMode
+                                  ? context.l10n.taskSaveChanges
+                                  : l10n.taskCreateAction),
+                        ),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
                       ),
                     ],
-                    const SizedBox(height: DS.xxl),
-
-                    // Submit Button
-                    FilledButton.icon(
-                      onPressed: _isSubmitting ? null : _submitTask,
-                      icon: _isSubmitting
-                          ? LoadingIndicator.circular(
-                              size: 16,
-                              color: DS.textOnPrimary,
-                            )
-                          : const Icon(Icons.check),
-                      label: Text(
-                        _isSubmitting
-                            ? (_isEditMode ? context.l10n.taskSaving : l10n.taskCreating)
-                            : (_isEditMode ? context.l10n.taskSaveChanges : l10n.taskCreateAction),
-                      ),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+        ),
       ),
     );
   }

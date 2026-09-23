@@ -350,7 +350,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get usernameMinLength => 'Username must be at least 3 characters';
 
   @override
-  String get invalidEmail => 'Please enter a valid email';
+  String get invalidEmail =>
+      'Invalid email format. Use a format like name@example.com';
 
   @override
   String get passwordMinLength => 'Password must be at least 6 characters';
@@ -2468,6 +2469,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get commonOptional => 'Optional';
+
+  @override
+  String get formUnsavedTitle => 'Discard changes?';
+
+  @override
+  String get formUnsavedMessage =>
+      'You have unsaved input. Leaving now will lose it.';
+
+  @override
+  String get formUnsavedKeepEditing => 'Keep editing';
+
+  @override
+  String get formUnsavedDiscard => 'Discard changes';
 
   @override
   String get commonEnabled => 'Enabled';
@@ -6461,7 +6475,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Enter your registered email and we\'ll send you a reset code.';
 
   @override
-  String get authInvalidEmail => 'Please enter a valid email';
+  String get authInvalidEmail =>
+      'Invalid email format. Use a format like name@example.com';
 
   @override
   String get authHaveResetCode => 'I already have a reset code';

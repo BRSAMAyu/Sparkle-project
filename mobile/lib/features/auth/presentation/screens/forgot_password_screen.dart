@@ -21,6 +21,10 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
 
+  /// N25（A-SPEC5 v1.5）校验三段制：未提交前不提前报错（disabled），
+  /// 首次提交失败后转即时校验（onUserInteraction），提交时全量兜底。
+  AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -28,7 +32,13 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      if (_autovalidateMode != AutovalidateMode.onUserInteraction) {
+        // N25 三段制：首次提交失败后，输入/失焦即校验，改错即时消错。
+        setState(() => _autovalidateMode = AutovalidateMode.onUserInteraction);
+      }
+      return;
+    }
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
 
     try {
@@ -67,6 +77,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             surfaceRole: SparkleSurfaceRole.card,
             child: Form(
               key: _formKey,
+              autovalidateMode: _autovalidateMode,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [

@@ -6,6 +6,7 @@ import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/services/openclaw_execution_preferences_service.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/utils/input_formatters.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 class OpenClawExecutionPreferencesCard extends ConsumerStatefulWidget {
@@ -84,9 +85,9 @@ class _OpenClawExecutionPreferencesCardState
               ),
               if (service.isLoading || service.isSaving)
                 LoadingIndicator.circular(
-                    size: 18,
-                    strokeWidth: 2,
-                    liveRegion: false,
+                  size: 18,
+                  strokeWidth: 2,
+                  liveRegion: false,
                 ),
             ],
           ),
@@ -278,6 +279,7 @@ class _OpenClawExecutionPreferencesCardState
                   initialValue:
                       draft.executionBudget.dailyTokenLimit?.toString() ?? '',
                   keyboardType: TextInputType.number,
+                  inputFormatters: SparkleInputFormatters.digitsOnly,
                   decoration: InputDecoration(
                     labelText: l.settingsDailyLimit,
                     helperText:
@@ -304,6 +306,7 @@ class _OpenClawExecutionPreferencesCardState
                   initialValue:
                       draft.executionBudget.monthlyTokenLimit?.toString() ?? '',
                   keyboardType: TextInputType.number,
+                  inputFormatters: SparkleInputFormatters.digitsOnly,
                   decoration: InputDecoration(
                     labelText: l.settingsMonthlyLimit,
                     helperText:
@@ -358,27 +361,27 @@ class _OpenClawExecutionPreferencesCardState
           const SizedBox(height: DS.spacing12),
           SizedBox(
             width: double.infinity,
-            child:             SparkleButton(
+            child: SparkleButton(
               label: _dirty ? l.settingsSavePreferences : l.execPrefSynced,
               minWidth: 64,
               minHeight: 40,
               onPressed: (!_dirty || service.isSaving)
- ? null
- : () async {
- final ok = await ref
- .read(openClawExecutionPreferencesProvider)
- .savePreferences(_draft ?? draft);
- if (!mounted) {
- return;
- }
- if (ok) {
- setState(() {
- _dirty = false;
- });
- AppFeedback.success(
- context, l.settingsPreferencesSaved);
- }
- },
+                  ? null
+                  : () async {
+                      final ok = await ref
+                          .read(openClawExecutionPreferencesProvider)
+                          .savePreferences(_draft ?? draft);
+                      if (!mounted) {
+                        return;
+                      }
+                      if (ok) {
+                        setState(() {
+                          _dirty = false;
+                        });
+                        AppFeedback.success(
+                            context, l.settingsPreferencesSaved);
+                      }
+                    },
               expand: true,
             ),
           ),

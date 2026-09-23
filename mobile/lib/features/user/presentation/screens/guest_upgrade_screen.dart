@@ -27,6 +27,10 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
   bool _acceptedPrivacy = false;
   bool _isLoading = false;
 
+  /// N25（A-SPEC5 v1.5）校验三段制：未提交前不提前报错（disabled），
+  /// 首次提交失败后转即时校验（onUserInteraction），提交时全量兜底。
+  AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
+
   @override
   void dispose() {
     _usernameController.dispose();
@@ -37,10 +41,18 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
   }
 
   Future<void> _upgradeWithEmail() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      if (_autovalidateMode != AutovalidateMode.onUserInteraction) {
+        // N25 三段制：首次提交失败后，输入/失焦即校验，改错即时消错。
+        setState(() => _autovalidateMode = AutovalidateMode.onUserInteraction);
+      }
+      return;
+    }
     if (!_acceptedTos || !_acceptedPrivacy) {
       AppFeedback.info(
-          context, context.l10n.guestUpgradeAcceptPoliciesRequired,);
+        context,
+        context.l10n.guestUpgradeAcceptPoliciesRequired,
+      );
       return;
     }
 
@@ -73,7 +85,9 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
   Future<void> _upgradeWithSocial(String provider) async {
     if (!_acceptedTos || !_acceptedPrivacy) {
       AppFeedback.info(
-          context, context.l10n.guestUpgradeAcceptPoliciesRequired,);
+        context,
+        context.l10n.guestUpgradeAcceptPoliciesRequired,
+      );
       return;
     }
 
@@ -144,34 +158,34 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
               child: GraphiteCardSurface(
                 surfaceRole: SparkleSurfaceRole.panel,
                 child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Wrap(
-                    spacing: DS.spacing8,
-                    runSpacing: DS.spacing8,
-                    children: [
-                      _buildMetaChip(
-                        context,
-                        icon: Icons.upgrade_rounded,
-                        label: context.l10n.userUpgradeFullAccount,
-                      ),
-                      _buildMetaChip(
-                        context,
-                        icon: Icons.verified_user_outlined,
-                        label: context.l10n.userKeepCurrentData,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: DS.spacing12),
-                  Text(
-                    l10n.guestUpgradeIntro,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: DS.textSecondary,
-                          height: 1.45,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: DS.spacing8,
+                      runSpacing: DS.spacing8,
+                      children: [
+                        _buildMetaChip(
+                          context,
+                          icon: Icons.upgrade_rounded,
+                          label: context.l10n.userUpgradeFullAccount,
                         ),
-                  ),
-                ],
-              ),
+                        _buildMetaChip(
+                          context,
+                          icon: Icons.verified_user_outlined,
+                          label: context.l10n.userKeepCurrentData,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: DS.spacing12),
+                    Text(
+                      l10n.guestUpgradeIntro,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: DS.textSecondary,
+                            height: 1.45,
+                          ),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: DS.spacing16),
@@ -179,141 +193,142 @@ class _GuestUpgradeScreenState extends ConsumerState<GuestUpgradeScreen> {
               index: 1,
               child: GraphiteCardSurface(
                 child: Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    TextFormField(
-                      controller: _usernameController,
-                      decoration: InputDecoration(
-                        labelText: l10n.username,
-                        filled: true,
-                        fillColor: DS.surfaceSecondary,
-                        border: const OutlineInputBorder(
-                          borderRadius: DS.borderRadius12,
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().length < 3) {
-                          return l10n.guestUpgradeUsernameMinLength;
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: DS.spacing16),
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: InputDecoration(
-                        labelText: l10n.email,
-                        filled: true,
-                        fillColor: DS.surfaceSecondary,
-                        border: const OutlineInputBorder(
-                          borderRadius: DS.borderRadius12,
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null ||
-                            !RegExp(r'^[^@]+@[^@]+\.[^@]+')
-                                .hasMatch(value.trim())) {
-                          return l10n.invalidEmail;
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: DS.spacing16),
-                    TextFormField(
-                      controller: _passwordController,
-                      obscureText: true,
-                      decoration: InputDecoration(
-                        labelText: l10n.password,
-                        filled: true,
-                        fillColor: DS.surfaceSecondary,
-                        border: const OutlineInputBorder(
-                          borderRadius: DS.borderRadius12,
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().length < 8) {
-                          return l10n.guestUpgradePasswordMinLength;
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: DS.spacing16),
-                    TextFormField(
-                      controller: _confirmPasswordController,
-                      obscureText: true,
-                      decoration: InputDecoration(
-                        labelText: l10n.confirmPassword,
-                        filled: true,
-                        fillColor: DS.surfaceSecondary,
-                        border: const OutlineInputBorder(
-                          borderRadius: DS.borderRadius12,
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value != _passwordController.text) {
-                          return l10n.passwordsDoNotMatch;
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: DS.spacing16),
-                    CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      value: _acceptedTos,
-                      onChanged: (value) {
-                        unawaited(
-                          SensoryFeedbackService.emit(
-                            SensoryFeedbackEvent.selection,
+                  key: _formKey,
+                  autovalidateMode: _autovalidateMode,
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: _usernameController,
+                        decoration: InputDecoration(
+                          labelText: l10n.username,
+                          filled: true,
+                          fillColor: DS.surfaceSecondary,
+                          border: const OutlineInputBorder(
+                            borderRadius: DS.borderRadius12,
                           ),
-                        );
-                        setState(() => _acceptedTos = value ?? false);
-                      },
-                      title: Text(l10n.guestUpgradeAgreeTerms),
-                      controlAffinity: ListTileControlAffinity.leading,
-                    ),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton(
-                        onPressed: () => context.push('/legal/terms'),
-                        child: Text(l10n.guestUpgradeViewTerms),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().length < 3) {
+                            return l10n.guestUpgradeUsernameMinLength;
+                          }
+                          return null;
+                        },
                       ),
-                    ),
-                    CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      value: _acceptedPrivacy,
-                      onChanged: (value) {
-                        unawaited(
-                          SensoryFeedbackService.emit(
-                            SensoryFeedbackEvent.selection,
+                      const SizedBox(height: DS.spacing16),
+                      TextFormField(
+                        controller: _emailController,
+                        decoration: InputDecoration(
+                          labelText: l10n.email,
+                          filled: true,
+                          fillColor: DS.surfaceSecondary,
+                          border: const OutlineInputBorder(
+                            borderRadius: DS.borderRadius12,
                           ),
-                        );
-                        setState(() => _acceptedPrivacy = value ?? false);
-                      },
-                      title: Text(l10n.guestUpgradeAgreePrivacy),
-                      controlAffinity: ListTileControlAffinity.leading,
-                    ),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton(
-                        onPressed: () => context.push('/legal/privacy'),
-                        child: Text(l10n.guestUpgradeViewPrivacy),
+                        ),
+                        validator: (value) {
+                          if (value == null ||
+                              !RegExp(r'^[^@]+@[^@]+\.[^@]+')
+                                  .hasMatch(value.trim())) {
+                            return l10n.invalidEmail;
+                          }
+                          return null;
+                        },
                       ),
-                    ),
-                    const SizedBox(height: DS.spacing16),
-                    SparkleButton(
-                      label: l10n.guestUpgradeWithEmail,
-                      expand: true,
-                      loading: _isLoading,
-                      onPressed: _isLoading
-                          ? null
-                          : () {
-                              unawaited(_upgradeWithEmail());
-                            },
-                    ),
-                  ],
+                      const SizedBox(height: DS.spacing16),
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          labelText: l10n.password,
+                          filled: true,
+                          fillColor: DS.surfaceSecondary,
+                          border: const OutlineInputBorder(
+                            borderRadius: DS.borderRadius12,
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().length < 8) {
+                            return l10n.guestUpgradePasswordMinLength;
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: DS.spacing16),
+                      TextFormField(
+                        controller: _confirmPasswordController,
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          labelText: l10n.confirmPassword,
+                          filled: true,
+                          fillColor: DS.surfaceSecondary,
+                          border: const OutlineInputBorder(
+                            borderRadius: DS.borderRadius12,
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value != _passwordController.text) {
+                            return l10n.passwordsDoNotMatch;
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: DS.spacing16),
+                      CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: _acceptedTos,
+                        onChanged: (value) {
+                          unawaited(
+                            SensoryFeedbackService.emit(
+                              SensoryFeedbackEvent.selection,
+                            ),
+                          );
+                          setState(() => _acceptedTos = value ?? false);
+                        },
+                        title: Text(l10n.guestUpgradeAgreeTerms),
+                        controlAffinity: ListTileControlAffinity.leading,
+                      ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton(
+                          onPressed: () => context.push('/legal/terms'),
+                          child: Text(l10n.guestUpgradeViewTerms),
+                        ),
+                      ),
+                      CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: _acceptedPrivacy,
+                        onChanged: (value) {
+                          unawaited(
+                            SensoryFeedbackService.emit(
+                              SensoryFeedbackEvent.selection,
+                            ),
+                          );
+                          setState(() => _acceptedPrivacy = value ?? false);
+                        },
+                        title: Text(l10n.guestUpgradeAgreePrivacy),
+                        controlAffinity: ListTileControlAffinity.leading,
+                      ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton(
+                          onPressed: () => context.push('/legal/privacy'),
+                          child: Text(l10n.guestUpgradeViewPrivacy),
+                        ),
+                      ),
+                      const SizedBox(height: DS.spacing16),
+                      SparkleButton(
+                        label: l10n.guestUpgradeWithEmail,
+                        expand: true,
+                        loading: _isLoading,
+                        onPressed: _isLoading
+                            ? null
+                            : () {
+                                unawaited(_upgradeWithEmail());
+                              },
+                      ),
+                    ],
+                  ),
                 ),
-              ),
               ),
             ),
             const SizedBox(height: DS.spacing16),

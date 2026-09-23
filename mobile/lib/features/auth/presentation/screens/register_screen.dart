@@ -28,6 +28,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool _acceptedTos = false;
   bool _acceptedPrivacy = false;
 
+  /// N25（A-SPEC5 v1.5）校验三段制：未提交前不提前报错（disabled），
+  /// 首次提交失败后转即时校验（onUserInteraction），提交时全量兜底。
+  AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
+
   @override
   void dispose() {
     _usernameController.dispose();
@@ -41,8 +45,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (_formKey.currentState!.validate()) {
       if (!_acceptedTos || !_acceptedPrivacy) {
         AppFeedback.info(
-            context,
-            AppLocalizations.of(context)!.authTermsRequired);
+            context, AppLocalizations.of(context)!.authTermsRequired);
         return;
       }
       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
@@ -56,6 +59,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               agreedLocale: Localizations.localeOf(context).toLanguageTag(),
             ),
       );
+    } else if (_autovalidateMode != AutovalidateMode.onUserInteraction) {
+      // N25 三段制：首次提交失败后，输入/失焦即校验，改错即时消错。
+      setState(() => _autovalidateMode = AutovalidateMode.onUserInteraction);
     }
   }
 
@@ -126,244 +132,236 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             padding: const EdgeInsets.all(DS.xl),
             child: Form(
               key: _formKey,
+              autovalidateMode: _autovalidateMode,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                        const SizedBox(height: DS.spacing20),
-                        SparkleStaggerItem(
-                          index: 0,
-                          child: Text(
-                            l10n.joinSparkle,
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineSmall
-                                ?.copyWith(
-                                  fontWeight: DS.fontWeightBold,
-                                  color:
-                                      Theme.of(context).colorScheme.secondary,
-                                ),
-                          ),
-                        ),
-                        const SizedBox(height: DS.xxl),
-                        SparkleStaggerItem(
-                          index: 1,
-                          child: TextFormField(
-                            controller: _usernameController,
-                            autofillHints: const [AutofillHints.username],
-                            decoration: InputDecoration(
-                              labelText: l10n.username,
-                              border: const OutlineInputBorder(),
-                              prefixIcon: const Icon(Icons.person_outline),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return l10n.pleaseEnterUsername;
-                              }
-                              if (value.length < 3) {
-                                return l10n.usernameMinLength;
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: DS.lg),
-                        SparkleStaggerItem(
-                          index: 2,
-                          child: TextFormField(
-                            controller: _emailController,
-                            autofillHints: const [AutofillHints.email],
-                            decoration: InputDecoration(
-                              labelText: l10n.email,
-                              border: const OutlineInputBorder(),
-                              prefixIcon: const Icon(Icons.email_outlined),
-                            ),
-                            keyboardType: TextInputType.emailAddress,
-                            validator: (value) {
-                              if (value == null ||
-                                  !RegExp(r'^[^@]+@[^@]+\.[^@]+')
-                                      .hasMatch(value)) {
-                                return l10n.invalidEmail;
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: DS.lg),
-                        SparkleStaggerItem(
-                          index: 3,
-                          child: TextFormField(
-                            controller: _passwordController,
-                            autofillHints: const [AutofillHints.newPassword],
-                            obscureText: !_isPasswordVisible,
-                            obscuringCharacter: '●',
-                            style: const TextStyle(letterSpacing: 0),
-                            decoration: InputDecoration(
-                              labelText: l10n.password,
-                              border: const OutlineInputBorder(),
-                              prefixIcon: const Icon(Icons.lock_outline),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _isPasswordVisible
-                                      ? Icons.visibility
-                                      : Icons.visibility_off,
-                                ),
-                                onPressed: () {
-                                  unawaited(
-                                    SensoryFeedbackService.emit(
-                                      SensoryFeedbackEvent.selection,
-                                    ),
-                                  );
-                                  setState(
-                                    () => _isPasswordVisible =
-                                        !_isPasswordVisible,
-                                  );
-                                },
+                  const SizedBox(height: DS.spacing20),
+                  SparkleStaggerItem(
+                    index: 0,
+                    child: Text(
+                      l10n.joinSparkle,
+                      textAlign: TextAlign.center,
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: DS.fontWeightBold,
+                                color: Theme.of(context).colorScheme.secondary,
                               ),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.length < 6) {
-                                return l10n.passwordMinLength;
-                              }
-                              return null;
-                            },
+                    ),
+                  ),
+                  const SizedBox(height: DS.xxl),
+                  SparkleStaggerItem(
+                    index: 1,
+                    child: TextFormField(
+                      controller: _usernameController,
+                      autofillHints: const [AutofillHints.username],
+                      decoration: InputDecoration(
+                        labelText: l10n.username,
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.person_outline),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return l10n.pleaseEnterUsername;
+                        }
+                        if (value.length < 3) {
+                          return l10n.usernameMinLength;
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: DS.lg),
+                  SparkleStaggerItem(
+                    index: 2,
+                    child: TextFormField(
+                      controller: _emailController,
+                      autofillHints: const [AutofillHints.email],
+                      decoration: InputDecoration(
+                        labelText: l10n.email,
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.email_outlined),
+                      ),
+                      keyboardType: TextInputType.emailAddress,
+                      validator: (value) {
+                        if (value == null ||
+                            !RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+                          return l10n.invalidEmail;
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: DS.lg),
+                  SparkleStaggerItem(
+                    index: 3,
+                    child: TextFormField(
+                      controller: _passwordController,
+                      autofillHints: const [AutofillHints.newPassword],
+                      obscureText: !_isPasswordVisible,
+                      obscuringCharacter: '●',
+                      style: const TextStyle(letterSpacing: 0),
+                      decoration: InputDecoration(
+                        labelText: l10n.password,
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isPasswordVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
                           ),
-                        ),
-                        ValueListenableBuilder<TextEditingValue>(
-                          valueListenable: _passwordController,
-                          builder: (context, value, _) {
-                            final password = value.text;
-                            if (password.isEmpty) return const SizedBox.shrink();
-                            final strength = _passwordStrength(password);
-                            final zh = AppLocalizations.of(context)!;
-                            return Padding(
-                              padding:
-                                  const EdgeInsets.only(top: DS.spacing8),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: ClipRRect(
-                                      borderRadius: DS.borderRadius4,
-                                      child: LinearProgressIndicator(
-                                        value: strength.progress,
-                                        backgroundColor:
-                                            DS.neutral200,
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                          strength.color,
-                                        ),
-                                        minHeight: 4,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: DS.spacing8),
-                                  Text(
-                                    strength.label(zh),
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: strength.color,
-                                      fontWeight: DS.fontWeightMedium,
-                                    ),
-                                  ),
-                                ],
+                          onPressed: () {
+                            unawaited(
+                              SensoryFeedbackService.emit(
+                                SensoryFeedbackEvent.selection,
                               ),
+                            );
+                            setState(
+                              () => _isPasswordVisible = !_isPasswordVisible,
                             );
                           },
                         ),
-                        const SizedBox(height: DS.lg),
-                        SparkleStaggerItem(
-                          index: 4,
-                          child: TextFormField(
-                            controller: _confirmPasswordController,
-                            autofillHints: const [AutofillHints.newPassword],
-                            obscureText: !_isPasswordVisible,
-                            obscuringCharacter: '●',
-                            style: const TextStyle(letterSpacing: 0),
-                            decoration: InputDecoration(
-                              labelText: l10n.confirmPassword,
-                              border: const OutlineInputBorder(),
-                              prefixIcon:
-                                  const Icon(Icons.lock_person_outlined),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.length < 6) {
+                          return l10n.passwordMinLength;
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _passwordController,
+                    builder: (context, value, _) {
+                      final password = value.text;
+                      if (password.isEmpty) return const SizedBox.shrink();
+                      final strength = _passwordStrength(password);
+                      final zh = AppLocalizations.of(context)!;
+                      return Padding(
+                        padding: const EdgeInsets.only(top: DS.spacing8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: DS.borderRadius4,
+                                child: LinearProgressIndicator(
+                                  value: strength.progress,
+                                  backgroundColor: DS.neutral200,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    strength.color,
+                                  ),
+                                  minHeight: 4,
+                                ),
+                              ),
                             ),
-                            validator: (value) {
-                              if (value != _passwordController.text) {
-                                return l10n.passwordsDoNotMatch;
-                              }
-                              return null;
-                            },
+                            const SizedBox(width: DS.spacing8),
+                            Text(
+                              strength.label(zh),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: strength.color,
+                                fontWeight: DS.fontWeightMedium,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: DS.lg),
+                  SparkleStaggerItem(
+                    index: 4,
+                    child: TextFormField(
+                      controller: _confirmPasswordController,
+                      autofillHints: const [AutofillHints.newPassword],
+                      obscureText: !_isPasswordVisible,
+                      obscuringCharacter: '●',
+                      style: const TextStyle(letterSpacing: 0),
+                      decoration: InputDecoration(
+                        labelText: l10n.confirmPassword,
+                        border: const OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.lock_person_outlined),
+                      ),
+                      validator: (value) {
+                        if (value != _passwordController.text) {
+                          return l10n.passwordsDoNotMatch;
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: DS.lg),
+                  SparkleStaggerItem(
+                    index: 5,
+                    child: CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: _acceptedTos,
+                      onChanged: (value) {
+                        unawaited(
+                          SensoryFeedbackService.emit(
+                            SensoryFeedbackEvent.selection,
                           ),
-                        ),
-                        const SizedBox(height: DS.lg),
-                        SparkleStaggerItem(
-                          index: 5,
-                          child: CheckboxListTile(
-                            contentPadding: EdgeInsets.zero,
-                            value: _acceptedTos,
-                            onChanged: (value) {
-                              unawaited(
-                                SensoryFeedbackService.emit(
-                                  SensoryFeedbackEvent.selection,
-                                ),
-                              );
-                              setState(() => _acceptedTos = value ?? false);
-                            },
-                            title: Text(context.l10n.authAgreeTerms),
-                            controlAffinity: ListTileControlAffinity.leading,
+                        );
+                        setState(() => _acceptedTos = value ?? false);
+                      },
+                      title: Text(context.l10n.authAgreeTerms),
+                      controlAffinity: ListTileControlAffinity.leading,
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      onPressed: () => context.push('/legal/terms'),
+                      child: Text(context.l10n.authViewTerms),
+                    ),
+                  ),
+                  SparkleStaggerItem(
+                    index: 6,
+                    child: CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: _acceptedPrivacy,
+                      onChanged: (value) {
+                        unawaited(
+                          SensoryFeedbackService.emit(
+                            SensoryFeedbackEvent.selection,
                           ),
-                        ),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: TextButton(
-                            onPressed: () => context.push('/legal/terms'),
-                            child: Text(context.l10n.authViewTerms),
-                          ),
-                        ),
-                        SparkleStaggerItem(
-                          index: 6,
-                          child: CheckboxListTile(
-                            contentPadding: EdgeInsets.zero,
-                            value: _acceptedPrivacy,
-                            onChanged: (value) {
-                              unawaited(
-                                SensoryFeedbackService.emit(
-                                  SensoryFeedbackEvent.selection,
-                                ),
-                              );
-                              setState(() => _acceptedPrivacy = value ?? false);
-                            },
-                            title: Text(context.l10n.authAgreePrivacy),
-                            controlAffinity: ListTileControlAffinity.leading,
-                          ),
-                        ),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: TextButton(
-                            onPressed: () => context.push('/legal/privacy'),
-                            child: Text(context.l10n.authViewPrivacy),
-                          ),
-                        ),
-                        const SizedBox(height: DS.xl),
-                        SparkleStaggerItem(
-                          index: 7,
-                          child: SparkleButton(
-                            label: l10n.register,
-                            onPressed: authState.isLoading ? null : _submit,
-                            expand: true,
-                            loading: authState.isLoading,
-                            disabled: authState.isLoading,
-                          ),
-                        ),
-                        // A-5: fixed gap replaces the Spacer() — a flex
-                        // child requires a bounded box (the removed
-                        // IntrinsicHeight) and reintroduces the overflow.
-                        const SizedBox(height: DS.xxl),
-                        SparkleButton.ghost(
-                          label: l10n.hasAccount,
-                          onPressed: () => context.go('/login'),
-                        ),
-                        const SizedBox(height: DS.spacing12),
-                      ],
-                ),
+                        );
+                        setState(() => _acceptedPrivacy = value ?? false);
+                      },
+                      title: Text(context.l10n.authAgreePrivacy),
+                      controlAffinity: ListTileControlAffinity.leading,
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      onPressed: () => context.push('/legal/privacy'),
+                      child: Text(context.l10n.authViewPrivacy),
+                    ),
+                  ),
+                  const SizedBox(height: DS.xl),
+                  SparkleStaggerItem(
+                    index: 7,
+                    child: SparkleButton(
+                      label: l10n.register,
+                      onPressed: authState.isLoading ? null : _submit,
+                      expand: true,
+                      loading: authState.isLoading,
+                      disabled: authState.isLoading,
+                    ),
+                  ),
+                  // A-5: fixed gap replaces the Spacer() — a flex
+                  // child requires a bounded box (the removed
+                  // IntrinsicHeight) and reintroduces the overflow.
+                  const SizedBox(height: DS.xxl),
+                  SparkleButton.ghost(
+                    label: l10n.hasAccount,
+                    onPressed: () => context.go('/login'),
+                  ),
+                  const SizedBox(height: DS.spacing12),
+                ],
+              ),
             ),
           ),
         ),

@@ -12,6 +12,7 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/utils/text_rendering.dart';
+import 'package:sparkle/core/widgets/unsaved_changes_guard.dart';
 import 'package:sparkle/features/plan/data/models/plan_draft.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
@@ -118,6 +119,56 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
       );
     }
     _initialTaskCount = _taskDrafts.length;
+    // N27：监听输入变化并重建，保证 UnsavedChangesGuard 的 canPop 实时生效。
+    for (final controller in [
+      _nameController,
+      _subjectController,
+      _goalController,
+      _scopeController,
+      _taskBlueprintController,
+      _guideController,
+    ]) {
+      controller.addListener(_onFormEdited);
+    }
+  }
+
+  void _onFormEdited() {
+    if (mounted) setState(() {});
+  }
+
+  // N27（A-SPEC5 v1.5）脏态基线：initState 水合（编辑模式）与
+  // didChangeDependencies 播种（新建模式）完成后记录基线，
+  // 与基线一致不算脏——打开编辑页立即返回不应误弹确认。
+  var _baselineCaptured = false;
+  var _baselineName = '';
+  var _baselineSubject = '';
+  var _baselineGoal = '';
+  var _baselineScope = '';
+  var _baselineBlueprint = '';
+  var _baselineGuide = '';
+  var _baselineDraftCount = 0;
+
+  void _captureDirtyBaseline() {
+    _baselineCaptured = true;
+    _baselineName = _nameController.text;
+    _baselineSubject = _subjectController.text;
+    _baselineGoal = _goalController.text;
+    _baselineScope = _scopeController.text;
+    _baselineBlueprint = _taskBlueprintController.text;
+    _baselineGuide = _guideController.text;
+    _baselineDraftCount = _taskDrafts.length;
+  }
+
+  /// 「输入是劳动」：任一文本与基线不一致、或任务蓝图卡片增删即为脏。
+  bool get _isDirty {
+    assert(_baselineCaptured);
+    return _nameController.text != _baselineName ||
+        _subjectController.text != _baselineSubject ||
+        _goalController.text != _baselineGoal ||
+        _scopeController.text != _baselineScope ||
+        _taskBlueprintController.text != _baselineBlueprint ||
+        _guideController.text != _baselineGuide ||
+        _taskDrafts.length != _baselineDraftCount;
   }
 
   @override
@@ -127,6 +178,9 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
       _scheduleLabel = context.l10n.planScheduleChipWeekday;
     }
     if (_didInitType || _isEditMode) {
+      if (!_baselineCaptured) {
+        _captureDirtyBaseline();
+      }
       return;
     }
     _didInitType = true;
@@ -144,16 +198,25 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
     } else if (_taskDrafts.isEmpty) {
       _seedSuggestedTasks(replaceExisting: true);
     }
+    // 播种完成后记录脏态基线（种子任务不算用户劳动）。
+    if (!_baselineCaptured) {
+      _captureDirtyBaseline();
+    }
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _subjectController.dispose();
-    _goalController.dispose();
-    _scopeController.dispose();
-    _taskBlueprintController.dispose();
-    _guideController.dispose();
+    for (final controller in [
+      _nameController,
+      _subjectController,
+      _goalController,
+      _scopeController,
+      _taskBlueprintController,
+      _guideController,
+    ]) {
+      controller.removeListener(_onFormEdited);
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -395,176 +458,183 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
     final draft = _buildDraft();
     final preview = PlanDescriptionCodec.encode(draft);
 
-    return SparklePageScaffold(
-      role: SparklePageRole.content,
-      appBar: AppBar(
-        title: Text(
-          _isEditMode
-              ? (_selectedType == PlanType.growth
-                  ? l10n.planCreateEditingGrowth
-                  : l10n.planCreateEditingSprint)
-              : (_selectedType == PlanType.growth
-                  ? l10n.createGrowthPlan
-                  : l10n.createSprintPlan),
+    // N27（A-SPEC5 v1.5）：脏态离开确认——半填计划返回必确认；
+    // 返回键与第 0 步取消键都改走 maybePop，否则硬 pop 会绕过 guard。
+    return UnsavedChangesGuard(
+      isDirty: _isDirty,
+      child: SparklePageScaffold(
+        role: SparklePageRole.content,
+        appBar: AppBar(
+          title: Text(
+            _isEditMode
+                ? (_selectedType == PlanType.growth
+                    ? l10n.planCreateEditingGrowth
+                    : l10n.planCreateEditingSprint)
+                : (_selectedType == PlanType.growth
+                    ? l10n.createGrowthPlan
+                    : l10n.createSprintPlan),
+          ),
+          leading: SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
         ),
-        leading: SparkleIconButton(
-          variant: ButtonVariant.ghost,
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-      ),
-      child: ContentConstraint(
-        child: Form(
-          key: _formKey,
-          child: Stepper(
-            currentStep: _currentStep,
-            onStepTapped: (value) => setState(() => _currentStep = value),
-            controlsBuilder: (context, details) {
-              final isLast = _currentStep == 4;
-              return Padding(
-                padding: const EdgeInsets.only(top: DS.spacing16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: SparkleButton(
-                        onPressed: _isSubmitting
-                            ? null
-                            : isLast
-                                ? _submitPlan
-                                : () => setState(
-                                      () => _currentStep =
-                                          (_currentStep + 1).clamp(0, 4),
-                                    ),
-                        icon: _isSubmitting
-                            ? LoadingIndicator.circular(size: 16)
-                            : Icon(
-                                isLast
-                                    ? Icons.check_rounded
-                                    : Icons.arrow_forward,
-                              ),
-                        label: isLast
-                            ? (_isEditMode
-                                ? l10n.planCreateSavePlan
-                                : l10n.planCreateAction)
-                            : l10n.commonNext,
-                        expand: true,
-                      ),
-                    ),
-                    const SizedBox(width: DS.spacing12),
-                    Expanded(
-                      child: SparkleButton.ghost(
-                        onPressed: _currentStep == 0
-                            ? () => context.pop()
-                            : () => setState(
-                                  () => _currentStep =
-                                      (_currentStep - 1).clamp(0, 4),
+        child: ContentConstraint(
+          child: Form(
+            key: _formKey,
+            child: Stepper(
+              currentStep: _currentStep,
+              onStepTapped: (value) => setState(() => _currentStep = value),
+              controlsBuilder: (context, details) {
+                final isLast = _currentStep == 4;
+                return Padding(
+                  padding: const EdgeInsets.only(top: DS.spacing16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SparkleButton(
+                          onPressed: _isSubmitting
+                              ? null
+                              : isLast
+                                  ? _submitPlan
+                                  : () => setState(
+                                        () => _currentStep =
+                                            (_currentStep + 1).clamp(0, 4),
+                                      ),
+                          icon: _isSubmitting
+                              ? LoadingIndicator.circular(size: 16)
+                              : Icon(
+                                  isLast
+                                      ? Icons.check_rounded
+                                      : Icons.arrow_forward,
                                 ),
-                        label: _currentStep == 0
-                            ? l10n.commonCancel
-                            : l10n.commonPrevious,
-                        expand: true,
+                          label: isLast
+                              ? (_isEditMode
+                                  ? l10n.planCreateSavePlan
+                                  : l10n.planCreateAction)
+                              : l10n.commonNext,
+                          expand: true,
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: DS.spacing12),
+                      Expanded(
+                        child: SparkleButton.ghost(
+                          onPressed: _currentStep == 0
+                              ? () => Navigator.of(context).maybePop()
+                              : () => setState(
+                                    () => _currentStep =
+                                        (_currentStep - 1).clamp(0, 4),
+                                  ),
+                          label: _currentStep == 0
+                              ? l10n.commonCancel
+                              : l10n.commonPrevious,
+                          expand: true,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              steps: [
+                Step(
+                  title: Text(l10n.planCreateStepPositioning),
+                  isActive: _currentStep >= 0,
+                  state:
+                      _currentStep > 0 ? StepState.complete : StepState.indexed,
+                  content: _PlanBasicsStep(
+                    selectedType: _selectedType,
+                    priority: _priority,
+                    nameController: _nameController,
+                    subjectController: _subjectController,
+                    goalController: _goalController,
+                    onTypeChanged: (type) {
+                      setState(() {
+                        _selectedType = type;
+                        _planStage = type == PlanType.growth
+                            ? PlanStage.daily
+                            : PlanStage.sprint;
+                      });
+                    },
+                    onPriorityChanged: (priority) =>
+                        setState(() => _priority = priority),
+                  ),
                 ),
-              );
-            },
-            steps: [
-              Step(
-                title: Text(l10n.planCreateStepPositioning),
-                isActive: _currentStep >= 0,
-                state:
-                    _currentStep > 0 ? StepState.complete : StepState.indexed,
-                content: _PlanBasicsStep(
-                  selectedType: _selectedType,
-                  priority: _priority,
-                  nameController: _nameController,
-                  subjectController: _subjectController,
-                  goalController: _goalController,
-                  onTypeChanged: (type) {
-                    setState(() {
-                      _selectedType = type;
-                      _planStage = type == PlanType.growth
-                          ? PlanStage.daily
-                          : PlanStage.sprint;
-                    });
-                  },
-                  onPriorityChanged: (priority) =>
-                      setState(() => _priority = priority),
+                Step(
+                  title: Text(l10n.planCreateStepTimeStructure),
+                  isActive: _currentStep >= 1,
+                  state:
+                      _currentStep > 1 ? StepState.complete : StepState.indexed,
+                  content: _PlanScheduleStep(
+                    dailyMinutes: _dailyMinutes,
+                    totalEstimatedHours: _totalEstimatedHours,
+                    targetDate: _targetDate,
+                    reminderTime: _reminderTime,
+                    scheduleLabel: _scheduleLabel,
+                    planStage: _planStage,
+                    onDailyMinutesChanged: (value) =>
+                        setState(() => _dailyMinutes = value),
+                    onTotalHoursChanged: (value) =>
+                        setState(() => _totalEstimatedHours = value),
+                    onPickTargetDate: _pickTargetDate,
+                    onPickReminderTime: _pickReminderTime,
+                    onScheduleChanged: (value) =>
+                        setState(() => _scheduleLabel = value),
+                    onPlanStageChanged: (value) =>
+                        setState(() => _planStage = value),
+                  ),
                 ),
-              ),
-              Step(
-                title: Text(l10n.planCreateStepTimeStructure),
-                isActive: _currentStep >= 1,
-                state:
-                    _currentStep > 1 ? StepState.complete : StepState.indexed,
-                content: _PlanScheduleStep(
-                  dailyMinutes: _dailyMinutes,
-                  totalEstimatedHours: _totalEstimatedHours,
-                  targetDate: _targetDate,
-                  reminderTime: _reminderTime,
-                  scheduleLabel: _scheduleLabel,
-                  planStage: _planStage,
-                  onDailyMinutesChanged: (value) =>
-                      setState(() => _dailyMinutes = value),
-                  onTotalHoursChanged: (value) =>
-                      setState(() => _totalEstimatedHours = value),
-                  onPickTargetDate: _pickTargetDate,
-                  onPickReminderTime: _pickReminderTime,
-                  onScheduleChanged: (value) =>
-                      setState(() => _scheduleLabel = value),
-                  onPlanStageChanged: (value) =>
-                      setState(() => _planStage = value),
+                Step(
+                  title: Text(l10n.planCreateStepTaskBlueprint),
+                  isActive: _currentStep >= 2,
+                  state:
+                      _currentStep > 2 ? StepState.complete : StepState.indexed,
+                  content: _PlanTasksStep(
+                    draftTasks: _taskDrafts,
+                    pendingTasks: pendingTasks,
+                    blueprintController: _taskBlueprintController,
+                    onAddTask: _addTaskDraft,
+                    onRemoveTask: _removeTaskDraft,
+                  ),
                 ),
-              ),
-              Step(
-                title: Text(l10n.planCreateStepTaskBlueprint),
-                isActive: _currentStep >= 2,
-                state:
-                    _currentStep > 2 ? StepState.complete : StepState.indexed,
-                content: _PlanTasksStep(
-                  draftTasks: _taskDrafts,
-                  pendingTasks: pendingTasks,
-                  blueprintController: _taskBlueprintController,
-                  onAddTask: _addTaskDraft,
-                  onRemoveTask: _removeTaskDraft,
+                Step(
+                  title: Text(l10n.planCreateStepBoundariesGuide),
+                  isActive: _currentStep >= 3,
+                  state:
+                      _currentStep > 3 ? StepState.complete : StepState.indexed,
+                  content: _PlanGuideStep(
+                    scopeController: _scopeController,
+                    guideController: _guideController,
+                    selectedAudience: _selectedGuideAudience,
+                    aiGuidePreview: _aiGuidePreview,
+                    isGenerating: _isGeneratingGuide,
+                    enableStage4Experience:
+                        AppFeatureFlags.enableTaskGuidanceV2,
+                    onAudienceChanged: (audience) =>
+                        setState(() => _selectedGuideAudience = audience),
+                    onCopyAiGuide: () async {
+                      if (_aiGuidePreview.trim().isEmpty) return;
+                      await Clipboard.setData(
+                        ClipboardData(text: _aiGuidePreview.trim()),
+                      );
+                      if (!context.mounted) return;
+                      AppFeedback.success(
+                          context, l10n.planCreateAiGuideCopied);
+                    },
+                    onGenerateGuide: _generateGuide,
+                  ),
                 ),
-              ),
-              Step(
-                title: Text(l10n.planCreateStepBoundariesGuide),
-                isActive: _currentStep >= 3,
-                state:
-                    _currentStep > 3 ? StepState.complete : StepState.indexed,
-                content: _PlanGuideStep(
-                  scopeController: _scopeController,
-                  guideController: _guideController,
-                  selectedAudience: _selectedGuideAudience,
-                  aiGuidePreview: _aiGuidePreview,
-                  isGenerating: _isGeneratingGuide,
-                  enableStage4Experience: AppFeatureFlags.enableTaskGuidanceV2,
-                  onAudienceChanged: (audience) =>
-                      setState(() => _selectedGuideAudience = audience),
-                  onCopyAiGuide: () async {
-                    if (_aiGuidePreview.trim().isEmpty) return;
-                    await Clipboard.setData(
-                      ClipboardData(text: _aiGuidePreview.trim()),
-                    );
-                    if (!context.mounted) return;
-                    AppFeedback.success(context, l10n.planCreateAiGuideCopied);
-                  },
-                  onGenerateGuide: _generateGuide,
+                Step(
+                  title: Text(l10n.planCreateStepReviewConfirm),
+                  isActive: _currentStep >= 4,
+                  content: _PlanReviewStep(
+                    draft: draft,
+                    previewDescription: preview,
+                    isEditMode: _isEditMode,
+                  ),
                 ),
-              ),
-              Step(
-                title: Text(l10n.planCreateStepReviewConfirm),
-                isActive: _currentStep >= 4,
-                content: _PlanReviewStep(
-                  draft: draft,
-                  previewDescription: preview,
-                  isEditMode: _isEditMode,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
