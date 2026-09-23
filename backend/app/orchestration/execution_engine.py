@@ -1846,6 +1846,7 @@ class ExecutionEngineMixin:
         user_id: str,
         queue: asyncio.Queue,
         result_holder: dict[str, Any],
+        frame_identity: dict[str, str] | None = None,
     ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
         logger.info("🚀 Launching StateGraph Execution")
         graph_task = await task_manager.spawn(
@@ -1857,6 +1858,20 @@ class ExecutionEngineMixin:
         total_prompt_tokens = 0
         total_completion_tokens = 0
         start_time = time.time()
+        # B-02 MIDSTREAM-HEARTBEAT：建模图的长工具调用/LLM 思考段期间队列无帧可出，
+        # 本循环是图执行期唯一的出帧口——实测该静默窗可达 50s+，客户端只剩「思考中」
+        # 胶囊、无服务端真实信号。静默超过阈值（默认 10s，可配）即直出诚实心跳帧
+        # （仍在处理 + 已耗时，复用 AgentStatus.THINKING 既有帧型，网关已透传
+        # status_update，零网关改动）。心跳不入队、不占背压配额、不计 usage；
+        # 任意真实帧出队即重置静默计时，正常流不多发一帧。
+        heartbeat_interval = float(getattr(settings, "STREAM_HEARTBEAT_INTERVAL_SECONDS", 10.0) or 0)
+        heartbeat_enabled = (
+            bool(getattr(settings, "STREAM_HEARTBEAT_ENABLED", True))
+            and heartbeat_interval > 0
+            and frame_identity is not None
+        )
+        start_monotonic = time.monotonic()
+        last_frame_monotonic = start_monotonic
 
         try:
             while not (graph_task.done() and queue.empty()):
@@ -1885,9 +1900,16 @@ class ExecutionEngineMixin:
                             TOKEN_USAGE.labels(model="gpt-4", type="completion").inc(item.usage.completion_tokens)
                     yield item
                     queue.task_done()
+                    last_frame_monotonic = time.monotonic()
                 except TimeoutError:
                     if graph_task.done():
                         break
+                    if heartbeat_enabled and time.monotonic() - last_frame_monotonic >= heartbeat_interval:
+                        yield self._build_stream_heartbeat_response(
+                            frame_identity or {},
+                            elapsed_seconds=time.monotonic() - start_monotonic,
+                        )
+                        last_frame_monotonic = time.monotonic()
 
             if graph_task.done():
                 try:
@@ -1904,6 +1926,51 @@ class ExecutionEngineMixin:
         except GeneratorExit:
             graph_task.cancel()
             raise
+
+    def _build_stream_heartbeat_response(
+        self,
+        frame_identity: dict[str, str],
+        *,
+        elapsed_seconds: float,
+    ) -> agent_service_pb2.ChatResponse:
+        """B-02 MIDSTREAM-HEARTBEAT：构造图执行静默段的诚实心跳帧。
+
+        内容只有「仍在处理 + 已耗时」，绝不伪造阶段进度；帧型复用
+        AgentStatus.THINKING（网关 status_update 透传已存在，mobile 侧
+        任意帧都会重置 75s 中段活动看门狗——正常流心跳续命看门狗，
+        真死流心跳与图同停、看门狗仍兜底）。
+        """
+        elapsed_int = max(int(elapsed_seconds), 0)
+        headline = "Still working on your request..."
+        detail = f"{elapsed_int}s elapsed"
+        identity = frame_identity or {}
+        return agent_service_pb2.ChatResponse(
+            response_id=str(identity.get("response_id") or uuid.uuid4()),
+            created_at=int(time.time()),
+            request_id=str(identity.get("request_id") or ""),
+            trace_id=str(identity.get("trace_id") or ""),
+            workflow_id=str(identity.get("workflow_id") or ""),
+            prompt_version=str(identity.get("prompt_version") or ""),
+            session_id=str(identity.get("session_id") or ""),
+            status_update=agent_service_pb2.AgentStatus(
+                state=agent_service_pb2.AgentStatus.THINKING,
+                details=f"{headline} ({detail})",
+                current_agent_name="Sparkle Flash",
+            ),
+            metadata={
+                "ux_progress": json.dumps(
+                    {
+                        "stage": "processing",
+                        "headline": headline,
+                        "detail": detail,
+                        "is_blocked": False,
+                        "heartbeat": True,
+                    },
+                    ensure_ascii=False,
+                ),
+                "stream_heartbeat": "true",
+            },
+        )
 
     async def _plan_and_validate(
         self,

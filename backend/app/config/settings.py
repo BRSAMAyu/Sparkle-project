@@ -745,6 +745,11 @@ class Settings(BaseSettings):
     DEEP_ANALYSIS_FORCE_FAST_TIER: bool = False
     FAST_INTERACTION_COPY_ENABLED: bool = True  # 澄清/确认文案优先由 FAST 模型生成
     EARLY_ACK_PROGRESS_ENABLED: bool = True  # 编排开始前先推送即时状态确认
+    # B-02 MIDSTREAM-HEARTBEAT：建模图长工具/思考段（实测 50s+ 无帧静默窗）周期补发
+    # 诚实心跳帧（仍在处理 + 已耗时，复用 AgentStatus.THINKING 既有帧型，零网关改动）。
+    # 心跳只保证「流还活着」的可见性，绝不伪造阶段进度；间隔 <=0 视为关闭。
+    STREAM_HEARTBEAT_ENABLED: bool = True  # 图执行静默段周期心跳帧总开关
+    STREAM_HEARTBEAT_INTERVAL_SECONDS: float = 10.0  # 静默多少秒后开始周期发心跳
 
     # Free Tier Model Downgrade (免费层跨层模型降级)
     FREE_TIER_DOWNGRADE_ENABLED: bool = True  # 免费用户能力层请求钳制总开关

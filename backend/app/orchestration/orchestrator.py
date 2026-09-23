@@ -3727,8 +3727,21 @@ class ChatOrchestrator(
                 # Step 13: Execute graph
                 result_holder: dict[str, Any] = {}
                 latency_probe.mark("pre_graph_launch")
+                # B-02 MIDSTREAM-HEARTBEAT：传入帧身份，供静默段心跳帧补全
+                # response/request/session/trace 字段（与 stream_callback 同源同值）。
                 async for item in self._execute_graph(
-                    state=state, user_id=user_id, queue=queue, result_holder=result_holder
+                    state=state,
+                    user_id=user_id,
+                    queue=queue,
+                    result_holder=result_holder,
+                    frame_identity={
+                        "response_id": response_id,
+                        "request_id": request_id,
+                        "session_id": session_id,
+                        "workflow_id": workflow_id,
+                        "prompt_version": prompt_version,
+                        "trace_id": trace_id,
+                    },
                 ):
                     yield item
                 latency_probe.mark("execute_graph")
