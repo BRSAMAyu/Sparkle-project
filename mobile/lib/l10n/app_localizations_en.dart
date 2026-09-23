@@ -3013,6 +3013,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statisticsWeeklyGrowthTrend => 'Weekly growth trend';
 
   @override
+  String get statisticsTrendAwaitingDataHint => 'Visible once data connects';
+
+  @override
   String statisticsLearningIndex(Object value) {
     return 'Learning index $value';
   }
@@ -5055,48 +5058,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Smarter path suggestions based on your knowledge graph';
 
   @override
-  String get onboardingChatTitle => 'AI Chat';
-
-  @override
-  String get onboardingChatDescription =>
-      'A learning partner that adapts to you.';
-
-  @override
-  String get onboardingChatFeature1 =>
-      'Multi-agent collaboration across math, code, writing, and science';
-
-  @override
-  String get onboardingChatFeature2 =>
-      'GraphRAG retrieval with visible reasoning context';
-
-  @override
-  String get onboardingChatFeature3 =>
-      'Context memory that keeps up with your learning history';
-
-  @override
-  String get onboardingChatFeature4 =>
-      'Tool use for tasks, knowledge lookup, and planning';
-
-  @override
-  String get onboardingTasksTitle => 'Smart Tasks';
-
-  @override
-  String get onboardingTasksDescription =>
-      'Personalized plans that keep learning moving forward.';
-
-  @override
-  String get onboardingTasksFeature1 =>
-      'Six task types covering learning, practice, correction, reflection, social, and planning';
-
-  @override
-  String get onboardingTasksFeature2 =>
-      'Smart reminders based on your current study state';
-
-  @override
-  String get onboardingTasksFeature3 => 'Sprint plans for short-term push';
-
-  @override
-  String get onboardingTasksFeature4 => 'Growth plans for long-term progress';
+  String get onboardingAiHelpTitle => 'How AI helps you';
 
   @override
   String get onboardingPersonalizationTitle => 'Personalization';
@@ -5125,34 +5087,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get onboardingSettingAssistantDesc =>
       'Create learning tasks automatically';
-
-  @override
-  String get onboardingChatDemo1 => 'Hi. What would you like help with?';
-
-  @override
-  String get onboardingChatDemo2 => 'Explain the basic idea behind calculus';
-
-  @override
-  String get onboardingChatDemo3 =>
-      'Calculus studies how quantities change over time...';
-
-  @override
-  String get onboardingTaskTypeLearning => 'Learning task';
-
-  @override
-  String get onboardingTaskTypePractice => 'Practice task';
-
-  @override
-  String get onboardingTaskTypeReflection => 'Reflection task';
-
-  @override
-  String get onboardingTaskDemo1 => 'Finish chapter one of calculus';
-
-  @override
-  String get onboardingTaskDemo2 => 'Solve ten practice questions';
-
-  @override
-  String get onboardingTaskDemo3 => 'Summarize what you learned this week';
 
   @override
   String get onboardingArchitectureStep1Title => 'Mobile app';

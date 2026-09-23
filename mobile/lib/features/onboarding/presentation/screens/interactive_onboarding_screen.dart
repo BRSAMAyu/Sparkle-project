@@ -22,15 +22,19 @@ const _kOnboardingPageKey = 'onboarding_current_page';
 /// 包含：
 /// 1. 欢迎页
 /// 2. 架构可视化动画
-/// 3. 核心功能介绍（Galaxy、Chat、Tasks）
-/// 4. 权限请求
-/// 5. 个性化设置
+/// 3. 核心功能介绍（Galaxy）
+/// 4. AI 怎么帮你（Chat + Tasks 合并单页，A-SPEC2 top10 #6）
+/// 5. 权限请求与个性化设置
 class InteractiveOnboardingScreen extends ConsumerStatefulWidget {
   const InteractiveOnboardingScreen({
     required this.onComplete,
     super.key,
   });
   final VoidCallback onComplete;
+
+  /// A-SPEC2 top10 #6：引导收敛 ≤5 步（SPEC §8.9 必达②）。
+  /// 原 6 页中的 chat/task 两特性页合并为「AI 怎么帮你」单页。
+  static const int totalPages = 5;
 
   @override
   ConsumerState<InteractiveOnboardingScreen> createState() =>
@@ -41,7 +45,7 @@ class _InteractiveOnboardingScreenState
     extends ConsumerState<InteractiveOnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
-  final int _totalPages = 6;
+  final int _totalPages = InteractiveOnboardingScreen.totalPages;
   bool _notificationsEnabled = false;
   bool _microphoneEnabled = false;
   bool _requestingNotification = false;
@@ -182,8 +186,7 @@ class _InteractiveOnboardingScreenState
                       _buildWelcomePage(),
                       _buildArchitecturePage(),
                       _buildGalaxyFeaturePage(),
-                      _buildChatFeaturePage(),
-                      _buildTaskFeaturePage(),
+                      _buildAiHelpPage(),
                       _buildPersonalizationPage(),
                     ],
                   ),
@@ -422,37 +425,54 @@ class _InteractiveOnboardingScreenState
         demoWidget: _buildGalaxyDemo(),
       );
 
-  // Page 4: Chat Feature
-  Widget _buildChatFeaturePage() => _buildFeaturePage(
-        icon: Icons.psychology,
-        iconGradient: [DS.prismPurple, DS.error],
-        title: context.l10n.onboardingChatTitle,
-        description: context.l10n.onboardingChatDescription,
-        features: [
-          context.l10n.onboardingChatFeature1,
-          context.l10n.onboardingChatFeature2,
-          context.l10n.onboardingChatFeature3,
-          context.l10n.onboardingChatFeature4,
-        ],
-        demoWidget: _buildChatDemo(),
+  // Page 4: AI 怎么帮你（Chat + Tasks 合并单页，一屏两特性各一句）
+  Widget _buildAiHelpPage() => ContentConstraint(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(DS.xxl),
+          child: Column(
+            children: [
+              // 复用 _buildFeaturePage 的图标容器（gradientLiteral 收敛：
+              // 渐变字面量单源于 _buildFeatureIcon，A5.3 ratchet 只降不升）。
+              _buildFeatureIcon(
+                icon: Icons.psychology,
+                iconGradient: [DS.prismPurple, DS.success.shade400],
+              ),
+              const SizedBox(height: DS.xl),
+              SparkleStaggerItem(
+                index: 1,
+                child: Text(
+                  context.l10n.onboardingAiHelpTitle,
+                  style: TextStyle(
+                    color: DS.brandPrimaryConst,
+                    fontSize: 28,
+                    fontWeight: DS.fontWeightBold,
+                  ),
+                ),
+              ),
+              const SizedBox(height: DS.xxl),
+              SparkleStaggerItem(
+                index: 2,
+                child: _buildFeaturePreview(
+                  Icons.psychology,
+                  context.l10n.onboardingFeatureChat,
+                  context.l10n.onboardingFeatureChatDesc,
+                ),
+              ),
+              const SizedBox(height: DS.lg),
+              SparkleStaggerItem(
+                index: 3,
+                child: _buildFeaturePreview(
+                  Icons.task_alt,
+                  context.l10n.onboardingFeatureTasks,
+                  context.l10n.onboardingFeatureTasksDesc,
+                ),
+              ),
+            ],
+          ),
+        ),
       );
 
-  // Page 5: Task Feature
-  Widget _buildTaskFeaturePage() => _buildFeaturePage(
-        icon: Icons.task_alt,
-        iconGradient: [DS.success.shade400, Colors.teal.shade400],
-        title: context.l10n.onboardingTasksTitle,
-        description: context.l10n.onboardingTasksDescription,
-        features: [
-          context.l10n.onboardingTasksFeature1,
-          context.l10n.onboardingTasksFeature2,
-          context.l10n.onboardingTasksFeature3,
-          context.l10n.onboardingTasksFeature4,
-        ],
-        demoWidget: _buildTaskDemo(),
-      );
-
-  // Page 6: Personalization
+  // Page 5: Personalization
   Widget _buildPersonalizationPage() => ContentConstraint(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(DS.xxl),
@@ -520,6 +540,23 @@ class _InteractiveOnboardingScreenState
         ),
       );
 
+  // 特性页头部图标容器（gradient 字面量唯一 owner，A5.3）。
+  Widget _buildFeatureIcon({
+    required IconData icon,
+    required List<Color> iconGradient,
+  }) =>
+      SparkleStaggerItem(
+        index: 0,
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: iconGradient),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Icon(icon, size: 48, color: DS.brandPrimary),
+        ),
+      );
+
   Widget _buildFeaturePage({
     required IconData icon,
     required List<Color> iconGradient,
@@ -534,17 +571,7 @@ class _InteractiveOnboardingScreenState
           child: Column(
             children: [
               // Icon
-              SparkleStaggerItem(
-                index: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: iconGradient),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Icon(icon, size: 48, color: DS.brandPrimary),
-                ),
-              ),
+              _buildFeatureIcon(icon: icon, iconGradient: iconGradient),
               const SizedBox(height: DS.xl),
 
               // Title
@@ -799,107 +826,6 @@ class _InteractiveOnboardingScreenState
             size: 80,
             color: DS.brandPrimary.shade400,
           ),
-        ),
-      );
-
-  Widget _buildChatDemo() => Container(
-        constraints: const BoxConstraints(minHeight: 200),
-        padding: const EdgeInsets.all(DS.lg),
-        decoration: BoxDecoration(
-          color: DS.brandPrimary.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildChatMessage(context.l10n.onboardingChatDemo1, true),
-            const SizedBox(height: DS.sm),
-            _buildChatMessage(context.l10n.onboardingChatDemo2, false),
-            const SizedBox(height: DS.sm),
-            _buildChatMessage(context.l10n.onboardingChatDemo3, true),
-          ],
-        ),
-      );
-
-  Widget _buildChatMessage(String text, bool isAI) => Align(
-        alignment: isAI ? Alignment.centerLeft : Alignment.centerRight,
-        child: Container(
-          padding: const EdgeInsets.all(DS.md),
-          decoration: BoxDecoration(
-            color: isAI
-                ? DS.prismPurple.withValues(alpha: 0.2)
-                : DS.brandPrimary.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            text,
-            style: TextStyle(color: DS.brandPrimaryConst, fontSize: 12),
-          ),
-        ),
-      );
-
-  Widget _buildTaskDemo() => Container(
-        constraints: const BoxConstraints(minHeight: 200),
-        padding: const EdgeInsets.all(DS.lg),
-        decoration: BoxDecoration(
-          color: DS.brandPrimary.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildTaskItem(
-              context.l10n.onboardingTaskTypeLearning,
-              context.l10n.onboardingTaskDemo1,
-              DS.brandPrimary,
-            ),
-            const SizedBox(height: DS.sm),
-            _buildTaskItem(
-              context.l10n.onboardingTaskTypePractice,
-              context.l10n.onboardingTaskDemo2,
-              DS.success,
-            ),
-            const SizedBox(height: DS.sm),
-            _buildTaskItem(
-              context.l10n.onboardingTaskTypeReflection,
-              context.l10n.onboardingTaskDemo3,
-              DS.prismPurple,
-            ),
-          ],
-        ),
-      );
-
-  Widget _buildTaskItem(String type, String title, Color color) => Container(
-        padding: const EdgeInsets.all(DS.md),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.circle, size: 12, color: color),
-            const SizedBox(width: DS.sm),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    type,
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 10,
-                      fontWeight: DS.fontWeightBold,
-                    ),
-                  ),
-                  Text(
-                    title,
-                    style: TextStyle(color: DS.brandPrimaryConst, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ),
       );
 }

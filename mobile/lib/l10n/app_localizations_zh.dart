@@ -2876,6 +2876,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get statisticsWeeklyGrowthTrend => '本周成长趋势';
 
   @override
+  String get statisticsTrendAwaitingDataHint => '接入后可见';
+
+  @override
   String statisticsLearningIndex(Object value) {
     return '学习指数 $value';
   }
@@ -4845,40 +4848,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get onboardingGalaxyFeature4 => '智能推荐：基于知识图谱的学习路径';
 
   @override
-  String get onboardingChatTitle => 'AI 对话';
-
-  @override
-  String get onboardingChatDescription => '你的智能学习伙伴';
-
-  @override
-  String get onboardingChatFeature1 => '多智能体协作：数学、代码、写作、科学专家';
-
-  @override
-  String get onboardingChatFeature2 => 'GraphRAG 检索：实时显示知识检索过程';
-
-  @override
-  String get onboardingChatFeature3 => '上下文理解：记住你的学习历史';
-
-  @override
-  String get onboardingChatFeature4 => '工具调用：执行任务、查询知识、管理计划';
-
-  @override
-  String get onboardingTasksTitle => '智能任务';
-
-  @override
-  String get onboardingTasksDescription => '个性化学习计划';
-
-  @override
-  String get onboardingTasksFeature1 => '6种任务类型：学习、训练、纠错、反思、社交、规划';
-
-  @override
-  String get onboardingTasksFeature2 => '智能推送：基于学习状态的提醒';
-
-  @override
-  String get onboardingTasksFeature3 => 'Sprint 计划：短期冲刺目标';
-
-  @override
-  String get onboardingTasksFeature4 => 'Growth Plan：长期成长规划';
+  String get onboardingAiHelpTitle => 'AI 怎么帮你';
 
   @override
   String get onboardingPersonalizationTitle => '个性化设置';
@@ -4903,33 +4873,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get onboardingSettingAssistantDesc => '自动创建学习任务';
-
-  @override
-  String get onboardingChatDemo1 => '你好！我能帮你什么？';
-
-  @override
-  String get onboardingChatDemo2 => '解释一下微积分的基本原理';
-
-  @override
-  String get onboardingChatDemo3 => '微积分研究函数的变化率...';
-
-  @override
-  String get onboardingTaskTypeLearning => '学习任务';
-
-  @override
-  String get onboardingTaskTypePractice => '训练任务';
-
-  @override
-  String get onboardingTaskTypeReflection => '反思任务';
-
-  @override
-  String get onboardingTaskDemo1 => '完成微积分第一章';
-
-  @override
-  String get onboardingTaskDemo2 => '完成10道练习题';
-
-  @override
-  String get onboardingTaskDemo3 => '总结本周学习收获';
 
   @override
   String get onboardingArchitectureStep1Title => '移动端';

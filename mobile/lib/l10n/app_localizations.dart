@@ -5432,6 +5432,12 @@ abstract class AppLocalizations {
   /// **'本周成长趋势'**
   String get statisticsWeeklyGrowthTrend;
 
+  /// No description provided for @statisticsTrendAwaitingDataHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'接入后可见'**
+  String get statisticsTrendAwaitingDataHint;
+
   /// No description provided for @statisticsLearningIndex.
   ///
   /// In zh, this message translates to:
@@ -9032,77 +9038,11 @@ abstract class AppLocalizations {
   /// **'智能推荐：基于知识图谱的学习路径'**
   String get onboardingGalaxyFeature4;
 
-  /// No description provided for @onboardingChatTitle.
+  /// No description provided for @onboardingAiHelpTitle.
   ///
   /// In zh, this message translates to:
-  /// **'AI 对话'**
-  String get onboardingChatTitle;
-
-  /// No description provided for @onboardingChatDescription.
-  ///
-  /// In zh, this message translates to:
-  /// **'你的智能学习伙伴'**
-  String get onboardingChatDescription;
-
-  /// No description provided for @onboardingChatFeature1.
-  ///
-  /// In zh, this message translates to:
-  /// **'多智能体协作：数学、代码、写作、科学专家'**
-  String get onboardingChatFeature1;
-
-  /// No description provided for @onboardingChatFeature2.
-  ///
-  /// In zh, this message translates to:
-  /// **'GraphRAG 检索：实时显示知识检索过程'**
-  String get onboardingChatFeature2;
-
-  /// No description provided for @onboardingChatFeature3.
-  ///
-  /// In zh, this message translates to:
-  /// **'上下文理解：记住你的学习历史'**
-  String get onboardingChatFeature3;
-
-  /// No description provided for @onboardingChatFeature4.
-  ///
-  /// In zh, this message translates to:
-  /// **'工具调用：执行任务、查询知识、管理计划'**
-  String get onboardingChatFeature4;
-
-  /// No description provided for @onboardingTasksTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'智能任务'**
-  String get onboardingTasksTitle;
-
-  /// No description provided for @onboardingTasksDescription.
-  ///
-  /// In zh, this message translates to:
-  /// **'个性化学习计划'**
-  String get onboardingTasksDescription;
-
-  /// No description provided for @onboardingTasksFeature1.
-  ///
-  /// In zh, this message translates to:
-  /// **'6种任务类型：学习、训练、纠错、反思、社交、规划'**
-  String get onboardingTasksFeature1;
-
-  /// No description provided for @onboardingTasksFeature2.
-  ///
-  /// In zh, this message translates to:
-  /// **'智能推送：基于学习状态的提醒'**
-  String get onboardingTasksFeature2;
-
-  /// No description provided for @onboardingTasksFeature3.
-  ///
-  /// In zh, this message translates to:
-  /// **'Sprint 计划：短期冲刺目标'**
-  String get onboardingTasksFeature3;
-
-  /// No description provided for @onboardingTasksFeature4.
-  ///
-  /// In zh, this message translates to:
-  /// **'Growth Plan：长期成长规划'**
-  String get onboardingTasksFeature4;
+  /// **'AI 怎么帮你'**
+  String get onboardingAiHelpTitle;
 
   /// No description provided for @onboardingPersonalizationTitle.
   ///
@@ -9151,60 +9091,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'自动创建学习任务'**
   String get onboardingSettingAssistantDesc;
-
-  /// No description provided for @onboardingChatDemo1.
-  ///
-  /// In zh, this message translates to:
-  /// **'你好！我能帮你什么？'**
-  String get onboardingChatDemo1;
-
-  /// No description provided for @onboardingChatDemo2.
-  ///
-  /// In zh, this message translates to:
-  /// **'解释一下微积分的基本原理'**
-  String get onboardingChatDemo2;
-
-  /// No description provided for @onboardingChatDemo3.
-  ///
-  /// In zh, this message translates to:
-  /// **'微积分研究函数的变化率...'**
-  String get onboardingChatDemo3;
-
-  /// No description provided for @onboardingTaskTypeLearning.
-  ///
-  /// In zh, this message translates to:
-  /// **'学习任务'**
-  String get onboardingTaskTypeLearning;
-
-  /// No description provided for @onboardingTaskTypePractice.
-  ///
-  /// In zh, this message translates to:
-  /// **'训练任务'**
-  String get onboardingTaskTypePractice;
-
-  /// No description provided for @onboardingTaskTypeReflection.
-  ///
-  /// In zh, this message translates to:
-  /// **'反思任务'**
-  String get onboardingTaskTypeReflection;
-
-  /// No description provided for @onboardingTaskDemo1.
-  ///
-  /// In zh, this message translates to:
-  /// **'完成微积分第一章'**
-  String get onboardingTaskDemo1;
-
-  /// No description provided for @onboardingTaskDemo2.
-  ///
-  /// In zh, this message translates to:
-  /// **'完成10道练习题'**
-  String get onboardingTaskDemo2;
-
-  /// No description provided for @onboardingTaskDemo3.
-  ///
-  /// In zh, this message translates to:
-  /// **'总结本周学习收获'**
-  String get onboardingTaskDemo3;
 
   /// No description provided for @onboardingArchitectureStep1Title.
   ///

@@ -55,7 +55,9 @@ void main() {
       onComplete: () => completed = true,
     );
 
-    for (var i = 0; i < 5; i++) {
+    // A-SPEC2 top10 #6：5 页流程（welcome/architecture/galaxy/ai-help/
+    // personalization），4 次「下一步」后到达末页。
+    for (var i = 0; i < 4; i++) {
       await _tapLabel(tester, _nextFinder);
     }
 
@@ -70,12 +72,68 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('totalPages is 5 and last page shows Get started after 4 nexts',
+      (tester) async {
+    // 页数断言（A-SPEC2 top10 #6 / SPEC §8.9 必达② ≤5 步）。
+    expect(InteractiveOnboardingScreen.totalPages, 5);
+
+    await _pumpOnboarding(tester);
+
+    for (var i = 0; i < 4; i++) {
+      expect(_getStartedFinder, findsNothing);
+      await _tapLabel(tester, _nextFinder);
+    }
+
+    // 第 5 页（末页）才出现「开始使用」。
+    expect(_getStartedFinder, findsOneWidget);
+    expect(_nextFinder, findsNothing);
+  });
+
+  testWidgets('merged ai-help page shows chat and tasks one-liner each', (
+    tester,
+  ) async {
+    await _pumpOnboarding(tester);
+
+    // 跳到第 4 页（AI 怎么帮你，chat/task 合并单页）。
+    for (var i = 0; i < 3; i++) {
+      await _tapLabel(tester, _nextFinder);
+    }
+
+    // 一屏两特性：合并页标题 + 两个特性名各一句同屏。
+    expect(find.text('AI 怎么帮你'), findsOneWidget);
+    expect(find.text('AI 对话'), findsOneWidget);
+    expect(find.text('智能任务'), findsOneWidget);
+    expect(find.text('智能学习伙伴'), findsOneWidget);
+    expect(find.text('个性化学习计划'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('restores saved page breakpoint (page index survives 6->5)', (
+    tester,
+  ) async {
+    // 断点续传：旧档页码 4 在 5 页制下仍合法 → 直接恢复到末页（个性化），
+    // 无需任何点击即出现「开始使用」。
+    SharedPreferences.setMockInitialValues({'onboarding_current_page': 4});
+    await _pumpOnboarding(tester);
+
+    expect(_getStartedFinder, findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Text &&
+            (widget.data == 'Voice Input' || widget.data == '语音输入'),
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('permission page updates notification and microphone state', (
     tester,
   ) async {
     await _pumpOnboarding(tester);
 
-    for (var i = 0; i < 5; i++) {
+    for (var i = 0; i < 4; i++) {
       await _tapLabel(tester, _nextFinder);
     }
 
