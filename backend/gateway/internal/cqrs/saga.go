@@ -5,7 +5,6 @@
 // Stage: v1 网关基座
 //
 // Saga 分布式事务协调.
-
 package cqrs
 
 import (

@@ -209,8 +209,9 @@ func TestFileEventHub_SendWhileRegisterUnregister_ConcurrentStress(t *testing.T)
 		}
 	}()
 	for i := 0; i < numConns; i++ {
-		client, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+		client, wsResp, err := websocket.DefaultDialer.Dial(wsURL, nil)
 		require.NoError(t, err)
+		defer wsResp.Body.Close()
 		clients = append(clients, client)
 	}
 	for i := 0; i < numConns; i++ {

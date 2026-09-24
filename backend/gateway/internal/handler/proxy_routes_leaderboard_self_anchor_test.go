@@ -10,9 +10,9 @@ leaderboards 组保持 wildcard-only 代理（registerREST "/*path"，gamificati
 P1-2 先例）。gin 1.9.1 在 catch-all 同级注册静态路由会 panic
 （"conflicts with existing wildcard"），故自我锚视图不加显式路由行——引擎侧
 新端点经 wildcard 自动可达且过组级 authMiddleware。本测试固化：
-  1. /api/v1/leaderboards/self-anchor 经 wildcard 代理到引擎（200，路径原样）；
-  2. 该路径受组级 authMiddleware 保护，未认证请求不会到达引擎；
-  3. 既有榜面路径（bare collection 与子路径）不回归。
+ 1. /api/v1/leaderboards/self-anchor 经 wildcard 代理到引擎（200，路径原样）；
+ 2. 该路径受组级 authMiddleware 保护，未认证请求不会到达引擎；
+ 3. 既有榜面路径（bare collection 与子路径）不回归。
 */
 package handler
 

@@ -163,6 +163,7 @@ func TestWebSocketProxyTerminalUpstreamRejectionsPassThrough(t *testing.T) {
 			require.Error(t, err)
 			require.Nil(t, conn)
 			require.NotNil(t, resp)
+			defer resp.Body.Close()
 			require.Equal(t, tc.upstreamStatus, resp.StatusCode)
 
 			body, readErr := io.ReadAll(resp.Body)
@@ -191,6 +192,7 @@ func TestWebSocketProxyUpstreamUnreachableStays502(t *testing.T) {
 	require.Error(t, err)
 	require.Nil(t, conn)
 	require.NotNil(t, resp)
+	defer resp.Body.Close()
 	require.Equal(t, http.StatusBadGateway, resp.StatusCode)
 }
 
@@ -227,6 +229,7 @@ func TestWebSocketProxyHandshakeTimeoutMapsTo504(t *testing.T) {
 	require.Error(t, err)
 	require.Nil(t, conn)
 	require.NotNil(t, resp)
+	defer resp.Body.Close()
 	require.Equal(t, http.StatusGatewayTimeout, resp.StatusCode)
 }
 

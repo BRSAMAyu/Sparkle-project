@@ -129,18 +129,18 @@ func TestLogRunnerStoppedGradesByShutdownState(t *testing.T) {
 	log := zap.New(core)
 
 	// err == nil → INFO（无错误收尾）
-	LogRunnerStopped(log, context.Background(), "runner-a", nil)
+	LogRunnerStopped(context.Background(), log, "runner-a", nil)
 
 	// 关停窗口（ctx 已取消）→ INFO，即使 err == context.Canceled
 	shutdownCtx, cancel := context.WithCancel(context.Background())
 	cancel()
-	LogRunnerStopped(log, shutdownCtx, "runner-b", context.Canceled)
+	LogRunnerStopped(shutdownCtx, log, "runner-b", context.Canceled)
 
 	// 进程仍存活时失败 → ERROR
-	LogRunnerStopped(log, context.Background(), "runner-c", errors.New("boom"))
+	LogRunnerStopped(context.Background(), log, "runner-c", errors.New("boom"))
 
 	// 非关停期出现的 canceled → 保持 ERROR（卡语义：仅关停期 canceled 降级）
-	LogRunnerStopped(log, context.Background(), "runner-d", context.Canceled)
+	LogRunnerStopped(context.Background(), log, "runner-d", context.Canceled)
 
 	entries := observed.TakeAll()
 	if len(entries) != 4 {

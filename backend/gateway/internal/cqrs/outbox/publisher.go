@@ -4,7 +4,6 @@
 // Stage: v1 网关基座
 //
 // 发件箱模式事件发布（事务性保证）.
-
 package outbox
 
 import (

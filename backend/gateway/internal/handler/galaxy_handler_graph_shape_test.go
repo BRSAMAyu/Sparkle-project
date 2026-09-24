@@ -277,7 +277,11 @@ func TestGetGraph_GRPCBranch_EmitsRESTContractShape(t *testing.T) {
 	gateway := httptest.NewServer(router)
 	defer gateway.Close()
 
-	resp, err := http.Get(gateway.URL + "/api/v1/galaxy/graph")
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, gateway.URL+"/api/v1/galaxy/graph", nil)
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("GET /graph: %v", err)
 	}

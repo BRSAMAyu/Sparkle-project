@@ -4,7 +4,6 @@
 // Stage: v1 网关基座
 //
 // 读侧投影生命周期管理.
-
 package projection
 
 import (

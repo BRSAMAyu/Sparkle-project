@@ -37,8 +37,9 @@ func TestFileEventHandler_HubSendOverlapsRateLimitClose(t *testing.T) {
 	ts := httptest.NewServer(r)
 	defer ts.Close()
 
-	client, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(ts.URL, "http")+"/ws/files", nil)
+	client, wsResp, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(ts.URL, "http")+"/ws/files", nil)
 	require.NoError(t, err)
+	defer wsResp.Body.Close()
 	defer client.Close()
 
 	require.Eventually(t, func() bool {

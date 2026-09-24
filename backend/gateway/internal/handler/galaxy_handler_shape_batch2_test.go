@@ -396,7 +396,11 @@ func setupBatch2Gateway(t *testing.T, register func(g *gin.RouterGroup, h *Galax
 
 func getBatch2Body(t *testing.T, url string) (int, map[string]any) {
 	t.Helper()
-	resp, err := http.Get(url)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("GET %s: %v", url, err)
 	}

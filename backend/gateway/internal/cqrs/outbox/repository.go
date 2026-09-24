@@ -4,7 +4,6 @@
 // Stage: v1 网关基座
 //
 // 发件箱存储.
-
 package outbox
 
 import (

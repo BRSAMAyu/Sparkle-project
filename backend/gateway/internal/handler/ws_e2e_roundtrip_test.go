@@ -72,16 +72,14 @@ func (e *e2eEchoAgent) StreamChat(req *agentv1.ChatRequest, stream grpc.ServerSt
 	}); err != nil {
 		return err
 	}
-	if err := send(&agentv1.ChatResponse{
-		ResponseId:    "resp-e2e-final",
-		RequestId:     req.RequestId,
-		SessionId:     req.SessionId,
-		Content:    &agentv1.ChatResponse_Usage{Usage: &agentv1.Usage{TotalTokens: 42}},
-		FinishReason:  agentv1.FinishReason_STOP,
-	}); err != nil {
-		return err
-	}
-	return nil // clean EOF
+	// clean EOF
+	return send(&agentv1.ChatResponse{
+		ResponseId:   "resp-e2e-final",
+		RequestId:    req.RequestId,
+		SessionId:    req.SessionId,
+		Content:      &agentv1.ChatResponse_Usage{Usage: &agentv1.Usage{TotalTokens: 42}},
+		FinishReason: agentv1.FinishReason_STOP,
+	})
 }
 
 func e2eJWT(t *testing.T, secret, sub string) string {
@@ -247,11 +245,11 @@ func TestChatOrchestrator_WSFullChainE2E(t *testing.T) {
 			"Authorization": []string{"Bearer not-a-valid-token"},
 		})
 		require.Error(t, err, "invalid JWT must fail the upgrade")
-		require.NotNil(t, resp)
-		require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
-		if resp != nil {
-			_ = resp.Body.Close()
+		if resp == nil {
+			t.Fatal("expected handshake response on rejected upgrade")
 		}
+		require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+		_ = resp.Body.Close()
 		require.Zero(t, h.orch.Registry().Count(), "rejected upgrade must not register a connection")
 	})
 

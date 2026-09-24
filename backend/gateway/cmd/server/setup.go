@@ -411,7 +411,7 @@ func initCQRS(ctx context.Context, cfg *config.Config, dbh *databaseHandles, rdb
 	go func() {
 		// PROD-LOG #8: graceful-shutdown cancellations log INFO, only live-process
 		// failures stay ERROR.
-		cqrsWorker.LogRunnerStopped(logger, ctx, "File GC", fileGC.Run(ctx))
+		cqrsWorker.LogRunnerStopped(ctx, logger, "File GC", fileGC.Run(ctx))
 	}()
 
 	if cfg.RabbitMQURL != "" {
@@ -438,13 +438,13 @@ func initCQRS(ctx context.Context, cfg *config.Config, dbh *databaseHandles, rdb
 		galaxySyncWorker:  galaxySyncWorker,
 		outboxPublisherRun: func() {
 			// PROD-LOG #8: shutdown-period "context canceled" → INFO, not ERROR.
-			cqrsWorker.LogRunnerStopped(logger, ctx, "Outbox publisher", outboxPublisher.Run(ctx))
+			cqrsWorker.LogRunnerStopped(ctx, logger, "Outbox publisher", outboxPublisher.Run(ctx))
 		},
 		outboxCleanerRun: func() {
-			cqrsWorker.LogRunnerStopped(logger, ctx, "Outbox cleaner", outboxCleaner.Run(ctx))
+			cqrsWorker.LogRunnerStopped(ctx, logger, "Outbox cleaner", outboxCleaner.Run(ctx))
 		},
 		dlqCleanerRun: func() {
-			cqrsWorker.LogRunnerStopped(logger, ctx, "DLQ cleaner", dlqCleaner.Run(ctx))
+			cqrsWorker.LogRunnerStopped(ctx, logger, "DLQ cleaner", dlqCleaner.Run(ctx))
 		},
 	}
 }
@@ -457,13 +457,13 @@ func startCQRSWorkers(ctx context.Context, cqrs *cqrsBundle, log *zap.Logger) {
 	// PROD-LOG #8: runner stop logging is level-graded by LogRunnerStopped —
 	// shutdown-period cancellations are INFO, live-process failures stay ERROR.
 	go func() {
-		cqrsWorker.LogRunnerStopped(log, ctx, "Community sync worker", cqrs.commSyncWorker.Run(ctx))
+		cqrsWorker.LogRunnerStopped(ctx, log, "Community sync worker", cqrs.commSyncWorker.Run(ctx))
 	}()
 	go func() {
-		cqrsWorker.LogRunnerStopped(log, ctx, "Task sync worker", cqrs.taskSyncWorker.Run(ctx))
+		cqrsWorker.LogRunnerStopped(ctx, log, "Task sync worker", cqrs.taskSyncWorker.Run(ctx))
 	}()
 	go func() {
-		cqrsWorker.LogRunnerStopped(log, ctx, "Galaxy sync worker", cqrs.galaxySyncWorker.Run(ctx))
+		cqrsWorker.LogRunnerStopped(ctx, log, "Galaxy sync worker", cqrs.galaxySyncWorker.Run(ctx))
 	}()
 }
 

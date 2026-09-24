@@ -13,7 +13,6 @@
 // Manager.UpdatePosition) bounds replay windows but does not by itself make
 // reprocessing harmless — projecting the same event twice must converge to
 // the same read-model state.
-
 package projection
 
 import (

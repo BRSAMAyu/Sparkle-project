@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -463,7 +464,11 @@ func TestProxyRoutesHandler_BackgroundTaskStreamRegistered(t *testing.T) {
 	streamServer := httptest.NewServer(router)
 	defer streamServer.Close()
 
-	streamResp, err := http.Get(streamServer.URL + "/api/v1/background-tasks/stream/events")
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, streamServer.URL+"/api/v1/background-tasks/stream/events", nil)
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	streamResp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("expected stream route to proxy successfully: %v", err)
 	}

@@ -113,7 +113,7 @@ type capturingGalaxyServer struct {
 	failAuth bool
 }
 
-func (s *capturingGalaxyServer) record(method string, ctx context.Context) error {
+func (s *capturingGalaxyServer) record(ctx context.Context, method string) error {
 	md, _ := metadata.FromIncomingContext(ctx)
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -135,70 +135,70 @@ func (s *capturingGalaxyServer) metadataFor(method string) metadata.MD {
 }
 
 func (s *capturingGalaxyServer) UpdateNodeMastery(ctx context.Context, req *galaxyv1.UpdateNodeMasteryRequest) (*galaxyv1.UpdateNodeMasteryResponse, error) {
-	if err := s.record("UpdateNodeMastery", ctx); err != nil {
+	if err := s.record(ctx, "UpdateNodeMastery"); err != nil {
 		return nil, err
 	}
 	return &galaxyv1.UpdateNodeMasteryResponse{Success: true, OldMastery: 1, NewMastery: 2, CurrentRevision: 42}, nil
 }
 
 func (s *capturingGalaxyServer) SyncCollaborativeGalaxy(ctx context.Context, req *galaxyv1.SyncCollaborativeGalaxyRequest) (*galaxyv1.SyncCollaborativeGalaxyResponse, error) {
-	if err := s.record("SyncCollaborativeGalaxy", ctx); err != nil {
+	if err := s.record(ctx, "SyncCollaborativeGalaxy"); err != nil {
 		return nil, err
 	}
 	return &galaxyv1.SyncCollaborativeGalaxyResponse{Success: true}, nil
 }
 
 func (s *capturingGalaxyServer) GetUserGalaxy(ctx context.Context, req *galaxyv1.GetUserGalaxyRequest) (*galaxyv1.GetUserGalaxyResponse, error) {
-	if err := s.record("GetUserGalaxy", ctx); err != nil {
+	if err := s.record(ctx, "GetUserGalaxy"); err != nil {
 		return nil, err
 	}
 	return &galaxyv1.GetUserGalaxyResponse{TotalNodes: 1}, nil
 }
 
 func (s *capturingGalaxyServer) GetNodeDetail(ctx context.Context, req *galaxyv1.GetNodeDetailRequest) (*galaxyv1.GetNodeDetailResponse, error) {
-	if err := s.record("GetNodeDetail", ctx); err != nil {
+	if err := s.record(ctx, "GetNodeDetail"); err != nil {
 		return nil, err
 	}
 	return &galaxyv1.GetNodeDetailResponse{NodeId: req.NodeId}, nil
 }
 
 func (s *capturingGalaxyServer) SearchNodes(ctx context.Context, req *galaxyv1.SearchNodesRequest) (*galaxyv1.SearchNodesResponse, error) {
-	if err := s.record("SearchNodes", ctx); err != nil {
+	if err := s.record(ctx, "SearchNodes"); err != nil {
 		return nil, err
 	}
 	return &galaxyv1.SearchNodesResponse{TotalFound: 1}, nil
 }
 
 func (s *capturingGalaxyServer) GetLearningPath(ctx context.Context, req *galaxyv1.GetLearningPathRequest) (*galaxyv1.GetLearningPathResponse, error) {
-	if err := s.record("GetLearningPath", ctx); err != nil {
+	if err := s.record(ctx, "GetLearningPath"); err != nil {
 		return nil, err
 	}
 	return &galaxyv1.GetLearningPathResponse{PathFound: true}, nil
 }
 
 func (s *capturingGalaxyServer) GetNodeDependencies(ctx context.Context, req *galaxyv1.GetNodeDependenciesRequest) (*galaxyv1.GetNodeDependenciesResponse, error) {
-	if err := s.record("GetNodeDependencies", ctx); err != nil {
+	if err := s.record(ctx, "GetNodeDependencies"); err != nil {
 		return nil, err
 	}
 	return &galaxyv1.GetNodeDependenciesResponse{}, nil
 }
 
 func (s *capturingGalaxyServer) RecordNodeInteraction(ctx context.Context, req *galaxyv1.RecordNodeInteractionRequest) (*galaxyv1.RecordNodeInteractionResponse, error) {
-	if err := s.record("RecordNodeInteraction", ctx); err != nil {
+	if err := s.record(ctx, "RecordNodeInteraction"); err != nil {
 		return nil, err
 	}
 	return &galaxyv1.RecordNodeInteractionResponse{Success: true}, nil
 }
 
 func (s *capturingGalaxyServer) GetGalaxyStats(ctx context.Context, req *galaxyv1.GetGalaxyStatsRequest) (*galaxyv1.GetGalaxyStatsResponse, error) {
-	if err := s.record("GetGalaxyStats", ctx); err != nil {
+	if err := s.record(ctx, "GetGalaxyStats"); err != nil {
 		return nil, err
 	}
 	return &galaxyv1.GetGalaxyStatsResponse{TotalNodes: 3}, nil
 }
 
 func (s *capturingGalaxyServer) GetRecommendedNodes(ctx context.Context, req *galaxyv1.GetRecommendedNodesRequest) (*galaxyv1.GetRecommendedNodesResponse, error) {
-	if err := s.record("GetRecommendedNodes", ctx); err != nil {
+	if err := s.record(ctx, "GetRecommendedNodes"); err != nil {
 		return nil, err
 	}
 	return &galaxyv1.GetRecommendedNodesResponse{}, nil
@@ -293,7 +293,7 @@ func TestGalaxyGRPCEndpoints_InjectAuthMetadata(t *testing.T) {
 			} else {
 				bodyReader = strings.NewReader("")
 			}
-			req, err := http.NewRequest(tc.method, gateway.URL+tc.path, bodyReader)
+			req, err := http.NewRequestWithContext(context.Background(), tc.method, gateway.URL+tc.path, bodyReader)
 			if err != nil {
 				t.Fatalf("new request: %v", err)
 			}

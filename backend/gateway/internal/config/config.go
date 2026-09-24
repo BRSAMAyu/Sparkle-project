@@ -30,48 +30,48 @@ const (
 )
 
 type Config struct {
-	Port                        string   `mapstructure:"PORT"`
-	DatabaseURL                 string   `mapstructure:"DATABASE_URL"`
-	PostgresHost                string   `mapstructure:"POSTGRES_HOST"`
-	PostgresPort                int      `mapstructure:"POSTGRES_PORT"`
-	PostgresUser                string   `mapstructure:"POSTGRES_USER"`
-	PostgresPassword            string   `mapstructure:"POSTGRES_PASSWORD"`
-	PostgresDB                  string   `mapstructure:"POSTGRES_DB"`
-	SparkleRBACEnabled          bool     `mapstructure:"SPARKLE_RBAC_ENABLED"`
-	SparkleGatewayDatabaseURL   string   `mapstructure:"SPARKLE_GATEWAY_DATABASE_URL"`
-	AgentAddress                string   `mapstructure:"AGENT_ADDRESS"`
-	AgentTLSEnabled             bool     `mapstructure:"AGENT_TLS_ENABLED"`
-	AgentTLSCACertPath          string   `mapstructure:"AGENT_TLS_CA_CERT"`
-	AgentTLSClientCertPath      string   `mapstructure:"AGENT_TLS_CLIENT_CERT"`
-	AgentTLSClientKeyPath       string   `mapstructure:"AGENT_TLS_CLIENT_KEY"`
-	AgentTLSServerName          string   `mapstructure:"AGENT_TLS_SERVER_NAME"`
-	AgentTLSInsecure            bool     `mapstructure:"AGENT_TLS_INSECURE"`
-	GRPCTimeoutSeconds          int      `mapstructure:"GRPC_TIMEOUT_SECONDS"`
-	JWTSecret                   string   `mapstructure:"JWT_SECRET"`
-	JWTIssuer                   string   `mapstructure:"JWT_ISSUER"`
-	JWTAudience                 string   `mapstructure:"JWT_AUDIENCE"`
-	JWTAlgorithm                string   `mapstructure:"JWT_ALGORITHM"`
-	JWTPrivateKeyPEM            string   `mapstructure:"JWT_PRIVATE_KEY"`
-	JWTPublicKeyPEM             string   `mapstructure:"JWT_PUBLIC_KEY"`
-	JWTAccessTokenExpireMinutes int      `mapstructure:"JWT_ACCESS_TOKEN_EXPIRE_MINUTES"`
-	JWTRefreshTokenExpireDays   int      `mapstructure:"JWT_REFRESH_TOKEN_EXPIRE_DAYS"`
-	AllowWsQueryToken           bool     `mapstructure:"ALLOW_WS_QUERY_TOKEN"`
-	WSTicketTTLSeconds          int      `mapstructure:"WS_TICKET_TTL_SECONDS"`
-	WSTicketRateRPS             float64  `mapstructure:"WS_TICKET_RATE_RPS"`
-	WSTicketRateBurst           int      `mapstructure:"WS_TICKET_RATE_BURST"`
-	WSUpgradeRateRPS            float64  `mapstructure:"WS_UPGRADE_RATE_RPS"`
-	WSUpgradeRateBurst          int      `mapstructure:"WS_UPGRADE_RATE_BURST"`
-	WSMaxMessageBytes           int64    `mapstructure:"WS_MAX_MESSAGE_BYTES"`
-	WSMessageRateRPS            float64  `mapstructure:"WS_MESSAGE_RATE_RPS"`
-	WSMessageRateBurst          int      `mapstructure:"WS_MESSAGE_RATE_BURST"`
-	WSMaxConnections            int      `mapstructure:"WS_MAX_CONNECTIONS_PER_USER"`
-	WSGlobalMaxConnections      int      `mapstructure:"WS_GLOBAL_MAX_CONNECTIONS"`
-	StreamMaxConcurrent         int      `mapstructure:"STREAM_MAX_CONCURRENT"`
-	RedisURL                    string   `mapstructure:"REDIS_URL"`
-	RedisHost                   string   `mapstructure:"REDIS_HOST"`
-	RedisPort                   int      `mapstructure:"REDIS_PORT"`
-	RedisPassword               string   `mapstructure:"REDIS_PASSWORD"`
-	RedisFailClosed             bool     `mapstructure:"REDIS_FAIL_CLOSED"` // Security: reject tokens on Redis failure
+	Port                        string  `mapstructure:"PORT"`
+	DatabaseURL                 string  `mapstructure:"DATABASE_URL"`
+	PostgresHost                string  `mapstructure:"POSTGRES_HOST"`
+	PostgresPort                int     `mapstructure:"POSTGRES_PORT"`
+	PostgresUser                string  `mapstructure:"POSTGRES_USER"`
+	PostgresPassword            string  `mapstructure:"POSTGRES_PASSWORD"`
+	PostgresDB                  string  `mapstructure:"POSTGRES_DB"`
+	SparkleRBACEnabled          bool    `mapstructure:"SPARKLE_RBAC_ENABLED"`
+	SparkleGatewayDatabaseURL   string  `mapstructure:"SPARKLE_GATEWAY_DATABASE_URL"`
+	AgentAddress                string  `mapstructure:"AGENT_ADDRESS"`
+	AgentTLSEnabled             bool    `mapstructure:"AGENT_TLS_ENABLED"`
+	AgentTLSCACertPath          string  `mapstructure:"AGENT_TLS_CA_CERT"`
+	AgentTLSClientCertPath      string  `mapstructure:"AGENT_TLS_CLIENT_CERT"`
+	AgentTLSClientKeyPath       string  `mapstructure:"AGENT_TLS_CLIENT_KEY"`
+	AgentTLSServerName          string  `mapstructure:"AGENT_TLS_SERVER_NAME"`
+	AgentTLSInsecure            bool    `mapstructure:"AGENT_TLS_INSECURE"`
+	GRPCTimeoutSeconds          int     `mapstructure:"GRPC_TIMEOUT_SECONDS"`
+	JWTSecret                   string  `mapstructure:"JWT_SECRET"`
+	JWTIssuer                   string  `mapstructure:"JWT_ISSUER"`
+	JWTAudience                 string  `mapstructure:"JWT_AUDIENCE"`
+	JWTAlgorithm                string  `mapstructure:"JWT_ALGORITHM"`
+	JWTPrivateKeyPEM            string  `mapstructure:"JWT_PRIVATE_KEY"`
+	JWTPublicKeyPEM             string  `mapstructure:"JWT_PUBLIC_KEY"`
+	JWTAccessTokenExpireMinutes int     `mapstructure:"JWT_ACCESS_TOKEN_EXPIRE_MINUTES"`
+	JWTRefreshTokenExpireDays   int     `mapstructure:"JWT_REFRESH_TOKEN_EXPIRE_DAYS"`
+	AllowWsQueryToken           bool    `mapstructure:"ALLOW_WS_QUERY_TOKEN"`
+	WSTicketTTLSeconds          int     `mapstructure:"WS_TICKET_TTL_SECONDS"`
+	WSTicketRateRPS             float64 `mapstructure:"WS_TICKET_RATE_RPS"`
+	WSTicketRateBurst           int     `mapstructure:"WS_TICKET_RATE_BURST"`
+	WSUpgradeRateRPS            float64 `mapstructure:"WS_UPGRADE_RATE_RPS"`
+	WSUpgradeRateBurst          int     `mapstructure:"WS_UPGRADE_RATE_BURST"`
+	WSMaxMessageBytes           int64   `mapstructure:"WS_MAX_MESSAGE_BYTES"`
+	WSMessageRateRPS            float64 `mapstructure:"WS_MESSAGE_RATE_RPS"`
+	WSMessageRateBurst          int     `mapstructure:"WS_MESSAGE_RATE_BURST"`
+	WSMaxConnections            int     `mapstructure:"WS_MAX_CONNECTIONS_PER_USER"`
+	WSGlobalMaxConnections      int     `mapstructure:"WS_GLOBAL_MAX_CONNECTIONS"`
+	StreamMaxConcurrent         int     `mapstructure:"STREAM_MAX_CONCURRENT"`
+	RedisURL                    string  `mapstructure:"REDIS_URL"`
+	RedisHost                   string  `mapstructure:"REDIS_HOST"`
+	RedisPort                   int     `mapstructure:"REDIS_PORT"`
+	RedisPassword               string  `mapstructure:"REDIS_PASSWORD"`
+	RedisFailClosed             bool    `mapstructure:"REDIS_FAIL_CLOSED"` // Security: reject tokens on Redis failure
 	// DF-2 (daily-flow): drain queue:persist:history into PostgreSQL.
 	// P2-D (daily-flow R2): default OFF — the engine persists every streamed
 	// chat row itself and is the authoritative writer (its session derivation
@@ -79,16 +79,16 @@ type Config struct {
 	// remains an opt-in durable backstop; enabling it is safe again because
 	// resolveSessionUUID now matches the engine's pseudo-session derivation,
 	// so its NOT EXISTS dedup actually matches engine rows.
-	ChatPersisterEnabled        bool     `mapstructure:"CHAT_PERSISTER_ENABLED"`
-	BackendURL                  string   `mapstructure:"BACKEND_URL"`
-	AppleClientID               string   `mapstructure:"APPLE_CLIENT_ID"`
-	AdminSecret                 string   `mapstructure:"ADMIN_SECRET"`
-	RabbitMQURL                 string   `mapstructure:"RABBITMQ_URL"`
-	InternalAPIKey              string   `mapstructure:"INTERNAL_API_KEY"`
-	InternalIPWhitelist         []string `mapstructure:"INTERNAL_IP_WHITELIST"`
-	ChaosEnabled                bool     `mapstructure:"CHAOS_ENABLED"`
-	ChaosAllowProd              bool     `mapstructure:"CHAOS_ALLOW_PROD"`
-	ToxiproxyURL                string   `mapstructure:"TOXIPROXY_URL"`
+	ChatPersisterEnabled bool     `mapstructure:"CHAT_PERSISTER_ENABLED"`
+	BackendURL           string   `mapstructure:"BACKEND_URL"`
+	AppleClientID        string   `mapstructure:"APPLE_CLIENT_ID"`
+	AdminSecret          string   `mapstructure:"ADMIN_SECRET"`
+	RabbitMQURL          string   `mapstructure:"RABBITMQ_URL"`
+	InternalAPIKey       string   `mapstructure:"INTERNAL_API_KEY"`
+	InternalIPWhitelist  []string `mapstructure:"INTERNAL_IP_WHITELIST"`
+	ChaosEnabled         bool     `mapstructure:"CHAOS_ENABLED"`
+	ChaosAllowProd       bool     `mapstructure:"CHAOS_ALLOW_PROD"`
+	ToxiproxyURL         string   `mapstructure:"TOXIPROXY_URL"`
 
 	// File storage (MinIO/S3)
 	MinioEndpoint         string `mapstructure:"MINIO_ENDPOINT"`

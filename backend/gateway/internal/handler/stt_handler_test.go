@@ -60,8 +60,9 @@ func TestSTTHandlerDialFailureReturnsSafeError(t *testing.T) {
 	server := httptest.NewServer(router)
 	defer server.Close()
 
-	conn, _, err := websocket.DefaultDialer.Dial(toWebSocketTestURL(server.URL)+"/ws/stt", nil)
+	conn, wsResp, err := websocket.DefaultDialer.Dial(toWebSocketTestURL(server.URL)+"/ws/stt", nil)
 	require.NoError(t, err)
+	defer wsResp.Body.Close()
 	defer conn.Close()
 
 	var payload map[string]string
@@ -104,8 +105,9 @@ func TestSTTHandlerRejectsPerConnectionRateLimit(t *testing.T) {
 	server := httptest.NewServer(router)
 	defer server.Close()
 
-	conn, _, err := websocket.DefaultDialer.Dial(toWebSocketTestURL(server.URL)+"/ws/stt", nil)
+	conn, wsResp, err := websocket.DefaultDialer.Dial(toWebSocketTestURL(server.URL)+"/ws/stt", nil)
 	require.NoError(t, err)
+	defer wsResp.Body.Close()
 	defer conn.Close()
 
 	require.NoError(t, conn.WriteMessage(websocket.BinaryMessage, []byte("audio-1")))
@@ -146,8 +148,9 @@ func TestSTTHandlerReapsSilentClientViaReadDeadline(t *testing.T) {
 	server := httptest.NewServer(router)
 	defer server.Close()
 
-	conn, _, err := websocket.DefaultDialer.Dial(toWebSocketTestURL(server.URL)+"/ws/stt", nil)
+	conn, wsResp, err := websocket.DefaultDialer.Dial(toWebSocketTestURL(server.URL)+"/ws/stt", nil)
 	require.NoError(t, err)
+	defer wsResp.Body.Close()
 	defer conn.Close()
 
 	// The client never reads (so it never answers pings); the server-side

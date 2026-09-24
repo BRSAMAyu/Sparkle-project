@@ -46,8 +46,9 @@ func startTrackedWSServer(t *testing.T, g *wsConnDrainGroup) *websocket.Conn {
 	t.Cleanup(server.Close)
 
 	url := "ws" + strings.TrimPrefix(server.URL, "http")
-	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
+	conn, wsResp, err := websocket.DefaultDialer.Dial(url, nil)
 	require.NoError(t, err)
+	t.Cleanup(func() { _ = wsResp.Body.Close() })
 	t.Cleanup(func() { _ = conn.Close() })
 	return conn
 }

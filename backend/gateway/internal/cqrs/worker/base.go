@@ -4,7 +4,6 @@
 // Stage: v1 网关基座
 //
 // CQRS 后台 worker 基座.
-
 package worker
 
 import (
@@ -32,7 +31,7 @@ import (
 // with fake ERRORs (~13 per restart); log INFO instead. Only a failure while the
 // process context is still alive stays ERROR — including a context.Canceled that
 // surfaces while ctx is not done (non-shutdown cancellation).
-func LogRunnerStopped(log *zap.Logger, ctx context.Context, name string, err error) {
+func LogRunnerStopped(ctx context.Context, log *zap.Logger, name string, err error) {
 	if log == nil {
 		return
 	}

@@ -875,7 +875,7 @@ func (s *ChatHistoryService) repairTailFromDB(ctx context.Context, userID, sessi
 		if t, perr := time.Parse(time.RFC3339, checkedAt); perr == nil && time.Since(t) < chatHistoryTailProbeInterval {
 			return cached
 		}
-	} else if err != redis.Nil {
+	} else if !errors.Is(err, redis.Nil) {
 		zap.L().Warn("Chat history tail watermark read failed; serving cache",
 			zap.String("session_id", sessionID),
 			zap.Error(err),

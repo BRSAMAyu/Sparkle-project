@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -198,7 +199,7 @@ func (p *ChatHistoryPersister) DrainOnce(ctx context.Context) error {
 	queueKey := "queue:persist:history"
 	for i := 0; i < PersisterBatchSize; i++ {
 		result, err := p.rdb.LPop(ctx, queueKey).Result()
-		if err == redis.Nil {
+		if errors.Is(err, redis.Nil) {
 			break
 		}
 		if err != nil {
@@ -371,7 +372,9 @@ func (p *ChatHistoryPersister) writeBatchToDB(ctx context.Context, batch []ChatH
 		if _, err := sp.Exec(ctx, chatMessageInsertSQL,
 			messageID, sessionUUID, userID, role, msg.Content, epochSeconds); err != nil {
 			log.Printf("[ChatHistoryPersister] Failed to insert message: %v", err)
-			sp.Rollback(ctx)
+			if rerr := sp.Rollback(ctx); rerr != nil {
+				log.Printf("[ChatHistoryPersister] Failed to rollback savepoint: %v", rerr)
+			}
 			// Continue with other messages - partial success is acceptable
 			continue
 		}

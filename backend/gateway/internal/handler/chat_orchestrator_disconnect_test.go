@@ -106,9 +106,10 @@ func TestChatOrchestrator_ClientDisconnectReleasesStreamSlot(t *testing.T) {
 	defer ts.Close()
 
 	// 4. Client connects and kicks off one streaming chat request.
-	client, _, err := websocket.DefaultDialer.Dial(
+	client, wsResp, err := websocket.DefaultDialer.Dial(
 		"ws"+strings.TrimPrefix(ts.URL, "http")+"/ws/chat", nil)
 	require.NoError(t, err)
+	defer wsResp.Body.Close()
 
 	err = client.WriteJSON(map[string]interface{}{
 		"message":    "hello",

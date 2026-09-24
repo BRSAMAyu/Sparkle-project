@@ -17,6 +17,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/sparkle/gateway/internal/config"
+	cqrsWorker "github.com/sparkle/gateway/internal/cqrs/worker"
 	"github.com/sparkle/gateway/internal/handler"
 	"github.com/sparkle/gateway/internal/i18n"
 	"github.com/sparkle/gateway/internal/infra/logger"
@@ -97,7 +98,11 @@ func main() {
 	// consumer of that queue, deduplicating against engine-persisted rows.
 	if cfg.ChatPersisterEnabled {
 		chatPersister := service.NewChatHistoryPersister(rdb, dbh.pool)
-		go chatPersister.Run(bgCtx)
+		// Run exits with context.Canceled on graceful shutdown; LogRunnerStopped
+		// grades that as INFO instead of a fake ERROR (PROD-LOG #8).
+		go func() {
+			cqrsWorker.LogRunnerStopped(bgCtx, logger.Log, "Chat history persister", chatPersister.Run(bgCtx))
+		}()
 		defer chatPersister.Stop()
 		logger.Log.Info("Chat history persister enabled")
 	}

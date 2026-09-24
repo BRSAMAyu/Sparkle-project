@@ -58,8 +58,9 @@ func TestWebSocketProxyDedupTimeoutForwardsMessage(t *testing.T) {
 	}))
 	defer gateway.Close()
 
-	conn, _, err := websocket.DefaultDialer.Dial(toWebSocketTestURL(gateway.URL), nil)
+	conn, wsResp, err := websocket.DefaultDialer.Dial(toWebSocketTestURL(gateway.URL), nil)
 	require.NoError(t, err)
+	defer wsResp.Body.Close()
 	defer conn.Close()
 
 	require.NoError(t, conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"dedup-timeout-probe"}`)))
