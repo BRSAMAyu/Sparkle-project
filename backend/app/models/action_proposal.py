@@ -23,10 +23,11 @@
 from __future__ import annotations
 
 import enum
+from datetime import datetime
+from typing import Any
 
 from sqlalchemy import (
     JSON,
-    Column,
     DateTime,
     Enum,
     ForeignKey,
@@ -36,6 +37,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.action_command import ProposalSource, ProposalStatus
 from app.models.base import GUID, BaseModel
@@ -56,45 +58,45 @@ class ActionProposal(BaseModel):
 
     __tablename__ = "action_proposals"
 
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 
     # --- 生命周期（封闭词表：app/core/action_command.py） ------------------------
-    status = Column(
+    status: Mapped[ProposalStatus] = mapped_column(
         Enum(ProposalStatus, values_callable=_enum_values, create_constraint=False, native_enum=False),
         nullable=False,
         default=ProposalStatus.PENDING,
         index=True,
     )
-    command_type = Column(String(32), nullable=False)  # ActionCommandType 词表
-    source = Column(String(16), nullable=False, default=ProposalSource.SYSTEM.value)
-    terminal_reason = Column(String(32), nullable=True)  # TERMINAL_REASON_VOCABULARY
+    command_type: Mapped[str] = mapped_column(String(32), nullable=False)  # ActionCommandType 词表
+    source: Mapped[str] = mapped_column(String(16), nullable=False, default=ProposalSource.SYSTEM.value)
+    terminal_reason: Mapped[str] = mapped_column(String(32), nullable=True)  # TERMINAL_REASON_VOCABULARY
 
     # --- 命令目标与乐观并发 ---------------------------------------------------
-    subject_type = Column(String(32), nullable=True)  # "task"（create 型命令为 NULL）
-    subject_id = Column(GUID(), nullable=True, index=True)
-    subject_version_token = Column(String(64), nullable=True)  # proposal 时 updated_at ISO
+    subject_type: Mapped[str] = mapped_column(String(32), nullable=True)  # "task"（create 型命令为 NULL）
+    subject_id: Mapped[Any] = mapped_column(GUID(), nullable=True, index=True)
+    subject_version_token: Mapped[str] = mapped_column(String(64), nullable=True)  # proposal 时 updated_at ISO
 
-    payload = Column(JSONBCompat, nullable=False)
-    diff = Column(JSONBCompat, nullable=True)  # {"before","after","changed_fields"}
+    payload: Mapped[Any] = mapped_column(JSONBCompat, nullable=False)
+    diff: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)  # {"before","after","changed_fields"}
 
     # --- 授权决策（前置；软件强制，非提示词） -----------------------------------
-    authorization = Column(JSONBCompat, nullable=True)
+    authorization: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
 
-    risk_class = Column(String(16), nullable=True)  # X-01 词表 low|medium|high|critical
-    reversible = Column(String(8), nullable=True)  # "true"/"false"/NULL（X-01 成对语义）
-    summary = Column(Text, nullable=True)  # 确认卡人类可读摘要
+    risk_class: Mapped[str] = mapped_column(String(16), nullable=True)  # X-01 词表 low|medium|high|critical
+    reversible: Mapped[str] = mapped_column(String(8), nullable=True)  # "true"/"false"/NULL（X-01 成对语义）
+    summary: Mapped[str] = mapped_column(Text, nullable=True)  # 确认卡人类可读摘要
 
-    idempotency_key = Column(String(255), nullable=True)
-    expires_at = Column(DateTime, nullable=False, index=True)
+    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
 
     # --- receipt（COMMITTED 权威回执本体；与状态变更同事务写入） -----------------
-    receipt = Column(JSONBCompat, nullable=True)
-    committed_at = Column(DateTime, nullable=True)
+    receipt: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
+    committed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # --- 关联（correlation ids；C-01/D-01 对齐） --------------------------------
-    session_id = Column(String(64), nullable=True, index=True)
-    trace_id = Column(String(64), nullable=True, index=True)
-    run_id = Column(GUID(), nullable=True, index=True)  # X-05 agent_run 关联（观测）
+    session_id: Mapped[str] = mapped_column(String(64), nullable=True, index=True)
+    trace_id: Mapped[str] = mapped_column(String(64), nullable=True, index=True)
+    run_id: Mapped[Any] = mapped_column(GUID(), nullable=True, index=True)  # X-05 agent_run 关联（观测）
 
     __table_args__ = (
         # 重复创建恰一次：(user_id, idempotency_key) 唯一；NULL 键（未携带）不参与。
@@ -115,15 +117,15 @@ class ActionProposalTransition(BaseModel):
 
     __tablename__ = "action_proposal_transitions"
 
-    proposal_id = Column(GUID(), ForeignKey("action_proposals.id", ondelete="CASCADE"), nullable=False, index=True)
-    from_status = Column(String(16), nullable=True)  # None = 创建（PENDING 落库）
-    to_status = Column(String(16), nullable=False)
-    event_name = Column(String(64), nullable=False)  # action.proposed/accepted/rejected（D-01 词表）
-    actor = Column(String(32), nullable=False)  # user|system|aurora|chat
-    idempotency_key = Column(String(255), nullable=True)
-    reason = Column(String(64), nullable=True)
-    details = Column(JSONBCompat, nullable=True)
-    occurred_at = Column(DateTime, nullable=False)
+    proposal_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("action_proposals.id", ondelete="CASCADE"), nullable=False, index=True)
+    from_status: Mapped[str] = mapped_column(String(16), nullable=True)  # None = 创建（PENDING 落库）
+    to_status: Mapped[str] = mapped_column(String(16), nullable=False)
+    event_name: Mapped[str] = mapped_column(String(64), nullable=False)  # action.proposed/accepted/rejected（D-01 词表）
+    actor: Mapped[str] = mapped_column(String(32), nullable=False)  # user|system|aurora|chat
+    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=True)
+    reason: Mapped[str] = mapped_column(String(64), nullable=True)
+    details: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
     __table_args__ = (
         # 重复 approve 恰一次审计：同 (proposal_id, idempotency_key) 唯一。

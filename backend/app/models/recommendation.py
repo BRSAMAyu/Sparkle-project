@@ -6,9 +6,10 @@ Recommendation System Models
 """
 import enum
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import JSON, Column, DateTime, Float, ForeignKey, Index, Integer, String
-from sqlalchemy.orm import relationship
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -35,22 +36,22 @@ class UserSimilarity(BaseModel):
     __tablename__ = "user_similarities"
 
     # 用户对（保证唯一性，user_id_1 < user_id_2）
-    user_id_1 = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
-    user_id_2 = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    user_id_1: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    user_id_2: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
 
     # 相似度分数
-    similarity_score = Column(Float, nullable=False, index=True)  # 0-1
+    similarity_score: Mapped[float] = mapped_column(Float, nullable=False, index=True)  # 0-1
 
     # 统计信息
-    common_items_count = Column(Integer, default=0, nullable=False)  # 共同学习物品数
-    common_subjects = Column(JSON, nullable=True)  # 共同学科列表
+    common_items_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # 共同学习物品数
+    common_subjects: Mapped[Any] = mapped_column(JSON, nullable=True)  # 共同学科列表
 
     # 计算信息
-    last_calculated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    calculation_version = Column(Integer, default=1, nullable=False)  # 用于批量更新时标记版本
+    last_calculated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    calculation_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)  # 用于批量更新时标记版本
 
     # 元数据
-    meta = Column(JSON, nullable=True)  # 额外的相似度信息
+    meta: Mapped[Any] = mapped_column(JSON, nullable=True)  # 额外的相似度信息
 
     # 关系
     user_1 = relationship("User", foreign_keys=[user_id_1])
@@ -76,25 +77,25 @@ class ItemSimilarity(BaseModel):
     __tablename__ = "item_similarities"
 
     # 物品对（保证唯一性）
-    item_id_1 = Column(GUID(), nullable=False, index=True)
-    item_type_1 = Column(String(50), nullable=False)  # knowledge_node, task, etc.
+    item_id_1: Mapped[Any] = mapped_column(GUID(), nullable=False, index=True)
+    item_type_1: Mapped[str] = mapped_column(String(50), nullable=False)  # knowledge_node, task, etc.
 
-    item_id_2 = Column(GUID(), nullable=False, index=True)
-    item_type_2 = Column(String(50), nullable=False)
+    item_id_2: Mapped[Any] = mapped_column(GUID(), nullable=False, index=True)
+    item_type_2: Mapped[str] = mapped_column(String(50), nullable=False)
 
     # 相似度分数
-    similarity_score = Column(Float, nullable=False, index=True)
+    similarity_score: Mapped[float] = mapped_column(Float, nullable=False, index=True)
 
     # 统计信息
-    common_learners = Column(Integer, default=0, nullable=False)
-    total_learners_either = Column(Integer, default=0, nullable=False)
+    common_learners: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    total_learners_either: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # 计算信息
-    last_calculated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    last_calculated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
     # 额外信息
-    subject_id = Column(GUID(), nullable=True)  # 所属学科（可选）
-    meta = Column(JSON, nullable=True)
+    subject_id: Mapped[Any] = mapped_column(GUID(), nullable=True)  # 所属学科（可选）
+    meta: Mapped[Any] = mapped_column(JSON, nullable=True)
 
     __table_args__ = (
         Index('idx_item_similarity_item1', 'item_id_1', 'item_type_1'),
@@ -114,22 +115,22 @@ class UserItemInteraction(BaseModel):
     """
     __tablename__ = "user_item_interactions"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
 
     # 物品信息
-    item_id = Column(GUID(), nullable=False, index=True)
-    item_type = Column(String(50), nullable=False)  # knowledge_node, task, capsule, etc.
+    item_id: Mapped[Any] = mapped_column(GUID(), nullable=False, index=True)
+    item_type: Mapped[str] = mapped_column(String(50), nullable=False)  # knowledge_node, task, capsule, etc.
 
     # 交互类型
-    interaction_type = Column(String(50), nullable=False, index=True)
+    interaction_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
 
     # 交互强度（用于加权）
-    interaction_weight = Column(Float, default=1.0, nullable=False)
+    interaction_weight: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
 
     # 上下文信息
-    subject_id = Column(GUID(), nullable=True)
-    session_id = Column(String(100), nullable=True)  # 学习会话ID
-    meta = Column(JSON, nullable=True)
+    subject_id: Mapped[Any] = mapped_column(GUID(), nullable=True)
+    session_id: Mapped[str] = mapped_column(String(100), nullable=True)  # 学习会话ID
+    meta: Mapped[Any] = mapped_column(JSON, nullable=True)
 
     # 关系
     user = relationship("User", foreign_keys=[user_id])
@@ -154,28 +155,28 @@ class UserLearningProfile(BaseModel):
     """
     __tablename__ = "user_learning_profiles"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, unique=True, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, unique=True, index=True)
 
     # 学习偏好
-    preferred_difficulty = Column(Float, nullable=True)  # 偏好难度 1-5
-    preferred_duration_minutes = Column(Integer, nullable=True)  # 偏好时长
-    preferred_time_of_day = Column(String(20), nullable=True)  # morning, afternoon, evening
+    preferred_difficulty: Mapped[float] = mapped_column(Float, nullable=True)  # 偏好难度 1-5
+    preferred_duration_minutes: Mapped[int] = mapped_column(Integer, nullable=True)  # 偏好时长
+    preferred_time_of_day: Mapped[str] = mapped_column(String(20), nullable=True)  # morning, afternoon, evening
 
     # 学科分布
-    subject_distribution = Column(JSON, nullable=True)  # {"数学": 0.4, "英语": 0.3, ...}
+    subject_distribution: Mapped[Any] = mapped_column(JSON, nullable=True)  # {"数学": 0.4, "英语": 0.3, ...}
 
     # 学习统计
-    total_study_minutes = Column(Integer, default=0, nullable=False)
-    total_items_completed = Column(Integer, default=0, nullable=False)
-    average_session_duration = Column(Float, nullable=True)
+    total_study_minutes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    total_items_completed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    average_session_duration: Mapped[float] = mapped_column(Float, nullable=True)
 
     # 协同过滤相关
-    learning_vector = Column(JSON, nullable=True)  # 学习向量（用于相似度计算）
-    cluster_id = Column(Integer, nullable=True)  # 聚类ID
+    learning_vector: Mapped[Any] = mapped_column(JSON, nullable=True)  # 学习向量（用于相似度计算）
+    cluster_id: Mapped[int] = mapped_column(Integer, nullable=True)  # 聚类ID
 
     # 更新信息
-    last_updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    update_version = Column(Integer, default=1, nullable=False)
+    last_updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    update_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     # 关系
     user = relationship("User", foreign_keys=[user_id])
@@ -195,18 +196,18 @@ class RecommendationCache(BaseModel):
     """
     __tablename__ = "recommendation_cache"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
 
     # 推荐类型
-    recommendation_type = Column(String(50), nullable=False, index=True)  # collaborative, hybrid, etc.
+    recommendation_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)  # collaborative, hybrid, etc.
 
     # 缓存的推荐结果
-    cached_recommendations = Column(JSON, nullable=False)  # JSON数组
+    cached_recommendations: Mapped[Any] = mapped_column(JSON, nullable=False)  # JSON数组
 
     # 缓存元信息
-    generated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    expires_at = Column(DateTime, nullable=False, index=True)
-    hit_count = Column(Integer, default=0, nullable=False)
+    generated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    hit_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # 关系
     user = relationship("User", foreign_keys=[user_id])
@@ -229,20 +230,20 @@ class LeaderboardSnapshot(BaseModel):
     __tablename__ = "leaderboard_snapshots"
 
     # 快照标识
-    snapshot_type = Column(String(50), nullable=False, index=True)  # global, friends, weekly, etc.
-    period = Column(String(20), nullable=False)  # daily, weekly, all_time
-    subject_id = Column(GUID(), nullable=True)  # 学科ID（学科榜）
+    snapshot_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)  # global, friends, weekly, etc.
+    period: Mapped[str] = mapped_column(String(20), nullable=False)  # daily, weekly, all_time
+    subject_id: Mapped[Any] = mapped_column(GUID(), nullable=True)  # 学科ID（学科榜）
 
     # 快照时间
-    snapshot_date = Column(DateTime, nullable=False, index=True)
-    snapshot_version = Column(Integer, nullable=False)
+    snapshot_date: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    snapshot_version: Mapped[int] = mapped_column(Integer, nullable=False)
 
     # 快照数据
-    rankings = Column(JSON, nullable=False)  # 排名数据
-    total_participants = Column(Integer, nullable=False)
+    rankings: Mapped[Any] = mapped_column(JSON, nullable=False)  # 排名数据
+    total_participants: Mapped[int] = mapped_column(Integer, nullable=False)
 
     # 统计信息
-    generation_time_ms = Column(Float, nullable=True)
+    generation_time_ms: Mapped[float] = mapped_column(Float, nullable=True)
 
     __table_args__ = (
         Index('idx_leaderboard_snapshot_type_date', 'snapshot_type', 'snapshot_date'),

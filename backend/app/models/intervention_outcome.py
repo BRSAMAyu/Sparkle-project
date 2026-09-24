@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import Boolean, Column, DateTime, Float, String, Text
+from sqlalchemy import Boolean, DateTime, Float, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import GUID, BaseModel, _utcnow
 
@@ -12,28 +15,28 @@ from app.models.base import GUID, BaseModel, _utcnow
 class InterventionOutcome(BaseModel):
     __tablename__ = "intervention_outcomes"
 
-    id = Column(GUID(), primary_key=True, default=uuid4, nullable=False)
-    user_id = Column(GUID(), nullable=False, index=True)
-    plan_id = Column(GUID(), nullable=True)
-    task_id = Column(GUID(), nullable=True)
+    id: Mapped[Any] = mapped_column(GUID(), primary_key=True, default=uuid4, nullable=False)
+    user_id: Mapped[Any] = mapped_column(GUID(), nullable=False, index=True)
+    plan_id: Mapped[Any] = mapped_column(GUID(), nullable=True)
+    task_id: Mapped[Any] = mapped_column(GUID(), nullable=True)
 
-    intervention_type = Column(String(64))
-    trigger_reason = Column(String(128))
-    target_concept = Column(String(256))
-    target_node_id = Column(GUID(), nullable=True)
+    intervention_type: Mapped[str] = mapped_column(String(64), nullable=True)
+    trigger_reason: Mapped[str] = mapped_column(String(128), nullable=True)
+    target_concept: Mapped[str] = mapped_column(String(256), nullable=True)
+    target_node_id: Mapped[Any] = mapped_column(GUID(), nullable=True)
 
-    triggered_at = Column(DateTime, nullable=False)
-    follow_up_at = Column(DateTime, nullable=True)
-    outcome_checked_at = Column(DateTime, nullable=True)
+    triggered_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    follow_up_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    outcome_checked_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
-    outcome_status = Column(String(32), default="pending")
+    outcome_status: Mapped[str] = mapped_column(String(32), default="pending", nullable=True)
 
-    mastery_before = Column(Float, nullable=True)
-    mastery_after = Column(Float, nullable=True)
-    effective = Column(Boolean, nullable=True)
+    mastery_before: Mapped[float] = mapped_column(Float, nullable=True)
+    mastery_after: Mapped[float] = mapped_column(Float, nullable=True)
+    effective: Mapped[bool] = mapped_column(Boolean, nullable=True)
 
-    user_adopted = Column(Boolean, nullable=True)
-    adopted_at = Column(DateTime, nullable=True)
+    user_adopted: Mapped[bool] = mapped_column(Boolean, nullable=True)
+    adopted_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
-    notes = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    notes: Mapped[str] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)

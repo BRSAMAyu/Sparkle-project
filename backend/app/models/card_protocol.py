@@ -9,11 +9,12 @@ ADR: docs/adr/0004-card-protocol-architecture.md
 from __future__ import annotations
 
 import enum
+from datetime import date, datetime
+from typing import Any
 
 from sqlalchemy import (
     JSON,
     Boolean,
-    Column,
     Date,
     DateTime,
     Enum,
@@ -25,7 +26,7 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -201,37 +202,37 @@ class ImportMode(enum.StrEnum):
 class Card(BaseModel):
     __tablename__ = "cards"
 
-    card_type = Column(_string_enum(CardType, "card_type_enum"), nullable=False, index=True)
-    owner_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    holder_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    version = Column(Integer, nullable=False, default=1)
-    schema_version = Column(String(16), nullable=False, default="3.0")
-    lifecycle_status = Column(
+    card_type: Mapped[Any] = mapped_column(_string_enum(CardType, "card_type_enum"), nullable=False, index=True)
+    owner_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    holder_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    schema_version: Mapped[str] = mapped_column(String(16), nullable=False, default="3.0")
+    lifecycle_status: Mapped[CardLifecycleStatus] = mapped_column(
         Enum(CardLifecycleStatus, name="card_lifecycle_enum"),
         nullable=False,
         default=CardLifecycleStatus.DRAFT,
         index=True,
     )
-    visibility = Column(
+    visibility: Mapped[CardVisibility] = mapped_column(
         Enum(CardVisibility, name="card_visibility_enum"),
         nullable=False,
         default=CardVisibility.PRIVATE,
     )
-    tags = Column(JSONBCompat, nullable=False, server_default="[]")
-    metadata_ = Column("metadata", JSONBCompat, nullable=False, server_default="{}")
-    source_type = Column(
+    tags: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, server_default="[]")
+    metadata_: Mapped[Any] = mapped_column("metadata", JSONBCompat, nullable=False, server_default="{}")
+    source_type: Mapped[CardSourceType] = mapped_column(
         Enum(CardSourceType, name="card_source_type_enum"),
         nullable=False,
         default=CardSourceType.ORIGINAL,
     )
-    origin_card_id = Column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True)
-    origin_snapshot_id = Column(GUID(), nullable=True)
-    created_by = Column(
+    origin_card_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True)
+    origin_snapshot_id: Mapped[Any] = mapped_column(GUID(), nullable=True)
+    created_by: Mapped[CardCreatedBy] = mapped_column(
         Enum(CardCreatedBy, name="card_created_by_enum"),
         nullable=False,
         default=CardCreatedBy.AI,
     )
-    updated_by = Column(
+    updated_by: Mapped[CardCreatedBy] = mapped_column(
         Enum(CardCreatedBy, name="card_updated_by_enum"),
         nullable=False,
         default=CardCreatedBy.AI,
@@ -272,16 +273,16 @@ class Card(BaseModel):
 class CardEdge(BaseModel):
     __tablename__ = "card_edges"
 
-    from_card_id = Column(GUID(), ForeignKey("cards.id", ondelete="CASCADE"), nullable=False, index=True)
-    to_card_id = Column(GUID(), ForeignKey("cards.id", ondelete="CASCADE"), nullable=False, index=True)
-    edge_type = Column(Enum(EdgeType, name="edge_type_enum"), nullable=False, index=True)
-    binding_mode = Column(Enum(BindingMode, name="binding_mode_enum"), nullable=False, default=BindingMode.OWNED)
-    order_index = Column(Integer, nullable=True)
-    weight = Column(Float, nullable=True)
-    temporal_window = Column(JSONBCompat, nullable=True)
-    metadata_ = Column("metadata", JSONBCompat, nullable=False, server_default="{}")
-    active = Column(Boolean, nullable=False, default=True)
-    removed_at = Column(DateTime, nullable=True)
+    from_card_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("cards.id", ondelete="CASCADE"), nullable=False, index=True)
+    to_card_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("cards.id", ondelete="CASCADE"), nullable=False, index=True)
+    edge_type: Mapped[EdgeType] = mapped_column(Enum(EdgeType, name="edge_type_enum"), nullable=False, index=True)
+    binding_mode: Mapped[BindingMode] = mapped_column(Enum(BindingMode, name="binding_mode_enum"), nullable=False, default=BindingMode.OWNED)
+    order_index: Mapped[int] = mapped_column(Integer, nullable=True)
+    weight: Mapped[float] = mapped_column(Float, nullable=True)
+    temporal_window: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
+    metadata_: Mapped[Any] = mapped_column("metadata", JSONBCompat, nullable=False, server_default="{}")
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    removed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # Relationships
     from_card = relationship("Card", foreign_keys=[from_card_id])
@@ -307,24 +308,24 @@ class CardEdge(BaseModel):
 class TaskOccurrence(BaseModel):
     __tablename__ = "task_occurrences"
 
-    series_card_id = Column(GUID(), ForeignKey("cards.id", ondelete="CASCADE"), nullable=False, index=True)
-    plan_card_id = Column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True, index=True)
-    phase_card_id = Column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True, index=True)
-    scheduled_for = Column(Date, nullable=True, index=True)
-    window_start = Column(DateTime, nullable=True)
-    window_end = Column(DateTime, nullable=True)
-    occurrence_status = Column(
+    series_card_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("cards.id", ondelete="CASCADE"), nullable=False, index=True)
+    plan_card_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True, index=True)
+    phase_card_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True, index=True)
+    scheduled_for: Mapped[date] = mapped_column(Date, nullable=True, index=True)
+    window_start: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    window_end: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    occurrence_status: Mapped[OccurrenceStatus] = mapped_column(
         Enum(OccurrenceStatus, name="occurrence_status_enum"),
         nullable=False,
         default=OccurrenceStatus.PLANNED,
         index=True,
     )
-    actual_minutes = Column(Integer, nullable=True)
-    completion_quality = Column(Integer, nullable=True)
-    deferral_count = Column(Integer, nullable=False, default=0)
-    generated_by_rule_hash = Column(String(128), nullable=False, server_default="")
-    feedback_payload = Column(JSONBCompat, nullable=True)
-    completed_at = Column(DateTime, nullable=True)
+    actual_minutes: Mapped[int] = mapped_column(Integer, nullable=True)
+    completion_quality: Mapped[int] = mapped_column(Integer, nullable=True)
+    deferral_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    generated_by_rule_hash: Mapped[str] = mapped_column(String(128), nullable=False, server_default="")
+    feedback_payload: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
+    completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # Relationships
     series_card = relationship("Card", foreign_keys=[series_card_id])
@@ -349,21 +350,21 @@ class TaskOccurrence(BaseModel):
 class PlanningArtifact(BaseModel):
     __tablename__ = "planning_artifacts"
 
-    plan_card_id = Column(GUID(), ForeignKey("cards.id", ondelete="CASCADE"), nullable=False, index=True)
-    artifact_type = Column(_string_enum(ArtifactType, "artifact_type_enum"), nullable=False, index=True)
-    version = Column(Integer, nullable=False, default=1)
-    status = Column(
+    plan_card_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("cards.id", ondelete="CASCADE"), nullable=False, index=True)
+    artifact_type: Mapped[Any] = mapped_column(_string_enum(ArtifactType, "artifact_type_enum"), nullable=False, index=True)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    status: Mapped[Any] = mapped_column(
         _string_enum(ArtifactStatus, "artifact_status_enum"),
         nullable=False,
         default=ArtifactStatus.DRAFT,
         index=True,
     )
-    payload = Column(JSONBCompat, nullable=False, server_default="{}")
-    based_on_versions = Column(JSONBCompat, nullable=False, server_default="{}")
-    created_by_agent = Column(String(64), nullable=True)
-    approved_by_user_id = Column(GUID(), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    approved_at = Column(DateTime, nullable=True)
-    superseded_at = Column(DateTime, nullable=True)
+    payload: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, server_default="{}")
+    based_on_versions: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, server_default="{}")
+    created_by_agent: Mapped[str] = mapped_column(String(64), nullable=True)
+    approved_by_user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    approved_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    superseded_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # Relationships
     plan_card = relationship("Card", foreign_keys=[plan_card_id])
@@ -387,35 +388,35 @@ class PlanningArtifact(BaseModel):
 class InterventionRecord(BaseModel):
     __tablename__ = "intervention_records"
 
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    plan_card_id = Column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True, index=True)
-    phase_card_id = Column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True)
-    task_occurrence_id = Column(GUID(), ForeignKey("task_occurrences.id", ondelete="SET NULL"), nullable=True)
-    knowledge_card_id = Column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True)
-    trigger_type = Column(
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    plan_card_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True, index=True)
+    phase_card_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True)
+    task_occurrence_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("task_occurrences.id", ondelete="SET NULL"), nullable=True)
+    knowledge_card_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True)
+    trigger_type: Mapped[Any] = mapped_column(
         _string_enum(InterventionTriggerType, "intervention_trigger_enum"),
         nullable=False,
         index=True,
     )
-    trigger_source_ref = Column(String(128), nullable=True)
-    diagnosis_payload = Column(JSONBCompat, nullable=False, server_default="{}")
-    delivery_strategy = Column(_string_enum(DeliveryStrategy, "delivery_strategy_enum"), nullable=False)
-    delivery_channel = Column(_string_enum(DeliveryChannel, "delivery_channel_enum"), nullable=False)
-    content_version = Column(String(64), nullable=False, server_default="1")
-    acceptance_status = Column(
+    trigger_source_ref: Mapped[str] = mapped_column(String(128), nullable=True)
+    diagnosis_payload: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, server_default="{}")
+    delivery_strategy: Mapped[Any] = mapped_column(_string_enum(DeliveryStrategy, "delivery_strategy_enum"), nullable=False)
+    delivery_channel: Mapped[Any] = mapped_column(_string_enum(DeliveryChannel, "delivery_channel_enum"), nullable=False)
+    content_version: Mapped[str] = mapped_column(String(64), nullable=False, server_default="1")
+    acceptance_status: Mapped[Any] = mapped_column(
         _string_enum(InterventionAcceptanceStatus, "intervention_acceptance_enum"),
         nullable=False,
         default=InterventionAcceptanceStatus.CREATED,
         index=True,
     )
-    action_payload = Column(JSONBCompat, nullable=True)
-    outcome_window_days = Column(Integer, nullable=False, default=7)
-    outcome_status = Column(
+    action_payload: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
+    outcome_window_days: Mapped[int] = mapped_column(Integer, nullable=False, default=7)
+    outcome_status: Mapped[Any] = mapped_column(
         _string_enum(InterventionOutcomeStatus, "intervention_outcome_enum"),
         nullable=False,
         default=InterventionOutcomeStatus.PENDING,
     )
-    evidence_payload = Column(JSONBCompat, nullable=True)
+    evidence_payload: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
 
     # Relationships
     user = relationship("User", foreign_keys=[user_id])
@@ -442,12 +443,12 @@ class InterventionRecord(BaseModel):
 class CardSnapshot(BaseModel):
     __tablename__ = "card_snapshots"
 
-    root_card_id = Column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True, index=True)
-    source_owner_id = Column(GUID(), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
-    source_card_type = Column(_string_enum(CardType, "snapshot_card_type_enum"), nullable=False, index=True)
-    schema_version = Column(String(16), nullable=False, server_default="1.0")
-    payload = Column(JSONBCompat, nullable=False, server_default="{}")
-    metadata_ = Column("metadata", JSONBCompat, nullable=False, server_default="{}")
+    root_card_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True, index=True)
+    source_owner_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    source_card_type: Mapped[Any] = mapped_column(_string_enum(CardType, "snapshot_card_type_enum"), nullable=False, index=True)
+    schema_version: Mapped[str] = mapped_column(String(16), nullable=False, server_default="1.0")
+    payload: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, server_default="{}")
+    metadata_: Mapped[Any] = mapped_column("metadata", JSONBCompat, nullable=False, server_default="{}")
 
     root_card = relationship("Card", foreign_keys=[root_card_id])
     source_owner = relationship("User", foreign_keys=[source_owner_id])
@@ -469,22 +470,22 @@ class CardSnapshot(BaseModel):
 class CardShareRecord(BaseModel):
     __tablename__ = "card_share_records"
 
-    snapshot_id = Column(GUID(), ForeignKey("card_snapshots.id", ondelete="CASCADE"), nullable=False, index=True)
-    root_card_id = Column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True, index=True)
-    shared_by_user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    target_user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
-    group_id = Column(GUID(), ForeignKey("groups.id", ondelete="CASCADE"), nullable=True, index=True)
-    scope = Column(Enum(ShareScope, name="share_scope_enum"), nullable=False, index=True)
-    permission = Column(
+    snapshot_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("card_snapshots.id", ondelete="CASCADE"), nullable=False, index=True)
+    root_card_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True, index=True)
+    shared_by_user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    target_user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    group_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("groups.id", ondelete="CASCADE"), nullable=True, index=True)
+    scope: Mapped[ShareScope] = mapped_column(Enum(ShareScope, name="share_scope_enum"), nullable=False, index=True)
+    permission: Mapped[SharePermission] = mapped_column(
         Enum(SharePermission, name="share_permission_enum"),
         nullable=False,
         default=SharePermission.ADOPT,
     )
-    message = Column(String(500), nullable=True)
-    adoption_count = Column(Integer, nullable=False, default=0)
-    view_count = Column(Integer, nullable=False, default=0)
-    revoked_at = Column(DateTime, nullable=True)
-    metadata_ = Column("metadata", JSONBCompat, nullable=False, server_default="{}")
+    message: Mapped[str] = mapped_column(String(500), nullable=True)
+    adoption_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    view_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    revoked_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    metadata_: Mapped[Any] = mapped_column("metadata", JSONBCompat, nullable=False, server_default="{}")
 
     snapshot = relationship("CardSnapshot", foreign_keys=[snapshot_id])
     root_card = relationship("Card", foreign_keys=[root_card_id])
@@ -509,13 +510,13 @@ class CardShareRecord(BaseModel):
 class CardAdoptionRecord(BaseModel):
     __tablename__ = "card_adoption_records"
 
-    share_record_id = Column(
+    share_record_id: Mapped[Any] = mapped_column(
         GUID(), ForeignKey("card_share_records.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    adopter_user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    adopted_root_card_id = Column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True, index=True)
-    import_mode = Column(Enum(ImportMode, name="import_mode_enum"), nullable=False, index=True)
-    attribution_payload = Column(JSONBCompat, nullable=False, server_default="{}")
+    adopter_user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    adopted_root_card_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("cards.id", ondelete="SET NULL"), nullable=True, index=True)
+    import_mode: Mapped[ImportMode] = mapped_column(Enum(ImportMode, name="import_mode_enum"), nullable=False, index=True)
+    attribution_payload: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, server_default="{}")
 
     share_record = relationship("CardShareRecord", foreign_keys=[share_record_id])
     adopter_user = relationship("User", foreign_keys=[adopter_user_id])

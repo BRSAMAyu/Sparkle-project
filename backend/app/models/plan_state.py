@@ -5,10 +5,12 @@ Plan-level state storage for tracking plan execution context.
 See: docs/state/plan_state_spec.md for design details.
 """
 import enum
+from datetime import datetime
+from typing import Any
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, Integer, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -60,14 +62,14 @@ class PlanState(BaseModel):
     __tablename__ = "plan_states"
 
     # Foreign keys
-    plan_id = Column(
+    plan_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("plans.id", ondelete="CASCADE"),
         nullable=False,
         unique=True,
         index=True,
     )
-    user_id = Column(
+    user_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
@@ -75,32 +77,32 @@ class PlanState(BaseModel):
     )
 
     # State fields (JSONB for efficient querying)
-    facts = Column(JSONBCompat, nullable=False, default=dict)
-    milestones = Column(JSONBCompat, nullable=False, default=list)
-    task_index = Column(JSONBCompat, nullable=False, default=dict)
-    task_summaries = Column(JSONBCompat, nullable=False, default=list)
-    feedback_log = Column(JSONBCompat, nullable=False, default=list)
-    constraints = Column(JSONBCompat, nullable=False, default=dict)
+    facts: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    milestones: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=list)
+    task_index: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    task_summaries: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=list)
+    feedback_log: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=list)
+    constraints: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
 
     # Version control (optimistic locking)
-    version = Column(Integer, nullable=False, default=1)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
     # P0-2: Rejection tracking for phase rollback
-    consecutive_rejection_count = Column(Integer, nullable=False, default=0)
+    consecutive_rejection_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     # Multi-plan coordination fields
-    is_focus = Column(Boolean, nullable=False, default=False, index=True)
-    last_focus_time = Column(DateTime, nullable=True, index=True)
-    parallel_priority = Column(Integer, nullable=False, default=0, index=True)
+    is_focus: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
+    last_focus_time: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True)
+    parallel_priority: Mapped[int] = mapped_column(Integer, nullable=False, default=0, index=True)
 
     # Status management
-    status = Column(
+    status: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
         default=PlanStateStatus.ACTIVE.value,
         index=True,
     )
-    archived_at = Column(DateTime, nullable=True)
+    archived_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # Relationships
     plan = relationship("Plan", backref="plan_state", uselist=False)

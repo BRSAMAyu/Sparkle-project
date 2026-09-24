@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
-from sqlalchemy import JSON, Column, Float, Integer, String
+from typing import Any
+
+from sqlalchemy import JSON, Float, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseModel
 
@@ -15,14 +18,14 @@ class StrategyBeliefSnapshot(BaseModel):
 
     __tablename__ = "strategy_belief_snapshots"
 
-    user_id = Column(String(128), nullable=False, index=True)
-    strategy_key = Column(String(128), nullable=False, index=True)
-    alpha = Column(Float, nullable=False, default=1.0)
-    beta = Column(Float, nullable=False, default=1.0)
-    evidence_count = Column(Integer, nullable=False, default=0)
-    last_updated = Column(String(64), nullable=False, default="")
-    counter_evidence = Column(JSONBCompat, nullable=False, default=list)
-    metadata_payload = Column("metadata", JSONBCompat, nullable=False, default=dict)
+    user_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    strategy_key: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    alpha: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
+    beta: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
+    evidence_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_updated: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    counter_evidence: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=list)
+    metadata_payload: Mapped[Any] = mapped_column("metadata", JSONBCompat, nullable=False, default=dict)
 
     @property
     def raw_expected_effectiveness(self) -> float:

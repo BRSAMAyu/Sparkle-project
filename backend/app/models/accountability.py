@@ -7,11 +7,12 @@ Models:
 """
 
 import enum
+from datetime import datetime
+from typing import Any
 
 from sqlalchemy import (
     DDL,
     JSON,
-    Column,
     DateTime,
     Enum,
     ForeignKey,
@@ -22,7 +23,7 @@ from sqlalchemy import (
     event,
 )
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -45,40 +46,40 @@ class AccountabilityPartnership(BaseModel):
 
     __tablename__ = "accountability_partnership"
 
-    initiator_id = Column(
+    initiator_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
-    partner_id = Column(
+    partner_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
-    friendship_id = Column(
+    friendship_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("friendships.id", ondelete="SET NULL"),
         nullable=True,
     )
-    initiator_goal = Column(Text, nullable=False)
-    partner_goal = Column(Text, nullable=True)
-    check_in_days = Column(Integer, nullable=False, default=1)
-    slot_type = Column(
+    initiator_goal: Mapped[str] = mapped_column(Text, nullable=False)
+    partner_goal: Mapped[str] = mapped_column(Text, nullable=True)
+    check_in_days: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    slot_type: Mapped[AccountabilitySlotType] = mapped_column(
         Enum(AccountabilitySlotType, values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
         default=AccountabilitySlotType.CORE,
         index=True,
     )
-    status = Column(
+    status: Mapped[AccountabilityStatus] = mapped_column(
         Enum(AccountabilityStatus, values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
         default=AccountabilityStatus.PENDING,
         index=True,
     )
-    started_at = Column(DateTime(timezone=True), nullable=True)
-    ended_at = Column(DateTime(timezone=True), nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    ended_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     initiator = relationship("User", foreign_keys=[initiator_id], lazy="selectin")
@@ -133,26 +134,26 @@ class AccountabilityCheckin(BaseModel):
 
     __tablename__ = "accountability_checkin"
 
-    partnership_id = Column(
+    partnership_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("accountability_partnership.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
-    user_id = Column(
+    user_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
-    content = Column(Text, nullable=False)
-    mood = Column(Integer, nullable=False, default=3)  # 1-5
-    minutes = Column(Integer, nullable=False, default=0)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    mood: Mapped[int] = mapped_column(Integer, nullable=False, default=3)  # 1-5
+    minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     # 互动字段
-    likes = Column(Integer, nullable=False, default=0)  # 点赞数
-    liked_by = Column(JSONBCompat, nullable=False, default=list)  # 点赞用户ID列表
-    encouragements = Column(JSONBCompat, nullable=False, default=list)  # 鼓励消息列表
+    likes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # 点赞数
+    liked_by: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=list)  # 点赞用户ID列表
+    encouragements: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=list)  # 鼓励消息列表
 
     # Relationships
     partnership = relationship("AccountabilityPartnership", back_populates="checkins")

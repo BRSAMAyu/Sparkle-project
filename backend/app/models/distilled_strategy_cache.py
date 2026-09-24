@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
-from sqlalchemy import Column, DateTime, Index, String, Text
+from datetime import datetime
+from typing import Any
+
+from sqlalchemy import DateTime, Index, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import GUID, Base
 
@@ -22,16 +26,16 @@ class DistilledStrategyCacheEntry(Base):
 
     __tablename__ = "distilled_strategy_cache"
 
-    id = Column(GUID(), primary_key=True, nullable=False)
-    title = Column(String(255), nullable=False)
-    description = Column(Text, nullable=False)
-    applicability_scope = Column(Text, nullable=False)
-    status = Column(String(64), nullable=False, index=True)
-    shareability = Column(String(64), nullable=False, index=True)
-    source_trajectory_type = Column(String(128), nullable=False, index=True)
-    payload = Column(JSONBCompat, nullable=False, default=dict)
-    created_at = Column(DateTime, nullable=False)
-    updated_at = Column(DateTime, nullable=False, index=True)
+    id: Mapped[Any] = mapped_column(GUID(), primary_key=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    applicability_scope: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    shareability: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    source_trajectory_type: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    payload: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
 
 
 Index(

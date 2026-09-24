@@ -13,8 +13,11 @@
 契约真源：backend/app/core/policy_patch.py（aurora_policy_patch.v1）。
 """
 
-from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, String
-from sqlalchemy.orm import relationship
+from datetime import datetime
+from typing import Any
+
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -25,35 +28,35 @@ class PolicyPatchRecord(BaseModel):
 
     __tablename__ = "aurora_policy_patches"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
 
     # -- patch 身份（内容寻址；core derive_policy_patch_id 派生）--------------
-    patch_id = Column(String(64), nullable=False, unique=True, index=True)
-    surface = Column(String(32), nullable=False)  # 六面白名单（POLICY_PATCH_SURFACES）
-    payload = Column(JSON, nullable=False, default=dict)  # 单键面 schema（V2/V3 fail-closed）
+    patch_id: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    surface: Mapped[str] = mapped_column(String(32), nullable=False)  # 六面白名单（POLICY_PATCH_SURFACES）
+    payload: Mapped[Any] = mapped_column(JSON, nullable=False, default=dict)  # 单键面 schema（V2/V3 fail-closed）
 
     # -- 情境 scope（可选约束；D-05 切片词表成员或 NULL=不限）----------------
-    scope_goal_type = Column(String(32), nullable=True)
-    scope_friction_tag = Column(String(40), nullable=True)
+    scope_goal_type: Mapped[str] = mapped_column(String(32), nullable=True)
+    scope_friction_tag: Mapped[str] = mapped_column(String(40), nullable=True)
 
     # -- 生命周期 ----------------------------------------------------------------
-    state = Column(String(24), nullable=False, default="candidate", index=True)
-    provenance = Column(String(32), nullable=False, default="decision_loop")
+    state: Mapped[str] = mapped_column(String(24), nullable=False, default="candidate", index=True)
+    provenance: Mapped[str] = mapped_column(String(32), nullable=False, default="decision_loop")
 
     # -- 证据面（evidence 门核验后的镜像；真源在 M-06/D-05）--------------------
-    evidence_refs = Column(JSON, nullable=False, default=list)  # memory://experience/… | decision://aurora_…
-    evidence_tier = Column(String(24), nullable=True)  # D-05 档位（核验后回填）
-    evidence_verified_at = Column(DateTime, nullable=True)
+    evidence_refs: Mapped[Any] = mapped_column(JSON, nullable=False, default=list)  # memory://experience/… | decision://aurora_…
+    evidence_tier: Mapped[str] = mapped_column(String(24), nullable=True)  # D-05 档位（核验后回填）
+    evidence_verified_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # -- 确认 / 生效 / 撤销 / 过期 ------------------------------------------------
-    user_confirmed = Column(Boolean, nullable=False, default=False)
-    confirmed_at = Column(DateTime, nullable=True)
-    activated_at = Column(DateTime, nullable=True)
-    expires_at = Column(DateTime, nullable=True, index=True)
-    revoked_at = Column(DateTime, nullable=True)
-    revoke_reason = Column(String(200), nullable=True)
+    user_confirmed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    confirmed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    activated_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True)
+    revoked_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    revoke_reason: Mapped[str] = mapped_column(String(200), nullable=True)
 
     # -- 审计（append-only；revoke 即时生效且审计永久保留）----------------------
-    transition_history = Column(JSON, nullable=False, default=list)
+    transition_history: Mapped[Any] = mapped_column(JSON, nullable=False, default=list)
 
     user = relationship("User", backref="aurora_policy_patches")

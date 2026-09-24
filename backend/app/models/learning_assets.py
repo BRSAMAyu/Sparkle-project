@@ -4,10 +4,10 @@ Represents user's vocabulary, sentences, and concepts collected from translation
 """
 import enum
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import (
     JSON,
-    Column,
     DateTime,
     Float,
     ForeignKey,
@@ -17,7 +17,7 @@ from sqlalchemy import (
     Text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel, HardDeleteBaseModel
 
@@ -61,48 +61,48 @@ class LearningAsset(BaseModel):
     __tablename__ = "learning_assets"
 
     # === Foreign Keys ===
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    source_file_id = Column(GUID(), ForeignKey("stored_files.id", ondelete="SET NULL"), nullable=True, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    source_file_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("stored_files.id", ondelete="SET NULL"), nullable=True, index=True)
 
     # === Status & Type ===
-    status = Column(String(20), default=AssetStatus.INBOX.value, nullable=False, index=True)
-    asset_kind = Column(String(20), default=AssetKind.WORD.value, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default=AssetStatus.INBOX.value, nullable=False, index=True)
+    asset_kind: Mapped[str] = mapped_column(String(20), default=AssetKind.WORD.value, nullable=False)
 
     # === Core Content (Relational for Search/Index) ===
-    headword = Column(String(255), nullable=False, index=True)  # The primary word/term
-    definition = Column(Text, nullable=True)  # Definition or meaning
-    translation = Column(Text, nullable=True)  # Target language translation
-    example = Column(Text, nullable=True)  # Example sentence
-    language_code = Column(String(10), default="en", nullable=False)  # Source language
+    headword: Mapped[str] = mapped_column(String(255), nullable=False, index=True)  # The primary word/term
+    definition: Mapped[str] = mapped_column(Text, nullable=True)  # Definition or meaning
+    translation: Mapped[str] = mapped_column(Text, nullable=True)  # Target language translation
+    example: Mapped[str] = mapped_column(Text, nullable=True)  # Example sentence
+    language_code: Mapped[str] = mapped_column(String(10), default="en", nullable=False)  # Source language
 
     # === Inbox Decay ===
-    inbox_expires_at = Column(DateTime, nullable=True, index=True)  # Auto-archive after this time
+    inbox_expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True)  # Auto-archive after this time
 
     # === Snapshot (Immutable) ===
-    snapshot_json = Column(JSONBCompat, nullable=False, default=dict)  # Original context snapshot
-    snapshot_schema_version = Column(Integer, default=1, nullable=False)  # For future migrations
+    snapshot_json: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)  # Original context snapshot
+    snapshot_schema_version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)  # For future migrations
 
     # === Provenance (Mutable for recalculation) ===
-    provenance_json = Column(JSONBCompat, nullable=True, default=dict)  # Match info, source location
-    provenance_updated_at = Column(DateTime, nullable=True)
+    provenance_json: Mapped[Any] = mapped_column(JSONBCompat, nullable=True, default=dict)  # Match info, source location
+    provenance_updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # === Fingerprints for Deduplication & Tracing ===
-    selection_fp = Column(String(64), nullable=True, index=True)  # sha256(normalize(selected_text))
-    anchor_fp = Column(String(64), nullable=True, index=True)    # sha256(doc_fp + context + page)
-    doc_fp = Column(String(64), nullable=True)                   # sha256(selection_fp + doc_id)
-    norm_version = Column(String(20), default="v1", nullable=False)  # Normalization version
-    match_profile = Column(String(50), nullable=True)            # Match algorithm used
+    selection_fp: Mapped[str] = mapped_column(String(64), nullable=True, index=True)  # sha256(normalize(selected_text))
+    anchor_fp: Mapped[str] = mapped_column(String(64), nullable=True, index=True)    # sha256(doc_fp + context + page)
+    doc_fp: Mapped[str] = mapped_column(String(64), nullable=True)                   # sha256(selection_fp + doc_id)
+    norm_version: Mapped[str] = mapped_column(String(20), default="v1", nullable=False)  # Normalization version
+    match_profile: Mapped[str] = mapped_column(String(50), nullable=True)            # Match algorithm used
 
     # === Review Scheduling (SRS) ===
-    review_due_at = Column(DateTime, nullable=True, index=True)
-    review_count = Column(Integer, default=0, nullable=False)
-    review_success_rate = Column(Float, default=0.0, nullable=False)  # 0.0 - 1.0
-    last_seen_at = Column(DateTime, nullable=True)
+    review_due_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True)
+    review_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    review_success_rate: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)  # 0.0 - 1.0
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # === Statistics ===
-    lookup_count = Column(Integer, default=1, nullable=False)  # Times looked up
-    star_count = Column(Integer, default=0, nullable=False)    # User stars/favorites
-    ignored_count = Column(Integer, default=0, nullable=False)  # Times dismissed
+    lookup_count: Mapped[int] = mapped_column(Integer, default=1, nullable=False)  # Times looked up
+    star_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)    # User stars/favorites
+    ignored_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # Times dismissed
 
     # === Relationships ===
     user = relationship("User")
@@ -164,28 +164,28 @@ class AssetSuggestionLog(HardDeleteBaseModel):
     __tablename__ = "asset_suggestion_logs"
 
     # === Context ===
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    session_id = Column(String(64), nullable=True)  # Client session ID
-    policy_id = Column(String(50), nullable=False, index=True)  # e.g., "repeat_lookup_v1"
-    trigger_event = Column(String(100), nullable=False)  # e.g., "translation_lookup"
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    session_id: Mapped[str] = mapped_column(String(64), nullable=True)  # Client session ID
+    policy_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)  # e.g., "repeat_lookup_v1"
+    trigger_event: Mapped[str] = mapped_column(String(100), nullable=False)  # e.g., "translation_lookup"
 
     # === Evidence ===
-    evidence_json = Column(JSONBCompat, nullable=False, default=dict)
+    evidence_json: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
     # Example: {"fingerprint": "...", "lookup_count": 3, "time_window_seconds": 3600}
 
     # === Decision ===
-    decision = Column(String(20), nullable=False)  # SUGGESTED / NOT_SUGGESTED / SKIPPED
-    decision_reason = Column(String(255), nullable=True)  # e.g., "cooldown_active"
+    decision: Mapped[str] = mapped_column(String(20), nullable=False)  # SUGGESTED / NOT_SUGGESTED / SKIPPED
+    decision_reason: Mapped[str] = mapped_column(String(255), nullable=True)  # e.g., "cooldown_active"
 
     # === User Response ===
-    user_response = Column(String(20), default=UserSuggestionResponse.PENDING.value)
-    response_at = Column(DateTime, nullable=True)
+    user_response: Mapped[str] = mapped_column(String(20), default=UserSuggestionResponse.PENDING.value, nullable=True)
+    response_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # === Cooldown ===
-    cooldown_until = Column(DateTime, nullable=True)  # If dismissed, cooldown expiry
+    cooldown_until: Mapped[datetime] = mapped_column(DateTime, nullable=True)  # If dismissed, cooldown expiry
 
     # === Reference ===
-    asset_id = Column(GUID(), ForeignKey("learning_assets.id", ondelete="SET NULL"), nullable=True)
+    asset_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("learning_assets.id", ondelete="SET NULL"), nullable=True)
 
     __table_args__ = (
         Index('idx_suggestion_log_user_created', 'user_id', 'created_at'),

@@ -2,8 +2,10 @@
 Agent Execution Statistics Models
 """
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import JSON, Column, DateTime, Index, Integer, String, Text
+from sqlalchemy import JSON, DateTime, Index, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.session import Base
 from app.models.base import GUID
@@ -13,31 +15,31 @@ class AgentExecutionStats(Base):
     """Agent执行统计表"""
     __tablename__ = 'agent_execution_stats'
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(GUID(), nullable=False, index=True)
-    session_id = Column(String(255), nullable=False, index=True)
-    request_id = Column(String(255), nullable=False)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), nullable=False, index=True)
+    session_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    request_id: Mapped[str] = mapped_column(String(255), nullable=False)
 
     # Agent information
-    agent_type = Column(String(50), nullable=False, index=True)
-    agent_name = Column(String(100), nullable=True)
+    agent_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    agent_name: Mapped[str] = mapped_column(String(100), nullable=True)
 
     # Execution metrics
-    started_at = Column(DateTime(timezone=True), nullable=False)
-    completed_at = Column(DateTime(timezone=True), nullable=True)
-    duration_ms = Column(Integer, nullable=True)
-    status = Column(String(20), nullable=False)  # success, failed, timeout
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    duration_ms: Mapped[int] = mapped_column(Integer, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)  # success, failed, timeout
 
     # Tool/operation details
-    tool_name = Column(String(100), nullable=True)
-    operation = Column(String(255), nullable=True)
+    tool_name: Mapped[str] = mapped_column(String(100), nullable=True)
+    operation: Mapped[str] = mapped_column(String(255), nullable=True)
 
     # Metadata (Use JSON for SQLite compatibility, JSONB for PostgreSQL)
-    extra_metadata = Column(JSON, nullable=True, default={})
-    error_message = Column(Text, nullable=True)
+    extra_metadata: Mapped[Any] = mapped_column(JSON, nullable=True, default={})
+    error_message: Mapped[str] = mapped_column(Text, nullable=True)
 
     # Timestamps
-    created_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False, index=True)
 
     __table_args__ = (
         Index('ix_agent_stats_user_agent_type', 'user_id', 'agent_type'),

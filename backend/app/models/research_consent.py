@@ -1,7 +1,11 @@
 from __future__ import annotations
 
-from sqlalchemy import Column, DateTime, Index, String, Text
+from datetime import datetime
+from typing import Any
+
+from sqlalchemy import DateTime, Index, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import JSON
 
 from app.models.base import BaseModel
@@ -14,21 +18,21 @@ class ResearchConsentRecord(BaseModel):
 
     __tablename__ = "research_consent_records"
 
-    user_id = Column(String(64), nullable=False, index=True)
-    protocol_id = Column(String(64), nullable=False, index=True)
-    granted_at = Column(DateTime, nullable=False, index=True)
-    revoked_at = Column(DateTime, nullable=True, index=True)
-    scope = Column(JSONBCompat, nullable=False, default=list)
-    evidence = Column(JSONBCompat, nullable=False, default=dict)
-    version = Column(String(32), nullable=False, default="1.0")
-    source = Column(String(64), nullable=False, default="api")
+    user_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    protocol_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    granted_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    revoked_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True)
+    scope: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=list)
+    evidence: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    version: Mapped[str] = mapped_column(String(32), nullable=False, default="1.0")
+    source: Mapped[str] = mapped_column(String(64), nullable=False, default="api")
 
-    grant_reason = Column(Text, nullable=True)
-    grant_initiator = Column(String(16), nullable=False, default="user")
-    grant_ip_hash = Column(String(64), nullable=True)
-    revoke_reason = Column(Text, nullable=True)
-    revoke_initiator = Column(String(16), nullable=True)
-    revoke_ip_hash = Column(String(64), nullable=True)
+    grant_reason: Mapped[str] = mapped_column(Text, nullable=True)
+    grant_initiator: Mapped[str] = mapped_column(String(16), nullable=False, default="user")
+    grant_ip_hash: Mapped[str] = mapped_column(String(64), nullable=True)
+    revoke_reason: Mapped[str] = mapped_column(Text, nullable=True)
+    revoke_initiator: Mapped[str] = mapped_column(String(16), nullable=True)
+    revoke_ip_hash: Mapped[str] = mapped_column(String(64), nullable=True)
 
     __table_args__ = (
         Index("ix_research_consent_user_protocol", "user_id", "protocol_id"),

@@ -3,9 +3,10 @@ Capsule Generation Job Model
 """
 import enum
 from datetime import UTC, datetime
+from typing import Any
 
-from sqlalchemy import ARRAY, JSON, Column, DateTime, Float, ForeignKey, Integer, String, Text
-from sqlalchemy.orm import relationship
+from sqlalchemy import ARRAY, JSON, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -38,21 +39,21 @@ class CapsuleGenerationJob(BaseModel):
     """
     __tablename__ = "capsule_generation_jobs"
 
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    status = Column(String(20), nullable=False, index=True, default=JobStatus.PENDING.value)
-    generation_type = Column(String(50), nullable=False, index=True)  # daily/weekly/manual/push_triggered
-    depth_preference = Column(Float, nullable=False)  # 0.0-1.0
-    curiosity_preference = Column(Float, nullable=False)  # 0.0-1.0
-    requested_count = Column(Integer, nullable=False)  # 请求生成的胶囊数量
-    actual_count = Column(Integer, nullable=True)  # 实际生成的胶囊数量
-    capsule_ids = Column(ARRAY(GUID()).with_variant(JSON(), "sqlite"), nullable=True)  # 生成的胶囊ID列表
-    progress = Column(Float, nullable=False, default=0.0)  # 0.0-1.0 进度值
-    error_message = Column(Text, nullable=True)  # 失败原因
-    duration_ms = Column(Integer, nullable=True)  # 生成耗时（毫秒）
-    model_used = Column(String(100), nullable=True)  # 使用的模型
-    scheduled_for = Column(DateTime, nullable=True, index=True)  # 计划执行时间
-    started_at = Column(DateTime, nullable=True)  # 实际开始时间
-    completed_at = Column(DateTime, nullable=True)  # 完成时间
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, index=True, default=JobStatus.PENDING.value)
+    generation_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)  # daily/weekly/manual/push_triggered
+    depth_preference: Mapped[float] = mapped_column(Float, nullable=False)  # 0.0-1.0
+    curiosity_preference: Mapped[float] = mapped_column(Float, nullable=False)  # 0.0-1.0
+    requested_count: Mapped[int] = mapped_column(Integer, nullable=False)  # 请求生成的胶囊数量
+    actual_count: Mapped[int] = mapped_column(Integer, nullable=True)  # 实际生成的胶囊数量
+    capsule_ids: Mapped[Any] = mapped_column(ARRAY(GUID()).with_variant(JSON(), "sqlite"), nullable=True)  # 生成的胶囊ID列表
+    progress: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)  # 0.0-1.0 进度值
+    error_message: Mapped[str] = mapped_column(Text, nullable=True)  # 失败原因
+    duration_ms: Mapped[int] = mapped_column(Integer, nullable=True)  # 生成耗时（毫秒）
+    model_used: Mapped[str] = mapped_column(String(100), nullable=True)  # 使用的模型
+    scheduled_for: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True)  # 计划执行时间
+    started_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)  # 实际开始时间
+    completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)  # 完成时间
 
     # Relationships
     user = relationship("User", back_populates="capsule_generation_jobs")

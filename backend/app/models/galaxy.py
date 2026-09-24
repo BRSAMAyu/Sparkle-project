@@ -8,6 +8,8 @@ from datetime import UTC, datetime
 def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
+from typing import Any
+
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     JSON,
@@ -24,7 +26,7 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import deferred, relationship
+from sqlalchemy.orm import Mapped, deferred, mapped_column, relationship
 
 from app.db.session import Base
 from app.models.base import GUID, BaseModel
@@ -39,17 +41,17 @@ class CollaborativeGalaxy(BaseModel):
     """
     __tablename__ = "collaborative_galaxies"
 
-    name = Column(String(200), nullable=False)
-    description = Column(Text, nullable=True)
-    created_by = Column(GUID(), ForeignKey("users.id"), nullable=False)
-    group_id = Column(GUID(), ForeignKey("groups.id", ondelete="CASCADE"), nullable=True, unique=True, index=True)
-    galaxy_scope = Column(String(32), default="shared", nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=True)
+    created_by: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False)
+    group_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("groups.id", ondelete="CASCADE"), nullable=True, unique=True, index=True)
+    galaxy_scope: Mapped[str] = mapped_column(String(32), default="shared", nullable=False, index=True)
 
     # 可见性: private, shared, public
-    visibility = Column(String(20), default="private", nullable=False)
+    visibility: Mapped[str] = mapped_column(String(20), default="private", nullable=False)
 
     # 关联学科 (可选)
-    subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=True)
+    subject_id: Mapped[int] = mapped_column(Integer, ForeignKey("subjects.id"), nullable=True)
 
     # 关系
     creator = relationship("User", foreign_keys=[created_by])
@@ -64,14 +66,14 @@ class GalaxyUserPermission(Base):
     """
     __tablename__ = "galaxy_user_permissions"
 
-    galaxy_id = Column(GUID(), ForeignKey("collaborative_galaxies.id"), primary_key=True)
-    user_id = Column(GUID(), ForeignKey("users.id"), primary_key=True)
+    galaxy_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("collaborative_galaxies.id"), primary_key=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), primary_key=True)
 
     # 权限等级: owner, editor, viewer, contrib
-    permission_level = Column(String(20), nullable=False)
+    permission_level: Mapped[str] = mapped_column(String(20), nullable=False)
 
-    created_at = Column(DateTime, default=_utcnow, nullable=False)
-    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
 
     # 关系
     galaxy = relationship("CollaborativeGalaxy", back_populates="permissions")
@@ -85,12 +87,12 @@ class CRDTSnapshot(Base):
     """
     __tablename__ = "crdt_snapshots"
 
-    galaxy_id = Column(GUID(), ForeignKey("collaborative_galaxies.id"), primary_key=True)
-    state_data = Column(LargeBinary, nullable=False)  # Yjs 二进制更新
-    operation_count = Column(Integer, default=0)
+    galaxy_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("collaborative_galaxies.id"), primary_key=True)
+    state_data: Mapped[Any] = mapped_column(LargeBinary, nullable=False)  # Yjs 二进制更新
+    operation_count: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
 
-    created_at = Column(DateTime, default=_utcnow, nullable=False)
-    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
 
 
 class CRDTOperationLog(Base):
@@ -100,15 +102,15 @@ class CRDTOperationLog(Base):
     """
     __tablename__ = "crdt_operation_log"
 
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
-    galaxy_id = Column(GUID(), ForeignKey("collaborative_galaxies.id"), nullable=False, index=True)
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    galaxy_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("collaborative_galaxies.id"), nullable=False, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False)
 
     # 操作类型: add_node, update_mastery, delete_node, etc.
-    operation_type = Column(String(50))
-    operation_data = Column(JSONBCompat)
+    operation_type: Mapped[str] = mapped_column(String(50), nullable=True)
+    operation_data: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
 
-    timestamp = Column(DateTime, default=_utcnow, nullable=False, index=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False, index=True)
 
 
 class KnowledgeNode(BaseModel):
@@ -119,62 +121,62 @@ class KnowledgeNode(BaseModel):
     __tablename__ = "knowledge_nodes"
 
     # 关联学科 (Subject) - 注意: Subject 使用 Integer ID
-    subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=True, index=True)
+    subject_id: Mapped[int] = mapped_column(Integer, ForeignKey("subjects.id"), nullable=True, index=True)
 
     # 父节点 (Parent Node) - 自关联
-    parent_id = Column(GUID(), ForeignKey("knowledge_nodes.id"), nullable=True, index=True)
+    parent_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("knowledge_nodes.id"), nullable=True, index=True)
 
     # 节点名称
-    name = Column(String(255), nullable=False)
-    name_en = Column(String(255), nullable=True) # 英文名
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    name_en: Mapped[str] = mapped_column(String(255), nullable=True) # 英文名
 
     # 描述
-    description = Column(Text, nullable=True)
+    description: Mapped[str] = mapped_column(Text, nullable=True)
 
     # 关键词 (使用 JSONB 优化搜索)
-    keywords = Column(JSONBCompat, default=list, nullable=True)
+    keywords: Mapped[Any] = mapped_column(JSONBCompat, default=list, nullable=True)
 
     # 重要性等级 (1-5), 决定星星大小
-    importance_level = Column(Integer, default=1, nullable=False)
+    importance_level: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     # 节点来源
-    is_seed = Column(Boolean, default=False)
-    source_type = Column(String(20), default='seed') # seed | user_created | llm_expanded | document_import
-    source_task_id = Column(GUID(), nullable=True) # 来源任务ID
+    is_seed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
+    source_type: Mapped[str] = mapped_column(String(20), default='seed', nullable=True) # seed | user_created | llm_expanded | document_import
+    source_task_id: Mapped[Any] = mapped_column(GUID(), nullable=True) # 来源任务ID
 
     # Phase 5B: Document Engine Traceability
-    source_file_id = Column(GUID(), ForeignKey("stored_files.id"), nullable=True)
-    chunk_refs = Column(JSONBCompat, nullable=True) # List of chunk IDs or {chunk_id: score}
-    status = Column(String(20), default='published', index=True) # draft | published | needs_review
+    source_file_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("stored_files.id"), nullable=True)
+    chunk_refs: Mapped[Any] = mapped_column(JSONBCompat, nullable=True) # List of chunk IDs or {chunk_id: score}
+    status: Mapped[str] = mapped_column(String(20), default='published', index=True, nullable=True) # draft | published | needs_review
 
     # AI 属性 (向量)
     # 注意: SQLite 不支持 Vector，需要处理兼容性，或者仅在 PG 环境使用
     embedding = deferred(Column(VectorCompat, nullable=True))
 
     # E-05 Embedding 版本溯源（同 document_chunks.embedding_model）
-    embedding_model = Column(String(100), nullable=True)
-    embedding_dim = Column(Integer, nullable=True)
+    embedding_model: Mapped[str] = mapped_column(String(100), nullable=True)
+    embedding_dim: Mapped[int] = mapped_column(Integer, nullable=True)
 
     # Layout Coordinates (for Viewport Query)
-    position_x = Column(Float, nullable=True, index=True)
-    position_y = Column(Float, nullable=True, index=True)
+    position_x: Mapped[float] = mapped_column(Float, nullable=True, index=True)
+    position_y: Mapped[float] = mapped_column(Float, nullable=True, index=True)
 
     # 多星域归属
-    sector_weights = Column(JSONBCompat, default=dict, nullable=True)
-    dominant_sector_code = Column(String(20), default="VOID", nullable=False, server_default="VOID", index=True)
-    sector_classification_status = Column(String(20), default="pending", nullable=False, server_default="pending", index=True)
-    sector_classification_model = Column(String(100), nullable=True)
-    sector_classified_at = Column(DateTime, nullable=True)
+    sector_weights: Mapped[Any] = mapped_column(JSONBCompat, default=dict, nullable=True)
+    dominant_sector_code: Mapped[str] = mapped_column(String(20), default="VOID", nullable=False, server_default="VOID", index=True)
+    sector_classification_status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False, server_default="pending", index=True)
+    sector_classification_model: Mapped[str] = mapped_column(String(100), nullable=True)
+    sector_classified_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # P2-24: Exam attributes for retrieval ranking (KG-001)
-    exam_weight = Column(Float, default=0.0, nullable=False, comment="考试权重 0-1")
-    difficulty = Column(Float, default=0.5, nullable=False, comment="难度 0-1")
-    trainability = Column(Float, default=0.5, nullable=False, comment="可训练性 0-1")
-    mistakes = Column(Integer, default=0, nullable=False, comment="累计错误次数")
+    exam_weight: Mapped[float] = mapped_column(Float, default=0.0, nullable=False, comment="考试权重 0-1")
+    difficulty: Mapped[float] = mapped_column(Float, default=0.5, nullable=False, comment="难度 0-1")
+    trainability: Mapped[float] = mapped_column(Float, default=0.5, nullable=False, comment="可训练性 0-1")
+    mistakes: Mapped[int] = mapped_column(Integer, default=0, nullable=False, comment="累计错误次数")
 
     # Collaborative Data
-    global_spark_count = Column(Integer, default=0, nullable=False)
-    community_signal = Column(JSONBCompat, nullable=True)
+    global_spark_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    community_signal: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
 
     # 关系
     subject = relationship("Subject", backref="knowledge_nodes")
@@ -198,10 +200,10 @@ class KnowledgeNodeDocument(BaseModel):
         UniqueConstraint("user_id", "node_id", "file_id", name="uq_knowledge_node_documents_user_node_file"),
     )
 
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    node_id = Column(GUID(), ForeignKey("knowledge_nodes.id", ondelete="CASCADE"), nullable=False, index=True)
-    file_id = Column(GUID(), ForeignKey("stored_files.id", ondelete="CASCADE"), nullable=False, index=True)
-    is_primary = Column(Boolean, default=False, nullable=False, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    node_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("knowledge_nodes.id", ondelete="CASCADE"), nullable=False, index=True)
+    file_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("stored_files.id", ondelete="CASCADE"), nullable=False, index=True)
+    is_primary: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
 
     user = relationship("User")
     node = relationship("KnowledgeNode", back_populates="document_links")
@@ -214,16 +216,16 @@ class NodeRelation(BaseModel):
     """
     __tablename__ = "node_relations"
 
-    source_node_id = Column(GUID(), ForeignKey("knowledge_nodes.id"), nullable=False, index=True)
-    target_node_id = Column(GUID(), ForeignKey("knowledge_nodes.id"), nullable=False, index=True)
+    source_node_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("knowledge_nodes.id"), nullable=False, index=True)
+    target_node_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("knowledge_nodes.id"), nullable=False, index=True)
 
     # 关系类型: prerequisite, related, application, composition, evolution
-    relation_type = Column(String(30), nullable=False)
+    relation_type: Mapped[str] = mapped_column(String(30), nullable=False)
 
     # 关系强度 (0-1)
-    strength = Column(Float, default=0.5)
+    strength: Mapped[float] = mapped_column(Float, default=0.5, nullable=True)
 
-    created_by = Column(String(20), default='seed') # seed | user | llm
+    created_by: Mapped[str] = mapped_column(String(20), default='seed', nullable=True) # seed | user | llm
 
     # 关系
     source_node = relationship("KnowledgeNode", foreign_keys=[source_node_id], back_populates="source_relations")
@@ -238,40 +240,40 @@ class UserNodeStatus(Base):
     """
     __tablename__ = "user_node_status"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), primary_key=True, nullable=False)
-    node_id = Column(GUID(), ForeignKey("knowledge_nodes.id"), primary_key=True, nullable=False)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), primary_key=True, nullable=False)
+    node_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("knowledge_nodes.id"), primary_key=True, nullable=False)
 
     # 掌握度/亮度 (0-100)
-    mastery_score = Column(Float, default=0, nullable=False)
+    mastery_score: Mapped[float] = mapped_column(Float, default=0, nullable=False)
     # BKT 掌握概率 (0-1)
-    bkt_mastery_prob = Column(Float, default=0.0, nullable=False)
-    bkt_last_updated_at = Column(DateTime, nullable=True)
+    bkt_mastery_prob: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    bkt_last_updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # 投入时间 (分钟)
-    total_minutes = Column(Integer, default=0, nullable=False)
-    total_study_minutes = Column(Integer, default=0, nullable=False) # 别名/冗余? Doc 用 total_study_minutes
+    total_minutes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    total_study_minutes: Mapped[int] = mapped_column(Integer, default=0, nullable=False) # 别名/冗余? Doc 用 total_study_minutes
 
-    study_count = Column(Integer, default=0) # 学习次数
+    study_count: Mapped[int] = mapped_column(Integer, default=0, nullable=True) # 学习次数
 
     # 状态标记
-    is_unlocked = Column(Boolean, default=False, nullable=False)
-    is_collapsed = Column(Boolean, default=False)
-    is_favorite = Column(Boolean, default=False)
+    is_unlocked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_collapsed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
+    is_favorite: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
 
     # 遗忘曲线相关
-    last_study_at = Column(DateTime, nullable=True) # Doc uses last_study_at
-    last_interacted_at = Column(DateTime, default=_utcnow, nullable=False) # Keep for compatibility or remove?
-    decay_paused = Column(Boolean, default=False)
-    next_review_at = Column(DateTime, nullable=True, index=True)
+    last_study_at: Mapped[datetime] = mapped_column(DateTime, nullable=True) # Doc uses last_study_at
+    last_interacted_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False) # Keep for compatibility or remove?
+    decay_paused: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
+    next_review_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True)
 
     # Logical clock for conflict resolution
-    revision = Column(Integer, default=0, nullable=False)
+    revision: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # 元数据
-    first_unlock_at = Column(DateTime, nullable=True)
-    learning_path_snapshot = Column(JSONBCompat, nullable=True)
-    created_at = Column(DateTime, default=_utcnow, nullable=False)
-    updated_at = Column(
+    first_unlock_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    learning_path_snapshot: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=_utcnow,
         onupdate=_utcnow,
@@ -292,16 +294,16 @@ class StudyRecord(BaseModel):
     """
     __tablename__ = "study_records"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
-    node_id = Column(GUID(), ForeignKey("knowledge_nodes.id"), nullable=False, index=True)
-    task_id = Column(GUID(), ForeignKey("tasks.id"), nullable=True) # 关联 Task
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    node_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("knowledge_nodes.id"), nullable=False, index=True)
+    task_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("tasks.id"), nullable=True) # 关联 Task
 
-    study_minutes = Column(Integer, nullable=False)
-    mastery_delta = Column(Float, nullable=False)
-    initial_mastery = Column(Float, nullable=True) # 学习前的掌握度
+    study_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
+    mastery_delta: Mapped[float] = mapped_column(Float, nullable=False)
+    initial_mastery: Mapped[float] = mapped_column(Float, nullable=True) # 学习前的掌握度
 
     # record_type: task_complete, review, exploration
-    record_type = Column(String(20), default='task_complete')
+    record_type: Mapped[str] = mapped_column(String(20), default='task_complete', nullable=True)
 
     # 关系
     user = relationship("User")
@@ -315,21 +317,21 @@ class NodeExpansionQueue(BaseModel):
     """
     __tablename__ = "node_expansion_queue"
 
-    trigger_node_id = Column(GUID(), ForeignKey("knowledge_nodes.id"), nullable=False)
-    trigger_task_id = Column(GUID(), ForeignKey("tasks.id"), nullable=True)
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    trigger_node_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("knowledge_nodes.id"), nullable=False)
+    trigger_task_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("tasks.id"), nullable=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
 
-    expansion_context = Column(Text, nullable=False)
+    expansion_context: Mapped[str] = mapped_column(Text, nullable=False)
 
     # status: pending, processing, completed, failed
-    status = Column(String(20), default='pending', index=True)
+    status: Mapped[str] = mapped_column(String(20), default='pending', index=True, nullable=True)
 
-    expanded_nodes = Column(JSON, nullable=True)
-    error_message = Column(Text, nullable=True)
-    prompt_version = Column(String(50), nullable=True)
-    model_name = Column(String(50), nullable=True)
+    expanded_nodes: Mapped[Any] = mapped_column(JSON, nullable=True)
+    error_message: Mapped[str] = mapped_column(Text, nullable=True)
+    prompt_version: Mapped[str] = mapped_column(String(50), nullable=True)
+    model_name: Mapped[str] = mapped_column(String(50), nullable=True)
 
-    processed_at = Column(DateTime, nullable=True)
+    processed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # 关系
     trigger_node = relationship("KnowledgeNode")
@@ -343,18 +345,18 @@ class ExpansionFeedback(BaseModel):
     """
     __tablename__ = "expansion_feedback"
 
-    expansion_queue_id = Column(GUID(), ForeignKey("node_expansion_queue.id"), nullable=True, index=True)
-    trigger_node_id = Column(GUID(), ForeignKey("knowledge_nodes.id"), nullable=False, index=True)
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    expansion_queue_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("node_expansion_queue.id"), nullable=True, index=True)
+    trigger_node_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("knowledge_nodes.id"), nullable=False, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
 
     # Explicit 1-5 rating, implicit signal (0-1)
-    rating = Column(Integer, nullable=True)
-    implicit_score = Column(Float, nullable=True)
-    feedback_type = Column(String(20), default="explicit")  # explicit | implicit
+    rating: Mapped[int] = mapped_column(Integer, nullable=True)
+    implicit_score: Mapped[float] = mapped_column(Float, nullable=True)
+    feedback_type: Mapped[str] = mapped_column(String(20), default="explicit", nullable=True)  # explicit | implicit
 
-    prompt_version = Column(String(50), nullable=True)
-    model_name = Column(String(50), nullable=True)
-    meta_data = Column(JSON, nullable=True)
+    prompt_version: Mapped[str] = mapped_column(String(50), nullable=True)
+    model_name: Mapped[str] = mapped_column(String(50), nullable=True)
+    meta_data: Mapped[Any] = mapped_column(JSON, nullable=True)
 
     # Relations
     trigger_node = relationship("KnowledgeNode")

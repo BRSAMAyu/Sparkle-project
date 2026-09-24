@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import JSON, Column, DateTime, ForeignKey, Index, String
-from sqlalchemy.orm import relationship
+from sqlalchemy import JSON, DateTime, ForeignKey, Index, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, HardDeleteBaseModel
 
@@ -15,12 +16,12 @@ class ExecutionAuditLog(HardDeleteBaseModel):
 
     __tablename__ = "execution_audit_log"
 
-    intent_id = Column(GUID(), ForeignKey("execution_intents.id", ondelete="CASCADE"), nullable=False, index=True)
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    action = Column(String(64), nullable=False, index=True)
-    actor = Column(String(32), nullable=False, index=True)
-    details = Column(JSON, nullable=True)
-    occurred_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    intent_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("execution_intents.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    action: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    actor: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    details: Mapped[Any] = mapped_column(JSON, nullable=True)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow, index=True)
 
     intent = relationship("ExecutionIntent", backref="audit_logs", foreign_keys=[intent_id])
     user = relationship("User", backref="execution_audit_logs", foreign_keys=[user_id])

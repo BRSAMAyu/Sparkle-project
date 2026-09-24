@@ -1,8 +1,11 @@
 """
 决策记录模型
 """
-from sqlalchemy import JSON, Column, ForeignKey, Integer, String
+from typing import Any
+
+from sqlalchemy import JSON, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import GUID, BaseModel
 
@@ -14,9 +17,9 @@ class DecisionRecord(BaseModel):
 
     __tablename__ = "decision_records"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
-    module = Column(String(50), nullable=False, index=True)  # "ai" | "push" | "task"
-    action = Column(String(100), nullable=False)
-    preference_version = Column(Integer, nullable=False)
-    preferences_snapshot = Column(JSONBCompat, nullable=True)
-    outcome = Column(String(500), nullable=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    module: Mapped[str] = mapped_column(String(50), nullable=False, index=True)  # "ai" | "push" | "task"
+    action: Mapped[str] = mapped_column(String(100), nullable=False)
+    preference_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    preferences_snapshot: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
+    outcome: Mapped[str] = mapped_column(String(500), nullable=True)

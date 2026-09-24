@@ -4,8 +4,10 @@ User Tool History Model - 用户工具执行历史记录
 """
 import uuid
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import GUID, Base
 
@@ -21,39 +23,39 @@ class UserToolHistory(Base):
     """
     __tablename__ = 'user_tool_history'
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     # Foreign key to users table
-    user_id = Column(GUID(), ForeignKey('users.id'), nullable=False)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey('users.id'), nullable=False)
 
     # Tool information
-    tool_name = Column(String(100), nullable=False)
-    tool_category = Column(String(50), nullable=True)  # plan, task, focus, etc.
+    tool_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    tool_category: Mapped[str] = mapped_column(String(50), nullable=True)  # plan, task, focus, etc.
 
     # Execution result
-    success = Column(Boolean, nullable=False)
-    execution_time_ms = Column(Integer, nullable=True)  # 执行时间（毫秒）
+    success: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    execution_time_ms: Mapped[int] = mapped_column(Integer, nullable=True)  # 执行时间（毫秒）
 
     # Error tracking
-    error_message = Column(String(500), nullable=True)
-    error_type = Column(String(100), nullable=True)
+    error_message: Mapped[str] = mapped_column(String(500), nullable=True)
+    error_type: Mapped[str] = mapped_column(String(100), nullable=True)
 
     # Context at execution time (for learning)
-    context_snapshot = Column(JSON, nullable=True)  # user_state, task_state, etc.
+    context_snapshot: Mapped[Any] = mapped_column(JSON, nullable=True)  # user_state, task_state, etc.
 
     # Input parameters (for replay/analysis)
-    input_args = Column(JSON, nullable=True)
+    input_args: Mapped[Any] = mapped_column(JSON, nullable=True)
 
     # Output result (for analysis)
-    output_summary = Column(Text, nullable=True)
+    output_summary: Mapped[str] = mapped_column(Text, nullable=True)
 
     # Learning metrics
-    user_satisfaction = Column(Integer, nullable=True)  # 1-5 rating if user provided
-    was_helpful = Column(Boolean, nullable=True)  # Derived from downstream actions
+    user_satisfaction: Mapped[int] = mapped_column(Integer, nullable=True)  # 1-5 rating if user provided
+    was_helpful: Mapped[bool] = mapped_column(Boolean, nullable=True)  # Derived from downstream actions
 
     # Temporal info
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=True)
 
     # Indexes for efficient querying
     __table_args__ = (

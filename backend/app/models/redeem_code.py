@@ -16,7 +16,11 @@ Stage: D-REDEEM
 
 from __future__ import annotations
 
-from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String
+from datetime import datetime
+from typing import Any
+
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import GUID, BaseModel
 
@@ -27,25 +31,25 @@ class RedeemCode(BaseModel):
     __tablename__ = "redeem_codes"
 
     # 哈希唯一键（归一化明文的域分隔 SHA-256，hex 64）
-    code_hash = Column(String(64), unique=True, nullable=False, index=True)
+    code_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
     # 展示用前缀（缺末段，非明文）
-    code_prefix = Column(String(16), nullable=True)
+    code_prefix: Mapped[str] = mapped_column(String(16), nullable=True)
 
     # 权益面：核销成功后授予的档位（值域与 users.entitlement 同约定 'free'|'pro'）
-    tier = Column(String(32), default="pro", nullable=False, server_default="pro")
+    tier: Mapped[str] = mapped_column(String(32), default="pro", nullable=False, server_default="pro")
     # 授予时长（天）；核销叠加语义见服务层
-    duration_days = Column(Integer, nullable=False)
+    duration_days: Mapped[int] = mapped_column(Integer, nullable=False)
     # 核销状态（单用户 1 次：max_uses=1 + used_by/used_at）
-    max_uses = Column(Integer, nullable=False, default=1, server_default="1")
-    used_count = Column(Integer, nullable=False, default=0, server_default="0")
-    used_by = Column(GUID(), ForeignKey("users.id"), nullable=True)
-    used_at = Column(DateTime, nullable=True)
+    max_uses: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    used_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    used_by: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=True)
+    used_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # 审计面
-    created_by = Column(GUID(), ForeignKey("users.id"), nullable=True)
-    batch_id = Column(String(64), nullable=False, index=True)
+    created_by: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=True)
+    batch_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     # 码有效期（NULL = 永不过期）
-    expires_at = Column(DateTime, nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     __table_args__ = (Index("idx_redeem_codes_batch", "batch_id", "created_at"),)
 

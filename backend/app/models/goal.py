@@ -9,10 +9,12 @@ Full Vision audit.
 
 from __future__ import annotations
 
+from datetime import date, datetime
+from typing import Any
+
 from sqlalchemy import (
     JSON,
     Boolean,
-    Column,
     Date,
     DateTime,
     Float,
@@ -20,7 +22,7 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -28,48 +30,47 @@ from app.models.base import GUID, BaseModel
 class Goal(BaseModel):
     __tablename__ = "goals"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
-    title = Column(String(255), nullable=False)
-    goal_type = Column(
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    goal_type: Mapped[str] = mapped_column(
         String(64), nullable=False, default="general",
         comment="exam | project | job_search | fitness | startup | general",
     )
-    description = Column(Text, nullable=True)
+    description: Mapped[str] = mapped_column(Text, nullable=True)
 
-    status = Column(
+    status: Mapped[str] = mapped_column(
         String(32), nullable=False, default="active",
         comment="draft | active | paused | completed | archived | cancelled",
     )
 
     # Deadline and progress
-    target_date = Column(Date, nullable=True)
-    mastery = Column(Float, default=0.0, comment="0-1 mastery level")
-    progress = Column(Float, default=0.0, comment="0-1 overall progress")
-    priority = Column(
+    target_date: Mapped[date] = mapped_column(Date, nullable=True)
+    mastery: Mapped[float] = mapped_column(Float, default=0.0, comment="0-1 mastery level", nullable=True)
+    progress: Mapped[float] = mapped_column(Float, default=0.0, comment="0-1 overall progress", nullable=True)
+    priority: Mapped[str] = mapped_column(
         String(16), default="normal",
-        comment="critical | high | normal | low",
-    )
-    is_primary = Column(Boolean, default=False)
+        comment="critical | high | normal | low", nullable=True)
+    is_primary: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
 
     # Acceptance criteria — the key missing field (GOAL-004 score 0/5 → 5/5)
-    minimum_acceptance_criteria = Column(
+    minimum_acceptance_criteria: Mapped[Any] = mapped_column(
         JSON, nullable=True,
         comment="List of criteria that must be met for goal completion. "
                 "e.g. [{'metric': 'exam_score', 'threshold': 85, 'unit': 'percent'}]",
     )
 
     # Associations
-    domain_pack_id = Column(String(64), nullable=True)
-    plan_id = Column(GUID(), ForeignKey("plans.id", use_alter=True), nullable=True)
-    source = Column(String(32), nullable=True, comment="exam_sprint | manual | community")
-    source_metadata = Column(JSON, nullable=True)
+    domain_pack_id: Mapped[str] = mapped_column(String(64), nullable=True)
+    plan_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("plans.id", use_alter=True), nullable=True)
+    source: Mapped[str] = mapped_column(String(32), nullable=True, comment="exam_sprint | manual | community")
+    source_metadata: Mapped[Any] = mapped_column(JSON, nullable=True)
 
     # Lifecycle timestamps
-    completed_at = Column(DateTime, nullable=True)
-    archived_at = Column(DateTime, nullable=True)
+    completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    archived_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # Additional metadata
-    metadata_payload = Column("metadata", JSON, nullable=True)
+    metadata_payload: Mapped[Any] = mapped_column("metadata", JSON, nullable=True)
 
     user = relationship("User", backref="goals")
     plan = relationship("Plan", foreign_keys=[plan_id])

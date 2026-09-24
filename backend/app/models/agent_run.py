@@ -28,11 +28,12 @@ X-07 · hybrid steps：``agent_runs.steps``（JSONB，Alembic ``x07_20260921``�
 from __future__ import annotations
 
 import enum
+from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, Column, DateTime, Enum, ForeignKey, Index, Integer, String, Text, text
+from sqlalchemy import JSON, DateTime, Enum, ForeignKey, Index, Integer, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.run_state_machine import TERMINAL_RUN_STATUSES, RunStatus
 from app.core.run_steps import reconcile_step_counters, run_steps_wire
@@ -63,62 +64,62 @@ class AgentRun(BaseModel):
 
     __tablename__ = "agent_runs"
 
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    kind = Column(
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    kind: Mapped[AgentRunKind] = mapped_column(
         Enum(AgentRunKind, values_callable=_enum_values, create_constraint=False, native_enum=False),
         nullable=False,
         default=AgentRunKind.EXECUTION,
     )
 
     # --- AGENT_RUNTIME.md §3 Run contract ---
-    objective = Column(Text, nullable=False)
-    context_refs = Column(JSONBCompat, nullable=False, default=list)  # ["scheme://id", ...]（C-01 对齐）
-    allowed_tools = Column(JSONBCompat, nullable=False, default=list)
-    permissions = Column(JSONBCompat, nullable=False, default=dict)
-    budget = Column(JSONBCompat, nullable=False, default=dict)  # token/cost/time/tool_calls
-    completion_condition = Column(JSONBCompat, nullable=False, default=dict)
-    risk_class = Column(String(16), nullable=True)  # 复用 X-01 词表 low|medium|high|critical
+    objective: Mapped[str] = mapped_column(Text, nullable=False)
+    context_refs: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=list)  # ["scheme://id", ...]（C-01 对齐）
+    allowed_tools: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=list)
+    permissions: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    budget: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)  # token/cost/time/tool_calls
+    completion_condition: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    risk_class: Mapped[str] = mapped_column(String(16), nullable=True)  # 复用 X-01 词表 low|medium|high|critical
 
     # --- 状态机 ---
-    status = Column(
+    status: Mapped[RunStatus] = mapped_column(
         Enum(RunStatus, values_callable=_enum_values, create_constraint=False, native_enum=False),
         nullable=False,
         default=RunStatus.QUEUED,
         index=True,
     )
-    wait_kind = Column(String(16), nullable=True)  # user_step|approval（AWAITING_* 态非空）
-    wait_expires_at = Column(DateTime, nullable=True)
+    wait_kind: Mapped[str] = mapped_column(String(16), nullable=True)  # user_step|approval（AWAITING_* 态非空）
+    wait_expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # --- 关联（跨轨 correlation；intent 轨道 1 活跃 run per intent） ---
-    task_id = Column(GUID(), ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True, index=True)
-    intent_id = Column(GUID(), ForeignKey("execution_intents.id", ondelete="SET NULL"), nullable=True, index=True)
-    session_id = Column(String(64), nullable=True, index=True)
-    trace_id = Column(String(64), nullable=True, index=True)
-    attempt = Column(Integer, nullable=False, default=1)  # 同 intent 的第 N 次尝试（retry 开新 run）
+    task_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True, index=True)
+    intent_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("execution_intents.id", ondelete="SET NULL"), nullable=True, index=True)
+    session_id: Mapped[str] = mapped_column(String(64), nullable=True, index=True)
+    trace_id: Mapped[str] = mapped_column(String(64), nullable=True, index=True)
+    attempt: Mapped[int] = mapped_column(Integer, nullable=False, default=1)  # 同 intent 的第 N 次尝试（retry 开新 run）
 
     # --- 进度（UI 阶段「正在执行 2/4」；App 只读） ---
-    current_stage = Column(String(64), nullable=True)
-    steps_done = Column(Integer, nullable=False, default=0)
-    steps_total = Column(Integer, nullable=True)
+    current_stage: Mapped[str] = mapped_column(String(64), nullable=True)
+    steps_done: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    steps_total: Mapped[int] = mapped_column(Integer, nullable=True)
 
     # --- X-07 · hybrid 步骤计划（owner/完成条件/产物引用/完成戳；契约见
     # app/core/run_steps.py；「awaiting step」从本列 + status 推导） ---
-    steps = Column(JSONBCompat, nullable=False, default=list)
+    steps: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=list)
 
     # --- 终态归因（封闭词表 terminal_reason_vocabulary） ---
-    terminal_reason = Column(String(32), nullable=True)
-    error_category = Column(String(100), nullable=True)
-    error_message = Column(Text, nullable=True)
-    result_ref = Column(JSONBCompat, nullable=True)  # {"scheme": ..., "ref": ...}（结果引用，非结果本体）
+    terminal_reason: Mapped[str] = mapped_column(String(32), nullable=True)
+    error_category: Mapped[str] = mapped_column(String(100), nullable=True)
+    error_message: Mapped[str] = mapped_column(Text, nullable=True)
+    result_ref: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)  # {"scheme": ..., "ref": ...}（结果引用，非结果本体）
 
     # --- 活性（worker restart 恢复判定） ---
-    heartbeat_at = Column(DateTime, nullable=False)  # 创建时置初值；迁移/步进/投影触达时刷新
+    heartbeat_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)  # 创建时置初值；迁移/步进/投影触达时刷新
 
     # --- 幂等创建（重复 run.created 恰一次） ---
-    idempotency_key = Column(String(255), nullable=True)
+    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=True)
 
-    started_at = Column(DateTime, nullable=True)
-    completed_at = Column(DateTime, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     user = relationship("User", backref="agent_runs", foreign_keys=[user_id])
     transitions = relationship(
@@ -212,15 +213,15 @@ class AgentRunTransition(BaseModel):
 
     __tablename__ = "agent_run_transitions"
 
-    run_id = Column(GUID(), ForeignKey("agent_runs.id", ondelete="CASCADE"), nullable=False, index=True)
-    from_status = Column(String(24), nullable=True)  # None = 创建（QUEUED 落库）
-    to_status = Column(String(24), nullable=False)
-    event_name = Column(String(64), nullable=False)  # 同事务写入 outbox 的事件名
-    actor = Column(String(32), nullable=False)  # user|worker|system|recovery|projection
-    idempotency_key = Column(String(255), nullable=True)  # 提供时按 (run_id, key) 唯一
-    reason = Column(String(64), nullable=True)
-    details = Column(JSONBCompat, nullable=True)
-    occurred_at = Column(DateTime, nullable=False)
+    run_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("agent_runs.id", ondelete="CASCADE"), nullable=False, index=True)
+    from_status: Mapped[str] = mapped_column(String(24), nullable=True)  # None = 创建（QUEUED 落库）
+    to_status: Mapped[str] = mapped_column(String(24), nullable=False)
+    event_name: Mapped[str] = mapped_column(String(64), nullable=False)  # 同事务写入 outbox 的事件名
+    actor: Mapped[str] = mapped_column(String(32), nullable=False)  # user|worker|system|recovery|projection
+    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=True)  # 提供时按 (run_id, key) 唯一
+    reason: Mapped[str] = mapped_column(String(64), nullable=True)
+    details: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
     run = relationship("AgentRun", back_populates="transitions")
 

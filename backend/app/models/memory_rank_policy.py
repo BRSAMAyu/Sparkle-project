@@ -1,8 +1,11 @@
 """
 Memory ranking policy model for personalized weights.
 """
-from sqlalchemy import JSON, Column, Index, String
+from typing import Any
+
+from sqlalchemy import JSON, Index, String
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import BaseModel
 
@@ -12,9 +15,9 @@ JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 class MemoryRankPolicy(BaseModel):
     __tablename__ = "memory_rank_policies"
 
-    scope_type = Column(String(20), nullable=False)
-    scope_key = Column(String(120), nullable=True)
-    weights = Column(JSONBCompat, nullable=False, default=dict)
+    scope_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    scope_key: Mapped[str] = mapped_column(String(120), nullable=True)
+    weights: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
 
 
 Index(

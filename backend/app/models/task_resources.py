@@ -5,11 +5,11 @@ Provides structured associations between tasks and learning resources,
 seed content, and knowledge graph nodes.
 """
 import enum
+from typing import Any
 
 from sqlalchemy import (
     JSON,
     Boolean,
-    Column,
     Float,
     ForeignKey,
     Index,
@@ -18,7 +18,7 @@ from sqlalchemy import (
     Text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -40,17 +40,17 @@ class TaskResourceLink(BaseModel):
     """
     __tablename__ = "task_resource_links"
 
-    task_id = Column(GUID(), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
-    resource_type = Column(String(50), nullable=False, index=True)
-    resource_id = Column(GUID(), nullable=True, index=True)
+    task_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
+    resource_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    resource_id: Mapped[Any] = mapped_column(GUID(), nullable=True, index=True)
 
-    title = Column(String(255), nullable=True)
-    url = Column(String(500), nullable=True)
-    summary = Column(Text, nullable=True)
-    resource_metadata = Column("metadata", JSONBCompat, nullable=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=True)
+    url: Mapped[str] = mapped_column(String(500), nullable=True)
+    summary: Mapped[str] = mapped_column(Text, nullable=True)
+    resource_metadata: Mapped[Any] = mapped_column("metadata", JSONBCompat, nullable=True)
 
-    order_index = Column(Integer, default=0, nullable=False)
-    is_primary = Column(Boolean, default=False, nullable=False)
+    order_index: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    is_primary: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     task = relationship("Task", back_populates="resource_links")
 
@@ -64,15 +64,15 @@ class TaskKnowledgeLink(BaseModel):
     """
     __tablename__ = "task_knowledge_links"
 
-    task_id = Column(GUID(), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
-    knowledge_node_id = Column(
+    task_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
+    knowledge_node_id: Mapped[Any] = mapped_column(
         GUID(), ForeignKey("knowledge_nodes.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    relation_type = Column(String(50), nullable=False, default="related")
-    strength = Column(Float, nullable=True)
-    notes = Column(Text, nullable=True)
-    order_index = Column(Integer, default=0, nullable=False)
-    is_primary = Column(Boolean, default=False, nullable=False)
+    relation_type: Mapped[str] = mapped_column(String(50), nullable=False, default="related")
+    strength: Mapped[float] = mapped_column(Float, nullable=True)
+    notes: Mapped[str] = mapped_column(Text, nullable=True)
+    order_index: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    is_primary: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     task = relationship("Task", back_populates="knowledge_links")
     knowledge_node = relationship("KnowledgeNode")

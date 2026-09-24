@@ -8,10 +8,10 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 from loguru import logger
-from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Index, Integer, String, Text, func, select
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Index, Integer, String, Text, func, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.config import settings
 from app.core.email_service import email_service
@@ -49,29 +49,29 @@ DOUBLE_APPROVAL_CATEGORIES = {
 class ReleaseApprovalRequest(BaseModel):
     __tablename__ = "release_approval_requests"
 
-    category = Column(String(64), nullable=False, index=True)
-    object_type = Column(String(64), nullable=False, index=True)
-    object_id = Column(String(128), nullable=False, index=True)
-    title = Column(String(200), nullable=False)
-    description = Column(Text, nullable=True)
-    payload = Column(JSONBCompat, nullable=False, default=dict)
+    category: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    object_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    object_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=True)
+    payload: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
 
-    status = Column(String(32), nullable=False, default=ApprovalStatus.DRAFT.value, index=True)
-    requested_by_id = Column(GUID(), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
-    submitted_at = Column(DateTime, nullable=True, index=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default=ApprovalStatus.DRAFT.value, index=True)
+    requested_by_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    submitted_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True)
 
-    required_approvals = Column(Integer, nullable=False, default=1)
-    approvals = Column(JSONBCompat, nullable=False, default=list)
-    rejections = Column(JSONBCompat, nullable=False, default=list)
-    reviewer_ids = Column(JSONBCompat, nullable=False, default=list)
-    reviewed_at = Column(DateTime, nullable=True)
-    rejection_reason = Column(Text, nullable=True)
+    required_approvals: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    approvals: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=list)
+    rejections: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=list)
+    reviewer_ids: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=list)
+    reviewed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    rejection_reason: Mapped[str] = mapped_column(Text, nullable=True)
 
-    applied_at = Column(DateTime, nullable=True, index=True)
-    applied_by_id = Column(GUID(), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
-    apply_result = Column(JSONBCompat, nullable=True)
-    notification_state = Column(JSONBCompat, nullable=False, default=dict)
-    needs_admin_attention = Column(Boolean, nullable=False, default=False, index=True)
+    applied_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True)
+    applied_by_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    apply_result: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
+    notification_state: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    needs_admin_attention: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
 
     requested_by = relationship("User", foreign_keys=[requested_by_id])
     applied_by = relationship("User", foreign_keys=[applied_by_id])

@@ -3,9 +3,12 @@ Background Task Model
 For tracking async operations like AI generation, data sync, etc.
 """
 import enum
+from datetime import datetime
+from typing import Any
 
-from sqlalchemy import JSON, Column, DateTime, Enum, Float, String, Text
+from sqlalchemy import JSON, DateTime, Enum, Float, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import GUID, BaseModel
 
@@ -34,30 +37,30 @@ class BackgroundTask(BaseModel):
     """Background task model for tracking async operations"""
     __tablename__ = "background_tasks"
 
-    user_id = Column(GUID(), nullable=False, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), nullable=False, index=True)
 
     # Task identification
-    task_type = Column(Enum(BackgroundTaskType), nullable=False)
-    name = Column(String(255), nullable=False)
+    task_type: Mapped[BackgroundTaskType] = mapped_column(Enum(BackgroundTaskType), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
 
     # Status tracking
-    status = Column(Enum(BackgroundTaskStatus), default=BackgroundTaskStatus.PENDING, nullable=False, index=True)
+    status: Mapped[BackgroundTaskStatus] = mapped_column(Enum(BackgroundTaskStatus), default=BackgroundTaskStatus.PENDING, nullable=False, index=True)
 
     # Progress tracking
-    progress = Column(Float, default=0.0)  # 0.0 to 1.0
-    progress_message = Column(Text, nullable=True)
+    progress: Mapped[float] = mapped_column(Float, default=0.0, nullable=True)  # 0.0 to 1.0
+    progress_message: Mapped[str] = mapped_column(Text, nullable=True)
 
     # Result and error data
-    result_data = Column(JSONBCompat, nullable=True)
-    error_message = Column(Text, nullable=True)
+    result_data: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
+    error_message: Mapped[str] = mapped_column(Text, nullable=True)
 
     # Related entity IDs (for linking to tasks, plans, etc.)
-    related_entity_id = Column(GUID(), nullable=True)
-    related_entity_type = Column(String(50), nullable=True)
+    related_entity_id: Mapped[Any] = mapped_column(GUID(), nullable=True)
+    related_entity_type: Mapped[str] = mapped_column(String(50), nullable=True)
 
     # Celery/async task ID for external job tracking
-    external_task_id = Column(String(255), nullable=True, index=True)
-    completed_at = Column(DateTime, nullable=True)
+    external_task_id: Mapped[str] = mapped_column(String(255), nullable=True, index=True)
+    completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     def __repr__(self):
         return f"<BackgroundTask(id={self.id}, type={self.task_type}, status={self.status})>"

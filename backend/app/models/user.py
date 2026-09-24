@@ -22,9 +22,10 @@ class StrEnum(enum.StrEnum):
 
 
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, Float, ForeignKey, Index, Integer, String
-from sqlalchemy.orm import relationship
+from sqlalchemy import JSON, Boolean, DateTime, Enum, Float, ForeignKey, Index, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -56,88 +57,88 @@ class SearchVisibility(StrEnum):
 class User(BaseModel):
     __tablename__ = "users"
 
-    username = Column(String(100), unique=True, nullable=False)
-    email = Column(String(255), unique=True, nullable=False)
-    hashed_password = Column(String(255), nullable=False)
-    password_login_enabled = Column(Boolean, default=True, nullable=False)
-    email_verified = Column(Boolean, default=False, nullable=False)
-    full_name = Column(String(100), nullable=True)
-    nickname = Column(String(100), nullable=True)
-    avatar_url = Column(String(500), nullable=True)
+    username: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    password_login_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    full_name: Mapped[str] = mapped_column(String(100), nullable=True)
+    nickname: Mapped[str] = mapped_column(String(100), nullable=True)
+    avatar_url: Mapped[str] = mapped_column(String(500), nullable=True)
 
     # 头像审核系统
-    avatar_status = Column(Enum(AvatarStatus), default=AvatarStatus.APPROVED, nullable=False)
-    pending_avatar_url = Column(String(500), nullable=True)
+    avatar_status: Mapped[AvatarStatus] = mapped_column(Enum(AvatarStatus), default=AvatarStatus.APPROVED, nullable=False)
+    pending_avatar_url: Mapped[str] = mapped_column(String(500), nullable=True)
 
     # 火花系统
-    flame_level = Column(Integer, default=1, nullable=False)
-    flame_brightness = Column(Float, default=0.5, nullable=False)
+    flame_level: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    flame_brightness: Mapped[float] = mapped_column(Float, default=0.5, nullable=False)
 
     # 🆕 权益分层 (V3-FIX-02 / D17 冻结决策)：独立字段，'free' | 'pro'。
     # 禁止用 flame_level 派生权益 —— 权益唯一判据是本列。
-    entitlement = Column(String(32), default="free", nullable=False, server_default="free")
+    entitlement: Mapped[str] = mapped_column(String(32), default="free", nullable=False, server_default="free")
 
     # 🆕 权益到期时间 (D-REDEEM)：NULL = 永久（存量行/手工授予的既有语义，零变化）。
     # 非空且已过 → 有效判级降为 free（到期降级，宁降不升；判级真源
     # app/core/entitlement.entitlement_effective，网关同语义
     # IsProEntitlementEffective）。兑换码核销是唯一写本列的业务路径。
-    entitlement_expires_at = Column(DateTime, nullable=True)
+    entitlement_expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # 用户偏好
-    depth_preference = Column(Float, default=0.5, nullable=False)
-    curiosity_preference = Column(Float, default=0.5, nullable=False)
+    depth_preference: Mapped[float] = mapped_column(Float, default=0.5, nullable=False)
+    curiosity_preference: Mapped[float] = mapped_column(Float, default=0.5, nullable=False)
 
     # 🆕 碎片时间/日程偏好 {"commute_time": ["08:00", "09:00"], "lunch_break": ...}
-    schedule_preferences = Column(JSON, nullable=True)  # Deprecated: Use PushPreference instead
+    schedule_preferences: Mapped[Any] = mapped_column(JSON, nullable=True)  # Deprecated: Use PushPreference instead
 
     # 🆕 天气映射偏好 (v2.3)
-    weather_preferences = Column(JSON, nullable=True)
+    weather_preferences: Mapped[Any] = mapped_column(JSON, nullable=True)
 
     # 状态
-    is_active = Column(Boolean, default=True, nullable=False)
-    is_superuser = Column(Boolean, default=False, nullable=False)
-    status = Column(Enum(UserStatus), default=UserStatus.OFFLINE, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_superuser: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    status: Mapped[UserStatus] = mapped_column(Enum(UserStatus), default=UserStatus.OFFLINE, nullable=False)
 
     # 🆕 社交登录 ID (encrypted at rest via pii_encryption_listeners)
-    google_id = Column(String(512), unique=True, nullable=True, index=True)
-    google_id_hash = Column(String(64), nullable=True, index=True)
-    apple_id = Column(String(512), unique=True, nullable=True, index=True)
-    apple_id_hash = Column(String(64), nullable=True, index=True)
-    wechat_unionid = Column(String(512), unique=True, nullable=True, index=True)
-    wechat_unionid_hash = Column(String(64), nullable=True, index=True)
+    google_id: Mapped[str] = mapped_column(String(512), unique=True, nullable=True, index=True)
+    google_id_hash: Mapped[str] = mapped_column(String(64), nullable=True, index=True)
+    apple_id: Mapped[str] = mapped_column(String(512), unique=True, nullable=True, index=True)
+    apple_id_hash: Mapped[str] = mapped_column(String(64), nullable=True, index=True)
+    wechat_unionid: Mapped[str] = mapped_column(String(512), unique=True, nullable=True, index=True)
+    wechat_unionid_hash: Mapped[str] = mapped_column(String(64), nullable=True, index=True)
 
     # Hash columns for deterministic lookup (P1-1: field-level encryption)
-    username_hash = Column(String(64), nullable=True, index=True)
-    email_hash = Column(String(64), nullable=True, index=True)
+    username_hash: Mapped[str] = mapped_column(String(64), nullable=True, index=True)
+    email_hash: Mapped[str] = mapped_column(String(64), nullable=True, index=True)
 
     # 🆕 注册来源 (analytics)
-    registration_source = Column(String(50), default="email", nullable=False) # email, google, apple, wechat
-    last_login_at = Column(DateTime, nullable=True)
-    token_revoked_before = Column(DateTime, nullable=True)
-    agreed_to_tos_at = Column(DateTime, nullable=True)
-    agreed_to_privacy_at = Column(DateTime, nullable=True)
-    tos_version = Column(String(50), nullable=True)
-    privacy_version = Column(String(50), nullable=True)
-    agreed_locale = Column(String(20), nullable=True)
+    registration_source: Mapped[str] = mapped_column(String(50), default="email", nullable=False) # email, google, apple, wechat
+    last_login_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    token_revoked_before: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    agreed_to_tos_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    agreed_to_privacy_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    tos_version: Mapped[str] = mapped_column(String(50), nullable=True)
+    privacy_version: Mapped[str] = mapped_column(String(50), nullable=True)
+    agreed_locale: Mapped[str] = mapped_column(String(20), nullable=True)
 
     # 🆕 年龄校验 (V3.1)
-    is_minor = Column(Boolean, nullable=True)  # None = unknown, True/False = verified
-    age_verified = Column(Boolean, default=False, nullable=False)
-    age_verification_source = Column(String(50), nullable=True)  # registration, parent_consent, device_mode
-    age_verified_at = Column(DateTime, nullable=True)
+    is_minor: Mapped[bool] = mapped_column(Boolean, nullable=True)  # None = unknown, True/False = verified
+    age_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    age_verification_source: Mapped[str] = mapped_column(String(50), nullable=True)  # registration, parent_consent, device_mode
+    age_verified_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # 🆕 光子积分系统 (V3.2)
-    photon_balance = Column(Integer, default=0, nullable=False)  # 光子积分余额
-    photon_updated_at = Column(DateTime, nullable=True)  # 光子积分最后更新时间
+    photon_balance: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # 光子积分余额
+    photon_updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)  # 光子积分最后更新时间
 
     # 🆕 商城装备系统 (V3.2)
-    equipped_skin = Column(String(50), nullable=True, index=True)  # 当前装备的皮肤ID（按来源命名空间解释）
-    equipped_skin_source = Column(String(20), nullable=True, index=True)  # achievement | shop
-    equipped_title = Column(String(50), nullable=True, index=True)  # 当前装备的称号ID（按来源命名空间解释）
-    equipped_title_source = Column(String(20), nullable=True, index=True)  # achievement | shop
+    equipped_skin: Mapped[str] = mapped_column(String(50), nullable=True, index=True)  # 当前装备的皮肤ID（按来源命名空间解释）
+    equipped_skin_source: Mapped[str] = mapped_column(String(20), nullable=True, index=True)  # achievement | shop
+    equipped_title: Mapped[str] = mapped_column(String(50), nullable=True, index=True)  # 当前装备的称号ID（按来源命名空间解释）
+    equipped_title_source: Mapped[str] = mapped_column(String(20), nullable=True, index=True)  # achievement | shop
 
     # 🆕 社群隐私设置 (V3.3)
-    searchable_by = Column(
+    searchable_by: Mapped[SearchVisibility] = mapped_column(
         Enum(
             SearchVisibility,
             name="searchvisibility",
@@ -337,22 +338,22 @@ class PushPreference(BaseModel):
     """
     __tablename__ = "push_preferences"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), unique=True, nullable=False, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), unique=True, nullable=False, index=True)
 
     # 活跃时间段 [{"start": "08:00", "end": "09:00"}]
-    active_slots = Column(JSON, nullable=True)
+    active_slots: Mapped[Any] = mapped_column(JSON, nullable=True)
 
     # 时区
-    timezone = Column(String(50), default="Asia/Shanghai", nullable=False)
+    timezone: Mapped[str] = mapped_column(String(50), default="Asia/Shanghai", nullable=False)
 
     # 开关和配置
-    enable_curiosity = Column(Boolean, default=True, nullable=False)
-    persona_type = Column(String(50), default="coach", nullable=False) # coach, anime
+    enable_curiosity: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    persona_type: Mapped[str] = mapped_column(String(50), default="coach", nullable=False) # coach, anime
 
     # 频控
-    daily_cap = Column(Integer, default=5, nullable=False)
-    last_push_time = Column(DateTime, nullable=True)
-    consecutive_ignores = Column(Integer, default=0, nullable=False)
+    daily_cap: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
+    last_push_time: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    consecutive_ignores: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # 关系
     user = relationship("User", back_populates="push_preference")
@@ -368,28 +369,28 @@ class UserDevice(BaseModel):
     """
     __tablename__ = "user_devices"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
 
     # 设备标识
-    device_id = Column(String(255), nullable=False, index=True)  # 设备唯一标识
-    platform = Column(String(50), nullable=False)  # ios, android, web
+    device_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)  # 设备唯一标识
+    platform: Mapped[str] = mapped_column(String(50), nullable=False)  # ios, android, web
 
     # 推送令牌 (encrypted at rest via pii_encryption_listeners)
-    push_token = Column(String(1024), nullable=False, index=True)  # FCM/APNs token
-    push_token_hash = Column(String(64), nullable=True, index=True)
-    token_type = Column(String(50), nullable=False)  # fcm, apns, huawei
+    push_token: Mapped[str] = mapped_column(String(1024), nullable=False, index=True)  # FCM/APNs token
+    push_token_hash: Mapped[str] = mapped_column(String(64), nullable=True, index=True)
+    token_type: Mapped[str] = mapped_column(String(50), nullable=False)  # fcm, apns, huawei
 
     # 设备信息
-    device_name = Column(String(100), nullable=True)  # iPhone 14 Pro, Xiaomi 13, etc.
-    app_version = Column(String(50), nullable=True)  # 应用版本
-    os_version = Column(String(50), nullable=True)  # iOS 17.0, Android 14, etc.
+    device_name: Mapped[str] = mapped_column(String(100), nullable=True)  # iPhone 14 Pro, Xiaomi 13, etc.
+    app_version: Mapped[str] = mapped_column(String(50), nullable=True)  # 应用版本
+    os_version: Mapped[str] = mapped_column(String(50), nullable=True)  # iOS 17.0, Android 14, etc.
 
     # 状态
-    is_active = Column(Boolean, default=True, nullable=False)  # 令牌是否有效
-    last_used_at = Column(DateTime, nullable=True)  # 最后使用时间
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)  # 令牌是否有效
+    last_used_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)  # 最后使用时间
 
     # 元数据 (使用 device_metadata 避免 SQLAlchemy 保留字冲突)
-    device_metadata = Column(JSON, nullable=True)  # 额外设备信息
+    device_metadata: Mapped[Any] = mapped_column(JSON, nullable=True)  # 额外设备信息
 
     def __repr__(self):
         return f"<UserDevice(user_id={self.user_id}, platform={self.platform}, is_active={self.is_active})>"
@@ -399,12 +400,12 @@ class LoginAttempt(BaseModel):
     """登录尝试记录表"""
     __tablename__ = "login_attempts"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=True, index=True)
-    username = Column(String(100), nullable=False, index=True)  # 尝试登录的用户名
-    ip_address = Column(String(45), nullable=False, index=True)  # 支持IPv6
-    user_agent = Column(String(500), nullable=True)  # 用户代理
-    success = Column(Boolean, nullable=False, index=True)  # 是否登录成功
-    attempted_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=True, index=True)
+    username: Mapped[str] = mapped_column(String(100), nullable=False, index=True)  # 尝试登录的用户名
+    ip_address: Mapped[str] = mapped_column(String(45), nullable=False, index=True)  # 支持IPv6
+    user_agent: Mapped[str] = mapped_column(String(500), nullable=True)  # 用户代理
+    success: Mapped[bool] = mapped_column(Boolean, nullable=False, index=True)  # 是否登录成功
+    attempted_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow, index=True)
 
     # 关系
     user = relationship("User", back_populates="login_attempts")

@@ -5,10 +5,12 @@ ExecutionIntent - 面向外部执行器的结构化任务协议
 from __future__ import annotations
 
 import enum
+from datetime import datetime
+from typing import Any
 
-from sqlalchemy import JSON, Column, DateTime, Enum, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import JSON, DateTime, Enum, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -74,11 +76,11 @@ class ExecutionIntent(BaseModel):
 
     __tablename__ = "execution_intents"
 
-    plan_id = Column(GUID(), ForeignKey("plans.id", ondelete="SET NULL"), nullable=True, index=True)
-    task_id = Column(GUID(), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    plan_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("plans.id", ondelete="SET NULL"), nullable=True, index=True)
+    task_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 
-    execution_mode = Column(
+    execution_mode: Mapped[ExecutionMode] = mapped_column(
         Enum(
             ExecutionMode,
             values_callable=_enum_values,
@@ -88,7 +90,7 @@ class ExecutionIntent(BaseModel):
         nullable=False,
         default=ExecutionMode.HUMAN,
     )
-    executor = Column(
+    executor: Mapped[ExecutorType] = mapped_column(
         Enum(
             ExecutorType,
             values_callable=_enum_values,
@@ -99,9 +101,9 @@ class ExecutionIntent(BaseModel):
         default=ExecutorType.MANUAL,
     )
 
-    goal = Column(Text, nullable=False)
-    instructions = Column(JSONBCompat, nullable=False, default=list)
-    target_env = Column(
+    goal: Mapped[str] = mapped_column(Text, nullable=False)
+    instructions: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=list)
+    target_env: Mapped[ExecutionTargetEnv] = mapped_column(
         Enum(
             ExecutionTargetEnv,
             values_callable=_enum_values,
@@ -110,12 +112,12 @@ class ExecutionIntent(BaseModel):
         ),
         nullable=True,
     )
-    policy = Column(JSONBCompat, nullable=False, default=dict)
-    success_criteria = Column(JSONBCompat, nullable=False, default=dict)
-    result_contract = Column(JSONBCompat, nullable=False, default=dict)
-    timeout_seconds = Column(Integer, nullable=False, default=300)
+    policy: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    success_criteria: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    result_contract: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    timeout_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=300)
 
-    status = Column(
+    status: Mapped[ExecutionIntentStatus] = mapped_column(
         Enum(
             ExecutionIntentStatus,
             values_callable=_enum_values,
@@ -126,7 +128,7 @@ class ExecutionIntent(BaseModel):
         default=ExecutionIntentStatus.DRAFT,
         index=True,
     )
-    trust_level = Column(
+    trust_level: Mapped[TrustLevel] = mapped_column(
         Enum(
             TrustLevel,
             values_callable=_enum_values,
@@ -137,13 +139,13 @@ class ExecutionIntent(BaseModel):
         default=TrustLevel.RAW,
     )
 
-    external_run_id = Column(String(255), nullable=True, index=True)
-    idempotency_key = Column(String(255), nullable=False, unique=True)
-    error_category = Column(String(100), nullable=True)
-    error_message = Column(Text, nullable=True)
+    external_run_id: Mapped[str] = mapped_column(String(255), nullable=True, index=True)
+    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    error_category: Mapped[str] = mapped_column(String(100), nullable=True)
+    error_message: Mapped[str] = mapped_column(Text, nullable=True)
 
-    dispatched_at = Column(DateTime, nullable=True)
-    completed_at = Column(DateTime, nullable=True)
+    dispatched_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     task = relationship("Task", backref="execution_intents", foreign_keys=[task_id])
     plan = relationship("Plan", backref="execution_intents", foreign_keys=[plan_id])

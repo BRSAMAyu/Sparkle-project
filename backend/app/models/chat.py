@@ -6,9 +6,10 @@ ChatMessage Model - 用户与AI的对话记录
 import enum
 import uuid
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, Float, ForeignKey, Index, Integer, String, Text
-from sqlalchemy.orm import relationship
+from sqlalchemy import JSON, Boolean, DateTime, Enum, Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -44,30 +45,30 @@ class ChatMessage(BaseModel):
 
     # Partitioning Support: Primary Key must include partition key
     # Note: We override the fields inherited from BaseModel to include primary_key=True
-    id = Column(GUID(), primary_key=True, default=uuid.uuid4, nullable=False)
-    created_at = Column(DateTime, primary_key=True, default=datetime.utcnow, nullable=False)
+    id: Mapped[Any] = mapped_column(GUID(), primary_key=True, default=uuid.uuid4, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, primary_key=True, default=datetime.utcnow, nullable=False)
 
     # 关联关系
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
-    task_id = Column(GUID(), ForeignKey("tasks.id"), nullable=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    task_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("tasks.id"), nullable=True)
 
     # 会话信息
-    session_id = Column(GUID(), nullable=False, index=True, default=uuid.uuid4)
+    session_id: Mapped[Any] = mapped_column(GUID(), nullable=False, index=True, default=uuid.uuid4)
     # 🆕 v2.1: 客户端生成的消息 ID (用于幂等性)
     # Note: message_id unique constraint was moved to composite (message_id, created_at) in partitioning
-    message_id = Column(String(128), nullable=True)
+    message_id: Mapped[str] = mapped_column(String(128), nullable=True)
 
     # 消息内容
-    role = Column(Enum(MessageRole), nullable=False)
-    content = Column(Text, nullable=False)
+    role: Mapped[MessageRole] = mapped_column(Enum(MessageRole), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
 
     # AI相关信息
-    actions = Column(JSON, nullable=True)  # AI执行的动作列表
+    actions: Mapped[Any] = mapped_column(JSON, nullable=True)  # AI执行的动作列表
     # 🆕 v2.1: 解析降级标记
-    parse_degraded = Column(Boolean, default=False)
+    parse_degraded: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
 
-    tokens_used = Column(Integer, nullable=True)
-    model_name = Column(String(100), nullable=True)
+    tokens_used: Mapped[int] = mapped_column(Integer, nullable=True)
+    model_name: Mapped[str] = mapped_column(String(100), nullable=True)
 
     # 关系定义
     user = relationship("User", back_populates="chat_messages")
@@ -86,10 +87,10 @@ class ChatSession(BaseModel):
 
     __tablename__ = "chat_sessions"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
-    title = Column(String(200), nullable=True)
-    is_active = Column(Boolean, default=True, nullable=False)
-    last_message_at = Column(DateTime, nullable=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    last_message_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     user = relationship("User", back_populates="chat_sessions")
 
@@ -116,18 +117,18 @@ class TokenUsage(BaseModel):
 
     __tablename__ = "token_usage"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
-    session_id = Column(String(100), nullable=False, index=True)
-    request_id = Column(String(100), nullable=False, unique=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    session_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    request_id: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
 
-    prompt_tokens = Column(Integer, nullable=False, default=0)
-    completion_tokens = Column(Integer, nullable=False, default=0)
-    total_tokens = Column(Integer, nullable=False, default=0)
+    prompt_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    completion_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    total_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    model = Column(String(100), nullable=False, default="gpt-4")
-    model_tier = Column(String(40), nullable=True)
-    ai_reasoning_mode = Column(String(16), nullable=False, default="balanced")
-    cost = Column(Float, nullable=True)  # 估算成本（美元）
+    model: Mapped[str] = mapped_column(String(100), nullable=False, default="gpt-4")
+    model_tier: Mapped[str] = mapped_column(String(40), nullable=True)
+    ai_reasoning_mode: Mapped[str] = mapped_column(String(16), nullable=False, default="balanced")
+    cost: Mapped[float] = mapped_column(Float, nullable=True)  # 估算成本（美元）
 
     # 关系
     user = relationship("User", back_populates="token_usage")

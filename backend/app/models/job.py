@@ -3,9 +3,11 @@
 Job Model - 用于处理耗时的后台任务
 """
 import enum
+from datetime import datetime
+from typing import Any
 
-from sqlalchemy import JSON, Column, DateTime, ForeignKey, Index, Integer, String, Text
-from sqlalchemy.orm import relationship
+from sqlalchemy import JSON, DateTime, ForeignKey, Index, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -42,21 +44,21 @@ class Job(BaseModel):
     """
     __tablename__ = "jobs"
 
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    type = Column(String(50), nullable=False)
-    status = Column(String(20), nullable=False, default=JobStatus.PENDING)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    type: Mapped[str] = mapped_column(String(50), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default=JobStatus.PENDING)
 
-    params = Column(JSON, default={}, nullable=True)
-    result = Column(JSON, nullable=True)
-    error_message = Column(Text, nullable=True)
+    params: Mapped[Any] = mapped_column(JSON, default={}, nullable=True)
+    result: Mapped[Any] = mapped_column(JSON, nullable=True)
+    error_message: Mapped[str] = mapped_column(Text, nullable=True)
 
-    progress = Column(Integer, default=0)
+    progress: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
 
-    started_at = Column(DateTime(timezone=True), nullable=True)
-    completed_at = Column(DateTime(timezone=True), nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # 🆕 v2.1: 超时时间
-    timeout_at = Column(DateTime(timezone=True), nullable=True)
+    timeout_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # 关系
     user = relationship("User", backref="jobs")

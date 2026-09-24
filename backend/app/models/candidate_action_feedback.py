@@ -5,10 +5,11 @@ Tracks user feedback on predicted candidate actions for learning loop.
 Enables daily analysis to calibrate signal thresholds and improve predictions.
 """
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, String
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, Base
 
@@ -28,17 +29,17 @@ class CandidateActionFeedback(Base):
     """
     __tablename__ = "candidate_action_feedback"
 
-    id = Column(GUID, primary_key=True)
-    user_id = Column(GUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    candidate_id = Column(String(64), nullable=False)  # "ca_timestamp"
-    action_type = Column(String(32), nullable=False)  # "break", "review", "clarify", "plan_split"
-    feedback_type = Column(String(16), nullable=False)  # "accept", "ignore", "dismiss"
-    executed = Column(Boolean, nullable=False, default=False)  # Was action actually executed
-    completion_result = Column(JSONBCompat, nullable=True)  # Result of executed action (if any)
-    context_snapshot = Column(JSONBCompat, nullable=False)  # ContextEnvelope at time of feedback
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
-    deleted_at = Column(DateTime, nullable=True)
+    id: Mapped[Any] = mapped_column(GUID, primary_key=True)
+    user_id: Mapped[Any] = mapped_column(GUID, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    candidate_id: Mapped[str] = mapped_column(String(64), nullable=False)  # "ca_timestamp"
+    action_type: Mapped[str] = mapped_column(String(32), nullable=False)  # "break", "review", "clarify", "plan_split"
+    feedback_type: Mapped[str] = mapped_column(String(16), nullable=False)  # "accept", "ignore", "dismiss"
+    executed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)  # Was action actually executed
+    completion_result: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)  # Result of executed action (if any)
+    context_snapshot: Mapped[Any] = mapped_column(JSONBCompat, nullable=False)  # ContextEnvelope at time of feedback
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # Relationships
     user = relationship("User", back_populates="candidate_feedbacks")

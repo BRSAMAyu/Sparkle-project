@@ -4,9 +4,12 @@ ExecutionRecord - 外部执行器原始结果记录
 
 from __future__ import annotations
 
-from sqlalchemy import JSON, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text
+from datetime import datetime
+from typing import Any
+
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -18,38 +21,38 @@ class ExecutionRecord(BaseModel):
 
     __tablename__ = "execution_records"
 
-    execution_intent_id = Column(
+    execution_intent_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("execution_intents.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
         unique=True,
     )
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    task_id = Column(GUID(), ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    task_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True, index=True)
 
-    executor_type = Column(String(50), nullable=False, default="openclaw")
-    external_run_id = Column(String(255), nullable=True)
+    executor_type: Mapped[str] = mapped_column(String(50), nullable=False, default="openclaw")
+    external_run_id: Mapped[str] = mapped_column(String(255), nullable=True)
 
-    raw_response = Column(JSONBCompat, nullable=False, default=dict)
-    parsed_output = Column(JSONBCompat, nullable=True)
-    artifacts = Column(JSONBCompat, nullable=False, default=list)
+    raw_response: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    parsed_output: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
+    artifacts: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=list)
 
-    trust_level = Column(String(20), nullable=False, default="raw")
-    validation_passed = Column(Integer, nullable=True)
-    validation_total = Column(Integer, nullable=True)
-    quality_score = Column(Float, nullable=True)
+    trust_level: Mapped[str] = mapped_column(String(20), nullable=False, default="raw")
+    validation_passed: Mapped[int] = mapped_column(Integer, nullable=True)
+    validation_total: Mapped[int] = mapped_column(Integer, nullable=True)
+    quality_score: Mapped[float] = mapped_column(Float, nullable=True)
 
-    duration_ms = Column(Integer, nullable=True)
-    token_usage = Column(JSONBCompat, nullable=True)
-    tool_calls_count = Column(Integer, nullable=True, default=0)
-    approval_requested = Column(Integer, nullable=True, default=0)
+    duration_ms: Mapped[int] = mapped_column(Integer, nullable=True)
+    token_usage: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
+    tool_calls_count: Mapped[int] = mapped_column(Integer, nullable=True, default=0)
+    approval_requested: Mapped[int] = mapped_column(Integer, nullable=True, default=0)
 
-    error_category = Column(String(100), nullable=True)
-    error_message = Column(Text, nullable=True)
+    error_category: Mapped[str] = mapped_column(String(100), nullable=True)
+    error_message: Mapped[str] = mapped_column(Text, nullable=True)
 
-    execution_started_at = Column(DateTime, nullable=True)
-    execution_completed_at = Column(DateTime, nullable=True)
+    execution_started_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    execution_completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     execution_intent = relationship("ExecutionIntent", back_populates="execution_record", uselist=False)
     user = relationship("User", backref="execution_records")

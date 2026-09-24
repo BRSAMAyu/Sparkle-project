@@ -4,11 +4,12 @@ Plan Model - 冲刺计划和成长计划
 """
 
 import enum
+from datetime import date, datetime
+from typing import Any
 
 from sqlalchemy import (
     JSON,
     Boolean,
-    Column,
     Date,
     DateTime,
     Enum,
@@ -21,7 +22,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -90,16 +91,16 @@ class Plan(BaseModel):
     __tablename__ = "plans"
 
     # 关联关系
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
-    goal_id = Column(GUID(), ForeignKey("goals.id"), nullable=True, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    goal_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("goals.id"), nullable=True, index=True)
 
     # 计划基本信息
-    name = Column(String(255), nullable=False)
-    type = Column(Enum(PlanType), nullable=False)
-    description = Column(Text, nullable=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    type: Mapped[PlanType] = mapped_column(Enum(PlanType), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=True)
 
     # 计划阶段
-    plan_stage = Column(
+    plan_stage: Mapped[PlanStage] = mapped_column(
         Enum(PlanStage, values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
         default=PlanStage.DAILY,
@@ -107,38 +108,38 @@ class Plan(BaseModel):
     )
 
     # 时间相关
-    target_date = Column(Date, nullable=True)  # 冲刺计划的目标日期
-    daily_available_minutes = Column(Integer, default=60, nullable=False)
-    total_estimated_hours = Column(Float, nullable=True)
+    target_date: Mapped[date] = mapped_column(Date, nullable=True)  # 冲刺计划的目标日期
+    daily_available_minutes: Mapped[int] = mapped_column(Integer, default=60, nullable=False)
+    total_estimated_hours: Mapped[float] = mapped_column(Float, nullable=True)
 
     # 学科/课程
-    subject = Column(String(100), nullable=True)
+    subject: Mapped[str] = mapped_column(String(100), nullable=True)
 
     # 进度跟踪
-    mastery_level = Column(Float, default=0.0, nullable=False)  # 范围 0-1
-    progress = Column(Float, default=0.0, nullable=False)  # 进度百分比 0-1
+    mastery_level: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)  # 范围 0-1
+    progress: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)  # 进度百分比 0-1
 
     # 状态
-    is_active = Column(Boolean, default=True, nullable=False, index=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
 
     # 人工确认（CP-01）：用户对计划草案「确认生效」的落点。
     # NULL=待确认（草稿态），非 NULL=已确认（生效态）；幂等语义见
     # PlanService.confirm_plan——重复确认保留首次时间戳。
     # naive UTC DateTime，与 BaseModel/deleted_at 的时间列惯例一致。
-    confirmed_at = Column(DateTime, nullable=True, default=None)
+    confirmed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, default=None)
 
     # 优先级和主计划 (P0: 并行计划限制)
-    priority = Column(
+    priority: Mapped[PlanPriority] = mapped_column(
         Enum(PlanPriority, values_callable=lambda obj: [e.value for e in obj]),
         default=PlanPriority.NORMAL,
         nullable=False,
         index=True,
     )
-    is_primary = Column(Boolean, default=False, nullable=False, index=True)
+    is_primary: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
 
     # 来源标记 (Phase 4: 学习路径进度追踪)
-    source = Column(String(32), nullable=True, index=True)
-    source_metadata = Column(JSONBCompat, nullable=True)
+    source: Mapped[str] = mapped_column(String(32), nullable=True, index=True)
+    source_metadata: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
 
     # 关系定义
     user = relationship("User", back_populates="plans")

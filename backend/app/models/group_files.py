@@ -3,9 +3,10 @@ Group file sharing models
 群组文件共享模型
 """
 from enum import StrEnum
+from typing import Any
 
-from sqlalchemy import JSON, Boolean, Column, Enum, Float, ForeignKey, Index, Integer, String, UniqueConstraint
-from sqlalchemy.orm import relationship
+from sqlalchemy import JSON, Boolean, Enum, Float, ForeignKey, Index, Integer, String, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 from app.models.community import GroupRole
@@ -25,23 +26,23 @@ class GroupFile(BaseModel):
     """
     __tablename__ = "group_files"
 
-    group_id = Column(GUID(), ForeignKey("groups.id", ondelete="CASCADE"), nullable=False, index=True)
-    file_id = Column(GUID(), ForeignKey("stored_files.id", ondelete="CASCADE"), nullable=False, index=True)
-    shared_by_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    group_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("groups.id", ondelete="CASCADE"), nullable=False, index=True)
+    file_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("stored_files.id", ondelete="CASCADE"), nullable=False, index=True)
+    shared_by_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
 
-    category = Column(String(64), nullable=True)
-    description = Column(String(500), nullable=True)
-    tags = Column(JSON, default=list, nullable=False)
-    trust_level = Column(Enum(GroupFileTrustLevel), default=GroupFileTrustLevel.MEMBER, nullable=False, index=True)
-    is_knowledge_base = Column(Boolean, default=False, nullable=False, index=True)
-    download_count = Column(Integer, default=0, nullable=False)
-    citation_count = Column(Integer, default=0, nullable=False)
-    rating_count = Column(Integer, default=0, nullable=False)
-    rating_total = Column(Float, default=0.0, nullable=False)
+    category: Mapped[str] = mapped_column(String(64), nullable=True)
+    description: Mapped[str] = mapped_column(String(500), nullable=True)
+    tags: Mapped[Any] = mapped_column(JSON, default=list, nullable=False)
+    trust_level: Mapped[GroupFileTrustLevel] = mapped_column(Enum(GroupFileTrustLevel), default=GroupFileTrustLevel.MEMBER, nullable=False, index=True)
+    is_knowledge_base: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
+    download_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    citation_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    rating_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    rating_total: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
 
-    view_role = Column(Enum(GroupRole), default=GroupRole.MEMBER, nullable=False)
-    download_role = Column(Enum(GroupRole), default=GroupRole.MEMBER, nullable=False)
-    manage_role = Column(Enum(GroupRole), default=GroupRole.ADMIN, nullable=False)
+    view_role: Mapped[GroupRole] = mapped_column(Enum(GroupRole), default=GroupRole.MEMBER, nullable=False)
+    download_role: Mapped[GroupRole] = mapped_column(Enum(GroupRole), default=GroupRole.MEMBER, nullable=False)
+    manage_role: Mapped[GroupRole] = mapped_column(Enum(GroupRole), default=GroupRole.ADMIN, nullable=False)
 
     group = relationship("Group", back_populates="files")
     file = relationship("StoredFile", back_populates="group_links")

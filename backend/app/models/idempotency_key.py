@@ -2,8 +2,11 @@
 幂等性键模型
 IdempotencyKey Model - 用于防止重复请求处理
 """
-from sqlalchemy import JSON, Column, DateTime, ForeignKey, Index, String
-from sqlalchemy.orm import relationship
+from datetime import datetime
+from typing import Any
+
+from sqlalchemy import JSON, DateTime, ForeignKey, Index, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
 from app.db.session import Base
@@ -17,20 +20,20 @@ class IdempotencyKey(Base):
     """
     __tablename__ = "idempotency_keys"
 
-    key = Column(String(255), primary_key=True)
-    user_id = Column(
+    key: Mapped[str] = mapped_column(String(255), primary_key=True)
+    user_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True
     )
-    endpoint = Column(String(128), nullable=False, default="")
-    response_hash = Column(String(64), nullable=False, default="")
+    endpoint: Mapped[str] = mapped_column(String(128), nullable=False, default="")
+    response_hash: Mapped[str] = mapped_column(String(64), nullable=False, default="")
 
-    response = Column(JSON, nullable=False)
+    response: Mapped[Any] = mapped_column(JSON, nullable=False)
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    expires_at = Column(DateTime(timezone=True), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
 
     # 关系
     user = relationship("User")

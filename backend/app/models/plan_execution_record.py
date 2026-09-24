@@ -3,10 +3,12 @@ PlanExecutionRecord - 方案执行记录模型
 
 记录方案执行后的验证结果，用于反馈学习和分析
 """
-from sqlalchemy import JSON, Boolean, Column, Float, ForeignKey, Index, Integer, String, Text
+from typing import Any
+
+from sqlalchemy import JSON, Boolean, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy import text as sa_text
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -40,13 +42,13 @@ class PlanExecutionRecord(BaseModel):
     __tablename__ = "plan_execution_records"
 
     # 外键关联
-    plan_id = Column(
+    plan_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("plans.id", ondelete="CASCADE"),
         nullable=False,
         index=True
     )
-    user_id = Column(
+    user_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
@@ -54,34 +56,34 @@ class PlanExecutionRecord(BaseModel):
     )
 
     # 验证结果
-    validation_status = Column(
+    validation_status: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
         index=True
     )  # passed, failed, partial
-    quality_score = Column(Float, default=0.0)  # 0-1
+    quality_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=True)  # 0-1
 
     # 成功标准检查结果
-    criteria_results = Column(JSONBCompat, default=dict)
+    criteria_results: Mapped[Any] = mapped_column(JSONBCompat, default=dict, nullable=True)
 
     # 工具执行统计
-    total_tools = Column(Integer, default=0)
-    successful_tools = Column(Integer, default=0)
-    failed_tools = Column(Integer, default=0)
+    total_tools: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
+    successful_tools: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
+    failed_tools: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
 
     # 问题列表
-    issues = Column(JSONBCompat, default=list)
+    issues: Mapped[Any] = mapped_column(JSONBCompat, default=list, nullable=True)
 
     # 用户反馈 (后续收集)
-    user_satisfaction = Column(Integer, nullable=True)  # 1-5
-    user_feedback = Column(Text, nullable=True)
+    user_satisfaction: Mapped[int] = mapped_column(Integer, nullable=True)  # 1-5
+    user_feedback: Mapped[str] = mapped_column(Text, nullable=True)
 
     # 学习标记
-    applied_to_learning = Column(Boolean, default=False)
+    applied_to_learning: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
 
     # C2 (sysrev round2): 关联的执行意图——P2-3 条件占位之上的第二层防线，
     # 配合部分唯一索引在 DB 级保证一个 intent 至多一条执行记录
-    execution_intent_id = Column(
+    execution_intent_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("execution_intents.id", ondelete="SET NULL"),
         nullable=True,

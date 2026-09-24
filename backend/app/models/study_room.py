@@ -20,7 +20,11 @@ ROOM-PRESENCE 修订：在场判定 = 开放记录 **且** last_heartbeat_at 在
 
 from __future__ import annotations
 
-from sqlalchemy import Column, DateTime, ForeignKey, Index, text
+from datetime import datetime
+from typing import Any
+
+from sqlalchemy import DateTime, ForeignKey, Index, text
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import GUID, BaseModel
 
@@ -36,12 +40,12 @@ class StudyRoomSession(BaseModel):
 
     __tablename__ = "study_room_sessions"
 
-    group_id = Column(GUID(), ForeignKey("groups.id", ondelete="CASCADE"), nullable=False, index=True)
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    group_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("groups.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 
-    entered_at = Column(DateTime, nullable=False)
-    exited_at = Column(DateTime, nullable=True)
-    last_heartbeat_at = Column(DateTime, nullable=False)
+    entered_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    exited_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    last_heartbeat_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
     __table_args__ = (
         # 一人一小队同时至多一个开放会话。部分索引带 exited_at/deleted_at

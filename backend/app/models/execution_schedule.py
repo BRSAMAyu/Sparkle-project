@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import enum
+from datetime import datetime
+from typing import Any
 
-from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, ForeignKey, Index
+from sqlalchemy import JSON, Boolean, DateTime, Enum, ForeignKey, Index
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -26,10 +28,10 @@ class ExecutionScheduleTriggerType(enum.StrEnum):
 class ExecutionSchedule(BaseModel):
     __tablename__ = "execution_schedules"
 
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    task_id = Column(GUID(), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
-    intent_template = Column(JSONBCompat, nullable=False, default=dict)
-    trigger_type = Column(
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    task_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
+    intent_template: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    trigger_type: Mapped[ExecutionScheduleTriggerType] = mapped_column(
         Enum(
             ExecutionScheduleTriggerType,
             values_callable=_enum_values,
@@ -38,10 +40,10 @@ class ExecutionSchedule(BaseModel):
         ),
         nullable=False,
     )
-    trigger_config = Column(JSONBCompat, nullable=False, default=dict)
-    last_run_at = Column(DateTime, nullable=True)
-    next_run_at = Column(DateTime, nullable=True, index=True)
-    is_active = Column(Boolean, nullable=False, default=True, index=True)
+    trigger_config: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    last_run_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    next_run_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, index=True)
 
     user = relationship("User", backref="execution_schedules", foreign_keys=[user_id])
     task = relationship("Task", backref="execution_schedules", foreign_keys=[task_id])

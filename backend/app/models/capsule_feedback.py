@@ -4,9 +4,10 @@ Capsule Feedback Model
 from __future__ import annotations
 
 import enum
+from typing import Any
 
-from sqlalchemy import Boolean, Column, Float, ForeignKey, Integer, String, Text
-from sqlalchemy.orm import relationship
+from sqlalchemy import Boolean, Float, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -32,14 +33,14 @@ class CapsuleFeedback(BaseModel):
 
     __tablename__ = "capsule_feedbacks"
 
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    capsule_id = Column(GUID(), ForeignKey("curiosity_capsules.id", ondelete="CASCADE"), nullable=False, index=True)
-    rating = Column(Integer, nullable=True, index=True)  # 1-5 星评分
-    helpful = Column(Boolean, nullable=True)  # 点赞/点踩
-    category = Column(String(50), nullable=True)  # 反馈分类
-    comment = Column(Text, nullable=True)  # 用户评论
-    inferred_depth_delta = Column(Float, nullable=True)  # 基于反馈推断的深度偏好变化
-    inferred_curiosity_delta = Column(Float, nullable=True)  # 基于反馈推断的好奇心偏好变化
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    capsule_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("curiosity_capsules.id", ondelete="CASCADE"), nullable=False, index=True)
+    rating: Mapped[int] = mapped_column(Integer, nullable=True, index=True)  # 1-5 星评分
+    helpful: Mapped[bool] = mapped_column(Boolean, nullable=True)  # 点赞/点踩
+    category: Mapped[str] = mapped_column(String(50), nullable=True)  # 反馈分类
+    comment: Mapped[str] = mapped_column(Text, nullable=True)  # 用户评论
+    inferred_depth_delta: Mapped[float] = mapped_column(Float, nullable=True)  # 基于反馈推断的深度偏好变化
+    inferred_curiosity_delta: Mapped[float] = mapped_column(Float, nullable=True)  # 基于反馈推断的好奇心偏好变化
 
     # Relationships
     user = relationship("User", back_populates="capsule_feedbacks")

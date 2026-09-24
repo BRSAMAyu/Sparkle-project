@@ -6,10 +6,12 @@ Achievement System Models
 from __future__ import annotations
 
 import enum
+from datetime import date, datetime
+from typing import Any
 
-from sqlalchemy import JSON, Boolean, Column, Date, DateTime, Enum, Float, ForeignKey, Index, Integer, String
+from sqlalchemy import JSON, Boolean, Date, DateTime, Enum, Float, ForeignKey, Index, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -87,55 +89,55 @@ class Achievement(BaseModel):
     __tablename__ = "achievements"
 
     # 基础信息
-    id = Column(String(50), primary_key=True)  # 字符串ID用于标识，如 "streak_7"
-    name = Column(String(100), nullable=False)
-    description = Column(String(500))
-    name_i18n = Column(JSON, default=dict, nullable=True)
-    description_i18n = Column(JSON, default=dict, nullable=True)
-    icon_url = Column(String(500))
+    id: Mapped[str] = mapped_column(String(50), primary_key=True)  # 字符串ID用于标识，如 "streak_7"
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[str] = mapped_column(String(500), nullable=True)
+    name_i18n: Mapped[Any] = mapped_column(JSON, default=dict, nullable=True)
+    description_i18n: Mapped[Any] = mapped_column(JSON, default=dict, nullable=True)
+    icon_url: Mapped[str] = mapped_column(String(500), nullable=True)
 
     # 分类
-    type = Column(
+    type: Mapped[AchievementType] = mapped_column(
         Enum(AchievementType, values_callable=lambda cls: [e.value for e in cls]),
         nullable=False,
         index=True,
     )
-    rarity = Column(Enum(AchievementRarity), default=AchievementRarity.COMMON)
+    rarity: Mapped[AchievementRarity] = mapped_column(Enum(AchievementRarity), default=AchievementRarity.COMMON, nullable=True)
 
     # 触发条件
-    trigger_code = Column(String(50), nullable=False, index=True)
-    trigger_config = Column(JSON)  # 触发条件配置，如 {"days": 7, "count": 100}
+    trigger_code: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    trigger_config: Mapped[Any] = mapped_column(JSON, nullable=True)  # 触发条件配置，如 {"days": 7, "count": 100}
 
     # 隐藏成就
-    is_hidden = Column(Boolean, default=False)
-    hint = Column(String(200))  # 隐藏成就的模糊提示
+    is_hidden: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
+    hint: Mapped[str] = mapped_column(String(200), nullable=True)  # 隐藏成就的模糊提示
 
     # 前置成就
-    prerequisites = Column(JSON)  # 前置成就ID列表，如 ["achievement_id_1", "achievement_id_2"]
+    prerequisites: Mapped[Any] = mapped_column(JSON, nullable=True)  # 前置成就ID列表，如 ["achievement_id_1", "achievement_id_2"]
 
     # 视觉效果配置（核心：与星图联动）
-    visual_effect_type = Column(Enum(VisualEffectType), default=VisualEffectType.NONE)
-    visual_config = Column(JSON)  # 详细视觉效果配置
+    visual_effect_type: Mapped[VisualEffectType] = mapped_column(Enum(VisualEffectType), default=VisualEffectType.NONE, nullable=True)
+    visual_config: Mapped[Any] = mapped_column(JSON, nullable=True)  # 详细视觉效果配置
 
     # 奖励配置
-    reward_config = Column(JSON)  # 奖励配置列表
+    reward_config: Mapped[Any] = mapped_column(JSON, nullable=True)  # 奖励配置列表
 
     # 统计
-    total_unlocked = Column(Integer, default=0)  # 全局解锁人数
-    first_unlocker_id = Column(GUID(), ForeignKey("users.id"), nullable=True)
+    total_unlocked: Mapped[int] = mapped_column(Integer, default=0, nullable=True)  # 全局解锁人数
+    first_unlocker_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=True)
 
     # 排序权重（用于成就地图排序）
-    sort_order = Column(Integer, default=0)
-    category = Column(String(50))  # 用于成就地图分组
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
+    category: Mapped[str] = mapped_column(String(50), nullable=True)  # 用于成就地图分组
 
     # 活动窗口（限时成就）
-    active_from = Column(DateTime, nullable=True)
-    active_to = Column(DateTime, nullable=True)
-    is_limited = Column(Boolean, default=False)
-    event_tag = Column(String(50), nullable=True)
+    active_from: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    active_to: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    is_limited: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
+    event_tag: Mapped[str] = mapped_column(String(50), nullable=True)
 
     # 父成就（用于成就树/成就链）
-    parent_id = Column(String(50), ForeignKey("achievements.id"), nullable=True)
+    parent_id: Mapped[str] = mapped_column(String(50), ForeignKey("achievements.id"), nullable=True)
 
     # 关系
     children = relationship("Achievement", backref="parent", remote_side="Achievement.id")
@@ -177,27 +179,27 @@ class UserAchievement(BaseModel):
 
     __tablename__ = "user_achievements"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), primary_key=True)
-    achievement_id = Column(String(50), ForeignKey("achievements.id"), primary_key=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), primary_key=True)
+    achievement_id: Mapped[str] = mapped_column(String(50), ForeignKey("achievements.id"), primary_key=True)
 
     # 进度（0.0 - 1.0）
-    progress = Column(Float, default=0.0)
-    progress_value = Column(Integer, default=0)  # 当前值（如：已学习50天）
-    progress_target = Column(Integer, default=1)  # 目标值（如：100天）
+    progress: Mapped[float] = mapped_column(Float, default=0.0, nullable=True)
+    progress_value: Mapped[int] = mapped_column(Integer, default=0, nullable=True)  # 当前值（如：已学习50天）
+    progress_target: Mapped[int] = mapped_column(Integer, default=1, nullable=True)  # 目标值（如：100天）
 
     # 解锁状态
-    unlocked_at = Column(DateTime, nullable=True, index=True)
-    is_pinned = Column(Boolean, default=False)  # 用户是否置顶展示
+    unlocked_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True)
+    is_pinned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)  # 用户是否置顶展示
 
     # 社交统计
-    share_count = Column(Integer, default=0)
-    is_first_unlocker = Column(Boolean, default=False)
+    share_count: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
+    is_first_unlocker: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
 
     # 最后更新时间（用于进度变化追踪）
-    last_progress_update = Column(DateTime, nullable=True)
+    last_progress_update: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # 解锁时上下文快照：当前计划、任务、触发事件和故事描述
-    context_snapshot = Column(JSONBCompat, nullable=True)
+    context_snapshot: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
 
     # 关系
     achievement = relationship("Achievement")
@@ -213,25 +215,25 @@ class UserStreakStats(BaseModel):
 
     __tablename__ = "user_streak_stats"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), primary_key=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), primary_key=True)
 
     # 连胜数据
-    current_streak = Column(Integer, default=0)
-    max_streak = Column(Integer, default=0)
-    last_activity_date = Column(DateTime, nullable=True)
+    current_streak: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
+    max_streak: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
+    last_activity_date: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # 连胜保护机制
-    freeze_charges = Column(Integer, default=1)  # 默认送1个
-    max_freeze_charges = Column(Integer, default=3)
-    last_freeze_used_at = Column(DateTime, nullable=True)
+    freeze_charges: Mapped[int] = mapped_column(Integer, default=1, nullable=True)  # 默认送1个
+    max_freeze_charges: Mapped[int] = mapped_column(Integer, default=3, nullable=True)
+    last_freeze_used_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # 统计
-    total_checkin_days = Column(Integer, default=0)
-    longest_streak_start = Column(DateTime, nullable=True)
-    longest_streak_end = Column(DateTime, nullable=True)
+    total_checkin_days: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
+    longest_streak_start: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    longest_streak_end: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # 最长连胜记录
-    longest_streak = Column(Integer, default=0)
+    longest_streak: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
 
     def __repr__(self):
         return f"<UserStreakStats(user_id={self.user_id}, current_streak={self.current_streak})>"
@@ -242,15 +244,15 @@ class UserStreakDay(BaseModel):
 
     __tablename__ = "user_streak_days"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), primary_key=True)
-    day = Column(Date, primary_key=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), primary_key=True)
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
 
-    status = Column(
+    status: Mapped[StreakDayStatus] = mapped_column(
         Enum(StreakDayStatus, values_callable=lambda enum_cls: [item.value for item in enum_cls]),
         nullable=False,
     )
-    used_freeze = Column(Boolean, default=False)
-    source_event = Column(String(50), nullable=True)
+    used_freeze: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
+    source_event: Mapped[str] = mapped_column(String(50), nullable=True)
 
     __table_args__ = (Index("ix_user_streak_days_user_day", "user_id", "day", unique=True),)
 
@@ -265,29 +267,29 @@ class SparkContract(BaseModel):
 
     __tablename__ = "spark_contracts"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), primary_key=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), primary_key=True)
 
     # 契约内容
-    target_study_minutes = Column(Integer, default=60)  # 目标学习时长（分钟）
-    target_days = Column(Integer, default=7)  # 目标连续天数
-    photon_stake = Column(Integer, default=100)  # 投入的光子积分
+    target_study_minutes: Mapped[int] = mapped_column(Integer, default=60, nullable=True)  # 目标学习时长（分钟）
+    target_days: Mapped[int] = mapped_column(Integer, default=7, nullable=True)  # 目标连续天数
+    photon_stake: Mapped[int] = mapped_column(Integer, default=100, nullable=True)  # 投入的光子积分
 
     # 状态
-    status = Column(Enum(ContractStatus), default=ContractStatus.ACTIVE)
-    start_date = Column(DateTime, nullable=False)
-    end_date = Column(DateTime, nullable=False)
+    status: Mapped[ContractStatus] = mapped_column(Enum(ContractStatus), default=ContractStatus.ACTIVE, nullable=True)
+    start_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    end_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
     # 进度
-    current_days = Column(Integer, default=0)
-    current_minutes = Column(Integer, default=0)
+    current_days: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
+    current_minutes: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
 
     # 结算
-    completed_at = Column(DateTime, nullable=True)
-    reward_multiplier = Column(Float, default=2.0)  # 完成后的倍数奖励
+    completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    reward_multiplier: Mapped[float] = mapped_column(Float, default=2.0, nullable=True)  # 完成后的倍数奖励
 
     # 失败记录
-    failed_at = Column(DateTime, nullable=True)
-    failure_reason = Column(String(200), nullable=True)
+    failed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    failure_reason: Mapped[str] = mapped_column(String(200), nullable=True)
 
     def __repr__(self):
         return f"<SparkContract(user_id={self.user_id}, status={self.status}, progress={self.current_days}/{self.target_days})>"
@@ -298,21 +300,21 @@ class GalaxySkin(BaseModel):
 
     __tablename__ = "galaxy_skins"
 
-    id = Column(String(50), primary_key=True)
-    name = Column(String(100))
-    description = Column(String(500))
-    preview_url = Column(String(500))
+    id: Mapped[str] = mapped_column(String(50), primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=True)
+    description: Mapped[str] = mapped_column(String(500), nullable=True)
+    preview_url: Mapped[str] = mapped_column(String(500), nullable=True)
 
     # 解锁条件
-    unlock_type = Column(String(50))  # achievement, level, purchase
-    unlock_requirement = Column(JSON)  # {"achievement_id": "legend_master"}
+    unlock_type: Mapped[str] = mapped_column(String(50), nullable=True)  # achievement, level, purchase
+    unlock_requirement: Mapped[Any] = mapped_column(JSON, nullable=True)  # {"achievement_id": "legend_master"}
 
     # 皮肤配置（核心：改变星系视觉）
-    skin_config = Column(JSON)
+    skin_config: Mapped[Any] = mapped_column(JSON, nullable=True)
 
     # 排序和稀有度
-    rarity = Column(Enum(AchievementRarity), default=AchievementRarity.RARE)
-    sort_order = Column(Integer, default=0)
+    rarity: Mapped[AchievementRarity] = mapped_column(Enum(AchievementRarity), default=AchievementRarity.RARE, nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
 
     def __repr__(self):
         return f"<GalaxySkin(id={self.id}, name={self.name}, rarity={self.rarity})>"
@@ -323,15 +325,15 @@ class UserGalaxySkin(BaseModel):
 
     __tablename__ = "user_galaxy_skins"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), primary_key=True)
-    skin_id = Column(String(50), ForeignKey("galaxy_skins.id"), primary_key=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), primary_key=True)
+    skin_id: Mapped[str] = mapped_column(String(50), ForeignKey("galaxy_skins.id"), primary_key=True)
 
     # 解锁状态
-    unlocked_at = Column(DateTime, nullable=False)
-    unlock_source = Column(String(50))  # achievement, purchase, etc.
+    unlocked_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    unlock_source: Mapped[str] = mapped_column(String(50), nullable=True)  # achievement, purchase, etc.
 
     # 使用状态
-    is_equipped = Column(Boolean, default=False)
+    is_equipped: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
 
     # 关系
     skin = relationship("GalaxySkin")
@@ -345,16 +347,16 @@ class StudyBuddy(BaseModel):
 
     __tablename__ = "study_buddies"
 
-    user1_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
-    user2_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    user1_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False)
+    user2_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False)
 
     # 关系状态
-    status = Column(String(20), default="active")  # active, paused
-    connection_strength = Column(Float, default=0.0)  # 连接强度 0-1
+    status: Mapped[str] = mapped_column(String(20), default="active", nullable=True)  # active, paused
+    connection_strength: Mapped[float] = mapped_column(Float, default=0.0, nullable=True)  # 连接强度 0-1
 
     # 共同成就
-    mutual_study_days = Column(Integer, default=0)
-    last_mutual_study_at = Column(DateTime, nullable=True)
+    mutual_study_days: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
+    last_mutual_study_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     def __repr__(self):
         return f"<StudyBuddy(user1={self.user1_id}, user2={self.user2_id}, strength={self.connection_strength})>"
@@ -365,19 +367,19 @@ class UserTitle(BaseModel):
 
     __tablename__ = "user_titles"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), primary_key=True)
-    title_id = Column(String(50), primary_key=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), primary_key=True)
+    title_id: Mapped[str] = mapped_column(String(50), primary_key=True)
 
     # 称号信息
-    title_name = Column(String(100))
-    title_display = Column(String(100))
+    title_name: Mapped[str] = mapped_column(String(100), nullable=True)
+    title_display: Mapped[str] = mapped_column(String(100), nullable=True)
 
     # 来源成就
-    source_achievement_id = Column(String(50), ForeignKey("achievements.id"))
+    source_achievement_id: Mapped[str] = mapped_column(String(50), ForeignKey("achievements.id"), nullable=True)
 
     # 状态
-    is_equipped = Column(Boolean, default=False)
-    unlocked_at = Column(DateTime, nullable=False)
+    is_equipped: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
+    unlocked_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
     def __repr__(self):
         return f"<UserTitle(user_id={self.user_id}, title={self.title_name}, is_equipped={self.is_equipped})>"

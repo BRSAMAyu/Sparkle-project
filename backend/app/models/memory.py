@@ -2,10 +2,13 @@
 Memory models for long-term memory storage.
 """
 
+from datetime import date, datetime
+from typing import Any
+
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import JSON, Boolean, Column, Date, DateTime, Float, ForeignKey, Index, Integer, String
+from sqlalchemy import JSON, Boolean, Date, DateTime, Float, ForeignKey, Index, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -16,20 +19,20 @@ VectorCompat = Vector(1024).with_variant(JSON(), "sqlite")
 class MemoryPreference(BaseModel):
     __tablename__ = "memory_preferences"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
-    pref_key = Column(String(80), nullable=False)
-    pref_value = Column(JSONBCompat, nullable=False)
-    version = Column(Integer, nullable=False)
-    replaced_by_id = Column(GUID(), nullable=True)
-    confidence = Column(Float, nullable=True)
-    evidence_score = Column(Float, nullable=False, default=0.0)
-    correction_count = Column(Integer, nullable=False, default=0)
-    evidence_refs = Column(JSONBCompat, nullable=False, default=list)
-    evidence_missing = Column(Boolean, default=False, nullable=False)
-    evidence_checked_at = Column(DateTime, nullable=True)
-    last_consumed_at = Column(DateTime, nullable=True)
-    archived_at = Column(DateTime, nullable=True)
-    retracted_at = Column(DateTime, nullable=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    pref_key: Mapped[str] = mapped_column(String(80), nullable=False)
+    pref_value: Mapped[Any] = mapped_column(JSONBCompat, nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    replaced_by_id: Mapped[Any] = mapped_column(GUID(), nullable=True)
+    confidence: Mapped[float] = mapped_column(Float, nullable=True)
+    evidence_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    correction_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    evidence_refs: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=list)
+    evidence_missing: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    evidence_checked_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    last_consumed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    archived_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    retracted_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     user = relationship("User", backref="memory_preferences")
 
@@ -51,28 +54,28 @@ Index("idx_memory_preferences_archived_at", MemoryPreference.archived_at)
 class MemoryGoal(BaseModel):
     __tablename__ = "memory_goals"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
-    title = Column(String(255), nullable=False)
-    status = Column(String(30), nullable=False)
-    target_date = Column(Date, nullable=True)
-    expires_at = Column(DateTime, nullable=True)
-    linked_task_id = Column(GUID(), ForeignKey("tasks.id"), nullable=True)
-    linked_plan_id = Column(GUID(), ForeignKey("plans.id"), nullable=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(String(30), nullable=False)
+    target_date: Mapped[date] = mapped_column(Date, nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    linked_task_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("tasks.id"), nullable=True)
+    linked_plan_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("plans.id"), nullable=True)
     # M-08 R2 P2-2：goal 真实写入来源（与 episodic/preferences 域同构的溯源面）。
     # NULL = 既有行/用户公共创建路径（创建动作本身即用户陈述）；"event" 等系统
     # 捕获值由写入方（plan_review_service 等）传入，provenance 面据此分流
     # 「系统写入」桶标签并降置信档——推断/捕获永不报「已确认」（M-01 对外口径）。
     # 迁移：alembic/versions/m08_20260920_add_memory_goals_source_type.py
-    source_type = Column(String(30), nullable=True)
-    evidence_score = Column(Float, nullable=False, default=0.0)
-    correction_count = Column(Integer, nullable=False, default=0)
-    evidence_refs = Column(JSONBCompat, nullable=False, default=list)
-    metadata_payload = Column("metadata", JSONBCompat, nullable=True)
-    evidence_missing = Column(Boolean, default=False, nullable=False)
-    evidence_checked_at = Column(DateTime, nullable=True)
-    last_consumed_at = Column(DateTime, nullable=True)
-    archived_at = Column(DateTime, nullable=True)
-    retracted_at = Column(DateTime, nullable=True)
+    source_type: Mapped[str] = mapped_column(String(30), nullable=True)
+    evidence_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    correction_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    evidence_refs: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=list)
+    metadata_payload: Mapped[Any] = mapped_column("metadata", JSONBCompat, nullable=True)
+    evidence_missing: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    evidence_checked_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    last_consumed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    archived_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    retracted_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     user = relationship("User", backref="memory_goals")
     linked_task = relationship("Task")
@@ -90,42 +93,42 @@ Index("idx_memory_goals_archived_at", MemoryGoal.archived_at)
 class EpisodicMemory(BaseModel):
     __tablename__ = "episodic_memories"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
-    summary = Column(String(2000), nullable=False)
-    source_type = Column(String(30), nullable=False)
-    source_id = Column(String(100), nullable=True)
-    source_lane = Column(String(40), nullable=False, default="direct_capture")
-    subject_type = Column(String(32), nullable=False, default="self")
-    occurred_at = Column(DateTime, nullable=False)
-    due_at = Column(DateTime, nullable=True)
-    resolved_at = Column(DateTime, nullable=True)
-    importance_score = Column(Float, nullable=True)
-    confidence = Column(Float, nullable=True)
-    evidence_score = Column(Float, nullable=False, default=0.0)
-    correction_count = Column(Integer, nullable=False, default=0)
-    evidence_token = Column(String(128), nullable=True)
-    decay_policy = Column(String(32), nullable=True)
-    semantic_key = Column(String(64), nullable=True)
-    mentioned_entity_hash = Column(String(64), nullable=True)
-    mentioned_entity_owner_user_id = Column(GUID(), nullable=True)
-    tags = Column(JSONBCompat, nullable=True)
-    evidence_refs = Column(JSONBCompat, nullable=False, default=list)
-    evidence_missing = Column(Boolean, default=False, nullable=False)
-    evidence_checked_at = Column(DateTime, nullable=True)
-    evidence_snapshot = Column(JSONBCompat, nullable=True)
-    last_consumed_at = Column(DateTime, nullable=True)
-    archived_at = Column(DateTime, nullable=True)
-    retracted_at = Column(DateTime, nullable=True)
-    revoked_at = Column(DateTime, nullable=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    summary: Mapped[str] = mapped_column(String(2000), nullable=False)
+    source_type: Mapped[str] = mapped_column(String(30), nullable=False)
+    source_id: Mapped[str] = mapped_column(String(100), nullable=True)
+    source_lane: Mapped[str] = mapped_column(String(40), nullable=False, default="direct_capture")
+    subject_type: Mapped[str] = mapped_column(String(32), nullable=False, default="self")
+    occurred_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    due_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    resolved_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    importance_score: Mapped[float] = mapped_column(Float, nullable=True)
+    confidence: Mapped[float] = mapped_column(Float, nullable=True)
+    evidence_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    correction_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    evidence_token: Mapped[str] = mapped_column(String(128), nullable=True)
+    decay_policy: Mapped[str] = mapped_column(String(32), nullable=True)
+    semantic_key: Mapped[str] = mapped_column(String(64), nullable=True)
+    mentioned_entity_hash: Mapped[str] = mapped_column(String(64), nullable=True)
+    mentioned_entity_owner_user_id: Mapped[Any] = mapped_column(GUID(), nullable=True)
+    tags: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
+    evidence_refs: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=list)
+    evidence_missing: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    evidence_checked_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    evidence_snapshot: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
+    last_consumed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    archived_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    retracted_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    revoked_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     # Memory V3 (M-01): epistemic class of the record. NULL = derive from
     # source_lane (explicit lanes -> FACT, everything else -> HYPOTHESIS);
     # OBSERVATION / EXPERIENCE are set explicitly by future writers
     # (outcome adapters / M-06 experience projection).
-    epistemic_class = Column(String(24), nullable=True)
+    epistemic_class: Mapped[str] = mapped_column(String(24), nullable=True)
     # Memory V3 (M-01): winner of a conflict resolution that replaced this
     # record —— episodic counterpart of memory_preferences.replaced_by_id.
-    superseded_by_id = Column(GUID(), nullable=True)
-    embedding = Column(VectorCompat, nullable=True)
+    superseded_by_id: Mapped[Any] = mapped_column(GUID(), nullable=True)
+    embedding: Mapped[Any] = mapped_column(VectorCompat, nullable=True)
 
     user = relationship("User", backref="episodic_memories")
 
@@ -147,16 +150,16 @@ Index("idx_episodic_memories_superseded_by_id", EpisodicMemory.superseded_by_id)
 class Scene(BaseModel):
     __tablename__ = "scenes"
 
-    scene_id = Column(String(80), nullable=False, unique=True, index=True)
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
-    title = Column(String(200), nullable=False)
-    summary = Column(String(200), nullable=False)
-    member_memory_ids = Column(JSONBCompat, nullable=False, default=list)
-    centroid_embedding = Column(VectorCompat, nullable=True)
-    time_start = Column(DateTime, nullable=False)
-    time_end = Column(DateTime, nullable=False)
-    quality_score = Column(Float, nullable=False, default=0.0)
-    version = Column(String(32), nullable=False, default="scene.v1")
+    scene_id: Mapped[str] = mapped_column(String(80), nullable=False, unique=True, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    summary: Mapped[str] = mapped_column(String(200), nullable=False)
+    member_memory_ids: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=list)
+    centroid_embedding: Mapped[Any] = mapped_column(VectorCompat, nullable=True)
+    time_start: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    time_end: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    quality_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    version: Mapped[str] = mapped_column(String(32), nullable=False, default="scene.v1")
 
     user = relationship("User", backref="scenes")
 
@@ -169,11 +172,11 @@ Index("idx_scenes_user_version", Scene.user_id, Scene.version)
 class MemoryCorrection(BaseModel):
     __tablename__ = "memory_corrections"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
-    memory_type = Column(String(30), nullable=False)
-    memory_id = Column(GUID(), nullable=False)
-    action = Column(String(40), nullable=False)
-    reason = Column(String(500), nullable=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    memory_type: Mapped[str] = mapped_column(String(30), nullable=False)
+    memory_id: Mapped[Any] = mapped_column(GUID(), nullable=False)
+    action: Mapped[str] = mapped_column(String(40), nullable=False)
+    reason: Mapped[str] = mapped_column(String(500), nullable=True)
 
     user = relationship("User", backref="memory_corrections")
 

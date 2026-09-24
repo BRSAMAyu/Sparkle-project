@@ -18,9 +18,10 @@
 """
 
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import JSON, Column, DateTime, ForeignKey, String, UniqueConstraint
-from sqlalchemy.orm import relationship
+from sqlalchemy import JSON, DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -39,31 +40,31 @@ class InterventionLifecycleEvent(BaseModel):
         ),
     )
 
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
 
     # -- 干预身份（A-01 决策产物锚点）--------------------------------------
-    decision_id = Column(String(64), nullable=False, index=True)  # aurora_<32hex>
-    event_type = Column(String(24), nullable=False, index=True)  # LifecycleEventType
-    intervention_type = Column(String(40), nullable=False)  # A-01 目录 17 成员
-    execution_mode = Column(String(16), nullable=True)  # human|agent|hybrid|NULL(inert 不可 exposure)
+    decision_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)  # aurora_<32hex>
+    event_type: Mapped[str] = mapped_column(String(24), nullable=False, index=True)  # LifecycleEventType
+    intervention_type: Mapped[str] = mapped_column(String(40), nullable=False)  # A-01 目录 17 成员
+    execution_mode: Mapped[str] = mapped_column(String(16), nullable=True)  # human|agent|hybrid|NULL(inert 不可 exposure)
 
     # -- 切片维度（记录时点固化；goal/friction/execution_mode）----------------
-    goal_type = Column(String(32), nullable=False, default="unknown")
-    friction_tag = Column(String(40), nullable=False, default="unattributed")
+    goal_type: Mapped[str] = mapped_column(String(32), nullable=False, default="unknown")
+    friction_tag: Mapped[str] = mapped_column(String(40), nullable=False, default="unattributed")
 
     # -- 关联键（exposure 时点捕获；canonical UUID str）----------------------
-    linkage = Column(JSON, nullable=True)  # {task_id, plan_id, node_id, intervention_request_id}
+    linkage: Mapped[Any] = mapped_column(JSON, nullable=True)  # {task_id, plan_id, node_id, intervention_request_id}
 
     # -- outcome 关联（outcome_observed 行专用；其余事件为 NULL）--------------
-    outcome_source = Column(String(24), nullable=True)  # D-02 OutcomeSource 值
-    outcome_ref = Column(String(80), nullable=True)  # outc_<sha256[:32]>
-    outcome_polarity = Column(String(16), nullable=True)  # positive|negative|neutral
-    outcome_truth_class = Column(String(16), nullable=True)  # actual|self_reported|…
+    outcome_source: Mapped[str] = mapped_column(String(24), nullable=True)  # D-02 OutcomeSource 值
+    outcome_ref: Mapped[str] = mapped_column(String(80), nullable=True)  # outc_<sha256[:32]>
+    outcome_polarity: Mapped[str] = mapped_column(String(16), nullable=True)  # positive|negative|neutral
+    outcome_truth_class: Mapped[str] = mapped_column(String(16), nullable=True)  # actual|self_reported|…
 
     # -- 事件补充（content-light：类型判别码/窗口参数，不存正文）--------------
-    detail = Column(JSON, nullable=True)  # 如 {"window_hours": 72} / {"feedback_kind": "edited"}
-    dedupe_subkey = Column(String(96), nullable=False, default="")
+    detail: Mapped[Any] = mapped_column(JSON, nullable=True)  # 如 {"window_hours": 72} / {"feedback_kind": "edited"}
+    dedupe_subkey: Mapped[str] = mapped_column(String(96), nullable=False, default="")
 
-    occurred_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow, index=True)
 
     user = relationship("User", backref="intervention_lifecycle_events")

@@ -2,10 +2,11 @@
 Curiosity Capsule Model
 """
 import enum
+from typing import Any
 
-from sqlalchemy import JSON, Boolean, Column, Enum, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, Enum, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -43,21 +44,21 @@ class CuriosityCapsule(BaseModel):
 
     __tablename__ = "curiosity_capsules"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
-    title = Column(String(255), nullable=False)
-    content = Column(Text, nullable=False)
-    related_subject = Column(String(255), nullable=True) # e.g., "Math", "History"
-    related_task_id = Column(GUID(), ForeignKey("tasks.id"), nullable=True, index=True)
-    is_read = Column(Boolean, default=False, nullable=False)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    related_subject: Mapped[str] = mapped_column(String(255), nullable=True) # e.g., "Math", "History"
+    related_task_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("tasks.id"), nullable=True, index=True)
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # 增强字段
-    depth_level = Column(Enum(DepthLevel), nullable=True, index=True)
-    generation_method = Column(String(100), nullable=True)  # e.g. "xiaomi_chat", "zhipu_chat", "deepseek_reason"
-    source_context = Column(JSONBCompat, nullable=True)  # 来源上下文数据
-    personalization_context = Column(JSONBCompat, nullable=True)  # 个性化来源上下文
-    quality_score = Column(Float, nullable=True, index=True)  # 0.0-1.0 质量评分
-    feedback_count = Column(Integer, nullable=False, default=0)  # 反馈数量
-    share_count = Column(Integer, nullable=False, default=0)  # 分享次数
+    depth_level: Mapped[DepthLevel] = mapped_column(Enum(DepthLevel), nullable=True, index=True)
+    generation_method: Mapped[str] = mapped_column(String(100), nullable=True)  # e.g. "xiaomi_chat", "zhipu_chat", "deepseek_reason"
+    source_context: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)  # 来源上下文数据
+    personalization_context: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)  # 个性化来源上下文
+    quality_score: Mapped[float] = mapped_column(Float, nullable=True, index=True)  # 0.0-1.0 质量评分
+    feedback_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # 反馈数量
+    share_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # 分享次数
 
     user = relationship("User", back_populates="curiosity_capsules")
     task = relationship("Task", back_populates="curiosity_capsules")

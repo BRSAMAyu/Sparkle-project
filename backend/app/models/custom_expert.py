@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import enum
+from typing import Any
 
-from sqlalchemy import JSON, Boolean, Column, ForeignKey, Index, String, Text
-from sqlalchemy.orm import relationship
+from sqlalchemy import JSON, Boolean, ForeignKey, Index, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -16,17 +17,17 @@ class CustomExpertSource(enum.StrEnum):
 class CustomExpertProfile(BaseModel):
     __tablename__ = "custom_expert_profiles"
 
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    name = Column(String(120), nullable=False)
-    description = Column(String(500), nullable=True)
-    system_prompt = Column(Text, nullable=False)
-    base_expert_id = Column(String(100), nullable=True, index=True)
-    preferred_model_key = Column(String(100), nullable=True, index=True)
-    preferred_model_tier = Column(String(40), nullable=True, index=True)
-    reasoning_mode = Column(String(40), nullable=False, default="balanced")
-    source = Column(String(40), nullable=False, default=CustomExpertSource.USER_DEFINED.value)
-    metadata_json = Column(JSON, nullable=True)
-    is_enabled = Column(Boolean, nullable=False, default=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    description: Mapped[str] = mapped_column(String(500), nullable=True)
+    system_prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    base_expert_id: Mapped[str] = mapped_column(String(100), nullable=True, index=True)
+    preferred_model_key: Mapped[str] = mapped_column(String(100), nullable=True, index=True)
+    preferred_model_tier: Mapped[str] = mapped_column(String(40), nullable=True, index=True)
+    reasoning_mode: Mapped[str] = mapped_column(String(40), nullable=False, default="balanced")
+    source: Mapped[str] = mapped_column(String(40), nullable=False, default=CustomExpertSource.USER_DEFINED.value)
+    metadata_json: Mapped[Any] = mapped_column(JSON, nullable=True)
+    is_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     user = relationship("User")
 
@@ -38,14 +39,14 @@ class CustomExpertProfile(BaseModel):
 class CustomExpertTeam(BaseModel):
     __tablename__ = "custom_expert_teams"
 
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    name = Column(String(120), nullable=False)
-    description = Column(String(500), nullable=True)
-    collaboration_mode = Column(String(40), nullable=False, default="auto")
-    expert_ids = Column(JSON, nullable=False, default=list)
-    answer_expert_ids = Column(JSON, nullable=True)
-    metadata_json = Column(JSON, nullable=True)
-    is_enabled = Column(Boolean, nullable=False, default=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    description: Mapped[str] = mapped_column(String(500), nullable=True)
+    collaboration_mode: Mapped[str] = mapped_column(String(40), nullable=False, default="auto")
+    expert_ids: Mapped[Any] = mapped_column(JSON, nullable=False, default=list)
+    answer_expert_ids: Mapped[Any] = mapped_column(JSON, nullable=True)
+    metadata_json: Mapped[Any] = mapped_column(JSON, nullable=True)
+    is_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     user = relationship("User")
 

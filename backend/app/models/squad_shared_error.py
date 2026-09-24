@@ -23,8 +23,11 @@
 
 from __future__ import annotations
 
-from sqlalchemy import JSON, Column, Float, ForeignKey, Index, Integer, Text, text
+from typing import Any
+
+from sqlalchemy import JSON, Float, ForeignKey, Index, Integer, Text, text
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import GUID, BaseModel
 
@@ -44,16 +47,16 @@ class SquadSharedError(BaseModel):
 
     __tablename__ = "squad_shared_errors"
 
-    group_id = Column(GUID(), ForeignKey("groups.id", ondelete="CASCADE"), nullable=False, index=True)
-    error_id = Column(GUID(), ForeignKey("error_records.id", ondelete="CASCADE"), nullable=False, index=True)
-    sharer_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    group_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("groups.id", ondelete="CASCADE"), nullable=False, index=True)
+    error_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("error_records.id", ondelete="CASCADE"), nullable=False, index=True)
+    sharer_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 
-    content = Column(JSONBCompat, nullable=False, default=dict)
-    snapshot_note = Column(Text, nullable=True)  # 分享者附言（可空；同样过安全过滤）
+    content: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    snapshot_note: Mapped[str] = mapped_column(Text, nullable=True)  # 分享者附言（可空；同样过安全过滤）
 
-    mastery_level = Column(Float, nullable=False, default=0.0)
-    mastery_delta = Column(Float, nullable=True)
-    review_count = Column(Integer, nullable=False, default=0)
+    mastery_level: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    mastery_delta: Mapped[float] = mapped_column(Float, nullable=True)
+    review_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     __table_args__ = (
         # 同一张错题在同一小队同时至多一条在册分享（撤回后可再分享）。

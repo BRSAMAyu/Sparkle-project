@@ -5,11 +5,13 @@ Base Model Classes
 from __future__ import annotations
 
 import uuid
-from typing import TypeVar
+from datetime import datetime
+from typing import Any, TypeVar
 
-from sqlalchemy import Column, DateTime, select
+from sqlalchemy import DateTime, select
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import CHAR, TypeDecorator
 
 from app.core.time_utils import utcnow as _utcnow
@@ -60,7 +62,7 @@ class SoftDeleteMixin:
     提供 deleted_at 字段和软删除相关方法
     """
 
-    deleted_at = Column(DateTime, nullable=True, default=None, index=True)
+    deleted_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, default=None, index=True)
 
     @property
     def is_deleted(self) -> bool:
@@ -95,14 +97,14 @@ class BaseModel(SoftDeleteMixin, Base):
 
     __abstract__ = True
 
-    id = Column(
+    id: Mapped[Any] = mapped_column(
         GUID(),
         primary_key=True,
         default=uuid.uuid4,
         nullable=False,
     )
-    created_at = Column(DateTime, default=_utcnow, nullable=False)
-    updated_at = Column(
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=_utcnow,
         onupdate=_utcnow,
@@ -197,14 +199,14 @@ class HardDeleteBaseModel(Base):
 
     __abstract__ = True
 
-    id = Column(
+    id: Mapped[Any] = mapped_column(
         GUID(),
         primary_key=True,
         default=uuid.uuid4,
         nullable=False,
     )
-    created_at = Column(DateTime, default=_utcnow, nullable=False)
-    updated_at = Column(
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=_utcnow,
         onupdate=_utcnow,

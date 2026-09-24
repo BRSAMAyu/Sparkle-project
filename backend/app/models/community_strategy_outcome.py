@@ -6,8 +6,11 @@ recommendation (CommunityDirective), closing the feedback loop.
 
 from __future__ import annotations
 
-from sqlalchemy import JSON, Column, ForeignKey, Index, Integer, String, Text
+from typing import Any
+
+from sqlalchemy import JSON, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import GUID, BaseModel
 
@@ -17,23 +20,23 @@ JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 class CommunityStrategyOutcome(BaseModel):
     __tablename__ = "community_strategy_outcomes"
 
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    directive_id = Column(String(128), nullable=False, index=True)
-    trigger_type = Column(
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    directive_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    trigger_type: Mapped[str] = mapped_column(
         String(64), nullable=False, index=True,
         comment="What triggered this: cohort_mistake, partner_feedback, resource_recommendation, accountability_checkin",
     )
-    decision = Column(
+    decision: Mapped[str] = mapped_column(
         String(32), nullable=False,
         comment="User choice: accepted, rejected, dismissed, modified, auto_expired",
     )
-    context_snapshot = Column(
+    context_snapshot: Mapped[Any] = mapped_column(
         JSONBCompat, nullable=False, server_default="{}",
         comment="Snapshot of the directive payload at decision time",
     )
-    time_to_decision_seconds = Column(Integer, nullable=True)
-    user_feedback = Column(Text, nullable=True)
-    source = Column(
+    time_to_decision_seconds: Mapped[int] = mapped_column(Integer, nullable=True)
+    user_feedback: Mapped[str] = mapped_column(Text, nullable=True)
+    source: Mapped[str] = mapped_column(
         String(32), nullable=False, default="system",
         comment="How the decision was recorded: user_action, timeout, system",
     )

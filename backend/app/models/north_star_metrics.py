@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime
+from typing import Any
+
 from sqlalchemy import (
     JSON,
     Boolean,
-    Column,
     Date,
     DateTime,
     Float,
@@ -16,7 +18,7 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -28,22 +30,22 @@ class NorthStarMetricEvent(BaseModel):
 
     __tablename__ = "north_star_metric_events"
 
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    plan_id = Column(GUID(), ForeignKey("plans.id", ondelete="SET NULL"), nullable=True, index=True)
-    task_id = Column(GUID(), ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    plan_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("plans.id", ondelete="SET NULL"), nullable=True, index=True)
+    task_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True, index=True)
 
-    event_type = Column(String(64), nullable=False, index=True)
-    event_key = Column(String(160), nullable=False, unique=True, index=True)
-    source = Column(String(64), nullable=False, default="backend", index=True)
+    event_type: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    event_key: Mapped[str] = mapped_column(String(160), nullable=False, unique=True, index=True)
+    source: Mapped[str] = mapped_column(String(64), nullable=False, default="backend", index=True)
 
-    metric_date = Column(Date, nullable=False, index=True)
-    occurred_at = Column(DateTime, nullable=False, index=True)
+    metric_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
 
-    value_float = Column(Float, nullable=True)
-    numerator = Column(Integer, nullable=True)
-    denominator = Column(Integer, nullable=True)
-    passed = Column(Boolean, nullable=True)
-    payload = Column(JSONBCompat, nullable=False, default=dict)
+    value_float: Mapped[float] = mapped_column(Float, nullable=True)
+    numerator: Mapped[int] = mapped_column(Integer, nullable=True)
+    denominator: Mapped[int] = mapped_column(Integer, nullable=True)
+    passed: Mapped[bool] = mapped_column(Boolean, nullable=True)
+    payload: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
 
     user = relationship("User", backref="north_star_metric_events")
     plan = relationship("Plan", backref="north_star_metric_events")

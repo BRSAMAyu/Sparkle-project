@@ -3,10 +3,11 @@ Compliance Models
 合规与审计相关模型 (V3.1)
 """
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -19,15 +20,15 @@ class LegalHold(BaseModel):
     """
     __tablename__ = "legal_holds"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=True, index=True)
-    device_id = Column(String(128), nullable=True, index=True)
-    case_ref = Column(String(120), nullable=False, index=True)
-    reason = Column(Text, nullable=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=True, index=True)
+    device_id: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
+    case_ref: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    reason: Mapped[str] = mapped_column(Text, nullable=True)
 
-    admin_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
-    is_active = Column(Boolean, default=True, nullable=False)
-    released_at = Column(DateTime, nullable=True)
-    released_by = Column(GUID(), ForeignKey("users.id"), nullable=True)
+    admin_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    released_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    released_by: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=True)
 
     user = relationship("User", foreign_keys=[user_id])
     admin = relationship("User", foreign_keys=[admin_id])
@@ -40,11 +41,11 @@ class UserPersonaKey(BaseModel):
     """
     __tablename__ = "user_persona_keys"
 
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    key_id = Column(String(128), nullable=False, index=True)
-    encrypted_key = Column(Text, nullable=True)
-    is_active = Column(Boolean, default=True, nullable=False)
-    destroyed_at = Column(DateTime, nullable=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    key_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    encrypted_key: Mapped[str] = mapped_column(Text, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    destroyed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     user = relationship("User")
 
@@ -55,11 +56,11 @@ class CryptoShreddingCertificate(BaseModel):
     """
     __tablename__ = "crypto_shredding_certificates"
 
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    key_id = Column(String(128), nullable=False)
-    destruction_time = Column(DateTime, default=datetime.utcnow, nullable=False)
-    cloud_provider_ack = Column(Text, nullable=True)
-    certificate_data = Column(JSONBCompat, nullable=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    key_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    destruction_time: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    cloud_provider_ack: Mapped[str] = mapped_column(Text, nullable=True)
+    certificate_data: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
 
     user = relationship("User")
 
@@ -70,11 +71,11 @@ class DlqReplayAuditLog(BaseModel):
     """
     __tablename__ = "dlq_replay_audit_logs"
 
-    message_id = Column(String(128), nullable=False, index=True)
-    admin_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
-    approver_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
-    reason_code = Column(String(64), nullable=False)
-    payload_hash = Column(String(128), nullable=False)
+    message_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    admin_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False)
+    approver_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False)
+    reason_code: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload_hash: Mapped[str] = mapped_column(String(128), nullable=False)
 
     admin = relationship("User", foreign_keys=[admin_id])
     approver = relationship("User", foreign_keys=[approver_id])
@@ -86,10 +87,10 @@ class PersonaSnapshot(BaseModel):
     """
     __tablename__ = "persona_snapshots"
 
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    persona_version = Column(String(50), nullable=False, index=True)
-    audit_token = Column(String(128), nullable=True, index=True)
-    source_event_id = Column(String(64), nullable=True, index=True)
-    snapshot_data = Column(JSONBCompat, nullable=False)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    persona_version: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    audit_token: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
+    source_event_id: Mapped[str] = mapped_column(String(64), nullable=True, index=True)
+    snapshot_data: Mapped[Any] = mapped_column(JSONBCompat, nullable=False)
 
     user = relationship("User")

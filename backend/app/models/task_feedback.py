@@ -4,10 +4,11 @@ Task Feedback Model
 from __future__ import annotations
 
 import enum
+from typing import Any
 
-from sqlalchemy import JSON, Column, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -34,25 +35,25 @@ class TaskFeedback(BaseModel):
     """
     __tablename__ = "task_feedbacks"
 
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    task_id = Column(GUID(), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    task_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
 
     # 反馈内容
-    completion_quality = Column(Integer, nullable=True, index=True)  # 1-5 星评分
-    feedback_text = Column(Text, nullable=True)  # 用户文字反馈
-    category = Column(String(50), nullable=True)  # 反馈分类
+    completion_quality: Mapped[int] = mapped_column(Integer, nullable=True, index=True)  # 1-5 星评分
+    feedback_text: Mapped[str] = mapped_column(Text, nullable=True)  # 用户文字反馈
+    category: Mapped[str] = mapped_column(String(50), nullable=True)  # 反馈分类
 
     # 推断的偏好变化
-    inferred_depth_delta = Column(Float, nullable=True)  # 基于反馈推断的深度偏好变化
-    inferred_difficulty_delta = Column(Float, nullable=True)  # 基于反馈推断的难度偏好变化
+    inferred_depth_delta: Mapped[float] = mapped_column(Float, nullable=True)  # 基于反馈推断的深度偏好变化
+    inferred_difficulty_delta: Mapped[float] = mapped_column(Float, nullable=True)  # 基于反馈推断的难度偏好变化
 
     # 任务状态快照（防止任务变更导致反馈失真）
-    task_difficulty_snapshot = Column(Integer, nullable=True)  # 任务难度快照
-    task_type_snapshot = Column(String(50), nullable=True)  # 任务类型快照
-    actual_minutes_snapshot = Column(Integer, nullable=True)  # 实际用时快照
+    task_difficulty_snapshot: Mapped[int] = mapped_column(Integer, nullable=True)  # 任务难度快照
+    task_type_snapshot: Mapped[str] = mapped_column(String(50), nullable=True)  # 任务类型快照
+    actual_minutes_snapshot: Mapped[int] = mapped_column(Integer, nullable=True)  # 实际用时快照
 
     # Phase 4: 结构化反思记录
-    reflection_payload = Column(JSONBCompat, nullable=True)
+    reflection_payload: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
 
     # Relationships
     user = relationship("User", back_populates="task_feedbacks")

@@ -8,11 +8,12 @@ Task Model - 学习任务卡片系统
 """
 
 import enum
+from datetime import date, datetime
+from typing import Any
 
 from sqlalchemy import (
     JSON,
     Boolean,
-    Column,
     Date,
     DateTime,
     Enum,
@@ -26,7 +27,7 @@ from sqlalchemy import (
     update,
 )
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -95,69 +96,69 @@ def _string_enum(enum_cls: type[enum.Enum]) -> Enum:
 class Task(BaseModel):
     __tablename__ = "tasks"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
-    plan_id = Column(GUID(), ForeignKey("plans.id"), nullable=True, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    plan_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("plans.id"), nullable=True, index=True)
 
     # 任务基本信息
-    title = Column(String(255), nullable=False)
-    type = Column(Enum(TaskType), nullable=False)
-    tags = Column(JSONBCompat, default=list, nullable=False)  # 标签列表 (使用 JSONB)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    type: Mapped[TaskType] = mapped_column(Enum(TaskType), nullable=False)
+    tags: Mapped[Any] = mapped_column(JSONBCompat, default=list, nullable=False)  # 标签列表 (使用 JSONB)
 
     # 时间和难度
-    estimated_minutes = Column(Integer, nullable=False)
-    difficulty = Column(Integer, default=1, nullable=False)  # 1-5
-    energy_cost = Column(Integer, default=1, nullable=False)  # 1-5
+    estimated_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
+    difficulty: Mapped[int] = mapped_column(Integer, default=1, nullable=False)  # 1-5
+    energy_cost: Mapped[int] = mapped_column(Integer, default=1, nullable=False)  # 1-5
 
     # AI生成内容
-    guide_content = Column(Text, nullable=True)
-    guide_json = Column(JSONBCompat, nullable=True)
-    ai_prompt = Column(Text, nullable=True)
-    source_planning_session_id = Column(String(64), nullable=True, index=True)
-    phase_index = Column(Integer, nullable=True)
-    success_criteria = Column(Text, nullable=True)
+    guide_content: Mapped[str] = mapped_column(Text, nullable=True)
+    guide_json: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
+    ai_prompt: Mapped[str] = mapped_column(Text, nullable=True)
+    source_planning_session_id: Mapped[str] = mapped_column(String(64), nullable=True, index=True)
+    phase_index: Mapped[int] = mapped_column(Integer, nullable=True)
+    success_criteria: Mapped[str] = mapped_column(Text, nullable=True)
 
     # 状态信息
-    status = Column(Enum(TaskStatus), default=TaskStatus.PENDING, nullable=False, index=True)
-    started_at = Column(DateTime, nullable=True)
-    confirmed_at = Column(DateTime, nullable=True)
-    completed_at = Column(DateTime, nullable=True)
+    status: Mapped[TaskStatus] = mapped_column(Enum(TaskStatus), default=TaskStatus.PENDING, nullable=False, index=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    confirmed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # 追溯信息
-    tool_result_id = Column(String(50), nullable=True, index=True)
-    execution_mode = Column(String(20), nullable=True, default=None)
+    tool_result_id: Mapped[str] = mapped_column(String(50), nullable=True, index=True)
+    execution_mode: Mapped[str] = mapped_column(String(20), nullable=True, default=None)
 
     # 暂停信息
-    paused_at = Column(DateTime, nullable=True)
-    paused_reason = Column(Text, nullable=True)
+    paused_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    paused_reason: Mapped[str] = mapped_column(Text, nullable=True)
 
     # 完成信息
-    actual_minutes = Column(Integer, nullable=True)
-    user_note = Column(Text, nullable=True)
+    actual_minutes: Mapped[int] = mapped_column(Integer, nullable=True)
+    user_note: Mapped[str] = mapped_column(Text, nullable=True)
 
     # 优先级和截止日期
-    priority = Column(Integer, default=0, nullable=False)
-    order_index = Column(Integer, default=0, nullable=False)
-    due_date = Column(Date, nullable=True)
+    priority: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    order_index: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    due_date: Mapped[date] = mapped_column(Date, nullable=True)
 
     # Knowledge Galaxy Integration
-    knowledge_node_id = Column(GUID(), ForeignKey("knowledge_nodes.id"), nullable=True)
-    auto_expand_enabled = Column(Boolean, default=True)
+    knowledge_node_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("knowledge_nodes.id"), nullable=True)
+    auto_expand_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=True)
 
     # ── X-01 · ActionPlan V3 契约列（全部 nullable：NULL = legacy/V2.x 行）─────
     # 契约真源：app/core/action_plan.py；execution_mode 复用上方既有 String(20)
     # 镜像列（ExecutionIntent 唯一协议），不新增第二执行模式列。
-    action_schema_version = Column(String(16), nullable=True)  # "action_plan.v1" | NULL=legacy
-    desired_outcome = Column(Text, nullable=True)  # 期望结果陈述（outcome 语义）
-    smallest_useful_step = Column(JSONBCompat, nullable=True)  # {description, useful_because:[封闭枚举]}
-    completion_evidence = Column(JSONBCompat, nullable=True)  # [{evidence_kind, ref?, description?}]
-    cognitive_ownership = Column(_string_enum(CognitiveOwnership), nullable=True)  # D13
-    source_refs = Column(JSONBCompat, nullable=True)  # ["scheme://id", ...] 封闭 scheme（C-01 对齐）
-    risk_class = Column(_string_enum(RiskClass), nullable=True)  # 风险分级
-    reversible = Column(Boolean, nullable=True)  # 可撤销性（risk/reversibility 成对）
+    action_schema_version: Mapped[str] = mapped_column(String(16), nullable=True)  # "action_plan.v1" | NULL=legacy
+    desired_outcome: Mapped[str] = mapped_column(Text, nullable=True)  # 期望结果陈述（outcome 语义）
+    smallest_useful_step: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)  # {description, useful_because:[封闭枚举]}
+    completion_evidence: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)  # [{evidence_kind, ref?, description?}]
+    cognitive_ownership: Mapped[Any] = mapped_column(_string_enum(CognitiveOwnership), nullable=True)  # D13
+    source_refs: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)  # ["scheme://id", ...] 封闭 scheme（C-01 对齐）
+    risk_class: Mapped[Any] = mapped_column(_string_enum(RiskClass), nullable=True)  # 风险分级
+    reversible: Mapped[bool] = mapped_column(Boolean, nullable=True)  # 可撤销性（risk/reversibility 成对）
 
     # Subtask counters
-    subtasks_total = Column(Integer, default=0, nullable=False)
-    subtasks_completed = Column(Integer, default=0, nullable=False)
+    subtasks_total: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    subtasks_completed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # 关系定义
     user = relationship("User", back_populates="tasks")
@@ -229,21 +230,21 @@ class SubTask(BaseModel):
 
     __tablename__ = "subtasks"
 
-    parent_task_id = Column(GUID(), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
-    knowledge_node_id = Column(GUID(), ForeignKey("knowledge_nodes.id", ondelete="SET NULL"), nullable=True, index=True)
+    parent_task_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
+    knowledge_node_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("knowledge_nodes.id", ondelete="SET NULL"), nullable=True, index=True)
 
     # 基本信息
-    title = Column(String(255), nullable=False)
-    description = Column(Text, nullable=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=True)
 
     # 学习指导
-    estimated_minutes = Column(Integer, default=25, nullable=False)
-    guide_content = Column(Text, nullable=True)
+    estimated_minutes: Mapped[int] = mapped_column(Integer, default=25, nullable=False)
+    guide_content: Mapped[str] = mapped_column(Text, nullable=True)
 
     # 排序和状态
-    order = Column(Integer, default=0, nullable=False)
-    status = Column(Enum(SubTaskStatus), default=SubTaskStatus.PENDING, nullable=False, index=True)
-    completed_at = Column(DateTime, nullable=True)
+    order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    status: Mapped[SubTaskStatus] = mapped_column(Enum(SubTaskStatus), default=SubTaskStatus.PENDING, nullable=False, index=True)
+    completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # 关系
     parent_task = relationship("Task", back_populates="subtasks")

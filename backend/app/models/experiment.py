@@ -2,11 +2,13 @@
 A/B Test Experiment Models
 A/B测试实验模型 - 支持实验生命周期管理、变体配置、指标跟踪
 """
+from datetime import datetime
 from enum import StrEnum
+from typing import Any
 
-from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -39,12 +41,12 @@ class ABExperiment(BaseModel):
     __tablename__ = "ab_experiments"
 
     # 基本信息
-    name = Column(String(200), nullable=False, doc="实验名称")
-    description = Column(Text, nullable=True, doc="实验描述")
-    hypothesis = Column(Text, nullable=False, doc="实验假设")
+    name: Mapped[str] = mapped_column(String(200), nullable=False, doc="实验名称")
+    description: Mapped[str] = mapped_column(Text, nullable=True, doc="实验描述")
+    hypothesis: Mapped[str] = mapped_column(Text, nullable=False, doc="实验假设")
 
     # 状态管理
-    status = Column(
+    status: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
         default="created",
@@ -53,7 +55,7 @@ class ABExperiment(BaseModel):
     )
 
     # 创建者
-    created_by = Column(
+    created_by: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
@@ -62,18 +64,18 @@ class ABExperiment(BaseModel):
     )
 
     # 统计参数
-    sample_size_target = Column(Integer, nullable=True, doc="目标样本量")
-    significance_level = Column(Float, nullable=False, default=0.05, doc="显著性水平 (alpha)")
-    power = Column(Float, nullable=False, default=0.8, doc="统计功效 (1-beta)")
-    minimum_detectable_effect = Column(Float, nullable=True, doc="最小可检测效应 (相对提升)")
+    sample_size_target: Mapped[int] = mapped_column(Integer, nullable=True, doc="目标样本量")
+    significance_level: Mapped[float] = mapped_column(Float, nullable=False, default=0.05, doc="显著性水平 (alpha)")
+    power: Mapped[float] = mapped_column(Float, nullable=False, default=0.8, doc="统计功效 (1-beta)")
+    minimum_detectable_effect: Mapped[float] = mapped_column(Float, nullable=True, doc="最小可检测效应 (相对提升)")
 
     # 时间管理
-    start_date = Column(DateTime, nullable=True, index=True, doc="实验开始时间")
-    end_date = Column(DateTime, nullable=True, doc="实验结束时间")
+    start_date: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True, doc="实验开始时间")
+    end_date: Mapped[datetime] = mapped_column(DateTime, nullable=True, doc="实验结束时间")
 
     # 实验结论
-    conclusion = Column(Text, nullable=True, doc="实验结论")
-    winning_variant_id = Column(
+    conclusion: Mapped[str] = mapped_column(Text, nullable=True, doc="实验结论")
+    winning_variant_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey(
             "ab_experiment_variants.id",
@@ -86,7 +88,7 @@ class ABExperiment(BaseModel):
     )
 
     # 元数据
-    extra_metadata = Column(JSONBCompat, nullable=True, doc="额外的元数据信息")
+    extra_metadata: Mapped[Any] = mapped_column(JSONBCompat, nullable=True, doc="额外的元数据信息")
 
     # 关系
     variants = relationship(
@@ -124,18 +126,18 @@ class ABExperimentVariant(BaseModel):
     __tablename__ = "ab_experiment_variants"
 
     # 基本信息
-    experiment_id = Column(
+    experiment_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("ab_experiments.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
         doc="所属实验ID"
     )
-    variant_name = Column(String(100), nullable=False, doc="变体名称")
-    description = Column(Text, nullable=True, doc="变体描述")
+    variant_name: Mapped[str] = mapped_column(String(100), nullable=False, doc="变体名称")
+    description: Mapped[str] = mapped_column(Text, nullable=True, doc="变体描述")
 
     # 变体类型
-    is_control = Column(
+    is_control: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
         default=False,
@@ -144,12 +146,12 @@ class ABExperimentVariant(BaseModel):
     )
 
     # 配置信息
-    prompt_version = Column(String(50), nullable=True, doc="Prompt版本标识")
-    configuration = Column(JSONBCompat, nullable=True, doc="变体配置（JSON格式）")
+    prompt_version: Mapped[str] = mapped_column(String(50), nullable=True, doc="Prompt版本标识")
+    configuration: Mapped[Any] = mapped_column(JSONBCompat, nullable=True, doc="变体配置（JSON格式）")
 
     # 流量分配
-    allocation_weight = Column(Float, nullable=False, default=0.5, doc="分配权重")
-    traffic_allocation_percentage = Column(
+    allocation_weight: Mapped[float] = mapped_column(Float, nullable=False, default=0.5, doc="分配权重")
+    traffic_allocation_percentage: Mapped[float] = mapped_column(
         Float,
         nullable=False,
         default=50.0,
@@ -157,7 +159,7 @@ class ABExperimentVariant(BaseModel):
     )
 
     # 元数据
-    extra_metadata = Column(JSONBCompat, nullable=True, doc="额外的元数据信息")
+    extra_metadata: Mapped[Any] = mapped_column(JSONBCompat, nullable=True, doc="额外的元数据信息")
 
     # 关系
     experiment = relationship("ABExperiment", back_populates="variants", foreign_keys=[experiment_id])
@@ -184,21 +186,21 @@ class ABExperimentMetric(BaseModel):
     __tablename__ = "ab_experiment_metrics"
 
     # 关联信息
-    experiment_id = Column(
+    experiment_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("ab_experiments.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
         doc="实验ID"
     )
-    variant_id = Column(
+    variant_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("ab_experiment_variants.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
         doc="变体ID"
     )
-    user_id = Column(
+    user_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
@@ -207,24 +209,24 @@ class ABExperimentMetric(BaseModel):
     )
 
     # 指标信息
-    metric_name = Column(
+    metric_name: Mapped[str] = mapped_column(
         String(100),
         nullable=False,
         index=True,
         doc="指标名称: success, latency, engagement, etc."
     )
-    metric_value = Column(Float, nullable=False, doc="指标值")
-    metric_type = Column(
+    metric_value: Mapped[float] = mapped_column(Float, nullable=False, doc="指标值")
+    metric_type: Mapped[str] = mapped_column(
         String(50),
         nullable=False,
         doc="指标类型: success, latency, engagement, conversion, custom"
     )
 
     # 上下文数据
-    context_data = Column(JSONBCompat, nullable=True, doc="上下文信息（JSON格式）")
+    context_data: Mapped[Any] = mapped_column(JSONBCompat, nullable=True, doc="上下文信息（JSON格式）")
 
     # 时间戳
-    timestamp = Column(DateTime, nullable=False, index=True, doc="指标记录时间")
+    timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True, doc="指标记录时间")
 
     # 关系
     experiment = relationship("ABExperiment", back_populates="metrics")
@@ -242,21 +244,21 @@ class ABExperimentAssignment(BaseModel):
     __tablename__ = "ab_experiment_assignments"
 
     # 关联信息
-    experiment_id = Column(
+    experiment_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("ab_experiments.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
         doc="实验ID"
     )
-    user_id = Column(
+    user_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
         doc="用户ID"
     )
-    variant_id = Column(
+    variant_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("ab_experiment_variants.id", ondelete="CASCADE"),
         nullable=False,
@@ -265,17 +267,17 @@ class ABExperimentAssignment(BaseModel):
     )
 
     # 分配信息
-    assignment_date = Column(DateTime, nullable=False, doc="分配时间")
+    assignment_date: Mapped[datetime] = mapped_column(DateTime, nullable=False, doc="分配时间")
 
     # 排除标记
-    is_excluded = Column(
+    is_excluded: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
         default=False,
         index=True,
         doc="是否被排除在实验外"
     )
-    exclusion_reason = Column(String(200), nullable=True, doc="排除原因")
+    exclusion_reason: Mapped[str] = mapped_column(String(200), nullable=True, doc="排除原因")
 
     # 关系
     experiment = relationship("ABExperiment", back_populates="assignments")

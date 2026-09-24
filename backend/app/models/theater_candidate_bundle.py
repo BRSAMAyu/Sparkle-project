@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from sqlalchemy import JSON, Column, ForeignKey, String, Text
+from typing import Any
+
+from sqlalchemy import JSON, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -12,25 +14,25 @@ class TheaterCandidateBundle(BaseModel):
 
     __tablename__ = "theater_candidate_bundles"
 
-    user_id = Column(
+    user_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
-    prediction_id = Column(String(64), nullable=False, unique=True, index=True)
-    topic = Column(Text, nullable=False)
-    target_name = Column(String(255), nullable=False)
-    target_resolution_mode = Column(String(32), nullable=False, index=True)
-    status = Column(String(32), nullable=False, default="pending_review", index=True)
-    nodes_payload = Column(JSON().with_variant(JSONB(astext_type=Text()), "postgresql"), nullable=False, default=list)
-    edges_payload = Column(JSON().with_variant(JSONB(astext_type=Text()), "postgresql"), nullable=False, default=list)
-    semantic_matches = Column(
+    prediction_id: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    topic: Mapped[str] = mapped_column(Text, nullable=False)
+    target_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    target_resolution_mode: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending_review", index=True)
+    nodes_payload: Mapped[Any] = mapped_column(JSON().with_variant(JSONB(astext_type=Text()), "postgresql"), nullable=False, default=list)
+    edges_payload: Mapped[Any] = mapped_column(JSON().with_variant(JSONB(astext_type=Text()), "postgresql"), nullable=False, default=list)
+    semantic_matches: Mapped[Any] = mapped_column(
         JSON().with_variant(JSONB(astext_type=Text()), "postgresql"),
         nullable=False,
         default=list,
     )
-    source_metadata = Column(
+    source_metadata: Mapped[Any] = mapped_column(
         JSON().with_variant(JSONB(astext_type=Text()), "postgresql"),
         nullable=False,
         default=dict,

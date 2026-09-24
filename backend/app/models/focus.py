@@ -3,9 +3,11 @@
 Focus Models - 番茄钟会话记录
 """
 import enum
+from datetime import datetime
+from typing import Any
 
-from sqlalchemy import Column, DateTime, Enum, ForeignKey, Index, Integer
-from sqlalchemy.orm import relationship
+from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -29,20 +31,20 @@ class FocusSession(BaseModel):
     """
     __tablename__ = "focus_sessions"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
-    task_id = Column(GUID(), ForeignKey("tasks.id"), nullable=True, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    task_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("tasks.id"), nullable=True, index=True)
 
     # 时间信息
-    start_time = Column(DateTime, nullable=False)
-    end_time = Column(DateTime, nullable=False)
-    duration_minutes = Column(Integer, nullable=False)  # 实际专注时长
+    start_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    end_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    duration_minutes: Mapped[int] = mapped_column(Integer, nullable=False)  # 实际专注时长
 
     # 类型与状态
-    focus_type = Column(Enum(FocusType), default=FocusType.POMODORO, nullable=False)
-    status = Column(Enum(FocusStatus), default=FocusStatus.COMPLETED, nullable=False)
+    focus_type: Mapped[FocusType] = mapped_column(Enum(FocusType), default=FocusType.POMODORO, nullable=False)
+    status: Mapped[FocusStatus] = mapped_column(Enum(FocusStatus), default=FocusStatus.COMPLETED, nullable=False)
 
     # 白噪音 (可选记录)
-    white_noise_type = Column(Integer, nullable=True) # ID or Enum Value
+    white_noise_type: Mapped[int] = mapped_column(Integer, nullable=True) # ID or Enum Value
 
     # 关系
     user = relationship("User")

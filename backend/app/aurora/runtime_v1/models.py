@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from datetime import datetime
+from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -14,19 +16,19 @@ JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 class AuroraStateSnapshot(BaseModel):
     __tablename__ = "aurora_state_snapshots"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
-    surface = Column(String(64), nullable=False, index=True)
-    conversation_id = Column(String(128), nullable=False, index=True)
-    runtime_session_id = Column(String(128), nullable=True)
-    snapshot_version = Column(Integer, nullable=False, default=1)
-    snapshot_at = Column(DateTime, nullable=False, index=True)
-    user_model_snapshot = Column(JSONBCompat, nullable=False, default=dict)
-    informational_tensions = Column(JSONBCompat, nullable=False, default=list)
-    current_intent = Column(JSONBCompat, nullable=True)
-    latent_threads = Column(JSONBCompat, nullable=False, default=list)
-    activity_profile = Column(JSONBCompat, nullable=False, default=dict)
-    last_decision_at = Column(DateTime, nullable=True)
-    runtime_metadata = Column("metadata", JSONBCompat, nullable=False, default=dict)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    surface: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    conversation_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    runtime_session_id: Mapped[str] = mapped_column(String(128), nullable=True)
+    snapshot_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    snapshot_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    user_model_snapshot: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    informational_tensions: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=list)
+    current_intent: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
+    latent_threads: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=list)
+    activity_profile: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    last_decision_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    runtime_metadata: Mapped[Any] = mapped_column("metadata", JSONBCompat, nullable=False, default=dict)
 
     user = relationship("User", backref="aurora_state_snapshots")
 
@@ -44,21 +46,21 @@ class AuroraStateSnapshot(BaseModel):
 class AuroraScheduledWake(BaseModel):
     __tablename__ = "aurora_scheduled_wakes"
 
-    wake_id = Column(String(128), nullable=False, index=True, default=lambda: str(uuid4()))
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
-    surface = Column(String(64), nullable=False, index=True)
-    conversation_id = Column(String(128), nullable=False, index=True)
-    session_id = Column(GUID(), nullable=True, index=True)
-    runtime_session_id = Column(String(128), nullable=True)
-    scheduled_at = Column(DateTime, nullable=False, index=True)
-    executed_at = Column(DateTime, nullable=True)
-    status = Column(String(32), nullable=False, default="pending", index=True)
-    reason = Column(Text, nullable=False)
-    planned_action = Column(String(64), nullable=False)
-    urgency_score = Column(Float, nullable=False, default=0.5)
-    payload = Column(JSONBCompat, nullable=False, default=dict)
-    runtime_metadata = Column("metadata", JSONBCompat, nullable=False, default=dict)
-    suppression_reason = Column(String(64), nullable=True)
+    wake_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True, default=lambda: str(uuid4()))
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    surface: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    conversation_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    session_id: Mapped[Any] = mapped_column(GUID(), nullable=True, index=True)
+    runtime_session_id: Mapped[str] = mapped_column(String(128), nullable=True)
+    scheduled_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    executed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending", index=True)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    planned_action: Mapped[str] = mapped_column(String(64), nullable=False)
+    urgency_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.5)
+    payload: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    runtime_metadata: Mapped[Any] = mapped_column("metadata", JSONBCompat, nullable=False, default=dict)
+    suppression_reason: Mapped[str] = mapped_column(String(64), nullable=True)
 
     user = relationship("User", backref="aurora_scheduled_wakes")
 
@@ -72,24 +74,24 @@ class AuroraScheduledWake(BaseModel):
 class AuroraDecisionTelemetry(BaseModel):
     __tablename__ = "aurora_decision_telemetry"
 
-    decision_id = Column(String(36), nullable=False, unique=True, index=True, default=lambda: str(uuid4()))
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
-    surface = Column(String(64), nullable=False, index=True)
-    conversation_id = Column(String(128), nullable=False, index=True)
-    request_id = Column(String(128), nullable=True, index=True)
-    decided_at = Column(DateTime, nullable=False, index=True)
-    wake_score = Column(Float, nullable=False, default=0.0)
-    energy_level = Column(String(16), nullable=False, default="light", index=True)
-    strategy_payload = Column(JSONBCompat, nullable=False, default=dict)
-    expression_payload = Column(JSONBCompat, nullable=False, default=dict)
-    context_mask = Column(JSONBCompat, nullable=False, default=list)
-    action = Column(String(64), nullable=False, index=True)
-    chat_directive_core = Column(JSONBCompat, nullable=False, default=dict)
-    standard_layer_contract = Column(JSONBCompat, nullable=False, default=dict)
-    strategy_confidence = Column(Float, nullable=False, default=0.7)
-    outcome = Column(String(32), nullable=True, index=True)
-    outcome_filled_at = Column(DateTime, nullable=True, index=True)
-    outcome_reason = Column(Text, nullable=True)
+    decision_id: Mapped[str] = mapped_column(String(36), nullable=False, unique=True, index=True, default=lambda: str(uuid4()))
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    surface: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    conversation_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    request_id: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
+    decided_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    wake_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    energy_level: Mapped[str] = mapped_column(String(16), nullable=False, default="light", index=True)
+    strategy_payload: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    expression_payload: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    context_mask: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=list)
+    action: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    chat_directive_core: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    standard_layer_contract: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    strategy_confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.7)
+    outcome: Mapped[str] = mapped_column(String(32), nullable=True, index=True)
+    outcome_filled_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True)
+    outcome_reason: Mapped[str] = mapped_column(Text, nullable=True)
 
     user = relationship("User", backref="aurora_decision_telemetry")
 
@@ -104,17 +106,17 @@ class AuroraCoreSessionSnapshot(BaseModel):
 
     __tablename__ = "aurora_core_session_snapshots"
 
-    session_id = Column(String(128), nullable=False, unique=True, index=True)
-    user_id = Column(String(128), nullable=False, index=True)
-    conversation_id = Column(String(128), nullable=True, index=True)
-    surface = Column(String(64), nullable=False, default="aurora_modeling", index=True)
-    status = Column(String(32), nullable=False, default="active", index=True)
-    stage = Column(String(32), nullable=False, default="declare", index=True)
-    resume_token_hash = Column(String(64), nullable=True, unique=True, index=True)
-    last_activity_at = Column(DateTime, nullable=False, index=True)
-    expires_at = Column(DateTime, nullable=False, index=True)
-    payload = Column(JSONBCompat, nullable=False, default=dict)
-    runtime_metadata = Column("metadata", JSONBCompat, nullable=False, default=dict)
+    session_id: Mapped[str] = mapped_column(String(128), nullable=False, unique=True, index=True)
+    user_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    conversation_id: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
+    surface: Mapped[str] = mapped_column(String(64), nullable=False, default="aurora_modeling", index=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="active", index=True)
+    stage: Mapped[str] = mapped_column(String(32), nullable=False, default="declare", index=True)
+    resume_token_hash: Mapped[str] = mapped_column(String(64), nullable=True, unique=True, index=True)
+    last_activity_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    payload: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    runtime_metadata: Mapped[Any] = mapped_column("metadata", JSONBCompat, nullable=False, default=dict)
 
     __table_args__ = (
         Index("idx_aurora_core_session_user_status", "user_id", "status", "last_activity_at"),
@@ -127,16 +129,16 @@ class DurableSessionStateSnapshot(BaseModel):
 
     __tablename__ = "durable_session_state_snapshots"
 
-    session_id = Column(String(128), nullable=False, unique=True, index=True)
-    user_id = Column(String(128), nullable=True, index=True)
-    request_id = Column(String(128), nullable=True, index=True)
-    fsm_state = Column(String(32), nullable=False, index=True)
-    details = Column(Text, nullable=False, default="")
-    payload = Column(JSONBCompat, nullable=False, default=dict)
-    recoverable = Column(Boolean, nullable=False, default=True, index=True)
-    last_seen_at = Column(DateTime, nullable=False, index=True)
-    expires_at = Column(DateTime, nullable=False, index=True)
-    runtime_metadata = Column("metadata", JSONBCompat, nullable=False, default=dict)
+    session_id: Mapped[str] = mapped_column(String(128), nullable=False, unique=True, index=True)
+    user_id: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
+    request_id: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
+    fsm_state: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    details: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    payload: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    recoverable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, index=True)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    runtime_metadata: Mapped[Any] = mapped_column("metadata", JSONBCompat, nullable=False, default=dict)
 
     __table_args__ = (
         Index("idx_durable_session_state_recovery", "session_id", "recoverable", "expires_at"),
@@ -153,14 +155,14 @@ class GoalWorldGraphSnapshot(BaseModel):
 
     __tablename__ = "goal_world_graph_snapshots"
 
-    graph_id = Column(String(128), nullable=False, index=True)
-    user_id = Column(String(128), nullable=False, index=True)
-    goal_id = Column(String(128), nullable=False, index=True)
-    goal_type = Column(String(64), nullable=False, default="general", index=True)
-    coverage = Column(Float, nullable=False, default=0.0)
-    payload = Column(JSONBCompat, nullable=False, default=dict)
-    last_saved_at = Column(DateTime, nullable=False, index=True)
-    runtime_metadata = Column("metadata", JSONBCompat, nullable=False, default=dict)
+    graph_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    user_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    goal_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    goal_type: Mapped[str] = mapped_column(String(64), nullable=False, default="general", index=True)
+    coverage: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    payload: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    last_saved_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    runtime_metadata: Mapped[Any] = mapped_column("metadata", JSONBCompat, nullable=False, default=dict)
 
     __table_args__ = (
         Index("idx_goal_world_graph_user_goal", "user_id", "goal_id", unique=True),
@@ -173,12 +175,12 @@ class GrowthChronicleSnapshot(BaseModel):
 
     __tablename__ = "growth_chronicle_snapshots"
 
-    user_id = Column(String(128), nullable=False, unique=True, index=True)
-    entry_count = Column(Integer, nullable=False, default=0)
-    confirmed_count = Column(Integer, nullable=False, default=0)
-    payload = Column(JSONBCompat, nullable=False, default=list)
-    last_saved_at = Column(DateTime, nullable=False, index=True)
-    runtime_metadata = Column("metadata", JSONBCompat, nullable=False, default=dict)
+    user_id: Mapped[str] = mapped_column(String(128), nullable=False, unique=True, index=True)
+    entry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    confirmed_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    payload: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=list)
+    last_saved_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    runtime_metadata: Mapped[Any] = mapped_column("metadata", JSONBCompat, nullable=False, default=dict)
 
     __table_args__ = (
         Index("idx_growth_chronicle_user_saved", "user_id", "last_saved_at"),
@@ -194,20 +196,20 @@ class CounterfactualReport(BaseModel):
 
     __tablename__ = "counterfactual_evaluation_reports"
 
-    user_id = Column(String(128), nullable=False, index=True)
-    context_signature = Column(JSONBCompat, nullable=False, default=dict)
-    context_hash = Column(String(64), nullable=False, index=True)
-    policy_a = Column(String(128), nullable=False, index=True)
-    policy_b = Column(String(128), nullable=False, index=True)
-    estimate = Column(JSONBCompat, nullable=False, default=dict)
-    confidence = Column(Float, nullable=False, default=0.0)
-    evidence_grade = Column(Integer, nullable=False, default=0, index=True)
-    generated_at = Column(DateTime, nullable=False, index=True)
-    replaced_by_id = Column(GUID(), ForeignKey("counterfactual_evaluation_reports.id"), nullable=True, index=True)
-    promotion_candidate = Column(JSONBCompat, nullable=False, default=dict)
-    promotion_status = Column(String(32), nullable=False, default="not_ready", index=True)
-    iron_law_compliance = Column(JSONBCompat, nullable=False, default=dict)
-    runtime_metadata = Column("metadata", JSONBCompat, nullable=False, default=dict)
+    user_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    context_signature: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    context_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    policy_a: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    policy_b: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    estimate: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    evidence_grade: Mapped[int] = mapped_column(Integer, nullable=False, default=0, index=True)
+    generated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    replaced_by_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("counterfactual_evaluation_reports.id"), nullable=True, index=True)
+    promotion_candidate: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    promotion_status: Mapped[str] = mapped_column(String(32), nullable=False, default="not_ready", index=True)
+    iron_law_compliance: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
+    runtime_metadata: Mapped[Any] = mapped_column("metadata", JSONBCompat, nullable=False, default=dict)
 
     replaced_by = relationship("CounterfactualReport", remote_side="CounterfactualReport.id")
 

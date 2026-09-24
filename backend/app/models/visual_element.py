@@ -20,9 +20,12 @@ class StrEnum(enum.StrEnum):
         return obj
 
 
-from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Index, Integer, String, Text, func
+from datetime import datetime
+from typing import Any
+
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
 from app.models.base import GUID, BaseModel
@@ -64,51 +67,50 @@ class VisualElement(BaseModel):
     __tablename__ = "visual_elements"
 
     # 基础信息
-    id = Column(String(50), primary_key=True)  # 如：bg_aurora_001
-    name = Column(String(100), nullable=False)
-    description = Column(Text, nullable=True)
-    name_i18n = Column(JSONBCompat, default=dict, nullable=True)
-    description_i18n = Column(JSONBCompat, default=dict, nullable=True)
+    id: Mapped[str] = mapped_column(String(50), primary_key=True)  # 如：bg_aurora_001
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=True)
+    name_i18n: Mapped[Any] = mapped_column(JSONBCompat, default=dict, nullable=True)
+    description_i18n: Mapped[Any] = mapped_column(JSONBCompat, default=dict, nullable=True)
 
     # 类型与稀有度
-    element_type = Column(
+    element_type: Mapped[VisualElementType] = mapped_column(
         Enum(VisualElementType, values_callable=lambda obj: [e.value for e in obj]), nullable=False, index=True
     )
-    rarity = Column(
+    rarity: Mapped[VisualElementRarity] = mapped_column(
         Enum(VisualElementRarity, values_callable=lambda obj: [e.value for e in obj]),
         default=VisualElementRarity.COMMON,
         nullable=False,
     )
 
     # 解锁来源
-    unlock_source = Column(
+    unlock_source: Mapped[VisualElementUnlockSource] = mapped_column(
         Enum(VisualElementUnlockSource, values_callable=lambda obj: [e.value for e in obj]),
-        default=VisualElementUnlockSource.SYSTEM,
-    )
-    unlock_requirement = Column(JSONBCompat, nullable=True)  # {"achievement_id": "streak_30"} 或 {"price_photons": 200}
+        default=VisualElementUnlockSource.SYSTEM, nullable=True)
+    unlock_requirement: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)  # {"achievement_id": "streak_30"} 或 {"price_photons": 200}
 
     # 元素配置（根据 element_type 不同，配置内容不同）
     # background: {"gradient": {...}, "texture": "stars", "texture_opacity": 0.3}
     # particle: {"count": 50, "shape": "star", "colors": [...], "speed": 1.0}
     # effect: {"effect_type": "pulse_glow", "intensity": 0.8, "color": "#FF6B6B"}
     # bundle: {"background_id": "bg_aurora", "particle_id": "particle_star", "effect_id": "effect_glow"}
-    config = Column(JSONBCompat, nullable=False, default=dict)
+    config: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
 
     # 预览图
-    preview_url = Column(String(500), nullable=True)
-    icon_url = Column(String(500), nullable=True)
+    preview_url: Mapped[str] = mapped_column(String(500), nullable=True)
+    icon_url: Mapped[str] = mapped_column(String(500), nullable=True)
 
     # 状态
-    is_active = Column(Boolean, default=True, nullable=False)
-    is_default = Column(Boolean, default=False, nullable=False)  # 是否为默认元素
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)  # 是否为默认元素
 
     # 排序和分类
-    sort_order = Column(Integer, default=0, nullable=False)
-    category = Column(String(50), nullable=True)  # 如：nature, space, cyberpunk
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    category: Mapped[str] = mapped_column(String(50), nullable=True)  # 如：nature, space, cyberpunk
 
     # 季节/时间限制
-    season_start = Column(String(10), nullable=True)  # "03-01" 表示3月1日开始
-    season_end = Column(String(10), nullable=True)  # "05-31" 表示5月31日结束
+    season_start: Mapped[str] = mapped_column(String(10), nullable=True)  # "03-01" 表示3月1日开始
+    season_end: Mapped[str] = mapped_column(String(10), nullable=True)  # "05-31" 表示5月31日结束
 
     def __repr__(self):
         return f"<VisualElement(id={self.id}, name={self.name}, type={self.element_type})>"
@@ -148,20 +150,20 @@ class UserVisualElement(Base):
     __tablename__ = "user_visual_elements"
     __table_args__ = {"extend_existing": True}
 
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
-    element_id = Column(String(50), ForeignKey("visual_elements.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    element_id: Mapped[str] = mapped_column(String(50), ForeignKey("visual_elements.id", ondelete="CASCADE"), primary_key=True)
 
     # 解锁信息
-    unlocked_at = Column(DateTime, nullable=False)
-    unlock_source = Column(String(50), nullable=False)  # achievement, shop, event, system
+    unlocked_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    unlock_source: Mapped[str] = mapped_column(String(50), nullable=False)  # achievement, shop, event, system
 
     # 关联的成就/购买记录
-    source_id = Column(String(100), nullable=True)  # achievement_id 或 purchase_id
+    source_id: Mapped[str] = mapped_column(String(100), nullable=True)  # achievement_id 或 purchase_id
 
     # Timestamps (手动定义，不继承BaseModel)
-    created_at = Column(DateTime, default=func.now(), nullable=False)
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
-    deleted_at = Column(DateTime, nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
+    deleted_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True)
 
     # 关系
     element = relationship("VisualElement")
@@ -176,22 +178,22 @@ class UserVisualConfig(Base):
     __tablename__ = "user_visual_configs"
     __table_args__ = {"extend_existing": True}
 
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
 
     # 装备的视觉元素
-    equipped_background_id = Column(String(50), ForeignKey("visual_elements.id"), nullable=True)
-    equipped_particle_id = Column(String(50), ForeignKey("visual_elements.id"), nullable=True)
-    equipped_effect_id = Column(String(50), ForeignKey("visual_elements.id"), nullable=True)
+    equipped_background_id: Mapped[str] = mapped_column(String(50), ForeignKey("visual_elements.id"), nullable=True)
+    equipped_particle_id: Mapped[str] = mapped_column(String(50), ForeignKey("visual_elements.id"), nullable=True)
+    equipped_effect_id: Mapped[str] = mapped_column(String(50), ForeignKey("visual_elements.id"), nullable=True)
 
     # 装备时间
-    background_equipped_at = Column(DateTime, nullable=True)
-    particle_equipped_at = Column(DateTime, nullable=True)
-    effect_equipped_at = Column(DateTime, nullable=True)
+    background_equipped_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    particle_equipped_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    effect_equipped_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # Timestamps (手动定义，不继承BaseModel)
-    created_at = Column(DateTime, default=func.now(), nullable=False)
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
-    deleted_at = Column(DateTime, nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
+    deleted_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True)
 
     def __repr__(self):
         return f"<UserVisualConfig(user_id={self.user_id}, bg={self.equipped_background_id})>"

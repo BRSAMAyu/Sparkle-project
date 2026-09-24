@@ -16,11 +16,12 @@ Community Models - 好友系统、群组、消息、任务、加密、风控
 - OfflineMessageQueue: 离线消息队列
 """
 import enum
+from datetime import datetime
+from typing import Any
 
 from sqlalchemy import (
     JSON,
     Boolean,
-    Column,
     DateTime,
     Enum,
     Float,
@@ -32,7 +33,7 @@ from sqlalchemy import (
     UniqueConstraint,
     text,
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.datetime_utils import _utcnow
 from app.models.base import GUID, BaseModel
@@ -137,19 +138,19 @@ class Friendship(BaseModel):
     __tablename__ = "friendships"
 
     # 用户ID（较小的一方）
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
     # 好友ID（较大的一方）
-    friend_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    friend_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
 
     # 关系状态
-    status = Column(Enum(FriendshipStatus), default=FriendshipStatus.PENDING, nullable=False)
+    status: Mapped[FriendshipStatus] = mapped_column(Enum(FriendshipStatus), default=FriendshipStatus.PENDING, nullable=False)
 
     # 谁发起的请求（用于pending状态时判断谁需要确认）
-    initiated_by = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    initiated_by: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False)
 
     # 匹配原因（JSON格式，记录为什么推荐这个好友）
     # 例如: {"courses": ["计算机组成原理"], "exams": ["期末考试"]}
-    match_reason = Column(JSON, nullable=True)
+    match_reason: Mapped[Any] = mapped_column(JSON, nullable=True)
 
     # 关系
     user = relationship("User", foreign_keys=[user_id])
@@ -179,37 +180,37 @@ class Group(BaseModel):
     __tablename__ = "groups"
 
     # 基本信息
-    name = Column(String(100), nullable=False)
-    description = Column(Text, nullable=True)
-    avatar_url = Column(String(500), nullable=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=True)
+    avatar_url: Mapped[str] = mapped_column(String(500), nullable=True)
 
     # 群组类型
-    type = Column(Enum(GroupType), nullable=False)
+    type: Mapped[GroupType] = mapped_column(Enum(GroupType), nullable=False)
 
     # 关注标签（课程/考试/知识点）
     # 例如: ["计算机组成原理", "数据结构", "算法"]
-    focus_tags = Column(JSON, default=list, nullable=False)
+    focus_tags: Mapped[Any] = mapped_column(JSON, default=list, nullable=False)
 
     # 冲刺群专用字段
-    deadline = Column(DateTime, nullable=True)  # 冲刺截止日期
-    sprint_goal = Column(Text, nullable=True)   # 冲刺目标描述
+    deadline: Mapped[datetime] = mapped_column(DateTime, nullable=True)  # 冲刺截止日期
+    sprint_goal: Mapped[str] = mapped_column(Text, nullable=True)   # 冲刺目标描述
 
     # 群组设置
-    max_members = Column(Integer, default=50, nullable=False)
-    is_public = Column(Boolean, default=True, nullable=False)   # 是否公开（可搜索加入）
-    join_requires_approval = Column(Boolean, default=False, nullable=False)
+    max_members: Mapped[int] = mapped_column(Integer, default=50, nullable=False)
+    is_public: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)   # 是否公开（可搜索加入）
+    join_requires_approval: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # 群组统计（定期更新）
-    total_flame_power = Column(Integer, default=0, nullable=False)  # 火苗总能量
-    today_checkin_count = Column(Integer, default=0, nullable=False)
-    total_tasks_completed = Column(Integer, default=0, nullable=False)
+    total_flame_power: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # 火苗总能量
+    today_checkin_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    total_tasks_completed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # 群管理与风控
-    announcement = Column(Text, nullable=True)  # 群公告
-    announcement_updated_at = Column(DateTime, nullable=True)
-    keyword_filters = Column(JSON, nullable=True)  # 敏感词过滤列表
-    mute_all = Column(Boolean, default=False, nullable=False)  # 全员禁言
-    slow_mode_seconds = Column(Integer, default=0, nullable=False)  # 慢速模式（秒）
+    announcement: Mapped[str] = mapped_column(Text, nullable=True)  # 群公告
+    announcement_updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    keyword_filters: Mapped[Any] = mapped_column(JSON, nullable=True)  # 敏感词过滤列表
+    mute_all: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)  # 全员禁言
+    slow_mode_seconds: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # 慢速模式（秒）
 
     # 关系
     members = relationship(
@@ -253,27 +254,27 @@ class GroupMember(BaseModel):
     """
     __tablename__ = "group_members"
 
-    group_id = Column(GUID(), ForeignKey("groups.id", ondelete="CASCADE"), nullable=False, index=True)
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    group_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("groups.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
 
     # 角色
-    role = Column(Enum(GroupRole), default=GroupRole.MEMBER, nullable=False)
+    role: Mapped[GroupRole] = mapped_column(Enum(GroupRole), default=GroupRole.MEMBER, nullable=False)
 
     # 成员状态
-    is_muted = Column(Boolean, default=False, nullable=False)      # 是否被禁言
-    mute_until = Column(DateTime, nullable=True)  # 禁言截止时间
-    warn_count = Column(Integer, default=0, nullable=False)  # 警告次数
-    notifications_enabled = Column(Boolean, default=True, nullable=False)
+    is_muted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)      # 是否被禁言
+    mute_until: Mapped[datetime] = mapped_column(DateTime, nullable=True)  # 禁言截止时间
+    warn_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # 警告次数
+    notifications_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # 贡献统计
-    flame_contribution = Column(Integer, default=0, nullable=False)  # 火苗贡献值
-    tasks_completed = Column(Integer, default=0, nullable=False)
-    checkin_streak = Column(Integer, default=0, nullable=False)      # 连续打卡天数
-    last_checkin_date = Column(DateTime, nullable=True)
+    flame_contribution: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # 火苗贡献值
+    tasks_completed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    checkin_streak: Mapped[int] = mapped_column(Integer, default=0, nullable=False)      # 连续打卡天数
+    last_checkin_date: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # 时间戳
-    joined_at = Column(DateTime, default=_utcnow, nullable=False)
-    last_active_at = Column(DateTime, default=_utcnow, nullable=False)
+    joined_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
+    last_active_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
 
     # 关系
     group = relationship("Group", back_populates="members")
@@ -313,45 +314,45 @@ class GroupMessage(BaseModel):
     """
     __tablename__ = "group_messages"
 
-    group_id = Column(GUID(), ForeignKey("groups.id", ondelete="CASCADE"), nullable=False, index=True)
-    sender_id = Column(GUID(), ForeignKey("users.id"), nullable=True)  # 系统消息可为空
+    group_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("groups.id", ondelete="CASCADE"), nullable=False, index=True)
+    sender_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=True)  # 系统消息可为空
 
     # 消息类型
-    message_type = Column(Enum(MessageType), default=MessageType.TEXT, nullable=False)
+    message_type: Mapped[MessageType] = mapped_column(Enum(MessageType), default=MessageType.TEXT, nullable=False)
 
     # 消息内容
-    content = Column(Text, nullable=True)  # 纯文本内容
+    content: Mapped[str] = mapped_column(Text, nullable=True)  # 纯文本内容
 
     # 结构化内容（根据message_type不同存储不同结构）
     # TASK_SHARE: {"task_id": "xxx", "task_title": "...", "progress": 0.5}
     # PROGRESS: {"task_id": "xxx", "old_progress": 0.3, "new_progress": 0.8}
     # ACHIEVEMENT: {"achievement_type": "streak_7", "description": "连续学习7天"}
     # CHECKIN: {"flame_power": 85, "today_duration": 120, "streak": 5}
-    content_data = Column(JSON, nullable=True)
+    content_data: Mapped[Any] = mapped_column(JSON, nullable=True)
 
     # 回复相关
-    reply_to_id = Column(GUID(), ForeignKey("group_messages.id"), nullable=True)
-    thread_root_id = Column(GUID(), ForeignKey("group_messages.id"), nullable=True, index=True)
+    reply_to_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("group_messages.id"), nullable=True)
+    thread_root_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("group_messages.id"), nullable=True, index=True)
 
     # 状态与协作
-    is_revoked = Column(Boolean, default=False, nullable=False)
-    revoked_at = Column(DateTime, nullable=True)
-    edited_at = Column(DateTime, nullable=True)
-    reactions = Column(JSON, nullable=True)  # {"like": ["user_id", ...]}
-    mention_user_ids = Column(JSON, nullable=True)  # ["user_id", ...]
+    is_revoked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    revoked_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    edited_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    reactions: Mapped[Any] = mapped_column(JSON, nullable=True)  # {"like": ["user_id", ...]}
+    mention_user_ids: Mapped[Any] = mapped_column(JSON, nullable=True)  # ["user_id", ...]
 
     # 端到端加密
-    encrypted_content = Column(Text, nullable=True)  # 加密后的内容
-    content_signature = Column(String(512), nullable=True)  # 消息签名
-    encryption_version = Column(Integer, nullable=True)  # 加密版本
+    encrypted_content: Mapped[str] = mapped_column(Text, nullable=True)  # 加密后的内容
+    content_signature: Mapped[str] = mapped_column(String(512), nullable=True)  # 消息签名
+    encryption_version: Mapped[int] = mapped_column(Integer, nullable=True)  # 加密版本
 
     # 话题与标签
-    topic = Column(String(100), nullable=True)  # 话题
-    tags = Column(JSON, nullable=True)  # 标签列表
+    topic: Mapped[str] = mapped_column(String(100), nullable=True)  # 话题
+    tags: Mapped[Any] = mapped_column(JSON, nullable=True)  # 标签列表
 
     # 转发
-    forwarded_from_id = Column(GUID(), ForeignKey("group_messages.id"), nullable=True)
-    forward_count = Column(Integer, default=0, nullable=False)
+    forwarded_from_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("group_messages.id"), nullable=True)
+    forward_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # 关系
     group = relationship("Group", back_populates="messages")
@@ -377,19 +378,19 @@ class GroupMessageRead(BaseModel):
 
     __tablename__ = "group_message_reads"
 
-    message_id = Column(
+    message_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("group_messages.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
-    user_id = Column(
+    user_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
-    read_at = Column(DateTime, default=_utcnow, nullable=False)
+    read_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
 
     message = relationship("GroupMessage", back_populates="read_receipts")
     user = relationship("User")
@@ -414,26 +415,26 @@ class GroupTask(BaseModel):
     """
     __tablename__ = "group_tasks"
 
-    group_id = Column(GUID(), ForeignKey("groups.id", ondelete="CASCADE"), nullable=False, index=True)
-    created_by = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    group_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("groups.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_by: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False)
 
     # 任务信息
-    title = Column(String(200), nullable=False)
-    description = Column(Text, nullable=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=True)
 
     # 关联的知识点/标签
-    tags = Column(JSON, default=list, nullable=False)
+    tags: Mapped[Any] = mapped_column(JSON, default=list, nullable=False)
 
     # 任务属性
-    estimated_minutes = Column(Integer, default=10, nullable=False)
-    difficulty = Column(Integer, default=1, nullable=False)  # 1-5
+    estimated_minutes: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
+    difficulty: Mapped[int] = mapped_column(Integer, default=1, nullable=False)  # 1-5
 
     # 完成统计
-    total_claims = Column(Integer, default=0, nullable=False)      # 认领次数
-    total_completions = Column(Integer, default=0, nullable=False)  # 完成次数
+    total_claims: Mapped[int] = mapped_column(Integer, default=0, nullable=False)      # 认领次数
+    total_completions: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # 完成次数
 
     # 截止日期
-    due_date = Column(DateTime, nullable=True)
+    due_date: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # 关系
     group = relationship("Group", back_populates="tasks")
@@ -460,18 +461,18 @@ class GroupTaskClaim(BaseModel):
     """
     __tablename__ = "group_task_claims"
 
-    group_task_id = Column(GUID(), ForeignKey("group_tasks.id", ondelete="CASCADE"), nullable=False, index=True)
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    group_task_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("group_tasks.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
 
     # 关联的个人任务（用户认领后会创建个人任务副本）
-    personal_task_id = Column(GUID(), ForeignKey("tasks.id"), nullable=True)
+    personal_task_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("tasks.id"), nullable=True)
 
     # 状态
-    is_completed = Column(Boolean, default=False, nullable=False)
-    completed_at = Column(DateTime, nullable=True)
+    is_completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # 认领时间
-    claimed_at = Column(DateTime, default=_utcnow, nullable=False)
+    claimed_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
 
     # 关系
     group_task = relationship("GroupTask", back_populates="claims")
@@ -495,38 +496,38 @@ class SharedResource(BaseModel):
     __tablename__ = "shared_resources"
 
     # 目标 (分享给谁)
-    group_id = Column(GUID(), ForeignKey("groups.id", ondelete="CASCADE"), nullable=True, index=True)
-    target_user_id = Column(GUID(), ForeignKey("users.id"), nullable=True, index=True)
+    group_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("groups.id", ondelete="CASCADE"), nullable=True, index=True)
+    target_user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=True, index=True)
 
     # 来源
-    shared_by = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    shared_by: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False)
 
     # 资源引用 (多态关联)
     # 注意: 需要确保 plan/task/cognitive 模型已定义或使用字符串引用避免循环导入
     # 实际运行时 SQLAlchemy 会解析
-    plan_id = Column(GUID(), ForeignKey("plans.id"), nullable=True)
-    task_id = Column(GUID(), ForeignKey("tasks.id"), nullable=True)
-    knowledge_node_id = Column(GUID(), ForeignKey("knowledge_nodes.id"), nullable=True)
-    seed_library_id = Column(GUID(), ForeignKey("seed_libraries.id"), nullable=True)
-    seed_item_id = Column(GUID(), ForeignKey("seed_items.id"), nullable=True)
-    cognitive_fragment_id = Column(GUID(), ForeignKey("cognitive_fragments.id"), nullable=True)
-    curiosity_capsule_id = Column(GUID(), ForeignKey("curiosity_capsules.id"), nullable=True)
-    behavior_pattern_id = Column(GUID(), ForeignKey("behavior_patterns.id"), nullable=True)
-    card_share_record_id = Column(GUID(), ForeignKey("card_share_records.id", ondelete="SET NULL"), nullable=True, index=True)
+    plan_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("plans.id"), nullable=True)
+    task_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("tasks.id"), nullable=True)
+    knowledge_node_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("knowledge_nodes.id"), nullable=True)
+    seed_library_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("seed_libraries.id"), nullable=True)
+    seed_item_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("seed_items.id"), nullable=True)
+    cognitive_fragment_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("cognitive_fragments.id"), nullable=True)
+    curiosity_capsule_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("curiosity_capsules.id"), nullable=True)
+    behavior_pattern_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("behavior_patterns.id"), nullable=True)
+    card_share_record_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("card_share_records.id", ondelete="SET NULL"), nullable=True, index=True)
 
     # 权限与元数据
-    permission = Column(String(20), default="view", nullable=False)  # view, comment, edit
-    comment = Column(Text, nullable=True)  # 分享留言
+    permission: Mapped[str] = mapped_column(String(20), default="view", nullable=False)  # view, comment, edit
+    comment: Mapped[str] = mapped_column(Text, nullable=True)  # 分享留言
 
     # 计数
-    view_count = Column(Integer, default=0)
-    save_count = Column(Integer, default=0)  # 被转存/fork次数
-    adoption_count = Column(Integer, default=0)
-    negative_feedback_count = Column(Integer, default=0)
+    view_count: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
+    save_count: Mapped[int] = mapped_column(Integer, default=0, nullable=True)  # 被转存/fork次数
+    adoption_count: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
+    negative_feedback_count: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
 
     # 质量评分 (FV-22)
-    quality_score = Column(Float, default=0.0)
-    quality_hidden = Column(Boolean, default=False)  # auto-hide when score < 0.3
+    quality_score: Mapped[float] = mapped_column(Float, default=0.0, nullable=True)
+    quality_hidden: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)  # auto-hide when score < 0.3
 
     # 关系
     group = relationship("Group")
@@ -569,43 +570,43 @@ class PrivateMessage(BaseModel):
     """
     __tablename__ = "private_messages"
 
-    sender_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
-    receiver_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    sender_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    receiver_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
 
     # 消息类型
-    message_type = Column(Enum(MessageType), default=MessageType.TEXT, nullable=False)
+    message_type: Mapped[MessageType] = mapped_column(Enum(MessageType), default=MessageType.TEXT, nullable=False)
 
     # 消息内容
-    content = Column(Text, nullable=True)  # 纯文本内容
+    content: Mapped[str] = mapped_column(Text, nullable=True)  # 纯文本内容
 
     # 结构化内容 (同 GroupMessage)
-    content_data = Column(JSON, nullable=True)
+    content_data: Mapped[Any] = mapped_column(JSON, nullable=True)
 
     # 回复相关
-    reply_to_id = Column(GUID(), ForeignKey("private_messages.id"), nullable=True)
-    thread_root_id = Column(GUID(), ForeignKey("private_messages.id"), nullable=True, index=True)
+    reply_to_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("private_messages.id"), nullable=True)
+    thread_root_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("private_messages.id"), nullable=True, index=True)
 
     # 状态
-    is_read = Column(Boolean, default=False, nullable=False)
-    read_at = Column(DateTime, nullable=True)
-    is_revoked = Column(Boolean, default=False, nullable=False)
-    revoked_at = Column(DateTime, nullable=True)
-    edited_at = Column(DateTime, nullable=True)
-    reactions = Column(JSON, nullable=True)  # {"like": ["user_id", ...]}
-    mention_user_ids = Column(JSON, nullable=True)  # ["user_id", ...]
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    read_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    is_revoked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    revoked_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    edited_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    reactions: Mapped[Any] = mapped_column(JSON, nullable=True)  # {"like": ["user_id", ...]}
+    mention_user_ids: Mapped[Any] = mapped_column(JSON, nullable=True)  # ["user_id", ...]
 
     # 端到端加密
-    encrypted_content = Column(Text, nullable=True)  # 加密后的内容
-    content_signature = Column(String(512), nullable=True)  # 消息签名
-    encryption_version = Column(Integer, nullable=True)  # 加密版本
+    encrypted_content: Mapped[str] = mapped_column(Text, nullable=True)  # 加密后的内容
+    content_signature: Mapped[str] = mapped_column(String(512), nullable=True)  # 消息签名
+    encryption_version: Mapped[int] = mapped_column(Integer, nullable=True)  # 加密版本
 
     # 话题与标签
-    topic = Column(String(100), nullable=True)  # 话题
-    tags = Column(JSON, nullable=True)  # 标签列表
+    topic: Mapped[str] = mapped_column(String(100), nullable=True)  # 话题
+    tags: Mapped[Any] = mapped_column(JSON, nullable=True)  # 标签列表
 
     # 转发
-    forwarded_from_id = Column(GUID(), ForeignKey("private_messages.id"), nullable=True)
-    forward_count = Column(Integer, default=0, nullable=False)
+    forwarded_from_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("private_messages.id"), nullable=True)
+    forward_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # 关系
     sender = relationship("User", foreign_keys=[sender_id])
@@ -634,12 +635,12 @@ class UserEncryptionKey(BaseModel):
     """
     __tablename__ = "user_encryption_keys"
 
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    public_key = Column(Text, nullable=False)  # Base64 编码的公钥
-    key_type = Column(String(50), default="x25519", nullable=False)  # x25519, rsa, etc.
-    device_id = Column(String(100), nullable=True)  # 可选的设备绑定
-    is_active = Column(Boolean, default=True, nullable=False)
-    expires_at = Column(DateTime, nullable=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    public_key: Mapped[str] = mapped_column(Text, nullable=False)  # Base64 编码的公钥
+    key_type: Mapped[str] = mapped_column(String(50), default="x25519", nullable=False)  # x25519, rsa, etc.
+    device_id: Mapped[str] = mapped_column(String(100), nullable=True)  # 可选的设备绑定
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # 关系
     user = relationship("User")
@@ -661,17 +662,17 @@ class MessageReport(BaseModel):
     """
     __tablename__ = "message_reports"
 
-    reporter_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    group_message_id = Column(GUID(), ForeignKey("group_messages.id", ondelete="SET NULL"), nullable=True)
-    private_message_id = Column(GUID(), ForeignKey("private_messages.id", ondelete="SET NULL"), nullable=True)
+    reporter_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    group_message_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("group_messages.id", ondelete="SET NULL"), nullable=True)
+    private_message_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("private_messages.id", ondelete="SET NULL"), nullable=True)
 
-    reason = Column(Enum(ReportReason), nullable=False)
-    description = Column(Text, nullable=True)
-    status = Column(Enum(ReportStatus), default=ReportStatus.PENDING, nullable=False)
+    reason: Mapped[ReportReason] = mapped_column(Enum(ReportReason), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=True)
+    status: Mapped[ReportStatus] = mapped_column(Enum(ReportStatus), default=ReportStatus.PENDING, nullable=False)
 
-    reviewed_by = Column(GUID(), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
-    reviewed_at = Column(DateTime, nullable=True)
-    action_taken = Column(Enum(ModerationAction), nullable=True)
+    reviewed_by: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    reviewed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    action_taken: Mapped[ModerationAction] = mapped_column(Enum(ModerationAction), nullable=True)
 
     # 关系
     reporter = relationship("User", foreign_keys=[reporter_id])
@@ -697,12 +698,12 @@ class MessageFavorite(BaseModel):
     """
     __tablename__ = "message_favorites"
 
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    group_message_id = Column(GUID(), ForeignKey("group_messages.id", ondelete="CASCADE"), nullable=True)
-    private_message_id = Column(GUID(), ForeignKey("private_messages.id", ondelete="CASCADE"), nullable=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    group_message_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("group_messages.id", ondelete="CASCADE"), nullable=True)
+    private_message_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("private_messages.id", ondelete="CASCADE"), nullable=True)
 
-    note = Column(Text, nullable=True)  # 用户的个人备注
-    tags = Column(JSON, nullable=True)  # 用户自定义标签
+    note: Mapped[str] = mapped_column(Text, nullable=True)  # 用户的个人备注
+    tags: Mapped[Any] = mapped_column(JSON, nullable=True)  # 用户自定义标签
 
     # 关系
     user = relationship("User")
@@ -726,11 +727,11 @@ class BroadcastMessage(BaseModel):
     """
     __tablename__ = "broadcast_messages"
 
-    sender_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    content = Column(Text, nullable=False)
-    content_data = Column(JSON, nullable=True)
-    target_group_ids = Column(JSON, nullable=False)  # 目标群组ID列表
-    delivered_count = Column(Integer, default=0, nullable=False)
+    sender_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    content_data: Mapped[Any] = mapped_column(JSON, nullable=True)
+    target_group_ids: Mapped[Any] = mapped_column(JSON, nullable=False)  # 目标群组ID列表
+    delivered_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # 关系
     sender = relationship("User")
@@ -749,17 +750,17 @@ class OfflineMessageQueue(BaseModel):
     """
     __tablename__ = "offline_message_queue"
 
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    client_nonce = Column(String(100), nullable=False)  # 客户端生成的唯一标识，用于去重
-    message_type = Column(String(50), nullable=False)  # group, private
-    target_id = Column(GUID(), nullable=False)  # group_id 或 receiver_id
-    payload = Column(JSON, nullable=False)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    client_nonce: Mapped[str] = mapped_column(String(100), nullable=False)  # 客户端生成的唯一标识，用于去重
+    message_type: Mapped[str] = mapped_column(String(50), nullable=False)  # group, private
+    target_id: Mapped[Any] = mapped_column(GUID(), nullable=False)  # group_id 或 receiver_id
+    payload: Mapped[Any] = mapped_column(JSON, nullable=False)
 
-    status = Column(Enum(OfflineMessageStatus), default=OfflineMessageStatus.PENDING, nullable=False)
-    retry_count = Column(Integer, default=0, nullable=False)
-    last_retry_at = Column(DateTime, nullable=True)
-    error_message = Column(Text, nullable=True)
-    expires_at = Column(DateTime, nullable=True)
+    status: Mapped[OfflineMessageStatus] = mapped_column(Enum(OfflineMessageStatus), default=OfflineMessageStatus.PENDING, nullable=False)
+    retry_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_retry_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    error_message: Mapped[str] = mapped_column(Text, nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # 关系
     user = relationship("User")
@@ -778,17 +779,17 @@ class Post(BaseModel):
     """
     __tablename__ = "posts"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
-    content = Column(Text, nullable=True)
-    image_urls = Column(JSON, nullable=True)  # List[str]
-    topic = Column(String(100), nullable=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    content: Mapped[str] = mapped_column(Text, nullable=True)
+    image_urls: Mapped[Any] = mapped_column(JSON, nullable=True)  # List[str]
+    topic: Mapped[str] = mapped_column(String(100), nullable=True)
 
     # 可见性控制
-    visibility = Column(String(20), default="public", nullable=False) # public, friends, private
+    visibility: Mapped[str] = mapped_column(String(20), default="public", nullable=False) # public, friends, private
 
     # 统计
-    like_count = Column(Integer, default=0)
-    comment_count = Column(Integer, default=0)
+    like_count: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
+    comment_count: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
 
     # 关系
     user = relationship("User")
@@ -801,9 +802,9 @@ class PostLike(BaseModel):
     """
     __tablename__ = "post_likes"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
-    post_id = Column(GUID(), ForeignKey("posts.id"), nullable=False)
-    created_at = Column(DateTime, default=_utcnow, nullable=False)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False)
+    post_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("posts.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
 
     # 关系
     user = relationship("User")
@@ -821,9 +822,9 @@ class PostComment(BaseModel):
 
     __tablename__ = "post_comments"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
-    post_id = Column(GUID(), ForeignKey("posts.id"), nullable=False)
-    content = Column(Text, nullable=False)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False)
+    post_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("posts.id"), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
 
     user = relationship("User")
     post = relationship("Post")
@@ -848,11 +849,11 @@ class UserBlock(BaseModel):
     """
     __tablename__ = "user_blocks"
 
-    blocker_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    blocked_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    blocker_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    blocked_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 
     # 拉黑原因
-    reason = Column(String(500), nullable=True)
+    reason: Mapped[str] = mapped_column(String(500), nullable=True)
 
     # 关系
     blocker = relationship("User", foreign_keys=[blocker_id])

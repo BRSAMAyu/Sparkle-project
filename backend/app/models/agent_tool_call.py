@@ -21,11 +21,12 @@ decision / start/end / result / error class），一张新表（Alembic
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, Column, DateTime, ForeignKey, Index, Integer, String, Text, text
+from sqlalchemy import JSON, DateTime, ForeignKey, Index, Integer, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -49,23 +50,23 @@ class AgentToolCall(BaseModel):
 
     __tablename__ = "agent_tool_calls"
 
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    run_id = Column(GUID(), ForeignKey("agent_runs.id", ondelete="SET NULL"), nullable=True, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    run_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("agent_runs.id", ondelete="SET NULL"), nullable=True, index=True)
 
     # --- AGENT_RUNTIME.md §4 Tool Call 契约 ---
-    tool_name = Column(String(100), nullable=False)
-    tool_call_id = Column(String(128), nullable=True)  # LLM/plan 侧调用 id（追踪用）
-    idempotency_key = Column(String(255), nullable=True)  # side-effect 工具必填（executor 强制）
-    args_hash = Column(String(64), nullable=False, default="")  # canonical args sha256
-    permission_decision = Column(JSONBCompat, nullable=True)  # decide_tool_permission 结果留痕
-    status = Column(String(16), nullable=False, default="in_progress")
-    result = Column(JSONBCompat, nullable=True)  # ToolResult dump（重放返回体）
-    execution_time_ms = Column(Integer, nullable=True)
-    error_type = Column(String(100), nullable=True)
-    error_message = Column(Text, nullable=True)
+    tool_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    tool_call_id: Mapped[str] = mapped_column(String(128), nullable=True)  # LLM/plan 侧调用 id（追踪用）
+    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=True)  # side-effect 工具必填（executor 强制）
+    args_hash: Mapped[str] = mapped_column(String(64), nullable=False, default="")  # canonical args sha256
+    permission_decision: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)  # decide_tool_permission 结果留痕
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="in_progress")
+    result: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)  # ToolResult dump（重放返回体）
+    execution_time_ms: Mapped[int] = mapped_column(Integer, nullable=True)
+    error_type: Mapped[str] = mapped_column(String(100), nullable=True)
+    error_message: Mapped[str] = mapped_column(Text, nullable=True)
 
-    started_at = Column(DateTime, nullable=True)
-    finished_at = Column(DateTime, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    finished_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     user = relationship("User", backref="agent_tool_calls", foreign_keys=[user_id])
     run = relationship("AgentRun", backref="tool_calls", foreign_keys=[run_id])

@@ -4,11 +4,12 @@ Seed Content Models
 """
 from datetime import UTC, datetime
 from enum import StrEnum
+from typing import Any
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import deferred, relationship
+from sqlalchemy.orm import Mapped, deferred, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel, HardDeleteBaseModel
 
@@ -60,17 +61,17 @@ class SeedLibrary(BaseModel):
     __tablename__ = "seed_libraries"
 
     # 基本信息
-    name = Column(String(200), nullable=False, index=True, doc="库名称")
-    description = Column(Text, nullable=True, doc="库描述")
+    name: Mapped[str] = mapped_column(String(200), nullable=False, index=True, doc="库名称")
+    description: Mapped[str] = mapped_column(Text, nullable=True, doc="库描述")
 
     # 分类与可见性
-    category = Column(
+    category: Mapped[str] = mapped_column(
         String(50),
         nullable=False,
         index=True,
         doc="库分类: few_shot, teaching_content, reply_template, custom"
     )
-    visibility = Column(
+    visibility: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
         default="private",
@@ -79,7 +80,7 @@ class SeedLibrary(BaseModel):
     )
 
     # 所有权
-    owner_id = Column(
+    owner_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
@@ -88,19 +89,19 @@ class SeedLibrary(BaseModel):
     )
 
     # 元数据
-    language = Column(String(10), nullable=False, default="zh", doc="语言代码")
-    tags = Column(JSONBCompat, nullable=True, doc="标签数组，用于分类和搜索")
-    extra_metadata = Column(JSONBCompat, nullable=True, doc="额外的元数据信息")
+    language: Mapped[str] = mapped_column(String(10), nullable=False, default="zh", doc="语言代码")
+    tags: Mapped[Any] = mapped_column(JSONBCompat, nullable=True, doc="标签数组，用于分类和搜索")
+    extra_metadata: Mapped[Any] = mapped_column(JSONBCompat, nullable=True, doc="额外的元数据信息")
 
     # 官方标记
-    is_official = Column(
+    is_official: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
         default=False,
         index=True,
         doc="是否为官方库"
     )
-    is_featured = Column(
+    is_featured: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
         default=False,
@@ -109,13 +110,13 @@ class SeedLibrary(BaseModel):
     )
 
     # 统计信息
-    usage_count = Column(
+    usage_count: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
         default=0,
         doc="使用次数统计"
     )
-    quality_score = Column(
+    quality_score: Mapped[float] = mapped_column(
         Float,
         nullable=True,
         doc="质量评分 (0-10)"
@@ -165,7 +166,7 @@ class SeedItem(BaseModel):
     __tablename__ = "seed_items"
 
     # 关联
-    library_id = Column(
+    library_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("seed_libraries.id", ondelete="CASCADE"),
         nullable=False,
@@ -174,7 +175,7 @@ class SeedItem(BaseModel):
     )
 
     # 类型
-    item_type = Column(
+    item_type: Mapped[str] = mapped_column(
         String(50),
         nullable=False,
         index=True,
@@ -182,30 +183,30 @@ class SeedItem(BaseModel):
     )
 
     # 内容
-    title = Column(String(300), nullable=True, doc="内容标题")
-    content = Column(Text, nullable=True, doc="文本内容")
+    title: Mapped[str] = mapped_column(String(300), nullable=True, doc="内容标题")
+    content: Mapped[str] = mapped_column(Text, nullable=True, doc="文本内容")
 
     # 结构化数据 (用于存储复杂内容)
-    content_data = Column(
+    content_data: Mapped[Any] = mapped_column(
         JSONBCompat,
         nullable=True,
         doc="结构化内容数据，如题目选项、答案解析等"
     )
 
     # 分类属性
-    subject = Column(
+    subject: Mapped[str] = mapped_column(
         String(100),
         nullable=True,
         index=True,
         doc="学科分类"
     )
-    difficulty_level = Column(
+    difficulty_level: Mapped[str] = mapped_column(
         String(20),
         nullable=True,
         index=True,
         doc="难度等级: beginner, intermediate, advanced, expert"
     )
-    tags = Column(JSONBCompat, nullable=True, doc="标签数组，用于分类和搜索")
+    tags: Mapped[Any] = mapped_column(JSONBCompat, nullable=True, doc="标签数组，用于分类和搜索")
 
     # 向量嵌入 (用于语义搜索)
     embedding = deferred(
@@ -217,13 +218,13 @@ class SeedItem(BaseModel):
     )
 
     # 排序与状态
-    order_index = Column(
+    order_index: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
         default=0,
         doc="排序索引"
     )
-    is_active = Column(
+    is_active: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
         default=True,
@@ -261,14 +262,14 @@ class UserLibrarySubscription(BaseModel):
     __tablename__ = "user_library_subscriptions"
 
     # 关联
-    user_id = Column(
+    user_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
         doc="用户ID"
     )
-    library_id = Column(
+    library_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("seed_libraries.id", ondelete="CASCADE"),
         nullable=False,
@@ -277,29 +278,29 @@ class UserLibrarySubscription(BaseModel):
     )
 
     # 订阅状态
-    is_enabled = Column(
+    is_enabled: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
         default=True,
         index=True,
         doc="是否启用订阅"
     )
-    priority = Column(
+    priority: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
         default=0,
         doc="优先级，数值越大优先级越高"
     )
-    notes = Column(Text, nullable=True, doc="用户备注")
+    notes: Mapped[str] = mapped_column(Text, nullable=True, doc="用户备注")
 
     # 时间戳
-    subscribed_at = Column(
+    subscribed_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
         default=lambda: _utcnow(),
         doc="订阅时间"
     )
-    last_used_at = Column(
+    last_used_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=True,
         doc="最后使用时间"
@@ -327,26 +328,26 @@ class SeedLibraryRating(HardDeleteBaseModel):
         UniqueConstraint("user_id", "library_id", name="uq_seed_library_ratings_user_library"),
     )
 
-    user_id = Column(
+    user_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
         doc="评分用户ID",
     )
-    library_id = Column(
+    library_id: Mapped[Any] = mapped_column(
         GUID(),
         ForeignKey("seed_libraries.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
         doc="种子库ID",
     )
-    score = Column(
+    score: Mapped[float] = mapped_column(
         Float,
         nullable=False,
         doc="用户评分，0-10",
     )
-    comment = Column(
+    comment: Mapped[str] = mapped_column(
         Text,
         nullable=True,
         doc="用户评价说明",

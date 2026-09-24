@@ -13,8 +13,12 @@ Understanding Depth daily baseline models.
 
 from __future__ import annotations
 
-from sqlalchemy import JSON, Column, Date, Float, Index, Integer, UniqueConstraint
+from datetime import date
+from typing import Any
+
+from sqlalchemy import JSON, Date, Float, Index, Integer, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import GUID, BaseModel
 
@@ -24,16 +28,16 @@ JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 class UnderstandingDepthDaily(BaseModel):
     __tablename__ = "understanding_depth_daily"
 
-    user_id = Column(GUID(), nullable=False, index=True)
-    metric_date = Column(Date, nullable=False)
+    user_id: Mapped[Any] = mapped_column(GUID(), nullable=False, index=True)
+    metric_date: Mapped[date] = mapped_column(Date, nullable=False)
     # 0-1 合成分；无活动日不落行，有活动但维度缺失按 0 计。
-    score = Column(Float, nullable=False)
+    score: Mapped[float] = mapped_column(Float, nullable=False)
     # 各维度原始值与归一化分量（memory_injection/personalization/non_correction/non_repeat）
     # 以及样本量（context_pack_runs、chat_turns、memory_corrections、repeat_questions）。
-    components = Column(JSONBCompat, nullable=False, default=dict)
+    components: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
     # 冗余样本量列（便于 SQL 直接做人群聚合，不必解 JSONB）。
-    context_pack_runs = Column(Integer, nullable=False, default=0)
-    chat_turns = Column(Integer, nullable=False, default=0)
+    context_pack_runs: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    chat_turns: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     __table_args__ = (
         UniqueConstraint("user_id", "metric_date", name="uq_understanding_depth_daily_user_date"),

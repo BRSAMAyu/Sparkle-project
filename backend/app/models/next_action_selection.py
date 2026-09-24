@@ -7,8 +7,9 @@ Next Action Selection Model
 import json
 from typing import Any
 
-from sqlalchemy import Boolean, Column, Integer, String, Text, TypeDecorator
+from sqlalchemy import Boolean, Integer, String, Text, TypeDecorator
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import GUID, BaseModel
 
@@ -56,23 +57,23 @@ class NextActionSelection(BaseModel):
     """
     __tablename__ = "next_action_selections"
 
-    user_id = Column(GUID(), nullable=False, index=True)
-    task_id = Column(GUID(), nullable=False, index=True)
+    user_id: Mapped[Any] = mapped_column(GUID(), nullable=False, index=True)
+    task_id: Mapped[Any] = mapped_column(GUID(), nullable=False, index=True)
 
     # Action信息
-    action_type = Column(String(50), nullable=False, index=True)  # quick_review, light_expand, etc.
-    action_title = Column(String(255), nullable=False)
+    action_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)  # quick_review, light_expand, etc.
+    action_title: Mapped[str] = mapped_column(String(255), nullable=False)
 
     # 用户行为
-    selected = Column(Boolean, nullable=False, default=False)
-    skipped = Column(Boolean, nullable=False, default=False)
+    selected: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    skipped: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     # 显示上下文
-    display_position = Column(Integer, nullable=True)  # 在列表中的位置 (0-based)
-    displayed_actions_count = Column(Integer, nullable=True)  # 总共显示了多少个建议
+    display_position: Mapped[int] = mapped_column(Integer, nullable=True)  # 在列表中的位置 (0-based)
+    displayed_actions_count: Mapped[int] = mapped_column(Integer, nullable=True)  # 总共显示了多少个建议
 
     # 额外上下文信息
-    context = Column(JSONCompat, nullable=True)  # 扩展信息
+    context: Mapped[Any] = mapped_column(JSONCompat, nullable=True)  # 扩展信息
 
     def __repr__(self):
         return f"<NextActionSelection(user_id={self.user_id}, action_type={self.action_type}, selected={self.selected})>"

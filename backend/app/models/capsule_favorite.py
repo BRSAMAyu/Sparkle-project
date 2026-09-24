@@ -1,8 +1,10 @@
 """
 Capsule Favorite Model
 """
-from sqlalchemy import Column, ForeignKey, Text, UniqueConstraint
-from sqlalchemy.orm import relationship
+from typing import Any
+
+from sqlalchemy import ForeignKey, Text, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -15,9 +17,9 @@ class CapsuleFavorite(BaseModel):
     """
     __tablename__ = "capsule_favorites"
 
-    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    capsule_id = Column(GUID(), ForeignKey("curiosity_capsules.id", ondelete="CASCADE"), nullable=False, index=True)
-    note = Column(Text, nullable=True)  # 用户收藏时的备注
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    capsule_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("curiosity_capsules.id", ondelete="CASCADE"), nullable=False, index=True)
+    note: Mapped[str] = mapped_column(Text, nullable=True)  # 用户收藏时的备注
 
     __table_args__ = (
         UniqueConstraint("user_id", "capsule_id", name="uq_capsule_favorite"),

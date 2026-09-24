@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from sqlalchemy import Column, Float, ForeignKey, Index, String
-from sqlalchemy.orm import relationship
+from typing import Any
+
+from sqlalchemy import Float, ForeignKey, Index, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import GUID, BaseModel
 
@@ -9,12 +11,12 @@ from app.models.base import GUID, BaseModel
 class PersDynAttractor(BaseModel):
     __tablename__ = "persdyn_attractors"
 
-    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
-    dim = Column(String(40), nullable=False)
-    baseline = Column(Float, nullable=False, default=0.0)
-    variability = Column(Float, nullable=False, default=0.0)
-    recovery_rate = Column(Float, nullable=False, default=0.0)
-    confidence = Column(Float, nullable=False, default=0.0)
+    user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    dim: Mapped[str] = mapped_column(String(40), nullable=False)
+    baseline: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    variability: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    recovery_rate: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
 
     user = relationship("User", backref="persdyn_attractors")
 
