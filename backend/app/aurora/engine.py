@@ -141,18 +141,23 @@ class AuroraEngine:
         context: AuroraDecisionContext,
         route: BackboneRoutingDecision,
     ) -> TransitionDecisionRecord:
-        policy = context.policy_version or self.load_policy(context.snapshot.policy_version)
+        # 调用方（tier 执行入口）已在 snapshot 为 None 时走 build_fallback_decision；
+        # 此处收窄以满足签名契约，防御分支与既有 fallback 语义一致。
+        snapshot = context.snapshot
+        if snapshot is None:
+            return self.build_fallback_decision(context, reason="missing_snapshot")
+        policy = context.policy_version or self.load_policy(snapshot.policy_version)
         impact_class = ImpactClass.LOW if not route.materiality.should_route else ImpactClass.MEDIUM
         return TransitionDecisionRecord(
             id=uuid4(),
-            user_id=context.snapshot.user_id,
-            created_at=context.snapshot.collected_at,
+            user_id=snapshot.user_id,
+            created_at=snapshot.collected_at,
             decision_type="stay",
             proposed_transition=None,
             initiation_type=InitiationType.REACTIVE,
             decision_mechanism=DecisionMechanism.DETERMINISTIC,
             decision_basis=route.materiality.basis,
-            input_snapshot_ref=context.snapshot.snapshot_hash,
+            input_snapshot_ref=snapshot.snapshot_hash,
             impact_class=impact_class,
             inference_knobs={"route_kind": route.route_kind, "reason": route.reason, "routing_mode": route.routing_mode.value},
             capability_gate={
@@ -181,7 +186,12 @@ class AuroraEngine:
         context: AuroraDecisionContext,
         route: BackboneRoutingDecision,
     ) -> TransitionDecisionRecord:
-        policy = context.policy_version or self.load_policy(context.snapshot.policy_version)
+        # 调用方（tier 执行入口）已在 snapshot 为 None 时走 build_fallback_decision；
+        # 此处收窄以满足签名契约，防御分支与既有 fallback 语义一致。
+        snapshot = context.snapshot
+        if snapshot is None:
+            return self.build_fallback_decision(context, reason="missing_snapshot")
+        policy = context.policy_version or self.load_policy(snapshot.policy_version)
         if context.trigger_point == "pre-tool-selection":
             initiation_type = InitiationType.SCHEDULED
         elif context.trigger_point == "pre-response-formatting":
@@ -190,14 +200,14 @@ class AuroraEngine:
             initiation_type = InitiationType.REACTIVE
         return TransitionDecisionRecord(
             id=uuid4(),
-            user_id=context.snapshot.user_id,
-            created_at=context.snapshot.collected_at,
+            user_id=snapshot.user_id,
+            created_at=snapshot.collected_at,
             decision_type="transition",
             proposed_transition=route.proposed_node,
             initiation_type=initiation_type,
             decision_mechanism=DecisionMechanism.DETERMINISTIC,
             decision_basis=route.materiality.basis,
-            input_snapshot_ref=context.snapshot.snapshot_hash,
+            input_snapshot_ref=snapshot.snapshot_hash,
             impact_class=ImpactClass.HIGH if route.materiality.should_route else ImpactClass.MEDIUM,
             inference_knobs={"route_kind": route.route_kind, "routing_mode": route.routing_mode.value},
             capability_gate={"enabled": True, "route": route.proposed_node, "routing_mode": route.routing_mode.value},

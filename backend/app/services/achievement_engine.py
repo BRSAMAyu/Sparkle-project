@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import inspect
 from collections.abc import Awaitable, Callable
 from datetime import UTC, date, datetime, timedelta
 from typing import TYPE_CHECKING, Any, cast
@@ -189,10 +190,16 @@ class AchievementEngine:
                 ttl=3600,
             )
             # Also maintain a rolling list via pipeline
-            pipe = cache_service.redis.pipeline() if hasattr(cache_service, 'redis') else None
+            redis_client = cache_service.redis
+            pipe = redis_client.pipeline() if redis_client is not None else None
             if pipe:
-                await pipe.lpush(key, _json.dumps(event))
-                await pipe.ltrim(key, 0, 9)  # Keep last 10
+                # redis-py 命令桩为双模式（Awaitable | 值）；async 客户端下恒可等待
+                pushed = pipe.lpush(key, _json.dumps(event))
+                if inspect.isawaitable(pushed):
+                    await pushed
+                trimmed = pipe.ltrim(key, 0, 9)  # Keep last 10
+                if inspect.isawaitable(trimmed):
+                    await trimmed
                 await pipe.expire(key, 3600)
                 await pipe.execute()
         except Exception:
@@ -1364,10 +1371,15 @@ class AchievementEngine:
     ) -> str:
         snapshot = context_snapshot or {}
         date_text = self._format_story_date(unlocked_at)
-        plan = snapshot.get("current_plan") if isinstance(snapshot.get("current_plan"), dict) else {}
-        task = snapshot.get("task") if isinstance(snapshot.get("task"), dict) else {}
-        node = snapshot.get("node") if isinstance(snapshot.get("node"), dict) else {}
-        progress = snapshot.get("progress") if isinstance(snapshot.get("progress"), dict) else {}
+        # 局部绑定后再 isinstance 收窄（双调用表达式的窄化在 mypy 下失效）
+        raw_plan = snapshot.get("current_plan")
+        plan = raw_plan if isinstance(raw_plan, dict) else {}
+        raw_task = snapshot.get("task")
+        task = raw_task if isinstance(raw_task, dict) else {}
+        raw_node = snapshot.get("node")
+        node = raw_node if isinstance(raw_node, dict) else {}
+        raw_progress = snapshot.get("progress")
+        progress = raw_progress if isinstance(raw_progress, dict) else {}
 
         context_bits: list[str] = []
         plan_name = str(plan.get("name") or "").strip()
@@ -1381,7 +1393,8 @@ class AchievementEngine:
             context_bits.append(f"在推进「{plan_name}」时")
 
         action = ""
-        achievement_snapshot = snapshot.get("achievement") if isinstance(snapshot.get("achievement"), dict) else {}
+        raw_achievement = snapshot.get("achievement")
+        achievement_snapshot = raw_achievement if isinstance(raw_achievement, dict) else {}
         trigger_code = str(achievement_snapshot.get("trigger_code") or "").strip()
         target = progress.get("target")
         task_title = str(task.get("title") or "").strip()
@@ -1537,7 +1550,7 @@ class AchievementEngine:
             from app.signals.types import _uid
 
             achievement_name = str(unlock_payload.get("name") or "")
-            rarity = unlock_payload.get("rarity")
+            rarity: Any = unlock_payload.get("rarity")
             rarity_value = str(rarity.value if hasattr(rarity, "value") else rarity or "")
             story = str(unlock_payload.get("context_story") or "").strip()
 
@@ -1590,7 +1603,7 @@ class AchievementEngine:
 
     async def _broadcast_unlock_signals(self, user_id: str, unlock_payload: dict[str, Any]) -> None:
         try:
-            rarity = unlock_payload.get("rarity")
+            rarity: Any = unlock_payload.get("rarity")
             rarity_value = rarity.value if hasattr(rarity, "value") else str(rarity)
             payload = {
                 "event_type": "achievement.unlocked",
@@ -2219,7 +2232,7 @@ class AchievementEngine:
         combo = combo_info.get("combo")
         if combo and combo > 1:
             lines.append(f"{combo} 连成就")
-        rarity = unlock_payload.get("rarity")
+        rarity: Any = unlock_payload.get("rarity")
         rarity_value = rarity.value if hasattr(rarity, "value") else str(rarity)
         percentile_map = {
             "common": "击败了 50% 的普通解锁节奏",

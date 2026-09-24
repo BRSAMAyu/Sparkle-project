@@ -269,6 +269,8 @@ async def _track_daily_user_tokens(user_id: str | None, total_tokens: int) -> No
         date_key = datetime.now(UTC).strftime("%Y-%m-%d")
         redis_key = f"llm_tokens:{user_id}:{date_key}"
         r = cache_service.redis
+        if r is None:
+            return
         await r.incrby(redis_key, total_tokens)
         # Set 48h TTL on first write (in case key is new)
         ttl = await r.ttl(redis_key)
@@ -816,8 +818,9 @@ class LLMService:
 
     def _get_provider_name_from_url(self) -> str:
         """从 provider 获取提供商名称"""
-        if hasattr(self.provider, 'base_url'):
-            url_lower = self.provider.base_url.lower()
+        provider = self.provider
+        if provider is not None and hasattr(provider, 'base_url'):
+            url_lower = provider.base_url.lower()
             if "bigmodel" in url_lower or "zhipu" in url_lower:
                 return "zhipu"
             elif "deepseek" in url_lower:
@@ -1635,8 +1638,13 @@ class LLMService:
                         operation_type="chat_stream_with_tools",
                     )
                 else:
+                    provider = self.provider
+                    if provider is None:
+                        # 入口处已对 not self.provider 抛 501；此处为类型收窄的防御分支
+                        raise HTTPException(status_code=501, detail="LLM provider unavailable")
+
                     async def _direct_stream() -> AsyncGenerator[Any, None]:
-                        stream = await self.provider.client.chat.completions.create(**request_params)
+                        stream = await provider.client.chat.completions.create(**request_params)
                         async for item in stream:
                             yield item
                     chunk_stream = _direct_stream()

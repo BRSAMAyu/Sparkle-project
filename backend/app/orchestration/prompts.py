@@ -2015,19 +2015,20 @@ def _format_companion_persona_section(
         )
 
     context_focus = user_context.get("context_focus") if isinstance(user_context, dict) else None
-    section_weights = (
-        context_focus.get("section_weights")
-        if isinstance(context_focus, dict) and isinstance(context_focus.get("section_weights"), dict)
-        else {}
-    )
+    # 局部绑定后再 isinstance 收窄（双调用表达式的窄化在 mypy 下失效）
+    raw_section_weights = context_focus.get("section_weights") if isinstance(context_focus, dict) else None
+    section_weights = raw_section_weights if isinstance(raw_section_weights, dict) else {}
     plan_weight = str(section_weights.get("plan_context") or "").strip().lower()
     goals_weight = str(section_weights.get("goals") or "").strip().lower()
     cognitive_weight = str(section_weights.get("cognitive_prism") or "").strip().lower()
     suppressed_weights = {"off", "low", "minimal"}
 
     profile = _extract_profile(user_context)
-    identity = profile.get("identity") if isinstance(profile.get("identity"), dict) else {}
-    raw_user_context = user_context.get("user_context") if isinstance(user_context.get("user_context"), dict) else {}
+    # 局部绑定后再 isinstance 收窄（双调用表达式的窄化在 mypy 下失效）
+    raw_identity = profile.get("identity")
+    identity = raw_identity if isinstance(raw_identity, dict) else {}
+    raw_nested_context = user_context.get("user_context") if isinstance(user_context, dict) else None
+    raw_user_context = raw_nested_context if isinstance(raw_nested_context, dict) else {}
     nickname = (
         str(identity.get("nickname") or "").strip()
         or str(raw_user_context.get("nickname") or raw_user_context.get("username") or "").strip()
@@ -2121,8 +2122,11 @@ def _format_soul_driven_companion_persona_section(
     effective_companion_state: dict[str, Any],
 ) -> str:
     profile = _extract_profile(user_context)
-    identity = profile.get("identity") if isinstance(profile.get("identity"), dict) else {}
-    raw_user_context = user_context.get("user_context") if isinstance(user_context.get("user_context"), dict) else {}
+    # 局部绑定后再 isinstance 收窄（双调用表达式的窄化在 mypy 下失效）
+    raw_identity = profile.get("identity")
+    identity = raw_identity if isinstance(raw_identity, dict) else {}
+    raw_nested_context = user_context.get("user_context") if isinstance(user_context, dict) else None
+    raw_user_context = raw_nested_context if isinstance(raw_nested_context, dict) else {}
     nickname = (
         str(identity.get("nickname") or "").strip()
         or str(raw_user_context.get("nickname") or raw_user_context.get("username") or "").strip()
@@ -2803,14 +2807,14 @@ def _extract_canonical_insight_state(context: dict[str, Any] | None) -> UserInsi
 
 def _extract_cognitive_context_payload(context: dict[str, Any] | None) -> dict[str, Any]:
     payload = context.get("cognitive_context") if isinstance(context, dict) else None
-    if hasattr(payload, "model_dump"):
+    if payload is not None and hasattr(payload, "model_dump"):
         payload = payload.model_dump(mode="json")
     return payload if isinstance(payload, dict) else {}
 
 
 def _extract_profile_context_payload(context: dict[str, Any] | None) -> dict[str, Any]:
     payload = context.get("profile_context") if isinstance(context, dict) else None
-    if hasattr(payload, "model_dump"):
+    if payload is not None and hasattr(payload, "model_dump"):
         payload = payload.model_dump(mode="json")
     return payload if isinstance(payload, dict) else {}
 

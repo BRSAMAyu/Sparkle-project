@@ -30,7 +30,7 @@ from app.agents.graph.state import (
     ReviewTargetType,
     SparkleState,
 )
-from app.agents.reflection_agent import get_reflection_agent
+from app.agents.reflection_agent import ReflectionResult, get_reflection_agent
 from app.agents.reviewer_agent import ReviewerAgent, ReviewResult, get_reviewer_agent
 from app.agents.workflow_experience import build_workflow_context, resolve_review_profile_id
 from app.core.agent_profiles import TaskType
@@ -911,6 +911,18 @@ async def reflection_node(state: SparkleState) -> dict[str, Any]:
             review_profile_id=review_profile_id,
             workflow_context=workflow_context,
         )
+        # review-mode 调用（review_result 非 None）按 reflect() 契约恒返回
+        # ReflectionResult；TriggeredReflectionResult 只出现在 trigger-mode。
+        # 用显式收窄代替裸联合访问，不可能分支走既有失败返回路径。
+        if not isinstance(reflection_result, ReflectionResult):
+            logger.error("[ReviewNode] Unexpected trigger-mode reflection result in review flow")
+            return {
+                "next_step": "__end__",
+                "review_context": {
+                    **review_context,
+                    "status": ReviewStatus.FAILED
+                }
+            }
 
         logger.info(
             f"[ReviewNode] Reflection complete: "

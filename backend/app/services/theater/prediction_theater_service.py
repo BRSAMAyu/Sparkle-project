@@ -9,7 +9,7 @@ import re
 import statistics
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
-from typing import Any
+from typing import Any, TypedDict
 from urllib.parse import quote, urlencode
 from uuid import UUID, uuid4
 
@@ -215,6 +215,16 @@ class TheaterPathOption:
         }
 
 
+class _StrategySampleBucket(TypedDict):
+    """按策略分桶的校准样本（精度统计内部结构）。"""
+
+    completion_biases: list[float]
+    mastery_biases: list[float]
+    completion_errors: list[float]
+    mastery_errors: list[float]
+    sample_count: int
+
+
 @dataclass(frozen=True)
 class TheaterTargetContext:
     name: str
@@ -256,7 +266,8 @@ class PredictionAccuracyTracker:
         if not isinstance(cached, dict):
             return None
 
-        predicted = cached.get("selected_prediction") if isinstance(cached.get("selected_prediction"), dict) else {}
+        predicted_raw = cached.get("selected_prediction")
+        predicted = predicted_raw if isinstance(predicted_raw, dict) else {}
         predicted_completion = float(predicted.get("estimated_completion_rate") or 0.0)
         predicted_mastery = float(predicted.get("estimated_mastery") or 0.0)
         completion_range_low = predicted.get("completion_range_low")
@@ -2701,7 +2712,7 @@ class PredictionTheaterService:
         actual_mastery_scores: list[float] = []
         coverage_hits = 0
         coverage_total = 0
-        strategy_samples: dict[str, dict[str, list[float] | int]] = {}
+        strategy_samples: dict[str, _StrategySampleBucket] = {}
 
         for selected_prediction, accuracy_summary in rows:
             if not isinstance(selected_prediction, dict) or not isinstance(accuracy_summary, dict):

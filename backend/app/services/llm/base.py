@@ -30,5 +30,9 @@ class LLMProvider(ABC):
     ) -> AsyncGenerator[str, None]:
         """
         Stream chat completion chunks.
+
+        契约：全部实现都是 async-generator 函数（函数体含 yield，调用即
+        返回 AsyncGenerator 而非协程），调用方直接 ``async for`` 消费。
+        抽象声明体中的 yield 仅为对齐该契约，永不执行。
         """
-        pass
+        yield ""

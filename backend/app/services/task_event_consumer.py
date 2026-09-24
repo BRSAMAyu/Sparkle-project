@@ -409,7 +409,8 @@ class TaskEventConsumer:
     ) -> None:
         from app.services.route_history_service import RouteHistoryService
 
-        metadata = event.get("source_metadata") if isinstance(event.get("source_metadata"), dict) else {}
+        source_metadata = event.get("source_metadata")
+        metadata = source_metadata if isinstance(source_metadata, dict) else {}
         route_history_decision_id = event.get("route_history_decision_id") or metadata.get("route_history_decision_id")
         routing_outcome_signal_id = event.get("routing_outcome_signal_id") or metadata.get("routing_outcome_signal_id")
         routing_trace_id = event.get("routing_trace_id") or metadata.get("routing_trace_id")
@@ -459,7 +460,8 @@ class TaskEventConsumer:
         evidence_items = build_task_outcome_evidence(event, completed=completed)
         if not evidence_items:
             return None
-        metadata = event.get("source_metadata") if isinstance(event.get("source_metadata"), dict) else {}
+        source_metadata = event.get("source_metadata")
+        metadata = source_metadata if isinstance(source_metadata, dict) else {}
         actual_router_mode = event.get("actual_router_mode") or metadata.get("actual_router_mode")
         action_type = "task_completed" if completed else "task_abandoned"
         engine = FusionEngine(str(user_id))
@@ -541,7 +543,8 @@ class TaskEventConsumer:
         evidence_items = build_task_feedback_evidence(event)
         if not evidence_items:
             return None
-        metadata = event.get("source_metadata") if isinstance(event.get("source_metadata"), dict) else {}
+        source_metadata = event.get("source_metadata")
+        metadata = source_metadata if isinstance(source_metadata, dict) else {}
         actual_router_mode = event.get("actual_router_mode") or metadata.get("actual_router_mode")
         engine = FusionEngine(str(user_id))
         reward = RoutingRewardModel.from_task_feedback(event)

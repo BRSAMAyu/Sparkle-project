@@ -149,13 +149,15 @@ async def translate_text(
         )
 
         if result.success:
-            # 构建响应元数据
+            # success=True 时 data 按契约非 None；绑定局部并以 or {} 兜底，
+            # 消除 Optional 联合上的 .get 访问
+            data = result.data or {}
             meta = {
-                "source_lang": result.data.get("source_lang", source_lang),
-                "target_lang": result.data.get("target_lang", target_lang),
-                "provider": result.data.get("provider", "unknown"),
-                "cache_hit": result.data.get("cache_hit", False),
-                "latency_ms": result.data.get("latency_ms", 0),
+                "source_lang": data.get("source_lang", source_lang),
+                "target_lang": data.get("target_lang", target_lang),
+                "provider": data.get("provider", "unknown"),
+                "cache_hit": data.get("cache_hit", False),
+                "latency_ms": data.get("latency_ms", 0),
                 "domain": request.domain,
                 "style": request.style,
                 "actions": [
@@ -165,7 +167,7 @@ async def translate_text(
                         "endpoint": "/api/v1/vocabulary/wordbook",
                         "payload": {
                             "word": request.text[:100],
-                            "definition": result.data.get("translation", ""),
+                            "definition": data.get("translation", ""),
                             "context_sentence": request.context_before or request.text[:1000],
                             "source_translation_id": request.fingerprint,
                             "save_to_knowledge": False,
@@ -189,7 +191,7 @@ async def translate_text(
             }
 
             # 构建片段列表
-            segments_data = result.data.get("segments", [])
+            segments_data = data.get("segments", [])
             segments = [
                 TranslationSegmentData(
                     id=seg.get("id", ""),
@@ -201,7 +203,7 @@ async def translate_text(
 
             # 构建推荐数据
             recommendation = None
-            recommendation_data = result.data.get("recommendation")
+            recommendation_data = data.get("recommendation")
             if recommendation_data:
                 recommendation = TranslationRecommendation(
                     should_create_card=recommendation_data.get("should_create_card", False),
@@ -211,7 +213,7 @@ async def translate_text(
 
             return TranslateResponse(
                 success=True,
-                translation=result.data.get("translation", ""),
+                translation=data.get("translation", ""),
                 segments=segments,
                 recommendation=recommendation,
                 meta=meta,

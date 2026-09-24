@@ -47,12 +47,19 @@ class InsightPredictionService:
         return predictions
 
     def _extract_features(self, *, state: UserInsightState, turn_signals: dict[str, Any]) -> dict[str, Any]:
-        analysis = state.multi_span_analysis if isinstance(state.multi_span_analysis, dict) else {}
-        short_span = analysis.get("short_span") if isinstance(analysis.get("short_span"), dict) else {}
-        medium_span = analysis.get("medium_span") if isinstance(analysis.get("medium_span"), dict) else {}
-        confidence_decay = analysis.get("confidence_decay") if isinstance(analysis.get("confidence_decay"), dict) else {}
-        calendar = state.temporal_patterns.get("calendar") if isinstance(state.temporal_patterns.get("calendar"), dict) else {}
-        drift = medium_span.get("task_start_completion_drift") if isinstance(medium_span.get("task_start_completion_drift"), dict) else {}
+        # 局部绑定后再 isinstance 收窄（双调用表达式的窄化在 mypy 下失效）
+        raw_analysis = state.multi_span_analysis
+        analysis = raw_analysis if isinstance(raw_analysis, dict) else {}
+        raw_short = analysis.get("short_span")
+        short_span = raw_short if isinstance(raw_short, dict) else {}
+        raw_medium = analysis.get("medium_span")
+        medium_span = raw_medium if isinstance(raw_medium, dict) else {}
+        raw_decay = analysis.get("confidence_decay")
+        confidence_decay = raw_decay if isinstance(raw_decay, dict) else {}
+        raw_calendar = state.temporal_patterns.get("calendar")
+        calendar = raw_calendar if isinstance(raw_calendar, dict) else {}
+        raw_drift = medium_span.get("task_start_completion_drift")
+        drift = raw_drift if isinstance(raw_drift, dict) else {}
 
         return {
             "goal_count": len(state.goals),

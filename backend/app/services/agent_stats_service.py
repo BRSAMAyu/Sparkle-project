@@ -115,7 +115,8 @@ class AgentStatsService:
             )
         )
         result = await self.db.execute(total_query)
-        overall = result.fetchone()
+        # 无 GROUP BY 的聚合查询恒返回一行；.one() 类型为 Row（非 Optional）
+        overall = result.one()
 
         # 按Agent类型统计
         agent_query = select(
@@ -275,7 +276,8 @@ class AgentStatsService:
         ).where(and_(*filters))
 
         result = await self.db.execute(query)
-        row = result.fetchone()
+        # 无 GROUP BY 的聚合查询恒返回一行；.one() 类型为 Row（非 Optional）
+        row = result.one()
 
         total = row.total or 0
         success_count = row.success_count or 0

@@ -5,7 +5,7 @@ Collaboration node with sequential, parallel, debate, and delegation modes.
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import Any, cast
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
@@ -384,12 +384,18 @@ async def _analyze_collaboration_needs_llm(
         ]
     )
     chain = prompt | structured_llm
-    decision = await chain.ainvoke(
-        {
-            "query": message,
-            "agent_lines": agent_lines,
-            "combination_lines": combination_lines,
-        }
+    # with_structured_output(CollaborationDecision)（非 include_raw 模式）在运行时
+    # 恒返回 CollaborationDecision 实例；ainvoke 的宽签名（dict | BaseModel）需
+    # 按契约收窄。
+    decision = cast(
+        CollaborationDecision,
+        await chain.ainvoke(
+            {
+                "query": message,
+                "agent_lines": agent_lines,
+                "combination_lines": combination_lines,
+            }
+        ),
     )
 
     resolved_primary = _normalize_agent_identifier(decision.primary_agent) or _classify_primary_agent(message)
@@ -769,7 +775,9 @@ async def _execute_delegation(
     )
     primary_llm = LLMFactory.get_llm(primary_agent).with_structured_output(DelegationPlan)
     try:
-        decomposition = await primary_llm.ainvoke([HumanMessage(content=decomposition_prompt)])
+        # with_structured_output(DelegationPlan) 运行时恒返回 DelegationPlan 实例，
+        # ainvoke 宽签名按契约收窄；异常路径由下方 except 兜底。
+        decomposition = cast(DelegationPlan, await primary_llm.ainvoke([HumanMessage(content=decomposition_prompt)]))
         subtasks = [
             {"agent": _normalize_agent_identifier(item.agent_id) or item.agent_id, "task": item.task}
             for item in decomposition.subtasks

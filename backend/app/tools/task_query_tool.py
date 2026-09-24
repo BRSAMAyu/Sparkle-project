@@ -483,6 +483,9 @@ class GetTaskDetailsTool(BaseTool):
                 except Exception:
                     related_nodes = []
 
+                # 局部绑定 + isinstance 收窄（details 值类型过宽，直接链式 .get 会撞联合）
+                raw_knowledge_context = details.get("knowledge_context")
+                knowledge_context = raw_knowledge_context if isinstance(raw_knowledge_context, dict) else {}
                 if task.knowledge_node_id and all(
                     n.get("node_id") != str(task.knowledge_node_id) for n in related_nodes
                 ):
@@ -490,8 +493,8 @@ class GetTaskDetailsTool(BaseTool):
                         0,
                         {
                             "node_id": str(task.knowledge_node_id),
-                            "title": details.get("knowledge_context", {}).get("title"),
-                            "summary": details.get("knowledge_context", {}).get("summary"),
+                            "title": knowledge_context.get("title"),
+                            "summary": knowledge_context.get("summary"),
                             "relation_type": "primary",
                             "strength": None,
                             "is_primary": True,

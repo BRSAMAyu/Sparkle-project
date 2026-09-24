@@ -32,6 +32,7 @@ class ChatSignalCollector:
     TOPIC_SIMILARITY_THRESHOLD = 0.4
 
     def __init__(self, redis=None, evidence_extractor=None, enable_conversational_evidence: bool = True):
+        # 与 cache_service.redis 同型：Redis 客户端或 None（缺席容忍）
         self.redis = redis or cache_service.redis
         self.evidence_extractor = evidence_extractor
         self.enable_conversational_evidence = enable_conversational_evidence
@@ -417,17 +418,23 @@ class ChatSignalCollector:
 
     async def _store_entry(self, user_id: UUID, entry: dict[str, Any]) -> None:
         key = f"user:chat:signals:{user_id}"
+        redis_client = self.redis
+        if redis_client is None:
+            return
         try:
-            await self.redis.lpush(key, json.dumps(entry, ensure_ascii=False))
-            await self.redis.ltrim(key, 0, self.WINDOW_SIZE - 1)
-            await self.redis.expire(key, self.WINDOW_TTL_SECONDS)
+            await redis_client.lpush(key, json.dumps(entry, ensure_ascii=False))
+            await redis_client.ltrim(key, 0, self.WINDOW_SIZE - 1)
+            await redis_client.expire(key, self.WINDOW_TTL_SECONDS)
         except Exception as exc:
             logger.warning("Failed to cache chat signal entry: {}", exc)
 
     async def _get_latest_entry(self, user_id: UUID) -> dict[str, Any] | None:
         key = f"user:chat:signals:{user_id}"
+        redis_client = self.redis
+        if redis_client is None:
+            return None
         try:
-            raw = await self.redis.lindex(key, 0)
+            raw = await redis_client.lindex(key, 0)
         except Exception:
             return None
         if not raw:
@@ -440,9 +447,12 @@ class ChatSignalCollector:
 
     async def _increment_counter(self, user_id: UUID) -> int:
         key = f"user:chat:signals:count:{user_id}"
+        redis_client = self.redis
+        if redis_client is None:
+            return 0
         try:
-            counter = await self.redis.incr(key)
-            await self.redis.expire(key, self.WINDOW_TTL_SECONDS)
+            counter = await redis_client.incr(key)
+            await redis_client.expire(key, self.WINDOW_TTL_SECONDS)
             return int(counter)
         except Exception as exc:
             logger.warning("Failed to increment chat signal counter: {}", exc)
@@ -450,8 +460,11 @@ class ChatSignalCollector:
 
     async def _load_entries(self, user_id: UUID) -> list[dict[str, Any]]:
         key = f"user:chat:signals:{user_id}"
+        redis_client = self.redis
+        if redis_client is None:
+            return []
         try:
-            raw_entries = await self.redis.lrange(key, 0, self.WINDOW_SIZE - 1)
+            raw_entries = await redis_client.lrange(key, 0, self.WINDOW_SIZE - 1)
         except Exception as exc:
             logger.warning("Failed to load chat signal entries: {}", exc)
             return []
