@@ -4,16 +4,15 @@ GraphRAG 系统测试
 测试 GraphRAG 检索器、图数据库集成和双写策略
 """
 
-import pytest
-import asyncio
-import uuid
 import json
-from unittest.mock import Mock, AsyncMock, patch
-from datetime import datetime
+import uuid
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
 
 from app.orchestration.graph_rag import (
-    GraphRAGRetriever,
     GraphRAGResult,
+    GraphRAGRetriever,
     _apply_retrieval_directive_filter,
     filter_graph_rag_result,
     filter_retrieved_chunks,
@@ -577,7 +576,8 @@ class TestPollutionGuardFilter:
             {"id": "high", "file_id": "s3", "similarity": 0.80},
         ]
         filtered = _apply_retrieval_directive_filter(
-            results, {"pollution_guard": "strict"},
+            results,
+            {"pollution_guard": "strict"},
         )
         ids = [r["id"] for r in filtered]
         assert "low" not in ids
@@ -591,7 +591,8 @@ class TestPollutionGuardFilter:
             {"id": "ok", "file_id": "s3", "similarity": 0.50},
         ]
         filtered = _apply_retrieval_directive_filter(
-            results, {"pollution_guard": "moderate"},
+            results,
+            {"pollution_guard": "moderate"},
         )
         ids = [r["id"] for r in filtered]
         assert "very-low" not in ids
@@ -604,7 +605,8 @@ class TestPollutionGuardFilter:
             {"id": "big", "file_id": "s2", "similarity": 0.99},
         ]
         filtered = _apply_retrieval_directive_filter(
-            results, {"pollution_guard": "off"},
+            results,
+            {"pollution_guard": "off"},
         )
         assert len(filtered) == 2
 
@@ -639,13 +641,15 @@ class TestPollutionGuardFilter:
     def test_missing_similarity_treated_as_zero(self):
         results = [{"id": "no-sim", "file_id": "s1"}]
         filtered = _apply_retrieval_directive_filter(
-            results, {"pollution_guard": "strict"},
+            results,
+            {"pollution_guard": "strict"},
         )
         assert len(filtered) == 0
 
     def test_strict_with_empty_results(self):
         filtered = _apply_retrieval_directive_filter(
-            [], {"pollution_guard": "strict"},
+            [],
+            {"pollution_guard": "strict"},
         )
         assert filtered == []
 
@@ -770,15 +774,18 @@ class TestGraphKnowledgeService:
 
     @pytest.mark.asyncio
     async def test_check_graph_connection(self, service):
-        """测试图数据库连接检查"""
-        # 成功情况
+        """测试图数据库连接检查（wt308: 真探针已落地，此处覆盖成功分支）"""
         with patch.object(service.age_client, "execute_cypher", new_callable=AsyncMock) as mock_cypher:
-            mock_cypher.return_value = [{"one": 1}]
-            # We assume check_graph_connection uses execute_cypher internally or similar
-            # If it uses fetchone on a result, we mock accordingly.
-            # result = await service.check_graph_connection()
-            # assert result is True
-            pass
+            mock_cypher.return_value = [{"result": 1}]
+            assert await service.check_graph_connection() is True
+            mock_cypher.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_check_graph_connection_failure(self, service):
+        """wt308: 图数据库不可达时探针必须归一化为 False 而非抛异常"""
+        with patch.object(service.age_client, "execute_cypher", new_callable=AsyncMock) as mock_cypher:
+            mock_cypher.side_effect = ConnectionError("age unreachable")
+            assert await service.check_graph_connection() is False
 
 
 class TestGraphSyncWorker:
