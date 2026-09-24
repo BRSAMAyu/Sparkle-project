@@ -1,0 +1,43 @@
+{
+  "name": "S2_single_account_issue_flood",
+  "started_at": "2026-09-24T23:43:17",
+  "params": {
+    "user_rps": 50.0,
+    "duration_s": 30.0,
+    "xff": "198.18.0.21"
+  },
+  "totals": {
+    "dispatched": 1500,
+    "normal_traffic_not_harmed": "3/3"
+  },
+  "status_dist": {
+    "200": 309,
+    "429": 1191
+  },
+  "metrics_delta": {
+    "ws_ticket_issued_total": {
+      "": 312.0
+    },
+    "ws_upgrade_limited_total": {}
+  },
+  "metrics_note": "",
+  "latency": {
+    "n": 1500,
+    "p50_ms": 1.44,
+    "p95_ms": 4.78,
+    "p99_ms": 7.43,
+    "mean_ms": 2.13
+  },
+  "judgments": {
+    "issued_200": 309,
+    "rejected_429": 1191,
+    "ticket_layer_rate_rps": 10.0,
+    "ticket_layer_burst": 10,
+    "ticket_layer_param_source": "env-file(/tmp/wt323-gw18080/.env)",
+    "ticket_layer_budget_theoretical": 310.0,
+    "issue_layer_breach": "ok",
+    "non_harm_check": "3/3"
+  },
+  "notes": [],
+  "truncated": false
+}

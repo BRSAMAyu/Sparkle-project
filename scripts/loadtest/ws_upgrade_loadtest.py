@@ -15,6 +15,14 @@
 
 场景判定公式（§6.2）：token bucket 预算 = burst + rate_limit × 注入时长，
 理论 429 率 = (注入总数 − 预算) / 注入总数；实测应 ≥ 理论值 × 95%。
+
+预算参数口径（wt323 教训，WSQ-6 S2 红旗复盘）：预算必须按网关**运行时**桶参数算，
+不能拍 viper 默认值——网关会加载 backend/gateway/.env（及仓库根 .env，优先级更高），
+WS_TICKET_RATE_*/WS_UPGRADE_RATE_* 被覆盖时默认值口径即失真（曾把 10rps 桶
+误判成 5rps 预算、得出 1.93×「超发」假红旗）。本脚本按网关 config.Load() 的
+文件解析优先级自动取值（CLI 参数 > 根 .env > backend/gateway/.env > viper 默认）；
+若网关再以**进程 env** 覆盖桶参数（压测侧不可见），必须用 --ticket-rate-rps 等
+CLI 参数显式传入同一值，来源会记入各场景 JSON 的 judgments 供审计。
 """
 
 from __future__ import annotations
@@ -29,6 +37,7 @@ import subprocess
 import sys
 import time
 from dataclasses import asdict, dataclass, field
+from pathlib import Path
 from typing import Callable, Optional
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -37,6 +46,71 @@ import ws_probe as wp  # noqa: E402
 
 DEFAULT_INFLIGHT = 30
 DEFAULT_SWAP_ABORT_MB = 800.0
+
+# viper 默认值（backend/gateway/internal/config/config.go:650-651 及 WS_UPGRADE_* 默认）。
+# 仅当 .env 链与 CLI 都未覆盖时使用。
+TICKET_RATE_RPS_DEFAULT = 5.0
+TICKET_RATE_BURST_DEFAULT = 10
+UPGRADE_RATE_RPS_DEFAULT = 30.0
+UPGRADE_RATE_BURST_DEFAULT = 60
+
+
+def _parse_env_file(path: Path) -> dict[str, str]:
+    out: dict[str, str] = {}
+    try:
+        for line in path.read_text().splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, _, v = line.partition("=")
+            out[k.strip()] = v.strip()
+    except OSError:
+        pass
+    return out
+
+
+def resolve_limit_params(
+    cli_rps: Optional[float],
+    cli_burst: Optional[int],
+    env_key_rps: str,
+    env_key_burst: str,
+    default_rps: float,
+    default_burst: int,
+    gateway_env_file: Optional[Path] = None,
+) -> tuple[float, int, str]:
+    """解析限流桶参数，镜像网关 config.Load() 的口径（config.go:732-754）。
+
+    优先级：CLI 参数（须与网关进程 env 覆盖一致）> 仓库根 .env（网关 merge 时
+    后读、优先生效）> backend/gateway/.env > viper 默认。
+    返回 (rps, burst, source)；source 记入 JSON judgments 供审计。
+    """
+    if cli_rps is not None or cli_burst is not None:
+        return (
+            float(cli_rps if cli_rps is not None else default_rps),
+            int(cli_burst if cli_burst is not None else default_burst),
+            "cli-arg(网关进程env覆盖时必须显式传入)",
+        )
+    chain: list[Path] = []
+    if gateway_env_file is not None:
+        chain.append(gateway_env_file)
+    else:
+        repo_root = Path(__file__).resolve().parents[2]
+        chain.append(repo_root / "backend" / "gateway" / ".env")  # 先读（低优先）
+        chain.append(repo_root / ".env")  # 后读（高优先，镜像网关 merge 顺序）
+    merged: dict[str, str] = {}
+    for p in chain:
+        merged.update(_parse_env_file(p))
+    rps_raw = merged.get(env_key_rps)
+    burst_raw = merged.get(env_key_burst)
+    rps, burst = default_rps, default_burst
+    if rps_raw is not None:
+        rps = float(rps_raw)
+    if burst_raw is not None:
+        burst = int(burst_raw)
+    source = "viper-defaults(config.go)"
+    if rps_raw is not None or burst_raw is not None:
+        source = "env-file(" + ",".join(str(p) for p in chain if p.exists()) + ")"
+    return rps, burst, source
 
 # 各场景 XFF 模拟源 IP（本机 lo0 无法绑多 IP；实例配置 TRUSTED_PROXIES=127.0.0.1
 # 后 ClientIP 取 XFF，等价生产 LB 后语义。网段取 benchmark 保留段 198.18/15。）
@@ -80,6 +154,17 @@ class Runner:
         self.wd = wp.SwapWatchdog(interval_s=15.0, abort_free_mb=args.swap_abort_mb)
         self.gw_pid = args.gateway_pid
         self.restart_cmd = args.gateway_restart_cmd
+        gw_env = Path(args.gateway_env_file) if args.gateway_env_file else None
+        self.ticket_rate_rps, self.ticket_rate_burst, self.ticket_rate_src = resolve_limit_params(
+            args.ticket_rate_rps, args.ticket_rate_burst,
+            "WS_TICKET_RATE_RPS", "WS_TICKET_RATE_BURST",
+            TICKET_RATE_RPS_DEFAULT, TICKET_RATE_BURST_DEFAULT, gw_env,
+        )
+        self.upgrade_rate_rps, self.upgrade_rate_burst, self.upgrade_rate_src = resolve_limit_params(
+            args.upgrade_rate_rps, args.upgrade_rate_burst,
+            "WS_UPGRADE_RATE_RPS", "WS_UPGRADE_RATE_BURST",
+            UPGRADE_RATE_RPS_DEFAULT, UPGRADE_RATE_BURST_DEFAULT, gw_env,
+        )
 
     # ---------------- 基础设施 ----------------
 
@@ -217,11 +302,11 @@ class Runner:
             "ws_connection_error_total": wp.counter_delta(before, after, "ws_connection_error_total"),
         }
 
-        # 判定（按 §6.2 公式代入实际参数；桶参数 30rps/burst60 为网关默认）
+        # 判定（按 §6.2 公式代入运行时参数；桶参数解析来源见 judgments）
         n429_t1 = dist_for(tier1).get("429", 0)
         n429_t2 = dist_for(tier2).get("429", 0)
-        budget1 = 60 + 30 * elapsed1
-        budget2 = 60 + 30 * elapsed2
+        budget1 = self.upgrade_rate_burst + self.upgrade_rate_rps * elapsed1
+        budget2 = self.upgrade_rate_burst + self.upgrade_rate_rps * elapsed2
         unauth = sr.totals["unauth_classes_dist"]
         n101_unauth = unauth.get("101", 0)
         sr.judgments = {
@@ -240,6 +325,9 @@ class Runner:
             },
             "penetration_rps_tier1": round((disp1 - n429_t1) / max(elapsed1, 0.001), 2),
             "penetration_rps_tier2": round((disp2 - n429_t2) / max(elapsed2, 0.001), 2),
+            "upgrade_rate_rps": self.upgrade_rate_rps,
+            "upgrade_rate_burst": self.upgrade_rate_burst,
+            "upgrade_rate_param_source": self.upgrade_rate_src,
             "finding_auth_gap": (
                 "valid_signed_fake_jwt 类别被网关放行 101（WsAuth 只验签名+黑名单，"
                 "不查用户存在性）——§6.2-S1 判定①的『合法签名假 JWT 升级成功率 0%』"
@@ -248,7 +336,7 @@ class Runner:
             ),
         }
         sr.notes = notes + [
-            "budget=burst60+30rps×注入时长（网关默认 WS_UPGRADE_RATE_RPS=30/BURST=60）",
+            f"budget=burst{self.upgrade_rate_burst:g}+{self.upgrade_rate_rps:g}rps×注入时长（桶参数来源：{self.upgrade_rate_src}）",
             "渗透=未被429的请求（401/101），其中 401=被认证层拒绝、101=白盒凭据建连",
         ]
         return sr
@@ -298,13 +386,18 @@ class Runner:
         n200 = sr.status_dist.get("200", 0)
         n429 = sr.status_dist.get("429", 0)
         elapsed = dispatched / rate
-        budget = 10 + 5 * elapsed  # ticket 层默认 5rps/burst10
-        # 注意：api 组另有 15rps/burst30 限流先行计数，但预算(480@30s)高于
-        # ticket 层(160@30s)，429 应全部来自 ticket 层——若 200 数远超 ticket
-        # 预算则说明限流层 key 或顺序有问题，作为 RED FLAG 输出。
+        # 预算必须用网关运行时桶参数（.env 可能覆盖 viper 默认；wt323 复盘：
+        # 曾因硬编码 5rps/burst10 而把 10rps 桶的正常收敛误判为 1.93× 超发红旗）
+        budget = self.ticket_rate_burst + self.ticket_rate_rps * elapsed
+        # 注意：api 组另有 15rps/burst30 限流先行计数，但其预算(480@30s)高于
+        # ticket 层预算，429 应全部来自 ticket 层——若 200 数远超 ticket 层
+        # 运行时预算则说明限流层 key 或顺序有问题，作为 RED FLAG 输出。
         sr.judgments = {
             "issued_200": n200,
             "rejected_429": n429,
+            "ticket_layer_rate_rps": self.ticket_rate_rps,
+            "ticket_layer_burst": self.ticket_rate_burst,
+            "ticket_layer_param_source": self.ticket_rate_src,
             "ticket_layer_budget_theoretical": round(budget, 1),
             "issue_layer_breach": "RED FLAG: 200 数超过 ticket 层预算" if n200 > budget * 1.15 else "ok",
             "non_harm_check": normal_ok,
@@ -736,6 +829,16 @@ def main() -> int:
     ap.add_argument("--gateway-pid", type=int, default=None,
                     help="S5 专用：自有网关实例 PID（SIGTERM drain）；缺省跳过 S5")
     ap.add_argument("--gateway-restart-cmd", default=None, help="S5 专用：重启命令（shell）")
+    ap.add_argument("--gateway-env-file", default=None,
+                    help="网关 .env 路径（解析限流桶参数用）；缺省按仓库根 .env > backend/gateway/.env 链解析")
+    ap.add_argument("--ticket-rate-rps", type=float, default=None,
+                    help="签发口桶速率（WS_TICKET_RATE_RPS）。仅当网关以进程 env 覆盖该值时必须显式传入")
+    ap.add_argument("--ticket-rate-burst", type=int, default=None,
+                    help="签发口桶容量（WS_TICKET_RATE_BURST）。仅当网关以进程 env 覆盖该值时必须显式传入")
+    ap.add_argument("--upgrade-rate-rps", type=float, default=None,
+                    help="握手口桶速率（WS_UPGRADE_RATE_RPS）。仅当网关以进程 env 覆盖该值时必须显式传入")
+    ap.add_argument("--upgrade-rate-burst", type=int, default=None,
+                    help="握手口桶容量（WS_UPGRADE_RATE_BURST）。仅当网关以进程 env 覆盖该值时必须显式传入")
     ap.add_argument("--out", default="/tmp/ws_loadtest_results")
     args = ap.parse_args()
 
