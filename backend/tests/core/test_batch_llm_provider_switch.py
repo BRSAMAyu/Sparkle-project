@@ -67,7 +67,12 @@ def _deterministic_env(monkeypatch):
         if k.endswith("_API_KEY") or k.startswith("LLM_TIER_"):
             monkeypatch.setattr(settings, k, "")
         elif k == "BATCH_LLM_PROVIDER":
-            monkeypatch.setattr(settings, k, "glm")
+            # 钉回代码默认（读字段默认值，勿硬编码——B 线切换默认后此处随动）
+            monkeypatch.setattr(
+                settings,
+                k,
+                (getattr(settings, "model_fields", None) or {})["BATCH_LLM_PROVIDER"].default,
+            )
 
 
 @pytest.fixture(autouse=True)
@@ -84,10 +89,10 @@ def _restore_global_router():
 # =============================================================================
 
 
-class TestSwitchDefaultGlm:
-    def test_default_value_is_glm(self):
-        """settings 默认值必须是 glm（回滚位；切换默认不在本卡内）。"""
-        assert settings.BATCH_LLM_PROVIDER == "glm"
+class TestSwitchDefaultMinimax:
+    def test_default_value_is_minimax(self):
+        """settings 默认值是 minimax（2026-09-24 充值档冒烟通过后切换；回滚=改回 glm）。"""
+        assert settings.BATCH_LLM_PROVIDER == "minimax"
 
     def test_keys_present_but_switch_glm_entries_not_registered(self):
         """开关=glm + 双 key 配置：batch 专用条目不注册（保留配置不启用）。"""
@@ -121,8 +126,8 @@ class TestSwitchDefaultGlm:
                 assert "qwen3_7_flash_batch" not in chain
 
     def test_invalid_switch_value_falls_back_to_glm(self):
-        """非法开关值安全回退 glm（与默认位同语义），绝不抛错。"""
-        assert batch_llm_provider() == "glm"  # fixture 钉回默认
+        """非法开关值安全回退 glm（安全回滚位），绝不抛错。"""
+        assert batch_llm_provider() == "minimax"  # fixture 钉回代码默认
         with patch.object(settings, "BATCH_LLM_PROVIDER", "openai"):
             assert batch_llm_provider() == "glm"
         router = _rebuild_router(minimax_key="test-key", batch_provider="openai")

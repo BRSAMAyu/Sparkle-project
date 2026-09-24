@@ -581,14 +581,15 @@ class Settings(BaseSettings):
     # 2×聊天车道 p95 2.2s，覆盖正常瞬态排队，饱和时快速失败走 fallback/重试。
     MINIMAX_QUEUE_TIMEOUT_SECONDS: float = 5.0
     # glm_batch 车道执行 provider 开关（B 线模型切换 2026-09-22，测试替换语义）：
-    # - "glm"（默认，回滚位）：batch 类调用走 GLM 原链；MINIMAX/DASHSCOPE key 即便
-    #   已配置，batch 专用条目（minimax_m3_batch/qwen3_7_flash_batch）也不注册
-    #   ——「GLM 保留配置不删、MiniMax 保留配置不启用」。
-    # - "minimax"：MM-M3+QWEN-PLAN 已验证车道（MiniMax M3 置首、Qwen batch 次位，
-    #   均 key-gated；全无 key 落 GLM 原链兜底）。
-    # 合入后由主会话以活栈真 key 冒烟（BATCH_LLM_PROVIDER=minimax → 触发一条
-    # batch 任务 → 验证 MiniMax 侧成功）再切默认；回滚 = 改回 "glm" 重启引擎。
-    BATCH_LLM_PROVIDER: str = "glm"
+    # - "glm"：batch 类调用走 GLM 原链；MINIMAX/DASHSCOPE key 即便已配置，
+    #   batch 专用条目（minimax_m3_batch/qwen3_7_flash_batch）也不注册
+    #   ——「GLM 保留配置不删、不启用」。
+    # - "minimax"（默认，2026-09-24 切换）：充值档真 key 冒烟已过（预测任务
+    #   POST api.minimaxi.com 200 OK / 4.9s 成功），MM-M3+QWEN-PLAN 验证车道
+    #   （MiniMax M3 置首、Qwen batch 次位，均 key-gated；全无 key 落 GLM 原链
+    #   兜底）。回滚 = 改回 "glm" 重启引擎。
+    # 非法值/显式空值仍安全回退 glm（见 llm_router.batch_llm_provider）。
+    BATCH_LLM_PROVIDER: str = "minimax"
 
     # Zhipu GLM Configuration (编程/工具调用)
     ZHIPU_API_KEY: str = ""
