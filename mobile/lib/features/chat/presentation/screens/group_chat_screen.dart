@@ -52,9 +52,18 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   bool _draftUserResolved = false;
   bool _applyingStoredDraft = false;
 
-  // SEARCH-EMPTY：命中定位基建——照 chat_screen 的「GlobalKey 表 +
-  // Scrollable.ensureVisible」同款形制；短高亮由屏侧 Timer 收敛。
-  final Map<String, GlobalKey> _messageKeys = <String, GlobalKey>{};
+  // SEARCH-EMPTY：命中定位基建——「Scrollable.ensureVisible + 短高亮」，
+  // 短高亮由屏侧 Timer 收敛。
+  // F-4 同款债务清偿（wt336 chat_screen 判例）：消息列表项不再常驻
+  // GlobalKey（`_messageKeys`/`_messageKeyFor` 旧机制已删除）。reversed
+  // 懒加载 ListView 的子项在 agent 状态前缀行进出/流式气泡进出时索引整体
+  // 移位，常驻 GlobalKey 会走 `inflateWidget → _retakeInactiveElement`
+  // 认领路径（chat 域 F-4 同族崩溃形态）。现改为：列表项常驻身份键 =
+  // ValueKey（配合 findChildIndexCallback 由框架按键搬移 Element，不再有
+  // 认领分支）；唯一需要 context 的搜索命中定位用一次性瞬态 GlobalKey，
+  // 只挂目标消息一项，定位收尾即摘除（含快速连点接管守卫）。
+  GlobalKey? _locateTargetKey;
+  String? _locateTargetMessageId;
   String? _highlightedMessageId;
   Timer? _highlightTimer;
 
@@ -131,14 +140,6 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
       text: _composerController.text,
     );
   }
-
-  void _pruneMessageKeys(List<MessageInfo> messages) {
-    final ids = messages.map((message) => message.id).toSet();
-    _messageKeys.removeWhere((id, _) => !ids.contains(id));
-  }
-
-  GlobalKey _messageKeyFor(String id) =>
-      _messageKeys.putIfAbsent(id, GlobalKey.new);
 
   void _handleScroll() {
     if (!_scrollController.hasClients) {
@@ -592,17 +593,21 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   if (mergedMessages.isEmpty) {
                     return Center(child: Text(context.l10n.communityChatEmpty));
                   }
-                  _pruneMessageKeys(mergedMessages);
                   return Align(
                     alignment: Alignment.topCenter,
-                    child: ListView.builder(
+                    // F-4 同款（wt336 chat_screen 判例）：ListView.builder →
+                    // ListView.custom。子项身份键改 ValueKey（原为常驻
+                    // GlobalKey，是 reversed 列表索引移位帧 GlobalKey 认领
+                    // 冲突的根因），并由 findChildIndexCallback 让框架在
+                    // 索引移位帧按键搬移既有 Element（remap 路径原位复用，
+                    // 不再走「同键新槽位 inflate」的认领分支）。
+                    child: ListView.custom(
                       controller: _scrollController,
                       reverse: true,
                       shrinkWrap: true,
                       padding: const EdgeInsets.all(DS.spacing16),
-                      itemCount:
-                          mergedMessages.length + (showAgentStatus ? 1 : 0),
-                      itemBuilder: (context, index) {
+                      childrenDelegate: SliverChildBuilderDelegate(
+                        (context, index) {
                         if (showAgentStatus && index == 0) {
                           return Padding(
                             padding: const EdgeInsets.only(
@@ -620,7 +625,12 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                             showAgentStatus ? index - 1 : index;
                         final message = mergedMessages[messageIndex];
                         return GroupChatBubble(
-                          key: _messageKeyFor(message.id),
+                          // F-4 同款：常驻身份键 = ValueKey；仅当本帧为
+                          // 搜索命中定位目标时挂瞬态 GlobalKey。
+                          key: (_locateTargetMessageId == message.id &&
+                                  _locateTargetKey != null)
+                              ? _locateTargetKey
+                              : ValueKey<String>(message.id),
                           message: message,
                           groupId: widget.groupId,
                           highlighted: message.id == _highlightedMessageId,
@@ -674,7 +684,19 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                               ? null
                               : _handleReport,
                         );
-                      },
+                        },
+                        childCount:
+                            mergedMessages.length + (showAgentStatus ? 1 : 0),
+                        // F-4 同款：索引移位帧按键找位，框架走 remap 路径
+                        // 原位搬移 Element，消灭 GlobalKey 认领冲突；瞬态
+                        // 定位键也由同一 callback 覆盖 remap。
+                        findChildIndexCallback: (key) =>
+                            _findChildIndexForKey(
+                          key,
+                          messages: mergedMessages,
+                          showAgentStatus: showAgentStatus,
+                        ),
+                      ),
                     ),
                   );
                 },
@@ -1039,7 +1061,15 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   /// 定位+短高亮——替换原「tap 只 pop」的 pop-only 死链。
   void _locateSearchHit(MessageInfo msg) {
     _highlightTimer?.cancel();
-    setState(() => _highlightedMessageId = msg.id);
+    // F-4 同款：一次性瞬态定位键——只挂目标消息一项，定位收尾即摘除
+    //（itemBuilder 对该消息返回挂 `_locateTargetKey` 的 GroupChatBubble）。
+    // 重复触发时直接替换新键：旧键所在条目下一帧回挂 ValueKey（正常摘除
+    // 路径，无双挂），旧链路由接管守卫废弃。
+    setState(() {
+      _highlightedMessageId = msg.id;
+      _locateTargetKey = GlobalKey(debugLabel: 'group-locate-${msg.id}');
+      _locateTargetMessageId = msg.id;
+    });
     // 高亮驻留窗（非动画时长，seconds 形制照 openclaw_connection_panel
     // 的 _saveHighlightTimer 先例）：2s 后收敛，容器经 300ms 淡出。
     _highlightTimer = Timer(const Duration(seconds: 2), () {
@@ -1077,6 +1107,51 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
         (message) => message.id == messageId,
       );
 
+  /// F-4 同款（wt336 chat_screen 判例）：reversed 列表的按键找位
+  ///（SliverChildBuilderDelegate `findChildIndexCallback`）。返回该键对应
+  /// 消息在**当前**列表坐标（含 agent 状态前缀行偏移）中的索引；找不到
+  /// 返回 null。这使框架在索引移位帧按键搬移既有 Element（performRebuild
+  /// 的 remap 路径），消息子树原位复用——不再发生「同键元素仍挂在旧槽位
+  /// 却在新槽位 inflate」的 GlobalKey 认领（F-4 崩溃根因）；瞬态定位键也
+  /// 被同一 callback 覆盖，杜绝「定位期间恰好开跑新一轮流式」的残余竞态。
+  int? _findChildIndexForKey(
+    Key key, {
+    required List<MessageInfo> messages,
+    required bool showAgentStatus,
+  }) {
+    final String? messageId;
+    if (key is ValueKey<String>) {
+      messageId = key.value;
+    } else if (key is GlobalKey) {
+      // 瞬态定位键：只对应目标消息一项。
+      messageId = _locateTargetMessageId;
+    } else {
+      return null;
+    }
+    if (messageId == null) {
+      return null;
+    }
+    final messageIndex = messages.indexWhere((m) => m.id == messageId);
+    if (messageIndex < 0) {
+      return null;
+    }
+    // itemBuilder 坐标：mergedMessages 为新→旧序，index 0 = 最新 =
+    // reversed 列表底部；agent 状态前缀行存在时整体 +1。
+    return (showAgentStatus ? 1 : 0) + messageIndex;
+  }
+
+  /// 定位收尾（动画完成或重试耗尽）摘除瞬态键；若期间已有新一轮定位
+  /// 接管（键已被替换），不越权清理——接管方自会收尾。
+  void _clearLocateTarget(GlobalKey expectedKey) {
+    if (!mounted || _locateTargetKey != expectedKey) {
+      return;
+    }
+    setState(() {
+      _locateTargetKey = null;
+      _locateTargetMessageId = null;
+    });
+  }
+
   /// 复用 chat_screen 的 ensureVisible 定位；因 ListView 懒构建，目标
   /// 未物化时按平均项高 jumpTo 逼近（N28-⑤ 一期：滚动定位即达标），
   /// 有界重试直至可见。
@@ -1084,7 +1159,14 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
     if (!mounted) {
       return;
     }
-    final targetContext = _messageKeys[messageId]?.currentContext;
+    // 接管守卫：定位已被新一轮命中接管（或已收尾）时，旧链路立即退出
+    //（旧常驻键形态下旧链路仍能命中目标 context 双向拉扯滚动，此处一并对齐
+    // chat_screen 的守卫语义）。
+    if (_locateTargetMessageId != messageId || _locateTargetKey == null) {
+      return;
+    }
+    final locateKey = _locateTargetKey!;
+    final targetContext = locateKey.currentContext;
     if (targetContext != null) {
       await Scrollable.ensureVisible(
         targetContext,
@@ -1092,9 +1174,11 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
         curve: Curves.easeOutCubic,
         alignment: 0.22,
       );
+      _clearLocateTarget(locateKey);
       return;
     }
     if (attempt >= 12 || !_scrollController.hasClients) {
+      _clearLocateTarget(locateKey);
       return;
     }
     final messages =
