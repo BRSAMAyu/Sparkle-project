@@ -138,6 +138,37 @@ def _phase_d_forced_model_tier(state: WorkflowState) -> ModelTier | None:
         return None
 
 
+def _deep_signal_overrides_phase_default(
+    forced_phase_d_tier: ModelTier,
+    state: WorkflowState,
+    user_message: str,
+) -> bool:
+    """G-1（E-02）：显式深度信号 > phase 默认档（phase 门是默认不是枷锁）。
+
+    cost_band 偏好（如冲刺会话 low→[FAST, STANDARD]）是会话级默认，不得把
+    携带显式深度信号的轮次压回 FAST thinking-off（L1）。深度信号判定：
+    - 深度词：与 balanced fast path 的深度词否决同源（共享
+      ``DEEP_ANALYSIS_TEXT_MARKERS``，capability_lane 遥测同口径）；
+    - 用户显式元请求：reasoning_mode=deep（deep 偏好链归 llm_router 权威）。
+
+    仅当 phase 偏好本身是 FAST（唯一低于 deliberate 能力带的 tier）时否决；
+    偏好 STANDARD 及以上与深度信号同带，不否决（避免把高成本带会话的深度
+    轮反向降档到默认链首选层）。用户显式快档（reasoning_mode=fast）不否决
+    ——该轮即便无 phase_d 也会经 fast first touch 落 FAST，语义不变。
+    """
+    if forced_phase_d_tier != ModelTier.FAST:
+        return False
+    reasoning_mode = _resolve_reasoning_mode(state)
+    if reasoning_mode == "fast":
+        return False
+    if reasoning_mode == "deep":
+        return True
+    text = (user_message or "").strip().lower()
+    if not text:
+        return False
+    return any(marker in text for marker in DEEP_ANALYSIS_TEXT_MARKERS)
+
+
 def _deep_analysis_generation_tier(state: WorkflowState) -> ModelTier | None:
     """deep_analysis 档生成层的显式决策（F-1）。
 
@@ -1533,6 +1564,10 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
         else:
             # F-1：deep_analysis 档优先于 phase_d/首触快响决策——用户显式选择
             # 深度分析档位时必须真实路由 MAX 层（v4-pro），成本带偏好不得静默降档。
+            # G-1（E-02）：显式深度信号（深度词/用户显式 deep 元请求）优先级高于
+            # phase 默认档——phase 门是默认不是枷锁，深度轮回落既有默认选择链
+            # （reasoning_mode 偏好 + 复杂度 delta + 健康秩），lane 遥测
+            # （deep_marker_text/user_mode_deep → deliberate）自此与 tier 行为一致。
             deep_analysis_tier = _deep_analysis_generation_tier(state)
             forced_phase_d_tier = _phase_d_forced_model_tier(state)
             if deep_analysis_tier is not None:
@@ -1543,6 +1578,15 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
                     reasoning_mode=reasoning_mode,
                 )
                 state.context_data["deep_analysis_model_tier"] = deep_analysis_tier.value
+            elif forced_phase_d_tier is not None and _deep_signal_overrides_phase_default(
+                forced_phase_d_tier, state, user_message
+            ):
+                state.context_data["phase_d_default_overridden"] = "deep_signal"
+                generation_llm = await get_configured_llm_service(
+                    agent_role,
+                    task_type,
+                    reasoning_mode=reasoning_mode,
+                )
             elif forced_phase_d_tier is not None:
                 generation_llm = await get_configured_llm_service_for_tier(
                     agent_role,

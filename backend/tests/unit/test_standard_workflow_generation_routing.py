@@ -6,11 +6,11 @@ import pytest
 from app.agents.standard_workflow import (
     _build_generation_fallback_response,
     _classify_user_intent,
+    _sanitize_community_sendable_response,
     _should_disable_tools_for_deep_analysis,
     _should_disable_tools_for_light_standard_reply,
-    _should_use_slim_standard_context,
     _should_use_slim_deep_analysis_context,
-    _sanitize_community_sendable_response,
+    _should_use_slim_standard_context,
     collaboration_post_process_node,
     generation_node,
     router_node,
@@ -225,6 +225,117 @@ async def test_generation_node_respects_phase_d_forced_model_tier(monkeypatch):
         reasoning_mode="balanced",
     )
     assert new_state.context_data["phase_d_model_tier_enforced"] == "fast"
+
+
+@pytest.mark.asyncio
+async def test_generation_node_deep_marker_overrides_phase_d_fast_default(monkeypatch):
+    """G-1（E-02）：显式深度信号 > phase 默认档。
+
+    冲刺会话 cost_band=low → phase_d 偏好 FAST 是会话级默认；携带深度词的
+    轮次（真实 trace 09-22：「帮我系统讲解一下二部图的判定定理，包括充要条件
+    和证明思路」）不得被压回 FAST thinking-off（L1）——深度词否决必须先于
+    phase 默认档求值，回落既有默认选择链（reasoning_mode 偏好 + 复杂度 delta）。
+    """
+    fake_llm = _FakeGenerationLLM()
+    get_tier_mock = AsyncMock(return_value=fake_llm)
+    get_llm_mock = AsyncMock(return_value=fake_llm)
+    monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service_for_tier", get_tier_mock)
+    monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service", get_llm_mock)
+    monkeypatch.setattr("app.agents.standard_workflow.build_system_prompt", lambda *args, **kwargs: "SYSTEM")
+
+    state = WorkflowState(
+        messages=[
+            {"role": "user", "content": "帮我系统讲解一下二部图的判定定理，包括充要条件和证明思路"},
+        ],
+        context_data={
+            "chat_mode": "standard",
+            "reasoning_mode": "balanced",
+            "phase_d_forced_model_tier": "fast",
+            "user_context": {},
+            "conversation_context": {"messages": []},
+            "tools_schema": [],
+        },
+    )
+
+    new_state = await generation_node(state)
+
+    # 深度轮走默认选择链（deliberate），任何 FAST tier 强制 helper 均不得触发。
+    get_llm_mock.assert_awaited_once()
+    get_tier_mock.assert_not_awaited()
+    assert "phase_d_model_tier_enforced" not in new_state.context_data
+    assert new_state.context_data.get("phase_d_default_overridden") == "deep_signal"
+    assert new_state.messages[-1]["content"] == "分析完成"
+
+
+@pytest.mark.asyncio
+async def test_generation_node_user_deep_mode_overrides_phase_d_fast_default(monkeypatch):
+    """G-1：用户显式 deep 元请求（reasoning_mode=deep）> phase 默认档。
+
+    用户显式要求深度推理时，冲刺会话的 FAST 偏好不得短路该元请求——
+    否决后回落默认链（deep 偏好链 [STANDARD, PLUS, PRO]，llm_router 权威）。
+    """
+    fake_llm = _FakeGenerationLLM()
+    get_tier_mock = AsyncMock(return_value=fake_llm)
+    get_llm_mock = AsyncMock(return_value=fake_llm)
+    monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service_for_tier", get_tier_mock)
+    monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service", get_llm_mock)
+    monkeypatch.setattr("app.agents.standard_workflow.build_system_prompt", lambda *args, **kwargs: "SYSTEM")
+
+    state = WorkflowState(
+        messages=[{"role": "user", "content": "这道题怎么解？"}],
+        context_data={
+            "chat_mode": "standard",
+            "reasoning_mode": "deep",
+            "phase_d_forced_model_tier": "fast",
+            "user_context": {},
+            "conversation_context": {"messages": []},
+            "tools_schema": [],
+        },
+    )
+
+    new_state = await generation_node(state)
+
+    get_llm_mock.assert_awaited_once()
+    get_tier_mock.assert_not_awaited()
+    assert "phase_d_model_tier_enforced" not in new_state.context_data
+    assert new_state.context_data.get("phase_d_default_overridden") == "deep_signal"
+
+
+@pytest.mark.asyncio
+async def test_generation_node_phase_d_non_fast_tier_survives_deep_marker(monkeypatch):
+    """G-1 反向守卫：phase 偏好 STANDARD 及以上与深度信号同属 deliberate 带，
+    不否决（防止把高成本带会话的深度轮反向降档到默认链首选层）。"""
+    fake_llm = _FakeGenerationLLM()
+    get_tier_mock = AsyncMock(return_value=fake_llm)
+    get_llm_mock = AsyncMock(side_effect=AssertionError("non-FAST phase preference must stay enforced"))
+    monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service_for_tier", get_tier_mock)
+    monkeypatch.setattr("app.agents.standard_workflow.get_configured_llm_service", get_llm_mock)
+    monkeypatch.setattr("app.agents.standard_workflow.build_system_prompt", lambda *args, **kwargs: "SYSTEM")
+
+    state = WorkflowState(
+        messages=[
+            {"role": "user", "content": "帮我系统讲解一下二部图的判定定理，包括充要条件和证明思路"},
+        ],
+        context_data={
+            "chat_mode": "standard",
+            "reasoning_mode": "balanced",
+            "phase_d_forced_model_tier": "standard",
+            "user_context": {},
+            "conversation_context": {"messages": []},
+            "tools_schema": [],
+        },
+    )
+
+    new_state = await generation_node(state)
+
+    get_tier_mock.assert_awaited_once_with(
+        "generation",
+        ModelTier.STANDARD,
+        task_type=TaskType.STANDARD_RESPONSE,
+        reasoning_mode="balanced",
+    )
+    assert new_state.context_data["phase_d_model_tier_enforced"] == "standard"
+    assert "phase_d_default_overridden" not in new_state.context_data
 
 
 @pytest.mark.asyncio
