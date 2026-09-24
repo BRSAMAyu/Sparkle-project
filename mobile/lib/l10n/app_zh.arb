@@ -4076,6 +4076,32 @@
         }
     },
     "planDetailDefaultRecommendation": "今天不再学新内容，只做高频知识点速览、错题错因回看和 30 分钟短模拟。",
+    "planComebackExpiredBasis": "原定 {date} 完成。断档不是清零，重新校准终点就能接上。",
+    "@planComebackExpiredBasis": {
+        "placeholders": {
+            "date": {
+                "type": "Object"
+            }
+        }
+    },
+    "planComebackExpiredTitle": "计划已过期 {days} 天",
+    "@planComebackExpiredTitle": {
+        "placeholders": {
+            "days": {
+                "type": "Object"
+            }
+        }
+    },
+    "planComebackRecalibrate": "重新校准计划",
+    "planComebackStalledBasis": "计划停在上次的地方。重新校准节奏，或从断点直接继续。",
+    "planComebackStalledTitle": "离开了 {days} 天",
+    "@planComebackStalledTitle": {
+        "placeholders": {
+            "days": {
+                "type": "Object"
+            }
+        }
+    },
     "planDetailEdit": "编辑计划",
     "planDetailFullPlan": "完整计划",
     "planDetailHealthNeedAttention": "需要关注",

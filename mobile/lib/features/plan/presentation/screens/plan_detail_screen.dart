@@ -19,6 +19,7 @@ import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/data/models/plan_phase_model.dart';
 import 'package:sparkle/features/plan/data/repositories/exam_sprint_repository.dart';
 import 'package:sparkle/features/plan/data/services/plan_description_codec.dart';
+import 'package:sparkle/features/plan/domain/plan_staleness.dart';
 import 'package:sparkle/features/plan/presentation/providers/learning_path_progress_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_confirmation_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_phase_provider.dart';
@@ -300,6 +301,10 @@ class _PlanOverviewTab extends ConsumerWidget {
         : null;
     final parsedDescription = PlanDescriptionCodec.parse(plan.description);
     final mergedTasks = _mergedPlanTasks(plan);
+    // J-07 comeback：回归者打开过期/断档计划的第一屏——横幅置于列表首位，
+    // 保证"回来 ≤2 actions 到 meaningful next step"（重新校准 = 1 tap 进
+    // 编辑面重锚 targetDate）。判定口径唯一来源见 plan_staleness.dart。
+    final staleness = PlanStaleness.assess(plan: plan, now: DateTime.now());
 
     return ContentConstraint(
       child: SparkleRefreshIndicator(
@@ -312,6 +317,10 @@ class _PlanOverviewTab extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.all(DS.lg),
           children: [
+            if (staleness.isStale) ...[
+              _PlanComebackBanner(plan: plan, staleness: staleness),
+              const SizedBox(height: DS.lg),
+            ],
             if (plan.source == 'learning_path') ...[
               Consumer(
                 builder: (context, ref, child) {
@@ -419,7 +428,9 @@ class _PlanOverviewTab extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: DS.lg),
-            if (_isLast24hMode(plan)) ...[
+            // J-07：过期/断档计划不复用「考前最后 24 小时」冲刺横幅——
+            // deadline 已过多日，冲刺框架与陈旧建议一并让位给回归横幅。
+            if (!staleness.isStale && _isLast24hMode(plan)) ...[
               _Last24hSprintBanner(plan: plan),
               const SizedBox(height: DS.lg),
             ],
@@ -713,7 +724,10 @@ class _PlanExecutionSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tasks = _mergedPlanTasks(plan);
-    final isLast24hMode = _isLast24hMode(plan);
+    // J-07：过期计划的 deadline 已过，「最后 24 小时冲刺」框架不成立，
+    // 回退常规「今日焦点」呈现（同 overview tab 的 stale 门口径）。
+    final isLast24hMode = _isLast24hMode(plan) &&
+        !PlanStaleness.assess(plan: plan, now: DateTime.now()).isStale;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1011,6 +1025,102 @@ class _PlanTaskActions extends StatelessWidget {
       );
 }
 
+/// J-07 comeback：回归接住横幅——不冷冰冰报错，给「计划已过期/断档 →
+/// 一键重新校准」。形制复用 warning 语义槽既有横幅（_Last24hSprintBanner
+/// 同款 surface：alpha 0.10 底 + 0.28 边 + 图标瓦片），不发明新视觉；
+/// 文案不做羞辱式累积（断档≠清零）。动作复用既有重规划链路中 mobile
+/// 可达的一段：PlanUpdate（编辑面重锚 targetDate），1 tap 到 meaningful
+/// next step；引擎侧 Aurora 自动 rescope 属跨层，交接不硬上。
+class _PlanComebackBanner extends StatelessWidget {
+  const _PlanComebackBanner({required this.plan, required this.staleness});
+
+  final PlanModel plan;
+  final PlanStaleness staleness;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final isExpired = staleness.isExpired;
+    // 过期态的 comeback rationale 用真实变化依据：原定 targetDate（过期
+    // 判定由它而来，必有值）；断档态的天数已在标题承载，正文用静态接话。
+    final dueDate = isExpired && plan.targetDate != null
+        ? Formatters.formatDateMedium(plan.targetDate!)
+        : null;
+
+    return Container(
+      key: const ValueKey('plan-comeback-banner'),
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing16),
+      decoration: BoxDecoration(
+        color: DS.warning.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: DS.warning.withValues(alpha: 0.28)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(DS.spacing8),
+                decoration: BoxDecoration(
+                  color: DS.warning.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  isExpired
+                      ? Icons.event_busy_rounded
+                      : Icons.event_repeat_rounded,
+                  color: DS.warning,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: DS.spacing12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isExpired
+                          ? l10n.planComebackExpiredTitle(staleness.days)
+                          : l10n.planComebackStalledTitle(staleness.days),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: DS.textPrimary,
+                          ),
+                    ),
+                    const SizedBox(height: DS.spacing8),
+                    Text(
+                      isExpired
+                          ? (dueDate != null
+                              ? l10n.planComebackExpiredBasis(dueDate)
+                              : l10n.planComebackStalledBasis)
+                          : l10n.planComebackStalledBasis,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: DS.textSecondary,
+                            height: 1.45,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing12),
+          SparkleButton(
+            key: const ValueKey('plan-comeback-recalibrate'),
+            onPressed: () =>
+                context.push('/plans/${plan.id}/edit'),
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: l10n.planComebackRecalibrate,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _Last24hSprintBanner extends StatelessWidget {
   const _Last24hSprintBanner({required this.plan});
 
@@ -1085,54 +1195,62 @@ class _TodayFocusPlan extends StatelessWidget {
     final groups = _buildPlanDayGroups(tasks);
     final highlightDay = _highlightDay(plan, groups);
     final highlightedTasks = _highlightTasks(plan, groups, highlightDay);
-    final recommendation = _highlightRecommendation(
-      context.l10n,
-      plan,
-      highlightedTasks,
-      highlightDay,
-    );
+    // J-07：过期/断档计划不复用"今天优先…"式陈旧建议文案（回归接住横幅
+    // 已在页首给出当前该做的事），任务卡保留，直接可见可继续。
+    final isStale = PlanStaleness.assess(
+      plan: plan,
+      now: DateTime.now(),
+    ).isStale;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(DS.spacing16),
-          decoration: BoxDecoration(
-            color: DS.brandPrimary.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.18)),
+        if (!isStale) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(DS.spacing16),
+            decoration: BoxDecoration(
+              color: DS.brandPrimary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(16),
+              border:
+                  Border.all(color: DS.brandPrimary.withValues(alpha: 0.18)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(DS.spacing8),
+                  decoration: BoxDecoration(
+                    color: DS.brandPrimary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.auto_awesome_rounded,
+                    size: 18,
+                    color: DS.brandPrimary,
+                  ),
+                ),
+                const SizedBox(width: DS.spacing12),
+                Expanded(
+                  child: Text(
+                    _highlightRecommendation(
+                      context.l10n,
+                      plan,
+                      highlightedTasks,
+                      highlightDay,
+                    ),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: DS.textPrimary,
+                          height: 1.45,
+                          fontWeight: DS.fontWeightBold,
+                        ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(DS.spacing8),
-                decoration: BoxDecoration(
-                  color: DS.brandPrimary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.auto_awesome_rounded,
-                  size: 18,
-                  color: DS.brandPrimary,
-                ),
-              ),
-              const SizedBox(width: DS.spacing12),
-              Expanded(
-                child: Text(
-                  recommendation,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: DS.textPrimary,
-                        height: 1.45,
-                        fontWeight: DS.fontWeightBold,
-                      ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: DS.spacing12),
+          const SizedBox(height: DS.spacing12),
+        ],
         ...highlightedTasks.asMap().entries.map(
               (entry) => Padding(
                 padding: EdgeInsets.only(
@@ -1878,11 +1996,32 @@ int _taskDay(TaskModel task) {
   return 1;
 }
 
+bool _groupHasPendingTasks(_PlanDayGroup group) =>
+    group.tasks.any((task) => task.status != TaskStatus.completed);
+
 int _highlightDay(PlanModel plan, List<_PlanDayGroup> groups) {
   final serverDay = plan.dayHighlights?.day;
-  if (serverDay != null && serverDay > 0) return serverDay;
-  if (groups.any((group) => group.day == 1)) return 1;
-  return groups.isEmpty ? 1 : groups.first.day;
+  final day = serverDay != null && serverDay > 0
+      ? serverDay
+      : groups.any((group) => group.day == 1)
+          ? 1
+          : (groups.isEmpty ? 1 : groups.first.day);
+  // J-07 comeback：陈旧建议不复用。高亮日（服务端指定或 Day-1 兜底，
+  // 服务端 _build_day_highlights 恒推 Day 1 且不感知日期）已全部完成时，
+  // 焦点切到第一个仍有未完成任务的日子；全部完成则维持原高亮（完成流
+  // 由 sprint completion 探针接管）。呈现层守卫——不改服务端真源。
+  final resolved = groups.where((group) => group.day == day).toList();
+  if (resolved.isNotEmpty && resolved.any(_groupHasPendingTasks)) {
+    return day;
+  }
+  _PlanDayGroup? pendingGroup;
+  for (final group in groups) {
+    if (_groupHasPendingTasks(group)) {
+      pendingGroup = group;
+      break;
+    }
+  }
+  return pendingGroup?.day ?? day;
 }
 
 List<TaskModel> _highlightTasks(
@@ -1890,8 +2029,14 @@ List<TaskModel> _highlightTasks(
   List<_PlanDayGroup> groups,
   int day,
 ) {
-  final serverTasks = plan.dayHighlights?.tasks ?? const <TaskModel>[];
-  if (serverTasks.isNotEmpty) return serverTasks;
+  final highlights = plan.dayHighlights;
+  // 仅当 comeback 守卫没有改写高亮日时才沿用服务端 tasks（J-07：高亮日
+  // 被守卫切换后，服务端旧日 tasks 不再复用）。
+  if (highlights != null &&
+      highlights.day == day &&
+      highlights.tasks.isNotEmpty) {
+    return highlights.tasks;
+  }
   return groups
       .firstWhere(
         (group) => group.day == day,

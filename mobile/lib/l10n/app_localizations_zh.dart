@@ -422,6 +422,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get planCreateAction => '创建计划';
 
   @override
+  String planComebackExpiredBasis(Object date) {
+    return '原定 $date 完成。断档不是清零，重新校准终点就能接上。';
+  }
+
+  @override
+  String planComebackExpiredTitle(Object days) {
+    return '计划已过期 $days 天';
+  }
+
+  @override
+  String get planComebackRecalibrate => '重新校准计划';
+
+  @override
+  String get planComebackStalledBasis => '计划停在上次的地方。重新校准节奏，或从断点直接继续。';
+
+  @override
+  String planComebackStalledTitle(Object days) {
+    return '离开了 $days 天';
+  }
+
+  @override
   String get featureComingSoon => '精彩功能即将登场';
 
   @override

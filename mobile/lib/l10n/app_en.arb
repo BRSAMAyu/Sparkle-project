@@ -4073,6 +4073,32 @@
         }
     },
     "planDetailDefaultRecommendation": "No new content today. Just review high-frequency topics, revisit past mistakes, and do a 30-min mini simulation.",
+    "planComebackExpiredBasis": "It was due {date}. A gap doesn't reset your progress - recalibrate the finish line and pick up from there.",
+    "@planComebackExpiredBasis": {
+        "placeholders": {
+            "date": {
+                "type": "Object"
+            }
+        }
+    },
+    "planComebackExpiredTitle": "Plan expired {days} days ago",
+    "@planComebackExpiredTitle": {
+        "placeholders": {
+            "days": {
+                "type": "Object"
+            }
+        }
+    },
+    "planComebackRecalibrate": "Recalibrate plan",
+    "planComebackStalledBasis": "The plan is paused right where you left it. Recalibrate the pace, or resume from the breakpoint.",
+    "planComebackStalledTitle": "Away for {days} days",
+    "@planComebackStalledTitle": {
+        "placeholders": {
+            "days": {
+                "type": "Object"
+            }
+        }
+    },
     "planDetailEdit": "Edit Plan",
     "planDetailFullPlan": "Full Plan",
     "planDetailHealthNeedAttention": "Needs Attention",

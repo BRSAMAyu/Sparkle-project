@@ -444,6 +444,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planCreateAction => 'Create Plan';
 
   @override
+  String planComebackExpiredBasis(Object date) {
+    return 'It was due $date. A gap doesn\'t reset your progress - recalibrate the finish line and pick up from there.';
+  }
+
+  @override
+  String planComebackExpiredTitle(Object days) {
+    return 'Plan expired $days days ago';
+  }
+
+  @override
+  String get planComebackRecalibrate => 'Recalibrate plan';
+
+  @override
+  String get planComebackStalledBasis =>
+      'The plan is paused right where you left it. Recalibrate the pace, or resume from the breakpoint.';
+
+  @override
+  String planComebackStalledTitle(Object days) {
+    return 'Away for $days days';
+  }
+
+  @override
   String get featureComingSoon => 'Exciting features are coming soon';
 
   @override

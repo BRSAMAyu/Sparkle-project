@@ -130,6 +130,103 @@ void main() {
       await tester.pump(const Duration(seconds: 35));
     });
   });
+
+  group('PlanDetailScreen comeback (J-07 stale plan)', () {
+    testWidgets('expired plan shows comeback banner and recalibrate routes to edit',
+        (tester) async {
+      final now = DateTime.now();
+      var editPushed = false;
+      final plan = _comebackPlan(
+        targetDate: now.subtract(const Duration(days: 5)),
+        updatedAt: now.subtract(const Duration(days: 5)),
+      );
+
+      await _pumpPlanDetail(
+        tester,
+        plan,
+        onEditRoute: () => editPushed = true,
+      );
+
+      expect(find.byKey(const ValueKey('plan-comeback-banner')), findsOneWidget);
+      expect(find.text('计划已过期 5 天'), findsOneWidget);
+      expect(find.textContaining('重新校准终点'), findsOneWidget);
+      // 过期计划不复用冲刺框架与陈旧建议（deadline 已过多日）。
+      expect(find.text('考前冲刺模式'), findsNothing);
+      expect(find.text('今天优先拿下 TCP 确认号。'), findsNothing);
+
+      await tester.tap(find.byKey(const ValueKey('plan-comeback-recalibrate')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(editPushed, isTrue);
+      expect(find.text('EDIT_ROUTE_MARKER'), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 35));
+    });
+
+    testWidgets('stalled plan shows away-days banner and hides stale advice',
+        (tester) async {
+      final now = DateTime.now();
+      final plan = _comebackPlan(
+        targetDate: now.add(const Duration(days: 2)),
+        updatedAt: now.subtract(const Duration(days: 5)),
+      );
+
+      await _pumpPlanDetail(tester, plan);
+
+      expect(find.byKey(const ValueKey('plan-comeback-banner')), findsOneWidget);
+      expect(find.text('离开了 5 天'), findsOneWidget);
+      expect(find.textContaining('断点直接继续'), findsOneWidget);
+      // 陈旧建议不复用：断档期间"今天优先…"式服务端建议气泡不再渲染。
+      expect(find.text('今天优先拿下 TCP 确认号。'), findsNothing);
+
+      await tester.pump(const Duration(seconds: 35));
+    });
+
+    testWidgets('fresh plan is unaffected: no banner, advice bubble stays',
+        (tester) async {
+      final now = DateTime.now();
+      final plan = _comebackPlan(
+        targetDate: now.add(const Duration(days: 7)),
+        updatedAt: now,
+      );
+
+      await _pumpPlanDetail(tester, plan);
+
+      expect(find.byKey(const ValueKey('plan-comeback-banner')), findsNothing);
+      expect(find.text('今天优先拿下 TCP 确认号。'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('plan-task-card-task-1')),
+        findsOneWidget,
+      );
+
+      await tester.pump(const Duration(seconds: 35));
+    });
+
+    testWidgets('fully-completed highlight day is not reused as stale focus',
+        (tester) async {
+      final now = DateTime.now();
+      final plan = _planWithCompletedDay1PendingDay2(
+        targetDate: now.add(const Duration(days: 7)),
+        updatedAt: now,
+      );
+
+      await _pumpPlanDetail(tester, plan);
+
+      // 服务端 day_highlights 恒推 Day 1；Day 1 已全部完成时，焦点必须
+      // 切到仍有未完成任务的日子——完成日任务卡不在焦点位复现。
+      expect(
+        find.byKey(const ValueKey('plan-task-card-task-day2')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('plan-task-card-task-day1')),
+        findsNothing,
+      );
+
+      await tester.pump(const Duration(seconds: 35));
+    });
+  });
 }
 
 Finder _commonMistakeCards() => find.byWidgetPredicate((widget) {
@@ -142,6 +239,7 @@ Future<void> _pumpPlanDetail(
   WidgetTester tester,
   PlanModel plan, {
   _FakePlanRepository? repository,
+  void Function()? onEditRoute,
 }) async {
   tester.view.physicalSize = const Size(390, 1200);
   tester.view.devicePixelRatio = 1;
@@ -155,6 +253,16 @@ Future<void> _pumpPlanDetail(
         path: '/plans/:planId',
         builder: (context, state) => PlanDetailScreen(planId: plan.id),
       ),
+      if (onEditRoute != null)
+        GoRoute(
+          path: '/plans/:planId/edit',
+          builder: (context, state) {
+            onEditRoute();
+            return const Scaffold(
+              body: Center(child: Text('EDIT_ROUTE_MARKER')),
+            );
+          },
+        ),
     ],
   );
   addTearDown(router.dispose);
@@ -291,6 +399,116 @@ PlanModel _planWithTargetedRepairTask({
       day: 1,
       recommendation: '今天优先修复昨天暴露的错因。',
       tasks: [normalTask, repairTask],
+    ),
+  );
+}
+
+/// J-07 comeback 用例：单 pending 任务 + 服务端 Day-1 高亮。
+PlanModel _comebackPlan({
+  required DateTime updatedAt,
+  DateTime? targetDate,
+}) {
+  final task = TaskModel(
+    id: 'task-1',
+    userId: 'user-1',
+    planId: 'plan-1',
+    title: '拿下 TCP 确认号',
+    type: TaskType.learning,
+    tags: const ['day:1'],
+    estimatedMinutes: 30,
+    difficulty: 2,
+    energyCost: 1,
+    guideJson: {
+      'why_now': '现在先处理它，是为了把今天的学习推进变成一个看得见的输出。',
+    },
+    status: TaskStatus.pending,
+    priority: 1,
+    orderIndex: 1000,
+    createdAt: updatedAt.subtract(const Duration(days: 10)),
+    updatedAt: updatedAt,
+  );
+
+  return PlanModel(
+    id: 'plan-1',
+    userId: 'user-1',
+    name: '计算机网络冲刺',
+    type: PlanType.sprint,
+    dailyAvailableMinutes: 45,
+    masteryLevel: 0.4,
+    progress: 0.2,
+    isActive: true,
+    createdAt: updatedAt.subtract(const Duration(days: 10)),
+    updatedAt: updatedAt,
+    targetDate: targetDate,
+    description: '今天先稳住高频节点。',
+    subject: '计算机网络',
+    tasks: [task],
+    dayHighlights: PlanDayHighlights(
+      day: 1,
+      recommendation: '今天优先拿下 TCP 确认号。',
+      tasks: [task],
+    ),
+  );
+}
+
+/// J-07 陈旧焦点用例：Day 1 全部完成、Day 2 有 pending，
+/// 服务端 day_highlights 仍推 Day 1（后端 _build_day_highlights 恒推 Day 1）。
+PlanModel _planWithCompletedDay1PendingDay2({
+  required DateTime targetDate,
+  required DateTime updatedAt,
+}) {
+  final doneTask = TaskModel(
+    id: 'task-day1',
+    userId: 'user-1',
+    planId: 'plan-1',
+    title: '完成于离开前：TCP 确认号',
+    type: TaskType.learning,
+    tags: const ['day:1'],
+    estimatedMinutes: 30,
+    difficulty: 2,
+    energyCost: 1,
+    status: TaskStatus.completed,
+    priority: 1,
+    orderIndex: 1000,
+    createdAt: updatedAt.subtract(const Duration(days: 10)),
+    updatedAt: updatedAt,
+  );
+  final pendingTask = TaskModel(
+    id: 'task-day2',
+    userId: 'user-1',
+    planId: 'plan-1',
+    title: '断点续接：TCP 滑动窗口',
+    type: TaskType.learning,
+    tags: const ['day:2'],
+    estimatedMinutes: 30,
+    difficulty: 2,
+    energyCost: 1,
+    status: TaskStatus.pending,
+    priority: 1,
+    orderIndex: 2000,
+    createdAt: updatedAt.subtract(const Duration(days: 10)),
+    updatedAt: updatedAt,
+  );
+
+  return PlanModel(
+    id: 'plan-1',
+    userId: 'user-1',
+    name: '计算机网络冲刺',
+    type: PlanType.sprint,
+    dailyAvailableMinutes: 45,
+    masteryLevel: 0.4,
+    progress: 0.5,
+    isActive: true,
+    createdAt: updatedAt.subtract(const Duration(days: 10)),
+    updatedAt: updatedAt,
+    targetDate: targetDate,
+    description: '今天先稳住高频节点。',
+    subject: '计算机网络',
+    tasks: [doneTask, pendingTask],
+    dayHighlights: PlanDayHighlights(
+      day: 1,
+      recommendation: '今天优先拿下 TCP 确认号。',
+      tasks: [doneTask],
     ),
   );
 }

@@ -920,6 +920,36 @@ abstract class AppLocalizations {
   /// **'创建计划'**
   String get planCreateAction;
 
+  /// No description provided for @planComebackExpiredBasis.
+  ///
+  /// In zh, this message translates to:
+  /// **'原定 {date} 完成。断档不是清零，重新校准终点就能接上。'**
+  String planComebackExpiredBasis(Object date);
+
+  /// No description provided for @planComebackExpiredTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划已过期 {days} 天'**
+  String planComebackExpiredTitle(Object days);
+
+  /// No description provided for @planComebackRecalibrate.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新校准计划'**
+  String get planComebackRecalibrate;
+
+  /// No description provided for @planComebackStalledBasis.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划停在上次的地方。重新校准节奏，或从断点直接继续。'**
+  String get planComebackStalledBasis;
+
+  /// No description provided for @planComebackStalledTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'离开了 {days} 天'**
+  String planComebackStalledTitle(Object days);
+
   /// No description provided for @featureComingSoon.
   ///
   /// In zh, this message translates to:
