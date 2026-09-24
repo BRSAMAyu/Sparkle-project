@@ -68,6 +68,7 @@ from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
 from app.services.galaxy.review_urgency_service import ReviewUrgencyService
 from app.services.galaxy.stats_service import GalaxyStatsService
 from app.services.galaxy.structure_service import GraphStructureService
+from app.services.galaxy.title_sanitizer import clean_display_title
 from app.services.node_sector_service import NodeSectorService
 
 
@@ -2681,8 +2682,15 @@ class GalaxyService:
 
     @staticmethod
     def task_node_uuid(title: str) -> UUID:
-        """Stable internal UUID for a task-derived node (whitespace-insensitive)."""
-        normalized = re.sub(r"\s+", "", str(title or "").strip().lower())
+        """Stable internal UUID for a task-derived node (whitespace-insensitive).
+
+        F-2：键在清洗后的语义名上——评测 harness（feature_tour S7）往任务标题里
+        拼全局唯一 token（「TOUR 专题7-<run>: 真题演练与错因回看」形态）重跑安全，
+        语义相同只剩 token 不同的任务必须收敛到同一颗星。干净标题零改写，
+        映射与旧口径完全一致（见 test_task_node_uuid_clean_title_mapping_unchanged）。
+        """
+        display = clean_display_title(str(title or ""))
+        normalized = re.sub(r"\s+", "", display.strip().lower())
         return uuid5(TASK_NODE_UUID_NAMESPACE, normalized)
 
     async def ensure_task_node(self, title: str, *, task_id: UUID | None = None) -> UUID:
@@ -2692,12 +2700,17 @@ class GalaxyService:
         completing「TCP 拥塞控制」lights the seeded star instead of duplicating
         it. Otherwise materializes a deterministic node keyed by the normalized
         title, so re-studying the same topic accumulates mastery on one star.
+
+        F-2 内部命名泄漏修复：name/description/keywords 只落清洗后的人类可读名
+        （「真题演练与错因回看」），harness 唯一性 token 不再进入任何用户可见
+        字段——内部标识只留在 id / source_task_id 等非展示字段。
         """
         clean_title = re.sub(r"\s+", " ", str(title or "").strip())
         if not clean_title:
             raise ValueError("task title is required for galaxy anchoring")
 
-        lowered = clean_title.lower()
+        display_title = clean_display_title(clean_title)
+        lowered = display_title.lower()
         matched = (
             await self.db.execute(select(KnowledgeNode.id).where(func.lower(KnowledgeNode.name) == lowered).limit(1))
         ).scalar_one_or_none()
@@ -2711,9 +2724,9 @@ class GalaxyService:
 
         knowledge_node = KnowledgeNode(
             id=resolved_id,
-            name=clean_title[:255],
-            description=f"来自任务的学习主题：{clean_title}",
-            keywords=[clean_title],
+            name=display_title[:255],
+            description=f"来自任务的学习主题：{display_title}",
+            keywords=[display_title],
             importance_level=3,
             is_seed=False,
             source_type="user_created",
@@ -2722,7 +2735,7 @@ class GalaxyService:
         )
         self.db.add(knowledge_node)
         await self.db.flush()
-        logger.info("GalaxyService: ignited task star {} for title {!r}", resolved_id, clean_title)
+        logger.info("GalaxyService: ignited task star {} for title {!r}", resolved_id, display_title)
         return resolved_id
 
     @staticmethod
@@ -3122,7 +3135,8 @@ class GalaxyService:
             node_key = str(node_id)
             item = GalaxyContributionNode(
                 node_id=node_id,
-                node_name=str(row["node_name"] or "未命名节点"),
+                # F-2 存量防御：贡献列表的节点名同样过展示面清洗
+                node_name=clean_display_title(str(row["node_name"] or "")) or "未命名节点",
                 reason=reason or None,
                 mastery_delta=int(round(new_mastery - old_mastery)),
                 updated_at=row["created_at"],

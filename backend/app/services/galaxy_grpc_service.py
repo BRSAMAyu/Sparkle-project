@@ -19,6 +19,7 @@ except ImportError:
     galaxy_service_pb2_grpc = None
 
 from app.core.cache import cache_service
+from app.schemas.galaxy import sanitize_display_text, sanitize_keywords, sanitize_node_display_title
 from app.services.galaxy.collaborative_service import CollaborativeGalaxyService
 from app.services.galaxy.crdt_persistence import CRDTPersistenceManager, MasteryMergeCRDT
 from app.services.galaxy_service import GalaxyService
@@ -487,11 +488,13 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
 
                 return galaxy_service_pb2.GetNodeDetailResponse(
                     node_id=str(node_id),
-                    label=node.name if node else "",
+                    # F-2 存量防御：本分支直读 ORM，展示字段需同口径清洗
+                    # （REST/gRPC 其余 label 已随 NodeBase/NodeWithStatus 投影清洗）
+                    label=sanitize_node_display_title(node.name) if node else "",
                     node_type=node.source_type if node else "unknown",
                     mastery=int(stats.mastery_score) if stats and hasattr(stats, 'mastery_score') else 0,
-                    description=node.description or "" if node else "",
-                    tags=(node.keywords or []) if node else [],
+                    description=sanitize_display_text(node.description) or "" if node else "",
+                    tags=sanitize_keywords([str(k) for k in (node.keywords or [])]) if node else [],
                     parent_ids=[str(node.parent_id)] if node and node.parent_id else [],
                     child_ids=[],
                     metadata=doc_meta,

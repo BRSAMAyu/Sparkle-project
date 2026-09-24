@@ -51,6 +51,9 @@ from app.schemas.galaxy import (
     SparkResult,
     SuggestedDocumentNodesResponse,
     UserGalaxyContribution,
+    sanitize_display_text,
+    sanitize_keywords,
+    sanitize_node_display_title,
 )
 from app.services.decay_service import DecayService
 from app.services.expansion_service import ExpansionService
@@ -574,12 +577,14 @@ async def get_node_detail(
         }
 
     # 构建 node dict (matching Flutter KnowledgeNodeDetail)
+    # F-2 存量防御：详情页大标题/描述/关键词是 wt324 实测泄漏面（星图 sheet），
+    # 读取侧兜底清洗存量脏行——零改写纪律：干净数据原样透传，不重写库。
     node_dict = {
         "id": str(node.id),
-        "name": node.name,
+        "name": sanitize_node_display_title(node.name) or "",
         "name_en": node.name_en,
-        "description": node.description,
-        "keywords": node.keywords or [],
+        "description": sanitize_display_text(node.description),
+        "keywords": sanitize_keywords([str(k) for k in (node.keywords or [])]),
         "importance_level": node.importance_level,
         "sector_code": sector_code,
         "sector_weights": sector_weights,
@@ -600,8 +605,12 @@ async def get_node_detail(
             "target_node_id": str(rel.target_node_id),
             "relation_type": rel.relation_type,
             "strength": float(rel.strength or 0.5),
-            "source_node_name": rel.source_node.name if rel.source_node else None,
-            "target_node_name": rel.target_node.name if rel.target_node else None,
+            "source_node_name": sanitize_node_display_title(rel.source_node.name)
+            if rel.source_node
+            else None,
+            "target_node_name": sanitize_node_display_title(rel.target_node.name)
+            if rel.target_node
+            else None,
         }
         for rel in relations
     ]

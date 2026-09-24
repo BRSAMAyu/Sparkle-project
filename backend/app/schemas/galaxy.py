@@ -10,6 +10,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.sector import SectorCode
+from app.services.galaxy.title_sanitizer import clean_display_title, strip_internal_tokens
 from app.services.node_sector_service import (
     blend_sector_colors,
     build_sector_visuals,
@@ -17,6 +18,39 @@ from app.services.node_sector_service import (
     parse_sector_code,
     resolve_sector_weights,
 )
+
+
+def sanitize_display_text(text: str | None) -> str | None:
+    """F-2 读取侧兜底：剥离文本中嵌入的内部 token（「TOUR 专题7-…: 尾」形态）。
+
+    None 透传；不含该形态的文本零改写——存量脏行只在展示面清洗，不重写库。
+    """
+    if not text:
+        return text
+    return strip_internal_tokens(text)
+
+
+def sanitize_node_display_title(title: str | None) -> str | None:
+    """F-2 读取侧兜底：节点名清洗（含裸 token fallback「专题 N」）。"""
+    if not title:
+        return title
+    return clean_display_title(title)
+
+
+def sanitize_keywords(keywords: list[str]) -> list[str]:
+    """F-2 读取侧兜底：关键词逐项清洗 + 去空 + 保序去重。"""
+    cleaned: list[str] = []
+    seen: set[str] = set()
+    for raw in keywords:
+        value = clean_display_title(raw).strip()
+        if not value:
+            continue
+        key = value.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        cleaned.append(value)
+    return cleaned
 
 
 class NodeStatus(StrEnum):
@@ -260,9 +294,11 @@ class NodeBase(BaseModel):
         base_color, glow_color = cls._resolve_sector_colors(node, sector_weights)
         return cls(
             id=node.id,
-            name=node.name,
+            # F-2 存量防御：读取侧兜底清洗，存量脏行不重写库、只在展示面剥离
+            # 内部 token（生成侧自 2026-09-25 起已产出干净名，本层对两者皆幂等）。
+            name=sanitize_node_display_title(node.name) or "",
             name_en=node.name_en,
-            description=node.description,
+            description=sanitize_display_text(node.description),
             importance_level=node.importance_level,
             sector_code=sector_code,
             sector_weights=sector_weights,
@@ -274,7 +310,7 @@ class NodeBase(BaseModel):
             tags=NodeWithStatus._build_auto_tags(node, sector_code),
             # GALAXY-KW: str() 与 _build_auto_tags 的 add_tag 同款防御——
             # JSONB 列内的脏元素不得让投影抛 ValidationError。
-            keywords=[str(k) for k in (node.keywords or [])],
+            keywords=sanitize_keywords([str(k) for k in (node.keywords or [])]),
             global_spark_count=node.global_spark_count,
         )
 
@@ -446,9 +482,10 @@ class NodeWithStatus(NodeBase):
 
         return cls(
             id=node.id,
-            name=node.name,
+            # F-2 存量防御：与 NodeBase.from_model 同口径的展示面清洗。
+            name=sanitize_node_display_title(node.name) or "",
             name_en=node.name_en,
-            description=node.description,
+            description=sanitize_display_text(node.description),
             importance_level=node.importance_level,
             sector_code=sector_code,
             sector_weights=sector_weights,
@@ -618,11 +655,14 @@ class NodeWithStatus(NodeBase):
             seen.add(normalized)
             tags.append(tag)
 
-        for keyword in node.keywords or []:
-            add_tag(str(keyword))
+        for keyword in sanitize_keywords([str(k) for k in node.keywords or []]):
+            add_tag(keyword)
 
         if not tags:
-            source = f"{node.name or ''} {node.description or ''}"
+            # F-2: tags fallback 源文本同样过清洗，脏名/脏描述不得借 tags 泄漏
+            source_name = sanitize_display_text(str(node.name or "")) or ""
+            source_desc = sanitize_display_text(str(node.description or "")) or ""
+            source = f"{source_name} {source_desc}"
             for token in re.findall(r"[\w\u4e00-\u9fff]{2,}", source):
                 add_tag(token)
                 if len(tags) >= 3:
