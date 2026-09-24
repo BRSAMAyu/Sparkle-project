@@ -76,7 +76,7 @@ jobs:
         run: ruff check backend/app --output-format=github
 
       - name: Python Type Check (MyPy)
-        run: mypy backend/app --ignore-missing-imports --no-error-summary
+        run: bash scripts/ci/mypy_ratchet.sh
 
       # Flutter Linting
       - name: Set up Flutter
