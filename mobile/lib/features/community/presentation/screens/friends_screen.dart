@@ -22,6 +22,8 @@ import 'package:sparkle/features/community/presentation/utils/accountability_inv
 import 'package:sparkle/features/community/presentation/widgets/friends_hub_view.dart';
 import 'package:sparkle/features/community/presentation/widgets/recommendation_feedback_widgets.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/features/chat/data/services/chat_draft_store.dart';
+import 'package:sparkle/features/chat/presentation/providers/chat_draft_store_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 class FriendsScreen extends StatelessWidget {
@@ -244,6 +246,17 @@ class _MyFriendsTab extends ConsumerWidget {
     if (confirmed == true && context.mounted) {
       try {
         await ref.read(friendsProvider.notifier).deleteFriend(friendInfo.id);
+        // N46：会话删除（删好友）同步清除该私聊的未发送草稿。
+        try {
+          final draftUserId = await resolveChatDraftUserId(ref);
+          await ref.read(chatDraftStoreProvider).clear(
+                scope: ChatDraftScope.privateChat,
+                conversationId: friendInfo.friend.id,
+                userId: draftUserId,
+              );
+        } catch (_) {
+          // 草稿清理失败不影响删除主流程。
+        }
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SparkleSnackBar.success(context.l10n

@@ -13,6 +13,7 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/providers/experience_envelope_provider.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/guest_conversion_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/intervention_action_service.dart';
 import 'package:sparkle/core/utils/error_messages.dart';
@@ -1306,6 +1307,22 @@ class ChatNotifier extends StateNotifier<ChatState> {
         );
 
         state = state.copyWith(messages: [...state.messages, aiMessage]);
+
+        // N47（A-SPEC8B §4）· firstMemoryReferenced 价值信号：AI 回复引用
+        // 记忆的 receipt 落点。引擎仅在确有被引用记忆时才产出
+        // memory_reference_receipt（response_builder._build_memory_reference_
+        // receipt 空引用返回 None），即 ContextReceiptBar/AuroraReceiptChip
+        // 「它记得我」芯片的同一数据源；此处是每轮回复唯一收口（finalizeRun
+        // 由 sawTerminalEvent 守门，恰发一次），避免按渲染帧重复计数。
+        // 照 N40 既有形制只**记录**不展示——展示时机由挂载点派生可见性
+        // 裁决；注册用户 no-op（免费闭环零变化）。
+        if (_receiptReferencesMemories(accumulatedRawMetadata)) {
+          unawaited(
+            _ref
+                .read(guestConversionControllerProvider.notifier)
+                .recordValueSignal(GuestValueSignal.firstMemoryReferenced),
+          );
+        }
       }
 
       state = state.copyWith(
@@ -2263,4 +2280,25 @@ class _PendingChatRequest {
   final String content;
   final String? taskId;
   final Map<String, dynamic>? extraContextOverrides;
+}
+
+/// N47（A-SPEC8B §4）· firstMemoryReferenced 的触发判据：本轮回复的
+/// rawMetadata 是否携带非空 referenced_memories 的记忆引用 receipt。
+/// 引擎可能以 dict 或 JSON 字符串两种形态下发（照
+/// memory_reference_receipt.dart 的解析口径），仅在确有被引用记忆时
+/// 才算价值信号成立。
+bool _receiptReferencesMemories(Map<String, dynamic> rawMetadata) {
+  final raw = rawMetadata['memory_reference_receipt'];
+  if (raw == null) return false;
+  Object? decoded = raw;
+  if (decoded is String) {
+    try {
+      decoded = jsonDecode(decoded);
+    } catch (_) {
+      return false;
+    }
+  }
+  if (decoded is! Map) return false;
+  final memories = decoded['referenced_memories'];
+  return memories is List && memories.isNotEmpty;
 }

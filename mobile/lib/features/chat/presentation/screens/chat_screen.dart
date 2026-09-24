@@ -33,7 +33,9 @@ import 'package:sparkle/features/aurora/data/models/aurora_core_session.dart';
 import 'package:sparkle/features/aurora/data/repositories/aurora_daily_startup_repository.dart';
 import 'package:sparkle/features/chat/chat_routes.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+import 'package:sparkle/features/chat/data/services/chat_draft_store.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
+import 'package:sparkle/features/chat/presentation/providers/chat_draft_store_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
@@ -69,6 +71,7 @@ import 'package:sparkle/features/aurora/data/services/aurora_telemetry_service.d
 import 'package:sparkle/features/chat/presentation/widgets/study_materials_sheet.dart';
 import 'package:sparkle/features/chat/presentation/widgets/transparency_floating_capsule.dart';
 import 'package:sparkle/features/chat/presentation/widgets/understanding_drawer.dart';
+import 'package:sparkle/features/auth/presentation/widgets/guest_conversion_card.dart';
 import 'package:sparkle/features/documents/data/models/document_library_models.dart';
 import 'package:sparkle/features/documents/presentation/providers/document_library_provider.dart';
 import 'package:sparkle/features/file/file.dart';
@@ -187,6 +190,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   // 建议话术 chip 点按只填入+聚焦，不直接发送。
   final TextEditingController _draftController = TextEditingController();
   final FocusNode _draftFocusNode = FocusNode();
+  // N46 单机草稿（A-SPEC8A 会话连续性改造 #1）：composer 文本按
+  // userId+conversationId 落 shared_preferences，切页/杀进程可恢复；
+  // 发送成功（输入被清空）即删草稿。
+  late final ChatDraftStore _draftStore;
+  String? _draftConversationKey;
+  String _draftUserId = 'anon';
+  bool _draftUserResolved = false;
+  bool _applyingStoredDraft = false;
   bool _showContextControls = false;
   String? _dispatchedInitialPrompt;
   String? _dispatchedInitialUserMessage;
@@ -210,6 +221,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     super.initState();
     _scrollController.addListener(_handleScroll);
     _extractReviewNodeContext();
+    _draftStore = ref.read(chatDraftStoreProvider);
+    _draftController.addListener(_handleDraftTextChanged);
+    unawaited(_initChatDraftSync());
     ref
       ..listenManual(
         chatProvider.select((state) => state.messages),
@@ -333,6 +347,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             AppFeedback.error(context, l10n.chatConnectionFailed);
           }
         },
+      )
+      // N46 单机草稿：会话切换时把 composer 内容归还原会话并载入新会话草稿。
+      ..listenManual(
+        chatProvider.select((state) => state.conversationId),
+        (previous, next) => unawaited(
+          _syncDraftWithConversation(next, flushAttribution: previous != null),
+        ),
       );
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -1066,10 +1087,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (conversationId != null && latestId != null) {
       unawaited(_writeLatestReadPosition(conversationId, latestId));
     }
+    // N46：离开页面即落盘草稿（覆盖防抖窗口内尚未写入的尾部输入）。
+    if (_draftUserResolved) {
+      unawaited(
+        _draftStore.flush(
+          scope: ChatDraftScope.chat,
+          conversationId:
+              _draftConversationKey ?? ChatDraftStore.newConversationKey,
+          userId: _draftUserId,
+          text: _draftController.text,
+        ),
+      );
+    }
     _scrollController
       ..removeListener(_handleScroll)
       ..dispose();
-    _draftController.dispose();
+    _draftController
+      ..removeListener(_handleDraftTextChanged)
+      ..dispose();
     _draftFocusNode.dispose();
     unawaited(BgmService.setReadingActivity(false));
     unawaited(BgmService.setThinkingActivity(false));
@@ -1086,6 +1121,83 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (_draftFocusNode.canRequestFocus) {
       _draftFocusNode.requestFocus();
     }
+  }
+
+  /// N46：解析 userId 后做首次草稿归属与恢复（进入会话即恢复）。
+  Future<void> _initChatDraftSync() async {
+    _draftUserId = await resolveChatDraftUserId(ref);
+    if (!mounted) {
+      return;
+    }
+    _draftUserResolved = true;
+    await _syncDraftWithConversation(
+      ref.read(chatProvider).conversationId,
+      flushAttribution: false,
+    );
+  }
+
+  /// N46：把 composer 内容归属切到目标会话——先把当前文本即时归还
+  /// 原会话草稿，再载入目标会话草稿（含空草稿清空 composer）。
+  Future<void> _syncDraftWithConversation(
+    String? conversationId, {
+    required bool flushAttribution,
+  }) async {
+    final nextKey = (conversationId?.trim().isNotEmpty ?? false)
+        ? conversationId!.trim()
+        : ChatDraftStore.newConversationKey;
+    final previousKey = _draftConversationKey;
+    _draftConversationKey = nextKey;
+    if (flushAttribution &&
+        previousKey != null &&
+        previousKey != nextKey &&
+        !_applyingStoredDraft) {
+      await _draftStore.flush(
+        scope: ChatDraftScope.chat,
+        conversationId: previousKey,
+        userId: _draftUserId,
+        text: _draftController.text,
+      );
+    }
+    final draft = await _draftStore.load(
+      scope: ChatDraftScope.chat,
+      conversationId: nextKey,
+      userId: _draftUserId,
+    );
+    if (!mounted) {
+      return;
+    }
+    final restored = draft ?? '';
+    if (restored == _draftController.text) {
+      return;
+    }
+    // 取消新键在途防抖闭包，防止恢复后被旧文本回写。
+    _draftStore.cancelScheduled(
+      scope: ChatDraftScope.chat,
+      conversationId: nextKey,
+      userId: _draftUserId,
+    );
+    _applyingStoredDraft = true;
+    try {
+      _draftController.text = restored;
+      _draftController.selection =
+          TextSelection.collapsed(offset: restored.length);
+    } finally {
+      _applyingStoredDraft = false;
+    }
+  }
+
+  /// N46：输入变化 → 防抖落盘；输入被清空（发送成功/用户删空）→ 删草稿。
+  void _handleDraftTextChanged() {
+    if (_applyingStoredDraft || !_draftUserResolved) {
+      return;
+    }
+    _draftStore.scheduleSave(
+      scope: ChatDraftScope.chat,
+      conversationId:
+          _draftConversationKey ?? ChatDraftStore.newConversationKey,
+      userId: _draftUserId,
+      text: _draftController.text,
+    );
   }
 
   /// S8：底部信号行是否需要渲染（两个信号都无内容时零面积）。
@@ -1517,6 +1629,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                         : null,
                                 onItemSelected: _handleComebackItemSelected,
                               ),
+                            // N47（A-SPEC8B §4）· 转化卡 chat 落点：挂在
+                            // chatHeaderPanels 事件横幅槽（出现即有实际事件、
+                            // 无事件零面积）。守门四条全复用
+                            // （guestConversionVisibleProvider）；本面追加
+                            // 「非流式中」守卫——AI 回复进行中一律让位，
+                            // 永不打断对话。内联卡非弹窗（N40 形制既辖）。
+                            if (!chatState.isSending && !chatState.hasActiveRun)
+                              const GuestConversionCard(),
                           ],
                         ),
                       ),

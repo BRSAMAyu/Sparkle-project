@@ -12,15 +12,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// `guest_conversion_provider` 的派生可见性统一裁决；本层保持无 UI 语义。
 enum GuestValueSignal {
   /// 首个任务完成——「第一次真正帮到学习」的价值时刻（旅程 S6）。
-  /// 当前唯一已接线信号：task_execution 完成回调收口。
+  /// 接线点：task_execution 完成回调收口（task_execution_screen.dart）。
   firstTaskCompleted('first_task_completed'),
 
   /// 首次诊断产出——认知棱镜长出第一条行为定式（旅程 S7）。
-  /// 预留常量：接线点应在 pattern 首产出回调，勿在空态/入口误挂。
+  /// 接线点：聊天内规划类 AI 输出落点（引擎 requires_review →
+  /// PlanReviewCard，chat_notifier_actions 的 plan review 处理收口）。
   firstDiagnosisOutput('first_diagnosis_output'),
 
   /// 首次记忆被引用——「它记得我」receipt 时刻（旅程 S8）。
-  /// 预留常量：接线点应在 memory_reference_receipt 首次渲染回调。
+  /// 接线点：AI 回复收口处（chat_provider finalizeRun）——引擎仅在确有
+  /// 被引用记忆时才产出 memory_reference_receipt，与 ContextReceiptBar
+  /// 渲染芯片同源；收口计数而非按渲染帧计数（避免重建重复累加）。
   firstMemoryReferenced('first_memory_referenced');
 
   const GuestValueSignal(this.key);

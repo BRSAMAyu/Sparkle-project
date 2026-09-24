@@ -12,8 +12,9 @@ import 'package:sparkle/features/auth/presentation/providers/guest_conversion_pr
 /// N40（A-SPEC7 §4）· 访客唯一转化点引导卡（价值回顾形）。
 ///
 /// 形制：SparkleCard 家族卡形 + core/design 令牌（取色走 context.colors、
-/// 字阶走 context.typo、间距走 DS.spacing 档），内联非弹窗——唯一挂载点
-/// 为 home（访客落地面），进行中任务时不可见
+/// 字阶走 context.typo、间距走 DS.spacing 档），内联非弹窗——挂载点为
+/// home（访客落地面）与 chat（N47 增补的 chatHeaderPanels 事件横幅槽，
+/// 挂载处另加「非流式中」守卫），进行中任务时不可见
 /// （[guestConversionVisibleProvider] 守门）。克制红线：
 /// - 同会话最多一次（点掉/点击注册后本会话硬关）；
 /// - 点掉持久挂起直到下个价值信号（「暂不」→ dismissUntilNextValueSignal）；

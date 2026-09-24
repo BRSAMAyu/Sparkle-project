@@ -132,7 +132,9 @@ class GuestConversionController extends StateNotifier<GuestConversionState> {
 /// ③ 未被点掉/挂起（点掉不再弹直到下个价值信号；同会话最多一次）；
 /// ④ 无进行中任务（inProgress/stuck 一律让位，永不打断进行中任务）。
 ///
-/// 唯一消费挂载点 = home（访客落地面）内联卡，非弹窗、非全局 overlay。
+/// 消费挂载点 = home（访客落地面）+ chat（N47：诊断/规划产出所在的
+/// 高价值时机面，挂载处另加「非流式中」守卫）内联卡，非弹窗、非全局
+/// overlay。
 final guestConversionVisibleProvider = Provider<bool>((ref) {
   final session = ref.watch(guestConversionControllerProvider);
   final activeTask = ref.watch(activeTaskProvider);

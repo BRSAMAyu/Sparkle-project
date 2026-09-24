@@ -1412,7 +1412,9 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
               mainAxisAlignment:
                   isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
               children: [
-                if (isUser) _buildMessageStatus(),
+                // 诚实性红线：AI 代写消息（_isAgent）同样渲染投递状态——
+                // pending 转圈、失败徽标必须可见，否则失败被静默吞掉。
+                if (isUser || _isAgent) _buildMessageStatus(),
                 if (!chatPureMode &&
                     showTokenUsageDetails &&
                     !isUser &&
@@ -2604,6 +2606,16 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       );
     }
     if (msg.hasError) {
+      // 诚实性红线：发送失败必须可见；有重试入口时复用群聊侧失败徽标形态。
+      if (widget.onRetryDelivery != null) {
+        return _DeliveryBadge(
+          icon: Icons.error_outline_rounded,
+          label: _deliveryCopy('failed'),
+          color: DS.error,
+          actionLabel: _deliveryCopy('retry'),
+          onAction: widget.onRetryDelivery,
+        );
+      }
       return Icon(
         Icons.error_outline,
         color: DS.error,

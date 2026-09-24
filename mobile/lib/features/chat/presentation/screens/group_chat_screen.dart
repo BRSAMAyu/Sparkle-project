@@ -15,6 +15,8 @@ import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/utils/input_formatters.dart';
+import 'package:sparkle/features/chat/data/services/chat_draft_store.dart';
+import 'package:sparkle/features/chat/presentation/providers/chat_draft_store_provider.dart';
 import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
 import 'package:sparkle/features/chat/presentation/widgets/community_chat_input.dart';
 import 'package:sparkle/features/community/community_routes.dart';
@@ -41,6 +43,15 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   late final ScrollController _scrollController;
   String? _lastNewestMessageId;
 
+  // N46 单机草稿（A-SPEC8A 会话连续性改造 #1）：群聊 composer 文本按
+  // userId+groupId 持久化，切页/杀进程可恢复；发送成功即删草稿。
+  // 输入框控制器由此屏持有并下传 CommunityChatInput（原为组件内态）。
+  final TextEditingController _composerController = TextEditingController();
+  late final ChatDraftStore _draftStore;
+  String _draftUserId = 'anon';
+  bool _draftUserResolved = false;
+  bool _applyingStoredDraft = false;
+
   // SEARCH-EMPTY：命中定位基建——照 chat_screen 的「GlobalKey 表 +
   // Scrollable.ensureVisible」同款形制；短高亮由屏侧 Timer 收敛。
   final Map<String, GlobalKey> _messageKeys = <String, GlobalKey>{};
@@ -51,15 +62,74 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   void initState() {
     super.initState();
     _scrollController = ScrollController()..addListener(_handleScroll);
+    _draftStore = ref.read(chatDraftStoreProvider);
+    _composerController.addListener(_handleComposerTextChanged);
+    unawaited(_restoreComposerDraft());
   }
 
   @override
   void dispose() {
+    // N46：离开页面即落盘草稿（覆盖防抖窗口内尚未写入的尾部输入）。
+    if (_draftUserResolved) {
+      unawaited(
+        _draftStore.flush(
+          scope: ChatDraftScope.groupChat,
+          conversationId: widget.groupId,
+          userId: _draftUserId,
+          text: _composerController.text,
+        ),
+      );
+    }
     _highlightTimer?.cancel();
     _scrollController
       ..removeListener(_handleScroll)
       ..dispose();
+    _composerController
+      ..removeListener(_handleComposerTextChanged)
+      ..dispose();
     super.dispose();
+  }
+
+  /// N46：进入会话恢复草稿（composer 为空时才回填，不覆盖先于恢复的输入）。
+  Future<void> _restoreComposerDraft() async {
+    _draftUserId = await resolveChatDraftUserId(ref);
+    if (!mounted) {
+      return;
+    }
+    _draftUserResolved = true;
+    final draft = await _draftStore.load(
+      scope: ChatDraftScope.groupChat,
+      conversationId: widget.groupId,
+      userId: _draftUserId,
+    );
+    if (!mounted) {
+      return;
+    }
+    final restored = draft ?? '';
+    if (restored.isEmpty || _composerController.text.isNotEmpty) {
+      return;
+    }
+    _applyingStoredDraft = true;
+    try {
+      _composerController.text = restored;
+      _composerController.selection =
+          TextSelection.collapsed(offset: restored.length);
+    } finally {
+      _applyingStoredDraft = false;
+    }
+  }
+
+  /// N46：输入变化 → 防抖落盘；输入被清空（发送成功/用户删空）→ 删草稿。
+  void _handleComposerTextChanged() {
+    if (_applyingStoredDraft || !_draftUserResolved) {
+      return;
+    }
+    _draftStore.scheduleSave(
+      scope: ChatDraftScope.groupChat,
+      conversationId: widget.groupId,
+      userId: _draftUserId,
+      text: _composerController.text,
+    );
   }
 
   void _pruneMessageKeys(List<MessageInfo> messages) {
@@ -682,6 +752,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
               messages: chatState.valueOrNull ?? [],
             ),
             CommunityChatInput(
+              controller: _composerController,
               enabled: !_agentMode || !agentState.isSending,
               hintText: _agentMode
                   ? context.l10n.communityAgentPromptHint

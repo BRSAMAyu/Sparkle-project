@@ -10,6 +10,8 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/chat/data/services/chat_draft_store.dart';
+import 'package:sparkle/features/chat/presentation/providers/chat_draft_store_provider.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/bonfire_widget.dart';
@@ -549,6 +551,18 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                       await ref
                           .read(groupDetailProvider(widget.groupId).notifier)
                           .leaveGroup();
+                      // N46：会话删除（退群）同步清除该群聊的未发送草稿。
+                      try {
+                        final draftUserId =
+                            await resolveChatDraftUserId(ref);
+                        await ref.read(chatDraftStoreProvider).clear(
+                              scope: ChatDraftScope.groupChat,
+                              conversationId: widget.groupId,
+                              userId: draftUserId,
+                            );
+                      } catch (_) {
+                        // 草稿清理失败不影响退群主流程。
+                      }
                       if (context.mounted) context.pop();
                     } catch (e) {
                       if (context.mounted) {

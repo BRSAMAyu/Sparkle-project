@@ -14,6 +14,8 @@ import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/chat/data/services/chat_draft_store.dart';
+import 'package:sparkle/features/chat/presentation/providers/chat_draft_store_provider.dart';
 import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
 import 'package:sparkle/features/chat/presentation/widgets/community_chat_input.dart';
@@ -47,20 +49,84 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
   bool _agentMode = false;
   String? _assistantOriginalDraft;
   String? _lastNewestMessageId;
+  // N46 单机草稿（A-SPEC8A 会话连续性改造 #1）：私聊 composer 文本按
+  // userId+friendId 持久化，切页/杀进程可恢复；发送成功即删草稿。
+  late final ChatDraftStore _draftStore;
+  String _draftUserId = 'anon';
+  bool _draftUserResolved = false;
+  bool _applyingStoredDraft = false;
 
   @override
   void initState() {
     super.initState();
     _displayName = widget.friendName;
     _scrollController = ScrollController();
+    _draftStore = ref.read(chatDraftStoreProvider);
+    _composerController.addListener(_handleComposerTextChanged);
+    unawaited(_restoreComposerDraft());
   }
 
   @override
   void dispose() {
+    // N46：离开页面即落盘草稿（覆盖防抖窗口内尚未写入的尾部输入）。
+    if (_draftUserResolved) {
+      unawaited(
+        _draftStore.flush(
+          scope: ChatDraftScope.privateChat,
+          conversationId: widget.friendId,
+          userId: _draftUserId,
+          text: _composerController.text,
+        ),
+      );
+    }
     _scrollController.dispose();
-    _composerController.dispose();
+    _composerController
+      ..removeListener(_handleComposerTextChanged)
+      ..dispose();
     _composerFocusNode.dispose();
     super.dispose();
+  }
+
+  /// N46：进入会话恢复草稿（composer 为空时才回填，不覆盖先于恢复的输入）。
+  Future<void> _restoreComposerDraft() async {
+    _draftUserId = await resolveChatDraftUserId(ref);
+    if (!mounted) {
+      return;
+    }
+    _draftUserResolved = true;
+    final draft = await _draftStore.load(
+      scope: ChatDraftScope.privateChat,
+      conversationId: widget.friendId,
+      userId: _draftUserId,
+    );
+    if (!mounted) {
+      return;
+    }
+    final restored = draft ?? '';
+    if (restored.isEmpty || _composerController.text.isNotEmpty) {
+      return;
+    }
+    _applyingStoredDraft = true;
+    try {
+      _composerController.text = restored;
+      _composerController.selection =
+          TextSelection.collapsed(offset: restored.length);
+    } finally {
+      _applyingStoredDraft = false;
+    }
+  }
+
+  /// N46：输入变化 → 防抖落盘；输入被清空（发送成功/用户删空）→ 删草稿。
+  void _handleComposerTextChanged() {
+    if (_applyingStoredDraft || !_draftUserResolved) {
+      return;
+    }
+    _draftStore.scheduleSave(
+      scope: ChatDraftScope.privateChat,
+      conversationId: widget.friendId,
+      userId: _draftUserId,
+      text: _composerController.text,
+    );
   }
 
   void _scheduleScrollToLatest() {
@@ -210,6 +276,18 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                           isLatestAssistantMessage:
                               latestAssistantMessageId != null &&
                                   message.id == latestAssistantMessageId,
+                          // 诚实性红线：代写消息发送失败时暴露失败徽标与重试入口
+                          // （删除走 onRevoke → removeLocalDraft）。普通消息的
+                          // 失败补偿仍走 offline pending 队列，不接重试徽标。
+                          onRetryDelivery:
+                              isPrivateAgentMessage(message) && message.hasError
+                                  ? () => ref
+                                      .read(
+                                        privateChatAgentProvider(widget.friendId)
+                                            .notifier,
+                                      )
+                                      .retryAgentMessage(message.id)
+                                  : null,
                           onQuote: isPrivateAgentMessage(message)
                               ? null
                               : (msg) => setState(

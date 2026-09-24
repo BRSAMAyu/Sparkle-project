@@ -868,6 +868,17 @@ extension ChatNotifierActions on ChatNotifier {
       pendingReviewActionId: review.actionId,
     );
 
+    // N47（A-SPEC8B §4）· firstDiagnosisOutput 价值信号：聊天内规划类 AI
+    // 输出的落点（引擎 requires_review → PlanReviewCard，访客可直达的
+    // 「AI 懂我并给出规划」时刻）。照 N40 既有形制只**记录**不展示——
+    // 价值动作当下用户仍在对话流内，展示时机由挂载点派生可见性裁决；
+    // 注册用户 no-op（免费闭环零变化）。
+    unawaited(
+      _ref
+          .read(guestConversionControllerProvider.notifier)
+          .recordValueSignal(GuestValueSignal.firstDiagnosisOutput),
+    );
+
     debugPrint(
       '📋 Plan review ready: ${review.decision} (review_id: ${review.reviewId})',
     );
