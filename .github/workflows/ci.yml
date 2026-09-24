@@ -88,7 +88,8 @@ jobs:
 
       - name: Flutter Analyze Gate
         run: |
-          python3 scripts/check_flutter_analyze_gate.py \
+          cd mobile && flutter pub get
+          cd .. && python3 scripts/check_flutter_analyze_gate.py \
             --project-dir mobile \
             --budget-file quality/flutter_analyze_allowlist.json \
             --write-report quality/flutter_analyze_report_ci.json
