@@ -186,6 +186,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   Set<String> _searchMatchedNodeIds = const <String>{};
   Set<String> _spotlightNodeIds = const <String>{};
   String? _spotlightAnchorId;
+
+  /// G-03 测试观测缝：相机锚定后的当前 spotlight 锚（@visibleForTesting）。
+  @visibleForTesting
+  String? get debugSpotlightAnchorId => _spotlightAnchorId;
   Map<String, Offset> _microDriftOffsets = const <String, Offset>{};
   bool _isGoalWorldMode = false;
   Set<String> _goalWorldNodeIds = const <String>{};
@@ -1412,6 +1416,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         Offset(_viewportSize.width / 2, _viewportSize.height / 2),
       );
       _microDriftOffsets = const <String, Offset>{};
+      _applyCameraAnchoredFocus();
     });
     _syncProviderScale(_camera.scale);
   }
@@ -1425,6 +1430,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _clearPreviewState();
       _camera = _camera.applyPan(delta);
       _microDriftOffsets = const <String, Offset>{};
+      _applyCameraAnchoredFocus();
     });
   }
 
@@ -1439,6 +1445,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         _clearPreviewState();
         _camera = _camera.applyPan(command.delta);
         _microDriftOffsets = const <String, Offset>{};
+        _applyCameraAnchoredFocus();
       });
       return;
     }
@@ -1451,6 +1458,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         _clearPreviewState();
         _camera = _camera.applyZoom(command.scaleDelta, command.focalPoint);
         _microDriftOffsets = const <String, Offset>{};
+        _applyCameraAnchoredFocus();
       });
       _syncProviderScale(_camera.scale);
       return;
@@ -1627,7 +1635,6 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       _clearPreviewState();
       _selectedNodeId = nodeId;
       _tapFeedbackNodeId = nodeId;
-      _pendingNavigationNodeId = nodeId;
       _draggingNodeId = null;
       _spotlightAnchorId = nodeId;
       _spotlightNodeIds = _spotlightSetFor(nodeId);
@@ -1637,6 +1644,13 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       ..stop()
       ..reset();
     unawaited(_tapFeedbackController.forward());
+    // G-03 详情触达减一跳（挂账差额清理）：详情面板随点按立即打开，
+    // 不再等 420ms 装饰脉冲走完（原链路在 [_handleTapFeedbackStatus]
+    // completed 才开面板——触达成本 = 装饰动画 + 网络往返两段纯等待）。
+    // 脉冲动画继续在面板下方播完，作为视觉延续；
+    // [_pendingNavigationNodeId] 不再置位，动画完成回调只做清理，
+    // 不会二次开面板。
+    unawaited(_openNodeDetailSheet(nodeId));
   }
 
   void _cancelTapFeedbackState() {
@@ -1689,6 +1703,46 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       includeNeighbors
           ? <String>{nodeId, ...?_adjacency[nodeId]}
           : <String>{nodeId};
+
+  /// G-03「焦点随相机」（挂账差额清理）：视口被用户移动时，把 spotlight
+  /// 锚重定到视口内距中心最近的节点——平移/缩放后不再出现「锚钉在屏外
+  /// 旧节点」或「全图无锚」的 tech-demo 漂泊感。
+  ///
+  /// 只消费既有 [_camera]（viewportRect）与 [_spotlightAnchorId] 字段，
+  /// 解析逻辑在 [GalaxyCameraFocus.resolveNearestNodeId]（纯函数）；
+  /// 显式选中仍在视口内时不打断（preferredId），目标世界模式有自己的
+  /// spotlight 口径（_goalWorldNodeIds），不掺和。
+  ///
+  /// 调用契约：必须在调用方既有 setState 内执行（与相机变更同帧落位，
+  /// 避免一次手势双重建）；仅在用户驱动的连续移动路径挂（pan/zoom/
+  /// fling/键盘）——程序化相机动画（聚焦/总览适配）有明确语义目标，
+  /// 由调用方自行设锚，动画中途重定锚只会造成闪烁。
+  void _applyCameraAnchoredFocus() {
+    if (_isGoalWorldMode || _isBuildAnimating) {
+      return;
+    }
+    if (_draggingNodeId != null || _previewNode != null) {
+      return;
+    }
+    if (_tapFeedbackNodeId != null || _pendingNavigationNodeId != null) {
+      return;
+    }
+    final graph = _graph;
+    if (graph == null || graph.nodes.isEmpty || _positions.isEmpty) {
+      return;
+    }
+    final anchorId = GalaxyCameraFocus.resolveNearestNodeId(
+      viewportRect: _camera.viewportRect,
+      positions: _positions,
+      preferredId: _spotlightAnchorId,
+    );
+    if (anchorId == _spotlightAnchorId) {
+      return;
+    }
+    _spotlightAnchorId = anchorId;
+    _spotlightNodeIds =
+        anchorId == null ? const <String>{} : _spotlightSetFor(anchorId);
+  }
 
   Offset _computePreviewPosition({
     required Offset anchor,
@@ -1812,6 +1866,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           simulationY.x(time),
         ),
       );
+      _applyCameraAnchoredFocus();
     });
   }
 
@@ -4133,29 +4188,41 @@ class _StatusPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    // G-03 状态面对齐（空/载/错形制挂账）——对齐
+    // core/design/widgets/empty_state.dart 的库空态形制两要素：
+    // ① Semantics(container+liveRegion) 整块语义（读屏开口即知状态，
+    //    与 EmptyState 同构）；② 动作按钮 owner 归位 SparkleButton
+    //    （U-01 Step 0：按钮 owner 唯一，原 FilledButton 逸出 owner 表）。
+    // 星云 orb 保留——GALAXY.md「保留暗色宇宙作为品牌视觉锤」，状态面
+    // 不豁免；这是形制对齐而非组件整体替换的差异点。
     return ColoredBox(
       color: backgroundColor,
       child: Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 380),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: (isDarkMode ? DS.neutral0 : DS.neutral900)
-                    .withValues(alpha: isDarkMode ? 0.04 : 0.03),
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(
+          child: Semantics(
+            container: true,
+            liveRegion: true,
+            label: title,
+            value: message,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 380),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
                   color: (isDarkMode ? DS.neutral0 : DS.neutral900)
-                      .withValues(alpha: 0.08),
+                      .withValues(alpha: isDarkMode ? 0.04 : 0.03),
+                  borderRadius: BorderRadius.circular(28),
+                  border: Border.all(
+                    color: (isDarkMode ? DS.neutral0 : DS.neutral900)
+                        .withValues(alpha: 0.08),
+                  ),
                 ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 28,
-                ),
-                child: Column(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 28,
+                  ),
+                  child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     TweenAnimationBuilder<double>(
@@ -4239,12 +4306,13 @@ class _StatusPanel extends StatelessWidget {
                     ],
                     if (actionLabel != null && onAction != null) ...[
                       const SizedBox(height: 18),
-                      FilledButton(
+                      SparkleButton(
+                        label: actionLabel!,
                         onPressed: () => unawaited(onAction!()),
-                        child: Text(actionLabel!),
                       ),
                     ],
                   ],
+                ),
                 ),
               ),
             ),

@@ -9448,10 +9448,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get galaxyA11yActionStartLearning =>
-      'Galaxy A11y Action Start Learning';
+      'Start learning';
 
   @override
-  String get galaxyA11yActionUnlockNode => 'Galaxy A11y Action Unlock Node';
+  String get galaxyA11yActionUnlockNode => 'Unlock node';
 
   @override
   String galaxyA11yCanvasSummary(int nodeCount, int domainCount) {
@@ -9464,10 +9464,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get galaxyA11yHintStartLearning => 'Galaxy A11y Hint Start Learning';
+  String get galaxyA11yHintStartLearning => 'Tap to start learning this knowledge point';
 
   @override
-  String get galaxyA11yHintUnlockNode => 'Galaxy A11y Hint Unlock Node';
+  String get galaxyA11yHintUnlockNode => 'Tap to unlock this node';
 
   @override
   String galaxyA11yNavigateTo(Object arg0) {
@@ -9475,7 +9475,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get galaxyA11yNavigationHint => 'Galaxy A11y Navigation Hint';
+  String get galaxyA11yNavigationHint => 'Navigate the knowledge galaxy with gestures';
 
   @override
   String galaxyA11yNodeImportance(Object arg0) {
@@ -9514,28 +9514,28 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get galaxyControlOverview => 'Galaxy Control Overview';
+  String get galaxyControlOverview => 'Overview';
 
   @override
-  String get galaxyControlReplayStart => 'Galaxy Control Replay Start';
+  String get galaxyControlReplayStart => 'Start replay';
 
   @override
-  String get galaxyControlReplayStop => 'Galaxy Control Replay Stop';
+  String get galaxyControlReplayStop => 'Stop replay';
 
   @override
-  String get galaxyControlSearchClose => 'Galaxy Control Search Close';
+  String get galaxyControlSearchClose => 'Close search';
 
   @override
-  String get galaxyControlSearchOpen => 'Galaxy Control Search Open';
+  String get galaxyControlSearchOpen => 'Open search';
 
   @override
-  String get galaxyControlSettings => 'Galaxy Control Settings';
+  String get galaxyControlSettings => 'Settings';
 
   @override
-  String get galaxyControlZoomIn => 'Galaxy Control Zoom In';
+  String get galaxyControlZoomIn => 'Zoom in';
 
   @override
-  String get galaxyControlZoomOut => 'Galaxy Control Zoom Out';
+  String get galaxyControlZoomOut => 'Zoom out';
 
   @override
   String get galaxyEmptyMessage =>
@@ -9545,69 +9545,69 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyEmptyTitle => 'Your galaxy is still waiting to be charted';
 
   @override
-  String get galaxyErrorConnectionFailed => 'Galaxy Error Connection Failed';
+  String get galaxyErrorConnectionFailed => 'Connection failed';
 
   @override
-  String get galaxyErrorConnectionTimeout => 'Galaxy Error Connection Timeout';
+  String get galaxyErrorConnectionTimeout => 'Connection timed out';
 
   @override
-  String get galaxyErrorLoadFailed => 'Galaxy Error Load Failed';
+  String get galaxyErrorLoadFailed => 'Failed to load galaxy';
 
   @override
-  String get galaxyErrorNetwork => 'Galaxy Error Network';
+  String get galaxyErrorNetwork => 'Network error';
 
   @override
-  String get galaxyErrorNetworkFailed => 'Galaxy Error Network Failed';
+  String get galaxyErrorNetworkFailed => 'Network request failed';
 
   @override
-  String get galaxyErrorRequestFailed => 'Galaxy Error Request Failed';
+  String get galaxyErrorRequestFailed => 'Request failed';
 
   @override
-  String get galaxyErrorResponseTimeout => 'Galaxy Error Response Timeout';
+  String get galaxyErrorResponseTimeout => 'Response timed out';
 
   @override
-  String get galaxyErrorRetryHint => 'Galaxy Error Retry Hint';
+  String get galaxyErrorRetryHint => 'Tap to retry';
 
   @override
   String get galaxyErrorServiceTemporarilyUnavailable =>
-      'Galaxy Error Service Temporarily Unavailable';
+      'Service is temporarily unavailable';
 
   @override
   String get galaxyErrorServiceUnavailable =>
-      'Galaxy Error Service Unavailable';
+      'Service unavailable';
 
   @override
-  String get galaxyErrorUnknown => 'Galaxy Error Unknown';
+  String get galaxyErrorUnknown => 'Unknown error';
 
   @override
-  String get galaxyGraphRagGraph => 'Galaxy Graph Rag Graph';
+  String get galaxyGraphRagGraph => 'Graph search';
 
   @override
-  String get galaxyGraphRagSearching => 'Galaxy Graph Rag Searching';
+  String get galaxyGraphRagSearching => 'Searching...';
 
   @override
-  String get galaxyGraphRagTime => 'Galaxy Graph Rag Time';
+  String get galaxyGraphRagTime => 'Time';
 
   @override
-  String get galaxyGraphRagVector => 'Galaxy Graph Rag Vector';
+  String get galaxyGraphRagVector => 'Vector search';
 
   @override
-  String get galaxyImportanceAdvanced => 'Galaxy Importance Advanced';
+  String get galaxyImportanceAdvanced => 'Advanced';
 
   @override
-  String get galaxyImportanceBasic => 'Galaxy Importance Basic';
+  String get galaxyImportanceBasic => 'Basic';
 
   @override
-  String get galaxyImportanceCore => 'Galaxy Importance Core';
+  String get galaxyImportanceCore => 'Core';
 
   @override
-  String get galaxyImportanceEntry => 'Galaxy Importance Entry';
+  String get galaxyImportanceEntry => 'Entry';
 
   @override
-  String get galaxyImportanceIntermediate => 'Galaxy Importance Intermediate';
+  String get galaxyImportanceIntermediate => 'Intermediate';
 
   @override
-  String get galaxyImportanceNormal => 'Galaxy Importance Normal';
+  String get galaxyImportanceNormal => 'Normal';
 
   @override
   String galaxyLLMActionFailed(Object arg0) {
@@ -9615,7 +9615,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get galaxyLoadFailed => 'Galaxy Load Failed';
+  String get galaxyLoadFailed => 'Load failed';
 
   @override
   String get galaxyLoadFailedTitle => 'Galaxy failed to load';
@@ -9655,16 +9655,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyNodeUnlocked => 'Unlocked';
 
   @override
-  String get galaxyOfflineMode => 'Galaxy Offline Mode';
+  String get galaxyOfflineMode => 'Offline mode';
 
   @override
-  String get galaxyOverviewMastery => 'Galaxy Overview Mastery';
+  String get galaxyOverviewMastery => 'Mastery';
 
   @override
-  String get galaxyOverviewNodes => 'Galaxy Overview Nodes';
+  String get galaxyOverviewNodes => 'Nodes';
 
   @override
-  String get galaxyOverviewUnlocked => 'Galaxy Overview Unlocked';
+  String get galaxyOverviewUnlocked => 'Unlocked';
 
   @override
   String galaxyPerfHighJank(Object arg0) {
@@ -9683,19 +9683,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get galaxyPerfRecommendationDisableParticles =>
-      'Galaxy Perf Recommendation Disable Particles';
+      'Disable particle effects';
 
   @override
   String get galaxyPerfRecommendationLowQualityMode =>
-      'Galaxy Perf Recommendation Low Quality Mode';
+      'Low quality mode';
 
   @override
   String get galaxyPerfRecommendationOptimizeLayout =>
-      'Galaxy Perf Recommendation Optimize Layout';
+      'Optimize layout';
 
   @override
   String get galaxyPerfRecommendationReduceNodes =>
-      'Galaxy Perf Recommendation Reduce Nodes';
+      'Show fewer nodes';
 
   @override
   String galaxyPerfSlowRender(Object arg0) {
@@ -9703,25 +9703,25 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get galaxyPerfStatusCritical => 'Galaxy Perf Status Critical';
+  String get galaxyPerfStatusCritical => 'Performance critical';
 
   @override
-  String get galaxyPerfStatusDegraded => 'Galaxy Perf Status Degraded';
+  String get galaxyPerfStatusDegraded => 'Performance degraded';
 
   @override
-  String get galaxyPerfStatusOptimal => 'Galaxy Perf Status Optimal';
+  String get galaxyPerfStatusOptimal => 'Performance optimal';
 
   @override
   String get galaxyReload => 'Reload galaxy';
 
   @override
-  String get galaxySearchHint => 'Galaxy Search Hint';
+  String get galaxySearchHint => 'Search knowledge nodes...';
 
   @override
-  String get galaxySearchHintDetail => 'Galaxy Search Hint Detail';
+  String get galaxySearchHintDetail => 'Type keywords to search';
 
   @override
-  String get galaxySearchNoResults => 'Galaxy Search No Results';
+  String get galaxySearchNoResults => 'No matching nodes';
 
   @override
   String galaxySearchResultSubtitle(Object arg0, Object arg1, Object arg2) {
@@ -9729,53 +9729,53 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get galaxySearchTitle => 'Galaxy Search Title';
+  String get galaxySearchTitle => 'Search galaxy';
 
   @override
-  String get galaxySectorArt => 'Galaxy Sector Art';
+  String get galaxySectorArt => 'Art';
 
   @override
-  String get galaxySectorCivilization => 'Galaxy Sector Civilization';
+  String get galaxySectorCivilization => 'Civilization';
 
   @override
-  String get galaxySectorCosmos => 'Galaxy Sector Cosmos';
+  String get galaxySectorCosmos => 'Cosmos';
 
   @override
-  String get galaxySectorLife => 'Galaxy Sector Life';
+  String get galaxySectorLife => 'Life';
 
   @override
-  String get galaxySectorTech => 'Galaxy Sector Tech';
+  String get galaxySectorTech => 'Technology';
 
   @override
-  String get galaxySectorVoid => 'Galaxy Sector Void';
+  String get galaxySectorVoid => 'Void';
 
   @override
-  String get galaxySectorWisdom => 'Galaxy Sector Wisdom';
+  String get galaxySectorWisdom => 'Wisdom';
 
   @override
   String get galaxySimulationCenterGravity =>
-      'Galaxy Simulation Center Gravity';
+      'Center gravity';
 
   @override
-  String get galaxySimulationGravity => 'Galaxy Simulation Gravity';
+  String get galaxySimulationGravity => 'Gravity';
 
   @override
-  String get galaxySimulationReplaySpeed => 'Galaxy Simulation Replay Speed';
+  String get galaxySimulationReplaySpeed => 'Replay speed';
 
   @override
-  String get galaxySimulationRepulsion => 'Galaxy Simulation Repulsion';
+  String get galaxySimulationRepulsion => 'Repulsion';
 
   @override
-  String get galaxySimulationReset => 'Galaxy Simulation Reset';
+  String get galaxySimulationReset => 'Reset';
 
   @override
-  String get galaxySimulationSubtitle => 'Galaxy Simulation Subtitle';
+  String get galaxySimulationSubtitle => 'Adjust physics parameters';
 
   @override
-  String get galaxySimulationTitle => 'Galaxy Simulation Title';
+  String get galaxySimulationTitle => 'Simulation settings';
 
   @override
-  String get galaxyUsingCache => 'Galaxy Using Cache';
+  String get galaxyUsingCache => 'Showing cached data';
 
   @override
   String get guestUpgradeAcceptPoliciesRequired =>

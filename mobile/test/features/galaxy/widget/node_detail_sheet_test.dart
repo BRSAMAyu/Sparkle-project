@@ -1,10 +1,14 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/services/retry_strategy.dart';
 import 'package:sparkle/features/galaxy/data/models/node_history_model.dart';
+import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/node_detail_sheet.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
@@ -111,6 +115,37 @@ void main() {
     expect(find.text('开始复习'), findsNothing);
   });
 
+  // G-03 详情触达减一跳：加载期节点身份（标题）必须先于历史明细可见——
+  // 首帧回答「点的是哪个节点」，明细异步填充，不再整块让位给裸 spinner。
+  testWidgets('NodeDetailSheet shows node identity while history loads', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          enhancedGalaxyRepositoryProvider.overrideWithValue(
+            _NeverLoadingHistoryRepository(),
+          ),
+        ],
+        child: testMaterialApp(
+          home: const Scaffold(
+            body: NodeDetailSheet(
+              nodeId: 'cn.slow',
+              nodeLabel: 'TCP流量控制',
+            ),
+          ),
+        ),
+      ),
+    );
+    // 只 pump 一帧：历史请求处于 pending，断言加载中的首帧形态。
+    await tester.pump();
+
+    expect(find.text('TCP流量控制'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    // 明细未返回前，动作区不应出现（避免对半成品做决策）。
+    expect(find.text('开始复习'), findsNothing);
+  });
+
   testWidgets('start review can return to Galaxy after entering chat', (
     tester,
   ) async {
@@ -199,4 +234,20 @@ void main() {
 
     expect(find.text('OPEN_SHEET'), findsOneWidget);
   });
+}
+
+/// 历史请求永不返回——固化「加载中」形态（G-03 减一跳验收）。
+class _NeverLoadingHistoryRepository extends EnhancedGalaxyRepository {
+  _NeverLoadingHistoryRepository() : super(_NoopApiClient());
+
+  @override
+  Future<NetworkResult<GalaxyNodeHistory>> getNodeHistory(
+    String nodeId, {
+    String? packId,
+  }) => Completer<NetworkResult<GalaxyNodeHistory>>().future;
+}
+
+class _NoopApiClient implements ApiClient {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
 }

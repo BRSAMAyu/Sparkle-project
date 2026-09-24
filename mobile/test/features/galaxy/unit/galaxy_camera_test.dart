@@ -38,4 +38,61 @@ void main() {
       );
     });
   });
+
+  // G-03「焦点随相机」：视口锚点解析（纯函数）——平移/缩放后锚应落在
+  // 视口内距中心最近的节点；显式选中在视口内不被冲掉；视口空则诚实无锚。
+  group('GalaxyCameraFocus.resolveNearestNodeId', () {
+    const viewport = Rect.fromLTWH(0, 0, 400, 300);
+    final positions = <String, Offset>{
+      'left': const Offset(-100, 150), // 视口外
+      'edge': const Offset(190, 150), // 视口内，离中心较远
+      'near': const Offset(201, 150), // 视口内，距中心最近
+      'far': const Offset(390, 290), // 视口内，角落
+    };
+
+    test('returns the in-viewport node nearest to the viewport center', () {
+      final anchor = GalaxyCameraFocus.resolveNearestNodeId(
+        viewportRect: viewport,
+        positions: positions,
+      );
+      expect(anchor, 'near');
+    });
+
+    test('keeps the preferred anchor while it stays inside the viewport', () {
+      final anchor = GalaxyCameraFocus.resolveNearestNodeId(
+        viewportRect: viewport,
+        positions: positions,
+        preferredId: 'far',
+      );
+      expect(anchor, 'far');
+    });
+
+    test('re-anchors when the preferred node has left the viewport', () {
+      final anchor = GalaxyCameraFocus.resolveNearestNodeId(
+        viewportRect: viewport,
+        positions: positions,
+        preferredId: 'left',
+      );
+      expect(anchor, 'near');
+    });
+
+    test('returns null when the viewport contains no nodes (honest empty)', () {
+      final anchor = GalaxyCameraFocus.resolveNearestNodeId(
+        viewportRect: viewport,
+        positions: const {
+          'outside-left': Offset(-50, 150),
+          'outside-right': Offset(450, 150),
+        },
+      );
+      expect(anchor, isNull);
+    });
+
+    test('returns null for empty positions', () {
+      final anchor = GalaxyCameraFocus.resolveNearestNodeId(
+        viewportRect: viewport,
+        positions: const {},
+      );
+      expect(anchor, isNull);
+    });
+  });
 }

@@ -126,7 +126,21 @@ class _NodeDetailSheetState extends ConsumerState<NodeDetailSheet> {
                   future: _historyFuture,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState != ConnectionState.done) {
-                      return const _HistoryLoadingState();
+                      // G-03 详情触达减一跳：加载期不再整块让位给裸
+                      // spinner——节点身份（handle+标题行）同步渲染，
+                      // 异步明细（掌握度/素材/错题）随后填充，触达
+                      // 首帧即回答「我点的是哪个节点」。
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Center(child: _SheetHandle()),
+                          const SizedBox(height: DS.spacing16),
+                          _SheetHeader(label: widget.nodeLabel),
+                          const SizedBox(height: DS.spacing12),
+                          const _HistoryLoadingState(height: 120),
+                        ],
+                      );
                     }
                     if (snapshot.hasError || snapshot.data == null) {
                       final errorMsg = snapshot.error?.toString();
@@ -310,42 +324,7 @@ class _HistoryContent extends StatelessWidget {
         children: [
           const Center(child: _SheetHandle()),
           const SizedBox(height: DS.spacing16),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: DS.brandPrimary12,
-                  borderRadius: BorderRadius.circular(DS.radius8),
-                  border: Border.all(color: DS.brandPrimary24),
-                ),
-                child: Icon(
-                  Icons.auto_awesome_rounded,
-                  color: DS.brandPrimary,
-                  size: DS.iconSizeSm,
-                ),
-              ),
-              const SizedBox(width: DS.spacing12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: DS.textPrimary,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          _SheetHeader(label: label),
           const SizedBox(height: DS.spacing20),
           Row(
             children: [
@@ -1256,6 +1235,48 @@ class _SheetHandle extends StatelessWidget {
       );
 }
 
+/// G-03 详情触达减一跳：节点身份行（图标+标题）——加载期也即时渲染，
+/// 让用户点开面板首帧就知道「点的是哪个节点」，不必等历史明细返回。
+/// 与 [_HistoryContent] 头部同形制（同一行结构的唯一实现点）。
+class _SheetHeader extends StatelessWidget {
+  const _SheetHeader({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: DS.brandPrimary12,
+              borderRadius: BorderRadius.circular(DS.radius8),
+              border: Border.all(color: DS.brandPrimary24),
+            ),
+            child: Icon(
+              Icons.auto_awesome_rounded,
+              color: DS.brandPrimary,
+              size: DS.iconSizeSm,
+            ),
+          ),
+          const SizedBox(width: DS.spacing12),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: DS.textPrimary,
+                  ),
+            ),
+          ),
+        ],
+      );
+}
+
 class _MetricChip extends StatelessWidget {
   const _MetricChip({required this.icon, required this.label});
 
@@ -1371,12 +1392,18 @@ class _ErrorPreview extends StatelessWidget {
 }
 
 class _HistoryLoadingState extends StatelessWidget {
-  const _HistoryLoadingState();
+  const _HistoryLoadingState({
+    // G-03：加载期身份行已在上方渲染，进度区收窄（默认高度留给
+    // 无身份行的旧形态）。
+    this.height = 220,
+  });
+
+  final double height;
 
   @override
-  Widget build(BuildContext context) => const SizedBox(
-        height: 220,
-        child: Center(child: CircularProgressIndicator()),
+  Widget build(BuildContext context) => SizedBox(
+        height: height,
+        child: const Center(child: CircularProgressIndicator()),
       );
 }
 
