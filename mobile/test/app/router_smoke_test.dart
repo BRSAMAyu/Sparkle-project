@@ -25,6 +25,8 @@ import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/core/storage/token_storage_io.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
+import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart'
+    show sharedPreferencesProvider;
 import 'package:sparkle/features/auth/presentation/screens/login_screen.dart';
 import 'package:sparkle/features/calendar/presentation/screens/calendar_stats_screen.dart';
 import 'package:sparkle/features/calendar/presentation/screens/daily_detail_screen.dart';
@@ -466,6 +468,11 @@ Future<_RouterHarness> _pumpRouter(
     overrides: [
       authProvider.overrideWith(
         (ref) => authNotifierOverride ?? _FakeAuthNotifier(authState),
+      ),
+      // wt302 草稿链后 ChatScreen.initState 直读 chatDraftStoreProvider →
+      // sharedPreferencesProvider；不 override 则落 /chat 即 UnimplementedError。
+      sharedPreferencesProvider.overrideWithValue(
+        await SharedPreferences.getInstance(),
       ),
       onboardingCompletedProvider.overrideWith(
         (ref) => _FakeOnboardingCompletedNotifier(onboardingCompleted, ref),

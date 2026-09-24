@@ -243,14 +243,23 @@ void main() {
     });
 
     test('focus year derives totals from the heatmap and marks unknowns null', () async {
+      // 日期必须封闭：heatmap 是「截至今天」的连续窗口，硬编码日历日会让
+      // streak 断言在写作次日之后漂移成 0（CI 12 败之一）。
+      String heatmapDay(int daysAgo) {
+        final now = DateTime.now();
+        return DateTime(now.year, now.month, now.day - daysAgo)
+            .toIso8601String()
+            .substring(0, 10);
+      }
+
       final repo = FocusStatsRepository(
         database: localDb,
         dio: _routeDio((path) {
           expect(path, '/focus/stats/heatmap');
           return {
-            '2026-09-18': 60,
-            '2026-09-19': 30,
-            '2026-09-20': 45,
+            heatmapDay(2): 60,
+            heatmapDay(1): 30,
+            heatmapDay(0): 45,
           };
         }),
       );

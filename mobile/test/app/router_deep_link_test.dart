@@ -34,6 +34,8 @@ import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/core/storage/token_storage_io.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
+import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart'
+    show sharedPreferencesProvider;
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -261,6 +263,12 @@ Future<_RouterHarness> _pumpRouter(
     overrides: [
       authProvider.overrideWith(
         (ref) => authNotifierOverride ?? _FakeAuthNotifier(authState),
+      ),
+      // wt302 草稿链后 ChatScreen.initState 直读 chatDraftStoreProvider →
+      // sharedPreferencesProvider；不 override 则 deep link 落 /chat 即
+      // UnimplementedError（CI 12 败同族）。mock 值已在上面 setMockInitialValues。
+      sharedPreferencesProvider.overrideWithValue(
+        await SharedPreferences.getInstance(),
       ),
       onboardingCompletedProvider.overrideWith(
         (ref) => pendingOnboarding

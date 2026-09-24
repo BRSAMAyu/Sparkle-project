@@ -289,9 +289,11 @@ void main() {
         find.text(AppLocalizationsZh().galaxyErrorHumanDefault),
         findsOneWidget,
       );
-      expect(find.byType(FilledButton), findsWidgets);
+      // wt305 G-03：错误面板动作按钮 owner 归位 SparkleButton
+      // （原裸 FilledButton 逸出 U-01 owner 表），断言跟设计系统走。
+      expect(find.byType(SparkleButton), findsWidgets);
 
-      await tester.tap(find.byType(FilledButton).first);
+      await tester.tap(find.byType(SparkleButton).first);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 1200));
 

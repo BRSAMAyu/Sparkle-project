@@ -26,6 +26,8 @@ import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/core/storage/token_storage_io.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
+import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart'
+    show sharedPreferencesProvider;
 import 'package:sparkle/features/chat/presentation/screens/chat_screen.dart';
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
@@ -112,6 +114,11 @@ void main() {
           (ref) => _StaticAuthNotifier(
             AuthState(isAuthenticated: true, user: _buildUser()),
           ),
+        ),
+        // wt302 草稿链后 ChatScreen.initState 直读 chatDraftStoreProvider →
+        // sharedPreferencesProvider；shell 落地走 chat 分支即 UnimplementedError。
+        sharedPreferencesProvider.overrideWithValue(
+          await SharedPreferences.getInstance(),
         ),
         onboardingCompletedProvider.overrideWith(
           (ref) => _StaticOnboardingNotifier(true, ref),

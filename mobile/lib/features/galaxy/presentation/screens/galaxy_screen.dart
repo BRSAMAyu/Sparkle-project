@@ -840,7 +840,15 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   }
 
   void _syncProviderScale(double scale) {
-    ref.read(galaxyProvider.notifier).updateScale(scale);
+    // 相机惯性/程序动画的最后一拍可能落在宿主 scope 已销毁之后（典型：
+    // 测试容器 addTearDown 先于树卸载，遗留 ticker 在下一帧仍触发本回调）。
+    // 相机值本身已是本地真源，这里只是顺手广播——scope 已死时放弃同步，
+    // 不打断动画自身的清理路径。
+    try {
+      ref.read(galaxyProvider.notifier).updateScale(scale);
+    } on StateError {
+      // ProviderContainer 已销毁：无可写方，静默终止。
+    }
   }
 
   void _applyGraphData(
