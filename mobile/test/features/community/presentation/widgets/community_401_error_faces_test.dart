@@ -60,8 +60,11 @@ void main() {
     expect(find.textContaining('mozilla.org'), findsNothing);
     // Humanized message with the stable field-report code instead.
     expect(find.textContaining('[ERR-AUTH]'), findsOneWidget);
-    // A visible tap-to-retry face exists.
-    expect(find.byType(CompactErrorCard), findsOneWidget);
+    // A visible tap-to-retry face exists. wt307 hub 分区韧性：myGroups 与
+    // directory 是两个独立真源，各自降级到自己的 CompactErrorCard（分区
+    // 面而非全屏单卡）——断言「至少一个」而非恰好一个，人类化守卫由
+    // 上方文本断言全局承担。
+    expect(find.byType(CompactErrorCard), findsWidgets);
   });
 
   testWidgets('plaza degrades to an in-panel error face, not a fullscreen '

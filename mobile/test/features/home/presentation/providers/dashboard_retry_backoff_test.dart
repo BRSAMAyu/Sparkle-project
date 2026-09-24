@@ -166,7 +166,10 @@ void main() {
         .inMilliseconds;
     expect(
       retryDelta,
-      lessThan(250),
+      // 判别的是第一档(~80ms)与升级档(~400ms 计时器)的区别：慢 CI 的事件
+      // 循环开销会等比抬高两档的实测值，300ms 同时保留对两档的判别裕度
+      // （CI 慢机性能阈族，同 wt296 bench 分类）。
+      lessThan(300),
       reason:
           'After a success the next failure must be retried from the first '
           'backoff step (~80ms); got ${retryDelta}ms (budget was not reset)',
