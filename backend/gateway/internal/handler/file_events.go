@@ -9,6 +9,7 @@ package handler
 import (
 	"log"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -24,17 +25,46 @@ type FileEventHandler struct {
 	wsFactory *WebSocketFactory
 	hub       *service.FileEventHub
 	cfg       *config.Config
+	// draining stops new upgrades during graceful shutdown; live conns are
+	// tracked in drainConns so shutdown can close them with a proper close
+	// frame (wt275: /ws/files used to be killed abrupt — http.Server.Shutdown
+	// ignores hijacked sockets).
+	draining   atomic.Bool
+	drainConns *wsConnDrainGroup
 }
 
 func NewFileEventHandler(wsFactory *WebSocketFactory, hub *service.FileEventHub, cfg *config.Config) *FileEventHandler {
 	return &FileEventHandler{
-		wsFactory: wsFactory,
-		hub:       hub,
-		cfg:       cfg,
+		wsFactory:  wsFactory,
+		hub:        hub,
+		cfg:        cfg,
+		drainConns: newWSConnDrainGroup(),
 	}
 }
 
+// StartDraining stops admitting new /ws/files upgrades.
+func (h *FileEventHandler) StartDraining() {
+	h.draining.Store(true)
+	h.drainConns.StartDraining()
+}
+
+// IsDraining reports whether the endpoint stopped admitting upgrades.
+func (h *FileEventHandler) IsDraining() bool {
+	return h.draining.Load()
+}
+
+// DrainConnections closes every live /ws/files WebSocket with a CloseGoingAway
+// frame and waits (bounded by timeout) for the handler goroutines to unwind.
+// It satisfies the graceful-shutdown drainer contract wired in cmd/server.
+func (h *FileEventHandler) DrainConnections(timeout time.Duration) {
+	h.drainConns.DrainAll(timeout)
+}
+
 func (h *FileEventHandler) HandleWebSocket(c *gin.Context) {
+	if h.IsDraining() {
+		c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"error": "Server shutting down"})
+		return
+	}
 	var upgrader websocket.Upgrader
 	if h.wsFactory != nil {
 		upgrader = h.wsFactory.CreateUpgrader()
@@ -56,6 +86,18 @@ func (h *FileEventHandler) HandleWebSocket(c *gin.Context) {
 		return
 	}
 	defer conn.Close()
+
+	// Track the upgraded conn for graceful-shutdown drain (see drainConns).
+	untrack, ok := h.drainConns.startTracking(conn)
+	if !ok {
+		_ = conn.WriteControl(
+			websocket.CloseMessage,
+			websocket.FormatCloseMessage(websocket.CloseTryAgainLater, "server shutting down"),
+			time.Now().Add(time.Second),
+		)
+		return
+	}
+	defer untrack()
 
 	// GW-P0-1: serialize all writes (hub.Send from the Redis subscriber
 	// goroutine + local close frames) through one wsSafeWriter — gorilla

@@ -2,7 +2,9 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
+	"net/http"
 	"sync"
 	"time"
 
@@ -19,6 +21,10 @@ type STTHandler struct {
 	upgrader     websocket.Upgrader
 	logger       *zap.Logger
 	config       *config.Config
+	// drain tracks live upgraded conns so graceful shutdown can close them
+	// with a proper close frame (wt275: /ws/stt used to be killed abrupt —
+	// http.Server.Shutdown ignores hijacked sockets).
+	drain *wsConnDrainGroup
 }
 
 // NewSTTHandler creates a new STT handler
@@ -39,11 +45,33 @@ func NewSTTHandler(pythonSTTUrl string, logger *zap.Logger, cfg *config.Config) 
 		},
 		logger: logger,
 		config: cfg,
+		drain:  newWSConnDrainGroup(),
 	}
+}
+
+// StartDraining stops admitting new STT WebSocket upgrades.
+func (h *STTHandler) StartDraining() {
+	h.drain.StartDraining()
+}
+
+// IsDraining reports whether the endpoint stopped admitting upgrades.
+func (h *STTHandler) IsDraining() bool {
+	return h.drain.IsDraining()
+}
+
+// DrainConnections closes every live STT WebSocket with a CloseGoingAway frame
+// and waits (bounded by timeout) for the handler goroutines to unwind. It
+// satisfies the graceful-shutdown drainer contract wired in cmd/server.
+func (h *STTHandler) DrainConnections(timeout time.Duration) {
+	h.drain.DrainAll(timeout)
 }
 
 // HandleWebSocket proxies Flutter WebSocket connections to Python STT service
 func (h *STTHandler) HandleWebSocket(c *gin.Context) {
+	if h.IsDraining() {
+		c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"error": "Server shutting down"})
+		return
+	}
 	// Debug logging for real device testing
 	origin := c.GetHeader("Origin")
 	h.logger.Info("STT WebSocket upgrade attempt",
@@ -76,6 +104,17 @@ func (h *STTHandler) HandleWebSocket(c *gin.Context) {
 	}
 	clientConn.SetReadLimit(readLimit)
 	msgLimiter := newWSMessageRateLimiter(h.config)
+
+	// Track the upgraded conn for graceful-shutdown drain (see STTHandler.drain).
+	// Must happen before the Python dial so a draining gateway neither serves
+	// nor dials upstream; on drain the conn is closed underneath the pumps, so
+	// both read loops unwind and deferred cleanup releases everything.
+	untrack, ok := h.drain.startTracking(clientConn)
+	if !ok {
+		_ = clientWriter.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseTryAgainLater, "server shutting down"))
+		return
+	}
+	defer untrack()
 
 	// Extract user_id from context (set by auth middleware)
 	userID := c.GetString("user_id")
@@ -151,8 +190,28 @@ func (h *STTHandler) HandleWebSocket(c *gin.Context) {
 		return pythonConn.WriteMessage(messageType, data)
 	}
 
+	// recoverSTTPump converts a panic in any pump goroutine into a connection
+	// teardown instead of a process crash (wt275): a panic in a detached
+	// goroutine is fatal to the whole gateway, and the community proxy pumps
+	// already follow this pattern (recoverProxyGoroutine) — STT was the gap.
+	recoverSTTPump := func(name string) {
+		if r := recover(); r != nil {
+			h.logger.Error("STT proxy goroutine panic recovered",
+				zap.String("goroutine", name),
+				zap.String("user_id_hash", hashUserIDForLog(userID)),
+				zap.Any("panic", r),
+				zap.Stack("stack"))
+			select {
+			case errChan <- fmt.Errorf("%s panic: %v", name, r):
+			default:
+			}
+			closeDone()
+		}
+	}
+
 	// Client -> Python (forward audio data)
 	go func() {
+		defer recoverSTTPump("client_to_python")
 		defer closeDone()
 		for {
 			select {
@@ -188,6 +247,7 @@ func (h *STTHandler) HandleWebSocket(c *gin.Context) {
 
 	// Python -> Client (forward transcription results)
 	go func() {
+		defer recoverSTTPump("python_to_client")
 		defer closeDone()
 		for {
 			select {
@@ -217,6 +277,7 @@ func (h *STTHandler) HandleWebSocket(c *gin.Context) {
 	// deadline failure (surfacing through the pumps into errChan) instead of
 	// an indefinite half-open hang (R2-GW-4).
 	go func() {
+		defer recoverSTTPump("stt_ping")
 		ticker := time.NewTicker(pingInterval)
 		defer ticker.Stop()
 		for {

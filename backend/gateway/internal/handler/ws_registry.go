@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -276,6 +277,87 @@ func (r *ConnectionRegistry) DrainAll(timeout time.Duration) {
 	case <-done:
 	case <-time.After(timeout):
 		// Goroutines timed out; they'll eventually finish on their own.
+	}
+}
+
+// wsConnDrainGroup is the shutdown companion for WS endpoints whose handler
+// holds a single upgraded conn (STT, /ws/files): it rejects upgrades while
+// draining, tracks live conns, and on shutdown sends each one a CloseGoingAway
+// frame before closing so mobile clients observe 1001 instead of an abnormal
+// 1006 (wt275: both endpoints were previously killed abrupt by process exit —
+// http.Server.Shutdown ignores hijacked sockets).
+type wsConnDrainGroup struct {
+	mu       sync.Mutex
+	conns    map[*websocket.Conn]struct{}
+	wg       sync.WaitGroup
+	draining atomic.Bool
+}
+
+func newWSConnDrainGroup() *wsConnDrainGroup {
+	return &wsConnDrainGroup{conns: make(map[*websocket.Conn]struct{})}
+}
+
+// startTracking registers a live conn and returns an untrack func for the
+// handler's defer. It returns false when the group is draining, meaning the
+// caller must not serve the connection.
+func (g *wsConnDrainGroup) startTracking(conn *websocket.Conn) (func(), bool) {
+	g.mu.Lock()
+	if g.draining.Load() {
+		g.mu.Unlock()
+		return nil, false
+	}
+	g.conns[conn] = struct{}{}
+	g.wg.Add(1)
+	g.mu.Unlock()
+	return func() {
+		g.mu.Lock()
+		delete(g.conns, conn)
+		g.mu.Unlock()
+		g.wg.Done()
+	}, true
+}
+
+func (g *wsConnDrainGroup) IsDraining() bool {
+	return g.draining.Load()
+}
+
+func (g *wsConnDrainGroup) StartDraining() {
+	g.draining.Store(true)
+}
+
+// DrainAll sends a CloseGoingAway frame to every tracked conn, closes it, and
+// waits up to timeout for the handler goroutines to unwind.
+func (g *wsConnDrainGroup) DrainAll(timeout time.Duration) {
+	g.StartDraining()
+	g.mu.Lock()
+	snapshot := make([]*websocket.Conn, 0, len(g.conns))
+	for conn := range g.conns {
+		snapshot = append(snapshot, conn)
+	}
+	g.conns = make(map[*websocket.Conn]struct{})
+	g.mu.Unlock()
+
+	deadline := time.Now().Add(timeout)
+	for _, conn := range snapshot {
+		remaining := time.Until(deadline)
+		if remaining > 0 {
+			_ = conn.WriteControl(
+				websocket.CloseMessage,
+				websocket.FormatCloseMessage(websocket.CloseGoingAway, "server shutting down"),
+				deadline,
+			)
+		}
+		_ = conn.Close()
+	}
+
+	done := make(chan struct{})
+	go func() {
+		g.wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(timeout):
 	}
 }
 

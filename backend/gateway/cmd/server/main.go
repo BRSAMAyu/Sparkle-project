@@ -170,7 +170,11 @@ func main() {
 	if reg := handlers.chatOrchestrator.Registry(); reg != nil {
 		registry = reg
 	}
-	drainWebSocketPhases(handlers.wsProxy, registry, logger.Log, drainTimeout)
+	// wt275: /ws/stt and /ws/files hold hijacked sockets the same way the chat
+	// registry and the community proxy do, but had no drain representation —
+	// process exit killed them without a close frame (client-visible 1006).
+	drainWebSocketPhases(handlers.wsProxy, registry, logger.Log, drainTimeout,
+		handlers.sttHandler, handlers.fileEventHandler)
 
 	// Phase 4: wait for HTTP shutdown to settle now that all upgraded sockets are closed.
 	if err := <-shutdownErrCh; err != nil {
@@ -189,6 +193,12 @@ type registryDrainer interface {
 	DrainAll(timeout time.Duration)
 }
 
+// endpointDrainer covers the single-conn WS endpoints (/ws/stt, /ws/files)
+// whose handlers track their live sockets for graceful shutdown.
+type endpointDrainer interface {
+	DrainConnections(timeout time.Duration)
+}
+
 // remainingDrainBudget is the time left until an absolute deadline, floored
 // at zero so a drained-out budget shortens rather than extends the wait.
 func remainingDrainBudget(deadline time.Time) time.Duration {
@@ -199,9 +209,10 @@ func remainingDrainBudget(deadline time.Time) time.Duration {
 	return d
 }
 
-// drainWebSocketPhases runs both WebSocket drain phases against one shared
-// deadline (R2-GW-6): the combined wait never exceeds drainTimeout.
-func drainWebSocketPhases(wsProxy proxyDrainer, registry registryDrainer, log *zap.Logger, drainTimeout time.Duration) {
+// drainWebSocketPhases runs all WebSocket drain phases against one shared
+// deadline (R2-GW-6): the combined wait never exceeds drainTimeout. extras are
+// the single-conn WS endpoints drained with whatever budget remains.
+func drainWebSocketPhases(wsProxy proxyDrainer, registry registryDrainer, log *zap.Logger, drainTimeout time.Duration, extras ...endpointDrainer) {
 	deadline := time.Now().Add(drainTimeout)
 	if wsProxy != nil {
 		log.Info("Draining proxied WebSocket connections",
@@ -214,5 +225,13 @@ func drainWebSocketPhases(wsProxy proxyDrainer, registry registryDrainer, log *z
 			zap.Duration("drain_timeout", drainTimeout))
 		registry.DrainAll(remainingDrainBudget(deadline))
 		log.Info("WebSocket connections drained")
+	}
+	for _, extra := range extras {
+		if extra == nil {
+			continue
+		}
+		log.Info("Draining endpoint WebSocket connections",
+			zap.Duration("drain_timeout", remainingDrainBudget(deadline)))
+		extra.DrainConnections(remainingDrainBudget(deadline))
 	}
 }

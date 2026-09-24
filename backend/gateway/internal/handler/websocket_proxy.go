@@ -825,13 +825,6 @@ func (p *WebSocketProxy) reconnectBlockRemaining(userID string) int {
 
 func (p *WebSocketProxy) startReconnectTrackerCleanup() {
 	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				p.logger.Error("WebSocket reconnect tracker cleanup panic recovered",
-					zap.Any("panic", r),
-					zap.Stack("stack"))
-			}
-		}()
 		ticker := time.NewTicker(time.Duration(reconnectCleanupSec) * time.Second)
 		defer ticker.Stop()
 		for {
@@ -839,7 +832,21 @@ func (p *WebSocketProxy) startReconnectTrackerCleanup() {
 			case <-p.stopCh:
 				return
 			case <-ticker.C:
-				p.cleanupExpiredReconnectTrackers()
+				// wt275: recover per tick, not once for the whole goroutine. The
+				// previous top-level defer turned any panic into a silent,
+				// permanent death of the cleanup loop — reconnectTrackers then
+				// grew without bound until process restart. A per-tick recover
+				// keeps the loop alive instead.
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							p.logger.Error("WebSocket reconnect tracker cleanup panic recovered",
+								zap.Any("panic", r),
+								zap.Stack("stack"))
+						}
+					}()
+					p.cleanupExpiredReconnectTrackers()
+				}()
 			}
 		}
 	}()
