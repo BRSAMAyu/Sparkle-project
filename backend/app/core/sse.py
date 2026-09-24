@@ -26,6 +26,22 @@ class SSEManager:
     def __init__(self):
         # {user_id: Set[queue]}
         self.connections: dict[str, set[asyncio.Queue]] = {}
+        # {user_key: last_seq} per-user 严格单调 seq（wt299-p1-pair P1-2）
+        self._last_seq: dict[str, int] = {}
+
+    def _next_seq(self, user_key: str) -> int:
+        """生成严格单调递增的事件序号。
+
+        毫秒时间戳为主体；同一毫秒内（或时钟回拨时）取 last+1 兜底，
+        保证 connect() 的 `seq > last_event_id` 重放过滤不丢同毫秒事件
+        （修前同毫秒事件 seq 相同，重放按严格大于过滤会静默丢弃）。
+        纯同步段（首个 await 之前完成），事件循环内天然原子。
+        """
+        now_ms = int(time.time() * 1000)
+        last = self._last_seq.get(user_key, 0)
+        seq = now_ms if now_ms > last else last + 1
+        self._last_seq[user_key] = seq
+        return seq
 
     async def connect(self, user_id: str, last_event_id: str | None = None) -> asyncio.Queue:
         """
@@ -107,8 +123,8 @@ class SSEManager:
         """
         user_id_str = str(user_id) if isinstance(user_id, UUID) else user_id
 
-        # Generate Sequence ID (Timestamp in ms for simplicity)
-        seq = int(time.time() * 1000)
+        # Generate Sequence ID（per-user 严格单调，同毫秒自增）
+        seq = self._next_seq(user_id_str)
 
         event_data = {
             "type": event_type,
@@ -157,7 +173,7 @@ class SSEManager:
         event_data = {
             "type": event_type,
             "data": data,
-            "seq": int(time.time() * 1000)
+            "seq": self._next_seq("__broadcast__")
         }
 
         for user_id, queues in self.connections.items():

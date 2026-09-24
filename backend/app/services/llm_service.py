@@ -501,6 +501,12 @@ class LLMService:
         """
         根据任务类型动态切换模型（线程安全）
 
+        警告（wt299-p1-pair P1-1）：本方法会改写实例上的共享路由状态
+        （_current_selection/chat_model/_extra_body），锁只串行化单次变更、
+        防不住"切换后到下次切换前"的跨请求串读。只允许在自建/per-request
+        实例上调用（如 multi_intent_service）；严禁对 get_llm_service() 返回
+        的按角色共享实例调用——工厂函数已不再代为切换。
+
         Args:
             task_type: 任务类型（如 TaskType.DEEP_REASONING）
         """
@@ -533,7 +539,11 @@ class LLMService:
             )
 
     async def switch_to_specific_model(self, model_key: str):
-        """切换到指定模型 key。用于 batch / specialist 等显式路由场景。"""
+        """切换到指定模型 key。用于 batch / specialist 等显式路由场景。
+
+        警告（wt299-p1-pair P1-1）：同 switch_model_for_task——只允许在
+        自建/per-request 实例上调用，严禁用于按角色共享实例。
+        """
         if not self.enable_dynamic_routing:
             logger.warning("Dynamic routing is disabled, cannot switch to a specific model")
             return
@@ -1949,15 +1959,26 @@ async def get_configured_llm_service(
 
     该 helper 用于避免调用方只切换了 prompt / workflow，
     但底层仍落到全局 generation 模型。
+
+    wt299-p1-pair P1-1：task_type 非空时改为返回**独立实例**（与
+    get_llm_service_for_task / get_configured_llm_service_for_tier 同型），
+    不再在按角色缓存的共享实例上原地 switch_model_for_task——共享实例的
+    可变路由状态（_current_selection/chat_model 等）会被并发/后续请求读到，
+    造成跨请求串模型（standard_workflow 主聊天路径等 10+ 调用点受影响）。
     """
-    service = get_llm_service(agent_role)
-    if task_type is not None:
-        await service.switch_model_for_task(
-            task_type,
-            avoid_providers=avoid_providers,
-            reasoning_mode=reasoning_mode,
-        )
-    return service
+    if task_type is None:
+        return get_llm_service(agent_role)
+    selection = llm_router.select_model(
+        agent_role,
+        task_type,
+        avoid_providers=avoid_providers,
+        reasoning_mode=reasoning_mode,
+    )
+    return LLMService(
+        agent_role=selection.agent_role,
+        enable_dynamic_routing=True,
+        initial_selection=selection,
+    )
 
 
 async def get_configured_llm_service_for_tier(
@@ -2015,10 +2036,19 @@ async def get_llm_service_for_specific_model(
     model_key: str,
     agent_role: AgentRole | str = AgentRole.GENERATION,
 ) -> LLMService:
-    """获取并切换到指定 model_key 的 LLM 服务实例。"""
-    service = get_llm_service(agent_role)
-    await service.switch_to_specific_model(model_key)
-    return service
+    """获取切换到指定 model_key 的 LLM 服务实例。
+
+    wt299-p1-pair P1-1：改为返回**独立实例**（per-request 隔离），不再在按
+    角色缓存的共享实例上原地 switch_to_specific_model（跨请求串模型，同
+    get_configured_llm_service 注释）。无 key / demo 语义由 __init__ 按新
+    selection 的 api_key 现估，与原 switch_to_specific_model 的 wt9 修复等价。
+    """
+    selection = llm_router.select_specific_model(model_key, agent_role=agent_role)
+    return LLMService(
+        agent_role=selection.agent_role,
+        enable_dynamic_routing=True,
+        initial_selection=selection,
+    )
 
 
 # ==========================================
