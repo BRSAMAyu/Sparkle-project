@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/token_refresh_coordinator.dart';
+import 'package:sparkle/core/network/ws_ticket_client.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -56,18 +57,36 @@ final communityEventsStreamProvider =
   }
 
   final baseUrl = ApiEndpoints.baseUrl.replaceFirst(RegExp('^http'), 'ws');
-  // 支持两种认证方式：headers用于移动端，query param用于Web端fallback
-  final wsUrl = '$baseUrl/community/ws/connect?token=$token';
   final headers = <String, dynamic>{
     'Authorization': 'Bearer $token',
   };
 
-  try {
-    wsService.connect(wsUrl, headers: headers);
-  } catch (e) {
-    debugPrint('WS Connect Error: $e');
-    return const Stream.empty();
-  }
+  // WSQ-5 扫尾（WS-TICKET-DESIGN §1.5 缺口 4 的隐藏第三入口）：本 provider
+  // 经 core WebSocketService 连 personal 频道，旧实现把长寿 JWT 放进
+  // `?token=`——生产网关强制禁该参数（ALLOW_WS_QUERY_TOKEN=false），既无
+  // 认证作用又把 JWT 泄进代理/日志（违反 community_provider_security_test
+  // 声明的「URL 不含 token」意图）。迁移为 ticket-first：?ticket= 携带单次票，
+  // Authorization 头保留（移动端主通道 + 过渡期回退）。换票是异步短步骤，
+  // provider 体内先以 unawaited 发起，不改变返回 Stream 的同步语义。
+  unawaited(() async {
+    String? ticket;
+    try {
+      final grant = await ref.read(wsTicketClientProvider).issue(
+            authToken: token,
+          );
+      ticket = grant?.ticket;
+    } catch (e) {
+      debugPrint('[WS] Ticket issuance failed, using header auth only: $e');
+    }
+    final wsUri = Uri.parse('$baseUrl/community/ws/connect').replace(
+      queryParameters: ticket == null ? null : {'ticket': ticket},
+    );
+    try {
+      wsService.connect(wsUri.toString(), headers: headers);
+    } catch (e) {
+      debugPrint('WS Connect Error: $e');
+    }
+  }());
 
   return wsService.stream;
 });
@@ -1209,7 +1228,8 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
         final sessionDead = await _authRepository.getRefreshToken() == null;
         if (sessionDead) {
           await _authRepository.logout(
-              keepDemoMode: DemoDataService.isDemoMode,);
+            keepDemoMode: DemoDataService.isDemoMode,
+          );
         }
       } catch (e) {
         debugPrint('❌ Logout failed: $e');
@@ -1236,7 +1256,8 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
         // 与 HTTP/WS 口对齐；demo 下 community WS 本就禁用）+ 停自动重连。
         try {
           await _authRepository.logout(
-              keepDemoMode: DemoDataService.isDemoMode,);
+            keepDemoMode: DemoDataService.isDemoMode,
+          );
         } catch (logoutErr) {
           debugPrint('❌ Logout failed: $logoutErr');
         }

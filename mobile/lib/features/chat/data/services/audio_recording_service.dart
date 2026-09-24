@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:record/record.dart';
+import 'package:sparkle/core/network/ws_ticket_client.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -12,7 +13,11 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 /// 音频录制服务
 /// 负责录制音频并实时流式传输到服务器
 class AudioRecordingService {
+  AudioRecordingService({WsTicketClient? ticketClient})
+      : _ticketClient = ticketClient ?? WsTicketClient();
+
   final AudioRecorder _recorder = AudioRecorder();
+  final WsTicketClient _ticketClient;
   final Logger _logger = Logger();
   WebSocketChannel? _webSocket;
   StreamSubscription<Uint8List>? _audioStreamSubscription;
@@ -49,12 +54,22 @@ class AudioRecordingService {
       // 1. 连接WebSocket
       _logger.d('Connecting to WebSocket: $wsUrl');
 
-      // Prepare WebSocket with token as query param
-      // Flutter's IOWebSocketChannel doesn't support custom headers,
-      // so we pass the token via query parameter
-      final uri = Uri.parse('$wsUrl?token=$authToken');
+      // WSQ-4（WS-TICKET-DESIGN §四 Step 3）：连接前先用 JWT 换单次 WS 票，
+      // 以 ?ticket= 携带。生产网关强制禁 ?token=（ALLOW_WS_QUERY_TOKEN=false），
+      // 旧的 query-token 握手在生产必然 401——STT 语音输入的潜伏故障，
+      // 此处即该 bug 的修复点（签发失败时回退 Authorization 头过渡）。
+      final ticket = await _issueTicketSafely(authToken);
+      final baseUri = Uri.parse(wsUrl);
+      final queryParameters = Map<String, String>.of(baseUri.queryParameters);
+      if (ticket != null) {
+        queryParameters['ticket'] = ticket;
+      }
+      final uri = baseUri.replace(queryParameters: queryParameters);
+      // 票签发成功后仍保留 Authorization 头一个版本周期（设计 §3.2：
+      // 网关未收紧 WS_TICKET_REQUIRED 前双带无害，收紧后由服务端裁决）。
       final channel = IOWebSocketChannel.connect(
         uri,
+        headers: {'Authorization': 'Bearer $authToken'},
       );
 
       _webSocket = channel;
@@ -62,7 +77,8 @@ class AudioRecordingService {
       // 2. 开始监听WebSocket消息
       _webSocket!.stream.listen(
         (message) {
-          _handleWebSocketMessage(message, onTranscription, onError, onCompleted);
+          _handleWebSocketMessage(
+              message, onTranscription, onError, onCompleted);
         },
         onError: (Object error) {
           _logger.e('WebSocket error: $error');
@@ -84,8 +100,8 @@ class AudioRecordingService {
       // 3. 开始录制音频流 - 使用 startStream 获取原始 PCM 数据
       const config = RecordConfig(
         encoder: AudioEncoder.pcm16bits, // 获取原始 PCM 数据
-        sampleRate: 16000,               // 16kHz，服务端会封装为智谱 ASR 兼容 WAV
-        numChannels: 1,                   // 单声道
+        sampleRate: 16000, // 16kHz，服务端会封装为智谱 ASR 兼容 WAV
+        numChannels: 1, // 单声道
       );
 
       final audioStream = await _recorder.startStream(config);
@@ -129,9 +145,21 @@ class AudioRecordingService {
 
       _logger.d('Recording started successfully');
     } catch (e) {
-        _logger.e('Failed to start recording: $e');
+      _logger.e('Failed to start recording: $e');
       onError(I18nService.instance.l10n.chatAudioStartFailed(e.toString()));
       await _cleanupSession();
+    }
+  }
+
+  /// 用 JWT 换单次 WS 票；失败不阻断录音流程（返回 null 时走
+  /// Authorization 头回退，见 [WsTicketClient.issue] 的过渡期语义）。
+  Future<String?> _issueTicketSafely(String authToken) async {
+    try {
+      final grant = await _ticketClient.issue(authToken: authToken);
+      return grant?.ticket;
+    } catch (e) {
+      _logger.w('WS ticket issuance failed, falling back to header auth: $e');
+      return null;
     }
   }
 
@@ -239,7 +267,8 @@ class AudioRecordingService {
         try {
           await completion.future.timeout(const Duration(seconds: 2));
         } on TimeoutException {
-          _logger.w('Timed out waiting for final transcription acknowledgement');
+          _logger
+              .w('Timed out waiting for final transcription acknowledgement');
         }
       }
     } catch (e) {

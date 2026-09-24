@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
+import 'package:sparkle/core/network/ws_ticket_client.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -30,13 +31,12 @@ enum WsConnectionState {
 
 /// Community event received from WebSocket
 class CommunityEvent {
-
   CommunityEvent({required this.type, required this.data});
 
   factory CommunityEvent.fromJson(Map<String, dynamic> json) => CommunityEvent(
-      type: json['type'] as String? ?? 'unknown',
-      data: json,
-    );
+        type: json['type'] as String? ?? 'unknown',
+        data: json,
+      );
   final String type;
   final Map<String, dynamic> data;
 
@@ -55,7 +55,6 @@ class CommunityEvent {
 
 /// Configuration for WebSocket reconnection
 class WsReconnectConfig {
-
   const WsReconnectConfig({
     this.maxAttempts = 10,
     this.baseDelayMs = 1000,
@@ -79,8 +78,7 @@ bool isTerminalCommunityWsFailure(Object? error) {
   final text = error.toString();
   // 网关终态拒帧标记（writeBackendDialFailure 透传体）
   if (text.contains('websocket_upstream_rejected')) return true;
-  if (text.contains('"retryable":false') ||
-      text.contains('retryable: false')) {
+  if (text.contains('"retryable":false') || text.contains('retryable: false')) {
     return true;
   }
   // dart:io 握手失败：'WebSocketException: ... HTTP status code: 403'；
@@ -96,8 +94,8 @@ bool isTerminalCommunityWsFailure(Object? error) {
     if (status == 401 || status == 403 || status == 404) return true;
   }
   // WS close code 约定：4401/4403/4404 表示上游鉴权/路由终态
-  final closeMatch = RegExp(r'close code[:\s]*(\d{4})', caseSensitive: false)
-      .firstMatch(text);
+  final closeMatch =
+      RegExp(r'close code[:\s]*(\d{4})', caseSensitive: false).firstMatch(text);
   if (closeMatch != null) {
     final code = int.parse(closeMatch.group(1)!);
     if (code == 4401 || code == 4403 || code == 4404) return true;
@@ -137,18 +135,23 @@ bool isTerminalCommunityWsFrame(Map<String, dynamic> frame) {
 /// Community WebSocket Service
 /// Handles real-time communication for group chats and personal notifications
 class CommunityWebSocketService {
-
   CommunityWebSocketService({
     required AuthRepository authRepository,
     WsReconnectConfig reconnectConfig = const WsReconnectConfig(),
+
     /// 测试注入：覆盖 WS 基地址（默认 [ApiConstants.wsBaseUrl]）。
     String? wsBaseUrlOverride,
+
+    /// WS ticket 签发客户端（WSQ-5，WS-TICKET-DESIGN §四 Step 4）；测试可注入桩。
+    WsTicketClient? ticketClient,
   })  : _authRepository = authRepository,
         _reconnectConfig = reconnectConfig,
-        _wsBaseUrlOverride = wsBaseUrlOverride;
+        _wsBaseUrlOverride = wsBaseUrlOverride,
+        _ticketClient = ticketClient ?? WsTicketClient();
   final AuthRepository _authRepository;
   final WsReconnectConfig _reconnectConfig;
   final String? _wsBaseUrlOverride;
+  final WsTicketClient _ticketClient;
 
   String get _wsBaseUrl => _wsBaseUrlOverride ?? ApiConstants.wsBaseUrl;
 
@@ -163,7 +166,8 @@ class CommunityWebSocketService {
 
   // Connection state controllers
   final _groupStateController = StreamController<WsConnectionState>.broadcast();
-  final _personalStateController = StreamController<WsConnectionState>.broadcast();
+  final _personalStateController =
+      StreamController<WsConnectionState>.broadcast();
   final _eventController = StreamController<CommunityEvent>.broadcast();
 
   // Reconnection mechanism
@@ -192,7 +196,8 @@ class CommunityWebSocketService {
   String? _currentGroupId;
 
   Stream<WsConnectionState> get groupState => _groupStateController.stream;
-  Stream<WsConnectionState> get personalState => _personalStateController.stream;
+  Stream<WsConnectionState> get personalState =>
+      _personalStateController.stream;
   Stream<CommunityEvent> get events => _eventController.stream;
 
   WsConnectionState? _groupConnectionState;
@@ -230,6 +235,14 @@ class CommunityWebSocketService {
 
     debugPrint('[WS] Connecting to group: $groupId');
 
+    // WSQ-5（WS-TICKET-DESIGN §四 Step 4）：ticket-first 握手——JWT 换单次票
+    // 后以 ?ticket= 携带。票单次核销，重连路径经 [connectToGroup] 重新入内，
+    // 天然逐次换新票。签发失败回退 Authorization 头（过渡期双带无害）。
+    final ticket = await _issueTicketSafely(token);
+    final wsUri = Uri.parse(wsUrl).replace(
+      queryParameters: ticket == null ? null : {'ticket': ticket},
+    );
+
     try {
       _groupReconnectAttempts = 0;
       _groupTerminalFailure = false;
@@ -237,7 +250,7 @@ class CommunityWebSocketService {
       _currentGroupId = groupId;
 
       _groupChannel = IOWebSocketChannel.connect(
-        Uri.parse(wsUrl),
+        wsUri,
         protocols: ['json'],
         headers: {'Authorization': 'Bearer $token'},
       );
@@ -297,13 +310,19 @@ class CommunityWebSocketService {
 
     debugPrint('[WS] Connecting to personal channel');
 
+    // WSQ-5：ticket-first 握手（语义同 [connectToGroup]）。
+    final ticket = await _issueTicketSafely(token);
+    final wsUri = Uri.parse(wsUrl).replace(
+      queryParameters: ticket == null ? null : {'ticket': ticket},
+    );
+
     try {
       _personalReconnectAttempts = 0;
       _personalTerminalFailure = false;
       _personalFailureReason = null;
 
       _personalChannel = IOWebSocketChannel.connect(
-        Uri.parse(wsUrl),
+        wsUri,
         protocols: ['json'],
         headers: {'Authorization': 'Bearer $token'},
       );
@@ -345,6 +364,19 @@ class CommunityWebSocketService {
     }
   }
 
+  /// 用 JWT 换单次 WS 票；失败不阻断建连（返回 null 时走 Authorization 头
+  /// 回退，见 [WsTicketClient.issue] 的过渡期语义）。
+  Future<String?> _issueTicketSafely(String token) async {
+    try {
+      final grant = await _ticketClient.issue(authToken: token);
+      return grant?.ticket;
+    } catch (e) {
+      debugPrint(
+          '[WS] Ticket issuance failed, falling back to header auth: $e');
+      return null;
+    }
+  }
+
   /// Send a message through the group WebSocket
   void sendGroupMessage(Map<String, dynamic> message) {
     if (_groupChannel == null) {
@@ -374,11 +406,13 @@ class CommunityWebSocketService {
     if (channel == null) return;
 
     try {
-      channel.sink.add(jsonEncode({
-        'type': 'ack',
-        'msg_id': msgId,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-      }),);
+      channel.sink.add(
+        jsonEncode({
+          'type': 'ack',
+          'msg_id': msgId,
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        }),
+      );
     } catch (e) {
       debugPrint('[WS] Error sending ACK: $e');
     }
@@ -537,7 +571,8 @@ class CommunityWebSocketService {
     );
 
     _setGroupState(WsConnectionState.reconnecting);
-    debugPrint('[WS] Scheduling group reconnect in ${delay}ms (attempt ${_groupReconnectAttempts + 1})');
+    debugPrint(
+        '[WS] Scheduling group reconnect in ${delay}ms (attempt ${_groupReconnectAttempts + 1})');
 
     _groupReconnectTimer = Timer(Duration(milliseconds: delay), () {
       _groupReconnectAttempts++;
@@ -559,7 +594,8 @@ class CommunityWebSocketService {
     );
 
     _setPersonalState(WsConnectionState.reconnecting);
-    debugPrint('[WS] Scheduling personal reconnect in ${delay}ms (attempt ${_personalReconnectAttempts + 1})');
+    debugPrint(
+        '[WS] Scheduling personal reconnect in ${delay}ms (attempt ${_personalReconnectAttempts + 1})');
 
     _personalReconnectTimer = Timer(Duration(milliseconds: delay), () {
       _personalReconnectAttempts++;
