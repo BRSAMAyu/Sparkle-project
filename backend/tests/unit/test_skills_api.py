@@ -36,6 +36,9 @@ async def test_skills_api_crud_extract_and_share_flow(db_session, monkeypatch):
     monkeypatch.setattr("app.api.v1.skills.SkillExtractService._call_llm", _fake_extract)
     monkeypatch.setattr("app.services.skill_extract_service.settings.SPARKLE_SKILL_EXTRACT_ENABLED", True)
     monkeypatch.setattr("app.services.skill_share.service.settings.SPARKLE_SKILL_SHARE_ENABLED", True)
+    # share 端点默认 status=pending（人工审核队列），shared 列表/fork 无从验证；
+    # 开启 mock review 自动过审门（skill_share/service.py:73，默认 False）走全链路。
+    monkeypatch.setattr("app.services.skill_share.service.settings.SPARKLE_SKILL_SHARE_MOCK_REVIEW_ENABLED", True)
 
     async def _share_safe(*_args, **_kwargs):
         return []

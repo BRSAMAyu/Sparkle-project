@@ -23,6 +23,11 @@ async def _create_user(db_session):
 @pytest.mark.asyncio
 async def test_skill_share_pipeline_publishes_and_withdraws(db_session, monkeypatch):
     monkeypatch.setattr("app.services.skill_share.service.settings.SPARKLE_SKILL_SHARE_ENABLED", True)
+    # 产物默认走人工审核队列（status=pending）；本验证的是发布→目录→撤回全链路，
+    # 须开启 mock review 自动过审门（service.py:73，默认 False，产品有意设计）。
+    # 仅开 legacy 布尔 SPARKLE_SKILL_SHARE_ENABLED 是空操作：其默认即 True，
+    # 且 tri-state 模式已由 AURORA_STAGE21_SKILL_SHARE_MODE 默认 "live" 满足。
+    monkeypatch.setattr("app.services.skill_share.service.settings.SPARKLE_SKILL_SHARE_MOCK_REVIEW_ENABLED", True)
 
     async def _safe_llm(_messages, **_kwargs):
         return {"contains_pii": False, "contains_injection": False, "reasons": []}
