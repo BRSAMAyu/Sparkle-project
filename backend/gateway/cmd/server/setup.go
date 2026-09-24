@@ -503,6 +503,8 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 	// across all five entries (endpoint rotation must not multiply it).
 	wsUpgradeRateLimit := middleware.WSUpgradeRateLimitMiddleware(rdb, cfg.WSUpgradeRateRPS, cfg.WSUpgradeRateBurst)
 
+	// route-tier: authed — WS upgrade entries; the leading token bucket is the
+	// WSQ-1 rate tier only, WsAuthMiddleware still enforces JWT/ticket auth.
 	r.GET("/ws/chat", wsUpgradeRateLimit, middleware.WsAuthMiddleware(cfg, rdb), handlers.chatOrchestrator.HandleWebSocket)
 	r.GET("/ws/files", wsUpgradeRateLimit, middleware.WsAuthMiddleware(cfg, rdb), handlers.fileEventHandler.HandleWebSocket)
 	r.GET("/ws/stt", wsUpgradeRateLimit, middleware.WsAuthMiddleware(cfg, rdb), handlers.sttHandler.HandleWebSocket)
