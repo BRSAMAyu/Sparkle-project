@@ -314,10 +314,13 @@ class ToolExecutor:
         timeout = getattr(tool, "timeout_seconds", None)
         if timeout is None:
             timeout = getattr(settings, "TOOL_EXECUTION_TIMEOUT_SECONDS", 120.0)
-        try:
-            timeout_value = float(timeout)
-        except (TypeError, ValueError):
+        if timeout is None:
             timeout_value = 120.0
+        else:
+            try:
+                timeout_value = float(timeout)
+            except (TypeError, ValueError):
+                timeout_value = 120.0
         return timeout_value if timeout_value > 0 else 120.0
 
     @staticmethod
@@ -525,8 +528,7 @@ class ToolExecutor:
                     guard.reject(
                         error_type="IdempotencyArgsMismatch",
                         message=(
-                            f"Idempotency key '{key}' was already used with different arguments "
-                            f"for tool '{tool_name}'"
+                            f"Idempotency key '{key}' was already used with different arguments for tool '{tool_name}'"
                         ),
                     )
                     return guard
@@ -619,7 +621,8 @@ class ToolExecutor:
 
         try:
             stmt = (
-                select(AgentToolCall).where(
+                select(AgentToolCall)
+                .where(
                     AgentToolCall.user_id == uuid.UUID(str(user_id)),
                     AgentToolCall.tool_name == tool_name,
                     AgentToolCall.idempotency_key == key,
@@ -1452,8 +1455,7 @@ class ToolExecutor:
                 # 用户可见文案路由为自然话术；开发者诊断（含 layer 细节）只进
                 # 日志，不进聊天文本。
                 confirmation_gate_hit = any(
-                    (sr.tool_result.error_type or "") == CONFIRMATION_REQUIRED_ERROR_TYPE
-                    for sr in result.step_results
+                    (sr.tool_result.error_type or "") == CONFIRMATION_REQUIRED_ERROR_TYPE for sr in result.step_results
                 )
                 if confirmation_gate_hit:
                     result.awaiting_user_confirmation = True

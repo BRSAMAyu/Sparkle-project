@@ -128,9 +128,10 @@ class BeliefTraceInspector:
                 signal_type = str(reward.get("signal_type") or "unknown")
                 reward_signal_counts[signal_type] += 1
                 reward_category_counts[str(reward.get("reward_category") or "unknown")] += 1
-                if reward.get("total_reward") is not None:
+                raw_total = reward.get("total_reward")
+                if raw_total is not None:
                     try:
-                        total_reward += float(reward.get("total_reward"))
+                        total_reward += float(raw_total)
                         reward_count += 1
                     except (TypeError, ValueError):
                         pass
@@ -150,7 +151,9 @@ class BeliefTraceInspector:
                     for target, source_counts in by_target.items():
                         if isinstance(source_counts, dict):
                             try:
-                                target_evidence_counts[str(target)] += sum(int(value) for value in source_counts.values())
+                                target_evidence_counts[str(target)] += sum(
+                                    int(value) for value in source_counts.values()
+                                )
                             except (TypeError, ValueError):
                                 pass
             metadata_summary = trace.get("evidence_metadata_summary")
@@ -400,10 +403,14 @@ class BeliefTraceInspector:
             calibration_raw = await redis.lrange(calibration_key, 0, 299)
             from app.services.analytics.evidence_calibration import EvidenceCalibrationAnalyzer
 
-            summary["evidence_calibration"] = EvidenceCalibrationAnalyzer().evaluate(
-                [],
-                correction_events=[_loads(item) for item in calibration_raw if _loads(item) is not None],
-            ).to_dict()
+            summary["evidence_calibration"] = (
+                EvidenceCalibrationAnalyzer()
+                .evaluate(
+                    [],
+                    correction_events=[_loads(item) for item in calibration_raw if _loads(item) is not None],
+                )
+                .to_dict()
+            )
         except Exception as exc:
             summary["evidence_calibration"] = {"blockers": ["calibration_read_failed"], "error": str(exc)}
         return summary
@@ -414,10 +421,7 @@ class BeliefTraceInspector:
         mode_outcome_counts: dict[str, Counter[str]],
         mode_load_type_outcome_counts: dict[str, dict[str, Counter[str]]],
     ) -> dict[str, Any]:
-        serial_mode_counts = {
-            mode: dict(counter)
-            for mode, counter in sorted(mode_outcome_counts.items())
-        }
+        serial_mode_counts = {mode: dict(counter) for mode, counter in sorted(mode_outcome_counts.items())}
         serial_load_counts = {
             mode: {load_type: dict(counter) for load_type, counter in sorted(load_map.items())}
             for mode, load_map in sorted(mode_load_type_outcome_counts.items())

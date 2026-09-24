@@ -351,7 +351,7 @@ class ContextBuilderMixin:
         if scaffolding_snapshot is not None:
             payload["scaffolding_fsm_snapshot"] = scaffolding_snapshot
 
-        galaxy_snapshot = {
+        galaxy_snapshot: dict[str, Any] = {
             "mode": str(stage39_modes.get("galaxy_inject_mode") or "shadow"),
             "goal_ids": [],
             "nodes": [],
@@ -815,8 +815,7 @@ class ContextBuilderMixin:
                 prefilter_allowed_count=episodic_prefilter.allowed_count,
                 prefilter_reasons=dict(episodic_prefilter.reason_counts),
                 prefilter_dropped_refs=[
-                    (episodic_ref(rejection.record_id), rejection.reason)
-                    for rejection in episodic_prefilter.rejections
+                    (episodic_ref(rejection.record_id), rejection.reason) for rejection in episodic_prefilter.rejections
                 ],
                 ranked_rows=ranked_episodic_rows,
                 injected_rows=episodic_memories,

@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_active_superuser, get_db
@@ -75,6 +75,7 @@ def _ensure_governance_enabled() -> None:
     if not settings.ENABLE_MEMORY_GOVERNANCE:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Memory governance disabled")
 
+
 def _ensure_ltm_eval_enabled() -> None:
     if not settings.ENABLE_LTM_EVAL:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="LTM eval disabled")
@@ -93,13 +94,13 @@ async def memory_stats(db: AsyncSession = Depends(get_db)):
         total_result = await db.execute(
             select(func.count(model.id)).where(
                 model.deleted_at.is_(None),
-                getattr(model, "archived_at", None).is_(None) if hasattr(model, "archived_at") else True,
+                getattr(model, "archived_at", None).is_(None) if hasattr(model, "archived_at") else true(),
             )
         )
         missing_result = await db.execute(
             select(func.count(model.id)).where(
                 model.deleted_at.is_(None),
-                getattr(model, "archived_at", None).is_(None) if hasattr(model, "archived_at") else True,
+                getattr(model, "archived_at", None).is_(None) if hasattr(model, "archived_at") else true(),
                 model.evidence_missing.is_(True),
             )
         )
@@ -166,7 +167,7 @@ async def memory_health(
         result = await db.execute(
             select(model)
             .where(model.evidence_missing.is_(True))
-            .where(getattr(model, "archived_at", None).is_(None) if hasattr(model, "archived_at") else True)
+            .where(getattr(model, "archived_at", None).is_(None) if hasattr(model, "archived_at") else true())
             .order_by(model.updated_at.desc())
             .limit(limit)
         )
@@ -246,9 +247,7 @@ async def memory_jobs_status(db: AsyncSession = Depends(get_db)):
             conditions.append(model.archived_at.is_(None))
         if hasattr(model, "retracted_at"):
             conditions.append(model.retracted_at.is_(None))
-        result = await db.execute(
-            select(func.count(model.id)).where(*conditions)
-        )
+        result = await db.execute(select(func.count(model.id)).where(*conditions))
         missing[kind] = result.scalar() or 0
     return {"jobs": job_status, "evidence_missing": missing}
 
@@ -432,8 +431,9 @@ async def get_stage26_kill_switches():
 @audit_admin_action(category="kill_switch", risk="high", action="update_stage26_kill_switches")
 async def update_stage26_kill_switches(payload: dict = Body(default={})):
     service = AuroraStage26SceneKillSwitchService()
-    if payload.get("mode") is not None:
-        await service.set_mode(payload.get("mode"))
+    mode = payload.get("mode")
+    if mode is not None:
+        await service.set_mode(mode)
     return {"status": "ok", "flags": {"mode": await service.get_mode()}}
 
 
@@ -448,11 +448,13 @@ async def get_stage27_kill_switches():
 @audit_admin_action(category="kill_switch", risk="high", action="update_stage27_kill_switches")
 async def update_stage27_kill_switches(payload: dict = Body(default={})):
     service = AuroraStage27ForesightKillSwitchService()
-    if payload.get("mode") is not None:
-        await service.set_mode(payload.get("mode"))
+    mode = payload.get("mode")
+    if mode is not None:
+        await service.set_mode(mode)
     for feature in service.FEATURE_BINDINGS:
-        if payload.get(feature) is not None:
-            await service.set_feature_mode(feature, payload.get(feature))
+        feature_mode = payload.get(feature)
+        if feature_mode is not None:
+            await service.set_feature_mode(feature, feature_mode)
     return {"status": "ok", "flags": await service.get_all()}
 
 
@@ -474,12 +476,15 @@ async def get_stage28_kill_switches():
 @audit_admin_action(category="kill_switch", risk="high", action="update_stage28_kill_switches")
 async def update_stage28_kill_switches(payload: dict = Body(default={})):
     service = AuroraStage28TraitsKillSwitchService()
-    if payload.get("mode") is not None:
-        await service.set_mode(payload.get("mode"))
-    if payload.get("nlp_mode") is not None:
-        await service.set_nlp_mode(payload.get("nlp_mode"))
-    if payload.get("coldstart_mode") is not None:
-        await service.set_coldstart_mode(payload.get("coldstart_mode"))
+    mode = payload.get("mode")
+    if mode is not None:
+        await service.set_mode(mode)
+    nlp_mode = payload.get("nlp_mode")
+    if nlp_mode is not None:
+        await service.set_nlp_mode(nlp_mode)
+    coldstart_mode = payload.get("coldstart_mode")
+    if coldstart_mode is not None:
+        await service.set_coldstart_mode(coldstart_mode)
     return await get_stage28_kill_switches()
 
 
@@ -494,14 +499,18 @@ async def get_stage29_kill_switches():
 @audit_admin_action(category="kill_switch", risk="high", action="update_stage29_kill_switches")
 async def update_stage29_kill_switches(payload: dict = Body(default={})):
     service = AuroraStage29SRLKillSwitchService()
-    if payload.get("mode") is not None:
-        await service.set_mode(payload.get("mode"))
-    if payload.get("tracker_mode") is not None:
-        await service.set_tracker_mode(payload.get("tracker_mode"))
-    if payload.get("bridge_mode") is not None:
-        await service.set_bridge_mode(payload.get("bridge_mode"))
-    if payload.get("scaffolding_consume_mode") is not None:
-        await service.set_scaffolding_consume_mode(payload.get("scaffolding_consume_mode"))
+    mode = payload.get("mode")
+    if mode is not None:
+        await service.set_mode(mode)
+    tracker_mode = payload.get("tracker_mode")
+    if tracker_mode is not None:
+        await service.set_tracker_mode(tracker_mode)
+    bridge_mode = payload.get("bridge_mode")
+    if bridge_mode is not None:
+        await service.set_bridge_mode(bridge_mode)
+    scaffolding_consume_mode = payload.get("scaffolding_consume_mode")
+    if scaffolding_consume_mode is not None:
+        await service.set_scaffolding_consume_mode(scaffolding_consume_mode)
     return {"status": "ok", "flags": await service.summary()}
 
 
@@ -512,10 +521,7 @@ async def get_stage30_kill_switches():
     return {
         "flags": {
             "mode": await service.get_mode(),
-            **{
-                feature: await service.get_feature_mode(feature)
-                for feature in service.FEATURE_BINDINGS
-            },
+            **{feature: await service.get_feature_mode(feature) for feature in service.FEATURE_BINDINGS},
         }
     }
 
@@ -525,11 +531,13 @@ async def get_stage30_kill_switches():
 @audit_admin_action(category="kill_switch", risk="high", action="update_stage30_kill_switches")
 async def update_stage30_kill_switches(payload: dict = Body(default={})):
     service = AuroraStage30MetacognitionKillSwitchService()
-    if payload.get("mode") is not None:
-        await service.set_mode(payload.get("mode"))
+    mode = payload.get("mode")
+    if mode is not None:
+        await service.set_mode(mode)
     for feature in service.FEATURE_BINDINGS:
-        if payload.get(feature) is not None:
-            await service.set_feature_mode(feature, payload.get(feature))
+        feature_mode = payload.get(feature)
+        if feature_mode is not None:
+            await service.set_feature_mode(feature, feature_mode)
     return await get_stage30_kill_switches()
 
 
@@ -545,8 +553,9 @@ async def get_stage31_kill_switches():
 @audit_admin_action(category="kill_switch", risk="high", action="update_stage31_kill_switches")
 async def update_stage31_kill_switches(payload: dict = Body(default={})):
     service = AuroraStage31IdiographicKillSwitchService()
-    if payload.get("mode") is not None:
-        await service.set_mode(payload.get("mode"))
+    mode = payload.get("mode")
+    if mode is not None:
+        await service.set_mode(mode)
     return {"status": "ok", "flags": {"mode": await service.get_mode()}}
 
 
@@ -561,11 +570,13 @@ async def get_stage33_kill_switches():
 @audit_admin_action(category="kill_switch", risk="high", action="update_stage33_kill_switches")
 async def update_stage33_kill_switches(payload: dict = Body(default={})):
     service = AuroraStage33KillSwitchService()
-    if payload.get("mode") is not None:
-        await service.set_mode(payload.get("mode"))
+    mode = payload.get("mode")
+    if mode is not None:
+        await service.set_mode(mode)
     for feature in service.FEATURE_BINDINGS:
-        if payload.get(feature) is not None:
-            await service.set_feature_mode(feature, payload.get(feature))
+        feature_mode = payload.get(feature)
+        if feature_mode is not None:
+            await service.set_feature_mode(feature, feature_mode)
     return {"status": "ok", "flags": await service.summary()}
 
 

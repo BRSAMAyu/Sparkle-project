@@ -78,7 +78,8 @@ class SRLPhaseHint:
             return None
 
         try:
-            confidence = round(float(payload.get("confidence") or 0.0), 4)
+            raw_confidence = payload.get("confidence")
+            confidence = round(float(raw_confidence) if raw_confidence is not None else 0.0, 4)
         except Exception:
             confidence = 0.0
 

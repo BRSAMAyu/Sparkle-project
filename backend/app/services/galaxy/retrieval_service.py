@@ -4,7 +4,7 @@ import asyncio
 import re
 import time
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any, Sequence, cast
 from uuid import UUID
 
 from loguru import logger
@@ -55,6 +55,7 @@ KNOWLEDGE_VERSION_CACHE_KEY = "knowledge:version:v1"
 _LEX_WORD_RE = re.compile(r"[A-Za-z0-9_]{2,}|[\u4e00-\u9fff]+")
 _CJK_RUN_RE = re.compile(r"[\u4e00-\u9fff]+$")
 
+
 def extract_lexical_tokens(query: str, *, max_tokens: int = 8) -> list[str]:
     """把查询拆成词法检索 token（去重、保序、截断）。"""
     tokens: list[str] = []
@@ -68,6 +69,7 @@ def extract_lexical_tokens(query: str, *, max_tokens: int = 8) -> list[str]:
                 if bigram not in tokens:
                     tokens.append(bigram)
     return tokens[:max_tokens]
+
 
 class KnowledgeRetrievalService:
     def __init__(self, db: AsyncSession):
@@ -156,7 +158,9 @@ class KnowledgeRetrievalService:
 
         version = await self._compute_knowledge_version()
         if version:
-            await cache_service.set(KNOWLEDGE_VERSION_CACHE_KEY, version, ttl=settings.KNOWLEDGE_VERSION_CACHE_TTL_SECONDS)
+            await cache_service.set(
+                KNOWLEDGE_VERSION_CACHE_KEY, version, ttl=settings.KNOWLEDGE_VERSION_CACHE_TTL_SECONDS
+            )
         return version
 
     async def _compute_knowledge_version(self) -> str | None:
@@ -196,13 +200,15 @@ class KnowledgeRetrievalService:
         subject_id: int | None = None,
         limit: int = 5,
         threshold: float = 0.6,
-        use_reranker: bool = True
+        use_reranker: bool = True,
     ) -> list[SearchResultItem]:
         """
         RAG v2.0 Hybrid Search with Cache Stampede Protection.
         """
         if not semantic_cache_service:
-            return await self._execute_hybrid_search(user_id, query, vector_query, subject_id, limit, threshold, use_reranker)
+            return await self._execute_hybrid_search(
+                user_id, query, vector_query, subject_id, limit, threshold, use_reranker
+            )
 
         knowledge_version = await self._get_knowledge_version()
 
@@ -214,7 +220,7 @@ class KnowledgeRetrievalService:
         return await semantic_cache_service.get_with_lock(
             query=query,
             factory_func=self._execute_hybrid_search,
-            user_id=str(user_id), # Optional: could be global if knowledge is shared
+            user_id=str(user_id),  # Optional: could be global if knowledge is shared
             similarity_threshold=settings.SEMANTIC_CACHE_SIM_THRESHOLD,
             knowledge_version=knowledge_version,
             embedding_version=embedding_service.current_embedding_version(),
@@ -226,7 +232,7 @@ class KnowledgeRetrievalService:
             subject_id=subject_id,
             limit=limit,
             threshold=threshold,
-            use_reranker=use_reranker
+            use_reranker=use_reranker,
         )
 
     async def _execute_hybrid_search(
@@ -290,11 +296,7 @@ class KnowledgeRetrievalService:
             .dialect(2)
         )
 
-        vector_task = redis_search_client.hybrid_search(
-            text_query="*",
-            vector=query_embedding,
-            top_k=vector_limit
-        )
+        vector_task = redis_search_client.hybrid_search(text_query="*", vector=query_embedding, top_k=vector_limit)
         keyword_task = redis_search_client.search(bm25_q)
 
         try:
@@ -307,13 +309,17 @@ class KnowledgeRetrievalService:
             logger.warning("Redis hybrid search timed out, fallback_enabled={}", settings.ENABLE_REDIS_HYBRID_FALLBACK)
             RETRIEVAL_TIMEOUT_TOTAL.labels(source="redis_hybrid", stage="retrieve").inc()
             if settings.ENABLE_REDIS_HYBRID_FALLBACK:
-                return await self._pgvector_fallback(user_id_uuid, query_str, subject_id, limit, threshold, use_reranker)
+                return await self._pgvector_fallback(
+                    user_id_uuid, query_str, subject_id, limit, threshold, use_reranker
+                )
             raise
         except Exception as e:
             logger.warning(f"Redis hybrid search failed: {e}, fallback_enabled={settings.ENABLE_REDIS_HYBRID_FALLBACK}")
             RETRIEVAL_ERROR_TOTAL.labels(source="redis_hybrid", stage="retrieve").inc()
             if settings.ENABLE_REDIS_HYBRID_FALLBACK:
-                return await self._pgvector_fallback(user_id_uuid, query_str, subject_id, limit, threshold, use_reranker)
+                return await self._pgvector_fallback(
+                    user_id_uuid, query_str, subject_id, limit, threshold, use_reranker
+                )
             raise
 
         vec_docs = vector_res.docs if vector_res else []
@@ -370,13 +376,9 @@ class KnowledgeRetrievalService:
         stmt = (
             select(KnowledgeNode, UserNodeStatus)
             .outerjoin(
-                UserNodeStatus,
-                (UserNodeStatus.node_id == KnowledgeNode.id) & (UserNodeStatus.user_id == user_id_uuid)
+                UserNodeStatus, (UserNodeStatus.node_id == KnowledgeNode.id) & (UserNodeStatus.user_id == user_id_uuid)
             )
-            .options(
-                selectinload(KnowledgeNode.subject),
-                selectinload(KnowledgeNode.parent)
-            )
+            .options(selectinload(KnowledgeNode.subject), selectinload(KnowledgeNode.parent))
             .where(KnowledgeNode.id.in_(parent_ids))
         )
         result = await self.db.execute(stmt)
@@ -410,13 +412,9 @@ class KnowledgeRetrievalService:
         stmt = (
             select(KnowledgeNode, UserNodeStatus)
             .outerjoin(
-                UserNodeStatus,
-                (UserNodeStatus.node_id == KnowledgeNode.id) & (UserNodeStatus.user_id == user_id_uuid)
+                UserNodeStatus, (UserNodeStatus.node_id == KnowledgeNode.id) & (UserNodeStatus.user_id == user_id_uuid)
             )
-            .options(
-                selectinload(KnowledgeNode.subject),
-                selectinload(KnowledgeNode.parent)
-            )
+            .options(selectinload(KnowledgeNode.subject), selectinload(KnowledgeNode.parent))
             .where(KnowledgeNode.id.in_(node_ids))
         )
         result = await self.db.execute(stmt)
@@ -462,9 +460,7 @@ class KnowledgeRetrievalService:
             RETRIEVAL_ERROR_TOTAL.labels(source="pgvector_fallback", stage="retrieve").inc()
             return []
 
-        RAG_RETRIEVAL_LATENCY.labels(source="pgvector_fallback", stage="retrieve").observe(
-            time.time() - fallback_start
-        )
+        RAG_RETRIEVAL_LATENCY.labels(source="pgvector_fallback", stage="retrieve").observe(time.time() - fallback_start)
 
         if not candidates:
             logger.info("pgvector fallback returned no candidates, trying keyword fallback")
@@ -488,9 +484,7 @@ class KnowledgeRetrievalService:
         else:
             reranked = candidates[:limit]
 
-        RAG_RETRIEVAL_LATENCY.labels(source="pgvector_fallback", stage="rerank").observe(
-            time.time() - rerank_start
-        )
+        RAG_RETRIEVAL_LATENCY.labels(source="pgvector_fallback", stage="rerank").observe(time.time() - rerank_start)
 
         results = await self._build_results_from_nodes(reranked, user_id_uuid)
         if results:
@@ -508,7 +502,7 @@ class KnowledgeRetrievalService:
         limit: int = 5,
         threshold: float = 0.6,
         include_group_documents: bool = False,
-        group_ids: list[UUID | str] | None = None,
+        group_ids: Sequence[UUID | str] | None = None,
     ) -> list[DocumentChunkResult]:
         """
         Vector search over document chunks with forced file scope.
@@ -534,7 +528,7 @@ class KnowledgeRetrievalService:
                 StoredFile.file_name,
                 GroupFile.group_id,
                 GroupFile.shared_by_id,
-                DocumentChunk.embedding.cosine_distance(query_embedding).label("distance")
+                DocumentChunk.embedding.cosine_distance(query_embedding).label("distance"),
             )
             .join(StoredFile, StoredFile.id == DocumentChunk.file_id)
             .outerjoin(
@@ -609,7 +603,7 @@ class KnowledgeRetrievalService:
         file_ids: list[UUID],
         limit: int = 5,
         include_group_documents: bool = False,
-        group_ids: list[UUID | str] | None = None,
+        group_ids: Sequence[UUID | str] | None = None,
     ) -> list[DocumentChunkResult]:
         """E-05: 纯词法（稀疏）检索 document_chunks，与向量检索同权限边界。
 
@@ -716,7 +710,7 @@ class KnowledgeRetrievalService:
         threshold: float = 0.4,
         use_reranker: bool = True,
         include_group_documents: bool = False,
-        group_ids: list[UUID | str] | None = None,
+        group_ids: Sequence[UUID | str] | None = None,
         exec_meta: dict[str, Any] | None = None,
     ) -> list[DocumentChunkResult]:
         """E-05: hybrid lexical + vector 检索（RRF 融合，可选 rerank）。
@@ -761,9 +755,7 @@ class KnowledgeRetrievalService:
             group_ids=group_ids,
         )
 
-        vector_results, lexical_results = await asyncio.gather(
-            vector_task, lexical_task, return_exceptions=True
-        )  # type: ignore[assignment]
+        vector_results, lexical_results = await asyncio.gather(vector_task, lexical_task, return_exceptions=True)  # type: ignore[assignment]
 
         vector_side_failed = False
         lexical_side_failed = False
@@ -827,11 +819,7 @@ class KnowledgeRetrievalService:
         return final_chunks
 
     async def semantic_search_nodes(
-        self,
-        query: str,
-        subject_id: int | None = None,
-        limit: int = 10,
-        threshold: float = 0.3
+        self, query: str, subject_id: int | None = None, limit: int = 10, threshold: float = 0.3
     ) -> list[KnowledgeNode]:
         """Internal semantic search that returns KnowledgeNode models."""
         ranked_nodes = await self.semantic_search_ranked_nodes(
@@ -859,14 +847,8 @@ class KnowledgeRetrievalService:
         query_embedding = await embedding_service.get_embedding(query, text_type="query")
 
         search_query = (
-            select(
-                KnowledgeNode,
-                KnowledgeNode.embedding.cosine_distance(query_embedding).label('distance')
-            )
-            .options(
-                selectinload(KnowledgeNode.subject),
-                selectinload(KnowledgeNode.parent)
-            )
+            select(KnowledgeNode, KnowledgeNode.embedding.cosine_distance(query_embedding).label("distance"))
+            .options(selectinload(KnowledgeNode.subject), selectinload(KnowledgeNode.parent))
             .where(KnowledgeNode.embedding.isnot(None))
             .where(or_(KnowledgeNode.status.is_(None), KnowledgeNode.status == "published"))
             # E-05: 版本隔离——不同 embedding 模型的节点向量不参与当前查询
@@ -876,11 +858,7 @@ class KnowledgeRetrievalService:
         if subject_id:
             search_query = search_query.where(KnowledgeNode.subject_id == subject_id)
 
-        search_query = (
-            search_query
-            .order_by('distance')
-            .limit(limit)
-        )
+        search_query = search_query.order_by("distance").limit(limit)
 
         try:
             result = await self.db.execute(search_query)
@@ -901,11 +879,7 @@ class KnowledgeRetrievalService:
         return ranked_matches
 
     async def keyword_search(
-        self,
-        user_id: UUID,
-        query: str,
-        subject_id: int | None = None,
-        limit: int = 20
+        self, user_id: UUID, query: str, subject_id: int | None = None, limit: int = 20
     ) -> list[KnowledgeNode]:
         """Keyword search for nodes (Sparse Retrieval).
 
@@ -925,9 +899,10 @@ class KnowledgeRetrievalService:
         # 3. jsonb_path_exists for partial keyword match
         # Escape LIKE wildcards and regex metacharacters to prevent injection
         # Both ILIKE patterns and jsonb_path_exists regex are vulnerable
-        escaped_query = query.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+        escaped_query = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         # For regex injection in jsonb_path_exists, also escape regex special chars
         import re
+
         regex_safe_query = re.escape(query)
 
         # R6-P0-7: tenant isolation — node must be seed OR user has UserNodeStatus
@@ -942,19 +917,15 @@ class KnowledgeRetrievalService:
 
         stmt = (
             select(KnowledgeNode)
-            .options(
-                selectinload(KnowledgeNode.subject),
-                selectinload(KnowledgeNode.parent)
-            )
+            .options(selectinload(KnowledgeNode.subject), selectinload(KnowledgeNode.parent))
             .where(
                 or_(
                     KnowledgeNode.name.ilike(f"%{escaped_query}%"),
                     KnowledgeNode.description.ilike(f"%{escaped_query}%"),
                     KnowledgeNode.keywords.contains([query]),
                     func.jsonb_path_exists(
-                        KnowledgeNode.keywords,
-                        f'$[*] ? (@ like_regex "{regex_safe_query}" flag "i")'
-                    )
+                        KnowledgeNode.keywords, f'$[*] ? (@ like_regex "{regex_safe_query}" flag "i")'
+                    ),
                 )
             )
             .where(or_(KnowledgeNode.status.is_(None), KnowledgeNode.status == "published"))
@@ -974,21 +945,19 @@ class KnowledgeRetrievalService:
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
-
     # --- Helpers ---
     async def get_user_node_status(self, user_id: UUID, node_id: UUID) -> UserNodeStatus | None:
         """Public alias for _get_user_status."""
         return await self._get_user_status(user_id, node_id)
 
     async def _get_user_status(self, user_id: UUID, node_id: UUID) -> UserNodeStatus | None:
-        stmt = select(UserNodeStatus).where(
-            UserNodeStatus.user_id == user_id,
-            UserNodeStatus.node_id == node_id
-        )
+        stmt = select(UserNodeStatus).where(UserNodeStatus.user_id == user_id, UserNodeStatus.node_id == node_id)
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
-    def _format_search_result(self, node: KnowledgeNode, status: UserNodeStatus | None, score: float) -> SearchResultItem:
+    def _format_search_result(
+        self, node: KnowledgeNode, status: UserNodeStatus | None, score: float
+    ) -> SearchResultItem:
         node_base = NodeBase.from_model(node)
 
         user_status_info = None
@@ -996,13 +965,17 @@ class KnowledgeRetrievalService:
             # Note: We duplicate logic from StatsService for formatting to avoid circular deps
             # Ideally this formatting logic belongs to a Schema Mapper
             brightness = 0.3 + (status.mastery_score / 100.0) * 0.7
-            if not status.is_unlocked: brightness = 0.2
+            if not status.is_unlocked:
+                brightness = 0.2
 
             from app.schemas.galaxy import NodeStatus
+
             visual_status = NodeStatus.UNLIT
             if status.is_unlocked:
-                if status.mastery_score >= 80: visual_status = NodeStatus.BRILLIANT
-                elif status.mastery_score > 0: visual_status = NodeStatus.GLIMMER
+                if status.mastery_score >= 80:
+                    visual_status = NodeStatus.BRILLIANT
+                elif status.mastery_score > 0:
+                    visual_status = NodeStatus.GLIMMER
             else:
                 visual_status = NodeStatus.LOCKED
 
@@ -1018,14 +991,10 @@ class KnowledgeRetrievalService:
                 next_review_at=status.next_review_at,
                 decay_paused=status.decay_paused,
                 status=visual_status,
-                brightness=brightness
+                brightness=brightness,
             )
 
-        return SearchResultItem(
-            node=node_base,
-            similarity=score,
-            user_status=user_status_info
-        )
+        return SearchResultItem(node=node_base, similarity=score, user_status=user_status_info)
 
 
 @dataclass

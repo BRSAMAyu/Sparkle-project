@@ -1,6 +1,7 @@
 """
 CommunitySignalBridge - bridge high-value community signals back into personal systems.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -418,8 +419,7 @@ class CommunitySignalBridge:
         values: list[float] = []
         # Batch query: extract contributor IDs, check all at once
         contributor_ids = [
-            item["user_id"] for item in contributor_values
-            if isinstance(item, dict) and item.get("user_id")
+            item["user_id"] for item in contributor_values if isinstance(item, dict) and item.get("user_id")
         ]
         if not contributor_ids:
             # No dict items with user_id - process non-dict values only
@@ -433,8 +433,9 @@ class CommunitySignalBridge:
 
         # Batch query for community intelligence settings
         settings_result = await self.db.execute(
-            select(UserSettings.user_id, UserSettings.community_intelligence_enabled)
-            .where(UserSettings.user_id.in_(contributor_ids))
+            select(UserSettings.user_id, UserSettings.community_intelligence_enabled).where(
+                UserSettings.user_id.in_(contributor_ids)
+            )
         )
         opted_in = {row[0] for row in settings_result.all() if row[1]}
         opted_out = {row[0] for row in settings_result.all() if not row[1]}
@@ -451,6 +452,8 @@ class CommunitySignalBridge:
                 raw_value = item.get("value")
             else:
                 raw_value = item
+            if raw_value is None:
+                continue
             try:
                 values.append(float(raw_value))
             except (TypeError, ValueError):
@@ -532,7 +535,9 @@ class CommunitySignalBridge:
         cohort = result.get("cohort") or {}
         stat = result.get("stat") or {}
         record = CommunityAggregateSignal(
-            signal_id=str(result.get("observation", {}).get("observation_id") or f"cas_{datetime.now(UTC).timestamp()}"),
+            signal_id=str(
+                result.get("observation", {}).get("observation_id") or f"cas_{datetime.now(UTC).timestamp()}"
+            ),
             cohort_id=str(cohort.get("cohort_id") or ""),
             cohort_key=self._cohort_key(cohort_criteria),
             cohort_criteria=cohort_criteria,
@@ -541,7 +546,7 @@ class CommunitySignalBridge:
             cohort_size=int(stat.get("cohort_size") or 0),
             min_cohort_size=int(stat.get("min_cohort_size") or 5),
             privacy_tier=str(cohort.get("privacy_tier") or "suppressed"),
-            value=float(stat.get("value")) if stat.get("value") is not None else None,
+            value=(float(value_raw) if (value_raw := stat.get("value")) is not None else None),
             noise_std=float(stat.get("noise_std") or 0.0),
             confidence_interval=stat.get("confidence_interval") or [],
             pattern=result.get("pattern") or {},

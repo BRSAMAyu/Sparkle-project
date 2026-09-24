@@ -6,7 +6,7 @@ import re
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timedelta
-from typing import Any, cast
+from typing import Any, TypedDict, cast
 from uuid import UUID
 
 from loguru import logger
@@ -166,6 +166,19 @@ def _listish(value: Any) -> list[Any]:
     if isinstance(value, list | tuple | set):
         return [item for item in value if item not in (None, "")]
     return [value] if value not in (None, "") else []
+
+
+class _BottleneckAnalysisKwargs(TypedDict):
+    """Keyword contract of BottleneckAnalyzer.analyze / _rule_fallback."""
+
+    subject: str
+    knowledge_baseline: str
+    time_constraint_days: int
+    daily_available_hours: float
+    galaxy_weak_nodes: list[Any]
+    available_materials: list[str]
+    blocked_days: list[str]
+    open_tensions: list[str]
 
 
 def _safe_int(value: Any) -> int | None:
@@ -420,7 +433,9 @@ class PlanningWorkflowManager:
             has_planning_verb or has_goal_commitment or (asks_for_help and (has_goal or has_subject))
         )
 
-    async def get_active_session(self, chat_session_id: str, user_id: str | UUID | None = None) -> PlanningSession | None:
+    async def get_active_session(
+        self, chat_session_id: str, user_id: str | UUID | None = None
+    ) -> PlanningSession | None:
         if not self.redis or not chat_session_id:
             return None
         user_prefix = f"{str(user_id)}:" if user_id else ""
@@ -442,7 +457,7 @@ class PlanningWorkflowManager:
     async def save_session(self, session: PlanningSession) -> None:
         if not self.redis:
             return
-        user_prefix = f"{session.user_id}:" if getattr(session, 'user_id', None) else ""
+        user_prefix = f"{session.user_id}:" if getattr(session, "user_id", None) else ""
         await self.redis.setex(
             f"{PLANNING_SESSION_PREFIX.format(user_id=user_prefix)}{session.chat_session_id}",
             PLANNING_SESSION_TTL,
@@ -1015,19 +1030,23 @@ class PlanningWorkflowManager:
         plan_directive = None
         try:
             from app.signals.spine_orchestrator import get_spine_orchestrator
+
             spine = get_spine_orchestrator(cache_service.redis)
             plan_directive = await spine.get_plan_directive(str(user_id))
             if plan_directive:
-                logger.info("Spine plan_directive active for user {}: action={} constraints={}", user_id, plan_directive.plan_action, list(plan_directive.constraints.keys()))
+                logger.info(
+                    "Spine plan_directive active for user {}: action={} constraints={}",
+                    user_id,
+                    plan_directive.plan_action,
+                    list(plan_directive.constraints.keys()),
+                )
         except Exception as _spine_exc:
             logger.debug("Spine directive fetch skipped: {}", _spine_exc)
 
         # MAGIC-006: load community cohort mistakes for template injection
         _cohort_hints: list[dict[str, Any]] = []
         try:
-            _hint_raw = await cache_service.redis.get(
-                f"spine:community_loop:{str(user_id)}:cohort_mistake_hint:latest"
-            )
+            _hint_raw = await cache_service.redis.get(f"spine:community_loop:{str(user_id)}:cohort_mistake_hint:latest")
             if _hint_raw:
                 _hint_data = json.loads(_hint_raw)
                 if isinstance(_hint_data, dict):
@@ -1095,7 +1114,8 @@ class PlanningWorkflowManager:
                 if spine is not None:
                     try:
                         day_spec, _spine_audit = await spine.apply_directive_to_task_spec(
-                            str(user_id), day_spec,
+                            str(user_id),
+                            day_spec,
                         )
                         if _spine_audit and not _spine_audit.applied:
                             logger.warning("Spine audit violation: {}", _spine_audit.violations)
@@ -1109,16 +1129,19 @@ class PlanningWorkflowManager:
                 # skill matches the user's context.
                 try:
                     from app.signals.spine_orchestrator import get_spine_orchestrator as _Spine
+
                     _skill_spine = _Spine(cache_service.redis)
                     _skill_result = await _skill_spine.inject_skill_to_task(
-                        str(user_id), day_spec,
+                        str(user_id),
+                        day_spec,
                         {"goal_type": strategy.get("goal_type", ""), "sprint_policy": sprint_policy},
                     )
                     if _skill_result and _skill_result.get("_skill_injection"):
                         day_spec = _skill_result
                         logger.info(
                             "Skill injection applied to day {} for user {}: {}",
-                            day_spec.get("day"), user_id,
+                            day_spec.get("day"),
+                            user_id,
                             _skill_result.get("_skill_injection", {}).get("strategy_summary", ""),
                         )
                 except Exception as _skill_exc:
@@ -1131,13 +1154,13 @@ class PlanningWorkflowManager:
                     _day_focus = (day_spec.get("focus") or "").lower()
                     for _hint in _cohort_hints:
                         _affected = set(_hint.get("affected_nodes") or [])
-                        if _affected & _day_node_ids or any(
-                            _n.lower() in _day_focus for _n in _affected
-                        ):
-                            day_spec.setdefault("_community_mistakes", []).append({
-                                "tip": _hint.get("tip", ""),
-                                "summary": _hint.get("anonymous_summary", ""),
-                            })
+                        if _affected & _day_node_ids or any(_n.lower() in _day_focus for _n in _affected):
+                            day_spec.setdefault("_community_mistakes", []).append(
+                                {
+                                    "tip": _hint.get("tip", ""),
+                                    "summary": _hint.get("anonymous_summary", ""),
+                                }
+                            )
                             break
 
                 guide_json = self._build_task_guide_json(
@@ -1160,10 +1183,9 @@ class PlanningWorkflowManager:
                     db=db,
                     obj_in=TaskCreate(
                         title=(
-                            f"Day {day_spec['day']} · {_strip(phase.get('label'))}"
-                            f" - {self._task_title_focus(day_spec)}"
+                            f"Day {day_spec['day']} · {_strip(phase.get('label'))} - {self._task_title_focus(day_spec)}"
                         ),
-                        type=coerce_task_type(_task_type_for_day_spec(day_spec)),
+                        type=coerce_task_type(_task_type_for_day_spec(day_spec), default=TaskType.LEARNING),
                         plan_id=plan.id,
                         estimated_minutes=max(
                             _safe_int(day_spec.get("estimated_minutes"))
@@ -1386,7 +1408,7 @@ class PlanningWorkflowManager:
             db=db,
             obj_in=TaskCreate(
                 title=title,
-                type=coerce_task_type("error_fix"),
+                type=coerce_task_type("error_fix", default=TaskType.ERROR_FIX),
                 plan_id=plan.id,
                 tags=self._repair_task_tags(day_number, node_ref, error_cause_category),
                 estimated_minutes=15,
@@ -2209,7 +2231,9 @@ class PlanningWorkflowManager:
             for attachment in list(doc.get("node_attachments") or []):
                 if not isinstance(attachment, dict):
                     continue
-                anchor = self._material_anchor_from_attachment(doc=doc, attachment=attachment, section_lookup=section_lookup)
+                anchor = self._material_anchor_from_attachment(
+                    doc=doc, attachment=attachment, section_lookup=section_lookup
+                )
                 score = self._material_anchor_score(anchor=anchor, query_keys=query_keys, doc_preferred=preferred)
                 if score <= 0:
                     continue
@@ -2241,8 +2265,13 @@ class PlanningWorkflowManager:
 
         deduped: list[dict[str, Any]] = []
         seen_keys: set[tuple[str, str]] = set()
-        for anchor in sorted(candidates, key=lambda item: (-int(item.get("score") or 0), _strip(item.get("chapter_ref")))):
-            dedupe_key = (_strip(anchor.get("file_id")), _strip(anchor.get("chapter_ref")) or _strip(anchor.get("node_name")))
+        for anchor in sorted(
+            candidates, key=lambda item: (-int(item.get("score") or 0), _strip(item.get("chapter_ref")))
+        ):
+            dedupe_key = (
+                _strip(anchor.get("file_id")),
+                _strip(anchor.get("chapter_ref")) or _strip(anchor.get("node_name")),
+            )
             if dedupe_key in seen_keys:
                 continue
             seen_keys.add(dedupe_key)
@@ -2253,9 +2282,13 @@ class PlanningWorkflowManager:
         if deduped:
             return deduped, None
 
-        topic_summary = self._format_compact_list(
-            [_strip(item) for item in list(subject_strategy.get("node_labels") or []) if _strip(item)]
-        ) or _strip(spec.get("title_focus")) or _strip(spec.get("focus"))
+        topic_summary = (
+            self._format_compact_list(
+                [_strip(item) for item in list(subject_strategy.get("node_labels") or []) if _strip(item)]
+            )
+            or _strip(spec.get("title_focus"))
+            or _strip(spec.get("focus"))
+        )
         if topic_summary:
             return [], f"你上传的资料里还没有能直接覆盖 {topic_summary} 的章节材料。"
         return [], "你上传的资料还没有和今天任务直接对齐的章节材料。"
@@ -2316,7 +2349,9 @@ class PlanningWorkflowManager:
         if node_labels:
             why_parts.append(f"直接针对考试高频节点：{'、'.join(node_labels[:4])}")
         if error_clusters:
-            cluster_names = "、".join(_strip(e.get("label", "")) for e in error_clusters[:2] if _strip(e.get("label", "")))
+            cluster_names = "、".join(
+                _strip(e.get("label", "")) for e in error_clusters[:2] if _strip(e.get("label", ""))
+            )
             if cluster_names:
                 why_parts.append(f"修复已发现的错因：{cluster_names}")
         if pack_why_now:
@@ -2397,7 +2432,9 @@ class PlanningWorkflowManager:
             for item in list((day_spec or {}).get("material_anchors") or [])
             if isinstance(item, dict) and _strip(item.get("file_name") or item.get("chapter_ref"))
         ]
-        primary_material = _as_dict((day_spec or {}).get("primary_material_anchor") or (material_anchors[0] if material_anchors else {}))
+        primary_material = _as_dict(
+            (day_spec or {}).get("primary_material_anchor") or (material_anchors[0] if material_anchors else {})
+        )
         material_gap_note = _strip((day_spec or {}).get("material_gap_note"))
         material_label = self._format_material_anchor(primary_material) if primary_material else ""
         contract = self._build_daily_task_contract(
@@ -2797,7 +2834,9 @@ class PlanningWorkflowManager:
         )
         session.collected["study_material_context"] = summary
 
-        existing_materials = [_strip(item) for item in _listish(session.collected.get("available_materials")) if _strip(item)]
+        existing_materials = [
+            _strip(item) for item in _listish(session.collected.get("available_materials")) if _strip(item)
+        ]
         for filename in list(summary.get("available_materials") or []):
             label = _strip(filename)
             if label and label not in existing_materials:
@@ -2820,13 +2859,13 @@ class PlanningWorkflowManager:
             # R8-P1-01: Add timeout protection for LLM call
             async with asyncio.timeout(15):
                 task_summaries = [
-                {
-                    "title": task.title,
-                    "estimated_minutes": task.estimated_minutes,
-                    "why_now": _as_dict(task.guide_json).get("why_now"),
-                }
-                for task in tasks[:4]
-            ]
+                    {
+                        "title": task.title,
+                        "estimated_minutes": task.estimated_minutes,
+                        "why_now": _as_dict(task.guide_json).get("why_now"),
+                    }
+                    for task in tasks[:4]
+                ]
             result = await llm_service.reason_json(
                 messages=[
                     {
@@ -3252,7 +3291,7 @@ class PlanningWorkflowManager:
             for item in _listish(brief.get("available_materials") or session.collected.get("available_materials"))
         ]
         open_tensions = [_strip(item) for item in _listish(brief.get("open_tensions"))]
-        analysis_kwargs = {
+        analysis_kwargs: _BottleneckAnalysisKwargs = {
             "subject": subject,
             "knowledge_baseline": baseline,
             "time_constraint_days": days,
@@ -4722,16 +4761,14 @@ class PlanningWorkflowManager:
                 spec["estimated_minutes"] = adjusted_minutes
                 receipt = {
                     "applied": True,
-                    "reason": (
-                        "未来 3 天日程较满，已降低当天任务强度，避免把时间压力误判成执行力问题。"
-                    ),
+                    "reason": ("未来 3 天日程较满，已降低当天任务强度，避免把时间压力误判成执行力问题。"),
                     "available_minutes": available_minutes,
                     "original_estimated_minutes": current_minutes,
                     "adjusted_estimated_minutes": adjusted_minutes,
                 }
                 spec["calendar_capacity_receipt"] = receipt
                 method_steps = [_strip(item) for item in list(spec.get("method_steps") or []) if _strip(item)]
-                note = receipt["reason"]
+                note = str(receipt["reason"])
                 if note not in method_steps:
                     method_steps.append(note)
                 if method_steps:

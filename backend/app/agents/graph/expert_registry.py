@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import Any
 
 from app.agents.graph.nodes.custom_expert import custom_expert_node
 from app.agents.graph.nodes.deep_analyst import deep_analyst_node
@@ -20,7 +21,9 @@ from app.services.custom_expert_service import is_custom_expert_id
 class GraphExpertSpec:
     expert_id: str
     node_name: str
-    node_handler: Callable[[SparkleState], dict]
+    # LangGraph 节点契约：全部节点均为 (state, config=...) 形态（config 由框架可选注入），
+    # 异步节点返回 coroutine 由框架 await，同步节点返回 dict
+    node_handler: Callable[[SparkleState, dict | None], Any]
     aliases: tuple[str, ...] = ()
     default_rank: int = 100
     supports_collaboration: bool = True
@@ -29,6 +32,7 @@ class GraphExpertSpec:
 @dataclass
 class SubjectPolicy:
     """Per-subject tuning policy exposed to router/planner/executor."""
+
     subject_id: str
     display_name: str
     aliases: tuple[str, ...] = ()
@@ -64,36 +68,60 @@ def list_subject_policies() -> list[SubjectPolicy]:
 
 
 def _init_default_subject_policies() -> None:
-    register_subject_policy(SubjectPolicy(
-        subject_id="math", display_name="Mathematics",
-        aliases=("高数", "数学", "线性代数", "概率论", "微积分", "calculus", "algebra"),
-        expert_id="math_agent", model_strategy="deep",
-    ))
-    register_subject_policy(SubjectPolicy(
-        subject_id="code", display_name="Programming",
-        aliases=("编程", "代码", "python", "java", "编程", "计算机", "cs"),
-        expert_id="code_agent", model_strategy="default",
-    ))
-    register_subject_policy(SubjectPolicy(
-        subject_id="writing", display_name="Writing",
-        aliases=("写作", "作文", "论文", "essay"),
-        expert_id="writing_agent", model_strategy="default",
-    ))
-    register_subject_policy(SubjectPolicy(
-        subject_id="science", display_name="Science",
-        aliases=("物理", "化学", "生物", "physics", "chemistry", "biology", "理科"),
-        expert_id="science_agent", model_strategy="deep",
-    ))
-    register_subject_policy(SubjectPolicy(
-        subject_id="english", display_name="English",
-        aliases=("英语", "英语四六级", "cet", "ielts", "toefl", "gre"),
-        expert_id=None, model_strategy="default",
-    ))
-    register_subject_policy(SubjectPolicy(
-        subject_id="exam", display_name="Exam Prep",
-        aliases=("考试", "期末", "期中", "备考", "高考", "考研", "finals", "midterm"),
-        expert_id="exam_oracle", model_strategy="deep",
-    ))
+    register_subject_policy(
+        SubjectPolicy(
+            subject_id="math",
+            display_name="Mathematics",
+            aliases=("高数", "数学", "线性代数", "概率论", "微积分", "calculus", "algebra"),
+            expert_id="math_agent",
+            model_strategy="deep",
+        )
+    )
+    register_subject_policy(
+        SubjectPolicy(
+            subject_id="code",
+            display_name="Programming",
+            aliases=("编程", "代码", "python", "java", "编程", "计算机", "cs"),
+            expert_id="code_agent",
+            model_strategy="default",
+        )
+    )
+    register_subject_policy(
+        SubjectPolicy(
+            subject_id="writing",
+            display_name="Writing",
+            aliases=("写作", "作文", "论文", "essay"),
+            expert_id="writing_agent",
+            model_strategy="default",
+        )
+    )
+    register_subject_policy(
+        SubjectPolicy(
+            subject_id="science",
+            display_name="Science",
+            aliases=("物理", "化学", "生物", "physics", "chemistry", "biology", "理科"),
+            expert_id="science_agent",
+            model_strategy="deep",
+        )
+    )
+    register_subject_policy(
+        SubjectPolicy(
+            subject_id="english",
+            display_name="English",
+            aliases=("英语", "英语四六级", "cet", "ielts", "toefl", "gre"),
+            expert_id=None,
+            model_strategy="default",
+        )
+    )
+    register_subject_policy(
+        SubjectPolicy(
+            subject_id="exam",
+            display_name="Exam Prep",
+            aliases=("考试", "期末", "期中", "备考", "高考", "考研", "finals", "midterm"),
+            expert_id="exam_oracle",
+            model_strategy="deep",
+        )
+    )
 
 
 _init_default_subject_policies()

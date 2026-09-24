@@ -72,6 +72,8 @@ def _registry_max_timeout_seconds() -> float | None:
         timeouts: list[float] = []
         for tool in tool_registry.get_all_tools():
             value = getattr(tool, "timeout_seconds", None)
+            if value is None:
+                continue
             try:
                 timeouts.append(float(value))
             except (TypeError, ValueError):

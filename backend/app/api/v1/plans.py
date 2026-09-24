@@ -450,6 +450,8 @@ def _initial_days_for_today(plan: Plan, tasks: list[Task]) -> int:
         strategy.get("total_days"),
         (plan.source_metadata or {}).get("initial_days_left") if isinstance(plan.source_metadata, dict) else None,
     ):
+        if candidate is None:
+            continue
         try:
             parsed = int(float(candidate))
         except (TypeError, ValueError):

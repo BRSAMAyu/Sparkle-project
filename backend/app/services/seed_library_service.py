@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger
-from sqlalchemy import String, and_, asc, cast, desc, func, insert, or_, select, text
+from sqlalchemy import ColumnElement, String, and_, asc, cast, desc, false, func, insert, or_, select
 from sqlalchemy import update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer, selectinload
@@ -111,13 +111,13 @@ class SeedLibraryService:
         category: str | None = None,
         language: str | None = None,
     ) -> list[uuid.UUID]:
-        conditions = [SeedLibrary.deleted_at.is_(None)]
+        conditions: list[ColumnElement[bool]] = [SeedLibrary.deleted_at.is_(None)]
         if category:
             conditions.append(SeedLibrary.category == category)
         if language:
             conditions.append(SeedLibrary.language == language)
 
-        visibility_conditions = [
+        visibility_conditions: list[ColumnElement[bool]] = [
             SeedLibrary.is_official.is_(True),
             SeedLibrary.visibility == LibraryVisibility.PUBLIC.value,
         ]
@@ -730,7 +730,7 @@ class SeedLibraryService:
             (库列表, 总数)
         """
         # 构建查询条件
-        conditions = [SeedLibrary.deleted_at.is_(None)]
+        conditions: list[ColumnElement[bool]] = [SeedLibrary.deleted_at.is_(None)]
 
         # 分类筛选
         if params.category:
@@ -746,12 +746,12 @@ class SeedLibraryService:
                     )
                 else:
                     # 未登录用户看不到私有库，返回空结果
-                    conditions.append(text("FALSE"))
+                    conditions.append(false())
             else:
                 conditions.append(SeedLibrary.visibility == params.visibility.value)
         else:
             # 默认显示公开库和官方库
-            public_conditions = [
+            public_conditions: list[ColumnElement[bool]] = [
                 SeedLibrary.visibility == LibraryVisibility.PUBLIC.value,
                 SeedLibrary.visibility == LibraryVisibility.OFFICIAL.value,
             ]
@@ -1028,7 +1028,7 @@ class SeedLibraryService:
         Returns:
             (内容项列表, 总数)
         """
-        conditions = [SeedItem.deleted_at.is_(None)]
+        conditions: list[ColumnElement[bool]] = [SeedItem.deleted_at.is_(None)]
 
         # 库筛选
         if params.library_id:
@@ -1133,9 +1133,7 @@ class SeedLibraryService:
         item.content = derived
         try:
             await db.execute(
-                sa_update(SeedItem)
-                .where(SeedItem.id == item.id)
-                .values(content=derived, updated_at=_utcnow())
+                sa_update(SeedItem).where(SeedItem.id == item.id).values(content=derived, updated_at=_utcnow())
             )
         except Exception as exc:
             logger.warning(f"Failed to persist derived content for seed item {item.id}: {exc}")
@@ -1383,7 +1381,10 @@ class SeedLibraryService:
         Returns:
             订阅列表
         """
-        conditions = [UserLibrarySubscription.user_id == user_id, UserLibrarySubscription.deleted_at.is_(None)]
+        conditions: list[ColumnElement[bool]] = [
+            UserLibrarySubscription.user_id == user_id,
+            UserLibrarySubscription.deleted_at.is_(None),
+        ]
 
         if is_enabled is not None:
             conditions.append(UserLibrarySubscription.is_enabled == is_enabled)
@@ -1562,7 +1563,7 @@ class SeedLibraryService:
         limit: int,
     ) -> tuple[list[SeedItem], int]:
         """关键词搜索内部实现"""
-        conditions = [SeedItem.deleted_at.is_(None), SeedItem.is_active]
+        conditions: list[ColumnElement[bool]] = [SeedItem.deleted_at.is_(None), SeedItem.is_active.is_(True)]
 
         if lib_ids:
             conditions.append(SeedItem.library_id.in_(lib_ids))
@@ -1824,11 +1825,7 @@ class SeedLibraryService:
                 example["output"] = item.content or ""
 
             if include_metadata:
-                item_tags = [
-                    str(tag).strip()
-                    for tag in list(item.tags or [])
-                    if str(tag).strip()
-                ]
+                item_tags = [str(tag).strip() for tag in list(item.tags or []) if str(tag).strip()]
                 example["tags"] = item_tags
                 example["seed_library_nodes"] = self._extract_example_node_ids(item.content_data, item_tags)
 
@@ -2038,7 +2035,7 @@ class SeedLibraryService:
         Returns:
             {"processed": n, "failed": m, "skipped": k}
         """
-        conditions = [
+        conditions: list[ColumnElement[bool]] = [
             SeedItem.deleted_at.is_(None),
             SeedItem.embedding.is_(None),
         ]

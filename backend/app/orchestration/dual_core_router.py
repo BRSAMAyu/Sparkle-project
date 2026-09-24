@@ -334,7 +334,9 @@ class DualCoreRouter:
             )
 
         if emotional_block:
-            cognitive_adjustments.append("Address the user's current emotional resistance before entering planning discussion.")
+            cognitive_adjustments.append(
+                "Address the user's current emotional resistance before entering planning discussion."
+            )
             recommend_strategy(
                 "session_mode",
                 "recovery",
@@ -346,21 +348,27 @@ class DualCoreRouter:
                 reason="High-friction turns need softer intervention intensity so the move stays reversible.",
             )
         if not goal_clear:
-            cognitive_adjustments.append("Help the user clarify goals, constraints, and success criteria before diving into specifics.")
+            cognitive_adjustments.append(
+                "Help the user clarify goals, constraints, and success criteria before diving into specifics."
+            )
             recommend_strategy(
                 "explanation_style",
                 "step_by_step",
                 reason="When the goal boundary is still blurry, the explanation path should slow down and clarify one step at a time.",
             )
         if procrastination_pattern:
-            cognitive_adjustments.append("Identify recent execution friction first, then narrow suggestions to easier-to-start actions.")
+            cognitive_adjustments.append(
+                "Identify recent execution friction first, then narrow suggestions to easier-to-start actions."
+            )
             recommend_strategy(
                 "difficulty_level",
                 2,
                 reason="Execution friction should lower the startup bar before the system asks for another push.",
             )
         if cognitive_mode_suggested:
-            cognitive_adjustments.append("Calibrate understanding gaps or conceptual blocks before deciding on an execution plan.")
+            cognitive_adjustments.append(
+                "Calibrate understanding gaps or conceptual blocks before deciding on an execution plan."
+            )
             recommend_strategy(
                 "explanation_style",
                 "step_by_step",
@@ -368,14 +376,18 @@ class DualCoreRouter:
             )
         cognitive_adjustments.extend(pattern_guidance["cognitive"])
         if routing_input.suggested_verbosity == "supportive":
-            cognitive_adjustments.append("Use a more supportive, lower-pressure tone; avoid framing suggestions as urgent must-dos.")
+            cognitive_adjustments.append(
+                "Use a more supportive, lower-pressure tone; avoid framing suggestions as urgent must-dos."
+            )
             recommend_strategy(
                 "push_vs_support",
                 0.25,
                 reason="Supportive delivery should reduce pressure and keep the tone on the user's side.",
             )
         if high_cognitive_load:
-            cognitive_adjustments.append("Cognitive load is currently high; reduce plan complexity first, then offer an easier next step.")
+            cognitive_adjustments.append(
+                "Cognitive load is currently high; reduce plan complexity first, then offer an easier next step."
+            )
             recommend_strategy(
                 "explanation_style",
                 "step_by_step",
@@ -396,7 +408,9 @@ class DualCoreRouter:
         metacognition_hint = routing_input.metacognition_hint
         if social_signals is not None:
             if social_signals.pending_commitments_count > 0:
-                execution_constraints.append("If scheduling a next step, respect the user's existing external commitments and avoid stacking new long-term obligations.")
+                execution_constraints.append(
+                    "If scheduling a next step, respect the user's existing external commitments and avoid stacking new long-term obligations."
+                )
             if (
                 social_signals.social_learning_preference is not None
                 and social_signals.social_learning_preference >= 0.65
@@ -406,20 +420,26 @@ class DualCoreRouter:
                     "If the task naturally suits collaboration, allow the user to leverage peers or groups, but do not make social interaction a hard requirement."
                 )
             if social_signals.relationship_count > 0:
-                cognitive_adjustments.append("When involving others or collaborative contexts, maintain boundaries; do not make promises on behalf of the user or assume others' positions.")
+                cognitive_adjustments.append(
+                    "When involving others or collaborative contexts, maintain boundaries; do not make promises on behalf of the user or assume others' positions."
+                )
 
         srl_phase_hint = routing_input.srl_phase_hint
         reflection_phase_detected = False
         if srl_phase_hint is not None:
             if srl_phase_hint.current_phase == "forethought":
-                cognitive_adjustments.append("The user is in the forethought phase; help clarify goals, constraints, and launch criteria before expanding into details.")
+                cognitive_adjustments.append(
+                    "The user is in the forethought phase; help clarify goals, constraints, and launch criteria before expanding into details."
+                )
                 recommend_strategy(
                     "planning_granularity",
                     "startup_ready",
                     reason="Forethought users benefit from tighter success criteria and a clear launch point before more detail is added.",
                 )
             elif srl_phase_hint.current_phase == "performance":
-                execution_constraints.append("The user is in the performance phase; prioritize maintaining execution continuity with immediately actionable short steps.")
+                execution_constraints.append(
+                    "The user is in the performance phase; prioritize maintaining execution continuity with immediately actionable short steps."
+                )
                 recommend_strategy(
                     "execution_window",
                     "momentum_preserving",
@@ -446,7 +466,9 @@ class DualCoreRouter:
             )
             if low_metacognition_accuracy:
                 low_metacognition_adjustment_added = True
-                cognitive_adjustments.append("The user's recent self-assessment of state or time has been inaccurate; recalibrate judgment before pushing execution.")
+                cognitive_adjustments.append(
+                    "The user's recent self-assessment of state or time has been inaccurate; recalibrate judgment before pushing execution."
+                )
                 recommend_strategy(
                     "intervention_intensity",
                     "low",
@@ -458,7 +480,9 @@ class DualCoreRouter:
                     reason="When self-monitoring is noisy, the delivery should skew toward support instead of pressure.",
                 )
             elif strong_metacognition_execution_bias:
-                execution_constraints.append("The user shows strong self-awareness; reduce redundant confirmations and interruptions, directly provide an actionable next step.")
+                execution_constraints.append(
+                    "The user shows strong self-awareness; reduce redundant confirmations and interruptions, directly provide an actionable next step."
+                )
                 recommend_strategy(
                     "check_in_frequency",
                     "minimal",
@@ -472,10 +496,9 @@ class DualCoreRouter:
         if belief_signal_snapshot.get("active"):
             metacognition_belief = belief_targets.get("metacognition_accuracy", {})
             if metacognition_belief.get("observed"):
-                low_metacognition_accuracy = (
-                    bool(metacognition_belief.get("confident"))
-                    and float(metacognition_belief["mean"]) < float(self._param("low_metacognition_accuracy", 0.5))
-                )
+                low_metacognition_accuracy = bool(metacognition_belief.get("confident")) and float(
+                    metacognition_belief["mean"]
+                ) < float(self._param("low_metacognition_accuracy", 0.5))
                 if low_metacognition_accuracy and not low_metacognition_adjustment_added:
                     cognitive_adjustments.append(
                         "Belief state indicates noisy self-monitoring; recalibrate judgment before pushing execution."
@@ -507,7 +530,9 @@ class DualCoreRouter:
                 or value in {"high_load", "high_load_detected", "overloaded", "anxious", "tense"}
             ) and conf >= float(self._param("spine_fatigue_confidence_min", 0.6)):
                 spine_fatigue_detected = True
-                cognitive_adjustments.append("Spine detected accumulated fatigue or emotional pressure; prioritize reducing load and offering recovery suggestions.")
+                cognitive_adjustments.append(
+                    "Spine detected accumulated fatigue or emotional pressure; prioritize reducing load and offering recovery suggestions."
+                )
                 recommend_strategy(
                     "intervention_intensity",
                     "low",
@@ -515,7 +540,9 @@ class DualCoreRouter:
                 )
             if key in ("execution_consistency", "task_granularity_fit") and conf >= 0.55:
                 spine_execution_low = True
-                execution_constraints.append("Spine detected execution consistency or task granularity drift; prioritize easier-to-start short actions.")
+                execution_constraints.append(
+                    "Spine detected execution consistency or task granularity drift; prioritize easier-to-start short actions."
+                )
                 recommend_strategy(
                     "planning_granularity",
                     "startup_ready",
@@ -523,7 +550,9 @@ class DualCoreRouter:
                 )
             if key in ("knowledge_bottleneck", "knowledge_transfer") and conf >= 0.55:
                 spine_knowledge_bottleneck = True
-                cognitive_adjustments.append("Spine detected a knowledge bottleneck; help the user understand core concepts before pushing forward.")
+                cognitive_adjustments.append(
+                    "Spine detected a knowledge bottleneck; help the user understand core concepts before pushing forward."
+                )
                 recommend_strategy(
                     "explanation_style",
                     "step_by_step",
@@ -536,7 +565,9 @@ class DualCoreRouter:
                     reason="Recent reward engagement indicates user is invested; moderate encouragement can sustain momentum.",
                 )
             if key == "deadline_pressure" and conf >= 0.6:
-                execution_constraints.append("Spine detected deadline pressure; prioritize review or sprint tasks related to the deadline.")
+                execution_constraints.append(
+                    "Spine detected deadline pressure; prioritize review or sprint tasks related to the deadline."
+                )
                 recommend_strategy(
                     "planning_granularity",
                     "startup_ready",
@@ -564,14 +595,18 @@ class DualCoreRouter:
             if topic:
                 corrections_addressed_topics.add(topic)
         if corrections_count >= int(self._param("corrections_threshold", 3)):
-            cognitive_adjustments.append("The user has been corrected multiple times recently; verify whether prior corrections have taken effect before issuing new ones.")
+            cognitive_adjustments.append(
+                "The user has been corrected multiple times recently; verify whether prior corrections have taken effect before issuing new ones."
+            )
             recommend_strategy(
                 "intervention_intensity",
                 "low",
                 reason="Multiple recent corrections suggest the system should pause and verify calibration before pushing more changes.",
             )
         if "difficulty_mismatch" in corrections_addressed_topics:
-            execution_constraints.append("The user has had a difficulty correction before; this round's task difficulty should follow the corrected standard.")
+            execution_constraints.append(
+                "The user has had a difficulty correction before; this round's task difficulty should follow the corrected standard."
+            )
             recommend_strategy(
                 "difficulty_level",
                 2,
@@ -606,7 +641,9 @@ class DualCoreRouter:
         route_outcome_support_needed = failed_execution_count >= 2
         route_outcome_over_scaffolded = failed_cognitive_count >= 2 and successful_execution_count >= 1
         if route_outcome_support_needed:
-            cognitive_adjustments.append("Recent direct-push outcomes were corrected or timed out multiple times; confirm understanding first and make the next step smaller.")
+            cognitive_adjustments.append(
+                "Recent direct-push outcomes were corrected or timed out multiple times; confirm understanding first and make the next step smaller."
+            )
             recommend_strategy(
                 "planning_granularity",
                 "startup_ready",
@@ -618,7 +655,9 @@ class DualCoreRouter:
                 reason="Failed direct-routing outcomes should increase support without adding pressure.",
             )
         elif route_outcome_over_scaffolded:
-            execution_constraints.append("Recent cognitive-first support was over-corrected; reduce explanations this round and provide a single actionable step.")
+            execution_constraints.append(
+                "Recent cognitive-first support was over-corrected; reduce explanations this round and provide a single actionable step."
+            )
             recommend_strategy(
                 "check_in_frequency",
                 "minimal",
@@ -630,7 +669,9 @@ class DualCoreRouter:
                 reason="Over-scaffolded route outcomes should shorten the next explanation.",
             )
         elif successful_execution_count >= 3 and failed_execution_count == 0:
-            execution_constraints.append("Recent execution-first outcomes have been stable; reduce unnecessary scaffolding and redundant confirmations this round.")
+            execution_constraints.append(
+                "Recent execution-first outcomes have been stable; reduce unnecessary scaffolding and redundant confirmations this round."
+            )
             recommend_strategy(
                 "check_in_frequency",
                 "minimal",
@@ -645,7 +686,9 @@ class DualCoreRouter:
             )
 
         if aurora_pressure == "gentle":
-            execution_constraints.append("The user prefers gentle reminders; do not use pressure-driven nudging strategies.")
+            execution_constraints.append(
+                "The user prefers gentle reminders; do not use pressure-driven nudging strategies."
+            )
             recommend_strategy(
                 "push_vs_support",
                 0.2,
@@ -660,7 +703,9 @@ class DualCoreRouter:
             )
 
         if aurora_analysis == "light":
-            cognitive_adjustments.append("The user prefers light analysis; reduce deep behavioral interpretations and prioritize an actionable next step.")
+            cognitive_adjustments.append(
+                "The user prefers light analysis; reduce deep behavioral interpretations and prioritize an actionable next step."
+            )
             recommend_strategy(
                 "intervention_intensity",
                 "low",
@@ -674,9 +719,13 @@ class DualCoreRouter:
         if routing_input.difficulty_preference is not None and routing_input.difficulty_preference < 0.4:
             execution_constraints.append("Lower initial task difficulty; avoid high-pressure challenges at the outset.")
         if routing_input.recent_task_feedback_distribution.get("too_difficult", 0) >= 2:
-            execution_constraints.append("Recent consecutive feedback says 'too difficult'; avoid increasing task intensity in this response.")
+            execution_constraints.append(
+                "Recent consecutive feedback says 'too difficult'; avoid increasing task intensity in this response."
+            )
         if routing_input.recent_task_feedback_distribution.get("too_long", 0) >= 2:
-            execution_constraints.append("Recent consecutive feedback says 'too long'; prioritize breaking into shorter, easier-to-start steps.")
+            execution_constraints.append(
+                "Recent consecutive feedback says 'too long'; prioritize breaking into shorter, easier-to-start steps."
+            )
         if capsule_method_preferences:
             top_method = capsule_method_preferences[0]
             method_label = str(top_method.get("label") or "").strip()
@@ -705,7 +754,9 @@ class DualCoreRouter:
         scaffolding_failures = int(scaffolding_snapshot.get("consecutive_failures") or 0)
         scaffolding_successes = int(scaffolding_snapshot.get("consecutive_successes") or 0)
         if scaffolding_zone == "frustration" or scaffolding_support >= 4 or scaffolding_failures >= 2:
-            cognitive_adjustments.append("SGW scaffolding indicates the user may be in a frustration zone; increase support density and lower task resistance first.")
+            cognitive_adjustments.append(
+                "SGW scaffolding indicates the user may be in a frustration zone; increase support density and lower task resistance first."
+            )
             recommend_strategy(
                 "planning_granularity",
                 "startup_ready",
@@ -717,7 +768,9 @@ class DualCoreRouter:
                 reason="High scaffolding support means Aurora should feel helpful rather than pushy.",
             )
         elif scaffolding_zone == "boredom" or scaffolding_successes >= 3:
-            execution_constraints.append("SGW scaffolding indicates the user has been progressing smoothly; reduce explanations and offer a more challenging but manageable next step.")
+            execution_constraints.append(
+                "SGW scaffolding indicates the user has been progressing smoothly; reduce explanations and offer a more challenging but manageable next step."
+            )
             recommend_strategy(
                 "difficulty_level",
                 4,
@@ -728,9 +781,13 @@ class DualCoreRouter:
         if routing_input.adaptive_adjustments:
             diff_shift = routing_input.adaptive_adjustments.get("difficulty_shift", 0.0)
             if diff_shift < 0:
-                cognitive_adjustments.append("Consider lowering sub-task difficulty and providing simpler, easier-to-start steps.")
+                cognitive_adjustments.append(
+                    "Consider lowering sub-task difficulty and providing simpler, easier-to-start steps."
+                )
             elif diff_shift > 0:
-                cognitive_adjustments.append("Consider moderately increasing challenge level; provide more advanced content or tasks.")
+                cognitive_adjustments.append(
+                    "Consider moderately increasing challenge level; provide more advanced content or tasks."
+                )
 
             time_mult = routing_input.adaptive_adjustments.get("time_multiplier", 1.0)
             if time_mult > 1.0:
@@ -738,14 +795,18 @@ class DualCoreRouter:
                 execution_constraints.append(f"Increase estimated execution time by {extra_pct}% to allow more buffer.")
             elif time_mult < 1.0:
                 less_pct = int((1.0 - time_mult) * 100)
-                execution_constraints.append(f"Estimated execution time can be reduced by {less_pct}%; suggest a tighter pace.")
+                execution_constraints.append(
+                    f"Estimated execution time can be reduced by {less_pct}%; suggest a tighter pace."
+                )
 
             if routing_input.adaptive_adjustments.get("insert_prerequisite_review"):
                 execution_constraints.append("Must insert a prerequisite knowledge review step.")
 
             max_tasks = routing_input.adaptive_adjustments.get("max_concurrent_tasks")
             if max_tasks is not None and max_tasks < 3:
-                execution_constraints.append(f"Control concurrent task count; do not exceed {max_tasks} tasks in a single push.")
+                execution_constraints.append(
+                    f"Control concurrent task count; do not exceed {max_tasks} tasks in a single push."
+                )
 
         # Finalize precedence scores with late-computed signals
         precedence["reflection_phase"] = pw["reflection_phase"] if reflection_phase_detected else 0.0
@@ -871,18 +932,18 @@ class DualCoreRouter:
             return self._stabilize_decision(
                 routing_input,
                 DualCoreDecision(
-                mode="execution_first",
-                reason=(
-                    "用户对自身状态觉察稳定，且当前没有明显情绪或执行阻塞，适合减少打扰并直接推进执行路径。"
-                    if strong_metacognition_execution_bias
-                    else "目标清晰、信息充分，且当前没有明显情绪或执行阻塞，适合直接推进执行路径。"
-                ),
-                cognitive_adjustments=cognitive_adjustments[-10:],
-                execution_constraints=execution_constraints[:10],
-                routing_debug=routing_debug,
-                strategy_adjustments=strategy_adjustments[:10],
-                signal_scores=signal_scores,
-                scaffolding_zone=scaffolding_zone,
+                    mode="execution_first",
+                    reason=(
+                        "用户对自身状态觉察稳定，且当前没有明显情绪或执行阻塞，适合减少打扰并直接推进执行路径。"
+                        if strong_metacognition_execution_bias
+                        else "目标清晰、信息充分，且当前没有明显情绪或执行阻塞，适合直接推进执行路径。"
+                    ),
+                    cognitive_adjustments=cognitive_adjustments[-10:],
+                    execution_constraints=execution_constraints[:10],
+                    routing_debug=routing_debug,
+                    strategy_adjustments=strategy_adjustments[:10],
+                    signal_scores=signal_scores,
+                    scaffolding_zone=scaffolding_zone,
                 ),
             )
 
@@ -902,20 +963,20 @@ class DualCoreRouter:
             return self._stabilize_decision(
                 routing_input,
                 DualCoreDecision(
-                mode="cognitive_first",
-                reason=self._cognitive_reason(
-                    goal_clear=goal_clear,
-                    information_sufficient=routing_input.information_sufficient,
-                    emotional_block=emotional_block,
-                    procrastination_pattern=procrastination_pattern,
-                    cognitive_mode_suggested=cognitive_mode_suggested,
-                ),
-                cognitive_adjustments=cognitive_adjustments[-10:],
-                execution_constraints=execution_constraints[:10],
-                routing_debug=routing_debug,
-                strategy_adjustments=strategy_adjustments[:10],
-                signal_scores=signal_scores,
-                scaffolding_zone=scaffolding_zone,
+                    mode="cognitive_first",
+                    reason=self._cognitive_reason(
+                        goal_clear=goal_clear,
+                        information_sufficient=routing_input.information_sufficient,
+                        emotional_block=emotional_block,
+                        procrastination_pattern=procrastination_pattern,
+                        cognitive_mode_suggested=cognitive_mode_suggested,
+                    ),
+                    cognitive_adjustments=cognitive_adjustments[-10:],
+                    execution_constraints=execution_constraints[:10],
+                    routing_debug=routing_debug,
+                    strategy_adjustments=strategy_adjustments[:10],
+                    signal_scores=signal_scores,
+                    scaffolding_zone=scaffolding_zone,
                 ),
             )
 
@@ -929,14 +990,14 @@ class DualCoreRouter:
         return self._stabilize_decision(
             routing_input,
             DualCoreDecision(
-            mode="balanced",
-            reason=balanced_reason,
-            cognitive_adjustments=cognitive_adjustments[-10:],
-            execution_constraints=execution_constraints[:10],
-            routing_debug=routing_debug,
-            strategy_adjustments=strategy_adjustments[:10],
-            signal_scores=signal_scores,
-            scaffolding_zone=scaffolding_zone,
+                mode="balanced",
+                reason=balanced_reason,
+                cognitive_adjustments=cognitive_adjustments[-10:],
+                execution_constraints=execution_constraints[:10],
+                routing_debug=routing_debug,
+                strategy_adjustments=strategy_adjustments[:10],
+                signal_scores=signal_scores,
+                scaffolding_zone=scaffolding_zone,
             ),
         )
 
@@ -978,7 +1039,11 @@ class DualCoreRouter:
             low_risk_streak = 0
 
         if commitment_remaining > 0 and previous_mode in {"execution_first", "cognitive_first"}:
-            if previous_mode == "cognitive_first" and raw_mode == "execution_first" and not (low_risk and low_risk_streak >= 2):
+            if (
+                previous_mode == "cognitive_first"
+                and raw_mode == "execution_first"
+                and not (low_risk and low_risk_streak >= 2)
+            ):
                 stabilized_mode = "cognitive_first"
                 reason = "mode_commitment_hold_cognitive"
             elif previous_mode == "execution_first" and raw_mode == "cognitive_first" and not critical_support:
@@ -997,7 +1062,11 @@ class DualCoreRouter:
         next_commitment = max(0, commitment_remaining - 1)
         if stabilized_mode in {"execution_first", "cognitive_first"} and stabilized_mode != previous_mode:
             next_commitment = 2
-        elif stabilized_mode in {"execution_first", "cognitive_first"} and next_commitment == 0 and raw_mode == stabilized_mode:
+        elif (
+            stabilized_mode in {"execution_first", "cognitive_first"}
+            and next_commitment == 0
+            and raw_mode == stabilized_mode
+        ):
             next_commitment = 1
         if stabilized_mode != raw_mode:
             routing_debug = dict(decision.routing_debug or {})
@@ -1055,11 +1124,13 @@ class DualCoreRouter:
         ):
             mean, variance = self._belief_mean_variance(belief_state, target)
             observed = mean is not None and variance is not None
+            mean_value = float(mean) if mean is not None else None
+            variance_value = float(variance) if variance is not None else None
             entry = {
                 "observed": observed,
-                "mean": round(float(mean), 4) if observed else None,
-                "variance": round(float(variance), 4) if observed else None,
-                "confident": bool(observed and float(variance) <= uncertainty_max),
+                "mean": round(mean_value, 4) if mean_value is not None else None,
+                "variance": round(variance_value, 4) if variance_value is not None else None,
+                "confident": bool(observed and variance_value is not None and variance_value <= uncertainty_max),
             }
             targets[target] = entry
         snapshot["targets"] = targets

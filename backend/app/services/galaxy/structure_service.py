@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import UTC, datetime
-from typing import Any
 from uuid import UUID
 
 from loguru import logger
@@ -12,7 +12,6 @@ from sqlalchemy.orm import selectinload
 from app.models.galaxy import KnowledgeNode, NodeRelation, UserNodeStatus
 from app.models.sector import SectorCode
 from app.models.subject import Subject
-from app.schemas.galaxy import GalaxyGraphResponse
 from app.services.node_sector_service import build_sector_visuals, node_belongs_to_sector, parse_sector_code
 
 
@@ -136,9 +135,7 @@ class GraphStructureService:
                 f"create_edge denied: user={user_id} lacks access to nodes={missing} "
                 f"(source={source_id}, target={target_id})"
             )
-            raise GraphNodeAccessDenied(
-                f"User {user_id} cannot create edge involving inaccessible nodes"
-            )
+            raise GraphNodeAccessDenied(f"User {user_id} cannot create edge involving inaccessible nodes")
 
         edge = NodeRelation(
             source_node_id=source_id, target_node_id=target_id, relation_type=relation_type, created_by="user"
@@ -176,14 +173,10 @@ class GraphStructureService:
         if user_id is not None:
             accessible = await self._filter_accessible_node_ids([node_id], user_id)
             if node_id not in accessible:
-                logger.info(
-                    f"get_node_with_context: user={user_id} denied access to node={node_id}"
-                )
+                logger.info(f"get_node_with_context: user={user_id} denied access to node={node_id}")
                 return None
         else:
-            logger.warning(
-                "get_node_with_context called without user_id; access check skipped"
-            )
+            logger.warning("get_node_with_context called without user_id; access check skipped")
 
         return node
 
@@ -203,14 +196,10 @@ class GraphStructureService:
         if user_id is not None:
             accessible_start = await self._filter_accessible_node_ids([node_id], user_id)
             if node_id not in accessible_start:
-                logger.info(
-                    f"get_node_neighbors: user={user_id} denied access to anchor node={node_id}"
-                )
+                logger.info(f"get_node_neighbors: user={user_id} denied access to anchor node={node_id}")
                 return []
         else:
-            logger.warning(
-                "get_node_neighbors called without user_id; access check skipped"
-            )
+            logger.warning("get_node_neighbors called without user_id; access check skipped")
 
         # Find edges where node is source or target
         stmt = (
@@ -257,6 +246,7 @@ class GraphStructureService:
 
         node_ids = [item["id"] for item in updates]
         from app.models.galaxy import KnowledgeNode, KnowledgeNodeDocument
+
         # KnowledgeNode 本身无 user_id：归属经 KnowledgeNodeDocument 判定
         ownership_stmt = (
             select(KnowledgeNode.id)
@@ -346,7 +336,7 @@ class GraphStructureService:
         nodes_with_status = result.all()
 
         node_ids = [node.id for node, _ in nodes_with_status]
-        relations: list[Any] = []
+        relations: list[NodeRelation] = []
         if node_ids:
             relations_query = select(NodeRelation).where(
                 and_(
@@ -355,13 +345,13 @@ class GraphStructureService:
                 )
             )
             relations_result = await self.db.execute(relations_query)
-            relations = relations_result.scalars().all()
+            relations = list(relations_result.scalars().all())
 
         return nodes_with_status, relations
 
     async def get_graph_view(
         self, user_id: UUID, sector_code: str | None = None, include_locked: bool = True, zoom_level: float = 1.0
-    ) -> GalaxyGraphResponse:
+    ) -> tuple[Sequence[tuple[KnowledgeNode, UserNodeStatus | None]], Sequence[NodeRelation]]:
         """Fetch graph structure for visualization"""
         # 1. Query nodes with status
         query = (
@@ -394,13 +384,13 @@ class GraphStructureService:
             )
 
         result = await self.db.execute(query)
-        nodes_with_status = result.all()
+        nodes_with_status: list[tuple[KnowledgeNode, UserNodeStatus | None]] = [
+            (node, status) for node, status in result.all()
+        ]
 
         if sector_code:
             nodes_with_status = [
-                (node, status)
-                for node, status in nodes_with_status
-                if node_belongs_to_sector(node, sector_code)
+                (node, status) for node, status in nodes_with_status if node_belongs_to_sector(node, sector_code)
             ]
 
         if not include_locked:
@@ -408,13 +398,13 @@ class GraphStructureService:
 
         # 2. Query Relations
         node_ids = [node.id for node, _ in nodes_with_status]
-        relations: list[Any] = []
+        relations: list[NodeRelation] = []
         if node_ids:
             relations_query = select(NodeRelation).where(
                 and_(NodeRelation.source_node_id.in_(node_ids), NodeRelation.target_node_id.in_(node_ids))
             )
             relations_result = await self.db.execute(relations_query)
-            relations = relations_result.scalars().all()
+            relations = list(relations_result.scalars().all())
 
         # Note: stats are calculated in StatsService, here we return partial or delegate
         # Since we are splitting, this method returns the structural part.

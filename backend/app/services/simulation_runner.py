@@ -176,10 +176,7 @@ def _scenario_index(suites: dict[str, list[TestScenario]]) -> dict[str, tuple[st
 def _run_selected_suites(suites: dict[str, list[TestScenario]]) -> dict[str, Any]:
     all_scenarios = [scenario for scenarios in suites.values() for scenario in scenarios]
     aggregate = ScenarioSimulator.run_suite(all_scenarios)
-    aggregate["suite_breakdown"] = {
-        name: ScenarioSimulator.run_suite(scenarios)
-        for name, scenarios in suites.items()
-    }
+    aggregate["suite_breakdown"] = {name: ScenarioSimulator.run_suite(scenarios) for name, scenarios in suites.items()}
     return cast("dict[str, Any]", (aggregate))
 
 
@@ -228,6 +225,8 @@ async def _previous_pass_rate(session: AsyncSession, suite_name: str) -> float |
     if not isinstance(payload, dict):
         return None
     pass_rate = payload.get("pass_rate")
+    if pass_rate is None:
+        return None
     try:
         return float(pass_rate)
     except (TypeError, ValueError):
@@ -244,8 +243,7 @@ def _build_gate_decision(
     high_risk_failures = [report for report in failed if report.get("risk_level") == HIGH_RISK_LEVEL]
     medium_risk_failures = [report for report in failed if report.get("risk_level") == MEDIUM_RISK_LEVEL]
     low_risk_failures = [
-        report for report in failed
-        if report.get("risk_level") not in {HIGH_RISK_LEVEL, MEDIUM_RISK_LEVEL}
+        report for report in failed if report.get("risk_level") not in {HIGH_RISK_LEVEL, MEDIUM_RISK_LEVEL}
     ]
     trend_delta = None if previous_pass_rate is None else round(previous_pass_rate - pass_rate, 4)
     trend_blocked = trend_delta is not None and trend_delta > TREND_BLOCK_THRESHOLD
@@ -386,7 +384,9 @@ def _render_markdown(report: BenchmarkReport, reports_dir: Path) -> str:
     else:
         lines.append("No scenario regressions detected.")
 
-    lines.extend(["", "## Raw Summary", "", "```json", json.dumps(report.to_dict(), indent=2, ensure_ascii=False), "```", ""])
+    lines.extend(
+        ["", "## Raw Summary", "", "```json", json.dumps(report.to_dict(), indent=2, ensure_ascii=False), "```", ""]
+    )
     path.write_text("\n".join(lines), encoding="utf-8")
     return str(path)
 

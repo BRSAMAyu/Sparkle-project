@@ -83,7 +83,7 @@ class ErrorPatternTemplateService:
         error_label = self._error_type_label(pattern.error_type)
         title = f"补救练习：{focus} · {error_label}"
         objective = (
-            f"针对近 14 天出现 {pattern.error_count} 次的「{error_label}」模式，" f"用一组小练习修复 {focus} 的薄弱点。"
+            f"针对近 14 天出现 {pattern.error_count} 次的「{error_label}」模式，用一组小练习修复 {focus} 的薄弱点。"
         )
         minimum_output = f"完成 1 张错因对照卡，并独立做对 1 道 {focus} 同类题。"
         success_criteria = [
@@ -257,7 +257,7 @@ class ErrorPatternTemplateService:
             return 0.6
         raw = analysis.get("confidence", analysis.get("confidence_score", 0.6))
         try:
-            return max(0.0, min(float(raw), 1.0))
+            return max(0.0, min(float(raw) if raw is not None else 0.6, 1.0))
         except (TypeError, ValueError):
             return 0.6
 

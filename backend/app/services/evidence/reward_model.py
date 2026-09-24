@@ -28,12 +28,15 @@ def _difficulty_from_event(event: dict[str, Any]) -> float:
     source_metadata = event.get("source_metadata") if isinstance(event.get("source_metadata"), dict) else {}
     for source in (event, metadata, source_metadata):
         for key in ("intrinsic_difficulty", "difficulty_normalized", "difficulty_score"):
-            if source.get(key) is not None:
+            raw_value = source.get(key)
+            if raw_value is not None:
                 try:
-                    return _clamp(float(source.get(key)), 0.0, 1.0)
+                    return _clamp(float(raw_value), 0.0, 1.0)
                 except (TypeError, ValueError):
                     pass
-    task_kind = str(event.get("task_kind") or metadata.get("task_kind") or source_metadata.get("task_kind") or "").lower()
+    task_kind = str(
+        event.get("task_kind") or metadata.get("task_kind") or source_metadata.get("task_kind") or ""
+    ).lower()
     title = str(event.get("title") or event.get("task_title") or metadata.get("title") or "").lower()
     estimated_minutes = _positive_float(event.get("estimated_minutes") or metadata.get("estimated_minutes"))
     if any(marker in task_kind or marker in title for marker in ("breath", "reflection", "micro", "深呼吸", "复盘")):
@@ -154,7 +157,8 @@ class RoutingRewardModel:
 
     @classmethod
     def from_task_outcome(cls, event: dict[str, Any], *, completed: bool) -> RewardBreakdown:
-        completion_rate = _clamp(float(event.get("completion_rate") if completed else 0.0), 0.0, 1.0)
+        raw_completion = event.get("completion_rate") if completed else 0.0
+        completion_rate = _clamp(float(raw_completion) if raw_completion is not None else 0.0, 0.0, 1.0)
         actual_minutes = _positive_float(event.get("actual_minutes") or event.get("time_spent"))
         estimated_minutes = _positive_float(event.get("estimated_minutes"))
         duration_ratio = actual_minutes / estimated_minutes if actual_minutes > 0 and estimated_minutes > 0 else None

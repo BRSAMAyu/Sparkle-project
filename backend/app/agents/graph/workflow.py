@@ -1,7 +1,9 @@
 import threading
+from typing import Any, cast
 
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
+from langgraph.graph.state import StateNode
 from langgraph.prebuilt import ToolNode
 from loguru import logger
 
@@ -38,6 +40,7 @@ RUNTIME_NODE_NAMES = [*EXPERT_NODE_NAMES, "custom_expert"]
 
 # --- 1. 条件边逻辑 (Conditional Edges) ---
 
+
 def route_after_router(state: SparkleState):
     """Router 节点后的分支逻辑"""
     target = state.get("next_step")
@@ -47,6 +50,7 @@ def route_after_router(state: SparkleState):
     if resolved:
         return resolved
     return "study_buddy"
+
 
 def route_after_agent(state: SparkleState):
     """Agent 节点后的逻辑 (处理工具调用)"""
@@ -60,6 +64,7 @@ def route_after_agent(state: SparkleState):
 
     # 否则任务结束
     return END
+
 
 def route_after_agent_planning(state: SparkleState):
     """Agent 节点后的逻辑 (规划模式 - 不执行工具)
@@ -79,6 +84,7 @@ def route_after_agent_planning(state: SparkleState):
     # 否则任务结束
     return END
 
+
 # --- 2. 构建标准图 (Graph Construction) ---
 
 workflow = StateGraph(SparkleState)
@@ -86,7 +92,9 @@ workflow = StateGraph(SparkleState)
 # (A) 添加 Agent 节点
 workflow.add_node("router", router_node)
 for spec in EXPERT_SPECS:
-    workflow.add_node(spec.node_name, spec.node_handler)
+    # node_handler 是 (state) / (state, config) 两种 LangGraph 节点形态的并集，
+    # langgraph 泛型重载无法从并集推断 NodeInputT，此处按协议显式收窄
+    workflow.add_node(spec.node_name, cast("StateNode[SparkleState, Any]", spec.node_handler))
 workflow.add_node("custom_expert", custom_expert_node)
 
 # (B) 添加工具节点 (所有 Agent 的工具汇聚于此，也可拆分为多个 ToolNode)
@@ -105,6 +113,7 @@ all_tools = [
 tool_node = ToolNode(all_tools)
 workflow.add_node("tools", tool_node)
 
+
 # (C) Human-in-the-loop node
 # When the graph routes here with interrupt_before, execution pauses.
 # The caller (orchestrator) inspects approval_context, presents it to the
@@ -118,6 +127,8 @@ def human_node(state: SparkleState):
     else:
         logger.info(f"Human rejected: {context}")
         return {"approval_result": None, "require_approval": False}
+
+
 workflow.add_node("human_node", human_node)
 
 # --- 3. 连接边 (Edges) ---
@@ -133,14 +144,7 @@ workflow.add_conditional_edges("router", route_after_router, router_edge_map)
 
 # Agents -> Tools OR End
 for agent_name in RUNTIME_NODE_NAMES:
-    workflow.add_conditional_edges(
-        agent_name,
-        route_after_agent,
-        {
-            "tools": "tools",
-            END: END
-        }
-    )
+    workflow.add_conditional_edges(agent_name, route_after_agent, {"tools": "tools", END: END})
 
 # Tools -> Back to Agent (需要知道是谁调用的工具)
 # 简化策略：工具执行完，统一回到 Router 进行下一轮判断？
@@ -190,6 +194,7 @@ def _make_checkpointer():
         redis_client = cache_service.redis
         if redis_client:
             from app.checkpoint.langgraph_redis_checkpointer import LangGraphRedisCheckpointer
+
             return LangGraphRedisCheckpointer(redis_client)
     except Exception as exc:
         logger.warning(f"Redis checkpointer unavailable, falling back to MemorySaver: {exc}")
@@ -202,18 +207,17 @@ def _init_checkpointer():
         return _make_checkpointer()
     except Exception:
         from langgraph.checkpoint.memory import MemorySaver
+
         return MemorySaver()
 
 
-sparkle_graph = workflow.compile(
-    checkpointer=_init_checkpointer(),
-    interrupt_before=["human_node"]
-)
+sparkle_graph = workflow.compile(checkpointer=_init_checkpointer(), interrupt_before=["human_node"])
 
 
 # ==========================================
 # Phase 2: Planning-Only Graph (No Tool Execution)
 # ==========================================
+
 
 def create_planning_graph():
     """Create a planning-only graph that does NOT execute tools (Phase 3: with collaboration support).
@@ -232,7 +236,8 @@ def create_planning_graph():
     # Phase 3: Add collaboration node
     planning_workflow.add_node("collaboration", collaboration_node)
     for spec in EXPERT_SPECS:
-        planning_workflow.add_node(spec.node_name, spec.node_handler)
+        # 同上：node_handler 联合类型对 langgraph 泛型重载的推断限制，显式收窄
+        planning_workflow.add_node(spec.node_name, cast("StateNode[SparkleState, Any]", spec.node_handler))
     planning_workflow.add_node("custom_expert", custom_expert_node)
     # Phase 3: Add aggregator node
     planning_workflow.add_node("aggregator", collaboration_aggregator_node)
@@ -257,11 +262,7 @@ def create_planning_graph():
 
     # Reset -> Collaboration (after clearing review_feedback)
     planning_workflow.add_conditional_edges(
-        "reset_collaboration",
-        route_after_reset,
-        {
-            "collaboration": "collaboration"
-        }
+        "reset_collaboration", route_after_reset, {"collaboration": "collaboration"}
     )
 
     # Collaboration -> Agents (sequential execution)
@@ -275,11 +276,7 @@ def create_planning_graph():
         planning_workflow.add_conditional_edges(
             agent_name,
             route_after_agent_in_collaboration,
-            {
-                "continue_collaboration": "collaboration",
-                "aggregator": "aggregator",
-                END: END
-            }
+            {"continue_collaboration": "collaboration", "aggregator": "aggregator", END: END},
         )
 
     # Aggregator -> End
@@ -288,12 +285,11 @@ def create_planning_graph():
     # Compile with checkpointer
     planning_checkpointer = _init_checkpointer()
 
-    return planning_workflow.compile(
-        checkpointer=planning_checkpointer
-    )
+    return planning_workflow.compile(checkpointer=planning_checkpointer)
 
 
 # ============ Phase 3: Collaboration Routing Functions ============
+
 
 def reset_collaboration_node(state: SparkleState):
     """
@@ -307,9 +303,11 @@ def reset_collaboration_node(state: SparkleState):
         "review_feedback": None,  # Clear after processing to prevent infinite loop
     }
 
+
 def route_after_reset(state: SparkleState) -> str:
     """After reset, always route back to collaboration for replanning."""
     return "collaboration"
+
 
 def route_after_router_with_collaboration(state: SparkleState):
     """Router 后的路由（支持协作模式） (Phase 3)"""
@@ -350,13 +348,15 @@ def route_after_collaboration(state: SparkleState):
 def route_after_agent_in_collaboration(state: SparkleState):
     """Agent 执行后的路由（协作模式） (Phase 3)"""
     collaboration_mode = state.get("collaboration_mode", "single")
-    collaboration_order = state.get("collaboration_order", [])
+    collaboration_order = state.get("collaboration_order") or []
     collaboration_index = state.get("collaboration_index", 0)
 
     # Safety guard: prevent infinite collaboration loops
     max_iterations = len(collaboration_order) * 2 if collaboration_order else 10
     if collaboration_index >= max_iterations:
-        logger.error(f"Collaboration loop detected (index={collaboration_index}, max={max_iterations}), routing to aggregator")
+        logger.error(
+            f"Collaboration loop detected (index={collaboration_index}, max={max_iterations}), routing to aggregator"
+        )
         return "aggregator"
 
     if collaboration_mode != "single" and len(collaboration_order) > 1:

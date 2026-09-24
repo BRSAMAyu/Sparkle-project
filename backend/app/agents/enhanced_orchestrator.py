@@ -43,13 +43,15 @@ class EnhancedOrchestratorAgent(BaseAgent):
         super().__init__()
         self.role = AgentRole.ORCHESTRATOR
         self.name = "Enhanced Orchestrator"
-        self.description = "Intelligently routes queries and coordinates multi-agent workflows with knowledge graph integration"
+        self.description = (
+            "Intelligently routes queries and coordinates multi-agent workflows with knowledge graph integration"
+        )
         self.capabilities = [
             "Intelligent workflow selection (Task/Exploration/Error)",
             "Knowledge graph & forgetting curve integration",
             "Multi-agent collaboration coordination",
             "Unified response synthesis",
-            "Production-grade monitoring & error handling"
+            "Production-grade monitoring & error handling",
         ]
 
         # 初始化所有智能体
@@ -69,7 +71,7 @@ class EnhancedOrchestratorAgent(BaseAgent):
         self.collaboration_workflows = {
             "task_decomposition": TaskDecompositionWorkflow(self),
             "progressive_exploration": ProgressiveExplorationWorkflow(self),
-            "error_diagnosis": ErrorDiagnosisWorkflow(self)
+            "error_diagnosis": ErrorDiagnosisWorkflow(self),
         }
 
     def can_handle(self, query: str) -> float:
@@ -104,8 +106,7 @@ class EnhancedOrchestratorAgent(BaseAgent):
                 if workflow_type in self.collaboration_workflows:
                     # 使用协作工作流
                     result = await self.collaboration_workflows[workflow_type].execute(
-                        context.user_query,
-                        enhanced_context
+                        context.user_query, enhanced_context
                     )
                     response = self._format_collaboration_response(result)
                     span.set_attribute("collaboration_mode", True)
@@ -127,7 +128,7 @@ class EnhancedOrchestratorAgent(BaseAgent):
                     text=f"抱歉，处理你的请求时遇到错误：{str(e)}",
                     reasoning="System error occurred during orchestration",
                     confidence=0.0,
-                    metadata={"error": str(e), "error_type": type(e).__name__}
+                    metadata={"error": str(e), "error_type": type(e).__name__},
                 )
 
     async def _select_workflow_type(self, query: str) -> str:
@@ -140,22 +141,66 @@ class EnhancedOrchestratorAgent(BaseAgent):
             # 定义模式特征
             patterns = {
                 "task_decomposition": {
-                    "keywords": ["计划", "plan", "准备", "prepare", "复习", "review",
-                                "考试", "exam", "冲刺", "sprint", "学习路径", "学什么",
-                                "学习计划", "复习计划", "计划表", "学会", "一个月", "一个月内"],
-                    "weight": 1.0
+                    "keywords": [
+                        "计划",
+                        "plan",
+                        "准备",
+                        "prepare",
+                        "复习",
+                        "review",
+                        "考试",
+                        "exam",
+                        "冲刺",
+                        "sprint",
+                        "学习路径",
+                        "学什么",
+                        "学习计划",
+                        "复习计划",
+                        "计划表",
+                        "学会",
+                        "一个月",
+                        "一个月内",
+                    ],
+                    "weight": 1.0,
                 },
                 "progressive_exploration": {
-                    "keywords": ["解释", "explain", "理解", "understand", "详细说明", "detail",
-                                "深入", "deep", "原理", "principle", "如何工作", "how it works",
-                                "为什么", "why"],
-                    "weight": 1.0
+                    "keywords": [
+                        "解释",
+                        "explain",
+                        "理解",
+                        "understand",
+                        "详细说明",
+                        "detail",
+                        "深入",
+                        "deep",
+                        "原理",
+                        "principle",
+                        "如何工作",
+                        "how it works",
+                        "为什么",
+                        "why",
+                    ],
+                    "weight": 1.0,
                 },
                 "error_diagnosis": {
-                    "keywords": ["错题", "wrong", "错误", "error", "mistake", "不明白", "confused",
-                                "不懂", "don't understand", "搞混", "混淆", "做错了", "做错", "failed"],
-                    "weight": 1.2  # 错题诊断优先级稍高
-                }
+                    "keywords": [
+                        "错题",
+                        "wrong",
+                        "错误",
+                        "error",
+                        "mistake",
+                        "不明白",
+                        "confused",
+                        "不懂",
+                        "don't understand",
+                        "搞混",
+                        "混淆",
+                        "做错了",
+                        "做错",
+                        "failed",
+                    ],
+                    "weight": 1.2,  # 错题诊断优先级稍高
+                },
             }
 
             # 计算每个模式的匹配分数
@@ -181,10 +226,7 @@ class EnhancedOrchestratorAgent(BaseAgent):
             logger.info(f"[EnhancedOrchestrator] Workflow scores: {scores}, selected: {best_workflow}")
             return best_workflow
 
-    async def _build_enhanced_context(
-        self,
-        context: AgentContext
-    ) -> EnhancedAgentContext:
+    async def _build_enhanced_context(self, context: AgentContext) -> EnhancedAgentContext:
         """
         构建增强上下文
 
@@ -201,34 +243,15 @@ class EnhancedOrchestratorAgent(BaseAgent):
             # task_service = TaskService()
 
             # 模拟数据（实际应调用真实服务）
-            knowledge_graph = {
-                "total_nodes": 50,
-                "unlocked_nodes": 35,
-                "average_mastery": 0.72
-            }
+            knowledge_graph = {"total_nodes": 50, "unlocked_nodes": 35, "average_mastery": 0.72}
 
-            mastery_levels = {
-                "高数-极限": 0.85,
-                "高数-导数": 0.65,
-                "高数-积分": 0.50,
-                "线代-矩阵": 0.40
-            }
+            mastery_levels = {"高数-极限": 0.85, "高数-导数": 0.65, "高数-积分": 0.50, "线代-矩阵": 0.40}
 
             weak_concepts = ["高数-积分", "线代-矩阵"]
 
             forgetting_risks = [
-                {
-                    "concept": "高数-导数",
-                    "last_review": "5天前",
-                    "predicted_retention": 0.60,
-                    "risk_level": "medium"
-                },
-                {
-                    "concept": "线代-矩阵",
-                    "last_review": "10天前",
-                    "predicted_retention": 0.35,
-                    "risk_level": "high"
-                }
+                {"concept": "高数-导数", "last_review": "5天前", "predicted_retention": 0.60, "risk_level": "medium"},
+                {"concept": "线代-矩阵", "last_review": "10天前", "predicted_retention": 0.35, "risk_level": "high"},
             ]
 
             active_tasks = []
@@ -251,13 +274,10 @@ class EnhancedOrchestratorAgent(BaseAgent):
                 active_plans=active_plans,
                 study_time_preference="evening",
                 learning_style="visual",
-                common_errors=["忘记考虑边界条件", "符号错误"]
+                common_errors=["忘记考虑边界条件", "符号错误"],
             )
 
-    def _format_collaboration_response(
-        self,
-        result: CollaborationResult
-    ) -> AgentResponse:
+    def _format_collaboration_response(self, result: CollaborationResult) -> AgentResponse:
         """
         格式化协作结果
 
@@ -273,8 +293,9 @@ class EnhancedOrchestratorAgent(BaseAgent):
             action = event.get("action") or ""
             status = event.get("status") or "completed"
             start_time_ms = event.get("start_time_ms")
-            if start_time_ms is None and event.get("timestamp") is not None:
-                start_time_ms = int(float(event.get("timestamp")) * 1000)
+            raw_timestamp = event.get("timestamp")
+            if start_time_ms is None and raw_timestamp is not None:
+                start_time_ms = int(float(raw_timestamp) * 1000)
             duration_ms = event.get("duration_ms")
             output_summary = event.get("output_summary")
             agent_role = event.get("agent_role")
@@ -311,7 +332,7 @@ class EnhancedOrchestratorAgent(BaseAgent):
                     "agent_name": output.agent_name,
                     "agent_role": output.agent_role,
                     "confidence": output.confidence,
-                    "reasoning": output.reasoning
+                    "reasoning": output.reasoning,
                 }
                 for output in result.outputs
             ],
@@ -325,13 +346,10 @@ class EnhancedOrchestratorAgent(BaseAgent):
             response_text=result.final_response,
             reasoning=result.reasoning,
             confidence=result.confidence,
-            metadata=response_metadata
+            metadata=response_metadata,
         )
 
-    async def _fallback_routing(
-        self,
-        context: EnhancedAgentContext
-    ) -> AgentResponse:
+    async def _fallback_routing(self, context: EnhancedAgentContext) -> AgentResponse:
         """
         降级路由（单个或两个智能体）
 
@@ -358,7 +376,7 @@ class EnhancedOrchestratorAgent(BaseAgent):
 
             logger.info(
                 f"[EnhancedOrchestrator] Selected agents: {[agent.name for agent in selected]} "
-                f"(scores: {[score for _, score in agent_scores[:len(selected)]]})"
+                f"(scores: {[score for _, score in agent_scores[: len(selected)]]})"
             )
 
             if not selected:
@@ -395,9 +413,7 @@ class EnhancedOrchestratorAgent(BaseAgent):
             return await self._synthesize_responses(context, agent_responses)
 
     async def _synthesize_responses(
-        self,
-        context: EnhancedAgentContext,
-        responses: list[AgentResponse]
+        self, context: EnhancedAgentContext, responses: list[AgentResponse]
     ) -> AgentResponse:
         """整合多个智能体的响应"""
 
@@ -419,8 +435,8 @@ class EnhancedOrchestratorAgent(BaseAgent):
             metadata={
                 "multi_agent": True,
                 "agent_count": len(responses),
-                "agents_involved": [r.agent_name for r in responses]
-            }
+                "agents_involved": [r.agent_name for r in responses],
+            },
         )
 
     async def _fallback_llm(self, context: EnhancedAgentContext) -> AgentResponse:
@@ -433,24 +449,22 @@ class EnhancedOrchestratorAgent(BaseAgent):
             response_text = await llm_service.chat(
                 messages=[
                     {"role": "system", "content": "你是 Sparkle AI 学习助手，帮助学生解答学习问题。"},
-                    {"role": "user", "content": context.user_query}
+                    {"role": "user", "content": context.user_query},
                 ],
-                model="qwen-plus"
+                model="qwen-plus",
             )
 
             return self.format_response(
                 text=response_text,
                 reasoning="Fallback to general LLM (no specialist match)",
                 confidence=0.7,
-                metadata={"fallback": True}
+                metadata={"fallback": True},
             )
 
         except Exception as e:
             logger.error(f"[EnhancedOrchestrator] Fallback LLM failed: {e}")
             return self.format_response(
-                text="抱歉，我暂时无法回答这个问题。请稍后重试。",
-                confidence=0.0,
-                metadata={"error": str(e)}
+                text="抱歉，我暂时无法回答这个问题。请稍后重试。", confidence=0.0, metadata={"error": str(e)}
             )
 
 

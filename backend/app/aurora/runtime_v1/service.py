@@ -1383,6 +1383,9 @@ class AuroraRuntimeV1Service:
             return self_model
 
         raw_rate = task_state.get("completion_rate")
+        if raw_rate is None:
+            logger.warning("Aurora daily recap: invalid completion_rate={} for user {}", raw_rate, user_id)
+            return self_model
         try:
             completion_rate = float(raw_rate)
         except (TypeError, ValueError):
@@ -1783,8 +1786,11 @@ class AuroraRuntimeV1Service:
 
     def _claim_confidence(self, payload: Mapping[str, Any], *, default: float) -> float:
         for key in ("confidence", "priority"):
+            raw_confidence = payload.get(key)
+            if raw_confidence is None:
+                continue
             try:
-                return round(max(0.0, min(1.0, float(payload.get(key)))), 4)
+                return round(max(0.0, min(1.0, float(raw_confidence))), 4)
             except (TypeError, ValueError):
                 continue
         return default

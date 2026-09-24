@@ -860,13 +860,13 @@ MODE_SYSTEM_PROMPTS = {
 
 def build_system_prompt(
     user_context: dict,
-    conversation_history: dict = None,
+    conversation_history: dict | None = None,
     prompt_version: str = "v1",
     agent_role: AgentRole = AgentRole.GENERATION,
-    plan_context: dict = None,
-    intent_instruction: str = None,  # Vision Item 4b: Explicit Intent Injection
-    session_feedback_instruction: str = None,
-    dual_core_instruction: str = None,
+    plan_context: dict | None = None,
+    intent_instruction: str | None = None,  # Vision Item 4b: Explicit Intent Injection
+    session_feedback_instruction: str | None = None,
+    dual_core_instruction: str | None = None,
     context_focus: dict | None = None,
     context_briefing_note: str | None = None,
     context_level: str = "full",  # full | light
@@ -911,19 +911,15 @@ def build_system_prompt(
     # Ensure user_context is never None
 
     if user_context is None:
-
         user_context = {}
 
     if conversation_history is None:
-
         conversation_history = {}
 
     if plan_context is None and isinstance(user_context, dict):
-
         plan_context = user_context.get("plan_context")
 
     if plan_context and isinstance(user_context, dict):
-
         user_context = merge_plan_context(user_context, plan_context)
 
     if context_focus is None and isinstance(user_context, dict):
@@ -1032,7 +1028,6 @@ def build_system_prompt(
     intent_section = ""
 
     if intent_instruction:
-
         intent_section = (
             "\n## 当前意图指令 [L1 强制]\n"
             "[冲突处理] 若与其他指令冲突，优先执行本节。\n"
@@ -1513,7 +1508,6 @@ def build_system_prompt(
                 prompt = f"{prompt}\n\n{suffix}"
 
     else:
-
         # 角色专用模板，简单替换
 
         # Note: specialized prompts might not support intent_section yet, so we append it if present
@@ -1584,7 +1578,6 @@ def build_system_prompt(
     # 4. 版本特定修饰
 
     if prompt_version == "v2":
-
         prompt += "\n\n## 输出风格\n- 更简洁\n- 先给结论，再给要点\n-  列表优先"
 
     # Signal-to-Action Spine: inject ResponseDirective constraints
@@ -1792,10 +1785,13 @@ def _conversation_messages_from_context(conversation_context: Any) -> tuple[list
         raw_count = conversation_context.get("message_count")
         if raw_count is None:
             raw_count = conversation_context.get("original_count")
-        try:
-            message_count = int(raw_count)
-        except (TypeError, ValueError):
+        if raw_count is None:
             message_count = len(messages)
+        else:
+            try:
+                message_count = int(raw_count)
+            except (TypeError, ValueError):
+                message_count = len(messages)
         return messages, max(message_count, len(messages))
 
     if isinstance(conversation_context, list):
@@ -2099,7 +2095,9 @@ def _format_companion_persona_section(
     community_ctx = (
         cognitive_ctx.get("community_context")
         if isinstance(cognitive_ctx, dict)
-        else user_context.get("community_context") if isinstance(user_context, dict) else None
+        else user_context.get("community_context")
+        if isinstance(user_context, dict)
+        else None
     )
     if isinstance(community_ctx, dict) and community_ctx.get("active_group_count", 0) > 0:
         sprint_progress = community_ctx.get("sprint_progress") or []
@@ -2618,7 +2616,7 @@ def _resolve_preference_instructions(
 
 
 def _format_plan_context(
-    plan_context: dict = None,
+    plan_context: dict | None = None,
     *,
     context_focus: dict[str, Any] | None = None,
     query_text: str = "",
@@ -3789,9 +3787,11 @@ def _render_user_context_content(
             # GAIN-FIX 红旗2（M-05 回灌对齐）：本节是回灌面，口径必须与预算裁剪
             # 一致——只渲染仍在本包注入面（surfaced）的条目，被裁掉的正文
             # （goal 标题/事件摘要/偏好 key）不回灌；全部为空时不落节头（诚实空态）。
-            surfaced_pref_keys = {
-                str(key) for key in (normalized.get("preferences") or {})
-            } if isinstance(normalized.get("preferences"), dict) else set()
+            surfaced_pref_keys = (
+                {str(key) for key in (normalized.get("preferences") or {})}
+                if isinstance(normalized.get("preferences"), dict)
+                else set()
+            )
             evidence_lines: list[str] = []
             prefs = [
                 item

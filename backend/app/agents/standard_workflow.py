@@ -1111,9 +1111,7 @@ def _resolve_budget_dimensions(context_data: dict[str, Any] | None) -> tuple[str
     payload = context_data or {}
     user_context = payload.get("user_context")
     user_context = user_context if isinstance(user_context, dict) else {}
-    raw_entitlement = str(
-        payload.get("entitlement") or user_context.get("entitlement") or ""
-    ).strip()
+    raw_entitlement = str(payload.get("entitlement") or user_context.get("entitlement") or "").strip()
     if raw_entitlement:
         tier = resolve_tier(raw_entitlement)
     else:
@@ -1121,9 +1119,7 @@ def _resolve_budget_dimensions(context_data: dict[str, Any] | None) -> tuple[str
         if request_tier in (ENTITLEMENT_FREE, ENTITLEMENT_PRO):
             tier = request_tier
         else:
-            tier = resolve_tier(
-                str(getattr(settings, "DEFAULT_CONTEXT_ENTITLEMENT", "free") or "free")
-            )
+            tier = resolve_tier(str(getattr(settings, "DEFAULT_CONTEXT_ENTITLEMENT", "free") or "free"))
     decision_type = resolve_decision_type(
         route_intent=payload.get("route_intent"),
         chat_mode=payload.get("chat_mode"),
@@ -1399,9 +1395,11 @@ async def retrieval_node(state: WorkflowState) -> WorkflowState:
 
                 if filtered_docs.chunks:
                     _budget_tier, _budget_decision = _resolve_budget_dimensions(state.context_data)
-                    document_budget = ContextBudgetManager(
-                        tier=_budget_tier, decision_type=_budget_decision
-                    ).allocate().get("document_chunks", 0)
+                    document_budget = (
+                        ContextBudgetManager(tier=_budget_tier, decision_type=_budget_decision)
+                        .allocate()
+                        .get("document_chunks", 0)
+                    )
                     document_context_candidate, document_budget_metadata = format_document_chunks_for_prompt(
                         filtered_docs.chunks,
                         budget=document_budget,
@@ -2001,18 +1999,14 @@ Ask about their available time and current tasks if needed.
                         _now_mono = time.perf_counter()
                         if (
                             stream_callback
-                            and (_now_mono - _gen_reasoning_status_last)
-                            >= _REASONING_PROGRESS_STATUS_INTERVAL_SECONDS
+                            and (_now_mono - _gen_reasoning_status_last) >= _REASONING_PROGRESS_STATUS_INTERVAL_SECONDS
                         ):
                             _gen_reasoning_status_last = _now_mono
                             await stream_callback(
                                 agent_service_pb2.ChatResponse(
                                     status_update=agent_service_pb2.AgentStatus(
                                         state=agent_service_pb2.AgentStatus.THINKING,
-                                        details=(
-                                            "仍在深度思考中…（已思考 "
-                                            f"{max(0, int(_now_mono - _gen_t0))} 秒）"
-                                        ),
+                                        details=(f"仍在深度思考中…（已思考 {max(0, int(_now_mono - _gen_t0))} 秒）"),
                                         current_agent_name="Sparkle AI",
                                     )
                                 )
@@ -2284,19 +2278,9 @@ Ask about their available time and current tasks if needed.
             # O-02 trace spine：漏斗记录挂全链 trace_id（数据面传播：
             # process_stream 写入 state.context_data["trace_id"]；contextvar
             # 为同 task 调用的兜底；缺失诚实降级为 None）。
-            trace_id=str(state.context_data.get("trace_id") or "")
-            or current_spine_trace_id()
-            or None,
-            memory_funnel=(
-                _uc_payload.get("context_funnel_memory")
-                if isinstance(_uc_payload, dict)
-                else None
-            ),
-            experience_meta=(
-                _uc_payload.get("experience_memory_meta")
-                if isinstance(_uc_payload, dict)
-                else None
-            ),
+            trace_id=str(state.context_data.get("trace_id") or "") or current_spine_trace_id() or None,
+            memory_funnel=(_uc_payload.get("context_funnel_memory") if isinstance(_uc_payload, dict) else None),
+            experience_meta=(_uc_payload.get("experience_memory_meta") if isinstance(_uc_payload, dict) else None),
             retrieval=state.context_data.get("document_context_retrieval") or {},
             document_budget=state.context_data.get("document_context_budget") or {},
             context_budget=state.context_data.get("context_budget") or {},
@@ -2334,9 +2318,7 @@ Ask about their available time and current tasks if needed.
 # ---------------------------------------------------------------------------
 #: 确认门中断（awaiting user confirmation）的面向用户话术——不是失败，
 #: 不出现「中断/失败/layer/step」等开发者词汇。
-_CONFIRMATION_PENDING_NOTICE = (
-    "这一步需要你确认后才能继续。你确认之后，我们可以马上接着往下走。"
-)
+_CONFIRMATION_PENDING_NOTICE = "这一步需要你确认后才能继续。你确认之后，我们可以马上接着往下走。"
 
 
 def render_plan_abort_notice(plan_result: Any, locale: str | None = None) -> str:
@@ -2557,9 +2539,7 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
                     executable_plan.plan_id,
                     plan_result.abort_reason,
                 )
-            await stream_callback(
-                agent_service_pb2.ChatResponse(delta=render_plan_abort_notice(plan_result))
-            )
+            await stream_callback(agent_service_pb2.ChatResponse(delta=render_plan_abort_notice(plan_result)))
 
         # Write feedback for LangGraph plan
         await _write_feedback(
@@ -2720,9 +2700,7 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
         if stream_callback:
             try:
                 await stream_callback(
-                    agent_service_pb2.ChatResponse(
-                        delta=budget_exhausted_turn_note(state.context_data.get("locale"))
-                    )
+                    agent_service_pb2.ChatResponse(delta=budget_exhausted_turn_note(state.context_data.get("locale")))
                 )
             except Exception:  # noqa: BLE001 — 说明帧是 best-effort，不打断终态收敛
                 logger.warning("budget exhausted turn note streaming failed (non-fatal)")
@@ -3229,7 +3207,7 @@ async def collaboration_node(state: WorkflowState) -> WorkflowState:
         # Build enhanced context
         context = EnhancedAgentContext(
             user_id=user_id,
-            session_id=state.context_data.get("session_id") or getattr(state, "session_id", ""),
+            session_id=state.context_data.get("session_id") or getattr(state, "session_id", "") or "",
             user_query=user_message,
             conversation_history=state.messages[:-1],
             knowledge_context=state.context_data.get("knowledge_context"),

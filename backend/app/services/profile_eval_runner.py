@@ -218,13 +218,13 @@ class ProfileEvalRunner:
                 )
                 or {}
             )
+            raw_llm_score = llm_attachment.get("score")
             try:
-                llm_score = float(llm_attachment.get("score"))
+                llm_score = float(raw_llm_score) if raw_llm_score is not None else rubric_score
             except (TypeError, ValueError):
                 llm_score = rubric_score
             final_score = round(
-                (rubric_score * self.judge_config.rubric_weight)
-                + (llm_score * self.judge_config.judge_weight),
+                (rubric_score * self.judge_config.rubric_weight) + (llm_score * self.judge_config.judge_weight),
                 3,
             )
 

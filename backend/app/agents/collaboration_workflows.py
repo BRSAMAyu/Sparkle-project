@@ -6,12 +6,13 @@ Collaboration Workflows - 多智能体协作工作流
 2. ProgressiveExplorationWorkflow - 渐进式深度探索
 3. ErrorDiagnosisWorkflow - 错题诊断循环
 """
+
 from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, Sequence
 
 from loguru import logger
 
@@ -35,6 +36,7 @@ from .workflow_experience import (
 @dataclass
 class CollaborationResult:
     """多智能体协作结果"""
+
     workflow_type: str  # 工作流类型
     participants: list[str]  # 参与的智能体名称
     outputs: list[AgentResponse]  # 各智能体的输出
@@ -116,7 +118,7 @@ def _build_query(
     *,
     base_query: str,
     workflow_type: str,
-    handoff_packets: list[HandoffPacket | dict[str, Any]] | None = None,
+    handoff_packets: Sequence[HandoffPacket | dict[str, Any]] | None = None,
     few_shot_examples: list[dict[str, Any]] | None = None,
     extra_instruction: str | None = None,
 ) -> str:
@@ -151,10 +153,8 @@ class TaskDecompositionWorkflow:
         self.orchestrator = orchestrator
 
     async def execute(
-        self,
-        query: str,
-        context: EnhancedAgentContext
-    , tool_call_id: str | None = None) -> CollaborationResult:
+        self, query: str, context: EnhancedAgentContext, tool_call_id: str | None = None
+    ) -> CollaborationResult:
         """
         执行任务分解协作
 
@@ -247,42 +247,48 @@ class TaskDecompositionWorkflow:
         # 数学领域
         if subject_distribution.get("math"):
             math_context = EnhancedAgentContext(
-                **{**context.__dict__,
-                   "user_query": _build_query(
-                       base_query=f"为以下数学知识点生成练习题：{', '.join(subject_distribution['math'][:3])}",
-                       workflow_type="task_decomposition",
-                       handoff_packets=[planner_packet.to_dict()],
-                       extra_instruction="直接产出专项训练建议，不要复述整份计划。",
-                   ),
-                   "previous_agent_outputs": [planner_packet.to_dict()]}
+                **{
+                    **context.__dict__,
+                    "user_query": _build_query(
+                        base_query=f"为以下数学知识点生成练习题：{', '.join(subject_distribution['math'][:3])}",
+                        workflow_type="task_decomposition",
+                        handoff_packets=[planner_packet.to_dict()],
+                        extra_instruction="直接产出专项训练建议，不要复述整份计划。",
+                    ),
+                    "previous_agent_outputs": [planner_packet.to_dict()],
+                }
             )
             parallel_tasks.append(("MathExpert", MathAgent().process(math_context)))
 
         # 编程领域
         if subject_distribution.get("code"):
             code_context = EnhancedAgentContext(
-                **{**context.__dict__,
-                   "user_query": _build_query(
-                       base_query=f"为以下编程概念设计实战项目：{', '.join(subject_distribution['code'][:3])}",
-                       workflow_type="task_decomposition",
-                       handoff_packets=[planner_packet.to_dict()],
-                       extra_instruction="聚焦实战项目和训练动作，不重复宏观计划。",
-                   ),
-                   "previous_agent_outputs": [planner_packet.to_dict()]}
+                **{
+                    **context.__dict__,
+                    "user_query": _build_query(
+                        base_query=f"为以下编程概念设计实战项目：{', '.join(subject_distribution['code'][:3])}",
+                        workflow_type="task_decomposition",
+                        handoff_packets=[planner_packet.to_dict()],
+                        extra_instruction="聚焦实战项目和训练动作，不重复宏观计划。",
+                    ),
+                    "previous_agent_outputs": [planner_packet.to_dict()],
+                }
             )
             parallel_tasks.append(("CodeExpert", CodeAgent().process(code_context)))
 
         # 写作领域（生成学习笔记模板）
         if weak_points or forgetting_risks:
             writing_context = EnhancedAgentContext(
-                **{**context.__dict__,
-                   "user_query": _build_query(
-                       base_query=f"为以下知识点创建学习笔记模板：{', '.join((weak_points + forgetting_risks)[:5])}",
-                       workflow_type="task_decomposition",
-                       handoff_packets=[planner_packet.to_dict()],
-                       extra_instruction="输出适合执行的学习笔记模板，不重复整份计划。",
-                   ),
-                   "previous_agent_outputs": [planner_packet.to_dict()]}
+                **{
+                    **context.__dict__,
+                    "user_query": _build_query(
+                        base_query=f"为以下知识点创建学习笔记模板：{', '.join((weak_points + forgetting_risks)[:5])}",
+                        workflow_type="task_decomposition",
+                        handoff_packets=[planner_packet.to_dict()],
+                        extra_instruction="输出适合执行的学习笔记模板，不重复整份计划。",
+                    ),
+                    "previous_agent_outputs": [planner_packet.to_dict()],
+                }
             )
             parallel_tasks.append(("WritingExpert", WritingAgent().process(writing_context)))
 
@@ -291,7 +297,7 @@ class TaskDecompositionWorkflow:
             results = await asyncio.gather(*[task for _, task in parallel_tasks], return_exceptions=True)
 
             for _i, (agent_name, result) in enumerate(zip([name for name, _ in parallel_tasks], results, strict=False)):
-                if isinstance(result, Exception):
+                if isinstance(result, BaseException):
                     logger.error(f"[TaskDecomposition] {agent_name} failed: {result}")
                     continue
 
@@ -330,8 +336,8 @@ class TaskDecompositionWorkflow:
             participants=[agent for agent, _ in parallel_tasks] + ["StudyPlanner", "Orchestrator"],
             outputs=outputs,
             final_response=final_response,
-            reasoning=f"任务分解协作：由 StudyPlanner 制定宏观计划，" \
-                     f"{len(parallel_tasks)} 个专业 Agent 协作生成具体内容",
+            reasoning=f"任务分解协作：由 StudyPlanner 制定宏观计划，"
+            f"{len(parallel_tasks)} 个专业 Agent 协作生成具体内容",
             metadata={
                 "weak_points": weak_points,
                 "forgetting_risks": forgetting_risks,
@@ -340,17 +346,12 @@ class TaskDecompositionWorkflow:
                 "handoff_packets": handoff_packets,
             },
             timeline=timeline,
-            confidence=0.88
+            confidence=0.88,
         )
 
     def _categorize_concepts(self, concepts: list[str]) -> dict[str, list[str]]:
         """将知识点分类到不同领域"""
-        categorization = {
-            "math": [],
-            "code": [],
-            "writing": [],
-            "science": []
-        }
+        categorization = {"math": [], "code": [], "writing": [], "science": []}
 
         for concept in concepts:
             concept_lower = concept.lower()
@@ -426,10 +427,8 @@ class ProgressiveExplorationWorkflow:
         self.orchestrator = orchestrator
 
     async def execute(
-        self,
-        query: str,
-        context: EnhancedAgentContext
-    , tool_call_id: str | None = None) -> CollaborationResult:
+        self, query: str, context: EnhancedAgentContext, tool_call_id: str | None = None
+    ) -> CollaborationResult:
         """
         执行渐进式深度探索
 
@@ -452,11 +451,9 @@ class ProgressiveExplorationWorkflow:
         search_agent = SearchAgent()
         search_response = await search_agent.process(context)
         outputs.append(search_response)
-        conversation_history.append({
-            "agent": "SearchExpert",
-            "content": search_response.response_text,
-            "reasoning": search_response.reasoning
-        })
+        conversation_history.append(
+            {"agent": "SearchExpert", "content": search_response.response_text, "reasoning": search_response.reasoning}
+        )
         timeline.append(
             _build_timeline_step(
                 "SearchExpert",
@@ -496,11 +493,9 @@ class ProgressiveExplorationWorkflow:
         )
         math_response = await math_agent.process(math_context)
         outputs.append(math_response)
-        conversation_history.append({
-            "agent": "MathExpert",
-            "content": math_response.response_text,
-            "reasoning": math_response.reasoning
-        })
+        conversation_history.append(
+            {"agent": "MathExpert", "content": math_response.response_text, "reasoning": math_response.reasoning}
+        )
         timeline.append(
             _build_timeline_step(
                 "MathExpert",
@@ -521,23 +516,23 @@ class ProgressiveExplorationWorkflow:
         if self._needs_code_implementation(query):
             logger.info("[ProgressiveExploration] Round 2: Code implementation...")
             code_context = EnhancedAgentContext(
-                **{**context.__dict__,
-                   "previous_agent_outputs": [math_packet.to_dict()],
-                   "user_query": _build_query(
-                       base_query=f"基于上述数学推导，提供代码实现：{query}",
-                       workflow_type="progressive_exploration",
-                       handoff_packets=[math_packet.to_dict()],
-                       extra_instruction="请只补充代码化视角，不要复述整段推导。",
-                   )}
+                **{
+                    **context.__dict__,
+                    "previous_agent_outputs": [math_packet.to_dict()],
+                    "user_query": _build_query(
+                        base_query=f"基于上述数学推导，提供代码实现：{query}",
+                        workflow_type="progressive_exploration",
+                        handoff_packets=[math_packet.to_dict()],
+                        extra_instruction="请只补充代码化视角，不要复述整段推导。",
+                    ),
+                }
             )
             code_agent = CodeAgent()
             code_response = await code_agent.process(code_context)
             outputs.append(code_response)
-            conversation_history.append({
-                "agent": "CodeExpert",
-                "content": code_response.response_text,
-                "reasoning": code_response.reasoning
-            })
+            conversation_history.append(
+                {"agent": "CodeExpert", "content": code_response.response_text, "reasoning": code_response.reasoning}
+            )
             timeline.append(
                 _build_timeline_step(
                     "CodeExpert",
@@ -565,24 +560,36 @@ class ProgressiveExplorationWorkflow:
                 stage="collaboration",
             )
             science_context = EnhancedAgentContext(
-                **{**context.__dict__,
-                   "previous_agent_outputs": [packet for packet in [math_packet.to_dict(), code_packet.to_dict() if code_packet else None] if packet],
-                   "user_query": _build_query(
-                       base_query=f"用生物学或物理学概念类比解释：{query}",
-                       workflow_type="progressive_exploration",
-                       handoff_packets=[packet for packet in [math_packet.to_dict(), code_packet.to_dict() if code_packet else None] if packet],
-                       few_shot_examples=science_examples,
-                       extra_instruction="类比只能帮助理解，必须指出类比边界。",
-                   )}
+                **{
+                    **context.__dict__,
+                    "previous_agent_outputs": [
+                        packet
+                        for packet in [math_packet.to_dict(), code_packet.to_dict() if code_packet else None]
+                        if packet
+                    ],
+                    "user_query": _build_query(
+                        base_query=f"用生物学或物理学概念类比解释：{query}",
+                        workflow_type="progressive_exploration",
+                        handoff_packets=[
+                            packet
+                            for packet in [math_packet.to_dict(), code_packet.to_dict() if code_packet else None]
+                            if packet
+                        ],
+                        few_shot_examples=science_examples,
+                        extra_instruction="类比只能帮助理解，必须指出类比边界。",
+                    ),
+                }
             )
             science_agent = ScienceAgent()
             science_response = await science_agent.process(science_context)
             outputs.append(science_response)
-            conversation_history.append({
-                "agent": "ScienceExpert",
-                "content": science_response.response_text,
-                "reasoning": science_response.reasoning
-            })
+            conversation_history.append(
+                {
+                    "agent": "ScienceExpert",
+                    "content": science_response.response_text,
+                    "reasoning": science_response.reasoning,
+                }
+            )
             timeline.append(
                 _build_timeline_step(
                     "ScienceExpert",
@@ -609,15 +616,17 @@ class ProgressiveExplorationWorkflow:
             stage="collaboration",
         )
         writing_context = EnhancedAgentContext(
-            **{**context.__dict__,
-               "previous_agent_outputs": handoff_packets,
-               "user_query": _build_query(
-                   base_query=f"基于以上多角度解释，生成学习笔记和记忆技巧：{query}",
-                   workflow_type="progressive_exploration",
-                   handoff_packets=handoff_packets,
-                   few_shot_examples=writing_examples,
-                   extra_instruction="请压缩重复内容，按概念-例子-记忆钩子组织笔记。",
-               )}
+            **{
+                **context.__dict__,
+                "previous_agent_outputs": handoff_packets,
+                "user_query": _build_query(
+                    base_query=f"基于以上多角度解释，生成学习笔记和记忆技巧：{query}",
+                    workflow_type="progressive_exploration",
+                    handoff_packets=handoff_packets,
+                    few_shot_examples=writing_examples,
+                    extra_instruction="请压缩重复内容，按概念-例子-记忆钩子组织笔记。",
+                ),
+            }
         )
         writing_agent = WritingAgent()
         writing_response = await writing_agent.process(writing_context)
@@ -642,14 +651,16 @@ class ProgressiveExplorationWorkflow:
         if self._needs_review_schedule(query):
             logger.info("[ProgressiveExploration] Round 5: Review scheduling...")
             planner_context = EnhancedAgentContext(
-                **{**context.__dict__,
-                   "previous_agent_outputs": [writing_packet.to_dict()],
-                   "user_query": _build_query(
-                       base_query=f"为这个知识点安排复习计划：{query}",
-                       workflow_type="progressive_exploration",
-                       handoff_packets=[writing_packet.to_dict()],
-                       extra_instruction="复习安排只保留关键节奏和复盘节点即可。",
-                   )}
+                **{
+                    **context.__dict__,
+                    "previous_agent_outputs": [writing_packet.to_dict()],
+                    "user_query": _build_query(
+                        base_query=f"为这个知识点安排复习计划：{query}",
+                        workflow_type="progressive_exploration",
+                        handoff_packets=[writing_packet.to_dict()],
+                        extra_instruction="复习安排只保留关键节奏和复盘节点即可。",
+                    ),
+                }
             )
             planner = StudyPlannerAgent()
             planner_response = await planner.process(planner_context)
@@ -668,7 +679,8 @@ class ProgressiveExplorationWorkflow:
 
         return CollaborationResult(
             workflow_type="progressive_exploration",
-            participants=[item["agent"] for item in conversation_history] + (["StudyPlanner"] if planner_response else []),
+            participants=[str(item["agent"]) for item in conversation_history]
+            + (["StudyPlanner"] if planner_response else []),
             outputs=outputs,
             final_response=final_response,
             reasoning=self._build_reasoning_summary(
@@ -684,7 +696,7 @@ class ProgressiveExplorationWorkflow:
                 "handoff_packets": handoff_packets,
             },
             timeline=timeline,
-            confidence=0.92
+            confidence=0.92,
         )
 
     def _needs_scientific_analogy(self, query: str) -> bool:
@@ -721,9 +733,7 @@ class ProgressiveExplorationWorkflow:
         return f"渐进式深度探索：从 {' → '.join(stages)}，共 {outputs_count} 个维度的深度解析"
 
     def _format_exploration_summary(
-        self,
-        conversation_history: list[dict],
-        planner_response: AgentResponse | None
+        self, conversation_history: list[dict], planner_response: AgentResponse | None
     ) -> str:
         """格式化探索总结"""
 
@@ -767,10 +777,8 @@ class ErrorDiagnosisWorkflow:
         self.orchestrator = orchestrator
 
     async def execute(
-        self,
-        query: str,
-        context: EnhancedAgentContext
-    , tool_call_id: str | None = None) -> CollaborationResult:
+        self, query: str, context: EnhancedAgentContext, tool_call_id: str | None = None
+    ) -> CollaborationResult:
         """
         执行错题诊断
 
@@ -798,13 +806,15 @@ class ErrorDiagnosisWorkflow:
             stage="collaboration",
         )
         solver_context = EnhancedAgentContext(
-            **{**context.__dict__,
-               "user_query": _build_query(
-                   base_query=f"分析这道题的错误模式和知识点缺陷：{query}",
-                   workflow_type="error_diagnosis",
-                   few_shot_examples=solver_examples,
-                   extra_instruction="请先区分错误症状与根因，再给修复动作。",
-               )}
+            **{
+                **context.__dict__,
+                "user_query": _build_query(
+                    base_query=f"分析这道题的错误模式和知识点缺陷：{query}",
+                    workflow_type="error_diagnosis",
+                    few_shot_examples=solver_examples,
+                    extra_instruction="请先区分错误症状与根因，再给修复动作。",
+                ),
+            }
         )
         solver_response = await solver.process(solver_context)
         outputs.append(solver_response)
@@ -856,14 +866,16 @@ class ErrorDiagnosisWorkflow:
         logger.info("[ErrorDiagnosis] Step 2: Planning targeted review...")
         planner = StudyPlannerAgent()
         planner_context = EnhancedAgentContext(
-            **{**context.__dict__,
-               "previous_agent_outputs": handoff_packets,
-               "user_query": _build_query(
-                   base_query=f"为薄弱知识点安排针对性复习：{', '.join(weak_points)}",
-                   workflow_type="error_diagnosis",
-                   handoff_packets=handoff_packets,
-                   extra_instruction="只输出针对性复习动作，不要重复完整错因分析。",
-               )}
+            **{
+                **context.__dict__,
+                "previous_agent_outputs": handoff_packets,
+                "user_query": _build_query(
+                    base_query=f"为薄弱知识点安排针对性复习：{', '.join(weak_points)}",
+                    workflow_type="error_diagnosis",
+                    handoff_packets=handoff_packets,
+                    extra_instruction="只输出针对性复习动作，不要重复完整错因分析。",
+                ),
+            }
         )
         planner_response = await planner.process(planner_context)
         outputs.append(planner_response)
@@ -893,27 +905,31 @@ class ErrorDiagnosisWorkflow:
         if is_math:
             math_agent = MathAgent()
             practice_context = EnhancedAgentContext(
-                **{**context.__dict__,
-                   "previous_agent_outputs": [solver_packet.to_dict(), planner_packet.to_dict()],
-                   "user_query": _build_query(
-                       base_query=f"生成5道类似的练习题（难度递进）：{', '.join(weak_points)}",
-                       workflow_type="error_diagnosis",
-                       handoff_packets=[solver_packet.to_dict(), planner_packet.to_dict()],
-                       extra_instruction="练习题必须围绕已识别的根因递进展开。",
-                   )}
+                **{
+                    **context.__dict__,
+                    "previous_agent_outputs": [solver_packet.to_dict(), planner_packet.to_dict()],
+                    "user_query": _build_query(
+                        base_query=f"生成5道类似的练习题（难度递进）：{', '.join(weak_points)}",
+                        workflow_type="error_diagnosis",
+                        handoff_packets=[solver_packet.to_dict(), planner_packet.to_dict()],
+                        extra_instruction="练习题必须围绕已识别的根因递进展开。",
+                    ),
+                }
             )
             practice_response = await math_agent.process(practice_context)
         elif is_code:
             code_agent = CodeAgent()
             practice_context = EnhancedAgentContext(
-                **{**context.__dict__,
-                   "previous_agent_outputs": [solver_packet.to_dict(), planner_packet.to_dict()],
-                   "user_query": _build_query(
-                       base_query=f"生成3个编程练习题（涉及知识点：{', '.join(weak_points)}）",
-                       workflow_type="error_diagnosis",
-                       handoff_packets=[solver_packet.to_dict(), planner_packet.to_dict()],
-                       extra_instruction="练习题要针对根因设计，不要泛泛给题。",
-                   )}
+                **{
+                    **context.__dict__,
+                    "previous_agent_outputs": [solver_packet.to_dict(), planner_packet.to_dict()],
+                    "user_query": _build_query(
+                        base_query=f"生成3个编程练习题（涉及知识点：{', '.join(weak_points)}）",
+                        workflow_type="error_diagnosis",
+                        handoff_packets=[solver_packet.to_dict(), planner_packet.to_dict()],
+                        extra_instruction="练习题要针对根因设计，不要泛泛给题。",
+                    ),
+                }
             )
             practice_response = await code_agent.process(practice_context)
 
@@ -937,10 +953,7 @@ class ErrorDiagnosisWorkflow:
 
         # 整合诊断报告
         final_response = self._format_diagnosis_report(
-            solver_response,
-            planner_response,
-            practice_response,
-            weak_points
+            solver_response, planner_response, practice_response, weak_points
         )
 
         return CollaborationResult(
@@ -957,7 +970,7 @@ class ErrorDiagnosisWorkflow:
                 "handoff_packets": handoff_packets,
             },
             timeline=timeline,
-            confidence=0.90
+            confidence=0.90,
         )
 
     def _format_diagnosis_report(
@@ -965,7 +978,7 @@ class ErrorDiagnosisWorkflow:
         solver_response: AgentResponse,
         planner_response: AgentResponse,
         practice_response: AgentResponse | None,
-        weak_points: list[str]
+        weak_points: list[str],
     ) -> str:
         """格式化错题诊断报告"""
 

@@ -89,9 +89,9 @@ class PersonaAwarePlanner:
                 )
                 active_subjects = knowledge_summary.get("active_learning_subjects")
                 if isinstance(active_subjects, list):
-                    constraints.active_subjects = [
-                        str(item).strip() for item in active_subjects if str(item).strip()
-                    ][:5]
+                    constraints.active_subjects = [str(item).strip() for item in active_subjects if str(item).strip()][
+                        :5
+                    ]
 
         user_profile = plan_context.get("user_profile")
         user_profile = user_profile if isinstance(user_profile, dict) else {}
@@ -229,7 +229,7 @@ class PersonaAwarePlanner:
         breakdown_feedback = facts.get("breakdown_feedback")
         if isinstance(breakdown_feedback, list):
             ratios = [
-                float(item.get("time_accuracy"))
+                float(item["time_accuracy"])
                 for item in breakdown_feedback
                 if isinstance(item, dict) and isinstance(item.get("time_accuracy"), (int, float))
             ]

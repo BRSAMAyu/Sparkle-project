@@ -2,12 +2,13 @@
 Group file service
 群组文件服务
 """
+
 from __future__ import annotations
 
 import os
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import cast
+from typing import Sequence, cast
 from uuid import UUID, uuid4
 
 from sqlalchemy import and_, func, or_, select
@@ -216,7 +217,7 @@ class GroupFileService:
     async def list_accessible_group_ids(
         db: AsyncSession,
         user_id: UUID,
-        requested_group_ids: list[UUID | str] | None = None,
+        requested_group_ids: Sequence[UUID | str] | None = None,
     ) -> list[UUID]:
         stmt = select(GroupMember.group_id).where(
             GroupMember.user_id == user_id,

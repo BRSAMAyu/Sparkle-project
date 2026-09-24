@@ -192,9 +192,7 @@ class PredictiveService:
         normalized_user_id = self._require_user_id(user_id)
         kill_switch = AuroraStage27ForesightKillSwitchService()
         mode = await kill_switch.get_mode()
-        cache_key = await self._build_foresight_cache_key(
-            normalized_user_id, kill_switch=kill_switch
-        )
+        cache_key = await self._build_foresight_cache_key(normalized_user_id, kill_switch=kill_switch)
         cached = await cache_service.get(cache_key)
         if isinstance(cached, dict):
             FORESIGHT_SNAPSHOT_GENERATED_TOTAL.labels(cache="hit", mode=mode).inc()
@@ -205,13 +203,9 @@ class PredictiveService:
         engagement = await self.predict_engagement(normalized_user_id)
         optimal_time = await self.recommend_optimal_time(normalized_user_id)
         dropout_risk = await self.detect_dropout_risk(normalized_user_id)
-        dropout_risk_level = (
-            str(dropout_risk.get("risk_level") or "unknown").strip().lower()
-        )
+        dropout_risk_level = str(dropout_risk.get("risk_level") or "unknown").strip().lower()
         next_intent = await self.get_next_intent_forecast(normalized_user_id)
-        subject_difficulty = await self._build_subject_difficulty_projection(
-            normalized_user_id
-        )
+        subject_difficulty = await self._build_subject_difficulty_projection(normalized_user_id)
 
         attractors = {}
         deviations = ()
@@ -219,9 +213,7 @@ class PredictiveService:
         if mode != "off":
             attractor_service = PersDynAttractorService(self.db)
             if await kill_switch.is_feature_enabled("attractor"):
-                attractors = await attractor_service.get_snapshot_attractors(
-                    user_id=normalized_user_id
-                )
+                attractors = await attractor_service.get_snapshot_attractors(user_id=normalized_user_id)
             if attractors and await kill_switch.is_feature_enabled("deviation"):
                 current_observation = await attractor_service.build_current_observation(
                     user_id=normalized_user_id, now=now
@@ -234,9 +226,7 @@ class PredictiveService:
             if dropout_risk_level == "high":
                 # High predictive risk stays on richer product surfaces; JITAI avoids
                 # affect-based nudges by suppressing mood-only deviation hints.
-                jitai_deviations = tuple(
-                    item for item in deviations if item.dim != "mood_valence"
-                )
+                jitai_deviations = tuple(item for item in deviations if item.dim != "mood_valence")
             if jitai_deviations and await kill_switch.is_feature_live("jitai"):
                 hints = await JITAITrigger().generate_hints(
                     user_id=normalized_user_id,
@@ -266,9 +256,7 @@ class PredictiveService:
             ttl=int(settings.AURORA_FORESIGHT_CACHE_TTL_SECONDS),
         )
         FORESIGHT_SNAPSHOT_GENERATED_TOTAL.labels(cache="miss", mode=mode).inc()
-        FORESIGHT_SNAPSHOT_LATENCY_SECONDS.labels(mode=mode).observe(
-            max(0.0, perf_counter() - started_at)
-        )
+        FORESIGHT_SNAPSHOT_LATENCY_SECONDS.labels(mode=mode).observe(max(0.0, perf_counter() - started_at))
         return snapshot
 
     @staticmethod
@@ -277,9 +265,7 @@ class PredictiveService:
             return user_id
         normalized = str(user_id or "").strip()
         if not normalized:
-            raise ValueError(
-                "PredictiveService.build_foresight_snapshot requires a non-empty user_id"
-            )
+            raise ValueError("PredictiveService.build_foresight_snapshot requires a non-empty user_id")
         return UUID(normalized)
 
     async def _build_foresight_cache_key(
@@ -294,9 +280,7 @@ class PredictiveService:
             f"{modes['mode']}:{modes['attractor']}:{modes['deviation']}:{modes['jitai']}"
         )
 
-    async def _build_subject_difficulty_projection(
-        self, user_id: UUID
-    ) -> dict[str, Any] | None:
+    async def _build_subject_difficulty_projection(self, user_id: UUID) -> dict[str, Any] | None:
         topic_id = await self._resolve_subject_difficulty_topic(user_id)
         if topic_id is None:
             return None
@@ -313,9 +297,7 @@ class PredictiveService:
             .order_by(StudyRecord.created_at.desc())
             .limit(1)
         )
-        latest_study_topic = (
-            await self.db.execute(latest_study_stmt)
-        ).scalar_one_or_none()
+        latest_study_topic = (await self.db.execute(latest_study_stmt)).scalar_one_or_none()
         if isinstance(latest_study_topic, UUID):
             return latest_study_topic
 
@@ -374,9 +356,7 @@ class PredictiveService:
             # 2. 计算会话间隔
             intervals = []
             for i in range(len(recent_records) - 1):
-                interval = (
-                    recent_records[i].created_at - recent_records[i + 1].created_at
-                ).total_seconds() / 3600
+                interval = (recent_records[i].created_at - recent_records[i + 1].created_at).total_seconds() / 3600
                 intervals.append(interval)
 
             avg_interval_hours = statistics.mean(intervals) if intervals else 24
@@ -392,9 +372,7 @@ class PredictiveService:
             predicted_time = last_activity + timedelta(hours=avg_interval_hours)
 
             # 调整到最常见的星期和时间
-            predicted_time = self._adjust_to_pattern(
-                predicted_time, weekday_pattern, hour_pattern
-            )
+            predicted_time = self._adjust_to_pattern(predicted_time, weekday_pattern, hour_pattern)
 
             # 5. 计算置信度
             # 基于间隔的稳定性
@@ -423,8 +401,7 @@ class PredictiveService:
         except PREDICTION_DATA_ERRORS as e:
             logger.error(f"参与度预测失败: {e}")
             return EngagementForecast(
-                next_active_time=self._get_current_time().replace(tzinfo=None)
-                + timedelta(days=1),
+                next_active_time=self._get_current_time().replace(tzinfo=None) + timedelta(days=1),
                 confidence=0.0,
                 recommended_intervention="预测失败",
                 risk_level="unknown",
@@ -464,15 +441,11 @@ class PredictiveService:
             predicted_time += timedelta(days=days_diff)
 
         # 调整到最常见的小时
-        predicted_time = predicted_time.replace(
-            hour=most_common_hour, minute=0, second=0
-        )
+        predicted_time = predicted_time.replace(hour=most_common_hour, minute=0, second=0)
 
         return predicted_time
 
-    async def predict_difficulty(
-        self, user_id: UUID, topic_id: UUID
-    ) -> DifficultyPrediction:
+    async def predict_difficulty(self, user_id: UUID, topic_id: UUID) -> DifficultyPrediction:
         """
         预测话题难度
 
@@ -604,14 +577,11 @@ class PredictiveService:
                 weekday = record.created_at.weekday()
                 recency_days = max(
                     0.0,
-                    (now - record.created_at.replace(tzinfo=None)).total_seconds()
-                    / 86400,
+                    (now - record.created_at.replace(tzinfo=None)).total_seconds() / 86400,
                 )
                 recency_weight = max(0.35, 1.0 - (recency_days / 45.0))
                 mastery_score = max(float(getattr(record, "mastery_delta", 0.0)), 0.0)
-                duration_score = min(
-                    float(getattr(record, "study_minutes", 0.0)) / 45.0, 1.0
-                )
+                duration_score = min(float(getattr(record, "study_minutes", 0.0)) / 45.0, 1.0)
                 performance_score = (mastery_score * 0.7) + (duration_score * 0.3)
 
                 hour_scores[hour] += performance_score * recency_weight
@@ -620,30 +590,16 @@ class PredictiveService:
                 weekday_weights[weekday] += recency_weight
 
             avg_hour_performance = {
-                hour: (
-                    (hour_scores[hour] / hour_weights[hour])
-                    if hour_weights[hour] > 0
-                    else 0.0
-                )
+                hour: ((hour_scores[hour] / hour_weights[hour]) if hour_weights[hour] > 0 else 0.0)
                 for hour in range(24)
             }
             avg_weekday_performance = {
-                day: (
-                    (weekday_scores[day] / weekday_weights[day])
-                    if weekday_weights[day] > 0
-                    else 0.0
-                )
+                day: ((weekday_scores[day] / weekday_weights[day]) if weekday_weights[day] > 0 else 0.0)
                 for day in range(7)
             }
-            observed_hours = [
-                hour for hour, weight in hour_weights.items() if weight > 0
-            ]
-            observed_weekdays = [
-                day for day, weight in weekday_weights.items() if weight > 0
-            ]
-            best_hours = sorted(
-                observed_hours, key=lambda h: avg_hour_performance[h], reverse=True
-            )[:3]
+            observed_hours = [hour for hour, weight in hour_weights.items() if weight > 0]
+            observed_weekdays = [day for day, weight in weekday_weights.items() if weight > 0]
+            best_hours = sorted(observed_hours, key=lambda h: avg_hour_performance[h], reverse=True)[:3]
             best_weekdays = sorted(
                 observed_weekdays,
                 key=lambda d: avg_weekday_performance[d],
@@ -715,9 +671,7 @@ class PredictiveService:
 
             # 活跃度变化
             if previous_7d_count > 0:
-                activity_change = (
-                    recent_7d_count - previous_7d_count
-                ) / previous_7d_count
+                activity_change = (recent_7d_count - previous_7d_count) / previous_7d_count
             else:
                 activity_change = 0.0
 
@@ -733,18 +687,12 @@ class PredictiveService:
             incomplete_count = incomplete_result.scalar() or 0
 
             total_tasks_query = select(func.count(Task.id)).where(
-                and_(
-                    Task.user_id == user_id, Task.created_at >= now - timedelta(days=14)
-                )
+                and_(Task.user_id == user_id, Task.created_at >= now - timedelta(days=14))
             )
             total_result = await self.db.execute(total_tasks_query)
             total_count = total_result.scalar() or 0
 
-            completion_rate = (
-                (total_count - incomplete_count) / total_count
-                if total_count > 0
-                else 0.5
-            )
+            completion_rate = (total_count - incomplete_count) / total_count if total_count > 0 else 0.5
 
             # 3. 计算风险分数 (0-100)
             risk_score = 0
@@ -856,18 +804,14 @@ class PredictiveService:
 
     async def generate_long_horizon_forecast(self, user_id: UUID) -> dict[str, Any]:
         base = await self._build_rule_based_next_intent(user_id)
-        model_candidates, route_reason = self._select_long_horizon_model_chain(
-            base.get("signals", {})
-        )
+        model_candidates, route_reason = self._select_long_horizon_model_chain(base.get("signals", {}))
         messages = self._build_long_horizon_messages(base)
 
         try:
             for model_key in model_candidates:
                 try:
                     if not await is_llm_within_budget():
-                        logger.info(
-                            f"Long horizon prediction skipped for user {user_id}: LLM budget exhausted"
-                        )
+                        logger.info(f"Long horizon prediction skipped for user {user_id}: LLM budget exhausted")
                         return self._finalize_prediction(
                             user_id=user_id,
                             forecast=base,
@@ -888,9 +832,7 @@ class PredictiveService:
                     )
                     merged = self._merge_prediction_payload(base, payload)
                     if merged is None:
-                        logger.info(
-                            f"Long horizon model returned no usable payload for user {user_id}: {model_key}"
-                        )
+                        logger.info(f"Long horizon model returned no usable payload for user {user_id}: {model_key}")
                         continue
 
                     enriched = await self._maybe_attach_within_category_preference(
@@ -911,8 +853,7 @@ class PredictiveService:
                         ttl_seconds=self.LONG_HORIZON_CACHE_TTL_SECONDS,
                     )
                     logger.info(
-                        f"Long horizon prediction ready for user {user_id}: "
-                        f"model={model_key}, route={route_reason}"
+                        f"Long horizon prediction ready for user {user_id}: model={model_key}, route={route_reason}"
                     )
                     return enriched
                 except PREDICTION_MODEL_ERRORS as exc:
@@ -971,9 +912,7 @@ class PredictiveService:
             FocusSession.status == FocusStatus.COMPLETED,
         )
         focus_sessions = (await self.db.execute(focus_stmt)).scalars().all()
-        total_focus_minutes = sum(
-            int(session.duration_minutes or 0) for session in focus_sessions
-        )
+        total_focus_minutes = sum(int(session.duration_minutes or 0) for session in focus_sessions)
 
         study_stmt = select(func.count(StudyRecord.id)).where(
             StudyRecord.user_id == user_id,
@@ -987,11 +926,7 @@ class PredictiveService:
         study_count_7d = int((await self.db.execute(study_7d_stmt)).scalar() or 0)
 
         top_task = pending_tasks[0] if pending_tasks else None
-        overdue_count = sum(
-            1
-            for task in pending_tasks
-            if task.due_date is not None and task.due_date < now.date()
-        )
+        overdue_count = sum(1 for task in pending_tasks if task.due_date is not None and task.due_date < now.date())
 
         if top_task is not None:
             reasons = [
@@ -1031,11 +966,7 @@ class PredictiveService:
                     "profile": ["你最近更像在推进已有任务，而不是重新开新坑"],
                     "plan": [
                         f"当前还有 {len(pending_tasks)} 个待办未完成",
-                        *(
-                            [f"其中 {overdue_count} 个已经逾期"]
-                            if overdue_count > 0
-                            else []
-                        ),
+                        *([f"其中 {overdue_count} 个已经逾期"] if overdue_count > 0 else []),
                     ],
                     "focus": [
                         "先推进 25 分钟的小段，比直接做大块任务更容易进入状态",
@@ -1154,18 +1085,13 @@ class PredictiveService:
 
         action_type = "continue_chat"
         title = "系统预测你接下来会继续让 AI 帮你推进这件事"
-        summary = (
-            "这句话更像是一个需要立刻承接的意图，继续让 AI 帮你收束成下一步最省力。"
-        )
+        summary = "这句话更像是一个需要立刻承接的意图，继续让 AI 帮你收束成下一步最省力。"
         suggested_prompt = normalized
         reasons = ["你正在连续输入，当前最需要的是立刻给出下一步动作"]
         confidence = 0.66
         primary_route = "/chat"
 
-        if any(
-            keyword in normalized
-            for keyword in ["任务", "待办", "提醒", "todo", "task"]
-        ):
+        if any(keyword in normalized for keyword in ["任务", "待办", "提醒", "todo", "task"]):
             action_type = "create_task"
             title = "系统预测你想先把这件事落成任务"
             summary = "这段输入更像一个可执行待办，直接落到任务列表会更容易继续推进。"
@@ -1173,31 +1099,21 @@ class PredictiveService:
             reasons = ["输入里出现了明确的任务/提醒语义"]
             confidence = 0.82
             primary_route = "/tasks/new"
-        elif any(
-            keyword in normalized
-            for keyword in ["计划", "学习路径", "复习", "学", "study", "plan"]
-        ):
+        elif any(keyword in normalized for keyword in ["计划", "学习路径", "复习", "学", "study", "plan"]):
             action_type = "study_plan"
             title = "系统预测你想把它收成一个学习计划"
             summary = "当前输入更像在请求结构化规划，先收成计划会比直接闲聊更高效。"
-            suggested_prompt = (
-                normalized if normalized else "请帮我制定一个可执行的学习计划"
-            )
+            suggested_prompt = normalized if normalized else "请帮我制定一个可执行的学习计划"
             reasons = ["输入里有明显的规划/学习语义"]
             confidence = 0.78
-        elif any(
-            keyword in lowered
-            for keyword in ["why", "error", "bug", "报错", "为什么", "问题", "错题"]
-        ):
+        elif any(keyword in lowered for keyword in ["why", "error", "bug", "报错", "为什么", "问题", "错题"]):
             action_type = "error_diagnosis"
             title = "系统预测你接下来想做一次问题诊断"
             summary = "这更像是在定位问题根因，直接进入诊断型回答会更省时间。"
             suggested_prompt = normalized
             reasons = ["输入里出现了问题定位或报错语义"]
             confidence = 0.8
-        elif any(
-            keyword in normalized for keyword in ["翻译", "单词", "英文", "translate"]
-        ):
+        elif any(keyword in normalized for keyword in ["翻译", "单词", "英文", "translate"]):
             action_type = "translate"
             title = "系统预测你接下来想要一个即时语言结果"
             summary = "这是时效性很强的即时需求，直接拿到结果比展开讨论更重要。"
@@ -1207,9 +1123,7 @@ class PredictiveService:
         elif top_task is not None and len(normalized) < 10:
             action_type = "resume_task"
             title = "系统预测你想继续当前重点任务"
-            summary = (
-                f"你最近仍在围绕「{top_task.title}」推进，系统建议直接承接这条主线。"
-            )
+            summary = f"你最近仍在围绕「{top_task.title}」推进，系统建议直接承接这条主线。"
             suggested_prompt = f"帮我继续推进任务：{top_task.title}"
             reasons = [f"当前最高优先级待办仍是「{top_task.title}」"]
             confidence = 0.72
@@ -1269,9 +1183,7 @@ class PredictiveService:
         base: dict[str, Any],
         surface: str,
     ) -> dict[str, Any] | None:
-        messages = self._build_realtime_llm_messages(
-            partial_text=partial_text, base=base
-        )
+        messages = self._build_realtime_llm_messages(partial_text=partial_text, base=base)
 
         async def _attempt(
             model_key: str,
@@ -1305,9 +1217,7 @@ class PredictiveService:
         for model_key, source_tier, timeout_seconds in self._realtime_model_attempts():
             try:
                 if not await is_llm_within_budget():
-                    logger.info(
-                        f"Realtime prediction skipped for user {user_id}: LLM budget exhausted"
-                    )
+                    logger.info(f"Realtime prediction skipped for user {user_id}: LLM budget exhausted")
                     return None
                 forecast = await _attempt(
                     model_key,
@@ -1316,8 +1226,7 @@ class PredictiveService:
                 )
                 if forecast is not None:
                     logger.info(
-                        f"Realtime prediction ready for user {user_id}: "
-                        f"model={model_key}, tier={source_tier.value}"
+                        f"Realtime prediction ready for user {user_id}: model={model_key}, tier={source_tier.value}"
                     )
                     return forecast
                 logger.info(
@@ -1385,18 +1294,14 @@ class PredictiveService:
         summary = str(payload.get("summary") or "").strip()
         action_type = str(payload.get("predicted_action_type") or "").strip()
         suggested_prompt = str(payload.get("suggested_prompt") or "").strip()
-        reasons = [
-            str(item).strip()
-            for item in list(payload.get("reasons") or [])
-            if str(item).strip()
-        ]
+        reasons = [str(item).strip() for item in list(payload.get("reasons") or []) if str(item).strip()]
         has_signal = any([title, summary, action_type, suggested_prompt, reasons])
         if not has_signal:
             return None
 
         merged_confidence = payload.get("confidence")
         try:
-            confidence = float(merged_confidence)
+            confidence = float(merged_confidence) if merged_confidence is not None else float(base["confidence"])
         except (TypeError, ValueError):
             confidence = float(base["confidence"])
 
@@ -1406,9 +1311,7 @@ class PredictiveService:
             "summary": summary or str(base["summary"]),
             "confidence": max(0.0, min(confidence, 0.95)),
             "predicted_action_type": action_type or str(base["predicted_action_type"]),
-            "predicted_window": str(
-                payload.get("predicted_window") or base["predicted_window"]
-            ),
+            "predicted_window": str(payload.get("predicted_window") or base["predicted_window"]),
             "reasons": reasons or list(base["reasons"]),
             "suggested_prompt": suggested_prompt or str(base["suggested_prompt"]),
         }
@@ -1446,9 +1349,7 @@ class PredictiveService:
             },
         ]
 
-    def _build_long_horizon_messages(
-        self, base: dict[str, Any]
-    ) -> list[dict[str, str]]:
+    def _build_long_horizon_messages(self, base: dict[str, Any]) -> list[dict[str, str]]:
         return [
             {
                 "role": "system",
@@ -1590,9 +1491,7 @@ class PredictiveService:
             preferred = ["minimax_m3_batch"]
             reason = f"{reason}；batch 车道默认已切 MiniMax M3（GLM 保留待用）"
         ordered = [model_key for model_key in preferred if model_key in registered]
-        ordered.extend(
-            model_key for model_key in registered if model_key not in ordered
-        )
+        ordered.extend(model_key for model_key in registered if model_key not in ordered)
         return ordered, reason
 
     def _finalize_prediction(
@@ -1610,15 +1509,9 @@ class PredictiveService:
         prediction_id = str(uuid4())
         action_type = str(forecast.get("predicted_action_type") or "continue_chat")
         suggested_prompt = str(forecast.get("suggested_prompt") or "").strip()
-        primary_route = str(
-            forecast.get("primary_route") or self._route_for_action(action_type)
-        )
+        primary_route = str(forecast.get("primary_route") or self._route_for_action(action_type))
         explanations = self._normalize_explanations(forecast.get("explanations"))
-        reasons = [
-            str(item)
-            for item in list(forecast.get("reasons") or [])
-            if str(item).strip()
-        ]
+        reasons = [str(item) for item in list(forecast.get("reasons") or []) if str(item).strip()]
 
         recommended_actions = self._build_prediction_actions(
             prediction_id=prediction_id,
@@ -1765,9 +1658,7 @@ class PredictiveService:
         *,
         days: int = 7,
     ) -> dict[str, Any]:
-        since = self._get_current_time().replace(tzinfo=None) - timedelta(
-            days=max(1, min(days, 30))
-        )
+        since = self._get_current_time().replace(tzinfo=None) - timedelta(days=max(1, min(days, 30)))
         try:
             stmt = select(CandidateActionFeedback).where(
                 CandidateActionFeedback.user_id == user_id,
@@ -1804,9 +1695,7 @@ class PredictiveService:
 
         for row in rows:
             ctx = row.context_snapshot or {}
-            prediction_ctx = (
-                ctx.get("prediction") if isinstance(ctx.get("prediction"), dict) else {}
-            )
+            prediction_ctx = ctx.get("prediction") if isinstance(ctx.get("prediction"), dict) else {}
             surface = str(prediction_ctx.get("surface") or "unknown")
             horizon = str(prediction_ctx.get("horizon") or "unknown")
             source = str(prediction_ctx.get("source") or "unknown")
@@ -1842,16 +1731,10 @@ class PredictiveService:
             prediction_id = str(payload.get("prediction_id") or "").strip()
             if not prediction_id:
                 continue
-            surface = str(
-                payload.get("prediction_surface") or payload.get("surface") or "unknown"
-            )
+            surface = str(payload.get("prediction_surface") or payload.get("surface") or "unknown")
             horizon = str(payload.get("prediction_horizon") or "unknown")
             source = str(payload.get("prediction_source") or "unknown")
-            action_type = str(
-                payload.get("prediction_action_type")
-                or payload.get("action_type")
-                or "unknown"
-            )
+            action_type = str(payload.get("prediction_action_type") or payload.get("action_type") or "unknown")
             buckets = [
                 overall,
                 by_surface[surface],
@@ -1867,21 +1750,15 @@ class PredictiveService:
             accepts = int(bucket["accepts"])
             executed_accepts = int(bucket["executed_accepts"])
             linked_executions = int(bucket["linked_executions"])
-            total_executions = (
-                linked_executions if linked_executions > 0 else executed_accepts
-            )
+            total_executions = linked_executions if linked_executions > 0 else executed_accepts
             ctr = round((accepts / impressions) * 100, 2) if impressions > 0 else 0.0
             return {
                 **bucket,
                 "ctr": ctr,
                 "ctr_percent": ctr,
-                "execution_rate_percent": (
-                    round((total_executions / accepts) * 100, 2) if accepts > 0 else 0.0
-                ),
+                "execution_rate_percent": (round((total_executions / accepts) * 100, 2) if accepts > 0 else 0.0),
                 "impression_to_execution_percent": (
-                    round((total_executions / impressions) * 100, 2)
-                    if impressions > 0
-                    else 0.0
+                    round((total_executions / impressions) * 100, 2) if impressions > 0 else 0.0
                 ),
             }
 
@@ -1889,9 +1766,7 @@ class PredictiveService:
         by_surface_final = {key: _finalize(value) for key, value in by_surface.items()}
         by_horizon_final = {key: _finalize(value) for key, value in by_horizon.items()}
         by_source_final = {key: _finalize(value) for key, value in by_source.items()}
-        by_action_type_final = {
-            key: _finalize(value) for key, value in by_action_type.items()
-        }
+        by_action_type_final = {key: _finalize(value) for key, value in by_action_type.items()}
 
         top_actions = sorted(
             (
@@ -1916,9 +1791,7 @@ class PredictiveService:
                 "ctr": overall_final["ctr"],
                 "ctr_percent": overall_final["ctr_percent"],
                 "accept_to_execution_percent": overall_final["execution_rate_percent"],
-                "impression_to_execution_percent": overall_final[
-                    "impression_to_execution_percent"
-                ],
+                "impression_to_execution_percent": overall_final["impression_to_execution_percent"],
             },
             "by_surface": by_surface_final,
             "by_horizon": by_horizon_final,
@@ -1940,15 +1813,11 @@ class PredictiveService:
             logger.warning(f"Failed to read predictive cache {cache_key}: {exc}")
             return None
 
-    async def _cache_forecast(
-        self, cache_key: str, payload: dict[str, Any], *, ttl_seconds: int
-    ) -> None:
+    async def _cache_forecast(self, cache_key: str, payload: dict[str, Any], *, ttl_seconds: int) -> None:
         if not cache_service.redis:
             return
         try:
-            await cache_service.redis.setex(
-                cache_key, ttl_seconds, json.dumps(payload, ensure_ascii=False)
-            )
+            await cache_service.redis.setex(cache_key, ttl_seconds, json.dumps(payload, ensure_ascii=False))
         except (TypeError, ValueError, *PREDICTION_CACHE_ERRORS) as exc:
             logger.warning(f"Failed to cache predictive forecast {cache_key}: {exc}")
 
@@ -1985,34 +1854,24 @@ class PredictiveService:
                 logger.warning(
                     f"Failed to release long horizon refresh lock after schedule failure for user {user_id}: {cleanup_exc}"
                 )
-            logger.warning(
-                f"Failed to schedule long horizon prediction for user {user_id}: {exc}"
-            )
+            logger.warning(f"Failed to schedule long horizon prediction for user {user_id}: {exc}")
 
-    def _schedule_local_long_horizon_refresh(
-        self, *, user_id: UUID, lock_key: str, reason: str
-    ) -> None:
+    def _schedule_local_long_horizon_refresh(self, *, user_id: UUID, lock_key: str, reason: str) -> None:
         async def _run() -> None:
             from app.db.session import AsyncSessionLocal
 
             try:
-                logger.info(
-                    f"Scheduling local long horizon refresh for user {user_id} ({reason})"
-                )
+                logger.info(f"Scheduling local long horizon refresh for user {user_id} ({reason})")
                 async with AsyncSessionLocal() as session:
                     service = PredictiveService(session)
                     await service.generate_long_horizon_forecast(user_id)
             except (RuntimeError, ValueError, SQLAlchemyError) as exc:
-                logger.warning(
-                    f"Local long horizon refresh failed for user {user_id}: {exc}"
-                )
+                logger.warning(f"Local long horizon refresh failed for user {user_id}: {exc}")
             finally:
                 if cache_service.redis:
                     try:
                         await cache_service.redis.delete(lock_key)
                     except PREDICTION_CACHE_ERRORS as exc:
-                        logger.warning(
-                            f"Failed to release long horizon refresh lock for user {user_id}: {exc}"
-                        )
+                        logger.warning(f"Failed to release long horizon refresh lock for user {user_id}: {exc}")
 
         asyncio.create_task(_run())

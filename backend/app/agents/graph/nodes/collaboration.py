@@ -1,6 +1,7 @@
 """
 Collaboration node with sequential, parallel, debate, and delegation modes.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -356,10 +357,13 @@ async def _analyze_collaboration_needs_llm(
         f"- {item['id']} ({item['display_name']}): {item['description']} | quality_score={item['quality_score']:.2f}"
         for item in available_agents
     )
-    combination_lines = "\n".join(
-        f"- {' + '.join(hint.get('agents', []))}: feedback_score={hint.get('feedback_score', 0):.2f}, samples={hint.get('sample_size', 0)}"
-        for hint in combination_hints[:3]
-    ) or "- 暂无稳定历史组合"
+    combination_lines = (
+        "\n".join(
+            f"- {' + '.join(hint.get('agents', []))}: feedback_score={hint.get('feedback_score', 0):.2f}, samples={hint.get('sample_size', 0)}"
+            for hint in combination_hints[:3]
+        )
+        or "- 暂无稳定历史组合"
+    )
     prompt = ChatPromptTemplate.from_messages(
         [
             (
@@ -440,17 +444,13 @@ async def analyze_collaboration_plan(
     intent_type = _planning_intent_type(state)
     planning_constraints = state.get("_planning_constraints") or {}
     excluded_agents = {
-        str(agent).strip()
-        for agent in (planning_constraints.get("excluded_agents") or [])
-        if str(agent).strip()
+        str(agent).strip() for agent in (planning_constraints.get("excluded_agents") or []) if str(agent).strip()
     }
     scoring_service = AgentScoringService(redis_client)
     fast_result = _analyze_collaboration_needs_fast(message)
     available_agents = await _build_available_agents(user_id=user_id, redis_client=redis_client)
     if excluded_agents:
-        available_agents = [
-            agent for agent in available_agents if agent.get("id") not in excluded_agents
-        ]
+        available_agents = [agent for agent in available_agents if agent.get("id") not in excluded_agents]
     quality_by_agent = {item["id"]: float(item.get("quality_score") or 0.5) for item in available_agents}
 
     # Confidence threshold: below this, escalate to LLM even if keywords matched
@@ -577,7 +577,9 @@ async def _execute_agents_parallel(
                 agent_id=agent_id,
                 status="error",
                 result_summary=str(exc)[:120],
-                metadata=_activity_metadata(mode=str(state.get("collaboration_mode") or "parallel"), phase=phase, task=task),
+                metadata=_activity_metadata(
+                    mode=str(state.get("collaboration_mode") or "parallel"), phase=phase, task=task
+                ),
             )
             return {"agent_id": agent_id, "error": str(exc), "success": False, "index": index, "task": task}
 
@@ -694,10 +696,7 @@ async def _execute_debate(
     if len(successful_round1) <= 1:
         return await _merge_parallel_results(round1_results, state, config)
 
-    round1_summaries = {
-        result["agent_id"]: _extract_content(result.get("result"))
-        for result in successful_round1
-    }
+    round1_summaries = {result["agent_id"]: _extract_content(result.get("result")) for result in successful_round1}
     review_tasks = []
     for agent_id in round1_summaries:
         others = {other_id: text for other_id, text in round1_summaries.items() if other_id != agent_id}
@@ -887,7 +886,9 @@ async def collaboration_node(state: SparkleState, config: dict | None = None) ->
             result["collaboration_agents"] = agents
             result["collaboration_order"] = order
             return result
-        primary_agent = _normalize_agent_identifier(collaboration_plan.get("primary_agent")) or (agents[0] if agents else "study_buddy")
+        primary_agent = _normalize_agent_identifier(collaboration_plan.get("primary_agent")) or (
+            agents[0] if agents else "study_buddy"
+        )
         delegates = [agent for agent in agents if agent != primary_agent]
         result = await _execute_delegation(primary_agent, delegates, local_state, config, stream_cb, task_map=task_map)
         result["collaboration_mode"] = mode
@@ -974,7 +975,7 @@ async def collaboration_aggregator_node(state: SparkleState) -> SparkleState:
             collaboration_results["narrative"] = narrative
 
     logger.info(
-        f"Collaboration aggregated: {len(agents_involved)} agents, "
+        f"Collaboration aggregated: {len(agents_involved or [])} agents, "
         f"{len(all_tool_calls)} tool calls, mode={collaboration_mode}"
     )
     return result

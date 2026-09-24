@@ -260,21 +260,27 @@ class UnderstandingDepthService:
         return hints.get(level, "")
 
     async def evaluate(self, *, user_id: UUID) -> UnderstandingDepthSnapshot:
-        pref_count = await self.db.scalar(
-            select(func.count(MemoryPreference.id)).where(
-                MemoryPreference.user_id == user_id,
-                MemoryPreference.deleted_at.is_(None),
-                MemoryPreference.archived_at.is_(None),
-                MemoryPreference.retracted_at.is_(None),
+        pref_count = (
+            await self.db.scalar(
+                select(func.count(MemoryPreference.id)).where(
+                    MemoryPreference.user_id == user_id,
+                    MemoryPreference.deleted_at.is_(None),
+                    MemoryPreference.archived_at.is_(None),
+                    MemoryPreference.retracted_at.is_(None),
+                )
             )
-        ) or 0
-        pattern_count = await self.db.scalar(
-            select(func.count(BehaviorPattern.id)).where(
-                BehaviorPattern.user_id == user_id,
-                BehaviorPattern.confidence_score >= 0.7,
-                BehaviorPattern.is_archived.is_(False),
+            or 0
+        )
+        pattern_count = (
+            await self.db.scalar(
+                select(func.count(BehaviorPattern.id)).where(
+                    BehaviorPattern.user_id == user_id,
+                    BehaviorPattern.confidence_score >= 0.7,
+                    BehaviorPattern.is_archived.is_(False),
+                )
             )
-        ) or 0
+            or 0
+        )
         alignment_scores = await self.calibration.recent_alignment_scores(user_id=user_id, limit=3)
         alignment_ready = len(alignment_scores) >= 3 and all(score >= 0.7 for score in alignment_scores[-3:])
         adoption_rate = await self._insight_adoption_rate(user_id=user_id)
@@ -367,7 +373,8 @@ class UnderstandingDepthService:
             return None
         updates = await self.updates.list_updates(user_id, limit=80)
         insights = [
-            update for update in updates
+            update
+            for update in updates
             if isinstance(update, dict)
             and isinstance(update.get("metadata"), dict)
             and update["metadata"].get("evolution_kind") == "proactive_insight"
@@ -463,7 +470,7 @@ class MetricBaselineService:
             "profile_hit_rate",
         )
         for field in fields:
-            values = [float(item.get(field)) for item in history if item.get(field) is not None]
+            values = [float(item[field]) for item in history if item.get(field) is not None]
             if not values:
                 continue
             ordered = sorted(values)
@@ -506,10 +513,11 @@ class CohortPromotionService:
         history = history[-10:]
         await _redis_json_set(self.redis, self.HISTORY_KEY, history, ttl_seconds=self.TTL_SECONDS)
 
-        recommendation = (result.get("recommendation") or {})
+        recommendation = result.get("recommendation") or {}
         if recommendation.get("promotion_ready"):
             last_ready = [
-                item for item in history[:-1]
+                item
+                for item in history[:-1]
                 if isinstance(item, dict)
                 and isinstance(item.get("recommendation"), dict)
                 and item["recommendation"].get("promotion_ready")

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from uuid import UUID
@@ -99,7 +100,7 @@ class ReviewUrgencyService:
     @classmethod
     def score_graph_nodes(
         cls,
-        nodes_with_status: list[tuple[object, object | None]],
+        nodes_with_status: Sequence[tuple[object, object | None]],
         *,
         now: datetime | None = None,
         recent_error_counts: dict[UUID, int] | None = None,

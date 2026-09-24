@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Sequence
 
 from loguru import logger
 
@@ -715,7 +715,7 @@ async def build_handoff_packet(
 
 
 def format_handoff_packets(
-    packets: list[HandoffPacket | dict[str, Any]],
+    packets: Sequence[HandoffPacket | dict[str, Any]],
     *,
     title: str = "上游协作桥接摘要包",
 ) -> str:
@@ -732,7 +732,7 @@ def build_collaboration_user_query(
     *,
     base_query: str,
     workflow_type: str,
-    handoff_packets: list[HandoffPacket | dict[str, Any]] | None = None,
+    handoff_packets: Sequence[HandoffPacket | dict[str, Any]] | None = None,
     few_shot_examples: list[dict[str, Any]] | None = None,
     extra_instruction: str | None = None,
 ) -> str:

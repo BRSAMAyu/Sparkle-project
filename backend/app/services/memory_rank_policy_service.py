@@ -86,15 +86,15 @@ class MemoryRankPolicyService:
 
     async def list_policies(self) -> list[MemoryRankPolicy]:
         result = await self.db.execute(
-            select(MemoryRankPolicy).where(MemoryRankPolicy.deleted_at.is_(None)).order_by(
-                MemoryRankPolicy.created_at.desc()
-            )
+            select(MemoryRankPolicy)
+            .where(MemoryRankPolicy.deleted_at.is_(None))
+            .order_by(MemoryRankPolicy.created_at.desc())
         )
         return list(result.scalars().all())
 
     async def upsert_policy(
         self,
-        scope_type: str,
+        scope_type: str | None,
         scope_key: str | None,
         weights: dict[str, float],
     ) -> MemoryRankPolicy:

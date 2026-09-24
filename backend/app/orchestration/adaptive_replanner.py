@@ -142,9 +142,7 @@ class CognitivePatternTrigger:
             .where(BehaviorPattern.user_id == user_id)
             .where(BehaviorPattern.is_archived.is_(False))
             .where(BehaviorPattern.confidence_score >= self.MIN_CONFIDENCE)
-            .where(
-                User.registration_source.not_in(EXCLUDED_COHORT_REGISTRATION_SOURCES)
-            )
+            .where(User.registration_source.not_in(EXCLUDED_COHORT_REGISTRATION_SOURCES))
             .order_by(desc(BehaviorPattern.confidence_score), desc(BehaviorPattern.frequency))
             .limit(12)
         )
@@ -375,6 +373,8 @@ class AdaptiveReplanner:
         source_daily_spec: dict[str, Any] | None = None,
     ) -> bool:
         """Trigger sprint compression only when the user is behind and time is short."""
+        if completion_rate is None or days_left is None:
+            return False
         try:
             rate = float(completion_rate)
             days = int(float(days_left))
@@ -1258,7 +1258,7 @@ class AdaptiveReplanner:
         description = str(item.get("description") or item.get("detail") or "").strip() or None
         guide_content = str(item.get("guide_content") or item.get("guide") or "").strip()
         if not guide_content:
-            guide_content = "这是从“太难”快速操作里拆出来的小步。" "只需要完成这一小步，不要顺手加码。"
+            guide_content = "这是从“太难”快速操作里拆出来的小步。只需要完成这一小步，不要顺手加码。"
 
         return {
             "title": title[:255],
@@ -1559,9 +1559,7 @@ class AdaptiveReplanner:
         # plan_states_plan_id_fkey and poisons the shared chat transaction.
         plan_row = await self.db.scalar(select(Plan.id).where(Plan.id == plan_id))
         if plan_row is None:
-            logger.info(
-                f"Skip execution feedback persistence for ephemeral plan: plan_id={plan_id}"
-            )
+            logger.info(f"Skip execution feedback persistence for ephemeral plan: plan_id={plan_id}")
             return []
         state = await self.plan_state_service.get_plan_state(user_id, plan_id)
         outcome_learning = self._extract_outcome_learning((state.facts or {}) if state else {})
@@ -1635,7 +1633,7 @@ class AdaptiveReplanner:
                 self.AUTO_REPLAN_COOLDOWN,
             ):
                 replan_reason = (
-                    f"Execution feedback: {feedback.validation_status}, " f"failed_tools={feedback.failed_tools}"
+                    f"Execution feedback: {feedback.validation_status}, failed_tools={feedback.failed_tools}"
                 )
                 await plan_review_service.trigger_replanning(
                     plan_id=str(plan_id),
@@ -1644,7 +1642,7 @@ class AdaptiveReplanner:
                 )
                 record = AdaptationRecord(
                     what_changed="触发了当前计划的自动重规划",
-                    why=(f"执行反馈显示质量状态为 {feedback.validation_status}，" f"失败工具={feedback.failed_tools}"),
+                    why=(f"执行反馈显示质量状态为 {feedback.validation_status}，失败工具={feedback.failed_tools}"),
                     expected_effect="下一轮计划会重新评估失败步骤和依赖，降低重复卡住的概率。",
                     user_facing_message="我发现这轮执行里有关键步骤卡住了，下一轮会重新帮你收紧计划。",
                     source="adaptive_replanner",
@@ -1754,9 +1752,8 @@ class AdaptiveReplanner:
         else:
             if self._recently_triggered(state.facts, "last_adjustment_at", self.AUTO_ADJUSTMENT_COOLDOWN):
                 action_taken = "adjustment_cooldown_active"
-            elif (
-                trigger != "task_feedback_struggle"
-                and self._recently_triggered(state.facts, "last_noop_adjustment_at", self.AUTO_NOOP_ADJUSTMENT_THROTTLE)
+            elif trigger != "task_feedback_struggle" and self._recently_triggered(
+                state.facts, "last_noop_adjustment_at", self.AUTO_NOOP_ADJUSTMENT_THROTTLE
             ):
                 # R2-P3-06：上一轮零任务级变更的评估刚发生过（窗口内），跳过
                 # 整轮重评估——不写参数、不追加 feedback_log、不打扰用户。
@@ -2013,9 +2010,7 @@ class AdaptiveReplanner:
             # 保持 P2-2"落地才武装冷却"语义）。深合并读取最新 adaptive_meta，
             # 防止覆盖 applier 刚写入的快照；bump_version=False 避免每信号刷版本。
             try:
-                fresh_state = await self.plan_state_service.get_plan_state(
-                    report.user_id, report.plan_id, refresh=True
-                )
+                fresh_state = await self.plan_state_service.get_plan_state(report.user_id, report.plan_id, refresh=True)
                 if fresh_state:
                     noop_meta = dict((fresh_state.facts or {}).get("adaptive_meta") or {})
                     noop_meta["last_noop_adjustment_at"] = now
@@ -2035,7 +2030,7 @@ class AdaptiveReplanner:
                     why="系统检测到了波动信号，但暂时只更新了内部参数和回顾记录。",
                     expected_effect="保留当前执行面不被频繁扰动，同时把这次评估结果纳入后续重规划依据。",
                     user_facing_message=(
-                        "我已经重新检查了你的计划，这一轮先保留当前任务安排，" "并把评估结果记入后续校准。"
+                        "我已经重新检查了你的计划，这一轮先保留当前任务安排，并把评估结果记入后续校准。"
                     ),
                     source="adaptive_replanner",
                 ),
@@ -2863,7 +2858,7 @@ class AdaptiveReplanner:
             )
         else:
             # 通用挣扎
-            message_hint = "你最近学习节奏似乎遇到了一些阻力，这很正常——" "我们来看看是卡点的问题还是任务节奏需要调整？"
+            message_hint = "你最近学习节奏似乎遇到了一些阻力，这很正常——我们来看看是卡点的问题还是任务节奏需要调整？"
 
         await self._set_meta_value(user_id, plan_id, "last_proactive_at", _utcnow())
 

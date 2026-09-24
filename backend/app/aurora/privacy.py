@@ -7,6 +7,7 @@ import random
 import re
 import time
 from dataclasses import dataclass
+from typing import TypedDict
 
 from app.config import settings
 from app.core.background_tasks import spawn_tracked
@@ -53,7 +54,13 @@ def sha256_token(value: str) -> str:
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
-_MODE_CACHE: dict[str, object] = {"value": None, "expires_at": 0.0, "settings_seed": None}
+class _ModeCache(TypedDict):
+    value: str | None
+    expires_at: float
+    settings_seed: str | None
+
+
+_MODE_CACHE: _ModeCache = {"value": None, "expires_at": 0.0, "settings_seed": None}
 _MODE_TTL_SECONDS = 30.0
 
 

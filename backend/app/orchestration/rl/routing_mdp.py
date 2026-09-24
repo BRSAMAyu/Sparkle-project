@@ -203,9 +203,7 @@ class RoutingRewardSignal:
             progress = 0.38 * _safe_float(state.get("execution_capacity")) + 0.28 * _safe_float(
                 state.get("goal_clarity")
             )
-            cost = 0.18 * _safe_float(state.get("emotional_block")) + 0.16 * _safe_float(
-                state.get("task_aversion")
-            )
+            cost = 0.18 * _safe_float(state.get("emotional_block")) + 0.16 * _safe_float(state.get("task_aversion"))
             reward = max(-0.4, min(0.6, progress - cost))
         return cls(
             reward=round(float(reward), 6),
@@ -226,8 +224,11 @@ class RoutingRewardSignal:
             return cls.unknown()
         if bool(reward.get("is_censored")):
             return cls.unknown()
+        raw_total = reward.get("total_reward")
+        if raw_total is None:
+            return cls.unknown()
         try:
-            total_reward = float(reward.get("total_reward"))
+            total_reward = float(raw_total)
         except (TypeError, ValueError):
             return cls.unknown()
         return cls(

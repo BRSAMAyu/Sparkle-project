@@ -16,7 +16,7 @@ import json
 import math
 import re
 from datetime import UTC, datetime
-from typing import Any, cast
+from typing import Any, Sequence, TypedDict, cast
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from loguru import logger
@@ -82,6 +82,28 @@ SPRINT_NODE_ID_ALIASES = {
 }
 
 
+class _NodeGraphPayload(TypedDict):
+    """节点卡片 payload（构建后仅做展示与排序消费）。"""
+
+    node_id: str
+    name: str
+    description: str
+    mastery_score: float
+    role: str
+    relevance_score: float
+
+
+class _GalaxyPathEdge(TypedDict):
+    """学习路径边（来自 NodeRelation 查询的结构化行）。"""
+
+    source_node_id: UUID
+    target_node_id: UUID
+    relation_type: str
+    strength: float
+    source_name: str
+    target_name: str
+
+
 class GalaxyService:
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -131,18 +153,14 @@ class GalaxyService:
             from app.core.event_registry import build_event_metadata
 
             metadata = build_event_metadata(
-                user_id=payload.get("user_id") or aggregate_id,
+                user_id=str(payload.get("user_id") or aggregate_id),
                 source="server_service",
                 service="galaxy_service",
                 event_name=event_type,
                 aggregate_type="galaxy_node_mastery",
                 aggregate_id=aggregate_id,
                 sequence_number=sequence_number,
-                correlation={
-                    k: payload[k]
-                    for k in ("node_id", "task_id")
-                    if payload.get(k) is not None
-                },
+                correlation={k: payload[k] for k in ("node_id", "task_id") if payload.get(k) is not None},
             )
             await self.db.execute(
                 text("""
@@ -373,7 +391,7 @@ class GalaxyService:
         user_id: UUID,
         plan_ids: list[UUID],
         limit: int = 5,
-    ) -> list[dict[str, object]]:
+    ) -> list[_NodeGraphPayload]:
         if not plan_ids:
             return []
 
@@ -409,7 +427,7 @@ class GalaxyService:
                     .limit(limit)
                 )
             ).all()
-            seed_node_ids = [node_id for node_id, in status_rows if node_id is not None]
+            seed_node_ids = [node_id for (node_id,) in status_rows if node_id is not None]
 
         if not seed_node_ids:
             return []
@@ -452,7 +470,7 @@ class GalaxyService:
         if not rows:
             return []
 
-        node_payloads: dict[UUID, dict[str, object]] = {}
+        node_payloads: dict[UUID, _NodeGraphPayload] = {}
         for node, mastery_score, is_unlocked in rows:
             if not bool(is_unlocked):
                 continue
@@ -612,6 +630,7 @@ class GalaxyService:
         # P1-23 fix: schedule background embedding for all document-imported nodes
         # (upsert_node_from_candidate used generate_embedding=False above)
         from app.core.task_manager import task_manager
+
         all_nodes = [root_node, *created_nodes]
         for node in all_nodes:
             await task_manager.spawn(
@@ -824,13 +843,17 @@ class GalaxyService:
             payloads.append(self._node_link_payload(link=link, node=node))
 
         legacy_nodes = (
-            await self.db.execute(
-                select(KnowledgeNode)
-                .where(KnowledgeNode.source_file_id == file_id)
-                .where(KnowledgeNode.deleted_at.is_(None))
-                .order_by(KnowledgeNode.name.asc())
+            (
+                await self.db.execute(
+                    select(KnowledgeNode)
+                    .where(KnowledgeNode.source_file_id == file_id)
+                    .where(KnowledgeNode.deleted_at.is_(None))
+                    .order_by(KnowledgeNode.name.asc())
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         for node in legacy_nodes:
             if node.id in seen_node_ids:
                 continue
@@ -858,11 +881,7 @@ class GalaxyService:
             for raw_file_id in list(preferred_file_ids or [])
             if (file_id := self._coerce_uuid_or_none(raw_file_id)) is not None
         }
-        cleaned_topic_hints = [
-            hint
-            for raw_hint in list(topic_hints or [])
-            if (hint := str(raw_hint or "").strip())
-        ]
+        cleaned_topic_hints = [hint for raw_hint in list(topic_hints or []) if (hint := str(raw_hint or "").strip())]
 
         explicit_rows = (
             await self.db.execute(
@@ -942,14 +961,18 @@ class GalaxyService:
 
         file_ids = list(file_records.keys())
         chunk_rows = (
-            await self.db.execute(
-                select(DocumentChunk)
-                .where(DocumentChunk.user_id == user_id)
-                .where(DocumentChunk.file_id.in_(file_ids))
-                .where(DocumentChunk.deleted_at.is_(None))
-                .order_by(DocumentChunk.file_id.asc(), DocumentChunk.chunk_index.asc())
+            (
+                await self.db.execute(
+                    select(DocumentChunk)
+                    .where(DocumentChunk.user_id == user_id)
+                    .where(DocumentChunk.file_id.in_(file_ids))
+                    .where(DocumentChunk.deleted_at.is_(None))
+                    .order_by(DocumentChunk.file_id.asc(), DocumentChunk.chunk_index.asc())
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         chunks_by_file: dict[UUID, list[DocumentChunk]] = {}
         for chunk in chunk_rows:
@@ -1038,7 +1061,9 @@ class GalaxyService:
 
         return {
             "documents": documents,
-            "available_materials": [str(item.get("file_name") or "") for item in documents if str(item.get("file_name") or "").strip()],
+            "available_materials": [
+                str(item.get("file_name") or "") for item in documents if str(item.get("file_name") or "").strip()
+            ],
             "matched_documents_count": matched_documents_count,
             "has_materials": bool(documents),
             "topic_hints": cleaned_topic_hints,
@@ -1127,9 +1152,7 @@ class GalaxyService:
             return []
 
         matched_by_title = [
-            chunk
-            for chunk in file_chunks
-            if self._planning_text_matches(str(chunk.section_title or ""), node_tokens)
+            chunk for chunk in file_chunks if self._planning_text_matches(str(chunk.section_title or ""), node_tokens)
         ]
         if matched_by_title:
             return matched_by_title
@@ -1226,14 +1249,18 @@ class GalaxyService:
 
     async def _clear_primary_document_links(self, *, user_id: UUID, file_id: UUID) -> None:
         existing = (
-            await self.db.execute(
-                select(KnowledgeNodeDocument)
-                .where(KnowledgeNodeDocument.user_id == user_id)
-                .where(KnowledgeNodeDocument.file_id == file_id)
-                .where(KnowledgeNodeDocument.is_primary.is_(True))
-                .where(KnowledgeNodeDocument.deleted_at.is_(None))
+            (
+                await self.db.execute(
+                    select(KnowledgeNodeDocument)
+                    .where(KnowledgeNodeDocument.user_id == user_id)
+                    .where(KnowledgeNodeDocument.file_id == file_id)
+                    .where(KnowledgeNodeDocument.is_primary.is_(True))
+                    .where(KnowledgeNodeDocument.deleted_at.is_(None))
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         for link in existing:
             link.is_primary = False
 
@@ -1244,13 +1271,18 @@ class GalaxyService:
         node_id: UUID,
         file_id: UUID,
     ) -> KnowledgeNodeDocument | None:
-        return cast("KnowledgeNodeDocument | None", (await self.db.scalar(
-            select(KnowledgeNodeDocument)
-            .where(KnowledgeNodeDocument.user_id == user_id)
-            .where(KnowledgeNodeDocument.node_id == node_id)
-            .where(KnowledgeNodeDocument.file_id == file_id)
-            .where(KnowledgeNodeDocument.deleted_at.is_(None))
-        )))
+        return cast(
+            "KnowledgeNodeDocument | None",
+            (
+                await self.db.scalar(
+                    select(KnowledgeNodeDocument)
+                    .where(KnowledgeNodeDocument.user_id == user_id)
+                    .where(KnowledgeNodeDocument.node_id == node_id)
+                    .where(KnowledgeNodeDocument.file_id == file_id)
+                    .where(KnowledgeNodeDocument.deleted_at.is_(None))
+                )
+            ),
+        )
 
     async def _get_existing_node(self, node_id: UUID) -> KnowledgeNode:
         node = await self.db.get(KnowledgeNode, node_id)
@@ -1265,12 +1297,17 @@ class GalaxyService:
         return file_record
 
     async def _get_owned_file_or_none(self, user_id: UUID, file_id: UUID) -> StoredFile | None:
-        return cast("StoredFile | None", (await self.db.scalar(
-            select(StoredFile)
-            .where(StoredFile.id == file_id)
-            .where(StoredFile.user_id == user_id)
-            .where(StoredFile.deleted_at.is_(None))
-        )))
+        return cast(
+            "StoredFile | None",
+            (
+                await self.db.scalar(
+                    select(StoredFile)
+                    .where(StoredFile.id == file_id)
+                    .where(StoredFile.user_id == user_id)
+                    .where(StoredFile.deleted_at.is_(None))
+                )
+            ),
+        )
 
     async def _document_link_payload(
         self,
@@ -1950,7 +1987,8 @@ class GalaxyService:
         chunk_indices: set[int] = set()
         chunk_scores: dict[str, float] = {}
 
-        def parse_one(raw_ref: object, raw_score: object = None) -> None:
+        # raw_ref/raw_score 语义上是任意解码后的 JSON 值，函数体内部自行 isinstance 分派
+        def parse_one(raw_ref: Any, raw_score: Any = None) -> None:
             ref = raw_ref
             score = raw_score
             if isinstance(raw_ref, dict):
@@ -2095,7 +2133,7 @@ class GalaxyService:
         source_node = aliased(KnowledgeNode)
         target_node = aliased(KnowledgeNode)
 
-        async def _load_edges(node_ids: list[UUID]) -> list[dict[str, object]]:
+        async def _load_edges(node_ids: list[UUID]) -> list[_GalaxyPathEdge]:
             if not node_ids:
                 return []
             stmt = (
@@ -2118,7 +2156,7 @@ class GalaxyService:
                 )
             )
             result = await self.db.execute(stmt)
-            edges: list[dict[str, object]] = []
+            edges: list[_GalaxyPathEdge] = []
             for source_id, target_id, relation_type, strength, source_name, target_name in result.all():
                 normalized_type = str(relation_type or "").strip().lower() or "related"
                 edges.append(
@@ -2139,8 +2177,8 @@ class GalaxyService:
 
         seen_keys: set[tuple[UUID, UUID, str]] = set()
 
-        def _dedupe(edges: list[dict[str, object]]) -> list[dict[str, object]]:
-            deduped: list[dict[str, object]] = []
+        def _dedupe(edges: list[_GalaxyPathEdge]) -> list[_GalaxyPathEdge]:
+            deduped: list[_GalaxyPathEdge] = []
             for edge in edges:
                 key = (
                     edge["source_node_id"],
@@ -2155,13 +2193,13 @@ class GalaxyService:
 
         first_hop_edges = _dedupe(first_hop_edges)
 
-        best_path: dict[str, object] | None = None
+        best_path: dict[str, Any] | None = None
 
-        def _score(edge: dict[str, object]) -> float:
+        def _score(edge: _GalaxyPathEdge) -> float:
             relation_type = str(edge.get("relation_type") or "related")
             return float(edge.get("strength") or 0.0) * relation_weight.get(relation_type, 1.0)
 
-        def _set_best(candidate: dict[str, object]) -> None:
+        def _set_best(candidate: dict[str, Any]) -> None:
             nonlocal best_path
             if best_path is None or float(candidate.get("score") or 0.0) > float(best_path.get("score") or 0.0):
                 best_path = candidate
@@ -2169,7 +2207,9 @@ class GalaxyService:
         for edge in first_hop_edges:
             source_id = edge["source_node_id"]
             target_id = edge["target_node_id"]
-            if (source_id in source_set and target_id in target_set) or (source_id in target_set and target_id in source_set):
+            if (source_id in source_set and target_id in target_set) or (
+                source_id in target_set and target_id in source_set
+            ):
                 _set_best(
                     {
                         "path_type": "direct",
@@ -2185,11 +2225,13 @@ class GalaxyService:
             edge["target_node_id"] if edge["source_node_id"] in source_set | target_set else edge["source_node_id"]
             for edge in first_hop_edges
         }
-        bridge_ids = {bridge_id for bridge_id in bridge_ids if bridge_id not in source_set and bridge_id not in target_set}
+        bridge_ids = {
+            bridge_id for bridge_id in bridge_ids if bridge_id not in source_set and bridge_id not in target_set
+        }
         second_hop_edges = _dedupe(await _load_edges(list(bridge_ids)))
         all_edges = first_hop_edges + second_hop_edges
 
-        edges_by_bridge: dict[UUID, list[dict[str, object]]] = {}
+        edges_by_bridge: dict[UUID, list[_GalaxyPathEdge]] = {}
         for edge in all_edges:
             for node_id in (edge["source_node_id"], edge["target_node_id"]):
                 if node_id in bridge_ids:
@@ -2199,20 +2241,14 @@ class GalaxyService:
             from_source = [
                 edge
                 for edge in bridge_edges
-                if (
-                    edge["source_node_id"] in source_set and edge["target_node_id"] == bridge_id
-                ) or (
-                    edge["target_node_id"] in source_set and edge["source_node_id"] == bridge_id
-                )
+                if (edge["source_node_id"] in source_set and edge["target_node_id"] == bridge_id)
+                or (edge["target_node_id"] in source_set and edge["source_node_id"] == bridge_id)
             ]
             to_target = [
                 edge
                 for edge in bridge_edges
-                if (
-                    edge["source_node_id"] in target_set and edge["target_node_id"] == bridge_id
-                ) or (
-                    edge["target_node_id"] in target_set and edge["source_node_id"] == bridge_id
-                )
+                if (edge["source_node_id"] in target_set and edge["target_node_id"] == bridge_id)
+                or (edge["target_node_id"] in target_set and edge["source_node_id"] == bridge_id)
             ]
             if not from_source or not to_target:
                 continue
@@ -2272,7 +2308,9 @@ class GalaxyService:
 
     @cached(
         ttl=600,
-        key_builder=lambda self, user_id, sector_code=None, include_locked=True, zoom_level=1.0: f"{user_id}:{sector_code}:{include_locked}:{zoom_level < 0.5}",
+        key_builder=lambda self, user_id, sector_code=None, include_locked=True, zoom_level=1.0: (
+            f"{user_id}:{sector_code}:{include_locked}:{zoom_level < 0.5}"
+        ),
     )
     async def get_galaxy_graph(
         self, user_id: UUID, sector_code: str | None = None, include_locked: bool = True, zoom_level: float = 1.0
@@ -2387,7 +2425,7 @@ class GalaxyService:
             ).all()
 
             node_ids: set[UUID] = set()
-            for node_id, in [*direct_rows, *linked_rows]:
+            for (node_id,) in [*direct_rows, *linked_rows]:
                 if isinstance(node_id, UUID):
                     node_ids.add(node_id)
             return node_ids
@@ -2397,8 +2435,8 @@ class GalaxyService:
 
     @staticmethod
     def _get_blocked_prerequisites_by_node(
-        nodes_with_status: list[tuple[KnowledgeNode, UserNodeStatus | None]],
-        relations: list[NodeRelation],
+        nodes_with_status: Sequence[tuple[KnowledgeNode, UserNodeStatus | None]],
+        relations: Sequence[NodeRelation],
     ) -> dict[UUID, list[UUID]]:
         status_by_node_id = {node.id: status for node, status in nodes_with_status}
         blocked: dict[UUID, list[UUID]] = {}
@@ -2661,9 +2699,7 @@ class GalaxyService:
 
         lowered = clean_title.lower()
         matched = (
-            await self.db.execute(
-                select(KnowledgeNode.id).where(func.lower(KnowledgeNode.name) == lowered).limit(1)
-            )
+            await self.db.execute(select(KnowledgeNode.id).where(func.lower(KnowledgeNode.name) == lowered).limit(1))
         ).scalar_one_or_none()
         if matched is not None:
             return cast("UUID", (matched))
@@ -2690,7 +2726,7 @@ class GalaxyService:
         return resolved_id
 
     @staticmethod
-    def _mastery_ratio(value: object) -> float:
+    def _mastery_ratio(value: Any) -> float:  # noqa: ANN401 — 语义上接受任意 DB/JSON 标量再强制转换
         try:
             mastery = float(value or 0.0)
         except (TypeError, ValueError):
@@ -2700,7 +2736,7 @@ class GalaxyService:
         return max(0.0, min(mastery, 1.0))
 
     @staticmethod
-    def _bkt_probability_from_mastery(value: object) -> float:
+    def _bkt_probability_from_mastery(value: Any) -> float:  # noqa: ANN401 — 同上，动态标量强制转换边界
         try:
             mastery = float(value or 0.0)
         except (TypeError, ValueError):
@@ -2837,7 +2873,7 @@ class GalaxyService:
         return result
 
     @staticmethod
-    def _mastery_score_percent(value: object) -> float:
+    def _mastery_score_percent(value: Any) -> float:  # noqa: ANN401 — 同上，动态标量强制转换边界
         try:
             mastery = float(value or 0.0)
         except (TypeError, ValueError):
@@ -3494,7 +3530,7 @@ class GalaxyService:
         *,
         user_id: UUID,
         node_id: UUID,
-        new_mastery: int,
+        new_mastery: float,
     ) -> None:
         """Process mastery achievements after the primary transaction is durable."""
         try:

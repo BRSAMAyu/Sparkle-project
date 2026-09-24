@@ -208,7 +208,7 @@ async def chat_with_task_context(
             for item in available:
                 if item.payload:
                     lines.append(f"- [{item.kind.value}] {item.payload}")
-            lines.append(f"- ux_intent={injection.ux_intent}, " f"presence={injection.aurora_presence}")
+            lines.append(f"- ux_intent={injection.ux_intent}, presence={injection.aurora_presence}")
             dormant_injection_block = "\n".join(lines)
         # Store injection data for outcome capture + mobile metadata
         injection_data = injection.model_dump(mode="json")
@@ -222,7 +222,7 @@ async def chat_with_task_context(
     llm_conversation_history = [{"role": msg["role"], "content": msg["content"]} for msg in conversation_history_raw]
 
     # 3. System Prompt with Task Focus
-    system_prompt = build_system_prompt(user_context, "History injected.")
+    system_prompt = build_system_prompt(user_context)
     system_prompt += (
         "\n\nCURRENT TASK CONTEXT:\n"
         f"You are assisting the user with the task: '{task.title}'. "
@@ -391,13 +391,8 @@ async def chat(
                 user_id=current_user.id,
                 conversation_id=session_id_str,
             )
-            response_data = {
-                "message": "先跳过这一步也没关系。我会先带你进入主界面，之后需要时再补齐这些信息。",
-                "widgets": [],
-                "tool_results": [],
-                "has_errors": False,
-                "errors": None,
-            }
+            assistant_message = "先跳过这一步也没关系。我会先带你进入主界面，之后需要时再补齐这些信息。"
+            response_widgets: list[dict[str, Any]] = []
         else:
             onboarding_data = await planning_workflow_manager.process_onboarding_turn(
                 db=db,
@@ -406,23 +401,18 @@ async def chat(
                 message=request.message,
                 context=planning_context,
             )
-            response_data = {
-                "message": onboarding_data["message"],
-                "widgets": onboarding_data.get("widgets", []),
-                "tool_results": [],
-                "has_errors": False,
-                "errors": None,
-            }
+            assistant_message = onboarding_data["message"]
+            response_widgets = onboarding_data.get("widgets", [])
 
         await save_chat_message(
             db=db,
             user_id=current_user.id,
             session_id=session_id_uuid,
             user_message=request.message,
-            assistant_message=response_data["message"],
+            assistant_message=assistant_message,
             tool_results=[],
         )
-        return ChatResponse(**response_data, conversation_id=session_id_str)
+        return ChatResponse(message=assistant_message, widgets=response_widgets, conversation_id=session_id_str)
 
     planning_response = await planning_workflow_manager.process_planning_turn(
         db=db,
@@ -432,22 +422,17 @@ async def chat(
         context=planning_context,
     )
     if planning_response and not planning_response.get("bypass_planning"):
-        response_data = {
-            "message": planning_response["message"],
-            "widgets": planning_response.get("widgets", []),
-            "tool_results": [],
-            "has_errors": False,
-            "errors": None,
-        }
+        assistant_message = planning_response["message"]
+        planning_widgets = planning_response.get("widgets", [])
         await save_chat_message(
             db=db,
             user_id=current_user.id,
             session_id=session_id_uuid,
             user_message=request.message,
-            assistant_message=response_data["message"],
+            assistant_message=assistant_message,
             tool_results=[],
         )
-        return ChatResponse(**response_data, conversation_id=session_id_str)
+        return ChatResponse(message=assistant_message, widgets=planning_widgets, conversation_id=session_id_str)
 
     planning_detour_prompt = ""
     if planning_response and planning_response.get("bypass_planning"):
@@ -461,7 +446,7 @@ async def chat(
             )
 
     # 2. 构建 System Prompt
-    system_prompt = build_system_prompt(user_context, "暂无对话历史")  # History passed directly to LLM
+    system_prompt = build_system_prompt(user_context)  # History passed directly to LLM
     if planning_detour_prompt:
         system_prompt += f"\n\nAURORA PLANNING SIDECAR:\n{planning_detour_prompt}"
 
@@ -620,7 +605,7 @@ async def chat_stream(
             {"role": msg["role"], "content": msg["content"]} for msg in conversation_history_raw
         ]
 
-        system_prompt = build_system_prompt(user_context, "暂无对话历史")  # History passed directly to LLM
+        system_prompt = build_system_prompt(user_context)  # History passed directly to LLM
 
         collected_text_content = ""
         collected_tool_calls_raw = []  # Raw tool calls from LLM (function_call format)
