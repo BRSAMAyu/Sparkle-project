@@ -40,6 +40,7 @@ from app.aurora.runtime_v1 import AURORA_RUNTIME_MODE_SURFACES, AuroraRuntimeV1S
 from app.aurora.runtime_v1.control_surface import AuroraHardBounds
 from app.checkpoint.redis_checkpointer import RedisCheckpointer
 from app.config import settings
+from app.core.background_tasks import register_tracked_task
 from app.core.business_metrics import (
     COLLABORATION_SUCCESS,
 )
@@ -1647,17 +1648,13 @@ class ChatOrchestrator(
         )
 
     def _track_task(self, task: asyncio.Task) -> None:
-        """Track background tasks for graceful shutdown with exception logging."""
+        """Track background tasks for graceful shutdown.
 
-        def _on_task_done(t: asyncio.Task) -> None:
-            self._bg_tasks.discard(t)
-            if t.cancelled():
-                return
-            if exc := t.exception():
-                logger.opt(exception=exc).error(f"Background task {t.get_coro().__name__ if t.get_coro() else t} failed: {exc}")
-
-        self._bg_tasks.add(task)
-        task.add_done_callback(_on_task_done)
+        FF-CONVERGENCE（wt310）：强引用 + 异常日志统一委托给
+        ``background_tasks.register_tracked_task``；registry 仍传实例自己的
+        ``_bg_tasks``，``shutdown()`` 的 cancel/drain 语义不变。
+        """
+        register_tracked_task(task, registry=self._bg_tasks)
 
     async def shutdown(self) -> None:
         """Cancel background tasks started by the orchestrator."""

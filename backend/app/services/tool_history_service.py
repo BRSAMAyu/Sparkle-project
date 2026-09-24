@@ -20,6 +20,7 @@ from loguru import logger
 from sqlalchemy import Integer, and_, desc, event, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.background_tasks import spawn_tracked
 from app.core.event_bus import event_bus
 from app.core.event_types import TOOL_HISTORY_RECORDED, TOOL_USAGE_EVENT
 from app.models.tool_history import ToolSuccessRateView, UserToolHistory, UserToolPreference
@@ -59,13 +60,15 @@ def _run_tool_history_after_commit_tasks(session) -> None:
         return
 
     try:
-        loop = asyncio.get_running_loop()
+        asyncio.get_running_loop()
     except RuntimeError:
         logger.warning("Skipping tool history after-commit callbacks because no event loop is running")
         return
 
     for callback in callbacks:
-        loop.create_task(callback())
+        # FF-CONVERGENCE（wt310）：裸 loop.create_task → 统一追踪（强引用 +
+        # 异常日志），工具事件发布丢失不再静默。
+        spawn_tracked(callback(), name="tool_history.after_commit_publish")
 
 
 @event.listens_for(AsyncSession.sync_session_class, "after_rollback")

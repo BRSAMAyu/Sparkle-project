@@ -14,12 +14,15 @@ LLM 监控与告警模块
 创建时间: 2026-01-03
 """
 
+import asyncio
 import logging
 import time
 from functools import wraps
 from typing import Any
 
 from prometheus_client import Counter, Gauge, Histogram, Info, start_http_server
+
+from app.core.background_tasks import spawn_tracked
 
 logger = logging.getLogger(__name__)
 
@@ -181,8 +184,13 @@ class LLMMonitor:
                     # 记录活跃任务
                     ACTIVE_TASKS.inc()
                     # 减少活跃任务 (延迟1ms后)
-                    import asyncio
-                    asyncio.create_task(LLMMonitor._decrement_active_tasks())
+                    # FF-CONVERGENCE（wt310）：裸 spawn 的递减任务可能被 GC 回收
+                    # → ACTIVE_TASKS gauge 永久漂移（wt294 P1-3）。统一追踪保证
+                    # 递减必达；异常路径也可见。
+                    spawn_tracked(
+                        LLMMonitor._decrement_active_tasks(),
+                        name="llm_monitor.decrement_active_tasks",
+                    )
 
             return wrapper
         return decorator

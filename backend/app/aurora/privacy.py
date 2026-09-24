@@ -9,6 +9,7 @@ import time
 from dataclasses import dataclass
 
 from app.config import settings
+from app.core.background_tasks import spawn_tracked
 from app.core.kill_switch import normalize_mode, record_mode_gauge
 
 _EMAIL_RE = re.compile(
@@ -103,7 +104,7 @@ def _resolve_mode_safe() -> str:
     """
     settings_mode = _resolve_settings_mode()
     try:
-        loop = asyncio.get_running_loop()
+        asyncio.get_running_loop()
     except RuntimeError:
         try:
             from app.services.aurora_privacy_kill_switch_service import (
@@ -116,7 +117,9 @@ def _resolve_mode_safe() -> str:
 
     # Inside an event loop — schedule a background refresh; return the last
     # known cached value (or the static settings fallback on cold start).
-    loop.create_task(_refresh_mode_cache_async())
+    # FF-CONVERGENCE（wt310）：裸 create_task 无强引用，刷新任务可能被 GC 回收
+    # → 隐私模式刷新静默丢失（wt294 清单最高优先级之二）。
+    spawn_tracked(_refresh_mode_cache_async(), name="aurora.privacy.refresh_mode_cache")
     cached = _MODE_CACHE.get("value")
     return str(cached) if cached else settings_mode
 

@@ -35,6 +35,7 @@ from app.consumers.plan_task_generation_consumer import PlanTaskGenerationConsum
 from app.consumers.user_memory_seed_consumer import UserMemorySeedConsumer
 from app.consumers.user_profile_bootstrap_consumer import UserProfileBootstrapConsumer
 from app.consumers.welcome_onboarding_consumer import WelcomeOnboardingConsumer
+from app.core import background_tasks
 from app.core.cache import cache_service
 from app.core.exceptions import SparkleException
 from app.core.idempotency import get_idempotency_store
@@ -795,6 +796,16 @@ async def lifespan(fastapp: FastAPI):
     if galaxy_streaming_service:
         galaxy_streaming_service.stop()
         logger.info("GalaxyStreamingService stopped")
+
+    # FF-CONVERGENCE（wt310）：统一收口 fire-and-forget 后台任务——关停链在此
+    # drain 全部经 spawn_tracked 追踪的短尾任务（审计写、信号采集、after-commit
+    # 发布等）：先给 5s 自然收尾宽限，再 cancel 残留者。必须先于 event_bus /
+    # Redis / DB 关闭执行，否则这些任务要么撞上已关闭客户端、要么被静默丢弃。
+    try:
+        drained = await background_tasks.shutdown_tracked_tasks()
+        logger.info("Tracked background tasks drained: {}", drained)
+    except Exception as e:
+        logger.warning(f"Tracked background tasks drain failed: {e}")
 
     # EI-04: 排空事件总线内部消费任务（subscribe() 挂在 bus 内部的 _consume_loop
     # 从未被各 *_consumer_task 句柄覆盖）。需在 cache_service.close()（释放 Redis）

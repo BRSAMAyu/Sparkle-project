@@ -4,7 +4,6 @@ Job Service - 管理异步任务的创建、状态查询和恢复 (v2.1 增强�
 """
 from __future__ import annotations
 
-import asyncio
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
@@ -13,6 +12,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.core.background_tasks import spawn_tracked
 from app.db.session import AsyncSessionLocal
 from app.models.job import Job, JobStatus, JobType
 from app.services.error_book_service import ErrorBookService
@@ -81,7 +81,9 @@ class JobService:
 
         # 触发后台执行（不等待）
         # 注意: 这里的 _execute_job_safe 需要能获取 DB session
-        asyncio.create_task(self._execute_job_safe(job.id))
+        # FF-CONVERGENCE（wt310）：裸 spawn 无强引用，执行体可能被 GC 回收 →
+        # job 卡 RUNNING 直至 timeout_at（wt294 P1-5）。改走统一追踪面。
+        spawn_tracked(self._execute_job_safe(job.id), name=f"job.execute:{job.id}")
 
         return job
 

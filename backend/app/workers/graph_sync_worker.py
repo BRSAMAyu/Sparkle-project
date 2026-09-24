@@ -6,18 +6,23 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 from typing import Any
 
 from loguru import logger
 
 from app.core.age_client import get_age_client
+from app.core.background_tasks import spawn_tracked
 from app.core.cache import cache_service
 from app.models.graph_models import KnowledgeVertex
 
 
 class GraphSyncWorker:
     """图同步 Worker"""
+
+    # 兼容经 __new__ 构造的测试实例（未跑 __init__ 时 stop() 也安全）。
+    _consume_task: asyncio.Task | None = None
 
     def __init__(self):
         self.age_client = get_age_client()
@@ -30,6 +35,7 @@ class GraphSyncWorker:
         # EVENT-ACK：pending 回收空闲阈值——失败/崩溃遗留的未 ack 消息（PEL）
         # 超过该空闲时长后被 XAUTOCLAIM 认领重处理（at-least-once）。
         self.pending_reclaim_idle_ms = 60_000
+        self._consume_task = None
 
     async def start(self):
         """启动 Worker"""
@@ -58,12 +64,21 @@ class GraphSyncWorker:
         self.running = True
 
         # 开始消费
-        asyncio.create_task(self._consume())
+        # FF-CONVERGENCE（wt310）：裸 create_task 无引用 + stop() 只翻 flag 无法
+        # cancel（wt294 P1-4 关停面裸奔）。改为持有引用的追踪任务，stop() 可
+        # 立即 cancel 并等待落地。
+        self._consume_task = spawn_tracked(self._consume(), name="graph_sync_worker.consume")
 
     async def stop(self):
         """停止 Worker"""
         logger.info("🛑 停止图同步 Worker...")
         self.running = False
+        task = self._consume_task
+        self._consume_task = None
+        if task is not None and not task.done():
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
 
     async def _recover_pending(self):
         """回收 pending：崩溃/处理失败遗留的未确认消息（EVENT-ACK）。
@@ -278,7 +293,8 @@ def get_graph_sync_worker() -> GraphSyncWorker:
 async def start_sync_worker():
     """启动同步 Worker"""
     worker = get_graph_sync_worker()
-    asyncio.create_task(worker.start())
+    # FF-CONVERGENCE（wt310）：裸 spawn → 统一追踪（异常可见、不被 GC 回收）。
+    spawn_tracked(worker.start(), name="graph_sync_worker.start")
 
 
 async def stop_sync_worker():

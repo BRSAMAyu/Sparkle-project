@@ -28,6 +28,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.core.background_tasks import spawn_tracked
 from app.core.cache import cache_service
 from app.core.event_bus import event_bus
 from app.models.achievement import (
@@ -59,19 +60,6 @@ _EXTERNAL_TRANSACTION_MANAGED_KEY = "external_transaction_managed"
 _AFTER_COMMIT_TASKS_KEY = "achievement_after_commit_tasks"
 
 
-def _make_after_commit_error_handler():
-    """Create a done-callback that logs unhandled exceptions from after-commit tasks."""
-
-    def _handler(task: asyncio.Task) -> None:
-        if task.cancelled():
-            return
-        exc = task.exception()
-        if exc:
-            logger.error("Achievement after-commit task failed: {}", exc)
-
-    return _handler
-
-
 @event.listens_for(AsyncSession.sync_session_class, "after_commit")
 def _run_achievement_after_commit_tasks(session) -> None:
     callbacks: list[Callable[[], Awaitable[None]]] = session.info.pop(_AFTER_COMMIT_TASKS_KEY, [])
@@ -79,14 +67,16 @@ def _run_achievement_after_commit_tasks(session) -> None:
         return
 
     try:
-        loop = asyncio.get_running_loop()
+        asyncio.get_running_loop()
     except RuntimeError:
         logger.warning("Skipping achievement after-commit callbacks because no event loop is running")
         return
 
     for callback in callbacks:
-        task: asyncio.Task[Any] = loop.create_task(callback())
-        task.add_done_callback(_make_after_commit_error_handler())
+        # FF-CONVERGENCE（wt310）：原实现有异常 done-callback 但缺强引用（任务仍
+        # 可能被 GC 回收、回调永不执行）。spawn_tracked 两者齐备（异常记 error
+        # 日志，语义等价于原 _make_after_commit_error_handler，已删除）。
+        spawn_tracked(callback(), name="achievement.after_commit")
 
 
 @event.listens_for(AsyncSession.sync_session_class, "after_rollback")

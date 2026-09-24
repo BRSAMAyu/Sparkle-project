@@ -9,7 +9,6 @@ Community Service - 好友、群组、消息、打卡、任务的业务逻辑
 
 from __future__ import annotations
 
-import asyncio
 import math
 from datetime import UTC, datetime, timedelta
 from difflib import SequenceMatcher
@@ -26,6 +25,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.background_tasks import spawn_tracked
 from app.core.cache import cache_service
 from app.core.datetime_utils import _utcnow
 from app.core.event_bus import GroupFileDeletedEvent, event_bus
@@ -81,13 +81,15 @@ def _record_community_signal(
     context: str,
     timestamp: datetime | None = None,
 ) -> None:
-    asyncio.create_task(
+    # FF-CONVERGENCE（wt310）：社区信号采集裸 spawn → 统一追踪（强引用 + 异常可见）。
+    spawn_tracked(
         CommunitySignalCollector(cache_service.redis).record_interaction(
             user_id=user_id,
             action=action,
             context=context,
             timestamp=timestamp or _utcnow(),
-        )
+        ),
+        name="community.signal.record_interaction",
     )
 
 

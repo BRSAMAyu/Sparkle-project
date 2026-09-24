@@ -3,7 +3,6 @@ Authentication audit service.
 """
 from __future__ import annotations
 
-import asyncio
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -11,6 +10,7 @@ from fastapi import Request
 from loguru import logger
 from sqlalchemy import select
 
+from app.core.background_tasks import spawn_tracked
 from app.db.session import AsyncSessionLocal
 from app.models.auth_security import AuthAuditAction, AuthAuditLog
 
@@ -59,8 +59,12 @@ class AuthAuditService:
         metadata: dict[str, Any] | None = None,
     ) -> None:
         try:
-            asyncio.create_task(
+            # FF-CONVERGENCE（wt310）：审计写是最高优先级收敛点——裸 spawn 的
+            # 任务被 GC 回收时审计丢失且不可见；spawn_tracked 保强引用并保证
+            # 异常必达日志。
+            spawn_tracked(
                 self.log_event(action=action, user_id=user_id, request=request, metadata=metadata),
+                name="auth_audit.log_event",
             )
         except Exception as exc:
             logger.warning(f"Failed to schedule auth audit log: {exc}")
