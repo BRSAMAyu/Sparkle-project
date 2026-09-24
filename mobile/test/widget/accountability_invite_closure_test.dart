@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -100,6 +101,9 @@ Future<void> _pumpHarness(
       ],
       child: MaterialApp.router(
         routerConfig: router,
+        // 拒绝后转空态走 CompactEmptyState → context.colors，未注册
+        // SparkleThemeExtension 直接断言失败（与 testMaterialApp 同款修复）。
+        theme: ThemeData(extensions: [SparkleThemeExtension.light()]),
         localizationsDelegates: const [
           ...AppLocalizations.localizationsDelegates,
           GlobalMaterialLocalizations.delegate,

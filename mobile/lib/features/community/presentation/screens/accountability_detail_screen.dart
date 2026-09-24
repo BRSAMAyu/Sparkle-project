@@ -961,7 +961,7 @@ class _PendingPoliciesCard extends StatelessWidget {
         : nextTriggerAt == null
             ? context.l10n.accountabilityPoliciesReady(count)
             : context.l10n.accountabilityPoliciesPending(
-                count, DateFormat.yMMMd(locale).add_Hm().format(nextTriggerAt));
+                count, DateFormat.yMMMd(locale.toLanguageTag()).add_Hm().format(nextTriggerAt));
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.panel,
       child: Column(
@@ -1014,7 +1014,7 @@ class _RecentReflectionsCard extends StatelessWidget {
             ? context.l10n.accountabilityReflectionsGenerated(count)
             : context.l10n.accountabilityReflectionsLatest(
                 _labelForCategory(context, lastCategory),
-                DateFormat.yMMMd(locale).add_Hm().format(lastAt));
+                DateFormat.yMMMd(locale.toLanguageTag()).add_Hm().format(lastAt));
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.panel,
       child: Column(
@@ -1090,7 +1090,7 @@ class _ForesightHintCard extends StatelessWidget {
         context.l10n.accountabilityDeviationsDetected(deviationCount),
       if (generatedAt != null)
         context.l10n.accountabilityUpdatedAt(
-            DateFormat.yMMMd(locale).add_Hm().format(generatedAt)),
+            DateFormat.yMMMd(locale.toLanguageTag()).add_Hm().format(generatedAt)),
     ].join(' · ');
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.panel,
@@ -1258,7 +1258,7 @@ class _CheckinTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final locale = Localizations.localeOf(context);
-    final dateStr = DateFormat.yMMMd(locale).add_Hm().format(checkin.createdAt);
+    final dateStr = DateFormat.yMMMd(locale.toLanguageTag()).add_Hm().format(checkin.createdAt);
     final moodVisual = _resolveCheckinMoodVisual(context, checkin.mood);
     final authorName = checkin.author?.displayName ??
         (isMe

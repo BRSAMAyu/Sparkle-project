@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_interceptor.dart';
 import 'package:sparkle/features/auth/auth.dart';
@@ -94,6 +95,9 @@ Future<void> _pumpHarness(
       ],
       child: MaterialApp.router(
         routerConfig: router,
+        // 详情屏 SparkleRefreshIndicator 构建即读 context.colors，未注册
+        // SparkleThemeExtension 直接断言失败（与 testMaterialApp 同款修复）。
+        theme: ThemeData(extensions: [SparkleThemeExtension.light()]),
         localizationsDelegates: const [
           ...AppLocalizations.localizationsDelegates,
           GlobalMaterialLocalizations.delegate,
