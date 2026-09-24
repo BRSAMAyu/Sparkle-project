@@ -92,16 +92,27 @@ class DashboardSlotIds {
   /// Default-collapsed set: high-volume / low-glanceable slots ship
   /// collapsed (~64px header each) so the first-run scroll feels
   /// intentional but every registered slot is still discoverable.
-  /// Together with `defaultVisible = all`, this means new users see
-  /// 5 expanded high-signal slots and 11 collapsed headers — far less
-  /// noisy than the previous "all expanded" default, but no slot is
-  /// silently hidden.
+  ///
+  /// J-03（v3/03_modules/HOME.md「避免 5 个系统同时抢 CTA」）：首屏唯一
+  /// 主行动卡是 TodayCockpitCard（growthSections 顶部，不受 slot 系统
+  /// 控制）。所有自带行动按钮/次级 CTA 的聚合卡（dailyBriefing、
+  /// multiGoalDashboard、examSprint、taskBoard、dashboardUpdates、
+  /// workspaceCards）默认折叠为 64px header——内容仍可一键展开，已有
+  /// 用户持久化配置不受影响（fromJson 仅在无存档时取默认值）。
+  /// Together with `defaultVisible = all`, this means new users see the
+  /// cockpit expanded and everything else as collapsed headers — no slot
+  /// is silently hidden.
   static const List<String> defaultCollapsed = [
+    dailyBriefing,
+    multiGoalDashboard,
+    examSprint,
+    taskBoard,
+    dashboardUpdates,
+    workspaceCards,
     understanding,
     metricsRow,
     returnCaseFile,
     goalDetailSnapshot,
-    dashboardUpdates,
     growthQuality,
     weeklyNarrative,
     community,

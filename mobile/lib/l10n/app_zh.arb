@@ -16573,6 +16573,92 @@
         }
     },
     "dashboardCommandCenterAskAurora": "问 Aurora",
+    "todayCockpitEyebrowFresh": "今天最值得做",
+    "todayCockpitEyebrowActive": "继续推进",
+    "todayCockpitEyebrowStalled": "先解决卡点",
+    "todayCockpitFreshHeadline": "开始今天的第一件事",
+    "todayCockpitFreshUnarrangedHeadline": "今天还没排布",
+    "todayCockpitActiveHeadline": "接着做下一件",
+    "todayCockpitAllDoneHeadline": "今天的任务已完成",
+    "todayCockpitStalledHeadline": "先解开这个卡点",
+    "todayCockpitWhyBottleneck": "卡点在「{topic}」",
+    "@todayCockpitWhyBottleneck": {
+        "placeholders": {
+            "topic": {
+                "type": "String"
+            }
+        }
+    },
+    "todayCockpitWhyDueToday": "截止就在今天",
+    "todayCockpitWhyOverdue": "已逾期 {days} 天",
+    "@todayCockpitWhyOverdue": {
+        "placeholders": {
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "todayCockpitWhyDueIn": "距截止 {days} 天",
+    "@todayCockpitWhyDueIn": {
+        "placeholders": {
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "todayCockpitWhyStale": "计划有一段时间没推进了",
+    "todayCockpitWhyHealth": "计划健康度 {percent}%，需要留意",
+    "@todayCockpitWhyHealth": {
+        "placeholders": {
+            "percent": {
+                "type": "int"
+            }
+        }
+    },
+    "todayCockpitWhyRemaining": "今天还有 {count} 件待办",
+    "@todayCockpitWhyRemaining": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "todayCockpitWhyAllDone": "今天的待办已清空",
+    "todayCockpitCtaArrange": "安排今天",
+    "todayCockpitCtaStuck": "解开卡点",
+    "todayCockpitStuckButton": "我卡住了",
+    "todayCockpitStuckPrompt": "我在推进「{goal}」时卡住了：{reason}帮我重新找到此刻最值得做的一步。",
+    "@todayCockpitStuckPrompt": {
+        "placeholders": {
+            "goal": {
+                "type": "String"
+            },
+            "reason": {
+                "type": "String"
+            }
+        }
+    },
+    "todayCockpitGoalWord": "当前目标",
+    "todayCockpitStallReasonDeadline": "快到截止但还没推进，",
+    "todayCockpitStallReasonStale": "计划已经搁置了一段时间，",
+    "todayCockpitStallReasonHealth": "计划健康度降到 {percent}%，",
+    "@todayCockpitStallReasonHealth": {
+        "placeholders": {
+            "percent": {
+                "type": "int"
+            }
+        }
+    },
+    "todayCockpitStallReasonGeneric": "不确定下一步从哪继续，",
+    "todayCockpitRunOngoing": "Aurora 正在推进",
+    "todayCockpitRunOngoingDetailed": "Aurora 正在推进：{detail}",
+    "@todayCockpitRunOngoingDetailed": {
+        "placeholders": {
+            "detail": {
+                "type": "String"
+            }
+        }
+    },
     "dashboardCcAllMapped": "今天的任务已经清楚了",
     "dashboardCcCheckPlan": "先检查今天的计划节奏",
     "dashboardCcSetGoal": "先定一个今天能开始的目标",

@@ -55,6 +55,7 @@ import 'package:sparkle/features/home/presentation/widgets/predicted_intent_card
 import 'package:sparkle/features/home/presentation/widgets/recent_insights_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/stuck_recovery_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/task_board_card.dart';
+import 'package:sparkle/features/home/presentation/widgets/today_cockpit_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/understanding_panel.dart';
 import 'package:sparkle/features/home/presentation/widgets/unified_omni_bar.dart';
 import 'package:sparkle/features/home/presentation/widgets/weather_header.dart';
@@ -208,14 +209,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         child: child,
       );
 
-  bool _shouldShowFirstGoalEmptyState(DashboardState state) {
-    if (state.isLoading || state.error != null) {
-      return false;
-    }
-    return state.nextActions.isEmpty &&
-        state.sprint == null &&
-        state.growth == null;
-  }
+  // J-03：原 `_shouldShowFirstGoalEmptyState` / `_buildFirstGoalEmptyState` /
+  // `_buildOnboardingWelcome`（三处互相竞争的引导卡面，合计 3+ 个 CTA）
+  // 由 TodayCockpitCard 的 no-goal / fresh 态统一承接（见下方
+  // growthSections 与 hasNoGoals 分支），首屏引导面收敛为唯一主卡。
 
   AuroraBandState _resolveAuroraState(DashboardState state) {
     final sprint = state.sprint;
@@ -385,170 +382,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  void _startNextAction(HomeGrowthTask task) {
-    if (task.id.isEmpty) {
-      unawaited(context.push('/tasks'));
-      return;
-    }
-
-    final taskModel = task.taskModel;
-    if (taskModel == null) {
-      unawaited(context.push('/tasks/${task.id}'));
-      return;
-    }
-
-    ref.read(activeTaskProvider.notifier).state = taskModel;
-    unawaited(
-      context.push('/tasks/${task.id}/execute?origin=home_growth'),
-    );
-  }
-
-  Widget _buildFirstGoalEmptyState() => ContentConstraint(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            DS.spacing16,
-            DS.spacing6,
-            DS.spacing16,
-            DS.spacing10,
-          ),
-          child: DashboardSectionShell(
-            tone: DashboardSurfaceTone.hero,
-            padding: const EdgeInsets.all(DS.spacing20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                DashboardSectionHeader(
-                  icon: Icons.auto_awesome_rounded,
-                  iconSize: 40,
-                  accentColor: DS.brandPrimary,
-                  title: context.l10n.dashboardSetFirstGoal,
-                  summary: context.l10n.dashboardSetFirstGoalSummary,
-                ),
-                const SizedBox(height: DS.spacing16),
-                Text(
-                  context.l10n.dashboardWhatToPush,
-                  style: DS.bodySmall.copyWith(
-                    color: DS.textSecondary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: DS.spacing12),
-                Wrap(
-                  spacing: DS.spacing8,
-                  runSpacing: DS.spacing8,
-                  children: [
-                    _GoalChip(
-                      label: context.l10n.dashboardGoalExamSprint,
-                      icon: Icons.local_fire_department_outlined,
-                      onTap: () => context.go(
-                        '/chat?prompt=${Uri.encodeComponent(context.l10n.dashboardGoalExamSprintPrompt)}',
-                      ),
-                    ),
-                    _GoalChip(
-                      label: context.l10n.dashboardGoalLongTerm,
-                      icon: Icons.school_outlined,
-                      onTap: () => context.go(
-                        '/chat?prompt=${Uri.encodeComponent(context.l10n.dashboardGoalLongTermPrompt)}',
-                      ),
-                    ),
-                    _GoalChip(
-                      label: context.l10n.dashboardGoalProject,
-                      icon: Icons.rocket_launch_outlined,
-                      onTap: () => context.go(
-                        '/chat?prompt=${Uri.encodeComponent(context.l10n.dashboardGoalProjectPrompt)}',
-                      ),
-                    ),
-                    _GoalChip(
-                      label: context.l10n.dashboardGoalSelfGrowth,
-                      icon: Icons.psychology_outlined,
-                      onTap: () => context.go(
-                        '/chat?prompt=${Uri.encodeComponent(context.l10n.dashboardGoalSelfGrowthPrompt)}',
-                      ),
-                    ),
-                    _GoalChip(
-                      label: context.l10n.dashboardGoalNotSure,
-                      icon: Icons.help_outline,
-                      onTap: () => context.go(
-                        '/chat?prompt=${Uri.encodeComponent(context.l10n.dashboardGoalNotSurePrompt)}',
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: DS.spacing16),
-                Wrap(
-                  spacing: DS.spacing12,
-                  runSpacing: DS.spacing10,
-                  children: [
-                    SparkleButton.primary(
-                      label: context.l10n.dashboardStartWithAI,
-                      onPressed: () => context.go('/goals/new'),
-                    ),
-                    SparkleButton.ghost(
-                      label: context.l10n.homeQuickCreate,
-                      onPressed: () => context.go('/chat'),
-                    ),
-                    SparkleButton.ghost(
-                      label: context.l10n.dashboardOpenTaskList,
-                      onPressed: () => context.push('/tasks'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-
-  Widget _buildOnboardingWelcome() => ContentConstraint(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            DS.spacing16,
-            DS.spacing12,
-            DS.spacing16,
-            DS.spacing16,
-          ),
-          child: DashboardSectionShell(
-            tone: DashboardSurfaceTone.hero,
-            padding: const EdgeInsets.all(DS.spacing24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                DashboardSectionHeader(
-                  icon: Icons.auto_awesome_rounded,
-                  iconSize: 44,
-                  accentColor: DS.brandPrimary,
-                  title: context.l10n.chatWelcomeTitle,
-                  summary: context.l10n.homeOnboardingSummary,
-                ),
-                const SizedBox(height: DS.spacing20),
-                _OnboardingQuickCard(
-                  icon: Icons.flag_outlined,
-                  color: DS.brandPrimary,
-                  title: context.l10n.homeOnboardingSetGoal,
-                  subtitle: context.l10n.homeOnboardingSetGoalSubtitle,
-                  onTap: () => context.go('/goals/new'),
-                ),
-                const SizedBox(height: DS.spacing8),
-                _OnboardingQuickCard(
-                  icon: Icons.chat_bubble_outline,
-                  color: DS.success,
-                  title: context.l10n.homeOnboardingChatSparkle,
-                  subtitle: context.l10n.homeOnboardingChatSubtitle,
-                  onTap: () => context.go('/chat'),
-                ),
-                const SizedBox(height: DS.spacing8),
-                _OnboardingQuickCard(
-                  icon: Icons.explore_outlined,
-                  color: DS.info,
-                  title: context.l10n.homeOnboardingExploreGalaxy,
-                  subtitle: context.l10n.homeOnboardingExploreSubtitle,
-                  onTap: () => context.go('/galaxy'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
+  // J-03：`_startNextAction`（原 Command Center 启动任务链路）已迁至
+  // today_cockpit_card.dart 的 `_CockpitContent._startTask`，链路不变
+  // （/tasks/today → activeTaskProvider → /tasks/{id}/execute）。
 
   List<Widget> _buildDashboardSkeletonSections() => const [
         // CompactStatusBar skeleton — short wide bar
@@ -631,24 +467,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       case DashboardSlotIds.metricsRow:
         return MetricsRow(dashboardState: dashboardState);
       case DashboardSlotIds.commandCenter:
-        return _HomeCommandCenterCard(
-          dashboardState: dashboardState,
-          growthState: growthState,
-          isLoading: growthState == null && growthAsync.isLoading,
-          onStartTask: _startNextAction,
-          onOpenTasks: () {
-            unawaited(context.push('/tasks'));
-          },
-          onCreatePlan: () {
-            unawaited(context.push('/plans/new?type=growth'));
-          },
-          onOpenAurora: () {
-            unawaited(context.push(ChatRoutes.chat));
-          },
-          onOpenBottleneckChat: activeBottleneck == null
-              ? null
-              : () => _openBottleneckChat(activeBottleneck),
-        );
+        // J-03：Command Center 由 TodayCockpitCard 收编（唯一主行动卡）。
+        // 主渲染路径在 growthSections 顶部；slot walk 仍会跳过该 id
+        // （DASH-01），此处仅为编辑面板/兜底渲染保持一致。
+        return const TodayCockpitCard();
       case DashboardSlotIds.understanding:
         return _UnderstandingExpansionSlot(
           isExpanded: _isUnderstandingExpanded,
@@ -1061,8 +883,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final dailyContextAsync = ref.watch(homeDailyContextLineProvider);
     final predictions = ref.watch(visiblePredictionsProvider);
     final l10n = AppLocalizations.of(context)!;
-    final showFirstGoalEmptyState =
-        _shouldShowFirstGoalEmptyState(dashboardState);
     final textScale = MediaQuery.textScalerOf(context).scale(1);
     final mediaPadding = MediaQuery.paddingOf(context);
     final bottomSafeInset = mediaPadding.bottom;
@@ -1112,6 +932,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
     var growthSectionIndex = 0;
     final showGrowthHeader = dashboardState.error == null;
+    // J-03 信息层级（v3/03_modules/HOME.md）：
+    // 1. TodayCockpitCard = 唯一 Primary Action（含 why/stuck/current run）；
+    // 2. goal context（cockpit 内 chips + GoalSwitcherBand 紧随其后）；
+    // 3. 「我卡住了」在 cockpit 卡内作次级入口；
+    // 4. 次要 upcoming / daily context；
+    // 5. Aurora understanding receipt 下移至首屏末尾，不再与主行动抢注意力。
     final growthSections = !showGrowthHeader
         ? <Widget>[]
         : <Widget>[
@@ -1128,11 +954,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
             _staggeredSection(
               index: growthSectionIndex++,
-              child: ContentConstraint(
-                child: UnderstandingSnapshotCard(
-                  onOpenChat: () => unawaited(context.push(ChatRoutes.chat)),
-                ),
-              ),
+              child: const TodayCockpitCard(),
             ),
             _staggeredSection(
               index: growthSectionIndex++,
@@ -1144,27 +966,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 text: dailyContextLine?.text,
                 isLoading:
                     dailyContextLine == null && dailyContextAsync.isLoading,
-              ),
-            ),
-            _staggeredSection(
-              index: growthSectionIndex++,
-              child: _HomeCommandCenterCard(
-                dashboardState: dashboardState,
-                growthState: growthState,
-                isLoading: growthState == null && growthAsync.isLoading,
-                onStartTask: _startNextAction,
-                onOpenTasks: () {
-                  unawaited(context.push('/tasks'));
-                },
-                onCreatePlan: () {
-                  unawaited(context.push('/plans/new?type=growth'));
-                },
-                onOpenAurora: () {
-                  unawaited(context.push(ChatRoutes.chat));
-                },
-                onOpenBottleneckChat: activeBottleneck == null
-                    ? null
-                    : () => _openBottleneckChat(activeBottleneck),
               ),
             ),
             _staggeredSection(
@@ -1229,6 +1030,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   },
                 ),
               ),
+            // HOME.md 第 5 层：Aurora understanding receipt —— 有用的一条
+            // 理解回执，置于首屏行动区之后，而非堆在主行动上方。
+            _staggeredSection(
+              index: growthSectionIndex++,
+              child: ContentConstraint(
+                child: UnderstandingSnapshotCard(
+                  onOpenChat: () => unawaited(context.push(ChatRoutes.chat)),
+                ),
+              ),
+            ),
           ];
 
     var sectionIndex = growthSections.length;
@@ -1324,17 +1135,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         );
       }
     } else {
-      // First-goal empty state always pins to the top of the customizable
-      // surface so brand-new users get guidance regardless of which slots
-      // they've enabled.
-      if (showFirstGoalEmptyState) {
-        dashboardSections.add(
-          _staggeredSection(
-            index: sectionIndex++,
-            child: _buildFirstGoalEmptyState(),
-          ),
-        );
-      }
+      // J-03：原 first-goal empty state 已由 TodayCockpitCard 的
+      // no-goal/fresh 态统一承接（主行动唯一入口），不再单独渲染。
 
       // N40（A-SPEC7 §4）访客唯一转化点：home 是访客落地面，也是
       // 「进行中任务之外」的安全窗口——卡内联于此，非弹窗；派生可见性
@@ -1381,8 +1183,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       // in CollapsibleSlot so they can shrink to a 64px header without
       // losing access via the header tap / overflow menu.
       for (final slotId in slotConfig.visibleOrderedSlots) {
-        // DASH-01 fix: skip commandCenter since it's already rendered in
-        // growthSections below — avoids duplicate Command Center cards.
+        // DASH-01 fix: skip commandCenter — it now renders as
+        // TodayCockpitCard at the top of growthSections (the single primary
+        // action card); rendering it again here would duplicate it.
         if (slotId == DashboardSlotIds.commandCenter) continue;
 
         final content = _buildSlotContent(
@@ -1492,7 +1295,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         delegate: SliverChildListDelegate(
                           hasNoGoals
                               ? [
-                                  _buildOnboardingWelcome(),
+                                  // J-03：无目标分支同样以 cockpit 打头
+                                  // （no-goal 态 = 设定第一个目标的唯一
+                                  // 主入口），原 _buildOnboardingWelcome
+                                  // 三连快卡已移除，避免多 CTA 竞争。
+                                  const TodayCockpitCard(),
                                   ...dashboardSections,
                                 ]
                               : [
@@ -2025,367 +1832,6 @@ String _formatDeadlineLabel({
   return context.l10n.dashboardDaysLeft(daysToDeadline);
 }
 
-class _HomeCommandCenterCard extends StatelessWidget {
-  const _HomeCommandCenterCard({
-    required this.dashboardState,
-    required this.growthState,
-    required this.isLoading,
-    required this.onStartTask,
-    required this.onOpenTasks,
-    required this.onCreatePlan,
-    required this.onOpenAurora,
-    this.onOpenBottleneckChat,
-  });
-
-  final DashboardState dashboardState;
-  final HomeGrowthState? growthState;
-  final bool isLoading;
-  final ValueChanged<HomeGrowthTask> onStartTask;
-  final VoidCallback onOpenTasks;
-  final VoidCallback onCreatePlan;
-  final VoidCallback onOpenAurora;
-  final VoidCallback? onOpenBottleneckChat;
-
-  @override
-  Widget build(BuildContext context) {
-    final state = growthState;
-    final l10n = I18nService.instance.l10n;
-
-    return ContentConstraint(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          DS.spacing16,
-          0,
-          DS.spacing16,
-          DS.spacing10,
-        ),
-        child: DashboardSectionShell(
-          key: const ValueKey('dashboard-command-center'),
-          tone: DashboardSurfaceTone.hero,
-          child: AnimatedSwitcher(
-            duration: context.reduceMotion ? Duration.zero : DS.quick,
-            child: isLoading && state == null
-                ? const _CommandCenterSkeleton()
-                : _CommandCenterContent(
-                    dashboardState: dashboardState,
-                    growthState: state ?? const HomeGrowthState.empty(),
-                    onStartTask: onStartTask,
-                    onOpenTasks: onOpenTasks,
-                    onCreatePlan: onCreatePlan,
-                    onOpenAurora: onOpenAurora,
-                    onOpenBottleneckChat: onOpenBottleneckChat,
-                    l10n: l10n,
-                  ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CommandCenterContent extends StatelessWidget {
-  const _CommandCenterContent({
-    required this.dashboardState,
-    required this.growthState,
-    required this.onStartTask,
-    required this.onOpenTasks,
-    required this.onCreatePlan,
-    required this.onOpenAurora,
-    required this.l10n,
-    this.onOpenBottleneckChat,
-  });
-
-  final DashboardState dashboardState;
-  final HomeGrowthState growthState;
-  final ValueChanged<HomeGrowthTask> onStartTask;
-  final VoidCallback onOpenTasks;
-  final VoidCallback onCreatePlan;
-  final VoidCallback onOpenAurora;
-  final VoidCallback? onOpenBottleneckChat;
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    final nextTask = growthState.nextAction;
-    final priorityTask = dashboardState.mostImportantTask;
-    final hasActivePlan = growthState.hasActivePlan;
-    final bottleneck = growthState.activeBottleneck;
-    final progress = growthState.completionRate;
-    final health = growthState.planHealth;
-    final planName = growthState.activePlan?.name ??
-        dashboardState.activePlanProgress?.name ??
-        dashboardState.growth?.name;
-    final deadlineDays = priorityTask?.daysToDeadline ??
-        dashboardState.nextMoveCard?.daysToDeadline ??
-        dashboardState.activePlanProgress?.daysToDeadline;
-
-    final hasRisk = bottleneck != null ||
-        (deadlineDays != null && deadlineDays <= 2) ||
-        (hasActivePlan && health > 0 && health < 0.45);
-    final accentColor = hasRisk
-        ? DS.warning
-        : nextTask != null
-            ? DS.brandPrimary
-            : hasActivePlan
-                ? DS.success
-                : DS.info;
-    final title = _title(nextTask, priorityTask, hasActivePlan);
-    final summary = _summary(context, nextTask, priorityTask, hasActivePlan);
-    final riskText = _riskText(context, bottleneck, deadlineDays, health);
-
-    return Column(
-      key: const ValueKey('dashboard-command-center-content'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: accentColor.withValues(alpha: 0.12),
-                borderRadius: DS.borderRadius16,
-                border: Border.all(color: accentColor.withValues(alpha: 0.18)),
-              ),
-              child: Icon(
-                hasRisk
-                    ? Icons.priority_high_rounded
-                    : nextTask != null
-                        ? Icons.play_arrow_rounded
-                        : Icons.auto_awesome_rounded,
-                color: accentColor,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: DS.spacing12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.dashboardCommandCenterNow,
-                    style: context.typo.labelSmall.copyWith(
-                      color: DS.textSecondary,
-                      fontWeight: DS.fontWeightBold,
-                    ),
-                  ),
-                  const SizedBox(height: DS.spacing4),
-                  Text(
-                    title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.typo.titleLarge.copyWith(
-                      color: DS.textPrimary,
-                      fontWeight: DS.fontWeightBold,
-                      height: 1.18,
-                    ),
-                  ),
-                  if (summary.isNotEmpty) ...[
-                    const SizedBox(height: DS.spacing6),
-                    Text(
-                      summary,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.typo.bodySmall.copyWith(
-                        color: DS.textSecondary,
-                        height: 1.52,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: DS.spacing14),
-        Wrap(
-          spacing: DS.spacing8,
-          runSpacing: DS.spacing8,
-          children: [
-            _DashboardChip(
-              icon: Icons.task_alt_rounded,
-              label: growthState.hasTasks
-                  ? '${growthState.tasksCompleted}/${growthState.tasksTotal}'
-                  : l10n.dashboardCommandCenterNoTasks,
-            ),
-            if (hasActivePlan)
-              _DashboardChip(
-                icon: Icons.timeline_rounded,
-                label: l10n.dashboardCommandCenterHealth((health * 100).round()),
-              ),
-            if (planName != null && planName.trim().isNotEmpty)
-              _DashboardChip(
-                icon: Icons.flag_rounded,
-                label: planName,
-              ),
-            if (deadlineDays != null)
-              _DashboardChip(
-                icon: Icons.timelapse_rounded,
-                label: _formatDeadlineLabel(
-                  context: context,
-                  daysToDeadline: deadlineDays,
-                ),
-              ),
-          ],
-        ),
-        if (growthState.hasTasks || dashboardState.activePlanProgress != null)
-          Padding(
-            padding: const EdgeInsets.only(top: DS.spacing12),
-            child: ClipRRect(
-              borderRadius: DS.borderRadiusFull,
-              // U-01 Step 3：确定性进度条迁 owner。
-              child: LoadingIndicator.linear(
-                size: 8,
-                value: progress > 0
-                    ? progress.clamp(0, 1)
-                    : (dashboardState.activePlanProgress?.progress ?? 0)
-                        .clamp(0, 1),
-                backgroundColor: DS.surfaceOverlay,
-                color: accentColor,
-                liveRegion: false,
-              ),
-            ),
-          ),
-        if (riskText != null) ...[
-          const SizedBox(height: DS.spacing12),
-          _CommandCenterRiskBanner(
-            text: riskText,
-            onTap: onOpenBottleneckChat ?? onOpenAurora,
-          ),
-        ],
-        const SizedBox(height: DS.spacing14),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final primary = SparkleButton.primary(
-              label: nextTask != null
-                  ? context.l10n.dashboardStartHere
-                  : hasActivePlan
-                      ? context.l10n.dashboardOpenTasks
-                      : context.l10n.dashboardStartWithAI,
-              icon: Icon(
-                nextTask != null
-                    ? Icons.play_arrow_rounded
-                    : hasActivePlan
-                        ? Icons.list_alt_rounded
-                        : Icons.auto_awesome_rounded,
-              ),
-              onPressed: nextTask != null
-                  ? () => onStartTask(nextTask)
-                  : hasActivePlan
-                      ? onOpenTasks
-                      : onCreatePlan,
-            );
-            final secondary = SparkleButton.ghost(
-              label: l10n.dashboardCommandCenterAskAurora,
-              icon: const Icon(Icons.chat_bubble_outline_rounded),
-              onPressed: onOpenAurora,
-            );
-
-            if (constraints.maxWidth < 360) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  primary,
-                  const SizedBox(height: DS.spacing10),
-                  secondary,
-                ],
-              );
-            }
-
-            return Row(
-              children: [
-                Expanded(child: primary),
-                const SizedBox(width: DS.spacing10),
-                Expanded(child: secondary),
-              ],
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  String _title(
-    HomeGrowthTask? nextTask,
-    PriorityTaskData? priorityTask,
-    bool hasActivePlan,
-  ) {
-    if (nextTask != null) {
-      return nextTask.title;
-    }
-    if (priorityTask != null && priorityTask.title.trim().isNotEmpty) {
-      return priorityTask.title;
-    }
-    if (hasActivePlan && growthState.hasTasks) {
-      return l10n.dashboardCcAllMapped;
-    }
-    if (hasActivePlan) {
-      return l10n.dashboardCcCheckPlan;
-    }
-    return l10n.dashboardCcSetGoal;
-  }
-
-  String _summary(
-    BuildContext context,
-    HomeGrowthTask? nextTask,
-    PriorityTaskData? priorityTask,
-    bool hasActivePlan,
-  ) {
-    if (nextTask != null) {
-      final due = nextTask.dueDate;
-      final dueText = due == null
-          ? null
-          : _formatDeadlineLabel(
-              context: context,
-              daysToDeadline: DateTime(
-                due.year,
-                due.month,
-                due.day,
-              )
-                  .difference(
-                    DateTime(
-                      DateTime.now().year,
-                      DateTime.now().month,
-                      DateTime.now().day,
-                    ),
-                  )
-                  .inDays,
-            );
-      return [
-        if (dueText != null) dueText,
-        if (nextTask.isHighPriority) l10n.dashboardCcHighPriority,
-        l10n.dashboardCcPlanProgress,
-      ].join(' - ');
-    }
-    if (priorityTask != null && priorityTask.reason.trim().isNotEmpty) {
-      return priorityTask.reason;
-    }
-    if (hasActivePlan && growthState.tasksCompleted >= growthState.tasksTotal) {
-      return l10n.dashboardCcNoUrgentAction;
-    }
-    return dashboardState.nextMoveCard?.summary ?? l10n.dashboardCcWillBreakDown;
-  }
-
-  String? _riskText(
-    BuildContext context,
-    HomeBottleneck? bottleneck,
-    int? deadlineDays,
-    double health,
-  ) {
-    if (bottleneck != null) {
-      return l10n.dashboardRiskBottleneck(bottleneck.topic);
-    }
-    if (deadlineDays != null && deadlineDays <= 2) {
-      return l10n.dashboardRiskDeadline(_formatDeadlineLabel(context: context, daysToDeadline: deadlineDays));
-    }
-    if (health > 0 && health < 0.45) {
-      return l10n.dashboardRiskHealth;
-    }
-    return null;
-  }
-}
-
 class _CommandCenterRiskBanner extends StatelessWidget {
   const _CommandCenterRiskBanner({
     required this.text,
@@ -2439,46 +1885,6 @@ class _CommandCenterRiskBanner extends StatelessWidget {
             ],
           ),
         ),
-      );
-}
-
-class _CommandCenterSkeleton extends StatelessWidget {
-  const _CommandCenterSkeleton();
-
-  @override
-  Widget build(BuildContext context) => const Column(
-        key: ValueKey('dashboard-command-center-skeleton'),
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              SparkleSkeleton(width: 44, height: 44, borderRadius: 16),
-              SizedBox(width: DS.spacing12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SparkleSkeleton(width: 112, height: 12, borderRadius: 6),
-                    SizedBox(height: DS.spacing8),
-                    SparkleSkeleton(height: 22, borderRadius: 11),
-                    SizedBox(height: DS.spacing8),
-                    SparkleSkeleton(width: 220, height: 14, borderRadius: 7),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: DS.spacing14),
-          SparkleSkeleton(height: 8, borderRadius: 4),
-          SizedBox(height: DS.spacing14),
-          Row(
-            children: [
-              Expanded(child: SparkleSkeleton(height: 38, borderRadius: 19)),
-              SizedBox(width: DS.spacing10),
-              Expanded(child: SparkleSkeleton(height: 38, borderRadius: 19)),
-            ],
-          ),
-        ],
       );
 }
 
@@ -3190,127 +2596,4 @@ class _DashboardChip extends StatelessWidget {
           ],
         ),
       );
-}
-
-class _GoalChip extends StatelessWidget {
-  const _GoalChip({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-        button: true,
-        label: I18nService.instance.l10n.dashboardGoalChipSelectGoal(label),
-        child: GestureDetector(
-          onTap: onTap,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 44),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: DS.brandPrimary.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: DS.brandPrimary.withValues(alpha: 0.2),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: 15, color: DS.brandPrimary),
-                  const SizedBox(width: 6),
-                  Text(
-                    label,
-                    style: DS.labelSmall.copyWith(
-                      color: DS.brandPrimary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-}
-
-class _OnboardingQuickCard extends StatelessWidget {
-  const _OnboardingQuickCard({
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-      button: true,
-      label: title,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: DS.borderRadius12,
-          child: Container(
-            padding: const EdgeInsets.all(DS.spacing14),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.06),
-              borderRadius: DS.borderRadius12,
-              border: Border.all(color: color.withValues(alpha: 0.15)),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
-                    borderRadius: DS.borderRadius8,
-                  ),
-                  child: Icon(icon, color: color, size: 22),
-                ),
-                const SizedBox(width: DS.spacing12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          fontSize: DS.fontSizeBase,
-                          fontWeight: DS.fontWeightSemibold,
-                          color: DS.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          fontSize: DS.fontSizeSm,
-                          color: DS.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.chevron_right, color: color.withValues(alpha: 0.4)),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
 }

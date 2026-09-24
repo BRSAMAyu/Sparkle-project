@@ -14,7 +14,14 @@ void main() {
   group('Dashboard screen structure', () {
     testWidgets('briefing details expand and collapse', (tester) async {
       await initializeDashboardTestEnvironment();
-      await tester.pumpWidget(buildDashboardTestHarness());
+      // J-03：dailyBriefing 槽改为默认折叠（首屏唯一主行动卡=Today
+      // Cockpit），折叠态下 briefing toggle 不进树；与下方 wt296 用例
+      // 同款注入「全展开」基线后再验证展开/折叠行为本身。
+      await tester.pumpWidget(
+        buildDashboardTestHarness(
+          extraOverrides: [dashboardSlotConfigAllExpandedOverride()],
+        ),
+      );
       await _pumpDashboard(tester);
 
       expect(find.text('Active Plan'), findsNothing);
@@ -103,7 +110,13 @@ void main() {
       tester,
     ) async {
       await initializeDashboardTestEnvironment();
-      await tester.pumpWidget(buildDashboardTestHarness());
+      // J-03：workspaceCards 槽随首屏去竞争默认折叠，section 内容（含
+      // customize action）折叠态不进树；注入「全展开」基线后验证 affordance。
+      await tester.pumpWidget(
+        buildDashboardTestHarness(
+          extraOverrides: [dashboardSlotConfigAllExpandedOverride()],
+        ),
+      );
       await _pumpDashboard(tester);
 
       await _scrollToSection(

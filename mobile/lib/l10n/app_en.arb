@@ -16563,6 +16563,92 @@
         }
     },
     "dashboardCommandCenterAskAurora": "Ask Aurora",
+    "todayCockpitEyebrowFresh": "Most worth doing today",
+    "todayCockpitEyebrowActive": "Keep going",
+    "todayCockpitEyebrowStalled": "Clear the blocker first",
+    "todayCockpitFreshHeadline": "Start the first thing today",
+    "todayCockpitFreshUnarrangedHeadline": "Today isn't planned yet",
+    "todayCockpitActiveHeadline": "Move to the next one",
+    "todayCockpitAllDoneHeadline": "Today's tasks are done",
+    "todayCockpitStalledHeadline": "Clear this blocker first",
+    "todayCockpitWhyBottleneck": "Stuck on \"{topic}\"",
+    "@todayCockpitWhyBottleneck": {
+        "placeholders": {
+            "topic": {
+                "type": "String"
+            }
+        }
+    },
+    "todayCockpitWhyDueToday": "Due today",
+    "todayCockpitWhyOverdue": "{days} days overdue",
+    "@todayCockpitWhyOverdue": {
+        "placeholders": {
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "todayCockpitWhyDueIn": "{days} days until deadline",
+    "@todayCockpitWhyDueIn": {
+        "placeholders": {
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "todayCockpitWhyStale": "This plan hasn't moved for a while",
+    "todayCockpitWhyHealth": "Plan health at {percent}%, needs attention",
+    "@todayCockpitWhyHealth": {
+        "placeholders": {
+            "percent": {
+                "type": "int"
+            }
+        }
+    },
+    "todayCockpitWhyRemaining": "{count} tasks left today",
+    "@todayCockpitWhyRemaining": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "todayCockpitWhyAllDone": "Today's to-dos are clear",
+    "todayCockpitCtaArrange": "Plan today",
+    "todayCockpitCtaStuck": "Unblock it",
+    "todayCockpitStuckButton": "I'm stuck",
+    "todayCockpitStuckPrompt": "I'm stuck while working on \"{goal}\": {reason}Help me find the most worthwhile next step right now.",
+    "@todayCockpitStuckPrompt": {
+        "placeholders": {
+            "goal": {
+                "type": "String"
+            },
+            "reason": {
+                "type": "String"
+            }
+        }
+    },
+    "todayCockpitGoalWord": "my current goal",
+    "todayCockpitStallReasonDeadline": "the deadline is close but progress stalled, ",
+    "todayCockpitStallReasonStale": "the plan has been idle for a while, ",
+    "todayCockpitStallReasonHealth": "plan health dropped to {percent}%, ",
+    "@todayCockpitStallReasonHealth": {
+        "placeholders": {
+            "percent": {
+                "type": "int"
+            }
+        }
+    },
+    "todayCockpitStallReasonGeneric": "I'm not sure where to continue, ",
+    "todayCockpitRunOngoing": "Aurora is working",
+    "todayCockpitRunOngoingDetailed": "Aurora is working: {detail}",
+    "@todayCockpitRunOngoingDetailed": {
+        "placeholders": {
+            "detail": {
+                "type": "String"
+            }
+        }
+    },
     "dashboardCcAllMapped": "Today is mapped out",
     "dashboardCcCheckPlan": "Check today plan rhythm",
     "dashboardCcSetGoal": "Set a goal you can start today",

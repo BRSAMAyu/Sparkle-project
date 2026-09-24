@@ -1,0 +1,3750 @@
+diff --git a/mobile/lib/features/home/home.dart b/mobile/lib/features/home/home.dart
+index 486856d8..c008d660 100755
+--- a/mobile/lib/features/home/home.dart
++++ b/mobile/lib/features/home/home.dart
+@@ -1,5 +1,7 @@
+ export 'home_routes.dart';
+ export 'presentation/providers/dashboard_provider.dart';
+ export 'presentation/providers/notification_provider.dart';
++export 'presentation/providers/today_cockpit_provider.dart';
+ export 'presentation/screens/dashboard_screen.dart';
+ export 'presentation/screens/notification_list_screen.dart';
++export 'presentation/widgets/today_cockpit_card.dart';
+diff --git a/mobile/lib/features/home/presentation/providers/dashboard_slot_config_provider.dart b/mobile/lib/features/home/presentation/providers/dashboard_slot_config_provider.dart
+index 7cd3bb92..4957a15d 100644
+--- a/mobile/lib/features/home/presentation/providers/dashboard_slot_config_provider.dart
++++ b/mobile/lib/features/home/presentation/providers/dashboard_slot_config_provider.dart
+@@ -92,16 +92,27 @@ class DashboardSlotIds {
+   /// Default-collapsed set: high-volume / low-glanceable slots ship
+   /// collapsed (~64px header each) so the first-run scroll feels
+   /// intentional but every registered slot is still discoverable.
+-  /// Together with `defaultVisible = all`, this means new users see
+-  /// 5 expanded high-signal slots and 11 collapsed headers — far less
+-  /// noisy than the previous "all expanded" default, but no slot is
+-  /// silently hidden.
++  ///
++  /// J-03（v3/03_modules/HOME.md「避免 5 个系统同时抢 CTA」）：首屏唯一
++  /// 主行动卡是 TodayCockpitCard（growthSections 顶部，不受 slot 系统
++  /// 控制）。所有自带行动按钮/次级 CTA 的聚合卡（dailyBriefing、
++  /// multiGoalDashboard、examSprint、taskBoard、dashboardUpdates、
++  /// workspaceCards）默认折叠为 64px header——内容仍可一键展开，已有
++  /// 用户持久化配置不受影响（fromJson 仅在无存档时取默认值）。
++  /// Together with `defaultVisible = all`, this means new users see the
++  /// cockpit expanded and everything else as collapsed headers — no slot
++  /// is silently hidden.
+   static const List<String> defaultCollapsed = [
++    dailyBriefing,
++    multiGoalDashboard,
++    examSprint,
++    taskBoard,
++    dashboardUpdates,
++    workspaceCards,
+     understanding,
+     metricsRow,
+     returnCaseFile,
+     goalDetailSnapshot,
+-    dashboardUpdates,
+     growthQuality,
+     weeklyNarrative,
+     community,
+diff --git a/mobile/lib/features/home/presentation/providers/today_cockpit_provider.dart b/mobile/lib/features/home/presentation/providers/today_cockpit_provider.dart
+new file mode 100644
+index 00000000..a8465c4e
+--- /dev/null
++++ b/mobile/lib/features/home/presentation/providers/today_cockpit_provider.dart
+@@ -0,0 +1,265 @@
++import 'package:flutter/foundation.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
++import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
++import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
++import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
++import 'package:sparkle/features/home/presentation/providers/spine_status_band_provider.dart';
++import 'package:sparkle/features/plan/presentation/providers/active_goal_provider.dart';
++
++/// J-03 Today Cockpit —「现在最值得做什么」的唯一派生视图模型。
++///
++/// 本文件**不新建任何权威真源**（B-02 lineage 契约）：所有字段均由既有
++/// provider 派生，展示层（today_cockpit_card.dart）只消费这里的事实字段，
++/// 再用 l10n 渲染文案。逐字段来源链路：
++///
++/// | VM 字段          | 权威真源（链路）                                              |
++/// |------------------|---------------------------------------------------------------|
++/// | hasGoals         | multiGoalOverviewProvider ← GET /growth/spine/goals + GET /plans |
++/// | goalTitle        | 同上（selected goal title）                                    |
++/// | goalProgress     | 同上（healthScore 为 0~1）                                     |
++/// | planName         | homeGrowthStateProvider ← GET /growth/dashboard.active_plan_progress（兜底 GET /plans/active） |
++/// | tasksTotal/Done  | homeGrowthStateProvider ← GET /tasks/today                     |
++/// | taskToStart      | homeGrowthStateProvider.nextAction ← /tasks/today 派生（优先级→瓶颈关联→截止日） |
++/// | bottleneckTopic  | homeGrowthStateProvider.activeBottleneck ← /growth/dashboard.active_bottleneck（兜底 /plans/{id}/bottlenecks，仅 high severity） |
++/// | planHealth       | homeGrowthStateProvider.planHealth ← active_plan_progress.health_score |
++/// | deadlineDays     | dashboardProvider.mostImportantTask.daysToDeadline ?? activePlanProgress.daysToDeadline（沿用原 Command Center 口径） |
++/// | staleGuard       | spineStatusBandProvider ← GET /aurora/spine/status-band.stale_guard |
++/// | runIsActive 等   | chatProvider.runPhase/activeRunSummary ← WS 流式运行态（keep-alive，只读不触发连接） |
++enum TodayCockpitMode {
++  /// 没有任何目标：唯一出路是设定第一个目标。
++  noGoal,
++
++  /// 有目标但今天还没动：要么有待办没开始，要么今天还没排布。
++  fresh,
++
++  /// 今天已有推进：继续下一个。
++  active,
++
++  /// 有客观卡点信号：瓶颈 / 截止临期或逾期 / 计划健康度低 / stale guard。
++  stalled,
++}
++
++/// 主行动类型（展示层据此渲染唯一 primary CTA 的文案与跳转）。
++enum TodayCockpitAction {
++  setGoal,
++  startTask,
++  arrangeToday,
++  openTasks,
++  stuckRecovery,
++}
++
++@immutable
++class TodayCockpitVm {
++  const TodayCockpitVm({
++    required this.mode,
++    required this.action,
++    this.isLoading = false,
++    this.taskToStart,
++    this.goalTitle,
++    this.goalProgress,
++    this.planName,
++    this.tasksTotal = 0,
++    this.tasksCompleted = 0,
++    this.bottleneckTopic,
++    this.planHealthPercent,
++    this.deadlineDays,
++    this.staleGuard = false,
++    this.runIsActive = false,
++    this.runLabel,
++  });
++
++  /// growth / goals 尚在首次加载（展示骨架，不做状态判定）。
++  final bool isLoading;
++
++  final TodayCockpitMode mode;
++  final TodayCockpitAction action;
++
++  /// 来自 /tasks/today 的下一个行动（可能为 null → CTA 退化为开任务/排计划）。
++  final HomeGrowthTask? taskToStart;
++
++  /// 当前选中目标（spine arbitration 或 plan 兜底）。
++  final String? goalTitle;
++  final double? goalProgress;
++  final String? planName;
++
++  final int tasksTotal;
++  final int tasksCompleted;
++
++  /// high-severity 瓶颈主题（stalled why 的第一信号）。
++  final String? bottleneckTopic;
++
++  /// 0~100 的计划健康度（仅在有计划且 >0 时有值）。
++  final int? planHealthPercent;
++
++  /// 正数=剩余天数；0=今天截止；负数=已逾期天数。
++  final int? deadlineDays;
++
++  /// Aurora spine stale guard 信号。
++  final bool staleGuard;
++
++  /// 当前是否有 agent run 在执行（chat WS 运行态）。
++  final bool runIsActive;
++
++  /// run 的摘要文案素材（details 或 agentName），无则展示通用进行中。
++  final String? runLabel;
++
++  bool get hasGoalContext => goalTitle != null || planName != null;
++}
++
++/// 派生 provider：纯组合既有真源，永不抛异常（各源自身已兜底）。
++///
++/// `dependencies` 声明全部上游（Riverpod 2 作用域化解析要求，测试中以
++/// 嵌套 ProviderScope 覆盖上游时必需；应用内非作用域场景无影响）。
++final todayCockpitProvider = Provider<TodayCockpitVm>((ref) {
++  final goalsAsync = ref.watch(multiGoalOverviewProvider);
++  final growthAsync = ref.watch(homeGrowthStateProvider);
++  final bandAsync = ref.watch(spineStatusBandProvider);
++  final dashboardState = ref.watch(dashboardProvider);
++  final chatState = ref.watch(chatProvider);
++
++  final isLoading =
++      (goalsAsync.isLoading || growthAsync.isLoading) && !goalsAsync.hasValue;
++
++  final goals = goalsAsync.valueOrNull;
++  final growth = growthAsync.valueOrNull ?? const HomeGrowthState.empty();
++  final band = bandAsync.valueOrNull;
++
++  // ── 目标上下文（no-goal 判定与 goal 行展示）───────────────────────────
++  final selectedGoal = goals?.selectedGoal;
++  final goalTitle = _nonEmpty(selectedGoal?.title);
++  final goalProgress = selectedGoal?.healthScore;
++  final planName = _nonEmpty(growth.activePlan?.name) ??
++      _nonEmpty(dashboardState.activePlanProgress?.name);
++  final hasGoals = goals == null ? planName != null : goals.goals.isNotEmpty;
++
++  if (isLoading) {
++    return TodayCockpitVm(
++      mode: TodayCockpitMode.fresh,
++      action: TodayCockpitAction.openTasks,
++      isLoading: true,
++      goalTitle: goalTitle,
++      planName: planName,
++    );
++  }
++
++  // ── 状态 1：no-goal ──────────────────────────────────────────────────
++  if (!hasGoals) {
++    return TodayCockpitVm(
++      mode: TodayCockpitMode.noGoal,
++      action: TodayCockpitAction.setGoal,
++      goalTitle: goalTitle,
++      planName: planName,
++      runIsActive: chatState.runPhase.isActive,
++      runLabel: chatState.activeRunSummary?.details ??
++          chatState.activeRunSummary?.agentName,
++    );
++  }
++
++  final deadlineDays = dashboardState.mostImportantTask?.daysToDeadline ??
++      dashboardState.activePlanProgress?.daysToDeadline;
++
++  // ── stalled 信号（全部为真实字段，任一命中即判卡）────────────────────
++  final bottleneck = growth.activeBottleneck;
++  final health = growth.planHealth;
++  final overdueOrDueToday = deadlineDays != null && deadlineDays <= 0;
++  final nextTaskOverdue = _isOverdue(growth.nextAction);
++  final stalled = bottleneck != null ||
++      (band?.staleGuard ?? false) ||
++      overdueOrDueToday ||
++      nextTaskOverdue ||
++      (health > 0 && health < 0.45);
++
++  // ── 状态 4：stalled ──────────────────────────────────────────────────
++  if (stalled) {
++    return _buildVm(
++      mode: TodayCockpitMode.stalled,
++      action: TodayCockpitAction.stuckRecovery,
++      growth: growth,
++      goalTitle: goalTitle,
++      goalProgress: goalProgress,
++      planName: planName,
++      bottleneckTopic: bottleneck?.topic,
++      planHealthPercent: health > 0 ? (health * 100).round() : null,
++      deadlineDays: deadlineDays,
++      staleGuard: band?.staleGuard ?? false,
++      chatState: chatState,
++    );
++  }
++
++  // ── 状态 2：fresh（今天还没动）／状态 3：active（已有推进）────────────
++  final startedToday = growth.tasksCompleted > 0;
++  final hasSomethingToDo = growth.nextAction != null || growth.tasksTotal > 0;
++  final mode =
++      startedToday ? TodayCockpitMode.active : TodayCockpitMode.fresh;
++  final action = growth.nextAction != null
++      ? TodayCockpitAction.startTask
++      : (hasSomethingToDo ? TodayCockpitAction.openTasks
++          : TodayCockpitAction.arrangeToday);
++
++  return _buildVm(
++    mode: mode,
++    action: action,
++    growth: growth,
++    goalTitle: goalTitle,
++    goalProgress: goalProgress,
++    planName: planName,
++    bottleneckTopic: null,
++    planHealthPercent:
++        health > 0 && health < 1 ? (health * 100).round() : null,
++    deadlineDays: deadlineDays,
++    staleGuard: band?.staleGuard ?? false,
++    chatState: chatState,
++  );
++}, dependencies: [
++  multiGoalOverviewProvider,
++  homeGrowthStateProvider,
++  spineStatusBandProvider,
++  dashboardProvider,
++  chatProvider,
++],);
++
++TodayCockpitVm _buildVm({
++  required TodayCockpitMode mode,
++  required TodayCockpitAction action,
++  required HomeGrowthState growth,
++  required String? goalTitle,
++  required double? goalProgress,
++  required String? planName,
++  required String? bottleneckTopic,
++  required int? planHealthPercent,
++  required int? deadlineDays,
++  required bool staleGuard,
++  required ChatState chatState,
++}) =>
++    TodayCockpitVm(
++      mode: mode,
++      action: action,
++      taskToStart: growth.nextAction,
++      goalTitle: goalTitle,
++      goalProgress: goalProgress,
++      planName: planName,
++      tasksTotal: growth.tasksTotal,
++      tasksCompleted: growth.tasksCompleted,
++      bottleneckTopic: _nonEmpty(bottleneckTopic),
++      planHealthPercent: planHealthPercent,
++      deadlineDays: deadlineDays,
++      staleGuard: staleGuard,
++      runIsActive: chatState.runPhase.isActive,
++      runLabel: chatState.activeRunSummary?.details ??
++          chatState.activeRunSummary?.agentName,
++    );
++
++bool _isOverdue(HomeGrowthTask? task) {
++  final due = task?.dueDate;
++  if (due == null || task!.isCompleted) return false;
++  final today = DateTime.now();
++  final endOfDue = DateTime(due.year, due.month, due.day);
++  final startOfToday = DateTime(today.year, today.month, today.day);
++  return endOfDue.isBefore(startOfToday);
++}
++
++String? _nonEmpty(String? value) {
++  final trimmed = value?.trim();
++  return trimmed == null || trimmed.isEmpty ? null : trimmed;
++}
+diff --git a/mobile/lib/features/home/presentation/screens/dashboard_screen.dart b/mobile/lib/features/home/presentation/screens/dashboard_screen.dart
+index ceda19bf..351eb678 100644
+--- a/mobile/lib/features/home/presentation/screens/dashboard_screen.dart
++++ b/mobile/lib/features/home/presentation/screens/dashboard_screen.dart
+@@ -54,6 +54,7 @@ import 'package:sparkle/features/home/presentation/widgets/onboarding_resume_car
+ import 'package:sparkle/features/home/presentation/widgets/predicted_intent_card.dart';
+ import 'package:sparkle/features/home/presentation/widgets/recent_insights_card.dart';
+ import 'package:sparkle/features/home/presentation/widgets/task_board/task_board_card.dart';
++import 'package:sparkle/features/home/presentation/widgets/today_cockpit_card.dart';
+ import 'package:sparkle/features/home/presentation/widgets/understanding_panel.dart';
+ import 'package:sparkle/features/home/presentation/widgets/unified_omni_bar.dart';
+ import 'package:sparkle/features/home/presentation/widgets/weather_header.dart';
+@@ -207,14 +208,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+         child: child,
+       );
+ 
+-  bool _shouldShowFirstGoalEmptyState(DashboardState state) {
+-    if (state.isLoading || state.error != null) {
+-      return false;
+-    }
+-    return state.nextActions.isEmpty &&
+-        state.sprint == null &&
+-        state.growth == null;
+-  }
++  // J-03：原 `_shouldShowFirstGoalEmptyState` / `_buildFirstGoalEmptyState` /
++  // `_buildOnboardingWelcome`（三处互相竞争的引导卡面，合计 3+ 个 CTA）
++  // 由 TodayCockpitCard 的 no-goal / fresh 态统一承接（见下方
++  // growthSections 与 hasNoGoals 分支），首屏引导面收敛为唯一主卡。
+ 
+   AuroraBandState _resolveAuroraState(DashboardState state) {
+     final sprint = state.sprint;
+@@ -384,170 +381,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+     );
+   }
+ 
+-  void _startNextAction(HomeGrowthTask task) {
+-    if (task.id.isEmpty) {
+-      unawaited(context.push('/tasks'));
+-      return;
+-    }
+-
+-    final taskModel = task.taskModel;
+-    if (taskModel == null) {
+-      unawaited(context.push('/tasks/${task.id}'));
+-      return;
+-    }
+-
+-    ref.read(activeTaskProvider.notifier).state = taskModel;
+-    unawaited(
+-      context.push('/tasks/${task.id}/execute?origin=home_growth'),
+-    );
+-  }
+-
+-  Widget _buildFirstGoalEmptyState() => ContentConstraint(
+-        child: Padding(
+-          padding: const EdgeInsets.fromLTRB(
+-            DS.spacing16,
+-            DS.spacing6,
+-            DS.spacing16,
+-            DS.spacing10,
+-          ),
+-          child: DashboardSectionShell(
+-            tone: DashboardSurfaceTone.hero,
+-            padding: const EdgeInsets.all(DS.spacing20),
+-            child: Column(
+-              crossAxisAlignment: CrossAxisAlignment.start,
+-              children: [
+-                DashboardSectionHeader(
+-                  icon: Icons.auto_awesome_rounded,
+-                  iconSize: 40,
+-                  accentColor: DS.brandPrimary,
+-                  title: context.l10n.dashboardSetFirstGoal,
+-                  summary: context.l10n.dashboardSetFirstGoalSummary,
+-                ),
+-                const SizedBox(height: DS.spacing16),
+-                Text(
+-                  context.l10n.dashboardWhatToPush,
+-                  style: DS.bodySmall.copyWith(
+-                    color: DS.textSecondary,
+-                    fontWeight: FontWeight.w500,
+-                  ),
+-                ),
+-                const SizedBox(height: DS.spacing12),
+-                Wrap(
+-                  spacing: DS.spacing8,
+-                  runSpacing: DS.spacing8,
+-                  children: [
+-                    _GoalChip(
+-                      label: context.l10n.dashboardGoalExamSprint,
+-                      icon: Icons.local_fire_department_outlined,
+-                      onTap: () => context.go(
+-                        '/chat?prompt=${Uri.encodeComponent(context.l10n.dashboardGoalExamSprintPrompt)}',
+-                      ),
+-                    ),
+-                    _GoalChip(
+-                      label: context.l10n.dashboardGoalLongTerm,
+-                      icon: Icons.school_outlined,
+-                      onTap: () => context.go(
+-                        '/chat?prompt=${Uri.encodeComponent(context.l10n.dashboardGoalLongTermPrompt)}',
+-                      ),
+-                    ),
+-                    _GoalChip(
+-                      label: context.l10n.dashboardGoalProject,
+-                      icon: Icons.rocket_launch_outlined,
+-                      onTap: () => context.go(
+-                        '/chat?prompt=${Uri.encodeComponent(context.l10n.dashboardGoalProjectPrompt)}',
+-                      ),
+-                    ),
+-                    _GoalChip(
+-                      label: context.l10n.dashboardGoalSelfGrowth,
+-                      icon: Icons.psychology_outlined,
+-                      onTap: () => context.go(
+-                        '/chat?prompt=${Uri.encodeComponent(context.l10n.dashboardGoalSelfGrowthPrompt)}',
+-                      ),
+-                    ),
+-                    _GoalChip(
+-                      label: context.l10n.dashboardGoalNotSure,
+-                      icon: Icons.help_outline,
+-                      onTap: () => context.go(
+-                        '/chat?prompt=${Uri.encodeComponent(context.l10n.dashboardGoalNotSurePrompt)}',
+-                      ),
+-                    ),
+-                  ],
+-                ),
+-                const SizedBox(height: DS.spacing16),
+-                Wrap(
+-                  spacing: DS.spacing12,
+-                  runSpacing: DS.spacing10,
+-                  children: [
+-                    SparkleButton.primary(
+-                      label: context.l10n.dashboardStartWithAI,
+-                      onPressed: () => context.go('/goals/new'),
+-                    ),
+-                    SparkleButton.ghost(
+-                      label: context.l10n.homeQuickCreate,
+-                      onPressed: () => context.go('/chat'),
+-                    ),
+-                    SparkleButton.ghost(
+-                      label: context.l10n.dashboardOpenTaskList,
+-                      onPressed: () => context.push('/tasks'),
+-                    ),
+-                  ],
+-                ),
+-              ],
+-            ),
+-          ),
+-        ),
+-      );
+-
+-  Widget _buildOnboardingWelcome() => ContentConstraint(
+-        child: Padding(
+-          padding: const EdgeInsets.fromLTRB(
+-            DS.spacing16,
+-            DS.spacing12,
+-            DS.spacing16,
+-            DS.spacing16,
+-          ),
+-          child: DashboardSectionShell(
+-            tone: DashboardSurfaceTone.hero,
+-            padding: const EdgeInsets.all(DS.spacing24),
+-            child: Column(
+-              crossAxisAlignment: CrossAxisAlignment.start,
+-              children: [
+-                DashboardSectionHeader(
+-                  icon: Icons.auto_awesome_rounded,
+-                  iconSize: 44,
+-                  accentColor: DS.brandPrimary,
+-                  title: context.l10n.chatWelcomeTitle,
+-                  summary: context.l10n.homeOnboardingSummary,
+-                ),
+-                const SizedBox(height: DS.spacing20),
+-                _OnboardingQuickCard(
+-                  icon: Icons.flag_outlined,
+-                  color: DS.brandPrimary,
+-                  title: context.l10n.homeOnboardingSetGoal,
+-                  subtitle: context.l10n.homeOnboardingSetGoalSubtitle,
+-                  onTap: () => context.go('/goals/new'),
+-                ),
+-                const SizedBox(height: DS.spacing8),
+-                _OnboardingQuickCard(
+-                  icon: Icons.chat_bubble_outline,
+-                  color: DS.success,
+-                  title: context.l10n.homeOnboardingChatSparkle,
+-                  subtitle: context.l10n.homeOnboardingChatSubtitle,
+-                  onTap: () => context.go('/chat'),
+-                ),
+-                const SizedBox(height: DS.spacing8),
+-                _OnboardingQuickCard(
+-                  icon: Icons.explore_outlined,
+-                  color: DS.info,
+-                  title: context.l10n.homeOnboardingExploreGalaxy,
+-                  subtitle: context.l10n.homeOnboardingExploreSubtitle,
+-                  onTap: () => context.go('/galaxy'),
+-                ),
+-              ],
+-            ),
+-          ),
+-        ),
+-      );
++  // J-03：`_startNextAction`（原 Command Center 启动任务链路）已迁至
++  // today_cockpit_card.dart 的 `_CockpitContent._startTask`，链路不变
++  // （/tasks/today → activeTaskProvider → /tasks/{id}/execute）。
+ 
+   List<Widget> _buildDashboardSkeletonSections() => const [
+         // CompactStatusBar skeleton — short wide bar
+@@ -630,24 +466,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+       case DashboardSlotIds.metricsRow:
+         return MetricsRow(dashboardState: dashboardState);
+       case DashboardSlotIds.commandCenter:
+-        return _HomeCommandCenterCard(
+-          dashboardState: dashboardState,
+-          growthState: growthState,
+-          isLoading: growthState == null && growthAsync.isLoading,
+-          onStartTask: _startNextAction,
+-          onOpenTasks: () {
+-            unawaited(context.push('/tasks'));
+-          },
+-          onCreatePlan: () {
+-            unawaited(context.push('/plans/new?type=growth'));
+-          },
+-          onOpenAurora: () {
+-            unawaited(context.push(ChatRoutes.chat));
+-          },
+-          onOpenBottleneckChat: activeBottleneck == null
+-              ? null
+-              : () => _openBottleneckChat(activeBottleneck),
+-        );
++        // J-03：Command Center 由 TodayCockpitCard 收编（唯一主行动卡）。
++        // 主渲染路径在 growthSections 顶部；slot walk 仍会跳过该 id
++        // （DASH-01），此处仅为编辑面板/兜底渲染保持一致。
++        return const TodayCockpitCard();
+       case DashboardSlotIds.understanding:
+         return _UnderstandingExpansionSlot(
+           isExpanded: _isUnderstandingExpanded,
+@@ -1060,8 +882,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+     final dailyContextAsync = ref.watch(homeDailyContextLineProvider);
+     final predictions = ref.watch(visiblePredictionsProvider);
+     final l10n = AppLocalizations.of(context)!;
+-    final showFirstGoalEmptyState =
+-        _shouldShowFirstGoalEmptyState(dashboardState);
+     final textScale = MediaQuery.textScalerOf(context).scale(1);
+     final mediaPadding = MediaQuery.paddingOf(context);
+     final bottomSafeInset = mediaPadding.bottom;
+@@ -1111,6 +931,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+     );
+     var growthSectionIndex = 0;
+     final showGrowthHeader = dashboardState.error == null;
++    // J-03 信息层级（v3/03_modules/HOME.md）：
++    // 1. TodayCockpitCard = 唯一 Primary Action（含 why/stuck/current run）；
++    // 2. goal context（cockpit 内 chips + GoalSwitcherBand 紧随其后）；
++    // 3. 「我卡住了」在 cockpit 卡内作次级入口；
++    // 4. 次要 upcoming / daily context；
++    // 5. Aurora understanding receipt 下移至首屏末尾，不再与主行动抢注意力。
+     final growthSections = !showGrowthHeader
+         ? <Widget>[]
+         : <Widget>[
+@@ -1127,11 +953,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+             ),
+             _staggeredSection(
+               index: growthSectionIndex++,
+-              child: ContentConstraint(
+-                child: UnderstandingSnapshotCard(
+-                  onOpenChat: () => unawaited(context.push(ChatRoutes.chat)),
+-                ),
+-              ),
++              child: const TodayCockpitCard(),
+             ),
+             _staggeredSection(
+               index: growthSectionIndex++,
+@@ -1145,27 +967,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+                     dailyContextLine == null && dailyContextAsync.isLoading,
+               ),
+             ),
+-            _staggeredSection(
+-              index: growthSectionIndex++,
+-              child: _HomeCommandCenterCard(
+-                dashboardState: dashboardState,
+-                growthState: growthState,
+-                isLoading: growthState == null && growthAsync.isLoading,
+-                onStartTask: _startNextAction,
+-                onOpenTasks: () {
+-                  unawaited(context.push('/tasks'));
+-                },
+-                onCreatePlan: () {
+-                  unawaited(context.push('/plans/new?type=growth'));
+-                },
+-                onOpenAurora: () {
+-                  unawaited(context.push(ChatRoutes.chat));
+-                },
+-                onOpenBottleneckChat: activeBottleneck == null
+-                    ? null
+-                    : () => _openBottleneckChat(activeBottleneck),
+-              ),
+-            ),
+             _staggeredSection(
+               index: growthSectionIndex++,
+               child: const ReturnCaseFileCard(),
+@@ -1228,6 +1029,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+                   },
+                 ),
+               ),
++            // HOME.md 第 5 层：Aurora understanding receipt —— 有用的一条
++            // 理解回执，置于首屏行动区之后，而非堆在主行动上方。
++            _staggeredSection(
++              index: growthSectionIndex++,
++              child: ContentConstraint(
++                child: UnderstandingSnapshotCard(
++                  onOpenChat: () => unawaited(context.push(ChatRoutes.chat)),
++                ),
++              ),
++            ),
+           ];
+ 
+     var sectionIndex = growthSections.length;
+@@ -1323,17 +1134,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+         );
+       }
+     } else {
+-      // First-goal empty state always pins to the top of the customizable
+-      // surface so brand-new users get guidance regardless of which slots
+-      // they've enabled.
+-      if (showFirstGoalEmptyState) {
+-        dashboardSections.add(
+-          _staggeredSection(
+-            index: sectionIndex++,
+-            child: _buildFirstGoalEmptyState(),
+-          ),
+-        );
+-      }
++      // J-03：原 first-goal empty state 已由 TodayCockpitCard 的
++      // no-goal/fresh 态统一承接（主行动唯一入口），不再单独渲染。
+ 
+       // N40（A-SPEC7 §4）访客唯一转化点：home 是访客落地面，也是
+       // 「进行中任务之外」的安全窗口——卡内联于此，非弹窗；派生可见性
+@@ -1367,8 +1169,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+       // in CollapsibleSlot so they can shrink to a 64px header without
+       // losing access via the header tap / overflow menu.
+       for (final slotId in slotConfig.visibleOrderedSlots) {
+-        // DASH-01 fix: skip commandCenter since it's already rendered in
+-        // growthSections below — avoids duplicate Command Center cards.
++        // DASH-01 fix: skip commandCenter — it now renders as
++        // TodayCockpitCard at the top of growthSections (the single primary
++        // action card); rendering it again here would duplicate it.
+         if (slotId == DashboardSlotIds.commandCenter) continue;
+ 
+         final content = _buildSlotContent(
+@@ -1478,7 +1281,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+                         delegate: SliverChildListDelegate(
+                           hasNoGoals
+                               ? [
+-                                  _buildOnboardingWelcome(),
++                                  // J-03：无目标分支同样以 cockpit 打头
++                                  // （no-goal 态 = 设定第一个目标的唯一
++                                  // 主入口），原 _buildOnboardingWelcome
++                                  // 三连快卡已移除，避免多 CTA 竞争。
++                                  const TodayCockpitCard(),
+                                   ...dashboardSections,
+                                 ]
+                               : [
+@@ -2011,367 +1818,6 @@ String _formatDeadlineLabel({
+   return context.l10n.dashboardDaysLeft(daysToDeadline);
+ }
+ 
+-class _HomeCommandCenterCard extends StatelessWidget {
+-  const _HomeCommandCenterCard({
+-    required this.dashboardState,
+-    required this.growthState,
+-    required this.isLoading,
+-    required this.onStartTask,
+-    required this.onOpenTasks,
+-    required this.onCreatePlan,
+-    required this.onOpenAurora,
+-    this.onOpenBottleneckChat,
+-  });
+-
+-  final DashboardState dashboardState;
+-  final HomeGrowthState? growthState;
+-  final bool isLoading;
+-  final ValueChanged<HomeGrowthTask> onStartTask;
+-  final VoidCallback onOpenTasks;
+-  final VoidCallback onCreatePlan;
+-  final VoidCallback onOpenAurora;
+-  final VoidCallback? onOpenBottleneckChat;
+-
+-  @override
+-  Widget build(BuildContext context) {
+-    final state = growthState;
+-    final l10n = I18nService.instance.l10n;
+-
+-    return ContentConstraint(
+-      child: Padding(
+-        padding: const EdgeInsets.fromLTRB(
+-          DS.spacing16,
+-          0,
+-          DS.spacing16,
+-          DS.spacing10,
+-        ),
+-        child: DashboardSectionShell(
+-          key: const ValueKey('dashboard-command-center'),
+-          tone: DashboardSurfaceTone.hero,
+-          child: AnimatedSwitcher(
+-            duration: context.reduceMotion ? Duration.zero : DS.quick,
+-            child: isLoading && state == null
+-                ? const _CommandCenterSkeleton()
+-                : _CommandCenterContent(
+-                    dashboardState: dashboardState,
+-                    growthState: state ?? const HomeGrowthState.empty(),
+-                    onStartTask: onStartTask,
+-                    onOpenTasks: onOpenTasks,
+-                    onCreatePlan: onCreatePlan,
+-                    onOpenAurora: onOpenAurora,
+-                    onOpenBottleneckChat: onOpenBottleneckChat,
+-                    l10n: l10n,
+-                  ),
+-          ),
+-        ),
+-      ),
+-    );
+-  }
+-}
+-
+-class _CommandCenterContent extends StatelessWidget {
+-  const _CommandCenterContent({
+-    required this.dashboardState,
+-    required this.growthState,
+-    required this.onStartTask,
+-    required this.onOpenTasks,
+-    required this.onCreatePlan,
+-    required this.onOpenAurora,
+-    required this.l10n,
+-    this.onOpenBottleneckChat,
+-  });
+-
+-  final DashboardState dashboardState;
+-  final HomeGrowthState growthState;
+-  final ValueChanged<HomeGrowthTask> onStartTask;
+-  final VoidCallback onOpenTasks;
+-  final VoidCallback onCreatePlan;
+-  final VoidCallback onOpenAurora;
+-  final VoidCallback? onOpenBottleneckChat;
+-  final AppLocalizations l10n;
+-
+-  @override
+-  Widget build(BuildContext context) {
+-    final nextTask = growthState.nextAction;
+-    final priorityTask = dashboardState.mostImportantTask;
+-    final hasActivePlan = growthState.hasActivePlan;
+-    final bottleneck = growthState.activeBottleneck;
+-    final progress = growthState.completionRate;
+-    final health = growthState.planHealth;
+-    final planName = growthState.activePlan?.name ??
+-        dashboardState.activePlanProgress?.name ??
+-        dashboardState.growth?.name;
+-    final deadlineDays = priorityTask?.daysToDeadline ??
+-        dashboardState.nextMoveCard?.daysToDeadline ??
+-        dashboardState.activePlanProgress?.daysToDeadline;
+-
+-    final hasRisk = bottleneck != null ||
+-        (deadlineDays != null && deadlineDays <= 2) ||
+-        (hasActivePlan && health > 0 && health < 0.45);
+-    final accentColor = hasRisk
+-        ? DS.warning
+-        : nextTask != null
+-            ? DS.brandPrimary
+-            : hasActivePlan
+-                ? DS.success
+-                : DS.info;
+-    final title = _title(nextTask, priorityTask, hasActivePlan);
+-    final summary = _summary(context, nextTask, priorityTask, hasActivePlan);
+-    final riskText = _riskText(context, bottleneck, deadlineDays, health);
+-
+-    return Column(
+-      key: const ValueKey('dashboard-command-center-content'),
+-      crossAxisAlignment: CrossAxisAlignment.start,
+-      children: [
+-        Row(
+-          crossAxisAlignment: CrossAxisAlignment.start,
+-          children: [
+-            Container(
+-              width: 44,
+-              height: 44,
+-              decoration: BoxDecoration(
+-                color: accentColor.withValues(alpha: 0.12),
+-                borderRadius: DS.borderRadius16,
+-                border: Border.all(color: accentColor.withValues(alpha: 0.18)),
+-              ),
+-              child: Icon(
+-                hasRisk
+-                    ? Icons.priority_high_rounded
+-                    : nextTask != null
+-                        ? Icons.play_arrow_rounded
+-                        : Icons.auto_awesome_rounded,
+-                color: accentColor,
+-                size: 22,
+-              ),
+-            ),
+-            const SizedBox(width: DS.spacing12),
+-            Expanded(
+-              child: Column(
+-                crossAxisAlignment: CrossAxisAlignment.start,
+-                children: [
+-                  Text(
+-                    l10n.dashboardCommandCenterNow,
+-                    style: context.typo.labelSmall.copyWith(
+-                      color: DS.textSecondary,
+-                      fontWeight: DS.fontWeightBold,
+-                    ),
+-                  ),
+-                  const SizedBox(height: DS.spacing4),
+-                  Text(
+-                    title,
+-                    maxLines: 2,
+-                    overflow: TextOverflow.ellipsis,
+-                    style: context.typo.titleLarge.copyWith(
+-                      color: DS.textPrimary,
+-                      fontWeight: DS.fontWeightBold,
+-                      height: 1.18,
+-                    ),
+-                  ),
+-                  if (summary.isNotEmpty) ...[
+-                    const SizedBox(height: DS.spacing6),
+-                    Text(
+-                      summary,
+-                      maxLines: 2,
+-                      overflow: TextOverflow.ellipsis,
+-                      style: context.typo.bodySmall.copyWith(
+-                        color: DS.textSecondary,
+-                        height: 1.52,
+-                      ),
+-                    ),
+-                  ],
+-                ],
+-              ),
+-            ),
+-          ],
+-        ),
+-        const SizedBox(height: DS.spacing14),
+-        Wrap(
+-          spacing: DS.spacing8,
+-          runSpacing: DS.spacing8,
+-          children: [
+-            _DashboardChip(
+-              icon: Icons.task_alt_rounded,
+-              label: growthState.hasTasks
+-                  ? '${growthState.tasksCompleted}/${growthState.tasksTotal}'
+-                  : l10n.dashboardCommandCenterNoTasks,
+-            ),
+-            if (hasActivePlan)
+-              _DashboardChip(
+-                icon: Icons.timeline_rounded,
+-                label: l10n.dashboardCommandCenterHealth((health * 100).round()),
+-              ),
+-            if (planName != null && planName.trim().isNotEmpty)
+-              _DashboardChip(
+-                icon: Icons.flag_rounded,
+-                label: planName,
+-              ),
+-            if (deadlineDays != null)
+-              _DashboardChip(
+-                icon: Icons.timelapse_rounded,
+-                label: _formatDeadlineLabel(
+-                  context: context,
+-                  daysToDeadline: deadlineDays,
+-                ),
+-              ),
+-          ],
+-        ),
+-        if (growthState.hasTasks || dashboardState.activePlanProgress != null)
+-          Padding(
+-            padding: const EdgeInsets.only(top: DS.spacing12),
+-            child: ClipRRect(
+-              borderRadius: DS.borderRadiusFull,
+-              // U-01 Step 3：确定性进度条迁 owner。
+-              child: LoadingIndicator.linear(
+-                size: 8,
+-                value: progress > 0
+-                    ? progress.clamp(0, 1)
+-                    : (dashboardState.activePlanProgress?.progress ?? 0)
+-                        .clamp(0, 1),
+-                backgroundColor: DS.surfaceOverlay,
+-                color: accentColor,
+-                liveRegion: false,
+-              ),
+-            ),
+-          ),
+-        if (riskText != null) ...[
+-          const SizedBox(height: DS.spacing12),
+-          _CommandCenterRiskBanner(
+-            text: riskText,
+-            onTap: onOpenBottleneckChat ?? onOpenAurora,
+-          ),
+-        ],
+-        const SizedBox(height: DS.spacing14),
+-        LayoutBuilder(
+-          builder: (context, constraints) {
+-            final primary = SparkleButton.primary(
+-              label: nextTask != null
+-                  ? context.l10n.dashboardStartHere
+-                  : hasActivePlan
+-                      ? context.l10n.dashboardOpenTasks
+-                      : context.l10n.dashboardStartWithAI,
+-              icon: Icon(
+-                nextTask != null
+-                    ? Icons.play_arrow_rounded
+-                    : hasActivePlan
+-                        ? Icons.list_alt_rounded
+-                        : Icons.auto_awesome_rounded,
+-              ),
+-              onPressed: nextTask != null
+-                  ? () => onStartTask(nextTask)
+-                  : hasActivePlan
+-                      ? onOpenTasks
+-                      : onCreatePlan,
+-            );
+-            final secondary = SparkleButton.ghost(
+-              label: l10n.dashboardCommandCenterAskAurora,
+-              icon: const Icon(Icons.chat_bubble_outline_rounded),
+-              onPressed: onOpenAurora,
+-            );
+-
+-            if (constraints.maxWidth < 360) {
+-              return Column(
+-                crossAxisAlignment: CrossAxisAlignment.stretch,
+-                children: [
+-                  primary,
+-                  const SizedBox(height: DS.spacing10),
+-                  secondary,
+-                ],
+-              );
+-            }
+-
+-            return Row(
+-              children: [
+-                Expanded(child: primary),
+-                const SizedBox(width: DS.spacing10),
+-                Expanded(child: secondary),
+-              ],
+-            );
+-          },
+-        ),
+-      ],
+-    );
+-  }
+-
+-  String _title(
+-    HomeGrowthTask? nextTask,
+-    PriorityTaskData? priorityTask,
+-    bool hasActivePlan,
+-  ) {
+-    if (nextTask != null) {
+-      return nextTask.title;
+-    }
+-    if (priorityTask != null && priorityTask.title.trim().isNotEmpty) {
+-      return priorityTask.title;
+-    }
+-    if (hasActivePlan && growthState.hasTasks) {
+-      return l10n.dashboardCcAllMapped;
+-    }
+-    if (hasActivePlan) {
+-      return l10n.dashboardCcCheckPlan;
+-    }
+-    return l10n.dashboardCcSetGoal;
+-  }
+-
+-  String _summary(
+-    BuildContext context,
+-    HomeGrowthTask? nextTask,
+-    PriorityTaskData? priorityTask,
+-    bool hasActivePlan,
+-  ) {
+-    if (nextTask != null) {
+-      final due = nextTask.dueDate;
+-      final dueText = due == null
+-          ? null
+-          : _formatDeadlineLabel(
+-              context: context,
+-              daysToDeadline: DateTime(
+-                due.year,
+-                due.month,
+-                due.day,
+-              )
+-                  .difference(
+-                    DateTime(
+-                      DateTime.now().year,
+-                      DateTime.now().month,
+-                      DateTime.now().day,
+-                    ),
+-                  )
+-                  .inDays,
+-            );
+-      return [
+-        if (dueText != null) dueText,
+-        if (nextTask.isHighPriority) l10n.dashboardCcHighPriority,
+-        l10n.dashboardCcPlanProgress,
+-      ].join(' - ');
+-    }
+-    if (priorityTask != null && priorityTask.reason.trim().isNotEmpty) {
+-      return priorityTask.reason;
+-    }
+-    if (hasActivePlan && growthState.tasksCompleted >= growthState.tasksTotal) {
+-      return l10n.dashboardCcNoUrgentAction;
+-    }
+-    return dashboardState.nextMoveCard?.summary ?? l10n.dashboardCcWillBreakDown;
+-  }
+-
+-  String? _riskText(
+-    BuildContext context,
+-    HomeBottleneck? bottleneck,
+-    int? deadlineDays,
+-    double health,
+-  ) {
+-    if (bottleneck != null) {
+-      return l10n.dashboardRiskBottleneck(bottleneck.topic);
+-    }
+-    if (deadlineDays != null && deadlineDays <= 2) {
+-      return l10n.dashboardRiskDeadline(_formatDeadlineLabel(context: context, daysToDeadline: deadlineDays));
+-    }
+-    if (health > 0 && health < 0.45) {
+-      return l10n.dashboardRiskHealth;
+-    }
+-    return null;
+-  }
+-}
+-
+ class _CommandCenterRiskBanner extends StatelessWidget {
+   const _CommandCenterRiskBanner({
+     required this.text,
+@@ -2428,46 +1874,6 @@ class _CommandCenterRiskBanner extends StatelessWidget {
+       );
+ }
+ 
+-class _CommandCenterSkeleton extends StatelessWidget {
+-  const _CommandCenterSkeleton();
+-
+-  @override
+-  Widget build(BuildContext context) => const Column(
+-        key: ValueKey('dashboard-command-center-skeleton'),
+-        crossAxisAlignment: CrossAxisAlignment.start,
+-        children: [
+-          Row(
+-            children: [
+-              SparkleSkeleton(width: 44, height: 44, borderRadius: 16),
+-              SizedBox(width: DS.spacing12),
+-              Expanded(
+-                child: Column(
+-                  crossAxisAlignment: CrossAxisAlignment.start,
+-                  children: [
+-                    SparkleSkeleton(width: 112, height: 12, borderRadius: 6),
+-                    SizedBox(height: DS.spacing8),
+-                    SparkleSkeleton(height: 22, borderRadius: 11),
+-                    SizedBox(height: DS.spacing8),
+-                    SparkleSkeleton(width: 220, height: 14, borderRadius: 7),
+-                  ],
+-                ),
+-              ),
+-            ],
+-          ),
+-          SizedBox(height: DS.spacing14),
+-          SparkleSkeleton(height: 8, borderRadius: 4),
+-          SizedBox(height: DS.spacing14),
+-          Row(
+-            children: [
+-              Expanded(child: SparkleSkeleton(height: 38, borderRadius: 19)),
+-              SizedBox(width: DS.spacing10),
+-              Expanded(child: SparkleSkeleton(height: 38, borderRadius: 19)),
+-            ],
+-          ),
+-        ],
+-      );
+-}
+-
+ class _DailyBriefingCard extends StatelessWidget {
+   const _DailyBriefingCard({
+     required this.dashboardState,
+@@ -3177,126 +2583,3 @@ class _DashboardChip extends StatelessWidget {
+         ),
+       );
+ }
+-
+-class _GoalChip extends StatelessWidget {
+-  const _GoalChip({
+-    required this.label,
+-    required this.icon,
+-    required this.onTap,
+-  });
+-
+-  final String label;
+-  final IconData icon;
+-  final VoidCallback onTap;
+-
+-  @override
+-  Widget build(BuildContext context) => Semantics(
+-        button: true,
+-        label: I18nService.instance.l10n.dashboardGoalChipSelectGoal(label),
+-        child: GestureDetector(
+-          onTap: onTap,
+-          child: ConstrainedBox(
+-            constraints: const BoxConstraints(minHeight: 44),
+-            child: Container(
+-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+-              decoration: BoxDecoration(
+-                color: DS.brandPrimary.withValues(alpha: 0.08),
+-                borderRadius: BorderRadius.circular(20),
+-                border: Border.all(
+-                  color: DS.brandPrimary.withValues(alpha: 0.2),
+-                ),
+-              ),
+-              child: Row(
+-                mainAxisSize: MainAxisSize.min,
+-                children: [
+-                  Icon(icon, size: 15, color: DS.brandPrimary),
+-                  const SizedBox(width: 6),
+-                  Text(
+-                    label,
+-                    style: DS.labelSmall.copyWith(
+-                      color: DS.brandPrimary,
+-                      fontWeight: FontWeight.w500,
+-                    ),
+-                  ),
+-                ],
+-              ),
+-            ),
+-          ),
+-        ),
+-      );
+-}
+-
+-class _OnboardingQuickCard extends StatelessWidget {
+-  const _OnboardingQuickCard({
+-    required this.icon,
+-    required this.color,
+-    required this.title,
+-    required this.subtitle,
+-    required this.onTap,
+-  });
+-
+-  final IconData icon;
+-  final Color color;
+-  final String title;
+-  final String subtitle;
+-  final VoidCallback onTap;
+-
+-  @override
+-  Widget build(BuildContext context) => Semantics(
+-      button: true,
+-      label: title,
+-      child: Material(
+-        color: Colors.transparent,
+-        child: InkWell(
+-          onTap: onTap,
+-          borderRadius: DS.borderRadius12,
+-          child: Container(
+-            padding: const EdgeInsets.all(DS.spacing14),
+-            decoration: BoxDecoration(
+-              color: color.withValues(alpha: 0.06),
+-              borderRadius: DS.borderRadius12,
+-              border: Border.all(color: color.withValues(alpha: 0.15)),
+-            ),
+-            child: Row(
+-              children: [
+-                Container(
+-                  width: 40,
+-                  height: 40,
+-                  decoration: BoxDecoration(
+-                    color: color.withValues(alpha: 0.12),
+-                    borderRadius: DS.borderRadius8,
+-                  ),
+-                  child: Icon(icon, color: color, size: 22),
+-                ),
+-                const SizedBox(width: DS.spacing12),
+-                Expanded(
+-                  child: Column(
+-                    crossAxisAlignment: CrossAxisAlignment.start,
+-                    children: [
+-                      Text(
+-                        title,
+-                        style: TextStyle(
+-                          fontSize: DS.fontSizeBase,
+-                          fontWeight: DS.fontWeightSemibold,
+-                          color: DS.textPrimary,
+-                        ),
+-                      ),
+-                      const SizedBox(height: 2),
+-                      Text(
+-                        subtitle,
+-                        style: TextStyle(
+-                          fontSize: DS.fontSizeSm,
+-                          color: DS.textSecondary,
+-                        ),
+-                      ),
+-                    ],
+-                  ),
+-                ),
+-                Icon(Icons.chevron_right, color: color.withValues(alpha: 0.4)),
+-              ],
+-            ),
+-          ),
+-        ),
+-      ),
+-    );
+-}
+diff --git a/mobile/lib/features/home/presentation/widgets/today_cockpit_card.dart b/mobile/lib/features/home/presentation/widgets/today_cockpit_card.dart
+new file mode 100644
+index 00000000..692bf07e
+--- /dev/null
++++ b/mobile/lib/features/home/presentation/widgets/today_cockpit_card.dart
+@@ -0,0 +1,514 @@
++import 'dart:async';
++
++import 'package:flutter/material.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:go_router/go_router.dart';
++import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
++import 'package:sparkle/core/design/design_system.dart';
++import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
++import 'package:sparkle/core/design/widgets/loading_indicator.dart';
++import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
++import 'package:sparkle/core/extensions/context_l10n.dart';
++import 'package:sparkle/features/home/presentation/providers/today_cockpit_provider.dart';
++import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
++import 'package:sparkle/features/task/task.dart';
++import 'package:sparkle/l10n/app_localizations.dart';
++
++/// J-03 Today Cockpit 主入口卡。
++///
++/// 产品契约（v3/03_modules/HOME.md）：
++/// 1. 全页唯一 Primary Action（本卡的 [SparkleButton.primary]，其它卡片
++///    均降级为折叠 slot / ghost 入口）；
++/// 2. 携带 why（为什么是现在）+ goal context；
++/// 3. 「我卡住了」作为统一的次级恢复入口（J-05 全旅程的 home 落点）；
++/// 4. 当前 agent run 进行中时展示 current run 条（真实 WS 运行态）。
++/// 四态（fresh / no-goal / active / stalled）由 [todayCockpitProvider]
++/// 派生，本组件只做事实 → 文案渲染。
++class TodayCockpitCard extends ConsumerWidget {
++  const TodayCockpitCard({super.key});
++
++  @override
++  Widget build(BuildContext context, WidgetRef ref) {
++    final vm = ref.watch(todayCockpitProvider);
++
++    return ContentConstraint(
++      child: Padding(
++        padding: const EdgeInsets.fromLTRB(
++          DS.spacing16,
++          0,
++          DS.spacing16,
++          DS.spacing12,
++        ),
++        child: DashboardSectionShell(
++          key: const ValueKey('today-cockpit-card'),
++          tone: DashboardSurfaceTone.hero,
++          child: AnimatedSwitcher(
++            duration: context.reduceMotion ? Duration.zero : DS.quick,
++            child: vm.isLoading
++                ? const _CockpitSkeleton()
++                : _CockpitContent(vm: vm),
++          ),
++        ),
++      ),
++    );
++  }
++}
++
++class _CockpitContent extends ConsumerWidget {
++  const _CockpitContent({required this.vm});
++
++  final TodayCockpitVm vm;
++
++  @override
++  Widget build(BuildContext context, WidgetRef ref) {
++    final l10n = context.l10n;
++    final accent = _accentColor();
++    final headline = _headline(l10n);
++    final why = _whyLine(l10n);
++
++    return Column(
++      key: const ValueKey('today-cockpit-content'),
++      crossAxisAlignment: CrossAxisAlignment.start,
++      children: [
++        Row(
++          crossAxisAlignment: CrossAxisAlignment.start,
++          children: [
++            Container(
++              width: 44,
++              height: 44,
++              decoration: BoxDecoration(
++                color: accent.withValues(alpha: 0.12),
++                borderRadius: DS.borderRadius16,
++                border: Border.all(color: accent.withValues(alpha: 0.18)),
++              ),
++              child: Icon(
++                vm.mode == TodayCockpitMode.stalled
++                    ? Icons.priority_high_rounded
++                    : vm.action == TodayCockpitAction.startTask
++                        ? Icons.play_arrow_rounded
++                        : Icons.auto_awesome_rounded,
++                color: accent,
++                size: 22,
++              ),
++            ),
++            const SizedBox(width: DS.spacing12),
++            Expanded(
++              child: Column(
++                crossAxisAlignment: CrossAxisAlignment.start,
++                children: [
++                  Text(
++                    _eyebrow(l10n),
++                    style: context.typo.labelSmall.copyWith(
++                      color: DS.textSecondary,
++                      fontWeight: DS.fontWeightBold,
++                    ),
++                  ),
++                  const SizedBox(height: DS.spacing4),
++                  Semantics(
++                    header: true,
++                    child: Text(
++                      headline,
++                      maxLines: 2,
++                      overflow: TextOverflow.ellipsis,
++                      style: context.typo.titleLarge.copyWith(
++                        color: DS.textPrimary,
++                        fontWeight: DS.fontWeightBold,
++                        height: 1.18,
++                      ),
++                    ),
++                  ),
++                  if (why != null) ...[
++                    const SizedBox(height: DS.spacing8),
++                    Text(
++                      why,
++                      maxLines: 2,
++                      overflow: TextOverflow.ellipsis,
++                      style: context.typo.bodySmall.copyWith(
++                        color: DS.textSecondary,
++                        height: 1.52,
++                      ),
++                    ),
++                  ],
++                ],
++              ),
++            ),
++          ],
++        ),
++        if (vm.hasGoalContext) ...[
++          const SizedBox(height: DS.spacing12),
++          _GoalContextRow(vm: vm),
++        ],
++        if (vm.runIsActive) ...[
++          const SizedBox(height: DS.spacing12),
++          _CurrentRunStrip(runLabel: vm.runLabel),
++        ],
++        const SizedBox(height: DS.spacing16),
++        // 唯一 primary CTA —— 首屏 filled 按钮只此一个。
++        SparkleButton.primary(
++          key: const ValueKey('today-cockpit-primary-cta'),
++          label: _primaryLabel(l10n),
++          icon: Icon(_primaryIcon()),
++          expand: true,
++          onPressed: () => _executePrimary(context, ref),
++        ),
++        const SizedBox(height: DS.spacing8),
++        // 次级恢复入口：「我卡住了」（J-05 统一恢复旅程的 home 落点）。
++        // stalled 态下主 CTA 已是卡点恢复，这里退化为「先看任务」。
++        Center(
++          child: SparkleButton.ghost(
++            key: const ValueKey('today-cockpit-stuck-cta'),
++            label: vm.mode == TodayCockpitMode.stalled
++                ? l10n.dashboardOpenTasks
++                : l10n.todayCockpitStuckButton,
++            icon: Icon(
++              vm.mode == TodayCockpitMode.stalled
++                  ? Icons.list_alt_rounded
++                  : Icons.help_outline_rounded,
++            ),
++            onPressed: () => _executeSecondary(context, ref),
++          ),
++        ),
++        if (vm.mode == TodayCockpitMode.noGoal) ...[
++          const SizedBox(height: DS.spacing12),
++          _GoalStarters(),
++        ],
++      ],
++    );
++  }
++
++  Color _accentColor() => switch (vm.mode) {
++        TodayCockpitMode.stalled => DS.warning,
++        TodayCockpitMode.active => DS.success,
++        TodayCockpitMode.noGoal => DS.info,
++        TodayCockpitMode.fresh => DS.brandPrimary,
++      };
++
++  String _eyebrow(AppLocalizations l10n) => switch (vm.mode) {
++        TodayCockpitMode.noGoal => l10n.dashboardCommandCenterNow,
++        TodayCockpitMode.stalled => l10n.todayCockpitEyebrowStalled,
++        TodayCockpitMode.active => l10n.todayCockpitEyebrowActive,
++        TodayCockpitMode.fresh => l10n.todayCockpitEyebrowFresh,
++      };
++
++  String _headline(AppLocalizations l10n) {
++    final task = vm.taskToStart;
++    if (vm.mode != TodayCockpitMode.noGoal && task != null) {
++      return task.title;
++    }
++    return switch (vm.mode) {
++      TodayCockpitMode.noGoal => l10n.dashboardSetFirstGoal,
++      TodayCockpitMode.stalled => l10n.todayCockpitStalledHeadline,
++      TodayCockpitMode.active =>
++        vm.tasksTotal > 0 && vm.tasksCompleted >= vm.tasksTotal
++            ? l10n.todayCockpitAllDoneHeadline
++            : l10n.todayCockpitActiveHeadline,
++      TodayCockpitMode.fresh =>
++        vm.tasksTotal > 0
++            ? l10n.todayCockpitFreshHeadline
++            : l10n.todayCockpitFreshUnarrangedHeadline,
++    };
++  }
++
++  /// why-now：按信号强度取最相关的一条（瓶颈 > 截止 > 停滞 > 健康度 > 余量）。
++  String? _whyLine(AppLocalizations l10n) {
++    if (vm.mode == TodayCockpitMode.noGoal) {
++      return l10n.dashboardSetFirstGoalSummary;
++    }
++    final bottleneck = vm.bottleneckTopic;
++    if (bottleneck != null) {
++      return l10n.todayCockpitWhyBottleneck(bottleneck);
++    }
++    final deadline = vm.deadlineDays;
++    if (deadline != null) {
++      if (deadline == 0) return l10n.todayCockpitWhyDueToday;
++      if (deadline < 0) return l10n.todayCockpitWhyOverdue(-deadline);
++      return l10n.todayCockpitWhyDueIn(deadline);
++    }
++    if (vm.staleGuard) {
++      return l10n.todayCockpitWhyStale;
++    }
++    final health = vm.planHealthPercent;
++    if (health != null) {
++      return l10n.todayCockpitWhyHealth(health);
++    }
++    if (vm.tasksTotal > vm.tasksCompleted) {
++      return l10n.todayCockpitWhyRemaining(vm.tasksTotal - vm.tasksCompleted);
++    }
++    if (vm.tasksTotal > 0) {
++      return l10n.todayCockpitWhyAllDone;
++    }
++    return null;
++  }
++
++  String _primaryLabel(AppLocalizations l10n) => switch (vm.action) {
++        TodayCockpitAction.setGoal => l10n.dashboardStartWithAI,
++        TodayCockpitAction.startTask => l10n.dashboardStartHere,
++        TodayCockpitAction.arrangeToday => l10n.todayCockpitCtaArrange,
++        TodayCockpitAction.openTasks => l10n.dashboardOpenTasks,
++        TodayCockpitAction.stuckRecovery => l10n.todayCockpitCtaStuck,
++      };
++
++  IconData _primaryIcon() => switch (vm.action) {
++        TodayCockpitAction.setGoal => Icons.auto_awesome_rounded,
++        TodayCockpitAction.startTask => Icons.play_arrow_rounded,
++        TodayCockpitAction.arrangeToday => Icons.event_note_rounded,
++        TodayCockpitAction.openTasks => Icons.list_alt_rounded,
++        TodayCockpitAction.stuckRecovery => Icons.healing_rounded,
++      };
++
++  void _executePrimary(BuildContext context, WidgetRef ref) {
++    switch (vm.action) {
++      case TodayCockpitAction.setGoal:
++        context.go('/goals/new');
++      case TodayCockpitAction.startTask:
++        _startTask(context, ref);
++      case TodayCockpitAction.arrangeToday:
++        unawaited(context.push('/plans/new?type=growth'));
++      case TodayCockpitAction.openTasks:
++        unawaited(context.push('/tasks'));
++      case TodayCockpitAction.stuckRecovery:
++        _openStuckChat(context);
++    }
++  }
++
++  void _executeSecondary(BuildContext context, WidgetRef ref) {
++    if (vm.mode == TodayCockpitMode.stalled) {
++      unawaited(context.push('/tasks'));
++      return;
++    }
++    _openStuckChat(context);
++  }
++
++  /// 与原 dashboard_screen._startNextAction 相同的跳转链路（来源：
++  /// /tasks/today → activeTaskProvider → 任务执行页），不另建通道。
++  void _startTask(BuildContext context, WidgetRef ref) {
++    final growthTask = vm.taskToStart;
++    if (growthTask == null || growthTask.id.isEmpty) {
++      unawaited(context.push('/tasks'));
++      return;
++    }
++    final taskModel = growthTask.taskModel;
++    if (taskModel == null) {
++      unawaited(context.push('/tasks/${growthTask.id}'));
++      return;
++    }
++    ref.read(activeTaskProvider.notifier).state = taskModel;
++    unawaited(context.push('/tasks/${growthTask.id}/execute?origin=home_growth'));
++  }
++
++  /// 「我卡住了」→ 携带真实 context 进入 growth chat
++  /// （沿用 dashboard_screen._openBottleneckChat 的 prompt+chat_mode 约定，
++  /// J-05 旗舰恢复旅程以此为 home 落点）。
++  void _openStuckChat(BuildContext context) {
++    final l10n = context.l10n;
++    final bottleneck = vm.bottleneckTopic;
++    final prompt = bottleneck != null
++        ? l10n.dashboardBottleneckPrompt(bottleneck)
++        : l10n.todayCockpitStuckPrompt(
++            vm.goalTitle ?? vm.planName ?? l10n.todayCockpitGoalWord,
++            _stallReason(l10n),
++          );
++    context.go(
++      Uri(
++        path: '/chat',
++        queryParameters: {
++          'prompt': prompt,
++          'chat_mode': 'growth',
++        },
++      ).toString(),
++    );
++  }
++
++  String _stallReason(AppLocalizations l10n) {
++    final deadline = vm.deadlineDays;
++    if (deadline != null && deadline <= 0) {
++      return l10n.todayCockpitStallReasonDeadline;
++    }
++    if (vm.staleGuard) {
++      return l10n.todayCockpitStallReasonStale;
++    }
++    final health = vm.planHealthPercent;
++    if (health != null) {
++      return l10n.todayCockpitStallReasonHealth(health);
++    }
++    return l10n.todayCockpitStallReasonGeneric;
++  }
++}
++
++class _GoalContextRow extends StatelessWidget {
++  const _GoalContextRow({required this.vm});
++
++  final TodayCockpitVm vm;
++
++  @override
++  Widget build(BuildContext context) {
++    final l10n = context.l10n;
++    final goalLabel = vm.goalTitle ?? vm.planName;
++    final deadline = vm.deadlineDays;
++
++    return Wrap(
++      spacing: DS.spacing8,
++      runSpacing: DS.spacing8,
++      children: [
++        if (goalLabel != null && goalLabel.isNotEmpty)
++          SemanticPill(
++            label: goalLabel,
++            tone: PillTone.info,
++            icon: Icons.flag_rounded,
++            dense: true,
++          ),
++        if (vm.tasksTotal > 0)
++          SemanticPill(
++            label: '${vm.tasksCompleted}/${vm.tasksTotal}',
++            tone: PillTone.neutral,
++            icon: Icons.task_alt_rounded,
++            dense: true,
++          ),
++        if (deadline != null && deadline <= 2)
++          SemanticPill(
++            label: deadline == 0
++                ? l10n.todayCockpitWhyDueToday
++                : deadline < 0
++                    ? l10n.todayCockpitWhyOverdue(-deadline)
++                    : l10n.todayCockpitWhyDueIn(deadline),
++            tone: PillTone.warning,
++            icon: Icons.timelapse_rounded,
++            dense: true,
++          ),
++      ],
++    );
++  }
++}
++
++/// current run 条：agent 正在执行时的轻量进行中提示（点击进入 chat 查看）。
++class _CurrentRunStrip extends StatelessWidget {
++  const _CurrentRunStrip({this.runLabel});
++
++  final String? runLabel;
++
++  @override
++  Widget build(BuildContext context) {
++    final l10n = context.l10n;
++    return InkWell(
++      onTap: () => unawaited(context.push('/chat')),
++      borderRadius: BorderRadius.circular(14),
++      child: Container(
++        width: double.infinity,
++        padding: const EdgeInsets.symmetric(
++          horizontal: DS.spacing12,
++          vertical: DS.spacing8,
++        ),
++        decoration: BoxDecoration(
++          color: DS.brandPrimary.withValues(alpha: 0.06),
++          borderRadius: BorderRadius.circular(14),
++          border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.16)),
++        ),
++        child: Row(
++          children: [
++            // U-01 Step 3：进度/加载一律走 owner LoadingIndicator。
++            LoadingIndicator.circular(size: 14, strokeWidth: 2),
++            const SizedBox(width: DS.spacing8),
++            Expanded(
++              child: Text(
++                runLabel == null || runLabel!.trim().isEmpty
++                    ? l10n.todayCockpitRunOngoing
++                    : l10n.todayCockpitRunOngoingDetailed(runLabel!),
++                maxLines: 1,
++                overflow: TextOverflow.ellipsis,
++                style: context.typo.bodySmall.copyWith(
++                  color: DS.textSecondary,
++                  fontWeight: DS.fontWeightMedium,
++                ),
++              ),
++            ),
++            Icon(Icons.chevron_right_rounded, size: 16, color: DS.textSecondary),
++          ],
++        ),
++      ),
++    );
++  }
++}
++
++/// no-goal 态的目标起点建议（复用既有 goal-starter 文案与 chat prompt 通道）。
++class _GoalStarters extends StatelessWidget {
++  @override
++  Widget build(BuildContext context) {
++    final l10n = context.l10n;
++    final starters = [
++      (
++        l10n.dashboardGoalExamSprint,
++        Icons.local_fire_department_outlined,
++        l10n.dashboardGoalExamSprintPrompt,
++      ),
++      (
++        l10n.dashboardGoalLongTerm,
++        Icons.school_outlined,
++        l10n.dashboardGoalLongTermPrompt,
++      ),
++      (
++        l10n.dashboardGoalProject,
++        Icons.rocket_launch_outlined,
++        l10n.dashboardGoalProjectPrompt,
++      ),
++      (
++        l10n.dashboardGoalSelfGrowth,
++        Icons.psychology_outlined,
++        l10n.dashboardGoalSelfGrowthPrompt,
++      ),
++      (
++        l10n.dashboardGoalNotSure,
++        Icons.help_outline,
++        l10n.dashboardGoalNotSurePrompt,
++      ),
++    ];
++
++    return Wrap(
++      spacing: DS.spacing8,
++      runSpacing: DS.spacing8,
++      children: [
++        for (final (label, icon, prompt) in starters)
++          SemanticPill(
++            label: label,
++            tone: PillTone.brand,
++            icon: icon,
++            dense: true,
++            onTap: () => context.go(
++              '/chat?prompt=${Uri.encodeComponent(prompt)}',
++            ),
++          ),
++      ],
++    );
++  }
++}
++
++class _CockpitSkeleton extends StatelessWidget {
++  const _CockpitSkeleton();
++
++  @override
++  Widget build(BuildContext context) => const Column(
++        key: ValueKey('today-cockpit-skeleton'),
++        crossAxisAlignment: CrossAxisAlignment.start,
++        children: [
++          Row(
++            children: [
++              SparkleSkeleton(width: 44, height: 44, borderRadius: 16),
++              SizedBox(width: DS.spacing12),
++              Expanded(
++                child: Column(
++                  crossAxisAlignment: CrossAxisAlignment.start,
++                  children: [
++                    SparkleSkeleton(width: 112, height: 12, borderRadius: 6),
++                    SizedBox(height: DS.spacing8),
++                    SparkleSkeleton(height: 22, borderRadius: 11),
++                    SizedBox(height: DS.spacing8),
++                    SparkleSkeleton(width: 220, height: 14, borderRadius: 7),
++                  ],
++                ),
++              ),
++            ],
++          ),
++          SizedBox(height: DS.spacing16),
++          SparkleSkeleton(height: 44, borderRadius: 22),
++        ],
++      );
++}
+diff --git a/mobile/lib/l10n/app_en.arb b/mobile/lib/l10n/app_en.arb
+index 8c0d95fd..f38dc458 100755
+--- a/mobile/lib/l10n/app_en.arb
++++ b/mobile/lib/l10n/app_en.arb
+@@ -16485,6 +16485,92 @@
+         }
+     },
+     "dashboardCommandCenterAskAurora": "Ask Aurora",
++    "todayCockpitEyebrowFresh": "Most worth doing today",
++    "todayCockpitEyebrowActive": "Keep going",
++    "todayCockpitEyebrowStalled": "Clear the blocker first",
++    "todayCockpitFreshHeadline": "Start the first thing today",
++    "todayCockpitFreshUnarrangedHeadline": "Today isn't planned yet",
++    "todayCockpitActiveHeadline": "Move to the next one",
++    "todayCockpitAllDoneHeadline": "Today's tasks are done",
++    "todayCockpitStalledHeadline": "Clear this blocker first",
++    "todayCockpitWhyBottleneck": "Stuck on \"{topic}\"",
++    "@todayCockpitWhyBottleneck": {
++        "placeholders": {
++            "topic": {
++                "type": "String"
++            }
++        }
++    },
++    "todayCockpitWhyDueToday": "Due today",
++    "todayCockpitWhyOverdue": "{days} days overdue",
++    "@todayCockpitWhyOverdue": {
++        "placeholders": {
++            "days": {
++                "type": "int"
++            }
++        }
++    },
++    "todayCockpitWhyDueIn": "{days} days until deadline",
++    "@todayCockpitWhyDueIn": {
++        "placeholders": {
++            "days": {
++                "type": "int"
++            }
++        }
++    },
++    "todayCockpitWhyStale": "This plan hasn't moved for a while",
++    "todayCockpitWhyHealth": "Plan health at {percent}%, needs attention",
++    "@todayCockpitWhyHealth": {
++        "placeholders": {
++            "percent": {
++                "type": "int"
++            }
++        }
++    },
++    "todayCockpitWhyRemaining": "{count} tasks left today",
++    "@todayCockpitWhyRemaining": {
++        "placeholders": {
++            "count": {
++                "type": "int"
++            }
++        }
++    },
++    "todayCockpitWhyAllDone": "Today's to-dos are clear",
++    "todayCockpitCtaArrange": "Plan today",
++    "todayCockpitCtaStuck": "Unblock it",
++    "todayCockpitStuckButton": "I'm stuck",
++    "todayCockpitStuckPrompt": "I'm stuck while working on \"{goal}\": {reason}Help me find the most worthwhile next step right now.",
++    "@todayCockpitStuckPrompt": {
++        "placeholders": {
++            "goal": {
++                "type": "String"
++            },
++            "reason": {
++                "type": "String"
++            }
++        }
++    },
++    "todayCockpitGoalWord": "my current goal",
++    "todayCockpitStallReasonDeadline": "the deadline is close but progress stalled, ",
++    "todayCockpitStallReasonStale": "the plan has been idle for a while, ",
++    "todayCockpitStallReasonHealth": "plan health dropped to {percent}%, ",
++    "@todayCockpitStallReasonHealth": {
++        "placeholders": {
++            "percent": {
++                "type": "int"
++            }
++        }
++    },
++    "todayCockpitStallReasonGeneric": "I'm not sure where to continue, ",
++    "todayCockpitRunOngoing": "Aurora is working",
++    "todayCockpitRunOngoingDetailed": "Aurora is working: {detail}",
++    "@todayCockpitRunOngoingDetailed": {
++        "placeholders": {
++            "detail": {
++                "type": "String"
++            }
++        }
++    },
+     "dashboardCcAllMapped": "Today is mapped out",
+     "dashboardCcCheckPlan": "Check today plan rhythm",
+     "dashboardCcSetGoal": "Set a goal you can start today",
+diff --git a/mobile/lib/l10n/app_localizations.dart b/mobile/lib/l10n/app_localizations.dart
+index 67be9fdd..c3556529 100644
+--- a/mobile/lib/l10n/app_localizations.dart
++++ b/mobile/lib/l10n/app_localizations.dart
+@@ -63,7 +63,7 @@ import 'app_localizations_zh.dart';
+ /// property.
+ abstract class AppLocalizations {
+   AppLocalizations(String locale)
+-      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
++    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+ 
+   final String localeName;
+ 
+@@ -86,16 +86,16 @@ abstract class AppLocalizations {
+   /// of delegates is preferred or required.
+   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
+       <LocalizationsDelegate<dynamic>>[
+-    delegate,
+-    GlobalMaterialLocalizations.delegate,
+-    GlobalCupertinoLocalizations.delegate,
+-    GlobalWidgetsLocalizations.delegate,
+-  ];
++        delegate,
++        GlobalMaterialLocalizations.delegate,
++        GlobalCupertinoLocalizations.delegate,
++        GlobalWidgetsLocalizations.delegate,
++      ];
+ 
+   /// A list of this localizations delegate's supported locales.
+   static const List<Locale> supportedLocales = <Locale>[
+     Locale('en'),
+-    Locale('zh')
++    Locale('zh'),
+   ];
+ 
+   /// No description provided for @appTitle.
+@@ -19753,7 +19753,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'已处理 {count} 个候选节点，新增 {created} 个，复用 {reused} 个已有节点。'**
+   String taskDetailCandidatesApplied(
+-      Object count, Object created, Object reused);
++    Object count,
++    Object created,
++    Object reused,
++  );
+ 
+   /// No description provided for @taskDetailCandidatesReused.
+   ///
+@@ -21122,7 +21125,11 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'近 {days} 天里，当前最值得继续盯的预测动作是「{topAction}」；同时 prompt / inference 命中率分别是 {promptUtil}%/{inferenceUtil}%。'**
+   String aiOpsPredictionSummary(
+-      Object days, Object topAction, Object promptUtil, Object inferenceUtil);
++    Object days,
++    Object topAction,
++    Object promptUtil,
++    Object inferenceUtil,
++  );
+ 
+   /// No description provided for @aiOpsOpenAnalysis.
+   ///
+@@ -23409,7 +23416,11 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{progress}% · {completed}/{occurrences} 次发生 · {tasks} 个任务'**
+   String planDetailPhaseStats(
+-      Object progress, Object completed, Object occurrences, Object tasks);
++    Object progress,
++    Object completed,
++    Object occurrences,
++    Object tasks,
++  );
+ 
+   /// No description provided for @theaterTitle.
+   ///
+@@ -24124,7 +24135,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'当前阶段：{label} · {step} · {compare}'**
+   String theaterTimelinePhaseWithSteps(
+-      Object compare, Object label, Object step);
++    Object compare,
++    Object label,
++    Object step,
++  );
+ 
+   /// No description provided for @theaterTimelineWaitingDeduction.
+   ///
+@@ -24358,8 +24372,12 @@ abstract class AppLocalizations {
+   ///
+   /// In zh, this message translates to:
+   /// **'区间预测：完成率 {completionLow}%-{completionHigh}%， 掌握度 {masteryLow}%-{masteryHigh}%'**
+-  String theaterRouteRangePrediction(Object completionHigh,
+-      Object completionLow, Object masteryHigh, Object masteryLow);
++  String theaterRouteRangePrediction(
++    Object completionHigh,
++    Object completionLow,
++    Object masteryHigh,
++    Object masteryLow,
++  );
+ 
+   /// No description provided for @theaterRouteRecommendedBaseline.
+   ///
+@@ -25128,7 +25146,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{type} · {dailyMinutes} 分钟/天 · {hours} 小时'**
+   String planCreateReviewSummary(
+-      Object dailyMinutes, Object hours, Object type);
++    Object dailyMinutes,
++    Object hours,
++    Object type,
++  );
+ 
+   /// No description provided for @planCreateReviewEditDescription.
+   ///
+@@ -26263,17 +26284,22 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'原始 {originalMastery}% / {originalCompletion}%  →  调整后 {predictedMastery}% / {predictedCompletion}%'**
+   String theaterWhatIfCombinedResult(
+-      Object originalMastery,
+-      Object originalCompletion,
+-      Object predictedMastery,
+-      Object predictedCompletion);
++    Object originalMastery,
++    Object originalCompletion,
++    Object predictedMastery,
++    Object predictedCompletion,
++  );
+ 
+   /// No description provided for @theaterAccuracyPredictedActual.
+   ///
+   /// In zh, this message translates to:
+   /// **'预测 {predictedCompletion}% / {predictedMastery}%， 实际 {actualCompletion}% / {actualMastery}%'**
+-  String theaterAccuracyPredictedActual(Object predictedCompletion,
+-      Object predictedMastery, Object actualCompletion, Object actualMastery);
++  String theaterAccuracyPredictedActual(
++    Object predictedCompletion,
++    Object predictedMastery,
++    Object actualCompletion,
++    Object actualMastery,
++  );
+ 
+   /// No description provided for @theaterPerDayUnit.
+   ///
+@@ -38172,12 +38198,13 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{hashtag} 我在 Sparkle 达成了「{headline}」里程碑。累计学习 {studyDays} 天，掌握 {masteredNodes} 个知识节点，完成 {completedSprints} 次冲刺，记录 {errorCount} 道错题。'**
+   String achievementMilestoneShareText(
+-      Object completedSprints,
+-      Object errorCount,
+-      Object hashtag,
+-      Object headline,
+-      Object masteredNodes,
+-      Object studyDays);
++    Object completedSprints,
++    Object errorCount,
++    Object hashtag,
++    Object headline,
++    Object masteredNodes,
++    Object studyDays,
++  );
+ 
+   /// No description provided for @achievementMilestoneShareInProgress.
+   ///
+@@ -38628,7 +38655,11 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{month}月{day}日 {hour}:{minute}'**
+   String achievementUnlockTimeDate(
+-      Object day, Object hour, Object minute, Object month);
++    Object day,
++    Object hour,
++    Object minute,
++    Object month,
++  );
+ 
+   /// No description provided for @achievementUnlockCombo.
+   ///
+@@ -38821,7 +38852,11 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'结果：{result}，影响任务 {affected} 个，新增 {inserted} 个，收起 {hidden} 个'**
+   String notificationCompilationSummary(
+-      Object affected, Object hidden, Object inserted, Object result);
++    Object affected,
++    Object hidden,
++    Object inserted,
++    Object result,
++  );
+ 
+   /// No description provided for @notificationEvidencePlanHealthRecovered.
+   ///
+@@ -39038,7 +39073,9 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'接受率 {acceptanceRate}% · 行动率 {actionRate}%'**
+   String notificationAnalyticsAcceptanceActionRate(
+-      Object acceptanceRate, Object actionRate);
++    Object acceptanceRate,
++    Object actionRate,
++  );
+ 
+   /// No description provided for @notificationAnalyticsToneEffectivenessTitle.
+   ///
+@@ -39075,7 +39112,9 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'行动率 {actedRate}% · 有效率 {effectiveRate}%'**
+   String notificationAnalyticsActedEffectiveRate(
+-      Object actedRate, Object effectiveRate);
++    Object actedRate,
++    Object effectiveRate,
++  );
+ 
+   /// No description provided for @notificationAnalyticsTimeToActionTitle.
+   ///
+@@ -39142,7 +39181,9 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'接受率: {acceptanceRate}% · 行动率: {actionRate}%'**
+   String notificationAnalyticsRateSuffix(
+-      Object acceptanceRate, Object actionRate);
++    Object acceptanceRate,
++    Object actionRate,
++  );
+ 
+   /// No description provided for @focusNoTaskHint.
+   ///
+@@ -39185,7 +39226,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'今天的专注让你的 {nodeName} 掌握度从 {oldMastery} 提升到了 {newMastery} 分'**
+   String focusSessionMasteryUpdate(
+-      String nodeName, int oldMastery, int newMastery);
++    String nodeName,
++    int oldMastery,
++    int newMastery,
++  );
+ 
+   /// No description provided for @focusReflectionTitleLabel.
+   ///
+@@ -49751,8 +49795,12 @@ abstract class AppLocalizations {
+   ///
+   /// In zh, this message translates to:
+   /// **'我的 7 天备考冲刺完成：掌握 {masteredNodes} 个知识节点，修复 {repairedErrors} 个错误模式，完成 {completedTasks} 个任务。最强项：{strongestArea}。#Sparkle备考'**
+-  String planSprintShareText(int masteredNodes, int repairedErrors,
+-      int completedTasks, String strongestArea);
++  String planSprintShareText(
++    int masteredNodes,
++    int repairedErrors,
++    int completedTasks,
++    String strongestArea,
++  );
+ 
+   /// No description provided for @planSprintBack.
+   ///
+@@ -49795,7 +49843,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'掌握了 {masteredNodes} 个知识节点，修复了 {repairedErrors} 个错误模式，完成了 {completedTasks} 个任务。'**
+   String planSprintResultSummary(
+-      Object completedTasks, Object masteredNodes, Object repairedErrors);
++    Object completedTasks,
++    Object masteredNodes,
++    Object repairedErrors,
++  );
+ 
+   /// No description provided for @planSprintStrongest.
+   ///
+@@ -50036,7 +50087,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{mode} · 进行中（第 {currentDay} 天，还剩 {remainingDays} 天）'**
+   String planPortfolioActiveDay(
+-      Object currentDay, Object mode, Object remainingDays);
++    Object currentDay,
++    Object mode,
++    Object remainingDays,
++  );
+ 
+   /// No description provided for @planPortfolioActiveShort.
+   ///
+@@ -55425,7 +55479,11 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'prompt 命中 {prompt}% · 推理命中 {inference}% · known {promptCount}/{inferenceCount}'**
+   String aiopsPromptHit(
+-      String prompt, String inference, int promptCount, int inferenceCount);
++    String prompt,
++    String inference,
++    int promptCount,
++    int inferenceCount,
++  );
+ 
+   /// No description provided for @calTaskRescheduled.
+   ///
+@@ -56926,7 +56984,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{tone} · {verbosity}。{reason}'**
+   String understandingStyleSummary(
+-      String tone, String verbosity, String reason);
++    String tone,
++    String verbosity,
++    String reason,
++  );
+ 
+   /// No description provided for @understandingRecentlyCorrected.
+   ///
+@@ -57971,7 +58032,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'将「{title}」的状态从「{status}」改为「{nextStatus}」。\\n\\n这会影响相关计划、任务和提醒，且不会自动撤销。'**
+   String personaGoalStatusChangeContent(
+-      Object nextStatus, Object status, Object title);
++    Object nextStatus,
++    Object status,
++    Object title,
++  );
+ 
+   /// No description provided for @personaConfirmChange.
+   ///
+@@ -63919,6 +63983,168 @@ abstract class AppLocalizations {
+   /// **'问 Aurora'**
+   String get dashboardCommandCenterAskAurora;
+ 
++  /// No description provided for @todayCockpitEyebrowFresh.
++  ///
++  /// In zh, this message translates to:
++  /// **'今天最值得做'**
++  String get todayCockpitEyebrowFresh;
++
++  /// No description provided for @todayCockpitEyebrowActive.
++  ///
++  /// In zh, this message translates to:
++  /// **'继续推进'**
++  String get todayCockpitEyebrowActive;
++
++  /// No description provided for @todayCockpitEyebrowStalled.
++  ///
++  /// In zh, this message translates to:
++  /// **'先解决卡点'**
++  String get todayCockpitEyebrowStalled;
++
++  /// No description provided for @todayCockpitFreshHeadline.
++  ///
++  /// In zh, this message translates to:
++  /// **'开始今天的第一件事'**
++  String get todayCockpitFreshHeadline;
++
++  /// No description provided for @todayCockpitFreshUnarrangedHeadline.
++  ///
++  /// In zh, this message translates to:
++  /// **'今天还没排布'**
++  String get todayCockpitFreshUnarrangedHeadline;
++
++  /// No description provided for @todayCockpitActiveHeadline.
++  ///
++  /// In zh, this message translates to:
++  /// **'接着做下一件'**
++  String get todayCockpitActiveHeadline;
++
++  /// No description provided for @todayCockpitAllDoneHeadline.
++  ///
++  /// In zh, this message translates to:
++  /// **'今天的任务已完成'**
++  String get todayCockpitAllDoneHeadline;
++
++  /// No description provided for @todayCockpitStalledHeadline.
++  ///
++  /// In zh, this message translates to:
++  /// **'先解开这个卡点'**
++  String get todayCockpitStalledHeadline;
++
++  /// No description provided for @todayCockpitWhyBottleneck.
++  ///
++  /// In zh, this message translates to:
++  /// **'卡点在「{topic}」'**
++  String todayCockpitWhyBottleneck(String topic);
++
++  /// No description provided for @todayCockpitWhyDueToday.
++  ///
++  /// In zh, this message translates to:
++  /// **'截止就在今天'**
++  String get todayCockpitWhyDueToday;
++
++  /// No description provided for @todayCockpitWhyOverdue.
++  ///
++  /// In zh, this message translates to:
++  /// **'已逾期 {days} 天'**
++  String todayCockpitWhyOverdue(int days);
++
++  /// No description provided for @todayCockpitWhyDueIn.
++  ///
++  /// In zh, this message translates to:
++  /// **'距截止 {days} 天'**
++  String todayCockpitWhyDueIn(int days);
++
++  /// No description provided for @todayCockpitWhyStale.
++  ///
++  /// In zh, this message translates to:
++  /// **'计划有一段时间没推进了'**
++  String get todayCockpitWhyStale;
++
++  /// No description provided for @todayCockpitWhyHealth.
++  ///
++  /// In zh, this message translates to:
++  /// **'计划健康度 {percent}%，需要留意'**
++  String todayCockpitWhyHealth(int percent);
++
++  /// No description provided for @todayCockpitWhyRemaining.
++  ///
++  /// In zh, this message translates to:
++  /// **'今天还有 {count} 件待办'**
++  String todayCockpitWhyRemaining(int count);
++
++  /// No description provided for @todayCockpitWhyAllDone.
++  ///
++  /// In zh, this message translates to:
++  /// **'今天的待办已清空'**
++  String get todayCockpitWhyAllDone;
++
++  /// No description provided for @todayCockpitCtaArrange.
++  ///
++  /// In zh, this message translates to:
++  /// **'安排今天'**
++  String get todayCockpitCtaArrange;
++
++  /// No description provided for @todayCockpitCtaStuck.
++  ///
++  /// In zh, this message translates to:
++  /// **'解开卡点'**
++  String get todayCockpitCtaStuck;
++
++  /// No description provided for @todayCockpitStuckButton.
++  ///
++  /// In zh, this message translates to:
++  /// **'我卡住了'**
++  String get todayCockpitStuckButton;
++
++  /// No description provided for @todayCockpitStuckPrompt.
++  ///
++  /// In zh, this message translates to:
++  /// **'我在推进「{goal}」时卡住了：{reason}帮我重新找到此刻最值得做的一步。'**
++  String todayCockpitStuckPrompt(String goal, String reason);
++
++  /// No description provided for @todayCockpitGoalWord.
++  ///
++  /// In zh, this message translates to:
++  /// **'当前目标'**
++  String get todayCockpitGoalWord;
++
++  /// No description provided for @todayCockpitStallReasonDeadline.
++  ///
++  /// In zh, this message translates to:
++  /// **'快到截止但还没推进，'**
++  String get todayCockpitStallReasonDeadline;
++
++  /// No description provided for @todayCockpitStallReasonStale.
++  ///
++  /// In zh, this message translates to:
++  /// **'计划已经搁置了一段时间，'**
++  String get todayCockpitStallReasonStale;
++
++  /// No description provided for @todayCockpitStallReasonHealth.
++  ///
++  /// In zh, this message translates to:
++  /// **'计划健康度降到 {percent}%，'**
++  String todayCockpitStallReasonHealth(int percent);
++
++  /// No description provided for @todayCockpitStallReasonGeneric.
++  ///
++  /// In zh, this message translates to:
++  /// **'不确定下一步从哪继续，'**
++  String get todayCockpitStallReasonGeneric;
++
++  /// No description provided for @todayCockpitRunOngoing.
++  ///
++  /// In zh, this message translates to:
++  /// **'Aurora 正在推进'**
++  String get todayCockpitRunOngoing;
++
++  /// No description provided for @todayCockpitRunOngoingDetailed.
++  ///
++  /// In zh, this message translates to:
++  /// **'Aurora 正在推进：{detail}'**
++  String todayCockpitRunOngoingDetailed(String detail);
++
+   /// No description provided for @dashboardCcAllMapped.
+   ///
+   /// In zh, this message translates to:
+@@ -64722,14 +64948,20 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'你是Sparkle内置的群聊AI助手，正在协助群聊「{name}」。\n你的任务是产出一条最终可直接发送到群里的中文消息。\n只输出消息正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样发”“建议发送”，不要使用项目符号或备注，不要冒充系统说明。\n语气自然、简洁、友好，像群成员会直接发出去的话。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用 `•`、`◦`、emoji 项目符号、半残 Markdown。\n\n最近对话:\n{contextLines}\n\n用户问题:\n{input}'**
+   String communityAgentGroupPromptZh(
+-      Object contextLines, Object input, Object name);
++    Object contextLines,
++    Object input,
++    Object name,
++  );
+ 
+   /// No description provided for @communityAgentGroupPromptEn.
+   ///
+   /// In zh, this message translates to:
+   /// **'You are Sparkle\'s built-in group chat AI assistant, helping in the group \"{name}\".\nYour task is to produce a single message ready to send directly in the group.\nOutput only the message body — no explanations, no preambles, no \"I can help\" or \"You could say\" or \"Suggested reply\", no bullet points or notes, no system impersonation.\nTone: natural, concise, friendly — like something a group member would actually send.\nIf you need to list items, only use `1. ` or `- `. No `•`, `◦`, emoji bullets, or broken Markdown.\n\nRecent conversation:\n{contextLines}\n\nUser question:\n{input}'**
+   String communityAgentGroupPromptEn(
+-      Object contextLines, Object input, Object name);
++    Object contextLines,
++    Object input,
++    Object name,
++  );
+ 
+   /// No description provided for @communityAgentFriend.
+   ///
+@@ -64742,14 +64974,20 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'你是Sparkle内置的私聊AI助手，正在协助我与「{name}」的对话。\n你的任务是产出一条最终可直接发送给对方的中文私聊回复。\n只输出回复正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样回”“建议回复”，不要附带分析或备注。\n语气自然、礼貌、克制，像我会直接按下发送的内容。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用特殊项目符号或半残 Markdown。\n\n最近对话:\n{contextLines}\n\n用户问题:\n{input}'**
+   String communityAgentPrivatePromptZh(
+-      Object contextLines, Object input, Object name);
++    Object contextLines,
++    Object input,
++    Object name,
++  );
+ 
+   /// No description provided for @communityAgentPrivatePromptEn.
+   ///
+   /// In zh, this message translates to:
+   /// **'You are Sparkle\'s built-in private chat AI assistant, helping with my conversation with \"{name}\".\nYour task is to produce a single private reply ready to send directly.\nOutput only the reply body — no explanations, no preambles, no \"I can help\" or \"You could reply\" or \"Suggested reply\", no analysis or notes.\nTone: natural, polite, restrained — like something I would actually hit send on.\nIf you need to list items, only use `1. ` or `- `. No special bullets or broken Markdown.\n\nRecent conversation:\n{contextLines}\n\nUser question:\n{input}'**
+   String communityAgentPrivatePromptEn(
+-      Object contextLines, Object input, Object name);
++    Object contextLines,
++    Object input,
++    Object name,
++  );
+ 
+   /// No description provided for @communityAgentPresetSummaryGroupZh.
+   ///
+@@ -65170,7 +65408,11 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'必读 {mustLoad} · 选读 {optional} · 附件 {attached}{retrievalLabel}'**
+   String taskProtocolMaterialsCount(
+-      Object attached, Object mustLoad, Object optional, Object retrievalLabel);
++    Object attached,
++    Object mustLoad,
++    Object optional,
++    Object retrievalLabel,
++  );
+ 
+   /// No description provided for @taskProtocolUpdatesOnCompletion.
+   ///
+@@ -67199,7 +67441,10 @@ abstract class AppLocalizations {
+   /// In zh, this message translates to:
+   /// **'{title} ≥ {threshold} {unit}'**
+   String displayCriterionAtLeastUnitTemplate(
+-      String title, String threshold, String unit);
++    String title,
++    String threshold,
++    String unit,
++  );
+ 
+   /// No description provided for @displayCriterionAtLeastTemplate.
+   ///
+@@ -68081,8 +68326,9 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
+   }
+ 
+   throw FlutterError(
+-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+-      'an issue with the localizations generation tool. Please file an issue '
+-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+-      'that was used.');
++    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
++    'an issue with the localizations generation tool. Please file an issue '
++    'on GitHub with a reproducible sample app and the gen-l10n configuration '
++    'that was used.',
++  );
+ }
+diff --git a/mobile/lib/l10n/app_localizations_en.dart b/mobile/lib/l10n/app_localizations_en.dart
+index 410e486f..13ab96e7 100644
+--- a/mobile/lib/l10n/app_localizations_en.dart
++++ b/mobile/lib/l10n/app_localizations_en.dart
+@@ -11115,7 +11115,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String taskDetailCandidatesApplied(
+-      Object count, Object created, Object reused) {
++    Object count,
++    Object created,
++    Object reused,
++  ) {
+     return 'Processed $count candidates, created $created new, reused $reused existing.';
+   }
+ 
+@@ -11928,7 +11931,11 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String aiOpsPredictionSummary(
+-      Object days, Object topAction, Object promptUtil, Object inferenceUtil) {
++    Object days,
++    Object topAction,
++    Object promptUtil,
++    Object inferenceUtil,
++  ) {
+     return 'In the past $days days, the prediction action worth watching most is \"$topAction\"; prompt/inference hit rates are $promptUtil%/$inferenceUtil%.';
+   }
+ 
+@@ -13301,7 +13308,11 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String planDetailPhaseStats(
+-      Object progress, Object completed, Object occurrences, Object tasks) {
++    Object progress,
++    Object completed,
++    Object occurrences,
++    Object tasks,
++  ) {
+     return '$progress% · $completed/$occurrences occurrences · $tasks tasks';
+   }
+ 
+@@ -13728,7 +13739,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String theaterTimelinePhaseWithSteps(
+-      Object compare, Object label, Object step) {
++    Object compare,
++    Object label,
++    Object step,
++  ) {
+     return 'Current phase: $label · $step · $compare';
+   }
+ 
+@@ -13870,8 +13884,12 @@ class AppLocalizationsEn extends AppLocalizations {
+   }
+ 
+   @override
+-  String theaterRouteRangePrediction(Object completionHigh,
+-      Object completionLow, Object masteryHigh, Object masteryLow) {
++  String theaterRouteRangePrediction(
++    Object completionHigh,
++    Object completionLow,
++    Object masteryHigh,
++    Object masteryLow,
++  ) {
+     return 'Range prediction: completion $completionLow%-$completionHigh%, mastery $masteryLow%-$masteryHigh%';
+   }
+ 
+@@ -14329,7 +14347,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String planCreateReviewSummary(
+-      Object dailyMinutes, Object hours, Object type) {
++    Object dailyMinutes,
++    Object hours,
++    Object type,
++  ) {
+     return '$type · $dailyMinutes min/day · $hours hours';
+   }
+ 
+@@ -14995,16 +15016,21 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String theaterWhatIfCombinedResult(
+-      Object originalMastery,
+-      Object originalCompletion,
+-      Object predictedMastery,
+-      Object predictedCompletion) {
++    Object originalMastery,
++    Object originalCompletion,
++    Object predictedMastery,
++    Object predictedCompletion,
++  ) {
+     return 'Original $originalMastery% / $originalCompletion%  →  Adjusted $predictedMastery% / $predictedCompletion%';
+   }
+ 
+   @override
+-  String theaterAccuracyPredictedActual(Object predictedCompletion,
+-      Object predictedMastery, Object actualCompletion, Object actualMastery) {
++  String theaterAccuracyPredictedActual(
++    Object predictedCompletion,
++    Object predictedMastery,
++    Object actualCompletion,
++    Object actualMastery,
++  ) {
+     return 'Predicted $predictedCompletion% / $predictedMastery%, Actual $actualCompletion% / $actualMastery%';
+   }
+ 
+@@ -21833,12 +21859,13 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String achievementMilestoneShareText(
+-      Object completedSprints,
+-      Object errorCount,
+-      Object hashtag,
+-      Object headline,
+-      Object masteredNodes,
+-      Object studyDays) {
++    Object completedSprints,
++    Object errorCount,
++    Object hashtag,
++    Object headline,
++    Object masteredNodes,
++    Object studyDays,
++  ) {
+     return '$hashtag I reached the \"$headline\" milestone on Sparkle. Studied $studyDays days, mastered $masteredNodes nodes, completed $completedSprints sprints, recorded $errorCount errors.';
+   }
+ 
+@@ -22080,7 +22107,11 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String achievementUnlockTimeDate(
+-      Object day, Object hour, Object minute, Object month) {
++    Object day,
++    Object hour,
++    Object minute,
++    Object month,
++  ) {
+     return '$month/$day $hour:$minute';
+   }
+ 
+@@ -22187,7 +22218,11 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String notificationCompilationSummary(
+-      Object affected, Object hidden, Object inserted, Object result) {
++    Object affected,
++    Object hidden,
++    Object inserted,
++    Object result,
++  ) {
+     return 'Result: $result, affected $affected tasks, added $inserted, hidden $hidden';
+   }
+ 
+@@ -22311,7 +22346,9 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String notificationAnalyticsAcceptanceActionRate(
+-      Object acceptanceRate, Object actionRate) {
++    Object acceptanceRate,
++    Object actionRate,
++  ) {
+     return 'Acceptance rate $acceptanceRate% · Action rate $actionRate%';
+   }
+ 
+@@ -22341,7 +22378,9 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String notificationAnalyticsActedEffectiveRate(
+-      Object actedRate, Object effectiveRate) {
++    Object actedRate,
++    Object effectiveRate,
++  ) {
+     return 'Action rate $actedRate% · Effective rate $effectiveRate%';
+   }
+ 
+@@ -22378,7 +22417,9 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String notificationAnalyticsRateSuffix(
+-      Object acceptanceRate, Object actionRate) {
++    Object acceptanceRate,
++    Object actionRate,
++  ) {
+     return 'Acceptance rate: $acceptanceRate% · Action rate: $actionRate%';
+   }
+ 
+@@ -22408,7 +22449,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String focusSessionMasteryUpdate(
+-      String nodeName, int oldMastery, int newMastery) {
++    String nodeName,
++    int oldMastery,
++    int newMastery,
++  ) {
+     return 'Today\'s focus raised $nodeName mastery from $oldMastery to $newMastery';
+   }
+ 
+@@ -28423,8 +28467,12 @@ class AppLocalizationsEn extends AppLocalizations {
+   String get planSprintShareOpened => 'Share opened';
+ 
+   @override
+-  String planSprintShareText(int masteredNodes, int repairedErrors,
+-      int completedTasks, String strongestArea) {
++  String planSprintShareText(
++    int masteredNodes,
++    int repairedErrors,
++    int completedTasks,
++    String strongestArea,
++  ) {
+     return 'My 7-day exam sprint is done: mastered $masteredNodes knowledge nodes, repaired $repairedErrors error patterns, completed $completedTasks tasks. Strongest area: $strongestArea. #SparkleExam';
+   }
+ 
+@@ -28448,7 +28496,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String planSprintResultSummary(
+-      Object completedTasks, Object masteredNodes, Object repairedErrors) {
++    Object completedTasks,
++    Object masteredNodes,
++    Object repairedErrors,
++  ) {
+     return 'Mastered $masteredNodes knowledge nodes, repaired $repairedErrors error patterns, completed $completedTasks tasks.';
+   }
+ 
+@@ -28600,7 +28651,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String planPortfolioActiveDay(
+-      Object currentDay, Object mode, Object remainingDays) {
++    Object currentDay,
++    Object mode,
++    Object remainingDays,
++  ) {
+     return '$mode · In progress (Day $currentDay, $remainingDays days left)';
+   }
+ 
+@@ -31789,7 +31843,11 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String aiopsPromptHit(
+-      String prompt, String inference, int promptCount, int inferenceCount) {
++    String prompt,
++    String inference,
++    int promptCount,
++    int inferenceCount,
++  ) {
+     return 'Prompt hit $prompt% · Inference hit $inference% · Known $promptCount/$inferenceCount';
+   }
+ 
+@@ -32616,7 +32674,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String lowYieldCardMessage(
+-      String activity, String reason, String suggestion) {
++    String activity,
++    String reason,
++    String suggestion,
++  ) {
+     return 'I noticed you are doing $activity. Considering $reason, what may be more valuable now is $suggestion.';
+   }
+ 
+@@ -32678,7 +32739,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String understandingStyleSummary(
+-      String tone, String verbosity, String reason) {
++    String tone,
++    String verbosity,
++    String reason,
++  ) {
+     return '$tone · $verbosity. $reason';
+   }
+ 
+@@ -33253,7 +33317,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String personaGoalStatusChangeContent(
+-      Object nextStatus, Object status, Object title) {
++    Object nextStatus,
++    Object status,
++    Object title,
++  ) {
+     return 'Change status of \"$title\" from \"$status\" to \"$nextStatus\".\\n\\nThis will affect related plans, tasks and reminders, and cannot be auto-reverted.';
+   }
+ 
+@@ -36659,6 +36726,106 @@ class AppLocalizationsEn extends AppLocalizations {
+   @override
+   String get dashboardCommandCenterAskAurora => 'Ask Aurora';
+ 
++  @override
++  String get todayCockpitEyebrowFresh => 'Most worth doing today';
++
++  @override
++  String get todayCockpitEyebrowActive => 'Keep going';
++
++  @override
++  String get todayCockpitEyebrowStalled => 'Clear the blocker first';
++
++  @override
++  String get todayCockpitFreshHeadline => 'Start the first thing today';
++
++  @override
++  String get todayCockpitFreshUnarrangedHeadline => 'Today isn\'t planned yet';
++
++  @override
++  String get todayCockpitActiveHeadline => 'Move to the next one';
++
++  @override
++  String get todayCockpitAllDoneHeadline => 'Today\'s tasks are done';
++
++  @override
++  String get todayCockpitStalledHeadline => 'Clear this blocker first';
++
++  @override
++  String todayCockpitWhyBottleneck(String topic) {
++    return 'Stuck on \"$topic\"';
++  }
++
++  @override
++  String get todayCockpitWhyDueToday => 'Due today';
++
++  @override
++  String todayCockpitWhyOverdue(int days) {
++    return '$days days overdue';
++  }
++
++  @override
++  String todayCockpitWhyDueIn(int days) {
++    return '$days days until deadline';
++  }
++
++  @override
++  String get todayCockpitWhyStale => 'This plan hasn\'t moved for a while';
++
++  @override
++  String todayCockpitWhyHealth(int percent) {
++    return 'Plan health at $percent%, needs attention';
++  }
++
++  @override
++  String todayCockpitWhyRemaining(int count) {
++    return '$count tasks left today';
++  }
++
++  @override
++  String get todayCockpitWhyAllDone => 'Today\'s to-dos are clear';
++
++  @override
++  String get todayCockpitCtaArrange => 'Plan today';
++
++  @override
++  String get todayCockpitCtaStuck => 'Unblock it';
++
++  @override
++  String get todayCockpitStuckButton => 'I\'m stuck';
++
++  @override
++  String todayCockpitStuckPrompt(String goal, String reason) {
++    return 'I\'m stuck while working on \"$goal\": ${reason}Help me find the most worthwhile next step right now.';
++  }
++
++  @override
++  String get todayCockpitGoalWord => 'my current goal';
++
++  @override
++  String get todayCockpitStallReasonDeadline =>
++      'the deadline is close but progress stalled, ';
++
++  @override
++  String get todayCockpitStallReasonStale =>
++      'the plan has been idle for a while, ';
++
++  @override
++  String todayCockpitStallReasonHealth(int percent) {
++    return 'plan health dropped to $percent%, ';
++  }
++
++  @override
++  String get todayCockpitStallReasonGeneric =>
++      'I\'m not sure where to continue, ';
++
++  @override
++  String get todayCockpitRunOngoing => 'Aurora is working';
++
++  @override
++  String todayCockpitRunOngoingDetailed(String detail) {
++    return 'Aurora is working: $detail';
++  }
++
+   @override
+   String get dashboardCcAllMapped => 'Today is mapped out';
+ 
+@@ -37129,13 +37296,19 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String communityAgentGroupPromptZh(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return '你是Sparkle内置的群聊AI助手，正在协助群聊「$name」。\n你的任务是产出一条最终可直接发送到群里的中文消息。\n只输出消息正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样发”“建议发送”，不要使用项目符号或备注，不要冒充系统说明。\n语气自然、简洁、友好，像群成员会直接发出去的话。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用 `•`、`◦`、emoji 项目符号、半残 Markdown。\n\n最近对话:\n$contextLines\n\n用户问题:\n$input';
+   }
+ 
+   @override
+   String communityAgentGroupPromptEn(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return 'You are Sparkle\'s built-in group chat AI assistant, helping in the group \"$name\".\nYour task is to produce a single message ready to send directly in the group.\nOutput only the message body — no explanations, no preambles, no \"I can help\" or \"You could say\" or \"Suggested reply\", no bullet points or notes, no system impersonation.\nTone: natural, concise, friendly — like something a group member would actually send.\nIf you need to list items, only use `1. ` or `- `. No `•`, `◦`, emoji bullets, or broken Markdown.\n\nRecent conversation:\n$contextLines\n\nUser question:\n$input';
+   }
+ 
+@@ -37144,13 +37317,19 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String communityAgentPrivatePromptZh(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return '你是Sparkle内置的私聊AI助手，正在协助我与「$name」的对话。\n你的任务是产出一条最终可直接发送给对方的中文私聊回复。\n只输出回复正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样回”“建议回复”，不要附带分析或备注。\n语气自然、礼貌、克制，像我会直接按下发送的内容。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用特殊项目符号或半残 Markdown。\n\n最近对话:\n$contextLines\n\n用户问题:\n$input';
+   }
+ 
+   @override
+   String communityAgentPrivatePromptEn(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return 'You are Sparkle\'s built-in private chat AI assistant, helping with my conversation with \"$name\".\nYour task is to produce a single private reply ready to send directly.\nOutput only the reply body — no explanations, no preambles, no \"I can help\" or \"You could reply\" or \"Suggested reply\", no analysis or notes.\nTone: natural, polite, restrained — like something I would actually hit send on.\nIf you need to list items, only use `1. ` or `- `. No special bullets or broken Markdown.\n\nRecent conversation:\n$contextLines\n\nUser question:\n$input';
+   }
+ 
+@@ -37442,8 +37621,12 @@ class AppLocalizationsEn extends AppLocalizations {
+   String get taskProtocolMaterialsNeeded => 'Materials needed';
+ 
+   @override
+-  String taskProtocolMaterialsCount(Object attached, Object mustLoad,
+-      Object optional, Object retrievalLabel) {
++  String taskProtocolMaterialsCount(
++    Object attached,
++    Object mustLoad,
++    Object optional,
++    Object retrievalLabel,
++  ) {
+     return 'Required $mustLoad · Optional $optional · Attached $attached$retrievalLabel';
+   }
+ 
+@@ -38591,7 +38774,10 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String displayCriterionAtLeastUnitTemplate(
+-      String title, String threshold, String unit) {
++    String title,
++    String threshold,
++    String unit,
++  ) {
+     return '$title: at least $threshold $unit';
+   }
+ 
+diff --git a/mobile/lib/l10n/app_localizations_zh.dart b/mobile/lib/l10n/app_localizations_zh.dart
+index 39125217..c0404273 100644
+--- a/mobile/lib/l10n/app_localizations_zh.dart
++++ b/mobile/lib/l10n/app_localizations_zh.dart
+@@ -10698,7 +10698,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String taskDetailCandidatesApplied(
+-      Object count, Object created, Object reused) {
++    Object count,
++    Object created,
++    Object reused,
++  ) {
+     return '已处理 $count 个候选节点，新增 $created 个，复用 $reused 个已有节点。';
+   }
+ 
+@@ -11452,7 +11455,11 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String aiOpsPredictionSummary(
+-      Object days, Object topAction, Object promptUtil, Object inferenceUtil) {
++    Object days,
++    Object topAction,
++    Object promptUtil,
++    Object inferenceUtil,
++  ) {
+     return '近 $days 天里，当前最值得继续盯的预测动作是「$topAction」；同时 prompt / inference 命中率分别是 $promptUtil%/$inferenceUtil%。';
+   }
+ 
+@@ -12748,7 +12755,11 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String planDetailPhaseStats(
+-      Object progress, Object completed, Object occurrences, Object tasks) {
++    Object progress,
++    Object completed,
++    Object occurrences,
++    Object tasks,
++  ) {
+     return '$progress% · $completed/$occurrences 次发生 · $tasks 个任务';
+   }
+ 
+@@ -13157,7 +13168,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String theaterTimelinePhaseWithSteps(
+-      Object compare, Object label, Object step) {
++    Object compare,
++    Object label,
++    Object step,
++  ) {
+     return '当前阶段：$label · $step · $compare';
+   }
+ 
+@@ -13295,8 +13309,12 @@ class AppLocalizationsZh extends AppLocalizations {
+   }
+ 
+   @override
+-  String theaterRouteRangePrediction(Object completionHigh,
+-      Object completionLow, Object masteryHigh, Object masteryLow) {
++  String theaterRouteRangePrediction(
++    Object completionHigh,
++    Object completionLow,
++    Object masteryHigh,
++    Object masteryLow,
++  ) {
+     return '区间预测：完成率 $completionLow%-$completionHigh%， 掌握度 $masteryLow%-$masteryHigh%';
+   }
+ 
+@@ -13733,7 +13751,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String planCreateReviewSummary(
+-      Object dailyMinutes, Object hours, Object type) {
++    Object dailyMinutes,
++    Object hours,
++    Object type,
++  ) {
+     return '$type · $dailyMinutes 分钟/天 · $hours 小时';
+   }
+ 
+@@ -14385,16 +14406,21 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String theaterWhatIfCombinedResult(
+-      Object originalMastery,
+-      Object originalCompletion,
+-      Object predictedMastery,
+-      Object predictedCompletion) {
++    Object originalMastery,
++    Object originalCompletion,
++    Object predictedMastery,
++    Object predictedCompletion,
++  ) {
+     return '原始 $originalMastery% / $originalCompletion%  →  调整后 $predictedMastery% / $predictedCompletion%';
+   }
+ 
+   @override
+-  String theaterAccuracyPredictedActual(Object predictedCompletion,
+-      Object predictedMastery, Object actualCompletion, Object actualMastery) {
++  String theaterAccuracyPredictedActual(
++    Object predictedCompletion,
++    Object predictedMastery,
++    Object actualCompletion,
++    Object actualMastery,
++  ) {
+     return '预测 $predictedCompletion% / $predictedMastery%， 实际 $actualCompletion% / $actualMastery%';
+   }
+ 
+@@ -20935,12 +20961,13 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String achievementMilestoneShareText(
+-      Object completedSprints,
+-      Object errorCount,
+-      Object hashtag,
+-      Object headline,
+-      Object masteredNodes,
+-      Object studyDays) {
++    Object completedSprints,
++    Object errorCount,
++    Object hashtag,
++    Object headline,
++    Object masteredNodes,
++    Object studyDays,
++  ) {
+     return '$hashtag 我在 Sparkle 达成了「$headline」里程碑。累计学习 $studyDays 天，掌握 $masteredNodes 个知识节点，完成 $completedSprints 次冲刺，记录 $errorCount 道错题。';
+   }
+ 
+@@ -21180,7 +21207,11 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String achievementUnlockTimeDate(
+-      Object day, Object hour, Object minute, Object month) {
++    Object day,
++    Object hour,
++    Object minute,
++    Object month,
++  ) {
+     return '$month月$day日 $hour:$minute';
+   }
+ 
+@@ -21283,7 +21314,11 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String notificationCompilationSummary(
+-      Object affected, Object hidden, Object inserted, Object result) {
++    Object affected,
++    Object hidden,
++    Object inserted,
++    Object result,
++  ) {
+     return '结果：$result，影响任务 $affected 个，新增 $inserted 个，收起 $hidden 个';
+   }
+ 
+@@ -21402,7 +21437,9 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String notificationAnalyticsAcceptanceActionRate(
+-      Object acceptanceRate, Object actionRate) {
++    Object acceptanceRate,
++    Object actionRate,
++  ) {
+     return '接受率 $acceptanceRate% · 行动率 $actionRate%';
+   }
+ 
+@@ -21432,7 +21469,9 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String notificationAnalyticsActedEffectiveRate(
+-      Object actedRate, Object effectiveRate) {
++    Object actedRate,
++    Object effectiveRate,
++  ) {
+     return '行动率 $actedRate% · 有效率 $effectiveRate%';
+   }
+ 
+@@ -21468,7 +21507,9 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String notificationAnalyticsRateSuffix(
+-      Object acceptanceRate, Object actionRate) {
++    Object acceptanceRate,
++    Object actionRate,
++  ) {
+     return '接受率: $acceptanceRate% · 行动率: $actionRate%';
+   }
+ 
+@@ -21496,7 +21537,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String focusSessionMasteryUpdate(
+-      String nodeName, int oldMastery, int newMastery) {
++    String nodeName,
++    int oldMastery,
++    int newMastery,
++  ) {
+     return '今天的专注让你的 $nodeName 掌握度从 $oldMastery 提升到了 $newMastery 分';
+   }
+ 
+@@ -27238,8 +27282,12 @@ class AppLocalizationsZh extends AppLocalizations {
+   String get planSprintShareOpened => '分享已打开';
+ 
+   @override
+-  String planSprintShareText(int masteredNodes, int repairedErrors,
+-      int completedTasks, String strongestArea) {
++  String planSprintShareText(
++    int masteredNodes,
++    int repairedErrors,
++    int completedTasks,
++    String strongestArea,
++  ) {
+     return '我的 7 天备考冲刺完成：掌握 $masteredNodes 个知识节点，修复 $repairedErrors 个错误模式，完成 $completedTasks 个任务。最强项：$strongestArea。#Sparkle备考';
+   }
+ 
+@@ -27263,7 +27311,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String planSprintResultSummary(
+-      Object completedTasks, Object masteredNodes, Object repairedErrors) {
++    Object completedTasks,
++    Object masteredNodes,
++    Object repairedErrors,
++  ) {
+     return '掌握了 $masteredNodes 个知识节点，修复了 $repairedErrors 个错误模式，完成了 $completedTasks 个任务。';
+   }
+ 
+@@ -27407,7 +27458,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String planPortfolioActiveDay(
+-      Object currentDay, Object mode, Object remainingDays) {
++    Object currentDay,
++    Object mode,
++    Object remainingDays,
++  ) {
+     return '$mode · 进行中（第 $currentDay 天，还剩 $remainingDays 天）';
+   }
+ 
+@@ -30472,7 +30526,11 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String aiopsPromptHit(
+-      String prompt, String inference, int promptCount, int inferenceCount) {
++    String prompt,
++    String inference,
++    int promptCount,
++    int inferenceCount,
++  ) {
+     return 'prompt 命中 $prompt% · 推理命中 $inference% · known $promptCount/$inferenceCount';
+   }
+ 
+@@ -31276,7 +31334,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String lowYieldCardMessage(
+-      String activity, String reason, String suggestion) {
++    String activity,
++    String reason,
++    String suggestion,
++  ) {
+     return '我注意到你正在做 $activity。考虑到 $reason，现在更值得做的可能是 $suggestion。';
+   }
+ 
+@@ -31336,7 +31397,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String understandingStyleSummary(
+-      String tone, String verbosity, String reason) {
++    String tone,
++    String verbosity,
++    String reason,
++  ) {
+     return '$tone · $verbosity。$reason';
+   }
+ 
+@@ -31885,7 +31949,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String personaGoalStatusChangeContent(
+-      Object nextStatus, Object status, Object title) {
++    Object nextStatus,
++    Object status,
++    Object title,
++  ) {
+     return '将「$title」的状态从「$status」改为「$nextStatus」。\\n\\n这会影响相关计划、任务和提醒，且不会自动撤销。';
+   }
+ 
+@@ -35147,6 +35214,103 @@ class AppLocalizationsZh extends AppLocalizations {
+   @override
+   String get dashboardCommandCenterAskAurora => '问 Aurora';
+ 
++  @override
++  String get todayCockpitEyebrowFresh => '今天最值得做';
++
++  @override
++  String get todayCockpitEyebrowActive => '继续推进';
++
++  @override
++  String get todayCockpitEyebrowStalled => '先解决卡点';
++
++  @override
++  String get todayCockpitFreshHeadline => '开始今天的第一件事';
++
++  @override
++  String get todayCockpitFreshUnarrangedHeadline => '今天还没排布';
++
++  @override
++  String get todayCockpitActiveHeadline => '接着做下一件';
++
++  @override
++  String get todayCockpitAllDoneHeadline => '今天的任务已完成';
++
++  @override
++  String get todayCockpitStalledHeadline => '先解开这个卡点';
++
++  @override
++  String todayCockpitWhyBottleneck(String topic) {
++    return '卡点在「$topic」';
++  }
++
++  @override
++  String get todayCockpitWhyDueToday => '截止就在今天';
++
++  @override
++  String todayCockpitWhyOverdue(int days) {
++    return '已逾期 $days 天';
++  }
++
++  @override
++  String todayCockpitWhyDueIn(int days) {
++    return '距截止 $days 天';
++  }
++
++  @override
++  String get todayCockpitWhyStale => '计划有一段时间没推进了';
++
++  @override
++  String todayCockpitWhyHealth(int percent) {
++    return '计划健康度 $percent%，需要留意';
++  }
++
++  @override
++  String todayCockpitWhyRemaining(int count) {
++    return '今天还有 $count 件待办';
++  }
++
++  @override
++  String get todayCockpitWhyAllDone => '今天的待办已清空';
++
++  @override
++  String get todayCockpitCtaArrange => '安排今天';
++
++  @override
++  String get todayCockpitCtaStuck => '解开卡点';
++
++  @override
++  String get todayCockpitStuckButton => '我卡住了';
++
++  @override
++  String todayCockpitStuckPrompt(String goal, String reason) {
++    return '我在推进「$goal」时卡住了：$reason帮我重新找到此刻最值得做的一步。';
++  }
++
++  @override
++  String get todayCockpitGoalWord => '当前目标';
++
++  @override
++  String get todayCockpitStallReasonDeadline => '快到截止但还没推进，';
++
++  @override
++  String get todayCockpitStallReasonStale => '计划已经搁置了一段时间，';
++
++  @override
++  String todayCockpitStallReasonHealth(int percent) {
++    return '计划健康度降到 $percent%，';
++  }
++
++  @override
++  String get todayCockpitStallReasonGeneric => '不确定下一步从哪继续，';
++
++  @override
++  String get todayCockpitRunOngoing => 'Aurora 正在推进';
++
++  @override
++  String todayCockpitRunOngoingDetailed(String detail) {
++    return 'Aurora 正在推进：$detail';
++  }
++
+   @override
+   String get dashboardCcAllMapped => '今天的任务已经清楚了';
+ 
+@@ -35593,13 +35757,19 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String communityAgentGroupPromptZh(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return '你是Sparkle内置的群聊AI助手，正在协助群聊「$name」。\n你的任务是产出一条最终可直接发送到群里的中文消息。\n只输出消息正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样发”“建议发送”，不要使用项目符号或备注，不要冒充系统说明。\n语气自然、简洁、友好，像群成员会直接发出去的话。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用 `•`、`◦`、emoji 项目符号、半残 Markdown。\n\n最近对话:\n$contextLines\n\n用户问题:\n$input';
+   }
+ 
+   @override
+   String communityAgentGroupPromptEn(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return 'You are Sparkle\'s built-in group chat AI assistant, helping in the group \"$name\".\nYour task is to produce a single message ready to send directly in the group.\nOutput only the message body — no explanations, no preambles, no \"I can help\" or \"You could say\" or \"Suggested reply\", no bullet points or notes, no system impersonation.\nTone: natural, concise, friendly — like something a group member would actually send.\nIf you need to list items, only use `1. ` or `- `. No `•`, `◦`, emoji bullets, or broken Markdown.\n\nRecent conversation:\n$contextLines\n\nUser question:\n$input';
+   }
+ 
+@@ -35608,13 +35778,19 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String communityAgentPrivatePromptZh(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return '你是Sparkle内置的私聊AI助手，正在协助我与「$name」的对话。\n你的任务是产出一条最终可直接发送给对方的中文私聊回复。\n只输出回复正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样回”“建议回复”，不要附带分析或备注。\n语气自然、礼貌、克制，像我会直接按下发送的内容。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用特殊项目符号或半残 Markdown。\n\n最近对话:\n$contextLines\n\n用户问题:\n$input';
+   }
+ 
+   @override
+   String communityAgentPrivatePromptEn(
+-      Object contextLines, Object input, Object name) {
++    Object contextLines,
++    Object input,
++    Object name,
++  ) {
+     return 'You are Sparkle\'s built-in private chat AI assistant, helping with my conversation with \"$name\".\nYour task is to produce a single private reply ready to send directly.\nOutput only the reply body — no explanations, no preambles, no \"I can help\" or \"You could reply\" or \"Suggested reply\", no analysis or notes.\nTone: natural, polite, restrained — like something I would actually hit send on.\nIf you need to list items, only use `1. ` or `- `. No special bullets or broken Markdown.\n\nRecent conversation:\n$contextLines\n\nUser question:\n$input';
+   }
+ 
+@@ -35892,8 +36068,12 @@ class AppLocalizationsZh extends AppLocalizations {
+   String get taskProtocolMaterialsNeeded => '需要的资料';
+ 
+   @override
+-  String taskProtocolMaterialsCount(Object attached, Object mustLoad,
+-      Object optional, Object retrievalLabel) {
++  String taskProtocolMaterialsCount(
++    Object attached,
++    Object mustLoad,
++    Object optional,
++    Object retrievalLabel,
++  ) {
+     return '必读 $mustLoad · 选读 $optional · 附件 $attached$retrievalLabel';
+   }
+ 
+@@ -36980,7 +37160,10 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String displayCriterionAtLeastUnitTemplate(
+-      String title, String threshold, String unit) {
++    String title,
++    String threshold,
++    String unit,
++  ) {
+     return '$title ≥ $threshold $unit';
+   }
+ 
+diff --git a/mobile/lib/l10n/app_zh.arb b/mobile/lib/l10n/app_zh.arb
+index 66a36f88..364451c1 100755
+--- a/mobile/lib/l10n/app_zh.arb
++++ b/mobile/lib/l10n/app_zh.arb
+@@ -16495,6 +16495,92 @@
+         }
+     },
+     "dashboardCommandCenterAskAurora": "问 Aurora",
++    "todayCockpitEyebrowFresh": "今天最值得做",
++    "todayCockpitEyebrowActive": "继续推进",
++    "todayCockpitEyebrowStalled": "先解决卡点",
++    "todayCockpitFreshHeadline": "开始今天的第一件事",
++    "todayCockpitFreshUnarrangedHeadline": "今天还没排布",
++    "todayCockpitActiveHeadline": "接着做下一件",
++    "todayCockpitAllDoneHeadline": "今天的任务已完成",
++    "todayCockpitStalledHeadline": "先解开这个卡点",
++    "todayCockpitWhyBottleneck": "卡点在「{topic}」",
++    "@todayCockpitWhyBottleneck": {
++        "placeholders": {
++            "topic": {
++                "type": "String"
++            }
++        }
++    },
++    "todayCockpitWhyDueToday": "截止就在今天",
++    "todayCockpitWhyOverdue": "已逾期 {days} 天",
++    "@todayCockpitWhyOverdue": {
++        "placeholders": {
++            "days": {
++                "type": "int"
++            }
++        }
++    },
++    "todayCockpitWhyDueIn": "距截止 {days} 天",
++    "@todayCockpitWhyDueIn": {
++        "placeholders": {
++            "days": {
++                "type": "int"
++            }
++        }
++    },
++    "todayCockpitWhyStale": "计划有一段时间没推进了",
++    "todayCockpitWhyHealth": "计划健康度 {percent}%，需要留意",
++    "@todayCockpitWhyHealth": {
++        "placeholders": {
++            "percent": {
++                "type": "int"
++            }
++        }
++    },
++    "todayCockpitWhyRemaining": "今天还有 {count} 件待办",
++    "@todayCockpitWhyRemaining": {
++        "placeholders": {
++            "count": {
++                "type": "int"
++            }
++        }
++    },
++    "todayCockpitWhyAllDone": "今天的待办已清空",
++    "todayCockpitCtaArrange": "安排今天",
++    "todayCockpitCtaStuck": "解开卡点",
++    "todayCockpitStuckButton": "我卡住了",
++    "todayCockpitStuckPrompt": "我在推进「{goal}」时卡住了：{reason}帮我重新找到此刻最值得做的一步。",
++    "@todayCockpitStuckPrompt": {
++        "placeholders": {
++            "goal": {
++                "type": "String"
++            },
++            "reason": {
++                "type": "String"
++            }
++        }
++    },
++    "todayCockpitGoalWord": "当前目标",
++    "todayCockpitStallReasonDeadline": "快到截止但还没推进，",
++    "todayCockpitStallReasonStale": "计划已经搁置了一段时间，",
++    "todayCockpitStallReasonHealth": "计划健康度降到 {percent}%，",
++    "@todayCockpitStallReasonHealth": {
++        "placeholders": {
++            "percent": {
++                "type": "int"
++            }
++        }
++    },
++    "todayCockpitStallReasonGeneric": "不确定下一步从哪继续，",
++    "todayCockpitRunOngoing": "Aurora 正在推进",
++    "todayCockpitRunOngoingDetailed": "Aurora 正在推进：{detail}",
++    "@todayCockpitRunOngoingDetailed": {
++        "placeholders": {
++            "detail": {
++                "type": "String"
++            }
++        }
++    },
+     "dashboardCcAllMapped": "今天的任务已经清楚了",
+     "dashboardCcCheckPlan": "先检查今天的计划节奏",
+     "dashboardCcSetGoal": "先定一个今天能开始的目标",
+diff --git a/mobile/test/features/home/presentation/widgets/today_cockpit_card_test.dart b/mobile/test/features/home/presentation/widgets/today_cockpit_card_test.dart
+new file mode 100644
+index 00000000..3cd1c485
+--- /dev/null
++++ b/mobile/test/features/home/presentation/widgets/today_cockpit_card_test.dart
+@@ -0,0 +1,282 @@
++import 'dart:async';
++
++import 'package:flutter/material.dart';
++import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:flutter_test/flutter_test.dart';
++import 'package:sparkle/core/design/design_system.dart';
++import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
++import 'package:sparkle/features/home/presentation/widgets/today_cockpit_card.dart';
++import 'package:sparkle/features/plan/presentation/providers/active_goal_provider.dart';
++
++import '../../../../shared/i18n_test_helper.dart';
++import '../../dashboard_test_harness.dart';
++
++void main() {
++  setUp(setUpI18nForTesting);
++  TestWidgetsFlutterBinding.ensureInitialized();
++
++  // J-03 验收锚点：
++  // 1. 四态（no-goal / fresh / active / stalled）各有真实数据路径；
++  // 2. 卡内唯一 primary CTA；
++  // 3. 首屏（DashboardScreen 默认折叠配置）全页唯一 primary CTA。
++  ActiveGoalSnapshot goal(String title) => ActiveGoalSnapshot(
++        id: 'goal-1',
++        title: title,
++        goalType: 'exam',
++        healthScore: 0.7,
++        weeklyConflictCount: 0,
++      );
++
++  HomeGrowthState buildGrowth({
++    HomeActivePlanStatus? plan,
++    int total = 0,
++    int completed = 0,
++    HomeBottleneck? bottleneck,
++    HomeGrowthTask? nextAction,
++  }) =>
++      HomeGrowthState(
++        planHealth: plan?.healthScore ?? 0,
++        tasksTotal: total,
++        tasksCompleted: completed,
++        streak: 0,
++        activePlan: plan,
++        activeBottleneck: bottleneck,
++        nextAction: nextAction,
++      );
++
++  Widget harness(
++    Widget child, {
++    MultiGoalOverview? goals,
++    HomeGrowthState? growthState,
++  }) =>
++      ProviderScope(
++        overrides: [
++          multiGoalOverviewProvider.overrideWith(
++            (ref) async => goals ?? const MultiGoalOverview.empty(),
++          ),
++          homeGrowthStateProvider
++              .overrideWith((ref) async => growthState ?? buildGrowth()),
++        ],
++        child: buildDashboardWidgetHarness(child: child),
++      );
++
++  Future<void> pumpCockpit(
++    WidgetTester tester, {
++    MultiGoalOverview? goals,
++    HomeGrowthState? growthState,
++  }) async {
++    await initializeDashboardTestEnvironment();
++    await tester.pumpWidget(harness(
++      const TodayCockpitCard(),
++      goals: goals,
++      growthState: growthState,
++    ),);
++    await tester.pumpAndSettle();
++  }
++
++  List<SparkleButton> primaryButtons(WidgetTester tester) => tester
++      .widgetList<SparkleButton>(find.byType(SparkleButton))
++      .where((button) => button.variant == ButtonVariant.primary)
++      .toList();
++
++  group('TodayCockpitCard states', () {
++    testWidgets(
++      'no-goal: set-first-goal headline with single primary CTA',
++      (tester) async {
++      await pumpCockpit(tester);
++
++      expect(
++          find.byKey(const ValueKey('today-cockpit-skeleton')),
++          findsNothing,
++        );
++      // 唯一 primary：no-goal 态主 CTA = 「和 AI 定目标」。
++      final primaries = primaryButtons(tester);
++      expect(primaries, hasLength(1));
++      expect(primaries.first.label, 'Start with AI');
++      // 「我卡住了」次级入口存在。
++      expect(find.text("I'm stuck"), findsOneWidget);
++      // no-goal 目标起点 chips 存在。
++      expect(find.text('Exam Sprint'), findsOneWidget);
++    });
++
++    testWidgets('fresh: pending task becomes headline and primary starts it',
++        (tester) async {
++      await pumpCockpit(
++        tester,
++        goals: MultiGoalOverview(
++          goals: [goal('Pass the exam')],
++          selectedGoalId: 'goal-1',
++        ),
++        growthState: buildGrowth(
++          plan: const HomeActivePlanStatus(
++            id: 'plan-1',
++            name: 'Final Sprint',
++            healthScore: 0.8,
++          ),
++          total: 3,
++          nextAction: const HomeGrowthTask(
++            id: 't1',
++            title: 'Read chapter 3',
++            priority: 4,
++            isCompleted: false,
++          ),
++        ),
++      );
++
++      expect(find.text('Read chapter 3'), findsOneWidget);
++      expect(find.text('Most worth doing today'), findsOneWidget);
++      // harness 样例 dashboard 自带 daysToDeadline=3 → why 线取截止信号
++      // （why 优先级：瓶颈 > 截止 > 停滞 > 健康度 > 余量）。
++      expect(find.text('3 days until deadline'), findsOneWidget);
++      final primaries = primaryButtons(tester);
++      expect(primaries, hasLength(1));
++      expect(primaries.first.label, 'Start Here');
++    });
++
++    testWidgets('fresh unarranged: plan with no today tasks offers arrange',
++        (tester) async {
++      await pumpCockpit(
++        tester,
++        goals: MultiGoalOverview(
++          goals: [goal('Pass the exam')],
++          selectedGoalId: 'goal-1',
++        ),
++        growthState: buildGrowth(
++          plan: const HomeActivePlanStatus(
++            id: 'plan-1',
++            name: 'Final Sprint',
++            healthScore: 0.8,
++          ),
++        ),
++      );
++
++      expect(find.text("Today isn't planned yet"), findsOneWidget);
++      final primaries = primaryButtons(tester);
++      expect(primaries, hasLength(1));
++      expect(primaries.first.label, 'Plan today');
++    });
++
++    testWidgets('active: completed>0 switches eyebrow to keep-going',
++        (tester) async {
++      await pumpCockpit(
++        tester,
++        goals: MultiGoalOverview(
++          goals: [goal('Pass the exam')],
++          selectedGoalId: 'goal-1',
++        ),
++        growthState: buildGrowth(
++          plan: const HomeActivePlanStatus(
++            id: 'plan-1',
++            name: 'Final Sprint',
++            healthScore: 0.8,
++          ),
++          total: 3,
++          completed: 1,
++          nextAction: const HomeGrowthTask(
++            id: 't2',
++            title: 'Do exercise set 2',
++            priority: 3,
++            isCompleted: false,
++          ),
++        ),
++      );
++
++      expect(find.text('Keep going'), findsOneWidget);
++      expect(find.text('Do exercise set 2'), findsOneWidget);
++      expect(find.text('1/3'), findsOneWidget);
++    });
++
++    testWidgets('stalled by bottleneck: primary becomes unblock with why',
++        (tester) async {
++      await pumpCockpit(
++        tester,
++        goals: MultiGoalOverview(
++          goals: [goal('Pass the exam')],
++          selectedGoalId: 'goal-1',
++        ),
++        growthState: buildGrowth(
++          plan: const HomeActivePlanStatus(
++            id: 'plan-1',
++            name: 'Final Sprint',
++            healthScore: 0.8,
++          ),
++          total: 2,
++          completed: 1,
++          bottleneck: const HomeBottleneck(
++            id: 'b1',
++            topic: 'TCP congestion control',
++            severity: 'high',
++          ),
++          nextAction: const HomeGrowthTask(
++            id: 't1',
++            title: 'Read chapter 3',
++            priority: 4,
++            isCompleted: false,
++          ),
++        ),
++      );
++
++      expect(find.text('Clear the blocker first'), findsOneWidget);
++      expect(find.text('Stuck on "TCP congestion control"'), findsOneWidget);
++      final primaries = primaryButtons(tester);
++      expect(primaries, hasLength(1));
++      expect(primaries.first.label, 'Unblock it');
++    });
++
++    testWidgets('loading: renders skeleton before data lands', (tester) async {
++      await initializeDashboardTestEnvironment();
++      final goalsCompleter = Completer<MultiGoalOverview>();
++      final growthCompleter = Completer<HomeGrowthState>();
++      await tester.pumpWidget(
++        ProviderScope(
++          overrides: [
++            multiGoalOverviewProvider
++                .overrideWith((ref) => goalsCompleter.future),
++            homeGrowthStateProvider
++                .overrideWith((ref) => growthCompleter.future),
++          ],
++          child: buildDashboardWidgetHarness(child: const TodayCockpitCard()),
++        ),
++      );
++      await tester.pump();
++
++      expect(
++          find.byKey(const ValueKey('today-cockpit-skeleton')),
++          findsOneWidget,
++        );
++
++      // 数据落位后骨架退场（同时冲掉 pending timers）。
++      goalsCompleter.complete(const MultiGoalOverview.empty());
++      growthCompleter.complete(buildGrowth());
++      await tester.pumpAndSettle();
++      expect(
++          find.byKey(const ValueKey('today-cockpit-skeleton')),
++          findsNothing,
++        );
++      expect(find.text('Start with AI'), findsOneWidget);
++    });
++  });
++
++  group('Dashboard screen primary CTA uniqueness', () {
++    testWidgets('full home screen renders exactly one primary CTA',
++        (tester) async {
++      await initializeDashboardTestEnvironment();
++      await tester.pumpWidget(buildDashboardTestHarness());
++      await tester.pump();
++      for (var i = 0; i < 12; i++) {
++        await tester.pump(const Duration(milliseconds: 100));
++      }
++
++      final primaries = primaryButtons(tester);
++      expect(primaries, hasLength(1));
++      // 唯一 primary 属于 Today Cockpit 卡。
++      expect(
++        find.ancestor(
++          of: find.byWidget(primaries.first),
++          matching: find.byKey(const ValueKey('today-cockpit-card')),
++        ),
++        findsOneWidget,
++      );
++    });
++  });
++}
+diff --git a/mobile/test/widget/dashboard_screen_structure_test.dart b/mobile/test/widget/dashboard_screen_structure_test.dart
+index 0687210a..10080f6b 100644
+--- a/mobile/test/widget/dashboard_screen_structure_test.dart
++++ b/mobile/test/widget/dashboard_screen_structure_test.dart
+@@ -14,7 +14,14 @@ void main() {
+   group('Dashboard screen structure', () {
+     testWidgets('briefing details expand and collapse', (tester) async {
+       await initializeDashboardTestEnvironment();
+-      await tester.pumpWidget(buildDashboardTestHarness());
++      // J-03：dailyBriefing 槽改为默认折叠（首屏唯一主行动卡=Today
++      // Cockpit），折叠态下 briefing toggle 不进树；与下方 wt296 用例
++      // 同款注入「全展开」基线后再验证展开/折叠行为本身。
++      await tester.pumpWidget(
++        buildDashboardTestHarness(
++          extraOverrides: [dashboardSlotConfigAllExpandedOverride()],
++        ),
++      );
+       await _pumpDashboard(tester);
+ 
+       expect(find.text('Active Plan'), findsNothing);
+@@ -103,7 +110,13 @@ void main() {
+       tester,
+     ) async {
+       await initializeDashboardTestEnvironment();
+-      await tester.pumpWidget(buildDashboardTestHarness());
++      // J-03：workspaceCards 槽随首屏去竞争默认折叠，section 内容（含
++      // customize action）折叠态不进树；注入「全展开」基线后验证 affordance。
++      await tester.pumpWidget(
++        buildDashboardTestHarness(
++          extraOverrides: [dashboardSlotConfigAllExpandedOverride()],
++        ),
++      );
+       await _pumpDashboard(tester);
+ 
+       await _scrollToSection(
