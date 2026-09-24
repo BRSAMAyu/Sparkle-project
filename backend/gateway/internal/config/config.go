@@ -56,7 +56,9 @@ type Config struct {
 	JWTAccessTokenExpireMinutes int     `mapstructure:"JWT_ACCESS_TOKEN_EXPIRE_MINUTES"`
 	JWTRefreshTokenExpireDays   int     `mapstructure:"JWT_REFRESH_TOKEN_EXPIRE_DAYS"`
 	AllowWsQueryToken           bool    `mapstructure:"ALLOW_WS_QUERY_TOKEN"`
+	AllowWsQueryTicket          bool    `mapstructure:"ALLOW_WS_QUERY_TICKET"`
 	WSTicketTTLSeconds          int     `mapstructure:"WS_TICKET_TTL_SECONDS"`
+	WSTicketTTLSecondsMax       int     `mapstructure:"WS_TICKET_TTL_SECONDS_MAX"`
 	WSTicketRateRPS             float64 `mapstructure:"WS_TICKET_RATE_RPS"`
 	WSTicketRateBurst           int     `mapstructure:"WS_TICKET_RATE_BURST"`
 	WSUpgradeRateRPS            float64 `mapstructure:"WS_UPGRADE_RATE_RPS"`
@@ -464,7 +466,9 @@ func Load() *Config {
 		"JWT_ACCESS_TOKEN_EXPIRE_MINUTES",
 		"JWT_REFRESH_TOKEN_EXPIRE_DAYS",
 		"ALLOW_WS_QUERY_TOKEN",
+		"ALLOW_WS_QUERY_TICKET",
 		"WS_TICKET_TTL_SECONDS",
+		"WS_TICKET_TTL_SECONDS_MAX",
 		"WS_TICKET_RATE_RPS",
 		"WS_TICKET_RATE_BURST",
 		"WS_UPGRADE_RATE_RPS",
@@ -543,9 +547,22 @@ func Load() *Config {
 	viper.SetDefault("JWT_AUDIENCE", "sparkle-app")
 	viper.SetDefault("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", 30) // 30 minutes for access token
 	viper.SetDefault("JWT_REFRESH_TOKEN_EXPIRE_DAYS", 7)    // 7 days for refresh token
+	// WSQ-2 (WS-TICKET-DESIGN §2.3/§3.3): ?ticket= gets its own gate,
+	// default true and allowed in production — a leaked ticket is a
+	// single-use opaque string bounded by the TTL clamp below, far below the
+	// long-lived-JWT leak surface of ?token= (which stays on the
+	// production-forbidden ALLOW_WS_QUERY_TOKEN).
+	viper.SetDefault("ALLOW_WS_QUERY_TICKET", true)
 	viper.SetDefault("WS_TICKET_TTL_SECONDS", 120)
-	viper.SetDefault("WS_TICKET_RATE_RPS", 2.0)
-	viper.SetDefault("WS_TICKET_RATE_BURST", 5)
+	// WSQ-2 (§2.2/§3.3): single-use ticket TTL ceiling — exceeding it is a
+	// startup Fatal in every environment (the shipped 3600s example
+	// multiplied the query leak window 30x for zero benefit).
+	viper.SetDefault("WS_TICKET_TTL_SECONDS_MAX", 300)
+	// WSQ-2 (§3.3/§5-R2): issuance pin default raised 2.0/5 → 5/10 — a
+	// three-device user's reconnect storm (3 x 6 backoff retries = 18
+	// issuances/min) blows through the old burst-5 budget.
+	viper.SetDefault("WS_TICKET_RATE_RPS", 5.0)
+	viper.SetDefault("WS_TICKET_RATE_BURST", 10)
 	// WSQ-1 (WS-TICKET-DESIGN §2.1/§3.3): pre-auth per-IP fallback pin shared
 	// by the 5 WS upgrade routes. Defaults cover the worst plausible NAT
 	// reconnect storm (200 devices x 6 backoff retries = 20rps mean < 30rps
@@ -735,6 +752,13 @@ func Load() *Config {
 		}
 	}
 
+	// WSQ-2 (WS-TICKET-DESIGN §2.2/§3.3, §6.1-4): clamp the single-use ticket
+	// TTL — exceeding the ceiling is a startup Fatal in every environment
+	// (Redis holds the raw bearer token for the whole TTL window).
+	if err := wsTicketTTLExceedsMax(cfg.WSTicketTTLSeconds, cfg.WSTicketTTLSecondsMax); err != nil {
+		log.Fatal(err)
+	}
+
 	// P1-8: RBAC must be enabled in production
 	if cfg.IsProduction() && !cfg.SparkleRBACEnabled {
 		log.Fatal("SPARKLE_RBAC_ENABLED must be true in production")
@@ -780,4 +804,17 @@ func Load() *Config {
 	}
 
 	return &cfg
+}
+
+// wsTicketTTLExceedsMax reports the WSQ-2 TTL-clamp violation (nil = within
+// ceiling). The comparison is inclusive: TTL == max passes, anything above is
+// rejected by Load() with a startup Fatal. Extracted as a pure function so
+// the boundary is unit-testable without tripping os.Exit.
+func wsTicketTTLExceedsMax(ttlSeconds, maxSeconds int) error {
+	if ttlSeconds > maxSeconds {
+		return fmt.Errorf(
+			"WS_TICKET_TTL_SECONDS=%d exceeds WS_TICKET_TTL_SECONDS_MAX=%d: single-use ws tickets must stay short-lived (default 120s)",
+			ttlSeconds, maxSeconds)
+	}
+	return nil
 }

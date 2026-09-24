@@ -9,6 +9,9 @@ import (
 
 func TestLoadUsesGatewayDatabaseURLWhenRBACEnabled(t *testing.T) {
 	viper.Reset()
+	// Load() 对缺失 JWT_SECRET 直接 Fatal；worktree 内无 .env（不入库），
+	// 测试自带一份以保持自包含（与 config_ws_upgrade_test.go 同一口径）。
+	t.Setenv("JWT_SECRET", "rbac-test-jwt-secret")
 	t.Setenv("SPARKLE_RBAC_ENABLED", "true")
 	t.Setenv("DATABASE_URL", "postgresql://postgres:legacy@sparkle_db:5432/sparkle")
 	t.Setenv("SPARKLE_GATEWAY_DATABASE_URL", "postgresql://sparkle_gateway:pw@sparkle_db:5432/sparkle?sslmode=require")
@@ -25,6 +28,7 @@ func TestLoadUsesGatewayDatabaseURLWhenRBACEnabled(t *testing.T) {
 
 func TestLoadKeepsLegacyDatabaseURLWhenRBACDisabled(t *testing.T) {
 	viper.Reset()
+	t.Setenv("JWT_SECRET", "rbac-test-jwt-secret")
 	t.Setenv("SPARKLE_RBAC_ENABLED", "false")
 	t.Setenv("DATABASE_URL", "postgresql://postgres:legacy@sparkle_db:5432/sparkle")
 	t.Setenv("SPARKLE_GATEWAY_DATABASE_URL", "postgresql://sparkle_gateway:pw@sparkle_db:5432/sparkle")

@@ -87,7 +87,12 @@ func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 			}
 		}
 
-		ticket := extractWSTicket(c, cfg.AllowWsQueryToken)
+		// WSQ-2 (WS-TICKET-DESIGN §2.3): the query channel for tickets is
+		// gated by its own switch, ALLOW_WS_QUERY_TICKET (default true,
+		// production-allowed) — no longer collateral of the production
+		// ALLOW_WS_QUERY_TOKEN ban. The subprotocol channel above stays
+		// ungated; ?token= remains bound to AllowWsQueryToken.
+		ticket := extractWSTicket(c, cfg.AllowWsQueryTicket)
 		if ticket == "" {
 			metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), "unknown", "missing_credentials").Inc()
 			abortWithAPIError(c, http.StatusUnauthorized, "authorization_token_required", "Authorization token required")
