@@ -11,6 +11,7 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/goal/presentation/widgets/goal_conflict_dialog.dart';
+import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
 import 'package:sparkle/features/home/presentation/widgets/goal_switcher.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_goal_provider.dart';
@@ -60,6 +61,9 @@ class _MultiGoalDashboardContentState
     if (overview.goals.isEmpty) {
       return const SizedBox.shrink();
     }
+
+    // F-9：goal 行进度 = 任务账本口径（与 cockpit chip / 任务板头部同数）。
+    final ledgerProgressByPlan = ref.watch(ledgerProgressByPlanProvider);
 
     final zh = I18nService.instance.isChinese;
     final suggestion = overview.suggestion;
@@ -148,6 +152,7 @@ class _MultiGoalDashboardContentState
                           _GoalRow(
                             goal: goal,
                             isSelected: goal.id == selectedGoalId,
+                            progress: ledgerProgressByPlan[goal.id],
                             onTap: () {
                               unawaited(
                                 ref
@@ -307,11 +312,15 @@ class _GoalRow extends StatelessWidget {
     required this.goal,
     required this.isSelected,
     required this.onTap,
+    this.progress,
   });
 
   final ActiveGoalSnapshot goal;
   final bool isSelected;
   final VoidCallback onTap;
+
+  /// 任务账本进度（F-9 口径）。total 为 0（账本无该目标名下任务）时不渲染。
+  final TaskLedgerProgress? progress;
 
   @override
   Widget build(BuildContext context) {
@@ -373,6 +382,13 @@ class _GoalRow extends StatelessWidget {
                 spacing: DS.spacing8,
                 runSpacing: DS.spacing8,
                 children: [
+                  // F-9：任务进度 x/y 为 goal 行的第一进度信号，与 cockpit
+                  // chip、任务板头部对同一状态给出同一数字。
+                  if (progress != null && progress!.totalCount > 0)
+                    _MetaPill(
+                      icon: Icons.task_alt_rounded,
+                      label: '${progress!.completedCount}/${progress!.totalCount}',
+                    ),
                   _MetaPill(
                     icon: Icons.event_rounded,
                     label: _deadlineLabel(goal.deadlineDays, zh),

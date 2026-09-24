@@ -7,6 +7,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/today_cockpit_card.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_goal_provider.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
 
 import '../../../../shared/i18n_test_helper.dart';
 import '../../dashboard_test_harness.dart';
@@ -44,10 +45,36 @@ void main() {
         nextAction: nextAction,
       );
 
+  /// F-9：账本任务构造器（进度 chip 的真源是 taskListProvider 账本，
+  /// planId 与 goal.id 同一 id 空间）。
+  TaskModel ledgerTask(
+    String id, {
+    String planId = 'goal-1',
+    TaskStatus status = TaskStatus.pending,
+    DateTime? dueDate,
+  }) =>
+      TaskModel(
+        id: id,
+        userId: 'user-1',
+        title: 'task-$id',
+        type: TaskType.learning,
+        tags: const [],
+        estimatedMinutes: 25,
+        difficulty: 1,
+        energyCost: 1,
+        status: status,
+        priority: 1,
+        createdAt: DateTime(2026, 4, 8, 9),
+        updatedAt: DateTime(2026, 4, 8, 9),
+        planId: planId,
+        dueDate: dueDate,
+      );
+
   Widget harness(
     Widget child, {
     MultiGoalOverview? goals,
     HomeGrowthState? growthState,
+    List<Override> extraOverrides = const [],
   }) =>
       ProviderScope(
         overrides: [
@@ -57,19 +84,24 @@ void main() {
           homeGrowthStateProvider
               .overrideWith((ref) async => growthState ?? buildGrowth()),
         ],
-        child: buildDashboardWidgetHarness(child: child),
+        child: buildDashboardWidgetHarness(
+          child: child,
+          extraOverrides: extraOverrides,
+        ),
       );
 
   Future<void> pumpCockpit(
     WidgetTester tester, {
     MultiGoalOverview? goals,
     HomeGrowthState? growthState,
+    List<Override> extraOverrides = const [],
   }) async {
     await initializeDashboardTestEnvironment();
     await tester.pumpWidget(harness(
       const TodayCockpitCard(),
       goals: goals,
       growthState: growthState,
+      extraOverrides: extraOverrides,
     ),);
     await tester.pumpAndSettle();
   }
@@ -179,6 +211,15 @@ void main() {
             isCompleted: false,
           ),
         ),
+        // F-9：进度 chip 真源 = 任务账本（planId=goal-1，3 项完成 1），
+        // 与 growth（/tasks/today 选择流）脱钩。
+        extraOverrides: [
+          staticTaskListOverride([
+            ledgerTask('a', status: TaskStatus.completed),
+            ledgerTask('b'),
+            ledgerTask('c'),
+          ]),
+        ],
       );
 
       expect(find.text('Keep going'), findsOneWidget);

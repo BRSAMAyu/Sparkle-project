@@ -9485,6 +9485,18 @@
             }
         }
     },
+    "taskBoardProgressSummary": "{total} tasks · {completed} done",
+    "@taskBoardProgressSummary": {
+        "placeholders": {
+            "total": {
+                "type": "int"
+            },
+            "completed": {
+                "type": "int"
+            }
+        }
+    },
+    "taskBoardNoTasksYet": "No tasks yet",
     "taskBoardTitle": "Task Board",
     "taskBoardExpand": "Expand",
     "taskBoardCollapse": "Collapse",

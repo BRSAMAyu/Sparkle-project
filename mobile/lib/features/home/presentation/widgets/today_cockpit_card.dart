@@ -357,9 +357,12 @@ class _GoalContextRow extends StatelessWidget {
             icon: Icons.flag_rounded,
             dense: true,
           ),
-        if (vm.tasksTotal > 0)
+        if (vm.goalTasksTotal > 0)
           SemanticPill(
-            label: '${vm.tasksCompleted}/${vm.tasksTotal}',
+            // F-9：进度 chip 只渲染任务账本口径（goalTasks*），与任务板
+            // 头部、多目标看板对同一状态给出同一数字；不再用 /tasks/today
+            // 选择流（曾在 1/4 与 0/1 间漂移）。
+            label: '${vm.goalTasksCompleted}/${vm.goalTasksTotal}',
             tone: PillTone.neutral,
             icon: Icons.task_alt_rounded,
             dense: true,

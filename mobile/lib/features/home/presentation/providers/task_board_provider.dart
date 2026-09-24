@@ -13,22 +13,81 @@ enum TaskViewMode { schedule, priority, plan, sprint }
 /// Sprint task filter options
 enum SprintTaskFilter { all, todo, inProgress, done }
 
-class TaskBoardTodaySummary {
-  const TaskBoardTodaySummary({
+/// F-9 ·「任务进度」展示口径 · 单一定义点。
+///
+/// 权威真源 = 任务账本（`taskListProvider`，GET /tasks 全量列表），
+/// 不再用 `/tasks/today` 选择流或 due-today 过滤派生进度数字：
+/// 选择流的构成随「今日相关」判定逐日漂移（cockpit chip 曾在 1/4 与
+/// 0/1 间跳变，WT324 F-9），due-today 口径则与账本可见的「共 4 项、
+/// 已完成 1」同屏矛盾。
+///
+/// 口径：total = 非 abandoned 账本任务数；completed = 其中 status ==
+/// completed 的数量。多目标看板 goal 行（按 planId）、cockpit 进度
+/// chip（选中目标，缺配回落全账本）、任务板头部汇总（全账本）一律
+/// 引用本文件，禁止各自再写一套计数。
+class TaskLedgerProgress {
+  const TaskLedgerProgress({
     required this.totalCount,
     required this.completedCount,
   });
+
+  const TaskLedgerProgress.empty()
+      : totalCount = 0,
+        completedCount = 0;
 
   final int totalCount;
   final int completedCount;
 }
 
-/// S7「今日」展示口径 · 单一定义点。
+/// 账本进度计数的唯一实现（展示投影，不另立完成判定语义——
+/// 完成与否以 `TaskStatus.completed` 为准，与引擎一致）。
+TaskLedgerProgress ledgerProgressOf(
+  List<TaskModel> tasks, {
+  String? planId,
+}) {
+  final scoped = planId == null
+      ? tasks.where((t) => t.status != TaskStatus.abandoned).toList()
+      : tasks
+          .where(
+            (t) => t.planId == planId && t.status != TaskStatus.abandoned,
+          )
+          .toList();
+  final completed = scoped.where((t) => t.status == TaskStatus.completed).length;
+  return TaskLedgerProgress(
+    totalCount: scoped.length,
+    completedCount: completed,
+  );
+}
+
+/// 任务板头部汇总：全账本进度（非 abandoned）。
+final taskBoardLedgerSummaryProvider = Provider<TaskLedgerProgress>((ref) {
+  final taskState = ref.watch(taskListProvider);
+  return ledgerProgressOf(taskState.tasks);
+});
+
+/// 按计划（=目标）分组的账本进度，供多目标看板逐行展示。
+/// `null` 键收纳无归属计划的任务（无目标任务不挂在任何 goal 行上）。
+final ledgerProgressByPlanProvider =
+    Provider<Map<String?, TaskLedgerProgress>>((ref) {
+  final taskState = ref.watch(taskListProvider);
+  final byPlan = <String?, TaskLedgerProgress>{};
+  final planIds = taskState.tasks
+      .where((t) => t.status != TaskStatus.abandoned)
+      .map((t) => t.planId)
+      .toSet();
+  for (final planId in planIds) {
+    byPlan[planId] = ledgerProgressOf(taskState.tasks, planId: planId);
+  }
+  return byPlan;
+});
+
+/// S7「今日」分组口径 · 单一定义点。
 ///
 /// 真假判定以引擎 `backend/app/services/goal_today_view.py` 为唯一事实源
 /// （due_date == today 且状态非 COMPLETED/ABANDONED 即「今日待执行」）。
-/// 客户端此函数仅作看板的展示分组/计数投影，不另立判定语义；
-/// 头部汇总与「今日/逾期」分组必须共用本函数，禁止各写一套日期过滤。
+/// 客户端此函数仅作看板「今日/逾期」分组的展示投影，不另立判定语义；
+/// 进度类数字（头部汇总、cockpit chip、多目标看板）走本文件的
+/// `ledgerProgressOf` 账本口径（F-9），不再经由今日过滤派生。
 List<TaskModel> tasksDueOn(List<TaskModel> tasks, DateTime day) {
   bool isSameDay(DateTime? value) =>
       value != null &&
@@ -213,26 +272,6 @@ final taskBoardProvider =
     StateNotifierProvider<TaskBoardNotifier, TaskBoardState>(
   TaskBoardNotifier.new,
 );
-
-final taskBoardTodaySummaryProvider = Provider<TaskBoardTodaySummary>((ref) {
-  final taskState = ref.watch(taskListProvider);
-  final now = DateTime.now();
-
-  // 「今日 x/y」头部汇总：与今日分组同用 tasksDueOn 单一口径
-  //（到期日为今天，含当天已完成，排除已放弃）——不再把「今天完成的历史任务」
-  // 计入今日，消除「头部今日 1/1 正文却没有今日分组」的自相矛盾。
-  final todayTasks = tasksDueOn(
-    taskState.tasks.where((t) => t.status != TaskStatus.abandoned).toList(),
-    now,
-  );
-
-  final completedToday = todayTasks.where((task) => task.status == TaskStatus.completed).length;
-
-  return TaskBoardTodaySummary(
-    totalCount: todayTasks.length,
-    completedCount: completedToday,
-  );
-});
 
 /// Grouped tasks for schedule view
 class ScheduleGroup {

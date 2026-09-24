@@ -36771,6 +36771,18 @@ abstract class AppLocalizations {
   /// **'今日{total}项·已完成{completed}'**
   String taskBoardTodaySummary(int total, int completed);
 
+  /// No description provided for @taskBoardProgressSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'共{total}项·已完成{completed}'**
+  String taskBoardProgressSummary(int total, int completed);
+
+  /// No description provided for @taskBoardNoTasksYet.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无任务'**
+  String get taskBoardNoTasksYet;
+
   /// No description provided for @taskBoardTitle.
   ///
   /// In zh, this message translates to:

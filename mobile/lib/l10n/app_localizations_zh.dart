@@ -20186,6 +20186,14 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String taskBoardProgressSummary(int total, int completed) {
+    return '共$total项·已完成$completed';
+  }
+
+  @override
+  String get taskBoardNoTasksYet => '暂无任务';
+
+  @override
   String get taskBoardTitle => '任务看板';
 
   @override

@@ -29,7 +29,6 @@ import 'package:sparkle/features/home/presentation/providers/dashboard_card_conf
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_slot_config_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
-import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_center_provider.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
@@ -106,11 +105,13 @@ Widget buildDashboardWidgetHarness({
   Size size = const Size(390, 844),
   Locale? locale = const Locale('en'),
   DashboardState? dashboardState,
+  List<Override> extraOverrides = const [],
 }) => _buildDashboardProviderHarness(
     theme: theme,
     size: size,
     locale: locale,
     dashboardState: dashboardState,
+    extraOverrides: extraOverrides,
     child: Material(
       child: SingleChildScrollView(
         child: Padding(
@@ -184,9 +185,8 @@ Widget _buildDashboardProviderHarness({
       ),
       taskListProvider.overrideWith((ref) => _StaticTaskListNotifier(tasks)),
       planListProvider.overrideWith((ref) => _StaticPlanListNotifier()),
-      taskBoardTodaySummaryProvider.overrideWith(
-        (ref) => const TaskBoardTodaySummary(totalCount: 1, completedCount: 0),
-      ),
+      // F-9：任务板头部汇总改为账本进度（taskBoardLedgerSummaryProvider），
+      // 由 taskListProvider 派生，无需再单独钉 today 汇总。
       notificationRepositoryProvider.overrideWithValue(
         _FakeNotificationRepository(),
       ),
@@ -313,6 +313,11 @@ class _StaticDashboardCardConfigNotifier extends DashboardCardConfigNotifier {
 /// 经 extraOverrides 注入本 override。
 Override dashboardSlotConfigAllExpandedOverride() =>
     dashboardSlotConfigProvider.overrideWith(_StaticSlotConfigAllExpanded.new);
+
+/// F-9：进度一致性用例注入任意任务账本（复用 harness 私有 fake 依赖）。
+/// 经 extraOverrides 传入即可覆盖默认的 `_sampleTasks()` 账本。
+Override staticTaskListOverride(List<TaskModel> tasks) =>
+    taskListProvider.overrideWith((ref) => _StaticTaskListNotifier(tasks));
 
 class _StaticSlotConfigAllExpanded extends DashboardSlotConfigNotifier {
   _StaticSlotConfigAllExpanded(super.ref) {

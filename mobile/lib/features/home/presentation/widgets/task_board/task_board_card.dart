@@ -26,7 +26,9 @@ class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
   Widget build(BuildContext context) {
     final boardState = ref.watch(taskBoardProvider);
     final isCollapsed = boardState.isCollapsed;
-    final summary = ref.watch(taskBoardTodaySummaryProvider);
+    // F-9：头部汇总 = 任务账本全量进度（与 cockpit chip / 多目标看板
+    // 同一 ledgerProgressOf 口径），不再用 due-today 过滤派生。
+    final summary = ref.watch(taskBoardLedgerSummaryProvider);
     final isDualColumn = context.isTablet || context.isDesktop;
     final isChinese = Localizations.localeOf(context)
         .languageCode
@@ -264,13 +266,13 @@ class _TaskBoardCardState extends ConsumerState<TaskBoardCard> {
       };
 
   String _summaryLabel(
-    TaskBoardTodaySummary summary, {
+    TaskLedgerProgress summary, {
     required bool isChinese,
   }) {
     if (summary.totalCount == 0) {
-      return context.l10n.taskBoardNoTasksToday;
+      return context.l10n.taskBoardNoTasksYet;
     }
-    return context.l10n.taskBoardTodaySummary(
+    return context.l10n.taskBoardProgressSummary(
       summary.totalCount,
       summary.completedCount,
     );

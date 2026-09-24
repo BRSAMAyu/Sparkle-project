@@ -21060,6 +21060,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String taskBoardProgressSummary(int total, int completed) {
+    return '$total tasks · $completed done';
+  }
+
+  @override
+  String get taskBoardNoTasksYet => 'No tasks yet';
+
+  @override
   String get taskBoardTitle => 'Task Board';
 
   @override

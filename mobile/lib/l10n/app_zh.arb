@@ -9297,6 +9297,18 @@
             }
         }
     },
+    "taskBoardProgressSummary": "共{total}项·已完成{completed}",
+    "@taskBoardProgressSummary": {
+        "placeholders": {
+            "total": {
+                "type": "int"
+            },
+            "completed": {
+                "type": "int"
+            }
+        }
+    },
+    "taskBoardNoTasksYet": "暂无任务",
     "taskBoardTitle": "任务看板",
     "taskBoardExpand": "展开",
     "taskBoardCollapse": "收起",

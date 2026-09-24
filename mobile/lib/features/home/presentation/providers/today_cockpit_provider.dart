@@ -5,6 +5,7 @@ import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/spine_status_band_provider.dart';
+import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_goal_provider.dart';
 
 /// J-03 Today Cockpit —「现在最值得做什么」的唯一派生视图模型。
@@ -19,7 +20,8 @@ import 'package:sparkle/features/plan/presentation/providers/active_goal_provide
 /// | goalTitle        | 同上（selected goal title）                                    |
 /// | goalProgress     | 同上（healthScore 为 0~1）                                     |
 /// | planName         | homeGrowthStateProvider ← GET /growth/dashboard.active_plan_progress（兜底 GET /plans/active） |
-/// | tasksTotal/Done  | homeGrowthStateProvider ← GET /tasks/today                     |
+/// | goalTasksTotal/Done | taskListProvider（GET /tasks 任务账本）← ledgerProgressOf（F-9 口径：选中目标名下非 abandoned 任务的 completed/total，选中目标无账本任务时回落全账本）。进度 chip 一律用这里——`/tasks/today` 是随「今日相关」判定漂移的选择流，不能当进度真源（WT324 F-9） |
+/// | tasksTotal/Done  | homeGrowthStateProvider ← GET /tasks/today（仅用于 fresh/active 态判定与 why 文案，不再渲染为进度数字） |
 /// | taskToStart      | homeGrowthStateProvider.nextAction ← /tasks/today 派生（优先级→瓶颈关联→截止日） |
 /// | bottleneckTopic  | homeGrowthStateProvider.activeBottleneck ← /growth/dashboard.active_bottleneck（兜底 /plans/{id}/bottlenecks，仅 high severity） |
 /// | planHealth       | homeGrowthStateProvider.planHealth ← active_plan_progress.health_score |
@@ -61,6 +63,8 @@ class TodayCockpitVm {
     this.planName,
     this.tasksTotal = 0,
     this.tasksCompleted = 0,
+    this.goalTasksTotal = 0,
+    this.goalTasksCompleted = 0,
     this.bottleneckTopic,
     this.planHealthPercent,
     this.deadlineDays,
@@ -85,6 +89,12 @@ class TodayCockpitVm {
 
   final int tasksTotal;
   final int tasksCompleted;
+
+  /// 任务账本进度（F-9 口径）：选中目标名下非 abandoned 任务的
+  /// completed/total；选中目标在账本中无任务时回落为全账本进度。
+  /// 进度 chip（`x/y`）渲染这里，与任务板头部、多目标看板同行同数。
+  final int goalTasksTotal;
+  final int goalTasksCompleted;
 
   /// high-severity 瓶颈主题（stalled why 的第一信号）。
   final String? bottleneckTopic;
@@ -117,6 +127,9 @@ final todayCockpitProvider = Provider<TodayCockpitVm>((ref) {
   final bandAsync = ref.watch(spineStatusBandProvider);
   final dashboardState = ref.watch(dashboardProvider);
   final chatState = ref.watch(chatProvider);
+  // F-9：进度数字的唯一来源 = 任务账本（与任务板/多目标看板共用口径）。
+  final ledgerProgress = ref.watch(taskBoardLedgerSummaryProvider);
+  final ledgerProgressByPlan = ref.watch(ledgerProgressByPlanProvider);
 
   final isLoading =
       (goalsAsync.isLoading || growthAsync.isLoading) && !goalsAsync.hasValue;
@@ -132,6 +145,15 @@ final todayCockpitProvider = Provider<TodayCockpitVm>((ref) {
   final planName = _nonEmpty(growth.activePlan?.name) ??
       _nonEmpty(dashboardState.activePlanProgress?.name);
   final hasGoals = goals == null ? planName != null : goals.goals.isNotEmpty;
+
+  // 选中目标的账本进度：目标名下有任务用目标口径，否则回落全账本
+  // （目标 id 与任务 plan_id 同一 id 空间：goal 行/cockpit 的 goal 即 plan）。
+  final selectedPlanProgress =
+      selectedGoal == null ? null : ledgerProgressByPlan[selectedGoal.id];
+  final goalTasksProgress = (selectedPlanProgress != null &&
+          selectedPlanProgress.totalCount > 0)
+      ? selectedPlanProgress
+      : ledgerProgress;
 
   if (isLoading) {
     return TodayCockpitVm(
@@ -179,6 +201,7 @@ final todayCockpitProvider = Provider<TodayCockpitVm>((ref) {
       goalTitle: goalTitle,
       goalProgress: goalProgress,
       planName: planName,
+      goalTasksProgress: goalTasksProgress,
       bottleneckTopic: bottleneck?.topic,
       planHealthPercent: health > 0 ? (health * 100).round() : null,
       deadlineDays: deadlineDays,
@@ -204,6 +227,7 @@ final todayCockpitProvider = Provider<TodayCockpitVm>((ref) {
     goalTitle: goalTitle,
     goalProgress: goalProgress,
     planName: planName,
+    goalTasksProgress: goalTasksProgress,
     bottleneckTopic: null,
     planHealthPercent:
         health > 0 && health < 1 ? (health * 100).round() : null,
@@ -217,6 +241,8 @@ final todayCockpitProvider = Provider<TodayCockpitVm>((ref) {
   spineStatusBandProvider,
   dashboardProvider,
   chatProvider,
+  taskBoardLedgerSummaryProvider,
+  ledgerProgressByPlanProvider,
 ],);
 
 TodayCockpitVm _buildVm({
@@ -226,6 +252,7 @@ TodayCockpitVm _buildVm({
   required String? goalTitle,
   required double? goalProgress,
   required String? planName,
+  required TaskLedgerProgress goalTasksProgress,
   required String? bottleneckTopic,
   required int? planHealthPercent,
   required int? deadlineDays,
@@ -241,6 +268,8 @@ TodayCockpitVm _buildVm({
       planName: planName,
       tasksTotal: growth.tasksTotal,
       tasksCompleted: growth.tasksCompleted,
+      goalTasksTotal: goalTasksProgress.totalCount,
+      goalTasksCompleted: goalTasksProgress.completedCount,
       bottleneckTopic: _nonEmpty(bottleneckTopic),
       planHealthPercent: planHealthPercent,
       deadlineDays: deadlineDays,
