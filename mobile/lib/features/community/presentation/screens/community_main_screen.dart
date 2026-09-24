@@ -5,17 +5,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/presentation/widgets/feed_tab_content.dart';
 import 'package:sparkle/features/community/presentation/widgets/groups_tab.dart';
 import 'package:sparkle/features/community/presentation/widgets/partners_tab.dart';
 
-/// Community tab main screen — 3-tab flat architecture.
+/// Community tab main screen — 3-tab collaboration-first architecture
+/// (S-03 表面收敛：小队/冲刺/今日打卡/成果反馈是核心，公共 feed 降级)。
 ///
-/// Tab 0: 伙伴 Partners (default) — accountability hub, partnerships, friends
-/// Tab 1: 动态 Feed — social posts with filters
-/// Tab 2: 群组 Groups — study groups and recommendations
+/// Tab 0: 群组协作 Groups (default) — squads entry, today check-in,
+///        artifact feedback, my groups, discovery
+/// Tab 1: 伙伴 Partners — accountability hub, partnerships, friends
+/// Tab 2: 动态 Feed — public posts (demoted: last tab, not the core surface)
 class CommunityMainScreen extends ConsumerStatefulWidget {
   const CommunityMainScreen({super.key});
 
@@ -62,7 +65,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
       safeArea: false,
       // FAB-UNIFY：组件已自带最大尺寸语义（fabGeometry 钉死方形几何），
       // HYGIENE-DEBT 的急救 SizedBox 包装去重，调用点只声明视觉档。
-      floatingActionButton: _currentIndex == 1
+      floatingActionButton: _currentIndex == 2
           ? SparkleIconButton.fabGeometry(
               size: DS.touchTargetMinSize,
               icon: const Icon(Icons.edit),
@@ -98,6 +101,13 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
                       context.l10n.communitySubtitle,
                       style: TextStyle(fontSize: 14, color: DS.textSecondary),
                     ),
+                    // S-03 验收「seed/demo group 明确标演示」：demo 模式下
+                    // 全社群表面（群组/伙伴/动态）顶部挂常驻演示声明，
+                    // mock/seed 数据不冒充真实社群行为。
+                    if (DemoDataService.isDemoMode) ...[
+                      const SizedBox(height: DS.sm),
+                      _DemoModeBanner(),
+                    ],
                   ],
                 ),
               ),
@@ -127,15 +137,53 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
           body: TabBarView(
             controller: _tabController,
             children: const [
+              GroupsTab(),
               PartnersTab(),
               FeedTabContent(),
-              GroupsTab(),
             ],
           ),
         ),
       ),
     );
   }
+}
+
+/// 演示模式声明条：常驻、非 dismissible——demo/seed 数据必须一直可辨识，
+/// 不冒充真实社群（S-03 验收项）。令牌样式，无字面量色彩。
+class _DemoModeBanner extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.md,
+          vertical: DS.sm,
+        ),
+        decoration: BoxDecoration(
+          color: DS.warning.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(DS.radius12),
+          border: Border.all(color: DS.warning.withValues(alpha: 0.35)),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.science_outlined,
+              size: 16,
+              color: DS.warning,
+            ),
+            const SizedBox(width: DS.sm),
+            Expanded(
+              child: Text(
+                context.l10n.demoModeBanner,
+                style: TextStyle(
+                  fontSize: DS.fontSizeXs,
+                  fontWeight: DS.fontWeightSemibold,
+                  color: DS.textPrimary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 class _TabBarDelegate extends SliverPersistentHeaderDelegate {

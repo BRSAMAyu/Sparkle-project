@@ -25422,7 +25422,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gdMembers => 'Members';
 
   @override
-  String get gdFlamePower => 'Flame Power';
+  String get gdFlamePower => 'Activity Flame';
 
   @override
   String get gdTodayCheckin => 'Today\'s Check-in';
@@ -29586,7 +29586,62 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get communitySubtitle => 'Grow together with partners';
+  String get communitySubtitle => 'Sprint toward goals with your squad';
+
+  @override
+  String get communityHubCheckinTitle => 'Today\'s check-in';
+
+  @override
+  String get communityHubCheckinHint =>
+      'Check-ins feed the group flame — flame reflects group activity only';
+
+  @override
+  String communityHubCheckinGroupCount(int count) {
+    return '$count check-ins today';
+  }
+
+  @override
+  String get communityHubCheckinEmpty =>
+      'Join a squad or group to check in here every day';
+
+  @override
+  String get communityHubCheckinFailed =>
+      'Check-in failed, please try again later';
+
+  @override
+  String communityHubCheckinSuccess(int flame) {
+    return 'Checked in! +$flame flame fed to the group bonfire';
+  }
+
+  @override
+  String get communityHubArtifactTitle => 'Artifact feedback';
+
+  @override
+  String get communityHubArtifactHint =>
+      'Learning artifacts shared by partners — adopt to add them to your knowledge base';
+
+  @override
+  String get communityHubArtifactAdopted =>
+      'Adopted — added to your knowledge base';
+
+  @override
+  String get communityHubArtifactAdoptFailed =>
+      'Adopt failed, please try again later';
+
+  @override
+  String get communityHubArtifactEmpty =>
+      'No shared artifacts yet — share one in your squad first';
+
+  @override
+  String get demoModeBanner =>
+      'Demo mode: groups, partners and posts below are demo data';
+
+  @override
+  String get demoGroupSuffix => ' (demo)';
+
+  @override
+  String get gdFlameSemantics =>
+      'Group bonfire: the flame reflects group activity, fed by check-ins and collaboration';
 
   @override
   String get communityGroupDetails => 'Group Details';

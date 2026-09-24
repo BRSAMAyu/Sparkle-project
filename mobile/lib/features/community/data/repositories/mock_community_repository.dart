@@ -116,11 +116,14 @@ class MockCommunityRepository implements CommunityRepository {
     ];
 
     // Restore Groups
+    // S-03 验收「seed/demo group 明确标演示」：demo 模式下的 mock 群一律在
+    // 名称尾部带「（演示）」标记，列表/详情/聊天各表面都能看到，不冒充真实群。
     final l10n = I18nService.instance.l10n;
+    final demoSuffix = l10n.demoGroupSuffix;
     final zh = I18nService.instance.isChinese;
     final sprintGroup = GroupInfo(
       id: 'group_sprint_001',
-      name: l10n.communityEveningLanguageReview,
+      name: '${l10n.communityEveningLanguageReview}$demoSuffix',
       description: l10n.communityEveningLanguageReviewDesc,
       type: GroupType.sprint,
       focusTags: ['Language', 'English', 'Speaking'],
@@ -138,7 +141,7 @@ class MockCommunityRepository implements CommunityRepository {
 
     final studyGroup = GroupInfo(
       id: 'group_study_001',
-      name: l10n.communityStemStudyGroup,
+      name: '${l10n.communityStemStudyGroup}$demoSuffix',
       description: l10n.communityStemStudyGroupDesc,
       type: GroupType.squad,
       focusTags: ['Academic', 'Math', 'Science'],
@@ -155,7 +158,7 @@ class MockCommunityRepository implements CommunityRepository {
     );
     final aiGroup = GroupInfo(
       id: 'group_ai_001',
-      name: l10n.communityPortfolioGrowth,
+      name: '${l10n.communityPortfolioGrowth}$demoSuffix',
       description: l10n.communityPortfolioGrowthDesc,
       type: GroupType.squad,
       focusTags: ['Career', 'Portfolio', 'Creative'],
@@ -171,7 +174,7 @@ class MockCommunityRepository implements CommunityRepository {
     );
     final mathGroup = GroupInfo(
       id: 'group_math_001',
-      name: zh ? '周末恢复实验室' : 'Weekend Recovery Lab',
+      name: zh ? '周末恢复实验室$demoSuffix' : 'Weekend Recovery Lab$demoSuffix',
       description: zh
           ? '一起讨论睡眠、运动和如何避免周末散掉，帮自己把节律重新接上。'
           : 'Discuss sleep, exercise, and how to avoid weekend dispersion. Help yourself reconnect your rhythm.',

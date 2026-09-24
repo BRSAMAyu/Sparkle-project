@@ -81,15 +81,22 @@ void main() {
       expect(find.byType(TabBar), findsOneWidget);
       expect(find.byType(Tab), findsNWidgets(3));
 
-      // Switch to Feed tab (index 1) — FAB with edit icon appears
-      await tester.tap(find.byType(Tab).at(1));
+      // S-03 表面收敛后 tab 顺序：[Groups, Partners, Feed]——feed 降级末位；
+      // demo 模式下顶部演示声明条常驻。
+      expect(
+        find.text('演示模式：以下群组、伙伴与动态均为演示数据'),
+        findsOneWidget,
+      );
+
+      // Switch to Feed tab (index 2) — FAB with edit icon appears
+      await tester.tap(find.byType(Tab).at(2));
       await tester.pump(const Duration(milliseconds: 300));
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.byIcon(Icons.edit), findsOneWidget);
 
-      // Switch to Groups tab (index 2)
-      await tester.tap(find.byType(Tab).at(2));
+      // Switch to Groups tab (index 0, default collab surface)
+      await tester.tap(find.byType(Tab).at(0));
       await tester.pump(const Duration(milliseconds: 300));
       await tester.pump(const Duration(milliseconds: 500));
 

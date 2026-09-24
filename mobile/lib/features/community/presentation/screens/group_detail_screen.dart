@@ -276,19 +276,24 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
               ),
             ),
           const SizedBox(height: DS.md),
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.0, end: 1.0),
-            duration: const Duration(milliseconds: 800),
-            curve: Curves.easeOutBack,
-            builder: (context, value, child) => Transform.scale(
-              scale: value,
-              child: Opacity(opacity: value, child: child),
-            ),
-            child: Center(
-              child: BonfireWidget(
-                level: (group.totalFlamePower ~/ 1000 + 1).clamp(1, 5),
-                size: 100,
-                showCrackleToggle: true,
+          // S-03：Flame 只表达群活跃度（打卡/协作喂养），不作权益/付费
+          // 信号——语义层显式声明，视觉与读屏同一语义。
+          Semantics(
+            label: context.l10n.gdFlameSemantics,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: const Duration(milliseconds: 800),
+              curve: Curves.easeOutBack,
+              builder: (context, value, child) => Transform.scale(
+                scale: value,
+                child: Opacity(opacity: value, child: child),
+              ),
+              child: Center(
+                child: BonfireWidget(
+                  level: (group.totalFlamePower ~/ 1000 + 1).clamp(1, 5),
+                  size: 100,
+                  showCrackleToggle: true,
+                ),
               ),
             ),
           ),

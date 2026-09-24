@@ -10325,7 +10325,35 @@
     "communityForward": "Forward",
     "communityReport": "Report",
     "communityStreakDaysSuffix": "{count}d",
-    "communitySubtitle": "Grow together with partners",
+    "communitySubtitle": "Sprint toward goals with your squad",
+    "communityHubCheckinTitle": "Today's check-in",
+    "communityHubCheckinHint": "Check-ins feed the group flame — flame reflects group activity only",
+    "communityHubCheckinGroupCount": "{count} check-ins today",
+    "@communityHubCheckinGroupCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "communityHubCheckinEmpty": "Join a squad or group to check in here every day",
+    "communityHubCheckinFailed": "Check-in failed, please try again later",
+    "communityHubCheckinSuccess": "Checked in! +{flame} flame fed to the group bonfire",
+    "@communityHubCheckinSuccess": {
+        "placeholders": {
+            "flame": {
+                "type": "int"
+            }
+        }
+    },
+    "communityHubArtifactTitle": "Artifact feedback",
+    "communityHubArtifactHint": "Learning artifacts shared by partners — adopt to add them to your knowledge base",
+    "communityHubArtifactAdopted": "Adopted — added to your knowledge base",
+    "communityHubArtifactAdoptFailed": "Adopt failed, please try again later",
+    "communityHubArtifactEmpty": "No shared artifacts yet — share one in your squad first",
+    "demoModeBanner": "Demo mode: groups, partners and posts below are demo data",
+    "demoGroupSuffix": " (demo)",
+    "gdFlameSemantics": "Group bonfire: the flame reflects group activity, fed by check-ins and collaboration",
     "communityGroupDetails": "Group Details",
     "communityWelcomeToGroup": "Welcome to the group!",
     "communityLeaveGroupFailed": "Failed to leave group, please retry",
@@ -11739,7 +11767,7 @@
         }
     },
     "gdMembers": "Members",
-    "gdFlamePower": "Flame Power",
+    "gdFlamePower": "Activity Flame",
     "gdTodayCheckin": "Today's Check-in",
     "gdAbout": "About",
     "gdNoDescription": "No description",

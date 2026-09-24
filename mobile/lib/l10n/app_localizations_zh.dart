@@ -24364,7 +24364,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get gdMembers => '成员';
 
   @override
-  String get gdFlamePower => '火力值';
+  String get gdFlamePower => '群活跃火苗';
 
   @override
   String get gdTodayCheckin => '今日打卡';
@@ -28353,7 +28353,53 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get communitySubtitle => '和伙伴一起成长';
+  String get communitySubtitle => '围绕目标，和小队一起冲刺';
+
+  @override
+  String get communityHubCheckinTitle => '今日打卡';
+
+  @override
+  String get communityHubCheckinHint => '打卡喂养群火堆——火苗只代表群活跃度';
+
+  @override
+  String communityHubCheckinGroupCount(int count) {
+    return '今日 $count 次打卡';
+  }
+
+  @override
+  String get communityHubCheckinEmpty => '加入小队或群组后，在这里完成每日打卡';
+
+  @override
+  String get communityHubCheckinFailed => '打卡失败，请稍后重试';
+
+  @override
+  String communityHubCheckinSuccess(int flame) {
+    return '打卡成功，+$flame 火苗喂进群火堆';
+  }
+
+  @override
+  String get communityHubArtifactTitle => '成果反馈';
+
+  @override
+  String get communityHubArtifactHint => '伙伴共享的学习成果——采纳即进你的知识库';
+
+  @override
+  String get communityHubArtifactAdopted => '已采纳，资源已进入你的知识库';
+
+  @override
+  String get communityHubArtifactAdoptFailed => '采纳失败，请稍后重试';
+
+  @override
+  String get communityHubArtifactEmpty => '还没有伙伴共享成果，先去小队里分享一个吧';
+
+  @override
+  String get demoModeBanner => '演示模式：以下群组、伙伴与动态均为演示数据';
+
+  @override
+  String get demoGroupSuffix => '（演示）';
+
+  @override
+  String get gdFlameSemantics => '群火堆：火苗代表群活跃度，由打卡与协作喂养';
 
   @override
   String get communityGroupDetails => '社群详情';

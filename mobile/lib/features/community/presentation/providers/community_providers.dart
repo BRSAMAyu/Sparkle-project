@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/models/community_models.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
+import 'package:sparkle/features/community/data/repositories/community_share_repository.dart';
 
 /// N34/N36：feed 页数据 + 溯源——[fromCache] 表示本次（或其中一页）来自
 /// 本地快照回读，[asOf] 为数据时点戳，UI 据此挂「截至 X」stale 徽标。
@@ -218,4 +220,13 @@ final feedProvider =
   final repository = ref.watch(communityRepositoryProvider);
   final user = ref.watch(currentUserProvider);
   return FeedNotifier(repository, user?.id);
+});
+
+/// S-03 收敛：社群首页「成果反馈」段数据——伙伴共享 artifact（质量分排序）。
+/// 真源是既有 `/community/resources` 读接口与 [CommunityShareRepository]，
+/// 此前该表面无任何产品入口（SharedResourceCard 是孤儿组件），此处接回。
+final sharedResourcesProvider =
+    FutureProvider.autoDispose<List<SharedResourceInfo>>((ref) async {
+  final repository = ref.watch(communityShareRepositoryProvider);
+  return repository.fetchSharedResources(limit: 10);
 });

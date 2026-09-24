@@ -44398,7 +44398,7 @@ abstract class AppLocalizations {
   /// No description provided for @gdFlamePower.
   ///
   /// In zh, this message translates to:
-  /// **'火力值'**
+  /// **'群活跃火苗'**
   String get gdFlamePower;
 
   /// No description provided for @gdTodayCheckin.
@@ -51721,8 +51721,92 @@ abstract class AppLocalizations {
   /// No description provided for @communitySubtitle.
   ///
   /// In zh, this message translates to:
-  /// **'和伙伴一起成长'**
+  /// **'围绕目标，和小队一起冲刺'**
   String get communitySubtitle;
+
+  /// No description provided for @communityHubCheckinTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日打卡'**
+  String get communityHubCheckinTitle;
+
+  /// No description provided for @communityHubCheckinHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'打卡喂养群火堆——火苗只代表群活跃度'**
+  String get communityHubCheckinHint;
+
+  /// No description provided for @communityHubCheckinGroupCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日 {count} 次打卡'**
+  String communityHubCheckinGroupCount(int count);
+
+  /// No description provided for @communityHubCheckinEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'加入小队或群组后，在这里完成每日打卡'**
+  String get communityHubCheckinEmpty;
+
+  /// No description provided for @communityHubCheckinFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'打卡失败，请稍后重试'**
+  String get communityHubCheckinFailed;
+
+  /// No description provided for @communityHubCheckinSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'打卡成功，+{flame} 火苗喂进群火堆'**
+  String communityHubCheckinSuccess(int flame);
+
+  /// No description provided for @communityHubArtifactTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'成果反馈'**
+  String get communityHubArtifactTitle;
+
+  /// No description provided for @communityHubArtifactHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'伙伴共享的学习成果——采纳即进你的知识库'**
+  String get communityHubArtifactHint;
+
+  /// No description provided for @communityHubArtifactAdopted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已采纳，资源已进入你的知识库'**
+  String get communityHubArtifactAdopted;
+
+  /// No description provided for @communityHubArtifactAdoptFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'采纳失败，请稍后重试'**
+  String get communityHubArtifactAdoptFailed;
+
+  /// No description provided for @communityHubArtifactEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有伙伴共享成果，先去小队里分享一个吧'**
+  String get communityHubArtifactEmpty;
+
+  /// No description provided for @demoModeBanner.
+  ///
+  /// In zh, this message translates to:
+  /// **'演示模式：以下群组、伙伴与动态均为演示数据'**
+  String get demoModeBanner;
+
+  /// No description provided for @demoGroupSuffix.
+  ///
+  /// In zh, this message translates to:
+  /// **'（演示）'**
+  String get demoGroupSuffix;
+
+  /// No description provided for @gdFlameSemantics.
+  ///
+  /// In zh, this message translates to:
+  /// **'群火堆：火苗代表群活跃度，由打卡与协作喂养'**
+  String get gdFlameSemantics;
 
   /// No description provided for @communityGroupDetails.
   ///

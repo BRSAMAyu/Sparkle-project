@@ -10938,7 +10938,7 @@
         }
     },
     "gdMembers": "成员",
-    "gdFlamePower": "火力值",
+    "gdFlamePower": "群活跃火苗",
     "gdTodayCheckin": "今日打卡",
     "gdAbout": "关于",
     "gdNoDescription": "暂无描述",
@@ -12614,7 +12614,35 @@
     "communityForward": "转发",
     "communityReport": "举报",
     "communityStreakDaysSuffix": "{count} 天",
-    "communitySubtitle": "和伙伴一起成长",
+    "communitySubtitle": "围绕目标，和小队一起冲刺",
+    "communityHubCheckinTitle": "今日打卡",
+    "communityHubCheckinHint": "打卡喂养群火堆——火苗只代表群活跃度",
+    "communityHubCheckinGroupCount": "今日 {count} 次打卡",
+    "@communityHubCheckinGroupCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "communityHubCheckinEmpty": "加入小队或群组后，在这里完成每日打卡",
+    "communityHubCheckinFailed": "打卡失败，请稍后重试",
+    "communityHubCheckinSuccess": "打卡成功，+{flame} 火苗喂进群火堆",
+    "@communityHubCheckinSuccess": {
+        "placeholders": {
+            "flame": {
+                "type": "int"
+            }
+        }
+    },
+    "communityHubArtifactTitle": "成果反馈",
+    "communityHubArtifactHint": "伙伴共享的学习成果——采纳即进你的知识库",
+    "communityHubArtifactAdopted": "已采纳，资源已进入你的知识库",
+    "communityHubArtifactAdoptFailed": "采纳失败，请稍后重试",
+    "communityHubArtifactEmpty": "还没有伙伴共享成果，先去小队里分享一个吧",
+    "demoModeBanner": "演示模式：以下群组、伙伴与动态均为演示数据",
+    "demoGroupSuffix": "（演示）",
+    "gdFlameSemantics": "群火堆：火苗代表群活跃度，由打卡与协作喂养",
     "communityGroupDetails": "社群详情",
     "communityWelcomeToGroup": "欢迎加入社群！",
     "communityLeaveGroupFailed": "退出群组失败，请重试",

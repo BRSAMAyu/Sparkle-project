@@ -86,7 +86,7 @@ void main() {
 
       expect(find.byType(CommunityMainScreen), findsOneWidget);
       expect(find.byType(TabBar), findsOneWidget);
-      // Community now has 3 tabs: Partners, Feed, Groups
+      // S-03 收敛后仍 3 tabs：Groups（默认协作面）、Partners、Feed（降级末位）
       expect(find.byType(Tab), findsNWidgets(3));
       expect(tester.takeException(), isNull);
     });
