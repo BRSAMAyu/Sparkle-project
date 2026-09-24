@@ -7,6 +7,7 @@ library;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/task_board_card.dart';
@@ -31,6 +32,12 @@ const int _scrollFrameThresholdUs = int.fromEnvironment(
 const int _chatListBuildThresholdMs = int.fromEnvironment(
   'CHAT_LIST_BUILD_MS',
   defaultValue: 260,
+);
+// wt296：动画帧阈值与其他阈值统一走环境开关（CI 慢机可 -DPLAN_REVIEW_FRAME_US
+// 放宽；默认值维持 60fps 的 16.67ms 不变，不放宽门）。
+const int _planReviewFrameTimeUs = int.fromEnvironment(
+  'PLAN_REVIEW_FRAME_US',
+  defaultValue: 16667,
 );
 
 void main() {
@@ -217,7 +224,7 @@ void main() {
           frameTimes.reduce((a, b) => a + b) / frameTimes.length;
 
       print('Average frame time: ${avgFrameTime / 1000}ms');
-      expect(avgFrameTime, lessThan(16667)); // < 16.67ms per frame
+      expect(avgFrameTime, lessThan(_planReviewFrameTimeUs));
     });
   });
 
@@ -325,6 +332,11 @@ int _getCurrentMemoryUsage() {
 Widget _wrapApp(Widget child) => MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      // wt296：PlanReviewCard 构建即读 context.sparkle，harness 缺
+      // SparkleThemeExtension 直接断言失败（CI 68 败同族修法）。
+      theme: ThemeData(brightness: Brightness.light).copyWith(
+        extensions: [SparkleThemeExtension.light()],
+      ),
       home: child,
     );
 

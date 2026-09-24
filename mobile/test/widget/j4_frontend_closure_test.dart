@@ -5,12 +5,15 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/achievement/data/repositories/achievement_repository.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/achievement/presentation/screens/achievement_list_screen.dart';
+import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
 import 'package:sparkle/features/seed_library/data/repositories/seed_library_repository.dart';
 import 'package:sparkle/features/seed_library/presentation/screens/seed_library_detail_screen.dart';
@@ -98,7 +101,15 @@ void main() {
 
       expect(find.text('验收知识库'), findsOneWidget);
       expect(find.text('用于验证种子库详情与正文显示'), findsOneWidget);
-      expect(find.text('验收测试原则'), findsOneWidget);
+      // wt296：条目列表懒构建且在折叠线下，滚动至可见后再断言。
+      final itemTitle = find.text('验收测试原则');
+      await tester.scrollUntilVisible(
+        itemTitle,
+        240,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(itemTitle, findsOneWidget);
       expect(find.textContaining('先跑主链，再补证据'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
@@ -223,10 +234,20 @@ Future<void> _pumpApp(
     ],
   );
   addTearDown(router.dispose);
+  // wt296：种子库详情链路读 sharedPreferencesProvider（会话恢复等），
+  // 不 override 会一路 UnimplementedError 重试，条目内容渲染不出来。
+  SharedPreferences.setMockInitialValues({});
+  final prefs = await SharedPreferences.getInstance();
   await tester.pumpWidget(
     ProviderScope(
-      overrides: overrides,
+      overrides: [
+        ...overrides,
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
       child: MaterialApp.router(
+        // wt296：harness 缺 theme → SparkleThemeExtension 未注册，owner 组件
+        // （SparkleRefreshIndicator 等）构建即断言失败（CI 68 败同族修法）。
+        theme: AppThemes.lightTheme,
         locale: const Locale('zh'),
         localizationsDelegates: const [
           AppLocalizations.delegate,

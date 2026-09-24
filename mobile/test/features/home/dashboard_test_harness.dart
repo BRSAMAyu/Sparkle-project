@@ -27,6 +27,7 @@ import 'package:sparkle/features/home/data/repositories/dashboard_repository.dar
 import 'package:sparkle/features/home/data/repositories/notification_repository.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_card_config_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/home/presentation/providers/dashboard_slot_config_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart';
@@ -302,6 +303,21 @@ class _StaticDashboardCardConfigNotifier extends DashboardCardConfigNotifier {
         DashboardCardIds.seedLibrary,
       ],
       layoutMode: DashboardCardLayoutMode.grid,
+    );
+  }
+}
+
+/// wt296：slot 折叠系统（CollapsibleSlot）上线后，dashboardUpdates 等槽位
+/// 默认收起为 ~64px 头部，折叠态下 section 内容（含 `dashboard-updates-section`
+/// 等 key）不进树。结构类测试需要「全展开」基线（与折叠系统上线前一致），
+/// 经 extraOverrides 注入本 override。
+Override dashboardSlotConfigAllExpandedOverride() =>
+    dashboardSlotConfigProvider.overrideWith(_StaticSlotConfigAllExpanded.new);
+
+class _StaticSlotConfigAllExpanded extends DashboardSlotConfigNotifier {
+  _StaticSlotConfigAllExpanded(super.ref) {
+    state = DashboardSlotConfigState.defaults().copyWith(
+      collapsedSlotIds: const [],
     );
   }
 }

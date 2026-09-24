@@ -5,8 +5,10 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
+import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/community/data/models/accountability_model.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
@@ -264,6 +266,9 @@ Future<void> _pumpHarness(
         communityShareRepositoryProvider.overrideWithValue(repo),
       ],
       child: MaterialApp.router(
+        // wt296：harness 维持默认主题——AppThemes.lightTheme 字号更大会使
+        // 分享面板在测试视口内溢出（RenderFlex overflow），此处只补缺失的
+        // localizations delegates。
         routerConfig: router,
         localizationsDelegates: const [
           ...AppLocalizations.localizationsDelegates,
@@ -286,6 +291,10 @@ Future<void> _pumpShareSheetHarness(
   required _FakeCommunityRepository communityRepository,
   String resourceType = 'plan',
 }) async {
+  // wt296：分享/采纳链路读 sharedPreferencesProvider（GuestService 等），
+  // 不 override 会一路 UnimplementedError 重试，采纳按钮渲染不出来。
+  SharedPreferences.setMockInitialValues({});
+  final prefs = await SharedPreferences.getInstance();
   final router = GoRouter(
     initialLocation: '/',
     routes: [
@@ -309,11 +318,15 @@ Future<void> _pumpShareSheetHarness(
       overrides: [
         communityShareRepositoryProvider.overrideWithValue(shareRepository),
         communityRepositoryProvider.overrideWithValue(communityRepository),
+        sharedPreferencesProvider.overrideWithValue(prefs),
         accountabilityOverviewProvider.overrideWith(
           (ref) async => AccountabilityOverviewInfo(slotType: 'core'),
         ),
       ],
       child: MaterialApp.router(
+        // wt296：harness 维持默认主题——AppThemes.lightTheme 字号更大会使
+        // 分享面板在测试视口内溢出（RenderFlex overflow），此处只补缺失的
+        // localizations delegates。
         routerConfig: router,
         localizationsDelegates: const [
           ...AppLocalizations.localizationsDelegates,

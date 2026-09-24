@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
@@ -34,20 +35,26 @@ void main() {
 
     // 2. Act: Pump the ActionCard with Sparkle theme extension
     await tester.pumpWidget(
-      testMaterialApp(theme: ThemeData.light().copyWith(
-          extensions: [SparkleThemeExtension.light()],
-        ),
-        home: Scaffold(
-          body: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: ActionCard(
-                action: taskListPayload,
-                onConfirm: () {},
+      // wt296：ActionCard 内 TaskCard 是 Consumer，缺 ProviderScope 直接
+      // "No ProviderScope found"（与 chat_action_card_navigation 同款修复）。
+      ProviderScope(
+        child: testMaterialApp(
+          theme: ThemeData.light().copyWith(
+            extensions: [SparkleThemeExtension.light()],
+          ),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ActionCard(
+                  action: taskListPayload,
+                  onConfirm: () {},
+                ),
               ),
             ),
           ),
-        ),),
+        ),
+      ),
     );
     // Use pump instead of pumpAndSettle — card has repeating shimmer animation
     await tester.pump();

@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
+import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/data/services/chat_cache_service.dart';
 import 'package:sparkle/features/chat/presentation/screens/group_chat_screen.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
@@ -200,6 +201,12 @@ class _FakeAuthRepository implements AuthRepository {
   Future<String?> getAccessToken() async => null;
 
   @override
+  Future<String?> getToken() => getAccessToken();
+
+  @override
+  Future<bool> isLoggedIn() async => getAccessToken() != null;
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
@@ -250,11 +257,16 @@ Future<void> _pumpScreen(
   WidgetTester tester, {
   required _FakeCommunityRepository repo,
 }) async {
+  // wt296：GroupChatScreen.initState 读 chatDraftStoreProvider（草稿恢复），
+  // 底层依赖 sharedPreferencesProvider，不 override 直接 UnimplementedError。
+  SharedPreferences.setMockInitialValues({});
+  final prefs = await SharedPreferences.getInstance();
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         communityRepositoryProvider.overrideWithValue(repo),
         authRepositoryProvider.overrideWithValue(_FakeAuthRepository()),
+        sharedPreferencesProvider.overrideWithValue(prefs),
       ],
       child: testMaterialApp(
         theme: AppThemes.lightTheme,

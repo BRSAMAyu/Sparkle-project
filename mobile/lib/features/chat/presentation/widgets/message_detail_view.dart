@@ -114,13 +114,10 @@ class _MessageDetailViewState extends State<MessageDetailView> {
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.surface,
                         borderRadius: BorderRadius.circular(DS.radius20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.15),
-                            blurRadius: 30,
-                            offset: const Offset(0, 15),
-                          ),
-                        ],
+                        boxShadow:
+                            // wt296：黑色硬编码阴影被 design-language 守卫拦下
+                            // （chat 扫描），改用 DS 阴影令牌。
+                            DS.shadowLg,
                         border: Border.all(
                           color: DS.borderSubtle.withValues(alpha: 0.5),
                         ),

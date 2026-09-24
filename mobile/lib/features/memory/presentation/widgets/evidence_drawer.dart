@@ -295,7 +295,7 @@ class _EvidenceDrawerSheetState extends State<_EvidenceDrawerSheet> {
                       style: DS.bodySmall.copyWith(color: DS.semanticWarning),
                     ),
                   )
-                : filtered.isEmpty
+                : filtered.isEmpty && widget.refs.isEmpty
                     ? Padding(
                         padding: const EdgeInsets.all(DS.lg),
                         child: Text(

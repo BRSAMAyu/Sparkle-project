@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
@@ -89,14 +90,18 @@ void main() {
     addTearDown(router.dispose);
 
     await tester.pumpWidget(
-      MaterialApp.router(
-        routerConfig: router,
-        theme: ThemeData.light().copyWith(
-          extensions: [SparkleThemeExtension.light()],
+      // wt296：ActionCard 内 TaskCard 是 Consumer，harness 缺 ProviderScope
+      // 直接 "No ProviderScope found"（CI 68 败同族修法）。
+      ProviderScope(
+        child: MaterialApp.router(
+          routerConfig: router,
+          theme: ThemeData.light().copyWith(
+            extensions: [SparkleThemeExtension.light()],
+          ),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
         ),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('zh'),
       ),
     );
 

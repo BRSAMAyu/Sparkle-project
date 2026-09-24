@@ -5,6 +5,7 @@ import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/insights/data/models/directive_audit_entry.dart';
 import 'package:sparkle/features/insights/presentation/screens/directive_audit_screen.dart';
 import 'package:sparkle/features/task/presentation/widgets/source_lifecycle_badge.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/l10n/app_localizations_en.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -22,6 +23,10 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppThemes.lightTheme,
+        // wt296：harness 缺 localizationsDelegates → context.l10n 空指针
+        // （CI 68 败同族修法）。断言为英文文案，保持默认 en locale。
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: SourceLifecycleBadge(
             source: const SourceAssetBinding(
@@ -68,6 +73,8 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppThemes.lightTheme,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: SingleChildScrollView(
             child: DirectiveAuditTimeline(entries: [entry]),

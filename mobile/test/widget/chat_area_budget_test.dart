@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_daily_startup_message.dart';
@@ -182,8 +183,11 @@ void main() {
   setUp(setUpI18nForTesting);
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  SharedPreferences? _prefs;
+
   setUpAll(() async {
     SharedPreferences.setMockInitialValues({});
+    _prefs = await SharedPreferences.getInstance();
     await ViewStorageService.ensureInitialized();
   });
 
@@ -236,6 +240,9 @@ void main() {
             _QuietDailyStartupRepository(),
           ),
           activePlanProvider.overrideWith(ActivePlanNotifier.new),
+          // wt296：ChatScreen 草稿恢复读 sharedPreferencesProvider，
+          // 不 override 直接 UnimplementedError（CI 68 败同族修法）。
+          sharedPreferencesProvider.overrideWithValue(_prefs!),
         ],
         child: testMaterialApp(home: const ChatScreen()),
       ),

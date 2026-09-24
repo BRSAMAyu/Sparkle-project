@@ -43,7 +43,9 @@ void main() {
     );
     addTearDown(router.dispose);
 
-    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    // wt296：裸 MaterialApp.router 缺 localizationsDelegates + SparkleThemeExtension，
+    // EvidenceCard 构建 context.l10n 空指针（CI 68 败同族修法），改用 testMaterialApp。
+    await tester.pumpWidget(testMaterialApp(routerConfig: router));
 
     // Tap to expand TIER2 where the route button is
     await tester.tap(find.byType(InkWell).first);
@@ -92,7 +94,9 @@ void main() {
     );
     addTearDown(router.dispose);
 
-    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    // wt296：裸 MaterialApp.router 缺 localizationsDelegates + SparkleThemeExtension，
+    // EvidenceCard 构建 context.l10n 空指针（CI 68 败同族修法），改用 testMaterialApp。
+    await tester.pumpWidget(testMaterialApp(routerConfig: router));
 
     // Tap to expand TIER2 where the route button is
     await tester.tap(find.byType(InkWell).first);
@@ -145,7 +149,9 @@ void main() {
     );
     addTearDown(router.dispose);
 
-    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    // wt296：裸 MaterialApp.router 缺 localizationsDelegates + SparkleThemeExtension，
+    // EvidenceCard 构建 context.l10n 空指针（CI 68 败同族修法），改用 testMaterialApp。
+    await tester.pumpWidget(testMaterialApp(routerConfig: router));
 
     // Tap to expand TIER2 where the route button is
     await tester.tap(find.byType(InkWell).first);
@@ -195,7 +201,9 @@ void main() {
     );
     addTearDown(router.dispose);
 
-    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    // wt296：裸 MaterialApp.router 缺 localizationsDelegates + SparkleThemeExtension，
+    // EvidenceCard 构建 context.l10n 空指针（CI 68 败同族修法），改用 testMaterialApp。
+    await tester.pumpWidget(testMaterialApp(routerConfig: router));
 
     // Tap to expand TIER2 where the route button is
     await tester.tap(find.byType(InkWell).first);
@@ -274,7 +282,9 @@ void main() {
     );
     addTearDown(router.dispose);
 
-    await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+    // wt296：裸 MaterialApp.router 缺 localizationsDelegates + SparkleThemeExtension，
+    // EvidenceCard 构建 context.l10n 空指针（CI 68 败同族修法），改用 testMaterialApp。
+    await tester.pumpWidget(testMaterialApp(routerConfig: router));
 
     // Tap to expand TIER2 where the route button is
     await tester.tap(find.byType(InkWell).first);

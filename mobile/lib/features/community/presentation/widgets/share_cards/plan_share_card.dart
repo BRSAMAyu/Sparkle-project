@@ -94,6 +94,26 @@ class PlanShareCard extends StatelessWidget {
                           color: DS.textTertiary,
                         ),
                       ),
+                    // wt296：compact 卡此前不渲染采纳按钮，而 group bubble 的
+                    // wrapper tap 恒被「查看详情」占用，采纳入口不可达（真回归）。
+                    // 与 full card 对齐：onAdopt 非空即提供采纳按钮。
+                    if (onAdopt != null)
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: DS.sm,
+                          ),
+                          minimumSize: const Size(0, 28),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        icon: const Icon(Icons.add_task,
+                            size: DS.iconSizeSm,),
+                        label: Text(
+                          context.l10n.communityShareAdoptPlan,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        onPressed: onAdopt,
+                      ),
                   ],
                 ),
               ),

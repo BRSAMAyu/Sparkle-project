@@ -79,7 +79,7 @@ class _TestApiClient implements ApiClient {
 
 void main() {
   group('MemoryApiService', () {
-    test('falls back to default settings when memory settings request is unauthorized', () async {
+    test('propagates unauthorized read failures instead of fabricating defaults (R2-01)', () async {
       final apiClient = _TestApiClient()
         ..getHandler = (path, queryParameters) async {
           throw DioException(
@@ -94,18 +94,13 @@ void main() {
         };
 
       final service = MemoryApiService(apiClient);
-      final settings = await service.getMemorySettings();
 
-      expect(settings.enabled, isTrue);
-      expect(settings.allowPreferences, isTrue);
-      expect(settings.allowGoals, isTrue);
-      expect(settings.allowEpisodic, isTrue);
-      expect(settings.captureLevel, 'medium');
-      expect(settings.blockedPrefKeys, isEmpty);
-      expect(settings.blockedSources, isEmpty);
+      // R2-01（wt296 对齐）：memory_api_service 是薄 API 层——读失败（含 401）
+      // 原样传播给调用者，由调用方决定是否以默认值兜底；服务层绝不伪造用户设置。
+      await expectLater(service.getMemorySettings(), throwsA(isA<DioException>()));
     });
 
-    test('returns submitted settings when update is unauthorized', () async {
+    test('propagates unauthorized save failures instead of echoing the payload (R2-01)', () async {
       final apiClient = _TestApiClient()
         ..putHandler = (path, data, queryParameters) async {
           throw DioException(
@@ -133,10 +128,9 @@ void main() {
         ),
       );
 
-      final resolved = await submitted;
-      expect(resolved.enabled, isFalse);
-      expect(resolved.captureLevel, 'high');
-      expect(resolved.blockedPrefKeys, contains('response_style'));
+      // R2-01（wt296 对齐）：保存失败原样传播——回显载荷等于把未落库的设置
+      // 假装成保存成功，违反诚实性红线。
+      await expectLater(submitted, throwsA(isA<DioException>()));
     });
   });
 }

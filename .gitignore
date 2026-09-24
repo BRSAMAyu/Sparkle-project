@@ -9,6 +9,10 @@ __pycache__/
 
 # C extensions
 *.so
+# 例外：Isar 测试原生库（vendored fork 二进制，test/shared/isar_test_helper.dart 在
+# Linux 上加载 mobile/third_party_plugins/isar_flutter_libs/linux/libisar.so；
+# macos/libisar.dylib 早已入库，linux 侧此前被全局 *.so 误伤导致 CI 缺文件）。
+!mobile/third_party_plugins/isar_flutter_libs/linux/libisar.so
 
 # Distribution / packaging
 .Python

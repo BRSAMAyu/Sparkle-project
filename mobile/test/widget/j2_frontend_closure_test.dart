@@ -88,6 +88,10 @@ void main() {
           child: MaterialApp(
             theme: AppThemes.lightTheme,
             darkTheme: AppThemes.darkTheme,
+            // wt296：ToolShell 构建读 context.l10n，harness 缺 delegates
+            // 直接空指针（CI 68 败同族修法）。
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: Scaffold(
               body: SizedBox.expand(
                 child: ToolShell(

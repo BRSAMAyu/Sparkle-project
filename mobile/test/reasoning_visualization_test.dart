@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
@@ -39,6 +40,9 @@ class TestApp extends StatelessWidget {
         theme: ThemeData(
           primarySwatch: Colors.blue,
           brightness: Brightness.dark,
+          // wt296：AgentReasoningBubble 构建即读 context.sparkle，harness 缺
+          // SparkleThemeExtension 直接断言失败（CI 68 败同族修法）。
+          extensions: [SparkleThemeExtension.dark()],
         ),
         home: const ReasoningVisualizationDemo(),
       );

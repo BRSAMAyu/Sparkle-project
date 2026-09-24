@@ -60,7 +60,9 @@ class NodeDetailSheet extends ConsumerStatefulWidget {
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
-        barrierColor: Colors.black.withValues(alpha: 0.1),
+        // wt296：黑色硬编码 barrier 被 design-language 守卫拦下（galaxy 扫描），
+        // 改用 DS overlay 令牌（chat_bubble 同款形制）。
+        barrierColor: DS.overlay30.withValues(alpha: 0.1),
         builder: (context) => NodeDetailSheet(
           nodeId: nodeId,
           nodeLabel: nodeLabel,

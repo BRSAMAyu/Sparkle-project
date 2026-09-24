@@ -341,9 +341,17 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(LearningInsightsOverviewScreen), findsOneWidget);
-      expect(find.text('已聚焦：学习仿真'), findsOneWidget);
+      // wt296：屏侧聚焦徽章已重构为 `_OverviewHero` 的 "Simulation · 动线标题"
+      // 形制（旧 l10n insFocusedSim 已成死键），断言对齐当前 UI 契约。
+      expect(find.textContaining('Simulation · '), findsOneWidget);
 
-      await tester.tap(find.text('从推荐开始'));
+      // wt296：仿真模块按钮在有推荐种子时的文案是 simulationStartSimButton
+      // （'开始模拟'，旧 insStartFromRecommended '从推荐开始' 已成死键）；
+      // 按钮在首屏折叠线下，先 ensureVisible 再 tap。
+      final simButton = find.text('开始模拟');
+      await tester.ensureVisible(simButton);
+      await tester.pumpAndSettle();
+      await tester.tap(simButton);
       await tester.pumpAndSettle();
       expect(find.text('simulation-screen'), findsOneWidget);
 
