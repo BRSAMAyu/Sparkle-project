@@ -81,7 +81,19 @@ func (h *STTHandler) HandleWebSocket(c *gin.Context) {
 		zap.String("connection_header", c.GetHeader("Connection")))
 
 	// 1. Upgrade HTTP to WebSocket
-	clientConn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
+	// WSQ-3 (WS-TICKET-DESIGN §WSQ-3): echo the client's chosen subprotocol —
+	// some client libraries fail the handshake unless the 101 response selects
+	// one of the offered values in its Sec-WebSocket-Protocol header. Same
+	// single-segment convention as chat/files (wt286: "ticket=<uuid>" /
+	// "ticket:<uuid>" parse, "ticket,<uuid>" never does), so the value echoed
+	// here is exactly the value WsAuth extracted the ticket from. h.upgrader
+	// is shared across concurrent upgrades — copy it before mutating
+	// Subprotocols; assigning through the struct field would be a data race.
+	upgrader := h.upgrader
+	if selected := selectWebSocketSubprotocol(c.Request); selected != "" {
+		upgrader.Subprotocols = []string{selected}
+	}
+	clientConn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		h.logger.Error("Failed to upgrade WebSocket connection",
 			zap.Error(err),
