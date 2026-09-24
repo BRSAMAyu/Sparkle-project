@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from collections.abc import Iterable
 from datetime import UTC, date, datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -90,8 +90,13 @@ def _truncate_summary(value: str) -> str:
 
 
 class MemoryService:
+    # wt297: 双契约——构造方可传 None（仅限不触库的方法，如 aurora correction_feedback 的
+    # record_calibration_receipt 路径）；但类内所有触库方法均要求会话非空。此处按使用侧
+    # 契约声明，构造点 divergence 以精确豁免注明。
+    db: AsyncSession
+
     def __init__(self, db: AsyncSession | None, redis_client=None):
-        self.db = db
+        self.db = db  # type: ignore[assignment]  # 构造契约 Optional（见类级注释），触库方法运行时要求非空
         self.redis = redis_client
 
     @staticmethod
@@ -941,7 +946,8 @@ class MemoryService:
                 layer="error_degraded",
                 reason="ERR.entrypoint",
             )
-            apply_decision_to_record = None
+            # wt297: 降级路径 verdict 恒为 ignore，下方必先 return None，该占位永不被调用。
+            apply_decision_to_record = None  # type: ignore[assignment]
         MEMORY_STORAGE_GATE_TOTAL.labels(verdict=gate_decision.verdict, layer=gate_decision.layer).inc()
         if gate_decision.verdict in {"ignore", "current_state"}:
             logger.info(
@@ -1052,7 +1058,8 @@ class MemoryService:
         confidence: float | None,
         tags: list[str] | None,
         normalized_refs: list[dict[str, Any]],
-        evidence_snapshot: dict[str, Any] | None,
+        # wt297: build_snapshot 产物为 list[dict]，JSONB 列与消费端均兼容 list，按真实契约放宽。
+        evidence_snapshot: dict[str, Any] | list[dict[str, Any]] | None,
         embedding: list[float] | None,
         evidence_score: float,
         evidence_token: str | None,
@@ -1067,7 +1074,7 @@ class MemoryService:
     ) -> EpisodicMemory:
         # naive-UTC is the DB canonical form; aware inputs (e.g. LLM-extracted
         # ISO timestamps) make asyncpg raise DataError against TIMESTAMP columns
-        occurred_at = ensure_naive_utc(occurred_at)
+        occurred_at = cast("datetime", ensure_naive_utc(occurred_at))  # wt297: 入参非 Optional，返回亦非 None
         due_at = ensure_naive_utc(due_at)
         resolved_at = ensure_naive_utc(resolved_at)
         return EpisodicMemory(

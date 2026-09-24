@@ -99,7 +99,7 @@ class TokenTracker:
             "timestamp": timestamp,
         }
 
-        await self.redis.rpush("queue:billing", json.dumps(usage_record))
+        await self.redis.rpush("queue:billing", json.dumps(usage_record))  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
 
         # 2. 更新用户当日累计
         today = datetime.now().strftime("%Y-%m-%d")
@@ -149,44 +149,44 @@ class TokenTracker:
             )
 
             aggregate_key = f"ai:daily_timing:{today}:{mode}:{chat_mode or 'standard'}"
-            await self.redis.hincrby(aggregate_key, "requests", 1)
+            await self.redis.hincrby(aggregate_key, "requests", 1)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
             if total_duration_ms > 0:
-                await self.redis.hincrby(aggregate_key, "total_duration_ms_sum", total_duration_ms)
+                await self.redis.hincrby(aggregate_key, "total_duration_ms_sum", total_duration_ms)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
             if first_token_ms > 0:
-                await self.redis.hincrby(aggregate_key, "first_token_ms_sum", first_token_ms)
+                await self.redis.hincrby(aggregate_key, "first_token_ms_sum", first_token_ms)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
             if stream_duration_ms > 0:
-                await self.redis.hincrby(aggregate_key, "stream_duration_ms_sum", stream_duration_ms)
+                await self.redis.hincrby(aggregate_key, "stream_duration_ms_sum", stream_duration_ms)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
             await self.redis.expire(aggregate_key, 86400 * 14)
 
         ops_key = f"user:ai_ops:{user_id}:{today}:{mode}:{chat_mode or 'standard'}"
-        await self.redis.hincrby(ops_key, "requests_total", 1)
-        await self.redis.hincrby(ops_key, "requests_success", 1 if success else 0)
-        await self.redis.hincrby(ops_key, "requests_failed", 0 if success else 1)
+        await self.redis.hincrby(ops_key, "requests_total", 1)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
+        await self.redis.hincrby(ops_key, "requests_success", 1 if success else 0)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
+        await self.redis.hincrby(ops_key, "requests_failed", 0 if success else 1)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
         if fallback_used:
-            await self.redis.hincrby(ops_key, "fallback_count", 1)
-        await self.redis.hincrby(ops_key, "total_tokens_sum", total_tokens)
+            await self.redis.hincrby(ops_key, "fallback_count", 1)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
+        await self.redis.hincrby(ops_key, "total_tokens_sum", total_tokens)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
         if cost is not None:
-            await self.redis.hincrby(ops_key, "total_cost_micro_usd", int(round(float(cost) * 1_000_000)))
+            await self.redis.hincrby(ops_key, "total_cost_micro_usd", int(round(float(cost) * 1_000_000)))  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
         if timing_stats:
             if total_duration_ms > 0:
-                await self.redis.hincrby(ops_key, "total_duration_ms_sum", total_duration_ms)
+                await self.redis.hincrby(ops_key, "total_duration_ms_sum", total_duration_ms)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
             if first_token_ms > 0:
-                await self.redis.hincrby(ops_key, "first_token_ms_sum", first_token_ms)
+                await self.redis.hincrby(ops_key, "first_token_ms_sum", first_token_ms)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
             if stream_duration_ms > 0:
-                await self.redis.hincrby(ops_key, "stream_duration_ms_sum", stream_duration_ms)
+                await self.redis.hincrby(ops_key, "stream_duration_ms_sum", stream_duration_ms)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
         outcome_stats = outcome_stats or {}
         task_count = self._safe_int(outcome_stats.get("task_count"))
         plan_count = self._safe_int(outcome_stats.get("plan_count"))
         execution_count = self._safe_int(outcome_stats.get("execution_count"))
         if task_count > 0:
-            await self.redis.hincrby(ops_key, "task_count_sum", task_count)
-            await self.redis.hincrby(ops_key, "task_request_count", 1)
+            await self.redis.hincrby(ops_key, "task_count_sum", task_count)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
+            await self.redis.hincrby(ops_key, "task_request_count", 1)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
         if plan_count > 0:
-            await self.redis.hincrby(ops_key, "plan_count_sum", plan_count)
-            await self.redis.hincrby(ops_key, "plan_request_count", 1)
+            await self.redis.hincrby(ops_key, "plan_count_sum", plan_count)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
+            await self.redis.hincrby(ops_key, "plan_request_count", 1)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
         if execution_count > 0:
-            await self.redis.hincrby(ops_key, "execution_count_sum", execution_count)
-            await self.redis.hincrby(ops_key, "execution_request_count", 1)
+            await self.redis.hincrby(ops_key, "execution_count_sum", execution_count)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
+            await self.redis.hincrby(ops_key, "execution_request_count", 1)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
         for metric_name in ("prompt_utilization", "inference_utilization"):
             metric_payload = (utilization_metrics or {}).get(metric_name)
             if isinstance(metric_payload, dict):
@@ -216,7 +216,7 @@ class TokenTracker:
             "utilization_metrics": utilization_metrics or {},
             "timestamp": timestamp,
         }
-        await self.redis.rpush(detail_key, json.dumps(detail))
+        await self.redis.rpush(detail_key, json.dumps(detail))  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
         await self.redis.expire(detail_key, 86400)  # 保留24小时
 
         logger.debug(
@@ -256,15 +256,15 @@ class TokenTracker:
             except (TypeError, ValueError):
                 ratio_basis_points = 0
 
-        await self.redis.hincrby(key, f"{metric_name}_numerator_sum", numerator)
-        await self.redis.hincrby(key, f"{metric_name}_denominator_sum", denominator)
+        await self.redis.hincrby(key, f"{metric_name}_numerator_sum", numerator)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
+        await self.redis.hincrby(key, f"{metric_name}_denominator_sum", denominator)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
         if status == "known" and denominator > 0:
-            await self.redis.hincrby(key, f"{metric_name}_known_count", 1)
-            await self.redis.hincrby(key, f"{metric_name}_ratio_basis_points_sum", ratio_basis_points)
+            await self.redis.hincrby(key, f"{metric_name}_known_count", 1)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
+            await self.redis.hincrby(key, f"{metric_name}_ratio_basis_points_sum", ratio_basis_points)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
         elif status == "not_applicable":
-            await self.redis.hincrby(key, f"{metric_name}_not_applicable_count", 1)
+            await self.redis.hincrby(key, f"{metric_name}_not_applicable_count", 1)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
         else:
-            await self.redis.hincrby(key, f"{metric_name}_unknown_count", 1)
+            await self.redis.hincrby(key, f"{metric_name}_unknown_count", 1)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
 
     @staticmethod
     def _normalize_mode(value: str | None) -> str:
@@ -446,7 +446,7 @@ class TokenTracker:
             date = datetime.now().strftime("%Y-%m-%d")
 
         key = f"user:details:{user_id}:{date}"
-        messages = await self.redis.lrange(key, -limit, -1)
+        messages = await self.redis.lrange(key, -limit, -1)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
 
         details = []
         for msg in messages:
@@ -607,7 +607,7 @@ class TokenTracker:
                 if len(parts) < 5:
                     continue
                 _, _, key_date, mode, chat_mode = parts[:5]
-                raw = await self.redis.hgetall(decoded_key)
+                raw = await self.redis.hgetall(decoded_key)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
                 if not raw:
                     continue
                 requests = int(raw.get("requests") or 0)
@@ -658,7 +658,7 @@ class TokenTracker:
                     continue
                 reasoning_mode = parts[4]
                 chat_mode = parts[5]
-                raw = await self.redis.hgetall(decoded_key)
+                raw = await self.redis.hgetall(decoded_key)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
                 if not raw:
                     continue
                 bucket = buckets.setdefault(
@@ -864,7 +864,7 @@ class TokenTracker:
                     continue
                 reasoning_mode = parts[4]
                 chat_mode = parts[5]
-                raw = await self.redis.hgetall(decoded_key)
+                raw = await self.redis.hgetall(decoded_key)  # type: ignore[misc]  # redis-py 桩 ResponseT=Awaitable|int 联合（同步桩残留）；asyncio 客户端运行时恒 awaitable
                 if not raw:
                     continue
                 bucket = buckets.setdefault(

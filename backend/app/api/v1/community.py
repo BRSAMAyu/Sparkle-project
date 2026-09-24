@@ -15,6 +15,7 @@ import json
 import time
 from copy import deepcopy
 from datetime import UTC, datetime
+from typing import cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
@@ -115,6 +116,7 @@ from app.schemas.community import (
     GroupFilePermissionUpdate,
     GroupFileShareRequest,
     GroupFileSortEnum,
+    GroupFileTrustLevelEnum,
     # 火堆
     GroupFlameStatus,
     GroupInfo,
@@ -127,6 +129,7 @@ from app.schemas.community import (
     GroupModerationSettings,
     GroupRecommendationFeedbackRequest,
     GroupRecommendationItem,
+    GroupRoleEnum,
     GroupTaskCreate,
     GroupTaskInfo,
     # 枚举
@@ -151,15 +154,19 @@ from app.schemas.community import (
     # 消息
     MessageSend,
     MessageTypeEnum,
+    ModerationActionEnum,
     # 离线队列相关
     OfflineMessageInfo,
     OfflineMessageRetryRequest,
+    OfflineMessageStatusEnum,
     PrivateMessageInfo,
     PrivateMessageSend,
     ReactionActionEnum,
     RecommendationFeedbackInsight,
     RecommendationFeedbackPrompt,
     RecommendationItemTypeEnum,
+    ReportReasonEnum,
+    ReportStatusEnum,
     # 隐私设置
     SearchVisibilityEnum,
     SharedResourceCreate,
@@ -169,6 +176,7 @@ from app.schemas.community import (
     UserBrief,
     UserFileShareRequest,
     UserPrivacySettings,
+    UserStatusEnum,
     # 状态
     UserStatusUpdate,
 )
@@ -749,7 +757,8 @@ def _build_message_info(msg: GroupMessage) -> MessageInfo:
         created_at=msg.created_at,
         updated_at=msg.updated_at,
         sender=sender,
-        message_type=msg.message_type,
+        # wt297: 模型/schema StrEnum 同值跨名，pydantic 按值收敛；cast 声明契约。
+        message_type=cast("MessageTypeEnum", msg.message_type),
         content=msg.content,
         content_data=msg.content_data,
         reply_to_id=msg.reply_to_id,
@@ -796,11 +805,11 @@ def _build_group_file_info(
         description=group_file.description,
         uploader_name=uploader_name,
         tags=group_file.tags or [],
-        trust_level=group_file.trust_level.value,
+        trust_level=cast("GroupFileTrustLevelEnum", group_file.trust_level),
         knowledge_base=group_file.is_knowledge_base,
-        view_role=group_file.view_role,
-        download_role=group_file.download_role,
-        manage_role=group_file.manage_role,
+        view_role=cast("GroupRoleEnum", group_file.view_role),
+        download_role=cast("GroupRoleEnum", group_file.download_role),
+        manage_role=cast("GroupRoleEnum", group_file.manage_role),
         file_name=stored_file.file_name,
         mime_type=stored_file.mime_type,
         file_size=stored_file.file_size,
@@ -837,7 +846,7 @@ def _build_file_copy_response(
 def _build_group_member_info(member: GroupMember) -> GroupMemberInfo:
     return GroupMemberInfo(
         user=UserBrief.model_validate(member.user),
-        role=member.role,
+        role=cast("GroupRoleEnum", member.role),
         flame_contribution=member.flame_contribution,
         tasks_completed=member.tasks_completed,
         checkin_streak=member.checkin_streak,
@@ -863,7 +872,7 @@ def _build_friendship_info(
             avatar_url=friend.avatar_url,
             flame_level=friend.flame_level,
             flame_brightness=friend.flame_brightness,
-            status=friend.status,
+            status=cast("UserStatusEnum", friend.status),
         ),
         status=friendship.status,
         match_reason=friendship.match_reason,
@@ -945,7 +954,7 @@ def _build_private_message_info(msg: PrivateMessage) -> PrivateMessageInfo:
         updated_at=msg.updated_at,
         sender=sender,
         receiver=receiver,
-        message_type=msg.message_type,
+        message_type=cast("MessageTypeEnum", msg.message_type),
         content=msg.content,
         content_data=msg.content_data,
         reply_to_id=msg.reply_to_id,
@@ -1012,8 +1021,10 @@ def _share_owner_payload(user: User | None) -> dict | None:
 
 
 def _build_share_meta(resource_type: SharedResourceType, resource: object) -> dict:
+    """wt297: resource 的实际类型由 resource_type 枚举派发决定（与 _get_share_resource
+    的返回一一对应），各分支以精确 cast 声明该契约。"""
     if resource_type == SharedResourceType.PLAN:
-        plan = resource
+        plan = cast("Plan", resource)
         return _compact_dict(
             {
                 "plan_type": plan.type.value if plan.type else None,
@@ -1024,7 +1035,7 @@ def _build_share_meta(resource_type: SharedResourceType, resource: object) -> di
             }
         )
     if resource_type == SharedResourceType.TASK:
-        task = resource
+        task = cast("Task", resource)
         return _compact_dict(
             {
                 "task_type": task.type.value if task.type else None,
@@ -1036,7 +1047,7 @@ def _build_share_meta(resource_type: SharedResourceType, resource: object) -> di
             }
         )
     if resource_type == SharedResourceType.KNOWLEDGE_NODE:
-        node = resource
+        node = cast("KnowledgeNode", resource)
         return _compact_dict(
             {
                 "importance_level": node.importance_level,
@@ -1045,7 +1056,7 @@ def _build_share_meta(resource_type: SharedResourceType, resource: object) -> di
             }
         )
     if resource_type == SharedResourceType.SEED_LIBRARY:
-        library = resource
+        library = cast("SeedLibrary", resource)
         return _compact_dict(
             {
                 "category": library.category,
@@ -1056,7 +1067,7 @@ def _build_share_meta(resource_type: SharedResourceType, resource: object) -> di
             }
         )
     if resource_type == SharedResourceType.SEED_ITEM:
-        item = resource
+        item = cast("SeedItem", resource)
         return _compact_dict(
             {
                 "item_type": item.item_type,
@@ -1067,7 +1078,7 @@ def _build_share_meta(resource_type: SharedResourceType, resource: object) -> di
             }
         )
     if resource_type == SharedResourceType.CURIOSITY_CAPSULE:
-        capsule = resource
+        capsule = cast("CuriosityCapsule", resource)
         return _compact_dict(
             {
                 "related_subject": capsule.related_subject,
@@ -1075,7 +1086,7 @@ def _build_share_meta(resource_type: SharedResourceType, resource: object) -> di
             }
         )
     if resource_type == SharedResourceType.COGNITIVE_PRISM_PATTERN:
-        pattern = resource
+        pattern = cast("BehaviorPattern", resource)
         return _compact_dict(
             {
                 "pattern_type": pattern.pattern_type,
@@ -1084,7 +1095,7 @@ def _build_share_meta(resource_type: SharedResourceType, resource: object) -> di
                 "is_archived": pattern.is_archived,
             }
         )
-    fragment = resource
+    fragment = cast("CognitiveFragment", resource)
     return _compact_dict(
         {
             "source_type": fragment.source_type,
@@ -1097,36 +1108,37 @@ def _build_share_meta(resource_type: SharedResourceType, resource: object) -> di
 
 
 def _build_share_brief(resource_type: SharedResourceType, resource: object) -> dict:
+    """wt297: 同 _build_share_meta——resource 类型由 resource_type 派发契约决定。"""
     if resource_type == SharedResourceType.PLAN:
-        plan = resource
+        plan = cast("Plan", resource)
         title = plan.name
         summary = plan.description or plan.subject
     elif resource_type == SharedResourceType.TASK:
-        task = resource
+        task = cast("Task", resource)
         title = task.title
         summary = task.user_note or task.guide_content
     elif resource_type == SharedResourceType.KNOWLEDGE_NODE:
-        node = resource
+        node = cast("KnowledgeNode", resource)
         title = node.name
         summary = node.description
     elif resource_type == SharedResourceType.SEED_LIBRARY:
-        library = resource
+        library = cast("SeedLibrary", resource)
         title = library.name
         summary = library.description or f"{library.category} library"
     elif resource_type == SharedResourceType.SEED_ITEM:
-        item = resource
+        item = cast("SeedItem", resource)
         title = item.title or "Seed Item"
         summary = item.content
     elif resource_type == SharedResourceType.CURIOSITY_CAPSULE:
-        capsule = resource
+        capsule = cast("CuriosityCapsule", resource)
         title = capsule.title
         summary = capsule.content
     elif resource_type == SharedResourceType.COGNITIVE_PRISM_PATTERN:
-        pattern = resource
+        pattern = cast("BehaviorPattern", resource)
         title = pattern.pattern_name
         summary = pattern.description or pattern.solution_text
     else:
-        fragment = resource
+        fragment = cast("CognitiveFragment", resource)
         title = _truncate_text(fragment.content, 48) or "Cognitive Fragment"
         summary = fragment.content
 
@@ -1530,7 +1542,7 @@ async def search_users(
             avatar_url=user.avatar_url,
             flame_level=user.flame_level,
             flame_brightness=user.flame_brightness,
-            status=user.status,
+            status=cast("UserStatusEnum", user.status),
         )
         for user in users
     ]
@@ -3025,6 +3037,9 @@ async def update_status(
     """手动更新在线状态"""
     # 重新加载以确保 attached
     user = await db.get(User, current_user.id)
+    # wt297: 已认证用户的 User 行必然存在；缺失属数据一致性故障，显式 404（原路径 AttributeError 500）。
+    if user is None:
+        raise HTTPException(status_code=404, detail="用户不存在")
     user.status = UserStatus(data.status.value)
     db.add(user)
     await db.commit()
@@ -3462,7 +3477,8 @@ async def share_resource(
         message_type = _share_message_type(resource_type)
         message_content = data.comment
 
-        message_info = None
+        # wt297: 群/私聊两分支返回不同 Info 类型，显式联合注解。
+        message_info: MessageInfo | PrivateMessageInfo | None = None
         if data.target_group_id:
             message = await GroupMessageService.send_message(
                 db,
@@ -3848,6 +3864,9 @@ async def adopt_shared_resource(
 
             if result.imported_root_plan_id:
                 imported_plan = await db.get(Plan, result.imported_root_plan_id)
+                # wt297: 刚导入即取，理论上恒存在；缺失属导入服务内部一致性故障，显式 404。
+                if imported_plan is None:
+                    raise HTTPException(status_code=404, detail="导入的计划不存在")
                 entity_card = build_plan_entity_card(
                     {
                         "id": str(imported_plan.id),
@@ -3871,6 +3890,9 @@ async def adopt_shared_resource(
 
             if result.imported_root_task_id:
                 imported_task = await db.get(Task, result.imported_root_task_id)
+                # wt297: 同 imported_plan——恒存在不变式，缺失即 404。
+                if imported_task is None:
+                    raise HTTPException(status_code=404, detail="导入的任务不存在")
                 entity_card = build_task_entity_card(
                     {
                         "id": str(imported_task.id),
@@ -3939,23 +3961,24 @@ async def adopt_shared_resource(
         resource_title = new_task.title
         resource_summary = new_task.guide_content
     elif shared.plan_id:
-        original = await db.get(Plan, shared.plan_id)
-        if not original:
+        # wt297: 与 task 分支的 original（Task）不复用同名——原重用令 mypy 误绑 Task 类型。
+        original_plan = await db.get(Plan, shared.plan_id)
+        if original_plan is None:
             raise HTTPException(status_code=404, detail="原始计划不存在")
         plan_in = PlanCreate(
-            name=original.name,
-            type=original.type,
-            description=original.description,
-            subject=original.subject,
-            target_date=original.target_date,
-            daily_available_minutes=original.daily_available_minutes,
-            total_estimated_hours=original.total_estimated_hours,
-            priority=original.priority,
+            name=original_plan.name,
+            type=original_plan.type,
+            description=original_plan.description,
+            subject=original_plan.subject,
+            target_date=original_plan.target_date,
+            daily_available_minutes=original_plan.daily_available_minutes,
+            total_estimated_hours=original_plan.total_estimated_hours,
+            priority=original_plan.priority,
         )
         new_plan = await PlanService.create(db, plan_in, current_user.id)
         new_plan.source = "adopted"
         new_plan.source_metadata = {
-            "original_id": str(original.id),
+            "original_id": str(original_plan.id),
             "shared_by": str(shared.shared_by),
             "shared_resource_id": str(shared_resource_id),
         }
@@ -4486,9 +4509,9 @@ async def report_message(
             created_at=report.created_at,
             updated_at=report.updated_at,
             reporter=UserBrief.model_validate(current_user),
-            reason=report.reason,
+            reason=cast("ReportReasonEnum", report.reason),
             description=report.description,
-            status=report.status,
+            status=cast("ReportStatusEnum", report.status),
             reviewed_by=None,
             reviewed_at=None,
             action_taken=None,
@@ -4525,12 +4548,12 @@ async def get_group_pending_reports(
             created_at=r.created_at,
             updated_at=r.updated_at,
             reporter=UserBrief.model_validate(r.reporter) if r.reporter else None,
-            reason=r.reason,
+            reason=cast("ReportReasonEnum", r.reason),
             description=r.description,
-            status=r.status,
+            status=cast("ReportStatusEnum", r.status),
             reviewed_by=None,
             reviewed_at=r.reviewed_at,
-            action_taken=r.action_taken,
+            action_taken=cast("ModerationActionEnum | None", r.action_taken),
         )
         for r in reports
     ]
@@ -4554,12 +4577,12 @@ async def review_message_report(
             created_at=report.created_at,
             updated_at=report.updated_at,
             reporter=UserBrief.model_validate(report.reporter) if report.reporter else None,
-            reason=report.reason,
+            reason=cast("ReportReasonEnum", report.reason),
             description=report.description,
-            status=report.status,
+            status=cast("ReportStatusEnum", report.status),
             reviewed_by=UserBrief.model_validate(current_user),
             reviewed_at=report.reviewed_at,
-            action_taken=report.action_taken,
+            action_taken=cast("ModerationActionEnum | None", report.action_taken),
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -4575,9 +4598,10 @@ async def add_message_favorite(
 ):
     """收藏消息"""
     try:
-        favorite = await FavoriteService.add_favorite(db, current_user.id, data)
+        created = await FavoriteService.add_favorite(db, current_user.id, data)
         await db.commit()
-        favorite = await FavoriteService.get_favorite(db, current_user.id, favorite.id)
+        # wt297: 两个不同语义的实体不复用同一局部名（add 的返回与 get 的 Optional 返回）。
+        favorite = await FavoriteService.get_favorite(db, current_user.id, created.id)
         if favorite is None:
             raise HTTPException(status_code=404, detail="收藏不存在")
 
@@ -4677,6 +4701,8 @@ async def forward_message(
         await db.commit()
 
         # 构建消息信息并广播
+        # wt297: 两分支返回类型不同（Group/Private 两种 Info），显式联合注解。
+        msg_info: MessageInfo | PrivateMessageInfo
         if data.target_group_id:
             msg_info = _build_message_info(forwarded)
             await manager.broadcast(msg_info.model_dump(mode="json"), str(data.target_group_id))
@@ -4819,7 +4845,7 @@ async def get_pending_offline_messages(
             client_nonce=msg.client_nonce,
             message_type=msg.message_type,
             target_id=msg.target_id,
-            status=msg.status,
+            status=cast("OfflineMessageStatusEnum", msg.status),
             retry_count=msg.retry_count,
             error_message=msg.error_message,
         )
@@ -4844,7 +4870,7 @@ async def get_failed_offline_messages(
             client_nonce=msg.client_nonce,
             message_type=msg.message_type,
             target_id=msg.target_id,
-            status=msg.status,
+            status=cast("OfflineMessageStatusEnum", msg.status),
             retry_count=msg.retry_count,
             error_message=msg.error_message,
         )
@@ -4871,12 +4897,13 @@ async def get_recommended_resources(
     db: AsyncSession = Depends(get_db),
 ):
     """Recommend high-quality community resources the user hasn't adopted yet."""
-    from app.models.community import GroupMembership
+    # wt297: 模型实名为 GroupMember（GroupMembership 从不存在，原句运行时必 ImportError）。
+    from app.models.community import GroupMember
 
     user_groups = await db.execute(
-        select(GroupMembership.group_id).where(
-            GroupMembership.user_id == current_user.id,
-            GroupMembership.deleted_at.is_(None),
+        select(GroupMember.group_id).where(
+            GroupMember.user_id == current_user.id,
+            GroupMember.deleted_at.is_(None),
         )
     )
     group_ids = [row[0] for row in user_groups]
@@ -4930,12 +4957,13 @@ async def get_community_resources_ranked(
     Retrieve community-shared resources ranked by quality score.
     Low-quality resources (score < 0.3) are hidden by default unless sort=quality.
     """
-    from app.models.community import GroupMembership
+    # wt297: 模型实名为 GroupMember（GroupMembership 从不存在，原句运行时必 ImportError）。
+    from app.models.community import GroupMember
 
     user_groups = await db.execute(
-        select(GroupMembership.group_id).where(
-            GroupMembership.user_id == current_user.id,
-            GroupMembership.deleted_at.is_(None),
+        select(GroupMember.group_id).where(
+            GroupMember.user_id == current_user.id,
+            GroupMember.deleted_at.is_(None),
         )
     )
     group_ids = [row[0] for row in user_groups]
@@ -5060,12 +5088,15 @@ async def get_all_pending_reports_admin(
     _admin: User = Depends(get_current_active_superuser),
 ):
     """管理员查看所有群组的待处理举报。"""
-    from app.models.community import CommunityMessageReport
+    # wt297: 模型实名为 MessageReport（CommunityMessageReport 从不存在，原句运行时必
+    # ImportError，本端点从未成功响应过）；message_id/group_id 同样非真实列，
+    # 按 message_reports 实际列（group_message_id/private_message_id）输出。
+    from app.models.community import MessageReport
 
     result = await db.execute(
-        select(CommunityMessageReport)
-        .where(CommunityMessageReport.status == "pending")
-        .order_by(CommunityMessageReport.created_at.desc())
+        select(MessageReport)
+        .where(MessageReport.status == "pending")
+        .order_by(MessageReport.created_at.desc())
         .limit(limit)
     )
     reports = result.scalars().all()
@@ -5075,8 +5106,8 @@ async def get_all_pending_reports_admin(
             "created_at": r.created_at.isoformat() if r.created_at else None,
             "updated_at": r.updated_at.isoformat() if r.updated_at else None,
             "reporter_id": str(r.reporter_id) if r.reporter_id else None,
-            "group_id": str(r.group_id) if r.group_id else None,
-            "message_id": str(r.message_id) if r.message_id else None,
+            "group_message_id": str(r.group_message_id) if r.group_message_id else None,
+            "private_message_id": str(r.private_message_id) if r.private_message_id else None,
             "reason": r.reason,
             "description": r.description,
             "status": r.status,

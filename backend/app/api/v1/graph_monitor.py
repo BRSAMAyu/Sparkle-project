@@ -20,7 +20,8 @@ try:
     from app.services.graph_knowledge_service import GraphKnowledgeService
     GRAPH_SERVICE_AVAILABLE = True
 except ModuleNotFoundError as exc:
-    GraphKnowledgeService = None
+    # wt297: 可选依赖回退惯用形（GRAPH_SERVICE_AVAILABLE 运行时守卫），需精确豁免。
+    GraphKnowledgeService = None  # type: ignore[assignment,misc]
     GRAPH_SERVICE_AVAILABLE = False
     logger.warning(f"GraphKnowledgeService unavailable: {exc}")
 
@@ -95,7 +96,8 @@ async def graph_rag_health(
     3. 数据同步状态
     4. 查询性能
     """
-    health_status = {
+    # wt297: 异构值健康负载（str/dict/list 混合），显式 Any 避免 mypy 收敛到 Collection[str]。
+    health_status: dict[str, Any] = {
         "status": "healthy",
         "timestamp": _utcnow().isoformat(),
         "components": {},
@@ -175,7 +177,7 @@ async def graph_rag_health(
             redis_client = cache_service.redis
             if redis_client:
                 # 检查同步队列长度
-                sync_queue_length = await redis_client.llen("queue:graph_sync")
+                sync_queue_length = await redis_client.llen("queue:graph_sync")  # type: ignore[misc]  # redis-py 桩 ResponseT 联合含同步 int 分支
                 health_status["metrics"]["sync_queue_length"] = sync_queue_length
 
                 if sync_queue_length > 1000:
@@ -302,7 +304,7 @@ async def trigger_sync(
 
         await redis_client.xadd(
             "stream:graph_sync",
-            sync_event,
+            sync_event,  # type: ignore[arg-type]  # redis-py xadd 桩 value 联合的 dict 不变性；实参恒 str/int
             maxlen=1000
         )
 
@@ -346,8 +348,8 @@ async def sync_status() -> dict[str, Any]:
             }
 
         # 检查同步队列
-        sync_queue_length = await redis_client.llen("queue:graph_sync")
-        stream_length = await redis_client.xlen("stream:graph_sync")
+        sync_queue_length = await redis_client.llen("queue:graph_sync")  # type: ignore[misc]  # redis-py 桩 ResponseT 联合含同步 int 分支
+        stream_length = await redis_client.xlen("stream:graph_sync")  # type: ignore[misc]  # 同上
 
         # 检查最近的同步事件
         recent_events = []
@@ -479,7 +481,8 @@ async def detailed_health_check(
     """
     start_time = time.time()
 
-    health_report = {
+    # wt297: 异构值健康负载，显式 Any 避免 mypy 收敛到 object。
+    health_report: dict[str, Any] = {
         "status": "healthy",
         "timestamp": _utcnow().isoformat(),
         "uptime_ms": 0,

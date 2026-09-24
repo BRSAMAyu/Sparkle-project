@@ -194,7 +194,8 @@ class GraphKnowledgeService:
     async def graph_rag_search(
         self,
         query: str,
-        user_id: uuid.UUID,
+        # wt297: 监控端点以 user_id=None 做无主测试查询（调用契约即 Optional）。
+        user_id: uuid.UUID | None = None,
         depth: int = 2,
         top_k: int = 5
     ) -> dict[str, Any]:

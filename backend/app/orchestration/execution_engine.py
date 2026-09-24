@@ -9,7 +9,7 @@ import time
 import uuid
 from collections.abc import AsyncGenerator
 from datetime import datetime
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 from google.protobuf import struct_pb2
 from loguru import logger
@@ -47,13 +47,18 @@ from app.orchestration.session_feedback import (
     apply_session_feedback_visible_prefix,
     build_session_feedback_instruction,
 )
-from app.orchestration.statechart_engine import WorkflowState
+from app.orchestration.statechart_engine import StateGraph, WorkflowState
 from app.orchestration.transparency_data_generator import StepType, TransparencyDataGenerator
 from app.orchestration.ux_envelope import ux_envelope_builder
 from app.services.execution_service import ExecutionService
 from app.services.galaxy.graph_structure_service import GraphStructureEvolutionService
 from app.services.llm_service import llm_service
 from app.services.system_update_service import SystemUpdateService, build_system_update
+
+if TYPE_CHECKING:
+    # wt297: 仅类型用（mixin 自身即为组合后的 ChatOrchestrator 之一环）；
+    # 运行时导入会与 orchestrator.py 形成循环，故置于 TYPE_CHECKING。
+    from app.orchestration.orchestrator import ChatOrchestrator
 
 # TTFT-CFG: 规划轮 planner 预算收敛 10s → 3s。探针实测 3/3 规划轮全部打满 10s 超时
 # 走 synthesized fallback（纯超时税）；提前失败落同一兜底，产物不变、首帧前移 7s。
@@ -136,8 +141,65 @@ GRAPH_TIMEOUT_SECONDS = 300
 _GRAPH_CANCEL_JOIN_TIMEOUT = 5.0
 
 
+class _ChatControlSentinel:
+    """wt297: openclaw 短路流终止哨兵的类型化载体。
+
+    替代裸 ``object()``：唯一类使 ``isinstance(item, _ChatControlSentinel)``
+    可被 mypy 窄化（从流 union 中排除哨兵分支），运行时行为与原先完全一致
+    （该类仅此单例，isinstance 与原 ``is`` 判定等价）。
+    """
+
+
+_CHAT_CONTROL_DONE = _ChatControlSentinel()
+
+
 class ExecutionEngineMixin:
     """Mixin providing execution, planning, and tool-handling methods for ChatOrchestrator."""
+
+    # wt297: 跨 mixin 成员声明（形制照 wt292 四 mixin 打法：类体纯注解，运行时零变化）。
+    # 这些属性/方法由组合类 ChatOrchestrator 及其兄弟 mixin 提供；此处仅做类型声明。
+    # 属性给精确类型（TYPE_CHECKING 导入，零运行时依赖、零循环导入风险）；跨 mixin
+    # 私有方法用 Callable 形制（kwarg 调用形态 Callable 本就不检查）。
+    if TYPE_CHECKING:
+        from app.orchestration.circuit_breaker import CircuitBreaker
+        from app.orchestration.executor import ToolExecutor
+        from app.orchestration.grounding_validator import GroundingValidator
+        from app.orchestration.lang_graph_planner import LangGraphPlanner
+        from app.orchestration.multi_agent_adapter import MultiAgentWorkflowAdapter
+        from app.orchestration.observability_logger import ObservabilityLogger
+        from app.orchestration.state_snapshot import StateSnapshotManager
+        from app.orchestration.token_tracker import TokenTracker
+        from app.orchestration.version_conflict_service import VersionConflictService
+        from app.services.shadow_prediction_service import ShadowPredictionService
+
+    redis: Any
+    tool_executor: ToolExecutor
+    graph: StateGraph
+    token_tracker: TokenTracker | None
+    observability: ObservabilityLogger
+    multi_agent_adapter: MultiAgentWorkflowAdapter
+    lang_graph_planner: LangGraphPlanner
+    langgraph_breaker: CircuitBreaker
+    snapshot_manager: StateSnapshotManager
+    version_conflict_service: VersionConflictService
+    grounding_validator: GroundingValidator
+    shadow_predictor: ShadowPredictionService
+
+    _persist_assistant_message: Callable[..., Any]
+    _cache_response: Callable[..., Any]
+    _build_routing_history: Callable[..., Any]
+    _extract_llm_profile_meta: Callable[..., Any]
+    _record_decision: Callable[..., Any]
+    _extract_latest_user_message: Callable[..., Any]
+    _drain_system_updates: Callable[..., Any]
+    _update_state: Callable[..., Any]
+    _load_recent_execution_feedback: Callable[..., Any]
+    _extract_route_intent: Callable[..., Any]
+    _roundtrip_ms: Callable[..., Any]
+    _sync_orchestration_trace: Callable[..., Any]
+    _load_context_versions: Callable[..., Any]
+    _stream_hitl_escalation: Callable[..., Any]
+    _stream_discard_notice: Callable[..., Any]
 
     async def _maybe_short_circuit_bridge_tool(
         self,
@@ -165,6 +227,9 @@ class ExecutionEngineMixin:
         if bridge_tool_name is None or not str(user_message or "").strip():
             return None
 
+        # wt297: 三分支字面量值型不一致（section_limit 为 int），显式按 executor 契约
+        # （arguments: dict[str, Any]，JSON 参数）注解，避免按首分支窄推断。
+        arguments: dict[str, Any]
         if bridge_tool_name == "launch_prediction":
             arguments = {
                 "topic": user_message,
@@ -406,8 +471,8 @@ class ExecutionEngineMixin:
             return
 
         service = ExecutionService(db=active_db, redis=self.redis)
-        queue: asyncio.Queue[agent_service_pb2.ChatResponse | object] = asyncio.Queue()
-        sentinel = object()
+        queue: asyncio.Queue[agent_service_pb2.ChatResponse | _ChatControlSentinel] = asyncio.Queue()
+        sentinel = _CHAT_CONTROL_DONE
         live_state: dict[str, Any] = {
             "current_step": "正在连接你的 OpenClaw",
             "recent_output": [],
@@ -547,7 +612,7 @@ class ExecutionEngineMixin:
         try:
             while True:
                 item = await queue.get()
-                if item is sentinel:
+                if isinstance(item, _ChatControlSentinel):
                     break
                 yield item
         finally:
@@ -1611,7 +1676,9 @@ class ExecutionEngineMixin:
                 )
             else:
                 response_stream = execute_multi_agent_workflow(
-                    orchestrator=self,
+                    # wt297: 本 mixin 仅被 ChatOrchestrator 组合使用（orchestrator.py 唯一
+                    # 组合点），运行时 self 即完整 ChatOrchestrator，cast 为真类型非谎言。
+                    orchestrator=cast("ChatOrchestrator", self),
                     chat_mode=chat_mode,
                     message=user_message,
                     user_id=user_id,
@@ -1739,9 +1806,10 @@ class ExecutionEngineMixin:
                             response_metadata["context_semantic_gating"] = json.dumps(semantic_meta, ensure_ascii=False)
                     if isinstance(situation_brief, dict):
                         response_metadata["situation_brief"] = json.dumps(situation_brief, ensure_ascii=False)
-                        summary = str(situation_brief.get("summary") or "").strip()
-                        if summary:
-                            response_metadata["situation_brief_summary"] = summary
+                        # wt297: 上方 focus 分支已用 `summary` 名（dict），此处独立局部名避免复用冲突。
+                        situation_summary = str(situation_brief.get("summary") or "").strip()
+                        if situation_summary:
+                            response_metadata["situation_brief_summary"] = situation_summary
                         decision_context = situation_brief.get("decision_context")
                         if isinstance(decision_context, dict):
                             response_metadata["residual_decision_context"] = json.dumps(
@@ -2003,7 +2071,8 @@ class ExecutionEngineMixin:
                 circuit_name="langgraph_planner",
                 old_state="open",
                 new_state="open",
-                reason=reason,
+                # wt297: allow_request 契约 reason 可为 None，日志面按空串记录。
+                reason=reason or "",
             )
             use_synthesized_fallback = True
 
@@ -2170,7 +2239,10 @@ class ExecutionEngineMixin:
                 )
             else:
                 try:
-                    locale = user_context_payload.get("profile", {}).get("identity", {}).get("language", "en")
+                    # wt297: user_context_payload 契约为 Optional；此前 None 时 AttributeError
+                    # 直接落入外层 except 使整轮规划退直连——现按本文件既有 `(x or {})`
+                    # 惯用法安全缺省（locale 缺省 en 与 get 默认一致）。
+                    locale = (user_context_payload or {}).get("profile", {}).get("identity", {}).get("language", "en")
                     _planner_started = time.perf_counter()
                     executable_plan = await asyncio.wait_for(
                         self.lang_graph_planner.plan(
@@ -2219,6 +2291,10 @@ class ExecutionEngineMixin:
                         plan_version=1,
                     )
                     use_synthesized_fallback = True
+
+            # wt297: 规划三出口（synthesized / plan 成功 / 超时兜底）均产出计划或向上抛异常，
+            # 此后 executable_plan 恒为非空——显式声明该不变式（后续版本冲突/校验分支依赖它）。
+            assert executable_plan is not None
 
             if self.redis and isinstance(user_context_payload, dict) and executable_plan is not None:
                 agent_ids = [
@@ -2376,7 +2452,8 @@ class ExecutionEngineMixin:
                     user_id=user_id,
                     session_id=session_id,
                     plan_id=executable_plan.plan_id,
-                    failure_reason=validation_result.failure_reason,
+                    # wt297: failure_reason 契约可空，日志面按空串记录。
+                    failure_reason=validation_result.failure_reason or "",
                 )
                 await self.langgraph_breaker.on_failure("validation_failed")
                 route_decision.execution_mode = "direct"
@@ -2499,7 +2576,9 @@ class ExecutionEngineMixin:
                             EVIDENCE_BACKED_VISIBLE_UPDATE_TOTAL.labels(kind="plan_reasoning").inc()
                         except Exception as exc:
                             logger.warning(f"Failed to enqueue plan reasoning summary: {exc}")
-                    if plan_id:
+                    # wt297: 两个 plan 反馈服务均要求非空 AsyncSession（签名 db: AsyncSession）；
+                    # 无 DB 会话时跳过持久化（无会话本就无法写库，原路径会在服务内部炸）。
+                    if plan_id and active_db is not None:
                         from app.services.plan_feedback_service import get_plan_feedback_service
                         from app.services.plan_state_service import PlanStateService
 

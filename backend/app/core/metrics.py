@@ -1200,6 +1200,15 @@ COMMUNITY_PRIVACY_COHORT_SIZE = get_or_create_metric(
     buckets=[0, 1, 3, 5, 10, 15, 25, 50, 100, 250],
 )
 
+# wt297: 该计数器此前从未定义，community.py flag-misleading 端点惰性导入时
+# 必然 ImportError（端点 100% 500）。按调用处契约（labels resource_id）补齐。
+COMMUNITY_RESOURCE_MISLEADING_FLAGS_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_community_resource_misleading_flags_total",
+    "Misleading flags raised against shared community resources",
+    ["resource_id"],
+)
+
 # ============ Phase 6: Performance SLO Metrics ============
 
 GALAXY_E2E_LATENCY = get_or_create_metric(

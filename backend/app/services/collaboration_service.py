@@ -26,7 +26,8 @@ class CollaborationService:
         target_group_id: UUID | None = None,
         target_user_id: UUID | None = None,
         permission: str = "view",
-        comment: str = None,
+        # wt297: 调用方 schema 即 str | None、DB 列可空——签名诚实 Optional 化（隐式 Optional）。
+        comment: str | None = None,
     ) -> SharedResource:
         """
         Share a resource (Plan, Task, Fragment) with a Group or User.
@@ -166,7 +167,8 @@ class CollaborationService:
         )
 
         result = await db.execute(stmt)
-        return result.scalars().all()
+        # wt297: scalars().all() 返回 Sequence，声明契约为 list——显式物化。
+        return list(result.scalars().all())
 
 
 collaboration_service = CollaborationService()

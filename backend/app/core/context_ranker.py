@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from math import exp
-from typing import Any, TypeVar
+from typing import Any, Generic, TypeVar
 
 from app.config import settings
 
@@ -29,7 +29,10 @@ PREFERENCE_STALE_DAYS = 180
 
 
 @dataclass(frozen=True)
-class RankedItem:
+class RankedItem(Generic[T]):
+    """wt297: 类体已用 TypeVar T 却未声明泛型——补 Generic[T] 使 RankedItem[X]
+    下标与 entry.item 的成员访问可被正确检查（运行时零变化）。"""
+
     item: T
     score: float
 

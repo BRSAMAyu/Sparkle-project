@@ -55,6 +55,9 @@ class MessageTypeEnum(StrEnum):
     ACHIEVEMENT = "achievement"
     CHECKIN = "checkin"
     SYSTEM = "system"
+    # wt297: 模型侧 MessageType.BROADCAST（跨群广播）为真实落库值（community_advanced_service
+    # 写入 GroupMessage），schema 侧缺失该成员曾令含广播消息的列表 ValidationError（500）。
+    BROADCAST = "broadcast"
 
 
 class ReactionActionEnum(StrEnum):
@@ -671,7 +674,8 @@ class GroupTaskInfo(BaseSchema):
     total_completions: int = Field(description="完成次数")
     completion_rate: float = Field(description="完成率")
     due_date: datetime | None = Field(description="截止日期")
-    creator: UserBrief = Field(description="创建者")
+    # wt297: 构建端对已删除/缺失用户合法产出 None，诚实 Optional 化（此前该情形 500）。
+    creator: UserBrief | None = Field(description="创建者")
 
     # 当前用户状态
     is_claimed_by_me: bool = Field(default=False, description="是否已认领")
@@ -770,7 +774,8 @@ class SharedResourceInfo(BaseSchema):
     adoption_count: int = 0
     avg_rating: float | None = None
 
-    sharer: UserBrief
+    # wt297: 同 creator——sharer 缺失时构建端产出 None，诚实 Optional 化。
+    sharer: UserBrief | None
 
     # Embedded Briefs (Optional)
     # Ideally we'd have a 'resource_title' or 'resource_summary' field computed
@@ -917,7 +922,8 @@ class MessageReportCreate(BaseModel):
 
 class MessageReportInfo(BaseSchema):
     """消息举报信息"""
-    reporter: UserBrief = Field(description="举报人")
+    # wt297: 举报人被删时构建端产出 None，诚实 Optional 化。
+    reporter: UserBrief | None = Field(description="举报人")
     reason: ReportReasonEnum = Field(description="举报原因")
     description: str | None = Field(description="详细描述")
     status: ReportStatusEnum = Field(description="状态")

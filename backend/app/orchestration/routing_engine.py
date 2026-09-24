@@ -9,7 +9,7 @@ import time
 import uuid
 from dataclasses import replace
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any, Callable, Literal
 
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -73,6 +73,20 @@ def _utcnow() -> datetime:
 
 class RoutingEngineMixin:
     """Mixin that groups all routing / classification helpers for the Orchestrator."""
+
+    # wt297: 跨 mixin 成员声明（形制照 wt292/execution_engine 打法：类体纯注解，
+    # 运行时零变化）。成员由组合类 ChatOrchestrator 提供。
+    if TYPE_CHECKING:
+        from app.core.unified_intent_router import UnifiedIntentRouter
+        from app.orchestration.dual_core_router import DualCoreRouter
+        from app.orchestration.grounding_validator import GroundingValidator
+
+    redis: Any
+    dual_core_router: DualCoreRouter
+    unified_router: UnifiedIntentRouter
+    grounding_validator: GroundingValidator
+    _get_recent_sentiment_distribution: Callable[..., Any]
+    _get_recent_task_feedback_distribution: Callable[..., Any]
 
     # ------------------------------------------------------------------
     # Preference extraction helpers
@@ -397,6 +411,7 @@ class RoutingEngineMixin:
         mean_abs_bias = sum(abs(float(item.bias_mean or 0.0)) for item in items) / len(items)
         accuracy = max(0.0, min(1.0, 1.0 - min(1.0, mean_abs_bias)))
         total_samples = sum(int(item.sample_size or 0) for item in items)
+        awareness: Literal["weak", "moderate", "strong"]
         if len(items) >= 2 and total_samples >= 60:
             awareness = "strong"
         elif total_samples >= 20:
@@ -428,6 +443,7 @@ class RoutingEngineMixin:
             return None
         total_samples = sum(int(item.get("sample_size") or 0) for item in items if isinstance(item, dict))
         accuracy = max(0.0, min(1.0, 1.0 - min(1.0, sum(bias_values) / len(bias_values))))
+        awareness: Literal["weak", "moderate", "strong"]
         if len(bias_values) >= 2 and total_samples >= 60:
             awareness = "strong"
         elif total_samples >= 20:
@@ -889,7 +905,12 @@ class RoutingEngineMixin:
         decision: DualCoreDecision,
         routing_input: DualCoreRoutingInput,
     ) -> dict[str, Any] | None:
-        if decision.mode not in {"cognitive_first", "balanced"} or routing_input.belief_state is None:
+        if (
+            decision.mode not in {"cognitive_first", "balanced"}
+            or routing_input.belief_state is None
+            # wt297: 契约为 BeliefState | dict（dict 无 uncertainty_vector，原路径靠 except 兜底）。
+            or isinstance(routing_input.belief_state, dict)
+        ):
             return None
         try:
             uncertainty = routing_input.belief_state.uncertainty_vector()
@@ -1935,7 +1956,7 @@ class RoutingEngineMixin:
                 for pattern in patterns[:5]:
                     confidence = float(pattern.confidence_score or 0.0)
                     canonical_key = canonical_pattern_key(pattern.pattern_name)
-                    detail = {
+                    detail: dict[str, Any] = {
                         "pattern_name": present_pattern_name(pattern.pattern_name),
                         "raw_pattern_name": str(pattern.pattern_name or "").strip(),
                         "canonical_key": canonical_key,
@@ -2053,8 +2074,10 @@ class RoutingEngineMixin:
         outcomes: list[dict[str, Any]] = []
         for item in decisions:
             payload = dict(item.decision_payload or {})
-            debug = payload.get("routing_debug") if isinstance(payload.get("routing_debug"), dict) else {}
-            scores = payload.get("signal_scores") if isinstance(payload.get("signal_scores"), dict) else {}
+            debug_raw = payload.get("routing_debug")
+            debug = debug_raw if isinstance(debug_raw, dict) else {}
+            scores_raw = payload.get("signal_scores")
+            scores = scores_raw if isinstance(scores_raw, dict) else {}
             outcomes.append(
                 {
                     "decision_id": item.decision_id,
@@ -2084,7 +2107,8 @@ class RoutingEngineMixin:
                 raw = await raw
             if raw:
                 data = json.loads(raw)
-                return data.get("mode")
+                mode = data.get("mode")
+                return str(mode) if isinstance(mode, str) else None
         except Exception:
             pass
         return None
@@ -2559,7 +2583,7 @@ class RoutingEngineMixin:
                 update={"core_signals": core_signals, "optional_signals": optional_signals}
             )
 
-        optional_signals: dict[str, Any] = {}
+        optional_signals = {}  # wt297: 类型已在上方分支声明（dict[str, Any]），避免 no-redef
         if self._stage4_task_assistant_request(user_message):
             optional_signals["task_card_id"] = "stage4_task_assistant_candidate"
 
@@ -2655,6 +2679,8 @@ class RoutingEngineMixin:
         )
 
         if route_decision.risk_level != "high" and route_decision.execution_mode == "direct":
+            # wt297: from_mode 在三条分支中取不同 Literal 值，显式按 str 声明。
+            from_mode: str
             if confidence < 0.6 and is_complex:
                 from_mode = route_decision.execution_mode
                 route_decision.execution_mode = "hybrid"

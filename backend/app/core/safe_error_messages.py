@@ -88,8 +88,12 @@ def budget_exhausted_turn_note(locale: str | None = None) -> str:
     )
 
 
-def build_safe_chat_error(exc: Exception) -> tuple[str, int, bool]:
-    """Map internal exceptions to user-safe chat error payload fields."""
+def build_safe_chat_error(exc: Exception) -> tuple[str, agent_service_pb2.ErrorCode, bool]:
+    """Map internal exceptions to user-safe chat error payload fields.
+
+    wt297: 全部返回路径均为 ``agent_service_pb2.ERROR_CODE_*`` 枚举成员（int 子类型），
+    收窄返回注解使调用方 ``Error(error_code=...)`` 通过类型检查；运行时零变化。
+    """
     if isinstance(exc, asyncio.TimeoutError):
         return (
             _GENERIC_TIMEOUT_ERROR_MESSAGE,

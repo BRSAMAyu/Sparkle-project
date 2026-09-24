@@ -5,7 +5,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from functools import lru_cache
-from typing import Any, Mapping
+from typing import Any, Mapping, cast
 from uuid import UUID
 
 from loguru import logger
@@ -15,7 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 try:
     import tiktoken
 except ImportError:  # pragma: no cover - optional runtime dependency
-    tiktoken = None
+    # wt297: 可选依赖回退的惯用形（运行时以 hasattr 守卫）；模块名复绑需精确豁免。
+    tiktoken = None  # type: ignore[assignment]
 
 from app.config import settings
 from app.core.business_metrics import (
@@ -237,7 +238,8 @@ def _trim_ranked_list(
     total = 0
     for payload in payloads:
         item_id = payload.get("id")
-        score = scores.get(item_id, 0.0)
+        # wt297: id 缺省时 get(None) 与缺省值等价，显式化该语义。
+        score = scores.get(item_id, 0.0) if item_id is not None else 0.0
         tokens = estimate_tokens(_serialize(_budget_view(payload, section)))
         entries.append({"payload": payload, "score": score, "tokens": tokens, "id": item_id})
         total += tokens
@@ -1786,11 +1788,11 @@ class ContextPackBuilder:
                     if (key := entry.item.pref_key) in trimmed_preferences
                 ][:10],
                 "goals": [
-                    {"id": payload.get("id"), "score": goal_scores.get(payload.get("id"), 0.0)}
+                    {"id": (goal_id := payload.get("id")), "score": goal_scores.get(goal_id, 0.0) if goal_id is not None else 0.0}
                     for payload in trimmed_goals[:10]
                 ],
                 "episodic": [
-                    {"id": payload.get("id"), "score": episodic_scores.get(payload.get("id"), 0.0)}
+                    {"id": (episodic_id := payload.get("id")), "score": episodic_scores.get(episodic_id, 0.0) if episodic_id is not None else 0.0}
                     for payload in trimmed_episodic[:10]
                 ],
             }
@@ -2283,7 +2285,7 @@ class ContextPackBuilder:
                             state_signal_from_envelope(
                                 field_name,
                                 envelope,
-                                ttl_map=ttl_map,
+                                ttl_map=cast("Mapping[str, int]", ttl_map),
                                 epoch=state.schema_version,
                             )
                         )
