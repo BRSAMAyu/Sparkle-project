@@ -967,24 +967,21 @@ class _PendingPoliciesCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // A-wt283 同屏双标题去重：段落标题由外层 ExpandableSection 单源播报，
+          // 卡内不再重复标题文字，仅保留图标并入首行内容（内容对齐）。
           Row(
             children: [
               Icon(Icons.policy_outlined, color: DS.brandPrimary),
               const SizedBox(width: DS.spacing8),
-              Text(
-                context.l10n.accountabilityPendingPolicies,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: DS.fontWeightBold,
-                    ),
+              Expanded(
+                child: Text(
+                  count <= 0 ? context.l10n.accountabilityZeroItems : context.l10n.accountabilityItemCount(count),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                ),
               ),
             ],
-          ),
-          const SizedBox(height: DS.spacing8),
-          Text(
-            count <= 0 ? context.l10n.accountabilityZeroItems : context.l10n.accountabilityItemCount(count),
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: DS.fontWeightBold,
-                ),
           ),
           const SizedBox(height: DS.spacing4),
           Text(
@@ -1020,24 +1017,21 @@ class _RecentReflectionsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // A-wt283 同屏双标题去重：同 _PendingPoliciesCard，卡内标题移除，
+          // 图标并入条数内容行。
           Row(
             children: [
               Icon(Icons.auto_stories_outlined, color: DS.taskReflection),
               const SizedBox(width: DS.spacing8),
-              Text(
-                context.l10n.accountabilityRecentReflections,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: DS.fontWeightBold,
-                    ),
+              Expanded(
+                child: Text(
+                  count <= 0 ? context.l10n.accountabilityZeroItems : context.l10n.accountabilityItemCount(count),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                ),
               ),
             ],
-          ),
-          const SizedBox(height: DS.spacing8),
-          Text(
-            count <= 0 ? context.l10n.accountabilityZeroItems : context.l10n.accountabilityItemCount(count),
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: DS.fontWeightBold,
-                ),
           ),
           if ((lastCategory ?? '').isNotEmpty) ...[
             const SizedBox(height: DS.spacing6),
@@ -1097,22 +1091,20 @@ class _ForesightHintCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // A-wt283 同屏双标题去重：同 _PendingPoliciesCard，卡内标题移除，
+          // 图标并入提示正文行（多行文本 start 对齐）。
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(Icons.visibility_outlined, color: DS.brandPrimary),
               const SizedBox(width: DS.spacing8),
-              Text(
-                context.l10n.accountabilityForesightHint,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: DS.fontWeightBold,
-                    ),
+              Expanded(
+                child: Text(
+                  hintText ?? context.l10n.accountabilityNoForesightHint,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
               ),
             ],
-          ),
-          const SizedBox(height: DS.spacing8),
-          Text(
-            hintText ?? context.l10n.accountabilityNoForesightHint,
-            style: Theme.of(context).textTheme.bodyMedium,
           ),
           if (subtitle.isNotEmpty) ...[
             const SizedBox(height: DS.spacing6),

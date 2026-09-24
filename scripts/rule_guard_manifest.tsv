@@ -85,3 +85,4 @@ DB-HEAD	PYTHONPATH="${REPO_ROOT}/backend" "${PYTHON_BIN}" "${REPO_ROOT}/scripts/
 COMM-LB	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_comm_lb_leaderboard_unrouted.py"
 FS-CARRY	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_finally_error_carry.py"
 N37-TIMEOUT	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_n37_timeout_registry.py"
+UX-DUPTITLE	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_section_title_duplication_ratchet.py"

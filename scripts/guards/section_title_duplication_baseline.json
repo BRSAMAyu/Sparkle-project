@@ -1,0 +1,74 @@
+{
+  "comment": "Frozen ratchet baseline for check_section_title_duplication_ratchet.py (A-wt283 同屏双标题去重：段落标题由分区件单源，卡内标题移除；冻结收敛后存量). Only lower via --update-baseline after a burn batch lowers counts; never raise.",
+  "files": {
+    "mobile/lib/features/achievement/presentation/widgets/achievement_share_bottom_sheet.dart": {
+      "dualTitle": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/chat_bubble.dart": {
+      "dualTitle": 3
+    },
+    "mobile/lib/features/cognitive/presentation/screens/curiosity_capsule_screen.dart": {
+      "dualTitle": 1
+    },
+    "mobile/lib/features/community/presentation/pages/accountability_hub_screen.dart": {
+      "dualTitle": 2
+    },
+    "mobile/lib/features/community/presentation/screens/squad_detail_screen.dart": {
+      "dualTitle": 2
+    },
+    "mobile/lib/features/focus/presentation/screens/focus_main_screen.dart": {
+      "dualTitle": 1
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/goal_world_graph_mini_panel.dart": {
+      "dualTitle": 1
+    },
+    "mobile/lib/features/home/presentation/screens/dashboard_screen.dart": {
+      "dualTitle": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/recent_insights_card.dart": {
+      "dualTitle": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/understanding_panel.dart": {
+      "dualTitle": 1
+    },
+    "mobile/lib/features/knowledge/presentation/screens/knowledge_detail_screen.dart": {
+      "dualTitle": 1
+    },
+    "mobile/lib/features/memory/presentation/screens/memory_panel_screen.dart": {
+      "dualTitle": 3
+    },
+    "mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart": {
+      "dualTitle": 1
+    },
+    "mobile/lib/features/plan/presentation/screens/sprint_review_screen.dart": {
+      "dualTitle": 1
+    },
+    "mobile/lib/features/report/presentation/screens/learning_report_screen.dart": {
+      "dualTitle": 2
+    },
+    "mobile/lib/features/reviews/presentation/screens/review_plan_hub_screen.dart": {
+      "dualTitle": 2
+    },
+    "mobile/lib/features/theater/presentation/screens/knowledge_theater_screen.dart": {
+      "dualTitle": 1
+    },
+    "mobile/lib/features/tools/presentation/widgets/breathing_tool.dart": {
+      "dualTitle": 2
+    },
+    "mobile/lib/features/tools/presentation/widgets/calculator_tool.dart": {
+      "dualTitle": 1
+    },
+    "mobile/lib/features/tools/presentation/widgets/flash_capsule_tool.dart": {
+      "dualTitle": 1
+    },
+    "mobile/lib/features/tools/presentation/widgets/notes_tool.dart": {
+      "dualTitle": 1
+    },
+    "mobile/lib/features/tools/presentation/widgets/translator_tool.dart": {
+      "dualTitle": 1
+    },
+    "mobile/lib/features/user/presentation/screens/delete_account_screen.dart": {
+      "dualTitle": 1
+    }
+  }
+}
