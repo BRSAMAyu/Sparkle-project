@@ -33049,6 +33049,37 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeOnboardingResumeCta => '继续引导';
 
   @override
+  String get stuckRecoveryCardTitle => '回来就好，任务还在';
+
+  @override
+  String stuckRecoveryCardBody(String taskTitle, int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days 天',
+      one: '1 天',
+    );
+    return '《$taskTitle》已经等你 $_temp0。不用一次做完——先做 5 分钟，接上就算赢。';
+  }
+
+  @override
+  String get stuckRecoveryCardCta => '先做 5 分钟';
+
+  @override
+  String get stuckRecoveryCardDismiss => '暂不';
+
+  @override
+  String get stuckRecoveryReconnectTitle => '重新接上了';
+
+  @override
+  String stuckRecoveryReconnectBody(String taskTitle) {
+    return '《$taskTitle》重新动起来了——比中断多走一步，这就是恢复。';
+  }
+
+  @override
+  String get stuckRecoveryReconnectAck => '好的';
+
+  @override
   String get homeSlotDailyBriefing => '今日简报';
 
   @override

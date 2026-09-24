@@ -15203,6 +15203,30 @@
     "homeOnboardingResumeTitle": "Finish setup so Sparkle knows you better",
     "homeOnboardingResumeSummary": "Your learning profile and modeling chat are still pending. Explore freely first — the AI is ready whenever you are.",
     "homeOnboardingResumeCta": "Continue setup",
+    "stuckRecoveryCardTitle": "Welcome back — your task is still here",
+    "stuckRecoveryCardBody": "{taskTitle} has been waiting for {days, plural, =1{1 day} other{{days} days}}. No need to finish it all at once — start with 5 minutes; picking it back up already counts.",
+    "@stuckRecoveryCardBody": {
+        "placeholders": {
+            "taskTitle": {
+                "type": "String"
+            },
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "stuckRecoveryCardCta": "Do 5 minutes",
+    "stuckRecoveryCardDismiss": "Not now",
+    "stuckRecoveryReconnectTitle": "Reconnected",
+    "stuckRecoveryReconnectBody": "{taskTitle} is moving again — one step past the pause is all recovery takes.",
+    "@stuckRecoveryReconnectBody": {
+        "placeholders": {
+            "taskTitle": {
+                "type": "String"
+            }
+        }
+    },
+    "stuckRecoveryReconnectAck": "Done",
     "homeSlotDailyBriefing": "Daily briefing",
     "homeSlotDailyBriefingReady": "{count} next actions · ready to start",
     "@homeSlotDailyBriefingReady": {

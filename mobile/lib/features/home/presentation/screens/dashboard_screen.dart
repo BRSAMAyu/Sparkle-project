@@ -53,6 +53,7 @@ import 'package:sparkle/features/home/presentation/widgets/multi_goal_dashboard_
 import 'package:sparkle/features/home/presentation/widgets/onboarding_resume_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/predicted_intent_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/recent_insights_card.dart';
+import 'package:sparkle/features/home/presentation/widgets/stuck_recovery_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/task_board_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/understanding_panel.dart';
 import 'package:sparkle/features/home/presentation/widgets/unified_omni_bar.dart';
@@ -1349,7 +1350,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       // 用户无目标时走 hasNoGoals 分支（growthSections 整体不渲染），挂这
       // 才能覆盖注册即到首屏的主受众。可见性由卡内自守门（非 guest 且
       // completed==false），其余场景渲染 SizedBox.shrink，零布局影响。
+      // J-05（「我卡住了」旗舰恢复旅程）：中断回流承接卡——用户卡住
+      // （停滞 ≥48h 的未完成任务，检测口径见 stuck_recovery_provider）后
+      // 回到 app 的第一屏承接：上次任务 + 一行共情 + 5 分钟最小重启动作，
+      // 完成后转正反馈相。挂 dashboardSections（与上方两卡同理由：主受众
+      // 场景在 hasNoGoals 分支也可见）；守门在 stuckRecoveryCardProvider
+      // （未认证/无停滞/执行中任务一律 SizedBox.shrink，零布局影响）。
+      // 排在转化/引导卡之前：把人拉回轨道优先于一切转化钩子。
       dashboardSections
+        ..add(
+          _staggeredSection(
+            index: sectionIndex++,
+            child: const StuckRecoveryCard(),
+          ),
+        )
         ..add(
           _staggeredSection(
             index: sectionIndex++,

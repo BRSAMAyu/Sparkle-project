@@ -15219,6 +15219,30 @@
     "homeOnboardingResumeTitle": "完成引导，让 AI 更懂你",
     "homeOnboardingResumeSummary": "学习画像和建模访谈还没完成。先随便体验，随时回来继续——AI 已经可以用了。",
     "homeOnboardingResumeCta": "继续引导",
+    "stuckRecoveryCardTitle": "回来就好，任务还在",
+    "stuckRecoveryCardBody": "《{taskTitle}》已经等你 {days, plural, =1{1 天} other{{days} 天}}。不用一次做完——先做 5 分钟，接上就算赢。",
+    "@stuckRecoveryCardBody": {
+        "placeholders": {
+            "taskTitle": {
+                "type": "String"
+            },
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "stuckRecoveryCardCta": "先做 5 分钟",
+    "stuckRecoveryCardDismiss": "暂不",
+    "stuckRecoveryReconnectTitle": "重新接上了",
+    "stuckRecoveryReconnectBody": "《{taskTitle}》重新动起来了——比中断多走一步，这就是恢复。",
+    "@stuckRecoveryReconnectBody": {
+        "placeholders": {
+            "taskTitle": {
+                "type": "String"
+            }
+        }
+    },
+    "stuckRecoveryReconnectAck": "好的",
     "homeSlotDailyBriefing": "今日简报",
     "homeSlotDailyBriefingReady": "今天 {count} 件待办 · 已就绪",
     "@homeSlotDailyBriefingReady": {

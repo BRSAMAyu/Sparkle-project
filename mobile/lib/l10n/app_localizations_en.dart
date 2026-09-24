@@ -34482,6 +34482,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeOnboardingResumeCta => 'Continue setup';
 
   @override
+  String get stuckRecoveryCardTitle => 'Welcome back — your task is still here';
+
+  @override
+  String stuckRecoveryCardBody(String taskTitle, int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: '1 day',
+    );
+    return '$taskTitle has been waiting for $_temp0. No need to finish it all at once — start with 5 minutes; picking it back up already counts.';
+  }
+
+  @override
+  String get stuckRecoveryCardCta => 'Do 5 minutes';
+
+  @override
+  String get stuckRecoveryCardDismiss => 'Not now';
+
+  @override
+  String get stuckRecoveryReconnectTitle => 'Reconnected';
+
+  @override
+  String stuckRecoveryReconnectBody(String taskTitle) {
+    return '$taskTitle is moving again — one step past the pause is all recovery takes.';
+  }
+
+  @override
+  String get stuckRecoveryReconnectAck => 'Done';
+
+  @override
   String get homeSlotDailyBriefing => 'Daily briefing';
 
   @override

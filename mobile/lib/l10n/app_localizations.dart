@@ -60073,6 +60073,48 @@ abstract class AppLocalizations {
   /// **'继续引导'**
   String get homeOnboardingResumeCta;
 
+  /// No description provided for @stuckRecoveryCardTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'回来就好，任务还在'**
+  String get stuckRecoveryCardTitle;
+
+  /// No description provided for @stuckRecoveryCardBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'《{taskTitle}》已经等你 {days, plural, =1{1 天} other{{days} 天}}。不用一次做完——先做 5 分钟，接上就算赢。'**
+  String stuckRecoveryCardBody(String taskTitle, int days);
+
+  /// No description provided for @stuckRecoveryCardCta.
+  ///
+  /// In zh, this message translates to:
+  /// **'先做 5 分钟'**
+  String get stuckRecoveryCardCta;
+
+  /// No description provided for @stuckRecoveryCardDismiss.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂不'**
+  String get stuckRecoveryCardDismiss;
+
+  /// No description provided for @stuckRecoveryReconnectTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新接上了'**
+  String get stuckRecoveryReconnectTitle;
+
+  /// No description provided for @stuckRecoveryReconnectBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'《{taskTitle}》重新动起来了——比中断多走一步，这就是恢复。'**
+  String stuckRecoveryReconnectBody(String taskTitle);
+
+  /// No description provided for @stuckRecoveryReconnectAck.
+  ///
+  /// In zh, this message translates to:
+  /// **'好的'**
+  String get stuckRecoveryReconnectAck;
+
   /// No description provided for @homeSlotDailyBriefing.
   ///
   /// In zh, this message translates to:
