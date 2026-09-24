@@ -2,7 +2,10 @@ FROM debian:bookworm-slim
 
 ARG PROTOC_VERSION=27.3
 ARG BUF_VERSION=1.47.2
-ARG DART_SDK_VERSION=3.6.1
+# WT280: protoc_plugin 25.1.0 的 pubspec 约束是 sdk >=3.7.0 <4.0.0，Dart 3.6.1 会使
+# 本镜像构建失败并堵死整条 CI（lint 首步即 make proto-tools-build）。配对三元组:
+# Dart >=3.7.0 ↔ protoc_plugin 25.1.0 ↔ protobuf 6.1.0（mobile 运行时锁定）。
+ARG DART_SDK_VERSION=3.7.2
 
 ENV DEBIAN_FRONTEND=noninteractive
 
