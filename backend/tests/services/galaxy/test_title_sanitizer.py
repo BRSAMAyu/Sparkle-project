@@ -139,3 +139,56 @@ def test_sanitize_keywords_dedupes_after_scrub_and_drops_empty():
 
 def test_sanitize_keywords_empty_list():
     assert sanitize_keywords([]) == []
+
+
+# ---------------------------------------------------------------------------
+# WT334 · plan 链路 subject 的内部 token 残留：feature_tour S7 以
+# f"TOUR科目-{run}" 填计划 subject（subject 参与 uq_plans_user_sprint_goal_active
+# 唯一键，token 是评测合法去重手段），plan 详情/日程推荐文案/Aurora 简报等展示面
+# 原样透出。形态与任务标题的「专题N-…: 尾」不同：TAG 直接贴「科目/Subject」，
+# 后跟唯一性 token 段，无语义尾。
+# ---------------------------------------------------------------------------
+
+from app.services.galaxy.title_sanitizer import clean_display_subject
+
+EVIDENCE_SUBJECT = "TOUR科目-d91d5df0-10-5dc70d"
+
+
+class TestSubjectTokenForms:
+    def test_bare_subject_token_drops_to_empty(self):
+        """纯 token 科目 → 空串，调用方走「无科目」文案兜底。"""
+        assert clean_display_subject(EVIDENCE_SUBJECT) == ""
+        assert strip_internal_tokens(EVIDENCE_SUBJECT) == ""
+
+    def test_embedded_subject_token_stripped_from_stored_copy(self):
+        dirty = f"小明，今天先做好这 7 件事，{EVIDENCE_SUBJECT} 的第一步就稳下来了。"
+        cleaned = strip_internal_tokens(dirty)
+        assert "TOUR科目" not in cleaned
+        assert "d91d5df0" not in cleaned and "5dc70d" not in cleaned
+        assert "第一步就稳下来了" in cleaned
+
+    def test_normal_subject_zero_rewrite(self):
+        for clean in (
+            "离散数学",
+            "高等数学",
+            "计算机网络",
+            "AI科目-期末",
+            "CS科目-exam1",
+            "TOUR 科目",
+            "business Subject",
+            "IT科目-2024-2025",
+        ):
+            assert clean_display_subject(clean) == clean, clean
+
+    def test_none_and_empty(self):
+        assert clean_display_subject(None) == ""
+        assert clean_display_subject("") == ""
+
+    def test_subject_form_alone_does_not_hijack_normal_titles(self):
+        """科目形态扩展不得波及 wt330 已固化的标题清洗行为。"""
+        assert strip_internal_tokens(EVIDENCE_TITLE) == EVIDENCE_TAIL
+        assert clean_display_title("数据结构复习 — 二叉树专题") == "数据结构复习 — 二叉树专题"
+
+    def test_mixed_topic_and_subject_blocks(self):
+        dirty = f"TOUR 专题2-d91d5df0-3-ef4567: {EVIDENCE_SUBJECT}"
+        assert strip_internal_tokens(dirty) == ""

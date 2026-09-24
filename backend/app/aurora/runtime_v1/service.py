@@ -48,6 +48,7 @@ from app.models.user import User
 from app.models.user_preferences import UserPreferencesCenter
 from app.services.aurora_stage38_kill_switch_service import AuroraStage38KillSwitchService
 from app.services.calendar_service import CalendarService
+from app.services.galaxy.title_sanitizer import clean_display_subject, strip_internal_tokens
 from app.services.memory_service import MemoryService
 from app.sprint_packs.last_24h_mode import (
     apply_last_24h_policy_overrides,
@@ -247,7 +248,8 @@ class AuroraRuntimeV1Service:
             _strip(plan_context.get("today_focus"))
             or self._today_focus_from_tasks(today_tasks)
             or self._stored_day_recommendation(plan=plan, day_index=current_day_index)
-            or _strip(plan.subject)
+            # WT334：subject 兜底不透出内部科目 token。
+            or clean_display_subject(plan.subject)
             or _strip(plan.name)
             or "今天的核心任务"
         )
@@ -1937,9 +1939,14 @@ class AuroraRuntimeV1Service:
         highlights = _as_dict(metadata.get("day_highlights"))
         stored_day = _safe_int(highlights.get("day"))
         if stored_day == day_index:
-            return self._compact_focus_text(highlights.get("recommendation") or highlights.get("ai_recommendation"))
+            # WT334：存量文案读取面兜底——剥离内部科目/主题 token。
+            return strip_internal_tokens(
+                self._compact_focus_text(highlights.get("recommendation") or highlights.get("ai_recommendation"))
+            )
         keyed = _as_dict(highlights.get(str(day_index)))
-        return self._compact_focus_text(keyed.get("recommendation") or keyed.get("ai_recommendation"))
+        return strip_internal_tokens(
+            self._compact_focus_text(keyed.get("recommendation") or keyed.get("ai_recommendation"))
+        )
 
     async def _resolve_user_display_name(self, *, active_db: AsyncSession, user_id: UUID) -> str:
         result = await active_db.execute(select(User).where(User.id == user_id).limit(1))
@@ -2002,7 +2009,9 @@ class AuroraRuntimeV1Service:
         display_name: str = "",
         calendar_note: str = "",
     ) -> str:
-        subject = _strip(plan.subject) or _strip(plan.name) or "这场考试"
+        # WT334：简报「备考{subject}的第 N 天」不吃内部科目 token——
+        # 纯 token 科目按既有兜底顺序回退（计划名 → 「这场考试」）。
+        subject = clean_display_subject(plan.subject) or _strip(plan.name) or "这场考试"
         greeting = self._daily_greeting()
         recommendation_tail = self._daily_recommendation_tail(day_recommendation, today_focus=today_focus)
         calendar_tail = self._daily_calendar_tail(calendar_note)

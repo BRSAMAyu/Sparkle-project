@@ -603,3 +603,174 @@ async def test_plan_health_no_inactivity_reason_for_active_plan(db_session, plan
     assert detail["health_metrics"]["days_since_last_activity"] == 0
     assert "days_since_last_activity" not in detail["health_reasons"]
     assert detail["health_status"] == "healthy"
+
+
+# ---------------------------------------------------------------------------
+# WT334 · plan subject 内部 token 残留清洗（红测先行）：
+# feature_tour S7 以 f"TOUR科目-{run}" 填计划 subject（subject 参与唯一键，
+# token 是评测合法去重手段，不改库）；详情 subject 字段 / day_highlights 推荐
+# 文案 / 任务 why_now 等展示面不得原样透出 token。正常科目零改写。
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_plan_detail_scrubs_internal_token_from_subject_surfaces(db_session, plans_client):
+    client, state = plans_client
+    user = User(
+        username="wt334_token_user",
+        email="wt334_token_user@example.com",
+        hashed_password="hashed",
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    plan = Plan(
+        user_id=user.id,
+        name="真题冲刺周",
+        type=PlanType.SPRINT,
+        description="评测 harness 遗留的 tokened subject（存量脏行，读取面兜底）",
+        plan_stage=PlanStage.SPRINT,
+        target_date=date.today() + timedelta(days=5),
+        daily_available_minutes=60,
+        subject="TOUR科目-d91d5df0-10-5dc70d",
+        is_active=True,
+        priority=PlanPriority.NORMAL,
+    )
+    db_session.add(plan)
+    await db_session.flush()
+    # 钉开始日 = 今天本地日（ naïve），使派生日 = Day 1「today」档——
+    # subject_tail 文案只在该档出现（今天先做好…{subject} 的第一步就稳下来了）。
+    started_at = datetime.combine(date.today(), datetime.min.time())
+    plan.created_at = started_at
+    plan.updated_at = started_at
+    await db_session.flush()
+    db_session.add(
+        Task(
+            user_id=user.id,
+            plan_id=plan.id,
+            title="真题演练与错因回看",
+            type=TaskType.LEARNING,
+            tags=["day:1"],
+            estimated_minutes=30,
+            difficulty=2,
+            energy_cost=2,
+            status=TaskStatus.PENDING,
+            priority=2,
+            guide_json={"task_kind": "diagnostic_map"},
+        )
+    )
+    db_session.add(
+        PlanState(
+            user_id=user.id,
+            plan_id=plan.id,
+            status=PlanStateStatus.ACTIVE.value,
+            version=1,
+            task_index={"completed": 0, "total": 1, "avg_completion_rate": 0.0},
+            task_summaries=[],
+        )
+    )
+    await db_session.commit()
+    state["current_user"] = user
+
+    detail_response = client.get(f"/plans/{plan.id}")
+    assert detail_response.status_code == 200
+    detail = detail_response.json()
+    assert "TOUR科目" not in str(detail["subject"])
+    recommendation = str((detail.get("day_highlights") or {}).get("recommendation") or "")
+    assert recommendation, "day_highlights recommendation must still be present"
+    assert "TOUR科目" not in recommendation and "d91d5df0" not in recommendation
+    why_now = str(((detail["tasks"][0].get("guide_json") or {}).get("why_now")) or "")
+    assert "TOUR科目" not in why_now and "d91d5df0" not in why_now
+
+    list_response = client.get("/plans")
+    assert list_response.status_code == 200
+    listed = next(item for item in list_response.json()["data"] if item["id"] == str(plan.id))
+    assert "TOUR科目" not in str(listed["subject"])
+
+
+@pytest.mark.asyncio
+async def test_plan_detail_normal_subject_zero_rewrite(db_session, plans_client):
+    client, state = plans_client
+    user = User(
+        username="wt334_clean_user",
+        email="wt334_clean_user@example.com",
+        hashed_password="hashed",
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    plan = Plan(
+        user_id=user.id,
+        name="考研冲刺",
+        type=PlanType.SPRINT,
+        description="正常科目零改写",
+        plan_stage=PlanStage.SPRINT,
+        target_date=date.today() + timedelta(days=5),
+        daily_available_minutes=60,
+        subject="离散数学",
+        is_active=True,
+        priority=PlanPriority.NORMAL,
+    )
+    db_session.add(plan)
+    await db_session.flush()
+    started_at = datetime.combine(date.today(), datetime.min.time())
+    plan.created_at = started_at
+    plan.updated_at = started_at
+    await db_session.flush()
+    db_session.add(
+        Task(
+            user_id=user.id,
+            plan_id=plan.id,
+            title="图论基础复习",
+            type=TaskType.LEARNING,
+            tags=["day:1"],
+            estimated_minutes=30,
+            difficulty=2,
+            energy_cost=2,
+            status=TaskStatus.PENDING,
+            priority=2,
+            guide_json={"task_kind": "diagnostic_map"},
+        )
+    )
+    db_session.add(
+        PlanState(
+            user_id=user.id,
+            plan_id=plan.id,
+            status=PlanStateStatus.ACTIVE.value,
+            version=1,
+            task_index={"completed": 0, "total": 1, "avg_completion_rate": 0.0},
+            task_summaries=[],
+        )
+    )
+    await db_session.commit()
+    state["current_user"] = user
+
+    detail_response = client.get(f"/plans/{plan.id}")
+    assert detail_response.status_code == 200
+    detail = detail_response.json()
+    assert detail["subject"] == "离散数学"
+    recommendation = str((detail.get("day_highlights") or {}).get("recommendation") or "")
+    assert "离散数学" in recommendation
+    why_now = str(((detail["tasks"][0].get("guide_json") or {}).get("why_now")) or "")
+    assert "离散数学" in why_now
+
+
+@pytest.mark.asyncio
+async def test_plan_galaxy_concept_extraction_drops_tokened_subject_tag():
+    """WT334 · 生成侧：里程碑触发的星图更新不把内部科目 token 带进节点 tags。"""
+    from types import SimpleNamespace
+
+    from app.core.celery_app import _extract_plan_galaxy_concepts as _extract_plan_concepts
+
+    plan = SimpleNamespace(
+        name="真题冲刺周",
+        description="冲刺描述",
+        subject="TOUR科目-d91d5df0-10-5dc70d",
+    )
+    concepts = await _extract_plan_concepts(plan, None)
+    assert len(concepts) == 1
+    assert concepts[0]["tags"] == []
+
+    clean_plan = SimpleNamespace(name="真题冲刺周", description="冲刺描述", subject="离散数学")
+    clean_concepts = await _extract_plan_concepts(clean_plan, None)
+    assert clean_concepts[0]["tags"] == ["离散数学"]

@@ -53,6 +53,7 @@ from app.services.card_protocol.global_compass_manager import GlobalCompassManag
 from app.services.card_protocol.phase_design_service import PhaseDesignService
 from app.services.card_protocol.phase_service import PhaseService
 from app.services.card_protocol.planning_memory_service import PlanningMemoryService
+from app.services.galaxy.title_sanitizer import clean_display_subject, strip_internal_tokens
 from app.services.plan_progress_service import PlanHealthReport, PlanProgressService
 from app.services.plan_quota_service import PlanQuotaService
 from app.services.plan_service import PlanService, _sync_plan_card_projection
@@ -154,7 +155,9 @@ def _serialize_plan(
         "name": plan.name,
         "type": plan.type.value,
         "description": plan.description,
-        "subject": plan.subject,
+        # WT334：subject 展示面清洗——评测 harness 遗留的「TOUR科目-…」token
+        # 不透出（纯 token → None，前端走无科目兜底）；正常科目零改写。库值不动。
+        "subject": clean_display_subject(plan.subject) or None,
         "target_date": plan.target_date,
         "progress": plan.progress,
         "health_score": None,
@@ -240,7 +243,8 @@ def _serialize_task_for_plan_detail(task: Task, *, subject: str | None) -> dict[
         )
         guide["why_now"] = _task_guide_enricher.build_rule_based_why_now(
             task_kind=task_kind,
-            subject=_strip(subject) or "当前科目",
+            # WT334：guide 文案收口同走 subject 清洗（token 不进用户可见文案）。
+            subject=clean_display_subject(subject) or "当前科目",
             focus=focus,
             guide_json=guide,
         )
@@ -304,10 +308,11 @@ def _stored_day_recommendation(plan: Plan, day: int) -> str:
     except (TypeError, ValueError):
         stored_day = 0
     if stored_day == day:
-        return _strip(highlights.get("recommendation") or highlights.get("ai_recommendation"))
+        # WT334：存量推荐文案读取面兜底——剥离历史遗留的内部科目 token。
+        return strip_internal_tokens(_strip(highlights.get("recommendation") or highlights.get("ai_recommendation")))
     keyed = highlights.get(str(day))
     if isinstance(keyed, dict):
-        return _strip(keyed.get("recommendation") or keyed.get("ai_recommendation"))
+        return strip_internal_tokens(_strip(keyed.get("recommendation") or keyed.get("ai_recommendation")))
     return ""
 
 
@@ -333,7 +338,10 @@ def _build_day_recommendation(
     name_prefix = f"{display_name}，" if display_name and len(display_name) <= 12 else ""
     task_count = max(1, len(task_payloads))
     thing_label = f"这 {task_count} 件事" if task_count > 1 else "这 1 件事"
-    subject_tail = f"{_strip(plan.subject)} 的第一步就稳下来了" if _strip(plan.subject) else "你已经走在正确路上了"
+    # WT334：推荐文案不拼内部科目 token——纯 token 科目走无科目兜底句。
+    subject_tail = (
+        f"{clean_display_subject(plan.subject)} 的第一步就稳下来了" if clean_display_subject(plan.subject) else "你已经走在正确路上了"
+    )
     # WT313 · comeback 重校准：mode 决定文案语义——
     # - today：派生日有未完成任务，"今天"语义诚实；
     # - resume：当天任务已完成/缺失，接上第一个未完成日，不冒充"今天"；
@@ -1387,7 +1395,8 @@ async def generate_tasks_for_plan(
 
     requested_count = request_body.count if request_body and request_body.count is not None else count
 
-    topic = plan.subject or plan.name
+    # WT334：任务派生 topic 不吃内部科目 token（纯 token 科目回退计划名）。
+    topic = clean_display_subject(plan.subject) or plan.name
     # X-09 · FIX-40 P3-4 收编：直调 tool.execute() 旁路 X-06 安全闸门（权限/
     # 幂等/预算/账本）——改走 ToolExecutor 统一入口。端点是用户显式 REST 动作
     # （点击"为计划生成任务"）= 天然确认语义；幂等键按请求唯一（重复点击是

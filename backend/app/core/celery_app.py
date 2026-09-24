@@ -606,6 +606,62 @@ def classify_node_sector_batch(
         raise self.retry(exc=exc, countdown=countdown) from exc
 
 
+async def _extract_plan_galaxy_concepts(plan, milestone_data: dict | None) -> list[dict]:
+    """Extract knowledge concepts from plan and milestone data
+
+    WT334：从 ``update_knowledge_galaxy`` 内嵌提升为模块级（无闭包依赖，便于
+    受测）——概念节点 tags 不带内部科目 token（纯 token 科目 → 空 tags）。
+    """
+    concepts = []
+
+    # Extract from plan name and description
+    if plan.name:
+        from app.services.galaxy.title_sanitizer import clean_display_subject
+
+        subject_tag = clean_display_subject(plan.subject)
+        concepts.append(
+            {
+                "name": plan.name,
+                "description": plan.description or "",
+                "mastery_delta": 0.2 if milestone_data else 0.1,
+                "tags": [subject_tag] if subject_tag else [],
+            }
+        )
+
+    # Extract from milestone data if available
+    if milestone_data:
+        milestone_name = milestone_data.get("name", "")
+        if milestone_name:
+            concepts.append(
+                {
+                    "name": milestone_name,
+                    "description": milestone_data.get("description", ""),
+                    "mastery_delta": 0.15,
+                    "tags": milestone_data.get("tags", []),
+                }
+            )
+
+        # Extract learning outcomes
+        for outcome in milestone_data.get("learning_outcomes", []):
+            if isinstance(outcome, str):
+                concepts.append(
+                    {
+                        "name": outcome,
+                        "mastery_delta": 0.1,
+                    }
+                )
+            elif isinstance(outcome, dict):
+                concepts.append(
+                    {
+                        "name": outcome.get("name", ""),
+                        "description": outcome.get("description", ""),
+                        "mastery_delta": outcome.get("mastery_delta", 0.1),
+                    }
+                )
+
+    return [c for c in concepts if c.get("name")]
+
+
 @celery_app.task(bind=True, max_retries=3, name="update_knowledge_galaxy")
 def update_knowledge_galaxy(
     self,
@@ -646,6 +702,7 @@ def update_knowledge_galaxy(
     async def _update_galaxy():
         async with AsyncSessionLocal() as session:
             try:
+                from app.services.galaxy.title_sanitizer import clean_display_subject
                 from app.services.knowledge_service import KnowledgeService
                 from app.services.plan_service import PlanService
 
@@ -661,6 +718,10 @@ def update_knowledge_galaxy(
                     logger.warning(f"Plan {plan_id} not found, skipping galaxy update")
                     return {"status": "skipped", "reason": "plan_not_found"}
 
+                # WT334：plan subject 生成侧收口——内部 token 科目不进节点命名/
+                # 关联（纯 token 科目置 None，跳过 subject 主线连接）。
+                subject_label = clean_display_subject(plan.subject) or None
+
                 result = {
                     "status": "success",
                     "trigger_type": trigger_type,
@@ -670,7 +731,7 @@ def update_knowledge_galaxy(
                 }
 
                 # Extract knowledge concepts from plan
-                concepts = await _extract_plan_concepts(plan, milestone_data)
+                concepts = await _extract_plan_galaxy_concepts(plan, milestone_data)
 
                 # Create or update knowledge nodes
                 for concept in concepts:
@@ -691,7 +752,7 @@ def update_knowledge_galaxy(
                             new_node = await knowledge_service.create_node(
                                 user_id=user_uuid,
                                 name=concept["name"],
-                                subject=plan.subject,
+                                subject=subject_label,
                                 description=concept.get("description", ""),
                                 tags=concept.get("tags", []),
                             )
@@ -727,12 +788,14 @@ def update_knowledge_galaxy(
                             logger.warning(f"Failed to create link: {e}")
 
                 # Link to plan's subject node
-                if plan.subject:
+                # WT334：subject 主线连接只用清洗后科目名——纯 token 科目置 None
+                # 跳过，不再造「TOUR科目-…」形态的脏节点。
+                if subject_label:
                     try:
                         for concept in concepts:
                             await knowledge_service.create_or_update_link(
                                 user_id=user_uuid,
-                                source_name=plan.subject,
+                                source_name=subject_label,
                                 target_name=concept["name"],
                                 relation_type="contains",
                                 strength=0.7,
@@ -755,54 +818,6 @@ def update_knowledge_galaxy(
             except Exception as e:
                 logger.error(f"❌ Celery: Failed to update galaxy for plan {plan_id}: {e}")
                 raise
-
-    async def _extract_plan_concepts(plan, milestone_data: dict | None) -> list[dict]:
-        """Extract knowledge concepts from plan and milestone data"""
-        concepts = []
-
-        # Extract from plan name and description
-        if plan.name:
-            concepts.append(
-                {
-                    "name": plan.name,
-                    "description": plan.description or "",
-                    "mastery_delta": 0.2 if milestone_data else 0.1,
-                    "tags": [plan.subject] if plan.subject else [],
-                }
-            )
-
-        # Extract from milestone data if available
-        if milestone_data:
-            milestone_name = milestone_data.get("name", "")
-            if milestone_name:
-                concepts.append(
-                    {
-                        "name": milestone_name,
-                        "description": milestone_data.get("description", ""),
-                        "mastery_delta": 0.15,
-                        "tags": milestone_data.get("tags", []),
-                    }
-                )
-
-            # Extract learning outcomes
-            for outcome in milestone_data.get("learning_outcomes", []):
-                if isinstance(outcome, str):
-                    concepts.append(
-                        {
-                            "name": outcome,
-                            "mastery_delta": 0.1,
-                        }
-                    )
-                elif isinstance(outcome, dict):
-                    concepts.append(
-                        {
-                            "name": outcome.get("name", ""),
-                            "description": outcome.get("description", ""),
-                            "mastery_delta": outcome.get("mastery_delta", 0.1),
-                        }
-                    )
-
-        return [c for c in concepts if c.get("name")]
 
     try:
         return _run_async(_update_galaxy())

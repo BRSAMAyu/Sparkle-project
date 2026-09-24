@@ -203,3 +203,24 @@ async def test_daily_startup_mentions_calendar_exam_countdown(db_session):
 
     assert "距「计算机网络考试」还有 1 天" in payload["message"]
     assert payload["calendar_note"]
+
+
+@pytest.mark.asyncio
+async def test_daily_startup_message_scrubs_internal_token_from_subject(db_session):
+    """WT334 · tokened plan subject（评测 harness 遗留）不得透出 Aurora 每日简报。"""
+    user, plan, session_day = await _create_sprint_plan(db_session, completion_rate=0.9)
+    plan.subject = "TOUR科目-d91d5df0-10-5dc70d"
+    await db_session.commit()
+
+    service = AuroraRuntimeV1Service(wake_policy_service=_WakePolicyStub())
+    payload = await service.get_daily_startup_message(
+        active_db=db_session,
+        user_id=user.id,
+        plan_id=plan.id,
+        session_date=session_day,
+    )
+
+    message = str(payload.get("message") or "")
+    assert "TOUR科目" not in message
+    assert "d91d5df0" not in message and "5dc70d" not in message
+    assert message, "daily startup message must still be produced"
