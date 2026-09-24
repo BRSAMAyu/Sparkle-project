@@ -116,6 +116,7 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
+          sudo apt-get update && sudo apt-get install -y liblzo2-dev
           python -m pip install --upgrade pip
           pip install -r backend/requirements.lock
 
@@ -220,6 +221,7 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
+          sudo apt-get update && sudo apt-get install -y liblzo2-dev
           python -m pip install --upgrade pip
           pip install -r backend/requirements.lock
 
@@ -312,6 +314,7 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
+          sudo apt-get update && sudo apt-get install -y liblzo2-dev
           python -m pip install --upgrade pip
           pip install -r backend/requirements.lock
 
@@ -375,6 +378,7 @@ jobs:
       - name: Install Python Dependencies
         if: steps.benchmark_changes.outputs.run_benchmark == 'true'
         run: |
+          sudo apt-get update && sudo apt-get install -y liblzo2-dev
           python -m pip install --upgrade pip
           pip install -r backend/requirements.lock
 
@@ -419,7 +423,7 @@ jobs:
 
       # gen/ 为 gitignored 生成物，测试前必须再生（docker 工具链已钉 protobuf 6.1.0 ↔ protoc_plugin 25.1.0 配对）
       - name: Regenerate protobuf bindings
-        run: make proto-gen
+        run: make proto-tools-build && make proto-gen
 
       - name: Get Dependencies
         working-directory: mobile
@@ -452,7 +456,7 @@ jobs:
 
       # Trivy for container security (advisory: findings reported, not blocking)
       - name: Run Trivy vulnerability scanner (Backend)
-        uses: aquasecurity/trivy-action@v0.29.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: 'fs'
           scan-ref: 'backend'
@@ -521,6 +525,7 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
+          sudo apt-get update && sudo apt-get install -y liblzo2-dev
           python -m pip install --upgrade pip
           pip install -r backend/requirements.lock
 
