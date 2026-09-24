@@ -344,12 +344,12 @@ class ProfileScreen extends ConsumerWidget {
                   'options': [
                     {
                       'id': 'structured',
-                      'label': context.l10n.profileTraitQ1Structured
+                      'label': context.l10n.profileTraitQ1Structured,
                     },
                     {'id': 'mixed', 'label': context.l10n.profileTraitQ1Mixed},
                     {
                       'id': 'explore',
-                      'label': context.l10n.profileTraitQ1Explore
+                      'label': context.l10n.profileTraitQ1Explore,
                     },
                     {'id': 'skip', 'label': context.l10n.profileTraitSkip},
                   ],
@@ -361,7 +361,7 @@ class ProfileScreen extends ConsumerWidget {
                     {'id': 'solo', 'label': context.l10n.profileTraitQ2Solo},
                     {
                       'id': 'small_group',
-                      'label': context.l10n.profileTraitQ2SmallGroup
+                      'label': context.l10n.profileTraitQ2SmallGroup,
                     },
                     {'id': 'group', 'label': context.l10n.profileTraitQ2Group},
                     {'id': 'skip', 'label': context.l10n.profileTraitSkip},
@@ -373,7 +373,7 @@ class ProfileScreen extends ConsumerWidget {
                   'options': [
                     {
                       'id': 'replan',
-                      'label': context.l10n.profileTraitQ3Replan
+                      'label': context.l10n.profileTraitQ3Replan,
                     },
                     {'id': 'pause', 'label': context.l10n.profileTraitQ3Pause},
                     {'id': 'swing', 'label': context.l10n.profileTraitQ3Swing},

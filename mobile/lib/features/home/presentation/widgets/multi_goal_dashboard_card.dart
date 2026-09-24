@@ -277,7 +277,7 @@ class _SuggestionCard extends ConsumerWidget {
 }
 
 Future<void> _showConflictResolution(
-    BuildContext context, MultiGoalOverview overview) async {
+    BuildContext context, MultiGoalOverview overview,) async {
   final totalMinutes = overview.goals.fold<int>(
     0,
     (sum, g) =>

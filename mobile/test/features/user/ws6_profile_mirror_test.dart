@@ -80,7 +80,7 @@ void main() {
 
   test('adapter builds mirror bar and transparent profile from legacy maps',
       () {
-    final adapter = Ws6ProfileMirrorAdapter();
+    const adapter = Ws6ProfileMirrorAdapter();
     final result = adapter.build(
       transparentProfile: {
         'layer_1': {
@@ -115,7 +115,6 @@ void main() {
           'active_patterns': ['structured'],
         },
       },
-      allowSensitiveMediation: false,
     );
 
     expect(result.summary, contains('透明画像'));
@@ -128,7 +127,7 @@ void main() {
   });
 
   test('adapter exposes recent correction history from profile context', () {
-    final adapter = Ws6ProfileMirrorAdapter();
+    const adapter = Ws6ProfileMirrorAdapter();
     final result = adapter.build(
       transparentProfile: const {
         'layer_1': {
@@ -157,7 +156,7 @@ void main() {
 
   test('adapter builds transparent profile from canonical transparency payload',
       () {
-    final adapter = Ws6ProfileMirrorAdapter();
+    const adapter = Ws6ProfileMirrorAdapter();
     final result = adapter.build(
       transparentProfile: {
         'claims': [
@@ -175,7 +174,7 @@ void main() {
         'unknowns': [
           {
             'id': 'capacity_hours',
-            'description': 'Reliable time-capacity data is still missing.'
+            'description': 'Reliable time-capacity data is still missing.',
           },
         ],
         'calibration': {
@@ -207,7 +206,7 @@ void main() {
     expect(result.visibleItems.first.supportsExamModeOnly, isTrue);
     expect(result.calibrationPosture, 'stable');
     expect(result.unknowns,
-        contains('Reliable time-capacity data is still missing.'));
+        contains('Reliable time-capacity data is still missing.'),);
   });
 
   test('provider records canonical binding telemetry', () async {
@@ -241,7 +240,7 @@ void main() {
         ),
         ws6BindingTelemetryRecorderProvider.overrideWith(
           (ref) => (
-              {required String outcome, Map<String, dynamic>? metadata}) async {
+              {required String outcome, Map<String, dynamic>? metadata,}) async {
             events.add({
               'outcome': outcome,
               'metadata': metadata ?? <String, dynamic>{},
@@ -257,7 +256,7 @@ void main() {
     expect(events, hasLength(1));
     expect(events.single['outcome'], 'canonical_embedded');
     expect((events.single['metadata'] as Map<String, dynamic>)['source'],
-        'user_insight_transparency');
+        'user_insight_transparency',);
   });
 
   test('provider records deprecated fallback telemetry', () async {
@@ -299,7 +298,7 @@ void main() {
         ),
         ws6BindingTelemetryRecorderProvider.overrideWith(
           (ref) => (
-              {required String outcome, Map<String, dynamic>? metadata}) async {
+              {required String outcome, Map<String, dynamic>? metadata,}) async {
             events.add({
               'outcome': outcome,
               'metadata': metadata ?? <String, dynamic>{},
@@ -315,7 +314,7 @@ void main() {
     expect(events, hasLength(1));
     expect(events.single['outcome'], 'deprecated_fallback');
     expect((events.single['metadata'] as Map<String, dynamic>)['source'],
-        'transparentProfileProvider');
+        'transparentProfileProvider',);
   });
 
   test('provider records binding failure telemetry', () async {
@@ -331,7 +330,7 @@ void main() {
         ),
         ws6BindingTelemetryRecorderProvider.overrideWith(
           (ref) => (
-              {required String outcome, Map<String, dynamic>? metadata}) async {
+              {required String outcome, Map<String, dynamic>? metadata,}) async {
             events.add({
               'outcome': outcome,
               'metadata': metadata ?? <String, dynamic>{},
@@ -349,6 +348,6 @@ void main() {
     expect(events, hasLength(1));
     expect(events.single['outcome'], 'binding_failure');
     expect((events.single['metadata'] as Map<String, dynamic>)['source'],
-        'canonical_and_legacy_failed');
+        'canonical_and_legacy_failed',);
   });
 }

@@ -68,7 +68,7 @@ class GoalDecompositionPreview {
             .whereType<Map<dynamic, dynamic>>()
             .map((item) => GoalMilestoneDraft.fromJson(
                   Map<String, dynamic>.from(item),
-                ))
+                ),)
             .toList(growable: false),
       );
 

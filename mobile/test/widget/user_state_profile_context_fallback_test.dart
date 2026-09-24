@@ -18,6 +18,6 @@ void main() {
 
     expect(model.metacognitionProfile, isNotNull);
     expect(model.metacognitionProfile?.value.items.single.dim,
-        'time_estimation_bias');
+        'time_estimation_bias',);
   });
 }

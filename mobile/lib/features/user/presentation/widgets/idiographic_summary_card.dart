@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class IdiographicSummaryCard extends StatelessWidget {
   const IdiographicSummaryCard({
-    super.key,
-    required this.summaryLines,
-    required this.disclaimerText,
+    required this.summaryLines, required this.disclaimerText, super.key,
   });
 
   final List<String> summaryLines;
@@ -40,8 +38,7 @@ class IdiographicSummaryCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return GraphiteCardSurface(
+  Widget build(BuildContext context) => GraphiteCardSurface(
       child: Padding(
         padding: const EdgeInsets.all(DS.spacing16),
         child: Column(
@@ -72,5 +69,4 @@ class IdiographicSummaryCard extends StatelessWidget {
         ),
       ),
     );
-  }
 }

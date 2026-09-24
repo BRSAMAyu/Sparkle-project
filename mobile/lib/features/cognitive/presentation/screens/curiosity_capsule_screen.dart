@@ -3,10 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/cognitive/data/models/curiosity_capsule_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_archive_provider.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
@@ -77,10 +77,10 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
                         tabs: [
                           Tab(
                               text: l10n
-                                  .capsuleCurrentTab(activeCapsules.length)),
+                                  .capsuleCurrentTab(activeCapsules.length),),
                           Tab(
                               text: l10n
-                                  .capsuleArchiveTab(archivedCapsules.length)),
+                                  .capsuleArchiveTab(archivedCapsules.length),),
                         ],
                       ),
                     ),

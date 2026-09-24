@@ -261,7 +261,7 @@ class _RecommendationsSection extends ConsumerWidget {
           Row(
             children: [
               Text(context.l10n.communityRecommendedForYou,
-                  style: Theme.of(context).textTheme.titleMedium),
+                  style: Theme.of(context).textTheme.titleMedium,),
               const Spacer(),
               SparkleButton(
                 label: context.l10n.communityViewAll,
@@ -358,7 +358,7 @@ class _MyGroupsSection extends ConsumerWidget {
               Row(
                 children: [
                   Text(context.l10n.communityMyGroups,
-                      style: Theme.of(context).textTheme.titleMedium),
+                      style: Theme.of(context).textTheme.titleMedium,),
                   const Spacer(),
                   SparkleButton(
                     label: context.l10n.communityViewAllGroups,
@@ -468,7 +468,7 @@ class _JoinedGroupTile extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               context.l10n.communityGroupSubtitle(
-                  roleLabel, group.memberCount, group.todayCheckinCount),
+                  roleLabel, group.memberCount, group.todayCheckinCount,),
               style: TextStyle(color: DS.textSecondary, fontSize: 12),
             ),
           ],

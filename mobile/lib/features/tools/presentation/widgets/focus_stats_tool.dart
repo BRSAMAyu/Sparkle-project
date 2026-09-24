@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/focus/presentation/providers/focus_statistics_provider.dart'
     as feature;
 import 'package:sparkle/features/focus/presentation/widgets/focus_stats_chart.dart';
@@ -10,8 +12,6 @@ import 'package:sparkle/features/focus/presentation/widgets/focus_stats_session_
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_body_skeleton.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 class FocusStatsTool extends ConsumerStatefulWidget {
   const FocusStatsTool({

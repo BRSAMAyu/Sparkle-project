@@ -41,7 +41,7 @@ double galaxyLodFade(double value, double start, double end) {
 }
 
 double galaxyMasteryRatio(int masteryScore) =>
-    (masteryScore / 100).clamp(0.0, 1.0).toDouble();
+    (masteryScore / 100).clamp(0.0, 1.0);
 
 /// V13 D-11：扇区标签左缘的水平收敛。
 ///

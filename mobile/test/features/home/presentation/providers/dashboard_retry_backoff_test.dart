@@ -106,13 +106,13 @@ void main() {
         value < expected.inMilliseconds + loMs + 400;
     // Escalation: each retry honours its own (larger) schedule entry.
     expect(inWindow(deltas[0], 30, schedule[0]), isTrue,
-        reason: 'retry 1 delta ${deltas[0]}ms must match ~80ms');
+        reason: 'retry 1 delta ${deltas[0]}ms must match ~80ms',);
     expect(inWindow(deltas[1], 30, schedule[1]), isTrue,
-        reason: 'retry 2 delta ${deltas[1]}ms must match ~200ms');
+        reason: 'retry 2 delta ${deltas[1]}ms must match ~200ms',);
     expect(inWindow(deltas[2], 30, schedule[2]), isTrue,
-        reason: 'retry 3 delta ${deltas[2]}ms must match ~500ms');
+        reason: 'retry 3 delta ${deltas[2]}ms must match ~500ms',);
     expect(inWindow(deltas[3], 30, schedule[3]), isTrue,
-        reason: 'retry 4 delta ${deltas[3]}ms must match ~1200ms');
+        reason: 'retry 4 delta ${deltas[3]}ms must match ~1200ms',);
     // Cap: the 5th retry (if reached) stays at the last entry instead of
     // growing further; with only 4 entries it can never exceed it.
     for (final delta in deltas.skip(4)) {

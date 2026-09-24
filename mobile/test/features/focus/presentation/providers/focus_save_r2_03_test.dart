@@ -5,7 +5,9 @@ import 'package:connectivity_plus_platform_interface/connectivity_plus_platform_
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/services/prediction_attribution_service.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/focus/data/repositories/focus_repository.dart';
 import 'package:sparkle/features/focus/data/services/prediction_service.dart';
@@ -13,8 +15,6 @@ import 'package:sparkle/features/focus/presentation/providers/focus_statistics_p
 import 'package:sparkle/features/focus/presentation/providers/mindfulness_provider.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/visual_elements/data/repositories/visual_element_repository.dart';
-import 'package:sparkle/core/services/app_event_stream_service.dart';
-import 'package:sparkle/core/services/prediction_attribution_service.dart';
 import 'package:sparkle/l10n/app_localizations_zh.dart';
 
 // R2-03 regression tests: a focus session must never be reported as saved
@@ -76,18 +76,15 @@ void _mockConnectivity() {
   ConnectivityPlatform.instance = _SilentConnectivityPlatform();
 }
 
-ProviderContainer _makeContainer() {
-  return ProviderContainer(
+ProviderContainer _makeContainer() => ProviderContainer(
     overrides: [
       focusRepositoryProvider.overrideWithValue(_StubFocusRepository()),
       // Prediction attribution only needs "no current user" to no-op.
       currentUserProvider.overrideWithValue(null),
     ],
   );
-}
 
-MindfulnessNotifier _makeMindfulnessNotifier(Ref ref) {
-  return MindfulnessNotifier(
+MindfulnessNotifier _makeMindfulnessNotifier(Ref ref) => MindfulnessNotifier(
     ref,
     _StubPredictionService(),
     _StubTaskRepository(),
@@ -95,7 +92,6 @@ MindfulnessNotifier _makeMindfulnessNotifier(Ref ref) {
     _StubPredictionAttribution(),
     _StubVisualElementRepository(),
   );
-}
 
 Future<void> _seedActiveSessionSnapshot() async {
   // Same payload shape as MindfulnessNotifier._persistSession(): an active
@@ -168,16 +164,16 @@ void main() {
     await Future<void>.delayed(Duration.zero);
 
     expect(notifier.state.isActive, isTrue,
-        reason: 'session snapshot should be restored on construction');
+        reason: 'session snapshot should be restored on construction',);
 
     final result = await notifier.stop();
 
     expect(result.savedLocally, isFalse,
-        reason: 'nothing was persisted — must not report an offline save');
+        reason: 'nothing was persisted — must not report an offline save',);
     expect(result.message, contains('保存失败'));
 
     expect(notifier.state.isActive, isTrue,
-        reason: 'session must stay alive so the user can retry stop()');
+        reason: 'session must stay alive so the user can retry stop()',);
     final prefs = await SharedPreferences.getInstance();
     expect(
       prefs.getString('mindfulness.active_session'),

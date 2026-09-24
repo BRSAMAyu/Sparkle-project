@@ -1,12 +1,12 @@
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
-import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
@@ -290,14 +290,14 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
           if (!mounted) return;
           Navigator.of(sheetContext).pop();
           AppFeedback.success(
-            this.context,
-            this.context.l10n.studyMaterialsUploadSuccess,
+            context,
+            context.l10n.studyMaterialsUploadSuccess,
           );
           unawaited(ref.read(documentLibraryProvider.notifier).refresh());
         },
         onError: (message) {
           if (!mounted) return;
-          AppFeedback.error(this.context, message);
+          AppFeedback.error(context, message);
         },
       ),
     );
@@ -657,8 +657,7 @@ class _HeroMetric extends StatelessWidget {
   final String value;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       constraints: const BoxConstraints(minWidth: 120),
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing12,
@@ -690,15 +689,13 @@ class _HeroMetric extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _MiniGalaxyIllustration extends StatelessWidget {
   const _MiniGalaxyIllustration();
 
   @override
-  Widget build(BuildContext context) {
-    return SizedBox(
+  Widget build(BuildContext context) => SizedBox(
       width: 92,
       height: 92,
       child: Stack(
@@ -764,7 +761,6 @@ class _MiniGalaxyIllustration extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _GlowDot extends StatelessWidget {
@@ -777,8 +773,7 @@ class _GlowDot extends StatelessWidget {
   final double size;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
@@ -793,7 +788,6 @@ class _GlowDot extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _SearchField extends StatelessWidget {
@@ -808,8 +802,7 @@ class _SearchField extends StatelessWidget {
   final VoidCallback onClear;
 
   @override
-  Widget build(BuildContext context) {
-    return TextField(
+  Widget build(BuildContext context) => TextField(
       controller: controller,
       onChanged: onChanged,
       decoration: InputDecoration(
@@ -835,7 +828,6 @@ class _SearchField extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _FilterSection extends ConsumerWidget {
@@ -1017,8 +1009,7 @@ class _FilterChip extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return FilterChip(
+  Widget build(BuildContext context) => FilterChip(
       label: Text(label),
       selected: selected,
       onSelected: (selectedValue) => onTap(),
@@ -1032,7 +1023,6 @@ class _FilterChip extends StatelessWidget {
             selected ? DS.brandPrimary.withValues(alpha: 0.3) : DS.borderSubtle,
       ),
     );
-  }
 }
 
 class _DocumentCard extends StatelessWidget {
@@ -1101,7 +1091,7 @@ class _DocumentCard extends StatelessWidget {
                         ),
                         _StatusBadge(document: document),
                         _LifecycleBadge(status: document.lifecycleStatus),
-                        if (document.processingStatus?.hasDraftsPending == true)
+                        if (document.processingStatus?.hasDraftsPending ?? false)
                           _DraftsPendingPill(
                             count: document.processingStatus!.draftsPending!,
                             onTap: () => context.push(GalaxyRoutes.draftReview),
@@ -1184,16 +1174,14 @@ class _DocumentCard extends StatelessWidget {
                   Wrap(
                     spacing: DS.spacing8,
                     runSpacing: DS.spacing8,
-                    children: document.attachedNodes.map((node) {
-                      return _NodeChip(
+                    children: document.attachedNodes.map((node) => _NodeChip(
                         node: node,
                         onNavigate: () => context.push(
                           GalaxyRoutes.knowledgeDetail
                               .replaceFirst(':id', node.nodeId),
                         ),
                         onFilter: () => onFilterByNode(node),
-                      );
-                    }).toList(),
+                      ),).toList(),
                   ),
                 const SizedBox(height: DS.spacing16),
                 _SectionHeader(
@@ -1207,12 +1195,10 @@ class _DocumentCard extends StatelessWidget {
                   )
                 else
                   Column(
-                    children: document.citationInsight.topChunks.map((chunk) {
-                      return Padding(
+                    children: document.citationInsight.topChunks.map((chunk) => Padding(
                         padding: const EdgeInsets.only(bottom: DS.spacing10),
                         child: _ChunkInsightCard(chunk: chunk),
-                      );
-                    }).toList(),
+                      ),).toList(),
                   ),
                 const SizedBox(height: DS.spacing16),
                 Row(
@@ -1365,8 +1351,7 @@ class _NodeChip extends StatelessWidget {
   final VoidCallback onFilter;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => DecoratedBox(
       decoration: BoxDecoration(
         color: DS.surfacePanel,
         borderRadius: BorderRadius.circular(999),
@@ -1430,7 +1415,6 @@ class _NodeChip extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _DocumentGlyph extends StatelessWidget {
@@ -1632,8 +1616,7 @@ class _DraftsPendingPill extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(
@@ -1660,7 +1643,6 @@ class _DraftsPendingPill extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _PillLabel extends StatelessWidget {
@@ -1673,8 +1655,7 @@ class _PillLabel extends StatelessWidget {
   final IconData icon;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing10,
         vertical: DS.spacing6,
@@ -1698,7 +1679,6 @@ class _PillLabel extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _SectionHeader extends StatelessWidget {
@@ -1707,15 +1687,13 @@ class _SectionHeader extends StatelessWidget {
   final String title;
 
   @override
-  Widget build(BuildContext context) {
-    return Text(
+  Widget build(BuildContext context) => Text(
       title,
       style: Theme.of(context).textTheme.titleSmall?.copyWith(
             color: DS.textPrimary,
             fontWeight: FontWeight.w700,
           ),
     );
-  }
 }
 
 class _HintPanel extends StatelessWidget {
@@ -1728,8 +1706,7 @@ class _HintPanel extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       width: double.infinity,
       padding: const EdgeInsets.all(DS.spacing14),
       decoration: BoxDecoration(
@@ -1752,7 +1729,6 @@ class _HintPanel extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _ChunkInsightCard extends StatelessWidget {
@@ -1761,8 +1737,7 @@ class _ChunkInsightCard extends StatelessWidget {
   final DocumentCitationChunk chunk;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       width: double.infinity,
       padding: const EdgeInsets.all(DS.spacing14),
       decoration: BoxDecoration(
@@ -1818,7 +1793,6 @@ class _ChunkInsightCard extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _StatPanel extends StatelessWidget {
@@ -1831,8 +1805,7 @@ class _StatPanel extends StatelessWidget {
   final String value;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(DS.spacing12),
       decoration: BoxDecoration(
         color: DS.surfacePanel,
@@ -1859,7 +1832,6 @@ class _StatPanel extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _DocumentsEmptyState extends StatelessWidget {
@@ -1927,8 +1899,7 @@ class _LargeGalaxyIllustration extends StatelessWidget {
   const _LargeGalaxyIllustration();
 
   @override
-  Widget build(BuildContext context) {
-    return SizedBox(
+  Widget build(BuildContext context) => SizedBox(
       width: 220,
       height: 180,
       child: Stack(
@@ -2001,7 +1972,6 @@ class _LargeGalaxyIllustration extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _OrbitTile extends StatelessWidget {
@@ -2014,8 +1984,7 @@ class _OrbitTile extends StatelessWidget {
   final Color color;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       width: 52,
       height: 52,
       decoration: BoxDecoration(
@@ -2031,7 +2000,6 @@ class _OrbitTile extends StatelessWidget {
       ),
       child: Icon(icon, color: color),
     );
-  }
 }
 
 class _QualityIndicator extends StatelessWidget {
@@ -2055,7 +2023,7 @@ class _QualityIndicator extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing10, vertical: DS.spacing6),
+          horizontal: DS.spacing10, vertical: DS.spacing6,),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),

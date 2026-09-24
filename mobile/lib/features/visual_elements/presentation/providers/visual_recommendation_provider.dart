@@ -7,7 +7,7 @@ import 'package:sparkle/features/visual_elements/presentation/providers/visual_e
 
 final visualRecommendationServiceProvider =
     Provider<VisualRecommendationService>(
-        (ref) => VisualRecommendationService());
+        (ref) => VisualRecommendationService(),);
 
 /// Derive current user activity state from dashboard + streak signals.
 final userActivityStateProvider = Provider<UserActivityState>((ref) {

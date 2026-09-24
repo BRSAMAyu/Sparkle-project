@@ -15,8 +15,8 @@ import 'package:sparkle/features/memory/presentation/widgets/evidence_cards.dart
 import 'package:sparkle/features/memory/presentation/widgets/evidence_drawer.dart';
 import 'package:sparkle/features/memory/presentation/widgets/memory_evidence_badge.dart';
 
-import 'evidence_cards_test.mocks.dart';
 import '../../../../shared/i18n_test_helper.dart';
+import 'evidence_cards_test.mocks.dart';
 
 @GenerateMocks([
   ApiClient,
@@ -339,7 +339,6 @@ void main() {
         type: 'empty',
         id: 'empty-1',
         status: 'ok',
-        payload: null,
       );
 
       await tester.pumpWidget(
@@ -464,7 +463,7 @@ void main() {
     // 旧 Chip 形状改为 owner 语义（状态→文案/PillTone 映射），断言强度不降。
     testWidgets('should render OK badge with success tone', (tester) async {
       await tester.pumpWidget(
-        testMaterialApp(home: Scaffold(
+        testMaterialApp(home: const Scaffold(
             body: MemoryEvidenceBadge(status: MemoryEvidenceStatus.ok),
           ),),
       );
@@ -476,7 +475,7 @@ void main() {
 
     testWidgets('should render redacted badge with warning tone', (tester) async {
       await tester.pumpWidget(
-        testMaterialApp(home: Scaffold(
+        testMaterialApp(home: const Scaffold(
             body: MemoryEvidenceBadge(status: MemoryEvidenceStatus.redacted),
           ),),
       );
@@ -488,7 +487,7 @@ void main() {
 
     testWidgets('should render missing badge with danger tone', (tester) async {
       await tester.pumpWidget(
-        testMaterialApp(home: Scaffold(
+        testMaterialApp(home: const Scaffold(
             body: MemoryEvidenceBadge(status: MemoryEvidenceStatus.missing),
           ),),
       );
@@ -500,7 +499,7 @@ void main() {
 
     testWidgets('should prefix evidence count when provided', (tester) async {
       await tester.pumpWidget(
-        testMaterialApp(home: Scaffold(
+        testMaterialApp(home: const Scaffold(
             body: MemoryEvidenceBadge(
               status: MemoryEvidenceStatus.ok,
               evidenceCount: 3,
@@ -513,9 +512,9 @@ void main() {
 
     testWidgets('should work in different contexts', (tester) async {
       await tester.pumpWidget(
-        testMaterialApp(home: Scaffold(
+        testMaterialApp(home: const Scaffold(
             body: Row(
-              children: const [
+              children: [
                 MemoryEvidenceBadge(status: MemoryEvidenceStatus.ok),
                 MemoryEvidenceBadge(status: MemoryEvidenceStatus.missing),
                 MemoryEvidenceBadge(status: MemoryEvidenceStatus.redacted),
@@ -579,7 +578,7 @@ void main() {
     testWidgets('should show drawer with ref items', (tester) async {
       await pumpDrawer(tester, refs: [
         EvidenceRefModel(type: 'event', id: 'evt-1'),
-      ]);
+      ],);
 
       expect(find.text('event: evt-1'), findsOneWidget);
     });
@@ -600,7 +599,7 @@ void main() {
 
       await pumpDrawer(tester, refs: [
         EvidenceRefModel(type: 'event', id: 'evt-1'),
-      ]);
+      ],);
 
       // Drawer renders ref items regardless of feature flag
       expect(find.text('event: evt-1'), findsOneWidget);
@@ -611,7 +610,7 @@ void main() {
         EvidenceRefModel(type: 'event', id: 'evt-1'),
         EvidenceRefModel(type: 'event', id: 'evt-2'),
         EvidenceRefModel(type: 'task', id: 'task-1'),
-      ]);
+      ],);
 
       // Drawer shows ref items as 'type: id'
       expect(find.text('event: evt-1'), findsOneWidget);
@@ -671,7 +670,7 @@ void main() {
 
       expect(result, isEmpty);
       verifyNever(
-          mockApiClient.post<Map<String, dynamic>>(any, data: anyNamed('data')));
+          mockApiClient.post<Map<String, dynamic>>(any, data: anyNamed('data')),);
     });
 
     test('should resolve evidence via API', () async {
@@ -682,7 +681,7 @@ void main() {
       when(mockApiClient.post<Map<String, dynamic>>(any, data: anyNamed('data')))
           .thenAnswer(
         (_) async => Response<Map<String, dynamic>>(
-          requestOptions: RequestOptions(path: ''),
+          requestOptions: RequestOptions(),
           data: {
             'resolved': [
               {
@@ -709,7 +708,7 @@ void main() {
         data: {
           'items': [refs.first.toJson()],
         },
-      )).called(1);
+      ),).called(1);
     });
 
     test('should handle multiple refs', () async {
@@ -721,7 +720,7 @@ void main() {
       when(mockApiClient.post<Map<String, dynamic>>(any, data: anyNamed('data')))
           .thenAnswer(
         (_) async => Response<Map<String, dynamic>>(
-          requestOptions: RequestOptions(path: ''),
+          requestOptions: RequestOptions(),
           data: {
             'resolved': [
               {'type': 'event', 'id': 'evt-1', 'status': 'ok'},
@@ -759,7 +758,7 @@ void main() {
       when(mockApiClient.post<Map<String, dynamic>>(any, data: anyNamed('data')))
           .thenAnswer(
         (_) async => Response<Map<String, dynamic>>(
-          requestOptions: RequestOptions(path: ''),
+          requestOptions: RequestOptions(),
           data: {},
           statusCode: 200,
         ),
@@ -782,7 +781,7 @@ void main() {
       when(mockApiClient.post<Map<String, dynamic>>(any, data: anyNamed('data')))
           .thenAnswer(
         (_) async => Response<Map<String, dynamic>>(
-          requestOptions: RequestOptions(path: ''),
+          requestOptions: RequestOptions(),
           data: {'resolved': <dynamic>[]},
           statusCode: 200,
         ),
@@ -793,7 +792,7 @@ void main() {
       final captured = verify(mockApiClient.post<Map<String, dynamic>>(
         '/api/v1/events/evidence/resolve',
         data: captureAnyNamed('data'),
-      )).captured.single as Map<String, dynamic>;
+      ),).captured.single as Map<String, dynamic>;
 
       expect(
         captured['items'].first['schema_version'],
@@ -961,7 +960,6 @@ void main() {
                   onPressed: () => EvidenceDrawer.show(
                     context,
                     refs: [],
-                    evidenceMissing: false,
                   ),
                   child: const Text('Show'),
                 ),

@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/core/offline/list_read_cache.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/community/data/models/community_models.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
@@ -52,7 +51,7 @@ class FeedNotifier extends StateNotifier<AsyncValue<FeedPageData>> {
       _currentPage = 1;
       _hasMore = true;
       // N34：缓存感知读——离线回读快照并带「截至 X」溯源。
-      final result = await _repository.getFeedCached(page: 1, scope: _scope);
+      final result = await _repository.getFeedCached(scope: _scope);
       _hasMore = result.data.length >= _pageSize;
       _fromCache = result.fromCache;
       _asOf = result.asOf;
@@ -116,8 +115,8 @@ class FeedNotifier extends StateNotifier<AsyncValue<FeedPageData>> {
     if (idx == -1) return;
 
     final post = currentList[idx];
-    final bool wasLiked = post.isLiked;
-    final int newCount = wasLiked ? post.likeCount - 1 : post.likeCount + 1;
+    final wasLiked = post.isLiked;
+    final newCount = wasLiked ? post.likeCount - 1 : post.likeCount + 1;
 
     // Optimistic update
     state = AsyncValue.data(

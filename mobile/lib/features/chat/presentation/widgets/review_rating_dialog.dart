@@ -660,7 +660,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
                 onTap: () {
                   setState(() => isSelected
                       ? _selectedTags.remove(tag)
-                      : _selectedTags.add(tag));
+                      : _selectedTags.add(tag),);
                 },
               );
             }).toList(),

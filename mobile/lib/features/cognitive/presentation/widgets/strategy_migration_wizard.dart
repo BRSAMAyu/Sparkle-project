@@ -154,8 +154,7 @@ class _EvidenceStep extends StatelessWidget {
   final VoidCallback onNext;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context) => Column(
       key: const ValueKey('strategy-evidence-step'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -180,7 +179,7 @@ class _EvidenceStep extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(Icons.report_problem_outlined,
-                    size: 18, color: DS.warning),
+                    size: 18, color: DS.warning,),
                 const SizedBox(width: 8),
                 Expanded(child: Text(evidence.reason)),
               ],
@@ -197,7 +196,6 @@ class _EvidenceStep extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 class _AlternativeStep extends StatelessWidget {
@@ -216,8 +214,7 @@ class _AlternativeStep extends StatelessWidget {
   final VoidCallback? onNext;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context) => Column(
       key: const ValueKey('strategy-alternative-step'),
       children: [
         for (final strategy in alternatives)
@@ -239,7 +236,6 @@ class _AlternativeStep extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 class _StrategyOptionTile extends StatelessWidget {
@@ -323,8 +319,7 @@ class _ConfirmStep extends StatelessWidget {
   final VoidCallback onConfirm;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context) => Column(
       key: const ValueKey('strategy-confirm-step'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -342,7 +337,7 @@ class _ConfirmStep extends StatelessWidget {
           children: [
             TextButton(
                 onPressed: submitting ? null : onBack,
-                child: Text(context.l10n.smwBack)),
+                child: Text(context.l10n.smwBack),),
             const SizedBox(width: 8),
             FilledButton.icon(
               onPressed: submitting ? null : onConfirm,
@@ -359,7 +354,6 @@ class _ConfirmStep extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 class _CompletedStep extends StatelessWidget {
@@ -368,8 +362,7 @@ class _CompletedStep extends StatelessWidget {
   final StrategyMigrationResult result;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
+  Widget build(BuildContext context) => Row(
       key: const ValueKey('strategy-completed-step'),
       children: [
         Icon(Icons.check_circle_outline_rounded, color: DS.success),
@@ -381,7 +374,6 @@ class _CompletedStep extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 class _StepDots extends StatelessWidget {
@@ -391,8 +383,7 @@ class _StepDots extends StatelessWidget {
   final int count;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
+  Widget build(BuildContext context) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         for (var index = 0; index < count; index++)
@@ -407,7 +398,6 @@ class _StepDots extends StatelessWidget {
           ),
       ],
     );
-  }
 }
 
 class _ErrorLine extends StatelessWidget {
@@ -417,13 +407,11 @@ class _ErrorLine extends StatelessWidget {
   final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
+  Widget build(BuildContext context) => Row(
       key: const ValueKey('strategy-error-line'),
       children: [
         Expanded(child: Text(label)),
         TextButton(onPressed: onRetry, child: Text(context.l10n.retry)),
       ],
     );
-  }
 }

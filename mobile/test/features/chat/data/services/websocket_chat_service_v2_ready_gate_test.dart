@@ -99,7 +99,7 @@ void main() {
   late List<_GateChannel> channels;
   late WebSocketChatServiceV2 service;
   late ProviderContainer container;
-  final List<String> logs = <String>[];
+  final logs = <String>[];
 
   setUp(() {
     debugPrint = (String? message, {int? wrapWidth}) {
@@ -119,7 +119,6 @@ void main() {
         channels.add(channel);
         return channel;
       },
-      enableReconnect: true,
       autoConnect: false,
     );
   });
@@ -234,7 +233,6 @@ void main() {
         channels.add(channel);
         return channel;
       },
-      enableReconnect: true,
       autoConnect: false,
       reconnectSchedule: const [
         Duration(milliseconds: 10),

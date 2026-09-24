@@ -6,8 +6,8 @@ import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/widgets/scene_audio_scope.dart';
-import 'package:sparkle/features/goal/presentation/screens/goal_detail_screen.dart';
 import 'package:sparkle/features/goal/presentation/screens/goal_creation_wizard_screen.dart';
+import 'package:sparkle/features/goal/presentation/screens/goal_detail_screen.dart';
 
 class GoalRoutes {
   GoalRoutes._();

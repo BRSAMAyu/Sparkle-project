@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/insights/data/models/growth_dashboard.dart';
 import 'package:sparkle/features/insights/presentation/providers/growth_dashboard_provider.dart';
 import 'package:sparkle/features/insights/presentation/widgets/model_update_receipt.dart';
@@ -373,8 +373,7 @@ class _StatusPill extends StatelessWidget {
   final Color color;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing8,
         vertical: DS.spacing4,
@@ -391,7 +390,6 @@ class _StatusPill extends StatelessWidget {
             ),
       ),
     );
-  }
 }
 
 class _GrowthError extends StatelessWidget {
@@ -400,8 +398,7 @@ class _GrowthError extends StatelessWidget {
   final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
+  Widget build(BuildContext context) => Center(
       child: EmptyState(
         icon: Icons.error_outline_rounded,
         title: context.l10n.gdLoadFailed,
@@ -410,17 +407,14 @@ class _GrowthError extends StatelessWidget {
         onAction: onRetry,
       ),
     );
-  }
 }
 
-IconData _entryIcon(String entryType) {
-  return switch (entryType) {
+IconData _entryIcon(String entryType) => switch (entryType) {
     'turning_point' => Icons.alt_route_rounded,
     'pattern_discovered' => Icons.psychology_rounded,
     'user_reflection' => Icons.rate_review_rounded,
     _ => Icons.flag_rounded,
   };
-}
 
 Color _entryColor(BuildContext context, String entryType) {
   final colors = Theme.of(context).colorScheme;
@@ -432,20 +426,16 @@ Color _entryColor(BuildContext context, String entryType) {
   };
 }
 
-String _entryTypeLabel(BuildContext context, String entryType) {
-  return switch (entryType) {
+String _entryTypeLabel(BuildContext context, String entryType) => switch (entryType) {
     'turning_point' => context.l10n.gdTurningPoint,
     'pattern_discovered' => context.l10n.gdPattern,
     'user_reflection' => context.l10n.gdReflection,
     _ => context.l10n.gdMilestone,
   };
-}
 
-String _statusLabel(BuildContext context, String status) {
-  return switch (status) {
+String _statusLabel(BuildContext context, String status) => switch (status) {
     'confirmed' => context.l10n.gdConfirmed,
     'edited' => context.l10n.gdEdited,
     'rejected' => context.l10n.gdRejected,
     _ => context.l10n.gdPending,
   };
-}

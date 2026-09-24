@@ -211,7 +211,7 @@ void main() {
           ),
         ],
         child: testMaterialApp(
-          home: Scaffold(
+          home: const Scaffold(
             body: Center(
               child: LearningPathDialog(
                 targetNodeId: 'target-node',

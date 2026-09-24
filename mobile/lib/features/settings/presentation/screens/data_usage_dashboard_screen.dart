@@ -111,8 +111,7 @@ class _SectionHeader extends StatelessWidget {
   final String title;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
+  Widget build(BuildContext context) => Row(
       children: [
         Icon(icon, size: 20, color: DS.brandPrimary),
         const SizedBox(width: DS.spacing8),
@@ -125,7 +124,6 @@ class _SectionHeader extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 class _DataCard extends StatelessWidget {
@@ -142,8 +140,7 @@ class _DataCard extends StatelessWidget {
   final List<String> dataTypes;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       width: double.infinity,
       padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
@@ -181,13 +178,12 @@ class _DataCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(DS.radius8),
                       ),
                       child: Text(t, style: TextStyle(fontSize: 11, color: DS.brandPrimary)),
-                    ))
+                    ),)
                 .toList(),
           ),
         ],
       ),
     );
-  }
 }
 
 class _ControlTile extends StatelessWidget {
@@ -202,12 +198,10 @@ class _ControlTile extends StatelessWidget {
   final String subtitle;
 
   @override
-  Widget build(BuildContext context) {
-    return ListTile(
+  Widget build(BuildContext context) => ListTile(
       contentPadding: EdgeInsets.zero,
       leading: Icon(icon, color: DS.textSecondary),
       title: Text(title, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: DS.textPrimary)),
       subtitle: Text(subtitle, style: TextStyle(fontSize: 12, color: DS.textTertiary)),
     );
-  }
 }

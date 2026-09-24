@@ -21,7 +21,7 @@ void main() {
               id: 'c1',
               summary: '把第三章错题过一遍',
               dueAt: DateTime.parse(
-                  '${due.year.toString().padLeft(4, '0')}-${due.month.toString().padLeft(2, '0')}-${due.day.toString().padLeft(2, '0')} 15:00:00.000'),
+                  '${due.year.toString().padLeft(4, '0')}-${due.month.toString().padLeft(2, '0')}-${due.day.toString().padLeft(2, '0')} 15:00:00.000',),
               subjectType: 'commitment',
             ),
           ],

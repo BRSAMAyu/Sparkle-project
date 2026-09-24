@@ -1,14 +1,13 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/riverpod.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:sparkle/core/utils/error_messages.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
+import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
+import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
-import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
-import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
-import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
-import 'package:sparkle/core/utils/error_messages.dart';
 
 void main() {
   // Initialize Flutter test bindings
@@ -42,7 +41,7 @@ void main() {
 
       test('should have correct initial connection state', () {
         expect(notifier.state.wsConnectionState,
-            equals(WsConnectionState.disconnected));
+            equals(WsConnectionState.disconnected),);
       });
     });
 
@@ -93,7 +92,7 @@ void main() {
 
     group('Reasoning Steps', () {
       test('should update reasoning steps', () {
-        final step = ReasoningStep(
+        const step = ReasoningStep(
           id: 'step-1',
           description: 'Analyzing user request',
           agent: AgentType.orchestrator,
@@ -106,7 +105,7 @@ void main() {
 
         expect(notifier.state.reasoningSteps.length, equals(1));
         expect(notifier.state.reasoningSteps.first.description,
-            equals('Analyzing user request'));
+            equals('Analyzing user request'),);
       });
 
       test('should update reasoning active state', () {
@@ -118,7 +117,7 @@ void main() {
       });
 
       test('should clear reasoning steps', () {
-        final step = ReasoningStep(
+        const step = ReasoningStep(
           id: 'step-1',
           description: 'Test',
           agent: AgentType.orchestrator,
@@ -149,7 +148,7 @@ void main() {
       });
 
       test('should track active run summary', () {
-        final summary = ActiveRunSummary(
+        const summary = ActiveRunSummary(
           status: 'running',
           details: 'Processing request',
           agentName: 'Orchestrator',
@@ -165,7 +164,7 @@ void main() {
       });
 
       test('should clear active run summary', () {
-        final summary = ActiveRunSummary(
+        const summary = ActiveRunSummary(
           status: 'running',
           details: 'Test',
         );
@@ -227,7 +226,7 @@ void main() {
 
         expect(notifier.state.messages.length, equals(1));
         expect(
-            notifier.state.messages.first.role, equals(MessageRole.assistant));
+            notifier.state.messages.first.role, equals(MessageRole.assistant),);
       });
 
       test('should have multiple messages in correct order', () {
@@ -290,7 +289,7 @@ void main() {
         );
 
         expect(notifier.state.wsConnectionState,
-            equals(WsConnectionState.connecting));
+            equals(WsConnectionState.connecting),);
       });
 
       test('should update to connected state', () {
@@ -299,7 +298,7 @@ void main() {
         );
 
         expect(notifier.state.wsConnectionState,
-            equals(WsConnectionState.connected));
+            equals(WsConnectionState.connected),);
       });
 
       test('should update to disconnected state', () {
@@ -308,7 +307,7 @@ void main() {
         );
 
         expect(notifier.state.wsConnectionState,
-            equals(WsConnectionState.disconnected));
+            equals(WsConnectionState.disconnected),);
       });
 
       test('should update to reconnecting state', () {
@@ -317,7 +316,7 @@ void main() {
         );
 
         expect(notifier.state.wsConnectionState,
-            equals(WsConnectionState.reconnecting));
+            equals(WsConnectionState.reconnecting),);
       });
 
       test('should update to failed state', () {
@@ -326,7 +325,7 @@ void main() {
         );
 
         expect(
-            notifier.state.wsConnectionState, equals(WsConnectionState.failed));
+            notifier.state.wsConnectionState, equals(WsConnectionState.failed),);
       });
     });
 
@@ -437,9 +436,8 @@ void main() {
 
     group('Transparency Presentation', () {
       test('should track transparency presentation state', () {
-        final presentationState = TransparencyPresentationState(
+        const presentationState = TransparencyPresentationState(
           isExpanded: true,
-          isDismissed: false,
           lastCompletedLabel: 'Test completed',
         );
 
@@ -449,12 +447,12 @@ void main() {
 
         expect(notifier.state.transparencyPresentationState.isExpanded, isTrue);
         expect(notifier.state.transparencyPresentationState.lastCompletedLabel,
-            equals('Test completed'));
+            equals('Test completed'),);
       });
 
       test('should update transparency data', () {
-        final transparencyData = TransparencyData(
-          steps: const [],
+        const transparencyData = TransparencyData(
+          steps: [],
           totalDurationMs: 1500,
           requestId: 'req-1',
         );
@@ -468,8 +466,8 @@ void main() {
       });
 
       test('should clear transparency data', () {
-        final transparencyData = TransparencyData(
-          steps: const [],
+        const transparencyData = TransparencyData(
+          steps: [],
           totalDurationMs: 1000,
           requestId: 'req-2',
         );

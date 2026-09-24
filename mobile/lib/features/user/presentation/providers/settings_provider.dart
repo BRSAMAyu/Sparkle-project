@@ -570,7 +570,7 @@ final transparentModeProvider = Provider<bool>(
 
 final onboardingCompletedProvider =
     StateNotifierProvider<OnboardingCompletedNotifier, bool?>(
-  (ref) => OnboardingCompletedNotifier(ref),
+  OnboardingCompletedNotifier.new,
 );
 
 final systemUpdateLevelProvider =
@@ -580,7 +580,7 @@ final systemUpdateLevelProvider =
 
 final aiReasoningModeProvider =
     StateNotifierProvider<AiReasoningModeNotifier, String>(
-  (ref) => AiReasoningModeNotifier(ref),
+  AiReasoningModeNotifier.new,
 );
 
 final showChatContextToggleProvider =

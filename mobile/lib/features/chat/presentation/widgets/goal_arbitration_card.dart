@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// Goal Arbitration Card — multi-goal conflict surface
 ///
@@ -64,8 +64,7 @@ class _GoalArbitrationCardState extends State<GoalArbitrationCard>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
+  Widget build(BuildContext context) => FadeTransition(
       opacity: _fadeAnim,
       child: SlideTransition(
         position: _slideAnim,
@@ -174,7 +173,6 @@ class _GoalArbitrationCardState extends State<GoalArbitrationCard>
         ),
       ),
     );
-  }
 
   String? _primaryGoalId() {
     try {

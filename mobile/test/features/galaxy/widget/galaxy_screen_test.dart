@@ -7,12 +7,13 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/retry_strategy.dart';
 import 'package:sparkle/core/services/smart_cache.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
-import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart';
-import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/galaxy/data/models/user_galaxy_contribution.dart';
+import 'package:sparkle/features/galaxy/galaxy.dart';
+import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart';
 import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/l10n/app_localizations_zh.dart';
+
 import '../../../shared/i18n_test_helper.dart';
 
 void main() {
@@ -563,7 +564,7 @@ class FakeEnhancedGalaxyRepository implements EnhancedGalaxyRepository {
 
 // Test widgets
 class _MasteryColorProbe extends StatelessWidget {
-  const _MasteryColorProbe({super.key, required this.color});
+  const _MasteryColorProbe({required this.color, super.key});
 
   final Color color;
 

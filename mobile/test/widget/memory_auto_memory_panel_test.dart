@@ -102,9 +102,9 @@ class _AutoMemoryApiService implements MemoryApiService {
         status: 'resolved',
         selectedSide: selection,
         leftCandidate: UnresolvedConflictCandidate(
-            summary: 'A', lane: 'inferred_extraction'),
+            summary: 'A', lane: 'inferred_extraction',),
         rightCandidate: UnresolvedConflictCandidate(
-            summary: 'B', lane: 'inferred_extraction'),
+            summary: 'B', lane: 'inferred_extraction',),
       );
 
   @override
@@ -257,7 +257,7 @@ void main() {
           evidenceResolveServiceProvider
               .overrideWithValue(_FakeEvidenceResolveService()),
         ],
-        child: testMaterialApp(home: MemoryPanelScreen()),
+        child: testMaterialApp(home: const MemoryPanelScreen()),
       ),
     );
 

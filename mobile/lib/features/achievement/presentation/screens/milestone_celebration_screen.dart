@@ -9,10 +9,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/navigation/route_resilience.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/achievement/achievement_routes.dart';
 import 'package:sparkle/features/home/home_routes.dart';
@@ -55,7 +55,7 @@ class MilestoneCelebrationPayload {
       masteredNodes: parseInt('mastered_nodes', 0),
       completedSprints: parseInt('completed_sprints', 0),
       errorCount: parseInt('error_count', 0),
-      shareHashtag: queryParameters['share_hashtag']?.trim().isNotEmpty == true
+      shareHashtag: queryParameters['share_hashtag']?.trim().isNotEmpty ?? false
           ? queryParameters['share_hashtag']!.trim()
           : _defaultShareHashtag(milestoneId),
     );
@@ -81,7 +81,7 @@ class MilestoneCelebrationPayload {
       masteredNodes: parseInt('mastered_nodes', 0),
       completedSprints: parseInt('completed_sprints', 0),
       errorCount: parseInt('error_count', 0),
-      shareHashtag: raw['share_hashtag']?.toString().trim().isNotEmpty == true
+      shareHashtag: raw['share_hashtag']?.toString().trim().isNotEmpty ?? false
           ? raw['share_hashtag'].toString().trim()
           : _defaultShareHashtag(milestoneId),
     );

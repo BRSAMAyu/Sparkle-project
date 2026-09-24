@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// Time-Aware Recovery Card — divine moment #4 "记得时间"
 ///
@@ -58,8 +58,9 @@ class _StaleRecoveryCardState extends State<StaleRecoveryCard>
   }
 
   String get _elapsedLabel {
-    if (widget.elapsedMinutes < 60)
+    if (widget.elapsedMinutes < 60) {
       return context.l10n.chatStaleMinutes(widget.elapsedMinutes);
+    }
     if (widget.elapsedMinutes >= 1440) {
       final days = widget.elapsedMinutes ~/ 1440;
       final remaining = widget.elapsedMinutes % 1440;

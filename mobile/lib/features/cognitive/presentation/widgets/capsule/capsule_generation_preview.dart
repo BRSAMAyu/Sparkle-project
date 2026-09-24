@@ -68,7 +68,7 @@ class CapsuleGenerationPreview extends StatelessWidget {
                   DS.primaryBase.withValues(alpha: isDark ? 0.12 : 0.08),
                   isDark ? DS.surfaceTertiary : DS.surfaceSecondary,
                 ),
-                isDark ? DS.surfaceSecondary : DS.surfacePrimaryElevated,
+                if (isDark) DS.surfaceSecondary else DS.surfacePrimaryElevated,
               ],
             ),
           ),
@@ -98,8 +98,7 @@ class CapsuleGenerationPreview extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: DS.spacing16),
-              compact
-                  ? Column(
+              if (compact) Column(
                       children: [
                         _buildPreviewMetricCard(
                           context,
@@ -130,8 +129,7 @@ class CapsuleGenerationPreview extends StatelessWidget {
                           color: DS.success,
                         ),
                       ],
-                    )
-                  : Wrap(
+                    ) else Wrap(
                       spacing: DS.spacing12,
                       runSpacing: DS.spacing12,
                       children: [

@@ -1,12 +1,11 @@
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/visual_elements/domain/services/visual_recommendation_service.dart';
 import 'package:sparkle/features/visual_elements/presentation/providers/visual_elements_provider.dart';
@@ -650,9 +649,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           ),
           labelPadding: const EdgeInsets.symmetric(horizontal: DS.spacing10),
           tabs: [
-            compact
-                ? Tab(text: l10n.visualElementsRecommended)
-                : Tab(
+            if (compact) Tab(text: l10n.visualElementsRecommended) else Tab(
                     icon: const Icon(Icons.auto_awesome),
                     text: l10n.visualElementsRecommended,
                   ),
@@ -812,7 +809,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
   }
 
   bool _isElementEquipped(
-          VisualElementModel element, VisualElementsState state) =>
+          VisualElementModel element, VisualElementsState state,) =>
       element.matchesConfig(state.config);
 
   int _bundleOwnedCount(
@@ -859,7 +856,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     final state = ref.read(visualElementsNotifierProvider);
     final unlockedIds = state.unlockedIds;
     final pieces = bundle.bundlePieceIds
-        .where((pieceId) => unlockedIds.contains(pieceId))
+        .where(unlockedIds.contains)
         .toList();
 
     if (pieces.isEmpty) {
@@ -1644,7 +1641,7 @@ class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) =>
-      Container(
+      ColoredBox(
         color: VisualElementPalette.of(context).surface,
         child: tabBar,
       );
@@ -2016,7 +2013,7 @@ class _RecommendationCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -2120,7 +2117,7 @@ class _RecommendationCard extends StatelessWidget {
                                   context,
                                   AppLocalizations.of(context)!
                                       .visualCollectedCount(
-                                          bundleOwnedCount, bundleTotalCount),
+                                          bundleOwnedCount, bundleTotalCount,),
                                   bundleOwnedCount == bundleTotalCount
                                       ? DS.success
                                       : DS.info,
@@ -2190,7 +2187,7 @@ class _RecommendationCard extends StatelessWidget {
             if (!element.isUnlocked)
               Positioned.fill(
                 child: IgnorePointer(
-                  child: Container(
+                  child: DecoratedBox(
                     decoration: BoxDecoration(
                       color: palette.moonless.withValues(alpha: 0.76),
                       borderRadius: DS.borderRadius16,

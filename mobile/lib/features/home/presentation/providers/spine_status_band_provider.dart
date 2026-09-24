@@ -27,18 +27,6 @@ enum AuroraBandStatus {
 
 /// Typed model for GET /aurora/spine/status-band response.
 class SpineStatusBand {
-  final bool strategyRisk;
-  final bool materialAware;
-  final bool executionRisk;
-  final bool staleGuard;
-  final String bandSeverity; // none/info/warning/critical
-  final AuroraBandStatus bandStatus;
-  final String bandLabel;
-  final String bandSummary;
-  final String bandEnergy; // L0/L1/L2/L3
-  final List<CorrectionOption> correctionOptions;
-  final int? cooldownRemainingSeconds;
-  final bool cooldownCanOverride;
 
   const SpineStatusBand({
     required this.strategyRisk,
@@ -55,8 +43,7 @@ class SpineStatusBand {
     required this.cooldownCanOverride,
   });
 
-  factory SpineStatusBand.fromJson(Map<String, dynamic> json) {
-    return SpineStatusBand(
+  factory SpineStatusBand.fromJson(Map<String, dynamic> json) => SpineStatusBand(
       strategyRisk: json['strategy_risk'] as bool? ?? false,
       materialAware: json['material_aware'] as bool? ?? false,
       executionRisk: json['execution_risk'] as bool? ?? false,
@@ -70,7 +57,18 @@ class SpineStatusBand {
       cooldownRemainingSeconds: json['cooldown_remaining_seconds'] as int?,
       cooldownCanOverride: json['cooldown_can_override'] as bool? ?? false,
     );
-  }
+  final bool strategyRisk;
+  final bool materialAware;
+  final bool executionRisk;
+  final bool staleGuard;
+  final String bandSeverity; // none/info/warning/critical
+  final AuroraBandStatus bandStatus;
+  final String bandLabel;
+  final String bandSummary;
+  final String bandEnergy; // L0/L1/L2/L3
+  final List<CorrectionOption> correctionOptions;
+  final int? cooldownRemainingSeconds;
+  final bool cooldownCanOverride;
 
   static AuroraBandStatus _parseBandStatus(String? raw) => switch (raw) {
       'sensing' => AuroraBandStatus.sensing,
@@ -92,10 +90,6 @@ class SpineStatusBand {
 }
 
 class CorrectionOption {
-  final String label;
-  final String semanticValue;
-  final bool isFreeform;
-  final bool isDisconfirming;
 
   const CorrectionOption({
     required this.label,
@@ -111,6 +105,10 @@ class CorrectionOption {
         isFreeform: json['is_freeform'] as bool? ?? false,
         isDisconfirming: json['is_disconfirming'] as bool? ?? false,
       );
+  final String label;
+  final String semanticValue;
+  final bool isFreeform;
+  final bool isDisconfirming;
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────

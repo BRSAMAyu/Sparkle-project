@@ -37,15 +37,11 @@ class _FakePlanRepository extends PlanRepository {
   Future<List<PlanModel>> getActivePlans() => getActivePlansHandler();
 
   @override
-  Future<PlanModel> getPlan(String id) async {
-    return await getPlanHandler?.call(id) ?? _plan(id: id, name: 'Plan $id');
-  }
+  Future<PlanModel> getPlan(String id) async => await getPlanHandler?.call(id) ?? _plan(id: id, name: 'Plan $id');
 
   @override
-  Future<List<TaskModel>> generateTasks(String planId, {int count = 5}) async {
-    return await generateTasksHandler?.call(planId, count: count) ??
+  Future<List<TaskModel>> generateTasks(String planId, {int count = 5}) async => await generateTasksHandler?.call(planId, count: count) ??
         <TaskModel>[];
-  }
 }
 
 class _FakeTaskRepository extends TaskRepository {
@@ -125,15 +121,13 @@ PlanModel _plan({
 ProviderContainer _createContainer({
   required PlanRepository repo,
   _RecordingTaskNotifier? taskNotifier,
-}) {
-  return ProviderContainer(
+}) => ProviderContainer(
     overrides: [
       planRepositoryProvider.overrideWithValue(repo),
       if (taskNotifier != null)
         taskListProvider.overrideWith((ref) => taskNotifier),
     ],
   );
-}
 
 Future<void> _drainMicrotasks() async {
   await Future<void>.delayed(Duration.zero);
@@ -187,7 +181,7 @@ void main() {
 
     test('marks loading during filtered loads and forwards the requested type',
         () async {
-      Future<List<PlanModel>> pendingPlans = Future.value(<PlanModel>[
+      var pendingPlans = Future<List<PlanModel>>.value(<PlanModel>[
         _plan(id: 'bootstrap', name: 'Bootstrap'),
       ]);
       final requestedTypes = <PlanType?>[];

@@ -12,8 +12,7 @@ class GoalValueChip extends StatelessWidget {
   final IconData icon;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withValues(alpha: 0.08),
@@ -39,5 +38,4 @@ class GoalValueChip extends StatelessWidget {
         ],
       ),
     );
-  }
 }

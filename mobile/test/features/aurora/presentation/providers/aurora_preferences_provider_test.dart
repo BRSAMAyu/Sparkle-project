@@ -35,7 +35,7 @@ void main() {
     }
 
     test('fixed update propagates error (caller can show feedback)', () async {
-      bool caught = false;
+      var caught = false;
       try {
         await fixedUpdate(apiSucceeds: false);
       } catch (_) {
@@ -45,7 +45,7 @@ void main() {
     });
 
     test('fixed update does not throw on success', () async {
-      bool caught = false;
+      var caught = false;
       try {
         await fixedUpdate(apiSucceeds: true);
       } catch (_) {
@@ -55,7 +55,7 @@ void main() {
     });
 
     test('old update silently returns on failure — the bug', () async {
-      bool errorCallbackInvoked = false;
+      var errorCallbackInvoked = false;
       await oldUpdate(
         apiSucceeds: false,
         onError: (_) => errorCallbackInvoked = true,

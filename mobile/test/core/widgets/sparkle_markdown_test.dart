@@ -146,7 +146,7 @@ void main() {
     });
 
     test('handles complex mixed input', () {
-      final input = '''
+      const input = '''
 • **标题1** - 描述
 ? **标题2**
 — 普通条目

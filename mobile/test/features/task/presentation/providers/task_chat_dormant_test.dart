@@ -246,7 +246,6 @@ void main() {
 
       // Simulate what sendMessage does after parsing
       final state = TaskChatState(
-        isLoading: false,
         dormantInjection: dormantState,
         turnCount: 1,
       );

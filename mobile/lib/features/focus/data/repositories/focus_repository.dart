@@ -198,7 +198,7 @@ class FocusRepository {
       final rawContent = payload['content'] ?? payload['guidance'];
       final content = rawContent is String ? rawContent : rawContent?.toString();
       if (content == null || content.isEmpty) {
-        throw FormatException(
+        throw const FormatException(
           'getLLMGuidance: response payload is missing a non-empty '
           '"content" or "guidance" field',
         );

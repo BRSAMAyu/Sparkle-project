@@ -292,7 +292,7 @@ class CalibrationReceiptViewData {
       final explicit = _pickLocalized(receipt[key]);
       if (explicit.isNotEmpty) return explicit;
 
-      final suffix = '_en';
+      const suffix = '_en';
       final suffixed = _pickLocalized(receipt['$key$suffix']);
       if (suffixed.isNotEmpty) return suffixed;
 

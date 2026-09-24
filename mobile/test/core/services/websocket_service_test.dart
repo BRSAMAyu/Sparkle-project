@@ -22,7 +22,7 @@ List<String> _wsLogs = <String>[];
 List<String> _connectingLogsFor(String url) => _wsLogs
     .where((log) => log.startsWith('Connecting to WebSocket') && (
           log.contains(url)
-        ))
+        ),)
     .toList();
 
 Future<void> _waitFor(

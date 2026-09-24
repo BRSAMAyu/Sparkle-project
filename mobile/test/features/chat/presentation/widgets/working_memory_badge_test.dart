@@ -8,7 +8,7 @@ void main() {
   setUp(setUpI18nForTesting);
   testWidgets('shows consolidated label when archived', (tester) async {
     await tester.pumpWidget(
-      testMaterialApp(home: Scaffold(
+      testMaterialApp(home: const Scaffold(
           body: WorkingMemoryBadge(consolidated: true),
         ),),
     );
@@ -18,7 +18,7 @@ void main() {
 
   testWidgets('shows session label when not archived', (tester) async {
     await tester.pumpWidget(
-      testMaterialApp(home: Scaffold(
+      testMaterialApp(home: const Scaffold(
           body: WorkingMemoryBadge(consolidated: false),
         ),),
     );

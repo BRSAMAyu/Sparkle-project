@@ -12,6 +12,7 @@ import 'package:sparkle/core/errors/failures.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_interceptor.dart';
 import 'package:sparkle/core/network/token_refresh_coordinator.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/auth/data/models/token_model.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart'
@@ -22,7 +23,6 @@ import 'package:sparkle/features/chat/data/services/chat_cache_service.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
-import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 
 /// AUTH-DEEP B-1 三单飞口收敛回归：
@@ -272,7 +272,7 @@ void main() {
       expect(authRepository.refreshCalls, 1);
       expect(authRepository.logoutCalls, 0);
       expect(authRepository.clearedTokens, isFalse,
-          reason: '仓库层 B-3：5xx 不清 token');
+          reason: '仓库层 B-3：5xx 不清 token',);
     });
 
     test('会话终局刷新失败（401 被拒）：登出善后', () async {

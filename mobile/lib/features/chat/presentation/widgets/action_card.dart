@@ -393,7 +393,7 @@ class _ActionCardState extends ConsumerState<ActionCard>
             : hasAction
                 ? () => unawaited(
                       SensoryFeedbackService.emit(
-                          SensoryFeedbackEvent.selection),
+                          SensoryFeedbackEvent.selection,),
                     )
                 : null,
         child: SparkleMotion.pressScale(
@@ -2206,13 +2206,13 @@ class _ActionCardState extends ConsumerState<ActionCard>
                 _buildMetaChip(
                   icon: Icons.rule_rounded,
                   label: context.l10n.chatActionValidationSteps(
-                      validationPassed, validationTotal),
+                      validationPassed, validationTotal,),
                 ),
               if (qualityScore > 0)
                 _buildMetaChip(
                   icon: Icons.fact_check_rounded,
                   label: context.l10n.chatActionQualityScore(
-                      (qualityScore * 100).round().toString()),
+                      (qualityScore * 100).round().toString(),),
                 ),
               if (selfVerification != null &&
                   (selfVerification['score'] as num?) != null)
@@ -2221,7 +2221,7 @@ class _ActionCardState extends ConsumerState<ActionCard>
                   label: context.l10n.chatActionSelfCheck(
                       (((selfVerification['score'] as num?) ?? 0) * 100)
                           .round()
-                          .toString()),
+                          .toString(),),
                 ),
             ],
           ),
@@ -2418,7 +2418,7 @@ class _ActionCardState extends ConsumerState<ActionCard>
                     color: DS.primaryBase.withValues(alpha: 0.1),
                     borderRadius: DS.borderRadius20,
                     border: Border.all(
-                        color: DS.primaryBase.withValues(alpha: 0.18)),
+                        color: DS.primaryBase.withValues(alpha: 0.18),),
                   ),
                   child: Text(
                     retryAction['label'].toString(),
@@ -2587,7 +2587,7 @@ class _ActionCardState extends ConsumerState<ActionCard>
                 icon: Icons.favorite_border_rounded,
                 label: context.l10n.chatActionTrust(
                     (double.tryParse('$delegatePreference') ?? 0)
-                        .toStringAsFixed(2)),
+                        .toStringAsFixed(2),),
               ),
           ],
         ),

@@ -150,7 +150,7 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
         child: Row(
           children: [
             Icon(Icons.auto_awesome_outlined,
-                size: 16, color: DS.textSecondary.withValues(alpha: 0.7)),
+                size: 16, color: DS.textSecondary.withValues(alpha: 0.7),),
             const SizedBox(width: DS.spacing8),
             Expanded(
               child: Text(
@@ -245,7 +245,7 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
                       GestureDetector(
                         onTap: () => setState(() => _dismissed = true),
                         child: Icon(Icons.close_rounded,
-                            size: 14, color: DS.textTertiary),
+                            size: 14, color: DS.textTertiary,),
                       ),
                       const SizedBox(width: DS.spacing4),
                       Icon(
@@ -325,7 +325,7 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
   }
 
   Widget _buildExpansionContent(
-      AuroraControlSurfaceSnapshot snapshot, Color tone) {
+      AuroraControlSurfaceSnapshot snapshot, Color tone,) {
     if (_expansion == _AuroraExpansion.deep) {
       final availableHeight = MediaQuery.sizeOf(context).height * 0.45;
       final maxHeight = availableHeight.clamp(220.0, 360.0);
@@ -343,7 +343,7 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
   // ── Layer 2: Light expansion ──────────────────────────────────
 
   Widget _buildLightExpansion(
-      AuroraControlSurfaceSnapshot snapshot, Color tone) {
+      AuroraControlSurfaceSnapshot snapshot, Color tone,) {
     final primaryFacet = _mostActionableFacet(snapshot.facets);
     final wake = snapshot.wakeEligibility;
     final l10n = context.l10n;
@@ -363,7 +363,7 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
         Text(
           _lightJudgmentText(snapshot, evidence),
           style: TextStyle(
-              color: DS.textPrimary, fontSize: DS.fontSizeXs, height: 1.4),
+              color: DS.textPrimary, fontSize: DS.fontSizeXs, height: 1.4,),
         ),
 
         // Evidence
@@ -375,16 +375,16 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
             children: [
               Text(l10n.auroraEvidence,
                   style: TextStyle(
-                      color: DS.textSecondary, fontSize: DS.fontSizeXs)),
+                      color: DS.textSecondary, fontSize: DS.fontSizeXs,),),
               ...evidence.take(3).map((s) => Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: DS.spacing6, vertical: DS.spacing2),
+                        horizontal: DS.spacing6, vertical: DS.spacing2,),
                     decoration: BoxDecoration(
                       color: tone.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(s, style: TextStyle(color: tone, fontSize: 11)),
-                  )),
+                  ),),
             ],
           ),
         ],
@@ -436,12 +436,12 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
                         groupId: payload.groupId,
                         bandStatus: payload.bandStatus,
                         conversationId: payload.conversationId,
-                      ));
+                      ),);
                       // Collapse bar after selection
                       _setExpansion(_AuroraExpansion.collapsed);
                       unawaited(SensoryFeedbackService.emitAuroraEvent(
                         AuroraSensoryEvent.correctionCompleted,
-                      ));
+                      ),);
                       ref
                           .read(auroraStatusProvider.notifier)
                           .markCorrectionEffective(
@@ -450,9 +450,9 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
                       // Refresh status
                       unawaited(ref.read(auroraStatusProvider.notifier).refresh(
                             conversationId: widget.conversationId,
-                          ));
+                          ),);
                     },
-                  )),
+                  ),),
               // Freeform correction chip
               if (topGroup.freeformOption != null)
                 _PredictedOptionChip(
@@ -518,7 +518,7 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
   }
 
   List<Widget> _buildActions(AuroraControlSurfaceSnapshot snapshot,
-      AuroraWakeEligibility wake, AppLocalizations l10n) {
+      AuroraWakeEligibility wake, AppLocalizations l10n,) {
     final actions = <Widget>[];
 
     if (snapshot.timeContext.hasConflict) {
@@ -526,7 +526,7 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
         label: l10n.chatStatusQuickCalibrate,
         onTap: () => _triggerCalibration(snapshot),
         isPrimary: true,
-      ));
+      ),);
     }
 
     switch (snapshot.overallStatus) {
@@ -537,24 +537,24 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
             label: l10n.auroraActionDeepConversation,
             onTap: () => _triggerCoreSession(snapshot),
             isPrimary: true,
-          ));
+          ),);
         }
         actions.add(_ActionChip(
           label: l10n.auroraActionViewDetails,
           onTap: () => _setExpansion(_AuroraExpansion.deep),
-        ));
+        ),);
       case 'needs_confirm':
         if (wake.canUserWake) {
           actions.add(_ActionChip(
             label: l10n.auroraActionDeepConversation,
             onTap: () => _triggerCoreSession(snapshot),
             isPrimary: true,
-          ));
+          ),);
         }
         actions.add(_ActionChip(
           label: l10n.auroraActionViewDetails,
           onTap: () => _setExpansion(_AuroraExpansion.deep),
-        ));
+        ),);
       case 'calibration_available':
         if (wake.canUserWake) {
           // Full L3 session — most impactful action
@@ -562,26 +562,26 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
             label: l10n.auroraWakeAvailable(wake.userQuotaRemaining),
             onTap: () => _triggerCoreSession(snapshot),
             isPrimary: true,
-          ));
+          ),);
         }
         // Fallback: light calibration panel
         actions.add(_ActionChip(
           label: context.l10n.chatStatusQuickCalibrate,
           onTap: () => _triggerCalibration(snapshot),
-        ));
+        ),);
       case 'cooling_down':
         actions.add(_ActionChip(
           label: l10n.auroraWakeCooling(wake.cooldownRemainingMin),
-        ));
+        ),);
         actions.add(_ActionChip(
           label: l10n.auroraWakeQuickFallback,
           onTap: () => _triggerCalibration(snapshot),
-        ));
+        ),);
       default:
         actions.add(_ActionChip(
           label: l10n.auroraActionViewDetails,
           onTap: () => _setExpansion(_AuroraExpansion.deep),
-        ));
+        ),);
     }
 
     return actions;
@@ -662,17 +662,17 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
       confirmOptions: [
         context.l10n.chatMinutes30,
         context.l10n.chatMinutes45,
-        context.l10n.chatMinutes60
+        context.l10n.chatMinutes60,
       ],
       onConfirm: (option) {
         unawaited(SensoryFeedbackService.emitAuroraEvent(
           AuroraSensoryEvent.correctionCompleted,
-        ));
+        ),);
         unawaited(ref.read(auroraStatusProvider.notifier).refresh(
               conversationId: widget.conversationId,
-            ));
+            ),);
       },
-    ));
+    ),);
   }
 
   /// L3 Core Session — full multi-message interactive modeling session.
@@ -681,7 +681,7 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
     _setExpansion(_AuroraExpansion.collapsed);
     unawaited(SensoryFeedbackService.emitAuroraEvent(
       AuroraSensoryEvent.coreSessionOpen,
-    ));
+    ),);
     unawaited(showAuroraCoreSession(
       context: context,
       bandStatus: snapshot.overallStatus,
@@ -696,13 +696,12 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
       ),
       conversationId: widget.conversationId,
       scope: wake.suggestedScope.isNotEmpty ? wake.suggestedScope : null,
-      sessionType: 'user_initiated',
     ).then((_) {
       // After session exits, refresh the status bar
       unawaited(ref.read(auroraStatusProvider.notifier).refresh(
             conversationId: widget.conversationId,
-          ));
-    }));
+          ),);
+    }),);
   }
 
   void _triggerTaskStuckCoreSession(AuroraControlSurfaceSnapshot snapshot) {
@@ -710,7 +709,7 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
     _setExpansion(_AuroraExpansion.collapsed);
     unawaited(SensoryFeedbackService.emitAuroraEvent(
       AuroraSensoryEvent.coreSessionOpen,
-    ));
+    ),);
     unawaited(showAuroraCoreSession(
       context: context,
       bandStatus: 'calibration_available',
@@ -734,8 +733,8 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
     ).then((_) {
       unawaited(ref.read(auroraStatusProvider.notifier).refresh(
             conversationId: widget.conversationId,
-          ));
-    }));
+          ),);
+    }),);
   }
 
   void _syncAuroraSensoryState(AuroraControlSurfaceSnapshot? snapshot) {
@@ -875,12 +874,12 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
     if (snapshot.timeContext.visible && snapshot.timeContext.label.isNotEmpty) {
       add(snapshot.timeContext.subtitle.trim().isEmpty
           ? snapshot.timeContext.label
-          : '${snapshot.timeContext.label} · ${snapshot.timeContext.subtitle}');
+          : '${snapshot.timeContext.label} · ${snapshot.timeContext.subtitle}',);
     }
     if (snapshot.taskHealth.visible && snapshot.taskHealth.label.isNotEmpty) {
       add(snapshot.taskHealth.subtitle.trim().isEmpty
           ? snapshot.taskHealth.label
-          : '${snapshot.taskHealth.label} · ${snapshot.taskHealth.subtitle}');
+          : '${snapshot.taskHealth.label} · ${snapshot.taskHealth.subtitle}',);
     }
     for (final facet in snapshot.facets) {
       for (final signal in facet.signals) {
@@ -1008,7 +1007,7 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
     setState(() => _selectedCorrectionSemantic = option.semanticValue);
     unawaited(SensoryFeedbackService.emitAuroraEvent(
       AuroraSensoryEvent.correctionCompleted,
-    ));
+    ),);
     final payload = AuroraCorrectionPayload.chip(
       surface: AuroraCorrectionSurface.statusBand,
       semanticValue: option.semanticValue,
@@ -1027,13 +1026,13 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
       telemetryId: payload.telemetryId,
       groupId: payload.groupId,
       conversationId: payload.conversationId,
-    ));
+    ),);
     ref.read(auroraStatusProvider.notifier).markCorrectionEffective(
           semanticValue: option.semanticValue,
         );
     unawaited(ref.read(auroraStatusProvider.notifier).refresh(
           conversationId: widget.conversationId,
-        ));
+        ),);
   }
 }
 
@@ -1066,9 +1065,9 @@ class _BarContainer extends StatelessWidget {
           duration: context.reduceMotion ? Duration.zero : const Duration(milliseconds: 300),
           curve: Curves.easeInOutCubic,
           margin: const EdgeInsets.symmetric(
-              horizontal: DS.spacing16, vertical: DS.spacing4),
+              horizontal: DS.spacing16, vertical: DS.spacing4,),
           padding: const EdgeInsets.symmetric(
-              horizontal: DS.spacing12, vertical: DS.spacing10),
+              horizontal: DS.spacing12, vertical: DS.spacing10,),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
@@ -1098,7 +1097,7 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing8, vertical: DS.spacing4),
+            horizontal: DS.spacing8, vertical: DS.spacing4,),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(999),
@@ -1108,7 +1107,7 @@ class _StatusPill extends StatelessWidget {
           style: TextStyle(
               color: color,
               fontSize: DS.fontSizeXs,
-              fontWeight: DS.fontWeightSemibold),
+              fontWeight: DS.fontWeightSemibold,),
         ),
       );
 }
@@ -1142,7 +1141,7 @@ class _TimeContextPill extends StatelessWidget {
           child: Container(
             constraints: const BoxConstraints(minHeight: 28),
             padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing8, vertical: DS.spacing4),
+                horizontal: DS.spacing8, vertical: DS.spacing4,),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(999),
@@ -1204,7 +1203,7 @@ class _TaskHealthPill extends StatelessWidget {
           child: Container(
             constraints: const BoxConstraints(minHeight: 28),
             padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing8, vertical: DS.spacing4),
+                horizontal: DS.spacing8, vertical: DS.spacing4,),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(999),
@@ -1306,13 +1305,13 @@ class _ActionChip extends StatelessWidget {
     if (onTap == null) {
       return Container(
         padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing10, vertical: DS.spacing6),
+            horizontal: DS.spacing10, vertical: DS.spacing6,),
         decoration: BoxDecoration(
           color: DS.surfaceSecondary.withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(999),
         ),
         child: Text(label,
-            style: TextStyle(color: DS.textSecondary, fontSize: 11)),
+            style: TextStyle(color: DS.textSecondary, fontSize: 11),),
       );
     }
     final foreground = isPrimary ? DS.brandPrimary : DS.textSecondary;
@@ -1328,7 +1327,7 @@ class _ActionChip extends StatelessWidget {
           child: Container(
             constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
             padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing10, vertical: DS.spacing6),
+                horizontal: DS.spacing10, vertical: DS.spacing6,),
             decoration: BoxDecoration(
               color: isPrimary
                   ? DS.brandPrimary.withValues(alpha: 0.1)
@@ -1398,7 +1397,7 @@ class _StatusCorrectionChip extends StatelessWidget {
             curve: Curves.easeOutCubic,
             constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
             padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing10, vertical: DS.spacing6),
+                horizontal: DS.spacing10, vertical: DS.spacing6,),
             decoration: BoxDecoration(
               color: color.withValues(alpha: selected ? 0.14 : 0.08),
               borderRadius: BorderRadius.circular(999),
@@ -1454,7 +1453,7 @@ class _PredictedOptionChip extends StatelessWidget {
           child: Container(
             constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
             padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing10, vertical: DS.spacing6),
+                horizontal: DS.spacing10, vertical: DS.spacing6,),
             decoration: BoxDecoration(
               color: isSpecial
                   ? Colors.transparent
@@ -1514,7 +1513,7 @@ class _ShimmerDotState extends State<_ShimmerDot>
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1200));
+        vsync: this, duration: const Duration(milliseconds: 1200),);
     unawaited(_controller.repeat());
   }
 

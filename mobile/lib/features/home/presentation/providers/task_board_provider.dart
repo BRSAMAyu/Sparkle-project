@@ -387,7 +387,7 @@ final sprintTasksProvider = Provider<List<TaskModel>>((ref) {
     case SprintTaskFilter.inProgress:
       tasks = tasks
           .where((t) =>
-              t.status == TaskStatus.inProgress || t.status == TaskStatus.stuck)
+              t.status == TaskStatus.inProgress || t.status == TaskStatus.stuck,)
           .toList();
     case SprintTaskFilter.done:
       tasks = tasks.where((t) => t.status == TaskStatus.completed).toList();
@@ -421,7 +421,7 @@ final sprintTaskCountsProvider = Provider<Map<SprintTaskFilter, int>>((ref) {
         sprintTasks.where((t) => t.status == TaskStatus.pending).length,
     SprintTaskFilter.inProgress: sprintTasks
         .where((t) =>
-            t.status == TaskStatus.inProgress || t.status == TaskStatus.stuck)
+            t.status == TaskStatus.inProgress || t.status == TaskStatus.stuck,)
         .length,
     SprintTaskFilter.done:
         sprintTasks.where((t) => t.status == TaskStatus.completed).length,

@@ -235,7 +235,7 @@ void main() {
         '/memory/provenance/items/preference/$id/revoke',
       );
       expect((api.calls.single.$3! as Map<String, dynamic>)['reason'],
-          'user_revoked');
+          'user_revoked',);
       expect(result['revoked'], isTrue);
     });
 
@@ -298,7 +298,7 @@ void main() {
       expect(api.calls.single.$2, '/memory/provenance/why-this');
       final body = api.calls.single.$3! as Map<String, dynamic>;
       expect(body['memory_ref'],
-          'memory://episodic/11111111-1111-1111-1111-111111111111');
+          'memory://episodic/11111111-1111-1111-1111-111111111111',);
       expect(body['version'], '3');
       expect(result.whyIncluded.single.label, '按与当轮内容的相关度排序选中');
       expect(result.internalOnly.single.known, isTrue);

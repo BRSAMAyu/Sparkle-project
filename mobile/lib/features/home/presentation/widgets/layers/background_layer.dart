@@ -7,9 +7,8 @@ import 'package:sparkle/shared/entities/visual_element_model.dart';
 /// 背景层 - 渲染用户选择的背景
 class BackgroundLayer extends StatelessWidget {
   const BackgroundLayer({
-    super.key,
+    required this.mainAnimation, super.key,
     this.element,
-    required this.mainAnimation,
     this.tint,
     this.tintOpacity = 0.0,
   });
@@ -438,10 +437,8 @@ class _TexturePainter extends CustomPainter {
       case 'grain':
       case 'grid':
         _paintMeshTexture(canvas, size);
-        break;
       default:
         _paintMeshTexture(canvas, size);
-        break;
     }
   }
 

@@ -1,16 +1,15 @@
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/analysis_card.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/error_question_image.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/review_performance_buttons.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 /// 复习模式枚举
@@ -128,7 +127,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
           if (filteredErrors.isEmpty) {
             return _buildEmptyState(context,
-                customMessage: context.l10n.ebNoMatchingErrors);
+                customMessage: context.l10n.ebNoMatchingErrors,);
           }
 
           // 复习完成
@@ -784,7 +783,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
   }
 
   String _getEncouragementText(
-      AppLocalizations l10n, int remembered, int total) {
+      AppLocalizations l10n, int remembered, int total,) {
     if (total == 0) return l10n.ebEncourageKeepGoing;
 
     final ratio = remembered / total;
@@ -811,7 +810,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             const SizedBox(height: DS.spacing16),
             Text(
               context.l10n.ebLoadReviewFailed,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: DS.fontWeightMedium,
               ),

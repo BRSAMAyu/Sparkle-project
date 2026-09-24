@@ -310,7 +310,7 @@ class MockCommunityRepository implements CommunityRepository {
                 ? '主动检索比重复看起来更费力，但正因为费力才更能留下记忆...'
                 : 'Active retrieval feels more effortful than repetition, but precisely because it\'s effortful, it sticks better...',
             'resource_meta': {
-              'related_subject': zh ? '学习策略' : 'Learning Strategies'
+              'related_subject': zh ? '学习策略' : 'Learning Strategies',
             },
             'comment': zh
                 ? '我觉得这条很适合理工错题回看时用'
@@ -1408,8 +1408,8 @@ class MockCommunityRepository implements CommunityRepository {
     return _mockUsers
         .where((u) =>
             u.id != currentUserId &&
-            (u.nickname?.toLowerCase().contains(lower) == true ||
-                u.username.toLowerCase().contains(lower)))
+            ((u.nickname?.toLowerCase().contains(lower) ?? false) ||
+                u.username.toLowerCase().contains(lower)),)
         .take(limit)
         .toList();
   }
@@ -1676,14 +1676,14 @@ class MockCommunityRepository implements CommunityRepository {
   // === CommunityRepository interface methods ===
   @override
   Future<List<Post>> getFeed(
-      {int page = 1, int limit = 20, String? scope}) async {
+      {int page = 1, int limit = 20, String? scope,}) async {
     return (await getFeedCached(page: page, limit: limit, scope: scope)).data;
   }
 
   // N34：demo/mock 仓库不做本地快照（mock 数据永不入缓存）。
   @override
   Future<CacheAwareResult<List<Post>>> getFeedCached(
-      {int page = 1, int limit = 20, String? scope}) async {
+      {int page = 1, int limit = 20, String? scope,}) async {
     final l10n = I18nService.instance.l10n;
     final now = DateTime.now();
     return CacheAwareResult([
@@ -1854,7 +1854,7 @@ class MockCommunityRepository implements CommunityRepository {
     if (group == null) return [];
     final roles = [GroupRole.member, GroupRole.member, GroupRole.member, GroupRole.admin];
     final members = <GroupMemberInfo>[];
-    for (int i = 0; i < _mockUsers.length && members.length < group.memberCount; i++) {
+    for (var i = 0; i < _mockUsers.length && members.length < group.memberCount; i++) {
       final user = _mockUsers[i];
       final role = user.id == currentUserId ? (group.myRole ?? GroupRole.member) : roles[i % roles.length];
       members.add(GroupMemberInfo(
@@ -1865,7 +1865,7 @@ class MockCommunityRepository implements CommunityRepository {
         checkinStreak: i < 3 ? 3 + i : 0,
         joinedAt: DateTime.now().subtract(Duration(days: 10 - i)),
         lastActiveAt: DateTime.now().subtract(Duration(hours: i)),
-      ));
+      ),);
     }
     return members;
   }
@@ -2329,7 +2329,7 @@ class MockCommunityRepository implements CommunityRepository {
 
   @override
   Future<SharedResourceInfo> shareResource(
-          SharedResourceCreate request) async =>
+          SharedResourceCreate request,) async =>
       SharedResourceInfo(
         id: const Uuid().v4(),
         resourceType: request.resourceType,

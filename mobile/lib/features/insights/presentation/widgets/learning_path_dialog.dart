@@ -1,4 +1,3 @@
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -6,15 +5,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/insights/data/models/learning_path_node.dart';
 import 'package:sparkle/features/insights/data/repositories/learning_path_repository.dart';
 import 'package:sparkle/features/insights/presentation/providers/learning_path_provider.dart';
 import 'package:sparkle/features/knowledge/presentation/providers/knowledge_detail_provider.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
-import 'package:sparkle/shared/entities/task_model.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
 
 class LearningPathDialog extends ConsumerStatefulWidget {
   const LearningPathDialog({
@@ -428,7 +428,6 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
 
   Future<List<TaskModel>> _loadRelatedTasks(String nodeId) async {
     final response = await ref.read(taskRepositoryProvider).getTasks(
-          pageSize: 50,
           filters: {'knowledge_node_id': nodeId},
         );
     return response.items;

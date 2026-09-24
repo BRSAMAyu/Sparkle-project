@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/session_refresh_service.dart';
@@ -26,7 +25,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   /// 拉高测试视口，登录/访客按钮同屏可见——保证同帧双通道连击都能真实命中。
-  void _enlargeViewport(WidgetTester tester) {
+  void enlargeViewport(WidgetTester tester) {
     tester.view
       ..physicalSize = const Size(800, 2200)
       ..devicePixelRatio = 1.0;
@@ -34,16 +33,12 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
   }
 
-  setUp(() {
-    setUpI18nForTesting();
-  });
+  setUp(setUpI18nForTesting);
 
-  tearDown(() {
-    tearDownI18n();
-  });
+  tearDown(tearDownI18n);
 
   Future<ProviderContainer> pumpLoginScreen(WidgetTester tester,
-      _CountingAuthRepository repo) async {
+      _CountingAuthRepository repo,) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     final container = ProviderContainer(
@@ -72,7 +67,7 @@ void main() {
   }
 
   testWidgets('同一帧内双击登录按钮只提交一次（双通道防重入）', (tester) async {
-    _enlargeViewport(tester);
+    enlargeViewport(tester);
     final repo = _CountingAuthRepository();
     await pumpLoginScreen(tester, repo);
 
@@ -92,7 +87,7 @@ void main() {
 
   testWidgets('提交后 800ms 内的访客连击被吸收（login+guest 双 POST 复现）',
       (tester) async {
-    _enlargeViewport(tester);
+    enlargeViewport(tester);
     final repo = _CountingAuthRepository();
     await pumpLoginScreen(tester, repo);
 

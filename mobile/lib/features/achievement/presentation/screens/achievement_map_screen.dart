@@ -1,17 +1,15 @@
 import 'dart:async';
-
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
-import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/animation_lifecycle_mixin.dart';
 import 'package:sparkle/core/design/widgets/global_particle_counter.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
@@ -36,7 +34,7 @@ class _AchievementMapScreenState extends ConsumerState<AchievementMapScreen> {
     final progressById = <String, double>{
       for (final entry in achievementState.achievements)
         entry.achievement.id:
-            (entry.progressPercentage / 100).clamp(0.0, 1.0).toDouble(),
+            (entry.progressPercentage / 100).clamp(0.0, 1.0),
     };
 
     return SparklePageScaffold(
@@ -417,7 +415,7 @@ class _CosmicConstellationCanvasState extends State<_CosmicConstellationCanvas>
       if (!mounted) return;
 
       final screenSize = MediaQuery.of(context).size;
-      final appBarHeight = kToolbarHeight;
+      const appBarHeight = kToolbarHeight;
 
       // Calculate canvas bounds
       var minX = double.infinity;
@@ -1193,7 +1191,7 @@ class _OrbitalParticlesPainter extends CustomPainter {
       for (var i = 0; i < particleCount; i++) {
         final orbitRadius = 30.0 + i * 6.0;
         final speed = 1.0 + i * 0.3;
-        final phase = (i * math.pi * 2 / particleCount);
+        final phase = i * math.pi * 2 / particleCount;
         final angle = animValue * math.pi * 2 * speed + phase;
 
         final px = center.dx + math.cos(angle) * orbitRadius;

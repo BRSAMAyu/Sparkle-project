@@ -1,4 +1,3 @@
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -6,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
@@ -601,7 +601,7 @@ class _AnimatedStatValue extends StatelessWidget {
     final suffix = value.substring(leadingStr.length);
 
     return TweenAnimationBuilder<int>(
-      tween: IntTween(begin: 0, end: targetNumber!),
+      tween: IntTween(begin: 0, end: targetNumber),
       duration: const Duration(milliseconds: 600),
       curve: Curves.easeOutCubic,
       builder: (context, animValue, _) => Text(
@@ -800,7 +800,7 @@ class _CalendarCellState extends State<_CalendarCell>
             borderRadius: DS.borderRadius8,
           );
 
-    Widget cell = Container(
+    Widget cell = DecoratedBox(
       decoration: decoration,
       child: Stack(
         children: [
@@ -834,7 +834,7 @@ class _CalendarCellState extends State<_CalendarCell>
     if (isToday && _pulseAnimation != null) {
       cell = AnimatedBuilder(
         animation: _pulseAnimation!,
-        builder: (context, child) => Container(
+        builder: (context, child) => DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: DS.borderRadius8,
             boxShadow: [
@@ -846,7 +846,7 @@ class _CalendarCellState extends State<_CalendarCell>
               ),
             ],
           ),
-          child: Container(
+          child: DecoratedBox(
             decoration: BoxDecoration(
               borderRadius: DS.borderRadius8,
               border: Border.all(
@@ -977,8 +977,7 @@ class _StreakInsightBanner extends StatelessWidget {
   final int totalCheckins;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(DS.spacing12),
       decoration: BoxDecoration(
         color: DS.brandPrimary.withValues(alpha: 0.06),
@@ -1002,5 +1001,4 @@ class _StreakInsightBanner extends StatelessWidget {
         ],
       ),
     );
-  }
 }

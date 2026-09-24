@@ -78,9 +78,9 @@ class _SceneSummaryApiService implements MemoryApiService {
         status: 'resolved',
         selectedSide: selection,
         leftCandidate: UnresolvedConflictCandidate(
-            summary: 'A', lane: 'inferred_extraction'),
+            summary: 'A', lane: 'inferred_extraction',),
         rightCandidate: UnresolvedConflictCandidate(
-            summary: 'B', lane: 'inferred_extraction'),
+            summary: 'B', lane: 'inferred_extraction',),
       );
 
   @override
@@ -202,7 +202,7 @@ void main() {
             _SceneSummaryApiService(recentScenes: scenes),
           ),
         ],
-        child: testMaterialApp(home: MemoryPanelScreen()),
+        child: testMaterialApp(home: const MemoryPanelScreen()),
       ),
     );
     await tester.pump();

@@ -138,7 +138,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
   }
 
   GlobalKey _messageKeyFor(String id) =>
-      _messageKeys.putIfAbsent(id, () => GlobalKey());
+      _messageKeys.putIfAbsent(id, GlobalKey.new);
 
   void _handleScroll() {
     if (!_scrollController.hasClients) {
@@ -217,7 +217,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
               children: [
                 Text(
                   context.l10n.chatGroupForwardToGroup,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontWeight: DS.fontWeightBold,
                     fontSize: DS.fontSizeLg,
                   ),
@@ -304,7 +304,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                 children: [
                   Text(
                     context.l10n.chatGroupReportMessage,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontWeight: DS.fontWeightBold,
                       fontSize: DS.fontSizeLg,
                     ),
@@ -357,7 +357,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                     controller: descController,
                     decoration: InputDecoration(
                       hintText: context.l10n.chatGroupReportAdditionalNote,
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                     ),
                     maxLines: 2,
                   ),
@@ -956,7 +956,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   Text(
                     context.l10n.communityAgentOnlyYou,
                     style: TextStyle(
-                        fontSize: DS.fontSizeSm, color: DS.neutral500),
+                        fontSize: DS.fontSizeSm, color: DS.neutral500,),
                   ),
                 const Spacer(),
                 if (agentState.isSending)

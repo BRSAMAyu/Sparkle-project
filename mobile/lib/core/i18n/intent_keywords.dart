@@ -10,8 +10,7 @@ enum IntentKeywordType {
 }
 
 class IntentKeywords {
-  static Map<String, double> getTaskKeywords() {
-    return {
+  static Map<String, double> getTaskKeywords() => {
       // Chinese
       '创建任务': 1.0,
       '新建任务': 1.0,
@@ -37,18 +36,14 @@ class IntentKeywords {
       'add task': 0.8,
       'schedule': 0.8,
     };
-  }
 
-  static List<String> getTaskBaseKeywords() {
-    return [
+  static List<String> getTaskBaseKeywords() => [
       '任务', '提醒', '创建', '新建', '做', '创建一个', '添加任务',
       'task', 'todo', 'remind', 'create', 'new task', 'add task', 'reminder',
       'schedule', 'set a reminder',
     ];
-  }
 
-  static Map<String, double> getCapsuleKeywords() {
-    return {
+  static Map<String, double> getCapsuleKeywords() => {
       // Chinese
       '烦': 0.9,
       '感觉': 0.7,
@@ -70,18 +65,14 @@ class IntentKeywords {
       "can't figure out": 0.85,
       'not sure': 0.8,
     };
-  }
 
-  static List<String> getCapsuleBaseKeywords() {
-    return [
+  static List<String> getCapsuleBaseKeywords() => [
       '烦', '感觉', '觉得', '好奇', '想知道', '疑惑', '不明白', '困惑',
       'curious', 'wonder', 'confused', 'frustrated', 'annoyed', 'not sure',
       "don't understand", "can't figure out", 'feeling', 'wondering',
     ];
-  }
 
-  static Map<String, double> getSprintKeywords() {
-    return {
+  static Map<String, double> getSprintKeywords() => {
       '冲刺': 1.0,
       'sprint': 1.0,
       '专注模式': 0.95,
@@ -95,18 +86,14 @@ class IntentKeywords {
       'focus session': 0.85,
       'deep work': 0.85,
     };
-  }
 
-  static List<String> getSprintBaseKeywords() {
-    return [
+  static List<String> getSprintBaseKeywords() => [
       '冲刺', '专注模式', '突击', '进入冲刺', '开始专注', '专注',
       'sprint', 'focus mode', 'deep focus', 'start sprint', 'enter focus',
       'pomodoro', 'focus session', 'deep work',
     ];
-  }
 
-  static Map<String, double> getReviewKeywords() {
-    return {
+  static Map<String, double> getReviewKeywords() => {
       '复习': 1.0,
       'review': 1.0,
       '回顾': 0.9,
@@ -117,17 +104,13 @@ class IntentKeywords {
       'refresh': 0.85,
       'recap': 0.85,
     };
-  }
 
-  static List<String> getReviewBaseKeywords() {
-    return [
+  static List<String> getReviewBaseKeywords() => [
       '复习', '回顾', '过一遍', '温习',
       'review', 'go over', 'revise', 'refresh', 'recap',
     ];
-  }
 
-  static Map<String, double> getLearnKeywords() {
-    return {
+  static Map<String, double> getLearnKeywords() => {
       '学习': 0.9,
       'learn': 0.9,
       'study': 0.9,
@@ -136,17 +119,13 @@ class IntentKeywords {
       'explain': 0.8,
       'show me how': 0.8,
     };
-  }
 
-  static List<String> getLearnBaseKeywords() {
-    return [
+  static List<String> getLearnBaseKeywords() => [
       '学习', '学一下', '了解一下', '学学',
       'learn', 'study', 'teach me', 'explain', 'show me how',
     ];
-  }
 
-  static Map<String, double> getTranslationKeywords() {
-    return {
+  static Map<String, double> getTranslationKeywords() => {
       '翻译': 1.0,
       'translate': 1.0,
       'translation': 0.95,
@@ -160,18 +139,14 @@ class IntentKeywords {
       'to english': 0.85,
       'to chinese': 0.85,
     };
-  }
 
-  static List<String> getTranslationBaseKeywords() {
-    return [
+  static List<String> getTranslationBaseKeywords() => [
       '翻译', '翻译成', '怎么说', '是什么意思', '什么意思',
       'translate', 'translation', 'how do you say', 'what does this mean',
       'in english', 'in chinese', 'to english', 'to chinese',
     ];
-  }
 
-  static Map<String, double> getPrismKeywords() {
-    return {
+  static Map<String, double> getPrismKeywords() => {
       '认知棱镜': 1.0,
       'cognitive prism': 1.0,
       '行为分析': 1.0,
@@ -187,15 +162,12 @@ class IntentKeywords {
       'learning analysis': 0.85,
       'insight': 0.8,
     };
-  }
 
-  static List<String> getPrismBaseKeywords() {
-    return [
+  static List<String> getPrismBaseKeywords() => [
       '认知棱镜', '行为分析', '学习习惯', '我的画像', '周报', '学习分析',
       'cognitive prism', 'behavior analysis', 'learning habit', 'my profile',
       'weekly report', 'learning analysis', 'persona', 'insight',
     ];
-  }
 
   // Add other types as needed
 }

@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/components/organisms/expandable_section.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
-import 'package:sparkle/core/design/widgets/sparkle_refresh_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/community/data/models/accountability_model.dart';
@@ -16,7 +16,6 @@ import 'package:sparkle/features/community/data/repositories/accountability_repo
 import 'package:sparkle/features/community/presentation/providers/accountability_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/accountability_heatmap.dart';
 import 'package:sparkle/features/community/presentation/widgets/achievement_badge.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 责任伙伴工作台
 class AccountabilityDetailScreen extends ConsumerStatefulWidget {
@@ -164,7 +163,7 @@ class _AccountabilityDetailScreenState
                       );
                       unawaited(context.push(
                         '/chat/private/$partnerId?name=${Uri.encodeComponent(partnerName)}',
-                      ));
+                      ),);
                     }
                   : null,
             ),
@@ -195,7 +194,7 @@ class _AccountabilityDetailScreenState
             ref.invalidate(myPartnershipsProvider);
             ref.invalidate(accountabilityOverviewProvider);
             ref.invalidate(
-                accountabilityDashboardProvider(widget.partnershipId));
+                accountabilityDashboardProvider(widget.partnershipId),);
           },
         ),
       ),
@@ -258,12 +257,12 @@ class _AccountabilityDetailScreenState
         if (mounted) {
           context.pop();
           AppFeedback.success(
-              context, context.l10n.accountabilityPartnershipEnded);
+              context, context.l10n.accountabilityPartnershipEnded,);
         }
       } catch (e) {
         if (mounted) {
           AppFeedback.error(
-              context, context.l10n.accountabilityOperationFailed);
+              context, context.l10n.accountabilityOperationFailed,);
         }
       }
     }
@@ -315,7 +314,6 @@ class _DashboardView extends StatelessWidget {
             children: [
               SparkleStaggerItem(
                 index: 0,
-                motionToken: SparkleMotionToken.scene,
                 child: _DashboardHero(
                   partnerName: partnerName,
                   stats: stats,
@@ -331,7 +329,6 @@ class _DashboardView extends StatelessWidget {
                 index: 1,
                 child: ExpandableSection(
                   title: context.l10n.accountabilityPendingPolicies,
-                  initiallyExpanded: false,
                   child: _PendingPoliciesCard(summary: dashboard.pendingPolicies),
                 ),
               ),
@@ -340,7 +337,6 @@ class _DashboardView extends StatelessWidget {
                 index: 2,
                 child: ExpandableSection(
                   title: context.l10n.accountabilityRecentReflections,
-                  initiallyExpanded: false,
                   child: _RecentReflectionsCard(
                     summary: dashboard.recentReflections,
                   ),
@@ -405,7 +401,6 @@ class _DashboardView extends StatelessWidget {
                       : 6,
                   child: ExpandableSection(
                     title: context.l10n.accountabilityRecentShares,
-                    initiallyExpanded: false,
                     child: Column(
                       children: dashboard.recentShares
                           .take(3)
@@ -479,7 +474,6 @@ class _DashboardView extends StatelessWidget {
                 index: 6,
                 child: ExpandableSection(
                   title: context.l10n.accountabilityPartnerAchievements,
-                  initiallyExpanded: false,
                   child: partnerAchievements.isEmpty
                       ? Text(
                           context.l10n.accountabilityPartnerNoAchievements,
@@ -598,7 +592,7 @@ class _DashboardHero extends StatelessWidget {
                             context.l10n.accountabilityDaysTogether(
                                 (relationshipSummary['days_together']
                                         as Object?) ??
-                                    0),
+                                    0,),
                             style:
                                 DS.bodySmall.copyWith(color: DS.textSecondary),
                             textAlign: TextAlign.center,
@@ -792,7 +786,7 @@ class _InactiveDashboardView extends StatelessWidget {
                       label: context.l10n.accountabilityContinueChat,
                       onPressed: () => unawaited(context.push(
                         '/chat/private/${partner?.id ?? ''}?name=${Uri.encodeComponent(partnerName)}',
-                      )),
+                      ),),
                     ),
                 ],
               ),
@@ -833,18 +827,18 @@ class _GrowthSummary extends StatelessWidget {
           children: [
             _TinyMetric(
               label: context.l10n.accountabilityMyStreakDays(
-                  (relationshipSummary['my_streak_days'] as Object?) ?? 0),
+                  (relationshipSummary['my_streak_days'] as Object?) ?? 0,),
             ),
             _TinyMetric(
               label: context.l10n.accountabilityPartnerStreakDays(
-                  (relationshipSummary['partner_streak_days'] as Object?) ?? 0),
+                  (relationshipSummary['partner_streak_days'] as Object?) ?? 0,),
             ),
             _TinyMetric(
                 label: context.l10n.accountabilityMyAchievementsUnlocked(
-                    myAchievements as Object)),
+                    myAchievements as Object,),),
             _TinyMetric(
                 label: context.l10n.accountabilityPartnerAchievementsUnlocked(
-                    partnerAchievements as Object)),
+                    partnerAchievements as Object,),),
           ],
         ),
         if (streakBoard.isNotEmpty) ...[
@@ -852,7 +846,7 @@ class _GrowthSummary extends StatelessWidget {
           Text(
             context.l10n.accountabilityStreakRank(
                 (streakBoard['my_rank'] ?? '-') as Object,
-                (streakBoard['partner_rank'] ?? '-') as Object),
+                (streakBoard['partner_rank'] ?? '-') as Object,),
             style: DS.bodySmall.copyWith(color: DS.textSecondary),
           ),
         ],
@@ -961,7 +955,7 @@ class _PendingPoliciesCard extends StatelessWidget {
         : nextTriggerAt == null
             ? context.l10n.accountabilityPoliciesReady(count)
             : context.l10n.accountabilityPoliciesPending(
-                count, DateFormat.yMMMd(locale.toLanguageTag()).add_Hm().format(nextTriggerAt));
+                count, DateFormat.yMMMd(locale.toLanguageTag()).add_Hm().format(nextTriggerAt),);
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.panel,
       child: Column(
@@ -1011,7 +1005,7 @@ class _RecentReflectionsCard extends StatelessWidget {
             ? context.l10n.accountabilityReflectionsGenerated(count)
             : context.l10n.accountabilityReflectionsLatest(
                 _labelForCategory(context, lastCategory),
-                DateFormat.yMMMd(locale.toLanguageTag()).add_Hm().format(lastAt));
+                DateFormat.yMMMd(locale.toLanguageTag()).add_Hm().format(lastAt),);
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.panel,
       child: Column(
@@ -1084,7 +1078,7 @@ class _ForesightHintCard extends StatelessWidget {
         context.l10n.accountabilityDeviationsDetected(deviationCount),
       if (generatedAt != null)
         context.l10n.accountabilityUpdatedAt(
-            DateFormat.yMMMd(locale.toLanguageTag()).add_Hm().format(generatedAt)),
+            DateFormat.yMMMd(locale.toLanguageTag()).add_Hm().format(generatedAt),),
     ].join(' · ');
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.panel,
@@ -1388,7 +1382,7 @@ class _CheckinTile extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         AppFeedback.error(
-            context, '${context.l10n.accountabilityLikeFailed}: $e');
+            context, '${context.l10n.accountabilityLikeFailed}: $e',);
       }
     }
   }
@@ -1404,7 +1398,7 @@ class _CheckinTile extends ConsumerWidget {
           maxLines: 3,
           decoration: InputDecoration(
             hintText: context.l10n.accountabilityEncourageHint,
-            border: OutlineInputBorder(),
+            border: const OutlineInputBorder(),
           ),
         ),
         actions: [
@@ -1428,12 +1422,12 @@ class _CheckinTile extends ConsumerWidget {
       ref.invalidate(accountabilityDashboardProvider(checkin.partnershipId));
       if (context.mounted) {
         AppFeedback.success(
-            context, context.l10n.accountabilityEncourageDelivered);
+            context, context.l10n.accountabilityEncourageDelivered,);
       }
     } catch (e) {
       if (context.mounted) {
         AppFeedback.error(
-            context, '${context.l10n.accountabilitySendFailed}: $e');
+            context, '${context.l10n.accountabilitySendFailed}: $e',);
       }
     }
   }
@@ -1469,8 +1463,7 @@ class _AccountabilityCheckinSheetState
   }
 
   @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
+  Widget build(BuildContext context) => DecoratedBox(
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -1490,7 +1483,7 @@ class _AccountabilityCheckinSheetState
             children: [
               Text(
                 context.l10n.accountabilityCheckInToday,
-                style: TextStyle(
+                style: const TextStyle(
                   fontWeight: DS.fontWeightBold,
                   fontSize: DS.fontSizeLg,
                 ),
@@ -1500,7 +1493,7 @@ class _AccountabilityCheckinSheetState
                 controller: _contentController,
                 decoration: InputDecoration(
                   hintText: context.l10n.accountabilityTodayProgressHint,
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                 ),
                 maxLines: 3,
                 autofocus: true,
@@ -1508,7 +1501,7 @@ class _AccountabilityCheckinSheetState
               const SizedBox(height: DS.spacing16),
               Text(
                 context.l10n.accountabilityTodayMood,
-                style: TextStyle(fontWeight: DS.fontWeightBold),
+                style: const TextStyle(fontWeight: DS.fontWeightBold),
               ),
               const SizedBox(height: DS.sm),
               Row(
@@ -1586,7 +1579,6 @@ class _AccountabilityCheckinSheetState
         ),
       ),
     );
-  }
 
   Future<void> _submit() async {
     final content = _contentController.text.trim();
@@ -1612,7 +1604,7 @@ class _AccountabilityCheckinSheetState
     } catch (e) {
       if (mounted) {
         AppFeedback.error(
-            context, '${context.l10n.accountabilityCheckinFailed}: $e');
+            context, '${context.l10n.accountabilityCheckinFailed}: $e',);
       }
     } finally {
       if (mounted) {

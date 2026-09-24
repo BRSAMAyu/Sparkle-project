@@ -300,7 +300,7 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
       ),
       NavigationDestination(
         icon: _buildBadgedIcon(
-            Icons.groups_outlined, unreadCount, badgeOverflowLabel),
+            Icons.groups_outlined, unreadCount, badgeOverflowLabel,),
         selectedIcon:
             _buildBadgedIcon(Icons.groups, unreadCount, badgeOverflowLabel),
         label: l10n.community,

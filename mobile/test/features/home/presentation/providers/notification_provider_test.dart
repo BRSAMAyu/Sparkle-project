@@ -39,7 +39,7 @@ void main() {
 
     test('fixed markAsRead propagates error (caller can show feedback)',
         () async {
-      bool caught = false;
+      var caught = false;
       try {
         await fixedMarkAsRead(apiSucceeds: false);
       } catch (_) {
@@ -49,7 +49,7 @@ void main() {
     });
 
     test('fixed markAsRead does not throw on success', () async {
-      bool caught = false;
+      var caught = false;
       try {
         await fixedMarkAsRead(apiSucceeds: true);
       } catch (_) {
@@ -59,8 +59,8 @@ void main() {
     });
 
     test('old markAsRead silently returns on failure — the bug', () async {
-      bool completed = false;
-      bool threw = false;
+      var completed = false;
+      var threw = false;
       try {
         await oldMarkAsRead(apiSucceeds: false);
         completed = true;

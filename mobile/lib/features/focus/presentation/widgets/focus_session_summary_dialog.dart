@@ -198,8 +198,8 @@ class _MasteryUpdateLine extends StatelessWidget {
               child: Text(
                 context.l10n.focusSessionMasteryUpdate(
                   update.nodeName,
-                  update.oldMastery.toInt(),
-                  update.newMastery.toInt(),
+                  update.oldMastery,
+                  update.newMastery,
                 ),
                 style: DS.bodySmall.copyWith(
                   color: DS.textPrimary,

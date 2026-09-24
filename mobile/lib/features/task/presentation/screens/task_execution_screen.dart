@@ -6,14 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/guest_conversion_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/intervention_action_service.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -39,6 +38,7 @@ import 'package:sparkle/features/task/presentation/widgets/execution_approval_ca
 import 'package:sparkle/features/task/presentation/widgets/execution_status_indicator.dart';
 import 'package:sparkle/features/task/presentation/widgets/execution_template_card.dart';
 import 'package:sparkle/features/task/presentation/widgets/paused_task_status_panel.dart';
+import 'package:sparkle/features/task/presentation/widgets/pending_proposal_section.dart';
 import 'package:sparkle/features/task/presentation/widgets/quick_tools_panel.dart';
 import 'package:sparkle/features/task/presentation/widgets/source_lifecycle_badge.dart';
 import 'package:sparkle/features/task/presentation/widgets/stuck_help_sheet.dart';
@@ -55,7 +55,6 @@ import 'package:sparkle/features/task/task_routes.dart';
 import 'package:sparkle/features/task/utils/task_identity.dart';
 import 'package:sparkle/features/visual_elements/presentation/providers/visual_elements_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
-import 'package:sparkle/features/task/presentation/widgets/pending_proposal_section.dart';
 
 LinearGradient _taskWarmActionGradient(BuildContext context) {
   final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -688,7 +687,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
       if (criteria.isNotEmpty)
         context.l10n.taskExecutionStuckCriteria(criteria),
       context.l10n.taskExecutionStuckSuggestion(
-          ifStuck.isNotEmpty ? ifStuck : fallback),
+          ifStuck.isNotEmpty ? ifStuck : fallback,),
       context.l10n.taskExecutionStuckClarifyPrompt,
     ];
     return parts.join('\n');
@@ -1371,9 +1370,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
   });
   final TaskModel task;
 
-  bool _hasExecutionPermissionIssue(OpenClawConnectionService connection) {
-    return connection.hasExecutionPermissionIssue;
-  }
+  bool _hasExecutionPermissionIssue(OpenClawConnectionService connection) => connection.hasExecutionPermissionIssue;
 
   Future<void> _handoffTask(BuildContext context, WidgetRef ref) async {
     ref.read(openClawTaskNudgeDismissedProvider.notifier).state = false;
@@ -1464,7 +1461,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
   }
 
   Future<void> _showRejectReasonSheet(
-      BuildContext context, WidgetRef ref) async {
+      BuildContext context, WidgetRef ref,) async {
     final selectedReason = await showSensoryModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
@@ -1515,7 +1512,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
   }
 
   String _executionStatusTitle(
-      BuildContext context, ExecutionIntentModel? intent, bool isLoading) {
+      BuildContext context, ExecutionIntentModel? intent, bool isLoading,) {
     if (isLoading) return context.l10n.taskExecutionAiTakingOver;
     return intent == null
         ? context.l10n.taskExecutionAiNotStarted
@@ -1545,7 +1542,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
       final validationText =
           record.validationPassed != null && record.validationTotal != null
               ? context.l10n.taskExecutionValidationLabel(
-                  record.validationPassed!, record.validationTotal!)
+                  record.validationPassed!, record.validationTotal!,)
               : record.trustLabel;
       return '${context.l10n.taskExecutionResultLabel(validationText)}'
           '${record.approvalRequested != null ? context.l10n.taskExecutionApprovalRequestLabel(record.approvalRequested!) : ''}';
@@ -1573,7 +1570,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
   }
 
   String? _executionMetaPreview(
-      BuildContext context, ExecutionIntentModel? intent) {
+      BuildContext context, ExecutionIntentModel? intent,) {
     if (intent == null) return null;
     final parts = <String>[
       if (intent.templateName != null && intent.templateName!.isNotEmpty)
@@ -1588,7 +1585,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
   }
 
   String _handoffButtonText(
-      BuildContext context, ExecutionIntentModel? intent, bool isLoading) {
+      BuildContext context, ExecutionIntentModel? intent, bool isLoading,) {
     if (isLoading) return context.l10n.taskExecutionAiTakingOverLoading;
     switch (intent?.status) {
       case ExecutionIntentStatus.failed:
@@ -1616,8 +1613,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
   Widget _buildNudgeDetailBlock({
     required String label,
     required String value,
-  }) {
-    return Column(
+  }) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -1637,7 +1633,6 @@ class _ExecutionAssistPanel extends ConsumerWidget {
         ),
       ],
     );
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1733,7 +1728,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
                           ref
                               .read(taskListProvider.notifier)
                               .selectExecutionTemplate(
-                                  task.id, entry.value.templateId);
+                                  task.id, entry.value.templateId,);
                         },
                       ),
                     ),
@@ -1822,7 +1817,6 @@ class _ExecutionAssistPanel extends ConsumerWidget {
                       : isClawConfigured
                           ? context.l10n.taskExecutionSuggestionQueueFirst
                           : context.l10n.taskExecutionSuggestionConnectFirst,
-                  tone: OpenClawVisualTone.active,
                 ),
               ],
               expandedContent: Column(
@@ -1963,11 +1957,11 @@ class _ExecutionAssistPanel extends ConsumerWidget {
                     ? copy.queueAction
                     : isClawConfigured
                         ? _handoffButtonText(
-                            context, executionIntent, isHandoffLoading)
+                            context, executionIntent, isHandoffLoading,)
                         : copy.connectEngineAction,
                 icon: Icon(canQueueHandoff
                     ? Icons.cloud_queue_rounded
-                    : Icons.smart_toy_outlined),
+                    : Icons.smart_toy_outlined,),
                 minHeight: 48,
                 onPressed: canHandoff
                     ? () => _handoffTask(context, ref)
@@ -1980,7 +1974,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
                         : () {
                             ref
                                 .read(
-                                    openClawTaskNudgeDismissedProvider.notifier)
+                                    openClawTaskNudgeDismissedProvider.notifier,)
                                 .state = false;
                             ref
                                 .read(

@@ -6,12 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/knowledge/presentation/providers/vocabulary_provider.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 class WordbookTool extends ConsumerStatefulWidget {
   const WordbookTool({
@@ -104,7 +104,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
           context,
           I18nService.instance.isChinese
               ? '本轮复习已完成'
-              : 'Review session completed');
+              : 'Review session completed',);
       return;
     }
 
@@ -386,7 +386,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
               builder: (context) => AlertDialog(
                 title: Text(context.l10n.toolsWbDeleteTitle),
                 content: Text(
-                    '${context.l10n.toolsWbDeleteConfirm} "${word['word']}"${context.l10n.toolsWbDeleteSuffix}'),
+                    '${context.l10n.toolsWbDeleteConfirm} "${word['word']}"${context.l10n.toolsWbDeleteSuffix}',),
                 actions: [
                   SparkleButton.ghost(
                     label: context.l10n.toolsWbCancel,

@@ -5,14 +5,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:isar/isar.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
-import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/offline/list_read_cache.dart';
+import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/offline/models/cached_list_snapshot.dart';
 import 'package:sparkle/features/error_book/data/repositories/error_book_repository.dart';
 import 'package:sparkle/shared/entities/cognitive_analysis.dart';
 
 import '../../../../shared/isar_test_helper.dart';
-
 import 'error_book_cache_test.mocks.dart';
 
 @GenerateMocks([Dio])
@@ -87,7 +86,7 @@ void main() {
       when(mockDio.get<Map<String, dynamic>>(
         any,
         queryParameters: anyNamed('queryParameters'),
-      )).thenAnswer(
+      ),).thenAnswer(
         (_) async => Response<Map<String, dynamic>>(
           requestOptions: options('/errors'),
           data: sampleListResponse(),
@@ -114,10 +113,10 @@ void main() {
       when(mockDio.get<Map<String, dynamic>>(
         any,
         queryParameters: anyNamed('queryParameters'),
-      )).thenThrow(DioException(
+      ),).thenThrow(DioException(
         requestOptions: options('/errors'),
         type: DioExceptionType.connectionError,
-      ));
+      ),);
 
       final result = await repo.getErrorsCached(subject: 'cs');
 
@@ -132,13 +131,13 @@ void main() {
       when(mockDio.get<Map<String, dynamic>>(
         any,
         queryParameters: anyNamed('queryParameters'),
-      )).thenThrow(DioException(
+      ),).thenThrow(DioException(
         requestOptions: options('/errors'),
         type: DioExceptionType.connectionError,
-      ));
+      ),);
 
       expect(
-        () => repo.getErrorsCached(),
+        repo.getErrorsCached,
         throwsA(isA<Exception>()),
       );
     });
@@ -150,17 +149,17 @@ void main() {
       when(mockDio.get<Map<String, dynamic>>(
         any,
         queryParameters: anyNamed('queryParameters'),
-      )).thenThrow(DioException(
+      ),).thenThrow(DioException(
         requestOptions: options('/errors'),
         type: DioExceptionType.badResponse,
         response: Response(
           requestOptions: options('/errors'),
           statusCode: 500,
         ),
-      ));
+      ),);
 
       expect(
-        () => repo.getErrorsCached(),
+        repo.getErrorsCached,
         throwsA(isA<Exception>()),
       );
       // 快照未被消费掉（仍然保留）。
@@ -183,11 +182,11 @@ void main() {
       });
 
       when(mockDio.get<Map<String, dynamic>>(any,
-          queryParameters: anyNamed('queryParameters')))
+          queryParameters: anyNamed('queryParameters'),),)
           .thenThrow(DioException(
         requestOptions: options('/errors/stats'),
         type: DioExceptionType.connectionTimeout,
-      ));
+      ),);
 
       final result = await repo.getStatsCached();
       expect(result.fromCache, isTrue);
@@ -219,14 +218,14 @@ void main() {
   test('未注入读缓存时断网照常抛错（向后兼容）', () async {
     final repo = ErrorBookRepository(mockDio);
     when(mockDio.get<Map<String, dynamic>>(any,
-        queryParameters: anyNamed('queryParameters')))
+        queryParameters: anyNamed('queryParameters'),),)
         .thenThrow(DioException(
       requestOptions: options('/errors'),
       type: DioExceptionType.connectionError,
-    ));
+    ),);
 
     expect(
-      () => repo.getErrorsCached(),
+      repo.getErrorsCached,
       throwsA(isA<Exception>()),
     );
   });
@@ -235,7 +234,7 @@ void main() {
     final repo = ErrorBookRepository(mockDio, readCache: cache);
     var call = 0;
     when(mockDio.get<Map<String, dynamic>>(any,
-        queryParameters: anyNamed('queryParameters')))
+        queryParameters: anyNamed('queryParameters'),),)
         .thenAnswer((_) async {
       call++;
       return Response<Map<String, dynamic>>(

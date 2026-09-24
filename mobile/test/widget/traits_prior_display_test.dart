@@ -9,7 +9,7 @@ void main() {
   testWidgets('traits prior card hides when there is no confident trait',
       (tester) async {
     await tester.pumpWidget(
-      testMaterialApp(home: Scaffold(
+      testMaterialApp(home: const Scaffold(
           body: TraitsPriorCard(traits: <Map<String, dynamic>>[]),
         ),),
     );
@@ -19,7 +19,7 @@ void main() {
 
   testWidgets('traits prior card renders confident dimensions', (tester) async {
     await tester.pumpWidget(
-      testMaterialApp(home: Scaffold(
+      testMaterialApp(home: const Scaffold(
           body: TraitsPriorCard(
             traits: <Map<String, dynamic>>[
               {

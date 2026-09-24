@@ -31,7 +31,6 @@ void main() {
           status: AccountabilityStatus.active,
           createdAt: DateTime(2026, 3, 29),
         ),
-        pendingPartnerships: const [],
       );
 
       expect(

@@ -3,11 +3,11 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/presentation/screens/login_screen.dart';
 import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart';
 import 'package:sparkle/main.dart' as app;
-import 'package:sparkle/core/services/bgm_service.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// Auth Flow Test
 /// Verifies: guest login works, login state persists after navigation
@@ -58,8 +58,8 @@ void main() {
         final demoButton = find.byWidgetPredicate(
           (widget) =>
               widget is Text &&
-              (widget.data?.contains('Demo') == true ||
-                  widget.data?.contains('演示') == true),
+              ((widget.data?.contains('Demo') ?? false) ||
+                  (widget.data?.contains('演示') ?? false)),
         );
         if (demoButton.evaluate().isNotEmpty) {
           await tester.tap(demoButton);

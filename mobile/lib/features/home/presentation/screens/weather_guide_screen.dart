@@ -7,10 +7,10 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/domain/services/emotion_visual_blending_service.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/layers/weather_layer.dart';
 import 'package:sparkle/features/home/presentation/widgets/weather_presentation.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 class WeatherGuideScreen extends ConsumerStatefulWidget {
   const WeatherGuideScreen({super.key});

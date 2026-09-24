@@ -1,5 +1,3 @@
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
-import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -10,6 +8,8 @@ import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart'
@@ -153,7 +153,7 @@ class _GroupKnowledgeBaseViewState
     } catch (e) {
       if (!mounted) return;
       AppFeedback.error(
-          context, context.l10n.communitySaveFailed(e.toString()));
+          context, context.l10n.communitySaveFailed(e.toString()),);
     }
   }
 
@@ -364,7 +364,7 @@ class _GroupKnowledgeBaseViewState
                               children: [
                                 _MetaChip(
                                   icon: _iconForMime(
-                                      file.mimeType, file.fileName),
+                                      file.mimeType, file.fileName,),
                                   label:
                                       _typeLabel(file.mimeType, file.fileName),
                                 ),
@@ -375,7 +375,7 @@ class _GroupKnowledgeBaseViewState
                                 _MetaChip(
                                   icon: Icons.download_outlined,
                                   label: context.l10n.communityDownloadsCount(
-                                      file.downloadCount),
+                                      file.downloadCount,),
                                 ),
                                 if (_isOfficial(file))
                                   _MetaChip(
@@ -665,7 +665,7 @@ class _GroupKnowledgeBaseViewState
               if (snapshot.hasError) {
                 return Center(
                   child: Text(context.l10n
-                      .communityLoadFailed(snapshot.error.toString())),
+                      .communityLoadFailed(snapshot.error.toString()),),
                 );
               }
 
@@ -932,7 +932,7 @@ class _KnowledgeBaseListCard extends StatelessWidget {
                 const Spacer(),
                 if (file.category?.isNotEmpty ?? false)
                   _InlinePill(
-                      label: file.category!, icon: Icons.folder_outlined),
+                      label: file.category!, icon: Icons.folder_outlined,),
                 if (isInGalaxy) ...[
                   const SizedBox(width: DS.spacing8),
                   _InlinePill(

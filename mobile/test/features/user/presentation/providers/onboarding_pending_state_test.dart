@@ -17,14 +17,14 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/services/session_refresh_service.dart';
+import 'package:sparkle/core/storage/token_storage_io.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
-import 'package:sparkle/core/services/session_refresh_service.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/shared/entities/user_brief.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
-import 'package:sparkle/core/storage/token_storage_io.dart';
 
 class _StaticAuthNotifier extends AuthNotifier {
   _StaticAuthNotifier(AuthState authState)

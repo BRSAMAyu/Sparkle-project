@@ -9,12 +9,8 @@ import 'package:sparkle/features/home/presentation/widgets/weather_presentation.
 /// 天气层独立于用户选择的场景，作为半透明叠加层
 class WeatherLayer extends StatefulWidget {
   const WeatherLayer({
-    super.key,
-    required this.weatherType,
+    required this.weatherType, required this.blendParams, required this.mainAnimation, required this.particleAnimation, super.key,
     this.weatherCondition,
-    required this.blendParams,
-    required this.mainAnimation,
-    required this.particleAnimation,
   });
 
   final String weatherType;
@@ -65,25 +61,20 @@ class _WeatherLayerState extends State<WeatherLayer> {
     switch (widget.weatherType) {
       case 'sunny':
         _particles = _initSunnyParticles();
-        break;
       case 'cloudy':
         _particles = _initCloudyParticles();
-        break;
       case 'rainy':
         _particles = _initRainyParticles();
-        break;
       case 'meteor':
         _particles = _initMeteorParticles();
-        break;
       default:
         _particles = _initSunnyParticles();
-        break;
     }
   }
 
   int _scaledCount(int base, {required int min}) {
     final scaled = (base * _density).round();
-    return scaled.clamp(min, (base * 2).round());
+    return scaled.clamp(min, base * 2);
   }
 
   List<_WeatherParticle> _initSunnyParticles() {
@@ -234,19 +225,14 @@ class _WeatherPainter extends CustomPainter {
     switch (weatherType) {
       case 'sunny':
         _paintSunny(canvas, size);
-        break;
       case 'cloudy':
         _paintCloudy(canvas, size);
-        break;
       case 'rainy':
         _paintRainy(canvas, size);
-        break;
       case 'meteor':
         _paintMeteor(canvas, size);
-        break;
       default:
         _paintSunny(canvas, size);
-        break;
     }
 
     _paintForegroundVeil(canvas, size);
@@ -411,13 +397,13 @@ class _WeatherPainter extends CustomPainter {
       canvas.drawCircle(cloudCenter, cloud.size, cloudPaint);
       canvas.drawCircle(
         Offset(cloudCenter.dx - cloud.size * 0.6,
-            cloudCenter.dy + cloud.size * 0.2),
+            cloudCenter.dy + cloud.size * 0.2,),
         cloud.size * 0.7,
         cloudPaint,
       );
       canvas.drawCircle(
         Offset(cloudCenter.dx + cloud.size * 0.5,
-            cloudCenter.dy + cloud.size * 0.15),
+            cloudCenter.dy + cloud.size * 0.15,),
         cloud.size * 0.6,
         cloudPaint,
       );

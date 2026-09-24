@@ -19,11 +19,6 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 /// 通知权限状态
 class NotificationPermissionStatus {
-  final bool hasPermission;
-  final bool? alertEnabled;
-  final bool? badgeEnabled;
-  final bool? soundEnabled;
-  final String? denialReason;
 
   const NotificationPermissionStatus({
     required this.hasPermission,
@@ -44,7 +39,7 @@ class NotificationPermissionStatus {
     bool? badge,
     bool? sound,
   }) {
-    final hasAny = alert == true || badge == true || sound == true;
+    final hasAny = (alert ?? false) || (badge ?? false) || (sound ?? false);
     return NotificationPermissionStatus(
       hasPermission: hasAny,
       alertEnabled: alert,
@@ -52,6 +47,11 @@ class NotificationPermissionStatus {
       soundEnabled: sound,
     );
   }
+  final bool hasPermission;
+  final bool? alertEnabled;
+  final bool? badgeEnabled;
+  final bool? soundEnabled;
+  final String? denialReason;
 
   @override
   String toString() =>

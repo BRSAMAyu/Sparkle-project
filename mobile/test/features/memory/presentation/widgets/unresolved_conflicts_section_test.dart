@@ -31,7 +31,6 @@ void main() {
                 ),
               ),
             ],
-            processingIds: const <String>{},
             onSelectLeft: (item) async => tapped = 'left:${item.id}',
             onSelectRight: (item) async => tapped = 'right:${item.id}',
             onSelectNone: (item) async => tapped = 'none:${item.id}',

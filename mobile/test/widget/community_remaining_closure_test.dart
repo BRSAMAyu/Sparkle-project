@@ -198,9 +198,9 @@ void main() {
       for (final preset in presets) {
         final prompt = buildPrivateAssistantPresetPrompt(preset);
         expect(prompt.isNotEmpty, isTrue,
-            reason: 'preset "$preset" must produce a non-empty prompt');
+            reason: 'preset "$preset" must produce a non-empty prompt',);
         expect(prompt.length > 10, isTrue,
-            reason: 'preset "$preset" must produce a real prompt');
+            reason: 'preset "$preset" must produce a real prompt',);
         prompts.add(prompt);
       }
       // All 5 presets must produce distinct prompts
@@ -215,9 +215,9 @@ void main() {
       for (final preset in presets) {
         final prompt = buildGroupAssistantPresetPrompt(preset);
         expect(prompt.isNotEmpty, isTrue,
-            reason: 'preset "$preset" must produce a non-empty prompt');
+            reason: 'preset "$preset" must produce a non-empty prompt',);
         expect(prompt.length > 10, isTrue,
-            reason: 'preset "$preset" must produce a real prompt');
+            reason: 'preset "$preset" must produce a real prompt',);
         prompts.add(prompt);
       }
       // All 3 presets must produce distinct prompts

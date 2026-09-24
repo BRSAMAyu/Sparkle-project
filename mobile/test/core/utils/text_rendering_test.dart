@@ -27,7 +27,7 @@ void main() {
         'title': '任务\uFFFD标题',
         'summary': '第一行\u200B\n第二行',
         'steps': [
-          {'label': '步骤\uFEFF一'}
+          {'label': '步骤\uFEFF一'},
         ],
       },
     });

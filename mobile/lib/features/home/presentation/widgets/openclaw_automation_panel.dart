@@ -1,11 +1,10 @@
-import 'package:sparkle/core/design/widgets/loading_indicator.dart';
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/openclaw_automation_service.dart';
 import 'package:sparkle/core/utils/input_formatters.dart';
@@ -120,13 +119,13 @@ class _OpenClawAutomationPanelState
                 items: [
                   DropdownMenuItem(
                       value: 'auto',
-                      child: Text(context.l10n.openclawModeAuto)),
+                      child: Text(context.l10n.openclawModeAuto),),
                   DropdownMenuItem(
                       value: 'sequential',
-                      child: Text(context.l10n.openclawModeSequential)),
+                      child: Text(context.l10n.openclawModeSequential),),
                   DropdownMenuItem(
                       value: 'parallel',
-                      child: Text(context.l10n.openclawModeParallel)),
+                      child: Text(context.l10n.openclawModeParallel),),
                 ],
                 onChanged: (value) {
                   if (value == null) return;
@@ -231,17 +230,17 @@ class _OpenClawAutomationPanelState
                 DropdownButtonFormField<String>(
                   initialValue: _triggerType,
                   decoration: InputDecoration(
-                      labelText: context.l10n.openclawTriggerMethod),
+                      labelText: context.l10n.openclawTriggerMethod,),
                   items: [
                     DropdownMenuItem(
                         value: 'cron',
-                        child: Text(context.l10n.openclawTriggerDaily)),
+                        child: Text(context.l10n.openclawTriggerDaily),),
                     DropdownMenuItem(
                         value: 'event',
-                        child: Text(context.l10n.openclawTriggerEvent)),
+                        child: Text(context.l10n.openclawTriggerEvent),),
                     DropdownMenuItem(
                         value: 'condition',
-                        child: Text(context.l10n.openclawTriggerCondition)),
+                        child: Text(context.l10n.openclawTriggerCondition),),
                   ],
                   onChanged: (value) {
                     if (value == null) return;
@@ -256,7 +255,7 @@ class _OpenClawAutomationPanelState
                         child: DropdownButtonFormField<int>(
                           initialValue: _selectedHour,
                           decoration: InputDecoration(
-                              labelText: context.l10n.openclawHour),
+                              labelText: context.l10n.openclawHour,),
                           items: List<DropdownMenuItem<int>>.generate(
                             24,
                             (index) => DropdownMenuItem(
@@ -276,7 +275,7 @@ class _OpenClawAutomationPanelState
                         child: DropdownButtonFormField<int>(
                           initialValue: _selectedMinute,
                           decoration: InputDecoration(
-                              labelText: context.l10n.openclawMinute),
+                              labelText: context.l10n.openclawMinute,),
                           items: List<DropdownMenuItem<int>>.generate(
                             12,
                             (index) {
@@ -633,7 +632,7 @@ class _ScheduleCard extends StatelessWidget {
       );
 
   static String _describeTrigger(
-      BuildContext context, OpenClawExecutionSchedule schedule) {
+      BuildContext context, OpenClawExecutionSchedule schedule,) {
     if (schedule.triggerType == 'event') {
       return context.l10n.openclawEventTriggerLabel(
         '${schedule.triggerConfig['event_type'] ?? context.l10n.openclawNotFilled}',

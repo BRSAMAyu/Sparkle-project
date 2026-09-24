@@ -6,9 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 
 enum _MemorySettingsErrorKind { load, save, unavailable }
 
@@ -157,9 +157,7 @@ class _MemorySettingsDataNotifier
 }
 
 final _memorySettingsDataProvider = StateNotifierProvider.autoDispose<
-    _MemorySettingsDataNotifier, _MemorySettingsDataState>((ref) {
-  return _MemorySettingsDataNotifier(ref.watch(memoryApiServiceProvider));
-});
+    _MemorySettingsDataNotifier, _MemorySettingsDataState>((ref) => _MemorySettingsDataNotifier(ref.watch(memoryApiServiceProvider)));
 
 class MemorySettingsScreen extends ConsumerStatefulWidget {
   const MemorySettingsScreen({super.key});
@@ -226,7 +224,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
   @override
   void initState() {
     super.initState();
-    Future(() => _loadSettings());
+    Future(_loadSettings);
   }
 
   void _goBack() {

@@ -7,8 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/guest_service.dart';
+import 'package:sparkle/core/storage/token_storage_io.dart';
 import 'package:sparkle/features/auth/auth.dart';
-import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_mode.dart';
@@ -22,7 +22,6 @@ import 'package:sparkle/features/chat/presentation/providers/guidance_mode_provi
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/seed_library/presentation/providers/seed_library_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
-import 'package:sparkle/core/storage/token_storage_io.dart';
 
 class _NoopApiClient extends ApiClient {
   _NoopApiClient() : super(_UnusedRef());
@@ -92,8 +91,7 @@ class _FakeChatRepository extends ChatRepository {
     bool includeReferences = false,
     String? chatMode,
     bool? useDocumentContext,
-  }) {
-    return _streamFactory(
+  }) => _streamFactory(
       message,
       conversationId,
       userId: userId,
@@ -105,7 +103,6 @@ class _FakeChatRepository extends ChatRepository {
       includeReferences: includeReferences,
       chatMode: chatMode,
     );
-  }
 
   @override
   void dispose() {
@@ -173,7 +170,7 @@ Future<ChatNotifier> _createNotifier(_FakeChatRepository repository) async {
   final prefs = await SharedPreferences.getInstance();
   final guestService = GuestService(prefs);
   final ref = _FakeRef(
-    authState: AuthState(isAuthenticated: false, user: null),
+    authState: AuthState(),
     guestService: guestService,
     authRepository: _FakeAuthRepository(token: 'test-token'),
   );
@@ -384,7 +381,7 @@ void main() {
           .where((message) => message.role == MessageRole.assistant)
           .toList();
       expect(assistantMessages.map((message) => message.content),
-          ['partial answer MORE']);
+          ['partial answer MORE'],);
       expect(assistantMessages.single.isInterrupted, isFalse);
     });
 

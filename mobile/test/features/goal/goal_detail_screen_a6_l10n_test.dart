@@ -15,16 +15,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
+import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/features/goal/presentation/screens/goal_detail_screen.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 class _StubApiClient implements ApiClient {
-  final Map<String, dynamic> goalDetailPayload;
 
   _StubApiClient(this.goalDetailPayload);
+  final Map<String, dynamic> goalDetailPayload;
 
   @override
   Dio get dio => Dio();

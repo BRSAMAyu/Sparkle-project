@@ -3,12 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
-import 'package:sparkle/core/utils/input_formatters.dart';
-import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/utils/input_formatters.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/photon/presentation/providers/photon_provider.dart';
 
@@ -139,8 +138,8 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                       controller: _recipientIdController,
                       decoration: InputDecoration(
                         hintText: context.l10n.ptRecipientIdHint,
-                        prefixIcon: Icon(Icons.person_outline),
-                        border: OutlineInputBorder(),
+                        prefixIcon: const Icon(Icons.person_outline),
+                        border: const OutlineInputBorder(),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
@@ -237,7 +236,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                       maxLength: 200,
                       decoration: InputDecoration(
                         hintText: context.l10n.ptMessageHint,
-                        border: OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
                       ),
                     ),
                   ],

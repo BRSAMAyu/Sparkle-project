@@ -57,8 +57,8 @@ class _ReflectionDialogState extends ConsumerState<ReflectionDialog> {
   String _buildReflectionContent() {
     final zh = I18nService.instance.isChinese;
     final parts = <String>[
-      zh ? '专注复盘' : 'Focus Reflection',
-      zh ? '卡点：${_stuckController.text.trim()}' : 'Friction: ${_stuckController.text.trim()}',
+      if (zh) '专注复盘' else 'Focus Reflection',
+      if (zh) '卡点：${_stuckController.text.trim()}' else 'Friction: ${_stuckController.text.trim()}',
     ];
     if (_methodController.text.trim().isNotEmpty) {
       parts.add(zh ? '有效方法：${_methodController.text.trim()}' : 'What helped: ${_methodController.text.trim()}');
@@ -72,9 +72,7 @@ class _ReflectionDialogState extends ConsumerState<ReflectionDialog> {
   String _copyForLocale({
     required String zh,
     required String en,
-  }) {
-    return I18nService.instance.isChinese ? zh : en;
-  }
+  }) => I18nService.instance.isChinese ? zh : en;
 
   @override
   void dispose() {

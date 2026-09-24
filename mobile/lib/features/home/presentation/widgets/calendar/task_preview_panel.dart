@@ -216,8 +216,7 @@ class TaskPreviewPanel extends ConsumerWidget {
       ),
     );
 
-  Widget _buildErrorState(BuildContext context) {
-    return Container(
+  Widget _buildErrorState(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
       child: Text(
         context.l10n.taskPreviewLoadFailed,
@@ -227,7 +226,6 @@ class TaskPreviewPanel extends ConsumerWidget {
         textAlign: TextAlign.center,
       ),
     );
-  }
 
   Widget _buildViewAllLink(BuildContext context, DateTime date, int totalCount) {
     final zh = I18nService.instance.isChinese;

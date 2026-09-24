@@ -30,7 +30,6 @@ class _OpenClawSmokeAppState extends State<_OpenClawSmokeApp> {
     const config = OpenClawConnectionConfig(
       gatewayUrl: 'http://127.0.0.1:18789',
       authToken: 'd1c836b87e26db7e164522b01bf346a2d7226b17',
-      transport: 'responses_http',
     );
 
     final ok = await service.testConnection(config);
@@ -58,8 +57,7 @@ class _OpenClawSmokeAppState extends State<_OpenClawSmokeApp> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Directionality(
+  Widget build(BuildContext context) => Directionality(
       textDirection: TextDirection.ltr,
       child: ColoredBox(
         color: Colors.white,
@@ -68,5 +66,4 @@ class _OpenClawSmokeAppState extends State<_OpenClawSmokeApp> {
         ),
       ),
     );
-  }
 }

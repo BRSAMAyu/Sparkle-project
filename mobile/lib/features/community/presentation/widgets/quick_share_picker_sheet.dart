@@ -1,11 +1,11 @@
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
@@ -224,7 +224,7 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
             t.status == TaskStatus.completed ||
             t.status == TaskStatus.inProgress ||
             t.status == TaskStatus.stuck ||
-            t.status == TaskStatus.pending)
+            t.status == TaskStatus.pending,)
         .toList()
       ..sort(
         (a, b) => (b.completedAt ?? b.updatedAt)
@@ -332,10 +332,10 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
                 labelColor: DS.brandPrimary,
                 indicatorColor: DS.brandPrimary,
                 tabs: [
-                  Tab(icon: Icon(Icons.emoji_events), text: context.l10n.communityTabAchievements),
-                  Tab(icon: Icon(Icons.flag), text: context.l10n.communityTabPlans),
-                  Tab(icon: Icon(Icons.task_alt), text: context.l10n.communityTabTasks),
-                  Tab(icon: Icon(Icons.school), text: context.l10n.communityTabKnowledge),
+                  Tab(icon: const Icon(Icons.emoji_events), text: context.l10n.communityTabAchievements),
+                  Tab(icon: const Icon(Icons.flag), text: context.l10n.communityTabPlans),
+                  Tab(icon: const Icon(Icons.task_alt), text: context.l10n.communityTabTasks),
+                  Tab(icon: const Icon(Icons.school), text: context.l10n.communityTabKnowledge),
                 ],
               ),
 

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/navigation/route_resilience.dart';
 import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
 import 'package:sparkle/features/plan/plan_routes.dart';
@@ -223,8 +222,7 @@ class _PortfolioSummaryCard extends StatelessWidget {
   final LearningPortfolioResult portfolio;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(DS.spacing20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
@@ -261,19 +259,18 @@ class _PortfolioSummaryCard extends StatelessWidget {
             children: [
               _SummaryPill(
                   label: context.l10n
-                      .planPortfolioActivePill(portfolio.activeCount)),
+                      .planPortfolioActivePill(portfolio.activeCount),),
               _SummaryPill(
                   label: context.l10n
-                      .planPortfolioCompletedPill(portfolio.completedCount)),
+                      .planPortfolioCompletedPill(portfolio.completedCount),),
               _SummaryPill(
                   label: context.l10n
-                      .planPortfolioPlannedPill(portfolio.plannedCount)),
+                      .planPortfolioPlannedPill(portfolio.plannedCount),),
             ],
           ),
         ],
       ),
     );
-  }
 }
 
 class _SummaryPill extends StatelessWidget {
@@ -282,8 +279,7 @@ class _SummaryPill extends StatelessWidget {
   final String label;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing12,
         vertical: DS.spacing8,
@@ -301,7 +297,6 @@ class _SummaryPill extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _PortfolioGroupSection extends StatelessWidget {
@@ -316,8 +311,7 @@ class _PortfolioGroupSection extends StatelessWidget {
   final List<LearningPortfolioEntry> entries;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -349,7 +343,6 @@ class _PortfolioGroupSection extends StatelessWidget {
           ),
       ],
     );
-  }
 }
 
 class _PortfolioEntryCard extends StatelessWidget {
@@ -358,8 +351,7 @@ class _PortfolioEntryCard extends StatelessWidget {
   final LearningPortfolioEntry entry;
 
   @override
-  Widget build(BuildContext context) {
-    return GraphiteCardSurface(
+  Widget build(BuildContext context) => GraphiteCardSurface(
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
@@ -431,11 +423,11 @@ class _PortfolioEntryCard extends StatelessWidget {
                 if (entry.resultRating != null)
                   _DetailChip(
                       label: context.l10n
-                          .planPortfolioResultRating(entry.resultRating!)),
+                          .planPortfolioResultRating(entry.resultRating!),),
                 if (entry.selfRating != null)
                   _DetailChip(
                       label: context.l10n
-                          .planPortfolioSelfRating(entry.selfRating!)),
+                          .planPortfolioSelfRating(entry.selfRating!),),
               ],
             ),
             const SizedBox(height: DS.spacing12),
@@ -447,7 +439,7 @@ class _PortfolioEntryCard extends StatelessWidget {
                     : <String>[
                         ...[
                           entry.growthArea,
-                        ].whereType<String>()
+                        ].whereType<String>(),
                       ],
                 fallback: context.l10n.planPortfolioWeakestFallback,
               ),
@@ -461,7 +453,7 @@ class _PortfolioEntryCard extends StatelessWidget {
                     : <String>[
                         ...[
                           entry.strongestArea,
-                        ].whereType<String>()
+                        ].whereType<String>(),
                       ],
                 fallback: context.l10n.planPortfolioProudFallback,
               ),
@@ -477,7 +469,6 @@ class _PortfolioEntryCard extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _DetailChip extends StatelessWidget {
@@ -486,8 +477,7 @@ class _DetailChip extends StatelessWidget {
   final String label;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing10,
         vertical: DS.spacing8,
@@ -505,7 +495,6 @@ class _DetailChip extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _DetailRow extends StatelessWidget {
@@ -518,8 +507,7 @@ class _DetailRow extends StatelessWidget {
   final String content;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -536,7 +524,6 @@ class _DetailRow extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 class _PortfolioEmptyState extends StatelessWidget {
@@ -545,8 +532,7 @@ class _PortfolioEmptyState extends StatelessWidget {
   final VoidCallback onStartSprint;
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
+  Widget build(BuildContext context) => Center(
       child: Padding(
         padding: const EdgeInsets.all(DS.spacing24),
         child: Column(
@@ -587,7 +573,6 @@ class _PortfolioEmptyState extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _PortfolioErrorState extends StatelessWidget {
@@ -600,8 +585,7 @@ class _PortfolioErrorState extends StatelessWidget {
   final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
+  Widget build(BuildContext context) => Center(
       child: Padding(
         padding: const EdgeInsets.all(DS.spacing24),
         child: Column(
@@ -622,7 +606,6 @@ class _PortfolioErrorState extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _LoadMoreButton extends StatelessWidget {
@@ -631,15 +614,13 @@ class _LoadMoreButton extends StatelessWidget {
   final VoidCallback onLoadMore;
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
+  Widget build(BuildContext context) => Center(
       child: SparkleButton(
         onPressed: onLoadMore,
         label: context.l10n.planPortfolioLoadMore,
         icon: const Icon(Icons.expand_more),
       ),
     );
-  }
 }
 
 String _statusLine(BuildContext context, LearningPortfolioEntry entry) {

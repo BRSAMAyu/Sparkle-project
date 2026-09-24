@@ -6,12 +6,13 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/network/dio_provider.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/prediction_attribution_service.dart';
+import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
 import 'package:sparkle/features/focus/data/services/candidate_feedback_service.dart';
-import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/home/data/models/prediction_insight_data.dart';
 import 'package:sparkle/features/home/data/repositories/prediction_repository.dart';
 import 'package:sparkle/features/home/domain/services/enhanced_intent_classifier.dart';
@@ -19,7 +20,6 @@ import 'package:sparkle/features/home/domain/services/intent_classifier.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 /// Predicted action for intent prediction bar

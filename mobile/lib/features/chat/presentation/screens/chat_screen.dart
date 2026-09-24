@@ -3,75 +3,74 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/errors/failures.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/models/aurora_correction_payload.dart';
+import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/offline/models/offline_chat_message.dart';
 import 'package:sparkle/core/offline/offline_providers.dart';
-import 'package:sparkle/core/models/aurora_correction_payload.dart';
-import 'package:sparkle/features/aurora/presentation/widgets/aurora_core_session_sheet.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_comeback_context.dart';
-import 'package:sparkle/features/chat/presentation/widgets/causal_timeline_panel.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_core_session.dart';
 import 'package:sparkle/features/aurora/data/repositories/aurora_daily_startup_repository.dart';
+import 'package:sparkle/features/aurora/data/services/aurora_telemetry_service.dart';
+import 'package:sparkle/features/aurora/presentation/widgets/aurora_core_session_sheet.dart';
+import 'package:sparkle/features/auth/presentation/widgets/guest_conversion_card.dart';
 import 'package:sparkle/features/chat/chat_routes.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/services/chat_draft_store.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
+import 'package:sparkle/features/chat/presentation/providers/aurora_status_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_draft_store_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
-import 'package:sparkle/features/chat/presentation/providers/aurora_status_provider.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_workflow_panel.dart';
 import 'package:sparkle/features/chat/presentation/widgets/ai_reasoning_mode_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
+import 'package:sparkle/features/chat/presentation/widgets/causal_timeline_panel.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_design_language_widgets.dart';
-import 'package:sparkle/features/chat/presentation/widgets/comeback_banner.dart';
-import 'package:sparkle/features/chat/presentation/widgets/contextual_correction_bar.dart';
-import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_inline_signals.dart';
-import 'package:sparkle/features/chat/presentation/widgets/chat_run_phase_indicator.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_mode_selector_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_mode_transition_banner.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_prediction_dock.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_run_phase_indicator.dart';
+import 'package:sparkle/features/chat/presentation/widgets/comeback_banner.dart';
+import 'package:sparkle/features/chat/presentation/widgets/community_insight_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/contextual_correction_bar.dart';
+import 'package:sparkle/features/chat/presentation/widgets/divine_moment_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/experience_envelope_indicator.dart';
 import 'package:sparkle/features/chat/presentation/widgets/expert_roundtable_widget.dart';
+import 'package:sparkle/features/chat/presentation/widgets/goal_arbitration_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/growth_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/guidance_mode_toggle.dart';
 import 'package:sparkle/features/chat/presentation/widgets/offline_queue_indicator.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
-import 'package:sparkle/features/chat/presentation/widgets/community_insight_card.dart';
-import 'package:sparkle/features/chat/presentation/widgets/goal_arbitration_card.dart';
-import 'package:sparkle/features/chat/presentation/widgets/divine_moment_card.dart';
-import 'package:sparkle/features/chat/presentation/widgets/experience_envelope_indicator.dart';
-import 'package:sparkle/features/chat/presentation/widgets/growth_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/plan_selector_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/spine_receipt_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/stale_recovery_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/strategy_intervention_card.dart';
-import 'package:sparkle/features/chat/presentation/widgets/plan_selector_pill.dart';
-import 'package:sparkle/features/aurora/data/services/aurora_telemetry_service.dart';
 import 'package:sparkle/features/chat/presentation/widgets/study_materials_sheet.dart';
 import 'package:sparkle/features/chat/presentation/widgets/transparency_floating_capsule.dart';
 import 'package:sparkle/features/chat/presentation/widgets/understanding_drawer.dart';
-import 'package:sparkle/features/auth/presentation/widgets/guest_conversion_card.dart';
 import 'package:sparkle/features/documents/data/models/document_library_models.dart';
 import 'package:sparkle/features/documents/presentation/providers/document_library_provider.dart';
 import 'package:sparkle/features/file/file.dart';
@@ -85,6 +84,7 @@ import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart'
 import 'package:sparkle/features/settings/presentation/screens/transparency_settings_screen.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 const _defaultAiSystemPreferences = TransparencyPreferences(
   enabled: true,
@@ -805,7 +805,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<void> _restoreReadPositionForConversation(
-      String conversationId) async {
+      String conversationId,) async {
     final normalizedConversationId = conversationId.trim();
     if (normalizedConversationId.isEmpty) {
       return;
@@ -861,7 +861,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   GlobalKey _messageKeyFor(String id) =>
-      _messageKeys.putIfAbsent(id, () => GlobalKey());
+      _messageKeys.putIfAbsent(id, GlobalKey.new);
 
   String _lastReadMessagePrefsKey(String conversationId) =>
       'chat:last_read_message_id:$conversationId';
@@ -1019,7 +1019,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               size: ButtonSize.small,
               minWidth: 64,
               minHeight: 40,
-              onPressed: () => Navigator.of(dialogContext).pop(null),
+              onPressed: () => Navigator.of(dialogContext).pop(),
             ),
                         SparkleButton(
               label: context.l10n.auroraCorrectionInputSend,
@@ -1211,13 +1211,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   /// S8：双核路由模式的单行人话标签（随阶段胶囊一行透明）。
-  String _dualCoreModeLabel(String mode) {
-    return switch (mode) {
+  String _dualCoreModeLabel(String mode) => switch (mode) {
       'execution' => context.l10n.chatExecutionMode,
       'cognitive' => context.l10n.chatCognitiveMode,
       _ => context.l10n.chatBalancedMode,
     };
-  }
 
   void _handleScroll() {
     if (!_scrollController.hasClients) {
@@ -1477,8 +1475,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 value: _ChatShortcutAction.newSession,
                 child: Row(
                   children: [
-                    Icon(Icons.add_comment_outlined, size: 18),
-                    SizedBox(width: DS.spacing12),
+                    const Icon(Icons.add_comment_outlined, size: 18),
+                    const SizedBox(width: DS.spacing12),
                     Text(context.l10n.chatNewConversation),
                   ],
                 ),
@@ -1487,12 +1485,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 value: _ChatShortcutAction.openClawHub,
                 child: Row(
                   children: [
-                    Icon(Icons.hub_outlined, size: 18),
-                    SizedBox(width: DS.spacing12),
+                    const Icon(Icons.hub_outlined, size: 18),
+                    const SizedBox(width: DS.spacing12),
                     Text(showOpenClawAttention
                         ? context.l10n.chatOpenclawHubQueued(
-                            openClawConnection.queuedRequestCount)
-                        : context.l10n.chatOpenclawHub),
+                            openClawConnection.queuedRequestCount,)
+                        : context.l10n.chatOpenclawHub,),
                   ],
                 ),
               ),
@@ -1500,8 +1498,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 value: _ChatShortcutAction.causalTimeline,
                 child: Row(
                   children: [
-                    Icon(Icons.timeline, size: 18),
-                    SizedBox(width: DS.spacing12),
+                    const Icon(Icons.timeline, size: 18),
+                    const SizedBox(width: DS.spacing12),
                     Text(context.l10n.chatDecisionTimeline),
                   ],
                 ),
@@ -1578,8 +1576,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 // full-screen fractions (0.25 + 0.4) no longer fit the
                 // shrunken body — the Column overflowed and the stripes
                 // covered the input bar (bottom 81px / right 53px).
-                child: LayoutBuilder(builder: (context, bodyConstraints) {
-                  return Column(
+                child: LayoutBuilder(builder: (context, bodyConstraints) => Column(
                   children: [
                     // S8 面积重划：常驻系统面板全部撤出（记忆→消息旁内联
                     // 信号、确认→收件箱入口、模式条→输入条关联区折叠行）。
@@ -1689,11 +1686,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                       modeLabel: chatState.dualCoreMode == null
                                           ? null
                                           : _dualCoreModeLabel(
-                                              chatState.dualCoreMode!),
+                                              chatState.dualCoreMode!,),
                                       onCancel: () => ref
                                           .read(chatProvider.notifier)
                                           .cancelActiveRun(
-                                              reason: 'phase_capsule_cancel'),
+                                              reason: 'phase_capsule_cancel',),
                                     );
                                   }
                                   return Padding(
@@ -1787,11 +1784,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                       modeLabel: chatState.dualCoreMode == null
                                           ? null
                                           : _dualCoreModeLabel(
-                                              chatState.dualCoreMode!),
+                                              chatState.dualCoreMode!,),
                                       onCancel: () => ref
                                           .read(chatProvider.notifier)
                                           .cancelActiveRun(
-                                              reason: 'phase_capsule_cancel'),
+                                              reason: 'phase_capsule_cancel',),
                                     );
                                   }
 
@@ -1924,7 +1921,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                               );
                                               ref
                                                   .read(auroraStatusProvider
-                                                      .notifier)
+                                                      .notifier,)
                                                   .markCorrectionEffective(
                                                     semanticValue:
                                                         option.semanticValue,
@@ -2023,7 +2020,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                                           '',
                                                       conversationId: ref
                                                               .read(
-                                                                  chatProvider)
+                                                                  chatProvider,)
                                                               .conversationId ??
                                                           '',
                                                       messageId:
@@ -2034,7 +2031,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                               );
                                               ref
                                                   .read(auroraStatusProvider
-                                                      .notifier)
+                                                      .notifier,)
                                                   .markCorrectionEffective(
                                                     semanticValue:
                                                         'not_right_direction',
@@ -2082,7 +2079,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                                           '',
                                                       conversationId: ref
                                                               .read(
-                                                                  chatProvider)
+                                                                  chatProvider,)
                                                               .conversationId ??
                                                           '',
                                                       messageId:
@@ -2135,7 +2132,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                                           '',
                                                       conversationId: ref
                                                               .read(
-                                                                  chatProvider)
+                                                                  chatProvider,)
                                                               .conversationId ??
                                                           '',
                                                       messageId:
@@ -2159,7 +2156,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                                           ?.wakeEligibility
                                                           .wakeReasons ??
                                                       const [
-                                                        'standard_layer_uncertainty'
+                                                        'standard_layer_uncertainty',
                                                       ],
                                                   entryReason: snapshot == null
                                                       ? AuroraCoreSessionEntryReason(
@@ -2352,7 +2349,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                           },
                                           child: Padding(
                                             padding: const EdgeInsets.all(
-                                                DS.spacing4),
+                                                DS.spacing4,),
                                             child: Icon(
                                               Icons.close,
                                               size: DS.iconSizeXs,
@@ -2416,7 +2413,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                               .dismissCommunityHint();
                           ref.read(chatProvider.notifier).sendMessage(
                                 context.l10n.chatCommunitySuggestion(
-                                    hint.anonymousSummary, hint.tip),
+                                    hint.anonymousSummary, hint.tip,),
                               );
                         },
                         onDismiss: () => ref
@@ -2435,7 +2432,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           ref.read(chatProvider.notifier).dismissUXWarning();
                           ref.read(chatProvider.notifier).sendMessage(
                                 context.l10n.chatWarningAction(
-                                    warning.suggestedAction, warning.reason),
+                                    warning.suggestedAction, warning.reason,),
                               );
                         },
                         onDismiss: () =>
@@ -2585,8 +2582,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       ),
                     ),
                   ],
-                  );
-                }),
+                  ),),
               ),
             ),
           ],
@@ -2620,9 +2616,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
         useRootNavigator: true,
         isScrollControlled: true,
-        builder: (_) => FractionallySizedBox(
+        builder: (_) => const FractionallySizedBox(
           heightFactor: 0.70,
-          child: const CausalTimelinePanel(),
+          child: CausalTimelinePanel(),
         ),
       ),
     );
@@ -3163,15 +3159,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 AppFeedback.info(
                   context,
                   context.l10n.chatFileAdded(
-                      file.fileName, _attachmentStatusText(file.status)),
+                      file.fileName, _attachmentStatusText(file.status),),
                 );
               }
             },
             onSend: (text, {replyToId}) => unawaited(
               ref.read(chatProvider.notifier).sendMessage(text),
             ),
-            onFreeformCorrection: (text) =>
-                _submitFreeformAuroraCorrection(text),
+            onFreeformCorrection: _submitFreeformAuroraCorrection,
           ),
           if (chatState.graphragTrace != null)
             Padding(
@@ -3188,7 +3183,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 MediaQuery.of(context).padding.bottom,
               ),
             ),
-        ]),
+        ],),
       ),
     );
   }
@@ -3748,7 +3743,7 @@ class _ReviewNodeBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final masteryText = mastery != null
         ? context.l10n.chatCurrentMastery(
-            (mastery! * 100).round().clamp(0, 100).toString())
+            (mastery! * 100).round().clamp(0, 100).toString(),)
         : '';
     return Container(
       margin: const EdgeInsets.symmetric(
@@ -4030,8 +4025,7 @@ class _BottomAreaScrollState extends State<_BottomAreaScroll> {
   double? _contentHeight;
 
   @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
+  Widget build(BuildContext context) => LayoutBuilder(
       builder: (context, constraints) {
         final fits = _contentHeight == null ||
             _contentHeight! <= constraints.maxHeight + 0.5;
@@ -4050,7 +4044,6 @@ class _BottomAreaScrollState extends State<_BottomAreaScroll> {
         );
       },
     );
-  }
 }
 
 /// 测量子内容尺寸的 RenderProxyBox（post-frame 回调，避免布局重入）。
@@ -4063,9 +4056,7 @@ class _MeasureSize extends SingleChildRenderObjectWidget {
   final ValueChanged<Size> onChange;
 
   @override
-  RenderObject createRenderObject(BuildContext context) {
-    return _RenderMeasureSize(onChange);
-  }
+  RenderObject createRenderObject(BuildContext context) => _RenderMeasureSize(onChange);
 
   @override
   void updateRenderObject(

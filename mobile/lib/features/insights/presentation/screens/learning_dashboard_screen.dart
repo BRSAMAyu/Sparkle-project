@@ -244,10 +244,10 @@ class _EfficiencyPanel extends StatelessWidget {
             children: [
               _MetricChip(
                   label: context.l10n
-                      .gdTasksCompletedCount(metrics.tasksCompleted)),
+                      .gdTasksCompletedCount(metrics.tasksCompleted),),
               _MetricChip(
                   label: context.l10n.gdAvgMinutes(
-                      metrics.avgCompletionTime.toStringAsFixed(0))),
+                      metrics.avgCompletionTime.toStringAsFixed(0),),),
               _MetricChip(label: context.l10n.gdOnTimeRate(percent)),
             ],
           ),
@@ -368,9 +368,9 @@ class _PlanStabilityPanel extends StatelessWidget {
       runSpacing: DS.spacing8,
       children: [
         _MetricChip(
-            label: context.l10n.gdInterruptionsCount(stability.interruptions)),
+            label: context.l10n.gdInterruptionsCount(stability.interruptions),),
         _MetricChip(
-            label: context.l10n.gdAdjustmentsCount(stability.adjustments)),
+            label: context.l10n.gdAdjustmentsCount(stability.adjustments),),
         _MetricChip(label: context.l10n.gdAbandonmentRate(percent)),
       ],
     );
@@ -439,15 +439,13 @@ class _MetricChip extends StatelessWidget {
 
 class _InlineEmpty extends StatelessWidget {
   @override
-  Widget build(BuildContext context) {
-    return Text(
+  Widget build(BuildContext context) => Text(
       context.l10n.gdNoDataDesc,
       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
             height: 1.52,
           ),
     );
-  }
 }
 
 class _DashboardError extends StatelessWidget {
@@ -456,8 +454,7 @@ class _DashboardError extends StatelessWidget {
   final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
+  Widget build(BuildContext context) => Center(
       child: EmptyState(
         icon: Icons.error_outline_rounded,
         title: context.l10n.gdLoadFailed,
@@ -466,7 +463,6 @@ class _DashboardError extends StatelessWidget {
         onAction: onRetry,
       ),
     );
-  }
 }
 
 class _RadarPainter extends CustomPainter {
@@ -525,15 +521,12 @@ class _RadarPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _RadarPainter oldDelegate) {
-    return oldDelegate.items != items ||
+  bool shouldRepaint(covariant _RadarPainter oldDelegate) => oldDelegate.items != items ||
         oldDelegate.color != color ||
         oldDelegate.gridColor != gridColor;
-  }
 }
 
-String _categoryLabel(BuildContext context, String category) {
-  return switch (category.toUpperCase()) {
+String _categoryLabel(BuildContext context, String category) => switch (category.toUpperCase()) {
     'LEARNING' => context.l10n.gdCategoryLearning,
     'TRAINING' => context.l10n.gdCategoryTraining,
     'ERROR_FIX' => context.l10n.gdCategoryErrorFix,
@@ -543,4 +536,3 @@ String _categoryLabel(BuildContext context, String category) {
     'OCR' => context.l10n.gdCategoryOcr,
     _ => context.l10n.gdCategoryUnassigned,
   };
-}

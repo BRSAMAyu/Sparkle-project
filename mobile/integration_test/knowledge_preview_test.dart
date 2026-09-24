@@ -3,11 +3,11 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/presentation/screens/login_screen.dart';
 import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart';
 import 'package:sparkle/main.dart' as app;
-import 'package:sparkle/core/services/bgm_service.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// Knowledge Preview Test
 /// Verifies: Galaxy/knowledge page loads without crash, not blank
@@ -37,7 +37,7 @@ void main() {
       // Verify no crash
       final errorWidgets = find.byType(ErrorWidget).evaluate();
       expect(errorWidgets.isEmpty, isTrue,
-          reason: 'No crash on Galaxy tab');
+          reason: 'No crash on Galaxy tab',);
     } finally {
       await BgmService.dispose();
       await SensoryFeedbackService.dispose();

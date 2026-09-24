@@ -5,12 +5,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:math_expressions/math_expressions.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/tools/data/repositories/tool_history_repository.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_context_effect_feedback.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 
 class CalculatorTool extends ConsumerStatefulWidget {
@@ -132,7 +132,7 @@ class _CalculatorToolState extends ConsumerState<CalculatorTool> {
       return;
     }
     AppFeedback.success(
-        context, context.l10n.auto_resultcopied);
+        context, context.l10n.auto_resultcopied,);
   }
 
   @override

@@ -29,15 +29,15 @@ class _PlanStrategyCardState extends State<PlanStrategyCard> {
     );
     final phases = (strategy['phases'] as List<dynamic>? ?? const [])
         .whereType<Map<dynamic, dynamic>>()
-        .map((item) => Map<String, dynamic>.from(item))
+        .map(Map<String, dynamic>.from)
         .toList();
     final checkpoints = (strategy['checkpoints'] as List<dynamic>? ?? const [])
         .whereType<Map<dynamic, dynamic>>()
-        .map((item) => Map<String, dynamic>.from(item))
+        .map(Map<String, dynamic>.from)
         .toList();
     final actions = (widget.data['actions'] as List<dynamic>? ?? const [])
         .whereType<Map<dynamic, dynamic>>()
-        .map((item) => Map<String, dynamic>.from(item))
+        .map(Map<String, dynamic>.from)
         .toList();
 
     return Column(
@@ -83,7 +83,7 @@ class _PlanStrategyCardState extends State<PlanStrategyCard> {
                           Text(
                             context.l10n.chatStrategyDailyHours(
                                 '${phase['daily_hours'] ?? '-'}',
-                                '${phase['focus'] ?? ''}'),
+                                '${phase['focus'] ?? ''}',),
                             style: Theme.of(context)
                                 .textTheme
                                 .bodySmall
@@ -123,7 +123,7 @@ class _PlanStrategyCardState extends State<PlanStrategyCard> {
                   const SizedBox(height: DS.spacing8),
                   Text(
                     context.l10n.chatStrategyPhaseOutput(
-                        phase['output']?.toString() ?? ''),
+                        phase['output']?.toString() ?? '',),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: DS.textSecondary,
                           height: 1.45,

@@ -3,10 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/shared/widgets/action_proposal/action_proposal_card.dart';
-import 'package:sparkle/shared/widgets/action_proposal/proposal_card_models.dart';
 
 import '../../../shared/i18n_test_helper.dart';
 
@@ -49,7 +47,7 @@ void main() {
       data: data(),
       onApprove: (_) async {},
       onReject: (_) async {},
-    )));
+    ),),);
     await tester.pump();
 
     expect(find.text('等你确认'), findsOneWidget);
@@ -65,7 +63,7 @@ void main() {
       data: data(status: ProposalCardStatus.running),
       onApprove: (_) async {},
       onReject: (_) async {},
-    )));
+    ),),);
     await tester.pump();
 
     expect(find.text('正在执行'), findsOneWidget);
@@ -78,7 +76,7 @@ void main() {
       data: data(status: ProposalCardStatus.partial),
       onApprove: (_) async {},
       onReject: (_) async {},
-    )));
+    ),),);
     await tester.pump();
 
     expect(find.text('部分完成'), findsOneWidget);
@@ -93,7 +91,7 @@ void main() {
       onApprove: (_) async {},
       onReject: (_) async {},
       onRefresh: () => refreshed++,
-    )));
+    ),),);
     await tester.pump();
 
     expect(find.text('结果待确认'), findsOneWidget);
@@ -109,7 +107,7 @@ void main() {
 
   testWidgets('committed: 已完成 + 回执摘要', (tester) async {
     await tester.pumpWidget(host(ActionProposalCard(
-      data: ActionProposalCardData(
+      data: const ActionProposalCardData(
         proposalId: 'p-1',
         status: ProposalCardStatus.committed,
         title: '把错题整理成复习卡',
@@ -117,7 +115,7 @@ void main() {
       ),
       onApprove: (_) async {},
       onReject: (_) async {},
-    )));
+    ),),);
     await tester.pump();
 
     expect(find.text('已完成'), findsOneWidget);
@@ -137,11 +135,11 @@ void main() {
         onApprove: (_) async {},
         onReject: (_) async {},
         onCancel: (_) async {},
-      )));
+      ),),);
       await tester.pump();
       expect(find.text(entry.value), findsOneWidget, reason: entry.key.name);
       expect(find.text('确认，就这样做'), findsNothing,
-          reason: '${entry.key.name} 不应再提供确认入口');
+          reason: '${entry.key.name} 不应再提供确认入口',);
     }
   });
 
@@ -157,7 +155,7 @@ void main() {
       onApprove: (_) async {},
       onReject: (_) async {},
       onReview: () => reviewed++,
-    )));
+    ),),);
     await tester.pump();
 
     expect(find.text('内容有更新'), findsOneWidget);
@@ -186,10 +184,10 @@ void main() {
         data: data(ownership: entry.key),
         onApprove: (_) async {},
         onReject: (_) async {},
-      )));
+      ),),);
       await tester.pump();
       expect(find.text(entry.value.$1), findsOneWidget,
-          reason: '${entry.key.name} 应显示「${entry.value.$1}」');
+          reason: '${entry.key.name} 应显示「${entry.value.$1}」',);
       // 卡片容器节点会把子节点 label 合并（含换行），故用子串匹配。
       expect(
         find.bySemanticsLabel(RegExp('当前轮到：${entry.value.$1}')),
@@ -218,7 +216,7 @@ void main() {
         await completer.future;
       },
       onReject: (_) async {},
-    )));
+    ),),);
     await tester.pump();
 
     await tester.tap(find.text('确认，就这样做'));
@@ -251,7 +249,7 @@ void main() {
           data: data(proposalId: 'abc-123'),
           onApprove: (key) async => keys.add(key),
           onReject: (_) async {},
-        ));
+        ),);
 
     await tester.pumpWidget(buildCard());
     await tester.pump();
@@ -273,14 +271,14 @@ void main() {
   testWidgets('显式幂等键透传优先于推导键', (tester) async {
     var captured = '';
     await tester.pumpWidget(host(ActionProposalCard(
-      data: ActionProposalCardData(
+      data: const ActionProposalCardData(
         proposalId: 'p-9',
         status: ProposalCardStatus.awaitingUser,
         idempotencyKey: 'server-key-1',
       ),
       onApprove: (key) async => captured = key,
       onReject: (_) async {},
-    )));
+    ),),);
     await tester.pump();
     await tester.tap(find.text('确认，就这样做'));
     await tester.pumpAndSettle();

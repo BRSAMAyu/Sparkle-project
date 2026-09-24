@@ -1,7 +1,7 @@
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 
-import 'local_database_store.dart';
+import 'package:sparkle/core/offline/local_database_store.dart';
 
 /// 原生平台（Android / iOS / Linux / macOS / Windows）的真实 Isar 后端。
 ///

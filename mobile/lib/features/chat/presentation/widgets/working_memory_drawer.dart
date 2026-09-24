@@ -5,10 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/features/chat/presentation/widgets/working_memory_badge.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class ChatWorkingMemoryPanel extends ConsumerStatefulWidget {
   const ChatWorkingMemoryPanel({
@@ -154,7 +154,7 @@ class _ChatWorkingMemoryPanelState
                 child: Row(
                   children: [
                     Icon(Icons.psychology_alt_outlined,
-                        color: DS.info, size: 18),
+                        color: DS.info, size: 18,),
                     const SizedBox(width: DS.spacing8),
                     Expanded(
                       child: Column(
@@ -174,7 +174,7 @@ class _ChatWorkingMemoryPanelState
                                 : _error != null
                                     ? context.l10n.chatMemoryUnavailable
                                     : context.l10n.chatMemorySessionCount(
-                                        _session.items.length),
+                                        _session.items.length,),
                             style: TextStyle(
                               color: DS.textSecondary,
                               fontSize: DS.fontSizeXs,
@@ -188,7 +188,7 @@ class _ChatWorkingMemoryPanelState
                       child: Padding(
                         padding: const EdgeInsets.only(left: DS.spacing4),
                         child: Icon(Icons.close_rounded,
-                            color: DS.textTertiary, size: 16),
+                            color: DS.textTertiary, size: 16,),
                       ),
                     ),
                     const SizedBox(width: DS.spacing4),
@@ -271,7 +271,7 @@ class _ChatWorkingMemoryPanelState
                   const SizedBox(height: DS.spacing8),
                   Text(
                     context.l10n.chatMemoryMentionCount(
-                        item.mentionCount, item.subjectType),
+                        item.mentionCount, item.subjectType,),
                     style: TextStyle(
                       color: DS.textSecondary,
                       fontSize: DS.fontSizeXs,

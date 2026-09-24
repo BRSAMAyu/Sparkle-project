@@ -159,7 +159,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     // For list below calendar (only shown in non-year mode)
     final selectedEvents = calendarState.events
         .where((event) =>
-            notifier.isSameDay(event.startTime, _selectedDay ?? _focusedDay))
+            notifier.isSameDay(event.startTime, _selectedDay ?? _focusedDay),)
         .toList();
     final taskState = ref.watch(taskListProvider);
     final selectedTasks = taskState.tasks.where((task) {
@@ -769,7 +769,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                                   event.taskId!.isNotEmpty) {
                                 unawaited(
                                   context.push(
-                                      '/tasks/new?taskId=${event.taskId!}'),
+                                      '/tasks/new?taskId=${event.taskId!}',),
                                 );
                                 return;
                               }
@@ -920,7 +920,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                     fontSize: 16,
                   ),
                 ),
-                SizedBox(height: DS.spacing6),
+                const SizedBox(height: DS.spacing6),
                 Text(
                   context.l10n.calHeatmapDesc,
                   style: TextStyle(color: DS.textSecondary, fontSize: 12),
@@ -934,7 +934,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                       context.l10n.calHeatLow,
                       style: TextStyle(fontSize: 11, color: DS.textSecondary),
                     ),
-                    SizedBox(width: DS.spacing6),
+                    const SizedBox(width: DS.spacing6),
                     ...List.generate(
                       5,
                       (index) => Container(
@@ -972,7 +972,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                     fontSize: 16,
                   ),
                 ),
-                SizedBox(height: DS.spacing10),
+                const SizedBox(height: DS.spacing10),
                 _buildInsightLine(
                   icon: Icons.trending_up_rounded,
                   title: context.l10n.calHottestDay,
@@ -1203,7 +1203,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               task.planId != null
                   ? context.l10n.calTaskTypeTask
                   : context.l10n.calTaskTypeTodo,
-              dueLabel),
+              dueLabel,),
           style: TextStyle(color: DS.textSecondary),
         ),
         trailing: Icon(
@@ -1836,7 +1836,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
         if (!mounted) return;
         context.pop();
         AppFeedback.success(context,
-            context.l10n.calEventUpdated);
+            context.l10n.calEventUpdated,);
         return;
       }
       final result = await ref.read(calendarProvider.notifier).addEvent(event);
@@ -1844,7 +1844,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
       context.pop();
       if (result.persistedRemotely) {
         AppFeedback.success(context,
-            context.l10n.calEventCreated);
+            context.l10n.calEventCreated,);
       } else {
         AppFeedback.info(
           context,

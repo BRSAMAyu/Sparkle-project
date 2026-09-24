@@ -17,7 +17,7 @@ void main() {
 
   test('timeout errors carry the ERR-TIMEOUT diagnostic code', () {
     final message = UserFacingError.from(
-        TimeoutException('no stream events', const Duration(seconds: 45)));
+        TimeoutException('no stream events', const Duration(seconds: 45)),);
     expect(message, contains('[ERR-TIMEOUT]'));
   });
 

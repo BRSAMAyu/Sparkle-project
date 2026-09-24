@@ -147,7 +147,7 @@ class _SmartPushSettingsScreenState
           if (_isLoading)
             Center(
               child: Padding(
-                padding: EdgeInsets.only(right: DS.spacing16),
+                padding: const EdgeInsets.only(right: DS.spacing16),
                 child: LoadingIndicator.circular(size: 20),
               ),
             )
@@ -282,13 +282,11 @@ class _SmartPushSettingsScreenState
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              isSelected
-                  ? Color.alphaBlend(
+              if (isSelected) Color.alphaBlend(
                       colorScheme.primary.withValues(alpha: 0.12),
                       DS.surfaceSecondary,
-                    )
-                  : DS.surfaceSecondary,
-              isSelected ? DS.surfacePrimaryElevated : DS.surfacePrimary,
+                    ) else DS.surfaceSecondary,
+              if (isSelected) DS.surfacePrimaryElevated else DS.surfacePrimary,
             ],
           ),
           borderRadius: BorderRadius.circular(12),

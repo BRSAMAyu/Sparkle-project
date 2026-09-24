@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 责任伙伴打卡热力图组件
 ///
@@ -125,7 +125,7 @@ class _AccountabilityHeatmapState extends State<AccountabilityHeatmap> {
                 child: ChoiceChip(
                   selected: selected,
                   label: Text(context.l10n.communityMonthDayCount(
-                      _monthLabels(context)[index], count)),
+                      _monthLabels(context)[index], count,),),
                   onSelected: (_) {
                     unawaited(
                       _pageController.animateToPage(
@@ -304,7 +304,7 @@ class MonthlyHeatmap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final daysInMonth = DateTime(year, month + 1, 0).day;
-    final firstWeekdayOffset = DateTime(year, month, 1).weekday - 1;
+    final firstWeekdayOffset = DateTime(year, month).weekday - 1;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -333,8 +333,7 @@ class MonthlyHeatmap extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          ...List.generate(6, (week) {
-            return Padding(
+          ...List.generate(6, (week) => Padding(
               padding: EdgeInsets.only(bottom: week == 5 ? 0 : 8),
               child: Row(
                 children: List.generate(7, (day) {
@@ -362,8 +361,7 @@ class MonthlyHeatmap extends StatelessWidget {
                   );
                 }),
               ),
-            );
-          }),
+            ),),
         ],
       ),
     );

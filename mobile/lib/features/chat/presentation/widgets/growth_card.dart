@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// Growth Card — divine moment #1 "看见坚持"
 ///
@@ -64,8 +64,7 @@ class _GrowthCardState extends State<GrowthCard>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Semantics(
+  Widget build(BuildContext context) => Semantics(
       container: true,
       label: widget.title,
       child: FadeTransition(
@@ -193,5 +192,4 @@ class _GrowthCardState extends State<GrowthCard>
       ),
       ),
     );
-  }
 }

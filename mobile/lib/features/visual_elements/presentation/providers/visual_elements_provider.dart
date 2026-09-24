@@ -290,12 +290,10 @@ class VisualElementsNotifier extends StateNotifier<VisualElementsState> {
         (_) => _repository.getDefaultElements(),
       );
       final unlockedElements =
-          await _repository.getUnlockedElements().catchError((_) async {
-        return VisualElementListResponse(
+          await _repository.getUnlockedElements().catchError((_) async => VisualElementListResponse(
           items: allElements.items.where((item) => item.isUnlocked).toList(),
           total: allElements.items.where((item) => item.isUnlocked).length,
-        );
-      });
+        ),);
       final config = await _repository.getUserConfig().catchError((_) async {
         final defaults = allElements.items.where((item) => item.isDefault);
         VisualElementModel? background;

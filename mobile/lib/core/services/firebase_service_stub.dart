@@ -3,6 +3,7 @@
 /// This file is used when Google services are disabled (ENABLE_GOOGLE_SERVICES=false)
 /// to provide no-op implementations that allow the app to build and run
 /// without Firebase dependencies.
+library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
@@ -57,7 +58,7 @@ class FirebaseMessagingService {
 
 /// Provider for FirebaseMessagingService
 final firebaseMessagingServiceProvider =
-    Provider<FirebaseMessagingService>((ref) => FirebaseMessagingService(ref));
+    Provider<FirebaseMessagingService>(FirebaseMessagingService.new);
 
 /// Provider for FCM initialization state
 final fcmInitializedProvider = StateProvider<bool>((ref) => false);

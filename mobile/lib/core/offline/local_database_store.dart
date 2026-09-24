@@ -1,6 +1,6 @@
 import 'package:isar/isar.dart';
 
-import 'local_database_store_io.dart'
+import 'package:sparkle/core/offline/local_database_store_io.dart'
     if (dart.library.html) 'local_database_store_web.dart';
 
 /// LocalDatabase 门面背后的平台存储后端（multi-platform web-unblock 闸）。

@@ -201,7 +201,7 @@ class _GalaxyDraftReviewScreenState
     }
     _loadedBatchId = batch.id;
     _currentIndex = 0;
-    _reviewedNodes..clear();
+    _reviewedNodes.clear();
     _workingDrafts
       ..clear()
       ..addAll(
@@ -240,7 +240,6 @@ class _GalaxyDraftReviewScreenState
           ),
         Dismissible(
           key: ValueKey(current.draft.id),
-          direction: DismissDirection.horizontal,
           background: _SwipeDecisionBackground(
             alignment: Alignment.centerLeft,
             color: DS.success.withValues(alpha: 0.18),
@@ -926,22 +925,22 @@ class _GalaxyDraftSkeleton extends StatelessWidget {
   const _GalaxyDraftSkeleton();
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(
+  Widget build(BuildContext context) => const Padding(
+        padding: EdgeInsets.fromLTRB(
           DS.spacing20, DS.spacing8, DS.spacing20, DS.spacing20,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SparkleSkeleton(width: 200, height: 20),
-            const SizedBox(height: DS.spacing12),
-            const SparkleSkeleton(width: double.infinity, height: 12),
-            const SizedBox(height: DS.spacing8),
-            const SparkleSkeleton(width: 280, height: 12),
-            const SizedBox(height: DS.spacing24),
-            const _SkeletonCard(),
-            const SizedBox(height: DS.spacing12),
-            const _SkeletonCard(),
+            SparkleSkeleton(width: 200, height: 20),
+            SizedBox(height: DS.spacing12),
+            SparkleSkeleton(width: double.infinity, height: 12),
+            SizedBox(height: DS.spacing8),
+            SparkleSkeleton(width: 280, height: 12),
+            SizedBox(height: DS.spacing24),
+            _SkeletonCard(),
+            SizedBox(height: DS.spacing12),
+            _SkeletonCard(),
           ],
         ),
       );
@@ -963,9 +962,9 @@ class _SkeletonCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                SparkleSkeleton(width: 60, height: 16),
+                SparkleSkeleton(width: 60),
                 SizedBox(width: DS.spacing8),
-                SparkleSkeleton(width: 40, height: 16),
+                SparkleSkeleton(width: 40),
               ],
             ),
             SizedBox(height: DS.spacing12),

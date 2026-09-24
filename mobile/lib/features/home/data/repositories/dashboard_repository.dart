@@ -100,7 +100,7 @@ class DashboardRepository {
         'streak_days': 9,
         'high_yield_low_mastery_topics': [
           l10n.dashboardTopicReliableTransport,
-          l10n.dashboardTopicTcpCongestion
+          l10n.dashboardTopicTcpCongestion,
         ],
         'task_groups': [
           {
@@ -196,15 +196,9 @@ class DashboardRepository {
               ? '未来 24 小时内保持较高活跃度的概率较大，但晚间会有轻微回落。'
               : 'High engagement likely in the next 24 hours, with a slight dip in the evening.',
           'signals': [
-            zh
-                ? '最近三次专注会话都发生在下午'
-                : 'Last 3 focus sessions were all in the afternoon',
-            zh
-                ? '错题本和星图节点的回看频率在上升'
-                : 'Error book & galaxy node review frequency is rising',
-            zh
-                ? '周末动能略低于工作日'
-                : 'Weekend momentum is slightly lower than weekdays',
+            if (zh) '最近三次专注会话都发生在下午' else 'Last 3 focus sessions were all in the afternoon',
+            if (zh) '错题本和星图节点的回看频率在上升' else 'Error book & galaxy node review frequency is rising',
+            if (zh) '周末动能略低于工作日' else 'Weekend momentum is slightly lower than weekdays',
           ],
         },
         'dropout_risk': {
@@ -214,9 +208,9 @@ class DashboardRepository {
               ? '当前没有明显流失风险，但如果连续两天没有专注记录，风险会抬升。'
               : 'No significant dropout risk now, but it will rise if you skip two consecutive days of focus.',
           'factors': [
-            zh ? '近期任务较多' : 'Many recent tasks',
-            zh ? '存在少量未完成任务' : 'Some incomplete tasks remain',
-            zh ? '晚间学习容易被打断' : 'Evening study sessions are easily interrupted',
+            if (zh) '近期任务较多' else 'Many recent tasks',
+            if (zh) '存在少量未完成任务' else 'Some incomplete tasks remain',
+            if (zh) '晚间学习容易被打断' else 'Evening study sessions are easily interrupted',
           ],
         },
         'optimal_time': {
@@ -240,8 +234,8 @@ class DashboardRepository {
           'predicted_action_type': 'resume_priority_task',
           'predicted_window': 'next_2h',
           'reasons': [
-            zh ? '最近24小时持续活跃' : 'Active in the last 24 hours',
-            zh ? '当前仍有重点待办' : 'Priority tasks still pending'
+            if (zh) '最近24小时持续活跃' else 'Active in the last 24 hours',
+            if (zh) '当前仍有重点待办' else 'Priority tasks still pending',
           ],
           'suggested_prompt': zh
               ? '帮我继续推进今天最关键的任务'
@@ -250,20 +244,16 @@ class DashboardRepository {
           'prediction_tier': 'rules',
           'fallback_used': true,
           'explanations': {
-            'recent_24h': [zh ? '最近24小时持续活跃' : 'Active in the last 24 hours'],
+            'recent_24h': [if (zh) '最近24小时持续活跃' else 'Active in the last 24 hours'],
             'recent_7d': [
-              zh ? '过去7天保持稳定推进' : 'Steady progress over the past 7 days'
+              if (zh) '过去7天保持稳定推进' else 'Steady progress over the past 7 days',
             ],
             'profile': [
-              zh
-                  ? '你更容易承接已有重点任务'
-                  : 'You tend to pick up existing priority tasks'
+              if (zh) '你更容易承接已有重点任务' else 'You tend to pick up existing priority tasks',
             ],
-            'plan': [zh ? '当前仍有重点待办' : 'Priority tasks still pending'],
+            'plan': [if (zh) '当前仍有重点待办' else 'Priority tasks still pending'],
             'focus': [
-              zh
-                  ? '先推进一个25分钟小段更自然'
-                  : 'A 25-minute focused block feels natural first'
+              if (zh) '先推进一个25分钟小段更自然' else 'A 25-minute focused block feels natural first',
             ],
           },
           'recommended_actions': [

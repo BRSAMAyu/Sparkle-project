@@ -3,11 +3,11 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/presentation/screens/login_screen.dart';
 import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart';
 import 'package:sparkle/main.dart' as app;
-import 'package:sparkle/core/services/bgm_service.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// Offline Error Test
 /// Verifies: app handles network failure gracefully (no white screen, no hang)
@@ -61,12 +61,12 @@ void main() {
       final hasMaterial = find.byType(Material).evaluate().isNotEmpty;
       final hasScaffold = find.byType(Scaffold).evaluate().isNotEmpty;
       expect(hasMaterial || hasScaffold, isTrue,
-          reason: 'Screen should not be blank even on error');
+          reason: 'Screen should not be blank even on error',);
 
       // Verify no unhandled error widgets
       final errorWidgets = find.byType(ErrorWidget).evaluate();
       expect(errorWidgets.isEmpty, isTrue,
-          reason: 'No ErrorWidget for network issues');
+          reason: 'No ErrorWidget for network issues',);
 
       // Check for retry buttons or error messages if error occurred
       // Retry button existence is informational, not required

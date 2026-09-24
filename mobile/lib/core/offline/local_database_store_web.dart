@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:isar/isar.dart';
 
-import 'local_database_store.dart';
+import 'package:sparkle/core/offline/local_database_store.dart';
 
 /// Web 端 no-op 桩（web-unblock 波次）。
 ///

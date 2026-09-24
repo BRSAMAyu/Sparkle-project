@@ -3,9 +3,7 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/features/experience/data/experience_models.dart';
 
-final experienceRepositoryProvider = Provider<ExperienceRepository>((ref) {
-  return ExperienceRepository(ref.watch(apiClientProvider));
-});
+final experienceRepositoryProvider = Provider<ExperienceRepository>((ref) => ExperienceRepository(ref.watch(apiClientProvider)));
 
 class ExperienceRepository {
   ExperienceRepository(this._apiClient);

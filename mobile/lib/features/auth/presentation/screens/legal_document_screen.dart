@@ -112,8 +112,7 @@ class _LegalSection {
   final String body;
 }
 
-List<_LegalSection> _termsSections(AppLocalizations l10n) {
-  return [
+List<_LegalSection> _termsSections(AppLocalizations l10n) => [
     _LegalSection(
       l10n.legalTermsServiceTitle,
       l10n.legalTermsServiceBody,
@@ -131,10 +130,8 @@ List<_LegalSection> _termsSections(AppLocalizations l10n) {
       l10n.legalTermsDeletionBody,
     ),
   ];
-}
 
-List<_LegalSection> _privacySections(AppLocalizations l10n) {
-  return [
+List<_LegalSection> _privacySections(AppLocalizations l10n) => [
     _LegalSection(
       l10n.legalPrivacyCollectTitle,
       l10n.legalPrivacyCollectBody,
@@ -152,4 +149,3 @@ List<_LegalSection> _privacySections(AppLocalizations l10n) {
       l10n.legalPrivacyRightsBody,
     ),
   ];
-}

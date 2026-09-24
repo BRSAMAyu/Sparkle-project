@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
 import 'package:sparkle/features/documents/data/models/document_library_models.dart';
 import 'package:sparkle/features/documents/presentation/providers/document_library_provider.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 /// Source Tray — full-featured material selection sheet.
 ///
@@ -258,8 +258,7 @@ class _ModeSelector extends StatelessWidget {
   final ValueChanged<DocumentContextMode> onModeChanged;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         color: DS.surfaceSecondary,
@@ -290,7 +289,6 @@ class _ModeSelector extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _ModeChip extends StatelessWidget {
@@ -305,8 +303,7 @@ class _ModeChip extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return Expanded(
+  Widget build(BuildContext context) => Expanded(
       child: Semantics(
         button: true,
         label: 'Chat study materials sheet control 1',
@@ -341,7 +338,6 @@ class _ModeChip extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _RelevanceLegend extends StatelessWidget {
@@ -349,13 +345,13 @@ class _RelevanceLegend extends StatelessWidget {
   Widget build(BuildContext context) => Row(
         children: [
           _LegendDot(
-              color: DS.success, label: context.l10n.chatStudyHighRelevance),
+              color: DS.success, label: context.l10n.chatStudyHighRelevance,),
           const SizedBox(width: 12),
           _LegendDot(
-              color: DS.warning, label: context.l10n.chatStudyMediumRelevance),
+              color: DS.warning, label: context.l10n.chatStudyMediumRelevance,),
           const SizedBox(width: 12),
           _LegendDot(
-              color: DS.textTertiary, label: context.l10n.chatStudyNotAnalyzed),
+              color: DS.textTertiary, label: context.l10n.chatStudyNotAnalyzed,),
         ],
       );
 }
@@ -509,7 +505,7 @@ class _SourceRow extends StatelessWidget {
                             const SizedBox(width: 8),
                             Text(
                               context.l10n.chatStudyCitationCount(
-                                  document.citationInsight.totalReferences),
+                                  document.citationInsight.totalReferences,),
                               style: DS.labelSmall.copyWith(
                                 color: DS.textTertiary,
                                 fontSize: 11,

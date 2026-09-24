@@ -8,11 +8,9 @@ final strategyMigrationRepositoryProvider =
 );
 
 final alternativeStrategiesProvider =
-    FutureProvider.family<StrategySuggestionBundle, String>((ref, goalId) {
-  return ref
+    FutureProvider.family<StrategySuggestionBundle, String>((ref, goalId) => ref
       .read(strategyMigrationRepositoryProvider)
-      .fetchAlternatives(goalId: goalId);
-});
+      .fetchAlternatives(goalId: goalId),);
 
 abstract class StrategyMigrationRepository {
   Future<StrategySuggestionBundle> fetchAlternatives({required String goalId});

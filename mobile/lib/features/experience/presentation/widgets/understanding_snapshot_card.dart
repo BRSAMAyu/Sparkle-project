@@ -135,7 +135,7 @@ class _UnderstandingSnapshotSurface extends StatelessWidget {
                   children: evidence
                       .take(3)
                       .map((item) =>
-                          _TinyEvidenceChip(label: item, color: accent))
+                          _TinyEvidenceChip(label: item, color: accent),)
                       .toList(growable: false),
                 ),
               ],
@@ -283,7 +283,7 @@ class _ExperienceCardSkeleton extends StatelessWidget {
                     Container(
                         height: 12,
                         width: double.infinity,
-                        color: DS.surfaceOverlay),
+                        color: DS.surfaceOverlay,),
                   ],
                 ),
               ),

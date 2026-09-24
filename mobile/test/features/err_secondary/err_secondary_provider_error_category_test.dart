@@ -227,7 +227,7 @@ void main() {
       await tester.pump();
 
       await tester.tap(find.widgetWithText(SparkleButton, '登录'),
-          warnIfMissed: false);
+          warnIfMissed: false,);
       // 错误 SnackBar 常驻不自动消失，pumpAndSettle 会永不等静——用定长 pump。
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));

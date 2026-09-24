@@ -383,11 +383,12 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
         color = DS.brandPrimary38;
     }
 
-    if (status == BackgroundTaskStatus.running)
+    if (status == BackgroundTaskStatus.running) {
       return LoadingIndicator.circular(
         size: 20,
         color: color,
       );
+    }
 
     return Icon(icon, color: color, size: 20);
   }

@@ -9,8 +9,7 @@ void main() {
     late Map<String, List<_TaskStub>> tasks;
 
     _TaskStub makeTask(String id, String title,
-        {int claims = 0, int completions = 0, bool claimed = false, bool? done}) {
-      return _TaskStub(
+        {int claims = 0, int completions = 0, bool claimed = false, bool? done,}) => _TaskStub(
         id: id,
         title: title,
         totalClaims: claims,
@@ -19,7 +18,6 @@ void main() {
         isClaimedByMe: claimed,
         myCompletionStatus: done,
       );
-    }
 
     List<_TaskStub> getGroupTasks(String groupId) =>
         List.from(tasks[groupId] ?? []);
@@ -28,9 +26,6 @@ void main() {
       final newTask = _TaskStub(
         id: 'new_${task.id}',
         title: task.title,
-        totalClaims: 0,
-        totalCompletions: 0,
-        completionRate: 0,
       );
       tasks.putIfAbsent(groupId, () => []).add(newTask);
       return newTask;
@@ -67,7 +62,7 @@ void main() {
         'group_a': [
           makeTask('t1', 'Task 1', claims: 2, completions: 1, claimed: true),
           makeTask('t2', 'Task 2', claims: 3, completions: 3, done: true),
-          makeTask('t3', 'Task 3', claims: 1, completions: 0),
+          makeTask('t3', 'Task 3', claims: 1),
         ],
       };
     });
@@ -86,9 +81,6 @@ void main() {
       final newTask = _TaskStub(
         id: 'raw',
         title: 'New Task',
-        totalClaims: 0,
-        totalCompletions: 0,
-        completionRate: 0,
       );
       final result = createGroupTask('group_a', newTask);
       expect(result.id, isNotEmpty);

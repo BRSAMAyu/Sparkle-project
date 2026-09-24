@@ -322,7 +322,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
               isActive: _viewMode == AchievementViewMode.grid,
               onTap: () {
                 unawaited(SensoryFeedbackService.emit(
-                    SensoryFeedbackEvent.selection));
+                    SensoryFeedbackEvent.selection,),);
                 setState(() => _viewMode = AchievementViewMode.grid);
               },
             ),
@@ -331,7 +331,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
               isActive: _viewMode == AchievementViewMode.list,
               onTap: () {
                 unawaited(SensoryFeedbackService.emit(
-                    SensoryFeedbackEvent.selection));
+                    SensoryFeedbackEvent.selection,),);
                 setState(() => _viewMode = AchievementViewMode.list);
               },
             ),
@@ -1571,7 +1571,7 @@ class _AchievementFilterSheetState extends State<_AchievementFilterSheet> {
                 accentColor: RarityColorProvider.getColor(rarity),
                 onTap: () {
                   unawaited(SensoryFeedbackService.emit(
-                      SensoryFeedbackEvent.selection));
+                      SensoryFeedbackEvent.selection,),);
                   setState(() {
                     _options = _options.copyWith(
                       rarity: _options.rarity == rarity ? null : rarity,
@@ -1609,7 +1609,7 @@ class _AchievementFilterSheetState extends State<_AchievementFilterSheet> {
                 isSelected,
                 onTap: () {
                   unawaited(SensoryFeedbackService.emit(
-                      SensoryFeedbackEvent.selection));
+                      SensoryFeedbackEvent.selection,),);
                   setState(() {
                     if (status == AchievementStatus.all) {
                       _options = _options.copyWith(status: null);

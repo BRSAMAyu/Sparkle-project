@@ -41,9 +41,9 @@ void main() {
       estimatedMinutes: 32,
       difficulty: 3,
       errorType: 'calculation_error',
-      successCriteria: const ['能解释错因', '能做对 1 道同类题'],
+      successCriteria: ['能解释错因', '能做对 1 道同类题'],
       minimumOutput: '完成 1 张错因对照卡',
-      structuredSteps: const [
+      structuredSteps: [
         StructuredRemediationStep(
           order: 1,
           title: '定位错因',
@@ -52,8 +52,8 @@ void main() {
           checkpoint: '能指出错误开始的位置。',
         ),
       ],
-      guideJson: const {},
-      taskPayload: const {},
+      guideJson: {},
+      taskPayload: {},
     );
 
     await tester.pumpWidget(

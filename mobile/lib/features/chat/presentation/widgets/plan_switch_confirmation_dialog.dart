@@ -10,11 +10,7 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 /// switch plan context with unsaved messages.
 class PlanSwitchConfirmationDialog extends StatelessWidget {
   const PlanSwitchConfirmationDialog({
-    super.key,
-    required this.targetPlanName,
-    required this.unsavedMessageCount,
-    required this.onConfirm,
-    required this.onCancel,
+    required this.targetPlanName, required this.unsavedMessageCount, required this.onConfirm, required this.onCancel, super.key,
   });
 
   final String targetPlanName;
@@ -37,7 +33,7 @@ class PlanSwitchConfirmationDialog extends StatelessWidget {
           maxHeight: media.size.height * 0.85,
         ),
         child: SingleChildScrollView(
-          child: Container(
+          child: DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,

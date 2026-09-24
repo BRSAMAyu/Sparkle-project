@@ -125,8 +125,7 @@ class _NoActiveSprintView extends StatelessWidget {
   const _NoActiveSprintView();
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
+  Widget build(BuildContext context) => Center(
       child: Padding(
         padding: const EdgeInsets.all(DS.xl),
         child: GraphiteCardSurface(
@@ -158,7 +157,6 @@ class _NoActiveSprintView extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _ActiveSprintView extends ConsumerWidget {

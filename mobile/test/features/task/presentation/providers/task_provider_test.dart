@@ -1,13 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
+import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
 import 'package:sparkle/features/task/data/models/execution_record_model.dart';
 import 'package:sparkle/features/task/data/models/execution_template_model.dart';
-import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
 import 'package:sparkle/features/task/data/models/next_action.dart';
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
-import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
+
 import '../../../../shared/i18n_test_helper.dart';
 
 void main() {
@@ -142,7 +142,7 @@ void main() {
 
       test('should update task executions', () {
         final executions = {
-          'task-1': ExecutionIntentModel(
+          'task-1': const ExecutionIntentModel(
             id: 'intent-1',
             taskId: 'task-1',
             executionMode: ExecutionMode.agent,
@@ -157,12 +157,12 @@ void main() {
 
         expect(state.taskExecutions['task-1']?.id, equals('intent-1'));
         expect(state.taskExecutions['task-1']?.status,
-            equals(ExecutionIntentStatus.running));
+            equals(ExecutionIntentStatus.running),);
       });
 
       test('should update task execution records', () {
         final records = {
-          'task-1': ExecutionRecordModel(
+          'task-1': const ExecutionRecordModel(
             id: 'record-1',
             executionIntentId: 'intent-1',
             trustLevel: 'validated',
@@ -180,7 +180,7 @@ void main() {
       test('should update task execution templates', () {
         final templates = {
           'task-1': [
-            ExecutionTemplateModel(
+            const ExecutionTemplateModel(
               templateId: 'template-1',
               name: 'Standard Template',
               description: 'Default execution template',
@@ -197,7 +197,7 @@ void main() {
 
         expect(state.taskExecutionTemplates['task-1']?.length, equals(1));
         expect(state.taskExecutionTemplates['task-1']?.first.templateId,
-            equals('template-1'));
+            equals('template-1'),);
       });
 
       test('should update selected execution template IDs', () {
@@ -210,15 +210,15 @@ void main() {
             TaskListState().copyWith(selectedExecutionTemplateIds: selectedIds);
 
         expect(
-            state.selectedExecutionTemplateIds['task-1'], equals('template-1'));
+            state.selectedExecutionTemplateIds['task-1'], equals('template-1'),);
         expect(
-            state.selectedExecutionTemplateIds['task-2'], equals('template-2'));
+            state.selectedExecutionTemplateIds['task-2'], equals('template-2'),);
       });
     });
 
     group('Next Actions Model', () {
       test('should create NextAction with all required fields', () {
-        final action = NextAction(
+        const action = NextAction(
           type: NextActionType.quickReview,
           title: 'Quick Review',
           description: 'Review the material',
@@ -246,7 +246,7 @@ void main() {
 
     group('Execution Record Model', () {
       test('should create ExecutionRecordModel with required fields', () {
-        final record = ExecutionRecordModel(
+        const record = ExecutionRecordModel(
           id: 'record-1',
           executionIntentId: 'intent-1',
           trustLevel: 'raw',
@@ -262,12 +262,12 @@ void main() {
       });
 
       test('should create ExecutionRecordModel with optional fields', () {
-        final record = ExecutionRecordModel(
+        const record = ExecutionRecordModel(
           id: 'record-2',
           executionIntentId: 'intent-2',
           trustLevel: 'validated',
           artifacts: [
-            {'type': 'output', 'content': 'result'}
+            {'type': 'output', 'content': 'result'},
           ],
           toolCallsCount: 5,
           qualityScore: 0.85,
@@ -283,7 +283,7 @@ void main() {
       });
 
       test('should calculate trust label correctly', () {
-        final rawRecord = ExecutionRecordModel(
+        const rawRecord = ExecutionRecordModel(
           id: 'raw-rec',
           executionIntentId: 'intent-1',
           trustLevel: 'raw',
@@ -291,7 +291,7 @@ void main() {
           toolCallsCount: 0,
         );
 
-        final validatedRecord = ExecutionRecordModel(
+        const validatedRecord = ExecutionRecordModel(
           id: 'validated-rec',
           executionIntentId: 'intent-2',
           trustLevel: 'validated',
@@ -299,7 +299,7 @@ void main() {
           toolCallsCount: 0,
         );
 
-        final trustedRecord = ExecutionRecordModel(
+        const trustedRecord = ExecutionRecordModel(
           id: 'trusted-rec',
           executionIntentId: 'intent-3',
           trustLevel: 'trusted',
@@ -330,7 +330,7 @@ void main() {
 
       test('should create TaskCompletionResult with optional fields', () {
         final nextActions = [
-          NextAction(
+          const NextAction(
             type: NextActionType.quickReview,
             title: 'Quick Review',
             description: 'Review',
@@ -375,7 +375,7 @@ void main() {
 
     group('Execution Template Model', () {
       test('should create ExecutionTemplateModel with required fields', () {
-        final template = ExecutionTemplateModel(
+        const template = ExecutionTemplateModel(
           templateId: 'template-1',
           name: 'Standard Template',
           description: 'Default execution template',

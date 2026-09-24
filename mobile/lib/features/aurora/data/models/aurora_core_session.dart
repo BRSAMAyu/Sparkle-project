@@ -9,8 +9,7 @@ class AuroraCoreSessionEntryReason {
     required this.estimatedMinutes,
   });
 
-  factory AuroraCoreSessionEntryReason.fromJson(Map<String, dynamic> json) {
-    return AuroraCoreSessionEntryReason(
+  factory AuroraCoreSessionEntryReason.fromJson(Map<String, dynamic> json) => AuroraCoreSessionEntryReason(
       triggerSource: json['trigger_source'] as String? ?? 'user_initiated',
       observedSignals: (json['observed_signals'] as List<dynamic>? ?? const [])
           .map((e) => '$e')
@@ -24,7 +23,6 @@ class AuroraCoreSessionEntryReason {
       whyNow: json['why_now'] as String? ?? '',
       estimatedMinutes: (json['estimated_minutes'] as num?)?.toInt() ?? 4,
     );
-  }
 
   factory AuroraCoreSessionEntryReason.fromSnapshot({
     required AuroraControlSurfaceSnapshot snapshot,
@@ -86,8 +84,7 @@ class AuroraCoreMessage {
     this.isFreeform = false,
   });
 
-  factory AuroraCoreMessage.fromJson(Map<String, dynamic> json) {
-    return AuroraCoreMessage(
+  factory AuroraCoreMessage.fromJson(Map<String, dynamic> json) => AuroraCoreMessage(
       role: json['role'] as String? ?? 'aurora',
       content: json['content'] as String? ?? '',
       stage: json['stage'] as String? ?? 'declare',
@@ -96,7 +93,6 @@ class AuroraCoreMessage {
       semanticValue: json['semantic_value'] as String?,
       isFreeform: json['is_freeform'] as bool? ?? false,
     );
-  }
 
   final String role; // aurora | user
   final String content;
@@ -133,8 +129,7 @@ class AuroraCalibrationResult {
     required this.completedAt,
   });
 
-  factory AuroraCalibrationResult.fromJson(Map<String, dynamic> json) {
-    return AuroraCalibrationResult(
+  factory AuroraCalibrationResult.fromJson(Map<String, dynamic> json) => AuroraCalibrationResult(
       updatesApplied: (json['updates_applied'] as List<dynamic>? ?? const [])
           .whereType<Map<String, dynamic>>()
           .toList(),
@@ -157,7 +152,6 @@ class AuroraCalibrationResult {
       sessionId: json['session_id'] as String? ?? '',
       completedAt: json['completed_at'] as String? ?? '',
     );
-  }
 
   final List<Map<String, dynamic>> updatesApplied;
   final String summary;

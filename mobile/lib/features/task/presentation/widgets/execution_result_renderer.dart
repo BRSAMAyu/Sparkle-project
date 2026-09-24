@@ -205,7 +205,7 @@ class _StructuredBlock extends StatelessWidget {
         if (!expanded && entries.length > visibleEntries.length)
           Text(
             context.l10n.executionResultMoreFields(
-                entries.length - visibleEntries.length),
+                entries.length - visibleEntries.length,),
             style: DS.bodySmall.copyWith(color: DS.textSecondary),
           ),
       ],
@@ -246,7 +246,7 @@ class _MarkdownLikeBlock extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: EdgeInsets.only(top: 6),
+                  padding: const EdgeInsets.only(top: 6),
                   child: Icon(Icons.circle, size: 6, color: DS.textSecondary),
                 ),
                 const SizedBox(width: DS.spacing8),
@@ -284,8 +284,7 @@ class _CodeBlock extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       width: double.infinity,
       padding: const EdgeInsets.all(DS.spacing12),
       decoration: BoxDecoration(
@@ -302,7 +301,6 @@ class _CodeBlock extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _LinkListBlock extends StatelessWidget {
@@ -354,8 +352,7 @@ class _LinkListBlock extends StatelessWidget {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: links.map((link) {
-        return InkWell(
+      children: links.map((link) => InkWell(
           onTap: () async {
             await Clipboard.setData(ClipboardData(text: link['url'] ?? ''));
             if (context.mounted) {
@@ -398,8 +395,7 @@ class _LinkListBlock extends StatelessWidget {
               ],
             ),
           ),
-        );
-      }).toList(),
+        ),).toList(),
     );
   }
 }
@@ -570,8 +566,7 @@ class _ImageArtifactPreviewDialog extends StatelessWidget {
   final String imageUrl;
 
   @override
-  Widget build(BuildContext context) {
-    return Dialog(
+  Widget build(BuildContext context) => Dialog(
       backgroundColor: DS.surfacePrimary,
       insetPadding: const EdgeInsets.all(DS.spacing16),
       child: Column(
@@ -645,7 +640,6 @@ class _ImageArtifactPreviewDialog extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _ArtifactPreviewSheet extends StatelessWidget {
@@ -671,7 +665,7 @@ class _ArtifactPreviewSheet extends StatelessWidget {
       return pages.take(3).map((item) => '$item').join('\n');
     }
     return context.l10n.executionResultNoPreview(
-        type.isEmpty ? context.l10n.commonUnknown : type);
+        type.isEmpty ? context.l10n.commonUnknown : type,);
   }
 
   @override
@@ -693,7 +687,7 @@ class _ArtifactPreviewSheet extends StatelessWidget {
             const SizedBox(height: DS.spacing8),
             Text(
               context.l10n.executionResultArtifactType(
-                  type.isEmpty ? context.l10n.commonUnknown : type),
+                  type.isEmpty ? context.l10n.commonUnknown : type,),
               style: DS.bodySmall.copyWith(color: DS.textSecondary),
             ),
             if (url.isNotEmpty) ...[

@@ -6,10 +6,10 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_calibration_card.dart';
 import 'package:sparkle/features/aurora/data/repositories/aurora_calibration_repository.dart';
 import 'package:sparkle/features/aurora/presentation/providers/aurora_calibration_provider.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class AuroraCalibrationStrip extends ConsumerStatefulWidget {
   const AuroraCalibrationStrip({

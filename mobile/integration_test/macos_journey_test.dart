@@ -46,10 +46,9 @@ void main() {
     final shotDest = shotDestEnv.isNotEmpty
         ? shotDestEnv
         // `flutter test` runs with cwd = mobile/, so repo root is one level up.
-        : (Directory.current.path.endsWith('mobile')
+        : '${Directory.current.path.endsWith('mobile')
                 ? Directory.current.parent.path
-                : Directory.current.path) +
-            '/v3-output/B-03/evidence/macos_latest';
+                : Directory.current.path}/v3-output/B-03/evidence/macos_latest';
     final dest = name.startsWith('/')
         ? name
         : '$shotDest/$name';
@@ -258,7 +257,7 @@ void main() {
       print('JOURNEY chat input found=$hasInput');
       if (hasInput) {
         await tester.enterText(inputField.first,
-            'What is machine learning? Please answer in one short sentence.');
+            'What is machine learning? Please answer in one short sentence.',);
         await tester.pump(const Duration(milliseconds: 500));
 
         final sendIcon = find.byIcon(Icons.arrow_upward_rounded);
@@ -300,7 +299,6 @@ void main() {
                 final again = await waitUntil(
                   tester,
                   () => find.byIcon(Icons.stop_rounded).evaluate().isNotEmpty,
-                  timeout: const Duration(seconds: 30),
                 );
                 if (!again) break;
                 stopNow = find.byIcon(Icons.stop_rounded);
@@ -454,7 +452,6 @@ void main() {
       final backToLogin = await waitUntil(
         tester,
         () => find.byType(LoginScreen).evaluate().isNotEmpty,
-        timeout: const Duration(seconds: 30),
       );
       // ignore: avoid_print
       print('JOURNEY step12 back to login=$backToLogin');
@@ -484,7 +481,7 @@ void main() {
     // ignore: avoid_print
     print('JOURNEY_DONE failures=${failures.length} ${jsonEncode(failures)}');
     expect(failures, isEmpty, reason: 'journey soft failures: $failures');
-  }, timeout: const Timeout(Duration(minutes: 15)));
+  }, timeout: const Timeout(Duration(minutes: 15)),);
 }
 
 /// Small helper so text lookups can try zh/en variants in order.

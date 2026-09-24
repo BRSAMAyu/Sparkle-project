@@ -194,7 +194,7 @@ class _GroupModerationScreenState
                         Row(
                           children: [
                             Text(context.l10n.communitySlowMode,
-                                style: TextStyle(
+                                style: const TextStyle(
                                     fontWeight: DS.fontWeightBold,
                                     fontSize: DS.fontSizeBase,),),
                             const Spacer(),
@@ -247,13 +247,13 @@ class _GroupModerationScreenState
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                         Text(context.l10n.communityKeywordFilter,
-                            style: TextStyle(
+                            style: const TextStyle(
                                 fontWeight: DS.fontWeightBold,
                                 fontSize: DS.fontSizeBase,),),
                         const SizedBox(height: DS.spacing8),
                         Text(
                           context.l10n.communityKeywordFilterHint,
-                          style: TextStyle(fontSize: DS.fontSizeSm),
+                          style: const TextStyle(fontSize: DS.fontSizeSm),
                         ),
                         const SizedBox(height: DS.spacing12),
                         if (_keywordFilters.isNotEmpty)
@@ -279,7 +279,7 @@ class _GroupModerationScreenState
                                 controller: _keywordController,
                                 decoration: InputDecoration(
                                   hintText: context.l10n.communityAddKeyword,
-                                  border: OutlineInputBorder(),
+                                  border: const OutlineInputBorder(),
                                 ),
                                 onSubmitted: (_) => _addKeyword(),
                               ),

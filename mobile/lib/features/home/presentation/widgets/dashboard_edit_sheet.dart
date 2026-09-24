@@ -29,8 +29,7 @@ class _DashboardEditSheetState extends ConsumerState<DashboardEditSheet> {
   _EditTab _tab = _EditTab.sections;
 
   @override
-  Widget build(BuildContext context) {
-    return GraphiteModalSurface(
+  Widget build(BuildContext context) => GraphiteModalSurface(
       title: context.l10n.dashboardEditTitle,
       child: ConstrainedBox(
         constraints: BoxConstraints(
@@ -62,7 +61,6 @@ class _DashboardEditSheetState extends ConsumerState<DashboardEditSheet> {
         ),
       ),
     );
-  }
 }
 
 class _TabSwitcher extends StatelessWidget {

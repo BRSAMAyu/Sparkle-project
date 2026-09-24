@@ -264,7 +264,7 @@ void main() {
       final task = state.tasks.firstWhere((t) => t.id == 'task-1');
       expect(task.status, TaskStatus.completed);
       expect(task.syncStatus, TaskSyncStatus.pending,
-          reason: '排队成功绝不能落 syncStatus.failed');
+          reason: '排队成功绝不能落 syncStatus.failed',);
       expect(state.offlineQueuedOp, 'complete');
       expect(state.error, isNull);
     });

@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
-import 'package:sparkle/core/widgets/unsaved_changes_guard.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/widgets/unsaved_changes_guard.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
 import 'package:sparkle/features/seed_library/data/repositories/seed_library_repository.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 
 
 /// Create Library Screen
@@ -76,7 +76,7 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
           SensoryFeedbackService.emit(SensoryFeedbackEvent.success),
         );
         AppFeedback.success(
-            context, zh ? '种子库创建成功' : 'Library created successfully');
+            context, zh ? '种子库创建成功' : 'Library created successfully',);
         Navigator.pop(context, true);
       }
     } catch (e) {
@@ -145,7 +145,7 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
                     decoration: InputDecoration(
                       labelText: context.l10n.seedNameLabel,
                       hintText: context.l10n.seedNameHint,
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
@@ -165,7 +165,7 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
                     decoration: InputDecoration(
                       labelText: context.l10n.seedDescLabel,
                       hintText: context.l10n.seedDescHint,
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                     ),
                     maxLines: 3,
                   ),
@@ -269,8 +269,8 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
                         controller: _tagsController,
                         decoration: InputDecoration(
                           hintText: context.l10n.seedTagHint,
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(
+                          border: const OutlineInputBorder(),
+                          contentPadding: const EdgeInsets.symmetric(
                             horizontal: DS.spacing12,
                             vertical: DS.spacing12,
                           ),

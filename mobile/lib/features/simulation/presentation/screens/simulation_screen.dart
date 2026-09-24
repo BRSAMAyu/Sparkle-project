@@ -6,14 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart' as share_plus;
-import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
-import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -29,6 +26,7 @@ import 'package:sparkle/features/simulation/presentation/providers/simulation_pr
 import 'package:sparkle/features/simulation/presentation/support/simulation_copy.dart';
 import 'package:sparkle/features/simulation/presentation/widgets/simulation_chat_bubble.dart';
 import 'package:sparkle/features/theater/theater_routes.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 class SimulationScreen extends ConsumerStatefulWidget {
   const SimulationScreen({
@@ -75,62 +73,62 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
       };
 
   Map<String, List<String>> _scenarioParticipantOptions(
-          AppLocalizations l10n) =>
+          AppLocalizations l10n,) =>
       {
         'study_group': [
           l10n.simTopStudent,
           l10n.simMidStudent,
           l10n.simQuestioner,
           l10n.simSummarizer,
-          l10n.simPracticeCoach
+          l10n.simPracticeCoach,
         ],
         'knowledge_debate': [
           l10n.simProExpert,
           l10n.simConExpert,
           l10n.simModerator,
           l10n.simEvidenceReviewer,
-          l10n.simChallenger
+          l10n.simChallenger,
         ],
         'historical_roleplay': [
           l10n.simHistoryTutor,
           l10n.simKeyFigure,
           l10n.simEraObserver,
           l10n.simStrategyAdvisor,
-          l10n.simRecorder
+          l10n.simRecorder,
         ],
         'socratic_dialogue': [
           l10n.simSocraticShort,
           l10n.simSkeptic,
           l10n.simBreakdown,
-          l10n.simApplicator
+          l10n.simApplicator,
         ],
         'case_analysis': [
           l10n.simCaseTutor,
           l10n.simDiagnostician,
           l10n.simPractitioner,
           l10n.simCounterExampler,
-          l10n.simDecisionRecorder
+          l10n.simDecisionRecorder,
         ],
         'what_if_path': [
           l10n.simCurrentPath,
           l10n.simAggressivePath,
           l10n.simRiskObserver,
           l10n.simResourceDispatcher,
-          l10n.simValidator
+          l10n.simValidator,
         ],
         'concept_map_build': [
           l10n.simStructurer,
           l10n.simConnector,
           l10n.simQuestioner,
           l10n.simCounterChecker,
-          l10n.simBridgeBuilder
+          l10n.simBridgeBuilder,
         ],
         'error_diagnosis': [
           l10n.simErrorAnalyst,
           l10n.simCorrectCoach,
           l10n.simValidator,
           l10n.simDeconstructor,
-          l10n.simTransferCoach
+          l10n.simTransferCoach,
         ],
       };
 
@@ -624,7 +622,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                 Text(
                   targetName.isNotEmpty
                       ? context.l10n.simulationBridgeVerificationDescWithTarget(
-                          targetName)
+                          targetName,)
                       : context.l10n.simulationBridgeVerificationContext,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: DS.textSecondary,
@@ -870,7 +868,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
         ? session?.topic ?? context.l10n.simulationCurrentSimulation
         : _topicController.text.trim();
     final scenarioLabel = _scenarioLabels(
-            context.l10n)[session?.scenarioKey ?? _selectedScenarioKey] ??
+            context.l10n,)[session?.scenarioKey ?? _selectedScenarioKey] ??
         localizeSimulationScenario(
           session?.scenarioKey ?? _selectedScenarioKey,
         );
@@ -946,7 +944,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
                       activeSpeaker: activeSpeaker,
                       participantCount: participants.length,
                       facilitationLabel: _facilitationLabels(
-                              context.l10n)[runtimeFacilitationStyle] ??
+                              context.l10n,)[runtimeFacilitationStyle] ??
                           context.l10n.simulationBalancedPush,
                       isPaused: _isPlaybackPaused,
                       isReview: viewMode == _SimulationViewMode.review,
@@ -1321,8 +1319,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
   LearningReport _mergeSimulationContextIntoReport({
     required SimulationSessionModel session,
     required LearningReport report,
-  }) {
-    return LearningReport(
+  }) => LearningReport(
       reportId: report.reportId,
       markdown: report.markdown,
       sections: report.sections,
@@ -1340,7 +1337,6 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
           ),
       dataStatus: report.dataStatus,
     );
-  }
 
   Map<String, dynamic> _buildSimulationTriggerSource(
     SimulationSessionModel session,
@@ -1392,7 +1388,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
             session.topic,
             _scenarioLabels(context.l10n)[session.scenarioKey] ??
                 localizeSimulationScenario(session.scenarioKey),
-            localizeSimulationText(session.insightSummary)),
+            localizeSimulationText(session.insightSummary),),
       ),
     );
   }
@@ -1417,7 +1413,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
             session.topic,
             _scenarioLabels(context.l10n)[session.scenarioKey] ??
                 localizeSimulationScenario(session.scenarioKey),
-            localizeSimulationText(session.insightSummary)),
+            localizeSimulationText(session.insightSummary),),
       ),
       onGenerateCard: (payload) =>
           SharePosterService().generatePoster(context, payload),
@@ -1447,7 +1443,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
     final session = state.session;
     final topic = (session?.topic ?? _topicController.text.trim()).trim();
     final scenarioLabel = _scenarioLabels(
-            context.l10n)[session?.scenarioKey ?? _selectedScenarioKey] ??
+            context.l10n,)[session?.scenarioKey ?? _selectedScenarioKey] ??
         localizeSimulationScenario(
           session?.scenarioKey ?? _selectedScenarioKey,
         );
@@ -1461,7 +1457,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
         context.l10n.simulationContinueScenarioLabel(scenarioLabel),
       if ((currentPrompt ?? '').trim().isNotEmpty)
         context.l10n.simulationContinueCurrentQuestion(
-            localizeSimulationText(currentPrompt!)),
+            localizeSimulationText(currentPrompt!),),
       context.l10n.simulationContinueMyResponse(normalizedReply),
     ].join('\n');
     final query = <String, String>{
@@ -1668,7 +1664,7 @@ class _RecommendedSeedStrip extends StatelessWidget {
                     icon: const Icon(Icons.refresh_rounded),
                     label: Text(seeds.isEmpty
                         ? context.l10n.simGenerate
-                        : context.l10n.simRefresh),
+                        : context.l10n.simRefresh,),
                   ),
                 ],
               ),
@@ -1902,7 +1898,7 @@ class _SimulationImmersiveTopBar extends StatelessWidget {
                 ),
                 label: Text(insightOpen
                     ? context.l10n.simulationCollapseInsight
-                    : context.l10n.simulationViewInsight),
+                    : context.l10n.simulationViewInsight,),
               ),
             FilledButton.tonalIcon(
               onPressed: onToggleSettings,
@@ -1911,7 +1907,7 @@ class _SimulationImmersiveTopBar extends StatelessWidget {
               ),
               label: Text(settingsOpen
                   ? context.l10n.simulationCollapseSettings
-                  : context.l10n.simulationSimSettings),
+                  : context.l10n.simulationSimSettings,),
             ),
           ],
         );
@@ -1937,7 +1933,7 @@ class _SimulationImmersiveTopBar extends StatelessWidget {
                   icon: Icons.forum_rounded,
                   label: context.l10n.simulationRoundFormatShort(
                       math.max(1, roundCount),
-                      math.max(expectedRounds, roundCount)),
+                      math.max(expectedRounds, roundCount),),
                 ),
                 _StatusBadge(
                   icon: Icons.groups_rounded,
@@ -2089,8 +2085,7 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
   final VoidCallback onRun;
 
   @override
-  Widget build(BuildContext context) {
-    return GraphiteCardSurface(
+  Widget build(BuildContext context) => GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.card,
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -2164,7 +2159,7 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
               _StatusBadge(
                 icon: Icons.timelapse_rounded,
                 label: context.l10n.simulationRoundFormatLabel(
-                    plannedRoundCount, maxRoundCount),
+                    plannedRoundCount, maxRoundCount,),
               ),
             ],
           ),
@@ -2284,7 +2279,7 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
             selectedParticipantNames.isEmpty
                 ? context.l10n.simulationParticipantDefaultStatus
                 : context.l10n.simulationParticipantCurrentStatus(
-                    selectedParticipantNames.join('、')),
+                    selectedParticipantNames.join('、'),),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textSecondary,
                   height: 1.4,
@@ -2298,13 +2293,12 @@ class _SimulationCompactSetupPanel extends StatelessWidget {
               icon: const Icon(Icons.refresh_rounded),
               label: Text(isLoading
                   ? context.l10n.simulationRunning
-                  : context.l10n.simulationRestartSim),
+                  : context.l10n.simulationRestartSim,),
             ),
           ),
         ],
       ),
     );
-  }
 }
 
 class _SimulationStatusCard extends StatelessWidget {
@@ -2350,7 +2344,7 @@ class _SimulationStatusCard extends StatelessWidget {
                         isRunning
                             ? roundCount > 0
                                 ? context.l10n.simulationRunningRoundN(
-                                    roundCount, expectedRounds)
+                                    roundCount, expectedRounds,)
                                 : context.l10n.simulationGatheringParticipants
                             : context.l10n.simulationAwaitingStart,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -2374,7 +2368,7 @@ class _SimulationStatusCard extends StatelessWidget {
                   ),
                   label: Text(isPaused
                       ? context.l10n.simulationContinue
-                      : context.l10n.simulationPause),
+                      : context.l10n.simulationPause,),
                 ),
               ],
             ),
@@ -2600,7 +2594,7 @@ class _SimulationTimelineCard extends StatelessWidget {
                                 ? context.l10n.simulationTopicFormat(topic)
                                 : context.l10n
                                     .simulationTopicCurrentFocusFormat(topic,
-                                        localizeSimulationText(activeSpeaker!)),
+                                        localizeSimulationText(activeSpeaker!),),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -2646,12 +2640,12 @@ class _SimulationTimelineCard extends StatelessWidget {
                               ? context.l10n.simulationTopicFormat(topic)
                               : immersive
                                   ? context.l10n.simulationCurrentFocusLabel(
-                                      localizeSimulationText(activeSpeaker!))
+                                      localizeSimulationText(activeSpeaker!),)
                                   : context.l10n
                                       .simulationImmersiveTopicAndFocus(
                                           topic,
                                           localizeSimulationText(
-                                              activeSpeaker!)),
+                                              activeSpeaker!,),),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -2840,7 +2834,7 @@ class _SimulationInsightTray extends StatelessWidget {
                       : const Icon(Icons.article_outlined),
                   label: Text(isGeneratingReport
                       ? context.l10n.simulationGeneratingReport
-                      : context.l10n.simulationGenerateLearningReport),
+                      : context.l10n.simulationGenerateLearningReport,),
                 ),
                 FilledButton.tonalIcon(
                   onPressed: onOpenTheater,
@@ -2861,15 +2855,15 @@ class _SimulationInsightTray extends StatelessWidget {
   }
 
   List<String> _buildBulletPoints(
-      BuildContext context, SimulationSessionModel session) {
+      BuildContext context, SimulationSessionModel session,) {
     final points = <String>[
       context.l10n.simulationBulletParticipants(
-          session.participants.map((item) => item.name).join('、')),
+          session.participants.map((item) => item.name).join('、'),),
       context.l10n.simulationBulletRounds(session.rounds.length.toString()),
     ];
     if (session.rounds.isNotEmpty) {
       points.add(context.l10n.simulationBulletOpeningFormat(
-          localizeSimulationText(session.rounds.first.message)));
+          localizeSimulationText(session.rounds.first.message),),);
     }
     return points.take(3).toList();
   }
@@ -2900,7 +2894,7 @@ class _StructuredInsightSectionData {
 }
 
 _StructuredSimulationInsight? _parseStructuredSimulationInsight(
-    BuildContext context, String summary) {
+    BuildContext context, String summary,) {
   final trimmed = summary.trim();
   if (trimmed.isEmpty) {
     return null;
@@ -3400,13 +3394,11 @@ class _SimulationInteractionCard extends StatelessWidget {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: options.map((option) {
-                return FilledButton.tonal(
+              children: options.map((option) => FilledButton.tonal(
                   onPressed:
                       isSubmitting ? null : () => onReplySelected(option),
                   child: Text(option),
-                );
-              }).toList(),
+                ),).toList(),
             ),
           ],
           if (hasSuggested && !hasOptions) ...[
@@ -3414,12 +3406,10 @@ class _SimulationInteractionCard extends StatelessWidget {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: suggestedReplies.map((reply) {
-                return OutlinedButton(
+              children: suggestedReplies.map((reply) => OutlinedButton(
                   onPressed: isSubmitting ? null : () => onReplySelected(reply),
                   child: Text(reply),
-                );
-              }).toList(),
+                ),).toList(),
             ),
           ],
           const SizedBox(height: 12),

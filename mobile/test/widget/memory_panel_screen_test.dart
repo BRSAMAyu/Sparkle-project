@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
+import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/evidence_resolve_service.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
@@ -13,6 +13,7 @@ import 'package:sparkle/features/memory/data/memory_provenance_repository.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_detail_screen.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_panel_screen.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+
 import '../shared/i18n_test_helper.dart';
 
 class _FakeMemoryApiService implements MemoryApiService {
@@ -115,9 +116,9 @@ class _FakeMemoryApiService implements MemoryApiService {
         status: 'resolved',
         selectedSide: selection,
         leftCandidate: UnresolvedConflictCandidate(
-            summary: 'A', lane: 'inferred_extraction'),
+            summary: 'A', lane: 'inferred_extraction',),
         rightCandidate: UnresolvedConflictCandidate(
-            summary: 'B', lane: 'inferred_extraction'),
+            summary: 'B', lane: 'inferred_extraction',),
       );
 
   @override
@@ -256,7 +257,7 @@ void main() {
       routes: [
         GoRoute(
           path: '/',
-          builder: (_, __) => MemoryPanelScreen(),
+          builder: (_, __) => const MemoryPanelScreen(),
         ),
         GoRoute(
           path: '/chat',
@@ -313,7 +314,7 @@ void main() {
       routes: [
         GoRoute(
           path: '/',
-          builder: (_, __) => MemoryPanelScreen(),
+          builder: (_, __) => const MemoryPanelScreen(),
         ),
         GoRoute(
           path: '/memory/detail',

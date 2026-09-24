@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,7 +10,9 @@ import 'package:sparkle/features/insights/data/models/learning_path_node.dart';
 import 'package:sparkle/features/insights/data/models/learning_path_plan_response.dart';
 import 'package:sparkle/features/insights/data/repositories/learning_path_repository.dart';
 import 'package:sparkle/features/insights/presentation/widgets/learning_path_dialog.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/utils/entity_card_payloads.dart';
+
 import '../shared/i18n_test_helper.dart';
 
 class _FakeApiClient extends Fake implements ApiClient {}

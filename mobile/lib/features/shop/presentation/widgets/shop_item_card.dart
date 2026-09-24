@@ -69,7 +69,6 @@ class ShopItemCard extends StatelessWidget {
                                   ),
                                   child: SparkleNetworkImage(
                                     imageUrl: item.iconUrl!,
-                                    fit: BoxFit.cover,
                                     errorWidget: Icon(
                                       _getItemTypeIcon(item.itemType),
                                       size: 64,

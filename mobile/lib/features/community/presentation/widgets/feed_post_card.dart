@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -29,8 +28,7 @@ class FeedPostCard extends StatelessWidget {
       currentUserId != null && post.userId == currentUserId;
 
   @override
-  Widget build(BuildContext context) {
-    return Semantics(
+  Widget build(BuildContext context) => Semantics(
       container: true,
       explicitChildNodes: true,
       label: '${post.user.username}. ${post.content}',
@@ -255,7 +253,6 @@ class FeedPostCard extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _ActionButton extends StatelessWidget {
@@ -317,8 +314,7 @@ class _ExpandableTextState extends State<_ExpandableText> {
   bool _overflows = false;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         LayoutBuilder(
@@ -366,5 +362,4 @@ class _ExpandableTextState extends State<_ExpandableText> {
           ),
       ],
     );
-  }
 }

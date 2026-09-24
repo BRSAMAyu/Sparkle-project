@@ -12,8 +12,7 @@ class GrowthDashboard {
     required this.modelUpdates,
   });
 
-  factory GrowthDashboard.fromJson(Map<String, dynamic> json) {
-    return GrowthDashboard(
+  factory GrowthDashboard.fromJson(Map<String, dynamic> json) => GrowthDashboard(
       chronicleEntries: _list(json['chronicle_entries'])
           .map(GrowthChronicleEntry.fromJson)
           .toList(growable: false),
@@ -37,7 +36,6 @@ class GrowthDashboard {
           .map(ModelUpdateItem.fromJson)
           .toList(growable: false),
     );
-  }
 
   factory GrowthDashboard.placeholder() {
     final l10n = S;
@@ -67,9 +65,9 @@ class GrowthDashboard {
       timeDistribution: const [
         TimeDistributionItem(category: 'LEARNING', hours: 3.5, trend: 'up'),
         TimeDistributionItem(
-            category: 'ERROR_FIX', hours: 1.2, trend: 'steady'),
+            category: 'ERROR_FIX', hours: 1.2, trend: 'steady',),
         TimeDistributionItem(
-            category: 'REFLECTION', hours: 0.6, trend: 'steady'),
+            category: 'REFLECTION', hours: 0.6, trend: 'steady',),
       ],
       efficiencyMetrics: const EfficiencyMetrics(
         tasksCompleted: 8,
@@ -78,11 +76,11 @@ class GrowthDashboard {
       ),
       weaknessRadar: const [
         WeaknessRadarItem(
-            area: 'Algebra', currentScore: 0.42, targetScore: 0.78, gap: 0.36),
+            area: 'Algebra', currentScore: 0.42, targetScore: 0.78, gap: 0.36,),
         WeaknessRadarItem(
-            area: 'Reading', currentScore: 0.58, targetScore: 0.78, gap: 0.2),
+            area: 'Reading', currentScore: 0.58, targetScore: 0.78, gap: 0.2,),
         WeaknessRadarItem(
-            area: 'Review', currentScore: 0.63, targetScore: 0.78, gap: 0.15),
+            area: 'Review', currentScore: 0.63, targetScore: 0.78, gap: 0.15,),
       ],
       knowledgeChanges: const [
         KnowledgeChangeItem(
@@ -117,8 +115,7 @@ class GrowthDashboard {
   final PlanStability planStability;
   final List<ModelUpdateItem> modelUpdates;
 
-  GrowthDashboard updateEntryStatus(String entryId, String status) {
-    return GrowthDashboard(
+  GrowthDashboard updateEntryStatus(String entryId, String status) => GrowthDashboard(
       chronicleEntries: chronicleEntries
           .map(
             (entry) => entry.id == entryId
@@ -134,7 +131,6 @@ class GrowthDashboard {
       planStability: planStability,
       modelUpdates: modelUpdates,
     );
-  }
 }
 
 class GrowthChronicleEntry {
@@ -149,8 +145,7 @@ class GrowthChronicleEntry {
     required this.confidence,
   });
 
-  factory GrowthChronicleEntry.fromJson(Map<String, dynamic> json) {
-    return GrowthChronicleEntry(
+  factory GrowthChronicleEntry.fromJson(Map<String, dynamic> json) => GrowthChronicleEntry(
       id: json['entry_id']?.toString() ?? json['id']?.toString() ?? '',
       entryType: json['entry_type']?.toString() ?? 'milestone',
       title: json['title']?.toString() ?? '',
@@ -160,7 +155,6 @@ class GrowthChronicleEntry {
       userStatus: json['user_status']?.toString() ?? 'pending',
       confidence: _double(json['confidence'], fallback: 0.5),
     );
-  }
 
   final String id;
   final String entryType;
@@ -171,8 +165,7 @@ class GrowthChronicleEntry {
   final String userStatus;
   final double confidence;
 
-  GrowthChronicleEntry copyWith({String? userStatus, String? narrative}) {
-    return GrowthChronicleEntry(
+  GrowthChronicleEntry copyWith({String? userStatus, String? narrative}) => GrowthChronicleEntry(
       id: id,
       entryType: entryType,
       title: title,
@@ -182,7 +175,6 @@ class GrowthChronicleEntry {
       userStatus: userStatus ?? this.userStatus,
       confidence: confidence,
     );
-  }
 }
 
 class WeeklyDashboardNarrative {
@@ -247,13 +239,11 @@ class TimeDistributionItem {
     required this.trend,
   });
 
-  factory TimeDistributionItem.fromJson(Map<String, dynamic> json) {
-    return TimeDistributionItem(
+  factory TimeDistributionItem.fromJson(Map<String, dynamic> json) => TimeDistributionItem(
       category: json['category']?.toString() ?? '',
       hours: _double(json['hours']),
       trend: json['trend']?.toString() ?? 'steady',
     );
-  }
 
   final String category;
   final double hours;
@@ -267,13 +257,11 @@ class EfficiencyMetrics {
     required this.onTimeRate,
   });
 
-  factory EfficiencyMetrics.fromJson(Map<String, dynamic> json) {
-    return EfficiencyMetrics(
+  factory EfficiencyMetrics.fromJson(Map<String, dynamic> json) => EfficiencyMetrics(
       tasksCompleted: _int(json['tasks_completed']),
       avgCompletionTime: _double(json['avg_completion_time']),
       onTimeRate: _double(json['on_time_rate']),
     );
-  }
 
   final int tasksCompleted;
   final double avgCompletionTime;
@@ -288,14 +276,12 @@ class WeaknessRadarItem {
     required this.gap,
   });
 
-  factory WeaknessRadarItem.fromJson(Map<String, dynamic> json) {
-    return WeaknessRadarItem(
+  factory WeaknessRadarItem.fromJson(Map<String, dynamic> json) => WeaknessRadarItem(
       area: json['area']?.toString() ?? '',
       currentScore: _double(json['current_score']),
       targetScore: _double(json['target_score']),
       gap: _double(json['gap']),
     );
-  }
 
   final String area;
   final double currentScore;
@@ -311,14 +297,12 @@ class KnowledgeChangeItem {
     required this.reason,
   });
 
-  factory KnowledgeChangeItem.fromJson(Map<String, dynamic> json) {
-    return KnowledgeChangeItem(
+  factory KnowledgeChangeItem.fromJson(Map<String, dynamic> json) => KnowledgeChangeItem(
       nodeLabel: json['node_label']?.toString() ?? '',
       masteryBefore: _double(json['mastery_before']),
       masteryAfter: _double(json['mastery_after']),
       reason: json['reason']?.toString() ?? '',
     );
-  }
 
   final String nodeLabel;
   final double masteryBefore;
@@ -333,13 +317,11 @@ class PlanStability {
     required this.abandonmentRate,
   });
 
-  factory PlanStability.fromJson(Map<String, dynamic> json) {
-    return PlanStability(
+  factory PlanStability.fromJson(Map<String, dynamic> json) => PlanStability(
       interruptions: _int(json['interruptions']),
       adjustments: _int(json['adjustments']),
       abandonmentRate: _double(json['abandonment_rate']),
     );
-  }
 
   final int interruptions;
   final int adjustments;
@@ -354,14 +336,12 @@ class ModelUpdateItem {
     required this.whatWasNotWritten,
   });
 
-  factory ModelUpdateItem.fromJson(Map<String, dynamic> json) {
-    return ModelUpdateItem(
+  factory ModelUpdateItem.fromJson(Map<String, dynamic> json) => ModelUpdateItem(
       triggerEvent: json['trigger_event']?.toString() ?? '',
       whatSparkleLearned: json['what_sparkle_learned']?.toString() ?? '',
       whatChanged: json['what_changed']?.toString() ?? '',
       whatWasNotWritten: json['what_was_not_written']?.toString() ?? '',
     );
-  }
 
   final String triggerEvent;
   final String whatSparkleLearned;
@@ -375,7 +355,7 @@ List<Map<String, dynamic>> _list(dynamic value) {
   }
   return value
       .whereType<Map<dynamic, dynamic>>()
-      .map((item) => Map<String, dynamic>.from(item))
+      .map(Map<String, dynamic>.from)
       .toList(growable: false);
 }
 

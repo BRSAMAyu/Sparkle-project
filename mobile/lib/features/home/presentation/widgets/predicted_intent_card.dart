@@ -8,7 +8,6 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/core/network/dio_provider.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/core/services/prediction_attribution_service.dart';
@@ -19,6 +18,7 @@ import 'package:sparkle/features/focus/data/services/candidate_feedback_service.
 import 'package:sparkle/features/home/data/models/prediction_insight_data.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 class PredictedIntentCard extends ConsumerStatefulWidget {
   const PredictedIntentCard({super.key});
@@ -573,8 +573,7 @@ class _WithinCategoryPreferencePanel extends StatelessWidget {
   final bool isDark;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       width: double.infinity,
       padding: const EdgeInsets.all(DS.spacing12),
       decoration: BoxDecoration(
@@ -613,7 +612,6 @@ class _WithinCategoryPreferencePanel extends StatelessWidget {
         ],
       ),
     );
-  }
 
   String _hintText() {
     final categoryLabel = _categoryLabel(

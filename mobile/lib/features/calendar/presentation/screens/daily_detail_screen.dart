@@ -757,8 +757,8 @@ class DailyDetailScreen extends ConsumerWidget {
     final locationController = TextEditingController(
       text: event.location ?? '',
     );
-    var startTime = event.startTime;
-    var endTime = event.endTime;
+    final startTime = event.startTime;
+    final endTime = event.endTime;
     var isAllDay = event.isAllDay;
     var reminderMinutes = event.reminderMinutes.isNotEmpty
         ? event.reminderMinutes.first
@@ -797,7 +797,7 @@ class DailyDetailScreen extends ConsumerWidget {
                       controller: titleController,
                       decoration: InputDecoration(
                         labelText: context.l10n.calTitle,
-                        border: OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
                       ),
                     ),
                     const SizedBox(height: DS.spacing12),
@@ -821,7 +821,7 @@ class DailyDetailScreen extends ConsumerWidget {
                       controller: locationController,
                       decoration: InputDecoration(
                         labelText: context.l10n.calLocation,
-                        border: OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
                       ),
                     ),
                     const SizedBox(height: DS.spacing12),
@@ -830,15 +830,15 @@ class DailyDetailScreen extends ConsumerWidget {
                       maxLines: 3,
                       decoration: InputDecoration(
                         labelText: context.l10n.calDescription,
-                        border: OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
                       ),
                     ),
-                    SizedBox(height: DS.spacing12),
+                    const SizedBox(height: DS.spacing12),
                     DropdownButtonFormField<int>(
                       initialValue: reminderMinutes,
                       decoration: InputDecoration(
                         labelText: context.l10n.calReminderLabel,
-                        border: OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
                       ),
                       items: [
                         DropdownMenuItem(value: 0, child: Text(context.l10n.calAtStart)),

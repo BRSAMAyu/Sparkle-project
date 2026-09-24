@@ -7,10 +7,10 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
-import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/utils/text_rendering.dart';
 import 'package:sparkle/core/widgets/unsaved_changes_guard.dart';
 import 'package:sparkle/features/plan/data/models/plan_draft.dart';
@@ -388,7 +388,7 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
     } catch (e) {
       if (mounted) {
         AppFeedback.error(
-            context, context.l10n.planGuideGenerationFailed(e.toString()));
+            context, context.l10n.planGuideGenerationFailed(e.toString()),);
       }
     } finally {
       if (mounted) {
@@ -620,7 +620,7 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
                       );
                       if (!context.mounted) return;
                       AppFeedback.success(
-                          context, l10n.planCreateAiGuideCopied);
+                          context, l10n.planCreateAiGuideCopied,);
                     },
                     onGenerateGuide: _generateGuide,
                   ),
@@ -771,19 +771,19 @@ class _PlanBasicsStep extends StatelessWidget {
           initialValue: priority,
           decoration: InputDecoration(
             labelText: l10n.planPriorityLabel,
-            border: OutlineInputBorder(),
+            border: const OutlineInputBorder(),
           ),
           items: [
             DropdownMenuItem(
-                value: PlanPriority.low, child: Text(l10n.planPriorityLow)),
+                value: PlanPriority.low, child: Text(l10n.planPriorityLow),),
             DropdownMenuItem(
                 value: PlanPriority.normal,
-                child: Text(l10n.planPriorityNormal)),
+                child: Text(l10n.planPriorityNormal),),
             DropdownMenuItem(
-                value: PlanPriority.high, child: Text(l10n.planPriorityHigh)),
+                value: PlanPriority.high, child: Text(l10n.planPriorityHigh),),
             DropdownMenuItem(
                 value: PlanPriority.critical,
-                child: Text(l10n.planPriorityCritical)),
+                child: Text(l10n.planPriorityCritical),),
           ],
           onChanged: (value) {
             if (value != null) {
@@ -842,7 +842,7 @@ class _PlanScheduleStep extends StatelessWidget {
           initialValue: dailyMinutes,
           decoration: InputDecoration(
             labelText: l10n.planCreateDailyMinutesLabel,
-            border: OutlineInputBorder(),
+            border: const OutlineInputBorder(),
           ),
           items: [20, 30, 45, 60, 90, 120, 180]
               .map(
@@ -861,7 +861,7 @@ class _PlanScheduleStep extends StatelessWidget {
         const SizedBox(height: DS.spacing16),
         Text(
           l10n.planCreateTotalEstimatedHours(
-              totalEstimatedHours.toStringAsFixed(1)),
+              totalEstimatedHours.toStringAsFixed(1),),
           style: DS.bodyMedium.copyWith(fontWeight: DS.fontWeightSemibold),
         ),
         Slider(
@@ -898,20 +898,20 @@ class _PlanScheduleStep extends StatelessWidget {
           initialValue: planStage,
           decoration: InputDecoration(
             labelText: l10n.planCreatePlanStageLabel,
-            border: OutlineInputBorder(),
+            border: const OutlineInputBorder(),
           ),
           items: [
             DropdownMenuItem(
                 value: PlanStage.sprint,
-                child: Text(l10n.planCreateStageSprint)),
+                child: Text(l10n.planCreateStageSprint),),
             DropdownMenuItem(
-                value: PlanStage.daily, child: Text(l10n.planCreateStageDaily)),
+                value: PlanStage.daily, child: Text(l10n.planCreateStageDaily),),
             DropdownMenuItem(
                 value: PlanStage.review,
-                child: Text(l10n.planCreateStageReview)),
+                child: Text(l10n.planCreateStageReview),),
             DropdownMenuItem(
                 value: PlanStage.paused,
-                child: Text(l10n.planCreateStagePaused)),
+                child: Text(l10n.planCreateStagePaused),),
           ],
           onChanged: (value) {
             if (value != null) {
@@ -936,7 +936,7 @@ class _PlanScheduleStep extends StatelessWidget {
           decoration: InputDecoration(
             labelText: l10n.planCreateScheduleLabel,
             hintText: l10n.planCreateScheduleHint,
-            border: OutlineInputBorder(),
+            border: const OutlineInputBorder(),
           ),
           onChanged: onScheduleChanged,
         ),
@@ -1029,7 +1029,7 @@ class _PlanTasksStepState extends State<_PlanTasksStep> {
           decoration: InputDecoration(
             labelText: l10n.planCreateTaskBlueprintLabel,
             hintText: l10n.planCreateTaskBlueprintHint,
-            border: OutlineInputBorder(),
+            border: const OutlineInputBorder(),
           ),
         ),
         const SizedBox(height: DS.spacing16),
@@ -1046,7 +1046,7 @@ class _PlanTasksStepState extends State<_PlanTasksStep> {
                 title: Text(task.title),
                 subtitle: Text(
                   l10n.planCreateTaskSubtitle(task.estimatedMinutes.toString(),
-                      task.difficulty.toString()),
+                      task.difficulty.toString(),),
                 ),
                 trailing: TextButton(
                   onPressed: () => widget.onAddTask(
@@ -1079,7 +1079,7 @@ class _PlanTasksStepState extends State<_PlanTasksStep> {
                 decoration: InputDecoration(
                   labelText: l10n.planCreateNewTaskLabel,
                   hintText: l10n.planCreateNewTaskHint,
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: DS.spacing12),
@@ -1090,14 +1090,14 @@ class _PlanTasksStepState extends State<_PlanTasksStep> {
                       initialValue: _minutes,
                       decoration: InputDecoration(
                         labelText: l10n.planCreateDurationLabel,
-                        border: OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
                       ),
                       items: const [20, 30, 45, 60, 90]
                           .map(
                             (value) => DropdownMenuItem(
                               value: value,
                               child: Text(
-                                  l10n.planCreateMinutes(value.toString())),
+                                  l10n.planCreateMinutes(value.toString()),),
                             ),
                           )
                           .toList(),
@@ -1114,7 +1114,7 @@ class _PlanTasksStepState extends State<_PlanTasksStep> {
                       initialValue: _difficulty,
                       decoration: InputDecoration(
                         labelText: l10n.planCreateDifficultyLabel,
-                        border: OutlineInputBorder(),
+                        border: const OutlineInputBorder(),
                       ),
                       items: const [1, 2, 3, 4, 5]
                           .map(
@@ -1163,7 +1163,7 @@ class _PlanTasksStepState extends State<_PlanTasksStep> {
                     subtitle: Text(
                       l10n.planCreateTaskSubtitle(
                           entry.value.estimatedMinutes.toString(),
-                          entry.value.difficulty.toString()),
+                          entry.value.difficulty.toString(),),
                     ),
                     trailing: IconButton(
                       // A11Y-BATCH3 同源形制：tooltip 与 Icon semanticLabel
@@ -1220,7 +1220,7 @@ class _PlanGuideStep extends StatelessWidget {
           decoration: InputDecoration(
             labelText: l10n.planCreateScopeLabel,
             hintText: l10n.planCreateScopeHint,
-            border: OutlineInputBorder(),
+            border: const OutlineInputBorder(),
           ),
         ),
         const SizedBox(height: DS.spacing16),
@@ -1304,7 +1304,7 @@ class _PlanGuideStep extends StatelessWidget {
             maxLines: 12,
             decoration: InputDecoration(
               hintText: l10n.planCreateGuideHint,
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
             ),
           )
         else

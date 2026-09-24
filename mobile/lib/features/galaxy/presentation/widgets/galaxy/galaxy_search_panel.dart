@@ -49,12 +49,8 @@ class GalaxySearchPanel extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                isDarkMode
-                    ? galaxyPanelOverlayDark // core/design 领域装饰色（单拷贝）
-                    : DS.neutral0.withValues(alpha: 0.88),
-                isDarkMode
-                    ? DS.neutral0.withValues(alpha: 0.03)
-                    : DS.info.withValues(alpha: 0.03),
+                if (isDarkMode) galaxyPanelOverlayDark else DS.neutral0.withValues(alpha: 0.88),
+                if (isDarkMode) DS.neutral0.withValues(alpha: 0.03) else DS.info.withValues(alpha: 0.03),
               ],
             ),
             borderRadius: BorderRadius.circular(24),

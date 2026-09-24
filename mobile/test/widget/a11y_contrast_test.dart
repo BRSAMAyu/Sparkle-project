@@ -33,13 +33,13 @@ void main() {
     test('textPrimary on surfacePrimary meets AA for normal text', () {
       final ratio = contrastRatio(DS.textPrimary, DS.surfacePrimary);
       expect(ratio, greaterThanOrEqualTo(minNormalText),
-          reason: 'textPrimary on surfacePrimary must meet 4.5:1');
+          reason: 'textPrimary on surfacePrimary must meet 4.5:1',);
     });
 
     test('textSecondary on surfacePrimary meets AA for large text', () {
       final ratio = contrastRatio(DS.textSecondary, DS.surfacePrimary);
       expect(ratio, greaterThanOrEqualTo(minLargeText),
-          reason: 'textSecondary on surfacePrimary must meet 3:1 (large text)');
+          reason: 'textSecondary on surfacePrimary must meet 3:1 (large text)',);
     });
 
     test('semanticSuccess (green) on surfacePrimary is perceivable', () {
@@ -47,19 +47,19 @@ void main() {
       // Green on light surfaces often falls short of 3:1 — this is acceptable
       // for decorative/status colors where meaning is also conveyed by icons.
       expect(ratio, greaterThanOrEqualTo(2.5),
-          reason: 'success green must be visually distinguishable');
+          reason: 'success green must be visually distinguishable',);
     });
 
     test('semanticError (red) on surfacePrimary meets AA for large text', () {
       final ratio = contrastRatio(DS.error, DS.surfacePrimary);
       expect(ratio, greaterThanOrEqualTo(minLargeText),
-          reason: 'error red on surface must meet 3:1');
+          reason: 'error red on surface must meet 3:1',);
     });
 
     test('brandPrimary on surfacePrimary meets AA for large text', () {
       final ratio = contrastRatio(DS.brandPrimary, DS.surfacePrimary);
       expect(ratio, greaterThanOrEqualTo(minLargeText),
-          reason: 'brand primary on surface must meet 3:1');
+          reason: 'brand primary on surface must meet 3:1',);
     });
 
     test('textOnPrimary on brandPrimary meets AA for normal text', () {
@@ -67,21 +67,21 @@ void main() {
       final textOn = DS.onBrandPrimary;
       final ratio = contrastRatio(textOn, DS.brandPrimary);
       expect(ratio, greaterThanOrEqualTo(minNormalText),
-          reason: 'text on brand primary must meet 4.5:1');
+          reason: 'text on brand primary must meet 4.5:1',);
     });
 
     test('border color is perceivable against surface', () {
       // Borders are decorative — WCAG exempts them. Just verify visible.
       final ratio = contrastRatio(DS.border, DS.surfacePrimary);
       expect(ratio, greaterThanOrEqualTo(1.1),
-          reason: 'border should be minimally visible');
+          reason: 'border should be minimally visible',);
     });
 
     test('textDisabled has perceivable but low contrast', () {
       final ratio = contrastRatio(DS.textDisabled, DS.surfacePrimary);
       // Disabled text should be visible but can be low contrast
       expect(ratio, greaterThanOrEqualTo(1.5),
-          reason: 'disabled text should still be perceivable');
+          reason: 'disabled text should still be perceivable',);
     });
   });
 }

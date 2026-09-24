@@ -6,7 +6,7 @@ import 'package:sparkle/features/home/presentation/providers/dashboard_provider.
 /// Lightweight cognitive state derived from dashboard signals.
 final cognitiveStateProvider = Provider<CognitiveState>((ref) {
   final dashboard = ref.watch(dashboardProvider);
-  final status = (dashboard.cognitive.status).toLowerCase();
+  final status = dashboard.cognitive.status.toLowerCase();
 
   if (status.contains('focus')) return CognitiveState.focus;
   if (status.contains('tired') || status.contains('fatigue')) {

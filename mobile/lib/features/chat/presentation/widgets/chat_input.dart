@@ -332,7 +332,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
               size: ButtonSize.small,
               minWidth: 64,
               minHeight: 40,
-              onPressed: () => Navigator.of(ctx).pop(null),
+              onPressed: () => Navigator.of(ctx).pop(),
             ),
                         SparkleButton(
               label: context.l10n.auroraCorrectionInputSend,
@@ -677,7 +677,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 children: [
                   Text(
                     context.l10n.chatInputQuoting(
-                        widget.quotedMessage!.sender.displayName),
+                        widget.quotedMessage!.sender.displayName,),
                     style: TextStyle(
                       fontSize: DS.fontSizeXs,
                       fontWeight: DS.fontWeightBold,

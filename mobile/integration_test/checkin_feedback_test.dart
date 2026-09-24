@@ -3,11 +3,11 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/presentation/screens/login_screen.dart';
 import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart';
 import 'package:sparkle/main.dart' as app;
-import 'package:sparkle/core/services/bgm_service.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// Checkin Feedback Test
 /// Verifies: checkin UI is reachable, feedback can be submitted
@@ -31,8 +31,8 @@ void main() {
       final checkinButtons = find.byWidgetPredicate(
         (widget) =>
             widget is Text &&
-            (widget.data?.contains('打卡') == true ||
-                widget.data?.contains('Check') == true),
+            ((widget.data?.contains('打卡') ?? false) ||
+                (widget.data?.contains('Check') ?? false)),
       );
 
       if (checkinButtons.evaluate().isNotEmpty) {
@@ -43,8 +43,8 @@ void main() {
         final feedbackWidgets = find.byWidgetPredicate(
           (widget) =>
               widget is Text &&
-              (widget.data?.contains('反馈') == true ||
-                  widget.data?.contains('Feedback') == true),
+              ((widget.data?.contains('反馈') ?? false) ||
+                  (widget.data?.contains('Feedback') ?? false)),
         );
 
         if (feedbackWidgets.evaluate().isNotEmpty) {
@@ -56,7 +56,7 @@ void main() {
       // Core assertion: no crash, no error widget
       final errorWidgets = find.byType(ErrorWidget).evaluate();
       expect(errorWidgets.isEmpty, isTrue,
-          reason: 'No crash during checkin/feedback flow');
+          reason: 'No crash during checkin/feedback flow',);
     } finally {
       await BgmService.dispose();
       await SensoryFeedbackService.dispose();

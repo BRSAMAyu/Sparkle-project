@@ -36,7 +36,7 @@ void main() {
     });
 
     test('updateStatus succeeds on successful API call', () async {
-      final repo = _FakeRepository(shouldThrow: false);
+      final repo = _FakeRepository();
       final notifier = CurrentUserStatusNotifier(repo);
 
       expect(notifier.state, UserStatus.online);
@@ -48,7 +48,7 @@ void main() {
     });
 
     test('updateStatus rollback from non-default state', () async {
-      final repo = _FakeRepository(shouldThrow: false);
+      final repo = _FakeRepository();
       final notifier = CurrentUserStatusNotifier(repo);
 
       // First, set to a non-default state with successful call

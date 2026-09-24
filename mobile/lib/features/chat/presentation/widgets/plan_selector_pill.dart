@@ -366,7 +366,7 @@ class _ClearOptionTile extends ConsumerWidget {
         onTap: () {
           ref.read(activePlanProvider.notifier).clearSelection();
           unawaited(
-              SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
+              SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen),);
           Navigator.pop(context);
         },
         child: Container(
@@ -432,7 +432,7 @@ class _PlanListTile extends ConsumerWidget {
         onTap: () {
           ref.read(activePlanProvider.notifier).selectPlan(plan.id);
           unawaited(
-              SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
+              SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen),);
           Navigator.pop(context);
         },
         child: Container(

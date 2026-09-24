@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
-import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 
 /// 从protobuf的int值映射到前端AgentType枚举
 /// 与 proto/agent_service.proto 中的 AgentType 枚举保持一致

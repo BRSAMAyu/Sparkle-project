@@ -2,15 +2,15 @@ import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/scene_audio_policy.dart';
 import 'package:sparkle/core/widgets/scene_audio_scope.dart';
-import 'package:sparkle/features/knowledge/presentation/screens/knowledge_detail_screen.dart';
 import 'package:sparkle/features/galaxy/presentation/screens/galaxy_draft_review_screen.dart';
+import 'package:sparkle/features/knowledge/presentation/screens/knowledge_detail_screen.dart';
 
 class GalaxyRoutes {
   // Route constants for deep linking and navigation
@@ -30,7 +30,6 @@ class GalaxyRoutes {
             return buildSparkleTransitionPage(
               state: state,
               motionToken: SparkleMotionToken.scene,
-              type: SharedAxisTransitionType.horizontal,
               child: SceneAudioScope(
                 policy: ExperienceProfiles.focusImmersive.audioPolicy(
                   trackOverride: BgmTrack.galaxy,

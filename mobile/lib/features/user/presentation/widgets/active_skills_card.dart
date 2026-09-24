@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/user_state_models.dart';
 
 class ActiveSkillsCard extends StatelessWidget {

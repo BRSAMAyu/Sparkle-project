@@ -11,7 +11,7 @@ class BottleneckCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final bottlenecks = (data['bottlenecks'] as List<dynamic>? ?? const [])
         .whereType<Map<dynamic, dynamic>>()
-        .map((item) => Map<String, dynamic>.from(item))
+        .map(Map<String, dynamic>.from)
         .toList();
 
     return Column(

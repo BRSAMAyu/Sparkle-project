@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/user_state_models.dart';
 
 class WorkingMemoryCard extends StatelessWidget {
@@ -90,7 +90,7 @@ class WorkingMemoryCard extends StatelessWidget {
     ];
     if (item.lastSeenAt != null) {
       parts.add(DateFormat(context.l10n.workMemDateFormat)
-          .format(item.lastSeenAt!));
+          .format(item.lastSeenAt!),);
     }
     return parts.join(' · ');
   }

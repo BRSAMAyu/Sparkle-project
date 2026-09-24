@@ -5,8 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_core_session.dart';
 import 'package:sparkle/features/aurora/data/services/aurora_core_session_service.dart';
 import 'package:sparkle/features/aurora/presentation/widgets/aurora_core_session_sheet.dart';
-import 'package:sparkle/features/chat/presentation/widgets/aurora_nudge_entry.dart';
 import 'package:sparkle/features/chat/presentation/providers/aurora_status_provider.dart';
+import 'package:sparkle/features/chat/presentation/widgets/aurora_nudge_entry.dart';
 import 'package:sparkle/features/task/presentation/widgets/stuck_help_sheet.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -34,10 +34,10 @@ void main() {
         ],
       ),
     );
-    final entryReason = AuroraCoreSessionEntryReason(
+    const entryReason = AuroraCoreSessionEntryReason(
       triggerSource: 'status_bar',
-      observedSignals: const ['任务超时'],
-      suggestedAgendaPreview: const ['确认状态带里的判断'],
+      observedSignals: ['任务超时'],
+      suggestedAgendaPreview: ['确认状态带里的判断'],
       whyNow: '需要校准',
       estimatedMinutes: 4,
     );
@@ -272,7 +272,6 @@ void main() {
       ],
     );
     final resumed = _session(
-      status: 'active',
       resumeToken: 'acs_resumed',
       messages: const [
         AuroraCoreMessage(
@@ -445,8 +444,7 @@ AuroraCoreSession _session({
   ],
   List<AuroraPredictedReplyGroup> optionGroups = const [],
   AuroraCalibrationResult? calibrationResult,
-}) {
-  return AuroraCoreSession(
+}) => AuroraCoreSession(
     sessionId: 'session-1',
     userId: 'u1',
     conversationId: 'c1',
@@ -467,7 +465,6 @@ AuroraCoreSession _session({
     lastActivityAt: '2026-05-01T00:00:00',
     expiresAt: '2026-05-01T00:30:00',
   );
-}
 
 AuroraPredictedReplyGroup _simpleGroup() => const AuroraPredictedReplyGroup(
       groupId: 'simple',

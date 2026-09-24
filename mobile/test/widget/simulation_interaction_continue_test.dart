@@ -248,7 +248,7 @@ class _AbruptContinueSimulationRepository implements SimulationRepository {
     int? plannedRoundCount,
   }) async =>
       throw UnimplementedError(
-          'existing session should prevent fallback rerun');
+          'existing session should prevent fallback rerun',);
 
   @override
   Stream<SimulationStreamEventModel> continueSimulationStream({
@@ -503,7 +503,6 @@ void main() {
             suggestedReplies: <String>[
               '我会先画依赖图，再做一道题验证。',
             ],
-            options: <String>[],
             targetRound: 1,
           ),
         ),
@@ -518,7 +517,7 @@ void main() {
           simulationProvider.overrideWith((ref) => notifier),
         ],
         child: testMaterialApp(
-          home: SimulationScreen(),
+          home: const SimulationScreen(),
         ),
       ),
     );
@@ -552,7 +551,7 @@ void main() {
           simulationProvider.overrideWith((ref) => notifier),
         ],
         child: testMaterialApp(
-          home: SimulationScreen(),
+          home: const SimulationScreen(),
         ),
       ),
     );
@@ -583,7 +582,6 @@ void main() {
       topic: '矩阵对角化',
       scenarioKey: 'study_group',
       plannedRoundCount: 5,
-      facilitationStyle: 'balanced',
     );
 
     expect(notifier.state.session?.id, 'sim-stream-1');
@@ -637,7 +635,7 @@ void main() {
           simulationProvider.overrideWith((ref) => notifier),
         ],
         child: testMaterialApp(
-          home: SimulationScreen(),
+          home: const SimulationScreen(),
         ),
       ),
     );

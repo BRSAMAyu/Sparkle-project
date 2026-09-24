@@ -425,10 +425,10 @@ class UnresolvedConflictItem {
         surfacedAt: _parseDate(json['surfaced_at']),
         resolvedAt: _parseDate(json['resolved_at']),
         leftCandidate: UnresolvedConflictCandidate.fromJson(
-          (json['left_candidate'] as Map<String, dynamic>? ?? const {}),
+          json['left_candidate'] as Map<String, dynamic>? ?? const {},
         ),
         rightCandidate: UnresolvedConflictCandidate.fromJson(
-          (json['right_candidate'] as Map<String, dynamic>? ?? const {}),
+          json['right_candidate'] as Map<String, dynamic>? ?? const {},
         ),
       );
 

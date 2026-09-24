@@ -26,7 +26,7 @@ class SparkleGoalCreatedDialog extends StatelessWidget {
     final l10n = context.l10n;
 
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: DS.borderRadius20),
+      shape: const RoundedRectangleBorder(borderRadius: DS.borderRadius20),
       title: Column(
         children: [
           Container(
@@ -130,8 +130,7 @@ class SparkleGoalCreatedDialog extends StatelessWidget {
     required VoidCallback onStartFirstTask,
     String? packName,
     String? packDurationLabel,
-  }) {
-    return showDialog<void>(
+  }) => showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (_) => SparkleGoalCreatedDialog(
@@ -143,7 +142,6 @@ class SparkleGoalCreatedDialog extends StatelessWidget {
         onStartFirstTask: onStartFirstTask,
       ),
     );
-  }
 }
 
 class _InfoRow extends StatelessWidget {

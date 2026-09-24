@@ -66,7 +66,7 @@ void main() {
             final notifier = ShopItemsNotifier(_ThrowingShopRepository(), ref);
             // 加载完成后清错误、保持空列表：纯空态。
             Future<void>.delayed(Duration.zero, () {
-              notifier.state = ShopItemsState(items: const [], error: null);
+              notifier.state = ShopItemsState();
             });
             return notifier;
           }),

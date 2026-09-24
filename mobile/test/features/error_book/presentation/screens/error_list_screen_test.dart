@@ -60,7 +60,7 @@ void main() {
                   reviewCount: 0,
                   createdAt: DateTime(2026, 4, 26, 9),
                   updatedAt: DateTime(2026, 4, 26, 9),
-                  latestAnalysis: ErrorAnalysis(
+                  latestAnalysis: const ErrorAnalysis(
                     errorType: 'concept_confusion',
                     errorTypeLabel: '语法规则混淆',
                     rootCause: '时态判断错误',

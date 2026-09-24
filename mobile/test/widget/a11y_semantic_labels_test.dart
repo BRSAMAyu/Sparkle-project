@@ -3,9 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
-import 'package:sparkle/shared/entities/user_model.dart';
 import 'package:sparkle/features/community/data/models/community_models.dart';
 import 'package:sparkle/features/community/presentation/widgets/feed_post_card.dart';
+import 'package:sparkle/shared/entities/user_model.dart';
 
 import '../shared/i18n_test_helper.dart';
 
@@ -46,7 +46,7 @@ void main() {
       await tester.pumpWidget(
         testMaterialApp(
           theme: AppThemes.lightTheme,
-          home: Scaffold(
+          home: const Scaffold(
             body: SparkleAvatar(
               fallbackText: 'Li',
               radius: 30,

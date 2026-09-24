@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// Aurora Judgment-Correction Card — divine moment #2 "承认误判"
 ///
@@ -61,8 +61,7 @@ class _SpineReceiptCardState extends State<SpineReceiptCard>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
+  Widget build(BuildContext context) => FadeTransition(
       opacity: _fadeAnim,
       child: SlideTransition(
         position: _slideAnim,
@@ -106,7 +105,6 @@ class _SpineReceiptCardState extends State<SpineReceiptCard>
         ),
       ),
     );
-  }
 }
 
 class _Header extends StatelessWidget {

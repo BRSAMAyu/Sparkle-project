@@ -7,15 +7,14 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:sparkle/core/analytics/models/user_analytics_event.dart';
 import 'package:sparkle/core/network/api_client.dart';
-import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/offline/list_read_cache.dart';
+import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/offline/models/cached_list_snapshot.dart';
 import 'package:sparkle/core/offline/sync_engine.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 import '../../../../shared/isar_test_helper.dart';
-
 import 'task_offline_wiring_test.mocks.dart';
 
 @GenerateMocks([ApiClient, SyncEngine])
@@ -100,7 +99,7 @@ void main() {
         dedupeKey: 'task:t1:pause',
         priority: anyNamed('priority'),
         traceId: anyNamed('traceId'),
-      )).captured.single as Map<String, dynamic>;
+      ),).captured.single as Map<String, dynamic>;
       expect(captured['task_id'], 't1');
       expect(captured['reason'], 'user_paused');
     });
@@ -124,7 +123,7 @@ void main() {
         dedupeKey: 'task:t2:resume',
         priority: anyNamed('priority'),
         traceId: anyNamed('traceId'),
-      )).called(1);
+      ),).called(1);
     });
 
     test('startTask 离线 → 入队 start（原死代码接线）', () async {
@@ -146,7 +145,7 @@ void main() {
         dedupeKey: 'task:t3:start',
         priority: anyNamed('priority'),
         traceId: anyNamed('traceId'),
-      )).called(1);
+      ),).called(1);
     });
 
     test('completeTask 离线 → 入队 complete（实测分钟进 completion 体）', () async {
@@ -168,7 +167,7 @@ void main() {
         dedupeKey: 'task:t4:complete',
         priority: anyNamed('priority'),
         traceId: anyNamed('traceId'),
-      )).captured.single as Map<String, dynamic>;
+      ),).captured.single as Map<String, dynamic>;
       expect(captured['completion']['actual_minutes'], 42);
       expect(captured['completion']['user_note'], 'done');
     });
@@ -192,7 +191,7 @@ void main() {
         dedupeKey: 'task:t5:abandon',
         priority: anyNamed('priority'),
         traceId: anyNamed('traceId'),
-      )).called(1);
+      ),).called(1);
     });
 
     test('SyncEngine 不可用时不入队、沿用旧错误通道', () async {
@@ -213,7 +212,7 @@ void main() {
         dedupeKey: anyNamed('dedupeKey'),
         priority: anyNamed('priority'),
         traceId: anyNamed('traceId'),
-      ));
+      ),);
     });
   });
 
@@ -224,12 +223,12 @@ void main() {
         'data': [taskJson('t7', status: 'IN_PROGRESS')],
       };
       when(mockApi.get<Map<String, dynamic>>(any,
-          queryParameters: anyNamed('queryParameters')))
+          queryParameters: anyNamed('queryParameters'),),)
           .thenAnswer((_) async => Response<Map<String, dynamic>>(
                 requestOptions: options('/tasks/today'),
                 data: body,
                 statusCode: 200,
-              ));
+              ),);
 
       final fresh = await repo.getTodayTasksCached();
       expect(fresh.fromCache, isFalse);
@@ -237,7 +236,7 @@ void main() {
 
       // 断网重进（连接类失败）。
       when(mockApi.get<Map<String, dynamic>>(any,
-          queryParameters: anyNamed('queryParameters')))
+          queryParameters: anyNamed('queryParameters'),),)
           .thenThrow(offlineError());
 
       final stale = await repo.getTodayTasksCached();
@@ -255,12 +254,12 @@ void main() {
         'page_size': 50,
       };
       when(mockApi.get<Map<String, dynamic>>(any,
-          queryParameters: anyNamed('queryParameters')))
+          queryParameters: anyNamed('queryParameters'),),)
           .thenAnswer((_) async => Response<Map<String, dynamic>>(
                 requestOptions: options('/tasks'),
                 data: body,
                 statusCode: 200,
-              ));
+              ),);
 
       await repo.getTasksCached(filters: {});
       expect(
@@ -269,7 +268,7 @@ void main() {
       );
 
       when(mockApi.get<Map<String, dynamic>>(any,
-          queryParameters: anyNamed('queryParameters')))
+          queryParameters: anyNamed('queryParameters'),),)
           .thenThrow(offlineError());
 
       final stale = await repo.getTasksCached(filters: {});

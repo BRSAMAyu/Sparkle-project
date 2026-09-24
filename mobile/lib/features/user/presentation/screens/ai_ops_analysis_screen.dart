@@ -1,11 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
 class AiOpsAnalysisScreen extends ConsumerStatefulWidget {
@@ -259,13 +258,13 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
             children: [
               _MetricChip(
                   label: context.l10n.userAiOpsExposures,
-                  value: '${funnel['impressions'] ?? 0}'),
+                  value: '${funnel['impressions'] ?? 0}',),
               _MetricChip(
                   label: context.l10n.userAiOpsAccepts,
-                  value: '${funnel['accepts'] ?? 0}'),
+                  value: '${funnel['accepts'] ?? 0}',),
               _MetricChip(
                   label: context.l10n.userAiOpsExecutions,
-                  value: '${funnel['executions'] ?? 0}'),
+                  value: '${funnel['executions'] ?? 0}',),
               _MetricChip(
                 label: 'CTR',
                 value:
@@ -299,7 +298,7 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
                           .toStringAsFixed(1),
                       ((item['execution_rate_percent'] as num?)?.toDouble() ??
                               0)
-                          .toStringAsFixed(1)),
+                          .toStringAsFixed(1),),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               );
@@ -323,7 +322,7 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
                 padding: const EdgeInsets.only(bottom: 6),
                 child: Text(
                   context.l10n.aiopsActionRow(
-                      actionType, executions as int, rate.toStringAsFixed(1)),
+                      actionType, executions as int, rate.toStringAsFixed(1),),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               );
@@ -611,13 +610,13 @@ class _ModeBreakdownRow extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             context.l10n.aiopsFirstPacket(avgFirst.toStringAsFixed(0),
-                avgTotal.toStringAsFixed(0), successRate.toStringAsFixed(1)),
+                avgTotal.toStringAsFixed(0), successRate.toStringAsFixed(1),),
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 2),
           Text(
             context.l10n.aiopsFallbackCost(fallbackRate.toStringAsFixed(1),
-                cost.toStringAsFixed(4), executionRate.toStringAsFixed(1)),
+                cost.toStringAsFixed(4), executionRate.toStringAsFixed(1),),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textSecondary,
                 ),
@@ -633,7 +632,7 @@ class _ModeBreakdownRow extends StatelessWidget {
                         0)
                     .toStringAsFixed(1),
                 (item['prompt_utilization_known_count'] ?? 0) as int,
-                (item['inference_utilization_known_count'] ?? 0) as int),
+                (item['inference_utilization_known_count'] ?? 0) as int,),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textSecondary,
                 ),

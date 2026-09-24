@@ -107,7 +107,7 @@ void main() {
       expect(history.map((m) => m.id), ['m1', 'm4', 'm5']);
       expect(
         history.any((m) => m.role == MessageRole.user &&
-            ChatRepository.isOnboardingControlMessage(m.content)),
+            ChatRepository.isOnboardingControlMessage(m.content),),
         isFalse,
       );
     });

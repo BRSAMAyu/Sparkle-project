@@ -729,7 +729,7 @@ class AuthRepository {
       }
       final message = _extractErrorMessage(e.response?.data);
       throw Exception(message ??
-          (I18nService.instance.l10n.authGuestLoginFailed));
+          (I18nService.instance.l10n.authGuestLoginFailed),);
     } catch (e) {
       if (DemoDataService.isDemoMode) {
         debugPrint('⚠️ Guest API failed, using demo user as fallback: $e');

@@ -55,7 +55,7 @@ void main() {
     PerformanceService.instance.currentTier.value = PerformanceTier.high;
     addTearDown(() =>
         PerformanceService.instance.currentTier.value =
-            defaultPerformanceTier());
+            defaultPerformanceTier(),);
   }
 
   Widget host({bool disableAnimations = false,}) => ProviderScope(

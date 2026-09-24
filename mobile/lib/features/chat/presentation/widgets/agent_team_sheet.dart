@@ -525,7 +525,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                 TextField(
                   controller: nameController,
                   decoration: InputDecoration(
-                      labelText: context.l10n.chatTeamExpertName),
+                      labelText: context.l10n.chatTeamExpertName,),
                 ),
                 TextField(
                   controller: descriptionController,
@@ -536,7 +536,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                 DropdownButtonFormField<String>(
                   initialValue: selectedBaseExpert,
                   decoration: InputDecoration(
-                      labelText: context.l10n.chatTeamBaseExpert),
+                      labelText: context.l10n.chatTeamBaseExpert,),
                   items: enabledExperts
                       .map(
                         (expert) => DropdownMenuItem<String>(
@@ -578,7 +578,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                     DropdownMenuItem(
                       value: 'balanced',
                       child: Text(
-                          S.chatLabelBalanced),
+                          S.chatLabelBalanced,),
                     ),
                     DropdownMenuItem(
                       value: 'deep',

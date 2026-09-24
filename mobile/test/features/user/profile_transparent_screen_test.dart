@@ -81,7 +81,7 @@ void main() {
             // Post batch-3 theme.dart removal the design tokens live in
             // SparkleThemeExtension; register it like the A-6 adaptation.
             theme: ThemeData(extensions: [SparkleThemeExtension.light()]),
-            home: ProfileTransparentScreen(),
+            home: const ProfileTransparentScreen(),
           ),
         ),
       );
@@ -89,7 +89,7 @@ void main() {
 
       expect(find.text('progress_praise', skipOffstage: false), findsWidgets);
       expect(
-          find.textContaining('Calibration posture: stable'), findsOneWidget);
+          find.textContaining('Calibration posture: stable'), findsOneWidget,);
       expect(
         find.textContaining(
           'Reliable time-capacity data is still missing.',
@@ -110,7 +110,7 @@ void main() {
 
       expect(repo.controlCalls, hasLength(1));
       expect(repo.controlCalls.single['target_id'],
-          'achievement_motivation_response');
+          'achievement_motivation_response',);
       expect(repo.controlCalls.single['action'], 'wrong');
     },
   );

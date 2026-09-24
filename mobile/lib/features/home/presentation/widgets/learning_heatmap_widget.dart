@@ -5,9 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/design/materials.dart';
 import 'package:sparkle/core/design/widgets/compact_error_card.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/features/task/task_routes.dart';
@@ -20,15 +19,15 @@ class HeatmapDay {
     required this.tasksCompleted,
   });
 
-  final String date;
-  final double minutes;
-  final int tasksCompleted;
-
   factory HeatmapDay.fromJson(Map<String, dynamic> json) => HeatmapDay(
         date: json['date'] as String,
         minutes: (json['minutes'] as num).toDouble(),
         tasksCompleted: (json['tasks_completed'] as num?)?.toInt() ?? 0,
       );
+
+  final String date;
+  final double minutes;
+  final int tasksCompleted;
 }
 
 final learningHeatmapProvider =
@@ -253,8 +252,7 @@ class _HeatmapGrid extends StatelessWidget {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: List.generate(totalWeeks, (weekIndex) {
-                    return Padding(
+                  children: List.generate(totalWeeks, (weekIndex) => Padding(
                       padding: EdgeInsets.only(
                         left: weekIndex > 0 ? _cellGap : 0,
                       ),
@@ -293,8 +291,7 @@ class _HeatmapGrid extends StatelessWidget {
                           );
                         }),
                       ),
-                    );
-                  }),
+                    ),),
                 ),
               );
             },
@@ -336,8 +333,7 @@ class _HeatmapEmptyState extends StatelessWidget {
   final bool isChinese;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       width: double.infinity,
       padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
@@ -390,7 +386,6 @@ class _HeatmapEmptyState extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _HeatmapLegend extends StatelessWidget {
@@ -403,8 +398,7 @@ class _HeatmapLegend extends StatelessWidget {
   final bool isChinese;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
+  Widget build(BuildContext context) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
@@ -445,7 +439,6 @@ class _HeatmapLegend extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 class _HeatmapCell extends StatefulWidget {
@@ -495,8 +488,7 @@ class _HeatmapCellState extends State<_HeatmapCell> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
+  Widget build(BuildContext context) => Padding(
       padding: EdgeInsets.only(bottom: widget.gap),
       child: Stack(
         clipBehavior: Clip.none,
@@ -558,15 +550,13 @@ class _HeatmapCellState extends State<_HeatmapCell> {
         ],
       ),
     );
-  }
 }
 
 class _HeatmapSkeleton extends StatelessWidget {
   const _HeatmapSkeleton();
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialStyler(
+  Widget build(BuildContext context) => MaterialStyler(
       material: AppMaterials.ceramic(context),
       borderRadius: DS.borderRadius20,
       padding: const EdgeInsets.all(DS.spacing16),
@@ -600,5 +590,4 @@ class _HeatmapSkeleton extends StatelessWidget {
         ],
       ),
     );
-  }
 }

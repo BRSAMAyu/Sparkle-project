@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,6 +12,8 @@ import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
 import 'package:sparkle/features/simulation/data/repositories/simulation_repository.dart';
 import 'package:sparkle/features/simulation/presentation/providers/simulation_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
+
 import '../shared/i18n_test_helper.dart';
 
 class _FakeSimulationRepository implements SimulationRepository {
@@ -234,7 +235,7 @@ void main() {
 
       expect(
         find.text(
-            '/theater?topic=%E7%BA%BF%E6%80%A7%E4%BB%A3%E6%95%B0&target_node_id=node-1'),
+            '/theater?topic=%E7%BA%BF%E6%80%A7%E4%BB%A3%E6%95%B0&target_node_id=node-1',),
         findsOneWidget,
       );
     });

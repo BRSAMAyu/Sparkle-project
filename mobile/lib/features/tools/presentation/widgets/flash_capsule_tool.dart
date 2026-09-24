@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/cognitive/data/models/cognitive_fragment_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
@@ -16,6 +15,7 @@ import 'package:sparkle/features/tools/data/repositories/tool_history_repository
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_context_effect_feedback.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/cognitive_analysis.dart';
 
 const List<String> _errorTypes = [
@@ -137,7 +137,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
     } catch (e) {
       if (!silent && mounted) {
         AppFeedback.error(
-            context, context.l10n.toolsFlashLoadFailed(e.toString()));
+            context, context.l10n.toolsFlashLoadFailed(e.toString()),);
       }
     }
   }
@@ -281,7 +281,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                                             const SizedBox(width: DS.spacing8),
                                             _HistoryChip(
                                                 label: context.l10n
-                                                    .flashCapsuleSyncPending),
+                                                    .flashCapsuleSyncPending,),
                                           ],
                                         ],
                                       ),
@@ -392,7 +392,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
       if (mounted) {
         setState(() => _isSubmitting = false);
         AppFeedback.error(
-            context, context.l10n.toolsFlashSaveFailed(e.toString()));
+            context, context.l10n.toolsFlashSaveFailed(e.toString()),);
       }
     }
   }
@@ -597,7 +597,7 @@ class _SubjectDropdown extends StatelessWidget {
                     (subject) => DropdownMenuItem<String>(
                       value: subject.code,
                       child: Text(_subjectLabel(
-                          AppLocalizations.of(context)!, subject.code)),
+                          AppLocalizations.of(context)!, subject.code,),),
                     ),
                   )
                   .toList(),

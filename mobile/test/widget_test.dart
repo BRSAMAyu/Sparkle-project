@@ -12,7 +12,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:isar/isar.dart';
-import 'shared/isar_test_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/app/app.dart';
 import 'package:sparkle/core/analytics/models/user_analytics_event.dart';
@@ -21,6 +20,8 @@ import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/offline/offline_providers.dart';
 import 'package:sparkle/core/offline/sync_engine.dart';
 import 'package:sparkle/core/services/websocket_service.dart';
+
+import 'shared/isar_test_helper.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

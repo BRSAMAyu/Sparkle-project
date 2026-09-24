@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
@@ -454,7 +453,6 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                           readerId: readBy[i],
                           readByUsers: readByUsers,
                         ),
-                        fit: BoxFit.cover,
                         width: 18,
                         height: 18,
                         errorWidget: Center(
@@ -1036,7 +1034,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       final entityCard = result['entity_card'] is Map<String, dynamic>
           ? EntityCardPayload.fromRaw({
               'entity_card': result['entity_card'] as Map<String, dynamic>,
-            }, fallbackType: resourceType)
+            }, fallbackType: resourceType,)
           : null;
       final newId = result['new_resource_id']?.toString();
       if (resourceType == 'plan') {

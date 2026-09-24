@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class SrlPhaseBadgeCard extends StatelessWidget {
   const SrlPhaseBadgeCard({
-    super.key,
-    required this.phase,
-    required this.helperText,
+    required this.phase, required this.helperText, super.key,
   });
 
   final String phase;

@@ -11,8 +11,8 @@ import 'package:share_plus/share_plus.dart' as share_plus;
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
-import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/network/api_timeouts.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -156,7 +156,7 @@ class _AchievementShareBottomSheetState
             privacySettings: _privacySettings,
           );
 
-      var cardUrl = shareCard?.cardUrl ?? widget.shareCardUrl;
+      final cardUrl = shareCard?.cardUrl ?? widget.shareCardUrl;
 
       if (cardUrl == null || cardUrl.isEmpty) {
         if (mounted) {
@@ -207,7 +207,7 @@ class _AchievementShareBottomSheetState
         DateTime.now().millisecondsSinceEpoch;
     final privacyHash = _privacySettings.settingsHash();
     final file = File(
-      '${tempDir.path}/achievement_${widget.achievementId}_${_selectedTemplateId}_$privacyHash\_$timestamp.png',
+      '${tempDir.path}/achievement_${widget.achievementId}_${_selectedTemplateId}_${privacyHash}_$timestamp.png',
     );
     await file.writeAsBytes(response.bodyBytes);
     return file;
@@ -507,13 +507,13 @@ class _AchievementShareBottomSheetState
             icon: Icons.chat,
             label: l10n.shareToWeChatFriends,
             color: const Color(0xFF07C160), // WeChat green
-            onTap: () => _shareToWeChatSession(),
+            onTap: _shareToWeChatSession,
           ),
           _buildShareOption(
             icon: Icons.timeline,
             label: l10n.shareToWeChatMoments,
             color: const Color(0xFF07C160), // WeChat green
-            onTap: () => _shareToWeChatTimeline(),
+            onTap: _shareToWeChatTimeline,
           ),
         ],
 
@@ -522,7 +522,7 @@ class _AchievementShareBottomSheetState
           icon: Icons.share,
           label: l10n.shareToSystem,
           color: DS.brandPrimary,
-          onTap: () => _shareToSystem(),
+          onTap: _shareToSystem,
         ),
 
         // Community share
@@ -530,7 +530,7 @@ class _AchievementShareBottomSheetState
           icon: Icons.groups,
           label: l10n.shareToCommunity,
           color: DS.info,
-          onTap: () => _shareToCommunity(),
+          onTap: _shareToCommunity,
         ),
 
         // Save to gallery
@@ -538,7 +538,7 @@ class _AchievementShareBottomSheetState
           icon: Icons.save_alt,
           label: l10n.saveImageToGallery,
           color: DS.success,
-          onTap: () => _saveToGallery(),
+          onTap: _saveToGallery,
         ),
 
         // Copy link
@@ -546,7 +546,7 @@ class _AchievementShareBottomSheetState
           icon: Icons.link,
           label: l10n.copyDeepLink,
           color: DS.warning,
-          onTap: () => _copyDeepLink(),
+          onTap: _copyDeepLink,
         ),
       ],
     );

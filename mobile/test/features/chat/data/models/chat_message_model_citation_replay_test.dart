@@ -44,7 +44,7 @@ void main() {
       // meta, no citation data anywhere — the strip must not render.
       final message = ChatMessageModel.fromJson(historyItem(
         meta: <String, dynamic>{'latency_ms': 42, 'total_duration_ms': 42},
-      ));
+      ),);
 
       expect(message.citations, isEmpty);
     });
@@ -55,7 +55,7 @@ void main() {
           'latency_ms': 42,
           'citations': [citation],
         },
-      ));
+      ),);
 
       expect(message.citations, hasLength(1));
       final restored = message.citations.first;
@@ -85,7 +85,7 @@ void main() {
             },
           },
         ],
-      ));
+      ),);
 
       expect(message.citations, hasLength(1));
       expect(message.citations.first.fileId, 'file-abc');
@@ -111,7 +111,7 @@ void main() {
             },
           },
         ],
-      ));
+      ),);
 
       expect(message.citations, hasLength(1));
     });

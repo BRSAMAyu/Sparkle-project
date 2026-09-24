@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
 import 'package:sparkle/features/plan/data/repositories/exam_sprint_repository.dart';
 import 'package:sparkle/features/plan/presentation/screens/learning_portfolio_screen.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
+
 import '../../../../shared/i18n_test_helper.dart';
 
 void main() {
@@ -249,8 +249,7 @@ Widget _buildApp({
   );
 }
 
-LearningPortfolioResult _mockPortfolio() {
-  return LearningPortfolioResult(
+LearningPortfolioResult _mockPortfolio() => LearningPortfolioResult(
     totalMasteredNodes: 98,
     activeCount: 1,
     completedCount: 1,
@@ -304,7 +303,6 @@ LearningPortfolioResult _mockPortfolio() {
       ),
     ],
   );
-}
 
 UserModel _mockUser() {
   final now = DateTime(2026, 4, 25, 9);
@@ -338,9 +336,7 @@ class _FakeExamSprintRepository extends ExamSprintRepository {
     String? userId,
     int page = 1,
     int pageSize = 20,
-  }) async {
-    return await _handler?.call() ?? _result!;
-  }
+  }) async => await _handler?.call() ?? _result!;
 }
 
 class _NoopApiClient implements ApiClient {

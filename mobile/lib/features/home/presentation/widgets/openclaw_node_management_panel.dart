@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/openclaw_execution_preferences_service.dart';
@@ -332,7 +331,7 @@ class _OpenClawNodeCard extends StatelessWidget {
                         .openclawCapsLabel(node.caps.take(4).join(' / ')),
                   if (node.commands.isNotEmpty)
                     context.l10n.openclawCommandsLabel(
-                        node.commands.take(3).join(' / ')),
+                        node.commands.take(3).join(' / '),),
                 ].join(' · '),
                 style: DS.bodySmall.copyWith(
                   color: DS.textSecondary,

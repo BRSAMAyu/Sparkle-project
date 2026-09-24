@@ -282,8 +282,7 @@ class _ProtocolLoadingShimmerState extends State<_ProtocolLoadingShimmer>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
+  Widget build(BuildContext context) => AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
         final opacity = 0.3 + 0.3 * _controller.value;
@@ -305,10 +304,8 @@ class _ProtocolLoadingShimmerState extends State<_ProtocolLoadingShimmer>
         );
       },
     );
-  }
 
-  Widget _shimmerLine(double width, double height) {
-    return Container(
+  Widget _shimmerLine(double width, double height) => Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
@@ -316,5 +313,4 @@ class _ProtocolLoadingShimmerState extends State<_ProtocolLoadingShimmer>
         borderRadius: BorderRadius.circular(4),
       ),
     );
-  }
 }

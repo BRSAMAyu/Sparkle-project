@@ -1,10 +1,10 @@
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -419,7 +419,7 @@ class _NotificationCenterScreenState
         .actOnIntervention(notification, actionPayload: {
       'cta': 'notification_card_start',
       'suggested_step': notification.suggestedStep,
-    });
+    },);
     if (!mounted) {
       return;
     }

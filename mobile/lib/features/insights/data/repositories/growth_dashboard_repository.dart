@@ -31,7 +31,7 @@ class GrowthDashboardRepository {
       return GrowthDashboard.fromJson(data);
     } on DioException catch (error) {
       throw Exception(
-          _extractDioMessage(error, 'Failed to load growth dashboard'));
+          _extractDioMessage(error, 'Failed to load growth dashboard'),);
     } catch (_) {
       throw Exception('An unexpected error occurred');
     }
@@ -45,7 +45,7 @@ class GrowthDashboardRepository {
       );
     } on DioException catch (error) {
       throw Exception(
-          _extractDioMessage(error, 'Failed to update chronicle entry status'));
+          _extractDioMessage(error, 'Failed to update chronicle entry status'),);
     } catch (_) {
       throw Exception('An unexpected error occurred');
     }

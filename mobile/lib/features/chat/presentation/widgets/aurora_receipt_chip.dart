@@ -85,19 +85,19 @@ class _AuroraReceiptChipState extends State<AuroraReceiptChip> {
     if (isSource &&
         usedCount == 0 &&
         !_hasDetailContent(receipt, memories, usedNames, excludedNames,
-            usedTools, whatChanged)) {
+            usedTools, whatChanged,)) {
       return const SizedBox.shrink();
     }
 
     final summary = _summary(context, receipt, isMemory, isSocialSource,
-        isSource, isNextAction, memories, usedCount, excludedNames);
+        isSource, isNextAction, memories, usedCount, excludedNames,);
     if (summary.isEmpty) return const SizedBox.shrink();
 
     final hasDetail = _hasDetailContent(
-        receipt, memories, usedNames, excludedNames, usedTools, whatChanged);
+        receipt, memories, usedNames, excludedNames, usedTools, whatChanged,);
     final icon = _iconFor(isMemory, isSocialSource, isSource, isNextAction);
     final title = _title(
-        context, receipt, isMemory, isSocialSource, isSource, isNextAction);
+        context, receipt, isMemory, isSocialSource, isSource, isNextAction,);
 
     return Semantics(
       button: hasDetail,
@@ -169,14 +169,14 @@ class _AuroraReceiptChipState extends State<AuroraReceiptChip> {
                     child: GestureDetector(
                       onTap: () {
                         unawaited(SensoryFeedbackService.emit(
-                            SensoryFeedbackEvent.selection));
+                            SensoryFeedbackEvent.selection,),);
                         setState(() => _dismissed = true);
                         unawaited(_persistDismiss());
                       },
                       child: Padding(
                         padding: const EdgeInsets.only(left: 4),
                         child: Icon(Icons.close_rounded,
-                            size: 13, color: DS.textTertiary),
+                            size: 13, color: DS.textTertiary,),
                       ),
                     ),
                   ),
@@ -321,7 +321,7 @@ String _title(
 }
 
 IconData _iconFor(
-    bool isMemory, bool isSocialSource, bool isSource, bool isNextAction) {
+    bool isMemory, bool isSocialSource, bool isSource, bool isNextAction,) {
   if (isMemory) return Icons.psychology_alt_outlined;
   if (isSocialSource) return Icons.groups_2_outlined;
   if (isSource) return Icons.auto_awesome;

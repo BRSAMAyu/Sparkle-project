@@ -62,7 +62,7 @@ void main() {
           ),
         ],
         child: testMaterialApp(
-          home: AiOpsAnalysisScreen(),
+          home: const AiOpsAnalysisScreen(),
         ),
       ),
     );

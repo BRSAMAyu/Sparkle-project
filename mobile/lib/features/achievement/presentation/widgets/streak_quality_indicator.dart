@@ -490,7 +490,7 @@ class _EvidenceCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(Icons.lightbulb_outline,
-                    size: 16, color: scheme.onTertiaryContainer),
+                    size: 16, color: scheme.onTertiaryContainer,),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(

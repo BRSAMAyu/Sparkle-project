@@ -3,12 +3,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/network/api_client.dart';
-import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/core/services/retry_strategy.dart';
+import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/features/galaxy/data/models/user_galaxy_contribution.dart';
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
 import 'package:sparkle/features/galaxy/presentation/screens/galaxy_screen.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
+
 import '../../../shared/i18n_test_helper.dart';
 
 void main() {
@@ -64,7 +65,6 @@ void main() {
                     masteryScore: 0,
                   ),
                 ],
-                edges: const <GalaxyEdgeModel>[],
                 userFlameIntensity: 0,
               ),
             ),
@@ -91,7 +91,6 @@ class _FakeEnhancedGalaxyRepository extends EnhancedGalaxyRepository {
   })  : graph = graph ??
             GalaxyGraphResponse(
               nodes: const <GalaxyNodeModel>[],
-              edges: const <GalaxyEdgeModel>[],
               userFlameIntensity: 0,
             ),
         super(_NoopApiClient());

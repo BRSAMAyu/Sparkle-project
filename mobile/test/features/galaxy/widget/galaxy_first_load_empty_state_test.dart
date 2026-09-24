@@ -10,11 +10,8 @@ import 'package:sparkle/core/services/retry_strategy.dart';
 import 'package:sparkle/core/services/smart_cache.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/features/galaxy/data/models/user_galaxy_contribution.dart';
-import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
-import 'package:sparkle/shared/entities/galaxy_model.dart';
 import '../../../shared/i18n_test_helper.dart';
 
 /// V24-B 回归：首次进入 galaxy 星图页（真实 GalaxyScreen + 真实 GalaxyNotifier +
@@ -153,7 +150,7 @@ Map<String, dynamic> _grpcShapePayload() {
             'label': node['name'],
             'node_type': 'concept',
             'mastery': node['mastery_score'],
-          })
+          },)
       .toList();
   final edges = ((rest['edges'] as List<Map<String, dynamic>>).isNotEmpty
           ? rest['edges']
@@ -165,7 +162,7 @@ Map<String, dynamic> _grpcShapePayload() {
               'source_id': edge['source_id'],
               'target_id': edge['target_id'],
               'relation': 'parent',
-            })
+            },)
         .toList(),
     'total_nodes': 147,
     'via': 'grpc',

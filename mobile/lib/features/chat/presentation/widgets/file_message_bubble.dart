@@ -184,7 +184,7 @@ class _FileMessageBubbleWithThumbnailState
                       children: [
                         Icon(
                           _iconForMime(
-                              widget.data.mimeType, widget.data.fileName),
+                              widget.data.mimeType, widget.data.fileName,),
                           size: 18,
                           color: accentColor,
                         ),

@@ -6,9 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/openclaw/presentation/widgets/openclaw_primitives.dart';
@@ -442,7 +440,7 @@ class _OpenClawConnectionPanelState
       return context.l10n.openclawPairingExpiresSeconds(seconds);
     }
     return context.l10n.openclawPairingExpiresMinutes(
-        minutes, seconds.toString().padLeft(2, '0'));
+        minutes, seconds.toString().padLeft(2, '0'),);
   }
 
   OpenClawConnectionConfig? _buildConfig() {
@@ -1038,7 +1036,7 @@ class _OpenClawConnectionPanelState
                                 );
                                 if (!mounted) return;
                                 _showSnackBar(
-                                    context.l10n.openclawPairingCodeCopied);
+                                    context.l10n.openclawPairingCodeCopied,);
                               },
                               icon: const Icon(Icons.copy_rounded),
                             ),
@@ -1104,7 +1102,7 @@ class _OpenClawConnectionPanelState
             ),
             const SizedBox(height: DS.spacing8),
             SegmentedButton<String>(
-              segments: [
+              segments: const [
                 ButtonSegment<String>(
                   value: 'responses_http',
                   label: Text('HTTP'),

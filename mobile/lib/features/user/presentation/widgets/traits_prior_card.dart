@@ -4,8 +4,7 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class TraitsPriorCard extends StatelessWidget {
   const TraitsPriorCard({
-    super.key,
-    required this.traits,
+    required this.traits, super.key,
     this.helperText = '',
   });
 

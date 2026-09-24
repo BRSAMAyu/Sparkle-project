@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
@@ -26,7 +27,7 @@ import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 import 'package:sparkle/shared/models/api_response_model.dart';
-import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
+
 import '../shared/i18n_test_helper.dart';
 
 class _PreloadedLearningPortfolioNotifier extends LearningPortfolioNotifier {
@@ -55,7 +56,7 @@ void main() {
           planRepository: harness.planRepository,
           taskRepository: harness.taskRepository,
           examSprintRepository: harness.examSprintRepository,
-        ));
+        ),);
         await _pumpTransitions(tester);
 
         await tester.enterText(
@@ -89,7 +90,7 @@ void main() {
 
         expect(find.byType(TaskDetailScreen), findsOneWidget);
         expect(find.byKey(const ValueKey('task-protocol-kind-chip')),
-            findsOneWidget);
+            findsOneWidget,);
         expect(find.text('process_trace_card'), findsWidgets);
 
         await tester.pump(const Duration(seconds: 35));
@@ -110,7 +111,7 @@ void main() {
           planRepository: harness.planRepository,
           taskRepository: harness.taskRepository,
           examSprintRepository: harness.examSprintRepository,
-        ));
+        ),);
         await _pumpTransitions(tester);
 
         final initialColor = _dotColor(
@@ -125,7 +126,7 @@ void main() {
           planRepository: completedHarness.planRepository,
           taskRepository: completedHarness.taskRepository,
           examSprintRepository: completedHarness.examSprintRepository,
-        ));
+        ),);
         await _pumpTransitions(tester);
 
         final completedColor = _dotColor(
@@ -189,11 +190,11 @@ void main() {
           planRepository: harness.planRepository,
           taskRepository: harness.taskRepository,
           examSprintRepository: harness.examSprintRepository,
-        ));
+        ),);
         await _pumpTransitions(tester);
 
         expect(find.byKey(const ValueKey('plan-adaptive-compression-banner')),
-            findsOneWidget);
+            findsOneWidget,);
         expect(find.text('已为你精简今日计划'), findsOneWidget);
         expect(find.textContaining('1 个任务 / 35 分钟'), findsOneWidget);
         expect(find.text('compressed_recovery'), findsWidgets);
@@ -211,7 +212,7 @@ void main() {
           planId: harness.planId,
           masteredNodesCount: 9,
           status: 'completed',
-          completedAt: DateTime.utc(2026, 5, 1),
+          completedAt: DateTime.utc(2026, 5),
         );
 
         await tester.pumpWidget(_buildRouterApp(
@@ -220,7 +221,7 @@ void main() {
           taskRepository: harness.taskRepository,
           examSprintRepository: harness.examSprintRepository,
           preloadedPortfolio: portfolio,
-        ));
+        ),);
         await _pumpTransitions(tester, cycles: 4);
         await tester.pump(const Duration(milliseconds: 950));
 
@@ -236,7 +237,7 @@ void main() {
           taskRepository: harness.taskRepository,
           examSprintRepository: harness.examSprintRepository,
           preloadedPortfolio: portfolio,
-        ));
+        ),);
         await _pumpTransitions(tester, cycles: 8);
 
         expect(find.byType(LearningPortfolioScreen), findsOneWidget);
@@ -403,7 +404,7 @@ class _MutableSprintHarness {
   static _MutableSprintHarness intakeAndPlan({
     TaskStatus firstTaskStatus = TaskStatus.pending,
   }) {
-    final planId = 'plan-sprint-intake';
+    const planId = 'plan-sprint-intake';
     final tasks = <TaskModel>[
       _buildTask(
         id: '00000000-0000-4000-8000-000000000001',
@@ -450,7 +451,7 @@ class _MutableSprintHarness {
   }
 
   static _MutableSprintHarness compressedPlan() {
-    final planId = 'plan-compressed';
+    const planId = 'plan-compressed';
     final task = _buildTask(
       id: '00000000-0000-4000-8000-000000000003',
       title: 'Day 4 · 压缩保底 - 网络层路由',
@@ -492,7 +493,7 @@ class _MutableSprintHarness {
   }
 
   static _MutableSprintHarness completedSprint() {
-    final planId = 'plan-completed';
+    const planId = 'plan-completed';
     final tasks = List<TaskModel>.generate(7, (index) {
       final day = index + 1;
       return _buildTask(
@@ -523,7 +524,7 @@ class _MutableSprintHarness {
         planId: planId,
         masteredNodesCount: 9,
         status: 'completed',
-        completedAt: DateTime.utc(2026, 5, 1),
+        completedAt: DateTime.utc(2026, 5),
       ),
       completionResult: const SprintCompletionCheckResult(
         completed: true,
@@ -615,8 +616,7 @@ TaskModel _buildTask({
   required int estimatedMinutes,
   required int orderIndex,
   required String taskKind,
-  String? cardTemplateId,
-  required String primaryNodeLabel,
+  required String primaryNodeLabel, String? cardTemplateId,
   bool compressed = false,
   String? compressionReason,
   DateTime? completedAt,
@@ -701,8 +701,7 @@ PlanModel _buildPlan({
 Map<String, dynamic> _examSprintMetadata({
   required int daysLeft,
   required String packName,
-}) {
-  return {
+}) => {
     'exam_sprint_intake': {
       'goal_model': {
         'days_left': daysLeft,
@@ -716,10 +715,8 @@ Map<String, dynamic> _examSprintMetadata({
       },
     },
   };
-}
 
-ExamSprintIntakeResult _intakeResult({required String planId}) {
-  return ExamSprintIntakeResult(
+ExamSprintIntakeResult _intakeResult({required String planId}) => ExamSprintIntakeResult(
     planningSessionId: 'planning-session-1',
     conversationId: 'conversation-1',
     userModel: ExamSprintUserModel(
@@ -772,15 +769,13 @@ ExamSprintIntakeResult _intakeResult({required String planId}) {
       recommendedTaskRoute: '/tasks/00000000-0000-4000-8000-000000000001',
     ),
   );
-}
 
 LearningPortfolioResult _portfolio({
   required String planId,
   required int masteredNodesCount,
   required String status,
   DateTime? completedAt,
-}) {
-  return LearningPortfolioResult(
+}) => LearningPortfolioResult(
     entries: <LearningPortfolioEntry>[
       LearningPortfolioEntry(
         planId: planId,
@@ -793,7 +788,7 @@ LearningPortfolioResult _portfolio({
         strongestArea: 'TCP 状态迁移',
         growthArea: '路由选择',
         completedAt: completedAt,
-        targetDate: DateTime.utc(2026, 5, 1),
+        targetDate: DateTime.utc(2026, 5),
         weakestPoints: const <String>['路由选择'],
         proudNodes: const <String>['TCP 状态迁移'],
       ),
@@ -803,7 +798,6 @@ LearningPortfolioResult _portfolio({
     completedCount: status == 'completed' ? 1 : 0,
     plannedCount: 0,
   );
-}
 
 class _FakePlanRepository extends PlanRepository {
   _FakePlanRepository({
@@ -883,7 +877,7 @@ class _FakeTaskRepository extends TaskRepository {
 
   @override
   Future<List<ExecutionIntentModel>> listExecutionIntents(
-          String taskId) async =>
+          String taskId,) async =>
       const <ExecutionIntentModel>[];
 
   @override

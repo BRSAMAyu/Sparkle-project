@@ -35,8 +35,7 @@ class DocumentLibraryState {
     String? Function()? nodeFilterId,
     String? Function()? nodeFilterName,
     Set<String>? expandedDocumentIds,
-  }) {
-    return DocumentLibraryState(
+  }) => DocumentLibraryState(
       documents: documents ?? this.documents,
       searchQuery: searchQuery ?? this.searchQuery,
       statusFilter: statusFilter != null ? statusFilter() : this.statusFilter,
@@ -49,7 +48,6 @@ class DocumentLibraryState {
           nodeFilterName != null ? nodeFilterName() : this.nodeFilterName,
       expandedDocumentIds: expandedDocumentIds ?? this.expandedDocumentIds,
     );
-  }
 
   List<DocumentLibraryItem> get allDocuments =>
       documents.valueOrNull ?? const <DocumentLibraryItem>[];
@@ -273,12 +271,10 @@ class DocumentLibraryNotifier extends StateNotifier<DocumentLibraryState> {
   Future<void> shareToGroup({
     required String fileId,
     required String groupId,
-  }) {
-    return _repository.shareDocumentToGroup(
+  }) => _repository.shareDocumentToGroup(
       fileId: fileId,
       groupId: groupId,
     );
-  }
 
   static String? _inferSubjectCode(
     List<DocumentGalaxyNode> nodes,

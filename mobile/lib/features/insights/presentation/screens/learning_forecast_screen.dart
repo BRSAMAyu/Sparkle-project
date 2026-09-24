@@ -1,4 +1,3 @@
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -6,13 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/charts/engagement_heatmap.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/predictive_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/insights/presentation/widgets/predictive_insights_card.dart';
 import 'package:sparkle/features/reviews/presentation/widgets/nightly_review_panel.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 /// 学习预测洞察屏幕 - 展示AI预测的学习趋势
 ///
@@ -103,7 +103,7 @@ class _LearningForecastScreenState
           backgroundColor: Colors.transparent,
           elevation: 0,
           title: Text(context.l10n.insForecastTitle,
-              style: TextStyle(color: DS.textPrimary)),
+              style: TextStyle(color: DS.textPrimary),),
           iconTheme: IconThemeData(color: DS.textPrimary),
           actions: [
             SparkleIconButton(
@@ -200,7 +200,7 @@ class _LearningForecastScreenState
 
                             // Engagement Heatmap
                             _buildSectionTitle(
-                                context.l10n.insActivityAnalysis),
+                                context.l10n.insActivityAnalysis,),
                             const SizedBox(height: DS.md),
                             EngagementHeatmap(
                               data: _heatmapData,
@@ -333,7 +333,7 @@ class _LearningForecastScreenState
                 const SizedBox(width: DS.md),
                 Text(
                   context.l10n.lfcBestTimeTitle,
-                  style: TextStyle(fontSize: 16, fontWeight: DS.fontWeightBold),
+                  style: const TextStyle(fontSize: 16, fontWeight: DS.fontWeightBold),
                 ),
               ],
             ),
@@ -341,7 +341,7 @@ class _LearningForecastScreenState
             Text(
               hasRecommendations
                   ? context.l10n.lfcConfidence(
-                      sampleSize, (confidence * 100).round().toString())
+                      sampleSize, (confidence * 100).round().toString(),)
                   : (reason.isEmpty ? context.l10n.insNotEnoughData : reason),
               style: TextStyle(
                 color: DS.textSecondary,
@@ -375,7 +375,7 @@ class _LearningForecastScreenState
               const SizedBox(height: DS.lg),
               Text(
                 context.l10n.lfcRecommendedHours,
-                style: TextStyle(fontSize: 14, fontWeight: DS.fontWeightMedium),
+                style: const TextStyle(fontSize: 14, fontWeight: DS.fontWeightMedium),
               ),
               const SizedBox(height: DS.sm),
               Wrap(
@@ -402,7 +402,7 @@ class _LearningForecastScreenState
               const SizedBox(height: DS.lg),
               Text(
                 context.l10n.lfcRecommendedDays,
-                style: TextStyle(fontSize: 14, fontWeight: DS.fontWeightMedium),
+                style: const TextStyle(fontSize: 14, fontWeight: DS.fontWeightMedium),
               ),
               const SizedBox(height: DS.sm),
               Wrap(
@@ -448,7 +448,7 @@ class _LearningForecastScreenState
                   Text(
                     context.l10n.lfcTipTitle,
                     style:
-                        TextStyle(fontSize: 16, fontWeight: DS.fontWeightBold),
+                        const TextStyle(fontSize: 16, fontWeight: DS.fontWeightBold),
                   ),
                 ],
               ),

@@ -58,10 +58,10 @@ class NotificationCenterRepository {
       );
 
       final data = ApiResponseParser.unwrapList(response.data,
-          action: 'getNotifications');
+          action: 'getNotifications',);
       return data
           .map((json) =>
-              UnifiedNotification.fromJson(json as Map<String, dynamic>))
+              UnifiedNotification.fromJson(json as Map<String, dynamic>),)
           .toList();
     } on DioException catch (e) {
       throw _handleError(e);
@@ -343,7 +343,7 @@ class NotificationCenterRepository {
       );
 
       final payload = ApiResponseParser.unwrapMap(response.data,
-          action: 'clearReadNotifications');
+          action: 'clearReadNotifications',);
       return payload['count'] as int? ?? 0;
     } on DioException catch (e) {
       throw _handleError(e);
@@ -363,8 +363,9 @@ class NotificationCenterRepository {
       final all = _demoNotifications();
       final filtered = all.where((item) {
         if (type != null && item.type != type) return false;
-        if (startDate != null && item.createdAt.isBefore(startDate))
+        if (startDate != null && item.createdAt.isBefore(startDate)) {
           return false;
+        }
         if (endDate != null && item.createdAt.isAfter(endDate)) return false;
         if (search != null && search.isNotEmpty) {
           final keyword = search.toLowerCase();
@@ -408,12 +409,12 @@ class NotificationCenterRepository {
       }
 
       final payload = ApiResponseParser.unwrapMap(response.data,
-          action: 'getNotificationHistory');
+          action: 'getNotificationHistory',);
 
       // Parse items
       final items = (payload['items'] as List? ?? [])
           .map((json) =>
-              UnifiedNotification.fromJson(json as Map<String, dynamic>))
+              UnifiedNotification.fromJson(json as Map<String, dynamic>),)
           .toList();
 
       return {
@@ -485,7 +486,7 @@ class NotificationCenterRepository {
                 .length,
             clicked: notifications
                 .where((item) =>
-                    item.sourceType == 'system' && item.priority == 'high')
+                    item.sourceType == 'system' && item.priority == 'high',)
                 .length,
             accepted: 0,
             acted: 0,
@@ -501,22 +502,22 @@ class NotificationCenterRepository {
                 .length,
             viewed: notifications
                 .where(
-                    (item) => item.sourceType == 'intervention' && item.isRead)
+                    (item) => item.sourceType == 'intervention' && item.isRead,)
                 .length,
             clicked: notifications
                 .where((item) =>
                     item.sourceType == 'intervention' &&
-                    item.priority == 'high')
+                    item.priority == 'high',)
                 .length,
             accepted: notifications
                 .where((item) =>
                     item.sourceType == 'intervention' &&
-                    item.interactionState == 'accepted')
+                    item.interactionState == 'accepted',)
                 .length,
             acted: notifications
                 .where((item) =>
                     item.sourceType == 'intervention' &&
-                    item.interactionState == 'acted')
+                    item.interactionState == 'acted',)
                 .length,
             viewRate: 0.88,
             clickRate: 0.62,
@@ -610,7 +611,7 @@ class NotificationCenterRepository {
 
   /// Update notification preferences
   Future<Map<String, dynamic>> updatePreferences(
-      Map<String, dynamic> updates) async {
+      Map<String, dynamic> updates,) async {
     if (DemoDataService.isDemoMode) {
       // Return updated mock preferences for demo mode
       return {
@@ -632,7 +633,7 @@ class NotificationCenterRepository {
       );
 
       final payload = ApiResponseParser.unwrapMap(response.data,
-          action: 'updatePreferences');
+          action: 'updatePreferences',);
       return payload;
     } on DioException catch (e) {
       throw _handleError(e);
@@ -705,7 +706,7 @@ class NotificationCenterRepository {
 
 @riverpod
 NotificationCenterRepository notificationCenterRepository(
-    NotificationCenterRepositoryRef ref) {
+    NotificationCenterRepositoryRef ref,) {
   final client = ref.watch(apiClientProvider);
   return NotificationCenterRepository(client);
 }

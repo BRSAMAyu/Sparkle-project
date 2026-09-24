@@ -4,12 +4,12 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/plan/data/models/learning_path_progress_model.dart';
 import 'package:sparkle/features/plan/data/models/plan_confirm_result.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/data/models/plan_phase_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 class PlanRepository {
   PlanRepository(this._apiClient);

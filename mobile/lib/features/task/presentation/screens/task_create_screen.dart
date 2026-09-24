@@ -1,5 +1,3 @@
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
-import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -7,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -362,7 +362,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
         role: SparklePageRole.content,
         appBar: AppBar(
           title: Text(
-              _isEditMode ? context.l10n.taskEditTitle : l10n.taskCreateTitle),
+              _isEditMode ? context.l10n.taskEditTitle : l10n.taskCreateTitle,),
         ),
         child: ContentConstraint(
           child: _isLoadingExistingTask
@@ -417,7 +417,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                                 child: Text(
                                   context.l10n.taskJoinPlan(_selectedPlanName ??
                                       _selectedPlanId ??
-                                      ''),
+                                      '',),
                                   style: TextStyle(
                                     color: DS.textPrimary,
                                     height: 1.4,
@@ -749,7 +749,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                           decoration: InputDecoration(
                             labelText: _isZhText(context, '备注', 'Note'),
                             hintText: _isZhText(context, '添加备注（可选）...',
-                                'Add a note (optional)...'),
+                                'Add a note (optional)...',),
                             border: const OutlineInputBorder(),
                             prefixIcon: const Icon(Icons.notes_rounded),
                           ),

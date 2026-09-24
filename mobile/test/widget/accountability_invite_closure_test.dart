@@ -1,27 +1,25 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_interceptor.dart';
-import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
+import 'package:sparkle/core/storage/token_storage_io.dart';
 import 'package:sparkle/features/auth/auth.dart';
-import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/accountability_model.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/accountability_repository.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 import 'package:sparkle/features/community/presentation/screens/accountability_screen.dart';
-import 'package:sparkle/shared/entities/user_brief.dart';
-import 'package:sparkle/shared/entities/user_model.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:sparkle/shared/entities/user_model.dart';
+
 import '../shared/i18n_test_helper.dart';
-import 'package:sparkle/core/storage/token_storage_io.dart';
 
 void main() {
 

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +8,8 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/home/data/models/notification_model.dart';
 import 'package:sparkle/features/home/data/repositories/notification_repository.dart';
 import 'package:sparkle/features/home/presentation/screens/notification_list_screen.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
+
 import '../shared/i18n_test_helper.dart';
 
 void main() {

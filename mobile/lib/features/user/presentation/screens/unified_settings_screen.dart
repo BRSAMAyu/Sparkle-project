@@ -5,14 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/theme/performance_tier.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/providers/locale_provider.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/task_notification_scheduler.dart'
@@ -27,8 +27,8 @@ import 'package:sparkle/features/cognitive/presentation/widgets/capsule/capsule_
 import 'package:sparkle/features/documents/documents_routes.dart';
 // memory-governance-mvp: 设置页"AI 记忆"入口直达记忆面板（列表+纠正/删除）。
 import 'package:sparkle/features/memory/memory_routes.dart';
-import 'package:sparkle/features/settings/presentation/screens/accessibility_settings_screen.dart';
 import 'package:sparkle/features/settings/presentation/providers/accessibility_provider.dart';
+import 'package:sparkle/features/settings/presentation/screens/accessibility_settings_screen.dart';
 import 'package:sparkle/features/settings/presentation/widgets/settings_behavior_explanation.dart';
 import 'package:sparkle/features/user/data/models/redeem_code_result.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
@@ -354,7 +354,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     } catch (e) {
       if (mounted) {
         AppFeedback.error(
-            context, AppLocalizations.of(context)!.capsulePreviewFailed);
+            context, AppLocalizations.of(context)!.capsulePreviewFailed,);
       }
     } finally {
       if (mounted) {
@@ -416,7 +416,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     } catch (e) {
       if (mounted) {
         AppFeedback.error(
-            context, AppLocalizations.of(context)!.capsuleScenePreviewFailed);
+            context, AppLocalizations.of(context)!.capsuleScenePreviewFailed,);
       }
     } finally {
       if (mounted) {
@@ -559,7 +559,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       ),
       child: ContentConstraint(
         child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(
+          padding: const EdgeInsets.symmetric(
             vertical: DS.spacing12,
           ),
           child: Column(
@@ -664,7 +664,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                 ),
                               ),
                               const Icon(Icons.surround_sound_rounded,
-                                  size: 18),
+                                  size: 18,),
                             ],
                           ),
                         ],
@@ -741,7 +741,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       subtitle: l10n.learningModeSubtitle,
                       expanded: _learningExpanded,
                       onToggle: () => setState(
-                          () => _learningExpanded = !_learningExpanded),
+                          () => _learningExpanded = !_learningExpanded,),
                     ),
                     AnimatedCrossFade(
                       firstChild: const SizedBox(width: double.infinity),
@@ -802,7 +802,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                           ),
                           const SizedBox(height: DS.spacing24),
                           _buildSectionHeader(
-                              Icons.schedule, l10n.weeklyAgenda),
+                              Icons.schedule, l10n.weeklyAgenda,),
                           const SizedBox(height: DS.spacing12),
                           _buildWeeklyAgendaSection(
                             context,
@@ -979,7 +979,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                         ),
                                         IconButton(
                                           tooltip: l10n.bgmPreviewTooltip(
-                                              _bgmPaletteLabel(l10n, palette)),
+                                              _bgmPaletteLabel(l10n, palette),),
                                           iconSize: 18,
                                           visualDensity: VisualDensity.compact,
                                           onPressed: _bgmEnabled && _bgmReady
@@ -992,7 +992,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                                   size: 16,
                                                 )
                                               : const Icon(
-                                                  Icons.play_arrow_rounded),
+                                                  Icons.play_arrow_rounded,),
                                         ),
                                       ],
                                     ),
@@ -1023,7 +1023,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                           InkWell(
                             borderRadius: DS.borderRadius12,
                             onTap: () => setState(() =>
-                                _bgmAdvancedExpanded = !_bgmAdvancedExpanded),
+                                _bgmAdvancedExpanded = !_bgmAdvancedExpanded,),
                             child: Container(
                               width: double.infinity,
                               padding: const EdgeInsets.all(DS.spacing12),
@@ -1235,7 +1235,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                             value: showChatTransparencyCapsule,
                             onChanged: (value) => ref
                                 .read(showChatTransparencyCapsuleProvider
-                                    .notifier)
+                                    .notifier,)
                                 .setEnabled(value),
                             activeThumbColor: DS.primaryBase,
                           ),
@@ -1273,7 +1273,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                     selected: motionIntensityLevel == level,
                                     onTap: () => ref
                                         .read(motionIntensityLevelProvider
-                                            .notifier)
+                                            .notifier,)
                                         .setLevel(level),
                                   ),
                                 )
@@ -1292,7 +1292,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                             ),
                             child: Text(
                               _motionIntensityDescription(
-                                  l10n, motionIntensityLevel),
+                                  l10n, motionIntensityLevel,),
                               style: DS.bodySmall.copyWith(
                                 color: DS.textSecondary,
                                 height: 1.4,
@@ -1301,7 +1301,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                           ),
                           const SizedBox(height: DS.spacing12),
                           aiUsageSummary.when(
-                            data: (summary) => _buildAiUsageSummary(summary),
+                            data: _buildAiUsageSummary,
                             loading: () =>
                                 LoadingIndicator.linear(size: 3, liveRegion: false),
                             error: (_, __) => Container(
@@ -1366,7 +1366,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       subtitle: context.l10n.settAuroraPrefSubtitle,
                       expanded: _auroraPrefsExpanded,
                       onToggle: () => setState(
-                          () => _auroraPrefsExpanded = !_auroraPrefsExpanded),
+                          () => _auroraPrefsExpanded = !_auroraPrefsExpanded,),
                     ),
                     AnimatedCrossFade(
                       firstChild: const SizedBox(width: double.infinity),
@@ -1398,14 +1398,14 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                       await ref
                                           .read(auroraPreferencesProvider.notifier)
                                           .updatePreference(
-                                              'aurora_analysis_depth', v);
+                                              'aurora_analysis_depth', v,);
                                     } catch (_) {
                                       if (context.mounted) {
                                         AppFeedback.error(
                                             context,
                                             AppLocalizations.of(context)!
                                                 .learningPreferenceSaveFailed(
-                                                    ''));
+                                                    '',),);
                                       }
                                     }
                                   },
@@ -1431,14 +1431,14 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                       await ref
                                           .read(auroraPreferencesProvider.notifier)
                                           .updatePreference(
-                                              'aurora_directness', v);
+                                              'aurora_directness', v,);
                                     } catch (_) {
                                       if (context.mounted) {
                                         AppFeedback.error(
                                             context,
                                             AppLocalizations.of(context)!
                                                 .learningPreferenceSaveFailed(
-                                                    ''));
+                                                    '',),);
                                       }
                                     }
                                   },
@@ -1464,14 +1464,14 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                       await ref
                                           .read(auroraPreferencesProvider.notifier)
                                           .updatePreference(
-                                              'aurora_explanation_level', v);
+                                              'aurora_explanation_level', v,);
                                     } catch (_) {
                                       if (context.mounted) {
                                         AppFeedback.error(
                                             context,
                                             AppLocalizations.of(context)!
                                                 .learningPreferenceSaveFailed(
-                                                    ''));
+                                                    '',),);
                                       }
                                     }
                                   },
@@ -1497,14 +1497,14 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                       await ref
                                           .read(auroraPreferencesProvider.notifier)
                                           .updatePreference(
-                                              'aurora_pressure_style', v);
+                                              'aurora_pressure_style', v,);
                                     } catch (_) {
                                       if (context.mounted) {
                                         AppFeedback.error(
                                             context,
                                             AppLocalizations.of(context)!
                                                 .learningPreferenceSaveFailed(
-                                                    ''));
+                                                    '',),);
                                       }
                                     }
                                   },
@@ -1513,7 +1513,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                               ],
                             ),
                             loading: () => const Center(
-                                child: LoadingIndicator()),
+                                child: LoadingIndicator(),),
                             error: (_, __) => Padding(
                               padding: const EdgeInsets.all(DS.spacing16),
                               child: Text(
@@ -1549,7 +1549,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                           : l10n.notificationLoadingPrefs,
                       expanded: _notificationExpanded,
                       onToggle: () => setState(
-                          () => _notificationExpanded = !_notificationExpanded),
+                          () => _notificationExpanded = !_notificationExpanded,),
                     ),
                     AnimatedCrossFade(
                       firstChild: const SizedBox(width: double.infinity),
@@ -1607,7 +1607,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                               contentPadding: EdgeInsets.zero,
                               title: Text(l10n.notificationSpacedRepetition),
                               subtitle: Text(
-                                  l10n.notificationSpacedRepetitionSubtitle),
+                                  l10n.notificationSpacedRepetitionSubtitle,),
                               onChanged: (value) => unawaited(
                                 _updateNotificationTypePreference(
                                   context,
@@ -1702,7 +1702,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                     successMessage:
                                         l10n.notificationLevelSwitched(
                                             _notificationLevelLabel(
-                                                l10n, level)),
+                                                l10n, level,),),
                                   ),
                                 );
                               },
@@ -1712,7 +1712,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                               icon: Icons.notifications_active_outlined,
                               title: l10n.notificationLevelPreviewTitle(
                                   _notificationLevelLabel(
-                                      l10n, notificationLevel)),
+                                      l10n, notificationLevel,),),
                               description: _notificationLevelPreview(
                                 l10n,
                                 notificationLevel,
@@ -2112,7 +2112,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         title: Text(zh ? '重置所有设置' : 'Reset All Settings'),
         content: Text(zh
             ? '这将重置所有主题、辅助功能和偏好设置到默认值。确定继续吗？'
-            : 'This will reset all theme, accessibility, and preference settings to defaults. Continue?'),
+            : 'This will reset all theme, accessibility, and preference settings to defaults. Continue?',),
         actions: [
           // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档；重置是破坏性动作，
           // destructive 文字动作档承接（ghost + 语义色前景，不升实心底）。
@@ -2304,7 +2304,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       AppFeedback.error(
         context,
         AppLocalizations.of(context)!.notificationUpdateFailed(
-            e.toString().replaceFirst('Exception: ', '').trim()),
+            e.toString().replaceFirst('Exception: ', '').trim(),),
       );
     }
   }
@@ -2357,7 +2357,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     final nextEnd = isStart ? prefs.quietHoursEnd : formatted;
     if (nextStart == nextEnd) {
       AppFeedback.info(context,
-          AppLocalizations.of(context)!.notificationQuietHoursSameTimeError);
+          AppLocalizations.of(context)!.notificationQuietHoursSameTimeError,);
       return;
     }
     await _updateNotificationPreferences(
@@ -2408,7 +2408,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   }
 
   String _taskReminderSummary(
-      AppLocalizations l10n, TaskReminderConfig config) {
+      AppLocalizations l10n, TaskReminderConfig config,) {
     if (!config.enabled) {
       return l10n.taskReminderDisabled;
     }
@@ -2932,11 +2932,11 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             runSpacing: DS.spacing8,
             children: [
               _buildInfoChip(context.l10n.bgmCurated,
-                  context.l10n.tracksCount(snapshot.curatedCount)),
+                  context.l10n.tracksCount(snapshot.curatedCount),),
               _buildInfoChip(context.l10n.bgmImported,
-                  context.l10n.tracksCount(snapshot.importedCount)),
+                  context.l10n.tracksCount(snapshot.importedCount),),
               _buildInfoChip(context.l10n.bgmBundled,
-                  context.l10n.tracksCount(snapshot.bundledCount)),
+                  context.l10n.tracksCount(snapshot.bundledCount),),
               _buildInfoChip(
                 context.l10n.bgmModeLabel,
                 _bgmMode == BgmMode.continuous
@@ -3035,18 +3035,18 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 runSpacing: DS.spacing8,
                 children: [
                   _buildInfoChip(context.l10n.bgmIntensityLabel,
-                      _bgmIntensityLabel(context.l10n, snapshot.intensity)),
+                      _bgmIntensityLabel(context.l10n, snapshot.intensity),),
                   _buildInfoChip(context.l10n.bgmVarietyLabel,
-                      _bgmVarietyLabel(context.l10n, snapshot.variety)),
+                      _bgmVarietyLabel(context.l10n, snapshot.variety),),
                   if (snapshot.readingProtectionApplied)
                     _buildInfoChip(context.l10n.bgmReadingProtection,
-                        context.l10n.bgmReadingProtectionTitle),
+                        context.l10n.bgmReadingProtectionTitle,),
                   if (snapshot.focusPriorityApplied)
                     _buildInfoChip(context.l10n.bgmFocusPriority,
-                        context.l10n.bgmFocusPriorityTitle),
+                        context.l10n.bgmFocusPriorityTitle,),
                   if (snapshot.styleLocked)
                     _buildInfoChip(context.l10n.bgmStyleLocked,
-                        context.l10n.bgmStyleLocked),
+                        context.l10n.bgmStyleLocked,),
                 ],
               ),
             ),
@@ -3055,8 +3055,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     );
   }
 
-  Widget _buildBgmAdvancedControls() {
-    return Column(
+  Widget _buildBgmAdvancedControls() => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -3145,10 +3144,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         ),
       ],
     );
-  }
 
-  Widget _buildInfoChip(String label, String value) {
-    return Container(
+  Widget _buildInfoChip(String label, String value) => Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing8,
         vertical: DS.spacing6,
@@ -3162,7 +3159,6 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         style: DS.labelSmall.copyWith(color: DS.textSecondary),
       ),
     );
-  }
 
   String _bgmPaletteLabel(AppLocalizations l10n, BgmPalette palette) =>
       switch (palette) {
@@ -3190,7 +3186,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       };
 
   String _bgmIntensityDescription(
-          AppLocalizations l10n, BgmIntensity intensity) =>
+          AppLocalizations l10n, BgmIntensity intensity,) =>
       switch (intensity) {
         BgmIntensity.gentle => l10n.bgmIntensityGentleDesc,
         BgmIntensity.balanced => l10n.bgmIntensityBalancedDesc,
@@ -3212,7 +3208,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       };
 
   String _motionIntensityLabel(
-          AppLocalizations l10n, MotionIntensityLevel level) =>
+          AppLocalizations l10n, MotionIntensityLevel level,) =>
       switch (level) {
         MotionIntensityLevel.ultra => l10n.motionIntensityUltra,
         MotionIntensityLevel.high => l10n.motionIntensityHigh,
@@ -3221,7 +3217,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       };
 
   String _motionIntensityDescription(
-          AppLocalizations l10n, MotionIntensityLevel level) =>
+          AppLocalizations l10n, MotionIntensityLevel level,) =>
       switch (level) {
         MotionIntensityLevel.ultra => l10n.motionIntensityUltraDesc,
         MotionIntensityLevel.high => l10n.motionIntensityHighDesc,
@@ -3258,7 +3254,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             size: 24,
           ),
           title: Text(l10n.notificationPermissionStatus),
-          subtitle: Text('...'),
+          subtitle: const Text('...'),
         ),
       ),
       error: (error, stack) => GraphiteCardSurface(
@@ -3523,7 +3519,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                         Text(
                           context.l10n.aiUsageLatency(
                               avgFirstTokenMs.toStringAsFixed(0),
-                              avgTotalMs.toStringAsFixed(0)),
+                              avgTotalMs.toStringAsFixed(0),),
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.textTheme.bodySmall?.color?.withValues(
                               alpha: 0.72,
@@ -3808,7 +3804,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 windowDays,
                 topAction,
                 avgPromptUtil.toStringAsFixed(1),
-                avgInferenceUtil.toStringAsFixed(1)),
+                avgInferenceUtil.toStringAsFixed(1),),
             style: theme.textTheme.bodySmall,
           ),
           const SizedBox(height: DS.spacing12),

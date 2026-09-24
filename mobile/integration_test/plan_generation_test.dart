@@ -3,11 +3,11 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/presentation/screens/login_screen.dart';
 import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart';
 import 'package:sparkle/main.dart' as app;
-import 'package:sparkle/core/services/bgm_service.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// Plan Generation Test
 /// Verifies: plan UI is reachable, loading/timeout/error states handled
@@ -37,12 +37,12 @@ void main() {
           find.byType(Scaffold).evaluate().isNotEmpty;
 
       expect(onValidScreen, isTrue,
-          reason: 'Should be on a valid screen after plan interaction attempt');
+          reason: 'Should be on a valid screen after plan interaction attempt',);
 
       // Check for no unhandled exceptions in the widget tree
       final errorWidgets = find.byType(ErrorWidget).evaluate();
       expect(errorWidgets.isEmpty, isTrue,
-          reason: 'No ErrorWidget should be present');
+          reason: 'No ErrorWidget should be present',);
     } finally {
       await BgmService.dispose();
       await SensoryFeedbackService.dispose();

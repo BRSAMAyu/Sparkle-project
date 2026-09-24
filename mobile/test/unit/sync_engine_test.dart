@@ -8,7 +8,6 @@ import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:isar/isar.dart';
-import '../shared/isar_test_helper.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,6 +19,7 @@ import 'package:sparkle/core/offline/sync_engine.dart';
 import 'package:sparkle/core/services/websocket_service.dart';
 import 'package:sparkle/gen/websocket.pb.dart';
 
+import '../shared/isar_test_helper.dart';
 import 'sync_engine_test.mocks.dart';
 
 @GenerateMocks([WebSocketService, ApiClient])

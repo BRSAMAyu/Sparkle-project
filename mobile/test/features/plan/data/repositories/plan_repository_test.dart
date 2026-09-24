@@ -160,7 +160,7 @@ void main() {
 
     final refreshed = await repository.getPlan(created.id);
     expect(refreshed.tasks, isNotNull);
-    expect(refreshed.tasks!, hasLength(2));
+    expect(refreshed.tasks, hasLength(2));
 
     await repository.archivePlan(created.id);
     expect((await repository.getPlan(created.id)).isActive, isFalse);

@@ -228,7 +228,7 @@ class _AchievementRow extends StatelessWidget {
                               minHeight: 4,
                               backgroundColor: DS.neutral200,
                               valueColor: AlwaysStoppedAnimation<Color>(
-                                  _rarityColor(rarity)),
+                                  _rarityColor(rarity),),
                             ),
                           ),
                         ),

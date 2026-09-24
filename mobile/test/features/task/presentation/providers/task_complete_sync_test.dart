@@ -11,9 +11,9 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/offline/list_read_cache.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/prediction_attribution_service.dart';
@@ -25,6 +25,7 @@ import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/models/api_response_model.dart';
+
 import '../../../../shared/i18n_test_helper.dart';
 
 class _UnusedRef implements Ref<Object?> {
@@ -61,8 +62,8 @@ class _FakeTaskRepository extends TaskRepository {
         'energy_cost': 1,
         'priority': 1,
         'status': 'COMPLETED',
-        'created_at': DateTime(2026, 1, 1).toIso8601String(),
-        'updated_at': DateTime(2026, 1, 1).toIso8601String(),
+        'created_at': DateTime(2026).toIso8601String(),
+        'updated_at': DateTime(2026).toIso8601String(),
       },
     );
   }
@@ -119,8 +120,8 @@ TaskModel _seedTask() => TaskModel(
       energyCost: 1,
       priority: 1,
       status: TaskStatus.pending,
-      createdAt: DateTime(2026, 1, 1),
-      updatedAt: DateTime(2026, 1, 1),
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
     );
 
 class _ThrowingAttributionService extends PredictionAttributionService {
@@ -155,13 +156,13 @@ class _FakeEventStreamService extends AppEventStreamService {
 }
 
 class _StubScheduler extends TaskNotificationScheduler {
-  int cancelCalls = 0;
 
   _StubScheduler()
       : super(
           NotificationService(_UnusedRef(), autoInitialize: false),
           TaskNotificationIdMapper(),
         );
+  int cancelCalls = 0;
 
   @override
   Future<void> cancelTaskReminders(String taskId) async {

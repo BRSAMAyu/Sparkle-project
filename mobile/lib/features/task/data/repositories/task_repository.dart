@@ -243,12 +243,10 @@ class TaskRepository {
 
   /// TASK-013: Returns true if the DioException looks like an offline / network
   /// failure and the request can safely be enqueued for later replay.
-  bool _isOfflineError(DioException e) {
-    return e.type == DioExceptionType.connectionError ||
+  bool _isOfflineError(DioException e) => e.type == DioExceptionType.connectionError ||
         e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.sendTimeout ||
         e.type == DioExceptionType.receiveTimeout;
-  }
 
   /// TASK-013/N35: Enqueue a task lifecycle op for later replay via the
   /// shared [TaskOfflineQueue] (dedupeKey/priority 与回放端口径一致).
@@ -432,9 +430,7 @@ class TaskRepository {
 
   /// N34：任务列表查询指纹（缓存键）。
   String _taskListCacheKey({
-    Map<String, dynamic>? filters,
-    required int page,
-    required int pageSize,
+    required int page, required int pageSize, Map<String, dynamic>? filters,
   }) {
     final filterPart = (filters == null || filters.isEmpty)
         ? '-'
@@ -1614,8 +1610,6 @@ Clarify the core output and completion criteria.
       if (existingIndex != -1) {
         final updated = DemoDataService().demoTasks[existingIndex].copyWith(
               status: TaskStatus.inProgress,
-              completedAt: null,
-              actualMinutes: null,
               startedAt: DateTime.now(),
             );
         DemoDataService().demoTasks[existingIndex] = updated;

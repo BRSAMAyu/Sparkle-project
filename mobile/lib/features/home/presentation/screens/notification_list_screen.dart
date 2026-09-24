@@ -8,7 +8,6 @@ import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/navigation/route_resilience.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/services/deep_link_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/data/models/notification_model.dart';
@@ -39,14 +38,14 @@ class NotificationListScreen extends ConsumerWidget {
             final zh = I18nService.instance.isChinese;
             return Center(
               child: Padding(
-                padding: EdgeInsets.all(DS.spacing24),
+                padding: const EdgeInsets.all(DS.spacing24),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.notifications_none_rounded, size: 48),
-                    SizedBox(height: DS.spacing12),
+                    const Icon(Icons.notifications_none_rounded, size: 48),
+                    const SizedBox(height: DS.spacing12),
                     Text(zh ? '暂无新通知' : 'No new notifications'),
-                    SizedBox(height: DS.spacing6),
+                    const SizedBox(height: DS.spacing6),
                     Text(
                       zh ? '学习提醒和周报需要您关注时，会显示在这里。' : 'Study reminders and weekly reports will appear here when they need your attention.',
                       textAlign: TextAlign.center,
@@ -73,7 +72,7 @@ class NotificationListScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Icons.notifications_off_outlined,
-                  size: 48, color: DS.textSecondary),
+                  size: 48, color: DS.textSecondary,),
               const SizedBox(height: DS.spacing12),
               Text(context.l10n.loadingFailed(UserFacingError.from(error)), style: TextStyle(color: DS.textSecondary)),
             ],

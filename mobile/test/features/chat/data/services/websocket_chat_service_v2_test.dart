@@ -3,11 +3,11 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/riverpod.dart';
-
-import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
-import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
+import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
+import 'package:web_socket_channel/src/channel.dart';
 
 void main() {
   // Initialize Flutter test bindings
@@ -21,7 +21,7 @@ void main() {
       container = ProviderContainer();
 
       // 使用 factory 返回 null 来模拟 WebSocket (实际测试中不需要真实连接)
-      WebSocketChannelFactory factory = (uri, {headers}) =>
+      WebSocketChannel factory(Uri uri, {Map<String, dynamic>? headers}) =>
           throw UnimplementedError('WebSocket mock not needed for unit tests');
 
       service = WebSocketChatServiceV2(
@@ -227,7 +227,7 @@ void main() {
         expect(event, isA<ReasoningStepEvent>());
         final reasoningEvent = event as ReasoningStepEvent;
         expect(
-            reasoningEvent.step.description, equals('Analyzing user request'));
+            reasoningEvent.step.description, equals('Analyzing user request'),);
         expect(reasoningEvent.step.agent, equals(AgentType.orchestrator));
         expect(reasoningEvent.step.status, equals(StepStatus.inProgress));
       });
@@ -523,8 +523,7 @@ class WebSocketChatServiceV2Parser {
     }
   }
 
-  static ToolResultModel _parseToolResult(Map<String, dynamic> json) {
-    return ToolResultModel(
+  static ToolResultModel _parseToolResult(Map<String, dynamic> json) => ToolResultModel(
       success: json['success'] == true,
       toolName: json['tool_name']?.toString() ?? '',
       data: json['data'] as Map<String, dynamic>?,
@@ -532,17 +531,13 @@ class WebSocketChatServiceV2Parser {
       widgetType: json['widget_type']?.toString(),
       widgetData: json['widget_data'] as Map<String, dynamic>?,
     );
-  }
 
-  static ToolResultModel _createDefaultToolResult() {
-    return ToolResultModel(
+  static ToolResultModel _createDefaultToolResult() => ToolResultModel(
       success: false,
       toolName: 'unknown',
     );
-  }
 
-  static ReasoningStep _parseReasoningStep(Map<String, dynamic> json) {
-    return ReasoningStep(
+  static ReasoningStep _parseReasoningStep(Map<String, dynamic> json) => ReasoningStep(
       id: json['id']?.toString() ?? '',
       description: json['description']?.toString() ?? '',
       agent: _parseAgentType(json['agent']),
@@ -557,16 +552,13 @@ class WebSocketChatServiceV2Parser {
           : null,
       metadata: json['metadata'] as Map<String, dynamic>?,
     );
-  }
 
-  static ReasoningStep _createDefaultReasoningStep() {
-    return const ReasoningStep(
+  static ReasoningStep _createDefaultReasoningStep() => const ReasoningStep(
       id: 'unknown',
       description: 'Unknown step',
       agent: AgentType.orchestrator,
       status: StepStatus.pending,
     );
-  }
 
   static AgentType _parseAgentType(dynamic raw) {
     final str = raw?.toString().toLowerCase() ?? 'orchestrator';

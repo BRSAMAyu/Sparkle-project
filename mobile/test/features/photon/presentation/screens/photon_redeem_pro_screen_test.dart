@@ -177,7 +177,7 @@ void main() {
       await tester.pump();
       expect(find.byType(AlertDialog), findsOneWidget);
       expect(find.text('确认兑换？'), findsOneWidget);
-      expect(find.textContaining('${photonRedeemProDisplayCost} 光子'), findsOneWidget);
+      expect(find.textContaining('$photonRedeemProDisplayCost 光子'), findsOneWidget);
       expect(find.textContaining('不退还'), findsOneWidget);
 
       // 确认 → 服务端终态 → 成功反馈 + 卡面翻转为已兑换 + 快照刷新。

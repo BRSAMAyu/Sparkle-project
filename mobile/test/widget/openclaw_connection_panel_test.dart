@@ -141,7 +141,7 @@ void main() {
             openClawConnectionProvider.overrideWith((ref) => service),
           ],
           child: testMaterialApp(
-            home: Scaffold(
+            home: const Scaffold(
               body: Center(
                 child: SizedBox(
                   width: 640,
@@ -185,7 +185,7 @@ void main() {
             openClawConnectionProvider.overrideWith((ref) => service),
           ],
           child: testMaterialApp(
-            home: Scaffold(
+            home: const Scaffold(
               body: Center(
                 child: SizedBox(
                   width: 640,
@@ -223,7 +223,7 @@ void main() {
             openClawConnectionProvider.overrideWith((ref) => service),
           ],
           child: testMaterialApp(
-            home: Scaffold(
+            home: const Scaffold(
               body: Center(
                 child: SizedBox(
                   width: 640,
@@ -277,7 +277,7 @@ void main() {
             openClawConnectionProvider.overrideWith((ref) => service),
           ],
           child: testMaterialApp(
-            home: Scaffold(
+            home: const Scaffold(
               body: Center(
                 child: SizedBox(
                   width: 640,
@@ -308,7 +308,7 @@ void main() {
             openClawConnectionProvider.overrideWith((ref) => service),
           ],
           child: testMaterialApp(
-            home: Scaffold(
+            home: const Scaffold(
               body: Center(
                 child: SizedBox(
                   width: 640,

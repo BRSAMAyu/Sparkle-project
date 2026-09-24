@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/knowledge/data/repositories/vocabulary_repository.dart';
 import 'package:sparkle/features/knowledge/presentation/providers/vocabulary_provider.dart';
@@ -15,7 +16,6 @@ import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_context_effect_feedback.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 import 'package:sparkle/features/vocabulary/data/services/offline_dictionary_service.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 
 class VocabularyLookupTool extends ConsumerStatefulWidget {
@@ -173,7 +173,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
     if (mounted) {
       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
       AppFeedback.success(
-          context, context.l10n.vocabularyLookupAddedToWordbook(word));
+          context, context.l10n.vocabularyLookupAddedToWordbook(word),);
     }
   }
 
@@ -197,7 +197,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
       setState(() => _isInLocalWordbook = false);
       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
       AppFeedback.info(
-          context, context.l10n.vocabularyLookupRemovedFromWordbook(word));
+          context, context.l10n.vocabularyLookupRemovedFromWordbook(word),);
     }
   }
 
@@ -222,12 +222,12 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
       await _refreshDictionaryPackages();
       if (mounted) {
         AppFeedback.success(
-            context, context.l10n.vocabularyLookupOfflineDownloaded);
+            context, context.l10n.vocabularyLookupOfflineDownloaded,);
       }
     } catch (e) {
       if (mounted) {
         AppFeedback.error(context,
-            context.l10n.vocabularyLookupOfflineDownloadFailed(e.toString()));
+            context.l10n.vocabularyLookupOfflineDownloadFailed(e.toString()),);
       }
     } finally {
       if (mounted) {
@@ -253,7 +253,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
         return;
       }
       AppFeedback.error(context,
-          context.l10n.vocabularyLookupOfflineRemoveFailed(e.toString()));
+          context.l10n.vocabularyLookupOfflineRemoveFailed(e.toString()),);
     }
   }
 
@@ -375,7 +375,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                                 children: [
                                   _buildMetaChip(context.l10n
                                       .toolsVocabEntryCount(
-                                          package.entryCount)),
+                                          package.entryCount,),),
                                   _buildMetaChip(package.packageScope),
                                   if (package.sizeBytes != null)
                                     _buildMetaChip(
@@ -532,7 +532,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                         focusNode: _focusNode,
                         decoration: InputDecoration(
                           hintText: context.l10n.toolsVocabInputHint,
-                          prefixIcon: Icon(Icons.menu_book_rounded),
+                          prefixIcon: const Icon(Icons.menu_book_rounded),
                         ),
                         textInputAction: TextInputAction.search,
                         onSubmitted: (_) => _lookup(),
@@ -565,7 +565,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                             focusNode: _focusNode,
                             decoration: InputDecoration(
                               hintText: context.l10n.toolsVocabInputHint,
-                              prefixIcon: Icon(Icons.menu_book_rounded),
+                              prefixIcon: const Icon(Icons.menu_book_rounded),
                             ),
                             textInputAction: TextInputAction.search,
                             onSubmitted: (_) => _lookup(),
@@ -734,7 +734,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                                           width: 5,
                                           height: 5,
                                           margin: const EdgeInsets.only(
-                                              top: 8, right: 8),
+                                              top: 8, right: 8,),
                                           decoration: BoxDecoration(
                                             color: DS.textSecondary,
                                             shape: BoxShape.circle,
@@ -904,8 +904,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
     ];
   }
 
-  Widget _buildOfflineDictionaryError(BuildContext context) {
-    return DecoratedBox(
+  Widget _buildOfflineDictionaryError(BuildContext context) => DecoratedBox(
       decoration: BoxDecoration(
         color: DS.semanticError.withValues(alpha: 0.08),
         borderRadius: DS.borderRadius12,
@@ -955,7 +954,6 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
         ),
       ),
     );
-  }
 
   Widget _buildMetaChip(String label) => DecoratedBox(
         decoration: BoxDecoration(

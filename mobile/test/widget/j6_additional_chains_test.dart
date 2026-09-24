@@ -20,9 +20,9 @@ void main() {
       expect(paths.contains('/errors'), isTrue, reason: 'error list route');
       expect(paths.contains('/errors/new'), isTrue, reason: 'add error route');
       expect(paths.contains('/errors/:id/edit'), isTrue,
-          reason: 'edit error route');
+          reason: 'edit error route',);
       expect(paths.contains('/errors/:id'), isTrue,
-          reason: 'error detail route');
+          reason: 'error detail route',);
     });
 
     test('review routes define the hub and active review paths', () {
@@ -30,9 +30,9 @@ void main() {
       final paths = routes.whereType<GoRoute>().map((r) => r.path).toSet();
 
       expect(paths.contains(ReviewRoutes.planHub), isTrue,
-          reason: 'review hub route');
+          reason: 'review hub route',);
       expect(paths.contains(ReviewRoutes.review), isTrue,
-          reason: 'review session route');
+          reason: 'review session route',);
     });
 
     test('ReviewMode enum covers all 4 learning modes', () {
@@ -56,7 +56,7 @@ void main() {
       // Each dimension must have a code for URL query params
       for (final dim in CognitiveDimension.values) {
         expect(dim.code.isNotEmpty, isTrue,
-            reason: '${dim.name} must have a code');
+            reason: '${dim.name} must have a code',);
       }
     });
 
@@ -78,7 +78,7 @@ void main() {
       final paths = routes.whereType<GoRoute>().map((r) => r.path).toSet();
 
       expect(paths.contains('/galaxy/node/:id'), isTrue,
-          reason: 'knowledge detail route must exist');
+          reason: 'knowledge detail route must exist',);
     });
 
     test('insights routes define learning forecast path', () {
@@ -86,7 +86,7 @@ void main() {
       final paths = routes.whereType<GoRoute>().map((r) => r.path).toSet();
 
       expect(paths.contains('/learning/forecast'), isTrue,
-          reason: 'learning forecast route must exist');
+          reason: 'learning forecast route must exist',);
     });
   });
 
@@ -97,7 +97,7 @@ void main() {
 
       expect(paths.contains('/memory'), isTrue, reason: 'memory panel');
       expect(paths.contains('/memory/settings'), isTrue,
-          reason: 'memory settings');
+          reason: 'memory settings',);
       expect(paths.contains('/memory/detail'), isTrue, reason: 'memory detail');
     });
 
@@ -122,7 +122,7 @@ void main() {
       // the route uses buildSparkleTransitionPage (not MaterialPage)
       final route = ShopRoutes.routes.whereType<GoRoute>().first;
       expect(route.pageBuilder, isNotNull,
-          reason: 'shop route must use pageBuilder for transition support');
+          reason: 'shop route must use pageBuilder for transition support',);
     });
   });
 

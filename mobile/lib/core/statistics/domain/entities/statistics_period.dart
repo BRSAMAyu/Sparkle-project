@@ -43,9 +43,7 @@ extension StatisticsPeriodExt on StatisticsPeriod {
   String get shortLabel => localizedShortLabel(null);
 
   /// Localized short label
-  String localizedShortLabel(AppLocalizations? l10n) {
-    return localizedLabel(l10n);
-  }
+  String localizedShortLabel(AppLocalizations? l10n) => localizedLabel(l10n);
 
   /// Get the start time for this period
   ///

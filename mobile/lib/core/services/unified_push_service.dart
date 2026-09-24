@@ -5,19 +5,18 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:logger/logger.dart';
 import 'package:sparkle/core/constants/push_config.dart';
+import 'package:sparkle/core/services/firebase_messaging_service.dart'
+    show fcmInitializedProvider, firebaseMessagingServiceProvider;
 import 'package:sparkle/core/services/jpush_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/push_navigation_service.dart';
-
-import 'package:sparkle/core/services/firebase_messaging_service.dart'
-    show firebaseMessagingServiceProvider, fcmInitializedProvider;
 
 // Conditional import for Firebase services
 export 'package:sparkle/core/services/firebase_messaging_service.dart'
     show
         FirebaseMessagingService,
-        firebaseMessagingServiceProvider,
-        fcmInitializedProvider;
+        fcmInitializedProvider,
+        firebaseMessagingServiceProvider;
 
 /// Push channel type
 enum PushChannel {
@@ -376,7 +375,7 @@ class UnifiedPushService {
 
 /// Provider for UnifiedPushService
 final unifiedPushServiceProvider =
-    Provider<UnifiedPushService>((ref) => UnifiedPushService(ref));
+    Provider<UnifiedPushService>(UnifiedPushService.new);
 
 /// Provider for push service initialization state
 final pushInitializedProvider = StateProvider<bool>((ref) => false);

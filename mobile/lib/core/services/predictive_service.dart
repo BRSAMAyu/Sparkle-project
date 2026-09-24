@@ -156,7 +156,7 @@ class PredictiveService {
       'weeklyTrend': [0.46, 0.49, 0.53, 0.6, 0.66, 0.71, 0.74],
       'upcomingDeadlines': tasks
           .where((task) =>
-              task.dueDate != null && task.status != TaskStatus.completed)
+              task.dueDate != null && task.status != TaskStatus.completed,)
           .take(3)
           .map(
             (task) => {

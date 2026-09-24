@@ -3,9 +3,9 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:isar/isar.dart';
+import 'package:sparkle/core/offline/list_read_cache.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/offline/models/cached_list_snapshot.dart';
-import 'package:sparkle/core/offline/list_read_cache.dart';
 
 import '../../shared/isar_test_helper.dart';
 

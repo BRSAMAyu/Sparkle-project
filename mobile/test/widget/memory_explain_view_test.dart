@@ -74,9 +74,9 @@ class _HistoryStubService implements MemoryApiService {
         status: 'resolved',
         selectedSide: selection,
         leftCandidate: UnresolvedConflictCandidate(
-            summary: 'A', lane: 'inferred_extraction'),
+            summary: 'A', lane: 'inferred_extraction',),
         rightCandidate: UnresolvedConflictCandidate(
-            summary: 'B', lane: 'inferred_extraction'),
+            summary: 'B', lane: 'inferred_extraction',),
       );
 
   @override

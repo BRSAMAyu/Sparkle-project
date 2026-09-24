@@ -243,7 +243,7 @@ class _StageDot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const dimension = 8.0;
-    Widget dot = Container(
+    final Widget dot = Container(
       width: dimension,
       height: dimension,
       decoration: BoxDecoration(

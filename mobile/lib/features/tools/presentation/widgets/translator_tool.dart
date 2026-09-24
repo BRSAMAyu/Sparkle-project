@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:isar/isar.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/knowledge/data/repositories/vocabulary_repository.dart';
 import 'package:sparkle/features/tools/data/repositories/tool_history_repository.dart';
@@ -17,7 +18,6 @@ import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 import 'package:sparkle/features/translation/data/services/translation_service.dart';
 import 'package:sparkle/features/translation/presentation/providers/translation_history_provider.dart';
 import 'package:sparkle/features/translation/translation_routes.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 
 
 class Language {
@@ -287,7 +287,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
     } catch (e) {
       if (mounted) {
         AppFeedback.error(
-            context, context.l10n.toolsTransAddWordFailed(e.toString()));
+            context, context.l10n.toolsTransAddWordFailed(e.toString()),);
       }
     } finally {
       if (mounted) {
@@ -317,7 +317,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
             unawaited(context.push(TranslationRoutes.history));
           }
         },
-        icon: Icon(Icons.history_rounded),
+        icon: const Icon(Icons.history_rounded),
         semanticLabel: context.l10n.translationHistoryTitle,
         variant: ButtonVariant.ghost,
       ),
@@ -370,7 +370,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
               label: context.l10n.toolsTransSwap,
               variant: ButtonVariant.ghost,
               onPressed: _swapLanguages,
-              icon: Icon(Icons.swap_horiz_rounded),
+              icon: const Icon(Icons.swap_horiz_rounded),
             ),
             child: LayoutBuilder(
               builder: (context, constraints) {
@@ -571,7 +571,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                 child: SparkleButton(
                   label: context.l10n.toolsTransAddWordbook,
                   onPressed: _isAddingToWordbook ? null : _addToWordbook,
-                  icon: Icon(Icons.bookmark_add_rounded),
+                  icon: const Icon(Icons.bookmark_add_rounded),
                   loading: _isAddingToWordbook,
                 ),
               ),
@@ -586,7 +586,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
             label: context.l10n.toolsTransCopyResult,
             variant: ButtonVariant.ghost,
             onPressed: _output.isEmpty ? null : _copyToClipboard,
-            icon: Icon(Icons.copy_rounded),
+            icon: const Icon(Icons.copy_rounded),
             expand: true,
           );
           final translateButton = SparkleButton(
@@ -594,7 +594,7 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                 ? context.l10n.toolsTransTranslating
                 : context.l10n.toolsTransStart,
             onPressed: _isLoading ? null : _translate,
-            icon: Icon(Icons.auto_fix_high_rounded),
+            icon: const Icon(Icons.auto_fix_high_rounded),
             loading: _isLoading,
             expand: true,
           );

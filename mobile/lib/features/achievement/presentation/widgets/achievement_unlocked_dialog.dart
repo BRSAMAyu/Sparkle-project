@@ -19,7 +19,7 @@ class SparkleAchievementUnlockedDialog extends StatelessWidget {
     final rarityColor = RarityColorProvider.getColor(achievement.rarity);
 
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: DS.borderRadius20),
+      shape: const RoundedRectangleBorder(borderRadius: DS.borderRadius20),
       title: Column(
         children: [
           TweenAnimationBuilder<double>(
@@ -67,7 +67,6 @@ class SparkleAchievementUnlockedDialog extends StatelessWidget {
         width: double.maxFinite,
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
               achievement.name,

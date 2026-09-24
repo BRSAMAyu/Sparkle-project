@@ -149,7 +149,7 @@ class _ExamSprintDashboardCardState extends State<ExamSprintDashboardCard> {
                       const SizedBox(height: DS.spacing12),
                       Text(
                         context.l10n.examHighYieldWeakSpots(
-                            data.highYieldLowMasteryTopics.join(' · ')),
+                            data.highYieldLowMasteryTopics.join(' · '),),
                         style: context.typo.bodySmall.copyWith(
                           color: DS.textSecondary,
                           height: 1.35,
@@ -327,7 +327,6 @@ class _DayZeroBannerState extends State<_DayZeroBanner>
           ],
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
               context.l10n.examDayReady,
@@ -485,7 +484,7 @@ class _HeadlineBlock extends StatelessWidget {
         ? context.l10n.examDay
         : context.l10n.examDaysUntil(data.daysLeft);
     final progress = context.l10n.examTodayProgress(
-        data.todayProgress.completed, data.todayProgress.total);
+        data.todayProgress.completed, data.todayProgress.total,);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -596,7 +595,6 @@ class _PassProbabilityArcState extends State<_PassProbabilityArc>
 
         return Row(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             RepaintBoundary(
               child: SizedBox(

@@ -205,7 +205,7 @@ void main() {
           ),
         ],
         child: testMaterialApp(
-          home: SimulationScreen(),
+          home: const SimulationScreen(),
         ),
       ),
     );
@@ -234,7 +234,7 @@ void main() {
           simulationProvider.overrideWith((ref) => notifier),
         ],
         child: testMaterialApp(
-          home: SimulationScreen(),
+          home: const SimulationScreen(),
         ),
       ),
     );

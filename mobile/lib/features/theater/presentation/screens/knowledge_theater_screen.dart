@@ -4,12 +4,11 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/share_poster_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
@@ -423,7 +422,7 @@ class _KnowledgeTheaterScreenState
                                 _TheaterDisclaimerBanner(
                                   message: prediction.disclaimer!.trim(),
                                   onDismiss: () => setState(
-                                      () => _disclaimerDismissed = true),
+                                      () => _disclaimerDismissed = true,),
                                 ),
                               ],
                               if ((prediction.evidenceSummary['user_copy']
@@ -623,7 +622,7 @@ class _KnowledgeTheaterScreenState
         shareMessage: context.l10n.theaterShareMessage(
             prediction.topic,
             shareRoute?.title ?? prediction.targetName,
-            shareRoute?.summary ?? context.l10n.theaterShareSuggestion),
+            shareRoute?.summary ?? context.l10n.theaterShareSuggestion,),
       ),
       onGenerateCard: (payload) =>
           SharePosterService().generatePoster(context, payload),
@@ -873,7 +872,7 @@ class _KnowledgeTheaterScreenState
                           Text(
                             sheetContext.l10n.theaterNodeStepLabel(
                                 matchedStep.dayLabel,
-                                matchedStep.index.toString()),
+                                matchedStep.index.toString(),),
                             style: Theme.of(sheetContext)
                                 .textTheme
                                 .labelLarge
@@ -896,7 +895,7 @@ class _KnowledgeTheaterScreenState
                           const SizedBox(height: 10),
                           Text(
                             sheetContext.l10n.theaterNodeNextAction(
-                                matchedStep.estimatedMinutes.toString()),
+                                matchedStep.estimatedMinutes.toString(),),
                             style: Theme.of(sheetContext)
                                 .textTheme
                                 .bodySmall
@@ -932,7 +931,7 @@ class _KnowledgeTheaterScreenState
                               },
                         child: Text(
                           _nodePrimaryGalaxyActionLabel(
-                              sheetContext, node, isPromotingNode),
+                              sheetContext, node, isPromotingNode,),
                         ),
                       ),
                       OutlinedButton(
@@ -1077,7 +1076,7 @@ class _KnowledgeTheaterScreenState
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '${context.l10n.theaterEdgeStrength((edge.strength * 100).round().toString())}',
+                  context.l10n.theaterEdgeStrength((edge.strength * 100).round().toString()),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: DS.textSecondary,
                       ),
@@ -1376,7 +1375,7 @@ class _ComposerCard extends StatelessWidget {
                 icon: const Icon(Icons.auto_awesome),
                 label: Text(isLoading
                     ? context.l10n.theaterComposerDeducing
-                    : context.l10n.theaterComposerGenerating),
+                    : context.l10n.theaterComposerGenerating,),
               );
               if (compact) {
                 return Column(
@@ -1485,17 +1484,17 @@ class _TheaterImmersiveTopBar extends StatelessWidget {
             child: Row(
               children: [
                 _MetricPill(
-                    label: context.l10n.theaterTopBarTarget(targetName)),
+                    label: context.l10n.theaterTopBarTarget(targetName),),
                 const SizedBox(width: 8),
                 if (selectedRoute != null) ...[
                   _MetricPill(
                       label:
-                          context.l10n.theaterTopBarPath(selectedRoute!.title)),
+                          context.l10n.theaterTopBarPath(selectedRoute!.title),),
                   const SizedBox(width: 8),
                 ],
                 _MetricPill(
                   label: context.l10n.theaterTopBarMode(
-                      _targetModeLabel(context, targetResolutionMode)),
+                      _targetModeLabel(context, targetResolutionMode),),
                 ),
                 const SizedBox(width: 8),
                 _MetricPill(
@@ -1508,7 +1507,7 @@ class _TheaterImmersiveTopBar extends StatelessWidget {
                 _MetricPill(
                   label: context.l10n.theaterTopBarMastery(
                       selectedRoute?.estimatedMastery.round().toString() ??
-                          '--'),
+                          '--',),
                 ),
               ],
             ),
@@ -1613,7 +1612,7 @@ class _TheaterSettingsDrawer extends StatelessWidget {
                   decoration: InputDecoration(
                     labelText: context.l10n.theaterSettingsLabel,
                     hintText: context.l10n.theaterComposerHint,
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -1622,7 +1621,7 @@ class _TheaterSettingsDrawer extends StatelessWidget {
                   icon: const Icon(Icons.auto_awesome_rounded),
                   label: Text(isLoading
                       ? context.l10n.theaterComposerLoading
-                      : context.l10n.theaterSettingsGenerate),
+                      : context.l10n.theaterSettingsGenerate,),
                 ),
                 if (suggestions.isNotEmpty) ...[
                   const SizedBox(height: 18),
@@ -2023,27 +2022,27 @@ class _PredictionView extends StatelessWidget {
             children: [
               _MetricPill(
                   label:
-                      context.l10n.theaterGraphRecommended(activeRoute.title)),
+                      context.l10n.theaterGraphRecommended(activeRoute.title),),
               _MetricPill(
                 label: context.l10n.theaterGraphEstimatedMastery(
-                    activeRoute.estimatedMastery.round().toString()),
+                    activeRoute.estimatedMastery.round().toString(),),
               ),
               _MetricPill(
                   label: context.l10n
-                      .theaterGraphRisk(_headlineRisk(context, activeRoute))),
+                      .theaterGraphRisk(_headlineRisk(context, activeRoute)),),
               _MetricPill(
                 label: context.l10n.theaterGraphMode(
-                    _targetModeLabel(context, prediction.targetResolutionMode)),
+                    _targetModeLabel(context, prediction.targetResolutionMode),),
               ),
               _MetricPill(
                 label: prediction.semanticMatches.isNotEmpty
                     ? context.l10n.theaterGraphRefCount(
-                        prediction.semanticMatches.length.toString())
+                        prediction.semanticMatches.length.toString(),)
                     : context.l10n.theaterGraphPendingEntry,
               ),
               _MetricPill(
                   label: context.l10n.theaterGraphNodeCount(
-                      prediction.graphNodes.length.toString())),
+                      prediction.graphNodes.length.toString(),),),
             ],
           ),
         ),
@@ -2414,7 +2413,7 @@ class _SemanticMatchSummary extends StatelessWidget {
             preview
                 .map(
                   (item) => context.l10n.theaterSemanticMatchItem(
-                      item.freeformNodeName, item.galaxyNodeName),
+                      item.freeformNodeName, item.galaxyNodeName,),
                 )
                 .join('；'),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -2445,7 +2444,7 @@ class _PredictionLoadingStateState extends State<_PredictionLoadingState>
   late final AnimationController _controller;
 
   static List<({String key, String title, IconData icon})> _buildStages(
-          BuildContext context) =>
+          BuildContext context,) =>
       [
         (
           key: 'graph',
@@ -2756,7 +2755,7 @@ class _TimelineSection extends StatelessWidget {
                     ),
                     label: Text(isPlaying
                         ? context.l10n.theaterTimelinePause
-                        : context.l10n.theaterTimelineAutoPlay),
+                        : context.l10n.theaterTimelineAutoPlay,),
                   ),
                   OutlinedButton.icon(
                     onPressed: onReset,
@@ -2878,7 +2877,7 @@ class _TimelineSection extends StatelessWidget {
                   currentFrame?.label ?? '',
                   currentFrame?.activeStepTitle ??
                       context.l10n.theaterTimelineWaitingDeduction,
-                  currentFrame?.compareLabel ?? ''),
+                  currentFrame?.compareLabel ?? '',),
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: DS.textSecondary,
                   ),
@@ -3058,7 +3057,7 @@ class _RouteSectionState extends State<_RouteSection> {
                   children: [
                     Text(
                       context.l10n.theaterRouteAdoptedPlan(
-                          widget.adoptionResult!.planName),
+                          widget.adoptionResult!.planName,),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: DS.success,
                             fontWeight: DS.fontWeightBold,
@@ -3071,7 +3070,7 @@ class _RouteSectionState extends State<_RouteSection> {
                             .adoptionResult!.createdTasks
                             .take(3)
                             .map((item) => item.title)
-                            .join('、')),
+                            .join('、'),),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: DS.textSecondary,
                               height: 1.4,
@@ -3099,7 +3098,7 @@ String _headlineRisk(BuildContext context, TheaterPathOption route) {
 }
 
 String _routeCompletionDisplay(BuildContext context, TheaterPathOption route,
-    {bool compact = false}) {
+    {bool compact = false,}) {
   if (route.dataQuality == 'low') {
     final low = (route.completionRangeLow * 100).round();
     final high = (route.completionRangeHigh * 100).round();
@@ -3110,7 +3109,7 @@ String _routeCompletionDisplay(BuildContext context, TheaterPathOption route,
 }
 
 String _routeMasteryDisplay(BuildContext context, TheaterPathOption route,
-    {bool compact = false}) {
+    {bool compact = false,}) {
   if (route.dataQuality == 'low') {
     final low = route.masteryRangeLow.round();
     final high = route.masteryRangeHigh.round();
@@ -3128,7 +3127,7 @@ String _routeDataBadgeLabel(BuildContext context, TheaterPathOption route) {
       return context.l10n.theaterRouteDataQualityMedium;
     case 'high':
       return context.l10n.theaterRouteDataQualityHigh(
-          (route.dataSufficiencyScore * 100).round().toString());
+          (route.dataSufficiencyScore * 100).round().toString(),);
     default:
       return context.l10n.theaterRouteDataQualityFallback;
   }
@@ -3146,7 +3145,7 @@ String _routeDataNote(BuildContext context, TheaterPathOption route) {
 }
 
 Color _routeMetricBackgroundColor(
-    BuildContext context, TheaterPathOption route) {
+    BuildContext context, TheaterPathOption route,) {
   if (route.dataQuality == 'low') {
     return Theme.of(context).colorScheme.surfaceContainerHighest;
   }
@@ -3292,14 +3291,14 @@ class _RouteListView extends StatelessWidget {
                           ),
                           if (isRecommended)
                             _MetricPill(
-                                label: context.l10n.theaterRouteRecommended),
+                                label: context.l10n.theaterRouteRecommended,),
                         ],
                       );
                       final adoptButton = FilledButton(
                         onPressed: isAdopting ? null : onAdopt,
                         child: Text(isAdopting
                             ? context.l10n.theaterRouteAdopting
-                            : context.l10n.theaterRouteAdopt),
+                            : context.l10n.theaterRouteAdopt,),
                       );
                       final simulateButton = FilledButton.tonalIcon(
                         onPressed: onOpenSimulation,
@@ -3354,7 +3353,7 @@ class _RouteListView extends StatelessWidget {
                       _MetricPill(
                         label: context.l10n.theaterRouteCompletion(
                             _routeCompletionDisplay(context, route,
-                                compact: true)),
+                                compact: true,),),
                         backgroundColor:
                             _routeMetricBackgroundColor(context, route),
                         labelColor: _routeMetricLabelColor(context, route),
@@ -3362,20 +3361,20 @@ class _RouteListView extends StatelessWidget {
                       _MetricPill(
                         label: context.l10n.theaterRouteMasteryLabel(
                             _routeMasteryDisplay(context, route,
-                                compact: true)),
+                                compact: true,),),
                         backgroundColor:
                             _routeMetricBackgroundColor(context, route),
                         labelColor: _routeMetricLabelColor(context, route),
                       ),
                       _MetricPill(
                           label: context.l10n.theaterRouteDailyMinutes(
-                              route.dailyMinutes.toString())),
+                              route.dailyMinutes.toString(),),),
                       _MetricPill(
                           label: context.l10n.theaterRouteRiskCount(
-                              route.risks.length.toString())),
+                              route.risks.length.toString(),),),
                       _MetricPill(
                           label: context.l10n.theaterRouteScore(
-                              route.routeScore.round().toString())),
+                              route.routeScore.round().toString(),),),
                       _MetricPill(
                         label: _routeDataBadgeLabel(context, route),
                         backgroundColor:
@@ -3485,7 +3484,7 @@ class _RouteComparePager extends StatelessWidget {
                               const SizedBox(height: 6),
                               _MetricPill(
                                   label: context
-                                      .l10n.theaterRouteRecommendedBaseline),
+                                      .l10n.theaterRouteRecommendedBaseline,),
                             ],
                             const SizedBox(height: 12),
                             Expanded(
@@ -3508,7 +3507,7 @@ class _RouteComparePager extends StatelessWidget {
                                 _RouteMetricRow(
                                   label: context.l10n.theaterRouteDailyTime,
                                   value: context.l10n.theaterRouteDailyMinutes(
-                                      route.dailyMinutes.toString()),
+                                      route.dailyMinutes.toString(),),
                                 ),
                                 _RouteMetricRow(
                                   label: context.l10n.theaterRouteRiskLevel,
@@ -3609,7 +3608,7 @@ class _RouteComparePager extends StatelessWidget {
                                     const SizedBox(height: 6),
                                     _MetricPill(
                                         label: context.l10n
-                                            .theaterRouteRecommendedBaseline),
+                                            .theaterRouteRecommendedBaseline,),
                                   ],
                                   const SizedBox(height: 10),
                                   _RouteMetricRow(
@@ -3626,7 +3625,7 @@ class _RouteComparePager extends StatelessWidget {
                                     label: context.l10n.theaterRouteDailyTime,
                                     value: context.l10n
                                         .theaterRouteDailyMinutes(
-                                            route.dailyMinutes.toString()),
+                                            route.dailyMinutes.toString(),),
                                   ),
                                   _RouteMetricRow(
                                     label: context.l10n.theaterRouteRiskLevel,
@@ -3790,7 +3789,7 @@ class _RouteFlowChain extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         context.l10n.theaterRouteStepMinutes(
-                            step.dayLabel, step.estimatedMinutes.toString()),
+                            step.dayLabel, step.estimatedMinutes.toString(),),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: DS.textSecondary,
                             ),
@@ -4038,18 +4037,18 @@ class _CompactRoutePreviewCard extends StatelessWidget {
             children: [
               _MetricPill(
                   label: context.l10n
-                      .theaterCompactComparisonCurrent(selectedRoute.title)),
+                      .theaterCompactComparisonCurrent(selectedRoute.title),),
               _MetricPill(
                 label: context.l10n.theaterCompactComparisonMastery(
-                    selectedRoute.estimatedMastery.round().toString()),
+                    selectedRoute.estimatedMastery.round().toString(),),
               ),
               _MetricPill(
                   label: context.l10n.theaterCompactComparisonTime(
-                      selectedRoute.dailyMinutes.toString())),
+                      selectedRoute.dailyMinutes.toString(),),),
               if (compareRoute.id != selectedRoute.id)
                 _MetricPill(
                     label: context.l10n
-                        .theaterCompactComparisonAlt(compareRoute.title)),
+                        .theaterCompactComparisonAlt(compareRoute.title),),
             ],
           ),
           const SizedBox(height: 12),
@@ -4184,9 +4183,9 @@ class _RouteComparisonCard extends StatelessWidget {
                     context,
                     context.l10n.theaterComparisonTimeInvestment,
                     context.l10n.theaterPerDayUnit(
-                        selectedRoute.dailyMinutes.toString()),
+                        selectedRoute.dailyMinutes.toString(),),
                     context.l10n.theaterPerDayUnit(
-                        compareRoute.dailyMinutes.toString()),
+                        compareRoute.dailyMinutes.toString(),),
                   ),
                   _comparisonRow(
                     context,
@@ -4442,7 +4441,7 @@ class _WhatIfSectionState extends State<_WhatIfSection> {
                   _selectedNodeIds.isEmpty
                       ? context.l10n.theaterWhatIfNoNodesSelected
                       : context.l10n.theaterWhatIfNodesSkipped(
-                          selectedSteps.map((step) => step.nodeName).join('、')),
+                          selectedSteps.map((step) => step.nodeName).join('、'),),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: DS.textSecondary,
                         height: 1.4,
@@ -4523,7 +4522,7 @@ class _WhatIfSectionState extends State<_WhatIfSection> {
                       context.l10n.theaterWhatIfRemainingPath(widget
                           .result!.remainingPath
                           .map((item) => item.nodeName)
-                          .join(' → ')),
+                          .join(' → '),),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: DS.textSecondary,
                             height: 1.4,
@@ -4731,7 +4730,7 @@ class _SnapshotSection extends StatelessWidget {
               onPressed: isSaving ? null : onSave,
               child: Text(isSaving
                   ? context.l10n.theaterSnapshotSaving
-                  : context.l10n.theaterSnapshotSave),
+                  : context.l10n.theaterSnapshotSave,),
             );
             final content = Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -4817,7 +4816,7 @@ class _AccuracyCard extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(context.l10n.theaterAccuracyAvgScore(
-                  (summary!.accuracyScore * 100).round().toString())),
+                  (summary!.accuracyScore * 100).round().toString(),),),
               const SizedBox(height: 8),
               Text(
                 summary!.withinPredictedRange
@@ -4858,20 +4857,20 @@ class _AccuracyCard extends StatelessWidget {
                 children: [
                   _MetricPill(
                     label: context.l10n.theaterAccuracySampleCount(
-                        overview!.sampleCount.toString()),
+                        overview!.sampleCount.toString(),),
                   ),
                   _MetricPill(
                     label: context.l10n.theaterAccuracyAvgScore(
-                        (overview!.avgAccuracyScore * 100).round().toString()),
+                        (overview!.avgAccuracyScore * 100).round().toString(),),
                   ),
                   _MetricPill(
                     label: context.l10n.theaterAccuracyConfidenceScore(
-                        (overview!.confidenceScore * 100).round().toString()),
+                        (overview!.confidenceScore * 100).round().toString(),),
                   ),
                   if (overview!.coverageRate != null)
                     _MetricPill(
                       label: context.l10n.theaterAccuracyCoverageRate(
-                          (overview!.coverageRate! * 100).round().toString()),
+                          (overview!.coverageRate! * 100).round().toString(),),
                     ),
                 ],
               ),
@@ -5000,7 +4999,7 @@ class _AdoptionSuccessOverlay extends StatelessWidget {
                               context.l10n.theaterAdoptionCheckpoints(
                                   checkpointDates
                                       .map((item) => item['date'])
-                                      .join('、')),
+                                      .join('、'),),
                               style: Theme.of(context)
                                   .textTheme
                                   .bodySmall

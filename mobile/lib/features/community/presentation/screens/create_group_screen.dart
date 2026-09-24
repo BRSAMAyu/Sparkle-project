@@ -125,7 +125,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
       if (mounted) {
         await SensoryFeedbackService.emit(SensoryFeedbackEvent.error);
         AppFeedback.error(context,
-            context.l10n.communityCreateGroupFailed(UserFacingError.from(e)));
+            context.l10n.communityCreateGroupFailed(UserFacingError.from(e)),);
       }
     } finally {
       if (mounted) {
@@ -182,8 +182,9 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                         if (value == null || value.trim().isEmpty) {
                           return context.l10n.communityGroupNameRequired;
                         }
-                        if (value.length < 2)
+                        if (value.length < 2) {
                           return context.l10n.communityGroupNameMinLength;
+                        }
                         return null;
                       },
                     ),
@@ -306,7 +307,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                         decoration: InputDecoration(
                           labelText: context.l10n.communitySprintGoalLabel,
                           hintText: context.l10n.communityCreateGroupGoalHint,
-                          border: OutlineInputBorder(),
+                          border: const OutlineInputBorder(),
                         ),
                         validator: (value) {
                           if (_type == GroupType.sprint &&

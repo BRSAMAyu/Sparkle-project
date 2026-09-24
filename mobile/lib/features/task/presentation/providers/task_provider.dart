@@ -6,9 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/core/services/prediction_attribution_service.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/task_notification_scheduler.dart'
     show
         TaskNotificationScheduler,
@@ -16,10 +16,10 @@ import 'package:sparkle/core/services/task_notification_scheduler.dart'
         taskReminderConfigProvider;
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/calendar/data/repositories/calendar_repository.dart';
-import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
 import 'package:sparkle/features/calendar/presentation/providers/unified_calendar_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
+import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/insights/presentation/providers/weekly_growth_narrative_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/learning_portfolio_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
@@ -163,7 +163,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       loadTodayTasks(),
       loadRecommendedTasks(),
       loadTasks(),
-    ]).catchError((_) => <void>[]));
+    ]).catchError((_) => <void>[]),);
   }
   final TaskRepository _taskRepository;
   final TaskNotificationScheduler _notificationScheduler;
@@ -1221,7 +1221,7 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     } catch (e) {
       debugPrint('[task] reorder failed: $e');
       state = state.copyWith(
-          tasks: originalTasks, error: categorizeUiError(e));
+          tasks: originalTasks, error: categorizeUiError(e),);
     }
   }
 

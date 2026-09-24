@@ -14,8 +14,8 @@ import 'package:sparkle/features/goal/data/models/scenario_pack_models.dart';
 import 'package:sparkle/features/goal/data/repositories/goal_repository.dart';
 import 'package:sparkle/features/goal/data/services/goal_intent_service.dart';
 import 'package:sparkle/features/goal/data/services/scenario_pack_service.dart';
-import 'package:sparkle/features/goal/presentation/widgets/goal_intent_input.dart';
 import 'package:sparkle/features/goal/presentation/widgets/goal_created_dialog.dart';
+import 'package:sparkle/features/goal/presentation/widgets/goal_intent_input.dart';
 import 'package:sparkle/features/goal/presentation/widgets/intent_confirmation_card.dart';
 
 class GoalCreationWizardScreen extends ConsumerStatefulWidget {
@@ -138,7 +138,7 @@ class _GoalCreationWizardScreenState
                 if (_error != null) ...[
                   _ErrorBanner(
                       message: _error!,
-                      onClose: () => setState(() => _error = null)),
+                      onClose: () => setState(() => _error = null),),
                   const SizedBox(height: 14),
                 ],
                 Semantics(
@@ -164,7 +164,7 @@ class _GoalCreationWizardScreenState
                       onPressed:
                           _creating ? null : () => setState(() => _step--),
                       icon: const Icon(Icons.arrow_back_rounded,
-                          semanticLabel: 'Back'),
+                          semanticLabel: 'Back',),
                       label: Text(l10n.goalWizardBack),
                     ),
                   ),
@@ -184,10 +184,10 @@ class _GoalCreationWizardScreenState
                                 : Icons.arrow_forward_rounded,
                             semanticLabel: _step == 4
                                 ? l10n.goalWizardCreate
-                                : l10n.goalWizardContinue),
+                                : l10n.goalWizardContinue,),
                     label: Text(_step == 4
                         ? l10n.goalWizardCreate
-                        : l10n.goalWizardContinue),
+                        : l10n.goalWizardContinue,),
                   ),
                 ),
               ],
@@ -901,8 +901,7 @@ class _ErrorBanner extends StatelessWidget {
   final VoidCallback onClose;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: DS.error100,
@@ -922,5 +921,4 @@ class _ErrorBanner extends StatelessWidget {
         ],
       ),
     );
-  }
 }

@@ -18,9 +18,7 @@ final ws6ProfileMirrorAdapterProvider = Provider<Ws6ProfileMirrorAdapter>(
 );
 
 final ws6BindingTelemetryRecorderProvider =
-    Provider<Ws6BindingTelemetryRecorder>((ref) {
-  return ({required String outcome, Map<String, dynamic>? metadata}) {
-    return ClientObservabilityService.instance.recordEvent(
+    Provider<Ws6BindingTelemetryRecorder>((ref) => ({required String outcome, Map<String, dynamic>? metadata}) => ClientObservabilityService.instance.recordEvent(
       eventType: 'profile_transparency_binding',
       category: 'profile_surface',
       route: '/user/profile/transparent',
@@ -30,9 +28,7 @@ final ws6BindingTelemetryRecorderProvider =
         'outcome': outcome,
         ...?metadata,
       },
-    );
-  };
-});
+    ),);
 
 final ws6TransparentProfileViewProvider =
     FutureProvider<Ws6TransparentProfileViewModel>((ref) async {
@@ -244,12 +240,10 @@ class Ws6ProfileMirrorAdapter {
 
   List<Ws6ProfileCorrectionHistoryItemModel> _buildRecentCorrections(
     Map<String, dynamic> profileContext,
-  ) {
-    return [
+  ) => [
       for (final raw in _asList(profileContext['recent_corrections']))
         if (_asMap(raw).isNotEmpty) _buildCorrectionHistoryItem(_asMap(raw)),
     ];
-  }
 
   Ws6ProfileCorrectionHistoryItemModel _buildCorrectionHistoryItem(
     Map<String, dynamic> item,
@@ -310,16 +304,16 @@ class Ws6ProfileMirrorAdapter {
       [
         currentState['commitment'],
         knowledgeSummary['active_learning_subjects'],
-        layer1['preferences']
+        layer1['preferences'],
       ],
       fallback: _dimensionValue(knowledgeSummary['active_learning_subjects'],
-          fallback: 0.35),
+          fallback: 0.35,),
     );
     final memoryValue = _dimensionValue(
       [
         knowledgeSummary['overall_mastery'],
         cognitiveSummary['active_patterns'],
-        layer3['patterns']
+        layer3['patterns'],
       ],
       fallback: _dimensionValue(layer3['patterns'], fallback: 0.3),
     );
@@ -327,7 +321,7 @@ class Ws6ProfileMirrorAdapter {
     final presenceFromRelationship =
         _numericFrom(relationship['relationship_maturity']);
     final presenceFallback = _clamp01(
-        (focusValue + energyValue + commitmentValue + memoryValue) / 4);
+        (focusValue + energyValue + commitmentValue + memoryValue) / 4,);
     final presenceValue = presenceFromRelationship ?? presenceFallback;
     final presenceLabel = _presenceLabel(presenceValue);
     final zh = I18nService.instance.isChinese;
@@ -349,7 +343,7 @@ class Ws6ProfileMirrorAdapter {
           sourceLabel: _sourceLabel(
             [
               'profileContext.current_state.focus',
-              'transparentProfile.layer_1.goals'
+              'transparentProfile.layer_1.goals',
             ],
           ),
           visibility: Ws6ProfileVisibility.visible,
@@ -370,7 +364,7 @@ class Ws6ProfileMirrorAdapter {
           sourceLabel: _sourceLabel(
             [
               'profileContext.current_state.energy',
-              'profileContext.readiness.energy'
+              'profileContext.readiness.energy',
             ],
           ),
           visibility: allowSensitiveMediation
@@ -393,7 +387,7 @@ class Ws6ProfileMirrorAdapter {
           sourceLabel: _sourceLabel(
             [
               'profileContext.knowledge_summary.active_learning_subjects',
-              'transparentProfile.layer_1.preferences'
+              'transparentProfile.layer_1.preferences',
             ],
           ),
           visibility: Ws6ProfileVisibility.visible,
@@ -414,7 +408,7 @@ class Ws6ProfileMirrorAdapter {
           sourceLabel: _sourceLabel(
             [
               'profileContext.knowledge_summary.overall_mastery',
-              'profileContext.cognitive_summary.active_patterns'
+              'profileContext.cognitive_summary.active_patterns',
             ],
           ),
           visibility: Ws6ProfileVisibility.visible,
@@ -435,7 +429,7 @@ class Ws6ProfileMirrorAdapter {
   }
 
   List<Map<String, dynamic>> _extractClaimLikeItems(
-      Map<String, dynamic> transparentProfile) {
+      Map<String, dynamic> transparentProfile,) {
     final items = <Map<String, dynamic>>[];
     final rawItems =
         transparentProfile['items'] ?? transparentProfile['claims'];
@@ -479,7 +473,7 @@ class Ws6ProfileMirrorAdapter {
   }
 
   List<Map<String, dynamic>> _synthesizeItemsFromLegacyLayers(
-      Map<String, dynamic> transparentProfile) {
+      Map<String, dynamic> transparentProfile,) {
     final layer1 = _asMap(transparentProfile['layer_1']);
     final layer2 = _asMap(transparentProfile['layer_2']);
     final layer3 = _asMap(transparentProfile['layer_3']);
@@ -712,7 +706,7 @@ class Ws6ProfileMirrorAdapter {
   double _clamp01(double value) => value.clamp(0.0, 1.0);
 
   String _dimensionSubtitle(dynamic primary, dynamic secondary,
-      {required String fallback}) {
+      {required String fallback,}) {
     final primaryText = _stringifyValue(primary);
     final secondaryText = _stringifyValue(secondary);
     if (primaryText.isNotEmpty) {

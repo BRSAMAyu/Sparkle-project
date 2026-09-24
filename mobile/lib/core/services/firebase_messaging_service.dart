@@ -217,7 +217,7 @@ class FirebaseMessagingService {
 
 /// Provider for FirebaseMessagingService
 final firebaseMessagingServiceProvider =
-    Provider<FirebaseMessagingService>((ref) => FirebaseMessagingService(ref));
+    Provider<FirebaseMessagingService>(FirebaseMessagingService.new);
 
 /// Provider for FCM initialization state
 final fcmInitializedProvider = StateProvider<bool>((ref) => false);

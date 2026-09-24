@@ -277,7 +277,7 @@ void main() {
       'error_code': 'permanent_failure',
       'error_message': 'bad frame',
       'permanent': true,
-    }));
+    }),);
 
     await waitFor(
       const Duration(seconds: 3),

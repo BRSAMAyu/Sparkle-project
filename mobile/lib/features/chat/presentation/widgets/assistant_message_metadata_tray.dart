@@ -292,7 +292,7 @@ class _TimingContent extends StatelessWidget {
     final rows = <MapEntry<String, String>>[
       if ((meta.firstTokenMs ?? 0) > 0)
         MapEntry(context.l10n.chatMetaFirstTokenLatency,
-            _formatDuration(meta.firstTokenMs!)),
+            _formatDuration(meta.firstTokenMs!),),
       if ((meta.totalDurationMs ?? meta.latencyMs ?? 0) > 0)
         MapEntry(
           context.l10n.chatMetaTotalDuration,
@@ -300,7 +300,7 @@ class _TimingContent extends StatelessWidget {
         ),
       if ((meta.streamDurationMs ?? 0) > 0)
         MapEntry(context.l10n.chatMetaStreamingPhase,
-            _formatDuration(meta.streamDurationMs!)),
+            _formatDuration(meta.streamDurationMs!),),
       if ((meta.responseEventCount ?? 0) > 0)
         MapEntry(context.l10n.chatMetaEventCount, '${meta.responseEventCount}'),
       if (meta.modelTier?.isNotEmpty ?? false)
@@ -312,7 +312,7 @@ class _TimingContent extends StatelessWidget {
             context.l10n.chatMetaCache,
             meta.isCacheHit!
                 ? context.l10n.chatMetaCacheHit
-                : context.l10n.chatMetaCacheMiss),
+                : context.l10n.chatMetaCacheMiss,),
     ];
 
     return Column(

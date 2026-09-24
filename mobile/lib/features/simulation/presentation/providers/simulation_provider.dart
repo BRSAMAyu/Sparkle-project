@@ -259,7 +259,7 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
       if (!recovered) {
         debugPrint('[simulation] realtime load failed: $e');
         state = state.copyWith(
-            isLoading: false, error: categorizeUiError(e));
+            isLoading: false, error: categorizeUiError(e),);
       }
     }
   }

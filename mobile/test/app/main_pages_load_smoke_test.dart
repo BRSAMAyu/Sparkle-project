@@ -10,6 +10,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
+import 'package:sparkle/core/storage/token_storage_io.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/auth/presentation/screens/login_screen.dart';
@@ -24,8 +25,8 @@ import 'package:sparkle/features/user/presentation/screens/profile_screen.dart';
 import 'package:sparkle/features/user/presentation/widgets/statistics_card.dart';
 import 'package:sparkle/shared/entities/user_brief.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
+
 import '../shared/i18n_test_helper.dart';
-import 'package:sparkle/core/storage/token_storage_io.dart';
 
 void main() {
 

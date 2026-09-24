@@ -414,14 +414,12 @@ int? _daysUntil(DateTime? value) {
   return targetDate.difference(todayDate).inDays;
 }
 
-String _planStageLabel(PlanStage stage) {
-  return switch (stage) {
+String _planStageLabel(PlanStage stage) => switch (stage) {
     PlanStage.sprint => S.planStageSprint,
     PlanStage.daily => S.planStageDaily,
     PlanStage.review => S.planStageReview,
     PlanStage.paused => S.planStagePaused,
   };
-}
 
 T? _firstWhereOrNull<T>(Iterable<T> items, bool Function(T) test) {
   for (final item in items) {

@@ -5,10 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/errors/user_facing_error.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/data/services/chat_draft_store.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_draft_store_provider.dart';
@@ -102,7 +102,6 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                 )
               else
                 SliverFillRemaining(
-                  hasScrollBody: true,
                   child: GroupKnowledgeBaseView(
                     groupId: widget.groupId,
                     currentUserRole: group.myRole,
@@ -134,7 +133,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
   }
 
   SliverAppBar _buildAppBar(
-      BuildContext context, WidgetRef ref, GroupInfo group) {
+      BuildContext context, WidgetRef ref, GroupInfo group,) {
     final isMember = group.myRole != null;
     final isSprint = group.isSprint;
 
@@ -237,7 +236,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
   }
 
   Widget _buildOverviewTab(
-      BuildContext context, WidgetRef ref, GroupInfo group) {
+      BuildContext context, WidgetRef ref, GroupInfo group,) {
     final isMember = group.myRole != null;
     final theme = Theme.of(context);
 
@@ -400,7 +399,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                     label: context.l10n.gdTasks,
                     icon: const Icon(Icons.task_alt, size: 18),
                     onPressed: () => unawaited(context
-                        .push('/community/groups/${widget.groupId}/tasks')),
+                        .push('/community/groups/${widget.groupId}/tasks'),),
                   ),
                 ),
                 const SizedBox(width: DS.md),
@@ -437,12 +436,12 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                       .joinGroup();
                   if (context.mounted) {
                     AppFeedback.success(
-                        context, context.l10n.communityWelcomeToGroup);
+                        context, context.l10n.communityWelcomeToGroup,);
                   }
                 } catch (e) {
                   if (context.mounted) {
                     AppFeedback.error(
-                        context, context.l10n.gdJoinFailed(UserFacingError.from(e)));
+                        context, context.l10n.gdJoinFailed(UserFacingError.from(e)),);
                   }
                 }
               },
@@ -624,11 +623,13 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
       await ref
           .read(groupDetailProvider(widget.groupId).notifier)
           .updateAnnouncement(result.isEmpty ? null : result);
-      if (context.mounted)
+      if (context.mounted) {
         AppFeedback.success(context, context.l10n.gdAnnouncementUpdated);
+      }
     } catch (e) {
-      if (context.mounted)
+      if (context.mounted) {
         AppFeedback.error(context, context.l10n.gdUpdateFailed(UserFacingError.from(e)));
+      }
     }
   }
 }

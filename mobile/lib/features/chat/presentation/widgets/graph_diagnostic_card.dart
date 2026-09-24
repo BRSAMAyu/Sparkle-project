@@ -113,8 +113,7 @@ class _SectionTitle extends StatelessWidget {
   final String subtitle;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -133,7 +132,6 @@ class _SectionTitle extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 class _NodeTile extends StatelessWidget {
@@ -163,7 +161,7 @@ class _NodeTile extends StatelessWidget {
           onPressed: () => unawaited(onAction!(
             'route',
             {'route': route},
-          )),
+          ),),
           minHeight: 32,
         ),
       );
@@ -178,7 +176,7 @@ class _NodeTile extends StatelessWidget {
           onPressed: () => unawaited(onAction!(
             'prompt',
             {'prompt': prompt},
-          )),
+          ),),
           minHeight: 32,
         ),
       );
@@ -229,7 +227,7 @@ class _NodeTile extends StatelessWidget {
             const SizedBox(height: DS.spacing8),
             Text(
               context.l10n.chatGraphPrerequisites(
-                  _listString(item['prerequisite_names']).join('、')),
+                  _listString(item['prerequisite_names']).join('、'),),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.neutral600,
                   ),
@@ -239,7 +237,7 @@ class _NodeTile extends StatelessWidget {
             const SizedBox(height: DS.spacing4),
             Text(
               context.l10n.chatGraphAffectedLater(
-                  _listString(item['downstream_names']).join('、')),
+                  _listString(item['downstream_names']).join('、'),),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.neutral600,
                   ),
@@ -271,8 +269,7 @@ class _Badge extends StatelessWidget {
   final Color background;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing8,
         vertical: DS.spacing4,
@@ -289,7 +286,6 @@ class _Badge extends StatelessWidget {
             ),
       ),
     );
-  }
 }
 
 List<Map<String, dynamic>> _mapList(dynamic raw) {

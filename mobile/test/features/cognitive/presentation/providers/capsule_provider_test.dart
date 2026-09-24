@@ -40,7 +40,7 @@ void main() {
 
     test('fixed submitFeedback propagates error (caller can show error toast)',
         () async {
-      bool caught = false;
+      var caught = false;
       try {
         await fixedSubmitFeedback(apiSucceeds: false);
       } catch (_) {

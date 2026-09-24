@@ -12,10 +12,10 @@ import 'package:sparkle/features/seed_library/presentation/providers/seed_librar
 import 'package:sparkle/features/shop/data/repositories/shop_repository.dart';
 import 'package:sparkle/features/shop/presentation/providers/shop_provider.dart';
 import 'package:sparkle/features/task/data/repositories/subtask_repository.dart';
-import 'package:sparkle/shared/entities/subtask_model.dart';
 import 'package:sparkle/features/task/presentation/providers/subtask_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/l10n/app_localizations_zh.dart';
+import 'package:sparkle/shared/entities/subtask_model.dart';
 
 /// ERR-CANAL（A-SPEC3 N15 主路径批）验收：
 ///
@@ -78,7 +78,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           planListProvider.overrideWith(
-            (ref) => _ThrowingPlanNotifier(ref),
+            _ThrowingPlanNotifier.new,
           ),
         ],
       );
@@ -132,11 +132,9 @@ class _CategoryProbeText extends StatelessWidget {
   final UiErrorCategory category;
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
+  Widget build(BuildContext context) => MaterialApp(
       home: Scaffold(body: Text(uiErrorMessage(l10n, category))),
     );
-  }
 }
 
 // ---- 测试脚手架（noSuchMethod 兜底的最小假仓库：

@@ -286,7 +286,7 @@ class _ExpandedExpertRoundtable extends StatelessWidget {
                 icon: Icons.forum_rounded,
                 label: context.l10n.chatRoundtableExpertCollab,
                 selected: true,
-                padding: EdgeInsets.symmetric(
+                padding: const EdgeInsets.symmetric(
                   horizontal: DS.spacing10,
                   vertical: DS.spacing6,
                 ),
@@ -414,8 +414,9 @@ class _TurnCard extends StatelessWidget {
 String _etaLabel(BuildContext context, int? etaMin, int? etaMax) {
   final low = etaMin ?? etaMax;
   final high = etaMax ?? etaMin;
-  if (low == null || high == null)
+  if (low == null || high == null) {
     return context.l10n.chatRoundtableEstimatedProcessing;
+  }
   if (low == high) return context.l10n.chatRoundtableAboutSeconds(low);
   return '$low-$high s';
 }

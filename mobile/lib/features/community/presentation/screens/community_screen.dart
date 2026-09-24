@@ -16,8 +16,7 @@ class CommunityScreen extends ConsumerWidget {
   const CommunityScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return SparklePageScaffold(
+  Widget build(BuildContext context, WidgetRef ref) => SparklePageScaffold(
       role: SparklePageRole.content,
       safeArea: false,
       floatingActionButton: SparkleIconButton(
@@ -37,5 +36,4 @@ class CommunityScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/galaxy/data/models/user_galaxy_contribution.dart';
 
 class GalaxyContributionBanner extends StatelessWidget {

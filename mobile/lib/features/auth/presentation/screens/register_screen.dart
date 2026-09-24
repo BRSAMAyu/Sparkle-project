@@ -6,10 +6,10 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -45,7 +45,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (_formKey.currentState!.validate()) {
       if (!_acceptedTos || !_acceptedPrivacy) {
         AppFeedback.info(
-            context, AppLocalizations.of(context)!.authTermsRequired);
+            context, AppLocalizations.of(context)!.authTermsRequired,);
         return;
       }
       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
@@ -69,8 +69,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     var score = 0;
     if (password.length >= 6) score++;
     if (password.length >= 10) score++;
-    if (RegExp(r'[A-Z]').hasMatch(password)) score++;
-    if (RegExp(r'[0-9]').hasMatch(password)) score++;
+    if (RegExp('[A-Z]').hasMatch(password)) score++;
+    if (RegExp('[0-9]').hasMatch(password)) score++;
     if (RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password)) score++;
     if (score <= 1) return _PasswordStrength.weak;
     if (score <= 3) return _PasswordStrength.fair;

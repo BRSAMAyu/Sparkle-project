@@ -1,4 +1,3 @@
-import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/galaxy/data/models/galaxy_build_playback_plan.dart';
@@ -51,9 +50,9 @@ void main() {
       );
 
       expect(plan.nodeSteps['root']!.nodeStartMs,
-          lessThan(plan.nodeSteps['child']!.nodeStartMs));
+          lessThan(plan.nodeSteps['child']!.nodeStartMs),);
       expect(plan.nodeSteps['child']!.nodeStartMs,
-          lessThan(plan.nodeSteps['locked']!.nodeStartMs));
+          lessThan(plan.nodeSteps['locked']!.nodeStartMs),);
     });
 
     test('creates multiple clusters for disconnected components', () {
@@ -83,7 +82,7 @@ void main() {
 
       expect(plan.clusterCount, 2);
       expect(plan.nodeSteps['a']!.clusterIndex,
-          isNot(plan.nodeSteps['b']!.clusterIndex));
+          isNot(plan.nodeSteps['b']!.clusterIndex),);
     });
 
     test('schedules edge before node and label after node', () {
@@ -143,14 +142,14 @@ void main() {
       ];
       final edges = [
         const GalaxyEdgeModel(
-            id: 'hub-left', sourceId: 'hub', targetId: 'left'),
+            id: 'hub-left', sourceId: 'hub', targetId: 'left',),
         const GalaxyEdgeModel(
           id: 'hub-right',
           sourceId: 'hub',
           targetId: 'right',
         ),
         const GalaxyEdgeModel(
-            id: 'left-leaf', sourceId: 'left', targetId: 'leaf'),
+            id: 'left-leaf', sourceId: 'left', targetId: 'leaf',),
       ];
       final positions = <String, Offset>{
         'hub': const Offset(0, 0),
@@ -180,13 +179,13 @@ void main() {
 
       expect(first.nodeSteps['hub']!.nodeStartMs, 0);
       expect(first.nodeSteps['left']!.nodeStartMs,
-          lessThan(first.nodeSteps['leaf']!.nodeStartMs));
+          lessThan(first.nodeSteps['leaf']!.nodeStartMs),);
       expect(first.nodeSteps['right']!.nodeStartMs,
-          lessThan(first.nodeSteps['leaf']!.nodeStartMs));
+          lessThan(first.nodeSteps['leaf']!.nodeStartMs),);
       expect(
         first.nodeSteps.map((key, value) => MapEntry(key, value.nodeStartMs)),
         equals(second.nodeSteps
-            .map((key, value) => MapEntry(key, value.nodeStartMs))),
+            .map((key, value) => MapEntry(key, value.nodeStartMs)),),
       );
       expect(first.nodeRevealAt('hub', 0), 0);
       expect(first.edgeRevealAt('hub-left', 0), 0);

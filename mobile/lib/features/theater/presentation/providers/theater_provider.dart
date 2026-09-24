@@ -2,12 +2,12 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
 import 'package:sparkle/features/galaxy/data/repositories/galaxy_repository.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/features/theater/data/models/theater_models.dart';
 import 'package:sparkle/features/theater/data/repositories/theater_repository.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 
 final theaterOverlayProvider = StateProvider<TheaterGalaxyOverlay?>(

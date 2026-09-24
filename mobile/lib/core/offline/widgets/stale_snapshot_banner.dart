@@ -8,7 +8,7 @@ import 'package:sparkle/core/utils/formatters.dart';
 /// 呈现来自本地 warm 缓存（离线/网络失败回读）的数据时必须挂本徽标
 /// （N36：stale 必带时点，复用既有时间格式化）。纯展示件，不携带交互。
 class StaleSnapshotBanner extends StatelessWidget {
-  const StaleSnapshotBanner({super.key, required this.fetchedAt});
+  const StaleSnapshotBanner({required this.fetchedAt, super.key});
 
   /// 快照的数据时点戳（缓存落库时刻）。
   final DateTime fetchedAt;

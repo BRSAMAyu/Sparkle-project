@@ -14,10 +14,10 @@ class GalaxyDraftSimilarity {
         json['score'] ??
         json['similarity_score'];
     final similarityValue = switch (rawPercent) {
-      int value => value,
-      double value when value <= 1 => (value * 100).round(),
-      num value => value.round(),
-      String value => _normalizePercent(double.tryParse(value)),
+      final int value => value,
+      final double value when value <= 1 => (value * 100).round(),
+      final num value => value.round(),
+      final String value => _normalizePercent(double.tryParse(value)),
       _ => 0,
     };
 
@@ -60,7 +60,7 @@ class GalaxyDraftNode {
         json['preview_excerpts'] ??
         json['source_quotes'];
     final excerpts = switch (rawExcerpts) {
-      List<dynamic> values => values
+      final List<dynamic> values => values
           .map((value) => value?.toString().trim() ?? '')
           .where((value) => value.isNotEmpty)
           .take(3)
@@ -111,11 +111,11 @@ class GalaxyDraftBatch {
     final rawDrafts =
         json['drafts'] ?? json['nodes'] ?? json['items'] ?? json['entries'];
     final drafts = switch (rawDrafts) {
-      List<dynamic> values => values
-          .where((value) => value is Map)
+      final List<dynamic> values => values
+          .whereType<Map>()
           .map(
             (value) => GalaxyDraftNode.fromJson(
-              Map<String, dynamic>.from(value as Map),
+              Map<String, dynamic>.from(value),
             ),
           )
           .toList(growable: false),

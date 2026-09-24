@@ -44,10 +44,10 @@ class MarketplaceScreen extends ConsumerWidget {
                 tabs: [
                   Tab(
                       icon: const Icon(Icons.psychology_alt_rounded),
-                      text: context.l10n.auto_skills),
+                      text: context.l10n.auto_skills,),
                   Tab(
                       icon: const Icon(Icons.inventory_2_outlined),
-                      text: context.l10n.auto_packs),
+                      text: context.l10n.auto_packs,),
                 ],
               ),
               if (state.isLoading &&
@@ -92,7 +92,7 @@ class _SkillList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (skills.isEmpty) {
       return Center(
-          child: Text(context.l10n.seedMarketplaceNoSkills));
+          child: Text(context.l10n.seedMarketplaceNoSkills),);
     }
     return ListView.separated(
       padding: const EdgeInsets.all(DS.spacing16),
@@ -112,7 +112,7 @@ class _PackList extends StatelessWidget {
   Widget build(BuildContext context) {
     if (packs.isEmpty) {
       return Center(
-          child: Text(context.l10n.seedMarketplaceNoPacks));
+          child: Text(context.l10n.seedMarketplaceNoPacks),);
     }
     return ListView.separated(
       padding: const EdgeInsets.all(DS.spacing16),
@@ -342,7 +342,7 @@ class _PreviewDialog extends StatelessWidget {
                   const SizedBox(width: DS.spacing8),
                   Text(I18nService.instance.isChinese
                       ? '质量 ${preview.qualityScore.toStringAsFixed(2)}'
-                      : 'Quality ${preview.qualityScore.toStringAsFixed(2)}'),
+                      : 'Quality ${preview.qualityScore.toStringAsFixed(2)}',),
                 ],
               ),
               const SizedBox(height: DS.spacing12),

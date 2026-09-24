@@ -6,16 +6,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
-import 'package:sparkle/features/aurora/data/repositories/aurora_daily_startup_repository.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_daily_startup_message.dart';
+import 'package:sparkle/features/aurora/data/repositories/aurora_daily_startup_repository.dart';
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/providers/aurora_status_provider.dart';
-import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/home/data/repositories/dashboard_repository.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
+
 import '../shared/i18n_test_helper.dart';
 
 /// Inactive Aurora snapshot that prevents the StatusAwarenessBar from
@@ -37,7 +37,7 @@ final _inactiveAuroraSnapshot = AuroraControlSurfaceSnapshot(
   surface: null,
   updatedAt: null,
   facets: const [],
-  wakeEligibility: AuroraWakeEligibility(
+  wakeEligibility: const AuroraWakeEligibility(
     canUserWake: false,
     userQuotaRemaining: 0,
     cooldownStatus: 'available',
@@ -76,10 +76,6 @@ class _FakeAuroraNotifier extends AuroraStatusNotifier {
   @override
   void stopPeriodicRefresh() {}
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
 }
 
 /// Quiet DashboardNotifier that does not trigger network requests.
@@ -189,7 +185,7 @@ class _HistoryChatNotifier extends ChatNotifier {
   // NOTE: switchPlanSession 是 ChatNotifierActions 扩展方法，无法真正 @override；
   // 此处同名实例方法仅用于拦截直接以 _HistoryChatNotifier 静态类型发起的调用。
   Future<void> switchPlanSession(String? planId,
-      {BuildContext? context}) async {}
+      {BuildContext? context,}) async {}
 }
 
 void main() {
@@ -274,7 +270,7 @@ void main() {
           auroraDailyStartupRepositoryProvider.overrideWithValue(
             _QuietDailyStartupRepository(),
           ),
-          activePlanProvider.overrideWith((ref) => ActivePlanNotifier(ref)),
+          activePlanProvider.overrideWith(ActivePlanNotifier.new),
           // Hide the prediction dock to prevent its 18s followup timer.
           showChatPredictionDockProvider.overrideWith(
             (ref) => _DisabledBoolNotifier(),
@@ -295,7 +291,7 @@ void main() {
       (tester) async {
     await pumpChat(
       tester,
-      repository: _HistoryChatRepository(recentConversations: const []),
+      repository: _HistoryChatRepository(),
     );
 
     await tester.tap(find.byIcon(Icons.history));
@@ -363,7 +359,7 @@ void main() {
     expect(find.text('历史对话'), findsNothing);
     expect(notifier.state.conversationId, 'session-2');
     expect(notifier.state.messages.map((message) => message.content),
-        contains('历史消息'));
+        contains('历史消息'),);
 
     await disposeWidgetTree(tester);
   });

@@ -1,16 +1,15 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/compact_error_card.dart';
+import 'package:sparkle/core/design/widgets/goal_value_chip.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
-import 'package:sparkle/core/design/widgets/goal_value_chip.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 
 /// Model for a user pursuing a similar goal.
@@ -114,7 +113,7 @@ class SimilarGoalPursuersCard extends ConsumerWidget {
                 Row(
                   children: [
                     Icon(Icons.group_outlined,
-                        size: 16, color: DS.brandPrimary),
+                        size: 16, color: DS.brandPrimary,),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(

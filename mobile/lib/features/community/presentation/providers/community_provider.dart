@@ -34,7 +34,7 @@ final _wsTokenProvider = FutureProvider.autoDispose<String?>((ref) async {
 // Singleton WebSocketService for community events — survives provider rebuilds
 final _communityWebSocketProvider = Provider<WebSocketService>((ref) {
   final wsService = WebSocketService();
-  ref.onDispose(() => wsService.disconnect());
+  ref.onDispose(wsService.disconnect);
   return wsService;
 });
 
@@ -1209,7 +1209,7 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
         final sessionDead = await _authRepository.getRefreshToken() == null;
         if (sessionDead) {
           await _authRepository.logout(
-              keepDemoMode: DemoDataService.isDemoMode);
+              keepDemoMode: DemoDataService.isDemoMode,);
         }
       } catch (e) {
         debugPrint('❌ Logout failed: $e');
@@ -1236,7 +1236,7 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
         // 与 HTTP/WS 口对齐；demo 下 community WS 本就禁用）+ 停自动重连。
         try {
           await _authRepository.logout(
-              keepDemoMode: DemoDataService.isDemoMode);
+              keepDemoMode: DemoDataService.isDemoMode,);
         } catch (logoutErr) {
           debugPrint('❌ Logout failed: $logoutErr');
         }
@@ -1253,7 +1253,7 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
     debugPrint('✅ Token refreshed successfully');
     _error401Count = 0;
     _retryCount = 0;
-    await _connectWebSocket(isRetry: false);
+    await _connectWebSocket();
   }
 
   /// AUTH-DEEP B-1 回归测试缝隙：并发 401 等待者共享结果（不再静默丢弃）。

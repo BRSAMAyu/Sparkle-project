@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/utils/text_rendering.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
@@ -120,7 +119,7 @@ class _TaskGuidanceSurfaceState extends ConsumerState<TaskGuidanceSurface> {
     } catch (error) {
       if (!mounted) return;
       AppFeedback.error(
-          context, context.l10n.taskGuidanceFailed(label, error.toString()));
+          context, context.l10n.taskGuidanceFailed(label, error.toString()),);
     }
   }
 
@@ -182,12 +181,12 @@ class _TaskGuidanceSurfaceState extends ConsumerState<TaskGuidanceSurface> {
               ButtonSegment(
                 value: TaskGuidanceAudience.human,
                 label: Text(context.l10n.taskGuidanceForSelf),
-                icon: Icon(Icons.person_outline_rounded),
+                icon: const Icon(Icons.person_outline_rounded),
               ),
               ButtonSegment(
                 value: TaskGuidanceAudience.ai,
                 label: Text(context.l10n.taskGuidanceForAi),
-                icon: Icon(Icons.auto_awesome_rounded),
+                icon: const Icon(Icons.auto_awesome_rounded),
               ),
             ],
             selected: {_selectedAudience},
@@ -214,7 +213,7 @@ class _TaskGuidanceSurfaceState extends ConsumerState<TaskGuidanceSurface> {
                   icon: Icons.update_rounded,
                   label: context.l10n.taskGuidanceUpdatedAt(
                       DateFormat('MM-dd HH:mm')
-                          .format(guidance.updatedAt.toLocal())),
+                          .format(guidance.updatedAt.toLocal()),),
                 ),
               if (guidance != null)
                 _MetaPill(

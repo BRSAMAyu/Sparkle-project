@@ -242,7 +242,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             child: testMaterialApp(
-              home: Scaffold(
+              home: const Scaffold(
                 body: Center(
                   child: Text('No messages yet'),
                 ),
@@ -259,7 +259,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             child: testMaterialApp(
-              home: Scaffold(
+              home: const Scaffold(
                 body: Text('Message with 中文 and emoji 😀'),
               ),
             ),
@@ -276,7 +276,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             child: testMaterialApp(
-              home: Scaffold(
+              home: const Scaffold(
                 body: SizedBox(
                   width: 300,
                   child: Text(longMessage),
@@ -440,7 +440,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             child: testMaterialApp(
-              home: Scaffold(
+              home: const Scaffold(
                 body: Center(
                   child: CircularProgressIndicator(),
                 ),
@@ -456,7 +456,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             child: testMaterialApp(
-              home: Scaffold(
+              home: const Scaffold(
                 body: Center(
                   child: Text('Error: Connection failed'),
                 ),
@@ -498,7 +498,7 @@ void main() {
         await tester.pumpWidget(
           ProviderScope(
             child: testMaterialApp(
-              home: Scaffold(
+              home: const Scaffold(
                 body: TextField(
                   decoration: InputDecoration(
                     labelText: 'Enter your message',

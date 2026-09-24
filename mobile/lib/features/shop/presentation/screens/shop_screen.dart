@@ -81,7 +81,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
       child: SparkleRefreshIndicator(
         onRefresh: () async {
           unawaited(
-              SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+              SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),);
           await ref.read(shopItemsProvider.notifier).refresh();
         },
         child: TabBarView(
@@ -187,7 +187,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
 
           if (success) {
             unawaited(
-                SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.success),);
             Navigator.of(dialogContext).pop();
             AppFeedback.success(
               context,

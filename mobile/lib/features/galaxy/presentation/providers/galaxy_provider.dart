@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/providers/persistent_state_notifier.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/features/galaxy/data/models/galaxy_optimization_config.dart';
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
@@ -13,7 +14,6 @@ import 'package:sparkle/features/galaxy/data/services/galaxy_performance_monitor
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 import 'package:sparkle/shared/models/compact_knowledge_node.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 /// Aggregation level based on zoom scale (5 levels)
 enum AggregationLevel {
@@ -481,7 +481,7 @@ class GalaxyNotifier extends StateNotifier<GalaxyState> {
             nodeName: oldNode.name,
             newMastery: newMastery,
             milestone: milestone,
-          ));
+          ),);
           break; // Only fire the highest milestone crossed
         }
       }

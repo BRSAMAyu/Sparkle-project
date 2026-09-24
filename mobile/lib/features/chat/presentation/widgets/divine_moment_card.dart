@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 /// Divine Moment card types — one per MAGIC-002 through MAGIC-006.
@@ -34,12 +34,6 @@ class DivineMomentData {
     this.metadata = const {},
   });
 
-  final DivineMomentType type;
-  final String title;
-  final String narrative;
-  final List<String> actions;
-  final Map<String, dynamic> metadata;
-
   factory DivineMomentData.fromJson(Map<String, dynamic> json) {
     final typeStr = json['divine_moment_type'] as String? ?? '';
     return DivineMomentData(
@@ -51,8 +45,13 @@ class DivineMomentData {
     );
   }
 
-  static DivineMomentType _parseType(String type) {
-    return switch (type) {
+  final DivineMomentType type;
+  final String title;
+  final String narrative;
+  final List<String> actions;
+  final Map<String, dynamic> metadata;
+
+  static DivineMomentType _parseType(String type) => switch (type) {
       'correction_impact' => DivineMomentType.correctionImpact,
       'material_non_use' => DivineMomentType.materialNonUse,
       'absence_notice' => DivineMomentType.absenceNotice,
@@ -60,7 +59,6 @@ class DivineMomentData {
       'community_strategy' => DivineMomentType.communityStrategy,
       _ => DivineMomentType.correctionImpact,
     };
-  }
 }
 
 /// Unified Divine Moment card for MAGIC-002 through MAGIC-006.
@@ -219,8 +217,7 @@ class _DivineMomentCardState extends State<DivineMomentCard>
         DivineMomentType.communityStrategy => l10n.divineCommunityTitle,
       };
 
-  String _defaultNarrative(AppLocalizations l10n, DivineMomentType type, Map<String, dynamic> meta) {
-    return switch (type) {
+  String _defaultNarrative(AppLocalizations l10n, DivineMomentType type, Map<String, dynamic> meta) => switch (type) {
       DivineMomentType.correctionImpact => l10n.divineCorrectionImpactNarrative,
       DivineMomentType.materialNonUse => l10n.divineMaterialSkipped(
           meta['material'] as String? ?? '',
@@ -239,7 +236,6 @@ class _DivineMomentCardState extends State<DivineMomentCard>
           meta['knowledge_node'] as String? ?? '',
         ),
     };
-  }
 
   List<String> _defaultActions(AppLocalizations l10n, DivineMomentType type) => switch (type) {
         DivineMomentType.correctionImpact => [

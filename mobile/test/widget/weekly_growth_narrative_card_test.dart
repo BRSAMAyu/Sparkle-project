@@ -60,7 +60,7 @@ void main() {
           ),
         ],
         child: testMaterialApp(
-          home: Scaffold(
+          home: const Scaffold(
             body: WeeklyGrowthNarrativeCard(),
           ),
         ),
@@ -96,7 +96,7 @@ void main() {
           ),
         ],
         child: testMaterialApp(
-          home: Scaffold(
+          home: const Scaffold(
             body: WeeklyGrowthNarrativeCard(),
           ),
         ),
@@ -132,7 +132,7 @@ void main() {
           ),
         ],
         child: testMaterialApp(
-          home: Scaffold(
+          home: const Scaffold(
             body: WeeklyGrowthNarrativeCard(initialExpanded: true),
           ),
         ),
@@ -162,8 +162,7 @@ void main() {
       generatedAt: '2026-04-25T10:00:00',
     );
 
-    Widget buildCard({required bool initialExpanded}) {
-      return ProviderScope(
+    Widget buildCard({required bool initialExpanded}) => ProviderScope(
         overrides: <Override>[
           weeklyGrowthNarrativeProvider.overrideWith(
             (ref) async => narrative,
@@ -177,7 +176,6 @@ void main() {
           ),
         ),
       );
-    }
 
     await tester.pumpWidget(buildCard(initialExpanded: false));
     await tester.pumpAndSettle();

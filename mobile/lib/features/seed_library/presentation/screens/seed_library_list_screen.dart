@@ -7,10 +7,10 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
-import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
@@ -272,7 +272,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
             label: context.l10n.commonClearSearch,
             onPressed: () {
               // 同步重建让 family 键回落到无参实例（否则专用态残留）。
-              setState(() => _searchController.clear());
+              setState(_searchController.clear);
               _applyFilters();
             },
           ),

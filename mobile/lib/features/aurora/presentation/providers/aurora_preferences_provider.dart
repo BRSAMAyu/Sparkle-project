@@ -17,20 +17,18 @@ class AuroraPreferences {
     this.pressureStyle = 'motivating',
   });
 
-  final String analysisDepth;
-  final String directness;
-  final String explanationLevel;
-  final String pressureStyle;
-
-  factory AuroraPreferences.fromJson(Map<String, dynamic> json) {
-    return AuroraPreferences(
+  factory AuroraPreferences.fromJson(Map<String, dynamic> json) => AuroraPreferences(
       analysisDepth: json['aurora_analysis_depth'] as String? ?? 'deep',
       directness: json['aurora_directness'] as String? ?? 'guided',
       explanationLevel:
           json['aurora_explanation_level'] as String? ?? 'detailed',
       pressureStyle: json['aurora_pressure_style'] as String? ?? 'motivating',
     );
-  }
+
+  final String analysisDepth;
+  final String directness;
+  final String explanationLevel;
+  final String pressureStyle;
 
   Map<String, String> toUpdateMap(Set<String> keys) {
     final map = <String, String>{};

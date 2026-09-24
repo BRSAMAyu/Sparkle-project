@@ -16,7 +16,7 @@ import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart'
 /// Sprint Review Screen — structured checkpoint experience showing accumulated
 /// sprint progress, bottleneck analysis, and plan adjustment options.
 class SprintReviewScreen extends ConsumerWidget {
-  const SprintReviewScreen({super.key, required this.planId});
+  const SprintReviewScreen({required this.planId, super.key});
   final String planId;
 
   @override
@@ -120,7 +120,7 @@ class _SprintReviewSkeleton extends StatelessWidget {
                     children: [
                       SparkleSkeleton(width: 20, height: 20, borderRadius: 10),
                       SizedBox(height: 6),
-                      SparkleSkeleton(height: 16, borderRadius: 6),
+                      SparkleSkeleton(borderRadius: 6),
                       SizedBox(height: 4),
                       SparkleSkeleton(width: 40, height: 12, borderRadius: 6),
                     ],
@@ -352,14 +352,14 @@ class _BottleneckCard extends ConsumerWidget {
         color: DS.error,
         title: context.l10n.sprintAlertSignificantlyBehind,
         detail: context.l10n.sprintAlertSignificantlyBehindDetail,
-      ));
+      ),);
     } else if (progress < 0.5) {
       insights.add(_Insight(
         icon: Icons.info_outline,
         color: DS.warning,
         title: context.l10n.sprintAlertSlower,
         detail: context.l10n.sprintAlertSlowerDetail,
-      ));
+      ),);
     }
 
     if (daysLeft <= 1) {
@@ -368,7 +368,7 @@ class _BottleneckCard extends ConsumerWidget {
         color: DS.warning,
         title: context.l10n.sprintAlertEnding,
         detail: context.l10n.sprintAlertEndingDetail,
-      ));
+      ),);
     }
 
     if (insights.isEmpty) {
@@ -377,7 +377,7 @@ class _BottleneckCard extends ConsumerWidget {
         color: DS.success,
         title: context.l10n.sprintAlertOnTrack,
         detail: context.l10n.sprintAlertOnTrackDetail,
-      ));
+      ),);
     }
 
     return Container(
@@ -424,7 +424,7 @@ class _BottleneckCard extends ConsumerWidget {
                       ],
                     ),
                   ),
-                ))
+                ),)
             .toList(),
       ),
     );
@@ -474,8 +474,7 @@ class _ReviewNotesCardState extends ConsumerState<_ReviewNotesCard> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Semantics(
+  Widget build(BuildContext context) => Semantics(
       container: true,
       explicitChildNodes: true,
       label: context.l10n.sprintReviewNotes,
@@ -527,7 +526,6 @@ class _ReviewNotesCardState extends ConsumerState<_ReviewNotesCard> {
         ),
       ),
     );
-  }
 
   Future<void> _loadNotes() async {
     final prefs = await SharedPreferences.getInstance();
@@ -578,8 +576,7 @@ class _ReviewStatusBanner extends StatelessWidget {
   final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) {
-    return Semantics(
+  Widget build(BuildContext context) => Semantics(
       container: true,
       label: context.l10n.sprintLoadIssue(message),
       child: Container(
@@ -609,7 +606,6 @@ class _ReviewStatusBanner extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _ActionButtons extends ConsumerWidget {
@@ -618,8 +614,7 @@ class _ActionButtons extends ConsumerWidget {
   final String planId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Column(
+  Widget build(BuildContext context, WidgetRef ref) => Column(
       children: [
         SizedBox(
           width: double.infinity,
@@ -632,7 +627,7 @@ class _ActionButtons extends ConsumerWidget {
               backgroundColor: DS.brandPrimary,
               foregroundColor: DS.textOnPrimary,
               padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
+              shape: const RoundedRectangleBorder(
                 borderRadius: DS.borderRadius12,
               ),
             ),
@@ -656,7 +651,7 @@ class _ActionButtons extends ConsumerWidget {
             style: OutlinedButton.styleFrom(
               foregroundColor: DS.textSecondary,
               padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
+              shape: const RoundedRectangleBorder(
                 borderRadius: DS.borderRadius12,
               ),
               side: BorderSide(color: DS.borderSubtle),
@@ -672,5 +667,4 @@ class _ActionButtons extends ConsumerWidget {
         ),
       ],
     );
-  }
 }

@@ -1,14 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/errors/user_facing_error.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
 import 'package:sparkle/features/plan/data/repositories/exam_sprint_repository.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 class PostExamReviewScreen extends ConsumerStatefulWidget {
   const PostExamReviewScreen({
@@ -97,7 +97,7 @@ class _PostExamReviewScreenState extends ConsumerState<PostExamReviewScreen> {
                             decoration: InputDecoration(
                               labelText: context.l10n.planExamScoreLabel,
                               hintText: context.l10n.planExamScoreHint,
-                              prefixIcon: Icon(Icons.query_stats_outlined),
+                              prefixIcon: const Icon(Icons.query_stats_outlined),
                             ),
                           ),
                         ],

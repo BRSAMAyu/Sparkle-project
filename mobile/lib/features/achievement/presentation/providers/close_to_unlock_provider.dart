@@ -29,7 +29,7 @@ class CloseToUnlockState {
 /// Handles throttling, auto-dismiss, and state management
 final closeToUnlockProvider =
     StateNotifierProvider<CloseToUnlockNotifier, CloseToUnlockState>(
-  (ref) => CloseToUnlockNotifier(ref),
+  CloseToUnlockNotifier.new,
 );
 
 class CloseToUnlockNotifier extends StateNotifier<CloseToUnlockState> {

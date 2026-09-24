@@ -3,13 +3,13 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/achievement/data/repositories/achievement_repository.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart'
     as chat;
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
+import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 // ========== Achievement State ==========

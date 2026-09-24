@@ -12,12 +12,7 @@ class GalaxyMiniMap extends StatelessWidget {
     required this.camera,
     required this.positions,
     required this.nodesById,
-    this.blendedColors,
-    required this.worldBounds,
-    required this.isDarkMode,
-    required this.sceneVersion,
-    required this.onNavigate,
-    required this.onViewportDragged,
+    required this.worldBounds, required this.isDarkMode, required this.sceneVersion, required this.onNavigate, required this.onViewportDragged, this.blendedColors,
     super.key,
     this.size = 120,
   });
@@ -107,10 +102,7 @@ class _GalaxyMiniMapPainter extends CustomPainter {
     required this.camera,
     required this.positions,
     required this.nodesById,
-    this.blendedColors,
-    required this.worldBounds,
-    required this.isDarkMode,
-    required this.sceneVersion,
+    required this.worldBounds, required this.isDarkMode, required this.sceneVersion, this.blendedColors,
   });
 
   final GalaxyCamera camera;

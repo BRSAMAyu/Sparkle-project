@@ -12,7 +12,6 @@ import 'package:sparkle/features/chat/data/services/chat_cache_service.dart';
 import 'package:sparkle/features/chat/presentation/screens/group_chat_screen.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
-import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 import '../../../../shared/i18n_test_helper.dart';
 
 /// SEARCH-EMPTY（N28-③/④/⑤）：群消息搜索面回归钉。
@@ -162,17 +161,17 @@ MessageInfo _message(int index, {String? content}) => MessageInfo(
         status: UserStatus.online,
       ),
       content: content ?? '新消息 $index',
-      createdAt: DateTime(2026, 9, 1, 12, 0).subtract(
+      createdAt: DateTime(2026, 9, 1, 12).subtract(
         Duration(minutes: index),
       ),
-      updatedAt: DateTime(2026, 9, 1, 12, 0).subtract(
+      updatedAt: DateTime(2026, 9, 1, 12).subtract(
         Duration(minutes: index),
       ),
     );
 
 /// 第一页：最新 50 条（newest-first，>= _pageSize 触发 hasMore）。
 List<MessageInfo> _pageOne() =>
-    List<MessageInfo>.generate(50, (i) => _message(i)).reversed.toList();
+    List<MessageInfo>.generate(50, _message).reversed.toList();
 
 /// 第二页：更早 30 条（< _pageSize → hasMore=false）。
 List<MessageInfo> _pageTwo() => List<MessageInfo>.generate(
@@ -192,8 +191,8 @@ GroupInfo _groupInfo() => GroupInfo(
       maxMembers: 50,
       isPublic: true,
       joinRequiresApproval: false,
-      createdAt: DateTime(2026, 8, 1),
-      updatedAt: DateTime(2026, 8, 1),
+      createdAt: DateTime(2026, 8),
+      updatedAt: DateTime(2026, 8),
     );
 
 class _FakeAuthRepository implements AuthRepository {

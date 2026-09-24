@@ -101,9 +101,9 @@ class _MemorySettingsApiStub implements MemoryApiService {
         status: 'resolved',
         selectedSide: selection,
         leftCandidate: UnresolvedConflictCandidate(
-            summary: 'A', lane: 'inferred_extraction'),
+            summary: 'A', lane: 'inferred_extraction',),
         rightCandidate: UnresolvedConflictCandidate(
-            summary: 'B', lane: 'inferred_extraction'),
+            summary: 'B', lane: 'inferred_extraction',),
       );
 
   @override
@@ -246,7 +246,7 @@ void main() {
         ],
         child: testMaterialApp(
           theme: AppThemes.lightTheme,
-          home: MemorySettingsScreen(),
+          home: const MemorySettingsScreen(),
         ),
       ),
     );
@@ -306,7 +306,7 @@ void main() {
         ],
         child: testMaterialApp(
           theme: AppThemes.lightTheme,
-          home: MemorySettingsScreen(),
+          home: const MemorySettingsScreen(),
         ),
       ),
     );
@@ -319,7 +319,7 @@ void main() {
     expect(find.text('自我记忆'), findsNothing);
     expect(find.text('保存设置'), findsNothing);
     expect(stub.lastUpdate, isNull,
-        reason: 'a failed read must never lead to a save of defaults');
+        reason: 'a failed read must never lead to a save of defaults',);
   });
 
   testWidgets(
@@ -357,7 +357,7 @@ void main() {
         ],
         child: testMaterialApp(
           theme: AppThemes.lightTheme,
-          home: MemorySettingsScreen(),
+          home: const MemorySettingsScreen(),
         ),
       ),
     );

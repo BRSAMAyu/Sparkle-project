@@ -6,7 +6,6 @@ import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/memory/data/memory_provenance_models.dart';
 import 'package:sparkle/features/memory/data/memory_provenance_repository.dart';
-import 'package:sparkle/features/memory/presentation/providers/understanding_overview_provider.dart';
 import 'package:sparkle/features/memory/presentation/widgets/understanding_overview_view.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -36,14 +35,12 @@ class _FakeProvenanceRepository implements MemoryProvenanceRepository {
     int limit = 200,
     int offset = 0,
     bool includeInactive = false,
-  }) async {
-    return ProvenanceListResult(
+  }) async => ProvenanceListResult(
       items: List.of(items),
       total: items.length,
       hasMore: false,
       scanCapped: false,
     );
-  }
 
   @override
   Future<ProvenanceMemoryItem> updateItem(
@@ -163,8 +160,7 @@ class _FakeProvenanceRepository implements MemoryProvenanceRepository {
     String? packId,
     List<String> whyIncluded = const [],
     List<Map<String, Object>> internalOnly = const [],
-  }) async {
-    return WhyThisResult(
+  }) async => WhyThisResult(
       kind: 'episodic',
       id: 'a',
       ref: memoryRef,
@@ -185,22 +181,20 @@ class _FakeProvenanceRepository implements MemoryProvenanceRepository {
         ),
       ],
       receiptVersion: 'v1',
-      receiptVersionKnown: true,
       recentUses: const [],
-      source: ProvenanceSourceInfo(
+      source: const ProvenanceSourceInfo(
         sourceKnown: false,
         sourceLabel: '',
         evidenceCount: 0,
         evidenceMissing: false,
         correctionCount: 0,
         confidenceTierLabel: '已确认',
-        governanceHistory: const [],
+        governanceHistory: [],
       ),
       correctionUpdatePath: '/update',
       correctionRevokePath: '/revoke',
       correctionScopePath: '/scope',
     );
-  }
 }
 
 ProvenanceMemoryItem _entry({

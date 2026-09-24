@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
@@ -359,7 +358,7 @@ class _PlanOverviewTab extends ConsumerWidget {
                         label: l10n.planDetailTaskCount(
                           plan.tasks
                                   ?.where((task) =>
-                                      task.status == TaskStatus.completed)
+                                      task.status == TaskStatus.completed,)
                                   .length ??
                               0,
                           plan.tasks?.length ?? 0,
@@ -566,7 +565,7 @@ class _PlanOverviewTab extends ConsumerWidget {
       } catch (e) {
         if (!context.mounted) return;
         AppFeedback.error(
-            context, context.l10n.planDetailTaskLoadFailed(e.toString()));
+            context, context.l10n.planDetailTaskLoadFailed(e.toString()),);
         return;
       }
     }
@@ -620,7 +619,7 @@ class _PlanOverviewTab extends ConsumerWidget {
     } catch (e) {
       if (!context.mounted) return;
       AppFeedback.error(
-          context, context.l10n.planDetailAddTaskFailed(e.toString()));
+          context, context.l10n.planDetailAddTaskFailed(e.toString()),);
     }
   }
 }
@@ -960,7 +959,7 @@ class _AdaptiveCompressionBanner extends StatelessWidget {
                   const SizedBox(height: DS.spacing6),
                   Text(
                     context.l10n.planDetailCompressionDesc(
-                        summary.taskCount, summary.totalMinutes),
+                        summary.taskCount, summary.totalMinutes,),
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: DS.textSecondary,
                           height: 1.45,
@@ -1337,7 +1336,7 @@ class _PlanDayExpansion extends StatelessWidget {
           ),
           subtitle: Text(
             context.l10n.planDetailDayGroupSubtitle(
-                group.tasks.length, group.totalMinutes),
+                group.tasks.length, group.totalMinutes,),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textSecondary,
                 ),
@@ -1703,7 +1702,7 @@ String? _sprintPackName(PlanModel plan) {
 }
 
 String _sprintModeLabel(
-    AppLocalizations l10n, PlanModel plan, List<TaskModel> tasks) {
+    AppLocalizations l10n, PlanModel plan, List<TaskModel> tasks,) {
   final metadata = plan.sourceMetadata ?? const <String, dynamic>{};
   final intake = metadata['exam_sprint_intake'];
   if (intake is Map) {
@@ -2087,7 +2086,7 @@ class _PlanHealthIndicator extends StatelessWidget {
   }
 
   static String _planHealthLabel(
-      AppLocalizations l10n, String? status, double score) {
+      AppLocalizations l10n, String? status, double score,) {
     final normalized = status?.trim().toLowerCase();
     if (normalized == 'critical') return l10n.planDetailHealthNeedReplan;
     if (normalized == 'warning') return l10n.planDetailHealthNeedAttention;
@@ -2561,7 +2560,7 @@ class _PlanPhaseSection extends ConsumerWidget {
               children: [
                 Expanded(
                     child: _SectionHeader(
-                        title: context.l10n.planDetailPhasesTitle)),
+                        title: context.l10n.planDetailPhasesTitle,),),
                 SparkleButton.ghost(
                   onPressed: () => _showCreatePhaseDialog(context, ref, bundle),
                   label: context.l10n.planDetailAddPhase,
@@ -2575,7 +2574,7 @@ class _PlanPhaseSection extends ConsumerWidget {
                 padding: const EdgeInsets.only(bottom: DS.spacing12),
                 child: Text(
                   context.l10n.planDetailWeightedProgress(
-                      (bundle.weightedProgress! * 100).round()),
+                      (bundle.weightedProgress! * 100).round(),),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: DS.textSecondary,
                       ),
@@ -2662,7 +2661,7 @@ class _PlanPhaseSection extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         AppFeedback.error(
-            context, l10n.planDetailCreatePhaseFailed(e.toString()));
+            context, l10n.planDetailCreatePhaseFailed(e.toString()),);
       }
     }
   }
@@ -2683,7 +2682,7 @@ class _PlanPhaseSection extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         AppFeedback.error(
-            context, context.l10n.planDetailActivatePhaseFailed(e.toString()));
+            context, context.l10n.planDetailActivatePhaseFailed(e.toString()),);
       }
     }
   }
@@ -2708,7 +2707,7 @@ class _PlanPhaseSection extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         AppFeedback.error(
-            context, context.l10n.planDetailCompletePhaseFailed(e.toString()));
+            context, context.l10n.planDetailCompletePhaseFailed(e.toString()),);
       }
     }
   }
@@ -2824,7 +2823,7 @@ class _PlanPhaseSection extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         AppFeedback.error(
-            context, l10n.planDetailSubmitFeedbackFailed(e.toString()));
+            context, l10n.planDetailSubmitFeedbackFailed(e.toString()),);
       }
     }
   }

@@ -134,7 +134,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
       if (!mounted || !_scrollController.hasClients) {
         return;
       }
-      final target = 0.0;
+      const target = 0.0;
       final position = _scrollController.position;
       if ((position.pixels - target).abs() < 8) {
         _scrollController.jumpTo(target);
@@ -258,7 +258,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                       itemBuilder: (context, index) {
                         if (showAgentStatus && index == 0) {
                           return Padding(
-                            padding: EdgeInsets.only(bottom: DS.spacing16),
+                            padding: const EdgeInsets.only(bottom: DS.spacing16),
                             child: AiStatusIndicator(
                               status: 'THINKING',
                               details: context.l10n.chatPrivateThinking,
@@ -304,7 +304,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                                     (msg as PrivateMessageInfo).id,
                                   )
                               : (msg) => notifier.revokeMessage(
-                                  (msg as PrivateMessageInfo).id),
+                                  (msg as PrivateMessageInfo).id,),
                           onPromoteSelfVisibleDraft:
                               isPrivateAgentMessage(message)
                                   ? (msg) => _promoteAgentDraftToComposer(
@@ -565,7 +565,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
     if (draft == null || draft.trim().isEmpty) {
       final error = ref.read(privateChatAgentProvider(widget.friendId)).error;
       AppFeedback.error(
-          context, error ?? context.l10n.chatPrivateGenerationFailed);
+          context, error ?? context.l10n.chatPrivateGenerationFailed,);
       return;
     }
     await _showDraftPreview(
@@ -662,11 +662,11 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                         Navigator.of(sheetContext).pop();
                         await ref
                             .read(privateChatAgentProvider(widget.friendId)
-                                .notifier)
+                                .notifier,)
                             .saveSelfVisibleDraft(content: draft);
                         if (!mounted) return;
                         AppFeedback.success(
-                            context, context.l10n.chatPrivateSavedOnlyToMe);
+                            context, context.l10n.chatPrivateSavedOnlyToMe,);
                       },
                     ),
                     _PreviewActionButton(

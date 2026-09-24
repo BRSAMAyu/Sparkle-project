@@ -134,7 +134,7 @@ class CheckinInteractionState {
 
 final checkinInteractionProvider = StateProvider.autoDispose
     .family<CheckinInteractionState, String>(
-        (ref, checkinId) => const CheckinInteractionState());
+        (ref, checkinId) => const CheckinInteractionState(),);
 
 // ─── Actions ────────────────────────────────────────────────────────────────────
 

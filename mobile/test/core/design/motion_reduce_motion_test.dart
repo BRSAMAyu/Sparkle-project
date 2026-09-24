@@ -115,7 +115,7 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       expect(tester.binding.transientCallbackCount, 1,
-          reason: '对照组：闪烁 repeat 应在跑');
+          reason: '对照组：闪烁 repeat 应在跑',);
       await unwindTree(tester);
     });
   });
@@ -161,7 +161,7 @@ void main() {
         reason: '减弱动效下数字必须立即落到新值',
       );
       expect(find.text('5'), findsNothing,
-          reason: '旧数字不得残留（有翻转时上半仍停留旧值）');
+          reason: '旧数字不得残留（有翻转时上半仍停留旧值）',);
     });
 
     testWidgets('对照组：默认（未开启减弱动效）→ 冒号闪烁运行', (tester) async {
@@ -173,7 +173,7 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       expect(tester.binding.transientCallbackCount, 1,
-          reason: '对照组：冒号 repeat 应在跑');
+          reason: '对照组：冒号 repeat 应在跑',);
       await unwindTree(tester);
     });
   });
@@ -236,7 +236,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
 
       expect(tester.binding.transientCallbackCount, 1,
-          reason: '对照组：脉动 repeat 应在跑');
+          reason: '对照组：脉动 repeat 应在跑',);
       expect(scaledTransforms(), findsOneWidget);
       await unwindTree(tester);
     });

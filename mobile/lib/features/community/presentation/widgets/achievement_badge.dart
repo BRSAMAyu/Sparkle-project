@@ -1,18 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// 责任伙伴成就徽章组件
 class AchievementBadge extends StatelessWidget {
   const AchievementBadge({
-    super.key,
-    required this.id,
-    required this.name,
-    required this.description,
-    required this.icon,
-    required this.points,
-    required this.isUnlocked,
+    required this.id, required this.name, required this.description, required this.icon, required this.points, required this.isUnlocked, super.key,
     this.unlockedAt,
     this.size = AchievementBadgeSize.medium,
     this.onTap,
@@ -218,8 +212,7 @@ enum AchievementBadgeSize {
 /// 成就网格列表
 class AchievementGrid extends StatelessWidget {
   const AchievementGrid({
-    super.key,
-    required this.achievements,
+    required this.achievements, super.key,
     this.onAchievementTap,
     this.crossAxisCount = 2,
   });
@@ -304,14 +297,6 @@ class AchievementInfo {
     this.unlockedAt,
   });
 
-  final String id;
-  final String name;
-  final String description;
-  final String icon;
-  final int points;
-  final bool isUnlocked;
-  final DateTime? unlockedAt;
-
   factory AchievementInfo.fromJson(Map<String, dynamic> json) =>
       AchievementInfo(
         id: json['id'] as String,
@@ -324,6 +309,14 @@ class AchievementInfo {
             ? DateTime.parse(json['unlocked_at'] as String)
             : null,
       );
+
+  final String id;
+  final String name;
+  final String description;
+  final String icon;
+  final int points;
+  final bool isUnlocked;
+  final DateTime? unlockedAt;
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -339,10 +332,7 @@ class AchievementInfo {
 /// 成就进度展示组件
 class AchievementProgressIndicator extends StatelessWidget {
   const AchievementProgressIndicator({
-    super.key,
-    required this.label,
-    required this.current,
-    required this.total,
+    required this.label, required this.current, required this.total, super.key,
     this.color,
   });
 
@@ -395,8 +385,7 @@ class AchievementProgressIndicator extends StatelessWidget {
 /// 成就详情弹窗
 class AchievementDetailDialog extends StatelessWidget {
   const AchievementDetailDialog({
-    super.key,
-    required this.achievement,
+    required this.achievement, super.key,
   });
 
   final AchievementInfo achievement;

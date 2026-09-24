@@ -31,7 +31,7 @@ List<_MsgStub> paginate(
 }
 
 void main() {
-  final t0 = DateTime(2026, 5, 1, 12, 0);
+  final t0 = DateTime(2026, 5, 1, 12);
   final messages = List.generate(
     10,
     (i) => _MsgStub(
@@ -55,7 +55,7 @@ void main() {
     test('with beforeId, returns messages older than the reference', () {
       // beforeId = msg_5 (index 4 in newest-first order)
       // messages after index 4: msg_4, msg_3, msg_2, msg_1, msg_0
-      final result = paginate(messages, beforeId: 'msg_5', limit: 50);
+      final result = paginate(messages, beforeId: 'msg_5');
       expect(result.length, 5);
       expect(result[0].id, 'msg_4');
       expect(result[4].id, 'msg_0');
@@ -77,12 +77,12 @@ void main() {
 
     test('beforeId of oldest message returns empty', () {
       // msg_0 is the oldest (index 9 in newest-first order)
-      final result = paginate(messages, beforeId: 'msg_0', limit: 50);
+      final result = paginate(messages, beforeId: 'msg_0');
       expect(result, isEmpty);
     });
 
     test('beforeId of newest message returns all older messages', () {
-      final result = paginate(messages, beforeId: 'msg_9', limit: 50);
+      final result = paginate(messages, beforeId: 'msg_9');
       expect(result.length, 9); // msg_8..msg_0
       expect(result[0].id, 'msg_8');
     });

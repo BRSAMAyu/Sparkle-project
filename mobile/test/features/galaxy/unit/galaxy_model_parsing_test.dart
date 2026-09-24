@@ -118,7 +118,7 @@ void main() {
       expect(sanitizeGalaxyNodeLabel('facade 原则'), 'facade 原则');
       // 「12」太短，不构成 ID 片段，整名保留。
       expect(sanitizeGalaxyNodeLabel('Chapter 12: Graph Theory'),
-          'Chapter 12: Graph Theory');
+          'Chapter 12: Graph Theory',);
       expect(sanitizeGalaxyNodeLabel('  带空白的标题  '), '带空白的标题');
       expect(sanitizeGalaxyNodeLabel(''), '');
     });

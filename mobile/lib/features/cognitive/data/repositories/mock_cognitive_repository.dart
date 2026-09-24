@@ -1,7 +1,7 @@
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/cognitive/data/models/behavior_pattern_model.dart';
 import 'package:sparkle/features/cognitive/data/models/cognitive_fragment_model.dart';
 import 'package:sparkle/features/cognitive/data/repositories/i_cognitive_repository.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 class MockCognitiveRepository implements ICognitiveRepository {
   @override

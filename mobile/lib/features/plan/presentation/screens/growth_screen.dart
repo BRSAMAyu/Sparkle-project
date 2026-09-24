@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -9,6 +8,7 @@ import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/design/widgets/sparkle_tappable.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
@@ -147,7 +147,7 @@ class _GrowthPlanCard extends StatelessWidget {
                         _InfoChip(
                           icon: Icons.timelapse_rounded,
                           label: context.l10n.planHoursUnit(
-                              plan.totalEstimatedHours!.toStringAsFixed(0)),
+                              plan.totalEstimatedHours!.toStringAsFixed(0),),
                         ),
                     ],
                   ),

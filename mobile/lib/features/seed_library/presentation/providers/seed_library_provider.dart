@@ -205,7 +205,6 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
       state = state.copyWith(
         library: library,
         isLoadingLibrary: false,
-        error: null,
       );
     } catch (e) {
       debugPrint('[seed_library] loadLibrary failed: $e');
@@ -231,13 +230,11 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
         isSubscribed: matchedSubscription != null,
         subscription: matchedSubscription,
         activeSubscriptions: activeSubscriptions,
-        error: null,
       );
     } catch (e) {
       debugPrint('[seed_library] load subscription status failed: $e');
       state = state.copyWith(
         isSubscribed: false,
-        subscription: null,
         activeSubscriptions: const [],
         error: state.library == null ? categorizeUiError(e) : null,
       );
@@ -323,7 +320,6 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
               (item) => item.libraryId != subscription.libraryId,
             ),
           ]..sort((a, b) => b.priority.compareTo(a.priority)),
-          error: null,
         );
       } else {
         final updated = await _repository.updateSubscription(
@@ -343,7 +339,6 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
           subscription: updated,
           isSubscribed: true,
           activeSubscriptions: refreshedSubscriptions,
-          error: null,
         );
       }
     } catch (e) {
@@ -369,7 +364,6 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
               ),
             ].where((item) => item.isEnabled).toList()
               ..sort((a, b) => b.priority.compareTo(a.priority)),
-            error: null,
           );
           return;
         }
@@ -439,7 +433,6 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
             .where((item) => item.libraryId != current.libraryId)
             .toList()
           ..sort((a, b) => b.priority.compareTo(a.priority)),
-        error: null,
       );
     } catch (e) {
       debugPrint('[seed_library] operation failed: $e');

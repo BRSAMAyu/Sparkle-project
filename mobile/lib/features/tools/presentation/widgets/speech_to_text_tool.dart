@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/chat/presentation/widgets/voice_input_button.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 
 class SpeechToTextTool extends StatefulWidget {
@@ -40,7 +40,7 @@ class _SpeechToTextToolState extends State<SpeechToTextTool> {
       return;
     }
     AppFeedback.success(context,
-        context.l10n.auto_transcriptcopied);
+        context.l10n.auto_transcriptcopied,);
   }
 
   @override

@@ -142,7 +142,7 @@ class _TaskCompletionCelebrationState extends State<TaskCompletionCelebration> {
                           icon: const Icon(Icons.arrow_forward_rounded),
                           onPressed: () {
                             unawaited(SensoryFeedbackService.emit(
-                                SensoryFeedbackEvent.selection));
+                                SensoryFeedbackEvent.selection,),);
                             widget.onContinue();
                           },
                         ),

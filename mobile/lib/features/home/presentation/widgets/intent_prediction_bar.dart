@@ -1,13 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/network/dio_provider.dart';
-import 'package:sparkle/features/focus/data/services/candidate_feedback_service.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
+import 'package:sparkle/features/focus/data/services/candidate_feedback_service.dart';
 import 'package:sparkle/features/home/data/models/prediction_insight_data.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
 

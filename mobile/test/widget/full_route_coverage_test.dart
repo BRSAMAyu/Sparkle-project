@@ -49,7 +49,7 @@ void main() {
             '/achievements/map',
             '/achievements/streak',
             '/achievements/contract',
-          ]));
+          ]),);
     });
 
     test('auth routes (6 paths)', () {
@@ -63,7 +63,7 @@ void main() {
             '/reset-password',
             '/legal/terms',
             '/legal/privacy',
-          ]));
+          ]),);
     });
 
     test('calendar routes (3 paths)', () {
@@ -74,7 +74,7 @@ void main() {
             '/calendar',
             '/calendar-stats',
             '/calendar/day',
-          ]));
+          ]),);
     });
 
     test('chat routes (6 paths including legacy redirects)', () {
@@ -84,7 +84,7 @@ void main() {
           containsAll([
             '/chat/group/:id',
             '/chat/private/:id',
-          ]));
+          ]),);
       // Legacy redirects
       expect(paths.contains('/community/chat/group/:id'), isTrue);
       expect(paths.contains('/community/chat/private/:id'), isTrue);
@@ -97,7 +97,7 @@ void main() {
           containsAll([
             '/cognitive/patterns',
             '/curiosity-capsule',
-          ]));
+          ]),);
     });
 
     test('community routes (19+ paths)', () {
@@ -119,7 +119,7 @@ void main() {
             CommunityRoutes.accountability,
             CommunityRoutes.accountabilityDetail,
             CommunityRoutes.postsCreate,
-          ]));
+          ]),);
     });
 
     test('error book routes (4 paths)', () {
@@ -131,7 +131,7 @@ void main() {
             '/errors/new',
             '/errors/:id/edit',
             '/errors/:id',
-          ]));
+          ]),);
     });
 
     test('review routes expose hub and active review flow', () {
@@ -141,7 +141,7 @@ void main() {
           containsAll([
             ReviewRoutes.planHub,
             ReviewRoutes.review,
-          ]));
+          ]),);
     });
 
     test('focus routes (2 paths)', () {
@@ -167,7 +167,7 @@ void main() {
             '/memory',
             '/memory/settings',
             '/memory/detail',
-          ]));
+          ]),);
     });
 
     test('notification center routes (single mounted path)', () {
@@ -184,7 +184,7 @@ void main() {
           containsAll([
             PhotonRoutes.transactionHistory,
             PhotonRoutes.redeemPro,
-          ]));
+          ]),);
       expect(paths, isNot(contains('/photon/transfer')));
     });
 
@@ -198,7 +198,7 @@ void main() {
             '/plans/new',
             '/plans/:id',
             '/exam-sprint/review',
-          ]));
+          ]),);
     });
 
     test('plan detail is also available inside tab shell', () {
@@ -214,7 +214,7 @@ void main() {
             '/seed-libraries',
             '/seed-libraries/new',
             '/seed-libraries/:id',
-          ]));
+          ]),);
     });
 
     test('shop route uses pageBuilder (not bare MaterialPage)', () {
@@ -232,7 +232,7 @@ void main() {
             '/tasks/new',
             '/tasks/:id',
             '/tasks/:id/execute',
-          ]));
+          ]),);
     });
 
     test('tools routes (2 paths) use pageBuilder', () {
@@ -240,7 +240,7 @@ void main() {
       expect(routes.length, 2);
       for (final route in routes) {
         expect(route.pageBuilder, isNotNull,
-            reason: '${route.path} must use pageBuilder');
+            reason: '${route.path} must use pageBuilder',);
       }
     });
 
@@ -258,7 +258,7 @@ void main() {
             '/profile/edit',
             '/profile/settings',
             '/profile/persona',
-          ]));
+          ]),);
     });
 
     test('visual elements route uses pageBuilder', () {
@@ -300,7 +300,7 @@ void main() {
       checkUnique('insights', _extractPaths(InsightsRoutes.routes));
       checkUnique('memory', _extractPaths(MemoryRoutes.routes));
       checkUnique(
-          'notification', _extractPaths(NotificationCenterRoutes.routes));
+          'notification', _extractPaths(NotificationCenterRoutes.routes),);
       checkUnique('photon', _extractPaths(PhotonRoutes.routes));
       checkUnique('plan', _extractPaths(PlanRoutes.routes));
       checkUnique('seed_library', _extractPaths(SeedLibraryRoutes.routes));
@@ -310,10 +310,10 @@ void main() {
       checkUnique('translation', _extractPaths(TranslationRoutes.routes));
       checkUnique('user', _extractPaths(UserRoutes.routes));
       checkUnique(
-          'visual_elements', _extractPaths(VisualElementsRoutes.routes));
+          'visual_elements', _extractPaths(VisualElementsRoutes.routes),);
 
       expect(duplicates, isEmpty,
-          reason: 'Duplicate route paths: ${duplicates.join(", ")}');
+          reason: 'Duplicate route paths: ${duplicates.join(", ")}',);
     });
 
     test('total route count is at least 90', () {

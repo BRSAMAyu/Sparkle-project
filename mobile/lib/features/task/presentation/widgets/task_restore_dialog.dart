@@ -93,9 +93,7 @@ Future<bool?> showRestoreTaskDialog({
   required BuildContext context,
   required TaskModel task,
   required VoidCallback? onConfirm,
-}) {
-  return showDialog<bool>(
+}) => showDialog<bool>(
     context: context,
     builder: (_) => TaskRestoreDialog(task: task, onConfirm: onConfirm),
   );
-}

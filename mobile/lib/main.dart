@@ -11,7 +11,6 @@ import 'package:sparkle/app/app.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart' as custom;
 import 'package:sparkle/core/offline/local_database.dart';
-import 'package:sparkle/core/utils/error_messages.dart';
 import 'package:sparkle/core/services/client_observability_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/performance_monitor.dart';
@@ -19,6 +18,7 @@ import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/core/services/user_preferences_service.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';
+import 'package:sparkle/core/utils/error_messages.dart';
 import 'package:sparkle/core/utils/text_rendering.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/chat.dart';
@@ -56,9 +56,8 @@ void main() async {
           color: DS.surfacePrimary,
           child: custom.CustomErrorWidget(
             type: custom.ErrorType.page,
-            severity: custom.ErrorSeverity.error,
             message: ErrorMessages.getUserFriendlyMessage(
-              'UNKNOWN', details.exceptionAsString()),
+              'UNKNOWN', details.exceptionAsString(),),
           ),
         );
     PlatformDispatcher.instance.onError = (error, stack) {

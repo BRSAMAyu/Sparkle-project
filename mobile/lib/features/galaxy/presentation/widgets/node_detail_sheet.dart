@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -14,8 +13,8 @@ import 'package:sparkle/features/galaxy/data/models/node_history_model.dart';
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/node_source_materials_provider.dart';
 import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 typedef NodeReviewContextCallback = void Function(
   Map<String, dynamic> initialContext,
@@ -393,7 +392,7 @@ class _HistoryContent extends StatelessWidget {
                 label: history.lastStudiedAt == null
                     ? context.l10n.galaxyNodeNoRecord
                     : context.l10n.galaxyNodeLastStudy(
-                        _relativeTime(history.lastStudiedAt!, context.l10n)),
+                        _relativeTime(history.lastStudiedAt!, context.l10n),),
               ),
               _MetricChip(
                 icon: Icons.assignment_late_rounded,
@@ -442,7 +441,7 @@ class _HistoryContent extends StatelessWidget {
                   ),
                   label: Text(history.mastery <= 0
                       ? context.l10n.galaxyNodeStartLearn
-                      : context.l10n.galaxyNodeStartReview),
+                      : context.l10n.galaxyNodeStartReview,),
                 ),
               ),
               const SizedBox(width: DS.spacing12),
@@ -1037,7 +1036,7 @@ class _BadgeLayer extends StatelessWidget {
 }
 
 class _SourceMaterialsEmptyState extends StatelessWidget {
-  _SourceMaterialsEmptyState({
+  const _SourceMaterialsEmptyState({
     required this.copy,
     required this.nodeLabel,
     required this.onAddNotes,
@@ -1086,7 +1085,7 @@ class _SourceMaterialsEmptyState extends StatelessWidget {
 }
 
 class _DocumentExcerptCard extends StatelessWidget {
-  _DocumentExcerptCard({
+  const _DocumentExcerptCard({
     required this.copy,
     required this.excerpt,
     required this.onReadMore,
@@ -1538,7 +1537,7 @@ class _FocusReasonSection extends StatelessWidget {
         Row(
           children: [
             Icon(Icons.lightbulb_outline_rounded,
-                size: DS.iconSizeSm, color: DS.warning),
+                size: DS.iconSizeSm, color: DS.warning,),
             const SizedBox(width: DS.spacing8),
             Text(
               context.l10n.galaxyNodeWhyToday,
@@ -1585,8 +1584,7 @@ class _CommunityInsightSection extends ConsumerWidget {
   final String nodeId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Column(
+  Widget build(BuildContext context, WidgetRef ref) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -1600,7 +1598,6 @@ class _CommunityInsightSection extends ConsumerWidget {
         _CommunityInsightContent(nodeId: nodeId),
       ],
     );
-  }
 }
 
 class _CommunityInsightContent extends ConsumerStatefulWidget {
@@ -1625,8 +1622,7 @@ class _CommunityInsightContentState
   }
 
   @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<Map<String, dynamic>?>(
+  Widget build(BuildContext context) => FutureBuilder<Map<String, dynamic>?>(
       future: _communityFuture,
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data == null) {
@@ -1679,7 +1675,6 @@ class _CommunityInsightContentState
         );
       },
     );
-  }
 
   Future<Map<String, dynamic>?> _fetchCommunitySignal() async {
     try {

@@ -1,12 +1,12 @@
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/errors/user_facing_error.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
@@ -101,7 +101,6 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
         children: [
           SparkleStaggerItem(
             index: 0,
-            motionToken: SparkleMotionToken.scene,
             child: Column(
               children: [
                 const SizedBox(height: DS.spacing16),

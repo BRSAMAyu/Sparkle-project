@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 /// Empty state widget for when no statistics data is available
@@ -93,8 +93,7 @@ class StatisticsEmptyState extends StatelessWidget {
     );
   }
 
-  Widget _buildMessage(BuildContext context, AppLocalizations l10n) {
-    return Text(
+  Widget _buildMessage(BuildContext context, AppLocalizations l10n) => Text(
       message ?? l10n.statisticsNoDataYet,
       style: DS.headlineStyle.copyWith(
         color: DS.neutral600,
@@ -102,7 +101,6 @@ class StatisticsEmptyState extends StatelessWidget {
       ),
       textAlign: TextAlign.center,
     );
-  }
 
   Widget _buildSubtitle() => Text(
         subtitle!,

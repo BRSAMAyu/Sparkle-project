@@ -25,8 +25,7 @@ class EvidenceDrawer extends StatelessWidget {
     List<EvidenceRefModel> refs = const [],
     List<Map<String, dynamic>> items = const [],
     bool evidenceMissing = false,
-  }) {
-    return showSensoryModalBottomSheet(
+  }) => showSensoryModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (ctx) => _EvidenceDrawerSheet(
@@ -35,7 +34,6 @@ class EvidenceDrawer extends StatelessWidget {
         evidenceMissing: evidenceMissing,
       ),
     );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -107,7 +105,7 @@ class EvidenceDrawer extends StatelessWidget {
                   ),
                 ),
               ),
-            )),
+            ),),
       ],
     );
   }
@@ -267,7 +265,7 @@ class _EvidenceDrawerSheetState extends State<_EvidenceDrawerSheet> {
                 ],
                 selected: {_filter},
                 onSelectionChanged: (f) => setState(() => _filter = f.first),
-                style: ButtonStyle(
+                style: const ButtonStyle(
                   visualDensity: VisualDensity.compact,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),

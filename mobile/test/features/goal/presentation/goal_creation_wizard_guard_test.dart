@@ -60,9 +60,9 @@ void main() {
         ],
         child: testMaterialApp(
           home: Navigator(
-            pages: [
-              const MaterialPage<void>(child: Scaffold(body: Text('起点'))),
-              const MaterialPage<void>(
+            pages: const [
+              MaterialPage<void>(child: Scaffold(body: Text('起点'))),
+              MaterialPage<void>(
                 key: ValueKey('wizard-page'),
                 child: GoalCreationWizardScreen(),
               ),

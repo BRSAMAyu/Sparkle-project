@@ -631,7 +631,7 @@ class _ConfettiPainter extends CustomPainter {
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           Rect.fromCenter(
-              center: Offset.zero, width: p.size, height: p.size * 0.6),
+              center: Offset.zero, width: p.size, height: p.size * 0.6,),
           Radius.circular(p.size * 0.15),
         ),
         paint,
@@ -787,14 +787,14 @@ class _ProgressBarPainter extends CustomPainter {
     for (final m in milestones) {
       final x = size.width * m;
       final isReached = progress >= m;
-      final dotRadius = 3.5;
+      const dotRadius = 3.5;
       final dotPaint = Paint()
         ..color = isReached ? activeMilestoneColor : milestoneColor;
 
       canvas.drawCircle(
           Offset(x.clamp(dotRadius, size.width - dotRadius), size.height / 2),
           dotRadius,
-          dotPaint);
+          dotPaint,);
     }
   }
 

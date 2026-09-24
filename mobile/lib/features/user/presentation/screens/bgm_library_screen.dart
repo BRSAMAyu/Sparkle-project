@@ -1,12 +1,10 @@
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
-import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 
@@ -296,8 +294,7 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
     );
   }
 
-  Widget _buildPlayerModeCard() {
-    return GraphiteCardSurface(
+  Widget _buildPlayerModeCard() => GraphiteCardSurface(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -346,10 +343,8 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
         ],
       ),
     );
-  }
 
-  Widget _buildQuickStrategyCard() {
-    return GraphiteCardSurface(
+  Widget _buildQuickStrategyCard() => GraphiteCardSurface(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -386,7 +381,6 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
         ],
       ),
     );
-  }
 
   Widget _buildLibraryStatsCard(BgmLibrarySnapshot? snapshot) {
     if (snapshot == null) {
@@ -403,13 +397,13 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
             runSpacing: DS.spacing10,
             children: [
               _buildStatChip(
-                  context.l10n.bgmLibraryTotalTracks, '${snapshot.totalCount}'),
+                  context.l10n.bgmLibraryTotalTracks, '${snapshot.totalCount}',),
               _buildStatChip(
-                  context.l10n.bgmLibraryCurated, '${snapshot.curatedCount}'),
+                  context.l10n.bgmLibraryCurated, '${snapshot.curatedCount}',),
               _buildStatChip(context.l10n.bgmLibraryImportedLabel,
-                  '${snapshot.importedCount}'),
+                  '${snapshot.importedCount}',),
               _buildStatChip(
-                  context.l10n.bgmLibraryBundled, '${snapshot.bundledCount}'),
+                  context.l10n.bgmLibraryBundled, '${snapshot.bundledCount}',),
             ],
           ),
           const SizedBox(height: DS.spacing12),
@@ -432,8 +426,7 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
     );
   }
 
-  Widget _buildImportCard() {
-    return GraphiteCardSurface(
+  Widget _buildImportCard() => GraphiteCardSurface(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -469,10 +462,8 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
         ],
       ),
     );
-  }
 
-  Widget _buildFilterBar() {
-    return Wrap(
+  Widget _buildFilterBar() => Wrap(
       spacing: DS.spacing8,
       runSpacing: DS.spacing8,
       children: [
@@ -490,7 +481,6 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
         ),
       ],
     );
-  }
 
   Widget _buildEntryCard(BgmLibraryEntry entry) {
     final isPlaying = _playbackSnapshot?.trackId == entry.id;
@@ -552,13 +542,13 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
               runSpacing: DS.spacing8,
               children: [
                 _buildStatChip(context.l10n.bgmLibraryTags,
-                    entry.sceneTags.take(3).join(' / ')),
+                    entry.sceneTags.take(3).join(' / '),),
                 _buildStatChip(context.l10n.bgmLibraryStyle,
-                    entry.paletteTags.take(3).join(' / ')),
+                    entry.paletteTags.take(3).join(' / '),),
                 _buildStatChip(context.l10n.bgmLibraryEnergy,
-                    entry.energy.toStringAsFixed(2)),
+                    entry.energy.toStringAsFixed(2),),
                 _buildStatChip(context.l10n.bgmLibraryDensity,
-                    entry.density.toStringAsFixed(2)),
+                    entry.density.toStringAsFixed(2),),
               ],
             ),
           ],
@@ -573,8 +563,7 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
     required T selected,
     required String Function(T value) labelBuilder,
     required ValueChanged<T> onSelect,
-  }) {
-    return Column(
+  }) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(title, style: DS.labelSmall.copyWith(color: DS.textSecondary)),
@@ -594,10 +583,8 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
         ),
       ],
     );
-  }
 
-  Widget _buildStatChip(String label, String value) {
-    return Container(
+  Widget _buildStatChip(String label, String value) => Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing8,
         vertical: DS.spacing6,
@@ -611,7 +598,6 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
         style: DS.labelSmall.copyWith(color: DS.textSecondary),
       ),
     );
-  }
 
   String _modeLabel(BgmMode mode) => switch (mode) {
         BgmMode.adaptive => context.l10n.bgmLibraryModeAdaptive,

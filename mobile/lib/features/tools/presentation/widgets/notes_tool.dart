@@ -5,14 +5,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
 import 'package:sparkle/features/tools/data/repositories/tool_history_repository.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_body_skeleton.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_context_effect_feedback.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 
 class NotesTool extends ConsumerStatefulWidget {
@@ -90,7 +90,7 @@ class _NotesToolState extends ConsumerState<NotesTool> {
         _lastSyncedAt = null;
       });
       AppFeedback.info(
-          context, context.l10n.auto_notescleared);
+          context, context.l10n.auto_notescleared,);
     }
   }
 
@@ -101,7 +101,7 @@ class _NotesToolState extends ConsumerState<NotesTool> {
     await Clipboard.setData(ClipboardData(text: _controller.text.trim()));
     if (mounted) {
       AppFeedback.success(
-          context, context.l10n.auto_notescopied);
+          context, context.l10n.auto_notescopied,);
     }
   }
 
@@ -112,7 +112,7 @@ class _NotesToolState extends ConsumerState<NotesTool> {
           context,
           I18nService.instance.isChinese
               ? '先写下一点内容，再同步到认知棱镜'
-              : 'Write something first, then sync to cognitive prism');
+              : 'Write something first, then sync to cognitive prism',);
       return;
     }
 

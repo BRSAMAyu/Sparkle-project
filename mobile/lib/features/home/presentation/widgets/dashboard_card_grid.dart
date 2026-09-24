@@ -21,7 +21,7 @@ class DashboardCardGrid extends StatelessWidget {
           builder: (context, constraints) {
             final crossAxisCount =
                 constraints.maxWidth < 340 ? 1 : 2;
-            final double columnWidth = (constraints.maxWidth -
+            final columnWidth = (constraints.maxWidth -
                     (crossAxisCount - 1) * DS.spacing12) /
                 crossAxisCount;
             return AlignedGridView.count(

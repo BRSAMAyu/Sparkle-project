@@ -60,7 +60,6 @@ class _PurchaseConfirmationDialogState
                           borderRadius: BorderRadius.circular(14),
                           child: SparkleNetworkImage(
                             imageUrl: widget.item.iconUrl!,
-                            fit: BoxFit.cover,
                             errorWidget: Icon(
                               _getItemTypeIcon(widget.item.itemType),
                               size: 64,

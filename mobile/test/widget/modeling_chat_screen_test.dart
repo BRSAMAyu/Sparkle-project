@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -10,17 +9,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/storage/token_storage_io.dart';
 import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/repositories/chat_repository.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_run_phase_indicator.dart';
-import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/features/user/presentation/screens/modeling_chat_screen.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
+
 import '../shared/i18n_test_helper.dart';
-import 'package:sparkle/core/storage/token_storage_io.dart';
 
 class _QueuedChatRepository extends ChatRepository {
   _QueuedChatRepository() : super(Dio(), container: ProviderContainer());
@@ -526,7 +527,7 @@ void main() {
       // V13-RETEST：访谈面已统一走 SparkleMarkdown 管道，消息以 RichText
       // 呈现——用 findRichText 断言同一语义（内容在场）。
       expect(find.textContaining('我先把瓶颈整理出来…', findRichText: true),
-          findsOneWidget);
+          findsOneWidget,);
 
       // 75s 中段无任何帧 → 必须从「无反馈」升级为可见错误 + 重试。
       await tester.pump(const Duration(seconds: 77));
@@ -552,7 +553,7 @@ void main() {
       repository.enqueueController(onboardingController);
 
       await _pumpModelingScreen(
-          tester, repository: repository, sharedPrefs: sharedPrefs);
+          tester, repository: repository, sharedPrefs: sharedPrefs,);
 
       // 复测截图 08/12 的泄漏形态：粗体原文 + HTML 实体箭头/比较符。
       const leakedChunk =

@@ -5,7 +5,7 @@ import 'package:sparkle/shared/entities/achievement_model.dart';
 
 /// Horizontal scrollable template selector for share cards
 class ShareTemplateSelector extends StatelessWidget {
-  ShareTemplateSelector({
+  const ShareTemplateSelector({
     required this.templates,
     required this.selectedId,
     required this.onSelected,
@@ -39,7 +39,7 @@ class ShareTemplateSelector extends StatelessWidget {
 }
 
 class _TemplateCard extends StatelessWidget {
-  _TemplateCard({
+  const _TemplateCard({
     required this.template,
     required this.isSelected,
     required this.onTap,

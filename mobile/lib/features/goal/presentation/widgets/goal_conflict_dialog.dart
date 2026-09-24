@@ -35,15 +35,13 @@ Future<int> showGoalConflictDialog(
   BuildContext context, {
   required int totalAvailableMinutes,
   required List<GoalConflictOption> options,
-}) {
-  return showSensoryDialog<int>(
+}) => showSensoryDialog<int>(
     context: context,
     builder: (context) => _ConflictDialog(
       totalMinutes: totalAvailableMinutes,
       options: options,
     ),
   ).then((value) => value ?? -1);
-}
 
 class _ConflictDialog extends StatelessWidget {
   const _ConflictDialog({
@@ -55,8 +53,7 @@ class _ConflictDialog extends StatelessWidget {
   final List<GoalConflictOption> options;
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: Text(context.l10n.goalConflictTodaySchedule),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -70,7 +67,7 @@ class _ConflictDialog extends StatelessWidget {
           ...options.map((opt) => _ConflictOptionTile(
             option: opt,
             minutesLabel: context.l10n.goalConflictMinutes(opt.suggestedMinutes),
-          )),
+          ),),
         ],
       ),
       actions: [
@@ -84,7 +81,6 @@ class _ConflictDialog extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 class _ConflictOptionTile extends StatelessWidget {
@@ -94,8 +90,7 @@ class _ConflictOptionTile extends StatelessWidget {
   final String minutesLabel;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
+  Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -134,5 +129,4 @@ class _ConflictOptionTile extends StatelessWidget {
         ],
       ),
     );
-  }
 }

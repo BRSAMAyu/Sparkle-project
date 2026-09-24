@@ -678,7 +678,7 @@ class _AgentTimelineRow extends StatelessWidget {
                   Row(
                     children: [
                       Icon(_mapAgentIcon(entry.icon),
-                          size: 13, color: agentColor),
+                          size: 13, color: agentColor,),
                       const SizedBox(width: DS.spacing4),
                       Expanded(
                         child: Text(

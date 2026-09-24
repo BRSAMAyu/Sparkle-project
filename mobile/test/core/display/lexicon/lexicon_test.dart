@@ -123,7 +123,7 @@ void main() {
   });
 
   group('例2 时间格式化唯一入口', () {
-    DateTime _daysFromNow(int days, {int hour = 15, int minute = 0}) {
+    DateTime daysFromNow(int days, {int hour = 15, int minute = 0}) {
       final now = DateTime.now();
       return DateTime(now.year, now.month, now.day + days, hour, minute);
     }
@@ -138,65 +138,65 @@ void main() {
     });
 
     test('相对优先：今天/明天/昨天', () {
-      expect(formatSparkleDateTime(_daysFromNow(0), zh), '今天 15:00');
-      expect(formatSparkleDateTime(_daysFromNow(1), zh), '明天 15:00');
-      expect(formatSparkleDateTime(_daysFromNow(-1), zh), '昨天 15:00');
-      expect(formatSparkleDateTime(_daysFromNow(0), en), 'Today 15:00');
+      expect(formatSparkleDateTime(daysFromNow(0), zh), '今天 15:00');
+      expect(formatSparkleDateTime(daysFromNow(1), zh), '明天 15:00');
+      expect(formatSparkleDateTime(daysFromNow(-1), zh), '昨天 15:00');
+      expect(formatSparkleDateTime(daysFromNow(0), en), 'Today 15:00');
     });
 
     test('7 天内相对，≥7 天落绝对', () {
-      expect(formatSparkleDateTime(_daysFromNow(3), zh), '3天后 15:00');
-      expect(formatSparkleDateTime(_daysFromNow(-6), zh), '6天前 15:00');
+      expect(formatSparkleDateTime(daysFromNow(3), zh), '3天后 15:00');
+      expect(formatSparkleDateTime(daysFromNow(-6), zh), '6天前 15:00');
       final out = formatSparkleDateTime(
-        _daysFromNow(-30, hour: 9, minute: 30),
+        daysFromNow(-30, hour: 9, minute: 30),
         zh,
       );
       // ≥7 天落绝对：不再出现「天前/天后」相对词，钟点保留且无毫秒。
       expect(out.contains('天前'), isFalse);
       expect(out.endsWith('09:30'), isTrue);
       final absolute = formatSparkleDateTime(
-        DateTime(2020, 1, 5, 15, 0),
+        DateTime(2020, 1, 5, 15),
         zh,
       );
       expect(absolute.contains('1月5日'), isTrue);
       final absoluteEn = formatSparkleDateTime(
-        DateTime(2020, 1, 5, 15, 0),
+        DateTime(2020, 1, 5, 15),
         en,
       );
       expect(absoluteEn, '1/5 15:00');
     });
 
     test('同点起止 Range 折叠为单点（X8）', () {
-      final start = _daysFromNow(0, hour: 13, minute: 59);
-      final end = _daysFromNow(0, hour: 13, minute: 59);
+      final start = daysFromNow(0, hour: 13, minute: 59);
+      final end = daysFromNow(0, hour: 13, minute: 59);
       final out = formatSparkleSceneRange(start, end, zh);
       expect(out, '今天 13:59');
       expect('-'.allMatches(out), isEmpty);
     });
 
     test('同日不同点只标一次日期', () {
-      final start = _daysFromNow(0, hour: 13, minute: 0);
-      final end = _daysFromNow(0, hour: 15, minute: 0);
+      final start = daysFromNow(0, hour: 13);
+      final end = daysFromNow(0);
       expect(formatSparkleSceneRange(start, end, zh), '今天 13:00 - 15:00');
     });
   });
 
   group('PHOTON #7 日期分组头唯一入口 formatSparkleDayHeader', () {
-    DateTime _daysFromNow(int days, {int hour = 15, int minute = 0}) {
+    DateTime daysFromNow(int days, {int hour = 15, int minute = 0}) {
       final now = DateTime.now();
       return DateTime(now.year, now.month, now.day + days, hour, minute);
     }
 
     test('今天/昨天/N天前（无时钟，纯日粒度）', () {
-      expect(formatSparkleDayHeader(_daysFromNow(0), zh), '今天');
-      expect(formatSparkleDayHeader(_daysFromNow(-1), zh), '昨天');
-      expect(formatSparkleDayHeader(_daysFromNow(-2), zh), '2天前');
-      expect(formatSparkleDayHeader(_daysFromNow(-6), zh), '6天前');
-      expect(formatSparkleDayHeader(_daysFromNow(-1), en), 'Yesterday');
+      expect(formatSparkleDayHeader(daysFromNow(0), zh), '今天');
+      expect(formatSparkleDayHeader(daysFromNow(-1), zh), '昨天');
+      expect(formatSparkleDayHeader(daysFromNow(-2), zh), '2天前');
+      expect(formatSparkleDayHeader(daysFromNow(-6), zh), '6天前');
+      expect(formatSparkleDayHeader(daysFromNow(-1), en), 'Yesterday');
     });
 
     test('≥7 天落纯日期绝对格式（无时钟、无相对词）', () {
-      final out = formatSparkleDayHeader(_daysFromNow(-30), zh);
+      final out = formatSparkleDayHeader(daysFromNow(-30), zh);
       expect(out.contains('天前'), isFalse);
       expect(out.contains(':'), isFalse); // 分组头不带钟点
       expect(formatSparkleDayHeader(DateTime(2020, 1, 5), zh), '1月5日');

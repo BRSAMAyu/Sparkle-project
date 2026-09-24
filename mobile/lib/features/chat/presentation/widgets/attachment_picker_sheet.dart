@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 class AttachmentPickerSheet extends StatelessWidget {
   const AttachmentPickerSheet({
@@ -31,7 +31,7 @@ class AttachmentPickerSheet extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              isDark ? DS.surfaceOverlay : DS.surfacePrimary,
+              if (isDark) DS.surfaceOverlay else DS.surfacePrimary,
               Color.alphaBlend(
                 DS.info.withValues(alpha: 0.03),
                 DS.surfacePrimary,

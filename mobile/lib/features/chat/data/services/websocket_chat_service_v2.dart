@@ -9,15 +9,15 @@ import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/models/user_state_models.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/token_refresh_coordinator.dart';
-import 'package:sparkle/core/services/demo_data_service.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
-import 'package:sparkle/core/tracing/tracing_service.dart';
-import 'package:sparkle/features/auth/auth.dart';
-import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/offline/models/offline_chat_message.dart';
 import 'package:sparkle/core/offline/offline_message_queue_service.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/tracing/tracing_service.dart';
 import 'package:sparkle/features/aurora/presentation/providers/emotion_state_provider.dart';
+import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
@@ -1926,7 +1926,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       unawaited(_offlineQueue.markAcked(
         targetRequestId,
         serverMessageId: event.messageId,
-      ));
+      ),);
     }
 
     if (event is FullTextEvent) {
@@ -2002,7 +2002,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
             : null,
         chatMode: payload['chat_mode']?.toString(),
         nickname: payload['nickname']?.toString(),
-      ));
+      ),);
     }
   }
 
@@ -2089,7 +2089,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         code: 'MESSAGE_PARSE_ERROR',
         message: S.chatErrorParseFailed,
         retryable: false,
-      ));
+      ),);
     });
   }
 
@@ -2489,7 +2489,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         _failPendingMessages(
           code: 'MESSAGES_LOST',
           message: l10n.chatPendingMessagesConnectionFailed(
-              droppedCount, _maxReconnectAttempts),
+              droppedCount, _maxReconnectAttempts,),
         );
       }
 

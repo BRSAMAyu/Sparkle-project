@@ -8,10 +8,8 @@ import 'package:sparkle/shared/entities/visual_element_model.dart';
 /// 粒子层 - 渲染用户选择的粒子效果
 class ParticleLayer extends StatefulWidget {
   const ParticleLayer({
-    super.key,
+    required this.particleAnimation, required this.mainAnimation, super.key,
     this.element,
-    required this.particleAnimation,
-    required this.mainAnimation,
     this.density = 1.0,
     this.speedMultiplier = 1.0,
   });
@@ -61,7 +59,7 @@ class _ParticleLayerState extends State<ParticleLayer>
     final count = (baseCount * widget.density * tierScale)
         .round()
         .clamp(0, baseCount * 2)
-        .toInt();
+        ;
     final minSize = (config['min_size'] as num?)?.toDouble() ?? 1.0;
     final maxSize = (config['max_size'] as num?)?.toDouble() ?? 3.0;
     final fallDirection = config['fall_direction'] as String?;
@@ -309,33 +307,26 @@ class _ParticlePainter extends CustomPainter {
         case 'trail':
           canvas.drawCircle(Offset(x, y), particle.size * 2.2, glowPaint);
           _drawTrail(
-              canvas, Offset(x, y), particle.size, paint, particle.rotation);
-          break;
+              canvas, Offset(x, y), particle.size, paint, particle.rotation,);
         case 'ember':
           canvas.drawCircle(Offset(x, y), particle.size * 2.0, glowPaint);
           _drawEmber(canvas, Offset(x, y), particle.size, paint);
-          break;
         case 'diamond':
           canvas.drawCircle(Offset(x, y), particle.size * 1.8, glowPaint);
           _drawDiamond(canvas, Offset(x, y), particle.size, paint);
-          break;
         case 'burst':
           canvas.drawCircle(Offset(x, y), particle.size * 2.0, glowPaint);
           _drawBurst(canvas, Offset(x, y), particle.size, paint);
-          break;
         case 'star':
           canvas.drawCircle(Offset(x, y), particle.size * 1.8, glowPaint);
           _drawStar(canvas, Offset(x, y), particle.size, paint);
-          break;
         case 'petal':
           canvas.drawCircle(Offset(x, y), particle.size * 1.6, glowPaint);
           _drawPetal(
-              canvas, Offset(x, y), particle.size, paint, particle.rotation);
-          break;
+              canvas, Offset(x, y), particle.size, paint, particle.rotation,);
         case 'snowflake':
           canvas.drawCircle(Offset(x, y), particle.size * 1.7, glowPaint);
           _drawSnowflake(canvas, Offset(x, y), particle.size, paint);
-          break;
         case 'square':
           canvas.drawCircle(Offset(x, y), particle.size * 1.45, glowPaint);
           canvas.drawRect(
@@ -346,7 +337,6 @@ class _ParticlePainter extends CustomPainter {
             ),
             paint,
           );
-          break;
         case 'circle':
         default:
           canvas.drawCircle(Offset(x, y), particle.size * 1.6, glowPaint);
@@ -378,7 +368,7 @@ class _ParticlePainter extends CustomPainter {
   }
 
   void _drawPetal(
-      Canvas canvas, Offset center, double size, Paint paint, double rotation) {
+      Canvas canvas, Offset center, double size, Paint paint, double rotation,) {
     final path = Path();
     final angle = rotation;
 

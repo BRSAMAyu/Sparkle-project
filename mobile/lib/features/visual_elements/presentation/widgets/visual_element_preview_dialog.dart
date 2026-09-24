@@ -140,7 +140,7 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
 
     return Stack(
       children: [
-        Container(
+        DecoratedBox(
           decoration: BoxDecoration(
             color: palette.moonless,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -716,7 +716,7 @@ class _StageChip extends StatelessWidget {
                   style: TextStyle(
                     fontSize: DS.fontSizeXs,
                     color: Color.lerp(
-                        color, VisualElementPalette.textPrimary, 0.18),
+                        color, VisualElementPalette.textPrimary, 0.18,),
                     fontWeight: DS.fontWeightMedium,
                   ),
                 ),
@@ -797,7 +797,7 @@ class _PreviewSurfaceMock extends StatelessWidget {
                                           colors.text.withValues(alpha: 0.42),
                                     ),
                                   ),
-                                  child: Icon(
+                                  child: const Icon(
                                     Icons.person_outline_rounded,
                                     color: VisualElementPalette.textPrimary,
                                     size: DS.iconSizeSm,
@@ -849,7 +849,7 @@ class _PreviewSurfaceMock extends StatelessWidget {
                               runSpacing: DS.spacing8,
                               children: [
                                 _surfacePill(Icons.home_rounded,
-                                    zh ? '主页' : 'Home', colors),
+                                    zh ? '主页' : 'Home', colors,),
                                 _surfacePill(
                                   Icons.account_tree_rounded,
                                   zh ? '星图' : 'Galaxy',
@@ -887,7 +887,7 @@ class _PreviewSurfaceMock extends StatelessWidget {
   }
 
   Widget _surfacePill(
-          IconData icon, String label, VisualElementRarityColors colors) =>
+          IconData icon, String label, VisualElementRarityColors colors,) =>
       Container(
         padding: const EdgeInsets.symmetric(
           horizontal: DS.spacing8,
@@ -1438,7 +1438,7 @@ class _InfoRow extends StatelessWidget {
               flex: 4,
               child: Text(
                 label,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: DS.fontSizeSm,
                   color: VisualElementPalette.textSecondary,
                 ),
@@ -1451,7 +1451,7 @@ class _InfoRow extends StatelessWidget {
                 value,
                 textAlign: TextAlign.right,
                 softWrap: true,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: DS.fontSizeSm,
                   fontWeight: DS.fontWeightMedium,
                   color: VisualElementPalette.textPrimary,
@@ -1483,7 +1483,7 @@ class _UnlockRequirement extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(
+            const Icon(
               Icons.lock_outline,
               size: DS.iconSizeSm,
               color: VisualElementPalette.textSecondary,
@@ -1492,7 +1492,7 @@ class _UnlockRequirement extends StatelessWidget {
             Expanded(
               child: Text(
                 _getRequirementText(),
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: DS.fontSizeSm,
                   color: VisualElementPalette.textSecondary,
                 ),

@@ -96,7 +96,7 @@ class GroupTasksScreen extends ConsumerWidget {
                               if (context.mounted) {
                                 AppFeedback.success(
                                     context,
-                                    context.l10n.communityTaskCompleted);
+                                    context.l10n.communityTaskCompleted,);
                               }
                             } catch (e) {
                               if (context.mounted) {
@@ -304,7 +304,7 @@ extension on GroupTasksScreen {
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           title: Text(
-              context.l10n.communityCreateTaskTitle),
+              context.l10n.communityCreateTaskTitle,),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,

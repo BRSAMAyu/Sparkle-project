@@ -7,10 +7,10 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/widgets/unsaved_changes_guard.dart';
-import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/widgets/unsaved_changes_guard.dart';
 import 'package:sparkle/features/community/presentation/providers/community_providers.dart';
 import 'package:sparkle/features/file/data/services/file_upload_service.dart';
 
@@ -117,8 +117,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return UnsavedChangesGuard(
+  Widget build(BuildContext context) => UnsavedChangesGuard(
       isDirty: _isDirty,
       discardTitle: context.l10n.communityDiscardDraft,
       discardMessage: context.l10n.communityUnsavedContent,
@@ -199,7 +198,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                             height: 1.6,
                           ),
                           border: InputBorder.none,
-                          counterStyle: TextStyle(
+                          counterStyle: const TextStyle(
                             fontSize: 0, // hide default counter
                           ),
                           contentPadding: EdgeInsets.zero,
@@ -235,7 +234,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                         Row(
                           children: [
                             Icon(Icons.image_rounded,
-                                size: 16, color: DS.brandPrimary),
+                                size: 16, color: DS.brandPrimary,),
                             const SizedBox(width: DS.spacing8),
                             Text(
                               context.l10n.communityAttachment,
@@ -250,7 +249,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                               variant: ButtonVariant.ghost,
                               semanticLabel: context.l10n.commonRemove,
                               icon: Icon(Icons.close_rounded,
-                                  size: 18, color: DS.textTertiary),
+                                  size: 18, color: DS.textTertiary,),
                               onPressed: _removeImage,
                             ),
                           ],
@@ -325,10 +324,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         ),
       ),
     );
-  }
 
-  Widget _buildMoodSelector() {
-    return Row(
+  Widget _buildMoodSelector() => Row(
       children: List.generate(_moodIcons.length, (index) {
         final selected = _moodIndex == index;
         return Padding(
@@ -336,7 +333,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           child: GestureDetector(
             onTap: () {
               unawaited(
-                  SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+                  SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),);
               setState(() {
                 _moodIndex = selected ? -1 : index;
               });
@@ -379,7 +376,6 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         );
       }),
     );
-  }
 }
 
 class _ToolbarButton extends StatelessWidget {

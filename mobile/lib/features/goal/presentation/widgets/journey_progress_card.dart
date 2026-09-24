@@ -139,7 +139,5 @@ class JourneyProgressCard extends StatelessWidget {
     );
   }
 
-  String _currentNodeLabel(BuildContext context, int index) {
-    return context.l10n.journeyPhase(index + 1);
-  }
+  String _currentNodeLabel(BuildContext context, int index) => context.l10n.journeyPhase(index + 1);
 }

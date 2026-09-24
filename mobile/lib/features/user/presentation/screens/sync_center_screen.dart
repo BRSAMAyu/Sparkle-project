@@ -1,9 +1,9 @@
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/offline/sync_center_provider.dart';
@@ -238,12 +238,10 @@ class _CompactStatsRow extends StatelessWidget {
                     alignment: WrapAlignment.end,
                     spacing: DS.spacing6,
                     runSpacing: DS.spacing4,
-                    children: topicEntries.map((entry) {
-                      return _StatChip(
+                    children: topicEntries.map((entry) => _StatChip(
                         label: _topicLabel(context, entry.key),
                         count: entry.value,
-                      );
-                    }).toList(),
+                      ),).toList(),
                   ),
                 ),
             ],
@@ -279,8 +277,7 @@ class _StatChip extends StatelessWidget {
   final int count;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing8,
         vertical: DS.spacing4,
@@ -311,7 +308,6 @@ class _StatChip extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 /// Compact single-row filter: topic dropdown on the left, copy button on the right.
@@ -329,8 +325,7 @@ class _CompactFilterRow extends StatelessWidget {
   final String onCopyLabel;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
+  Widget build(BuildContext context) => Row(
       children: [
         // Topic filter dropdown
         Flexible(
@@ -391,7 +386,6 @@ class _CompactFilterRow extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 class _ItemsList extends ConsumerWidget {
@@ -410,7 +404,7 @@ class _ItemsList extends ConsumerWidget {
           return const _EmptyState();
         }
         return ListView.separated(
-          padding: EdgeInsets.fromLTRB(
+          padding: const EdgeInsets.fromLTRB(
             DS.spacing16,
             DS.spacing4,
             DS.spacing16,
@@ -470,8 +464,7 @@ class _EmptyState extends StatelessWidget {
   const _EmptyState();
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
+  Widget build(BuildContext context) => Center(
       child: Padding(
         padding: const EdgeInsets.all(DS.spacing32),
         child: Column(
@@ -497,7 +490,6 @@ class _EmptyState extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _OutboxItemCard extends StatelessWidget {
@@ -529,7 +521,7 @@ class _OutboxItemCard extends StatelessWidget {
       SyncStatus.synced => DS.success,
     };
 
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: DS.borderRadius16,
         border: Border.all(

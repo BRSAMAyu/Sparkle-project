@@ -6,12 +6,12 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/empty_state.dart';
+import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/display/lexicon/date_formatting.dart';
 import 'package:sparkle/core/display/lexicon/goal_status_lexicon.dart';
 import 'package:sparkle/core/display/lexicon/lexicon.dart';
 import 'package:sparkle/core/display/lexicon/memory_event_lexicon.dart';
-import 'package:sparkle/core/design/widgets/empty_state.dart';
-import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
@@ -20,8 +20,8 @@ import 'package:sparkle/features/memory/presentation/providers/understanding_ove
 import 'package:sparkle/features/memory/presentation/screens/memory_detail_screen.dart';
 import 'package:sparkle/features/memory/presentation/widgets/evidence_drawer.dart';
 import 'package:sparkle/features/memory/presentation/widgets/memory_evidence_badge.dart';
-import 'package:sparkle/features/memory/presentation/widgets/understanding_overview_view.dart';
 import 'package:sparkle/features/memory/presentation/widgets/pending_commitments_section.dart';
+import 'package:sparkle/features/memory/presentation/widgets/understanding_overview_view.dart';
 import 'package:sparkle/features/memory/presentation/widgets/unresolved_conflicts_section.dart';
 import 'package:sparkle/features/user/user_routes.dart';
 
@@ -543,7 +543,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                 const SizedBox(height: DS.xl),
                 _SectionHeader(title: context.l10n.memoryPanelAiAutoMemories),
                 const SizedBox(height: DS.sm),
-                ..._autoMemoryEntries.map((item) => _buildEpisodicCard(item)),
+                ..._autoMemoryEntries.map(_buildEpisodicCard),
               ],
               if (_unresolvedConflicts.isNotEmpty) ...[
                 const SizedBox(height: DS.xl),
@@ -822,7 +822,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
                       Text(
                         context.l10n.memoryPanelSceneMemories(
                             _formatSceneTime(item.timeStart, item.timeEnd),
-                            item.memberCount),
+                            item.memberCount,),
                         style: TextStyle(color: DS.textSecondary),
                       ),
                     ],
@@ -1133,7 +1133,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   }
 
   List<EpisodicMemoryItem> get _autoMemoryEntries => _episodic
-      .where((item) => _isInferredAutoMemory(item))
+      .where(_isInferredAutoMemory)
       .toList(growable: false);
 
   MemoryEvidenceStatus _statusFor(
@@ -1255,19 +1255,19 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   Future<void> _selectConflictLeft(UnresolvedConflictItem item) async {
     await _arbitrateConflict(item,
         selection: 'left',
-        successMessage: context.l10n.memoryPanelConflictResolvedA);
+        successMessage: context.l10n.memoryPanelConflictResolvedA,);
   }
 
   Future<void> _selectConflictRight(UnresolvedConflictItem item) async {
     await _arbitrateConflict(item,
         selection: 'right',
-        successMessage: context.l10n.memoryPanelConflictResolvedB);
+        successMessage: context.l10n.memoryPanelConflictResolvedB,);
   }
 
   Future<void> _selectConflictNone(UnresolvedConflictItem item) async {
     await _arbitrateConflict(item,
         selection: 'none',
-        successMessage: context.l10n.memoryPanelConflictResolvedNone);
+        successMessage: context.l10n.memoryPanelConflictResolvedNone,);
   }
 
   Future<void> _arbitrateConflict(
@@ -1494,7 +1494,7 @@ class _MemoryCard extends StatelessWidget {
                           const SizedBox(width: 6),
                           _CorrectionBadge(
                               label: context.l10n
-                                  .memoryPanelCorrectionCount(correctionCount)),
+                                  .memoryPanelCorrectionCount(correctionCount),),
                         ],
                       ],
                     ),

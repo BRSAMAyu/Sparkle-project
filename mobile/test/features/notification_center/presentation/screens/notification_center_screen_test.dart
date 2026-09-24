@@ -11,7 +11,7 @@ class _StubNotificationCenter extends NotificationCenter {
   NotificationCenterState build() =>
       // N15（ERR-SECONDARY 批）：error 字段已类型化——状态只存类别，
       // 原始异常文本从不入户。
-      NotificationCenterState(error: UiErrorCategory.unknown);
+      const NotificationCenterState(error: UiErrorCategory.unknown);
 
   @override
   Future<void> loadNotifications({

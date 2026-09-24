@@ -3,8 +3,8 @@ import 'package:sparkle/features/home/data/models/prediction_insight_data.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/predicted_intent_card.dart';
 
-import '../../dashboard_test_harness.dart';
 import '../../../../shared/i18n_test_helper.dart';
+import '../../dashboard_test_harness.dart';
 
 void main() {
 

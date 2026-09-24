@@ -1,5 +1,3 @@
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
-import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -8,16 +6,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
-import 'package:sparkle/core/widgets/unsaved_changes_guard.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/widgets/unsaved_changes_guard.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/models/question_image_reference.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/error_question_image.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
 import 'package:sparkle/features/file/data/services/file_upload_service.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class AddErrorScreen extends ConsumerStatefulWidget {
   const AddErrorScreen({
@@ -343,7 +343,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
             const SizedBox(height: DS.spacing8),
             Text(
               context.l10n.ebUploadProgress(
-                  '${(_uploadProgress * 100).toStringAsFixed(0)}%'),
+                  '${(_uploadProgress * 100).toStringAsFixed(0)}%',),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -355,7 +355,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
             icon: const Icon(Icons.upload_file_outlined),
             label: Text(_hasQuestionImage
                 ? context.l10n.ebReuploadImage
-                : context.l10n.ebUploadImage),
+                : context.l10n.ebUploadImage,),
           ),
         ],
       ),
@@ -374,7 +374,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
           ),
           title: Text(widget.isEditMode
               ? context.l10n.ebEditError
-              : context.l10n.ebAddError),
+              : context.l10n.ebAddError,),
         ),
         child: const SparkleListSkeleton(),
       );
@@ -437,7 +437,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
           ),
           title: Text(widget.isEditMode
               ? context.l10n.ebEditError
-              : context.l10n.ebAddError),
+              : context.l10n.ebAddError,),
           actions: [
             Padding(
               padding: const EdgeInsets.only(right: DS.spacing8),
@@ -487,8 +487,8 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
                   decoration: InputDecoration(
                     labelText: context.l10n.ebChapterOptional,
                     hintText: context.l10n.ebChapterHint,
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.folder_outlined),
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.folder_outlined),
                     helperText: context.l10n.ebChapterHelper,
                   ),
                   textInputAction: TextInputAction.next,
@@ -501,8 +501,8 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
                   decoration: InputDecoration(
                     labelText: context.l10n.ebQuestionContent,
                     hintText: context.l10n.ebQuestionHint,
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.quiz_outlined),
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.quiz_outlined),
                     alignLabelWithHint: true,
                     helperText: context.l10n.ebQuestionHelper,
                   ),
@@ -516,8 +516,8 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
                   decoration: InputDecoration(
                     labelText: context.l10n.ebYourAnswer,
                     hintText: context.l10n.ebYourAnswerHint,
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.edit_outlined),
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.edit_outlined),
                     alignLabelWithHint: true,
                   ),
                   maxLines: 4,
@@ -538,8 +538,8 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
                   decoration: InputDecoration(
                     labelText: context.l10n.ebCorrectAnswer,
                     hintText: context.l10n.ebCorrectAnswerHint,
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.check_circle_outline),
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.check_circle_outline),
                     alignLabelWithHint: true,
                   ),
                   maxLines: 4,

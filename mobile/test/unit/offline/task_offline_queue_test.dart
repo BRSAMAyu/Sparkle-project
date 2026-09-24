@@ -5,7 +5,6 @@ import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:isar/isar.dart';
-import '../../shared/isar_test_helper.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,6 +15,7 @@ import 'package:sparkle/core/offline/sync_engine.dart';
 import 'package:sparkle/core/services/websocket_service.dart';
 import 'package:sparkle/features/task/data/services/task_offline_queue.dart';
 
+import '../../shared/isar_test_helper.dart';
 import 'task_offline_queue_test.mocks.dart';
 
 class _FakeConnectivity implements Connectivity {
@@ -89,7 +89,7 @@ void main() {
       dedupeKey: 'task:task-1:start',
       priority: 1,
       traceId: 'trace-1',
-    )).called(1);
+    ),).called(1);
   });
 
   test('enqueuePause includes reason when provided', () async {
@@ -111,7 +111,7 @@ void main() {
       dedupeKey: 'task:task-1:pause',
       priority: 1,
       traceId: 'trace-2',
-    )).called(1);
+    ),).called(1);
   });
 
   test('enqueueResume enqueues task:resume', () async {
@@ -130,7 +130,7 @@ void main() {
       dedupeKey: 'task:task-1:resume',
       priority: 1,
       traceId: anyNamed('traceId'),
-    )).called(1);
+    ),).called(1);
   });
 
   test('enqueueComplete includes completion data at priority 2', () async {
@@ -153,7 +153,7 @@ void main() {
       dedupeKey: 'task:task-1:complete',
       priority: 2,
       traceId: anyNamed('traceId'),
-    )).called(1);
+    ),).called(1);
   });
 
   test('enqueueAbandon includes reason when provided', () async {
@@ -175,7 +175,7 @@ void main() {
       dedupeKey: 'task:task-1:abandon',
       priority: 1,
       traceId: anyNamed('traceId'),
-    )).called(1);
+    ),).called(1);
   });
 
   test('pendingTaskOpsCount returns 0 when no task ops exist', () async {

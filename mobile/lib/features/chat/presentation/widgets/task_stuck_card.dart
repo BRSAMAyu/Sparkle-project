@@ -79,7 +79,7 @@ class TaskStuckCard extends StatelessWidget {
  action: 'snoozed',
  interventionId: interventionId,
  extra: const {'snooze_hours': 24},
- )),
+ ),),
               ),
                             SparkleButton(
                 label: context.l10n.chatNotNeeded,
@@ -92,7 +92,7 @@ class TaskStuckCard extends StatelessWidget {
  : () => unawaited(_sendFeedback(
  action: 'dismissed',
  interventionId: interventionId,
- )),
+ ),),
               ),
             ],
           ),
@@ -127,7 +127,7 @@ class TaskStuckCard extends StatelessWidget {
       unawaited(_sendFeedback(
         action: 'accepted',
         interventionId: interventionId,
-      ));
+      ),);
     }
     final microSession = data['micro_session'] is Map
         ? Map<String, dynamic>.from(data['micro_session'] as Map)
@@ -143,7 +143,7 @@ class TaskStuckCard extends StatelessWidget {
           ? AuroraCoreSessionEntryReason.fromJson(entryRaw)
           : AuroraCoreSessionEntryReason(
               triggerSource: 'task_stuck_card',
-              observedSignals: [pattern.isNotEmpty ? pattern : message],
+              observedSignals: [if (pattern.isNotEmpty) pattern else message],
               suggestedAgendaPreview: [
                 context.l10n.chatAgendaConfirmTaskBlockCause,
                 context.l10n.chatAgendaAdjustNextTaskEasier,
@@ -153,7 +153,7 @@ class TaskStuckCard extends StatelessWidget {
             ),
       scope: pattern.isNotEmpty ? pattern : message,
       sessionType: 'task_stuck_light',
-    ));
+    ),);
   }
 }
 

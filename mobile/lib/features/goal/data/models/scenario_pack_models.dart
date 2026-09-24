@@ -10,17 +10,7 @@ class ScenarioPackSummary {
     this.author = '',
   });
 
-  final String id;
-  final String name;
-  final String version;
-  final String description;
-  final int horizonDays;
-  final int nodeCount;
-  final String goalType;
-  final String author;
-
-  factory ScenarioPackSummary.fromJson(Map<String, dynamic> json) {
-    return ScenarioPackSummary(
+  factory ScenarioPackSummary.fromJson(Map<String, dynamic> json) => ScenarioPackSummary(
       id: json['id'] as String? ?? '',
       name: json['name'] as String? ?? '',
       version: json['version'] as String? ?? '',
@@ -30,7 +20,15 @@ class ScenarioPackSummary {
       goalType: json['goal_type'] as String? ?? '',
       author: json['author'] as String? ?? '',
     );
-  }
+
+  final String id;
+  final String name;
+  final String version;
+  final String description;
+  final int horizonDays;
+  final int nodeCount;
+  final String goalType;
+  final String author;
 }
 
 class ScenarioPackDetail extends ScenarioPackSummary {
@@ -47,10 +45,6 @@ class ScenarioPackDetail extends ScenarioPackSummary {
     this.backboneNodes = const [],
     this.defaultStrategies = const {},
   });
-
-  final List<String> applicabilityConditions;
-  final List<Map<String, dynamic>> backboneNodes;
-  final Map<String, String> defaultStrategies;
 
   factory ScenarioPackDetail.fromJson(Map<String, dynamic> json) {
     final summary = ScenarioPackSummary.fromJson(json);
@@ -76,6 +70,10 @@ class ScenarioPackDetail extends ScenarioPackSummary {
           const {},
     );
   }
+
+  final List<String> applicabilityConditions;
+  final List<Map<String, dynamic>> backboneNodes;
+  final Map<String, String> defaultStrategies;
 }
 
 class JourneyProgress {
@@ -90,6 +88,17 @@ class JourneyProgress {
     this.isOnBackbone = true,
   });
 
+  factory JourneyProgress.fromJson(Map<String, dynamic> json) => JourneyProgress(
+      packId: json['pack_id'] as String?,
+      packName: json['pack_name'] as String?,
+      currentNode: json['current_node'] as String?,
+      currentNodeIndex: json['current_node_index'] as int? ?? 0,
+      totalNodes: json['total_nodes'] as int? ?? 0,
+      dayNumber: json['day_number'] as int? ?? 0,
+      horizonDays: json['horizon_days'] as int? ?? 0,
+      isOnBackbone: json['is_on_backbone'] as bool? ?? true,
+    );
+
   final String? packId;
   final String? packName;
   final String? currentNode;
@@ -101,17 +110,4 @@ class JourneyProgress {
 
   bool get hasPack => packId != null && packId!.isNotEmpty;
   double get progress => totalNodes > 0 ? (currentNodeIndex + 1) / totalNodes : 0.0;
-
-  factory JourneyProgress.fromJson(Map<String, dynamic> json) {
-    return JourneyProgress(
-      packId: json['pack_id'] as String?,
-      packName: json['pack_name'] as String?,
-      currentNode: json['current_node'] as String?,
-      currentNodeIndex: json['current_node_index'] as int? ?? 0,
-      totalNodes: json['total_nodes'] as int? ?? 0,
-      dayNumber: json['day_number'] as int? ?? 0,
-      horizonDays: json['horizon_days'] as int? ?? 0,
-      isOnBackbone: json['is_on_backbone'] as bool? ?? true,
-    );
-  }
 }

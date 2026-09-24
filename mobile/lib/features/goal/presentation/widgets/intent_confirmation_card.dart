@@ -184,8 +184,7 @@ class _SuggestedActionRow extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return InkWell(
+  Widget build(BuildContext context) => InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(
@@ -214,5 +213,4 @@ class _SuggestedActionRow extends StatelessWidget {
         ),
       ),
     );
-  }
 }

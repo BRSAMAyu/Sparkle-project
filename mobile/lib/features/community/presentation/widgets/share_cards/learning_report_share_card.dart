@@ -92,13 +92,13 @@ class LearningReportShareCardFactory {
                   children: [
                     if (metadata['active_plans'] != null)
                       _chip(l10n.communityShareActivePlans,
-                          '${metadata['active_plans']}'),
+                          '${metadata['active_plans']}',),
                     if (metadata['unlocked_achievements'] != null)
                       _chip(l10n.communityShareAchievements,
-                          '${metadata['unlocked_achievements']}'),
+                          '${metadata['unlocked_achievements']}',),
                     if (metadata['flame_brightness'] != null)
                       _chip(l10n.communityShareBrightness,
-                          metadata['flame_brightness'].toString()),
+                          metadata['flame_brightness'].toString(),),
                   ],
                 ),
               ],

@@ -10,24 +10,24 @@ import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/compact_error_card.dart';
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/notification_service.dart' show navigatorKey;
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/share_poster_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
+import 'package:sparkle/features/chat/presentation/widgets/stale_recovery_card.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
-import 'package:sparkle/features/chat/presentation/widgets/stale_recovery_card.dart';
 import 'package:sparkle/features/task/presentation/providers/subtask_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/presentation/widgets/guidance/task_guidance_surface.dart';
@@ -96,7 +96,6 @@ class _TaskDetailView extends ConsumerWidget {
                           if (task.boundSources.isNotEmpty)
                             SourceLifecycleBadgeGroup(
                               sources: task.boundSources,
-                              maxVisible: 3,
                             ),
                           _buildInfoSection(context, ref),
                           WhyThisTodayPanel(
@@ -223,7 +222,7 @@ class _TaskDetailView extends ConsumerWidget {
 
     return Semantics(
       label: context.l10n.taskDetailSubtasks(
-          subtaskState.completed, subtaskState.total),
+          subtaskState.completed, subtaskState.total,),
       child: GraphiteCardSurface(
         padding: EdgeInsets.zero,
         child: ExpansionTile(
@@ -252,7 +251,7 @@ class _TaskDetailView extends ConsumerWidget {
               Expanded(
                 child: Text(
                   context.l10n.taskDetailSubtasks(
-                      subtaskState.completed, subtaskState.total),
+                      subtaskState.completed, subtaskState.total,),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: DS.fontWeightBold,
                       ),
@@ -271,7 +270,7 @@ class _TaskDetailView extends ConsumerWidget {
             child: subtaskState.isLoading && subtaskState.total == 0
                 ? const Padding(
                     padding: EdgeInsets.all(DS.spacing16),
-                    child: SparkleSkeleton(height: 40, borderRadius: 8),
+                    child: SparkleSkeleton(height: 40),
                   )
                 : subtaskState.error != null && subtaskState.total == 0
                     ? Text(
@@ -487,7 +486,7 @@ class _TaskDetailView extends ConsumerWidget {
         final loadZh =
             Localizations.localeOf(context).languageCode == 'zh';
         AppFeedback.error(
-            context, loadZh ? '加载计划失败: $e' : 'Failed to load plans: $e');
+            context, loadZh ? '加载计划失败: $e' : 'Failed to load plans: $e',);
         return;
       }
     }
@@ -1065,7 +1064,7 @@ class _BottomActionBar extends ConsumerWidget {
                                         navigatorKey.currentContext;
                                     if (navContext != null) {
                                       final zh = Localizations.localeOf(
-                                              navContext)
+                                              navContext,)
                                           .languageCode ==
                                           'zh';
                                       AppFeedback.undoable(
@@ -1154,7 +1153,7 @@ class _StructuredGuideSection extends StatelessWidget {
               icon: Icons.timer_outlined,
               label: context.l10n.taskEstimatedTime,
               value: context.l10n.taskDetailStepMinutesValue(
-                  guide['time_estimate_minutes'] as int),
+                  guide['time_estimate_minutes'] as int,),
             ),
           if ((task.successCriteria ??
                   guide['success_criteria']?.toString() ??
@@ -1222,7 +1221,6 @@ class _StructuredGuideSection extends StatelessWidget {
                 Expanded(
                   child: SparkleButton(
                     label: context.l10n.taskStartFocus,
-                    variant: ButtonVariant.primary,
                     icon: const Icon(Icons.play_arrow_rounded, size: 16),
                     onPressed: () => unawaited(
                       context.push('/tasks/${task.id}/execute'),
@@ -1323,7 +1321,7 @@ class _GenerateGuideButtonState extends ConsumerState<_GenerateGuideButton> {
     } catch (e) {
       if (mounted) {
         AppFeedback.error(
-            context, context.l10n.taskDetailGuideGenerateFailed('$e'));
+            context, context.l10n.taskDetailGuideGenerateFailed('$e'),);
       }
     } finally {
       if (mounted) setState(() => _isGenerating = false);

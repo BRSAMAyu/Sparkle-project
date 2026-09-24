@@ -40,7 +40,7 @@ class UnderstandingSnapshot {
           .where(_notEmpty)
           .toList(growable: false),
       nextStepLabel: _nullableString(
-          nextStep?['label'] ?? nextStep?['title'] ?? nextStep?['summary']),
+          nextStep?['label'] ?? nextStep?['title'] ?? nextStep?['summary'],),
       updatedAt: DateTime.tryParse(_string(json['updated_at'])),
     );
   }

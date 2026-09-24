@@ -1,12 +1,12 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/accountability_model.dart';
@@ -324,7 +324,7 @@ class _PartnerHero extends ConsumerWidget {
                               : context.l10n.communityTogetherDays(
                                   (relationshipSummary['days_together'] as num?)
                                           ?.toInt() ??
-                                      0),
+                                      0,),
                           style: DS.bodySmall.copyWith(color: DS.textSecondary),
                         ),
                       ],
@@ -342,21 +342,21 @@ class _PartnerHero extends ConsumerWidget {
                     value: context.l10n.communityMyStreakDays(
                         (relationshipSummary?['my_streak_days'] as num?)
                                 ?.toInt() ??
-                            0),
+                            0,),
                   ),
                   _MetricChip(
                     label: 'TA',
                     value: context.l10n.communityPartnerStreakDays(
                         (relationshipSummary?['partner_streak_days'] as num?)
                                 ?.toInt() ??
-                            0),
+                            0,),
                   ),
                   _MetricChip(
                     label: '合计',
                     value: context.l10n.communityTotalCheckins(
                         (relationshipSummary?['total_checkins'] as num?)
                                 ?.toInt() ??
-                            0),
+                            0,),
                   ),
                 ],
               ),
@@ -402,7 +402,7 @@ class _PartnerHero extends ConsumerWidget {
                               AppFeedback.error(
                                   context,
                                   context.l10n
-                                      .communityNudgeFailed(e.toString()));
+                                      .communityNudgeFailed(e.toString()),);
                             }
                           }
                         }
@@ -498,13 +498,13 @@ class _FriendCard extends StatelessWidget {
       child: GraphiteCardSurface(
         onLongPress: onLongPress,
         onTap: () {
-          if (accountability?.isPending == true) {
+          if (accountability?.isPending ?? false) {
             unawaited(context.pushNamed('friendRequests'));
             return;
           }
           unawaited(context.push(
             '/chat/private/${friend.id}?name=${Uri.encodeComponent(friend.displayName)}',
-          ));
+          ),);
         },
         child: Row(
           children: [
@@ -537,12 +537,12 @@ class _FriendCard extends StatelessWidget {
                         const SizedBox(width: 8),
                         _Pill(
                             label: context.l10n.communityAccountabilityPartner,
-                            color: DS.brandPrimary),
-                      ] else if (accountability?.isPending == true) ...[
+                            color: DS.brandPrimary,),
+                      ] else if (accountability?.isPending ?? false) ...[
                         const SizedBox(width: 8),
                         _Pill(
                             label: context.l10n.communityPendingConfirm,
-                            color: DS.warning),
+                            color: DS.warning,),
                       ],
                     ],
                   ),
@@ -579,7 +579,7 @@ class _FriendCard extends StatelessWidget {
                   if (accountability != null) ...[
                     const SizedBox(height: 8),
                     Text(
-                      accountability.goalPreview?.isNotEmpty == true
+                      accountability.goalPreview?.isNotEmpty ?? false
                           ? accountability.goalPreview!
                           : context.l10n.communityPartnerEstablished,
                       maxLines: 1,
@@ -596,12 +596,12 @@ class _FriendCard extends StatelessWidget {
                         if (accountability.myStreakDays != null)
                           _TinyMetric(
                             label: context.l10n.communityMyDays(
-                                accountability.myStreakDays ?? 0),
+                                accountability.myStreakDays ?? 0,),
                           ),
                         if (accountability.partnerStreakDays != null)
                           _TinyMetric(
                             label: context.l10n.communityPartnerDays(
-                                accountability.partnerStreakDays ?? 0),
+                                accountability.partnerStreakDays ?? 0,),
                           ),
                         if (accountability.partnerCheckedInToday != null)
                           _TinyMetric(
@@ -632,13 +632,13 @@ class _FriendCard extends StatelessWidget {
                   SparkleIconButton(
                     variant: ButtonVariant.ghost,
                     icon: Icon(
-                      accountability?.isPending == true
+                      accountability?.isPending ?? false
                           ? Icons.mark_email_unread_outlined
                           : Icons.handshake_outlined,
                     ),
                     semanticLabel: context.l10n.friendsPartnerEntry,
                     onPressed: () {
-                      if (accountability?.isPending == true) {
+                      if (accountability?.isPending ?? false) {
                         unawaited(context.pushNamed('friendRequests'));
                         return;
                       }
@@ -647,7 +647,7 @@ class _FriendCard extends StatelessWidget {
                           ':id',
                           accountability!.partnershipId,
                         ),
-                      ));
+                      ),);
                     },
                   ),
               ],

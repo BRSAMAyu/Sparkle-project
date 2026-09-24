@@ -23,7 +23,7 @@ void main() {
           confirmationStatus: 'none',
           consolidatedToL1Id: 'memory-1',
           rejected: false,
-          lastSeenAt: DateTime(2026, 4, 21, 10, 0, 0),
+          lastSeenAt: DateTime(2026, 4, 21, 10),
         ),
       ],
     );
@@ -62,7 +62,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         child: testMaterialApp(
-          home: Scaffold(
+          home: const Scaffold(
             body: ChatWorkingMemoryPanel(
               sessionId: null,
               onViewSource: _noopViewSource,
@@ -114,9 +114,8 @@ void main() {
           sourceTurnIds: const ['turn-1'],
           evidenceToken: 'turn-1',
           confirmationStatus: 'none',
-          consolidatedToL1Id: null,
           rejected: false,
-          lastSeenAt: DateTime(2026, 4, 21, 10, 0, 0),
+          lastSeenAt: DateTime(2026, 4, 21, 10),
         ),
       ],
     );

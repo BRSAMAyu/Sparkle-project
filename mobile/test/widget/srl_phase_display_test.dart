@@ -8,7 +8,7 @@ void main() {
   setUp(setUpI18nForTesting);
   testWidgets('srl phase badge hides for unknown phase', (tester) async {
     await tester.pumpWidget(
-      testMaterialApp(home: _SrlTestHelper(
+      testMaterialApp(home: const _SrlTestHelper(
           profileContext: {
             'user_insight_state': {
               'srl_phase': {
@@ -25,7 +25,7 @@ void main() {
 
   testWidgets('srl phase badge renders reflection phase copy', (tester) async {
     await tester.pumpWidget(
-      testMaterialApp(home: Scaffold(
+      testMaterialApp(home: const Scaffold(
           body: SrlPhaseBadgeCard(
             phase: 'SELF_REFLECTION',
             helperText: '当前更适合回看阻力、复盘并准备下一轮。',
@@ -40,7 +40,7 @@ void main() {
   testWidgets('srl phase parser returns helper text for performance phase',
       (tester) async {
     await tester.pumpWidget(
-      testMaterialApp(home: _SrlParseTestHelper(
+      testMaterialApp(home: const _SrlParseTestHelper(
           profileContext: {
             'user_insight_state': {
               'srl_phase': {

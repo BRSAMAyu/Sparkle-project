@@ -47,7 +47,7 @@ void main() {
         reason: 'Login passwords must be masked before reaching debug logs',
       );
       expect(logged, contains('alice'),
-          reason: 'Non-sensitive fields stay visible for debugging');
+          reason: 'Non-sensitive fields stay visible for debugging',);
     });
   });
 }

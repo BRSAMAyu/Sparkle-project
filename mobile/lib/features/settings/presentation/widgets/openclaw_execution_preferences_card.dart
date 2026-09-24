@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
-import 'package:sparkle/core/services/openclaw_execution_preferences_service.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/openclaw_execution_preferences_service.dart';
 import 'package:sparkle/core/utils/input_formatters.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
@@ -236,11 +235,11 @@ class _OpenClawExecutionPreferencesCardState
             ),
             items: [
               DropdownMenuItem(
-                  value: 'all', child: Text(l.settingsAllNotifications)),
+                  value: 'all', child: Text(l.settingsAllNotifications),),
               DropdownMenuItem(
-                  value: 'essential', child: Text(l.settingsCriticalOnly)),
+                  value: 'essential', child: Text(l.settingsCriticalOnly),),
               DropdownMenuItem(
-                  value: 'silent', child: Text(l.settingsQuietMode)),
+                  value: 'silent', child: Text(l.settingsQuietMode),),
             ],
             onChanged: (value) {
               if (value == null) {
@@ -379,7 +378,7 @@ class _OpenClawExecutionPreferencesCardState
                           _dirty = false;
                         });
                         AppFeedback.success(
-                            context, l.settingsPreferencesSaved);
+                            context, l.settingsPreferencesSaved,);
                       }
                     },
               expand: true,

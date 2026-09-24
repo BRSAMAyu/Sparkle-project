@@ -217,7 +217,7 @@ class _PlanContextSnapshotCardState extends State<_PlanContextSnapshotCard>
                   onPressed: () {
                     unawaited(
                       SensoryFeedbackService.emit(
-                          SensoryFeedbackEvent.selection),
+                          SensoryFeedbackEvent.selection,),
                     );
                     setState(() => _expanded = !_expanded);
                   },

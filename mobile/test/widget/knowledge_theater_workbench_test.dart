@@ -300,7 +300,7 @@ void main() {
           ),
         ],
         child: testMaterialApp(
-          home: KnowledgeTheaterScreen(),
+          home: const KnowledgeTheaterScreen(),
         ),
       ),
     );
@@ -412,7 +412,7 @@ void main() {
           ),
         ],
         child: testMaterialApp(
-          home: KnowledgeTheaterScreen(),
+          home: const KnowledgeTheaterScreen(),
         ),
       ),
     );

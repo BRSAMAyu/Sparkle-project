@@ -463,12 +463,7 @@ class SparkleButtonGroup extends StatelessWidget {
 ///    登记制清偿（ratchet 只降不升），新调用点在 debug/测试期即可见。
 ///    不采「强制 required 参数」方案：存量 ~170 处无名调用点跨 ~130 文件，
 ///    一次编译期铺开破坏面最大（评估记录见 v3-output/A11Y-ICONS/REPORT.md）。
-class SparkleIconButton extends ConsumerWidget {
-  /// 默认（AppBar/工具栏）视觉档。
-  static const double defaultSize = DS.touchTargetMinSize; // 48
-
-  /// FAB 视觉档（48 触控档 + 8 间距 = 56 方档）。
-  static const double fabSize = DS.touchTargetMinSize + DS.spacing8; // 56
+class SparkleIconButton extends ConsumerWidget { // 56
 
   const SparkleIconButton({
     required this.icon,
@@ -493,6 +488,11 @@ class SparkleIconButton extends ConsumerWidget {
     this.disabled = false,
     this.semanticLabel,
   }) : constraints = null;
+  /// 默认（AppBar/工具栏）视觉档。
+  static const double defaultSize = DS.touchTargetMinSize; // 48
+
+  /// FAB 视觉档（48 触控档 + 8 间距 = 56 方档）。
+  static const double fabSize = DS.touchTargetMinSize + DS.spacing8;
 
   final Widget icon;
   final VoidCallback? onPressed;

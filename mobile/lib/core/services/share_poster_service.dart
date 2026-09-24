@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
@@ -20,8 +19,7 @@ class SharePosterService {
   Future<File?> generatePoster(
     BuildContext context,
     UniversalSharePayload payload,
-  ) async {
-    return runWithoutDebugPaintGuides(() async {
+  ) async => runWithoutDebugPaintGuides(() async {
       final overlay = Overlay.maybeOf(context, rootOverlay: true);
       if (overlay == null) {
         return null;
@@ -103,7 +101,6 @@ class SharePosterService {
         entry.remove();
       }
     });
-  }
 
   @visibleForTesting
   static Future<T> runWithoutDebugPaintGuides<T>(
@@ -228,7 +225,6 @@ class _SharePosterCanvas extends StatelessWidget {
                   ),
                 const SizedBox(height: 20),
                 Flexible(
-                  fit: FlexFit.loose,
                   child: _PosterCardShell(
                     accent: posterTheme.accent,
                     child: FittedBox(
@@ -308,7 +304,7 @@ class _SharePosterCanvas extends StatelessWidget {
       };
 
   String? get _summaryText {
-    final source = payload.subtitle?.trim().isNotEmpty == true
+    final source = payload.subtitle?.trim().isNotEmpty ?? false
         ? payload.subtitle!.trim()
         : payload.description?.trim();
     if (source == null || source.isEmpty) {

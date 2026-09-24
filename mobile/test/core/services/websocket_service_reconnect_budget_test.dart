@@ -27,7 +27,7 @@ List<String> _scheduleLogs() => _wsLogs
 List<String> _connectingLogsFor(String url) => _wsLogs
     .where((log) => log.startsWith('Connecting to WebSocket') && (
           log.contains(url)
-        ))
+        ),)
     .toList();
 
 Duration _parseScheduleDelay(String log) {
@@ -175,7 +175,7 @@ void main() {
     final attemptNumbers = connects
         .map((log) => int.parse(
               RegExp(r'\(Attempt: (\d+)\)').firstMatch(log)!.group(1)!,
-            ))
+            ),)
         .toList();
     expect(
       attemptNumbers,

@@ -431,9 +431,7 @@ class _SearchBar extends StatelessWidget {
                 variant: ButtonVariant.ghost,
                 icon: const Icon(Icons.close),
                 semanticLabel: context.l10n.commonClear,
-                onPressed: () {
-                  onClear();
-                },
+                onPressed: onClear,
               ),
           ],
         ),
@@ -571,7 +569,7 @@ class _RecommendationsPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(context.l10n.communityRecommendedForYou,
-              style: Theme.of(context).textTheme.titleMedium),
+              style: Theme.of(context).textTheme.titleMedium,),
           const SizedBox(height: 12),
           SizedBox(
             height: 218,
@@ -659,7 +657,7 @@ class _DirectoryGroupCard extends StatelessWidget {
                       context.l10n.gdGroupStats(
                           group.memberCount,
                           group.todayCheckinCount,
-                          group.totalFlamePower.toStringAsFixed(0)),
+                          group.totalFlamePower.toStringAsFixed(0),),
                       style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeXs),
                     ),
                   ],
@@ -706,7 +704,7 @@ class _DirectoryGroupCard extends StatelessWidget {
                   group.activityScore == null
                       ? context.l10n.gdPublicGroup
                       : context.l10n.gdActivityScore(
-                          group.activityScore!.toStringAsFixed(1)),
+                          group.activityScore!.toStringAsFixed(1),),
                   style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeXs),
                 ),
               ),

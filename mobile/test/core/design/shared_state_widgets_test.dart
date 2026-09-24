@@ -3,9 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:sparkle/core/design/components/atoms/ai_status_capsule.dart';
-import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/materials.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
@@ -235,7 +233,7 @@ Color? _materialColor(WidgetTester tester, {required Key ancestorKey}) => tester
     .color;
 
 Color? _decoratedContainerColor(WidgetTester tester,
-    {required Key ancestorKey}) {
+    {required Key ancestorKey,}) {
   final container = tester.widget<Container>(
     find
         .descendant(
@@ -305,7 +303,6 @@ class _SystemThemeComponentsShell extends StatelessWidget {
   Widget build(BuildContext context) => MaterialApp(
         theme: AppThemes.lightTheme,
         darkTheme: AppThemes.darkTheme,
-        themeMode: ThemeMode.system,
         home: Builder(
           builder: (context) => Scaffold(
             body: Column(

@@ -271,7 +271,7 @@ class SparkleMarkdown extends StatelessWidget {
   }
 
   Future<void> _defaultLinkHandler(
-      String text, String? href, String title) async {
+      String text, String? href, String title,) async {
     if (href == null) return;
     final uri = Uri.tryParse(href);
     if (uri == null) return;
@@ -555,8 +555,8 @@ List<_ContentSegment> _splitAtCodeFences(String input) {
         }
         segments.add(_ContentSegment.code(
           codeContent,
-          language?.isNotEmpty == true ? language : null,
-        ));
+          language?.isNotEmpty ?? false ? language : null,
+        ),);
         closeEnd = closeMatch.end;
         i = j + 1;
         break;
@@ -573,8 +573,8 @@ List<_ContentSegment> _splitAtCodeFences(String input) {
       }
       segments.add(_ContentSegment.code(
         codeContent,
-        language?.isNotEmpty == true ? language : null,
-      ));
+        language?.isNotEmpty ?? false ? language : null,
+      ),);
       pos = input.length;
       break;
     }

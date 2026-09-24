@@ -152,8 +152,7 @@ class HomeBottleneck {
     this.relatedTaskIds = const [],
   });
 
-  factory HomeBottleneck.fromJson(Map<String, dynamic> json) {
-    return HomeBottleneck(
+  factory HomeBottleneck.fromJson(Map<String, dynamic> json) => HomeBottleneck(
       id: _asString(json['id'] ?? json['bottleneck_id']),
       topic: _asString(
         json['knowledge_point'] ??
@@ -175,7 +174,6 @@ class HomeBottleneck {
             json['task_ids'],
       ),
     );
-  }
 
   final String id;
   final String topic;

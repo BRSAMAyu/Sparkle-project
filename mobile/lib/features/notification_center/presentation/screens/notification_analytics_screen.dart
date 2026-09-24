@@ -1,9 +1,9 @@
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -173,19 +173,19 @@ class _NotificationAnalyticsScreenState
                   ),
                   const SizedBox(height: DS.spacing12),
                   _buildProgressBar(
-                      context.l10n.notificationAnalyticsCreated, funnel.created, funnel.created.toDouble()),
+                      context.l10n.notificationAnalyticsCreated, funnel.created, funnel.created.toDouble(),),
                   const SizedBox(height: DS.spacing8),
                   _buildProgressBar(
-                      context.l10n.notificationAnalyticsDelivered, funnel.delivered, funnel.created.toDouble()),
+                      context.l10n.notificationAnalyticsDelivered, funnel.delivered, funnel.created.toDouble(),),
                   const SizedBox(height: DS.spacing8),
                   _buildProgressBar(
-                      context.l10n.notificationAnalyticsSeen, funnel.seen, funnel.delivered.toDouble()),
+                      context.l10n.notificationAnalyticsSeen, funnel.seen, funnel.delivered.toDouble(),),
                   const SizedBox(height: DS.spacing8),
                   _buildProgressBar(
-                      context.l10n.notificationAnalyticsAccepted, funnel.accepted, funnel.seen.toDouble()),
+                      context.l10n.notificationAnalyticsAccepted, funnel.accepted, funnel.seen.toDouble(),),
                   const SizedBox(height: DS.spacing8),
                   _buildProgressBar(
-                      context.l10n.notificationAnalyticsActed, funnel.acted, funnel.accepted.toDouble()),
+                      context.l10n.notificationAnalyticsActed, funnel.acted, funnel.accepted.toDouble(),),
                   const SizedBox(height: DS.spacing8),
                   Text(
                     context.l10n.notificationAnalyticsAcceptanceActionRate(funnel.acceptanceRate.toStringAsFixed(1), funnel.actionRate.toStringAsFixed(1)),
@@ -586,11 +586,11 @@ class _NotificationAnalyticsScreenState
             runSpacing: DS.spacing8,
             children: [
               _buildTrendMetricChip(
-                  context.l10n.notifTrendViewed, trends.fold(0, (sum, item) => sum + item.viewed)),
+                  context.l10n.notifTrendViewed, trends.fold(0, (sum, item) => sum + item.viewed),),
               _buildTrendMetricChip(
-                  context.l10n.notifTrendAccepted, trends.fold(0, (sum, item) => sum + item.accepted)),
+                  context.l10n.notifTrendAccepted, trends.fold(0, (sum, item) => sum + item.accepted),),
               _buildTrendMetricChip(
-                  context.l10n.notifTrendActed, trends.fold(0, (sum, item) => sum + item.acted)),
+                  context.l10n.notifTrendActed, trends.fold(0, (sum, item) => sum + item.acted),),
             ],
           ),
         ],

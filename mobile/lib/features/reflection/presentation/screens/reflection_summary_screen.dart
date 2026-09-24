@@ -16,8 +16,7 @@ class ReflectionSummaryData {
     required this.timeline,
   });
 
-  factory ReflectionSummaryData.fromJson(Map<String, dynamic> json) {
-    return ReflectionSummaryData(
+  factory ReflectionSummaryData.fromJson(Map<String, dynamic> json) => ReflectionSummaryData(
       totalReflections: json['total_reflections'] as int? ?? 0,
       days: json['days'] as int? ?? 7,
       avgMood: (json['avg_mood'] as num?)?.toDouble(),
@@ -30,7 +29,6 @@ class ReflectionSummaryData {
               .toList() ??
           [],
     );
-  }
 
   final int totalReflections;
   final int days;
@@ -103,7 +101,7 @@ class ReflectionSummaryScreen extends ConsumerWidget {
   }
 
   Widget _buildContent(
-      BuildContext context, ReflectionSummaryData data) {
+      BuildContext context, ReflectionSummaryData data,) {
     final l10n = context.l10n;
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -131,8 +129,7 @@ class ReflectionSummaryScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatsCard(BuildContext context, ReflectionSummaryData data, AppLocalizations l10n) {
-    return Card(
+  Widget _buildStatsCard(BuildContext context, ReflectionSummaryData data, AppLocalizations l10n) => Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -156,10 +153,8 @@ class ReflectionSummaryScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
 
-  Widget _buildThemesCard(BuildContext context, ReflectionSummaryData data, AppLocalizations l10n) {
-    return Card(
+  Widget _buildThemesCard(BuildContext context, ReflectionSummaryData data, AppLocalizations l10n) => Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -180,24 +175,21 @@ class ReflectionSummaryScreen extends ConsumerWidget {
                           style: const TextStyle(fontSize: 12),
                         ),
                         visualDensity: VisualDensity.compact,
-                      ))
+                      ),)
                   .toList(),
             ),
           ],
         ),
       ),
     );
-  }
 
-  Widget _buildTimelineHeader(BuildContext context, ReflectionSummaryData data, AppLocalizations l10n) {
-    return Padding(
+  Widget _buildTimelineHeader(BuildContext context, ReflectionSummaryData data, AppLocalizations l10n) => Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         l10n.reflectionTimeline,
         style: Theme.of(context).textTheme.titleSmall,
       ),
     );
-  }
 
   Widget _buildTimelineItem(BuildContext context, _TimelineEntry entry) {
     final l10n = context.l10n;
@@ -276,8 +268,7 @@ class _StatItem extends StatelessWidget {
   final String value;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context) => Column(
       children: [
         Text(
           value,
@@ -289,5 +280,4 @@ class _StatItem extends StatelessWidget {
         ),
       ],
     );
-  }
 }

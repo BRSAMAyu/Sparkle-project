@@ -16,13 +16,11 @@ class GalaxyDraftReviewState {
   GalaxyDraftReviewState copyWith({
     AsyncValue<List<GalaxyDraftBatch>>? batches,
     Set<String>? dismissedPromptBatchIds,
-  }) {
-    return GalaxyDraftReviewState(
+  }) => GalaxyDraftReviewState(
       batches: batches ?? this.batches,
       dismissedPromptBatchIds:
           dismissedPromptBatchIds ?? this.dismissedPromptBatchIds,
     );
-  }
 
   List<GalaxyDraftBatch> get queue => batches.valueOrNull ?? const [];
 

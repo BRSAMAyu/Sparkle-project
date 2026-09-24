@@ -1,14 +1,14 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
@@ -253,7 +253,7 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
               Icon(Icons.error_outline, size: 48, color: DS.error),
               const SizedBox(height: DS.lg),
               Text(context.l10n.searchFailedRetry,
-                      style: TextStyle(color: DS.textSecondary)),
+                      style: TextStyle(color: DS.textSecondary),),
               const SizedBox(height: DS.md),
               SparkleButton.primary(
                 label: context.l10n.retryButton,

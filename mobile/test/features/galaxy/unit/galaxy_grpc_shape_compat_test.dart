@@ -1,8 +1,9 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
+
 import '../../../shared/i18n_test_helper.dart';
 
 /// V24-B 根因回归（客户端侧）：
@@ -72,7 +73,7 @@ void main() {
       expect(graph.nodes, hasLength(3));
       expect(graph.nodes.every((n) => n.id.isNotEmpty && n.name.isNotEmpty),
           isTrue,
-          reason: '全部节点必须可渲染，否则星图会被判定为空宇宙');
+          reason: '全部节点必须可渲染，否则星图会被判定为空宇宙',);
     });
   });
 
@@ -107,12 +108,12 @@ void main() {
         final first = await repo.getGraph();
         expect(first.isFailure, isTrue,
             reason: '声明了节点却解析出 0 个可用节点属于契约破坏，'
-                '不得当作"空星图成功"吞掉（V24 的直接死因）');
+                '不得当作"空星图成功"吞掉（V24 的直接死因）',);
 
         final second = await repo.getGraph();
         expect(client.getCalls, 2,
             reason: '坏载荷不得进入 _graphCache，否则 10 分钟内所有非 force 刷新'
-                '都会复用同一空图（会话内不可自愈的根因）');
+                '都会复用同一空图（会话内不可自愈的根因）',);
       },
     );
 

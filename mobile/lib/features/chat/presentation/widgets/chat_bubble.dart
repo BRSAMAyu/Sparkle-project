@@ -1166,12 +1166,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                                                         end: Alignment
                                                                             .bottomCenter,
                                                                         colors: [
-                                                                          isUser
-                                                                              ? DS.chatBubbleUser.withValues(alpha: 0)
-                                                                              : DS.chatBubbleOther.withValues(alpha: 0),
-                                                                          isUser
-                                                                              ? DS.chatBubbleUser
-                                                                              : DS.chatBubbleOther,
+                                                                          if (isUser) DS.chatBubbleUser.withValues(alpha: 0) else DS.chatBubbleOther.withValues(alpha: 0),
+                                                                          if (isUser) DS.chatBubbleUser else DS.chatBubbleOther,
                                                                         ],
                                                                       ),
                                                                     ),
@@ -1192,7 +1188,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                                             onPressed: () {
                                                               unawaited(SensoryFeedbackService.emit(
                                                                   SensoryFeedbackEvent
-                                                                      .selection));
+                                                                      .selection,),);
                                                               setState(() {
                                                                 _messageHeightState[
                                                                         messageKey] =
@@ -1208,7 +1204,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                                                     0) {
                                                                   _messageHeightState
                                                                       .remove(
-                                                                          messageKey);
+                                                                          messageKey,);
                                                                 }
                                                               });
                                                             },

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/core/services/agent_run_read_service.dart';
 import 'package:sparkle/shared/widgets/action_proposal/awaiting_step_resume_card.dart';
@@ -49,20 +48,20 @@ void main() {
 
   testWidgets('awaiting + human owner：轮到你了 / 你做 / 确认，继续（GJ07）',
       (tester) async {
-    var confirmKeys = <String>[];
+    final confirmKeys = <String>[];
     await tester.pumpWidget(host(AwaitingStepResumeCard(
       runId: 'run-1',
       step: step(),
       onConfirm: (key) async => confirmKeys.add(key),
       onCancel: (_) async {},
-    )));
+    ),),);
     await tester.pump();
 
     // 「轮到谁」非技术化呈现；HUMAN 态可达（U-04 P2 解锁）。
     expect(find.text('你做'), findsOneWidget);
     expect(find.text('轮到你了'), findsOneWidget);
     expect(find.text('挑出今日复习卡\nAgent 已备好 5 张复习卡，请挑选'),
-        findsOneWidget);
+        findsOneWidget,);
     // Agent 产物引用可见（本体在既有机制，卡片只展示引用）。
     expect(find.text('Sparkle 准备好了这些'), findsOneWidget);
     expect(find.text('action_proposal://p-1'), findsOneWidget);
@@ -86,7 +85,7 @@ void main() {
         calls += 1;
         await Future<void>.delayed(const Duration(milliseconds: 200));
       },
-    )));
+    ),),);
     await tester.pump();
 
     await tester.tap(find.text('确认，继续'), warnIfMissed: false);
@@ -102,7 +101,7 @@ void main() {
       runId: 'run-1',
       step: step(owner: 'hybrid'),
       onConfirm: (_) async {},
-    )));
+    ),),);
     await tester.pump();
     expect(find.text('一起做'), findsOneWidget);
   });
@@ -113,7 +112,7 @@ void main() {
       runId: 'run-1',
       step: step(state: 'expired'),
       onConfirm: (_) async {},
-    )));
+    ),),);
     await tester.pump();
     expect(find.text('已过期'), findsOneWidget);
     expect(find.text('这次确认已经过期，需要的话可以重新发起'), findsOneWidget);
@@ -126,7 +125,7 @@ void main() {
       runId: 'run-1',
       step: step(state: 'cancelled'),
       onConfirm: (_) async {},
-    )));
+    ),),);
     await tester.pump();
     expect(find.text('已取消'), findsOneWidget);
     expect(find.text('这一步已取消，没有执行'), findsOneWidget);
@@ -140,7 +139,7 @@ void main() {
       step: step(),
       onConfirm: (_) async {},
       onCancel: (key) async => cancelKey = key,
-    )));
+    ),),);
     await tester.pump();
     await tester.tap(find.text('取消'));
     await tester.pumpAndSettle();
@@ -207,7 +206,7 @@ void main() {
       runId: 'run-1',
       step: step(),
       onConfirm: (_) async {},
-    )));
+    ),),);
     await tester.pump();
     // SemanticPill 渲染 ownership 文案；按钮带确认 CTA——GJ07「无需读日志知道轮到谁」。
     expect(find.byType(SemanticPill), findsAtLeastNWidgets(2));

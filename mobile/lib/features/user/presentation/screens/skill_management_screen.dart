@@ -1,14 +1,13 @@
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
-import 'package:sparkle/core/design/widgets/error_widget.dart';
-import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/error_widget.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/core/models/skill_models.dart';
 import 'package:sparkle/core/services/skill_api_service.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 class SkillManagementScreen extends ConsumerStatefulWidget {
   const SkillManagementScreen({super.key});
@@ -92,7 +91,7 @@ class _SkillManagementScreenState extends ConsumerState<SkillManagementScreen>
                 variant: ButtonVariant.ghost,
                 icon: Icon(Icons.add_rounded, color: DS.textSecondary),
                 semanticLabel: context.l10n.skillNewSkill,
-                onPressed: () => _openEditor(),
+                onPressed: _openEditor,
               ),
             ),
             SparkleIconButton(
@@ -140,7 +139,7 @@ class _SkillManagementScreenState extends ConsumerState<SkillManagementScreen>
                                   padding:
                                       const EdgeInsets.only(top: DS.spacing24),
                                   child: Center(
-                                      child: Text(context.l10n.skillEmptyMy)),
+                                      child: Text(context.l10n.skillEmptyMy),),
                                 );
                               }
                               return _buildSkillCard(_skills[index - 2]);
@@ -163,11 +162,11 @@ class _SkillManagementScreenState extends ConsumerState<SkillManagementScreen>
                                       const EdgeInsets.only(top: DS.spacing24),
                                   child: Center(
                                       child:
-                                          Text(context.l10n.skillEmptyShared)),
+                                          Text(context.l10n.skillEmptyShared),),
                                 );
                               }
                               return _buildSharedSkillCard(
-                                  _sharedSkills[index]);
+                                  _sharedSkills[index],);
                             },
                           ),
                         ),
@@ -488,18 +487,16 @@ class _SkillEditorDialogState extends State<_SkillEditorDialog> {
       widget.draft?.activationConditions ??
       const [];
 
-  String _csvForKind(String kind) {
-    return _conditions
+  String _csvForKind(String kind) => _conditions
         .where((item) => item.kind == kind)
         .expand((item) => item.value)
         .join(', ');
-  }
 
   @override
   Widget build(BuildContext context) => AlertDialog(
         title: Text(widget.existing == null
             ? context.l10n.skillEditorNew
-            : context.l10n.skillEditorEdit),
+            : context.l10n.skillEditorEdit,),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -512,7 +509,7 @@ class _SkillEditorDialogState extends State<_SkillEditorDialog> {
               TextField(
                 controller: _patternController,
                 decoration: InputDecoration(
-                    labelText: context.l10n.skillEditorTemplate),
+                    labelText: context.l10n.skillEditorTemplate,),
                 minLines: 3,
                 maxLines: 5,
               ),
@@ -535,7 +532,7 @@ class _SkillEditorDialogState extends State<_SkillEditorDialog> {
               TextField(
                 controller: _examplesController,
                 decoration: InputDecoration(
-                    labelText: context.l10n.skillEditorExamples),
+                    labelText: context.l10n.skillEditorExamples,),
                 minLines: 2,
                 maxLines: 4,
               ),
@@ -607,7 +604,7 @@ class _SkillDraftRequestDialog extends ConsumerStatefulWidget {
 class _SkillDraftRequestDialogState
     extends ConsumerState<_SkillDraftRequestDialog> {
   late final TextEditingController _consentController = TextEditingController(
-      text: AppLocalizations.of(context)!.skillDraftDefaultConsent);
+      text: AppLocalizations.of(context)!.skillDraftDefaultConsent,);
   final TextEditingController _userController = TextEditingController();
   final TextEditingController _assistantController = TextEditingController();
   bool _submitting = false;
@@ -623,20 +620,20 @@ class _SkillDraftRequestDialogState
                 controller: _consentController,
                 decoration: InputDecoration(
                     labelText:
-                        AppLocalizations.of(context)!.skillDraftConsentLabel),
+                        AppLocalizations.of(context)!.skillDraftConsentLabel,),
               ),
               TextField(
                 controller: _userController,
                 decoration: InputDecoration(
                     labelText:
-                        AppLocalizations.of(context)!.skillDraftUserMessage),
+                        AppLocalizations.of(context)!.skillDraftUserMessage,),
                 minLines: 2,
                 maxLines: 4,
               ),
               TextField(
                 controller: _assistantController,
                 decoration: InputDecoration(
-                    labelText: AppLocalizations.of(context)!.skillDraftAiReply),
+                    labelText: AppLocalizations.of(context)!.skillDraftAiReply,),
                 minLines: 2,
                 maxLines: 4,
               ),

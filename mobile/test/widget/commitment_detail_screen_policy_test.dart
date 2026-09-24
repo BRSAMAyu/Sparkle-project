@@ -8,17 +8,16 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_interceptor.dart';
+import 'package:sparkle/core/storage/token_storage_io.dart';
 import 'package:sparkle/features/auth/auth.dart';
-import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
-import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/community/data/models/accountability_model.dart';
 import 'package:sparkle/features/community/data/repositories/accountability_repository.dart';
 import 'package:sparkle/features/community/presentation/screens/accountability_detail_screen.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/user_brief.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
+
 import '../shared/i18n_test_helper.dart';
-import 'package:sparkle/core/storage/token_storage_io.dart';
 
 void main() {
 
@@ -122,8 +121,7 @@ class _FakeAccountabilityRepository extends AccountabilityRepository {
   final PendingPoliciesSummaryInfo pendingPolicies;
 
   @override
-  Future<AccountabilityDashboardInfo> getDashboard(String partnershipId) async {
-    return AccountabilityDashboardInfo(
+  Future<AccountabilityDashboardInfo> getDashboard(String partnershipId) async => AccountabilityDashboardInfo(
       partnership: AccountabilityPartnershipInfo(
         id: partnershipId,
         initiatorId: 'me',
@@ -149,9 +147,6 @@ class _FakeAccountabilityRepository extends AccountabilityRepository {
       ),
       pendingPolicies: pendingPolicies,
       achievements: const {'achievements': <dynamic>[]},
-      leaderboardSummary: const {},
-      relationshipSummary: const {},
-      recentShares: const [],
       quickActions: const {
         'can_check_in': true,
         'can_nudge': true,
@@ -160,7 +155,6 @@ class _FakeAccountabilityRepository extends AccountabilityRepository {
         'can_open_dashboard': true,
       },
     );
-  }
 }
 
 class _FakeAuthNotifier extends AuthNotifier {

@@ -59,7 +59,7 @@ void main() {
       ProviderScope(
         child: testMaterialApp(
           theme: AppThemes.lightTheme,
-          home: UnifiedSettingsScreen(),
+          home: const UnifiedSettingsScreen(),
         ),
       ),
     );
@@ -96,7 +96,7 @@ void main() {
       ProviderScope(
         child: testMaterialApp(
           theme: AppThemes.lightTheme,
-          home: UnifiedSettingsScreen(),
+          home: const UnifiedSettingsScreen(),
         ),
       ),
     );

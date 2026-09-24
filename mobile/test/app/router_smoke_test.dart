@@ -11,8 +11,8 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:isar/isar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/app/routes.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/analytics/models/user_analytics_event.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/offline/models/focus_session_record.dart';
@@ -22,7 +22,7 @@ import 'package:sparkle/core/offline/models/vocab_word.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
-import 'package:sparkle/core/statistics/data/models/cached_statistics_model.dart';
+import 'package:sparkle/core/storage/token_storage_io.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/auth/presentation/screens/login_screen.dart';
@@ -75,8 +75,8 @@ import 'package:sparkle/features/user/presentation/screens/user_persona_screen.d
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/user_brief.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
+
 import '../shared/i18n_test_helper.dart';
-import 'package:sparkle/core/storage/token_storage_io.dart';
 
 void main() {
   setUp(setUpI18nForTesting);

@@ -10,7 +10,7 @@ void main() {
       'activation_conditions': [
         {
           'kind': 'intent_keywords',
-          'value': ['exam']
+          'value': ['exam'],
         }
       ],
       'examples': ['a'],

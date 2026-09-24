@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 
 /// Widget for displaying a plan progress share card preview
@@ -201,7 +201,7 @@ class PlanShareCard extends StatelessWidget {
                                 child: ClipRRect(
                                   borderRadius: DS.borderRadius4,
                                   child: LinearProgressIndicator(
-                                    value: progress!,
+                                    value: progress,
                                     backgroundColor: DS.neutral200,
                                     valueColor: AlwaysStoppedAnimation<Color>(
                                       _getProgressColor(),
@@ -260,7 +260,7 @@ class PlanShareCard extends StatelessWidget {
                               constraints: const BoxConstraints(maxWidth: 160),
                               child: TextButton.icon(
                                 icon: const Icon(Icons.add_task,
-                                    size: DS.iconSizeSm),
+                                    size: DS.iconSizeSm,),
                                 label: Text(
                                   context.l10n.communityShareAdoptPlan,
                                   overflow: TextOverflow.ellipsis,

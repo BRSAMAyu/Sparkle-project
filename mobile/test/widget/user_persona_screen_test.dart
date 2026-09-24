@@ -10,12 +10,6 @@ import 'package:sparkle/shared/entities/user_model.dart';
 import '../shared/i18n_test_helper.dart';
 
 class _FakeUserRepository implements UserRepository {
-  // FAB-UNIFY 收口：D-REDEEM（e375ed62）给 UserRepository 增加 redeemCode
-  // 时未同步此 fake（基线即编译失败），补最小桩恢复本文件可编译——
-  // 本测试不触达兑换路径，桩永远返回 error 态。
-  @override
-  Future<RedeemCodeResult> redeemCode(String code) async =>
-      const RedeemCodeResult(status: RedeemCodeStatus.error);
 
   _FakeUserRepository({
     Map<String, dynamic>? transparentProfile,
@@ -100,6 +94,12 @@ class _FakeUserRepository implements UserRepository {
                 'source_pattern': 'task_switching',
               },
             ];
+  // FAB-UNIFY 收口：D-REDEEM（e375ed62）给 UserRepository 增加 redeemCode
+  // 时未同步此 fake（基线即编译失败），补最小桩恢复本文件可编译——
+  // 本测试不触达兑换路径，桩永远返回 error 态。
+  @override
+  Future<RedeemCodeResult> redeemCode(String code) async =>
+      const RedeemCodeResult(status: RedeemCodeStatus.error);
 
   final Map<String, dynamic> _transparentProfile;
   final Map<String, dynamic> _profileContext;
@@ -174,7 +174,7 @@ class _FakeUserRepository implements UserRepository {
 
   @override
   Future<List<Map<String, dynamic>>> fetchSystemUpdates(
-          {int limit = 50, int offset = 0}) async =>
+          {int limit = 50, int offset = 0,}) async =>
       <Map<String, dynamic>>[];
 
   @override
@@ -182,11 +182,11 @@ class _FakeUserRepository implements UserRepository {
 
   @override
   Future<void> updateTransparentPreference(
-      {required String prefKey, required value}) async {}
+      {required String prefKey, required value,}) async {}
 
   @override
   Future<void> updateGoal(
-      {required String goalId, String? title, String? status}) async {}
+      {required String goalId, String? title, String? status,}) async {}
 
   @override
   Future<Map<String, dynamic>> fetchTraitsColdstartQuestions() async =>
@@ -259,7 +259,7 @@ class _FakeUserRepository implements UserRepository {
 
   @override
   Future<UserModel> updateSchedulePreferences(
-      Map<String, dynamic> scheduleData) {
+      Map<String, dynamic> scheduleData,) {
     throw UnimplementedError();
   }
 
@@ -274,7 +274,7 @@ Widget _buildTestApp(_FakeUserRepository repository) => ProviderScope(
         userRepositoryProvider.overrideWithValue(repository),
       ],
       child: testMaterialApp(
-        home: UserPersonaScreen(),
+        home: const UserPersonaScreen(),
       ),
     );
 
@@ -318,7 +318,7 @@ void main() {
     await _expandSection(tester, '上下文快照');
     expect(find.textContaining('Preference Version: 12'), findsOneWidget);
     expect(
-        find.textContaining('Knowledge Summary: mastery=0.81'), findsOneWidget);
+        find.textContaining('Knowledge Summary: mastery=0.81'), findsOneWidget,);
 
     // "系统推断与策略" section is collapsed by default — expand it
     await _expandSection(tester, '系统推断与策略');
@@ -331,7 +331,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('推断偏好'), findsOneWidget);
     expect(
-        find.textContaining('social_learning_preference: 0.2'), findsOneWidget);
+        find.textContaining('social_learning_preference: 0.2'), findsOneWidget,);
     expect(find.text('重置'), findsOneWidget);
   });
 
@@ -461,7 +461,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(
-        repository.resetOverrideCalls, <String>['social_learning_preference']);
+        repository.resetOverrideCalls, <String>['social_learning_preference'],);
     expect(find.text('已恢复系统推断值'), findsOneWidget);
   });
 

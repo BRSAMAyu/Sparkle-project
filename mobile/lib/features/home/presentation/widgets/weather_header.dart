@@ -89,7 +89,7 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
 
     _pulseAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
       CurvedAnimation(
-          parent: _mainAnimationController, curve: Curves.easeInOut),
+          parent: _mainAnimationController, curve: Curves.easeInOut,),
     );
   }
 
@@ -147,7 +147,7 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
     _particles = List.generate(
       sunRayCount,
       (i) => _Particle(
-        angle: (i * pi / 4),
+        angle: i * pi / 4,
         baseRadius: 30.0 + i * 15.0,
       ),
     );
@@ -264,8 +264,7 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
     );
   }
 
-  Widget _buildAnimatedStarField(WeatherPresentationData presentation) {
-    return RepaintBoundary(
+  Widget _buildAnimatedStarField(WeatherPresentationData presentation) => RepaintBoundary(
       child: AnimatedBuilder(
         animation: _mainAnimationController,
         builder: (context, child) => CustomPaint(
@@ -284,7 +283,6 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
         ),
       ),
     );
-  }
 
   Widget _buildWeatherEffects(WeatherPresentationData presentation) {
     // U-01 Step 2：off 档不挂载天气粒子特效（色彩氛围由底色渐变+静态幔保留）
@@ -378,8 +376,7 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
 
   /// 静态氛围幔（staticFrame/off 档）：固定 pulse=1 / drift=0 的单帧版本，
   /// 无 AnimatedBuilder、无逐帧重建。
-  Widget _buildStaticAtmosphereVeil(WeatherPresentationData presentation) {
-    return Stack(
+  Widget _buildStaticAtmosphereVeil(WeatherPresentationData presentation) => Stack(
       children: [
         Positioned.fill(
           child: DecoratedBox(
@@ -428,7 +425,6 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
         ),
       ],
     );
-  }
 
   /// Sunny: Pulsing sun rays with glow effect
   Widget _buildSunnyEffects(Color accentColor) => Stack(
@@ -565,11 +561,6 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
 // ============== Data Classes ==============
 
 class _Star {
-  final double x;
-  final double y;
-  final double size;
-  final double baseOpacity;
-  final double twinkleSpeed;
 
   _Star({
     required this.x,
@@ -578,21 +569,21 @@ class _Star {
     required this.baseOpacity,
     required this.twinkleSpeed,
   });
-}
-
-class _Particle {
-  final double angle;
-  final double baseRadius;
-
-  _Particle({required this.angle, required this.baseRadius});
-}
-
-class _Cloud {
   final double x;
   final double y;
   final double size;
-  final double speed;
-  final double opacity;
+  final double baseOpacity;
+  final double twinkleSpeed;
+}
+
+class _Particle {
+
+  _Particle({required this.angle, required this.baseRadius});
+  final double angle;
+  final double baseRadius;
+}
+
+class _Cloud {
 
   _Cloud({
     required this.x,
@@ -601,14 +592,14 @@ class _Cloud {
     required this.speed,
     required this.opacity,
   });
+  final double x;
+  final double y;
+  final double size;
+  final double speed;
+  final double opacity;
 }
 
 class _RainDrop {
-  final double x;
-  final double startY;
-  final double speed;
-  final double length;
-  final double opacity;
 
   _RainDrop({
     required this.x,
@@ -617,14 +608,14 @@ class _RainDrop {
     required this.length,
     required this.opacity,
   });
+  final double x;
+  final double startY;
+  final double speed;
+  final double length;
+  final double opacity;
 }
 
 class _Meteor {
-  final double startX;
-  final double startY;
-  final double length;
-  final double speed;
-  final double delay;
 
   _Meteor({
     required this.startX,
@@ -633,15 +624,16 @@ class _Meteor {
     required this.speed,
     required this.delay,
   });
+  final double startX;
+  final double startY;
+  final double length;
+  final double speed;
+  final double delay;
 }
 
 // ============== Custom Painters ==============
 
 class _AnimatedStarPainter extends CustomPainter {
-  final List<_Star> stars;
-  final double animationValue;
-  final Color color;
-  final double intensity;
 
   _AnimatedStarPainter({
     required this.stars,
@@ -649,6 +641,10 @@ class _AnimatedStarPainter extends CustomPainter {
     required this.color,
     required this.intensity,
   });
+  final List<_Star> stars;
+  final double animationValue;
+  final Color color;
+  final double intensity;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -678,15 +674,15 @@ class _AnimatedStarPainter extends CustomPainter {
 }
 
 class _SunRayPainter extends CustomPainter {
-  final List<_Particle> particles;
-  final double animationValue;
-  final Color accentColor;
 
   _SunRayPainter({
     required this.particles,
     required this.animationValue,
     required this.accentColor,
   });
+  final List<_Particle> particles;
+  final double animationValue;
+  final Color accentColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -714,7 +710,7 @@ class _SunRayPainter extends CustomPainter {
     paint.strokeWidth = 0.5;
     for (var i = 0; i < 12; i++) {
       final angle = i * pi / 6 + animationValue * pi / 12;
-      final innerRadius = 30.0;
+      const innerRadius = 30.0;
       final outerRadius = 80 + animationValue * 20;
 
       final start = Offset(
@@ -737,10 +733,6 @@ class _SunRayPainter extends CustomPainter {
 }
 
 class _CloudPainter extends CustomPainter {
-  final List<_Cloud> clouds;
-  final double animationValue;
-  final Color accentColor;
-  final double breathingValue;
 
   _CloudPainter({
     required this.clouds,
@@ -748,6 +740,10 @@ class _CloudPainter extends CustomPainter {
     required this.accentColor,
     required this.breathingValue,
   });
+  final List<_Cloud> clouds;
+  final double animationValue;
+  final Color accentColor;
+  final double breathingValue;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -773,9 +769,9 @@ class _CloudPainter extends CustomPainter {
   void _drawCloudShape(Canvas canvas, Paint paint, Offset center, double size) {
     canvas.drawCircle(center, size, paint);
     canvas.drawCircle(Offset(center.dx - size * 0.6, center.dy + size * 0.2),
-        size * 0.7, paint);
+        size * 0.7, paint,);
     canvas.drawCircle(Offset(center.dx + size * 0.5, center.dy + size * 0.1),
-        size * 0.6, paint);
+        size * 0.6, paint,);
   }
 
   @override
@@ -785,15 +781,15 @@ class _CloudPainter extends CustomPainter {
 }
 
 class _RainPainter extends CustomPainter {
-  final List<_RainDrop> rainDrops;
-  final double animationValue;
-  final Color accentColor;
 
   _RainPainter({
     required this.rainDrops,
     required this.animationValue,
     required this.accentColor,
   });
+  final List<_RainDrop> rainDrops;
+  final double animationValue;
+  final Color accentColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -842,15 +838,15 @@ class _RainPainter extends CustomPainter {
 }
 
 class _MeteorPainter extends CustomPainter {
-  final List<_Meteor> meteors;
-  final double animationValue;
-  final Color accentColor;
 
   _MeteorPainter({
     required this.meteors,
     required this.animationValue,
     required this.accentColor,
   });
+  final List<_Meteor> meteors;
+  final double animationValue;
+  final Color accentColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -912,15 +908,15 @@ class _MeteorPainter extends CustomPainter {
 }
 
 class _EnergyParticlePainter extends CustomPainter {
-  final double animationValue;
-  final Color accentColor;
-  final int particleCount;
 
   _EnergyParticlePainter({
     required this.animationValue,
     required this.accentColor,
     this.particleCount = 30,
   });
+  final double animationValue;
+  final Color accentColor;
+  final int particleCount;
 
   @override
   void paint(Canvas canvas, Size size) {

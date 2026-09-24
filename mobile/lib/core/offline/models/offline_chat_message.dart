@@ -93,7 +93,7 @@ extension OfflineChatMessageExtension on OfflineChatMessage {
         ..status = OfflineMessageStatus.pending
         ..retryCount = 0
         ..extraContext = extraContext
-        ..fileIds = fileIds != null ? fileIds.join(',') : null
+        ..fileIds = fileIds?.join(',')
         ..chatMode = chatMode
         ..nickname = nickname
         ..priority = priority;

@@ -6,10 +6,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
-import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_comeback_context.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_daily_startup_message.dart';
 import 'package:sparkle/features/aurora/data/repositories/aurora_daily_startup_repository.dart';
+import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/repositories/chat_repository.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
@@ -21,6 +21,7 @@ import 'package:sparkle/features/home/presentation/providers/dashboard_provider.
 import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
+
 import '../shared/i18n_test_helper.dart';
 
 class _NoopApiClient implements ApiClient {
@@ -111,7 +112,7 @@ class _BannerChatNotifier extends ChatNotifier {
   Future<void> warmUpConnection() async {}
 
   Future<void> switchPlanSession(String? planId,
-      {BuildContext? context}) async {}
+      {BuildContext? context,}) async {}
 }
 
 class _QuietAuroraStatusNotifier extends AuroraStatusNotifier {
@@ -163,7 +164,7 @@ void main() {
           ),
         ],
         child: testMaterialApp(
-          home: ChatScreen(
+          home: const ChatScreen(
             initialExtraContext: {
               'review_node': 'cn.tcp_flow',
               'node_label': 'TCP 流量控制',

@@ -3,6 +3,7 @@
 /// This file is used when Google services are disabled (ENABLE_GOOGLE_SERVICES=false)
 /// to provide a no-op implementation that allows the app to build and run
 /// without Google Sign-In dependency.
+library;
 
 import 'package:logger/logger.dart';
 

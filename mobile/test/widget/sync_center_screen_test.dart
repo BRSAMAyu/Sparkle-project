@@ -5,7 +5,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:isar/isar.dart';
-import '../shared/isar_test_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/analytics/models/user_analytics_event.dart';
 import 'package:sparkle/core/network/api_client.dart';
@@ -15,7 +14,9 @@ import 'package:sparkle/core/offline/sync_center_provider.dart';
 import 'package:sparkle/core/offline/sync_engine.dart';
 import 'package:sparkle/core/services/websocket_service.dart';
 import 'package:sparkle/features/user/presentation/screens/sync_center_screen.dart';
+
 import '../shared/i18n_test_helper.dart';
+import '../shared/isar_test_helper.dart';
 
 const _runSyncCenterWidget = bool.fromEnvironment('RUN_SYNC_CENTER_WIDGET');
 
@@ -91,7 +92,7 @@ void main() {
           ),
         ],
         child: testMaterialApp(
-          home: SyncCenterScreen(),
+          home: const SyncCenterScreen(),
         ),
       ),
     );

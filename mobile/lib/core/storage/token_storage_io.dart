@@ -1,6 +1,6 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import 'token_storage.dart';
+import 'package:sparkle/core/storage/token_storage.dart';
 
 /// 原生平台（Android / iOS / Linux / macOS / Windows）后端：
 /// 直接转发 FlutterSecureStorage（Keystore / Keychain）。

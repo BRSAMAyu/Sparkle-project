@@ -592,10 +592,8 @@ class AchievementMapNode {
     required this.name,
     required this.rarity,
     required this.category,
-    this.lane = 'prestige_lane',
+    required this.position, required this.isUnlocked, this.lane = 'prestige_lane',
     this.laneLabel = 'Prestige Lane',
-    required this.position,
-    required this.isUnlocked,
     this.isHidden = false,
     this.prerequisites = const [],
     this.parentId,
@@ -824,13 +822,11 @@ class ShareTemplateInfo {
 class AchievementShareCard {
   AchievementShareCard({
     required this.cardUrl,
-    this.mimeType = 'image/png',
+    required this.generatedAt, required this.achievement, this.mimeType = 'image/png',
     this.width = 0,
     this.height = 0,
-    required this.generatedAt,
     this.templateId = 'cosmic',
     this.privacySettings,
-    required this.achievement,
   });
 
   factory AchievementShareCard.fromJson(Map<String, dynamic> json) =>

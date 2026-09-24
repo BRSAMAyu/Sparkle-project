@@ -231,7 +231,7 @@ void main() {
           'cognitive_load': 0.44,
           'stress_signal': 0.31,
         },
-      }));
+      }),);
       await _waitForEvents(events);
 
       expect(events.first, isA<AuroraStateBandEvent>());

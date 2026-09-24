@@ -1,15 +1,15 @@
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
-import 'package:sparkle/core/design/widgets/loading_indicator.dart';
-import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
@@ -468,8 +468,8 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                           value: 'demote',
                           child: Row(
                             children: [
-                              Icon(Icons.arrow_downward, size: 18),
-                              SizedBox(width: DS.sm),
+                              const Icon(Icons.arrow_downward, size: 18),
+                              const SizedBox(width: DS.sm),
                               Text(context.l10n.groupDemoteToMember),
                             ],
                           ),
@@ -481,8 +481,8 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                           value: 'promote',
                           child: Row(
                             children: [
-                              Icon(Icons.arrow_upward, size: 18),
-                              SizedBox(width: DS.sm),
+                              const Icon(Icons.arrow_upward, size: 18),
+                              const SizedBox(width: DS.sm),
                               Text(context.l10n.groupPromoteToAdmin),
                             ],
                           ),
@@ -533,8 +533,8 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                         value: 'warn',
                         child: Row(
                           children: [
-                            Icon(Icons.warning_amber_outlined, size: 18),
-                            SizedBox(width: DS.sm),
+                            const Icon(Icons.warning_amber_outlined, size: 18),
+                            const SizedBox(width: DS.sm),
                             Text(context.l10n.gmSendWarning),
                           ],
                         ),
@@ -547,7 +547,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                         child: Row(
                           children: [
                             Icon(Icons.person_remove,
-                                size: 18, color: DS.error),
+                                size: 18, color: DS.error,),
                             const SizedBox(width: DS.sm),
                             Text(
                               context.l10n.gmKick,
@@ -696,7 +696,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
           } catch (e) {
             if (mounted) {
               AppFeedback.error(
-                  context, context.l10n.gmActionFailed(UserFacingError.from(e)));
+                  context, context.l10n.gmActionFailed(UserFacingError.from(e)),);
             }
           }
         }
@@ -750,7 +750,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                     ChoiceChip(
                       label: Text(m >= 1440
                           ? context.l10n.gm24Hours
-                          : context.l10n.gmMinutes(m)),
+                          : context.l10n.gmMinutes(m),),
                       selected: durationMinutes == m,
                       onSelected: (_) => setState(() => durationMinutes = m),
                     ),
@@ -761,7 +761,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                 controller: reasonController,
                 decoration: InputDecoration(
                   labelText: context.l10n.gmMuteReason,
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                 ),
               ),
             ],
@@ -792,7 +792,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                 } catch (e) {
                   if (!mounted) return;
                   AppFeedback.error(
-                      context, context.l10n.gmActionFailed(UserFacingError.from(e)));
+                      context, context.l10n.gmActionFailed(UserFacingError.from(e)),);
                 }
               },
             ),
@@ -814,7 +814,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
           controller: reasonController,
           decoration: InputDecoration(
             labelText: context.l10n.gmWarnReason,
-            border: OutlineInputBorder(),
+            border: const OutlineInputBorder(),
           ),
           autofocus: true,
           maxLines: 3,
@@ -845,7 +845,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
               } catch (e) {
                 if (!mounted) return;
                 AppFeedback.error(
-                    context, context.l10n.gmActionFailed(e.toString()));
+                    context, context.l10n.gmActionFailed(e.toString()),);
               }
             },
           ),

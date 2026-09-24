@@ -10,9 +10,8 @@ import 'package:sparkle/shared/entities/visual_element_model.dart';
 /// high/ultra 保持全量脉动动画。
 class EffectLayer extends StatelessWidget {
   const EffectLayer({
-    super.key,
+    required this.mainAnimation, super.key,
     this.element,
-    required this.mainAnimation,
   });
 
   final VisualElementModel? element;
@@ -122,7 +121,7 @@ class EffectLayer extends StatelessWidget {
 
   CustomPainter _getEffectPainter(
       String effectType, Map<String, dynamic> config,
-      {double? staticValue}) {
+      {double? staticValue,}) {
     final intensity = (config['intensity'] as num?)?.toDouble() ?? 0.5;
     final speed = (config['speed'] as num?)?.toDouble() ?? 1.0;
     final color = _parseColor(config['color'] as String? ?? '#FFFFFF');
@@ -326,7 +325,7 @@ class _DualRingPainter extends CustomPainter {
           color.withValues(alpha: 0.0),
         ],
       ).createShader(
-          Rect.fromCircle(center: center, radius: outerRadius * 1.2));
+          Rect.fromCircle(center: center, radius: outerRadius * 1.2),);
 
     canvas.drawCircle(center, outerRadius, outerPaint);
     canvas.drawCircle(center, innerRadius, innerPaint);

@@ -3,14 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
-import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/features/settings/presentation/widgets/openclaw_connection_panel.dart';
 import 'package:sparkle/features/settings/presentation/widgets/openclaw_execution_preferences_card.dart';
 import 'package:sparkle/features/task/presentation/execution_copy.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class OpenClawSettingsScreen extends ConsumerStatefulWidget {
   const OpenClawSettingsScreen({super.key});
@@ -122,7 +120,7 @@ class _OpenClawSettingsScreenState
                             ),
                             child: Text(
                               l10n.settOpenclawQueuedTasks(
-                                  queuedRequests.length),
+                                  queuedRequests.length,),
                               style: DS.bodySmall.copyWith(
                                 color: DS.warning,
                                 fontWeight: DS.fontWeightBold,
@@ -158,7 +156,7 @@ class _OpenClawSettingsScreenState
                                       (request.goal?.trim().isNotEmpty ?? false)
                                           ? request.goal!
                                           : l10n.settOpenclawTaskLabel(
-                                              request.taskId),
+                                              request.taskId,),
                                       style: DS.bodySmall.copyWith(
                                         color: DS.textPrimary,
                                         fontWeight: DS.fontWeightBold,
@@ -170,9 +168,9 @@ class _OpenClawSettingsScreenState
                                         if ((request.templateId ?? '')
                                             .isNotEmpty)
                                           l10n.settOpenclawTemplateLabel(
-                                              request.templateId!),
+                                              request.templateId!,),
                                         l10n.settOpenclawSourceLabel(
-                                            request.source),
+                                            request.source,),
                                       ].join(' · '),
                                       style: DS.bodySmall.copyWith(
                                         color: DS.textSecondary,
@@ -186,7 +184,7 @@ class _OpenClawSettingsScreenState
                       if (queuedRequests.length > 5)
                         Text(
                           l10n.settOpenclawMoreQueued(
-                              queuedRequests.length - 5),
+                              queuedRequests.length - 5,),
                           style: DS.bodySmall.copyWith(
                             color: DS.textSecondary,
                           ),

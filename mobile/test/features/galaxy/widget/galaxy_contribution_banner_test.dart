@@ -18,7 +18,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        testMaterialApp(home: Scaffold(
+        testMaterialApp(home: const Scaffold(
             body: GalaxyContributionBanner(
               isDarkMode: true,
               stats: stats,
@@ -40,7 +40,7 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        testMaterialApp(home: Scaffold(
+        testMaterialApp(home: const Scaffold(
             body: GalaxyContributionBanner(
               isDarkMode: true,
               stats: UserGalaxyContribution.empty,
@@ -56,8 +56,8 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        testMaterialApp(home: Scaffold(
-            body: const GalaxyContributionBanner.error(
+        testMaterialApp(home: const Scaffold(
+            body: GalaxyContributionBanner.error(
               isDarkMode: true,
             ),
           ),),
@@ -103,8 +103,8 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        testMaterialApp(home: Scaffold(
-            body: const GalaxyContributionBanner.error(
+        testMaterialApp(home: const Scaffold(
+            body: GalaxyContributionBanner.error(
               isDarkMode: true,
             ),
           ),),

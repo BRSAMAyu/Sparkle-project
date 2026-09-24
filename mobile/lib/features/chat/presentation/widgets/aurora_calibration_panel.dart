@@ -17,10 +17,8 @@ class AuroraCalibrationPanel extends StatefulWidget {
   const AuroraCalibrationPanel({
     required this.observation,
     required this.judgment,
-    this.uncertainty,
+    required this.confirmQuestion, required this.confirmOptions, this.uncertainty,
     this.suggestion,
-    required this.confirmQuestion,
-    required this.confirmOptions,
     this.onConfirm,
     this.onCustomResponse,
     this.onDismiss,
@@ -60,7 +58,7 @@ class _AuroraCalibrationPanelState extends State<AuroraCalibrationPanel>
     ).animate(CurvedAnimation(
       parent: _slideController,
       curve: Curves.easeOutCubic,
-    ));
+    ),);
     unawaited(_slideController.forward());
   }
 
@@ -74,7 +72,7 @@ class _AuroraCalibrationPanelState extends State<AuroraCalibrationPanel>
   Widget build(BuildContext context) {
     final l10n = context.l10n;
 
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: DS.surfacePrimary,
         borderRadius:
@@ -117,8 +115,7 @@ class _AuroraCalibrationPanelState extends State<AuroraCalibrationPanel>
         ),
       );
 
-  Widget _buildPresentingContent(AppLocalizations l10n) {
-    return SlideTransition(
+  Widget _buildPresentingContent(AppLocalizations l10n) => SlideTransition(
       position: _slideAnimation,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -226,7 +223,7 @@ class _AuroraCalibrationPanelState extends State<AuroraCalibrationPanel>
               ),
               _ConfirmOptionChip(
                 label: l10n.auroraActionDisagree,
-                onTap: () => _handleCustomResponse(),
+                onTap: _handleCustomResponse,
                 isSecondary: true,
               ),
             ],
@@ -234,10 +231,8 @@ class _AuroraCalibrationPanelState extends State<AuroraCalibrationPanel>
         ],
       ),
     );
-  }
 
-  Widget _buildConfirmedContent(AppLocalizations l10n) {
-    return Column(
+  Widget _buildConfirmedContent(AppLocalizations l10n) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
@@ -272,7 +267,6 @@ class _AuroraCalibrationPanelState extends State<AuroraCalibrationPanel>
         ),
       ],
     );
-  }
 
   void _handleConfirm(String option) {
     if (widget.onConfirm != null) {
@@ -293,14 +287,11 @@ Future<void> showAuroraCalibration({
   required BuildContext context,
   required String observation,
   required String judgment,
-  String? uncertainty,
+  required String confirmQuestion, required List<String> confirmOptions, String? uncertainty,
   String? suggestion,
-  required String confirmQuestion,
-  required List<String> confirmOptions,
   ValueChanged<String>? onConfirm,
   ValueChanged<String>? onCustomResponse,
-}) {
-  return showSensoryModalBottomSheet<void>(
+}) => showSensoryModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     builder: (context) => Padding(
@@ -319,7 +310,6 @@ Future<void> showAuroraCalibration({
       ),
     ),
   );
-}
 
 // ── Internal widgets ────────────────────────────────────────────
 

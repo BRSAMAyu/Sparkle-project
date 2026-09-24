@@ -413,8 +413,7 @@ class _CitationChunkAggregate {
     }
   }
 
-  DocumentCitationChunk toChunk() {
-    return DocumentCitationChunk(
+  DocumentCitationChunk toChunk() => DocumentCitationChunk(
       label: label,
       preview: preview,
       hitCount: hitCount,
@@ -422,5 +421,4 @@ class _CitationChunkAggregate {
       sectionTitle: sectionTitle,
       lastReferencedAt: lastReferencedAt,
     );
-  }
 }

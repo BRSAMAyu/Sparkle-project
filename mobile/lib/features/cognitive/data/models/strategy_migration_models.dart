@@ -34,7 +34,7 @@ class StrategyBeliefView {
             .whereType<Map<dynamic, dynamic>>()
             .map((item) => StrategyEvidenceModel.fromJson(
                   Map<String, dynamic>.from(item),
-                ))
+                ),)
             .toList(growable: false),
       );
 
@@ -94,13 +94,13 @@ class StrategySuggestionBundle {
             .whereType<Map<dynamic, dynamic>>()
             .map((item) => StrategyEvidenceModel.fromJson(
                   Map<String, dynamic>.from(item),
-                ))
+                ),)
             .toList(growable: false),
         alternatives: _asList(json['alternatives'])
             .whereType<Map<dynamic, dynamic>>()
             .map((item) => AlternativeStrategyModel.fromJson(
                   Map<String, dynamic>.from(item),
-                ))
+                ),)
             .toList(growable: false),
       );
 

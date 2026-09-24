@@ -26,7 +26,7 @@ class CommunityAccountabilityHubCard extends ConsumerWidget {
         onCreateCommitment: onCreateCommitment,
         onFindPartners: onFindPartners,
       ),
-      loading: () => SizedBox(
+      loading: () => const SizedBox(
         height: 160,
         child: Center(child: SparkleListSkeleton(count: 1)),
       ),

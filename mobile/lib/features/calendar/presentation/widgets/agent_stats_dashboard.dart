@@ -3,9 +3,9 @@ import 'package:fl_chart/fl_chart.dart';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_avatar_switcher.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Agent协作统计面板
 ///

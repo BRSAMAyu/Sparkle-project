@@ -207,16 +207,16 @@ class _FakeSkillApiService implements SkillApiService {
 void main() {
 
   setUp(setUpI18nForTesting);
-  Widget _buildApp(_FakeSkillApiService api) => ProviderScope(
+  Widget buildApp(_FakeSkillApiService api) => ProviderScope(
         overrides: [
           skillApiServiceProvider.overrideWithValue(api),
         ],
-        child: testMaterialApp(home: SkillManagementScreen()),
+        child: testMaterialApp(home: const SkillManagementScreen()),
       );
 
   testWidgets('skill screen renders personal and shared tabs', (tester) async {
     final api = _FakeSkillApiService();
-    await tester.pumpWidget(_buildApp(api));
+    await tester.pumpWidget(buildApp(api));
     await tester.pumpAndSettle();
 
     expect(find.text('我的方式'), findsNWidgets(2));
@@ -226,7 +226,7 @@ void main() {
 
   testWidgets('skill screen creates a new skill from editor', (tester) async {
     final api = _FakeSkillApiService();
-    await tester.pumpWidget(_buildApp(api));
+    await tester.pumpWidget(buildApp(api));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('新建方式'));
@@ -249,7 +249,7 @@ void main() {
 
   testWidgets('skill screen toggles a skill', (tester) async {
     final api = _FakeSkillApiService();
-    await tester.pumpWidget(_buildApp(api));
+    await tester.pumpWidget(buildApp(api));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byType(Switch).first);
@@ -260,7 +260,7 @@ void main() {
 
   testWidgets('skill screen shares and unshares a skill', (tester) async {
     final api = _FakeSkillApiService();
-    await tester.pumpWidget(_buildApp(api));
+    await tester.pumpWidget(buildApp(api));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('共享'));
@@ -274,7 +274,7 @@ void main() {
 
   testWidgets('skill screen forks a shared skill from catalog', (tester) async {
     final api = _FakeSkillApiService();
-    await tester.pumpWidget(_buildApp(api));
+    await tester.pumpWidget(buildApp(api));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('共享目录'));
@@ -289,7 +289,7 @@ void main() {
     tester,
   ) async {
     final api = _FakeSkillApiService();
-    await tester.pumpWidget(_buildApp(api));
+    await tester.pumpWidget(buildApp(api));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('从草稿生成'));
@@ -308,7 +308,7 @@ void main() {
 
   testWidgets('skill screen deletes a skill', (tester) async {
     final api = _FakeSkillApiService();
-    await tester.pumpWidget(_buildApp(api));
+    await tester.pumpWidget(buildApp(api));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('删除'));
@@ -319,13 +319,13 @@ void main() {
 
   testWidgets('skill screen edits an existing skill', (tester) async {
     final api = _FakeSkillApiService();
-    await tester.pumpWidget(_buildApp(api));
+    await tester.pumpWidget(buildApp(api));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('编辑'));
     await tester.pumpAndSettle();
     await tester.enterText(
-        find.widgetWithText(TextField, '名称'), 'Edited Skill');
+        find.widgetWithText(TextField, '名称'), 'Edited Skill',);
     await tester.tap(find.text('保存'));
     await tester.pumpAndSettle();
 

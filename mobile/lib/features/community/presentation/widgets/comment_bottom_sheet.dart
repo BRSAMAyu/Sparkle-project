@@ -18,8 +18,7 @@ Future<void> showCommentSheet(
   WidgetRef ref,
   String postId, {
   String? postContent,
-}) {
-  return showSensoryModalBottomSheet<void>(
+}) => showSensoryModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     builder: (sheetContext) => _CommentSheetContent(
@@ -27,7 +26,6 @@ Future<void> showCommentSheet(
       postContent: postContent,
     ),
   );
-}
 
 class _CommentSheetContent extends ConsumerStatefulWidget {
   const _CommentSheetContent({
@@ -80,7 +78,7 @@ class _CommentSheetContentState extends ConsumerState<_CommentSheetContent> {
       setState(() {
         _comments = items
             .whereType<Map<String, dynamic>>()
-            .map((item) => Map<String, dynamic>.from(item))
+            .map(Map<String, dynamic>.from)
             .toList(growable: false);
         _loading = false;
       });
@@ -186,7 +184,7 @@ class _CommentSheetContentState extends ConsumerState<_CommentSheetContent> {
           const Divider(),
           Expanded(
             child: _loading
-                ? const SparkleListSkeleton(count: 3)
+                ? const SparkleListSkeleton()
                 : _error != null
                     ? Center(
                         child: Column(
@@ -195,7 +193,7 @@ class _CommentSheetContentState extends ConsumerState<_CommentSheetContent> {
                             Icon(Icons.error_outline, size: 32, color: DS.textTertiary),
                             const SizedBox(height: DS.sm),
                             Text(l10n.communityCommentRetry,
-                                style: TextStyle(color: DS.textSecondary)),
+                                style: TextStyle(color: DS.textSecondary),),
                             TextButton(
                               onPressed: _loadComments,
                               child: Text(l10n.communityCommentRetry),
@@ -326,7 +324,7 @@ class _CommentSheetContentState extends ConsumerState<_CommentSheetContent> {
                 12,
                 MediaQuery.of(context).viewInsets.bottom + 8,
               ),
-              child: Container(
+              child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: DS.surfaceSecondary,
                   borderRadius: BorderRadius.circular(24),
@@ -358,7 +356,7 @@ class _CommentSheetContentState extends ConsumerState<_CommentSheetContent> {
                         icon: Icon(Icons.send,
                             semanticLabel: l10n.send,
                             color:
-                                _submitting ? DS.textTertiary : DS.brandPrimary),
+                                _submitting ? DS.textTertiary : DS.brandPrimary,),
                         iconSize: 20,
                       ),
                     ),

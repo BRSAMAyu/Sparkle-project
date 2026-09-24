@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
-import 'package:sparkle/core/navigation/sensory_navigation_observer.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/navigation/cold_start_motion.dart';
+import 'package:sparkle/core/navigation/sensory_navigation_observer.dart';
 import 'package:sparkle/core/navigation/shell_navigation.dart';
 import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
@@ -134,7 +134,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                 context.l10n.routerPageNotFoundMessage(
                   state.error?.message ?? state.uri.path,
                 ),
-                style: Theme.of(context).textTheme.bodyLarge),
+                style: Theme.of(context).textTheme.bodyLarge,),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: () => context.go('/'),
@@ -216,7 +216,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // N20 stale-while-revalidate 语义仍在：onboardingCompleted 为 null
       // （同步未决）时本就不做 onboarding 相关跳转（M6-07）。
       if (isAuthenticated &&
-          (onboardingCompleted == true || isGuestUser) &&
+          ((onboardingCompleted ?? false) || isGuestUser) &&
           isOnPersonaOnboarding) {
         return '/home';
       }

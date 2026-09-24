@@ -148,14 +148,14 @@ List<Map<String, dynamic>> _listOfMaps(dynamic value) {
   if (value is! List) return const [];
   return value
       .whereType<Map<dynamic, dynamic>>()
-      .map((m) => Map<String, dynamic>.from(m))
+      .map(Map<String, dynamic>.from)
       .toList(growable: false);
 }
 
 GoalIntentCorrectionOption goalIntentCorrectionOptionFromJson(
-        Map<String, dynamic> json) =>
+        Map<String, dynamic> json,) =>
     GoalIntentCorrectionOption.fromJson(json);
 
 GoalIntentSuggestedAction goalIntentSuggestedActionFromJson(
-        Map<String, dynamic> json) =>
+        Map<String, dynamic> json,) =>
     GoalIntentSuggestedAction.fromJson(json);

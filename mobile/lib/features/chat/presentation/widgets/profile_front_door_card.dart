@@ -168,8 +168,7 @@ class _SectionTitle extends StatelessWidget {
   final String subtitle;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
@@ -188,7 +187,6 @@ class _SectionTitle extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 class _SectionCard extends StatelessWidget {
@@ -203,8 +201,7 @@ class _SectionCard extends StatelessWidget {
   final Color? borderColor;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       width: double.infinity,
       padding: const EdgeInsets.all(DS.spacing12),
       decoration: BoxDecoration(
@@ -214,7 +211,6 @@ class _SectionCard extends StatelessWidget {
       ),
       child: child,
     );
-  }
 }
 
 class _ClaimTile extends StatelessWidget {
@@ -290,7 +286,7 @@ class _ClaimTile extends StatelessWidget {
               if ((claim['confidence_label']?.toString() ?? '').isNotEmpty)
                 _Badge(
                   label: context.l10n.chatProfileConfidence(
-                      claim['confidence_label'].toString()),
+                      claim['confidence_label'].toString(),),
                   color: DS.primaryBase,
                   background: DS.primaryBase.withValues(alpha: 0.08),
                 ),
@@ -329,7 +325,6 @@ class _ClaimTile extends StatelessWidget {
                   EvidenceDrawer.show(
                     context,
                     refs: evidenceRefs,
-                    evidenceMissing: false,
                   ),
                 ),
                 borderRadius: DS.borderRadius12,
@@ -349,7 +344,7 @@ class _ClaimTile extends StatelessWidget {
                       const SizedBox(width: DS.spacing6),
                       Flexible(
                         child: Text(
-                          claim['evidence_cta']?.toString().isNotEmpty == true
+                          claim['evidence_cta']?.toString().isNotEmpty ?? false
                               ? '${claim['evidence_cta']} · ${claim['evidence_summary']}'
                               : claim['evidence_summary']?.toString() ??
                                   context.l10n.chatProfileViewEvidence,
@@ -437,7 +432,7 @@ class _PredictionTile extends StatelessWidget {
             const SizedBox(height: DS.spacing8),
             Text(
               context.l10n.chatProfileSuggestedAction(
-                  item['recommended_action'].toString()),
+                  item['recommended_action'].toString(),),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.neutral900,
                     fontWeight: DS.fontWeightSemibold,
@@ -454,7 +449,6 @@ class _PredictionTile extends StatelessWidget {
                   EvidenceDrawer.show(
                     context,
                     refs: evidenceRefs,
-                    evidenceMissing: false,
                   ),
                 ),
                 borderRadius: DS.borderRadius12,
@@ -474,7 +468,7 @@ class _PredictionTile extends StatelessWidget {
                       const SizedBox(width: DS.spacing6),
                       Flexible(
                         child: Text(
-                          item['evidence_cta']?.toString().isNotEmpty == true
+                          item['evidence_cta']?.toString().isNotEmpty ?? false
                               ? '${item['evidence_cta']} · ${item['evidence_summary']}'
                               : item['evidence_summary']?.toString() ??
                                   context.l10n.chatProfileViewEvidence,
@@ -509,8 +503,7 @@ class _Badge extends StatelessWidget {
   final Color background;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(
         horizontal: DS.spacing8,
         vertical: DS.spacing4,
@@ -527,7 +520,6 @@ class _Badge extends StatelessWidget {
             ),
       ),
     );
-  }
 }
 
 List<Map<String, dynamic>> _mapList(dynamic raw) {
@@ -555,7 +547,7 @@ List<EvidenceRefModel> _parseEvidenceRefs(dynamic raw) {
     return raw
         .whereType<Map<dynamic, dynamic>>()
         .map((item) =>
-            EvidenceRefModel.fromJson(Map<String, dynamic>.from(item)))
+            EvidenceRefModel.fromJson(Map<String, dynamic>.from(item)),)
         .where((item) => item.type.isNotEmpty && item.id.isNotEmpty)
         .toList();
   }

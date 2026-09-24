@@ -15,15 +15,13 @@ class AuroraModelWriteEffect {
     required this.requiresPersistence,
   });
 
-  factory AuroraModelWriteEffect.fromJson(Map<String, dynamic> json) {
-    return AuroraModelWriteEffect(
+  factory AuroraModelWriteEffect.fromJson(Map<String, dynamic> json) => AuroraModelWriteEffect(
       target: json['target'] as String? ?? 'none',
       fieldKey: json['field_key'] as String? ?? '',
       fieldValue: json['field_value'],
       operation: json['operation'] as String? ?? 'set',
       requiresPersistence: json['requires_persistence'] as bool? ?? true,
     );
-  }
 
   final String target;
   final String fieldKey;
@@ -66,7 +64,7 @@ class AuroraPredictedReplyOption {
           ? AuroraModelWriteEffect.fromJson(rawEffect)
           : rawEffect is Map
               ? AuroraModelWriteEffect.fromJson(
-                  Map<String, dynamic>.from(rawEffect))
+                  Map<String, dynamic>.from(rawEffect),)
               : null,
       isDisconfirming: json['is_disconfirming'] as bool? ?? false,
       isFreeform: json['is_freeform'] as bool? ?? false,
@@ -557,8 +555,7 @@ class AuroraWakeEligibility {
     required this.fallbackIfUnavailable,
   });
 
-  factory AuroraWakeEligibility.fromJson(Map<String, dynamic> json) {
-    return AuroraWakeEligibility(
+  factory AuroraWakeEligibility.fromJson(Map<String, dynamic> json) => AuroraWakeEligibility(
       canUserWake: json['can_user_wake'] as bool? ?? false,
       userQuotaRemaining: (json['user_quota_remaining'] as num?)?.toInt() ?? 0,
       cooldownStatus: json['cooldown_status'] as String? ?? 'available',
@@ -575,7 +572,6 @@ class AuroraWakeEligibility {
       fallbackIfUnavailable:
           json['fallback_if_unavailable'] as String? ?? 'quick_calibration',
     );
-  }
 
   final bool canUserWake;
   final int userQuotaRemaining;

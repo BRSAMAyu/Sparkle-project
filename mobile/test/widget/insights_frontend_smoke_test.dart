@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/home/presentation/widgets/insight_hub_card.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/presentation/screens/learning_report_screen.dart';
 import 'package:sparkle/features/report/presentation/widgets/mastery_radar_chart.dart';
-import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
 import 'package:sparkle/features/simulation/data/repositories/simulation_repository.dart';
 import 'package:sparkle/features/simulation/presentation/providers/simulation_provider.dart';
@@ -19,6 +18,8 @@ import 'package:sparkle/features/theater/data/repositories/theater_repository.da
 import 'package:sparkle/features/theater/presentation/providers/theater_provider.dart';
 import 'package:sparkle/features/theater/presentation/screens/knowledge_theater_screen.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
+
 import '../shared/i18n_test_helper.dart';
 
 class _FakeSimulationRepository implements SimulationRepository {
@@ -338,7 +339,7 @@ void main() {
             apiClientProvider.overrideWithValue(_FakeApiClient()),
           ],
           child: testMaterialApp(
-            home: LearningReportScreen(report: report),
+            home: const LearningReportScreen(report: report),
           ),
         ),
       );
@@ -404,7 +405,6 @@ void main() {
             headline: '先开始一次真实学习',
             summary: '完成一个学习任务、练习或复盘后，这里才会出现可信的掌握度分析。',
             evidence: <String>['当前没有可用的掌握度或趋势数据'],
-            severity: 'info',
           ),
         ],
         actionCards: <LearningReportActionCard>[
@@ -438,7 +438,7 @@ void main() {
             apiClientProvider.overrideWithValue(_FakeApiClient()),
           ],
           child: testMaterialApp(
-            home: LearningReportScreen(report: report),
+            home: const LearningReportScreen(report: report),
           ),
         ),
       );
@@ -472,7 +472,7 @@ void main() {
             ),
           ],
           child: testMaterialApp(
-            home: KnowledgeTheaterScreen(),
+            home: const KnowledgeTheaterScreen(),
           ),
         ),
       );
@@ -603,11 +603,11 @@ void main() {
           summary: '先把短板收口，再扩大练习范围会更稳。',
           historyPoints: <LearningTrendPoint>[
             LearningTrendPoint(
-                label: '3/10', averageMastery: 61, studyMinutes: 42),
+                label: '3/10', averageMastery: 61, studyMinutes: 42,),
             LearningTrendPoint(
-                label: '3/17', averageMastery: 66, studyMinutes: 56),
+                label: '3/17', averageMastery: 66, studyMinutes: 56,),
             LearningTrendPoint(
-                label: '3/24', averageMastery: 72, studyMinutes: 63),
+                label: '3/24', averageMastery: 72, studyMinutes: 63,),
           ],
           comparisons: <LearningTrendComparison>[
             LearningTrendComparison(
@@ -626,7 +626,7 @@ void main() {
             apiClientProvider.overrideWithValue(_FakeApiClient()),
           ],
           child: testMaterialApp(
-            home: LearningReportScreen(report: report),
+            home: const LearningReportScreen(report: report),
           ),
         ),
       );
@@ -784,7 +784,7 @@ void main() {
             ),
           ],
           child: testMaterialApp(
-            home: KnowledgeTheaterScreen(),
+            home: const KnowledgeTheaterScreen(),
           ),
         ),
       );
@@ -838,7 +838,7 @@ void main() {
             ),
           ],
           child: testMaterialApp(
-            home: Scaffold(
+            home: const Scaffold(
               body: SizedBox(
                 width: 320,
                 height: 196,

@@ -1,11 +1,10 @@
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 // ignore_for_file: prefer_expression_function_bodies
 
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/models/ws6_profile_mirror_models.dart';
 import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
@@ -34,7 +33,7 @@ class ProfileTransparentScreen extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SparkleSnackBar.success(
-              context.l10n.profTransRecordedAdjustment(targetId)),
+              context.l10n.profTransRecordedAdjustment(targetId),),
         );
       }
     }
@@ -117,7 +116,7 @@ class ProfileTransparentScreen extends ConsumerWidget {
   }
 
   Widget _buildHeader(
-      BuildContext context, Ws6TransparentProfileViewModel view) {
+      BuildContext context, Ws6TransparentProfileViewModel view,) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -538,7 +537,7 @@ class _RevertActionCard extends StatelessWidget {
               ),
               _ModePill(
                   label: action.projectionPolicy,
-                  color: const Color(0xFFF1C27A)),
+                  color: const Color(0xFFF1C27A),),
             ],
           ),
           const SizedBox(height: DS.spacing8),
@@ -564,7 +563,7 @@ class _RevertActionCard extends StatelessWidget {
                   onPressed: onMarkWrong == null ? null : () => onMarkWrong!(),
                   child: Text(action.requiresDialogue
                       ? context.l10n.userMarkNeedsRecalibration
-                      : context.l10n.userMarkInaccurate),
+                      : context.l10n.userMarkInaccurate,),
                 ),
               ),
             ],

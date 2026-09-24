@@ -1,7 +1,7 @@
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/plan/data/models/plan_draft.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 class ParsedPlanDescription {
   const ParsedPlanDescription({

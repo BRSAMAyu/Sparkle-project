@@ -11,11 +11,11 @@ import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/offline/connectivity_provider.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/accountability_model.dart';
 import 'package:sparkle/features/community/data/models/community_accountability_hub_model.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
-import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/community/presentation/providers/accountability_hub_provider.dart';
 import 'package:sparkle/features/community/presentation/providers/accountability_provider.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
@@ -131,7 +131,7 @@ class PartnersTab extends ConsumerWidget {
                   },
                   loading: () => const Padding(
                     padding: EdgeInsets.symmetric(horizontal: DS.lg, vertical: DS.md),
-                    child: SparkleListSkeleton(count: 3),
+                    child: SparkleListSkeleton(),
                   ),
                   error: (_, __) => Padding(
                     padding: const EdgeInsets.symmetric(horizontal: DS.lg),
@@ -197,8 +197,7 @@ class _PartnershipsSection extends StatelessWidget {
   final String currentUserId;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
+  Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.fromLTRB(DS.lg, DS.md, DS.lg, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -212,7 +211,6 @@ class _PartnershipsSection extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _PartnershipCard extends StatelessWidget {
@@ -347,8 +345,7 @@ class _HubSections extends StatelessWidget {
   final CommunityAccountabilityHub hub;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
+  Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.fromLTRB(DS.lg, DS.md, DS.lg, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -398,7 +395,6 @@ class _HubSections extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _CommitmentCard extends StatelessWidget {
@@ -406,8 +402,7 @@ class _CommitmentCard extends StatelessWidget {
   final CommitmentCardPayload commitment;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
+  Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.only(bottom: DS.sm),
       child: Container(
         padding: const EdgeInsets.all(DS.md),
@@ -447,7 +442,6 @@ class _CommitmentCard extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _ProgressCard extends StatelessWidget {
@@ -455,8 +449,7 @@ class _ProgressCard extends StatelessWidget {
   final PartnerProgressItem item;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
+  Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.only(bottom: DS.sm),
       child: Container(
         padding: const EdgeInsets.all(DS.md),
@@ -513,7 +506,6 @@ class _ProgressCard extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _RiskCard extends StatelessWidget {
@@ -581,8 +573,7 @@ class _HelpableCard extends StatelessWidget {
   final HelpableItem item;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
+  Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.only(bottom: DS.sm),
       child: Container(
         padding: const EdgeInsets.all(DS.md),
@@ -628,7 +619,6 @@ class _HelpableCard extends StatelessWidget {
         ),
       ),
     );
-  }
 }
 
 class _FriendsSection extends StatelessWidget {
@@ -636,8 +626,7 @@ class _FriendsSection extends StatelessWidget {
   final List<FriendshipInfo> friends;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
+  Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.fromLTRB(DS.lg, DS.md, DS.lg, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -672,7 +661,6 @@ class _FriendsSection extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _FriendTile extends StatelessWidget {
@@ -721,11 +709,11 @@ class _FriendTile extends StatelessWidget {
                 child: Text(
                   user.displayName,
                   style: TextStyle(
-                      fontWeight: FontWeight.w500, color: DS.textPrimary),
+                      fontWeight: FontWeight.w500, color: DS.textPrimary,),
                 ),
               ),
               Icon(Icons.chevron_right_rounded,
-                  color: DS.textTertiary, size: 20),
+                  color: DS.textTertiary, size: 20,),
             ],
           ),
         ),

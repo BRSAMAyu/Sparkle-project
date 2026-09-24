@@ -107,17 +107,15 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
               delegate: _TabBarDelegate(
                 TabBar(
                   controller: _tabController,
-                  isScrollable: false,
                   labelColor: DS.textPrimary,
                   unselectedLabelColor: DS.textSecondary,
                   indicatorColor: DS.brandPrimary,
                   indicatorSize: TabBarIndicatorSize.label,
-                  indicatorWeight: 2,
-                  labelStyle: TextStyle(
+                  labelStyle: const TextStyle(
                     fontSize: DS.fontSizeSm,
                     fontWeight: DS.fontWeightSemibold,
                   ),
-                  unselectedLabelStyle: TextStyle(
+                  unselectedLabelStyle: const TextStyle(
                     fontSize: DS.fontSizeSm,
                     fontWeight: FontWeight.normal,
                   ),
@@ -151,7 +149,7 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) =>
-      Container(
+      ColoredBox(
         color: DS.surfacePrimary,
         child: tabBar,
       );

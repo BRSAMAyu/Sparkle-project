@@ -4,6 +4,7 @@
 /// - Chat bubbles for displaying shared resources
 /// - Quick share picker for previewing before sharing
 /// - Universal share bottom sheet for card preview
+library;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';

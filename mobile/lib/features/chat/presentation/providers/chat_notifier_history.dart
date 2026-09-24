@@ -102,7 +102,7 @@ extension ChatNotifierHistory on ChatNotifier {
         const Duration(seconds: 10),
         onTimeout: () {
           throw TimeoutException(
-              '[ChatHistory] Load timeout for $conversationId');
+              '[ChatHistory] Load timeout for $conversationId',);
         },
       ),
       onCancel: () {

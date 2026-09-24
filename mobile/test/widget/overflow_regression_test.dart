@@ -7,14 +7,15 @@ import 'package:sparkle/core/statistics/domain/services/statistics_export_servic
 import 'package:sparkle/core/statistics/presentation/widgets/common/statistics_overview_cards.dart';
 import 'package:sparkle/core/statistics/presentation/widgets/common/statistics_period_toggle.dart';
 import 'package:sparkle/core/statistics/presentation/widgets/export/statistics_export_bottom_sheet.dart';
+import 'package:sparkle/features/chat/presentation/widgets/plan_switch_confirmation_dialog.dart';
 import 'package:sparkle/features/community/data/models/community_models.dart';
 import 'package:sparkle/features/community/presentation/widgets/feed_post_card.dart';
-import 'package:sparkle/features/chat/presentation/widgets/plan_switch_confirmation_dialog.dart';
 import 'package:sparkle/features/focus/presentation/widgets/exit_confirmation_dialog.dart';
 import 'package:sparkle/features/home/presentation/widgets/thought_capsule_dialog.dart';
 import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
 import 'package:sparkle/features/notification_center/presentation/widgets/notification_filter_chip.dart';
 import 'package:sparkle/features/notification_center/presentation/widgets/unified_notification_card.dart';
+
 import '../shared/i18n_test_helper.dart';
 
 void main() {
@@ -169,8 +170,8 @@ void main() {
       await _setCompactSurface(tester);
       await _pumpApp(
         tester,
-        child: StatisticsOverviewCards(
-          cards: const [
+        child: const StatisticsOverviewCards(
+          cards: [
             OverviewCardData(
               id: 'card-1',
               title: '超长统计标题用于验证紧凑布局下不会横向或纵向溢出',

@@ -39,7 +39,7 @@ class _V2MemoryApiService implements MemoryApiService {
     int limit = 20,
     int offset = 0,
   }) async =>
-      EpisodicMemoryPage(items: const [], total: 0, hasMore: false);
+      const EpisodicMemoryPage(items: [], total: 0, hasMore: false);
 
   @override
   Future<EpisodicMemoryItem> correctEpisodicMemory(
@@ -72,9 +72,9 @@ class _V2MemoryApiService implements MemoryApiService {
         status: 'resolved',
         selectedSide: selection,
         leftCandidate: UnresolvedConflictCandidate(
-            summary: 'A', lane: 'inferred_extraction'),
+            summary: 'A', lane: 'inferred_extraction',),
         rightCandidate: UnresolvedConflictCandidate(
-            summary: 'B', lane: 'inferred_extraction'),
+            summary: 'B', lane: 'inferred_extraction',),
       );
 
   @override
@@ -181,9 +181,9 @@ class _V2MemoryApiService implements MemoryApiService {
 }
 
 class _FakeProvenanceRepository implements MemoryProvenanceRepository {
-  final List<ProvenanceMemoryItem> items;
 
   _FakeProvenanceRepository(this.items);
+  final List<ProvenanceMemoryItem> items;
 
   @override
   Future<ProvenanceListResult> listItems({
@@ -264,7 +264,7 @@ void main() {
             ]),
           ),
         ],
-        child: testMaterialApp(home: MemoryPanelScreen()),
+        child: testMaterialApp(home: const MemoryPanelScreen()),
       ),
     );
 

@@ -4,14 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
-import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/display/lexicon/goal_status_lexicon.dart'
-    show goalPriorityLabel, goalStatusLabel;
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/display/lexicon/goal_status_lexicon.dart'
+    show goalPriorityLabel, goalStatusLabel;
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/cognitive/presentation/widgets/strategy_migration_wizard.dart';
 import 'package:sparkle/features/community/presentation/widgets/similar_goal_pursuers_card.dart';
@@ -57,7 +55,7 @@ class GoalDetailScreen extends ConsumerWidget {
               final data = state.valueOrNull;
               if (data == null) return;
               _showEditDialog(
-                  context, ref, goalId, data.goal.title, data.goal.goalType);
+                  context, ref, goalId, data.goal.title, data.goal.goalType,);
             },
           ),
           SparkleIconButton(
@@ -709,8 +707,7 @@ class _InfoChip extends StatelessWidget {
   final bool emphasized;
 
   @override
-  Widget build(BuildContext context) {
-    return Semantics(
+  Widget build(BuildContext context) => Semantics(
       label: semanticsLabel == null ? label : '$semanticsLabel: $label',
       child: SemanticPill(
         label: label,
@@ -719,7 +716,6 @@ class _InfoChip extends StatelessWidget {
         selected: emphasized,
       ),
     );
-  }
 }
 
 class _ErrorState extends StatelessWidget {
@@ -761,30 +757,30 @@ class _GoalDetailSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
-        padding: EdgeInsets.all(DS.spacing16),
+        padding: const EdgeInsets.all(DS.spacing16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header: circular progress + title area
-            Row(
+            const Row(
               children: [
-                const SparkleSkeleton(width: 76, height: 76, borderRadius: 999),
+                SparkleSkeleton(width: 76, height: 76, borderRadius: 999),
                 SizedBox(width: DS.spacing16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SparkleSkeleton(width: 180, height: 20),
+                      SparkleSkeleton(width: 180, height: 20),
                       SizedBox(height: DS.spacing8),
-                      const SparkleSkeleton(width: 120, height: 14),
+                      SparkleSkeleton(width: 120, height: 14),
                       SizedBox(height: DS.spacing12),
                       Row(
                         children: [
-                          const SparkleSkeleton(width: 60, height: 24),
+                          SparkleSkeleton(width: 60, height: 24),
                           SizedBox(width: DS.spacing8),
-                          const SparkleSkeleton(width: 80, height: 24),
+                          SparkleSkeleton(width: 80, height: 24),
                           SizedBox(width: DS.spacing8),
-                          const SparkleSkeleton(width: 50, height: 24),
+                          SparkleSkeleton(width: 50, height: 24),
                         ],
                       ),
                     ],
@@ -792,32 +788,32 @@ class _GoalDetailSkeleton extends StatelessWidget {
                 ),
               ],
             ),
-            SizedBox(height: DS.spacing20),
+            const SizedBox(height: DS.spacing20),
             // Strategy card
             const SparkleCardSkeleton(),
-            SizedBox(height: DS.spacing14),
+            const SizedBox(height: DS.spacing14),
             // Minimum criteria card
             const SparkleCardSkeleton(),
-            SizedBox(height: DS.spacing14),
+            const SizedBox(height: DS.spacing14),
             // Today step card
             const SparkleCardSkeleton(),
-            SizedBox(height: DS.spacing14),
+            const SizedBox(height: DS.spacing14),
             // Plan health band
             const SparkleCardSkeleton(),
-            SizedBox(height: DS.spacing14),
+            const SizedBox(height: DS.spacing14),
             // Accountability card
             const SparkleCardSkeleton(),
-            SizedBox(height: DS.spacing14),
+            const SizedBox(height: DS.spacing14),
             // Metrics
             ...List.generate(
               3,
-              (_) => Padding(
+              (_) => const Padding(
                 padding: EdgeInsets.only(bottom: DS.spacing12),
                 child: Row(
                   children: [
-                    const SparkleSkeleton(width: 80, height: 14),
+                    SparkleSkeleton(width: 80, height: 14),
                     SizedBox(width: DS.spacing12),
-                    const Expanded(child: SparkleSkeleton(height: 8)),
+                    Expanded(child: SparkleSkeleton(height: 8)),
                   ],
                 ),
               ),

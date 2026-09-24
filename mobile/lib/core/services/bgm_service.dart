@@ -231,7 +231,7 @@ class BgmCatalogEntry {
         descriptiveSegment.split('_').where((segment) => segment.isNotEmpty);
     return segments
         .map((segment) =>
-            '${segment[0].toUpperCase()}${segment.substring(1).toLowerCase()}')
+            '${segment[0].toUpperCase()}${segment.substring(1).toLowerCase()}',)
         .join(' ');
   }
 }
@@ -2038,7 +2038,6 @@ class BgmService {
     }
     final resolvedSource = (await _resolveSelection(
       nextTrack,
-      switchBehavior: SceneBgmSwitchBehavior.switchOnEnter,
     ))
         .source;
     if (resolvedSource.cacheKey == _currentSourceKey ||
@@ -2331,7 +2330,6 @@ class BgmService {
         reason: '已锁定当前风格，延续当前音乐气质',
         readingProtectionApplied:
             tuning.readingProtection && targetScene.readingFriendly,
-        focusPriorityApplied: false,
         styleLocked: true,
       );
     }
@@ -2526,10 +2524,8 @@ class BgmService {
     final candidates =
         sceneCandidates.isNotEmpty ? sceneCandidates : approvedEntries;
 
-    final scored = candidates.map((entry) {
-      return MapEntry(
-          entry, _scoreEntryForScene(entry, scene, palette, tuning));
-    }).toList()
+    final scored = candidates.map((entry) => MapEntry(
+          entry, _scoreEntryForScene(entry, scene, palette, tuning),),).toList()
       ..sort((a, b) {
         final scoreCompare = b.value.compareTo(a.value);
         if (scoreCompare != 0) {
@@ -3138,7 +3134,7 @@ class BgmService {
       if (_focusSessionActive) tuning.focusPriority ? 0.82 : 0.90,
     ];
     return factors.fold<double>(
-        1.0, (current, next) => current < next ? current : next);
+        1.0, (current, next) => current < next ? current : next,);
   }
 
   static Future<List<_ImportedBgmTrack>> _loadImportedTracks() async {
@@ -3204,7 +3200,7 @@ class BgmService {
     final fileStem = p.basenameWithoutExtension(file.path);
     final normalizedStem = fileStem.replaceFirst(RegExp(r'^\d+_'), '');
     final title = normalizedStem
-        .split(RegExp(r'[_-]+'))
+        .split(RegExp('[_-]+'))
         .where((part) => part.isNotEmpty)
         .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
         .join(' ');
@@ -3242,7 +3238,7 @@ class BgmService {
 
   static String _slugifyFileStem(String raw) => raw
       .toLowerCase()
-      .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+      .replaceAll(RegExp('[^a-z0-9]+'), '_')
       .replaceAll(RegExp(r'^_+|_+$'), '');
 
   static List<BgmLibraryEntry> _bundledLibraryEntries() {
@@ -3342,12 +3338,12 @@ class BgmService {
 
   static String _humanizeTrackName(String raw) => raw
       .replaceAllMapped(
-        RegExp(r'([a-z])([A-Z])'),
+        RegExp('([a-z])([A-Z])'),
         (match) => '${match.group(1)} ${match.group(2)}',
       )
       .split('_')
       .map((part) =>
-          part.isEmpty ? part : '${part[0].toUpperCase()}${part.substring(1)}')
+          part.isEmpty ? part : '${part[0].toUpperCase()}${part.substring(1)}',)
       .join(' ');
 
   static Future<List<BgmCatalogEntry>> _loadCatalogEntries() async {

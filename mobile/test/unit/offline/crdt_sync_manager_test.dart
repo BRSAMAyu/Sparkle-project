@@ -5,7 +5,6 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:isar/isar.dart';
-import '../../shared/isar_test_helper.dart';
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,6 +16,7 @@ import 'package:sparkle/core/offline/offline_crdt_document.dart';
 import 'package:sparkle/core/offline/sync_engine.dart';
 import 'package:sparkle/core/services/websocket_service.dart';
 
+import '../../shared/isar_test_helper.dart';
 import 'crdt_sync_manager_test.mocks.dart';
 
 @GenerateMocks([WebSocketService, ApiClient, SyncEngine])
@@ -123,7 +123,7 @@ void main() {
       topic: anyNamed('topic'),
       opType: anyNamed('opType'),
       payload: anyNamed('payload'),
-    ));
+    ),);
   });
 
   test('setTaskState creates task_status operation', () async {

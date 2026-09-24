@@ -12,9 +12,7 @@ final growthDashboardProvider =
 
 class GrowthDashboardNotifier extends AsyncNotifier<GrowthDashboard> {
   @override
-  Future<GrowthDashboard> build() {
-    return ref.watch(growthDashboardRepositoryProvider).getGrowthDashboard();
-  }
+  Future<GrowthDashboard> build() => ref.watch(growthDashboardRepositoryProvider).getGrowthDashboard();
 
   void updateEntryStatus(String entryId, String status) {
     final current = state.valueOrNull;

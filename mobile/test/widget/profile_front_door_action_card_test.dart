@@ -163,7 +163,7 @@ void main() {
     await tester.pump();
 
     expect(
-        capturedPrompt, contains('target_id=achievement_motivation_response'));
+        capturedPrompt, contains('target_id=achievement_motivation_response'),);
     expect(capturedPrompt, contains('action=wrong'));
   });
 

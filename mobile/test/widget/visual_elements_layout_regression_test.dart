@@ -247,7 +247,6 @@ List<VisualElementModel> _buildElements() {
     unlockSource: VisualElementUnlockSource.event,
     isDefault: false,
     sortOrder: 4,
-    isUnlocked: false,
     config: const {
       'display_slot': 'profile_banner',
       'prestige_label': '限时横幅',

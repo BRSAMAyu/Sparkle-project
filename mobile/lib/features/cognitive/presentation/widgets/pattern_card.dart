@@ -77,7 +77,6 @@ class PatternCard extends StatelessWidget {
                 textColor: isDark ? DS.neutral300 : DS.neutral700,
                 codeBackgroundColor: isDark ? DS.neutral700 : DS.neutral100,
                 linkColor: DS.brandPrimary,
-                fontSize: DS.fontSizeSm,
                 lineHeight: 1.55,
               ),
             if (pattern.solutionText != null) ...[
@@ -102,7 +101,6 @@ class PatternCard extends StatelessWidget {
                         codeBackgroundColor:
                             isDark ? DS.neutral800 : DS.neutral100,
                         linkColor: DS.brandPrimary,
-                        fontSize: DS.fontSizeSm,
                         lineHeight: 1.55,
                       ),
                     ),

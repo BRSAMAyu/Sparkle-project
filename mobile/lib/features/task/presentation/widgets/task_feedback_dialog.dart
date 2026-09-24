@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
@@ -232,7 +231,6 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
         foregroundColor: DS.neutral0,
         icon: Icons.check_circle,
         duration: const Duration(seconds: 3),
-        showCloseIcon: true,
         actionLabel: response?.preferenceUpdates != null
             ? l10n.taskFeedbackView
             : null,

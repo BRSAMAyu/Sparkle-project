@@ -260,9 +260,7 @@ class OfflineIndicator extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            isOffline
-                ? DS.error.withValues(alpha: 0.9)
-                : DS.warning.withValues(alpha: 0.9),
+            if (isOffline) DS.error.withValues(alpha: 0.9) else DS.warning.withValues(alpha: 0.9),
             DS.surfacePrimary.withValues(alpha: 0.14),
           ],
         ),

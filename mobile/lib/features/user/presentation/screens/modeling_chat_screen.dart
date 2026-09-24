@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/navigation/route_resilience.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/auth/auth.dart';
@@ -442,7 +442,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
       if (!mounted) {
         return;
       }
-      AppFeedback.error(context, context.l10n.modelChatTempFailed(UserFacingError.from(error).toString()));
+      AppFeedback.error(context, context.l10n.modelChatTempFailed(UserFacingError.from(error)));
     }
   }
 
@@ -534,7 +534,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
         !_completed && !_skipInFlight && (_lastUserMessage?.trim().isNotEmpty ?? false);
     ScaffoldMessenger.of(context).showSnackBar(
       SparkleSnackBar.error(
-        context.l10n.modelChatTempFailed(UserFacingError.from(error).toString()),
+        context.l10n.modelChatTempFailed(UserFacingError.from(error)),
         onRetry: canRetry
             ? () {
                 final text = _lastUserMessage?.trim();
@@ -755,7 +755,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
       if (!mounted) {
         return;
       }
-      AppFeedback.error(context, context.l10n.modelChatSkipFailed(UserFacingError.from(error).toString()));
+      AppFeedback.error(context, context.l10n.modelChatSkipFailed(UserFacingError.from(error)));
       setState(() => _skipInFlight = false);
     }
   }
@@ -903,7 +903,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
       setState(() {
         _planningInFlight = false;
         _planningStarted = false;
-        _planningErrorMessage = context.l10n.modelChatPlanIssue(UserFacingError.from(error).toString());
+        _planningErrorMessage = context.l10n.modelChatPlanIssue(UserFacingError.from(error));
       });
     }
   }

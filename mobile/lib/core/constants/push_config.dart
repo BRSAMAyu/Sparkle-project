@@ -24,7 +24,6 @@ class PushConfig {
   /// JPush App Key (must be set via --dart-define=JPUSH_APP_KEY=xxx for production)
   static const String jpushAppKey = String.fromEnvironment(
     'JPUSH_APP_KEY',
-    defaultValue: '',
   );
 
   /// Whether JPush is effectively enabled (requires both flag and non-empty appKey)

@@ -37,13 +37,6 @@ class _TimeContextNotifier extends AuroraStatusNotifier {
         'action': 'quick_adjust',
         'conflict': {'type': 'plan_deadline'},
       }),
-      lastCorrectionEffect: const AuroraCorrectionEffect(
-        visible: false,
-        semanticValue: '',
-        action: '',
-        affectedStateKeys: [],
-        updatedAt: null,
-      ),
       taskHealth: taskHealth,
       surface: 'aurora_planning',
       updatedAt: DateTime(2026, 5),

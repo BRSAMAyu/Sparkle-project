@@ -60,8 +60,7 @@ class _StrategyInterventionCardState extends State<StrategyInterventionCard>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
+  Widget build(BuildContext context) => FadeTransition(
       opacity: _fadeAnim,
       child: SlideTransition(
         position: _slideAnim,
@@ -189,7 +188,6 @@ class _StrategyInterventionCardState extends State<StrategyInterventionCard>
         ),
       ),
     );
-  }
 }
 
 class _Header extends StatelessWidget {

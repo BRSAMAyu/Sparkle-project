@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/storage/token_storage_io.dart';
 import 'package:sparkle/features/achievement/data/repositories/achievement_repository.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
@@ -9,7 +10,6 @@ import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart'
 import 'package:sparkle/shared/entities/achievement_model.dart';
 import 'package:sparkle/shared/entities/user_brief.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
-import 'package:sparkle/core/storage/token_storage_io.dart';
 
 void main() {
   late _FakeAchievementRepository achievementRepository;

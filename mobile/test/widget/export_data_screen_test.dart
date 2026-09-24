@@ -12,7 +12,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         child: testMaterialApp(
-          home: ExportDataScreen(),
+          home: const ExportDataScreen(),
         ),
       ),
     );

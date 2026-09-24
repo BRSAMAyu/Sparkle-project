@@ -102,9 +102,9 @@ void main() {
         expect(explicitLight.colors.brightness, Brightness.light);
         expect(explicitDark.colors.brightness, Brightness.dark);
         expect(explicitLight.colors.surfacePrimary,
-            isNot(equals(explicitDark.colors.surfacePrimary)));
+            isNot(equals(explicitDark.colors.surfacePrimary)),);
         expect(explicitLight.colors.textPrimary,
-            isNot(equals(explicitDark.colors.textPrimary)));
+            isNot(equals(explicitDark.colors.textPrimary)),);
       });
 
       testWidgets(

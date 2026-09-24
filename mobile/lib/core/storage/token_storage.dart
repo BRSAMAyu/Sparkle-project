@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'token_storage_io.dart' if (dart.library.html) 'token_storage_web.dart';
+import 'package:sparkle/core/storage/token_storage_io.dart' if (dart.library.html) 'token_storage_web.dart';
 
 /// Token 持久化门面（key-value，全异步）。
 ///
@@ -33,6 +33,4 @@ TokenStorage createTokenStorage() => createTokenStorageImpl();
 ///
 /// 认证 token 的唯一持久化入口。`flutterSecureStorageProvider` 保留供
 /// 未来非 token 的敏感小数据使用（当前无其他消费方）。
-final tokenStorageProvider = Provider<TokenStorage>((ref) {
-  return createTokenStorage();
-});
+final tokenStorageProvider = Provider<TokenStorage>((ref) => createTokenStorage());

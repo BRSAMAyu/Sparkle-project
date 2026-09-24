@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/tokens_v2/theme_manager.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/storage/token_storage_io.dart';
 import 'package:sparkle/features/achievement/data/repositories/achievement_repository.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
@@ -14,7 +15,6 @@ import 'package:sparkle/shared/entities/achievement_model.dart';
 import 'package:sparkle/shared/entities/shop_model.dart';
 import 'package:sparkle/shared/entities/user_brief.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
-import 'package:sparkle/core/storage/token_storage_io.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

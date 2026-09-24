@@ -7,12 +7,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
+import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/task_notification_id_mapper.dart';
 import 'package:sparkle/core/services/task_notification_scheduler.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
+import 'package:sparkle/core/storage/token_storage.dart';
+import 'package:sparkle/core/storage/token_storage_io.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/achievement/presentation/providers/home_close_to_unlock_provider.dart';
 import 'package:sparkle/features/auth/auth.dart';
@@ -42,8 +44,6 @@ import 'package:sparkle/shared/entities/achievement_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/entities/user_brief.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
-import 'package:sparkle/core/storage/token_storage_io.dart';
-import 'package:sparkle/core/storage/token_storage.dart';
 
 Directory? _dashboardHiveDir;
 late SharedPreferences _dashboardPrefs;
@@ -90,8 +90,7 @@ Widget buildDashboardTestHarness({
   Locale? locale = const Locale('en'),
   DashboardState? dashboardState,
   List<Override> extraOverrides = const [],
-}) {
-  return _buildDashboardProviderHarness(
+}) => _buildDashboardProviderHarness(
     theme: theme,
     size: size,
     locale: locale,
@@ -99,7 +98,6 @@ Widget buildDashboardTestHarness({
     extraOverrides: extraOverrides,
     child: const DashboardScreen(),
   );
-}
 
 Widget buildDashboardWidgetHarness({
   required Widget child,
@@ -107,8 +105,7 @@ Widget buildDashboardWidgetHarness({
   Size size = const Size(390, 844),
   Locale? locale = const Locale('en'),
   DashboardState? dashboardState,
-}) {
-  return _buildDashboardProviderHarness(
+}) => _buildDashboardProviderHarness(
     theme: theme,
     size: size,
     locale: locale,
@@ -122,7 +119,6 @@ Widget buildDashboardWidgetHarness({
       ),
     ),
   );
-}
 
 Widget _buildDashboardProviderHarness({
   required Widget child,

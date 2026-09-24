@@ -98,7 +98,6 @@ class _VisualElementCardState extends State<VisualElementCard>
     return SparkleTappable(
       onTap: widget.onTap,
       onLongPress: widget.onLongPress,
-      enableHaptic: true,
       borderRadius: borderRadius,
       child: RarityVisualWrapper(
         rarity: widget.element.rarity,
@@ -109,7 +108,7 @@ class _VisualElementCardState extends State<VisualElementCard>
         unlockedAt: widget.element.unlockedAt,
         child: Stack(
           children: [
-            Container(
+            DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -319,7 +318,7 @@ class _VisualElementCardState extends State<VisualElementCard>
     final palette = VisualElementPalette.of(context);
     // 根据元素类型生成预览背景
     return Positioned.fill(
-      child: Container(
+      child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -522,7 +521,7 @@ class _VisualElementCardState extends State<VisualElementCard>
   }
 
   Widget _buildRarityBadge(
-          VisualElementRarityColors colors, AppLocalizations l10n) =>
+          VisualElementRarityColors colors, AppLocalizations l10n,) =>
       Container(
         padding: EdgeInsets.symmetric(
           horizontal: widget.isCompact ? DS.spacing6 : DS.spacing8,
@@ -704,7 +703,7 @@ class _VisualElementCardState extends State<VisualElementCard>
 
   /// 磨砂玻璃锁定遮罩
   Widget _buildLockedOverlay(
-          AppLocalizations l10n, VisualElementRarityColors colors) =>
+          AppLocalizations l10n, VisualElementRarityColors colors,) =>
       Positioned.fill(
         child: ClipRRect(
           borderRadius:
@@ -831,16 +830,12 @@ class _ElementPreviewPainter extends CustomPainter {
     switch (elementType) {
       case VisualElementType.background:
         _drawBackgroundPreview(canvas, size);
-        break;
       case VisualElementType.particle:
         _drawParticlePreview(canvas, size);
-        break;
       case VisualElementType.effect:
         _drawEffectPreview(canvas, size);
-        break;
       case VisualElementType.bundle:
         _drawBundlePreview(canvas, size);
-        break;
     }
   }
 

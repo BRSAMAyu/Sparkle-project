@@ -5,22 +5,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
-import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_comeback_context.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_daily_startup_message.dart';
 import 'package:sparkle/features/aurora/data/repositories/aurora_daily_startup_repository.dart';
+import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
-import 'package:sparkle/features/chat/data/repositories/chat_repository.dart';
-import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
 import 'package:sparkle/features/chat/presentation/providers/aurora_status_provider.dart';
-import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
-import 'package:sparkle/features/chat/presentation/screens/chat_screen.dart';
 import 'package:sparkle/features/home/data/repositories/dashboard_repository.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
+
 import '../shared/i18n_test_helper.dart';
 
 class _NoopApiClient implements ApiClient {

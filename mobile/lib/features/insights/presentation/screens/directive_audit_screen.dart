@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/insights/data/models/directive_audit_entry.dart';
 import 'package:sparkle/features/insights/presentation/providers/directive_audit_provider.dart';
 
@@ -371,8 +371,7 @@ class _DirectiveAuditError extends StatelessWidget {
   final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) {
-    return GraphiteCardSurface(
+  Widget build(BuildContext context) => GraphiteCardSurface(
       child: Column(
         children: [
           Icon(Icons.error_outline_rounded, color: DS.error),
@@ -400,5 +399,4 @@ class _DirectiveAuditError extends StatelessWidget {
         ],
       ),
     );
-  }
 }

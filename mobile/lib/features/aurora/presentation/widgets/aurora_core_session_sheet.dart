@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_core_session.dart';
@@ -16,20 +15,14 @@ import 'package:sparkle/features/chat/presentation/providers/aurora_status_provi
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 final auroraCoreSessionServiceProvider =
-    Provider<AuroraCoreSessionClient>((ref) {
-  return AuroraCoreSessionService(ref.read(apiClientProvider));
-});
+    Provider<AuroraCoreSessionClient>((ref) => AuroraCoreSessionService(ref.read(apiClientProvider)));
 
-final _telemetryServiceProvider = Provider<AuroraTelemetryService>((ref) {
-  return AuroraTelemetryService(ref.read(apiClientProvider));
-});
+final _telemetryServiceProvider = Provider<AuroraTelemetryService>((ref) => AuroraTelemetryService(ref.read(apiClientProvider)));
 
 final auroraCoreSessionStateProvider = StateNotifierProvider<
-    AuroraCoreSessionStateNotifier, AuroraCoreSessionResumeState>((ref) {
-  return AuroraCoreSessionStateNotifier(
+    AuroraCoreSessionStateNotifier, AuroraCoreSessionResumeState>((ref) => AuroraCoreSessionStateNotifier(
     ref.read(auroraCoreSessionServiceProvider),
-  );
-});
+  ),);
 
 enum AuroraCoreSessionSheetSize { half, expanded, full }
 
@@ -43,7 +36,7 @@ class AuroraCoreSessionResumeState {
           ? AuroraCoreSession.fromJson(rawSession)
           : rawSession is Map
               ? AuroraCoreSession.fromJson(
-                  Map<String, dynamic>.from(rawSession))
+                  Map<String, dynamic>.from(rawSession),)
               : null,
       restored: json['restored'] as bool? ?? true,
     );
@@ -272,7 +265,7 @@ class AuroraCoreSessionResumeBanner extends ConsumerWidget {
                   ),
                   const SizedBox(width: DS.spacing8),
                   Icon(Icons.chevron_right_rounded,
-                      size: 20, color: DS.textSecondary),
+                      size: 20, color: DS.textSecondary,),
                 ],
               ),
             ),
@@ -453,7 +446,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
             bandStatus: widget.bandStatus,
             conversationId: widget.conversationId,
             sessionId: _session!.sessionId,
-          ));
+          ),);
     }
 
     setState(() => _sending = true);
@@ -624,7 +617,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
     final l10n = context.l10n;
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-          DS.spacing20, DS.spacing12, DS.spacing12, 0),
+          DS.spacing20, DS.spacing12, DS.spacing12, 0,),
       child: Row(
         children: [
           Container(
@@ -635,7 +628,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
               shape: BoxShape.circle,
             ),
             child: Icon(Icons.auto_fix_high_rounded,
-                size: 18, color: DS.brandPrimary),
+                size: 18, color: DS.brandPrimary,),
           ),
           const SizedBox(width: DS.spacing10),
           Expanded(
@@ -655,7 +648,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
                   Text(
                     session.scope,
                     style: TextStyle(
-                        color: DS.textSecondary, fontSize: DS.fontSizeXs),
+                        color: DS.textSecondary, fontSize: DS.fontSizeXs,),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -666,7 +659,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
           if (session != null && session.isActive)
             Container(
               padding: const EdgeInsets.symmetric(
-                  horizontal: DS.spacing8, vertical: DS.spacing4),
+                  horizontal: DS.spacing8, vertical: DS.spacing4,),
               decoration: BoxDecoration(
                 color: DS.borderSubtle,
                 borderRadius: BorderRadius.circular(999),
@@ -735,7 +728,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
       child: ListView(
         controller: _scrollController,
         padding: const EdgeInsets.fromLTRB(
-            DS.spacing16, DS.spacing16, DS.spacing16, DS.spacing8),
+            DS.spacing16, DS.spacing16, DS.spacing16, DS.spacing8,),
         children: [
           if (_openedFromResumeState && session.isActive)
             _buildResumeNotice(context.l10n.auroraCoreSessionResumed),
@@ -867,7 +860,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
               const CircularProgressIndicator(strokeWidth: 2),
               const SizedBox(height: DS.spacing12),
               Text(context.l10n.auroraPreparing,
-                  style: TextStyle(color: DS.textSecondary)),
+                  style: TextStyle(color: DS.textSecondary),),
             ],
           ),
         ),
@@ -884,11 +877,11 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
             // arb 文案（auroraStartFailed，见 :429），异常文本不入 state。
             Text(_error!,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: DS.textSecondary)),
+                style: TextStyle(color: DS.textSecondary),),
             const SizedBox(height: DS.spacing16),
             TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text(context.l10n.auroraClose)),
+                child: Text(context.l10n.auroraClose),),
           ],
         ),
       );
@@ -913,7 +906,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.auto_fix_high_rounded,
-                  size: 16, color: DS.brandPrimary),
+                  size: 16, color: DS.brandPrimary,),
             ),
             const SizedBox(width: DS.spacing10),
             const _TypingDots(),
@@ -943,12 +936,12 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
           Row(
             children: [
               Icon(Icons.check_circle_outline_rounded,
-                  size: 16, color: DS.success),
+                  size: 16, color: DS.success,),
               const SizedBox(width: DS.spacing8),
               Text(
                 l10n.auroraCalibrationComplete,
                 style: DS.bodySmall.copyWith(
-                    color: DS.success, fontWeight: DS.fontWeightSemibold),
+                    color: DS.success, fontWeight: DS.fontWeightSemibold,),
               ),
             ],
           ),
@@ -1024,8 +1017,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
     );
   }
 
-  Widget _buildResumeNotice(String text) {
-    return Padding(
+  Widget _buildResumeNotice(String text) => Padding(
       padding: const EdgeInsets.only(bottom: DS.spacing12),
       child: Semantics(
         label: text,
@@ -1056,7 +1048,6 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
         ),
       ),
     );
-  }
 
   Widget _buildPausedResumeCard() {
     final l10n = context.l10n;
@@ -1074,7 +1065,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
           Row(
             children: [
               Icon(Icons.play_circle_outline_rounded,
-                  size: 18, color: DS.brandPrimary),
+                  size: 18, color: DS.brandPrimary,),
               const SizedBox(width: DS.spacing8),
               Expanded(
                 child: Text(
@@ -1121,7 +1112,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
       child: ListView(
         controller: _scrollController,
         padding: const EdgeInsets.fromLTRB(
-            DS.spacing16, DS.spacing16, DS.spacing16, DS.spacing16),
+            DS.spacing16, DS.spacing16, DS.spacing16, DS.spacing16,),
         children: [
           Container(
             padding: const EdgeInsets.all(DS.spacing16),
@@ -1229,10 +1220,9 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
   }
 
   Widget _buildOptionChips(
-      AuroraPredictedReplyGroup group, AuroraCoreSession session) {
-    return Container(
+      AuroraPredictedReplyGroup group, AuroraCoreSession session,) => Container(
       padding: const EdgeInsets.fromLTRB(
-          DS.spacing16, DS.spacing12, DS.spacing16, 0),
+          DS.spacing16, DS.spacing12, DS.spacing16, 0,),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -1271,7 +1261,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
                               option: option,
                               groupId: group.groupId,
                             ),
-                  )),
+                  ),),
               // Freeform correction chip
               if (group.freeformOption != null)
                 _SessionOptionChip(
@@ -1285,12 +1275,10 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
         ],
       ),
     );
-  }
 
-  Widget _buildFreeformInput(AuroraCoreSession session) {
-    return Container(
+  Widget _buildFreeformInput(AuroraCoreSession session) => Container(
       padding: const EdgeInsets.fromLTRB(
-          DS.spacing16, DS.spacing12, DS.spacing16, 0),
+          DS.spacing16, DS.spacing12, DS.spacing16, 0,),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -1298,7 +1286,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
           Text(
             context.l10n.auroraExplainPrompt,
             style: DS.bodyMedium.copyWith(
-                color: DS.textPrimary, fontWeight: DS.fontWeightSemibold),
+                color: DS.textPrimary, fontWeight: DS.fontWeightSemibold,),
           ),
           const SizedBox(height: DS.spacing8),
           TextField(
@@ -1368,7 +1356,6 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
         ],
       ),
     );
-  }
 }
 
 class _ResultBullet extends StatelessWidget {
@@ -1504,8 +1491,7 @@ class _AuroraMessageBubbleState extends State<_AuroraMessageBubble>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
+  Widget build(BuildContext context) => FadeTransition(
       opacity: _fadeAnim,
       child: Padding(
         padding: const EdgeInsets.only(bottom: DS.spacing12),
@@ -1540,7 +1526,7 @@ class _AuroraMessageBubbleState extends State<_AuroraMessageBubble>
                     bottomRight: Radius.circular(DS.radius12),
                   ),
                   border: Border.all(
-                      color: DS.brandPrimary.withValues(alpha: 0.12)),
+                      color: DS.brandPrimary.withValues(alpha: 0.12),),
                 ),
                 child: Text(
                   widget.message.content,
@@ -1553,7 +1539,6 @@ class _AuroraMessageBubbleState extends State<_AuroraMessageBubble>
         ),
       ),
     );
-  }
 }
 
 class _UserMessageBubble extends StatelessWidget {
@@ -1561,8 +1546,7 @@ class _UserMessageBubble extends StatelessWidget {
   final AuroraCoreMessage message;
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
+  Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.only(bottom: DS.spacing12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
@@ -1603,7 +1587,6 @@ class _UserMessageBubble extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 // ── Option chip ────────────────────────────────────────────────────────────────
@@ -1693,8 +1676,7 @@ class _TypingDotsState extends State<_TypingDots>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
+  Widget build(BuildContext context) => AnimatedBuilder(
       animation: _controller,
       builder: (_, __) {
         final phase = _controller.value;
@@ -1719,5 +1701,4 @@ class _TypingDotsState extends State<_TypingDots>
         );
       },
     );
-  }
 }

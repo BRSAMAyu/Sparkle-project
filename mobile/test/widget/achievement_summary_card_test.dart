@@ -20,7 +20,7 @@ void main() {
                     achievementId: 'streak-7',
                     name: '七日连学',
                     rarity: 'rare',
-                    unlockedAt: DateTime(2026, 4, 21, 21, 0),
+                    unlockedAt: DateTime(2026, 4, 21, 21),
                   ),
                 ],
                 inProgressAchievements: [

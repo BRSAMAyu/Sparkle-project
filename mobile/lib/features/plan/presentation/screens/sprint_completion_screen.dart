@@ -3,16 +3,15 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/navigation/route_resilience.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/home/home_routes.dart';
@@ -22,6 +21,7 @@ import 'package:sparkle/features/plan/data/repositories/exam_sprint_repository.d
 import 'package:sparkle/features/plan/plan_routes.dart';
 import 'package:sparkle/features/plan/presentation/providers/learning_portfolio_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 class SprintCompletionScreen extends ConsumerStatefulWidget {
   const SprintCompletionScreen({

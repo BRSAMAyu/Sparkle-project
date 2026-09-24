@@ -70,8 +70,7 @@ void main() {
 
   group('ChatRunPhaseIndicator 三态渲染 + 可取消', () {
     Widget host(WidgetTester tester, ChatRunPhase phase, String? aiStatus,
-        {required ValueChanged<String> onCancel}) {
-      return ProviderScope(
+        {required ValueChanged<String> onCancel,}) => ProviderScope(
         child: testMaterialApp(
           home: Scaffold(
             body: Builder(
@@ -86,7 +85,6 @@ void main() {
           ),
         ),
       );
-    }
 
     testWidgets('检索阶段高亮检索段并展示预期时长', (tester) async {
       final semantics = tester.ensureSemantics();
@@ -95,7 +93,7 @@ void main() {
         ChatRunPhase.sending,
         null,
         onCancel: (_) {},
-      ));
+      ),);
       await tester.pump();
 
       expect(find.text('检索资料'), findsOneWidget);
@@ -117,7 +115,7 @@ void main() {
         ChatRunPhase.sending,
         'THINKING',
         onCancel: (_) {},
-      ));
+      ),);
       await tester.pump();
       expect(find.bySemanticsLabel('正在思考中，可取消'), findsOneWidget);
       semantics.dispose();
@@ -130,7 +128,7 @@ void main() {
         ChatRunPhase.streaming,
         null,
         onCancel: (_) {},
-      ));
+      ),);
       await tester.pump();
       expect(find.bySemanticsLabel('正在生成回答，可取消'), findsOneWidget);
       semantics.dispose();
@@ -172,7 +170,7 @@ void main() {
         ChatRunPhase.sending,
         'REVIEWING',
         onCancel: (_) {},
-      ));
+      ),);
       await tester.pump();
       expect(find.bySemanticsLabel('正在思考中，可取消'), findsOneWidget);
       semantics.dispose();
@@ -184,8 +182,7 @@ void main() {
     // 胶囊可用宽 ≈380px，原布局（三段 Flexible + 提示 Text 非弹性）恰超
     // 14px 触发 OVERFLOWED BY 14 PIXELS 条纹（复测截图 07/09b/11）。
     Widget narrowHost(WidgetTester tester, double width,
-        {required VoidCallback onCancel}) {
-      return ProviderScope(
+        {required VoidCallback onCancel,}) => ProviderScope(
         child: testMaterialApp(
           home: Scaffold(
             body: Center(
@@ -201,7 +198,6 @@ void main() {
           ),
         ),
       );
-    }
 
     testWidgets('380px（V13 实测溢出面）不再产生 overflow 异常', (tester) async {
       var cancelled = false;

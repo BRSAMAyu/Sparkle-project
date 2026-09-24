@@ -1,5 +1,3 @@
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
-import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -8,12 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
-import 'package:sparkle/core/utils/text_rendering.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
@@ -118,7 +117,7 @@ class _SeedLibraryDetailScreenState
                 unawaited(
                   ref
                       .read(
-                          seedLibraryDetailProvider(widget.libraryId).notifier)
+                          seedLibraryDetailProvider(widget.libraryId).notifier,)
                       .toggleSubscription(),
                 );
               }
@@ -389,13 +388,13 @@ class _SeedLibraryDetailScreenState
                                               false;
                                       await ref
                                           .read(seedLibraryDetailProvider(
-                                                  widget.libraryId)
-                                              .notifier)
+                                                  widget.libraryId,)
+                                              .notifier,)
                                           .toggleApplied();
                                       if (!context.mounted) return;
                                       final refreshedState = ref.read(
                                         seedLibraryDetailProvider(
-                                            widget.libraryId),
+                                            widget.libraryId,),
                                       );
                                       final isNowEnabled = refreshedState
                                               .subscription?.isEnabled ??
@@ -417,7 +416,7 @@ class _SeedLibraryDetailScreenState
                                         context,
                                         context.l10n
                                             .seedLibraryDetailApplyFailed(
-                                                _friendlyActionError(e)),
+                                                _friendlyActionError(e),),
                                       );
                                     }
                                   },
@@ -437,21 +436,21 @@ class _SeedLibraryDetailScreenState
                                     try {
                                       await ref
                                           .read(seedLibraryDetailProvider(
-                                                  widget.libraryId)
-                                              .notifier)
+                                                  widget.libraryId,)
+                                              .notifier,)
                                           .setAsPrimaryLibrary();
                                       if (!context.mounted) return;
                                       AppFeedback.success(
                                           context,
                                           context.l10n
-                                              .seedLibraryDetailSetPrimarySuccess);
+                                              .seedLibraryDetailSetPrimarySuccess,);
                                     } catch (e) {
                                       if (!context.mounted) return;
                                       AppFeedback.error(
                                           context,
                                           context.l10n
                                               .seedLibraryDetailSetPrimaryFailed(
-                                                  e.toString()));
+                                                  e.toString(),),);
                                     }
                                   },
                                   label:
@@ -463,8 +462,8 @@ class _SeedLibraryDetailScreenState
                                     try {
                                       await ref
                                           .read(seedLibraryDetailProvider(
-                                                  widget.libraryId)
-                                              .notifier)
+                                                  widget.libraryId,)
+                                              .notifier,)
                                           .markNotSuitable();
                                       if (!context.mounted) return;
                                       AppFeedback.success(
@@ -478,7 +477,7 @@ class _SeedLibraryDetailScreenState
                                         context,
                                         context.l10n
                                             .seedLibraryDetailMarkNotSuitableFailed(
-                                                _friendlyActionError(e)),
+                                                _friendlyActionError(e),),
                                       );
                                     }
                                   },
@@ -909,7 +908,7 @@ class _SeedLibraryDetailScreenState
               ),
               const SizedBox(height: DS.spacing16),
               Text(context.l10n.seedLibraryDetailFilterContentType,
-                  style: Theme.of(sheetContext).textTheme.titleSmall),
+                  style: Theme.of(sheetContext).textTheme.titleSmall,),
               const SizedBox(height: DS.spacing8),
               Wrap(
                 spacing: DS.spacing8,
@@ -940,7 +939,7 @@ class _SeedLibraryDetailScreenState
               ),
               const SizedBox(height: DS.spacing16),
               Text(context.l10n.seedLibraryDetailFilterDifficulty,
-                  style: Theme.of(sheetContext).textTheme.titleSmall),
+                  style: Theme.of(sheetContext).textTheme.titleSmall,),
               const SizedBox(height: DS.spacing8),
               Wrap(
                 spacing: DS.spacing8,
@@ -1042,7 +1041,7 @@ class _SeedLibraryDetailScreenState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(context.l10n.seedLibraryDetailRatingTitle,
-                  style: Theme.of(context).textTheme.titleLarge),
+                  style: Theme.of(context).textTheme.titleLarge,),
               const SizedBox(height: DS.spacing8),
               Text(
                 context.l10n.seedLibraryDetailRatingDescription,
@@ -1052,7 +1051,7 @@ class _SeedLibraryDetailScreenState
               ),
               const SizedBox(height: DS.spacing12),
               Text(context.l10n
-                  .seedLibraryDetailCurrentRating(score.toStringAsFixed(1))),
+                  .seedLibraryDetailCurrentRating(score.toStringAsFixed(1)),),
               Slider(
                 value: score,
                 max: 10,
@@ -1066,7 +1065,7 @@ class _SeedLibraryDetailScreenState
                 maxLines: 4,
                 decoration: InputDecoration(
                   labelText: context.l10n.seedLibraryDetailRatingCommentLabel,
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: DS.spacing16),
@@ -1085,7 +1084,7 @@ class _SeedLibraryDetailScreenState
                         try {
                           await ref
                               .read(seedLibraryDetailProvider(widget.libraryId)
-                                  .notifier)
+                                  .notifier,)
                               .submitRating(
                                 score: score,
                                 comment: commentController.text.trim().isEmpty
@@ -1095,13 +1094,13 @@ class _SeedLibraryDetailScreenState
                           if (!context.mounted) return;
                           Navigator.pop(context);
                           AppFeedback.success(context,
-                              context.l10n.seedLibraryDetailRatingSubmitted);
+                              context.l10n.seedLibraryDetailRatingSubmitted,);
                         } catch (e) {
                           if (!context.mounted) return;
                           AppFeedback.error(
                               context,
                               context.l10n
-                                  .seedLibraryDetailRatingFailed(e.toString()));
+                                  .seedLibraryDetailRatingFailed(e.toString()),);
                         }
                       },
                       label: context.l10n.seedLibraryDetailSubmitRating,
@@ -1142,7 +1141,7 @@ class _SeedLibraryDetailScreenState
                     if (item.difficultyLevel != null)
                       Chip(
                           label:
-                              Text(item.difficultyLevelLabel(context.l10n)!)),
+                              Text(item.difficultyLevelLabel(context.l10n)!),),
                     ...?item.tags?.map((tag) => Chip(label: Text(tag))),
                   ],
                 ),
@@ -1150,7 +1149,7 @@ class _SeedLibraryDetailScreenState
                     item.content!.trim().isNotEmpty) ...[
                   const SizedBox(height: DS.spacing16),
                   Text(context.l10n.seedLibraryDetailContentBody,
-                      style: Theme.of(context).textTheme.titleMedium),
+                      style: Theme.of(context).textTheme.titleMedium,),
                   const SizedBox(height: DS.spacing8),
                   GraphiteCardSurface(
                     surfaceRole: SparkleSurfaceRole.panel,
@@ -1169,7 +1168,7 @@ class _SeedLibraryDetailScreenState
                     item.contentData!.isNotEmpty) ...[
                   const SizedBox(height: DS.spacing16),
                   Text(context.l10n.seedLibraryDetailStructuredContent,
-                      style: Theme.of(context).textTheme.titleMedium),
+                      style: Theme.of(context).textTheme.titleMedium,),
                   const SizedBox(height: DS.spacing8),
                   GraphiteCardSurface(
                     surfaceRole: SparkleSurfaceRole.panel,
@@ -1241,7 +1240,7 @@ class _SeedLibraryDetailScreenState
                 TextFormField(
                   controller: nameController,
                   decoration: InputDecoration(
-                      labelText: context.l10n.seedLibraryDetailEditName),
+                      labelText: context.l10n.seedLibraryDetailEditName,),
                   validator: (v) => (v == null || v.trim().isEmpty)
                       ? context.l10n.seedLibraryDetailEditNameEmpty
                       : null,
@@ -1251,7 +1250,7 @@ class _SeedLibraryDetailScreenState
                   controller: descController,
                   decoration: InputDecoration(
                       labelText: context
-                          .l10n.seedLibraryDetailEditDescriptionOptional),
+                          .l10n.seedLibraryDetailEditDescriptionOptional,),
                   maxLines: 3,
                 ),
               ],
@@ -1271,7 +1270,7 @@ class _SeedLibraryDetailScreenState
                 try {
                   await ref
                       .read(
-                          seedLibraryDetailProvider(widget.libraryId).notifier)
+                          seedLibraryDetailProvider(widget.libraryId).notifier,)
                       .updateLibrary(
                         name: nameController.text.trim(),
                         description: descController.text.trim().isEmpty
@@ -1280,7 +1279,7 @@ class _SeedLibraryDetailScreenState
                       );
                   if (!context.mounted) return;
                   AppFeedback.success(
-                      context, context.l10n.seedLibraryDetailLibraryUpdated);
+                      context, context.l10n.seedLibraryDetailLibraryUpdated,);
                 } catch (e) {
                   if (!context.mounted) return;
                   AppFeedback.error(
@@ -1316,7 +1315,7 @@ class _SeedLibraryDetailScreenState
                 try {
                   await ref
                       .read(
-                          seedLibraryDetailProvider(widget.libraryId).notifier)
+                          seedLibraryDetailProvider(widget.libraryId).notifier,)
                       .deleteLibrary();
                   if (context.mounted) {
                     Navigator.pop(context);
@@ -1375,7 +1374,7 @@ class _SeedLibraryDetailScreenState
                     initialValue: itemType,
                     decoration: InputDecoration(
                       labelText: context.l10n.seedLibraryDetailAddItemType,
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                     ),
                     items: ItemType.values
                         .map(
@@ -1396,7 +1395,7 @@ class _SeedLibraryDetailScreenState
                     controller: titleController,
                     decoration: InputDecoration(
                       labelText: context.l10n.seedLibraryDetailAddItemTitle,
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: DS.spacing12),
@@ -1404,7 +1403,7 @@ class _SeedLibraryDetailScreenState
                     controller: contentController,
                     decoration: InputDecoration(
                       labelText: context.l10n.seedLibraryDetailAddItemContent,
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                     ),
                     minLines: 3,
                     maxLines: 6,
@@ -1414,7 +1413,7 @@ class _SeedLibraryDetailScreenState
                     controller: subjectController,
                     decoration: InputDecoration(
                       labelText: context.l10n.seedLibraryDetailAddItemSubject,
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: DS.spacing12),
@@ -1423,7 +1422,7 @@ class _SeedLibraryDetailScreenState
                     decoration: InputDecoration(
                       labelText:
                           context.l10n.seedLibraryDetailAddItemDifficulty,
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                     ),
                     items: [
                       DropdownMenuItem<DifficultyLevel?>(
@@ -1445,7 +1444,7 @@ class _SeedLibraryDetailScreenState
                     controller: tagsController,
                     decoration: InputDecoration(
                       labelText: context.l10n.seedLibraryDetailAddItemTags,
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: DS.spacing16),
@@ -1462,7 +1461,7 @@ class _SeedLibraryDetailScreenState
                               .toList();
                           await ref
                               .read(seedLibraryDetailProvider(widget.libraryId)
-                                  .notifier)
+                                  .notifier,)
                               .addItem(
                                 itemType: itemType,
                                 title: titleController.text.trim().isEmpty
@@ -1480,13 +1479,13 @@ class _SeedLibraryDetailScreenState
                           if (!context.mounted) return;
                           Navigator.pop(context);
                           AppFeedback.success(context,
-                              context.l10n.seedLibraryDetailAddItemSuccess);
+                              context.l10n.seedLibraryDetailAddItemSuccess,);
                         } catch (e) {
                           if (!context.mounted) return;
                           AppFeedback.error(
                               context,
                               context.l10n.seedLibraryDetailAddItemFailed(
-                                  e.toString()));
+                                  e.toString(),),);
                         }
                       },
                       expand: true,
@@ -1518,7 +1517,7 @@ class _SeedLibraryDetailScreenState
       final bytes = file.bytes;
       if (bytes == null) {
         AppFeedback.error(
-            context, context.l10n.seedLibraryDetailImportCannotRead);
+            context, context.l10n.seedLibraryDetailImportCannotRead,);
         return;
       }
       final decoded = jsonDecode(utf8.decode(bytes));
@@ -1529,7 +1528,7 @@ class _SeedLibraryDetailScreenState
       }
       if (rawItems is! List) {
         AppFeedback.error(
-            context, context.l10n.seedLibraryDetailImportInvalidJson);
+            context, context.l10n.seedLibraryDetailImportInvalidJson,);
         return;
       }
 
@@ -1555,7 +1554,7 @@ class _SeedLibraryDetailScreenState
     } catch (e) {
       if (!mounted) return;
       AppFeedback.error(
-          context, context.l10n.seedLibraryDetailImportFailed(e.toString()));
+          context, context.l10n.seedLibraryDetailImportFailed(e.toString()),);
     }
   }
 }

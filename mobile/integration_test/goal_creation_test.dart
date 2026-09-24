@@ -3,12 +3,12 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:sparkle/features/auth/presentation/screens/login_screen.dart';
-import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart';
-import 'package:sparkle/features/goal/presentation/screens/goal_creation_wizard_screen.dart';
-import 'package:sparkle/main.dart' as app;
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/auth/presentation/screens/login_screen.dart';
+import 'package:sparkle/features/goal/presentation/screens/goal_creation_wizard_screen.dart';
+import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart';
+import 'package:sparkle/main.dart' as app;
 
 /// Goal Creation Test
 /// Verifies: can navigate to goal creation, wizard steps exist
@@ -48,7 +48,7 @@ void main() {
       // If we're on the wizard, at least the first step should be visible
       if (find.byType(GoalCreationWizardScreen).evaluate().isNotEmpty) {
         expect(wizardSteps.any((f) => f.evaluate().isNotEmpty), isTrue,
-            reason: 'At least one wizard step should be visible');
+            reason: 'At least one wizard step should be visible',);
       }
       // If we didn't reach the wizard (e.g. no backend), that's acceptable
       // as long as we didn't crash

@@ -49,8 +49,7 @@ void main() {
     Widget host({
       required List<String> promptStarters,
       required ValueChanged<String> onPromptSelected,
-    }) {
-      return ProviderScope(
+    }) => ProviderScope(
         child: testMaterialApp(
           home: Scaffold(
             body: Center(
@@ -62,7 +61,6 @@ void main() {
           ),
         ),
       );
-    }
 
     /// 泄掉 dock 的 18s followup 定时器，避免测试收尾报 pending timer。
     Future<void> flushTimers(WidgetTester tester) async {
@@ -74,7 +72,7 @@ void main() {
       await tester.pumpWidget(host(
         promptStarters: const ['帮我整理错题', '讲解这道题'],
         onPromptSelected: (_) {},
-      ));
+      ),);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
@@ -95,7 +93,7 @@ void main() {
           filledCount++;
           lastFilled = prompt;
         },
-      ));
+      ),);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 

@@ -3564,11 +3564,11 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                                   ),
                                   onRetry: () => ref
                                       .read(
-                                          galaxyDocumentUploadProvider.notifier)
+                                          galaxyDocumentUploadProvider.notifier,)
                                       .retryLastUpload(),
                                   onDismiss: () => ref
                                       .read(
-                                          galaxyDocumentUploadProvider.notifier)
+                                          galaxyDocumentUploadProvider.notifier,)
                                       .clearSession(),
                                 ),
                               if (_previewNode != null &&
@@ -3591,7 +3591,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                                             _inspectPreviewConnections,
                                         onViewDetails: () => unawaited(
                                           _openKnowledgeDetail(
-                                              _previewNode!.id),
+                                              _previewNode!.id,),
                                         ),
                                         onStartReview:
                                             _startReviewForPreviewNode,
@@ -3614,7 +3614,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                                             ? const SizedBox.shrink()
                                             : GalaxySectorIndicator(
                                                 key: ValueKey(
-                                                    currentSector.name),
+                                                    currentSector.name,),
                                                 label: SectorConfig.getStyle(
                                                   currentSector,
                                                 ).name,
@@ -3771,7 +3771,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                                               ? null
                                               : _handleGalaxyCoreUploadRequested,
                                           icon: const Icon(
-                                              Icons.menu_book_rounded),
+                                              Icons.menu_book_rounded,),
                                           label: Text(
                                             context.l10n.galaxyUploadFabLabel,
                                           ),
@@ -3901,7 +3901,6 @@ class _GalaxyDraftPromptCard extends StatelessWidget {
       // 触点（含「稍后再看」按钮周边 padding）都会被整卡热区吞掉、误入审核
       // 流；置空后动作收敛为「现在审核 / 稍后再看 / 关闭」三个显式按钮。
       child: InkWell(
-        onTap: null,
         borderRadius: BorderRadius.circular(24),
         child: Ink(
           decoration: BoxDecoration(

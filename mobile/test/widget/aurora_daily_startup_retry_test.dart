@@ -194,7 +194,7 @@ void main() {
           ),
         ],
         child: testMaterialApp(
-          home: ChatScreen(),
+          home: const ChatScreen(),
         ),
       ),
     );
@@ -247,7 +247,7 @@ void main() {
           ),
         ],
         child: testMaterialApp(
-          home: ChatScreen(),
+          home: const ChatScreen(),
         ),
       ),
     );

@@ -4,10 +4,7 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class TraitsColdstartQuestionnaire extends StatefulWidget {
   const TraitsColdstartQuestionnaire({
-    super.key,
-    required this.questions,
-    required this.onSubmit,
-    required this.onSkip,
+    required this.questions, required this.onSubmit, required this.onSkip, super.key,
   });
 
   final List<Map<String, dynamic>> questions;
@@ -26,8 +23,7 @@ class _TraitsColdstartQuestionnaireState
   bool _isExpanded = false;
 
   @override
-  Widget build(BuildContext context) {
-    return GraphiteCardSurface(
+  Widget build(BuildContext context) => GraphiteCardSurface(
       padding: const EdgeInsets.all(DS.spacing16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -91,7 +87,6 @@ class _TraitsColdstartQuestionnaireState
         ],
       ),
     );
-  }
 
   Widget _buildQuestion(Map<String, dynamic> question) {
     final questionId = question['id']?.toString() ?? '';

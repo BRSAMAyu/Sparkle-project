@@ -67,7 +67,7 @@ class ChatCacheService {
     ];
     final boxNames = _trackedBoxNames.toList();
     for (final name in boxNames) {
-      if (!managedPrefixes.any((prefix) => name.startsWith(prefix))) {
+      if (!managedPrefixes.any(name.startsWith)) {
         continue;
       }
       if (Hive.isBoxOpen(name)) {

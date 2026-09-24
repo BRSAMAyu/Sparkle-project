@@ -122,8 +122,7 @@ class DocumentGalaxyNode {
     this.updatedAt,
   });
 
-  factory DocumentGalaxyNode.fromJson(Map<String, dynamic> json) {
-    return DocumentGalaxyNode(
+  factory DocumentGalaxyNode.fromJson(Map<String, dynamic> json) => DocumentGalaxyNode(
       nodeId: json['node_id']?.toString() ?? '',
       fileId: json['file_id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
@@ -135,7 +134,6 @@ class DocumentGalaxyNode {
       attachedAt: _readDateTime(json['attached_at']),
       updatedAt: _readDateTime(json['updated_at']),
     );
-  }
 
   final String nodeId;
   final String fileId;
@@ -266,8 +264,7 @@ class DocumentLibraryItem {
     String? subjectArea,
     double? qualityScore,
     String? errorMessage,
-  }) {
-    return DocumentLibraryItem(
+  }) => DocumentLibraryItem(
       fileId: fileId ?? this.fileId,
       filename: filename ?? this.filename,
       fileType: fileType ?? this.fileType,
@@ -284,7 +281,6 @@ class DocumentLibraryItem {
       qualityScore: qualityScore ?? this.qualityScore,
       errorMessage: errorMessage ?? this.errorMessage,
     );
-  }
 
   DocumentStatus get effectiveStatus => processingStatus?.status ?? rawStatus;
 

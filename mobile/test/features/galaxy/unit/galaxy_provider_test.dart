@@ -10,8 +10,8 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/retry_strategy.dart';
 import 'package:sparkle/core/services/smart_cache.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
-import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/galaxy/data/models/user_galaxy_contribution.dart';
+import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
 
 class FakeEnhancedGalaxyRepository implements EnhancedGalaxyRepository {
@@ -604,7 +604,6 @@ void main() {
         mockRepository.graphResult = NetworkResult.success(
           GalaxyGraphResponse(
             nodes: testNodes,
-            edges: const [],
             userFlameIntensity: 0.5,
           ),
         );
@@ -622,7 +621,6 @@ void main() {
         mockRepository.graphResult = NetworkResult.success(
           GalaxyGraphResponse(
             nodes: refreshedNodes,
-            edges: const [],
             userFlameIntensity: 0.5,
           ),
         );

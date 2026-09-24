@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/action_card.dart';
@@ -50,6 +49,7 @@ void main() {
   late _RecordingRepository repository;
 
   ActionProposalCardData projectionData() => ActionProposalCardData.fromChatPayload(
+        // 非 const：proposalPayload 已含 'status'，const 下重复键为编译错误。
         <String, dynamic>{...proposalPayload, 'status': 'awaiting_user'},
       );
 
@@ -63,7 +63,7 @@ void main() {
           widgetActions.add(MapEntry(type, payload));
         },
       ),
-    ));
+    ),);
     await tester.pump();
 
     // GJ07：无需读日志即知轮到谁——ownership + turn line 直接可见。
@@ -91,7 +91,7 @@ void main() {
       overrides: [
         actionProposalRepositoryProvider.overrideWithValue(repository),
       ],
-    ));
+    ),);
     await tester.pump();
     await tester.pumpAndSettle();
 
@@ -118,7 +118,7 @@ void main() {
       overrides: [
         actionProposalRepositoryProvider.overrideWithValue(repository),
       ],
-    ));
+    ),);
     await tester.pumpAndSettle();
     expect(find.text('等你确认'), findsOneWidget);
 
@@ -127,7 +127,7 @@ void main() {
 
     expect(repository.rejectCalls, hasLength(1));
     expect(repository.fetches >= 2, isTrue,
-        reason: '命令后应 invalidate 收件箱并重取（刷新后卡片移除）');
+        reason: '命令后应 invalidate 收件箱并重取（刷新后卡片移除）',);
   });
 
   testWidgets('task 挂载：收件箱为空时不渲染任何卡片', (tester) async {
@@ -137,7 +137,7 @@ void main() {
       overrides: [
         actionProposalRepositoryProvider.overrideWithValue(repository),
       ],
-    ));
+    ),);
     await tester.pumpAndSettle();
 
     expect(find.text('等你确认'), findsNothing);

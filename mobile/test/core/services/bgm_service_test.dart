@@ -135,7 +135,6 @@ void main() {
       track: BgmTrack.dashboard,
       entry: dashboardEntry,
       position: const Duration(seconds: 4),
-      queueCursor: 0,
     );
 
     final chatState = BgmService.debugSceneStateForTrack(BgmTrack.chat);
@@ -155,7 +154,7 @@ void main() {
   test('switch-on-enter no longer retains same-family selection by default',
       () async {
     BgmService.debugSeedCurrentSelection(
-        track: BgmTrack.plan, entry: dashboardEntry);
+        track: BgmTrack.plan, entry: dashboardEntry,);
 
     final reason = await BgmService.debugResolveSelectionReason(
       BgmTrack.calendar,
@@ -268,7 +267,6 @@ void main() {
     BgmService.debugSeedSceneState(
       track: BgmTrack.chat,
       entry: chatEntry,
-      queueCursor: 0,
     );
 
     BgmService.debugAdvanceSceneQueue(
@@ -328,7 +326,7 @@ void main() {
   });
 
   test('BgmCatalogEntry.fromJson parses numeric fields robustly', () {
-    final entry = BgmCatalogEntry.fromJson({
+    final entry = BgmCatalogEntry.fromJson(const {
       'id': 'test-entry',
       'assetPath': 'audio/bgm/test.m4a',
       'album': 'Test',

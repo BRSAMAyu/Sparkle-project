@@ -1,8 +1,8 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_display_settings_provider.dart';
 
 class GalaxySimulationSettingsSheet extends StatelessWidget {

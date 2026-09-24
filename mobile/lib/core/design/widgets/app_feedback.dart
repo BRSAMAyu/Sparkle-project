@@ -91,7 +91,6 @@ class AppFeedback {
           foregroundColor: DS.textPrimary,
           icon: style.icon,
           duration: style.duration,
-          showCloseIcon: true,
           actionLabel: actionLabel,
           onAction: onAction,
           actionTextColor: actionLabel != null && onAction != null
@@ -154,8 +153,6 @@ class SparkleSnackBar {
       backgroundColor: DS.surfaceRoleColor(SparkleSurfaceRole.modal),
       foregroundColor: DS.textPrimary,
       icon: Icons.error_outline,
-      duration: errorDuration,
-      showCloseIcon: true,
       actionLabel: onRetry != null ? resolvedLabel : null,
       onAction: onRetry,
     );
@@ -174,7 +171,6 @@ class SparkleSnackBar {
         foregroundColor: DS.textPrimary,
         icon: Icons.check_circle_outline,
         duration: successDuration,
-        showCloseIcon: true,
       );
 
   /// Creates a fully configured [SnackBar] for warning messages.
@@ -189,8 +185,6 @@ class SparkleSnackBar {
         backgroundColor: DS.surfaceRoleColor(SparkleSurfaceRole.modal),
         foregroundColor: DS.textPrimary,
         icon: Icons.warning_amber_rounded,
-        duration: warningDuration,
-        showCloseIcon: true,
       );
 
   /// Creates a fully configured [SnackBar] for informational messages.
@@ -207,7 +201,6 @@ class SparkleSnackBar {
         foregroundColor: DS.textPrimary,
         icon: Icons.info_outline,
         duration: duration ?? infoDuration,
-        showCloseIcon: true,
       );
 
   /// Creates a fully configured [SnackBar] with custom content.

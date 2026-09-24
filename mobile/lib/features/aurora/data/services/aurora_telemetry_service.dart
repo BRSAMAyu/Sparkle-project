@@ -1,9 +1,9 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/features/chat/presentation/providers/aurora_status_provider.dart';
-import 'package:flutter/foundation.dart';
 
 /// Records user interactions with Aurora predicted reply chips.
 ///

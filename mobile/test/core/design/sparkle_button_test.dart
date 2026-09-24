@@ -3,7 +3,6 @@ import 'dart:ui' show SemanticsFlag;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/settings/presentation/providers/accessibility_provider.dart';
 
@@ -223,7 +222,7 @@ void main() {
       await tester.pumpWidget(host(SparkleIconButton(
         icon: const Icon(Icons.edit),
         onPressed: () => taps++,
-      )));
+      ),),);
 
       // 根治前：组件只带 min 触控约束，FAB 槽的 bounded-loose 约束把
       // Container(alignment) 拉满整屏（默认 800x600）InkWell，吞掉整页 tap。
@@ -248,11 +247,11 @@ void main() {
       await tester.pumpWidget(host(SparkleIconButton.fabGeometry(
         icon: const Icon(Icons.add),
         onPressed: () => taps++,
-      )));
+      ),),);
 
       final size = tester.getSize(find.byType(SparkleIconButton));
       expect(size.width, SparkleIconButton.fabSize,
-          reason: 'fabGeometry 默认 56 方档（touchTargetMinSize+spacing8）');
+          reason: 'fabGeometry 默认 56 方档（touchTargetMinSize+spacing8）',);
       expect(size.height, SparkleIconButton.fabSize);
 
       // 按钮外框之外（顶部中点，远离右下角 FAB）tap 不应命中。
@@ -282,7 +281,7 @@ void main() {
             ),
           ),
         ),
-      ));
+      ),);
       var size = tester.getSize(find.byType(SparkleIconButton));
       expect(size, const Size(72, 72), reason: '调用方显式档位被尊重');
 
@@ -303,7 +302,7 @@ void main() {
             ),
           ),
         ),
-      ));
+      ),);
       size = tester.getSize(find.byType(SparkleIconButton));
       expect(size, const Size(48, 48), reason: 'a11y 触控下限 48 不可被调用方压破');
     });
@@ -312,7 +311,7 @@ void main() {
       for (final fab in [
         SparkleIconButton(icon: const Icon(Icons.add), onPressed: () {}),
         SparkleIconButton.fabGeometry(
-            icon: const Icon(Icons.add), onPressed: () {}),
+            icon: const Icon(Icons.add), onPressed: () {},),
       ]) {
         await tester.pumpWidget(host(fab));
         final size = tester.getSize(find.byType(SparkleIconButton));

@@ -239,7 +239,7 @@ class UniversalShareService {
             ? '当前计划进度 ${(metadata['progress'] is num) ? (((metadata['progress'] as num) * 100).round()) : 0}%，稳步推进中'
             : 'Plan progress ${(metadata['progress'] is num) ? (((metadata['progress'] as num) * 100).round()) : 0}%, steadily advancing',
         ShareableContentType.capsule =>
-          subtitle?.isNotEmpty == true
+          subtitle?.isNotEmpty ?? false
             ? subtitle!
             : I18nService.instance.isChinese
               ? '记录下一个值得回看的想法'

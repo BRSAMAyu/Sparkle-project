@@ -124,8 +124,7 @@ void main() {
 Widget _buildHarness({
   required List<HeatmapDay> data,
   required int days,
-}) {
-  return ProviderScope(
+}) => ProviderScope(
     child: testMaterialApp(
       home: Scaffold(
         body: Center(
@@ -140,7 +139,6 @@ Widget _buildHarness({
       ),
     ),
   );
-}
 
 List<HeatmapDay> _buildHeatmapData({
   required int days,

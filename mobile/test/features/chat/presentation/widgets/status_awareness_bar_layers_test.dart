@@ -43,8 +43,7 @@ class _LayerStatusNotifier extends AuroraStatusNotifier {
 AuroraControlSurfaceSnapshot _snapshot({
   String status = 'risk_found',
   String summary = 'Aurora 发现当前推进节奏可能需要调整。',
-}) {
-  return AuroraControlSurfaceSnapshot(
+}) => AuroraControlSurfaceSnapshot(
     auroraActive: true,
     runtimeEnabled: true,
     overallStatus: status,
@@ -127,7 +126,6 @@ AuroraControlSurfaceSnapshot _snapshot({
       risk: '这个判断可能把临时忙碌误判成长期卡点。',
     ),
   );
-}
 
 Future<_LayerStatusNotifier> _pumpStatusBar(
   WidgetTester tester,
@@ -177,7 +175,7 @@ void main() {
     expect(find.text('都不是'), findsOneWidget);
 
     final correctionButton = find.byKey(
-        const ValueKey<String>('aurora-status-correction-time_not_enough'));
+        const ValueKey<String>('aurora-status-correction-time_not_enough'),);
     await tester.ensureVisible(correctionButton);
     await tester.tap(correctionButton);
     await tester.pumpAndSettle();
@@ -216,7 +214,7 @@ void main() {
     notifier.setSnapshot(_snapshot(
       status: 'calibrated',
       summary: 'Aurora 认为当前节奏稳定。',
-    ));
+    ),);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));
 

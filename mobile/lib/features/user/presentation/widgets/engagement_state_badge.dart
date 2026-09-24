@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/user_state_models.dart';
 
 class EngagementStateBadge extends StatelessWidget {
@@ -31,9 +31,9 @@ class EngagementStateBadge extends StatelessWidget {
               runSpacing: DS.spacing8,
               children: [
                 _StatusChip(
-                    label: context.l10n.engageSessions7d(value?.sessionCount7d ?? 0)),
+                    label: context.l10n.engageSessions7d(value?.sessionCount7d ?? 0),),
                 _StatusChip(
-                    label: context.l10n.engageDayStreak(value?.streak ?? 0)),
+                    label: context.l10n.engageDayStreak(value?.streak ?? 0),),
                 _StatusChip(
                   label: value?.lastActiveAt != null
                       ? context.l10n.engageLastActive(DateFormat(context.l10n.engageDateFormat).format(value!.lastActiveAt!))

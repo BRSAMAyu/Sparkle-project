@@ -684,7 +684,7 @@ extension ChatNotifierActions on ChatNotifier {
         'id':
             'achievement-progress-${event.achievementId}-${event.milestonePercent}-${now.microsecondsSinceEpoch}',
         'title': S.chatAchievementProgress(
-            event.achievementName, event.milestonePercent),
+            event.achievementName, event.milestonePercent,),
         'content': event.message,
         'type': 'achievement_progress',
         'priority': 'medium',

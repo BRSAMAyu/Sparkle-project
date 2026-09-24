@@ -140,7 +140,6 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
                   offset: Offset(0, (1 - progress) * 20),
                   child: SparkleStaggerItem(
                     index: index,
-                    offset: 0.04,
                     child: child!,
                   ),
                 ),

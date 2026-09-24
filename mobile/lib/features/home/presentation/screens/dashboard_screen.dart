@@ -32,7 +32,6 @@ import 'package:sparkle/features/goal/goal_routes.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_card_config_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_slot_config_provider.dart';
-import 'package:sparkle/features/plan/presentation/providers/active_goal_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
@@ -62,6 +61,7 @@ import 'package:sparkle/features/insights/presentation/widgets/return_case_file_
 import 'package:sparkle/features/insights/presentation/widgets/weekly_growth_narrative_card.dart';
 import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_center_provider.dart';
+import 'package:sparkle/features/plan/presentation/providers/active_goal_provider.dart';
 import 'package:sparkle/features/reviews/presentation/providers/nightly_review_provider.dart';
 import 'package:sparkle/features/reviews/presentation/widgets/nightly_review_panel.dart';
 import 'package:sparkle/features/task/task.dart';
@@ -809,7 +809,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           summary: total > 0
               ? l10n.dashboardSlotTaskBoardDone(done, total, done == total
                   ? l10n.dashboardSlotTaskBoardGoalHit
-                  : l10n.dashboardSlotTaskBoardToGo(total - done))
+                  : l10n.dashboardSlotTaskBoardToGo(total - done),)
               : l10n.dashboardSlotTaskBoardEmpty,
           accent: DS.success,
         );
@@ -958,8 +958,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     required String body,
     required String actionLabel,
     required VoidCallback onAction,
-  }) {
-    return Padding(
+  }) => Padding(
       padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
       child: DashboardSectionShell(
         tone: DashboardSurfaceTone.summary,
@@ -1009,7 +1008,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ),
       ),
     );
-  }
 
   /// Quiet end-of-list discovery affordance for the dashboard editor.
   /// Long-press on any slot still opens the same sheet, but this footer
@@ -1714,7 +1712,6 @@ class _CommunityAccountabilitySurface extends StatelessWidget {
                     : context.l10n.communityPartnerDescription,
                 trailing: SparkleIconButton(
                   variant: ButtonVariant.ghost,
-                  size: 48,
                   semanticLabel: context.l10n.dashboardAccountabilityOpen,
                   onPressed: () => context.push('/community/accountability'),
                   icon: const Icon(Icons.chevron_right_rounded, size: 18),
@@ -2543,7 +2540,6 @@ class _DailyBriefingCard extends StatelessWidget {
                 trailing: SparkleIconButton(
                   key: const ValueKey('dashboard-briefing-toggle'),
                   variant: ButtonVariant.ghost,
-                  size: 48,
                   semanticLabel: context.l10n.dashboardBriefingToggle,
                   onPressed: onToggleExpanded,
                   icon: AnimatedRotation(
@@ -3051,7 +3047,6 @@ class _DashboardUpdatesSectionState
                       SparkleIconButton(
                         key: const ValueKey('dashboard-updates-toggle'),
                         variant: ButtonVariant.ghost,
-                        size: 48,
                         semanticLabel: context.l10n.dashboardUpdatesToggle,
                         onPressed: _toggleExpanded,
                         icon: AnimatedRotation(
@@ -3247,8 +3242,7 @@ class _OnboardingQuickCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return Semantics(
+  Widget build(BuildContext context) => Semantics(
       button: true,
       label: title,
       child: Material(
@@ -3305,5 +3299,4 @@ class _OnboardingQuickCard extends StatelessWidget {
         ),
       ),
     );
-  }
 }

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -23,9 +22,8 @@ import 'package:sparkle/features/community/presentation/providers/community_prov
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
 import 'package:sparkle/features/error_book/data/repositories/error_book_repository.dart';
-import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/galaxy/data/models/user_galaxy_contribution.dart';
-import 'package:sparkle/features/galaxy/data/services/galaxy_performance_monitor.dart';
+import 'package:sparkle/features/galaxy/galaxy.dart';
 import 'package:sparkle/features/insights/data/models/weekly_growth_narrative.dart';
 import 'package:sparkle/features/insights/data/repositories/growth_narrative_repository.dart';
 import 'package:sparkle/features/insights/presentation/widgets/weekly_growth_narrative_card.dart';
@@ -45,6 +43,7 @@ import 'package:sparkle/shared/entities/achievement_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 import 'package:sparkle/shared/models/api_response_model.dart';
+
 import '../shared/i18n_test_helper.dart';
 
 void main() {
@@ -63,7 +62,6 @@ void main() {
       graphResult: NetworkResult.success(
         GalaxyGraphResponse(
           nodes: <GalaxyNodeModel>[_node('node-1', 20)],
-          edges: const <GalaxyEdgeModel>[],
           userFlameIntensity: 0.4,
         ),
       ),
@@ -77,7 +75,6 @@ void main() {
         galaxyRepository.graphResult = NetworkResult.success(
           GalaxyGraphResponse(
             nodes: <GalaxyNodeModel>[_node('node-1', 80)],
-            edges: const <GalaxyEdgeModel>[],
             userFlameIntensity: 0.7,
           ),
         );
@@ -283,14 +280,12 @@ void main() {
 Widget _buildApp({
   required List<Override> overrides,
   required Widget child,
-}) {
-  return ProviderScope(
+}) => ProviderScope(
     overrides: overrides,
     child: testMaterialApp(
       home: child,
     ),
   );
-}
 
 class _TaskGalaxyHarness extends ConsumerStatefulWidget {
   const _TaskGalaxyHarness();
@@ -457,8 +452,7 @@ class _WeeklyNarrativeHarness extends ConsumerWidget {
   const _WeeklyNarrativeHarness();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
+  Widget build(BuildContext context, WidgetRef ref) => Scaffold(
       body: Column(
         children: <Widget>[
           const Expanded(child: WeeklyGrowthNarrativeCard()),
@@ -477,7 +471,6 @@ class _WeeklyNarrativeHarness extends ConsumerWidget {
         ],
       ),
     );
-  }
 }
 
 class _AchievementEventHarness extends ConsumerWidget {
@@ -618,8 +611,7 @@ WeeklyGrowthNarrative _narrative(
   String period,
   String weekStart,
   String weekEnd,
-) {
-  return WeeklyGrowthNarrative(
+) => WeeklyGrowthNarrative(
     period: period,
     weekStart: weekStart,
     weekEnd: weekEnd,
@@ -633,7 +625,6 @@ WeeklyGrowthNarrative _narrative(
     isPlaceholder: false,
     generatedAt: '2026-04-25T10:00:00',
   );
-}
 
 class _FakeTaskRepository extends TaskRepository {
   _FakeTaskRepository({
@@ -877,8 +868,7 @@ class _MutableAchievementRepository extends AchievementRepository {
     AchievementRarity? rarity,
     bool includeHidden = false,
     bool includeInactive = false,
-  }) async {
-    return AchievementListResponse(
+  }) async => AchievementListResponse(
       achievements: <AchievementWithProgress>[
         AchievementWithProgress(
           achievement: AchievementModel(
@@ -886,8 +876,8 @@ class _MutableAchievementRepository extends AchievementRepository {
             name: _isUnlocked ? 'unlocked' : 'locked',
             type: AchievementType.milestone,
             rarity: AchievementRarity.common,
-            createdAt: DateTime.utc(2026, 4, 1),
-            updatedAt: DateTime.utc(2026, 4, 1),
+            createdAt: DateTime.utc(2026, 4),
+            updatedAt: DateTime.utc(2026, 4),
           ),
           userProgress: UserAchievementProgress(
             achievementId: 'ach-1',
@@ -904,7 +894,6 @@ class _MutableAchievementRepository extends AchievementRepository {
       totalUnlocked: _isUnlocked ? 1 : 0,
       categories: const <String, dynamic>{},
     );
-  }
 
   @override
   Future<AchievementStats> getAchievementStats() async => AchievementStats(
@@ -933,7 +922,6 @@ class _MutableAchievementRepository extends AchievementRepository {
   @override
   Future<GalaxySkinListResponse> getGalaxySkins() async =>
       GalaxySkinListResponse(
-        equippedSkinId: null,
         skins: const <GalaxySkin>[],
       );
 
@@ -946,8 +934,6 @@ class _MutableAchievementRepository extends AchievementRepository {
   @override
   Future<AchievementMapData> getAchievementMap() async => AchievementMapData(
         nodes: const <AchievementMapNode>[],
-        connections: const <Map<String, dynamic>>[],
-        categories: const <Map<String, dynamic>>[],
       );
 }
 

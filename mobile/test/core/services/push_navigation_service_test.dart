@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/services/intervention_action_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/push_navigation_service.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
+
 import '../../shared/i18n_test_helper.dart';
 
 Widget _testRouterApp({required GoRouter routerConfig}) => MaterialApp.router(

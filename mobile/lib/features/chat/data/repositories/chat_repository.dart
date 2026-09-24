@@ -6,12 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/errors/failures.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_response_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/models/expert_catalog_model.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 class ChatRepository {
   ChatRepository(

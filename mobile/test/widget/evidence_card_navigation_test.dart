@@ -225,7 +225,7 @@ void main() {
             },
           ),
         ),
-      )),
+      ),),
     );
 
     // Tap to expand TIER2

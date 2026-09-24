@@ -36,7 +36,7 @@ final sprintStatisticsProvider = Provider<SprintStatistics>((ref) {
       sprintTasks.where((t) => t.status == TaskStatus.completed).length;
   final inProgressTasks = sprintTasks
       .where((t) =>
-          t.status == TaskStatus.inProgress || t.status == TaskStatus.stuck)
+          t.status == TaskStatus.inProgress || t.status == TaskStatus.stuck,)
       .length;
   final todoTasks =
       sprintTasks.where((t) => t.status == TaskStatus.pending).length;

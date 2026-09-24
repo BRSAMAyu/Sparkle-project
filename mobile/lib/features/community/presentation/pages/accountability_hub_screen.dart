@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/community_accountability_hub_model.dart';
@@ -12,8 +12,6 @@ import 'package:sparkle/features/community/presentation/providers/accountability
 import 'package:sparkle/features/community/presentation/widgets/accountability_hub/commitment_card.dart';
 import 'package:sparkle/features/community/presentation/widgets/accountability_hub/partner_observation_control.dart';
 import 'package:sparkle/features/community/presentation/widgets/community_strategy_card.dart';
-import 'package:sparkle/core/design/widgets/graphite_surfaces.dart';
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 
 class AccountabilityHubScreen extends ConsumerWidget {
   const AccountabilityHubScreen({super.key});
@@ -723,7 +721,7 @@ class _StrategySection extends StatelessWidget {
         icon: Icons.assignment_outlined,
         actionLabel: l10n.cahStrategyCreateAction,
         onAction: () => unawaited(context.push(CommunityRoutes.feed)),
-      ));
+      ),);
     }
 
     if (hub.partnerProgress.isEmpty) {
@@ -734,7 +732,7 @@ class _StrategySection extends StatelessWidget {
         icon: Icons.person_search_outlined,
         actionLabel: l10n.cahStrategyPartnerAction,
         onAction: () => unawaited(context.push(CommunityRoutes.friends)),
-      ));
+      ),);
     }
 
     if (hub.sharedGoals.isEmpty) {
@@ -745,7 +743,7 @@ class _StrategySection extends StatelessWidget {
         icon: Icons.groups_outlined,
         actionLabel: l10n.cahStrategySharedGoalAction,
         onAction: () => unawaited(context.push(CommunityRoutes.groups)),
-      ));
+      ),);
     }
 
     if (hub.squadRisks.isNotEmpty) {
@@ -756,7 +754,7 @@ class _StrategySection extends StatelessWidget {
         icon: Icons.health_and_safety_outlined,
         actionLabel: l10n.cahStrategySquadRiskAction,
         onAction: () => unawaited(context.push(CommunityRoutes.friends)),
-      ));
+      ),);
     }
 
     return strategies;

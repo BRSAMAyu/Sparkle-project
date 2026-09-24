@@ -569,7 +569,7 @@ class SmartScheduleService {
 /// Provider for SmartScheduleService
 /// 智能排程服务 Provider
 final smartScheduleServiceProvider = Provider<SmartScheduleService>(
-  (ref) => SmartScheduleService(ref),
+  SmartScheduleService.new,
 );
 
 /// Provider for suggested time slots for a task

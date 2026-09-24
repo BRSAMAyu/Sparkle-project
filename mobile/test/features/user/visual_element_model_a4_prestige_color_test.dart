@@ -14,8 +14,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
 
-VisualElementModel elementWithConfig(Map<String, dynamic> config) {
-  return VisualElementModel.fromJson(<String, dynamic>{
+VisualElementModel elementWithConfig(Map<String, dynamic> config) => VisualElementModel.fromJson(<String, dynamic>{
     'id': 've_test',
     'name': 'Test Element',
     'element_type': 'background',
@@ -25,7 +24,6 @@ VisualElementModel elementWithConfig(Map<String, dynamic> config) {
     'sort_order': 1,
     'config': config,
   });
-}
 
 void main() {
   test('hex-string List for colors yields the first parsable hex', () {

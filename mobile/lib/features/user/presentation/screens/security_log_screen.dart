@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/auth/auth.dart';
@@ -39,8 +39,7 @@ class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
     });
     try {
       final logs = await ref.read(authProvider.notifier).getSecurityLog(
-            limit: _pageSize,
-            offset: 0,
+            
           );
       if (!mounted) return;
       setState(() => _logs = logs);
@@ -63,7 +62,6 @@ class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
     setState(() => _isLoadingMore = true);
     try {
       final moreLogs = await ref.read(authProvider.notifier).getSecurityLog(
-            limit: _pageSize,
             offset: _logs.length,
           );
       if (!mounted) return;
@@ -205,8 +203,8 @@ class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
                             label: l10n.secLogAnomalies(_logs
                                 .where((item) =>
                                     item.action == 'login_failed' ||
-                                    item.action == 'account_delete')
-                                .length),
+                                    item.action == 'account_delete',)
+                                .length,),
                           ),
                         ],
                       ),

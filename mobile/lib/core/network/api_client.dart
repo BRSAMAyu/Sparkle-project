@@ -5,8 +5,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
-import 'package:sparkle/core/network/api_timeouts.dart';
 import 'package:sparkle/core/network/api_interceptor.dart';
+import 'package:sparkle/core/network/api_timeouts.dart';
 import 'package:sparkle/core/network/http_client_pinning.dart';
 import 'package:sparkle/core/network/idempotency_interceptor.dart';
 
@@ -37,40 +37,30 @@ class ApiClient {
   Future<Response<T>> get<T>(
     String path, {
     Map<String, dynamic>? queryParameters,
-  }) async {
-    return await _dio.get(path, queryParameters: queryParameters);
-  }
+  }) async => _dio.get(path, queryParameters: queryParameters);
 
   Future<Response<T>> post<T>(
     String path, {
     Object? data,
     Map<String, dynamic>? queryParameters,
-  }) async {
-    return await _dio.post(path, data: data, queryParameters: queryParameters);
-  }
+  }) async => _dio.post(path, data: data, queryParameters: queryParameters);
 
   Future<Response<T>> put<T>(
     String path, {
     Object? data,
     Map<String, dynamic>? queryParameters,
-  }) async {
-    return await _dio.put(path, data: data, queryParameters: queryParameters);
-  }
+  }) async => _dio.put(path, data: data, queryParameters: queryParameters);
 
   Future<Response<T>> patch<T>(
     String path, {
     Object? data,
     Map<String, dynamic>? queryParameters,
-  }) async {
-    return await _dio.patch(path, data: data, queryParameters: queryParameters);
-  }
+  }) async => _dio.patch(path, data: data, queryParameters: queryParameters);
 
   Future<Response<T>> delete<T>(
     String path, {
     Map<String, dynamic>? queryParameters,
-  }) async {
-    return await _dio.delete(path, queryParameters: queryParameters);
-  }
+  }) async => _dio.delete(path, queryParameters: queryParameters);
 
   /// SSE 流式 GET 请求
   ///
@@ -105,7 +95,7 @@ class ApiClient {
         return;
       }
 
-      var buffer = StringBuffer();
+      final buffer = StringBuffer();
 
       await for (final chunk in stream.cast<List<int>>().transform(utf8.decoder)) {
         buffer.write(chunk);
@@ -182,7 +172,7 @@ class ApiClient {
         return;
       }
 
-      var buffer = StringBuffer();
+      final buffer = StringBuffer();
 
       await for (final chunk in stream.cast<List<int>>().transform(utf8.decoder)) {
         buffer.write(chunk);

@@ -5,9 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class ResetPasswordScreen extends ConsumerStatefulWidget {
   const ResetPasswordScreen({super.key, this.initialToken});
@@ -152,7 +152,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                               ),
                             );
                             setState(
-                                () => _obscurePassword = !_obscurePassword);
+                                () => _obscurePassword = !_obscurePassword,);
                           },
                         ),
                       ),

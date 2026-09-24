@@ -40,7 +40,7 @@ void main() {
         tier: 'pro',
         expiresAt: DateTime(2026, 10, 22),
       );
-    });
+    },);
 
     expect(find.text('兑换码'), findsOneWidget);
     await tester.enterText(find.byType(TextField), 'SPARK-ABCD-EFGH-JKLM');
@@ -53,9 +53,7 @@ void main() {
   });
 
   testWidgets('已用完码：弹窗不关且展示失败反馈', (tester) async {
-    await openDialog(tester, onRedeem: (_) async {
-      return const RedeemCodeResult(status: RedeemCodeStatus.exhausted);
-    });
+    await openDialog(tester, onRedeem: (_) async => const RedeemCodeResult(status: RedeemCodeStatus.exhausted),);
 
     await tester.enterText(find.byType(TextField), 'SPARK-ABCD-EFGH-JKLM');
     await tester.tap(find.text('兑换'));
@@ -66,9 +64,7 @@ void main() {
   });
 
   testWidgets('过期码：展示过期反馈且弹窗保留可改输入', (tester) async {
-    await openDialog(tester, onRedeem: (_) async {
-      return const RedeemCodeResult(status: RedeemCodeStatus.expired);
-    });
+    await openDialog(tester, onRedeem: (_) async => const RedeemCodeResult(status: RedeemCodeStatus.expired),);
 
     await tester.enterText(find.byType(TextField), 'SPARK-OLD1-CODE-XXXX');
     await tester.tap(find.text('兑换'));
@@ -83,7 +79,7 @@ void main() {
     await openDialog(tester, onRedeem: (_) async {
       calls += 1;
       return const RedeemCodeResult(status: RedeemCodeStatus.error);
-    });
+    },);
 
     await tester.tap(find.text('取消'));
     await tester.pumpAndSettle();

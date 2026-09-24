@@ -8,7 +8,6 @@ void main() {
       const MaterialApp(
         home: Scaffold(
           body: SparkleAttentionPulse(
-            active: true,
             child: SizedBox(width: 100, height: 100),
           ),
         ),

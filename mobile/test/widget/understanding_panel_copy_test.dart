@@ -13,8 +13,7 @@ class _SnapshotApiClient implements ApiClient {
   Future<Response<T>> get<T>(
     String path, {
     Map<String, dynamic>? queryParameters,
-  }) async {
-    return Response<T>(
+  }) async => Response<T>(
       requestOptions: RequestOptions(path: path),
       data: <String, dynamic>{
         'claims': [
@@ -40,7 +39,6 @@ class _SnapshotApiClient implements ApiClient {
         'high_confidence_ratio': 1.0,
       } as T,
     );
-  }
 
   @override
   Future<Response<T>> post<T>(

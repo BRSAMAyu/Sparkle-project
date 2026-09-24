@@ -15,13 +15,12 @@ void main() {
   setUp(setUpI18nForTesting);
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  ExamSprintDashboardData _makeData({
+  ExamSprintDashboardData makeData({
     double? passProbability,
     int daysLeft = 5,
     String subject = 'Math',
     String? sleepGuardHint,
-  }) {
-    return ExamSprintDashboardData(
+  }) => ExamSprintDashboardData(
       planId: 'test-plan',
       planName: 'Test Sprint',
       subject: subject,
@@ -43,13 +42,11 @@ void main() {
       taskGroups: const [],
       sleepGuardHint: sleepGuardHint,
     );
-  }
 
-  Widget _buildCard(
+  Widget buildCard(
     ExamSprintDashboardData data, {
     VoidCallback? onRecordResult,
-  }) {
-    return testMaterialApp(theme: ThemeData.light().copyWith(
+  }) => testMaterialApp(theme: ThemeData.light().copyWith(
         extensions: [SparkleThemeExtension.light()],
       ),
       home: Scaffold(
@@ -60,14 +57,13 @@ void main() {
           ),
         ),
       ),);
-  }
 
   group('F14 — Animated Pass Probability Ring', () {
     testWidgets(
         'pass_probability = 0.72 animates from 0% to 72% with green ring',
         (tester) async {
-      final data = _makeData(passProbability: 0.72);
-      await tester.pumpWidget(_buildCard(data));
+      final data = makeData(passProbability: 0.72);
+      await tester.pumpWidget(buildCard(data));
 
       // Animation starts near 0%
       await tester.pump();
@@ -86,16 +82,16 @@ void main() {
     });
 
     testWidgets('pass_probability = 0.35 shows red-tinted percentage', (tester) async {
-      final data = _makeData(passProbability: 0.35);
-      await tester.pumpWidget(_buildCard(data));
+      final data = makeData(passProbability: 0.35);
+      await tester.pumpWidget(buildCard(data));
       await tester.pumpAndSettle(const Duration(milliseconds: 1200));
 
       expect(find.text('35%'), findsOneWidget);
     });
 
     testWidgets('pass_probability = null shows -- without errors', (tester) async {
-      final data = _makeData(passProbability: null);
-      await tester.pumpWidget(_buildCard(data));
+      final data = makeData();
+      await tester.pumpWidget(buildCard(data));
       await tester.pumpAndSettle(const Duration(milliseconds: 1200));
 
       expect(find.text('--'), findsOneWidget);
@@ -106,8 +102,8 @@ void main() {
     });
 
     testWidgets('animation starts at 0 and ends near target value', (tester) async {
-      final data = _makeData(passProbability: 0.80);
-      await tester.pumpWidget(_buildCard(data));
+      final data = makeData(passProbability: 0.80);
+      await tester.pumpWidget(buildCard(data));
 
       // Frame 0: animation value near 0
       await tester.pump();
@@ -122,13 +118,13 @@ void main() {
     });
 
     testWidgets('daysLeft = 1 shows 还有 1 天 beside ring', (tester) async {
-      final data = ExamSprintDashboardData(
+      const data = ExamSprintDashboardData(
         planId: 'test-plan',
         planName: 'Test',
         subject: '',
         daysLeft: 1,
         targetMode: 'pass',
-        todayProgress: const ExamSprintTodayProgress(
+        todayProgress: ExamSprintTodayProgress(
           completed: 1,
           total: 1,
           completionRate: 1.0,
@@ -141,9 +137,9 @@ void main() {
         totalMistakeCount: 6,
         streakDays: 1,
         passProbability: 0.9,
-        taskGroups: const [],
+        taskGroups: [],
       );
-      await tester.pumpWidget(_buildCard(data));
+      await tester.pumpWidget(buildCard(data));
       await tester.pumpAndSettle(const Duration(milliseconds: 1200));
 
       expect(find.text('还有 1 天'), findsOneWidget);
@@ -155,13 +151,13 @@ void main() {
     testWidgets(
         'daysLeft = 0 renders day-0 banner title without probability ring',
         (tester) async {
-      final data = _makeData(
+      final data = makeData(
         daysLeft: 0,
         passProbability: 0.9,
         subject: '计算机网络',
         sleepGuardHint: '保持稳定，不熬夜',
       );
-      await tester.pumpWidget(_buildCard(data));
+      await tester.pumpWidget(buildCard(data));
       // SPEC-B #8 后横幅为单次入场（320ms）——pump 越过入场窗口即可
       await tester.pump(const Duration(milliseconds: 400));
 
@@ -180,11 +176,11 @@ void main() {
 
     testWidgets('daysLeft = 1 renders normal dashboard with probability ring',
         (tester) async {
-      final data = _makeData(
+      final data = makeData(
         daysLeft: 1,
         passProbability: 0.85,
       );
-      await tester.pumpWidget(_buildCard(data));
+      await tester.pumpWidget(buildCard(data));
       await tester.pumpAndSettle(const Duration(milliseconds: 1200));
 
       // Normal header
@@ -200,16 +196,16 @@ void main() {
     testWidgets('record exam result button fires callback',
         (tester) async {
       var callbackFired = false;
-      final data = _makeData(
+      final data = makeData(
         daysLeft: 0,
         passProbability: 0.9,
       );
-      await tester.pumpWidget(_buildCard(
+      await tester.pumpWidget(buildCard(
         data,
         onRecordResult: () {
           callbackFired = true;
         },
-      ));
+      ),);
       await tester.pump(const Duration(milliseconds: 400));
 
       final button = find.text('记录考试结果');
@@ -228,7 +224,7 @@ void main() {
 
     Future<void> pumpCardAt(WidgetTester tester, int daysLeft) async {
       await tester
-          .pumpWidget(_buildCard(_makeData(daysLeft: daysLeft, passProbability: 0.72)));
+          .pumpWidget(buildCard(makeData(daysLeft: daysLeft, passProbability: 0.72)));
       await tester.pumpAndSettle();
     }
 
@@ -309,24 +305,24 @@ void main() {
   group('SPEC-B #2 — N6 预测数准入四件（口径行 / 低档文案 / CB-safe 色源 / 320ms）',
       () {
     testWidgets('② 口径一行就地可见：「按当前进度估算」', (tester) async {
-      await tester.pumpWidget(_buildCard(_makeData(passProbability: 0.72)));
+      await tester.pumpWidget(buildCard(makeData(passProbability: 0.72)));
       await tester.pumpAndSettle();
       expect(find.text('按当前进度估算'), findsOneWidget);
     });
 
     testWidgets('③ 低档（<0.4）动作文案触发；≥0.4 不出现', (tester) async {
-      await tester.pumpWidget(_buildCard(_makeData(passProbability: 0.35)));
+      await tester.pumpWidget(buildCard(makeData(passProbability: 0.35)));
       await tester.pumpAndSettle();
       expect(find.text('还来得及，先攻高频考点'), findsOneWidget);
 
-      await tester.pumpWidget(_buildCard(_makeData(passProbability: 0.72)));
+      await tester.pumpWidget(buildCard(makeData(passProbability: 0.72)));
       await tester.pumpAndSettle();
       expect(find.text('还来得及，先攻高频考点'), findsNothing);
     });
 
     testWidgets('④ 入场动画时长 ∈ 正典集：320ms 到点完成（排掉 1200ms offLadder 档）',
         (tester) async {
-      await tester.pumpWidget(_buildCard(_makeData(passProbability: 0.72)));
+      await tester.pumpWidget(buildCard(makeData(passProbability: 0.72)));
       await tester.pump(); // 首帧：动画起跑，弧值 0%
       expect(find.text('0%'), findsOneWidget);
 
@@ -361,7 +357,7 @@ void main() {
           home: Scaffold(
             body: SingleChildScrollView(
               child: ExamSprintDashboardCard(
-                data: _makeData(passProbability: 0.35),
+                data: makeData(passProbability: 0.35),
               ),
             ),
           ),
@@ -393,7 +389,7 @@ void main() {
           home: Scaffold(
             body: SingleChildScrollView(
               child: ExamSprintDashboardCard(
-                data: _makeData(passProbability: 0.72),
+                data: makeData(passProbability: 0.72),
               ),
             ),
           ),
@@ -418,7 +414,7 @@ void main() {
       return transforms.first.transform.getTranslation().y;
     }
 
-    ExamSprintDashboardData dayZeroData() => _makeData(
+    ExamSprintDashboardData dayZeroData() => makeData(
           daysLeft: 0,
           passProbability: 0.9,
           subject: '计算机网络',
@@ -430,12 +426,12 @@ void main() {
       PerformanceService.instance.currentTier.value = PerformanceTier.high;
       addTearDown(() =>
           PerformanceService.instance.currentTier.value =
-              defaultPerformanceTier());
+              defaultPerformanceTier(),);
     }
 
     testWidgets('单次入场：320ms 内到静止位，之后持续观察无循环浮动', (tester) async {
       forceHighTier();
-      await tester.pumpWidget(_buildCard(dayZeroData()));
+      await tester.pumpWidget(buildCard(dayZeroData()));
       await tester.pump(); // 首帧：入场起跑（自下方 6px 浮入）
       expect(find.text('今天考试 · 你已经准备好了 🎓'), findsOneWidget);
       expect(bannerTranslateY(tester), greaterThan(0));
@@ -459,7 +455,7 @@ void main() {
             data: const MediaQueryData(disableAnimations: true),
             child: Scaffold(
               body: SingleChildScrollView(
-                child: ExamSprintDashboardCard(data: _makeData(daysLeft: 0)),
+                child: ExamSprintDashboardCard(data: makeData(daysLeft: 0)),
               ),
             ),
           ),
@@ -477,7 +473,7 @@ void main() {
 
   group('SPEC-FIX R5 — S-G9 同卡二出去重 + 日期走 date_formatting 唯一入口', () {
     testWidgets('S-G9：今日进度文案只保留 _HeadlineBlock 主位一种措辞', (tester) async {
-      await tester.pumpWidget(_buildCard(_makeData(passProbability: 0.72)));
+      await tester.pumpWidget(buildCard(makeData(passProbability: 0.72)));
       await tester.pumpAndSettle();
 
       // 主位（examTodayProgress）恰 1 处；弧旁副本（examTodayCompleted）
@@ -529,7 +525,7 @@ void main() {
           ),
         ],
       );
-      await tester.pumpWidget(_buildCard(data));
+      await tester.pumpWidget(buildCard(data));
       await tester.pumpAndSettle();
 
       // 未来任务组默认折叠：先展开（_TaskSectionHeader 的 CTA），日期随组卡可见。

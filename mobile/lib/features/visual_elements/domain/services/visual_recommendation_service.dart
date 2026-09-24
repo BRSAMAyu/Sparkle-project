@@ -70,7 +70,6 @@ class VisualRecommendationService {
           bundle: 8,
         );
         score += _keywordScore(text, _focusKeywords());
-        break;
       case UserActivityState.relax:
         score += _scoreByType(
           element.elementType,
@@ -80,7 +79,6 @@ class VisualRecommendationService {
           bundle: 6,
         );
         score += _keywordScore(text, _relaxKeywords());
-        break;
       case UserActivityState.sprint:
         score += _scoreByType(
           element.elementType,
@@ -90,7 +88,6 @@ class VisualRecommendationService {
           bundle: 10,
         );
         score += _keywordScore(text, _sprintKeywords());
-        break;
       case UserActivityState.night:
         score += _scoreByType(
           element.elementType,
@@ -100,7 +97,6 @@ class VisualRecommendationService {
           bundle: 8,
         );
         score += _keywordScore(text, _nightKeywords());
-        break;
       case UserActivityState.streak:
         score += _scoreByType(
           element.elementType,
@@ -110,7 +106,6 @@ class VisualRecommendationService {
           bundle: 12,
         );
         score += _keywordScore(text, _streakKeywords());
-        break;
     }
 
     if (element.isUnlocked) {

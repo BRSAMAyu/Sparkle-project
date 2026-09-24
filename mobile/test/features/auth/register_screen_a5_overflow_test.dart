@@ -24,12 +24,12 @@ Future<void> _pumpRegister(WidgetTester tester) async {
   addTearDown(tester.view.reset);
 
   await tester.pumpWidget(
-    ProviderScope(
+    const ProviderScope(
       child: MaterialApp(
-        locale: const Locale('en'),
-        supportedLocales: const [Locale('en'), Locale('zh')],
-        localizationsDelegates: const [AppLocalizations.delegate],
-        home: const RegisterScreen(),
+        locale: Locale('en'),
+        supportedLocales: [Locale('en'), Locale('zh')],
+        localizationsDelegates: [AppLocalizations.delegate],
+        home: RegisterScreen(),
       ),
     ),
   );

@@ -173,7 +173,7 @@ class ErrorBookRepository {
 
   /// N34：错题列表查询指纹（缓存键）。
   String _errorListCacheKey({
-    String? subject,
+    required int page, required int pageSize, String? subject,
     String? chapter,
     String? nodeId,
     bool? needReview,
@@ -181,14 +181,12 @@ class ErrorBookRepository {
     double? masteryMin,
     double? masteryMax,
     CognitiveDimension? cognitiveDimension,
-    required int page,
-    required int pageSize,
   }) {
     final parts = [
       subject ?? '-',
       chapter ?? '-',
       nodeId ?? '-',
-      needReview == true ? '1' : '0',
+      if (needReview ?? false) '1' else '0',
       keyword ?? '-',
       masteryMin?.toStringAsFixed(2) ?? '-',
       masteryMax?.toStringAsFixed(2) ?? '-',
@@ -494,7 +492,7 @@ class ErrorBookRepository {
       final errorDetail =
           data is Map<String, dynamic> ? data['detail'] as String? : null;
       return Exception(
-          errorDetail ?? l10n.errorBookInvalidParams);
+          errorDetail ?? l10n.errorBookInvalidParams,);
     } else if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout) {
       return Exception(l10n.errorBookNetworkTimeoutMsg);

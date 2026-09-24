@@ -617,7 +617,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
     });
 
     unawaited(_announceInstruction(
-        context.l10n.auto_practicecomplete));
+        context.l10n.auto_practicecomplete,),);
     if (!completedFromBackground) {
       if (contextEventId == null) {
         AppFeedback.success(context, context.l10n.toolsBreathComplete);

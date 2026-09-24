@@ -3,11 +3,11 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/core/errors/failures.dart';
 import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/errors/failures.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/session_refresh_service.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
@@ -110,11 +110,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }) async {
     if (_isStaleSessionOp(generation)) {
       debugPrint(
-          'ℹ️ Skipping stale session reset (generation $generation superseded)');
+          'ℹ️ Skipping stale session reset (generation $generation superseded)',);
       return;
     }
     debugPrint(
-        'ℹ️ Stored auth session expired, clearing local auth state: $error');
+        'ℹ️ Stored auth session expired, clearing local auth state: $error',);
     await _authRepository.clearTokens();
     await _clearUserScopedLocalData();
     state = state.copyWith(

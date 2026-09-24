@@ -35,9 +35,7 @@ class SpringCurve extends Curve {
 
 class SparkleBottomSheet {
   static const Curve _sheetCurve = SpringCurve(
-    stiffness: 280,
-    damping: 26,
-    initialVelocity: 0.8,
+    
   );
 
   static Future<T?> show<T>({
@@ -54,8 +52,7 @@ class SparkleBottomSheet {
     BoxConstraints? constraints,
     RouteSettings? routeSettings,
     Color? barrierColor,
-  }) {
-    return showModalBottomSheet<T>(
+  }) => showModalBottomSheet<T>(
       context: context,
       backgroundColor:
           backgroundColor ?? DS.surfaceRoleColor(SparkleSurfaceRole.modal),
@@ -81,7 +78,6 @@ class SparkleBottomSheet {
         child: builder(sheetContext),
       ),
     );
-  }
 }
 
 Future<T?> showSensoryModalBottomSheet<T>({
@@ -109,7 +105,7 @@ Future<T?> showSensoryModalBottomSheet<T>({
     builder: (sheetContext) => Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _DragHandle(),
+        const _DragHandle(),
         Flexible(child: builder(sheetContext)),
       ],
     ),

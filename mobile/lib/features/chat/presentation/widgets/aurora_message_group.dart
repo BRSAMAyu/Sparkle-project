@@ -39,8 +39,7 @@ class AuroraMessageGroup extends StatelessWidget {
   final List<String> segments;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (int i = 0; i < segments.length; i++) ...[
@@ -94,5 +93,4 @@ class AuroraMessageGroup extends StatelessWidget {
         ],
       ],
     );
-  }
 }

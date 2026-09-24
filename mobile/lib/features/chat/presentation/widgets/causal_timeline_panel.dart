@@ -5,11 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 
 // ── Data models ──────────────────────────────────────────────────────────────
 
@@ -160,7 +160,7 @@ class CausalTimelinePanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final timeline = ref.watch(causalTimelineProvider);
 
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: DS.surfacePanel,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -173,7 +173,7 @@ class CausalTimelinePanel extends ConsumerWidget {
             _Handle(),
             _Header(
                 onRefresh: () =>
-                    ref.read(causalTimelineProvider.notifier).load()),
+                    ref.read(causalTimelineProvider.notifier).load(),),
             Flexible(
               child: timeline.when(
                 loading: () => Padding(

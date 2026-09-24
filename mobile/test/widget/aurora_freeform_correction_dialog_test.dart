@@ -1,10 +1,10 @@
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart';
-import 'package:sparkle/l10n/app_localizations_en.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:sparkle/l10n/app_localizations_en.dart';
 
 void main() {
   setUp(() {

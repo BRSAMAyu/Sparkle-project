@@ -71,7 +71,7 @@ class VisualElementUnlockDialog extends StatefulWidget {
 
   /// Get the highest rarity from a list of elements
   static VisualElementRarity _getHighestRarity(
-      List<VisualElementModel> elements) {
+      List<VisualElementModel> elements,) {
     if (elements.isEmpty) return VisualElementRarity.common;
     return elements
         .map((e) => e.rarity)
@@ -172,21 +172,18 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
       case VisualElementRarity.rare:
         // Glow animation
         _glowController.repeat(reverse: true);
-        break;
       case VisualElementRarity.epic:
         // Particles + glow
         _glowController.repeat(reverse: true);
         if (_particlesEnabled) {
           _particleController.repeat();
         }
-        break;
       case VisualElementRarity.legendary:
         // Full effects + screen shake
         _glowController.repeat(reverse: true);
         if (_particlesEnabled) {
           _particleController.repeat();
         }
-        break;
     }
   }
 
@@ -484,7 +481,7 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
       );
 
   Widget _buildRarityIndicator(
-          VisualElementRarity rarity, AppLocalizations l10n) =>
+          VisualElementRarity rarity, AppLocalizations l10n,) =>
       Container(
         padding: const EdgeInsets.symmetric(
           horizontal: DS.spacing12,

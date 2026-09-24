@@ -38,9 +38,9 @@ class _StubApiClient implements ApiClient {
 }
 
 class _StubAuthRepository implements AuthRepository {
-  String? _accessToken;
 
   _StubAuthRepository([this._accessToken = 'valid-token']);
+  final String? _accessToken;
 
   @override
   Future<String?> getAccessToken() async => _accessToken;

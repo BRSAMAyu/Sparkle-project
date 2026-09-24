@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/features/galaxy/data/models/node_history_model.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/node_detail_sheet.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
+
 import '../../../shared/i18n_test_helper.dart';
 
 void main() {
@@ -91,7 +92,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         child: testMaterialApp(
-          home: Scaffold(
+          home: const Scaffold(
             body: NodeDetailSheet(
               nodeId: 'cn.empty',
               nodeLabel: '空白节点',

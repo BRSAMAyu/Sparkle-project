@@ -4,13 +4,13 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:isar/isar.dart';
-import '../../shared/isar_test_helper.dart';
 import 'package:mockito/mockito.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/analytics/models/user_analytics_event.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/offline/sync_engine.dart';
 
+import '../../shared/isar_test_helper.dart';
 import '../../unit/sync_engine_test.mocks.dart';
 
 void main() {

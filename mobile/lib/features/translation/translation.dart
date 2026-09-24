@@ -1,7 +1,7 @@
 /// Translation feature exports
 ///
 /// Provides text translation UI components and services
-library translation;
+library;
 
 // Services
 export 'data/services/translation_service.dart';

@@ -280,12 +280,12 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
                   );
               if (mounted) {
                 AppFeedback.success(
-                    context, context.l10n.capsuleFeedbackThanks);
+                    context, context.l10n.capsuleFeedbackThanks,);
               }
             } catch (_) {
               if (mounted) {
                 AppFeedback.error(
-                    context, context.l10n.capsuleSubmitFailed(''));
+                    context, context.l10n.capsuleSubmitFailed(''),);
               }
             }
           },

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
-import 'package:sparkle/features/translation/data/services/translation_service.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/features/translation/data/services/translation_service.dart';
 
 
 /// Inline translation block for sentences/paragraphs
@@ -177,13 +177,13 @@ class _InlineTranslationBlockState
         ),
         child: Row(
           children: [
-            SizedBox(
+            const SizedBox(
               width: 16,
               height: 16,
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
-            SizedBox(width: DS.sm),
-            Text(context.l10n.transTranslating, style: TextStyle(fontSize: 14)),
+            const SizedBox(width: DS.sm),
+            Text(context.l10n.transTranslating, style: const TextStyle(fontSize: 14)),
           ],
         ),
       );
@@ -272,7 +272,7 @@ class _InlineTranslationBlockState
               alignment: Alignment.centerRight,
               child: TextButton.icon(
                 icon: const Icon(Icons.bookmark_add_outlined, size: 16),
-                label: Text(context.l10n.transSaveToWordCard, style: TextStyle(fontSize: 13)),
+                label: Text(context.l10n.transSaveToWordCard, style: const TextStyle(fontSize: 13)),
                 onPressed: widget.onSaveToKnowledge,
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(

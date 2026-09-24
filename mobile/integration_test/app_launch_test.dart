@@ -3,11 +3,11 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/presentation/screens/login_screen.dart';
 import 'package:sparkle/features/home/presentation/screens/dashboard_screen.dart';
 import 'package:sparkle/main.dart' as app;
-import 'package:sparkle/core/services/bgm_service.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// App Launch Test
 /// Verifies: app starts, no crash, core entry point exists
@@ -36,7 +36,7 @@ void main() {
       final reachedHome = find.byType(DashboardScreen).evaluate().isNotEmpty;
 
       expect(reachedLogin || reachedHome, isTrue,
-          reason: 'App should reach either LoginScreen or DashboardScreen');
+          reason: 'App should reach either LoginScreen or DashboardScreen',);
 
       // Check for red screen of death
       final redScreen = find.byType(ColoredBox).evaluate().where((e) {

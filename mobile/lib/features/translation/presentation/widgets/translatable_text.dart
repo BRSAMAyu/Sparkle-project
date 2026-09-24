@@ -4,11 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/translation/translation.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// A widget that makes text translatable via long-press selection
 ///
@@ -176,8 +175,8 @@ class _TranslatableTextState extends ConsumerState<TranslatableText> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.translate, size: 16),
-                    SizedBox(width: 4),
+                    const Icon(Icons.translate, size: 16),
+                    const SizedBox(width: 4),
                     Text(context.l10n.transTranslate),
                   ],
                 ),
@@ -194,8 +193,8 @@ class _TranslatableTextState extends ConsumerState<TranslatableText> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.copy, size: 16),
-                    SizedBox(width: 4),
+                    const Icon(Icons.copy, size: 16),
+                    const SizedBox(width: 4),
                     Text(context.l10n.transCopy),
                   ],
                 ),

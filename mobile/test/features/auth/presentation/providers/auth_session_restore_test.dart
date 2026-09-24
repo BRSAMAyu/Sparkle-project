@@ -1,6 +1,6 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
@@ -74,7 +74,7 @@ void main() {
       );
       // M6-07：state 为 bool?，未决期 null；等待其落定为 true。
       await _waitFor(
-        () => container.read(onboardingCompletedProvider) == true,
+        () => container.read(onboardingCompletedProvider) ?? false,
       );
 
       final authState = container.read(authProvider);
@@ -121,7 +121,7 @@ void main() {
         () => rebuiltContainer.read(authProvider).isAuthenticated,
       );
       await _waitFor(
-        () => rebuiltContainer.read(onboardingCompletedProvider) == true,
+        () => rebuiltContainer.read(onboardingCompletedProvider) ?? false,
       );
 
       final rebuiltAuthState = rebuiltContainer.read(authProvider);
@@ -273,7 +273,6 @@ class _FailingAuthRepository extends _FakeAuthRepository {
     depthPreference: 0.2,
     curiosityPreference: 0.4,
     isActive: true,
-    status: UserStatus.offline,
     createdAt: DateTime(2026),
     updatedAt: DateTime(2026),
   );

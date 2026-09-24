@@ -157,7 +157,7 @@ class PushTokenManager extends AsyncNotifier<void> {
         await prefs.setString(_lastTokenKey, token);
 
         _logger.i(
-            'Successfully registered $resolvedTokenType push token for device $deviceId');
+            'Successfully registered $resolvedTokenType push token for device $deviceId',);
         return true;
       }
 

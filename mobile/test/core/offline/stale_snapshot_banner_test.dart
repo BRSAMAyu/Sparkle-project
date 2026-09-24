@@ -15,7 +15,7 @@ void main() {
       testMaterialApp(
         home: Scaffold(
           body: StaleSnapshotBanner(
-              fetchedAt: DateTime(2026, 9, 21, 22, 30)),
+              fetchedAt: DateTime(2026, 9, 21, 22, 30),),
         ),
       ),
     );

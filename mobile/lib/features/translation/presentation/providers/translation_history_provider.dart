@@ -1,10 +1,10 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/features/translation/data/repositories/local_translation_repository.dart';
-import 'package:flutter/foundation.dart';
 
 /// Translation history state
 class TranslationHistoryState {
@@ -48,7 +48,7 @@ class TranslationHistoryNotifier extends StateNotifier<TranslationHistoryState> 
     // Defer initial load so the provider tree is fully built before we
     // access Isar collections.  This avoids a crash if the widget that
     // first reads this provider is disposed during the same frame.
-    Future.microtask(() => _initialLoad());
+    Future.microtask(_initialLoad);
   }
 
   final LocalTranslationRepository _repository;

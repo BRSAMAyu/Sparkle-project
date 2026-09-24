@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 
 /// Widget for displaying a knowledge node share card preview
@@ -244,7 +244,7 @@ class NodeShareCard extends StatelessWidget {
                             child: ClipRRect(
                               borderRadius: DS.borderRadius4,
                               child: LinearProgressIndicator(
-                                value: masteryLevel!,
+                                value: masteryLevel,
                                 backgroundColor: DS.neutral200,
                                 valueColor: AlwaysStoppedAnimation<Color>(
                                   _getMasteryColor(),

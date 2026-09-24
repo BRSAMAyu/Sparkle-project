@@ -1,13 +1,12 @@
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
-import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
-import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/memory/memory.dart';
@@ -124,7 +123,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
       AsyncValue<Map<String, dynamic>> profileContextAsync,
       AsyncValue<List<Map<String, dynamic>>> inferredPreferencesAsync,
       AsyncValue<List<Map<String, dynamic>>> activePoliciesAsync,
-      {String? profileLoadError}) {
+      {String? profileLoadError,}) {
     final layer1 = data['layer_1'] as Map<String, dynamic>? ?? {};
     final layer2 = data['layer_2'] as Map<String, dynamic>? ?? {};
     final layer3 = data['layer_3'] as Map<String, dynamic>? ?? {};
@@ -347,7 +346,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
   }
 
   Widget _buildProfileLoadWarning(
-          AppLocalizations l10n, String message, WidgetRef ref) =>
+          AppLocalizations l10n, String message, WidgetRef ref,) =>
       GraphiteCardSurface(
         surfaceRole: SparkleSurfaceRole.card,
         padding: const EdgeInsets.all(DS.spacing12),
@@ -520,7 +519,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
   }
 
   Widget _buildReadableSummaryCard(
-      AppLocalizations l10n, List<String> summaryLines) {
+      AppLocalizations l10n, List<String> summaryLines,) {
     final summaryMarkdown = summaryLines
         .map((line) => '- ${normalizeRichText(line).trim()}')
         .join('\n');
@@ -541,7 +540,6 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
           textColor: DS.textSecondary,
           codeBackgroundColor: DS.surfaceSecondary,
           linkColor: DS.brandPrimary,
-          fontSize: DS.fontSizeBase,
           contentRole: SparkleMarkdownRole.knowledgeSummary,
         ),
       ],
@@ -1229,7 +1227,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                   AppFeedback.error(
                       context,
                       l10n.personaCorrectionSubmitFailed(
-                          _friendlyError(error, l10n)));
+                          _friendlyError(error, l10n),),);
                 }
               }
             },
@@ -1311,7 +1309,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                   AppFeedback.error(
                       context,
                       l10n.personaPreferenceUpdateFailed(
-                          _friendlyError(error, l10n)));
+                          _friendlyError(error, l10n),),);
                 }
               }
             },
@@ -1359,7 +1357,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
       } catch (error) {
         if (context.mounted) {
           AppFeedback.error(
-              context, l10n.personaRollbackFailed(_friendlyError(error, l10n)));
+              context, l10n.personaRollbackFailed(_friendlyError(error, l10n)),);
         }
       }
     }
@@ -1451,7 +1449,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                       title: Text(l10n.personaConfirmGoalStatusChange),
                       content: Text(
                         l10n.personaGoalStatusChangeContent(
-                            displayTitle, status, nextStatus),
+                            displayTitle, status, nextStatus,),
                       ),
                       actions: [
                         // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档，
@@ -1585,7 +1583,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                 ref.invalidate(activePoliciesProvider);
                 if (context.mounted) {
                   AppFeedback.success(
-                      context, context.l10n.personaInferredAdjusted);
+                      context, context.l10n.personaInferredAdjusted,);
                   Navigator.of(context).pop();
                 }
               } catch (error) {
@@ -1593,7 +1591,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                   AppFeedback.error(
                       context,
                       context.l10n.personaAdjustmentFailed(
-                          _friendlyError(error, context.l10n)));
+                          _friendlyError(error, context.l10n),),);
                 }
               }
             },
@@ -1624,7 +1622,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
         AppFeedback.error(
             context,
             context.l10n
-                .personaRestoreFailed(_friendlyError(error, context.l10n)));
+                .personaRestoreFailed(_friendlyError(error, context.l10n)),);
       }
     }
   }

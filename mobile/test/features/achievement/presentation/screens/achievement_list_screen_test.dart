@@ -134,7 +134,6 @@ class _FakeAchievementRepository extends AchievementRepository {
   Future<GalaxySkinListResponse> getGalaxySkins() async =>
       GalaxySkinListResponse(
         skins: const <GalaxySkin>[],
-        equippedSkinId: null,
       );
 
   @override

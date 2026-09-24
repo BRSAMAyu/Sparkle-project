@@ -485,8 +485,7 @@ class _FieldChangeTile extends StatelessWidget {
   final Map<String, dynamic> field;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       width: double.infinity,
       padding: const EdgeInsets.all(DS.spacing10),
       decoration: BoxDecoration(
@@ -524,7 +523,6 @@ class _FieldChangeTile extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 class _TargetComparison extends StatelessWidget {

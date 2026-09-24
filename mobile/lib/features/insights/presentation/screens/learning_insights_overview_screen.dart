@@ -157,7 +157,7 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
                     ? _simulationStatus(context, latestSimulation)
                     : simulationState.recommendedSeeds.isNotEmpty
                         ? context.l10n.lioRecommendedSeeds(
-                            simulationState.recommendedSeeds.length)
+                            simulationState.recommendedSeeds.length,)
                         : context.l10n.lioStartNewSim,
                 accent: DS.brandSecondary,
                 icon: Icons.groups_rounded,
@@ -284,7 +284,7 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
   }
 
   String _theaterTitle(
-      BuildContext context, Map<String, dynamic>? latestTheater) {
+      BuildContext context, Map<String, dynamic>? latestTheater,) {
     if (latestTheater == null) {
       return context.l10n.insTheaterFallback;
     }
@@ -320,23 +320,23 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
   }
 
   String _simulationStatus(
-      BuildContext context, Map<String, dynamic>? latestSimulation) {
+      BuildContext context, Map<String, dynamic>? latestSimulation,) {
     if (latestSimulation == null) {
       return context.l10n.lioNoSimYet;
     }
     return context.l10n.lioRecentUpdate(
         latestSimulation['description']?.toString() ??
-            context.l10n.insHasContinue);
+            context.l10n.insHasContinue,);
   }
 
   String _theaterStatus(
-      BuildContext context, Map<String, dynamic>? latestTheater) {
+      BuildContext context, Map<String, dynamic>? latestTheater,) {
     if (latestTheater == null) {
       return context.l10n.lioNoTheaterYet;
     }
     return context.l10n.lioRecentUpdate(
         latestTheater['description']?.toString() ??
-            context.l10n.insHasContinue);
+            context.l10n.insHasContinue,);
   }
 
   String _reportStatus(BuildContext context, LearningReport? report) {
@@ -351,7 +351,7 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
   }
 
   String _simulationLocation(
-      BuildContext context, Map<String, dynamic>? latestSimulation) {
+      BuildContext context, Map<String, dynamic>? latestSimulation,) {
     if (latestSimulation == null) {
       return SimulationRoutes.simulation;
     }
@@ -366,7 +366,7 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
   }
 
   String _theaterLocation(
-      BuildContext context, Map<String, dynamic>? latestTheater) {
+      BuildContext context, Map<String, dynamic>? latestTheater,) {
     if (latestTheater == null) {
       return TheaterRoutes.theater;
     }

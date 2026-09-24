@@ -369,8 +369,8 @@ class UnifiedNotificationCard extends StatelessWidget {
     VoidCallback? onInaccurate,
   }) {
     final score = notification.recallScore;
-    final boundedScore = score == null ? null : score.clamp(0.0, 1.0);
-    return Container(
+    final boundedScore = score?.clamp(0.0, 1.0);
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: DS.surfaceSecondary,
         borderRadius: BorderRadius.circular(8),
@@ -642,8 +642,7 @@ class UnifiedNotificationCard extends StatelessWidget {
 
   bool _hasText(String? value) => value != null && value.trim().isNotEmpty;
 
-  Widget _buildGoalValueChip(BuildContext context) {
-    return Semantics(
+  Widget _buildGoalValueChip(BuildContext context) => Semantics(
       container: true,
       label: context.l10n.notificationGoalValueSemantics(
         notification.valueReason ?? '',
@@ -653,10 +652,8 @@ class UnifiedNotificationCard extends StatelessWidget {
         child: GoalValueChip(text: notification.valueReason!),
       ),
     );
-  }
 
-  Widget _buildNextStepHint(BuildContext context) {
-    return Semantics(
+  Widget _buildNextStepHint(BuildContext context) => Semantics(
       container: true,
       label: context.l10n.notificationNextStepSemantics(
         notification.suggestedStep ?? '',
@@ -687,7 +684,6 @@ class UnifiedNotificationCard extends StatelessWidget {
       ),
     ),
     );
-  }
 
   String _labelForInteractionState(BuildContext context, String state) {
     switch (state) {

@@ -11,14 +11,7 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 /// 显示打卡的点赞和鼓励消息，并提供互动功能
 class CheckinInteraction extends StatelessWidget {
   const CheckinInteraction({
-    super.key,
-    required this.checkinId,
-    required this.content,
-    required this.authorName,
-    required this.likes,
-    required this.encouragements,
-    required this.isMyCheckin,
-    required this.isMyPartner,
+    required this.checkinId, required this.content, required this.authorName, required this.likes, required this.encouragements, required this.isMyCheckin, required this.isMyPartner, super.key,
     this.onLike,
     this.onEncourage,
   });
@@ -148,7 +141,7 @@ class CheckinInteraction extends StatelessWidget {
   Widget _buildEncourageButton(BuildContext context) => InkWell(
         onTap: () {
           unawaited(
-              SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
+              SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen),);
           _showEncourageDialog(context);
         },
         borderRadius: BorderRadius.circular(20),
@@ -252,7 +245,7 @@ class CheckinInteraction extends StatelessWidget {
       );
 
   String _encouragementAuthor(
-      BuildContext context, EncouragementMessage encouragement) {
+      BuildContext context, EncouragementMessage encouragement,) {
     if (encouragement.authorName.isNotEmpty) {
       return encouragement.authorName;
     }
@@ -324,12 +317,6 @@ class EncouragementMessage {
     required this.createdAt,
   });
 
-  final String id;
-  final String authorId;
-  final String authorName;
-  final String message;
-  final DateTime createdAt;
-
   factory EncouragementMessage.fromJson(Map<String, dynamic> json) =>
       EncouragementMessage(
         id: json['id'] as String,
@@ -339,6 +326,12 @@ class EncouragementMessage {
         message: json['message'] as String,
         createdAt: DateTime.parse(json['created_at'] as String),
       );
+
+  final String id;
+  final String authorId;
+  final String authorName;
+  final String message;
+  final DateTime createdAt;
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -352,9 +345,7 @@ class EncouragementMessage {
 /// 简化版打卡互动组件 - 仅显示互动信息
 class CheckinInteractionCompact extends StatelessWidget {
   const CheckinInteractionCompact({
-    super.key,
-    required this.likes,
-    required this.encouragementCount,
+    required this.likes, required this.encouragementCount, super.key,
     this.showEncouragement = true,
     this.onTap,
   });
@@ -420,9 +411,7 @@ class CheckinInteractionCompact extends StatelessWidget {
 /// 打卡互动列表 - 用于时间线展示
 class CheckinInteractionList extends StatelessWidget {
   const CheckinInteractionList({
-    super.key,
-    required this.checkins,
-    required this.myUserId,
+    required this.checkins, required this.myUserId, super.key,
     this.onLike,
     this.onEncourage,
     this.onCheckinTap,
@@ -502,14 +491,6 @@ class CheckinWithInteraction {
     required this.createdAt,
   });
 
-  final String id;
-  final String userId;
-  final String authorName;
-  final String content;
-  final int likes;
-  final List<EncouragementMessage> encouragements;
-  final DateTime createdAt;
-
   factory CheckinWithInteraction.fromJson(Map<String, dynamic> json) =>
       CheckinWithInteraction(
         id: json['id'] as String,
@@ -519,10 +500,18 @@ class CheckinWithInteraction {
         likes: json['likes'] as int? ?? 0,
         encouragements: (json['encouragements'] as List? ?? [])
             .map(
-                (e) => EncouragementMessage.fromJson(e as Map<String, dynamic>))
+                (e) => EncouragementMessage.fromJson(e as Map<String, dynamic>),)
             .toList(),
         createdAt: DateTime.parse(json['created_at'] as String),
       );
+
+  final String id;
+  final String userId;
+  final String authorName;
+  final String content;
+  final int likes;
+  final List<EncouragementMessage> encouragements;
+  final DateTime createdAt;
 
   Map<String, dynamic> toJson() => {
         'id': id,

@@ -73,8 +73,8 @@ class GalaxyDraftRepository {
     }
 
     final normalized = items
-        .where((item) => item is Map)
-        .map((item) => Map<String, dynamic>.from(item as Map))
+        .whereType<Map>()
+        .map(Map<String, dynamic>.from)
         .toList(growable: false);
 
     if (normalized.isEmpty) {

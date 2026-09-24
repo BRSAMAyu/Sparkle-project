@@ -15,7 +15,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      testMaterialApp(home: Scaffold(
+      testMaterialApp(home: const Scaffold(
           body: SingleChildScrollView(
             child: Column(
               children: [

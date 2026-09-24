@@ -196,7 +196,7 @@ Widget _buildApp(MemoryApiService service) => ProviderScope(
       overrides: [
         memoryApiServiceProvider.overrideWithValue(service),
       ],
-      child: testMaterialApp(home: MemoryPanelScreen()),
+      child: testMaterialApp(home: const MemoryPanelScreen()),
     );
 
 void main() {
@@ -214,7 +214,7 @@ void main() {
         _ForesightMemoryApiService(
           foresightHint: ForesightHintSummaryItem(
             hintText: '你最近学习节奏低于常态，先把目标缩成 15 分钟再启动。',
-            generatedAt: DateTime(2026, 4, 21, 9, 0),
+            generatedAt: DateTime(2026, 4, 21, 9),
             deviationCount: 2,
             attractorConfidences: const [],
           ),
@@ -237,7 +237,7 @@ void main() {
         _ForesightMemoryApiService(
           foresightHint: ForesightHintSummaryItem(
             hintText: '你最近有些偏离原计划，先把今天的主线重新钉住。',
-            generatedAt: DateTime(2026, 4, 21, 9, 0),
+            generatedAt: DateTime(2026, 4, 21, 9),
             deviationCount: 1,
             attractorConfidences: [
               ForesightConfidenceItem(dim: 'study_pace', confidence: 0.81),

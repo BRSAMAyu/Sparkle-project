@@ -693,7 +693,7 @@ class _OrbitalParticlesPainter extends CustomPainter {
     for (var i = 0; i < particleCount; i++) {
       final orbitRadius = baseRadius * (0.9 + i * 0.15);
       final speed = 1.0 + i * 0.3;
-      final phase = (i * math.pi * 2 / particleCount);
+      final phase = i * math.pi * 2 / particleCount;
       final angle = animValue * math.pi * 2 * speed + phase;
 
       final px = center.dx + math.cos(angle) * orbitRadius;

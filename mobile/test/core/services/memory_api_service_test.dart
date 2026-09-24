@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/models/memory_models.dart';
-import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/services/memory_api_service.dart';
 
 class _TestApiClient implements ApiClient {
   Future<Response<Map<String, dynamic>>> Function(

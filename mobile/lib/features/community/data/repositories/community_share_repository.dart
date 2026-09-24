@@ -53,7 +53,7 @@ class CommunityShareRepository {
 
     return items
         .whereType<Map<String, dynamic>>()
-        .map((json) => SharedResourceInfo.fromJson(json))
+        .map(SharedResourceInfo.fromJson)
         .toList();
   }
 

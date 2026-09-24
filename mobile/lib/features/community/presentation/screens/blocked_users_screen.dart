@@ -1,11 +1,10 @@
-import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 
@@ -30,7 +29,7 @@ class BlockedUsersScreen extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.block_outlined, size: 64, color: DS.neutral300),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   Text(
                     context.l10n.blockedNoBlockedUsers,
                     style: TextStyle(
@@ -58,7 +57,7 @@ class BlockedUsersScreen extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(context.l10n.favoritesLoadFailed(e), style: TextStyle(color: DS.error)),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () =>
                     ref.read(blockedUsersProvider.notifier).refresh(),
@@ -138,7 +137,7 @@ class _BlockedUserTile extends ConsumerWidget {
       ),
     );
 
-    if (confirmed == true && context.mounted) {
+    if ((confirmed ?? false) && context.mounted) {
       try {
         await ref
             .read(blockedUsersProvider.notifier)

@@ -1,12 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/widgets/unsaved_changes_guard.dart';
 import 'package:sparkle/features/file/data/models/file_models.dart';
 import 'package:sparkle/features/file/presentation/widgets/file_picker_with_presigned.dart';
@@ -14,6 +13,7 @@ import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
 import 'package:sparkle/features/plan/data/repositories/exam_sprint_repository.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 class ExamSprintSetupScreen extends ConsumerStatefulWidget {
   const ExamSprintSetupScreen({super.key});
@@ -116,7 +116,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
                         textInputAction: TextInputAction.next,
                         decoration: InputDecoration(
                           hintText: context.l10n.planSprintStep1Hint,
-                          prefixIcon: Icon(Icons.menu_book_outlined),
+                          prefixIcon: const Icon(Icons.menu_book_outlined),
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
@@ -182,7 +182,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
                                   _examDate == null
                                       ? context.l10n.planSprintDateDecides
                                       : context.l10n.planSprintDaysLeft(
-                                          _daysLeftLabel(_examDate!)),
+                                          _daysLeftLabel(_examDate!),),
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodySmall
@@ -247,7 +247,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
                             _uploadedFiles.isEmpty
                                 ? context.l10n.planSprintNoUpload
                                 : context.l10n.planSprintUploadedCount(
-                                    _uploadedFiles.length),
+                                    _uploadedFiles.length,),
                             style: Theme.of(context)
                                 .textTheme
                                 .bodySmall
@@ -622,13 +622,13 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
                     Icons.flag_outlined,
                     context.l10n.planSprintPassProbability(
                         (result.initialAssessment.passProbability * 100)
-                            .round()),
+                            .round(),),
                   ),
                   _buildResultChip(
                     context,
                     Icons.tune_rounded,
                     context.l10n.planSprintRecommendedMode(
-                        result.initialAssessment.recommendedModeLabel),
+                        result.initialAssessment.recommendedModeLabel,),
                   ),
                   _buildResultChip(
                     context,
@@ -780,5 +780,5 @@ List<_TargetModeOption> targetOptions(AppLocalizations l10n) =>
       _TargetModeOption(value: 'pass', label: l10n.planSprintTargetPass),
       _TargetModeOption(value: 'hold', label: l10n.planSprintTargetHold),
       _TargetModeOption(
-          value: 'high_score', label: l10n.planSprintTargetHighScore),
+          value: 'high_score', label: l10n.planSprintTargetHighScore,),
     ];

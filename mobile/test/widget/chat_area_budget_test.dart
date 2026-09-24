@@ -11,8 +11,6 @@ import 'package:sparkle/features/aurora/data/repositories/aurora_daily_startup_r
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/providers/aurora_status_provider.dart';
-import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
-import 'package:sparkle/features/chat/presentation/screens/chat_screen.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_design_language_widgets.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_inline_signals.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_prediction_dock.dart';
@@ -21,7 +19,6 @@ import 'package:sparkle/features/chat/presentation/widgets/working_memory_drawer
 import 'package:sparkle/features/home/data/repositories/dashboard_repository.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
-import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import '../shared/i18n_test_helper.dart';
 
 /// B3-CHAT §5.1 面积预算断言（P2-4 裁决：widget test 断言为主）。
@@ -46,7 +43,7 @@ final _inactiveAuroraSnapshot = AuroraControlSurfaceSnapshot(
   surface: null,
   updatedAt: null,
   facets: const [],
-  wakeEligibility: AuroraWakeEligibility(
+  wakeEligibility: const AuroraWakeEligibility(
     canUserWake: false,
     userQuotaRemaining: 0,
     cooldownStatus: 'available',
@@ -82,10 +79,6 @@ class _FakeAuroraNotifier extends AuroraStatusNotifier {
   @override
   void stopPeriodicRefresh() {}
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
 }
 
 class _QuietDashboardNotifier extends DashboardNotifier {
@@ -134,9 +127,9 @@ class _QuietDailyStartupRepository extends AuroraDailyStartupRepository {
 /// （initState 的 switchPlanSession 会经 loadConversationHistory 用
 ///  仓库数据重建消息列表——桩与预置同源才能保住会话本体。）
 class _AreaChatRepository extends Fake implements ChatRepository {
-  final List<ChatMessageModel> historyBySession;
 
   _AreaChatRepository({required this.historyBySession});
+  final List<ChatMessageModel> historyBySession;
 
   @override
   Stream<WsConnectionState> get connectionStateStream => const Stream.empty();
@@ -166,7 +159,7 @@ List<ChatMessageModel> _seedMessages() => [
         conversationId: 'session-area',
         content: '欧拉回路和哈密顿回路的区别是什么？',
         role: MessageRole.user,
-        createdAt: DateTime(2026, 9, 22, 10, 0),
+        createdAt: DateTime(2026, 9, 22, 10),
       ),
       ChatMessageModel(
         id: 'm-ai-1',
@@ -242,7 +235,7 @@ void main() {
           auroraDailyStartupRepositoryProvider.overrideWithValue(
             _QuietDailyStartupRepository(),
           ),
-          activePlanProvider.overrideWith((ref) => ActivePlanNotifier(ref)),
+          activePlanProvider.overrideWith(ActivePlanNotifier.new),
         ],
         child: testMaterialApp(home: const ChatScreen()),
       ),

@@ -47,7 +47,7 @@ void main() {
           currentUserProvider.overrideWithValue(null),
           seedLibraryDetailProvider('lib-err').overrideWith(
             (ref) => _StubSeedDetailNotifier(
-              SeedLibraryDetailState(error: UiErrorCategory.unknown),
+              const SeedLibraryDetailState(error: UiErrorCategory.unknown),
             ),
           ),
         ],

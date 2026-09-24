@@ -290,7 +290,7 @@ class _FilePickerWithPresignedUploadState
                                 if (_isUploading) ...[
                                   const SizedBox(height: 8),
                                   Text(
-                                    context.l10n.fileUploadProgress('${(_progress * 100).toStringAsFixed(0)}'),
+                                    context.l10n.fileUploadProgress((_progress * 100).toStringAsFixed(0)),
                                     style: TextStyle(
                                       color: DS.textSecondary,
                                     ),

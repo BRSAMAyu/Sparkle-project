@@ -513,8 +513,7 @@ class LearningPortfolioResult {
   bool get isEmpty => entries.isEmpty;
 
   /// Merge a newer page result into this one, appending new entries.
-  LearningPortfolioResult merge(LearningPortfolioResult next) {
-    return LearningPortfolioResult(
+  LearningPortfolioResult merge(LearningPortfolioResult next) => LearningPortfolioResult(
       entries: [...entries, ...next.entries],
       totalMasteredNodes: next.totalMasteredNodes,
       activeCount: next.activeCount,
@@ -524,7 +523,6 @@ class LearningPortfolioResult {
       currentPage: next.currentPage,
       totalEntries: next.totalEntries,
     );
-  }
 }
 
 /// One question of a diagnostic mini-quiz (P1-E5).

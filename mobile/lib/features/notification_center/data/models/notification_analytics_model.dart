@@ -303,7 +303,7 @@ class NotificationAnalytics {
 
     return NotificationAnalytics(
       summary: NotificationAnalyticsSummary.fromJson(
-          json['summary'] as Map<String, dynamic>),
+          json['summary'] as Map<String, dynamic>,),
       byType: byTypeMap,
       trends: trendsList,
       hourlyDistribution: distributionList,

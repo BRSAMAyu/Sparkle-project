@@ -210,7 +210,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                     duration: transitionDuration,
                     child: Icon(
                       _getAgentIcon(
-                          activeStep?.agent ?? AgentType.orchestrator),
+                          activeStep?.agent ?? AgentType.orchestrator,),
                       color: ThemeUtils.getContrastSafeText(
                         activeAgentColor,
                         darkText: DS.textPrimary,

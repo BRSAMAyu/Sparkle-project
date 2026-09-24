@@ -23,7 +23,7 @@ void main() {
           // Small buttons are acceptable if they have adequate horizontal padding
           // and are not the only interactive element in a dense row
           expect(height, greaterThanOrEqualTo(40),
-              reason: 'Small buttons must be at least 40dp');
+              reason: 'Small buttons must be at least 40dp',);
         }
       }
     });
@@ -34,12 +34,10 @@ void main() {
           theme: AppThemes.lightTheme,
           home: Scaffold(
             body: Builder(
-              builder: (context) {
-                return IconButton(
+              builder: (context) => IconButton(
                   icon: const Icon(Icons.close),
                   onPressed: () {},
-                );
-              },
+                ),
             ),
           ),
         ),

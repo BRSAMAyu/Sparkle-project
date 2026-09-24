@@ -36,8 +36,8 @@ void main() {
         priority: 1,
         tags: const [],
         status: TaskStatus.pending,
-        createdAt: DateTime(2026, 4, 1),
-        updatedAt: DateTime(2026, 4, 1),
+        createdAt: DateTime(2026, 4),
+        updatedAt: DateTime(2026, 4),
       ),
     );
     await Future<void>.delayed(Duration.zero);
@@ -62,8 +62,8 @@ void main() {
         priority: 1,
         tags: const [],
         status: TaskStatus.pending,
-        createdAt: DateTime(2026, 4, 1),
-        updatedAt: DateTime(2026, 4, 1),
+        createdAt: DateTime(2026, 4),
+        updatedAt: DateTime(2026, 4),
       ),
     );
     await Future<void>.delayed(Duration.zero);
@@ -114,8 +114,8 @@ void main() {
       priority: 1,
       tags: const [],
       status: TaskStatus.pending,
-      createdAt: DateTime(2026, 4, 1),
-      updatedAt: DateTime(2026, 4, 1),
+      createdAt: DateTime(2026, 4),
+      updatedAt: DateTime(2026, 4),
     );
     notifier.start(freshTask);
     expect(notifier.state.isActive, isTrue);
@@ -162,8 +162,8 @@ class _RecordingTaskRepository extends TaskRepository {
       priority: 1,
       tags: const [],
       status: TaskStatus.inProgress,
-      createdAt: DateTime(2026, 4, 1),
-      updatedAt: DateTime(2026, 4, 1),
+      createdAt: DateTime(2026, 4),
+      updatedAt: DateTime(2026, 4),
     );
   }
 }

@@ -11,6 +11,16 @@ import 'package:web_socket_channel/status.dart' as status;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 class WebSocketService {
+
+  WebSocketService({
+    /// 测试注入：覆盖退避表（长度需 ≥ [_maxReconnectAttempts]），
+    /// 便于在秒级时间内验证退避升级与 max-attempts 行为。
+    List<Duration>? reconnectSchedule,
+    /// M6-R2-02：连接存活达到该阈值才视为"稳定连接"，断开时才刷新
+    /// 重连预算。生产默认 30s；测试注入小值以避免真实等待。
+    Duration stableConnectionThreshold = _defaultStableConnectionThreshold,
+  })  : _reconnectScheduleOverride = reconnectSchedule,
+        _stableConnectionThreshold = stableConnectionThreshold;
   static const List<Duration> _reconnectSchedule = <Duration>[
     Duration(milliseconds: 800),
     Duration(milliseconds: 1200),
@@ -22,16 +32,6 @@ class WebSocketService {
   static const int _maxReconnectAttempts = 6;
   static const Duration _defaultStableConnectionThreshold =
       Duration(seconds: 30);
-
-  WebSocketService({
-    /// 测试注入：覆盖退避表（长度需 ≥ [_maxReconnectAttempts]），
-    /// 便于在秒级时间内验证退避升级与 max-attempts 行为。
-    List<Duration>? reconnectSchedule,
-    /// M6-R2-02：连接存活达到该阈值才视为"稳定连接"，断开时才刷新
-    /// 重连预算。生产默认 30s；测试注入小值以避免真实等待。
-    Duration stableConnectionThreshold = _defaultStableConnectionThreshold,
-  })  : _reconnectScheduleOverride = reconnectSchedule,
-        _stableConnectionThreshold = stableConnectionThreshold;
 
   final List<Duration>? _reconnectScheduleOverride;
   final Duration _stableConnectionThreshold;

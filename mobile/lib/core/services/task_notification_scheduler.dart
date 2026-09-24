@@ -12,7 +12,7 @@ class TaskReminderConfig {
     this.reminders = const [
       1440,
       60,
-      15
+      15,
     ], // 1 day, 1 hour, 15 minutes (in minutes)
   });
 
@@ -215,7 +215,7 @@ class TaskNotificationScheduler {
 
     if (config != null && !config.enabled) {
       _logger.i(
-          'Task reminders disabled, cleared ${existingTaskIds.length} mappings');
+          'Task reminders disabled, cleared ${existingTaskIds.length} mappings',);
       return;
     }
 

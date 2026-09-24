@@ -26,7 +26,6 @@ import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/models/notification_interrupt_policy.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
-import 'package:sparkle/features/chat/presentation/widgets/causal_timeline_panel.dart';
 import 'package:sparkle/features/chat/data/repositories/chat_repository.dart';
 import 'package:sparkle/features/chat/data/services/agent_session_store.dart';
 import 'package:sparkle/features/chat/data/services/plan_review_grpc_service.dart';
@@ -37,6 +36,7 @@ import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
 import 'package:sparkle/features/chat/presentation/providers/guidance_mode_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/low_yield_block_provider.dart';
+import 'package:sparkle/features/chat/presentation/widgets/causal_timeline_panel.dart';
 import 'package:sparkle/features/chat/presentation/widgets/content_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_switch_confirmation_dialog.dart';
@@ -54,9 +54,9 @@ import 'package:sparkle/features/task/task_routes.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/shared/utils/entity_card_payloads.dart';
 
-part 'chat_notifier_reviews.dart';
-part 'chat_notifier_history.dart';
 part 'chat_notifier_actions.dart';
+part 'chat_notifier_history.dart';
+part 'chat_notifier_reviews.dart';
 part 'chat_provider_wiring.dart';
 
 /// M-2 stream variance: error code injected by [chatStreamWithFirstEventGuard]

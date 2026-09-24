@@ -21,7 +21,7 @@ import 'package:uuid/uuid.dart';
 
 class SyncEngine {
   SyncEngine(this._localDb, this._wsService, this._apiClient,
-      {Connectivity? connectivity})
+      {Connectivity? connectivity,})
       : _connectivity = connectivity ?? Connectivity();
 
   final LocalDatabase _localDb;

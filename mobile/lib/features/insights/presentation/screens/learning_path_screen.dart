@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/graphite_surfaces.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/insights/presentation/widgets/learning_path_dialog.dart';
 
@@ -17,8 +16,7 @@ class LearningPathScreen extends ConsumerWidget {
   final String nodeName;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return SparklePageScaffold(
+  Widget build(BuildContext context, WidgetRef ref) => SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
         title: Text(
@@ -42,5 +40,4 @@ class LearningPathScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
 }

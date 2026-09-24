@@ -28,7 +28,7 @@ class HomeCloseToUnlockState {
 
 final homeCloseToUnlockProvider = StateNotifierProvider<
     HomeCloseToUnlockNotifier, HomeCloseToUnlockState>(
-  (ref) => HomeCloseToUnlockNotifier(ref),
+  HomeCloseToUnlockNotifier.new,
 );
 
 class HomeCloseToUnlockNotifier

@@ -636,7 +636,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
                   .where((item) => item.trim().isNotEmpty)
                   .toList(),
               timeframeLabel: _asString(whatChangedMap['timeframe_label'],
-                  fallback: I18nService.instance.l10n.dashboardWhatChangedTimeframeRecent),
+                  fallback: I18nService.instance.l10n.dashboardWhatChangedTimeframeRecent,),
             );
 
       final nextMoveMap =

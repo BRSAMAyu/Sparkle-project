@@ -21,8 +21,8 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:isar/isar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/app/routes.dart';
-import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/analytics/models/user_analytics_event.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/offline/models/focus_session_record.dart';
@@ -31,7 +31,7 @@ import 'package:sparkle/core/offline/models/translation_record.dart';
 import 'package:sparkle/core/offline/models/vocab_word.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
-import 'package:sparkle/core/statistics/data/models/cached_statistics_model.dart';
+import 'package:sparkle/core/storage/token_storage_io.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
@@ -39,8 +39,8 @@ import 'package:sparkle/features/user/presentation/providers/settings_provider.d
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/user_brief.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
+
 import '../shared/i18n_test_helper.dart';
-import 'package:sparkle/core/storage/token_storage_io.dart';
 
 void main() {
   setUp(setUpI18nForTesting);
@@ -121,7 +121,7 @@ void main() {
         deepLink,
         reason:
             'Deep link arriving during auth loading must be staged on the '
-            'splash location, not dropped: ${duringLoading.toString()}',
+            'splash location, not dropped: $duringLoading',
       );
     } else {
       expect(duringLoading.toString(), deepLink);
@@ -137,7 +137,7 @@ void main() {
       '/chat',
       reason:
           'Protected deep link must land on its target once auth resolves, '
-          'not fall back to /home: ${after.toString()}',
+          'not fall back to /home: $after',
     );
     expect(after.queryParameters['session_id'], 'deep-link-42');
 
@@ -199,7 +199,7 @@ void main() {
           'An authenticated user hitting splash with a backslash '
           'protocol-relative redirect payload must fall through to /home, '
           'not be navigated to the attacker-controlled location '
-          '(observed: ${uri.toString()})',
+          '(observed: $uri)',
     );
 
     await _tearDownHarness(tester, harness);
@@ -231,7 +231,7 @@ void main() {
       reason:
           'During the onboarding-pending window the redirect must not send '
           'users to the persona onboarding (M6-07 flash); observed: '
-          '${uri.toString()}',
+          '$uri',
     );
 
     await _tearDownHarness(tester, harness);
@@ -372,7 +372,7 @@ class _FakeOnboardingCompletedNotifier extends OnboardingCompletedNotifier {
 /// M6-07: stays in the pending (null) state for the whole test so the
 /// router redirect's onboarding branches must not fire.
 class _PendingOnboardingCompletedNotifier extends OnboardingCompletedNotifier {
-  _PendingOnboardingCompletedNotifier(Ref ref) : super(ref);
+  _PendingOnboardingCompletedNotifier(super.ref);
 
   @override
   Future<void> syncForUser(UserModel? user) async {

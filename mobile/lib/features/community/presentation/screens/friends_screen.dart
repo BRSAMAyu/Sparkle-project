@@ -1,16 +1,18 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
-import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/features/chat/data/services/chat_draft_store.dart';
+import 'package:sparkle/features/chat/presentation/providers/chat_draft_store_provider.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/accountability_model.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
@@ -21,9 +23,6 @@ import 'package:sparkle/features/community/presentation/providers/community_prov
 import 'package:sparkle/features/community/presentation/utils/accountability_invite_flow.dart';
 import 'package:sparkle/features/community/presentation/widgets/friends_hub_view.dart';
 import 'package:sparkle/features/community/presentation/widgets/recommendation_feedback_widgets.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/features/chat/data/services/chat_draft_store.dart';
-import 'package:sparkle/features/chat/presentation/providers/chat_draft_store_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 class FriendsScreen extends StatelessWidget {
@@ -68,8 +67,7 @@ class FriendRequestsScreen extends StatelessWidget {
   const FriendRequestsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return SparklePageScaffold(
+  Widget build(BuildContext context) => SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
         leading: SparkleIconButton(
@@ -86,15 +84,13 @@ class FriendRequestsScreen extends StatelessWidget {
         child: SparkleStaggerItem(index: 0, child: _PendingRequestsTab()),
       ),
     );
-  }
 }
 
 class FriendsDiscoverScreen extends StatelessWidget {
   const FriendsDiscoverScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return SparklePageScaffold(
+  Widget build(BuildContext context) => SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
         leading: SparkleIconButton(
@@ -111,7 +107,6 @@ class FriendsDiscoverScreen extends StatelessWidget {
         child: SparkleStaggerItem(index: 0, child: _RecommendationsTab()),
       ),
     );
-  }
 }
 
 class _MyFriendsTab extends ConsumerWidget {
@@ -134,7 +129,7 @@ class _MyFriendsTab extends ConsumerWidget {
       showSensoryModalBottomSheet<void>(
         context: context,
         backgroundColor: Colors.transparent,
-        builder: (ctx) => Container(
+        builder: (ctx) => DecoratedBox(
           decoration: BoxDecoration(
             color: Theme.of(ctx).scaffoldBackgroundColor,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -191,7 +186,7 @@ class _MyFriendsTab extends ConsumerWidget {
                 ListTile(
                   leading: Icon(Icons.block, color: DS.error),
                   title: Text(context.l10n.friendsBlockUser,
-                      style: TextStyle(color: DS.error)),
+                      style: TextStyle(color: DS.error),),
                   onTap: () {
                     Navigator.pop(ctx);
                     _handleBlockUser(context, ref, friendInfo);
@@ -225,7 +220,7 @@ class _MyFriendsTab extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         title: Text(context.l10n.friendsDeleteFriend),
         content: Text(context.l10n
-            .friendsConfirmDeleteFriend(friendInfo.friend.displayName)),
+            .friendsConfirmDeleteFriend(friendInfo.friend.displayName),),
         actions: [
           // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档；删除好友是破坏性
           // 动作，按 destructive 文字动作档承接（ghost + 语义色前景，不升实心底）。
@@ -243,7 +238,7 @@ class _MyFriendsTab extends ConsumerWidget {
       ),
     );
 
-    if (confirmed == true && context.mounted) {
+    if ((confirmed ?? false) && context.mounted) {
       try {
         await ref.read(friendsProvider.notifier).deleteFriend(friendInfo.id);
         // N46：会话删除（删好友）同步清除该私聊的未发送草稿。
@@ -260,14 +255,14 @@ class _MyFriendsTab extends ConsumerWidget {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SparkleSnackBar.success(context.l10n
-                .friendsFriendDeleted(friendInfo.friend.displayName)),
+                .friendsFriendDeleted(friendInfo.friend.displayName),),
           );
         }
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SparkleSnackBar.error(
-                context.l10n.friendsDeleteFailed(e.toString())),
+                context.l10n.friendsDeleteFailed(e.toString()),),
           );
         }
       }
@@ -288,7 +283,7 @@ class _MyFriendsTab extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(context.l10n
-                .friendsAfterBlockingHint(friendInfo.friend.displayName)),
+                .friendsAfterBlockingHint(friendInfo.friend.displayName),),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -353,7 +348,7 @@ class _MyFriendsTab extends ConsumerWidget {
       ),
     );
 
-    if (confirmed == true && context.mounted) {
+    if ((confirmed ?? false) && context.mounted) {
       try {
         await ref
             .read(friendsProvider.notifier)
@@ -361,14 +356,14 @@ class _MyFriendsTab extends ConsumerWidget {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SparkleSnackBar.success(context.l10n
-                .friendsBlockedSuccess(friendInfo.friend.displayName)),
+                .friendsBlockedSuccess(friendInfo.friend.displayName),),
           );
         }
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SparkleSnackBar.error(
-                context.l10n.friendsBlockFailed(e.toString())),
+                context.l10n.friendsBlockFailed(e.toString()),),
           );
         }
       }
@@ -391,7 +386,6 @@ class _PendingRequestsTab extends ConsumerWidget {
                 const <AccountabilityPartnershipInfo>[];
         if (requests.isEmpty && pendingPartnerships.isEmpty) {
           return EmptyState(
-            type: EmptyStateType.general,
             title: context.l10n.friendsNoPendingRequests,
             icon: Icons.people_outline,
           );
@@ -486,11 +480,11 @@ class _PendingRequestsTab extends ConsumerWidget {
                         : null,
                     child: partner?.avatarUrl == null
                         ? Text((partner?.displayName ??
-                            context.l10n.communityPartnerFallback)[0])
+                            context.l10n.communityPartnerFallback)[0],)
                         : null,
                   ),
                   title: Text(partner?.displayName ??
-                      context.l10n.friendPartnerInviteTitle),
+                      context.l10n.friendPartnerInviteTitle,),
                   subtitle: Text(partnership.initiatorGoal),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -519,14 +513,14 @@ class _PendingRequestsTab extends ConsumerWidget {
                             );
                             if (!context.mounted) return;
                             AppFeedback.success(
-                                context, context.l10n.friendPartnerAccepted);
+                                context, context.l10n.friendPartnerAccepted,);
                             context.go(resolution.route);
                           } catch (e) {
                             if (context.mounted) {
                               final message =
                                   normalizeAccountabilityInviteError(e);
                               final hasActiveCoreConflict = message.contains(
-                                  'already has a core accountability partner');
+                                  'already has a core accountability partner',);
                               if (hasActiveCoreConflict) {
                                 final route =
                                     await resolveExistingAccountabilityRouteOnConflict(
@@ -568,7 +562,7 @@ class _PendingRequestsTab extends ConsumerWidget {
                             );
                             if (context.mounted) {
                               AppFeedback.info(
-                                  context, context.l10n.friendInviteDeclined);
+                                  context, context.l10n.friendInviteDeclined,);
                             }
                           } catch (e) {
                             if (context.mounted) {
@@ -844,7 +838,7 @@ class _RecommendationsTab extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         AppFeedback.error(
-            context, context.l10n.friendSubmitFailed(e.toString()));
+            context, context.l10n.friendSubmitFailed(e.toString()),);
       }
     }
   }
@@ -864,7 +858,7 @@ class _RecommendationsTab extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         AppFeedback.error(
-            context, context.l10n.friendActionFailed(e.toString()));
+            context, context.l10n.friendActionFailed(e.toString()),);
       }
     }
   }
@@ -909,7 +903,7 @@ class _RecommendationsTab extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         AppFeedback.error(
-            context, context.l10n.friendActionFailed(e.toString()));
+            context, context.l10n.friendActionFailed(e.toString()),);
       }
     }
   }
@@ -941,14 +935,14 @@ class _RecommendationsTab extends ConsumerWidget {
                 decoration: InputDecoration(
                   labelText: context.l10n.friendGoalLabel,
                   hintText: context.l10n.communityFriendGoalHint,
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                 ),
                 maxLines: 2,
               ),
               const SizedBox(height: DS.spacing16),
               Text(
                 context.l10n.friendCheckInFrequency,
-                style: TextStyle(fontWeight: DS.fontWeightBold),
+                style: const TextStyle(fontWeight: DS.fontWeightBold),
               ),
               const SizedBox(height: DS.xs),
               Wrap(
@@ -958,7 +952,7 @@ class _RecommendationsTab extends ConsumerWidget {
                   return FilterChip(
                     label: Text(d == 1
                         ? context.l10n.friendCheckInEveryDay
-                        : context.l10n.friendCheckInEveryDays(d)),
+                        : context.l10n.friendCheckInEveryDays(d),),
                     selected: selected,
                     onSelected: (_) => setState(() => checkInDays = d),
                   );
@@ -984,8 +978,9 @@ class _RecommendationsTab extends ConsumerWidget {
     if (confirmed != true) return false;
     final goal = goalController.text.trim();
     if (goal.isEmpty) {
-      if (context.mounted)
+      if (context.mounted) {
         AppFeedback.info(context, context.l10n.friendGoalRequired);
+      }
       return false;
     }
 
@@ -1207,7 +1202,7 @@ class _RecommendationCard extends StatelessWidget {
   }
 
   String _primaryActionLabel(
-      FriendRecommendation recommendation, AppLocalizations l10n) {
+      FriendRecommendation recommendation, AppLocalizations l10n,) {
     if (recommendation.canInviteAccountability) {
       return l10n.friendStartPartnership;
     }

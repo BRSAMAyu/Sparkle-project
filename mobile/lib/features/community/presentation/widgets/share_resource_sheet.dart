@@ -255,7 +255,7 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
                               fontWeight: DS.fontWeightSemibold,
                             ),
                           )
-                        : friendship.accountability?.isPending == true
+                        : friendship.accountability?.isPending ?? false
                             ? Text(
                                 context.l10n.communityCorePartnerInvitePending,
                                 style: TextStyle(

@@ -12,7 +12,6 @@ library;
 
 import 'dart:async';
 import 'dart:developer' as developer;
-import 'dart:ui' show FrameTiming;
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';

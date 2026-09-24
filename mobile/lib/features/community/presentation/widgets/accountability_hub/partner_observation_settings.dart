@@ -50,7 +50,7 @@ class PartnerObservationSettings extends StatelessWidget {
           Row(
             children: [
               Icon(Icons.visibility_outlined,
-                  size: 18, color: DS.brandPrimary),
+                  size: 18, color: DS.brandPrimary,),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(

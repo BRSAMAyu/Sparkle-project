@@ -9,10 +9,6 @@ import 'package:sparkle/core/services/push_token_manager.dart';
 
 /// JPush notification message
 class JPushMessage {
-  final String? title;
-  final String? body;
-  final Map<String, dynamic>? extras;
-  final String? messageId;
 
   JPushMessage({
     this.title,
@@ -29,6 +25,10 @@ class JPushMessage {
             : null,
         messageId: map['msgId']?.toString(),
       );
+  final String? title;
+  final String? body;
+  final Map<String, dynamic>? extras;
+  final String? messageId;
 }
 
 /// JPush service for handling push notifications via JPush SDK.
@@ -114,7 +114,6 @@ class JPushService extends AsyncNotifier<void> {
 
       // Initialize JPush
       _jpush.setup(
-        appKey: PushConfig.jpushAppKey,
         channel: PushConfig.jpushChannel,
         production: production,
         debug: debug,
