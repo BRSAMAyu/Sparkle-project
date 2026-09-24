@@ -78,7 +78,8 @@ class AudioRecordingService {
       _webSocket!.stream.listen(
         (message) {
           _handleWebSocketMessage(
-              message, onTranscription, onError, onCompleted);
+              message,
+                  onTranscription, onError, onCompleted);
         },
         onError: (Object error) {
           _logger.e('WebSocket error: $error');

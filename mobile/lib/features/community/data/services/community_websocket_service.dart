@@ -372,7 +372,8 @@ class CommunityWebSocketService {
       return grant?.ticket;
     } catch (e) {
       debugPrint(
-          '[WS] Ticket issuance failed, falling back to header auth: $e');
+        '[WS] Ticket issuance failed, falling back to header auth: $e',
+      );
       return null;
     }
   }
@@ -572,7 +573,7 @@ class CommunityWebSocketService {
 
     _setGroupState(WsConnectionState.reconnecting);
     debugPrint(
-        '[WS] Scheduling group reconnect in ${delay}ms (attempt ${_groupReconnectAttempts + 1})');
+        '[WS] Scheduling group reconnect in ${delay}ms (attempt ${_groupReconnectAttempts + 1})',);
 
     _groupReconnectTimer = Timer(Duration(milliseconds: delay), () {
       _groupReconnectAttempts++;
@@ -595,7 +596,7 @@ class CommunityWebSocketService {
 
     _setPersonalState(WsConnectionState.reconnecting);
     debugPrint(
-        '[WS] Scheduling personal reconnect in ${delay}ms (attempt ${_personalReconnectAttempts + 1})');
+        '[WS] Scheduling personal reconnect in ${delay}ms (attempt ${_personalReconnectAttempts + 1})',);
 
     _personalReconnectTimer = Timer(Duration(milliseconds: delay), () {
       _personalReconnectAttempts++;

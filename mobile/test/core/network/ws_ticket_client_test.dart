@@ -126,7 +126,9 @@ void main() {
     test('returns null when ticket field is missing', () async {
       final gateway = _FakeTicketGateway(
         (_, __) => const _StubReply(
-            200, '{"expires_in":120,"token_type":"ws_ticket"}'),
+          200,
+          '{"expires_in":120,"token_type":"ws_ticket"}',
+        ),
       );
       final baseUri = await gateway.start();
       addTearDown(gateway.stop);
