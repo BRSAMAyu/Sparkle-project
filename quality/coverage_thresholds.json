@@ -49,23 +49,23 @@
     "global": 25,
     "paths": [
       {
-        "path": "mobile/lib/features/chat",
+        "path": "lib/features/chat",
         "threshold": 12
       },
       {
-        "path": "mobile/lib/features/plan",
+        "path": "lib/features/plan",
         "threshold": 7
       },
       {
-        "path": "mobile/lib/features/task",
+        "path": "lib/features/task",
         "threshold": 7
       },
       {
-        "path": "mobile/lib/features/home",
+        "path": "lib/features/home",
         "threshold": 7
       },
       {
-        "path": "mobile/lib/core/network",
+        "path": "lib/core/network",
         "threshold": 10
       }
     ]
