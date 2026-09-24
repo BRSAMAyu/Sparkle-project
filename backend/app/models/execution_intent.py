@@ -139,13 +139,13 @@ class ExecutionIntent(BaseModel):
         default=TrustLevel.RAW,
     )
 
-    external_run_id: Mapped[str] = mapped_column(String(255), nullable=True, index=True)
+    external_run_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
-    error_category: Mapped[str] = mapped_column(String(100), nullable=True)
-    error_message: Mapped[str] = mapped_column(Text, nullable=True)
+    error_category: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     dispatched_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     task = relationship("Task", backref="execution_intents", foreign_keys=[task_id])
     plan = relationship("Plan", backref="execution_intents", foreign_keys=[plan_id])

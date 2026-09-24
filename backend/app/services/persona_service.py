@@ -4,7 +4,7 @@ import hashlib
 import hmac
 import json
 import os
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from sqlalchemy import desc, func, select
@@ -38,7 +38,7 @@ class ProfileSnapshotService:
         if self.redis and not force_refresh:
             cached = await self.redis.get(cache_key)
             if cached:
-                return json.loads(cached)
+                return cast("dict[str, Any]", (json.loads(cached)))
 
         snapshot = await self._build_snapshot(user_id, purpose, profile_context=profile_context)
         snapshot["audit_token"] = self._sign_snapshot_payload(user_id, snapshot)

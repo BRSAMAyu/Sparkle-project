@@ -598,7 +598,7 @@ class FocusService:
         sessions = result.scalars().all()
 
         # Calculate daily breakdown
-        daily_breakdown = {}
+        daily_breakdown: dict[str, Any] = {}
         focus_type_distribution = {FocusType.POMODORO.value: 0, FocusType.STOPWATCH.value: 0}
 
         for session in sessions:
@@ -665,7 +665,7 @@ class FocusService:
         sessions = result.scalars().all()
 
         # Calculate daily breakdown
-        daily_breakdown = {}
+        daily_breakdown: dict[str, Any] = {}
         focus_type_distribution = {FocusType.POMODORO.value: 0, FocusType.STOPWATCH.value: 0}
 
         for session in sessions:
@@ -681,7 +681,7 @@ class FocusService:
         best_day = max(daily_breakdown, key=daily_breakdown.get) if daily_breakdown else None
 
         # Weekly breakdown
-        weekly_breakdown = {}
+        weekly_breakdown: dict[str, Any] = {}
         for session in sessions:
             # Get ISO week number
             week_key = session.start_time.strftime("%Y-W%W")
@@ -768,7 +768,7 @@ class FocusService:
         result = await db.execute(stmt)
         sessions = result.scalars().all()
 
-        heatmap_data = {}
+        heatmap_data: dict[str, Any] = {}
         for session in sessions:
             date_key = session.start_time.strftime("%Y-%m-%d")
             heatmap_data[date_key] = heatmap_data.get(date_key, 0.0) + session.duration_minutes

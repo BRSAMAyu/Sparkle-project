@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from loguru import logger
@@ -63,7 +64,7 @@ class PreferenceInferenceService:
         feedback_type: int,  # 1=up, -1=down
         reasons: list[str],
         metadata: dict | None = None
-    ) -> dict[str, any]:
+    ) -> dict[str, Any]:
         """
         处理用户反馈，更新推断偏好
 
@@ -162,8 +163,8 @@ class PreferenceInferenceService:
         self,
         user_id: UUID,
         behavior_type: str,
-        value: any = None
-    ) -> dict[str, any]:
+        value: Any = None
+    ) -> dict[str, Any]:
         """
         处理用户行为模式，更新推断偏好
         """

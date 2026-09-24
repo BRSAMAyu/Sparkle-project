@@ -121,24 +121,24 @@ class Task(BaseModel):
     status: Mapped[TaskStatus] = mapped_column(Enum(TaskStatus), default=TaskStatus.PENDING, nullable=False, index=True)
     started_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     confirmed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # 追溯信息
     tool_result_id: Mapped[str] = mapped_column(String(50), nullable=True, index=True)
     execution_mode: Mapped[str] = mapped_column(String(20), nullable=True, default=None)
 
     # 暂停信息
-    paused_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    paused_reason: Mapped[str] = mapped_column(Text, nullable=True)
+    paused_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    paused_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # 完成信息
-    actual_minutes: Mapped[int] = mapped_column(Integer, nullable=True)
-    user_note: Mapped[str] = mapped_column(Text, nullable=True)
+    actual_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    user_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # 优先级和截止日期
     priority: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     order_index: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    due_date: Mapped[date] = mapped_column(Date, nullable=True)
+    due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     # Knowledge Galaxy Integration
     knowledge_node_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("knowledge_nodes.id"), nullable=True)
@@ -235,7 +235,7 @@ class SubTask(BaseModel):
 
     # 基本信息
     title: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[str] = mapped_column(Text, nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # 学习指导
     estimated_minutes: Mapped[int] = mapped_column(Integer, default=25, nullable=False)
@@ -244,7 +244,7 @@ class SubTask(BaseModel):
     # 排序和状态
     order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     status: Mapped[SubTaskStatus] = mapped_column(Enum(SubTaskStatus), default=SubTaskStatus.PENDING, nullable=False, index=True)
-    completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # 关系
     parent_task = relationship("Task", back_populates="subtasks")

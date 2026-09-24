@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 推断偏好衰减服务 - 基于时间衰减推断偏好值
 """
@@ -42,7 +44,7 @@ class InferredPreferenceDecayService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def apply_decay_to_user(self, user_id: UUID) -> dict[str, any]:
+    async def apply_decay_to_user(self, user_id: UUID) -> dict[str, Any]:
         """
         对单个用户的推断偏好应用衰减
 
@@ -60,7 +62,7 @@ class InferredPreferenceDecayService:
             return {"status": "no_data", "changes": 0}
 
         changes = 0
-        reset_keys = []
+        reset_keys: list[Any] = []
         decayed_values = {}
 
         now = _utcnow()
@@ -185,7 +187,7 @@ class InferredPreferenceDecayService:
     def _should_round_to_int(key: str) -> bool:
         return any(token in key for token in ("duration", "_hours", "hour_", "minutes"))
 
-    async def apply_decay_batch(self, limit: int = 100, offset: int = 0) -> dict[str, any]:
+    async def apply_decay_batch(self, limit: int = 100, offset: int = 0) -> dict[str, Any]:
         """
         批量应用衰减到所有有推断偏好的活跃用户
 

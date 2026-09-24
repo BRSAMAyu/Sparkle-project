@@ -64,11 +64,11 @@ class User(BaseModel):
     email_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     full_name: Mapped[str] = mapped_column(String(100), nullable=True)
     nickname: Mapped[str] = mapped_column(String(100), nullable=True)
-    avatar_url: Mapped[str] = mapped_column(String(500), nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     # 头像审核系统
     avatar_status: Mapped[AvatarStatus] = mapped_column(Enum(AvatarStatus), default=AvatarStatus.APPROVED, nullable=False)
-    pending_avatar_url: Mapped[str] = mapped_column(String(500), nullable=True)
+    pending_avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     # 火花系统
     flame_level: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
@@ -124,7 +124,7 @@ class User(BaseModel):
     # 🆕 年龄校验 (V3.1)
     is_minor: Mapped[bool] = mapped_column(Boolean, nullable=True)  # None = unknown, True/False = verified
     age_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    age_verification_source: Mapped[str] = mapped_column(String(50), nullable=True)  # registration, parent_consent, device_mode
+    age_verification_source: Mapped[str | None] = mapped_column(String(50), nullable=True)  # registration, parent_consent, device_mode
     age_verified_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # 🆕 光子积分系统 (V3.2)
@@ -132,10 +132,10 @@ class User(BaseModel):
     photon_updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)  # 光子积分最后更新时间
 
     # 🆕 商城装备系统 (V3.2)
-    equipped_skin: Mapped[str] = mapped_column(String(50), nullable=True, index=True)  # 当前装备的皮肤ID（按来源命名空间解释）
-    equipped_skin_source: Mapped[str] = mapped_column(String(20), nullable=True, index=True)  # achievement | shop
-    equipped_title: Mapped[str] = mapped_column(String(50), nullable=True, index=True)  # 当前装备的称号ID（按来源命名空间解释）
-    equipped_title_source: Mapped[str] = mapped_column(String(20), nullable=True, index=True)  # achievement | shop
+    equipped_skin: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)  # 当前装备的皮肤ID（按来源命名空间解释）
+    equipped_skin_source: Mapped[str | None] = mapped_column(String(20), nullable=True, index=True)  # achievement | shop
+    equipped_title: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)  # 当前装备的称号ID（按来源命名空间解释）
+    equipped_title_source: Mapped[str | None] = mapped_column(String(20), nullable=True, index=True)  # achievement | shop
 
     # 🆕 社群隐私设置 (V3.3)
     searchable_by: Mapped[SearchVisibility] = mapped_column(

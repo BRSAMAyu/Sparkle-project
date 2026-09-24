@@ -47,12 +47,12 @@ class IdiographicAssociation(BaseModel):
     density_insufficient: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     visible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     path_mode: Mapped[str] = mapped_column(String(16), nullable=False, default="B")
-    window_start: Mapped[date] = mapped_column(Date, nullable=True)
-    window_end: Mapped[date] = mapped_column(Date, nullable=True)
+    window_start: Mapped[date | None] = mapped_column(Date, nullable=True)
+    window_end: Mapped[date | None] = mapped_column(Date, nullable=True)
     disclaimer_text: Mapped[str] = mapped_column(String(255), nullable=False, default="")
     rendered_text: Mapped[str] = mapped_column(String(2000), nullable=False, default="")
     user_disconfirmed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    user_disconfirmed_until: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    user_disconfirmed_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     user = relationship("User", backref="idiographic_associations")
 

@@ -1098,7 +1098,7 @@ class ReviewHistoryService:
             }
 
         # 按类型统计
-        by_type = {}
+        by_type: dict[str, Any] = {}
         for o in overrides:
             t = o.override_type.value
             by_type[t] = by_type.get(t, 0) + 1

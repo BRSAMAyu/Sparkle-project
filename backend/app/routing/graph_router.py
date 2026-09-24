@@ -1,6 +1,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import networkx as nx
 from loguru import logger
 
@@ -65,12 +67,12 @@ class GraphBasedRouter:
 
         # Use precomputed/cached router if available
         if self.precomputed_router:
-            return await self.precomputed_router.find_route(current_node, target_node)
+            return cast("str | None", (await self.precomputed_router.find_route(current_node, target_node)))
 
         try:
             path = nx.shortest_path(self.graph, source=current_node, target=target_node, weight="weight")
             if len(path) > 1:
-                return path[1] # Return next hop
+                return cast("str | None", (path[1]))# Return next hop
         except nx.NetworkXNoPath:
             logger.warning(f"No path found from {current_node} to {target_node}")
             return None

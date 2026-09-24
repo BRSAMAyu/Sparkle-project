@@ -14,7 +14,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from itertools import combinations
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 from redis.commands.search.query import Query
@@ -1704,7 +1704,7 @@ Return ONLY a JSON array of entity names."""
 
             entities = json.loads(response)
             logger.debug(f"提取实体: {entities}")
-            return entities
+            return cast("list[str]", (entities))
         except Exception as e:
             logger.warning(f"实体提取失败: {e}")
             # 降级：简单关键词提取

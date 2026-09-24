@@ -4,7 +4,7 @@ import json
 import statistics
 import time
 from datetime import UTC, date, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -805,7 +805,7 @@ class MetacognitionService:
                 if isinstance(raw, bytes):
                     raw = raw.decode("utf-8")
                 try:
-                    return json.loads(raw)
+                    return cast("dict[str, Any] | None", (json.loads(raw)))
                 except Exception:
                     logger.warning(
                         "Invalid metacognition cache payload for {}", user_id

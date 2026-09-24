@@ -315,9 +315,9 @@ class ContextOrchestrator:
         past_session_memory = await self._get_past_session_memory(uid)
         spine_model_claims = await self._get_spine_model_claims(user_id)
 
-        knowledge_summary = {}
+        knowledge_summary: dict[str, Any] = {}
         preference_version = 0
-        preferences = {}
+        preferences: dict[str, Any] = {}
         profile_context_payload = None
         if profile_context is not None:
             profile_context_payload = profile_context.to_prompt_context()
@@ -649,7 +649,7 @@ class ContextOrchestrator:
         # 2. Recent Mastery (This might require a specialized query in GalaxyService or StatsService)
         # For now, we can infer or leave empty if not easily available without custom query.
         # Assuming we might want to add a method to GalaxyService later for "recent updates".
-        recent = []
+        recent: list[Any] = []
 
         return {"stats": stats, "recent": recent}
 

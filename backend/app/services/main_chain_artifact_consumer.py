@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+from typing import cast
 from uuid import UUID
 
 from loguru import logger
@@ -177,4 +178,4 @@ class MainChainArtifactConsumer:
             return None
 
         result = await db.execute(select(Task.plan_id).where(Task.id == task_id))
-        return result.scalar_one_or_none()
+        return cast("UUID | None", (result.scalar_one_or_none()))

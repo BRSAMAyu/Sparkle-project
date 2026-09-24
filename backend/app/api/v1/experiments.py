@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 """
 A/B Test Experiment Management API
 A/B测试实验管理API
@@ -631,7 +633,7 @@ async def analyze_experiment(
     metrics = metrics_result.scalars().all()
 
     # Group metrics by variant
-    variant_metrics = {}
+    variant_metrics: dict[str, Any] = {}
     for metric in metrics:
         if metric.variant_id not in variant_metrics:
             variant_metrics[metric.variant_id] = {

@@ -30,7 +30,7 @@ import math
 import random
 import re
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 
@@ -2238,7 +2238,7 @@ def _format_decision_policy_section(*, user_context: dict) -> str:
     adjustments = [item for item in adjustments if isinstance(item, dict)] if isinstance(adjustments, list) else []
     body_guidance = decision_context.get("body_awareness_guidance")
     body_guidance = body_guidance if isinstance(body_guidance, dict) else {}
-    semantic_control = {}
+    semantic_control: dict[str, Any] = {}
     if isinstance(situation_brief, dict):
         semantic_control = situation_brief.get("semantic_control") or {}
     if not isinstance(semantic_control, dict) or not semantic_control:
@@ -2336,8 +2336,8 @@ def _format_decision_policy_section(*, user_context: dict) -> str:
 
 def _format_planning_strategy_section(*, user_context: dict) -> str:
     situation_brief = user_context.get("situation_brief") if isinstance(user_context, dict) else None
-    strategy = {}
-    semantic_control = {}
+    strategy: dict[str, Any] = {}
+    semantic_control: dict[str, Any] = {}
     if isinstance(situation_brief, dict) and isinstance(situation_brief.get("planning_strategy"), dict):
         strategy = situation_brief.get("planning_strategy")
         semantic_control = situation_brief.get("semantic_control") or {}
@@ -2614,7 +2614,7 @@ def _resolve_preference_instructions(
     )
     if strategy_lines:
         base_instruction = "\n".join([str(base_instruction).strip(), *strategy_lines]).strip()
-    return base_instruction
+    return cast("str", (base_instruction))
 
 
 def _format_plan_context(
@@ -4530,7 +4530,7 @@ def _resolve_semantic_control_from_context(context: dict[str, Any] | None) -> di
     decision_context = context.get("residual_decision_context")
     if not isinstance(decision_context, dict) and isinstance(situation_brief, dict):
         decision_context = situation_brief.get("decision_context")
-    planning_strategy = {}
+    planning_strategy: dict[str, Any] = {}
     if isinstance(situation_brief, dict) and isinstance(situation_brief.get("planning_strategy"), dict):
         planning_strategy = situation_brief.get("planning_strategy") or {}
 

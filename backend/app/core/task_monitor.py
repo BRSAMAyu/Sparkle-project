@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -153,7 +153,7 @@ class TaskMonitorService:
             session.add(task)
             await session.commit()
             await session.refresh(task)
-            return task.to_dict()
+            return cast("dict[str, Any]", (task.to_dict()))
 
     async def _publish_realtime(self, user_id: str, payload: dict[str, Any]) -> None:
         if not cache_service.redis:

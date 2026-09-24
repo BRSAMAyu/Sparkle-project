@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
+from typing import cast
 from uuid import UUID
 
 from app.core.cache import cache_service
@@ -158,11 +159,11 @@ class WorkingMemoryConsolidationService:
             user_id=user_id,
             reason="working_memory_rejected",
         )
-        return await self.working_memory.mark_rejected(
+        return cast("WorkingMemoryEntry | None", (await self.working_memory.mark_rejected(
             user_id=str(user_id),
             session_id=str(session_id),
             entry_id=target.entry_id,
-        )
+        )))
 
     async def _consolidate_entry(
         self,
@@ -213,4 +214,4 @@ class WorkingMemoryConsolidationService:
         )
         if updated is None:
             return replace(entry, consolidated_to_l1_id=str(record.id))
-        return updated
+        return cast("WorkingMemoryEntry | None", (updated))

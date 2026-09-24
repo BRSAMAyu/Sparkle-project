@@ -20,6 +20,12 @@ Stage: D-REDEEM
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import CursorResult
+
+
 import hashlib
 import re
 import secrets
@@ -244,7 +250,7 @@ async def redeem(
         )
         .values(used_count=RedeemCode.used_count + 1, used_by=user_id, used_at=now)
     )
-    if claimed.rowcount != 1:
+    if cast("CursorResult[Any]", (claimed)).rowcount != 1:
         logger.info("redeem rejected code_prefix={} batch_id={} reason=exhausted", row.code_prefix, row.batch_id)
         return RedeemOutcome(status=REDEEM_EXHAUSTED, message="兑换码已被使用")
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from collections import Counter
+from collections import Counter, defaultdict
 from typing import Any
 
 
@@ -81,9 +81,9 @@ class BeliefTraceInspector:
         same_source_correlation_max_group_size = 0
         belief_projection_count = 0
         belief_projection_target_counts: Counter[str] = Counter()
-        uncertainty_sums: Counter[str] = Counter()
+        uncertainty_sums: dict[str, float] = defaultdict(float)
         uncertainty_counts: Counter[str] = Counter()
-        belief_mean_sums: Counter[str] = Counter()
+        belief_mean_sums: dict[str, float] = defaultdict(float)
         belief_mean_counts: Counter[str] = Counter()
         mode_outcome_counts: dict[str, Counter[str]] = {}
         mode_load_type_outcome_counts: dict[str, dict[str, Counter[str]]] = {}

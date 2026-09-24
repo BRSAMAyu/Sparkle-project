@@ -32,7 +32,7 @@ class ExecutionRecord(BaseModel):
     task_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True, index=True)
 
     executor_type: Mapped[str] = mapped_column(String(50), nullable=False, default="openclaw")
-    external_run_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    external_run_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     raw_response: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
     parsed_output: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
@@ -48,8 +48,8 @@ class ExecutionRecord(BaseModel):
     tool_calls_count: Mapped[int] = mapped_column(Integer, nullable=True, default=0)
     approval_requested: Mapped[int] = mapped_column(Integer, nullable=True, default=0)
 
-    error_category: Mapped[str] = mapped_column(String(100), nullable=True)
-    error_message: Mapped[str] = mapped_column(Text, nullable=True)
+    error_category: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     execution_started_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     execution_completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)

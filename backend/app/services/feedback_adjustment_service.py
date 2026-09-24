@@ -26,7 +26,7 @@ import copy
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -225,7 +225,7 @@ class TimeEstimateCalibrator:
         avg_ratio = sum(ratios) / len(ratios)
 
         # 限制在合理范围
-        return max(0.5, min(2.0, avg_ratio))
+        return cast("float", (max(0.5, min(2.0, avg_ratio))))
 
 
 class FeedbackDrivenAdjustmentService:
@@ -344,7 +344,7 @@ class FeedbackDrivenAdjustmentService:
         difficulty: str
     ) -> list[AdjustmentAction]:
         """处理难度反馈"""
-        actions = []
+        actions: list[Any] = []
 
         if not event.task_id:
             return actions
@@ -393,7 +393,7 @@ class FeedbackDrivenAdjustmentService:
         event: FeedbackEvent
     ) -> list[AdjustmentAction]:
         """处理时间估计反馈"""
-        actions = []
+        actions: list[Any] = []
 
         if not event.task_id or not event.actual_duration_minutes:
             return actions
@@ -463,7 +463,7 @@ class FeedbackDrivenAdjustmentService:
         event: FeedbackEvent
     ) -> list[AdjustmentAction]:
         """处理主题已掌握反馈"""
-        actions = []
+        actions: list[Any] = []
 
         if not event.knowledge_nodes:
             return actions
@@ -495,7 +495,7 @@ class FeedbackDrivenAdjustmentService:
         event: FeedbackEvent
     ) -> list[AdjustmentAction]:
         """基于低评分建议任务修改"""
-        actions = []
+        actions: list[Any] = []
 
         if not event.task_id:
             return actions

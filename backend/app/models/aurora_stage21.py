@@ -24,7 +24,7 @@ class UserSkill(BaseModel):
     examples: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=list)
     privacy_level: Mapped[str] = mapped_column(String(16), nullable=False, default="private")
     usage_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    last_activated_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    last_activated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     forked_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     schema_version: Mapped[str] = mapped_column(String(16), nullable=False, default="skill.v1")

@@ -53,7 +53,7 @@ class UserSession(BaseModel):
     user_agent: Mapped[str] = mapped_column(String(500), nullable=True)
     refresh_token_jti: Mapped[str] = mapped_column(String(64), nullable=True, index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
-    revoked_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     last_active_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False, index=True)
 
 

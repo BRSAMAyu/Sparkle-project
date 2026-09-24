@@ -2,6 +2,7 @@ import base64
 import hashlib
 import os
 from abc import ABC, abstractmethod
+from typing import cast
 
 from loguru import logger
 
@@ -41,7 +42,7 @@ class AwsKmsKeyProvider(MasterKeyProvider):
         client = boto3.client("kms", region_name=self.region)
         blob = base64.b64decode(self.ciphertext.encode("ascii"))
         response = client.decrypt(CiphertextBlob=blob)
-        return response["Plaintext"]
+        return cast("bytes", (response["Plaintext"]))
 
 
 class VaultKeyProvider(MasterKeyProvider):

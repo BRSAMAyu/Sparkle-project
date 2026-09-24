@@ -102,7 +102,7 @@ class PlanState(BaseModel):
         default=PlanStateStatus.ACTIVE.value,
         index=True,
     )
-    archived_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Relationships
     plan = relationship("Plan", backref="plan_state", uselist=False)

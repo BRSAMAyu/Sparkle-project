@@ -215,7 +215,7 @@ class AccountabilityAchievementService:
         Returns:
             新解锁的成就ID列表
         """
-        unlocked = []
+        unlocked: list[str] = []
 
         partnership = await db.get(AccountabilityPartnership, partnership_id)
         if not partnership:
@@ -261,7 +261,7 @@ class AccountabilityAchievementService:
         Returns:
             新解锁的成就ID列表
         """
-        unlocked = []
+        unlocked: list[str] = []
 
         partnership = await db.get(AccountabilityPartnership, partnership_id)
         if not partnership:
@@ -295,7 +295,7 @@ class AccountabilityAchievementService:
         Returns:
             新解锁的成就ID列表
         """
-        unlocked = []
+        unlocked: list[Any] = []
 
         partnership = await db.get(AccountabilityPartnership, partnership_id)
         if not partnership or not partnership.started_at:

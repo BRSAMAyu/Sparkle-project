@@ -9,7 +9,7 @@ Follows the established metadata injection pattern (ux_envelope, spine_receipt).
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 
@@ -55,7 +55,7 @@ class ReplyOptionInjector:
                 wake_eligibility=wake_eligibility or {},
                 user_model_meta=user_model_meta or {},
             )
-            return groups
+            return cast("list[dict[str, Any]]", (groups))
         except Exception:
             logger.opt(exception=True).debug("ReplyOptionInjector: generation failed")
             return []
@@ -66,7 +66,7 @@ class ReplyOptionInjector:
             question = self._spine_engine.generate_options(signal)
             if question is None:
                 return None
-            return question.to_dict()
+            return cast("dict[str, Any] | None", (question.to_dict()))
         except Exception:
             logger.opt(exception=True).debug("ReplyOptionInjector: signal generation failed")
             return None

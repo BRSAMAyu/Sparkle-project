@@ -1,6 +1,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 from loguru import logger
 
@@ -56,7 +58,7 @@ class SemanticRouter:
 
             if best_capability:
                 logger.info(f"Semantic routing: '{query}' -> {best_capability} (score: {best_score:.2f})")
-                return best_capability
+                return cast("str | None", (best_capability))
 
             return None
 
@@ -119,7 +121,7 @@ class HybridRouter:
             # Map capability to node inside graph router if it handles it
             graph_result = await self.graph.find_route(current, capability)
             if graph_result:
-                return graph_result
+                return cast("str | None", (graph_result))
 
         # 4. Default Routing
         return "orchestrator"
@@ -144,5 +146,5 @@ class HybridRouter:
         text_lower = text.lower()
         for capability, keywords in self.semantic.capability_map.items():
             if any(kw in text_lower for kw in keywords):
-                return capability
+                return cast("str", (capability))
         return ""

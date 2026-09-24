@@ -34,11 +34,11 @@ class UserToolHistory(Base):
 
     # Execution result
     success: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    execution_time_ms: Mapped[int] = mapped_column(Integer, nullable=True)  # 执行时间（毫秒）
+    execution_time_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)  # 执行时间（毫秒）
 
     # Error tracking
-    error_message: Mapped[str] = mapped_column(String(500), nullable=True)
-    error_type: Mapped[str] = mapped_column(String(100), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    error_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     # Context at execution time (for learning)
     context_snapshot: Mapped[Any] = mapped_column(JSON, nullable=True)  # user_state, task_state, etc.

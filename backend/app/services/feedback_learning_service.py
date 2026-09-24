@@ -361,7 +361,7 @@ class FeedbackLearningService:
         # 简化实现：统计未通过且用户不满意的指标
 
         feedback_by_review = {f.review_id: f for f in feedbacks}
-        metric_failures = defaultdict(int)
+        metric_failures: dict[str, Any] = defaultdict(int)
 
         for review in reviews:
             feedback = feedback_by_review.get(review.review_id)
@@ -611,7 +611,7 @@ class FeedbackLearningService:
 
     def _find_common_metrics(self, metrics_list: list[list[dict]]) -> list[str]:
         """找出共同的未通过指标"""
-        metric_failures = defaultdict(int)
+        metric_failures: dict[str, Any] = defaultdict(int)
         for metrics in metrics_list:
             for metric in metrics:
                 if not metric.get("passed", True):
@@ -728,7 +728,7 @@ class FeedbackLearningService:
         trend_data: list[dict[str, Any]],
     ) -> list[str]:
         """从趋势数据中提取常见问题"""
-        issue_counts = defaultdict(int)
+        issue_counts: dict[str, Any] = defaultdict(int)
 
         for day_data in trend_data:
             # 如果通过率较低，标记问题

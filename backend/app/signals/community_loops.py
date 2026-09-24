@@ -10,7 +10,7 @@ privacy-preserving patches for the Signal-to-Action Spine.
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 
@@ -231,7 +231,7 @@ class CommunityLoopManager:
             return {"active": False, "total_checkins": 0}
         state = json.loads(raw)
         state["active"] = state.get("total_checkins", 0) >= 3
-        return state
+        return cast("dict[str, Any]", (state))
 
 
     async def record_strategy_outcome(
@@ -275,7 +275,7 @@ class CommunityLoopManager:
         raw = await redis_client.get(key)
         if not raw:
             return None
-        return json.loads(raw)
+        return cast("dict[str, Any] | None", (json.loads(raw)))
 
 
 def _now_iso() -> str:

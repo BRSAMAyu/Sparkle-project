@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -94,7 +94,7 @@ def _plan_current_day(plan: Plan, today: date) -> int | None:
     if total_days <= 0:
         return None
     days_remaining = max((target_date - today).days, 0)
-    return max(total_days - days_remaining + 1, 1)
+    return cast("int | None", (max(total_days - days_remaining + 1, 1)))
 
 
 class DailyTaskSelectionService:

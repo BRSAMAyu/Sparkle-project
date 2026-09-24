@@ -1,4 +1,9 @@
 from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import CursorResult
+
 
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,7 +33,7 @@ class EventRetentionService:
             )
         )
         await self.db.commit()
-        return result.rowcount or 0
+        return cast("CursorResult[Any]", (result)).rowcount or 0
 
     async def prune_state_snapshots(self, days: int) -> int:
         cutoff = _utcnow() - timedelta(days=days)
@@ -39,4 +44,4 @@ class EventRetentionService:
             .values(deleted_at=_utcnow())
         )
         await self.db.commit()
-        return result.rowcount or 0
+        return cast("CursorResult[Any]", (result)).rowcount or 0

@@ -27,7 +27,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import UUID, uuid4
 
 from loguru import logger
@@ -853,7 +853,7 @@ def _has_table(sync_conn, name: str) -> bool:
     from sqlalchemy import inspect
 
     try:
-        return inspect(sync_conn).has_table(name)
+        return cast("bool", (inspect(sync_conn).has_table(name)))
     except Exception:  # noqa: BLE001
         return False
 

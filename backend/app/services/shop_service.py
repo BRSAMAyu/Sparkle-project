@@ -8,8 +8,12 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 from uuid import uuid4
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import CursorResult
+
 
 from loguru import logger
 from sqlalchemy import and_, func, select
@@ -125,14 +129,14 @@ class ShopService:
                 index_elements=[IdempotencyKey.key]
             )
             result = await self.db.execute(stmt)
-            return bool(result.rowcount)
+            return bool(cast("CursorResult[Any]", (result)).rowcount)
 
         if dialect_name == "sqlite":
             stmt = sqlite_insert(IdempotencyKey).values(**values).on_conflict_do_nothing(
                 index_elements=[IdempotencyKey.key]
             )
             result = await self.db.execute(stmt)
-            return bool(result.rowcount)
+            return bool(cast("CursorResult[Any]", (result)).rowcount)
 
         self.db.add(IdempotencyKey(**values))
         await self.db.flush()

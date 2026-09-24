@@ -10,6 +10,7 @@ from __future__ import annotations
 import time
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -402,7 +403,7 @@ class CollaborativeFilteringService:
     ) -> list[CollaborativeRecommendation]:
         """基于相似用户生成推荐"""
         recommendations = []
-        item_scores = defaultdict(float)
+        item_scores: dict[str, Any] = defaultdict(float)
         item_users = defaultdict(set)
         item_details = {}
 
@@ -523,7 +524,7 @@ class CollaborativeFilteringService:
 
         task = await self.db.get(Task, item_id)
         if task:
-            return task.description
+            return cast("str | None", (task.description))
 
         return None
 
@@ -547,7 +548,7 @@ class CollaborativeFilteringService:
 
         task = await self.db.get(Task, item_id)
         if task:
-            return task.subject_id
+            return cast("UUID | None", (task.subject_id))
 
         return None
 

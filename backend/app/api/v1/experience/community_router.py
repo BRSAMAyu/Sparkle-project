@@ -6,6 +6,7 @@ integration pass so parallel agents do not contend on the central router.
 """
 
 from datetime import UTC, datetime, timedelta
+from typing import cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -52,8 +53,8 @@ def _display_name(user: User | None) -> str:
 
 def _other_user(partnership: AccountabilityPartnership, current_user_id: UUID) -> User | None:
     if str(partnership.initiator_id) == str(current_user_id):
-        return partnership.partner
-    return partnership.initiator
+        return cast("User | None", (partnership.partner))
+    return cast("User | None", (partnership.initiator))
 
 
 def _my_goal(partnership: AccountabilityPartnership, current_user_id: UUID) -> str:

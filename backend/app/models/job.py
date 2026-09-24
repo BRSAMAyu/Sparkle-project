@@ -50,12 +50,12 @@ class Job(BaseModel):
 
     params: Mapped[Any] = mapped_column(JSON, default={}, nullable=True)
     result: Mapped[Any] = mapped_column(JSON, nullable=True)
-    error_message: Mapped[str] = mapped_column(Text, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     progress: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
 
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
-    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # 🆕 v2.1: 超时时间
     timeout_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)

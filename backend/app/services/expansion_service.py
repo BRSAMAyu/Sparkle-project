@@ -9,6 +9,7 @@ import json
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -529,13 +530,13 @@ sector_weights 必须返回整数百分比，总和必须为 100，可多星域�
         """解析 LLM 响应"""
         try:
             data = json.loads(response)
-            return data
+            return cast("dict[Any, Any]", (data))
         except json.JSONDecodeError:
             # 尝试提取 JSON 块
             import re
             json_match = re.search(r'```json\s*(.*?)\s*```', response, re.DOTALL)
             if json_match:
-                return json.loads(json_match.group(1))
+                return cast("dict[Any, Any]", (json.loads(json_match.group(1))))
             raise ValueError("Failed to parse LLM response as JSON") from None
 
     async def _create_expanded_nodes(
@@ -605,7 +606,7 @@ sector_weights 必须返回整数百分比，总和必须为 100，可多星域�
             return None
         node, distance = row
         if distance is not None and float(distance) <= settings.EXPANSION_SEMANTIC_DEDUP_THRESHOLD:
-            return node
+            return cast("KnowledgeNode | None", (node))
         return None
 
     async def _select_prompt_version(self, trigger_node_id: UUID) -> str:
@@ -627,7 +628,7 @@ sector_weights 必须返回整数百分比，总和必须为 100，可多星域�
         if rows:
             best = max(rows, key=lambda r: (r.avg_rating or 0, r.count))
             if best.prompt_version:
-                return best.prompt_version
+                return cast("str", (best.prompt_version))
 
         # Deterministic fallback
         index = int(trigger_node_id.int % len(self.PROMPT_VERSIONS))
@@ -664,7 +665,7 @@ sector_weights 必须返回整数百分比，总和必须为 100，可多星域�
         self.db.add(feedback)
         await self.db.commit()
         asyncio.create_task(_refresh_galaxy_feedback_signals(user_id))
-        return feedback.id
+        return cast("UUID", (feedback.id))
 
     async def _find_existing_node(self, name: str) -> KnowledgeNode | None:
         """查找已存在的节点"""

@@ -1,6 +1,7 @@
 import asyncio
 import json
 from datetime import datetime
+from typing import Any
 
 from loguru import logger
 
@@ -47,7 +48,7 @@ class AutoOptimizer:
 
     async def _collect_metrics(self) -> dict:
         """Collect system metrics."""
-        metrics = {
+        metrics: dict[str, Any] = {
             'routes': {},
             'performance': {},
             'graph': {}

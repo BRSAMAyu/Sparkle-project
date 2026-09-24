@@ -8,6 +8,11 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime, timedelta
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import CursorResult
+
 
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -252,7 +257,7 @@ class TaskOccurrenceService:
         )
         result = await self.db.execute(stmt)
         await self.db.flush()
-        return result.rowcount
+        return cast("int", (cast("CursorResult[Any]", (result)).rowcount))
 
     async def auto_mark_missed(self, reference_date: date | None = None) -> int:
         """Mark PLANNED/READY occurrences as MISSED when past their window.
@@ -275,7 +280,7 @@ class TaskOccurrenceService:
         )
         result = await self.db.execute(stmt)
         await self.db.flush()
-        return result.rowcount
+        return cast("int", (cast("CursorResult[Any]", (result)).rowcount))
 
     # ------------------------------------------------------------------
     # Analytics

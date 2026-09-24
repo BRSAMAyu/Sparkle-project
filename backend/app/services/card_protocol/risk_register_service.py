@@ -12,6 +12,7 @@ from __future__ import annotations
 import uuid
 from copy import deepcopy
 from datetime import datetime
+from typing import Any, cast
 
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -82,7 +83,7 @@ class RiskRegisterService:
                         existing["evidence"] = existing_evidence
                     payload["risks"] = risks
                     await self.artifact_service.update_payload(artifact.id, payload)
-                    return existing
+                    return cast("dict[Any, Any] | None", (existing))
             risks.append(risk_entry)
             payload["risks"] = risks
             await self.artifact_service.update_payload(artifact.id, payload)

@@ -16,7 +16,7 @@ import statistics
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 from time import perf_counter
-from typing import Any
+from typing import Any, cast
 from uuid import UUID, uuid4
 
 from loguru import logger
@@ -301,7 +301,7 @@ class PredictiveService:
         if topic_id is None:
             return None
         prediction = await self.predict_difficulty(user_id=user_id, topic_id=topic_id)
-        return prediction.to_dict()
+        return cast("dict[str, Any] | None", (prediction.to_dict()))
 
     async def _resolve_subject_difficulty_topic(self, user_id: UUID) -> UUID | None:
         latest_study_stmt = (
@@ -1732,7 +1732,7 @@ class PredictiveService:
         return actions[:3]
 
     def _normalize_explanations(self, value: Any) -> dict[str, list[str]]:
-        base = {
+        base: dict[str, Any] = {
             "recent_24h": [],
             "recent_7d": [],
             "profile": [],

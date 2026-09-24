@@ -31,7 +31,7 @@ class MemoryPreference(BaseModel):
     evidence_missing: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     evidence_checked_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     last_consumed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    archived_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     retracted_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     user = relationship("User", backref="memory_preferences")
@@ -74,7 +74,7 @@ class MemoryGoal(BaseModel):
     evidence_missing: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     evidence_checked_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     last_consumed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    archived_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     retracted_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     user = relationship("User", backref="memory_goals")
@@ -117,9 +117,9 @@ class EpisodicMemory(BaseModel):
     evidence_checked_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     evidence_snapshot: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
     last_consumed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    archived_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     retracted_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    revoked_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     # Memory V3 (M-01): epistemic class of the record. NULL = derive from
     # source_lane (explicit lanes -> FACT, everything else -> HYPOTHESIS);
     # OBSERVATION / EXPERIENCE are set explicitly by future writers

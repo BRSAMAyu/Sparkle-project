@@ -4,7 +4,7 @@ import re
 from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -964,7 +964,7 @@ class ErrorReplanBridge:
                 Plan.created_at.desc(),
             )
         )
-        return result.scalars().first()
+        return cast("UUID | None", (result.scalars().first()))
 
     async def _insert_next_day_repair_tasks(
         self,
@@ -1319,7 +1319,7 @@ class ErrorReplanBridge:
             )
             .limit(1)
         )
-        return result.scalar_one_or_none()
+        return cast("Task | None", (result.scalar_one_or_none()))
 
     async def _attach_specialized_repair_links(self, *, task: Task, db_node_ids: list[UUID]) -> None:
         if not db_node_ids:
@@ -1663,7 +1663,7 @@ class ErrorReplanBridge:
         created_at = user.created_at
         if created_at.tzinfo is not None:
             created_at = created_at.replace(tzinfo=None)
-        return (_utcnow() - created_at) < timedelta(days=7)
+        return cast("bool", ((_utcnow() - created_at) < timedelta(days=7)))
 
     async def _resolve_node_name(self, node_ids: list[UUID]) -> str:
         if not node_ids:

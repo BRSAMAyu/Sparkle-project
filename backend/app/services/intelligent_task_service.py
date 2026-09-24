@@ -8,6 +8,8 @@ from uuid import UUID
 
 logger = logging.getLogger(__name__)
 
+from typing import Any, cast
+
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -80,7 +82,7 @@ class IntelligentTaskService:
         intent_data = await self._recognize_intent(input_text)
 
         # 2. Match extracted nodes with existing knowledge graph
-        suggested_nodes = []
+        suggested_nodes: list[Any] = []
 
         # Search for existing nodes using semantic search for each extracted term
         for term in intent_data.get("keywords", []):
@@ -182,7 +184,7 @@ class IntelligentTaskService:
                     except (ValueError, TypeError):
                         result["difficulty"] = 1
 
-                return result
+                return cast("dict[Any, Any]", (result))
             else:
                 raise ValueError(f"Unexpected response format: {data}")
 

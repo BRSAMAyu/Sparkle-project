@@ -13,7 +13,7 @@ Per Final Spec Iron Law 6: RAG is not a switch, it's a ContextPlan.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 
@@ -369,7 +369,7 @@ class SourceEffectivenessTracker:
         idx_key = _SOURCE_EFFECT_INDEX.format(user_id=user_id)
         await self.redis.sadd(idx_key, source_id)
         await self.redis.expire(idx_key, _SOURCE_EFFECT_TTL)
-        return data
+        return cast("dict[str, Any]", (data))
 
     async def get_source_effectiveness(
         self,
@@ -382,7 +382,7 @@ class SourceEffectivenessTracker:
         raw = await self.redis.get(key)
         if not raw:
             return None
-        return json.loads(raw if isinstance(raw, str) else raw.decode())
+        return cast("dict[str, Any] | None", (json.loads(raw if isinstance(raw, str) else raw.decode())))
 
     async def get_all_source_effectiveness(
         self,

@@ -13,7 +13,7 @@ import time
 import uuid
 from collections.abc import AsyncGenerator, AsyncIterator
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from fastapi import HTTPException
 from loguru import logger
@@ -778,7 +778,7 @@ class LLMService:
 
                     # 记录成功
                     await circuit_breaker_service.record_success("primary_llm")
-                    return response
+                    return cast("str", (response))
                 else:
                     # No current selection — use legacy provider path
                     logger.warning("No LLM selection available, using legacy provider")

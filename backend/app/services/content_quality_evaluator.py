@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import inspect
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -51,14 +51,14 @@ class ContentQualityEvaluator:
     def _action(feedback: ResponseFeedback) -> str | None:
         action = getattr(feedback, "action", None)
         if action is not None:
-            return action
+            return cast("str | None", (action))
         return getattr(feedback, "action_taken", None)
 
     @staticmethod
     def _rating(feedback: ResponseFeedback) -> int | None:
         rating = getattr(feedback, "rating", None)
         if rating is not None:
-            return rating
+            return cast("int | None", (rating))
         if getattr(feedback, "feedback_type", None) == ResponseFeedback.FEEDBACK_UP:
             return 5
         if getattr(feedback, "feedback_type", None) == ResponseFeedback.FEEDBACK_DOWN:

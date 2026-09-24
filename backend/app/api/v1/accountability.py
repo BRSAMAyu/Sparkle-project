@@ -9,6 +9,7 @@ Stage: <首次引入 Stage 号>
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any, cast
 from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
 
@@ -350,8 +351,8 @@ def _slot_type_value(slot_type: AccountabilitySlotType | str | None) -> str:
 
 def _other_user_id(partnership: AccountabilityPartnership, current_user_id: UUID) -> UUID:
     if str(partnership.initiator_id) == str(current_user_id):
-        return partnership.partner_id
-    return partnership.initiator_id
+        return cast("UUID", (partnership.partner_id))
+    return cast("UUID", (partnership.initiator_id))
 
 
 async def _fetch_partnerships_for_users(
@@ -679,7 +680,7 @@ async def _build_leaderboard_summary(
 ) -> dict:
     service = LeaderboardService(db)
     summary = await service.get_summary(current_user_id)
-    payload = {}
+    payload: dict[str, Any] = {}
     for key, board in (
         ("friends", summary.friends),
         ("weekly", summary.weekly),

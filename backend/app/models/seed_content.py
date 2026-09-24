@@ -347,7 +347,7 @@ class SeedLibraryRating(HardDeleteBaseModel):
         nullable=False,
         doc="用户评分，0-10",
     )
-    comment: Mapped[str] = mapped_column(
+    comment: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
         doc="用户评价说明",

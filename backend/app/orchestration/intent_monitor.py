@@ -17,6 +17,7 @@ This module provides:
 """
 
 from collections import defaultdict
+from typing import cast
 
 from loguru import logger
 
@@ -141,7 +142,7 @@ class IntentMonitor:
         self._total_predictions = 0
 
         # Intent distribution (for dashboard)
-        self._intent_distribution = defaultdict(int)
+        self._intent_distribution: dict[str, int] = defaultdict(int)
 
         logger.info("IntentMonitor initialized with Prometheus metrics")
 
@@ -306,12 +307,12 @@ class IntentMonitor:
             # Prometheus Gauge doesn't have a simple get() method
             # We need to use the internal _value() or access samples
             if hasattr(gauge, '_value'):
-                return gauge._value()
+                return cast("float", (gauge._value()))
             elif hasattr(gauge, 'metrics'):
                 # Try to get value from metrics
                 samples = list(gauge.collect())[0].samples
                 if samples:
-                    return samples[0].value
+                    return cast("float", (samples[0].value))
             return 0.0
         except Exception:
             return 0.0

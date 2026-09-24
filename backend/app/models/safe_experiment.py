@@ -38,7 +38,7 @@ class SafeExperiment(BaseModel):
     promotion_candidate: Mapped[Any] = mapped_column(JSON, nullable=True)
     created_by: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     started_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    paused_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    paused_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     concluded_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     episodes = relationship(

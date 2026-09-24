@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import uuid
 from copy import deepcopy
+from typing import Any, cast
 
 from loguru import logger
 from sqlalchemy import select
@@ -122,7 +123,7 @@ class StrategyMapManager:
         """Look up the adaptation rule for a given trigger."""
         params = await self.get_parameters(plan_card_id)
         rules = params.get("adaptation_rules", {})
-        return rules.get(trigger)
+        return cast("dict[Any, Any] | None", (rules.get(trigger)))
 
     async def get_execution_parameters(self, plan_card_id: uuid.UUID) -> dict:
         """Return execution_parameters section from approved strategy."""

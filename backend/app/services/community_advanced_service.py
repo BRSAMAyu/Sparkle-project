@@ -16,8 +16,12 @@ Advanced Community Service - 加密、风控、搜索、离线队列等
 import base64
 import binascii
 from datetime import timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import CursorResult
+
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
@@ -36,6 +40,7 @@ from app.models.community import (
     MessageFavorite,
     MessageReport,
     MessageType,
+    ModerationAction,
     OfflineMessageQueue,
     OfflineMessageStatus,
     PrivateMessage,
@@ -487,8 +492,8 @@ class ReportService:
         else:
             raise ValueError("无权操作")
 
-        report.status = data.status
-        report.action_taken = data.action_taken
+        report.status = cast("ReportStatus", data.status)
+        report.action_taken = cast("ModerationAction | None", data.action_taken)
         report.reviewed_by = reviewer_id
         report.reviewed_at = _utcnow()
         await db.flush()
@@ -977,7 +982,7 @@ class OfflineQueueService:
                 OfflineMessageQueue.expires_at < _utcnow()
             ).values(status=OfflineMessageStatus.EXPIRED)
         )
-        return result.rowcount
+        return cast("int", (cast("CursorResult[Any]", (result)).rowcount))
 
     @staticmethod
     async def get_failed_messages(

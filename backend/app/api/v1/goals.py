@@ -5,8 +5,12 @@ from __future__ import annotations
 import json
 import logging
 from datetime import UTC, date, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import CursorResult
+
 
 logger = logging.getLogger(__name__)
 
@@ -334,7 +338,7 @@ async def delete_goal(
             )
             logger.info(
                 "Soft-deleted %d tasks for goal %s (plan %s)",
-                task_result.rowcount,
+                cast("CursorResult[Any]", (task_result)).rowcount,
                 str(goal_id),
                 str(goal.plan_id),
             )

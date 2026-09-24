@@ -4,6 +4,7 @@ API 中间件
 from __future__ import annotations
 
 import hashlib
+from typing import cast
 from uuid import uuid4
 
 from fastapi import Request, Response
@@ -109,16 +110,16 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
         # 仅对 POST/PUT/PATCH 请求检查幂等性
         if request.method not in ["POST", "PUT", "PATCH"]:
-            return await call_next(request)
+            return cast("Response", (await call_next(request)))
 
         # 检查是否是受保护的路径
         if not any(request.url.path.startswith(p) for p in self.PROTECTED_PATHS):
-            return await call_next(request)
+            return cast("Response", (await call_next(request)))
 
         # 获取幂等键
         idempotency_key = request.headers.get("X-Idempotency-Key")
         if not idempotency_key:
-            return await call_next(request)  # 无幂等键，正常处理
+            return cast("Response", (await call_next(request)))# 无幂等键，正常处理
 
         # M1 Security Fix: 限制幂等键大小（防止 Redis OOM）
         MAX_IDEMPOTENCY_KEY_SIZE = 256
@@ -194,7 +195,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
                         user_id,
                         request_hash,
                     )
-                    return response
+                    return cast("Response", (response))
                 else:
                     # 普通 JSON 响应
                     response_body = [section async for section in response.body_iterator]
@@ -213,7 +214,7 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
                             ttl=3600,
                         )
 
-            return response
+            return cast("Response", (response))
 
         finally:
             if unlock_in_finally:

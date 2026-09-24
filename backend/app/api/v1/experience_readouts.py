@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime, timedelta
-from typing import Any, Literal
+from typing import Any, Literal, cast
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, Query
@@ -167,7 +167,7 @@ def _iso(value: Any) -> str | None:
     if value is None:
         return None
     if hasattr(value, "isoformat"):
-        return value.isoformat()
+        return cast("str | None", (value.isoformat()))
     return str(value)
 
 

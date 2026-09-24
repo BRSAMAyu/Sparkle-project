@@ -6,7 +6,7 @@ import json
 import math
 import time
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import grpc
 from google.api import annotations_pb2  # noqa: F401
@@ -523,8 +523,8 @@ class LLMDispatcher:
 
     def _select_model(self, request: inference_pb2.InferenceRequest) -> str:
         if request.task_type in (inference_pb2.HEAVY_JOB, inference_pb2.VERIFY_PLAN):
-            return llm_service.reason_model
-        return llm_service.chat_model
+            return cast("str", (llm_service.reason_model))
+        return cast("str", (llm_service.chat_model))
 
     def _cache_key(self, request: inference_pb2.InferenceRequest) -> str:
         payload = {
@@ -554,7 +554,7 @@ class LLMDispatcher:
             await cache_service.init_redis()
         if not cache_service.redis:
             return None
-        return await cache_service.get(key)
+        return cast("dict[str, Any] | None", (await cache_service.get(key)))
 
     async def _cache_set(self, key: str, value: dict[str, Any], request: inference_pb2.InferenceRequest) -> None:
         if not cache_service.redis:

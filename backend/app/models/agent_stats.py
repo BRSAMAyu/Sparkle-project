@@ -26,7 +26,7 @@ class AgentExecutionStats(Base):
 
     # Execution metrics
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     duration_ms: Mapped[int] = mapped_column(Integer, nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False)  # success, failed, timeout
 
@@ -36,7 +36,7 @@ class AgentExecutionStats(Base):
 
     # Metadata (Use JSON for SQLite compatibility, JSONB for PostgreSQL)
     extra_metadata: Mapped[Any] = mapped_column(JSON, nullable=True, default={})
-    error_message: Mapped[str] = mapped_column(Text, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False, index=True)

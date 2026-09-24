@@ -3,6 +3,7 @@ Account Lockout Policy Implementation
 Prevents brute force attacks by locking accounts after failed login attempts
 """
 from datetime import timedelta
+from typing import cast
 
 from loguru import logger
 from sqlalchemy import select
@@ -53,7 +54,7 @@ class AccountLockoutService:
         """Check if account is currently locked"""
         try:
             attempts = await self.get_failed_attempts(user_id)
-            return attempts >= self.max_failed_attempts
+            return cast("bool", (attempts >= self.max_failed_attempts))
         except Exception as e:
             logger.error(f"Redis error in is_account_locked: {e}")
             return False  # Allow login if Redis is down

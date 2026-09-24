@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from pydantic import ValidationError
 
@@ -251,7 +251,7 @@ def get_task_template(pack: dict[str, Any], template_id: str) -> dict[str, Any] 
     needle = template_id.lower()
     for template in pack.get("task_card_templates", []):
         if template.get("template_id", "").lower() == needle:
-            return template
+            return cast("dict[str, Any] | None", (template))
         if template.get("label", "").lower() == needle:
-            return template
+            return cast("dict[str, Any] | None", (template))
     return None

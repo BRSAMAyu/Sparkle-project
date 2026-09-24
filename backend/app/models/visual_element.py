@@ -21,7 +21,7 @@ class StrEnum(enum.StrEnum):
 
 
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
@@ -132,7 +132,7 @@ class VisualElement(BaseModel):
         if language and isinstance(self.name_i18n, dict):
             value = self.name_i18n.get(language)
             if value:
-                return value
+                return cast("str", (value))
         return self.name
 
     def get_localized_description(self, locale: str | None) -> str | None:
@@ -140,7 +140,7 @@ class VisualElement(BaseModel):
         if language and isinstance(self.description_i18n, dict):
             value = self.description_i18n.get(language)
             if value:
-                return value
+                return cast("str | None", (value))
         return self.description
 
 
@@ -158,12 +158,12 @@ class UserVisualElement(Base):
     unlock_source: Mapped[str] = mapped_column(String(50), nullable=False)  # achievement, shop, event, system
 
     # 关联的成就/购买记录
-    source_id: Mapped[str] = mapped_column(String(100), nullable=True)  # achievement_id 或 purchase_id
+    source_id: Mapped[str | None] = mapped_column(String(100), nullable=True)  # achievement_id 或 purchase_id
 
     # Timestamps (手动定义，不继承BaseModel)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
-    deleted_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
 
     # 关系
     element = relationship("VisualElement")
@@ -181,19 +181,19 @@ class UserVisualConfig(Base):
     user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
 
     # 装备的视觉元素
-    equipped_background_id: Mapped[str] = mapped_column(String(50), ForeignKey("visual_elements.id"), nullable=True)
-    equipped_particle_id: Mapped[str] = mapped_column(String(50), ForeignKey("visual_elements.id"), nullable=True)
-    equipped_effect_id: Mapped[str] = mapped_column(String(50), ForeignKey("visual_elements.id"), nullable=True)
+    equipped_background_id: Mapped[str | None] = mapped_column(String(50), ForeignKey("visual_elements.id"), nullable=True)
+    equipped_particle_id: Mapped[str | None] = mapped_column(String(50), ForeignKey("visual_elements.id"), nullable=True)
+    equipped_effect_id: Mapped[str | None] = mapped_column(String(50), ForeignKey("visual_elements.id"), nullable=True)
 
     # 装备时间
-    background_equipped_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    particle_equipped_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    effect_equipped_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    background_equipped_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    particle_equipped_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    effect_equipped_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Timestamps (手动定义，不继承BaseModel)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
-    deleted_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
 
     def __repr__(self):
         return f"<UserVisualConfig(user_id={self.user_id}, bg={self.equipped_background_id})>"

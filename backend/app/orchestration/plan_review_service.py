@@ -21,7 +21,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -815,7 +815,7 @@ class PlanReviewService:
             return strategy
         situation_brief = (user_context or {}).get("situation_brief")
         if isinstance(situation_brief, dict) and isinstance(situation_brief.get("planning_strategy"), dict):
-            return situation_brief["planning_strategy"]
+            return cast("dict[str, Any]", (situation_brief["planning_strategy"]))
         return {}
 
     @classmethod
@@ -1049,7 +1049,7 @@ class PlanReviewService:
                     f"decision={result.get('decision')}, "
                     f"confidence={result.get('confidence', 0.0)}"
                 )
-                return result
+                return cast("dict[str, Any]", (result))
 
             except Exception as e:
                 last_error = e
@@ -1120,7 +1120,7 @@ class PlanReviewService:
                 decision = result.get("decision", "")
                 if decision not in {d.value for d in ReviewDecision}:
                     result["decision"] = ReviewDecision.REQUIRES_CONFIRMATION.value
-                return result
+                return cast("dict[str, Any] | None", (result))
         except Exception as exc:
             logger.warning(f"Cross-model review failed (non-blocking): {exc}")
         return None
@@ -2508,7 +2508,7 @@ Please review this plan and provide your assessment."""
         try:
             count = await self.redis.incr(key)
             await self.redis.expire(key, 3600)  # 1小时过期
-            return count
+            return cast("int", (count))
         except Exception as e:
             logger.warning(f"Failed to track rejection count: {e}")
             return 1

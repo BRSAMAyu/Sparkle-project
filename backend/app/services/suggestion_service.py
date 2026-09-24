@@ -1,5 +1,6 @@
 import json
 import re
+from typing import cast
 
 from loguru import logger
 
@@ -50,7 +51,7 @@ class SuggestionService:
             cached = await self.redis.get(cache_key)
             if cached:
                 try:
-                    return json.loads(cached)
+                    return cast("list[dict[str, str]]", (json.loads(cached)))
                 except (json.JSONDecodeError, TypeError):
                     pass  # Fall through to generate suggestions
 

@@ -20,7 +20,7 @@ Created: 2026-01-15
 
 import asyncio
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional, cast
 
 from loguru import logger
 from sqlalchemy import func, select
@@ -323,7 +323,7 @@ class SignalsLearningWorker:
 
         if metrics:
             logger.debug("Retrieved latest metrics from cache")
-            return metrics
+            return cast("dict[Any, Any] | None", (metrics))
         else:
             logger.warning("No metrics found in cache")
             return None

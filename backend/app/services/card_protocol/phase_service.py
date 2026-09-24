@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from sqlalchemy import select
@@ -405,7 +405,7 @@ class PhaseService:
 
         total_weight = sum(weights) or float(len(weights))
         normalized = [weight / total_weight for weight in weights]
-        return round(sum(weight * progress for weight, progress in zip(normalized, progress_values, strict=False)), 4)
+        return cast("float", (round(sum(weight * progress for weight, progress in zip(normalized, progress_values, strict=False)), 4)))
 
     async def _has_complete_weighted_progress_projection(
         self,

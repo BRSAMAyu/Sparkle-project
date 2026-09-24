@@ -206,7 +206,7 @@ class Group(BaseModel):
     total_tasks_completed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # 群管理与风控
-    announcement: Mapped[str] = mapped_column(Text, nullable=True)  # 群公告
+    announcement: Mapped[str | None] = mapped_column(Text, nullable=True)  # 群公告
     announcement_updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     keyword_filters: Mapped[Any] = mapped_column(JSON, nullable=True)  # 敏感词过滤列表
     mute_all: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)  # 全员禁言
@@ -262,7 +262,7 @@ class GroupMember(BaseModel):
 
     # 成员状态
     is_muted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)      # 是否被禁言
-    mute_until: Mapped[datetime] = mapped_column(DateTime, nullable=True)  # 禁言截止时间
+    mute_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # 禁言截止时间
     warn_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # 警告次数
     notifications_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
@@ -270,7 +270,7 @@ class GroupMember(BaseModel):
     flame_contribution: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # 火苗贡献值
     tasks_completed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     checkin_streak: Mapped[int] = mapped_column(Integer, default=0, nullable=False)      # 连续打卡天数
-    last_checkin_date: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    last_checkin_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # 时间戳
     joined_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
@@ -321,7 +321,7 @@ class GroupMessage(BaseModel):
     message_type: Mapped[MessageType] = mapped_column(Enum(MessageType), default=MessageType.TEXT, nullable=False)
 
     # 消息内容
-    content: Mapped[str] = mapped_column(Text, nullable=True)  # 纯文本内容
+    content: Mapped[str | None] = mapped_column(Text, nullable=True)  # 纯文本内容
 
     # 结构化内容（根据message_type不同存储不同结构）
     # TASK_SHARE: {"task_id": "xxx", "task_title": "...", "progress": 0.5}
@@ -336,8 +336,8 @@ class GroupMessage(BaseModel):
 
     # 状态与协作
     is_revoked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    revoked_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    edited_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    edited_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     reactions: Mapped[Any] = mapped_column(JSON, nullable=True)  # {"like": ["user_id", ...]}
     mention_user_ids: Mapped[Any] = mapped_column(JSON, nullable=True)  # ["user_id", ...]
 
@@ -434,7 +434,7 @@ class GroupTask(BaseModel):
     total_completions: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # 完成次数
 
     # 截止日期
-    due_date: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    due_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # 关系
     group = relationship("Group", back_populates="tasks")
@@ -469,7 +469,7 @@ class GroupTaskClaim(BaseModel):
 
     # 状态
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # 认领时间
     claimed_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
@@ -517,7 +517,7 @@ class SharedResource(BaseModel):
 
     # 权限与元数据
     permission: Mapped[str] = mapped_column(String(20), default="view", nullable=False)  # view, comment, edit
-    comment: Mapped[str] = mapped_column(Text, nullable=True)  # 分享留言
+    comment: Mapped[str | None] = mapped_column(Text, nullable=True)  # 分享留言
 
     # 计数
     view_count: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
@@ -577,7 +577,7 @@ class PrivateMessage(BaseModel):
     message_type: Mapped[MessageType] = mapped_column(Enum(MessageType), default=MessageType.TEXT, nullable=False)
 
     # 消息内容
-    content: Mapped[str] = mapped_column(Text, nullable=True)  # 纯文本内容
+    content: Mapped[str | None] = mapped_column(Text, nullable=True)  # 纯文本内容
 
     # 结构化内容 (同 GroupMessage)
     content_data: Mapped[Any] = mapped_column(JSON, nullable=True)
@@ -588,10 +588,10 @@ class PrivateMessage(BaseModel):
 
     # 状态
     is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    read_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     is_revoked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    revoked_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    edited_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    edited_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     reactions: Mapped[Any] = mapped_column(JSON, nullable=True)  # {"like": ["user_id", ...]}
     mention_user_ids: Mapped[Any] = mapped_column(JSON, nullable=True)  # ["user_id", ...]
 
@@ -672,7 +672,7 @@ class MessageReport(BaseModel):
 
     reviewed_by: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     reviewed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    action_taken: Mapped[ModerationAction] = mapped_column(Enum(ModerationAction), nullable=True)
+    action_taken: Mapped[ModerationAction | None] = mapped_column(Enum(ModerationAction), nullable=True)
 
     # 关系
     reporter = relationship("User", foreign_keys=[reporter_id])
@@ -702,7 +702,7 @@ class MessageFavorite(BaseModel):
     group_message_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("group_messages.id", ondelete="CASCADE"), nullable=True)
     private_message_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("private_messages.id", ondelete="CASCADE"), nullable=True)
 
-    note: Mapped[str] = mapped_column(Text, nullable=True)  # 用户的个人备注
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)  # 用户的个人备注
     tags: Mapped[Any] = mapped_column(JSON, nullable=True)  # 用户自定义标签
 
     # 关系
@@ -759,7 +759,7 @@ class OfflineMessageQueue(BaseModel):
     status: Mapped[OfflineMessageStatus] = mapped_column(Enum(OfflineMessageStatus), default=OfflineMessageStatus.PENDING, nullable=False)
     retry_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     last_retry_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    error_message: Mapped[str] = mapped_column(Text, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # 关系
@@ -853,7 +853,7 @@ class UserBlock(BaseModel):
     blocked_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 
     # 拉黑原因
-    reason: Mapped[str] = mapped_column(String(500), nullable=True)
+    reason: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     # 关系
     blocker = relationship("User", foreign_keys=[blocker_id])

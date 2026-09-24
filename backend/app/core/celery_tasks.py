@@ -12,6 +12,11 @@ Celery 任务模块 - 任务包装器
 """
 
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import CursorResult
+
 
 from loguru import logger
 
@@ -2528,7 +2533,7 @@ def purge_deleted_account(self, user_id: str) -> dict:
             counts: dict[str, int] = {}
             for model, field in tables:
                 result = await session.execute(sql_delete(model).where(getattr(model, field) == uid))
-                counts[model.__tablename__] = result.rowcount
+                counts[model.__tablename__] = cast("CursorResult[Any]", (result)).rowcount
 
             await session.delete(user)
             await session.commit()
@@ -2573,7 +2578,7 @@ def purge_deleted_account(self, user_id: str) -> dict:
         return deleted
 
     try:
-        return _run_async(_purge())
+        return cast("dict[Any, Any]", (_run_async(_purge())))
     except Exception as exc:
         logger.error(f"❌ purge_deleted_account failed for {user_id}: {exc}")
         raise self.retry(exc=exc, countdown=3600) from exc

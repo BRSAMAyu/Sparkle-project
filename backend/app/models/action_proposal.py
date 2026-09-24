@@ -69,7 +69,7 @@ class ActionProposal(BaseModel):
     )
     command_type: Mapped[str] = mapped_column(String(32), nullable=False)  # ActionCommandType 词表
     source: Mapped[str] = mapped_column(String(16), nullable=False, default=ProposalSource.SYSTEM.value)
-    terminal_reason: Mapped[str] = mapped_column(String(32), nullable=True)  # TERMINAL_REASON_VOCABULARY
+    terminal_reason: Mapped[str | None] = mapped_column(String(32), nullable=True)  # TERMINAL_REASON_VOCABULARY
 
     # --- 命令目标与乐观并发 ---------------------------------------------------
     subject_type: Mapped[str] = mapped_column(String(32), nullable=True)  # "task"（create 型命令为 NULL）

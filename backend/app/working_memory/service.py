@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 from app.core.i18n import I18n
@@ -291,7 +291,7 @@ class WorkingMemoryService:
 
     async def _get_raw(self, key: str) -> str | None:
         if self.redis is not None:
-            return await self.redis.get(key)
+            return cast("str | None", (await self.redis.get(key)))
         cached = self._local_store.get(key)
         if cached is None:
             return None

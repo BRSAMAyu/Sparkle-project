@@ -62,7 +62,7 @@ class SoftDeleteMixin:
     提供 deleted_at 字段和软删除相关方法
     """
 
-    deleted_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, default=None, index=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None, index=True)
 
     @property
     def is_deleted(self) -> bool:

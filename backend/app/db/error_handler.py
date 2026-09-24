@@ -6,7 +6,7 @@ Database Error Handler
 import functools
 import logging
 from collections.abc import Callable
-from typing import TypeVar
+from typing import TypeVar, cast
 
 from sqlalchemy.exc import (
     DataError,
@@ -154,7 +154,7 @@ def async_db_error_handler(func: Callable[P, T]) -> Callable[P, T]:
     @functools.wraps(func)
     async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
         try:
-            return await func(*args, **kwargs)
+            return cast("T", (await func(*args, **kwargs)))
         except Exception as e:
             if isinstance(
                 e,
@@ -203,7 +203,7 @@ async def retry_on_deadlock(func: Callable[P, T], *args: P.args, max_retries: in
     last_error = None
     for attempt in range(max_retries):
         try:
-            return await func(*args, **kwargs)
+            return cast("T", (await func(*args, **kwargs)))
         except DeadlockError as e:
             last_error = e
             if attempt < max_retries - 1:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from loguru import logger
@@ -345,7 +346,7 @@ class GraphStructureService:
         nodes_with_status = result.all()
 
         node_ids = [node.id for node, _ in nodes_with_status]
-        relations = []
+        relations: list[Any] = []
         if node_ids:
             relations_query = select(NodeRelation).where(
                 and_(
@@ -407,7 +408,7 @@ class GraphStructureService:
 
         # 2. Query Relations
         node_ids = [node.id for node, _ in nodes_with_status]
-        relations = []
+        relations: list[Any] = []
         if node_ids:
             relations_query = select(NodeRelation).where(
                 and_(NodeRelation.source_node_id.in_(node_ids), NodeRelation.target_node_id.in_(node_ids))

@@ -14,6 +14,7 @@ import random
 import re
 from collections import defaultdict
 from datetime import datetime, timedelta
+from typing import Any, cast
 from uuid import UUID
 
 import httpx
@@ -727,7 +728,7 @@ class ErrorBookService:
 
                 json_match = re.search(r"```json\s*(.*?)\s*```", response, re.DOTALL)
                 content = json_match.group(1) if json_match else response
-                return json.loads(content)
+                return cast("dict[Any, Any]", (json.loads(content)))
             return response
         except Exception as e:
             logger.error(f"LLM call failed: {e}")

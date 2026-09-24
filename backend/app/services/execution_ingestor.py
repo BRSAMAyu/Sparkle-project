@@ -4,8 +4,12 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import CursorResult
+
 
 from loguru import logger
 from sqlalchemy import desc, select, update
@@ -494,7 +498,7 @@ class ExecutionIngestor:
         )
         result = await self._db.execute(stmt)
         await self._db.commit()
-        if result.rowcount != 1:
+        if cast("CursorResult[Any]", (result)).rowcount != 1:
             return False
         await self._db.refresh(intent)
         return True

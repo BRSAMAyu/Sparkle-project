@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import UTC, datetime, timedelta
+from typing import Any, cast
 from uuid import uuid4
 
 from jose import JWTError, jwt
@@ -30,7 +31,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """验证密码"""
     try:
-        return pwd_context.verify(plain_password, hashed_password)
+        return cast("bool", (pwd_context.verify(plain_password, hashed_password)))
     except Exception as exc:
         # Intentional fail-closed behavior: verifier errors must never authenticate a password.
         logger.warning("Password verification failed closed: {}", exc)
@@ -40,7 +41,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def get_password_hash(password: str) -> str:
     """生成密码哈希"""
     try:
-        return pwd_context.hash(password)
+        return cast("str", (pwd_context.hash(password)))
     except Exception:
         # Remove dangerous fallback - raise exception for hashing failures
         raise ValueError("Failed to hash password") from None
@@ -91,7 +92,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     )
     key, algorithm = _jwt_signing_key()
     encoded_jwt = jwt.encode(to_encode, key, algorithm=algorithm)
-    return encoded_jwt
+    return cast("str", (encoded_jwt))
 
 
 def create_refresh_token(data: dict) -> str:
@@ -113,7 +114,7 @@ def create_refresh_token(data: dict) -> str:
     )
     key, algorithm = _jwt_signing_key()
     encoded_jwt = jwt.encode(to_encode, key, algorithm=algorithm)
-    return encoded_jwt
+    return cast("str", (encoded_jwt))
 
 
 async def decode_token(
@@ -183,7 +184,7 @@ async def decode_token(
         if await is_session_revoked(str(session_id)):
             raise JWTError("Session revoked")
 
-    return payload
+    return cast("dict[Any, Any]", (payload))
 
 
 def decode_token_sync(token: str, expected_type: str | None = None) -> dict:

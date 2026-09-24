@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -344,7 +344,7 @@ class UserService:
                 if cached:
                     CACHE_HIT_COUNT.labels(cache_name="user_analytics", result="hit").inc()
                     logger.debug(f"Analytics cache HIT for user {user_id}")
-                    return json.loads(cached)
+                    return cast("dict[str, Any] | None", (json.loads(cached)))
                 CACHE_HIT_COUNT.labels(cache_name="user_analytics", result="miss").inc()
             except Exception as e:
                 logger.warning(f"Analytics cache lookup failed: {e}")
@@ -516,7 +516,7 @@ class UserService:
                 cached = await self.redis.get(cache_key)
                 if cached:
                     logger.debug(f"Stats cache HIT for user {user_id}")
-                    return json.loads(cached)
+                    return cast("dict[str, Any] | None", (json.loads(cached)))
             except Exception as e:
                 logger.warning(f"Stats cache lookup failed: {e}")
 

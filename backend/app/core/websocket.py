@@ -21,6 +21,7 @@ import hashlib
 import json
 import time
 import uuid
+from typing import cast
 from uuid import UUID
 
 import redis.asyncio as redis
@@ -516,7 +517,7 @@ class ConnectionManager:
             # Fallback: check local only
             return user_id in self.user_connections
 
-        return await self.redis.exists(f"ws:online:{user_id}") > 0
+        return cast("bool", (await self.redis.exists(f"ws:online:{user_id}") > 0))
 
     async def set_online_status(self, user_id: str, online: bool):
         """
@@ -660,7 +661,7 @@ class ConnectionManager:
                 cached = await self.redis.get(cache_key)
                 if cached:
                     try:
-                        return json.loads(cached)
+                        return cast("list[str]", (json.loads(cached)))
                     except (json.JSONDecodeError, TypeError):
                         pass  # 缓存损坏，继续查询
 

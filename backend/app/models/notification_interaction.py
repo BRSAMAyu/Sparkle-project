@@ -27,7 +27,7 @@ class NotificationInteraction(Base):
     notification_id: Mapped[Any] = mapped_column(GUID(), nullable=False, index=True)
     action_type: Mapped[str] = mapped_column(String(40), nullable=False, comment="viewed, clicked, dismissed")
     action_time: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
-    time_to_action: Mapped[int] = mapped_column(Integer, nullable=True, comment="Seconds from creation to action")
+    time_to_action: Mapped[int | None] = mapped_column(Integer, nullable=True, comment="Seconds from creation to action")
 
     # Relationship
     user = relationship("User", backref="notification_interactions")
@@ -51,8 +51,8 @@ class NotificationPreferences(Base):
     disabled_types: Mapped[Any] = mapped_column(JSON, default=list, nullable=False)
     notification_level: Mapped[str] = mapped_column(String(20), default="standard", nullable=False)
     quiet_hours_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    quiet_hours_start: Mapped[str] = mapped_column(String(5), nullable=True, comment="HH:MM format")
-    quiet_hours_end: Mapped[str] = mapped_column(String(5), nullable=True, comment="HH:MM format")
+    quiet_hours_start: Mapped[str | None] = mapped_column(String(5), nullable=True, comment="HH:MM format")
+    quiet_hours_end: Mapped[str | None] = mapped_column(String(5), nullable=True, comment="HH:MM format")
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False, onupdate=datetime.utcnow)
 
     # Relationship

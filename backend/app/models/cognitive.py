@@ -37,7 +37,7 @@ class CognitiveFragment(BaseModel):
 
     # 状态追踪 (v2.3 Patch)
     analysis_status: Mapped[AnalysisStatus] = mapped_column(Enum(AnalysisStatus), default=AnalysisStatus.PENDING, nullable=False)
-    error_message: Mapped[str] = mapped_column(String(500), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     # 来源类型: capsule (闪念), interceptor (拦截器), behavior (隐式行为)
     source_type: Mapped[str] = mapped_column(String(20), nullable=False)
@@ -50,7 +50,7 @@ class CognitiveFragment(BaseModel):
     content: Mapped[str] = mapped_column(Text, nullable=False)
 
     # AI 预分析结果
-    sentiment: Mapped[str] = mapped_column(String(20), nullable=True)   # anxious, bored, neutral...
+    sentiment: Mapped[str | None] = mapped_column(String(20), nullable=True)   # anxious, bored, neutral...
 
     # 画像版本与溯源 (V3.1)
     persona_version: Mapped[str] = mapped_column(String(50), nullable=True)
@@ -103,8 +103,8 @@ class BehaviorPattern(BaseModel):
     frequency: Mapped[int] = mapped_column(Integer, default=1, nullable=True)        # Occurrences count
 
     is_archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True) # 用户是否已克服此定式
-    last_observed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    last_decay_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    last_observed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_decay_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # 关系
     user = relationship("User", backref="behavior_patterns")

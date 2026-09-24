@@ -3,6 +3,7 @@
 Statistics API
 """
 from datetime import UTC, date, datetime, timedelta
+from typing import cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -224,7 +225,7 @@ def _day_key(value: date | str | datetime) -> str:
 
 def _resolve_heatmap_user_id(current_user: User, requested_user_id: UUID | None) -> UUID:
     if requested_user_id is None or requested_user_id == current_user.id:
-        return current_user.id
+        return cast("UUID", (current_user.id))
     if current_user.is_superuser:
         return requested_user_id
     raise HTTPException(status_code=403, detail="Not authorized to view another user's activity heatmap")

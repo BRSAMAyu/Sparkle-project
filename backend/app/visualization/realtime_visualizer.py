@@ -1,4 +1,6 @@
 
+from typing import Any, cast
+
 from app.core.websocket import manager
 from app.orchestration.statechart_engine import GraphEvent
 from app.visualization.state_visualizer import StateVisualizer
@@ -69,7 +71,7 @@ class RealtimeVisualizer(StateVisualizer):
         if session_id not in self.event_buffer:
             return []
 
-        return self.event_buffer[session_id][-limit:]
+        return cast("list[dict[Any, Any]]", (self.event_buffer[session_id][-limit:]))
 
     def _serialize_state(self, state) -> dict:
         """Serialize state for transport."""

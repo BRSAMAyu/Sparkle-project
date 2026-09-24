@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 遗忘衰减服务 (Decay Service)
 实现艾宾浩斯遗忘曲线，让知识点随时间逐渐暗淡
@@ -209,7 +211,7 @@ class DecayService:
             status.decay_paused = pause
             await self.db.commit()
 
-    async def get_decay_stats(self, user_id: UUID) -> dict[str, any]:
+    async def get_decay_stats(self, user_id: UUID) -> dict[str, Any]:
         """
         获取用户的衰减统计信息
 
@@ -263,7 +265,7 @@ class DecayService:
         self,
         user_id: UUID,
         days_ahead: int = 30
-    ) -> dict[str, dict[str, any]]:
+    ) -> dict[str, dict[str, Any]]:
         """
         时光机：预测未来的知识衰减状态
 
@@ -337,7 +339,7 @@ class DecayService:
         node_ids: list[UUID],
         days_ahead: int = 30,
         review_boost: float = 30.0  # 复习提升的掌握度
-    ) -> dict[str, dict[str, any]]:
+    ) -> dict[str, dict[str, Any]]:
         """
         时光机干预模拟：如果现在复习这些节点，未来会如何？
 
@@ -405,7 +407,7 @@ class DecayService:
         current_mastery: float,
         future_mastery: float,
         is_intervened: bool = False
-    ) -> dict[str, any]:
+    ) -> dict[str, Any]:
         """
         生成前端可视化状态
 

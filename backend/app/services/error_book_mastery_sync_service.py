@@ -21,7 +21,7 @@ from __future__ import annotations
 import hashlib
 import re
 from datetime import UTC, date, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -487,14 +487,14 @@ class ErrorBookMasterySyncService:
     ) -> dict | None:
         from app.services.galaxy_service import GalaxyService
 
-        return await GalaxyService(self.db).update_node_mastery(
+        return cast("dict[Any, Any] | None", (await GalaxyService(self.db).update_node_mastery(
             user_id=user_id,
             node_id=node_id,
             new_mastery=new_mastery,
             reason=reason,
             request_id=request_id,
             revision=revision,
-        )
+        )))
 
     async def _sync_already_applied(self, user_id: UUID, node_id: UUID, request_key: str | None) -> bool:
         """ERR-IDEM 幂等门：该 (user, node, request_key) 的同步是否已落账。
@@ -552,7 +552,7 @@ class ErrorBookMasterySyncService:
             )
             status = result.scalar_one_or_none()
             if status:
-                return status
+                return cast("UserNodeStatus | None", (status))
             if not create_if_missing:
                 return None
 
@@ -585,7 +585,7 @@ class ErrorBookMasterySyncService:
         """Extract error_type from the error record's latest_analysis."""
         analysis = getattr(error_record, "latest_analysis", None) or {}
         if isinstance(analysis, dict):
-            return analysis.get("error_type", "other")
+            return cast("str", (analysis.get("error_type", "other")))
         return "other"
 
     async def _identify_error_pressure_impacted_plans(

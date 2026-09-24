@@ -10,7 +10,7 @@ import asyncio
 import inspect
 import json
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import UUID, uuid4
 
 from loguru import logger
@@ -315,7 +315,7 @@ class CognitiveService:
             result = await llm.chat_json(messages=messages, temperature=temperature)
         if not result or not isinstance(result, dict):
             raise ValueError(f"Explicit batch analysis returned invalid result for {model_key}")
-        return result
+        return cast("dict[Any, Any]", (result))
 
     async def analyze_behavior(self, user_id: UUID, fragment_id: UUID, batch_model_key: str | None = None) -> dict:
         """
@@ -562,7 +562,7 @@ class CognitiveService:
             }
 
             logger.info(f"Successfully analyzed fragment {fragment_id}")
-            return analysis
+            return cast("dict[Any, Any]", (analysis))
 
         except (TimeoutError, SQLAlchemyError, ValueError, TypeError, AttributeError, KeyError) as e:
             logger.exception(f"Error during behavior analysis for {fragment_id}: {e}")

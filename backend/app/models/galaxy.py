@@ -165,7 +165,7 @@ class KnowledgeNode(BaseModel):
     sector_weights: Mapped[Any] = mapped_column(JSONBCompat, default=dict, nullable=True)
     dominant_sector_code: Mapped[str] = mapped_column(String(20), default="VOID", nullable=False, server_default="VOID", index=True)
     sector_classification_status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False, server_default="pending", index=True)
-    sector_classification_model: Mapped[str] = mapped_column(String(100), nullable=True)
+    sector_classification_model: Mapped[str | None] = mapped_column(String(100), nullable=True)
     sector_classified_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
     # P2-24: Exam attributes for retrieval ranking (KG-001)
@@ -327,7 +327,7 @@ class NodeExpansionQueue(BaseModel):
     status: Mapped[str] = mapped_column(String(20), default='pending', index=True, nullable=True)
 
     expanded_nodes: Mapped[Any] = mapped_column(JSON, nullable=True)
-    error_message: Mapped[str] = mapped_column(Text, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     prompt_version: Mapped[str] = mapped_column(String(50), nullable=True)
     model_name: Mapped[str] = mapped_column(String(50), nullable=True)
 

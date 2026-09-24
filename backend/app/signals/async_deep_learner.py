@@ -20,7 +20,7 @@ All outputs require: evidence, confidence, scope, user_visible flag.
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 
@@ -133,7 +133,7 @@ class AsyncDeepLearner:
                 await self.redis.delete(_QUEUE_KEY + ":latest")
         if not raw:
             return None
-        return json.loads(raw)
+        return cast("dict[str, Any] | None", (json.loads(raw)))
 
     async def store_result(
         self,
@@ -152,7 +152,7 @@ class AsyncDeepLearner:
         raw = await self.redis.get(_RESULT_KEY.format(user_id=user_id))
         if not raw:
             return None
-        return json.loads(raw)
+        return cast("dict[str, Any] | None", (json.loads(raw)))
 
     def analyze_signal_patterns(self, signals: list[dict]) -> dict[str, Any]:
         """Pure computation: analyze accumulated signals for patterns.
@@ -395,7 +395,7 @@ class AsyncDeepLearner:
             if stats["total_uses"] < 2:
                 continue
             rate = stats["positive"] / stats["total_uses"]
-            context_counts = {}
+            context_counts: dict[str, Any] = {}
             for ctx in stats["contexts"]:
                 context_counts[ctx] = context_counts.get(ctx, 0) + 1
             best_context = max(context_counts, key=context_counts.get) if context_counts else "general"
@@ -566,7 +566,7 @@ class AsyncDeepLearner:
         raw = await self.redis.get(key)
         if not raw:
             return None
-        return json.loads(raw)
+        return cast("dict[str, Any] | None", (json.loads(raw)))
 
     def _empty_candidate(self, job_type: str, user_id: str) -> dict[str, Any]:
         """Return an empty candidate when no data is available."""

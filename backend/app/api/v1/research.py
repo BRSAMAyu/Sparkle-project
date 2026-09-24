@@ -7,7 +7,7 @@ research dashboards and proposal data.
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
@@ -66,7 +66,7 @@ async def get_research_dashboard(
             "total_conclusions": 0,
         }
 
-    return json.loads(raw if isinstance(raw, str) else raw.decode())
+    return cast("dict[str, Any]", (json.loads(raw if isinstance(raw, str) else raw.decode())))
 
 
 # route-tier: authed

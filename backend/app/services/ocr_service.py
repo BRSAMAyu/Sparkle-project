@@ -5,7 +5,7 @@ import base64
 import binascii
 import json
 import uuid
-from typing import Any
+from typing import Any, cast
 
 import httpx
 from loguru import logger
@@ -171,7 +171,7 @@ class OCRService:
                 json=payload,
             )
             response.raise_for_status()
-            return response.json()
+            return cast("dict[str, Any]", (response.json()))
 
     async def ocr_for_math(self, image_url: str) -> str:
         """数学题 OCR。GLM OCR 返回结构化 Markdown。"""

@@ -13,7 +13,7 @@ User-visible: "为什么给我这个任务" → 可理解的因果卡片
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 # ── Card Types ──────────────────────────────────────────────────────
 
@@ -222,14 +222,14 @@ class TimelineCardRenderer:
     ) -> str:
         evidence = (signal_data or {}).get("evidence_summary", "")
         if evidence:
-            return evidence
+            return cast("str", (evidence))
 
         # Build from policy/directive
         if policy_data:
             policy_data.get("primary_strategy", "")
             reason = policy_data.get("reason_for_user", "")
             if reason:
-                return reason
+                return cast("str", (reason))
 
         # Signal-based fallback
         if signal_data:

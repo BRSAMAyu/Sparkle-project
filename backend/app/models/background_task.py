@@ -48,19 +48,19 @@ class BackgroundTask(BaseModel):
 
     # Progress tracking
     progress: Mapped[float] = mapped_column(Float, default=0.0, nullable=True)  # 0.0 to 1.0
-    progress_message: Mapped[str] = mapped_column(Text, nullable=True)
+    progress_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Result and error data
     result_data: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
-    error_message: Mapped[str] = mapped_column(Text, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Related entity IDs (for linking to tasks, plans, etc.)
     related_entity_id: Mapped[Any] = mapped_column(GUID(), nullable=True)
-    related_entity_type: Mapped[str] = mapped_column(String(50), nullable=True)
+    related_entity_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     # Celery/async task ID for external job tracking
     external_task_id: Mapped[str] = mapped_column(String(255), nullable=True, index=True)
-    completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     def __repr__(self):
         return f"<BackgroundTask(id={self.id}, type={self.task_type}, status={self.status})>"

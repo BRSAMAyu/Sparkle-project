@@ -14,7 +14,7 @@ import asyncio
 import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 from sqlalchemy import Integer, and_, desc, event, func, select
@@ -315,7 +315,7 @@ class ToolHistoryService:
         total = row[0]
         success_count = row[1] or 0
 
-        return (success_count / total) * 100
+        return cast("float", ((success_count / total) * 100))
 
     async def get_user_preferred_tools(
         self, user_id: uuid.UUID, limit: int = 10, days: int = 30

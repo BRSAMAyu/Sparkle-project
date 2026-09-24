@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import enum
 from datetime import date, datetime
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import JSON, Boolean, Date, DateTime, Enum, Float, ForeignKey, Index, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
@@ -162,7 +162,7 @@ class Achievement(BaseModel):
         if language and isinstance(self.name_i18n, dict):
             value = self.name_i18n.get(language)
             if value:
-                return value
+                return cast("str", (value))
         return self.name
 
     def get_localized_description(self, locale: str | None) -> str | None:
@@ -170,7 +170,7 @@ class Achievement(BaseModel):
         if language and isinstance(self.description_i18n, dict):
             value = self.description_i18n.get(language)
             if value:
-                return value
+                return cast("str | None", (value))
         return self.description
 
 
@@ -188,7 +188,7 @@ class UserAchievement(BaseModel):
     progress_target: Mapped[int] = mapped_column(Integer, default=1, nullable=True)  # 目标值（如：100天）
 
     # 解锁状态
-    unlocked_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True)
+    unlocked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
     is_pinned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)  # 用户是否置顶展示
 
     # 社交统计
@@ -220,7 +220,7 @@ class UserStreakStats(BaseModel):
     # 连胜数据
     current_streak: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
     max_streak: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
-    last_activity_date: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    last_activity_date: Mapped[date | None] = mapped_column(DateTime, nullable=True)
 
     # 连胜保护机制
     freeze_charges: Mapped[int] = mapped_column(Integer, default=1, nullable=True)  # 默认送1个
@@ -229,8 +229,8 @@ class UserStreakStats(BaseModel):
 
     # 统计
     total_checkin_days: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
-    longest_streak_start: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    longest_streak_end: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    longest_streak_start: Mapped[date | None] = mapped_column(DateTime, nullable=True)
+    longest_streak_end: Mapped[date | None] = mapped_column(DateTime, nullable=True)
 
     # 最长连胜记录
     longest_streak: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
@@ -252,7 +252,7 @@ class UserStreakDay(BaseModel):
         nullable=False,
     )
     used_freeze: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
-    source_event: Mapped[str] = mapped_column(String(50), nullable=True)
+    source_event: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     __table_args__ = (Index("ix_user_streak_days_user_day", "user_id", "day", unique=True),)
 
@@ -284,7 +284,7 @@ class SparkContract(BaseModel):
     current_minutes: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
 
     # 结算
-    completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     reward_multiplier: Mapped[float] = mapped_column(Float, default=2.0, nullable=True)  # 完成后的倍数奖励
 
     # 失败记录

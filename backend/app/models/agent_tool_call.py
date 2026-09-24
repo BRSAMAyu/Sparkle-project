@@ -61,9 +61,9 @@ class AgentToolCall(BaseModel):
     permission_decision: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)  # decide_tool_permission 结果留痕
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="in_progress")
     result: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)  # ToolResult dump（重放返回体）
-    execution_time_ms: Mapped[int] = mapped_column(Integer, nullable=True)
-    error_type: Mapped[str] = mapped_column(String(100), nullable=True)
-    error_message: Mapped[str] = mapped_column(Text, nullable=True)
+    execution_time_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    error_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     started_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     finished_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)

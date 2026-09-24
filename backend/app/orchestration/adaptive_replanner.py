@@ -12,7 +12,7 @@ import re
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -1816,7 +1816,7 @@ class AdaptiveReplanner:
             Card.not_deleted_filter(),
         )
         result = await self.db.execute(stmt)
-        return result.scalar_one_or_none()
+        return cast("UUID | None", (result.scalar_one_or_none()))
 
     async def _apply_incremental_adjustment(
         self,

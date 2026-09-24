@@ -41,10 +41,10 @@ class NorthStarMetricEvent(BaseModel):
     metric_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     occurred_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
 
-    value_float: Mapped[float] = mapped_column(Float, nullable=True)
-    numerator: Mapped[int] = mapped_column(Integer, nullable=True)
-    denominator: Mapped[int] = mapped_column(Integer, nullable=True)
-    passed: Mapped[bool] = mapped_column(Boolean, nullable=True)
+    value_float: Mapped[float | None] = mapped_column(Float, nullable=True)
+    numerator: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    denominator: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    passed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     payload: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
 
     user = relationship("User", backref="north_star_metric_events")

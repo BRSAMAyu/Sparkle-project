@@ -74,7 +74,7 @@ from collections import OrderedDict
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 
@@ -931,7 +931,7 @@ class MemoryStorageGate:
 
             if self._kill_switches is None:
                 self._kill_switches = AuroraStage19KillSwitchService()
-            return await self._kill_switches.get_feature_mode("storage_gate_enabled")
+            return cast("str", (await self._kill_switches.get_feature_mode("storage_gate_enabled")))
         except Exception as exc:  # kill-switch infra down → gate stays on (settings default)
             logger.debug("Storage gate kill-switch read failed, using settings default: {}", exc)
             mode = str(getattr(settings, "AURORA_STAGE19_STORAGE_GATE_MODE", "live") or "live").lower()

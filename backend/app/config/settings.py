@@ -12,7 +12,7 @@ import logging
 import os
 from urllib.parse import quote, unquote, urlparse, urlunparse
 
-from pydantic import AliasChoices, Field, field_validator, model_validator
+from pydantic import AliasChoices, Field, PrivateAttr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
@@ -123,6 +123,11 @@ class Settings(BaseSettings):
     )
 
     # Application
+    # 动态私有旋钮（kill-switch 服务运行期写入；PrivateAttr() 无默认=未写入即读仍抛 AttributeError，语义不变）
+    _aurora_stage29_lag_points: list[str] = PrivateAttr()
+    _aurora_stage29_misjudgment_days: list[str] = PrivateAttr()
+    _aurora_traits_bias_streak: list[str] = PrivateAttr()
+    _aurora_scene_quality_streak: list[str] = PrivateAttr()
     APP_NAME: str = "Sparkle"
     APP_VERSION: str = "1.0.0"
     ENVIRONMENT: str = "development"

@@ -988,7 +988,7 @@ class DocumentService:
 
         # 3. Create Section Nodes (Simple Heuristic)
         # Group chunks by section_title
-        sections = {}
+        sections: dict[str, Any] = {}
         # 纯标点/空白标题（markdown 的 ===== / ----- 分隔行被 chunker 误当
         # 标题）不是有效节名——剔除字母/数字/CJK 后为空即纯标点，其 chunk
         # 并入 General，避免 upsert 对无效候选 raise 导致整个文件 failed

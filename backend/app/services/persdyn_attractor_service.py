@@ -5,6 +5,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from statistics import fmean, pstdev
+from typing import Any
 from uuid import UUID
 
 from loguru import logger
@@ -353,7 +354,7 @@ class PersDynAttractorService:
         days: int | None = None,
     ) -> dict[str, list[float]]:
         window_days = max(1, int(days or self.HISTORY_DAYS))
-        series = {dim: [] for dim in self.DIMENSIONS}
+        series: dict[str, list[Any]] = {dim: [] for dim in self.DIMENSIONS}
         for offset in range(window_days - 1, -1, -1):
             reference_day = reference_time.date() - timedelta(days=offset)
             observation = self._build_observation_for_day(

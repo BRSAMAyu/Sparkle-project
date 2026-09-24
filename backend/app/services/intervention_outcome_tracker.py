@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import CursorResult
+
+
 from collections import defaultdict
 from datetime import timedelta
 from uuid import UUID
@@ -139,7 +145,7 @@ class InterventionOutcomeTracker:
                 outcome_checked_at=checked_at,
             )
         )
-        if update_result.rowcount == 0:
+        if cast("CursorResult[Any]", (update_result)).rowcount == 0:
             await db.rollback()
             return None
 

@@ -6,7 +6,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from difflib import SequenceMatcher
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -755,7 +755,7 @@ class CheckpointNudgeService:
         domains: list[str] = []
         seen: set[str] = set()
         for task in tasks:
-            candidates = []
+            candidates: list[Any] = []
             if isinstance(task.tags, list):
                 candidates.extend(str(tag) for tag in task.tags if str(tag).strip())
             candidates.append(str(task.title or ""))
@@ -1083,7 +1083,7 @@ class CheckpointDebriefService:
             raw = raw.decode("utf-8")
         if isinstance(raw, str):
             try:
-                return json.loads(raw)
+                return cast("dict[str, Any] | None", (json.loads(raw)))
             except ValueError:
                 return None
         return raw if isinstance(raw, dict) else None

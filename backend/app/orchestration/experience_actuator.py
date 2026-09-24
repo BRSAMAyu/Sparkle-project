@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -111,7 +111,7 @@ def _same_value(left: Any, right: Any) -> bool:
             return round(float(left), 3) == round(float(right), 3)
         except (TypeError, ValueError):
             return False
-    return left == right
+    return cast("bool", (left == right))
 
 
 def _contains_any(text: str, phrases: tuple[str, ...]) -> str | None:

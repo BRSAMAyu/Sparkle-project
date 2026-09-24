@@ -19,7 +19,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 
@@ -497,7 +497,7 @@ class AuroraCoreSessionService:
         if not raw:
             return None
         try:
-            return json.loads(raw)
+            return cast("dict[str, Any] | None", (json.loads(raw)))
         except (json.JSONDecodeError, TypeError):
             return None
 

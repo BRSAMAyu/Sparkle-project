@@ -646,7 +646,7 @@ class ReflectionAgent:
             return True
 
         # 检查是否有超过50%的问题在同一位置
-        location_counts = {}
+        location_counts: dict[str, Any] = {}
         for loc in locations:
             location_counts[loc] = location_counts.get(loc, 0) + 1
 

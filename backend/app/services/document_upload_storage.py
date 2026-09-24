@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from functools import lru_cache
+from typing import Any, cast
 from urllib.parse import urlparse
 
 import boto3
@@ -67,20 +68,20 @@ class DocumentUploadStorage:
         return max(60, int(settings.FILE_PRESIGN_EXPIRES_SECONDS or 420))
 
     def create_presigned_put_url(self, *, object_key: str, mime_type: str, file_size: int) -> str:
-        return _presign_client().generate_presigned_url(
+        return cast("str", (_presign_client().generate_presigned_url(
             "put_object",
             Params={"Bucket": self.bucket, "Key": object_key},
             ExpiresIn=self.expires_in,
             HttpMethod="PUT",
-        )
+        )))
 
     def create_presigned_get_url(self, *, object_key: str) -> str:
-        return _presign_client().generate_presigned_url(
+        return cast("str", (_presign_client().generate_presigned_url(
             "get_object",
             Params={"Bucket": self.bucket, "Key": object_key},
             ExpiresIn=self.expires_in,
             HttpMethod="GET",
-        )
+        )))
 
     def copy_object(self, *, source_object_key: str, destination_object_key: str) -> None:
         _internal_client().copy_object(
@@ -93,7 +94,7 @@ class DocumentUploadStorage:
         _internal_client().delete_object(Bucket=self.bucket, Key=object_key)
 
     def head_object(self, *, object_key: str) -> dict:
-        return _internal_client().head_object(Bucket=self.bucket, Key=object_key)
+        return cast("dict[Any, Any]", (_internal_client().head_object(Bucket=self.bucket, Key=object_key)))
 
     def read_header(self, *, object_key: str, max_bytes: int = 512) -> bytes:
         response = _internal_client().get_object(
@@ -103,7 +104,7 @@ class DocumentUploadStorage:
         )
         body = response["Body"]
         try:
-            return body.read(max_bytes)
+            return cast("bytes", (body.read(max_bytes)))
         finally:
             body.close()
 

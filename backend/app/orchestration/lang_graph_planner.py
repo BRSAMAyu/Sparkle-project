@@ -10,7 +10,7 @@ Responsibilities:
 from __future__ import annotations
 
 import uuid
-from typing import Any
+from typing import Any, cast
 
 from langchain_core.messages import AIMessage, HumanMessage
 from loguru import logger
@@ -312,7 +312,7 @@ class LangGraphPlanner:
     @staticmethod
     def _build_persona_constraints_context(persona_constraints: Any) -> str:
         if hasattr(persona_constraints, "to_prompt_block"):
-            return persona_constraints.to_prompt_block()
+            return cast("str", (persona_constraints.to_prompt_block()))
         if isinstance(persona_constraints, dict):
             lines = ["Persona-aware planning constraints:"]
             for key, value in persona_constraints.items():
@@ -825,7 +825,7 @@ class LangGraphPlanner:
             cached = await self.redis.get(cache_key)
             if cached:
                 data = json.loads(cached)
-                return data.get("version", 1)
+                return cast("int", (data.get("version", 1)))
         except Exception:
             pass
 

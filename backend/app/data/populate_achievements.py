@@ -6,7 +6,7 @@ import asyncio
 import json
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -73,7 +73,7 @@ VISUAL_ELEMENT_SYNC_FIELDS = [
     "sort_order",
     "category",
 ]
-VISUAL_ELEMENT_FIELD_DEFAULTS = {
+VISUAL_ELEMENT_FIELD_DEFAULTS: dict[str, Any] = {
     "unlock_requirement": None,
     "config": {},
     "is_active": True,
@@ -112,7 +112,7 @@ def _normalize_rewards(reward_config: Any) -> list[dict[str, Any]]:
         return []
     if isinstance(reward_config, list):
         return reward_config
-    return reward_config.get("rewards", [])
+    return cast("list[dict[str, Any]]", (reward_config.get("rewards", [])))
 
 
 def validate_achievement_seed_data() -> None:

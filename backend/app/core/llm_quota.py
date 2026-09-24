@@ -26,6 +26,8 @@ except ImportError:
         def decorator(func):
             return func
         return decorator
+from typing import cast
+
 import redis.asyncio as redis
 
 from app.config import settings
@@ -432,7 +434,7 @@ class LLMCostGuard:
     async def _is_emergency_mode(self) -> bool:
         """检查是否处于紧急模式"""
         mode = await self.redis.get(self.KEY_EMERGENCY_MODE)
-        return mode == b"1" or mode == "1"
+        return cast("bool", (mode == b"1" or mode == "1"))
 
     async def enable_emergency_mode(self, duration_minutes: int = 60) -> None:
         """

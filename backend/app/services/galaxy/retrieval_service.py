@@ -4,7 +4,7 @@ import asyncio
 import re
 import time
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -152,7 +152,7 @@ class KnowledgeRetrievalService:
 
         cached = await cache_service.get(KNOWLEDGE_VERSION_CACHE_KEY)
         if cached:
-            return cached
+            return cast("str | None", (cached))
 
         version = await self._compute_knowledge_version()
         if version:

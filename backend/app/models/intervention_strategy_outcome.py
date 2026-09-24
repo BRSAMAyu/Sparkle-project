@@ -54,7 +54,7 @@ class InterventionStrategyOutcome(BaseModel):
         nullable=False,
         index=True,
     )
-    time_to_action_seconds: Mapped[int] = mapped_column(Integer, nullable=True)
+    time_to_action_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     context_snapshot: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, server_default="{}")
 
     __table_args__ = (

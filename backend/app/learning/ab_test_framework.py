@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import time
 from datetime import datetime
+from typing import cast
 
 from loguru import logger
 
@@ -51,7 +52,7 @@ class ABTestFramework:
         for variant, weight in config['traffic_split'].items():
             total += weight * 100
             if hash_val < total:
-                return variant
+                return cast("str", (variant))
 
         return 'control'
 

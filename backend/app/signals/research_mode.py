@@ -23,7 +23,7 @@ import hashlib
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import desc, select
 from sqlalchemy.exc import IntegrityError
@@ -1017,7 +1017,7 @@ class ConsentTracker:
             self._invalidate_user_cache(str(user_id))
             return ConsentRecord.from_model(row)
 
-        return await self._with_session(_grant, db)
+        return cast("ConsentRecord", (await self._with_session(_grant, db)))
 
     def grant_consent(
         self,
@@ -1034,7 +1034,7 @@ class ConsentTracker:
         ip_hash: str | None = None,
     ) -> ConsentRecord:
         """Sync compatibility wrapper for scripts; async code should use grant_consent_async."""
-        return self._run_sync(
+        return cast("ConsentRecord", (self._run_sync(
             self.grant_consent_async(
                 user_id=user_id,
                 consent_type=consent_type,
@@ -1047,7 +1047,7 @@ class ConsentTracker:
                 ip_address=ip_address,
                 ip_hash=ip_hash,
             )
-        )
+        )))
 
     async def revoke_consent_async(
         self,
@@ -1079,7 +1079,7 @@ class ConsentTracker:
             self._invalidate_user_cache(str(user_id))
             return ConsentRecord.from_model(row)
 
-        return await self._with_session(_revoke, db)
+        return cast("ConsentRecord | None", (await self._with_session(_revoke, db)))
 
     def revoke_consent(
         self,
@@ -1092,7 +1092,7 @@ class ConsentTracker:
         ip_hash: str | None = None,
     ) -> ConsentRecord | None:
         """Sync compatibility wrapper for scripts; async code should use revoke_consent_async."""
-        return self._run_sync(
+        return cast("ConsentRecord | None", (self._run_sync(
             self.revoke_consent_async(
                 user_id=user_id,
                 consent_type=consent_type,
@@ -1101,7 +1101,7 @@ class ConsentTracker:
                 ip_address=ip_address,
                 ip_hash=ip_hash,
             )
-        )
+        )))
 
     async def has_consent_async(
         self,
@@ -1118,11 +1118,11 @@ class ConsentTracker:
             row = await self._get_active_record(session, user_id=str(user_id), protocol_id=protocol)
             return row is not None
 
-        return await self._with_session(_has, db)
+        return cast("bool", (await self._with_session(_has, db)))
 
     def has_consent(self, user_id: str, consent_type: str) -> bool:
         """Sync compatibility wrapper for scripts; async code should use has_consent_async."""
-        return self._run_sync(self.has_consent_async(user_id, consent_type))
+        return cast("bool", (self._run_sync(self.has_consent_async(user_id, consent_type))))
 
     async def check_all_consents_async(
         self,
@@ -1137,7 +1137,7 @@ class ConsentTracker:
 
     def check_all_consents(self, user_id: str) -> dict[str, bool]:
         """Sync compatibility wrapper for scripts; async code should use check_all_consents_async."""
-        return self._run_sync(self.check_all_consents_async(user_id))
+        return cast("dict[str, bool]", (self._run_sync(self.check_all_consents_async(user_id))))
 
     async def can_include_in_research_async(
         self,
@@ -1150,7 +1150,7 @@ class ConsentTracker:
 
     def can_include_in_research(self, user_id: str) -> bool:
         """Sync compatibility wrapper for scripts; async code should use can_include_in_research_async."""
-        return self._run_sync(self.can_include_in_research_async(user_id))
+        return cast("bool", (self._run_sync(self.can_include_in_research_async(user_id))))
 
     async def get_user_consents_async(
         self,
@@ -1173,11 +1173,11 @@ class ConsentTracker:
                 self._consent_cache[str(user_id)] = records
             return records
 
-        return await self._with_session(_list, db)
+        return cast("list[dict[str, Any]]", (await self._with_session(_list, db)))
 
     def get_user_consents(self, user_id: str) -> list[dict[str, Any]]:
         """Sync compatibility wrapper for scripts; async code should use get_user_consents_async."""
-        return self._run_sync(self.get_user_consents_async(user_id))
+        return cast("list[dict[str, Any]]", (self._run_sync(self.get_user_consents_async(user_id))))
 
     async def is_consented_async(
         self,

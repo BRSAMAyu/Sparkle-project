@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import random
+from typing import Any, cast
 
 from loguru import logger
 
@@ -13,7 +14,7 @@ class ExplorationRouter:
         self.learner = learner
         self.epsilon = epsilon
         self.adaptive = adaptive
-        self.attempts = {}
+        self.attempts: dict[str, Any] = {}
 
     async def select_route(self, source: str, targets: list[str], user_id: str = None) -> str | None:
         """Epsilon-Greedy Selection"""
@@ -50,7 +51,7 @@ class ExplorationRouter:
         base_epsilon = 0.3
 
         epsilon = base_epsilon * (decay_rate ** attempts)
-        return max(0.05, epsilon)
+        return cast("float", (max(0.05, epsilon)))
 
 class ThompsonSamplingRouter:
     """Thompson Sampling Strategy"""

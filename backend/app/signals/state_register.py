@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 
@@ -97,7 +97,7 @@ class StateRegister:
     async def _mget_with_fallback(self, keys: list[str]) -> list[Any]:
         """Batch GET via MGET, falling back to individual GETs for FakeRedis."""
         try:
-            return await self.redis.mget(*keys)
+            return cast("list[Any]", (await self.redis.mget(*keys)))
         except AttributeError:
             return [await self.redis.get(k) for k in keys]
 

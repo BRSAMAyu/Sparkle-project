@@ -15,7 +15,7 @@ from contextlib import suppress
 from dataclasses import dataclass as _dataclass
 from datetime import UTC, datetime
 from functools import wraps
-from typing import Any
+from typing import Any, cast
 
 import redis.asyncio as redis
 from loguru import logger
@@ -697,7 +697,7 @@ class EventBus:
         # We delay connection until needed or explicitly initialized
         self.redis_url = redis_url or os.getenv("REDIS_URL") or settings.REDIS_URL
         self.redis: redis.Redis | None = None
-        self._consumers = []
+        self._consumers: list[Any] = []
         self._consumer_tasks: list[asyncio.Task] = []
         self._running = False
         self.max_retries = getattr(settings, "EVENT_BUS_MAX_RETRIES", 3)
@@ -1017,7 +1017,7 @@ class EventBus:
                 msg_id,
             )
 
-        return msg_id
+        return cast("str", (msg_id))
 
     async def connect(self):
         """Establish Redis connection"""

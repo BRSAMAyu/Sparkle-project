@@ -33,7 +33,7 @@ class ReviewHistory(BaseModel):
     reflection_outcome: Mapped[str] = mapped_column(String(64), nullable=True)
     score_delta: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
 
-    user_feedback: Mapped[str] = mapped_column(String(64), nullable=True)
+    user_feedback: Mapped[str | None] = mapped_column(String(64), nullable=True)
     user_satisfied: Mapped[bool] = mapped_column(Boolean, nullable=True)
     feedback_timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
@@ -53,7 +53,7 @@ class ReviewFeedback(BaseModel):
     user_id: Mapped[Any] = mapped_column(GUID(), nullable=True, index=True)
     feedback_type: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     rating: Mapped[int] = mapped_column(Integer, nullable=True)
-    comment: Mapped[str] = mapped_column(Text, nullable=True)
+    comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     issues_reported: Mapped[Any] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
     original_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     original_decision: Mapped[str] = mapped_column(String(32), nullable=True)

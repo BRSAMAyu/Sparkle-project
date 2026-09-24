@@ -87,8 +87,8 @@ class AgentRun(BaseModel):
         default=RunStatus.QUEUED,
         index=True,
     )
-    wait_kind: Mapped[str] = mapped_column(String(16), nullable=True)  # user_step|approval（AWAITING_* 态非空）
-    wait_expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    wait_kind: Mapped[str | None] = mapped_column(String(16), nullable=True)  # user_step|approval（AWAITING_* 态非空）
+    wait_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # --- 关联（跨轨 correlation；intent 轨道 1 活跃 run per intent） ---
     task_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True, index=True)
@@ -100,16 +100,16 @@ class AgentRun(BaseModel):
     # --- 进度（UI 阶段「正在执行 2/4」；App 只读） ---
     current_stage: Mapped[str] = mapped_column(String(64), nullable=True)
     steps_done: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    steps_total: Mapped[int] = mapped_column(Integer, nullable=True)
+    steps_total: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # --- X-07 · hybrid 步骤计划（owner/完成条件/产物引用/完成戳；契约见
     # app/core/run_steps.py；「awaiting step」从本列 + status 推导） ---
     steps: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=list)
 
     # --- 终态归因（封闭词表 terminal_reason_vocabulary） ---
-    terminal_reason: Mapped[str] = mapped_column(String(32), nullable=True)
-    error_category: Mapped[str] = mapped_column(String(100), nullable=True)
-    error_message: Mapped[str] = mapped_column(Text, nullable=True)
+    terminal_reason: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    error_category: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     result_ref: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)  # {"scheme": ..., "ref": ...}（结果引用，非结果本体）
 
     # --- 活性（worker restart 恢复判定） ---
@@ -119,7 +119,7 @@ class AgentRun(BaseModel):
     idempotency_key: Mapped[str] = mapped_column(String(255), nullable=True)
 
     started_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     user = relationship("User", backref="agent_runs", foreign_keys=[user_id])
     transitions = relationship(

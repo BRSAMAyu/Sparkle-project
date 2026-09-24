@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import UTC, date, datetime
-from typing import Any
+from typing import Any, cast
 
 from app.sprint_packs.sprint_pack_loader import load_pack, query_nodes_by_priority
 
@@ -36,7 +36,7 @@ def parse_exam_date(value: Any) -> date | None:
     if isinstance(value, datetime):
         if value.tzinfo is not None:
             value = value.astimezone(UTC)
-        return value.date()
+        return cast("date | None", (value.date()))
     if isinstance(value, date):
         return value
     text = _strip(value)

@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 
@@ -171,7 +171,7 @@ class CoreSessionManager:
         raw = await self.redis.get(f"spine:session_summary:{session_id}")
         if not raw:
             return None
-        return json.loads(raw)
+        return cast("dict[str, Any] | None", (json.loads(raw)))
 
     async def pause_session(self, session_id: str) -> CoreSession:
         session = await self._require_session(session_id)

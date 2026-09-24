@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from statistics import mean
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -554,5 +554,5 @@ class CohortPromotionService:
         if evaluate is None:
             raise RuntimeError("Cohort evaluation script does not export evaluate")
         if asyncio.iscoroutinefunction(evaluate):
-            return await evaluate(7)
-        return evaluate(7)
+            return cast("dict[str, Any]", (await evaluate(7)))
+        return cast("dict[str, Any]", (evaluate(7)))

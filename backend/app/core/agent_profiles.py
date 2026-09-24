@@ -21,7 +21,7 @@ Agent Profile Configuration - 统一的Agent配置管理
 from copy import deepcopy
 from dataclasses import asdict, dataclass, field
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from loguru import logger
 
@@ -159,7 +159,7 @@ class AgentProfile:
     def get_model_config(self, available_models: dict[str, Any]) -> dict[str, Any]:
         """获取实际模型配置（考虑 tier 和 specific_model）"""
         if self.specific_model:
-            return available_models.get(self.specific_model, {})
+            return cast("dict[str, Any]", (available_models.get(self.specific_model, {})))
 
         # 根据 tier 选择默认模型
         tier_defaults = {

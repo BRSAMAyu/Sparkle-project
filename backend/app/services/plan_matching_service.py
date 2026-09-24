@@ -9,7 +9,7 @@ Plan Matching Service
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 import numpy as np
@@ -122,7 +122,7 @@ class PlanMatchingService:
             f"Matched task to plan {best_plan.id} ({best_plan.name}) "
             f"with score {best_score:.3f}"
         )
-        return best_plan
+        return cast("Plan | None", (best_plan))
 
     async def extract_task_keywords(self, task_context: dict[str, Any]) -> list[str]:
         """

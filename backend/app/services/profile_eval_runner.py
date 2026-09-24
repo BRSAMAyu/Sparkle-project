@@ -6,7 +6,7 @@ import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from app.services.profile_eval_llm_judge import (
     JUDGE_CONTRACT_VERSION,
@@ -450,7 +450,7 @@ class ProfileEvalRunner:
 
     @staticmethod
     def _load_fixture(fixture_name: str) -> dict[str, Any]:
-        return json.loads((FIXTURE_DIR / fixture_name).read_text(encoding="utf-8"))
+        return cast("dict[str, Any]", (json.loads((FIXTURE_DIR / fixture_name).read_text(encoding="utf-8"))))
 
 
 def main(argv: list[str] | None = None) -> int:

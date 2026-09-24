@@ -43,7 +43,7 @@ class UserPersonaKey(BaseModel):
 
     user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     key_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
-    encrypted_key: Mapped[str] = mapped_column(Text, nullable=True)
+    encrypted_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     destroyed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 

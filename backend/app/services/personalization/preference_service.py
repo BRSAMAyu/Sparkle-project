@@ -1,3 +1,8 @@
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import CursorResult
+
 """
 偏好服务 - 统一的偏好数据访问层
 """
@@ -212,7 +217,7 @@ class PreferenceService:
                 updated_at=now,
             )
         )
-        if result.rowcount == 0:
+        if cast("CursorResult[Any]", (result)).rowcount == 0:
             raise ConcurrentModificationError(
                 f"Preference version conflict for user {user_id}: expected {expected_version}"
             )

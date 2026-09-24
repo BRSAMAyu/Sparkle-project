@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from types import ModuleType
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from sqlalchemy import desc, select
 
@@ -155,7 +155,7 @@ def _build_suite_selection(suite_name: str) -> dict[str, list[TestScenario]]:
 
     lowered = normalized.lower()
     if lowered in {"full", "all", "sparkle_goal_bench"}:
-        return suites
+        return cast("dict[str, list[Any]]", (suites))
     if lowered in lookup:
         key = lookup[lowered]
         return {key: suites[key]}
@@ -180,7 +180,7 @@ def _run_selected_suites(suites: dict[str, list[TestScenario]]) -> dict[str, Any
         name: ScenarioSimulator.run_suite(scenarios)
         for name, scenarios in suites.items()
     }
-    return aggregate
+    return cast("dict[str, Any]", (aggregate))
 
 
 def _enrich_reports(result: dict[str, Any], suites: dict[str, list[TestScenario]]) -> list[dict[str, Any]]:

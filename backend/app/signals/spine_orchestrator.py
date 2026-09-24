@@ -11,7 +11,7 @@ from __future__ import annotations
 import contextlib
 import json
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 
@@ -784,7 +784,7 @@ class SpineOrchestrator:
             # Default: auto mode, no explicit selections
             return SourceTrayState(mode="auto", selections=[]).to_dict()
         try:
-            return json.loads(raw if isinstance(raw, str) else raw.decode())
+            return cast("dict[str, Any]", (json.loads(raw if isinstance(raw, str) else raw.decode())))
         except (json.JSONDecodeError, TypeError):
             return SourceTrayState(mode="auto", selections=[]).to_dict()
 
@@ -1211,7 +1211,7 @@ class SpineOrchestrator:
         if not raw:
             return None
         try:
-            return json.loads(raw)
+            return cast("dict[str, Any] | None", (json.loads(raw)))
         except (json.JSONDecodeError, TypeError):
             return None
 
@@ -1505,7 +1505,7 @@ class SpineOrchestrator:
                 await self.redis.delete(f"spine:pipeline_lock:{user_id}")
             except Exception as _unlock_err:
                 classify_error(_unlock_err, component="spine_pipeline_lock", category=ErrorCategory.REDIS)
-            return trace
+            return cast("CausalTrace | None", (trace))
 
         decision, directive = result
 
@@ -1754,7 +1754,7 @@ class SpineOrchestrator:
         except Exception:
             logger.opt(exception=True).debug("record_outcome: pipeline outcome recording skipped for user={}", user_id)
 
-        return trace
+        return cast("CausalTrace | None", (trace))
 
     # ── P0-1 Integration: FirstMinuteSnapshot / ExamRescue ─────────────
 
@@ -1882,7 +1882,7 @@ class SpineOrchestrator:
             raw = await self.redis.get(f"aurora:l1:{user_id}:latest")
             if not raw:
                 return None
-            return json.loads(raw if isinstance(raw, str) else raw.decode())
+            return cast("dict[str, Any] | None", (json.loads(raw if isinstance(raw, str) else raw.decode())))
         except Exception:
             return None
 
@@ -2787,7 +2787,7 @@ class SpineOrchestrator:
             raw = await self.redis.get(f"spine:source_receipt:{user_id}:latest")
             if not raw:
                 return None
-            return json.loads(raw if isinstance(raw, str) else raw.decode())
+            return cast("dict[str, Any] | None", (json.loads(raw if isinstance(raw, str) else raw.decode())))
         except Exception:
             logger.opt(exception=True).warning("get_source_receipt: failed")
             return None
@@ -3036,7 +3036,7 @@ class SpineOrchestrator:
             raw = await self.redis.get(f"spine:community_loop:{user_id}:{artifact_type}:latest")
             if raw:
                 try:
-                    return json.loads(raw)
+                    return cast("dict[str, Any] | None", (json.loads(raw)))
                 except Exception:
                     logger.opt(exception=True).warning("get_latest_community_hint: operation failed")
         return None
@@ -3373,17 +3373,17 @@ class SpineOrchestrator:
             sig_check = SpineQualityGuard.check_signal_actionability([trace_dict])
             dir_check = SpineQualityGuard.check_directive_compliance([trace_dict])
 
-            if not sig_check.get("passed", True):
+            if not sig_check.passed:
                 logger.warning(
                     "QualityGuard: signal actionability issue — trace={} issues={}",
-                    trace.trace_id, sig_check.get("issues", []),
+                    trace.trace_id, sig_check.recommendations,
                 )
                 await self.metrics.record_spine_degradation("quality_guard_signal")
 
-            if not dir_check.get("passed", True):
+            if not dir_check.passed:
                 logger.warning(
                     "QualityGuard: directive compliance issue — trace={} issues={}",
-                    trace.trace_id, dir_check.get("issues", []),
+                    trace.trace_id, dir_check.recommendations,
                 )
                 await self.metrics.record_spine_degradation("quality_guard_directive")
         except Exception:
@@ -4727,7 +4727,7 @@ class SpineOrchestrator:
     ) -> dict[str, Any]:
         """Save a snapshot of Spine state for recovery after TTL expiry."""
         import json
-        snapshot = {
+        snapshot: dict[str, Any] = {
             "snapshot_id": _uid("snap"),
             "user_id": user_id,
             "goal_id": goal_id,
@@ -4830,7 +4830,7 @@ class SpineOrchestrator:
                     )
                     await self.state_register._save_state(user_id, entry)
 
-            return snapshot
+            return cast("dict[str, Any] | None", (snapshot))
         except Exception:
             logger.opt(exception=True).warning("recover_from_snapshot: failed")
             return None
@@ -4870,7 +4870,7 @@ class SpineOrchestrator:
         try:
             raw = await self.redis.get(f"spine:metrics:rolling:{user_id}")
             if raw:
-                return json.loads(raw if isinstance(raw, str) else raw.decode())
+                return cast("dict[str, Any]", (json.loads(raw if isinstance(raw, str) else raw.decode())))
         except Exception:
             logger.opt(exception=True).warning("get_rolling_metrics: redis failed")
         return await self.metrics.snapshot()

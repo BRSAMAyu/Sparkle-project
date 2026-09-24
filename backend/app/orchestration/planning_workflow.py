@@ -6,7 +6,7 @@ import re
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -25,7 +25,7 @@ from app.models.user_preferences import UserPreferencesCenter
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.orchestration.exam_sprint_policy import ExamSprintPolicyEngine, ExamSprintPolicyInput
 from app.schemas.plan import PlanCreate
-from app.schemas.task import TaskCreate, coerce_task_type
+from app.schemas.task import TaskCreate, TaskType, coerce_task_type
 from app.services.galaxy_service import GalaxyService
 from app.services.plan_service import PlanService
 from app.services.profile_write_service import ProfileWriteService
@@ -1641,7 +1641,7 @@ class PlanningWorkflowManager:
         guide_json: dict[str, Any],
     ) -> None:
         task.title = title[:255]
-        task.type = coerce_task_type("error_fix")
+        task.type = cast("TaskType", coerce_task_type("error_fix"))
         task.tags = tags
         task.estimated_minutes = 15
         task.difficulty = min(int(task.difficulty or 2), 2)

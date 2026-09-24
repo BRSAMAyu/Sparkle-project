@@ -76,7 +76,7 @@ class LearningAsset(BaseModel):
     language_code: Mapped[str] = mapped_column(String(10), default="en", nullable=False)  # Source language
 
     # === Inbox Decay ===
-    inbox_expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True)  # Auto-archive after this time
+    inbox_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)  # Auto-archive after this time
 
     # === Snapshot (Immutable) ===
     snapshot_json: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)  # Original context snapshot

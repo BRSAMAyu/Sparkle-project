@@ -24,7 +24,7 @@ class Notification(BaseModel):
     type: Mapped[str] = mapped_column(String(50), default="fragmented_time", nullable=False) # fragmented_time, system, reminder
 
     is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    read_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # 关联的数据，比如推荐的任务ID
     data: Mapped[Any] = mapped_column(JSON, nullable=True)

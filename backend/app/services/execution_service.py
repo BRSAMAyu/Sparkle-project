@@ -7,10 +7,14 @@ import hashlib
 import re
 import socket
 import time
+import typing
 import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import CursorResult
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -1036,7 +1040,7 @@ class ExecutionService:
         )
         result = await self._db.execute(stmt)
         await self._db.commit()
-        if result.rowcount != 1:
+        if typing.cast("CursorResult[Any]", (result)).rowcount != 1:
             return False
         await self._db.refresh(intent)
         return True

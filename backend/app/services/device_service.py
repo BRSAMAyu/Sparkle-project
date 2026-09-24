@@ -5,6 +5,7 @@ User Device Service - 管理用户设备和推送令牌
 from __future__ import annotations
 
 from datetime import datetime
+from typing import cast
 
 import redis.asyncio as redis
 from sqlalchemy import select
@@ -160,7 +161,7 @@ class DeviceService:
             if cached:
                 import json
                 try:
-                    return json.loads(cached)
+                    return cast("list[str]", (json.loads(cached)))
                 except (json.JSONDecodeError, TypeError):
                     pass  # 缓存损坏，继续查询数据库
 

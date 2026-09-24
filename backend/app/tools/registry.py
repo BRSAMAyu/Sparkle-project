@@ -8,6 +8,8 @@ Tool Registry - 统一工具注册表
 """
 from __future__ import annotations
 
+from typing import Any, cast
+
 from .base import BaseTool, ToolCategory
 from .metadata import ToolMetadata
 
@@ -38,40 +40,40 @@ class ToolRegistry:
 
     def get_tool(self, name: str) -> BaseTool | None:
         """根据名称获取工具"""
-        return self._get_dynamic_registry().get_tool(name)
+        return cast("BaseTool | None", (self._get_dynamic_registry().get_tool(name)))
 
     def get_tool_metadata(self, name: str) -> ToolMetadata | None:
         """获取工具能力元数据（X-06 权限判定真源读口；None = 未知/被拒工具）"""
-        return self._get_dynamic_registry().get_tool_metadata(name)
+        return cast("ToolMetadata | None", (self._get_dynamic_registry().get_tool_metadata(name)))
 
     def get_all_tools(self) -> list[BaseTool]:
         """获取所有工具"""
-        return self._get_dynamic_registry().get_all_tools()
+        return cast("list[BaseTool]", (self._get_dynamic_registry().get_all_tools()))
 
     def get_tools_by_category(self, category: ToolCategory) -> list[BaseTool]:
         """按分类获取工具"""
-        return self._get_dynamic_registry().get_tools_by_category(category)
+        return cast("list[BaseTool]", (self._get_dynamic_registry().get_tools_by_category(category)))
 
     def get_openai_tools_schema(self) -> list[dict]:
         """
         获取所有工具的 OpenAI Function Calling 格式
         用于发送给 LLM
         """
-        return self._get_dynamic_registry().get_openai_tools_schema()
+        return cast("list[dict[Any, Any]]", (self._get_dynamic_registry().get_openai_tools_schema()))
 
     def get_tools_description(self) -> str:
         """
         生成工具描述文本，用于 System Prompt
         """
-        return self._get_dynamic_registry().get_tools_description()
+        return cast("str", (self._get_dynamic_registry().get_tools_description()))
 
     def list_tools(self, verbose: bool = False) -> list[dict]:
         """列出所有工具信息"""
-        return self._get_dynamic_registry().list_tools(verbose=verbose)
+        return cast("list[dict[Any, Any]]", (self._get_dynamic_registry().list_tools(verbose=verbose)))
 
     def get_stats(self) -> dict:
         """获取注册表统计信息"""
-        return self._get_dynamic_registry().get_stats()
+        return cast("dict[Any, Any]", (self._get_dynamic_registry().get_stats()))
 
 
 # 全局单例（向后兼容）

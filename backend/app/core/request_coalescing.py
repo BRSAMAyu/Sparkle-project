@@ -44,7 +44,7 @@ import asyncio
 import logging
 import time
 from collections.abc import Awaitable, Callable
-from typing import Any, TypeVar
+from typing import Any, TypeVar, cast
 
 T = TypeVar("T")
 
@@ -107,7 +107,7 @@ class EndpointShield:
         cached = self._cache_get(full_key)
         if cached is not None:
             self.hits += 1
-            return cached
+            return cast("T", (cached))
 
         inflight = self._inflight.get(full_key)
         if inflight is not None:
@@ -127,7 +127,7 @@ class EndpointShield:
             cached = self._cache_get(full_key)
             if cached is not None:
                 self.hits += 1
-                return cached
+                return cast("T", (cached))
             inflight = self._inflight.get(full_key)
             if inflight is not None:
                 self.deduped += 1

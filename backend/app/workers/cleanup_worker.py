@@ -1,5 +1,10 @@
 import asyncio
 import logging
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import CursorResult
+
 
 from celery import shared_task
 from sqlalchemy import text
@@ -15,8 +20,8 @@ async def _run_cleanup_query(query_str: str, params: dict, description: str):
         try:
             result = await db.execute(text(query_str), params)
             await db.commit()
-            logger.info(f"Finished {description}: Deleted {result.rowcount} rows")
-            return result.rowcount
+            logger.info(f"Finished {description}: Deleted {cast('CursorResult[Any]', (result)).rowcount} rows")
+            return cast("CursorResult[Any]", (result)).rowcount
         except Exception as e:
             await db.rollback()
             logger.error(f"Error during {description}: {e}")

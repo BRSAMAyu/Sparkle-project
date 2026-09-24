@@ -15,7 +15,7 @@ See: docs/product/SPARKLE_PRODUCT_CONSENSUS_2026-04-02.md (breakpoint 3)
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -122,7 +122,7 @@ class PlanHealthSignalService:
     def _get_last_signal_meta(self, facts: dict) -> dict:
         """Read last signal metadata from PlanState.facts.adaptive_meta.plan_health_signal."""
         adaptive_meta = facts.get("adaptive_meta", {})
-        return adaptive_meta.get("plan_health_signal", {})
+        return cast("dict[Any, Any]", (adaptive_meta.get("plan_health_signal", {})))
 
     def _cooldown_for(self, severity: str) -> int:
         """Return cooldown in seconds for a given severity."""

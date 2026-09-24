@@ -38,6 +38,8 @@ class DynamicToolRegistry:
     _tool_info: dict[str, ToolInfo] = {}
     _tool_metadata: dict[str, ToolMetadata] = {}
     _registered_packages: set[str] = set()
+    # declared: created in __new__ for the process-wide singleton
+    _registration_lock: threading.RLock
 
     def __new__(cls):
         if cls._instance is None:
@@ -396,7 +398,7 @@ class DynamicToolRegistry:
         Returns:
             Dict[str, Any]: 统计信息
         """
-        categories = {}
+        categories: dict[str, Any] = {}
         for tool in self._tools.values():
             cat = tool.category.value
             categories[cat] = categories.get(cat, 0) + 1

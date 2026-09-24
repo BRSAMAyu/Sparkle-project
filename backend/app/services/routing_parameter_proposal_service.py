@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -309,7 +309,7 @@ class RoutingParameterProposalService:
         raw = await self.redis.get(EFFECTIVENESS_REDIS_KEY)
         if raw is None:
             return []
-        return json.loads(raw)
+        return cast("list[dict[str, Any]]", (json.loads(raw)))
 
     @staticmethod
     def _compute_proposed_value(

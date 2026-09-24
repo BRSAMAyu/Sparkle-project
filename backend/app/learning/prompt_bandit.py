@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import random
 import time
+from typing import Any, cast
 
 from loguru import logger
 
@@ -60,7 +61,7 @@ class PromptBandit:
         state["arms"] = stored_arms
         if updated:
             await self._save_state(key, state)
-        return state
+        return cast("dict[Any, Any]", (state))
 
     async def _save_state(self, key: str, state: dict) -> None:
         if not self.redis:

@@ -5,7 +5,11 @@ Inventory Service - 物品管理服务
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import CursorResult
+
 
 from loguru import logger
 from sqlalchemy import and_, select, update
@@ -48,7 +52,7 @@ class InventoryService:
         Returns:
             分组的物品字典 {"skins": [...], "titles": [...], "consumables": [...]}
         """
-        inventory = {
+        inventory: dict[str, Any] = {
             "skins": [],
             "titles": [],
             "consumables": [],
@@ -360,7 +364,7 @@ class InventoryService:
             .where(and_(UserConsumable.id == consumable.id, UserConsumable.quantity >= quantity))
             .values(quantity=UserConsumable.quantity - quantity, updated_at=_utcnow())
         )
-        if decrement.rowcount == 0:
+        if cast("CursorResult[Any]", (decrement)).rowcount == 0:
             raise ValueError(
                 f"Insufficient consumable quantity: {consumable.quantity} < {quantity}"
             )

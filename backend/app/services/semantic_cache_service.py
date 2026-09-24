@@ -9,7 +9,7 @@ import asyncio
 import hashlib
 import json
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 from loguru import logger
@@ -137,7 +137,7 @@ class SemanticCacheService:
         if not payload_raw:
             return None
         try:
-            return json.loads(payload_raw)
+            return cast("dict[str, Any] | None", (json.loads(payload_raw)))
         except json.JSONDecodeError:
             return None
 
@@ -267,7 +267,7 @@ class SemanticCacheService:
                     f"cached_at={result.get('cached_at')}"
                 )
 
-                return result.get("data")
+                return cast("dict[str, Any] | None", (result.get("data")))
             # 语义相似检索
             # E-05: embedding 供应商未配置时跳过（避免每次未命中都触发
             # 3 次重试 x 2 供应商的失败风暴）；exact-match 缓存仍可用
@@ -292,7 +292,7 @@ class SemanticCacheService:
                         logger.debug(
                             f"Cache SEMANTIC HIT: query='{query[:30]}...', score={score:.3f}"
                         )
-                        return result.get("data")
+                        return cast("dict[str, Any] | None", (result.get("data")))
 
             # 未命中
             await self.redis.hincrby(self.STATS_KEY, "total_misses", 1)
@@ -338,10 +338,10 @@ class SemanticCacheService:
         """
         if not self.redis:
             SEMANTIC_CACHE_BYPASS_TOTAL.inc()
-            return await self._call_factory(factory_func, factory_meta, *args, **kwargs)
+            return cast("dict[str, Any] | None", (await self._call_factory(factory_func, factory_meta, *args, **kwargs)))
         if not settings.SEMANTIC_CACHE_ENABLED:
             SEMANTIC_CACHE_BYPASS_TOTAL.inc()
-            return await self._call_factory(factory_func, factory_meta, *args, **kwargs)
+            return cast("dict[str, Any] | None", (await self._call_factory(factory_func, factory_meta, *args, **kwargs)))
 
         # 1. 尝试获取缓存
         effective_threshold = similarity_threshold if similarity_threshold is not None else 1.0
@@ -384,7 +384,7 @@ class SemanticCacheService:
                         "(transient degradation must not be cached; E-05 D3)"
                     )
 
-                return result
+                return cast("dict[str, Any] | None", (result))
 
         except Exception as e:
             # redis.exceptions.LockError 可能会在锁获取超时抛出
@@ -404,7 +404,7 @@ class SemanticCacheService:
 
             logger.error(f"Cache Mutex Error: {e}")
             # 出错时降级为直接调用
-            return await self._call_factory(factory_func, factory_meta, *args, **kwargs)
+            return cast("dict[str, Any] | None", (await self._call_factory(factory_func, factory_meta, *args, **kwargs)))
 
     @staticmethod
     async def _call_factory(factory_func, factory_meta: dict[str, Any] | None, *args, **kwargs):
@@ -511,7 +511,7 @@ class SemanticCacheService:
             cache_key = self._generate_cache_key(query, user_id, knowledge_version)
             deleted = await self.redis.delete(cache_key)
             logger.info(f"Cache INVALIDATE: query='{query[:30]}...', deleted={deleted}")
-            return deleted > 0
+            return cast("bool", (deleted > 0))
 
         except Exception as e:
             logger.error(f"Cache INVALIDATE error: {e}")
@@ -540,7 +540,7 @@ class SemanticCacheService:
                 delete_keys = list(keys) + list(emb_keys) + [self.KEY_SET]
                 deleted = await self.redis.delete(*delete_keys)
                 logger.warning(f"Cache CLEAR_ALL: deleted {deleted} keys")
-                return deleted
+                return cast("int", (deleted))
             else:
                 logger.info("Cache CLEAR_ALL: no keys to delete")
                 return 0

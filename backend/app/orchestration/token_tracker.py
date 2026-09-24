@@ -402,7 +402,7 @@ class TokenTracker:
         """
         # 使用 Redis SCAN 查找所有用户
         pattern = "user:daily_tokens:*"
-        user_totals = {}
+        user_totals: dict[str, Any] = {}
 
         async for key in self.redis.scan_iter(match=pattern):
             # key 格式: user:daily_tokens:{user_id}:{date}

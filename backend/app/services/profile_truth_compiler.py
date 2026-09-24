@@ -49,10 +49,10 @@ class ProfileTruthCompiler:
             # Map signal confidence and freshness
             confidence_map = self._build_confidence_map(profile_context)
             freshness_map = self._build_freshness_map(profile_context)
-            contradictions = []
-            multi_span_analysis = {}
-            prediction_summary = {}
-            calibration_summary = {}
+            contradictions: list[Any] = []
+            multi_span_analysis: dict[str, Any] = {}
+            prediction_summary: dict[str, Any] = {}
+            calibration_summary: dict[str, Any] = {}
             compiled_state = CompiledInsightState(
                 stable_traits=stable_traits,
                 current_state=current_state,

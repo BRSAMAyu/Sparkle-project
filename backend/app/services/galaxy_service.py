@@ -16,7 +16,7 @@ import json
 import math
 import re
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from loguru import logger
@@ -1244,13 +1244,13 @@ class GalaxyService:
         node_id: UUID,
         file_id: UUID,
     ) -> KnowledgeNodeDocument | None:
-        return await self.db.scalar(
+        return cast("KnowledgeNodeDocument | None", (await self.db.scalar(
             select(KnowledgeNodeDocument)
             .where(KnowledgeNodeDocument.user_id == user_id)
             .where(KnowledgeNodeDocument.node_id == node_id)
             .where(KnowledgeNodeDocument.file_id == file_id)
             .where(KnowledgeNodeDocument.deleted_at.is_(None))
-        )
+        )))
 
     async def _get_existing_node(self, node_id: UUID) -> KnowledgeNode:
         node = await self.db.get(KnowledgeNode, node_id)
@@ -1265,12 +1265,12 @@ class GalaxyService:
         return file_record
 
     async def _get_owned_file_or_none(self, user_id: UUID, file_id: UUID) -> StoredFile | None:
-        return await self.db.scalar(
+        return cast("StoredFile | None", (await self.db.scalar(
             select(StoredFile)
             .where(StoredFile.id == file_id)
             .where(StoredFile.user_id == user_id)
             .where(StoredFile.deleted_at.is_(None))
-        )
+        )))
 
     async def _document_link_payload(
         self,
@@ -1589,7 +1589,7 @@ class GalaxyService:
         return payloads
 
     @staticmethod
-    def _embedding_to_list(value: object) -> list[float]:
+    def _embedding_to_list(value: Any) -> list[float]:
         if value is None:
             return []
         if isinstance(value, str):
@@ -2588,14 +2588,14 @@ class GalaxyService:
         search_text = f"{task_title} {task_description or ''}"
         nodes = await self.retrieval.semantic_search_nodes(search_text, limit=1)
         if nodes:
-            return nodes[0].id
+            return cast("UUID | None", (nodes[0].id))
 
         # Fallback keyword
         nodes_kw = await self.retrieval.keyword_search(
             UUID("00000000-0000-0000-0000-000000000000"), task_title.split()[0], limit=1
         )
         if nodes_kw:
-            return nodes_kw[0].id
+            return cast("UUID | None", (nodes_kw[0].id))
 
         return None
 
@@ -2666,7 +2666,7 @@ class GalaxyService:
             )
         ).scalar_one_or_none()
         if matched is not None:
-            return matched
+            return cast("UUID", (matched))
 
         resolved_id = self.task_node_uuid(clean_title)
         existing = await self.db.get(KnowledgeNode, resolved_id)
@@ -2723,7 +2723,7 @@ class GalaxyService:
         raw = str(node_id or "").strip()
         return SPRINT_NODE_ID_ALIASES.get(raw, raw)
 
-    def _lookup_sprint_node_metadata(self, external_node_id: str) -> dict[str, object]:
+    def _lookup_sprint_node_metadata(self, external_node_id: str) -> dict[str, Any]:
         external_node_id = self._canonical_sprint_node_id(external_node_id)
         try:
             from app.sprint_packs.sprint_pack_registry import PACKS_DIR

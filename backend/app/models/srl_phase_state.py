@@ -15,7 +15,7 @@ class SRLPhaseStateRecord(BaseModel):
     user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
     current_phase: Mapped[str] = mapped_column(String(32), nullable=False, default="UNKNOWN")
     phase_started_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    previous_phase: Mapped[str] = mapped_column(String(32), nullable=True)
+    previous_phase: Mapped[str | None] = mapped_column(String(32), nullable=True)
     transition_evidence_ids: Mapped[Any] = mapped_column(JSON, nullable=False, default=list)
     confidence: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     source: Mapped[str] = mapped_column(String(32), nullable=False, default="default")

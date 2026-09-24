@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 import redis.asyncio as redis
@@ -59,7 +59,7 @@ class MemoryIdempotencyStore(IdempotencyStore):
             del self._cache[key]
             return None
 
-        return data["value"]
+        return cast("dict[str, Any] | None", (data["value"]))
 
     async def set(self, key: str, value: dict[str, Any], ttl: int) -> None:
         self._cache[key] = {
@@ -110,7 +110,7 @@ class RedisIdempotencyStore(IdempotencyStore):
         if not raw:
             return None
         try:
-            return json.loads(raw)
+            return cast("dict[str, Any] | None", (json.loads(raw)))
         except Exception as exc:
             logger.warning(f"Redis idempotency decode failed: {exc}")
             return None
@@ -183,7 +183,7 @@ class DBIdempotencyStore(IdempotencyStore):
                 await db.commit()
                 return None
 
-            return record.response
+            return cast("dict[str, Any] | None", (record.response))
 
     async def set(self, key: str, value: dict[str, Any], ttl: int) -> None:
         user_id = value.get("user_id")

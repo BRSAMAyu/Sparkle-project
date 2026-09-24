@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 
 from app.orchestration.statechart_engine import GraphEvent
 
@@ -67,7 +68,7 @@ class ExecutionTracer:
         if not events:
             return None
 
-        node_count = {}
+        node_count: dict[str, Any] = {}
         error_count = 0
         total_latency = 0
 

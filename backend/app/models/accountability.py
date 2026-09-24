@@ -64,7 +64,7 @@ class AccountabilityPartnership(BaseModel):
         nullable=True,
     )
     initiator_goal: Mapped[str] = mapped_column(Text, nullable=False)
-    partner_goal: Mapped[str] = mapped_column(Text, nullable=True)
+    partner_goal: Mapped[str | None] = mapped_column(Text, nullable=True)
     check_in_days: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     slot_type: Mapped[AccountabilitySlotType] = mapped_column(
         Enum(AccountabilitySlotType, values_callable=lambda obj: [e.value for e in obj]),
@@ -78,8 +78,8 @@ class AccountabilityPartnership(BaseModel):
         default=AccountabilityStatus.PENDING,
         index=True,
     )
-    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
-    ended_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     initiator = relationship("User", foreign_keys=[initiator_id], lazy="selectin")

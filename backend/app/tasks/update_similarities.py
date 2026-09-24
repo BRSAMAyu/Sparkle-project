@@ -6,8 +6,12 @@ User Similarity Update Tasks
 """
 from collections import defaultdict
 from datetime import timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import CursorResult
+
 
 from celery import shared_task
 from loguru import logger
@@ -378,11 +382,11 @@ async def _cleanup_expired_cache(db: AsyncSession) -> int:
         RecommendationCache.expires_at < _utcnow()
     )
     result = await db.execute(delete_query)
-    deleted_count = result.rowcount
+    deleted_count = cast("CursorResult[Any]", (result)).rowcount
 
     await db.commit()
     logger.info(f"Cleaned up {deleted_count} expired cache entries")
-    return deleted_count
+    return cast("int", (deleted_count))
 
 
 async def _delete_expired_similarities(db: AsyncSession, current_version: int) -> int:
@@ -391,11 +395,11 @@ async def _delete_expired_similarities(db: AsyncSession, current_version: int) -
         UserSimilarity.calculation_version < current_version - 7  # 保留7个版本
     )
     result = await db.execute(delete_query)
-    deleted_count = result.rowcount
+    deleted_count = cast("CursorResult[Any]", (result)).rowcount
 
     await db.commit()
     logger.info(f"Deleted {deleted_count} expired similarity records")
-    return deleted_count
+    return cast("int", (deleted_count))
 
 
 async def _get_user_item_sets(

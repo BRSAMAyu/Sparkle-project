@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 from google.protobuf import struct_pb2
 from loguru import logger
@@ -48,6 +48,8 @@ REALTIME_VERSION_DOMAINS = ("tasks", "plans", "focus", "progress", "prefs")
 
 class SessionStateMixin:
     """Mixin providing session-state helpers extracted from Orchestrator."""
+    redis: Any
+    state_manager: Any
 
     @staticmethod
     def _copy_companion_runtime_keys(
@@ -899,7 +901,7 @@ class SessionStateMixin:
         if not self.state_manager or not request_id:
             return None
 
-        return await self.state_manager.get_cached_response(session_id, request_id)
+        return cast("dict[str, Any] | None", (await self.state_manager.get_cached_response(session_id, request_id)))
 
     async def _acquire_session_lock(self, session_id: str, request_id: str) -> bool:
         """Acquire distributed lock for session"""
@@ -907,7 +909,7 @@ class SessionStateMixin:
             return True
 
         try:
-            return await self.state_manager.acquire_lock(session_id, request_id)
+            return cast("bool", (await self.state_manager.acquire_lock(session_id, request_id)))
         except Exception as e:
             logger.warning(f"Redis lock acquisition failed, failing open for session {session_id}: {e}")
             return True

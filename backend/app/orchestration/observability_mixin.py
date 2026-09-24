@@ -100,7 +100,7 @@ class ObservabilityMixin:
         ))
 
     def _extract_llm_profile_meta(self, user_context_payload: dict[str, Any] | None) -> dict[str, Any]:
-        llm_profile_meta = {}
+        llm_profile_meta: dict[str, Any] = {}
         if not isinstance(user_context_payload, dict):
             return llm_profile_meta
         llm_profile = user_context_payload.get("llm_profile")

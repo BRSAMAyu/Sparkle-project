@@ -10,7 +10,7 @@ import html
 import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -182,7 +182,7 @@ class MDXDictionaryService:
                 # 清理方括号和其他符号，只保留音标部分
                 text = text.strip('[]ˈˌ()/\\ ')
                 if text and len(text) < 50:  # 合理的音标长度
-                    return text
+                    return cast("str", text)
 
         # 查找包含音标格式的文本
         full_text = soup.get_text()
@@ -216,7 +216,7 @@ class MDXDictionaryService:
                     # 清理常见的词性标记
                     text = text.split('\n')[0].strip()
                     if any(pos in text.lower() for pos in ['noun', 'verb', 'adj', 'adv', 'prep', 'conj', 'exclamation', 'pron']):
-                        return text[:20]
+                        return cast("str", text[:20])
 
         return None
 

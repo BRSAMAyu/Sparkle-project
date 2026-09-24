@@ -3,6 +3,7 @@ Personalization Engine - 偏好到策略的映射中心
 """
 from __future__ import annotations
 
+from typing import cast
 from uuid import UUID
 
 from app.core.profile_context import ProfileContext
@@ -496,7 +497,7 @@ class PersonalizationEngine:
             return profile_context
         try:
             if self.profile_context_service is not None:
-                return await self.profile_context_service.get_profile_context(user_id)
+                return cast("ProfileContext | None", (await self.profile_context_service.get_profile_context(user_id)))
             from app.services.profile_context_service import ProfileContextService
 
             service = ProfileContextService(self.pref_service.db, self.pref_service.redis)

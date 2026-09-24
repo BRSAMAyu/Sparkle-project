@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 import json
 import uuid
-from typing import Any
+from typing import Any, Callable
 
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -46,6 +46,8 @@ async def ensure_chat_session_header(
 
 class PersistenceLayerMixin:
     """Mixin that groups persistence / side-effect helpers used by ChatOrchestrator."""
+    redis: Any
+    _coerce_session_uuid: Callable[..., Any]
 
     # ------------------------------------------------------------------
     # persist assistant message

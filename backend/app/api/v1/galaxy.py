@@ -10,7 +10,7 @@ Knowledge Galaxy API
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -220,9 +220,9 @@ async def get_galaxy_graph(
     """
 
     async def _compute() -> GalaxyGraphResponse:
-        return await galaxy_service.get_galaxy_graph(
+        return cast("GalaxyGraphResponse", (await galaxy_service.get_galaxy_graph(
             user_id=UUID(user_id), sector_code=sector_code, include_locked=include_locked, zoom_level=zoom_level
-        )
+        )))
 
     # 恢复风暴防护：single-flight 合并同 user 并发拉取 + 10s TTL 缓存 + 并发钳制
     # （失效面：服务层写路径经 register_read_view_invalidation_hook 按 user 清缓存，

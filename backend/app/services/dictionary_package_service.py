@@ -6,7 +6,7 @@ import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from app.config.settings import settings
 from app.services.mdx_dictionary_service import create_mdx_service
@@ -193,7 +193,7 @@ class DictionaryPackageService:
         manifest_path = self._manifest_path(package_id)
         if not manifest_path.exists():
             return None
-        return json.loads(manifest_path.read_text(encoding="utf-8"))
+        return cast("dict[str, Any] | None", (json.loads(manifest_path.read_text(encoding="utf-8"))))
 
     def _load_fallback_entries(self) -> dict[str, dict[str, Any]]:
         if not self._fallback_entries_path.exists():

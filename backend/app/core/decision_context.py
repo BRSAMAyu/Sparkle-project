@@ -41,7 +41,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal
 from types import MappingProxyType
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Mapping, cast
 from uuid import UUID
 
 from app.state_aggregator.schema import StateFieldEnvelope, UserStateFieldName
@@ -384,7 +384,7 @@ def _default_signal_projection(value: Any) -> dict[str, Any]:
         return item
 
     if dataclasses.is_dataclass(value) and not isinstance(value, type):
-        return _convert(value)
+        return cast("dict[str, Any]", (_convert(value)))
     return {"value": _convert(value)}
 
 

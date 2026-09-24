@@ -371,7 +371,7 @@ class CapsuleFeedbackService:
 
         helpful_count = sum(1 for f in feedbacks if f.helpful is True)
 
-        category_dist = {}
+        category_dist: dict[str, Any] = {}
         for f in feedbacks:
             if f.category:
                 category_dist[f.category] = category_dist.get(f.category, 0) + 1

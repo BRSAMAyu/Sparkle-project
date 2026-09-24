@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import time
 from functools import wraps
+from typing import Any, cast
 
 import networkx as nx
 from loguru import logger
@@ -14,8 +15,8 @@ class RouteCache:
     def __init__(self, redis_client, ttl: int = 300):
         self.redis = redis_client
         self.ttl = ttl
-        self.local_cache = {}
-        self.local_ttl = {}
+        self.local_cache: dict[str, Any] = {}
+        self.local_ttl: dict[str, Any] = {}
         self._local_hits = 0
         self._redis_hits = 0
         self._total_requests = 0
@@ -30,7 +31,7 @@ class RouteCache:
             if self._is_local_cache_valid(cache_key):
                 logger.debug(f"L1 Cache HIT: {cache_key}")
                 self._local_hits += 1
-                return self.local_cache[cache_key]
+                return cast("str | None", (self.local_cache[cache_key]))
             else:
                 del self.local_cache[cache_key]
                 del self.local_ttl[cache_key]
@@ -43,7 +44,7 @@ class RouteCache:
                 self.local_ttl[cache_key] = time.time() + 60 # Local TTL shorter
                 logger.debug(f"L2 Cache HIT: {cache_key}")
                 self._redis_hits += 1
-                return cached
+                return cast("str | None", (cached))
             else:
                 logger.debug(f"Cache MISS: {cache_key}")
                 return None
@@ -81,7 +82,7 @@ class RouteCache:
     def _is_local_cache_valid(self, cache_key: str) -> bool:
         if cache_key not in self.local_ttl:
             return False
-        return time.time() < self.local_ttl[cache_key]
+        return cast("bool", (time.time() < self.local_ttl[cache_key]))
 
     def clear_local(self):
         self.local_cache.clear()
@@ -131,7 +132,7 @@ class PrecomputedRouter:
             )
 
             if len(path) > 1:
-                return path[1]
+                return cast("str | None", (path[1]))
             else:
                 return None
 

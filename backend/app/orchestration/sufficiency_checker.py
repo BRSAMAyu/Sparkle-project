@@ -119,7 +119,7 @@ class SufficiencyChecker:
     }
 
     # 默认要求（未知意图类型）
-    DEFAULT_REQUIREMENTS = {
+    DEFAULT_REQUIREMENTS: dict[str, Any] = {
         "required": [],
         "clarify_if_missing": [],
         "can_infer": [],

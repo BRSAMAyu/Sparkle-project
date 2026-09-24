@@ -36,7 +36,7 @@ import logging
 import time
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from app.core.llm_monitoring import (
     LLM_CALLS_TOTAL,
@@ -392,7 +392,7 @@ class LLMSecurityWrapper:
         self._record_call_metrics("chat", model, "success", elapsed, input_text, response)
         await self._record_usage(user_id, model, response)
 
-        return response
+        return cast("str", (response))
 
     async def chat_with_tools(
         self,
@@ -539,7 +539,7 @@ class LLMSecurityWrapper:
             "generate_embeddings", model, "success", time.monotonic() - start, input_text, ""
         )
         await self._record_usage(user_id, model or "embedding", "")
-        return embeddings
+        return cast("list[list[float]]", (embeddings))
 
     async def stream_chat(
         self,
@@ -624,7 +624,7 @@ class LLMSecurityWrapper:
 
     async def reason(self, *args: Any, **kwargs: Any) -> str:
         """审计旁路：推理模型调用。豁免论证见模块 docstring。"""
-        return await self._run_audited("reason", self.llm_service.reason, args, kwargs)
+        return cast("str", (await self._run_audited("reason", self.llm_service.reason, args, kwargs)))
 
     async def reason_json(self, *args: Any, **kwargs: Any) -> Any | None:
         """审计旁路：推理模型 JSON 结构化输出。豁免论证见模块 docstring。"""
@@ -642,9 +642,9 @@ class LLMSecurityWrapper:
 
     async def generate_push_content(self, *args: Any, **kwargs: Any) -> dict[str, str]:
         """审计旁路：系统内部推送文案生成，无终端用户身份。豁免论证见模块 docstring。"""
-        return await self._run_audited(
+        return cast("dict[str, str]", (await self._run_audited(
             "generate_push_content", self.llm_service.generate_push_content, args, kwargs
-        )
+        )))
 
     async def chat_stream_with_tools(
         self,

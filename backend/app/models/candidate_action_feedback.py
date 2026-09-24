@@ -39,7 +39,7 @@ class CandidateActionFeedback(Base):
     context_snapshot: Mapped[Any] = mapped_column(JSONBCompat, nullable=False)  # ContextEnvelope at time of feedback
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
-    deleted_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Relationships
     user = relationship("User", back_populates="candidate_feedbacks")

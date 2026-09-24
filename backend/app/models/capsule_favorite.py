@@ -19,7 +19,7 @@ class CapsuleFavorite(BaseModel):
 
     user_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     capsule_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("curiosity_capsules.id", ondelete="CASCADE"), nullable=False, index=True)
-    note: Mapped[str] = mapped_column(Text, nullable=True)  # 用户收藏时的备注
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)  # 用户收藏时的备注
 
     __table_args__ = (
         UniqueConstraint("user_id", "capsule_id", name="uq_capsule_favorite"),

@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from app.signals.types import ActionableSignal, _uid
 
@@ -516,7 +516,7 @@ class RecallOpportunityDetector:
             silence_hours=silence_hours,
             cohort_response_rate=cohort_response_rate,
         )
-        return self._ranker.score(features)
+        return cast("float", (self._ranker.score(features)))
 
     @staticmethod
     def _blend(rule_score: float, ml_score: float) -> float:

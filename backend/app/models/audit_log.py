@@ -78,7 +78,7 @@ class AdminAuditLog(Base):
     request_id: Mapped[str] = mapped_column(String(100), nullable=True, index=True)
     trace_id: Mapped[str] = mapped_column(String(100), nullable=True, index=True)
     actor_claims: Mapped[Any] = mapped_column(JSON, nullable=True)
-    error_message: Mapped[str] = mapped_column(Text, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     details: Mapped[Any] = mapped_column(JSON, nullable=True)
 
     occurred_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow, index=True)

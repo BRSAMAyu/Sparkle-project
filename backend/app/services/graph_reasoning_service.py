@@ -12,7 +12,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
-from typing import Any, TypedDict
+from typing import Any, TypedDict, cast
 from uuid import UUID
 
 import networkx as nx
@@ -568,11 +568,11 @@ class GraphReasoningService:
             return 0
         in_degree = self.G.in_degree(node_id)
         out_degree = self.G.out_degree(node_id)
-        return in_degree + out_degree
+        return cast("int", (in_degree + out_degree))
 
     def get_node_description(self, node_id: UUID) -> str:
         """获取节点描述"""
         if not self.G or not self.G.has_node(node_id):
             return ""
         node_data = self.G.nodes[node_id]
-        return node_data.get("description", "")
+        return cast("str", (node_data.get("description", "")))

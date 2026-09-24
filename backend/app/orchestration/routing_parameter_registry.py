@@ -15,7 +15,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 
@@ -248,7 +248,7 @@ class RoutingParameterRegistry:
                 if variant and not variant.is_control:
                     overrides = (variant.configuration or {}).get("overrides", {})
                     if overrides:
-                        return overrides
+                        return cast("dict[str, Any] | None", (overrides))
         except Exception as exc:
             logger.warning("Failed to load experiment overrides: {}", exc)
         return None

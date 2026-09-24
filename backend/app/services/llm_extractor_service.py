@@ -106,7 +106,7 @@ class LlmExtractorService:
         evidence_token: str,
         occurred_at: datetime,
     ) -> list[InferredEpisodicCandidate]:
-        raw_candidates = []
+        raw_candidates: list[Any] = []
         if isinstance(payload, dict):
             raw_candidates = payload.get("candidates") or []
         if not isinstance(raw_candidates, list):

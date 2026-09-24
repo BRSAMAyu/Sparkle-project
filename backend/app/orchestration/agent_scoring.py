@@ -5,7 +5,7 @@ import random
 import time
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 
@@ -251,7 +251,7 @@ class AgentScoringService:
             raw = await self.redis.get(self._response_map_key(response_id))
             if not raw:
                 return None
-            return json.loads(raw)
+            return cast("dict[str, Any] | None", (json.loads(raw)))
         except Exception as exc:
             logger.debug(f"Failed to load response-agent mapping: {exc}")
             return None

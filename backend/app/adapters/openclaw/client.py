@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import Any, cast
 
 import httpx
 from loguru import logger
@@ -78,7 +78,7 @@ class OpenClawClient:
                 error_message = error_body.get("error", {}).get("message", response.text)
                 raise OpenClawExecutionError(f"Request failed: {error_message}")
 
-            return response.json()
+            return cast("dict[str, Any]", (response.json()))
         except httpx.TimeoutException as exc:
             raise OpenClawTimeout(f"OpenClaw execution timed out after {read_timeout}s") from exc
         except httpx.ConnectError as exc:

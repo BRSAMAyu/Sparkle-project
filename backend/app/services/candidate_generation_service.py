@@ -243,7 +243,7 @@ class CandidateGenerationService:
         random.shuffle(shuffled)
 
         # Ensure diversity: no 3 consecutive same-type
-        diversified = []
+        diversified: list[Any] = []
         for candidate in shuffled:
             # Check last 2 candidates
             if len(diversified) >= 2:

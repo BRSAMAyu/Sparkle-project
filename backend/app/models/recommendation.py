@@ -168,7 +168,7 @@ class UserLearningProfile(BaseModel):
     # 学习统计
     total_study_minutes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     total_items_completed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    average_session_duration: Mapped[float] = mapped_column(Float, nullable=True)
+    average_session_duration: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     # 协同过滤相关
     learning_vector: Mapped[Any] = mapped_column(JSON, nullable=True)  # 学习向量（用于相似度计算）

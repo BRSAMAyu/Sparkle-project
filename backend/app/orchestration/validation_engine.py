@@ -4,7 +4,7 @@ import asyncio
 import json
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Callable
 
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -60,6 +60,12 @@ class ValidationEngineMixin:
     ``self.validator``, ``self.redis``, and several helper methods that live on
     the orchestrator (``_check_idempotency``, ``_publish_execution_feedback``).
     """
+    redis: Any
+    validator: Any
+    _check_idempotency: Callable[..., Any]
+    _attach_user_strategy_state: Callable[..., Any]
+    _attach_situation_brief: Callable[..., Any]
+    _publish_execution_feedback: Callable[..., Any]
 
     # ------------------------------------------------------------------
     # Proto request validation

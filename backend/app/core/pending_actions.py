@@ -10,7 +10,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 
@@ -134,7 +134,7 @@ class PendingActionsStore:
             if not raw:
                 return None
             try:
-                return json.loads(raw) if isinstance(raw, str) else raw
+                return cast("dict[str, Any] | None", (json.loads(raw) if isinstance(raw, str) else raw))
             except Exception:
                 return None
         else:
@@ -184,7 +184,7 @@ class PendingActionsStore:
         if action.get("user_id") != user_id:
             return None
 
-        return action
+        return cast("dict[str, Any] | None", (action))
 
     async def delete(self, action_id: str, user_id: str) -> bool:
         """

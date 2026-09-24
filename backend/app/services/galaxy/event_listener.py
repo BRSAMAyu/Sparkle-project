@@ -310,7 +310,7 @@ class TaskEventListener:
         1. 错误直接关联的节点 (linked_node_ids)
         2. 根据题目内容查找相关节点
         """
-        linked_node_ids = []
+        linked_node_ids: list[Any] = []
 
         try:
             error = await db.get(ErrorRecord, error_id)

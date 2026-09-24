@@ -14,8 +14,12 @@ Features:
 """
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import CursorResult
+
 
 from loguru import logger
 from sqlalchemy import select, update
@@ -492,7 +496,7 @@ class PushSenderService:
         result = await self.db.execute(stmt)
         await self.db.commit()
 
-        if result.rowcount > 0:
+        if cast("CursorResult[Any]", (result)).rowcount > 0:
             logger.info(f"Unregistered device {device_id} for user {user_id}")
             return True
         return False

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import cast
+
 from celery import shared_task
 
 from app.core.celery_app import _run_async
@@ -25,4 +27,4 @@ def process_due_policies() -> dict[str, int]:
             await db.commit()
             return result
 
-    return _run_async(_run())
+    return cast("dict[str, int]", (_run_async(_run())))

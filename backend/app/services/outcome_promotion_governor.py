@@ -296,7 +296,7 @@ class OutcomePromotionGovernor:
         user_ids: list[UUID] | tuple[UUID, ...],
         trigger_source: str = "scheduled_profile_ledger_sweep",
     ) -> dict[str, Any]:
-        stats = {
+        stats: dict[str, Any] = {
             "users_scanned": 0,
             "users_with_pending": 0,
             "pending_records_before": 0,

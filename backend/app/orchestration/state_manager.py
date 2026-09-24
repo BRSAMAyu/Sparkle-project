@@ -12,7 +12,7 @@ import asyncio
 import json
 from dataclasses import asdict, dataclass, fields
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -552,7 +552,7 @@ class SessionStateManager:
 
             if data:
                 logger.info(f"Hit cache for session {session_id}, request {request_id}")
-                return json.loads(data)
+                return cast("dict[str, Any] | None", (json.loads(data)))
             return None
         except Exception as e:
             logger.error(f"Failed to get cached response: {e}")
@@ -681,7 +681,7 @@ class SessionStateManager:
             key = self._get_active_plan_key(session_id)
             data = await self.redis.get(key)
             if data:
-                return json.loads(data)
+                return cast("dict[str, Any] | None", (json.loads(data)))
             return None
         except Exception as e:
             logger.error(f"Failed to get active plan for session {session_id}: {e}")
@@ -756,7 +756,7 @@ class SessionStateManager:
                     f"Auto-switched plan from {current_plan_id} to {matched_plan.id} "
                     f"for session {session_id}"
                 )
-                return matched_plan.id
+                return cast("UUID | None", (matched_plan.id))
 
             return current_plan_id
 

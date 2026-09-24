@@ -4,7 +4,7 @@ import math
 import re
 from datetime import datetime
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Any, Literal, cast
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -581,7 +581,7 @@ class NodeWithStatus(NodeBase):
             return 0.2
         if status.is_collapsed:
             return 0.1
-        return 0.3 + (status.mastery_score / 100.0) * 0.7
+        return cast("float", (0.3 + (status.mastery_score / 100.0) * 0.7))
 
     @staticmethod
     def _resolve_position(node, angle: float, radius: float) -> tuple[float, float]:

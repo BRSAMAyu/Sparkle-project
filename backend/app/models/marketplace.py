@@ -104,9 +104,9 @@ class UserSkillAdoption(BaseModel):
     explicit_confirm: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     context_signature: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
     preview_snapshot: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
-    trace_id: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
-    revoked_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    revoked_reason: Mapped[str] = mapped_column(String(256), nullable=True)
+    trace_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    revoked_reason: Mapped[str | None] = mapped_column(String(256), nullable=True)
 
     __table_args__ = (
         UniqueConstraint("user_id", "asset_type", "asset_id", name="uq_user_marketplace_asset_adoption"),

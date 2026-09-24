@@ -10,7 +10,7 @@ CausalTrace Store — 持久化审计链路到 Redis。
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 
@@ -258,7 +258,7 @@ class CausalTraceStore:
         raw = await self.redis.get(compact_key)
         if not raw:
             return []
-        return json.loads(raw if isinstance(raw, str) else raw.decode())
+        return cast("list[dict[str, Any]]", (json.loads(raw if isinstance(raw, str) else raw.decode())))
 
     async def get_full_trace_history(self, user_id: str) -> dict[str, Any]:
         """Get combined view: active traces + compacted summaries."""

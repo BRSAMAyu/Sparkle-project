@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from loguru import logger
 
@@ -100,7 +100,7 @@ async def get_trace(trace_id: str) -> dict[str, Any] | None:
     if not raw:
         return None
     try:
-        return json.loads(raw)
+        return cast("dict[str, Any] | None", (json.loads(raw)))
     except json.JSONDecodeError:
         return None
 

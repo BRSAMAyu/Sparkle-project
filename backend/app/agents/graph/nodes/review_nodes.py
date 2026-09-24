@@ -19,7 +19,7 @@ Phase 2c: 集成审查历史和反馈学习
 import json
 import time
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 
@@ -242,7 +242,7 @@ async def _check_and_execute_fallback(
                 except Exception as e:
                     logger.warning(f"[ReviewNode] Failed to send fallback notification: {e}")
 
-            return decision.suggested_model
+            return cast("str | None", (decision.suggested_model))
 
     except Exception as e:
         logger.warning(f"[ReviewNode] Failed to check fallback: {e}")
@@ -268,11 +268,11 @@ def _get_fallback_model(state: SparkleState, current_model: str, retry_count: in
 
     try:
         from app.core.agent_profiles import TaskType
-        return fallback_service.get_model_for_task(
+        return cast("str", (fallback_service.get_model_for_task(
             task_type=TaskType.STANDARD_RESPONSE,
             current_model=current_model,
             retry_count=retry_count,
-        )
+        )))
     except Exception as e:
         logger.warning(f"[ReviewNode] Failed to get fallback model: {e}")
         return current_model

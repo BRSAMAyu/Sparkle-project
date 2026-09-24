@@ -30,8 +30,8 @@ class GroupFile(BaseModel):
     file_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("stored_files.id", ondelete="CASCADE"), nullable=False, index=True)
     shared_by_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
 
-    category: Mapped[str] = mapped_column(String(64), nullable=True)
-    description: Mapped[str] = mapped_column(String(500), nullable=True)
+    category: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    description: Mapped[str | None] = mapped_column(String(500), nullable=True)
     tags: Mapped[Any] = mapped_column(JSON, default=list, nullable=False)
     trust_level: Mapped[GroupFileTrustLevel] = mapped_column(Enum(GroupFileTrustLevel), default=GroupFileTrustLevel.MEMBER, nullable=False, index=True)
     is_knowledge_base: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)

@@ -45,15 +45,15 @@ class CapsuleGenerationJob(BaseModel):
     depth_preference: Mapped[float] = mapped_column(Float, nullable=False)  # 0.0-1.0
     curiosity_preference: Mapped[float] = mapped_column(Float, nullable=False)  # 0.0-1.0
     requested_count: Mapped[int] = mapped_column(Integer, nullable=False)  # 请求生成的胶囊数量
-    actual_count: Mapped[int] = mapped_column(Integer, nullable=True)  # 实际生成的胶囊数量
+    actual_count: Mapped[int | None] = mapped_column(Integer, nullable=True)  # 实际生成的胶囊数量
     capsule_ids: Mapped[Any] = mapped_column(ARRAY(GUID()).with_variant(JSON(), "sqlite"), nullable=True)  # 生成的胶囊ID列表
     progress: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)  # 0.0-1.0 进度值
-    error_message: Mapped[str] = mapped_column(Text, nullable=True)  # 失败原因
-    duration_ms: Mapped[int] = mapped_column(Integer, nullable=True)  # 生成耗时（毫秒）
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)  # 失败原因
+    duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)  # 生成耗时（毫秒）
     model_used: Mapped[str] = mapped_column(String(100), nullable=True)  # 使用的模型
     scheduled_for: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True)  # 计划执行时间
-    started_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)  # 实际开始时间
-    completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)  # 完成时间
+    started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # 实际开始时间
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # 完成时间
 
     # Relationships
     user = relationship("User", back_populates="capsule_generation_jobs")

@@ -44,8 +44,8 @@ class TaskFeedback(BaseModel):
     category: Mapped[str] = mapped_column(String(50), nullable=True)  # 反馈分类
 
     # 推断的偏好变化
-    inferred_depth_delta: Mapped[float] = mapped_column(Float, nullable=True)  # 基于反馈推断的深度偏好变化
-    inferred_difficulty_delta: Mapped[float] = mapped_column(Float, nullable=True)  # 基于反馈推断的难度偏好变化
+    inferred_depth_delta: Mapped[float | None] = mapped_column(Float, nullable=True)  # 基于反馈推断的深度偏好变化
+    inferred_difficulty_delta: Mapped[float | None] = mapped_column(Float, nullable=True)  # 基于反馈推断的难度偏好变化
 
     # 任务状态快照（防止任务变更导致反馈失真）
     task_difficulty_snapshot: Mapped[int] = mapped_column(Integer, nullable=True)  # 任务难度快照

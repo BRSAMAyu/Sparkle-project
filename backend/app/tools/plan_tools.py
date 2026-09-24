@@ -283,7 +283,7 @@ class GenerateTasksForPlanTool(BaseTool):
                 )
 
             # 第四步: 批量创建任务
-            created_tasks = []
+            created_tasks: list[dict[str, Any]] = []
             learning_path_node_refs = await self._get_learning_path_node_refs(plan_snapshot, db_session)
             for task_data in task_list:
                 try:
@@ -666,7 +666,7 @@ class GenerateTasksForPlanTool(BaseTool):
 
         try:
             # 解析 JSON 响应
-            tasks = result if isinstance(result, list) else []
+            tasks: list[Any] = result if isinstance(result, list) else []
 
             # 验证和清理任务数据
             validated_tasks = []

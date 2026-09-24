@@ -38,7 +38,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any, Awaitable, Callable
+from typing import Any, Awaitable, Callable, cast
 
 from loguru import logger
 
@@ -346,7 +346,7 @@ class BatchWorklaneService:
         if isinstance(raw, bytes):
             raw = raw.decode("utf-8")
         try:
-            return json.loads(raw)
+            return cast("dict[str, Any] | None", (json.loads(raw)))
         except (TypeError, ValueError):
             return None
 

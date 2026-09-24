@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import cast
 from uuid import UUID
 
 from sqlalchemy import select
@@ -42,7 +43,7 @@ class StateDrivenPushService:
         dismissal_counts = await self.delivery_service.category_dismissal_counts_7d(user_id, now=reference_time)
         dismissed_categories = {category for category, count in dismissal_counts.items() if count > 0}
         device_context = await self._active_device_context(user_id)
-        return self.compiler.compile(
+        return cast("PushDecision | None", (self.compiler.compile(
             user_state=user_state,
             push_opt_in=opt_in,
             recent_delivery_count_24h=recent_count,
@@ -50,7 +51,7 @@ class StateDrivenPushService:
             category_dismissal_counts_7d=dismissal_counts,
             device_context=device_context,
             now=reference_time,
-        )
+        )))
 
     async def compile_and_deliver(self, user_id: UUID, *, now: datetime | None = None):
         decision = await self.preview_decision(user_id, now=now)

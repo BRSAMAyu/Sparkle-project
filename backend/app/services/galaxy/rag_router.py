@@ -1,4 +1,5 @@
 from dataclasses import replace
+from typing import cast
 
 from app.config import settings
 from app.config_rag_strategy import DEFAULT_STRATEGY, STRATEGIES, RagStrategy
@@ -57,4 +58,4 @@ class RagRouter:
             and strategy.enable_hyde
             and normalized_intent in self.KNOWLEDGE_ROUTE_INTENTS
         )
-        return replace(strategy, enable_hyde=hyde_allowed)
+        return cast("RagStrategy", (replace(strategy, enable_hyde=hyde_allowed)))

@@ -23,10 +23,10 @@ class ResponseFeedback(BaseModel):
     free_text: Mapped[str] = mapped_column(String, nullable=True)
     meta: Mapped[Any] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=True)
     intervention_id: Mapped[Any] = mapped_column(GUID(), nullable=True)
-    scaffolding_level: Mapped[int] = mapped_column(Integer, nullable=True)
-    template_variant_id: Mapped[str] = mapped_column(String(100), nullable=True)
+    scaffolding_level: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    template_variant_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     time_to_response: Mapped[int] = mapped_column(Integer, nullable=True)
-    action_taken: Mapped[str] = mapped_column(String(40), nullable=True)
+    action_taken: Mapped[str | None] = mapped_column(String(40), nullable=True)
 
     __table_args__ = (
         UniqueConstraint("user_id", "response_id", name="uq_response_feedback_user_response"),

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,4 +37,4 @@ class ContextPackTelemetryService:
         self.db.add(record)
         await self.db.commit()
         await self.db.refresh(record)
-        return record.id
+        return cast("UUID", (record.id))

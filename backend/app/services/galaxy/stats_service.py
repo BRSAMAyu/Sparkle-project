@@ -3,6 +3,7 @@ from __future__ import annotations
 import inspect
 import json
 from datetime import UTC, datetime, timedelta
+from typing import cast
 from uuid import UUID
 
 from loguru import logger
@@ -460,7 +461,7 @@ class GalaxyStatsService:
         if target_node_id:
             node = await self.db.get(KnowledgeNode, target_node_id)
             status = await self._get_user_status(user_id, target_node_id)
-            return NodeWithStatus.from_models(node, status)
+            return cast("NodeWithStatus | None", (NodeWithStatus.from_models(node, status)))
 
         return None
 

@@ -6,7 +6,7 @@ P1 Improvement: Provides multi-level fallback strategies when tool execution fai
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 
@@ -70,7 +70,7 @@ class ToolExecutionFallback:
                         redis_client=redis_client,
                     )
                     if result:
-                        return result
+                        return cast("str", (result))
                 except Exception as e:
                     logger.error(f"Fallback method '{fallback_method_name}' failed: {e}")
 

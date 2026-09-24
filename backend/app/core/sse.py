@@ -38,7 +38,7 @@ class SSEManager:
         Returns:
             asyncio.Queue: 事件队列
         """
-        queue = asyncio.Queue()
+        queue: asyncio.Queue = asyncio.Queue()
 
         if user_id not in self.connections:
             self.connections[user_id] = set()

@@ -5,7 +5,7 @@ from collections import Counter, OrderedDict
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 from urllib.parse import urlencode
 from uuid import UUID, uuid4
 
@@ -1429,7 +1429,7 @@ class SimulationEngine:
             "concept_map_build": 10,
             "error_diagnosis": 12,
         }.get(str(scenario_key or "study_group"), 10)
-        return max(current_rounds + 1, min(max(requested_int, 3), scenario_max))
+        return cast("int", (max(current_rounds + 1, min(max(requested_int, 3), scenario_max))))
 
     async def _summarize_rounds(self, topic: str, rounds: list[dict[str, Any]]) -> str:
         if not rounds:

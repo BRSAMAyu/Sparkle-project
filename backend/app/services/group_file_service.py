@@ -7,6 +7,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import cast
 from uuid import UUID, uuid4
 
 from sqlalchemy import and_, func, or_, select
@@ -60,7 +61,7 @@ class GroupFileService:
 
     @staticmethod
     def _root_source_file_id(stored_file: StoredFile) -> UUID:
-        return stored_file.source_file_id or stored_file.id
+        return cast("UUID", (stored_file.source_file_id or stored_file.id))
 
     @staticmethod
     def _build_object_key(*, user_id: UUID, file_id: UUID, file_name: str) -> str:
@@ -192,7 +193,7 @@ class GroupFileService:
             )
         )
         await db.flush()
-        return task.id
+        return cast("str | None", (task.id))
 
     @staticmethod
     async def ensure_processing_for_file(

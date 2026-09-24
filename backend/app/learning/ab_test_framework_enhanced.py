@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 from datetime import UTC, datetime
+from typing import Any
 
 from loguru import logger
 from sqlalchemy import and_, func, select
@@ -348,7 +349,7 @@ class ABTestFrameworkEnhanced:
         if not experiment:
             return None
 
-        stats = {
+        stats: dict[str, Any] = {
             "experiment_id": experiment_id,
             "experiment_name": experiment.name,
             "status": experiment.status,

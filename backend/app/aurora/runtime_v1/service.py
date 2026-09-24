@@ -8,7 +8,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta, timezone
 from datetime import date as date_type
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -145,8 +145,8 @@ def _as_utc_naive(value: Any) -> datetime | None:
     if isinstance(value, str):
         value = datetime.fromisoformat(value.replace("Z", "+00:00"))
     if getattr(value, "tzinfo", None) is not None:
-        return value.astimezone(UTC).replace(tzinfo=None)
-    return value
+        return cast("datetime | None", (value.astimezone(UTC).replace(tzinfo=None)))
+    return cast("datetime | None", (value))
 
 
 def _safe_int(value: Any) -> int | None:

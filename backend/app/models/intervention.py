@@ -25,17 +25,17 @@ class InterventionRequest(BaseModel):
     reason: Mapped[Any] = mapped_column(JSON, nullable=True)
     content: Mapped[Any] = mapped_column(JSON, nullable=True)
     cooldown_policy: Mapped[Any] = mapped_column(JSON, nullable=True)
-    delivery_method: Mapped[str] = mapped_column(String(20), nullable=True)
-    template_id: Mapped[str] = mapped_column(String(100), nullable=True)
-    template_variant_id: Mapped[str] = mapped_column(String(100), nullable=True)
-    scaffolding_level: Mapped[int] = mapped_column(Integer, nullable=True)
-    intent_type: Mapped[str] = mapped_column(String(50), nullable=True)
+    delivery_method: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    template_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    template_variant_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    scaffolding_level: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    intent_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     schema_version: Mapped[str] = mapped_column(String(50), nullable=False)
-    policy_version: Mapped[str] = mapped_column(String(50), nullable=True)
-    model_version: Mapped[str] = mapped_column(String(80), nullable=True)
+    policy_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    model_version: Mapped[str | None] = mapped_column(String(80), nullable=True)
 
-    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     is_retractable: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     supersedes_id: Mapped[Any] = mapped_column(GUID(), nullable=True)
 
@@ -66,9 +66,9 @@ class InterventionAuditLog(BaseModel):
     requested_level: Mapped[str] = mapped_column(String(40), nullable=False)
     final_level: Mapped[str] = mapped_column(String(40), nullable=False)
 
-    policy_version: Mapped[str] = mapped_column(String(50), nullable=True)
-    model_version: Mapped[str] = mapped_column(String(80), nullable=True)
-    schema_version: Mapped[str] = mapped_column(String(50), nullable=True)
+    policy_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    model_version: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    schema_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     occurred_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow, index=True)
 

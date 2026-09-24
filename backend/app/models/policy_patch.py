@@ -53,7 +53,7 @@ class PolicyPatchRecord(BaseModel):
     confirmed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     activated_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True)
-    revoked_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     revoke_reason: Mapped[str] = mapped_column(String(200), nullable=True)
 
     # -- 审计（append-only；revoke 即时生效且审计永久保留）----------------------

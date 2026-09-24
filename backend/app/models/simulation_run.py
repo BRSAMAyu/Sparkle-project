@@ -28,8 +28,8 @@ class SimulationRun(BaseModel):
     state: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     payload: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
     insight_summary: Mapped[str] = mapped_column(Text, nullable=True)
-    last_active_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True)
-    completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    last_active_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     __table_args__ = (
         Index("ix_simulation_runs_session_id", "session_id", unique=True),

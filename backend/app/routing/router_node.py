@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import random
 import uuid
+from typing import cast
 
 from loguru import logger
 
@@ -200,4 +201,4 @@ class RouterNode:
         """
         The condition function used in add_conditional_edge.
         """
-        return state.context_data.get('router_decision', "__end__")
+        return cast("str", (state.context_data.get('router_decision', "__end__")))

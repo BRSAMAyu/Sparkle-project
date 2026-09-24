@@ -16,7 +16,7 @@ class ScaffoldingState(BaseModel):
     capability_level: Mapped[float] = mapped_column(Float, default=0.5, nullable=False)
     current_zone: Mapped[str] = mapped_column(String(20), default="flow", nullable=False)
     support_level: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
-    template_variant_id: Mapped[str] = mapped_column(String(100), nullable=True)
+    template_variant_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     consecutive_successes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     consecutive_failures: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     last_intervention_timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=True)

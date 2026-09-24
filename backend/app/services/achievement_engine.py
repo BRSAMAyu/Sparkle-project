@@ -13,8 +13,12 @@ import asyncio
 import contextlib
 from collections.abc import Awaitable, Callable
 from datetime import UTC, date, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 from uuid import uuid4
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import CursorResult
+
 
 from loguru import logger
 from sqlalchemy import and_, desc, event, func, select
@@ -81,7 +85,7 @@ def _run_achievement_after_commit_tasks(session) -> None:
         return
 
     for callback in callbacks:
-        task = loop.create_task(callback())
+        task: asyncio.Task[Any] = loop.create_task(callback())
         task.add_done_callback(_make_after_commit_error_handler())
 
 
@@ -282,7 +286,7 @@ class AchievementEngine:
                 .on_conflict_do_nothing(index_elements=[SessionCompletion.session_id])
             )
             result = await self.db.execute(stmt)
-            return bool(result.rowcount)
+            return bool(cast("CursorResult[Any]", (result)).rowcount)
 
         if dialect_name == "sqlite":
             stmt = (
@@ -291,7 +295,7 @@ class AchievementEngine:
                 .on_conflict_do_nothing(index_elements=[SessionCompletion.session_id])
             )
             result = await self.db.execute(stmt)
-            return bool(result.rowcount)
+            return bool(cast("CursorResult[Any]", (result)).rowcount)
 
         try:
             async with self.db.begin_nested():
@@ -637,7 +641,7 @@ class AchievementEngine:
         cache_key = f"{settings.APP_NAME}:achievement:{user_id}:{achievement_id}:unlocked"
         cached = await cache_service.get(cache_key)
         if cached is not None:
-            return cached
+            return cast("bool", (cached))
 
         query = select(UserAchievement).where(
             and_(
@@ -1979,7 +1983,7 @@ class AchievementEngine:
         persisted_status = status.value if hasattr(status, "value") else status
 
         if record:
-            record.status = persisted_status
+            record.status = cast("StreakDayStatus", persisted_status)
             record.used_freeze = used_freeze
             record.source_event = source_event
         else:

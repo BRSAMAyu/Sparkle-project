@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -76,7 +76,7 @@ class DashboardService:
         cache_key = self._dashboard_cache_key(user_id)
         cached = await cache_service.get(cache_key)
         if cached is not None:
-            return cached
+            return cast("dict[str, Any]", (cached))
 
         user = await self._get_user(user_id)
 

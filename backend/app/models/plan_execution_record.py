@@ -76,7 +76,7 @@ class PlanExecutionRecord(BaseModel):
 
     # 用户反馈 (后续收集)
     user_satisfaction: Mapped[int] = mapped_column(Integer, nullable=True)  # 1-5
-    user_feedback: Mapped[str] = mapped_column(Text, nullable=True)
+    user_feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # 学习标记
     applied_to_learning: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)

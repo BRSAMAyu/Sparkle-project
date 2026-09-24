@@ -10,6 +10,7 @@ Plan Quota Service
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import cast
 from uuid import UUID
 
 from loguru import logger
@@ -161,7 +162,7 @@ class PlanQuotaService:
 
         if primary_plan:
             await self._set_primary(user_id, primary_plan.id)
-            return primary_plan.id
+            return cast("UUID | None", (primary_plan.id))
 
         return None
 
@@ -216,7 +217,7 @@ class PlanQuotaService:
         """
         primary = await self._get_primary_plan(user_id)
         if primary:
-            return primary.id
+            return cast("UUID | None", (primary.id))
 
         # 没有主计划，自动选择
         return await self.auto_set_primary_plan(user_id)

@@ -22,7 +22,7 @@ class CRDTPersistenceManager:
     def __init__(self, redis_client: Redis, db_session: AsyncSession):
         self.redis = redis_client
         self.db = db_session
-        self._batch_buffer = []
+        self._batch_buffer: list[Any] = []
 
     async def persist_snapshot(self, galaxy_id: str, ydoc: Y.YDoc):
         """

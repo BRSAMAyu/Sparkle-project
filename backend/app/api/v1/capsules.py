@@ -6,6 +6,7 @@ Curiosity Capsules API
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
@@ -30,7 +31,7 @@ router = APIRouter()
 
 def get_celery_status() -> dict:
     """Backward-compatible Celery health probe for capsule batch generation."""
-    return get_celery_queue_status(settings.GLM_BATCH_QUEUE)
+    return cast("dict[Any, Any]", (get_celery_queue_status(settings.GLM_BATCH_QUEUE)))
 
 
 # =============================================================================

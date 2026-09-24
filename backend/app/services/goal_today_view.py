@@ -17,7 +17,7 @@ goal-detail）、指挥台等消费面一律引用这里，禁止各自再写判
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Any, Iterable
+from typing import Any, Iterable, cast
 
 from sqlalchemy import and_, asc, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -53,7 +53,7 @@ def is_todays_task(*, status: Any, due_date: Any, today: date) -> bool:
             return False
     if status not in TODAY_ACTIVE_STATUSES:
         return False
-    return due_date == today
+    return cast("bool", (due_date == today))
 
 
 def pick_todays_next_task(tasks: Iterable[Task], today: date) -> Task | None:
@@ -132,7 +132,7 @@ def todays_task_payload(task: Task | None) -> dict[str, Any] | None:
         if value is None:
             return None
         if hasattr(value, "isoformat"):
-            return value.isoformat()
+            return cast("str | None", (value.isoformat()))
         return str(value)
 
     def _value(value: Any) -> Any:

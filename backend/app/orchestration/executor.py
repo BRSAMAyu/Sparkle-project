@@ -8,7 +8,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from loguru import logger
 from pydantic import ValidationError
@@ -630,7 +630,7 @@ class ToolExecutor:
                 # 而不是本会话构造时的 in_progress 残影。
                 .execution_options(populate_existing=True)
             )
-            return (await db_session.execute(stmt)).scalar_one_or_none()
+            return cast("AgentToolCall | None", ((await db_session.execute(stmt)).scalar_one_or_none()))
         except Exception as exc:  # noqa: BLE001 — 账本不可读 → fail-closed（无账本不执行 side effect）
             logger.error("tool call ledger read failed tool={} key={} error={!r}", tool_name, key, exc)
             raise

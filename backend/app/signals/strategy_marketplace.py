@@ -10,7 +10,7 @@ can be recommended to others with similar profiles. Rule-based matching only.
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 
@@ -65,7 +65,7 @@ class StrategyMarketplace:
         raw = await self.redis.get(_STRATEGY_KEY.format(strategy_key=strategy_key))
         if not raw:
             return None
-        return json.loads(raw)
+        return cast("dict[str, Any] | None", (json.loads(raw)))
 
     async def find_recommendations(
         self,
@@ -117,7 +117,7 @@ class StrategyMarketplace:
         raw = await self.redis.get(_RECOMMENDATIONS_KEY.format(user_id=user_id))
         if not raw:
             return []
-        return json.loads(raw)
+        return cast("list[dict[str, Any]]", (json.loads(raw)))
 
 
 def _anonymize_id(user_id: str) -> str:

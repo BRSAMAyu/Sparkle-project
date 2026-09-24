@@ -16,7 +16,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 
@@ -362,5 +362,5 @@ class MultivariateExperimentEngine:
         key = f"{key_prefix}{experiment_id}"
         raw = await redis_client.get(key)
         if raw:
-            return json.loads(raw) if isinstance(raw, bytes) else raw
+            return cast("dict[str, Any] | None", (json.loads(raw) if isinstance(raw, bytes) else raw))
         return None

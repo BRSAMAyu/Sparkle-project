@@ -871,7 +871,7 @@ class TaskFeedbackService:
         qualities = [f.completion_quality for f in feedbacks if f.completion_quality is not None]
         avg_quality = sum(qualities) / len(qualities) if qualities else None
 
-        category_dist = {}
+        category_dist: dict[str, Any] = {}
         for f in feedbacks:
             if f.category:
                 category_dist[f.category] = category_dist.get(f.category, 0) + 1

@@ -42,7 +42,7 @@ class ExecutionSchedule(BaseModel):
     )
     trigger_config: Mapped[Any] = mapped_column(JSONBCompat, nullable=False, default=dict)
     last_run_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    next_run_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True)
+    next_run_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, index=True)
 
     user = relationship("User", backref="execution_schedules", foreign_keys=[user_id])

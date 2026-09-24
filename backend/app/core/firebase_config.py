@@ -8,7 +8,7 @@ Supports both FCM (Android/Web) and APNs (iOS) through Firebase.
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -49,7 +49,7 @@ class FirebaseSettings(BaseSettings):
 
             try:
                 with open(self.FIREBASE_CREDENTIALS_PATH) as f:
-                    return json.load(f)
+                    return cast("dict[str, Any] | None", (json.load(f)))
             except Exception as e:
                 logger.error(f"Failed to load Firebase credentials from file: {e}")
                 return None

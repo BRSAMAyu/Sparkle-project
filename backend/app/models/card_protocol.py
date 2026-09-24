@@ -277,12 +277,12 @@ class CardEdge(BaseModel):
     to_card_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("cards.id", ondelete="CASCADE"), nullable=False, index=True)
     edge_type: Mapped[EdgeType] = mapped_column(Enum(EdgeType, name="edge_type_enum"), nullable=False, index=True)
     binding_mode: Mapped[BindingMode] = mapped_column(Enum(BindingMode, name="binding_mode_enum"), nullable=False, default=BindingMode.OWNED)
-    order_index: Mapped[int] = mapped_column(Integer, nullable=True)
-    weight: Mapped[float] = mapped_column(Float, nullable=True)
+    order_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    weight: Mapped[float | None] = mapped_column(Float, nullable=True)
     temporal_window: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
     metadata_: Mapped[Any] = mapped_column("metadata", JSONBCompat, nullable=False, server_default="{}")
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    removed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    removed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Relationships
     from_card = relationship("Card", foreign_keys=[from_card_id])
@@ -314,18 +314,18 @@ class TaskOccurrence(BaseModel):
     scheduled_for: Mapped[date] = mapped_column(Date, nullable=True, index=True)
     window_start: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     window_end: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    occurrence_status: Mapped[OccurrenceStatus] = mapped_column(
+    occurrence_status: Mapped[OccurrenceStatus | None] = mapped_column(
         Enum(OccurrenceStatus, name="occurrence_status_enum"),
         nullable=False,
         default=OccurrenceStatus.PLANNED,
         index=True,
     )
-    actual_minutes: Mapped[int] = mapped_column(Integer, nullable=True)
-    completion_quality: Mapped[int] = mapped_column(Integer, nullable=True)
+    actual_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    completion_quality: Mapped[int | None] = mapped_column(Integer, nullable=True)
     deferral_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     generated_by_rule_hash: Mapped[str] = mapped_column(String(128), nullable=False, server_default="")
     feedback_payload: Mapped[Any] = mapped_column(JSONBCompat, nullable=True)
-    completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Relationships
     series_card = relationship("Card", foreign_keys=[series_card_id])
@@ -484,7 +484,7 @@ class CardShareRecord(BaseModel):
     message: Mapped[str] = mapped_column(String(500), nullable=True)
     adoption_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     view_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    revoked_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     metadata_: Mapped[Any] = mapped_column("metadata", JSONBCompat, nullable=False, server_default="{}")
 
     snapshot = relationship("CardSnapshot", foreign_keys=[snapshot_id])

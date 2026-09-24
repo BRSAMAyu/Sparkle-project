@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID, uuid4
 
 from app.core.cache import cache_service
@@ -245,4 +245,4 @@ class FeedbackGateEngine:
         phase = await self.phase_service.card_service.get_card(phase_card_id)
         if not phase:
             raise ValueError("Phase card not found")
-        return phase.owner_id
+        return cast("UUID", (phase.owner_id))

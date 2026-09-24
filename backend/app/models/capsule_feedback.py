@@ -38,9 +38,9 @@ class CapsuleFeedback(BaseModel):
     rating: Mapped[int] = mapped_column(Integer, nullable=True, index=True)  # 1-5 星评分
     helpful: Mapped[bool] = mapped_column(Boolean, nullable=True)  # 点赞/点踩
     category: Mapped[str] = mapped_column(String(50), nullable=True)  # 反馈分类
-    comment: Mapped[str] = mapped_column(Text, nullable=True)  # 用户评论
-    inferred_depth_delta: Mapped[float] = mapped_column(Float, nullable=True)  # 基于反馈推断的深度偏好变化
-    inferred_curiosity_delta: Mapped[float] = mapped_column(Float, nullable=True)  # 基于反馈推断的好奇心偏好变化
+    comment: Mapped[str | None] = mapped_column(Text, nullable=True)  # 用户评论
+    inferred_depth_delta: Mapped[float | None] = mapped_column(Float, nullable=True)  # 基于反馈推断的深度偏好变化
+    inferred_curiosity_delta: Mapped[float | None] = mapped_column(Float, nullable=True)  # 基于反馈推断的好奇心偏好变化
 
     # Relationships
     user = relationship("User", back_populates="capsule_feedbacks")

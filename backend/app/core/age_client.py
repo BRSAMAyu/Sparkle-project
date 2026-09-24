@@ -10,7 +10,7 @@ import json
 import re
 import uuid
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 from urllib.parse import urlparse
 
 import asyncpg
@@ -280,7 +280,7 @@ class AgeClient:
 
         result = await self.execute_cypher(cypher)
         if result:
-            return result[0]["vertex_id"]
+            return cast("str", (result[0]["vertex_id"]))
         return None
 
     async def add_edge(self, from_label: str, from_props: dict[str, Any],

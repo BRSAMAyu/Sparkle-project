@@ -13,8 +13,12 @@ import asyncio
 import math
 from datetime import UTC, datetime, timedelta
 from difflib import SequenceMatcher
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import CursorResult
+
 
 from loguru import logger
 from sqlalchemy import and_, case, desc, func, or_, select, update
@@ -2826,7 +2830,7 @@ class PrivateMessageService:
         )
 
         result = await db.execute(stmt)
-        return result.rowcount
+        return cast("int", (cast("CursorResult[Any]", (result)).rowcount))
 
 
 class UserBlockService:
@@ -3220,7 +3224,7 @@ def _cosine_sim(a: list[float], b: list[float]) -> float:
     nb = sum(x * x for x in b) ** 0.5
     if na == 0 or nb == 0:
         return 0.0
-    return dot / (na * nb)
+    return cast("float", (dot / (na * nb)))
 
 
 def _bounded_similarity(raw: float) -> float:

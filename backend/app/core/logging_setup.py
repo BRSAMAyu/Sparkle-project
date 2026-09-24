@@ -19,7 +19,7 @@ nohup 重定向到 /tmp/*.log——每次重启旧文件被顶掉，证据链断
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 
@@ -57,10 +57,10 @@ def add_rotating_file_sink_if_configured(
     """
     if not path or not path.strip():
         return None
-    return sink_logger.add(
+    return cast("int | None", (sink_logger.add(
         path.strip(),
         level=level,
         serialize=serialize,
         rotation=format_rotation_size(rotation_mb),
         retention=retention,
-    )
+    )))

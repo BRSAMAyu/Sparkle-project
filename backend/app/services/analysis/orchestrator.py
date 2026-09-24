@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 
@@ -126,6 +126,6 @@ def _build_behavior_prompt(payload: dict[str, Any]) -> str:
 def _parse_json_response(response_text: str) -> dict[str, Any] | None:
     try:
         cleaned_text = response_text.replace("```json", "").replace("```", "").strip()
-        return json.loads(cleaned_text)
+        return cast("dict[str, Any] | None", (json.loads(cleaned_text)))
     except json.JSONDecodeError:
         return None

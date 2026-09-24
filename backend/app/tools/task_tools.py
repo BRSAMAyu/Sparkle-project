@@ -88,7 +88,7 @@ class CreateTaskTool(BaseTool):
                 user_id=user_uuid
             )
 
-            task_payload = {
+            task_payload: dict[str, Any] = {
                 "id": str(task.id),
                 "title": task.title,
                 "guide_content": task.guide_content,
@@ -177,7 +177,7 @@ class UpdateTaskStatusTool(BaseTool):
                 task_update = TaskUpdate(status=TaskStatus.PENDING)
                 task = await TaskService.update(db_session, task, task_update)
 
-            task_payload = {
+            task_payload: dict[str, Any] = {
                 "id": str(task.id),
                 "title": task.title,
                 "guide_content": task.guide_content,
@@ -244,7 +244,7 @@ class BatchCreateTasksTool(BaseTool):
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
-            created_tasks = []
+            created_tasks: list[dict[str, Any]] = []
             failed_tasks = []
 
             # Reuse logic from CreateTaskTool implicitly or just call service loop

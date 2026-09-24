@@ -14,7 +14,7 @@ from contextlib import asynccontextmanager
 from dataclasses import asdict, is_dataclass
 from datetime import date, datetime
 from functools import wraps
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 import redis.asyncio as redis
@@ -197,12 +197,12 @@ end
     async def incr(self, key: str, amount: int = 1) -> int:
         if not self.redis:
             return 0
-        return await self.redis.incrby(key, amount)
+        return cast("int", (await self.redis.incrby(key, amount)))
 
     async def expire(self, key: str, ttl: int) -> bool:
         if not self.redis:
             return False
-        return await self.redis.expire(key, ttl)
+        return cast("bool", (await self.redis.expire(key, ttl)))
 
     async def delete(self, key: str):
         if not self.redis:

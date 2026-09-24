@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import inspect
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -460,7 +460,7 @@ class MemoryEvolutionService:
 
         # Combined impact score
         impact = (confidence_delta * 0.6) + (content_change * 0.4)
-        return min(1.0, max(0.0, impact))
+        return cast("float", (min(1.0, max(0.0, impact))))
 
     async def _find_affected_decisions(self, memory_id: str) -> list[str]:
         """Find decisions affected by this memory change"""

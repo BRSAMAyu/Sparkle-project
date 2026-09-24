@@ -39,8 +39,12 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Iterable, Mapping
+from typing import TYPE_CHECKING, Any, Iterable, Mapping, cast
 from uuid import UUID
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import CursorResult
+
 
 from loguru import logger
 from sqlalchemy import select, text
@@ -523,7 +527,7 @@ class InterventionLifecycleService:
         model_values = dict(values)
         stmt = self._insert_statement(InterventionLifecycleEvent, model_values)
         result = await self.db.execute(stmt)
-        inserted = bool(result.rowcount)
+        inserted = bool(cast("CursorResult[Any]", (result)).rowcount)
         if inserted:
             await self.db.commit()
             if emit:
@@ -878,7 +882,7 @@ def _has_table(sync_conn, name: str) -> bool:
     from sqlalchemy import inspect
 
     try:
-        return inspect(sync_conn).has_table(name)
+        return cast("bool", (inspect(sync_conn).has_table(name)))
     except Exception:  # noqa: BLE001
         return False
 

@@ -35,7 +35,7 @@ class CommunityStrategyOutcome(BaseModel):
         comment="Snapshot of the directive payload at decision time",
     )
     time_to_decision_seconds: Mapped[int] = mapped_column(Integer, nullable=True)
-    user_feedback: Mapped[str] = mapped_column(Text, nullable=True)
+    user_feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
     source: Mapped[str] = mapped_column(
         String(32), nullable=False, default="system",
         comment="How the decision was recorded: user_action, timeout, system",

@@ -8,6 +8,7 @@ import asyncio
 import time
 import uuid
 from dataclasses import dataclass
+from typing import cast
 from uuid import UUID
 
 from google.protobuf import json_format
@@ -43,7 +44,7 @@ class KnowledgeService:
         if not subject:
             return None
         stmt = select(Subject.id).where(Subject.name == subject).limit(1)
-        return await self.db.scalar(stmt)
+        return cast("int | None", (await self.db.scalar(stmt)))
 
     async def find_node_by_name(self, user_id: UUID, name: str) -> KnowledgeNode | None:
         stmt = (
@@ -58,7 +59,7 @@ class KnowledgeService:
             )
             .limit(1)
         )
-        return await self.db.scalar(stmt)
+        return cast("KnowledgeNode | None", (await self.db.scalar(stmt)))
 
     async def create_node(
         self,

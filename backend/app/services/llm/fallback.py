@@ -20,7 +20,7 @@ import time
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 
@@ -383,7 +383,7 @@ class LLMModelFallbackManager:
             延迟秒数
         """
         # 基础延迟 100ms，指数增长，最大 2 秒
-        return min(0.1 * (2 ** attempt), 2.0)
+        return cast("float", (min(0.1 * (2 ** attempt), 2.0)))
 
     async def execute_with_fallback(
         self,

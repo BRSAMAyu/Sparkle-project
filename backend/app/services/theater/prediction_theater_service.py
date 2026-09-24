@@ -431,7 +431,7 @@ class PredictionTheaterService:
         )
         selected_prediction = options[0].to_dict() if options else {}
         prediction_id = str(uuid4())
-        graph_bundle = {"nodes": [], "edges": []}
+        graph_bundle: dict[str, Any] = {"nodes": [], "edges": []}
         discussion: list[dict[str, Any]] = []
         candidate_bundle_id = ""
         if not preview_mode:
@@ -626,7 +626,7 @@ class PredictionTheaterService:
             target_node.id,
             include_related_suggestions=True,
         )
-        backbone = []
+        backbone: list[Any] = []
         for item in learning_path:
             if item.get("is_optional"):
                 continue
@@ -2652,7 +2652,7 @@ class PredictionTheaterService:
         )
 
     async def _build_prediction_calibration(self, user_id: UUID) -> dict[str, Any]:
-        default_profile = {
+        default_profile: dict[str, Any] = {
             "sample_count": 0,
             "completion_bias_mean": 0.0,
             "mastery_bias_mean": 0.0,

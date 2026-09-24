@@ -450,7 +450,7 @@ class AppealReviewService:
             }
 
         # 按状态统计
-        by_status = {}
+        by_status: dict[str, Any] = {}
         for a in appeals:
             s = a.status.value
             by_status[s] = by_status.get(s, 0) + 1

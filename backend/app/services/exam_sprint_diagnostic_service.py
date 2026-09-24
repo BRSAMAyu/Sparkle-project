@@ -8,7 +8,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from loguru import logger
@@ -1705,11 +1705,11 @@ class ExamSprintDiagnosticService:
         sprint_pack_path: str | None,
     ) -> dict[str, Any]:
         if sprint_pack_path:
-            return json.loads(Path(sprint_pack_path).read_text(encoding="utf-8"))
+            return cast("dict[str, Any]", (json.loads(Path(sprint_pack_path).read_text(encoding="utf-8"))))
         target = sprint_pack_id or EXAM_PREP_14D_PACK_ID
         if target == EXAM_PREP_14D_PACK_ID:
-            return json.loads(EXAM_PREP_14D_MANIFEST_PATH.read_text(encoding="utf-8"))
-        return json.loads(EXAM_PREP_14D_MANIFEST_PATH.read_text(encoding="utf-8"))
+            return cast("dict[str, Any]", (json.loads(EXAM_PREP_14D_MANIFEST_PATH.read_text(encoding="utf-8"))))
+        return cast("dict[str, Any]", (json.loads(EXAM_PREP_14D_MANIFEST_PATH.read_text(encoding="utf-8"))))
 
     def _extract_question_archetypes(self, pack_payload: dict[str, Any], subject: str) -> list[str]:
         raw = pack_payload.get("question_archetypes")

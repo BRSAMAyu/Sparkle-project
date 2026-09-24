@@ -12,7 +12,7 @@ import re
 import time
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Callable
 
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,6 +38,18 @@ from app.orchestration.ux_envelope import ux_envelope_builder
 
 class ResponseBuilderMixin:
     """Mixin providing response-building and cleanup helpers for the Orchestrator."""
+    redis: Any
+    token_tracker: Any
+    state_manager: Any
+    _extract_llm_profile_meta: Callable[..., Any]
+    _extract_route_intent: Callable[..., Any]
+    _validate_plan_execution: Callable[..., Any]
+    _derive_task_context_for_execution: Callable[..., Any]
+    _detect_execution_suggestion: Callable[..., Any]
+    _hydrate_evolution_context: Callable[..., Any]
+    _persist_assistant_message: Callable[..., Any]
+    _record_decision: Callable[..., Any]
+    _release_session_lock: Callable[..., Any]
 
     @staticmethod
     def _memory_value(item: Any, *keys: str, default: Any = None) -> Any:

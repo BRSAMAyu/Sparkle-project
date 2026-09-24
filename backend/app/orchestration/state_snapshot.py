@@ -13,7 +13,7 @@ import contextlib
 import json
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 
@@ -204,7 +204,7 @@ class StateSnapshotManager:
         try:
             raw = await self.redis.get(key)
             if raw:
-                return json.loads(raw)
+                return cast("dict[str, str]", (json.loads(raw)))
         except Exception as e:
             logger.warning(f"Failed to load context versions for user {user_id}: {e}")
 
@@ -287,7 +287,7 @@ class StateSnapshotManager:
                 if hasattr(user, 'daily_quota'):
                     # For simplicity, return a fixed value
                     # In production, this would check actual usage
-                    return max(0, user.daily_quota - 0)
+                    return cast("int", (max(0, user.daily_quota - 0)))
 
             return 100  # Default quota
         except Exception as e:

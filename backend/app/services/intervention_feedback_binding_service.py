@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -521,7 +521,7 @@ class InterventionFeedbackBindingService:
             InterventionRecord.not_deleted_filter(),
         )
         result = await self.db.execute(stmt)
-        return result.scalar_one_or_none()
+        return cast("InterventionRecord | None", (result.scalar_one_or_none()))
 
     async def _persist_last_feedback_binding(
         self,

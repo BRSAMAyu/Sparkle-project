@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from app.aurora.ledger import AppendOnlyLedgerStore, ClaimLifecycleManager
@@ -142,11 +142,11 @@ class SignalProcessor:
                 first = value[0]
                 candidate = getattr(first, "user_id", None) or (first.get("user_id") if isinstance(first, dict) else None)
                 if candidate is not None:
-                    return candidate
+                    return cast("UUID | str | None", (candidate))
             if hasattr(value, "user_id"):
-                return value.user_id
+                return cast("UUID | str | None", (value.user_id))
             if isinstance(value, dict) and value.get("user_id") is not None:
-                return value["user_id"]
+                return cast("UUID | str | None", (value["user_id"]))
         return None
 
     @staticmethod

@@ -10,7 +10,7 @@ from app.gen.sparkle.signals.v1 import signals_pb2
 
 class GatewayClient:
     def __init__(self, base_url: str | None = None, api_key: str | None = None):
-        self.base_url = (base_url or settings.GATEWAY_URL).rstrip("/")
+        self.base_url = (base_url or settings.GATEWAY_INTERNAL_URL).rstrip("/")
         self.api_key = api_key or settings.INTERNAL_API_KEY
 
     async def push_next_actions(self, candidate_set: signals_pb2.NextActionsCandidateSet) -> bool:

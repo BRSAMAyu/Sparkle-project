@@ -22,7 +22,7 @@ LLM Fallback Utilities - 统一的LLM降级工具
 import asyncio
 import json
 import re
-from typing import Any
+from typing import Any, cast
 
 from loguru import logger
 
@@ -92,7 +92,7 @@ async def safe_llm_call(
                 target_service.chat(messages, **kwargs),
                 timeout=timeout
             )
-            return result
+            return cast("str", (result))
         except TimeoutError:
             last_error = f"LLM call timed out after {timeout}s"
             logger.warning(f"[LLMFallback] Timeout (attempt {attempt + 1}/{retry_count + 1})")
@@ -157,7 +157,7 @@ async def safe_llm_json_call(
 
     # 尝试解析JSON
     try:
-        return json.loads(json_payload)
+        return cast("dict[str, Any] | list[Any] | None", (json.loads(json_payload)))
     except json.JSONDecodeError:
         logger.warning(f"[LLMFallback] Failed to parse JSON from response: {response[:100]}...")
         return fallback

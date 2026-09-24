@@ -8,7 +8,7 @@ Accountability Partnership Scheduled Tasks
 - 里程碑庆祝
 """
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -192,8 +192,8 @@ def _is_checkin_due_for_cadence(
 
     days_since_reference = (_local_date(now, timezone_name) - _local_date(reference_at, timezone_name)).days
     if last_checkin_at is None:
-        return days_since_reference == 0 or days_since_reference >= cadence_days
-    return days_since_reference >= cadence_days
+        return cast("bool", (days_since_reference == 0 or days_since_reference >= cadence_days))
+    return cast("bool", (days_since_reference >= cadence_days))
 
 
 async def _already_sent_reminder_today(
@@ -789,7 +789,7 @@ async def _calculate_streak(
         best = daily_best.get(d)
         if best is None:
             return False
-        return best["mood"] >= 4 or best["minutes"] >= 15
+        return cast("bool", (best["mood"] >= 4 or best["minutes"] >= 15))
 
     # 计算连续天数 (使用用户本地日期)
     today_local = _local_date(_utcnow(), timezone_name)

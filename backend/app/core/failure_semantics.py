@@ -41,6 +41,7 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import cast
 
 from app.core.run_state_machine import RunStatus, is_terminal_run_status
 
@@ -356,7 +357,7 @@ def retry_backoff_delay(
     if base_delay_seconds < 0 or max_delay_seconds < 0:
         raise ValueError("delays must be non-negative")
     delay = float(base_delay_seconds) * (2 ** (int(attempt) - 1))
-    return round(min(delay, float(max_delay_seconds)), 6)
+    return cast("float", (round(min(delay, float(max_delay_seconds)), 6)))
 
 
 def retry_decision(

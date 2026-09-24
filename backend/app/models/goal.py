@@ -66,8 +66,8 @@ class Goal(BaseModel):
     source_metadata: Mapped[Any] = mapped_column(JSON, nullable=True)
 
     # Lifecycle timestamps
-    completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    archived_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # Additional metadata
     metadata_payload: Mapped[Any] = mapped_column("metadata", JSON, nullable=True)

@@ -951,7 +951,7 @@ class AuroraDecisionLoop:
         recalibration = _strategy_recalibration_context(readout)
         if recalibration.get("active"):
             system = f"{system} {STRATEGY_RECALIBRATION_RULE}"
-        user = {
+        user: dict[str, Any] = {
             "decision_schema": schema,
             "dashboard_readout": self._slim_readout_for_surface(readout),
             "strategy_defaults": self._strategy_defaults_for_readout(readout),

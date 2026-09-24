@@ -19,7 +19,7 @@ class NightlyReview(BaseModel):
     summary_text: Mapped[str] = mapped_column(String(2000), nullable=True)
     todo_items: Mapped[Any] = mapped_column(JSON, nullable=True)
     evidence_refs: Mapped[Any] = mapped_column(JSON, nullable=True)
-    model_version: Mapped[str] = mapped_column(String(50), nullable=True)
+    model_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
     status: Mapped[str] = mapped_column(String(30), default="generated", nullable=False)
     reviewed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -16,7 +17,7 @@ def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
-COLLECTION_RULES = {
+COLLECTION_RULES: dict[str, dict[str, Any]] = {
     "task_completion": {
         "time_deviation_threshold": 0.3,  # 时间偏差超过30%
         "completion_rate_threshold": 0.8,  # 完成度低于80%
@@ -225,7 +226,7 @@ class AutoFragmentCollector:
             )
             count = 0
             for row in result.scalars().all():
-                linked_ids = row or []
+                linked_ids: list[Any] = row or []
                 if node_id in [str(value) for value in linked_ids if value is not None]:
                     count += 1
             return count

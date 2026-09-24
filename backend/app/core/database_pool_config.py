@@ -5,6 +5,7 @@ PostgreSQL Connection Pool Configuration - 连接池优化
 """
 
 import ssl
+from typing import cast
 
 from loguru import logger
 from sqlalchemy.engine import make_url
@@ -110,7 +111,7 @@ def get_pool_status(engine: AsyncEngine) -> dict:
     Returns:
         dict: 连接池统计信息
     """
-    pool = engine.pool
+    pool = cast("QueuePool", engine.pool)
 
     return {
         "pool_size": pool.size(),  # 当前池大小
@@ -192,7 +193,7 @@ async def check_pool_health(engine: AsyncEngine) -> bool:
                 f"Database pool unhealthy: {status}"
             )
 
-        return is_healthy
+        return cast("bool", (is_healthy))
 
     except Exception as e:
         logger.error(f"Pool health check failed: {e}")

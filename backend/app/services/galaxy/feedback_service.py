@@ -6,7 +6,7 @@ GalaxyFeedbackService - 知识星图反馈收集服务
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
@@ -170,7 +170,7 @@ class GalaxyFeedbackService:
         if event_type == FeedbackType.STUDY_SESSION:
             # 学习时长反馈：30分钟=1.0分
             duration = event_data.get("duration_minutes", 0)
-            return min(duration / 30.0, 1.0)
+            return cast("float", (min(duration / 30.0, 1.0)))
 
         # 使用预定义分数
         return self.FEEDBACK_SCORES.get(event_type, 0.0)

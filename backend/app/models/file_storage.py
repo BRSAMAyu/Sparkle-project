@@ -37,14 +37,14 @@ class StoredFile(BaseModel):
     visibility: Mapped[str] = mapped_column(String(32), default="private", nullable=False) # Maps to ArtifactScope
     retention_policy: Mapped[str] = mapped_column(String(32), default="ephemeral", nullable=False) # ephemeral, keep
     source_file_id: Mapped[Any] = mapped_column(GUID(), ForeignKey("stored_files.id", ondelete="SET NULL"), nullable=True, index=True)
-    error_message: Mapped[str] = mapped_column(String(255), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(String(255), nullable=True)
     lifecycle_status: Mapped[str] = mapped_column(String(32), default=SourceLifecycleStatus.ACTIVE.value, nullable=False, index=True)
     lifecycle_reason: Mapped[str] = mapped_column(String(255), nullable=True)
     lifecycle_updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    archived_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True)
-    revoked_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True)
-    orphaned_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True)
-    archive_review_due_at: Mapped[datetime] = mapped_column(DateTime, nullable=True, index=True)
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+    orphaned_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+    archive_review_due_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
     erased_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     erasure_receipt: Mapped[str] = mapped_column(String(255), nullable=True)
     # Rolling retrieval quality score in [-1.0, 1.0].

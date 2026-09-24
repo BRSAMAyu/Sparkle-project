@@ -44,7 +44,7 @@ class FocusSession(BaseModel):
     status: Mapped[FocusStatus] = mapped_column(Enum(FocusStatus), default=FocusStatus.COMPLETED, nullable=False)
 
     # 白噪音 (可选记录)
-    white_noise_type: Mapped[int] = mapped_column(Integer, nullable=True) # ID or Enum Value
+    white_noise_type: Mapped[int | None] = mapped_column(Integer, nullable=True) # ID or Enum Value
 
     # 关系
     user = relationship("User")
