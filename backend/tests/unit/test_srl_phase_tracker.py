@@ -8,21 +8,6 @@ from sqlalchemy import select
 
 from app.config import settings
 from app.core.cache import cache_service
-
-
-class _InMemoryKillSwitchRedis:
-    """ordered_startup("shadow") must be observable: without a store the mode
-    write is dropped and the tracker resolves live from settings defaults."""
-
-    def __init__(self) -> None:
-        self._store: dict[str, str] = {}
-
-    async def get(self, key: str) -> str | None:
-        return self._store.get(key)
-
-    async def set(self, key: str, value: str) -> None:
-        self._store[key] = value
-
 from app.models.srl_phase_state import SRLPhaseStateRecord
 from app.models.user_preferences import UserPreferencesCenter
 from app.services.aurora_stage29_srl_kill_switch_service import (
@@ -30,6 +15,7 @@ from app.services.aurora_stage29_srl_kill_switch_service import (
 )
 from app.services.srl_phase_tracker_service import SRLPhaseTrackerService
 from app.services.srl_phase_types import SRLPhase
+from tests.unit.kill_switch_test_helpers import InMemoryKillSwitchRedis
 
 
 async def _enable_live_modes(monkeypatch) -> AuroraStage29SRLKillSwitchService:
@@ -91,7 +77,7 @@ async def test_tracker_handles_task_started_transition(
 async def test_tracker_shadow_computes_without_persisting_state(
     db_session, test_user, monkeypatch
 ) -> None:
-    monkeypatch.setattr(cache_service, "redis", _InMemoryKillSwitchRedis())
+    monkeypatch.setattr(cache_service, "redis", InMemoryKillSwitchRedis())
     cache_service._local_cache.clear()
     service = AuroraStage29SRLKillSwitchService()
     await service.ordered_startup("shadow")
@@ -122,7 +108,7 @@ async def test_tracker_shadow_computes_without_persisting_state(
 async def test_tracker_shadow_get_current_phase_does_not_persist_coldstart(
     db_session, test_user, monkeypatch
 ) -> None:
-    monkeypatch.setattr(cache_service, "redis", _InMemoryKillSwitchRedis())
+    monkeypatch.setattr(cache_service, "redis", InMemoryKillSwitchRedis())
     cache_service._local_cache.clear()
     service = AuroraStage29SRLKillSwitchService()
     await service.ordered_startup("shadow")
@@ -160,7 +146,7 @@ async def test_tracker_shadow_get_current_phase_does_not_persist_coldstart(
 async def test_tracker_shadow_force_reset_does_not_persist_state(
     db_session, test_user, monkeypatch
 ) -> None:
-    monkeypatch.setattr(cache_service, "redis", _InMemoryKillSwitchRedis())
+    monkeypatch.setattr(cache_service, "redis", InMemoryKillSwitchRedis())
     cache_service._local_cache.clear()
     service = AuroraStage29SRLKillSwitchService()
     await service.ordered_startup("shadow")

@@ -1,27 +1,15 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from uuid import uuid4
 
 import pytest
 
 from app.core.cache import cache_service
-from app.state_aggregator.service import StateAggregatorService
 from app.services.aurora_stage26_scene_kill_switch_service import AuroraStage26SceneKillSwitchService
+from app.state_aggregator.service import StateAggregatorService
+from tests.unit.kill_switch_test_helpers import InMemoryKillSwitchRedis
 from tests.unit.scene_test_helpers import make_scene
-
-
-class _InMemoryKillSwitchRedis:
-    """Minimal Redis stub: kill switch read/write only touch get/set on mode keys."""
-
-    def __init__(self) -> None:
-        self._store: dict[str, str] = {}
-
-    async def get(self, key: str) -> str | None:
-        return self._store.get(key)
-
-    async def set(self, key: str, value: str) -> None:
-        self._store[key] = value
 
 
 @pytest.fixture(name="scene_kill_switch_redis")
@@ -33,7 +21,7 @@ async def scene_kill_switch_redis_fixture(monkeypatch):
     no-ops and the hides-outside-live-mode assertion can never pass. Same
     stubbing pattern as tests/unit/test_stage19_kill_switch.py.
     """
-    fake = _InMemoryKillSwitchRedis()
+    fake = InMemoryKillSwitchRedis()
     monkeypatch.setattr(cache_service, "redis", fake)
     return fake
 

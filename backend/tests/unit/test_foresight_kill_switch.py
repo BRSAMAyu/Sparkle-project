@@ -6,12 +6,14 @@ from uuid import uuid4
 
 import pytest
 
+from app.core.cache import cache_service
 from app.schemas.foresight import AttractorState, Deviation, ForesightHint
 from app.services.aurora_stage27_foresight_kill_switch_service import AuroraStage27ForesightKillSwitchService
+from app.services.foresight_deviation_service import DeviationDetector
 from app.services.jitai_trigger_service import JITAITrigger
 from app.services.persdyn_attractor_service import PersDynAttractorService
 from app.services.predictive_service import PredictiveService
-from app.services.foresight_deviation_service import DeviationDetector
+from tests.unit.kill_switch_test_helpers import InMemoryKillSwitchRedis
 
 
 def _forecast():
@@ -24,11 +26,15 @@ def _forecast():
 
 async def _configure(
     *,
+    monkeypatch: pytest.MonkeyPatch,
     mode: str,
     attractor: str = "live",
     deviation: str = "live",
     jitai: str = "live",
 ) -> None:
+    # 注入内存桩：redis 为 None 时 kill_switch 写入被忽略、翻转不可观察
+    # （见 tests/unit/kill_switch_test_helpers.py 模块 docstring）。
+    monkeypatch.setattr(cache_service, "redis", InMemoryKillSwitchRedis())
     kill_switch = AuroraStage27ForesightKillSwitchService()
     await kill_switch.set_mode(mode)
     await kill_switch.set_feature_mode("attractor", attractor)
@@ -95,7 +101,7 @@ async def _build_snapshot(service: PredictiveService, monkeypatch) -> None:
 
 @pytest.mark.asyncio
 async def test_foresight_kill_switch_master_off(db_session, monkeypatch) -> None:
-    await _configure(mode="off")
+    await _configure(monkeypatch=monkeypatch, mode="off")
     service = PredictiveService(db_session)
     await _build_snapshot(service, monkeypatch)
 
@@ -108,7 +114,7 @@ async def test_foresight_kill_switch_master_off(db_session, monkeypatch) -> None
 
 @pytest.mark.asyncio
 async def test_foresight_kill_switch_attractor_off(db_session, monkeypatch) -> None:
-    await _configure(mode="live", attractor="off")
+    await _configure(monkeypatch=monkeypatch, mode="live", attractor="off")
     service = PredictiveService(db_session)
     await _build_snapshot(service, monkeypatch)
 
@@ -120,7 +126,7 @@ async def test_foresight_kill_switch_attractor_off(db_session, monkeypatch) -> N
 
 @pytest.mark.asyncio
 async def test_foresight_kill_switch_deviation_off(db_session, monkeypatch) -> None:
-    await _configure(mode="live", deviation="off")
+    await _configure(monkeypatch=monkeypatch, mode="live", deviation="off")
     service = PredictiveService(db_session)
     await _build_snapshot(service, monkeypatch)
 
@@ -133,7 +139,7 @@ async def test_foresight_kill_switch_deviation_off(db_session, monkeypatch) -> N
 
 @pytest.mark.asyncio
 async def test_foresight_kill_switch_jitai_off(db_session, monkeypatch) -> None:
-    await _configure(mode="live", jitai="off")
+    await _configure(monkeypatch=monkeypatch, mode="live", jitai="off")
     service = PredictiveService(db_session)
     await _build_snapshot(service, monkeypatch)
 

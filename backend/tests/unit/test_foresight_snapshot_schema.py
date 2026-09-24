@@ -10,10 +10,11 @@ from app.config import settings
 from app.core.cache import cache_service
 from app.schemas.foresight import AttractorState, Deviation, ForesightHint
 from app.services.aurora_stage27_foresight_kill_switch_service import AuroraStage27ForesightKillSwitchService
+from app.services.foresight_deviation_service import DeviationDetector
 from app.services.jitai_trigger_service import JITAITrigger
 from app.services.persdyn_attractor_service import PersDynAttractorService
 from app.services.predictive_service import PredictiveService
-from app.services.foresight_deviation_service import DeviationDetector
+from tests.unit.kill_switch_test_helpers import InMemoryKillSwitchRedis
 
 
 def _attractor(dim: str = "study_pace") -> AttractorState:
@@ -53,11 +54,15 @@ def _hint(dim: str = "study_pace") -> ForesightHint:
 
 async def _configure_modes(
     *,
+    monkeypatch: pytest.MonkeyPatch,
     mode: str,
     attractor: str = "live",
     deviation: str = "live",
     jitai: str = "live",
 ) -> None:
+    # 注入内存桩：redis 为 None 时 kill_switch 写入被忽略、翻转不可观察
+    # （见 tests/unit/kill_switch_test_helpers.py 模块 docstring）。
+    monkeypatch.setattr(cache_service, "redis", InMemoryKillSwitchRedis())
     service = AuroraStage27ForesightKillSwitchService()
     await service.set_mode(mode)
     await service.set_feature_mode("attractor", attractor)
@@ -68,7 +73,7 @@ async def _configure_modes(
 @pytest.mark.asyncio
 async def test_foresight_snapshot_returns_expected_contract(db_session, monkeypatch) -> None:
     user_id = uuid4()
-    await _configure_modes(mode="live")
+    await _configure_modes(monkeypatch=monkeypatch, mode="live")
     service = PredictiveService(db_session)
 
     monkeypatch.setattr(service, "predict_engagement", AsyncMock(return_value=type("Forecast", (), {"to_dict": lambda self: {"next_active_time": "2026-04-22T09:00:00", "confidence": 0.8, "recommended_intervention": None, "risk_level": "low"}})()))
@@ -100,7 +105,7 @@ async def test_foresight_snapshot_returns_expected_contract(db_session, monkeypa
 @pytest.mark.asyncio
 async def test_foresight_snapshot_uses_sixty_second_cache(db_session, monkeypatch) -> None:
     user_id = uuid4()
-    await _configure_modes(mode="off")
+    await _configure_modes(monkeypatch=monkeypatch, mode="off")
     service = PredictiveService(db_session)
     await cache_service.delete_pattern(f"foresight:snapshot:{user_id}*")
 
@@ -127,7 +132,7 @@ async def test_foresight_snapshot_uses_sixty_second_cache(db_session, monkeypatc
 @pytest.mark.asyncio
 async def test_foresight_snapshot_returns_empty_new_fields_when_master_mode_off(db_session, monkeypatch) -> None:
     user_id = uuid4()
-    await _configure_modes(mode="off")
+    await _configure_modes(monkeypatch=monkeypatch, mode="off")
     service = PredictiveService(db_session)
 
     monkeypatch.setattr(service, "predict_engagement", AsyncMock(return_value=type("Forecast", (), {"to_dict": lambda self: {"next_active_time": "2026-04-22T09:00:00", "confidence": 0.8, "recommended_intervention": None, "risk_level": "low"}})()))
@@ -146,7 +151,7 @@ async def test_foresight_snapshot_returns_empty_new_fields_when_master_mode_off(
 @pytest.mark.asyncio
 async def test_foresight_snapshot_hides_hints_when_jitai_not_live(db_session, monkeypatch) -> None:
     user_id = uuid4()
-    await _configure_modes(mode="live", jitai="shadow")
+    await _configure_modes(monkeypatch=monkeypatch, mode="live", jitai="shadow")
     service = PredictiveService(db_session)
 
     monkeypatch.setattr(service, "predict_engagement", AsyncMock(return_value=type("Forecast", (), {"to_dict": lambda self: {"next_active_time": "2026-04-22T09:00:00", "confidence": 0.8, "recommended_intervention": None, "risk_level": "low"}})()))
@@ -170,7 +175,7 @@ async def test_foresight_snapshot_hides_hints_when_jitai_not_live(db_session, mo
 @pytest.mark.asyncio
 async def test_foresight_snapshot_allows_nullable_subject_difficulty(db_session, monkeypatch) -> None:
     user_id = uuid4()
-    await _configure_modes(mode="off")
+    await _configure_modes(monkeypatch=monkeypatch, mode="off")
     service = PredictiveService(db_session)
 
     monkeypatch.setattr(service, "predict_engagement", AsyncMock(return_value=type("Forecast", (), {"to_dict": lambda self: {"next_active_time": "2026-04-22T09:00:00", "confidence": 0.8, "recommended_intervention": None, "risk_level": "low"}})()))

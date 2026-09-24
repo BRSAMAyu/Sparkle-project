@@ -6,6 +6,7 @@ import pytest
 
 from app.config import settings
 from app.services.aurora_stage19_kill_switch_service import AuroraStage19KillSwitchService
+from tests.unit.kill_switch_test_helpers import InMemoryKillSwitchRedis
 
 
 @pytest.mark.asyncio
@@ -33,7 +34,7 @@ async def test_stage19_kill_switch_defaults_follow_settings(monkeypatch) -> None
 async def test_stage19_kill_switch_can_flip_flags_without_cross_pollution(monkeypatch) -> None:
     monkeypatch.setattr(
         "app.services.aurora_stage19_kill_switch_service.cache_service.redis",
-        _InMemoryKillSwitchRedis(),
+        InMemoryKillSwitchRedis(),
     )
     monkeypatch.setattr(settings, "AURORA_STAGE19_WORKING_MEMORY_MODE", "off", raising=False)
     monkeypatch.setattr(settings, "AURORA_STAGE19_LLM_EXTRACTOR_MODE", "off", raising=False)
@@ -70,18 +71,3 @@ async def test_stage19_kill_switch_reads_redis_override(monkeypatch) -> None:
         "consolidation_enabled": "live",
         "storage_gate_enabled": "live",
     }
-
-
-class _InMemoryKillSwitchRedis:
-    """Kill switch round-trips only need get/set; writes to real Redis would be
-    pointless here and None would make flips unobservable."""
-
-    def __init__(self) -> None:
-        self._store: dict[str, str] = {}
-
-    async def get(self, key: str) -> str | None:
-        return self._store.get(key)
-
-    async def set(self, key: str, value: str) -> None:
-        self._store[key] = value
-

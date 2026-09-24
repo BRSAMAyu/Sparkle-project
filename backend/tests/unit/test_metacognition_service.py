@@ -96,4 +96,9 @@ async def test_dashboard_payload_uses_registered_templates_only(
 
     assert payload["available"] is True
     assert payload["cards"][0]["template_id"] == "mc_dashboard_time_more_support"
-    assert "你过去 {sample_size} 次对完成时间估得偏乐观 {display_value} 小时。" == payload["cards"][0]["body"]
+    # 期望=注册模板经 render_template 插值后的成文（产品在
+    # metacognition_service.build_dashboard_payload 内对注册模板做
+    # sample_size/display_value 插值，语言契约也跑在渲染后文本上）；
+    # 原断言期望裸占位符与产品意图相悖（仪表盘绝不能向用户裸露占位符）。
+    # template_id 断言已守住"只准用注册模板"，此处锁定插值成文。
+    assert payload["cards"][0]["body"] == "你过去 24 次对完成时间估得偏乐观 2.3 小时。"

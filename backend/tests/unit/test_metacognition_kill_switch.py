@@ -3,10 +3,12 @@ from __future__ import annotations
 import pytest
 
 from app.config import settings
+from app.core.cache import cache_service
 from app.services.aurora_stage30_metacognition_kill_switch_service import (
     AuroraStage30MetacognitionKillSwitchService,
 )
 from app.services.metacognition_service import MetacognitionService
+from tests.unit.kill_switch_test_helpers import InMemoryKillSwitchRedis
 
 
 @pytest.mark.asyncio
@@ -44,6 +46,9 @@ async def test_language_contract_hit_disables_runtime_modes(
     monkeypatch.setattr(settings, "AURORA_METACOG_DASHBOARD_MODE", "live")
     monkeypatch.setattr(settings, "AURORA_METACOG_PROCESS_SCAFFOLDING_MODE", "live")
     monkeypatch.setattr(settings, "AURORA_METACOG_FSM_COMBINE_MODE", "live")
+    # 注入内存桩：redis 为 None 时 auto_disable 写入被忽略、翻转不可观察
+    # （见 tests/unit/kill_switch_test_helpers.py 模块 docstring）。
+    monkeypatch.setattr(cache_service, "redis", InMemoryKillSwitchRedis())
     service = MetacognitionService(db_session, redis=None)
 
     allowed = await service._enforce_language_contract(

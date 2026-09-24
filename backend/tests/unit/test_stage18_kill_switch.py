@@ -6,6 +6,7 @@ import pytest
 
 from app.config import settings
 from app.services.aurora_stage18_kill_switch_service import AuroraStage18KillSwitchService
+from tests.unit.kill_switch_test_helpers import InMemoryKillSwitchRedis
 
 
 @pytest.mark.asyncio
@@ -36,7 +37,7 @@ async def test_stage18_kill_switch_can_flip_flags_without_cross_pollution(monkey
     monkeypatch.setattr(settings, "AURORA_STAGE18_PUSH_DELIVERY_MODE", "off", raising=False)
     monkeypatch.setattr(
         "app.services.aurora_stage18_kill_switch_service.cache_service.redis",
-        _InMemoryKillSwitchRedis(),
+        InMemoryKillSwitchRedis(),
     )
 
     service = AuroraStage18KillSwitchService()
@@ -68,18 +69,3 @@ async def test_stage18_kill_switch_reads_redis_override(monkeypatch) -> None:
         "push_policy_enabled": "live",
         "push_delivery_enabled": "live",
     }
-
-
-class _InMemoryKillSwitchRedis:
-    """Kill switch round-trips only need get/set; writes to real Redis would be
-    pointless here and None would make flips unobservable."""
-
-    def __init__(self) -> None:
-        self._store: dict[str, str] = {}
-
-    async def get(self, key: str) -> str | None:
-        return self._store.get(key)
-
-    async def set(self, key: str, value: str) -> None:
-        self._store[key] = value
-

@@ -15,39 +15,10 @@ from app.api.v1.memory_admin import router
 from app.config import settings
 from app.models.memory import EpisodicMemory, MemoryPreference
 from app.models.user import User
+from tests.unit.kill_switch_test_helpers import InMemoryKillSwitchRedis
 
 app = FastAPI()
 app.include_router(router, prefix="/api/v1")
-
-
-class _InMemoryKillSwitchRedis:
-    """Kill switch 写路径只在 cache_service.redis 可用时才真正落键（Redis 缺席时
-    write_mode 显式告警并忽略写入，读路径回落 settings 默认——见
-    app/core/kill_switch.py）。kill_switch admin PUT→GET 断言的是 round-trip
-    语义，注入 None 会让翻转不可观察（与服务级先例
-    tests/unit/test_stage18_kill_switch.py 的 _InMemoryKillSwitchRedis 同款）；
-    这里只需要 get/set，不需要真 Redis。"""
-
-    def __init__(self) -> None:
-        self._store: dict[str, str] = {}
-        self._counters: dict[str, int] = {}
-
-    async def get(self, key: str) -> str | None:
-        return self._store.get(key)
-
-    async def set(self, key: str, value: str) -> None:
-        self._store[key] = value
-
-    async def delete(self, key: str) -> int:
-        return 1 if self._store.pop(key, None) is not None else 0
-
-    async def incr(self, key: str) -> int:
-        self._counters[key] = self._counters.get(key, 0) + 1
-        return self._counters[key]
-
-    async def expire(self, key: str, ttl: int) -> bool:
-        # 内存桩无 TTL 语义；仅对存在的键报告成功，与 redis.expire 布尔契约一致
-        return key in self._counters or key in self._store
 
 
 @pytest.mark.asyncio
@@ -204,7 +175,7 @@ async def test_memory_admin_revoke_inferred_lane(db_session, monkeypatch):
 @pytest.mark.asyncio
 async def test_memory_admin_stage18_kill_switches(db_session, monkeypatch):
     monkeypatch.setattr(settings, "ENABLE_MEMORY_GOVERNANCE", True, raising=False)
-    monkeypatch.setattr("app.core.cache.cache_service.redis", _InMemoryKillSwitchRedis())
+    monkeypatch.setattr("app.core.cache.cache_service.redis", InMemoryKillSwitchRedis())
 
     user_id = uuid4()
     admin_user = User(
@@ -251,7 +222,7 @@ async def test_memory_admin_stage18_kill_switches(db_session, monkeypatch):
 @pytest.mark.asyncio
 async def test_memory_admin_stage19_kill_switches(db_session, monkeypatch):
     monkeypatch.setattr(settings, "ENABLE_MEMORY_GOVERNANCE", True, raising=False)
-    monkeypatch.setattr("app.services.aurora_stage19_kill_switch_service.cache_service.redis", _InMemoryKillSwitchRedis())
+    monkeypatch.setattr("app.services.aurora_stage19_kill_switch_service.cache_service.redis", InMemoryKillSwitchRedis())
 
     user_id = uuid4()
     admin_user = User(
@@ -298,7 +269,7 @@ async def test_memory_admin_stage19_kill_switches(db_session, monkeypatch):
 @pytest.mark.asyncio
 async def test_memory_admin_stage21_kill_switches(db_session, monkeypatch):
     monkeypatch.setattr(settings, "ENABLE_MEMORY_GOVERNANCE", True, raising=False)
-    monkeypatch.setattr("app.services.aurora_stage21_kill_switch_service.cache_service.redis", _InMemoryKillSwitchRedis())
+    monkeypatch.setattr("app.services.aurora_stage21_kill_switch_service.cache_service.redis", InMemoryKillSwitchRedis())
 
     user_id = uuid4()
     admin_user = User(
@@ -349,7 +320,7 @@ async def test_memory_admin_expanded_aurora_kill_switches(db_session, monkeypatc
     # 同一单例对象，在其 redis 属性上注入一次内存桩即可覆盖全部 stage 路由
     # （原实现对 10 个模块逐个 setattr None——同一属性重复赋值本就冗余，
     # 且 None 会让 PUT 翻转不可观察、断言只 reflect settings 默认值）。
-    monkeypatch.setattr("app.core.cache.cache_service.redis", _InMemoryKillSwitchRedis())
+    monkeypatch.setattr("app.core.cache.cache_service.redis", InMemoryKillSwitchRedis())
 
     user_id = uuid4()
     admin_user = User(

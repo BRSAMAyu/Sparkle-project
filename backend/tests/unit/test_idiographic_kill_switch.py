@@ -11,10 +11,14 @@ from app.services.aurora_stage31_idiographic_kill_switch_service import (
     AuroraStage31IdiographicKillSwitchService,
 )
 from app.services.idiographic_association_service import IdiographicAssociationService
+from tests.unit.kill_switch_test_helpers import InMemoryKillSwitchRedis
 
 
 @pytest.mark.asyncio
-async def test_kill_switch_auto_downgrades_live_mode_on_high_disconfirm_rate() -> None:
+async def test_kill_switch_auto_downgrades_live_mode_on_high_disconfirm_rate(monkeypatch) -> None:
+    # 注入内存桩：redis 为 None 时 kill_switch 写入被忽略、降级不可观察
+    # （见 tests/unit/kill_switch_test_helpers.py 模块 docstring）。
+    monkeypatch.setattr(cache_service, "redis", InMemoryKillSwitchRedis())
     service = AuroraStage31IdiographicKillSwitchService()
     original_mode = await service.get_mode()
 
@@ -30,7 +34,9 @@ async def test_kill_switch_auto_downgrades_live_mode_on_high_disconfirm_rate() -
 
 @pytest.mark.asyncio
 async def test_idiographic_shadow_computes_without_db_writes_or_events(monkeypatch) -> None:
-    monkeypatch.setattr(cache_service, "redis", None)
+    # 注入内存桩（原先补丁为 None：写入被忽略→mode 回落 settings "live"→
+    # recompute_user 误入 live 分支触发真 DB 查询，才是本测试另一败因）。
+    monkeypatch.setattr(cache_service, "redis", InMemoryKillSwitchRedis())
     kill_switch = AuroraStage31IdiographicKillSwitchService()
     original_mode = await kill_switch.get_mode()
     await kill_switch.set_mode("shadow")
@@ -78,7 +84,8 @@ async def test_idiographic_shadow_computes_without_db_writes_or_events(monkeypat
 
 @pytest.mark.asyncio
 async def test_idiographic_shadow_does_not_expose_aggregator_summary(monkeypatch) -> None:
-    monkeypatch.setattr(cache_service, "redis", None)
+    # 注入内存桩：redis 为 None 时 shadow 写入被忽略、读回落 "live"，遮蔽断言本意。
+    monkeypatch.setattr(cache_service, "redis", InMemoryKillSwitchRedis())
     kill_switch = AuroraStage31IdiographicKillSwitchService()
     original_mode = await kill_switch.get_mode()
     await kill_switch.set_mode("shadow")
