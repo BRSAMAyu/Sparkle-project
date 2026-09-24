@@ -36,7 +36,9 @@ void main() {
       ),
     );
 
-    expect(find.text('待执行策略'), findsOneWidget);
+    // 段落标题(ExpandableSection)与卡内标题同串双现是该屏既有模式
+    // （reflections 段同款）；A 线统一去重时此断言随动。
+    expect(find.text('待执行策略'), findsNWidgets(2));
     expect(find.text('3 条'), findsOneWidget);
     expect(find.textContaining('下一次触发在'), findsOneWidget);
   });

@@ -375,10 +375,19 @@ class GroupAgentChatNotifier
               : _fallbackGroupAgentOutput(preset, recentMessages))
           .trim();
       if (content.isNotEmpty) {
-        final message = await _persistGroupAgentMessage(
-          userId: userContext.userId,
+        final repository = _ref.read(communityRepositoryProvider);
+        final message = await repository.sendMessage(
+          _groupId,
+          type: MessageType.text,
           content: content,
-          sessionId: sessionId,
+          contentData: {
+            kAgentMetadataKey: true,
+            kAgentVisibilityKey: kAgentVisibilitySelf,
+            kAgentVisibleToKey: userContext.userId,
+            kAgentSessionIdKey: sessionId,
+            kAgentContextTypeKey: 'group',
+            kAgentContextIdKey: _groupId,
+          },
         );
 
         state = state.copyWith(
@@ -396,41 +405,6 @@ class GroupAgentChatNotifier
         isSending: false,
         streamingContent: '',
         error: message,
-      );
-    }
-  }
-
-  Future<MessageInfo> _persistGroupAgentMessage({
-    required String userId,
-    required String content,
-    required String sessionId,
-  }) async {
-    final repository = _ref.read(communityRepositoryProvider);
-    final contentData = {
-      kAgentMetadataKey: true,
-      kAgentVisibilityKey: kAgentVisibilitySelf,
-      kAgentVisibleToKey: userId,
-      kAgentSessionIdKey: sessionId,
-      kAgentContextTypeKey: 'group',
-      kAgentContextIdKey: _groupId,
-    };
-
-    try {
-      return await repository.sendMessage(
-        _groupId,
-        type: MessageType.text,
-        content: content,
-        contentData: contentData,
-      );
-    } catch (_) {
-      return MessageInfo(
-        id: const Uuid().v4(),
-        messageType: MessageType.text,
-        sender: buildCommunityAgentUser(),
-        content: content,
-        contentData: contentData,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
       );
     }
   }
@@ -604,77 +578,130 @@ class PrivateAgentChatNotifier
     if (content == null || content.isEmpty) {
       return;
     }
-    try {
-      final userContext = await _resolveUserContext(_ref);
-      final sessionId =
-          _ref.read(agentSessionStoreProvider).getOrCreateSessionId(
-                AgentSessionScope.privateChat,
-                _friendId,
-                userContext.userId,
-              );
-      if (content.isNotEmpty) {
-        final message = await _persistPrivateAgentMessage(
-          userId: userContext.userId,
-          content: content,
-          sessionId: sessionId,
-          receiver: userContext.userBrief,
-        );
-
-        state = state.copyWith(
-          isSending: false,
-          streamingContent: '',
-          messages: [message, ...state.messages],
-          clearDraft: true,
-        );
-      }
-    } catch (e) {
-      final message =
-          ErrorMessages.getUserFriendlyMessage('UNKNOWN', e.toString());
-      state = state.copyWith(
-        isSending: false,
-        streamingContent: '',
-        error: message,
-      );
-    }
-  }
-
-  Future<PrivateMessageInfo> _persistPrivateAgentMessage({
-    required String userId,
-    required String content,
-    required String sessionId,
-    required UserBrief receiver,
-  }) async {
+    final userContext = await _resolveUserContext(_ref);
+    final sessionId =
+        _ref.read(agentSessionStoreProvider).getOrCreateSessionId(
+              AgentSessionScope.privateChat,
+              _friendId,
+              userContext.userId,
+            );
+    final contentData = _privateAgentContentData(
+      userId: userContext.userId,
+      sessionId: sessionId,
+    );
     final repository = _ref.read(communityRepositoryProvider);
-    final contentData = {
-      kAgentMetadataKey: true,
-      kAgentVisibilityKey: kAgentVisibilitySelf,
-      kAgentVisibleToKey: userId,
-      kAgentSessionIdKey: sessionId,
-      kAgentContextTypeKey: 'private',
-      kAgentContextIdKey: _friendId,
-    };
+    // 诚实性红线：先落本地 pending 态消息（id 带 local_ 前缀，与
+    // PrivateChatNotifier.sendMessage 形制一致），持久化结果决定其终态，
+    // 绝不在发送失败时伪造 isRead:true 的"成功"消息。
+    final localId = 'local_${const Uuid().v4()}';
+    final pendingMessage = PrivateMessageInfo(
+      id: localId,
+      sender: buildCommunityAgentUser(),
+      receiver: userContext.userBrief,
+      messageType: MessageType.text,
+      content: content,
+      contentData: contentData,
+      isRead: false,
+      isSending: true,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    state = state.copyWith(
+      messages: [pendingMessage, ...state.messages],
+      clearDraft: true,
+    );
 
     try {
-      return await repository.sendPrivateMessage(
+      final message = await repository.sendPrivateMessage(
         PrivateMessageSend(
           targetUserId: _friendId,
           content: content,
           contentData: contentData,
         ),
       );
-    } catch (_) {
-      return PrivateMessageInfo(
-        id: const Uuid().v4(),
-        sender: buildCommunityAgentUser(),
-        receiver: receiver,
-        messageType: MessageType.text,
-        content: content,
-        contentData: contentData,
-        isRead: true,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
+      _replaceLocalMessage(localId, message);
+    } catch (e) {
+      _markLocalMessageFailed(localId, e);
     }
+  }
+
+  /// 用户对发送失败的代写消息显式重试：沿用原内容重新持久化。
+  Future<void> retryAgentMessage(String messageId) async {
+    final index =
+        state.messages.indexWhere((message) => message.id == messageId);
+    if (index == -1) return;
+    final target = state.messages[index];
+    if (target.isSending || !target.hasError) return;
+    if ((target.content ?? '').trim().isEmpty) return;
+
+    state = state.copyWith(
+      messages: [
+        for (final message in state.messages)
+          if (message.id == messageId)
+            message.copyWith(isSending: true, hasError: false)
+          else
+            message,
+      ],
+      clearError: true,
+    );
+
+    try {
+      final repository = _ref.read(communityRepositoryProvider);
+      final message = await repository.sendPrivateMessage(
+        PrivateMessageSend(
+          targetUserId: _friendId,
+          content: target.content,
+          contentData: target.contentData,
+        ),
+      );
+      _replaceLocalMessage(messageId, message);
+    } catch (e) {
+      _markLocalMessageFailed(messageId, e);
+    }
+  }
+
+  Map<String, dynamic> _privateAgentContentData({
+    required String userId,
+    required String sessionId,
+  }) =>
+      {
+        kAgentMetadataKey: true,
+        kAgentVisibilityKey: kAgentVisibilitySelf,
+        kAgentVisibleToKey: userId,
+        kAgentSessionIdKey: sessionId,
+        kAgentContextTypeKey: 'private',
+        kAgentContextIdKey: _friendId,
+      };
+
+  void _replaceLocalMessage(String localId, PrivateMessageInfo message) {
+    final updated = <PrivateMessageInfo>[
+      for (final existing in state.messages)
+        if (existing.id == localId) message else existing,
+    ];
+    if (!updated.any((existing) => existing.id == message.id)) {
+      updated.insert(0, message);
+    }
+    state = state.copyWith(
+      isSending: false,
+      streamingContent: '',
+      messages: updated,
+      clearError: true,
+    );
+  }
+
+  void _markLocalMessageFailed(String localId, Object error) {
+    final message =
+        ErrorMessages.getUserFriendlyMessage('UNKNOWN', error.toString());
+    state = state.copyWith(
+      messages: [
+        for (final existing in state.messages)
+          if (existing.id == localId)
+            existing.copyWith(isSending: false, hasError: true)
+          else
+            existing,
+      ],
+      error: message,
+    );
   }
 }
 
