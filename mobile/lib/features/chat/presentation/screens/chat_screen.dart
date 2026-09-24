@@ -210,7 +210,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   String? _newMessageDividerBeforeId;
   String? _latestReadConversationId;
   String? _latestReadMessageId;
-  final Map<String, GlobalKey> _messageKeys = <String, GlobalKey>{};
+  // F-4（wt324 blocker）：消息列表项不再常驻 GlobalKey（`_messageKeyFor`
+  // 旧机制已删除）。reversed 懒加载 ListView 的子项在每次追加/前缀行进出时
+  // 索引整体移位，常驻 GlobalKey 会走 `inflateWidget →
+  // _retakeInactiveElement` 认领路径，在「流式完成 + 子树形态切换（长建议
+  // 结构化渲染）」帧触发 `_elements.contains(element)` 崩溃（错误页兜底但
+  // 回复内容丢失）。现改为：列表项常驻身份键 = ValueKey（配合
+  // findChildIndexCallback 由框架按键搬移元素，不再有认领路径）；
+  // 唯一需要 context 的「按已读位置定位」只在会话打开时进行，用一次性
+  // 瞬态 GlobalKey 只挂目标消息一项，定位动画结束即摘除。
+  GlobalKey? _restoreTargetKey;
+  String? _restoreTargetMessageId;
   bool _dailyStartupRetryBannerVisible = false;
   bool _dailyStartupRetryInFlight = false;
   String? _reviewNodeLabel;
@@ -811,7 +821,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       return;
     }
     final messages = ref.read(chatProvider).messages;
-    _pruneMessageKeys(messages);
     final prefs = await SharedPreferences.getInstance();
     final storedLastReadId =
         prefs.getString(_lastReadMessagePrefsKey(normalizedConversationId));
@@ -837,13 +846,28 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (targetId == null) {
       return;
     }
+    // F-4：瞬态定位键——只挂目标消息一项，定位动画结束后立即摘除
+    //（itemBuilder 对该消息返回挂 `_restoreTargetKey` 的 Column）。
+    if (mounted) {
+      setState(() {
+        _restoreTargetKey = GlobalKey(debugLabel: 'chat-restore-$targetId');
+        _restoreTargetMessageId = targetId;
+      });
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
       }
-      final targetContext = _messageKeys[targetId]?.currentContext;
+      final restoreKey = _restoreTargetKey;
+      final targetContext = restoreKey?.currentContext;
       if (targetContext == null) {
         _scrollToBottom();
+        if (_restoreTargetKey == restoreKey) {
+          setState(() {
+            _restoreTargetKey = null;
+            _restoreTargetMessageId = null;
+          });
+        }
         return;
       }
       unawaited(
@@ -852,18 +876,59 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           duration: const Duration(milliseconds: 260),
           curve: Curves.easeOutCubic,
           alignment: 0.22,
-        ),
+        ).then((_) {
+          // 动画走完后摘键（比目标消息大一圈的气泡重挂一次，静态期不可感）；
+          // 若期间已有新一轮定位接管（会话快速切换），不越权清理。
+          if (!mounted || _restoreTargetKey != restoreKey) {
+            return;
+          }
+          setState(() {
+            _restoreTargetKey = null;
+            _restoreTargetMessageId = null;
+          });
+        }),
       );
     });
   }
 
-  void _pruneMessageKeys(List<ChatMessageModel> messages) {
-    final ids = messages.map((message) => message.id).toSet();
-    _messageKeys.removeWhere((id, _) => !ids.contains(id));
+  /// F-4：reversed 列表的按键找位（SliverChildBuilderDelegate
+  /// `findChildIndexCallback`）。返回该键对应的消息在**当前**列表坐标
+  /// （含状态/推理/流式前缀行偏移）中的索引；找不到返回 null。
+  ///
+  /// 这使框架在索引移位帧按键搬移既有 Element（performRebuild 的
+  /// remap 路径），消息子树原位复用——不再发生「同键元素仍挂在旧槽位
+  /// 却在新槽位 inflate」的 GlobalKey 认领（F-4 崩溃根因）。
+  int? _findChildIndexForKey(
+    Key key, {
+    required List<ChatMessageModel> messages,
+    required bool showStatusIndicator,
+    required bool showReasoningIndicator,
+    required bool showStreamingBubble,
+  }) {
+    final String? messageId;
+    if (key is ValueKey<String>) {
+      messageId = key.value;
+    } else if (key is GlobalKey) {
+      // 瞬态定位键：只对应目标消息一项。
+      messageId = _restoreTargetMessageId;
+    } else {
+      return null;
+    }
+    if (messageId == null) {
+      return null;
+    }
+    final messageIndex = messages.indexWhere((m) => m.id == messageId);
+    if (messageIndex < 0) {
+      return null;
+    }
+    final prefixCount =
+        (showStatusIndicator ? 1 : 0) +
+            (showReasoningIndicator ? 1 : 0) +
+            (showStreamingBubble ? 1 : 0);
+    // itemBuilder 坐标：listIndex = prefixCount + (messageCount - 1 - a)，
+    // 其中 a 为该消息在 messages（旧→新序）中的下标。
+    return prefixCount + (messages.length - 1 - messageIndex);
   }
-
-  GlobalKey _messageKeyFor(String id) =>
-      _messageKeys.putIfAbsent(id, GlobalKey.new);
 
   String _lastReadMessagePrefsKey(String conversationId) =>
       'chat:last_read_message_id:$conversationId';
@@ -1653,7 +1718,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           if (inQuickActionsState)
                             _buildQuickActions(context)
                           else
-                            ListView.builder(
+                            // F-4：ListView.builder → ListView.custom。
+                            // 子项身份键改 ValueKey（原为常驻 GlobalKey，
+                            // 是 reversed 列表索引移位帧 GlobalKey 认领冲突
+                            // 的根因），并由 findChildIndexCallback 让框架
+                            // 按键搬移既有 Element（原位复用、无重挂）。
+                            ListView.custom(
                               key: const Key('chatMessagesViewport'),
                               controller: _scrollController,
                               reverse: true,
@@ -1669,8 +1739,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 ),
                               ),
                               cacheExtent: 600,
-                              itemCount: listItemCount,
-                              itemBuilder: (context, index) {
+                              childrenDelegate: SliverChildBuilderDelegate(
+                                (context, index) {
                                 final isStatusShowing = showStatusIndicator;
                                 final isReasoningShowing =
                                     showReasoningIndicator;
@@ -1829,7 +1899,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 final showNewMessagesDivider =
                                     message.id == _newMessageDividerBeforeId;
                                 return Column(
-                                  key: _messageKeyFor(message.id),
+                                  // F-4：常驻身份键 = ValueKey（原常驻
+                                  // GlobalKey 见类字段处注释）；仅当本帧为
+                                  // 「已读定位」目标时挂瞬态 GlobalKey。
+                                  key: (_restoreTargetMessageId ==
+                                              message.id &&
+                                          _restoreTargetKey != null)
+                                      ? _restoreTargetKey
+                                      : ValueKey<String>(message.id),
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     if (showNewMessagesDivider)
@@ -2216,7 +2293,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                       const ExperienceEnvelopeIndicator(),
                                   ],
                                 );
-                              },
+                                },
+                                childCount: listItemCount,
+                                // F-4：索引移位帧按键找位，框架走 remap 路径
+                                // 原位搬移 Element，消灭 GlobalKey 认领冲突。
+                                findChildIndexCallback: (key) =>
+                                    _findChildIndexForKey(
+                                  key,
+                                  messages: messages,
+                                  showStatusIndicator: showStatusIndicator,
+                                  showReasoningIndicator:
+                                      showReasoningIndicator,
+                                  showStreamingBubble: showStreamingBubble,
+                                ),
+                              ),
                             ),
                           // OVERLAY-SMALL：小屏悬浮预测 dock（折叠单行胶囊，
                           // 叠于列表 152dp 底部留白区，不占布局行）。

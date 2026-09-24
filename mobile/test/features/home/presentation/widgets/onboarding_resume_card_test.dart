@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/design/components/atoms/sparkle_button_v2.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_card.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/storage/token_storage_io.dart';
@@ -81,6 +82,25 @@ void main() {
     expect(find.text('完成引导，让 AI 更懂你'), findsOneWidget);
     expect(find.text('继续引导'), findsOneWidget);
     expect(find.byType(SparkleCard), findsOneWidget);
+    // F-8（wt324 证据包）：首页唯一 Primary Action 归属 cockpit 本卡 CTA
+    // 锁定为 ghost 档（tonal 视觉权重），不得回升为 primary 填充。
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is SparkleButton &&
+            widget.variant == ButtonVariant.primary,
+        description: 'J-02 primary CTA（F-8 后应为零）',
+      ),
+      findsNothing,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is SparkleButton && widget.variant == ButtonVariant.ghost,
+        description: 'J-02 ghost CTA',
+      ),
+      findsOneWidget,
+    );
 
     await tester.tap(find.text('继续引导'));
     await tester.pump(const Duration(milliseconds: 300));

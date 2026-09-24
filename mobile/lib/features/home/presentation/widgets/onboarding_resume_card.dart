@@ -76,7 +76,11 @@ class OnboardingResumeCard extends ConsumerWidget {
           const SizedBox(height: DS.spacing16),
           SizedBox(
             width: double.infinity,
-            child: SparkleButton.primary(
+            // F-8（wt324 证据包）：首页唯一 Primary Action 归属 cockpit
+            // 本卡 CTA 降为 ghost 档——仅降视觉权重（10% 表面色 tonal +
+            // brandPrimary 文字，全既有令牌），可点性与跳转语义不变，
+            // 消除与 cockpit「和 AI 定目标」的双深棕填充竞争。
+            child: SparkleButton.ghost(
               label: l10n.homeOnboardingResumeCta,
               // 跳 persona 引导；完成后路由守卫按 completed 语义自然收敛回 home。
               onPressed: () => context.go(UserRoutes.personaOnboarding),
