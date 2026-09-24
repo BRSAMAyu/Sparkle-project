@@ -17,8 +17,8 @@ from typing import Any, Callable
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
 from app.aurora.calibration_receipt import build_calibration_receipt
+from app.config import settings
 from app.core.business_metrics import COLLABORATION_LATENCY
 from app.core.metrics import (
     AI_RESPONSE_TOTAL_DURATION,

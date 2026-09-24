@@ -43,7 +43,7 @@ class ReceiptRespondRequest(BaseModel):
     response_id: str | None = Field(None, max_length=200)
 
     @model_validator(mode="after")
-    def _closed_vocab(self) -> "ReceiptRespondRequest":
+    def _closed_vocab(self) -> ReceiptRespondRequest:
         if str(self.memory_type or "").strip().lower() not in SUPPORTED_MEMORY_KINDS:
             raise ValueError(f"memory_type must be one of {sorted(SUPPORTED_MEMORY_KINDS)}")
         if str(self.action or "").strip().lower() not in CALIBRATION_RECEIPT_ACTIONS:
