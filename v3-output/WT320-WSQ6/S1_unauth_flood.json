@@ -1,0 +1,80 @@
+{
+  "name": "S1_unauth_flood",
+  "started_at": "2026-09-24T22:00:04",
+  "params": {
+    "tier1": "100rps x 45s = 4500",
+    "tier2": "500rps x 12s = 6000",
+    "tier2_done": true,
+    "payloads": "no_cred/garbage_jwt/valid_signed_fake_jwt x 1/3",
+    "xff": "198.18.0.11/198.18.0.12"
+  },
+  "totals": {
+    "dispatched": 10500,
+    "tier1_dispatched": 4500,
+    "tier2_dispatched": 6000,
+    "tier1_dist": {
+      "401": 1409,
+      "429": 3091
+    },
+    "tier2_dist": {
+      "401": 420,
+      "429": 5580
+    },
+    "unauth_classes_dist": {
+      "401": 1215,
+      "429": 5785
+    },
+    "valid_signed_class_dist": {
+      "401": 614,
+      "429": 2886
+    }
+  },
+  "status_dist": {
+    "401": 1829,
+    "429": 8671
+  },
+  "metrics_delta": {
+    "ws_upgrade_limited_total": {
+      "{endpoint=\"/ws/chat\"}": 8671.0
+    },
+    "ws_connection_success_total": {
+      "{auth_method=\"jwt_query\",endpoint=\"/ws/chat\"}": 0.0
+    },
+    "ws_connection_error_total": {
+      "{auth_method=\"jwt_query\",endpoint=\"/ws/chat\",reason=\"invalid_token\"}": 1228.0,
+      "{auth_method=\"ticket\",endpoint=\"/ws/chat\",reason=\"invalid_or_expired\"}": 0.0,
+      "{auth_method=\"unknown\",endpoint=\"/ws/chat\",reason=\"missing_credentials\"}": 601.0
+    }
+  },
+  "metrics_note": "",
+  "latency": {
+    "n": 10500,
+    "p50_ms": 0.94,
+    "p95_ms": 2.36,
+    "p99_ms": 3.16,
+    "mean_ms": 1.13
+  },
+  "judgments": {
+    "upgrade_success_unauth_classes": "0 (101=0)",
+    "tier1_429_rate": {
+      "measured": 0.6869,
+      "theoretical": 0.6867,
+      "dispatched": 4500,
+      "limited": 3091
+    },
+    "tier2_429_rate": {
+      "measured": 0.93,
+      "theoretical": 0.93,
+      "dispatched": 6000,
+      "limited": 5580
+    },
+    "penetration_rps_tier1": 31.31,
+    "penetration_rps_tier2": 35.0,
+    "finding_auth_gap": "none"
+  },
+  "notes": [
+    "budget=burst60+30rps×注入时长（网关默认 WS_UPGRADE_RATE_RPS=30/BURST=60）",
+    "渗透=未被429的请求（401/101），其中 401=被认证层拒绝、101=白盒凭据建连"
+  ],
+  "truncated": false
+}

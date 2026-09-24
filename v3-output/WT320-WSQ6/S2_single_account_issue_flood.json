@@ -1,0 +1,40 @@
+{
+  "name": "S2_single_account_issue_flood",
+  "started_at": "2026-09-24T22:11:18",
+  "params": {
+    "user_rps": 50.0,
+    "duration_s": 30.0,
+    "xff": "198.18.0.21"
+  },
+  "totals": {
+    "dispatched": 1500,
+    "normal_traffic_not_harmed": "3/3"
+  },
+  "status_dist": {
+    "200": 309,
+    "429": 1191
+  },
+  "metrics_delta": {
+    "ws_ticket_issued_total": {
+      "": 312.0
+    },
+    "ws_upgrade_limited_total": {}
+  },
+  "metrics_note": "",
+  "latency": {
+    "n": 1500,
+    "p50_ms": 2.4,
+    "p95_ms": 5.4,
+    "p99_ms": 6.79,
+    "mean_ms": 2.74
+  },
+  "judgments": {
+    "issued_200": 309,
+    "rejected_429": 1191,
+    "ticket_layer_budget_theoretical": 160.0,
+    "issue_layer_breach": "RED FLAG: 200 数超过 ticket 层预算",
+    "non_harm_check": "3/3"
+  },
+  "notes": [],
+  "truncated": false
+}

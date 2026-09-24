@@ -1,0 +1,57 @@
+{
+  "name": "S4_reconnect_storm",
+  "started_at": "2026-09-24T22:13:11",
+  "params": {
+    "users": 100,
+    "xff_pool": [
+      "198.20.0.1",
+      "198.20.0.2",
+      "198.20.0.3",
+      "198.20.0.4",
+      "198.20.0.5"
+    ],
+    "phase_a_profile": "~20/s ticket+connect",
+    "outage_s": 10.0,
+    "backoff_shots": [
+      0.0,
+      0.5,
+      1.0,
+      2.0,
+      4.0,
+      8.0
+    ],
+    "design_outage_s": 30
+  },
+  "totals": {
+    "phase_a_accepted": 100,
+    "reconnected": 100,
+    "reconnect_429": 0,
+    "mean_shots": 1.0
+  },
+  "status_dist": {},
+  "metrics_delta": {
+    "ws_upgrade_limited_total": {
+      "{endpoint=\"/ws/chat\"}": 0.0
+    },
+    "ws_connection_success_total": {
+      "{auth_method=\"ticket\",endpoint=\"/ws/chat\"}": 200.0
+    },
+    "ws_ticket_issued_total": {
+      "": 200.0
+    }
+  },
+  "metrics_note": "",
+  "latency": {
+    "reconnect_p50_s": 0.01,
+    "reconnect_max_s": 0.02
+  },
+  "judgments": {
+    "reconnect_429": 0,
+    "all_within_15s": "PASS",
+    "verdict": "PASS: 0×429 且全员重连"
+  },
+  "notes": [
+    "outage 压缩为 10.0s（设计 30s），重连判定口径不变"
+  ],
+  "truncated": false
+}

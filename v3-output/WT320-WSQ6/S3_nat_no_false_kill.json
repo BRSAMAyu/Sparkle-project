@@ -1,0 +1,45 @@
+{
+  "name": "S3_nat_no_false_kill",
+  "started_at": "2026-09-24T22:11:50",
+  "params": {
+    "nat_users": 50,
+    "nat_xff": "198.19.0.1",
+    "flood_xff": "198.19.0.2",
+    "flood_profile": "50rps x 20s (unauth, separate XFF IP)"
+  },
+  "totals": {
+    "dispatched": 50,
+    "nat_dispatched": 50,
+    "flood_dist": {
+      "401": 659,
+      "429": 341
+    }
+  },
+  "status_dist": {
+    "101": 50
+  },
+  "metrics_delta": {
+    "ws_upgrade_limited_total": {
+      "{endpoint=\"/ws/chat\"}": 341.0
+    },
+    "ws_connection_success_total": {
+      "{auth_method=\"ticket\",endpoint=\"/ws/chat\"}": 50.0
+    }
+  },
+  "metrics_note": "",
+  "latency": {
+    "n": 50,
+    "p50_ms": 1.37,
+    "p95_ms": 1.82,
+    "p99_ms": 2.42,
+    "mean_ms": 1.35
+  },
+  "judgments": {
+    "nat_users_429_or_401": 0,
+    "nat_users_connected": 50,
+    "verdict": "PASS: NAT 用户 0 误杀",
+    "flood_clamped": 341
+  },
+  "notes": [],
+  "truncated": false
+}
