@@ -558,6 +558,51 @@ class SharedResource(BaseModel):
     )
 
 
+class SharedResourceFeedback(BaseModel):
+    """
+    共享资源同伴反馈表（S-04）
+
+    设计说明：
+    - 记录同伴对一次共享 artifact（task/plan/knowledge_node…）的反馈/ack。
+    - 反馈**不自动**成为 mastery/证据：只有资源主人显式「采纳为成果证据」
+      （adopted_at 落值 + Goal.metadata_payload['community_evidence'] 回执 +
+      services/evidence 信念证据）才进入个人成长系统。
+    - 撤回传播：共享被撤回（SharedResource 软删）时，活跃反馈行打 retracted_at，
+      已采纳的 Goal 回执由撤回服务同步标 retracted（派生引用更新）。
+    - 一人一资源一条反馈（唯一约束），重复反馈=更新 verdict/comment。
+    """
+    __tablename__ = "shared_resource_feedbacks"
+
+    shared_resource_id: Mapped[Any] = mapped_column(
+        GUID(), ForeignKey("shared_resources.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    feedback_by: Mapped[Any] = mapped_column(
+        GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
+    verdict: Mapped[str] = mapped_column(
+        String(20), nullable=False,
+        comment="helpful | insightful | applied（封闭词表，schemas.FeedbackVerdict）",
+    )
+    comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # 采纳为 outcome evidence 的回执（仅资源主人可采纳；一条反馈至多采纳一次）
+    adopted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    adopted_into_goal_id: Mapped[Any] = mapped_column(
+        GUID(), ForeignKey("goals.id", ondelete="SET NULL"), nullable=True
+    )
+
+    # 撤回传播（共享撤回时由服务层落值；行保留供审计）
+    retracted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    feedback_by_user = relationship("User", foreign_keys=[feedback_by], viewonly=True)
+
+    __table_args__ = (
+        UniqueConstraint("shared_resource_id", "feedback_by", name="uq_sr_feedback_resource_user"),
+        Index("idx_sr_feedback_resource_active", "shared_resource_id", "retracted_at"),
+    )
+
+
 # ============ 私聊消息系统 ============
 
 class PrivateMessage(BaseModel):

@@ -5220,6 +5220,27 @@ CREATE TABLE session_completions (
 ALTER TABLE session_completions OWNER TO postgres;
 
 --
+-- Name: shared_resource_feedbacks; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE shared_resource_feedbacks (
+    id uuid NOT NULL,
+    shared_resource_id uuid NOT NULL,
+    feedback_by uuid NOT NULL,
+    verdict character varying(20) NOT NULL,
+    comment text,
+    adopted_at timestamp without time zone,
+    adopted_into_goal_id uuid,
+    retracted_at timestamp without time zone,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE shared_resource_feedbacks OWNER TO postgres;
+
+--
 -- Name: shared_resources; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -8750,6 +8771,14 @@ ALTER TABLE ONLY session_completions
 
 
 --
+-- Name: shared_resource_feedbacks shared_resource_feedbacks_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY shared_resource_feedbacks
+    ADD CONSTRAINT shared_resource_feedbacks_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: shared_resources shared_resources_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -9227,6 +9256,14 @@ ALTER TABLE ONLY scenes
 
 ALTER TABLE ONLY seed_library_ratings
     ADD CONSTRAINT uq_seed_library_ratings_user_library UNIQUE (user_id, library_id);
+
+
+--
+-- Name: shared_resource_feedbacks uq_sr_feedback_resource_user; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY shared_resource_feedbacks
+    ADD CONSTRAINT uq_sr_feedback_resource_user UNIQUE (shared_resource_id, feedback_by);
 
 
 --
@@ -11267,6 +11304,13 @@ CREATE INDEX idx_squad_shared_error_group_time ON squad_shared_errors USING btre
 --
 
 CREATE INDEX idx_squad_shared_error_sharer ON squad_shared_errors USING btree (sharer_id, group_id);
+
+
+--
+-- Name: idx_sr_feedback_resource_active; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_sr_feedback_resource_active ON shared_resource_feedbacks USING btree (shared_resource_id, retracted_at);
 
 
 --
@@ -16100,6 +16144,20 @@ CREATE INDEX ix_session_completions_user_id_created_at ON session_completions US
 
 
 --
+-- Name: ix_shared_resource_feedbacks_feedback_by; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_shared_resource_feedbacks_feedback_by ON shared_resource_feedbacks USING btree (feedback_by);
+
+
+--
+-- Name: ix_shared_resource_feedbacks_shared_resource_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_shared_resource_feedbacks_shared_resource_id ON shared_resource_feedbacks USING btree (shared_resource_id);
+
+
+--
 -- Name: ix_shared_resources_card_share_record_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -19697,6 +19755,30 @@ ALTER TABLE ONLY session_completions
 
 
 --
+-- Name: shared_resource_feedbacks shared_resource_feedbacks_adopted_into_goal_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY shared_resource_feedbacks
+    ADD CONSTRAINT shared_resource_feedbacks_adopted_into_goal_id_fkey FOREIGN KEY (adopted_into_goal_id) REFERENCES goals(id) ON DELETE SET NULL;
+
+
+--
+-- Name: shared_resource_feedbacks shared_resource_feedbacks_feedback_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY shared_resource_feedbacks
+    ADD CONSTRAINT shared_resource_feedbacks_feedback_by_fkey FOREIGN KEY (feedback_by) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: shared_resource_feedbacks shared_resource_feedbacks_shared_resource_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY shared_resource_feedbacks
+    ADD CONSTRAINT shared_resource_feedbacks_shared_resource_id_fkey FOREIGN KEY (shared_resource_id) REFERENCES shared_resources(id) ON DELETE CASCADE;
+
+
+--
 -- Name: shared_resources shared_resources_behavior_pattern_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -22007,6 +22089,13 @@ GRANT SELECT ON TABLE semantic_links TO sparkle_readonly;
 --
 
 GRANT SELECT ON TABLE session_completions TO sparkle_readonly;
+
+
+--
+-- Name: TABLE shared_resource_feedbacks; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE shared_resource_feedbacks TO sparkle_readonly;
 
 
 --

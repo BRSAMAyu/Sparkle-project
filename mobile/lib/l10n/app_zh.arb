@@ -17679,5 +17679,89 @@
     "commonSearchClear": "清除搜索",
     "@commonSearchClear": {},
     "visualElementsFilter": "筛选",
-    "@visualElementsFilter": {}
+    "@visualElementsFilter": {},
+    "communityCheckinGoalLabel": "关联目标（可选）",
+    "@communityCheckinGoalLabel": {},
+    "communityCheckinGoalHint": "关联后可从打卡回看目标轨迹",
+    "@communityCheckinGoalHint": {},
+    "communityCheckinGoalNone": "不关联目标",
+    "@communityCheckinGoalNone": {},
+    "communityHubCheckinGoalSuccess": "打卡成功，+{flame} 火苗",
+    "@communityHubCheckinGoalSuccess": {
+        "placeholders": {
+            "flame": {
+                "type": "int"
+            }
+        }
+    },
+    "communityHubCheckinViewGoalTrajectory": "查看轨迹",
+    "@communityHubCheckinViewGoalTrajectory": {},
+    "sharedResourceFeedbackCount": "{count} 条反馈",
+    "@sharedResourceFeedbackCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "sharedResourceGiveFeedback": "反馈",
+    "@sharedResourceGiveFeedback": {},
+    "sharedResourceAdoptEvidence": "采纳为成果证据",
+    "@sharedResourceAdoptEvidence": {},
+    "sharedResourceFeedbackTitle": "反馈这份共享成果",
+    "@sharedResourceFeedbackTitle": {},
+    "sharedResourceFeedbackNoMasteryHint": "反馈只代表同伴看法，不会改变你的掌握度；是否采纳由作者决定",
+    "@sharedResourceFeedbackNoMasteryHint": {},
+    "sharedResourceFeedbackComment": "留言（可选）",
+    "@sharedResourceFeedbackComment": {},
+    "sharedResourceFeedbackSubmit": "提交反馈",
+    "@sharedResourceFeedbackSubmit": {},
+    "sharedResourceFeedbackThanks": "反馈已送达，感谢你的回应",
+    "@sharedResourceFeedbackThanks": {},
+    "sharedResourceFeedbackFailed": "反馈失败，请稍后重试",
+    "@sharedResourceFeedbackFailed": {},
+    "sharedResourceFeedbackLoadFailed": "反馈加载失败",
+    "@sharedResourceFeedbackLoadFailed": {},
+    "sharedResourceFeedbackSheetTitle": "「{title}」收到的反馈",
+    "@sharedResourceFeedbackSheetTitle": {
+        "placeholders": {
+            "title": {
+                "type": "String"
+            }
+        }
+    },
+    "sharedResourceFeedbackEmpty": "还没有收到反馈",
+    "@sharedResourceFeedbackEmpty": {},
+    "sharedResourceFeedbackAdoptedEvidence": "已采纳为「{goal}」的成果证据",
+    "@sharedResourceFeedbackAdoptedEvidence": {
+        "placeholders": {
+            "goal": {
+                "type": "String"
+            }
+        }
+    },
+    "sharedResourceFeedbackAdopted": "已采纳",
+    "@sharedResourceFeedbackAdopted": {},
+    "sharedResourceAnonymous": "社群伙伴",
+    "@sharedResourceAnonymous": {},
+    "sharedResourceVerdictHelpful": "有帮助",
+    "@sharedResourceVerdictHelpful": {},
+    "sharedResourceVerdictInsightful": "有启发",
+    "@sharedResourceVerdictInsightful": {},
+    "sharedResourceVerdictApplied": "我照做了",
+    "@sharedResourceVerdictApplied": {},
+    "sharedResourceVerdictRetracted": "已随共享撤回",
+    "@sharedResourceVerdictRetracted": {},
+    "goalDetailCommunityEvidence": "社群成果证据",
+    "@goalDetailCommunityEvidence": {},
+    "goalDetailCommunityEvidenceAdopted": "{peer} 的反馈已采纳为成果证据",
+    "@goalDetailCommunityEvidenceAdopted": {
+        "placeholders": {
+            "peer": {
+                "type": "String"
+            }
+        }
+    },
+    "goalDetailCommunityEvidenceRetracted": "该证据对应的共享已撤回",
+    "@goalDetailCommunityEvidenceRetracted": {}
 }

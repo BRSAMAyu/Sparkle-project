@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
@@ -866,6 +867,36 @@ class CommunityRepository {
     throw Exception('Failed to check in');
   }
 
+  /// S-04：带可选目标关联的打卡（GJ16「从 check-in 回到 Goal trajectory」）。
+  /// 后端校验目标归属后写入打卡消息 content_data 并随响应回传；
+  /// 打卡的火苗/连击语义与目标 mastery 一概不变。
+  Future<CheckinGoalLink> checkinWithGoalLink(
+    String groupId, {
+    required int todayDurationMinutes,
+    String? message,
+    String? goalId,
+  }) async {
+    final response = await _apiClient.post<dynamic>(
+      ApiEndpoints.checkin,
+      data: {
+        'group_id': groupId,
+        'today_duration_minutes': todayDurationMinutes,
+        if (message != null && message.isNotEmpty) 'message': message,
+        if (goalId != null && goalId.isNotEmpty) 'goal_id': goalId,
+      },
+    );
+    if (response.statusCode == 200) {
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'checkin');
+      return CheckinGoalLink(
+        response: CheckinResponse.fromJson(payload),
+        goalId: payload['goal_id']?.toString(),
+        goalTitle: payload['goal_title']?.toString(),
+      );
+    }
+    throw Exception('Failed to check in');
+  }
+
   Future<List<GroupTaskInfo>> getGroupTasks(String groupId) async {
     final response =
         await _apiClient.get<dynamic>(ApiEndpoints.groupTasks(groupId));
@@ -1476,4 +1507,22 @@ class CommunityRepository {
       '/api/v1/community/groups/$groupId/files/$fileId/copy-to-library',
     );
   }
+}
+
+/// S-04：打卡结果 + 可选目标回链（GJ16 从 check-in 回到 Goal trajectory）。
+/// CheckinResponse 走 json_serializable 生成码，本类是手写层信封，避免
+/// 为两个可空字段触碰生成物。
+@immutable
+class CheckinGoalLink {
+  const CheckinGoalLink({
+    required this.response,
+    this.goalId,
+    this.goalTitle,
+  });
+
+  final CheckinResponse response;
+  final String? goalId;
+  final String? goalTitle;
+
+  bool get hasGoalLink => goalId != null && goalId!.isNotEmpty;
 }

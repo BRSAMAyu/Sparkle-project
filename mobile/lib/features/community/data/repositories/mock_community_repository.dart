@@ -1617,6 +1617,23 @@ class MockCommunityRepository implements CommunityRepository {
         rankInGroup: 1,
         groupCheckinCount: 1,
       );
+
+  @override
+  Future<CheckinGoalLink> checkinWithGoalLink(
+    String groupId, {
+    required int todayDurationMinutes,
+    String? message,
+    String? goalId,
+  }) async =>
+      CheckinGoalLink(
+        response: CheckinResponse(
+          success: true,
+          newStreak: 1,
+          flameEarned: 10,
+          rankInGroup: 1,
+          groupCheckinCount: 1,
+        ),
+      );
   @override
   Future<List<GroupTaskInfo>> getGroupTasks(String groupId) async =>
       List.from(_mockGroupTasks[groupId] ?? []);

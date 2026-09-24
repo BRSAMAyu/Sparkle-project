@@ -217,6 +217,7 @@ class GoalDetailData {
     required this.accountabilityStatus,
     required this.relatedSources,
     this.strategyBelief,
+    this.communityEvidence = const [],
   });
 
   factory GoalDetailData.fromJson(Map<String, dynamic> json) => GoalDetailData(
@@ -249,6 +250,12 @@ class GoalDetailData {
         strategyBelief: _asMap(json['strategy_belief']) == null
             ? null
             : StrategyBeliefView.fromJson(_asMap(json['strategy_belief'])!),
+        // S-04：同伴反馈采纳回执（Goal trajectory 的社群证据面）。
+        communityEvidence: _asList(json['community_evidence'])
+            .map(_asMap)
+            .whereType<Map<String, dynamic>>()
+            .map(CommunityEvidenceReceipt.fromJson)
+            .toList(growable: false),
       );
 
   final GoalSummary goal;
@@ -260,6 +267,9 @@ class GoalDetailData {
   final AccountabilityStatusSummary accountabilityStatus;
   final List<RelatedSource> relatedSources;
   final StrategyBeliefView? strategyBelief;
+
+  /// S-04：同伴反馈采纳回执（撤回后 status=retracted，轨迹如实展示）。
+  final List<CommunityEvidenceReceipt> communityEvidence;
 
   GoalDetailData copyWith({
     MinimumAcceptanceCriteria? minimumAcceptanceCriteria,
@@ -275,7 +285,44 @@ class GoalDetailData {
         accountabilityStatus: accountabilityStatus,
         relatedSources: relatedSources,
         strategyBelief: strategyBelief,
+        communityEvidence: communityEvidence,
       );
+}
+
+/// S-04：Goal 轨迹里的同伴反馈采纳回执（与后端
+/// CommunityEvidenceReceiptPayload 对齐；撤回条目如实透出）。
+@immutable
+class CommunityEvidenceReceipt {
+  const CommunityEvidenceReceipt({
+    required this.status,
+    this.feedbackId,
+    this.sharedResourceId,
+    this.verdict,
+    this.peerAlias,
+    this.adoptedAt,
+    this.retractedAt,
+  });
+
+  factory CommunityEvidenceReceipt.fromJson(Map<String, dynamic> json) =>
+      CommunityEvidenceReceipt(
+        status: _asString(json['status'], fallback: 'adopted'),
+        feedbackId: _asNullableString(json['feedback_id']),
+        sharedResourceId: _asNullableString(json['shared_resource_id']),
+        verdict: _asNullableString(json['verdict']),
+        peerAlias: _asNullableString(json['peer_alias']),
+        adoptedAt: _asNullableString(json['adopted_at']),
+        retractedAt: _asNullableString(json['retracted_at']),
+      );
+
+  final String status;
+  final String? feedbackId;
+  final String? sharedResourceId;
+  final String? verdict;
+  final String? peerAlias;
+  final String? adoptedAt;
+  final String? retractedAt;
+
+  bool get isRetracted => status == 'retracted';
 }
 
 @immutable

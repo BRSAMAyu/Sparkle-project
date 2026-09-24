@@ -15,12 +15,18 @@ class SharedResourceCard extends StatelessWidget {
     super.key,
     this.onTap,
     this.onAdopt,
+    this.onFeedback,
+    this.onAdoptFeedback,
     this.compact = false,
   });
 
   final SharedResourceInfo resource;
   final VoidCallback? onTap;
   final VoidCallback? onAdopt;
+  /// S-04：给这份共享成果一条反馈/ack（不自动成为 mastery）。
+  final VoidCallback? onFeedback;
+  /// S-04：主人打开反馈面板，把收到的反馈显式采纳为 Goal outcome evidence。
+  final VoidCallback? onAdoptFeedback;
   final bool compact;
 
   @override
@@ -91,6 +97,77 @@ class SharedResourceCard extends StatelessWidget {
               // Stats row
               _StatsRow(resource: resource),
 
+              // S-04：反馈行——左：反馈计数徽标（有反馈才显示）；右：反馈动作。
+              if (resource.feedbackCount > 0 || onFeedback != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    if (resource.feedbackCount > 0) ...[
+                      Icon(Icons.forum_outlined,
+                          size: 12, color: DS.textTertiary,),
+                      const SizedBox(width: 4),
+                      Text(
+                        l10n.sharedResourceFeedbackCount(
+                            resource.feedbackCount,),
+                        style: Theme.of(context)
+                            .textTheme
+                            .labelSmall
+                            ?.copyWith(color: DS.textTertiary),
+                      ),
+                    ],
+                    const Spacer(),
+                    if (onFeedback != null)
+                      TextButton.icon(
+                        key: const ValueKey(
+                            'shared-resource-feedback-button',),
+                        onPressed: onFeedback,
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4,),
+                          minimumSize: const Size(0, 28),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        icon: Icon(Icons.reply_outlined,
+                            size: 14, color: DS.brandPrimary,),
+                        label: Text(
+                          l10n.sharedResourceGiveFeedback,
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelSmall
+                              ?.copyWith(color: DS.brandPrimary),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+
+              // S-04：主人入口——把收到的反馈显式采纳为 Goal outcome evidence。
+              if (onAdoptFeedback != null) ...[
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    key: const ValueKey('shared-resource-adopt-evidence'),
+                    onPressed: onAdoptFeedback,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: DS.borderRadius8,
+                      ),
+                    ),
+                    icon: Icon(Icons.fact_check_outlined,
+                        size: 14, color: DS.brandPrimary,),
+                    label: Text(
+                      l10n.sharedResourceAdoptEvidence,
+                      style: Theme.of(context)
+                          .textTheme
+                          .labelSmall
+                          ?.copyWith(color: DS.brandPrimary),
+                    ),
+                  ),
+                ),
+              ],
+
               // Adopt button
               if (onAdopt != null) ...[
                 const SizedBox(height: 8),
@@ -99,7 +176,7 @@ class SharedResourceCard extends StatelessWidget {
                   child: OutlinedButton(
                     onPressed: onAdopt,
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      padding: const EdgeInsets.symmetric(vertical: 4),
                       shape: const RoundedRectangleBorder(
                         borderRadius: DS.borderRadius8,
                       ),

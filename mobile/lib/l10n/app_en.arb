@@ -18076,5 +18076,90 @@
     "commonSearchClear": "Clear search",
     "@commonSearchClear": {},
     "visualElementsFilter": "Filter",
-    "@visualElementsFilter": {}
+    "@visualElementsFilter": {},
+    "visualElementsFilter": "Filter",
+    "communityCheckinGoalLabel": "Link a goal (optional)",
+    "@communityCheckinGoalLabel": {},
+    "communityCheckinGoalHint": "Link to revisit your goal trajectory from this check-in",
+    "@communityCheckinGoalHint": {},
+    "communityCheckinGoalNone": "No goal",
+    "@communityCheckinGoalNone": {},
+    "communityHubCheckinGoalSuccess": "Checked in, +{flame} flame",
+    "@communityHubCheckinGoalSuccess": {
+        "placeholders": {
+            "flame": {
+                "type": "int"
+            }
+        }
+    },
+    "communityHubCheckinViewGoalTrajectory": "View trajectory",
+    "@communityHubCheckinViewGoalTrajectory": {},
+    "sharedResourceFeedbackCount": "{count} feedback",
+    "@sharedResourceFeedbackCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "sharedResourceGiveFeedback": "Feedback",
+    "@sharedResourceGiveFeedback": {},
+    "sharedResourceAdoptEvidence": "Adopt as evidence",
+    "@sharedResourceAdoptEvidence": {},
+    "sharedResourceFeedbackTitle": "Give feedback on this shared artifact",
+    "@sharedResourceFeedbackTitle": {},
+    "sharedResourceFeedbackNoMasteryHint": "Feedback is only a peer opinion; it never changes your mastery. Only the author decides whether to adopt it.",
+    "@sharedResourceFeedbackNoMasteryHint": {},
+    "sharedResourceFeedbackComment": "Comment (optional)",
+    "@sharedResourceFeedbackComment": {},
+    "sharedResourceFeedbackSubmit": "Submit",
+    "@sharedResourceFeedbackSubmit": {},
+    "sharedResourceFeedbackThanks": "Feedback sent — thanks for the response",
+    "@sharedResourceFeedbackThanks": {},
+    "sharedResourceFeedbackFailed": "Feedback failed, please try again",
+    "@sharedResourceFeedbackFailed": {},
+    "sharedResourceFeedbackLoadFailed": "Failed to load feedback",
+    "@sharedResourceFeedbackLoadFailed": {},
+    "sharedResourceFeedbackSheetTitle": "Feedback on \"{title}\"",
+    "@sharedResourceFeedbackSheetTitle": {
+        "placeholders": {
+            "title": {
+                "type": "String"
+            }
+        }
+    },
+    "sharedResourceFeedbackEmpty": "No feedback yet",
+    "@sharedResourceFeedbackEmpty": {},
+    "sharedResourceFeedbackAdoptedEvidence": "Adopted as evidence for \"{goal}\"",
+    "@sharedResourceFeedbackAdoptedEvidence": {
+        "placeholders": {
+            "goal": {
+                "type": "String"
+            }
+        }
+    },
+    "sharedResourceFeedbackAdopted": "Adopted",
+    "@sharedResourceFeedbackAdopted": {},
+    "sharedResourceAnonymous": "A study peer",
+    "@sharedResourceAnonymous": {},
+    "sharedResourceVerdictHelpful": "Helpful",
+    "@sharedResourceVerdictHelpful": {},
+    "sharedResourceVerdictInsightful": "Insightful",
+    "@sharedResourceVerdictInsightful": {},
+    "sharedResourceVerdictApplied": "I applied it",
+    "@sharedResourceVerdictApplied": {},
+    "sharedResourceVerdictRetracted": "Share retracted",
+    "@sharedResourceVerdictRetracted": {},
+    "goalDetailCommunityEvidence": "Community evidence",
+    "@goalDetailCommunityEvidence": {},
+    "goalDetailCommunityEvidenceAdopted": "{peer}'s feedback adopted as outcome evidence",
+    "@goalDetailCommunityEvidenceAdopted": {
+        "placeholders": {
+            "peer": {
+                "type": "String"
+            }
+        }
+    },
+    "goalDetailCommunityEvidenceRetracted": "The underlying share was retracted",
+    "@goalDetailCommunityEvidenceRetracted": {}
 }

@@ -1792,6 +1792,9 @@ class SharedResourceInfo {
     this.qualityHidden,
     this.adoptionCount,
     this.avgRating,
+    this.feedbackCount = 0,
+    this.unadoptedFeedbackCount = 0,
+    this.isOwn = false,
   });
 
   factory SharedResourceInfo.fromJson(Map<String, dynamic> json) {
@@ -1853,6 +1856,10 @@ class SharedResourceInfo {
       qualityHidden: json['quality_hidden'] as bool?,
       adoptionCount: (json['adoption_count'] as num?)?.toInt(),
       avgRating: (json['avg_rating'] as num?)?.toDouble(),
+      feedbackCount: (json['feedback_count'] as num?)?.toInt() ?? 0,
+      unadoptedFeedbackCount:
+          (json['unadopted_feedback_count'] as num?)?.toInt() ?? 0,
+      isOwn: json['is_own'] as bool? ?? false,
     );
   }
   final String id;
@@ -1900,6 +1907,14 @@ class SharedResourceInfo {
   @JsonKey(name: 'avg_rating')
   final double? avgRating;
 
+  /// S-04：活跃同伴反馈计数（主人据此获得「采纳为成果证据」入口）。
+  @JsonKey(name: 'feedback_count')
+  final int feedbackCount;
+  @JsonKey(name: 'unadopted_feedback_count')
+  final int unadoptedFeedbackCount;
+  @JsonKey(name: 'is_own')
+  final bool isOwn;
+
   String? get resourceId =>
       planId ??
       taskId ??
@@ -1935,6 +1950,9 @@ class SharedResourceInfo {
         'quality_hidden': qualityHidden,
         'adoption_count': adoptionCount,
         'avg_rating': avgRating,
+        'feedback_count': feedbackCount,
+        'unadopted_feedback_count': unadoptedFeedbackCount,
+        'is_own': isOwn,
       };
 }
 

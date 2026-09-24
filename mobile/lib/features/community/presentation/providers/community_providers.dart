@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/models/community_models.dart';
@@ -229,4 +230,38 @@ final sharedResourcesProvider =
     FutureProvider.autoDispose<List<SharedResourceInfo>>((ref) async {
   final repository = ref.watch(communityShareRepositoryProvider);
   return repository.fetchSharedResources(limit: 10);
+});
+
+/// S-04：打卡关联目标选择器的数据源——读既有 `GET /goals` 列表接口
+/// （GoalResponse 真源），只保留进行中的目标，不建新真源。
+class ActiveGoalOption {
+  const ActiveGoalOption({required this.id, required this.title});
+
+  final String id;
+  final String title;
+}
+
+final activeGoalsProvider =
+    FutureProvider.autoDispose<List<ActiveGoalOption>>((ref) async {
+  final apiClient = ref.watch(apiClientProvider);
+  final response = await apiClient.get<dynamic>('/goals');
+  final payload = response.data;
+  final List<dynamic> items;
+  if (payload is List) {
+    items = payload;
+  } else if (payload is Map<String, dynamic> && payload['goals'] is List) {
+    items = payload['goals'] as List;
+  } else {
+    return const [];
+  }
+  return items
+      .whereType<Map<String, dynamic>>()
+      // 后端 status: draft | active | paused | completed | archived | cancelled
+      .where((g) => const {'draft', 'active', 'paused'}.contains(g['status']))
+      .map((g) => ActiveGoalOption(
+            id: g['id'].toString(),
+            title: (g['title'] ?? '').toString(),
+          ),)
+      .where((g) => g.title.isNotEmpty)
+      .toList(growable: false);
 });

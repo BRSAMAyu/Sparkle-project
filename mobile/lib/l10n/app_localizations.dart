@@ -68525,6 +68525,168 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'筛选'**
   String get visualElementsFilter;
+
+  /// No description provided for @communityCheckinGoalLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'关联目标（可选）'**
+  String get communityCheckinGoalLabel;
+
+  /// No description provided for @communityCheckinGoalHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'关联后可从打卡回看目标轨迹'**
+  String get communityCheckinGoalHint;
+
+  /// No description provided for @communityCheckinGoalNone.
+  ///
+  /// In zh, this message translates to:
+  /// **'不关联目标'**
+  String get communityCheckinGoalNone;
+
+  /// No description provided for @communityHubCheckinGoalSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'打卡成功，+{flame} 火苗'**
+  String communityHubCheckinGoalSuccess(int flame);
+
+  /// No description provided for @communityHubCheckinViewGoalTrajectory.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看轨迹'**
+  String get communityHubCheckinViewGoalTrajectory;
+
+  /// No description provided for @sharedResourceFeedbackCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 条反馈'**
+  String sharedResourceFeedbackCount(int count);
+
+  /// No description provided for @sharedResourceGiveFeedback.
+  ///
+  /// In zh, this message translates to:
+  /// **'反馈'**
+  String get sharedResourceGiveFeedback;
+
+  /// No description provided for @sharedResourceAdoptEvidence.
+  ///
+  /// In zh, this message translates to:
+  /// **'采纳为成果证据'**
+  String get sharedResourceAdoptEvidence;
+
+  /// No description provided for @sharedResourceFeedbackTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'反馈这份共享成果'**
+  String get sharedResourceFeedbackTitle;
+
+  /// No description provided for @sharedResourceFeedbackNoMasteryHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'反馈只代表同伴看法，不会改变你的掌握度；是否采纳由作者决定'**
+  String get sharedResourceFeedbackNoMasteryHint;
+
+  /// No description provided for @sharedResourceFeedbackComment.
+  ///
+  /// In zh, this message translates to:
+  /// **'留言（可选）'**
+  String get sharedResourceFeedbackComment;
+
+  /// No description provided for @sharedResourceFeedbackSubmit.
+  ///
+  /// In zh, this message translates to:
+  /// **'提交反馈'**
+  String get sharedResourceFeedbackSubmit;
+
+  /// No description provided for @sharedResourceFeedbackThanks.
+  ///
+  /// In zh, this message translates to:
+  /// **'反馈已送达，感谢你的回应'**
+  String get sharedResourceFeedbackThanks;
+
+  /// No description provided for @sharedResourceFeedbackFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'反馈失败，请稍后重试'**
+  String get sharedResourceFeedbackFailed;
+
+  /// No description provided for @sharedResourceFeedbackLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'反馈加载失败'**
+  String get sharedResourceFeedbackLoadFailed;
+
+  /// No description provided for @sharedResourceFeedbackSheetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'「{title}」收到的反馈'**
+  String sharedResourceFeedbackSheetTitle(String title);
+
+  /// No description provided for @sharedResourceFeedbackEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有收到反馈'**
+  String get sharedResourceFeedbackEmpty;
+
+  /// No description provided for @sharedResourceFeedbackAdoptedEvidence.
+  ///
+  /// In zh, this message translates to:
+  /// **'已采纳为「{goal}」的成果证据'**
+  String sharedResourceFeedbackAdoptedEvidence(String goal);
+
+  /// No description provided for @sharedResourceFeedbackAdopted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已采纳'**
+  String get sharedResourceFeedbackAdopted;
+
+  /// No description provided for @sharedResourceAnonymous.
+  ///
+  /// In zh, this message translates to:
+  /// **'社群伙伴'**
+  String get sharedResourceAnonymous;
+
+  /// No description provided for @sharedResourceVerdictHelpful.
+  ///
+  /// In zh, this message translates to:
+  /// **'有帮助'**
+  String get sharedResourceVerdictHelpful;
+
+  /// No description provided for @sharedResourceVerdictInsightful.
+  ///
+  /// In zh, this message translates to:
+  /// **'有启发'**
+  String get sharedResourceVerdictInsightful;
+
+  /// No description provided for @sharedResourceVerdictApplied.
+  ///
+  /// In zh, this message translates to:
+  /// **'我照做了'**
+  String get sharedResourceVerdictApplied;
+
+  /// No description provided for @sharedResourceVerdictRetracted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已随共享撤回'**
+  String get sharedResourceVerdictRetracted;
+
+  /// No description provided for @goalDetailCommunityEvidence.
+  ///
+  /// In zh, this message translates to:
+  /// **'社群成果证据'**
+  String get goalDetailCommunityEvidence;
+
+  /// No description provided for @goalDetailCommunityEvidenceAdopted.
+  ///
+  /// In zh, this message translates to:
+  /// **'{peer} 的反馈已采纳为成果证据'**
+  String goalDetailCommunityEvidenceAdopted(String peer);
+
+  /// No description provided for @goalDetailCommunityEvidenceRetracted.
+  ///
+  /// In zh, this message translates to:
+  /// **'该证据对应的共享已撤回'**
+  String get goalDetailCommunityEvidenceRetracted;
 }
 
 class _AppLocalizationsDelegate

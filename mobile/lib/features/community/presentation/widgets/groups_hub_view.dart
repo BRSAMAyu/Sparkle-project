@@ -236,6 +236,12 @@ Future<void> _showHubCheckinDialog(
   GroupListItem group,
 ) async {
   unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
+  // 打卡对话框内选中的目标 id（下拉 onChanged 写入；null=不关联）。
+  // 闭包捕获局部变量，无需提升为状态。
+  String? goalPickerValue;
+  // S-04：回执动作要做路由跳转——在 context 仍活跃的同步期先抓 GoRouter
+  // 引用，避免打卡成功后 invalidate 触发重建使旧 element 失效。
+  final hubRouter = GoRouter.of(context);
   final durationController = TextEditingController(text: '60');
   final messageController = TextEditingController();
 
@@ -263,6 +269,44 @@ Future<void> _showHubCheckinDialog(
               hintText: dialogContext.l10n.communityCheckInMessageHint,
             ),
           ),
+          // S-04：可选目标关联——打卡后可一键回到 Goal trajectory（GJ16）。
+          // 数据源是既有 /goals 列表（activeGoalsProvider），不建新真源；
+          // 加载失败时下拉不可用但打卡仍可完成（回链是可选增强）。
+          Consumer(builder: (context, ref, _) {
+            final goalsAsync = ref.watch(activeGoalsProvider);
+            return goalsAsync.maybeWhen(
+              data: (goals) => goals.isEmpty
+                  ? const SizedBox.shrink()
+                  : DropdownButtonFormField<String>(
+                      key: const ValueKey('community-checkin-goal-picker'),
+                      decoration: InputDecoration(
+                        labelText:
+                            dialogContext.l10n.communityCheckinGoalLabel,
+                        // 语义提示走 label；组件内 hint 在窄容器会挤压溢出。
+                      ),
+                      items: [
+                        DropdownMenuItem<String>(
+                          child: Text(
+                            dialogContext.l10n.communityCheckinGoalNone,
+                            style: TextStyle(color: DS.textSecondary),
+                          ),
+                        ),
+                        ...goals.map(
+                          (g) => DropdownMenuItem<String>(
+                            value: g.id,
+                            child: Text(
+                              g.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) => goalPickerValue = value,
+                    ),
+              orElse: () => const SizedBox.shrink(),
+            );
+          },),
         ],
       ),
       actions: [
@@ -275,12 +319,15 @@ Future<void> _showHubCheckinDialog(
           onPressed: () async {
             final duration = int.tryParse(durationController.text) ?? 0;
             final message = messageController.text;
+            final linkedGoalId = goalPickerValue;
             Navigator.pop(dialogContext);
             try {
-              final response = await ref
+              final link = await ref
                   .read(communityRepositoryProvider)
-                  .checkin(group.id,
-                      todayDurationMinutes: duration, message: message,);
+                  .checkinWithGoalLink(group.id,
+                      todayDurationMinutes: duration,
+                      message: message,
+                      goalId: linkedGoalId,);
               // 回真源：今日打卡计数与群详情一并失效。
               ref
                 ..invalidate(myGroupsProvider)
@@ -289,10 +336,27 @@ Future<void> _showHubCheckinDialog(
               unawaited(
                 SensoryFeedbackService.emit(SensoryFeedbackEvent.checkin),
               );
-              AppFeedback.success(
-                context,
-                context.l10n.communityHubCheckinSuccess(response.flameEarned),
-              );
+              if (link.hasGoalLink) {
+                // GJ16：从 check-in 回到 Goal trajectory 的一跳。
+                final goalId = link.goalId!;
+                AppFeedback.undoable(
+                  context: context,
+                  // 紧凑文案：动作按钮与消息同行，长文案会挤压溢出。
+                  message: context.l10n.communityHubCheckinGoalSuccess(
+                      link.response.flameEarned,),
+                  actionLabel:
+                      context.l10n.communityHubCheckinViewGoalTrajectory,
+onAction: () => unawaited(
+                      hubRouter.push('/goals/${Uri.encodeComponent(goalId)}'),
+                    ),
+                );
+              } else {
+                AppFeedback.success(
+                  context,
+                  context.l10n
+                      .communityHubCheckinSuccess(link.response.flameEarned),
+                );
+              }
             } catch (e) {
               // N9：原始异常只进日志，用户面为固定人类话术。
               debugPrint('community hub checkin failed: $e');
@@ -353,9 +417,22 @@ class _ArtifactFeedbackSection extends ConsumerWidget {
                       'community-artifact-card-${resources[index].id}',
                     ),
                     resource: resources[index],
-                    onAdopt: () => unawaited(
-                      _adoptResource(context, ref, resources[index].id),
+                    onAdopt: resources[index].isOwn
+                        ? null // 自己的共享无「采纳到我的空间」语义
+                        : () => unawaited(
+                            _adoptResource(context, ref, resources[index].id),
+                          ),
+                    // S-04：给同伴成果一条反馈（不自动成为 mastery）。
+                    onFeedback: () => unawaited(
+                      _showFeedbackDialog(context, ref, resources[index]),
                     ),
+                    // S-04：主人查看收到的反馈并显式采纳为 Goal outcome evidence。
+                    onAdoptFeedback: resources[index].isOwn &&
+                            resources[index].feedbackCount > 0
+                        ? () => unawaited(
+                            _showAdoptEvidenceSheet(context, ref, resources[index]),
+                          )
+                        : null,
                   ),
                 ),
               ),
@@ -391,6 +468,274 @@ class _ArtifactFeedbackSection extends ConsumerWidget {
         context.l10n.communityHubArtifactAdoptFailed,
       );
     }
+  }
+}
+
+/// S-04：给同伴共享成果一条反馈/ack。仅写社群表面记录 + 事件，
+/// 后端不因此改任何 mastery——这是「反馈 ≠ 掌握度」的产品面锚点。
+Future<void> _showFeedbackDialog(
+  BuildContext context,
+  WidgetRef ref,
+  SharedResourceInfo resource,
+) async {
+  unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
+  var verdict = ResourceFeedbackVerdict.helpful;
+  final commentController = TextEditingController();
+
+  final ok = await showSensoryDialog<bool>(
+    context: context,
+    builder: (dialogContext) => StatefulBuilder(
+      builder: (dialogContext, setState) => AlertDialog(
+        title: Text(dialogContext.l10n.sharedResourceFeedbackTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              dialogContext.l10n.sharedResourceFeedbackNoMasteryHint,
+              style: TextStyle(fontSize: DS.fontSizeXs, color: DS.textSecondary),
+            ),
+            const SizedBox(height: DS.sm),
+            Wrap(
+              spacing: DS.sm,
+              children: ResourceFeedbackVerdict.values
+                  .map(
+                    (v) => SparkleButton.primary(
+                      label: _verdictLabel(dialogContext, v),
+                      size: ButtonSize.small,
+                      onPressed:
+                          verdict == v ? null : () => setState(() => verdict = v),
+                    ),
+                  )
+                  .toList(),
+            ),
+            const SizedBox(height: DS.sm),
+            TextField(
+              controller: commentController,
+              decoration: InputDecoration(
+                labelText: dialogContext.l10n.sharedResourceFeedbackComment,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          SparkleButton.ghost(
+            label: dialogContext.l10n.cancel,
+            onPressed: () => Navigator.pop(dialogContext, false),
+          ),
+          SparkleButton.primary(
+            key: const ValueKey('shared-resource-feedback-submit'),
+            label: dialogContext.l10n.sharedResourceFeedbackSubmit,
+            onPressed: () => Navigator.pop(dialogContext, true),
+          ),
+        ],
+      ),
+    ),
+  );
+  final comment = commentController.text;
+  commentController.dispose();
+  if (ok != true) return;
+  try {
+    await ref
+        .read(communityShareRepositoryProvider)
+        .giveFeedback(
+          sharedResourceId: resource.id,
+          verdict: verdict,
+          comment: comment,
+        );
+    if (!context.mounted) return;
+    AppFeedback.success(
+        context, context.l10n.sharedResourceFeedbackThanks,);
+  } catch (e) {
+    // N9：原始异常只进日志，用户面为固定人类话术。
+    debugPrint('community resource feedback failed: $e');
+    if (!context.mounted) return;
+    AppFeedback.error(context, context.l10n.sharedResourceFeedbackFailed);
+  }
+}
+
+/// S-04：主人的反馈面板——查看收到的反馈，把其中未采纳的**显式采纳**
+/// 为 Goal 的 outcome evidence（后端走 services/evidence 既有链 + Goal
+/// 轨迹回执，且永不 bump mastery）。
+Future<void> _showAdoptEvidenceSheet(
+  BuildContext context,
+  WidgetRef ref,
+  SharedResourceInfo resource,
+) async {
+  unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
+  final repository = ref.read(communityShareRepositoryProvider);
+  await showModalBottomSheet<void>(
+    context: context,
+    builder: (sheetContext) => SafeArea(
+      child: FutureBuilder<List<ResourceFeedbackItem>>(
+        future: repository.fetchFeedback(sharedResourceId: resource.id),
+        builder: (sheetContext, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Padding(
+              padding: EdgeInsets.all(DS.xl),
+              child: SparkleListSkeleton(count: 2),
+            );
+          }
+          if (snapshot.hasError) {
+            return Padding(
+              padding: const EdgeInsets.all(DS.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(sheetContext.l10n.sharedResourceFeedbackLoadFailed),
+                  const SizedBox(height: DS.sm),
+                  SparkleButton.ghost(
+                    label: sheetContext.l10n.commonClose,
+                    onPressed: () => Navigator.pop(sheetContext),
+                  ),
+                ],
+              ),
+            );
+          }
+          final items = snapshot.data ?? const <ResourceFeedbackItem>[];
+          return ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.all(DS.md),
+            children: [
+              Text(
+                sheetContext.l10n.sharedResourceFeedbackSheetTitle(
+                    resource.resourceTitle ??
+                        sheetContext.l10n.sharedResourceTitle,),
+                style: const TextStyle(
+                    fontSize: DS.fontSizeMd, fontWeight: DS.fontWeightBold,),
+              ),
+              const SizedBox(height: DS.sm),
+              if (items.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: DS.lg),
+                  child: Text(
+                      sheetContext.l10n.sharedResourceFeedbackEmpty,),
+                )
+              else
+                ...items.map(
+                  (item) => _FeedbackTile(
+                    item: item,
+                    onAdopt: item.isRetracted || item.isAdopted
+                        ? null
+                        : () => unawaited(_adoptFeedback(
+                              context,
+                              ref,
+                              resource,
+                              item,
+                            ),),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    ),
+  );
+}
+
+Future<void> _adoptFeedback(
+  BuildContext context,
+  WidgetRef ref,
+  SharedResourceInfo resource,
+  ResourceFeedbackItem item,
+) async {
+  try {
+    final result = await ref
+        .read(communityShareRepositoryProvider)
+        .adoptFeedbackAsEvidence(
+          sharedResourceId: resource.id,
+          feedbackId: item.id,
+        );
+    // 先关面板再失效真源，避免在活跃手势下重建面板子树。
+    if (!context.mounted) return;
+    if (context.canPop()) Navigator.pop(context);
+    ref.invalidate(sharedResourcesProvider);
+    AppFeedback.success(
+      context,
+      context.l10n.sharedResourceFeedbackAdoptedEvidence(
+        (result['goal_title'] ?? '').toString(),
+      ),
+    );
+  } catch (e) {
+    // N9：原始异常只进日志，用户面为固定人类话术。
+    debugPrint('community feedback adopt failed: $e');
+    if (!context.mounted) return;
+    AppFeedback.error(context, context.l10n.sharedResourceFeedbackFailed);
+  }
+}
+
+String _verdictLabel(BuildContext context, ResourceFeedbackVerdict verdict) {
+  final l10n = context.l10n;
+  switch (verdict) {
+    case ResourceFeedbackVerdict.helpful:
+      return l10n.sharedResourceVerdictHelpful;
+    case ResourceFeedbackVerdict.insightful:
+      return l10n.sharedResourceVerdictInsightful;
+    case ResourceFeedbackVerdict.applied:
+      return l10n.sharedResourceVerdictApplied;
+  }
+}
+
+/// 反馈面板里的一条反馈（同伴名 + 词表 + 采纳动作；撤回态诚实标注）。
+class _FeedbackTile extends StatelessWidget {
+  const _FeedbackTile({required this.item, this.onAdopt});
+
+  final ResourceFeedbackItem item;
+  final VoidCallback? onAdopt;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final verdictLabel = switch (item.verdict) {
+      'insightful' => l10n.sharedResourceVerdictInsightful,
+      'applied' => l10n.sharedResourceVerdictApplied,
+      _ => l10n.sharedResourceVerdictHelpful,
+    };
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      dense: true,
+      leading: Icon(
+        item.isRetracted ? Icons.block_outlined : Icons.forum_outlined,
+        size: 18,
+        color: item.isRetracted ? DS.textTertiary : DS.brandPrimary,
+      ),
+      title: Text(
+        item.giverName ?? l10n.sharedResourceAnonymous,
+        style: TextStyle(fontSize: DS.fontSizeSm, color: DS.textPrimary),
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            item.isRetracted
+                ? l10n.sharedResourceVerdictRetracted
+                : verdictLabel,
+            style: TextStyle(
+              fontSize: DS.fontSizeXs,
+              color: item.isRetracted ? DS.textTertiary : DS.textSecondary,
+            ),
+          ),
+          if (item.comment != null && item.comment!.isNotEmpty)
+            Text(
+              item.comment!,
+              style: TextStyle(
+                  fontSize: DS.fontSizeXs, color: DS.textSecondary,),
+            ),
+        ],
+      ),
+      trailing: item.isAdopted && !item.isRetracted
+          ? Text(
+              l10n.sharedResourceFeedbackAdopted,
+              style: TextStyle(fontSize: DS.fontSizeXs, color: DS.textTertiary),
+            )
+          : (onAdopt != null
+              ? SparkleButton.ghost(
+                  key: ValueKey('adopt-evidence-${item.id}'),
+                  label: l10n.sharedResourceAdoptEvidence,
+                  size: ButtonSize.small,
+                  onPressed: onAdopt,
+                )
+              : null),
+    );
   }
 }
 

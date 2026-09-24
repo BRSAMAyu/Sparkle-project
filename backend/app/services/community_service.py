@@ -2185,6 +2185,26 @@ class CheckinService:
         if member.last_checkin_date and member.last_checkin_date.date() == today:
             raise ValueError("今日已打卡")
 
+        # S-04：可选关联目标（GJ16 从 check-in 回到 Goal trajectory 的回链锚点）。
+        # 校验归属后仅写入打卡消息 content_data 与响应——打卡的火苗/连击语义
+        # 与目标 mastery 一概不变（feedback/ack 不自动成为 mastery）。
+        linked_goal: Goal | None = None
+        if getattr(data, "goal_id", None) is not None:
+            from app.models.goal import Goal
+
+            goal_result = await db.execute(
+                select(Goal).where(
+                    Goal.id == data.goal_id,
+                    Goal.user_id == user_id,
+                    Goal.not_deleted_filter(),
+                )
+            )
+            linked_goal = goal_result.scalar_one_or_none()
+            if not linked_goal:
+                raise ValueError("关联的目标不存在或不属于当前用户")
+            if linked_goal.status not in (None, "", "active", "paused", "draft"):
+                raise ValueError("该目标已归档或取消，不能关联打卡")
+
         # 计算连续打卡天数
         yesterday = today - timedelta(days=1)
         if member.last_checkin_date and member.last_checkin_date.date() == yesterday:
@@ -2216,7 +2236,10 @@ class CheckinService:
             content_data={
                 'flame_power': flame_earned,
                 'streak': member.checkin_streak,
-                'today_duration': data.today_duration_minutes
+                'today_duration': data.today_duration_minutes,
+                # S-04：目标回链（未关联时缺省，读面按存在性判断）。
+                'goal_id': str(linked_goal.id) if linked_goal else None,
+                'goal_title': linked_goal.title if linked_goal else None,
             }
         )
         db.add(message)
@@ -2238,7 +2261,9 @@ class CheckinService:
             'new_streak': member.checkin_streak,
             'flame_earned': flame_earned,
             'rank_in_group': rank,
-            'group_checkin_count': group.today_checkin_count
+            'group_checkin_count': group.today_checkin_count,
+            'goal_id': str(linked_goal.id) if linked_goal else None,
+            'goal_title': linked_goal.title if linked_goal else None,
         }
 
 

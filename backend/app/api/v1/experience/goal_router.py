@@ -114,6 +114,19 @@ class StrategyBeliefPayload(BaseModel):
     counter_evidence: list[dict[str, Any]] = Field(default_factory=list)
 
 
+class CommunityEvidenceReceiptPayload(BaseModel):
+    """S-04：Goal 轨迹里的同伴反馈采纳回执（撤回后 status=retracted，不静默消失）。"""
+
+    kind: str = "peer_feedback"
+    feedback_id: str | None = None
+    shared_resource_id: str | None = None
+    verdict: str | None = None
+    peer_alias: str | None = None
+    adopted_at: str | None = None
+    retracted_at: str | None = None
+    status: str = "adopted"
+
+
 class GoalDetailPayload(BaseModel):
     # goal 详情屏契约（goal_detail_provider.dart GoalDetailData.fromJson）。
     goal: GoalSummaryPayload | None = None
@@ -125,6 +138,8 @@ class GoalDetailPayload(BaseModel):
     accountability_status: AccountabilityStatusPayload
     related_sources: list[RelatedSourcePayload] = Field(default_factory=list)
     strategy_belief: StrategyBeliefPayload | None = None
+    # S-04：同伴反馈采纳回执（Goal.metadata_payload["community_evidence"] 投影）。
+    community_evidence: list[CommunityEvidenceReceiptPayload] = Field(default_factory=list)
     # home 仪表盘卡兼容字段（experience_models.dart GoalDetailSnapshot.fromJson，
     # 原 readouts 快照形状；goal 可为 None、plan 为计划回退结果）。
     active: bool = False
@@ -178,6 +193,7 @@ async def get_goal_detail(
         accountability_status=accountability,
         related_sources=sources,
         strategy_belief=strategy_belief,
+        community_evidence=_community_evidence_payload(goal),
         active=bool(goal or plan),
         plan=_plan_summary(plan),
         progress=_progress_payload(goal=goal, plan=plan, task_counts=task_counts),
@@ -391,6 +407,39 @@ async def _strategy_belief_payload(
         confidence=round(belief.belief_score, 3),
         counter_evidence=_counter_evidence_payload(belief.counter_evidence),
     )
+
+
+def _community_evidence_payload(goal: Goal | None) -> list[CommunityEvidenceReceiptPayload]:
+    """S-04：Goal 轨迹的同伴反馈采纳回执投影。
+
+    数据真源是 ``Goal.metadata_payload["community_evidence"]``（写入方：
+    SharedResourceFeedbackService.adopt_feedback / retract_share）。本函数只
+    做形状投影：非 dict / 缺字段条目诚实丢弃，撤回条目按 retracted 原样透出
+    （派生引用更新后轨迹面如实展示，不静默消失）。
+    """
+    if goal is None:
+        return []
+    metadata = goal.metadata_payload if isinstance(goal.metadata_payload, dict) else {}
+    raw_receipts = metadata.get("community_evidence")
+    if not isinstance(raw_receipts, list):
+        return []
+    receipts: list[CommunityEvidenceReceiptPayload] = []
+    for item in raw_receipts:
+        if not isinstance(item, dict):
+            continue
+        receipts.append(
+            CommunityEvidenceReceiptPayload(
+                kind=str(item.get("kind") or "peer_feedback"),
+                feedback_id=str(item["feedback_id"]) if item.get("feedback_id") else None,
+                shared_resource_id=str(item["shared_resource_id"]) if item.get("shared_resource_id") else None,
+                verdict=str(item["verdict"]) if item.get("verdict") else None,
+                peer_alias=str(item["peer_alias"]) if item.get("peer_alias") else None,
+                adopted_at=str(item["adopted_at"]) if item.get("adopted_at") else None,
+                retracted_at=str(item["retracted_at"]) if item.get("retracted_at") else None,
+                status=str(item.get("status") or "adopted"),
+            )
+        )
+    return receipts
 
 
 def _counter_evidence_payload(raw: Any) -> list[dict[str, Any]]:

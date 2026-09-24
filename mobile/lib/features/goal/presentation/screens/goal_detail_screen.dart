@@ -144,6 +144,12 @@ class GoalDetailScreen extends ConsumerWidget {
                   const SizedBox(height: 14),
                   _AccountabilityCard(summary: data.accountabilityStatus),
                   const SizedBox(height: 14),
+                  // S-04：同伴反馈采纳回执——Goal trajectory 的社群证据面
+                  //（撤回后如实标示，不静默消失）。
+                  if (data.communityEvidence.isNotEmpty) ...[
+                    CommunityEvidenceCard(receipts: data.communityEvidence),
+                    const SizedBox(height: 14),
+                  ],
                   _RelatedSourcesCard(sources: data.relatedSources),
                   const SizedBox(height: 14),
                   SimilarGoalPursuersCard(goalId: goalId),
@@ -799,6 +805,64 @@ class _RelatedSourcesCard extends StatelessWidget {
             ),
       ],
     );
+  }
+}
+
+/// S-04：社群证据卡——展示被采纳为成果证据的同伴反馈；
+/// 撤回传播后条目如实标示「已撤回」（派生引用更新，不静默消失）。
+class CommunityEvidenceCard extends StatelessWidget {
+  const CommunityEvidenceCard({required this.receipts, super.key});
+
+  final List<CommunityEvidenceReceipt> receipts;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return _SectionCard(
+      icon: Icons.fact_check_outlined,
+      title: l10n.goalDetailCommunityEvidence,
+      children: [
+        for (final receipt in receipts)
+          ListTile(
+            key: ValueKey('community-evidence-${receipt.feedbackId}'),
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            leading: Icon(
+              receipt.isRetracted
+                  ? Icons.block_outlined
+                  : Icons.verified_outlined,
+              size: 18,
+              color: receipt.isRetracted ? DS.textTertiary : DS.brandPrimary,
+            ),
+            title: Text(
+              receipt.isRetracted
+                  ? l10n.goalDetailCommunityEvidenceRetracted
+                  : l10n.goalDetailCommunityEvidenceAdopted(
+                      receipt.peerAlias ?? l10n.sharedResourceAnonymous,
+                    ),
+              style: TextStyle(
+                fontSize: DS.fontSizeSm,
+                color: receipt.isRetracted ? DS.textTertiary : DS.textPrimary,
+              ),
+            ),
+            subtitle: Text(
+              _verdictLabel(l10n, receipt.verdict),
+              style: TextStyle(fontSize: DS.fontSizeXs, color: DS.textSecondary),
+            ),
+          ),
+      ],
+    );
+  }
+
+  String _verdictLabel(AppLocalizations l10n, String? verdict) {
+    switch (verdict) {
+      case 'insightful':
+        return l10n.sharedResourceVerdictInsightful;
+      case 'applied':
+        return l10n.sharedResourceVerdictApplied;
+      default:
+        return l10n.sharedResourceVerdictHelpful;
+    }
   }
 }
 

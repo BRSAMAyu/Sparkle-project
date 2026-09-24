@@ -384,6 +384,13 @@ class ApiEndpoints {
   static const String communityShare = '/community/share';
   static String adoptSharedResource(String id) =>
       '/community/shared-resources/$id/adopt';
+  // S-04: 同伴反馈 → 可采纳的 outcome evidence
+  static String sharedResourceFeedback(String id) =>
+      '/community/shared-resources/$id/feedback';
+  static String sharedResourceFeedbackAdopt(String id, String feedbackId) =>
+      '/community/shared-resources/$id/feedback/$feedbackId/adopt';
+  static String sharedResourceRetract(String id) =>
+      '/community/shared-resources/$id/retract';
   static String similarGoalPursuers(String goalId) =>
       '/community/goals/$goalId/similar-pursuers';
   static const String communityResources = '/community/resources';

@@ -39405,4 +39405,101 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get visualElementsFilter => 'Filter';
+
+  @override
+  String get communityCheckinGoalLabel => 'Link a goal (optional)';
+
+  @override
+  String get communityCheckinGoalHint =>
+      'Link to revisit your goal trajectory from this check-in';
+
+  @override
+  String get communityCheckinGoalNone => 'No goal';
+
+  @override
+  String communityHubCheckinGoalSuccess(int flame) {
+    return 'Checked in, +$flame flame';
+  }
+
+  @override
+  String get communityHubCheckinViewGoalTrajectory => 'View trajectory';
+
+  @override
+  String sharedResourceFeedbackCount(int count) {
+    return '$count feedback';
+  }
+
+  @override
+  String get sharedResourceGiveFeedback => 'Feedback';
+
+  @override
+  String get sharedResourceAdoptEvidence => 'Adopt as evidence';
+
+  @override
+  String get sharedResourceFeedbackTitle =>
+      'Give feedback on this shared artifact';
+
+  @override
+  String get sharedResourceFeedbackNoMasteryHint =>
+      'Feedback is only a peer opinion; it never changes your mastery. Only the author decides whether to adopt it.';
+
+  @override
+  String get sharedResourceFeedbackComment => 'Comment (optional)';
+
+  @override
+  String get sharedResourceFeedbackSubmit => 'Submit';
+
+  @override
+  String get sharedResourceFeedbackThanks =>
+      'Feedback sent — thanks for the response';
+
+  @override
+  String get sharedResourceFeedbackFailed =>
+      'Feedback failed, please try again';
+
+  @override
+  String get sharedResourceFeedbackLoadFailed => 'Failed to load feedback';
+
+  @override
+  String sharedResourceFeedbackSheetTitle(String title) {
+    return 'Feedback on \"$title\"';
+  }
+
+  @override
+  String get sharedResourceFeedbackEmpty => 'No feedback yet';
+
+  @override
+  String sharedResourceFeedbackAdoptedEvidence(String goal) {
+    return 'Adopted as evidence for \"$goal\"';
+  }
+
+  @override
+  String get sharedResourceFeedbackAdopted => 'Adopted';
+
+  @override
+  String get sharedResourceAnonymous => 'A study peer';
+
+  @override
+  String get sharedResourceVerdictHelpful => 'Helpful';
+
+  @override
+  String get sharedResourceVerdictInsightful => 'Insightful';
+
+  @override
+  String get sharedResourceVerdictApplied => 'I applied it';
+
+  @override
+  String get sharedResourceVerdictRetracted => 'Share retracted';
+
+  @override
+  String get goalDetailCommunityEvidence => 'Community evidence';
+
+  @override
+  String goalDetailCommunityEvidenceAdopted(String peer) {
+    return '$peer\'s feedback adopted as outcome evidence';
+  }
+
+  @override
+  String get goalDetailCommunityEvidenceRetracted =>
+      'The underlying share was retracted';
 }

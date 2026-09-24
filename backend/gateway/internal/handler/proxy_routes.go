@@ -690,6 +690,15 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		// R2-08 §2.2 #21: the /share/{id}/adopt old alias is removed —
 		// adoption lives at /shared-resources/{id}/adopt (below).
 		community.POST("/shared-resources/:shared_resource_id/adopt", h.proxyWithHeaders)
+		// S-04: peer feedback on shared artifacts + adopt-as-evidence + retract
+		// route-tier: authed
+		community.GET("/shared-resources/:shared_resource_id/feedback", h.proxyWithHeaders)
+		// route-tier: authed
+		community.POST("/shared-resources/:shared_resource_id/feedback", h.proxyWithHeaders)
+		// route-tier: authed
+		community.POST("/shared-resources/:shared_resource_id/feedback/:feedback_id/adopt", h.proxyWithHeaders)
+		// route-tier: authed
+		community.POST("/shared-resources/:shared_resource_id/retract", h.proxyWithHeaders)
 		// Encryption
 		community.POST("/encryption/keys", h.proxyWithHeaders)
 		community.GET("/encryption/keys/:user_id", h.proxyWithHeaders)

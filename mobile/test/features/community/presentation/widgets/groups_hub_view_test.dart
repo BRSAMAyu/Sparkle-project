@@ -10,6 +10,7 @@ import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 import 'package:sparkle/features/community/data/repositories/community_share_repository.dart';
+import 'package:sparkle/features/community/presentation/providers/community_providers.dart';
 import 'package:sparkle/features/community/presentation/widgets/groups_hub_view.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import '../../../../shared/i18n_test_helper.dart';
@@ -148,7 +149,142 @@ void main() {
       expect(find.text('加入小队或群组后，在这里完成每日打卡'), findsOneWidget);
     });
   });
+
+  group('GroupsHubView S-04 feedback → goal evidence', () {
+    testWidgets(
+        'check-in with linked goal offers trajectory jump and passes goal_id',
+        (tester) async {
+      final router = _hubRouterWithGoalDetail();
+      addTearDown(router.dispose);
+      final repo = _FakeCommunityRepository();
+
+      await _pumpHub(
+        tester,
+        router: router,
+        shareRepository: _FakeShareRepo(),
+        communityRepository: repo,
+        goals: const [ActiveGoalOption(id: 'goal-1', title: 'S-04 目标')],
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey('community-checkin-open-button')).first,
+      );
+      await tester.pumpAndSettle();
+
+      // 目标下拉出现并选中「S-04 目标」。
+      await tester.tap(
+        find.byKey(const ValueKey('community-checkin-goal-picker')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('S-04 目标').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('打卡'),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      // repo 收到 goal_id（GJ16 回链）；成功回执带「查看目标轨迹」动作。
+      expect(repo.lastGoalLink, 'goal-1');
+      expect(find.text('打卡成功，+20 火苗'), findsOneWidget);
+      await tester.tap(find.text('查看轨迹'));
+      await tester.pumpAndSettle();
+      debugPrint(
+        'texts=${tester.widgetList<Text>(find.byType(Text)).map((w) => w.data).toList()}',
+      );
+      debugPrint('lastGoalLink=${repo.lastGoalLink}');
+      expect(find.text('goal-detail:goal-1'), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 3));
+    });
+
+    testWidgets('peer artifact exposes feedback action that submits verdict',
+        (tester) async {
+      final router = _hubRouter();
+      addTearDown(router.dispose);
+      final shareRepo = _FakeShareRepo();
+
+      await _pumpHub(
+        tester,
+        router: router,
+        shareRepository: shareRepo,
+      );
+
+      final feedbackButton = find.descendant(
+        of: find.byKey(const ValueKey('community-artifact-card-res-1')),
+        matching: find.byKey(const ValueKey('shared-resource-feedback-button')),
+      );
+      expect(feedbackButton, findsOneWidget);
+      await tester.tap(feedbackButton);
+      await tester.pumpAndSettle();
+
+      // 反馈面板声明「反馈不改掌握度」语义后提交。
+      expect(find.text('反馈这份共享成果'), findsOneWidget);
+      await tester.tap(find.text('我照做了'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('shared-resource-feedback-submit')),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(shareRepo.givenFeedbackIds, contains('res-1'));
+      expect(shareRepo.lastVerdict, ResourceFeedbackVerdict.applied);
+      expect(find.text('反馈已送达，感谢你的回应'), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 3));
+    });
+
+    testWidgets('own artifact offers adopt-as-evidence entry with receipts',
+        (tester) async {
+      final router = _hubRouter();
+      addTearDown(router.dispose);
+      final shareRepo = _FakeShareRepo(ownOnly: true);
+
+      await _pumpHub(
+        tester,
+        router: router,
+        shareRepository: shareRepo,
+      );
+
+      // 本人共享卡片带「采纳为成果证据」入口（未采纳反馈 > 0）。
+      await tester.tap(
+        find.byKey(const ValueKey('shared-resource-adopt-evidence')),
+      );
+      await tester.pumpAndSettle();
+
+      // 反馈面板列出反馈，采纳后走真实契约（回执含 goal_title）。
+      expect(find.text('「我的作品集任务」收到的反馈'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('adopt-evidence-fb-1')));
+      await tester.pumpAndSettle();
+
+      expect(shareRepo.adoptedFeedbackIds, contains('fb-1'));
+      expect(find.text('已采纳为「S-04 目标」的成果证据'), findsOneWidget);
+
+      await tester.pump(const Duration(seconds: 3));
+    });
+  });
 }
+
+GoRouter _hubRouterWithGoalDetail() => GoRouter(
+      navigatorKey: navigatorKey,
+      initialLocation: '/groups-hub',
+      routes: [
+        GoRoute(
+          path: '/groups-hub',
+          builder: (_, __) => const Scaffold(body: GroupsHubView()),
+        ),
+        GoRoute(
+          path: '/goals/:goalId',
+          builder: (_, state) =>
+              Scaffold(body: Center(child: Text('goal-detail:${state.pathParameters['goalId']!}'))),
+        ),
+      ],
+    );
 
 GoRouter _hubRouter() => GoRouter(
       navigatorKey: navigatorKey,
@@ -166,6 +302,8 @@ Future<void> _pumpHub(
   required GoRouter router,
   _FakeShareRepo? shareRepository,
   bool emptyGroups = false,
+  List<ActiveGoalOption> goals = const [],
+  _FakeCommunityRepository? communityRepository,
 }) async {
   final shareRepo = shareRepository ?? _FakeShareRepo();
   tester.view.physicalSize = const Size(390, 2400);
@@ -177,9 +315,10 @@ Future<void> _pumpHub(
     ProviderScope(
       overrides: [
         communityRepositoryProvider.overrideWithValue(
-          _FakeCommunityRepository(emptyGroups: emptyGroups),
+          communityRepository ?? _FakeCommunityRepository(emptyGroups: emptyGroups),
         ),
         communityShareRepositoryProvider.overrideWithValue(shareRepo),
+        activeGoalsProvider.overrideWith((ref) => Future.value(goals)),
       ],
       child: MaterialApp.router(
         theme: AppThemes.lightTheme,
@@ -239,6 +378,29 @@ class _FakeCommunityRepository extends CommunityRepository {
         groupCheckinCount: 10,
       );
 
+  String? lastGoalLink;
+
+  @override
+  Future<CheckinGoalLink> checkinWithGoalLink(
+    String groupId, {
+    required int todayDurationMinutes,
+    String? message,
+    String? goalId,
+  }) async {
+    lastGoalLink = goalId;
+    return CheckinGoalLink(
+      response: CheckinResponse(
+        success: true,
+        newStreak: 3,
+        flameEarned: 20,
+        rankInGroup: 1,
+        groupCheckinCount: 10,
+      ),
+      goalId: goalId,
+      goalTitle: goalId == null ? null : 'S-04 目标',
+    );
+  }
+
   @override
   Future<GroupDirectoryInfo> getGroupDirectory({
     String? keyword,
@@ -266,23 +428,83 @@ class _FakeCommunityRepository extends CommunityRepository {
 
 /// 成果反馈段：走既有 CommunityShareRepository 契约的假实现（真实接口形状）。
 class _FakeShareRepo extends CommunityShareRepository {
-  _FakeShareRepo() : super(_UnusedApiClient(), _UnusedEventStream());
+  _FakeShareRepo({this.ownOnly = false})
+      : super(_UnusedApiClient(), _UnusedEventStream());
+
+  final bool ownOnly;
+
+  final List<String> givenFeedbackIds = <String>[];
+  final List<String> adoptedFeedbackIds = <String>[];
+  ResourceFeedbackVerdict? lastVerdict;
 
   @override
   Future<List<SharedResourceInfo>> fetchSharedResources({
     String sort = 'quality',
     String? resourceType,
     int limit = 20,
+  }) async => ownOnly
+        ? [
+            // S-04：本人共享、带未采纳反馈——主人「采纳为成果证据」入口。
+            SharedResourceInfo(
+              id: 'res-own',
+              resourceType: SharedResourceType.task,
+              createdAt: DateTime.utc(2026, 9),
+              resourceTitle: '我的作品集任务',
+              resourceSummary: '自己共享的任务',
+              qualityScore: 0.8,
+              feedbackCount: 1,
+              unadoptedFeedbackCount: 1,
+              isOwn: true,
+            ),
+          ]
+        : [
+            SharedResourceInfo(
+              id: 'res-1',
+              resourceType: SharedResourceType.plan,
+              createdAt: DateTime.utc(2026, 9),
+              resourceTitle: '错题复盘计划',
+              resourceSummary: '伙伴共享的复盘计划',
+              qualityScore: 0.9,
+            ),
+          ];
+
+  @override
+  Future<void> giveFeedback({
+    required String sharedResourceId,
+    required ResourceFeedbackVerdict verdict,
+    String? comment,
+  }) async {
+    givenFeedbackIds.add(sharedResourceId);
+    lastVerdict = verdict;
+  }
+
+  @override
+  Future<List<ResourceFeedbackItem>> fetchFeedback({
+    required String sharedResourceId,
   }) async => [
-        SharedResourceInfo(
-          id: 'res-1',
-          resourceType: SharedResourceType.plan,
-          createdAt: DateTime.utc(2026, 9),
-          resourceTitle: '错题复盘计划',
-          resourceSummary: '伙伴共享的复盘计划',
-          qualityScore: 0.9,
-        ),
-      ];
+            ResourceFeedbackItem(
+              id: 'fb-1',
+              sharedResourceId: sharedResourceId,
+              verdict: 'helpful',
+              comment: '很清楚',
+              giverName: '社群伙伴',
+            ),
+          ];
+
+  @override
+  Future<Map<String, dynamic>> adoptFeedbackAsEvidence({
+    required String sharedResourceId,
+    required String feedbackId,
+    String? goalId,
+  }) async {
+    adoptedFeedbackIds.add(feedbackId);
+    return <String, dynamic>{
+      'success': true,
+      'goal_id': 'goal-1',
+      'goal_title': 'S-04 目标',
+      'feedback_id': feedbackId,
+    };
+  }
 }
 
 class _UnusedApiClient extends ApiClient {

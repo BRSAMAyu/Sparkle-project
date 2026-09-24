@@ -36,6 +36,7 @@ from app.api.v1.accountability import (
 )
 from app.config import settings
 from app.core.cache import cache_service
+from app.core.event_bus import event_bus
 from app.core.metrics import (
     observe_product_loop_items,
     observe_product_loop_latency,
@@ -73,6 +74,7 @@ from app.models.community import (
 from app.models.curiosity_capsule import CuriosityCapsule
 from app.models.file_storage import StoredFile
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
+from app.models.goal import Goal
 from app.models.group_files import GroupFile
 from app.models.plan import Plan
 from app.models.seed_content import SeedItem, SeedLibrary
@@ -91,6 +93,8 @@ from app.schemas.community import (
     CheckinResponse,
     EncryptionKeyCreate,
     EncryptionKeyInfo,
+    FeedbackAdoptRequest,
+    FeedbackAdoptResponse,
     # 群文件
     FileCopyResponse,
     FlameStatus,
@@ -170,7 +174,10 @@ from app.schemas.community import (
     # 隐私设置
     SearchVisibilityEnum,
     SharedResourceCreate,
+    SharedResourceFeedbackCreate,
+    SharedResourceFeedbackInfo,
     SharedResourceInfo,
+    SharedResourceRetractResponse,
     SharedResourceTypeEnum,
     SimilarGoalPursuer,
     UserBrief,
@@ -184,6 +191,7 @@ from app.schemas.plan import PlanCreate
 from app.schemas.task import TaskCreate
 from app.services.card_protocol.share_service import ShareService
 from app.services.collaboration_service import collaboration_service
+from app.services.community_feedback_service import SharedResourceFeedbackService
 from app.services.community_advanced_service import (
     BroadcastService,
     EncryptionService,
@@ -3131,9 +3139,26 @@ async def checkin(
                 "group_id": str(data.group_id),
                 "user": UserBrief.model_validate(current_user).model_dump(mode="json"),
                 "duration": data.today_duration_minutes,
+                "goal_id": result.get("goal_id"),
+                "goal_title": result.get("goal_title"),
                 "timestamp": datetime.now(UTC).isoformat(),
             },
             str(data.group_id),
+        )
+
+        # S-04 flywheel：打卡事件进事件总线（下游信念/聚合面按需消费；
+        # 无订阅者时是纯事件流记录，不产生 mastery 副作用）。
+        await event_bus.publish(
+            "community.checkin_recorded",
+            {
+                "event_type": "community.checkin_recorded",
+                "user_id": str(current_user.id),
+                "group_id": str(data.group_id),
+                "goal_id": result.get("goal_id"),
+                "goal_title": result.get("goal_title"),
+                "today_duration_minutes": data.today_duration_minutes,
+                "timestamp": datetime.now(UTC).isoformat(),
+            },
         )
 
         return result
@@ -3589,6 +3614,11 @@ async def get_group_resources(
     if sort == "quality":
         resources = sorted(resources, key=lambda r: r.quality_score or 0.0, reverse=True)
 
+    # S-04：批量活跃反馈计数（单查询），卡片反馈徽标与主人采纳入口共用。
+    feedback_counts = await SharedResourceFeedbackService.feedback_count_map(
+        db, [res.id for res in resources]
+    )
+
     result = []
     for res in resources:
         if not _shared_resource_payload_is_active(res):
@@ -3701,6 +3731,9 @@ async def get_group_resources(
                     visibility="group",
                     availability="available",
                 ),
+                feedback_count=feedback_counts.get(res.id, {}).get("total", 0),
+                unadopted_feedback_count=feedback_counts.get(res.id, {}).get("unadopted", 0),
+                is_own=str(res.shared_by) == str(current_user.id),
             )
         )
     return result
@@ -4249,6 +4282,190 @@ async def reject_shared_resource(
 
     await db.commit()
     return {"success": True}
+
+
+# ============ S-04: 同伴反馈 → 可采纳的 outcome evidence ============
+
+
+def _feedback_to_info(feedback, giver: User | None) -> SharedResourceFeedbackInfo:
+    return SharedResourceFeedbackInfo(
+        id=feedback.id,
+        shared_resource_id=feedback.shared_resource_id,
+        feedback_by=UserBrief.model_validate(giver)
+        if giver is not None
+        else UserBrief(id=feedback.feedback_by, username="unknown"),
+        verdict=feedback.verdict,
+        comment=feedback.comment,
+        adopted_at=feedback.adopted_at,
+        adopted_into_goal_id=feedback.adopted_into_goal_id,
+        retracted_at=feedback.retracted_at,
+        created_at=feedback.created_at,
+    )
+
+
+# route-tier: authed
+@router.post(
+    "/shared-resources/{shared_resource_id}/feedback",
+    response_model=SharedResourceFeedbackInfo,
+    status_code=201,
+    summary="反馈同伴的共享成果（helpful/insightful/applied）",
+)
+async def give_shared_resource_feedback(
+    shared_resource_id: UUID,
+    data: SharedResourceFeedbackCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    给共享资源一条反馈/ack。
+
+    S-04 语义：反馈只是社群表面记录 + 事件（flywheel），**不自动成为
+    mastery**，也不自动进入任何证据/信念系统；只有资源主人显式采纳
+    （POST .../feedback/{feedback_id}/adopt）才成为 Goal 的 outcome evidence。
+    一人一资源一条，重复提交=更新。
+    """
+    try:
+        feedback = await SharedResourceFeedbackService.give_feedback(
+            db,
+            resource_id=shared_resource_id,
+            user=current_user,
+            verdict=data.verdict,
+            comment=data.comment,
+        )
+        await db.commit()
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e)) from e
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    giver_result = await db.execute(select(User).where(User.id == feedback.feedback_by))
+    return _feedback_to_info(feedback, giver_result.scalar_one_or_none())
+
+
+# route-tier: authed
+@router.get(
+    "/shared-resources/{shared_resource_id}/feedback",
+    response_model=list[SharedResourceFeedbackInfo],
+    summary="获取共享资源的同伴反馈列表",
+)
+async def list_shared_resource_feedback(
+    shared_resource_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """按可见性返回该共享资源的全部反馈（含撤回标记，读面诚实展示）。"""
+    try:
+        feedbacks = await SharedResourceFeedbackService.list_feedback(
+            db, resource_id=shared_resource_id, user=current_user
+        )
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e)) from e
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+
+    giver_ids = {feedback.feedback_by for feedback in feedbacks}
+    givers: dict[UUID, User | None] = {}
+    if giver_ids:
+        givers_result = await db.execute(select(User).where(User.id.in_(giver_ids)))
+        givers = {user.id: user for user in givers_result.scalars().all()}
+    return [_feedback_to_info(feedback, givers.get(feedback.feedback_by)) for feedback in feedbacks]
+
+
+# route-tier: authed
+@router.post(
+    "/shared-resources/{shared_resource_id}/feedback/{feedback_id}/adopt",
+    response_model=FeedbackAdoptResponse,
+    summary="采纳同伴反馈为 Goal outcome evidence",
+)
+async def adopt_shared_resource_feedback(
+    shared_resource_id: UUID,
+    feedback_id: UUID,
+    data: FeedbackAdoptRequest | None = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    资源主人把一条活跃反馈**显式采纳**为成果证据：
+
+    - Goal.metadata_payload["community_evidence"] 追加轨迹回执（GJ16 的
+      Goal trajectory 消费面）；
+    - 经 services/evidence 既有链注入信念证据（best-effort，无 Redis 降级）；
+    - **永不**修改 GALAXY mastery / Goal.mastery / Goal.progress。
+    """
+    try:
+        result = await SharedResourceFeedbackService.adopt_feedback(
+            db,
+            resource_id=shared_resource_id,
+            feedback_id=feedback_id,
+            owner=current_user,
+            explicit_goal_id=data.goal_id if data is not None else None,
+        )
+        await db.commit()
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e)) from e
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    goal: Goal | None = result["goal"]
+    feedback = result["feedback"]
+    return FeedbackAdoptResponse(
+        success=True,
+        goal_id=goal.id if goal is not None else feedback.adopted_into_goal_id,
+        goal_title=goal.title if goal is not None else None,
+        feedback_id=feedback.id,
+        shared_resource_id=feedback.shared_resource_id,
+        evidence_count=int(result.get("evidence_count") or 0),
+        receipt_status="adopted",
+    )
+
+
+# route-tier: authed
+@router.post(
+    "/shared-resources/{shared_resource_id}/retract",
+    response_model=SharedResourceRetractResponse,
+    summary="撤回共享资源（派生引用同步更新）",
+)
+async def retract_shared_resource(
+    shared_resource_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    撤回语义对齐既有 revoke 链（主人限定 + 软删 + 广播），并做**派生引用更新**：
+
+    - 活跃反馈行打 retracted_at（不可再采纳）；
+    - 主人各 Goal 轨迹中引用该共享的已采纳回执标 retracted（不静默消失）；
+    - 撤回事件进 flywheel（community.resource_retracted）并广播到目标群/用户。
+    """
+    try:
+        result = await SharedResourceFeedbackService.retract_share(
+            db, resource_id=shared_resource_id, owner=current_user
+        )
+        await db.commit()
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e)) from e
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+
+    shared = result["shared"]
+    broadcast_payload = {
+        "type": "share_retracted",
+        "shared_resource_id": str(shared_resource_id),
+        "retracted_by": str(current_user.id),
+        "timestamp": datetime.now(UTC).isoformat(),
+    }
+    if shared.group_id is not None:
+        await manager.broadcast(broadcast_payload, str(shared.group_id))
+    if shared.target_user_id is not None:
+        await manager.send_personal_message(broadcast_payload, str(shared.target_user_id))
+        await manager.send_personal_message(broadcast_payload, str(current_user.id))
+
+    return SharedResourceRetractResponse(
+        success=True,
+        shared_resource_id=shared_resource_id,
+        retracted_feedback_count=int(result["retracted_feedback_count"]),
+        updated_goal_receipt_count=int(result["updated_goal_receipt_count"]),
+    )
 
 
 # ============ 端到端加密 ============
@@ -5007,8 +5224,14 @@ async def get_community_resources_ranked(
     result = await db.execute(stmt)
     resources = result.scalars().all()
 
+    # S-04：批量取活跃反馈计数（单查询），主人反馈采纳入口与反馈徽标共用。
+    feedback_counts = await SharedResourceFeedbackService.feedback_count_map(
+        db, [res.id for res in resources]
+    )
+
     items = []
     for res in resources:
+        counts = feedback_counts.get(res.id, {})
         items.append(
             {
                 "id": str(res.id),
@@ -5022,6 +5245,9 @@ async def get_community_resources_ranked(
                 "save_count": res.save_count or 0,
                 "created_at": res.created_at.isoformat() if res.created_at else None,
                 "resource_type": "plan" if res.plan_id else "task" if res.task_id else "knowledge_node" if res.knowledge_node_id else "other",
+                "feedback_count": counts.get("total", 0),
+                "unadopted_feedback_count": counts.get("unadopted", 0),
+                "is_own": str(res.shared_by) == str(current_user.id),
             }
         )
 

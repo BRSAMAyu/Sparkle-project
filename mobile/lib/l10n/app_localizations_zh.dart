@@ -37773,4 +37773,96 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get visualElementsFilter => '筛选';
+
+  @override
+  String get communityCheckinGoalLabel => '关联目标（可选）';
+
+  @override
+  String get communityCheckinGoalHint => '关联后可从打卡回看目标轨迹';
+
+  @override
+  String get communityCheckinGoalNone => '不关联目标';
+
+  @override
+  String communityHubCheckinGoalSuccess(int flame) {
+    return '打卡成功，+$flame 火苗';
+  }
+
+  @override
+  String get communityHubCheckinViewGoalTrajectory => '查看轨迹';
+
+  @override
+  String sharedResourceFeedbackCount(int count) {
+    return '$count 条反馈';
+  }
+
+  @override
+  String get sharedResourceGiveFeedback => '反馈';
+
+  @override
+  String get sharedResourceAdoptEvidence => '采纳为成果证据';
+
+  @override
+  String get sharedResourceFeedbackTitle => '反馈这份共享成果';
+
+  @override
+  String get sharedResourceFeedbackNoMasteryHint =>
+      '反馈只代表同伴看法，不会改变你的掌握度；是否采纳由作者决定';
+
+  @override
+  String get sharedResourceFeedbackComment => '留言（可选）';
+
+  @override
+  String get sharedResourceFeedbackSubmit => '提交反馈';
+
+  @override
+  String get sharedResourceFeedbackThanks => '反馈已送达，感谢你的回应';
+
+  @override
+  String get sharedResourceFeedbackFailed => '反馈失败，请稍后重试';
+
+  @override
+  String get sharedResourceFeedbackLoadFailed => '反馈加载失败';
+
+  @override
+  String sharedResourceFeedbackSheetTitle(String title) {
+    return '「$title」收到的反馈';
+  }
+
+  @override
+  String get sharedResourceFeedbackEmpty => '还没有收到反馈';
+
+  @override
+  String sharedResourceFeedbackAdoptedEvidence(String goal) {
+    return '已采纳为「$goal」的成果证据';
+  }
+
+  @override
+  String get sharedResourceFeedbackAdopted => '已采纳';
+
+  @override
+  String get sharedResourceAnonymous => '社群伙伴';
+
+  @override
+  String get sharedResourceVerdictHelpful => '有帮助';
+
+  @override
+  String get sharedResourceVerdictInsightful => '有启发';
+
+  @override
+  String get sharedResourceVerdictApplied => '我照做了';
+
+  @override
+  String get sharedResourceVerdictRetracted => '已随共享撤回';
+
+  @override
+  String get goalDetailCommunityEvidence => '社群成果证据';
+
+  @override
+  String goalDetailCommunityEvidenceAdopted(String peer) {
+    return '$peer 的反馈已采纳为成果证据';
+  }
+
+  @override
+  String get goalDetailCommunityEvidenceRetracted => '该证据对应的共享已撤回';
 }

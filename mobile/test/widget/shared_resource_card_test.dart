@@ -14,6 +14,9 @@ void main() {
     double? avgRating,
     String? title,
     String? summary,
+    int feedbackCount = 0,
+    int unadoptedFeedbackCount = 0,
+    bool isOwn = false,
   }) =>
       SharedResourceInfo(
         id: 'test-id',
@@ -25,6 +28,9 @@ void main() {
         avgRating: avgRating,
         resourceTitle: title ?? 'Test Resource',
         resourceSummary: summary,
+        feedbackCount: feedbackCount,
+        unadoptedFeedbackCount: unadoptedFeedbackCount,
+        isOwn: isOwn,
       );
 
   testWidgets('SharedResourceCard renders gold badge for score >= 0.8',
@@ -124,5 +130,72 @@ void main() {
 
     await tester.tap(find.byType(SharedResourceCard));
     expect(tapped, isTrue);
+  });
+
+  group('SharedResourceCard S-04 feedback → evidence surface', () {
+    testWidgets('shows feedback count chip and fires feedback callback',
+        (tester) async {
+      final resource = makeResource(feedbackCount: 3);
+      var feedbackTapped = false;
+
+      await tester.pumpWidget(
+        testMaterialApp(
+          home: Scaffold(
+            body: SharedResourceCard(
+              resource: resource,
+              onFeedback: () => feedbackTapped = true,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('3 条反馈'), findsOneWidget);
+      await tester
+          .tap(find.byKey(const ValueKey('shared-resource-feedback-button')));
+      expect(feedbackTapped, isTrue);
+    });
+
+    testWidgets('own resource with unadopted feedback offers adopt entry',
+        (tester) async {
+      final resource =
+          makeResource(feedbackCount: 2, unadoptedFeedbackCount: 2, isOwn: true);
+
+      await tester.pumpWidget(
+        testMaterialApp(
+          home: Scaffold(
+            body: SharedResourceCard(
+              resource: resource,
+              onAdoptFeedback: () {},
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        find.byKey(const ValueKey('shared-resource-adopt-evidence')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('hides adopt entry when hub withholds the callback',
+        (tester) async {
+      // 卡片契约：入口显隐由调用方按「未采纳反馈 > 0」决定，卡片只管回传。
+      final resource = makeResource(isOwn: true);
+
+      await tester.pumpWidget(
+        testMaterialApp(
+          home: Scaffold(
+            body: SharedResourceCard(
+              resource: resource,
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        find.byKey(const ValueKey('shared-resource-adopt-evidence')),
+        findsNothing,
+      );
+    });
   });
 }

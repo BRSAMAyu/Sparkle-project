@@ -689,6 +689,10 @@ class CheckinRequest(BaseModel):
     group_id: UUID = Field(description="群组ID")
     message: str | None = Field(default=None, max_length=200, description="打卡留言")
     today_duration_minutes: int = Field(ge=0, description="今日学习时长（分钟）")
+    # S-04：可选关联目标（GJ16「从 check-in 回到 Goal trajectory」的回链锚点）。
+    # 校验归属后写入打卡消息 content_data 并随响应回传；非必填，不改变
+    # 打卡本身的火苗/连击语义。
+    goal_id: UUID | None = Field(default=None, description="关联目标ID（可选）")
 
 
 class CheckinResponse(BaseModel):
@@ -698,6 +702,8 @@ class CheckinResponse(BaseModel):
     flame_earned: int = Field(description="获得的火苗值")
     rank_in_group: int = Field(description="在群组中的排名")
     group_checkin_count: int = Field(description="群组今日打卡数")
+    goal_id: UUID | None = Field(default=None, description="关联目标ID（未关联为 null）")
+    goal_title: str | None = Field(default=None, description="关联目标标题（未关联为 null）")
 
 
 # ============ 火堆视觉 Schemas ============
@@ -782,6 +788,70 @@ class SharedResourceInfo(BaseSchema):
     resource_title: str | None = None
     resource_summary: str | None = None
     entity_card: dict[str, Any] | None = None
+
+    # S-04: 同伴反馈面（活跃反馈计数 + 是否本人共享；未采纳反馈数供主人采纳入口）
+    feedback_count: int = 0
+    unadopted_feedback_count: int = 0
+    is_own: bool = False
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ============ S-04: 共享资源同伴反馈 Schemas ============
+
+class FeedbackVerdict(StrEnum):
+    """同伴反馈封闭词表（不自动成为 mastery，仅记录社群反馈语义）"""
+    HELPFUL = "helpful"
+    INSIGHTFUL = "insightful"
+    APPLIED = "applied"
+
+
+class SharedResourceFeedbackCreate(BaseModel):
+    """创建/更新共享资源反馈（一人一资源一条，重复提交=更新）"""
+    verdict: FeedbackVerdict = Field(description="反馈结论")
+    comment: str | None = Field(default=None, max_length=500, description="反馈留言")
+
+
+class SharedResourceFeedbackInfo(BaseModel):
+    """共享资源反馈信息（API 响应面，不继承 BaseSchema 的 id/时间戳契约）"""
+    id: UUID
+    shared_resource_id: UUID
+    feedback_by: UserBrief = Field(description="反馈人（社群表面，展示昵称）")
+    verdict: FeedbackVerdict
+    comment: str | None = None
+    adopted_at: datetime | None = Field(default=None, description="被资源主人采纳为成果证据的时间")
+    adopted_into_goal_id: UUID | None = None
+    retracted_at: datetime | None = Field(default=None, description="共享撤回后的传播标记")
+    created_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class FeedbackAdoptRequest(BaseModel):
+    """采纳反馈为 outcome evidence 请求"""
+    goal_id: UUID | None = Field(
+        default=None,
+        description="显式指定目标；缺省时按 共享资源→plan/task→Goal 链解析",
+    )
+
+
+class FeedbackAdoptResponse(BaseModel):
+    """采纳反馈为 outcome evidence 响应（不含 mastery 变更——本接口永不 bump mastery）"""
+    success: bool
+    goal_id: UUID
+    goal_title: str | None = None
+    feedback_id: UUID
+    shared_resource_id: UUID
+    evidence_count: int = Field(default=0, description="注入 services/evidence 信念链的证据条数")
+    receipt_status: str = Field(default="adopted", description="Goal 轨迹回执状态")
+
+
+class SharedResourceRetractResponse(BaseModel):
+    """撤回共享资源响应（撤回传播：活跃反馈标记 + Goal 派生回执标 retracted）"""
+    success: bool
+    shared_resource_id: UUID
+    retracted_feedback_count: int = 0
+    updated_goal_receipt_count: int = 0
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -4967,6 +4967,20 @@ type SharedResource struct {
 	QualityHidden         bool             `json:"quality_hidden"`
 }
 
+type SharedResourceFeedback struct {
+	ID                pgtype.UUID      `json:"id"`
+	SharedResourceID  pgtype.UUID      `json:"shared_resource_id"`
+	FeedbackBy        pgtype.UUID      `json:"feedback_by"`
+	Verdict           string           `json:"verdict"`
+	Comment           pgtype.Text      `json:"comment"`
+	AdoptedAt         pgtype.Timestamp `json:"adopted_at"`
+	AdoptedIntoGoalID pgtype.UUID      `json:"adopted_into_goal_id"`
+	RetractedAt       pgtype.Timestamp `json:"retracted_at"`
+	CreatedAt         pgtype.Timestamp `json:"created_at"`
+	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
+	DeletedAt         pgtype.Timestamp `json:"deleted_at"`
+}
+
 type SharedSkill struct {
 	ID                   pgtype.UUID      `json:"id"`
 	CreatedAt            pgtype.Timestamp `json:"created_at"`

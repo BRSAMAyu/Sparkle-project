@@ -253,3 +253,57 @@ def build_task_feedback_evidence(event: dict[str, Any]) -> list[UnifiedEvidence]
             )
         )
     return evidence
+
+
+# S-04 采纳强度按反馈词表封闭取值：peer 反馈是被采纳的**用户侧社会证据**，
+# 永不自动产生（必须资源主人显式采纳），因此置信档低于服务器行为观察
+# （outcome 0.92 / feedback 0.82），与「声明不构成证明」的账本哲学同口径。
+_PEER_FEEDBACK_STRENGTH: dict[str, float] = {
+    "helpful": 0.62,
+    "insightful": 0.70,
+    "applied": 0.78,
+}
+
+
+def build_peer_feedback_evidence(event: dict[str, Any]) -> list[UnifiedEvidence]:
+    """Convert an *user-adopted* peer feedback into shadow-safe belief evidence.
+
+    S-04：同伴反馈只有被资源主人显式采纳后才经本适配器进入信念链；
+    反馈/ack 本身**永不**自动成为 mastery 或证据（GALAXY mastery 不动，
+    仅 UnifiedEvidence 信念面 + Goal 轨迹回执）。
+    事件字段：feedback_id / shared_resource_id / verdict / goal_id /
+    sharer_id(=资源主人) / feedback_giver_id / comment。
+    """
+    verdict = str(event.get("verdict") or "").strip().lower()
+    if verdict not in _PEER_FEEDBACK_STRENGTH:
+        return []
+    strength = _PEER_FEEDBACK_STRENGTH[verdict]
+    feedback_id = str(event.get("feedback_id") or "unknown_feedback")
+    giver_alias = str(event.get("feedback_giver_alias") or "").strip()
+    text = str(event.get("comment") or "").strip() or (
+        f"Peer feedback ({verdict}) adopted for shared artifact {event.get('shared_resource_id')}"
+    )
+
+    metadata = {
+        "adopted_from": "community_feedback",
+        "feedback_id": feedback_id,
+        "shared_resource_id": str(event.get("shared_resource_id") or "") or None,
+        "goal_id": str(event.get("goal_id") or "") or None,
+        "verdict": verdict,
+        "peer_alias": giver_alias or None,
+        # 诚实标注：这是用户采纳的社会证据（self_reported 档），不是服务器
+        # 行为观察——下游消费方按 outcome_ledger 的 TruthClass 哲学对待。
+        "truth_class": "self_reported",
+    }
+    return [
+        _evidence(
+            event,
+            target=EvidenceTarget.EXECUTION_CAPACITY,
+            direction=EvidenceDirection.INCREASE,
+            strength=strength,
+            confidence=0.58,
+            text=text,
+            metadata=metadata,
+            ttl_seconds=14 * 24 * 3600,
+        )
+    ]
