@@ -37473,4 +37473,42 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get toolsCalcReuseHistory => '复用该算式';
+
+  @override
+  String get authShowConfirmPassword => '显示确认密码';
+
+  @override
+  String get authHideConfirmPassword => '隐藏确认密码';
+
+  @override
+  String get capsuleFavorite => '收藏胶囊';
+
+  @override
+  String get capsuleUnfavorite => '取消收藏胶囊';
+
+  @override
+  String get knowledgeFavorite => '收藏知识';
+
+  @override
+  String get knowledgeUnfavorite => '取消收藏知识';
+
+  @override
+  String get focusMindfulnessResume => '继续正念';
+
+  @override
+  String get focusMindfulnessPause => '暂停正念';
+
+  @override
+  String get focusBackToTask => '返回任务';
+
+  @override
+  String translationRateStar(Object count) {
+    return '评为 $count 星';
+  }
+
+  @override
+  String get commonSearchClear => '清除搜索';
+
+  @override
+  String get visualElementsFilter => '筛选';
 }

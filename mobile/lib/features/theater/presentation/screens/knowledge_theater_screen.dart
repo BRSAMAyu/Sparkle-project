@@ -256,6 +256,8 @@ class _KnowledgeTheaterScreenState
           SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: Icon(Icons.share_outlined, color: DS.textSecondary),
+            // A11Y-BATCH6A：甲式单节点（semanticLabel 直挂按钮）。
+            semanticLabel: context.l10n.share,
             onPressed: prediction == null
                 ? null
                 : () => unawaited(_showTheaterShareSheet()),
@@ -263,6 +265,8 @@ class _KnowledgeTheaterScreenState
           SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: Icon(Icons.auto_graph_rounded, color: DS.textSecondary),
+            // A11Y-BATCH6A：甲式单节点（semanticLabel 直挂按钮）。
+            semanticLabel: context.l10n.exploreGalaxy,
             onPressed: prediction == null ? null : () => context.go('/galaxy'),
           ),
         ],
@@ -1566,7 +1570,13 @@ class _TheaterSettingsDrawer extends StatelessWidget {
                 ),
                 IconButton(
                   onPressed: onClose,
-                  icon: const Icon(Icons.close_rounded),
+                  // A11Y-BATCH6A：乙式单节点（tooltip + Icon semanticLabel
+                  // 同键）。
+                  tooltip: context.l10n.close,
+                  icon: Icon(
+                    Icons.close_rounded,
+                    semanticLabel: context.l10n.close,
+                  ),
                 ),
               ],
             ),

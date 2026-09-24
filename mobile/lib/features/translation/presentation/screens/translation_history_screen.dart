@@ -63,6 +63,9 @@ class _TranslationHistoryScreenState
                 children: List.generate(5, (index) {
                   final starValue = index + 1;
                   return SparkleIconButton(
+                    // A11Y-BATCH6A：甲式单节点——评级钮按目标档位命名。
+                    semanticLabel:
+                        context.l10n.translationRateStar(starValue),
                     onPressed: () {
                       unawaited(
                         SensoryFeedbackService.emit(
@@ -207,6 +210,10 @@ class _TranslationHistoryScreenState
                     suffixIcon: _searchController.text.isNotEmpty
                         ? SparkleIconButton(
                             icon: const Icon(Icons.clear),
+                            // A11Y-BATCH6A：甲式单节点（semanticLabel
+                            // 直挂按钮）。
+                            semanticLabel:
+                                context.l10n.commonSearchClear,
                             onPressed: () {
                               _searchController.clear();
                               ref

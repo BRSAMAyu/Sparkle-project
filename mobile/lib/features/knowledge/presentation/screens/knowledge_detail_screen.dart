@@ -112,6 +112,8 @@ class KnowledgeDetailScreen extends ConsumerWidget {
             leading: SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: Icon(Icons.arrow_back, color: DS.textPrimary),
+              // A11Y-BATCH6A：甲式单节点（semanticLabel 直挂按钮）。
+              semanticLabel: l10n.back,
               onPressed: () => context.pop(),
             ),
             actions: [
@@ -123,6 +125,10 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                       ? sectorStyle.primaryColor
                       : DS.textPrimary,
                 ),
+                // A11Y-BATCH6A：两态钮按当前态命名（甲式单节点）。
+                semanticLabel: detail.userStats.isFavorite
+                    ? l10n.knowledgeUnfavorite
+                    : l10n.knowledgeFavorite,
                 onPressed: () {
                   ref.read(toggleFavoriteProvider(nodeId));
                 },
@@ -130,6 +136,8 @@ class KnowledgeDetailScreen extends ConsumerWidget {
               SparkleIconButton(
                 variant: ButtonVariant.ghost,
                 icon: const Icon(Icons.share_outlined),
+                // A11Y-BATCH6A：甲式单节点（semanticLabel 直挂按钮）。
+                semanticLabel: l10n.share,
                 onPressed: () => unawaited(_showShareSheet(context, detail)),
               ),
             ],

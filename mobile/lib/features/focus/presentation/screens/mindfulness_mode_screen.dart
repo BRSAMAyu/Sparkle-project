@@ -443,6 +443,10 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
                 state.isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
                 color: DS.textSecondary,
               ),
+              // A11Y-BATCH6A：两态钮按当前态命名（甲式单节点）。
+              semanticLabel: state.isPaused
+                  ? context.l10n.focusMindfulnessResume
+                  : context.l10n.focusMindfulnessPause,
               onPressed: () {
                 if (state.isPaused) {
                   ref.read(mindfulnessProvider.notifier).resume();
@@ -459,6 +463,8 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
         variant: ButtonVariant.ghost,
         size: 40,
         icon: const Icon(Icons.arrow_back_rounded, size: 20),
+        // A11Y-BATCH6A：甲式单节点（semanticLabel 直挂按钮）。
+        semanticLabel: context.l10n.focusBackToTask,
         onPressed: () {
           unawaited(_handleExit());
         },

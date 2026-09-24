@@ -12,10 +12,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// （presentation 全量 + data 层通知浮窗；群聊批 3 已清零）/
 /// community 域（presentation 全量，群组批 3 已清零），批 5 四域
 /// （A11Y-BATCH5 扩域）——memory 域 / achievement 域 / home 域 /
-/// tools 域（均 presentation 全量），批 6B（A11Y-BATCH6B）**全域收口**：
-/// 剩余全部 feature 域入扫（无钮域零成本入防），单钮长尾 26 处清零；
-/// 批 6A 辖的 10 个多钮面文件在航豁免（见
-/// [_batch6AInFlightExemptions]，6A 合入后删除）——做静态扫描，
+/// tools 域（均 presentation 全量）。批 6B 全域收口 + 批 6A 十多钮面
+/// （文件级条目为全域的子集，随全域生效）——N32 收口：全库无名钮清零，
+
 /// 任何 `SparkleIconButton` / `IconButton` 调用点（含 `.fabGeometry` 等
 /// 命名构造，批 3 起入扫）必须可命名：
 ///
@@ -99,7 +98,7 @@ void main() {
     'lib/features/tools/presentation',
     // ── 批 6B（A11Y-BATCH6B）全域收口 ──────────────────────────────────
     // N32 收口：剩余全部 feature 域入守卫（无钮域入扫零成本，只增
-    // 未来防线）。批 6A 辖的多钮面文件见 [_batch6AInFlightExemptions]。
+    // 未来防线）。批 6A 的十多钮面已随全域生效。
     'lib/features/auth/presentation',
     'lib/features/calendar/presentation',
     'lib/features/cognitive/presentation',
@@ -140,9 +139,6 @@ void main() {
 
     for (final scope in batchScopes) {
       for (final path in _dartFiles(scope)) {
-        if (_batch6AInFlightExemptions.any(path.endsWith)) {
-          continue;
-        }
         final findings = _scanUnnamedButtons(File(path).readAsStringSync());
         for (final line in findings) {
           violations.add('$path:$line');
@@ -188,21 +184,6 @@ List<String> _dartFiles(String scope) {
 // --- 静态扫描（与 A11Y-ICONS 批内盘点同口径） --------------------------
 
 /// 批 6A（A11Y-BATCH6B 并行卡，wt268）在航豁免：10 个多钮面文件 / 24 处
-/// 未名钮，归批 6A 清零。批 6B 只辖单钮文件（26 处已全部标注），按卡面
-/// 纪律不碰多钮面。**6A 合入后本清单必须删除**（届时全域守卫零豁免，
-/// 即 N32 闭环终点）。
-const _batch6AInFlightExemptions = <String>[
-  'lib/features/auth/presentation/screens/register_screen.dart',
-  'lib/features/auth/presentation/screens/reset_password_screen.dart',
-  'lib/features/cognitive/presentation/screens/capsule/capsule_detail_screen.dart',
-  'lib/features/cognitive/presentation/screens/capsule/capsule_jobs_screen.dart',
-  'lib/features/documents/presentation/screens/document_library_screen.dart',
-  'lib/features/focus/presentation/screens/mindfulness_mode_screen.dart',
-  'lib/features/knowledge/presentation/screens/knowledge_detail_screen.dart',
-  'lib/features/theater/presentation/screens/knowledge_theater_screen.dart',
-  'lib/features/translation/presentation/screens/translation_history_screen.dart',
-  'lib/features/visual_elements/presentation/screens/visual_elements_screen.dart',
-];
 
 final _blockComment = RegExp(r'/\*.*?\*/', dotAll: true);
 

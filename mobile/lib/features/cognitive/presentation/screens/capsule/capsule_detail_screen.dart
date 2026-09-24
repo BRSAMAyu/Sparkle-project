@@ -60,6 +60,8 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
       appBar: AppBar(
         leading: SparkleIconButton(
           icon: const Icon(Icons.arrow_back),
+          // A11Y-BATCH6A：甲式单节点（semanticLabel 直挂按钮）。
+          semanticLabel: l10n.back,
           onPressed: () => context.pop(),
           variant: ButtonVariant.ghost,
         ),
@@ -72,6 +74,10 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
               icon: Icon(
                 capsule.isFavorite ? Icons.favorite : Icons.favorite_border,
               ),
+              // A11Y-BATCH6A：两态钮按当前态命名（甲式单节点）。
+              semanticLabel: capsule.isFavorite
+                  ? l10n.capsuleUnfavorite
+                  : l10n.capsuleFavorite,
               onPressed: () => _toggleFavorite(capsule),
               // CAPSULE-VARIANT：收藏激活态是品牌强调（positive marking），
               // 不是删除类破坏动作——destructive 语义保留给删除/移除类操作。
@@ -642,6 +648,8 @@ class _FeedbackBottomSheetState extends State<_FeedbackBottomSheet> {
               ),
               SparkleIconButton(
                 icon: const Icon(Icons.close),
+                // A11Y-BATCH6A：甲式单节点（semanticLabel 直挂按钮）。
+                semanticLabel: l10n.close,
                 onPressed: () => Navigator.pop(context),
                 variant: ButtonVariant.ghost,
               ),

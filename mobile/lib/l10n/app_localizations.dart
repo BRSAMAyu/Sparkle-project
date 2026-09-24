@@ -68015,6 +68015,78 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'复用该算式'**
   String get toolsCalcReuseHistory;
+
+  /// No description provided for @authShowConfirmPassword.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示确认密码'**
+  String get authShowConfirmPassword;
+
+  /// No description provided for @authHideConfirmPassword.
+  ///
+  /// In zh, this message translates to:
+  /// **'隐藏确认密码'**
+  String get authHideConfirmPassword;
+
+  /// No description provided for @capsuleFavorite.
+  ///
+  /// In zh, this message translates to:
+  /// **'收藏胶囊'**
+  String get capsuleFavorite;
+
+  /// No description provided for @capsuleUnfavorite.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消收藏胶囊'**
+  String get capsuleUnfavorite;
+
+  /// No description provided for @knowledgeFavorite.
+  ///
+  /// In zh, this message translates to:
+  /// **'收藏知识'**
+  String get knowledgeFavorite;
+
+  /// No description provided for @knowledgeUnfavorite.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消收藏知识'**
+  String get knowledgeUnfavorite;
+
+  /// No description provided for @focusMindfulnessResume.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续正念'**
+  String get focusMindfulnessResume;
+
+  /// No description provided for @focusMindfulnessPause.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂停正念'**
+  String get focusMindfulnessPause;
+
+  /// No description provided for @focusBackToTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'返回任务'**
+  String get focusBackToTask;
+
+  /// No description provided for @translationRateStar.
+  ///
+  /// In zh, this message translates to:
+  /// **'评为 {count} 星'**
+  String translationRateStar(Object count);
+
+  /// No description provided for @commonSearchClear.
+  ///
+  /// In zh, this message translates to:
+  /// **'清除搜索'**
+  String get commonSearchClear;
+
+  /// No description provided for @visualElementsFilter.
+  ///
+  /// In zh, this message translates to:
+  /// **'筛选'**
+  String get visualElementsFilter;
 }
 
 class _AppLocalizationsDelegate

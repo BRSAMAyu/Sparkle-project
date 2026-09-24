@@ -173,6 +173,8 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                 children: [
                   SparkleIconButton(
                     icon: const Icon(Icons.arrow_back),
+                    // A11Y-BATCH6A：甲式单节点（semanticLabel 直挂按钮）。
+                    semanticLabel: l10n.back,
                     onPressed: () => context.canPop()
                         ? context.pop()
                         : context.go('/profile/settings'),
@@ -191,6 +193,8 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                   ),
                   SparkleIconButton(
                     icon: const Icon(Icons.filter_list),
+                    // A11Y-BATCH6A：甲式单节点（semanticLabel 直挂按钮）。
+                    semanticLabel: l10n.visualElementsFilter,
                     onPressed: () => _showFilterSheet(context, l10n),
                     variant: ButtonVariant.ghost,
                   ),

@@ -53,6 +53,8 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
+          // A11Y-BATCH6A：甲式单节点（semanticLabel 直挂按钮）。
+          semanticLabel: l10n.back,
           onPressed: () {
             final router = GoRouter.of(context);
             if (router.canPop()) {
@@ -816,7 +818,13 @@ class _SearchField extends StatelessWidget {
         suffixIcon: controller.text.isEmpty
             ? null
             : IconButton(
-                icon: const Icon(Icons.close_rounded),
+                // A11Y-BATCH6A：乙式单节点（tooltip + Icon semanticLabel
+                // 同键）。
+                tooltip: context.l10n.commonSearchClear,
+                icon: Icon(
+                  Icons.close_rounded,
+                  semanticLabel: context.l10n.commonSearchClear,
+                ),
                 onPressed: onClear,
               ),
         filled: true,

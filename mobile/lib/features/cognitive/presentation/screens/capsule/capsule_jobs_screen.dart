@@ -45,6 +45,8 @@ class _CapsuleJobsScreenState extends ConsumerState<CapsuleJobsScreen> {
       appBar: AppBar(
         leading: SparkleIconButton(
           icon: const Icon(Icons.arrow_back),
+          // A11Y-BATCH6A：甲式单节点（semanticLabel 直挂按钮）。
+          semanticLabel: l10n.back,
           onPressed: () => context.pop(),
           variant: ButtonVariant.ghost,
         ),
@@ -52,6 +54,8 @@ class _CapsuleJobsScreenState extends ConsumerState<CapsuleJobsScreen> {
         actions: [
           SparkleIconButton(
             icon: const Icon(Icons.refresh),
+            // A11Y-BATCH6A：甲式单节点（semanticLabel 直挂按钮）。
+            semanticLabel: l10n.commonRefresh,
             onPressed: () {
               unawaited(
                 SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),

@@ -80,6 +80,8 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
+          // A11Y-BATCH6A：甲式单节点（semanticLabel 直挂按钮）。
+          semanticLabel: context.l10n.back,
           onPressed: () => context.go('/login'),
         ),
         title: Text(context.l10n.authResetPassword),
@@ -130,10 +132,18 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                         border: const OutlineInputBorder(),
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
+                          // A11Y-BATCH6A：乙式单节点（tooltip + Icon
+                          // semanticLabel 同键），两态钮按当前态命名。
+                          tooltip: _obscurePassword
+                              ? context.l10n.authShowPassword
+                              : context.l10n.authHidePassword,
                           icon: Icon(
                             _obscurePassword
                                 ? Icons.visibility_off_outlined
                                 : Icons.visibility_outlined,
+                            semanticLabel: _obscurePassword
+                                ? context.l10n.authShowPassword
+                                : context.l10n.authHidePassword,
                           ),
                           onPressed: () {
                             unawaited(
@@ -166,10 +176,17 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                         border: const OutlineInputBorder(),
                         prefixIcon: const Icon(Icons.lock_person_outlined),
                         suffixIcon: IconButton(
+                          // A11Y-BATCH6A：乙式单节点，两态钮按当前态命名。
+                          tooltip: _obscureConfirmPassword
+                              ? context.l10n.authShowConfirmPassword
+                              : context.l10n.authHideConfirmPassword,
                           icon: Icon(
                             _obscureConfirmPassword
                                 ? Icons.visibility_off_outlined
                                 : Icons.visibility_outlined,
+                            semanticLabel: _obscureConfirmPassword
+                                ? context.l10n.authShowConfirmPassword
+                                : context.l10n.authHideConfirmPassword,
                           ),
                           onPressed: () {
                             unawaited(

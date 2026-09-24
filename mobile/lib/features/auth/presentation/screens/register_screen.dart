@@ -109,6 +109,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       appBar: AppBar(
         leading: SparkleIconButton(
           icon: const Icon(Icons.arrow_back),
+          // A11Y-BATCH6A：甲式单节点（semanticLabel 直挂按钮）。
+          semanticLabel: l10n.back,
           onPressed: () => context.go('/login'),
           variant: ButtonVariant.ghost,
         ),
@@ -206,10 +208,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         border: const OutlineInputBorder(),
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
+                          // A11Y-BATCH6A：乙式单节点（tooltip + Icon
+                          // semanticLabel 同键），两态钮按当前态命名。
+                          tooltip: _isPasswordVisible
+                              ? l10n.authHidePassword
+                              : l10n.authShowPassword,
                           icon: Icon(
                             _isPasswordVisible
                                 ? Icons.visibility
                                 : Icons.visibility_off,
+                            semanticLabel: _isPasswordVisible
+                                ? l10n.authHidePassword
+                                : l10n.authShowPassword,
                           ),
                           onPressed: () {
                             unawaited(

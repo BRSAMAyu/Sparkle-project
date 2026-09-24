@@ -39090,4 +39090,42 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get toolsCalcReuseHistory => 'Reuse this calculation';
+
+  @override
+  String get authShowConfirmPassword => 'Show confirm password';
+
+  @override
+  String get authHideConfirmPassword => 'Hide confirm password';
+
+  @override
+  String get capsuleFavorite => 'Favorite capsule';
+
+  @override
+  String get capsuleUnfavorite => 'Unfavorite capsule';
+
+  @override
+  String get knowledgeFavorite => 'Favorite knowledge';
+
+  @override
+  String get knowledgeUnfavorite => 'Unfavorite knowledge';
+
+  @override
+  String get focusMindfulnessResume => 'Resume mindfulness';
+
+  @override
+  String get focusMindfulnessPause => 'Pause mindfulness';
+
+  @override
+  String get focusBackToTask => 'Back to task';
+
+  @override
+  String translationRateStar(Object count) {
+    return 'Rate $count stars';
+  }
+
+  @override
+  String get commonSearchClear => 'Clear search';
+
+  @override
+  String get visualElementsFilter => 'Filter';
 }
