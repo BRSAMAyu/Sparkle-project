@@ -20,7 +20,7 @@ Created: 2026-01-15
 
 import asyncio
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Optional
 
 from loguru import logger
 from sqlalchemy import func, select
@@ -58,7 +58,7 @@ class SignalsLearningWorker:
     def __init__(self):
         self.session: Optional[AsyncSession] = None
 
-    async def run_daily_analysis(self) -> Dict:
+    async def run_daily_analysis(self) -> dict:
         """
         Run daily feedback analysis.
 
@@ -115,7 +115,7 @@ class SignalsLearningWorker:
                     "error": str(e),
                 }
 
-    async def _calculate_overall_metrics(self) -> Dict:
+    async def _calculate_overall_metrics(self) -> dict:
         """Calculate overall feedback metrics across all action types."""
         # Total feedback count
         total_result = await self.session.execute(
@@ -151,7 +151,7 @@ class SignalsLearningWorker:
         executed_result = await self.session.execute(
             select(func.count(CandidateActionFeedback.id))
             .where(CandidateActionFeedback.feedback_type == 'accept')
-            .where(CandidateActionFeedback.executed == True)
+            .where(CandidateActionFeedback.executed)
             .where(CandidateActionFeedback.deleted_at.is_(None))
         )
         executed_count = executed_result.scalar() or 0
@@ -166,7 +166,7 @@ class SignalsLearningWorker:
             "completion_rate": round(completion_rate, 4),
         }
 
-    async def _calculate_action_type_metrics(self) -> Dict[str, Dict]:
+    async def _calculate_action_type_metrics(self) -> dict[str, dict]:
         """Calculate metrics broken down by action type."""
         action_types = ["break", "review", "clarify", "plan_split"]
         metrics = {}
@@ -197,7 +197,7 @@ class SignalsLearningWorker:
                 select(func.count(CandidateActionFeedback.id))
                 .where(CandidateActionFeedback.action_type == action_type)
                 .where(CandidateActionFeedback.feedback_type == 'accept')
-                .where(CandidateActionFeedback.executed == True)
+                .where(CandidateActionFeedback.executed)
                 .where(CandidateActionFeedback.deleted_at.is_(None))
             )
             executed = executed_result.scalar() or 0
@@ -215,7 +215,7 @@ class SignalsLearningWorker:
 
         return metrics
 
-    async def _calculate_confidence_calibration(self) -> Dict[str, float]:
+    async def _calculate_confidence_calibration(self) -> dict[str, float]:
         """
         Calculate confidence calibration error.
 
@@ -241,9 +241,9 @@ class SignalsLearningWorker:
 
     async def _generate_threshold_adjustments(
         self,
-        action_type_metrics: Dict[str, Dict],
-        calibration_errors: Dict
-    ) -> Dict[str, Dict]:
+        action_type_metrics: dict[str, dict],
+        calibration_errors: dict
+    ) -> dict[str, dict]:
         """
         Generate threshold adjustment recommendations.
 
@@ -304,7 +304,7 @@ class SignalsLearningWorker:
 
         return adjustments
 
-    async def _store_metrics_in_cache(self, metrics: Dict):
+    async def _store_metrics_in_cache(self, metrics: dict):
         """Store metrics in Redis cache for dashboard access."""
         cache_key = "signals_learning:latest_metrics"
         ttl = 86400 * 2  # 2 days (longer than daily run interval)
@@ -312,7 +312,7 @@ class SignalsLearningWorker:
         await cache_service.set(cache_key, metrics, ttl=ttl)
         logger.info(f"📊 Stored metrics in cache: {cache_key}")
 
-    async def get_latest_metrics(self) -> Optional[Dict]:
+    async def get_latest_metrics(self) -> Optional[dict]:
         """
         Retrieve latest learning metrics from cache.
 

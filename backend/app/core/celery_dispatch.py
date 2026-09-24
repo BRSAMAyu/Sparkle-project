@@ -96,7 +96,7 @@ async def submit_task_async(
     loop = asyncio.get_running_loop()
     try:
         return await asyncio.wait_for(loop.run_in_executor(None, _send), timeout=timeout)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         logger.warning(
             "[CeleryDispatch] task {} enqueue timed out after {}s (off-loop, no freeze)",
             task_name,

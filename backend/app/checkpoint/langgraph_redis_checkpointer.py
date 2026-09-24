@@ -152,7 +152,7 @@ class LangGraphRedisCheckpointer(BaseCheckpointSaver):
         pending_writes: list[PendingWrite] | None = None
         if writes_raw:
             pending_writes = []
-            for wid, wdata in writes_raw.items():
+            for _wid, wdata in writes_raw.items():
                 decoded = json.loads(wdata)
                 pending_writes.append((decoded[0], decoded[1], decoded[2]))
 
@@ -220,8 +220,7 @@ class LangGraphRedisCheckpointer(BaseCheckpointSaver):
 
         sorted_entries.sort(key=lambda x: x[2], reverse=True)
 
-        count = 0
-        for cid, entry, _ in sorted_entries:
+        for count, (cid, entry, _) in enumerate(sorted_entries):
             if limit is not None and count >= limit:
                 break
             cp_data = entry["checkpoint"]
@@ -256,7 +255,6 @@ class LangGraphRedisCheckpointer(BaseCheckpointSaver):
                 parent_config=None,
                 pending_writes=None,
             )
-            count += 1
 
     async def aput_writes(
         self,

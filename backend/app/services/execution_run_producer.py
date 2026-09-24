@@ -99,7 +99,7 @@ def _should_publish(intent_key: str, milestone: str) -> bool:
     return True
 
 
-async def publish_execution_step_event(intent: "ExecutionIntent", milestone: str) -> None:
+async def publish_execution_step_event(intent: ExecutionIntent, milestone: str) -> None:
     """在执行步进点发布 ``run.status_changed``（EXECUTING 可见步进）。
 
     永不抛出：发布失败仅记 warning（EventBus.publish 自带重试与 publish 侧

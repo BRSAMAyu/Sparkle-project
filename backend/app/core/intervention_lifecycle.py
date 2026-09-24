@@ -220,7 +220,7 @@ FORBIDDEN_OUTCOME_SIGNAL_PATTERNS: tuple[str, ...] = (
 )
 
 # import 期断言：白名单是 D-02 封闭枚举的子集，且不含任何禁用字样。
-assert OUTCOME_ASSOCIATION_SOURCES <= set(OutcomeSource), (
+assert set(OutcomeSource) >= OUTCOME_ASSOCIATION_SOURCES, (
     "OUTCOME_ASSOCIATION_SOURCES must be a subset of the D-02 OutcomeSource vocabulary"
 )
 assert not any(

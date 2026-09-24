@@ -14,7 +14,7 @@ from __future__ import annotations
 import json
 import time
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from fastapi import APIRouter, Header, HTTPException, Request
@@ -50,7 +50,7 @@ SLO_AUTO_RESPONSE_DURATION = get_or_create_metric(
 # Alert-to-action mapping
 # ---------------------------------------------------------------------------
 
-class AlertType(str, Enum):
+class AlertType(StrEnum):
     LLM_LATENCY_HIGH = "LLM_LATENCY_HIGH"
     REDIS_NEAR_FULL = "REDIS_NEAR_FULL"
     DB_CONNECTION_EXHAUST = "DB_CONNECTION_EXHAUST"

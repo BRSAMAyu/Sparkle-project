@@ -133,9 +133,7 @@ class LearningBase:
 
         if normalized == "effective":
             belief.alpha += weight
-        elif normalized == "insufficient":
-            belief.beta += weight
-        elif normalized == "harmful":
+        elif normalized == "insufficient" or normalized == "harmful":
             belief.beta += weight
         else:
             return belief

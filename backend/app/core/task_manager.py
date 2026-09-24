@@ -65,7 +65,7 @@ class BackgroundTaskManager:
 
     def __init__(self, max_concurrent_tasks: int = 100):
         self._max_concurrent_tasks = max_concurrent_tasks
-        self._loop_runtimes: "weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, _LoopRuntime]" = (
+        self._loop_runtimes: weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, _LoopRuntime] = (
             weakref.WeakKeyDictionary()
         )
         self._stats: dict[str, TaskStats] = {}  # 任务统计（跨循环共享的纯数据）

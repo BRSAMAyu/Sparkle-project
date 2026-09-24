@@ -308,7 +308,7 @@ class ActionPlanContract:
             "reversible": self.reversible,
         }
 
-    def replace(self, **changes: Any) -> "ActionPlanContract":
+    def replace(self, **changes: Any) -> ActionPlanContract:
         return replace(self, **changes)
 
 
@@ -349,7 +349,7 @@ def action_plan_projection(task: Any) -> dict[str, Any] | None:
     if not (step_raw.get("description") and useful_because):
         _degrade("smallest_useful_step incomplete (description/useful_because)")
         return None
-    if not (USEFUL_STEP_REASONS >= set(useful_because)):
+    if not (set(useful_because) <= USEFUL_STEP_REASONS):
         _degrade(f"useful_because out of vocabulary: {sorted(set(useful_because) - USEFUL_STEP_REASONS)}")
         return None
     evidence_raw = getattr(task, "completion_evidence", None) or []

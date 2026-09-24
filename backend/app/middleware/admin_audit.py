@@ -56,7 +56,7 @@ def audit_admin_action(
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         setattr(func, ADMIN_AUDIT_METADATA_ATTR, metadata)
-        if not hasattr(func, "__call__"):
+        if not callable(func):
             return func
 
         @wraps(func)

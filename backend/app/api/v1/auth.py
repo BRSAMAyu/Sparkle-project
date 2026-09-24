@@ -13,8 +13,6 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-import asyncio
-
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from jose.exceptions import JWTError
 from loguru import logger
@@ -708,7 +706,7 @@ async def refresh_token(
         raise
     except JWTError as e:
         raise HTTPException(status_code=401, detail="刷新令牌无效，请重新登录") from e
-    except (OperationalError, ConnectionError, TimeoutError, asyncio.TimeoutError) as e:
+    except (OperationalError, ConnectionError, TimeoutError) as e:
         # AUTH-DEEP A3'：基础设施抖动不可伪装成 401——否则移动端清 token 强登出
         # （一次 Redis/DB 抖动 = 全舰队重登）。503 + retryable 语义让客户端保会话重试。
         logger.error("refresh failed on infrastructure: {}", e)

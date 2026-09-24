@@ -132,10 +132,7 @@ class ExperienceMemoryProjector:
         # cohort 旗标必须进 M-06 自有缓存键：D-05 summary_cache_key 只含
         # (user, window)，同窗不同旗标共享条目会让 demo cohort 行在暖缓存下
         # 泄入显式排除调用（R2 P2-1），双向均错。
-        cache_key = "{}|demo={}".format(
-            InterventionLifecycleService.summary_cache_key(user_id=user_id, since=since, until=until),
-            int(include_demo_cohort),
-        )
+        cache_key = f"{InterventionLifecycleService.summary_cache_key(user_id=user_id, since=since, until=until)}|demo={int(include_demo_cohort)}"
         watermark = await svc.watermark(user_id=user_id)
         if use_cache:
             cached = self._cache_get(cache_key, watermark)

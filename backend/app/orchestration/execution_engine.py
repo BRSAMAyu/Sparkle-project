@@ -1388,7 +1388,7 @@ class ExecutionEngineMixin:
                     conversation_history=conversation_history,
                     tool_results=[tool_result],
                 )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error("Tool result continuation timed out after 30s", extra={"tool_name": tr.tool_name})
             yield agent_service_pb2.ChatResponse(
                 response_id=response_id,

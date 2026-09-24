@@ -94,8 +94,8 @@ from app.api.v1 import (
     profile_transparency,
     push_interaction,
     recommendations,
-    reflections,
     redeem,  # D-REDEEM 兑换码付费闭环（user 核销 + admin 批量生成）
+    reflections,
     release_approvals,
     research,
     research_consent,

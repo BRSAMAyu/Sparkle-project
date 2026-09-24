@@ -195,7 +195,8 @@ def build_task_entity_card(
     locale: str = "en",
 ) -> dict[str, Any]:
     from app.core.i18n import I18n
-    t = lambda key, **kwargs: I18n.t(key, locale=locale, **kwargs)
+    def t(key, **kwargs):
+        return I18n.t(key, locale=locale, **kwargs)
     task_id = str(task.get("id")) if task.get("id") is not None else None
     title = task.get("title") or t("entity_cards.task.untitled")
     guide_content = task.get("guide_content") or task.get("description")
@@ -267,7 +268,8 @@ def build_plan_entity_card(
     locale: str = "en",
 ) -> dict[str, Any]:
     from app.core.i18n import I18n
-    t = lambda key, **kwargs: I18n.t(key, locale=locale, **kwargs)
+    def t(key, **kwargs):
+        return I18n.t(key, locale=locale, **kwargs)
     plan_id = str(plan.get("id") or plan.get("plan_id")) if (plan.get("id") or plan.get("plan_id")) else None
     title = plan.get("title") or plan.get("name") or t("entity_cards.plan.untitled")
     description = plan.get("description")
@@ -337,7 +339,8 @@ def build_task_list_entity_card(
     locale: str = "en",
 ) -> dict[str, Any]:
     from app.core.i18n import I18n
-    t = lambda key, **kwargs: I18n.t(key, locale=locale, **kwargs)
+    def t(key, **kwargs):
+        return I18n.t(key, locale=locale, **kwargs)
 
     children = [
         build_task_entity_card(
@@ -417,7 +420,8 @@ def build_knowledge_entity_card(
     locale: str = "en",
 ) -> dict[str, Any]:
     from app.core.i18n import I18n
-    t = lambda key, **kwargs: I18n.t(key, locale=locale, **kwargs)
+    def t(key, **kwargs):
+        return I18n.t(key, locale=locale, **kwargs)
 
     node_id = str(node.get("id")) if node.get("id") is not None else None
     title = node.get("title") or node.get("name") or t("entity_cards.knowledge_node.untitled")
@@ -475,7 +479,8 @@ def build_source_document_entity_card(
     locale: str = "en",
 ) -> dict[str, Any]:
     from app.core.i18n import I18n
-    t = lambda key, **kwargs: I18n.t(key, locale=locale, **kwargs)
+    def t(key, **kwargs):
+        return I18n.t(key, locale=locale, **kwargs)
 
     source_id = (
         str(source.get("id") or source.get("source_id") or source.get("document_id") or source.get("file_id"))
@@ -595,7 +600,8 @@ def build_review_entity_card(
     locale: str = "en",
 ) -> dict[str, Any]:
     from app.core.i18n import I18n
-    t = lambda key, **kwargs: I18n.t(key, locale=locale, **kwargs)
+    def t(key, **kwargs):
+        return I18n.t(key, locale=locale, **kwargs)
 
     review_id = (
         str(review.get("id") or review.get("review_id")) if (review.get("id") or review.get("review_id")) else None
@@ -673,7 +679,8 @@ def build_vocabulary_entity_card(
     locale: str = "en",
 ) -> dict[str, Any]:
     from app.core.i18n import I18n
-    t = lambda key, **kwargs: I18n.t(key, locale=locale, **kwargs)
+    def t(key, **kwargs):
+        return I18n.t(key, locale=locale, **kwargs)
 
     word = str(vocabulary.get("word") or vocabulary.get("term") or "").strip()
     word_id = (
@@ -747,7 +754,8 @@ def build_seed_entity_card(
     locale: str = "en",
 ) -> dict[str, Any]:
     from app.core.i18n import I18n
-    t = lambda key, **kwargs: I18n.t(key, locale=locale, **kwargs)
+    def t(key, **kwargs):
+        return I18n.t(key, locale=locale, **kwargs)
 
     seed_id = (
         str(seed.get("id") or seed.get("library_id") or seed.get("seed_id"))
@@ -829,7 +837,8 @@ def build_learning_path_entity_card(
     locale: str = "en",
 ) -> dict[str, Any]:
     from app.core.i18n import I18n
-    t = lambda key, **kwargs: I18n.t(key, locale=locale, **kwargs)
+    def t(key, **kwargs):
+        return I18n.t(key, locale=locale, **kwargs)
 
     plan_card = build_plan_entity_card(
         plan,
@@ -915,7 +924,8 @@ def build_prediction_entity_card(
     locale: str = "en",
 ) -> dict[str, Any]:
     from app.core.i18n import I18n
-    t = lambda key, **kwargs: I18n.t(key, locale=locale, **kwargs)
+    def t(key, **kwargs):
+        return I18n.t(key, locale=locale, **kwargs)
 
     primary_route = "/chat"
     if recommended_actions:
@@ -1002,7 +1012,8 @@ def build_shared_resource_entity_card(
     locale: str = "en",
 ) -> dict[str, Any]:
     from app.core.i18n import I18n
-    t = lambda key, **kwargs: I18n.t(key, locale=locale, **kwargs)
+    def t(key, **kwargs):
+        return I18n.t(key, locale=locale, **kwargs)
 
     adoptable_resource_types = {
         "plan",

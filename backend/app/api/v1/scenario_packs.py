@@ -10,7 +10,7 @@ plus assignment and progress tracking for authenticated users.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -168,7 +168,7 @@ async def assign_pack(
 
     goal.domain_pack_id = pack_id
     goal.source_metadata = goal.source_metadata or {}
-    goal.source_metadata["scenario_pack_assigned_at"] = datetime.now(timezone.utc).isoformat()
+    goal.source_metadata["scenario_pack_assigned_at"] = datetime.now(UTC).isoformat()
     await db.flush()
 
     # Store initial journey state in Redis for progress tracking.
@@ -182,7 +182,7 @@ async def assign_pack(
             json.dumps({
                 "pack_id": pack_id,
                 "current_node": first_node,
-                "started_at": datetime.now(timezone.utc).isoformat(),
+                "started_at": datetime.now(UTC).isoformat(),
                 "is_on_backbone": True,
             }),
             ex=90 * 24 * 3600,
@@ -232,7 +232,7 @@ async def get_progress(
     if started_at:
         try:
             started = datetime.fromisoformat(started_at)
-            day_number = (datetime.now(timezone.utc) - started).days + 1
+            day_number = (datetime.now(UTC) - started).days + 1
         except (ValueError, TypeError):
             pass
 

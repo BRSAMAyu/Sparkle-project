@@ -86,7 +86,8 @@ REF_KIND_EPISODIC = "episodic"
 REF_KIND_EXPERIENCE = "experience"
 REF_KINDS: tuple[str, ...] = (REF_KIND_DOCUMENT, REF_KIND_EPISODIC, REF_KIND_EXPERIENCE)
 
-_FALLBACK_TOKEN_ESTIMATOR: Callable[[str], int] = lambda text: max(1, len(text) // 4) if text else 0
+def _FALLBACK_TOKEN_ESTIMATOR(text: str) -> int:
+    return max(1, len(text) // 4) if text else 0
 
 #: C-08 N6：``make_source_ref`` 标量 extra 的字符串长度上限——extra 是
 #: metadata 通道（page_number / chunk_index / relevance 等短标量），超长
@@ -180,7 +181,7 @@ class SurfaceFunnel:
         """漏斗单调性：下游计数不得大于上游（违例返回人读错误列表）。"""
         errors: list[str] = []
         ordered = [name for name in STAGE_NAMES if name in self.stages]
-        for upstream, downstream in zip(ordered, ordered[1:]):
+        for upstream, downstream in zip(ordered, ordered[1:], strict=False):
             up = self.stages[upstream].items
             down = self.stages[downstream].items
             if down > up:
@@ -272,7 +273,7 @@ def align_markers_to_refs(
         return aligned, "no_markers"
     if len(markers) != len(aligned):
         return aligned, "unverified"
-    for entry, marker in zip(aligned, markers):
+    for entry, marker in zip(aligned, markers, strict=True):
         entry["marker"] = str(marker)
     return aligned, "aligned"
 
@@ -395,7 +396,7 @@ def build_episodic_funnel(
         injected.reasons[REASON_RANK_CUTOFF] = injected.reasons.get(REASON_RANK_CUTOFF, 0) + (
             len(ranked_rows) - len(injected_rows)
         )
-    for ref, reason in selfcheck_dropped_refs or []:
+    for ref, _reason in selfcheck_dropped_refs or []:
         injected.dropped_refs.append((ref, REASON_SELFCHECK_INTERNAL))
         injected.reasons[REASON_SELFCHECK_INTERNAL] = injected.reasons.get(REASON_SELFCHECK_INTERNAL, 0) + 1
     return funnel
@@ -646,7 +647,7 @@ def record_funnel_metrics(record: dict[str, Any]) -> None:
                     stage=str(stage), surface=clamped_surface, outcome="kept"
                 ).inc(items)
                 dropped = 0
-                for reason, count in (observation.get("reasons") or {}).items():
+                for _reason, count in (observation.get("reasons") or {}).items():
                     CONTEXT_FUNNEL_STAGE_ITEMS_TOTAL.labels(
                         stage=str(stage),
                         surface=clamped_surface,

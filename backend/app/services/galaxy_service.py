@@ -20,7 +20,7 @@ from typing import Any
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from loguru import logger
-from sqlalchemy import and_, delete, func, inspect, or_, select, text, String, bindparam
+from sqlalchemy import String, and_, bindparam, delete, func, inspect, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, undefer
 
@@ -2608,7 +2608,7 @@ class GalaxyService:
         study_minutes: int,
         task_id: UUID | None = None,
         trigger_expansion: bool = True,
-        outcome: "EvidenceObservation | None" = None,
+        outcome: EvidenceObservation | None = None,
     ) -> SparkResult:
         return await self.stats.spark_node(user_id, node_id, study_minutes, task_id, trigger_expansion, outcome)
 

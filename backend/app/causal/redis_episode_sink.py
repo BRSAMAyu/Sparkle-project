@@ -10,6 +10,7 @@ Key prefix:  causal:episode:{trace_id}
 from __future__ import annotations
 
 import json
+from datetime import UTC
 
 from app.causal.episode_logger import EvaluationEpisode
 
@@ -45,9 +46,9 @@ class RedisEpisodeSink:
         if raw is None:
             return
         data = json.loads(raw)
-        from datetime import datetime, timezone
+        from datetime import datetime
         data["actual_outcome"] = actual_outcome
-        data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        data["updated_at"] = datetime.now(UTC).isoformat()
         await self.redis.setex(key, self.ttl_seconds, json.dumps(data, ensure_ascii=False))
 
     async def by_trace_id(self, trace_id: str) -> EvaluationEpisode | None:

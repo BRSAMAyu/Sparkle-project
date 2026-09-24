@@ -201,7 +201,7 @@ async def event_generator(queue: asyncio.Queue):
                     queue.get(),
                     timeout=phase5_config.SSE_HEARTBEAT_INTERVAL,
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 yield ": heartbeat\n\n"
                 continue
 

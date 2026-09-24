@@ -116,7 +116,7 @@ class EndpointShield:
 
         try:
             await asyncio.wait_for(self._semaphore.acquire(), timeout=self.wait_timeout)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self.shed += 1
             raise EndpointOverloaded(
                 f"[{self.name}] compute slots saturated, key={key}"
@@ -179,7 +179,7 @@ class EndpointShield:
         """加入在飞计算；等待超过 wait_timeout 视为过载（计算本身不受影响）。"""
         try:
             return await asyncio.wait_for(asyncio.shield(task), timeout=self.wait_timeout)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self.shed += 1
             raise EndpointOverloaded(f"[{self.name}] inflight join timed out, key={key}") from None
 

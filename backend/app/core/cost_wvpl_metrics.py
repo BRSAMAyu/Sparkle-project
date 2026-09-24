@@ -79,7 +79,7 @@ async def _daily_spend_all_categories() -> float:
     for category in CostCategory:
         try:
             total += await breaker.read_daily_spend(category)
-        except Exception as exc:  # noqa: BLE001 — 单类目读失败不拖垮整个快照
+        except Exception:  # noqa: BLE001 — 单类目读失败不拖垮整个快照
             logger.opt(exception=True).debug("cost_wvpl: daily spend read failed for {}", category)
     return total
 

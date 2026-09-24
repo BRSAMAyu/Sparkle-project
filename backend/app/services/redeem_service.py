@@ -65,7 +65,7 @@ def normalize_redeem_code(raw: str) -> str:
 
 def hash_redeem_code(normalized: str) -> str:
     """归一化码面 → 域分隔 SHA-256 hex。这是 DB 里唯一存在的码面形态。"""
-    return hashlib.sha256(f"{HASH_DOMAIN}:{normalized}".encode("utf-8")).hexdigest()
+    return hashlib.sha256(f"{HASH_DOMAIN}:{normalized}".encode()).hexdigest()
 
 
 def looks_like_redeem_code(normalized: str) -> bool:

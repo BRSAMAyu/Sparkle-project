@@ -2818,7 +2818,7 @@ class PrivateMessageService:
             and_(
                 PrivateMessage.receiver_id == user_id,
                 PrivateMessage.sender_id == sender_id,
-                PrivateMessage.is_read == False
+                PrivateMessage.is_read.is_(False)
             )
         ).values(
             is_read=True,
@@ -3215,7 +3215,7 @@ class CommunityResourceScorer:
 
 def _cosine_sim(a: list[float], b: list[float]) -> float:
     """Compute cosine similarity between two vectors."""
-    dot = sum(x * y for x, y in zip(a, b))
+    dot = sum(x * y for x, y in zip(a, b, strict=False))
     na = sum(x * x for x in a) ** 0.5
     nb = sum(x * x for x in b) ** 0.5
     if na == 0 or nb == 0:
@@ -3346,7 +3346,7 @@ async def find_users_with_similar_goals(
         if right_id in cand_friend_map:
             cand_friend_map[right_id].add(left_id)
 
-    for (cand_goal, cand_user), cand_emb in zip(candidates, cand_embeddings):
+    for (cand_goal, cand_user), cand_emb in zip(candidates, cand_embeddings, strict=False):
         # Title vector similarity (0-1)
         if src_embedding and cand_emb:
             vec_sim = _bounded_similarity(_cosine_sim(src_embedding, cand_emb))

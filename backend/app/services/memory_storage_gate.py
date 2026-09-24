@@ -555,7 +555,7 @@ _REPORTED_BACKCHANNEL_RE = re.compile(
 # stay R4-exact-only to avoid over-rejection. Kept DISJOINT from
 # TRANSIENT_STATE_VOCAB: 头疼-family transient states are classified by R6
 # (working memory), the net only sees non-transient sensitive signals.
-SENSITIVE_DOMAIN_NET: tuple[tuple[str, "re.Pattern[str]"], ...] = (
+SENSITIVE_DOMAIN_NET: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
         "financial",
         re.compile(
@@ -590,7 +590,7 @@ def _normalize_text(value: str) -> str:
 
 DEDUP_TTL_SECONDS = 30 * 60
 _DEDUP_MAXLEN = 4096
-_dedup_cache: "OrderedDict[tuple[str, str], float]" = OrderedDict()
+_dedup_cache: OrderedDict[tuple[str, str], float] = OrderedDict()
 
 
 def _dedup_key(candidate: StorageGateCandidate) -> tuple[str, str]:
@@ -982,7 +982,7 @@ class MemoryStorageGate:
             payload = await asyncio.wait_for(
                 llm(prompt), timeout=settings.SPARKLE_STORAGE_GATE_SEMANTIC_TIMEOUT_SECONDS
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self._breaker_record_failure()
             logger.info("Storage gate semantic classify timed out; degrading to rule default")
             return None

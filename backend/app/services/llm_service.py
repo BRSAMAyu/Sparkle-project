@@ -1693,13 +1693,13 @@ class LLMService:
                     await _track_daily_user_tokens(user_id, usage_data.total_tokens or 0)
                     # O-02 trace spine：llm_call span——actual model/token/cost/
                     # latency 与全链 trace_id 关联（正文零记录）。
-                    _llm_span_tags = dict(
-                        model=str(model_name),
-                        prompt_tokens=int(usage_data.prompt_tokens or 0),
-                        completion_tokens=int(usage_data.completion_tokens or 0),
-                        total_tokens=int(usage_data.total_tokens or 0),
-                        cost_usd=round(float(_llm_cost_usd or 0.0), 6),
-                    )
+                    _llm_span_tags = {
+                        "model": str(model_name),
+                        "prompt_tokens": int(usage_data.prompt_tokens or 0),
+                        "completion_tokens": int(usage_data.completion_tokens or 0),
+                        "total_tokens": int(usage_data.total_tokens or 0),
+                        "cost_usd": round(float(_llm_cost_usd or 0.0), 6),
+                    }
                     _spine = current_recorder()
                     if _spine is not None:
                         _spine.span(

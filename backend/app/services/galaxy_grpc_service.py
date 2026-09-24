@@ -1,7 +1,7 @@
 import asyncio
 from collections import OrderedDict
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import grpc
@@ -43,7 +43,7 @@ _sessions_lock = asyncio.Lock()
 
 def _utcnow() -> datetime:
     # P0-5 fix: replace deprecated datetime.utcnow() with timezone-aware UTC now
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _prune_inactive_collaborative_sessions() -> None:

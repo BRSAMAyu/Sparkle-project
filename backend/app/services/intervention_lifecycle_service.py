@@ -728,7 +728,7 @@ class InterventionLifecycleService:
         if not user_ids:
             return {}
         if fallback is not None:
-            return {user_id: fallback for user_id in user_ids}
+            return dict.fromkeys(user_ids, fallback)
         rows = list(
             (
                 await self.db.execute(

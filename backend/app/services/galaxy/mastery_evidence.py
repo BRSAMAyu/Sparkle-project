@@ -28,14 +28,14 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 # ---------------------------------------------------------------------------
 # Evidence vocabulary
 # ---------------------------------------------------------------------------
 
 
-class MasteryEvidenceType(str, Enum):
+class MasteryEvidenceType(StrEnum):
     """Sources of mastery evidence. Weights follow GALAXY.md V3 contract:
 
     quiz / performance / artifact / review / self-report are tracked

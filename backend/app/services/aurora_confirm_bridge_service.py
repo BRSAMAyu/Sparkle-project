@@ -33,7 +33,6 @@ from loguru import logger
 from app.schemas.unified_notification import UnifiedNotificationResponse
 from app.services.aurora_calibration_card_service import (
     KNOWN_ASSUMPTIONS_KEY,
-    SELF_MODEL_KEY,
     AuroraCalibrationCardService,
 )
 

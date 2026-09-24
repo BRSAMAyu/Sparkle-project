@@ -170,7 +170,7 @@ class BatchLaneChatClient:
     （GLM_BATCH tier + 隔离并发 + 独立预算 + 幂等）。
     """
 
-    def __init__(self, kind: BatchWorkloadKind, lane: "BatchWorklaneService"):
+    def __init__(self, kind: BatchWorkloadKind, lane: BatchWorklaneService):
         self._kind = kind
         self._lane = lane
 
@@ -595,7 +595,7 @@ class BatchWorklaneService:
                     },
                 )
                 BATCH_LANE_DISPATCH_TOTAL.labels(kind=kind.value, outcome=BatchLaneOutcome.COMPLETED.value).inc()
-                BATCH_LANE_LATENCY.labels(kind=kind.value).observe((time.perf_counter() - start))
+                BATCH_LANE_LATENCY.labels(kind=kind.value).observe(time.perf_counter() - start)
                 return _finish(result)
 
             # 有界重试耗尽 → 死信终态（不无限循环、不静默丢）

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -330,7 +330,7 @@ async def delete_goal(
                     TaskModel.plan_id == goal.plan_id,
                     TaskModel.deleted_at.is_(None),
                 )
-                .values(deleted_at=datetime.now(timezone.utc))
+                .values(deleted_at=datetime.now(UTC))
             )
             logger.info(
                 "Soft-deleted %d tasks for goal %s (plan %s)",
@@ -412,7 +412,7 @@ def _auto_assign_scenario_pack(goal: Any, goal_type: str, user_id: str) -> None:
     goal.source_metadata = {
         **(goal.source_metadata or {}),
         "scenario_pack_auto_assigned": True,
-        "scenario_pack_assigned_at": datetime.now(timezone.utc).isoformat(),
+        "scenario_pack_assigned_at": datetime.now(UTC).isoformat(),
     }
 
     # Write initial journey state to Redis.
@@ -429,7 +429,7 @@ def _auto_assign_scenario_pack(goal: Any, goal_type: str, user_id: str) -> None:
                 json.dumps({
                     "pack_id": pack_id,
                     "current_node": first_node,
-                    "started_at": datetime.now(timezone.utc).isoformat(),
+                    "started_at": datetime.now(UTC).isoformat(),
                     "is_on_backbone": True,
                 }),
                 ex=90 * 24 * 3600,

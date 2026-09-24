@@ -72,7 +72,7 @@ DEFAULT_PROFILE_DEFAULTS: dict[str, float] = {
 # Bounds enforce safety: no parameter can drift beyond these limits.
 PARAMETER_BOUNDS: dict[str, tuple[float, float]] = {
     # Precedence weights: [0, 15]
-    **{k: (0.0, 15.0) for k in DEFAULT_PRECEDENCE_WEIGHTS},
+    **dict.fromkeys(DEFAULT_PRECEDENCE_WEIGHTS, (0.0, 15.0)),
     # Thresholds: various
     "goal_clear_threshold_base": (0.3, 0.95),
     "goal_clear_threshold_sensitivity": (0.0, 0.5),
@@ -86,7 +86,7 @@ PARAMETER_BOUNDS: dict[str, tuple[float, float]] = {
     "emotional_block_negative_ratio": (0.3, 0.9),
     "corrections_threshold": (1, 10),
     # Profile defaults: [0.1, 0.95]
-    **{k: (0.1, 0.95) for k in DEFAULT_PROFILE_DEFAULTS},
+    **dict.fromkeys(DEFAULT_PROFILE_DEFAULTS, (0.1, 0.95)),
 }
 
 ALL_DEFAULT_PARAMETERS: dict[str, float | int] = {

@@ -313,7 +313,7 @@ class SignalAggregator:
 
         # Parallel collection via asyncio.gather
         results = await asyncio.gather(*[c for _s, _svc, c in tasks], return_exceptions=True)
-        for (spec, _service, _coro), result in zip(tasks, results):
+        for (spec, _service, _coro), result in zip(tasks, results, strict=True):
             try:
                 payload = result if not isinstance(result, Exception) else {}
             except Exception:

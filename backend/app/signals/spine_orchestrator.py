@@ -2069,7 +2069,7 @@ class SpineOrchestrator:
     async def on_absence_detected(
         self,
         user_id: str,
-        snapshot: "AbsenceSnapshot",
+        snapshot: AbsenceSnapshot,
     ) -> CausalTrace | None:
         """Process an absence signal from the periodic scanner.
 

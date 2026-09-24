@@ -34,7 +34,7 @@ _MAX_TAG_VALUE_LEN = 48
 _MAX_TAG_KEY_LEN = 48
 _MAX_TAGS_PER_SPAN = 32
 
-_spine_var: ContextVar["SpineRecorder | None"] = ContextVar("trace_spine_recorder", default=None)
+_spine_var: ContextVar[SpineRecorder | None] = ContextVar("trace_spine_recorder", default=None)
 
 
 def fingerprint(text: str) -> tuple[int, str]:
@@ -67,9 +67,7 @@ def sanitize_tags(tags: dict[str, Any] | None) -> dict[str, Any]:
         key = _clamp_str(str(raw_key or ""), _MAX_TAG_KEY_LEN)
         if not key or raw_value is None:
             continue
-        if isinstance(raw_value, bool):
-            clean[key] = raw_value
-        elif isinstance(raw_value, (int, float)):
+        if isinstance(raw_value, (bool, int, float)):
             clean[key] = raw_value
         elif isinstance(raw_value, str):
             if len(raw_value) <= _MAX_TAG_VALUE_LEN:

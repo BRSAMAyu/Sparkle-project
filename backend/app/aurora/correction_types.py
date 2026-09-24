@@ -92,7 +92,7 @@ class AuroraCorrectionPayload:
         cls,
         raw: Mapping[str, Any] | None = None,
         **overrides: Any,
-    ) -> "AuroraCorrectionPayload":
+    ) -> AuroraCorrectionPayload:
         """Build a complete payload from canonical or legacy correction fields."""
         data: dict[str, Any] = {}
         if raw:

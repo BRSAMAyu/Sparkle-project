@@ -137,7 +137,7 @@ class AbsenceDetector:
                 pipe.get(key)
             values = await pipe.execute()
 
-            for key, raw_val in zip(keys, values):
+            for key, raw_val in zip(keys, values, strict=True):
                 if raw_val is None:
                     continue
                 val = raw_val.decode() if isinstance(raw_val, bytes) else raw_val

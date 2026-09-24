@@ -480,7 +480,7 @@ class ReportService:
             # Private message reports can only be reviewed by superusers
             from app.models.user import User
             rev_result = await db.execute(
-                select(User).where(User.id == reviewer_id, User.is_superuser == True)
+                select(User).where(User.id == reviewer_id, User.is_superuser)
             )
             if not rev_result.scalar_one_or_none():
                 raise ValueError("无权操作")

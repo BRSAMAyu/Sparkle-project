@@ -636,8 +636,8 @@ async def invalidate_galaxy_graph_view_cache(user_id: UUID) -> int:
     Redis 层时 shield 仍回写前旧值。回调未注册（API 模块未加载）时为
     no-op；同步纯内存操作，失败不传播（notify 内部已兜底）。
     """
-    from app.core.cache import cache_service
     from app.config import settings
+    from app.core.cache import cache_service
 
     pattern = f"{settings.APP_NAME}:view:get_galaxy_graph:{user_id}:*"
     deleted = await cache_service.delete_pattern(pattern)
