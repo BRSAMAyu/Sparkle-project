@@ -12,6 +12,10 @@ if [[ ! -x "${PYTHON_BIN}" ]]; then
 fi
 export SECRET_KEY="${SECRET_KEY:-rule-guard-secret-0123456789abcdef}"
 export JWT_SECRET="${JWT_SECRET:-rule-guard-jwt-0123456789abcdef}"
+# 守卫环境确定性：pytest 系规则在主仓会读到 backend/.env 的演示库 DATABASE_URL，
+# 被 TEST-DBGUARD 会话门拒跑（worktree 无 .env 反而绿——环境性假红）。
+# 此处钉 sqlite 使任何检出形态行为一致；确需真库的规则用 GUARD_DATABASE_URL 覆盖。
+export DATABASE_URL="${GUARD_DATABASE_URL:-sqlite+aiosqlite:///:memory:}"
 
 MANIFEST_PATH="${REPO_ROOT}/scripts/rule_guard_manifest.tsv"
 RULE_FILTER=""
