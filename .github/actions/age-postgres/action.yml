@@ -79,14 +79,14 @@ runs:
         AGE_PG_DB: ${{ inputs.postgres-db }}
         AGE_PG_NAME: ${{ inputs.container-name }}
       run: |
-        for i in $(seq 1 40); do
+        for i in $(seq 1 150); do
           if docker exec "$AGE_PG_NAME" pg_isready -U "$AGE_PG_USER" -d "$AGE_PG_DB" >/dev/null 2>&1; then
             echo "PostgreSQL is ready (attempt $i)"
             exit 0
           fi
           sleep 2
         done
-        echo "::error::PostgreSQL did not become ready in 80s"
+        echo "::error::PostgreSQL did not become ready in 300s"
         docker logs "$AGE_PG_NAME" || true
         exit 1
       shell: bash
