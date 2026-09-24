@@ -1,0 +1,133 @@
+ts(post-E02-merge-0919_2120),session_id,request_id,model,tier,mode,prompt_tokens,completion_tokens,latest_user_msg,lane,ladder_observed,classification,rationale
+09-20 13:24:11,f406ebd8-3272-41a9-b,audit-1789910483,dashscope_fast,fast,balanced,944,1229,我在准备离散数学期末，图论部分完全跟不上，能帮我梳理一下欧拉回路和哈密顿回路的区别吗？,chat_journey,L2/L3,necessary_llm,考试冲刺旅程轮次（sprint 会话 phase_d/工具流上下文）——观测全 FAST（G-1 同源证据）
+09-20 13:37:27,d733d8d0-aac3-4a13-b,audit-1789911137,dashscope_fast,fast,balanced,1451,1230,最近在备考离散数学，图论这块卡住好久了……欧拉回路和哈密顿回路到底差在哪？我总是分不清，考试肯定,chat_journey,L2/L3,necessary_llm,考试冲刺旅程轮次（sprint 会话 phase_d/工具流上下文）——观测全 FAST（G-1 同源证据）
+09-20 13:37:32,593ca13e-c571-4bdf-a,audit-1789911247,dashscope_fast,fast,balanced,1425,599,,chat_journey,?,insufficient_evidence,无消息 join
+09-20 13:45:45,588c6052-9f45-4b3c-9,verify-1789911590,dashscope_fast,fast,balanced,1380,1138,我叫小鹿，正在准备离散数学期末考，图论里欧拉回路和哈密顿回路总是分不清，能帮我讲讲区别吗？,chat_journey,L2/L3,necessary_llm,考试冲刺旅程轮次（sprint 会话 phase_d/工具流上下文）——观测全 FAST（G-1 同源证据）
+09-20 13:54:06,af337503-8682-45f8-9,verify-1789912323,dashscope_fast,fast,balanced,1357,688,还记得我叫什么名字吗？我在准备哪门考试的哪个部分？,chat_journey,L1,necessary_llm,记忆类轮次落 FAST——E-01 W-1/E-02 修复后的行为证据
+09-20 13:59:15,e9ffb081-27b0-4fe9-9,seed-1789912562,dashscope_fast,fast,balanced,1399,659,说实话我今天有点焦虑。离散数学期末就剩两周了，一想到考试就静不下心。而且考试周那几天我特别怕被打,chat_journey,L2/L3,necessary_llm,考试冲刺旅程轮次（sprint 会话 phase_d/工具流上下文）——观测全 FAST（G-1 同源证据）
+09-20 14:05:58,e77e40fc-1af4-4a26-a,verify-1789912922,dashscope_fast,fast,balanced,19,71,我之前告诉过你我养宠物了吗？它叫什么名字？,chat_journey,L1,necessary_llm,记忆类轮次落 FAST——E-01 W-1/E-02 修复后的行为证据
+09-20 14:06:04,0f0623e4-108f-49ac-a,seed-1789912889,dashscope_fast,fast,balanced,1425,876,今天把「离散数学期末复习」目标建好了，还拆了三个小任务：欧拉哈密顿判定题、Dijkstra 手算,chat_journey,L2/L3,necessary_llm,考试冲刺旅程轮次（sprint 会话 phase_d/工具流上下文）——观测全 FAST（G-1 同源证据）
+09-20 14:10:57,b7c34e6e-0cf5-454e-8,seed-1789913169,dashscope_fast,fast,balanced,1454,3439,,chat_journey,?,insufficient_evidence,无消息 join
+09-20 14:11:03,6a19af44-7534-4ed7-8,verify-1789913249,dashscope_fast,fast,balanced,2350,976,根据我上传的复习材料，欧拉回路存在的条件是什么？和哈密顿回路判定有什么区别？,chat_journey,L2/L3,necessary_llm,考试冲刺旅程轮次（sprint 会话 phase_d/工具流上下文）——观测全 FAST（G-1 同源证据）
+09-20 14:21:45,fe91fbee-f1aa-4000-a,seed-1789913925,dashscope_fast,fast,balanced,1114,1418,,chat_journey,?,insufficient_evidence,无消息 join
+09-20 14:27:45,6546cc7a-eb5c-48ec-8,seed-1789914319,dashscope_fast,fast,balanced,1104,338,,chat_journey,?,insufficient_evidence,无消息 join
+09-20 16:08:42,597dda59-59f4-4408-a,audit-1789920464,dashscope_fast,fast,balanced,13870,359,我上传的《图论考前小结》里怎么区分欧拉回路和哈密顿回路？请引用材料原文说明,chat_journey,L2->L1,necessary_llm,文档接地引用问答（prompt 13870）观测落 FAST；早于 21451599(09-20 22:29) 反指标修复
+09-20 23:38:03,fe1fde1f-18b0-46fb-a,audit-1789947405,dashscope_fast,fast,balanced,1307,1429,我在准备离散数学期末，图论部分完全跟不上，能帮我梳理一下欧拉回路和哈密顿回路的区别吗？,chat_journey,L2/L3,necessary_llm,考试冲刺旅程轮次（sprint 会话 phase_d/工具流上下文）——观测全 FAST（G-1 同源证据）
+09-20 23:41:37,277b2e87-3653-4525-b,audit-1789947625,dashscope_fast,fast,balanced,1419,650,我在准备离散数学期末，图论部分完全跟不上，能帮我梳理一下欧拉回路和哈密顿回路的区别吗？,chat_journey,L2/L3,necessary_llm,考试冲刺旅程轮次（sprint 会话 phase_d/工具流上下文）——观测全 FAST（G-1 同源证据）
+09-20 23:47:46,d21ecba5-ea87-489a-8,rawprobe-1789948063,dashscope_fast,fast,balanced,1397,137,一句话回答：欧拉回路和哈密顿回路的核心区别是什么？,chat_journey,L1,necessary_llm,轻量问答/多轮续写——FAST+slim 生效（fast-first 达成）
+09-21 00:05:32,c8155a6a-acf0-4bf7-8,postdebt-1789949123,dashscope_fast,fast,balanced,1392,373,用一句话告诉我今天我该优先复习什么？,chat_journey,L2/L3,necessary_llm,考试冲刺旅程轮次（sprint 会话 phase_d/工具流上下文）——观测全 FAST（G-1 同源证据）
+09-21 00:31:39,3d8f5642-de7f-4c8a-a,f821probe-1789950688,dashscope_fast,fast,balanced,1095,392,帮我用一句话总结：欧拉路径存在的充要条件是什么？,chat_journey,L1,necessary_llm,记忆类轮次落 FAST——E-01 W-1/E-02 修复后的行为证据
+09-21 00:37:52,6cfa70c1-8cea-4d9d-b,x08probe-1789951065,dashscope_fast,fast,balanced,1424,164,一句话：哈密顿回路和欧拉回路的判定难度差别在哪？,chat_journey,L1,necessary_llm,轻量问答/多轮续写——FAST+slim 生效（fast-first 达成）
+09-21 01:41:10,5de08263-afdf-459b-b,fix49-1789954867,dashscope_fast,fast,balanced,1417,61,一句话确认：你能正常回复吗？,chat_journey,L1,necessary_llm,连通性/冒烟确认——轻查询符合 fast-first（理想可 L0 模板，G-2 同族）
+09-21 02:23:45,ea02f1c3-5f9d-49ba-8,echo-1789957420,dashscope_fast,fast,balanced,1415,105,一句话：你能听到我吗？,chat_journey,L1,necessary_llm,轻量问答/多轮续写——FAST+slim 生效（fast-first 达成）
+09-21 04:57:37,580cc62b-faed-43ea-a,o07-1789966646,dashscope_fast,fast,balanced,1391,289,一句话：我现在还能正常聊天吗？,chat_journey,L1,necessary_llm,连通性/冒烟确认——轻查询符合 fast-first（理想可 L0 模板，G-2 同族）
+09-21 05:30:49,3e952ee4-708b-4702-8,g02-1789968644,dashscope_fast,fast,balanced,1391,80,一句话：主链路还正常吗？,chat_journey,L1,necessary_llm,连通性/冒烟确认——轻查询符合 fast-first（理想可 L0 模板，G-2 同族）
+09-21 07:06:07,session_178997429518,aurora_modeling_1789974295170888_0,dashscope_fast,fast,balanced,1395,340,,aurora_modeling,L1,necessary_llm,Aurora modeling 旁路生成（ modeling runtime），有 token 消耗但无聊天消息对应
+09-21 10:02:09,73209999-2744-4116-a,gw53-1789984923,dashscope_fast,fast,balanced,1393,194,一句话：星图现在能正常显示吗？,chat_journey,L1,necessary_llm,连通性/冒烟确认——轻查询符合 fast-first（理想可 L0 模板，G-2 同族）
+09-21 12:39:31,e99ea650-cc13-497e-a,x07-1789994365,dashscope_fast,fast,balanced,1389,107,一句话：一切正常吗？,chat_journey,L1,necessary_llm,连通性/冒烟确认——轻查询符合 fast-first（理想可 L0 模板，G-2 同族）
+09-22 11:22:15,29af6ffd-a71c-4b51-9,audit-1790076127,dashscope_fast,fast,balanced,1424,103,一句话回答：欧拉回路和哈密顿回路的本质区别是什么？,chat_journey,L1,necessary_llm,轻量问答/多轮续写——FAST+slim 生效（fast-first 达成）
+09-22 11:30:11,ns001-ddf9d2513d6a,44ed24426e1e46139436892b3a3a6aa1,dashscope_fast,fast,balanced,1465,1203,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 11:36:41,ns001-f02d7ff837ff,3944dcc1eba04a6c87b6e8d1fd4d6b39,dashscope_fast,fast,balanced,1126,1653,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 12:38:37,ns001-aa28a53bfbc6,bb02ade1e0814b24bf48924180d6914b,dashscope_fast,fast,balanced,1399,2093,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 12:39:33,ns001-6a7d3d79aa98,497de245e2384e5c92e92e4e92e1306b,dashscope_fast,fast,balanced,1393,195,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 12:40:17,ns001-6a7d3d79aa98,af2e3650d4754b11925a45206376d797,dashscope_fast,fast,balanced,1228,178,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 12:43:59,ns001-2b8c37a91d1d,869e8a5749f8486eb8cfe0bc8cf6eb41,dashscope_fast,fast,balanced,1098,560,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 12:52:23,b316863f-0068-44d6-b,audit-1790081490,dashscope_fast,fast,balanced,1419,273,一句话回答：哈密顿图的充分条件有哪些？,chat_journey,L1,necessary_llm,轻量问答/多轮续写——FAST+slim 生效（fast-first 达成）
+09-22 13:09:18,fec25b12-8f2b-4aed-b,audit-1790082534,dashscope_fast,fast,balanced,1379,1411,一句话：欧拉图的判定条件？,chat_journey,L1,necessary_llm,轻量问答/多轮续写——FAST+slim 生效（fast-first 达成）
+09-22 13:21:12,ns001-9910e4785883,f23a8b2929314ce99026994a9e715e3a,dashscope_fast,fast,balanced,1946,2456,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 13:37:11,ns001-7947b5d34593,614c0331daa541089fb1cf75030b2c7e,dashscope_fast,fast,balanced,1401,2931,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 13:38:05,ea112f10-605f-4e63-8,audit-1790084161,dashscope_fast,fast,balanced,1378,1690,一句话：什么是图的同构？,chat_journey,L1,necessary_llm,轻量问答/多轮续写——FAST+slim 生效（fast-first 达成）
+09-22 13:42:24,ns001-46058ed8d642,867b539e9e24461299859badc982a9e8,dashscope_fast,fast,balanced,1050,3076,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 13:43:33,ns001-46058ed8d642,363fa1d3940343adbaef6e0c3ec62af9,dashscope_fast,fast,balanced,1982,2379,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 13:47:33,ns001-6c4861e8306d,067fb3f95eba4d278f830782b1e2636b,dashscope_fast,fast,balanced,1024,2794,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 13:48:31,ns001-e619ce793833,2878244ed3aa4cd8bc6c1840c284122a,dashscope_fast,fast,balanced,1356,2436,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 13:49:13,ns001-6c4861e8306d,0f806e6e815e4b7ab3354c528358419d,dashscope_fast,fast,balanced,1690,1377,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 15:07:13,111ccca2-6b6c-4aec-b,audit-1790089607,dashscope_fast,fast,balanced,1334,1540,一句话：什么是平面图的对偶图？,chat_journey,L1,necessary_llm,轻量问答/多轮续写——FAST+slim 生效（fast-first 达成）
+09-22 15:27:38,ns3-3280d88457d4,8e11c399771d4e53b12288649cd36c74,dashscope_fast,fast,balanced,1319,2730,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 15:30:35,ns3-de98bbe85277,8b2e4a9f837a46b19deaafe5d8829450,dashscope_fast,fast,balanced,1153,2163,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 15:31:39,ns3-de98bbe85277,af6e8951e7e8480fb7bbb2ac789c6689,dashscope_fast,fast,balanced,1929,2202,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 15:32:51,ns3-cf25f4652189,802fbe956c0b442f86ab6b19263480d9,dashscope_fast,fast,balanced,1189,2303,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 16:03:20,a54c0354-7778-4211-8,wt126-f7ea70774bba,dashscope_fast,fast,balanced,1482,2915,我要开始备考离散数学期末，7天后考试，图论最弱，帮我定个冲刺计划并梳理欧拉回路和哈密顿回路的区别,chat_journey,L2/L3,necessary_llm,考试冲刺旅程轮次（sprint 会话 phase_d/工具流上下文）——观测全 FAST（G-1 同源证据）
+09-22 16:04:22,a54c0354-7778-4211-8,wt126-711ba7ddb2f9,dashscope_fast,fast,balanced,1361,3228,那哈密顿回路在实际应用里有什么典型例子？再给我两道练习题。,chat_journey,L1,necessary_llm,轻量问答/多轮续写——FAST+slim 生效（fast-first 达成）
+09-22 16:05:03,a54c0354-7778-4211-8,wt126-f71086952d77,dashscope_fast,fast,balanced,13276,1444,我感觉不太行啊，怎么办,chat_journey,L1,necessary_llm,轻量问答/多轮续写——FAST+slim 生效（fast-first 达成）
+09-22 16:05:57,af0499b6-0311-4287-8,wt126-554cbeb3034d,dashscope_fast,fast,balanced,1070,2635,帮我系统讲解一下二部图的判定定理，包括充要条件和证明思路。,chat_journey,L2->L1,rule_eligible_for_deeper,深词轮落 FAST——phase_d 强制 tier（capability_selection cost_band）先于 deep-marker 否决（错位 G-1）
+09-22 16:06:12,517a114f-06e4-4958-8,wt126-de33862194f1,dashscope_fast,fast,balanced,1378,860,一句话回答：什么是图的度数？,chat_journey,L1,necessary_llm,轻量问答/多轮续写——FAST+slim 生效（fast-first 达成）
+09-22 16:07:08,ef90b35e-11d5-4ecb-9,wt126-3e4ad9b99cb5,dashscope_fast,fast,balanced,1037,2609,帮我系统讲解一下拓扑排序的性质和应用场景。,chat_journey,L2->L1,rule_eligible_for_deeper,深词轮落 FAST——phase_d 强制 tier（capability_selection cost_band）先于 deep-marker 否决（错位 G-1）
+09-22 16:27:18,05fe468e-8791-4329-a,req_c3127bacb5b64d34982ce32b7efb74a3,dashscope_fast,fast,balanced,1078,2535,提醒一下：我有一门 量子引力动力学bf3837 期末考试在 7 天后，目标 85 分。,chat_journey,L1,necessary_llm,记忆类轮次落 FAST——E-01 W-1/E-02 修复后的行为证据
+09-22 17:10:02,b3c0b25c-83a3-4567-b,cfg-1790096959-0,dashscope_fast,fast,balanced,1315,895,欧拉回路和哈密顿回路有什么区别？各自怎么判断？,chat_journey,L1,necessary_llm,轻量问答/多轮续写——FAST+slim 生效（fast-first 达成）
+09-22 17:10:17,2b853c8b-7487-4b88-b,cfg-1790096959-1,dashscope_fast,fast,balanced,1338,87,那考试里遇到判断题应该抓哪些关键点？,chat_journey,L2/L3,necessary_llm,考试冲刺旅程轮次（sprint 会话 phase_d/工具流上下文）——观测全 FAST（G-1 同源证据）
+09-22 17:14:11,ns001-a4325465ed35,43ea7e36132148728c2c3e3b900a7989,dashscope_fast,fast,balanced,1676,391,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 17:14:44,ns001-a4325465ed35,1b93f0b0a3134a31be9a80a5dc960ef4,dashscope_fast,fast,balanced,1654,152,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 17:15:28,ns001-a4325465ed35,37efb8049a224fc3848b2552eb0c687e,dashscope_fast,fast,balanced,1911,502,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 17:15:56,ns001-8ba6b56473b0,b8ded7988e6a4994be325cfad7c3f8fd,dashscope_fast,fast,balanced,1311,207,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 17:16:21,ns001-a4325465ed35,ae0c9ac70f9041338db3e5ca6b5ce5d9,dashscope_fast,fast,balanced,1976,159,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 17:25:20,ns001-8d9d3115ee6c,4989e4c5d26d44b4ac2395b714fb9b25,dashscope_fast,fast,balanced,1358,579,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 17:26:08,ns001-8d9d3115ee6c,e822ef0c6d8c45d1a47d5d00c9cb933e,dashscope_fast,fast,balanced,1785,419,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 17:26:53,ns001-8d9d3115ee6c,4d9f87e1ed594fb8abd9ae3fa5c43883,dashscope_fast,fast,balanced,2271,579,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 17:27:18,ns001-e8daee63985d,c88e88261dfc4339833c8dbf9ae22519,dashscope_fast,fast,balanced,1358,365,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 17:27:44,ns001-8d9d3115ee6c,97d2d1bea62c4982a51d3fd6311b2510,dashscope_fast,fast,balanced,2209,305,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 17:34:28,ns001-dd6446e23e2e,0eaa4be5b0e64107b4d81058d6827531,dashscope_fast,fast,balanced,1676,464,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 17:34:52,ns001-dd6446e23e2e,3d7fff0ab2a24e358faa70b20c23c0b8,dashscope_fast,fast,balanced,1699,433,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 17:36:03,ns001-dd6446e23e2e,b9515d64dfa546bab765431d84c3ad6a,dashscope_fast,fast,balanced,2332,808,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 17:36:59,ns001-580f1e3730de,9b9f3df050a749d58944c019b81c3108,dashscope_fast,fast,balanced,1332,690,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 17:37:28,ns001-dd6446e23e2e,11ce39880c174b28bb768e2b0d965fbb,dashscope_fast,fast,balanced,2394,365,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 18:32:10,ns001-a447b94a4b85,2e6505d989ec499293a8e75fc4bf7c83,dashscope_fast,fast,balanced,1650,590,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 18:32:35,ns001-a447b94a4b85,6caef8b5d5db4820b6a5a40f65a4d758,dashscope_fast,fast,balanced,1817,541,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 18:33:22,ns001-a447b94a4b85,0b67a133312b46a0b4f2a60599ef0a3d,dashscope_fast,fast,balanced,1799,748,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 18:34:09,ns001-29f164ea9168,fc5fb35068e84e27b56d91b211229cd5,dashscope_fast,fast,balanced,1332,1105,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 18:34:38,ns001-a447b94a4b85,c53c441aaefe4cbb8c32799e95323d7a,dashscope_fast,fast,balanced,2348,417,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 19:01:39,ns001-96fe24448951,0bef1c0a28c1477aa58351eead94ccb6,dashscope_fast,fast,balanced,1650,516,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 19:02:23,ns001-96fe24448951,9d29e2c4f7c5491da85ea663d1c95153,dashscope_fast,fast,balanced,1758,445,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 19:03:09,ns001-96fe24448951,b34bc97eb3ab42b686981f14377f5589,dashscope_fast,fast,balanced,2301,794,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 19:03:30,ns001-035865fe551e,64cc7075a6b843cc9475817572610be2,dashscope_fast,fast,balanced,1311,245,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 19:04:10,ns001-96fe24448951,ac46ece710bc45a3b6340a693bccafb7,dashscope_fast,fast,balanced,2250,564,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 21:16:08,ns001-9854ea07376a,8c7fc1584d1d43bbab289d79805c835a,dashscope_fast,fast,balanced,1139,556,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 21:16:52,ns001-9854ea07376a,1f5d1541c1a943ec82ac6078aa4d07a2,dashscope_fast,fast,balanced,1807,509,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-22 23:22:06,d310c6f9-a2df-4d52-9,req_d4987dcb37244093a1555dc615c6300e,dashscope_fast,fast,balanced,1308,25,用一句话介绍你能帮我做什么,chat_journey,L1,necessary_llm,连通性/冒烟确认——轻查询符合 fast-first（理想可 L0 模板，G-2 同族）
+09-23 01:23:05,db8152a7-76f0-4f53-8,req_3e1c9c4a60344c2eb0b4ab37a0853eb8,dashscope_fast,fast,balanced,1064,74,等等，先帮我查一下这个任务完成没有,chat_journey,L1,necessary_llm,轻量问答/多轮续写——FAST+slim 生效（fast-first 达成）
+09-23 01:23:28,e7b77832-7b19-402c-a,req_352919f354974618bbdb88f79eda35f7,dashscope_fast,fast,balanced,1458,137,先不管那个了，把冲刺节奏调轻一点继续,chat_journey,L2/L3,necessary_llm,考试冲刺旅程轮次（sprint 会话 phase_d/工具流上下文）——观测全 FAST（G-1 同源证据）
+09-23 01:49:55,session_179012818108,aurora_modeling_1790128181084070_0,dashscope_fast,fast,balanced,1385,126,,aurora_modeling,L1,necessary_llm,Aurora modeling 旁路生成（ modeling runtime），有 token 消耗但无聊天消息对应
+09-23 01:57:26,session_179012818108,aurora_modeling_1790128617015107_3,dashscope_fast,fast,balanced,1285,187,,aurora_modeling,L1,necessary_llm,Aurora modeling 旁路生成（ modeling runtime），有 token 消耗但无聊天消息对应
+09-23 03:57:49,session_179013585306,aurora_modeling_1790135853062874_0,dashscope_fast,fast,balanced,1359,131,,aurora_modeling,L1,necessary_llm,Aurora modeling 旁路生成（ modeling runtime），有 token 消耗但无聊天消息对应
+09-23 04:01:52,session_179013585306,aurora_modeling_1790136074262134_2,dashscope_fast,fast,balanced,1251,355,,aurora_modeling,L1,necessary_llm,Aurora modeling 旁路生成（ modeling runtime），有 token 消耗但无聊天消息对应
+09-23 04:04:13,session_179013585306,aurora_modeling_1790136210492034_3,dashscope_fast,fast,balanced,1590,1278,,aurora_modeling,L1,necessary_llm,Aurora modeling 旁路生成（ modeling runtime），有 token 消耗但无聊天消息对应
+09-23 04:06:42,session_179013585306,aurora_modeling_1790136361348190_4,dashscope_fast,fast,balanced,2367,1315,,aurora_modeling,L1,necessary_llm,Aurora modeling 旁路生成（ modeling runtime），有 token 消耗但无聊天消息对应
+09-23 04:08:23,session_179013585306,aurora_modeling_1790136402423608_5,dashscope_fast,fast,balanced,2400,87,,aurora_modeling,L1,necessary_llm,Aurora modeling 旁路生成（ modeling runtime），有 token 消耗但无聊天消息对应
+09-23 04:34:38,9809220e-61d4-4dc7-8,req_258db28ab808456e8b3fec14941f6a2b,dashscope_fast,fast,balanced,1351,1672,帮我深入分析欧拉回路和哈密顿回路的判定条件差异，给出详细对比和例题，要全面,chat_journey,L2->L1,rule_eligible_for_deeper,深词轮落 FAST——phase_d 强制 tier（capability_selection cost_band）先于 deep-marker 否决（错位 G-1）
+09-23 06:09:03,ns001-28fd19d84705,2d13fe143efe41fe851a93d084d7f5f8,dashscope_fast,fast,balanced,1101,314,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-23 08:21:17,6712bec1-881a-41ae-8,req_698fe9db3c864a5b888cd8ee49f295b4,dashscope_fast,fast,balanced,1334,25,用一句话介绍你能帮我做什么,chat_journey,L1,necessary_llm,连通性/冒烟确认——轻查询符合 fast-first（理想可 L0 模板，G-2 同族）
+09-24 00:02:00,ns001-9ed3a1af18a5,5ca07e454a18484e9b883e228f9d54e4,dashscope_fast,fast,balanced,1001,324,,canary_probe,L1,necessary_llm,ns001-* 金丝雀巡检调用（延迟基线），合成流量非用户旅程
+09-20 13:07:14,de68eecc-4f13-4e85-b,audit-1789909633,default,,balanced,0,0,,chat_journey,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-20 13:37:32,4b5a9181-c97a-453d-b,seed-1789911406,default,,balanced,0,0,,chat_journey,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-20 13:45:50,7512cf99-bdce-4408-b,seed-1789911625,default,,balanced,0,0,,chat_journey,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-20 17:40:32,5225945d-2f64-49bb-b,audit-1789926018,default,,balanced,0,0,,chat_journey,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-22 11:27:29,ns001-577d0e3d92e3,957f0fcc740b4165869873eb76ea8d77,default,,balanced,0,0,,canary_probe,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-22 11:30:25,ns001-ddf9d2513d6a,2acd54714bd549c78f869460915d6cc4,default,,balanced,0,0,,canary_probe,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-22 11:36:46,ns001-5733858f6a2a,0db6f30d4e9644f6a6381153c9cbc427,default,,balanced,0,0,,canary_probe,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-22 12:38:51,ns001-aa28a53bfbc6,ee5840b4e76b4459a54f448a281f48f0,default,,balanced,0,0,,canary_probe,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-22 12:40:33,ns001-7d79bd3127c2,cd6cba69e95f4a089da9ec3e54ac2b05,default,,balanced,0,0,,canary_probe,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-22 12:44:48,ns001-2b8c37a91d1d,c00816890e2b43a08b7fa19c97b689b4,default,,balanced,0,0,,canary_probe,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-22 13:16:39,ns001-937b5f641985,124234fca6cf43c5b9a90e55956e8dd9,default,,balanced,0,0,,canary_probe,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-22 13:17:05,ns001-364aded145a3,68562b4baec040dea7b81669d5ae76df,default,,balanced,0,0,,canary_probe,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-22 13:19:41,ns001-1f4e6376899c,30fde66925f34474a064c389954bf402,default,,balanced,0,0,,canary_probe,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-22 13:19:52,ns001-b1494da6c4eb,4c47533356b64d00848a8f63d458a7e9,default,,balanced,0,0,,canary_probe,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-22 13:20:11,ns001-65029ae7211e,a200b7b1b23f42c29a7ad83734607347,default,,balanced,0,0,,canary_probe,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-22 13:21:32,ns001-b517072fe4da,9342147f971f46c2befababa2284beac,default,,balanced,0,0,,canary_probe,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-22 13:38:21,ns001-7947b5d34593,2ec6ef11354d46e9b3e52526acae1806,default,,balanced,0,0,,canary_probe,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-22 15:27:57,ns3-3280d88457d4,9eeb4b80eeda4f0db5830fd625c08d89,default,,balanced,0,0,,canary_probe,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-22 16:07:49,1d2316b8-596f-430c-b,wt126-7cae23189536,default,,balanced,0,0,,chat_journey,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-22 16:31:25,9d9d99cf-82af-4d22-b,audit-1790094684,default,,balanced,0,0,,chat_journey,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-22 16:45:55,68769762-a92c-4f9f-8,fin-1790095553,default,,balanced,0,0,,chat_journey,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-22 17:13:48,ns001-a4325465ed35,5e182727afea4cc18f2f7c7434d63349,default,,balanced,0,0,,canary_probe,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-22 17:33:59,ns001-dd6446e23e2e,ccd360d4b8f04189b947f36223da44c1,default,,balanced,0,0,,canary_probe,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-22 18:31:37,ns001-a447b94a4b85,ef108505c5e047c5be3e6bfdf6806283,default,,balanced,0,0,,canary_probe,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-22 19:01:11,ns001-96fe24448951,cb8bd74a2a0d4aef8e9e28a3bed80b45,default,,balanced,0,0,,canary_probe,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-22 21:15:30,ns001-dae6e098c687,0afcb61704ea4a52b1f2d61fd6d367e4,default,,balanced,0,0,,canary_probe,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-23 01:22:45,86a9b8ef-83ab-477d-9,req_c7e1389d05b3441f9339622cdb67271e,default,,balanced,0,0,,chat_journey,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-23 01:53:35,session_179012818108,aurora_modeling_1790128405186510_1,default,,balanced,0,0,,aurora_modeling,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-23 01:54:08,session_179012818108,aurora_modeling_1790128428479476_2,default,,balanced,0,0,,aurora_modeling,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-23 01:58:13,session_179012818108,run_1790128683122098_0,default,,balanced,0,0,,run_execution,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-23 01:59:14,session_179012818108,run_1790128743547272_1,default,,balanced,0,0,,run_execution,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-23 03:01:05,7ed2d1de-86d8-45d9-b,req_3f5d54ee32ca440d99044860e52c2999,default,,balanced,0,0,,chat_journey,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-23 03:59:16,session_179013585306,aurora_modeling_1790135944465897_1,default,,balanced,0,0,,aurora_modeling,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
+09-23 04:08:29,session_179013585306,run_1790136496069671_0,default,,balanced,0,0,,run_execution,n/a,wasteful,default 配置 0/0 token 调用（初始化/回退链痕迹，零价值计账；G-3 未关）
