@@ -62,6 +62,11 @@ class GrowthDashboardService:
     """Computes the high-signal dashboard payload for Phase 5."""
 
     LOOKBACK_DAYS = 7
+    # F-5（wt324 实测）：刚完成任务关联的知识节点不得立即成为瓶颈信号，
+    # 否则完成任务的反讽后果是 cockpit 立即转 stalled（wt306 风险4 成真）。
+    # 修法=时间窗判定：窗口期内有关联任务完成的节点不参与瓶颈指认；
+    # 24h 足以覆盖「刚完成即误报」场景，到期自然复权，无需任何数据迁移。
+    BOTTLENECK_RECENT_COMPLETION_WINDOW_HOURS = 24
     DAILY_CONTEXT_RECENT_TTL_SECONDS = 86400 * 21
     DAILY_CONTEXT_RECENT_LIMIT = 14
     # P2-F (daily-flow R2): the line used to be cached until midnight, so the
@@ -741,10 +746,27 @@ class GrowthDashboardService:
         return None
 
     async def _get_weakest_area(self, user_id: UUID) -> str | None:
+        # F-5：窗口期内刚完成任务关联的节点不参与瓶颈指认（排除 completed
+        # 态 + 时间窗判定，与同文件 LOOKBACK_DAYS 式窗口推导同风格）；
+        # 全部节点都被窗口覆盖时返回 None——诚实空态优于指认刚处理过的节点。
+        recent_completed_node_ids = (
+            select(Task.knowledge_node_id).where(
+                Task.user_id == user_id,
+                Task.status == TaskStatus.COMPLETED,
+                Task.completed_at.is_not(None),
+                Task.knowledge_node_id.is_not(None),
+                Task.completed_at
+                >= _utcnow()
+                - timedelta(hours=self.BOTTLENECK_RECENT_COMPLETION_WINDOW_HOURS),
+            )
+        ).scalar_subquery()
         stmt = (
             select(KnowledgeNode.name, UserNodeStatus.mastery_score)
             .join(UserNodeStatus, UserNodeStatus.node_id == KnowledgeNode.id)
-            .where(UserNodeStatus.user_id == user_id)
+            .where(
+                UserNodeStatus.user_id == user_id,
+                KnowledgeNode.id.not_in(recent_completed_node_ids),
+            )
             .order_by(UserNodeStatus.mastery_score.asc(), KnowledgeNode.name.asc())
             .limit(1)
         )

@@ -296,7 +296,7 @@ class _CockpitContent extends ConsumerWidget {
     unawaited(context.push('/tasks/${growthTask.id}/execute?origin=home_growth'));
   }
 
-  /// 「我卡住了」→ 携带真实 context 进入 growth chat
+  /// 「我卡住了」→ 携带真实 context 进入卡点突破 chat
   /// （沿用 dashboard_screen._openBottleneckChat 的 prompt+chat_mode 约定，
   /// J-05 旗舰恢复旅程以此为 home 落点）。
   void _openStuckChat(BuildContext context) {
@@ -313,7 +313,11 @@ class _CockpitContent extends ConsumerWidget {
         path: '/chat',
         queryParameters: {
           'prompt': prompt,
-          'chat_mode': 'growth',
+          // F-6：'growth' 非后端支持 mode（backend chat_modes.py
+          // SUPPORTED_CHAT_MODES 无此值，normalize_chat_mode 静默回落
+          // standard，mode 条形同虚设）。卡住求助=诊断并突破当前瓶颈，
+          // 取语义最近的后端既有 mode deep_analysis。
+          'chat_mode': 'deep_analysis',
         },
       ).toString(),
     );

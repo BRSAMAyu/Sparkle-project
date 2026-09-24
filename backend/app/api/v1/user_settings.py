@@ -34,7 +34,10 @@ async def get_user_settings(
         transparency_level=record.transparency_level,
         system_update_level=record.system_update_level,
         ai_reasoning_mode=record.ai_reasoning_mode,
-        current_goal_id=record.current_goal_id,
+        # F-7 读侧自愈：存量 plan_id 纠偏到 goal 空间（纯读，不回写库）。
+        current_goal_id=await service.resolve_goal_space_id(
+            current_user.id, record.current_goal_id
+        ),
         task_reminders_enabled=record.task_reminders_enabled,
         task_reminder_times=record.task_reminder_times,
         community_intelligence_enabled=record.community_intelligence_enabled,
@@ -92,7 +95,10 @@ async def _update_user_settings_impl(
         transparency_level=record.transparency_level,
         system_update_level=record.system_update_level,
         ai_reasoning_mode=record.ai_reasoning_mode,
-        current_goal_id=record.current_goal_id,
+        # 写侧已在 update_settings 内纠偏；此处读侧再投影一次兜底存量。
+        current_goal_id=await service.resolve_goal_space_id(
+            current_user.id, record.current_goal_id
+        ),
         task_reminders_enabled=record.task_reminders_enabled,
         task_reminder_times=record.task_reminder_times,
         community_intelligence_enabled=record.community_intelligence_enabled,

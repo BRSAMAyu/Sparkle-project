@@ -376,7 +376,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         path: '/chat',
         queryParameters: {
           'prompt': prompt,
-          'chat_mode': 'growth',
+          // F-6：'growth' 非后端支持 mode（SUPPORTED_CHAT_MODES 无此值，
+          // 静默回落 standard）；取语义最近的 deep_analysis，与
+          // today_cockpit_card._openStuckChat 约定一致。
+          'chat_mode': 'deep_analysis',
         },
       ).toString(),
     );

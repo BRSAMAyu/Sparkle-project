@@ -93,11 +93,21 @@ def _push_pref_response(push_pref: PushPreference | None) -> PushPreferenceRespo
     )
 
 
-def _build_user_profile(
+async def _build_user_profile(
+    db: AsyncSession,
     user: User,
     push_pref: PushPreference | None,
     user_settings: UserSettings | None = None,
 ) -> UserProfile:
+    # F-7 读侧自愈：存量 current_goal_id 可能是 plan_id（multi-goal 看板
+    # plan 回退快照误写），读取投影时纠偏到 goal 空间；纯读，不回写库。
+    corrected_goal_id = (
+        await UserSettingsService(db).resolve_goal_space_id(
+            user.id, user_settings.current_goal_id
+        )
+        if user_settings is not None
+        else None
+    )
     return UserProfile(
         id=user.id,
         username=user.username,
@@ -127,7 +137,7 @@ def _build_user_profile(
         linked_providers=_linked_providers(user),
         tos_version=user.tos_version,
         privacy_version=user.privacy_version,
-        current_goal_id=user_settings.current_goal_id if user_settings else None,
+        current_goal_id=corrected_goal_id,
         push_preferences=_push_pref_response(push_pref),
     )
 
@@ -164,7 +174,7 @@ async def get_me(
     """
     push_pref = await _get_push_pref(db, current_user.id)
     user_settings = await _get_user_settings(db, current_user.id)
-    return _build_user_profile(current_user, push_pref, user_settings)
+    return await _build_user_profile(db, current_user, push_pref, user_settings)
 
 
 @router.put("/me", response_model=UserProfile)
@@ -223,7 +233,7 @@ async def update_me(
     push_pref = await _get_push_pref(db, current_user.id)
     if user_settings is None:
         user_settings = await _get_user_settings(db, current_user.id)
-    return _build_user_profile(current_user, push_pref, user_settings)
+    return await _build_user_profile(db, current_user, push_pref, user_settings)
 
 
 @router.post("/me/avatar", response_model=UserProfile)
@@ -264,7 +274,7 @@ async def update_avatar(
 
     push_pref = await _get_push_pref(db, current_user.id)
     user_settings = await _get_user_settings(db, current_user.id)
-    return _build_user_profile(current_user, push_pref, user_settings)
+    return await _build_user_profile(db, current_user, push_pref, user_settings)
 
 
 @router.post("/me/password")
@@ -645,7 +655,7 @@ async def update_my_preferences(
 
     push_pref = await _get_push_pref(db, current_user.id)
     user_settings = await _get_user_settings(db, current_user.id)
-    return _build_user_profile(current_user, push_pref, user_settings)
+    return await _build_user_profile(db, current_user, push_pref, user_settings)
 
 
 @router.get("/me/push-preference", response_model=PushPreferenceResponse)
@@ -729,7 +739,7 @@ async def update_schedule_preferences(
 
     push_pref = await _get_push_pref(db, current_user.id)
     user_settings = await _get_user_settings(db, current_user.id)
-    return _build_user_profile(current_user, push_pref, user_settings)
+    return await _build_user_profile(db, current_user, push_pref, user_settings)
 
 
 @router.get("/{user_id}", summary="获取用户公开资料")

@@ -47,6 +47,11 @@ class UserSettingsService:
         for key, value in updates.items():
             if value is None and key != "current_goal_id":
                 continue
+            if key == "current_goal_id":
+                # F-7：激活链必须落 goal 空间的 id（历史上有 multi-goal 看板
+                # plan 回退快照把 plan_id 当 goal id 传上来，app 拿去请求
+                # /experience/goal-detail/{id} 即 404）。写入口统一纠偏。
+                value = await self.resolve_goal_space_id(user_id, value)
             if hasattr(record, key):
                 setattr(record, key, value)
         await self.db.commit()
@@ -56,6 +61,53 @@ class UserSettingsService:
         await self._invalidate_cache(user_id)
 
         return record
+
+    async def resolve_goal_space_id(self, user_id: UUID, raw: Any) -> Any:
+        """F-7：把 current_goal_id 候选值校验/纠偏到 goal 空间（纯读，不写库）。
+
+        - 命中本人 Goal → 原样返回（零额外成本路径：一次主键查询）；
+        - 命中本人 Plan（缺陷历史形态）→ 纠偏为该 plan 的 goal_id；
+          plan 未挂 goal 时返回 None（诚实空态优于一个必然 404 的 id）；
+        - 其余（None/非 UUID/悬空 id）→ 原样返回，不做吞值——悬空可能来自
+          写读竞态或外部数据损坏，纠偏职责止于「plan→goal」这一确证形态。
+        """
+        if not isinstance(raw, str):
+            return raw
+        text = raw.strip()
+        if not text:
+            return raw
+        try:
+            candidate = UUID(text)
+        except ValueError:
+            return raw
+
+        from app.models.goal import Goal
+        from app.models.plan import Plan
+
+        goal_hit = (
+            await self.db.execute(
+                select(Goal.id).where(
+                    Goal.id == candidate,
+                    Goal.user_id == user_id,
+                    Goal.deleted_at.is_(None),
+                )
+            )
+        ).scalar_one_or_none()
+        if goal_hit is not None:
+            return raw
+
+        plan_goal_id = (
+            await self.db.execute(
+                select(Plan.goal_id).where(
+                    Plan.id == candidate,
+                    Plan.user_id == user_id,
+                    Plan.deleted_at.is_(None),
+                )
+            )
+        ).scalar_one_or_none()
+        if plan_goal_id is None:
+            return raw
+        return str(plan_goal_id) if plan_goal_id else None
 
     async def get_ai_usage_summary(self, user_id: UUID) -> dict[str, Any]:
         redis_client = await self._ensure_redis()
