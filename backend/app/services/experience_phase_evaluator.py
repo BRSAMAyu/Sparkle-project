@@ -203,7 +203,8 @@ class ExperiencePhaseEvaluator:
         freedom_hits: list[float] = []
 
         for turn in turns:
-            decision_context = turn.get("decision_context") if isinstance(turn.get("decision_context"), dict) else {}
+            raw_decision_context = turn.get("decision_context")
+            decision_context: dict[str, Any] = raw_decision_context if isinstance(raw_decision_context, dict) else {}
             expected_residual = str(turn.get("expected_residual") or "").strip()
             expected_loop = str(turn.get("expected_loop_type") or "").strip()
             if expected_residual:
@@ -216,7 +217,8 @@ class ExperiencePhaseEvaluator:
             grounding_priority = decision_context.get("grounding_priority")
             if isinstance(grounding_priority, list) and grounding_priority:
                 actual_grounding = str(grounding_priority[0] or "").strip()
-            grounding_runtime = turn.get("user_material_grounding") if isinstance(turn.get("user_material_grounding"), dict) else {}
+            raw_grounding_runtime = turn.get("user_material_grounding")
+            grounding_runtime: dict[str, Any] = raw_grounding_runtime if isinstance(raw_grounding_runtime, dict) else {}
             if expected_grounding:
                 grounded = str(grounding_runtime.get("status") or "").strip()
                 grounding_hits.append(
@@ -265,7 +267,8 @@ class ExperiencePhaseEvaluator:
                 understood_hits.append(1.0 if user_signal in {"clearer", "helped", "accepted", "started"} else 0.45)
 
             expected_mode = str(turn.get("expected_mode") or "").strip()
-            decision_context = turn.get("decision_context") if isinstance(turn.get("decision_context"), dict) else {}
+            raw_decision_context = turn.get("decision_context")
+            decision_context: dict[str, Any] = raw_decision_context if isinstance(raw_decision_context, dict) else {}
             if expected_mode:
                 timely_hits.append(1.0 if str(decision_context.get("experience_mode") or "").strip() == expected_mode else 0.0)
 

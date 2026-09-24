@@ -468,9 +468,10 @@ class AuroraRuntimePlanningAdapter:
         )
         if is_detour:
             self._upsert_latent_thread(state)
+            top_tension = self._top_open_tension(state)
             state.current_intent = {
                 "intent_type": "answer_detour",
-                "target_tension_id": self._top_open_tension(state).tension_id if self._top_open_tension(state) else None,
+                "target_tension_id": top_tension.tension_id if top_tension else None,
                 "payload": {"message": cleaned_message, "surface_state": self._surface_state(state)},
             }
         else:
@@ -890,7 +891,8 @@ class AuroraRuntimePlanningAdapter:
         state.informational_tensions = rebuilt
         state.covered_domains = [item.domain for item in rebuilt if item.status == "resolved"]
         state.missing_domains = [item.domain for item in rebuilt if item.status in {"open", "partially_resolved"}]
-        state.activity_profile.agenda_priority = self.select_next_tension(state).domain if self.select_next_tension(state) else None
+        selected_tension = self.select_next_tension(state)
+        state.activity_profile.agenda_priority = selected_tension.domain if selected_tension else None
         state.activity_profile.conversation_style = state.activity_profile.conversation_style or "structured"
 
     def _priority_for_domain(
@@ -1087,6 +1089,8 @@ class AuroraRuntimePlanningAdapter:
     @staticmethod
     def _state_from_snapshot(snapshot: Any, *, conversation_id: str) -> AuroraRuntimePlanningState:
         runtime_session_id = _strip(getattr(snapshot, "last_runtime_session_id", None)) or str(uuid.uuid4())
+        raw_intent: Any = getattr(snapshot, "current_intent", None)
+        raw_activity_profile: Any = getattr(snapshot, "activity_profile", None)
         return AuroraRuntimePlanningState(
             user_id=_strip(getattr(snapshot, "user_id", "")),
             surface=_strip(getattr(snapshot, "last_surface", None)) or AURORA_PLANNING_SURFACE,
@@ -1098,9 +1102,9 @@ class AuroraRuntimePlanningAdapter:
                 for item in list(getattr(snapshot, "informational_tensions", []) or [])
             ],
             current_intent=(
-                getattr(snapshot, "current_intent", None).model_dump(mode="json")
-                if hasattr(getattr(snapshot, "current_intent", None), "model_dump")
-                else _as_dict(getattr(snapshot, "current_intent", None))
+                raw_intent.model_dump(mode="json")
+                if hasattr(raw_intent, "model_dump")
+                else _as_dict(raw_intent)
                 or None
             ),
             latent_threads=[
@@ -1108,9 +1112,9 @@ class AuroraRuntimePlanningAdapter:
                 for item in list(getattr(snapshot, "latent_threads", []) or [])
             ],
             activity_profile=AuroraActivityProfile.from_dict(
-                getattr(snapshot, "activity_profile", None).model_dump(mode="json")
-                if hasattr(getattr(snapshot, "activity_profile", None), "model_dump")
-                else _as_dict(getattr(snapshot, "activity_profile", None))
+                raw_activity_profile.model_dump(mode="json")
+                if hasattr(raw_activity_profile, "model_dump")
+                else _as_dict(raw_activity_profile)
             ),
             last_decision_at=_coerce_iso(getattr(snapshot, "last_decision_at", None)),
             updated_at=_coerce_iso(getattr(snapshot, "updated_at", None)) or _utcnow().isoformat(),

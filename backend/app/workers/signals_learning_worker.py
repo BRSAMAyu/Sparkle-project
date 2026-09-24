@@ -117,15 +117,18 @@ class SignalsLearningWorker:
 
     async def _calculate_overall_metrics(self) -> dict:
         """Calculate overall feedback metrics across all action types."""
+        session = self.session
+        if session is None:
+            raise RuntimeError("session not initialized; call run_daily_analysis() first")
         # Total feedback count
-        total_result = await self.session.execute(
+        total_result = await session.execute(
             select(func.count(CandidateActionFeedback.id))
             .where(CandidateActionFeedback.deleted_at.is_(None))
         )
         total_count = total_result.scalar() or 0
 
         # Feedback type breakdown
-        feedback_type_result = await self.session.execute(
+        feedback_type_result = await session.execute(
             select(
                 CandidateActionFeedback.feedback_type,
                 func.count(CandidateActionFeedback.id).label('count')
@@ -135,8 +138,8 @@ class SignalsLearningWorker:
         )
 
         feedback_counts = {
-            row.feedback_type: row.count
-            for row in feedback_type_result
+            str(feedback_type): int(count)
+            for feedback_type, count in feedback_type_result
         }
 
         accepts = feedback_counts.get('accept', 0)
@@ -148,7 +151,7 @@ class SignalsLearningWorker:
         ctr = (accepts / total_interactions) if total_interactions > 0 else 0.0
 
         # Calculate completion rate
-        executed_result = await self.session.execute(
+        executed_result = await session.execute(
             select(func.count(CandidateActionFeedback.id))
             .where(CandidateActionFeedback.feedback_type == 'accept')
             .where(CandidateActionFeedback.executed)
@@ -173,7 +176,10 @@ class SignalsLearningWorker:
 
         for action_type in action_types:
             # Get feedback counts by feedback_type
-            result = await self.session.execute(
+            session = self.session
+            if session is None:
+                raise RuntimeError("session not initialized; call run_daily_analysis() first")
+            result = await session.execute(
                 select(
                     CandidateActionFeedback.feedback_type,
                     func.count(CandidateActionFeedback.id).label('count')
@@ -183,7 +189,10 @@ class SignalsLearningWorker:
                 .group_by(CandidateActionFeedback.feedback_type)
             )
 
-            counts = {row.feedback_type: row.count for row in result}
+            counts = {
+                str(feedback_type): int(count)
+                for feedback_type, count in result
+            }
             accepts = counts.get('accept', 0)
             ignores = counts.get('ignore', 0)
             dismisses = counts.get('dismiss', 0)
@@ -193,7 +202,7 @@ class SignalsLearningWorker:
             ctr = (accepts / total) if total > 0 else 0.0
 
             # Calculate completion rate
-            executed_result = await self.session.execute(
+            executed_result = await session.execute(
                 select(func.count(CandidateActionFeedback.id))
                 .where(CandidateActionFeedback.action_type == action_type)
                 .where(CandidateActionFeedback.feedback_type == 'accept')

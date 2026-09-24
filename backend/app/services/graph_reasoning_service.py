@@ -205,7 +205,16 @@ class GraphReasoningService:
         """
         await self._load_graph()
 
-        if not self.G.has_node(target_node_id):
+        graph = self.G
+        if graph is None:  # 防御分支：_load_graph 成功返回时保证非 None，与既有 graph_error 回退语义一致
+            return [{
+                "error": "graph_error",
+                "error_code": "GRAPH_ERROR",
+                "message": "知识图谱尚未加载",
+                "details": {}
+            }]
+
+        if not graph.has_node(target_node_id):
             logger.warning(f"Target node {target_node_id} not found in graph")
             return [{
                 "error": "target_not_found",
@@ -216,7 +225,7 @@ class GraphReasoningService:
 
         # 1. 获取所有前置依赖 (Ancestors)
         try:
-            ancestors = nx.ancestors(self.G, target_node_id)
+            ancestors = nx.ancestors(graph, target_node_id)
         except Exception as e:
             logger.error(f"Error finding ancestors: {e}")
             return [{
@@ -230,7 +239,7 @@ class GraphReasoningService:
         subgraph_nodes = ancestors | {target_node_id}
 
         # 2. 提取子图
-        subgraph = self.G.subgraph(subgraph_nodes)
+        subgraph = graph.subgraph(subgraph_nodes)
 
         # 3. 循环检测预处理 - 在拓扑排序前检测
         if not nx.is_directed_acyclic_graph(subgraph):
@@ -273,6 +282,7 @@ class GraphReasoningService:
         for node_id in path_nodes_ids:
             final_path.append(
                 self._build_path_node_payload(
+                    graph=graph,
                     node_id=node_id,
                     mastered_ids=mastered_ids,
                     is_target=node_id == target_node_id,
@@ -280,6 +290,7 @@ class GraphReasoningService:
             )
 
         related_nodes = await self._build_related_nodes(
+            graph=graph,
             user_id=user_id,
             target_node_id=target_node_id,
             backbone_node_ids=path_nodes_ids,
@@ -406,18 +417,19 @@ class GraphReasoningService:
     def _build_path_node_payload(
         self,
         *,
+        graph: nx.DiGraph,
         node_id: UUID,
         mastered_ids: set[UUID],
         is_target: bool,
         is_optional: bool = False,
         relation_type: str | None = None,
     ) -> dict[str, Any]:
-        node_data = self.G.nodes[node_id]
+        node_data = graph.nodes[node_id]
         is_mastered = node_id in mastered_ids
 
         status = "mastered" if is_mastered else "locked"
         if not is_mastered:
-            predecessors = list(self.G.predecessors(node_id))
+            predecessors = list(graph.predecessors(node_id))
             if all(p in mastered_ids for p in predecessors):
                 status = "unlocked"
 
@@ -434,6 +446,7 @@ class GraphReasoningService:
     async def _build_related_nodes(
         self,
         *,
+        graph: nx.DiGraph,
         user_id: UUID,
         target_node_id: UUID,
         backbone_node_ids: list[UUID],
@@ -466,7 +479,7 @@ class GraphReasoningService:
 
         related_nodes: list[dict[str, Any]] = []
         for node_id in ordered_related_ids:
-            if node_id in backbone_node_ids or not self.G.has_node(node_id):
+            if node_id in backbone_node_ids or not graph.has_node(node_id):
                 continue
 
             relation_type = suggested_map.get(node_id)
@@ -475,6 +488,7 @@ class GraphReasoningService:
 
             related_nodes.append(
                 self._build_path_node_payload(
+                    graph=graph,
                     node_id=node_id,
                     mastered_ids=mastered_ids,
                     is_target=False,

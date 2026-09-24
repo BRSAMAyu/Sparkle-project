@@ -134,11 +134,11 @@ class VisualElementService:
         equipped_particle = None
         equipped_effect = None
 
-        background_id = config.equipped_background_id or (
-            default_elements.get(VisualElementType.BACKGROUND).id
-            if default_elements.get(VisualElementType.BACKGROUND)
-            else None
-        )
+        default_background = default_elements.get(VisualElementType.BACKGROUND)
+        default_particle = default_elements.get(VisualElementType.PARTICLE)
+        default_effect = default_elements.get(VisualElementType.EFFECT)
+
+        background_id = config.equipped_background_id or (default_background.id if default_background else None)
         if background_id:
             bg = await self._get_element_by_id(background_id)
             if bg:
@@ -146,11 +146,7 @@ class VisualElementService:
                     bg, locale, is_unlocked=True, is_equipped=True
                 )
 
-        particle_id = config.equipped_particle_id or (
-            default_elements.get(VisualElementType.PARTICLE).id
-            if default_elements.get(VisualElementType.PARTICLE)
-            else None
-        )
+        particle_id = config.equipped_particle_id or (default_particle.id if default_particle else None)
         if particle_id:
             pt = await self._get_element_by_id(particle_id)
             if pt:
@@ -158,11 +154,7 @@ class VisualElementService:
                     pt, locale, is_unlocked=True, is_equipped=True
                 )
 
-        effect_id = config.equipped_effect_id or (
-            default_elements.get(VisualElementType.EFFECT).id
-            if default_elements.get(VisualElementType.EFFECT)
-            else None
-        )
+        effect_id = config.equipped_effect_id or (default_effect.id if default_effect else None)
         if effect_id:
             ef = await self._get_element_by_id(effect_id)
             if ef:

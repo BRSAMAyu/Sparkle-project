@@ -280,7 +280,8 @@ class SoulCompiler:
         active_plan = str(
             plan_context.get("plan_title") or plan_context.get("title") or plan_context.get("goal") or ""
         ).strip()
-        user_preferences = user_context.get("preferences") if isinstance(user_context.get("preferences"), dict) else {}
+        raw_preferences = user_context.get("preferences")
+        user_preferences: dict[str, Any] = raw_preferences if isinstance(raw_preferences, dict) else {}
         return {
             "compiler_version": SOUL_COMPILER_VERSION,
             "constitution_version": self.constitution.version,
@@ -349,10 +350,9 @@ def _extract_visible_intelligence_context(
 ) -> dict[str, Any]:
     state_context_data = state_context_data if isinstance(state_context_data, dict) else {}
     user_context = user_context if isinstance(user_context, dict) else {}
-    visible_update_context = (
-        state_context_data.get("visible_update_context")
-        if isinstance(state_context_data.get("visible_update_context"), dict)
-        else {}
+    raw_visible_update_context = state_context_data.get("visible_update_context")
+    visible_update_context: dict[str, Any] = (
+        raw_visible_update_context if isinstance(raw_visible_update_context, dict) else {}
     )
     evolution_highlights = list(state_context_data.get("evolution_highlights") or [])
     if not evolution_highlights:

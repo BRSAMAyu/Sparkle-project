@@ -130,7 +130,8 @@ class SessionStateMixin:
                 continue
             update_type = str(update.get("type") or "").strip()
             description = str(update.get("description") or "").strip()
-            metadata = update.get("metadata") if isinstance(update.get("metadata"), dict) else {}
+            raw_metadata = update.get("metadata")
+            metadata: dict[str, Any] = raw_metadata if isinstance(raw_metadata, dict) else {}
             evolution_kind = str(metadata.get("evolution_kind") or "").strip()
 
             if not proactive_opening_message and description and (

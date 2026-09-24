@@ -98,7 +98,8 @@ def _paused_seconds(task: Task) -> int:
     （宁少扣不少算：actual 偏保守小于等于真实活跃时长，仍绝不等于 estimated）。
     """
     guide = task.guide_json if isinstance(task.guide_json, dict) else {}
-    pause_state = guide.get("pause_state") if isinstance(guide.get("pause_state"), dict) else {}
+    raw_pause_state = guide.get("pause_state")
+    pause_state: dict[str, Any] = raw_pause_state if isinstance(raw_pause_state, dict) else {}
 
     total = pause_state.get("total_paused_seconds")
     if isinstance(total, (int, float)) and total >= 0:

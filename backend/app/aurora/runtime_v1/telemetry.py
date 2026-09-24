@@ -403,9 +403,12 @@ class AuroraDecisionTelemetryService:
         await self._redis_call("expire", key, RECENT_TELEMETRY_TTL_SECONDS)
 
     async def build_summary(self, *, days: int = 30) -> dict[str, Any]:
+        db = self.db
+        if db is None:
+            raise RuntimeError("build_summary requires a database session (constructor received db=None)")
         now = _utcnow()
         await self._cleanup_expired(now=now)
-        await self.db.commit()
+        await db.commit()
 
         window_days = max(1, min(int(days or 30), self.retention_days))
         since = now - timedelta(days=window_days)
@@ -417,7 +420,7 @@ class AuroraDecisionTelemetryService:
             )
             .order_by(AuroraDecisionTelemetry.decided_at.desc())
         )
-        rows = list((await self.db.execute(stmt)).scalars().all())
+        rows = list((await db.execute(stmt)).scalars().all())
 
         strategy_distribution = {field: {"true": 0, "false": 0, "missing": 0} for field in STRATEGY_FIELDS}
         wake_buckets = {"lt_0_45": 0, "0_45_to_0_72": 0, "gte_0_72": 0}
@@ -721,6 +724,9 @@ class AuroraDecisionTelemetryService:
         request_extra_context: dict[str, Any],
         observed_at: datetime,
     ) -> None:
+        db = self.db
+        if db is None:
+            return
         previous_stmt = (
             select(AuroraDecisionTelemetry)
             .where(
@@ -733,7 +739,7 @@ class AuroraDecisionTelemetryService:
             .order_by(AuroraDecisionTelemetry.decided_at.desc(), AuroraDecisionTelemetry.created_at.desc())
             .limit(1)
         )
-        previous = (await self.db.execute(previous_stmt)).scalar_one_or_none()
+        previous = (await db.execute(previous_stmt)).scalar_one_or_none()
         if previous is None:
             return
 
@@ -745,7 +751,9 @@ class AuroraDecisionTelemetryService:
         previous.outcome = classified.outcome
         previous.outcome_reason = classified.reason
         previous.outcome_filled_at = observed_at
-        previous.request_id = previous.request_id or (_strip(request_id) or None)
+        backfill_request_id = _strip(request_id)
+        if not previous.request_id and backfill_request_id:
+            previous.request_id = backfill_request_id
         await self._update_bayesian_policy_from_outcome(previous=previous, outcome=classified.outcome)
 
     async def _update_bayesian_policy_from_outcome(
@@ -773,8 +781,11 @@ class AuroraDecisionTelemetryService:
             )
 
     async def _cleanup_expired(self, *, now: datetime) -> None:
+        db = self.db
+        if db is None:
+            return
         cutoff = now - timedelta(days=self.retention_days)
-        await self.db.execute(delete(AuroraDecisionTelemetry).where(AuroraDecisionTelemetry.decided_at < cutoff))
+        await db.execute(delete(AuroraDecisionTelemetry).where(AuroraDecisionTelemetry.decided_at < cutoff))
         # TODO: Extend retention enforcement to all Aurora data models (currently only AuroraDecisionTelemetry)
         # Missing: AuroraStateSnapshot, AuroraScheduledWake, AuroraCoreSessionSnapshot,
         # DurableSessionStateSnapshot, GoalWorldGraphSnapshot, GrowthChronicleSnapshot,

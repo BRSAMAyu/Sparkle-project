@@ -333,7 +333,8 @@ def awaiting_step_projection(
     if state is None:
         return None
 
-    awaiting = step.get("awaiting") if isinstance(step.get("awaiting"), dict) else {}
+    raw_awaiting = step.get("awaiting")
+    awaiting: dict[str, Any] = raw_awaiting if isinstance(raw_awaiting, dict) else {}
     projection: dict[str, Any] = {
         "schema_version": RUN_STEPS_CONTRACT_VERSION,
         "step_id": step.get("step_id"),

@@ -182,6 +182,8 @@ class ExpansionService:
         """构建发送给 LLM 的拓展上下文"""
         # 获取触发节点
         node = await self.db.get(KnowledgeNode, node_id)
+        if node is None:
+            raise ValueError(f"trigger knowledge node {node_id} not found")
 
         # 获取相邻节点
         neighbors = await self._get_neighbor_nodes(node_id)

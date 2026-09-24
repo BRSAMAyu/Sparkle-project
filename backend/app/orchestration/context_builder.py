@@ -991,9 +991,8 @@ class ContextBuilderMixin:
         memory_references = [
             str(item).strip() for item in list(snapshot.get("memory_references") or [])[:2] if str(item).strip()
         ]
-        last_correction = (
-            snapshot.get("last_correction_effect") if isinstance(snapshot.get("last_correction_effect"), dict) else {}
-        )
+        raw_correction = snapshot.get("last_correction_effect")
+        last_correction: dict[Any, Any] = raw_correction if isinstance(raw_correction, dict) else {}
         return_tier = str((returning_context or {}).get("resume_tier") or "").strip()
 
         uncertainty_level = "low"
@@ -2022,7 +2021,7 @@ class ContextBuilderMixin:
     async def _persist_user_message(
         self,
         *,
-        active_db: AsyncSession | None,
+        active_db: AsyncSession,
         user_id: str,
         session_id: str,
         user_message: str,

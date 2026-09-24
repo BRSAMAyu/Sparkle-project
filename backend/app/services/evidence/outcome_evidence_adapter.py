@@ -45,7 +45,8 @@ def _event_timestamp(event: dict[str, Any]) -> datetime:
 
 
 def _scope(event: dict[str, Any]) -> dict[str, Any]:
-    metadata = event.get("source_metadata") if isinstance(event.get("source_metadata"), dict) else {}
+    raw_metadata = event.get("source_metadata")
+    metadata: dict[str, Any] = raw_metadata if isinstance(raw_metadata, dict) else {}
     return {
         "event_type": event.get("event_type"),
         "task_id": event.get("task_id"),

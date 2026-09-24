@@ -1157,9 +1157,14 @@ class EventBus:
         if not self.redis:
             await self.connect()
 
+        redis_client = self.redis
+        if redis_client is None:
+            # connect() 失败时吞异常置 None；此处显式失败（原为 AttributeError，同样向外抛）
+            raise RuntimeError(f"Redis unavailable; cannot start consumer group {group_name} on stream {stream}")
+
         # 1. Create Consumer Group if not exists
         try:
-            await self.redis.xgroup_create(stream, group_name, id=group_start_id, mkstream=True)
+            await redis_client.xgroup_create(stream, group_name, id=group_start_id, mkstream=True)
             logger.info(f"Created consumer group {group_name} for stream {stream} at id={group_start_id}")
         except ResponseError as e:
             if "BUSYGROUP" in str(e):
@@ -1225,6 +1230,11 @@ class EventBus:
         data: dict[str, Any],
     ) -> None:
         parsed_data: dict[str, Any] = {}
+        redis_client = self.redis
+        if redis_client is None:
+            # 消费循环只在 redis 就绪后启动；此分支仅为类型收窄的防御路径
+            logger.warning(f"Redis unavailable; skipping message {message_id} on stream {stream}")
+            return
         try:
             for key, value in data.items():
                 try:
@@ -1246,7 +1256,7 @@ class EventBus:
             existing = await idempotency.get(idempotency_key)
             if existing:
                 logger.info(f"Skipping duplicate message: {message_id}")
-                await self.redis.xack(stream, group_name, message_id)
+                await redis_client.xack(stream, group_name, message_id)
                 return
 
             if not await idempotency.lock(idempotency_key):
@@ -1260,7 +1270,7 @@ class EventBus:
             try:
                 await callback(parsed_data)
                 await idempotency.set(idempotency_key, {"status": "done"}, ttl=86400)
-                await self.redis.xack(stream, group_name, message_id)
+                await redis_client.xack(stream, group_name, message_id)
             except Exception:
                 raise
             finally:

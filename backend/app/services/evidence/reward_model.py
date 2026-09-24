@@ -24,8 +24,10 @@ def _positive_float(value: Any, *, default: float = 0.0) -> float:
 
 
 def _difficulty_from_event(event: dict[str, Any]) -> float:
-    metadata = event.get("metadata") if isinstance(event.get("metadata"), dict) else {}
-    source_metadata = event.get("source_metadata") if isinstance(event.get("source_metadata"), dict) else {}
+    raw_metadata = event.get("metadata")
+    metadata: dict[str, Any] = raw_metadata if isinstance(raw_metadata, dict) else {}
+    raw_source_metadata = event.get("source_metadata")
+    source_metadata: dict[str, Any] = raw_source_metadata if isinstance(raw_source_metadata, dict) else {}
     for source in (event, metadata, source_metadata):
         for key in ("intrinsic_difficulty", "difficulty_normalized", "difficulty_score"):
             raw_value = source.get(key)
