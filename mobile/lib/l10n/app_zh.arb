@@ -15718,6 +15718,22 @@
     "chatMemoryCorrectionFailed": "记忆纠正失败",
     "chatMemoryConfirmed": "已确认",
     "chatMemoryNeedsConfirmation": "待确认",
+    "receiptActionNotRelevant": "不相关",
+    "receiptActionWrong": "不对",
+    "receiptActionChangeScope": "别再用它建议",
+    "receiptActionDelete": "删除",
+    "receiptCorrectionRecorded": "Aurora 会记住这次纠正",
+    "receiptCorrectionScope": "这条记忆会暂停参与建议，可在「对我的理解」里恢复",
+    "receiptCorrectionDeleted": "这条记忆已删除",
+    "receiptUncertainLine": "{count} 条我还不确定，你可以直接纠正",
+    "@receiptUncertainLine": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "receiptKnowledgeRefs": "参考材料",
     "chatMemoryNotRightPrompt": "这条记忆不对：{content}。请降低置信度，以后不要直接引用。",
     "@chatMemoryNotRightPrompt": {
         "placeholders": {

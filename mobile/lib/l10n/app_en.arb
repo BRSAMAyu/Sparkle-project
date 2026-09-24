@@ -15702,6 +15702,22 @@
     "chatMemoryCorrectionFailed": "Memory correction failed",
     "chatMemoryConfirmed": "confirmed",
     "chatMemoryNeedsConfirmation": "needs confirmation",
+    "receiptActionNotRelevant": "Not relevant",
+    "receiptActionWrong": "Wrong",
+    "receiptActionChangeScope": "Stop suggesting with it",
+    "receiptActionDelete": "Delete",
+    "receiptCorrectionRecorded": "Aurora will remember this correction",
+    "receiptCorrectionScope": "This memory is paused from suggestions — you can resume it in Understanding",
+    "receiptCorrectionDeleted": "This memory was deleted",
+    "receiptUncertainLine": "{count} I'm not sure about — you can correct directly",
+    "@receiptUncertainLine": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "receiptKnowledgeRefs": "Reference materials",
     "chatMemoryNotRightPrompt": "This memory is not right: {content}. Please lower confidence and avoid directly using it later.",
     "@chatMemoryNotRightPrompt": {
         "placeholders": {

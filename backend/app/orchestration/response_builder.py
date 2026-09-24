@@ -18,6 +18,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.aurora.calibration_receipt import build_calibration_receipt
 from app.core.business_metrics import COLLABORATION_LATENCY
 from app.core.metrics import (
     AI_RESPONSE_TOTAL_DURATION,
@@ -232,12 +233,46 @@ class ResponseBuilderMixin:
         ]
 
     @staticmethod
+    def _knowledge_refs_from_context(context_data: dict[str, Any]) -> list[str]:
+        """真实被引材料的名称面（GraphRAG 检索的 used_names——真实 Context，
+        不虚构；无检索时为空表）。"""
+        retrieval = context_data.get("document_context_retrieval")
+        if not isinstance(retrieval, dict):
+            return []
+        receipt = retrieval.get("context_receipt")
+        if not isinstance(receipt, dict):
+            return []
+        used_names = receipt.get("used_names")
+        if not isinstance(used_names, list):
+            return []
+        return [str(item).strip() for item in used_names if str(item).strip()]
+
+    async def _calibration_receipts_shown_today(self, user_id: str) -> int:
+        """calibration 呈现日计数（Redis 真实计数；故障 fail-open 到 0——
+        呈现预算是触有度的调节器不是守卫，宁可多呈现也不可静默吞掉纠偏面）。"""
+        try:
+            key = f"aurora:calibration_receipts:{user_id}:{datetime.now(UTC).date().isoformat()}"
+            raw = await self.redis.get(key)
+            return int(raw) if raw else 0
+        except Exception:  # noqa: BLE001 — presentation budget must never break replies
+            return 0
+
+    async def _record_calibration_surface(self, user_id: str) -> None:
+        try:
+            key = f"aurora:calibration_receipts:{user_id}:{datetime.now(UTC).date().isoformat()}"
+            await self.redis.incr(key)
+            await self.redis.expire(key, 172800)
+        except Exception:  # noqa: BLE001
+            return
+
+    @staticmethod
     def _build_memory_reference_receipt(
         *,
         full_response: str,
         user_context_payload: dict[str, Any] | None,
         context_data: dict[str, Any],
         response_id: str,
+        calibration_shown_today: int = 0,
     ) -> dict[str, Any] | None:
         referenced: list[dict[str, Any]] = []
         for item in ResponseBuilderMixin._collect_memory_reference_candidates(
@@ -274,15 +309,14 @@ class ResponseBuilderMixin:
 
         if not referenced:
             return None
-        return {
-            "receipt_type": "memory_reference_receipt",
-            "response_id": response_id,
-            "used_count": len(referenced),
-            "decision_reason": "Aurora 引用了和本轮有关的记忆，让回复能接上你的真实上下文。",
-            "memory_reference_outcome": "pending",
-            "supported_outcomes": ["accepted", "corrected", "ignored", "denied"],
-            "referenced_memories": referenced,
-        }
+        # A-06：回执装配与呈现门委托给纯模块（rationale 组成摘要 + 四动作 +
+        # uncertainties + 触发有度）。此处照旧只负责真实引用的解析。
+        return build_calibration_receipt(
+            response_id=response_id,
+            referenced_memories=referenced,
+            knowledge_refs=ResponseBuilderMixin._knowledge_refs_from_context(context_data),
+            calibration_shown_today=calibration_shown_today,
+        )
 
     @staticmethod
     def _decode_receipt_payload(raw: Any) -> Any:
@@ -1203,13 +1237,18 @@ class ResponseBuilderMixin:
         if isinstance(returning_context, dict):
             response_metadata["returning_after_silence"] = json.dumps(returning_context, ensure_ascii=False)
 
+        # A-06 触发有度：呈现日预算先读后记（surfaced 才计数；故障 fail-open）。
+        calibration_shown_today = await self._calibration_receipts_shown_today(user_id)
         memory_reference_receipt = self._build_memory_reference_receipt(
             full_response=full_response,
             user_context_payload=user_context_payload,
             context_data=final_state.context_data,
             response_id=response_id,
+            calibration_shown_today=calibration_shown_today,
         )
         if memory_reference_receipt:
+            if (memory_reference_receipt.get("surface") or {}).get("decision") == "surfaced":
+                await self._record_calibration_surface(user_id)
             final_state.context_data["memory_reference_receipt"] = memory_reference_receipt
             response_metadata["memory_reference_receipt"] = json.dumps(memory_reference_receipt, ensure_ascii=False)
 

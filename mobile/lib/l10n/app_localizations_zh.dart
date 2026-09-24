@@ -33987,6 +33987,35 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatMemoryNeedsConfirmation => '待确认';
 
   @override
+  String get receiptActionNotRelevant => '不相关';
+
+  @override
+  String get receiptActionWrong => '不对';
+
+  @override
+  String get receiptActionChangeScope => '别再用它建议';
+
+  @override
+  String get receiptActionDelete => '删除';
+
+  @override
+  String get receiptCorrectionRecorded => 'Aurora 会记住这次纠正';
+
+  @override
+  String get receiptCorrectionScope => '这条记忆会暂停参与建议，可在「对我的理解」里恢复';
+
+  @override
+  String get receiptCorrectionDeleted => '这条记忆已删除';
+
+  @override
+  String receiptUncertainLine(int count) {
+    return '$count 条我还不确定，你可以直接纠正';
+  }
+
+  @override
+  String get receiptKnowledgeRefs => '参考材料';
+
+  @override
   String chatMemoryNotRightPrompt(String content) {
     return '这条记忆不对：$content。请降低置信度，以后不要直接引用。';
   }

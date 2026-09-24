@@ -61727,6 +61727,60 @@ abstract class AppLocalizations {
   /// **'待确认'**
   String get chatMemoryNeedsConfirmation;
 
+  /// No description provided for @receiptActionNotRelevant.
+  ///
+  /// In zh, this message translates to:
+  /// **'不相关'**
+  String get receiptActionNotRelevant;
+
+  /// No description provided for @receiptActionWrong.
+  ///
+  /// In zh, this message translates to:
+  /// **'不对'**
+  String get receiptActionWrong;
+
+  /// No description provided for @receiptActionChangeScope.
+  ///
+  /// In zh, this message translates to:
+  /// **'别再用它建议'**
+  String get receiptActionChangeScope;
+
+  /// No description provided for @receiptActionDelete.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除'**
+  String get receiptActionDelete;
+
+  /// No description provided for @receiptCorrectionRecorded.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 会记住这次纠正'**
+  String get receiptCorrectionRecorded;
+
+  /// No description provided for @receiptCorrectionScope.
+  ///
+  /// In zh, this message translates to:
+  /// **'这条记忆会暂停参与建议，可在「对我的理解」里恢复'**
+  String get receiptCorrectionScope;
+
+  /// No description provided for @receiptCorrectionDeleted.
+  ///
+  /// In zh, this message translates to:
+  /// **'这条记忆已删除'**
+  String get receiptCorrectionDeleted;
+
+  /// No description provided for @receiptUncertainLine.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 条我还不确定，你可以直接纠正'**
+  String receiptUncertainLine(int count);
+
+  /// No description provided for @receiptKnowledgeRefs.
+  ///
+  /// In zh, this message translates to:
+  /// **'参考材料'**
+  String get receiptKnowledgeRefs;
+
   /// No description provided for @chatMemoryNotRightPrompt.
   ///
   /// In zh, this message translates to:

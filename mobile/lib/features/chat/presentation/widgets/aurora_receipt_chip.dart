@@ -6,8 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/aurora_receipt_api_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
-import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/presentation/widgets/causal_timeline_panel.dart';
 
@@ -253,6 +253,40 @@ List<String> _parseWhatChanged(Map<String, dynamic> receipt) {
   return const [];
 }
 
+/// A-06：回执的 uncertainties 面（后端封闭类型 + 用户语言标签）。
+List<Map<String, dynamic>> _parseUncertainties(Map<String, dynamic> receipt) {
+  final raw = receipt['uncertainties'];
+  if (raw is! List) return const [];
+  return raw
+      .whereType<Map<Object?, Object?>>()
+      .map(Map<String, dynamic>.from)
+      .where(
+        (item) =>
+            (item['label']?.toString().trim() ?? '').isNotEmpty ||
+            (item['kind']?.toString().trim() ?? '').isNotEmpty,
+      )
+      .toList(growable: false);
+}
+
+/// A-06：回执的 knowledge_refs 面（真实被引材料名，服务端解析）。
+List<String> _parseKnowledgeRefs(Map<String, dynamic> receipt) {
+  final raw = receipt['knowledge_refs'];
+  if (raw is! List) return const [];
+  return raw
+      .map((item) => item.toString().trim())
+      .where((item) => item.isNotEmpty)
+      .toList(growable: false);
+}
+
+int _uncertaintyTotalCount(List<Map<String, dynamic>> uncertainties) {
+  var total = 0;
+  for (final item in uncertainties) {
+    final count = item['count'];
+    total += count is int ? count : 0;
+  }
+  return total;
+}
+
 bool _hasDetailContent(
   Map<String, dynamic> receipt,
   List<Map<String, dynamic>> memories,
@@ -429,11 +463,46 @@ class _AuroraReceiptDetailSheet extends StatelessWidget {
               summary,
               style: DS.labelSmall.copyWith(color: DS.textSecondary),
             ),
+            if (_uncertaintyTotalCount(
+                  _parseUncertainties(receipt),
+                ) >
+                0) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.help_outline,
+                      size: 13, color: DS.warning,),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: Text(
+                      S.receiptUncertainLine(
+                        _uncertaintyTotalCount(
+                          _parseUncertainties(receipt),
+                        ),
+                      ),
+                      style: DS.labelSmall.copyWith(color: DS.warning),
+                    ),
+                  ),
+                ],
+              ),
+            ],
             if (privacyBoundary.isNotEmpty) ...[
               const SizedBox(height: 10),
               Text(
                 privacyBoundary,
                 style: DS.labelSmall.copyWith(color: DS.textTertiary),
+              ),
+            ],
+            if (_parseKnowledgeRefs(receipt).isNotEmpty) ...[
+              const SizedBox(height: 14),
+              _SectionHeader(
+                icon: Icons.menu_book_outlined,
+                label: S.receiptKnowledgeRefs,
+                color: DS.info,
+              ),
+              const SizedBox(height: 6),
+              ..._parseKnowledgeRefs(receipt).map(
+                (name) => _SourceRow(name: name, isUsed: true),
               ),
             ],
             if (whatChanged.isNotEmpty) ...[
@@ -676,30 +745,40 @@ class _MemoryReceiptRow extends ConsumerStatefulWidget {
 }
 
 class _MemoryReceiptRowState extends ConsumerState<_MemoryReceiptRow> {
-  bool _submitting = false;
+  String? _submittingAction;
 
-  Future<void> _markWrong() async {
-    if (_submitting) return;
+  /// A-06 四动作（not_relevant / wrong / change_scope / delete）→ 真实后端
+  /// 权威（引用降噪 / supersede / 暂停召回 / 撤销链）。每个动作只发一次请求；
+  /// 失败诚实提示，绝不本地伪造成功态。
+  Future<void> _runAction(String action) async {
+    if (_submittingAction != null) return;
     final id = widget.memory['id']?.toString().trim() ?? '';
     final type = widget.memory['type']?.toString().trim();
-    final content = widget.memory['content']?.toString().trim() ?? '';
     final memoryType = type != null && type.isNotEmpty ? type : 'episodic';
-    final prompt = S.chatMemoryNotRightPrompt(content);
+    final content = widget.memory['content']?.toString().trim() ?? '';
 
-    setState(() => _submitting = true);
+    setState(() => _submittingAction = action);
     try {
       if (id.isNotEmpty) {
-        await ref.read(memoryApiServiceProvider).correctMemory(
+        await ref.read(auroraReceiptApiServiceProvider).respond(
               type: memoryType,
               id: id,
-              action: 'lower_confidence',
-              reason: 'memory_reference_receipt',
+              action: action,
+              responseId: widget.responseId,
             );
       }
-      if (mounted) {
-        widget.onActionSelected?.call(prompt);
-        Navigator.of(context).pop();
-      }
+      if (!mounted) return;
+      AppFeedback.success(
+        context,
+        action == 'delete'
+            ? S.receiptCorrectionDeleted
+            : action == 'change_scope'
+                ? S.receiptCorrectionScope
+                : S.receiptCorrectionRecorded,
+      );
+      widget.onActionSelected
+          ?.call(S.chatMemoryNotRightPrompt(content));
+      Navigator.of(context).pop();
     } catch (_) {
       if (mounted) {
         AppFeedback.error(
@@ -708,7 +787,7 @@ class _MemoryReceiptRowState extends ConsumerState<_MemoryReceiptRow> {
         );
       }
     } finally {
-      if (mounted) setState(() => _submitting = false);
+      if (mounted) setState(() => _submittingAction = null);
     }
   }
 
@@ -719,6 +798,7 @@ class _MemoryReceiptRowState extends ConsumerState<_MemoryReceiptRow> {
     final source = widget.memory['source']?.toString().trim() ?? '';
     final confidence = _confidenceLabel(widget.memory['confidence']);
     final confirmed = widget.memory['user_confirmed'] == true;
+    final uncertain = widget.memory['uncertain'] == true;
     final meta = [
       if (timeAgo.isNotEmpty) timeAgo,
       if (source.isNotEmpty) source,
@@ -735,7 +815,11 @@ class _MemoryReceiptRowState extends ConsumerState<_MemoryReceiptRow> {
       decoration: BoxDecoration(
         color: DS.surfaceHigh.withValues(alpha: 0.62),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: DS.borderSubtle),
+        border: Border.all(
+          color: uncertain
+              ? DS.warning.withValues(alpha: 0.35)
+              : DS.borderSubtle,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -746,32 +830,40 @@ class _MemoryReceiptRowState extends ConsumerState<_MemoryReceiptRow> {
             Text(meta, style: DS.labelSmall.copyWith(color: DS.textTertiary)),
           ],
           const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Semantics(
-              button: true,
-              label: S.chatMemoryNotRight,
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  foregroundColor: DS.warning,
-                  side: BorderSide(color: DS.warning.withValues(alpha: 0.45)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                onPressed: _submitting ? null : _markWrong,
-                icon: _submitting
-                    ? LoadingIndicator.circular(
-                        size: 12,
-                        strokeWidth: 2,
-                        color: DS.warning,
-                        liveRegion: false,
-                    )
-                    : const Icon(Icons.flag_outlined, size: 14),
-                label: Text(S.chatMemoryNotRightShort),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              _ReceiptCorrectionAction(
+                label: S.receiptActionNotRelevant,
+                icon: Icons.block_outlined,
+                busy: _submittingAction == 'not_relevant',
+                disabled: _submittingAction != null,
+                onPressed: () => unawaited(_runAction('not_relevant')),
               ),
-            ),
+              _ReceiptCorrectionAction(
+                label: S.receiptActionWrong,
+                icon: Icons.flag_outlined,
+                busy: _submittingAction == 'wrong',
+                disabled: _submittingAction != null,
+                onPressed: () => unawaited(_runAction('wrong')),
+              ),
+              _ReceiptCorrectionAction(
+                label: S.receiptActionChangeScope,
+                icon: Icons.visibility_off_outlined,
+                busy: _submittingAction == 'change_scope',
+                disabled: _submittingAction != null,
+                onPressed: () => unawaited(_runAction('change_scope')),
+              ),
+              _ReceiptCorrectionAction(
+                label: S.receiptActionDelete,
+                icon: Icons.delete_outline,
+                busy: _submittingAction == 'delete',
+                disabled: _submittingAction != null,
+                destructive: true,
+                onPressed: () => unawaited(_runAction('delete')),
+              ),
+            ],
           ),
         ],
       ),
@@ -782,6 +874,67 @@ class _MemoryReceiptRowState extends ConsumerState<_MemoryReceiptRow> {
     final value = raw is num ? raw.toDouble() : double.tryParse('$raw');
     if (value == null) return '';
     return S.chatMemoryConfidencePercent((value * 100).round());
+  }
+}
+
+class _ReceiptCorrectionAction extends StatelessWidget {
+  const _ReceiptCorrectionAction({
+    required this.label,
+    required this.icon,
+    required this.busy,
+    required this.disabled,
+    required this.onPressed,
+    this.destructive = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool busy;
+  final bool disabled;
+  final VoidCallback onPressed;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = destructive ? DS.warning : DS.brandPrimary;
+    return Semantics(
+      button: true,
+      label: label,
+      child: InkWell(
+        onTap: disabled ? null : onPressed,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          decoration: BoxDecoration(
+            color: accent.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: accent.withValues(alpha: 0.35)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (busy)
+                LoadingIndicator.circular(
+                  size: 12,
+                  strokeWidth: 2,
+                  color: accent,
+                  liveRegion: false,
+                )
+              else
+                Icon(icon, size: 13, color: accent),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: DS.labelSmall.copyWith(
+                  color: DS.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

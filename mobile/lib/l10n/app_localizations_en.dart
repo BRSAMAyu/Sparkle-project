@@ -9469,8 +9469,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fileStatusUploaded => 'File Status Uploaded';
 
   @override
-  String get galaxyA11yActionStartLearning =>
-      'Start learning';
+  String get galaxyA11yActionStartLearning => 'Start learning';
 
   @override
   String get galaxyA11yActionUnlockNode => 'Unlock node';
@@ -9486,7 +9485,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get galaxyA11yHintStartLearning => 'Tap to start learning this knowledge point';
+  String get galaxyA11yHintStartLearning =>
+      'Tap to start learning this knowledge point';
 
   @override
   String get galaxyA11yHintUnlockNode => 'Tap to unlock this node';
@@ -9497,7 +9497,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get galaxyA11yNavigationHint => 'Navigate the knowledge galaxy with gestures';
+  String get galaxyA11yNavigationHint =>
+      'Navigate the knowledge galaxy with gestures';
 
   @override
   String galaxyA11yNodeImportance(Object arg0) {
@@ -9595,8 +9596,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Service is temporarily unavailable';
 
   @override
-  String get galaxyErrorServiceUnavailable =>
-      'Service unavailable';
+  String get galaxyErrorServiceUnavailable => 'Service unavailable';
 
   @override
   String get galaxyErrorUnknown => 'Unknown error';
@@ -9708,16 +9708,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Disable particle effects';
 
   @override
-  String get galaxyPerfRecommendationLowQualityMode =>
-      'Low quality mode';
+  String get galaxyPerfRecommendationLowQualityMode => 'Low quality mode';
 
   @override
-  String get galaxyPerfRecommendationOptimizeLayout =>
-      'Optimize layout';
+  String get galaxyPerfRecommendationOptimizeLayout => 'Optimize layout';
 
   @override
-  String get galaxyPerfRecommendationReduceNodes =>
-      'Show fewer nodes';
+  String get galaxyPerfRecommendationReduceNodes => 'Show fewer nodes';
 
   @override
   String galaxyPerfSlowRender(Object arg0) {
@@ -9775,8 +9772,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxySectorWisdom => 'Wisdom';
 
   @override
-  String get galaxySimulationCenterGravity =>
-      'Center gravity';
+  String get galaxySimulationCenterGravity => 'Center gravity';
 
   @override
   String get galaxySimulationGravity => 'Gravity';
@@ -35455,6 +35451,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatMemoryNeedsConfirmation => 'needs confirmation';
+
+  @override
+  String get receiptActionNotRelevant => 'Not relevant';
+
+  @override
+  String get receiptActionWrong => 'Wrong';
+
+  @override
+  String get receiptActionChangeScope => 'Stop suggesting with it';
+
+  @override
+  String get receiptActionDelete => 'Delete';
+
+  @override
+  String get receiptCorrectionRecorded =>
+      'Aurora will remember this correction';
+
+  @override
+  String get receiptCorrectionScope =>
+      'This memory is paused from suggestions — you can resume it in Understanding';
+
+  @override
+  String get receiptCorrectionDeleted => 'This memory was deleted';
+
+  @override
+  String receiptUncertainLine(int count) {
+    return '$count I\'m not sure about — you can correct directly';
+  }
+
+  @override
+  String get receiptKnowledgeRefs => 'Reference materials';
 
   @override
   String chatMemoryNotRightPrompt(String content) {

@@ -23,6 +23,7 @@ from app.api.v1 import (
     assets,
     audit,
     aurora,
+    aurora_receipts,
     aurora_status,
     auth,
     background_tasks,
@@ -197,6 +198,7 @@ api_router.include_router(error_book.error_book_router)  # Prefix is defined in 
 api_router.include_router(learning_paths.router)  # Already has prefix /learning-paths
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 api_router.include_router(aurora.router)
+api_router.include_router(aurora_receipts.router)  # A-06：/aurora/receipts 前缀（Why-this 回执四动作纠偏）
 api_router.include_router(client_telemetry.router)
 api_router.include_router(signals.router)
 api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
