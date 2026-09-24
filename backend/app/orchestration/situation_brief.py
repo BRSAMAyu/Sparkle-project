@@ -53,7 +53,8 @@ def _compact_text(value: Any, *, limit: int = 160) -> str:
 
 
 def _extract_cognitive_context(value: dict[str, Any]) -> dict[str, Any]:
-    payload = value.get("cognitive_context") if isinstance(value, dict) else None
+    # 显式 Any 注解系原表达式本就含有的 Any 显式化，hasattr 运行时守卫保留（wt333 先例）。
+    payload: Any = value.get("cognitive_context") if isinstance(value, dict) else None
     if hasattr(payload, "model_dump"):
         payload = payload.model_dump(mode="json")
     return payload if isinstance(payload, dict) else {}

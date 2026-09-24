@@ -306,7 +306,10 @@ async def get_context_receipt(
     try:
         from app.core.cache import cache_service
 
-        raw = await cache_service.redis.get(
+        redis_client = cache_service.redis
+        if redis_client is None:
+            return {"ok": True, "receipt": None}  # 与 redis 异常路径同回退
+        raw = await redis_client.get(
             f"spine:card:context_receipt:{current_user.id}:latest"
         )
         if not raw:

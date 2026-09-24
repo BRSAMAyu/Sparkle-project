@@ -1046,7 +1046,11 @@ class PlanningWorkflowManager:
         # MAGIC-006: load community cohort mistakes for template injection
         _cohort_hints: list[dict[str, Any]] = []
         try:
-            _hint_raw = await cache_service.redis.get(f"spine:community_loop:{str(user_id)}:cohort_mistake_hint:latest")
+            _redis_client = cache_service.redis
+            if _redis_client is None:
+                # 显式失败走既有 except 跳过路径（原 AttributeError 同类外抛）。
+                raise RuntimeError("redis unavailable for cohort mistake hint")
+            _hint_raw = await _redis_client.get(f"spine:community_loop:{str(user_id)}:cohort_mistake_hint:latest")
             if _hint_raw:
                 _hint_data = json.loads(_hint_raw)
                 if isinstance(_hint_data, dict):

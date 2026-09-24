@@ -324,7 +324,8 @@ class InterventionRecordService:
         evidence_payload: dict[str, Any],
     ) -> dict[str, Any]:
         implications: dict[str, Any] = {}
-        improvement = evidence_payload.get("improvement") if isinstance(evidence_payload.get("improvement"), dict) else {}
+        raw_improvement = evidence_payload.get("improvement")
+        improvement = raw_improvement if isinstance(raw_improvement, dict) else {}
         trigger = record.trigger_type.value if record.trigger_type else ""
         if trigger in {InterventionTriggerType.OVERLOAD.value, InterventionTriggerType.STALL_PATTERN.value}:
             implications["lighter_first_step"] = True

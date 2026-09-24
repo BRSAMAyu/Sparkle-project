@@ -610,8 +610,12 @@ class FeedbackDrivenAdjustmentService:
                 keep_ratio = action.parameters.get("keep_ratio", 0.5)
                 prefer_harder = action.parameters.get("prefer_harder", False)
 
-                tasks = [await self._get_task(tid, user_id) for tid in action.target_task_ids]
-                tasks = [t for t in tasks if t and t.status == TaskStatus.PENDING]
+                fetched_tasks = [await self._get_task(tid, user_id) for tid in action.target_task_ids]
+                # 显式循环替代过滤推导式：mypy 无法跨推导式携带 None 收窄（wt333 同族）。
+                tasks: list[Task] = []
+                for fetched in fetched_tasks:
+                    if fetched is not None and fetched.status == TaskStatus.PENDING:
+                        tasks.append(fetched)
 
                 if prefer_harder:
                     tasks.sort(key=lambda t: t.difficulty or 0, reverse=True)

@@ -378,13 +378,13 @@ class AgentScoringService:
         agent_ids: list[str],
     ) -> list[str]:
         scores = await self.get_quality_scores(user_id=user_id, agent_ids=agent_ids)
-        return sorted(
-            agent_ids,
-            key=lambda agent_id: (
-                -(scores.get(agent_id).quality_score if scores.get(agent_id) else 0.5),
-                agent_id,
-            ),
-        )
+
+        def _rank_key(agent_id: str) -> tuple[float, str]:
+            # 单次 get 局部绑定：双调用表达式 mypy 无法收窄（wt331 先例 #1）。
+            entry = scores.get(agent_id)
+            return (-(entry.quality_score if entry is not None else 0.5), agent_id)
+
+        return sorted(agent_ids, key=_rank_key)
 
     async def analyze_best_combinations(
         self,

@@ -1025,7 +1025,8 @@ def _resolve_recent_memory_answer(conversation_context: dict[str, Any] | None, u
     memory_key = (
         question_match.group("key").strip()
         if question_match
-        else re.sub(r"\s+", " ", english_question_match.group("key").strip().lower())
+        # 1022 行已保证两 match 至少一个非 None；此处 None 分支为 mypy 不可达兜底。
+        else (re.sub(r"\s+", " ", english_question_match.group("key").strip().lower()) if english_question_match else "")
     )
     messages = (conversation_context or {}).get("messages", []) if isinstance(conversation_context, dict) else []
 

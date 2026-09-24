@@ -5,6 +5,7 @@ Closes event-bus paths for achievement progression without blocking request hand
 
 import asyncio
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from urllib.parse import urlencode
 from uuid import UUID, uuid4
 
@@ -847,7 +848,9 @@ class AchievementEventConsumer:
 
     @staticmethod
     def _rarity_weight(rarity: AchievementRarity | str | None) -> float:
-        value = str(rarity.value if hasattr(rarity, "value") else rarity or "").strip().lower()
+        # 显式 Any 注解系原表达式本就含有的 Any 显式化，hasattr 运行时守卫保留（wt333 先例）。
+        raw_rarity: Any = rarity
+        value = str(raw_rarity.value if hasattr(raw_rarity, "value") else raw_rarity or "").strip().lower()
         return {
             "common": 1.0,
             "rare": 1.2,

@@ -508,10 +508,9 @@ class ResponseBuilderMixin:
         next_step = str(presence.get("next_step_suggestion") or "").strip()
         uncertainty = str(presence.get("uncertainty_level") or "medium").strip() or "medium"
         last_correction = presence.get("last_correction_effect")
-        correction_visible = isinstance(last_correction, dict) and bool(last_correction.get("visible"))
 
         what_changed: list[str] = []
-        if correction_visible:
+        if isinstance(last_correction, dict) and bool(last_correction.get("visible")):
             affected = [
                 str(item).strip() for item in last_correction.get("affected_state_keys") or [] if str(item).strip()
             ]

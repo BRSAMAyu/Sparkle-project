@@ -396,7 +396,8 @@ class ModelFallbackService:
             if decision.should_fallback:
                 logger.info(
                     f"[ModelFallback] Switching from {current_model} "
-                    f"to {decision.suggested_model} (reason: {decision.reason.value})"
+                    f"to {decision.suggested_model} "
+                    f"(reason: {decision.reason.value if decision.reason else 'unspecified'})"
                 )
                 return decision.suggested_model
 

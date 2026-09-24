@@ -954,10 +954,12 @@ async def get_user_context(db: AsyncSession, user_id: UUID, payload: dict[str, A
             except Exception:
                 explicit = {}
 
-        context["learning_preferences"] = {
-            "depth_preference": explicit.get("depth_preference", user.depth_preference),
-            "curiosity_preference": explicit.get("curiosity_preference", user.curiosity_preference),
-        }
+            # learning_preferences 依赖 user 行存在：放在守卫内，user 缺席时不再
+            # AttributeError 打断后续 context 段（同 GAIN-FIX 红旗3 的外层吞错形态）。
+            context["learning_preferences"] = {
+                "depth_preference": explicit.get("depth_preference", user.depth_preference),
+                "curiosity_preference": explicit.get("curiosity_preference", user.curiosity_preference),
+            }
 
         try:
             from app.services.profile_context_service import ProfileContextService

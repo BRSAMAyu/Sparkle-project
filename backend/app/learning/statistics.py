@@ -431,8 +431,7 @@ class ABTestStatistics:
         alpha: float, power: float, look_ahead: int
     ) -> dict:
         """Calculate sequential analysis boundaries (O'Brien-Fleming)"""
-        norm = stats.norm if HAS_SCIPY else NormalDist()
-        inv_cdf = norm.ppf if HAS_SCIPY else norm.inv_cdf
+        inv_cdf = stats.norm.ppf if HAS_SCIPY else NormalDist().inv_cdf
 
         # Calculate adjusted significance boundary.
         alpha_spending = 2 * (1 - inv_cdf(1 - alpha / (2 * look_ahead)))
@@ -506,8 +505,7 @@ class ABTestStatistics:
         p_pooled = (baseline_rate + target_rate) / 2
 
         # Z-values
-        norm = stats.norm if HAS_SCIPY else NormalDist()
-        inv_cdf = norm.ppf if HAS_SCIPY else norm.inv_cdf
+        inv_cdf = stats.norm.ppf if HAS_SCIPY else NormalDist().inv_cdf
         z_alpha = inv_cdf(1 - alpha / 2)
         z_beta = inv_cdf(power)
 

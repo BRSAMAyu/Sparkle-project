@@ -58,7 +58,10 @@ from app.services.action_authorization import (
     decide_authorization_mode,
     record_confirmation,
 )
-from app.services.action_commands import get_command_handler
+
+# 直接从定义模块导入（而非包再导出）：依赖图对静态守卫（Rule AT）可见，
+# 运行时同一对象，语义零变化。
+from app.services.action_commands.task_commands import get_command_handler
 
 ACTION_PROPOSAL_AGGREGATE = "action_proposal"
 ACTION_COMMAND_SERVICE_NAME = "action_command_service"

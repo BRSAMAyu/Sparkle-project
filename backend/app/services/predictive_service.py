@@ -1695,7 +1695,8 @@ class PredictiveService:
 
         for row in rows:
             ctx = row.context_snapshot or {}
-            prediction_ctx = ctx.get("prediction") if isinstance(ctx.get("prediction"), dict) else {}
+            raw_prediction = ctx.get("prediction")
+            prediction_ctx = raw_prediction if isinstance(raw_prediction, dict) else {}
             surface = str(prediction_ctx.get("surface") or "unknown")
             horizon = str(prediction_ctx.get("horizon") or "unknown")
             source = str(prediction_ctx.get("source") or "unknown")

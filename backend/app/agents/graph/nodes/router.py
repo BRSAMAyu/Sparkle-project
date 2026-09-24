@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from langchain_core.prompts import ChatPromptTemplate
 from loguru import logger
 from pydantic import BaseModel, Field
@@ -34,8 +36,10 @@ def _infer_plan_type(state: SparkleState) -> str:
     if not messages:
         return "routine"
 
-    last_message = messages[-1]
-    user_query = last_message.content.lower() if last_message else ""
+    last_message: Any = messages[-1] if messages else None
+    # 消息载体常规为带 .content 的消息对象（SparkleState 值类型松散，Any 系既有松散性
+    # 的显式化，非新增消音）；getattr 默认值保留原 falsy → "" 路径。
+    user_query = str(getattr(last_message, "content", "") or "").lower()
 
     if any(k in user_query for k in ["sprint", "突击", "冲刺", "cram", "focus"]):
         return "sprint"

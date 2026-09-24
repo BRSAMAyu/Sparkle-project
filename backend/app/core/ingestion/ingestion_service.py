@@ -313,7 +313,9 @@ class IngestionService:
                 continue
 
             # Feature Engineering: Extract styles
-            style_name = para.style.name.lower()
+            # python-docx 的 para.style 可为 None：空样式落 ""（非 header、metadata 记空串），
+            # 不再 AttributeError 打断整篇解析。
+            style_name = (para.style.name if para.style else "").lower()
             is_header = "heading" in style_name
 
             # Check for bold/color runs

@@ -126,7 +126,8 @@ class SpineEventBridge:
         )
 
     def _plan_created(self, event: dict[str, Any]) -> ActionableSignal:
-        metadata = event.get("metadata") if isinstance(event.get("metadata"), dict) else {}
+        raw_metadata = event.get("metadata")
+        metadata = raw_metadata if isinstance(raw_metadata, dict) else {}
         return self._signal(
             event,
             source_system="event_bus.plan",
@@ -144,7 +145,8 @@ class SpineEventBridge:
         )
 
     def _srl_transition(self, event: dict[str, Any]) -> ActionableSignal:
-        metadata = event.get("metadata") if isinstance(event.get("metadata"), dict) else {}
+        raw_metadata = event.get("metadata")
+        metadata = raw_metadata if isinstance(raw_metadata, dict) else {}
         return self._signal(
             event,
             source_system="event_bus.srl",

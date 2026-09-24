@@ -223,8 +223,11 @@ class MilestoneHandler:
             # Use TaskType.TASK_DECOMPOSITION which maps to study_planner
             llm = get_llm_service_for_task(TaskType.TASK_DECOMPOSITION)
             result = await llm.chat_json(messages)
+            # chat_json 契约为 Any | None：None 落空 dict 走既有空 tasks → None 回退，
+            # 不再 AttributeError（与下方 except 回退同出口）。
+            result_data = result if isinstance(result, dict) else {}
 
-            tasks = result.get("tasks", [])
+            tasks = result_data.get("tasks", [])
             if not tasks:
                 return None
 
@@ -232,7 +235,7 @@ class MilestoneHandler:
                 proposal_id=f"prop-{uuid.uuid4().hex[:8]}",
                 milestone_id=milestone.get("id"),
                 plan_id=str(plan_id),
-                reasoning=result.get("reasoning", "Generated based on milestone achievement."),
+                reasoning=result_data.get("reasoning", "Generated based on milestone achievement."),
                 suggested_count=len(tasks),
                 proposed_tasks=tasks
             )

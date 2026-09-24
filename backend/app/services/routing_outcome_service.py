@@ -225,7 +225,8 @@ class RoutingOutcomeEvaluator:
 
     @staticmethod
     def _judge_success(context: dict[str, Any]) -> tuple[bool, str, float]:
-        scores = context.get("signal_scores") if isinstance(context.get("signal_scores"), dict) else {}
+        raw_scores = context.get("signal_scores")
+        scores = raw_scores if isinstance(raw_scores, dict) else {}
         routing_mode = str(context.get("routing_mode") or "balanced")
         if float(scores.get("recent_corrections") or 0.0) >= 0.6:
             return False, "recent_corrections_after_routing", 1.25

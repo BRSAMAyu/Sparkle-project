@@ -165,7 +165,11 @@ class RoutingParameterExperimentService:
         # NOTE: This is a non-atomic read-modify-write. Concurrent experiments resolving
         # simultaneously could lose one's overrides. Acceptable because experiments resolve
         # rarely (daily at most) and winning overrides are additive, not destructive.
-        current_raw = await self.redis.get(REGISTRY_UPDATE_KEY)
+        redis_client = self.redis
+        if redis_client is None:
+            # 本方法无回退分支：显式失败（原 AttributeError 同类外抛，可诊断）。
+            raise RuntimeError("redis unavailable for experiment registry update")
+        current_raw = await redis_client.get(REGISTRY_UPDATE_KEY)
         current_params = dict(ALL_DEFAULT_PARAMETERS)
         if current_raw is not None:
             try:
@@ -179,7 +183,7 @@ class RoutingParameterExperimentService:
 
         new_version = _config_hash(current_params)
         payload = json.dumps({"version": new_version, "parameters": current_params})
-        await self.redis.set(
+        await redis_client.set(
             REGISTRY_UPDATE_KEY,
             payload.encode() if isinstance(payload, str) else payload,
             ex=86400 * 30,  # 30-day TTL — auto-revert if not refreshed

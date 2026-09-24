@@ -91,16 +91,19 @@ async def memory_stats(db: AsyncSession = Depends(get_db)):
         ("goals", MemoryGoal),
         ("episodic", EpisodicMemory),
     ):
+        # 单次 getattr 绑定：hasattr+双 getattr 模式 mypy 无法收窄（wt333 planning 同款）。
+        archived_at_col = getattr(model, "archived_at", None)
+        not_archived = archived_at_col.is_(None) if archived_at_col is not None else true()
         total_result = await db.execute(
             select(func.count(model.id)).where(
                 model.deleted_at.is_(None),
-                getattr(model, "archived_at", None).is_(None) if hasattr(model, "archived_at") else true(),
+                not_archived,
             )
         )
         missing_result = await db.execute(
             select(func.count(model.id)).where(
                 model.deleted_at.is_(None),
-                getattr(model, "archived_at", None).is_(None) if hasattr(model, "archived_at") else true(),
+                not_archived,
                 model.evidence_missing.is_(True),
             )
         )
@@ -164,10 +167,12 @@ async def memory_health(
         (MemoryGoal, "goal"),
         (EpisodicMemory, "episodic"),
     ):
+        archived_at_col = getattr(model, "archived_at", None)
+        not_archived = archived_at_col.is_(None) if archived_at_col is not None else true()
         result = await db.execute(
             select(model)
             .where(model.evidence_missing.is_(True))
-            .where(getattr(model, "archived_at", None).is_(None) if hasattr(model, "archived_at") else true())
+            .where(not_archived)
             .order_by(model.updated_at.desc())
             .limit(limit)
         )

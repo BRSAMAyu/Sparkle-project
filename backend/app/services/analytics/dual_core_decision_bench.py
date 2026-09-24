@@ -142,7 +142,8 @@ def _route_execution_mode(record: RoutingDecisionLog) -> str:
 
 def _signal_scores(record: RoutingDecisionLog) -> dict[str, float]:
     payload = dict(record.decision_payload or {})
-    raw = payload.get("signal_scores") if isinstance(payload.get("signal_scores"), dict) else {}
+    raw_payload = payload.get("signal_scores")
+    raw = raw_payload if isinstance(raw_payload, dict) else {}
     return {
         str(key): round(_safe_float(value), 6)
         for key, value in raw.items()

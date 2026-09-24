@@ -128,14 +128,20 @@ class LangGraphPlanner:
                 elif hist.get("role") == "assistant":
                     messages.insert(-1, AIMessage(content=hist.get("content", "")))
 
-        initial_state: SparkleState = {
+        # 单次绑定 + hasattr 收窄：局部显式 Any 系原表达式本就含有的 Any 显式化（wt333 先例）。
+        persona_model: Any = persona_constraints
+
+        # 注解谎言修正（wt333 先例 #2 同族）：字面量在 162-179 行三段条件更新后才成为完整
+        # SparkleState，构造点从未满足该 TypedDict（base 中同行的 union-attr 错误恰好
+        # 抑制了严格校验——修正后暴露的 3 条存量问题按字面量真实类型修正注解）。
+        initial_state: dict[str, Any] = {
             "messages": messages,
             "user_id": user_id,
             "session_id": session_id,
             "user_profile": {
                 **(snapshot.to_dict() if snapshot else {}),
                 **({"plan_constraints": planning_constraints} if planning_constraints else {}),
-                **({"persona_constraints": persona_constraints.to_planning_constraints()} if hasattr(persona_constraints, "to_planning_constraints") else {}),
+                **({"persona_constraints": persona_model.to_planning_constraints()} if hasattr(persona_model, "to_planning_constraints") else {}),
                 "language": locale,
             },
             "next_step": None,

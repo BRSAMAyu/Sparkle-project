@@ -950,7 +950,7 @@ async def guest_login(
 
     # 如果不存在，创建一个临时guest用户并播种演示数据
     is_new_guest = not user
-    if is_new_guest:
+    if user is None:
         user = User(
             username=guest_id,
             email=f"{guest_id}@guest.local",  # 临时邮箱

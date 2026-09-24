@@ -393,7 +393,9 @@ class TaskDecompositionWorkflow:
             integrated += f"\n### {output.agent_name}\n\n{output.response_text}\n\n---\n"
 
         # 添加任务生成提示
-        tool_calls = planner_response.metadata.get("tool_calls", [])
+        # metadata 可空：缺席落空 dict（wt331 translation result.data or {} 同款），
+        # 不再 AttributeError 打断整合输出。
+        tool_calls = (planner_response.metadata or {}).get("tool_calls", [])
         if tool_calls:
             integrated += f"\n## ✅ 已为你生成 {len(tool_calls)} 个学习任务\n\n"
             integrated += "这些任务已添加到你的任务列表中，可以在任务页面查看和开始学习。\n"

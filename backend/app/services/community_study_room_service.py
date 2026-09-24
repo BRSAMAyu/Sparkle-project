@@ -287,6 +287,16 @@ class StudyRoomService:
             if in_room:
                 in_room_count += 1
             today_minutes = await StudyRoomService._today_minutes_for(db, group_id, member.user_id, now=now)
+            # in_room 与 session is not None 同义（283 行定义），显式联判使 mypy 可收窄；
+            # 运行时真值表不变。
+            current_session_minutes = 0
+            if in_room and session is not None:
+                current_session_minutes = overlap_minutes(
+                    session.entered_at,
+                    _effective_end(session, now),
+                    session.entered_at,
+                    now,
+                )
             entries.append(
                 StudyRoomPresenceEntry(
                     user_id=member.user_id,
@@ -294,17 +304,8 @@ class StudyRoomService:
                     role=str(member.role.value),
                     in_room=in_room,
                     is_stale=is_stale,
-                    entered_at=session.entered_at if in_room else None,
-                    current_session_minutes=(
-                        overlap_minutes(
-                            session.entered_at,
-                            _effective_end(session, now),
-                            session.entered_at,
-                            now,
-                        )
-                        if in_room
-                        else 0
-                    ),
+                    entered_at=session.entered_at if session is not None and in_room else None,
+                    current_session_minutes=current_session_minutes,
                     today_minutes=today_minutes,
                 )
             )

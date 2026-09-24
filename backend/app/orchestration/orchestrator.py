@@ -3219,13 +3219,16 @@ class ChatOrchestrator(
                     # expensive Aurora LLM decision loop and fall through to standard chat.
                     _aurora_l1 = (request_extra_context or {}).get("aurora_l1")
                     _l1_should_escalate = True
+                    _l1_band_hint = "unknown"
                     if isinstance(_aurora_l1, dict):
                         _l1_should_escalate = bool(_aurora_l1.get("should_escalate", True))
+                        # 单次绑定：本分支内 isinstance 已收窄，日志取值不再跨分支解引用。
+                        _l1_band_hint = str(_aurora_l1.get("status_band_hint", "unknown"))
                     if not _l1_should_escalate:
                         logger.debug(
                             "L1 fast path: skipping Aurora LLM for user={}, band={}",
                             user_id,
-                            _aurora_l1.get("status_band_hint", "unknown"),
+                            _l1_band_hint,
                         )
                         # Fall through to standard chat — the aurora_l1 metadata was
                         # already forwarded to Flutter at the pre-processing stage.

@@ -143,7 +143,8 @@ def _is_chat_opening_update(update: dict[str, Any]) -> bool:
     if not isinstance(update, dict):
         return False
     update_type = str(update.get("type") or "").strip()
-    metadata = update.get("metadata") if isinstance(update.get("metadata"), dict) else {}
+    raw_metadata = update.get("metadata")
+    metadata = raw_metadata if isinstance(raw_metadata, dict) else {}
     evolution_kind = str(metadata.get("evolution_kind") or "").strip()
     return update_type == "plan_adjusted_from_error" or evolution_kind in {
         "adjustment",
@@ -171,7 +172,8 @@ def _extract_intervention_id(updates: list[dict[str, Any]]) -> UUID | None:
     for update in updates:
         if not isinstance(update, dict):
             continue
-        metadata = update.get("metadata") if isinstance(update.get("metadata"), dict) else {}
+        raw_metadata = update.get("metadata")
+        metadata = raw_metadata if isinstance(raw_metadata, dict) else {}
         raw = metadata.get("intervention_id")
         if not raw:
             continue
@@ -288,9 +290,9 @@ def _build_first_session_message(
     study_time_minutes: int | None,
 ) -> str:
     """Deterministic fallback for the first-session opener message."""
-    if not (learning_goal or "").strip():
+    goal = (learning_goal or "").strip()
+    if not goal:
         return "你好！我是 Sparkle。告诉我你现在最想突破的学习难关，我们一起来想办法。"
-    goal = learning_goal.strip()
     goal_label = _goal_type_label(learning_goal_type)
     level_map = {
         "beginner": "刚开始接触",

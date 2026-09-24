@@ -91,7 +91,8 @@ def status_change_semantics(target: TaskStatus) -> tuple[str, bool]:
 def _snapshot(task: Task) -> dict[str, Any]:
     snap: dict[str, Any] = {}
     for field_name in _SUBJECT_SNAPSHOT_FIELDS:
-        value = getattr(task, field_name, None)
+        # 显式 Any 注解：getattr 返回本就是 Any | None，hasattr 运行时守卫保留（wt333 先例）。
+        value: Any = getattr(task, field_name, None)
         if isinstance(value, DateType):
             value = value.isoformat()
         elif hasattr(value, "isoformat"):  # datetime

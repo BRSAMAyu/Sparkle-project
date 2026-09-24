@@ -1684,7 +1684,7 @@ async def get_accountability_achievements(
                 "type": definition["type"].value,
                 "points": definition.get("points", 0),
                 "unlocked": user_achievement is not None,
-                "unlocked_at": user_achievement.unlocked_at.isoformat() if user_achievement else None,
+                "unlocked_at": user_achievement.unlocked_at.isoformat() if user_achievement and user_achievement.unlocked_at else None,
             }
         )
 

@@ -71,7 +71,8 @@ def _serialize_preference_record(
             (record.pref_value or {}).get("value") if isinstance(record.pref_value, dict) else record.pref_value,
             current_values,
         )
-        adjustable = INFERRED_META.get(record.pref_key).adjustable if record.pref_key in INFERRED_META else False
+        inferred_meta = INFERRED_META.get(record.pref_key)
+        adjustable = inferred_meta.adjustable if inferred_meta is not None else False
 
     return {
         "id": str(record.id),

@@ -113,7 +113,9 @@ async def clean_document(
             )
 
         # 3. Save temp file
-        file_ext = os.path.splitext(file.filename)[1].lower()
+        # UploadFile.filename 可为 None（starlette 契约）：以空串落空扩展名走 400 拒绝，
+        # 不再 splitext(None) TypeError 落 500。
+        file_ext = os.path.splitext(file.filename or "")[1].lower()
         ALLOWED_EXTENSIONS = {".pdf", ".docx", ".txt", ".md", ".html"}
         if file_ext not in ALLOWED_EXTENSIONS:
             raise HTTPException(status_code=400, detail="File type not allowed")

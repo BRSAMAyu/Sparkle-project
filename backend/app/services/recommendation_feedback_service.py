@@ -192,12 +192,13 @@ class RecommendationFeedbackService:
         }
         completed_stage_keys = {
             (
-                cls._interaction_item_type(interaction).value,
+                item_type.value,
                 str(interaction.item_id),
                 str((interaction.meta or {}).get("stage")),
             )
             for interaction in interactions
-            if cls._interaction_item_type(interaction) is not None
+            # 海象单次调用：条件与取值同源，消除「判 A 调用、取 B 调用」脆弱模式（wt333 先例）。
+            if (item_type := cls._interaction_item_type(interaction)) is not None
             and (interaction.meta or {}).get("has_structured_feedback")
             and (interaction.meta or {}).get("stage")
         }
@@ -491,7 +492,11 @@ class RecommendationFeedbackService:
             for key in keys:
                 strategy_bias[key] += delta
 
-        if item_type == RecommendationItemTypeEnum.FRIEND:
+        # FRIEND 分支全程使用 Friend 变体专属字段（strategy 等）：isinstance 联判使
+        # mypy 可收窄；调用不一致（FRIEND + Group payload）时跳过而非中途 AttributeError。
+        if item_type == RecommendationItemTypeEnum.FRIEND and isinstance(
+            payload, FriendRecommendationFeedbackRequest
+        ):
             if getattr(payload, "relevance_score", None) and payload.relevance_score <= 2:
                 bump_feature("subject_overlap", "preference_alignment", delta=0.08)
             if getattr(payload, "similarity_score", None) and payload.similarity_score <= 2:

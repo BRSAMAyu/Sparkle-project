@@ -816,8 +816,10 @@ class ProgressNarrativeService:
         )
         context_bits: list[str] = []
 
-        plan = snapshot.get("current_plan") if isinstance(snapshot.get("current_plan"), dict) else {}
-        task = snapshot.get("task") if isinstance(snapshot.get("task"), dict) else {}
+        raw_plan = snapshot.get("current_plan")
+        plan = raw_plan if isinstance(raw_plan, dict) else {}
+        raw_task = snapshot.get("task")
+        task = raw_task if isinstance(raw_task, dict) else {}
         plan_name = self._clean_text(plan.get("name"))
         task_title = self._clean_text(task.get("title"))
         days_to_target = plan.get("days_to_target")

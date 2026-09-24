@@ -171,11 +171,16 @@ class AgeClient:
         Returns:
             查询结果列表
         """
-        if not self.pool:
+        pool = self.pool
+        if not pool:
             await self.init_pool()
+            pool = self.pool
+        if pool is None:
+            # init_pool 失败仍为 None 时显式失败（原 AttributeError 同类外抛，可诊断）。
+            raise RuntimeError("AGE connection pool unavailable after init_pool")
 
         try:
-            async with self.pool.acquire() as conn:
+            async with pool.acquire() as conn:
                 await self._prepare_connection(conn)
                 rendered_cypher = self._inline_cypher_params(cypher, params)
                 sql = (
@@ -200,10 +205,14 @@ class AgeClient:
 
     async def create_graph(self, graph_name: str):
         """创建图谱"""
-        if not self.pool:
+        pool = self.pool
+        if not pool:
             await self.init_pool()
+            pool = self.pool
+        if pool is None:
+            raise RuntimeError("AGE connection pool unavailable after init_pool")
 
-        async with self.pool.acquire() as conn:
+        async with pool.acquire() as conn:
             await self._prepare_connection(conn)
             exists = await conn.fetchval(
                 "SELECT 1 FROM ag_catalog.ag_graph WHERE name = $1",

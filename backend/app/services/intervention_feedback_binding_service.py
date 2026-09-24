@@ -70,7 +70,8 @@ class InterventionFeedbackBindingService:
         for update in updates:
             if not isinstance(update, dict):
                 continue
-            metadata = update.get("metadata") if isinstance(update.get("metadata"), dict) else {}
+            raw_metadata = update.get("metadata")
+            metadata = raw_metadata if isinstance(raw_metadata, dict) else {}
             raw_intervention_id = metadata.get("intervention_id")
             if not raw_intervention_id:
                 continue

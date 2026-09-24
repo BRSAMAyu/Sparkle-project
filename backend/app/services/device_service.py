@@ -194,7 +194,9 @@ class DeviceService:
         """辅助方法：缓存用户设备令牌到 Redis"""
         import json
         tokens = await self.get_user_device_tokens(db, user_id, active_only=True)
-        await self.redis.setex(cache_key, 300, json.dumps(tokens))
+        # 与本文件其余方法同款 self.redis 缺席守卫（95/139/158/177 行既有约定）。
+        if self.redis:
+            await self.redis.setex(cache_key, 300, json.dumps(tokens))
 
     async def cleanup_inactive_devices(
         self,

@@ -332,15 +332,15 @@ async def batch_operations(
             elif op.action == "update":
                 if not op.event_id:
                     raise ValueError("Missing event_id for update operation")
-                event = await db.get(CalendarEvent, op.event_id)
-                if not event or event.user_id != current_user.id or event.deleted_at:
+                existing_event = await db.get(CalendarEvent, op.event_id)
+                if not existing_event or existing_event.user_id != current_user.id or existing_event.deleted_at:
                     raise ValueError("Event not found")
 
                 if op.data:
-                    event_in = CalendarEventUpdate(**op.data)
-                    update_data = event_in.model_dump(exclude_unset=True)
+                    event_update = CalendarEventUpdate(**op.data)
+                    update_data = event_update.model_dump(exclude_unset=True)
                     for field, value in update_data.items():
-                        setattr(event, field, value)
+                        setattr(existing_event, field, value)
 
                 results.append(BatchOperationResult(
                     action=op.action,
@@ -352,12 +352,12 @@ async def batch_operations(
             elif op.action == "delete":
                 if not op.event_id:
                     raise ValueError("Missing event_id for delete operation")
-                event = await db.get(CalendarEvent, op.event_id)
-                if not event or event.user_id != current_user.id:
+                existing_event = await db.get(CalendarEvent, op.event_id)
+                if not existing_event or existing_event.user_id != current_user.id:
                     raise ValueError("Event not found")
 
-                event.soft_delete()
-                db.add(event)
+                existing_event.soft_delete()
+                db.add(existing_event)
 
                 results.append(BatchOperationResult(
                     action=op.action,

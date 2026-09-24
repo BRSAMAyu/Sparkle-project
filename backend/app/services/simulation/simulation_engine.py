@@ -426,7 +426,8 @@ class SimulationEngine:
         limit: int,
     ) -> list[str]:
         topic_lower = str(topic or "").strip().lower()
-        if not topic_lower:
+        if not topic_lower or self.db is None:
+            # db 缺席与空 topic 同回退（本类 391/1665/1690 行既有守卫口径）。
             return []
         rows = (
             await self.db.execute(
@@ -479,7 +480,8 @@ class SimulationEngine:
         limit: int,
     ) -> list[str]:
         topic_lower = str(topic or "").strip().lower()
-        if not topic_lower:
+        if not topic_lower or self.db is None:
+            # db 缺席与空 topic 同回退（本类 391/1665/1690 行既有守卫口径）。
             return []
         rows = (
             await self.db.execute(
@@ -1516,6 +1518,9 @@ class SimulationEngine:
         )
 
     async def _get_user_mastery_gaps(self, user_id: UUID) -> list[str]:
+        if self.db is None:
+            # db 缺席诚实空（本类 391/1665/1690 行既有守卫口径）。
+            return []
         result = await self.db.execute(
             select(KnowledgeNode.name)
             .join(UserNodeStatus, UserNodeStatus.node_id == KnowledgeNode.id)

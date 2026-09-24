@@ -1534,7 +1534,8 @@ class TaskService:
 
         changes: dict[str, dict[str, Any]] = {}
         for key, value in fields.items():
-            current = getattr(db_obj, key, None)
+            # 显式 Any 注解：getattr 返回本就是 Any | None，hasattr 运行时守卫保留（wt333 先例）。
+            current: Any = getattr(db_obj, key, None)
             if key == "due_date" and isinstance(value, str) and value:
                 from datetime import date as date_cls
 

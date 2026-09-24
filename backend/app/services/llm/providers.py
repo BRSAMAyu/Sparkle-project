@@ -1,5 +1,6 @@
 import time
 from collections.abc import AsyncGenerator
+from typing import cast
 
 from fastapi import HTTPException
 from loguru import logger
@@ -7,6 +8,8 @@ from loguru import logger
 try:
     from openai import APIError, AsyncOpenAI
     from openai import Timeout as OpenAITimeout
+    from openai.types.chat import ChatCompletionChunk
+
     HAS_OPENAI = True
 except ImportError:
     AsyncOpenAI = None
@@ -144,13 +147,18 @@ class OpenAICompatibleProvider(LLMProvider):
         ttft_observed = False
         try:
             async with llm_concurrency.acquire(provider):
-                stream = await self.client.chat.completions.create(
+                response = await self.client.chat.completions.create(
                     model=model,
                     messages=messages,
                     temperature=temperature,
                     stream=True,
                     **kwargs
                 )
+                # stream=True 时 openai SDK 契约恒返 AsyncStream（**kwargs 使 mypy 无法
+                # 选择 overload，cast 记录该运行时契约——wt331 collaboration 同款）。
+                from openai import AsyncStream
+
+                stream = cast(AsyncStream[ChatCompletionChunk], response)
                 async for chunk in stream:
                     content = chunk.choices[0].delta.content
                     if content:

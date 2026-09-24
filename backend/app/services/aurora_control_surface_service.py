@@ -519,8 +519,10 @@ class AuroraControlSurfaceService:
         signals: list[str] = []
         if actual:
             signals.append(f"会话: {actual}")
-        if _strip(getattr(runtime_state, "surface", None)):
-            signals.append(f"表面: {runtime_state.surface}")
+        # 单次 getattr 绑定：条件与取值同源，None 时分支不可达（与原 getattr 默认值语义一致）。
+        runtime_surface = getattr(runtime_state, "surface", None)
+        if _strip(runtime_surface):
+            signals.append(f"表面: {runtime_surface}")
         if overload:
             signals.append(f"过载风险: {overload}")
         if runtime_surface_state.get("in_detour") is True:

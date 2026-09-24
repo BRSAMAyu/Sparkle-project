@@ -2152,7 +2152,9 @@ Please review this plan and provide your assessment."""
                 )
 
                 if result.success:
-                    task_count_created = result.data.get("task_count", 0)
+                    # 局部绑定：success 分支取 data 快照，None 时落空 dict（wt331 translation 同款）。
+                    result_data = result.data or {}
+                    task_count_created = result_data.get("task_count", 0)
                     logger.info(
                         f"Successfully generated {task_count_created} tasks "
                         f"for plan {plan_id} (action_id={action_id})"
@@ -2162,7 +2164,7 @@ Please review this plan and provide your assessment."""
                             db_session=db,
                             user_id=user_id,
                             plan_id=plan_id,
-                            tasks=result.data.get("tasks") or [],
+                            tasks=result_data.get("tasks") or [],
                         )
                 else:
                     logger.error(f"Task generation failed for plan {plan_id}: " f"{result.error_message}")

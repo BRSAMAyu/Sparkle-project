@@ -227,7 +227,8 @@ class TaskOccurrenceService:
             "occurrence_id": str(occurrence.id),
             "series_card_id": str(occurrence.series_card_id),
             "old_status": old_status.value,
-            "new_status": occurrence.occurrence_status.value,
+            # 状态列可空（nullable）：缺席落 None 而非 AttributeError 打断事件发布。
+            "new_status": occurrence.occurrence_status.value if occurrence.occurrence_status else None,
         }
         if extra_payload:
             payload.update(extra_payload)

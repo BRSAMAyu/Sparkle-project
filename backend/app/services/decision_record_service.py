@@ -49,10 +49,14 @@ class DecisionRecordService:
         limit: int = 10
     ) -> list[DecisionRecordModel]:
         """获取最近的决策记录"""
+        # 与 record_decision 同款 db 缺席跳过语义（本类既有约定）。
+        if self.db is None:
+            logger.warning("DecisionRecordService called without db session; skipping get_recent_records")
+            return []
         result = await self.db.execute(
             select(DecisionRecordModel)
             .where(DecisionRecordModel.user_id == user_id)
             .order_by(DecisionRecordModel.created_at.desc())
             .limit(limit)
         )
-        return result.scalars().all()
+        return list(result.scalars().all())

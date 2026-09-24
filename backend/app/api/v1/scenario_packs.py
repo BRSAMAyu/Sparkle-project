@@ -177,7 +177,11 @@ async def assign_pack(
         first_node = manifest.backbone_nodes[0].node_id if manifest.backbone_nodes else ""
         state_key = f"spine:scenario_journey:{current_user.id}:{goal.id}"
         import json
-        await cache_service.redis.set(
+        redis_client = cache_service.redis
+        if redis_client is None:
+            # 显式失败走既有 except 告警路径（原 AttributeError 同类外抛，可诊断）。
+            raise RuntimeError("redis unavailable for scenario journey state write")
+        await redis_client.set(
             state_key,
             json.dumps({
                 "pack_id": pack_id,
@@ -207,7 +211,10 @@ async def get_progress(
 
         from app.core.cache import cache_service
         state_key = f"spine:scenario_journey:{current_user.id}:{goal_id}"
-        raw = await cache_service.redis.get(state_key)
+        redis_client = cache_service.redis
+        if redis_client is None:
+            return JourneyProgress()  # 与 redis 异常路径同回退
+        raw = await redis_client.get(state_key)
         if raw is None:
             return JourneyProgress()
         state = json.loads(raw)

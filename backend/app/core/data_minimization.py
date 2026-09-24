@@ -550,10 +550,8 @@ def resolve_data_minimization_mode(
     migration discovery without silently changing local fixtures.
     """
     raw_mode = (
-        (configured_mode or os.getenv("SPARKLE_DATA_MINIMIZATION_MODE", ""))
-        .strip()
-        .lower()
-    )
+        configured_mode or os.getenv("SPARKLE_DATA_MINIMIZATION_MODE") or ""
+    ).strip().lower()
     if raw_mode:
         if raw_mode not in VALID_DATA_MINIMIZATION_MODES:
             raise ValueError(

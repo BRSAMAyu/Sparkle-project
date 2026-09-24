@@ -311,7 +311,7 @@ async def defer_occurrence(
             "success": True,
             "data": {
                 "occurrence_id": str(occurrence.id),
-                "status": occurrence.occurrence_status.value,
+                "status": occurrence.occurrence_status.value if occurrence.occurrence_status else None,
                 "scheduled_for": occurrence.scheduled_for.isoformat() if occurrence.scheduled_for else None,
                 "deferral_count": occurrence.deferral_count,
             },

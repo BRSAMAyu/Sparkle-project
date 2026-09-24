@@ -502,6 +502,8 @@ class ProblemSolverAgent(BaseAgent):
         """
 
         related_concepts_str = ", ".join(problem_analysis["related_concepts"])
+        # mastery_levels 可空：缺席落空 dict（掌握度全 0%），不再 AttributeError 打断提示词构建。
+        mastery_levels = context.mastery_levels or {}
 
         system_prompt = f"""{self.get_system_prompt()}
 
@@ -509,7 +511,7 @@ class ProblemSolverAgent(BaseAgent):
 
 **用户背景**：
 - 相关知识点：{related_concepts_str}
-- 这些知识点的掌握度：{', '.join([f'{c}: {context.mastery_levels.get(c, 0):.0%}' for c in problem_analysis['related_concepts'][:3]])}
+- 这些知识点的掌握度：{', '.join([f'{c}: {mastery_levels.get(c, 0):.0%}' for c in problem_analysis['related_concepts'][:3]])}
 - 用户常见错误：{', '.join((context.common_errors or [])[:3])}
 
 **教学策略**：

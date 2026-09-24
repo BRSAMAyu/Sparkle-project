@@ -19,6 +19,7 @@
 - `backend/app/services/understanding_benchmark_evaluator.py`
 - `backend/app/services/card_protocol/consistency_validator.py`
 - `backend/app/services/jpush_sender_service.py`
+- `backend/app/services/analytics/dual_core_decision_bench.py` — offline decision audit bench（模块自述 intentionally read-only），直接受测（tests/unit/test_dual_core_decision_bench.py），无运行时导入方属设计内；同 planning_benchmark_evaluator / profile_eval_runner 先例（wt340 登记）
 
 - Dead modules (no runtime importers, candidates for removal):
 - `backend/app/services/budget_optimization_service.py`

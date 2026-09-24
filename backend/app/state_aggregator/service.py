@@ -880,11 +880,20 @@ class StateAggregatorService:
         # DF-10: Also read recent events from Redis cache
         recent_events: list[dict] = []
         try:
+            import inspect
             import json as _json
 
             from app.core.cache import cache_service
             events_key = f"spine:achievement_events:{user_id}"
-            raw_events = await cache_service.redis.lrange(events_key, 0, 4) if hasattr(cache_service, 'redis') else []
+            # hasattr(cache_service, 'redis') 恒真（模块级单例，属性类型 Redis | None）——
+            # wt331 achievement 同款：改显式判空，None 落 [] 与 except 回退一致。
+            # lrange 按库官方 dual-mode 模式处理（redis-py 7.x 桩 Union[Awaitable, list]）。
+            redis_client = cache_service.redis
+            if redis_client is not None:
+                pending_events = redis_client.lrange(events_key, 0, 4)
+                raw_events = await pending_events if inspect.isawaitable(pending_events) else pending_events
+            else:
+                raw_events = []
             for raw in raw_events:
                 try:
                     recent_events.append(_json.loads(raw))

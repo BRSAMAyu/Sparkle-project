@@ -2224,6 +2224,9 @@ class CheckinService:
 
         # 更新群组统计
         group = await Group.get_by_id(db, data.group_id)
+        if group is None:
+            # 与上方 linked_goal 校验同类外抛（原 AttributeError 无诊断信息）。
+            raise ValueError(f"群组不存在: {data.group_id}")
         group.total_flame_power += flame_earned
         group.today_checkin_count += 1
 

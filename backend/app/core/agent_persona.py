@@ -160,7 +160,8 @@ def build_agent_persona(
     profile: AgentProfile,
 ) -> AgentPersona:
     context = user_context if isinstance(user_context, dict) else {}
-    identity = context.get("identity") if isinstance(context.get("identity"), dict) else {}
+    raw_identity = context.get("identity")
+    identity = raw_identity if isinstance(raw_identity, dict) else {}
     knowledge_summary = context.get("profile_context", {}) if isinstance(context.get("profile_context"), dict) else {}
     active_subjects = list(
         (
