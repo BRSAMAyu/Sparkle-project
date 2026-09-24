@@ -107,6 +107,7 @@ analyzer:
     - ".dart_tool/**"
     - "lib/generated/**"
     - "lib/gen/**"
+    - "third_party_plugins/**"
     - "lib/core/network/proto/**"
     - "test/performance/**"
     - "test/integration/**"
