@@ -106,6 +106,35 @@ void main() {
       );
     });
 
+    test('anchor ring marks only the current anchor with a live spotlight',
+        () {
+      const spotlight = {'root', 'child'};
+
+      // F-3「锚定可感知」：环只落在当前锚上——平移重定锚后用户能在
+      // 视口里指出锚是哪个节点。
+      expect(
+        galaxySpotlightAnchorRingOpacity('root', 'root', spotlight),
+        1,
+      );
+      expect(
+        galaxySpotlightAnchorRingOpacity('child', 'root', spotlight),
+        0,
+      );
+      expect(
+        galaxySpotlightAnchorRingOpacity('other', 'root', spotlight),
+        0,
+      );
+      // 无锚（视口空/诚实退回）或 spotlight 未挂时不画环。
+      expect(
+        galaxySpotlightAnchorRingOpacity('root', null, spotlight),
+        0,
+      );
+      expect(
+        galaxySpotlightAnchorRingOpacity('root', 'root', const <String>{}),
+        0,
+      );
+    });
+
     test('link distance maps to force engine spring rest length', () {
       final engine = GalaxyForceEngine();
       engine.updateParameters(springRestLength: 144);

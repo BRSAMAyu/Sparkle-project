@@ -13,11 +13,12 @@ import '../../../shared/i18n_test_helper.dart';
 
 /// SPEC-J（A-SPEC-V1_1 top10 #10）：galaxy 工作视图最小切片验收。
 ///
-/// 验收条款（REPORT.md §5 #10）：
+/// 验收条款（REPORT.md §5 #10；4 号条款经 wt324 F-3 修订）：
 /// 1. 进图默认视野节点 ≤20；
 /// 2. 推荐 chip（「下一个建议碰：X」）同屏 ≤1；
 /// 3. chip 点击直达复习流（既有 /chat 路由 + reviewUrgencyReason 理由链）；
-/// 4. 无推荐目标用户诚实降级——不挂 chip，不造默认值。
+/// 4. 无推荐目标时不再无引导（F-3）：相机落到结构锚（importance 最高、
+///    图序稳定）邻域作视觉起始引导，仍不挂 chip、不带复习语义。
 void main() {
   setUp(setUpI18nForTesting);
 
@@ -168,22 +169,49 @@ void main() {
     );
 
     testWidgets(
-      'no recommendation → honest degradation: no chip, no fake spotlight '
-      '(SPEC-J 验收 4：无目标诚实降级)',
+      'no recommendation → structural anchor fallback: camera converges to '
+      'highest-importance node, still no chip (F-3：无推荐不再无引导)',
       (tester) async {
         final nodes = _gridNodes(count: 12, columns: 4);
+        // 无任何 is_review_recommended：structural anchor = importance 最高
+        // 的图序首个 → index 4（importance 5；index 9 同分靠后）。
         final container = await _pumpGalaxy(tester, nodes, const []);
 
-        await _pumpUntilWorkViewSettled(tester, anchorId: null);
+        await _pumpUntilWorkViewSettled(tester, anchorId: nodes[4].id);
 
+        // F-3 契约：无推荐≠无引导——相机落到结构锚邻域并挂 spotlight
+        // （含 F-3 锚定指示环的绘制口径），但复习语义不跟来。
+        final painter = _starMapPainter(tester);
+        expect(painter.spotlightAnchorId, nodes[4].id);
+        expect(painter.spotlightNodeIds, contains(nodes[4].id));
         expect(
           find.byKey(const ValueKey('galaxy_work_view_chip')),
           findsNothing,
         );
         expect(find.textContaining('下一个建议碰'), findsNothing);
-        // 不造默认值：无推荐时不伪挂聚焦。
+        container.dispose();
+      },
+    );
+
+    testWidgets(
+      'fresh all-locked graph gets a visible starting focus without review '
+      'semantics (F-3：fresh 全锁定初始态起始引导)',
+      (tester) async {
+        final nodes = _gridNodes(count: 12, columns: 4, unlocked: false);
+        final container = await _pumpGalaxy(tester, nodes, const []);
+
+        await _pumpUntilWorkViewSettled(tester, anchorId: nodes[4].id);
+
         final painter = _starMapPainter(tester);
-        expect(painter.spotlightAnchorId, isNull);
+        // wt324 F-3 现象回归钉：全锁定进图后锚定在视口内可指认
+        // （结构锚 = importance 最高、图序稳定），不再停留全图概览。
+        expect(painter.spotlightAnchorId, nodes[4].id);
+        expect(painter.spotlightNodeIds, contains(nodes[4].id));
+        // 锁定节点无复习语义可挂：chip 必须缺席。
+        expect(
+          find.byKey(const ValueKey('galaxy_work_view_chip')),
+          findsNothing,
+        );
         container.dispose();
       },
     );
@@ -282,6 +310,7 @@ List<GalaxyNodeModel> _gridNodes({
   required int count,
   required int columns,
   double spacing = 100,
+  bool unlocked = true,
 }) =>
     List<GalaxyNodeModel>.generate(count, (index) {
       final row = index ~/ columns;
@@ -291,7 +320,7 @@ List<GalaxyNodeModel> _gridNodes({
         'name': 'Node $index',
         'importance': (index % 5) + 1,
         'sector_code': 'TECH',
-        'is_unlocked': true,
+        'is_unlocked': unlocked,
         'mastery_score': (index * 7) % 100,
         'position_x': column * spacing,
         'position_y': row * spacing,

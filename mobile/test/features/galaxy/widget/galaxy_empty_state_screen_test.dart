@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,6 +9,7 @@ import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/features/galaxy/data/models/user_galaxy_contribution.dart';
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
 import 'package:sparkle/features/galaxy/presentation/screens/galaxy_screen.dart';
+import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
 import '../../../shared/i18n_test_helper.dart';
@@ -112,10 +114,10 @@ void main() {
     expect(find.byType(SparkleButton), findsOneWidget);
   });
 
-  // G-03「焦点随相机」：用户平移视口后，spotlight 锚重定到新视口内
-  // 距中心最近的节点——基线（未动相机）无锚，平移后有锚且指向左侧
-  // 唯一在视口内的节点。节点用稳定坐标铺开（左/中/右），拖拽量按
-  // fit 档位换算足以把中/右节点移出视口。
+  // G-03「焦点随相机」×F-3「锚定可感知」：进图后结构锚（importance 最高、
+  // 图序稳定）即工作视野锚；用户平移视口、锚节点出视口后，spotlight 锚
+  // 重定到新视口内距中心最近的节点。拖拽步数按落位后的真实相机 scale 与
+  // 节点位置换算（对力布局收敛漂移鲁棒），缓速 <420px/s 不触发 fling。
   testWidgets('panning the viewport re-anchors spotlight to nearest node', (
     WidgetTester tester,
   ) async {
@@ -129,7 +131,7 @@ void main() {
                   GalaxyNodeModel(
                     id: 'node-a',
                     name: '左节点',
-                    importance: 1,
+                    importance: 5,
                     sector: SectorEnum.tech,
                     isUnlocked: true,
                     masteryScore: 50,
@@ -138,22 +140,12 @@ void main() {
                   ),
                   GalaxyNodeModel(
                     id: 'node-b',
-                    name: '中节点',
+                    name: '右节点',
                     importance: 1,
                     sector: SectorEnum.life,
                     isUnlocked: true,
                     masteryScore: 50,
-                    positionX: 3000,
-                    positionY: 0,
-                  ),
-                  GalaxyNodeModel(
-                    id: 'node-c',
-                    name: '右节点',
-                    importance: 1,
-                    sector: SectorEnum.cosmos,
-                    isUnlocked: true,
-                    masteryScore: 50,
-                    positionX: 6000,
+                    positionX: 1200,
                     positionY: 0,
                   ),
                 ],
@@ -180,17 +172,23 @@ void main() {
     // 观测缝 getter 挂在私有 State 上，测试侧只能经 dynamic 触达
     //（@visibleForTesting debugSpotlightAnchorId，见 galaxy_screen.dart）。
     final state = tester.state(find.byType(GalaxyScreen)) as dynamic;
-    // 相机未被用户移动前：无相机锚（诚实基线，不造默认值）。
+    // F-3 起始引导基线：进图后结构锚（importance 5 的 node-a）即当前锚，
+    // 用户第一眼有可指认的落点（不再是「诚实无锚」的全图漂泊）。
     // ignore: avoid_dynamic_calls
-    expect(state.debugSpotlightAnchorId, isNull);
+    expect(state.debugSpotlightAnchorId, 'node-a');
 
-    // 缓速拖拽（<420px/s fling 阈值）：24×30px、每步 100ms。
-    // fit 档 scale≈0.128（世界宽 6240 / 视口 800）→ 720px 屏幕位移
-    // ≈5616 世界位移：视口中心从 3000 移到 ≈-2616，只剩 node-a 在视口。
+    // 缓速拖拽（<420px/s fling 阈值）：30px/步、每步 100ms = 300px/s。
+    // 步数按落位后的真实相机与节点距离换算：把 node-b 拖到视口中心并
+    // 越过 4 步，保证 node-a（preferred 锚）确定出视口、锚权交还几何。
+    final painter = _starMapPainter(tester);
+    final worldPerStep = 30 / painter.camera.scale;
+    final anchorX = painter.positions['node-a']!.dx;
+    final targetX = painter.positions['node-b']!.dx;
+    final steps = ((targetX - anchorX) / worldPerStep).ceil() + 4;
     final center = tester.getCenter(find.byType(GalaxyScreen));
     final gesture = await tester.startGesture(center);
-    for (var i = 0; i < 24; i++) {
-      await gesture.moveBy(const Offset(30, 0));
+    for (var i = 0; i < steps; i++) {
+      await gesture.moveBy(const Offset(-30, 0));
       await tester.pump(const Duration(milliseconds: 100));
     }
     await gesture.up();
@@ -198,8 +196,18 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     // ignore: avoid_dynamic_calls
-    expect(state.debugSpotlightAnchorId, 'node-a');
+    expect(state.debugSpotlightAnchorId, 'node-b');
   });
+}
+
+StarMapPainter _starMapPainter(WidgetTester tester) {
+  final matches = tester.widgetList<CustomPaint>(
+    find.byWidgetPredicate(
+      (widget) => widget is CustomPaint && widget.painter is StarMapPainter,
+    ),
+  );
+  expect(matches, isNotEmpty, reason: 'StarMapPainter 应已上树');
+  return matches.first.painter! as StarMapPainter;
 }
 
 /// 图加载恒失败——固化错误态面板（G-03 状态面对齐验收）。

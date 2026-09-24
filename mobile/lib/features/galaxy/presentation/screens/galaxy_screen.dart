@@ -245,7 +245,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   // 并挂一枚推荐 chip（§4.1.4 ≤1 名额铁律——全屏最多一枚，见
   // [_workViewChipNode]）。锚点只信服务端既有推荐信号
   // （is_review_recommended / review_urgency_score），不自造算法；
-  // 无推荐节点时诚实降级：保留既有总览视野、不挂 chip。
+  // 无推荐节点时落到 F-3 结构锚兜底（相机对准最高 importance 邻域作
+  // 视觉起始引导，仍不挂 chip、不带复习语义）。
   static const int _workViewMaxVisibleNodes = 20;
   // 档位升到 2.0：密集图在 ≤1.0 档可能整图皆在视野内，必须有更近档
   // 兜住「视野 ≤20」；上限低于相机 maxScale(2.5)，仍留手动放大余地。
@@ -611,7 +612,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   /// SPEC-J：解析工作视野锚点——只信服务端既有推荐信号
   /// （is_review_recommended + review_urgency_score，与节点预览卡
   /// 推荐理由链 reviewUrgencyReason 同源），取分最高者；同分保持
-  /// 图序首个（稳定）。无推荐节点 → null（诚实降级，不造默认值）。
+  /// 图序首个（稳定）。无推荐节点 → null，由 [_applyWorkViewFocus]
+  /// 落到 F-3 结构锚兜底（本函数不越推荐语义半步）。
   GalaxyNodeModel? _resolveWorkViewAnchorNode() {
     final graph = _graph;
     if (graph == null) {
@@ -664,11 +666,48 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
   void _applyWorkViewFocus() {
     final anchor = _resolveWorkViewAnchorNode();
-    if (anchor == null) {
-      // 诚实降级：无推荐节点→保留既有总览视野，不挂 chip、不造默认值。
+    if (anchor != null) {
+      _focusWorkView(anchor.id, targetScale: _workViewScaleFor(anchor.id));
       return;
     }
-    _focusWorkView(anchor.id, targetScale: _workViewScaleFor(anchor.id));
+    // F-3（wt324 实测）：fresh 全锁定初始态没有任何推荐信号，原「诚实
+    // 降级」在这里等于「首眼无引导」——用户面对全图概览不知道该看哪。
+    // 兜底改聚结构锚：相机对准最重要的节点邻域（视觉起始引导），但
+    // 不挂推荐 chip、不带任何复习语义（[_workViewChipNode] 仍要求
+    // isReviewRecommended，结构锚必然不满足 → chip 诚实隐藏）；
+    // 目标世界模式有自己的聚焦口径，不掺和，维持总览。
+    if (_isGoalWorldMode) {
+      return;
+    }
+    final structuralAnchor = _resolveStructuralAnchorNode();
+    if (structuralAnchor == null) {
+      return;
+    }
+    _focusWorkView(
+      structuralAnchor.id,
+      targetScale: _workViewScaleFor(structuralAnchor.id),
+    );
+  }
+
+  /// F-3：结构锚解析——无服务端推荐信号时的确定性起始引导目标。
+  /// 只消费图结构既有信号 importance（1-5，服务端权威字段），取最高；
+  /// 同分保持图序首个（与 [_resolveWorkViewAnchorNode] 同一稳定约定，
+  /// 不自造算法、不猜用户意图）。无位节点跳过（无从聚焦）。
+  GalaxyNodeModel? _resolveStructuralAnchorNode() {
+    final graph = _graph;
+    if (graph == null) {
+      return null;
+    }
+    GalaxyNodeModel? anchor;
+    for (final node in graph.nodes) {
+      if (!_positions.containsKey(node.id)) {
+        continue;
+      }
+      if (anchor == null || node.importance > anchor.importance) {
+        anchor = node;
+      }
+    }
+    return anchor;
   }
 
   /// SPEC-J：视野内节点计数（屏幕投影 + 节点光晕屏幕容差），

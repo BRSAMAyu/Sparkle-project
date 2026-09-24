@@ -952,6 +952,30 @@ class StarMapPainter extends CustomPainter {
     canvas.restore();
   }
 
+  /// F-3「锚定可感知」：锚定指示环——节点自身派生色（[color] 由调用方
+  /// 传 `_nodeStyle(...).baseColor`，不新造颜色值）的细描边圆环，套在
+  /// 既有锁定虚线圈（radius+1）/掌握度环（radius+1.6）之外，随
+  /// [ambientPhase] 缓慢呼吸以在平移重定锚时被余光捕捉。无 maskFilter，
+  /// 单 draw call；是否绘制由 [galaxySpotlightAnchorRingOpacity] 口径裁决。
+  void _drawAnchorRing(
+    Canvas canvas,
+    Offset center, {
+    required double radius,
+    required Color color,
+    required double nodeAlpha,
+  }) {
+    final breathe =
+        0.78 + 0.22 * (0.5 + 0.5 * math.sin(ambientPhase * 2.2));
+    canvas.drawCircle(
+      center,
+      radius * 1.9 + 2,
+      Paint()
+        ..color = color.withValues(alpha: 0.62 * nodeAlpha * breathe)
+        ..strokeWidth = 1.6
+        ..style = PaintingStyle.stroke,
+    );
+  }
+
   List<_PaintNode> _selectVisibleNodes({
     required List<String> candidateNodeIds,
     required GalaxyLod lod,
@@ -1718,6 +1742,28 @@ class StarMapPainter extends CustomPainter {
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1.2,
+        );
+      }
+
+      // F-3「锚定可感知」：当前锚定节点的呼吸描边环。此前锚定只体现在
+      // 「邻域不被调暗」，而全锁定初始态节点本体本就暗淡（fillAlpha 0.22、
+      // glowAlpha 0），重定锚在真机上不可辨识——这里给锚一个显式视觉身份。
+      // 环只在锚上画且无 blur，单 draw call 不进性能敏感路径；目标世界
+      // 模式在屏层传 spotlightAnchorId=null，天然无环。
+      if (galaxySpotlightAnchorRingOpacity(
+            node.id,
+            spotlightAnchorId,
+            spotlightNodeIds,
+          ) >
+              0 &&
+          nodeAlpha > 0 &&
+          !isBuildAnimating) {
+        _drawAnchorRing(
+          canvas,
+          nodeCenter,
+          radius: radius,
+          color: style.baseColor,
+          nodeAlpha: nodeAlpha,
         );
       }
 

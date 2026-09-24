@@ -241,6 +241,22 @@ double galaxySpotlightLabelOpacity({
   return spotlightNodeIds.contains(nodeId) ? 0.94 : 0.08;
 }
 
+/// F-3「锚定可感知」：锚定指示环的静态口径——只有当前 spotlight 锚
+/// （且 spotlight 已挂）可见，其余一律 0。环的颜色/半径/呼吸等绘制
+/// 维度由 StarMapPainter 用节点自身派生色与既有 ambientPhase 合成，
+/// 本函数只钉「谁配得上环」这一可纯函数测试的语义：
+/// 平移重定锚后（G-03 焦点随相机），用户能在视口里指出锚在哪个节点。
+double galaxySpotlightAnchorRingOpacity(
+  String nodeId,
+  String? spotlightAnchorId,
+  Set<String> spotlightNodeIds,
+) {
+  if (spotlightAnchorId == null || spotlightNodeIds.isEmpty) {
+    return 0;
+  }
+  return nodeId == spotlightAnchorId ? 1 : 0;
+}
+
 double galaxySpotlightEdgeOpacity({
   required String sourceId,
   required String targetId,
