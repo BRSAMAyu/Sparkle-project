@@ -31,6 +31,14 @@ var (
 		Name: "ws_connection_error_total",
 		Help: "Total number of failed WebSocket connections",
 	}, []string{"endpoint", "auth_method", "reason"})
+	// WSUpgradeLimited counts handshakes rejected with 429 by the pre-auth
+	// per-IP fallback pin in front of the 5 WS upgrade routes (WSQ-1,
+	// WS-TICKET-DESIGN §3.4). Primary load-test signal for §6.2-S1: alerts
+	// should fire on "sustained >0 alongside normal-connection success drop".
+	WSUpgradeLimited = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "ws_upgrade_limited_total",
+		Help: "Total number of WebSocket upgrade handshakes rejected by the pre-auth per-IP rate limit (429)",
+	}, []string{"endpoint"})
 
 	// ========== Phase 3: Enhanced WebSocket Metrics ==========
 

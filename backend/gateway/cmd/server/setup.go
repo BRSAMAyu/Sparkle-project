@@ -495,14 +495,24 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 	}
 	handler.NewHealthHandler(dbh.pool, rdb, agentClient, healthVersion).RegisterRoutes(r)
 
-	r.GET("/ws/chat", middleware.WsAuthMiddleware(cfg, rdb), handlers.chatOrchestrator.HandleWebSocket)
-	r.GET("/ws/files", middleware.WsAuthMiddleware(cfg, rdb), handlers.fileEventHandler.HandleWebSocket)
-	r.GET("/ws/stt", middleware.WsAuthMiddleware(cfg, rdb), handlers.sttHandler.HandleWebSocket)
+	// WSQ-1 (WS-TICKET-DESIGN §四 Step 0): these 5 WS upgrade routes are the
+	// only entry points outside the /api/v1 rate-limited group (wt275 D6).
+	// Pin one shared pre-auth per-IP token bucket in front of
+	// WsAuthMiddleware so unauthenticated floods stop with 429 + Retry-After
+	// before jwt.Parse / Redis auth cost; one instance = one per-IP budget
+	// across all five entries (endpoint rotation must not multiply it).
+	wsUpgradeRateLimit := middleware.WSUpgradeRateLimitMiddleware(rdb, cfg.WSUpgradeRateRPS, cfg.WSUpgradeRateBurst)
+
+	r.GET("/ws/chat", wsUpgradeRateLimit, middleware.WsAuthMiddleware(cfg, rdb), handlers.chatOrchestrator.HandleWebSocket)
+	r.GET("/ws/files", wsUpgradeRateLimit, middleware.WsAuthMiddleware(cfg, rdb), handlers.fileEventHandler.HandleWebSocket)
+	r.GET("/ws/stt", wsUpgradeRateLimit, middleware.WsAuthMiddleware(cfg, rdb), handlers.sttHandler.HandleWebSocket)
 
 	r.GET("/api/v1/community/groups/:group_id/ws",
+		wsUpgradeRateLimit,
 		middleware.WsAuthMiddleware(cfg, rdb),
 		handlers.wsProxy.HandleCommunityWS)
 	r.GET("/api/v1/community/ws/connect",
+		wsUpgradeRateLimit,
 		middleware.WsAuthMiddleware(cfg, rdb),
 		handlers.wsProxy.HandlePersonalWS)
 

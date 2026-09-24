@@ -59,6 +59,8 @@ type Config struct {
 	WSTicketTTLSeconds          int      `mapstructure:"WS_TICKET_TTL_SECONDS"`
 	WSTicketRateRPS             float64  `mapstructure:"WS_TICKET_RATE_RPS"`
 	WSTicketRateBurst           int      `mapstructure:"WS_TICKET_RATE_BURST"`
+	WSUpgradeRateRPS            float64  `mapstructure:"WS_UPGRADE_RATE_RPS"`
+	WSUpgradeRateBurst          int      `mapstructure:"WS_UPGRADE_RATE_BURST"`
 	WSMaxMessageBytes           int64    `mapstructure:"WS_MAX_MESSAGE_BYTES"`
 	WSMessageRateRPS            float64  `mapstructure:"WS_MESSAGE_RATE_RPS"`
 	WSMessageRateBurst          int      `mapstructure:"WS_MESSAGE_RATE_BURST"`
@@ -465,6 +467,8 @@ func Load() *Config {
 		"WS_TICKET_TTL_SECONDS",
 		"WS_TICKET_RATE_RPS",
 		"WS_TICKET_RATE_BURST",
+		"WS_UPGRADE_RATE_RPS",
+		"WS_UPGRADE_RATE_BURST",
 		"WS_MAX_MESSAGE_BYTES",
 		"WS_MESSAGE_RATE_RPS",
 		"WS_MESSAGE_RATE_BURST",
@@ -542,6 +546,13 @@ func Load() *Config {
 	viper.SetDefault("WS_TICKET_TTL_SECONDS", 120)
 	viper.SetDefault("WS_TICKET_RATE_RPS", 2.0)
 	viper.SetDefault("WS_TICKET_RATE_BURST", 5)
+	// WSQ-1 (WS-TICKET-DESIGN §2.1/§3.3): pre-auth per-IP fallback pin shared
+	// by the 5 WS upgrade routes. Defaults cover the worst plausible NAT
+	// reconnect storm (200 devices x 6 backoff retries = 20rps mean < 30rps
+	// bucket rate, transient burst < 60) while clamping unauthenticated
+	// floods from the first second.
+	viper.SetDefault("WS_UPGRADE_RATE_RPS", 30.0)
+	viper.SetDefault("WS_UPGRADE_RATE_BURST", 60)
 	viper.SetDefault("WS_MAX_MESSAGE_BYTES", int64(262144))
 	viper.SetDefault("WS_BACKEND_DIAL_TIMEOUT_SECONDS", 10)
 	viper.SetDefault("WS_MESSAGE_RATE_RPS", DefaultWSMessageRateRPS)
