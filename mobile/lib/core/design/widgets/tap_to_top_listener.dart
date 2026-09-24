@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/navigation/shell_navigation.dart';
@@ -14,10 +15,12 @@ class TapToTopListener extends ConsumerWidget {
     ref.listen(scrollToTopSignalProvider, (prev, next) {
       final position = PrimaryScrollController.maybeOf(context);
       if (position != null && position.hasListeners) {
-        position.animateTo(
-          0,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
+        unawaited(
+  position.animateTo(
+            0,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          ),
         );
       }
     });

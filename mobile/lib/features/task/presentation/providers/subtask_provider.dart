@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
@@ -39,7 +40,7 @@ class SubtaskState {
 /// Notifier for managing subtasks for a specific task
 class SubtaskNotifier extends StateNotifier<SubtaskState> {
   SubtaskNotifier(this._repository, this._taskId) : super(const SubtaskState()) {
-    loadSubtasks();
+    unawaited(loadSubtasks());
   }
 
   final SubtaskRepository _repository;

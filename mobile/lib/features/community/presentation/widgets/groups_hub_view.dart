@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -107,7 +108,7 @@ class _CommunityHeroState extends State<_CommunityHero> {
   @override
   void initState() {
     super.initState();
-    _loadCollapsed();
+    unawaited(_loadCollapsed());
   }
 
   Future<void> _loadCollapsed() async {
@@ -292,15 +293,19 @@ class _RecommendationsSection extends ConsumerWidget {
                         onTap: () =>
                             context.push('/community/groups/${item.group.id}'),
                         onJoin: () {
-                          ref
-                              .read(groupRecommendationsProvider.notifier)
-                              .join(item.group.id);
+                          unawaited(
+  ref
+                                .read(groupRecommendationsProvider.notifier)
+                                .join(item.group.id),
+                          );
                           ref.invalidate(myGroupsProvider);
                         },
                         onDismiss: () {
-                          ref
-                              .read(groupRecommendationsProvider.notifier)
-                              .dismiss(item.group.id);
+                          unawaited(
+  ref
+                                .read(groupRecommendationsProvider.notifier)
+                                .dismiss(item.group.id),
+                          );
                         },
                       ),
                     );

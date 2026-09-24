@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -27,8 +28,8 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
   void _handleSearch() {
     final query = _searchController.text.trim();
     if (query.isNotEmpty) {
-      SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
-      ref.read(groupSearchProvider.notifier).search(query);
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+      unawaited(ref.read(groupSearchProvider.notifier).search(query));
     }
   }
 
@@ -115,10 +116,12 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
                       ),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () {
-                        SensoryFeedbackService.emit(
-                          SensoryFeedbackEvent.selection,
+                        unawaited(
+  SensoryFeedbackService.emit(
+                            SensoryFeedbackEvent.selection,
+                          ),
                         );
-                        context.push('/community/groups/${group.id}');
+                        unawaited(context.push('/community/groups/${group.id}'));
                       },
                     ),
                   ),

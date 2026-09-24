@@ -154,23 +154,23 @@ class _RarityVisualWrapperState extends State<RarityVisualWrapper>
 
     // Shimmer for rare+
     if (widget.showShimmer && level.index >= _RarityLevel.rare.index) {
-      _shimmerController.repeat();
+      unawaited(_shimmerController.repeat());
     }
 
     // Glow for newly unlocked
     if (widget.showGlow && _isActuallyNewlyUnlocked) {
       _emitRarityCelebrationOnce();
-      _glowController.repeat(reverse: true);
+      unawaited(_glowController.repeat(reverse: true));
     }
 
     // Particles for epic+ when enabled
     if (_particlesEnabled) {
-      _particleController.repeat();
+      unawaited(_particleController.repeat());
     }
 
     // Border rotation for epic+
     if (level.index >= _RarityLevel.epic.index) {
-      _borderRotationController.repeat();
+      unawaited(_borderRotationController.repeat());
     }
   }
 

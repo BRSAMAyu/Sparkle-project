@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -17,7 +18,7 @@ class _RealtimeNudgeBubbleState extends ConsumerState<RealtimeNudgeBubble> {
   void initState() {
     super.initState();
     // Load patterns when the widget is initialized
-    _loadPatterns();
+    unawaited(_loadPatterns());
   }
 
   Future<void> _loadPatterns() async {

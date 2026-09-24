@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
@@ -37,7 +38,7 @@ class PhotonBalanceState {
 
 class PhotonBalanceNotifier extends StateNotifier<PhotonBalanceState> {
   PhotonBalanceNotifier(this._repository) : super(PhotonBalanceState()) {
-    loadBalance();
+    unawaited(loadBalance());
   }
 
   final PhotonRepository _repository;
@@ -107,7 +108,7 @@ class PhotonTransactionsNotifier
     extends StateNotifier<PhotonTransactionsState> {
   PhotonTransactionsNotifier(this._repository)
       : super(PhotonTransactionsState()) {
-    loadTransactions();
+    unawaited(loadTransactions());
   }
 
   final PhotonRepository _repository;

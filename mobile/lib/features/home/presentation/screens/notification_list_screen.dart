@@ -103,19 +103,21 @@ class NotificationItem extends ConsumerWidget {
                 ? Icon(Icons.circle, size: 12, color: DS.brandPrimary)
                 : null,
             onTap: () {
-              ref
-                  .read(unreadNotificationsProvider.notifier)
-                  .markAsRead(notification.id)
-                  .catchError((_) {
-                    if (context.mounted) {
-                      AppFeedback.error(
-                        context,
-                        I18nService.instance.isChinese
-                            ? '标记已读失败，请重试'
-                            : 'Failed to mark as read',
-                      );
-                    }
-                  });
+              unawaited(
+  ref
+                    .read(unreadNotificationsProvider.notifier)
+                    .markAsRead(notification.id)
+                    .catchError((_) {
+                      if (context.mounted) {
+                        AppFeedback.error(
+                          context,
+                          I18nService.instance.isChinese
+                              ? '标记已读失败，请重试'
+                              : 'Failed to mark as read',
+                        );
+                      }
+                    }),
+              );
               final data = notification.data;
               if (data != null) {
                 final destinationRoute = data['destination_route']?.toString();

@@ -140,7 +140,7 @@ class AppUsageService {
 
   void dispose() {
     stopMonitoring();
-    _usageEventController.close();
+    unawaited(_usageEventController.close());
   }
 }
 

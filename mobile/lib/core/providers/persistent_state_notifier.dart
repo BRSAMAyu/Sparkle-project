@@ -59,7 +59,7 @@ abstract class PersistentStateNotifier<T> extends StateNotifier<T> {
   }) : super(defaultValue) {
     _storage = ViewStorageService.instance;
     if (enabled) {
-      _loadState();
+      unawaited(_loadState());
     }
   }
 
@@ -248,7 +248,7 @@ class PersistentNotifier<T> extends StateNotifier<T> {
         super(defaultValue) {
     _storage = ViewStorageService.instance;
     if (enabled) {
-      _loadState();
+      unawaited(_loadState());
     }
   }
 
@@ -520,7 +520,7 @@ class StringSetPersistentNotifier extends StateNotifier<Set<String>> {
   }) : super(defaultValue) {
     _storage = ViewStorageService.instance;
     if (enabled) {
-      _loadState();
+      unawaited(_loadState());
     }
   }
 

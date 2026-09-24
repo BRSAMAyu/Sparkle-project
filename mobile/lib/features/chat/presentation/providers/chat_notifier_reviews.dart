@@ -133,13 +133,24 @@ extension ChatNotifierReviews on ChatNotifier {
       }
     });
 
-    requestRegeneration(
-      originalContentId: 'content_from_review_${review.reviewId}',
-      reviewId: review.reviewId,
-      regenerationType: 'fix_issues',
-    ).then((result) {
-      if (result == null || result['success'] != true) {
-        debugPrint('Regeneration request failed for ${review.reviewId}');
+    unawaited(
+  requestRegeneration(
+        originalContentId: 'content_from_review_${review.reviewId}',
+        reviewId: review.reviewId,
+        regenerationType: 'fix_issues',
+      ).then((result) {
+        if (result == null || result['success'] != true) {
+          debugPrint('Regeneration request failed for ${review.reviewId}');
+          if (mounted) {
+            state = state.copyWith(
+              lastActionStatus: 'regeneration_failed',
+              lastActionMessage:
+                  I18nService.instance.l10n.chatReviewRegenerationFailed,
+            );
+          }
+        }
+      }).catchError((Object e) {
+        debugPrint('Regeneration request error for ${review.reviewId}: $e');
         if (mounted) {
           state = state.copyWith(
             lastActionStatus: 'regeneration_failed',
@@ -147,17 +158,8 @@ extension ChatNotifierReviews on ChatNotifier {
                 I18nService.instance.l10n.chatReviewRegenerationFailed,
           );
         }
-      }
-    }).catchError((Object e) {
-      debugPrint('Regeneration request error for ${review.reviewId}: $e');
-      if (mounted) {
-        state = state.copyWith(
-          lastActionStatus: 'regeneration_failed',
-          lastActionMessage:
-              I18nService.instance.l10n.chatReviewRegenerationFailed,
-        );
-      }
-    });
+      }),
+    );
 
     debugPrint('❌ Content review rejected, requesting regeneration');
   }

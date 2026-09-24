@@ -37,7 +37,7 @@ class _CalibrationReceiptChipState extends State<CalibrationReceiptChip> {
   @override
   void initState() {
     super.initState();
-    _restoreDismissState();
+    unawaited(_restoreDismissState());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         setState(() => _visible = true);

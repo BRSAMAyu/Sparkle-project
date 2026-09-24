@@ -479,11 +479,11 @@ class _ContractCelebrationState extends State<_ContractCelebration>
     );
 
     // Start sequence
-    _iconController.forward();
+    unawaited(_iconController.forward());
     Future.delayed(const Duration(milliseconds: 200), () {
-      if (mounted) _textController.forward();
+      if (mounted) unawaited(_textController.forward());
     });
-    _confettiController.forward();
+    unawaited(_confettiController.forward());
 
     // Auto-dismiss after 2 seconds
     Future.delayed(const Duration(seconds: 2), () {
@@ -670,7 +670,7 @@ class _AnimatedProgressBarState extends State<_AnimatedProgressBar>
       duration: const Duration(milliseconds: 1200),
     );
     if (widget.progress >= 1.0) {
-      _glowController.repeat(reverse: true);
+      unawaited(_glowController.repeat(reverse: true));
     }
   }
 
@@ -678,7 +678,7 @@ class _AnimatedProgressBarState extends State<_AnimatedProgressBar>
   void didUpdateWidget(_AnimatedProgressBar old) {
     super.didUpdateWidget(old);
     if (widget.progress >= 1.0 && !_glowController.isAnimating) {
-      _glowController.repeat(reverse: true);
+      unawaited(_glowController.repeat(reverse: true));
     } else if (widget.progress < 1.0 && _glowController.isAnimating) {
       _glowController.stop();
       _glowController.value = 0;
@@ -861,7 +861,8 @@ class _RewardMultiplierRowState extends State<_RewardMultiplierRow>
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1600),
-    )..repeat(reverse: true);
+    );
+    unawaited(_pulseController.repeat(reverse: true));
 
     _pulseScale = Tween<double>(begin: 1.0, end: 1.08).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
@@ -986,9 +987,9 @@ class _FocusHighlightFieldState extends State<_FocusHighlightField>
 
   void _onFocusChanged() {
     if (_focusNode.hasFocus) {
-      _borderController.forward();
+      unawaited(_borderController.forward());
     } else {
-      _borderController.reverse();
+      unawaited(_borderController.reverse());
     }
   }
 

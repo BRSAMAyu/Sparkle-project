@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -22,7 +23,7 @@ class _ChaosControlDialogState extends State<ChaosControlDialog> {
   @override
   void initState() {
     super.initState();
-    _fetchStatus();
+    unawaited(_fetchStatus());
   }
 
   Future<void> _fetchStatus() async {

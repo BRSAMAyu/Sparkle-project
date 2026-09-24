@@ -356,8 +356,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
   void dispose() {
     _streamDebouncer.cancel();
     _chatRepository.dispose();
-    _planReviewService?.close();
-    _reviewService?.close();
+    unawaited(_planReviewService?.close());
+    unawaited(_reviewService?.close());
     _isDisposed = true;
     unawaited(_historyLoadOperation?.cancel());
     _historyLoadOperation = null;

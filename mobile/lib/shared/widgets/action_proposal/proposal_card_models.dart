@@ -10,6 +10,7 @@
 ///   （[proposalActionIdempotencyKey]），不重建服务端幂等语义。
 library;
 
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 /// 这一步轮到谁（HUMAN_AGENT_HYBRID.md §4：UI 应清楚显示"现在轮到谁"）。
@@ -296,7 +297,7 @@ class ProposalActionGuard {
     // 注意：回调必须用块体丢弃 Map.remove 的返回值——remove 返回的正是
     // map 中存下的这个 future，箭体写法会让 whenComplete 等待它自身而死锁。
     final future = op().whenComplete(() {
-      _inFlight.remove(action);
+      unawaited(_inFlight.remove(action));
     });
     _inFlight[action] = future;
     return future;

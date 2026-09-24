@@ -103,30 +103,32 @@ class _TranslatableTextState extends ConsumerState<TranslatableText> {
   }
 
   void _showTranslationSheet(String selectedText) {
-    showSensoryModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        minChildSize: 0.3,
-        maxChildSize: 0.9,
-        expand: false,
-        builder: (context, scrollController) => Padding(
-          padding: const EdgeInsets.all(DS.spacing16),
-          child: SingleChildScrollView(
-            controller: scrollController,
-            child: InlineTranslationBlock(
-              sourceText: selectedText,
-              sourceLang: widget.sourceLang,
-              targetLang: widget.targetLang,
-              domain: widget.domain,
-              initiallyExpanded: true,
-              onSaveToKnowledge: () {
-                Navigator.of(context).pop();
-                if (widget.onSaveToKnowledge != null) {
-                  widget.onSaveToKnowledge!(selectedText, '');
-                }
-              },
+    unawaited(
+  showSensoryModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        builder: (context) => DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.3,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) => Padding(
+            padding: const EdgeInsets.all(DS.spacing16),
+            child: SingleChildScrollView(
+              controller: scrollController,
+              child: InlineTranslationBlock(
+                sourceText: selectedText,
+                sourceLang: widget.sourceLang,
+                targetLang: widget.targetLang,
+                domain: widget.domain,
+                initiallyExpanded: true,
+                onSaveToKnowledge: () {
+                  Navigator.of(context).pop();
+                  if (widget.onSaveToKnowledge != null) {
+                    widget.onSaveToKnowledge!(selectedText, '');
+                  }
+                },
+              ),
             ),
           ),
         ),
@@ -187,7 +189,7 @@ class _TranslatableTextState extends ConsumerState<TranslatableText> {
                   vertical: DS.spacing8,
                 ),
                 onPressed: () {
-                  Clipboard.setData(ClipboardData(text: selectedText));
+                  unawaited(Clipboard.setData(ClipboardData(text: selectedText)));
                   editableTextState.hideToolbar();
                 },
                 child: Row(

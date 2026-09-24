@@ -370,7 +370,7 @@ class _TimelineEntryCardState extends State<_TimelineEntryCard> {
             child: InkWell(
               borderRadius: BorderRadius.circular(14),
               onTap: () {
-                SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
+                unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
                 setState(() => _expanded = !_expanded);
               },
               child: Padding(
@@ -474,9 +474,9 @@ class _TimelineEntryCardState extends State<_TimelineEntryCard> {
   }
 
   void _handleAction(String action) {
-    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     if (action == 'correct') {
-      _showCorrectionInput(action);
+      unawaited(_showCorrectionInput(action));
     } else {
       widget.onCorrect(widget.entry, action, null);
     }

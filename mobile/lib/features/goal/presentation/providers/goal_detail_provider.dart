@@ -4,8 +4,13 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/services/app_event_stream_service.dart';
+import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/cognitive/data/models/strategy_migration_models.dart';
+import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/features/goal/data/repositories/goal_repository.dart';
+import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/plan/presentation/providers/learning_portfolio_provider.dart';
 
 final goalDetailProvider = StateNotifierProvider.family<GoalDetailNotifier,
     AsyncValue<GoalDetailData>, String>(
@@ -15,6 +20,27 @@ final goalDetailProvider = StateNotifierProvider.family<GoalDetailNotifier,
     return notifier;
   },
 );
+
+/// J-08 完成时刻的庆祝载荷：目标详情页完成今日最小步骤后由
+/// [GoalDetailNotifier.completeNextStep] 返回、经
+/// [goalStepCelebrationProvider] 挂载到页面。只携带「想法→成果」轨迹
+/// 所需的最小字段（步骤与目标），不引入任何新存储。
+@immutable
+class GoalStepCelebration {
+  const GoalStepCelebration({
+    required this.taskId,
+    required this.stepTitle,
+    required this.goalTitle,
+  });
+
+  final String taskId;
+  final String stepTitle;
+  final String goalTitle;
+}
+
+/// 当前展示中的目标步骤庆祝态；null = 无庆祝。页面以 Stack 覆盖层消费。
+final goalStepCelebrationProvider =
+    StateProvider<GoalStepCelebration?>((ref) => null);
 
 class GoalDetailNotifier extends StateNotifier<AsyncValue<GoalDetailData>> {
   GoalDetailNotifier(this._ref, this._goalId)
@@ -64,14 +90,75 @@ class GoalDetailNotifier extends StateNotifier<AsyncValue<GoalDetailData>> {
     }
   }
 
-  Future<void> completeNextStep() async {
-    final taskId = state.valueOrNull?.todaysMinimalNextStep.taskId;
-    if (taskId == null || taskId.isEmpty) return;
+  /// 完成今日最小步骤（J-08 闭环起点）。
+  ///
+  /// 服务端完成（POST /tasks/{id}/complete）与既有 GJ03 链一致——任务
+  /// 完成即触发 study_record→mastery→outbox→星图，本方法不重建真源；
+  /// 客户端侧补齐两件此前缺失的事：
+  /// 1. 轨迹沉淀钩子（与 task_provider._runPostCompletionSteps 同链）：
+  ///    星图刷新触发器 + galaxy 刷新 + 成长/成就/仪表盘失效 + 完成事件
+  ///    入既有事件流（source: goal_detail，便于区分入口）。
+  /// 2. 返回 [GoalStepCelebration] 供页面挂载轻庆祝态 + 一题式微反思
+  ///    （步骤标题在 reload 前捕获——完成后今日步骤会推进到下一步）。
+  ///
+  /// 失败路径 rethrow，由调用方按既有错误 snack 处理；未完成不受影响。
+  Future<GoalStepCelebration?> completeNextStep() async {
+    final data = state.valueOrNull;
+    final step = data?.todaysMinimalNextStep;
+    final taskId = step?.taskId;
+    if (data == null ||
+        step == null ||
+        taskId == null ||
+        taskId.isEmpty) {
+      return null;
+    }
     try {
       await _ref.read(apiClientProvider).post<dynamic>('/tasks/$taskId/complete');
+      _runCompletionTrajectoryHooks(taskId);
       unawaited(load());
+      return GoalStepCelebration(
+        taskId: taskId,
+        stepTitle: step.title ?? '',
+        goalTitle: data.goal.title,
+      );
     } catch (e) {
       rethrow;
+    }
+  }
+
+  /// 服务端确认完成后的客户端轨迹钩子。全部消费既有 provider/事件链，
+  /// 不新增存储；单条失败仅记日志——任务在服务端已是完成态。
+  void _runCompletionTrajectoryHooks(String taskId) {
+    try {
+      _ref.read(galaxyRefreshTriggerProvider.notifier).state++;
+      unawaited(
+        _ref
+            .read(galaxyProvider.notifier)
+            .refreshForTaskCompletion()
+            .catchError((Object error) {
+          debugPrint(
+            '[GoalDetail] galaxy refresh skipped after step completion: '
+            '$error',
+          );
+        }),
+      );
+      _ref
+        ..invalidate(learningPortfolioProvider)
+        ..invalidate(achievementProvider)
+        ..invalidate(dashboardProvider);
+      unawaited(
+        _ref.read(appEventStreamServiceProvider).recordEntityExecution(
+              entityType: 'task',
+              entityId: taskId,
+              actionType: 'complete_task',
+              source: 'goal_detail',
+            ),
+      );
+    } catch (e) {
+      debugPrint(
+        '[GoalDetail] completion trajectory hooks failed for $taskId '
+        '(server state kept): $e',
+      );
     }
   }
 

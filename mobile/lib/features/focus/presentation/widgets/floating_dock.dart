@@ -77,9 +77,9 @@ class _FocusFloatingDockState extends State<FocusFloatingDock>
       _isExpanded = !_isExpanded;
       _isHiding = false;
       if (_isExpanded) {
-        _controller.forward();
+        unawaited(_controller.forward());
       } else {
-        _controller.reverse();
+        unawaited(_controller.reverse());
       }
     });
   }

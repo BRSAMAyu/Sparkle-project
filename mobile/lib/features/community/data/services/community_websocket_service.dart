@@ -541,7 +541,7 @@ class CommunityWebSocketService {
 
     _groupReconnectTimer = Timer(Duration(milliseconds: delay), () {
       _groupReconnectAttempts++;
-      connectToGroup(groupId);
+      unawaited(connectToGroup(groupId));
     });
   }
 
@@ -563,7 +563,7 @@ class CommunityWebSocketService {
 
     _personalReconnectTimer = Timer(Duration(milliseconds: delay), () {
       _personalReconnectAttempts++;
-      connectToPersonal();
+      unawaited(connectToPersonal());
     });
   }
 

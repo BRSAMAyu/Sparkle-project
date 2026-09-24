@@ -124,7 +124,7 @@ class JPushService extends AsyncNotifier<void> {
         if (rid.isNotEmpty) {
           _registrationId = rid;
           _logger.i('JPush Registration ID: $rid');
-          _registerTokenWithBackend(rid);
+          unawaited(_registerTokenWithBackend(rid));
           onTokenRefresh?.call(rid);
         }
       });

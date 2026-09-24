@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' show AppExitResponse, ViewFocusEvent;
 
 import 'package:flutter/services.dart' show PredictiveBackEvent;
@@ -117,7 +118,7 @@ mixin AnimationLifecycleMixin<T extends StatefulWidget> on State<T>
       if (entry.onResume != null) {
         entry.onResume!();
       } else {
-        entry.controller.repeat();
+        unawaited(entry.controller.repeat());
       }
     }
     _wasAnimating.clear();

@@ -38,8 +38,8 @@ class PlanListState {
 // 2. PlanNotifier Class
 class PlanNotifier extends StateNotifier<PlanListState> {
   PlanNotifier(this._planRepository, this._ref) : super(PlanListState()) {
-    loadPlans();
-    loadActivePlans();
+    unawaited(loadPlans());
+    unawaited(loadActivePlans());
   }
   final PlanRepository _planRepository;
   final Ref _ref;

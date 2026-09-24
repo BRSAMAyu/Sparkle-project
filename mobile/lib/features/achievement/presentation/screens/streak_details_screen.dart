@@ -516,7 +516,7 @@ class _StatTileState extends State<_StatTile>
     );
 
     Future.delayed(Duration(milliseconds: widget.index * 60), () {
-      if (mounted) _controller.forward();
+      if (mounted) unawaited(_controller.forward());
     });
   }
 
@@ -708,7 +708,7 @@ class _CalendarCellState extends State<_CalendarCell>
       milliseconds: math.min(widget.index * 15, 1500),
     );
     Future.delayed(delay, () {
-      if (mounted) _controller.forward();
+      if (mounted) unawaited(_controller.forward());
     });
 
     // Pulsing glow for today's cell
@@ -723,7 +723,7 @@ class _CalendarCellState extends State<_CalendarCell>
           curve: Curves.easeInOut,
         ),
       );
-      _pulseController!.repeat(reverse: true);
+      unawaited(_pulseController!.repeat(reverse: true));
     }
   }
 
@@ -917,7 +917,7 @@ class _RiskHintCardState extends State<_RiskHintCard>
       curve: const Interval(0, 0.5, curve: Curves.easeOut),
     );
 
-    _controller.forward();
+    unawaited(_controller.forward());
 
     if (widget.isCritical) {
       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.warning));

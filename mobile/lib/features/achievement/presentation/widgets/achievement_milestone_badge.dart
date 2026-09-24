@@ -109,7 +109,7 @@ class _AchievementMilestoneBadgeState extends State<AchievementMilestoneBadge>
   void _startAnimations() {
     if (_reduceMotion || _milestone == MilestoneLevel.none) return;
     if (!_controller.isAnimating) {
-      _controller.repeat();
+      unawaited(_controller.repeat());
     }
   }
 

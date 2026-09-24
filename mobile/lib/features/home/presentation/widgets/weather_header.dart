@@ -100,10 +100,10 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
   void _applyMotionPolicy() {
     if (_mode == DecorationMode.animated) {
       if (!_mainAnimationController.isAnimating) {
-        _mainAnimationController.repeat(reverse: true);
+        unawaited(_mainAnimationController.repeat(reverse: true));
       }
       if (!_particleController.isAnimating) {
-        _particleController.repeat();
+        unawaited(_particleController.repeat());
       }
       return;
     }

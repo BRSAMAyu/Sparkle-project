@@ -125,9 +125,9 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
 
   void _togglePreviewMode() {
     if (_isPreviewing) {
-      _crossfadeController.reverse(from: 1.0);
+      unawaited(_crossfadeController.reverse(from: 1.0));
     } else {
-      _crossfadeController.forward(from: 0.0);
+      unawaited(_crossfadeController.forward(from: 0.0));
     }
     setState(() => _isPreviewing = !_isPreviewing);
   }
@@ -949,11 +949,13 @@ class _PreviewAreaState extends State<_PreviewArea>
     _mainController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
-    )..repeat(reverse: true);
+    );
+    unawaited(_mainController.repeat(reverse: true));
     _particleController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 3000),
-    )..repeat();
+    );
+    unawaited(_particleController.repeat());
   }
 
   @override
@@ -1127,11 +1129,13 @@ class _CrossfadePreviewAreaState extends State<_CrossfadePreviewArea>
     _mainController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
-    )..repeat(reverse: true);
+    );
+    unawaited(_mainController.repeat(reverse: true));
     _particleController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 3000),
-    )..repeat();
+    );
+    unawaited(_particleController.repeat());
   }
 
   @override

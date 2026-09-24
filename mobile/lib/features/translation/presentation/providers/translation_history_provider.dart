@@ -48,7 +48,7 @@ class TranslationHistoryNotifier extends StateNotifier<TranslationHistoryState> 
     // Defer initial load so the provider tree is fully built before we
     // access Isar collections.  This avoids a crash if the widget that
     // first reads this provider is disposed during the same frame.
-    Future.microtask(_initialLoad);
+    unawaited(Future.microtask(_initialLoad));
   }
 
   final LocalTranslationRepository _repository;
@@ -90,7 +90,7 @@ class TranslationHistoryNotifier extends StateNotifier<TranslationHistoryState> 
   void setFilter(TranslationFilter filter) {
     if (state.filter != filter) {
       state = state.copyWith(filter: filter);
-      loadHistory();
+      unawaited(loadHistory());
     }
   }
 
@@ -98,7 +98,7 @@ class TranslationHistoryNotifier extends StateNotifier<TranslationHistoryState> 
   void setSortOrder(TranslationSortOrder order) {
     if (state.sortOrder != order) {
       state = state.copyWith(sortOrder: order);
-      loadHistory();
+      unawaited(loadHistory());
     }
   }
 
@@ -106,7 +106,7 @@ class TranslationHistoryNotifier extends StateNotifier<TranslationHistoryState> 
   void search(String query) {
     if (state.searchQuery != query) {
       state = state.copyWith(searchQuery: query);
-      loadHistory();
+      unawaited(loadHistory());
     }
   }
 
@@ -114,7 +114,7 @@ class TranslationHistoryNotifier extends StateNotifier<TranslationHistoryState> 
   void clearSearch() {
     if (state.searchQuery.isNotEmpty) {
       state = state.copyWith(searchQuery: '');
-      loadHistory();
+      unawaited(loadHistory());
     }
   }
 

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -77,7 +78,7 @@ class _StudyMaterialsSheetState extends ConsumerState<StudyMaterialsSheet> {
               mode: widget.documentContextMode,
               docCount: readyDocs.length,
               onModeChanged: (mode) {
-                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+                unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
                 widget.onModeChanged?.call(mode);
               },
             ),
@@ -85,7 +86,7 @@ class _StudyMaterialsSheetState extends ConsumerState<StudyMaterialsSheet> {
             _ModeSelector(
               currentMode: widget.documentContextMode,
               onModeChanged: (mode) {
-                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+                unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
                 widget.onModeChanged?.call(mode);
               },
             ),
@@ -150,7 +151,7 @@ class _StudyMaterialsSheetState extends ConsumerState<StudyMaterialsSheet> {
                         canToggle: widget.documentContextMode ==
                             DocumentContextMode.userSelected,
                         onToggle: () {
-                          SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
+                          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
                           setState(() {
                             if (isToggledOff) {
                               _toggledOff.remove(doc.fileId);

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -398,7 +399,7 @@ class _AnimatedTaskItemState extends State<_AnimatedTaskItem>
     // Stagger animation based on index
     Future.delayed(Duration(milliseconds: widget.index * 50), () {
       if (mounted) {
-        _controller.forward();
+        unawaited(_controller.forward());
       }
     });
   }

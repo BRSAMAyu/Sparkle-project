@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -265,8 +266,10 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
               onPressed: _isSubmitting
                   ? null
                   : () {
-                      SensoryFeedbackService.emit(
-                        SensoryFeedbackEvent.tap,
+                      unawaited(
+  SensoryFeedbackService.emit(
+                          SensoryFeedbackEvent.tap,
+                        ),
                       );
                       Navigator.pop(context);
                     },
@@ -290,7 +293,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
             label: 'Chat review rating dialog control 1',
             child: GestureDetector(
               onTap: () {
-                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+                unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
                 setState(() {
                   _rating = starValue;
                   // Auto-set helpful based on rating
@@ -332,7 +335,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
               label: context.l10n.reviewRatingHelpful,
               isSelected: _wasHelpful ?? false,
               onTap: () {
-                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+                unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
                 setState(() {
                   _wasHelpful = _wasHelpful ?? false ? null : true;
                 });
@@ -349,7 +352,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
               isSelected: _wasHelpful == false,
               isNegative: true,
               onTap: () {
-                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+                unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
                 setState(() {
                   _wasHelpful = _wasHelpful == false ? null : false;
                 });
@@ -433,7 +436,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
                   icon: Icons.check_circle_outline,
                   isSelected: _wasAccurate ?? false,
                   onTap: () {
-                    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+                    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
                     setState(() {
                       _wasAccurate = _wasAccurate ?? false ? null : true;
                     });
@@ -449,7 +452,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
                   isSelected: _wasAccurate == false,
                   isNegative: true,
                   onTap: () {
-                    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+                    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
                     setState(() {
                       _wasAccurate = _wasAccurate == false ? null : false;
                     });
@@ -487,8 +490,10 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
                         label: level.label(context),
                         isSelected: _specificityLevel == level,
                         onTap: () {
-                          SensoryFeedbackService.emit(
-                            SensoryFeedbackEvent.selection,
+                          unawaited(
+  SensoryFeedbackService.emit(
+                              SensoryFeedbackEvent.selection,
+                            ),
                           );
                           setState(() {
                             _specificityLevel =
@@ -632,7 +637,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
   void _addInaccuratePoint(String point) {
     final trimmed = point.trim();
     if (trimmed.isNotEmpty && !_inaccuratePoints.contains(trimmed)) {
-      SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
       setState(() {
         _inaccuratePoints.add(trimmed);
         _inaccuratePointController.clear();

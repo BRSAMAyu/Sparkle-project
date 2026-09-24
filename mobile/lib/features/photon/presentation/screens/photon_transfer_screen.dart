@@ -333,47 +333,49 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
   void _showAmountSelector(int currentBalance) {
     final quickAmounts = [100, 500, 1000, 2000, 5000];
 
-    showSensoryModalBottomSheet<void>(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(DS.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              context.l10n.ptSelectAmount,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: DS.lg),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: quickAmounts.map((amount) {
-                final isEnabled = amount <= currentBalance;
-                return ActionChip(
-                  label: Text('$amount'),
-                  onPressed: isEnabled
-                      ? () {
-                          unawaited(
-                            SensoryFeedbackService.emit(
-                              SensoryFeedbackEvent.selection,
-                            ),
-                          );
-                          _amountController.text = amount.toString();
-                          Navigator.of(context).pop();
-                        }
-                      : null,
-                  backgroundColor: isEnabled
-                      ? Theme.of(context).colorScheme.primary
-                      : DS.surfaceTertiary,
-                  labelStyle: TextStyle(
-                    color: isEnabled ? DS.neutral0 : DS.textSecondary,
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
+    unawaited(
+  showSensoryModalBottomSheet<void>(
+        context: context,
+        builder: (context) => Container(
+          padding: const EdgeInsets.all(DS.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                context.l10n.ptSelectAmount,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: DS.lg),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: quickAmounts.map((amount) {
+                  final isEnabled = amount <= currentBalance;
+                  return ActionChip(
+                    label: Text('$amount'),
+                    onPressed: isEnabled
+                        ? () {
+                            unawaited(
+                              SensoryFeedbackService.emit(
+                                SensoryFeedbackEvent.selection,
+                              ),
+                            );
+                            _amountController.text = amount.toString();
+                            Navigator.of(context).pop();
+                          }
+                        : null,
+                    backgroundColor: isEnabled
+                        ? Theme.of(context).colorScheme.primary
+                        : DS.surfaceTertiary,
+                    labelStyle: TextStyle(
+                      color: isEnabled ? DS.neutral0 : DS.textSecondary,
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -383,52 +385,54 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
     final amount = int.parse(_amountController.text);
     final recipientId = _recipientIdController.text;
 
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.l10n.ptConfirmDialogTitle),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(context.l10n.ptRecipientLabel(recipientId)),
-            const SizedBox(height: DS.sm),
-            Text(context.l10n.ptAmountLabel(amount)),
-            const SizedBox(height: DS.sm),
-            Text(context.l10n.ptRemainingLabel(currentBalance - amount)),
-            if (_messageController.text.isNotEmpty) ...[
+    unawaited(
+  showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(context.l10n.ptConfirmDialogTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(context.l10n.ptRecipientLabel(recipientId)),
               const SizedBox(height: DS.sm),
-              Text(context.l10n.ptMessageLabel(_messageController.text)),
+              Text(context.l10n.ptAmountLabel(amount)),
+              const SizedBox(height: DS.sm),
+              Text(context.l10n.ptRemainingLabel(currentBalance - amount)),
+              if (_messageController.text.isNotEmpty) ...[
+                const SizedBox(height: DS.sm),
+                Text(context.l10n.ptMessageLabel(_messageController.text)),
+              ],
+              const SizedBox(height: DS.lg),
+              Text(context.l10n.ptConfirmWarning),
             ],
-            const SizedBox(height: DS.lg),
-            Text(context.l10n.ptConfirmWarning),
+          ),
+          actions: [
+            SparkleButton.ghost(
+              label: context.l10n.ptCancel,
+              onPressed: () {
+                unawaited(
+                  SensoryFeedbackService.emit(
+                    SensoryFeedbackEvent.selection,
+                  ),
+                );
+                Navigator.of(context).pop();
+              },
+            ),
+            SparkleButton(
+              label: context.l10n.ptConfirm,
+              onPressed: () {
+                unawaited(
+                  SensoryFeedbackService.emit(
+                    SensoryFeedbackEvent.confirm,
+                  ),
+                );
+                Navigator.of(context).pop();
+                unawaited(_performTransfer());
+              },
+            ),
           ],
         ),
-        actions: [
-          SparkleButton.ghost(
-            label: context.l10n.ptCancel,
-            onPressed: () {
-              unawaited(
-                SensoryFeedbackService.emit(
-                  SensoryFeedbackEvent.selection,
-                ),
-              );
-              Navigator.of(context).pop();
-            },
-          ),
-          SparkleButton(
-            label: context.l10n.ptConfirm,
-            onPressed: () {
-              unawaited(
-                SensoryFeedbackService.emit(
-                  SensoryFeedbackEvent.confirm,
-                ),
-              );
-              Navigator.of(context).pop();
-              unawaited(_performTransfer());
-            },
-          ),
-        ],
       ),
     );
   }

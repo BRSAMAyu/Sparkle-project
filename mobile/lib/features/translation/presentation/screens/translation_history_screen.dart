@@ -48,66 +48,68 @@ class _TranslationHistoryScreenState
   void _showRatingDialog(Id id, int currentRating) {
     _selectedRatings[id] = currentRating;
 
-    showDialog<void>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(context.l10n.translationRating),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(context.l10n.translationSelectImportance),
-              const SizedBox(height: DS.lg),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(5, (index) {
-                  final starValue = index + 1;
-                  return SparkleIconButton(
-                    // A11Y-BATCH6A：甲式单节点——评级钮按目标档位命名。
-                    semanticLabel:
-                        context.l10n.translationRateStar(starValue),
-                    onPressed: () {
-                      unawaited(
-                        SensoryFeedbackService.emit(
-                          SensoryFeedbackEvent.selection,
-                        ),
-                      );
-                      setDialogState(() {
-                        _selectedRatings[id] = starValue;
-                      });
-                    },
-                    icon: Icon(
-                      Icons.star,
-                      color:
-                          (_selectedRatings[id] ?? currentRating) >= starValue
-                              ? DS.warning
-                              : DS.neutral300,
-                    ),
-                    variant: ButtonVariant.ghost,
-                    size: DS.spacing40,
-                  );
-                }),
+    unawaited(
+  showDialog<void>(
+        context: context,
+        builder: (context) => StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: Text(context.l10n.translationRating),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(context.l10n.translationSelectImportance),
+                const SizedBox(height: DS.lg),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(5, (index) {
+                    final starValue = index + 1;
+                    return SparkleIconButton(
+                      // A11Y-BATCH6A：甲式单节点——评级钮按目标档位命名。
+                      semanticLabel:
+                          context.l10n.translationRateStar(starValue),
+                      onPressed: () {
+                        unawaited(
+                          SensoryFeedbackService.emit(
+                            SensoryFeedbackEvent.selection,
+                          ),
+                        );
+                        setDialogState(() {
+                          _selectedRatings[id] = starValue;
+                        });
+                      },
+                      icon: Icon(
+                        Icons.star,
+                        color:
+                            (_selectedRatings[id] ?? currentRating) >= starValue
+                                ? DS.warning
+                                : DS.neutral300,
+                      ),
+                      variant: ButtonVariant.ghost,
+                      size: DS.spacing40,
+                    );
+                  }),
+                ),
+              ],
+            ),
+            actions: [
+              SparkleButton.ghost(
+                label: context.l10n.commonCancel,
+                onPressed: () => Navigator.pop(context),
+              ),
+              // CAPSULE-VARIANT 对话框按钮归一：评分确认=primary 确认档。
+              SparkleButton(
+                onPressed: () async {
+                  final newRating = _selectedRatings[id] ?? currentRating;
+                  await ref
+                      .read(translationHistoryProvider.notifier)
+                      .updateRating(id, newRating);
+                  _selectedRatings.remove(id);
+                  if (mounted) Navigator.pop(context);
+                },
+                label: context.l10n.commonOk,
               ),
             ],
           ),
-          actions: [
-            SparkleButton.ghost(
-              label: context.l10n.commonCancel,
-              onPressed: () => Navigator.pop(context),
-            ),
-            // CAPSULE-VARIANT 对话框按钮归一：评分确认=primary 确认档。
-            SparkleButton(
-              onPressed: () async {
-                final newRating = _selectedRatings[id] ?? currentRating;
-                await ref
-                    .read(translationHistoryProvider.notifier)
-                    .updateRating(id, newRating);
-                _selectedRatings.remove(id);
-                if (mounted) Navigator.pop(context);
-              },
-              label: context.l10n.commonOk,
-            ),
-          ],
         ),
       ),
     );

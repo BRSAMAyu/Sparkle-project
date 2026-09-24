@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/documents/data/models/document_library_models.dart';
 import 'package:sparkle/features/documents/data/repositories/document_library_repository.dart';
@@ -111,7 +112,7 @@ class DocumentLibraryState {
 class DocumentLibraryNotifier extends StateNotifier<DocumentLibraryState> {
   DocumentLibraryNotifier(this._repository)
       : super(const DocumentLibraryState()) {
-    _load();
+    unawaited(_load());
   }
 
   final DocumentLibraryRepository _repository;

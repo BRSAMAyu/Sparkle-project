@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/community/data/models/accountability_model.dart';
 import 'package:sparkle/features/community/data/repositories/accountability_repository.dart';
@@ -26,7 +27,7 @@ final accountabilityDashboardProvider = FutureProvider.autoDispose
 class MyPartnershipsNotifier
     extends StateNotifier<AsyncValue<List<AccountabilityPartnershipInfo>>> {
   MyPartnershipsNotifier(this._repo) : super(const AsyncValue.loading()) {
-    load();
+    unawaited(load());
   }
 
   final AccountabilityRepository _repo;

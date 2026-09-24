@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -77,7 +78,7 @@ class AttachmentPickerSheet extends StatelessWidget {
               title: primaryTitle ?? context.l10n.chatAttachDirectUpload,
               subtitle: primarySubtitle ?? context.l10n.chatAttachUploadDesc,
               onTap: () {
-                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+                unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
                 Navigator.pop(context);
                 onDirectUpload();
               },
@@ -88,7 +89,7 @@ class AttachmentPickerSheet extends StatelessWidget {
               title: context.l10n.chatAttachAiDocClean,
               subtitle: context.l10n.chatAttachAiDocCleanDesc,
               onTap: () {
-                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+                unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
                 Navigator.pop(context);
                 onDocumentClean();
               },

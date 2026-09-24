@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -210,8 +211,10 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
                     icon: const Icon(Icons.chat_bubble_outline),
                     minHeight: 48,
                     onPressed: () {
-                      context.push(
-                        '/chat/private/${user.id}?name=${Uri.encodeComponent(user.displayName)}',
+                      unawaited(
+  context.push(
+                          '/chat/private/${user.id}?name=${Uri.encodeComponent(user.displayName)}',
+                        ),
                       );
                     },
                     expand: true,
@@ -231,12 +234,14 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
                     minHeight: 48,
                     onPressed: () {
                       if (canOpenDashboard) {
-                        context.push(
-                          CommunityRoutes.accountabilityDetail
-                              .replaceFirst(':id', partnershipId),
+                        unawaited(
+  context.push(
+                            CommunityRoutes.accountabilityDetail
+                                .replaceFirst(':id', partnershipId),
+                          ),
                         );
                       } else {
-                        context.push('/achievements');
+                        unawaited(context.push('/achievements'));
                       }
                     },
                     expand: true,
@@ -258,14 +263,16 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
                 minHeight: 48,
                 onPressed: () {
                   if (canInviteAccountability) {
-                    _showAccountabilityInvite(context, user);
+                    unawaited(_showAccountabilityInvite(context, user));
                     return;
                   }
                   final id = partnershipId;
                   if (id == null) return;
-                  context.push(
-                    CommunityRoutes.accountabilityDetail
-                        .replaceFirst(':id', id),
+                  unawaited(
+  context.push(
+                      CommunityRoutes.accountabilityDetail
+                          .replaceFirst(':id', id),
+                    ),
                   );
                 },
                 expand: true,

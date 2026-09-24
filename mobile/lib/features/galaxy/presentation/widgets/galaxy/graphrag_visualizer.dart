@@ -50,7 +50,8 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
+    );
+    unawaited(_pulseController.repeat(reverse: true));
 
     // 淡出动画
     _fadeController = AnimationController(
@@ -84,7 +85,7 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
       // 3秒后自动淡出
       _autoHideTimer = Timer(const Duration(seconds: 3), () {
         if (mounted) {
-          _fadeController.reverse();
+          unawaited(_fadeController.reverse());
         }
       });
     }

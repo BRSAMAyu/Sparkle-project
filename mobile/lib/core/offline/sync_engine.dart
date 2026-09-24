@@ -50,20 +50,20 @@ class SyncEngine {
         .watch(fireImmediately: true);
 
     _subscription = outboxStream.listen((_) {
-      _processOutbox();
+      unawaited(_processOutbox());
     });
 
     // Also listen for connectivity changes
     _connectivitySubscription = _connectivity.onConnectivityChanged.listen((result) {
       if (!result.contains(ConnectivityResult.none)) {
-        _processOutbox();
+        unawaited(_processOutbox());
       }
     });
   }
 
   void stop() {
-    _subscription?.cancel();
-    _connectivitySubscription?.cancel();
+    unawaited(_subscription?.cancel());
+    unawaited(_connectivitySubscription?.cancel());
   }
 
   Future<void> enqueue({

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -47,8 +48,8 @@ class _StaleRecoveryCardState extends State<StaleRecoveryCard>
     ).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
-    _controller.forward();
-    SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
+    unawaited(_controller.forward());
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
   }
 
   @override
@@ -117,7 +118,7 @@ class _StaleRecoveryCardState extends State<StaleRecoveryCard>
                 _OptionsRow(
                   options: widget.resumeOptions,
                   onSelected: (opt) {
-                    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+                    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
                     widget.onOptionSelected(opt);
                   },
                 ),

@@ -779,7 +779,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
           });
           return;
         }
-        context.push(TaskRoutes.taskCreate);
+        unawaited(context.push(TaskRoutes.taskCreate));
       },
     );
   }
@@ -819,7 +819,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
             SparkleButton.outline(
               label: l10n.retry,
               onPressed: () {
-                ref.read(achievementProvider.notifier).loadInitialData();
+                unawaited(ref.read(achievementProvider.notifier).loadInitialData());
               },
             ),
           ],
@@ -979,11 +979,11 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
   }
 
   void _openAchievementDetail(AchievementWithProgress achievement) {
-    context.push('/achievements/${achievement.achievement.id}');
+    unawaited(context.push('/achievements/${achievement.achievement.id}'));
   }
 
   void _showStreakDetails(BuildContext context) {
-    context.push(AchievementRoutes.streakDetails);
+    unawaited(context.push(AchievementRoutes.streakDetails));
   }
 }
 
@@ -1096,7 +1096,7 @@ class _AnimatedLimitedCardState extends State<_AnimatedLimitedCard>
       vsync: this,
     );
     Future.delayed(Duration(milliseconds: widget.index * 80), () {
-      if (mounted) _controller.forward();
+      if (mounted) unawaited(_controller.forward());
     });
   }
 
@@ -1174,7 +1174,7 @@ class _QuickActionCardState extends State<_QuickActionCard>
   Widget build(BuildContext context) => GestureDetector(
         onTapDown: (_) => _tapController.forward(),
         onTapUp: (_) {
-          _tapController.reverse();
+          unawaited(_tapController.reverse());
           widget.onTap();
         },
         onTapCancel: () => _tapController.reverse(),
@@ -1435,7 +1435,8 @@ class _PulsingBadgeState extends State<_PulsingBadge>
     _controller = AnimationController(
       duration: const Duration(milliseconds: 1800),
       vsync: this,
-    )..repeat(reverse: true);
+    );
+    unawaited(_controller.repeat(reverse: true));
   }
 
   @override

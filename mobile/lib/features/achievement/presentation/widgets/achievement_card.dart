@@ -100,7 +100,7 @@ class _AnimatedAchievementCardState extends State<AnimatedAchievementCard>
       Future<void>.delayed(
         Duration(milliseconds: widget.index * _rarityDelayMs),
         () {
-          if (mounted) _controller.forward();
+          if (mounted) unawaited(_controller.forward());
         },
       ),
     );

@@ -94,7 +94,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
   void dispose() {
     _durationTimer?.cancel();
     _animationController?.dispose();
-    _recordingService.dispose();
+    unawaited(_recordingService.dispose());
     super.dispose();
   }
 
@@ -186,7 +186,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
               _isRecording = false;
               _isProcessing = false;
             });
-            _animationController?.reverse();
+            unawaited(_animationController?.reverse());
             widget.onError(error);
           }
         },
@@ -196,7 +196,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
               _isRecording = false;
               _isProcessing = false;
             });
-            _animationController?.reverse();
+            unawaited(_animationController?.reverse());
             _notifyRecordingFinished();
           }
         },

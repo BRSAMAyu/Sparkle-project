@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -149,7 +150,7 @@ class CompactTaskCard extends ConsumerWidget {
           onTap: () {
             // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
             ref.read(activeTaskProvider.notifier).state = task;
-            context.push(TaskRoutes.taskExecution.replaceFirst(':id', task.id));
+            unawaited(context.push(TaskRoutes.taskExecution.replaceFirst(':id', task.id)));
           },
         );
       case TaskStatus.paused:

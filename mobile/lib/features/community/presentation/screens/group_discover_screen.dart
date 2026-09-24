@@ -81,7 +81,7 @@ class _GroupDiscoverScreenState extends ConsumerState<GroupDiscoverScreen> {
               unawaited(
                 SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
               );
-              context.push('/community/groups/create');
+              unawaited(context.push('/community/groups/create'));
             },
           ),
         ],
@@ -207,7 +207,7 @@ class _GroupDiscoverScreenState extends ConsumerState<GroupDiscoverScreen> {
                                 SensoryFeedbackEvent.selection,
                               ),
                             );
-                            context.push('/community/groups/${group.id}');
+                            unawaited(context.push('/community/groups/${group.id}'));
                           },
                           onJoin: group.isJoined
                               ? null
@@ -217,7 +217,7 @@ class _GroupDiscoverScreenState extends ConsumerState<GroupDiscoverScreen> {
                                       SensoryFeedbackEvent.confirm,
                                     ),
                                   );
-                                  notifier.join(group.id);
+                                  unawaited(notifier.join(group.id));
                                 },
                         ),
                       ),
@@ -422,7 +422,7 @@ class _SearchBar extends StatelessWidget {
                   isDense: true,
                 ),
                 onSubmitted: (_) {
-                  onSubmitted();
+                  unawaited(onSubmitted());
                 },
               ),
             ),
@@ -586,10 +586,10 @@ class _RecommendationsPanel extends StatelessWidget {
                     onTap: () =>
                         context.push('/community/groups/${item.group.id}'),
                     onJoin: () {
-                      onJoin(item.group.id);
+                      unawaited(onJoin(item.group.id));
                     },
                     onFeedback: () {
-                      onFeedback(item);
+                      unawaited(onFeedback(item));
                     },
                   ),
                 );

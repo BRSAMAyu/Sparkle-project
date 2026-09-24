@@ -31,7 +31,7 @@ class TtsService {
   }
 
   void dispose() {
-    _tts?.stop();
+    unawaited(_tts?.stop());
     _tts = null;
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -38,7 +39,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
   @override
   void initState() {
     super.initState();
-    _analyzeIntents();
+    unawaited(_analyzeIntents());
   }
 
   @override
@@ -158,10 +159,12 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
               SparkleButton.outline(
                 label: context.l10n.retry,
                 onPressed: () {
-                  SensoryFeedbackService.emit(
-                    SensoryFeedbackEvent.selection,
+                  unawaited(
+  SensoryFeedbackService.emit(
+                      SensoryFeedbackEvent.selection,
+                    ),
                   );
-                  _analyzeIntents();
+                  unawaited(_analyzeIntents());
                 },
               ),
             ],

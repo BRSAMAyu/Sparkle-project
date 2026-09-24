@@ -117,11 +117,11 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
         widget.args.goal?.retractedAt ??
         widget.args.episodic?.retractedAt;
     if (widget.args.type == MemoryDetailType.preference) {
-      _loadHistory();
+      unawaited(_loadHistory());
     }
     if (AppFeatureFlags.enableMemoryExplain &&
         AppFeatureFlags.enableUserMemoryControls) {
-      _loadSettings();
+      unawaited(_loadSettings());
     }
   }
 
@@ -426,10 +426,12 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
     unawaited(
       SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen),
     );
-    EvidenceDrawer.show(
-      context,
-      refs: _refs,
-      evidenceMissing: _evidenceMissing,
+    unawaited(
+  EvidenceDrawer.show(
+        context,
+        refs: _refs,
+        evidenceMissing: _evidenceMissing,
+      ),
     );
   }
 
@@ -733,19 +735,21 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
       MemoryDetailType.goal => _goal,
       MemoryDetailType.episodic => _episodic,
     };
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.l10n.memoryExportView),
-        content: SingleChildScrollView(
-          child: SelectableText(payload.toString()),
-        ),
-        actions: [
-          SparkleButton.ghost(
-            label: context.l10n.commonClose,
-            onPressed: () => Navigator.of(context).pop(),
+    unawaited(
+  showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(context.l10n.memoryExportView),
+          content: SingleChildScrollView(
+            child: SelectableText(payload.toString()),
           ),
-        ],
+          actions: [
+            SparkleButton.ghost(
+              label: context.l10n.commonClose,
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        ),
       ),
     );
   }

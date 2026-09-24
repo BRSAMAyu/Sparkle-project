@@ -741,7 +741,7 @@ extension ChatNotifierActions on ChatNotifier {
 
   void _refreshCausalTimeline() {
     try {
-      _ref.read(causalTimelineProvider.notifier).load();
+      unawaited(_ref.read(causalTimelineProvider.notifier).load());
     } catch (_) {}
   }
 

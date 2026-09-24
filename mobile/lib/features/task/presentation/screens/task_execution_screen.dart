@@ -211,15 +211,17 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
   void _startExecutionPolling(String taskId) {
     _executionRefreshTimer?.cancel();
     _executionRefreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      unawaited(() async {
-        final latest = await ref
-            .read(taskListProvider.notifier)
-            .loadTaskExecutionState(taskId);
-        if (!mounted) return;
-        if (latest == null || latest.isTerminal) {
-          _executionRefreshTimer?.cancel();
-        }
-      }());
+      unawaited(
+  () async {
+          final latest = await ref
+              .read(taskListProvider.notifier)
+              .loadTaskExecutionState(taskId);
+          if (!mounted) return;
+          if (latest == null || latest.isTerminal) {
+            _executionRefreshTimer?.cancel();
+          }
+        }(),
+      );
     });
   }
 

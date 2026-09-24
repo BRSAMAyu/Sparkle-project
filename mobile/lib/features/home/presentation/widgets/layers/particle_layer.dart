@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/theme/performance_tier.dart';
@@ -88,7 +89,7 @@ class _ParticleLayerState extends State<ParticleLayer>
         mainController,
         onResume: () {
           if (!mainController.isAnimating) {
-            mainController.repeat(reverse: true);
+            unawaited(mainController.repeat(reverse: true));
           }
         },
       );
@@ -100,7 +101,7 @@ class _ParticleLayerState extends State<ParticleLayer>
         particleController,
         onResume: () {
           if (!particleController.isAnimating) {
-            particleController.repeat();
+            unawaited(particleController.repeat());
           }
         },
       );

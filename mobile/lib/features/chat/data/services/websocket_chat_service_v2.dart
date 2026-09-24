@@ -1784,12 +1784,14 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
 
           // Restore pending messages from offline DB, then flush all pending.
           // DB restore failure must not prevent flush — use onError callback.
-          _restorePendingFromDb()
-              .then((_) => _flushPendingMessages())
-              .catchError((Object e) {
-            _log('⚠️ DB restore failed, flushing pending messages anyway: $e');
-            _flushPendingMessages();
-          });
+          unawaited(
+  _restorePendingFromDb()
+                .then((_) => _flushPendingMessages())
+                .catchError((Object e) {
+              _log('⚠️ DB restore failed, flushing pending messages anyway: $e');
+              _flushPendingMessages();
+            }),
+          );
 
           _log('✅ WebSocket connected');
         }).catchError((Object e) {

@@ -34,7 +34,7 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
     final query = _searchController.text.trim();
     if (query.isNotEmpty) {
       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
-      ref.read(userSearchProvider.notifier).search(query);
+      unawaited(ref.read(userSearchProvider.notifier).search(query));
     }
   }
 
@@ -86,8 +86,10 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
                 title: Text(context.l10n.sendMessageLabel),
                 onTap: () {
                   Navigator.pop(context);
-                  context.push(
-                    '/chat/private/${user.id}?name=${Uri.encodeComponent(user.displayName)}',
+                  unawaited(
+  context.push(
+                      '/chat/private/${user.id}?name=${Uri.encodeComponent(user.displayName)}',
+                    ),
                   );
                 },
               ),

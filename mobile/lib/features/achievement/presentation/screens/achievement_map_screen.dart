@@ -265,7 +265,7 @@ class _AchievementNodeBottomSheet extends StatelessWidget {
                       label: context.l10n.achievementMapViewDetails,
                       onPressed: () {
                         Navigator.of(context).pop();
-                        context.push('/achievements/${node.id}');
+                        unawaited(context.push('/achievements/${node.id}'));
                       },
                     ),
                   ),
@@ -370,13 +370,15 @@ class _CosmicConstellationCanvasState extends State<_CosmicConstellationCanvas>
     _twinkleController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 8),
-    )..repeat();
+    );
+    unawaited(_twinkleController.repeat());
 
     // Pulse cycle for connection glow dots and node rings (3 seconds).
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 3),
-    )..repeat();
+    );
+    unawaited(_pulseController.repeat());
 
     // Entrance animation for nodes (staggered).
     final totalDuration =
@@ -384,7 +386,8 @@ class _CosmicConstellationCanvasState extends State<_CosmicConstellationCanvas>
     _nodeEntranceController = AnimationController(
       vsync: this,
       duration: totalDuration,
-    )..forward();
+    );
+    unawaited(_nodeEntranceController.forward());
 
     registerController(
       _twinkleController,
@@ -524,13 +527,13 @@ class _CosmicConstellationCanvasState extends State<_CosmicConstellationCanvas>
       _releaseOrbitalParticles();
     } else {
       if (!_twinkleController.isAnimating) {
-        _twinkleController.repeat();
+        unawaited(_twinkleController.repeat());
       }
       if (!_pulseController.isAnimating) {
-        _pulseController.repeat();
+        unawaited(_pulseController.repeat());
       }
       if (_nodeEntranceController.value == 0.0) {
-        _nodeEntranceController.forward();
+        unawaited(_nodeEntranceController.forward());
       }
       _updateOrbitalParticleRegistration(force: true);
     }

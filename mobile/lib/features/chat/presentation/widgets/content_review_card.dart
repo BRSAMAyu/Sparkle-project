@@ -291,7 +291,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
     ).animate(
       CurvedAnimation(parent: _slideInController, curve: Curves.easeOut),
     );
-    _slideInController.forward();
+    unawaited(_slideInController.forward());
   }
 
   @override

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -109,9 +110,11 @@ class _EnergyTransferAnimationState extends State<EnergyTransferAnimation>
 
     _controller.addListener(_updateTrail);
 
-    _controller.forward().then((_) {
-      widget.onComplete();
-    });
+    unawaited(
+  _controller.forward().then((_) {
+        widget.onComplete();
+      }),
+    );
   }
 
   void _updateTrail() {

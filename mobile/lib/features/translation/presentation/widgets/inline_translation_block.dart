@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -45,7 +46,7 @@ class _InlineTranslationBlockState
     super.initState();
     _isExpanded = widget.initiallyExpanded;
     if (_isExpanded) {
-      _loadTranslation();
+      unawaited(_loadTranslation());
     }
   }
 
@@ -86,7 +87,7 @@ class _InlineTranslationBlockState
     setState(() {
       _isExpanded = !_isExpanded;
       if (_isExpanded && _result == null && !_isLoading) {
-        _loadTranslation();
+        unawaited(_loadTranslation());
       }
     });
   }

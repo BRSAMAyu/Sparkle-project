@@ -166,7 +166,7 @@ class FocusMainScreen extends ConsumerWidget {
                   );
                   // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
                   ref.read(activeTaskProvider.notifier).state = dummyTask;
-                  context.push('/tasks/${dummyTask.id}/execute?origin=focus');
+                  unawaited(context.push('/tasks/${dummyTask.id}/execute?origin=focus'));
                 },
                 icon: const Icon(Icons.play_circle_outline),
                 label: context.l10n.focusStartNow,
@@ -181,7 +181,7 @@ class FocusMainScreen extends ConsumerWidget {
                     SensoryFeedbackEvent.selection,
                   ),
                 );
-                context.push('/tasks/new');
+                unawaited(context.push('/tasks/new'));
               },
             ),
           ],
@@ -221,7 +221,7 @@ class FocusMainScreen extends ConsumerWidget {
               );
               // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
               ref.read(activeTaskProvider.notifier).state = task;
-              context.push('/tasks/${task.id}/execute?origin=focus');
+              unawaited(context.push('/tasks/${task.id}/execute?origin=focus'));
             },
           ),
         ),
@@ -254,7 +254,7 @@ class FocusMainScreen extends ConsumerWidget {
                   updatedAt: DateTime.now(),
                 );
                 ref.read(activeTaskProvider.notifier).state = dummyTask;
-                context.push('/tasks/${dummyTask.id}/execute?origin=focus');
+                unawaited(context.push('/tasks/${dummyTask.id}/execute?origin=focus'));
               },
             ),
             const SizedBox(height: DS.spacing8),

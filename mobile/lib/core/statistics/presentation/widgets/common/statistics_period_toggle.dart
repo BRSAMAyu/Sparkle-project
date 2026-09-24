@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
@@ -107,9 +108,11 @@ class _PeriodButtonState extends State<_PeriodButton>
     super.didUpdateWidget(oldWidget);
     if (widget.isSelected != oldWidget.isSelected) {
       if (widget.isSelected) {
-        _controller.forward().then((_) {
-          _controller.reverse();
-        });
+        unawaited(
+  _controller.forward().then((_) {
+            unawaited(_controller.reverse());
+          }),
+        );
       }
     }
   }

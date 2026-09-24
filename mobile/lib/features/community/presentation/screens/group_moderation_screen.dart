@@ -21,7 +21,7 @@ class GroupModerationNotifier
     extends StateNotifier<AsyncValue<GroupModerationSettings>> {
   GroupModerationNotifier(this._repo, this._groupId)
       : super(const AsyncValue.loading()) {
-    load();
+    unawaited(load());
   }
 
   final CommunityRepository _repo;

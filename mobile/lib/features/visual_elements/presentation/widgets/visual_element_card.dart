@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -56,7 +57,7 @@ class _VisualElementCardState extends State<VisualElementCard>
 
     // 已装备卡片启动呼吸动画
     if (widget.element.isEquipped) {
-      _breathingController.repeat(reverse: true);
+      unawaited(_breathingController.repeat(reverse: true));
     }
   }
 
@@ -66,7 +67,7 @@ class _VisualElementCardState extends State<VisualElementCard>
     // 装备状态变化时更新动画
     if (widget.element.isEquipped != oldWidget.element.isEquipped) {
       if (widget.element.isEquipped) {
-        _breathingController.repeat(reverse: true);
+        unawaited(_breathingController.repeat(reverse: true));
       } else {
         _breathingController.stop();
         _breathingController.reset();

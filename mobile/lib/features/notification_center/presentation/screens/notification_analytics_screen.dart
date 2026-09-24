@@ -27,9 +27,11 @@ class _NotificationAnalyticsScreenState
     super.initState();
     // Load analytics on init
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref
-          .read(providers.notificationAnalyticsProvider.notifier)
-          .loadAnalytics('7d');
+      unawaited(
+  ref
+            .read(providers.notificationAnalyticsProvider.notifier)
+            .loadAnalytics('7d'),
+      );
     });
   }
 
@@ -61,9 +63,11 @@ class _NotificationAnalyticsScreenState
                     SensoryFeedbackEvent.selection,
                   ),
                 );
-                ref
-                    .read(providers.notificationAnalyticsProvider.notifier)
-                    .setPeriod(value);
+                unawaited(
+  ref
+                      .read(providers.notificationAnalyticsProvider.notifier)
+                      .setPeriod(value),
+                );
               }
             },
           ),

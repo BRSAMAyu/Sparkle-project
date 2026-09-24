@@ -101,7 +101,7 @@ class PassiveSignalService with WidgetsBindingObserver {
       _isForeground = true;
       _emitSessionStart();
       _controller.add(PassiveSignal(type: PassiveSignalType.appForeground));
-      _captureForegroundApp();
+      unawaited(_captureForegroundApp());
       _resetIdleTimer(const Duration(seconds: 20));
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive) {
@@ -129,7 +129,7 @@ class PassiveSignalService with WidgetsBindingObserver {
 
   void dispose() {
     stop();
-    _controller.close();
+    unawaited(_controller.close());
   }
 }
 

@@ -163,7 +163,7 @@ class _PlanHistorySection extends ConsumerWidget {
                               SensoryFeedbackEvent.selection,
                             ),
                           );
-                          context.push('/plans/${entry.value.id}');
+                          unawaited(context.push('/plans/${entry.value.id}'));
                         },
                       ),
                     ),

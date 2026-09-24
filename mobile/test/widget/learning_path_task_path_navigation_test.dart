@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -78,12 +79,14 @@ class _LearningPathDialogLauncher extends StatelessWidget {
         body: Center(
           child: ElevatedButton(
             onPressed: () {
-              showDialog<void>(
-                context: context,
-                builder: (dialogContext) => const Dialog(
-                  child: LearningPathDialog(
-                    targetNodeId: 'node-1',
-                    targetNodeName: '目标节点',
+              unawaited(
+  showDialog<void>(
+                  context: context,
+                  builder: (dialogContext) => const Dialog(
+                    child: LearningPathDialog(
+                      targetNodeId: 'node-1',
+                      targetNodeName: '目标节点',
+                    ),
                   ),
                 ),
               );

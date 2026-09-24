@@ -80,7 +80,7 @@ class FocusActionCard extends StatelessWidget {
                   );
                   // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
                   ref.read(activeTaskProvider.notifier).state = taskModel;
-                  context.push('/tasks/${taskModel.id}/execute');
+                  unawaited(context.push('/tasks/${taskModel.id}/execute'));
                 },
               ),
             ),

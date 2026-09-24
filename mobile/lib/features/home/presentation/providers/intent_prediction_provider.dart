@@ -518,7 +518,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
   void _navigateToFocus() {
     final context = navigatorKey.currentContext;
     if (context != null) {
-      GoRouter.of(context).push('/focus');
+      unawaited(GoRouter.of(context).push('/focus'));
     }
   }
 
@@ -547,7 +547,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
       if (task != null) {
         _ref.read(activeTaskProvider.notifier).state = task;
       }
-      GoRouter.of(context).push('/tasks/$taskId/execute');
+      unawaited(GoRouter.of(context).push('/tasks/$taskId/execute'));
     }
   }
 
@@ -557,37 +557,37 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
 
     if (title != null && title.isNotEmpty) {
       final encodedTitle = Uri.encodeComponent(title);
-      GoRouter.of(context).push('/tasks/new?title=$encodedTitle');
+      unawaited(GoRouter.of(context).push('/tasks/new?title=$encodedTitle'));
     } else {
-      GoRouter.of(context).push('/tasks/new');
+      unawaited(GoRouter.of(context).push('/tasks/new'));
     }
   }
 
   void _navigateToCalendar() {
     final context = navigatorKey.currentContext;
     if (context != null) {
-      GoRouter.of(context).push('/calendar-stats');
+      unawaited(GoRouter.of(context).push('/calendar-stats'));
     }
   }
 
   void _navigateToCapsule() {
     final context = navigatorKey.currentContext;
     if (context != null) {
-      GoRouter.of(context).push('/curiosity-capsule');
+      unawaited(GoRouter.of(context).push('/curiosity-capsule'));
     }
   }
 
   void _navigateToPatterns() {
     final context = navigatorKey.currentContext;
     if (context != null) {
-      GoRouter.of(context).push('/cognitive/patterns');
+      unawaited(GoRouter.of(context).push('/cognitive/patterns'));
     }
   }
 
   void _navigateToErrorBook() {
     final context = navigatorKey.currentContext;
     if (context != null) {
-      GoRouter.of(context).push('/errors');
+      unawaited(GoRouter.of(context).push('/errors'));
     }
   }
 

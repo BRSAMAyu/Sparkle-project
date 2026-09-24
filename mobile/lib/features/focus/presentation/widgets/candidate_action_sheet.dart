@@ -187,10 +187,12 @@ class _CandidateActionSheetState extends ConsumerState<CandidateActionSheet> {
   }
 
   void _recordFeedback(CandidateActionModel candidate, String feedbackType) {
-    _feedbackService.recordFeedback(
-      candidateId: candidate.id,
-      actionType: candidate.actionType,
-      feedbackType: feedbackType,
+    unawaited(
+  _feedbackService.recordFeedback(
+        candidateId: candidate.id,
+        actionType: candidate.actionType,
+        feedbackType: feedbackType,
+      ),
     );
   }
 }

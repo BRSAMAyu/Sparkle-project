@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
@@ -53,8 +54,8 @@ class _GoalArbitrationCardState extends State<GoalArbitrationCard>
       begin: const Offset(0, 0.06),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
-    _controller.forward();
-    SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
+    unawaited(_controller.forward());
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
   }
 
   @override
@@ -146,8 +147,10 @@ class _GoalArbitrationCardState extends State<GoalArbitrationCard>
                         label: context.l10n.chatGoalFocusPrimary,
                         color: DS.warning,
                         onTap: () {
-                          SensoryFeedbackService.emit(
-                            SensoryFeedbackEvent.selection,
+                          unawaited(
+  SensoryFeedbackService.emit(
+                              SensoryFeedbackEvent.selection,
+                            ),
                           );
                           widget.onFocusPrimary();
                         },
@@ -160,7 +163,7 @@ class _GoalArbitrationCardState extends State<GoalArbitrationCard>
                         color: DS.textTertiary,
                         outlined: true,
                         onTap: () {
-                          SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
+                          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
                           widget.onContinueMulti();
                         },
                       ),

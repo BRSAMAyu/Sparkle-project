@@ -326,7 +326,7 @@ class _SprintHeader extends ConsumerWidget {
             // styleFrom 的边框/圆角/内边距复刻）。
             SparkleButton.outline(
               onPressed: () {
-                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+                unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
                 unawaited(context.push('/plans/${plan.id}/review'));
               },
               icon: const Icon(Icons.rate_review_outlined, size: 18),

@@ -38,7 +38,7 @@ class _AuroraReceiptChipState extends State<AuroraReceiptChip> {
   @override
   void initState() {
     super.initState();
-    _restoreDismissState();
+    unawaited(_restoreDismissState());
   }
 
   Future<void> _restoreDismissState() async {

@@ -129,7 +129,7 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
     if (_reduceMotion) {
       _scaleController.value = 1.0;
     } else {
-      _scaleController.forward();
+      unawaited(_scaleController.forward());
     }
 
     // Particle animation for Epic/Legendary
@@ -171,18 +171,18 @@ class _VisualElementUnlockDialogState extends State<VisualElementUnlockDialog>
         break;
       case VisualElementRarity.rare:
         // Glow animation
-        _glowController.repeat(reverse: true);
+        unawaited(_glowController.repeat(reverse: true));
       case VisualElementRarity.epic:
         // Particles + glow
-        _glowController.repeat(reverse: true);
+        unawaited(_glowController.repeat(reverse: true));
         if (_particlesEnabled) {
-          _particleController.repeat();
+          unawaited(_particleController.repeat());
         }
       case VisualElementRarity.legendary:
         // Full effects + screen shake
-        _glowController.repeat(reverse: true);
+        unawaited(_glowController.repeat(reverse: true));
         if (_particlesEnabled) {
-          _particleController.repeat();
+          unawaited(_particleController.repeat());
         }
     }
   }

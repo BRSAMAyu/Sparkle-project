@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
@@ -27,7 +28,8 @@ class _StepperIndicatorState extends State<StepperIndicator>
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
+    );
+    unawaited(_pulseController.repeat(reverse: true));
   }
 
   @override
@@ -35,7 +37,7 @@ class _StepperIndicatorState extends State<StepperIndicator>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.currentStepIndex != widget.currentStepIndex) {
       _pulseController.reset();
-      _pulseController.repeat(reverse: true);
+      unawaited(_pulseController.repeat(reverse: true));
     }
   }
 

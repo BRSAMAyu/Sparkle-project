@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -230,8 +231,10 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                       ],
                       onChanged: (value) {
                         if (value != null) {
-                          SensoryFeedbackService.emit(
-                            SensoryFeedbackEvent.selection,
+                          unawaited(
+  SensoryFeedbackService.emit(
+                              SensoryFeedbackEvent.selection,
+                            ),
                           );
                           setState(() {
                             _type = value;

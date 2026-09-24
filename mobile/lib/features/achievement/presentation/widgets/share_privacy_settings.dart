@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -187,8 +188,10 @@ class _SharePrivacySettingsState extends State<SharePrivacySettings> {
                       semanticLabel: l10n.commonClear,
                     ),
                     onPressed: () {
-                      SensoryFeedbackService.emit(
-                        SensoryFeedbackEvent.selection,
+                      unawaited(
+  SensoryFeedbackService.emit(
+                          SensoryFeedbackEvent.selection,
+                        ),
                       );
                       _nameController.clear();
                       _updateSettings();
@@ -280,8 +283,10 @@ class _SharePrivacySettingsState extends State<SharePrivacySettings> {
             child: Switch(
               value: value,
               onChanged: (next) {
-                SensoryFeedbackService.emit(
-                  SensoryFeedbackEvent.selection,
+                unawaited(
+  SensoryFeedbackService.emit(
+                    SensoryFeedbackEvent.selection,
+                  ),
                 );
                 onChanged(next);
               },

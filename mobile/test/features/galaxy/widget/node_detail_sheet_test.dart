@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -137,14 +138,16 @@ void main() {
             body: Center(
               child: TextButton(
                 onPressed: () {
-                  showModalBottomSheet<void>(
-                    context: context,
-                    isScrollControlled: true,
-                    useSafeArea: true,
-                    builder: (sheetContext) => NodeDetailSheet(
-                      nodeId: 'cn.tcp_flow',
-                      nodeLabel: 'TCP流量控制',
-                      initialHistory: history,
+                  unawaited(
+  showModalBottomSheet<void>(
+                      context: context,
+                      isScrollControlled: true,
+                      useSafeArea: true,
+                      builder: (sheetContext) => NodeDetailSheet(
+                        nodeId: 'cn.tcp_flow',
+                        nodeLabel: 'TCP流量控制',
+                        initialHistory: history,
+                      ),
                     ),
                   );
                 },

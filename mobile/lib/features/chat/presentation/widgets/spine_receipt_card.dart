@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -50,8 +51,8 @@ class _SpineReceiptCardState extends State<SpineReceiptCard>
     ).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
-    _controller.forward();
-    SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
+    unawaited(_controller.forward());
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
   }
 
   @override
@@ -95,7 +96,7 @@ class _SpineReceiptCardState extends State<SpineReceiptCard>
                 _CorrectionRow(
                   options: widget.correctionOptions,
                   onSelected: (opt) {
-                    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+                    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
                     widget.onCorrect(opt);
                   },
                 ),

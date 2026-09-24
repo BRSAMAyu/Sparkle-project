@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -50,8 +51,8 @@ class _CommunityInsightCardState extends State<CommunityInsightCard>
     ).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
-    _controller.forward();
-    SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
+    unawaited(_controller.forward());
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
   }
 
   @override
@@ -146,8 +147,10 @@ class _CommunityInsightCardState extends State<CommunityInsightCard>
                         label: 'Chat community insight card control 1',
                         child: GestureDetector(
                           onTap: () {
-                            SensoryFeedbackService.emit(
-                              SensoryFeedbackEvent.selection,
+                            unawaited(
+  SensoryFeedbackService.emit(
+                                SensoryFeedbackEvent.selection,
+                              ),
                             );
                             widget.onApply();
                           },
@@ -179,7 +182,7 @@ class _CommunityInsightCardState extends State<CommunityInsightCard>
                       label: 'Chat community insight card control 2',
                       child: GestureDetector(
                         onTap: () {
-                          SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
+                          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
                           widget.onDismiss();
                         },
                         child: Container(

@@ -71,7 +71,7 @@ class VoiceInputNotifier extends StateNotifier<VoiceInputState> {
     _durationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       _recordingDuration++;
       if (maxDuration != null && _recordingDuration >= maxDuration.inSeconds) {
-        stopRecording();
+        unawaited(stopRecording());
       }
     });
 

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -42,7 +43,7 @@ class _AgentAvatarStackState extends State<AgentAvatarStack>
     );
 
     if (widget.animate) {
-      _transitionController.repeat(reverse: true);
+      unawaited(_transitionController.repeat(reverse: true));
     }
   }
 
@@ -51,7 +52,7 @@ class _AgentAvatarStackState extends State<AgentAvatarStack>
     super.didUpdateWidget(oldWidget);
 
     if (widget.activeAgents != oldWidget.activeAgents && widget.animate) {
-      _transitionController.forward(from: 0);
+      unawaited(_transitionController.forward(from: 0));
     }
   }
 
@@ -293,9 +294,11 @@ class _AgentHandoffAnimationState extends State<AgentHandoffAnimation>
       curve: Curves.easeInOut,
     );
 
-    _controller.forward().then((_) {
-      widget.onComplete?.call();
-    });
+    unawaited(
+  _controller.forward().then((_) {
+        widget.onComplete?.call();
+      }),
+    );
   }
 
   @override

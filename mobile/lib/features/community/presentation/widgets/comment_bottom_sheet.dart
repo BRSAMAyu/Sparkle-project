@@ -51,7 +51,7 @@ class _CommentSheetContentState extends ConsumerState<_CommentSheetContent> {
   @override
   void initState() {
     super.initState();
-    _loadComments();
+    unawaited(_loadComments());
   }
 
   @override

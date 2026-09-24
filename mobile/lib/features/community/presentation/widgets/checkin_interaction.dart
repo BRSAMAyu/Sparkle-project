@@ -255,36 +255,38 @@ class CheckinInteraction extends StatelessWidget {
   void _showEncourageDialog(BuildContext context) {
     final controller = TextEditingController();
 
-    showSensoryDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.l10n.communitySendEncouragement),
-        content: TextField(
-          controller: controller,
-          maxLines: 3,
-          maxLength: 500,
-          decoration: InputDecoration(
-            hintText: context.l10n.communityWriteEncouragement,
-            border: const OutlineInputBorder(),
+    unawaited(
+  showSensoryDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(context.l10n.communitySendEncouragement),
+          content: TextField(
+            controller: controller,
+            maxLines: 3,
+            maxLength: 500,
+            decoration: InputDecoration(
+              hintText: context.l10n.communityWriteEncouragement,
+              border: const OutlineInputBorder(),
+            ),
           ),
+          actions: [
+            // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档，发送=primary 确认档。
+            SparkleButton.ghost(
+              onPressed: () => Navigator.of(context).pop(),
+              label: context.l10n.cancel,
+            ),
+            SparkleButton(
+              onPressed: () {
+                final message = controller.text.trim();
+                if (message.isNotEmpty && onEncourage != null) {
+                  onEncourage!(message);
+                  Navigator.of(context).pop();
+                }
+              },
+              label: context.l10n.communitySendEncouragement,
+            ),
+          ],
         ),
-        actions: [
-          // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档，发送=primary 确认档。
-          SparkleButton.ghost(
-            onPressed: () => Navigator.of(context).pop(),
-            label: context.l10n.cancel,
-          ),
-          SparkleButton(
-            onPressed: () {
-              final message = controller.text.trim();
-              if (message.isNotEmpty && onEncourage != null) {
-                onEncourage!(message);
-                Navigator.of(context).pop();
-              }
-            },
-            label: context.l10n.communitySendEncouragement,
-          ),
-        ],
       ),
     );
   }

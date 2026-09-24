@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -134,7 +135,7 @@ class StuckHelpSheet extends StatelessWidget {
                   icon: const Icon(Icons.play_arrow_rounded),
                   onPressed: () {
                     onContinuePressed?.call();
-                    Navigator.of(context).maybePop();
+                    unawaited(Navigator.of(context).maybePop());
                   },
                 ),
               ),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -9,7 +10,7 @@ final focusModeProvider = StateNotifierProvider<FocusModeNotifier, bool>(
 /// Notifier for managing focus mode state
 class FocusModeNotifier extends StateNotifier<bool> {
   FocusModeNotifier() : super(false) {
-    _loadFromPrefs();
+    unawaited(_loadFromPrefs());
   }
 
   /// Load focus mode state from shared preferences

@@ -88,7 +88,7 @@ class UnifiedCalendarNotifier extends StateNotifier<UnifiedCalendarState> {
     // Defer loading to avoid Riverpod initialization issues
     Future.delayed(const Duration(milliseconds: 100), () {
       if (mounted) {
-        loadMonth(DateTime.now());
+        unawaited(loadMonth(DateTime.now()));
       }
     });
   }
@@ -360,9 +360,11 @@ final todayAggregateProvider = Provider<CalendarDayAggregate>((ref) {
   // Trigger deferred initialization if not loaded
   if (!state.isMonthLoaded(now.year, now.month) && !state.isLoading) {
     // Use Future.microtask to defer the initialization call
-    Future.microtask(() {
-      ref.read(unifiedCalendarProvider.notifier).initializeIfNeeded();
-    });
+    unawaited(
+  Future.microtask(() {
+        ref.read(unifiedCalendarProvider.notifier).initializeIfNeeded();
+      }),
+    );
   }
 
   return state.getDayAggregate(now) ?? CalendarDayAggregate.empty(now);
@@ -380,9 +382,11 @@ final currentMonthAggregateProvider = Provider<CalendarMonthAggregate?>((ref) {
   // Trigger deferred initialization if not loaded
   if (!state.isMonthLoaded(now.year, now.month) && !state.isLoading) {
     // Use Future.microtask to defer the initialization call
-    Future.microtask(() {
-      ref.read(unifiedCalendarProvider.notifier).initializeIfNeeded();
-    });
+    unawaited(
+  Future.microtask(() {
+        ref.read(unifiedCalendarProvider.notifier).initializeIfNeeded();
+      }),
+    );
   }
 
   final monthKey = '${now.year}-${now.month.toString().padLeft(2, '0')}';

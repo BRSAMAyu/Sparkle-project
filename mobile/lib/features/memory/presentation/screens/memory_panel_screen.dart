@@ -1100,7 +1100,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   }
 
   void _openDetail(BuildContext context, MemoryDetailArgs args) {
-    context.push(MemoryRoutes.detail, extra: args);
+    unawaited(context.push(MemoryRoutes.detail, extra: args));
   }
 
   String _formatUpdated(DateTime? value) {
@@ -1297,7 +1297,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
       path: UserRoutes.persona,
       queryParameters: {'override': item.prefKey},
     );
-    context.push(uri.toString());
+    unawaited(context.push(uri.toString()));
   }
 }
 

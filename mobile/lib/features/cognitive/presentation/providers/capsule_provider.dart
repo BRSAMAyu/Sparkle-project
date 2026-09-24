@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/cognitive/data/models/capsule_feedback_model.dart';
@@ -9,7 +10,7 @@ import 'package:sparkle/features/cognitive/data/repositories/capsule_repository.
 /// 胶囊列表状态通知器
 class CapsuleNotifier extends StateNotifier<AsyncValue<List<CuriosityCapsuleModel>>> {
   CapsuleNotifier(this._repository) : super(const AsyncValue.loading()) {
-    fetchTodayCapsules();
+    unawaited(fetchTodayCapsules());
   }
   final CapsuleRepository _repository;
 

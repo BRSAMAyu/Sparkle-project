@@ -486,22 +486,26 @@ class _ArtifactTile extends StatelessWidget {
       child: InkWell(
         onTap: () {
           if (_isImage(type) && url.isNotEmpty) {
-            showDialog<void>(
-              context: context,
-              builder: (_) => _ImageArtifactPreviewDialog(
-                title: name,
-                imageUrl: url,
+            unawaited(
+  showDialog<void>(
+                context: context,
+                builder: (_) => _ImageArtifactPreviewDialog(
+                  title: name,
+                  imageUrl: url,
+                ),
               ),
             );
             return;
           }
-          showSensoryModalBottomSheet<void>(
-            context: context,
-            builder: (_) => _ArtifactPreviewSheet(
-              artifact: artifact,
-              title: name,
-              url: url,
-              type: type,
+          unawaited(
+  showSensoryModalBottomSheet<void>(
+              context: context,
+              builder: (_) => _ArtifactPreviewSheet(
+                artifact: artifact,
+                title: name,
+                url: url,
+                type: type,
+              ),
             ),
           );
         },

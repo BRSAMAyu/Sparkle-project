@@ -160,7 +160,7 @@ class FocusAgentSheet extends ConsumerWidget {
   void _sendPrompt(WidgetRef ref, TaskModel task, String text) {
     if (text.trim().isEmpty) return;
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
-    ref.read(taskChatProvider(task.id).notifier).sendMessage(text);
+    unawaited(ref.read(taskChatProvider(task.id).notifier).sendMessage(text));
   }
 }
 

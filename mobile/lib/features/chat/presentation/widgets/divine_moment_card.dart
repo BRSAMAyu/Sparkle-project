@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -94,8 +95,8 @@ class _DivineMomentCardState extends State<DivineMomentCard>
       duration: const Duration(milliseconds: 350),
     );
     _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
-    _ctrl.forward();
-    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+    unawaited(_ctrl.forward());
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
   }
 
   @override

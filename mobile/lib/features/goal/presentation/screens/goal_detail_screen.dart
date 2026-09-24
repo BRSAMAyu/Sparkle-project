@@ -17,6 +17,7 @@ import 'package:sparkle/features/goal/data/models/scenario_pack_models.dart';
 import 'package:sparkle/features/goal/data/services/scenario_pack_service.dart';
 import 'package:sparkle/features/goal/presentation/providers/goal_detail_provider.dart';
 import 'package:sparkle/features/goal/presentation/widgets/goal_bottleneck_strip.dart';
+import 'package:sparkle/features/goal/presentation/widgets/goal_step_completion_celebration.dart';
 import 'package:sparkle/features/goal/presentation/widgets/journey_progress_card.dart';
 import 'package:sparkle/features/goal/presentation/widgets/minimum_criteria_card.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
@@ -34,6 +35,9 @@ class GoalDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(goalDetailProvider(goalId));
     final l10n = context.l10n;
+    // J-08：完成时刻的轻庆祝态（含一题式微反思），以覆盖层挂在页面
+    // 之上；null = 无庆祝。背后的目标页与星图由 provider 轨迹钩子刷新。
+    final celebration = ref.watch(goalStepCelebrationProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -54,8 +58,10 @@ class GoalDetailScreen extends ConsumerWidget {
             onPressed: () {
               final data = state.valueOrNull;
               if (data == null) return;
-              _showEditDialog(
-                  context, ref, goalId, data.goal.title, data.goal.goalType,);
+              unawaited(
+  _showEditDialog(
+                    context, ref, goalId, data.goal.title, data.goal.goalType,),
+              );
             },
           ),
           SparkleIconButton(
@@ -68,70 +74,84 @@ class GoalDetailScreen extends ConsumerWidget {
         ],
       ),
       backgroundColor: DS.surface,
-      body: state.when(
-        data: (data) => SparkleRefreshIndicator(
-          onRefresh: () => ref.read(goalDetailProvider(goalId).notifier).load(),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-            children: [
-              _GoalHeader(data: data),
-              JourneyProgressFutureCard(goalId: goalId),
-              if (data.strategyBelief != null) ...[
-                const SizedBox(height: 14),
-                StrategyMigrationWizard(
-                  goalId: goalId,
-                  belief: data.strategyBelief,
-                  onMigrated: (_) =>
-                      ref.read(goalDetailProvider(goalId).notifier).load(),
-                ),
-              ],
-              const SizedBox(height: 14),
-              MinimumCriteriaCard(
-                criteria: data.minimumAcceptanceCriteria,
-                onConfirm: () async {
-                  try {
-                    await ref
-                        .read(goalDetailProvider(goalId).notifier)
-                        .confirmMinimumCriteria();
-                    if (!context.mounted) return;
-                    AppFeedback.undoable(
-                      context: context,
-                      message: l10n.goalDetailConfirmedSnack,
-                      actionLabel: l10n.goalDetailUndo,
-                      onAction: () {
-                        unawaited(
-                          ref
-                              .read(goalDetailProvider(goalId).notifier)
-                              .undoConfirmMinimumCriteria()
-                              .catchError((Object _) {}),
+      body: Stack(
+        children: [
+          state.when(
+            data: (data) => SparkleRefreshIndicator(
+              onRefresh: () =>
+                  ref.read(goalDetailProvider(goalId).notifier).load(),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                children: [
+                  _GoalHeader(data: data),
+                  JourneyProgressFutureCard(goalId: goalId),
+                  if (data.strategyBelief != null) ...[
+                    const SizedBox(height: 14),
+                    StrategyMigrationWizard(
+                      goalId: goalId,
+                      belief: data.strategyBelief,
+                      onMigrated: (_) =>
+                          ref.read(goalDetailProvider(goalId).notifier).load(),
+                    ),
+                  ],
+                  const SizedBox(height: 14),
+                  MinimumCriteriaCard(
+                    criteria: data.minimumAcceptanceCriteria,
+                    onConfirm: () async {
+                      try {
+                        await ref
+                            .read(goalDetailProvider(goalId).notifier)
+                            .confirmMinimumCriteria();
+                        if (!context.mounted) return;
+                        AppFeedback.undoable(
+                          context: context,
+                          message: l10n.goalDetailConfirmedSnack,
+                          actionLabel: l10n.goalDetailUndo,
+                          onAction: () {
+                            unawaited(
+                              ref
+                                  .read(goalDetailProvider(goalId).notifier)
+                                  .undoConfirmMinimumCriteria()
+                                  .catchError((Object _) {}),
+                            );
+                          },
                         );
-                      },
-                    );
-                  } catch (e) {
-                    if (!context.mounted) return;
-                    AppFeedback.error(context, l10n.goalDetailLoadFailed);
-                  }
-                },
+                      } catch (e) {
+                        if (!context.mounted) return;
+                        AppFeedback.error(context, l10n.goalDetailLoadFailed);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: DS.spacing20),
+                  GoalBottleneckStrip(items: data.knowledgeBottlenecks),
+                  const SizedBox(height: DS.spacing20),
+                  _TodayStepCard(goalId: goalId, step: data.todaysMinimalNextStep),
+                  const SizedBox(height: 14),
+                  _PlanHealthBand(goalId: goalId, data: data),
+                  const SizedBox(height: 14),
+                  _AccountabilityCard(summary: data.accountabilityStatus),
+                  const SizedBox(height: 14),
+                  _RelatedSourcesCard(sources: data.relatedSources),
+                  const SizedBox(height: 14),
+                  SimilarGoalPursuersCard(goalId: goalId),
+                ],
               ),
-              const SizedBox(height: DS.spacing20),
-              GoalBottleneckStrip(items: data.knowledgeBottlenecks),
-              const SizedBox(height: DS.spacing20),
-              _TodayStepCard(goalId: goalId, step: data.todaysMinimalNextStep),
-              const SizedBox(height: 14),
-              _PlanHealthBand(goalId: goalId, data: data),
-              const SizedBox(height: 14),
-              _AccountabilityCard(summary: data.accountabilityStatus),
-              const SizedBox(height: 14),
-              _RelatedSourcesCard(sources: data.relatedSources),
-              const SizedBox(height: 14),
-              SimilarGoalPursuersCard(goalId: goalId),
-            ],
+            ),
+            loading: () => const _GoalDetailSkeleton(),
+            error: (_, __) => _ErrorState(
+              onRetry: () => ref.read(goalDetailProvider(goalId).notifier).load(),
+            ),
           ),
-        ),
-        loading: () => const _GoalDetailSkeleton(),
-        error: (_, __) => _ErrorState(
-          onRetry: () => ref.read(goalDetailProvider(goalId).notifier).load(),
-        ),
+          if (celebration != null)
+            Positioned.fill(
+              child: GoalStepCompletionCelebration(
+                celebration: celebration,
+                onContinue: () => ref
+                    .read(goalStepCelebrationProvider.notifier)
+                    .state = null,
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -445,9 +465,17 @@ class _TodayStepCard extends ConsumerWidget {
                       );
                       if (confirmed ?? false) {
                         try {
-                          await ref
+                          // J-08：完成成功即返回庆祝载荷（含轨迹所需的最小
+                          // 字段），挂载轻庆祝态 + 一题式微反思；失败路径
+                          // 保持既有错误 snack，任务未完成不受影响。
+                          final celebration = await ref
                               .read(goalDetailProvider(goalId).notifier)
                               .completeNextStep();
+                          if (celebration != null) {
+                            ref
+                                .read(goalStepCelebrationProvider.notifier)
+                                .state = celebration;
+                          }
                         } catch (e) {
                           if (!context.mounted) return;
                           AppFeedback.error(

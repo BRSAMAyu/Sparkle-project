@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
@@ -463,9 +464,11 @@ class AchievementDetailDialog extends StatelessWidget {
       );
 
   static void show(BuildContext context, AchievementInfo achievement) {
-    showSensoryDialog<void>(
-      context: context,
-      builder: (context) => AchievementDetailDialog(achievement: achievement),
+    unawaited(
+  showSensoryDialog<void>(
+        context: context,
+        builder: (context) => AchievementDetailDialog(achievement: achievement),
+      ),
     );
   }
 }

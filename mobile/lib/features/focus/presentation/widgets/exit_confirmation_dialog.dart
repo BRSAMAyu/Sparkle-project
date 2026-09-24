@@ -43,7 +43,7 @@ class _ExitConfirmationDialogState extends State<ExitConfirmationDialog>
         curve: Curves.easeOut,
       ),
     );
-    _slideController.forward();
+    unawaited(_slideController.forward());
   }
 
   @override

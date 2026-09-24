@@ -1126,9 +1126,11 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                             ],
                             onChanged: (newValue) {
                               if (newValue != null) {
-                                ref
-                                    .read(themeManagerProvider)
-                                    .setAppThemeMode(newValue);
+                                unawaited(
+  ref
+                                      .read(themeManagerProvider)
+                                      .setAppThemeMode(newValue),
+                                );
                               }
                             },
                           ),
@@ -1844,11 +1846,13 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       subtitle: Text(l10n.pushMicroTasks),
                       value: pushPrefs.dailyCap > 0,
                       onChanged: (v) {
-                        ref
-                            .read(pushPreferencesProvider.notifier)
-                            .updatePreferences(
-                              dailyCap: v ? 5 : 0,
-                            );
+                        unawaited(
+  ref
+                              .read(pushPreferencesProvider.notifier)
+                              .updatePreferences(
+                                dailyCap: v ? 5 : 0,
+                              ),
+                        );
                       },
                       activeThumbColor: DS.primaryBase,
                     ),
@@ -1900,9 +1904,11 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                         ],
                         onChanged: (level) {
                           if (level != null) {
-                            ref
-                                .read(transparencyLevelProvider.notifier)
-                                .setLevel(level);
+                            unawaited(
+  ref
+                                  .read(transparencyLevelProvider.notifier)
+                                  .setLevel(level),
+                            );
                           }
                         },
                       ),
@@ -1928,9 +1934,11 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       ],
                       onChanged: (level) {
                         if (level != null) {
-                          ref
-                              .read(systemUpdateLevelProvider.notifier)
-                              .setLevel(level);
+                          unawaited(
+  ref
+                                .read(systemUpdateLevelProvider.notifier)
+                                .setLevel(level),
+                          );
                         }
                       },
                     ),
@@ -2005,9 +2013,11 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               Center(
                 child: GestureDetector(
                   onLongPress: () {
-                    showSensoryDialog<void>(
-                      context: context,
-                      builder: (context) => const ChaosControlDialog(),
+                    unawaited(
+  showSensoryDialog<void>(
+                        context: context,
+                        builder: (context) => const ChaosControlDialog(),
+                      ),
                     );
                   },
                   child: Text(
@@ -2076,10 +2086,12 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                     icon: const Icon(Icons.auto_awesome),
                     onPressed: () {
                       Navigator.of(sheetContext).pop();
-                      Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) =>
-                              CapsuleDetailScreen(capsuleId: capsule.id),
+                      unawaited(
+  Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) =>
+                                CapsuleDetailScreen(capsuleId: capsule.id),
+                          ),
                         ),
                       );
                     },
@@ -2106,40 +2118,42 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
 
   void _resetAllSettings(BuildContext context, WidgetRef ref) {
     final zh = I18nService.instance.isChinese;
-    showSensoryDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(zh ? '重置所有设置' : 'Reset All Settings'),
-        content: Text(zh
-            ? '这将重置所有主题、辅助功能和偏好设置到默认值。确定继续吗？'
-            : 'This will reset all theme, accessibility, and preference settings to defaults. Continue?',),
-        actions: [
-          // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档；重置是破坏性动作，
-          // destructive 文字动作档承接（ghost + 语义色前景，不升实心底）。
-          SparkleButton.ghost(
-            onPressed: () => Navigator.of(ctx).pop(),
-            label: zh ? '取消' : 'Cancel',
-          ),
-          SparkleButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              final themeManager = ref.read(themeManagerProvider);
-              unawaited(themeManager.reset());
-              final a11yNotifier =
-                  ref.read(accessibilitySettingsProvider.notifier);
-              unawaited(a11yNotifier.reset());
-              if (context.mounted) {
-                AppFeedback.success(
-                  context,
-                  zh ? '设置已重置' : 'Settings reset successfully',
-                );
-              }
-            },
-            variant: ButtonVariant.ghost,
-            foregroundColor: DS.error,
-            label: zh ? '重置' : 'Reset',
-          ),
-        ],
+    unawaited(
+  showSensoryDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(zh ? '重置所有设置' : 'Reset All Settings'),
+          content: Text(zh
+              ? '这将重置所有主题、辅助功能和偏好设置到默认值。确定继续吗？'
+              : 'This will reset all theme, accessibility, and preference settings to defaults. Continue?',),
+          actions: [
+            // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档；重置是破坏性动作，
+            // destructive 文字动作档承接（ghost + 语义色前景，不升实心底）。
+            SparkleButton.ghost(
+              onPressed: () => Navigator.of(ctx).pop(),
+              label: zh ? '取消' : 'Cancel',
+            ),
+            SparkleButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                final themeManager = ref.read(themeManagerProvider);
+                unawaited(themeManager.reset());
+                final a11yNotifier =
+                    ref.read(accessibilitySettingsProvider.notifier);
+                unawaited(a11yNotifier.reset());
+                if (context.mounted) {
+                  AppFeedback.success(
+                    context,
+                    zh ? '设置已重置' : 'Settings reset successfully',
+                  );
+                }
+              },
+              variant: ButtonVariant.ghost,
+              foregroundColor: DS.error,
+              label: zh ? '重置' : 'Reset',
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2151,7 +2165,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   ) {
     final currentLocale = ref.read(localeProvider);
 
-    showSensoryDialog<void>(
+    unawaited(showSensoryDialog<void>(
       context: context,
       builder: (dialogContext) => Dialog(
         backgroundColor: Colors.transparent,
@@ -2185,9 +2199,11 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 subtitle: l10n.languageChineseDescription,
                 selected: currentLocale.languageCode == 'zh',
                 onTap: () {
-                  ref
-                      .read(localeProvider.notifier)
-                      .setLocale(const Locale('zh'));
+                  unawaited(
+  ref
+                        .read(localeProvider.notifier)
+                        .setLocale(const Locale('zh')),
+                  );
                   Navigator.pop(dialogContext);
                 },
               ),
@@ -2198,9 +2214,11 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 subtitle: l10n.languageEnglishDescription,
                 selected: currentLocale.languageCode == 'en',
                 onTap: () {
-                  ref
-                      .read(localeProvider.notifier)
-                      .setLocale(const Locale('en'));
+                  unawaited(
+  ref
+                        .read(localeProvider.notifier)
+                        .setLocale(const Locale('en')),
+                  );
                   Navigator.pop(dialogContext);
                 },
               ),
@@ -2208,7 +2226,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           ),
         ),
       ),
-    );
+    ),);
   }
 
   Future<void> _confirmOpenDeleteData(BuildContext context) async {
@@ -2850,7 +2868,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               child: WeeklyAgendaGrid(
                 initialData: weeklyAgenda,
                 onChanged: (data) {
-                  ref.read(weeklyAgendaProvider.notifier).updateAgenda(data);
+                  unawaited(ref.read(weeklyAgendaProvider.notifier).updateAgenda(data));
                 },
               ),
             ),
@@ -3415,31 +3433,33 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       );
 
   void _showOpenSettingsDialog(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.l10n.notificationPermissionDialogTitle),
-        content: Text(context.l10n.notificationPermissionDialogContent),
-        actions: [
-          // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档；去开系统设置是
-          // 对话框的肯定推进动作 → primary 确认档。
-          SparkleButton.ghost(
-            onPressed: () => Navigator.pop(context),
-            label: context.l10n.commonCancel,
-          ),
-          SparkleButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // Open app settings
-              unawaited(
-                ref
-                    .read(notificationPermissionStatusProvider.notifier)
-                    .requestPermission(),
-              );
-            },
-            label: context.l10n.notificationOpenSettings,
-          ),
-        ],
+    unawaited(
+  showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(context.l10n.notificationPermissionDialogTitle),
+          content: Text(context.l10n.notificationPermissionDialogContent),
+          actions: [
+            // CAPSULE-VARIANT 对话框按钮归一：取消=ghost 档；去开系统设置是
+            // 对话框的肯定推进动作 → primary 确认档。
+            SparkleButton.ghost(
+              onPressed: () => Navigator.pop(context),
+              label: context.l10n.commonCancel,
+            ),
+            SparkleButton(
+              onPressed: () {
+                Navigator.pop(context);
+                // Open app settings
+                unawaited(
+                  ref
+                      .read(notificationPermissionStatusProvider.notifier)
+                      .requestPermission(),
+                );
+              },
+              label: context.l10n.notificationOpenSettings,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -3813,9 +3833,11 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             child: SparkleButton.ghost(
               label: context.l10n.aiOpsOpenAnalysis,
               onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const AiOpsAnalysisScreen(),
+                unawaited(
+  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const AiOpsAnalysisScreen(),
+                    ),
                   ),
                 );
               },

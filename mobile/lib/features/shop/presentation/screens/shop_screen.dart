@@ -175,34 +175,36 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
 
   void _showPurchaseDialog(ShopItem item) {
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => PurchaseConfirmationDialog(
-        item: item,
-        onConfirm: () async {
-          final success =
-              await ref.read(shopItemsProvider.notifier).purchaseItem(item.id);
-
-          if (!mounted) return;
-
-          if (success) {
-            unawaited(
-                SensoryFeedbackService.emit(SensoryFeedbackEvent.success),);
-            Navigator.of(dialogContext).pop();
-            AppFeedback.success(
-              context,
-              context.l10n.shopPurchaseSuccess(item.name),
-            );
-          } else {
-            final error = ref.read(shopItemsProvider).error;
-            AppFeedback.error(
-              context,
-              error == null
-                  ? context.l10n.shopPurchaseFailed
-                  : uiErrorMessage(context.l10n, error),
-            );
-          }
-        },
+    unawaited(
+  showDialog<void>(
+        context: context,
+        builder: (dialogContext) => PurchaseConfirmationDialog(
+          item: item,
+          onConfirm: () async {
+            final success =
+                await ref.read(shopItemsProvider.notifier).purchaseItem(item.id);
+  
+            if (!mounted) return;
+  
+            if (success) {
+              unawaited(
+                  SensoryFeedbackService.emit(SensoryFeedbackEvent.success),);
+              Navigator.of(dialogContext).pop();
+              AppFeedback.success(
+                context,
+                context.l10n.shopPurchaseSuccess(item.name),
+              );
+            } else {
+              final error = ref.read(shopItemsProvider).error;
+              AppFeedback.error(
+                context,
+                error == null
+                    ? context.l10n.shopPurchaseFailed
+                    : uiErrorMessage(context.l10n, error),
+              );
+            }
+          },
+        ),
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -271,7 +272,7 @@ class _DayZeroBannerState extends State<_DayZeroBanner>
       // 单次入场：只播一次，依赖重建（主题/媒体变化）不重播。
       if (!_entranceController.isAnimating &&
           !_entranceController.isCompleted) {
-        _entranceController.forward();
+        unawaited(_entranceController.forward());
       }
     } else {
       // 静止定帧＝入场完成位（offset 0）。
@@ -558,14 +559,14 @@ class _PassProbabilityArcState extends State<_PassProbabilityArc>
       // 原 1200ms offLadder 退役。
       duration: _kCanonicalEntrance,
     );
-    _controller.forward();
+    unawaited(_controller.forward());
   }
 
   @override
   void didUpdateWidget(covariant _PassProbabilityArc oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.data.passProbability != widget.data.passProbability) {
-      _controller.forward(from: 0.0);
+      unawaited(_controller.forward(from: 0.0));
     }
   }
 

@@ -846,11 +846,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         _scrollToBottom();
         return;
       }
-      Scrollable.ensureVisible(
-        targetContext,
-        duration: const Duration(milliseconds: 260),
-        curve: Curves.easeOutCubic,
-        alignment: 0.22,
+      unawaited(
+  Scrollable.ensureVisible(
+          targetContext,
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOutCubic,
+          alignment: 0.22,
+        ),
       );
     });
   }
@@ -1458,8 +1460,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 case _ChatShortcutAction.newSession:
                   ref.read(chatProvider.notifier).startNewSession();
                 case _ChatShortcutAction.openClawHub:
-                  context
-                      .push('${HomeRoutes.openClawHub}?section=delegate');
+                  unawaited(
+  context
+                        .push('${HomeRoutes.openClawHub}?section=delegate'),
+                  );
                 case _ChatShortcutAction.causalTimeline:
                   _showCausalTimelineSheet(context);
                 case _ChatShortcutAction.contextControls:
@@ -2375,7 +2379,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             chatState.pendingStaleCard!.resumeOptions,
                         onOptionSelected: (option) {
                           ref.read(chatProvider.notifier).dismissStaleCard();
-                          ref.read(chatProvider.notifier).sendMessage(option);
+                          unawaited(ref.read(chatProvider.notifier).sendMessage(option));
                         },
                         onDismiss: () =>
                             ref.read(chatProvider.notifier).dismissStaleCard(),
@@ -2390,9 +2394,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             chatState.pendingSpineReceipt!.correctionOptions,
                         onCorrect: (correction) {
                           ref.read(chatProvider.notifier).dismissSpineReceipt();
-                          ref
-                              .read(chatProvider.notifier)
-                              .sendMessage(correction);
+                          unawaited(
+  ref
+                                .read(chatProvider.notifier)
+                                .sendMessage(correction),
+                          );
                         },
                         onDismiss: () => ref
                             .read(chatProvider.notifier)
@@ -2411,10 +2417,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           ref
                               .read(chatProvider.notifier)
                               .dismissCommunityHint();
-                          ref.read(chatProvider.notifier).sendMessage(
-                                context.l10n.chatCommunitySuggestion(
-                                    hint.anonymousSummary, hint.tip,),
-                              );
+                          unawaited(
+  ref.read(chatProvider.notifier).sendMessage(
+                                  context.l10n.chatCommunitySuggestion(
+                                      hint.anonymousSummary, hint.tip,),
+                                ),
+                          );
                         },
                         onDismiss: () => ref
                             .read(chatProvider.notifier)
@@ -2430,10 +2438,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         onAdjust: () {
                           final warning = chatState.pendingUXWarning!;
                           ref.read(chatProvider.notifier).dismissUXWarning();
-                          ref.read(chatProvider.notifier).sendMessage(
-                                context.l10n.chatWarningAction(
-                                    warning.suggestedAction, warning.reason,),
-                              );
+                          unawaited(
+  ref.read(chatProvider.notifier).sendMessage(
+                                  context.l10n.chatWarningAction(
+                                      warning.suggestedAction, warning.reason,),
+                                ),
+                          );
                         },
                         onDismiss: () =>
                             ref.read(chatProvider.notifier).dismissUXWarning(),
@@ -2467,7 +2477,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           if (action.contains('累') ||
                               action.contains('tired') ||
                               action.contains(context.l10n.chatNotNeeded)) {
-                            ref.read(chatProvider.notifier).sendMessage(action);
+                            unawaited(ref.read(chatProvider.notifier).sendMessage(action));
                           }
                         },
                       ),
@@ -2484,10 +2494,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           ref
                               .read(chatProvider.notifier)
                               .dismissGoalArbitration();
-                          ref.read(chatProvider.notifier).sendMessage(
-                                context.l10n
-                                    .chatFocusOnGoal(arb.primaryGoalTitle),
-                              );
+                          unawaited(
+  ref.read(chatProvider.notifier).sendMessage(
+                                  context.l10n
+                                      .chatFocusOnGoal(arb.primaryGoalTitle),
+                                ),
+                          );
                         },
                         onContinueMulti: () => ref
                             .read(chatProvider.notifier)
@@ -2505,7 +2517,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         onAction: (action) {
                           ref.read(chatProvider.notifier).dismissDivineMoment();
                           if (action.isNotEmpty) {
-                            ref.read(chatProvider.notifier).sendMessage(action);
+                            unawaited(ref.read(chatProvider.notifier).sendMessage(action));
                           }
                         },
                       ),

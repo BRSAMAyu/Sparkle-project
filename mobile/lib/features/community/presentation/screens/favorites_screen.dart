@@ -21,7 +21,7 @@ final favoritesProvider = StateNotifierProvider.autoDispose<FavoritesNotifier,
 class FavoritesNotifier
     extends StateNotifier<AsyncValue<List<MessageFavoriteInfo>>> {
   FavoritesNotifier(this._repo) : super(const AsyncValue.loading()) {
-    load();
+    unawaited(load());
   }
 
   final CommunityRepository _repo;
@@ -181,17 +181,19 @@ class _FavoriteTile extends ConsumerWidget {
         ),
         onTap: () {
           if (favorite.note != null && favorite.note!.isNotEmpty) {
-            showSensoryDialog<void>(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: Text(context.l10n.favoritesNote),
-                content: Text(favorite.note!),
-                actions: [
-                  SparkleButton.ghost(
-                    label: context.l10n.favoritesClose,
-                    onPressed: () => Navigator.pop(ctx),
-                  ),
-                ],
+            unawaited(
+  showSensoryDialog<void>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: Text(context.l10n.favoritesNote),
+                  content: Text(favorite.note!),
+                  actions: [
+                    SparkleButton.ghost(
+                      label: context.l10n.favoritesClose,
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
               ),
             );
           }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -279,77 +280,81 @@ class TranslationDrawer extends ConsumerWidget {
   }
 
   void _showFullTextDialog(BuildContext context, TranslationHistoryItem item) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('${item.sourceLang} → ${item.targetLang}'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                context.l10n.translationOriginal,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: DS.fontWeightSemibold,
-                  color: DS.neutral500,
+    unawaited(
+  showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('${item.sourceLang} → ${item.targetLang}'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  context.l10n.translationOriginal,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: DS.fontWeightSemibold,
+                    color: DS.neutral500,
+                  ),
                 ),
-              ),
-              const SizedBox(height: DS.xs),
-              SelectableText(
-                item.sourceText,
-                style: const TextStyle(fontSize: 15),
-              ),
-              const SizedBox(height: DS.md),
-              Text(
-                context.l10n.translationTranslated,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: DS.fontWeightSemibold,
-                  color: DS.neutral500,
+                const SizedBox(height: DS.xs),
+                SelectableText(
+                  item.sourceText,
+                  style: const TextStyle(fontSize: 15),
                 ),
-              ),
-              const SizedBox(height: DS.xs),
-              SelectableText(
-                item.translation,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: DS.brandPrimaryConst,
+                const SizedBox(height: DS.md),
+                Text(
+                  context.l10n.translationTranslated,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: DS.fontWeightSemibold,
+                    color: DS.neutral500,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: DS.xs),
+                SelectableText(
+                  item.translation,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: DS.brandPrimaryConst,
+                  ),
+                ),
+              ],
+            ),
           ),
+          actions: [
+            SparkleButton.ghost(
+              label: context.l10n.commonClose,
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
         ),
-        actions: [
-          SparkleButton.ghost(
-            label: context.l10n.commonClose,
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-        ],
       ),
     );
   }
 
   void _showClearConfirmation(BuildContext context, WidgetRef ref) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.l10n.translationClearAll),
-        content: Text(context.l10n.translationClearConfirm),
-        actions: [
-          SparkleButton.ghost(
-            label: context.l10n.commonCancel,
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-          SparkleButton.destructive(
-            label: context.l10n.translationClearAll,
-            onPressed: () {
-              ref.read(translationHistoryProvider.notifier).clearHistory();
-              Navigator.of(context).pop();
-            },
-          ),
-        ],
+    unawaited(
+  showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(context.l10n.translationClearAll),
+          content: Text(context.l10n.translationClearConfirm),
+          actions: [
+            SparkleButton.ghost(
+              label: context.l10n.commonCancel,
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            SparkleButton.destructive(
+              label: context.l10n.translationClearAll,
+              onPressed: () {
+                ref.read(translationHistoryProvider.notifier).clearHistory();
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

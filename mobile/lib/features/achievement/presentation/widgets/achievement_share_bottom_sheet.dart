@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -77,7 +78,7 @@ class _AchievementShareBottomSheetState
   @override
   void initState() {
     super.initState();
-    _initializeAndPrepare();
+    unawaited(_initializeAndPrepare());
   }
 
   Future<void> _initializeAndPrepare() async {
@@ -223,23 +224,23 @@ class _AchievementShareBottomSheetState
   void _onTemplateSelected(String templateId) {
     if (_selectedTemplateId == templateId) return;
 
-    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     setState(() {
       _selectedTemplateId = templateId;
       _isLoading = true;
     });
-    _prepareShareCard();
+    unawaited(_prepareShareCard());
   }
 
   void _onPrivacySettingsChanged(ShareCardPrivacySettings settings) {
     if (_privacySettings.settingsHash() == settings.settingsHash()) return;
 
-    SensoryFeedbackService.emit(SensoryFeedbackEvent.toggle);
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.toggle));
     setState(() {
       _privacySettings = settings;
       _isLoading = true;
     });
-    _prepareShareCard();
+    unawaited(_prepareShareCard());
   }
 
   @override
@@ -410,7 +411,7 @@ class _AchievementShareBottomSheetState
                               _isLoading = true;
                               _errorMessage = null;
                             });
-                            _prepareShareCard();
+                            unawaited(_prepareShareCard());
                           },
                           icon: const Icon(Icons.refresh),
                           label: Text(l10n.shareRegenerateCard),

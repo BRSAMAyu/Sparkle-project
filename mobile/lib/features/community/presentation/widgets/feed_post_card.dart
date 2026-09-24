@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -203,7 +204,7 @@ class FeedPostCard extends StatelessWidget {
                     if (post.topic != null && post.topic!.isNotEmpty) {
                       buffer.write(' #${post.topic}');
                     }
-                    Clipboard.setData(ClipboardData(text: buffer.toString()));
+                    unawaited(Clipboard.setData(ClipboardData(text: buffer.toString())));
                     AppFeedback.success(
                       context,
                       context.l10n.communityCopiedToClipboard,

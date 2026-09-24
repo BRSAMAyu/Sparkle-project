@@ -236,7 +236,7 @@ class _DelayedGraphFakeRepository implements EnhancedGalaxyRepository {
 
   void close() {
     for (final controller in _eventStreamControllers) {
-      controller.close();
+      unawaited(controller.close());
     }
   }
 

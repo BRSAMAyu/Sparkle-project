@@ -167,15 +167,17 @@ class _TaskDetailView extends ConsumerWidget {
       ],
       onOptionSelected: (option) {
         if (option == context.l10n.taskActionResume) {
-          unawaited(() async {
-            await ref.read(taskListProvider.notifier).resumeTask(task.id);
-            if (!context.mounted) return;
-            ref.read(activeTaskProvider.notifier).state = task.copyWith(
-              status: TaskStatus.inProgress,
-              startedAt: task.startedAt ?? DateTime.now(),
-            );
-            context.go('/tasks/${task.id}/execute');
-          }());
+          unawaited(
+  () async {
+              await ref.read(taskListProvider.notifier).resumeTask(task.id);
+              if (!context.mounted) return;
+              ref.read(activeTaskProvider.notifier).state = task.copyWith(
+                status: TaskStatus.inProgress,
+                startedAt: task.startedAt ?? DateTime.now(),
+              );
+              context.go('/tasks/${task.id}/execute');
+            }(),
+          );
         }
       },
       onDismiss: () {},
@@ -885,13 +887,13 @@ class _InfoTileCardState extends State<_InfoTileCard>
 
     return GestureDetector(
       onTapDown: (_) {
-        if (!_reduceMotion) _controller.forward();
+        if (!_reduceMotion) unawaited(_controller.forward());
       },
       onTapUp: (_) {
-        if (!_reduceMotion) _controller.reverse();
+        if (!_reduceMotion) unawaited(_controller.reverse());
       },
       onTapCancel: () {
-        if (!_reduceMotion) _controller.reverse();
+        if (!_reduceMotion) unawaited(_controller.reverse());
       },
       child: _reduceMotion ? content : ScaleTransition(scale: _scaleAnimation, child: content),
     );

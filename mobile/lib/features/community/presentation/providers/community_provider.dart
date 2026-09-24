@@ -107,7 +107,7 @@ final friendsProvider =
 class FriendsNotifier extends StateNotifier<AsyncValue<List<FriendshipInfo>>> {
   FriendsNotifier(this._repository, Stream<dynamic> events)
       : super(const AsyncValue.loading()) {
-    loadFriends();
+    unawaited(loadFriends());
     _eventsSubscription = events.listen(_handleEvent);
   }
   final CommunityRepository _repository;
@@ -220,7 +220,7 @@ class PendingRequestsNotifier
     extends StateNotifier<AsyncValue<List<FriendshipInfo>>> {
   PendingRequestsNotifier(this._repository)
       : super(const AsyncValue.loading()) {
-    loadPendingRequests();
+    unawaited(loadPendingRequests());
   }
   final CommunityRepository _repository;
 
@@ -264,7 +264,7 @@ class FriendRecommendationsNotifier
     extends StateNotifier<AsyncValue<List<FriendRecommendation>>> {
   FriendRecommendationsNotifier(this._repository)
       : super(const AsyncValue.loading()) {
-    loadRecommendations();
+    unawaited(loadRecommendations());
   }
   final CommunityRepository _repository;
   final Set<String> _viewed = {};
@@ -389,7 +389,7 @@ class RecommendationFeedbackPromptsNotifier
     extends StateNotifier<AsyncValue<List<RecommendationFeedbackPrompt>>> {
   RecommendationFeedbackPromptsNotifier(this._repository)
       : super(const AsyncValue.loading()) {
-    loadPrompts();
+    unawaited(loadPrompts());
   }
 
   final CommunityRepository _repository;
@@ -414,7 +414,7 @@ class RecommendationFeedbackInsightsNotifier
     extends StateNotifier<AsyncValue<List<RecommendationFeedbackInsight>>> {
   RecommendationFeedbackInsightsNotifier(this._repository)
       : super(const AsyncValue.loading()) {
-    loadInsights();
+    unawaited(loadInsights());
   }
 
   final CommunityRepository _repository;
@@ -442,7 +442,7 @@ class GroupRecommendationsNotifier
     required this.source,
     required this.limit,
   }) : super(const AsyncValue.loading()) {
-    loadRecommendations();
+    unawaited(loadRecommendations());
   }
   final CommunityRepository _repository;
   final String source;
@@ -531,7 +531,7 @@ class GroupDirectoryNotifier
     extends StateNotifier<AsyncValue<GroupDirectoryInfo>> {
   GroupDirectoryNotifier(this._repository, this._ref)
       : super(const AsyncValue.loading()) {
-    loadDirectory();
+    unawaited(loadDirectory());
   }
 
   final CommunityRepository _repository;
@@ -662,7 +662,7 @@ final groupDetailProvider = StateNotifierProvider.family<GroupDetailNotifier,
 class GroupDetailNotifier extends StateNotifier<AsyncValue<GroupInfo>> {
   GroupDetailNotifier(this._repository, this._groupId, this._ref)
       : super(const AsyncValue.loading()) {
-    loadDetail();
+    unawaited(loadDetail());
   }
   final CommunityRepository _repository;
   final String _groupId;
@@ -743,7 +743,7 @@ class GroupDetailNotifier extends StateNotifier<AsyncValue<GroupInfo>> {
 class MyGroupsNotifier extends StateNotifier<AsyncValue<List<GroupListItem>>> {
   MyGroupsNotifier(this._repository, this._ref)
       : super(const AsyncValue.loading()) {
-    loadGroups();
+    unawaited(loadGroups());
   }
   final CommunityRepository _repository;
   final Ref _ref;
@@ -795,7 +795,7 @@ class GroupMembersNotifier
     extends StateNotifier<AsyncValue<List<GroupMemberInfo>>> {
   GroupMembersNotifier(this._repository, this._groupId)
       : super(const AsyncValue.loading()) {
-    loadMembers();
+    unawaited(loadMembers());
   }
   final CommunityRepository _repository;
   final String _groupId;
@@ -875,7 +875,7 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
     this._groupId,
     this._ref,
   ) : super(const AsyncValue.loading()) {
-    _initialize();
+    unawaited(_initialize());
   }
   final CommunityRepository _repository;
   final AuthRepository _authRepository;
@@ -1153,7 +1153,7 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
       );
       Future.delayed(delay, () {
         if (mounted && !_disposed) {
-          _connectWebSocket(isRetry: true);
+          unawaited(_connectWebSocket(isRetry: true));
         }
       });
     } else {
@@ -1312,7 +1312,7 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
   @override
   void dispose() {
     _disposed = true;
-    _wsSubscription?.cancel();
+    unawaited(_wsSubscription?.cancel());
     _wsService.disconnect();
     super.dispose();
   }
@@ -1710,7 +1710,7 @@ class GroupTasksNotifier
     extends StateNotifier<AsyncValue<List<GroupTaskInfo>>> {
   GroupTasksNotifier(this._repository, this._groupId)
       : super(const AsyncValue.loading()) {
-    loadTasks();
+    unawaited(loadTasks());
   }
   final CommunityRepository _repository;
   final String _groupId;
@@ -1774,7 +1774,7 @@ class PrivateChatNotifier
     Stream<dynamic> events,
     this._ref,
   ) : super(const AsyncValue.loading()) {
-    _initialize(events);
+    unawaited(_initialize(events));
   }
   final CommunityRepository _repository;
   final String _friendId;
@@ -2260,7 +2260,7 @@ final blockedUsersProvider = StateNotifierProvider<BlockedUsersNotifier,
 class BlockedUsersNotifier
     extends StateNotifier<AsyncValue<List<BlockUserInfo>>> {
   BlockedUsersNotifier(this._repository) : super(const AsyncValue.loading()) {
-    loadBlockedUsers();
+    unawaited(loadBlockedUsers());
   }
   final CommunityRepository _repository;
 

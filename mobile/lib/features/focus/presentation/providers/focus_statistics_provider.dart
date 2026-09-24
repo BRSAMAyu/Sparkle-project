@@ -168,10 +168,10 @@ class FocusStatistics extends _$FocusStatistics {
   @override
   FocusStatisticsState build() {
     _isDisposed = false;
-    _connectivitySub?.cancel();
+    unawaited(_connectivitySub?.cancel());
     ref.onDispose(() {
       _isDisposed = true;
-      _connectivitySub?.cancel();
+      unawaited(_connectivitySub?.cancel());
     });
 
     // Initialize repositories.

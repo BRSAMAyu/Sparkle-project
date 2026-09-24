@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
@@ -272,7 +273,8 @@ class _ProtocolLoadingShimmerState extends State<_ProtocolLoadingShimmer>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
-    )..repeat();
+    );
+    unawaited(_controller.repeat());
   }
 
   @override

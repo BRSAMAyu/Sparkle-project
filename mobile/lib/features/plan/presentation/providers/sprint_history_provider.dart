@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
@@ -129,7 +130,7 @@ class SprintHistoryState {
 /// Sprint history notifier
 class SprintHistoryNotifier extends StateNotifier<SprintHistoryState> {
   SprintHistoryNotifier(this._ref) : super(SprintHistoryState()) {
-    fetchHistory();
+    unawaited(fetchHistory());
   }
 
   final Ref _ref;

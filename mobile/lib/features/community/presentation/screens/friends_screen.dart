@@ -179,7 +179,7 @@ class _MyFriendsTab extends ConsumerWidget {
                   title: Text(context.l10n.friendsDeleteFriend),
                   onTap: () {
                     Navigator.pop(ctx);
-                    _handleDeleteFriend(context, ref, friendInfo);
+                    unawaited(_handleDeleteFriend(context, ref, friendInfo));
                   },
                 ),
                 // Block user option
@@ -189,7 +189,7 @@ class _MyFriendsTab extends ConsumerWidget {
                       style: TextStyle(color: DS.error),),
                   onTap: () {
                     Navigator.pop(ctx);
-                    _handleBlockUser(context, ref, friendInfo);
+                    unawaited(_handleBlockUser(context, ref, friendInfo));
                   },
                 ),
                 // Blocked users management
@@ -198,7 +198,7 @@ class _MyFriendsTab extends ConsumerWidget {
                   title: Text(context.l10n.friendsBlockedUsersManagement),
                   onTap: () {
                     Navigator.pop(ctx);
-                    context.push(CommunityRoutes.blockedUsers);
+                    unawaited(context.push(CommunityRoutes.blockedUsers));
                   },
                 ),
                 const SizedBox(height: DS.spacing8),
@@ -437,10 +437,12 @@ class _PendingRequestsTab extends ConsumerWidget {
                           icon: Icon(Icons.check, color: DS.success),
                           semanticLabel: context.l10n.friendsAcceptRequest,
                           onPressed: () {
-                            ref
-                                .read(pendingRequestsProvider.notifier)
-                                .respondToRequest(request.id, true);
-                            ref.read(friendsProvider.notifier).refresh();
+                            unawaited(
+  ref
+                                  .read(pendingRequestsProvider.notifier)
+                                  .respondToRequest(request.id, true),
+                            );
+                            unawaited(ref.read(friendsProvider.notifier).refresh());
                           },
                         ),
                         SparkleIconButton(
@@ -449,9 +451,11 @@ class _PendingRequestsTab extends ConsumerWidget {
                           icon: Icon(Icons.close, color: DS.error),
                           semanticLabel: context.l10n.friendsDeclineRequest,
                           onPressed: () {
-                            ref
-                                .read(pendingRequestsProvider.notifier)
-                                .respondToRequest(request.id, false);
+                            unawaited(
+  ref
+                                  .read(pendingRequestsProvider.notifier)
+                                  .respondToRequest(request.id, false),
+                            );
                           },
                         ),
                       ],
@@ -639,9 +643,11 @@ class _RecommendationsTab extends ConsumerWidget {
                     ref
                         .read(friendRecommendationStrategyProvider.notifier)
                         .state = item;
-                    ref
-                        .read(friendRecommendationsProvider.notifier)
-                        .setStrategy(item);
+                    unawaited(
+  ref
+                          .read(friendRecommendationsProvider.notifier)
+                          .setStrategy(item),
+                    );
                   },
                 );
               }).toList(),

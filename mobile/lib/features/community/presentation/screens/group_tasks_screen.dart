@@ -128,9 +128,11 @@ class GroupTasksScreen extends ConsumerWidget {
                                 SensoryFeedbackEvent.confirm,
                               ),
                             );
-                            ref
-                                .read(groupTasksProvider(groupId).notifier)
-                                .claimTask(entry.$2.id);
+                            unawaited(
+  ref
+                                  .read(groupTasksProvider(groupId).notifier)
+                                  .claimTask(entry.$2.id),
+                            );
                           },
                         ),
                       ),
@@ -299,125 +301,127 @@ extension on GroupTasksScreen {
     var estimatedMinutes = 30;
     var difficulty = 2;
 
-    showSensoryDialog<void>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text(
-              context.l10n.communityCreateTaskTitle,),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: titleController,
-                  decoration: InputDecoration(
-                    labelText:
-                        context.l10n.communityTaskTitleField,
-                    hintText: context.l10n.communityTaskTitleHint,
-                    border: const OutlineInputBorder(),
+    unawaited(
+  showSensoryDialog<void>(
+        context: context,
+        builder: (context) => StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            title: Text(
+                context.l10n.communityCreateTaskTitle,),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: titleController,
+                    decoration: InputDecoration(
+                      labelText:
+                          context.l10n.communityTaskTitleField,
+                      hintText: context.l10n.communityTaskTitleHint,
+                      border: const OutlineInputBorder(),
+                    ),
+                    autofocus: true,
                   ),
-                  autofocus: true,
-                ),
-                const SizedBox(height: DS.md),
-                TextField(
-                  controller: descriptionController,
-                  decoration: InputDecoration(
-                    labelText: context.l10n.communityTaskDescription,
-                    hintText: context.l10n.communityTaskDescriptionHint,
-                    border: const OutlineInputBorder(),
+                  const SizedBox(height: DS.md),
+                  TextField(
+                    controller: descriptionController,
+                    decoration: InputDecoration(
+                      labelText: context.l10n.communityTaskDescription,
+                      hintText: context.l10n.communityTaskDescriptionHint,
+                      border: const OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
                   ),
-                  maxLines: 3,
-                ),
-                const SizedBox(height: DS.md),
-                Text(
-                  '${context.l10n.communityTaskEstimatedTime}: $estimatedMinutes ${context.l10n.communityTaskMinutes}',
-                  style: const TextStyle(fontWeight: DS.fontWeightBold),
-                ),
-                Slider(
-                  value: estimatedMinutes.toDouble(),
-                  min: 5,
-                  max: 180,
-                  divisions: 35,
-                  label:
-                      '$estimatedMinutes ${context.l10n.communityTaskMinutes}',
-                  onChanged: (value) {
-                    setState(() {
-                      estimatedMinutes = value.toInt();
-                    });
-                  },
-                ),
-                const SizedBox(height: DS.md),
-                Text(
-                  '${context.l10n.communityTaskDifficulty}: $difficulty/5',
-                  style: const TextStyle(fontWeight: DS.fontWeightBold),
-                ),
-                Slider(
-                  value: difficulty.toDouble(),
-                  min: 1,
-                  max: 5,
-                  divisions: 4,
-                  label: '$difficulty',
-                  onChanged: (value) {
-                    setState(() {
-                      difficulty = value.toInt();
-                    });
-                  },
-                ),
-              ],
+                  const SizedBox(height: DS.md),
+                  Text(
+                    '${context.l10n.communityTaskEstimatedTime}: $estimatedMinutes ${context.l10n.communityTaskMinutes}',
+                    style: const TextStyle(fontWeight: DS.fontWeightBold),
+                  ),
+                  Slider(
+                    value: estimatedMinutes.toDouble(),
+                    min: 5,
+                    max: 180,
+                    divisions: 35,
+                    label:
+                        '$estimatedMinutes ${context.l10n.communityTaskMinutes}',
+                    onChanged: (value) {
+                      setState(() {
+                        estimatedMinutes = value.toInt();
+                      });
+                    },
+                  ),
+                  const SizedBox(height: DS.md),
+                  Text(
+                    '${context.l10n.communityTaskDifficulty}: $difficulty/5',
+                    style: const TextStyle(fontWeight: DS.fontWeightBold),
+                  ),
+                  Slider(
+                    value: difficulty.toDouble(),
+                    min: 1,
+                    max: 5,
+                    divisions: 4,
+                    label: '$difficulty',
+                    onChanged: (value) {
+                      setState(() {
+                        difficulty = value.toInt();
+                      });
+                    },
+                  ),
+                ],
+              ),
             ),
-          ),
-          actions: [
-            SparkleButton.ghost(
-              label: context.l10n.communityCancel,
-              onPressed: () => Navigator.pop(context),
-            ),
-            SparkleButton.primary(
-              label: context.l10n.communityCreate,
-              onPressed: () async {
-                final title = titleController.text.trim();
-                if (title.isEmpty) {
-                  AppFeedback.info(
-                    context,
-                    context.l10n.communityEnterTaskTitle,
-                  );
-                  return;
-                }
-
-                Navigator.pop(context);
-
-                try {
-                  await ref
-                      .read(groupTasksProvider(groupId).notifier)
-                      .createTask(
-                        GroupTaskCreate(
-                          title: title,
-                          description: descriptionController.text.trim().isEmpty
-                              ? null
-                              : descriptionController.text.trim(),
-                          estimatedMinutes: estimatedMinutes,
-                          difficulty: difficulty,
-                        ),
+            actions: [
+              SparkleButton.ghost(
+                label: context.l10n.communityCancel,
+                onPressed: () => Navigator.pop(context),
+              ),
+              SparkleButton.primary(
+                label: context.l10n.communityCreate,
+                onPressed: () async {
+                  final title = titleController.text.trim();
+                  if (title.isEmpty) {
+                    AppFeedback.info(
+                      context,
+                      context.l10n.communityEnterTaskTitle,
+                    );
+                    return;
+                  }
+  
+                  Navigator.pop(context);
+  
+                  try {
+                    await ref
+                        .read(groupTasksProvider(groupId).notifier)
+                        .createTask(
+                          GroupTaskCreate(
+                            title: title,
+                            description: descriptionController.text.trim().isEmpty
+                                ? null
+                                : descriptionController.text.trim(),
+                            estimatedMinutes: estimatedMinutes,
+                            difficulty: difficulty,
+                          ),
+                        );
+  
+                    if (context.mounted) {
+                      AppFeedback.success(
+                        context,
+                        context.l10n.communityTaskCreated,
                       );
-
-                  if (context.mounted) {
-                    AppFeedback.success(
-                      context,
-                      context.l10n.communityTaskCreated,
-                    );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      AppFeedback.error(
+                        context,
+                        context.l10n.communityCreateTaskFailed(e.toString()),
+                      );
+                    }
                   }
-                } catch (e) {
-                  if (context.mounted) {
-                    AppFeedback.error(
-                      context,
-                      context.l10n.communityCreateTaskFailed(e.toString()),
-                    );
-                  }
-                }
-              },
-            ),
-          ],
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -123,11 +123,13 @@ class _FlipDigitState extends State<_FlipDigit>
           _currentDigit = _nextDigit;
         });
       } else {
-        _controller.forward(from: 0).then((_) {
-          setState(() {
-            _currentDigit = _nextDigit;
-          });
-        });
+        unawaited(
+  _controller.forward(from: 0).then((_) {
+            setState(() {
+              _currentDigit = _nextDigit;
+            });
+          }),
+        );
       }
     }
   }

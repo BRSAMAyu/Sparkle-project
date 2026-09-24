@@ -1526,10 +1526,12 @@ class _AchievementDetailScreenState
       return;
     }
 
-    showAchievementShareSheet(
-      context,
-      achievementId: achievement.achievement.id,
-      achievementName: achievement.achievement.name,
+    unawaited(
+  showAchievementShareSheet(
+        context,
+        achievementId: achievement.achievement.id,
+        achievementName: achievement.achievement.name,
+      ),
     );
   }
 }

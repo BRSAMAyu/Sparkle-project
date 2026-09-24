@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -49,8 +50,8 @@ class _StrategyInterventionCardState extends State<StrategyInterventionCard>
     ).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
-    _controller.forward();
-    SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
+    unawaited(_controller.forward());
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
   }
 
   @override
@@ -125,8 +126,10 @@ class _StrategyInterventionCardState extends State<StrategyInterventionCard>
                         label: widget.suggestedAction,
                         child: GestureDetector(
                           onTap: () {
-                            SensoryFeedbackService.emit(
-                              SensoryFeedbackEvent.selection,
+                            unawaited(
+  SensoryFeedbackService.emit(
+                                SensoryFeedbackEvent.selection,
+                              ),
                             );
                             widget.onAdjust();
                           },
@@ -158,7 +161,7 @@ class _StrategyInterventionCardState extends State<StrategyInterventionCard>
                       label: context.l10n.chatInterventionIgnore,
                       child: GestureDetector(
                         onTap: () {
-                          SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
+                          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
                           widget.onDismiss();
                         },
                         child: Container(

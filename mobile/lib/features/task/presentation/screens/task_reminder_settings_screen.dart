@@ -27,7 +27,7 @@ class _TaskReminderSettingsScreenState
   @override
   void initState() {
     super.initState();
-    _checkNotificationPermission();
+    unawaited(_checkNotificationPermission());
   }
 
   Future<bool> _checkNotificationPermission() async {

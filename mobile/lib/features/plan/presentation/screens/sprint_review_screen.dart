@@ -620,7 +620,7 @@ class _ActionButtons extends ConsumerWidget {
           width: double.infinity,
           child: FilledButton(
             onPressed: () {
-              SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+              unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
               context.pop();
             },
             style: FilledButton.styleFrom(
@@ -645,7 +645,7 @@ class _ActionButtons extends ConsumerWidget {
           width: double.infinity,
           child: OutlinedButton(
             onPressed: () {
-              SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+              unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
               unawaited(context.push('/plans/$planId/edit'));
             },
             style: OutlinedButton.styleFrom(

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -39,7 +40,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
 
     // 初始加载数据
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(visualElementsNotifierProvider.notifier).loadAll();
+      unawaited(ref.read(visualElementsNotifierProvider.notifier).loadAll());
     });
   }
 
@@ -787,24 +788,26 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     bool isUnlocked,
     bool isEquipped,
   ) {
-    VisualElementPreviewDialog.show(
-      context,
-      element: element,
-      availableElements: ref.read(visualElementsNotifierProvider).allElements,
-      baseConfig: ref.read(visualElementsNotifierProvider).config,
-      unlockedElementIds: ref.read(visualElementsNotifierProvider).unlockedIds,
-      isUnlocked: isUnlocked,
-      isEquipped: isEquipped,
-      onEquip: isUnlocked
-          ? () => element.isBundle
-              ? _equipBundle(element)
-              : _equipElement(element.id)
-          : null,
-      onUnequip: isEquipped
-          ? () => element.isBundle
-              ? _unequipBundle(element)
-              : _unequipElement(element.elementType)
-          : null,
+    unawaited(
+  VisualElementPreviewDialog.show(
+        context,
+        element: element,
+        availableElements: ref.read(visualElementsNotifierProvider).allElements,
+        baseConfig: ref.read(visualElementsNotifierProvider).config,
+        unlockedElementIds: ref.read(visualElementsNotifierProvider).unlockedIds,
+        isUnlocked: isUnlocked,
+        isEquipped: isEquipped,
+        onEquip: isUnlocked
+            ? () => element.isBundle
+                ? _equipBundle(element)
+                : _equipElement(element.id)
+            : null,
+        onUnequip: isEquipped
+            ? () => element.isBundle
+                ? _unequipBundle(element)
+                : _unequipElement(element.elementType)
+            : null,
+      ),
     );
   }
 
@@ -939,7 +942,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
               SparkleButton.primary(
                 label: l10n.retry,
                 onPressed: () {
-                  ref.read(visualElementsNotifierProvider.notifier).loadAll();
+                  unawaited(ref.read(visualElementsNotifierProvider.notifier).loadAll());
                 },
               ),
             ],
@@ -1089,22 +1092,24 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
   }
 
   void _showFilterSheet(BuildContext context, AppLocalizations l10n) {
-    showSensoryModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _FilterSheet(
-        currentOptions: _filterOptions,
-        onApply: (options) {
-          setState(() => _filterOptions = options);
-          ref.read(visualElementsNotifierProvider.notifier).setFilterOptions(
-                options,
-              );
-        },
-        onClear: () {
-          setState(() => _filterOptions = const VisualElementFilterOptions());
-          ref.read(visualElementsNotifierProvider.notifier).clearFilters();
-        },
+    unawaited(
+  showSensoryModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => _FilterSheet(
+          currentOptions: _filterOptions,
+          onApply: (options) {
+            setState(() => _filterOptions = options);
+            ref.read(visualElementsNotifierProvider.notifier).setFilterOptions(
+                  options,
+                );
+          },
+          onClear: () {
+            setState(() => _filterOptions = const VisualElementFilterOptions());
+            ref.read(visualElementsNotifierProvider.notifier).clearFilters();
+          },
+        ),
       ),
     );
   }

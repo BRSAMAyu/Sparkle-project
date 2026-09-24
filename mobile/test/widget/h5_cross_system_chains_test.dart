@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -45,12 +46,14 @@ void main() {
             body: Center(
               child: ElevatedButton(
                 onPressed: () {
-                  showModalBottomSheet<void>(
-                    context: context,
-                    builder: (_) => NodeDetailSheet(
-                      nodeId: 'cn.tcp_flow',
-                      nodeLabel: 'TCP 流量控制',
-                      initialHistory: history,
+                  unawaited(
+  showModalBottomSheet<void>(
+                      context: context,
+                      builder: (_) => NodeDetailSheet(
+                        nodeId: 'cn.tcp_flow',
+                        nodeLabel: 'TCP 流量控制',
+                        initialHistory: history,
+                      ),
                     ),
                   );
                 },

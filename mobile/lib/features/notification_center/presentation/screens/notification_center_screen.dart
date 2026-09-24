@@ -32,7 +32,7 @@ class _NotificationCenterScreenState
     super.initState();
     // Load notifications on init
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(notificationCenterProvider.notifier).loadNotifications();
+      unawaited(ref.read(notificationCenterProvider.notifier).loadNotifications());
     });
   }
 
@@ -87,7 +87,7 @@ class _NotificationCenterScreenState
           PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'clear_read') {
-                _clearReadNotifications();
+                unawaited(_clearReadNotifications());
               }
             },
             itemBuilder: (context) => [
@@ -568,6 +568,6 @@ class _NotificationCenterScreenState
     if (!mounted || planId == null || planId.isEmpty) {
       return;
     }
-    context.push('/plans/$planId');
+    unawaited(context.push('/plans/$planId'));
   }
 }

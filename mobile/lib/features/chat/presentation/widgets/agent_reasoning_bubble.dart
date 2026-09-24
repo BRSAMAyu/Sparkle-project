@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
@@ -74,52 +75,54 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
     setState(() {
       _isExpanded = !_isExpanded;
       if (_isExpanded) {
-        _animationController.forward();
+        unawaited(_animationController.forward());
       } else {
-        _animationController.reverse();
+        unawaited(_animationController.reverse());
       }
     });
   }
 
   void _showCitationDetails(BuildContext context, Map<String, dynamic> cite) {
-    showSensoryDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          (cite['title'] as String?) ?? context.l10n.viewDetails,
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (cite['score'] != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8.0),
-                  child: Chip(
-                    label: Text(
-                      context.l10n.chatCitationRelevance(
-                        ((cite['score'] as num) * 100).toStringAsFixed(0),
+    unawaited(
+  showSensoryDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(
+            (cite['title'] as String?) ?? context.l10n.viewDetails,
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (cite['score'] != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Chip(
+                      label: Text(
+                        context.l10n.chatCitationRelevance(
+                          ((cite['score'] as num) * 100).toStringAsFixed(0),
+                        ),
                       ),
+                      backgroundColor: widget.agentColor.withValues(alpha: 0.1),
+                      labelStyle:
+                          TextStyle(color: widget.agentColor, fontSize: 12),
                     ),
-                    backgroundColor: widget.agentColor.withValues(alpha: 0.1),
-                    labelStyle:
-                        TextStyle(color: widget.agentColor, fontSize: 12),
                   ),
+                Text(
+                  (cite['content'] as String?) ?? '',
+                  style: const TextStyle(fontSize: 14, height: 1.5),
                 ),
-              Text(
-                (cite['content'] as String?) ?? '',
-                style: const TextStyle(fontSize: 14, height: 1.5),
-              ),
-            ],
+              ],
+            ),
           ),
+          actions: [
+            SparkleButton.ghost(
+              label: context.l10n.commonClose,
+              onPressed: () => Navigator.pop(context),
+            ),
+          ],
         ),
-        actions: [
-          SparkleButton.ghost(
-            label: context.l10n.commonClose,
-            onPressed: () => Navigator.pop(context),
-          ),
-        ],
       ),
     );
   }

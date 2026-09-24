@@ -330,7 +330,7 @@ class InteractiveTaskCard extends ConsumerWidget {
         behavior: HitTestBehavior.opaque,
         onTap: () {
           unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
-          context.push('/calendar?date=${dueDate.toIso8601String()}');
+          unawaited(context.push('/calendar?date=${dueDate.toIso8601String()}'));
         },
         child: Container(
           padding:

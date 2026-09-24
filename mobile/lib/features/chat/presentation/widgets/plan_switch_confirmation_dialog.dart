@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -148,8 +149,10 @@ class PlanSwitchConfirmationDialog extends StatelessWidget {
                                 label: context.l10n.confirm,
                                 minHeight: 48,
                                 onPressed: () {
-                                  SensoryFeedbackService.emit(
-                                    SensoryFeedbackEvent.confirm,
+                                  unawaited(
+  SensoryFeedbackService.emit(
+                                      SensoryFeedbackEvent.confirm,
+                                    ),
                                   );
                                   onConfirm();
                                 },
@@ -165,8 +168,10 @@ class PlanSwitchConfirmationDialog extends StatelessWidget {
                                 label: context.l10n.cancel,
                                 minHeight: 48,
                                 onPressed: () {
-                                  SensoryFeedbackService.emit(
-                                    SensoryFeedbackEvent.tap,
+                                  unawaited(
+  SensoryFeedbackService.emit(
+                                      SensoryFeedbackEvent.tap,
+                                    ),
                                   );
                                   onCancel();
                                 },
@@ -184,8 +189,10 @@ class PlanSwitchConfirmationDialog extends StatelessWidget {
                                 label: context.l10n.cancel,
                                 minHeight: 48,
                                 onPressed: () {
-                                  SensoryFeedbackService.emit(
-                                    SensoryFeedbackEvent.tap,
+                                  unawaited(
+  SensoryFeedbackService.emit(
+                                      SensoryFeedbackEvent.tap,
+                                    ),
                                   );
                                   onCancel();
                                 },
@@ -198,8 +205,10 @@ class PlanSwitchConfirmationDialog extends StatelessWidget {
                                 label: context.l10n.confirm,
                                 minHeight: 48,
                                 onPressed: () {
-                                  SensoryFeedbackService.emit(
-                                    SensoryFeedbackEvent.confirm,
+                                  unawaited(
+  SensoryFeedbackService.emit(
+                                      SensoryFeedbackEvent.confirm,
+                                    ),
                                   );
                                   onConfirm();
                                 },

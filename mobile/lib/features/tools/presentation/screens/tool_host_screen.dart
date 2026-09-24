@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -148,7 +149,7 @@ class ToolHostScreen extends StatelessWidget {
                           semanticLabel: context.l10n.auto_toollibrary,
                           onPressed: () {
                             if (context.mounted) {
-                              context.push('/tools/library');
+                              unawaited(context.push('/tools/library'));
                             }
                           },
                           icon: const Icon(Icons.grid_view_rounded),

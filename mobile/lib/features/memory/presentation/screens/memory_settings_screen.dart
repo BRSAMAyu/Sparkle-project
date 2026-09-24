@@ -224,7 +224,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
   @override
   void initState() {
     super.initState();
-    Future(_loadSettings);
+    unawaited(Future(_loadSettings));
   }
 
   void _goBack() {

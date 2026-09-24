@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -461,7 +462,7 @@ class UnifiedNotificationCard extends StatelessWidget {
       case 'intervention_push':
         final planId = notification.planId;
         if (planId != null && planId.isNotEmpty) {
-          context.push('/plans/$planId');
+          unawaited(context.push('/plans/$planId'));
         } else {
           _showDetailDialog(context);
         }
@@ -472,23 +473,23 @@ class UnifiedNotificationCard extends StatelessWidget {
       case 'plan_deleted':
         final planId = notification.metadata['plan_id'] as String?;
         if (planId != null) {
-          context.push('/plans/$planId');
+          unawaited(context.push('/plans/$planId'));
         } else {
           _showDetailDialog(context);
         }
         return;
 
       case 'settings_updated':
-        context.push('/profile/settings');
+        unawaited(context.push('/profile/settings'));
         return;
 
       case 'achievement':
         final achievementId =
             notification.metadata['achievement_id'] as String?;
         if (achievementId != null) {
-          context.push('/achievements/$achievementId');
+          unawaited(context.push('/achievements/$achievementId'));
         } else {
-          context.push('/achievements');
+          unawaited(context.push('/achievements'));
         }
         return;
 
@@ -497,9 +498,9 @@ class UnifiedNotificationCard extends StatelessWidget {
         final partnershipId =
             notification.metadata['partnership_id'] as String?;
         if (partnershipId != null && partnershipId.isNotEmpty) {
-          context.push('/community/accountability/$partnershipId');
+          unawaited(context.push('/community/accountability/$partnershipId'));
         } else {
-          context.push('/community/accountability');
+          unawaited(context.push('/community/accountability'));
         }
         return;
 
@@ -507,7 +508,7 @@ class UnifiedNotificationCard extends StatelessWidget {
       case 'task_overdue':
         final taskId = notification.metadata['task_id'] as String?;
         if (taskId != null) {
-          context.push('/tasks/$taskId');
+          unawaited(context.push('/tasks/$taskId'));
         } else {
           _showDetailDialog(context);
         }
@@ -525,102 +526,104 @@ class UnifiedNotificationCard extends StatelessWidget {
     final evidence = notification.outcomeEvidence;
     final parameterCompilation = notification.parameterCompilation;
 
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(notification.title),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(notification.content),
-              if (notification.isIntervention && interactionState != null) ...[
-                const SizedBox(height: 12),
-                _buildDetailRow(
-                  context,
-                  context.l10n.notificationCurrentState,
-                  _labelForInteractionState(context, interactionState),
-                ),
-              ],
-              if (notification.isIntervention && outcomeStatus != null) ...[
-                const SizedBox(height: 8),
-                _buildDetailRow(
-                  context,
-                  context.l10n.notificationVerificationResult,
-                  _labelForOutcomeStatus(context, outcomeStatus),
-                ),
-              ],
-              if (notification.isIntervention &&
-                  notification.suggestedStep != null &&
-                  notification.suggestedStep!.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Text(
-                  context.l10n
-                      .notificationSuggestedAction(notification.suggestedStep!),
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: DS.fontWeightSemibold,
-                      ),
-                ),
-              ],
-              if (notification.isIntervention &&
-                  parameterCompilation.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                _buildDetailRow(
-                  context,
-                  context.l10n.notificationParameterAdjustment,
-                  _buildParameterCompilationSummary(
+    unawaited(
+  showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(notification.title),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(notification.content),
+                if (notification.isIntervention && interactionState != null) ...[
+                  const SizedBox(height: 12),
+                  _buildDetailRow(
                     context,
-                    parameterCompilation,
+                    context.l10n.notificationCurrentState,
+                    _labelForInteractionState(context, interactionState),
                   ),
-                ),
-              ],
-              if (notification.isIntervention && evidence.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                _buildDetailRow(
-                  context,
-                  context.l10n.notificationVerificationEvidence,
-                  _buildEvidenceSummary(context, evidence),
-                ),
-              ],
-              if (notification.isPush) ...[
-                const SizedBox(height: 12),
-                _buildDetailRow(
-                  context,
-                  context.l10n.notificationTriggerEvidence,
-                  notification.proactiveReason ??
-                      notification.evidenceToken ??
-                      context.l10n.notificationNotProvided,
-                ),
-                const SizedBox(height: 8),
-                _buildDetailRow(
-                  context,
-                  context.l10n.notificationReminderCategory,
-                  _labelForPushCategory(context, notification.pushCategory),
-                ),
-                if (notification.retractableUntil != null) ...[
+                ],
+                if (notification.isIntervention && outcomeStatus != null) ...[
                   const SizedBox(height: 8),
                   _buildDetailRow(
                     context,
-                    context.l10n.notificationRetractableTo,
-                    notification.retractableUntil!,
+                    context.l10n.notificationVerificationResult,
+                    _labelForOutcomeStatus(context, outcomeStatus),
                   ),
                 ],
+                if (notification.isIntervention &&
+                    notification.suggestedStep != null &&
+                    notification.suggestedStep!.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    context.l10n
+                        .notificationSuggestedAction(notification.suggestedStep!),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: DS.fontWeightSemibold,
+                        ),
+                  ),
+                ],
+                if (notification.isIntervention &&
+                    parameterCompilation.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  _buildDetailRow(
+                    context,
+                    context.l10n.notificationParameterAdjustment,
+                    _buildParameterCompilationSummary(
+                      context,
+                      parameterCompilation,
+                    ),
+                  ),
+                ],
+                if (notification.isIntervention && evidence.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  _buildDetailRow(
+                    context,
+                    context.l10n.notificationVerificationEvidence,
+                    _buildEvidenceSummary(context, evidence),
+                  ),
+                ],
+                if (notification.isPush) ...[
+                  const SizedBox(height: 12),
+                  _buildDetailRow(
+                    context,
+                    context.l10n.notificationTriggerEvidence,
+                    notification.proactiveReason ??
+                        notification.evidenceToken ??
+                        context.l10n.notificationNotProvided,
+                  ),
+                  const SizedBox(height: 8),
+                  _buildDetailRow(
+                    context,
+                    context.l10n.notificationReminderCategory,
+                    _labelForPushCategory(context, notification.pushCategory),
+                  ),
+                  if (notification.retractableUntil != null) ...[
+                    const SizedBox(height: 8),
+                    _buildDetailRow(
+                      context,
+                      context.l10n.notificationRetractableTo,
+                      notification.retractableUntil!,
+                    ),
+                  ],
+                ],
+                const SizedBox(height: 16),
+                Text(
+                  Formatters.formatRelativeTime(notification.createdAt),
+                  style: DS.labelSmall.copyWith(color: DS.textSecondary),
+                ),
               ],
-              const SizedBox(height: 16),
-              Text(
-                Formatters.formatRelativeTime(notification.createdAt),
-                style: DS.labelSmall.copyWith(color: DS.textSecondary),
-              ),
-            ],
+            ),
           ),
+          actions: [
+            SparkleButton.outline(
+              label: context.l10n.commonClose,
+              onPressed: () => Navigator.pop(context),
+            ),
+          ],
         ),
-        actions: [
-          SparkleButton.outline(
-            label: context.l10n.commonClose,
-            onPressed: () => Navigator.pop(context),
-          ),
-        ],
       ),
     );
   }

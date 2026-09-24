@@ -690,7 +690,7 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
       _errorRetryCount++;
       Future.delayed(schedule[attempt], () {
         if (mounted && state.error != null) {
-          fetchData();
+          unawaited(fetchData());
         }
       });
     }

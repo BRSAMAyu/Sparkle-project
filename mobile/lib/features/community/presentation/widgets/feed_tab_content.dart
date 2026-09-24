@@ -49,7 +49,7 @@ class _FeedTabContentState extends ConsumerState<FeedTabContent> {
   void _onScroll() {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
-      ref.read(feedProvider.notifier).loadMore();
+      unawaited(ref.read(feedProvider.notifier).loadMore());
     }
   }
 

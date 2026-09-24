@@ -750,7 +750,7 @@ final prometheusAlertsProvider =
 
 class EnterToSendNotifier extends StateNotifier<bool> {
   EnterToSendNotifier() : super(true) {
-    _loadSettings();
+    unawaited(_loadSettings());
   }
 
   /// Load saved setting from SharedPreferences
@@ -782,7 +782,7 @@ class EnterToSendNotifier extends StateNotifier<bool> {
 
   /// Toggle the setting
   void toggle() {
-    setEnabled(!state);
+    unawaited(setEnabled(!state));
   }
 }
 
@@ -791,7 +791,7 @@ class SimpleBoolPreferenceNotifier extends StateNotifier<bool> {
     required this.storageKey,
     required this.defaultValue,
   }) : super(defaultValue) {
-    _loadSettings();
+    unawaited(_loadSettings());
   }
 
   final String storageKey;
@@ -821,7 +821,7 @@ class SimpleBoolPreferenceNotifier extends StateNotifier<bool> {
 
 class MotionIntensityLevelNotifier extends StateNotifier<MotionIntensityLevel> {
   MotionIntensityLevelNotifier() : super(MotionIntensityLevel.high) {
-    _loadSettings();
+    unawaited(_loadSettings());
   }
 
   Future<void> _loadSettings() async {
@@ -853,10 +853,10 @@ class TransparencyLevelNotifier extends StateNotifier<int> {
   TransparencyLevelNotifier(this._ref) : super(0) {
     _ref.listen<AuthState>(authProvider, (prev, next) {
       if (next.user != null && prev?.user?.id != next.user?.id) {
-        _syncFromServer();
+        unawaited(_syncFromServer());
       }
     });
-    _loadSettings();
+    unawaited(_loadSettings());
   }
 
   final Ref _ref;
@@ -1036,10 +1036,10 @@ class SystemUpdateLevelNotifier extends StateNotifier<int> {
   SystemUpdateLevelNotifier(this._ref) : super(1) {
     _ref.listen<AuthState>(authProvider, (prev, next) {
       if (next.user != null && prev?.user?.id != next.user?.id) {
-        _syncFromServer();
+        unawaited(_syncFromServer());
       }
     });
-    _loadSettings();
+    unawaited(_loadSettings());
   }
 
   final Ref _ref;
@@ -1117,10 +1117,10 @@ class AiReasoningModeNotifier extends StateNotifier<String> {
   AiReasoningModeNotifier(this._ref) : super('balanced') {
     _ref.listen<AuthState>(authProvider, (prev, next) {
       if (next.user != null && prev?.user?.id != next.user?.id) {
-        _syncFromServer();
+        unawaited(_syncFromServer());
       }
     });
-    _loadSettings();
+    unawaited(_loadSettings());
   }
 
   final Ref _ref;

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -73,8 +74,8 @@ class _FlameIndicatorState extends State<FlameIndicator>
     );
 
     if (widget.animate) {
-      _pulseController.repeat(reverse: true);
-      _rotationController.repeat();
+      unawaited(_pulseController.repeat(reverse: true));
+      unawaited(_rotationController.repeat());
     }
   }
 
@@ -83,8 +84,8 @@ class _FlameIndicatorState extends State<FlameIndicator>
     super.didUpdateWidget(oldWidget);
     if (widget.animate != oldWidget.animate) {
       if (widget.animate) {
-        _pulseController.repeat(reverse: true);
-        _rotationController.repeat();
+        unawaited(_pulseController.repeat(reverse: true));
+        unawaited(_rotationController.repeat());
       } else {
         _pulseController.stop();
         _rotationController.stop();

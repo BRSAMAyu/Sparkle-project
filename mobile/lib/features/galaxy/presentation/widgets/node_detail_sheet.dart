@@ -243,14 +243,16 @@ class _NodeDetailSheetState extends ConsumerState<NodeDetailSheet> {
     Navigator.of(context).pop();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final router = GoRouter.of(context);
-      router.push(
-        Uri(
-          path: '/learning-path',
-          queryParameters: {
-            'node_id': nodeId,
-            'node_label': label,
-          },
-        ).toString(),
+      unawaited(
+  router.push(
+          Uri(
+            path: '/learning-path',
+            queryParameters: {
+              'node_id': nodeId,
+              'node_label': label,
+            },
+          ).toString(),
+        ),
       );
     });
   }

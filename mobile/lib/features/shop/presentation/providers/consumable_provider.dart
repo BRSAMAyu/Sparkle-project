@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/shop/data/repositories/shop_repository.dart';
@@ -68,7 +69,7 @@ class ConsumableEffectState {
 class ConsumableEffectNotifier extends StateNotifier<ConsumableEffectState> {
   ConsumableEffectNotifier(this._shopRepository)
       : super(ConsumableEffectState()) {
-    _loadActiveEffects();
+    unawaited(_loadActiveEffects());
   }
 
   final ShopRepository _shopRepository;

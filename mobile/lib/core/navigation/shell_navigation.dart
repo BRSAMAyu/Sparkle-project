@@ -56,10 +56,12 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
     if (index == widget.navigationShell.currentIndex) {
       // Scroll current tab content to top
       if (_shellScrollController.hasClients) {
-        _shellScrollController.animateTo(
-          0,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
+        unawaited(
+  _shellScrollController.animateTo(
+            0,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          ),
         );
       }
       return;

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -86,12 +87,14 @@ class ShareTriggerButton extends StatelessWidget {
     };
 
   void _onTap(BuildContext context) {
-    showUniversalShareSheet(
-      context,
-      payload: payload,
-      onGenerateCard: onGenerateCard,
-      onCommunityShare: onCommunityShare,
-      templates: templates,
+    unawaited(
+  showUniversalShareSheet(
+        context,
+        payload: payload,
+        onGenerateCard: onGenerateCard,
+        onCommunityShare: onCommunityShare,
+        templates: templates,
+      ),
     );
   }
 

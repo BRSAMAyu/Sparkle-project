@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
@@ -55,10 +56,10 @@ class LocalVocabularyState {
 class LocalVocabularyNotifier extends StateNotifier<LocalVocabularyState> {
   LocalVocabularyNotifier(this._repository)
       : super(const LocalVocabularyState()) {
-    loadWords();
-    loadDueWords();
-    loadStatistics();
-    loadTags();
+    unawaited(loadWords());
+    unawaited(loadDueWords());
+    unawaited(loadStatistics());
+    unawaited(loadTags());
   }
 
   final LocalVocabularyRepository _repository;
@@ -116,7 +117,7 @@ class LocalVocabularyNotifier extends StateNotifier<LocalVocabularyState> {
   void setFilter(VocabFilter filter) {
     if (state.filter != filter) {
       state = state.copyWith(filter: filter);
-      loadWords();
+      unawaited(loadWords());
     }
   }
 
@@ -124,7 +125,7 @@ class LocalVocabularyNotifier extends StateNotifier<LocalVocabularyState> {
   void setTagFilter(String? tag) {
     if (state.tagFilter != tag) {
       state = state.copyWith(filter: VocabFilter.byTag, tagFilter: tag);
-      loadWords();
+      unawaited(loadWords());
     }
   }
 
@@ -132,7 +133,7 @@ class LocalVocabularyNotifier extends StateNotifier<LocalVocabularyState> {
   void clearTagFilter() {
     if (state.tagFilter != null) {
       state = state.copyWith(filter: VocabFilter.all, clearTagFilter: true);
-      loadWords();
+      unawaited(loadWords());
     }
   }
 
@@ -140,7 +141,7 @@ class LocalVocabularyNotifier extends StateNotifier<LocalVocabularyState> {
   void search(String query) {
     if (state.searchQuery != query) {
       state = state.copyWith(searchQuery: query);
-      loadWords();
+      unawaited(loadWords());
     }
   }
 
@@ -148,7 +149,7 @@ class LocalVocabularyNotifier extends StateNotifier<LocalVocabularyState> {
   void clearSearch() {
     if (state.searchQuery.isNotEmpty) {
       state = state.copyWith(searchQuery: '');
-      loadWords();
+      unawaited(loadWords());
     }
   }
 

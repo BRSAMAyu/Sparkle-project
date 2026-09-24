@@ -1946,14 +1946,16 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
   void _handleNodeLearningPlanRequested(String nodeId, String label) {
     final router = GoRouter.of(context);
-    router.push(
-      Uri(
-        path: '/learning-path',
-        queryParameters: {
-          'node_id': nodeId,
-          'node_label': label,
-        },
-      ).toString(),
+    unawaited(
+  router.push(
+        Uri(
+          path: '/learning-path',
+          queryParameters: {
+            'node_id': nodeId,
+            'node_label': label,
+          },
+        ).toString(),
+      ),
     );
   }
 
@@ -2574,38 +2576,40 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   }) {
     final epoch = ++_layoutOptimizationEpoch;
     final settings = ref.read(galaxyDisplaySettingsProvider);
-    unawaited(() async {
-      final result = await GalaxyLayoutEngineAsync.optimizeLayoutAsync(
-        nodes: graph.nodes,
-        edges: graph.edges,
-        initialPositions: basePositions,
-        sectorAffinity: settings.sectorAffinity,
-      );
-      if (!mounted || epoch != _layoutOptimizationEpoch || _graph != graph) {
-        return;
-      }
-
-      final optimizedPositions = result.positions;
-      if (_isBuildAnimating) {
-        final snapshot = _playbackSnapshot;
-        if (snapshot == null) {
+    unawaited(
+  () async {
+        final result = await GalaxyLayoutEngineAsync.optimizeLayoutAsync(
+          nodes: graph.nodes,
+          edges: graph.edges,
+          initialPositions: basePositions,
+          sectorAffinity: settings.sectorAffinity,
+        );
+        if (!mounted || epoch != _layoutOptimizationEpoch || _graph != graph) {
           return;
         }
-        setState(() {
-          _positions = optimizedPositions;
-          _playbackSnapshot = snapshot.copyWith(
-            settledPositions: optimizedPositions,
-          );
-          _sceneVersion++;
-        });
-        return;
-      }
-
-      _beginLayoutBlend(optimizedPositions);
-      // SPEC-J：最终布局与聚焦时的布局可能不同，默认态工作视野按
-      // 最终布局重定焦（用户已接管相机则不动）。
-      _recentreWorkViewCamera(optimizedPositions);
-    }());
+  
+        final optimizedPositions = result.positions;
+        if (_isBuildAnimating) {
+          final snapshot = _playbackSnapshot;
+          if (snapshot == null) {
+            return;
+          }
+          setState(() {
+            _positions = optimizedPositions;
+            _playbackSnapshot = snapshot.copyWith(
+              settledPositions: optimizedPositions,
+            );
+            _sceneVersion++;
+          });
+          return;
+        }
+  
+        _beginLayoutBlend(optimizedPositions);
+        // SPEC-J：最终布局与聚焦时的布局可能不同，默认态工作视野按
+        // 最终布局重定焦（用户已接管相机则不动）。
+        _recentreWorkViewCamera(optimizedPositions);
+      }(),
+    );
   }
 
   void _beginLayoutBlend(Map<String, Offset> targetPositions) {
