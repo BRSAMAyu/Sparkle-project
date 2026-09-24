@@ -10,6 +10,7 @@ package outbox
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -26,7 +27,11 @@ import (
 
 // --- fakes -----------------------------------------------------------------
 
+// fakeRepo is safe for concurrent use: Run's poll goroutine calls
+// GetUnpublished while the test goroutine flips the outage to healed
+// (CI -race, run 35962100809 — the fields used to be written raw).
 type fakeRepo struct {
+	mu                sync.Mutex
 	getUnpublishedErr error
 	entries           []*event.OutboxEntry
 	getCalls          int
@@ -35,8 +40,22 @@ type fakeRepo struct {
 func (f *fakeRepo) InsertWithTx(context.Context, pgx.Tx, *event.OutboxEntry) error { return nil }
 func (f *fakeRepo) Insert(context.Context, *event.OutboxEntry) error               { return nil }
 func (f *fakeRepo) GetUnpublished(context.Context, int) ([]*event.OutboxEntry, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.getCalls++
+	// Snapshot under the lock; heal replaces the slice header instead of
+	// mutating entries in place, so iterating the snapshot is race-free.
 	return f.entries, f.getUnpublishedErr
+}
+
+// heal ends the simulated outage: clears the GetUnpublished error and queues
+// the given pending entries as one atomic state transition observable by the
+// polling Run goroutine.
+func (f *fakeRepo) heal(entries ...*event.OutboxEntry) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.getUnpublishedErr = nil
+	f.entries = entries
 }
 func (f *fakeRepo) MarkPublished(context.Context, []uuid.UUID) error { return nil }
 func (f *fakeRepo) DeleteOld(context.Context, int) (int64, error)    { return 0, nil }
@@ -162,13 +181,12 @@ func TestRun_RecoversToNormalCadenceAfterOutage(t *testing.T) {
 
 	// Let it fail a few times, then heal the downstream with a pending entry.
 	time.Sleep(40 * time.Millisecond)
-	repo.getUnpublishedErr = nil
-	repo.entries = []*event.OutboxEntry{{
+	repo.heal(&event.OutboxEntry{
 		ID:        uuid.New(),
 		EventType: event.EventTaskCreated,
 		Payload:   []byte("{}"),
 		CreatedAt: time.Now(),
-	}}
+	})
 	time.Sleep(60 * time.Millisecond)
 	cancel()
 	require.ErrorIs(t, <-done, context.Canceled)
