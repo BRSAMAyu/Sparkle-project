@@ -14,6 +14,7 @@ import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/network/api_timeouts.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/share_service.dart';
 import 'package:sparkle/core/services/wechat_share_service.dart';
@@ -192,7 +193,11 @@ class _AchievementShareBottomSheetState
     String url,
     AchievementShareCard? shareCard,
   ) async {
-    final response = await http.get(Uri.parse(url));
+    // N37：package:http 裸调用零超时是 WT273 审计实锤缺陷（弱网永久 pending
+    // → 分享按钮悬挂）；TimeoutException 走下方既有非 2xx 同类 throw 路径。
+    final response = await http
+        .get(Uri.parse(url))
+        .timeout(ApiTimeouts.shareCardDownloadTimeout);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(context.l10n.shareCardDownloadFailed(response.statusCode));
     }

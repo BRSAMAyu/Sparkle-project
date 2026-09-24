@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart' as share_plus;
 
+import 'package:sparkle/core/network/api_timeouts.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/share_service.dart';
 import 'package:sparkle/core/services/wechat_share_service.dart';
@@ -356,9 +357,16 @@ class UniversalShareService {
   }
 
   /// Download card image from URL to a temporary file
+  ///
+  /// N37：package:http 直连无内建超时，整请求预算必须显式表达（WT273 审计：
+  /// 此前裸调用零超时，弱网下 future 永久 pending，分享面板卡死 loading）。
+  /// 登记面：ApiTimeouts.shareCardDownloadTimeout。TimeoutException 走既有
+  /// catch → 返回 null（与下载失败同语义，UI 呈现下载失败态）。
   Future<File?> downloadCardImage(String url, {String? fileName}) async {
     try {
-      final response = await http.get(Uri.parse(url));
+      final response = await http
+          .get(Uri.parse(url))
+          .timeout(ApiTimeouts.shareCardDownloadTimeout);
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return null;
       }

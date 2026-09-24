@@ -12,6 +12,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/network/api_timeouts.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
@@ -326,7 +327,11 @@ Future<File> _downloadCardToTempFile(AchievementShareCard shareCard) async {
     throw Exception(S.shareCardUrlEmpty);
   }
 
-  final response = await http.get(Uri.parse(resolvedUrl));
+  // N37：package:http 裸调用零超时是 WT273 审计实锤缺陷；TimeoutException
+  // 由调用方 try/catch 收敛为分享失败提示（与非 2xx throw 同路径）。
+  final response = await http
+      .get(Uri.parse(resolvedUrl))
+      .timeout(ApiTimeouts.shareCardDownloadTimeout);
   if (response.statusCode < 200 || response.statusCode >= 300) {
     throw Exception(S.shareCardDownloadFailed(response.statusCode));
   }

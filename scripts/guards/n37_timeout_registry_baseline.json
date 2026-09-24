@@ -1,5 +1,7 @@
 {
-  "comment": "Frozen ratchet baseline for check_n37_timeout_registry.py (SPEC N37 弱网参数登记制, TIMEOUT-SOURCE card wt258 @ HEAD 04904b54). dioTimeoutArgLiterals = bare Duration literals on Dio connect/receive/sendTimeout named args outside core/network/api_timeouts.dart; networkLayerTimeoutLiterals = bare timeout-context Duration literals in core/network outside the registry. Registered at ZERO after the consolidation: any NEW literal violates; counts may only go down via --update-baseline after a legitimate cleanup. Never raise.",
+  "comment": "Frozen ratchet baseline for check_n37_timeout_registry.py (SPEC N37 弱网参数登记制, TIMEOUT-SOURCE card wt258 @ HEAD 04904b54; dims 3-4 added by WT273 audit). dioTimeoutArgLiterals = bare Duration literals on Dio connect/receive/sendTimeout named args outside core/network/api_timeouts.dart; networkLayerTimeoutLiterals = bare timeout-context Duration literals in core/network outside the registry; nullTimeoutOverrideLiterals = `connect/receive/sendTimeout: null` anywhere (dio Options.compose silently falls back to the global default — the A11Y-BATCH2 inert-exemption trap); unboundedHttpPackageCalls = package:http verb calls with no statement-level .timeout( (dart http has no default timeout). Registered at ZERO: any NEW hit violates; counts may only go down via --update-baseline after a legitimate cleanup. Never raise.",
   "dioTimeoutArgLiterals": {},
-  "networkLayerTimeoutLiterals": {}
+  "networkLayerTimeoutLiterals": {},
+  "nullTimeoutOverrideLiterals": {},
+  "unboundedHttpPackageCalls": {}
 }

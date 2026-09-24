@@ -14,6 +14,8 @@
 /// | 文件缓存 Dio | 10s | 30s | 未设 | 同上（引用默认） |
 /// | 上传面 Dio | **15s** | 30s | 未设 | `uploadConnectTimeout` + 默认 receive |
 /// | SSE 流（ApiClient getStream/postStream + galaxy 请求级覆写） | 继承 10s | **Duration.zero（dio 零值=不挂接收看门）** | — | `sseReceiveTimeout` |
+/// | 分享卡片图下载（package:http 直连 ×3：universal_share_service / achievement_share_bottom_sheet / achievement_share_dialog） | — | **30s 整请求总闸** | — | `shareCardDownloadTimeout` |
+/// | 混沌工程管理面（dev-only 调试对话框，package:http 直连 ×2） | — | **30s 整请求总闸** | — | `chaosAdminCallTimeout` |
 ///
 /// SSE 豁免覆盖面（全库 getStream/postStream/dio.get(stream) 消费方 @ 基线
 /// a7733e2a）：task_monitor（`/background-tasks/stream/events`）、simulation
@@ -31,8 +33,11 @@
 ///    命名 `<face><Slot>Timeout`（face=default/upload/sse/…，Slot=Connect/Receive/Send）；
 ///    值与默认相同的面直接引用默认常量，不另立同值常量。
 /// 2. **流式豁免**：AI 生成/长推理/事件流类**禁依赖 receiveTimeout 表达超时**——
-///    流式域以心跳/事件超时为准（先例：galaxy SSE 请求级 `receiveTimeout: null`
-///    + ws 心跳 30s/超时 60s）。流式静默期大于 30s 会被全局 receiveTimeout 误杀。
+///    流式域以心跳/事件超时为准（galaxy SSE 旧例是请求级 `receiveTimeout: null`，
+///    已被 A11Y-BATCH2 判为无效豁免并收敛为 [sseReceiveTimeout] 零值形态，
+///    详见下方常量文档）。「关闭」请求级 receiveTimeout 的唯一合法写法是
+///    引用 `ApiTimeouts.sseReceiveTimeout`（Duration.zero），**禁写 null**——
+///    dio 5.9.0 `Options.compose` 会把显式 null 回落全局默认（守卫 dim3 冻结）。
 /// 3. **机检**：`scripts/guards/check_n37_timeout_registry.py`（N9 家族形制，
 ///    基线冻结只降不升）——network 层与全库 Dio 超时命名参数位出现裸
 ///    `Duration(...)` 字面量即违例，唯一合法写法是引用本文件常量。
@@ -68,4 +73,18 @@ class ApiTimeouts {
   /// `receiveTimeout <= Duration.zero` 直接不挂接收超时看门。故「关闭」的
   /// 有效表示是零值。禁止改成裸 `Duration(...)` 字面量（N37 dim1）。
   static const Duration sseReceiveTimeout = Duration.zero;
+
+  /// 分享卡片图下载面（package:http 直连，dio 拦截器体系之外）：
+  /// 连接+下载整请求 30s 总闸。WT273 审计实锤：该面此前 3 处 `http.get(...)`
+  /// 裸调用零超时——dart http 包默认无任何超时，弱网下 future 永久 pending，
+  /// 分享面板/成就分享卡死在 loading。package:http 无 per-phase 拆分，只能以
+  /// `.timeout()` 表达整请求预算；新面仍须在此登记后引用常量（守卫 dim4：
+  /// scripts/guards/check_n37_timeout_registry.py 无 .timeout 的 http 裸调用
+  /// 基线冻结为零）。
+  static const Duration shareCardDownloadTimeout = Duration(seconds: 30);
+
+  /// 混沌工程管理面（dev-only ChaosControlDialog，package:http 直连）：
+  /// status 探测 / config 设置整请求 30s 总闸（WT273 审计补登记，缺陷类同
+  /// 分享卡片下载面：裸 `http.get/post` 无界等待 + setState 悬挂）。
+  static const Duration chaosAdminCallTimeout = Duration(seconds: 30);
 }

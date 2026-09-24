@@ -6,6 +6,7 @@ import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/network/api_timeouts.dart';
 
 class ChaosControlDialog extends StatefulWidget {
   const ChaosControlDialog({super.key});
@@ -27,9 +28,10 @@ class _ChaosControlDialogState extends State<ChaosControlDialog> {
 
   Future<void> _fetchStatus() async {
     try {
-      final response = await http.get(
-        Uri.parse('${ApiConstants.baseUrl}/admin/chaos/status'),
-      );
+      // N37：package:http 裸调用零超时（WT273 审计补登记）；超时走 catch。
+      final response = await http
+          .get(Uri.parse('${ApiConstants.baseUrl}/admin/chaos/status'))
+          .timeout(ApiTimeouts.chaosAdminCallTimeout);
       if (response.statusCode == 200) {
         final data = json.decode(response.body) as Map<String, dynamic>;
         final thresholdValue = data['threshold'];
@@ -51,17 +53,20 @@ class _ChaosControlDialogState extends State<ChaosControlDialog> {
   Future<void> _setThreshold(int value) async {
     setState(() => _isLoading = true);
     try {
-      final response = await http.post(
-        Uri.parse('${ApiConstants.baseUrl}/admin/chaos/config'),
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Admin-Secret': 'sparkle_2025',
-        },
-        body: json.encode({
-          'target': 'queue_persist',
-          'value': value,
-        }),
-      );
+      // N37：同上，config 设置面整请求总闸；超时走 catch → 失败 SnackBar。
+      final response = await http
+          .post(
+            Uri.parse('${ApiConstants.baseUrl}/admin/chaos/config'),
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Admin-Secret': 'sparkle_2025',
+            },
+            body: json.encode({
+              'target': 'queue_persist',
+              'value': value,
+            }),
+          )
+          .timeout(ApiTimeouts.chaosAdminCallTimeout);
 
       if (response.statusCode == 200) {
         await _fetchStatus();
