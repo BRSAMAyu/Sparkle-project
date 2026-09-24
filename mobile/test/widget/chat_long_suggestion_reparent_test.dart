@@ -248,6 +248,11 @@ void main() {
     );
     await settle(tester, 6);
 
+    // 内容完整性（第二拍当场断言：第三拍追加后 reversed 懒加载列表可能
+    // 回收离屏的 m7 条目，widget 级断言只应在结构化翻转当场做）。
+    expect(find.byType(StructuredSuggestionBody), findsOneWidget);
+    expect(find.textContaining('第 1 步'), findsWidgets);
+
     // 第三拍：继续对话 → 列表尾部继续追加，历史消息索引整体移位
     // （GlobalKey 认领路径的高危帧）。
     notifier.appendMessage(_msg('m8', MessageRole.user, '收到，开始执行'));
@@ -265,9 +270,11 @@ void main() {
           '实际：$exception',
     );
 
-    // 内容完整性：结构化渲染在场、编号条目可见（错误边界兜底=内容丢失，同样算失败形态）。
-    expect(find.byType(StructuredSuggestionBody), findsOneWidget);
-    expect(find.textContaining('第 1 步'), findsWidgets);
+    // 状态级完整性（第三拍后兜底）：m7 长建议内容仍在会话状态——错误边界
+    // 兜住崩溃但内容丢失同样算失败形态；widget 可能被懒加载回收，故查状态。
+    final m7 = notifier.state.messages.firstWhere((m) => m.id == 'm7');
+    expect(m7.content, contains('第 1 步'));
+    expect(m7.content.length, greaterThan(500));
     expect(find.byType(ChatScreen), findsOneWidget);
   });
 }

@@ -9,7 +9,6 @@
 // （cockpit 进度 chip / 多目标看板 goal 行 / 任务板头部汇总）对同一状态
 // 必须给出同一数字；/tasks/today 选择流与 due-today 过滤不得再派生进度。
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
@@ -101,9 +100,13 @@ void main() {
     testWidgets('cockpit chip / 多目标 goal 行 / 任务板头部 同屏同数',
         (tester) async {
       await initializeDashboardTestEnvironment();
+      // 覆盖一律走 harness 的 extraOverrides（追加式、同 provider 后写胜出）：
+      // harness 自带内层 ProviderScope（含 taskListProvider 样例夹具），外层
+      // 再包 ProviderScope 会被内层遮蔽——本验收首跑即踩中（账本读到样例
+      // 夹具而非证据账本，chip/头部全错数）。
       await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
+        buildDashboardWidgetHarness(
+          extraOverrides: [
             // cockpit 的目标上下文（选中 goal-1）。
             multiGoalOverviewProvider.overrideWith(
               (ref) async => const MultiGoalOverview(
@@ -136,30 +139,29 @@ void main() {
               ),
             ),
             // 任务账本：4 项完成 1（真相），计划键 = goal-1。
+            // （后写胜出：压过 harness 默认样例夹具。）
             staticTaskListOverride(evidenceLedger()),
           ],
-          child: buildDashboardWidgetHarness(
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TodayCockpitCard(),
-                TaskBoardCard(),
-                MultiGoalDashboardCard(
-                  overview: MultiGoalOverview(
-                    goals: [
-                      ActiveGoalSnapshot(
-                        id: 'goal-1',
-                        title: 'Final Sprint',
-                        goalType: 'exam',
-                        healthScore: 0.7,
-                        weeklyConflictCount: 0,
-                      ),
-                    ],
-                    selectedGoalId: 'goal-1',
-                  ),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TodayCockpitCard(),
+              TaskBoardCard(),
+              MultiGoalDashboardCard(
+                overview: MultiGoalOverview(
+                  goals: [
+                    ActiveGoalSnapshot(
+                      id: 'goal-1',
+                      title: 'Final Sprint',
+                      goalType: 'exam',
+                      healthScore: 0.7,
+                      weeklyConflictCount: 0,
+                    ),
+                  ],
+                  selectedGoalId: 'goal-1',
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       );
@@ -172,7 +174,8 @@ void main() {
       expect(find.text('1/4'), findsNWidgets(2),
           reason: 'cockpit chip 与 goal 行必须与账本真相同数（1 完成/共 4 项）',);
       // 2) 任务板头部：全账本进度（不再是 due-today 的「1 项·已完成 0」）。
-      expect(find.text('4 tasks · 1 done'), findsOneWidget);
+      // 折叠默认态下 header 与 collapsed preview 各渲染一次 summary（产品形态）。
+      expect(find.text('4 tasks · 1 done'), findsNWidgets(2));
       expect(find.text('1 tasks · 0 done'), findsNothing,
           reason: 'due-today 派生的进度口径必须退场（F-9 三处打架的来源之一）',);
       // 漂移锁：/tasks/today 快照数字（0/1）不得出现在任何进度位。

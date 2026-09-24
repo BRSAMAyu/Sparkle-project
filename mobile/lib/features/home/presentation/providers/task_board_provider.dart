@@ -60,10 +60,18 @@ TaskLedgerProgress ledgerProgressOf(
 }
 
 /// 任务板头部汇总：全账本进度（非 abandoned）。
-final taskBoardLedgerSummaryProvider = Provider<TaskLedgerProgress>((ref) {
-  final taskState = ref.watch(taskListProvider);
-  return ledgerProgressOf(taskState.tasks);
-});
+///
+/// dependencies 声明 taskListProvider：账本 provider 消费可被测试/局部
+/// 作用域 override 的 taskListProvider，不声明则作用域断言拒绝跨界读取。
+final taskBoardLedgerSummaryProvider = Provider<TaskLedgerProgress>(
+  (ref) {
+    final taskState = ref.watch(taskListProvider);
+    return ledgerProgressOf(taskState.tasks);
+  },
+  dependencies: [
+    taskListProvider,
+  ],
+);
 
 /// 按计划（=目标）分组的账本进度，供多目标看板逐行展示。
 /// `null` 键收纳无归属计划的任务（无目标任务不挂在任何 goal 行上）。
@@ -79,7 +87,10 @@ final ledgerProgressByPlanProvider =
     byPlan[planId] = ledgerProgressOf(taskState.tasks, planId: planId);
   }
   return byPlan;
-});
+}, dependencies: [
+  taskListProvider,
+],
+);
 
 /// S7「今日」分组口径 · 单一定义点。
 ///
@@ -268,9 +279,14 @@ class TaskBoardNotifier extends PersistentStateNotifier<TaskBoardState> {
 }
 
 /// Task board provider
+///
+/// dependencies 声明 planListProvider：TaskBoardNotifier 内 listen 计划
+/// 列表，不声明则局部作用域（测试 harness）override planListProvider 时
+/// 读取被作用域断言拒绝。
 final taskBoardProvider =
     StateNotifierProvider<TaskBoardNotifier, TaskBoardState>(
   TaskBoardNotifier.new,
+  dependencies: [planListProvider],
 );
 
 /// Grouped tasks for schedule view
