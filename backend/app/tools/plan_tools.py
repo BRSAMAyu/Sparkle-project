@@ -25,6 +25,7 @@ from app.models.task import TaskType as ModelTaskType
 from app.orchestration.persona_aware_planner import PersonaAwarePlanner
 from app.schemas.plan import PlanCreate
 from app.schemas.task import TaskCreate, coerce_task_type
+from app.services.galaxy.title_sanitizer import clean_display_plan_name, sprint_plan_fallback_name
 from app.services.knowledge_service import KnowledgeService
 from app.services.llm_fallback_utils import plan_llm
 from app.services.plan_service import PlanService
@@ -100,7 +101,8 @@ class CreatePlanTool(BaseTool):
 
             plan_payload = {
                 "id": str(plan.id),
-                "title": plan.name,
+                # WT337：卡面标题不吃「TOUR 冲刺 {run}」token 名（纯 token → 创建日兜底命名）。
+                "title": clean_display_plan_name(plan.name) or sprint_plan_fallback_name(plan.created_at),
                 "type": plan.type.value,
                 "plan_stage": plan.plan_stage.value if plan.plan_stage else None,
                 "description": plan.description,
@@ -419,7 +421,11 @@ class GenerateTasksForPlanTool(BaseTool):
             return I18n.t(key, locale=locale, **kwargs)
 
         max_session_minutes = self._resolve_max_session_minutes(persona_constraints)
-        topic_name = (topic or getattr(plan, "subject", None) or getattr(plan, "name", None) or t("planner.fallback_topic_default")).strip()
+        # WT337：name 腿不吃「TOUR 冲刺 {run}」token 名（subject 腿属 wt334 科目形态，未动）。
+        plan_name_leg = clean_display_plan_name(getattr(plan, "name", None)) or sprint_plan_fallback_name(
+            getattr(plan, "created_at", None)
+        )
+        topic_name = (topic or getattr(plan, "subject", None) or plan_name_leg or t("planner.fallback_topic_default")).strip()
         node_names = await self._get_learning_path_node_names(plan, db_session)
         tasks: list[dict[str, Any]] = []
 

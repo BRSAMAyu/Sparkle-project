@@ -48,7 +48,11 @@ from app.models.user import User
 from app.models.user_preferences import UserPreferencesCenter
 from app.services.aurora_stage38_kill_switch_service import AuroraStage38KillSwitchService
 from app.services.calendar_service import CalendarService
-from app.services.galaxy.title_sanitizer import clean_display_subject, strip_internal_tokens
+from app.services.galaxy.title_sanitizer import (  # WT337：plan name 冲刺形态清洗
+    clean_display_plan_name,
+    clean_display_subject,
+    strip_internal_tokens,
+)
 from app.services.memory_service import MemoryService
 from app.sprint_packs.last_24h_mode import (
     apply_last_24h_policy_overrides,
@@ -249,8 +253,9 @@ class AuroraRuntimeV1Service:
             or self._today_focus_from_tasks(today_tasks)
             or self._stored_day_recommendation(plan=plan, day_index=current_day_index)
             # WT334：subject 兜底不透出内部科目 token。
+            # WT337：name 兜底不吃「TOUR 冲刺 {run}」token 名。
             or clean_display_subject(plan.subject)
-            or _strip(plan.name)
+            or clean_display_plan_name(plan.name)
             or "今天的核心任务"
         )
         estimated_minutes = self._estimated_minutes(today_tasks, fallback=plan.daily_available_minutes)
@@ -418,7 +423,8 @@ class AuroraRuntimeV1Service:
         days_remaining = max(0, (plan.target_date - now.date()).days) if plan and plan.target_date else 0
         subject = (
             _strip(getattr(plan, "subject", None))
-            or _strip(getattr(plan, "name", None))
+            # WT337：name 兜底不吃「TOUR 冲刺 {run}」token 名。
+            or clean_display_plan_name(getattr(plan, "name", None))
             or _strip((latest_chat or {}).get("topic_summary"))
             or "你的计划"
         )
@@ -2011,7 +2017,8 @@ class AuroraRuntimeV1Service:
     ) -> str:
         # WT334：简报「备考{subject}的第 N 天」不吃内部科目 token——
         # 纯 token 科目按既有兜底顺序回退（计划名 → 「这场考试」）。
-        subject = clean_display_subject(plan.subject) or _strip(plan.name) or "这场考试"
+        # WT337：name 兜底不吃「TOUR 冲刺 {run}」token 名。
+        subject = clean_display_subject(plan.subject) or clean_display_plan_name(plan.name) or "这场考试"
         greeting = self._daily_greeting()
         recommendation_tail = self._daily_recommendation_tail(day_recommendation, today_focus=today_focus)
         calendar_tail = self._daily_calendar_tail(calendar_note)

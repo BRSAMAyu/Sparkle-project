@@ -48,8 +48,12 @@ class GalaxyPlanConsumer(JourneyEventConsumerBase):
                 )
                 return
 
+            # WT337：播种 learning_goal 不吃「TOUR 冲刺 {run}」token 名
+            # （纯 token → 按创建日兜底命名，播种链路保持可用）。
+            from app.services.galaxy.title_sanitizer import clean_display_plan_name, sprint_plan_fallback_name
+
             await GalaxyBootstrapService(db).seed_from_goal(
                 user_id=user_id,
-                learning_goal=plan.name,
+                learning_goal=clean_display_plan_name(plan.name) or sprint_plan_fallback_name(plan.created_at),
                 goal_type=getattr(plan.type, "value", plan.type),
             )

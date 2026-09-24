@@ -15,6 +15,15 @@ WT334 补充（plan 科目链路）：同一阶段以 ``f"TOUR科目-{run}"`` �
 兜底（读取侧，只清展示面，不改库）。形态与任务标题不同：TAG 直接贴
 「科目/Subject」（无空白），后跟唯一性 token 段，无语义尾。
 
+WT337 补充（plan 名冲刺链路）：同一阶段以 ``f"TOUR 冲刺 {run}"`` 填计划
+name（name 无唯一键约束，token 纯为 harness 可读去重）。plan 列表/详情
+``name`` 字段、状态通知 toast、Aurora 兜底文案、星图 plan 概念节点名等展示面
+原样透出——由 :func:`clean_display_plan_name` 与 :func:`strip_internal_tokens`
+的冲刺形态剥离兜底。形态 = TAG + 空白 + 「冲刺」 + 空白 + 唯一性 token run；
+纯 token 名清洗后为空串，展示方用 :func:`sprint_plan_fallback_name`
+（「冲刺计划·M月D日」）补名——name 是列表/详情主标题，没有 subject 那样的
+「无科目」文案链可回退，空标题会渲染成空行。
+
 本模块是纯函数、无 IO，两处接入：
 - 生成侧：``GalaxyService.ensure_task_node`` / ``task_node_uuid`` 用
   :func:`clean_display_title` 产出干净人类可读名，内部标识只留在 id /
@@ -29,13 +38,23 @@ WT334 补充（plan 科目链路）：同一阶段以 ``f"TOUR科目-{run}"`` �
 内部命名形态上触发。科目形态同理：「AI科目-期末」「CS科目-exam1」
 「IT科目-2024-2025」这类正常命名零改写——科目模式只在「TAG贴科目 +
 ≥2 段含数字 token 段且至少一段 ≥6 位」的完整 harness 形态上触发。
+冲刺形态（WT337）三同：「冲刺期末复习」「7天冲刺计划」「TOUR 冲刺计划」
+「TOUR 冲刺 2024」零改写——冲刺模式只在「TAG + 空白 + 冲刺 + 空白 +
+token run（每段含数字、≥2 段、至少一段 ≥6 位）」的完整 harness 形态上触发。
 """
 
 from __future__ import annotations
 
 import re
+from datetime import date, datetime
 
-__all__ = ["clean_display_subject", "clean_display_title", "strip_internal_tokens"]
+__all__ = [
+    "clean_display_plan_name",
+    "clean_display_subject",
+    "clean_display_title",
+    "sprint_plan_fallback_name",
+    "strip_internal_tokens",
+]
 
 # harness 命名空间 tag：TOUR / EVAL / SIM 等 2-12 位大写字母数字，后跟空白。
 _TAG = r"[A-Z][A-Z0-9]{1,11}\s+"
@@ -61,6 +80,15 @@ _SUBJECT_NS = r"[A-Z][A-Z0-9]{1,11}(?:科目|[Ss]ubject)"
 _SUBJECT_RUN = r"(?:\s*[-_]\s*[0-9A-Za-z]*[0-9][0-9A-Za-z]*){2,}"
 _SUBJECT_TOKEN_RE = re.compile(rf"(?P<ns>{_SUBJECT_NS})(?P<run>{_SUBJECT_RUN})")
 
+# plan 名 token 形态（WT337）：「TOUR 冲刺 d91d5df0-10-5dc70d」——TAG + 空白 +
+# 「冲刺」 + 空白 + 唯一性 token run（feature_tour.py S7 ``f"TOUR 冲刺 {run}"``）。
+# 与科目形态同纪律：首段 + ≥1 个后继段均须含数字、至少一段 ≥6 位——
+# 「TOUR 冲刺计划」「TOUR 冲刺 2024」「TOUR 冲刺 2024-2025赛季」（无 ≥6 位段）
+# 及缺 TAG 的「冲刺 d91d5df0-…」均不满足，零改写。
+_SPRINT_NS = r"[A-Z][A-Z0-9]{1,11}\s+冲刺"
+_SPRINT_RUN = r"[0-9A-Za-z]*[0-9][0-9A-Za-z]*(?:\s*[-_]\s*[0-9A-Za-z]*[0-9][0-9A-Za-z]*)+"
+_SPRINT_TOKEN_RE = re.compile(rf"(?P<ns>{_SPRINT_NS})\s+(?P<run>{_SPRINT_RUN})")
+
 # 删除块后残留的悬挂分隔符（仅当删除发生过才做此清理，正常标题零改写）。
 _DANGLING_SEP_RE = re.compile(r"^\s*[:：\-—–_]\s*|\s*[:：]\s*$")
 
@@ -85,6 +113,16 @@ def _qualifying_subject_spans(text: str) -> list[tuple[int, int]]:
     return spans
 
 
+def _qualifying_sprint_spans(text: str) -> list[tuple[int, int]]:
+    """冲刺名 token 的合格匹配区间：至少一段 ≥6 位（hex 形态）才认定内部 token。"""
+    spans: list[tuple[int, int]] = []
+    for match in _SPRINT_TOKEN_RE.finditer(text):
+        segments = [seg for seg in re.split(r"[-_\s]+", match.group("run").strip()) if seg]
+        if any(len(seg) >= 6 for seg in segments):
+            spans.append(match.span())
+    return spans
+
+
 def _strip_subject_tokens(text: str) -> tuple[str, int]:
     """剥离字符串内所有「TAG科目-token」内部科目 token，返回 (结果, 删除次数)。"""
     if not text or ("科目" not in text and "ubject" not in text):
@@ -101,17 +139,34 @@ def _strip_subject_tokens(text: str) -> tuple[str, int]:
     return "".join(parts), len(spans)
 
 
-def strip_internal_tokens(text: str) -> str:
-    """剥离字符串内所有「专题N-…:」与「TAG科目-token」内部命名块，保留语义。
+def _strip_sprint_tokens(text: str) -> tuple[str, int]:
+    """剥离字符串内所有「TAG 冲刺-token」内部计划名 token，返回 (结果, 删除次数)。"""
+    if not text or "冲刺" not in text:
+        return text, 0
+    spans = _qualifying_sprint_spans(text)
+    if not spans:
+        return text, 0
+    parts: list[str] = []
+    last = 0
+    for start, end in spans:
+        parts.append(text[last:start])
+        last = end
+    parts.append(text[last:])
+    return "".join(parts), len(spans)
 
-    正常（不含该形态）输入零改写原样返回；空串返回空串。纯 token 科目剥除后
-    即空串。删除后仅清理悬挂分隔符与多余空白——此清理只在确有删除发生时执行。
+
+def strip_internal_tokens(text: str) -> str:
+    """剥离字符串内所有「专题N-…:」「TAG科目-token」「TAG 冲刺-token」内部命名块。
+
+    正常（不含该形态）输入零改写原样返回；空串返回空串。纯 token 科目/计划名
+    剥除后即空串。删除后仅清理悬挂分隔符与多余空白——此清理只在确有删除发生时执行。
     """
     if not text:
         return text
     cleaned, count = _INTERNAL_TOKEN_BLOCK_RE.subn("", text)
     cleaned, subject_count = _strip_subject_tokens(cleaned)
-    if count == 0 and subject_count == 0:
+    cleaned, sprint_count = _strip_sprint_tokens(cleaned)
+    if count == 0 and subject_count == 0 and sprint_count == 0:
         return text
     cleaned = _DANGLING_SEP_RE.sub("", cleaned)
     return re.sub(r"\s{2,}", " ", cleaned).strip()
@@ -128,6 +183,33 @@ def clean_display_subject(subject: str | None) -> str:
     if not subject:
         return ""
     return strip_internal_tokens(subject)
+
+
+def clean_display_plan_name(name: str | None) -> str:
+    """plan name → 干净展示名（冲刺链路展示面与生成侧共用，WT337）。
+
+    - 纯内部 token 名：「TOUR 冲刺 d91d5df0-10-5dc70d」→ 空串
+      （调用方用 :func:`sprint_plan_fallback_name` 按创建日补名，或走自身
+      「无名词」文案链——如 Aurora 简报回退「这场考试」）；
+    - 嵌入形态：剥 token、保留其余语义；
+    - 正常计划名（含「7天冲刺计划」这类含"冲刺"的合法命名）零改写；
+      None/空 → 空串。
+    """
+    if not name:
+        return ""
+    return strip_internal_tokens(name)
+
+
+def sprint_plan_fallback_name(created_at: datetime | date | None) -> str:
+    """纯 token 计划名的兜底命名（WT337）：按创建日「冲刺计划·M月D日」。
+
+    plan name 是列表/详情的主标题，没有 subject 那样的「无科目」文案链可回退，
+    空标题会渲染成空行；带创建日后缀可区分多个归档评测冲刺且确定性稳定
+    （同一计划每次渲染同名，不闪烁）。created_at 缺失时退「冲刺计划」。
+    """
+    if created_at is None:
+        return "冲刺计划"
+    return f"冲刺计划·{created_at.month}月{created_at.day}日"
 
 
 def clean_display_title(title: str) -> str:

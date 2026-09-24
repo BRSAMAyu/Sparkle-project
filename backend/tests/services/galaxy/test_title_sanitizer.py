@@ -192,3 +192,80 @@ class TestSubjectTokenForms:
     def test_mixed_topic_and_subject_blocks(self):
         dirty = f"TOUR 专题2-d91d5df0-3-ef4567: {EVIDENCE_SUBJECT}"
         assert strip_internal_tokens(dirty) == ""
+
+
+# ---------------------------------------------------------------------------
+# WT337 · plan 链路 name 的「TOUR 冲刺 {run}」第三形态（wt334 遗留）：
+# feature_tour.py S7 以 f"TOUR 冲刺 {run}" 填计划 name（证据样本
+# 「TOUR 冲刺 d91d5df0-10-5dc70d」）。形态 = TAG + 空白 + 「冲刺」 + 空白 +
+# 唯一性 token run——与前两形态同纪律：每段含数字、≥2 段且至少一段 ≥6 位，
+# 正常冲刺命名（「冲刺期末复习」「7天冲刺计划」「TOUR 冲刺计划」）零改写。
+# ---------------------------------------------------------------------------
+
+from app.services.galaxy.title_sanitizer import clean_display_plan_name, sprint_plan_fallback_name  # noqa: E402
+
+EVIDENCE_PLAN_NAME = "TOUR 冲刺 d91d5df0-10-5dc70d"
+
+
+class TestSprintPlanNameForms:
+    def test_bare_sprint_token_drops_to_empty(self):
+        """纯 token 计划名 → 空串（读取方按兜底命名策略补名，见 sprint_plan_fallback_name）。"""
+        assert clean_display_plan_name(EVIDENCE_PLAN_NAME) == ""
+        assert strip_internal_tokens(EVIDENCE_PLAN_NAME) == ""
+
+    def test_embedded_sprint_token_stripped(self):
+        dirty = f"目标：{EVIDENCE_PLAN_NAME} 的第一周稳住节奏"
+        cleaned = strip_internal_tokens(dirty)
+        assert "d91d5df0" not in cleaned and "5dc70d" not in cleaned and "TOUR" not in cleaned
+        assert "第一周稳住节奏" in cleaned
+
+    def test_normal_sprint_names_zero_rewrite(self):
+        for clean in (
+            "冲刺期末复习",
+            "7天冲刺计划",
+            "考研冲刺",
+            "TOUR 冲刺计划",  # TAG+冲刺后无空白+token run
+            "TOUR 冲刺 2024",  # 单段
+            "TOUR 冲刺 2024-2025赛季",  # 无 ≥6 位段
+            "冲刺 d91d5df0-10-5dc70d",  # 缺 TAG：非完整 harness 形态
+            "TOUR 冲刺 abc",  # 单段无分隔 token
+            "TOUR 冲刺 abc-123",  # 不足 2 个含数字段
+        ):
+            assert strip_internal_tokens(clean) == clean, clean
+            assert clean_display_plan_name(clean) == clean, clean
+
+    def test_none_and_empty(self):
+        assert clean_display_plan_name(None) == ""
+        assert clean_display_plan_name("") == ""
+
+    def test_sprint_form_does_not_disturb_topic_and_subject_forms(self):
+        """第三形态扩展不得波及 wt330/wt334 已固化的两形态行为。"""
+        assert strip_internal_tokens(EVIDENCE_TITLE) == EVIDENCE_TAIL
+        assert clean_display_title(EVIDENCE_TITLE) == EVIDENCE_TAIL
+        assert strip_internal_tokens(EVIDENCE_SUBJECT) == ""
+
+    def test_mixed_all_three_forms(self):
+        dirty = f"{EVIDENCE_TITLE}（{EVIDENCE_SUBJECT}）+ {EVIDENCE_PLAN_NAME}"
+        cleaned = strip_internal_tokens(dirty)
+        for marker in ("d91d5df0", "5dc70d", "TOUR科目", "冲刺"):
+            assert marker not in cleaned
+        assert EVIDENCE_TAIL in cleaned
+
+
+class TestSprintPlanFallbackName:
+    """纯 token 名的兜底命名：按创建日「冲刺计划·M月D日」（理由：plan name 是
+    列表/详情的主标题，无「无名词」文案链可回退，空标题会渲染空行；带创建日
+    可区分多个归档评测冲刺且确定性稳定）。"""
+
+    def test_datetime_falls_back_to_creation_day(self):
+        from datetime import datetime
+
+        assert sprint_plan_fallback_name(datetime(2026, 9, 25, 14, 30)) == "冲刺计划·9月25日"
+
+    def test_date_only(self):
+        from datetime import date
+
+        assert sprint_plan_fallback_name(date(2026, 1, 3)) == "冲刺计划·1月3日"
+
+    def test_none_falls_back_to_plain_name(self):
+        assert sprint_plan_fallback_name(None) == "冲刺计划"

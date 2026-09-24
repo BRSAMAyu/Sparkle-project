@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from uuid import uuid4
 from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import pytest
 import pytest_asyncio
@@ -19,7 +19,6 @@ from app.models.memory import EpisodicMemory
 from app.models.plan import Plan, PlanType
 from app.models.user import User
 from app.services.system_update_service import SystemUpdateService
-
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
@@ -244,3 +243,56 @@ async def test_journey_plan_created_subscribers_cover_generation_and_achievement
     achievement.assert_awaited_once()
     spawn.assert_awaited_once()
     galaxy_seed.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_journey_plan_created_galaxy_seed_uses_clean_learning_goal(
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """WT337 · plan.created → 星图播种 learning_goal 不吃「TOUR 冲刺 {run}」token 名。"""
+    _bind_consumer_session(monkeypatch, db_session)
+
+    captured: dict = {}
+
+    async def galaxy_seed(self, *, user_id, learning_goal, goal_type):
+        captured["learning_goal"] = learning_goal
+
+    monkeypatch.setattr(
+        "app.consumers.galaxy_plan_consumer.GalaxyBootstrapService.seed_from_goal",
+        galaxy_seed,
+    )
+
+    user = User(
+        id=uuid4(),
+        username="wt337_galaxy_seed",
+        email="wt337_galaxy_seed@example.com",
+        hashed_password="hashed",
+    )
+    plan = Plan(
+        id=uuid4(),
+        user_id=user.id,
+        name="TOUR 冲刺 d91d5df0-10-5dc70d",
+        type=PlanType.SPRINT,
+        description="tokened plan name",
+        daily_available_minutes=45,
+        is_active=True,
+    )
+    db_session.add(user)
+    db_session.add(plan)
+    await db_session.commit()
+
+    event = {
+        "event_type": "plan.created",
+        "user_id": str(user.id),
+        "plan_id": str(plan.id),
+    }
+
+    from app.consumers.galaxy_plan_consumer import GalaxyPlanConsumer
+
+    await GalaxyPlanConsumer(event_bus=object(), redis_client=None).handle_event(event)
+
+    assert captured, "seed_from_goal must be called"
+    learning_goal = str(captured.get("learning_goal") or "")
+    assert "d91d5df0" not in learning_goal and "TOUR" not in learning_goal
+    assert learning_goal.startswith("冲刺计划"), f"unexpected fallback: {learning_goal}"

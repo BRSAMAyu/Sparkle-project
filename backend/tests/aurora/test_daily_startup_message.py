@@ -224,3 +224,32 @@ async def test_daily_startup_message_scrubs_internal_token_from_subject(db_sessi
     assert "TOUR科目" not in message
     assert "d91d5df0" not in message and "5dc70d" not in message
     assert message, "daily startup message must still be produced"
+
+
+@pytest.mark.asyncio
+async def test_daily_startup_message_scrubs_internal_token_from_plan_name(db_session):
+    """WT337 · tokened plan name（「TOUR 冲刺 {run}」评测遗留）不得透出每日简报。
+
+    subject 与 name 同时为 token 时，兜底链（科目 → 计划名 → 「这场考试」）
+    必须逐级剥空，不得把 token 名带进「备考{X}的第 N 天」。
+    """
+    user, plan, session_day = await _create_sprint_plan(db_session, completion_rate=0.9)
+    plan.name = "TOUR 冲刺 d91d5df0-10-5dc70d"
+    plan.subject = "TOUR科目-d91d5df0-10-5dc70d"
+    await db_session.commit()
+
+    service = AuroraRuntimeV1Service(wake_policy_service=_WakePolicyStub())
+    payload = await service.get_daily_startup_message(
+        active_db=db_session,
+        user_id=user.id,
+        plan_id=plan.id,
+        session_date=session_day,
+    )
+
+    message = str(payload.get("message") or "")
+    assert "d91d5df0" not in message and "5dc70d" not in message
+    assert "TOUR" not in message
+    assert message, "daily startup message must still be produced"
+
+    focus = str(payload.get("today_focus") or "")
+    assert "d91d5df0" not in focus and "TOUR" not in focus

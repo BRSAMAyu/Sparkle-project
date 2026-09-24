@@ -53,7 +53,12 @@ from app.services.card_protocol.global_compass_manager import GlobalCompassManag
 from app.services.card_protocol.phase_design_service import PhaseDesignService
 from app.services.card_protocol.phase_service import PhaseService
 from app.services.card_protocol.planning_memory_service import PlanningMemoryService
-from app.services.galaxy.title_sanitizer import clean_display_subject, strip_internal_tokens
+from app.services.galaxy.title_sanitizer import (  # WT337：plan name 冲刺形态清洗
+    clean_display_plan_name,
+    clean_display_subject,
+    sprint_plan_fallback_name,
+    strip_internal_tokens,
+)
 from app.services.plan_progress_service import PlanHealthReport, PlanProgressService
 from app.services.plan_quota_service import PlanQuotaService
 from app.services.plan_service import PlanService, _sync_plan_card_projection
@@ -141,6 +146,13 @@ def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+def _plan_display_name(plan: Plan) -> str:
+    """WT337：plan.name 展示名——「TOUR 冲刺 {run}」token 名按创建日兜底
+    「冲刺计划·M月D日」（name 是列表/详情主标题，无「无名词」文案链可回退）；
+    正常命名零改写。库值不动。"""
+    return clean_display_plan_name(plan.name) or sprint_plan_fallback_name(plan.created_at)
+
+
 def _serialize_plan(
     plan: Plan,
     *,
@@ -152,7 +164,9 @@ def _serialize_plan(
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "id": plan.id,
-        "name": plan.name,
+        # WT337：name 展示面清洗——harness 遗留的「TOUR 冲刺-…」token 名不透出
+        # （纯 token → 按创建日兜底命名）；正常冲刺命名零改写。库值不动。
+        "name": _plan_display_name(plan),
         "type": plan.type.value,
         "description": plan.description,
         # WT334：subject 展示面清洗——评测 harness 遗留的「TOUR科目-…」token
@@ -1396,7 +1410,8 @@ async def generate_tasks_for_plan(
     requested_count = request_body.count if request_body and request_body.count is not None else count
 
     # WT334：任务派生 topic 不吃内部科目 token（纯 token 科目回退计划名）。
-    topic = clean_display_subject(plan.subject) or plan.name
+    # WT337：计划名同为 token 形态时按创建日兜底命名，不再回退到 token 名。
+    topic = clean_display_subject(plan.subject) or _plan_display_name(plan)
     # X-09 · FIX-40 P3-4 收编：直调 tool.execute() 旁路 X-06 安全闸门（权限/
     # 幂等/预算/账本）——改走 ToolExecutor 统一入口。端点是用户显式 REST 动作
     # （点击"为计划生成任务"）= 天然确认语义；幂等键按请求唯一（重复点击是
@@ -1479,7 +1494,8 @@ async def delete_plan(
     try:
         await state_notification_service.notify_plan_deleted(
             user_id=str(current_user.id),
-            plan_name=plan.name,
+            # WT337：通知文案不吃内部 token 名。
+            plan_name=_plan_display_name(plan),
             plan_id=plan_id,
             task_count_freed=task_count_freed,
             memory_count_removed=0,  # Memory cleanup not implemented yet
@@ -1593,12 +1609,16 @@ async def archive_plan_state(
     if quota_status.primary_plan_id:
         new_primary_result = await db.execute(select(Plan.name).where(Plan.id == quota_status.primary_plan_id))
         new_primary_plan_name = new_primary_result.scalar()
+        # WT337：通知文案不吃内部 token 名（标量查询无 created_at，纯 token → None）。
+        if new_primary_plan_name:
+            new_primary_plan_name = clean_display_plan_name(new_primary_plan_name) or None
 
     # Send state change notification
     try:
         await state_notification_service.notify_plan_archived(
             user_id=str(current_user.id),
-            plan_name=plan.name,
+            # WT337：通知文案不吃内部 token 名。
+            plan_name=_plan_display_name(plan),
             plan_id=plan_id,
             task_count_freed=task_count_freed,
             memory_count_removed=memory_count_removed,
@@ -1672,7 +1692,11 @@ async def restore_plan_state(
     # Send state change notification
     try:
         await state_notification_service.notify_plan_restored(
-            user_id=str(current_user.id), plan_name=plan.name, plan_id=plan_id, intervention_level="toast"
+            user_id=str(current_user.id),
+            # WT337：通知文案不吃内部 token 名。
+            plan_name=_plan_display_name(plan),
+            plan_id=plan_id,
+            intervention_level="toast",
         )
     except Exception as e:
         logger.error(f"Failed to send plan_restored notification: {e}")

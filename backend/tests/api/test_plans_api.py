@@ -774,3 +774,215 @@ async def test_plan_galaxy_concept_extraction_drops_tokened_subject_tag():
     clean_plan = SimpleNamespace(name="真题冲刺周", description="冲刺描述", subject="离散数学")
     clean_concepts = await _extract_plan_concepts(clean_plan, None)
     assert clean_concepts[0]["tags"] == ["离散数学"]
+
+
+# ---------------------------------------------------------------------------
+# WT337 · plan name「TOUR 冲刺 {run}」第三形态 token 清洗（wt334 遗留）：
+# feature_tour.py S7 以 f"TOUR 冲刺 {run}" 填计划 name。列表/详情 name 字段、
+# 状态通知文案、任务派生 topic、星图概念节点名等展示面不得透出 token。
+# 纯 token 名按创建日兜底命名「冲刺计划·M月D日」；正常冲刺命名零改写。
+# ---------------------------------------------------------------------------
+
+WT337_EVIDENCE_PLAN_NAME = "TOUR 冲刺 d91d5df0-10-5dc70d"
+WT337_TOKENED_CREATED_AT = datetime(2026, 9, 25, 10, 0, 0)
+WT337_FALLBACK_NAME = "冲刺计划·9月25日"
+
+
+@pytest.mark.asyncio
+async def test_plan_detail_scrubs_internal_token_from_name_surfaces(db_session, plans_client):
+    """存量脏 name（读取面兜底，不改库）：详情/列表 name 走兜底命名，无 token。"""
+    client, state = plans_client
+    user = User(
+        username="wt337_token_name_user",
+        email="wt337_token_name_user@example.com",
+        hashed_password="hashed",
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    plan = Plan(
+        user_id=user.id,
+        name=WT337_EVIDENCE_PLAN_NAME,
+        type=PlanType.SPRINT,
+        description="评测 harness 遗留的 tokened name（存量脏行，读取面兜底）",
+        plan_stage=PlanStage.SPRINT,
+        target_date=date.today() + timedelta(days=5),
+        daily_available_minutes=60,
+        subject="离散数学",
+        is_active=True,
+        priority=PlanPriority.NORMAL,
+    )
+    db_session.add(plan)
+    await db_session.flush()
+    plan.created_at = WT337_TOKENED_CREATED_AT
+    plan.updated_at = WT337_TOKENED_CREATED_AT
+    await db_session.flush()
+    await db_session.commit()
+    state["current_user"] = user
+
+    detail_response = client.get(f"/plans/{plan.id}")
+    assert detail_response.status_code == 200
+    detail = detail_response.json()
+    assert detail["name"] == WT337_FALLBACK_NAME
+    assert "d91d5df0" not in str(detail["name"]) and "TOUR" not in str(detail["name"])
+    assert detail["subject"] == "离散数学", "正常科目不受 name 清洗波及"
+
+    list_response = client.get("/plans")
+    assert list_response.status_code == 200
+    listed = next(item for item in list_response.json()["data"] if item["id"] == str(plan.id))
+    assert listed["name"] == WT337_FALLBACK_NAME
+
+
+@pytest.mark.asyncio
+async def test_plan_detail_normal_sprint_name_zero_rewrite(db_session, plans_client):
+    """正常冲刺命名零改写：「7天冲刺计划」原样透出。"""
+    client, state = plans_client
+    user = User(
+        username="wt337_clean_name_user",
+        email="wt337_clean_name_user@example.com",
+        hashed_password="hashed",
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    plan = Plan(
+        user_id=user.id,
+        name="7天冲刺计划",
+        type=PlanType.SPRINT,
+        description="正常冲刺命名零改写",
+        plan_stage=PlanStage.SPRINT,
+        target_date=date.today() + timedelta(days=5),
+        daily_available_minutes=60,
+        subject="计算机网络",
+        is_active=True,
+        priority=PlanPriority.NORMAL,
+    )
+    db_session.add(plan)
+    await db_session.commit()
+    state["current_user"] = user
+
+    detail_response = client.get(f"/plans/{plan.id}")
+    assert detail_response.status_code == 200
+    assert detail_response.json()["name"] == "7天冲刺计划"
+
+    list_response = client.get("/plans")
+    assert list_response.status_code == 200
+    listed = next(item for item in list_response.json()["data"] if item["id"] == str(plan.id))
+    assert listed["name"] == "7天冲刺计划"
+
+
+@pytest.mark.asyncio
+async def test_plan_archive_notification_scrubs_internal_token_from_name(db_session, plans_client, monkeypatch):
+    """归档通知 toast（「已归档计划：{name}」）不吃内部 token 名。"""
+    client, state = plans_client
+    user = User(
+        username="wt337_archive_user",
+        email="wt337_archive_user@example.com",
+        hashed_password="hashed",
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    plan = Plan(
+        user_id=user.id,
+        name=WT337_EVIDENCE_PLAN_NAME,
+        type=PlanType.GROWTH,
+        description="归档通知文案兜底",
+        plan_stage=PlanStage.REVIEW,
+        target_date=date.today() + timedelta(days=5),
+        daily_available_minutes=60,
+        is_active=True,
+        priority=PlanPriority.NORMAL,
+    )
+    db_session.add(plan)
+    await db_session.flush()
+    plan.created_at = WT337_TOKENED_CREATED_AT
+    plan.updated_at = WT337_TOKENED_CREATED_AT
+    await db_session.flush()
+    await db_session.commit()
+    state["current_user"] = user
+
+    captured: dict = {}
+
+    async def _capture(**kwargs):
+        captured.update(kwargs)
+
+    monkeypatch.setattr("app.api.v1.plans.state_notification_service.notify_plan_archived", _capture)
+
+    response = client.post(f"/plans/{plan.id}/archive")
+    assert response.status_code == 200
+    assert captured, "notify_plan_archived must be called"
+    assert captured.get("plan_name") == WT337_FALLBACK_NAME
+
+
+@pytest.mark.asyncio
+async def test_generate_tasks_topic_scrubs_internal_token_from_name(db_session, plans_client, monkeypatch):
+    """任务派生 topic：subject 与 name 双双为 token 时按创建日兜底命名。"""
+    from types import SimpleNamespace
+
+    client, state = plans_client
+    user = User(
+        username="wt337_topic_user",
+        email="wt337_topic_user@example.com",
+        hashed_password="hashed",
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    plan = Plan(
+        user_id=user.id,
+        name=WT337_EVIDENCE_PLAN_NAME,
+        type=PlanType.SPRINT,
+        description="任务派生 topic 兜底",
+        plan_stage=PlanStage.SPRINT,
+        target_date=date.today() + timedelta(days=5),
+        daily_available_minutes=60,
+        subject="TOUR科目-d91d5df0-10-5dc70d",
+        is_active=True,
+        priority=PlanPriority.NORMAL,
+    )
+    db_session.add(plan)
+    await db_session.flush()
+    plan.created_at = WT337_TOKENED_CREATED_AT
+    plan.updated_at = WT337_TOKENED_CREATED_AT
+    await db_session.flush()
+    await db_session.commit()
+    state["current_user"] = user
+
+    from app.orchestration.executor import ToolExecutor
+
+    captured: dict = {}
+
+    async def _capture(self, **kwargs):
+        captured.update(kwargs)
+        return SimpleNamespace(success=True, data={"tasks": []}, error_message=None)
+
+    monkeypatch.setattr(ToolExecutor, "execute_tool_call", _capture)
+
+    response = client.post(f"/plans/{plan.id}/generate-tasks", json={"count": 3})
+    assert response.status_code == 200
+    assert captured, "ToolExecutor.execute_tool_call must be called"
+    topic = str((captured.get("arguments") or {}).get("topic") or "")
+    assert topic == WT337_FALLBACK_NAME
+    assert "d91d5df0" not in topic and "TOUR" not in topic
+
+
+@pytest.mark.asyncio
+async def test_plan_galaxy_concept_extraction_drops_tokened_name():
+    """生成侧：纯 token 计划名不造「TOUR 冲刺-…」概念节点（也不造兜底名噪声星）。"""
+    from types import SimpleNamespace
+
+    from app.core.celery_app import _extract_plan_galaxy_concepts as _extract_plan_concepts
+
+    tokened = SimpleNamespace(name=WT337_EVIDENCE_PLAN_NAME, description="冲刺描述", subject="离散数学")
+    assert await _extract_plan_concepts(tokened, None) == []
+
+    tokened_with_milestone = SimpleNamespace(name=WT337_EVIDENCE_PLAN_NAME, description="冲刺描述", subject="离散数学")
+    concepts = await _extract_plan_concepts(
+        tokened_with_milestone, {"name": "里程碑A", "description": "描述", "tags": []}
+    )
+    assert [c["name"] for c in concepts] == ["里程碑A"]
+
+    clean = SimpleNamespace(name="真题冲刺周", description="冲刺描述", subject="离散数学")
+    clean_concepts = await _extract_plan_concepts(clean, None)
+    assert clean_concepts[0]["name"] == "真题冲刺周"

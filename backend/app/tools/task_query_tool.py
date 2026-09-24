@@ -18,6 +18,7 @@ from app.models.task import Task
 from app.models.task import TaskStatus as ModelTaskStatus
 from app.models.task_resources import TaskKnowledgeLink, TaskResourceLink, TaskResourceType
 from app.schemas.task import TaskUpdate, coerce_task_type
+from app.services.galaxy.title_sanitizer import clean_display_plan_name, sprint_plan_fallback_name
 from app.services.task_service import TaskService
 
 from .base import BaseTool, ToolCategory, ToolResult
@@ -402,7 +403,10 @@ class GetTaskDetailsTool(BaseTool):
             if task.plan_id:
                 details["plan_id"] = str(task.plan_id)
                 if task.plan:
-                    details["plan_title"] = task.plan.name
+                    # WT337：plan_title 不吃「TOUR 冲刺 {run}」token 名。
+                    details["plan_title"] = clean_display_plan_name(task.plan.name) or sprint_plan_fallback_name(
+                        task.plan.created_at
+                    )
 
             # Include guide content
             if params.include_guide and task.guide_content:
@@ -757,7 +761,8 @@ class QueryAllTasksTool(BaseTool):
 
                     plans_with_tasks.append({
                         "plan_id": str(plan.id),
-                        "plan_title": plan.name,
+                        # WT337：plan_title 不吃「TOUR 冲刺 {run}」token 名。
+                        "plan_title": clean_display_plan_name(plan.name) or sprint_plan_fallback_name(plan.created_at),
                         "plan_type": plan.type.value if plan.type else None,
                         "plan_status": "active" if plan.is_active else "inactive",
                         "task_count": len(task_list),

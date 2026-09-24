@@ -615,13 +615,17 @@ async def _extract_plan_galaxy_concepts(plan, milestone_data: dict | None) -> li
     concepts = []
 
     # Extract from plan name and description
-    if plan.name:
-        from app.services.galaxy.title_sanitizer import clean_display_subject
+    # WT337：概念节点名不吃「TOUR 冲刺 {run}」token 名——纯 token 计划名整条
+    # 概念跳过（兜底命名「冲刺计划·M月D日」的星对用户是噪声，同 wt334 纯 token
+    # 科目跳过 subject 连接的判法）。
+    from app.services.galaxy.title_sanitizer import clean_display_plan_name, clean_display_subject
 
+    plan_name_label = clean_display_plan_name(plan.name)
+    if plan_name_label:
         subject_tag = clean_display_subject(plan.subject)
         concepts.append(
             {
-                "name": plan.name,
+                "name": plan_name_label,
                 "description": plan.description or "",
                 "mastery_delta": 0.2 if milestone_data else 0.1,
                 "tags": [subject_tag] if subject_tag else [],

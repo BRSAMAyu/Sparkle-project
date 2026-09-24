@@ -58,6 +58,9 @@ from app.schemas.galaxy import (
 from app.services.decay_service import DecayService
 from app.services.expansion_service import ExpansionService
 from app.services.galaxy.mastery_evidence import EvidenceObservation, MasteryEvidenceType
+
+# WT337：节点详情 relatedPlans 标题不吃「TOUR 冲刺 {run}」token 名。
+from app.services.galaxy.title_sanitizer import clean_display_plan_name, sprint_plan_fallback_name
 from app.services.galaxy_service import GalaxyService
 from app.services.knowledge_integration_service import KnowledgeIntegrationService
 from app.services.node_sector_service import dominant_sector_from_weights, resolve_sector_weights
@@ -679,7 +682,8 @@ async def get_node_detail(
         "relatedPlans": [
             {
                 "id": str(plan.id),
-                "title": plan.name,
+                # WT337：标题不吃「TOUR 冲刺 {run}」token 名（纯 token → 创建日兜底命名）。
+                "title": clean_display_plan_name(plan.name) or sprint_plan_fallback_name(plan.created_at),
                 "plan_type": plan.type.value if plan.type else "GROWTH",
                 "status": "active" if not plan.deleted_at else "archived",
                 "target_date": None,
