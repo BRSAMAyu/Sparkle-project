@@ -138,11 +138,36 @@ def test_condition_matches_pure_predicate():
 
 
 @pytest.mark.asyncio
-async def test_surface_queries_both_filter_by_ssot_condition():
-    """两消费面的实际 DB 查询必须携带同一 SSOT 条件（today + 状态集）。"""
+async def test_surface_queries_both_filter_by_ssot_condition(monkeypatch):
+    """两消费面的实际 DB 查询必须携带同一 SSOT 条件（today + 状态集）。
+
+    「今天」是两消费面各自时钟源（goal_router 的 ``datetime.now(UTC)`` 与
+    experience_readouts 的 ``_utcnow``）在调用期求值的运行期事实，SSOT 条件
+    本身由 goal_today_view.todays_task_condition 唯一定义。本测试固定两个时
+    钟源后再断言查询参数等于固定日期——保留原断言语义（today 过滤 + 状态
+    集 + 排除软删），同时不依赖墙钟：原版本把运行期参数与硬编码 2026-09-22
+    裸比且无时钟控制，UTC 日期滚过 09-22（2026-09-23 00:00 UTC）后恒红
+    （时间炸弹，wt338 REPORT §二诊断）。
+    """
+    from datetime import UTC
+
+    from app.api.v1 import experience_readouts
     from app.api.v1.experience import goal_router
-    from app.api.v1.experience_readouts import _next_task
     from app.services.goal_today_view import TODAY_ACTIVE_STATUSES
+
+    fixed_now = dt.datetime(2026, 9, 22, 12, 0, 0, tzinfo=UTC)
+
+    class _FrozenDatetime(dt.datetime):
+        """替身：与真实 datetime 同型（.date() 可用），仅 now 固定。"""
+
+        @staticmethod
+        def now(tz=None):  # type: ignore[override]
+            return fixed_now
+
+    monkeypatch.setattr(goal_router, "datetime", _FrozenDatetime)
+    monkeypatch.setattr(
+        experience_readouts, "_utcnow", lambda: fixed_now.replace(tzinfo=None)
+    )
 
     captured: dict[str, object] = {}
 
@@ -161,7 +186,7 @@ async def test_surface_queries_both_filter_by_ssot_condition():
     await goal_router._todays_next_task(db, user_id=db_id, plan_id=plan_id)
     goal_stmt = captured.pop("stmt")
 
-    await _next_task(db, db_id, plan_id=plan_id)
+    await experience_readouts._next_task(db, db_id, plan_id=plan_id)
     readouts_stmt = captured.pop("stmt")
 
     for stmt in (goal_stmt, readouts_stmt):
