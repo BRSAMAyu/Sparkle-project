@@ -487,6 +487,31 @@ func isWebSocketRequest(c *gin.Context) bool {
 	return upgrade == "websocket" && strings.Contains(connection, "upgrade")
 }
 
+// rs256VerifyKey selects the RSA public key for RS256 verification.
+// Rotation routing (WT317): tokens carry a kid header; a kid matching
+// JWT_PREVIOUS_KID verifies against the previous (verify-only) public key,
+// everything else verifies against the active key. An absent or unknown kid
+// falls back to the active key — the signature check remains the authority,
+// so a forged kid gains nothing.
+func rs256VerifyKey(cfg *config.Config, kid interface{}) (interface{}, error) {
+	pubKey, err := cfg.ParseJWTPublicKey()
+	if err != nil {
+		return nil, fmt.Errorf("jwt RS256 public key not available: %w", err)
+	}
+	kidStr, _ := kid.(string)
+	if kidStr == "" || kidStr == cfg.JWTKid || cfg.JWTPreviousKid == "" {
+		return pubKey, nil
+	}
+	if kidStr == cfg.JWTPreviousKid && cfg.JWTPreviousPublicKeyPEM != "" {
+		prevKey, err := cfg.ParseJWTPreviousPublicKey()
+		if err != nil {
+			return nil, fmt.Errorf("jwt RS256 previous public key not available: %w", err)
+		}
+		return prevKey, nil
+	}
+	return pubKey, nil
+}
+
 func validateJWT(cfg *config.Config, rdb *redis.Client, tokenString string) (string, bool, error) {
 	const jwtClockSkew = 30 * time.Second
 
@@ -494,18 +519,20 @@ func validateJWT(cfg *config.Config, rdb *redis.Client, tokenString string) (str
 	// verifies with the public key, while only the auth handler and Python
 	// Engine hold the private signing key — eliminating the shared-secret risk.
 	//
-	// HS256 fallback is accepted during migration and in development;
-	// it will be removed once all issued HS256 tokens have expired.
+	// Dual-verify transition (WT317): HS256 fallback stays open by default so
+	// pre-migration tokens keep working; set JWT_HS256_FALLBACK=false to
+	// tighten verification to RS256-only once every legacy token has expired
+	// (bounded by the refresh-token lifetime). alg is pinned by the explicit
+	// switch below — "none" and every other method are rejected here.
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		switch token.Method.Alg() {
 		case jwt.SigningMethodRS256.Alg():
-			pubKey, err := cfg.ParseJWTPublicKey()
-			if err != nil {
-				return nil, fmt.Errorf("jwt RS256 public key not available: %w", err)
-			}
-			return pubKey, nil
+			return rs256VerifyKey(cfg, token.Header["kid"])
 		case jwt.SigningMethodHS256.Alg():
 			// HS256 fallback for backward compatibility during migration
+			if !cfg.HS256FallbackEnabled() {
+				return nil, fmt.Errorf("jwt HS256 fallback disabled (JWT_HS256_FALLBACK=false)")
+			}
 			if cfg.JWTSecret == "" {
 				return nil, fmt.Errorf("jwt HS256 secret not available")
 			}

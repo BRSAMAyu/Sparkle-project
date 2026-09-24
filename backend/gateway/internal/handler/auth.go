@@ -187,7 +187,7 @@ func (h *AuthHandler) createAccessToken(userID pgtype.UUID, sessionID string) (s
 		signingMethod = jwt.SigningMethodRS256
 	}
 	token := jwt.NewWithClaims(signingMethod, claims)
-	return token.SignedString(signingKey)
+	return h.stampKid(token).SignedString(signingKey)
 }
 
 func (h *AuthHandler) createRefreshToken(userID pgtype.UUID, sessionID string) (string, string, error) {
@@ -226,11 +226,21 @@ func (h *AuthHandler) createRefreshToken(userID pgtype.UUID, sessionID string) (
 		signingMethod = jwt.SigningMethodRS256
 	}
 	token := jwt.NewWithClaims(signingMethod, claims)
-	signed, err := token.SignedString(signingKey)
+	signed, err := h.stampKid(token).SignedString(signingKey)
 	if err != nil {
 		return "", "", err
 	}
 	return signed, jti, nil
+}
+
+// stampKid stamps the active key id into the JOSE header so verifiers can
+// route signatures during key rotation. RS256 tokens only — HS256 legacy
+// tokens carry no kid and are pinned to JWT_SECRET.
+func (h *AuthHandler) stampKid(token *jwt.Token) *jwt.Token {
+	if h.cfg.JWTAlgorithm == "RS256" && h.cfg.JWTKid != "" {
+		token.Header["kid"] = h.cfg.JWTKid
+	}
+	return token
 }
 
 func (h *AuthHandler) uuidToString(id pgtype.UUID) string {

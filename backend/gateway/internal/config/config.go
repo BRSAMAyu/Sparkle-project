@@ -53,6 +53,13 @@ type Config struct {
 	JWTAlgorithm                string  `mapstructure:"JWT_ALGORITHM"`
 	JWTPrivateKeyPEM            string  `mapstructure:"JWT_PRIVATE_KEY"`
 	JWTPublicKeyPEM             string  `mapstructure:"JWT_PUBLIC_KEY"`
+	JWTKid                      string  `mapstructure:"JWT_KID"`
+	JWTPreviousKid              string  `mapstructure:"JWT_PREVIOUS_KID"`
+	JWTPreviousPublicKeyPEM     string  `mapstructure:"JWT_PREVIOUS_PUBLIC_KEY"`
+	JWTPrivateKeyFile           string  `mapstructure:"JWT_PRIVATE_KEY_FILE"`
+	JWTPublicKeyFile            string  `mapstructure:"JWT_PUBLIC_KEY_FILE"`
+	JWTPreviousPublicKeyFile    string  `mapstructure:"JWT_PREVIOUS_PUBLIC_KEY_FILE"`
+	JWTHS256Fallback            *bool   `mapstructure:"JWT_HS256_FALLBACK"`
 	JWTAccessTokenExpireMinutes int     `mapstructure:"JWT_ACCESS_TOKEN_EXPIRE_MINUTES"`
 	JWTRefreshTokenExpireDays   int     `mapstructure:"JWT_REFRESH_TOKEN_EXPIRE_DAYS"`
 	AllowWsQueryToken           bool    `mapstructure:"ALLOW_WS_QUERY_TOKEN"`
@@ -310,6 +317,67 @@ func (c *Config) ParseJWTPublicKey() (*rsa.PublicKey, error) {
 	return rsaKey, nil
 }
 
+// ParseJWTPreviousPublicKey parses the PEM-encoded previous RSA public key
+// kept for verification-only grace during key rotation (kid-routed).
+func (c *Config) ParseJWTPreviousPublicKey() (*rsa.PublicKey, error) {
+	block, _ := pem.Decode([]byte(c.JWTPreviousPublicKeyPEM))
+	if block == nil {
+		return nil, fmt.Errorf("failed to decode PEM block from JWT_PREVIOUS_PUBLIC_KEY")
+	}
+	key, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		// Try PKCS1 as fallback
+		key, err = x509.ParsePKCS1PublicKey(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse RSA public key: %w", err)
+		}
+	}
+	rsaKey, ok := key.(*rsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("JWT_PREVIOUS_PUBLIC_KEY is not an RSA public key")
+	}
+	return rsaKey, nil
+}
+
+// HS256FallbackEnabled reports whether legacy HS256 tokens are still accepted
+// during the RS256 migration. Default (nil pointer, unset env) keeps the
+// dual-verify window open; setting JWT_HS256_FALLBACK=false tightens
+// verification to RS256-only once every pre-migration token has expired
+// (bound by the refresh-token lifetime).
+func (c *Config) HS256FallbackEnabled() bool {
+	return c.JWTHS256Fallback == nil || *c.JWTHS256Fallback
+}
+
+// loadJWTKeyFiles fills the inline JWT PEM fields from *_FILE paths when the
+// inline env form is empty, so deployments can mount keys as files instead of
+// inlining multi-line PEM into the environment. File content must be PEM.
+func (c *Config) loadJWTKeyFiles() error {
+	loads := []struct {
+		path   string
+		field  *string
+		envVar string
+	}{
+		{c.JWTPrivateKeyFile, &c.JWTPrivateKeyPEM, "JWT_PRIVATE_KEY"},
+		{c.JWTPublicKeyFile, &c.JWTPublicKeyPEM, "JWT_PUBLIC_KEY"},
+		{c.JWTPreviousPublicKeyFile, &c.JWTPreviousPublicKeyPEM, "JWT_PREVIOUS_PUBLIC_KEY"},
+	}
+	for _, l := range loads {
+		if l.path == "" {
+			continue
+		}
+		if strings.TrimSpace(*l.field) != "" {
+			log.Printf("WARNING: %s is set but the inline PEM takes precedence; ignoring the file", l.envVar)
+			continue
+		}
+		content, err := os.ReadFile(l.path)
+		if err != nil {
+			return fmt.Errorf("failed to read JWT key file: %w", err)
+		}
+		*l.field = string(content)
+	}
+	return nil
+}
+
 func normalizeDatabaseURL(raw string) string {
 	if raw == "" {
 		return ""
@@ -463,6 +531,13 @@ func Load() *Config {
 		"JWT_ALGORITHM",
 		"JWT_PRIVATE_KEY",
 		"JWT_PUBLIC_KEY",
+		"JWT_KID",
+		"JWT_PREVIOUS_KID",
+		"JWT_PREVIOUS_PUBLIC_KEY",
+		"JWT_PRIVATE_KEY_FILE",
+		"JWT_PUBLIC_KEY_FILE",
+		"JWT_PREVIOUS_PUBLIC_KEY_FILE",
+		"JWT_HS256_FALLBACK",
 		"JWT_ACCESS_TOKEN_EXPIRE_MINUTES",
 		"JWT_REFRESH_TOKEN_EXPIRE_DAYS",
 		"ALLOW_WS_QUERY_TOKEN",
@@ -545,6 +620,9 @@ func Load() *Config {
 	// JWT_SECRET has no default - must be set via environment variable or .env file
 	viper.SetDefault("JWT_ISSUER", "sparkle-gateway")
 	viper.SetDefault("JWT_AUDIENCE", "sparkle-app")
+	// WT317 RS256 migration: dual-verify transition — legacy HS256 tokens stay
+	// accepted until JWT_HS256_FALLBACK=false tightens verification to RS256-only.
+	viper.SetDefault("JWT_HS256_FALLBACK", true)
 	viper.SetDefault("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", 30) // 30 minutes for access token
 	viper.SetDefault("JWT_REFRESH_TOKEN_EXPIRE_DAYS", 7)    // 7 days for refresh token
 	// WSQ-2 (WS-TICKET-DESIGN §2.3/§3.3): ?ticket= gets its own gate,
@@ -672,6 +750,13 @@ func Load() *Config {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
+	// WT317 RS256 migration: materialize PEM fields from *_FILE mounts before
+	// any validation or use. Fatal on unreadable files — a half-loaded key
+	// pair must never reach the signing path.
+	if err := cfg.loadJWTKeyFiles(); err != nil {
+		log.Fatalf("JWT key file loading failed: %v", err)
+	}
+
 	// Set JWT algorithm default (RS256 for production, HS256 for dev backward compat)
 	if cfg.JWTAlgorithm == "" {
 		if cfg.IsDevelopment() {
@@ -703,6 +788,19 @@ func Load() *Config {
 			}
 			if _, err := cfg.ParseJWTPublicKey(); err != nil {
 				log.Fatalf("JWT_PUBLIC_KEY is not a valid PEM-encoded RSA public key: %v", err)
+			}
+			// Rotation grace key (verify-only) must parse when provided; kid is
+			// what routes old tokens to it, so it is required alongside.
+			if cfg.JWTPreviousPublicKeyPEM != "" {
+				if _, err := cfg.ParseJWTPreviousPublicKey(); err != nil {
+					log.Fatalf("JWT_PREVIOUS_PUBLIC_KEY is not a valid PEM-encoded RSA public key: %v", err)
+				}
+				if cfg.JWTPreviousKid == "" {
+					log.Println("WARNING: JWT_PREVIOUS_PUBLIC_KEY is set without JWT_PREVIOUS_KID; rotation grace will never match old tokens")
+				}
+			}
+			if cfg.JWTPreviousKid != "" && cfg.JWTPreviousPublicKeyPEM == "" {
+				log.Println("WARNING: JWT_PREVIOUS_KID is set without JWT_PREVIOUS_PUBLIC_KEY; old-kid tokens fall back to the active key")
 			}
 		} else {
 			if cfg.JWTSecret == "" {
