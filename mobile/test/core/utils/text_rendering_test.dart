@@ -20,6 +20,28 @@ void main() {
     });
   });
 
+  group('autoSpaceCjkLatin', () {
+    test('inserts space between CJK prose and a glued Latin task title', () {
+      expect(
+        autoSpaceCjkLatin('先完成TimedPracticeLoop打破昨日零记录。'),
+        '先完成 TimedPracticeLoop 打破昨日零记录。',
+      );
+    });
+
+    test('spaces digits adjacent to CJK, keeps existing spacing intact', () {
+      expect(
+        autoSpaceCjkLatin('wt324a，距期末还有118天，先复习 3 章。'),
+        'wt324a，距期末还有 118 天，先复习 3 章。',
+      );
+    });
+
+    test('leaves pure ASCII and pure CJK untouched', () {
+      expect(autoSpaceCjkLatin('plain ascii text'), 'plain ascii text');
+      expect(autoSpaceCjkLatin('纯中文句子不加空格'), '纯中文句子不加空格');
+      expect(autoSpaceCjkLatin(''), '');
+    });
+  });
+
   test('sanitizeTextMap sanitizes nested widget payload strings', () {
     final payload = WidgetPayload.fromJson({
       'type': 'task_card',

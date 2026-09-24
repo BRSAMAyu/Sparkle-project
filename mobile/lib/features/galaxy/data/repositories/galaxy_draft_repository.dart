@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
@@ -13,30 +12,26 @@ final galaxyDraftRepositoryProvider = Provider<GalaxyDraftRepository>((ref) {
 });
 
 class GalaxyDraftRepository {
-  GalaxyDraftRepository(this._dio);
+  /// [demoMode] is the ONLY path to canned draft data and must be explicitly
+  /// requested. When omitted it follows the app-wide explicit demo switch
+  /// (which itself defaults to false). There is intentionally no debug-mode
+  /// fallback: empty backend results surface as an empty list and network
+  /// failures surface as exceptions, never as fabricated "OS.pdf" drafts.
+  GalaxyDraftRepository(this._dio, {bool? demoMode})
+      : _demoMode = demoMode ?? DemoDataService.isDemoMode;
 
   final Dio _dio;
+  final bool _demoMode;
 
   Future<List<GalaxyDraftBatch>> listPendingDrafts() async {
-    if (DemoDataService.isDemoMode) {
+    if (_demoMode) {
       return _buildMockBatches();
     }
 
     try {
       final response = await _dio.get<dynamic>(ApiEndpoints.galaxyDrafts);
-      final batches = _parseDraftBatches(response.data);
-      if (batches.isNotEmpty) {
-        return batches;
-      }
-      if (kDebugMode) {
-        return _buildMockBatches();
-      }
-      return const <GalaxyDraftBatch>[];
+      return _parseDraftBatches(response.data);
     } on DioException catch (error) {
-      if (kDebugMode) {
-        debugPrint('Using mock galaxy drafts after API error: $error');
-        return _buildMockBatches();
-      }
       throw Exception(_extractMessage(error));
     }
   }

@@ -60,6 +60,21 @@ void main() {
     expect(find.textContaining('一小步'), findsOneWidget);
   });
 
+  testWidgets('DailyContextLine spaces CJK text around glued Latin titles', (
+    tester,
+  ) async {
+    // WT328 F-10：服务端拼出的句子把拉丁任务名直接粘在中文上。
+    await _pumpWithTheme(
+      tester,
+      const DailyContextLine(
+        text: 'wt324a，距期末还有118天，先完成TimedPracticeLoop打破昨日零记录。',
+      ),
+    );
+
+    expect(find.textContaining('先完成 TimedPracticeLoop 打破'), findsOneWidget);
+    expect(find.textContaining('还有 118 天'), findsOneWidget);
+  });
+
   testWidgets('TodayGrowthStatusCard uses success tone when all done', (
     tester,
   ) async {

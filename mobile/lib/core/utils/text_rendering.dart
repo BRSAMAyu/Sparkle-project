@@ -57,6 +57,42 @@ String? sanitizeNullableDisplayText(dynamic value) {
   return text.isEmpty ? null : text;
 }
 
+bool _isCjkIdeograph(int c) =>
+    (c >= 0x3400 && c <= 0x4DBF) || // Extension A
+    (c >= 0x4E00 && c <= 0x9FFF) || // Unified Ideographs
+    (c >= 0xF900 && c <= 0xFAFF); // Compatibility Ideographs
+
+bool _isLatinLetterOrDigit(int c) =>
+    (c >= 0x30 && c <= 0x39) || // 0-9
+    (c >= 0x41 && c <= 0x5A) || // A-Z
+    (c >= 0x61 && c <= 0x7A); // a-z
+
+/// Inserts a single space between CJK ideographs and Latin letters/digits so
+/// composed display lines (e.g. AI-generated daily context sentences mixing a
+/// task title into Chinese prose) never render jammed like
+/// `先完成TimedPracticeLoop打破昨日零记录`. Runs that already contain a
+/// separating space are left untouched.
+String autoSpaceCjkLatin(String raw) {
+  if (raw.isEmpty) {
+    return raw;
+  }
+  final buf = StringBuffer();
+  var prevWasCjk = false;
+  var prevWasLatin = false;
+  for (var i = 0; i < raw.length; i++) {
+    final c = raw.codeUnitAt(i);
+    final isCjk = _isCjkIdeograph(c);
+    final isLatin = _isLatinLetterOrDigit(c);
+    if ((prevWasCjk && isLatin) || (prevWasLatin && isCjk)) {
+      buf.write(' ');
+    }
+    buf.writeCharCode(c);
+    prevWasCjk = isCjk;
+    prevWasLatin = isLatin;
+  }
+  return buf.toString();
+}
+
 dynamic sanitizeTextPayload(dynamic value) {
   if (value is String) {
     return sanitizeDisplayText(value);
