@@ -68,8 +68,7 @@
     },
     "ratelimit": {
         "exceeded": "请求过于频繁，请稍后再试",
-        "endpoint_exceeded": "该端点请求过于频繁，请稍后再试",
-        "websocket_exceeded": "WebSocket连接过于频繁，请稍后再试"
+        "endpoint_exceeded": "该端点请求过于频繁，请稍后再试"
     },
     "chat_history": {
         "new_conversation": "新对话"

@@ -64,6 +64,7 @@ type Config struct {
 	JWTRefreshTokenExpireDays   int     `mapstructure:"JWT_REFRESH_TOKEN_EXPIRE_DAYS"`
 	AllowWsQueryToken           bool    `mapstructure:"ALLOW_WS_QUERY_TOKEN"`
 	AllowWsQueryTicket          bool    `mapstructure:"ALLOW_WS_QUERY_TICKET"`
+	WsTicketRequired            bool    `mapstructure:"WS_TICKET_REQUIRED"`
 	WSTicketTTLSeconds          int     `mapstructure:"WS_TICKET_TTL_SECONDS"`
 	WSTicketTTLSecondsMax       int     `mapstructure:"WS_TICKET_TTL_SECONDS_MAX"`
 	WSTicketRateRPS             float64 `mapstructure:"WS_TICKET_RATE_RPS"`
@@ -542,6 +543,7 @@ func Load() *Config {
 		"JWT_REFRESH_TOKEN_EXPIRE_DAYS",
 		"ALLOW_WS_QUERY_TOKEN",
 		"ALLOW_WS_QUERY_TICKET",
+		"WS_TICKET_REQUIRED",
 		"WS_TICKET_TTL_SECONDS",
 		"WS_TICKET_TTL_SECONDS_MAX",
 		"WS_TICKET_RATE_RPS",
@@ -631,6 +633,12 @@ func Load() *Config {
 	// long-lived-JWT leak surface of ?token= (which stays on the
 	// production-forbidden ALLOW_WS_QUERY_TOKEN).
 	viper.SetDefault("ALLOW_WS_QUERY_TICKET", true)
+	// WSQ-7 (WS-TICKET-DESIGN §2.5 P5/§3.3): per-entry tightening switch,
+	// default false (observation period). When flipped, WsAuth accepts
+	// tickets only — JWT header / query-token upgrade paths are rejected
+	// outright. Opt-in hardening: flipping kills pre-ticket clients
+	// (design §5-R4), so it stays off until forced-update coverage.
+	viper.SetDefault("WS_TICKET_REQUIRED", false)
 	viper.SetDefault("WS_TICKET_TTL_SECONDS", 120)
 	// WSQ-2 (§2.2/§3.3): single-use ticket TTL ceiling — exceeding it is a
 	// startup Fatal in every environment (the shipped 3600s example
@@ -899,6 +907,13 @@ func Load() *Config {
 
 	if !viper.IsSet("ALLOW_WS_QUERY_TOKEN") {
 		cfg.AllowWsQueryToken = cfg.IsDevelopment()
+	}
+
+	// WSQ-7: make the tightening flip visible in deployment logs — the
+	// switch has the highest blast radius of the WS rollout (old clients
+	// lose WS entirely once on), so operators must see it took effect.
+	if cfg.WsTicketRequired {
+		log.Printf("WS_TICKET_REQUIRED=true: WS auth accepts tickets only; JWT header/query-token upgrade paths are rejected with ws_ticket_required")
 	}
 
 	return &cfg

@@ -45,45 +45,51 @@ func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 			)
 		}
 
-		authHeader := c.GetHeader("Authorization")
-		if authHeader != "" {
-			if strings.HasPrefix(authHeader, "Bearer ") {
-				tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-				userID, isAdmin, err := validateJWT(cfg, rdb, tokenString)
-				if err != nil {
-					zap.L().Warn("[WsAuth] JWT header validation failed", zap.Error(err))
-					metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), "jwt_header", "invalid_token").Inc()
-					abortWithAPIError(c, http.StatusUnauthorized, "invalid_or_expired_token", "Invalid or expired token")
+		// WSQ-7 (WS-TICKET-DESIGN §2.5 P5): WS_TICKET_REQUIRED tightening.
+		// When the switch is on, the two JWT downgrade paths below are
+		// skipped entirely — old credentials are rejected without spending
+		// signature/Redis validation cost — and WsAuth accepts tickets only.
+		if !cfg.WsTicketRequired {
+			authHeader := c.GetHeader("Authorization")
+			if authHeader != "" {
+				if strings.HasPrefix(authHeader, "Bearer ") {
+					tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+					userID, isAdmin, err := validateJWT(cfg, rdb, tokenString)
+					if err != nil {
+						zap.L().Warn("[WsAuth] JWT header validation failed", zap.Error(err))
+						metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), "jwt_header", "invalid_token").Inc()
+						abortWithAPIError(c, http.StatusUnauthorized, "invalid_or_expired_token", "Invalid or expired token")
+						return
+					}
+					zap.L().Debug("[WsAuth] JWT header validation success", zap.String("user_hash", logsafe.UserIDHash(userID)))
+					c.Set("user_id", userID)
+					c.Set("is_admin", isAdmin)
+					c.Set("auth_token", tokenString)
+					c.Set("ws_auth_method", "jwt_header")
+					c.Next()
 					return
 				}
-				zap.L().Debug("[WsAuth] JWT header validation success", zap.String("user_hash", logsafe.UserIDHash(userID)))
-				c.Set("user_id", userID)
-				c.Set("is_admin", isAdmin)
-				c.Set("auth_token", tokenString)
-				c.Set("ws_auth_method", "jwt_header")
-				c.Next()
-				return
 			}
-		}
 
-		// Support JWT token via query param (for clients that can't send custom headers, like Flutter)
-		if cfg.AllowWsQueryToken {
-			if queryToken := c.Query("token"); queryToken != "" {
-				zap.L().Debug("[WsAuth] JWT query validation attempt", zap.Bool("allow_ws_query_token", cfg.AllowWsQueryToken))
-				userID, isAdmin, err := validateJWT(cfg, rdb, queryToken)
-				if err != nil {
-					zap.L().Warn("[WsAuth] JWT query validation failed", zap.Error(err))
-					metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), "jwt_query", "invalid_token").Inc()
-					abortWithAPIError(c, http.StatusUnauthorized, "invalid_or_expired_token", "Invalid or expired token")
+			// Support JWT token via query param (for clients that can't send custom headers, like Flutter)
+			if cfg.AllowWsQueryToken {
+				if queryToken := c.Query("token"); queryToken != "" {
+					zap.L().Debug("[WsAuth] JWT query validation attempt", zap.Bool("allow_ws_query_token", cfg.AllowWsQueryToken))
+					userID, isAdmin, err := validateJWT(cfg, rdb, queryToken)
+					if err != nil {
+						zap.L().Warn("[WsAuth] JWT query validation failed", zap.Error(err))
+						metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), "jwt_query", "invalid_token").Inc()
+						abortWithAPIError(c, http.StatusUnauthorized, "invalid_or_expired_token", "Invalid or expired token")
+						return
+					}
+					zap.L().Debug("[WsAuth] JWT query validation success", zap.String("user_hash", logsafe.UserIDHash(userID)))
+					c.Set("user_id", userID)
+					c.Set("is_admin", isAdmin)
+					c.Set("auth_token", queryToken)
+					c.Set("ws_auth_method", "jwt_query")
+					c.Next()
 					return
 				}
-				zap.L().Debug("[WsAuth] JWT query validation success", zap.String("user_hash", logsafe.UserIDHash(userID)))
-				c.Set("user_id", userID)
-				c.Set("is_admin", isAdmin)
-				c.Set("auth_token", queryToken)
-				c.Set("ws_auth_method", "jwt_query")
-				c.Next()
-				return
 			}
 		}
 
@@ -94,6 +100,22 @@ func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 		// ungated; ?token= remains bound to AllowWsQueryToken.
 		ticket := extractWSTicket(c, cfg.AllowWsQueryTicket)
 		if ticket == "" {
+			if cfg.WsTicketRequired {
+				// WSQ-7: tightened posture — no ticket, no upgrade. Record
+				// which downgrade credential (if any) the rejected client
+				// attempted so the flip can be gated on measured old-client
+				// traffic (design §5-R4 rollout evidence).
+				authMethod := "unknown"
+				if strings.HasPrefix(c.GetHeader("Authorization"), "Bearer ") {
+					authMethod = "jwt_header"
+				} else if c.Query("token") != "" {
+					authMethod = "jwt_query"
+				}
+				metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), authMethod, "ticket_required").Inc()
+				abortWithAPIError(c, http.StatusUnauthorized, "ws_ticket_required",
+					"WebSocket ticket required: obtain one via POST /api/v1/ws/ticket")
+				return
+			}
 			metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), "unknown", "missing_credentials").Inc()
 			abortWithAPIError(c, http.StatusUnauthorized, "authorization_token_required", "Authorization token required")
 			return

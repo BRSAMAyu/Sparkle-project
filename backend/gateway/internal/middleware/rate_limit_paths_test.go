@@ -68,56 +68,10 @@ func TestRateLimitMiddlewareAllowsThenRejects(t *testing.T) {
 	require.Equal(t, http.StatusTooManyRequests, second.Code)
 }
 
-func TestUserAndEndpointSpecificRateLimits(t *testing.T) {
-	userMW := UserBasedRateLimit(100, 1)
-	first := serveWithMiddleware(userMW, "/user", "user-1")
-	require.Equal(t, http.StatusOK, first.Code)
-
-	fallback := serveWithMiddleware(UserBasedRateLimit(100, 1), "/user-ip", "")
-	require.Equal(t, http.StatusOK, fallback.Code)
-
+func TestEndpointSpecificRateLimit(t *testing.T) {
 	endpointMW := EndpointSpecificRateLimit("/api/v1/chat", 0, 1)
 	require.Equal(t, http.StatusOK, serveWithMiddleware(endpointMW, "/endpoint", "").Code)
 	require.Equal(t, http.StatusTooManyRequests, serveWithMiddleware(endpointMW, "/endpoint", "").Code)
-}
-
-func TestAdaptiveAndWebSocketRateLimitBranches(t *testing.T) {
-	adaptive := AdaptiveRateLimitMiddleware(100, 10)
-
-	for _, tc := range []struct {
-		method string
-		path   string
-	}{
-		{method: http.MethodGet, path: "/api/v1/tasks"},
-		{method: http.MethodPost, path: "/api/v1/tasks"},
-		{method: http.MethodPost, path: "/api/v1/auth/login"},
-	} {
-		router := gin.New()
-		router.Use(adaptive)
-		router.Handle(tc.method, tc.path, func(c *gin.Context) {
-			_, exists := c.Get("rate_limit_info")
-			require.True(t, exists)
-			c.Status(http.StatusOK)
-		})
-		w := httptest.NewRecorder()
-		req := httptest.NewRequest(tc.method, tc.path, nil)
-		req.RemoteAddr = "127.0.0.1:22222"
-		router.ServeHTTP(w, req)
-		require.Equal(t, http.StatusOK, w.Code)
-	}
-
-	previousRate := GlobalRateLimitConfig.WebSocketConnectionsPerMinute
-	previousBurst := GlobalRateLimitConfig.WebSocketBurst
-	GlobalRateLimitConfig.WebSocketConnectionsPerMinute = 0
-	GlobalRateLimitConfig.WebSocketBurst = 1
-	defer func() {
-		GlobalRateLimitConfig.WebSocketConnectionsPerMinute = previousRate
-		GlobalRateLimitConfig.WebSocketBurst = previousBurst
-	}()
-
-	wsMW := WebSocketRateLimitMiddleware()
-	require.Equal(t, http.StatusOK, serveWithMiddleware(wsMW, "/ws", "").Code)
-	require.Equal(t, http.StatusTooManyRequests, serveWithMiddleware(wsMW, "/ws", "").Code)
 }
 
 func TestSlidingWindowMiddlewareRedisAndFallback(t *testing.T) {

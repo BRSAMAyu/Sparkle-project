@@ -68,8 +68,7 @@
     },
     "ratelimit": {
         "exceeded": "Too many requests, please try again later",
-        "endpoint_exceeded": "Too many requests to this endpoint, please try again later",
-        "websocket_exceeded": "Too many WebSocket connections, please try again later"
+        "endpoint_exceeded": "Too many requests to this endpoint, please try again later"
     },
     "chat_history": {
         "new_conversation": "New conversation"
