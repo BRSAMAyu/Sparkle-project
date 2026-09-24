@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import weakref
 from collections import Counter
 from typing import Any
 from uuid import uuid4
@@ -16,6 +18,14 @@ from app.services.evidence.unified_evidence import (
 )
 
 logger = logging.getLogger(__name__)
+
+# WT294-P0: update_user_state 是 GET->fuse->SETEX 的跨 await 读改写。同一用户的
+# 并发写入方（chat_signal_collector 每轮信号、task_event_consumer 结局回灌、
+# cognitive API）会在 load_state 与 save_state 之间交错，后写者覆盖前写者，
+# 静默丢失证据（复现：8 路并发丢 7 条）。FusionEngine 在各调用点按次实例化，
+# 实例级锁无效——锁必须模块级、按已解析 user_id 取。WeakValueDictionary 保证
+# 无持锁者且无等待者时条目自动回收（等待中的协程帧持有 Lock 强引用）。
+_user_state_locks: weakref.WeakValueDictionary[str, asyncio.Lock] = weakref.WeakValueDictionary()
 
 
 class FusionEngine:
@@ -474,30 +484,40 @@ class FusionEngine:
         user_id: str,
         evidence_items: list[UnifiedEvidence],
     ) -> BeliefState:
-        global_state = await self.load_state(redis, user_id)
-        global_state = self.fuse_many(global_state, evidence_items)
-        await self.save_state(redis, global_state)
+        # WT294-P0: 同一用户的并发读改写必须串行化，否则跨 await 的
+        # load->fuse->save 会互相覆盖（丢证据）。锁按已解析 user_id 取，
+        # 与 load_state/save_state 的 key 解析保持同一口径。
+        resolved_user_id = str(user_id or self.user_id or "")
+        if not resolved_user_id:
+            raise ValueError("user_id is required to load belief state")
+        state_lock = _user_state_locks.setdefault(resolved_user_id, asyncio.Lock())
+        async with state_lock:
+            global_state = await self.load_state(redis, resolved_user_id)
+            global_state = self.fuse_many(global_state, evidence_items)
+            await self.save_state(redis, global_state)
 
-        scope_level, scope_id = self.scope_from_evidence(evidence_items)
-        if not scope_level or not scope_id:
-            global_state.scope_metadata = {  # type: ignore[attr-defined]
-                "belief_scope_level": "global",
-                "belief_scope_id": None,
+            scope_level, scope_id = self.scope_from_evidence(evidence_items)
+            if not scope_level or not scope_id:
+                global_state.scope_metadata = {  # type: ignore[attr-defined]
+                    "belief_scope_level": "global",
+                    "belief_scope_id": None,
+                    "global_belief_state_id": global_state.state_id,
+                    "scoped_belief_state_id": None,
+                }
+                return global_state
+
+            scoped_state = await self.load_state(
+                redis, resolved_user_id, scope_level=scope_level, scope_id=scope_id
+            )
+            scoped_state = self.fuse_many(scoped_state, evidence_items)
+            await self.save_state(redis, scoped_state, scope_level=scope_level, scope_id=scope_id)
+            scoped_state.scope_metadata = {  # type: ignore[attr-defined]
+                "belief_scope_level": scope_level,
+                "belief_scope_id": scope_id,
                 "global_belief_state_id": global_state.state_id,
-                "scoped_belief_state_id": None,
+                "scoped_belief_state_id": scoped_state.state_id,
             }
-            return global_state
-
-        scoped_state = await self.load_state(redis, user_id, scope_level=scope_level, scope_id=scope_id)
-        scoped_state = self.fuse_many(scoped_state, evidence_items)
-        await self.save_state(redis, scoped_state, scope_level=scope_level, scope_id=scope_id)
-        scoped_state.scope_metadata = {  # type: ignore[attr-defined]
-            "belief_scope_level": scope_level,
-            "belief_scope_id": scope_id,
-            "global_belief_state_id": global_state.state_id,
-            "scoped_belief_state_id": scoped_state.state_id,
-        }
-        return scoped_state
+            return scoped_state
 
     async def append_trace(self, redis: Any, *, user_id: str, trace: dict[str, Any]) -> None:
         key = self.BELIEF_TRACE_KEY.format(user_id=user_id)

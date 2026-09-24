@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -443,3 +444,44 @@ async def test_fusion_engine_diagnoses_unbindable_outcome_event() -> None:
     assert diagnostics["bindable"] is False
     assert diagnostics["best_match_score"] == 0
     assert diagnostics["blockers"] == ["no_trace_id_overlap"]
+
+
+class RacyFakeRedis(FakeRedis):
+    """在 setex 落笔前挂起，拉宽 load->save 读改写窗口以复现并发覆盖。"""
+
+    async def setex(self, key: str, ttl: int, value: str) -> None:
+        await asyncio.sleep(0.01)
+        await super().setex(key, ttl, value)
+
+
+@pytest.mark.asyncio
+async def test_concurrent_update_user_state_serializes_per_user_and_keeps_all_evidence() -> None:
+    """WT294-P0 回归：同用户并发 update_user_state 不丢证据。
+
+    update_user_state 是跨 await 的 GET->fuse->SETEX 读改写；修复前 8 路并发
+    同用户更新只剩最后写者（实测 submitted=8 survived=1）。修复引入模块级
+    per-user asyncio.Lock 串行化读改写——本测试若锁被移除或失效即失败。
+    """
+    redis = RacyFakeRedis()
+    targets = [
+        EvidenceTarget.EMOTIONAL_BLOCK,
+        EvidenceTarget.TASK_AVERSION,
+        EvidenceTarget.COGNITIVE_LOAD,
+        EvidenceTarget.GOAL_CLARITY,
+        EvidenceTarget.EXECUTION_CAPACITY,
+        EvidenceTarget.METACOGNITION_ACCURACY,
+        EvidenceTarget.AI_VERBOSITY_PREFERENCE,
+        EvidenceTarget.DIRECTNESS_PREFERENCE,
+    ]
+    engines = [FusionEngine("u-race") for _ in targets]
+
+    await asyncio.gather(
+        *(
+            engine.update_user_state(redis, user_id="u-race", evidence_items=[_evidence(target=t)])
+            for engine, t in zip(engines, targets, strict=True)
+        )
+    )
+
+    final = BeliefState.model_validate_json(redis.store["aurora:belief_state:v1:u-race"])
+    observed = {v.target.value for v in final.variables.values() if v.evidence_count > 0}
+    assert observed == {t.value for t in targets}
