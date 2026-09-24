@@ -228,6 +228,10 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		// CP-01: exam-sprint 计划人工确认（幂等，Python 侧 PlanService.confirm_plan 承接）
 		plans.POST("/:id/confirm", h.proxyWithHeaders)
 		// route-tier: authed
+		// WT313 comeback replan 执行器：health recommended_action="replan" 的落地端点
+		// （纯透传，语义在 Python 侧 PlanService.update 链：超期重锚 target_date + 回执）
+		plans.POST("/:id/replan", h.proxyWithHeaders)
+		// route-tier: authed
 		plans.POST("/:id/generate-tasks", h.proxyWithHeaders)
 		// route-tier: authed
 		plans.GET("/:id/progress", h.proxyWithHeaders)

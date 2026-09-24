@@ -80,6 +80,11 @@ class PlanDayHighlights(BaseModel):
     day: int = Field(default=1, ge=1, description="Highlighted day number")
     recommendation: str = Field(description="AI coach recommendation for the highlighted day")
     tasks: list[TaskDetail] = Field(default_factory=list, description="Tasks for the highlighted day")
+    # WT313 · comeback 日期感知字段（mobile 消费后续卡接）：
+    # today_day = 由 plan 开始日 + 今天推派生的当天日次；
+    # degraded = 当天无未完成任务、焦点被诚实降级（接上未完成日/呈现完成事实）。
+    today_day: int | None = Field(default=None, ge=1, description="Date-derived current day index from plan start")
+    degraded: bool = Field(default=False, description="True when highlight day was honestly downgraded from today")
 
 
 class PlanDetail(PlanBase):

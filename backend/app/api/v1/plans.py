@@ -9,7 +9,7 @@ Plans API Endpoints - Full CRUD operations
 from __future__ import annotations
 
 import json
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -98,6 +98,13 @@ class PhaseRegenerateScheduleRequest(BaseModel):
     from_date: date | None = None
 
 
+class PlanReplanRequest(BaseModel):
+    """WT313 · comeback replan 执行请求（recommended_action="replan" 的落地入参）。"""
+
+    target_date: date | None = Field(default=None, description="显式重锚终点；缺省由服务端按未完成任务现状推算")
+    note: str | None = Field(default=None, max_length=500, description="重校准备注（进入 last_replan 回执）")
+
+
 class DiscoveryStartRequest(BaseModel):
     initial_message: str = Field(min_length=1, max_length=5000)
 
@@ -176,6 +183,7 @@ def _serialize_plan(
             plan=plan,
             task_payloads=task_payloads,
             user_display_name=user_display_name,
+            tasks=list(tasks),
         )
     return payload
 
@@ -303,12 +311,18 @@ def _stored_day_recommendation(plan: Plan, day: int) -> str:
     return ""
 
 
+def _payload_is_pending(task_payload: dict[str, Any]) -> bool:
+    status_value = _strip(task_payload.get("status")).upper()
+    return status_value not in (TaskStatus.COMPLETED.value, TaskStatus.ABANDONED.value)
+
+
 def _build_day_recommendation(
     *,
     plan: Plan,
     day: int,
     task_payloads: list[dict[str, Any]],
     user_display_name: str | None,
+    mode: str,
 ) -> str:
     stored = _stored_day_recommendation(plan, day)
     display_name = _strip(user_display_name)
@@ -320,9 +334,33 @@ def _build_day_recommendation(
     task_count = max(1, len(task_payloads))
     thing_label = f"这 {task_count} 件事" if task_count > 1 else "这 1 件事"
     subject_tail = f"{_strip(plan.subject)} 的第一步就稳下来了" if _strip(plan.subject) else "你已经走在正确路上了"
+    # WT313 · comeback 重校准：mode 决定文案语义——
+    # - today：派生日有未完成任务，"今天"语义诚实；
+    # - resume：当天任务已完成/缺失，接上第一个未完成日，不冒充"今天"；
+    # - completed：全部完成，呈现完成事实，不做"今天先做"式复用。
+    if mode == "completed":
+        return f"{name_prefix}Day {day} 的任务已全部完成，先给自己一个肯定。"
+    if mode == "resume":
+        return f"{name_prefix}先接上 Day {day} 的{thing_label}，把停下的节奏稳稳接回来。"
     if day == 1:
         return f"{name_prefix}今天先做好{thing_label}，{subject_tail}。"
-    return f"{name_prefix}先看 Day {day} 的{thing_label}，把节奏稳稳接上。"
+    return f"{name_prefix}今天先看 Day {day} 的{thing_label}，把节奏稳稳接上。"
+
+
+def _derived_today_day(plan: Plan, tasks: list[Task], pending_payload_days: list[int]) -> int:
+    """以 plan 开始日 + 今天推「当天」日次（日期感知核心）。
+
+    与 `_today_day_index`（/today 端点用）同源但**不做 max_task_day 截断**：
+    超期回归者按日历真实推到日程之外（如 7 天计划拖到第 9 天），
+    让 `_build_day_highlights` 的降级逻辑接管，而不是把日程最后一天冒充今天。
+    """
+    if plan.target_date is None:
+        # 无终点计划：当天 = 第一个未完成日（与 /today 无终点分支同语义）；
+        # 全部完成时呈现最后一个任务日。
+        return pending_payload_days[0] if pending_payload_days else 1
+    initial_days = _initial_days_for_today(plan, tasks)
+    days_left = max((plan.target_date - date.today()).days, 0)
+    return max(initial_days - days_left + 1, 1)
 
 
 def _build_day_highlights(
@@ -330,6 +368,7 @@ def _build_day_highlights(
     plan: Plan,
     task_payloads: list[dict[str, Any]],
     user_display_name: str | None,
+    tasks: list[Task] | None = None,
 ) -> dict[str, Any] | None:
     if not task_payloads:
         return None
@@ -339,18 +378,35 @@ def _build_day_highlights(
         day = _task_day_from_payload(task_payload)
         day_groups.setdefault(day, []).append(task_payload)
 
-    highlight_day = 1 if day_groups.get(1) else min(day_groups)
+    # WT313 · comeback 重校准：重点日跟着日期走（开始日 + 今天推派生日），
+    # 当天无未完成任务时诚实降级（接上第一个未完成日 / 呈现完成事实），
+    # 不再恒推 Day 1、不冒充"今天"（wt303 J-07 审计的双端陈旧建议根因）。
+    pending_days = sorted(day for day, payloads in day_groups.items() if any(_payload_is_pending(p) for p in payloads))
+    today_day = _derived_today_day(plan, tasks or [], pending_days)
+
+    today_group = day_groups.get(today_day)
+    if today_group is not None and any(_payload_is_pending(p) for p in today_group):
+        highlight_day, mode = today_day, "today"
+    elif pending_days:
+        highlight_day, mode = pending_days[0], "resume"
+    else:
+        highlight_day = today_day if today_day in day_groups else max(day_groups)
+        mode = "completed"
+
     highlight_tasks = sorted(
         day_groups[highlight_day],
         key=lambda task: (int(task.get("order_index") or 0), _strip(task.get("created_at"))),
     )
     return {
         "day": highlight_day,
+        "today_day": today_day,
+        "degraded": mode != "today",
         "recommendation": _build_day_recommendation(
             plan=plan,
             day=highlight_day,
             task_payloads=highlight_tasks,
             user_display_name=user_display_name,
+            mode=mode,
         ),
         "tasks": highlight_tasks,
     }
@@ -1194,6 +1250,124 @@ async def update_plan(
         task_count=task_count,
         completed_task_count=completed_count,
     )
+
+
+def _derive_replan_target(plan: Plan, tasks: list[Task], today: date) -> date:
+    """按现状推算重锚终点：只看未完成任务，不删库重来。
+
+    - 有日结构（跨多日或 day>1）：按未完成日的首尾跨度给天数；
+    - 无日结构（全部落在 Day 1）：按 1 任务/天的诚实默认节奏；
+    - 兜底至少 1 天，封顶 180 天（防脏数据把终点推到天边）。
+    """
+    pending = [
+        task
+        for task in tasks
+        if getattr(task.status, "value", task.status) not in (TaskStatus.COMPLETED.value, TaskStatus.ABANDONED.value)
+    ]
+    pending_days = sorted({_task_day_from_model(task) for task in pending})
+    if pending_days and (len(pending_days) > 1 or pending_days[0] > 1):
+        span = pending_days[-1] - pending_days[0] + 1
+    else:
+        span = len(pending)
+    span = max(1, min(span, 180))
+    return today + timedelta(days=span)
+
+
+# route-tier: authed
+@router.post("/{plan_id:uuid}/replan", response_model=dict[str, Any])
+async def replan_plan(
+    plan_id: UUID = Path(..., description="Plan ID"),
+    request_body: PlanReplanRequest | None = Body(default=None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """WT313 · comeback replan 执行器。
+
+    health `recommended_action:"replan"` 此前只有标签没有执行端点（wt303 审计）。
+    语义 = 基于现状重校准：超期计划把 target_date 重锚到「今天 + 未完成任务跨度」，
+    走 PlanService.update 既有服务链（单次提交 + plan card 投影同步），不新建真源、
+    不删任务、不重建计划；last_replan 回执落 source_metadata 供双端审计。
+    幂等：终点仍有效/无未完成任务/无终点可校准时为无变更 no-op（重复点击不无限续期）。
+    """
+    plan = await PlanService.get_by_id(db=db, plan_id=plan_id, user_id=current_user.id)
+    if not plan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Plan {plan_id} not found")
+
+    today = date.today()
+    previous_target = plan.target_date
+
+    tasks_result = await db.execute(
+        select(Task)
+        .where(and_(Task.plan_id == plan.id, Task.user_id == current_user.id, Task.not_deleted_filter()))
+        .order_by(Task.order_index.asc(), Task.created_at.asc())
+    )
+    tasks = list(tasks_result.scalars().all())
+
+    # 捕获不可变值供 no-op 分支用（plan 变量随后会被 update 重赋值，
+    # mypy 对闭包捕获的重赋值变量不做窄化保真）。
+    plan_id_str = str(plan.id)
+    existing_receipt = (
+        (plan.source_metadata or {}).get("last_replan") if isinstance(plan.source_metadata, dict) else None
+    )
+
+    def _no_op(message: str) -> dict[str, Any]:
+        return {
+            "plan_id": plan_id_str,
+            "replanned": False,
+            "previous_target_date": previous_target.isoformat() if previous_target else None,
+            "new_target_date": previous_target.isoformat() if previous_target else None,
+            "days_shifted": None,
+            "message": message,
+            "target_date": previous_target.isoformat() if previous_target else None,
+            "last_replan": existing_receipt,
+        }
+
+    explicit_target = request_body.target_date if request_body else None
+    if explicit_target is not None:
+        if explicit_target <= today:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="PLAN_TARGET_DATE_MUST_BE_FUTURE",
+            )
+        new_target = explicit_target
+    elif previous_target is None:
+        return _no_op("plan_has_no_target_date")
+    elif previous_target >= today:
+        return _no_op("target_date_still_valid")
+    elif not any(
+        getattr(task.status, "value", task.status) not in (TaskStatus.COMPLETED.value, TaskStatus.ABANDONED.value)
+        for task in tasks
+    ):
+        return _no_op("no_pending_tasks")
+    else:
+        new_target = _derive_replan_target(plan, tasks, today)
+
+    days_shifted = (new_target - previous_target).days if previous_target else None
+
+    # 回执先落 source_metadata，随 PlanService.update 单次提交（投影同步随链路）。
+    metadata = dict(plan.source_metadata or {})
+    metadata["last_replan"] = {
+        "at": _utcnow().isoformat(),
+        "trigger": "api",
+        "previous_target_date": previous_target.isoformat() if previous_target else None,
+        "new_target_date": new_target.isoformat(),
+        "days_shifted": days_shifted,
+        "note": _strip(request_body.note) if request_body else "",
+    }
+    plan.source_metadata = metadata
+
+    plan = await PlanService.update(db=db, db_obj=plan, obj_in=PlanUpdate(target_date=new_target))
+
+    return {
+        "plan_id": str(plan.id),
+        "replanned": True,
+        "previous_target_date": previous_target.isoformat() if previous_target else None,
+        "new_target_date": new_target.isoformat(),
+        "days_shifted": days_shifted,
+        "message": "",
+        "target_date": new_target.isoformat(),
+        "last_replan": (plan.source_metadata or {}).get("last_replan"),
+    }
 
 
 @router.post("/{plan_id:uuid}/generate-tasks", response_model=list[TaskDetail])

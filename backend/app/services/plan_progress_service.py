@@ -1,6 +1,7 @@
 """
 PlanProgressService - Plan health evaluation and progress diagnostics.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -9,11 +10,11 @@ from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.plan import Plan
-from app.models.task import Task
+from app.models.task import Task, TaskStatus
 from app.models.task_feedback import TaskFeedback, TaskFeedbackCategory
 from app.services.plan_state_service import PlanStateService
 
@@ -47,6 +48,10 @@ class PlanProgressService:
     PROGRESS_LAG_WARN = 0.25
     PROGRESS_LAG_CRITICAL = 0.4
     FEEDBACK_COUNT_THRESHOLD = 3
+    # WT313 · comeback「离开」维度：与 mobile plan_staleness.dart 的
+    # kPlanComebackStaleDays = 3 同口径（一个周末+周一 ≈ 离开数日）。
+    # 字段先落地作为服务端真源可选依据，mobile 消费后续卡接。
+    INACTIVITY_STALE_DAYS = 3
 
     def __init__(
         self,
@@ -90,18 +95,15 @@ class PlanProgressService:
 
         summaries = (state.task_summaries or [])[: self.summary_window]
         ratio_samples = self._compute_completion_ratios(summaries)
-        avg_overrun = (
-            round(sum(ratio_samples) / len(ratio_samples), 2) if ratio_samples else None
-        )
+        avg_overrun = round(sum(ratio_samples) / len(ratio_samples), 2) if ratio_samples else None
         overrun_count = sum(1 for ratio in ratio_samples if ratio >= self.OVERRUN_RATIO_WARN)
-        severe_overrun_count = sum(
-            1 for ratio in ratio_samples if ratio >= self.OVERRUN_RATIO_CRITICAL
-        )
+        severe_overrun_count = sum(1 for ratio in ratio_samples if ratio >= self.OVERRUN_RATIO_CRITICAL)
 
         feedback_stats = await self._get_feedback_stats(user_id, plan_id)
 
         plan = await self._get_plan(user_id, plan_id)
         time_progress = self._compute_time_progress(plan)
+        days_since_last_activity = await self._compute_days_since_last_activity(plan)
 
         reasons: list[str] = []
         if overrun_count >= self.OVERRUN_COUNT_WARN:
@@ -114,6 +116,14 @@ class PlanProgressService:
             lag = time_progress - completion_rate
             if lag >= self.PROGRESS_LAG_WARN:
                 reasons.append("progress_lag")
+        # WT313 · comeback「离开」维度：仍有未完成任务的活跃计划停摆超阈值
+        # → 显式 reason（全完成计划走完成流，不判离开）。
+        if (
+            days_since_last_activity is not None
+            and days_since_last_activity >= self.INACTIVITY_STALE_DAYS
+            and completion_rate < 1.0
+        ):
+            reasons.append("days_since_last_activity")
 
         severity = "healthy"
         recommended_action = "none"
@@ -143,6 +153,7 @@ class PlanProgressService:
             "feedback_stats": feedback_stats,
             "time_progress": time_progress,
             "progress_lag": lag,
+            "days_since_last_activity": days_since_last_activity,
         }
         health_score = self._compute_health_score(
             severity=severity,
@@ -264,3 +275,32 @@ class PlanProgressService:
             return None
         elapsed_days = (_utcnow().date() - plan.created_at.date()).days
         return min(1.0, max(0.0, elapsed_days / total_days))
+
+    async def _compute_days_since_last_activity(self, plan: Plan | None) -> int | None:
+        """WT313 · comeback「离开」维度：距最后一次活动信号的整日数。
+
+        活动信号与 mobile PlanStaleness.resolveLastActivityAt 同口径：
+        plan.updated_at 与已完成任务的 updated_at 取最大（plan.updated_at 可能
+        被服务端进度重算噪音提前，取最大只放宽、不收紧——宁可少报离开）。
+        仅对活跃计划计算；归档计划与数据不足时返回 None（可选依据，不硬造数）。
+        """
+        if plan is None or not plan.is_active:
+            return None
+        last_activity = plan.updated_at
+        result = await self.db.execute(
+            select(func.max(Task.updated_at)).where(
+                and_(
+                    Task.plan_id == plan.id,
+                    Task.user_id == plan.user_id,
+                    Task.status == TaskStatus.COMPLETED,
+                )
+            )
+        )
+        latest_completed = result.scalar_one_or_none()
+        if latest_completed is not None and (last_activity is None or latest_completed > last_activity):
+            last_activity = latest_completed
+        if last_activity is None:
+            last_activity = plan.created_at
+        if last_activity is None:
+            return None
+        return max(0, (_utcnow().date() - last_activity.date()).days)
