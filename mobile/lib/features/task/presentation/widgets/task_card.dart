@@ -61,8 +61,10 @@ class _TaskCardState extends ConsumerState<TaskCard> {
 
   List<BoxShadow> _shadows(BuildContext context) => DS.shadowMd;
 
-  double _spacingMd(BuildContext context) =>
-      _sparkleTheme(context)?.spacing.md ?? DS.spacing16;
+  // N43 §3.3 卡内边距两档制：TaskCard 是列表卡，取列表卡档 12
+  // （原走 theme.spacing.md=16；A-SPEC7 卡片家族抽样首验面）。
+  double _cardPadding(BuildContext context) =>
+      _sparkleTheme(context)?.spacing.cardPaddingList ?? DS.cardPaddingList;
 
   Color _surfaceSecondary(BuildContext context) =>
       _sparkleTheme(context)?.colors.surfaceSecondary ??
@@ -313,7 +315,8 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                               ),
                               Expanded(
                                 child: Padding(
-                                  padding: EdgeInsets.all(_spacingMd(context)),
+                                  padding:
+                                      EdgeInsets.all(_cardPadding(context)),
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,

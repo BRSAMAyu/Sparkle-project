@@ -1236,6 +1236,11 @@ class SparkleSpacing {
   final double xxl = 48.0;
   final double xxxl = 64.0;
 
+  // N43 §3.3 卡内边距两档制（A-SPEC7）：列表卡 12 / 内容卡 16。
+  // 与 DS.cardPaddingList/cardPaddingContent 同值双挂，供 theme 侧消费。
+  final double cardPaddingList = 12.0;
+  final double cardPaddingContent = 16.0;
+
   EdgeInsets edge({double? all, double? horizontal, double? vertical}) {
     if (all != null) return EdgeInsets.all(all);
     return EdgeInsets.symmetric(

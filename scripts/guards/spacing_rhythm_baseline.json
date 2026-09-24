@@ -1,0 +1,977 @@
+{
+  "comment": "Frozen ratchet baseline for check_spacing_rhythm_ratchet.py (A-SPEC7 N43 half-step grid erosion registry + §3.3 card-padding two-tier revision; frozen by wt270-ty-cardpadding). Machine scope = spacing tokens 2/6/10/14/18 + bare literals on EdgeInsets lines, mobile/lib. Only lower via --update-baseline after a burn batch lowers counts; never raise.",
+  "files": {
+    "mobile/lib/core/design/components/atoms/semantic_pill.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/core/design/components/molecules/stepper_indicator.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/core/design/design_system.dart": {
+      "spacingHalfStep": 7
+    },
+    "mobile/lib/core/design/widgets/app_feedback.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/core/design/widgets/compact_error_card.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/core/design/widgets/goal_value_chip.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/core/design/widgets/sparkle_confetti.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/core/design/widgets/sparkle_motion_primitives.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/core/design/widgets/universal_share_bottom_sheet.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/core/offline/widgets/stale_snapshot_banner.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/core/services/share_poster_service.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/core/widgets/card_intervention.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/core/widgets/mirofish_stage_header.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/core/widgets/modal_intervention.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/core/widgets/sparkle_markdown.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/core/widgets/toast_intervention.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/achievement/presentation/screens/achievement_detail_screen.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/achievement/presentation/screens/achievement_list_screen.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/achievement/presentation/screens/achievement_map_screen.dart": {
+      "spacingHalfStep": 16
+    },
+    "mobile/lib/features/achievement/presentation/screens/streak_details_screen.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/achievement/presentation/widgets/achievement_card.dart": {
+      "spacingHalfStep": 17
+    },
+    "mobile/lib/features/achievement/presentation/widgets/achievement_progress_card.dart": {
+      "spacingHalfStep": 8
+    },
+    "mobile/lib/features/achievement/presentation/widgets/achievement_stats_panel.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/achievement/presentation/widgets/achievement_unlock_dialog.dart": {
+      "spacingHalfStep": 11
+    },
+    "mobile/lib/features/achievement/presentation/widgets/rarity_badge.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/achievement/presentation/widgets/streak_indicator.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/achievement/presentation/widgets/streak_quality_indicator.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/aurora/presentation/widgets/aurora_calibration_strip.dart": {
+      "spacingHalfStep": 8
+    },
+    "mobile/lib/features/aurora/presentation/widgets/aurora_core_session_sheet.dart": {
+      "spacingHalfStep": 25
+    },
+    "mobile/lib/features/calendar/presentation/screens/calendar_stats_screen.dart": {
+      "spacingHalfStep": 25
+    },
+    "mobile/lib/features/calendar/presentation/screens/daily_detail_screen.dart": {
+      "spacingHalfStep": 8
+    },
+    "mobile/lib/features/calendar/presentation/widgets/agent_stats_dashboard.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/calendar/presentation/widgets/smart_schedule_chip.dart": {
+      "spacingHalfStep": 6
+    },
+    "mobile/lib/features/chat/data/services/message_notification_service.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/chat/presentation/screens/chat_screen.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/chat/presentation/screens/chat_settings_screen.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/chat/presentation/screens/private_chat_screen.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/action_card.dart": {
+      "spacingHalfStep": 34
+    },
+    "mobile/lib/features/chat/presentation/widgets/agent_reasoning_bubble_v2.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/chat/presentation/widgets/agent_team_sheet.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/chat/presentation/widgets/agent_workflow_panel.dart": {
+      "spacingHalfStep": 15
+    },
+    "mobile/lib/features/chat/presentation/widgets/ai_reasoning_mode_pill.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/chat/presentation/widgets/ai_status_indicator.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/chat/presentation/widgets/assistant_citation_strip.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/assistant_message_metadata_tray.dart": {
+      "spacingHalfStep": 10
+    },
+    "mobile/lib/features/chat/presentation/widgets/aurora_calibration_panel.dart": {
+      "spacingHalfStep": 6
+    },
+    "mobile/lib/features/chat/presentation/widgets/aurora_indicator.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/chat/presentation/widgets/aurora_message_group.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/aurora_receipt_chip.dart": {
+      "spacingHalfStep": 8
+    },
+    "mobile/lib/features/chat/presentation/widgets/aurora_status_layer_card.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/chat/presentation/widgets/bottleneck_card.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/chat/presentation/widgets/calibration_receipt_chip.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/chat/presentation/widgets/causal_timeline_panel.dart": {
+      "spacingHalfStep": 6
+    },
+    "mobile/lib/features/chat/presentation/widgets/chat_accessory_pill.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/chat/presentation/widgets/chat_bubble.dart": {
+      "spacingHalfStep": 23
+    },
+    "mobile/lib/features/chat/presentation/widgets/chat_design_language_widgets.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/chat/presentation/widgets/chat_input.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/chat_mode_selector_pill.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/chat_prediction_dock.dart": {
+      "spacingHalfStep": 10
+    },
+    "mobile/lib/features/chat/presentation/widgets/chat_run_phase_indicator.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/chat/presentation/widgets/collaboration_timeline.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/chat/presentation/widgets/collapsible_widget_wrapper.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/chat/presentation/widgets/comeback_banner.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/chat/presentation/widgets/community_chat_input.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/community_insight_card.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/content_review_card.dart": {
+      "spacingHalfStep": 13
+    },
+    "mobile/lib/features/chat/presentation/widgets/contextual_correction_bar.dart": {
+      "spacingHalfStep": 10
+    },
+    "mobile/lib/features/chat/presentation/widgets/divine_moment_card.dart": {
+      "spacingHalfStep": 7
+    },
+    "mobile/lib/features/chat/presentation/widgets/experience_envelope_indicator.dart": {
+      "spacingHalfStep": 10
+    },
+    "mobile/lib/features/chat/presentation/widgets/expert_roundtable_widget.dart": {
+      "spacingHalfStep": 11
+    },
+    "mobile/lib/features/chat/presentation/widgets/file_message_bubble.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/chat/presentation/widgets/goal_arbitration_card.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/chat/presentation/widgets/graph_diagnostic_card.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/chat/presentation/widgets/growth_card.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/chat/presentation/widgets/guidance_mode_toggle.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/intent_analysis_button.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/intent_preview_dialog.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/low_yield_gentle_block_card.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/chat/presentation/widgets/memory_reference_receipt.dart": {
+      "spacingHalfStep": 6
+    },
+    "mobile/lib/features/chat/presentation/widgets/mode_suggestion_card.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/plan_review_card.dart": {
+      "spacingHalfStep": 13
+    },
+    "mobile/lib/features/chat/presentation/widgets/plan_selector_pill.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/chat/presentation/widgets/plan_strategy_card.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/chat/presentation/widgets/profile_front_door_card.dart": {
+      "spacingHalfStep": 14
+    },
+    "mobile/lib/features/chat/presentation/widgets/regeneration_prompt.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/review_appeal_card.dart": {
+      "spacingHalfStep": 8
+    },
+    "mobile/lib/features/chat/presentation/widgets/review_rating_dialog.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/chat/presentation/widgets/source_explanation_card.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/chat/presentation/widgets/spine_receipt_card.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/chat/presentation/widgets/stale_recovery_card.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/chat/presentation/widgets/status_awareness_bar.dart": {
+      "spacingHalfStep": 28
+    },
+    "mobile/lib/features/chat/presentation/widgets/strategy_intervention_card.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/study_materials_sheet.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/chat/presentation/widgets/task_stuck_card.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/chat/presentation/widgets/transparency_floating_capsule.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/chat/presentation/widgets/transparency_panel.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/understanding_drawer.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/chat/presentation/widgets/voice_input_button.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/chat/widgets/agent_status_indicator.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/chat/widgets/quick_reply_chips.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/chat/widgets/typing_text.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/cognitive/presentation/screens/capsule/capsule_detail_screen.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/cognitive/presentation/screens/pattern_list_screen.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/cognitive/presentation/widgets/capsule/capsule_generation_preview.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/cognitive/presentation/widgets/interactive_decay_timeline.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/cognitive/presentation/widgets/prism_behavior_card.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/cognitive/presentation/widgets/strategy_migration_wizard.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/community/presentation/pages/accountability_hub_screen.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/community/presentation/screens/accountability_detail_screen.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/community/presentation/screens/accountability_screen.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/community/presentation/screens/friend_profile_screen.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/community/presentation/screens/group_discover_screen.dart": {
+      "spacingHalfStep": 6
+    },
+    "mobile/lib/features/community/presentation/screens/group_members_screen.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/community/presentation/widgets/accountability_hub/commitment_card.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/community/presentation/widgets/accountability_hub/partner_observation_settings.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/bonfire_widget.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/checkin_interaction.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/community/presentation/widgets/community_strategy_card.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/community_widgets.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/community/presentation/widgets/friends_hub_view.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/community/presentation/widgets/group_chat_bubble.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/community/presentation/widgets/group_knowledge_base_view.dart": {
+      "spacingHalfStep": 7
+    },
+    "mobile/lib/features/community/presentation/widgets/groups_hub_view.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/community/presentation/widgets/share_cards/achievement_share_card.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/community/presentation/widgets/share_cards/learning_report_share_card.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/community/presentation/widgets/shared_resource_card.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/community/presentation/widgets/similar_goal_pursuers_card.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/document/views/document_cleaner_sheet.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/documents/presentation/screens/document_library_screen.dart": {
+      "spacingHalfStep": 46
+    },
+    "mobile/lib/features/error_book/presentation/screens/error_detail_screen.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/error_book/presentation/screens/error_list_screen.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/error_book/presentation/widgets/analysis_card.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/error_book/presentation/widgets/error_card.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/error_book/presentation/widgets/remediable_patterns_card.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/error_book/presentation/widgets/subject_chips.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/experience/presentation/widgets/community_accountability_hub_card.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/experience/presentation/widgets/goal_detail_snapshot_card.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/experience/presentation/widgets/growth_quality_card.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/experience/presentation/widgets/understanding_snapshot_card.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/file/presentation/widgets/file_picker_with_presigned.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/focus/presentation/screens/focus_main_screen.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/focus/presentation/screens/mindfulness_mode_screen.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/focus/presentation/widgets/candidate_action_sheet.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/focus/presentation/widgets/focus_session_summary_dialog.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/focus/presentation/widgets/focus_stats_heatmap.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/galaxy/data/services/galaxy_monitoring_integration.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/galaxy/presentation/screens/galaxy_draft_review_screen.dart": {
+      "spacingHalfStep": 12
+    },
+    "mobile/lib/features/galaxy/presentation/screens/galaxy_screen.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_controls.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_document_upload_overlay.dart": {
+      "spacingHalfStep": 10
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_node_preview_card.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy/galaxy_simulation_settings_sheet.dart": {
+      "spacingHalfStep": 8
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/galaxy_contribution_banner.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/goal_world_graph_mini_panel.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/galaxy/presentation/widgets/node_detail_sheet.dart": {
+      "spacingHalfStep": 23
+    },
+    "mobile/lib/features/goal/presentation/screens/goal_creation_wizard_screen.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/goal/presentation/screens/goal_detail_screen.dart": {
+      "spacingHalfStep": 6
+    },
+    "mobile/lib/features/goal/presentation/widgets/goal_bottleneck_strip.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/goal/presentation/widgets/goal_conflict_dialog.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/goal/presentation/widgets/goal_created_dialog.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/goal/presentation/widgets/intent_confirmation_card.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/goal/presentation/widgets/journey_progress_card.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/goal/presentation/widgets/minimum_criteria_card.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/home/presentation/screens/dashboard_screen.dart": {
+      "spacingHalfStep": 51
+    },
+    "mobile/lib/features/home/presentation/screens/notification_list_screen.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/home/presentation/screens/openclaw_hub_screen.dart": {
+      "spacingHalfStep": 11
+    },
+    "mobile/lib/features/home/presentation/screens/weather_guide_screen.dart": {
+      "spacingHalfStep": 10
+    },
+    "mobile/lib/features/home/presentation/widgets/calendar/compact_task_card.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/home/presentation/widgets/calendar/task_preview_panel.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/home/presentation/widgets/calendar_heatmap_card.dart": {
+      "spacingHalfStep": 7
+    },
+    "mobile/lib/features/home/presentation/widgets/cognitive_tool_hub_card.dart": {
+      "spacingHalfStep": 12
+    },
+    "mobile/lib/features/home/presentation/widgets/collapsible_slot.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/home/presentation/widgets/compact_status_bar.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/home/presentation/widgets/dashboard_card_section.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/home/presentation/widgets/dashboard_curiosity_card.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/home/presentation/widgets/dashboard_edit_sheet.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/home/presentation/widgets/dashboard_section.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/home/presentation/widgets/exam_sprint_dashboard_card.dart": {
+      "spacingHalfStep": 17
+    },
+    "mobile/lib/features/home/presentation/widgets/expanded_toolbar_section.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/focus_card.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/goal_switcher.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/home/presentation/widgets/home_notification_card.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/home/presentation/widgets/insight_hub_card.dart": {
+      "spacingHalfStep": 6
+    },
+    "mobile/lib/features/home/presentation/widgets/intent_prediction_bar.dart": {
+      "spacingHalfStep": 8
+    },
+    "mobile/lib/features/home/presentation/widgets/learning_heatmap_widget.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/home/presentation/widgets/long_term_plan_card.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/metrics_row.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/home/presentation/widgets/multi_agent_bar.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/multi_goal_dashboard_card.dart": {
+      "spacingHalfStep": 7
+    },
+    "mobile/lib/features/home/presentation/widgets/next_action_prompt.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/next_actions_card.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/home/presentation/widgets/openclaw_automation_panel.dart": {
+      "spacingHalfStep": 11
+    },
+    "mobile/lib/features/home/presentation/widgets/openclaw_connection_diagnostics_sheet.dart": {
+      "spacingHalfStep": 9
+    },
+    "mobile/lib/features/home/presentation/widgets/openclaw_hub_card.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/home/presentation/widgets/openclaw_node_management_panel.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/home/presentation/widgets/predicted_intent_card.dart": {
+      "spacingHalfStep": 8
+    },
+    "mobile/lib/features/home/presentation/widgets/recent_insights_card.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/home/presentation/widgets/seed_library_dashboard_card.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/home/presentation/widgets/task_board/interactive_task_card.dart": {
+      "spacingHalfStep": 8
+    },
+    "mobile/lib/features/home/presentation/widgets/task_board/plan_view.dart": {
+      "spacingHalfStep": 15
+    },
+    "mobile/lib/features/home/presentation/widgets/task_board/schedule_view.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/task_board/sprint_view.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/task_board/task_board_card.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/home/presentation/widgets/task_board/task_view_switcher.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/home/presentation/widgets/today_growth_status_card.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/home/presentation/widgets/understanding_panel.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/home/presentation/widgets/unified_omni_bar.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/home/presentation/widgets/weather_presentation.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/insights/presentation/screens/directive_audit_screen.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/insights/presentation/screens/growth_chronicle_screen.dart": {
+      "spacingHalfStep": 9
+    },
+    "mobile/lib/features/insights/presentation/screens/learning_dashboard_screen.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/insights/presentation/screens/learning_insights_overview_screen.dart": {
+      "spacingHalfStep": 7
+    },
+    "mobile/lib/features/insights/presentation/widgets/learning_path_dialog.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/insights/presentation/widgets/model_update_receipt.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/insights/presentation/widgets/return_case_file_card.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/insights/presentation/widgets/weekly_growth_narrative_card.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/knowledge/presentation/screens/knowledge_detail_screen.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/leaderboard/presentation/screens/self_anchor_screen.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/memory/presentation/screens/memory_settings_screen.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/memory/presentation/widgets/evidence_cards.dart": {
+      "spacingHalfStep": 8
+    },
+    "mobile/lib/features/memory/presentation/widgets/evidence_drawer.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/memory/presentation/widgets/memory_evidence_badge.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/notification_center/presentation/screens/notification_analytics_screen.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/notification_center/presentation/widgets/unified_notification_card.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/openclaw/presentation/widgets/openclaw_primitives.dart": {
+      "spacingHalfStep": 10
+    },
+    "mobile/lib/features/plan/presentation/screens/diagnostic_quiz_screen.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/plan/presentation/screens/exam_sprint_setup_screen.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/plan/presentation/screens/growth_screen.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/plan/presentation/screens/learning_portfolio_screen.dart": {
+      "spacingHalfStep": 7
+    },
+    "mobile/lib/features/plan/presentation/screens/plan_create_screen.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart": {
+      "spacingHalfStep": 23
+    },
+    "mobile/lib/features/plan/presentation/screens/sprint_completion_screen.dart": {
+      "spacingHalfStep": 7
+    },
+    "mobile/lib/features/plan/presentation/screens/sprint_review_screen.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/plan/presentation/widgets/plan_card.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/plan/presentation/widgets/plan_context_summary.dart": {
+      "spacingHalfStep": 6
+    },
+    "mobile/lib/features/report/presentation/screens/learning_report_screen.dart": {
+      "spacingHalfStep": 11
+    },
+    "mobile/lib/features/reviews/presentation/screens/review_plan_hub_screen.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/reviews/presentation/widgets/nightly_review_panel.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/seed_library/presentation/screens/seed_library_detail_screen.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/seed_library/presentation/widgets/seed_item_card.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/seed_library/presentation/widgets/seed_library_card.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/settings/presentation/screens/accessibility_settings_screen.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/settings/presentation/screens/data_usage_dashboard_screen.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/settings/presentation/screens/openclaw_settings_screen.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/settings/presentation/widgets/openclaw_connection_panel.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/settings/presentation/widgets/openclaw_execution_preferences_card.dart": {
+      "spacingHalfStep": 7
+    },
+    "mobile/lib/features/settings/presentation/widgets/openclaw_pairing_scanner_sheet.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/settings/presentation/widgets/settings_behavior_explanation.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/shop/presentation/widgets/user_title_widget.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/simulation/presentation/screens/simulation_screen.dart": {
+      "spacingHalfStep": 21
+    },
+    "mobile/lib/features/simulation/presentation/widgets/simulation_chat_bubble.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/task/presentation/screens/task_create_screen.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/task/presentation/screens/task_detail_screen.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/task/presentation/screens/task_execution_screen.dart": {
+      "spacingHalfStep": 6
+    },
+    "mobile/lib/features/task/presentation/screens/task_list_screen.dart": {
+      "spacingHalfStep": 9
+    },
+    "mobile/lib/features/task/presentation/widgets/execution_approval_card.dart": {
+      "spacingHalfStep": 10
+    },
+    "mobile/lib/features/task/presentation/widgets/execution_result_renderer.dart": {
+      "spacingHalfStep": 6
+    },
+    "mobile/lib/features/task/presentation/widgets/execution_status_indicator.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/task/presentation/widgets/execution_template_card.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/task/presentation/widgets/guidance/task_guidance_surface.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/task/presentation/widgets/paused_task_status_panel.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/task/presentation/widgets/quick_tools_panel.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/task/presentation/widgets/source_lifecycle_badge.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/task/presentation/widgets/stuck_help_sheet.dart": {
+      "spacingHalfStep": 6
+    },
+    "mobile/lib/features/task/presentation/widgets/task_card.dart": {
+      "spacingHalfStep": 8
+    },
+    "mobile/lib/features/task/presentation/widgets/task_chat_panel.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/task/presentation/widgets/task_feedback_dialog.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/task/presentation/widgets/task_guide_panel.dart": {
+      "spacingHalfStep": 10
+    },
+    "mobile/lib/features/task/presentation/widgets/task_list_widget.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/task/presentation/widgets/task_offline_indicator.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/task/presentation/widgets/task_protocol_panel.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/task/presentation/widgets/task_quick_action_menu.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/task/presentation/widgets/why_this_today_panel.dart": {
+      "spacingHalfStep": 17
+    },
+    "mobile/lib/features/theater/presentation/screens/knowledge_theater_screen.dart": {
+      "spacingHalfStep": 23
+    },
+    "mobile/lib/features/tools/presentation/screens/tool_library_screen.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/tools/presentation/widgets/breathing_tool.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/tools/presentation/widgets/calculator_tool.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/tools/presentation/widgets/flash_capsule_tool.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/tools/presentation/widgets/focus_timer_tool.dart": {
+      "spacingHalfStep": 6
+    },
+    "mobile/lib/features/tools/presentation/widgets/tool_shell.dart": {
+      "spacingHalfStep": 8
+    },
+    "mobile/lib/features/tools/presentation/widgets/translator_tool.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/tools/presentation/widgets/vocabulary_lookup_tool.dart": {
+      "spacingHalfStep": 9
+    },
+    "mobile/lib/features/tools/presentation/widgets/wordbook_tool.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/translation/presentation/screens/translation_history_screen.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/user/presentation/screens/account_security_screen.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/user/presentation/screens/admin_operations_screen.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/user/presentation/screens/ai_ops_analysis_screen.dart": {
+      "spacingHalfStep": 6
+    },
+    "mobile/lib/features/user/presentation/screens/bgm_library_screen.dart": {
+      "spacingHalfStep": 10
+    },
+    "mobile/lib/features/user/presentation/screens/delete_account_screen.dart": {
+      "spacingHalfStep": 6
+    },
+    "mobile/lib/features/user/presentation/screens/edit_profile_screen.dart": {
+      "spacingHalfStep": 8
+    },
+    "mobile/lib/features/user/presentation/screens/guest_upgrade_screen.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/user/presentation/screens/modeling_chat_screen.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/user/presentation/screens/persona_onboarding_screen.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/user/presentation/screens/poster_studio_screen.dart": {
+      "spacingHalfStep": 13
+    },
+    "mobile/lib/features/user/presentation/screens/profile_screen.dart": {
+      "spacingHalfStep": 9
+    },
+    "mobile/lib/features/user/presentation/screens/profile_transparent_screen.dart": {
+      "spacingHalfStep": 8
+    },
+    "mobile/lib/features/user/presentation/screens/schedule_preferences_screen.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/user/presentation/screens/security_log_screen.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/user/presentation/screens/session_management_screen.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/features/user/presentation/screens/skill_management_screen.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/user/presentation/screens/smart_push_settings_screen.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/user/presentation/screens/social_accounts_screen.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/user/presentation/screens/sync_center_screen.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/user/presentation/screens/system_updates_screen.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/user/presentation/screens/unified_settings_screen.dart": {
+      "spacingHalfStep": 17
+    },
+    "mobile/lib/features/user/presentation/screens/user_persona_screen.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/user/presentation/widgets/avatar_selection_dialog.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/user/presentation/widgets/engagement_state_badge.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/features/user/presentation/widgets/foresight_card.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/user/presentation/widgets/idiographic_summary_card.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/user/presentation/widgets/metacognition_panel_card.dart": {
+      "spacingHalfStep": 5
+    },
+    "mobile/lib/features/user/presentation/widgets/mirror_bar.dart": {
+      "spacingHalfStep": 6
+    },
+    "mobile/lib/features/user/presentation/widgets/redeem_code_dialog.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/user/presentation/widgets/srl_phase_badge_card.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/user/presentation/widgets/statistics_card.dart": {
+      "spacingHalfStep": 1
+    },
+    "mobile/lib/features/user/presentation/widgets/weekly_agenda_grid.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/user/presentation/widgets/working_memory_card.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/visual_elements/presentation/screens/visual_elements_screen.dart": {
+      "spacingHalfStep": 11
+    },
+    "mobile/lib/features/visual_elements/presentation/widgets/visual_element_card.dart": {
+      "spacingHalfStep": 11
+    },
+    "mobile/lib/features/visual_elements/presentation/widgets/visual_element_grid.dart": {
+      "spacingHalfStep": 2
+    },
+    "mobile/lib/features/visual_elements/presentation/widgets/visual_element_preview_dialog.dart": {
+      "spacingHalfStep": 13
+    },
+    "mobile/lib/features/visual_elements/presentation/widgets/visual_element_unlock_dialog.dart": {
+      "spacingHalfStep": 4
+    },
+    "mobile/lib/shared/widgets/action_proposal/action_proposal_card.dart": {
+      "spacingHalfStep": 3
+    },
+    "mobile/lib/shared/widgets/card_picker_sheet.dart": {
+      "spacingHalfStep": 2
+    }
+  }
+}

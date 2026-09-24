@@ -980,6 +980,13 @@ class DS {
   static const double spacing56 = 56.0;
   static const double spacing64 = 64.0;
 
+  // N43 §3.3 卡内边距两档制（A-SPEC7）：列表卡 12 / 内容卡 16。
+  // 卡片家族同屏必须同档；新组件间距只取 4 基栅格档
+  // （4/8/12/16/20/24/32/40/48/64），半格档（2/6/10/14/18）存量登记只降不升
+  // （守卫 SPACING-RHYTHM）。
+  static const double cardPaddingList = 12.0;
+  static const double cardPaddingContent = 16.0;
+
   // Const aliases for backward compatibility
   static const double smConst = 8.0;
 

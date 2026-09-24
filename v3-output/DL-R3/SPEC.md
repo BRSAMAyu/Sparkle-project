@@ -279,7 +279,13 @@ Owner：`SparkleTypography`（`tokens_v2/theme_manager.dart`，符号 `SparkleTy
 
 ### 3.3 密度
 
-- 列表项最小高度 56dp、卡内边距 16dp、屏边距 16dp（现有 SparkleSpacing 阶梯内取值）；信息密度按「每屏 1 主角 + ≤3 支撑」排布（§0.2 必达项 ≤2 的视觉表达）。【依据：I-P1 内容优先；§8 各屏蓝图】
+- 列表项最小高度 56dp、屏边距 16dp（现有 SparkleSpacing 阶梯内取值）；信息密度按「每屏 1 主角 + ≤3 支撑」排布（§0.2 必达项 ≤2 的视觉表达）。【依据：I-P1 内容优先；§8 各屏蓝图】
+- **卡内边距两档制（v1.7 N43 条款内修订 @A-SPEC7；原 v1.0 单向「卡内边距 16dp」就此修订，修订说明保留如下）**：
+  - **列表卡 12dp / 内容卡 16dp**。修订依据：A-SPEC7 实测卡内边距三档并存 10/12/16（SparkleCard 16 / task_card 10 / 错题列表卡 12 / feed 卡 12/16 混排），且 16dp 对 3 行列表卡实测过松——单向条款是三档并存的源头；两档制给列表密度让位，内容卡维持 v1.0 冻结值。
+  - **语义 token**：`cardPaddingList = 12`、`cardPaddingContent = 16`（`DS` 与 `SparkleSpacing` 双挂）；`SparkleCard` 默认内边距维持 16（内容卡档）。首验面（只动验证面，不做全库清洗）：task_card → 12（列表卡档）/ error_list 列表卡 12 保持 / SparkleCard 默认 16 保持。
+  - **新组件 4 基栅格硬条款**：新组件间距必须取 4 基栅格档（4/8/12/16/20/24/32/40/48/64）。
+  - **半格档登记只降不升**：半格档（2/6/10/14/18）存量 **1285** 处=18%（A-SPEC7 台账口径）登记不清洗，由守卫 `SPACING-RHYTHM`（`scripts/guards/check_spacing_rhythm_ratchet.py`，TYPO-RHYTHM 姊妹守卫；基线 JSON 为机器口径唯一事实源）执行棘轮。
+  - **同屏卡片家族必须同档**：同屏并置的卡片家族取同一内边距档（审查口径，登记制）。【依据：§2.2 TY-G4/TY-G5；§2.1b 密度节奏与卡片家族抽样；§3.3 原条款】
 
 ---
 
