@@ -13,31 +13,92 @@ cleanup——「并发测试节点-5c2d9cff」等测试节点永久留存并被�
   不触碰任何既有数据。
 本测试必须连 PostgreSQL（C1 原子 UPDATE 依赖 FOR UPDATE/RETURNING 的
 行锁语义，SQLite 无此保证）。
+
+环境定界（wt342 · 2026-09-25，CI 日志 + 本地独立库实证）：本文件直连应用侧
+``AsyncSessionLocal/engine``（不经过 conftest 的 sqlite ``db_session`` fixture），
+历史上在 worktree/sqlite 环境呈 3F+3E 硬失败假信号（各卡报告归因不一：
+``no such table`` / asyncpg 认证失败 / sqlite 方言）。CI 实况：Backend Tests 的
+DATABASE_URL 指向 live PG（sparkle_test），同会话收集序更早的
+``tests/test_migrations.py`` 先行 ``alembic upgrade head`` 建全 schema
+（run 36015155771 日志 25% 处 test_migrations 全 PASSED 为证），本文件真跑且
+3/3 passed（本地同构独立测试库复现一致）——CI 不会红。现按
+test_db_partitioning / test_document_retrieval_isolation 先例加整模块 skip 门：
+演示库形状 → TEST-DBGUARD 跳过；非 PostgreSQL 方言 → 跳过；PG 探活失败 →
+跳过。CI 路径（postgres 方言 + 可达 + 非演示库名）不受影响。
 """
+
 import asyncio
 from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import text
+from sqlalchemy.engine import make_url
 
+from app.config import settings
 from app.db.session import AsyncSessionLocal, engine
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.user import User
 from app.services.galaxy_service import GalaxyService
+from tests import _dbguard
+
+pytestmark = [pytest.mark.asyncio, pytest.mark.postgres]
 
 TEST_MARKER = "galaxy_concurrency_test"
+
+# === 环境定界门（整模块 skip，先于任何业务建连；判据顺序与 tests/_dbguard.py
+# === 同纪律：演示库 > 方言 > 探活）。任一不满足即跳过，绝不静默硬失败。 ===
+_DATABASE_URL = settings.DATABASE_URL or ""
+if _dbguard.is_demo_db_url(_DATABASE_URL):
+    pytest.skip(
+        "TEST-DBGUARD: 演示库隔离 " + _dbguard.demo_guard_message(_DATABASE_URL, "test_galaxy_concurrency (module)"),
+        allow_module_level=True,
+    )
+try:
+    _backend = make_url(_DATABASE_URL).get_backend_name() if _DATABASE_URL else ""
+except Exception:
+    _backend = ""
+if _backend != "postgresql":
+    pytest.skip(
+        "test_galaxy_concurrency 需要 live PostgreSQL：C1 原子 UPDATE 依赖 "
+        f"FOR UPDATE/RETURNING 行锁语义，SQLite 无此保证（当前 DATABASE_URL "
+        f"后端={_backend or '未配置/不可解析'}）。CI（Backend Tests）的 DATABASE_URL "
+        "指向 sparkle_test 且 test_migrations 先行建表，不受本门影响。",
+        allow_module_level=True,
+    )
+
+
+async def _probe_live_pg() -> None:
+    async with AsyncSessionLocal() as session:
+        await session.execute(text("SELECT 1"))
+
+
+try:
+    asyncio.run(_probe_live_pg())
+except Exception as exc:
+    pytest.skip(
+        "test_galaxy_concurrency 需要 live PostgreSQL 但连接失败："
+        f"{type(exc).__name__}: {exc}。指路：DATABASE_URL 指向约定命名的 "
+        "*_test 库并先行建 schema（CI 内由 tests/test_migrations.py 负责）。",
+        allow_module_level=True,
+    )
 
 
 async def _cleanup(db, *, user_id: UUID, node_id: UUID) -> None:
     """按精确 ID 清除本测试产生的全部行（逆 FK 顺序，不触碰既有数据）。"""
     for stmt, params in (
-        ("DELETE FROM user_node_status WHERE user_id = :user_id AND node_id = :node_id",
-         {"user_id": user_id, "node_id": node_id}),
+        (
+            "DELETE FROM user_node_status WHERE user_id = :user_id AND node_id = :node_id",
+            {"user_id": user_id, "node_id": node_id},
+        ),
         ("DELETE FROM knowledge_nodes WHERE id = :node_id", {"node_id": node_id}),
-        ("DELETE FROM event_outbox WHERE aggregate_type = 'galaxy_node_mastery' AND aggregate_id = :user_id",
-         {"user_id": user_id}),
-        ("DELETE FROM event_sequence_counters WHERE aggregate_type = 'galaxy_node_mastery' AND aggregate_id = :user_id",
-         {"user_id": user_id}),
+        (
+            "DELETE FROM event_outbox WHERE aggregate_type = 'galaxy_node_mastery' AND aggregate_id = :user_id",
+            {"user_id": user_id},
+        ),
+        (
+            "DELETE FROM event_sequence_counters WHERE aggregate_type = 'galaxy_node_mastery' AND aggregate_id = :user_id",
+            {"user_id": user_id},
+        ),
         ("DELETE FROM users WHERE id = :user_id", {"user_id": user_id}),
     ):
         await db.execute(text(stmt), params)
@@ -107,15 +168,11 @@ async def test_concurrent_mastery_update_with_revision(seeded_ids):
                 node_id=node_id,
                 new_mastery=new_score,
                 reason="test",
-                revision=1  # Both expect revision=1
+                revision=1,  # Both expect revision=1
             )
 
     # Run both updates concurrently
-    results = await asyncio.gather(
-        update_mastery(60),
-        update_mastery(70),
-        return_exceptions=True
-    )
+    results = await asyncio.gather(update_mastery(60), update_mastery(70), return_exceptions=True)
 
     # Analyze results
     success_count = 0
@@ -165,11 +222,7 @@ async def test_sequential_mastery_update_with_revision(seeded_ids):
         async with AsyncSessionLocal() as db:
             service = GalaxyService(db)
             result = await service.update_node_mastery(
-                user_id=user_id,
-                node_id=node_id,
-                new_mastery=new_score,
-                reason="test",
-                revision=expected_rev
+                user_id=user_id, node_id=node_id, new_mastery=new_score, reason="test", revision=expected_rev
             )
             assert result.get("success"), f"Update with revision {expected_rev} should succeed"
 
@@ -204,11 +257,7 @@ async def test_stale_revision_rejected(seeded_ids):
     async with AsyncSessionLocal() as db:
         service = GalaxyService(db)
         result = await service.update_node_mastery(
-            user_id=user_id,
-            node_id=node_id,
-            new_mastery=90,
-            reason="test",
-            revision=3  # Stale revision
+            user_id=user_id, node_id=node_id, new_mastery=90, reason="test", revision=3  # Stale revision
         )
 
     assert result.get("success") is False, "Stale update should fail"
