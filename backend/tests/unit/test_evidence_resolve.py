@@ -1,6 +1,6 @@
 from datetime import date
-from uuid import uuid4
 from unittest.mock import AsyncMock, patch
+from uuid import uuid4
 
 import pytest
 from sqlalchemy import select
@@ -10,11 +10,12 @@ from app.models.chat import ChatMessage, MessageRole
 from app.models.error_book import ErrorRecord
 from app.models.memory import EpisodicMemory
 from app.models.nightly_review import NightlyReview
-from app.models.task import Task, TaskType, TaskStatus
+from app.models.task import Task, TaskStatus, TaskType
 from app.models.user import User
 from app.schemas.error_book import ReviewAction, ReviewPerformanceEnum
 from app.schemas.events import EvidenceResolveRequest
 from app.schemas.intervention import EvidenceRef
+from app.services import error_book_mastery_sync_service  # noqa: F401 — patch 目标需显式可导入
 from app.services.error_book_service import ErrorBookService
 
 
