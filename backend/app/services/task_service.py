@@ -1612,6 +1612,18 @@ class TaskService:
         await db.delete(db_obj)
         await db.commit()
 
+        # G-04 残影守卫（best-effort）：任务硬删后星图读面的目标关联
+        # （goal-connected nodes）与任务星关联旧值不得活过缓存 TTL
+        # （view ttl=600 + shield 10s）。已吸收的掌握度与溯源不回滚——
+        # 真实完成过的学习是已发生事实；已删任务的 outcome 再点亮由
+        # absorber 的 GHOST-OUTCOME 守卫阻断。
+        try:
+            from app.services.galaxy.consistency_service import invalidate_galaxy_view_for_user
+
+            await invalidate_galaxy_view_for_user(user_id)
+        except Exception as e:
+            logger.warning(f"Failed to invalidate galaxy view after task deletion: {e}")
+
         if plan_id:
             try:
                 from app.services.plan_service import PlanService

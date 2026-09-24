@@ -1254,8 +1254,32 @@ class ErrorBookService:
         if not error:
             return False
 
+        # G-04：tombstone 前先读关联节点（删除后星图派生面清理的定界集）。
+        linked_node_ids: list[UUID] = []
+        for raw in error.linked_knowledge_node_ids or []:
+            try:
+                linked_node_ids.append(raw if isinstance(raw, UUID) else UUID(str(raw)))
+            except (ValueError, AttributeError):
+                continue
+
         error.is_deleted = True
         await self.db.commit()
+
+        # G-04 派生面一致性（best-effort，不回滚 tombstone）：剪除星图溯源
+        # 残影（node detail 不再引用已删错题）→ 弱点标记重算（学习状态
+        # WEAK 不复活）→ 读面视图缓存失效（recent_error_count/review_signal
+        # 立即新值，不吃 ttl=600）。清理失败只降级，删除恒成功。
+        try:
+            from app.services.galaxy.consistency_service import GalaxyConsistencyService
+
+            cleanup = await GalaxyConsistencyService(self.db).handle_error_deleted(
+                user_id=user_id, error_id=error_id, node_ids=linked_node_ids
+            )
+            logger.info(
+                "error {} deleted: galaxy consistency cleanup {}", error_id, cleanup
+            )
+        except Exception as exc:  # noqa: BLE001 — 派生面清理失败不阻断删除
+            logger.warning("error {} deleted but galaxy cleanup failed: {}", error_id, exc)
         return True
 
     async def submit_review(self, user_id: UUID, error_id: UUID, data: ReviewAction) -> ErrorRecord:

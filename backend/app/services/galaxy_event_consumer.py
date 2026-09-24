@@ -203,6 +203,12 @@ class GalaxyEventConsumer:
                     )
             await db.commit()
 
+        # G-04/70eb9b68 同类缺口收口：本处理器改变了星图读面（新增 error-gap
+        # 节点、弱点标记、邻居边强、溯源行）但从未失效视图缓存——新状态被
+        # ttl=600 吞成分钟级不可见。提交后立即失效（best-effort，消费不因
+        # 缓存面故障失败）。
+        await self._invalidate_read_model(user_uuid)
+
         # P8: Signal-to-Action Spine — mistake detection
         # Iron Rule: GalaxyService mastery is updated separately (ErrorBookMasterySyncService).
         # This call only generates control signals (transfer_failure) for task strategy.
@@ -421,6 +427,10 @@ class GalaxyEventConsumer:
             await evolution.handle_task_completed(event)
             if user_id:
                 await SeedExtractor(db).prewarm_for_scenarios(UUID(str(user_id)))
+        # G-04：投入分钟/邻居边强/弱点标记都已变更——失效读面让完成点击
+        # 即时可见（与 update_mastery/spark/absorption 失效纪律对齐）。
+        if user_id:
+            await self._invalidate_read_model(UUID(str(user_id)))
         logger.info("Processed task.completed graph evolution for task {}", event.get("task_id"))
 
     async def _handle_mastery_updated(self, event: dict):
@@ -430,7 +440,21 @@ class GalaxyEventConsumer:
             await evolution.handle_mastery_updated(event)
             if user_id:
                 await SeedExtractor(db).prewarm_for_scenarios(UUID(str(user_id)))
+        # G-04：本异步处理器在 update_node_mastery 的失效**之后**才改边强/
+        # 弱点标记——若不在此再失效，读面会以旧边强回填并存活到 TTL。
+        if user_id:
+            await self._invalidate_read_model(UUID(str(user_id)))
         logger.info("Processed node_mastery_updated graph evolution for node {}", event.get("node_id"))
+
+    @staticmethod
+    async def _invalidate_read_model(user_id: UUID) -> None:
+        """best-effort 读面失效（NBP-4 canonical 面：Redis 视图键 + shield）。"""
+        try:
+            from app.services.galaxy.consistency_service import invalidate_galaxy_view_for_user
+
+            await invalidate_galaxy_view_for_user(user_id)
+        except Exception as exc:  # noqa: BLE001 — 失效失败不拖垮消费循环
+            logger.debug("galaxy read-model invalidation skipped for user {}: {}", user_id, exc)
 
     async def _handle_simulation_gap_revealed(self, event: dict):
         user_id = event.get("user_id")

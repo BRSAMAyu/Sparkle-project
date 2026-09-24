@@ -375,9 +375,26 @@ class KnowledgeIntegrationService:
         if not user_status:
             raise ValueError(f"User {user_id} doesn't have access to node {node_id}")
 
+        # G-04：删除前收集持有该节点状态的全部用户（节点是全局行，持缓存
+        # 的读面可能不止请求者）——删除后的失效面按这份名单定界。
+        holders_result = await self.db.execute(
+            select(UserNodeStatus.user_id).where(UserNodeStatus.node_id == node_id).distinct()
+        )
+        holder_user_ids = [row[0] for row in holders_result.all()]
+
         # Delete node (cascade will delete user_status)
         await self.db.delete(node)
         await self.db.commit()
+
+        # G-04 残影守卫（best-effort）：被删草稿节点不得在星图读面活过缓存
+        # TTL（view ttl=600 + shield 10s）——提交后立即失效持缓存用户的视图。
+        try:
+            from app.services.galaxy.consistency_service import invalidate_galaxy_view_for_user
+
+            for holder_id in holder_user_ids:
+                await invalidate_galaxy_view_for_user(holder_id)
+        except Exception as exc:  # noqa: BLE001 — 失效失败只降级（退回 TTL 过期）
+            logger.warning("draft node {} deleted but view invalidation failed: {}", node_id, exc)
 
         logger.info(f"🗑️ Deleted draft node: {node.name} (id={node.id})")
 
