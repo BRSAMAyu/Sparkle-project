@@ -107,7 +107,12 @@ jobs:
     timeout-minutes: 20
     needs: lint
     steps:
+      # AT/AX/BJ 族守卫按「changed-files 圈定」防历史误报（origin/HEAD 的
+      # merge-base）；浅克隆拿不到 ref 会回落全量扫描把历史孤儿全翻出来。
+      # 本地行为依赖全量 ref——CI 对齐。
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # gitignored 生成物（backend/app/gen 等）是 AT/AX/AV 族守卫的扫描输入：
       # 本地树有它们所以绿，CI 裸检出会环境性误报——先再生（与 lint job 同形制）。
@@ -544,6 +549,8 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:password@localhost:5432/sparkle_ci
           ENVIRONMENT: development
+          SECRET_KEY: ci-schema-drift-secret-0123456789abcdef
+          JWT_SECRET: ci-schema-drift-jwt-0123456789abcdef
         run: cd backend && alembic upgrade head
 
       - name: Compare Schema Dump
