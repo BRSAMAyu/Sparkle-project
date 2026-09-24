@@ -38,6 +38,7 @@ import 'package:sparkle/features/chat/presentation/widgets/message_detail_view.d
 import 'package:sparkle/features/chat/presentation/widgets/mode_suggestion_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/orchestration_trace_panel.dart';
 import 'package:sparkle/features/chat/presentation/widgets/source_explanation_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/structured_suggestion_body.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_share_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
@@ -1070,24 +1071,55 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                                 MediaQuery.of(context)
                                                     .size
                                                     .height;
+                                            // U-05（CHAT.md「不藏在长段落」）：
+                                            // 助手长建议自带列表结构（编号/
+                                            // 项目符号）且已流式完成时，用
+                                            // 结构化 proposal 行渲染，裸
+                                            // markdown 墙降级为可扫读条目；
+                                            // 其余（用户消息/流式中/无结构）
+                                            // 保持原 markdown 渲染不变。
+                                            // 真正的 action proposal 卡与
+                                            // 确认流仍只由后端载荷触发。
+                                            final useStructuredSuggestion =
+                                                !isUser &&
+                                                    !_isStreamingAssistantBubble &&
+                                                    _content.length > 500 &&
+                                                    StructuredSuggestionBody
+                                                        .hasListStructure(
+                                                      _content,
+                                                    );
                                             final contentWidget =
-                                                SparkleMarkdown(
-                                              content: _content,
-                                              textColor: isUser
-                                                  ? DS.chatBubbleUserText
-                                                  : DS.chatBubbleOtherText,
-                                              codeBackgroundColor: isUser
-                                                  ? DS.chatBubbleUserText
-                                                      .withValues(alpha: 0.12)
-                                                  : DS.surfaceTertiary,
-                                              linkColor: isUser
-                                                  ? DS.chatBubbleUserText
-                                                  : DS.brandPrimary,
-                                              isStreaming:
-                                                  _isStreamingAssistantBubble,
-                                              contentRole: SparkleMarkdownRole
-                                                  .chatBubble,
-                                            );
+                                                useStructuredSuggestion
+                                                    ? StructuredSuggestionBody(
+                                                        content: _content,
+                                                        textColor: DS
+                                                            .chatBubbleOtherText,
+                                                        codeBackgroundColor:
+                                                            DS.surfaceTertiary,
+                                                        linkColor:
+                                                            DS.brandPrimary,
+                                                      )
+                                                    : SparkleMarkdown(
+                                                        content: _content,
+                                                        textColor: isUser
+                                                            ? DS.chatBubbleUserText
+                                                            : DS.chatBubbleOtherText,
+                                                        codeBackgroundColor:
+                                                            isUser
+                                                                ? DS.chatBubbleUserText
+                                                                    .withValues(
+                                                                    alpha: 0.12,
+                                                                  )
+                                                                : DS.surfaceTertiary,
+                                                        linkColor: isUser
+                                                            ? DS.chatBubbleUserText
+                                                            : DS.brandPrimary,
+                                                        isStreaming:
+                                                            _isStreamingAssistantBubble,
+                                                        contentRole:
+                                                            SparkleMarkdownRole
+                                                                .chatBubble,
+                                                      );
 
                                             // Streaming messages are never constrained
                                             if (_isStreamingAssistantBubble) {
@@ -1166,8 +1198,14 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                                                         end: Alignment
                                                                             .bottomCenter,
                                                                         colors: [
-                                                                          if (isUser) DS.chatBubbleUser.withValues(alpha: 0) else DS.chatBubbleOther.withValues(alpha: 0),
-                                                                          if (isUser) DS.chatBubbleUser else DS.chatBubbleOther,
+                                                                          if (isUser)
+                                                                            DS.chatBubbleUser.withValues(alpha: 0)
+                                                                          else
+                                                                            DS.chatBubbleOther.withValues(alpha: 0),
+                                                                          if (isUser)
+                                                                            DS.chatBubbleUser
+                                                                          else
+                                                                            DS.chatBubbleOther,
                                                                         ],
                                                                       ),
                                                                     ),
@@ -1186,9 +1224,13 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                                           child:
                                                               TextButton.icon(
                                                             onPressed: () {
-                                                              unawaited(SensoryFeedbackService.emit(
+                                                              unawaited(
+                                                                SensoryFeedbackService
+                                                                    .emit(
                                                                   SensoryFeedbackEvent
-                                                                      .selection,),);
+                                                                      .selection,
+                                                                ),
+                                                              );
                                                               setState(() {
                                                                 _messageHeightState[
                                                                         messageKey] =
@@ -1204,7 +1246,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                                                     0) {
                                                                   _messageHeightState
                                                                       .remove(
-                                                                          messageKey,);
+                                                                    messageKey,
+                                                                  );
                                                                 }
                                                               });
                                                             },
@@ -1927,10 +1970,30 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     );
     final tokenCounts = <String, int>{};
     final stopWords = <String>{
-      '这个', '那个', '今天', '现在', '学习', '感觉', '然后',
-      '因为', '所以', '如果', '但是',
-      'about', 'there', 'which', 'this', 'that', 'today', 'now',
-      'then', 'because', 'very', 'just', 'really', 'feel',
+      '这个',
+      '那个',
+      '今天',
+      '现在',
+      '学习',
+      '感觉',
+      '然后',
+      '因为',
+      '所以',
+      '如果',
+      '但是',
+      'about',
+      'there',
+      'which',
+      'this',
+      'that',
+      'today',
+      'now',
+      'then',
+      'because',
+      'very',
+      'just',
+      'really',
+      'feel',
     };
     for (final match in RegExp(r'[\u4e00-\u9fff]{2,6}|[A-Za-z]{4,}')
         .allMatches(normalized)) {
@@ -2596,9 +2659,9 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
 
     if (msg.isSending) {
       return LoadingIndicator.circular(
-          size: 12,
-          strokeWidth: 1,
-          liveRegion: false,
+        size: 12,
+        strokeWidth: 1,
+        liveRegion: false,
       );
     }
     if (msg.hasError) {
@@ -2912,7 +2975,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       );
     } catch (e) {
       if (!mounted) return;
-      AppFeedback.error(context, context.l10n.chatConfirmFailed(UserFacingError.from(e)));
+      AppFeedback.error(
+        context,
+        context.l10n.chatConfirmFailed(UserFacingError.from(e)),
+      );
       rethrow;
     }
   }
@@ -3189,10 +3255,10 @@ class _DeliveryBadge extends StatelessWidget {
           children: [
             if (showSpinner)
               LoadingIndicator.circular(
-                  size: 12,
-                  strokeWidth: 1.6,
-                  color: color,
-                  liveRegion: false,
+                size: 12,
+                strokeWidth: 1.6,
+                color: color,
+                liveRegion: false,
               )
             else if (icon != null)
               Icon(icon, size: 13, color: color),
@@ -3282,7 +3348,7 @@ class _InsightLinkCard extends StatelessWidget {
               ),
         ),
         actions: [
-                    SparkleButton(
+          SparkleButton(
             label: context.l10n.chatPromptPreviewCancel,
             variant: ButtonVariant.text,
             size: ButtonSize.small,
@@ -3290,14 +3356,14 @@ class _InsightLinkCard extends StatelessWidget {
             minHeight: 40,
             onPressed: () => Navigator.of(dialogContext).pop(),
           ),
-                    SparkleButton(
+          SparkleButton(
             label: context.l10n.chatPromptPreviewSend,
             minWidth: 64,
             minHeight: 40,
             onPressed: () {
- Navigator.of(dialogContext).pop();
- action.onTap?.call();
- },
+              Navigator.of(dialogContext).pop();
+              action.onTap?.call();
+            },
           ),
         ],
       ),

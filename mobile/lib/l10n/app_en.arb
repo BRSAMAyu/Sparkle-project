@@ -17862,6 +17862,19 @@
     "@goalDetailOpenCommunity": {},
     "goalDetailNoSources": "No related sources yet.",
     "@goalDetailNoSources": {},
+    "goalDetailMilestone": "Current milestone",
+    "@goalDetailMilestone": {},
+    "goalDetailReplan": "Replan",
+    "@goalDetailReplan": {},
+    "goalDetailReplanPrompt": "I want to replan the direction and path of my goal \"{goal}\", help me evaluate the current route and suggest adjustments.",
+    "@goalDetailReplanPrompt": {
+        "type": "text",
+        "placeholders": {
+            "goal": {
+                "type": "String"
+            }
+        }
+    },
     "goalDetailRefresh": "Refresh goal detail",
     "@goalDetailRefresh": {},
     "goalDetailLoadFailed": "Goal detail failed to load",

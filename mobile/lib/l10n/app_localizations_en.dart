@@ -444,28 +444,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planCreateAction => 'Create Plan';
 
   @override
-  String planComebackExpiredBasis(Object date) {
-    return 'It was due $date. A gap doesn\'t reset your progress - recalibrate the finish line and pick up from there.';
-  }
-
-  @override
-  String planComebackExpiredTitle(Object days) {
-    return 'Plan expired $days days ago';
-  }
-
-  @override
-  String get planComebackRecalibrate => 'Recalibrate plan';
-
-  @override
-  String get planComebackStalledBasis =>
-      'The plan is paused right where you left it. Recalibrate the pace, or resume from the breakpoint.';
-
-  @override
-  String planComebackStalledTitle(Object days) {
-    return 'Away for $days days';
-  }
-
-  @override
   String get featureComingSoon => 'Exciting features are coming soon';
 
   @override
@@ -9948,6 +9926,28 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get planDetailDefaultRecommendation =>
       'No new content today. Just review high-frequency topics, revisit past mistakes, and do a 30-min mini simulation.';
+
+  @override
+  String planComebackExpiredBasis(Object date) {
+    return 'It was due $date. A gap doesn\'t reset your progress - recalibrate the finish line and pick up from there.';
+  }
+
+  @override
+  String planComebackExpiredTitle(Object days) {
+    return 'Plan expired $days days ago';
+  }
+
+  @override
+  String get planComebackRecalibrate => 'Recalibrate plan';
+
+  @override
+  String get planComebackStalledBasis =>
+      'The plan is paused right where you left it. Recalibrate the pace, or resume from the breakpoint.';
+
+  @override
+  String planComebackStalledTitle(Object days) {
+    return 'Away for $days days';
+  }
 
   @override
   String get planDetailEdit => 'Edit Plan';
@@ -39086,6 +39086,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get goalDetailNoSources => 'No related sources yet.';
+
+  @override
+  String get goalDetailMilestone => 'Current milestone';
+
+  @override
+  String get goalDetailReplan => 'Replan';
+
+  @override
+  String goalDetailReplanPrompt(String goal) {
+    return 'I want to replan the direction and path of my goal \"$goal\", help me evaluate the current route and suggest adjustments.';
+  }
 
   @override
   String get goalDetailRefresh => 'Refresh goal detail';

@@ -59,8 +59,13 @@ class GoalDetailScreen extends ConsumerWidget {
               final data = state.valueOrNull;
               if (data == null) return;
               unawaited(
-  _showEditDialog(
-                    context, ref, goalId, data.goal.title, data.goal.goalType,),
+                _showEditDialog(
+                  context,
+                  ref,
+                  goalId,
+                  data.goal.title,
+                  data.goal.goalType,
+                ),
               );
             },
           ),
@@ -84,6 +89,11 @@ class GoalDetailScreen extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
                 children: [
                   _GoalHeader(data: data),
+                  const SizedBox(height: DS.spacing16),
+                  // U-05（GOAL.md：desired outcome/deadline → 当前 milestone →
+                  // active action → …）：当前里程碑从 _PlanHealthBand 的角标
+                  // 提级为紧跟 header 的独立条，desired outcome 下一眼可见。
+                  _MilestoneStrip(data: data),
                   JourneyProgressFutureCard(goalId: goalId),
                   if (data.strategyBelief != null) ...[
                     const SizedBox(height: 14),
@@ -125,7 +135,10 @@ class GoalDetailScreen extends ConsumerWidget {
                   const SizedBox(height: DS.spacing20),
                   GoalBottleneckStrip(items: data.knowledgeBottlenecks),
                   const SizedBox(height: DS.spacing20),
-                  _TodayStepCard(goalId: goalId, step: data.todaysMinimalNextStep),
+                  _TodayStepCard(
+                    goalId: goalId,
+                    step: data.todaysMinimalNextStep,
+                  ),
                   const SizedBox(height: 14),
                   _PlanHealthBand(goalId: goalId, data: data),
                   const SizedBox(height: 14),
@@ -134,21 +147,28 @@ class GoalDetailScreen extends ConsumerWidget {
                   _RelatedSourcesCard(sources: data.relatedSources),
                   const SizedBox(height: 14),
                   SimilarGoalPursuersCard(goalId: goalId),
+                  // U-05（GOAL.md 屏面契约收尾两项）：`重新规划` / `我卡住了`。
+                  // 重新规划 → 有活跃计划时直达计划详情（J-07 staleness 重校准
+                  // 落点在此，不另建重算通道）；无活跃计划 → 携目标上下文进
+                  // growth chat。我卡住了 → 复用 J-05 统一恢复旅程的 home 落点
+                  // 同款 prompt/chat_mode 约定（todayCockpitStuckPrompt），文案
+                  // 与首页 cockpit 完全一致。
+                  _GoalRecoveryActions(goalTitle: data.goal.title),
                 ],
               ),
             ),
             loading: () => const _GoalDetailSkeleton(),
             error: (_, __) => _ErrorState(
-              onRetry: () => ref.read(goalDetailProvider(goalId).notifier).load(),
+              onRetry: () =>
+                  ref.read(goalDetailProvider(goalId).notifier).load(),
             ),
           ),
           if (celebration != null)
             Positioned.fill(
               child: GoalStepCompletionCelebration(
                 celebration: celebration,
-                onContinue: () => ref
-                    .read(goalStepCelebrationProvider.notifier)
-                    .state = null,
+                onContinue: () =>
+                    ref.read(goalStepCelebrationProvider.notifier).state = null,
               ),
             ),
         ],
@@ -226,12 +246,12 @@ class _GoalHeader extends StatelessWidget {
                         style: textTheme.labelLarge?.copyWith(
                           color: DS.textPrimary,
                           fontWeight: FontWeight.w700,
-                    ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-            ),
             ),
             const SizedBox(width: DS.spacing16),
             Expanded(
@@ -253,8 +273,8 @@ class _GoalHeader extends StatelessWidget {
                       _InfoChip(
                         icon: Icons.flag_outlined,
                         // S2 例3：状态枚举经词典人话化，禁「active」直出。
-                        label:
-                            goalStatusLabel(l10n, data.goal.status) ?? data.goal.status,
+                        label: goalStatusLabel(l10n, data.goal.status) ??
+                            data.goal.status,
                         semanticsLabel:
                             '${l10n.goalDetailStatus}: ${goalStatusLabel(l10n, data.goal.status) ?? data.goal.status}',
                       ),
@@ -304,8 +324,12 @@ class _GoalHeader extends StatelessWidget {
     }
 
     final parsed = DateTime.tryParse(targetDate);
-    final isOverdue =
-        parsed != null && parsed.isBefore(DateTime.now().add(const Duration(days: 1)).copyWith(hour: 0, minute: 0, second: 0));
+    final isOverdue = parsed != null &&
+        parsed.isBefore(
+          DateTime.now()
+              .add(const Duration(days: 1))
+              .copyWith(hour: 0, minute: 0, second: 0),
+        );
 
     if (!isOverdue) {
       return _InfoChip(
@@ -325,6 +349,159 @@ class _GoalHeader extends StatelessWidget {
         icon: Icons.warning_amber_rounded,
         dense: true,
       ),
+    );
+  }
+}
+
+/// U-05：当前里程碑条——GOAL.md「当前 milestone」的第一屏位。
+/// 数据全部来自既有 GoalDetailData（currentPhase + planHealth.phaseHealth），
+/// 不新增真源；progress < 0 视为后端未给，进度条退化为纯文本。
+class _MilestoneStrip extends StatelessWidget {
+  const _MilestoneStrip({required this.data});
+
+  final GoalDetailData data;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final textTheme = Theme.of(context).textTheme;
+    final phaseProgress = data.currentPhase.progress;
+
+    return Semantics(
+      container: true,
+      label: l10n.goalDetailMilestone,
+      child: Container(
+        key: const ValueKey('goal-detail-milestone-strip'),
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          color: DS.brandPrimary.withValues(alpha: 0.06),
+          borderRadius: DS.borderRadius12,
+          border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.16)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.track_changes_rounded,
+                  size: 18,
+                  color: DS.brandPrimary,
+                ),
+                const SizedBox(width: DS.spacing8),
+                Expanded(
+                  child: Text(
+                    l10n.goalDetailMilestone,
+                    style: textTheme.labelMedium?.copyWith(
+                      color: DS.textSecondary,
+                      fontWeight: DS.fontWeightBold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.spacing8),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    // 后端未给 phase 名时（_asString 缺省 ''）以占位符示空，
+                    // 不借其他条目文案冒充。
+                    data.currentPhase.name.isEmpty
+                        ? '—'
+                        : data.currentPhase.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.titleSmall?.copyWith(
+                      color: DS.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${(data.planHealth.phaseHealth * 100).round()}%',
+                  style: textTheme.labelLarge?.copyWith(
+                    color: DS.brandPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.spacing8),
+            // U-01 Step 3：确定性进度条走 owner LoadingIndicator。
+            // （_asRatio 缺省 0，无需负值守卫。）
+            LoadingIndicator.linear(
+              value: phaseProgress.clamp(0.0, 1.0),
+              size: 5,
+              liveRegion: false,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// U-05：GOAL.md 屏面契约的收尾两项——`重新规划` / `我卡住了`。
+class _GoalRecoveryActions extends ConsumerWidget {
+  const _GoalRecoveryActions({required this.goalTitle});
+
+  final String goalTitle;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final activePlanId = ref.watch(activePlanProvider);
+
+    return Row(
+      children: [
+        Expanded(
+          child: SparkleButton(
+            key: const ValueKey('goal-detail-replan-action'),
+            label: l10n.goalDetailReplan,
+            icon: const Icon(Icons.route_rounded),
+            variant: ButtonVariant.secondary,
+            onPressed: () {
+              final planId = activePlanId;
+              if (planId != null && planId.isNotEmpty) {
+                // 计划详情页已有 J-07 staleness 横幅 + 一键重校准（PlanUpdate），
+                // 直接复用该权威通道，不另起重算入口。
+                unawaited(context.push('/plans/$planId'));
+                return;
+              }
+              context.go(
+                Uri(
+                  path: '/chat',
+                  queryParameters: {
+                    'prompt': l10n.goalDetailReplanPrompt(goalTitle),
+                    'chat_mode': 'growth',
+                  },
+                ).toString(),
+              );
+            },
+          ),
+        ),
+        const SizedBox(width: DS.spacing12),
+        Expanded(
+          child: SparkleButton.ghost(
+            key: const ValueKey('goal-detail-stuck-action'),
+            label: l10n.todayCockpitStuckButton,
+            icon: const Icon(Icons.help_outline_rounded),
+            onPressed: () => context.go(
+              Uri(
+                path: '/chat',
+                queryParameters: {
+                  'prompt': l10n.todayCockpitStuckPrompt(
+                    goalTitle,
+                    l10n.todayCockpitStallReasonGeneric,
+                  ),
+                  'chat_mode': 'growth',
+                },
+              ).toString(),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -736,14 +913,14 @@ class _InfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
-      label: semanticsLabel == null ? label : '$semanticsLabel: $label',
-      child: SemanticPill(
-        label: label,
-        tone: tone,
-        icon: icon,
-        selected: emphasized,
-      ),
-    );
+        label: semanticsLabel == null ? label : '$semanticsLabel: $label',
+        child: SemanticPill(
+          label: label,
+          tone: tone,
+          icon: icon,
+          selected: emphasized,
+        ),
+      );
 }
 
 class _ErrorState extends StatelessWidget {
@@ -918,14 +1095,14 @@ Future<void> _showEditDialog(
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
-            child:             SparkleButton(
+            child: SparkleButton(
               label: l10n.goalDetailEditSave,
               minWidth: 64,
               minHeight: 40,
               onPressed: () => Navigator.of(ctx).pop({
- 'title': titleController.text.trim(),
- 'description': descriptionController.text.trim(),
- }),
+                'title': titleController.text.trim(),
+                'description': descriptionController.text.trim(),
+              }),
               expand: true,
             ),
           ),

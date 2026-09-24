@@ -117,7 +117,7 @@ Future<String?> showAuroraFreeformCorrectionInputDialog(BuildContext context) {
           },
         ),
         actions: [
-                    SparkleButton(
+          SparkleButton(
             label: l10n.homeAuroraDialogCancel,
             variant: ButtonVariant.text,
             size: ButtonSize.small,
@@ -125,7 +125,7 @@ Future<String?> showAuroraFreeformCorrectionInputDialog(BuildContext context) {
             minHeight: 40,
             onPressed: () => Navigator.of(ctx).pop(),
           ),
-                    SparkleButton(
+          SparkleButton(
             label: l10n.homeAuroraDialogSend,
             minWidth: 64,
             minHeight: 40,
@@ -630,9 +630,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           title: l10n.dashboardSlotTaskBoard,
           icon: Icons.checklist_rounded,
           summary: total > 0
-              ? l10n.dashboardSlotTaskBoardDone(done, total, done == total
-                  ? l10n.dashboardSlotTaskBoardGoalHit
-                  : l10n.dashboardSlotTaskBoardToGo(total - done),)
+              ? l10n.dashboardSlotTaskBoardDone(
+                  done,
+                  total,
+                  done == total
+                      ? l10n.dashboardSlotTaskBoardGoalHit
+                      : l10n.dashboardSlotTaskBoardToGo(total - done),
+                )
               : l10n.dashboardSlotTaskBoardEmpty,
           accent: DS.success,
         );
@@ -641,7 +645,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           return _SlotMeta(
             title: l10n.dashboardSlotExamSprint,
             icon: Icons.local_fire_department_outlined,
-            summary: l10n.dashboardSlotExamSprintActive(examSprintDashboard.subject, examSprintDashboard.daysLeft),
+            summary: l10n.dashboardSlotExamSprintActive(
+              examSprintDashboard.subject,
+              examSprintDashboard.daysLeft,
+            ),
             accent: DS.warning,
           );
         }
@@ -781,56 +788,57 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     required String body,
     required String actionLabel,
     required VoidCallback onAction,
-  }) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
-      child: DashboardSectionShell(
-        tone: DashboardSurfaceTone.summary,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: accent.withValues(alpha: 0.18),
+  }) =>
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+        child: DashboardSectionShell(
+          tone: DashboardSurfaceTone.summary,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: accent.withValues(alpha: 0.18),
+                      ),
+                    ),
+                    child: Icon(icon, size: 16, color: accent),
+                  ),
+                  const SizedBox(width: DS.spacing10),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: DS.titleMedium.copyWith(
+                        color: DS.textPrimary,
+                        fontWeight: DS.fontWeightSemiBold,
+                      ),
                     ),
                   ),
-                  child: Icon(icon, size: 16, color: accent),
-                ),
-                const SizedBox(width: DS.spacing10),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: DS.titleMedium.copyWith(
-                      color: DS.textPrimary,
-                      fontWeight: DS.fontWeightSemiBold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: DS.spacing8),
-            Text(
-              body,
-              style: DS.bodySmall.copyWith(color: DS.textSecondary),
-            ),
-            const SizedBox(height: DS.spacing12),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: SparkleButton.ghost(
-                label: actionLabel,
-                onPressed: onAction,
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: DS.spacing8),
+              Text(
+                body,
+                style: DS.bodySmall.copyWith(color: DS.textSecondary),
+              ),
+              const SizedBox(height: DS.spacing12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: SparkleButton.ghost(
+                  label: actionLabel,
+                  onPressed: onAction,
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
 
   /// Quiet end-of-list discovery affordance for the dashboard editor.
   /// Long-press on any slot still opens the same sheet, but this footer
@@ -938,6 +946,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // 3. 「我卡住了」在 cockpit 卡内作次级入口；
     // 4. 次要 upcoming / daily context；
     // 5. Aurora understanding receipt 下移至首屏末尾，不再与主行动抢注意力。
+    // U-05（首页「仅突出 Primary Action/Why/Stuck/Run」）：growthSections
+    // 收敛为行动脊柱——移除 returnCaseFile / goalDetailSnapshot /
+    // multiGoalDashboard / taskBoard / growthQuality / community /
+    // weeklyNarrative / examSprint 的原样展开渲染。这些卡与 slot 系统的
+    // CollapsibleSlot 版本此前同屏双渲染：原样卡（自带 CTA）+ 64px 折叠头
+    // 并排出现，正是 HOME.md「避免 5 个系统同时抢 CTA」的残留。收敛后每张
+    // 次要卡只有 slot 系统一个实例（默认折叠、点开/长按编辑/lean view 均可达，
+    // 用户显式展开过的配置不受影响），功能不退化；瓶颈 _AttentionSlot 无
+    // slot 对应物、understanding receipt 是 HOME.md 第 5 层指定保留面，
+    // 二者原样保留。
     final growthSections = !showGrowthHeader
         ? <Widget>[]
         : <Widget>[
@@ -968,66 +986,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     dailyContextLine == null && dailyContextAsync.isLoading,
               ),
             ),
-            _staggeredSection(
-              index: growthSectionIndex++,
-              child: const ReturnCaseFileCard(),
-            ),
-            _staggeredSection(
-              index: growthSectionIndex++,
-              child: GoalDetailSnapshotCard(
-                onOpenGoal: (goalId) => unawaited(
-                  context.push(_goalDetailLocation(goalId)),
-                ),
-              ),
-            ),
-            _staggeredSection(
-              index: growthSectionIndex++,
-              child: const MultiGoalDashboardCard(),
-            ),
-            _staggeredSection(
-              index: growthSectionIndex++,
-              child: const TaskBoardCard(),
-            ),
-            _staggeredSection(
-              index: growthSectionIndex++,
-              child: const GrowthQualityCard(),
-            ),
-            _staggeredSection(
-              index: growthSectionIndex++,
-              child: const _CommunityAccountabilitySlot(),
-            ),
             if (activeBottleneck != null)
               _staggeredSection(
                 index: growthSectionIndex++,
                 child: _AttentionSlot(
                   bottleneck: activeBottleneck,
                   onOpen: () => _openBottleneckChat(activeBottleneck),
-                ),
-              ),
-            _staggeredSection(
-              index: growthSectionIndex++,
-              child: const _WeeklyNarrativeSlot(),
-            ),
-            if (examSprintDashboard != null)
-              _staggeredSection(
-                index: growthSectionIndex++,
-                child: ExamSprintDashboardCard(
-                  data: examSprintDashboard,
-                  onRecordResult: () {
-                    unawaited(
-                      context.push(
-                        '/exam-sprint/review?plan_id=${examSprintDashboard.planId}'
-                        '&subject=${Uri.encodeComponent(examSprintDashboard.subject)}',
-                      ),
-                    );
-                  },
-                  onStartDiagnostic: () {
-                    unawaited(
-                      context.push(
-                        '/exam-sprint/diagnose?subject=${Uri.encodeComponent(examSprintDashboard.subject.isEmpty ? '计算机网络' : examSprintDashboard.subject)}',
-                      ),
-                    );
-                  },
                 ),
               ),
             // HOME.md 第 5 层：Aurora understanding receipt —— 有用的一条
@@ -1572,8 +1536,7 @@ class _CommunityAccountabilitySurface extends StatelessWidget {
                         label: context.l10n.accountabilityNudge,
                         tone: PillTone.brand,
                         icon: Icons.notifications_active_outlined,
-                        onTap: () =>
-                            context.push('/community/accountability'),
+                        onTap: () => context.push('/community/accountability'),
                       ),
                     ],
                   ),
@@ -1749,7 +1712,7 @@ class _HomeErrorCard extends StatelessWidget {
                   ],
                 ),
               ),
-                            SparkleButton(
+              SparkleButton(
                 label: context.l10n.dashboardRetry,
                 variant: ButtonVariant.text,
                 size: ButtonSize.small,
@@ -1802,7 +1765,7 @@ class _HomeEmptyInline extends StatelessWidget {
                   ),
             ),
           ),
-                    SparkleButton(
+          SparkleButton(
             label: actionLabel,
             variant: ButtonVariant.text,
             size: ButtonSize.small,
@@ -2005,7 +1968,10 @@ class _DailyBriefingCard extends StatelessWidget {
                                         estimatedMinutes > 0)
                                       _DashboardChip(
                                         icon: Icons.schedule_rounded,
-                                        label: context.l10n.dashboardEstimatedMinutes(estimatedMinutes),
+                                        label: context.l10n
+                                            .dashboardEstimatedMinutes(
+                                          estimatedMinutes,
+                                        ),
                                       ),
                                     if (planName != null && planName.isNotEmpty)
                                       _DashboardChip(
@@ -2059,8 +2025,7 @@ class _DailyBriefingCard extends StatelessWidget {
                                 context.l10n.dashboardMoreTasksQueued(
                                   nextActionCount - 1,
                                 ),
-                                style: context.typo.bodySmall
-                                    .copyWith(
+                                style: context.typo.bodySmall.copyWith(
                                   color: DS.textSecondary,
                                   height: 1.52,
                                 ),

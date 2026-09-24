@@ -422,27 +422,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get planCreateAction => '创建计划';
 
   @override
-  String planComebackExpiredBasis(Object date) {
-    return '原定 $date 完成。断档不是清零，重新校准终点就能接上。';
-  }
-
-  @override
-  String planComebackExpiredTitle(Object days) {
-    return '计划已过期 $days 天';
-  }
-
-  @override
-  String get planComebackRecalibrate => '重新校准计划';
-
-  @override
-  String get planComebackStalledBasis => '计划停在上次的地方。重新校准节奏，或从断点直接继续。';
-
-  @override
-  String planComebackStalledTitle(Object days) {
-    return '离开了 $days 天';
-  }
-
-  @override
   String get featureComingSoon => '精彩功能即将登场';
 
   @override
@@ -9578,6 +9557,27 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get planDetailDefaultRecommendation =>
       '今天不再学新内容，只做高频知识点速览、错题错因回看和 30 分钟短模拟。';
+
+  @override
+  String planComebackExpiredBasis(Object date) {
+    return '原定 $date 完成。断档不是清零，重新校准终点就能接上。';
+  }
+
+  @override
+  String planComebackExpiredTitle(Object days) {
+    return '计划已过期 $days 天';
+  }
+
+  @override
+  String get planComebackRecalibrate => '重新校准计划';
+
+  @override
+  String get planComebackStalledBasis => '计划停在上次的地方。重新校准节奏，或从断点直接继续。';
+
+  @override
+  String planComebackStalledTitle(Object days) {
+    return '离开了 $days 天';
+  }
 
   @override
   String get planDetailEdit => '编辑计划';
@@ -37461,6 +37461,17 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get goalDetailNoSources => '暂无关联资料。';
+
+  @override
+  String get goalDetailMilestone => '当前里程碑';
+
+  @override
+  String get goalDetailReplan => '重新规划';
+
+  @override
+  String goalDetailReplanPrompt(String goal) {
+    return '我想重新规划目标「$goal」的方向和路径，帮我评估当前路线并给出调整建议。';
+  }
 
   @override
   String get goalDetailRefresh => '刷新目标详情';

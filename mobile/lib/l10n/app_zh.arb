@@ -17465,6 +17465,19 @@
     "@goalDetailOpenCommunity": {},
     "goalDetailNoSources": "暂无关联资料。",
     "@goalDetailNoSources": {},
+    "goalDetailMilestone": "当前里程碑",
+    "@goalDetailMilestone": {},
+    "goalDetailReplan": "重新规划",
+    "@goalDetailReplan": {},
+    "goalDetailReplanPrompt": "我想重新规划目标「{goal}」的方向和路径，帮我评估当前路线并给出调整建议。",
+    "@goalDetailReplanPrompt": {
+        "type": "text",
+        "placeholders": {
+            "goal": {
+                "type": "String"
+            }
+        }
+    },
     "goalDetailRefresh": "刷新目标详情",
     "@goalDetailRefresh": {},
     "goalDetailLoadFailed": "目标详情加载失败",
