@@ -89,12 +89,14 @@ Widget buildDashboardTestHarness({
   Size size = const Size(390, 844),
   Locale? locale = const Locale('en'),
   DashboardState? dashboardState,
+  List<Override> extraOverrides = const [],
 }) {
   return _buildDashboardProviderHarness(
     theme: theme,
     size: size,
     locale: locale,
     dashboardState: dashboardState,
+    extraOverrides: extraOverrides,
     child: const DashboardScreen(),
   );
 }
@@ -128,6 +130,7 @@ Widget _buildDashboardProviderHarness({
   Size size = const Size(390, 844),
   Locale? locale = const Locale('en'),
   DashboardState? dashboardState,
+  List<Override> extraOverrides = const [],
 }) {
   final effectiveDashboardState = dashboardState ?? _sampleDashboardState();
   final tasks = _sampleTasks();
@@ -195,6 +198,10 @@ Widget _buildDashboardProviderHarness({
       ),
       systemUpdatesProvider.overrideWith((ref) async => _sampleSystemUpdates()),
       nightlyReviewProvider.overrideWith((ref) async => null),
+      // wt287：追加式覆盖（riverpod 同 provider 后写胜出），供转化卡/
+      // 引导卡可见性用例改写 guest 态、引导完成态与目标总览，不影响
+      // 存量用例的默认基线。
+      ...extraOverrides,
     ],
     child: MaterialApp(
       locale: locale,

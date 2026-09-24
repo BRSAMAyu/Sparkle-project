@@ -1123,14 +1123,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 dashboardState: dashboardState,
               ),
             ),
-            // N40（A-SPEC7 §4）访客唯一转化点：home 是访客落地面，也是
-            // 「进行中任务之外」的安全窗口——卡内联于此，非弹窗；派生
-            // 可见性四条守门（仅访客/已有价值信号/未被点掉/无进行中任务），
-            // 注册用户与无信号访客渲染 SizedBox.shrink（零布局影响）。
-            _staggeredSection(
-              index: growthSectionIndex++,
-              child: const GuestConversionCard(),
-            ),
             _staggeredSection(
               index: growthSectionIndex++,
               child: _buildAuroraStatusBandSlot(dashboardState),
@@ -1345,18 +1337,33 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         );
       }
 
+      // N40（A-SPEC7 §4）访客唯一转化点：home 是访客落地面，也是
+      // 「进行中任务之外」的安全窗口——卡内联于此，非弹窗；派生可见性
+      // 四条守门（仅访客/已有价值信号/未被点掉/无进行中任务），注册用户
+      // 与无信号访客渲染 SizedBox.shrink（零布局影响）。挂 dashboardSections
+      // 而非 growthSections（wt287 盲区修复）：growthSections 在 hasNoGoals
+      // 时整体不渲染，而「没有目标的新访客」恰是转化卡的主受众；两分支
+      // 均渲染 dashboardSections，挂这里才保证主受众可见。与 OnboardingResumeCard
+      // 相邻但语义互斥（本卡仅 guest，resume 卡仅非 guest），同屏至多见其一。
       // J-02（A-SPEC8B G1 软化）：注册墙改「放行 + 提醒」后的提醒入口——
       // 引导未完成的注册用户可自由体验（价值先于画像），本卡在首页承担
       // 「继续引导」职责。挂 dashboardSections 而非 growthSections：新注册
       // 用户无目标时走 hasNoGoals 分支（growthSections 整体不渲染），挂这
       // 才能覆盖注册即到首屏的主受众。可见性由卡内自守门（非 guest 且
       // completed==false），其余场景渲染 SizedBox.shrink，零布局影响。
-      dashboardSections.add(
-        _staggeredSection(
-          index: sectionIndex++,
-          child: const OnboardingResumeCard(),
-        ),
-      );
+      dashboardSections
+        ..add(
+          _staggeredSection(
+            index: sectionIndex++,
+            child: const GuestConversionCard(),
+          ),
+        )
+        ..add(
+          _staggeredSection(
+            index: sectionIndex++,
+            child: const OnboardingResumeCard(),
+          ),
+        );
 
       // Walk the user's slot order, render only what's visible, wrap each
       // in CollapsibleSlot so they can shrink to a 64px header without
