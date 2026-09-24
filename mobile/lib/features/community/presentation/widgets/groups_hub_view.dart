@@ -499,7 +499,8 @@ Future<void> _showFeedbackDialog(
               spacing: DS.sm,
               children: ResourceFeedbackVerdict.values
                   .map(
-                    (v) => SparkleButton.primary(
+                    (v) => SparkleButton(
+                      key: ValueKey('feedback-verdict-$v'),
                       label: _verdictLabel(dialogContext, v),
                       size: ButtonSize.small,
                       onPressed:
@@ -728,9 +729,10 @@ class _FeedbackTile extends StatelessWidget {
               style: TextStyle(fontSize: DS.fontSizeXs, color: DS.textTertiary),
             )
           : (onAdopt != null
-              ? SparkleButton.ghost(
+              ? SparkleButton(
                   key: ValueKey('adopt-evidence-${item.id}'),
                   label: l10n.sharedResourceAdoptEvidence,
+                  variant: ButtonVariant.ghost,
                   size: ButtonSize.small,
                   onPressed: onAdopt,
                 )
