@@ -205,6 +205,7 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
         title: Text(context.l10n.taskMonitorTitle),
         leading: SparkleIconButton(
           icon: const Icon(Icons.arrow_back_ios_new),
+          semanticLabel: context.l10n.back,
           onPressed: () => Navigator.pop(context),
           variant: ButtonVariant.ghost,
         ),

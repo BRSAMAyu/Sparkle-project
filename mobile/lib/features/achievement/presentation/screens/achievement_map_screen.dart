@@ -55,17 +55,21 @@ class _AchievementMapScreenState extends ConsumerState<AchievementMapScreen> {
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: Icon(Icons.arrow_back, color: DS.textPrimary),
+          semanticLabel: l10n.back,
           onPressed: () => context.pop(),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
           // Focus button - navigate to nearest unlocked achievement
+          // 甲式同键补名（A11Y-BATCH5）：wrapper Tooltip 不构成按钮名，
+          // semanticLabel 与 tooltip 同源同键（双源漂移修正）。
           Tooltip(
             message: l10n.achievementMapFocusTooltip,
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: Icon(Icons.my_location, color: DS.textPrimary),
+              semanticLabel: l10n.achievementMapFocusTooltip,
               onPressed: state.isLoading || state.nodes.isEmpty
                   ? null
                   : () => _showFocusTooltip(context, state.nodes),

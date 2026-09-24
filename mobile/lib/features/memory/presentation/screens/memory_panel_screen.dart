@@ -442,8 +442,10 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
   Widget build(BuildContext context) => GraphiteScaffold(
         safeArea: false,
         appBar: AppBar(
+          // 甲式（A11Y-BATCH5）：semanticLabel 承载按钮名。
           leading: SparkleIconButton(
             icon: const Icon(Icons.arrow_back),
+            semanticLabel: context.l10n.back,
             onPressed: () => context.pop(),
             variant: ButtonVariant.ghost,
           ),
@@ -460,6 +462,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
           actions: [
             SparkleIconButton(
               icon: const Icon(Icons.refresh),
+              semanticLabel: context.l10n.commonRefresh,
               onPressed: _loadAll,
               variant: ButtonVariant.ghost,
             ),

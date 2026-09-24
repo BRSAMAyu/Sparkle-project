@@ -179,7 +179,14 @@ class _SharePrivacySettingsState extends State<SharePrivacySettings> {
             ),
             suffixIcon: _nameController.text.isNotEmpty
                 ? IconButton(
-                    icon: Icon(Icons.clear, size: 18, color: DS.textTertiary),
+                    // 乙式（A11Y-BATCH5）：tooltip+Icon semanticLabel 同键单节点。
+                    tooltip: l10n.commonClear,
+                    icon: Icon(
+                      Icons.clear,
+                      size: 18,
+                      color: DS.textTertiary,
+                      semanticLabel: l10n.commonClear,
+                    ),
                     onPressed: () {
                       SensoryFeedbackService.emit(
                         SensoryFeedbackEvent.selection,

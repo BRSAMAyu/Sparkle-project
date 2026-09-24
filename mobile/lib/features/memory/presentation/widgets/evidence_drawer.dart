@@ -189,10 +189,16 @@ class _EvidenceDrawerSheetState extends State<_EvidenceDrawerSheet> {
               children: [
                 Text(context.l10n.memEvidenceRecord, style: DS.titleMedium),
                 const Spacer(),
+                // 乙式（A11Y-BATCH5）：tooltip+Icon semanticLabel 同键单节点。
                 IconButton(
-                  icon: const Icon(Icons.close, size: DS.iconSizeXs),
+                  tooltip: context.l10n.close,
                   onPressed: () => Navigator.pop(context),
                   visualDensity: VisualDensity.compact,
+                  icon: Icon(
+                    Icons.close,
+                    size: DS.iconSizeXs,
+                    semanticLabel: context.l10n.close,
+                  ),
                 ),
               ],
             ),

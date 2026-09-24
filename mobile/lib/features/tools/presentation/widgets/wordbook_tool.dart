@@ -256,12 +256,19 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                           suffixIcon: _searchController.text.isEmpty
                               ? null
                               : IconButton(
+                                  // 乙式（A11Y-BATCH5）：tooltip+Icon
+                                  // semanticLabel 同键单节点。
+                                  tooltip: context.l10n.toolsSearchClear,
                                   onPressed: () {
                                     _searchController.clear();
                                     _reloadVocabularyData();
                                     setState(() {});
                                   },
-                                  icon: const Icon(Icons.close_rounded),
+                                  icon: Icon(
+                                    Icons.close_rounded,
+                                    semanticLabel:
+                                        context.l10n.toolsSearchClear,
+                                  ),
                                 ),
                         ),
                         onChanged: (value) {
@@ -675,11 +682,14 @@ class _WordCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: DS.spacing12),
+            // 乙式（A11Y-BATCH5）：tooltip+Icon semanticLabel 同键单节点。
             IconButton(
+              tooltip: context.l10n.toolsWbDelete,
               onPressed: onDelete,
               icon: Icon(
                 Icons.delete_outline_rounded,
                 color: DS.error.withValues(alpha: 0.8),
+                semanticLabel: context.l10n.toolsWbDelete,
               ),
             ),
           ],

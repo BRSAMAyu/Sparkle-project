@@ -264,6 +264,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
                     children: [
                       SparkleIconButton(
                         icon: const Icon(Icons.arrow_back),
+                        semanticLabel: l10n.back,
                         onPressed: () => context.pop(),
                         variant: ButtonVariant.ghost,
                       ),

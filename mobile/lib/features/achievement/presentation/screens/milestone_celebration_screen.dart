@@ -267,9 +267,11 @@ class _MilestoneCelebrationScreenState
                   Positioned(
                     top: DS.spacing8,
                     left: DS.spacing8,
+                    // 甲式（A11Y-BATCH5）：semanticLabel 承载按钮名。
                     child: SparkleIconButton(
                       variant: ButtonVariant.ghost,
                       icon: const Icon(Icons.close_rounded),
+                      semanticLabel: context.l10n.close,
                       onPressed: _dismissToAchievements,
                     ),
                   ),

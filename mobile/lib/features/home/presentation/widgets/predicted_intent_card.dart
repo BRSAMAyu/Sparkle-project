@@ -118,13 +118,16 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                 children: [
                   _Chip(label: '$confidencePercent%', subdued: true),
                   const SizedBox(width: DS.spacing8),
+                  // 两态钮按当前态命名（A11Y-BATCH5）：收起态→展开。
                   SparkleIconButton(
                     variant: ButtonVariant.ghost,
                     size: 34,
+                    semanticLabel: l10n.homePredictedIntentExpand,
                     onPressed: () => _setCollapsed(false),
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.unfold_more_rounded,
                       size: 18,
+                      semanticLabel: l10n.homePredictedIntentExpand,
                     ),
                   ),
                 ],
@@ -159,13 +162,16 @@ class _PredictedIntentCardState extends ConsumerState<PredictedIntentCard> {
                   children: [
                     _Chip(label: '$confidencePercent%'),
                     const SizedBox(width: DS.spacing8),
+                    // 两态钮按当前态命名（A11Y-BATCH5）：展开态→收起。
                     SparkleIconButton(
                       variant: ButtonVariant.ghost,
                       size: 34,
+                      semanticLabel: l10n.homePredictedIntentCollapse,
                       onPressed: () => _setCollapsed(true),
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.visibility_off_rounded,
                         size: 18,
+                        semanticLabel: l10n.homePredictedIntentCollapse,
                       ),
                     ),
                   ],

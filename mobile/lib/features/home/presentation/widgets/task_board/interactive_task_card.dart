@@ -409,8 +409,11 @@ class _QuickCompleteButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => Tooltip(
         message: context.l10n.taskCompleteTask,
+        // 甲式同键补名（A11Y-BATCH5）：semanticLabel 与 tooltip 同源同键
+        //（双源漂移修正）。
         child: SparkleIconButton(
           icon: const Icon(Icons.check_circle_outline_rounded),
+          semanticLabel: context.l10n.taskCompleteTask,
           variant: ButtonVariant.ghost,
           onPressed: () async {
             // X-04：无实测值传 null，不回填 estimated

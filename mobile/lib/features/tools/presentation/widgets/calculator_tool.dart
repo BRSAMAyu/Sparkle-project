@@ -325,10 +325,17 @@ class _CalculatorToolState extends ConsumerState<CalculatorTool> {
                                   ),
                             ),
                             trailing: IconButton(
+                              // 乙式（A11Y-BATCH5）：tooltip+Icon
+                              // semanticLabel 同键单节点。
+                              tooltip: context.l10n.toolsCalcReuseHistory,
                               onPressed: () => setState(() {
                                 _expression = entry.split(' = ').first;
                               }),
-                              icon: const Icon(Icons.undo_rounded),
+                              icon: Icon(
+                                Icons.undo_rounded,
+                                semanticLabel:
+                                    context.l10n.toolsCalcReuseHistory,
+                              ),
                             ),
                           ),
                         )

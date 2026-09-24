@@ -90,6 +90,7 @@ class _WeatherGuideScreenState extends ConsumerState<WeatherGuideScreen>
       appBar: AppBar(
         leading: SparkleIconButton(
           icon: const Icon(Icons.arrow_back),
+          semanticLabel: context.l10n.back,
           onPressed: () => context.pop(),
           variant: ButtonVariant.ghost,
         ),

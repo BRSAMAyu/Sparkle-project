@@ -417,14 +417,19 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                 accentColor: accent,
                 title: context.l10n.toolsTransSource,
                 subtitle: context.l10n.toolsTransSourceDesc,
+                // 乙式（A11Y-BATCH5）：tooltip+Icon semanticLabel 同键单节点。
                 trailing: IconButton(
+                  tooltip: context.l10n.toolsTransClearInput,
                   onPressed: () {
                     setState(() {
                       _inputController.clear();
                       _output = '';
                     });
                   },
-                  icon: Icon(Icons.close_rounded),
+                  icon: Icon(
+                    Icons.close_rounded,
+                    semanticLabel: context.l10n.toolsTransClearInput,
+                  ),
                 ),
                 child: SizedBox(
                   height: (MediaQuery.sizeOf(context).height * 0.2)
@@ -448,12 +453,19 @@ class _TranslatorToolState extends ConsumerState<TranslatorTool> {
                 trailing: _output.isEmpty
                     ? null
                     : IconButton(
+                        // 两态钮按当前态命名（A11Y-BATCH5）：已收藏→取消收藏。
+                        tooltip: _isFavorited
+                            ? context.l10n.toolsTransUnfavorite
+                            : context.l10n.toolsTransFavorite,
                         onPressed: _toggleFavorite,
                         icon: Icon(
                           _isFavorited
                               ? Icons.favorite_rounded
                               : Icons.favorite_border_rounded,
                           color: _isFavorited ? DS.error : DS.textSecondary,
+                          semanticLabel: _isFavorited
+                              ? context.l10n.toolsTransUnfavorite
+                              : context.l10n.toolsTransFavorite,
                         ),
                       ),
                 child: _isLoading

@@ -223,8 +223,10 @@ class _AchievementDetailScreenState
           color: DS.surfacePrimary.withValues(alpha: 0.9),
           shape: BoxShape.circle,
         ),
+        // 甲式（A11Y-BATCH5）：semanticLabel 承载按钮名。
         child: SparkleIconButton(
           icon: const Icon(Icons.arrow_back),
+          semanticLabel: context.l10n.back,
           onPressed: () => context.pop(),
           variant: ButtonVariant.ghost,
         ),
@@ -238,6 +240,7 @@ class _AchievementDetailScreenState
           ),
           child: SparkleIconButton(
             icon: const Icon(Icons.share_outlined),
+            semanticLabel: context.l10n.share,
             onPressed: () => _shareAchievement(achievement),
             variant: ButtonVariant.ghost,
           ),
@@ -515,6 +518,7 @@ class _AchievementDetailScreenState
                 ),
               ),
               const SizedBox(width: DS.spacing8),
+              // 两态钮按当前态命名（A11Y-BATCH5）：已置顶→取消置顶。
               SparkleIconButton(
                 icon: Icon(
                   achievement.userProgress?.isPinned ?? false
@@ -524,6 +528,10 @@ class _AchievementDetailScreenState
                       ? DS.semanticWarning
                       : DS.textSecondary,
                 ),
+                semanticLabel:
+                    (achievement.userProgress?.isPinned ?? false)
+                        ? l10n.achievementUnpin
+                        : l10n.achievementPin,
                 onPressed: () => _togglePin(achievement),
                 variant: ButtonVariant.ghost,
               ),

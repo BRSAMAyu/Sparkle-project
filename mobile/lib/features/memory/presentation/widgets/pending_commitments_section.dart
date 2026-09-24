@@ -67,13 +67,24 @@ class PendingCommitmentsSection extends StatelessWidget {
                         liveRegion: false,
                     )
                   else ...[
+                    // 乙式（A11Y-BATCH5）：tooltip+Icon semanticLabel 同键单节点。
                     IconButton(
-                      icon: const Icon(Icons.check, size: 16),
+                      tooltip: context.l10n.memoryCommitmentResolve,
                       onPressed: () => onResolve?.call(c),
+                      icon: Icon(
+                        Icons.check,
+                        size: 16,
+                        semanticLabel: context.l10n.memoryCommitmentResolve,
+                      ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close, size: 16),
+                      tooltip: context.l10n.memoryCommitmentDismiss,
                       onPressed: () => onDismiss?.call(c),
+                      icon: Icon(
+                        Icons.close,
+                        size: 16,
+                        semanticLabel: context.l10n.memoryCommitmentDismiss,
+                      ),
                     ),
                   ],
                 ],

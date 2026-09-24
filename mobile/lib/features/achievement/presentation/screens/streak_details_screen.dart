@@ -50,9 +50,14 @@ class _StreakDetailsScreenState extends ConsumerState<StreakDetailsScreen> {
       role: SparklePageRole.content,
       appBar: AppBar(
         title: Text(l10n.streakDetails),
+        // 乙式（A11Y-BATCH5）：tooltip+Icon semanticLabel 同键单节点。
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          tooltip: l10n.back,
           onPressed: () => context.pop(),
+          icon: Icon(
+            Icons.arrow_back,
+            semanticLabel: l10n.back,
+          ),
         ),
       ),
       child: CustomScrollView(

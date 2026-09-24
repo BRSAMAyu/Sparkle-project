@@ -379,10 +379,13 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
           // 状态角标 Stack 由 Container 居中承载，clipBehavior: none 不裁切）。
           Padding(
             padding: const EdgeInsets.only(right: DS.spacing12),
+            // 甲式同键补名（A11Y-BATCH5）：semanticLabel 与 tooltip 同源
+            // 同键（按连接态取同一文案，双源漂移修正）。
             child: Tooltip(
               message: _statusIndicatorTooltip(connection),
               child: SparkleIconButton(
                 variant: ButtonVariant.ghost,
+                semanticLabel: _statusIndicatorTooltip(connection),
                 onPressed: () => _openDiagnostics(connection),
                 icon: Stack(
                   clipBehavior: Clip.none,

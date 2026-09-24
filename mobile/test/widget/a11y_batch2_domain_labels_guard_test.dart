@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// A11Y-BATCH2/3/4（N32 续 · 无名钮下批）域内 ratchet 守卫。
+/// A11Y-BATCH2/3/4/5（N32 续 · 无名钮下批）域内 ratchet 守卫。
 ///
 /// 卡面验收「本批域内无名钮清零」：批 2 三域——friends 族 / sprint 族 /
 /// user 设置族（features/user + features/settings presentation 全量），
@@ -10,7 +10,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// group_chat）/ galaxy 域 / insights 域 / plan_create 族，批 4 四域
 /// （A11Y-BATCH4 扩域）——seed_library 域 / error_book 域 / chat 域
 /// （presentation 全量 + data 层通知浮窗；群聊批 3 已清零）/
-/// community 域（presentation 全量，群组批 3 已清零）——做静态扫描，
+/// community 域（presentation 全量，群组批 3 已清零），批 5 四域
+/// （A11Y-BATCH5 扩域）——memory 域 / achievement 域 / home 域 /
+/// tools 域（均 presentation 全量）——做静态扫描，
 /// 任何 `SparkleIconButton` / `IconButton` 调用点（含 `.fabGeometry` 等
 /// 命名构造，批 3 起入扫）必须可命名：
 ///
@@ -78,6 +80,15 @@ void main() {
     'lib/features/chat/data/services/message_notification_service.dart',
     // community 域（presentation 全量；群组批 3 已清零）
     'lib/features/community/presentation',
+    // ── 批 5（A11Y-BATCH5）扩域 ────────────────────────────────────────
+    // memory 域（presentation 全量）
+    'lib/features/memory/presentation',
+    // achievement 域（presentation 全量）
+    'lib/features/achievement/presentation',
+    // home 域（presentation 全量）
+    'lib/features/home/presentation',
+    // tools 域（presentation 全量）
+    'lib/features/tools/presentation',
   ];
 
   test('批域内图标按钮全部有语义名（N31 ratchet 只降不升）', () {
@@ -137,6 +148,10 @@ final _lineComment = RegExp(r'(?<!:)//[^\n]*');
 final _buttonCall = RegExp(r'\b(SparkleIconButton|IconButton)(\.\w+)?\s*\(');
 final _iconCall = RegExp(r'\bIcon\s*\(');
 
+/// 批 5 修正的假阳性类：`IconButton.styleFrom(...)` 是 ButtonStyle 工厂
+/// （PopupMenuButton.style 等槽位消费），不构造按钮——不入扫。
+final _styleFactoryCall = RegExp(r'\bIconButton\.styleFrom\s*\(');
+
 /// 返回未命名钮所在行号清单（基于注释剥离后的文本）。
 List<int> _scanUnnamedButtons(String source) {
   final clean = source
@@ -146,6 +161,11 @@ List<int> _scanUnnamedButtons(String source) {
   final findings = <int>[];
 
   for (final match in _buttonCall.allMatches(clean)) {
+    if (_styleFactoryCall
+        .allMatches(clean)
+        .any((s) => s.start == match.start)) {
+      continue;
+    }
     final args = _balanced(clean, match.end - 1);
     final named = args.contains('semanticLabel:') ||
         args.contains('tooltip:') ||

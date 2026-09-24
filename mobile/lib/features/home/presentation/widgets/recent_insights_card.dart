@@ -159,15 +159,23 @@ class _RecentInsightsCardState extends ConsumerState<RecentInsightsCard> {
                       ),
                     ),
                     const SizedBox(width: DS.spacing6),
+                    // 两态钮按当前态命名（A11Y-BATCH5）：收起态→展开 /
+                    // 展开态→收起。
                     SparkleIconButton(
                       variant: ButtonVariant.ghost,
                       size: 32,
+                      semanticLabel: _isCollapsed
+                          ? context.l10n.homeRecentInsightsExpand
+                          : context.l10n.homeRecentInsightsCollapse,
                       onPressed: () => unawaited(_setCollapsed(!_isCollapsed)),
                       icon: Icon(
                         _isCollapsed
                             ? Icons.keyboard_arrow_down_rounded
                             : Icons.keyboard_arrow_up_rounded,
                         size: 18,
+                        semanticLabel: _isCollapsed
+                            ? context.l10n.homeRecentInsightsExpand
+                            : context.l10n.homeRecentInsightsCollapse,
                       ),
                     ),
                   ],

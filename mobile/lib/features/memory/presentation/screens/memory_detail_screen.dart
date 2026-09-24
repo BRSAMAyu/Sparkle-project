@@ -192,8 +192,10 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
   Widget build(BuildContext context) => GraphiteScaffold(
         safeArea: false,
         appBar: AppBar(
+          // 甲式（A11Y-BATCH5）：SparkleIconButton semanticLabel 同键单节点。
           leading: SparkleIconButton(
             icon: const Icon(Icons.arrow_back),
+            semanticLabel: context.l10n.back,
             onPressed: () => context.pop(),
             variant: ButtonVariant.ghost,
           ),
@@ -211,18 +213,21 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
             if (AppFeatureFlags.enableMemoryPanelV2)
               SparkleIconButton(
                 icon: const Icon(Icons.copy),
+                semanticLabel: context.l10n.memoryDetailCopy,
                 onPressed: _copyDetail,
                 variant: ButtonVariant.ghost,
               ),
             if (AppFeatureFlags.enableMemoryPanelV2)
               SparkleIconButton(
                 icon: const Icon(Icons.file_download),
+                semanticLabel: context.l10n.memoryDetailExport,
                 onPressed: _showExportDialog,
                 variant: ButtonVariant.ghost,
               ),
             if (AppFeatureFlags.enableEvidenceViewer)
               SparkleIconButton(
                 icon: const Icon(Icons.link),
+                semanticLabel: context.l10n.memoryDetailEvidence,
                 onPressed: () => _showEvidence(context),
                 variant: ButtonVariant.ghost,
               ),
@@ -503,6 +508,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
                 const Spacer(),
                 SparkleIconButton(
                   icon: const Icon(Icons.link),
+                  semanticLabel: context.l10n.memoryDetailEvidence,
                   onPressed: AppFeatureFlags.enableEvidenceViewer
                       ? () => EvidenceDrawer.show(
                             context,

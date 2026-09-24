@@ -131,8 +131,13 @@ class _ToolLibraryScreenState extends ConsumerState<ToolLibraryScreen>
               suffixIcon: query.isEmpty
                   ? null
                   : IconButton(
+                      // 乙式（A11Y-BATCH5）：tooltip+Icon semanticLabel 同键单节点。
+                      tooltip: l10n.toolsSearchClear,
                       onPressed: _searchController.clear,
-                      icon: const Icon(Icons.close_rounded),
+                      icon: Icon(
+                        Icons.close_rounded,
+                        semanticLabel: l10n.toolsSearchClear,
+                      ),
                     ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(18),
@@ -289,10 +294,15 @@ class _ToolLibraryScreenState extends ConsumerState<ToolLibraryScreen>
                     '$positionLabel · ${_categoryLabel(tool.category, context)}',
                   ),
                   trailing: IconButton(
+                    // 乙式（A11Y-BATCH5）：tooltip+Icon semanticLabel 同键单节点。
+                    tooltip: l10n.toolsUnpinTool,
                     onPressed: () => ref
                         .read(toolPreferencesProvider.notifier)
                         .unpin(tool.id),
-                    icon: const Icon(Icons.push_pin_outlined),
+                    icon: Icon(
+                      Icons.push_pin_outlined,
+                      semanticLabel: l10n.toolsUnpinTool,
+                    ),
                   ),
                 ),
               );
@@ -419,6 +429,7 @@ class _LibraryToolCard extends StatelessWidget {
                       child: Icon(tool.icon, color: accent),
                     ),
                     const Spacer(),
+                    // 两态钮按当前态命名（A11Y-BATCH5）：已置顶→取消置顶。
                     IconButton(
                       constraints: const BoxConstraints.tightFor(
                         width: 32,
@@ -426,11 +437,17 @@ class _LibraryToolCard extends StatelessWidget {
                       ),
                       padding: EdgeInsets.zero,
                       visualDensity: VisualDensity.compact,
+                      tooltip: pinned
+                          ? context.l10n.toolsUnpinTool
+                          : context.l10n.toolsPinTool,
                       onPressed: onTogglePin,
                       icon: Icon(
                         pinned ? Icons.push_pin : Icons.push_pin_outlined,
                         size: 18,
                         color: pinned ? DS.warning : DS.textSecondary,
+                        semanticLabel: pinned
+                            ? context.l10n.toolsUnpinTool
+                            : context.l10n.toolsPinTool,
                       ),
                     ),
                   ],
