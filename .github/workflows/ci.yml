@@ -19,7 +19,7 @@ permissions:
 env:
   GO_VERSION: '1.24.0'
   PYTHON_VERSION: '3.11'
-  FLUTTER_VERSION: '3.24.0'
+  FLUTTER_VERSION: '3.41.3'  # 2026-09-24: align with local toolchain — protobuf 6.1.0 needs Dart >=3.6; 3.24 (Dart 3.5) broke package resolution and exploded the analyze gate
   COVERAGE_RULES_FILE: 'quality/coverage_thresholds.json'
   COVERAGE_THRESHOLD_GO: '30'
   COVERAGE_THRESHOLD_PYTHON: '50'
