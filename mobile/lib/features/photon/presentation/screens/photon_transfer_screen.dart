@@ -177,10 +177,13 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                       decoration: InputDecoration(
                         hintText: context.l10n.ptAmountHint,
                         prefixIcon: const Icon(Icons.flash_on_outlined),
+                        // 甲式（A11Y-BATCH6B）：SparkleIconButton
+                        // semanticLabel 单节点。
                         suffixIcon: SparkleIconButton(
                           variant: ButtonVariant.ghost,
                           size: 32,
                           icon: const Icon(Icons.add_circle_outline),
+                          semanticLabel: context.l10n.ptAmountSelect,
                           onPressed: () {
                             unawaited(
                               SensoryFeedbackService.emit(

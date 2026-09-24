@@ -201,9 +201,11 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
         title: Text(context.l10n.reportLearningAnalysisReport),
         actions: [
           // FAB-UNIFY：M3 IconButton → 组件归一（ghost 档，几何走组件默认档）。
+          // 甲式（A11Y-BATCH6B）：semanticLabel 单节点。
           SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: Icon(Icons.share_outlined, color: DS.textSecondary),
+            semanticLabel: context.l10n.share,
             onPressed: () => unawaited(_showReportShareSheet(report)),
           ),
         ],

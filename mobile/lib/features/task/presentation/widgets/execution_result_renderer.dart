@@ -596,9 +596,15 @@ class _ImageArtifactPreviewDialog extends StatelessWidget {
                     ),
                   ),
                 ),
+                // 乙式（A11Y-BATCH6B）：tooltip+Icon semanticLabel
+                // 同键单节点。
                 IconButton(
+                  tooltip: context.l10n.close,
                   onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close_rounded),
+                  icon: Icon(
+                    Icons.close_rounded,
+                    semanticLabel: context.l10n.close,
+                  ),
                 ),
               ],
             ),

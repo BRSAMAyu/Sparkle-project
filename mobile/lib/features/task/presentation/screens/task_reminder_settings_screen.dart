@@ -77,9 +77,11 @@ class _TaskReminderSettingsScreenState
       role: SparklePageRole.settings,
       appBar: AppBar(
         title: Text(context.l10n.taskReminderSettingsTitle),
+        // 甲式（A11Y-BATCH6B）：SparkleIconButton semanticLabel 单节点。
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back_ios_new),
+          semanticLabel: context.l10n.back,
           onPressed: () => Navigator.pop(context),
         ),
       ),

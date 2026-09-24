@@ -119,9 +119,11 @@ class _LearningPortfolioScreenState
       child: SparklePageScaffold(
         role: SparklePageRole.content,
         appBar: AppBar(
+          // 甲式（A11Y-BATCH6B）：SparkleIconButton semanticLabel 单节点。
           leading: SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: const Icon(Icons.arrow_back),
+            semanticLabel: context.l10n.back,
             onPressed: () => RouteResilience.popOrGo(
               context,
               fallbackRoute: UserRoutes.profile,

@@ -22,9 +22,11 @@ class LegalDocumentScreen extends StatelessWidget {
     return SparklePageScaffold(
       role: SparklePageRole.settings,
       appBar: AppBar(
+        // 甲式（A11Y-BATCH6B）：SparkleIconButton semanticLabel 单节点。
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
+          semanticLabel: context.l10n.back,
           onPressed: () {
             if (context.canPop()) {
               context.pop();

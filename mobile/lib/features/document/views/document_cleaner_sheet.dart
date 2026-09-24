@@ -125,9 +125,11 @@ class _DocumentCleanerPanelState extends ConsumerState<DocumentCleanerPanel> {
       accentColor: accent,
       compactHeader: true,
       fillHeight: true,
+      // 甲式（A11Y-BATCH6B）：SparkleIconButton semanticLabel 单节点。
       headerAction: _isSheet
           ? SparkleIconButton(
               icon: const Icon(Icons.close_rounded),
+              semanticLabel: context.l10n.close,
               onPressed: () => Navigator.of(context).pop(),
               variant: ButtonVariant.ghost,
             )

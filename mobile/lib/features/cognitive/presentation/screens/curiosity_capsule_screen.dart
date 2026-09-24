@@ -25,8 +25,10 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
+        // 甲式（A11Y-BATCH6B）：SparkleIconButton semanticLabel 单节点。
         leading: SparkleIconButton(
           icon: const Icon(Icons.arrow_back),
+          semanticLabel: l10n.back,
           onPressed: () => context.pop(),
           variant: ButtonVariant.ghost,
         ),

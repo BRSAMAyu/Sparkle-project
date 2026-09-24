@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// A11Y-BATCH2/3/4/5（N32 续 · 无名钮下批）域内 ratchet 守卫。
+/// A11Y-BATCH2/3/4/5/6B（N32 续 · 无名钮下批）域内 ratchet 守卫。
 ///
 /// 卡面验收「本批域内无名钮清零」：批 2 三域——friends 族 / sprint 族 /
 /// user 设置族（features/user + features/settings presentation 全量），
@@ -12,7 +12,10 @@ import 'package:flutter_test/flutter_test.dart';
 /// （presentation 全量 + data 层通知浮窗；群聊批 3 已清零）/
 /// community 域（presentation 全量，群组批 3 已清零），批 5 四域
 /// （A11Y-BATCH5 扩域）——memory 域 / achievement 域 / home 域 /
-/// tools 域（均 presentation 全量）——做静态扫描，
+/// tools 域（均 presentation 全量），批 6B（A11Y-BATCH6B）**全域收口**：
+/// 剩余全部 feature 域入扫（无钮域零成本入防），单钮长尾 26 处清零；
+/// 批 6A 辖的 10 个多钮面文件在航豁免（见
+/// [_batch6AInFlightExemptions]，6A 合入后删除）——做静态扫描，
 /// 任何 `SparkleIconButton` / `IconButton` 调用点（含 `.fabGeometry` 等
 /// 命名构造，批 3 起入扫）必须可命名：
 ///
@@ -21,6 +24,11 @@ import 'package:flutter_test/flutter_test.dart';
 ///    显式 semanticLabel，故两者都计为已命名——wrapper Tooltip 不计，
 ///    因其只挂 semantics.tooltip 不构成按钮名）；
 /// 3. 反推：icon 为 `Icon(...)` 且自带 `semanticLabel:`（组件层反推链）。
+///
+/// 豁免登记（N32 收口口径）：`lib/core/design/` 组件库不入扫——
+/// sparkle_button_v2.dart 的 3 处扫描命中均为类定义/告警字符串
+/// （`const SparkleIconButton({` / `SparkleIconButton.fabGeometry({` /
+/// N31 告警 message），非调用点，属扫描器字面误报，非无钮债务。
 ///
 /// 形制照 A11Y-ICONS（wt256）首批；ratchet 只降不升——本测试失败即批域
 /// 出现新无名钮，按 N31 登记制当场补名。
@@ -89,6 +97,42 @@ void main() {
     'lib/features/home/presentation',
     // tools 域（presentation 全量）
     'lib/features/tools/presentation',
+    // ── 批 6B（A11Y-BATCH6B）全域收口 ──────────────────────────────────
+    // N32 收口：剩余全部 feature 域入守卫（无钮域入扫零成本，只增
+    // 未来防线）。批 6A 辖的多钮面文件见 [_batch6AInFlightExemptions]。
+    'lib/features/auth/presentation',
+    'lib/features/calendar/presentation',
+    'lib/features/cognitive/presentation',
+    'lib/features/document',
+    'lib/features/documents/presentation',
+    'lib/features/focus/presentation',
+    'lib/features/goal',
+    'lib/features/knowledge/presentation',
+    'lib/features/leaderboard/presentation',
+    'lib/features/photon/presentation',
+    // plan 域收口为 presentation 全量（批 2 sprint 族与批 3 plan_create
+    // 族的逐文件条目成为其子集，保留为 ratchet 历史）。
+    'lib/features/plan/presentation',
+    'lib/features/report/presentation',
+    'lib/features/reviews/presentation',
+    'lib/features/shop/presentation',
+    'lib/features/simulation/presentation',
+    'lib/features/task/presentation',
+    'lib/features/theater/presentation',
+    'lib/features/translation/presentation',
+    'lib/features/visual_elements/presentation',
+    // 以下域无图标钮调用点（批 6B 全库复扫零命中），入扫零成本。
+    'lib/features/aurora',
+    'lib/features/experience',
+    'lib/features/file',
+    'lib/features/intent',
+    'lib/features/mirofish',
+    'lib/features/notification_center',
+    'lib/features/onboarding',
+    'lib/features/openclaw',
+    'lib/features/reflection',
+    'lib/features/splash',
+    'lib/features/vocabulary',
   ];
 
   test('批域内图标按钮全部有语义名（N31 ratchet 只降不升）', () {
@@ -96,6 +140,9 @@ void main() {
 
     for (final scope in batchScopes) {
       for (final path in _dartFiles(scope)) {
+        if (_batch6AInFlightExemptions.any(path.endsWith)) {
+          continue;
+        }
         final findings = _scanUnnamedButtons(File(path).readAsStringSync());
         for (final line in findings) {
           violations.add('$path:$line');
@@ -139,6 +186,23 @@ List<String> _dartFiles(String scope) {
 }
 
 // --- 静态扫描（与 A11Y-ICONS 批内盘点同口径） --------------------------
+
+/// 批 6A（A11Y-BATCH6B 并行卡，wt268）在航豁免：10 个多钮面文件 / 24 处
+/// 未名钮，归批 6A 清零。批 6B 只辖单钮文件（26 处已全部标注），按卡面
+/// 纪律不碰多钮面。**6A 合入后本清单必须删除**（届时全域守卫零豁免，
+/// 即 N32 闭环终点）。
+const _batch6AInFlightExemptions = <String>[
+  'lib/features/auth/presentation/screens/register_screen.dart',
+  'lib/features/auth/presentation/screens/reset_password_screen.dart',
+  'lib/features/cognitive/presentation/screens/capsule/capsule_detail_screen.dart',
+  'lib/features/cognitive/presentation/screens/capsule/capsule_jobs_screen.dart',
+  'lib/features/documents/presentation/screens/document_library_screen.dart',
+  'lib/features/focus/presentation/screens/mindfulness_mode_screen.dart',
+  'lib/features/knowledge/presentation/screens/knowledge_detail_screen.dart',
+  'lib/features/theater/presentation/screens/knowledge_theater_screen.dart',
+  'lib/features/translation/presentation/screens/translation_history_screen.dart',
+  'lib/features/visual_elements/presentation/screens/visual_elements_screen.dart',
+];
 
 final _blockComment = RegExp(r'/\*.*?\*/', dotAll: true);
 

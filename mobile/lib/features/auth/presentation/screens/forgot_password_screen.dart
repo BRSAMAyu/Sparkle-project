@@ -62,9 +62,11 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     return SparklePageScaffold(
       role: SparklePageRole.auth,
       appBar: AppBar(
+        // 甲式（A11Y-BATCH6B）：SparkleIconButton semanticLabel 单节点。
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
           icon: const Icon(Icons.arrow_back),
+          semanticLabel: l10n.back,
           onPressed: () => context.go('/login'),
         ),
         title: Text(l10n.authForgotPasswordTitle),

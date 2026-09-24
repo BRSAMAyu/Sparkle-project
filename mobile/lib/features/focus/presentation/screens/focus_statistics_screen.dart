@@ -49,9 +49,11 @@ class _FocusStatisticsScreenState extends ConsumerState<FocusStatisticsScreen> {
       appBar: AppBar(
         title: Text(l10n.focusStatsScreenTitle),
         actions: [
+          // 甲式（A11Y-BATCH6B）：SparkleIconButton semanticLabel 单节点。
           SparkleIconButton(
             variant: ButtonVariant.ghost,
             icon: const Icon(Icons.sync),
+            semanticLabel: l10n.commonRefresh,
             onPressed: state.isRefreshing
                 ? null
                 : () {

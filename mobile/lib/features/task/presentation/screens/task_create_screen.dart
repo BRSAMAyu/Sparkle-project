@@ -729,10 +729,12 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                         trailing: _dueDate != null
                             ? SizedBox(
                                 width: 40,
+                                // 甲式（A11Y-BATCH6B）：semanticLabel 单节点。
                                 child: SparkleIconButton(
                                   variant: ButtonVariant.ghost,
                                   size: 32,
                                   icon: const Icon(Icons.clear),
+                                  semanticLabel: l10n.taskClearDueDate,
                                   onPressed: () =>
                                       setState(() => _dueDate = null),
                                 ),

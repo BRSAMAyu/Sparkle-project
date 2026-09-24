@@ -52,11 +52,14 @@ class _ShopScreenState extends ConsumerState<ShopScreen>
         // D-COMM-2：光子兑 Pro 入口（次级位置，不占内容主面积；奖励出口语义，
         // 与商城购买面分开——不放兑换卡进商品网格）。
         actions: [
+          // 双源同键（A11Y-BATCH6B，照批 4 漂移修正形制）：Tooltip 之外
+          // 显式 semanticLabel——隐藏期 Tooltip 不构成按钮名。
           Tooltip(
             message: context.l10n.photonRedeemProEntryTooltip,
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: const Icon(Icons.redeem_rounded),
+              semanticLabel: context.l10n.photonRedeemProEntryTooltip,
               onPressed: () =>
                   unawaited(context.push(PhotonRoutes.redeemPro)),
             ),

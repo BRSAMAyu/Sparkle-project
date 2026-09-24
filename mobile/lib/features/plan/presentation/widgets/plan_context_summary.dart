@@ -200,9 +200,14 @@ class _PlanContextSnapshotCardState extends State<_PlanContextSnapshotCard>
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                // 两态钮按当前态命名（A11Y-BATCH6B，照批 5 置顶形制）：
+                // 展开态收起名、收起态展开名，semanticLabel 单节点。
                 SparkleIconButton(
                   variant: ButtonVariant.ghost,
                   size: DS.spacing32,
+                  semanticLabel: _expanded
+                      ? l10n.planContextCollapse
+                      : l10n.planContextExpand,
                   icon: Icon(
                     _expanded
                         ? Icons.keyboard_arrow_up_rounded

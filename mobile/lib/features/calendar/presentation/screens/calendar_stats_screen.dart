@@ -235,8 +235,10 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
         ),
         child: Row(
           children: [
+            // 甲式（A11Y-BATCH6B）：SparkleIconButton semanticLabel 单节点。
             SparkleIconButton(
               icon: const Icon(Icons.arrow_back_ios_new),
+              semanticLabel: context.l10n.back,
               onPressed: () => context.pop(),
               variant: ButtonVariant.ghost,
             ),

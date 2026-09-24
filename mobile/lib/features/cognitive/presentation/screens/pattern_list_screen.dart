@@ -78,6 +78,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
         ),
         child: Row(
           children: [
+            // 甲式（A11Y-BATCH6B）：SparkleIconButton semanticLabel 单节点。
             SparkleIconButton(
               onPressed: () {
                 unawaited(
@@ -86,6 +87,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
                 context.pop();
               },
               icon: const Icon(Icons.arrow_back_ios_rounded),
+              semanticLabel: context.l10n.back,
               variant: ButtonVariant.ghost,
             ),
             Expanded(

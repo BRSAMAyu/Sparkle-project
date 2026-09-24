@@ -348,10 +348,12 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen> {
         title: Text(context.l10n.simulationTitle),
         actions: [
           // FAB-UNIFY：M3 IconButton → 组件归一（ghost 档，几何走组件默认档）。
+          // 甲式（A11Y-BATCH6B）：semanticLabel 单节点。
           if (session != null)
             SparkleIconButton(
               variant: ButtonVariant.ghost,
               icon: Icon(Icons.ios_share_rounded, color: DS.textSecondary),
+              semanticLabel: context.l10n.share,
               onPressed: () => unawaited(_showSimulationShareSheet(session)),
             ),
         ],

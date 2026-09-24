@@ -115,10 +115,12 @@ class _CandidateActionSheetState extends ConsumerState<CandidateActionSheet> {
                   ],
                 ),
               ),
+              // 甲式（A11Y-BATCH6B）：SparkleIconButton semanticLabel 单节点。
               SparkleIconButton(
                 variant: ButtonVariant.ghost,
                 size: 36,
                 icon: const Icon(Icons.close, size: 20),
+                semanticLabel: l10n.close,
                 onPressed: () {
                   unawaited(
                     SensoryFeedbackService.emit(
