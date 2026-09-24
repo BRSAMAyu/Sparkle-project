@@ -109,6 +109,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # gitignored 生成物（backend/app/gen 等）是 AT/AX/AV 族守卫的扫描输入：
+      # 本地树有它们所以绿，CI 裸检出会环境性误报——先再生（与 lint job 同形制）。
+      - name: Regenerate protobuf bindings
+        run: make proto-tools-build && make proto-gen
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -451,6 +456,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: lint
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@v4
 
