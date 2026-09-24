@@ -509,6 +509,7 @@ class SharedResourceFeedbackService:
         """经 services/evidence 既有链注入信念证据；无 Redis 时诚实降级为 0。"""
         try:
             from app.core.cache import cache_service
+
             # 直接引子模块而非包 re-export（Rule AT：子模块需要真实运行时引用方）。
             from app.services.evidence.fusion_engine import FusionEngine
             from app.services.evidence.outcome_evidence_adapter import (

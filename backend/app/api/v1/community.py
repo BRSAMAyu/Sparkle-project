@@ -191,7 +191,6 @@ from app.schemas.plan import PlanCreate
 from app.schemas.task import TaskCreate
 from app.services.card_protocol.share_service import ShareService
 from app.services.collaboration_service import collaboration_service
-from app.services.community_feedback_service import SharedResourceFeedbackService
 from app.services.community_advanced_service import (
     BroadcastService,
     EncryptionService,
@@ -202,6 +201,7 @@ from app.services.community_advanced_service import (
     OfflineQueueService,
     ReportService,
 )
+from app.services.community_feedback_service import SharedResourceFeedbackService
 from app.services.community_service import (
     CheckinService,
     FriendshipService,
