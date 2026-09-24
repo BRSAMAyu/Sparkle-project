@@ -1157,8 +1157,13 @@ class ContextBuilderMixin:
             task_status_summary = await self._get_task_status_summary(user_id, db_session)
             _uc_mark("task_status_summary")
 
-            llm_profile_data = None
-            preference_version = 0
+            # WT295: 显式类型注解——消除 mypy partial-type 内部崩溃（Unexpectedly
+            # encountered partial type @ L1277 use-site，由 L1209 嵌套元组解包
+            # 重定义触发）。该崩溃令 mypy 全量输出被随机截断（±400 条可见性翻转，
+            # wt292 实锤回退），且崩溃时 context_builder 下游 ~500 条存量类型债
+            # 被静默隐藏。局部注解为纯编译期元数据，运行时零行为变化。
+            llm_profile_data: dict[str, Any] | None = None
+            preference_version: int = 0
 
             async def _build_llm_profile_bundle(session: AsyncSession) -> tuple[dict[str, Any] | None, int]:
                 bundle_profile_data = None

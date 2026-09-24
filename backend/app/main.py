@@ -167,8 +167,11 @@ async def lifespan(fastapp: FastAPI):
     loop.set_exception_handler(_global_task_exception_handler)
 
     # Activate PII field-level encryption listeners (SQLAlchemy events)
+    # WT295: 必须用具名别名——裸 `import app.models.x` 会在函数作用域把全局 `app`
+    # （FastAPI 实例）遮蔽为 `app` 包模块，导致下方关停段 30+ 处 `app.state` 在
+    # 运行时抛 AttributeError（拿到的不是 FastAPI 实例），优雅关停整段跳过。
     try:
-        import app.models.pii_encryption_listeners  # noqa: F401 — side-effect import
+        import app.models.pii_encryption_listeners as _pii_encryption_listeners  # noqa: F401 — side-effect import
     except Exception:
         logger.opt(exception=True).warning("PII encryption listeners failed to activate")
 
