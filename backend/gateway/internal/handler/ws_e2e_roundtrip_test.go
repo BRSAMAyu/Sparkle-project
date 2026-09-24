@@ -353,7 +353,14 @@ func TestChatOrchestrator_WSE2E_IdleTimeout(t *testing.T) {
 	token := e2eJWT(t, h.jwtSecret, "e2e-idle-user")
 
 	conn := h.dial(t, token)
-	require.Equal(t, 1, h.orch.Registry().Count())
+	// Dial only guarantees the 101 upgrade was written; the server handler
+	// reaches registerConnection only after logging/metrics/timer setup, so
+	// registration is asynchronous from the client's point of view. Poll
+	// instead of asserting inline — a fixed assert raced CI (-race, slow
+	// runners) and local runs alike (observed 1-in-5 failure).
+	require.Eventually(t, func() bool {
+		return h.orch.Registry().Count() == 1
+	}, 5*time.Second, 10*time.Millisecond, "dial must register exactly one connection")
 
 	// Never send anything; expect the server-side idle timer to close us.
 	require.NoError(t, conn.SetReadDeadline(time.Now().Add(5*time.Second)))

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ast
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -43,34 +44,53 @@ def _extract_exemption_reason(path: Path) -> str | None:
 
 
 def _changed_python_files(repo_root: Path) -> set[Path] | None:
+    """Changed guard-scope files. Returns None only when git is unavailable.
+
+    Semantics: empty set = no changes since the diff base (scope-empty, must
+    NOT fall back to a full scan); None = git failure (legacy full-scan
+    fallback). RULE_GUARD_DIFF_BASE (CI: github.event.before || github.sha)
+    overrides the origin/HEAD merge-base — after a push lands on main,
+    HEAD == origin/main makes the merge-base diff empty, and only
+    event.before can scope the files this push actually touched.
+    """
     try:
-        default_ref = (
-            subprocess.run(
-                ["git", "symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"],
-                check=True,
-                capture_output=True,
-                text=True,
-                cwd=repo_root,
+        env_base = os.environ.get("RULE_GUARD_DIFF_BASE", "").strip()
+        if set(env_base) == {"0"}:
+            # all-zero sha = ref creation (tag push / new branch): nothing
+            # scoping-relevant changed since HEAD — pin to HEAD so the diff is
+            # empty (scope-empty) instead of feeding git a bad revision.
+            env_base = "HEAD"
+        if env_base:
+            diff_spec = f"{env_base}...HEAD"
+        else:
+            default_ref = (
+                subprocess.run(
+                    ["git", "symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                    cwd=repo_root,
+                )
+                .stdout.strip()
             )
-            .stdout.strip()
-        )
-        merge_base = (
-            subprocess.run(
-                ["git", "merge-base", "HEAD", default_ref],
-                check=True,
-                capture_output=True,
-                text=True,
-                cwd=repo_root,
+            merge_base = (
+                subprocess.run(
+                    ["git", "merge-base", "HEAD", default_ref],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                    cwd=repo_root,
+                )
+                .stdout.strip()
             )
-            .stdout.strip()
-        )
+            diff_spec = f"{merge_base}...HEAD"
         changed = subprocess.run(
             [
                 "git",
                 "diff",
                 "--name-only",
                 "--diff-filter=ACMR",
-                f"{merge_base}...HEAD",
+                diff_spec,
                 "--",
                 "backend/app/services",
                 "backend/app/consumers",
@@ -80,29 +100,32 @@ def _changed_python_files(repo_root: Path) -> set[Path] | None:
             text=True,
             cwd=repo_root,
         ).stdout.splitlines()
-        changed.extend(
-            subprocess.run(
-                ["git", "status", "--porcelain", "--", "backend/app/services", "backend/app/consumers"],
-                check=True,
-                capture_output=True,
-                text=True,
-                cwd=repo_root,
-            ).stdout.splitlines()
-        )
+        status_lines = subprocess.run(
+            ["git", "status", "--porcelain", "--", "backend/app/services", "backend/app/consumers"],
+            check=True,
+            capture_output=True,
+            text=True,
+            cwd=repo_root,
+        ).stdout.splitlines()
     except (subprocess.CalledProcessError, FileNotFoundError):
         return None
 
-    resolved: set[Path] = set()
-    for item in changed:
-        entry = item.strip()
-        if not entry:
+    # The two sources have different line formats: diff --name-only emits bare
+    # paths, while porcelain emits `XY <path>` (fixed-width status prefix —
+    # slice the RAW line; strip()ing " M path" first shifts the offset and
+    # mangles the path, which is how unstaged modifications used to vanish
+    # from the scan scope).
+    path_strs: list[str] = [line.strip() for line in changed if line.strip()]
+    for entry in (line.rstrip() for line in status_lines):
+        if not entry.strip():
             continue
-        if entry.startswith(("M ", "A ", "R ", "C ", "?? ")):
-            path_str = entry[3:].strip()
-            if " -> " in path_str:
-                path_str = path_str.split(" -> ", 1)[1].strip()
-        else:
-            path_str = entry
+        path_str = entry[3:].strip()
+        if " -> " in path_str:
+            path_str = path_str.split(" -> ", 1)[1].strip()
+        path_strs.append(path_str)
+
+    resolved: set[Path] = set()
+    for path_str in path_strs:
         candidate = repo_root / path_str
         if candidate.exists() and _is_scannable(candidate):
             resolved.add(candidate)
@@ -193,6 +216,10 @@ def main() -> int:
         for violation in violations:
             print(violation)
         return 1
+    scope = _changed_python_files(Path(__file__).resolve().parents[2])
+    if scope is not None and not scope:
+        print("[Rule AT] PASS (scope-empty — no guard-scope files changed since diff base)")
+        return 0
     print("[Rule AT] PASS")
     return 0
 

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -100,22 +101,39 @@ def _parse_changed_lines(diff_text: str) -> dict[str, set[int] | None]:
 
 
 def _changed_lines(repo_root: Path) -> dict[str, set[int] | None] | None:
-    default_ref = _default_ref(repo_root)
-    if not default_ref:
-        return None
-    try:
-        merge_base = (
-            subprocess.run(
-                ["git", "merge-base", "HEAD", default_ref],
-                check=True,
-                capture_output=True,
-                text=True,
-                cwd=repo_root,
+    """Changed route lines since the diff base. Returns None only on git failure.
+
+    Empty dict = nothing changed since the base (scope-empty — must NOT fall
+    back to a full scan); None = git unavailable (legacy full-scan fallback).
+    RULE_GUARD_DIFF_BASE (CI: github.event.before || github.sha) overrides the
+    origin/HEAD merge-base: after a push lands on main, HEAD == origin/main
+    makes the merge-base diff empty and only event.before scopes the push.
+    """
+    env_base = os.environ.get("RULE_GUARD_DIFF_BASE", "").strip()
+    if set(env_base) == {"0"}:
+        # all-zero sha = ref creation (tag push / new branch): nothing
+        # scoping-relevant changed since HEAD — pin to HEAD so the diff is
+        # empty (scope-empty) instead of feeding git a bad revision.
+        env_base = "HEAD"
+    if env_base:
+        merge_base = env_base
+    else:
+        default_ref = _default_ref(repo_root)
+        if not default_ref:
+            return None
+        try:
+            merge_base = (
+                subprocess.run(
+                    ["git", "merge-base", "HEAD", default_ref],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                    cwd=repo_root,
+                )
+                .stdout.strip()
             )
-            .stdout.strip()
-        )
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return None
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            return None
 
     changed: dict[str, set[int] | None] = {}
     diff_commands = [
@@ -199,13 +217,17 @@ def main() -> int:
     args = parser.parse_args()
 
     violations = scan_rule_ax(diff_only=not args.full)
+    mode = "FULL" if args.full else "DIFF"
     if violations:
-        mode = "FULL" if args.full else "DIFF"
         print(f"[Rule AX] FAIL ({mode})")
         for violation in violations:
             print(violation)
         return 1
-    mode = "FULL" if args.full else "DIFF"
+    if not args.full:
+        scope = _changed_lines(Path(__file__).resolve().parents[2])
+        if scope is not None and not scope:
+            print(f"[Rule AX] PASS ({mode}, scope-empty — no route-scope changes since diff base)")
+            return 0
     print(f"[Rule AX] PASS ({mode})")
     return 0
 

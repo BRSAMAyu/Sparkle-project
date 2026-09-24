@@ -151,6 +151,14 @@ jobs:
           python3 scripts/render_stage22_precheck.py
 
       - name: Run All Rule Guards (includes Rule AR SQAM)
+        env:
+          # AT/AX/BJ 按 diff 圈定变更面：push-to-main 后 HEAD==origin/main，
+          # origin/HEAD merge-base 圈定恒空（且 actions/checkout 不建 origin/HEAD
+          # 符号引用，直接触发全量回落翻历史账 → run 35965302672 的 AT/AX 红）。
+          # 改用 event.before（本次 push 旧头）圈定；workflow_dispatch 无 before
+          # 时回落 github.sha = 空 diff，守卫按 scope-empty PASS（空集≠None 语义），
+          # 不再全扫。
+          RULE_GUARD_DIFF_BASE: ${{ github.event.before || github.sha }}
         run: bash scripts/run_all_rule_guards.sh --jobs 4
 
   # ==================== JOB 2: BACKEND TEST ====================
@@ -559,9 +567,17 @@ jobs:
         env:
           PGPASSWORD: password
         run: |
+          # pg_dump 方言伪漂移：CI 侧 pg_dump 对每个对象输出 public. 限定名
+          # （search_path 置空风格），提交快照由 pg_dump 16.15 生成、不带限定。
+          # 单 schema（public）单库下 public.x 与 x 语义等价——diff 前双方归一
+          # 去限定，只留真漂移。2026-09-24 run 35965302672 判定：3445 对差异行
+          # 去限定后逐行配对归零，零真差异。
+          normalize() {
+            grep -v '^--' "$1" | grep -v '^SET ' | grep -v '^SELECT pg_catalog.set_config' | grep -v '^\\' | sed 's/public\.//g'
+          }
           pg_dump -h localhost -U postgres -d sparkle_ci --schema-only | grep -v '^\\' > /tmp/schema_ci.sql
-          grep -v '^--' backend/gateway/internal/db/schema.sql | grep -v '^SET ' | grep -v '^SELECT pg_catalog.set_config' | grep -v '^\\' > /tmp/schema_repo.sql
-          grep -v '^--' /tmp/schema_ci.sql | grep -v '^SET ' | grep -v '^SELECT pg_catalog.set_config' | grep -v '^\\' > /tmp/schema_ci_norm.sql
+          normalize backend/gateway/internal/db/schema.sql > /tmp/schema_repo.sql
+          normalize /tmp/schema_ci.sql > /tmp/schema_ci_norm.sql
           diff -u /tmp/schema_repo.sql /tmp/schema_ci_norm.sql
 
       - name: Warn On Advisory Schema Diff
