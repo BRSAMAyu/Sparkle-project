@@ -100,7 +100,7 @@
     "errorEmptyState": "这里空空如也，快去添加内容吧",
     "retry": "重试",
     "back": "返回",
-    "welcomeSubtitle": "点燃你的学习潜能",
+    "welcomeSubtitle": "期末备考提分，AI 陪你把该拿的分拿回来",
     "pleaseEnterUsername": "请输入用户名或邮箱",
     "pleaseEnterPassword": "请输入密码",
     "orText": "或",
@@ -8534,7 +8534,7 @@
     "onboardingPermissionWorking": "请求中...",
     "homeNotificationUnreadMessages": "{count} 条未读消息",
     "homeNotificationUnreadNotifications": "{count} 条未读通知",
-    "splashSubtitle": "从第一秒开始，进入更聪明也更有温度的学习旅程。",
+    "splashSubtitle": "期末一周，星火陪你备考，把该拿的分拿回来。",
     "@homeNotificationUnreadMessages": {
         "placeholders": {
             "count": {
@@ -15216,6 +15216,9 @@
     "homeOnboardingChatSubtitle": "聊聊你的想法，获得个性化建议",
     "homeOnboardingExploreGalaxy": "探索知识星图",
     "homeOnboardingExploreSubtitle": "发现你的知识结构，找到提升方向",
+    "homeOnboardingResumeTitle": "完成引导，让 AI 更懂你",
+    "homeOnboardingResumeSummary": "学习画像和建模访谈还没完成。先随便体验，随时回来继续——AI 已经可以用了。",
+    "homeOnboardingResumeCta": "继续引导",
     "homeSlotDailyBriefing": "今日简报",
     "homeSlotDailyBriefingReady": "今天 {count} 件待办 · 已就绪",
     "@homeSlotDailyBriefingReady": {

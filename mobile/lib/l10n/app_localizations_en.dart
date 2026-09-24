@@ -329,7 +329,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get back => 'Back';
 
   @override
-  String get welcomeSubtitle => 'Ignite your learning potential';
+  String get welcomeSubtitle =>
+      'Prep for finals and raise your grade with AI at your side';
 
   @override
   String get pleaseEnterUsername => 'Please enter your username or email';
@@ -19099,7 +19100,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get splashSubtitle =>
-      'From the first second, step into a learning journey that\'s smarter and warmer.';
+      'One week to finals — Sparkle helps you win back every point you deserve.';
 
   @override
   String get taskGuidePanelCollapse => 'Collapse Guide';
@@ -34535,6 +34536,17 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get homeOnboardingExploreSubtitle =>
       'Discover your knowledge structure and growth areas';
+
+  @override
+  String get homeOnboardingResumeTitle =>
+      'Finish setup so Sparkle knows you better';
+
+  @override
+  String get homeOnboardingResumeSummary =>
+      'Your learning profile and modeling chat are still pending. Explore freely first — the AI is ready whenever you are.';
+
+  @override
+  String get homeOnboardingResumeCta => 'Continue setup';
 
   @override
   String get homeSlotDailyBriefing => 'Daily briefing';

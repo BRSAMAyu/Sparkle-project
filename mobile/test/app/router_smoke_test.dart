@@ -148,7 +148,7 @@ void main() {
     });
 
     testWidgets(
-        'redirects authenticated users without onboarding to persona flow',
+        'keeps authenticated users without onboarding on home (J-02 soft wall)',
         (tester) async {
       final harness = await _pumpRouter(
         tester,
@@ -161,11 +161,15 @@ void main() {
 
       await _pumpFrames(tester);
 
+      // J-02（A-SPEC8B G1 软化）：引导未完成不再全域硬弹回 persona——用户
+      // 先在 home 拿价值（价值先于画像）；「继续引导」入口由
+      // OnboardingResumeCard 承担，persona 链路保持手动可达。
       expect(
         harness.router.routeInformationProvider.value.uri.path,
-        '/onboarding/persona',
+        '/home',
       );
-      expect(find.byType(PersonaOnboardingScreen), findsOneWidget);
+      expect(find.byType(DashboardScreen), findsOneWidget);
+      expect(find.byType(PersonaOnboardingScreen), findsNothing);
     });
 
     testWidgets(

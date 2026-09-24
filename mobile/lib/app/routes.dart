@@ -162,8 +162,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isOnPersonaOnboarding =
           state.uri.path == UserRoutes.personaOnboarding ||
               state.uri.path.startsWith('${UserRoutes.personaOnboarding}/');
-      final isOnModelingChat = state.uri.path == UserRoutes.modelingChat ||
-          state.uri.path.startsWith('${UserRoutes.modelingChat}/');
       final onboardingCompleted = ref.read(onboardingCompletedProvider);
       final isGuestUser = authState.user?.registrationSource == 'guest';
 
@@ -210,19 +208,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/home';
       }
 
-      // N20 stale-while-revalidate：先放行期 user 尚在后台校验（可能为
-      // null），此时 onboardingCompleted 已被 syncForUser(null) 置 false
-      // ——身份未决不得当 false（M6-07 同源），否则老用户会被闪跳进引导。
-      // user 就位后 onboardingCompleted 按真实存值重判，再跳不迟。
-      if (isAuthenticated &&
-          authState.user != null &&
-          !isGuestUser &&
-          onboardingCompleted == false &&
-          !isOnPersonaOnboarding &&
-          !isOnModelingChat) {
-        return UserRoutes.personaOnboarding;
-      }
-
+      // J-02（A-SPEC8B G1 软化）：注册墙从「引导未完成=全域硬重定向」改为
+      // 「放行 + 提醒」——非 guest 用户 onboardingCompleted==false 时不再被
+      // 弹回 persona，可先体验价值（首聊/首目标）；首页经 OnboardingResumeCard
+      // 提供继续引导入口，persona/modeling 链路保持可达（「价值先于画像」）。
+      // auth 面守卫（未登录→login、已登录→出 auth）原样保留，不在本软化范围。
+      // N20 stale-while-revalidate 语义仍在：onboardingCompleted 为 null
+      // （同步未决）时本就不做 onboarding 相关跳转（M6-07）。
       if (isAuthenticated &&
           (onboardingCompleted == true || isGuestUser) &&
           isOnPersonaOnboarding) {

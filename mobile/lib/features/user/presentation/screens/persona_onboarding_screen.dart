@@ -11,7 +11,9 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/widgets/scene_audio_scope.dart';
+import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
+import 'package:sparkle/features/user/presentation/providers/persona_onboarding_draft.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
 import 'package:sparkle/features/user/user_routes.dart';
@@ -29,6 +31,9 @@ class _PersonaOnboardingScreenState
     extends ConsumerState<PersonaOnboardingScreen> {
   final _goalController = TextEditingController();
   Timer? _previewDebounce;
+  // J-02（A-SPEC8B 改造 #3 / N50 前半）：5 步引导 + 已填内容的断点续存，
+  // 防抖 400ms 落 per-user prefs；跳过/提交成功即清除。
+  Timer? _draftSaveDebounce;
   int _currentStep = 0;
   String _goalType = 'exam';
   String _learningStyle = 'balanced';
@@ -44,14 +49,82 @@ class _PersonaOnboardingScreenState
   @override
   void initState() {
     super.initState();
-    _goalController.addListener(_schedulePreview);
+    _goalController.addListener(_onFieldMutated);
+    unawaited(_restoreDraft());
   }
 
   @override
   void dispose() {
     _previewDebounce?.cancel();
+    _draftSaveDebounce?.cancel();
     _goalController.dispose();
     super.dispose();
+  }
+
+  String? get _currentUserId => ref.read(authProvider).user?.id;
+
+  /// 恢复上次中断的引导草稿（步数 + 已填内容），恢复值经 clamp 钳位——
+  /// 旧版本/损坏数据不致把用户带进非法状态。
+  Future<void> _restoreDraft() async {
+    final userId = _currentUserId;
+    if (userId == null) return;
+    final draft =
+        await ref.read(personaOnboardingDraftStoreProvider).load(userId);
+    if (!mounted || draft == null) return;
+    final restored = draft.clamp();
+    setState(() {
+      _currentStep = restored.step;
+      _goalType = restored.goalType;
+      _learningStyle = restored.learningStyle;
+      _knowledgeLevel = restored.knowledgeLevel;
+      _studyMinutes = restored.studyMinutes;
+      _depthPreference = restored.depthPreference;
+      _curiosityPreference = restored.curiosityPreference;
+      if (restored.goalText.isNotEmpty) {
+        // 经 listener 顺带重排预览（_onFieldMutated），内容与草稿一致时
+        // 再存一次为幂等写，无害。
+        _goalController.text = restored.goalText;
+      }
+    });
+  }
+
+  PersonaOnboardingDraft _draftSnapshot() => PersonaOnboardingDraft(
+        step: _currentStep,
+        goalType: _goalType,
+        goalText: _goalController.text.trim(),
+        learningStyle: _learningStyle,
+        knowledgeLevel: _knowledgeLevel,
+        studyMinutes: _studyMinutes,
+        depthPreference: _depthPreference,
+        curiosityPreference: _curiosityPreference,
+      );
+
+  void _scheduleDraftSave() {
+    _draftSaveDebounce?.cancel();
+    _draftSaveDebounce = Timer(const Duration(milliseconds: 400), () {
+      unawaited(_saveDraftNow());
+    });
+  }
+
+  Future<void> _saveDraftNow() async {
+    final userId = _currentUserId;
+    if (userId == null) return;
+    await ref
+        .read(personaOnboardingDraftStoreProvider)
+        .save(userId, _draftSnapshot());
+  }
+
+  Future<void> _clearDraft() async {
+    _draftSaveDebounce?.cancel();
+    final userId = _currentUserId;
+    if (userId == null) return;
+    await ref.read(personaOnboardingDraftStoreProvider).clear(userId);
+  }
+
+  /// 任一字段变更的统一入口：重排 AI 预览 + 防抖续存草稿。
+  void _onFieldMutated() {
+    _schedulePreview();
+    _scheduleDraftSave();
   }
 
   @override
@@ -182,7 +255,7 @@ class _PersonaOnboardingScreenState
                     SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
                   );
                   setState(() => _studyMinutes = v);
-                  _schedulePreview();
+                  _onFieldMutated();
                 },
               ),
             ],
@@ -215,7 +288,7 @@ class _PersonaOnboardingScreenState
                     SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
                   );
                   setState(() => _depthPreference = v);
-                  _schedulePreview();
+                  _onFieldMutated();
                 },
               ),
               const SizedBox(height: DS.spacing12),
@@ -228,7 +301,7 @@ class _PersonaOnboardingScreenState
                     SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
                   );
                   setState(() => _curiosityPreference = v);
-                  _schedulePreview();
+                  _onFieldMutated();
                 },
               ),
             ],
@@ -244,7 +317,7 @@ class _PersonaOnboardingScreenState
         // 触感由 SparklePressable 默认 tap 反馈提供（Step 1 申报：selection→tap）。
         onTap: () {
           setState(() => _learningStyle = value);
-          _schedulePreview();
+          _onFieldMutated();
         },
       );
 
@@ -255,7 +328,7 @@ class _PersonaOnboardingScreenState
         // 触感由 SparklePressable 默认 tap 反馈提供（Step 1 申报：selection→tap）。
         onTap: () {
           setState(() => _goalType = value);
-          _schedulePreview();
+          _onFieldMutated();
         },
       );
 
@@ -266,7 +339,7 @@ class _PersonaOnboardingScreenState
         // 触感由 SparklePressable 默认 tap 反馈提供（Step 1 申报：selection→tap）。
         onTap: () {
           setState(() => _knowledgeLevel = value);
-          _schedulePreview();
+          _onFieldMutated();
         },
       );
 
@@ -274,10 +347,13 @@ class _PersonaOnboardingScreenState
     if (_currentStep == 0) return;
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     setState(() => _currentStep -= 1);
+    unawaited(_saveDraftNow());
   }
 
   void _handleSkip() {
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+    // 用户显式放弃 persona 逐页引导 → 清除草稿（建模访谈完成即整体完成）。
+    unawaited(_clearDraft());
     ref.invalidate(transparentProfileProvider);
     ref.invalidate(profileContextProvider);
     ref.invalidate(inferredPreferencesProvider);
@@ -406,6 +482,7 @@ class _PersonaOnboardingScreenState
     if (_currentStep < totalSteps - 1) {
       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
       setState(() => _currentStep += 1);
+      unawaited(_saveDraftNow());
       return;
     }
 
@@ -428,6 +505,8 @@ class _PersonaOnboardingScreenState
       ref.invalidate(profileContextProvider);
       ref.invalidate(inferredPreferencesProvider);
       ref.invalidate(activePoliciesProvider);
+      // 提交成功 → 引导闭环，草稿使命结束。
+      unawaited(_clearDraft());
       if (mounted) {
         unawaited(
           SensoryFeedbackService.emit(SensoryFeedbackEvent.achievementRare),

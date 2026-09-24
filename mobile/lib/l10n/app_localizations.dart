@@ -701,7 +701,7 @@ abstract class AppLocalizations {
   /// No description provided for @welcomeSubtitle.
   ///
   /// In zh, this message translates to:
-  /// **'点燃你的学习潜能'**
+  /// **'期末备考提分，AI 陪你把该拿的分拿回来'**
   String get welcomeSubtitle;
 
   /// No description provided for @pleaseEnterUsername.
@@ -33228,7 +33228,7 @@ abstract class AppLocalizations {
   /// No description provided for @splashSubtitle.
   ///
   /// In zh, this message translates to:
-  /// **'从第一秒开始，进入更聪明也更有温度的学习旅程。'**
+  /// **'期末一周，星火陪你备考，把该拿的分拿回来。'**
   String get splashSubtitle;
 
   /// No description provided for @taskGuidePanelCollapse.
@@ -60118,6 +60118,24 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'发现你的知识结构，找到提升方向'**
   String get homeOnboardingExploreSubtitle;
+
+  /// No description provided for @homeOnboardingResumeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成引导，让 AI 更懂你'**
+  String get homeOnboardingResumeTitle;
+
+  /// No description provided for @homeOnboardingResumeSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习画像和建模访谈还没完成。先随便体验，随时回来继续——AI 已经可以用了。'**
+  String get homeOnboardingResumeSummary;
+
+  /// No description provided for @homeOnboardingResumeCta.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续引导'**
+  String get homeOnboardingResumeCta;
 
   /// No description provided for @homeSlotDailyBriefing.
   ///

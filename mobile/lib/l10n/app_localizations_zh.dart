@@ -309,7 +309,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get back => '返回';
 
   @override
-  String get welcomeSubtitle => '点燃你的学习潜能';
+  String get welcomeSubtitle => '期末备考提分，AI 陪你把该拿的分拿回来';
 
   @override
   String get pleaseEnterUsername => '请输入用户名或邮箱';
@@ -18286,7 +18286,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get splashSubtitle => '从第一秒开始，进入更聪明也更有温度的学习旅程。';
+  String get splashSubtitle => '期末一周，星火陪你备考，把该拿的分拿回来。';
 
   @override
   String get taskGuidePanelCollapse => '收起指南';
@@ -33104,6 +33104,16 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get homeOnboardingExploreSubtitle => '发现你的知识结构，找到提升方向';
+
+  @override
+  String get homeOnboardingResumeTitle => '完成引导，让 AI 更懂你';
+
+  @override
+  String get homeOnboardingResumeSummary =>
+      '学习画像和建模访谈还没完成。先随便体验，随时回来继续——AI 已经可以用了。';
+
+  @override
+  String get homeOnboardingResumeCta => '继续引导';
 
   @override
   String get homeSlotDailyBriefing => '今日简报';

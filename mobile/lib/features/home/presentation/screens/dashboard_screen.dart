@@ -51,6 +51,7 @@ import 'package:sparkle/features/home/presentation/widgets/home_notification_car
 import 'package:sparkle/features/home/presentation/widgets/learning_heatmap_widget.dart';
 import 'package:sparkle/features/home/presentation/widgets/metrics_row.dart';
 import 'package:sparkle/features/home/presentation/widgets/multi_goal_dashboard_card.dart';
+import 'package:sparkle/features/home/presentation/widgets/onboarding_resume_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/predicted_intent_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/recent_insights_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/task_board_card.dart';
@@ -1343,6 +1344,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
         );
       }
+
+      // J-02（A-SPEC8B G1 软化）：注册墙改「放行 + 提醒」后的提醒入口——
+      // 引导未完成的注册用户可自由体验（价值先于画像），本卡在首页承担
+      // 「继续引导」职责。挂 dashboardSections 而非 growthSections：新注册
+      // 用户无目标时走 hasNoGoals 分支（growthSections 整体不渲染），挂这
+      // 才能覆盖注册即到首屏的主受众。可见性由卡内自守门（非 guest 且
+      // completed==false），其余场景渲染 SizedBox.shrink，零布局影响。
+      dashboardSections.add(
+        _staggeredSection(
+          index: sectionIndex++,
+          child: const OnboardingResumeCard(),
+        ),
+      );
 
       // Walk the user's slot order, render only what's visible, wrap each
       // in CollapsibleSlot so they can shrink to a 64px header without

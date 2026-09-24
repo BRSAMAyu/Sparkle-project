@@ -100,7 +100,7 @@
     "errorEmptyState": "It's a bit empty here, why not add something?",
     "retry": "Retry",
     "back": "Back",
-    "welcomeSubtitle": "Ignite your learning potential",
+    "welcomeSubtitle": "Prep for finals and raise your grade with AI at your side",
     "pleaseEnterUsername": "Please enter your username or email",
     "pleaseEnterPassword": "Please enter your password",
     "orText": "OR",
@@ -8531,7 +8531,7 @@
     "onboardingPermissionWorking": "Working...",
     "homeNotificationUnreadMessages": "{count} unread messages",
     "homeNotificationUnreadNotifications": "{count} unread notifications",
-    "splashSubtitle": "From the first second, step into a learning journey that's smarter and warmer.",
+    "splashSubtitle": "One week to finals — Sparkle helps you win back every point you deserve.",
     "@homeNotificationUnreadMessages": {
         "placeholders": {
             "count": {
@@ -15200,6 +15200,9 @@
     "homeOnboardingChatSubtitle": "Share your thoughts, get personalized guidance",
     "homeOnboardingExploreGalaxy": "Explore knowledge map",
     "homeOnboardingExploreSubtitle": "Discover your knowledge structure and growth areas",
+    "homeOnboardingResumeTitle": "Finish setup so Sparkle knows you better",
+    "homeOnboardingResumeSummary": "Your learning profile and modeling chat are still pending. Explore freely first — the AI is ready whenever you are.",
+    "homeOnboardingResumeCta": "Continue setup",
     "homeSlotDailyBriefing": "Daily briefing",
     "homeSlotDailyBriefingReady": "{count} next actions · ready to start",
     "@homeSlotDailyBriefingReady": {

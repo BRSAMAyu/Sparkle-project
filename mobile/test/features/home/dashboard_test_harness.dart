@@ -36,6 +36,7 @@ import 'package:sparkle/features/reviews/presentation/providers/nightly_review_p
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
+import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -141,6 +142,13 @@ Widget _buildDashboardProviderHarness({
       flutterSecureStorageProvider.overrideWithValue(_MemorySecureStorage()),
       sharedPreferencesProvider.overrideWithValue(_dashboardPrefs),
       authProvider.overrideWith((ref) => _StaticAuthNotifier()),
+      // J-02：OnboardingResumeCard 挂入 home 后，引导完成态必须有确定值，
+      // 否则真实 notifier 走网络判定、测试里落 false → 存量结构断言多出
+      // 一张卡。harness 钉 completed=true（存量基线布局），可见性用例在
+      // onboarding_resume_card_test.dart 内自行 override 为 false。
+      onboardingCompletedProvider.overrideWith(
+        _StaticOnboardingCompletedNotifier.new,
+      ),
       currentUserProvider.overrideWith((ref) => _buildUser()),
       notificationServiceProvider.overrideWith(
         (ref) => _SilentNotificationService(),
@@ -240,6 +248,24 @@ class _StaticAuthNotifier extends AuthNotifier {
 
   @override
   Future<void> checkAuthStatus() async {}
+}
+
+/// J-02：harness 钉引导完成态（存量基线=completed），避免真实 notifier
+/// 在测试环境走网络判定落 false、令 OnboardingResumeCard 混入布局。
+class _StaticOnboardingCompletedNotifier extends OnboardingCompletedNotifier {
+  _StaticOnboardingCompletedNotifier(super.ref) {
+    state = true;
+  }
+
+  @override
+  Future<void> syncForUser(UserModel? user) async {
+    state = true;
+  }
+
+  @override
+  Future<void> setCompleted(bool value) async {
+    state = value;
+  }
 }
 
 class _StaticHomeCloseToUnlockNotifier extends HomeCloseToUnlockNotifier {
