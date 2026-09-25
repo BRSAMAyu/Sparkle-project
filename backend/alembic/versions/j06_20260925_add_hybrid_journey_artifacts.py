@@ -28,7 +28,7 @@ from alembic import op
 from app.models.base import GUID
 
 revision: str = "j06_20260925"
-down_revision: str | None = "j05_20260925"
+down_revision: str | None = "s04b_20260925"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

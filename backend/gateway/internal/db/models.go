@@ -3492,6 +3492,22 @@ type GrowthChronicleSnapshot struct {
 	Metadata       []byte           `json:"metadata"`
 }
 
+type HybridJourneyArtifact struct {
+	UserID        pgtype.UUID      `json:"user_id"`
+	RunID         pgtype.UUID      `json:"run_id"`
+	TaskID        pgtype.UUID      `json:"task_id"`
+	Stage         string           `json:"stage"`
+	ArtifactKind  string           `json:"artifact_kind"`
+	Citations     []byte           `json:"citations"`
+	SourceRefs    []byte           `json:"source_refs"`
+	Payload       []byte           `json:"payload"`
+	SchemaVersion string           `json:"schema_version"`
+	ID            pgtype.UUID      `json:"id"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
+	DeletedAt     pgtype.Timestamp `json:"deleted_at"`
+}
+
 type IdempotencyKey struct {
 	Key          string             `json:"key"`
 	UserID       pgtype.UUID        `json:"user_id"`

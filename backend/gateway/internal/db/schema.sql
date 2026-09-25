@@ -3107,6 +3107,29 @@ CREATE TABLE growth_chronicle_snapshots (
 ALTER TABLE growth_chronicle_snapshots OWNER TO postgres;
 
 --
+-- Name: hybrid_journey_artifacts; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE hybrid_journey_artifacts (
+    user_id uuid NOT NULL,
+    run_id uuid NOT NULL,
+    task_id uuid,
+    stage character varying(24) NOT NULL,
+    artifact_kind character varying(32) NOT NULL,
+    citations json NOT NULL,
+    source_refs json NOT NULL,
+    payload json NOT NULL,
+    schema_version character varying(32) NOT NULL,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE hybrid_journey_artifacts OWNER TO postgres;
+
+--
 -- Name: idempotency_keys; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -8138,6 +8161,14 @@ ALTER TABLE ONLY growth_chronicle_snapshots
 
 
 --
+-- Name: hybrid_journey_artifacts hybrid_journey_artifacts_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY hybrid_journey_artifacts
+    ADD CONSTRAINT hybrid_journey_artifacts_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: idempotency_keys idempotency_keys_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -10647,6 +10678,20 @@ CREATE INDEX idx_group_type ON groups USING btree (type);
 --
 
 CREATE INDEX idx_growth_chronicle_user_saved ON growth_chronicle_snapshots USING btree (user_id, last_saved_at);
+
+
+--
+-- Name: idx_hybrid_journey_artifact_run; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_hybrid_journey_artifact_run ON hybrid_journey_artifacts USING btree (run_id);
+
+
+--
+-- Name: idx_hybrid_journey_artifact_user; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_hybrid_journey_artifact_user ON hybrid_journey_artifacts USING btree (user_id);
 
 
 --
@@ -19059,6 +19104,30 @@ ALTER TABLE ONLY group_tasks
 
 
 --
+-- Name: hybrid_journey_artifacts hybrid_journey_artifacts_run_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY hybrid_journey_artifacts
+    ADD CONSTRAINT hybrid_journey_artifacts_run_id_fkey FOREIGN KEY (run_id) REFERENCES agent_runs(id) ON DELETE CASCADE;
+
+
+--
+-- Name: hybrid_journey_artifacts hybrid_journey_artifacts_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY hybrid_journey_artifacts
+    ADD CONSTRAINT hybrid_journey_artifacts_task_id_fkey FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE SET NULL;
+
+
+--
+-- Name: hybrid_journey_artifacts hybrid_journey_artifacts_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY hybrid_journey_artifacts
+    ADD CONSTRAINT hybrid_journey_artifacts_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: idempotency_keys idempotency_keys_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -21556,6 +21625,13 @@ GRANT SELECT ON TABLE groups TO sparkle_readonly;
 --
 
 GRANT SELECT ON TABLE growth_chronicle_snapshots TO sparkle_readonly;
+
+
+--
+-- Name: TABLE hybrid_journey_artifacts; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE hybrid_journey_artifacts TO sparkle_readonly;
 
 
 --

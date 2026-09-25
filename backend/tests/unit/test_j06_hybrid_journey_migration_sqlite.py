@@ -40,7 +40,7 @@ EXPECTED_COLUMNS = {
 EXPECTED_INDEXES = {"idx_hybrid_journey_artifact_run", "idx_hybrid_journey_artifact_user"}
 
 #: 单头断言：j06_20260925 的 down_revision 必须是 j05_20260925（链不裂头）。
-EXPECTED_DOWN_REVISION = "j05_20260925"
+EXPECTED_DOWN_REVISION = "s04b_20260925"  # 合并态链:j05→s04b(S-04)→j06,单头语义不变
 
 
 @pytest.fixture(name="migration_env")
