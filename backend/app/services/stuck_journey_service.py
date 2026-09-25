@@ -16,7 +16,7 @@ Home/Goal/Action 三面携带各自真实 context 触发；最多先问一个高
   侧纪律：零写库、不修饰）。
 
 本层新增的三件事（引擎之外的正交事实）：
-1. **context 装配**：把 db 真实行投影成 ``FrictionDiagnosisInput`` 的
+1. **context 装配**：把 db 真源行投影成 ``FrictionDiagnosisInput`` 的
    flat 事实（缺事实保持 None——结构诚实，不猜）；
 2. **单问上限（产品口径）**：旅程内最多问一问；answer 轮若引擎仍想
    追问（Q1），以「会话问题预算已用完」声明触发引擎自身 B1 best-guess
@@ -25,7 +25,11 @@ Home/Goal/Action 三面携带各自真实 context 触发；最多先问一个高
    后续派生把被纠正类型从主判断中垫后——后继者取引擎后验里下一位有
    提名的类型；后验无后继（单一类型证据）时如实回落「根分裂问」
    （A-03 冻结问题库首问 = 引擎 U1.unknown 出口的同一问），并标注
-   ``correction_no_alternative``——纠正永远可见，不静默丢弃。
+   ``correction_no_alternative``——纠正永远可见，不静默丢弃；
+4. **V3-FIX-51 交付契约**：``main_intervention`` 恒带
+   ``delivery="recommendation"``（建议非执行；见
+   ``JOURNEY_INTERVENTION_DELIVERY``）——旅程提名不经 A-02 执行守卫，
+   与 chat 面（过守卫的 ``selected``）的差异在类型面声明，非静默。
 
 文案纪律：本服务零用户文案（问题文本/分支标签出自 A-03 冻结问题库，
 intervention 是目录键；展示文案在客户端 l10n 完成；receipt 的
@@ -60,6 +64,16 @@ STUCK_JOURNEY_SCHEMA_VERSION = "stuck_journey.v1"
 
 #: 三面入口（路由层校验值域）。
 STUCK_JOURNEY_SURFACES = frozenset({"home", "goal", "action"})
+
+#: V3-FIX-51 · 旅程提名的交付语义（决策两面守卫不对称的**声明式处置**）：
+#: chat 面决策经 A-02 结构守卫（``FrictionChatWiringService.CHAT_TURN_CAPABILITIES``
+#: 能力/权限/分配事实）选出 ``selected`` 才出面；旅程面 ``main_intervention``
+#: 是 A-03 诊断提名直出（不经 A-02 执行守卫）——同一摩擦类型两面结论可合法
+#: 不同（A-08 p03 反例：chat 诊断对但结构不可服务 + 旅程 B1 错型）。本服务
+#: **不执行**任何干预，提名由客户端动作面消费（各有其守卫）；契约恒带
+#: ``delivery="recommendation"``——「建议非执行」在类型面声明，消费方据此
+#: 区分两面语义，差异登记非静默（有子进程测试锁）。
+JOURNEY_INTERVENTION_DELIVERY = "recommendation"
 
 #: 纠正反馈环口径：freshness 窗口与容量上限（超出窗口/容量不再垫后——
 #: 纠正不记仇，但窗口内的纠正一定生效）。
@@ -542,6 +556,8 @@ class StuckJourneyService:
                 "type": nominated[0],
                 "nominated": nominated,
                 "friction_type": diagnosis.friction_type,
+                # V3-FIX-51：契约面恒声明「建议非执行」（JOURNEY_INTERVENTION_DELIVERY）。
+                "delivery": JOURNEY_INTERVENTION_DELIVERY,
                 "uncertain": bool(diagnosis.uncertain),
                 "adjusted_by_correction": any(
                     reason == "J1.correction_demoted_primary"

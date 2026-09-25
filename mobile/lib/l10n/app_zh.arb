@@ -16163,9 +16163,12 @@
             }
         }
     },
-    "streakInsightBanner": "过去7天你有{totalCheckins}天完成了任务。当前连续打卡{currentStreak}天。",
+    "streakInsightBanner": "过去{windowDays}天你有{totalCheckins}天完成了任务。当前连续打卡{currentStreak}天。",
     "@streakInsightBanner": {
         "placeholders": {
+            "windowDays": {
+                "type": "int"
+            },
             "totalCheckins": {
                 "type": "int"
             },

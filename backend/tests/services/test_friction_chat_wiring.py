@@ -563,6 +563,126 @@ class TestAskLoopEndToEnd:
 # ---------------------------------------------------------------------------
 
 
+class TestFrictionWiringTriggerGate:
+    """V3-FIX-49 · chat 面 fresh 出口词牌门（降噪不关死）。
+
+    A-08 四臂反例（v3-output/WT393-A08-ABLATION raw 对照会话）：
+    - 无词牌普通消息 + stale spine（48h 内）→ S1 置信直出建议（full 臂 21/25 侵入）；
+    - 无词牌普通消息 + 零证据 → U1 根分裂澄清问（no_experience 臂 25/25 侵入）。
+    契约：**fresh 轮的 ask/act 出面必须携带正向摩擦自报词牌**（utterance 词牌
+    命中非空）；无词牌 → 静默 no_action（门原因入 annotations）。回答闭环
+    （answer_replay）与带词牌的诊断不受门影响（降噪≠关死：A-08 full 臂
+    真摩擦介入优势必须保持）。
+    """
+
+    CONTROL_MESSAGE = "今天把这一章看完了，进度正常。"
+
+    async def _seed_spine(self, redis, user_id: str, key: str = "knowledge_transfer") -> None:
+        await redis.sadd(f"spine:state_index:{user_id}", key)
+
+    async def test_control_message_with_stale_spine_stays_silent(self, db_session, fake_redis):
+        """反例①机制②：无词牌消息 + 48h 内 spine 键 → 不再 S1 直出建议。"""
+        user = await _make_user(db_session)
+        await self._seed_spine(fake_redis, str(user.id))
+        svc = FrictionChatWiringService(db_session, fake_redis)
+        outcome = await svc.process_turn(
+            user_id=str(user.id),
+            session_id="gate-1",
+            user_message=self.CONTROL_MESSAGE,
+            user_context_payload={},
+            request_extra_context={},
+            now=_NOW,
+        )
+        assert outcome.outcome == "no_action"
+        assert outcome.question is None
+        assert outcome.intervention is None
+        assert outcome.annotations.get("wiring_gate") == "silent_no_utterance_wordmark"
+        # 不落 pending、不耗日预算（门是静默出口，不是问询）
+        assert await svc._load_pending(str(user.id), "gate-1") is None
+
+    async def test_control_message_without_evidence_asks_nothing(self, db_session, fake_redis):
+        """反例①机制①：零 spine + 零词牌 → 不再 U1 根分裂澄清问。"""
+        user = await _make_user(db_session)
+        svc = FrictionChatWiringService(db_session, fake_redis)
+        outcome = await svc.process_turn(
+            user_id=str(user.id),
+            session_id="gate-2",
+            user_message=self.CONTROL_MESSAGE,
+            user_context_payload={},
+            request_extra_context={},
+            now=_NOW,
+        )
+        assert outcome.outcome == "no_action"
+        assert outcome.question is None
+        assert outcome.intervention is None
+        # 零证据 → 引擎 U1 unknown-ask 出口被门拦下（专用门原因可审计）
+        assert outcome.annotations.get("wiring_gate") == "silent_unknown_no_friction_evidence"
+        assert outcome.friction_type == "unknown"
+
+    async def test_wordmark_message_still_full_pipeline(self, db_session, fake_redis):
+        """降噪不关死：带词牌的真卡点表达照常问（U1/Q1 面不受门影响）。"""
+        user = await _make_user(db_session)
+        svc = FrictionChatWiringService(db_session, fake_redis)
+        outcome = await svc.process_turn(
+            user_id=str(user.id),
+            session_id="gate-3",
+            user_message="最近做不下去",
+            user_context_payload={"active_goals": [{"name": "考研数学一轮"}]},
+            request_extra_context={},
+            now=_NOW,
+        )
+        assert outcome.outcome == "ask"
+        assert outcome.question is not None
+        assert "wiring_gate" not in outcome.annotations
+
+    async def test_wordmark_act_with_spine_still_acts(self, db_session, fake_redis):
+        """带词牌 + spine 证据的 act 照常出面（A-08 full 臂主结论依赖）。"""
+        user = await _make_user(db_session)
+        await self._seed_spine(fake_redis, str(user.id))
+        svc = FrictionChatWiringService(db_session, fake_redis)
+        outcome = await svc.process_turn(
+            user_id=str(user.id),
+            session_id="gate-4",
+            user_message="这里有点看不懂",
+            user_context_payload={},
+            request_extra_context={},
+            now=_NOW,
+        )
+        assert outcome.outcome == "act"
+        assert outcome.friction_type in {"skill", "knowledge"}
+        assert outcome.intervention is not None
+        assert "wiring_gate" not in outcome.annotations
+
+    async def test_answer_replay_is_never_gated(self, db_session, fake_redis):
+        """回答闭环不受门影响：pending 在册时即使消息无词牌也照常收敛。"""
+        user = await _make_user(db_session)
+        svc = FrictionChatWiringService(db_session, fake_redis)
+        first = await svc.process_turn(
+            user_id=str(user.id),
+            session_id="gate-5",
+            user_message="最近做不下去",
+            user_context_payload={},
+            request_extra_context={},
+            now=_NOW,
+        )
+        assert first.outcome == "ask"
+        replay = await svc.process_turn(
+            user_id=str(user.id),
+            session_id="gate-5",
+            user_message=self.CONTROL_MESSAGE,  # 无词牌消息作答
+            user_context_payload={},
+            request_extra_context={
+                FRICTION_ANSWER_CONTEXT_KEY: {
+                    "question_id": first.question["question_id"],
+                    "branch_key": first.question["branch_options"][0]["key"],
+                }
+            },
+            now=_NOW,
+        )
+        assert replay.mode == "answer_replay"
+        assert "wiring_gate" not in replay.annotations
+
+
 class TestActDecisionPathWithPatchedInputs:
     async def _service(self, db_session, fake_redis):
         return FrictionChatWiringService(db_session, fake_redis)

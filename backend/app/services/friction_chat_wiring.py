@@ -4,6 +4,15 @@
 ``ChatOrchestrator.process_stream`` 在 context 装配后单点调用 ``process_turn``，
 产出经 ``state.context_data["friction_decision"]`` → response metadata 出面）：
 
+0. **V3-FIX-49 · fresh 出口词牌门（v2，2026-09-26）**：orchestrator 对每条
+   非工具消息无门调用 ``process_turn``，A-08 四臂消融实证对照会话侵入率
+   84%~100%——无词牌普通消息 + stale spine → S1 直出建议（full 臂 21/25）；
+   零证据普通消息 → U1 根分裂澄清问（no_experience 臂 25/25）。门契约：
+   **fresh 轮 ask/act 出面必须携带正向摩擦自报词牌**（``utterance_matches``
+   非空），否则静默 ``no_action``（``annotations.wiring_gate`` 记门原因）。
+   降噪不关死：回答闭环不设门、带词牌诊断全链照常、旅程面（用户主动入口）
+   不经过本服务——A-08 full 臂「真摩擦介入优于固定模板」的主结论依赖此通道。
+
 1. **A-03 摩擦诊断触发（FIX-43a）**：从既有 context 装配
    ``FrictionDiagnosisInput``（utterance=用户消息、spine_state_keys=spine
    state_index 活跃键、task_anchor/has_active_goal=stage34 active_goals、
@@ -61,7 +70,15 @@ from app.aurora.intervention_policy import evaluate_intervention_policy
 from app.core.policy_patch import SURFACE_PAYLOAD_KEYS
 from app.services.policy_patch_service import PolicyPatchService
 
-FRICTION_CHAT_WIRING_VERSION = "friction-chat-wiring.v1"
+FRICTION_CHAT_WIRING_VERSION = "friction-chat-wiring.v2"
+
+#: V3-FIX-49 · chat 面 fresh 出口词牌门的静默出口原因（annotations.wiring_gate）：
+#: - 无词牌 + unknown（U1 根分裂澄清问）：对零摩擦证据的普通消息发问卷 = 过度
+#:   个性化主源头之一（A-08 no_experience 臂对照侵入 25/25）；
+#: - 无词牌 + ask/act（Q1/S1）：stale spine（48h 窗口内）/context 推断单独驱动
+#:   的介入（A-08 full 臂对照侵入 21/25，含 S1 直出建议）。
+WIRING_GATE_UNKNOWN = "silent_unknown_no_friction_evidence"
+WIRING_GATE_NO_WORDMARK = "silent_no_utterance_wordmark"
 
 #: pending 问题 Redis 键（per user+session；TTL 一天——跨天会话按过期处理）。
 PENDING_KEY_TEMPLATE = "friction:pending:{user_id}:{session_id}"
@@ -112,15 +129,31 @@ class FrictionWiringOutcome:
         }
 
 
+def _fresh_turn_gate_reason(diagnosis: FrictionDiagnosis) -> str | None:
+    """V3-FIX-49 · fresh 出口词牌门的判据（纯函数；answer_replay 不经过此门）。
+
+    - ask/act 出面要求 utterance 携带正向摩擦自报词牌（``utterance_matches``
+      非空——引擎注记的词牌证据面）；无词牌 → 静默。
+    - 无词牌 + unknown（U1 根分裂澄清问）单独记门原因（问卷式追问面）。
+    - no_action 出口本来就静默，不过门。
+    """
+    if diagnosis.outcome not in ("ask", "act"):
+        return None
+    matched = diagnosis.annotations.get("utterance_matches")
+    if matched:
+        return None
+    if diagnosis.outcome == "ask" and diagnosis.friction_type == "unknown":
+        return WIRING_GATE_UNKNOWN
+    return WIRING_GATE_NO_WORDMARK
+
+
 class FrictionChatWiringService:
     """chat 决策路径的 A-03/A-05 接线（一个 db 会话一个实例；Redis 可缺席）。"""
 
     def __init__(self, db: AsyncSession | None, redis_client=None):
         self.db = db
         self.redis = redis_client
-        self._patches = PolicyPatchService(db) if db is not None else None
-
-    # ------------------------------------------------------------------
+        self._patches = PolicyPatchService(db) if db is not None else None    # ------------------------------------------------------------------
     # 对外主入口
     # ------------------------------------------------------------------
 
@@ -250,6 +283,23 @@ class FrictionChatWiringService:
             now=now,
         )
         diagnosis = diagnose_friction(input_mapping)
+        # V3-FIX-49 · fresh 出口词牌门（降噪不关死）：orchestrator 对每条非工具
+        # 消息无门调用本服务（WIRING-1 生产接线），A-08 四臂消融实证两条侵入
+        # 机制——①零证据普通消息恒触发 U1 根分裂澄清问；②stale spine 单独
+        # 驱动 S1 直出建议/Q1 追问。chat 面的 ask/act 出面必须携带**正向摩擦
+        # 自报词牌**（utterance 词牌命中非空）；否则静默 no_action（门原因入
+        # annotations，可审计）。回答闭环（answer_replay）与本服务外的旅程面
+        # （用户主动「我卡住了」）不受门影响——真摩擦介入通道保持全通。
+        gate_reason = _fresh_turn_gate_reason(diagnosis)
+        if gate_reason is not None:
+            return FrictionWiringOutcome(
+                mode="fresh",
+                outcome="no_action",
+                friction_type=diagnosis.friction_type,
+                lifecycle_tag=diagnosis.lifecycle_tag,
+                diagnosis=diagnosis.to_dict(),
+                annotations={"wiring_gate": gate_reason},
+            )
         return await self._emit(
             user_id=user_id,
             session_id=session_id,

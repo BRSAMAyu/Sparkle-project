@@ -75,13 +75,20 @@ class _StreakDetailsScreenState extends ConsumerState<StreakDetailsScreen> {
                     ),
                   ),
                   const SizedBox(height: DS.spacing16),
-                  _StreakInsightBanner(
-                    stats: streakStats,
-                    totalCheckins: historyState.days
-                        .where((d) => d.status == StreakDayStatus.active)
-                        .length,
-                  ),
-                  const SizedBox(height: DS.spacing16),
+                  // V3-FIX-59：概览句窗口值与完成数同源（都取自同一段历史
+                  // 日历）——此前模板硬编码「过去7天」而完成数是 90 天统计
+                  // 窗口径（渲染出「过去7天你有70天」的自相矛盾句）。历史
+                  // 未加载（空日历）时不渲染可能为假的概览句。
+                  if (historyState.days.isNotEmpty) ...[
+                    _StreakInsightBanner(
+                      stats: streakStats,
+                      windowDays: historyState.days.length,
+                      totalCheckins: historyState.days
+                          .where((d) => d.status == StreakDayStatus.active)
+                          .length,
+                    ),
+                    const SizedBox(height: DS.spacing16),
+                  ],
                   _AnimatedSection(
                     delay: const Duration(milliseconds: 100),
                     child: _buildStatsGrid(streakStats, historyState, l10n),
@@ -973,10 +980,14 @@ class _RiskHintCardState extends State<_RiskHintCard>
 class _StreakInsightBanner extends StatelessWidget {
   const _StreakInsightBanner({
     required this.stats,
+    required this.windowDays,
     required this.totalCheckins,
   });
 
   final StreakStats stats;
+
+  /// 概览句统计窗（天）——与 [totalCheckins] 同源（同一段历史日历的长度）。
+  final int windowDays;
   final int totalCheckins;
 
   @override
@@ -993,7 +1004,11 @@ class _StreakInsightBanner extends StatelessWidget {
           const SizedBox(width: DS.spacing8),
           Expanded(
             child: Text(
-              context.l10n.streakInsightBanner(totalCheckins, stats.currentStreak),
+              context.l10n.streakInsightBanner(
+                windowDays,
+                totalCheckins,
+                stats.currentStreak,
+              ),
               style: TextStyle(
                 fontSize: DS.fontSizeSm,
                 color: DS.textPrimary,

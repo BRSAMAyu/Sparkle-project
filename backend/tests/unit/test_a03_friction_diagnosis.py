@@ -22,6 +22,9 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 from uuid import uuid4
 
@@ -46,6 +49,8 @@ from app.aurora.friction_diagnosis import (
     FRICTION_UTTERANCE_LEXICON,
     SPINE_STATE_EVIDENCE,
     FrictionDiagnosisInput,
+    _argmax_type,
+    _posterior_from_scores,
     apply_question_answer,
     diagnose_friction,
     friction_evidence_fingerprint,
@@ -74,10 +79,13 @@ FIXTURE_PATH = Path(__file__).resolve().parents[1] / "aurora" / "fixtures" / "fr
 #: 命中优先（词面零改动），tried_unsure 补「不对」词牌（单字正向词牌「对」
 #: 遮蔽无法由算法消解的唯一词面补充）；bump 依据见 WIRING-1 REPORT 与模块
 #: 顶部修订记录。
+#: SUFFICIENCY v1_2：V3-FIX-50 处置——新增 B3.budget_exhausted_tie_no_action
+#: reason 码 + tie_discrimination_epsilon 参数（B1 exact-tie 降级判据）；
+#: 词面/问题库/证据面指纹不变。
 FROZEN_TAXONOMY_FINGERPRINT = "0ce224ab8e12139e2dbdce7092868bad7b7d0efd710de7d9f730ea46a6f6c903"
 FROZEN_EVIDENCE_FINGERPRINT = "2bff307f03cb5176e0c2f885b43ed991f3ddf19631187da94aab5661e33df238"
 FROZEN_QUESTION_BANK_FINGERPRINT = "e9da836b88f740a7222cd2f3169d58594eefe0915c6865b1004ab0c0319742ae"
-FROZEN_SUFFICIENCY_FINGERPRINT = "a05fdee9fa84160c0fb907782489208e6dd4ed5f6d526d7e05a814119c851a18"
+FROZEN_SUFFICIENCY_FINGERPRINT = "c1a304ce5d41187f5c4c069c35fc6f167f9b31746bc0f091083f3e30ea75b657"
 
 
 def _load_scenarios() -> dict:
@@ -205,6 +213,7 @@ class TestVocabularyFreeze:
                     "Q2.no_discriminative_question_act_argmax",
                     "B1.budget_exhausted_best_guess",
                     "B2.budget_exhausted_unknown_no_action",
+                    "B3.budget_exhausted_tie_no_action",
                     "U1.unknown_ask_entry_question",
                     "E1.degraded_to_conservative",
                 }
@@ -212,6 +221,10 @@ class TestVocabularyFreeze:
             == FRICTION_DIAGNOSIS_REASONS
         )
         assert frozenset({"act", "ask", "no_action"}) == FRICTION_OUTCOMES
+
+    def test_version_tracks_vocabulary_generation(self):
+        """版本钉死：词面/判据面扩展必须显式 bump（v1_2 = V3-FIX-50 处置）。"""
+        assert FRICTION_DIAGNOSIS_VERSION == "aurora_friction_diagnosis.v1_2"
 
     def test_spine_state_evidence_covers_rule_table_exactly(self):
         """spine 演进（新增/改名 state_key）→ 此测试红（投影缺项即刻暴露）。"""
@@ -749,3 +762,110 @@ class TestResilience:
         assert BRANCH_SUPPORT_MULTIPLIER == 2.0
         assert BRANCH_DECAY_MULTIPLIER == 0.35
         assert ANSWER_SEED_WEIGHT == 1.0
+
+
+# ---------------------------------------------------------------------------
+# 9. V3-FIX-50 · B1 平权 tie 出口契约（宽分支零事实 exact tie 不猜 + 字母序确定性）
+# ---------------------------------------------------------------------------
+
+
+class TestB1TieExitContract:
+    """FIX-50：根分裂宽分支（q_direction_vs_push.cant_push 10 类支持）+ 零行为
+    事实 → 答案种子均摊 → 10 路平权 → 预算尽 B1 按 argmax 行动是**字母序偶然**
+    （A-08 反例：p06 time 真值段恒落 dependency×3 纠正环）。契约：
+
+    - ①exact tie（top - runner_up 无区分度）→ 降级 no_action + 空提名
+      （B3，与 B2「不假诊断」同律——证据对行动零约束时不猜）；
+    - 非 tie 的 B1 best-guess 行为不变（有区分度仍按 argmax 行动 + uncertain）；
+    - ③argmax/后验 tie-break 是**字母序显式契约**（跨进程可复现，测试锁死）。
+    """
+
+    TIE_INPUT = {
+        "utterance": "",
+        "spine_state_keys": [],
+        "answered_branches": [["q_direction_vs_push", "cant_push"]],
+        "questions_asked_session": DEFAULT_SESSION_QUESTION_LIMIT,
+    }
+
+    def test_b1_exact_tie_degrades_to_no_action(self):
+        """10 路平权（margin=0）→ B3 no_action，不按字母序偶然型行动。"""
+        result = diagnose_friction(self.TIE_INPUT)
+        assert result.outcome == "no_action"
+        assert result.nominated_interventions == ()
+        assert result.uncertain is True
+        assert "insufficient_context" in result.uncertainty_kinds
+        assert "B3.budget_exhausted_tie_no_action" in result.reasons
+        assert result.budget_exhausted is True
+        # 平权事实可审计：后验首位与次位概率相等（margin == 0）
+        assert result.posterior[0][1] == result.posterior[1][1]
+
+    def test_b1_non_tie_still_best_guess(self):
+        """有区分度（margin>0）的 B1 行为不变：argmax 行动 + uncertain。
+
+        弱词牌「做不下去」+ 失败痕迹事实（skill/difficulty/energy 三证据、
+        置信不过 S1 门）→ 预算尽走 B1（top 与 runner-up 有区分度）。
+        """
+        result = diagnose_friction(
+            {
+                "utterance": "做不下去",
+                "recent_failure_count": 3,
+                "has_task_context": True,
+                "questions_asked_session": DEFAULT_SESSION_QUESTION_LIMIT,
+            }
+        )
+        assert result.outcome == "act"
+        assert "B1.budget_exhausted_best_guess" in result.reasons
+        assert result.uncertain is True
+        assert result.nominated_interventions
+        assert result.posterior[0][1] - result.posterior[1][1] > 0
+
+    def test_tie_break_is_alphabetical_explicit_contract(self):
+        """③字母序 tie-break 显式契约（A-08 评估侧 PYTHONHASHSEED=0 补丁的
+        引擎内化）：并列按 (−score, type) 字典序——``_argmax_type`` 与
+        ``_posterior_from_scores`` 同律。"""
+        scores = {"time": 0.1, "skill": 0.1, "dependency": 0.1, "energy": 0.2}
+        assert _argmax_type(scores) == "energy"
+        assert _argmax_type({"time": 0.1, "skill": 0.1, "dependency": 0.1}) == "dependency"
+        posterior = _posterior_from_scores({"tooling": 0.1, "social": 0.1, "feedback": 0.1})
+        assert [t for t, _p in posterior] == ["feedback", "social", "tooling"]
+
+    @pytest.mark.parametrize("seed", ["0", "1", "7", "random"])
+    def test_b1_tie_outcome_identical_across_processes(self, seed):
+        """跨进程可复现锁：不同 PYTHONHASHSEED 下 exact-tie B1 输出逐字段一致。
+
+        A-08 评估口径（REPORT §4）曾以 PYTHONHASHSEED=0 侧写补丁规避本面；
+        本测试把确定性收回引擎契约（子进程真实换 seed，非同进程假复现）。
+        """
+        snippet = (
+            "import json\n"
+            "from app.aurora.friction_diagnosis import diagnose_friction\n"
+            "r = diagnose_friction({\n"
+            "    'utterance': '',\n"
+            "    'answered_branches': [['q_direction_vs_push', 'cant_push']],\n"
+            "    'questions_asked_session': 2,\n"
+            "})\n"
+            "print('PROBE=' + json.dumps(r.to_dict(), ensure_ascii=False, sort_keys=True))\n"
+        )
+        outputs = []
+        for run_seed in (seed, "31337"):
+            env = {
+                **os.environ,
+                "PYTHONHASHSEED": run_seed,
+                "DATABASE_URL": "sqlite+aiosqlite:///:memory:",
+                "SECRET_KEY": "v" * 32,
+                "PYTHONPATH": str(Path(__file__).resolve().parents[1]),
+            }
+            proc = subprocess.run(
+                [sys.executable, "-c", snippet],
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=120,
+                check=True,
+            )
+            line = next(l for l in proc.stdout.splitlines() if l.startswith("PROBE="))
+            outputs.append(line[len("PROBE=") :])
+        assert outputs[0] == outputs[1]
+        payload = json.loads(outputs[0])
+        assert payload["outcome"] == "no_action"
+        assert "B3.budget_exhausted_tie_no_action" in payload["reasons"]

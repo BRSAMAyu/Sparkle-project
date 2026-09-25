@@ -399,3 +399,70 @@ async def test_start_rejects_unknown_surface(db_session):
 
     resp = await _post(app, "/experience/stuck-journey/start", {"surface": "settings"})
     assert resp.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# V3-FIX-51 · 旅程提名的「建议非执行」契约锁（决策两面守卫不对称的声明式处置）
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_main_intervention_declares_recommendation_delivery(db_session):
+    """旅程面 main_intervention 恒带 ``delivery="recommendation"``（类型面锁）。
+
+    chat 面决策经 A-02 结构守卫（能力/权限/分配事实）后才有 ``selected``；
+    旅程面提名不经该守卫——同一摩擦类型两面结论可合法不同（A-08 p03 双输
+    反例）。本契约把差异**声明化**（非静默）：旅程提名是「建议，非执行承诺」，
+    执行发生在客户端动作面（各有其守卫）。消费方据此区分两面语义。
+    """
+    pytest.importorskip("app.services.stuck_journey_service")
+    from app.services.stuck_journey_service import JOURNEY_INTERVENTION_DELIVERY
+
+    assert JOURNEY_INTERVENTION_DELIVERY == "recommendation"
+
+    user = await _make_user(db_session)
+    goal = await _seed_goal_with_plan(db_session, user.id)
+    stalled = await _seed_task(
+        db_session,
+        user.id,
+        goal.plan_id,
+        title="英语真题阅读精读",
+        status=TaskStatus.IN_PROGRESS,
+        updated_at=_NOW - timedelta(days=6),
+    )
+    for i in range(3):
+        await _seed_task(
+            db_session,
+            user.id,
+            goal.plan_id,
+            title=f"卡住任务 {i}",
+            status=TaskStatus.STUCK,
+            updated_at=_NOW - timedelta(days=6 + i),
+        )
+    app = _build_app(db_session, user.id)
+
+    start = await _post(
+        app,
+        "/experience/stuck-journey/start",
+        {"surface": "action", "task_id": str(stalled.id)},
+    )
+    assert start.status_code == 200, start.text
+    payload = start.json()
+    assert payload["main_intervention"] is None or payload["main_intervention"]["delivery"] == "recommendation"
+
+    question = payload["question"]
+    if question is not None:
+        answered = await _post(
+            app,
+            "/experience/stuck-journey/answer",
+            {
+                "surface": "action",
+                "task_id": str(stalled.id),
+                "question_id": question["question_id"],
+                "branch_key": question["branch_options"][0]["key"],
+            },
+        )
+        assert answered.status_code == 200, answered.text
+        intervention = answered.json()["main_intervention"]
+        assert intervention is not None
+        assert intervention["delivery"] == "recommendation"

@@ -1,4 +1,19 @@
-"""A-03 · Friction Diagnosis + Sufficiency / One Best Question（aurora_friction_diagnosis.v1_1）。
+"""A-03 · Friction Diagnosis + Sufficiency / One Best Question（aurora_friction_diagnosis.v1_2）。
+
+**v1_2（V3-FIX-50 处置，2026-09-26）**：B1 预算出口的平权 tie 修复——
+
+1. **exact-tie 降级（B3）**：预算尽 best-guess 仅当证据对首要类型有非零区分度
+   （``top - runner_up > TIE_DISCRIMINATION_EPSILON``）才按 argmax 行动；
+   exact tie（如根分裂宽分支 ``q_direction_vs_push.cant_push`` 10 类支持 × 零
+   行为事实 → ``ANSWER_SEED_WEIGHT`` 均摊 → 10 路平权）是「证据对行动零约束」
+   ——字母序 argmax 行动纯属偶然（A-08 反例：p06 time 真值段恒落 dependency×3
+   纠正环），降级 ``no_action`` + ``insufficient_context``（B2「不假诊断」同律，
+   绝不无中生有）。新增封闭 reason 码 ``B3.budget_exhausted_tie_no_action``；
+2. **argmax/后验 tie-break 显式契约（字母序）**：``_argmax_type`` /
+   ``_posterior_from_scores`` 并列按 ``(−score, type)`` 字典序——跨进程可复现
+   （A-08 评估侧曾以 ``PYTHONHASHSEED=0`` 侧写补丁规避，本版起确定性内化为
+   引擎契约并有子进程换 seed 测试锁死）。
+   ``FRICTION_DIAGNOSIS_VERSION`` 按「扩任何一面需 bump」纪律升级。
 
 **v1_1（WIRING-1 / FIX-43 P2 处置，2026-09-20）**：`resolve_answer_branch`
 负向词牌被正向词牌子串遮蔽的语义反转修复——
@@ -94,9 +109,10 @@ from app.core.intervention_lifecycle import INTERVENTION_FRICTION_TAGS
 from app.core.policy_patch import SURFACE_PAYLOAD_SCHEMAS
 from app.signals.policy_engine import _RULE_TABLE
 
+#: v1_2：V3-FIX-50 处置（B1 exact-tie 降级 B3 + argmax/后验字母序 tie-break 契约）。
 #: v1_1：FIX-43 P2 负向反转处置（解析算法最长匹配 + tried_unsure 补「不对」词牌）。
 #: 词面/算法变更纪律见模块 docstring 顶部修订记录。
-FRICTION_DIAGNOSIS_VERSION = "aurora_friction_diagnosis.v1_1"
+FRICTION_DIAGNOSIS_VERSION = "aurora_friction_diagnosis.v1_2"
 
 # ---------------------------------------------------------------------------
 # 封闭词表（冻结；扩展需 bump 版本 + reviewer）
@@ -485,6 +501,11 @@ _GOAL_WITHOUT_TASK_WEIGHT = 0.8
 SUFFICIENCY_MIN_CONFIDENCE = 0.55
 SUFFICIENCY_MIN_MARGIN = 0.15
 
+#: exact-tie 判别阈（V3-FIX-50）：B1 出口领先幅度 ≤ 此值视为「证据对行动零约束」
+#: ——分数来自同一均摊种子的浮点相等（margin 恒 0.0），epsilon 只吸收求和顺序
+#: 噪声，不改变任何真实区分度的判定。
+TIE_DISCRIMINATION_EPSILON = 1e-9
+
 #: 竞争带：得分 ≥ top 得分 50% 的类型集合（决策等价判定在此带内进行）。
 CONTENDER_BAND_RATIO = 0.5
 
@@ -532,6 +553,7 @@ FRICTION_DIAGNOSIS_REASONS: frozenset[str] = frozenset(
         "Q2.no_discriminative_question_act_argmax",  # 无决策敏感问题 → 按 argmax 行动（不确定标注）
         "B1.budget_exhausted_best_guess",  # 预算超限 → best-guess + uncertain 标注
         "B2.budget_exhausted_unknown_no_action",  # 预算超限且无证据 → 不假诊断 no_action
+        "B3.budget_exhausted_tie_no_action",  # 预算超限且 exact tie（证据对行动零约束）→ 不猜 no_action
         "U1.unknown_ask_entry_question",  # 无正向证据 → unknown，仍可问根分裂问题（预算内）
         "E1.degraded_to_conservative",  # 内部异常 → no_action 保守降级
     }
@@ -1159,7 +1181,8 @@ def _entropy(distribution: Mapping[str, float]) -> float:
 
 
 def _posterior_from_scores(scores: Mapping[str, float]) -> tuple[tuple[str, float], ...]:
-    """得分 → 后验分布（类型按冻结序输出——同输入同输出 bit-for-bit）。"""
+    """得分 → 后验分布（V3-FIX-50③ 显式契约：类型按 ``(−score, type)`` 字典序
+    输出——同输入同输出 bit-for-bit，并列按字母序破平，跨进程可复现）。"""
     positive = {t: s for t, s in scores.items() if s > 0}
     total = sum(positive.values())
     if total <= 0:
@@ -1193,7 +1216,8 @@ def _primary_nomination(friction_type: str) -> str | None:
 
 
 def _argmax_type(scores: Mapping[str, float]) -> str | None:
-    """得分 argmax（并列按冻结类型序破平——确定性）。"""
+    """得分 argmax（V3-FIX-50③ 显式契约：并列按 ``(−score, type)`` 字典序
+    破平——字母序，跨进程可复现；消费方含问询决策敏感判定与 B1 出口）。"""
     positive = {t: s for t, s in scores.items() if s > 0}
     if not positive:
         return None
@@ -1459,7 +1483,33 @@ def _build_diagnosis(
         return _act("Q2.no_discriminative_question_act_argmax", uncertain=True)
 
     # 不足路：预算超限 → best-guess（argmax + 不确定标注；有证据故可猜）。
+    # V3-FIX-50①：exact tie（领先幅度无区分度）不在此列——宽分支答案种子均摊
+    # 造成的平权（如 q_direction_vs_push.cant_push 10 类支持 × 零行为事实）下
+    # argmax 是字母序偶然，按它行动必然产生「纠正逐类试错环」（A-08 p06/p02
+    # 反例）。降级 no_action + insufficient_context（B2「不假诊断」同律）。
     if budget_exhausted:
+        if margin <= TIE_DISCRIMINATION_EPSILON:
+            return FrictionDiagnosis(
+                outcome="no_action",
+                friction_type=top_type,
+                runner_up=runner_up,
+                confidence=top_p,
+                margin=margin,
+                nominated_interventions=(),
+                uncertain=True,
+                budget_exhausted=True,
+                uncertainty_kinds=("insufficient_context",),
+                reasons=("B3.budget_exhausted_tie_no_action",),
+                posterior=posterior,
+                evidence_scores=tuple(sorted(scores.items())),
+                evidence_refs=tuple(dict.fromkeys(evidence_refs)),
+                annotations={
+                    **notes,
+                    "contenders": list(contenders),
+                    "tie_degraded": True,
+                    "input_snapshot": _input_snapshot(inp),
+                },
+            )
         return replace(
             _act("B1.budget_exhausted_best_guess", uncertain=True),
             budget_exhausted=True,
@@ -1607,6 +1657,7 @@ def friction_sufficiency_fingerprint() -> str:
         "branch_support_multiplier": BRANCH_SUPPORT_MULTIPLIER,
         "branch_decay_multiplier": BRANCH_DECAY_MULTIPLIER,
         "answer_seed_weight": ANSWER_SEED_WEIGHT,
+        "tie_discrimination_epsilon": TIE_DISCRIMINATION_EPSILON,
         "default_session_limit": DEFAULT_SESSION_QUESTION_LIMIT,
         "default_day_limit": DEFAULT_DAY_QUESTION_LIMIT,
         "preference_budgets": dict(sorted(CLARIFICATION_PREFERENCE_BUDGETS.items())),

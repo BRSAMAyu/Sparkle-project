@@ -16147,9 +16147,12 @@
             }
         }
     },
-    "streakInsightBanner": "In the past 7 days you completed tasks on {totalCheckins} days. Current streak: {currentStreak} days.",
+    "streakInsightBanner": "In the past {windowDays} days you completed tasks on {totalCheckins} days. Current streak: {currentStreak} days.",
     "@streakInsightBanner": {
         "placeholders": {
+            "windowDays": {
+                "type": "int"
+            },
             "totalCheckins": {
                 "type": "int"
             },

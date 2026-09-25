@@ -36153,8 +36153,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String streakInsightBanner(int totalCheckins, int currentStreak) {
-    return 'In the past 7 days you completed tasks on $totalCheckins days. Current streak: $currentStreak days.';
+  String streakInsightBanner(
+    int windowDays,
+    int totalCheckins,
+    int currentStreak,
+  ) {
+    return 'In the past $windowDays days you completed tasks on $totalCheckins days. Current streak: $currentStreak days.';
   }
 
   @override

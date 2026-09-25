@@ -34648,8 +34648,12 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String streakInsightBanner(int totalCheckins, int currentStreak) {
-    return '过去7天你有$totalCheckins天完成了任务。当前连续打卡$currentStreak天。';
+  String streakInsightBanner(
+    int windowDays,
+    int totalCheckins,
+    int currentStreak,
+  ) {
+    return '过去$windowDays天你有$totalCheckins天完成了任务。当前连续打卡$currentStreak天。';
   }
 
   @override

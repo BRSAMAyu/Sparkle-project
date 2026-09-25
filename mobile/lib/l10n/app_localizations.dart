@@ -62976,8 +62976,12 @@ abstract class AppLocalizations {
   /// No description provided for @streakInsightBanner.
   ///
   /// In zh, this message translates to:
-  /// **'过去7天你有{totalCheckins}天完成了任务。当前连续打卡{currentStreak}天。'**
-  String streakInsightBanner(int totalCheckins, int currentStreak);
+  /// **'过去{windowDays}天你有{totalCheckins}天完成了任务。当前连续打卡{currentStreak}天。'**
+  String streakInsightBanner(
+    int windowDays,
+    int totalCheckins,
+    int currentStreak,
+  );
 
   /// No description provided for @achievementViewDetailsSemantics.
   ///
