@@ -245,5 +245,3 @@ class LocalVocabularyNotifier extends StateNotifier<LocalVocabularyState> {
     }
   }
 }
-
-

@@ -1520,4 +1520,3 @@ class _CorrectionBadge extends StatelessWidget {
   Widget build(BuildContext context) =>
       SemanticPill(label: label, tone: PillTone.warning, dense: true);
 }
-

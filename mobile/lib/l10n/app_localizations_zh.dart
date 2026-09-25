@@ -20160,9 +20160,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskBoardSprintTiming => '冲刺计时';
 
   @override
-  String get taskBoardNoTasksToday => '今日无任务';
-
-  @override
   String get taskBoardBrowseByDateDesc => '任务按到期日期分组显示';
 
   @override
@@ -20179,11 +20176,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get taskBoardSprintTimingDesc => '关注剩余天数和进度';
-
-  @override
-  String taskBoardTodaySummary(int total, int completed) {
-    return '今日$total项·已完成$completed';
-  }
 
   @override
   String taskBoardProgressSummary(int total, int completed) {

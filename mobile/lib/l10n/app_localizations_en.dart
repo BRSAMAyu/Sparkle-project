@@ -21029,9 +21029,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskBoardSprintTiming => 'Sprint Timing';
 
   @override
-  String get taskBoardNoTasksToday => 'No tasks due today';
-
-  @override
   String get taskBoardBrowseByDateDesc => 'Tasks are grouped by due date.';
 
   @override
@@ -21053,11 +21050,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get taskBoardSprintTimingDesc =>
       'Keep an eye on remaining days and progress.';
-
-  @override
-  String taskBoardTodaySummary(int total, int completed) {
-    return 'Today $total items · $completed done';
-  }
 
   @override
   String taskBoardProgressSummary(int total, int completed) {

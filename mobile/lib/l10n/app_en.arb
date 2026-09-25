@@ -9467,24 +9467,12 @@
     "taskBoardCustomPriority": "Custom Priority",
     "taskBoardSprintFocus": "Sprint Focus Mode",
     "taskBoardSprintTiming": "Sprint Timing",
-    "taskBoardNoTasksToday": "No tasks due today",
     "taskBoardBrowseByDateDesc": "Tasks are grouped by due date.",
     "taskBoardOverdueTasksDesc": "Overdue tasks are highlighted in red.",
     "taskBoardPriorityOrderDesc": "Higher-priority tasks rise to the top.",
     "taskBoardCustomPriorityDesc": "Adjust task priority from the editor.",
     "taskBoardSprintFocusDesc": "Only tasks from the active sprint are shown.",
     "taskBoardSprintTimingDesc": "Keep an eye on remaining days and progress.",
-    "taskBoardTodaySummary": "Today {total} items · {completed} done",
-    "@taskBoardTodaySummary": {
-        "placeholders": {
-            "total": {
-                "type": "int"
-            },
-            "completed": {
-                "type": "int"
-            }
-        }
-    },
     "taskBoardProgressSummary": "{total} tasks · {completed} done",
     "@taskBoardProgressSummary": {
         "placeholders": {

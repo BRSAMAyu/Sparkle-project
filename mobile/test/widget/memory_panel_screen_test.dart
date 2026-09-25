@@ -435,4 +435,3 @@ class _EmptyMemoryApiService extends _FakeMemoryApiService {
   }) async =>
       throw UnimplementedError();
 }
-

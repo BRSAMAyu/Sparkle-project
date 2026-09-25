@@ -1,11 +1,11 @@
 #!/usr/bin/env dart
-/// Interactive Intent Classifier Test Runner
-///
-/// Run this script to interactively test the enhanced intent classifier:
-///   dart test/interactive_intent_test.dart
-///
-/// Or in Flutter:
-///   flutter test test/interactive_intent_test.dart
+// Interactive Intent Classifier Test Runner
+//
+// Run this script to interactively test the enhanced intent classifier:
+//   dart test/interactive_intent_test.dart
+//
+// Or in Flutter:
+//   flutter test test/interactive_intent_test.dart
 
 import 'package:sparkle/features/home/domain/services/enhanced_intent_classifier.dart';
 

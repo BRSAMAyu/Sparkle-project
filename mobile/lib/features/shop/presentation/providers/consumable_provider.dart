@@ -226,4 +226,3 @@ final photonMultiplierProvider = Provider<double>((ref) {
       ? effectState.photonBoostMultiplier
       : 1.0;
 });
-

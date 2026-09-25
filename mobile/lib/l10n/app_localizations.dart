@@ -36723,12 +36723,6 @@ abstract class AppLocalizations {
   /// **'冲刺计时'**
   String get taskBoardSprintTiming;
 
-  /// No description provided for @taskBoardNoTasksToday.
-  ///
-  /// In zh, this message translates to:
-  /// **'今日无任务'**
-  String get taskBoardNoTasksToday;
-
   /// No description provided for @taskBoardBrowseByDateDesc.
   ///
   /// In zh, this message translates to:
@@ -36764,12 +36758,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'关注剩余天数和进度'**
   String get taskBoardSprintTimingDesc;
-
-  /// No description provided for @taskBoardTodaySummary.
-  ///
-  /// In zh, this message translates to:
-  /// **'今日{total}项·已完成{completed}'**
-  String taskBoardTodaySummary(int total, int completed);
 
   /// No description provided for @taskBoardProgressSummary.
   ///
