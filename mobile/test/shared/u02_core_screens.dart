@@ -1,10 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show MethodChannel;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter/services.dart' show MethodChannel;
-import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/adaptive/emotion_responsive_theme.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -12,9 +13,9 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
+import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/core/storage/token_storage.dart';
 import 'package:sparkle/core/storage/token_storage_io.dart';
-import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/core/utils/text_rendering.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_comeback_context.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_daily_startup_message.dart';
@@ -101,14 +102,15 @@ Future<void> initializeU02SurfaceEnvironment() async {
   // 供 NotificationService/BgmService 的异步初始化 fail-soft 落定。
   final messenger = TestDefaultBinaryMessengerBinding
       .instance.defaultBinaryMessenger;
-  messenger.setMockMethodCallHandler(
-    const MethodChannel('dexterous.com/flutter/local_notifications'),
-    (call) async => call.method == 'initialize' ? false : null,
-  );
-  messenger.setMockMethodCallHandler(
-    const MethodChannel('plugins.flutter.io/path_provider'),
-    (call) async => Directory.systemTemp.createTempSync('u02_evidence_').path,
-  );
+  messenger
+    ..setMockMethodCallHandler(
+      const MethodChannel('dexterous.com/flutter/local_notifications'),
+      (call) async => call.method == 'initialize' ? false : null,
+    )
+    ..setMockMethodCallHandler(
+      const MethodChannel('plugins.flutter.io/path_provider'),
+      (call) async => Directory.systemTemp.createTempSync('u02_evidence_').path,
+    );
   await BgmService.debugResetState();
   await ViewStorageService.ensureInitialized();
   _u02EnvReady = true;

@@ -6,7 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/design/adaptive/emotion_responsive_theme.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
-import 'package:sparkle/core/design/tokens_v2/state_tokens.dart';
 import 'package:sparkle/features/chat/chat.dart' show ChatNotifier;
 
 import '../../shared/u02_core_screens.dart';
@@ -33,14 +32,14 @@ void main() {
   // WCAG 2.1 程序化计算
   // ---------------------------------------------------------------------------
 
-  double _channel(double v) {
+  double channel(double v) {
     final c = v.clamp(0.0, 1.0);
     return c <= 0.03928 ? c / 12.92 : math.pow((c + 0.055) / 1.055, 2.4).toDouble();
   }
 
-  double relativeLuminance(Color c) => 0.2126 * _channel(c.r) +
-      0.7152 * _channel(c.g) +
-      0.0722 * _channel(c.b);
+  double relativeLuminance(Color c) => 0.2126 * channel(c.r) +
+      0.7152 * channel(c.g) +
+      0.0722 * channel(c.b);
 
   double contrastRatio(Color a, Color b) {
     final la = relativeLuminance(a);
@@ -132,11 +131,11 @@ void main() {
     final scaffoldBg = theme.scaffoldBackgroundColor;
 
     void expectPair(String fgName, Color fg, String bgName, Color bg,
-        {required double threshold}) {
+        {required double threshold,}) {
       final ratio = contrastRatio(fg, bg);
       // ignore: avoid_print
       print('CONTRAST $fgName on $bgName = ${ratio.toStringAsFixed(2)}:1 '
-          '(AA${threshold == 4.5 ? '' : '-large'} ${threshold}:1 '
+          '(AA${threshold == 4.5 ? '' : '-large'} $threshold:1 '
           '${ratio >= threshold ? 'PASS' : 'FAIL'})');
       expect(
         ratio,
@@ -147,49 +146,49 @@ void main() {
 
     test('standard 档：文字 token × 表面 token 全对达标', () {
       expectPair('textPrimary', colors.textPrimary, 'surfacePrimary', scaffoldBg,
-          threshold: 4.5);
+          threshold: 4.5,);
       expectPair('textPrimary', colors.textPrimary, 'surfaceSecondary',
-          colors.surfaceSecondary, threshold: 4.5);
+          colors.surfaceSecondary, threshold: 4.5,);
       expectPair('textPrimary', colors.textPrimary, 'surfaceTertiary',
-          colors.surfaceTertiary, threshold: 4.5);
+          colors.surfaceTertiary, threshold: 4.5,);
       expectPair('textSecondary', colors.textSecondary, 'surfacePrimary', scaffoldBg,
-          threshold: 4.5);
+          threshold: 4.5,);
       expectPair('textSecondary', colors.textSecondary, 'surfaceSecondary',
-          colors.surfaceSecondary, threshold: 4.5);
+          colors.surfaceSecondary, threshold: 4.5,);
       expectPair('chatBubbleOtherText', colors.chatBubbleOtherText,
-          'chatBubbleOther', colors.chatBubbleOther, threshold: 4.5);
+          'chatBubbleOther', colors.chatBubbleOther, threshold: 4.5,);
       // 辅助文字按 WCAG 大字/附带信息阈值 3.0。
       expectPair('textTertiary', colors.textTertiary, 'surfacePrimary', scaffoldBg,
-          threshold: 3.0);
+          threshold: 3.0,);
       expectPair('textTertiary', colors.textTertiary, 'surfaceSecondary',
-          colors.surfaceSecondary, threshold: 3.0);
+          colors.surfaceSecondary, threshold: 3.0,);
       // 反白对：白字在用户气泡/品牌主色上。
       expectPair('chatBubbleUserText', colors.chatBubbleUserText,
-          'chatBubbleUser', colors.chatBubbleUser, threshold: 4.5);
+          'chatBubbleUser', colors.chatBubbleUser, threshold: 4.5,);
       expectPair(
           'onPrimary', theme.colorScheme.onPrimary, 'brandPrimary', colors.brandPrimary,
-          threshold: 4.5);
+          threshold: 4.5,);
     });
 
     test('low 档：低刺激滤色后的实显 token 对仍达标（减色不牺牲可读性）', () {
       Color dim(Color c) => lowStimEffective(c);
       expectPair('textPrimary*', dim(colors.textPrimary), 'surfacePrimary*',
-          dim(scaffoldBg), threshold: 4.5);
+          dim(scaffoldBg), threshold: 4.5,);
       expectPair('textPrimary*', dim(colors.textPrimary), 'surfaceSecondary*',
-          dim(colors.surfaceSecondary), threshold: 4.5);
+          dim(colors.surfaceSecondary), threshold: 4.5,);
       expectPair('textSecondary*', dim(colors.textSecondary), 'surfacePrimary*',
-          dim(scaffoldBg), threshold: 4.5);
+          dim(scaffoldBg), threshold: 4.5,);
       expectPair('textTertiary*', dim(colors.textTertiary), 'surfacePrimary*',
-          dim(scaffoldBg), threshold: 3.0);
+          dim(scaffoldBg), threshold: 3.0,);
       expectPair('chatBubbleUserText*', dim(colors.chatBubbleUserText),
-          'chatBubbleUser*', dim(colors.chatBubbleUser), threshold: 4.5);
+          'chatBubbleUser*', dim(colors.chatBubbleUser), threshold: 4.5,);
       expectPair('chatBubbleOtherText*', dim(colors.chatBubbleOtherText),
-          'chatBubbleOther*', dim(colors.chatBubbleOther), threshold: 4.5);
+          'chatBubbleOther*', dim(colors.chatBubbleOther), threshold: 4.5,);
     });
   });
 
   group('U-02 rubric · hierarchy/mode-diff（四核心屏真跑渲染树）', () {
-    Future<_ScreenRubricReport> _pumpAndMeasure(
+    Future<_ScreenRubricReport> pumpAndMeasure(
       WidgetTester tester,
       U02Surface surface,
       EmotionResponsiveConfig config,
@@ -260,7 +259,7 @@ void main() {
               fontWeight: style.fontWeight ?? FontWeight.w400,
               color: style.color ?? const Color(0xFF000000),
               opacity: (style.color ?? const Color(0xFF000000)).a,
-            ));
+            ),);
           }
         }
       }
@@ -297,7 +296,7 @@ void main() {
             '（全部渲染文本均为正文/辅助级）');
       }
       expect(headings.isNotEmpty || registeredFindings.contains('hierarchy:no-heading'),
-          isTrue, reason: '$label 无标题层（未登记的层级缺陷）');
+          isTrue, reason: '$label 无标题层（未登记的层级缺陷）',);
       expect(bodies, isNotEmpty, reason: '$label 无正文层');
 
       final maxBody = bodies.map((t) => t.fontSize).reduce(math.max);
@@ -330,8 +329,8 @@ void main() {
           maxHeading > maxBody ||
               headingMaxWeightAtSize >= bodyMaxWeightAtMaxSize,
           isTrue,
-          reason: '$label 层级倒挂：标题最大 $maxHeading(w${headingMaxWeightAtSize}) '
-              '≤ 正文最大 $maxBody(w${bodyMaxWeightAtMaxSize})',
+          reason: '$label 层级倒挂：标题最大 $maxHeading(w$headingMaxWeightAtSize) '
+              '≤ 正文最大 $maxBody(w$bodyMaxWeightAtMaxSize)',
         );
         if (maxCaption != null) {
           expect(
@@ -493,7 +492,7 @@ void main() {
         addTearDown(() => FlutterError.onError = previousOnError);
 
         final registered = registeredU02Findings[surface]!;
-        final stdReport = await _pumpAndMeasure(
+        final stdReport = await pumpAndMeasure(
           tester,
           surface,
           const EmotionResponsiveConfig.normal(),
@@ -504,7 +503,7 @@ void main() {
           registeredFindings: registered,
         );
 
-        final lowReport = await _pumpAndMeasure(
+        final lowReport = await pumpAndMeasure(
           tester,
           surface,
           const EmotionResponsiveConfig.lowStimulus(),

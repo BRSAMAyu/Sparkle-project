@@ -25,7 +25,7 @@ import '../shared/u02_test_fonts.dart';
 void main() {
   setUpAll(initializeU02SurfaceEnvironment);
 
-  final captureEnabled = const bool.fromEnvironment('U02_CAPTURE_EVIDENCE');
+  const captureEnabled = bool.fromEnvironment('U02_CAPTURE_EVIDENCE');
 
   Future<void> pumpSurface(
     WidgetTester tester,
@@ -96,7 +96,7 @@ void main() {
               caughtLayoutErrors.add('flutteranim:RenderAnimatedSize');
             } else if (details.exception is FlutterError) {
               caughtLayoutErrors.add(
-                  'flutter:${info.substring(0, math.min(120, info.length))}');
+                  'flutter:${info.substring(0, math.min(120, info.length))}',);
             } else {
               previousOnError?.call(details);
             }
