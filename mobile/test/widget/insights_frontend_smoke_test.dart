@@ -177,7 +177,7 @@ void main() {
 
   group('Insights frontend smoke', () {
     testWidgets(
-        'insight hub card renders unified entry and supports direct jump',
+        'insight hub card keeps contextual report entry, drops LABS shortcuts',
         (tester) async {
       final router = GoRouter(
         initialLocation: '/',
@@ -194,30 +194,17 @@ void main() {
             path: '/theater',
             builder: (context, state) => const Text('open-theater'),
           ),
+          GoRoute(
+            path: '/learning-report',
+            builder: (context, state) => const Text('report-direct'),
+          ),
         ],
       );
 
       await tester.pumpWidget(
         ProviderScope(
           overrides: <Override>[
-            simulationProvider.overrideWith(
-              (ref) => _StaticSimulationNotifier(
-                const SimulationState(
-                  recommendedSeeds: <SimulationSeedModel>[
-                    SimulationSeedModel(
-                      topic: '特征值与特征向量',
-                      context: '来自 Galaxy 的推荐种子',
-                      tensionPoint: '前置知识存在断层',
-                      sourceType: 'galaxy',
-                      sourceIds: <String>['n1'],
-                      relevanceScore: 0.91,
-                      suggestedScenario: 'study_group',
-                      suggestedExperts: <String>['数学专家', '星图导航'],
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            // U-07：LABS 类型系统更新即便到达，也不得渲染成首页洞察入口。
             systemUpdatesProvider.overrideWith(
               (ref) async => <Map<String, dynamic>>[
                 <String, dynamic>{
@@ -263,16 +250,16 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('学习洞察'), findsOneWidget);
-      expect(find.text('推演剧场'), findsOneWidget);
-      expect(find.text('学习仿真'), findsOneWidget);
       expect(find.text('学习报告'), findsOneWidget);
-      expect(find.textContaining('线性代数'), findsOneWidget);
-      expect(find.textContaining('1 个推荐场景'), findsWidgets);
       expect(find.textContaining('掌握度 72%'), findsOneWidget);
+      // LABS 快捷动作（theater/simulation）与 LABS 通知行不再出现。
+      expect(find.text('推演剧场'), findsNothing);
+      expect(find.text('学习仿真'), findsNothing);
+      expect(find.textContaining('线性代数'), findsNothing);
 
-      await tester.tap(find.text('推演剧场'));
+      await tester.tap(find.text('学习报告'));
       await tester.pumpAndSettle();
-      expect(find.text('open-theater'), findsOneWidget);
+      expect(find.text('report-direct'), findsOneWidget);
     });
 
     testWidgets('learning report screen renders partial-data report without feature routing',
@@ -852,8 +839,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('学习洞察'), findsOneWidget);
-      expect(find.text('仿真'), findsOneWidget);
-      expect(find.text('推演'), findsOneWidget);
+      // U-07：紧凑形态只剩「报告」单一 CONTEXTUAL 动作 chip。
+      expect(find.text('报告'), findsOneWidget);
+      expect(find.text('仿真'), findsNothing);
+      expect(find.text('推演'), findsNothing);
       expect(tester.takeException(), isNull);
     });
   });

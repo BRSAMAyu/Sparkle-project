@@ -2,12 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/seed_library/presentation/providers/seed_library_provider.dart';
-import 'package:sparkle/features/seed_library/seed_library_routes.dart';
 import 'package:sparkle/features/settings/presentation/screens/transparency_settings_screen.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
@@ -37,33 +35,6 @@ class ChatSettingsScreen extends ConsumerWidget {
     final chatPureMode = ref.watch(chatPureModeProvider);
     final seedLibraryEnabled = ref.watch(chatSeedLibraryEnabledProvider);
     final subscriptionState = ref.watch(subscriptionsProvider);
-    final enabledSeedSubscriptions = subscriptionState.subscriptions
-        .where((subscription) => subscription.isEnabled)
-        .toList()
-      ..sort((a, b) => b.priority.compareTo(a.priority));
-    final enabledSeedCount = enabledSeedSubscriptions.length;
-    final enabledSeedNames = enabledSeedSubscriptions
-        .map((subscription) => subscription.library?.name.trim() ?? '')
-        .where((name) => name.isNotEmpty)
-        .take(3)
-        .toList();
-
-    final seedTitle = switch ((
-      subscriptionState.isLoading,
-      seedLibraryEnabled,
-      enabledSeedCount,
-    )) {
-      (true, _, _) => context.l10n.chatSettingsSyncingSeeds,
-      (_, false, _) => context.l10n.chatSettingsSeedsDefaultOff,
-      (_, true, > 0) => context.l10n.chatSettingsSeedsEnabledCount(enabledSeedCount),
-      _ => context.l10n.chatSettingsSeedsEnabledNone,
-    };
-
-    final seedSubtitle = seedLibraryEnabled
-        ? enabledSeedNames.isEmpty
-            ? context.l10n.chatSettingsSeedEnableHint
-            : context.l10n.chatSettingsCurrentSeeds(enabledSeedNames.join('、'))
-        : context.l10n.chatSettingsSeedDisableHint;
 
     return SparklePageScaffold(
       role: SparklePageRole.settings,
@@ -145,14 +116,8 @@ class ChatSettingsScreen extends ConsumerWidget {
                       );
                     },
                   ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.library_books_outlined),
-                    title: Text(seedTitle),
-                    subtitle: Text(seedSubtitle),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => context.push(SeedLibraryRoutes.libraries),
-                  ),
+                  // U-07：种子库浏览入口摘除（/seed-libraries 属 LABS，
+                  // hidden by default）；种子增强开关保留为能力配置。
                   if (subscriptionState.error != null) ...[
                     const Divider(height: 1),
                     Padding(

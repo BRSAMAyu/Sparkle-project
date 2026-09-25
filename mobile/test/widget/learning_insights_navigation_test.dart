@@ -8,117 +8,17 @@ import 'package:sparkle/features/home/presentation/widgets/insight_hub_card.dart
 import 'package:sparkle/features/insights/data/models/weekly_growth_narrative.dart';
 import 'package:sparkle/features/insights/presentation/providers/weekly_growth_narrative_provider.dart';
 import 'package:sparkle/features/insights/presentation/screens/learning_insights_overview_screen.dart';
-import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
-import 'package:sparkle/features/simulation/data/repositories/simulation_repository.dart';
-import 'package:sparkle/features/simulation/presentation/providers/simulation_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 import '../shared/i18n_test_helper.dart';
 
-class _FakeSimulationRepository implements SimulationRepository {
-  @override
-  Future<List<SimulationSeedModel>> getRecommendedSeeds({
-    String? scenarioKey,
-    int limit = 3,
-  }) async =>
-      <SimulationSeedModel>[
-        const SimulationSeedModel(
-          topic: '特征值与特征向量',
-          context: '来自 Galaxy 的推荐种子',
-          tensionPoint: '前置知识存在断层',
-          sourceType: 'galaxy',
-          sourceIds: <String>['n1'],
-          relevanceScore: 0.91,
-          suggestedScenario: 'study_group',
-          suggestedExperts: <String>['数学专家', '星图导航'],
-        ),
-      ];
-
-  @override
-  Future<SimulationSessionModel> runSimulation({
-    required String topic,
-    required String scenarioKey,
-    int? plannedRoundCount,
-    List<String>? participantNames,
-    String facilitationStyle = 'balanced',
-  }) async =>
-      const SimulationSessionModel(
-        id: 's-1',
-        scenarioKey: 'study_group',
-        state: 'COMPLETED',
-        topic: '特征值与特征向量',
-        participants: <SimulationParticipantModel>[],
-        rounds: <SimulationRoundModel>[],
-        insightSummary: '已完成模拟',
-      );
-
-  @override
-  Stream<SimulationStreamEventModel> streamSimulation({
-    required String topic,
-    required String scenarioKey,
-    int? plannedRoundCount,
-    List<String>? participantNames,
-    String facilitationStyle = 'balanced',
-  }) =>
-      const Stream<SimulationStreamEventModel>.empty();
-
-  @override
-  Future<SimulationSessionModel> continueSimulation({
-    required String sessionId,
-    required String userResponse,
-    int? plannedRoundCount,
-  }) async =>
-      const SimulationSessionModel(
-        id: 's-1',
-        scenarioKey: 'study_group',
-        state: 'COMPLETED',
-        topic: '特征值与特征向量',
-        participants: <SimulationParticipantModel>[],
-        rounds: <SimulationRoundModel>[],
-        insightSummary: '已完成模拟',
-      );
-
-  @override
-  Stream<SimulationStreamEventModel> continueSimulationStream({
-    required String sessionId,
-    required String userResponse,
-    int? plannedRoundCount,
-  }) =>
-      const Stream<SimulationStreamEventModel>.empty();
-
-  @override
-  Future<SimulationSessionModel> getSession(String sessionId) async =>
-      const SimulationSessionModel(
-        id: 's-1',
-        scenarioKey: 'study_group',
-        state: 'COMPLETED',
-        topic: '特征值与特征向量',
-        participants: <SimulationParticipantModel>[],
-        rounds: <SimulationRoundModel>[],
-        insightSummary: '已完成模拟',
-      );
-}
-
-class _StaticSimulationNotifier extends SimulationNotifier {
-  _StaticSimulationNotifier(SimulationState initialState)
-      : super(_FakeSimulationRepository(), _FakeRef()) {
-    state = initialState;
-  }
-
-  @override
-  Future<void> loadRecommendedSeeds({
-    String? scenarioKey,
-    int limit = 3,
-    bool silent = false,
-  }) async {}
-}
-
-class _FakeRef implements Ref {
-  @override
-  dynamic noSuchMethod(Invocation invocation) => null;
-}
-
+/// U-07 导航减负契约钉：
+/// 1. 首页洞察枢纽卡只保留「学习报告」单一 CONTEXTUAL 快捷动作 +
+///    总览入口；theater/simulation（LABS, hidden by default）的快捷卡
+///    与 LABS 类型通知聚合不再出现在 CORE 首页面。
+/// 2. 洞察总览屏只剩 CORE/CONTEXTUAL 模块卡；simulation/theater 模块
+///    卡与 deep-link 面板摘除。
 void main() {
 
   setUp(setUpI18nForTesting);
@@ -127,7 +27,7 @@ void main() {
   });
 
   group('learning insights navigation', () {
-    testWidgets('insight hub shortcuts open destination pages directly',
+    testWidgets('insight hub keeps only the contextual report shortcut',
         (tester) async {
       final router = GoRouter(
         initialLocation: '/',
@@ -142,7 +42,7 @@ void main() {
           ),
           GoRoute(
             path: '/theater',
-            builder: (context, state) => Text(state.uri.toString()),
+            builder: (context, state) => const Text('open-theater'),
           ),
           GoRoute(
             path: '/simulation',
@@ -158,24 +58,8 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: <Override>[
-            simulationProvider.overrideWith(
-              (ref) => _StaticSimulationNotifier(
-                const SimulationState(
-                  recommendedSeeds: <SimulationSeedModel>[
-                    SimulationSeedModel(
-                      topic: '特征值与特征向量',
-                      context: '来自 Galaxy 的推荐种子',
-                      tensionPoint: '前置知识存在断层',
-                      sourceType: 'galaxy',
-                      sourceIds: <String>['n1'],
-                      relevanceScore: 0.91,
-                      suggestedScenario: 'study_group',
-                      suggestedExperts: <String>['数学专家', '星图导航'],
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            // LABS 类型通知（theater_*/simulation_session_ready）即便到达
+            // 系统更新流，也不得渲染成首页洞察行。
             systemUpdatesProvider.overrideWith(
               (ref) async => <Map<String, dynamic>>[
                 <String, dynamic>{
@@ -186,6 +70,11 @@ void main() {
                     'deep_link':
                         '/theater?topic=%E7%BA%BF%E6%80%A7%E4%BB%A3%E6%95%B0&target_node_id=node-1',
                   },
+                },
+                <String, dynamic>{
+                  'type': 'simulation_session_ready',
+                  'description': '仿真会话已就绪',
+                  'metadata': <String, dynamic>{},
                 },
                 <String, dynamic>{
                   'type': 'learning_report_ready',
@@ -226,24 +115,24 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('学习洞察'), findsOneWidget);
-      expect(find.text('推演剧场'), findsOneWidget);
-      expect(find.text('学习仿真'), findsOneWidget);
       expect(find.text('学习报告'), findsOneWidget);
+      // LABS 快捷动作与 LABS 通知行不再出现在洞察枢纽卡。
+      expect(find.text('推演剧场'), findsNothing);
+      expect(find.text('学习仿真'), findsNothing);
+      expect(find.textContaining('theater'), findsNothing);
+      expect(find.textContaining('simulation'), findsNothing);
 
-      await tester.tap(find.text('推演剧场'));
+      await tester.tap(find.text('学习报告'));
       await tester.pumpAndSettle();
 
-      expect(
-        find.text(
-            '/theater?topic=%E7%BA%BF%E6%80%A7%E4%BB%A3%E6%95%B0&target_node_id=node-1',),
-        findsOneWidget,
-      );
+      expect(find.text('report-direct'), findsOneWidget);
     });
 
-    testWidgets('overview opens child routes and returns back to overview',
+    testWidgets(
+        'overview keeps report module, drops simulation/theater modules',
         (tester) async {
       final router = GoRouter(
-        initialLocation: '/learning/insights?initialPanel=simulation',
+        initialLocation: '/learning/insights?initialPanel=report',
         routes: <RouteBase>[
           GoRoute(
             path: '/learning/insights',
@@ -252,15 +141,15 @@ void main() {
             ),
           ),
           GoRoute(
-            path: '/simulation',
-            builder: (context, state) => const Scaffold(
-              body: Center(child: Text('simulation-screen')),
-            ),
-          ),
-          GoRoute(
             path: '/theater',
             builder: (context, state) => const Scaffold(
               body: Center(child: Text('theater-screen')),
+            ),
+          ),
+          GoRoute(
+            path: '/simulation',
+            builder: (context, state) => const Scaffold(
+              body: Center(child: Text('simulation-screen')),
             ),
           ),
           GoRoute(
@@ -275,24 +164,6 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: <Override>[
-            simulationProvider.overrideWith(
-              (ref) => _StaticSimulationNotifier(
-                const SimulationState(
-                  recommendedSeeds: <SimulationSeedModel>[
-                    SimulationSeedModel(
-                      topic: '特征值与特征向量',
-                      context: '来自 Galaxy 的推荐种子',
-                      tensionPoint: '前置知识存在断层',
-                      sourceType: 'galaxy',
-                      sourceIds: <String>['n1'],
-                      relevanceScore: 0.91,
-                      suggestedScenario: 'study_group',
-                      suggestedExperts: <String>['数学专家', '星图导航'],
-                    ),
-                  ],
-                ),
-              ),
-            ),
             systemUpdatesProvider.overrideWith(
               (ref) async => <Map<String, dynamic>>[
                 <String, dynamic>{
@@ -341,19 +212,22 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(LearningInsightsOverviewScreen), findsOneWidget);
-      // wt296：屏侧聚焦徽章已重构为 `_OverviewHero` 的 "Simulation · 动线标题"
-      // 形制（旧 l10n insFocusedSim 已成死键），断言对齐当前 UI 契约。
-      expect(find.textContaining('Simulation · '), findsOneWidget);
+      // 面板聚焦徽章只剩 Report 形制；Simulation/Theater 面板已摘除。
+      expect(find.textContaining('Report · '), findsOneWidget);
+      expect(find.textContaining('Simulation · '), findsNothing);
+      expect(find.textContaining('Theater · '), findsNothing);
 
-      // wt296：仿真模块按钮在有推荐种子时的文案是 simulationStartSimButton
-      // （'开始模拟'，旧 insStartFromRecommended '从推荐开始' 已成死键）；
-      // 按钮在首屏折叠线下，先 ensureVisible 再 tap。
-      final simButton = find.text('开始模拟');
-      await tester.ensureVisible(simButton);
+      // LABS 模块卡不再渲染。
+      expect(find.text('学习仿真'), findsNothing);
+      expect(find.text('推演剧场'), findsNothing);
+
+      // 报告模块按钮 → 报告屏，返回回到总览（context CTA 返回语义）。
+      final reportButton = find.text('查看报告');
+      await tester.ensureVisible(reportButton);
       await tester.pumpAndSettle();
-      await tester.tap(simButton);
+      await tester.tap(reportButton);
       await tester.pumpAndSettle();
-      expect(find.text('simulation-screen'), findsOneWidget);
+      expect(find.text('report-screen'), findsOneWidget);
 
       router.pop();
       await tester.pumpAndSettle();

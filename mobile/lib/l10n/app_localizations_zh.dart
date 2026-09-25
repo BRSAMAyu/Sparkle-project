@@ -14078,7 +14078,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get insightHubFallbackSummary => '把推演、仿真和报告收进一条更轻量的学习动线。';
+  String get insightHubFallbackSummary => '把报告和洞察收进一条更轻量的学习动线。';
 
   @override
   String get insightHubSimulation => '学习仿真';
@@ -14110,7 +14110,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get insightHubCompactFallback => '仿真、推演和报告现在收在同一张卡里';
+  String get insightHubCompactFallback => '报告与洞察现在收在同一张卡里';
 
   @override
   String get insightHubNoRecentTheater => '最近暂无推演';

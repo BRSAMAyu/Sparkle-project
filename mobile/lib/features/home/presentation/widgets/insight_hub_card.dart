@@ -10,11 +10,11 @@ import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/insights/insights_routes.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/report_routes.dart';
-import 'package:sparkle/features/simulation/presentation/providers/simulation_provider.dart';
-import 'package:sparkle/features/simulation/simulation_routes.dart';
-import 'package:sparkle/features/theater/theater_routes.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 
+/// U-07 导航减负：洞察枢纽卡收敛为「学习报告」单一 CONTEXTUAL 动作 +
+/// 洞察总览入口。simulation/theater 属 LABS（hidden by default），不再
+/// 在 CORE 首页面挂快速入口；对应推荐种子加载与 LABS 通知聚合一并摘除。
 class InsightHubCard extends ConsumerStatefulWidget {
   const InsightHubCard({
     super.key,
@@ -31,36 +31,12 @@ class InsightHubCard extends ConsumerStatefulWidget {
 
 class _InsightHubCardState extends ConsumerState<InsightHubCard> {
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(
-        ref
-            .read(simulationProvider.notifier)
-            .loadRecommendedSeeds(silent: true),
-      );
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final simulationState = ref.watch(simulationProvider);
     final systemUpdatesAsync = ref.watch(systemUpdatesProvider);
     final systemUpdates = systemUpdatesAsync.maybeWhen(
       data: (items) => items,
       orElse: () => const <Map<String, dynamic>>[],
     );
-    final latestTheater =
-        systemUpdates.cast<Map<String, dynamic>?>().firstWhere(
-              (item) =>
-                  item?['type']?.toString().startsWith('theater_') ?? false,
-              orElse: () => null,
-            );
-    final latestSimulation =
-        systemUpdates.cast<Map<String, dynamic>?>().firstWhere(
-              (item) => item?['type']?.toString() == 'simulation_session_ready',
-              orElse: () => null,
-            );
     final latestReport = systemUpdates.cast<Map<String, dynamic>?>().firstWhere(
           (item) => item?['type']?.toString() == 'learning_report_ready',
           orElse: () => null,
@@ -73,15 +49,11 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
             ),
           )
         : null;
-    final hasRefreshError = (simulationState.error != null) ||
-        systemUpdatesAsync.hasError;
+    final hasRefreshError = systemUpdatesAsync.hasError;
 
     if (widget.compact) {
       return _CompactInsightHubCard(
-        latestTheater: latestTheater,
-        latestSimulation: latestSimulation,
         latestReportPayload: latestReportPayload,
-        simulationState: simulationState,
         dense: widget.dense,
         hasRefreshError: hasRefreshError,
       );
@@ -103,13 +75,7 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              _heroSummary(
-                context,
-                latestTheater,
-                latestReportPayload,
-                simulationState,
-                latestSimulation,
-              ),
+              _heroSummary(context, latestReportPayload),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: DS.textSecondary,
                     height: 1.45,
@@ -120,27 +86,6 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
               spacing: DS.spacing12,
               runSpacing: DS.spacing12,
               children: [
-                _InsightHubQuickAction(
-                  icon: Icons.groups_rounded,
-                  title: context.l10n.insightHubSimulation,
-                  subtitle: _simulationSubtitle(
-                    simulationState,
-                    latestSimulation: latestSimulation,
-                  ),
-                  accent: DS.brandSecondary,
-                  onTap: () => _openSimulation(
-                    context,
-                    simulationState,
-                    latestSimulation: latestSimulation,
-                  ),
-                ),
-                _InsightHubQuickAction(
-                  icon: Icons.auto_graph_rounded,
-                  title: context.l10n.insightHubTheater,
-                  subtitle: _theaterSubtitle(latestTheater),
-                  accent: DS.info,
-                  onTap: () => _openTheater(context, latestTheater),
-                ),
                 _InsightHubQuickAction(
                   icon: Icons.article_outlined,
                   title: context.l10n.insightHubReport,
@@ -164,11 +109,6 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
               _InsightHubStatusBanner(
                 onRetry: () {
                   ref.invalidate(systemUpdatesProvider);
-                  unawaited(
-                    ref
-                        .read(simulationProvider.notifier)
-                        .loadRecommendedSeeds(),
-                  );
                 },
               ),
             ],
@@ -178,27 +118,9 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
     );
   }
 
-  String _heroSummary(
-    BuildContext context,
-    Map<String, dynamic>? latestTheater,
-    LearningReport? report,
-    SimulationState simulationState,
-    Map<String, dynamic>? latestSimulation,
-  ) {
-    if (simulationState.recommendedSeeds.isNotEmpty) {
-      return context.l10n.insightHubRecommendedSeeds(simulationState.recommendedSeeds.length);
-    }
-    if (latestSimulation != null) {
-      return _simulationSubtitle(
-        simulationState,
-        latestSimulation: latestSimulation,
-      );
-    }
+  String _heroSummary(BuildContext context, LearningReport? report) {
     if (report != null && report.mastery.isNotEmpty) {
       return _reportSubtitle(report);
-    }
-    if (latestTheater != null) {
-      return _theaterSubtitle(latestTheater);
     }
     return context.l10n.insightHubFallbackSummary;
   }
@@ -211,32 +133,6 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
     );
   }
 
-  void _openSimulation(
-    BuildContext context,
-    SimulationState simulationState, {
-    Map<String, dynamic>? latestSimulation,
-  }) {
-    final metadata = Map<String, dynamic>.from(
-      latestSimulation?['metadata'] as Map? ?? const {},
-    );
-    final deepLink = metadata['deep_link']?.toString().trim();
-    if (deepLink != null && deepLink.startsWith(SimulationRoutes.simulation)) {
-      unawaited(context.push(deepLink));
-      return;
-    }
-    final seed = simulationState.recommendedSeeds.isNotEmpty
-        ? simulationState.recommendedSeeds.first
-        : null;
-    final location = seed == null
-        ? SimulationRoutes.simulation
-        : '${SimulationRoutes.simulation}?topic=${Uri.encodeComponent(seed.topic)}&scenario_key=${Uri.encodeComponent(seed.suggestedScenario)}';
-    unawaited(context.push(location));
-  }
-
-  void _openTheater(BuildContext context, Map<String, dynamic>? latestTheater) {
-    unawaited(context.push(_resolveTheaterLocation(latestTheater)));
-  }
-
   void _openReport(BuildContext context, LearningReport? report) {
     unawaited(context.push(ReportRoutes.learningReport, extra: report));
   }
@@ -244,31 +140,19 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
 
 class _CompactInsightHubCard extends ConsumerWidget {
   const _CompactInsightHubCard({
-    required this.latestTheater,
-    required this.latestSimulation,
     required this.latestReportPayload,
-    required this.simulationState,
     required this.dense,
     required this.hasRefreshError,
   });
 
-  final Map<String, dynamic>? latestTheater;
-  final Map<String, dynamic>? latestSimulation;
   final LearningReport? latestReportPayload;
-  final SimulationState simulationState;
   final bool dense;
   final bool hasRefreshError;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final contentPadding = dense ? DS.spacing10 : DS.spacing12;
-    final summary = _heroSummary(
-      context,
-      latestTheater,
-      latestReportPayload,
-      simulationState,
-      latestSimulation,
-    );
+    final summary = _heroSummary(context, latestReportPayload);
 
     return ClipRRect(
       borderRadius: DS.borderRadius20,
@@ -386,88 +270,37 @@ class _CompactInsightHubCard extends ConsumerWidget {
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final actions = <Widget>[
-                    _CompactInsightAction(
-                      title: context.l10n.insightHubCompactSimulation,
-                      subtitle: _simulationSubtitle(
-                        simulationState,
-                        latestSimulation: latestSimulation,
-                      ),
-                      icon: Icons.groups_rounded,
-                      accent: DS.brandSecondary,
-                      onTap: () {
-                        final metadata = Map<String, dynamic>.from(
-                          latestSimulation?['metadata'] as Map? ?? const {},
-                        );
-                        final deepLink =
-                            metadata['deep_link']?.toString().trim();
-                        final seed = simulationState.recommendedSeeds.isNotEmpty
-                            ? simulationState.recommendedSeeds.first
-                            : null;
-                        final location = deepLink != null &&
-                                deepLink.startsWith(SimulationRoutes.simulation)
-                            ? deepLink
-                            : seed == null
-                                ? SimulationRoutes.simulation
-                                : '${SimulationRoutes.simulation}?topic=${Uri.encodeComponent(seed.topic)}&scenario_key=${Uri.encodeComponent(seed.suggestedScenario)}';
-                        unawaited(context.push(location));
-                      },
-                    ),
-                    _CompactInsightAction(
-                      title: context.l10n.insightHubCompactTheater,
-                      subtitle: _theaterSubtitle(latestTheater),
-                      icon: Icons.auto_graph_rounded,
-                      accent: DS.info,
-                      onTap: () {
-                        final metadata = Map<String, dynamic>.from(
-                          latestTheater?['metadata'] as Map? ?? const {},
-                        );
-                        final title = metadata['title']?.toString();
-                        final location = title == null || title.isEmpty
-                            ? TheaterRoutes.theater
-                            : '${TheaterRoutes.theater}?topic=${Uri.encodeComponent(title)}';
-                        unawaited(context.push(location));
-                      },
-                    ),
-                    _CompactInsightAction(
-                      title: context.l10n.insightHubCompactReport,
-                      subtitle: _reportSubtitle(latestReportPayload),
-                      icon: Icons.article_outlined,
-                      accent: DS.success,
-                      onTap: () => unawaited(
-                        context.push(
-                          ReportRoutes.learningReport,
-                          extra: latestReportPayload,
-                        ),
+                  // U-07：LABS 快捷动作（simulation/theater）摘除后，
+                  // 紧凑形态只剩报告动作——单卡满宽，不再三等分。
+                  final action = _CompactInsightAction(
+                    title: context.l10n.insightHubCompactReport,
+                    subtitle: _reportSubtitle(latestReportPayload),
+                    icon: Icons.article_outlined,
+                    accent: DS.success,
+                    onTap: () => unawaited(
+                      context.push(
+                        ReportRoutes.learningReport,
+                        extra: latestReportPayload,
                       ),
                     ),
-                  ];
+                  );
                   final useHorizontalStrip =
                       dense || constraints.maxWidth < 420;
                   if (useHorizontalStrip) {
                     final itemWidth =
                         (constraints.maxWidth * 0.48).clamp(108.0, 152.0);
-                    return ListView.separated(
+                    return ListView(
                       scrollDirection: Axis.horizontal,
                       physics: const BouncingScrollPhysics(),
-                      itemCount: actions.length,
-                      separatorBuilder: (_, __) =>
-                          const SizedBox(width: DS.spacing8),
-                      itemBuilder: (context, index) => SizedBox(
-                        width: itemWidth,
-                        child: actions[index],
-                      ),
+                      children: [
+                        SizedBox(
+                          width: itemWidth,
+                          child: action,
+                        ),
+                      ],
                     );
                   }
-                  return Row(
-                    children: [
-                      Expanded(child: actions[0]),
-                      const SizedBox(width: DS.spacing8),
-                      Expanded(child: actions[1]),
-                      const SizedBox(width: DS.spacing8),
-                      Expanded(child: actions[2]),
-                    ],
-                  );
+                  return action;
                 },
               ),
             ),
@@ -488,27 +321,9 @@ class _CompactInsightHubCard extends ConsumerWidget {
     );
   }
 
-  String _heroSummary(
-    BuildContext context,
-    Map<String, dynamic>? latestTheater,
-    LearningReport? report,
-    SimulationState simulationState,
-    Map<String, dynamic>? latestSimulation,
-  ) {
-    if (simulationState.recommendedSeeds.isNotEmpty) {
-      return context.l10n.insightHubSeedsToExplore(simulationState.recommendedSeeds.length);
-    }
-    if (latestSimulation != null) {
-      return _simulationSubtitle(
-        simulationState,
-        latestSimulation: latestSimulation,
-      );
-    }
+  String _heroSummary(BuildContext context, LearningReport? report) {
     if (report != null && report.mastery.isNotEmpty) {
       return _reportSubtitle(report);
-    }
-    if (latestTheater != null) {
-      return _theaterSubtitle(latestTheater);
     }
     return context.l10n.insightHubCompactFallback;
   }
@@ -671,7 +486,7 @@ class _InsightHubStatusBanner extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-                    SparkleButton(
+          SparkleButton(
             label: context.l10n.insightHubRetry,
             variant: ButtonVariant.text,
             size: ButtonSize.small,
@@ -683,73 +498,6 @@ class _InsightHubStatusBanner extends StatelessWidget {
       ),
     );
   }
-}
-
-String _theaterSubtitle(Map<String, dynamic>? latestTheater) {
-  if (latestTheater == null) {
-    return S.insightHubNoRecentTheater;
-  }
-  final metadata = Map<String, dynamic>.from(
-    latestTheater['metadata'] as Map? ?? const {},
-  );
-  final title = metadata['title']?.toString();
-  if (title != null && title.isNotEmpty) {
-    return title;
-  }
-  return latestTheater['description']?.toString() ?? S.insightHubContinueLastTheater;
-}
-
-String _resolveTheaterLocation(Map<String, dynamic>? latestTheater) {
-  final metadata = Map<String, dynamic>.from(
-    latestTheater?['metadata'] as Map? ?? const {},
-  );
-  final deepLink = metadata['deep_link']?.toString().trim();
-  if (deepLink != null && deepLink.startsWith(TheaterRoutes.theater)) {
-    return deepLink;
-  }
-  final topicCandidate = metadata['topic']?.toString().trim();
-  final targetNameCandidate = metadata['target_name']?.toString().trim();
-  final titleCandidate = metadata['title']?.toString().trim();
-  final topic = (topicCandidate?.isNotEmpty ?? false)
-      ? topicCandidate
-      : (targetNameCandidate?.isNotEmpty ?? false)
-          ? targetNameCandidate
-          : titleCandidate;
-  if (topic == null || topic.isEmpty) {
-    return TheaterRoutes.theater;
-  }
-  final query = <String, String>{'topic': topic};
-  final targetNodeId = metadata['target_node_id']?.toString().trim();
-  if (targetNodeId != null && targetNodeId.isNotEmpty) {
-    query['target_node_id'] = targetNodeId;
-  }
-  return Uri(path: TheaterRoutes.theater, queryParameters: query).toString();
-}
-
-String _simulationSubtitle(
-  SimulationState simulationState, {
-  Map<String, dynamic>? latestSimulation,
-}) {
-  if (latestSimulation != null) {
-    final metadata = Map<String, dynamic>.from(
-      latestSimulation['metadata'] as Map? ?? const {},
-    );
-    final sessionPayload = metadata['session_payload'];
-    if (sessionPayload is Map) {
-      final topic = sessionPayload['topic']?.toString().trim();
-      if (topic != null && topic.isNotEmpty) {
-        return S.insightHubContinueTopic(topic);
-      }
-    }
-    return latestSimulation['description']?.toString() ?? S.insightHubContinueLastSimulation;
-  }
-  if (simulationState.recommendedSeeds.isNotEmpty) {
-    return S.insightHubRecommendedSeedsCount(simulationState.recommendedSeeds.length);
-  }
-  if (simulationState.session != null) {
-    return S.insightHubContinueSession(simulationState.session!.topic);
-  }
-  return S.insightHubStartSimulation;
 }
 
 String _reportSubtitle(LearningReport? report) {

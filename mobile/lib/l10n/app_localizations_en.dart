@@ -14678,7 +14678,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get insightHubFallbackSummary =>
-      'Simulations, what-ifs, and reports — now in one lighter learning flow.';
+      'Reports and insights — now in one lighter learning flow.';
 
   @override
   String get insightHubSimulation => 'Simulation';
@@ -14712,7 +14712,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get insightHubCompactFallback =>
-      'Simulations, what-ifs, and reports now in one card';
+      'Reports and insights now in one card';
 
   @override
   String get insightHubNoRecentTheater => 'No recent theater';

@@ -23,8 +23,6 @@ import 'package:sparkle/features/plan/plan_routes.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/presentation/widgets/mastery_radar_chart.dart';
 import 'package:sparkle/features/report/report_routes.dart';
-import 'package:sparkle/features/simulation/simulation_routes.dart';
-import 'package:sparkle/features/theater/theater_routes.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 
 enum _ReportRange { week, month, all }
@@ -284,13 +282,11 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
                 primaryLabel: weakestNode == null
                     ? context.l10n.reportOpenGalaxy
                     : context.l10n.reportPrioritizeNode(weakestNode.nodeName),
-                onPrimaryTap: weakestNode == null
-                    ? () => unawaited(_openReportDeepLink(GalaxyRoutes.home))
-                    : () => unawaited(
-                          _openReportDeepLink(
-                            '${TheaterRoutes.theater}?topic=${Uri.encodeComponent(weakestNode.nodeName)}',
-                          ),
-                        ),
+                // U-07：报告 hero 主 CTA 收敛到星图（evidence-aware mastery
+                // 的 CORE 面）。报告模型只有 node_name 无 node_id，无法直连
+                // 节点详情；theater 属 LABS，不再作为报告出口。
+                onPrimaryTap: () =>
+                    unawaited(_openReportDeepLink(GalaxyRoutes.home)),
                 footer: history.length > 1
                     ? SegmentedButton<_ReportRange>(
                         segments: [
@@ -334,23 +330,18 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
             _AnimatedReportSection(
               delay: 90,
               child: _ReportActionCard(
-                actionCards: report.actionCards,
+                // U-07：LABS 类行动建议（theater/simulation）不在 CORE 报告
+                // 面渲染；galaxy/plan 类建议保持原样。
+                actionCards: report.actionCards
+                    .where(
+                      (item) =>
+                          item.kind != 'theater' && item.kind != 'simulation',
+                    )
+                    .toList(),
                 weakestNode: weakestNode,
                 strongestNode: strongestNode,
                 onOpenGalaxy: () =>
                     unawaited(_openReportDeepLink(GalaxyRoutes.home)),
-                onOpenTheater: weakestNode == null
-                    ? null
-                    : () => unawaited(
-                          _openReportDeepLink(
-                            '${TheaterRoutes.theater}?topic=${Uri.encodeComponent(weakestNode.nodeName)}',
-                          ),
-                        ),
-                onOpenSimulation: () => unawaited(
-                  _openReportDeepLink(
-                    '${SimulationRoutes.simulation}?topic=${Uri.encodeComponent(weakestNode?.nodeName ?? strongestNode?.nodeName ?? context.l10n.reportCurrentLearningTopic)}&scenario_key=study_group',
-                  ),
-                ),
                 onOpenSprintHistory: () =>
                     unawaited(_openReportDeepLink(PlanRoutes.sprintHistory)),
                 onActionTap: _openReportDeepLink,
@@ -1213,9 +1204,7 @@ class _LearningReportScreenState extends ConsumerState<LearningReportScreen> {
     };
 
     final shouldCarryChatContext =
-        resolvedPath.startsWith(TheaterRoutes.theater) ||
-            resolvedPath.startsWith(SimulationRoutes.simulation) ||
-            resolvedPath.startsWith(ReportRoutes.learningReport) ||
+        resolvedPath.startsWith(ReportRoutes.learningReport) ||
             resolvedPath.startsWith(GalaxyRoutes.home);
     if (shouldCarryChatContext &&
         (sourceChatSessionId?.isNotEmpty ?? false) &&
@@ -1991,8 +1980,6 @@ class _ReportActionCard extends StatelessWidget {
     required this.weakestNode,
     required this.strongestNode,
     required this.onOpenGalaxy,
-    required this.onOpenTheater,
-    required this.onOpenSimulation,
     required this.onOpenSprintHistory,
     required this.onActionTap,
   });
@@ -2001,8 +1988,6 @@ class _ReportActionCard extends StatelessWidget {
   final LearningMasteryDatum? weakestNode;
   final LearningMasteryDatum? strongestNode;
   final VoidCallback onOpenGalaxy;
-  final VoidCallback? onOpenTheater;
-  final VoidCallback onOpenSimulation;
   final VoidCallback onOpenSprintHistory;
   final ValueChanged<String> onActionTap;
 
@@ -2055,17 +2040,6 @@ class _ReportActionCard extends StatelessWidget {
                     onPressed: onOpenGalaxy,
                     icon: const Icon(Icons.auto_graph_rounded),
                     label: Text(context.l10n.reportOpenGalaxy),
-                  ),
-                  if (onOpenTheater != null)
-                    FilledButton.tonalIcon(
-                      onPressed: onOpenTheater,
-                      icon: const Icon(Icons.theater_comedy_outlined),
-                      label: Text(context.l10n.reportActionExploreNode(weakestNode?.nodeName ?? context.l10n.reportActionWeaknessFallback)),
-                    ),
-                  FilledButton.tonalIcon(
-                    onPressed: onOpenSimulation,
-                    icon: const Icon(Icons.groups_rounded),
-                    label: Text(context.l10n.reportActionEnterSimulation),
                   ),
                   OutlinedButton.icon(
                     onPressed: onOpenSprintHistory,

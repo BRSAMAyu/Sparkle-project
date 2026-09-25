@@ -48,11 +48,8 @@ import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.
 import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/report_routes.dart';
 import 'package:sparkle/features/settings/presentation/screens/transparency_settings_screen.dart';
-import 'package:sparkle/features/simulation/presentation/support/simulation_copy.dart';
-import 'package:sparkle/features/simulation/simulation_routes.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
-import 'package:sparkle/features/theater/theater_routes.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/shared/utils/entity_card_payloads.dart';
 
@@ -546,10 +543,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     }
     final message = widget.message as ChatMessageModel;
     final collaboration = message.agentCollaboration ?? const {};
+    // U-07：预览捷径只认 report（CONTEXTUAL）；theater/simulation 属
+    // LABS，不再作为纯模式的附件页触发源。
     final hasPreviewShortcut =
-        collaboration['prediction_preview'] is Map<dynamic, dynamic> ||
-            collaboration['simulation_preview'] is Map<dynamic, dynamic> ||
-            collaboration['report_preview'] is Map<dynamic, dynamic>;
+        collaboration['report_preview'] is Map<dynamic, dynamic>;
     return _actionableWidgets.isNotEmpty || hasPreviewShortcut;
   }
 
@@ -565,16 +562,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       return null;
     }
 
-    final predictionPreview =
-        asMap(chatMessage.agentCollaboration?['prediction_preview']);
-    final simulationPreview =
-        asMap(chatMessage.agentCollaboration?['simulation_preview']);
     final reportPreview =
         asMap(chatMessage.agentCollaboration?['report_preview']);
-    final theaterDeepLink =
-        chatMessage.agentCollaboration?['deep_link']?.toString();
-    final simulationDeepLink =
-        chatMessage.agentCollaboration?['simulation_deep_link']?.toString();
     final reportDeepLink =
         chatMessage.agentCollaboration?['report_deep_link']?.toString();
     final sourceChatSessionId =
@@ -622,28 +611,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
           );
         },
       ),
-      if (predictionPreview != null && predictionPreview.isNotEmpty)
-        _AccessoryPreviewPage(
-          title: context.l10n.chatTheaterTitle,
-          subtitle: context.l10n.chatTheaterDesc,
-          child: _buildTheaterPreviewCard(
-            context,
-            preview: predictionPreview,
-            deepLink: theaterDeepLink,
-            sourceChatSessionId: sourceChatSessionId,
-          ),
-        ),
-      if (simulationPreview != null && simulationPreview.isNotEmpty)
-        _AccessoryPreviewPage(
-          title: context.l10n.chatSimulationTitle,
-          subtitle: context.l10n.chatSimulationDesc,
-          child: _buildSimulationPreviewCard(
-            context,
-            preview: simulationPreview,
-            deepLink: simulationDeepLink,
-            sourceChatSessionId: sourceChatSessionId,
-          ),
-        ),
       if (reportPreview != null && reportPreview.isNotEmpty)
         _AccessoryPreviewPage(
           title: context.l10n.chatReportTitle,
@@ -897,22 +864,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     final agentActivities = widget.message is ChatMessageModel
         ? (widget.message as ChatMessageModel).agentActivities
         : const <Map<String, dynamic>>[];
-    final predictionPreview = widget.message is ChatMessageModel
-        ? ((widget.message as ChatMessageModel)
-            .agentCollaboration?['prediction_preview'] as Map<String, dynamic>?)
-        : null;
-    final simulationPreview = widget.message is ChatMessageModel
-        ? ((widget.message as ChatMessageModel)
-            .agentCollaboration?['simulation_preview'] as Map<String, dynamic>?)
-        : null;
     final reportPreview = widget.message is ChatMessageModel
         ? ((widget.message as ChatMessageModel)
             .agentCollaboration?['report_preview'] as Map<String, dynamic>?)
         : null;
-    final theaterDeepLink =
-        chatMessage?.agentCollaboration?['deep_link']?.toString();
-    final simulationDeepLink =
-        chatMessage?.agentCollaboration?['simulation_deep_link']?.toString();
     final reportDeepLink =
         chatMessage?.agentCollaboration?['report_deep_link']?.toString();
     final sourceChatSessionId =
@@ -1413,11 +1368,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                 orchestrationTrace: orchestrationTrace,
                                 routingPreview: routingPreview,
                                 roundtableTurns: roundtableTurns,
-                                predictionPreview: predictionPreview,
-                                simulationPreview: simulationPreview,
                                 reportPreview: reportPreview,
-                                theaterDeepLink: theaterDeepLink,
-                                simulationDeepLink: simulationDeepLink,
                                 reportDeepLink: reportDeepLink,
                                 sourceChatSessionId: sourceChatSessionId,
                                 collaborationNarrative: collaborationNarrative,
@@ -1667,11 +1618,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     required Map<String, dynamic>? orchestrationTrace,
     required Map<String, dynamic>? routingPreview,
     required List<Map<String, dynamic>> roundtableTurns,
-    required Map<String, dynamic>? predictionPreview,
-    required Map<String, dynamic>? simulationPreview,
     required Map<String, dynamic>? reportPreview,
-    required String? theaterDeepLink,
-    required String? simulationDeepLink,
     required String? reportDeepLink,
     required String? sourceChatSessionId,
     required String? collaborationNarrative,
@@ -1719,45 +1666,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       );
     }
 
-    // Prediction / theater preview
-    if (!chatPureMode &&
-        !isUser &&
-        predictionPreview != null &&
-        predictionPreview.isNotEmpty) {
-      disclosureItems.add(
-        _buildAccessoryDisclosure(
-          id: 'prediction_preview',
-          label: context.l10n.chatViewTheaterDetails,
-          icon: Icons.auto_graph_rounded,
-          child: _buildTheaterPreviewCard(
-            context,
-            preview: predictionPreview,
-            deepLink: theaterDeepLink,
-            sourceChatSessionId: sourceChatSessionId,
-          ),
-        ),
-      );
-    }
-
-    // Simulation preview
-    if (!chatPureMode &&
-        !isUser &&
-        simulationPreview != null &&
-        simulationPreview.isNotEmpty) {
-      disclosureItems.add(
-        _buildAccessoryDisclosure(
-          id: 'simulation_preview',
-          label: context.l10n.chatViewSimulationDetails,
-          icon: Icons.groups_rounded,
-          child: _buildSimulationPreviewCard(
-            context,
-            preview: simulationPreview,
-            deepLink: simulationDeepLink,
-            sourceChatSessionId: sourceChatSessionId,
-          ),
-        ),
-      );
-    }
+    // U-07：theater/simulation 预览披露摘除（LABS hidden by default，
+    // CORE 聊天面不再渲染 LABS 预览卡与深链入口）。
 
     // Report preview
     if (!chatPureMode &&
@@ -2029,138 +1939,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
           ? context.l10n.chatContinueFromConversation
           : context.l10n.chatReviewFirstThenExpand;
 
-  List<_InlinePromptAction> _theaterPromptActions(
-    Map<String, dynamic> preview,
-  ) {
-    final topic =
-        preview['topic']?.toString() ?? context.l10n.chatCurrentLearningTopic;
-    final paths = (preview['paths'] as List<dynamic>? ?? [])
-        .whereType<Map<dynamic, dynamic>>()
-        .map(Map<String, dynamic>.from)
-        .toList();
-    final actions = <_InlinePromptAction>[
-      _InlinePromptAction(
-        label: context.l10n.chatPromptRefinePath,
-        prompt: context.l10n.chatPromptRefinePathMessage(topic),
-        onTap: () => _continueInlinePrompt(
-          context.l10n.chatPromptRefinePathMessage(topic),
-        ),
-      ),
-    ];
-    if (paths.length >= 2) {
-      actions.add(
-        _InlinePromptAction(
-          label: context.l10n.chatPromptComparePaths,
-          prompt: context.l10n.chatPromptComparePathsMessage(
-            paths[0]['title']?.toString() ??
-                context.l10n.chatPromptDefaultPathA,
-            paths[1]['title']?.toString() ??
-                context.l10n.chatPromptDefaultPathB,
-          ),
-          onTap: () => _continueInlinePrompt(
-            context.l10n.chatPromptComparePathsMessage(
-              paths[0]['title']?.toString() ??
-                  context.l10n.chatPromptDefaultPathA,
-              paths[1]['title']?.toString() ??
-                  context.l10n.chatPromptDefaultPathB,
-            ),
-          ),
-        ),
-      );
-    } else {
-      actions.add(
-        _InlinePromptAction(
-          label: context.l10n.chatPromptPrerequisites,
-          prompt: context.l10n.chatPromptPrerequisitesMessage(topic),
-          onTap: () => _continueInlinePrompt(
-            context.l10n.chatPromptPrerequisitesMessage(topic),
-          ),
-        ),
-      );
-    }
-    final recentHints = _recentTopicHints();
-    if (recentHints.contains('考试')) {
-      actions.add(
-        _InlinePromptAction(
-          label: context.l10n.chatPromptExamFocus,
-          prompt: context.l10n.chatPromptExamFocusMessage(topic),
-          onTap: () => _continueInlinePrompt(
-            context.l10n.chatPromptExamFocusMessage(topic),
-          ),
-        ),
-      );
-    }
-    if (recentHints.contains('计划')) {
-      actions.add(
-        _InlinePromptAction(
-          label: context.l10n.chatPromptMakePlan,
-          prompt: context.l10n.chatPromptMakePlanMessage(topic),
-          onTap: () => _continueInlinePrompt(
-            context.l10n.chatPromptMakePlanMessage(topic),
-          ),
-        ),
-      );
-    }
-    return _dedupePromptActions(actions);
-  }
-
-  List<_InlinePromptAction> _simulationPromptActions(
-    Map<String, dynamic> preview,
-  ) {
-    final topic =
-        preview['topic']?.toString() ?? context.l10n.chatCurrentLearningTopic;
-    final rounds = (preview['round_preview'] as List<dynamic>? ?? [])
-        .whereType<Map<dynamic, dynamic>>()
-        .map(Map<String, dynamic>.from)
-        .toList();
-    final actions = <_InlinePromptAction>[
-      _InlinePromptAction(
-        label: context.l10n.chatPromptSimulateRound,
-        prompt: context.l10n.chatPromptSimulateRoundMessage(topic),
-        onTap: () => _continueInlinePrompt(
-          context.l10n.chatPromptSimulateRoundMessage(topic),
-        ),
-      ),
-    ];
-    if (rounds.isNotEmpty) {
-      final speaker = localizeSimulationText(
-        rounds.first['speaker']?.toString() ?? context.l10n.chatOneOfTheRoles,
-      );
-      actions.add(
-        _InlinePromptAction(
-          label: context.l10n.chatPromptLetMeAnswer,
-          prompt: context.l10n.chatPromptLetMeAnswerMessage(speaker, topic),
-          onTap: () => _continueInlinePrompt(
-            context.l10n.chatPromptLetMeAnswerMessage(speaker, topic),
-          ),
-        ),
-      );
-    }
-    final recentHints = _recentTopicHints();
-    if (recentHints.contains('表达')) {
-      actions.add(
-        _InlinePromptAction(
-          label: context.l10n.chatPromptPracticeExplain,
-          prompt: context.l10n.chatPromptPracticeExplainMessage(topic),
-          onTap: () => _continueInlinePrompt(
-            context.l10n.chatPromptPracticeExplainMessage(topic),
-          ),
-        ),
-      );
-    }
-    if (recentHints.contains('错题')) {
-      actions.add(
-        _InlinePromptAction(
-          label: context.l10n.chatPromptErrorDiagnosis,
-          prompt: context.l10n.chatPromptErrorDiagnosisMessage(topic),
-          onTap: () => _continueInlinePrompt(
-            context.l10n.chatPromptErrorDiagnosisMessage(topic),
-          ),
-        ),
-      );
-    }
-    return _dedupePromptActions(actions);
-  }
 
   List<_InlinePromptAction> _reportPromptActions(
     Map<String, dynamic> preview,
@@ -2232,91 +2010,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     return _dedupePromptActions(actions);
   }
 
-  Widget _buildTheaterPreviewCard(
-    BuildContext context, {
-    required Map<String, dynamic> preview,
-    required String? deepLink,
-    required String? sourceChatSessionId,
-  }) {
-    final topic =
-        preview['topic']?.toString() ?? context.l10n.chatCurrentLearningTopic;
-    final paths = (preview['paths'] as List<dynamic>? ?? [])
-        .whereType<Map<dynamic, dynamic>>()
-        .map(Map<String, dynamic>.from)
-        .toList();
-    final resolvedDeepLink = _resolveInsightDeepLink(
-      deepLink: deepLink,
-      fallbackPath: TheaterRoutes.theater,
-      fallbackQuery: {'topic': topic},
-      sourceChatSessionId: sourceChatSessionId,
-    );
-    final promptActions = _theaterPromptActions(preview);
-    return _InsightLinkCard(
-      icon: Icons.auto_graph_rounded,
-      title: context.l10n.chatTheaterTitle,
-      subtitle: topic,
-      bullets: paths
-          .take(3)
-          .map(
-            (item) =>
-                '${item['title'] ?? context.l10n.chatPathLabel} · ${context.l10n.chatMasteryLabel} ${(item['estimated_mastery'] as num?)?.toStringAsFixed(0) ?? '--'}%',
-          )
-          .toList(),
-      caption: _bridgeCaption(sourceChatSessionId),
-      onTap: () => context.push(resolvedDeepLink),
-      promptActions: promptActions,
-      primaryLabel: context.l10n.chatOpenFullExperience,
-      onPrimaryTap: () => context.push(resolvedDeepLink),
-      secondaryLabel: context.l10n.chatContinueInChat,
-      onSecondaryTap: () => _continueInlinePrompt(promptActions.first.prompt),
-    );
-  }
-
-  Widget _buildSimulationPreviewCard(
-    BuildContext context, {
-    required Map<String, dynamic> preview,
-    required String? deepLink,
-    required String? sourceChatSessionId,
-  }) {
-    final topic =
-        preview['topic']?.toString() ?? context.l10n.chatCurrentLearningTopic;
-    final scenarioKey = preview['scenario_key']?.toString() ?? 'study_group';
-    final rounds = (preview['round_preview'] as List<dynamic>? ?? const [])
-        .whereType<Map<dynamic, dynamic>>()
-        .map(Map<String, dynamic>.from)
-        .toList();
-    final resolvedDeepLink = _resolveInsightDeepLink(
-      deepLink: deepLink,
-      fallbackPath: SimulationRoutes.simulation,
-      fallbackQuery: {
-        'topic': topic,
-        'scenario_key': scenarioKey,
-      },
-      sourceChatSessionId: sourceChatSessionId,
-    );
-    final promptActions = _simulationPromptActions(preview);
-    final scenarioLabel = localizeSimulationScenario(scenarioKey);
-    return _InsightLinkCard(
-      icon: Icons.groups_rounded,
-      title: context.l10n.chatSimulationTitle,
-      subtitle: '$topic · $scenarioLabel',
-      bullets: rounds
-          .take(3)
-          .map(
-            (item) =>
-                '${localizeSimulationText(item['speaker']?.toString() ?? context.l10n.chatParticipantLabel)}: ${localizeSimulationText(item['message']?.toString() ?? '')}',
-          )
-          .toList(),
-      caption: _bridgeCaption(sourceChatSessionId),
-      onTap: () => context.push(resolvedDeepLink),
-      promptActions: promptActions,
-      primaryLabel: context.l10n.chatOpenFullExperience,
-      onPrimaryTap: () => context.push(resolvedDeepLink),
-      secondaryLabel: context.l10n.chatContinueInChat,
-      onSecondaryTap: () => _continueInlinePrompt(promptActions.first.prompt),
-    );
-  }
-
   Widget _buildReportPreviewCard(
     BuildContext context, {
     required Map<String, dynamic> preview,
@@ -2364,6 +2057,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       badgeLabel: triggerSummary?.title,
       promptActions: promptActions,
       actionButtons: report.actionCards
+          // U-07：LABS 类行动建议（theater/simulation）不在聊天附件卡渲染。
+          .where(
+            (item) => item.kind != 'theater' && item.kind != 'simulation',
+          )
           .take(2)
           .map(
             (item) => _InlineActionButton(

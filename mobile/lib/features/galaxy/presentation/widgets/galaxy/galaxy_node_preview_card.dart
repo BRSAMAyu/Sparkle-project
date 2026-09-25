@@ -11,7 +11,7 @@ class GalaxyNodePreviewCard extends StatelessWidget {
     required this.onInspectConnections,
     required this.onViewDetails,
     required this.onStartReview,
-    required this.onLaunchPrediction,
+    this.onLaunchPrediction,
     super.key,
   });
 
@@ -20,11 +20,16 @@ class GalaxyNodePreviewCard extends StatelessWidget {
   final VoidCallback onInspectConnections;
   final VoidCallback onViewDetails;
   final VoidCallback onStartReview;
-  final VoidCallback onLaunchPrediction;
+
+  /// U-07：theater 演练入口（LABS hidden by default）默认不挂在节点
+  /// 预览卡上；参数保留为可空以兼容未来 Labs 态按需启用。
+  final VoidCallback? onLaunchPrediction;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    // 实例字段不参与流程提升，先落局部变量供判空与传参。
+    final launchPrediction = onLaunchPrediction;
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final sectorStyle = SectorConfig.getStyle(node.sector);
     final sectorName = SectorConfig.getLocalizedName(node.sector);
@@ -242,16 +247,18 @@ class GalaxyNodePreviewCard extends StatelessWidget {
                     onPressed: onViewDetails,
                   ),
                 ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: _CardActionButton(
-                    label: l10n.galaxyNodeLaunchPrediction,
-                    icon: Icons.auto_graph_rounded,
-                    color: sectorColor,
-                    onPressed: onLaunchPrediction,
+                if (launchPrediction != null) ...[
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: _CardActionButton(
+                      label: l10n.galaxyNodeLaunchPrediction,
+                      icon: Icons.auto_graph_rounded,
+                      color: sectorColor,
+                      onPressed: launchPrediction,
+                    ),
                   ),
-                ),
+                ],
                 if ((node.description ?? '').trim().isNotEmpty) ...[
                   const SizedBox(height: 10),
                   Text(

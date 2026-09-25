@@ -345,21 +345,9 @@ class ToolRegistry {
       },
       routeBuilder: (_) => '/curiosity-capsule',
     ),
-    ToolDefinition(
-      id: 'seed_library',
-      title: 'Seed Library',
-      description: 'Browse official and community knowledge bases',
-      icon: Icons.auto_stories_rounded,
-      category: ToolCategory.study,
-      defaultOrder: 190,
-      searchTerms: const ['种子', '知识库', 'library', 'seed'],
-      searchTermsEn: const ['seed', 'library', 'knowledge', 'community'],
-      supportedContexts: const {
-        ToolLaunchContext.home,
-        ToolLaunchContext.toolLibrary,
-      },
-      routeBuilder: (_) => '/seed-libraries',
-    ),
+    // U-07：seed_library 工具别名摘除。种子库属 LABS（hidden by
+    // default），不再出现在工具库/搜索/首页工具枢纽；路由挂载与功能文件
+    // 保留（unlisted），后续 Labs 化可整卡恢复。
   ];
 
   static List<ToolDefinition> get all =>

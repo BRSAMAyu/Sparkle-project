@@ -63,14 +63,12 @@ class _RecentInsightsCardState extends ConsumerState<RecentInsightsCard> {
           orElse: () => const <Map<String, dynamic>>[],
         );
 
+    // U-07 导航减负：本卡是 CORE 首页面，只承载 CONTEXTUAL 学习报告洞察；
+    // theater_*/simulation_session_ready 属 LABS（hidden by default），
+    // 不再进入首页入口面。
     final insightEntries = <_InsightEntry>[
       ...notificationState.notifications
-          .where(
-            (item) =>
-                (item.type ?? '').startsWith('theater_') ||
-                item.type == 'learning_report_ready' ||
-                item.type == 'simulation_session_ready',
-          )
+          .where((item) => item.type == 'learning_report_ready')
           .map(
             (item) => _InsightEntry(
               type: item.type ?? '',
@@ -82,10 +80,7 @@ class _RecentInsightsCardState extends ConsumerState<RecentInsightsCard> {
           ),
       ...systemUpdates
           .where(
-            (item) =>
-                (item['type']?.toString().startsWith('theater_') ?? false) ||
-                item['type']?.toString() == 'learning_report_ready' ||
-                item['type']?.toString() == 'simulation_session_ready',
+            (item) => item['type']?.toString() == 'learning_report_ready',
           )
           .map(
             (item) => _InsightEntry(
@@ -196,11 +191,7 @@ class _RecentInsightsCardState extends ConsumerState<RecentInsightsCard> {
                           const SizedBox(height: DS.spacing8),
                           ...recentEntries.map(
                             (item) => _InsightRow(
-                              icon: item.type == 'learning_report_ready'
-                                  ? Icons.article_outlined
-                                  : item.type == 'simulation_session_ready'
-                                      ? Icons.groups_rounded
-                                      : Icons.auto_graph_rounded,
+                              icon: Icons.article_outlined,
                               title: item.title,
                               subtitle: item.subtitle,
                               onTap: () => _openNotificationInsight(
@@ -262,22 +253,9 @@ class _RecentInsightsCardState extends ConsumerState<RecentInsightsCard> {
       return;
     }
 
-    if (type == 'simulation_session_ready') {
-      final deepLink = metadata['deep_link']?.toString();
-      if (deepLink != null && deepLink.isNotEmpty) {
-        unawaited(context.push(deepLink));
-        return;
-      }
-      unawaited(context.push('/simulation'));
-      return;
-    }
-
-    final deepLink = metadata['deep_link']?.toString();
-    if (deepLink != null && deepLink.isNotEmpty) {
-      unawaited(context.push(deepLink));
-      return;
-    }
-    unawaited(context.push('/theater'));
+    // U-07：LABS 类型（theater_*/simulation_session_ready）已不在本卡
+    // 渲染；兜底落通知中心，不再推 /simulation、/theater。
+    unawaited(context.push('/notification-center'));
   }
 }
 

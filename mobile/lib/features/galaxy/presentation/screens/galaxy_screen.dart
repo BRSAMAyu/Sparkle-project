@@ -1198,22 +1198,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     unawaited(context.push(uri.toString()));
   }
 
-  void _launchPredictionForPreviewNode() {
-    final previewNode = _previewNode;
-    if (previewNode == null) {
-      return;
-    }
-    final query = <String, String>{
-      'target_node_id': previewNode.id,
-      'topic': previewNode.name,
-    };
-    setState(_clearPreviewState);
-    unawaited(
-      context.push(
-        Uri(path: '/theater', queryParameters: query).toString(),
-      ),
-    );
-  }
+  // U-07：_launchPredictionForPreviewNode 已随预览卡常驻演练入口一并摘除
+  //（theater 属 LABS hidden by default；theater 会话激活态的 overlay 回路
+  // 保留，属 Labs 内部延续而非 CORE 常驻入口）。
 
   void _startReviewForPreviewNode() {
     final previewNode = _previewNode;
@@ -3701,8 +3688,9 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                                         ),
                                         onStartReview:
                                             _startReviewForPreviewNode,
-                                        onLaunchPrediction:
-                                            _launchPredictionForPreviewNode,
+                                        // U-07：节点预览卡不再常挂 theater 演练
+                                        // 入口（LABS hidden by default）；预览
+                                        // 常规动作只留聚焦/连线/详情/复习。
                                       ),
                                     ),
                                   ),

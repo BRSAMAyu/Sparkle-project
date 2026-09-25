@@ -15,6 +15,7 @@ import 'package:sparkle/core/navigation/route_resilience.dart';
 import 'package:sparkle/core/services/share_poster_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
+import 'package:sparkle/features/calendar/calendar_routes.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/data/models/plan_phase_model.dart';
 import 'package:sparkle/features/plan/data/repositories/exam_sprint_repository.dart';
@@ -97,6 +98,19 @@ class _PlanDetailScreenState extends ConsumerState<PlanDetailScreen> {
           ),
           title: Text(l10n.planDetailTitle),
           actions: [
+            // U-07 CONTEXTUAL：计划的时间摆位语境 → 日历。calendar 按
+            // portfolio 不是独立主目的地，而是计划/任务上下文里的能力；
+            // push 进入、返回即回本计划（context CTA 返回原 Goal 语义）。
+            // A11Y-BATCH3 同源形制：semanticLabel 与 Tooltip 同一 l10n 键。
+            Tooltip(
+              message: l10n.calendarTitle,
+              child: SparkleIconButton(
+                variant: ButtonVariant.ghost,
+                icon: const Icon(Icons.calendar_month_outlined),
+                semanticLabel: l10n.calendarTitle,
+                onPressed: () => unawaited(context.push(CalendarRoutes.calendar)),
+              ),
+            ),
             // A11Y-BATCH3 同源形制：semanticLabel 与 Tooltip message 同一
             // l10n 键——Tooltip 只挂 semantics.tooltip 不构成按钮名，按钮
             // 名由 semanticLabel 承载（sprint_screen 批 2 同款先例）。

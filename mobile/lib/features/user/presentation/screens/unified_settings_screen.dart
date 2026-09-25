@@ -38,7 +38,6 @@ import 'package:sparkle/features/user/presentation/widgets/learning_mode_control
 import 'package:sparkle/features/user/presentation/widgets/redeem_code_dialog.dart';
 import 'package:sparkle/features/user/presentation/widgets/weekly_agenda_grid.dart';
 import 'package:sparkle/features/user/user_routes.dart';
-import 'package:sparkle/features/visual_elements/visual_elements_routes.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 const Map<String, Set<String>> _notificationTypeAliases = {
@@ -820,17 +819,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 ),
               ),
               const SizedBox(height: DS.spacing16),
-              GraphiteCardSurface(
-                child: ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.palette_outlined),
-                  title: Text(l10n.visualElementsTitle),
-                  subtitle: Text(l10n.visualElementsEntrySubtitle),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push(VisualElementsRoutes.basePath),
-                ),
-              ),
-              const SizedBox(height: DS.spacing16),
+              // U-07：visual-elements 入口摘除（视觉实验属 LABS，
+              // hidden by default）。
               GraphiteCardSurface(
                 child: ListTile(
                   contentPadding: EdgeInsets.zero,

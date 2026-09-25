@@ -6193,7 +6193,7 @@
             }
         }
     },
-    "insightHubFallbackSummary": "把推演、仿真和报告收进一条更轻量的学习动线。",
+    "insightHubFallbackSummary": "把报告和洞察收进一条更轻量的学习动线。",
     "insightHubSimulation": "学习仿真",
     "insightHubTheater": "推演剧场",
     "insightHubReport": "学习报告",
@@ -6210,7 +6210,7 @@
             }
         }
     },
-    "insightHubCompactFallback": "仿真、推演和报告现在收在同一张卡里",
+    "insightHubCompactFallback": "报告与洞察现在收在同一张卡里",
     "insightHubNoRecentTheater": "最近暂无推演",
     "insightHubContinueLastTheater": "继续上次推演",
     "insightHubContinueTopic": "继续 {topic}",

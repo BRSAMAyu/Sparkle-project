@@ -6190,7 +6190,7 @@
             }
         }
     },
-    "insightHubFallbackSummary": "Simulations, what-ifs, and reports — now in one lighter learning flow.",
+    "insightHubFallbackSummary": "Reports and insights — now in one lighter learning flow.",
     "insightHubSimulation": "Simulation",
     "insightHubTheater": "What-If Theater",
     "insightHubReport": "Learning Report",
@@ -6207,7 +6207,7 @@
             }
         }
     },
-    "insightHubCompactFallback": "Simulations, what-ifs, and reports now in one card",
+    "insightHubCompactFallback": "Reports and insights now in one card",
     "insightHubNoRecentTheater": "No recent theater",
     "insightHubContinueLastTheater": "Continue last theater",
     "insightHubContinueTopic": "Continue {topic}",

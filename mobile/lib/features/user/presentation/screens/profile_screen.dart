@@ -28,7 +28,6 @@ import 'package:sparkle/features/user/presentation/widgets/traits_coldstart_ques
 import 'package:sparkle/features/user/presentation/widgets/traits_prior_card.dart';
 import 'package:sparkle/features/user/presentation/widgets/working_memory_card.dart';
 import 'package:sparkle/features/user/user_routes.dart';
-import 'package:sparkle/features/visual_elements/visual_elements_routes.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
@@ -702,14 +701,8 @@ class ProfileScreen extends ConsumerWidget {
                   onTap: () => context.push(UserRoutes.posterStudio),
                 ),
                 const Divider(height: 1, indent: 68),
-                _buildSettingsTile(
-                  context,
-                  icon: Icons.palette_outlined,
-                  title: l10n.visualElementsTitle,
-                  accentColor: DS.profileAccentVisualElements,
-                  onTap: () => context.push(VisualElementsRoutes.basePath),
-                ),
-                const Divider(height: 1, indent: 68),
+                // U-07：visual-elements 入口摘除（视觉实验属 LABS，
+                // hidden by default），「我的」页回归身份与设置本体。
                 _buildSettingsTile(
                   context,
                   icon: Icons.psychology_alt_outlined,
@@ -1039,8 +1032,6 @@ class ProfileScreen extends ConsumerWidget {
   String _settingsSubtitle(String title, AppLocalizations l10n) {
     if (title == l10n.achievementTitle) {
       return l10n.profileSubtitleAchievements;
-    } else if (title == l10n.visualElementsTitle) {
-      return l10n.profileSubtitleVisualElements;
     } else if (title == l10n.myPersona) {
       return l10n.profileSubtitlePersona;
     } else if (title == l10n.profilePersonalInfo) {
