@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.core.cache import cache_service
 from app.core.event_bus import event_bus
+from app.core.request_coalescing import notify_read_view_invalidated
 from app.models.galaxy import KnowledgeNode, NodeRelation, StudyRecord, UserNodeStatus
 from app.schemas.galaxy import GalaxyUserStats, NodeWithStatus, SectorCode, SparkEvent, SparkResult, UserStatusInfo
 from app.services.expansion_service import ExpansionService
@@ -261,9 +262,11 @@ class GalaxyStatsService:
                 user_id=user_id
             )
 
-        # 9. Invalidate Cache
+        # 9. Invalidate Cache（wt392 F4：shield 层同族失效——只清 Redis 时
+        #    10s TTL 内读面回写前旧值，SHIELD-INVAL 同款双层纪律）
         pattern = f"{settings.APP_NAME}:view:get_galaxy_graph:{user_id}:*"
         await cache_service.delete_pattern(pattern)
+        notify_read_view_invalidated("galaxy_graph", str(user_id))
 
         # ========== Achievement Integration ==========
         try:

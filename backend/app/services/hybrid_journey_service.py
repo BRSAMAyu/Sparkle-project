@@ -42,6 +42,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.citation_markers import parse_cited_markers
+from app.core.run_state_machine import RunStatus, is_terminal_run_status
 from app.core.run_steps import awaiting_step_projection, find_step
 from app.models.agent_run import AgentRun
 from app.models.agent_tool_call import AgentToolCall
@@ -74,6 +75,10 @@ PREP_CITATION_LIMIT = 4
 
 #: 判断段 awaiting 戳引用上限以内（≤16）：候选 source_refs 全量内嵌。
 _JUDGMENT_STAMP_REF_LIMIT = 16
+
+#: wt392 F1 · 同键终态 run 的 attempt 后缀探测上限（防御性封顶；正常重试
+#: 在 1-2 次内命中空闲键）。
+_MAX_JOURNEY_START_ATTEMPTS = 16
 
 #: LlmChat 注入面（J-04 同形）：messages → 原始文本；生产默认真实模型。
 LlmChat = Callable[[list[dict[str, str]]], Awaitable[str]]
@@ -399,25 +404,38 @@ async def _replay_payload(db: AsyncSession, run: AgentRun) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-async def start_hybrid_journey(
-    db: AsyncSession,
-    *,
-    user_id: UUID | str,
-    task_id: UUID | str | None = None,
-    idempotency_key: str | None = None,
-    session_id: str | None = None,
-    tool_executor: ToolExecutor | None = None,
-) -> dict[str, Any]:
-    """启动四段旅程：真实锚点 → run（X-07 计划）→ prep（真实工具检索）→
-    判断面 awaiting。幂等：同 task 的重复启动收敛到同一 run（已过 prep
-    则原样回放状态，不重复检索、不重复落产物）。
-    """
-    user_uuid = UUID(str(user_id))
-    anchor = await _resolve_anchor(db, user_id=user_uuid, task_id=UUID(str(task_id)) if task_id else None)
+async def _compensate_failed_start(service: AgentRunService, run: AgentRun, user_uuid: UUID) -> None:
+    """wt392 F1 · prep 失败的启动 run 补偿为 FAILED（best-effort，不掩盖原异常）.
 
-    service = AgentRunService(db)
-    key = (str(idempotency_key).strip() if idempotency_key else None) or f"hybrid_journey:{anchor.task_id}"
-    created = await service.create_run(
+    run 在默认幂等键下已两次内部提交（``create_run`` + ``transition(RUNNING)``），
+    prep 失败后若不补偿，重试将永远 resolve 到这个无产物死 run（judgment/
+    confirm 全 409，且无 cancel 路由）。诚实落 FAILED 终态：幂等键随之释放
+    （重试开新 attempt），sweep 亦无需等 6h 判孤儿。补偿失败最坏退回 sweep
+    判终 + 终态键释放双保险，原失败照常抛出。
+    """
+    try:
+        await service.transition(
+            run.id,
+            RunStatus.FAILED,
+            user_id=user_uuid,
+            actor=TransitionActor.SYSTEM,
+            reason="failed",
+            error_category="prep_failed",
+            source="server_service",
+        )
+    except Exception as exc:  # noqa: BLE001 — 补偿失败不掩盖原失败；sweep 兜底
+        logger.warning("hybrid journey start compensation failed run={} err={}", run.id, exc)
+
+
+async def _create_journey_run(
+    service: AgentRunService,
+    *,
+    user_uuid: UUID,
+    anchor: _JourneyAnchor,
+    key: str,
+    session_id: str | None,
+):
+    return await service.create_run(
         user_id=user_uuid,
         objective=f"Hybrid 旅程：{anchor.goal_title[:60]} —— 材料研判与带引用交付",
         kind="system",
@@ -432,6 +450,46 @@ async def start_hybrid_journey(
         session_id=session_id,
         source="server_service",
     )
+
+
+async def start_hybrid_journey(
+    db: AsyncSession,
+    *,
+    user_id: UUID | str,
+    task_id: UUID | str | None = None,
+    idempotency_key: str | None = None,
+    session_id: str | None = None,
+    tool_executor: ToolExecutor | None = None,
+) -> dict[str, Any]:
+    """启动四段旅程：真实锚点 → run（X-07 计划）→ prep（真实工具检索）→
+    判断面 awaiting。幂等：同 task 的重复启动收敛到同一 run（已过 prep
+    则原样回放状态，不重复检索、不重复落产物）。
+
+    wt392 F1：幂等键命中**终态** run（上次启动 prep 失败被补偿判 FAILED /
+    判断挂起被 admin sweep 判 UNKNOWN_OUTCOME）时释放键开新 attempt——
+    原样回放死 run 会把旅程永久钉死（无产物、无等待面、无 cancel 路径）；
+    活跃 run 仍幂等回放（双击/重开不重复建 run）。
+    """
+    user_uuid = UUID(str(user_id))
+    anchor = await _resolve_anchor(db, user_id=user_uuid, task_id=UUID(str(task_id)) if task_id else None)
+
+    service = AgentRunService(db)
+    base_key = (str(idempotency_key).strip() if idempotency_key else None) or f"hybrid_journey:{anchor.task_id}"
+    created = await _create_journey_run(service, user_uuid=user_uuid, anchor=anchor, key=base_key, session_id=session_id)
+    attempt = 1
+    while not created.created and is_terminal_run_status(RunStatus(str(created.run.status))):
+        attempt += 1
+        if attempt > _MAX_JOURNEY_START_ATTEMPTS:
+            raise HybridJourneyStateError(
+                f"hybrid journey for task {anchor.task_id} exhausted {_MAX_JOURNEY_START_ATTEMPTS} terminal attempts"
+            )
+        created = await _create_journey_run(
+            service,
+            user_uuid=user_uuid,
+            anchor=anchor,
+            key=f"{base_key}:attempt-{attempt}",
+            session_id=session_id,
+        )
     run = created.run
     if not created.created:
         # 幂等重放：已存在的 run 按当前状态回放（判断等待中原样返回）。
@@ -451,23 +509,30 @@ async def start_hybrid_journey(
 
     # ---- 段1 prep：真实注册工具经 X-06 完整执行链（权限 + 账本 + 真实检索）----
     executor = tool_executor or ToolExecutor()
-    tool_result = await executor.execute_tool_call(
-        PREP_TOOL_NAME,
-        {"query": anchor.goal_title[:120], "limit": PREP_CITATION_LIMIT},
-        str(user_uuid),
-        db,
-        tool_call_id=f"j06_prep_{run.id}",
-        runtime_context={"run_id": str(run.id)},
-        idempotency_key=f"hybrid_journey:prep:{run.id}",
-    )
-    if not tool_result.success:
-        logger.warning("hybrid journey prep tool failed run={} err={}", run.id, tool_result.error_message)
-        raise HybridJourneyStateError(f"prep tool failed: {tool_result.error_message or 'unknown'}")
-    data = dict(tool_result.data or {})
-    results = [item for item in (data.get("results") or []) if isinstance(item, dict) and item.get("chunk_id")]
-    if not results:
-        # 诚实失败：真实材料检索零命中 → 不建旅程产物、不编造引用。
-        raise NoMaterialError()
+    try:
+        tool_result = await executor.execute_tool_call(
+            PREP_TOOL_NAME,
+            {"query": anchor.goal_title[:120], "limit": PREP_CITATION_LIMIT},
+            str(user_uuid),
+            db,
+            tool_call_id=f"j06_prep_{run.id}",
+            runtime_context={"run_id": str(run.id)},
+            idempotency_key=f"hybrid_journey:prep:{run.id}",
+        )
+        if not tool_result.success:
+            logger.warning("hybrid journey prep tool failed run={} err={}", run.id, tool_result.error_message)
+            raise HybridJourneyStateError(f"prep tool failed: {tool_result.error_message or 'unknown'}")
+        data = dict(tool_result.data or {})
+        results = [item for item in (data.get("results") or []) if isinstance(item, dict) and item.get("chunk_id")]
+        if not results:
+            # 诚实失败：真实材料检索零命中 → 不建旅程产物、不编造引用。
+            raise NoMaterialError()
+    except (HybridJourneyStateError, NoMaterialError):
+        # wt392 F1 · 死 run 补偿：run 已在本键下两次内部提交（创建 + RUNNING），
+        # 不补偿则重试永远 resolve 到这个无产物死 run。先把本次启动的 run 诚实
+        # 落 FAILED 再抛出（终态键释放让重试开新 attempt；sweep 无需等 6h）。
+        await _compensate_failed_start(service, run, user_uuid)
+        raise
 
     citations = [_citation_from_result(index, item) for index, item in enumerate(results, start=1)]
     ledger_row = (
@@ -817,6 +882,43 @@ async def confirm_outcome(
     if run.task_id is None:
         raise HybridJourneyStateError("journey run has no task anchor")
 
+    # wt392 F2 · 事务重排：任务完成先于完成戳。原序（先 complete_user_step 后
+    # complete_task）下，完成戳 + resume 在其内部事务先行提交，complete_task
+    # 任何一次失败（NotFoundError / 状态迁移校验 / DB）都会留下「已戳未完成」
+    # 的半确认孤儿——重试命中完成戳走 _confirmed_replay 谎报「已确认」，而任务
+    # 从未完成、run 永停 RUNNING、outcome 永不捕获。重排后全部失败窗口收敛：
+    # - complete_task 失败 → 完成戳未写、run 仍在 AWAITING_USER（诚实可恢复）；
+    # - complete_task 成功（内部已提交）后任一步失败 → 重试经下方
+    #   「已 COMPLETED/ABANDONED 跳过」分支补齐剩余段。
+    from app.core.exceptions import NotFoundError
+    from app.services.task_service import TaskService
+
+    try:
+        task = await db.get(Task, run.task_id)
+        if task is None:
+            raise HybridJourneyStateError("journey task anchor no longer exists")
+        if task.status not in (TaskStatus.COMPLETED, TaskStatus.ABANDONED):
+            # 任务完成走既有 TaskService 路径（plan 进度/spark/outcome 捕获单一事件源）。
+            task = await TaskService.complete_task(
+                db,
+                run.task_id,
+                user_uuid,
+                None,
+                note=(note or "")[:200] or None,
+                evidence=[
+                    {
+                        "evidence_kind": "artifact",
+                        "ref": f"run://{run.id}",
+                        "description": "Hybrid 旅程带引用交付（用户研判 + Agent 起草核对）",
+                    }
+                ],
+                evidence_source="user",
+            )
+    except (NotFoundError, ValueError) as exc:
+        # 并发软删（get_by_id）/迁移校验（CANCELLED 等）→ 诚实 409 面；
+        # 不写完成戳，run 保持 AWAITING_USER（不是已戳 RUNNING 的孤儿）。
+        raise HybridJourneyStateError(f"journey task cannot be completed: {exc}") from exc
+
     await service.complete_user_step(
         run.id,
         step_id="outcome",
@@ -827,29 +929,6 @@ async def confirm_outcome(
         note=(note or "")[:200] or None,
         current_stage="outcome",
     )
-
-    # 任务完成走既有 TaskService 路径（plan 进度/spark/outcome 捕获单一事件源）。
-    from app.services.task_service import TaskService
-
-    task = await db.get(Task, run.task_id)
-    if task is None:
-        raise HybridJourneyStateError("journey task anchor no longer exists")
-    if task.status not in (TaskStatus.COMPLETED, TaskStatus.ABANDONED):
-        task = await TaskService.complete_task(
-            db,
-            run.task_id,
-            user_uuid,
-            None,
-            note=(note or "")[:200] or None,
-            evidence=[
-                {
-                    "evidence_kind": "artifact",
-                    "ref": f"run://{run.id}",
-                    "description": "Hybrid 旅程带引用交付（用户研判 + Agent 起草核对）",
-                }
-            ],
-            evidence_source="user",
-        )
 
     # run 终态（合法边 RUNNING→SUCCEEDED；result_ref 经 transition 合法写入）。
     run = await service.get_run(run.id, user_id=user_uuid)

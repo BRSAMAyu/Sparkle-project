@@ -278,16 +278,31 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         客户端/网关逐字写入，但经 protojson 往返（或上游 MessageToDict 再
         回填）会变成 camelCase（userTier）——只读单一形态即死键（E-08 实证
         pro 覆盖永不生效）。两形态都读，free 覆盖同样不被绕过。
+
+        wt392 F3 · 信任边界收紧（升档门）：user_profile 是网关对每条真实
+        WS/HTTP 消息的权威声明（chatflow 单一装配点）；extra_context 的
+        user_tier/userTier 键客户端逐字可写——**user_profile 已声明时，
+        客户端升档词（pro/premium/paid）一律忽略**，否则任意认证用户单条
+        WS 消息即可自提 pro 车道（free 钳制旁路 + 免疫自适应重排）。降级词
+        （free）任何来源都允许（钳制语义，wt380 契约保留）；user_profile
+        缺省（内部/基准调用方无网关装配）时双形态覆盖原样保留（wt380
+        8/8 契约锁不回退）。更细分层未来应经 proto user_profile 演进进入，
+        而非客户端可写的 extra_context 键。
         """
         try:
+            profile_declared = bool(request.HasField("user_profile"))
             tier = "free"
-            if request.HasField("user_profile") and request.user_profile.is_pro:
+            if profile_declared and request.user_profile.is_pro:
                 tier = "pro"
             if request.HasField("extra_context"):
                 extra = MessageToDict(request.extra_context)
                 raw = str(extra.get("user_tier") or extra.get("userTier") or "").strip().lower()
                 if raw in {"free", "pro", "premium", "paid"}:
-                    tier = "free" if raw == "free" else "pro"
+                    if raw == "free":
+                        tier = "free"  # 降级/确认：任何来源都允许（钳制不被绕过）
+                    elif not profile_declared:
+                        tier = "pro"  # 无权威声明（内部/基准调用方）：wt380 双形态契约保留
+                    # else：网关已权威声明 → 客户端升档词忽略（wt392 F3 提权面封堵）
             return tier
         except (TypeError, ValueError, AttributeError) as exc:
             logger.debug(f"Failed to resolve request user tier, defaulting to free: {exc}")

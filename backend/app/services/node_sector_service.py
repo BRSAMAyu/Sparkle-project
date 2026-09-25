@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.cache import cache_service
+from app.core.request_coalescing import notify_read_view_invalidated
 from app.models.galaxy import KnowledgeNode, NodeRelation
 from app.models.sector import SectorCode
 from app.services.llm_service import get_llm_service, get_llm_service_for_specific_model
@@ -607,7 +608,16 @@ class NodeSectorService:
         return await self.enqueue_backfill_for_nodes(user_id=user_id, node_ids=node_ids)
 
     async def invalidate_user_graph_cache(self, user_id: UUID) -> None:
+        """失效星图读面**两层**缓存：Redis 视图键 + API shield 进程内缓存.
+
+        wt392 F4（SHIELD-INVAL 同族）：只清 Redis 层时
+        ``app.api.v1.galaxy`` 的 10s TTL shield 仍回写前旧值——调用点
+        （galaxy_service×2 / expansion_service / sector 回填提交后）因此全部
+        双层齐清。notify 经核心注册表（API 模块未加载时为 no-op，纯内存
+        同步，失败不传播）。
+        """
         await cache_service.delete_pattern(f"{settings.APP_NAME}:view:get_galaxy_graph:{user_id}:*")
+        notify_read_view_invalidated("galaxy_graph", str(user_id))
 
     async def _request_sector_weights(
         self,
