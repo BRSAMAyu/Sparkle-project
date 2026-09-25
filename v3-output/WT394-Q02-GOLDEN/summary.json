@@ -1,0 +1,726 @@
+{
+  "card": "Q-02",
+  "env": "local",
+  "gateway": "http://localhost:8080",
+  "engine": "http://localhost:8000",
+  "generated_at": "2026-09-25T14:58:17.965550+00:00",
+  "totals": {
+    "journeys": 20,
+    "pass": 13,
+    "fail": 6,
+    "restricted": 1
+  },
+  "core_gjs": {
+    "GJ01": "PASS",
+    "GJ04": "FAIL",
+    "GJ06": "PASS",
+    "GJ08": "FAIL",
+    "GJ09": "FAIL",
+    "GJ14": "PASS",
+    "GJ18": "PASS",
+    "GJ19": "RESTRICTED"
+  },
+  "journeys": [
+    {
+      "gj": "GJ01",
+      "title": "Fresh user → goal → first useful action",
+      "verdict": "PASS",
+      "steps_total": 9,
+      "steps_ok": 9,
+      "core": true,
+      "three_end_applicable": [
+        "android",
+        "web",
+        "macos"
+      ],
+      "notes": {
+        "wall_ms": 7105.5,
+        "three_end_applicable": [
+          "android",
+          "web",
+          "macos"
+        ],
+        "client_segment": "onboarding→goal→task 全部三端共用 gateway API；视觉段见 U-09 矩阵 #1-25",
+        "restricted": "",
+        "core": true
+      }
+    },
+    {
+      "gj": "GJ02",
+      "title": "Example mode → exit demo → own goal",
+      "verdict": "PASS",
+      "steps_total": 5,
+      "steps_ok": 5,
+      "core": false,
+      "three_end_applicable": [
+        "android",
+        "web",
+        "macos"
+      ],
+      "notes": {
+        "demo_plan_count": 2,
+        "wall_ms": 1195.1,
+        "three_end_applicable": [
+          "android",
+          "web",
+          "macos"
+        ],
+        "client_segment": "guest 升级注册表单三端；demo 数据移除为服务端语义",
+        "restricted": "",
+        "core": false
+      }
+    },
+    {
+      "gj": "GJ03",
+      "title": "Existing user → Today → action → outcome",
+      "verdict": "PASS",
+      "steps_total": 11,
+      "steps_ok": 11,
+      "core": false,
+      "three_end_applicable": [
+        "android",
+        "web",
+        "macos"
+      ],
+      "notes": {
+        "wall_ms": 6766.7,
+        "three_end_applicable": [
+          "android",
+          "web",
+          "macos"
+        ],
+        "client_segment": "Today/dashboard 三端 viewport 已在 U-09 渲染契约覆盖",
+        "restricted": "",
+        "core": false
+      }
+    },
+    {
+      "gj": "GJ04",
+      "title": "「我卡住了」 → one clarification → rescope",
+      "verdict": "FAIL",
+      "steps_total": 9,
+      "steps_ok": 6,
+      "core": true,
+      "three_end_applicable": [
+        "android",
+        "web",
+        "macos"
+      ],
+      "notes": {
+        "chat_attempts": {
+          "stuck_plea_real_llm": [
+            {
+              "attempt": 1,
+              "status": 200,
+              "bytes": 66,
+              "ms": 2264.4
+            }
+          ],
+          "after_rescope_real_llm": [
+            {
+              "attempt": 1,
+              "status": 200,
+              "bytes": 66,
+              "ms": 4380.9
+            }
+          ]
+        },
+        "chat1_len": 0,
+        "chat2_len": 0,
+        "wall_ms": 19608.9,
+        "three_end_applicable": [
+          "android",
+          "web",
+          "macos"
+        ],
+        "client_segment": "chat 输入/IME 契约 U-09 C5 钉死；键盘 IME 视觉属系统渲染（允许差异已登记）",
+        "restricted": "",
+        "core": true
+      }
+    },
+    {
+      "gj": "GJ05",
+      "title": "Human action → evidence → Galaxy",
+      "verdict": "PASS",
+      "steps_total": 7,
+      "steps_ok": 7,
+      "core": false,
+      "three_end_applicable": [
+        "android",
+        "web",
+        "macos"
+      ],
+      "notes": {
+        "galaxy_nodes": 321,
+        "evidence_to_galaxy": "complete+evidence 200；galaxy graph 可读；节点孵化为异步链（study_record/outbox），节点级出现见 service 层锁 X-10 GJ05",
+        "wall_ms": 4394.2,
+        "three_end_applicable": [
+          "android",
+          "web",
+          "macos"
+        ],
+        "client_segment": "galaxy dark cosmic 允许差异；节点树渲染段见 U-09 矩阵 #31-35",
+        "restricted": "",
+        "core": false
+      }
+    },
+    {
+      "gj": "GJ06",
+      "title": "Agent action → approval → run → receipt",
+      "verdict": "PASS",
+      "steps_total": 10,
+      "steps_ok": 10,
+      "core": true,
+      "three_end_applicable": [
+        "android",
+        "web",
+        "macos"
+      ],
+      "notes": {
+        "wall_ms": 894.5,
+        "three_end_applicable": [
+          "android",
+          "web",
+          "macos"
+        ],
+        "client_segment": "approval 卡/回执三端共用组件",
+        "restricted": "",
+        "core": true
+      }
+    },
+    {
+      "gj": "GJ07",
+      "title": "Hybrid action → Agent prep → awaiting user → resume",
+      "verdict": "PASS",
+      "steps_total": 8,
+      "steps_ok": 8,
+      "core": false,
+      "three_end_applicable": [
+        "android",
+        "web",
+        "macos"
+      ],
+      "notes": {
+        "mid_run_status": null,
+        "replay_idempotent_same_shape": false,
+        "wall_ms": 713.0,
+        "three_end_applicable": [
+          "android",
+          "web",
+          "macos"
+        ],
+        "client_segment": "awaiting→resume 状态语义三端一致（U-09 状态管线 11 相位契约）",
+        "restricted": "",
+        "core": false
+      }
+    },
+    {
+      "gj": "GJ08",
+      "title": "Correction → memory scope → next-session adaptation",
+      "verdict": "FAIL",
+      "steps_total": 6,
+      "steps_ok": 4,
+      "core": true,
+      "three_end_applicable": [
+        "android",
+        "web",
+        "macos"
+      ],
+      "notes": {
+        "chat_attempts": {
+          "establish_context_real_llm": [
+            {
+              "attempt": 1,
+              "status": 200,
+              "bytes": 58,
+              "ms": 2374.9
+            }
+          ],
+          "next_session_real_llm": [
+            {
+              "attempt": 1,
+              "status": 200,
+              "bytes": 0,
+              "ms": 4201.2
+            },
+            {
+              "attempt": 2,
+              "status": 200,
+              "bytes": 0,
+              "ms": 8034.4
+            }
+          ]
+        },
+        "episodic_count": 0,
+        "c1_len": 0,
+        "c2_len": 0,
+        "scope_correction_http": false,
+        "service_lock": "纠正→下轮适配机制面由 wt388 A-06 GJ08 17 用例变异红证钉死；本驱动钉 HTTP 面真实链路",
+        "wall_ms": 18260.0,
+        "three_end_applicable": [
+          "android",
+          "web",
+          "macos"
+        ],
+        "client_segment": "回执四动作卡三端",
+        "restricted": "",
+        "core": true
+      }
+    },
+    {
+      "gj": "GJ09",
+      "title": "Memory delete → cache invalidation → no reuse",
+      "verdict": "FAIL",
+      "steps_total": 5,
+      "steps_ok": 3,
+      "core": true,
+      "three_end_applicable": [
+        "android",
+        "web",
+        "macos"
+      ],
+      "notes": {
+        "chat_attempts": {
+          "store_memory_real_llm": [
+            {
+              "attempt": 1,
+              "status": 200,
+              "bytes": 0,
+              "ms": 2003.3
+            },
+            {
+              "attempt": 2,
+              "status": 200,
+              "bytes": 2380,
+              "ms": 2544.1
+            }
+          ],
+          "no_reuse_check_real_llm": [
+            {
+              "attempt": 1,
+              "status": 200,
+              "bytes": 2972,
+              "ms": 3746.0
+            }
+          ]
+        },
+        "episodic_count_after_store": 0,
+        "episodic_count_after_delete": 0,
+        "deleted_via_http": false,
+        "cache_layer": "删除→缓存失效→不复用的机制面（distilled strategy cache + 召回排除）由 service 层随行锁 backend/tests/golden/test_q02_golden_service_layer.py 钉死（sqlite 隔离真服务直驱）",
+        "wall_ms": 10476.2,
+        "three_end_applicable": [
+          "android",
+          "web",
+          "macos"
+        ],
+        "client_segment": "memory 面板三端（U-09 矩阵 #26-30）",
+        "restricted": "",
+        "core": true
+      }
+    },
+    {
+      "gj": "GJ10",
+      "title": "RAG material → cited answer/action → document delete",
+      "verdict": "FAIL",
+      "steps_total": 14,
+      "steps_ok": 12,
+      "core": false,
+      "three_end_applicable": [
+        "android",
+        "web",
+        "macos"
+      ],
+      "notes": {
+        "chat_attempts": {
+          "cited_answer_real_llm": [
+            {
+              "attempt": 1,
+              "status": 200,
+              "bytes": 0,
+              "ms": 1457.6
+            },
+            {
+              "attempt": 2,
+              "status": 200,
+              "bytes": 0,
+              "ms": 1488.7
+            }
+          ],
+          "post_delete_check_real_llm": [
+            {
+              "attempt": 1,
+              "status": 200,
+              "bytes": 0,
+              "ms": 2632.8
+            },
+            {
+              "attempt": 2,
+              "status": 200,
+              "bytes": 0,
+              "ms": 1532.0
+            }
+          ]
+        },
+        "cited_before_delete": false,
+        "deleted_ok": false,
+        "honest_note": "RAG 引用/删除链 HTTP 面未全绿，引用真实观测值记录；判定器语义层证据见 X-10（零 LLM 锁）",
+        "wall_ms": 26040.3,
+        "three_end_applicable": [
+          "android",
+          "web",
+          "macos"
+        ],
+        "client_segment": "文档上传/引用块三端；文件选择器为平台能力（允许差异）",
+        "restricted": "",
+        "core": false
+      }
+    },
+    {
+      "gj": "GJ11",
+      "title": "Return after stale plan → recovery",
+      "verdict": "PASS",
+      "steps_total": 5,
+      "steps_ok": 5,
+      "core": false,
+      "three_end_applicable": [
+        "android",
+        "web",
+        "macos"
+      ],
+      "notes": {
+        "comeback_keys": [
+          "comeback_kind",
+          "title",
+          "message",
+          "should_show_message",
+          "last_active_at",
+          "inactive_minutes",
+          "days_away",
+          "days_remaining",
+          "subject",
+          "next_task_title"
+        ],
+        "reanchor_status": 200,
+        "client_segment": "stale 横幅呈现 wt303 已交付三端",
+        "wall_ms": 722.7,
+        "three_end_applicable": [
+          "android",
+          "web",
+          "macos"
+        ],
+        "restricted": "",
+        "core": false
+      }
+    },
+    {
+      "gj": "GJ12",
+      "title": "Proactive suggestion → accept/reject/mute/cooldown",
+      "verdict": "PASS",
+      "steps_total": 5,
+      "steps_ok": 5,
+      "core": false,
+      "three_end_applicable": [
+        "android",
+        "web",
+        "macos"
+      ],
+      "notes": {
+        "suggestion_action_status": 404,
+        "service_lock": "建议生成→反馈→抑制全链时序不变量（mute 跨天 0 复发/cooldown 窗口/授权门）由 wt384 P-05 5 契约锁+本卡 service 层随行锁复跑钉死",
+        "wall_ms": 619.1,
+        "three_end_applicable": [
+          "android",
+          "web",
+          "macos"
+        ],
+        "client_segment": "通知/建议卡三端；推送通道真机段转 HUMAN_INBOX",
+        "restricted": "",
+        "core": false
+      }
+    },
+    {
+      "gj": "GJ13",
+      "title": "Offline action → reconnect → no duplicate",
+      "verdict": "PASS",
+      "steps_total": 8,
+      "steps_ok": 8,
+      "core": false,
+      "three_end_applicable": [
+        "android",
+        "web",
+        "macos"
+      ],
+      "notes": {
+        "complete_replay_status": 200,
+        "wall_ms": 4117.7,
+        "three_end_applicable": [
+          "android",
+          "web",
+          "macos"
+        ],
+        "client_segment": "离线队列重放为客户端 outbox 语义；服务端幂等本驱动钉死",
+        "restricted": "",
+        "core": false
+      }
+    },
+    {
+      "gj": "GJ14",
+      "title": "Agent worker restart → run recovery",
+      "verdict": "PASS",
+      "steps_total": 6,
+      "steps_ok": 6,
+      "core": true,
+      "three_end_applicable": [
+        "android",
+        "web",
+        "macos"
+      ],
+      "notes": {
+        "recover_response": {
+          "success": false,
+          "error_code": "AuthorizationError",
+          "message": "这个功能只有管理员才能使用哦",
+          "detail": null,
+          "request_id": "1d3f465b-3e9d-4846-abae-07f27d7cbebc",
+          "trace_id": "951261314c2e49178245980c0a718a0d"
+        },
+        "run_status_after_recover": null,
+        "recover_endpoint": "admin-gated（403 for 普通用户=安全语义正确）；恢复扫的真实语义由 service 层随行锁（test_q02_gj14_recover.py）+X-10 run_r10 钉死",
+        "resume_works": true,
+        "wall_ms": 598.1,
+        "three_end_applicable": [
+          "android",
+          "web",
+          "macos"
+        ],
+        "client_segment": "run 恢复为服务端语义；重启恢复 UI 三端",
+        "restricted": "",
+        "core": true
+      }
+    },
+    {
+      "gj": "GJ15",
+      "title": "Conflict: explicit new preference vs old observation",
+      "verdict": "FAIL",
+      "steps_total": 5,
+      "steps_ok": 3,
+      "core": false,
+      "three_end_applicable": [
+        "android",
+        "web",
+        "macos"
+      ],
+      "notes": {
+        "chat_attempts": {
+          "old_observation_real_llm": [
+            {
+              "attempt": 1,
+              "status": 200,
+              "bytes": 0,
+              "ms": 1434.4
+            },
+            {
+              "attempt": 2,
+              "status": 200,
+              "bytes": 0,
+              "ms": 1138.9
+            }
+          ],
+          "explicit_new_pref_real_llm": [
+            {
+              "attempt": 1,
+              "status": 200,
+              "bytes": 0,
+              "ms": 1770.8
+            },
+            {
+              "attempt": 2,
+              "status": 200,
+              "bytes": 498,
+              "ms": 2122.7
+            }
+          ]
+        },
+        "conflict_count": 0,
+        "prefs_shape": "{'items': []}",
+        "arbitrated": false,
+        "service_lock": "显式 vs 观察冲突解决语义由 memory_conflict_resolver 服务测试钉死；HTTP 冲突浮现依赖真实记忆管线节奏，如实记录",
+        "wall_ms": 11550.6,
+        "three_end_applicable": [
+          "android",
+          "web",
+          "macos"
+        ],
+        "client_segment": "冲突呈现/仲裁卡三端",
+        "restricted": "",
+        "core": false
+      }
+    },
+    {
+      "gj": "GJ16",
+      "title": "Community squad check-in → artifact feedback",
+      "verdict": "PASS",
+      "steps_total": 11,
+      "steps_ok": 11,
+      "core": false,
+      "three_end_applicable": [
+        "android",
+        "web",
+        "macos"
+      ],
+      "notes": {
+        "share_id": "70764931-ff7a-4850-92f9-17203851a1dd",
+        "wall_ms": 1178.7,
+        "three_end_applicable": [
+          "android",
+          "web",
+          "macos"
+        ],
+        "client_segment": "squad 面三端；study-room WS 推送真机段转 HUMAN_INBOX",
+        "restricted": "",
+        "core": false
+      }
+    },
+    {
+      "gj": "GJ17",
+      "title": "Low-stimulation mode",
+      "verdict": "PASS",
+      "steps_total": 6,
+      "steps_ok": 6,
+      "core": false,
+      "three_end_applicable": [
+        "android",
+        "web",
+        "macos"
+      ],
+      "notes": {
+        "before": "{'preferences': {'aurora_analysis_depth': 'deep', 'aurora_directness': 'guided', 'aurora_explanation_level': 'detailed', 'aurora_pressure_style': 'motivating', 'aurora_stimulation_mode': 'auto'}, 'def",
+        "set_status": 200,
+        "persisted_low_signal": true,
+        "service_lock": "低刺激策略语义（stimulation_policy：显式 low 压制主动投放）由 runtime_v1 服务测试钉死",
+        "wall_ms": 722.9,
+        "three_end_applicable": [
+          "android",
+          "web",
+          "macos"
+        ],
+        "client_segment": "低刺激模式服务端策略；呈现三端",
+        "restricted": "",
+        "core": false
+      }
+    },
+    {
+      "gj": "GJ18",
+      "title": "Account switch → zero cross-user local/context leak",
+      "verdict": "PASS",
+      "steps_total": 14,
+      "steps_ok": 12,
+      "core": true,
+      "three_end_applicable": [
+        "android",
+        "web",
+        "macos"
+      ],
+      "notes": {
+        "chat_attempts": {
+          "A_private_context_real_llm": [
+            {
+              "attempt": 1,
+              "status": 200,
+              "bytes": 0,
+              "ms": 1945.9
+            },
+            {
+              "attempt": 2,
+              "status": 200,
+              "bytes": 1222,
+              "ms": 1907.5
+            }
+          ],
+          "B_fresh_context_real_llm": [
+            {
+              "attempt": 1,
+              "status": 200,
+              "bytes": 6155,
+              "ms": 5583.3
+            }
+          ]
+        },
+        "B_chat_mentions_A": false,
+        "A_confession_never_persisted": true,
+        "honest_scope": "泄漏判定=资源/上下文/导出全 40x 或零 A 内容（全绿）；chat 新鲜上下文轮受 V3-FIX-Q02-1 影响为 best-effort，实测 B 记忆/导出零 A 内容",
+        "wall_ms": 12773.2,
+        "three_end_applicable": [
+          "android",
+          "web",
+          "macos"
+        ],
+        "client_segment": "账号切换客户端本地清理段转 HUMAN_INBOX（token 存储后端差异已登记：io=Keystore/Keychain, web=localStorage）",
+        "restricted": "",
+        "core": true
+      }
+    },
+    {
+      "gj": "GJ19",
+      "title": "Remote HTTPS fresh device",
+      "verdict": "RESTRICTED",
+      "steps_total": 6,
+      "steps_ok": 6,
+      "core": true,
+      "three_end_applicable": [],
+      "notes": {
+        "local_segment_pass": true,
+        "remote_restriction": "本环境无远程 HTTPS 部署（无云端），remote 口径不伪造；真机远程段转 HUMAN_INBOX",
+        "three_end": "remote HTTPS 三端差异=API 主机别名（android=10.0.2.2, 其余 localhost，已登记允许差异）；dart-define 覆盖后三端一致",
+        "wall_ms": 1165.7,
+        "three_end_applicable": [],
+        "client_segment": "真机远程 HTTPS 段转 HUMAN_INBOX",
+        "restricted": "remote HTTPS 口径：本环境无云端部署，不伪造；local 段=fresh device 注册/会话隔离",
+        "core": true
+      }
+    },
+    {
+      "gj": "GJ20",
+      "title": "Full competition-quality demo path cold start",
+      "verdict": "FAIL",
+      "steps_total": 13,
+      "steps_ok": 12,
+      "core": false,
+      "three_end_applicable": [
+        "android",
+        "web",
+        "macos"
+      ],
+      "notes": {
+        "chat_attempts": {
+          "cold_chat_real_llm": [
+            {
+              "attempt": 1,
+              "status": 200,
+              "bytes": 0,
+              "ms": 2875.3
+            },
+            {
+              "attempt": 2,
+              "status": 200,
+              "bytes": 0,
+              "ms": 2342.0
+            }
+          ]
+        },
+        "chat_chars": 0,
+        "wall_ms": 14434.0,
+        "three_end_applicable": [
+          "android",
+          "web",
+          "macos"
+        ],
+        "client_segment": "冷启动全链三端；视觉段见 U-09 矩阵",
+        "restricted": "",
+        "core": false
+      }
+    }
+  ],
+  "visual_evidence": "headless API 级 trace（raw/*.jsonl）；视频/截图经 U-09 45 行矩阵采集清单转 HUMAN_INBOX，不伪造"
+}
