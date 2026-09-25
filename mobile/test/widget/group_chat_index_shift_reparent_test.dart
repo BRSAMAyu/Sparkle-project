@@ -138,16 +138,11 @@ void main() {
     expect(find.text('定位甲正文'), findsOneWidget);
 
     // 第一次定位：关 sheet → 瞬态键挂载 → 滚动逼近 → ensureVisible。
-    // _revealMessage 的逼近链每重试一次消耗一帧 endOfFrame——远屏目标
-    // （第 30/40 新）需要的帧数多于固定 settle，改有界轮询直到目标进场
-    //（产品链路有 12 次重试上限，测试给足帧预算等它收敛）。
+    // 达靶判据升级（wt359）：不只要求命中树（cacheExtent 内未进视口的
+    // 条目也会被 find.text 找到），还要求文本 RenderBox 实际在屏内。
     await tester.tap(find.text('定位甲正文'));
-    await _pumpUntilVisible(tester, '定位甲正文');
-    expect(
-      find.text('定位甲正文'),
-      findsOneWidget,
-      reason: '瞬态键定位未把目标消息滚入视口',
-    );
+    await _pumpUntilLocateLanded(tester, '定位甲正文');
+    _expectOnScreen(tester, '定位甲正文');
     expect(tester.takeException(), isNull);
 
     // 第二次定位（键替换路径：新键 mount、旧键已摘/接管守卫兜底）。
@@ -159,12 +154,9 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
     await tester.tap(find.text('定位乙正文'));
-    await _pumpUntilVisible(tester, '定位乙正文');
-    expect(
-      find.text('定位乙正文'),
-      findsOneWidget,
-      reason: '第二次瞬态键定位未把目标消息滚入视口',
-    );
+    await _pumpUntilLocateLanded(tester, '定位乙正文');
+    _expectOnScreen(tester, '定位乙正文');
+    expect(tester.takeException(), isNull);
 
     // 收尾：ensureVisible 动画（250ms）与高亮 Timer（2s）全部走完，
     // 瞬态键摘除、高亮收敛，全程无框架异常。
@@ -173,11 +165,9 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.byType(GroupChatScreen), findsOneWidget);
   },
-      // skip 理由：Case B 的远屏定位链（jumpTo 逼近×12 重试×endOfFrame）在
-      // widget 测试环境 60 帧轮询仍不收敛——CI 与本地同败，疑测试装配与
-      // endOfFrame 驱动模型不兼容或逼近链在测试 viewport 下不收敛；产品
-      // 行为待专属诊断卡（wt359）裁定，恢复前以 skip 保主干可推。
-      skip: true);
+      // wt359 诊断：skip 已解除——本卡负责裁定装配 vs 产品缺陷（探针结论见
+      // v3-output/WT359-LOCATE-DIAG/REPORT.md）。
+      );
 }
 
 Object? _hiveAdaptersGuard;
@@ -389,17 +379,48 @@ Future<void> _settle(WidgetTester tester, [int frames = 10]) async {
   }
 }
 
-/// 有界轮询直到目标文本进场（远屏目标的 jumpTo 逼近链每帧进一步，
-/// 固定帧数 settle 会与重试链的 endOfFrame 竞争导致假失败）。
-Future<void> _pumpUntilVisible(
+/// 定位达靶有界轮询（wt359 装配修复版）。原帮手两个装配缺陷（裁定在案）：
+/// 1. 「先查后泵」：tap 后首查即命中仍在退场动画中的搜索 sheet 结果
+///    ListTile（与列表气泡同文），零帧假绿且逼近链被饿死；
+/// 2. 未排除 sheet：sheet 命中项与列表气泡同文，sheet 未关时任何命中
+///    判定都可能是假阳性。
+/// 现约定：每轮先泵一帧（一帧=endOfFrame 逼近链一次重试预算）；sheet 未
+/// 完全关闭不认命中。24 帧覆盖 sheet 退场（~3 帧）+ 逼近链 13 次有界重试
+/// + ensureVisible 250ms（~5 帧）仍有余量；产品链路 12 次重试放弃后多泵
+/// 不会进场，故这是有界收敛预算而非掩败等待。
+Future<void> _pumpUntilLocateLanded(
   WidgetTester tester,
   String text, {
-  int maxFrames = 60,
+  int maxFrames = 24,
 }) async {
   for (var i = 0; i < maxFrames; i++) {
-    if (find.text(text).evaluate().isNotEmpty) {
+    await tester.pump(const Duration(milliseconds: 50));
+    final sheetOpen = _searchField().evaluate().isNotEmpty;
+    if (!sheetOpen && find.text(text).evaluate().isNotEmpty) {
       return;
     }
-    await tester.pump(const Duration(milliseconds: 50));
   }
+}
+
+/// 真实达靶断言：目标文本的 RenderBox 必须实际在屏内（不只是已构建——
+/// cacheExtent 内的离屏条目同样能被 find.text 命中）。
+void _expectOnScreen(WidgetTester tester, String text) {
+  expect(
+    find.text(text),
+    findsOneWidget,
+    reason: '定位后目标消息未在列表中构建',
+  );
+  final rect = tester.getRect(find.text(text));
+  final screenHeight =
+      tester.view.physicalSize.height / tester.view.devicePixelRatio;
+  expect(
+    rect.top,
+    greaterThanOrEqualTo(0),
+    reason: '定位达靶但目标仍在视口上方（未滚入）',
+  );
+  expect(
+    rect.bottom,
+    lessThanOrEqualTo(screenHeight),
+    reason: '定位达靶但目标仍在视口下方（未滚入）',
+  );
 }

@@ -1181,20 +1181,37 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
       _clearLocateTarget(locateKey);
       return;
     }
-    final messages =
-        ref.read(groupChatProvider(widget.groupId)).valueOrNull ?? const [];
-    final index = messages.indexWhere((message) => message.id == messageId);
+    // 定位估算必须与列表展示同一坐标系：reversed ListView 消费的是
+    // _mergeMessages 的新→旧序（index 0=最新=offset 0），而
+    // groupChatProvider 原始态按仓库分页契约存旧→新（loadOlderMessages 以
+    // 列表 .last 为 before_id 锚点，.last 即最新）。直接用原始序 index 估算
+    // 会把 jumpTo 打到镜像位置，瞬态键 context 永不物化，逼近链空转耗尽
+    //（wt359 裁定的产品缺陷根因：远屏命中静默失达）。
+    final merged = _mergeMessages(
+      ref.read(groupChatProvider(widget.groupId)).valueOrNull ?? const [],
+      ref.read(groupChatAgentProvider(widget.groupId)),
+    );
+    final index = merged.indexWhere((message) => message.id == messageId);
     if (index < 0) {
       return;
     }
     final position = _scrollController.position;
-    final itemCount = messages.length + 1;
+    final itemCount = merged.length + 1;
     final averageExtent = itemCount > 1 && position.maxScrollExtent > 0
         ? position.maxScrollExtent / (itemCount - 1)
         : 240.0;
     // reverse 列表：index 0 贴 offset 0（最新在底部），越旧 offset 越大。
-    final target = (index * averageExtent - position.viewportDimension * 0.5)
-        .clamp(0.0, position.maxScrollExtent);
+    final estimate = index * averageExtent - position.viewportDimension * 0.5;
+    // 收敛性修复：平均项高估算必有偏差，首跳落空时若每轮重复同一 offset，
+    // 逼近链永不收敛（逐次空转耗尽 12 次上限）。重试围绕估计值按 3/4 视口
+    // 步长交替外扩扫过滚动轴（相邻两跳窗口重叠，无漏扫），保证有界重试内
+    // 目标进入构建窗；context 物化后仍由 ensureVisible 精确对齐，参数与
+    // 瞬态键语义不变。
+    final sweepStep = position.viewportDimension * 0.75;
+    final sweep = attempt == 0
+        ? 0.0
+        : ((attempt + 1) ~/ 2) * sweepStep * (attempt.isOdd ? 1.0 : -1.0);
+    final target = (estimate + sweep).clamp(0.0, position.maxScrollExtent);
     _scrollController.jumpTo(target);
     await WidgetsBinding.instance.endOfFrame;
     await _revealMessage(messageId, attempt: attempt + 1);
