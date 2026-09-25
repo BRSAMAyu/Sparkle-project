@@ -213,10 +213,15 @@ async def create_goal(
 
     # Create a task for each milestone linked to the plan.
     # The first task is exposed so the wizard can navigate to it.
+    # wt396 F5：每个任务持久化 ``goal_milestone:<id>`` 标签（轨迹面按 id 精确
+    # 关联，缺位显式 gap）；创建失败不再静默吞——补偿清单进 warning（目标创建
+    # 本身不阻塞的设计意图保留，但失败必须如实呈现并记日志）。
     first_task_id: str | None = None
+    failed_milestone_titles: list[str] = []
     if milestones:
         try:
             first = milestones[0]
+            first_milestone_id = str(first.get("id") or "m1").strip()
             task = await TaskService.create(
                 db,
                 TaskCreate(
@@ -224,7 +229,7 @@ async def create_goal(
                     type=coerce_task_type("learning"),
                     estimated_minutes=25,
                     energy_cost=2,
-                    tags=["goal_first_step"],
+                    tags=["goal_first_step", f"goal_milestone:{first_milestone_id}"],
                     guide_content=first.get("description"),
                     plan_id=plan.id,
                 ),
@@ -235,9 +240,17 @@ async def create_goal(
             first_task_id = str(task.id)
         except Exception:
             first_task_id = None
+            failed_milestone_titles.append(str(milestones[0].get("title") or "第一个里程碑"))
+            logger.warning(
+                "Milestone task creation failed (goal=%s milestone_index=%s); surfaced via warning",
+                goal.id,
+                0,
+                exc_info=True,
+            )
 
         # Create tasks for remaining milestones
         for i, milestone in enumerate(milestones[1:], start=2):
+            milestone_id = str(milestone.get("id") or f"m{i}").strip()
             try:
                 await TaskService.create(
                     db,
@@ -246,14 +259,25 @@ async def create_goal(
                         type=coerce_task_type("learning"),
                         estimated_minutes=25,
                         energy_cost=2,
-                        tags=["goal_milestone"],
+                        tags=["goal_milestone", f"goal_milestone:{milestone_id}"],
                         guide_content=milestone.get("description"),
                         plan_id=plan.id,
                     ),
                     user_id=current_user.id,
                 )
             except Exception:
-                pass  # non-blocking; task creation failures should not block goal creation
+                # non-blocking; the failure is surfaced via the warning compensation list
+                failed_milestone_titles.append(str(milestone.get("title") or f"第{i}个里程碑"))
+                logger.warning(
+                    "Milestone task creation failed (goal=%s milestone_index=%s); surfaced via warning",
+                    goal.id,
+                    i - 1,
+                    exc_info=True,
+                )
+
+    if failed_milestone_titles:
+        compensation = "milestone_task_creation_failed"
+        warning = f"{warning};{compensation}" if warning else compensation
 
     await db.commit()
     return GoalResponse(

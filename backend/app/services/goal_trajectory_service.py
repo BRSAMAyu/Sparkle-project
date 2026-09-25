@@ -213,13 +213,28 @@ def _milestone_tag_of(task: Task) -> str | None:
     return None
 
 
+def _milestone_id_tag_of(task: Task) -> str | None:
+    """创建面持久化的 wizard 里程碑 id（goals.py 写入 ``goal_milestone:<id>`` 标签）。"""
+    for tag in task.tags or []:
+        text_tag = str(tag or "").strip()
+        if text_tag.startswith("goal_milestone:"):
+            return text_tag.split(":", 1)[1].strip() or None
+    return None
+
+
 def _milestones_face(
     *,
     wizard_milestones: list[Any],
     tasks: list[Task],
     outcomes_by_task: dict[str, dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """里程碑环：元数据草案 × 计划里程碑任务行（达成 = 真实任务行终态）。"""
+    """里程碑环：元数据草案 × 计划里程碑任务行（达成 = 真实任务行终态）。
+
+    join 稳健性（wt396 F5）：优先按创建面写入的 ``goal_milestone:<id>`` 标签
+    精确关联；存量任务回退标题精确匹配（创建时标题与草案同源）；仍无匹配 →
+    显式 gap（``task=None`` 且 ``gap=True``）。绝不按位置顺延配对——中间任务
+    创建失败被吞/被删除时，位置 join 会把后续里程碑的达成状态整体错位一位。
+    """
     milestone_tasks = [task for task in tasks if _milestone_tag_of(task) is not None]
     faces: list[dict[str, Any]] = []
 
@@ -234,24 +249,57 @@ def _milestones_face(
             "outcome_id": outcome["outcome_id"] if outcome else None,
         }
 
+    tasks_by_milestone_id: dict[str, Task] = {}
+    untagged_tasks: list[Task] = []
+    for milestone_task in milestone_tasks:
+        milestone_id_tag = _milestone_id_tag_of(milestone_task)
+        if milestone_id_tag is None:
+            untagged_tasks.append(milestone_task)
+        elif milestone_id_tag not in tasks_by_milestone_id:
+            tasks_by_milestone_id[milestone_id_tag] = milestone_task
+
+    matched_task_ids: set[int] = set()
+
+    def _claim_untagged_by_title(title: str) -> Task | None:
+        wanted = title.strip()
+        if not wanted:
+            return None
+        for task in untagged_tasks:
+            if id(task) in matched_task_ids:
+                continue
+            if str(task.title or "").strip() == wanted:
+                matched_task_ids.add(id(task))
+                return task
+        return None
+
     for index, item in enumerate(wizard_milestones[:_TRAJECTORY_RING_CAP]):
         if not isinstance(item, dict):
             continue
-        task = milestone_tasks[index] if index < len(milestone_tasks) else None
+        milestone_id = str(item.get("id") or f"m{index + 1}")
+        tagged_task = tasks_by_milestone_id.get(milestone_id)
+        if tagged_task is not None:
+            matched_task_ids.add(id(tagged_task))
+        task: Task | None = tagged_task
+        if task is None:
+            task = _claim_untagged_by_title(str(item.get("title") or ""))
         task_face = _task_face(task)
-        faces.append(
-            {
-                "milestone_id": str(item.get("id") or f"m{index + 1}"),
-                "title": str(item.get("title") or (task.title if task else "")).strip(),
-                "task": task_face,
-                "reached": bool(task_face and task_face["reached"]),
-                "task_id": task_face["task_id"] if task_face else None,
-                "outcome_id": task_face["outcome_id"] if task_face else None,
-            }
-        )
+        face: dict[str, Any] = {
+            "milestone_id": milestone_id,
+            "title": str(item.get("title") or (task.title if task else "")).strip(),
+            "task": task_face,
+            "reached": bool(task_face and task_face["reached"]),
+            "task_id": task_face["task_id"] if task_face else None,
+            "outcome_id": task_face["outcome_id"] if task_face else None,
+        }
+        if task is None:
+            # 缺失位显式 gap：任务行不存在（创建失败/被删）时诚实留空，不顺延错配
+            face["gap"] = True
+        faces.append(face)
 
-    # 元数据缺里程碑草案时，任务行本身就是里程碑事实（goals.py 同构创建）
-    for task in milestone_tasks[len(wizard_milestones) :][: _TRAJECTORY_RING_CAP - len(faces)]:
+    # 未与草案关联上的任务行本身就是里程碑事实（goals.py 同构创建；含超出
+    # wizard 列表或 id 标签未命中草案的行）——照旧进尾部事实段，不丢失。
+    leftover_tasks = [task for task in milestone_tasks if id(task) not in matched_task_ids]
+    for task in leftover_tasks[: max(0, _TRAJECTORY_RING_CAP - len(faces))]:
         task_face = _task_face(task)
         faces.append(
             {

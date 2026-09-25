@@ -57,6 +57,9 @@ GENERATION_SLOT_PM = 0.625
 #: comeback 任务只在单线程 executor 里跑（celery _run_async 的 worker loop 绑定线程）
 _TASK_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="p05-celery-task")
 
+#: 恢复总线实例属性时的「原本不存在」哨兵（与「值为 None」区分）
+_BUS_ATTR_MISSING = object()
+
 _LIFECYCLE_OUTCOME_KEYS = (
     "source",
     "ledger_done",
@@ -113,6 +116,44 @@ class _WorldState:
     ignore_count: int = 0
 
 
+class _StubBusRedis:
+    """评估隔离用内存 stub redis：承接发布链路触达的全部接口（wt396 F7）.
+
+    生产事件发布（``_publish_once``）只需要 ``xadd``/``xinfo_groups``；事件按
+    stream 记入内存（评估断言面可检查），绝不连真实 REDIS_URL、绝不写真实
+    Postgres（DLQ 由引擎在总线实例级中和）。线程侧 celery 任务经同一单例对象
+    发布（纯内存读写，跨事件 loop 安全）。
+    """
+
+    def __init__(self) -> None:
+        self.streams: dict[str, list[dict[str, Any]]] = {}
+
+    async def ping(self) -> bool:
+        return True
+
+    async def xadd(
+        self,
+        stream: str,
+        fields: dict[str, Any],
+        maxlen: int | None = None,
+        approximate: bool = False,
+    ) -> str:
+        entry = {str(key): (value if isinstance(value, str) else str(value)) for key, value in dict(fields).items()}
+        entries = self.streams.setdefault(stream, [])
+        entries.append(entry)
+        return f"{len(entries)}-1"
+
+    async def xinfo_groups(self, stream: str) -> list[dict[str, Any]]:
+        # publish 侧的可观测性探测只关心「有无消费组」；stub 恒答有，静默通过
+        return [{"name": "p05-eval-stub", "stream": stream}]
+
+    async def aclose(self) -> None:
+        return None
+
+    async def close(self) -> None:
+        return None
+
+
 class PersonaWorld:
     """一个 persona × 一个组的隔离世界（独立 sqlite 引擎 + 真实服务驱动）。"""
 
@@ -134,8 +175,11 @@ class PersonaWorld:
         self.session: AsyncSession | None = None
         self.user_id: UUID | None = None
         self.records: list[dict[str, Any]] = []
+        self.event_bus_stub: _StubBusRedis | None = None
+        self._bus_saved: dict[str, Any] | None = None
 
     async def __aenter__(self) -> PersonaWorld:
+        self._install_isolated_event_bus()
         await self._world.__aenter__()
         self.session = self._factory()
         await self._seed()
@@ -145,6 +189,55 @@ class PersonaWorld:
         if self.session is not None:
             await self.session.close()
         await self._world.__aexit__(*exc_info)
+        self._restore_event_bus()
+
+    # ------------------------------------------------------- event bus 隔离
+
+    def _install_isolated_event_bus(self) -> None:
+        """全局 event_bus 单例注入隔离通道（wt396 F7；生产路径零改动）.
+
+        评估运行内的真实服务链（TaskService.complete → outcome 捕获广播、
+        comeback 生产任务等）会向全局单例发布事件：不隔离时 ``_publish_once``
+        自动连 ``settings.REDIS_URL`` 并 XADD 真 ``sparkle_events``（伪 user
+        uuid / 回拨时间线污染真实 dev 流），publish 失败的 DLQ 回退还会经模块
+        级 ``AsyncSessionLocal`` 写真 Postgres。stub 让事件留在内存；实例级
+        中和 ``connect``（永不重连真 URL）与 ``_persist_dlq_entry``（永不写真
+        库）。``__aexit__`` 逐属性恢复。
+        """
+        from app.core.event_bus import event_bus
+
+        bus = event_bus
+        self._bus_saved = {
+            "redis": bus.__dict__.get("redis", _BUS_ATTR_MISSING),
+            "connect": bus.__dict__.get("connect", _BUS_ATTR_MISSING),
+            "_persist_dlq_entry": bus.__dict__.get("_persist_dlq_entry", _BUS_ATTR_MISSING),
+        }
+        stub = _StubBusRedis()
+        self.event_bus_stub = stub
+        bus.__dict__["redis"] = stub
+
+        async def _no_connect() -> None:
+            return None
+
+        async def _no_persist_dlq(**kwargs: Any) -> None:
+            return None
+
+        bus.__dict__["connect"] = _no_connect
+        bus.__dict__["_persist_dlq_entry"] = _no_persist_dlq
+
+    def _restore_event_bus(self) -> None:
+        if self._bus_saved is None:
+            return
+        from app.core.event_bus import event_bus
+
+        bus = event_bus
+        for name, value in self._bus_saved.items():
+            if value is _BUS_ATTR_MISSING:
+                bus.__dict__.pop(name, None)
+            else:
+                bus.__dict__[name] = value
+        self._bus_saved = None
+        # event_bus_stub 保留（含本次运行捕获的事件，供评估断言面检查）
 
     # ------------------------------------------------------------------ seed
 

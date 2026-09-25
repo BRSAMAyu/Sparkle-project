@@ -297,10 +297,26 @@ class ConnectionManager:
         logger.info(f"User {user_id} disconnected from personal channel. Cleaned up friend map.")
 
     async def kick_user_from_group(self, group_id: str, user_id: str, reason: str = "kicked"):
-        """Kick user from group (Distributed)"""
+        """Kick user from group (Distributed).
+
+        wt396 F6：publish 失败（Redis 瞬断）不再向上抛——成员行已是权威事实，
+        关闭通知是 best-effort；降级 ``_kick_local`` 保证本节点扇出仍生效。
+        否则 publish 异常穿透成 500，而重试 leave/kick 已被「不是群组成员」
+        400 挡死，已退成员的存活连接会永久滞留 active_connections 持续收群广播。
+        """
         if self.redis:
             msg = {"type": "kick_group", "user_id": user_id, "reason": reason}
-            await self.redis.publish(f"group:{group_id}", json.dumps(msg))
+            try:
+                await self.redis.publish(f"group:{group_id}", json.dumps(msg))
+            except Exception:
+                logger.warning(
+                    "kick_group publish failed; falling back to local kick (group=%s user=%s reason=%s)",
+                    group_id,
+                    user_id,
+                    reason,
+                    exc_info=True,
+                )
+                await self._kick_local(group_id, user_id, reason)
         else:
             await self._kick_local(group_id, user_id, reason)
 

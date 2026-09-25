@@ -2070,21 +2070,38 @@ async def leave_group(
         await GroupService.leave_group(db, group_id, current_user.id)
         await db.commit()
 
-        # Broadcast member left event
-        await manager.broadcast(
-            {
-                "type": "member_left",
-                "group_id": str(group_id),
-                "user_id": str(current_user.id),
-                "timestamp": datetime.now(UTC).isoformat(),
-            },
-            str(group_id),
-        )
+        # wt396 F6：提交后的广播与关闭通知整体 best-effort——成员行删除已是权威
+        # 结果，通知通道（Redis publish）瞬断不得把已提交的结果变成 500：
+        # 重试 leave/kick 会被「不是群组成员」400 挡死，已退成员的存活 WS 将
+        # 永久滞留 active_connections 持续收群广播（S-05 要堵的缺口回归）。
+        try:
+            # Broadcast member left event
+            await manager.broadcast(
+                {
+                    "type": "member_left",
+                    "group_id": str(group_id),
+                    "user_id": str(current_user.id),
+                    "timestamp": datetime.now(UTC).isoformat(),
+                },
+                str(group_id),
+            )
+        except Exception:
+            logger.opt(exception=True).warning(
+                "member_left broadcast failed after leave commit (post-commit best-effort), group_id={}",
+                group_id,
+            )
 
         # S-05：离群失效（实时面）——主动关闭退群成员的存活 WS 连接。
         # 此前只改成员行，已退群连接仍挂在 ConnectionManager 上继续收群广播
         # （非成员持续接收群实时消息，权限/隐私缺口）。
-        await manager.kick_user_from_group(str(group_id), str(current_user.id), "left group")
+        try:
+            await manager.kick_user_from_group(str(group_id), str(current_user.id), "left group")
+        except Exception:
+            logger.opt(exception=True).warning(
+                "kick after leave failed (post-commit best-effort), group_id={} user_id={}",
+                group_id,
+                current_user.id,
+            )
 
         return {"success": True}
     except ValueError as e:
@@ -2162,18 +2179,33 @@ async def kick_group_member(
     try:
         await GroupService.kick_member(db, group_id, current_user.id, user_id)
         await db.commit()
-        await manager.broadcast(
-            {
-                "type": "member_kicked",
-                "group_id": str(group_id),
-                "user_id": str(user_id),
-                "operator_id": str(current_user.id),
-                "timestamp": datetime.now(UTC).isoformat(),
-            },
-            str(group_id),
-        )
+        # wt396 F6：同 leave——提交后的广播与关闭通知整体 best-effort（失败记
+        # 日志不 500；重试被「不是群组成员」400 挡死的补偿缺口不得回归）。
+        try:
+            await manager.broadcast(
+                {
+                    "type": "member_kicked",
+                    "group_id": str(group_id),
+                    "user_id": str(user_id),
+                    "operator_id": str(current_user.id),
+                    "timestamp": datetime.now(UTC).isoformat(),
+                },
+                str(group_id),
+            )
+        except Exception:
+            logger.opt(exception=True).warning(
+                "member_kicked broadcast failed after kick commit (post-commit best-effort), group_id={}",
+                group_id,
+            )
         # S-05：踢出失效（实时面）——主动关闭被踢成员的存活 WS 连接（同 leave）。
-        await manager.kick_user_from_group(str(group_id), str(user_id), "kicked")
+        try:
+            await manager.kick_user_from_group(str(group_id), str(user_id), "kicked")
+        except Exception:
+            logger.opt(exception=True).warning(
+                "kick after kick commit failed (post-commit best-effort), group_id={} user_id={}",
+                group_id,
+                user_id,
+            )
         return {"success": True}
     except ValueError as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
