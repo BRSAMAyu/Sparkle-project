@@ -109,6 +109,8 @@ dev_dependencies:
     sdk: flutter
   integration_test:
     sdk: flutter
+  # Q-03 visual QA：widget test 静音 audioplayers（audioplayers 的平台接口层）
+  audioplayers_platform_interface: ^7.1.1
 
   # Code Generation
   build_runner: ^2.4.7

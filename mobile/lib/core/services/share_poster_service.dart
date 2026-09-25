@@ -27,6 +27,10 @@ class SharePosterService {
 
       final captureKey = GlobalKey();
       final mediaQuery = MediaQuery.of(context);
+      // Q-03（wt401）：主题读取与 mediaQuery 一样必须在 insert 前完成——
+      // builder 闭包里 Theme.of(context) 会在生成窗口期内离开源页时以失活
+      // context 重入（deactivated ancestor 断言），根覆盖层整屏红（G3 守卫）。
+      final themeData = Theme.of(context);
       final sanitizedPayload = _sanitizePayload(payload);
 
       late final OverlayEntry entry;
@@ -47,7 +51,7 @@ class SharePosterService {
                       devicePixelRatio: 1,
                     ),
                     child: Theme(
-                      data: Theme.of(context),
+                      data: themeData,
                       child: RepaintBoundary(
                         key: captureKey,
                         child: SizedBox(

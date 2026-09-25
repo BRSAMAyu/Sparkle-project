@@ -1,0 +1,909 @@
+[
+  {
+    "screen": "L01_register",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 50,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 7
+  },
+  {
+    "screen": "L02_forgot_password",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 50,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 7
+  },
+  {
+    "screen": "L03_reset_password",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 50,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 7
+  },
+  {
+    "screen": "L04_legal_terms",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 50,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 7
+  },
+  {
+    "screen": "L05_legal_privacy",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 50,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 7
+  },
+  {
+    "screen": "L06_focus",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 12,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L07_tasks",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 18,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L08_task_new",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 55,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L09_openclaw",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 62,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 3
+  },
+  {
+    "screen": "L10_calendar",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 84,
+    "truncation_candidates": [
+      {
+        "text": "Sun",
+        "box": "25x16",
+        "text_extent": "25x23",
+        "axis": "height"
+      },
+      {
+        "text": "Mon",
+        "box": "28x16",
+        "text_extent": "28x23",
+        "axis": "height"
+      },
+      {
+        "text": "Tue",
+        "box": "24x16",
+        "text_extent": "24x23",
+        "axis": "height"
+      },
+      {
+        "text": "Wed",
+        "box": "29x16",
+        "text_extent": "29x23",
+        "axis": "height"
+      },
+      {
+        "text": "Thu",
+        "box": "24x16",
+        "text_extent": "24x23",
+        "axis": "height"
+      },
+      {
+        "text": "Fri",
+        "box": "17x16",
+        "text_extent": "17x23",
+        "axis": "height"
+      },
+      {
+        "text": "Sat",
+        "box": "21x16",
+        "text_extent": "21x23",
+        "axis": "height"
+      }
+    ],
+    "overflow_bounds_widgets": 7
+  },
+  {
+    "screen": "L11_calendar_stats",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 84,
+    "truncation_candidates": [
+      {
+        "text": "Sun",
+        "box": "25x16",
+        "text_extent": "25x23",
+        "axis": "height"
+      },
+      {
+        "text": "Mon",
+        "box": "28x16",
+        "text_extent": "28x23",
+        "axis": "height"
+      },
+      {
+        "text": "Tue",
+        "box": "24x16",
+        "text_extent": "24x23",
+        "axis": "height"
+      },
+      {
+        "text": "Wed",
+        "box": "29x16",
+        "text_extent": "29x23",
+        "axis": "height"
+      },
+      {
+        "text": "Thu",
+        "box": "24x16",
+        "text_extent": "24x23",
+        "axis": "height"
+      },
+      {
+        "text": "Fri",
+        "box": "17x16",
+        "text_extent": "17x23",
+        "axis": "height"
+      },
+      {
+        "text": "Sat",
+        "box": "21x16",
+        "text_extent": "21x23",
+        "axis": "height"
+      }
+    ],
+    "overflow_bounds_widgets": 7
+  },
+  {
+    "screen": "L12_calendar_day",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 24,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L13_sprint",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 73,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L14_sprint_history",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 7,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L15_growth",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 17,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L16_plans_history",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 79,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 5
+  },
+  {
+    "screen": "L17_exam_sprint_setup",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 29,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L18_exam_sprint_diagnose",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 6,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L19_exam_sprint_review",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 22,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L20_exam_sprint_completion",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 6,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L21_exam_sprint_portfolio",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 9,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L22_learning_insights",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 36,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 3
+  },
+  {
+    "screen": "L23_learning_forecast",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 38,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 3
+  },
+  {
+    "screen": "L24_growth_chronicle",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 39,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L25_insights_dashboard",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 45,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L26_directive_audit",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 14,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L27_learning_path",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 10,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L28_learning_report",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 52,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L29_review_plan_hub",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 25,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L30_reflection_summary",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 2,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L31_memory_panel",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 5,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L32_memory_settings",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 5,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L33_memory_understanding",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 5,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L34_profile_edit",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 40,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 5
+  },
+  {
+    "screen": "L35_profile_settings",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 399,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 24
+  },
+  {
+    "screen": "L36_music_library",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 3,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L37_profile_persona",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 25,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L38_poster_studio",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 58,
+    "truncation_candidates": [
+      {
+        "text": "S",
+        "box": "34x34",
+        "text_extent": "34x48",
+        "axis": "height"
+      }
+    ],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L39_system_updates",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 30,
+    "truncation_candidates": [
+      {
+        "text": "S",
+        "box": "34x34",
+        "text_extent": "34x48",
+        "axis": "height"
+      }
+    ],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L40_profile_memory_settings",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 26,
+    "truncation_candidates": [
+      {
+        "text": "S",
+        "box": "34x34",
+        "text_extent": "34x48",
+        "axis": "height"
+      }
+    ],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L41_openclaw_settings",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 121,
+    "truncation_candidates": [
+      {
+        "text": "S",
+        "box": "34x34",
+        "text_extent": "34x48",
+        "axis": "height"
+      }
+    ],
+    "overflow_bounds_widgets": 19
+  },
+  {
+    "screen": "L42_sync_center",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 38,
+    "truncation_candidates": [
+      {
+        "text": "S",
+        "box": "34x34",
+        "text_extent": "34x48",
+        "axis": "height"
+      }
+    ],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L43_session_management",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 33,
+    "truncation_candidates": [
+      {
+        "text": "S",
+        "box": "34x34",
+        "text_extent": "34x48",
+        "axis": "height"
+      }
+    ],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L44_security_log",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 32,
+    "truncation_candidates": [
+      {
+        "text": "S",
+        "box": "34x34",
+        "text_extent": "34x48",
+        "axis": "height"
+      }
+    ],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L45_export_data",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 36,
+    "truncation_candidates": [
+      {
+        "text": "S",
+        "box": "34x34",
+        "text_extent": "34x48",
+        "axis": "height"
+      }
+    ],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L46_achievements",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 47,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L47_achievements_map",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 54,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 7
+  },
+  {
+    "screen": "L48_streak_details",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 213,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 3
+  },
+  {
+    "screen": "L49_achievement_contract",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 8,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L50_self_anchor",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 6,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L51_community_feed",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 38,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L52_friends",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 51,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L53_friend_requests",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 14,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L54_friends_discover",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 42,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L55_user_search",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 5,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L56_groups",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 54,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L57_group_search",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 5,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L58_groups_discover",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 64,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 2
+  },
+  {
+    "screen": "L59_group_create",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 12,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L60_post_create",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 21,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L61_favorites",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 5,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L62_blocked_users",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 3,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L63_accountability",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 19,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L64_squads",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 8,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L65_curiosity_capsule",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 32,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L66_cognitive_patterns",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 8,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L67_tools_library",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 52,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L68_tool_host_translator",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 59,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 4
+  },
+  {
+    "screen": "L69_photon_history",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 6,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L70_seed_libraries",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 12,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L71_seed_marketplace",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 11,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L72_shop",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 13,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 5
+  },
+  {
+    "screen": "L73_visual_elements",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 46,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L74_theater",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 27,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L75_simulation",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 68,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 7
+  },
+  {
+    "screen": "L76_documents",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 33,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L77_translation_history",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 12,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L78_weather_guide",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 39,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 5
+  },
+  {
+    "screen": "L79_memory_detail",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 1,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L80_galaxy_draft_review",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 35,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L81_error_detail_unknown_id",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 7,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L82_goal_detail_unknown_id",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 8,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L83_task_detail_unknown_id",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 33,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L84_group_detail_unknown_id",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 7,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "L85_user_profile_unknown_id",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 20,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  }
+]

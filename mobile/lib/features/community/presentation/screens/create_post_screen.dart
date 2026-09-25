@@ -325,7 +325,11 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       ),
     );
 
-  Widget _buildMoodSelector() => Row(
+  // Q-03（wt401）：5 个心情 chip 在 390w 标准档溢出 66px（G1 守卫）——
+  // 改横向滚动，所有 chip 保持可达（不再截断/溢出）。
+  Widget _buildMoodSelector() => SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
       children: List.generate(_moodIcons.length, (index) {
         final selected = _moodIndex == index;
         return Padding(
@@ -375,6 +379,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
           ),
         );
       }),
+      ),
     );
 }
 

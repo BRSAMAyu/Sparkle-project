@@ -1,0 +1,200 @@
+[
+  {
+    "screen": "C01_home",
+    "state": "loading",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 76,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 7
+  },
+  {
+    "screen": "C01_home",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 76,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 7
+  },
+  {
+    "screen": "C01_home",
+    "state": "empty",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 76,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 7
+  },
+  {
+    "screen": "C01_home",
+    "state": "error",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 36,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 7
+  },
+  {
+    "screen": "C02_galaxy",
+    "state": "loading",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 81,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 7
+  },
+  {
+    "screen": "C02_galaxy",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 117,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 7
+  },
+  {
+    "screen": "C03_chat",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 131,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 7
+  },
+  {
+    "screen": "C03_chat",
+    "state": "fixture_conversation",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 131,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 7
+  },
+  {
+    "screen": "C04_community",
+    "state": "loading",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 90,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 7
+  },
+  {
+    "screen": "C04_community",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 116,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 7
+  },
+  {
+    "screen": "C05_profile",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 194,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 15
+  },
+  {
+    "screen": "C06_login",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 20,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 6
+  },
+  {
+    "screen": "C07_persona_onboarding",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 76,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 7
+  },
+  {
+    "screen": "C08_errors",
+    "state": "loading",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 117,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 9
+  },
+  {
+    "screen": "C08_errors",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 107,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 3
+  },
+  {
+    "screen": "C09_error_new",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 58,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 3
+  },
+  {
+    "screen": "C10_goal_new",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 14,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "C11_plans",
+    "state": "loading",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 81,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 7
+  },
+  {
+    "screen": "C11_plans",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 73,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "C12_review",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 13,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 1
+  },
+  {
+    "screen": "C13_notification_center",
+    "state": "loading",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 89,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 8
+  },
+  {
+    "screen": "C13_notification_center",
+    "state": "default",
+    "pump_exception": null,
+    "logical_size": "390.0x844.0",
+    "text_widget_count": 54,
+    "truncation_candidates": [],
+    "overflow_bounds_widgets": 2
+  }
+]

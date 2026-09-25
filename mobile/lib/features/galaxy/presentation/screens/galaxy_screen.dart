@@ -3721,27 +3721,13 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                                               ),
                                       ),
                                     ),
-                                    Positioned(
-                                      top: 112,
-                                      right: 16,
-                                      left: constraints.maxWidth < 560
-                                          ? 16
-                                          : null,
-                                      child: GoalWorldGraphMiniPanel(
-                                        isGoalWorldMode: _isGoalWorldMode,
-                                        onViewModeToggle: () {
-                                          setState(() {
-                                            _isGoalWorldMode =
-                                                !_isGoalWorldMode;
-                                            if (!_isGoalWorldMode) {
-                                              _spotlightNodeIds =
-                                                  const <String>{};
-                                              _spotlightAnchorId = null;
-                                            }
-                                          });
-                                        },
-                                      ),
-                                    ),
+                                    // Q-03（wt401）：模式面板原先钉死在
+                                    // top:112 的兄弟 Positioned 上——V13 D-10
+                                    // 把统计挪进 top:48 流式列后，列内容
+                                    // （统计+贡献横幅）向下生长恰好压住面板。
+                                    // 挂入同一条纵向流（统计之上、横幅之下，
+                                    // 顺序对齐原视觉层次），任何字号/数据态
+                                    // 互不遮压（G4 守卫锁定）。
                                     Positioned(
                                       top: 48,
                                       left: 16,
@@ -3750,6 +3736,21 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                                         crossAxisAlignment:
                                             CrossAxisAlignment.stretch,
                                         children: [
+                                          GoalWorldGraphMiniPanel(
+                                            isGoalWorldMode: _isGoalWorldMode,
+                                            onViewModeToggle: () {
+                                              setState(() {
+                                                _isGoalWorldMode =
+                                                    !_isGoalWorldMode;
+                                                if (!_isGoalWorldMode) {
+                                                  _spotlightNodeIds =
+                                                      const <String>{};
+                                                  _spotlightAnchorId = null;
+                                                }
+                                              });
+                                            },
+                                          ),
+                                          const SizedBox(height: 12),
                                           // V13 D-10：总览统计从固定 top:14
                                           // 改挂为本列流式首行（右对齐）——
                                           // 与引导卡/掌握卡/种子审核卡共用

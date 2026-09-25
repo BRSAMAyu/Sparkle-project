@@ -1,0 +1,7248 @@
+[
+  {
+    "screen": "C01_home",
+    "state": "loading",
+    "scaffold_bg": "fffef7ff",
+    "min_ratio": "4.98",
+    "samples": [
+      {
+        "text": "视",
+        "fg": "ff4f5e76",
+        "bg": "ffe3dfdd",
+        "ratio": "4.98",
+        "font_size": 16.0
+      },
+      {
+        "text": "视觉审查",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天适合保持节奏",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "Aurora · 策略已激活",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "冲刺剩余 7 天，已对齐今日任务",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 11.0
+      },
+      {
+        "text": "今天最值得做",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "今天还没排布",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "距截止 2 天",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "7/22",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "距截止 2 天",
+        "fg": "ff7d5c26",
+        "bg": "fff9f5f0",
+        "ratio": "5.64",
+        "font_size": 12.0
+      },
+      {
+        "text": "安排今天",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
+      },
+      {
+        "text": "我卡住了",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 14.56
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "早上好，今天先从一小步开始，把节奏找回来就很好。",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "加载失败",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "轻触重试",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "今日简报",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天 3 件待办 · 已就绪",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "多目标看板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "所有目标的总览",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "考试冲刺",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "计算机网络 · 5 天后",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "任务面板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今日待办与进度",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "动态",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "通知、洞察、提醒",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "工作区卡片",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "8 张已显示",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "创建任务",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "开始专注",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "查看日历",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "好奇心胶囊",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "输入消息...",
+        "fg": "806c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 16.0
+      },
+      {
+        "text": "驾驶舱",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "星图",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "对话",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "社群",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "我的",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      }
+    ]
+  },
+  {
+    "screen": "C01_home",
+    "state": "default",
+    "scaffold_bg": "fffef7ff",
+    "min_ratio": "4.98",
+    "samples": [
+      {
+        "text": "视",
+        "fg": "ff4f5e76",
+        "bg": "ffe3dfdd",
+        "ratio": "4.98",
+        "font_size": 16.0
+      },
+      {
+        "text": "视觉审查",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天适合保持节奏",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "Aurora · 策略已激活",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "冲刺剩余 7 天，已对齐今日任务",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 11.0
+      },
+      {
+        "text": "今天最值得做",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "今天还没排布",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "距截止 2 天",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "7/22",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "距截止 2 天",
+        "fg": "ff7d5c26",
+        "bg": "fff9f5f0",
+        "ratio": "5.64",
+        "font_size": 12.0
+      },
+      {
+        "text": "安排今天",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
+      },
+      {
+        "text": "我卡住了",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 14.56
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "早上好，今天先从一小步开始，把节奏找回来就很好。",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "加载失败",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "轻触重试",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "今日简报",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天 3 件待办 · 已就绪",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "多目标看板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "所有目标的总览",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "考试冲刺",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "计算机网络 · 5 天后",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "任务面板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今日待办与进度",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "动态",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "通知、洞察、提醒",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "工作区卡片",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "8 张已显示",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "创建任务",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "开始专注",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "查看日历",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "好奇心胶囊",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "输入消息...",
+        "fg": "806c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 16.0
+      },
+      {
+        "text": "驾驶舱",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "星图",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "对话",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "社群",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "我的",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      }
+    ]
+  },
+  {
+    "screen": "C01_home",
+    "state": "empty",
+    "scaffold_bg": "fffef7ff",
+    "min_ratio": "4.98",
+    "samples": [
+      {
+        "text": "视",
+        "fg": "ff4f5e76",
+        "bg": "ffe3dfdd",
+        "ratio": "4.98",
+        "font_size": 16.0
+      },
+      {
+        "text": "视觉审查",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天适合保持节奏",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "Aurora · 已校准",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "今天最值得做",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "今天还没排布",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "7/22",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "安排今天",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
+      },
+      {
+        "text": "我卡住了",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 14.56
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "早上好，今天先从一小步开始，把节奏找回来就很好。",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "加载失败",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "轻触重试",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "今日简报",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "当天的状态与节奏",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "多目标看板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "所有目标的总览",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "考试冲刺",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "计算机网络 · 5 天后",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "任务面板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今日待办与进度",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "动态",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "通知、洞察、提醒",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "工作区卡片",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "8 张已显示",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "关键指标",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "进度、连续天数、动力",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "创建任务",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "开始专注",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "查看日历",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "好奇心胶囊",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "输入消息...",
+        "fg": "806c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 16.0
+      },
+      {
+        "text": "驾驶舱",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "星图",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "对话",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "社群",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "我的",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      }
+    ]
+  },
+  {
+    "screen": "C01_home",
+    "state": "error",
+    "scaffold_bg": "fffef7ff",
+    "min_ratio": "4.98",
+    "samples": [
+      {
+        "text": "视",
+        "fg": "ff4f5e76",
+        "bg": "ffe3dfdd",
+        "ratio": "4.98",
+        "font_size": 16.0
+      },
+      {
+        "text": "视觉审查",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天适合保持节奏",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "首页暂时加载失败",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 15.0
+      },
+      {
+        "text": "网络不可用",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 14.0
+      },
+      {
+        "text": "重试",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 14.0
+      },
+      {
+        "text": "Aurora · 需要确认",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "3 条关键假设待你校准",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "创建任务",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "开始专注",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "查看日历",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "好奇心胶囊",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "输入消息...",
+        "fg": "806c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 16.0
+      },
+      {
+        "text": "驾驶舱",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "星图",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "对话",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "社群",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "我的",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      }
+    ]
+  },
+  {
+    "screen": "C02_galaxy",
+    "state": "loading",
+    "scaffold_bg": "fffef7ff",
+    "min_ratio": "4.98",
+    "samples": [
+      {
+        "text": "视",
+        "fg": "ff4f5e76",
+        "bg": "ffe3dfdd",
+        "ratio": "4.98",
+        "font_size": 16.0
+      },
+      {
+        "text": "视觉审查",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天适合保持节奏",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "Aurora · 策略已激活",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "冲刺剩余 7 天，已对齐今日任务",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 11.0
+      },
+      {
+        "text": "今天最值得做",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "今天还没排布",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "距截止 2 天",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "7/22",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "距截止 2 天",
+        "fg": "ff7d5c26",
+        "bg": "fff9f5f0",
+        "ratio": "5.64",
+        "font_size": 12.0
+      },
+      {
+        "text": "安排今天",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
+      },
+      {
+        "text": "我卡住了",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 14.56
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "早上好，今天先从一小步开始，把节奏找回来就很好。",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "加载失败",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "轻触重试",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "今日简报",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天 3 件待办 · 已就绪",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "多目标看板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "所有目标的总览",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "考试冲刺",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "计算机网络 · 5 天后",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "任务面板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今日待办与进度",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "动态",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "通知、洞察、提醒",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "工作区卡片",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "8 张已显示",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "创建任务",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "开始专注",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "查看日历",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "好奇心胶囊",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "输入消息...",
+        "fg": "806c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 16.0
+      },
+      {
+        "text": "加载中",
+        "fg": "ffffffff",
+        "bg": "ff060a12",
+        "ratio": "19.81",
+        "font_size": 20.0
+      },
+      {
+        "text": "正在加载星图...",
+        "fg": "b8ffffff",
+        "bg": "ff060a12",
+        "ratio": "19.81",
+        "font_size": 14.0
+      },
+      {
+        "text": "搜索知识节点",
+        "fg": "b8ffffff",
+        "bg": "ff060a12",
+        "ratio": "19.81",
+        "font_size": 12.0
+      },
+      {
+        "text": "推演模式",
+        "fg": "b8ffffff",
+        "bg": "ff060a12",
+        "ratio": "19.81",
+        "font_size": 12.0
+      },
+      {
+        "text": "节点数",
+        "fg": "b8ffffff",
+        "bg": "ff060a12",
+        "ratio": "19.81",
+        "font_size": 12.0
+      },
+      {
+        "text": "驾驶舱",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "星图",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "对话",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "社群",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "我的",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      }
+    ]
+  },
+  {
+    "screen": "C02_galaxy",
+    "state": "default",
+    "scaffold_bg": "fffef7ff",
+    "min_ratio": "1.11",
+    "samples": [
+      {
+        "text": "视",
+        "fg": "ff4f5e76",
+        "bg": "ffe3dfdd",
+        "ratio": "4.98",
+        "font_size": 16.0
+      },
+      {
+        "text": "视觉审查",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天适合保持节奏",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "Aurora · 策略已激活",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "冲刺剩余 7 天，已对齐今日任务",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 11.0
+      },
+      {
+        "text": "今天最值得做",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "今天还没排布",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "距截止 2 天",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "7/22",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "距截止 2 天",
+        "fg": "ff7d5c26",
+        "bg": "fff9f5f0",
+        "ratio": "5.64",
+        "font_size": 12.0
+      },
+      {
+        "text": "安排今天",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
+      },
+      {
+        "text": "我卡住了",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 14.56
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "早上好，今天先从一小步开始，把节奏找回来就很好。",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "加载失败",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "轻触重试",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "今日简报",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天 3 件待办 · 已就绪",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "多目标看板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "所有目标的总览",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "考试冲刺",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "计算机网络 · 5 天后",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "任务面板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今日待办与进度",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "动态",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "通知、洞察、提醒",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "工作区卡片",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "8 张已显示",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "创建任务",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "开始专注",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "查看日历",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "好奇心胶囊",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "输入消息...",
+        "fg": "806c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 16.0
+      },
+      {
+        "text": "目标图谱",
+        "fg": "ffffffff",
+        "bg": "ff060a12",
+        "ratio": "19.81",
+        "font_size": 14.0
+      },
+      {
+        "text": "目标",
+        "fg": "ff52443c",
+        "bg": "ffe7ded4",
+        "ratio": "7.02",
+        "font_size": 12.0
+      },
+      {
+        "text": "重试",
+        "fg": "ff825d49",
+        "bg": "ff060a12",
+        "ratio": "3.41",
+        "font_size": 14.0
+      },
+      {
+        "text": "节点数",
+        "fg": "9effffff",
+        "bg": "ff060a12",
+        "ratio": "19.81",
+        "font_size": 11.0
+      },
+      {
+        "text": "57",
+        "fg": "ffffffff",
+        "bg": "ff060a12",
+        "ratio": "19.81",
+        "font_size": 15.0
+      },
+      {
+        "text": "已解锁",
+        "fg": "9effffff",
+        "bg": "ff060a12",
+        "ratio": "19.81",
+        "font_size": 11.0
+      },
+      {
+        "text": "95%",
+        "fg": "ffffffff",
+        "bg": "ff060a12",
+        "ratio": "19.81",
+        "font_size": 15.0
+      },
+      {
+        "text": "掌握度",
+        "fg": "9effffff",
+        "bg": "ff060a12",
+        "ratio": "19.81",
+        "font_size": 11.0
+      },
+      {
+        "text": "60%",
+        "fg": "ffffffff",
+        "bg": "ff060a12",
+        "ratio": "19.81",
+        "font_size": 15.0
+      },
+      {
+        "text": "首次点亮",
+        "fg": "b8ffffff",
+        "bg": "ff060a12",
+        "ratio": "19.81",
+        "font_size": 11.0
+      },
+      {
+        "text": "12 个节点",
+        "fg": "ffffffff",
+        "bg": "ff060a12",
+        "ratio": "19.81",
+        "font_size": 14.0
+      },
+      {
+        "text": "错题修复",
+        "fg": "b8ffffff",
+        "bg": "ff060a12",
+        "ratio": "19.81",
+        "font_size": 11.0
+      },
+      {
+        "text": "4 个节点",
+        "fg": "ffffffff",
+        "bg": "ff060a12",
+        "ratio": "19.81",
+        "font_size": 14.0
+      },
+      {
+        "text": "对话更新",
+        "fg": "b8ffffff",
+        "bg": "ff060a12",
+        "ratio": "19.81",
+        "font_size": 11.0
+      },
+      {
+        "text": "6 个节点",
+        "fg": "ffffffff",
+        "bg": "ff060a12",
+        "ratio": "19.81",
+        "font_size": 14.0
+      },
+      {
+        "text": "点按查看我的贡献详情",
+        "fg": "adffffff",
+        "bg": "ff060a12",
+        "ratio": "19.81",
+        "font_size": 12.0
+      },
+      {
+        "text": "我们从 OS.pdf 里找到了 5 颗知识星，要现在看看吗？",
+        "fg": "ffffffff",
+        "bg": "ff060a12",
+        "ratio": "19.81",
+        "font_size": 16.0
+      },
+      {
+        "text": "你的星图该由你亲手确认。你可以逐个通过、跳过、合并，或者先改名再收下。",
+        "fg": "b8ffffff",
+        "bg": "ff060a12",
+        "ratio": "19.81",
+        "font_size": 14.0
+      },
+      {
+        "text": "稍后再看",
+        "fg": "ffffffff",
+        "bg": "ff060a12",
+        "ratio": "19.81",
+        "font_size": 14.0
+      },
+      {
+        "text": "现在审核",
+        "fg": "ff182238",
+        "bg": "ffffffff",
+        "ratio": "15.85",
+        "font_size": 14.0
+      },
+      {
+        "text": "添加学习资料",
+        "fg": "ff171717",
+        "bg": "fff1ebe4",
+        "ratio": "15.15",
+        "font_size": 14.0
+      },
+      {
+        "text": "搜索星图",
+        "fg": "ff171717",
+        "bg": "ff060a12",
+        "ratio": "1.11",
+        "font_size": 16.0
+      },
+      {
+        "text": "搜索知识节点...",
+        "fg": "a3ffffff",
+        "bg": "ff060a12",
+        "ratio": "19.81",
+        "font_size": 14.0
+      },
+      {
+        "text": "输入关键词搜索",
+        "fg": "9effffff",
+        "bg": "ff060a12",
+        "ratio": "19.81",
+        "font_size": 13.0
+      },
+      {
+        "text": "驾驶舱",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "星图",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "对话",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "社群",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "我的",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      }
+    ]
+  },
+  {
+    "screen": "C03_chat",
+    "state": "default",
+    "scaffold_bg": "fffef7ff",
+    "min_ratio": "3.08",
+    "samples": [
+      {
+        "text": "视",
+        "fg": "ff4f5e76",
+        "bg": "ffe3dfdd",
+        "ratio": "4.98",
+        "font_size": 16.0
+      },
+      {
+        "text": "视觉审查",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天适合保持节奏",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "Aurora · 策略已激活",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "冲刺剩余 7 天，已对齐今日任务",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 11.0
+      },
+      {
+        "text": "今天最值得做",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "今天还没排布",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "距截止 2 天",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "7/22",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "距截止 2 天",
+        "fg": "ff7d5c26",
+        "bg": "fff9f5f0",
+        "ratio": "5.64",
+        "font_size": 12.0
+      },
+      {
+        "text": "安排今天",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
+      },
+      {
+        "text": "我卡住了",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 14.56
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "早上好，今天先从一小步开始，把节奏找回来就很好。",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "加载失败",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "轻触重试",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "今日简报",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天 3 件待办 · 已就绪",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "多目标看板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "所有目标的总览",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "考试冲刺",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "计算机网络 · 5 天后",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "任务面板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今日待办与进度",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "动态",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "通知、洞察、提醒",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "工作区卡片",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "8 张已显示",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "创建任务",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "开始专注",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "查看日历",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "好奇心胶囊",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "输入消息...",
+        "fg": "806c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 16.0
+      },
+      {
+        "text": "AI",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 12.0
+      },
+      {
+        "text": "完全可以。对你这种跨领域用户来说，过程型作品集反而更真实。",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "建议首页先放三类内容：",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "课程或项目里解决过的问题",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "语言或写作里能体现表达能力的片段",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "你持续做过的创作与复盘痕迹",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "它不需要先证明“我已经定型”，而是先证明“我有连续成长的轨迹”。",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "来源摘要",
+        "fg": "ff6c655d",
+        "bg": "fff0eae3",
+        "ratio": "4.82",
+        "font_size": 12.0
+      },
+      {
+        "text": "00:24",
+        "fg": "ff958a80",
+        "bg": "fff8f4ef",
+        "ratio": "3.08",
+        "font_size": 10.0
+      },
+      {
+        "text": "不是这个方向",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 11.0
+      },
+      {
+        "text": "判断偏了",
+        "fg": "b86c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 10.0
+      },
+      {
+        "text": "更短一点",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 11.0
+      },
+      {
+        "text": "收短回复",
+        "fg": "b86c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 10.0
+      },
+      {
+        "text": "直接出题",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 11.0
+      },
+      {
+        "text": "切到练习",
+        "fg": "b86c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 10.0
+      },
+      {
+        "text": "重新校准",
+        "fg": "ff825d49",
+        "bg": "fff8f4ef",
+        "ratio": "5.31",
+        "font_size": 11.0
+      },
+      {
+        "text": "深度检查",
+        "fg": "b8825d49",
+        "bg": "fff8f4ef",
+        "ratio": "5.31",
+        "font_size": 10.0
+      },
+      {
+        "text": "我对以后做什么还没有完全确定，作品集是不是也可以先做成“过程型”的？",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "U",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 12.0
+      },
+      {
+        "text": "00:24",
+        "fg": "ff958a80",
+        "bg": "fff8f4ef",
+        "ratio": "3.08",
+        "font_size": 10.0
+      },
+      {
+        "text": "AI",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 12.0
+      },
+      {
+        "text": "睡晚之后觉得“整天都钝”，通常不只是睡眠时长问题，而是节律被整体推迟了。",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "起床变晚，第一餐和出门时间也一起后移",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "白天活动量下降，大脑更难进入清醒状态",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "到了晚上又不够困，形成循环",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "所以周末更适合保留固定起床时间，把任务改轻，而不是彻底打乱节奏。",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "来源摘要",
+        "fg": "ff6c655d",
+        "bg": "fff0eae3",
+        "ratio": "4.82",
+        "font_size": 12.0
+      },
+      {
+        "text": "00:24",
+        "fg": "ff958a80",
+        "bg": "fff8f4ef",
+        "ratio": "3.08",
+        "font_size": 10.0
+      },
+      {
+        "text": "均衡 · 标准对话 · 未绑定计划",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "你现在可以先做：继续重点任务",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "输入消息...",
+        "fg": "ff6c655d",
+        "bg": "ffe7ded4",
+        "ratio": "4.32",
+        "font_size": 16.0
+      },
+      {
+        "text": "0/4000",
+        "fg": "ff52443c",
+        "bg": "ffe7ded4",
+        "ratio": "7.02",
+        "font_size": 12.0
+      },
+      {
+        "text": "AI学习助手",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "随时为你解答",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "驾驶舱",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "星图",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "对话",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "社群",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "我的",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      }
+    ]
+  },
+  {
+    "screen": "C03_chat",
+    "state": "fixture_conversation",
+    "scaffold_bg": "fffef7ff",
+    "min_ratio": "3.08",
+    "samples": [
+      {
+        "text": "视",
+        "fg": "ff4f5e76",
+        "bg": "ffe3dfdd",
+        "ratio": "4.98",
+        "font_size": 16.0
+      },
+      {
+        "text": "视觉审查",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天适合保持节奏",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "Aurora · 策略已激活",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "冲刺剩余 7 天，已对齐今日任务",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 11.0
+      },
+      {
+        "text": "今天最值得做",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "今天还没排布",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "距截止 2 天",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "7/22",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "距截止 2 天",
+        "fg": "ff7d5c26",
+        "bg": "fff9f5f0",
+        "ratio": "5.64",
+        "font_size": 12.0
+      },
+      {
+        "text": "安排今天",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
+      },
+      {
+        "text": "我卡住了",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 14.56
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "早上好，今天先从一小步开始，把节奏找回来就很好。",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "加载失败",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "轻触重试",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "今日简报",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天 3 件待办 · 已就绪",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "多目标看板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "所有目标的总览",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "考试冲刺",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "计算机网络 · 5 天后",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "任务面板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今日待办与进度",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "动态",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "通知、洞察、提醒",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "工作区卡片",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "8 张已显示",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "创建任务",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "开始专注",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "查看日历",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "好奇心胶囊",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "输入消息...",
+        "fg": "806c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 16.0
+      },
+      {
+        "text": "AI",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 12.0
+      },
+      {
+        "text": "完全可以。对你这种跨领域用户来说，过程型作品集反而更真实。",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "建议首页先放三类内容：",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "课程或项目里解决过的问题",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "语言或写作里能体现表达能力的片段",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "你持续做过的创作与复盘痕迹",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "它不需要先证明“我已经定型”，而是先证明“我有连续成长的轨迹”。",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "来源摘要",
+        "fg": "ff6c655d",
+        "bg": "fff0eae3",
+        "ratio": "4.82",
+        "font_size": 12.0
+      },
+      {
+        "text": "00:24",
+        "fg": "ff958a80",
+        "bg": "fff8f4ef",
+        "ratio": "3.08",
+        "font_size": 10.0
+      },
+      {
+        "text": "不是这个方向",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 11.0
+      },
+      {
+        "text": "判断偏了",
+        "fg": "b86c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 10.0
+      },
+      {
+        "text": "更短一点",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 11.0
+      },
+      {
+        "text": "收短回复",
+        "fg": "b86c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 10.0
+      },
+      {
+        "text": "直接出题",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 11.0
+      },
+      {
+        "text": "切到练习",
+        "fg": "b86c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 10.0
+      },
+      {
+        "text": "重新校准",
+        "fg": "ff825d49",
+        "bg": "fff8f4ef",
+        "ratio": "5.31",
+        "font_size": 11.0
+      },
+      {
+        "text": "深度检查",
+        "fg": "b8825d49",
+        "bg": "fff8f4ef",
+        "ratio": "5.31",
+        "font_size": 10.0
+      },
+      {
+        "text": "我对以后做什么还没有完全确定，作品集是不是也可以先做成“过程型”的？",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "U",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 12.0
+      },
+      {
+        "text": "00:24",
+        "fg": "ff958a80",
+        "bg": "fff8f4ef",
+        "ratio": "3.08",
+        "font_size": 10.0
+      },
+      {
+        "text": "AI",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 12.0
+      },
+      {
+        "text": "睡晚之后觉得“整天都钝”，通常不只是睡眠时长问题，而是节律被整体推迟了。",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "起床变晚，第一餐和出门时间也一起后移",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "白天活动量下降，大脑更难进入清醒状态",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "到了晚上又不够困，形成循环",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "所以周末更适合保留固定起床时间，把任务改轻，而不是彻底打乱节奏。",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "来源摘要",
+        "fg": "ff6c655d",
+        "bg": "fff0eae3",
+        "ratio": "4.82",
+        "font_size": 12.0
+      },
+      {
+        "text": "00:24",
+        "fg": "ff958a80",
+        "bg": "fff8f4ef",
+        "ratio": "3.08",
+        "font_size": 10.0
+      },
+      {
+        "text": "均衡 · 标准对话 · 未绑定计划",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "你现在可以先做：继续重点任务",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "输入消息...",
+        "fg": "ff6c655d",
+        "bg": "ffe7ded4",
+        "ratio": "4.32",
+        "font_size": 16.0
+      },
+      {
+        "text": "0/4000",
+        "fg": "ff52443c",
+        "bg": "ffe7ded4",
+        "ratio": "7.02",
+        "font_size": 12.0
+      },
+      {
+        "text": "AI学习助手",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "随时为你解答",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "驾驶舱",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "星图",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "对话",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "社群",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "我的",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      }
+    ]
+  },
+  {
+    "screen": "C04_community",
+    "state": "loading",
+    "scaffold_bg": "fffef7ff",
+    "min_ratio": "4.98",
+    "samples": [
+      {
+        "text": "视",
+        "fg": "ff4f5e76",
+        "bg": "ffe3dfdd",
+        "ratio": "4.98",
+        "font_size": 16.0
+      },
+      {
+        "text": "视觉审查",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天适合保持节奏",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "Aurora · 策略已激活",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "冲刺剩余 7 天，已对齐今日任务",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 11.0
+      },
+      {
+        "text": "今天最值得做",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "今天还没排布",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "距截止 2 天",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "7/22",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "距截止 2 天",
+        "fg": "ff7d5c26",
+        "bg": "fff9f5f0",
+        "ratio": "5.64",
+        "font_size": 12.0
+      },
+      {
+        "text": "安排今天",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
+      },
+      {
+        "text": "我卡住了",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 14.56
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "早上好，今天先从一小步开始，把节奏找回来就很好。",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "加载失败",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "轻触重试",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "今日简报",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天 3 件待办 · 已就绪",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "多目标看板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "所有目标的总览",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "考试冲刺",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "计算机网络 · 5 天后",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "任务面板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今日待办与进度",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "动态",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "通知、洞察、提醒",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "工作区卡片",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "8 张已显示",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "创建任务",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "开始专注",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "查看日历",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "好奇心胶囊",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "输入消息...",
+        "fg": "806c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 16.0
+      },
+      {
+        "text": "星火社群",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 28.0
+      },
+      {
+        "text": "围绕目标，和小队一起冲刺",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 14.0
+      },
+      {
+        "text": "演示模式：以下群组、伙伴与动态均为演示数据",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "群组",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "伙伴",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 16.0
+      },
+      {
+        "text": "动态",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 16.0
+      },
+      {
+        "text": "冲刺小队",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "组队冲刺，互盯完成度",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "今日打卡",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "打卡喂养群火堆——火苗只代表群活跃度",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "驾驶舱",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "星图",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "对话",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "社群",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "我的",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      }
+    ]
+  },
+  {
+    "screen": "C04_community",
+    "state": "default",
+    "scaffold_bg": "fffef7ff",
+    "min_ratio": "4.98",
+    "samples": [
+      {
+        "text": "视",
+        "fg": "ff4f5e76",
+        "bg": "ffe3dfdd",
+        "ratio": "4.98",
+        "font_size": 16.0
+      },
+      {
+        "text": "视觉审查",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天适合保持节奏",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "Aurora · 策略已激活",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "冲刺剩余 7 天，已对齐今日任务",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 11.0
+      },
+      {
+        "text": "今天最值得做",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "今天还没排布",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "距截止 2 天",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "7/22",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "距截止 2 天",
+        "fg": "ff7d5c26",
+        "bg": "fff9f5f0",
+        "ratio": "5.64",
+        "font_size": 12.0
+      },
+      {
+        "text": "安排今天",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
+      },
+      {
+        "text": "我卡住了",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 14.56
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "早上好，今天先从一小步开始，把节奏找回来就很好。",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "加载失败",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "轻触重试",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "今日简报",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天 3 件待办 · 已就绪",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "多目标看板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "所有目标的总览",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "考试冲刺",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "计算机网络 · 5 天后",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "任务面板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今日待办与进度",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "动态",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "通知、洞察、提醒",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "工作区卡片",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "8 张已显示",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "创建任务",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "开始专注",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "查看日历",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "好奇心胶囊",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "输入消息...",
+        "fg": "806c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 16.0
+      },
+      {
+        "text": "星火社群",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 28.0
+      },
+      {
+        "text": "围绕目标，和小队一起冲刺",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 14.0
+      },
+      {
+        "text": "演示模式：以下群组、伙伴与动态均为演示数据",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "群组",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "伙伴",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 16.0
+      },
+      {
+        "text": "动态",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 16.0
+      },
+      {
+        "text": "冲刺小队",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "组队冲刺，互盯完成度",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "今日打卡",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "打卡喂养群火堆——火苗只代表群活跃度",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "晚间语言复盘屋（演示）",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "今日 32 次打卡",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "打卡",
+        "fg": "ff171717",
+        "bg": "ff7a8ba6",
+        "ratio": "5.18",
+        "font_size": 14.56
+      },
+      {
+        "text": "理工理解力自习组（演示）",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "今日 15 次打卡",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "打卡",
+        "fg": "ff171717",
+        "bg": "ff7a8ba6",
+        "ratio": "5.18",
+        "font_size": 14.56
+      },
+      {
+        "text": "我的社群",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "查看全部",
+        "fg": "ff825d49",
+        "bg": "fff8f4ef",
+        "ratio": "5.31",
+        "font_size": 14.56
+      },
+      {
+        "text": "晚间语言复盘屋（演示）",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "下班下课后一起做精读、跟说和短复盘，适合想慢慢找回表达节奏的人。",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "32 · 45 人 · 今日 成员 次打卡",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "理工理解力自习组（演示）",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "一起复盘课堂概念、错题和公式，不求卷时长，先把理解说清楚。",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "15 · 28 人 · 今日 管理员 次打卡",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "成果反馈",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "伙伴共享的学习成果——采纳即进你的知识库",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "加载失败",
+        "fg": "996c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "轻触重试",
+        "fg": "ff825d49",
+        "bg": "fff8f4ef",
+        "ratio": "5.31",
+        "font_size": 12.0
+      },
+      {
+        "text": "驾驶舱",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "星图",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "对话",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "社群",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "我的",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      }
+    ]
+  },
+  {
+    "screen": "C05_profile",
+    "state": "default",
+    "scaffold_bg": "fffef7ff",
+    "min_ratio": "1.74",
+    "samples": [
+      {
+        "text": "视",
+        "fg": "ff4f5e76",
+        "bg": "ffe3dfdd",
+        "ratio": "4.98",
+        "font_size": 16.0
+      },
+      {
+        "text": "视觉审查",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天适合保持节奏",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "Aurora · 策略已激活",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "冲刺剩余 7 天，已对齐今日任务",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 11.0
+      },
+      {
+        "text": "今天最值得做",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "今天还没排布",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "距截止 2 天",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "7/22",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "距截止 2 天",
+        "fg": "ff7d5c26",
+        "bg": "fff9f5f0",
+        "ratio": "5.64",
+        "font_size": 12.0
+      },
+      {
+        "text": "安排今天",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
+      },
+      {
+        "text": "我卡住了",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 14.56
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "早上好，今天先从一小步开始，把节奏找回来就很好。",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "加载失败",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "轻触重试",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "今日简报",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天 3 件待办 · 已就绪",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "多目标看板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "所有目标的总览",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "考试冲刺",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "计算机网络 · 5 天后",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "任务面板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今日待办与进度",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "动态",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "通知、洞察、提醒",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "工作区卡片",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "8 张已显示",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "创建任务",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "开始专注",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "查看日历",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "好奇心胶囊",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "输入消息...",
+        "fg": "806c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 16.0
+      },
+      {
+        "text": "视",
+        "fg": "ff4f5e76",
+        "bg": "ffe3dfdd",
+        "ratio": "4.98",
+        "font_size": 28.8
+      },
+      {
+        "text": "视觉审查",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 24.0
+      },
+      {
+        "text": "Lv.3",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "亮度 80%",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "本周成长趋势",
+        "fg": "ff171717",
+        "bg": "fff1ebe4",
+        "ratio": "15.15",
+        "font_size": 16.0
+      },
+      {
+        "text": "接入后可见",
+        "fg": "ff6c655d",
+        "bg": "fff1ebe4",
+        "ratio": "4.85",
+        "font_size": 12.0
+      },
+      {
+        "text": "初始画像",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "点击展开/收起",
+        "fg": "996c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "自我认识",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "1",
+        "fg": "ff4a7a58",
+        "bg": "ffe0ebe3",
+        "ratio": "4.07",
+        "font_size": 12.0
+      },
+      {
+        "text": "这里只展示过去样本里的判断偏差，不给你贴标签。",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "已观察 2 个元认知维度",
+        "fg": "ff4a7a58",
+        "bg": "fff8f4ef",
+        "ratio": "4.55",
+        "font_size": 12.0
+      },
+      {
+        "text": "时间预估",
+        "fg": "ff171717",
+        "bg": "ffeaeae6",
+        "ratio": "14.81",
+        "font_size": 14.0
+      },
+      {
+        "text": "你过去 10 次对完成时间估得偏乐观 2.3 小时。",
+        "fg": "ff171717",
+        "bg": "ffeaeae6",
+        "ratio": "14.81",
+        "font_size": 14.0
+      },
+      {
+        "text": "最近几周正在变稳。",
+        "fg": "ff497179",
+        "bg": "ffeaeae6",
+        "ratio": "4.42",
+        "font_size": 12.0
+      },
+      {
+        "text": "更新于 2026-04-22T10:00:00",
+        "fg": "996c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "工作记忆快照",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "把最近还在脑海前台的事项收紧成一个短视图。",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "英语长难句拆解还卡在倒装句，下一次练习先回看第 3 题。",
+        "fg": "ff171717",
+        "bg": "fff1ebe4",
+        "ratio": "15.15",
+        "font_size": 14.0
+      },
+      {
+        "text": "study_focus · 提及 3 次 · 仍在前台 · 4月22日 09:40",
+        "fg": "ff6c655d",
+        "bg": "fff1ebe4",
+        "ratio": "4.85",
+        "font_size": 12.0
+      },
+      {
+        "text": "这周要把概率论错题本整理成 2 页复盘卡片。",
+        "fg": "ff171717",
+        "bg": "fff1ebe4",
+        "ratio": "15.15",
+        "font_size": 14.0
+      },
+      {
+        "text": "task · 提及 2 次 · 已巩固 · 4月22日 08:20",
+        "fg": "ff6c655d",
+        "bg": "fff1ebe4",
+        "ratio": "4.85",
+        "font_size": 12.0
+      },
+      {
+        "text": "成就摘要",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "总成就分 18.5",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "最近解锁",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "七日连学",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "当前推进",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "深度专注 10 次 70%",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "当前激活技能",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "分块推进 92%",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "轻量重排 78%",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "参与状态",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "7日会话 6",
+        "fg": "ff171717",
+        "bg": "ffeaf2e8",
+        "ratio": "15.68",
+        "font_size": 12.0
+      },
+      {
+        "text": "连续 4 天",
+        "fg": "ff171717",
+        "bg": "ffeaf2e8",
+        "ratio": "15.68",
+        "font_size": 12.0
+      },
+      {
+        "text": "最近 4月22日",
+        "fg": "ff171717",
+        "bg": "ffeaf2e8",
+        "ratio": "15.68",
+        "font_size": 12.0
+      },
+      {
+        "text": "前瞻提示",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "你今天后半段更容易被切碎，先把最难的一题压到午前完成。",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "2 次偏离 · 4月22日 09:55",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "执行稳定性 0.84",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "过载风险 0.66",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "荣耀身份",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "星际探索者",
+        "fg": "ff825d49",
+        "bg": "fff8f4ef",
+        "ratio": "5.31",
+        "font_size": 12.0
+      },
+      {
+        "text": "近期高光成就",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "一周坚持",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "普通",
+        "fg": "ffb0bec5",
+        "bg": "fff8f4ef",
+        "ratio": "1.74",
+        "font_size": 12.0
+      },
+      {
+        "text": "个人成长",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 14.0
+      },
+      {
+        "text": "学习档案",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "查看所有科目的冲刺历史、进行中与计划中记录",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "学习资料库",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "查看上传资料、处理进度，并管理知识来源",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "成就",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "查看已解锁的里程碑与荣誉进度",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "光子兑换",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "学习所得的光子，随时可兑换成 Pro 时长",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "海报工坊",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "把成长、计划与灵感做成高质感分享海报",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "我的画像",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "查看系统理解到的学习特征与偏好",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "设置",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 14.0
+      },
+      {
+        "text": "个人信息",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "编辑头像、昵称和基础资料",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "个人偏好",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "管理感官反馈、学习模式与推送偏好",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "我的方式",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "管理私有 Skill、共享与匿名 fork",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "自我认识面板",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "显示过去样本里的判断偏差摘要",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "账户",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 14.0
+      },
+      {
+        "text": "账户与安全",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "查看安全信息、设备与隐私控制",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "记忆控制",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "调整长期记忆与上下文保留策略",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "导出我的数据",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "下载账号、学习与记忆相关数据",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "退出登录",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 14.0
+      },
+      {
+        "text": "退出登录",
+        "fg": "ffa0483e",
+        "bg": "fff8f4ef",
+        "ratio": "5.49",
+        "font_size": 16.0
+      },
+      {
+        "text": "安全退出当前账号",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "注销账户",
+        "fg": "ffa0483e",
+        "bg": "fff8f4ef",
+        "ratio": "5.49",
+        "font_size": 16.0
+      },
+      {
+        "text": "永久移除账号与相关数据",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "驾驶舱",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "星图",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "对话",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "社群",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "我的",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      }
+    ]
+  },
+  {
+    "screen": "C06_login",
+    "state": "default",
+    "scaffold_bg": "fffef7ff",
+    "min_ratio": "4.28",
+    "samples": [
+      {
+        "text": "Sparkle 星火",
+        "fg": "ff66758b",
+        "bg": "fff8f4ef",
+        "ratio": "4.28",
+        "font_size": 24.0
+      },
+      {
+        "text": "期末备考提分，AI 陪你把该拿的分拿回来",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "用户名",
+        "fg": "ff52443c",
+        "bg": "fff8f4ef",
+        "ratio": "8.52",
+        "font_size": 16.0
+      },
+      {
+        "text": "密码",
+        "fg": "ff52443c",
+        "bg": "fff8f4ef",
+        "ratio": "8.52",
+        "font_size": 16.0
+      },
+      {
+        "text": "忘记密码？",
+        "fg": "ff825d49",
+        "bg": "fff8f4ef",
+        "ratio": "5.31",
+        "font_size": 14.0
+      },
+      {
+        "text": "登录",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
+      },
+      {
+        "text": "以访客身份继续",
+        "fg": "ff825d49",
+        "bg": "fff8f4ef",
+        "ratio": "5.31",
+        "font_size": 14.56
+      },
+      {
+        "text": "或",
+        "fg": "ff825d49",
+        "bg": "fff8f4ef",
+        "ratio": "5.31",
+        "font_size": 14.0
+      },
+      {
+        "text": "还没有账号？",
+        "fg": "ff825d49",
+        "bg": "fff8f4ef",
+        "ratio": "5.31",
+        "font_size": 14.56
+      },
+      {
+        "text": "登录即表示你同意",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "用户协议",
+        "fg": "ff825d49",
+        "bg": "fff8f4ef",
+        "ratio": "5.31",
+        "font_size": 14.0
+      },
+      {
+        "text": "和",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "隐私政策",
+        "fg": "ff825d49",
+        "bg": "fff8f4ef",
+        "ratio": "5.31",
+        "font_size": 14.0
+      }
+    ]
+  },
+  {
+    "screen": "C07_persona_onboarding",
+    "state": "default",
+    "scaffold_bg": "fffef7ff",
+    "min_ratio": "4.98",
+    "samples": [
+      {
+        "text": "视",
+        "fg": "ff4f5e76",
+        "bg": "ffe3dfdd",
+        "ratio": "4.98",
+        "font_size": 16.0
+      },
+      {
+        "text": "视觉审查",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天适合保持节奏",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "Aurora · 策略已激活",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "冲刺剩余 7 天，已对齐今日任务",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 11.0
+      },
+      {
+        "text": "今天最值得做",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "今天还没排布",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "距截止 2 天",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "7/22",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "距截止 2 天",
+        "fg": "ff7d5c26",
+        "bg": "fff9f5f0",
+        "ratio": "5.64",
+        "font_size": 12.0
+      },
+      {
+        "text": "安排今天",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
+      },
+      {
+        "text": "我卡住了",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 14.56
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "早上好，今天先从一小步开始，把节奏找回来就很好。",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "加载失败",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "轻触重试",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "今日简报",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天 3 件待办 · 已就绪",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "多目标看板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "所有目标的总览",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "考试冲刺",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "计算机网络 · 5 天后",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "任务面板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今日待办与进度",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "动态",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "通知、洞察、提醒",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "工作区卡片",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "8 张已显示",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "创建任务",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "开始专注",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "查看日历",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "好奇心胶囊",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "输入消息...",
+        "fg": "806c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 16.0
+      },
+      {
+        "text": "驾驶舱",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "星图",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "对话",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "社群",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "我的",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      }
+    ]
+  },
+  {
+    "screen": "C08_errors",
+    "state": "loading",
+    "scaffold_bg": "fffef7ff",
+    "min_ratio": "4.98",
+    "samples": [
+      {
+        "text": "视",
+        "fg": "ff4f5e76",
+        "bg": "ffe3dfdd",
+        "ratio": "4.98",
+        "font_size": 16.0
+      },
+      {
+        "text": "视觉审查",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天适合保持节奏",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "Aurora · 策略已激活",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "冲刺剩余 7 天，已对齐今日任务",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 11.0
+      },
+      {
+        "text": "今天最值得做",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "今天还没排布",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "距截止 2 天",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "7/22",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "距截止 2 天",
+        "fg": "ff7d5c26",
+        "bg": "fff9f5f0",
+        "ratio": "5.64",
+        "font_size": 12.0
+      },
+      {
+        "text": "安排今天",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
+      },
+      {
+        "text": "我卡住了",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 14.56
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "早上好，今天先从一小步开始，把节奏找回来就很好。",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "加载失败",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "轻触重试",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "今日简报",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天 3 件待办 · 已就绪",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "多目标看板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "所有目标的总览",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "考试冲刺",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "计算机网络 · 5 天后",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "任务面板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今日待办与进度",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "动态",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "通知、洞察、提醒",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "工作区卡片",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "8 张已显示",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "创建任务",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "开始专注",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "查看日历",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "好奇心胶囊",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "输入消息...",
+        "fg": "806c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 16.0
+      },
+      {
+        "text": "驾驶舱",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "星图",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "对话",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "社群",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "我的",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "全部",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "数学",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "物理",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "化学",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "生物",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "英语",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "语文",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "离散数学",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "高等数学",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "线性代数",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "概率统计",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "数据结构",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "算法",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "计算机网络",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "操作系统",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "数据库",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "其他",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "错题档案",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 19.0
+      },
+      {
+        "text": "全部",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "待复习",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 14.0
+      },
+      {
+        "text": "添加错题",
+        "fg": "ff171717",
+        "bg": "fff1ebe4",
+        "ratio": "15.15",
+        "font_size": 14.0
+      }
+    ]
+  },
+  {
+    "screen": "C08_errors",
+    "state": "default",
+    "scaffold_bg": "fffef7ff",
+    "min_ratio": "5.17",
+    "samples": [
+      {
+        "text": "全部",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "数学",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "物理",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "化学",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "生物",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "英语",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "语文",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "离散数学",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "高等数学",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "线性代数",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "概率统计",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "数据结构",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "算法",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "计算机网络",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "操作系统",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "数据库",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "其他",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "乘积求导",
+        "fg": "ff52443c",
+        "bg": "fff1ebe4",
+        "ratio": "7.88",
+        "font_size": 12.0
+      },
+      {
+        "text": "若函数 f(x)=x^2 e^x，求 f'(x) 的结果。",
+        "fg": "ff171717",
+        "bg": "fff1ebe4",
+        "ratio": "15.15",
+        "font_size": 14.0
+      },
+      {
+        "text": "巩固中",
+        "fg": "ff7d5c26",
+        "bg": "fff1ebe4",
+        "ratio": "5.17",
+        "font_size": 12.0
+      },
+      {
+        "text": "60%",
+        "fg": "ff52443c",
+        "bg": "fff1ebe4",
+        "ratio": "7.88",
+        "font_size": 12.0
+      },
+      {
+        "text": "复习 2 次",
+        "fg": "ff52443c",
+        "bg": "fff1ebe4",
+        "ratio": "7.88",
+        "font_size": 12.0
+      },
+      {
+        "text": "5天前",
+        "fg": "ff52443c",
+        "bg": "fff1ebe4",
+        "ratio": "7.88",
+        "font_size": 12.0
+      },
+      {
+        "text": "日常表达",
+        "fg": "ff52443c",
+        "bg": "fff1ebe4",
+        "ratio": "7.88",
+        "font_size": 12.0
+      },
+      {
+        "text": "请将 “我最近在尝试建立更稳定的学习节奏” 翻译成更自然的英文。",
+        "fg": "ff171717",
+        "bg": "fff1ebe4",
+        "ratio": "15.15",
+        "font_size": 14.0
+      },
+      {
+        "text": "还在学",
+        "fg": "ff7d5c26",
+        "bg": "fff1ebe4",
+        "ratio": "5.17",
+        "font_size": 12.0
+      },
+      {
+        "text": "40%",
+        "fg": "ff52443c",
+        "bg": "fff1ebe4",
+        "ratio": "7.88",
+        "font_size": 12.0
+      },
+      {
+        "text": "复习 3 次",
+        "fg": "ff52443c",
+        "bg": "fff1ebe4",
+        "ratio": "7.88",
+        "font_size": 12.0
+      },
+      {
+        "text": "09-19",
+        "fg": "ff52443c",
+        "bg": "fff1ebe4",
+        "ratio": "7.88",
+        "font_size": 12.0
+      },
+      {
+        "text": "论证结构",
+        "fg": "ff52443c",
+        "bg": "fff1ebe4",
+        "ratio": "7.88",
+        "font_size": 12.0
+      },
+      {
+        "text": "阅读一段非虚构文本时，作者为什么在第二段突然转向个人经历？",
+        "fg": "ff171717",
+        "bg": "fff1ebe4",
+        "ratio": "15.15",
+        "font_size": 14.0
+      },
+      {
+        "text": "巩固中",
+        "fg": "ff7d5c26",
+        "bg": "fff1ebe4",
+        "ratio": "5.17",
+        "font_size": 12.0
+      },
+      {
+        "text": "70%",
+        "fg": "ff52443c",
+        "bg": "fff1ebe4",
+        "ratio": "7.88",
+        "font_size": 12.0
+      },
+      {
+        "text": "复习 1 次",
+        "fg": "ff52443c",
+        "bg": "fff1ebe4",
+        "ratio": "7.88",
+        "font_size": 12.0
+      },
+      {
+        "text": "3天前",
+        "fg": "ff52443c",
+        "bg": "fff1ebe4",
+        "ratio": "7.88",
+        "font_size": 12.0
+      },
+      {
+        "text": "抽样方法",
+        "fg": "ff52443c",
+        "bg": "fff1ebe4",
+        "ratio": "7.88",
+        "font_size": 12.0
+      },
+      {
+        "text": "如果一项调查样本主要来自同一个宿舍楼层，结论最可能受到什么影响？",
+        "fg": "ff171717",
+        "bg": "fff1ebe4",
+        "ratio": "15.15",
+        "font_size": 14.0
+      },
+      {
+        "text": "巩固中",
+        "fg": "ff7d5c26",
+        "bg": "fff1ebe4",
+        "ratio": "5.17",
+        "font_size": 12.0
+      },
+      {
+        "text": "52%",
+        "fg": "ff52443c",
+        "bg": "fff1ebe4",
+        "ratio": "7.88",
+        "font_size": 12.0
+      },
+      {
+        "text": "复习 2 次",
+        "fg": "ff52443c",
+        "bg": "fff1ebe4",
+        "ratio": "7.88",
+        "font_size": 12.0
+      },
+      {
+        "text": "4天前",
+        "fg": "ff52443c",
+        "bg": "fff1ebe4",
+        "ratio": "7.88",
+        "font_size": 12.0
+      },
+      {
+        "text": "主体与留白",
+        "fg": "ff52443c",
+        "bg": "fff1ebe4",
+        "ratio": "7.88",
+        "font_size": 12.0
+      },
+      {
+        "text": "为什么这张街拍照片看起来“很热闹但没有重点”？",
+        "fg": "ff171717",
+        "bg": "fff1ebe4",
+        "ratio": "15.15",
+        "font_size": 14.0
+      },
+      {
+        "text": "还在学",
+        "fg": "ff7d5c26",
+        "bg": "fff1ebe4",
+        "ratio": "5.17",
+        "font_size": 12.0
+      },
+      {
+        "text": "46%",
+        "fg": "ff52443c",
+        "bg": "fff1ebe4",
+        "ratio": "7.88",
+        "font_size": 12.0
+      },
+      {
+        "text": "复习 1 次",
+        "fg": "ff52443c",
+        "bg": "fff1ebe4",
+        "ratio": "7.88",
+        "font_size": 12.0
+      },
+      {
+        "text": "6天前",
+        "fg": "ff52443c",
+        "bg": "fff1ebe4",
+        "ratio": "7.88",
+        "font_size": 12.0
+      },
+      {
+        "text": "错题档案",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 19.0
+      },
+      {
+        "text": "全部",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "5",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 11.0
+      },
+      {
+        "text": "待复习",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 14.0
+      },
+      {
+        "text": "添加错题",
+        "fg": "ff171717",
+        "bg": "fff1ebe4",
+        "ratio": "15.15",
+        "font_size": 14.0
+      }
+    ]
+  },
+  {
+    "screen": "C09_error_new",
+    "state": "default",
+    "scaffold_bg": "fffef7ff",
+    "min_ratio": "5.24",
+    "samples": [
+      {
+        "text": "记录越完整，AI 越容易定位错误原因并推荐下一次复习时间。",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "选择科目 *",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "全部",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "数学",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "物理",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "化学",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "生物",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "英语",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "语文",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "离散数学",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "高等数学",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "线性代数",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "概率统计",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "数据结构",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "算法",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "计算机网络",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "操作系统",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "数据库",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "其他",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "章节（可选）",
+        "fg": "ff52443c",
+        "bg": "fff8f4ef",
+        "ratio": "8.52",
+        "font_size": 16.0
+      },
+      {
+        "text": "例如：第三章 牛顿运动定律",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 16.0
+      },
+      {
+        "text": "填写后便于按章节筛选复习",
+        "fg": "ff52443c",
+        "bg": "fff8f4ef",
+        "ratio": "8.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "题目图片（可选）",
+        "fg": "ff171717",
+        "bg": "fffcf8f3",
+        "ratio": "16.95",
+        "font_size": 14.0
+      },
+      {
+        "text": "支持拍照后的题目截图或试卷照片。若未填写题干，AI 会优先尝试 OCR 识别图片文字。",
+        "fg": "ff52443c",
+        "bg": "fffcf8f3",
+        "ratio": "8.82",
+        "font_size": 12.0
+      },
+      {
+        "text": "还没有上传题目图片",
+        "fg": "ff52443c",
+        "bg": "ffe7ded4",
+        "ratio": "7.02",
+        "font_size": 14.0
+      },
+      {
+        "text": "上传题目图片",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.0
+      },
+      {
+        "text": "题目内容",
+        "fg": "ff52443c",
+        "bg": "fff8f4ef",
+        "ratio": "8.52",
+        "font_size": 16.0
+      },
+      {
+        "text": "请输入完整的题目内容，或仅上传题目图片...",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 16.0
+      },
+      {
+        "text": "题目文字和题目图片二选一即可，推荐两者都填以提升分析质量",
+        "fg": "ff52443c",
+        "bg": "fff8f4ef",
+        "ratio": "8.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "你的答案",
+        "fg": "ff52443c",
+        "bg": "fff8f4ef",
+        "ratio": "8.52",
+        "font_size": 16.0
+      },
+      {
+        "text": "你当时写的错误答案...",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 16.0
+      },
+      {
+        "text": "添加错题",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 19.0
+      },
+      {
+        "text": "保存",
+        "fg": "ff825d49",
+        "bg": "fff8f4ef",
+        "ratio": "5.31",
+        "font_size": 14.56
+      }
+    ]
+  },
+  {
+    "screen": "C10_goal_new",
+    "state": "default",
+    "scaffold_bg": "fffef7ff",
+    "min_ratio": "5.24",
+    "samples": [
+      {
+        "text": "类型",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "动机",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "时间",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "拆解",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "确认",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "告诉我你想达成什么",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "一句话就好，比如「7天后计网考试基本没学想先别挂」",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 13.0
+      },
+      {
+        "text": "在这里输入",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 16.0
+      },
+      {
+        "text": "让我先看看你的情况",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.0
+      },
+      {
+        "text": "创建目标",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 19.0
+      },
+      {
+        "text": "继续",
+        "fg": "61171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      }
+    ]
+  },
+  {
+    "screen": "C11_plans",
+    "state": "loading",
+    "scaffold_bg": "fffef7ff",
+    "min_ratio": "4.98",
+    "samples": [
+      {
+        "text": "视",
+        "fg": "ff4f5e76",
+        "bg": "ffe3dfdd",
+        "ratio": "4.98",
+        "font_size": 16.0
+      },
+      {
+        "text": "视觉审查",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天适合保持节奏",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "Aurora · 策略已激活",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "冲刺剩余 7 天，已对齐今日任务",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 11.0
+      },
+      {
+        "text": "今天最值得做",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "今天还没排布",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "距截止 2 天",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "7/22",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "距截止 2 天",
+        "fg": "ff7d5c26",
+        "bg": "fff9f5f0",
+        "ratio": "5.64",
+        "font_size": 12.0
+      },
+      {
+        "text": "安排今天",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
+      },
+      {
+        "text": "我卡住了",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 14.56
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "早上好，今天先从一小步开始，把节奏找回来就很好。",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "加载失败",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "轻触重试",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "今日简报",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天 3 件待办 · 已就绪",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "多目标看板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "所有目标的总览",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "考试冲刺",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "计算机网络 · 5 天后",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "任务面板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今日待办与进度",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "动态",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "通知、洞察、提醒",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "工作区卡片",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "8 张已显示",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "创建任务",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "开始专注",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "查看日历",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "好奇心胶囊",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "输入消息...",
+        "fg": "806c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 16.0
+      },
+      {
+        "text": "驾驶舱",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "星图",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "对话",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "社群",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "我的",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "我的冲刺",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 19.0
+      }
+    ]
+  },
+  {
+    "screen": "C11_plans",
+    "state": "default",
+    "scaffold_bg": "fffef7ff",
+    "min_ratio": "2.50",
+    "samples": [
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 24.0
+      },
+      {
+        "text": "把白天的高认知任务、晚间语言复盘和睡前降速动作重新排顺。",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "进度",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "68%",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "口径：服务端按冲刺任务完成比结算",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "10月3日 结束",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "冲刺复盘",
+        "fg": "ff825d49",
+        "bg": "fff8f4ef",
+        "ratio": "5.31",
+        "font_size": 14.56
+      },
+      {
+        "text": "即将解锁！",
+        "fg": "ff171717",
+        "bg": "fff9f1d2",
+        "ratio": "15.78",
+        "font_size": 12.0
+      },
+      {
+        "text": "月度冠军",
+        "fg": "ff171717",
+        "bg": "fff9f1d2",
+        "ratio": "15.78",
+        "font_size": 14.0
+      },
+      {
+        "text": "再3",
+        "fg": "ff958a80",
+        "bg": "fff9f1d2",
+        "ratio": "2.97",
+        "font_size": 12.0
+      },
+      {
+        "text": "90%",
+        "fg": "ff6c655d",
+        "bg": "fff9f1d2",
+        "ratio": "5.05",
+        "font_size": 14.0
+      },
+      {
+        "text": "冲刺成就",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "查看全部",
+        "fg": "ff825d49",
+        "bg": "fff8f4ef",
+        "ratio": "5.31",
+        "font_size": 14.56
+      },
+      {
+        "text": "任务",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 19.0
+      },
+      {
+        "text": "理工课复盘 - 用自己的话讲清楚积分换元",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "Learning",
+        "fg": "ff825d49",
+        "bg": "fff8f4ef",
+        "ratio": "5.31",
+        "font_size": 12.0
+      },
+      {
+        "text": "进行中",
+        "fg": "ff825d49",
+        "bg": "fff8f4ef",
+        "ratio": "5.31",
+        "font_size": 12.0
+      },
+      {
+        "text": "75 分钟",
+        "fg": "ffa49b90",
+        "bg": "fff8f4ef",
+        "ratio": "2.50",
+        "font_size": 12.0
+      },
+      {
+        "text": "4",
+        "fg": "ffa49b90",
+        "bg": "fff8f4ef",
+        "ratio": "2.50",
+        "font_size": 12.0
+      },
+      {
+        "text": "09/26",
+        "fg": "ffa49b90",
+        "bg": "fff8f4ef",
+        "ratio": "2.50",
+        "font_size": 12.0
+      },
+      {
+        "text": "为什么今天选这个？",
+        "fg": "ff171717",
+        "bg": "fff1ebe4",
+        "ratio": "15.15",
+        "font_size": 16.0
+      },
+      {
+        "text": "正在整理推荐依据",
+        "fg": "ff6c655d",
+        "bg": "fff1ebe4",
+        "ratio": "4.85",
+        "font_size": 12.0
+      },
+      {
+        "text": "理工练习 - 统计学抽样误差题组",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "Training",
+        "fg": "ff825d49",
+        "bg": "fff8f4ef",
+        "ratio": "5.31",
+        "font_size": 12.0
+      },
+      {
+        "text": "85 分钟",
+        "fg": "ffa49b90",
+        "bg": "fff8f4ef",
+        "ratio": "2.50",
+        "font_size": 12.0
+      },
+      {
+        "text": "4",
+        "fg": "ffa49b90",
+        "bg": "fff8f4ef",
+        "ratio": "2.50",
+        "font_size": 12.0
+      },
+      {
+        "text": "09/28",
+        "fg": "ffa49b90",
+        "bg": "fff8f4ef",
+        "ratio": "2.50",
+        "font_size": 12.0
+      },
+      {
+        "text": "为什么今天选这个？",
+        "fg": "ff171717",
+        "bg": "fff1ebe4",
+        "ratio": "15.15",
+        "font_size": 16.0
+      },
+      {
+        "text": "正在整理推荐依据",
+        "fg": "ff6c655d",
+        "bg": "fff1ebe4",
+        "ratio": "4.85",
+        "font_size": 12.0
+      },
+      {
+        "text": "理工总结 - 线性代数错题回看",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "Reflection",
+        "fg": "ff48678d",
+        "bg": "fff8f4ef",
+        "ratio": "5.33",
+        "font_size": 12.0
+      },
+      {
+        "text": "已完成",
+        "fg": "ff456e52",
+        "bg": "fff8f4ef",
+        "ratio": "5.32",
+        "font_size": 12.0
+      },
+      {
+        "text": "50 分钟",
+        "fg": "ffa49b90",
+        "bg": "fff8f4ef",
+        "ratio": "2.50",
+        "font_size": 12.0
+      },
+      {
+        "text": "2",
+        "fg": "ffa49b90",
+        "bg": "fff8f4ef",
+        "ratio": "2.50",
+        "font_size": 12.0
+      },
+      {
+        "text": "09/23",
+        "fg": "ffa49b90",
+        "bg": "fff8f4ef",
+        "ratio": "2.50",
+        "font_size": 12.0
+      },
+      {
+        "text": "把总是漏写条件的地方圈出来了，下次先审题再动笔。",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "我的冲刺",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 19.0
+      }
+    ]
+  },
+  {
+    "screen": "C12_review",
+    "state": "default",
+    "scaffold_bg": "fffef7ff",
+    "min_ratio": "5.24",
+    "samples": [
+      {
+        "text": "进度: 0/2",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 14.0
+      },
+      {
+        "text": "0%",
+        "fg": "ff825d49",
+        "bg": "fff8f4ef",
+        "ratio": "5.31",
+        "font_size": 14.0
+      },
+      {
+        "text": "数学",
+        "fg": "ff48678d",
+        "bg": "fff8f4ef",
+        "ratio": "5.33",
+        "font_size": 12.0
+      },
+      {
+        "text": "二次函数",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "题目",
+        "fg": "ff825d49",
+        "bg": "fff8f4ef",
+        "ratio": "5.31",
+        "font_size": 14.0
+      },
+      {
+        "text": "查看答案",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 16.0
+      },
+      {
+        "text": "先思考答案，再点击查看",
+        "fg": "ff52443c",
+        "bg": "fff8f4ef",
+        "ratio": "8.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "今日复习",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 19.0
+      }
+    ]
+  },
+  {
+    "screen": "C13_notification_center",
+    "state": "loading",
+    "scaffold_bg": "fffef7ff",
+    "min_ratio": "4.98",
+    "samples": [
+      {
+        "text": "视",
+        "fg": "ff4f5e76",
+        "bg": "ffe3dfdd",
+        "ratio": "4.98",
+        "font_size": 16.0
+      },
+      {
+        "text": "视觉审查",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天适合保持节奏",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "Aurora · 策略已激活",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "冲刺剩余 7 天，已对齐今日任务",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 11.0
+      },
+      {
+        "text": "今天最值得做",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "今天还没排布",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "距截止 2 天",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff48678d",
+        "bg": "fff9f5f0",
+        "ratio": "5.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "7/22",
+        "fg": "ff6c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "距截止 2 天",
+        "fg": "ff7d5c26",
+        "bg": "fff9f5f0",
+        "ratio": "5.64",
+        "font_size": 12.0
+      },
+      {
+        "text": "安排今天",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
+      },
+      {
+        "text": "我卡住了",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 14.56
+      },
+      {
+        "text": "本周复合学习节奏校准",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 12.0
+      },
+      {
+        "text": "早上好，今天先从一小步开始，把节奏找回来就很好。",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 19.0
+      },
+      {
+        "text": "加载失败",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "轻触重试",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "今日简报",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今天 3 件待办 · 已就绪",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "多目标看板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "所有目标的总览",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "考试冲刺",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "计算机网络 · 5 天后",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "任务面板",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "今日待办与进度",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "动态",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "通知、洞察、提醒",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "工作区卡片",
+        "fg": "ff171717",
+        "bg": "fff9f5f0",
+        "ratio": "16.52",
+        "font_size": 14.0
+      },
+      {
+        "text": "8 张已显示",
+        "fg": "996c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 12.0
+      },
+      {
+        "text": "创建任务",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "开始专注",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "查看日历",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "好奇心胶囊",
+        "fg": "ff825d49",
+        "bg": "fff9f5f0",
+        "ratio": "5.36",
+        "font_size": 12.0
+      },
+      {
+        "text": "输入消息...",
+        "fg": "806c655d",
+        "bg": "fff9f5f0",
+        "ratio": "5.29",
+        "font_size": 16.0
+      },
+      {
+        "text": "驾驶舱",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 12.0
+      },
+      {
+        "text": "星图",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "对话",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "社群",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "我的",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "全部",
+        "fg": "ff6f3714",
+        "bg": "fff0eae3",
+        "ratio": "7.89",
+        "font_size": 12.0
+      },
+      {
+        "text": "未读",
+        "fg": "ff52443c",
+        "bg": "fff0eae3",
+        "ratio": "7.83",
+        "font_size": 12.0
+      },
+      {
+        "text": "已读",
+        "fg": "ff52443c",
+        "bg": "fff0eae3",
+        "ratio": "7.83",
+        "font_size": 12.0
+      },
+      {
+        "text": "所有类型",
+        "fg": "ff6f3714",
+        "bg": "fff0eae3",
+        "ratio": "7.89",
+        "font_size": 12.0
+      },
+      {
+        "text": "系统通知",
+        "fg": "ff52443c",
+        "bg": "fff0eae3",
+        "ratio": "7.83",
+        "font_size": 12.0
+      },
+      {
+        "text": "干预通知",
+        "fg": "ff52443c",
+        "bg": "fff0eae3",
+        "ratio": "7.83",
+        "font_size": 12.0
+      },
+      {
+        "text": "主动提醒",
+        "fg": "ff52443c",
+        "bg": "fff0eae3",
+        "ratio": "7.83",
+        "font_size": 12.0
+      },
+      {
+        "text": "Aurora 确认",
+        "fg": "ff52443c",
+        "bg": "fff0eae3",
+        "ratio": "7.83",
+        "font_size": 12.0
+      },
+      {
+        "text": "暂无通知",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 19.0
+      },
+      {
+        "text": "有新通知时会显示在这里。",
+        "fg": "996c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 14.0
+      },
+      {
+        "text": "通知中心",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 19.0
+      }
+    ]
+  },
+  {
+    "screen": "C13_notification_center",
+    "state": "default",
+    "scaffold_bg": "fffef7ff",
+    "min_ratio": "4.32",
+    "samples": [
+      {
+        "text": "全部",
+        "fg": "ff6f3714",
+        "bg": "fff0eae3",
+        "ratio": "7.89",
+        "font_size": 12.0
+      },
+      {
+        "text": "未读",
+        "fg": "ff52443c",
+        "bg": "fff0eae3",
+        "ratio": "7.83",
+        "font_size": 12.0
+      },
+      {
+        "text": "已读",
+        "fg": "ff52443c",
+        "bg": "fff0eae3",
+        "ratio": "7.83",
+        "font_size": 12.0
+      },
+      {
+        "text": "所有类型",
+        "fg": "ff6f3714",
+        "bg": "fff0eae3",
+        "ratio": "7.89",
+        "font_size": 12.0
+      },
+      {
+        "text": "系统通知",
+        "fg": "ff52443c",
+        "bg": "fff0eae3",
+        "ratio": "7.83",
+        "font_size": 12.0
+      },
+      {
+        "text": "干预通知",
+        "fg": "ff52443c",
+        "bg": "fff0eae3",
+        "ratio": "7.83",
+        "font_size": 12.0
+      },
+      {
+        "text": "主动提醒",
+        "fg": "ff52443c",
+        "bg": "fff0eae3",
+        "ratio": "7.83",
+        "font_size": 12.0
+      },
+      {
+        "text": "Aurora 确认",
+        "fg": "ff52443c",
+        "bg": "fff0eae3",
+        "ratio": "7.83",
+        "font_size": 12.0
+      },
+      {
+        "text": "🏆",
+        "fg": "ff171717",
+        "bg": "ffffdbca",
+        "ratio": "13.86",
+        "font_size": 16.0
+      },
+      {
+        "text": "🏆 解锁新成就",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "恭喜你获得“连续学习7天”成就，节奏感正在慢慢稳定下来。",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 14.0
+      },
+      {
+        "text": "1小时前",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "系统通知",
+        "fg": "ff48678d",
+        "bg": "fff8f4ef",
+        "ratio": "5.33",
+        "font_size": 12.0
+      },
+      {
+        "text": "🔔",
+        "fg": "ff171717",
+        "bg": "ffffdbca",
+        "ratio": "13.86",
+        "font_size": 16.0
+      },
+      {
+        "text": "⏰ 任务提醒",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 16.0
+      },
+      {
+        "text": "你有 1 个任务即将到期：理工课复盘 - 用自己的话讲清楚积分换元",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 14.0
+      },
+      {
+        "text": "3小时前",
+        "fg": "ff6c655d",
+        "bg": "fff8f4ef",
+        "ratio": "5.24",
+        "font_size": 12.0
+      },
+      {
+        "text": "系统通知",
+        "fg": "ff48678d",
+        "bg": "fff8f4ef",
+        "ratio": "5.33",
+        "font_size": 12.0
+      },
+      {
+        "text": "🔔",
+        "fg": "ff171717",
+        "bg": "fff4efe9",
+        "ratio": "15.68",
+        "font_size": 16.0
+      },
+      {
+        "text": "💡 新的学习洞察",
+        "fg": "ff171717",
+        "bg": "ffe7ded4",
+        "ratio": "13.49",
+        "font_size": 16.0
+      },
+      {
+        "text": "发现你在下午适合理工与职业任务，晚上更适合语言复盘与阅读整理",
+        "fg": "ff6c655d",
+        "bg": "ffe7ded4",
+        "ratio": "4.32",
+        "font_size": 14.0
+      },
+      {
+        "text": "6小时前",
+        "fg": "ff6c655d",
+        "bg": "ffe7ded4",
+        "ratio": "4.32",
+        "font_size": 12.0
+      },
+      {
+        "text": "系统通知",
+        "fg": "ff48678d",
+        "bg": "ffe7ded4",
+        "ratio": "4.39",
+        "font_size": 12.0
+      },
+      {
+        "text": "⚠️",
+        "fg": "ff171717",
+        "bg": "fff4efe9",
+        "ratio": "15.68",
+        "font_size": 16.0
+      },
+      {
+        "text": "💬 社群动态",
+        "fg": "ff171717",
+        "bg": "ffe7ded4",
+        "ratio": "13.49",
+        "font_size": 16.0
+      },
+      {
+        "text": "Mori_Creative 在“作品集慢慢长出来”里回复了你的问题",
+        "fg": "ff6c655d",
+        "bg": "ffe7ded4",
+        "ratio": "4.32",
+        "font_size": 14.0
+      },
+      {
+        "text": "1天前",
+        "fg": "ff6c655d",
+        "bg": "ffe7ded4",
+        "ratio": "4.32",
+        "font_size": 12.0
+      },
+      {
+        "text": "干预通知",
+        "fg": "ff7d5c26",
+        "bg": "ffe7ded4",
+        "ratio": "4.60",
+        "font_size": 12.0
+      },
+      {
+        "text": "试试看",
+        "fg": "ff825d49",
+        "bg": "ffe7ded4",
+        "ratio": "4.37",
+        "font_size": 14.56
+      },
+      {
+        "text": "开始",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
+      },
+      {
+        "text": "稍后",
+        "fg": "ff825d49",
+        "bg": "ffe7ded4",
+        "ratio": "4.37",
+        "font_size": 14.56
+      },
+      {
+        "text": "🔔",
+        "fg": "ff171717",
+        "bg": "fff4efe9",
+        "ratio": "15.68",
+        "font_size": 16.0
+      },
+      {
+        "text": "🎯 计划进度",
+        "fg": "ff171717",
+        "bg": "ffe7ded4",
+        "ratio": "13.49",
+        "font_size": 16.0
+      },
+      {
+        "text": "你的“本周复合学习节奏校准”计划已完成 68%，还剩 7 天。",
+        "fg": "ff6c655d",
+        "bg": "ffe7ded4",
+        "ratio": "4.32",
+        "font_size": 14.0
+      },
+      {
+        "text": "1天前",
+        "fg": "ff6c655d",
+        "bg": "ffe7ded4",
+        "ratio": "4.32",
+        "font_size": 12.0
+      },
+      {
+        "text": "系统通知",
+        "fg": "ff48678d",
+        "bg": "ffe7ded4",
+        "ratio": "4.39",
+        "font_size": 12.0
+      },
+      {
+        "text": "⚠️",
+        "fg": "ff171717",
+        "bg": "fff4efe9",
+        "ratio": "15.68",
+        "font_size": 16.0
+      },
+      {
+        "text": "🎁 新认知胶囊",
+        "fg": "ff171717",
+        "bg": "ffe7ded4",
+        "ratio": "13.49",
+        "font_size": 16.0
+      },
+      {
+        "text": "为你生成了一个关于“下一步不够明确为什么会拖延”的深度洞察",
+        "fg": "ff6c655d",
+        "bg": "ffe7ded4",
+        "ratio": "4.32",
+        "font_size": 14.0
+      },
+      {
+        "text": "2天前",
+        "fg": "ff6c655d",
+        "bg": "ffe7ded4",
+        "ratio": "4.32",
+        "font_size": 12.0
+      },
+      {
+        "text": "干预通知",
+        "fg": "ff7d5c26",
+        "bg": "ffe7ded4",
+        "ratio": "4.60",
+        "font_size": 12.0
+      },
+      {
+        "text": "试试看",
+        "fg": "ff825d49",
+        "bg": "ffe7ded4",
+        "ratio": "4.37",
+        "font_size": 14.56
+      },
+      {
+        "text": "开始",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 14.56
+      },
+      {
+        "text": "稍后",
+        "fg": "ff825d49",
+        "bg": "ffe7ded4",
+        "ratio": "4.37",
+        "font_size": 14.56
+      },
+      {
+        "text": "通知中心",
+        "fg": "ff171717",
+        "bg": "fff8f4ef",
+        "ratio": "16.37",
+        "font_size": 19.0
+      },
+      {
+        "text": "3",
+        "fg": "ffffffff",
+        "bg": "ff825d49",
+        "ratio": "5.82",
+        "font_size": 10.0
+      }
+    ]
+  }
+]

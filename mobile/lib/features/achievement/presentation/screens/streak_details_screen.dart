@@ -665,8 +665,11 @@ class _CalendarCell extends StatefulWidget {
   State<_CalendarCell> createState() => _CalendarCellState();
 }
 
+// Q-03（wt401）：入场动画 + 今日脉冲边框各自持一个 controller——今日格子
+// 同时创建两个 ticker，SingleTickerProviderStateMixin 在 debug 构建直接
+// 断言（ErrorWidget 顶掉整格）。改多 ticker mixin（G2 守卫）。
 class _CalendarCellState extends State<_CalendarCell>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _fadeAnimation;
   late final Animation<double> _scaleAnimation;
