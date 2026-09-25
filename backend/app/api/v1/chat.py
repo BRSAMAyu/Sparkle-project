@@ -590,13 +590,27 @@ async def chat_stream(
     """
     流式聊天接口（SSE）
     适合长回复场景，实时展示 LLM 生成内容
+
+    V3-FIX-53：生成器内任何异常都不得静默断流——统一经 `error` 事件下行
+    （客户端可见"本轮失败"），并以 done 帧收束；异常本身 log.exception 落地。
     """
 
     async def event_generator():
+        try:
+            async for frame in _chat_stream_frames():
+                yield frame
+        except Exception:
+            # asyncio.CancelledError 是 BaseException，客户端断连自然穿透。
+            logger.exception("chat stream failed for user {}", current_user.id)
+            yield f"data: {json.dumps({'type': 'error', 'message': '本轮处理失败，请重试'})}\n\n"
+            yield f"data: {json.dumps({'type': 'done'})}\n\n"
+
+    async def _chat_stream_frames():
         tool_executor = ToolExecutor()
         error_handler = AgentErrorHandler()
 
         user_id_uuid = current_user.id
+        session_id_uuid, _ = _normalize_conversation_id(request.conversation_id)
 
         # Build context
         user_context = await get_user_context(
@@ -613,6 +627,15 @@ async def chat_stream(
 
         collected_text_content = ""
         collected_tool_calls_raw = []  # Raw tool calls from LLM (function_call format)
+        announced_tool_ids: set[str] = set()  # V3-FIX-53：已宣布 tool_start 的调用 id
+
+        def _tool_start_frame(tool_call_id: str | None, tool_name: str | None) -> str | None:
+            """每个新 tool call 恰宣布一次 tool_start（首个调用也不例外）。"""
+            if not tool_name or (tool_call_id is not None and tool_call_id in announced_tool_ids):
+                return None
+            if tool_call_id is not None:
+                announced_tool_ids.add(tool_call_id)
+            return f"data: {json.dumps({'type': 'tool_start', 'tool': tool_name})}\n\n"
 
         # Keep track of messages for history
         message_history_for_llm_callback = llm_conversation_history + [
@@ -628,17 +651,14 @@ async def chat_stream(
         ):
             if chunk.type == "text":
                 collected_text_content += chunk.content
-                yield f"data: {json.dumps({'type': 'text', 'content': chunk.content})}\\n\n"
+                yield f"data: {json.dumps({'type': 'text', 'content': chunk.content})}\n\n"
 
             elif chunk.type == "tool_call_chunk":
-                # For now, we only care about the tool_call_end for execution
-                # We can send tool_start event when tool_name is first received
-                if (
-                    chunk.tool_name
-                    and collected_tool_calls_raw
-                    and collected_tool_calls_raw[-1].get("function", {}).get("name") != chunk.tool_name
-                ):
-                    yield f"data: {json.dumps({'type': 'tool_start', 'tool': chunk.tool_name})}\\n\n"
+                # V3-FIX-53：首个工具调用也必须宣布 tool_start（原条件要求
+                # collected_tool_calls_raw 非空，首个调用永远不宣布）。
+                frame = _tool_start_frame(chunk.tool_call_id, chunk.tool_name)
+                if frame is not None:
+                    yield frame
 
                 # Append raw chunks to reconstruct full tool call later
                 if not collected_tool_calls_raw or collected_tool_calls_raw[-1]["id"] != chunk.tool_call_id:
@@ -656,7 +676,10 @@ async def chat_stream(
 
             elif chunk.type == "tool_call_end":
                 # Execute tool once full arguments are received
-                yield f"data: {json.dumps({'type': 'tool_start', 'tool': chunk.tool_name})}\\n\n"
+                # （tool_start 已在 tool_call_chunk 首帧宣布过则不重复）
+                frame = _tool_start_frame(chunk.tool_call_id, chunk.tool_name)
+                if frame is not None:
+                    yield frame
 
                 result = await tool_executor.execute_tool_call(
                     tool_name=chunk.tool_name,
@@ -687,11 +710,11 @@ async def chat_stream(
                         db_session=db,
                     )
 
-                yield f"data: {json.dumps({'type': 'tool_result', 'result': result.model_dump()})}\\n\n"
+                yield f"data: {json.dumps({'type': 'tool_result', 'result': result.model_dump()})}\n\n"
 
                 # If there's a widget, send it separately
                 if result.widget_type:
-                    yield f"data: {json.dumps({'type': 'widget', 'widget_type': result.widget_type, 'widget_data': result.widget_data})}\\n\n"
+                    yield f"data: {json.dumps({'type': 'widget', 'widget_type': result.widget_type, 'widget_data': result.widget_data})}\n\n"
 
                 # If tool was successfully executed, send tool result back to LLM to continue conversation
                 # This requires an extra turn to LLM
@@ -716,7 +739,7 @@ async def chat_stream(
                         conversation_history=message_history_for_llm_callback, tool_results=[result.model_dump()]
                     )
                 final_text = final_llm_response.content
-                yield f"data: {json.dumps({'type': 'text', 'content': final_text})}\\n\n"
+                yield f"data: {json.dumps({'type': 'text', 'content': final_text})}\n\n"
                 collected_text_content += final_text
 
         # If no tool calls were made, just final text from first LLM call
@@ -725,17 +748,20 @@ async def chat_stream(
             pass
 
         # Save message to database after all is done
+        # V3-FIX-53 根因修复：此处原为 save_chat_message(conversation_id=...)
+        # —— 函数签名只收 session_id，每次流式轮收尾必抛 TypeError 打断流
+        # （工具轮此前零 yield → 200+空体；文本轮正文后断尾、无 done、不落库）。
         await save_chat_message(
             db=db,
             user_id=current_user.id,
-            conversation_id=request.conversation_id,
+            session_id=session_id_uuid,
             user_message=request.message,
             assistant_message=collected_text_content,
             # tool_results should be collected during the stream, but simplified here
             tool_results=[],
         )
 
-        yield f"data: {json.dumps({'type': 'done'})}\\n\n"
+        yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 

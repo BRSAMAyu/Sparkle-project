@@ -53767,7 +53767,7 @@
     },
     "/api/v1/chat/stream": {
       "post": {
-        "description": "流式聊天接口（SSE）\n适合长回复场景，实时展示 LLM 生成内容",
+        "description": "流式聊天接口（SSE）\n适合长回复场景，实时展示 LLM 生成内容\n\nV3-FIX-53：生成器内任何异常都不得静默断流——统一经 `error` 事件下行\n（客户端可见\"本轮失败\"），并以 done 帧收束；异常本身 log.exception 落地。",
         "operationId": "chat_stream_api_v1_chat_stream_post",
         "requestBody": {
           "content": {

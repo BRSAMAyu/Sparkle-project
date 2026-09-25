@@ -1625,7 +1625,7 @@ class LLMService:
                 if self._extra_body:
                     request_params["extra_body"] = self._extra_body
 
-                collected_tool_call_chunks = {}
+                collected_tool_call_chunks: dict[Any, dict[str, Any]] = {}
                 usage_data = None
                 _llm_t0 = time.perf_counter()
                 _llm_error: str | None = None
@@ -1669,31 +1669,54 @@ class LLMService:
 
                             if delta.tool_calls:
                                 for tc_chunk in delta.tool_calls:
-                                    tool_call_id = tc_chunk.id
-                                    if tool_call_id not in collected_tool_call_chunks:
-                                        collected_tool_call_chunks[tool_call_id] = {"name": "", "args_str": ""}
-                                    if tc_chunk.function.name:
-                                        collected_tool_call_chunks[tool_call_id]["name"] = tc_chunk.function.name
-                                        yield StreamChunk(type="tool_call_chunk", tool_call_id=tool_call_id, tool_name=tc_chunk.function.name)
-                                    if tc_chunk.function.arguments:
-                                        collected_tool_call_chunks[tool_call_id]["args_str"] += tc_chunk.function.arguments
-                                        yield StreamChunk(type="tool_call_chunk", tool_call_id=tool_call_id, arguments=tc_chunk.function.arguments)
+                                    # V3-FIX-53：OpenAI 流式契约以 `index` 关联同一
+                                    # tool call 的增量；GLM/OpenAI 兼容层的后续增量帧
+                                    # id/name 均为 None、只带 arguments。按 id 关联会把
+                                    # name 与 arguments 拆进不同桶 → tool_call_end 永不
+                                    # 产出 → 工具轮静默断流（wt394 GJ04/08/09/10/15/20）。
+                                    _tc_index = getattr(tc_chunk, "index", None)
+                                    key: Any = _tc_index if _tc_index is not None else (tc_chunk.id or "")
+                                    entry = collected_tool_call_chunks.setdefault(
+                                        key, {"name": "", "args_str": "", "id": ""}
+                                    )
+                                    if tc_chunk.id and not entry["id"]:
+                                        entry["id"] = tc_chunk.id
+                                    # 下发给路由层的 tool_call_id 必须全程稳定非空
+                                    # （路由层按它聚合并触发 tool_start/tool 执行）。
+                                    stable_id = entry["id"] or f"tool_call_{key}"
+                                    # 防御：部分 provider 在仅有 id 的帧上 function=None
+                                    fn = getattr(tc_chunk, "function", None)
+                                    if fn is None:
+                                        continue
+                                    if fn.name:
+                                        entry["name"] = fn.name
+                                        yield StreamChunk(type="tool_call_chunk", tool_call_id=stable_id, tool_name=fn.name)
+                                    if fn.arguments:
+                                        entry["args_str"] += fn.arguments
+                                        yield StreamChunk(type="tool_call_chunk", tool_call_id=stable_id, arguments=fn.arguments)
                 except Exception as exc:
                     _llm_error = type(exc).__name__
                     raise
 
-                for tool_call_id, data in collected_tool_call_chunks.items():
-                    if data["name"] and data["args_str"]:
-                        try:
-                            full_arguments = json.loads(data["args_str"])
-                            yield StreamChunk(
-                                type="tool_call_end",
-                                tool_call_id=tool_call_id,
-                                tool_name=data["name"],
-                                full_arguments=full_arguments
-                            )
-                        except json.JSONDecodeError:
-                            logger.error(f"Failed to decode tool arguments for {tool_call_id}: {data['args_str']}")
+                for _tc_key, data in collected_tool_call_chunks.items():
+                    if not data["name"]:
+                        # 无法归属工具名的增量（provider 异常帧）：显式告警，
+                        # 不再静默——这是工具轮"零事件收场"的观测锚点。
+                        logger.warning(f"tool_call stream incomplete (no function name), dropped: index={_tc_key}")
+                        continue
+                    stable_id = data["id"] or f"tool_call_{_tc_key}"
+                    try:
+                        # 无参工具的合法形态：arguments 为空 → 按 {} 解析
+                        full_arguments = json.loads(data["args_str"] or "{}")
+                    except json.JSONDecodeError:
+                        logger.error(f"Failed to decode tool arguments for {stable_id}: {data['args_str']}")
+                        continue
+                    yield StreamChunk(
+                        type="tool_call_end",
+                        tool_call_id=stable_id,
+                        tool_name=data["name"],
+                        full_arguments=full_arguments
+                    )
 
                 if usage_data:
                     span.set_attribute("llm.usage.prompt_tokens", usage_data.prompt_tokens)

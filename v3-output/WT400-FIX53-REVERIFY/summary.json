@@ -1,0 +1,284 @@
+{
+  "card": "Q-02",
+  "env": "local",
+  "gateway": "http://127.0.0.1:8081",
+  "engine": "http://127.0.0.1:8001",
+  "generated_at": "2026-09-25T16:21:51.868801+00:00",
+  "totals": {
+    "journeys": 6,
+    "pass": 3,
+    "fail": 3,
+    "restricted": 0
+  },
+  "core_gjs": {
+    "GJ04": "PASS",
+    "GJ08": "FAIL",
+    "GJ09": "PASS"
+  },
+  "journeys": [
+    {
+      "gj": "GJ04",
+      "title": "「我卡住了」 → one clarification → rescope",
+      "verdict": "PASS",
+      "steps_total": 8,
+      "steps_ok": 8,
+      "core": true,
+      "three_end_applicable": [
+        "android",
+        "web",
+        "macos"
+      ],
+      "notes": {
+        "chat_attempts": {
+          "stuck_plea_real_llm": [
+            {
+              "attempt": 1,
+              "status": 200,
+              "bytes": 5454,
+              "ms": 6864.2
+            }
+          ],
+          "after_rescope_real_llm": [
+            {
+              "attempt": 1,
+              "status": 200,
+              "bytes": 121200,
+              "ms": 4735.4
+            }
+          ]
+        },
+        "chat1_len": 431,
+        "chat2_len": 72,
+        "wall_ms": 22723.9,
+        "three_end_applicable": [
+          "android",
+          "web",
+          "macos"
+        ],
+        "client_segment": "chat 输入/IME 契约 U-09 C5 钉死；键盘 IME 视觉属系统渲染（允许差异已登记）",
+        "restricted": "",
+        "core": true
+      }
+    },
+    {
+      "gj": "GJ08",
+      "title": "Correction → memory scope → next-session adaptation",
+      "verdict": "FAIL",
+      "steps_total": 6,
+      "steps_ok": 5,
+      "core": true,
+      "three_end_applicable": [
+        "android",
+        "web",
+        "macos"
+      ],
+      "notes": {
+        "chat_attempts": {
+          "establish_context_real_llm": [
+            {
+              "attempt": 1,
+              "status": 200,
+              "bytes": 4790,
+              "ms": 5656.5
+            }
+          ],
+          "next_session_real_llm": [
+            {
+              "attempt": 1,
+              "status": 200,
+              "bytes": 3653,
+              "ms": 3733.1
+            }
+          ]
+        },
+        "episodic_count": 0,
+        "c1_len": 387,
+        "c2_len": 0,
+        "scope_correction_http": false,
+        "service_lock": "纠正→下轮适配机制面由 wt388 A-06 GJ08 17 用例变异红证钉死；本驱动钉 HTTP 面真实链路",
+        "wall_ms": 10333.5,
+        "three_end_applicable": [
+          "android",
+          "web",
+          "macos"
+        ],
+        "client_segment": "回执四动作卡三端",
+        "restricted": "",
+        "core": true
+      }
+    },
+    {
+      "gj": "GJ09",
+      "title": "Memory delete → cache invalidation → no reuse",
+      "verdict": "PASS",
+      "steps_total": 5,
+      "steps_ok": 5,
+      "core": true,
+      "three_end_applicable": [
+        "android",
+        "web",
+        "macos"
+      ],
+      "notes": {
+        "chat_attempts": {
+          "store_memory_real_llm": [
+            {
+              "attempt": 1,
+              "status": 200,
+              "bytes": 2679,
+              "ms": 4305.4
+            }
+          ],
+          "no_reuse_check_real_llm": [
+            {
+              "attempt": 1,
+              "status": 200,
+              "bytes": 1414,
+              "ms": 4786.8
+            }
+          ]
+        },
+        "episodic_count_after_store": 0,
+        "episodic_count_after_delete": 0,
+        "deleted_via_http": false,
+        "cache_layer": "删除→缓存失效→不复用的机制面（distilled strategy cache + 召回排除）由 service 层随行锁 backend/tests/golden/test_q02_golden_service_layer.py 钉死（sqlite 隔离真服务直驱）",
+        "wall_ms": 10076.1,
+        "three_end_applicable": [
+          "android",
+          "web",
+          "macos"
+        ],
+        "client_segment": "memory 面板三端（U-09 矩阵 #26-30）",
+        "restricted": "",
+        "core": true
+      }
+    },
+    {
+      "gj": "GJ10",
+      "title": "RAG material → cited answer/action → document delete",
+      "verdict": "FAIL",
+      "steps_total": 14,
+      "steps_ok": 14,
+      "core": false,
+      "three_end_applicable": [
+        "android",
+        "web",
+        "macos"
+      ],
+      "notes": {
+        "chat_attempts": {
+          "cited_answer_real_llm": [
+            {
+              "attempt": 1,
+              "status": 200,
+              "bytes": 3088,
+              "ms": 9292.2
+            }
+          ],
+          "post_delete_check_real_llm": [
+            {
+              "attempt": 1,
+              "status": 200,
+              "bytes": 2060,
+              "ms": 8307.0
+            }
+          ]
+        },
+        "cited_before_delete": false,
+        "deleted_ok": false,
+        "honest_note": "RAG 引用/删除链 HTTP 面未全绿，引用真实观测值记录；判定器语义层证据见 X-10（零 LLM 锁）",
+        "wall_ms": 31401.5,
+        "three_end_applicable": [
+          "android",
+          "web",
+          "macos"
+        ],
+        "client_segment": "文档上传/引用块三端；文件选择器为平台能力（允许差异）",
+        "restricted": "",
+        "core": false
+      }
+    },
+    {
+      "gj": "GJ15",
+      "title": "Conflict: explicit new preference vs old observation",
+      "verdict": "FAIL",
+      "steps_total": 5,
+      "steps_ok": 4,
+      "core": false,
+      "three_end_applicable": [
+        "android",
+        "web",
+        "macos"
+      ],
+      "notes": {
+        "chat_attempts": {
+          "old_observation_real_llm": [
+            {
+              "attempt": 1,
+              "status": 200,
+              "bytes": 42692,
+              "ms": 4856.3
+            }
+          ],
+          "explicit_new_pref_real_llm": [
+            {
+              "attempt": 1,
+              "status": 200,
+              "bytes": 3359,
+              "ms": 7201.2
+            }
+          ]
+        },
+        "conflict_count": 0,
+        "prefs_shape": "{'items': []}",
+        "arbitrated": false,
+        "service_lock": "显式 vs 观察冲突解决语义由 memory_conflict_resolver 服务测试钉死；HTTP 冲突浮现依赖真实记忆管线节奏，如实记录",
+        "wall_ms": 12793.4,
+        "three_end_applicable": [
+          "android",
+          "web",
+          "macos"
+        ],
+        "client_segment": "冲突呈现/仲裁卡三端",
+        "restricted": "",
+        "core": false
+      }
+    },
+    {
+      "gj": "GJ20",
+      "title": "Full competition-quality demo path cold start",
+      "verdict": "PASS",
+      "steps_total": 13,
+      "steps_ok": 13,
+      "core": false,
+      "three_end_applicable": [
+        "android",
+        "web",
+        "macos"
+      ],
+      "notes": {
+        "chat_attempts": {
+          "cold_chat_real_llm": [
+            {
+              "attempt": 1,
+              "status": 200,
+              "bytes": 4128,
+              "ms": 5760.3
+            }
+          ]
+        },
+        "chat_chars": 35,
+        "wall_ms": 24101.7,
+        "three_end_applicable": [
+          "android",
+          "web",
+          "macos"
+        ],
+        "client_segment": "冷启动全链三端；视觉段见 U-09 矩阵",
+        "restricted": "",
+        "core": false
+      }
+    }
+  ],
+  "visual_evidence": "headless API 级 trace（raw/*.jsonl）；视频/截图经 U-09 45 行矩阵采集清单转 HUMAN_INBOX，不伪造"
+}

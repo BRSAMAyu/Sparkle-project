@@ -186,7 +186,10 @@ class GetSituationBriefTool(BaseTool):
         builder = SituationBriefBuilder()
         # build 是 async（situation_brief.SituationBriefBuilder.build）——原未
         # await 即取 .to_dict()，运行时必 AttributeError，本工具从未成功返回。
-        brief = await builder.build(
+        # V3-FIX-53：await 优先级低于属性访问——`await builder.build(...).to_dict()`
+        # 等价于 `await (…coroutine…).to_dict()`，运行时必 AttributeError（wt349
+        # 的 await 修复实际未生效，本工具从未成功返回过）。须先 await 再 to_dict。
+        brief = (await builder.build(
             user_context_payload=user_context_payload if isinstance(user_context_payload, dict) else None,
             plan_context=(
                 runtime_context.get("plan_context") if isinstance(runtime_context.get("plan_context"), dict) else None
@@ -222,7 +225,7 @@ class GetSituationBriefTool(BaseTool):
                 if isinstance(runtime_context.get("adaptation_records"), list)
                 else None
             ),
-        ).to_dict()
+        )).to_dict()
 
         return ToolResult(
             success=True,
