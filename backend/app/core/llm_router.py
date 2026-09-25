@@ -106,6 +106,24 @@ def reset_request_user_tier(token: Token) -> None:
     _REQUEST_USER_TIER.reset(token)
 
 
+def _adaptive_reorder_allowed(reasoning_mode: str | None) -> bool:
+    """wt380 Tier 塌缩②：显式 tier 信号存在时不做自适应候选重排。
+
+    E-08 实证：samples>=8 的持久化启发式会把多 tier 候选链（策略链/
+    balanced 链含 FAST 兜底）的显式偏好头稳定翻到 cheap/fast 模型（bench
+    窗口 reorder 日志 90 次），deep/pro 意图的质量上限被 fast 车道封顶。
+    重排只允许作用于无明确信号的默认流量：
+    - 请求档位 pro（付费全能力，tier 语义即"不被降档"）→ 禁止重排；
+    - 显式 reasoning_mode=deep（深推理偏好链是 E-02 决策权威）→ 禁止重排。
+    balanced / fast / 未标注流量不受影响，E-07 三维反馈语义保留。
+    """
+    if get_request_user_tier() == "pro":
+        return False
+    if reasoning_mode and LLMRouter._normalize_reasoning_mode(reasoning_mode) == "deep":
+        return False
+    return True
+
+
 # 能力层排序（高→低，数值越小越重）。免费层钳制只作用于这些 tier；
 # FREE*/GLM_BATCH/SPECIALIST 等非直出能力层保持原路由。
 _CAPABILITY_TIER_RANK: dict[ModelTier, int] = {
@@ -1210,7 +1228,9 @@ class LLMRouter:
         # E-07 健康秩：probation（恢复观察）降权，健康优先；秩内保持策略原序
         candidates = self._order_candidates_by_health(candidates)
         # E-07 三维自适应反馈：候选链内稳定重排（冷启动零介入，不跨 tier）
-        candidates = adaptive_routing_engine.reorder_candidates(candidates)
+        # wt380 Tier 塌缩②：显式 deep/pro 信号不做启发式重排（只作用默认流量）
+        if _adaptive_reorder_allowed(reasoning_mode):
+            candidates = adaptive_routing_engine.reorder_candidates(candidates)
 
         # 优先使用第一个候选
         model_key = candidates[0]
@@ -1443,8 +1463,10 @@ class LLMRouter:
             return None
 
         # E-07 健康秩 + 三维自适应反馈（与 select_model 同一语义：链内重排，不跨层）
+        # wt380 Tier 塌缩②：显式 deep/pro 信号不做启发式重排（只作用默认流量）
         candidates = self._order_candidates_by_health(candidates)
-        candidates = adaptive_routing_engine.reorder_candidates(candidates)
+        if _adaptive_reorder_allowed(reasoning_mode):
+            candidates = adaptive_routing_engine.reorder_candidates(candidates)
 
         model_key = candidates[0]
         model_config = self._available_models.get(model_key, self._available_models["default"])

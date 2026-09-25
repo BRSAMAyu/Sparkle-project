@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import contextvars
 import logging
 import time
 import weakref
@@ -127,10 +128,18 @@ class BackgroundTaskManager:
         result_future: asyncio.Future = runtime.loop.create_future()
         self._ensure_queue_worker(runtime)
 
+        # wt380 Tier 塌缩③：捕获 spawn 调用方 context。内层任务由长驻 queue
+        # worker 创建，若不显式传 context，任务会运行在 worker 创建时刻的
+        # 上下文快照里——请求级 ContextVar（llm_router._REQUEST_USER_TIER 等）
+        # 不随请求传播，主生成/子代理全部读到陈旧档位（E-08 实证：跨请求
+        # free_tier_downgrade 漂移、pro 车道被塌缩到 fast）。此处恢复与
+        # asyncio.create_task 原生一致的 context 继承语义。
+        caller_context = contextvars.copy_context()
+
         # Higher priority value means earlier execution
         runtime.queue_seq += 1
         await runtime.queue.put(
-            (-priority, runtime.queue_seq, task_id, task_name, user_id, coro, stats, result_future)
+            (-priority, runtime.queue_seq, task_id, task_name, user_id, coro, stats, result_future, caller_context)
         )
 
         # R2-01: 内层任务句柄 —— worker 创建受管任务后回填，
@@ -181,7 +190,7 @@ class BackgroundTaskManager:
             except asyncio.CancelledError:
                 break
 
-            priority, seq, task_id, task_name, user_id, coro, stats, result_future = item
+            priority, seq, task_id, task_name, user_id, coro, stats, result_future, caller_context = item
             caller_gone_waiter: asyncio.Task | None = None
             try:
                 # R2-01: 调用方在出队前就放弃（result_future 已取消，或包装任务
@@ -198,7 +207,8 @@ class BackgroundTaskManager:
                     task_name=task_name,
                     user_id=user_id,
                     coro=coro,
-                    stats=stats
+                    stats=stats,
+                    caller_context=caller_context,
                 )
                 # R2-01: 回填内层句柄，让包装任务的 cancel() 可直达内层协程
                 if inner_handle is not None:
@@ -262,7 +272,8 @@ class BackgroundTaskManager:
         task_name: str,
         user_id: str | None,
         coro: Coroutine[Any, Any, Any],
-        stats: TaskStats
+        stats: TaskStats,
+        caller_context: contextvars.Context | None = None,
     ) -> asyncio.Task:
         async def _wrapped():
             async with runtime.semaphore:
@@ -311,7 +322,12 @@ class BackgroundTaskManager:
                     # 重新抛出,让调用者可以选择处理
                     raise
 
-        task = asyncio.create_task(_wrapped(), name=task_id)
+        # wt380：以 spawn 调用方的 context 创建内层任务（None 时退化为
+        # create_task 默认行为=worker 当前上下文，兼容直接调用面）
+        if caller_context is not None:
+            task = asyncio.create_task(_wrapped(), name=task_id, context=caller_context)
+        else:
+            task = asyncio.create_task(_wrapped(), name=task_id)
         runtime.tasks[task_id] = task
 
         # 任务完成时清理

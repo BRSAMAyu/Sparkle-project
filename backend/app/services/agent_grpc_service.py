@@ -273,6 +273,11 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         V3-FIX-02 后权益不再由 flame_level 派生），
         此处只消费、不改网关；extra_context.user_tier（free/pro）可显式覆盖，
         供网关未来透传更细分层而无需改 proto。
+
+        wt380 Tier 塌缩①：extra_context 是 google.protobuf.Struct，键值由
+        客户端/网关逐字写入，但经 protojson 往返（或上游 MessageToDict 再
+        回填）会变成 camelCase（userTier）——只读单一形态即死键（E-08 实证
+        pro 覆盖永不生效）。两形态都读，free 覆盖同样不被绕过。
         """
         try:
             tier = "free"
@@ -280,7 +285,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 tier = "pro"
             if request.HasField("extra_context"):
                 extra = MessageToDict(request.extra_context)
-                raw = str(extra.get("user_tier") or "").strip().lower()
+                raw = str(extra.get("user_tier") or extra.get("userTier") or "").strip().lower()
                 if raw in {"free", "pro", "premium", "paid"}:
                     tier = "free" if raw == "free" else "pro"
             return tier
