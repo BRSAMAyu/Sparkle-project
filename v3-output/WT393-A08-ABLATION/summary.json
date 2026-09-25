@@ -1,0 +1,3186 @@
+{
+  "generated_at": "2026-09-25T14:29:35.402306+00:00",
+  "git_sha": "b9bc60ae",
+  "spec": "A-08 aurora longitudinal/ablation (wt393)",
+  "arms": [
+    "full",
+    "no_memory",
+    "no_experience",
+    "fixed_policy"
+  ],
+  "population": [
+    "p01_experience_reinforce",
+    "p02_experience_hysteresis",
+    "p03_explicit_difficulty",
+    "p04_ambiguous_weak",
+    "p05_correction_loop",
+    "p06_structural_gap",
+    "p07_plan_drift_entry",
+    "p08_skill_repeat",
+    "p09_choice_feedback",
+    "p10_quiet_then_tooling"
+  ],
+  "summaries": {
+    "full": {
+      "arm": "full",
+      "spec_version": "aurora_ablation_spec.v1",
+      "metrics_rules_version": "aurora_ablation_metrics.v1",
+      "records_total": 84,
+      "stuck_sessions": 39,
+      "control_sessions": 25,
+      "episodes_total": 20,
+      "episodes_resolved": 13,
+      "episodes_failed": 7,
+      "stuck_accuracy": 0.65,
+      "sessions_to_resolution_mean": 1.3846,
+      "sessions_to_resolution_max": 3,
+      "allocation_match_followed_mean": 0.3205,
+      "allocation_match_journey_surface_mean": 0.2436,
+      "allocation_match_chat_surface_mean": 0.619,
+      "followed_wrong_decisions": 24,
+      "control_intrusions": 21,
+      "control_intrusion_rate": 0.84,
+      "uncertain_acts": 21,
+      "questions_total": 0,
+      "questions_per_episode": 0.0,
+      "ask_precision": null,
+      "cost": {
+        "engine_call_sessions": 103,
+        "chat_turns": 69,
+        "journey_starts": 62,
+        "questions": 0,
+        "sessions_consumed": 39,
+        "sessions_per_resolved_episode": 3.0
+      },
+      "utility": -16.2,
+      "experience": {
+        "patch_reordered_turns": 15,
+        "patch_ids_seen": 7
+      },
+      "per_persona": {
+        "p01_experience_reinforce": {
+          "episodes": 2,
+          "resolved": 2,
+          "stuck_accuracy": 1.0,
+          "questions": 0,
+          "control_intrusions": 3
+        },
+        "p02_experience_hysteresis": {
+          "episodes": 2,
+          "resolved": 1,
+          "stuck_accuracy": 0.5,
+          "questions": 0,
+          "control_intrusions": 2
+        },
+        "p03_explicit_difficulty": {
+          "episodes": 2,
+          "resolved": 1,
+          "stuck_accuracy": 0.5,
+          "questions": 0,
+          "control_intrusions": 2
+        },
+        "p04_ambiguous_weak": {
+          "episodes": 2,
+          "resolved": 1,
+          "stuck_accuracy": 0.5,
+          "questions": 0,
+          "control_intrusions": 2
+        },
+        "p05_correction_loop": {
+          "episodes": 2,
+          "resolved": 2,
+          "stuck_accuracy": 1.0,
+          "questions": 0,
+          "control_intrusions": 1
+        },
+        "p06_structural_gap": {
+          "episodes": 2,
+          "resolved": 1,
+          "stuck_accuracy": 0.5,
+          "questions": 0,
+          "control_intrusions": 2
+        },
+        "p07_plan_drift_entry": {
+          "episodes": 2,
+          "resolved": 0,
+          "stuck_accuracy": 0.0,
+          "questions": 0,
+          "control_intrusions": 2
+        },
+        "p08_skill_repeat": {
+          "episodes": 2,
+          "resolved": 2,
+          "stuck_accuracy": 1.0,
+          "questions": 0,
+          "control_intrusions": 3
+        },
+        "p09_choice_feedback": {
+          "episodes": 2,
+          "resolved": 2,
+          "stuck_accuracy": 1.0,
+          "questions": 0,
+          "control_intrusions": 3
+        },
+        "p10_quiet_then_tooling": {
+          "episodes": 2,
+          "resolved": 1,
+          "stuck_accuracy": 0.5,
+          "questions": 0,
+          "control_intrusions": 1
+        }
+      },
+      "invariants": {
+        "fixed_arm_zero_engine_calls": null,
+        "budget_respected": true,
+        "resolution_requires_match": true
+      }
+    },
+    "no_memory": {
+      "arm": "no_memory",
+      "spec_version": "aurora_ablation_spec.v1",
+      "metrics_rules_version": "aurora_ablation_metrics.v1",
+      "records_total": 84,
+      "stuck_sessions": 39,
+      "control_sessions": 25,
+      "episodes_total": 20,
+      "episodes_resolved": 11,
+      "episodes_failed": 9,
+      "stuck_accuracy": 0.55,
+      "sessions_to_resolution_mean": 1.0909,
+      "sessions_to_resolution_max": 2,
+      "allocation_match_followed_mean": 0.2821,
+      "allocation_match_journey_surface_mean": 0.1282,
+      "allocation_match_chat_surface_mean": 0.6304,
+      "followed_wrong_decisions": 27,
+      "control_intrusions": 21,
+      "control_intrusion_rate": 0.84,
+      "uncertain_acts": 28,
+      "questions_total": 0,
+      "questions_per_episode": 0.0,
+      "ask_precision": null,
+      "cost": {
+        "engine_call_sessions": 103,
+        "chat_turns": 69,
+        "journey_starts": 75,
+        "questions": 0,
+        "sessions_consumed": 39,
+        "sessions_per_resolved_episode": 3.5455
+      },
+      "utility": -21.4,
+      "experience": {
+        "patch_reordered_turns": 15,
+        "patch_ids_seen": 6
+      },
+      "per_persona": {
+        "p01_experience_reinforce": {
+          "episodes": 2,
+          "resolved": 2,
+          "stuck_accuracy": 1.0,
+          "questions": 0,
+          "control_intrusions": 3
+        },
+        "p02_experience_hysteresis": {
+          "episodes": 2,
+          "resolved": 0,
+          "stuck_accuracy": 0.0,
+          "questions": 0,
+          "control_intrusions": 2
+        },
+        "p03_explicit_difficulty": {
+          "episodes": 2,
+          "resolved": 1,
+          "stuck_accuracy": 0.5,
+          "questions": 0,
+          "control_intrusions": 2
+        },
+        "p04_ambiguous_weak": {
+          "episodes": 2,
+          "resolved": 0,
+          "stuck_accuracy": 0.0,
+          "questions": 0,
+          "control_intrusions": 2
+        },
+        "p05_correction_loop": {
+          "episodes": 2,
+          "resolved": 1,
+          "stuck_accuracy": 0.5,
+          "questions": 0,
+          "control_intrusions": 1
+        },
+        "p06_structural_gap": {
+          "episodes": 2,
+          "resolved": 1,
+          "stuck_accuracy": 0.5,
+          "questions": 0,
+          "control_intrusions": 2
+        },
+        "p07_plan_drift_entry": {
+          "episodes": 2,
+          "resolved": 1,
+          "stuck_accuracy": 0.5,
+          "questions": 0,
+          "control_intrusions": 2
+        },
+        "p08_skill_repeat": {
+          "episodes": 2,
+          "resolved": 2,
+          "stuck_accuracy": 1.0,
+          "questions": 0,
+          "control_intrusions": 3
+        },
+        "p09_choice_feedback": {
+          "episodes": 2,
+          "resolved": 2,
+          "stuck_accuracy": 1.0,
+          "questions": 0,
+          "control_intrusions": 3
+        },
+        "p10_quiet_then_tooling": {
+          "episodes": 2,
+          "resolved": 1,
+          "stuck_accuracy": 0.5,
+          "questions": 0,
+          "control_intrusions": 1
+        }
+      },
+      "invariants": {
+        "fixed_arm_zero_engine_calls": null,
+        "budget_respected": true,
+        "resolution_requires_match": true,
+        "no_memory_zero_corrections": true
+      }
+    },
+    "no_experience": {
+      "arm": "no_experience",
+      "spec_version": "aurora_ablation_spec.v1",
+      "metrics_rules_version": "aurora_ablation_metrics.v1",
+      "records_total": 84,
+      "stuck_sessions": 39,
+      "control_sessions": 25,
+      "episodes_total": 20,
+      "episodes_resolved": 13,
+      "episodes_failed": 7,
+      "stuck_accuracy": 0.65,
+      "sessions_to_resolution_mean": 1.3846,
+      "sessions_to_resolution_max": 3,
+      "allocation_match_followed_mean": 0.3205,
+      "allocation_match_journey_surface_mean": 0.2436,
+      "allocation_match_chat_surface_mean": 0.8667,
+      "followed_wrong_decisions": 24,
+      "control_intrusions": 25,
+      "control_intrusion_rate": 1.0,
+      "uncertain_acts": 22,
+      "questions_total": 3,
+      "questions_per_episode": 0.15,
+      "ask_precision": 0.3333,
+      "cost": {
+        "engine_call_sessions": 103,
+        "chat_turns": 69,
+        "journey_starts": 62,
+        "questions": 3,
+        "sessions_consumed": 39,
+        "sessions_per_resolved_episode": 3.0
+      },
+      "utility": -19.05,
+      "experience": {
+        "patch_reordered_turns": 0,
+        "patch_ids_seen": 0
+      },
+      "per_persona": {
+        "p01_experience_reinforce": {
+          "episodes": 2,
+          "resolved": 2,
+          "stuck_accuracy": 1.0,
+          "questions": 0,
+          "control_intrusions": 3
+        },
+        "p02_experience_hysteresis": {
+          "episodes": 2,
+          "resolved": 1,
+          "stuck_accuracy": 0.5,
+          "questions": 0,
+          "control_intrusions": 2
+        },
+        "p03_explicit_difficulty": {
+          "episodes": 2,
+          "resolved": 1,
+          "stuck_accuracy": 0.5,
+          "questions": 0,
+          "control_intrusions": 2
+        },
+        "p04_ambiguous_weak": {
+          "episodes": 2,
+          "resolved": 1,
+          "stuck_accuracy": 0.5,
+          "questions": 0,
+          "control_intrusions": 2
+        },
+        "p05_correction_loop": {
+          "episodes": 2,
+          "resolved": 2,
+          "stuck_accuracy": 1.0,
+          "questions": 2,
+          "control_intrusions": 2
+        },
+        "p06_structural_gap": {
+          "episodes": 2,
+          "resolved": 1,
+          "stuck_accuracy": 0.5,
+          "questions": 0,
+          "control_intrusions": 2
+        },
+        "p07_plan_drift_entry": {
+          "episodes": 2,
+          "resolved": 0,
+          "stuck_accuracy": 0.0,
+          "questions": 1,
+          "control_intrusions": 2
+        },
+        "p08_skill_repeat": {
+          "episodes": 2,
+          "resolved": 2,
+          "stuck_accuracy": 1.0,
+          "questions": 0,
+          "control_intrusions": 3
+        },
+        "p09_choice_feedback": {
+          "episodes": 2,
+          "resolved": 2,
+          "stuck_accuracy": 1.0,
+          "questions": 0,
+          "control_intrusions": 3
+        },
+        "p10_quiet_then_tooling": {
+          "episodes": 2,
+          "resolved": 1,
+          "stuck_accuracy": 0.5,
+          "questions": 0,
+          "control_intrusions": 4
+        }
+      },
+      "invariants": {
+        "fixed_arm_zero_engine_calls": null,
+        "budget_respected": true,
+        "resolution_requires_match": true,
+        "no_experience_zero_patches": true,
+        "no_experience_zero_spine": true
+      }
+    },
+    "fixed_policy": {
+      "arm": "fixed_policy",
+      "spec_version": "aurora_ablation_spec.v1",
+      "metrics_rules_version": "aurora_ablation_metrics.v1",
+      "records_total": 96,
+      "stuck_sessions": 51,
+      "control_sessions": 25,
+      "episodes_total": 20,
+      "episodes_resolved": 6,
+      "episodes_failed": 14,
+      "stuck_accuracy": 0.3,
+      "sessions_to_resolution_mean": 1.5,
+      "sessions_to_resolution_max": 2,
+      "allocation_match_followed_mean": 0.1176,
+      "allocation_match_journey_surface_mean": null,
+      "allocation_match_chat_surface_mean": null,
+      "followed_wrong_decisions": 42,
+      "control_intrusions": 0,
+      "control_intrusion_rate": 0.0,
+      "uncertain_acts": 0,
+      "questions_total": 0,
+      "questions_per_episode": 0.0,
+      "ask_precision": null,
+      "cost": {
+        "engine_call_sessions": 0,
+        "chat_turns": 0,
+        "journey_starts": 0,
+        "questions": 0,
+        "sessions_consumed": 51,
+        "sessions_per_resolved_episode": 8.5
+      },
+      "utility": -24.8,
+      "experience": {
+        "patch_reordered_turns": 0,
+        "patch_ids_seen": 0
+      },
+      "per_persona": {
+        "p01_experience_reinforce": {
+          "episodes": 2,
+          "resolved": 2,
+          "stuck_accuracy": 1.0,
+          "questions": 0,
+          "control_intrusions": 0
+        },
+        "p02_experience_hysteresis": {
+          "episodes": 2,
+          "resolved": 2,
+          "stuck_accuracy": 1.0,
+          "questions": 0,
+          "control_intrusions": 0
+        },
+        "p03_explicit_difficulty": {
+          "episodes": 2,
+          "resolved": 0,
+          "stuck_accuracy": 0.0,
+          "questions": 0,
+          "control_intrusions": 0
+        },
+        "p04_ambiguous_weak": {
+          "episodes": 2,
+          "resolved": 0,
+          "stuck_accuracy": 0.0,
+          "questions": 0,
+          "control_intrusions": 0
+        },
+        "p05_correction_loop": {
+          "episodes": 2,
+          "resolved": 0,
+          "stuck_accuracy": 0.0,
+          "questions": 0,
+          "control_intrusions": 0
+        },
+        "p06_structural_gap": {
+          "episodes": 2,
+          "resolved": 0,
+          "stuck_accuracy": 0.0,
+          "questions": 0,
+          "control_intrusions": 0
+        },
+        "p07_plan_drift_entry": {
+          "episodes": 2,
+          "resolved": 0,
+          "stuck_accuracy": 0.0,
+          "questions": 0,
+          "control_intrusions": 0
+        },
+        "p08_skill_repeat": {
+          "episodes": 2,
+          "resolved": 2,
+          "stuck_accuracy": 1.0,
+          "questions": 0,
+          "control_intrusions": 0
+        },
+        "p09_choice_feedback": {
+          "episodes": 2,
+          "resolved": 0,
+          "stuck_accuracy": 0.0,
+          "questions": 0,
+          "control_intrusions": 0
+        },
+        "p10_quiet_then_tooling": {
+          "episodes": 2,
+          "resolved": 0,
+          "stuck_accuracy": 0.0,
+          "questions": 0,
+          "control_intrusions": 0
+        }
+      },
+      "invariants": {
+        "fixed_arm_zero_engine_calls": true,
+        "budget_respected": true,
+        "resolution_requires_match": true
+      }
+    }
+  },
+  "comparison": [
+    {
+      "metric": "stuck accuracy（预算内收敛率）",
+      "key": "stuck_accuracy",
+      "full": 0.65,
+      "no_memory": 0.55,
+      "no_experience": 0.65,
+      "fixed_policy": 0.3,
+      "delta_vs_full_fixed": -0.35
+    },
+    {
+      "metric": "收敛会话数均值",
+      "key": "sessions_to_resolution_mean",
+      "full": 1.3846,
+      "no_memory": 1.0909,
+      "no_experience": 1.3846,
+      "fixed_policy": 1.5,
+      "delta_vs_full_fixed": 0.1154
+    },
+    {
+      "metric": "被跟随决策匹配分",
+      "key": "allocation_match_followed_mean",
+      "full": 0.3205,
+      "no_memory": 0.2821,
+      "no_experience": 0.3205,
+      "fixed_policy": 0.1176,
+      "delta_vs_full_fixed": -0.2029
+    },
+    {
+      "metric": "旅程面匹配分",
+      "key": "allocation_match_journey_surface_mean",
+      "full": 0.2436,
+      "no_memory": 0.1282,
+      "no_experience": 0.2436,
+      "fixed_policy": null,
+      "delta_vs_full_fixed": null
+    },
+    {
+      "metric": "chat 面匹配分",
+      "key": "allocation_match_chat_surface_mean",
+      "full": 0.619,
+      "no_memory": 0.6304,
+      "no_experience": 0.8667,
+      "fixed_policy": null,
+      "delta_vs_full_fixed": null
+    },
+    {
+      "metric": "对照侵入率",
+      "key": "control_intrusion_rate",
+      "full": 0.84,
+      "no_memory": 0.84,
+      "no_experience": 1.0,
+      "fixed_policy": 0.0,
+      "delta_vs_full_fixed": -0.84
+    },
+    {
+      "metric": "每段问句数",
+      "key": "questions_per_episode",
+      "full": 0.0,
+      "no_memory": 0.0,
+      "no_experience": 0.15,
+      "fixed_policy": 0.0,
+      "delta_vs_full_fixed": 0.0
+    },
+    {
+      "metric": "问后收敛命中率",
+      "key": "ask_precision",
+      "full": null,
+      "no_memory": null,
+      "no_experience": 0.3333,
+      "fixed_policy": null,
+      "delta_vs_full_fixed": null
+    },
+    {
+      "metric": "不确定行动数",
+      "key": "uncertain_acts",
+      "full": 21,
+      "no_memory": 28,
+      "no_experience": 22,
+      "fixed_policy": 0,
+      "delta_vs_full_fixed": -21
+    },
+    {
+      "metric": "效用（冻结权重）",
+      "key": "utility",
+      "full": -16.2,
+      "no_memory": -21.4,
+      "no_experience": -19.05,
+      "fixed_policy": -24.8,
+      "delta_vs_full_fixed": -8.6
+    },
+    {
+      "metric": "每解决段会话成本",
+      "key": "sessions_per_resolved_episode",
+      "full": null,
+      "no_memory": null,
+      "no_experience": null,
+      "fixed_policy": null,
+      "delta_vs_full_fixed": null
+    }
+  ],
+  "counterexamples": {
+    "full": {
+      "b1_tie_acts": [
+        {
+          "persona": "p01_experience_reinforce",
+          "day": 0,
+          "truth": "knowledge",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "这里有点看不懂"
+        },
+        {
+          "persona": "p02_experience_hysteresis",
+          "day": 2,
+          "truth": "knowledge",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "没学过这个，证明看不懂"
+        },
+        {
+          "persona": "p02_experience_hysteresis",
+          "day": 4,
+          "truth": "skill",
+          "journey_type": "energy",
+          "intervention": "pause",
+          "utterance": "看懂了但不会"
+        },
+        {
+          "persona": "p02_experience_hysteresis",
+          "day": 5,
+          "truth": "skill",
+          "journey_type": "feedback",
+          "intervention": "review",
+          "utterance": "概念都懂但不会做，一做题就不会"
+        },
+        {
+          "persona": "p02_experience_hysteresis",
+          "day": 6,
+          "truth": "skill",
+          "journey_type": "knowledge",
+          "intervention": "explain",
+          "utterance": "概念都懂但不会做，一做题就不会"
+        },
+        {
+          "persona": "p04_ambiguous_weak",
+          "day": 7,
+          "truth": "energy",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "太累了，状态不好"
+        },
+        {
+          "persona": "p05_correction_loop",
+          "day": 0,
+          "truth": "goal_drift",
+          "journey_type": "choice",
+          "intervention": "reflect",
+          "utterance": "有点坚持不下去"
+        },
+        {
+          "persona": "p05_correction_loop",
+          "day": 6,
+          "truth": "clarity",
+          "journey_type": "choice",
+          "intervention": "reflect",
+          "utterance": "这个要求有点模糊"
+        },
+        {
+          "persona": "p05_correction_loop",
+          "day": 7,
+          "truth": "clarity",
+          "journey_type": "clarity",
+          "intervention": "clarify",
+          "utterance": "这个要求有点模糊"
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 0,
+          "truth": "time",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "完全没时间，挤不出时间"
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 1,
+          "truth": "time",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "完全没时间，挤不出时间"
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 2,
+          "truth": "time",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "完全没时间，挤不出时间"
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 4,
+          "truth": "dependency",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "在等导师回复，卡在等"
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 0,
+          "truth": "plan_drift",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "计划有点乱"
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 1,
+          "truth": "plan_drift",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "计划赶不上变化，原计划不行了"
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 2,
+          "truth": "plan_drift",
+          "journey_type": "difficulty",
+          "intervention": "split",
+          "utterance": "计划赶不上变化，原计划不行了"
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 6,
+          "truth": "entry",
+          "journey_type": "choice",
+          "intervention": "reflect",
+          "utterance": "完全不知道怎么开始"
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 7,
+          "truth": "entry",
+          "journey_type": "clarity",
+          "intervention": "clarify",
+          "utterance": "完全不知道怎么开始"
+        },
+        {
+          "persona": "p09_choice_feedback",
+          "day": 0,
+          "truth": "choice",
+          "journey_type": "choice",
+          "intervention": "reflect",
+          "utterance": "选择太多，不知道先做哪个"
+        },
+        {
+          "persona": "p10_quiet_then_tooling",
+          "day": 0,
+          "truth": "goal_drift",
+          "journey_type": "choice",
+          "intervention": "reflect",
+          "utterance": "目标变了，其实更想做别的"
+        },
+        {
+          "persona": "p10_quiet_then_tooling",
+          "day": 8,
+          "truth": "tooling",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "环境报错，配置搞不定"
+        },
+        {
+          "persona": "p10_quiet_then_tooling",
+          "day": 9,
+          "truth": "tooling",
+          "journey_type": "difficulty",
+          "intervention": "split",
+          "utterance": "环境报错，配置搞不定"
+        },
+        {
+          "persona": "p10_quiet_then_tooling",
+          "day": 10,
+          "truth": "tooling",
+          "journey_type": "energy",
+          "intervention": "pause",
+          "utterance": "环境报错，配置搞不定"
+        }
+      ],
+      "correction_cycles": [
+        {
+          "episode_id": "p02_experience_hysteresis:d0:knowledge",
+          "truth": "knowledge",
+          "walk": [
+            {
+              "day": 0,
+              "journey_type": "skill",
+              "corrected": "skill"
+            },
+            {
+              "day": 1,
+              "journey_type": "difficulty",
+              "corrected": "difficulty"
+            },
+            {
+              "day": 2,
+              "journey_type": "dependency",
+              "corrected": "dependency"
+            }
+          ]
+        },
+        {
+          "episode_id": "p02_experience_hysteresis:d4:skill",
+          "truth": "skill",
+          "walk": [
+            {
+              "day": 4,
+              "journey_type": "energy",
+              "corrected": "energy"
+            },
+            {
+              "day": 5,
+              "journey_type": "feedback",
+              "corrected": "feedback"
+            }
+          ]
+        },
+        {
+          "episode_id": "p04_ambiguous_weak:d5:energy",
+          "truth": "energy",
+          "walk": [
+            {
+              "day": 5,
+              "journey_type": "skill",
+              "corrected": "skill"
+            },
+            {
+              "day": 6,
+              "journey_type": "difficulty",
+              "corrected": "difficulty"
+            },
+            {
+              "day": 7,
+              "journey_type": "dependency",
+              "corrected": "dependency"
+            }
+          ]
+        },
+        {
+          "episode_id": "p07_plan_drift_entry:d0:plan_drift",
+          "truth": "plan_drift",
+          "walk": [
+            {
+              "day": 1,
+              "journey_type": "dependency",
+              "corrected": "dependency"
+            },
+            {
+              "day": 2,
+              "journey_type": "difficulty",
+              "corrected": "difficulty"
+            }
+          ]
+        },
+        {
+          "episode_id": "p07_plan_drift_entry:d5:entry",
+          "truth": "entry",
+          "walk": [
+            {
+              "day": 5,
+              "journey_type": "skill",
+              "corrected": "skill"
+            },
+            {
+              "day": 6,
+              "journey_type": "choice",
+              "corrected": "choice"
+            },
+            {
+              "day": 7,
+              "journey_type": "clarity",
+              "corrected": "clarity"
+            }
+          ]
+        },
+        {
+          "episode_id": "p10_quiet_then_tooling:d8:tooling",
+          "truth": "tooling",
+          "walk": [
+            {
+              "day": 8,
+              "journey_type": "dependency",
+              "corrected": "dependency"
+            },
+            {
+              "day": 9,
+              "journey_type": "difficulty",
+              "corrected": "difficulty"
+            },
+            {
+              "day": 10,
+              "journey_type": "energy",
+              "corrected": "energy"
+            }
+          ]
+        }
+      ],
+      "control_intrusions": [
+        {
+          "persona": "p01_experience_reinforce",
+          "day": 2,
+          "utterance": null,
+          "mode": "fresh",
+          "question": false,
+          "selected": "explain",
+          "spine_keys": [
+            "knowledge_transfer"
+          ]
+        },
+        {
+          "persona": "p01_experience_reinforce",
+          "day": 5,
+          "utterance": null,
+          "mode": "fresh",
+          "question": false,
+          "selected": "explain",
+          "spine_keys": [
+            "knowledge_transfer"
+          ]
+        },
+        {
+          "persona": "p01_experience_reinforce",
+          "day": 8,
+          "utterance": null,
+          "mode": "fresh",
+          "question": false,
+          "selected": "explain",
+          "spine_keys": [
+            "knowledge_transfer"
+          ]
+        },
+        {
+          "persona": "p02_experience_hysteresis",
+          "day": 7,
+          "utterance": null,
+          "mode": "fresh",
+          "question": false,
+          "selected": "explain",
+          "spine_keys": [
+            "knowledge_transfer"
+          ]
+        },
+        {
+          "persona": "p02_experience_hysteresis",
+          "day": 10,
+          "utterance": null,
+          "mode": "fresh",
+          "question": false,
+          "selected": "explain",
+          "spine_keys": [
+            "knowledge_transfer"
+          ]
+        },
+        {
+          "persona": "p03_explicit_difficulty",
+          "day": 2,
+          "utterance": null,
+          "mode": "fresh",
+          "question": false,
+          "selected": "practice",
+          "spine_keys": [
+            "task_granularity_fit"
+          ]
+        },
+        {
+          "persona": "p03_explicit_difficulty",
+          "day": 8,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": [
+            "affective_pressure",
+            "task_granularity_fit"
+          ]
+        },
+        {
+          "persona": "p04_ambiguous_weak",
+          "day": 9,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": [
+            "affective_pressure",
+            "task_granularity_fit"
+          ]
+        },
+        {
+          "persona": "p04_ambiguous_weak",
+          "day": 12,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": [
+            "affective_pressure",
+            "task_granularity_fit"
+          ]
+        },
+        {
+          "persona": "p05_correction_loop",
+          "day": 10,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": [
+            "growth_momentum",
+            "task_granularity_fit"
+          ]
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 8,
+          "utterance": null,
+          "mode": "fresh",
+          "question": false,
+          "selected": "explain",
+          "spine_keys": [
+            "goal_mode",
+            "material_utilization"
+          ]
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 11,
+          "utterance": null,
+          "mode": "fresh",
+          "question": false,
+          "selected": "explain",
+          "spine_keys": [
+            "goal_mode",
+            "material_utilization"
+          ]
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 9,
+          "utterance": null,
+          "mode": "fresh",
+          "question": false,
+          "selected": "practice",
+          "spine_keys": [
+            "task_granularity_fit"
+          ]
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 12,
+          "utterance": null,
+          "mode": "fresh",
+          "question": false,
+          "selected": "practice",
+          "spine_keys": [
+            "task_granularity_fit"
+          ]
+        },
+        {
+          "persona": "p08_skill_repeat",
+          "day": 3,
+          "utterance": null,
+          "mode": "fresh",
+          "question": false,
+          "selected": "practice",
+          "spine_keys": [
+            "knowledge_transfer"
+          ]
+        },
+        {
+          "persona": "p08_skill_repeat",
+          "day": 9,
+          "utterance": null,
+          "mode": "fresh",
+          "question": false,
+          "selected": "practice",
+          "spine_keys": [
+            "knowledge_transfer"
+          ]
+        },
+        {
+          "persona": "p08_skill_repeat",
+          "day": 12,
+          "utterance": null,
+          "mode": "fresh",
+          "question": false,
+          "selected": "practice",
+          "spine_keys": [
+            "knowledge_transfer"
+          ]
+        },
+        {
+          "persona": "p09_choice_feedback",
+          "day": 6,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": [
+            "growth_momentum",
+            "recall_needed"
+          ]
+        },
+        {
+          "persona": "p09_choice_feedback",
+          "day": 9,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": [
+            "growth_momentum",
+            "recall_needed"
+          ]
+        },
+        {
+          "persona": "p09_choice_feedback",
+          "day": 12,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": [
+            "growth_momentum",
+            "recall_needed"
+          ]
+        },
+        {
+          "persona": "p10_quiet_then_tooling",
+          "day": 12,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": [
+            "growth_momentum",
+            "task_granularity_fit"
+          ]
+        }
+      ],
+      "chat_structural_no_action": [
+        {
+          "persona": "p03_explicit_difficulty",
+          "day": 5,
+          "truth": "energy",
+          "diagnosed": "energy",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p03_explicit_difficulty",
+          "day": 6,
+          "truth": "energy",
+          "diagnosed": "energy",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p03_explicit_difficulty",
+          "day": 7,
+          "truth": "energy",
+          "diagnosed": "energy",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p04_ambiguous_weak",
+          "day": 5,
+          "truth": "energy",
+          "diagnosed": "energy",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p04_ambiguous_weak",
+          "day": 6,
+          "truth": "energy",
+          "diagnosed": "energy",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p04_ambiguous_weak",
+          "day": 7,
+          "truth": "energy",
+          "diagnosed": "energy",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p05_correction_loop",
+          "day": 0,
+          "truth": "goal_drift",
+          "diagnosed": "goal_drift",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 0,
+          "truth": "time",
+          "diagnosed": "time",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 1,
+          "truth": "time",
+          "diagnosed": "time",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 2,
+          "truth": "time",
+          "diagnosed": "time",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 4,
+          "truth": "dependency",
+          "diagnosed": "dependency",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 1,
+          "truth": "plan_drift",
+          "diagnosed": "plan_drift",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 2,
+          "truth": "plan_drift",
+          "diagnosed": "plan_drift",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 5,
+          "truth": "entry",
+          "diagnosed": "entry",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 6,
+          "truth": "entry",
+          "diagnosed": "entry",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 7,
+          "truth": "entry",
+          "diagnosed": "entry",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p09_choice_feedback",
+          "day": 0,
+          "truth": "choice",
+          "diagnosed": "choice",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p10_quiet_then_tooling",
+          "day": 0,
+          "truth": "goal_drift",
+          "diagnosed": "goal_drift",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        }
+      ],
+      "budget_failures": [
+        {
+          "episode_id": "p02_experience_hysteresis:d0:knowledge",
+          "truth": "knowledge",
+          "attempts": 3,
+          "decisions": [
+            {
+              "day": 0,
+              "intervention": "practice",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 1,
+              "intervention": "split",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 2,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            }
+          ]
+        },
+        {
+          "episode_id": "p03_explicit_difficulty:d5:energy",
+          "truth": "energy",
+          "attempts": 3,
+          "decisions": [
+            {
+              "day": 5,
+              "intervention": "practice",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 6,
+              "intervention": "practice",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 7,
+              "intervention": "practice",
+              "match_class": "wrong",
+              "surface": "journey"
+            }
+          ]
+        },
+        {
+          "episode_id": "p04_ambiguous_weak:d5:energy",
+          "truth": "energy",
+          "attempts": 3,
+          "decisions": [
+            {
+              "day": 5,
+              "intervention": "practice",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 6,
+              "intervention": "split",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 7,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            }
+          ]
+        },
+        {
+          "episode_id": "p06_structural_gap:d0:time",
+          "truth": "time",
+          "attempts": 3,
+          "decisions": [
+            {
+              "day": 0,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 1,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 2,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            }
+          ]
+        },
+        {
+          "episode_id": "p07_plan_drift_entry:d0:plan_drift",
+          "truth": "plan_drift",
+          "attempts": 3,
+          "decisions": [
+            {
+              "day": 0,
+              "intervention": "practice",
+              "match_class": "wrong",
+              "surface": "chat"
+            },
+            {
+              "day": 1,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 2,
+              "intervention": "split",
+              "match_class": "wrong",
+              "surface": "journey"
+            }
+          ]
+        },
+        {
+          "episode_id": "p07_plan_drift_entry:d5:entry",
+          "truth": "entry",
+          "attempts": 3,
+          "decisions": [
+            {
+              "day": 5,
+              "intervention": "practice",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 6,
+              "intervention": "reflect",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 7,
+              "intervention": "clarify",
+              "match_class": "wrong",
+              "surface": "journey"
+            }
+          ]
+        },
+        {
+          "episode_id": "p10_quiet_then_tooling:d8:tooling",
+          "truth": "tooling",
+          "attempts": 3,
+          "decisions": [
+            {
+              "day": 8,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 9,
+              "intervention": "split",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 10,
+              "intervention": "pause",
+              "match_class": "wrong",
+              "surface": "journey"
+            }
+          ]
+        }
+      ]
+    },
+    "no_memory": {
+      "b1_tie_acts": [
+        {
+          "persona": "p01_experience_reinforce",
+          "day": 0,
+          "truth": "knowledge",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "这里有点看不懂"
+        },
+        {
+          "persona": "p01_experience_reinforce",
+          "day": 3,
+          "truth": "knowledge",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "这里有点看不懂"
+        },
+        {
+          "persona": "p02_experience_hysteresis",
+          "day": 0,
+          "truth": "knowledge",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "没学过这个，证明看不懂"
+        },
+        {
+          "persona": "p02_experience_hysteresis",
+          "day": 1,
+          "truth": "knowledge",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "没学过这个，证明看不懂"
+        },
+        {
+          "persona": "p02_experience_hysteresis",
+          "day": 2,
+          "truth": "knowledge",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "没学过这个，证明看不懂"
+        },
+        {
+          "persona": "p02_experience_hysteresis",
+          "day": 4,
+          "truth": "skill",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "看懂了但不会"
+        },
+        {
+          "persona": "p02_experience_hysteresis",
+          "day": 5,
+          "truth": "skill",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "概念都懂但不会做，一做题就不会"
+        },
+        {
+          "persona": "p02_experience_hysteresis",
+          "day": 6,
+          "truth": "skill",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "概念都懂但不会做，一做题就不会"
+        },
+        {
+          "persona": "p03_explicit_difficulty",
+          "day": 0,
+          "truth": "difficulty",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "太难了，超出我的水平"
+        },
+        {
+          "persona": "p03_explicit_difficulty",
+          "day": 1,
+          "truth": "difficulty",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "太难了，超出我的水平"
+        },
+        {
+          "persona": "p03_explicit_difficulty",
+          "day": 5,
+          "truth": "energy",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "太累了，状态不好"
+        },
+        {
+          "persona": "p03_explicit_difficulty",
+          "day": 6,
+          "truth": "energy",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "太累了，状态不好"
+        },
+        {
+          "persona": "p03_explicit_difficulty",
+          "day": 7,
+          "truth": "energy",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "太累了，状态不好"
+        },
+        {
+          "persona": "p04_ambiguous_weak",
+          "day": 0,
+          "truth": "difficulty",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "做不下去"
+        },
+        {
+          "persona": "p04_ambiguous_weak",
+          "day": 1,
+          "truth": "difficulty",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "做不下去"
+        },
+        {
+          "persona": "p04_ambiguous_weak",
+          "day": 2,
+          "truth": "difficulty",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "太难了，超出我的水平"
+        },
+        {
+          "persona": "p04_ambiguous_weak",
+          "day": 7,
+          "truth": "energy",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "太累了，状态不好"
+        },
+        {
+          "persona": "p05_correction_loop",
+          "day": 0,
+          "truth": "goal_drift",
+          "journey_type": "choice",
+          "intervention": "reflect",
+          "utterance": "有点坚持不下去"
+        },
+        {
+          "persona": "p05_correction_loop",
+          "day": 6,
+          "truth": "clarity",
+          "journey_type": "choice",
+          "intervention": "reflect",
+          "utterance": "这个要求有点模糊"
+        },
+        {
+          "persona": "p05_correction_loop",
+          "day": 7,
+          "truth": "clarity",
+          "journey_type": "choice",
+          "intervention": "reflect",
+          "utterance": "这个要求有点模糊"
+        },
+        {
+          "persona": "p05_correction_loop",
+          "day": 8,
+          "truth": "clarity",
+          "journey_type": "choice",
+          "intervention": "reflect",
+          "utterance": "不清楚标准，不知道要交什么"
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 0,
+          "truth": "time",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "完全没时间，挤不出时间"
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 1,
+          "truth": "time",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "完全没时间，挤不出时间"
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 2,
+          "truth": "time",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "完全没时间，挤不出时间"
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 4,
+          "truth": "dependency",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "在等导师回复，卡在等"
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 0,
+          "truth": "plan_drift",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "计划有点乱"
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 1,
+          "truth": "plan_drift",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "计划赶不上变化，原计划不行了"
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 2,
+          "truth": "plan_drift",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "计划赶不上变化，原计划不行了"
+        },
+        {
+          "persona": "p08_skill_repeat",
+          "day": 0,
+          "truth": "skill",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "看懂了但不会"
+        },
+        {
+          "persona": "p08_skill_repeat",
+          "day": 5,
+          "truth": "skill",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "看懂了但不会"
+        },
+        {
+          "persona": "p09_choice_feedback",
+          "day": 0,
+          "truth": "choice",
+          "journey_type": "choice",
+          "intervention": "reflect",
+          "utterance": "选择太多，不知道先做哪个"
+        },
+        {
+          "persona": "p09_choice_feedback",
+          "day": 3,
+          "truth": "feedback",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "不知道对不对，没人给反馈"
+        },
+        {
+          "persona": "p10_quiet_then_tooling",
+          "day": 0,
+          "truth": "goal_drift",
+          "journey_type": "choice",
+          "intervention": "reflect",
+          "utterance": "目标变了，其实更想做别的"
+        },
+        {
+          "persona": "p10_quiet_then_tooling",
+          "day": 8,
+          "truth": "tooling",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "环境报错，配置搞不定"
+        },
+        {
+          "persona": "p10_quiet_then_tooling",
+          "day": 9,
+          "truth": "tooling",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "环境报错，配置搞不定"
+        },
+        {
+          "persona": "p10_quiet_then_tooling",
+          "day": 10,
+          "truth": "tooling",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "环境报错，配置搞不定"
+        }
+      ],
+      "correction_cycles": [],
+      "control_intrusions": [
+        {
+          "persona": "p01_experience_reinforce",
+          "day": 2,
+          "utterance": null,
+          "mode": "fresh",
+          "question": false,
+          "selected": "explain",
+          "spine_keys": [
+            "knowledge_transfer"
+          ]
+        },
+        {
+          "persona": "p01_experience_reinforce",
+          "day": 5,
+          "utterance": null,
+          "mode": "fresh",
+          "question": false,
+          "selected": "explain",
+          "spine_keys": [
+            "knowledge_transfer"
+          ]
+        },
+        {
+          "persona": "p01_experience_reinforce",
+          "day": 8,
+          "utterance": null,
+          "mode": "fresh",
+          "question": false,
+          "selected": "explain",
+          "spine_keys": [
+            "knowledge_transfer"
+          ]
+        },
+        {
+          "persona": "p02_experience_hysteresis",
+          "day": 7,
+          "utterance": null,
+          "mode": "fresh",
+          "question": false,
+          "selected": "practice",
+          "spine_keys": [
+            "knowledge_transfer"
+          ]
+        },
+        {
+          "persona": "p02_experience_hysteresis",
+          "day": 10,
+          "utterance": null,
+          "mode": "fresh",
+          "question": false,
+          "selected": "practice",
+          "spine_keys": [
+            "knowledge_transfer"
+          ]
+        },
+        {
+          "persona": "p03_explicit_difficulty",
+          "day": 2,
+          "utterance": null,
+          "mode": "fresh",
+          "question": false,
+          "selected": "practice",
+          "spine_keys": [
+            "task_granularity_fit"
+          ]
+        },
+        {
+          "persona": "p03_explicit_difficulty",
+          "day": 8,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": [
+            "affective_pressure",
+            "task_granularity_fit"
+          ]
+        },
+        {
+          "persona": "p04_ambiguous_weak",
+          "day": 9,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": [
+            "affective_pressure",
+            "task_granularity_fit"
+          ]
+        },
+        {
+          "persona": "p04_ambiguous_weak",
+          "day": 12,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": [
+            "affective_pressure",
+            "task_granularity_fit"
+          ]
+        },
+        {
+          "persona": "p05_correction_loop",
+          "day": 10,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": [
+            "growth_momentum",
+            "task_granularity_fit"
+          ]
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 8,
+          "utterance": null,
+          "mode": "fresh",
+          "question": false,
+          "selected": "explain",
+          "spine_keys": [
+            "goal_mode",
+            "material_utilization"
+          ]
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 11,
+          "utterance": null,
+          "mode": "fresh",
+          "question": false,
+          "selected": "explain",
+          "spine_keys": [
+            "goal_mode",
+            "material_utilization"
+          ]
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 9,
+          "utterance": null,
+          "mode": "fresh",
+          "question": false,
+          "selected": "practice",
+          "spine_keys": [
+            "task_granularity_fit"
+          ]
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 12,
+          "utterance": null,
+          "mode": "fresh",
+          "question": false,
+          "selected": "practice",
+          "spine_keys": [
+            "task_granularity_fit"
+          ]
+        },
+        {
+          "persona": "p08_skill_repeat",
+          "day": 3,
+          "utterance": null,
+          "mode": "fresh",
+          "question": false,
+          "selected": "practice",
+          "spine_keys": [
+            "knowledge_transfer"
+          ]
+        },
+        {
+          "persona": "p08_skill_repeat",
+          "day": 9,
+          "utterance": null,
+          "mode": "fresh",
+          "question": false,
+          "selected": "practice",
+          "spine_keys": [
+            "knowledge_transfer"
+          ]
+        },
+        {
+          "persona": "p08_skill_repeat",
+          "day": 12,
+          "utterance": null,
+          "mode": "fresh",
+          "question": false,
+          "selected": "practice",
+          "spine_keys": [
+            "knowledge_transfer"
+          ]
+        },
+        {
+          "persona": "p09_choice_feedback",
+          "day": 6,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": [
+            "growth_momentum",
+            "recall_needed"
+          ]
+        },
+        {
+          "persona": "p09_choice_feedback",
+          "day": 9,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": [
+            "growth_momentum",
+            "recall_needed"
+          ]
+        },
+        {
+          "persona": "p09_choice_feedback",
+          "day": 12,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": [
+            "growth_momentum",
+            "recall_needed"
+          ]
+        },
+        {
+          "persona": "p10_quiet_then_tooling",
+          "day": 12,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": [
+            "growth_momentum",
+            "task_granularity_fit"
+          ]
+        }
+      ],
+      "chat_structural_no_action": [
+        {
+          "persona": "p03_explicit_difficulty",
+          "day": 5,
+          "truth": "energy",
+          "diagnosed": "energy",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p03_explicit_difficulty",
+          "day": 6,
+          "truth": "energy",
+          "diagnosed": "energy",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p03_explicit_difficulty",
+          "day": 7,
+          "truth": "energy",
+          "diagnosed": "energy",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p04_ambiguous_weak",
+          "day": 5,
+          "truth": "energy",
+          "diagnosed": "energy",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p04_ambiguous_weak",
+          "day": 6,
+          "truth": "energy",
+          "diagnosed": "energy",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p04_ambiguous_weak",
+          "day": 7,
+          "truth": "energy",
+          "diagnosed": "energy",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p05_correction_loop",
+          "day": 0,
+          "truth": "goal_drift",
+          "diagnosed": "goal_drift",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 0,
+          "truth": "time",
+          "diagnosed": "time",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 1,
+          "truth": "time",
+          "diagnosed": "time",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 2,
+          "truth": "time",
+          "diagnosed": "time",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 4,
+          "truth": "dependency",
+          "diagnosed": "dependency",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 1,
+          "truth": "plan_drift",
+          "diagnosed": "plan_drift",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 2,
+          "truth": "plan_drift",
+          "diagnosed": "plan_drift",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 5,
+          "truth": "entry",
+          "diagnosed": "entry",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p09_choice_feedback",
+          "day": 0,
+          "truth": "choice",
+          "diagnosed": "choice",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p10_quiet_then_tooling",
+          "day": 0,
+          "truth": "goal_drift",
+          "diagnosed": "goal_drift",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        }
+      ],
+      "budget_failures": [
+        {
+          "episode_id": "p02_experience_hysteresis:d0:knowledge",
+          "truth": "knowledge",
+          "attempts": 3,
+          "decisions": [
+            {
+              "day": 0,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 1,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 2,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            }
+          ]
+        },
+        {
+          "episode_id": "p02_experience_hysteresis:d4:skill",
+          "truth": "skill",
+          "attempts": 3,
+          "decisions": [
+            {
+              "day": 4,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 5,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 6,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            }
+          ]
+        },
+        {
+          "episode_id": "p03_explicit_difficulty:d5:energy",
+          "truth": "energy",
+          "attempts": 3,
+          "decisions": [
+            {
+              "day": 5,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 6,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 7,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            }
+          ]
+        },
+        {
+          "episode_id": "p04_ambiguous_weak:d0:difficulty",
+          "truth": "difficulty",
+          "attempts": 3,
+          "decisions": [
+            {
+              "day": 0,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 1,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 2,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            }
+          ]
+        },
+        {
+          "episode_id": "p04_ambiguous_weak:d5:energy",
+          "truth": "energy",
+          "attempts": 3,
+          "decisions": [
+            {
+              "day": 5,
+              "intervention": "rescope",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 6,
+              "intervention": "rescope",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 7,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            }
+          ]
+        },
+        {
+          "episode_id": "p05_correction_loop:d6:clarity",
+          "truth": "clarity",
+          "attempts": 3,
+          "decisions": [
+            {
+              "day": 6,
+              "intervention": "reflect",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 7,
+              "intervention": "reflect",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 8,
+              "intervention": "reflect",
+              "match_class": "wrong",
+              "surface": "journey"
+            }
+          ]
+        },
+        {
+          "episode_id": "p06_structural_gap:d0:time",
+          "truth": "time",
+          "attempts": 3,
+          "decisions": [
+            {
+              "day": 0,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 1,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 2,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            }
+          ]
+        },
+        {
+          "episode_id": "p07_plan_drift_entry:d0:plan_drift",
+          "truth": "plan_drift",
+          "attempts": 3,
+          "decisions": [
+            {
+              "day": 0,
+              "intervention": "practice",
+              "match_class": "wrong",
+              "surface": "chat"
+            },
+            {
+              "day": 1,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 2,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            }
+          ]
+        },
+        {
+          "episode_id": "p10_quiet_then_tooling:d8:tooling",
+          "truth": "tooling",
+          "attempts": 3,
+          "decisions": [
+            {
+              "day": 8,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 9,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 10,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            }
+          ]
+        }
+      ]
+    },
+    "no_experience": {
+      "b1_tie_acts": [
+        {
+          "persona": "p01_experience_reinforce",
+          "day": 0,
+          "truth": "knowledge",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "这里有点看不懂"
+        },
+        {
+          "persona": "p02_experience_hysteresis",
+          "day": 2,
+          "truth": "knowledge",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "没学过这个，证明看不懂"
+        },
+        {
+          "persona": "p02_experience_hysteresis",
+          "day": 4,
+          "truth": "skill",
+          "journey_type": "energy",
+          "intervention": "pause",
+          "utterance": "看懂了但不会"
+        },
+        {
+          "persona": "p02_experience_hysteresis",
+          "day": 5,
+          "truth": "skill",
+          "journey_type": "feedback",
+          "intervention": "review",
+          "utterance": "概念都懂但不会做，一做题就不会"
+        },
+        {
+          "persona": "p02_experience_hysteresis",
+          "day": 6,
+          "truth": "skill",
+          "journey_type": "knowledge",
+          "intervention": "explain",
+          "utterance": "概念都懂但不会做，一做题就不会"
+        },
+        {
+          "persona": "p04_ambiguous_weak",
+          "day": 7,
+          "truth": "energy",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "太累了，状态不好"
+        },
+        {
+          "persona": "p05_correction_loop",
+          "day": 0,
+          "truth": "goal_drift",
+          "journey_type": "choice",
+          "intervention": "reflect",
+          "utterance": "有点坚持不下去"
+        },
+        {
+          "persona": "p05_correction_loop",
+          "day": 6,
+          "truth": "clarity",
+          "journey_type": "choice",
+          "intervention": "reflect",
+          "utterance": "这个要求有点模糊"
+        },
+        {
+          "persona": "p05_correction_loop",
+          "day": 7,
+          "truth": "clarity",
+          "journey_type": "clarity",
+          "intervention": "clarify",
+          "utterance": "这个要求有点模糊"
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 0,
+          "truth": "time",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "完全没时间，挤不出时间"
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 1,
+          "truth": "time",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "完全没时间，挤不出时间"
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 2,
+          "truth": "time",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "完全没时间，挤不出时间"
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 4,
+          "truth": "dependency",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "在等导师回复，卡在等"
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 0,
+          "truth": "plan_drift",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "计划有点乱"
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 1,
+          "truth": "plan_drift",
+          "journey_type": "difficulty",
+          "intervention": "split",
+          "utterance": "计划赶不上变化，原计划不行了"
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 2,
+          "truth": "plan_drift",
+          "journey_type": "energy",
+          "intervention": "pause",
+          "utterance": "计划赶不上变化，原计划不行了"
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 6,
+          "truth": "entry",
+          "journey_type": "choice",
+          "intervention": "reflect",
+          "utterance": "完全不知道怎么开始"
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 7,
+          "truth": "entry",
+          "journey_type": "clarity",
+          "intervention": "clarify",
+          "utterance": "完全不知道怎么开始"
+        },
+        {
+          "persona": "p09_choice_feedback",
+          "day": 0,
+          "truth": "choice",
+          "journey_type": "choice",
+          "intervention": "reflect",
+          "utterance": "选择太多，不知道先做哪个"
+        },
+        {
+          "persona": "p10_quiet_then_tooling",
+          "day": 0,
+          "truth": "goal_drift",
+          "journey_type": "choice",
+          "intervention": "reflect",
+          "utterance": "目标变了，其实更想做别的"
+        },
+        {
+          "persona": "p10_quiet_then_tooling",
+          "day": 8,
+          "truth": "tooling",
+          "journey_type": "dependency",
+          "intervention": "remind",
+          "utterance": "环境报错，配置搞不定"
+        },
+        {
+          "persona": "p10_quiet_then_tooling",
+          "day": 9,
+          "truth": "tooling",
+          "journey_type": "difficulty",
+          "intervention": "split",
+          "utterance": "环境报错，配置搞不定"
+        },
+        {
+          "persona": "p10_quiet_then_tooling",
+          "day": 10,
+          "truth": "tooling",
+          "journey_type": "energy",
+          "intervention": "pause",
+          "utterance": "环境报错，配置搞不定"
+        }
+      ],
+      "correction_cycles": [
+        {
+          "episode_id": "p02_experience_hysteresis:d0:knowledge",
+          "truth": "knowledge",
+          "walk": [
+            {
+              "day": 0,
+              "journey_type": "skill",
+              "corrected": "skill"
+            },
+            {
+              "day": 1,
+              "journey_type": "difficulty",
+              "corrected": "difficulty"
+            },
+            {
+              "day": 2,
+              "journey_type": "dependency",
+              "corrected": "dependency"
+            }
+          ]
+        },
+        {
+          "episode_id": "p02_experience_hysteresis:d4:skill",
+          "truth": "skill",
+          "walk": [
+            {
+              "day": 4,
+              "journey_type": "energy",
+              "corrected": "energy"
+            },
+            {
+              "day": 5,
+              "journey_type": "feedback",
+              "corrected": "feedback"
+            }
+          ]
+        },
+        {
+          "episode_id": "p04_ambiguous_weak:d5:energy",
+          "truth": "energy",
+          "walk": [
+            {
+              "day": 5,
+              "journey_type": "skill",
+              "corrected": "skill"
+            },
+            {
+              "day": 6,
+              "journey_type": "difficulty",
+              "corrected": "difficulty"
+            },
+            {
+              "day": 7,
+              "journey_type": "dependency",
+              "corrected": "dependency"
+            }
+          ]
+        },
+        {
+          "episode_id": "p07_plan_drift_entry:d0:plan_drift",
+          "truth": "plan_drift",
+          "walk": [
+            {
+              "day": 0,
+              "journey_type": "dependency",
+              "corrected": "dependency"
+            },
+            {
+              "day": 1,
+              "journey_type": "difficulty",
+              "corrected": "difficulty"
+            },
+            {
+              "day": 2,
+              "journey_type": "energy",
+              "corrected": "energy"
+            }
+          ]
+        },
+        {
+          "episode_id": "p07_plan_drift_entry:d5:entry",
+          "truth": "entry",
+          "walk": [
+            {
+              "day": 5,
+              "journey_type": "skill",
+              "corrected": "skill"
+            },
+            {
+              "day": 6,
+              "journey_type": "choice",
+              "corrected": "choice"
+            },
+            {
+              "day": 7,
+              "journey_type": "clarity",
+              "corrected": "clarity"
+            }
+          ]
+        },
+        {
+          "episode_id": "p10_quiet_then_tooling:d8:tooling",
+          "truth": "tooling",
+          "walk": [
+            {
+              "day": 8,
+              "journey_type": "dependency",
+              "corrected": "dependency"
+            },
+            {
+              "day": 9,
+              "journey_type": "difficulty",
+              "corrected": "difficulty"
+            },
+            {
+              "day": 10,
+              "journey_type": "energy",
+              "corrected": "energy"
+            }
+          ]
+        }
+      ],
+      "control_intrusions": [
+        {
+          "persona": "p01_experience_reinforce",
+          "day": 2,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": []
+        },
+        {
+          "persona": "p01_experience_reinforce",
+          "day": 5,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": []
+        },
+        {
+          "persona": "p01_experience_reinforce",
+          "day": 8,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": []
+        },
+        {
+          "persona": "p02_experience_hysteresis",
+          "day": 7,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": []
+        },
+        {
+          "persona": "p02_experience_hysteresis",
+          "day": 10,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": []
+        },
+        {
+          "persona": "p03_explicit_difficulty",
+          "day": 2,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": []
+        },
+        {
+          "persona": "p03_explicit_difficulty",
+          "day": 8,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": []
+        },
+        {
+          "persona": "p04_ambiguous_weak",
+          "day": 9,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": []
+        },
+        {
+          "persona": "p04_ambiguous_weak",
+          "day": 12,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": []
+        },
+        {
+          "persona": "p05_correction_loop",
+          "day": 4,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": []
+        },
+        {
+          "persona": "p05_correction_loop",
+          "day": 10,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": []
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 8,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": []
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 11,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": []
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 9,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": []
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 12,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": []
+        },
+        {
+          "persona": "p08_skill_repeat",
+          "day": 3,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": []
+        },
+        {
+          "persona": "p08_skill_repeat",
+          "day": 9,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": []
+        },
+        {
+          "persona": "p08_skill_repeat",
+          "day": 12,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": []
+        },
+        {
+          "persona": "p09_choice_feedback",
+          "day": 6,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": []
+        },
+        {
+          "persona": "p09_choice_feedback",
+          "day": 9,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": []
+        },
+        {
+          "persona": "p09_choice_feedback",
+          "day": 12,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": []
+        },
+        {
+          "persona": "p10_quiet_then_tooling",
+          "day": 2,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": []
+        },
+        {
+          "persona": "p10_quiet_then_tooling",
+          "day": 3,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": []
+        },
+        {
+          "persona": "p10_quiet_then_tooling",
+          "day": 4,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": []
+        },
+        {
+          "persona": "p10_quiet_then_tooling",
+          "day": 12,
+          "utterance": null,
+          "mode": "fresh",
+          "question": true,
+          "selected": null,
+          "spine_keys": []
+        }
+      ],
+      "chat_structural_no_action": [
+        {
+          "persona": "p03_explicit_difficulty",
+          "day": 5,
+          "truth": "energy",
+          "diagnosed": "energy",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p03_explicit_difficulty",
+          "day": 6,
+          "truth": "energy",
+          "diagnosed": "energy",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p03_explicit_difficulty",
+          "day": 7,
+          "truth": "energy",
+          "diagnosed": "energy",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p04_ambiguous_weak",
+          "day": 5,
+          "truth": "energy",
+          "diagnosed": "energy",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p04_ambiguous_weak",
+          "day": 6,
+          "truth": "energy",
+          "diagnosed": "energy",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p04_ambiguous_weak",
+          "day": 7,
+          "truth": "energy",
+          "diagnosed": "energy",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p05_correction_loop",
+          "day": 0,
+          "truth": "goal_drift",
+          "diagnosed": "goal_drift",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 0,
+          "truth": "time",
+          "diagnosed": "time",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 1,
+          "truth": "time",
+          "diagnosed": "time",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 2,
+          "truth": "time",
+          "diagnosed": "time",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p06_structural_gap",
+          "day": 4,
+          "truth": "dependency",
+          "diagnosed": "dependency",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 1,
+          "truth": "plan_drift",
+          "diagnosed": "plan_drift",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 2,
+          "truth": "plan_drift",
+          "diagnosed": "plan_drift",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 5,
+          "truth": "entry",
+          "diagnosed": "entry",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 6,
+          "truth": "entry",
+          "diagnosed": "entry",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p07_plan_drift_entry",
+          "day": 7,
+          "truth": "entry",
+          "diagnosed": "entry",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p09_choice_feedback",
+          "day": 0,
+          "truth": "choice",
+          "diagnosed": "choice",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p10_quiet_then_tooling",
+          "day": 0,
+          "truth": "goal_drift",
+          "diagnosed": "goal_drift",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p10_quiet_then_tooling",
+          "day": 8,
+          "truth": "tooling",
+          "diagnosed": "tooling",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p10_quiet_then_tooling",
+          "day": 9,
+          "truth": "tooling",
+          "diagnosed": "tooling",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        },
+        {
+          "persona": "p10_quiet_then_tooling",
+          "day": 10,
+          "truth": "tooling",
+          "diagnosed": "tooling",
+          "note": "诊断命中但 A-02 守卫结构性排除（chat 能力/权限面）"
+        }
+      ],
+      "budget_failures": [
+        {
+          "episode_id": "p02_experience_hysteresis:d0:knowledge",
+          "truth": "knowledge",
+          "attempts": 3,
+          "decisions": [
+            {
+              "day": 0,
+              "intervention": "practice",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 1,
+              "intervention": "split",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 2,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            }
+          ]
+        },
+        {
+          "episode_id": "p03_explicit_difficulty:d5:energy",
+          "truth": "energy",
+          "attempts": 3,
+          "decisions": [
+            {
+              "day": 5,
+              "intervention": "practice",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 6,
+              "intervention": "practice",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 7,
+              "intervention": "practice",
+              "match_class": "wrong",
+              "surface": "journey"
+            }
+          ]
+        },
+        {
+          "episode_id": "p04_ambiguous_weak:d5:energy",
+          "truth": "energy",
+          "attempts": 3,
+          "decisions": [
+            {
+              "day": 5,
+              "intervention": "practice",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 6,
+              "intervention": "split",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 7,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            }
+          ]
+        },
+        {
+          "episode_id": "p06_structural_gap:d0:time",
+          "truth": "time",
+          "attempts": 3,
+          "decisions": [
+            {
+              "day": 0,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 1,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 2,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            }
+          ]
+        },
+        {
+          "episode_id": "p07_plan_drift_entry:d0:plan_drift",
+          "truth": "plan_drift",
+          "attempts": 3,
+          "decisions": [
+            {
+              "day": 0,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 1,
+              "intervention": "split",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 2,
+              "intervention": "pause",
+              "match_class": "wrong",
+              "surface": "journey"
+            }
+          ]
+        },
+        {
+          "episode_id": "p07_plan_drift_entry:d5:entry",
+          "truth": "entry",
+          "attempts": 3,
+          "decisions": [
+            {
+              "day": 5,
+              "intervention": "practice",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 6,
+              "intervention": "reflect",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 7,
+              "intervention": "clarify",
+              "match_class": "wrong",
+              "surface": "journey"
+            }
+          ]
+        },
+        {
+          "episode_id": "p10_quiet_then_tooling:d8:tooling",
+          "truth": "tooling",
+          "attempts": 3,
+          "decisions": [
+            {
+              "day": 8,
+              "intervention": "remind",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 9,
+              "intervention": "split",
+              "match_class": "wrong",
+              "surface": "journey"
+            },
+            {
+              "day": 10,
+              "intervention": "pause",
+              "match_class": "wrong",
+              "surface": "journey"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "notes": {
+    "determinism": "summary 全部由 raw 程序化复算；模型 judge 0 次",
+    "repro": "PYTHONHASHSEED=0 固定；--verify-repro 断言两遍 summary 一致"
+  }
+}
