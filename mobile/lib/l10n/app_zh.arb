@@ -11216,9 +11216,9 @@
             }
         }
     },
-    "insForecastTitle": "学习预测洞察",
-    "insForecastEmpty": "预测数据暂时还没准备好",
-    "insForecastEmptyHint": "稍后重试，或者先完成几次学习与专注记录，让预测系统有足够数据可用。",
+    "insForecastTitle": "学习观察",
+    "insForecastEmpty": "观察数据暂时还没准备好",
+    "insForecastEmptyHint": "稍后重试，或者先完成几次学习与专注记录，积累更多可观察的数据。",
     "insReload": "重新加载",
     "insNightReview": "夜间复盘",
     "insActivityAnalysis": "学习活跃度分析",
@@ -11274,7 +11274,6 @@
     "insTargetNode": "目标节点",
     "insOptionalExtend": "可选拓展",
     "insRetryLoad": "重试加载",
-    "insPredictNext": "预测下次学习时间",
     "insCollapse": "收起",
     "insExpand": "展开",
     "insStudyDays": "{count} 天学习",
@@ -11319,13 +11318,6 @@
     },
     "insFirstWeek": "第一周",
     "insRetry": "重试",
-    "insUnknownType": "未知类型",
-    "insEngagementForecast": "活跃度预测",
-    "insEngagementSubtitle": "AI 基于学习习惯的预测",
-    "insDifficultyForecast": "难度预测",
-    "insDifficultySubtitle": "AI 基于前置知识的评估",
-    "insPredictedDifficulty": "预测难度",
-    "insPrerequisitesWarning": "建议先学习 {count} 个前置知识",
     "@insPrerequisitesWarning": {
         "placeholders": {
             "count": {
@@ -11333,12 +11325,9 @@
             }
         }
     },
-    "insRiskAssessment": "学习风险评估",
-    "insRiskSubtitle": "AI 持续关注您的学习状态",
+    "insRiskAssessment": "学习状态观察",
+    "insRiskSubtitle": "基于最近学习记录的观察",
     "insAiSuggestions": "AI 建议：",
-    "insDifficultyEasy": "简单",
-    "insDifficultyMedium": "中等",
-    "insDifficultyHard": "困难",
     "insRiskLow": "低风险",
     "insRiskMedium": "中等风险",
     "insRiskHigh": "高风险",
@@ -13918,7 +13907,6 @@
     "calEventCreated": "日程已创建",
     "calSavedLocally": "已保存到本地，稍后会自动同步到云端。",
     "calEditEvent": "编辑日程",
-    "picEstimatedHours": "预计学习时长: {hours} 小时",
     "@picEstimatedHours": {
         "placeholders": {
             "hours": {
@@ -13926,7 +13914,6 @@
             }
         }
     },
-    "picRiskScore": "风险指数: {score}/100",
     "@picRiskScore": {
         "placeholders": {
             "score": {
@@ -13934,7 +13921,6 @@
             }
         }
     },
-    "picChurnRisk": "流失风险: {level}",
     "@picChurnRisk": {
         "placeholders": {
             "level": {
@@ -13942,7 +13928,6 @@
             }
         }
     },
-    "picMinutesLater": "约 {minutes} 分钟后",
     "@picMinutesLater": {
         "placeholders": {
             "minutes": {
@@ -13950,7 +13935,6 @@
             }
         }
     },
-    "picTodayTime": "今天 {time}",
     "@picTodayTime": {
         "placeholders": {
             "time": {
@@ -13958,7 +13942,6 @@
             }
         }
     },
-    "picTomorrowTime": "明天 {time}",
     "@picTomorrowTime": {
         "placeholders": {
             "time": {
@@ -13994,7 +13977,6 @@
             }
         }
     },
-    "lfcConfidence": "基于 {sampleSize} 条学习记录，当前推荐置信度 {confidence}%。",
     "@lfcConfidence": {
         "placeholders": {
             "sampleSize": {
@@ -14009,8 +13991,8 @@
     "lfcTipPomodoro": "建议每次学习 30-45 分钟，然后休息 5-10 分钟",
     "lfcTipTitle": "学习建议",
     "lfcPeakDays": "周一到周四是您的高产学习日",
-    "lfcHeaderTitle": "AI 预测系统",
-    "lfcHeaderSubtitle": "基于学习数据的智能分析",
+    "lfcHeaderTitle": "学习观察",
+    "lfcHeaderSubtitle": "基于学习记录的如实呈现",
     "lfcBestTimeTitle": "最佳学习时间",
     "lfcInsufficientDataHint": "先完成 3 次以上学习或专注记录，系统就会开始给出更个性化的时间窗口。",
     "lfcRecommendedHours": "推荐学习时段",
@@ -17709,5 +17691,138 @@
     "statePhaseCancelled": "已取消",
     "@statePhaseCancelled": {},
     "statePhaseRevoked": "内容已不存在或已被移除",
-    "@statePhaseRevoked": {}
+    "@statePhaseRevoked": {},
+    "eicSectionTitle": "证据洞察",
+    "@eicSectionTitle": {},
+    "eicSectionSubtitle": "每条洞察都可以点开证据核对。",
+    "@eicSectionSubtitle": {},
+    "eicFactLabel": "事实",
+    "@eicFactLabel": {},
+    "eicInterpretationLabel": "解读",
+    "@eicInterpretationLabel": {},
+    "eicUncertaintyLabel": "不确定性",
+    "@eicUncertaintyLabel": {},
+    "eicEvidenceLabel": "证据",
+    "@eicEvidenceLabel": {},
+    "eicImplicationLabel": "行动含义",
+    "@eicImplicationLabel": {},
+    "eicKindFriction": "阻力模式",
+    "@eicKindFriction": {},
+    "eicKindHelpedInterventions": "有帮助的应对",
+    "@eicKindHelpedInterventions": {},
+    "eicKindGoalProgress": "目标进展",
+    "@eicKindGoalProgress": {},
+    "eicFrictionFact": "最近 {days} 天记录到 {count} 次「{tag}」",
+    "@eicFrictionFact": {
+        "placeholders": {
+            "days": { "type": "int" },
+            "count": { "type": "int" },
+            "tag": { "type": "String" }
+        }
+    },
+    "eicFrictionResponses": "其中接受 {accepted} 次，修改 {edited} 次，拒绝 {rejected} 次",
+    "@eicFrictionResponses": {
+        "placeholders": {
+            "accepted": { "type": "int" },
+            "edited": { "type": "int" },
+            "rejected": { "type": "int" }
+        }
+    },
+    "eicHelpedFact": "观察到的 {observed} 次记录中，{positive} 次伴随正向结果",
+    "@eicHelpedFact": {
+        "placeholders": {
+            "observed": { "type": "int" },
+            "positive": { "type": "int" }
+        }
+    },
+    "eicHelpedAgainst": "针对「{tag}」",
+    "@eicHelpedAgainst": {
+        "placeholders": {
+            "tag": { "type": "String" }
+        }
+    },
+    "eicGoalFact": "目标「{title}」的任务账本：已完成 {completed} / 共 {total} 项",
+    "@eicGoalFact": {
+        "placeholders": {
+            "title": { "type": "String" },
+            "completed": { "type": "int" },
+            "total": { "type": "int" }
+        }
+    },
+    "eicFrictionRoleMostFrequent": "这是最近最常出现的阻力模式",
+    "@eicFrictionRoleMostFrequent": {},
+    "eicFrictionRoleObserved": "这是窗口内观察到的阻力模式之一",
+    "@eicFrictionRoleObserved": {},
+    "eicHelpedTierSingle": "目前只有单次观察",
+    "@eicHelpedTierSingle": {},
+    "eicHelpedTierRepeated": "多次观察都呈现同样方向",
+    "@eicHelpedTierRepeated": {},
+    "eicHelpedTierAccumulated": "累积了较多一致观察",
+    "@eicHelpedTierAccumulated": {},
+    "eicGoalBandJustStarted": "刚起步",
+    "@eicGoalBandJustStarted": {},
+    "eicGoalBandInProgress": "进行中",
+    "@eicGoalBandInProgress": {},
+    "eicGoalBandNearlyDone": "接近完成",
+    "@eicGoalBandNearlyDone": {},
+    "eicGoalBandAllComplete": "全部完成",
+    "@eicGoalBandAllComplete": {},
+    "eicGoalBandNoTaskEvidence": "还没有可计的任务",
+    "@eicGoalBandNoTaskEvidence": {},
+    "eicUniqCountsOnly": "仅基于干预记录计数",
+    "@eicUniqCountsOnly": {},
+    "eicUniqSmallSample": "样本较少，仅供参考",
+    "@eicUniqSmallSample": {},
+    "eicUniqCorrelationNotCausation": "只是相关观察，不能证明因果",
+    "@eicUniqCorrelationNotCausation": {},
+    "eicUniqLedgerHonest": "进展按任务账本逐条计数",
+    "@eicUniqLedgerHonest": {},
+    "eicUniqProgressColumnMayLag": "目标进度列可能与账本不一致，两个口径都如实呈现",
+    "@eicUniqProgressColumnMayLag": {},
+    "eicUniqNoTaskLedger": "该目标还没有可计任务",
+    "@eicUniqNoTaskLedger": {},
+    "eicUniqNotYetObserved": "{count} 次还在观察窗口内，结果未到期",
+    "@eicUniqNotYetObserved": {
+        "placeholders": {
+            "count": { "type": "int" }
+        }
+    },
+    "eicEvidenceDirectiveLog": "查看决策日志",
+    "@eicEvidenceDirectiveLog": {},
+    "eicEvidenceGoalLedger": "查看目标与任务账本",
+    "@eicEvidenceGoalLedger": {},
+    "eicActionReviewDirectives": "去决策日志看看系统当时做了什么",
+    "@eicActionReviewDirectives": {},
+    "eicActionKeepObserving": "先保持观察，暂不下结论",
+    "@eicActionKeepObserving": {},
+    "eicActionOpenGoal": "打开目标详情，安排下一步",
+    "@eicActionOpenGoal": {},
+    "eicFrictionTagExecutionFriction": "任务执行阻力",
+    "@eicFrictionTagExecutionFriction": {},
+    "eicFrictionTagKnowledgeBottleneck": "知识运用卡点",
+    "@eicFrictionTagKnowledgeBottleneck": {},
+    "eicFrictionTagMaterialGap": "学习材料闲置",
+    "@eicFrictionTagMaterialGap": {},
+    "eicFrictionTagDeadlinePressure": "截止日期压力",
+    "@eicFrictionTagDeadlinePressure": {},
+    "eicFrictionTagOverloadCrisis": "负荷过载",
+    "@eicFrictionTagOverloadCrisis": {},
+    "eicFrictionTagCognitiveOverload": "认知负荷偏高",
+    "@eicFrictionTagCognitiveOverload": {},
+    "eicFrictionTagAffectivePressure": "情绪压力",
+    "@eicFrictionTagAffectivePressure": {},
+    "eicFrictionTagEngagementMomentum": "学习动量波动",
+    "@eicFrictionTagEngagementMomentum": {},
+    "eicFrictionTagRecallGap": "记忆召回缺口",
+    "@eicFrictionTagRecallGap": {},
+    "eicFrictionTagCommunityGap": "同伴协作缺口",
+    "@eicFrictionTagCommunityGap": {},
+    "eicFrictionTagUnknown": "其他阻力",
+    "@eicFrictionTagUnknown": {},
+    "lfcObservationBasis": "基于最近 {sampleSize} 条学习记录的观察。",
+    "@lfcObservationBasis": {
+        "placeholders": {
+            "sampleSize": { "type": "int" }
+        }
+    }
 }

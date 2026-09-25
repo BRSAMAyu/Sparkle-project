@@ -2554,6 +2554,17 @@
               }
             ],
             "title": "Aurora Pressure Style"
+          },
+          "aurora_stimulation_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aurora Stimulation Mode"
           }
         },
         "title": "AuroraPreferencesRequest",
@@ -49304,7 +49315,7 @@
     },
     "/api/v1/aurora/preferences": {
       "get": {
-        "description": "Get Aurora communication preferences. Returns all 4 prefs with defaults for unset values.",
+        "description": "Get Aurora communication preferences. Returns all 5 prefs with defaults for unset values.",
         "operationId": "get_aurora_preferences_api_v1_aurora_preferences_get",
         "responses": {
           "200": {
@@ -70222,6 +70233,61 @@
         "summary": "Check Cleaning Task Status",
         "tags": [
           "ingestion"
+        ]
+      }
+    },
+    "/api/v1/insights/evidence-cards": {
+      "get": {
+        "description": "Evidence-driven insight cards (D-07).\n\nfact→interpretation→uncertainty→evidence→implication 五要素洞察卡，\n优先三类：friction_pattern / interventions_that_helped / goal_progress。\n全部派生自已交付真源（D-05 lifecycle + Goal/Task 读侧），每次请求现算\n（纠正落库后下一次读取即更新）；只出结构化字段与定性档位，无置信\n百分比/无定义分数（M-10 口径）；文案组合在移动端 l10n 完成。\n无数据不出卡、不生成人格结论。",
+        "operationId": "get_evidence_cards_api_v1_insights_evidence_cards_get",
+        "parameters": [
+          {
+            "description": "Evidence lookback window in days",
+            "in": "query",
+            "name": "window_days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "description": "Evidence lookback window in days",
+              "maximum": 90,
+              "minimum": 7,
+              "title": "Window Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Evidence Cards Api V1 Insights Evidence Cards Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Evidence Cards",
+        "tags": [
+          "insights"
         ]
       }
     },

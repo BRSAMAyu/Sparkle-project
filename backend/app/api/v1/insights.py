@@ -43,6 +43,28 @@ async def get_recent_directives(
 
 
 # route-tier: authed
+@router.get("/evidence-cards", response_model=dict[str, Any])
+async def get_evidence_cards(
+    window_days: int = Query(default=30, ge=7, le=90, description="Evidence lookback window in days"),
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db),
+) -> dict[str, Any]:
+    """Evidence-driven insight cards (D-07).
+
+    fact→interpretation→uncertainty→evidence→implication 五要素洞察卡，
+    优先三类：friction_pattern / interventions_that_helped / goal_progress。
+    全部派生自已交付真源（D-05 lifecycle + Goal/Task 读侧），每次请求现算
+    （纠正落库后下一次读取即更新）；只出结构化字段与定性档位，无置信
+    百分比/无定义分数（M-10 口径）；文案组合在移动端 l10n 完成。
+    无数据不出卡、不生成人格结论。
+    """
+    from app.services.evidence_insight_service import EvidenceInsightService
+
+    service = EvidenceInsightService(db)
+    return await service.build_cards(user_id=current_user.id, window_days=window_days)
+
+
+# route-tier: authed
 @router.get("/understanding-depth", response_model=dict[str, Any])
 async def get_understanding_depth(
     days: int = Query(default=7, ge=7, le=30, description="Trend window: 7 or 30 days"),

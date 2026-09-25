@@ -12773,7 +12773,7 @@ abstract class AppLocalizations {
   /// No description provided for @memoryMergeComingSoon.
   ///
   /// In zh, this message translates to:
-  /// **'合并功能即将上线'**
+  /// **'合并功能暂未开放'**
   String get memoryMergeComingSoon;
 
   /// No description provided for @memoryCorrectionSubmitted.
@@ -21211,7 +21211,7 @@ abstract class AppLocalizations {
   /// No description provided for @memoryExplanationInferredEpisodic.
   ///
   /// In zh, this message translates to:
-  /// **'这条经历由 AI 从聊天中推断，并保留了证据 token、置信度与撤销路径。'**
+  /// **'这条经历由 AI 从聊天中推断而来，保留了依据，也支持撤销。'**
   String get memoryExplanationInferredEpisodic;
 
   /// No description provided for @memoryCorrectionSubmittedWithAction.
@@ -25655,7 +25655,7 @@ abstract class AppLocalizations {
   /// No description provided for @insightHubFallbackSummary.
   ///
   /// In zh, this message translates to:
-  /// **'把推演、仿真和报告收进一条更轻量的学习动线。'**
+  /// **'把报告和洞察收进一条更轻量的学习动线。'**
   String get insightHubFallbackSummary;
 
   /// No description provided for @insightHubReport.
@@ -25685,7 +25685,7 @@ abstract class AppLocalizations {
   /// No description provided for @insightHubCompactFallback.
   ///
   /// In zh, this message translates to:
-  /// **'仿真、推演和报告现在收在同一张卡里'**
+  /// **'报告与洞察现在收在同一张卡里'**
   String get insightHubCompactFallback;
 
   /// No description provided for @insightHubNoRecentReport.
@@ -38832,7 +38832,7 @@ abstract class AppLocalizations {
   /// No description provided for @notificationRecallScore.
   ///
   /// In zh, this message translates to:
-  /// **'召回评分'**
+  /// **'记忆保持预估'**
   String get notificationRecallScore;
 
   /// No description provided for @notificationRecallInaccurate.
@@ -45568,19 +45568,19 @@ abstract class AppLocalizations {
   /// No description provided for @insForecastTitle.
   ///
   /// In zh, this message translates to:
-  /// **'学习预测洞察'**
+  /// **'学习观察'**
   String get insForecastTitle;
 
   /// No description provided for @insForecastEmpty.
   ///
   /// In zh, this message translates to:
-  /// **'预测数据暂时还没准备好'**
+  /// **'观察数据暂时还没准备好'**
   String get insForecastEmpty;
 
   /// No description provided for @insForecastEmptyHint.
   ///
   /// In zh, this message translates to:
-  /// **'稍后重试，或者先完成几次学习与专注记录，让预测系统有足够数据可用。'**
+  /// **'稍后重试，或者先完成几次学习与专注记录，积累更多可观察的数据。'**
   String get insForecastEmptyHint;
 
   /// No description provided for @insReload.
@@ -45829,12 +45829,6 @@ abstract class AppLocalizations {
   /// **'重试加载'**
   String get insRetryLoad;
 
-  /// No description provided for @insPredictNext.
-  ///
-  /// In zh, this message translates to:
-  /// **'预测下次学习时间'**
-  String get insPredictNext;
-
   /// No description provided for @insCollapse.
   ///
   /// In zh, this message translates to:
@@ -45889,58 +45883,16 @@ abstract class AppLocalizations {
   /// **'重试'**
   String get insRetry;
 
-  /// No description provided for @insUnknownType.
-  ///
-  /// In zh, this message translates to:
-  /// **'未知类型'**
-  String get insUnknownType;
-
-  /// No description provided for @insEngagementForecast.
-  ///
-  /// In zh, this message translates to:
-  /// **'活跃度预测'**
-  String get insEngagementForecast;
-
-  /// No description provided for @insEngagementSubtitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'AI 基于学习习惯的预测'**
-  String get insEngagementSubtitle;
-
-  /// No description provided for @insDifficultyForecast.
-  ///
-  /// In zh, this message translates to:
-  /// **'难度预测'**
-  String get insDifficultyForecast;
-
-  /// No description provided for @insDifficultySubtitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'AI 基于前置知识的评估'**
-  String get insDifficultySubtitle;
-
-  /// No description provided for @insPredictedDifficulty.
-  ///
-  /// In zh, this message translates to:
-  /// **'预测难度'**
-  String get insPredictedDifficulty;
-
-  /// No description provided for @insPrerequisitesWarning.
-  ///
-  /// In zh, this message translates to:
-  /// **'建议先学习 {count} 个前置知识'**
-  String insPrerequisitesWarning(int count);
-
   /// No description provided for @insRiskAssessment.
   ///
   /// In zh, this message translates to:
-  /// **'学习风险评估'**
+  /// **'学习状态观察'**
   String get insRiskAssessment;
 
   /// No description provided for @insRiskSubtitle.
   ///
   /// In zh, this message translates to:
-  /// **'AI 持续关注您的学习状态'**
+  /// **'基于最近学习记录的观察'**
   String get insRiskSubtitle;
 
   /// No description provided for @insAiSuggestions.
@@ -45948,24 +45900,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'AI 建议：'**
   String get insAiSuggestions;
-
-  /// No description provided for @insDifficultyEasy.
-  ///
-  /// In zh, this message translates to:
-  /// **'简单'**
-  String get insDifficultyEasy;
-
-  /// No description provided for @insDifficultyMedium.
-  ///
-  /// In zh, this message translates to:
-  /// **'中等'**
-  String get insDifficultyMedium;
-
-  /// No description provided for @insDifficultyHard.
-  ///
-  /// In zh, this message translates to:
-  /// **'困难'**
-  String get insDifficultyHard;
 
   /// No description provided for @insRiskLow.
   ///
@@ -51625,7 +51559,7 @@ abstract class AppLocalizations {
   /// No description provided for @communityCommentsComingSoon.
   ///
   /// In zh, this message translates to:
-  /// **'评论功能即将上线'**
+  /// **'评论功能暂未开放'**
   String get communityCommentsComingSoon;
 
   /// No description provided for @communityShowMore.
@@ -55451,42 +55385,6 @@ abstract class AppLocalizations {
   /// **'编辑日程'**
   String get calEditEvent;
 
-  /// No description provided for @picEstimatedHours.
-  ///
-  /// In zh, this message translates to:
-  /// **'预计学习时长: {hours} 小时'**
-  String picEstimatedHours(String hours);
-
-  /// No description provided for @picRiskScore.
-  ///
-  /// In zh, this message translates to:
-  /// **'风险指数: {score}/100'**
-  String picRiskScore(String score);
-
-  /// No description provided for @picChurnRisk.
-  ///
-  /// In zh, this message translates to:
-  /// **'流失风险: {level}'**
-  String picChurnRisk(String level);
-
-  /// No description provided for @picMinutesLater.
-  ///
-  /// In zh, this message translates to:
-  /// **'约 {minutes} 分钟后'**
-  String picMinutesLater(int minutes);
-
-  /// No description provided for @picTodayTime.
-  ///
-  /// In zh, this message translates to:
-  /// **'今天 {time}'**
-  String picTodayTime(String time);
-
-  /// No description provided for @picTomorrowTime.
-  ///
-  /// In zh, this message translates to:
-  /// **'明天 {time}'**
-  String picTomorrowTime(String time);
-
   /// No description provided for @lioStartNewSim.
   ///
   /// In zh, this message translates to:
@@ -55529,12 +55427,6 @@ abstract class AppLocalizations {
   /// **'掌握度 {percent}%'**
   String lioMastery(String percent);
 
-  /// No description provided for @lfcConfidence.
-  ///
-  /// In zh, this message translates to:
-  /// **'基于 {sampleSize} 条学习记录，当前推荐置信度 {confidence}%。'**
-  String lfcConfidence(int sampleSize, String confidence);
-
   /// No description provided for @lfcTipMorning.
   ///
   /// In zh, this message translates to:
@@ -55562,13 +55454,13 @@ abstract class AppLocalizations {
   /// No description provided for @lfcHeaderTitle.
   ///
   /// In zh, this message translates to:
-  /// **'AI 预测系统'**
+  /// **'学习观察'**
   String get lfcHeaderTitle;
 
   /// No description provided for @lfcHeaderSubtitle.
   ///
   /// In zh, this message translates to:
-  /// **'基于学习数据的智能分析'**
+  /// **'基于学习记录的如实呈现'**
   String get lfcHeaderSubtitle;
 
   /// No description provided for @lfcBestTimeTitle.
@@ -61468,7 +61360,7 @@ abstract class AppLocalizations {
   /// No description provided for @chatMemoryNotRightPrompt.
   ///
   /// In zh, this message translates to:
-  /// **'这条记忆不对：{content}。请降低置信度，以后不要直接引用。'**
+  /// **'这条记忆不对：{content}。之后请少参考这条，不要直接引用。'**
   String chatMemoryNotRightPrompt(String content);
 
   /// No description provided for @chatReceiptDismiss.
@@ -68484,6 +68376,300 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'内容已不存在或已被移除'**
   String get statePhaseRevoked;
+
+  /// No description provided for @eicSectionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'证据洞察'**
+  String get eicSectionTitle;
+
+  /// No description provided for @eicSectionSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'每条洞察都可以点开证据核对。'**
+  String get eicSectionSubtitle;
+
+  /// No description provided for @eicFactLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'事实'**
+  String get eicFactLabel;
+
+  /// No description provided for @eicInterpretationLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'解读'**
+  String get eicInterpretationLabel;
+
+  /// No description provided for @eicUncertaintyLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'不确定性'**
+  String get eicUncertaintyLabel;
+
+  /// No description provided for @eicEvidenceLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'证据'**
+  String get eicEvidenceLabel;
+
+  /// No description provided for @eicImplicationLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'行动含义'**
+  String get eicImplicationLabel;
+
+  /// No description provided for @eicKindFriction.
+  ///
+  /// In zh, this message translates to:
+  /// **'阻力模式'**
+  String get eicKindFriction;
+
+  /// No description provided for @eicKindHelpedInterventions.
+  ///
+  /// In zh, this message translates to:
+  /// **'有帮助的应对'**
+  String get eicKindHelpedInterventions;
+
+  /// No description provided for @eicKindGoalProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标进展'**
+  String get eicKindGoalProgress;
+
+  /// No description provided for @eicFrictionFact.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近 {days} 天记录到 {count} 次「{tag}」'**
+  String eicFrictionFact(int days, int count, String tag);
+
+  /// No description provided for @eicFrictionResponses.
+  ///
+  /// In zh, this message translates to:
+  /// **'其中接受 {accepted} 次，修改 {edited} 次，拒绝 {rejected} 次'**
+  String eicFrictionResponses(int accepted, int edited, int rejected);
+
+  /// No description provided for @eicHelpedFact.
+  ///
+  /// In zh, this message translates to:
+  /// **'观察到的 {observed} 次记录中，{positive} 次伴随正向结果'**
+  String eicHelpedFact(int observed, int positive);
+
+  /// No description provided for @eicHelpedAgainst.
+  ///
+  /// In zh, this message translates to:
+  /// **'针对「{tag}」'**
+  String eicHelpedAgainst(String tag);
+
+  /// No description provided for @eicGoalFact.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标「{title}」的任务账本：已完成 {completed} / 共 {total} 项'**
+  String eicGoalFact(String title, int completed, int total);
+
+  /// No description provided for @eicFrictionRoleMostFrequent.
+  ///
+  /// In zh, this message translates to:
+  /// **'这是最近最常出现的阻力模式'**
+  String get eicFrictionRoleMostFrequent;
+
+  /// No description provided for @eicFrictionRoleObserved.
+  ///
+  /// In zh, this message translates to:
+  /// **'这是窗口内观察到的阻力模式之一'**
+  String get eicFrictionRoleObserved;
+
+  /// No description provided for @eicHelpedTierSingle.
+  ///
+  /// In zh, this message translates to:
+  /// **'目前只有单次观察'**
+  String get eicHelpedTierSingle;
+
+  /// No description provided for @eicHelpedTierRepeated.
+  ///
+  /// In zh, this message translates to:
+  /// **'多次观察都呈现同样方向'**
+  String get eicHelpedTierRepeated;
+
+  /// No description provided for @eicHelpedTierAccumulated.
+  ///
+  /// In zh, this message translates to:
+  /// **'累积了较多一致观察'**
+  String get eicHelpedTierAccumulated;
+
+  /// No description provided for @eicGoalBandJustStarted.
+  ///
+  /// In zh, this message translates to:
+  /// **'刚起步'**
+  String get eicGoalBandJustStarted;
+
+  /// No description provided for @eicGoalBandInProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'进行中'**
+  String get eicGoalBandInProgress;
+
+  /// No description provided for @eicGoalBandNearlyDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'接近完成'**
+  String get eicGoalBandNearlyDone;
+
+  /// No description provided for @eicGoalBandAllComplete.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部完成'**
+  String get eicGoalBandAllComplete;
+
+  /// No description provided for @eicGoalBandNoTaskEvidence.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有可计的任务'**
+  String get eicGoalBandNoTaskEvidence;
+
+  /// No description provided for @eicUniqCountsOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅基于干预记录计数'**
+  String get eicUniqCountsOnly;
+
+  /// No description provided for @eicUniqSmallSample.
+  ///
+  /// In zh, this message translates to:
+  /// **'样本较少，仅供参考'**
+  String get eicUniqSmallSample;
+
+  /// No description provided for @eicUniqCorrelationNotCausation.
+  ///
+  /// In zh, this message translates to:
+  /// **'只是相关观察，不能证明因果'**
+  String get eicUniqCorrelationNotCausation;
+
+  /// No description provided for @eicUniqLedgerHonest.
+  ///
+  /// In zh, this message translates to:
+  /// **'进展按任务账本逐条计数'**
+  String get eicUniqLedgerHonest;
+
+  /// No description provided for @eicUniqProgressColumnMayLag.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标进度列可能与账本不一致，两个口径都如实呈现'**
+  String get eicUniqProgressColumnMayLag;
+
+  /// No description provided for @eicUniqNoTaskLedger.
+  ///
+  /// In zh, this message translates to:
+  /// **'该目标还没有可计任务'**
+  String get eicUniqNoTaskLedger;
+
+  /// No description provided for @eicUniqNotYetObserved.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 次还在观察窗口内，结果未到期'**
+  String eicUniqNotYetObserved(int count);
+
+  /// No description provided for @eicEvidenceDirectiveLog.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看决策日志'**
+  String get eicEvidenceDirectiveLog;
+
+  /// No description provided for @eicEvidenceGoalLedger.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看目标与任务账本'**
+  String get eicEvidenceGoalLedger;
+
+  /// No description provided for @eicActionReviewDirectives.
+  ///
+  /// In zh, this message translates to:
+  /// **'去决策日志看看系统当时做了什么'**
+  String get eicActionReviewDirectives;
+
+  /// No description provided for @eicActionKeepObserving.
+  ///
+  /// In zh, this message translates to:
+  /// **'先保持观察，暂不下结论'**
+  String get eicActionKeepObserving;
+
+  /// No description provided for @eicActionOpenGoal.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开目标详情，安排下一步'**
+  String get eicActionOpenGoal;
+
+  /// No description provided for @eicFrictionTagExecutionFriction.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务执行阻力'**
+  String get eicFrictionTagExecutionFriction;
+
+  /// No description provided for @eicFrictionTagKnowledgeBottleneck.
+  ///
+  /// In zh, this message translates to:
+  /// **'知识运用卡点'**
+  String get eicFrictionTagKnowledgeBottleneck;
+
+  /// No description provided for @eicFrictionTagMaterialGap.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习材料闲置'**
+  String get eicFrictionTagMaterialGap;
+
+  /// No description provided for @eicFrictionTagDeadlinePressure.
+  ///
+  /// In zh, this message translates to:
+  /// **'截止日期压力'**
+  String get eicFrictionTagDeadlinePressure;
+
+  /// No description provided for @eicFrictionTagOverloadCrisis.
+  ///
+  /// In zh, this message translates to:
+  /// **'负荷过载'**
+  String get eicFrictionTagOverloadCrisis;
+
+  /// No description provided for @eicFrictionTagCognitiveOverload.
+  ///
+  /// In zh, this message translates to:
+  /// **'认知负荷偏高'**
+  String get eicFrictionTagCognitiveOverload;
+
+  /// No description provided for @eicFrictionTagAffectivePressure.
+  ///
+  /// In zh, this message translates to:
+  /// **'情绪压力'**
+  String get eicFrictionTagAffectivePressure;
+
+  /// No description provided for @eicFrictionTagEngagementMomentum.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习动量波动'**
+  String get eicFrictionTagEngagementMomentum;
+
+  /// No description provided for @eicFrictionTagRecallGap.
+  ///
+  /// In zh, this message translates to:
+  /// **'记忆召回缺口'**
+  String get eicFrictionTagRecallGap;
+
+  /// No description provided for @eicFrictionTagCommunityGap.
+  ///
+  /// In zh, this message translates to:
+  /// **'同伴协作缺口'**
+  String get eicFrictionTagCommunityGap;
+
+  /// No description provided for @eicFrictionTagUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'其他阻力'**
+  String get eicFrictionTagUnknown;
+
+  /// No description provided for @lfcObservationBasis.
+  ///
+  /// In zh, this message translates to:
+  /// **'基于最近 {sampleSize} 条学习记录的观察。'**
+  String lfcObservationBasis(int sampleSize);
 }
 
 class _AppLocalizationsDelegate

@@ -485,6 +485,8 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		insights.GET("/recent-directives", h.proxyWithHeaders)
 		// route-tier: authed — 数据飞轮：理解深度每日基线趋势（user-id 由网关注入）
 		insights.GET("/understanding-depth", h.proxyWithHeaders)
+		// route-tier: authed — D-07 证据洞察卡（五要素，只读派生面）
+		insights.GET("/evidence-cards", h.proxyWithHeaders)
 	}
 
 	// ==================== Capsules Routes ====================

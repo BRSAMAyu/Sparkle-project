@@ -26046,14 +26046,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get insForecastTitle => 'Learning Forecast';
+  String get insForecastTitle => 'Learning observations';
 
   @override
-  String get insForecastEmpty => 'Forecast data is not ready yet';
+  String get insForecastEmpty => 'Observation data is not ready yet';
 
   @override
   String get insForecastEmptyHint =>
-      'Try again later, or complete a few learning and focus sessions so the prediction system has enough data.';
+      'Try again later, or complete a few learning and focus sessions to build up observable data.';
 
   @override
   String get insReload => 'Reload';
@@ -26191,9 +26191,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insRetryLoad => 'Retry';
 
   @override
-  String get insPredictNext => 'Predict next study time';
-
-  @override
   String get insCollapse => 'Collapse';
 
   @override
@@ -26231,45 +26228,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insRetry => 'Retry';
 
   @override
-  String get insUnknownType => 'Unknown type';
+  String get insRiskAssessment => 'Learning status observations';
 
   @override
-  String get insEngagementForecast => 'Engagement Forecast';
-
-  @override
-  String get insEngagementSubtitle => 'AI prediction based on learning habits';
-
-  @override
-  String get insDifficultyForecast => 'Difficulty Forecast';
-
-  @override
-  String get insDifficultySubtitle => 'AI assessment based on prerequisites';
-
-  @override
-  String get insPredictedDifficulty => 'Predicted Difficulty';
-
-  @override
-  String insPrerequisitesWarning(int count) {
-    return 'Complete $count prerequisite(s) first';
-  }
-
-  @override
-  String get insRiskAssessment => 'Learning Risk Assessment';
-
-  @override
-  String get insRiskSubtitle => 'AI monitors your learning status';
+  String get insRiskSubtitle =>
+      'Based on observations from your recent study records';
 
   @override
   String get insAiSuggestions => 'AI Suggestions:';
-
-  @override
-  String get insDifficultyEasy => 'Easy';
-
-  @override
-  String get insDifficultyMedium => 'Medium';
-
-  @override
-  String get insDifficultyHard => 'Hard';
 
   @override
   String get insRiskLow => 'Low Risk';
@@ -31801,36 +31767,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calEditEvent => 'Edit Event';
 
   @override
-  String picEstimatedHours(String hours) {
-    return 'Estimated study time: $hours hours';
-  }
-
-  @override
-  String picRiskScore(String score) {
-    return 'Risk index: $score/100';
-  }
-
-  @override
-  String picChurnRisk(String level) {
-    return 'Churn risk: $level';
-  }
-
-  @override
-  String picMinutesLater(int minutes) {
-    return 'In about $minutes minutes';
-  }
-
-  @override
-  String picTodayTime(String time) {
-    return 'Today $time';
-  }
-
-  @override
-  String picTomorrowTime(String time) {
-    return 'Tomorrow $time';
-  }
-
-  @override
   String get lioStartNewSim => 'Start a new simulation now';
 
   @override
@@ -31859,11 +31795,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String lfcConfidence(int sampleSize, String confidence) {
-    return 'Based on $sampleSize learning records, current recommendation confidence is $confidence%.';
-  }
-
-  @override
   String get lfcTipMorning =>
       'Based on your history, studying at 9am is most effective';
 
@@ -31878,10 +31809,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lfcPeakDays => 'Mon-Thu are your peak learning days';
 
   @override
-  String get lfcHeaderTitle => 'AI Prediction System';
+  String get lfcHeaderTitle => 'Learning observations';
 
   @override
-  String get lfcHeaderSubtitle => 'Smart analysis based on learning data';
+  String get lfcHeaderSubtitle => 'An honest view of your study records';
 
   @override
   String get lfcBestTimeTitle => 'Best Learning Time';
@@ -39332,4 +39263,175 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get statePhaseRevoked =>
       'This content no longer exists or was removed';
+
+  @override
+  String get eicSectionTitle => 'Evidence-based insights';
+
+  @override
+  String get eicSectionSubtitle =>
+      'Every insight links to evidence you can open.';
+
+  @override
+  String get eicFactLabel => 'Fact';
+
+  @override
+  String get eicInterpretationLabel => 'Interpretation';
+
+  @override
+  String get eicUncertaintyLabel => 'Uncertainty';
+
+  @override
+  String get eicEvidenceLabel => 'Evidence';
+
+  @override
+  String get eicImplicationLabel => 'Next step';
+
+  @override
+  String get eicKindFriction => 'Friction pattern';
+
+  @override
+  String get eicKindHelpedInterventions => 'Interventions that helped';
+
+  @override
+  String get eicKindGoalProgress => 'Goal progress';
+
+  @override
+  String eicFrictionFact(int days, int count, String tag) {
+    return '$count “$tag” signals recorded in the last $days days';
+  }
+
+  @override
+  String eicFrictionResponses(int accepted, int edited, int rejected) {
+    return 'Of these: $accepted accepted, $edited edited, $rejected rejected';
+  }
+
+  @override
+  String eicHelpedFact(int observed, int positive) {
+    return 'In $observed observed cases, $positive came with a positive outcome';
+  }
+
+  @override
+  String eicHelpedAgainst(String tag) {
+    return 'addressing “$tag”';
+  }
+
+  @override
+  String eicGoalFact(String title, int completed, int total) {
+    return 'Goal “$title” task ledger: $completed of $total tasks completed';
+  }
+
+  @override
+  String get eicFrictionRoleMostFrequent =>
+      'This is the most frequent friction pattern recently';
+
+  @override
+  String get eicFrictionRoleObserved =>
+      'One of the friction patterns observed in this window';
+
+  @override
+  String get eicHelpedTierSingle => 'Only a single observation so far';
+
+  @override
+  String get eicHelpedTierRepeated => 'Several observations point the same way';
+
+  @override
+  String get eicHelpedTierAccumulated =>
+      'Many consistent observations have accumulated';
+
+  @override
+  String get eicGoalBandJustStarted => 'Just getting started';
+
+  @override
+  String get eicGoalBandInProgress => 'In progress';
+
+  @override
+  String get eicGoalBandNearlyDone => 'Almost there';
+
+  @override
+  String get eicGoalBandAllComplete => 'All tasks completed';
+
+  @override
+  String get eicGoalBandNoTaskEvidence => 'No countable tasks yet';
+
+  @override
+  String get eicUniqCountsOnly => 'Based only on intervention record counts';
+
+  @override
+  String get eicUniqSmallSample =>
+      'Small sample — treat as a hint, not a conclusion';
+
+  @override
+  String get eicUniqCorrelationNotCausation =>
+      'Observed correlation only; this does not prove causation';
+
+  @override
+  String get eicUniqLedgerHonest =>
+      'Progress counted task-by-task from the ledger';
+
+  @override
+  String get eicUniqProgressColumnMayLag =>
+      'The goal progress field may lag the ledger; both are shown as-is';
+
+  @override
+  String get eicUniqNoTaskLedger => 'This goal has no countable tasks yet';
+
+  @override
+  String eicUniqNotYetObserved(int count) {
+    return '$count still within the observation window; outcomes not yet due';
+  }
+
+  @override
+  String get eicEvidenceDirectiveLog => 'Open decision log';
+
+  @override
+  String get eicEvidenceGoalLedger => 'Open goal and task ledger';
+
+  @override
+  String get eicActionReviewDirectives =>
+      'Review what the system did in the decision log';
+
+  @override
+  String get eicActionKeepObserving =>
+      'Keep observing before drawing conclusions';
+
+  @override
+  String get eicActionOpenGoal => 'Open the goal to plan your next step';
+
+  @override
+  String get eicFrictionTagExecutionFriction => 'Task execution friction';
+
+  @override
+  String get eicFrictionTagKnowledgeBottleneck => 'Knowledge bottleneck';
+
+  @override
+  String get eicFrictionTagMaterialGap => 'Unused learning materials';
+
+  @override
+  String get eicFrictionTagDeadlinePressure => 'Deadline pressure';
+
+  @override
+  String get eicFrictionTagOverloadCrisis => 'Overload crisis';
+
+  @override
+  String get eicFrictionTagCognitiveOverload => 'High cognitive load';
+
+  @override
+  String get eicFrictionTagAffectivePressure => 'Emotional pressure';
+
+  @override
+  String get eicFrictionTagEngagementMomentum => 'Engagement momentum';
+
+  @override
+  String get eicFrictionTagRecallGap => 'Recall gap';
+
+  @override
+  String get eicFrictionTagCommunityGap => 'Peer support gap';
+
+  @override
+  String get eicFrictionTagUnknown => 'Other friction';
+
+  @override
+  String lfcObservationBasis(int sampleSize) {
+    return 'Based on observations from your last $sampleSize study records.';
+  }
 }

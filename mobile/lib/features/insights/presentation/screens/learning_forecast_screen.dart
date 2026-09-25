@@ -10,7 +10,7 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/predictive_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
-import 'package:sparkle/features/insights/presentation/widgets/predictive_insights_card.dart';
+import 'package:sparkle/features/insights/presentation/widgets/risk_observation_card.dart';
 import 'package:sparkle/features/reviews/presentation/widgets/nightly_review_panel.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
@@ -210,22 +210,14 @@ class _LearningForecastScreenState
                             ),
                             const SizedBox(height: DS.xl),
 
-                            // Insights Cards
+                            // Insights Cards（D-07：假精确预测面已删除——
+                            // 置信度百分比、精确到时刻的下次学习预测、
+                            // 风险指数 x/100 一律不再渲染，只保留定性观察）
                             _buildSectionTitle(context.l10n.insAiInsights),
                             const SizedBox(height: DS.md),
 
-                            // Engagement Forecast
-                            PredictiveInsightsCard(
-                              type: 'engagement',
-                              data: (_dashboardData?['engagement_forecast']
-                                      as Map<String, dynamic>?) ??
-                                  {},
-                            ),
-                            const SizedBox(height: DS.lg),
-
-                            // Risk Assessment
-                            PredictiveInsightsCard(
-                              type: 'risk',
+                            // Risk Observation（定性档位 + 建议）
+                            RiskObservationCard(
                               data: (_dashboardData?['dropout_risk']
                                       as Map<String, dynamic>?) ??
                                   {},
@@ -311,7 +303,6 @@ class _LearningForecastScreenState
         .toList(growable: false);
     final reason = optimalTimeMap['reason']?.toString() ?? '';
     final sampleSize = (optimalTimeMap['sample_size'] as num?)?.toInt() ?? 0;
-    final confidence = (optimalTimeMap['confidence'] as num?)?.toDouble() ?? 0;
     final dataStatus = optimalTimeMap['data_status']?.toString() ?? 'ok';
     final hasRecommendations = bestHours.isNotEmpty || bestWeekdays.isNotEmpty;
 
@@ -340,8 +331,7 @@ class _LearningForecastScreenState
             const SizedBox(height: DS.lg),
             Text(
               hasRecommendations
-                  ? context.l10n.lfcConfidence(
-                      sampleSize, (confidence * 100).round().toString(),)
+                  ? context.l10n.lfcObservationBasis(sampleSize)
                   : (reason.isEmpty ? context.l10n.insNotEnoughData : reason),
               style: TextStyle(
                 color: DS.textSecondary,

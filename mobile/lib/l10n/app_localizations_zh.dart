@@ -24969,13 +24969,13 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get insForecastTitle => '学习预测洞察';
+  String get insForecastTitle => '学习观察';
 
   @override
-  String get insForecastEmpty => '预测数据暂时还没准备好';
+  String get insForecastEmpty => '观察数据暂时还没准备好';
 
   @override
-  String get insForecastEmptyHint => '稍后重试，或者先完成几次学习与专注记录，让预测系统有足够数据可用。';
+  String get insForecastEmptyHint => '稍后重试，或者先完成几次学习与专注记录，积累更多可观察的数据。';
 
   @override
   String get insReload => '重新加载';
@@ -25108,9 +25108,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get insRetryLoad => '重试加载';
 
   @override
-  String get insPredictNext => '预测下次学习时间';
-
-  @override
   String get insCollapse => '收起';
 
   @override
@@ -25148,45 +25145,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get insRetry => '重试';
 
   @override
-  String get insUnknownType => '未知类型';
+  String get insRiskAssessment => '学习状态观察';
 
   @override
-  String get insEngagementForecast => '活跃度预测';
-
-  @override
-  String get insEngagementSubtitle => 'AI 基于学习习惯的预测';
-
-  @override
-  String get insDifficultyForecast => '难度预测';
-
-  @override
-  String get insDifficultySubtitle => 'AI 基于前置知识的评估';
-
-  @override
-  String get insPredictedDifficulty => '预测难度';
-
-  @override
-  String insPrerequisitesWarning(int count) {
-    return '建议先学习 $count 个前置知识';
-  }
-
-  @override
-  String get insRiskAssessment => '学习风险评估';
-
-  @override
-  String get insRiskSubtitle => 'AI 持续关注您的学习状态';
+  String get insRiskSubtitle => '基于最近学习记录的观察';
 
   @override
   String get insAiSuggestions => 'AI 建议：';
-
-  @override
-  String get insDifficultyEasy => '简单';
-
-  @override
-  String get insDifficultyMedium => '中等';
-
-  @override
-  String get insDifficultyHard => '困难';
 
   @override
   String get insRiskLow => '低风险';
@@ -30483,36 +30448,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get calEditEvent => '编辑日程';
 
   @override
-  String picEstimatedHours(String hours) {
-    return '预计学习时长: $hours 小时';
-  }
-
-  @override
-  String picRiskScore(String score) {
-    return '风险指数: $score/100';
-  }
-
-  @override
-  String picChurnRisk(String level) {
-    return '流失风险: $level';
-  }
-
-  @override
-  String picMinutesLater(int minutes) {
-    return '约 $minutes 分钟后';
-  }
-
-  @override
-  String picTodayTime(String time) {
-    return '今天 $time';
-  }
-
-  @override
-  String picTomorrowTime(String time) {
-    return '明天 $time';
-  }
-
-  @override
   String get lioStartNewSim => '可立即开始一轮新模拟';
 
   @override
@@ -30540,11 +30475,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String lfcConfidence(int sampleSize, String confidence) {
-    return '基于 $sampleSize 条学习记录，当前推荐置信度 $confidence%。';
-  }
-
-  @override
   String get lfcTipMorning => '根据历史数据，您在早上9点学习效果最佳';
 
   @override
@@ -30557,10 +30487,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get lfcPeakDays => '周一到周四是您的高产学习日';
 
   @override
-  String get lfcHeaderTitle => 'AI 预测系统';
+  String get lfcHeaderTitle => '学习观察';
 
   @override
-  String get lfcHeaderSubtitle => '基于学习数据的智能分析';
+  String get lfcHeaderSubtitle => '基于学习记录的如实呈现';
 
   @override
   String get lfcBestTimeTitle => '最佳学习时间';
@@ -37695,4 +37625,165 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get statePhaseRevoked => '内容已不存在或已被移除';
+
+  @override
+  String get eicSectionTitle => '证据洞察';
+
+  @override
+  String get eicSectionSubtitle => '每条洞察都可以点开证据核对。';
+
+  @override
+  String get eicFactLabel => '事实';
+
+  @override
+  String get eicInterpretationLabel => '解读';
+
+  @override
+  String get eicUncertaintyLabel => '不确定性';
+
+  @override
+  String get eicEvidenceLabel => '证据';
+
+  @override
+  String get eicImplicationLabel => '行动含义';
+
+  @override
+  String get eicKindFriction => '阻力模式';
+
+  @override
+  String get eicKindHelpedInterventions => '有帮助的应对';
+
+  @override
+  String get eicKindGoalProgress => '目标进展';
+
+  @override
+  String eicFrictionFact(int days, int count, String tag) {
+    return '最近 $days 天记录到 $count 次「$tag」';
+  }
+
+  @override
+  String eicFrictionResponses(int accepted, int edited, int rejected) {
+    return '其中接受 $accepted 次，修改 $edited 次，拒绝 $rejected 次';
+  }
+
+  @override
+  String eicHelpedFact(int observed, int positive) {
+    return '观察到的 $observed 次记录中，$positive 次伴随正向结果';
+  }
+
+  @override
+  String eicHelpedAgainst(String tag) {
+    return '针对「$tag」';
+  }
+
+  @override
+  String eicGoalFact(String title, int completed, int total) {
+    return '目标「$title」的任务账本：已完成 $completed / 共 $total 项';
+  }
+
+  @override
+  String get eicFrictionRoleMostFrequent => '这是最近最常出现的阻力模式';
+
+  @override
+  String get eicFrictionRoleObserved => '这是窗口内观察到的阻力模式之一';
+
+  @override
+  String get eicHelpedTierSingle => '目前只有单次观察';
+
+  @override
+  String get eicHelpedTierRepeated => '多次观察都呈现同样方向';
+
+  @override
+  String get eicHelpedTierAccumulated => '累积了较多一致观察';
+
+  @override
+  String get eicGoalBandJustStarted => '刚起步';
+
+  @override
+  String get eicGoalBandInProgress => '进行中';
+
+  @override
+  String get eicGoalBandNearlyDone => '接近完成';
+
+  @override
+  String get eicGoalBandAllComplete => '全部完成';
+
+  @override
+  String get eicGoalBandNoTaskEvidence => '还没有可计的任务';
+
+  @override
+  String get eicUniqCountsOnly => '仅基于干预记录计数';
+
+  @override
+  String get eicUniqSmallSample => '样本较少，仅供参考';
+
+  @override
+  String get eicUniqCorrelationNotCausation => '只是相关观察，不能证明因果';
+
+  @override
+  String get eicUniqLedgerHonest => '进展按任务账本逐条计数';
+
+  @override
+  String get eicUniqProgressColumnMayLag => '目标进度列可能与账本不一致，两个口径都如实呈现';
+
+  @override
+  String get eicUniqNoTaskLedger => '该目标还没有可计任务';
+
+  @override
+  String eicUniqNotYetObserved(int count) {
+    return '$count 次还在观察窗口内，结果未到期';
+  }
+
+  @override
+  String get eicEvidenceDirectiveLog => '查看决策日志';
+
+  @override
+  String get eicEvidenceGoalLedger => '查看目标与任务账本';
+
+  @override
+  String get eicActionReviewDirectives => '去决策日志看看系统当时做了什么';
+
+  @override
+  String get eicActionKeepObserving => '先保持观察，暂不下结论';
+
+  @override
+  String get eicActionOpenGoal => '打开目标详情，安排下一步';
+
+  @override
+  String get eicFrictionTagExecutionFriction => '任务执行阻力';
+
+  @override
+  String get eicFrictionTagKnowledgeBottleneck => '知识运用卡点';
+
+  @override
+  String get eicFrictionTagMaterialGap => '学习材料闲置';
+
+  @override
+  String get eicFrictionTagDeadlinePressure => '截止日期压力';
+
+  @override
+  String get eicFrictionTagOverloadCrisis => '负荷过载';
+
+  @override
+  String get eicFrictionTagCognitiveOverload => '认知负荷偏高';
+
+  @override
+  String get eicFrictionTagAffectivePressure => '情绪压力';
+
+  @override
+  String get eicFrictionTagEngagementMomentum => '学习动量波动';
+
+  @override
+  String get eicFrictionTagRecallGap => '记忆召回缺口';
+
+  @override
+  String get eicFrictionTagCommunityGap => '同伴协作缺口';
+
+  @override
+  String get eicFrictionTagUnknown => '其他阻力';
+
+  @override
+  String lfcObservationBasis(int sampleSize) {
+    return '基于最近 $sampleSize 条学习记录的观察。';
+  }
 }

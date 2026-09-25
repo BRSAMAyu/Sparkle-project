@@ -12052,9 +12052,9 @@
             }
         }
     },
-    "insForecastTitle": "Learning Forecast",
-    "insForecastEmpty": "Forecast data is not ready yet",
-    "insForecastEmptyHint": "Try again later, or complete a few learning and focus sessions so the prediction system has enough data.",
+    "insForecastTitle": "Learning observations",
+    "insForecastEmpty": "Observation data is not ready yet",
+    "insForecastEmptyHint": "Try again later, or complete a few learning and focus sessions to build up observable data.",
     "insReload": "Reload",
     "insNightReview": "Night Review",
     "insActivityAnalysis": "Activity Analysis",
@@ -12110,7 +12110,6 @@
     "insTargetNode": "Target Node",
     "insOptionalExtend": "Optional Extensions",
     "insRetryLoad": "Retry",
-    "insPredictNext": "Predict next study time",
     "insCollapse": "Collapse",
     "insExpand": "Expand",
     "insStudyDays": "{count} study days",
@@ -12134,13 +12133,6 @@
     },
     "insFirstWeek": "Week 1",
     "insRetry": "Retry",
-    "insUnknownType": "Unknown type",
-    "insEngagementForecast": "Engagement Forecast",
-    "insEngagementSubtitle": "AI prediction based on learning habits",
-    "insDifficultyForecast": "Difficulty Forecast",
-    "insDifficultySubtitle": "AI assessment based on prerequisites",
-    "insPredictedDifficulty": "Predicted Difficulty",
-    "insPrerequisitesWarning": "Complete {count} prerequisite(s) first",
     "@insPrerequisitesWarning": {
         "placeholders": {
             "count": {
@@ -12148,12 +12140,9 @@
             }
         }
     },
-    "insRiskAssessment": "Learning Risk Assessment",
-    "insRiskSubtitle": "AI monitors your learning status",
+    "insRiskAssessment": "Learning status observations",
+    "insRiskSubtitle": "Based on observations from your recent study records",
     "insAiSuggestions": "AI Suggestions:",
-    "insDifficultyEasy": "Easy",
-    "insDifficultyMedium": "Medium",
-    "insDifficultyHard": "Hard",
     "insRiskLow": "Low Risk",
     "insRiskMedium": "Medium Risk",
     "insRiskHigh": "High Risk",
@@ -13887,7 +13876,6 @@
     "calEventCreated": "Event created",
     "calSavedLocally": "Saved locally, will sync to cloud automatically.",
     "calEditEvent": "Edit Event",
-    "picEstimatedHours": "Estimated study time: {hours} hours",
     "@picEstimatedHours": {
         "placeholders": {
             "hours": {
@@ -13895,7 +13883,6 @@
             }
         }
     },
-    "picRiskScore": "Risk index: {score}/100",
     "@picRiskScore": {
         "placeholders": {
             "score": {
@@ -13903,7 +13890,6 @@
             }
         }
     },
-    "picChurnRisk": "Churn risk: {level}",
     "@picChurnRisk": {
         "placeholders": {
             "level": {
@@ -13911,7 +13897,6 @@
             }
         }
     },
-    "picMinutesLater": "In about {minutes} minutes",
     "@picMinutesLater": {
         "placeholders": {
             "minutes": {
@@ -13919,7 +13904,6 @@
             }
         }
     },
-    "picTodayTime": "Today {time}",
     "@picTodayTime": {
         "placeholders": {
             "time": {
@@ -13927,7 +13911,6 @@
             }
         }
     },
-    "picTomorrowTime": "Tomorrow {time}",
     "@picTomorrowTime": {
         "placeholders": {
             "time": {
@@ -13963,7 +13946,6 @@
             }
         }
     },
-    "lfcConfidence": "Based on {sampleSize} learning records, current recommendation confidence is {confidence}%.",
     "@lfcConfidence": {
         "placeholders": {
             "sampleSize": {
@@ -13978,8 +13960,8 @@
     "lfcTipPomodoro": "Suggest 30-45 minute study sessions with 5-10 minute breaks",
     "lfcTipTitle": "Learning Tips",
     "lfcPeakDays": "Mon-Thu are your peak learning days",
-    "lfcHeaderTitle": "AI Prediction System",
-    "lfcHeaderSubtitle": "Smart analysis based on learning data",
+    "lfcHeaderTitle": "Learning observations",
+    "lfcHeaderSubtitle": "An honest view of your study records",
     "lfcBestTimeTitle": "Best Learning Time",
     "lfcInsufficientDataHint": "Complete 3+ learning or focus sessions first, and the system will provide more personalized time windows.",
     "lfcRecommendedHours": "Recommended Learning Hours",
@@ -18107,5 +18089,138 @@
     "statePhaseCancelled": "Cancelled",
     "@statePhaseCancelled": {},
     "statePhaseRevoked": "This content no longer exists or was removed",
-    "@statePhaseRevoked": {}
+    "@statePhaseRevoked": {},
+    "eicSectionTitle": "Evidence-based insights",
+    "@eicSectionTitle": {},
+    "eicSectionSubtitle": "Every insight links to evidence you can open.",
+    "@eicSectionSubtitle": {},
+    "eicFactLabel": "Fact",
+    "@eicFactLabel": {},
+    "eicInterpretationLabel": "Interpretation",
+    "@eicInterpretationLabel": {},
+    "eicUncertaintyLabel": "Uncertainty",
+    "@eicUncertaintyLabel": {},
+    "eicEvidenceLabel": "Evidence",
+    "@eicEvidenceLabel": {},
+    "eicImplicationLabel": "Next step",
+    "@eicImplicationLabel": {},
+    "eicKindFriction": "Friction pattern",
+    "@eicKindFriction": {},
+    "eicKindHelpedInterventions": "Interventions that helped",
+    "@eicKindHelpedInterventions": {},
+    "eicKindGoalProgress": "Goal progress",
+    "@eicKindGoalProgress": {},
+    "eicFrictionFact": "{count} “{tag}” signals recorded in the last {days} days",
+    "@eicFrictionFact": {
+        "placeholders": {
+            "days": { "type": "int" },
+            "count": { "type": "int" },
+            "tag": { "type": "String" }
+        }
+    },
+    "eicFrictionResponses": "Of these: {accepted} accepted, {edited} edited, {rejected} rejected",
+    "@eicFrictionResponses": {
+        "placeholders": {
+            "accepted": { "type": "int" },
+            "edited": { "type": "int" },
+            "rejected": { "type": "int" }
+        }
+    },
+    "eicHelpedFact": "In {observed} observed cases, {positive} came with a positive outcome",
+    "@eicHelpedFact": {
+        "placeholders": {
+            "observed": { "type": "int" },
+            "positive": { "type": "int" }
+        }
+    },
+    "eicHelpedAgainst": "addressing “{tag}”",
+    "@eicHelpedAgainst": {
+        "placeholders": {
+            "tag": { "type": "String" }
+        }
+    },
+    "eicGoalFact": "Goal “{title}” task ledger: {completed} of {total} tasks completed",
+    "@eicGoalFact": {
+        "placeholders": {
+            "title": { "type": "String" },
+            "completed": { "type": "int" },
+            "total": { "type": "int" }
+        }
+    },
+    "eicFrictionRoleMostFrequent": "This is the most frequent friction pattern recently",
+    "@eicFrictionRoleMostFrequent": {},
+    "eicFrictionRoleObserved": "One of the friction patterns observed in this window",
+    "@eicFrictionRoleObserved": {},
+    "eicHelpedTierSingle": "Only a single observation so far",
+    "@eicHelpedTierSingle": {},
+    "eicHelpedTierRepeated": "Several observations point the same way",
+    "@eicHelpedTierRepeated": {},
+    "eicHelpedTierAccumulated": "Many consistent observations have accumulated",
+    "@eicHelpedTierAccumulated": {},
+    "eicGoalBandJustStarted": "Just getting started",
+    "@eicGoalBandJustStarted": {},
+    "eicGoalBandInProgress": "In progress",
+    "@eicGoalBandInProgress": {},
+    "eicGoalBandNearlyDone": "Almost there",
+    "@eicGoalBandNearlyDone": {},
+    "eicGoalBandAllComplete": "All tasks completed",
+    "@eicGoalBandAllComplete": {},
+    "eicGoalBandNoTaskEvidence": "No countable tasks yet",
+    "@eicGoalBandNoTaskEvidence": {},
+    "eicUniqCountsOnly": "Based only on intervention record counts",
+    "@eicUniqCountsOnly": {},
+    "eicUniqSmallSample": "Small sample — treat as a hint, not a conclusion",
+    "@eicUniqSmallSample": {},
+    "eicUniqCorrelationNotCausation": "Observed correlation only; this does not prove causation",
+    "@eicUniqCorrelationNotCausation": {},
+    "eicUniqLedgerHonest": "Progress counted task-by-task from the ledger",
+    "@eicUniqLedgerHonest": {},
+    "eicUniqProgressColumnMayLag": "The goal progress field may lag the ledger; both are shown as-is",
+    "@eicUniqProgressColumnMayLag": {},
+    "eicUniqNoTaskLedger": "This goal has no countable tasks yet",
+    "@eicUniqNoTaskLedger": {},
+    "eicUniqNotYetObserved": "{count} still within the observation window; outcomes not yet due",
+    "@eicUniqNotYetObserved": {
+        "placeholders": {
+            "count": { "type": "int" }
+        }
+    },
+    "eicEvidenceDirectiveLog": "Open decision log",
+    "@eicEvidenceDirectiveLog": {},
+    "eicEvidenceGoalLedger": "Open goal and task ledger",
+    "@eicEvidenceGoalLedger": {},
+    "eicActionReviewDirectives": "Review what the system did in the decision log",
+    "@eicActionReviewDirectives": {},
+    "eicActionKeepObserving": "Keep observing before drawing conclusions",
+    "@eicActionKeepObserving": {},
+    "eicActionOpenGoal": "Open the goal to plan your next step",
+    "@eicActionOpenGoal": {},
+    "eicFrictionTagExecutionFriction": "Task execution friction",
+    "@eicFrictionTagExecutionFriction": {},
+    "eicFrictionTagKnowledgeBottleneck": "Knowledge bottleneck",
+    "@eicFrictionTagKnowledgeBottleneck": {},
+    "eicFrictionTagMaterialGap": "Unused learning materials",
+    "@eicFrictionTagMaterialGap": {},
+    "eicFrictionTagDeadlinePressure": "Deadline pressure",
+    "@eicFrictionTagDeadlinePressure": {},
+    "eicFrictionTagOverloadCrisis": "Overload crisis",
+    "@eicFrictionTagOverloadCrisis": {},
+    "eicFrictionTagCognitiveOverload": "High cognitive load",
+    "@eicFrictionTagCognitiveOverload": {},
+    "eicFrictionTagAffectivePressure": "Emotional pressure",
+    "@eicFrictionTagAffectivePressure": {},
+    "eicFrictionTagEngagementMomentum": "Engagement momentum",
+    "@eicFrictionTagEngagementMomentum": {},
+    "eicFrictionTagRecallGap": "Recall gap",
+    "@eicFrictionTagRecallGap": {},
+    "eicFrictionTagCommunityGap": "Peer support gap",
+    "@eicFrictionTagCommunityGap": {},
+    "eicFrictionTagUnknown": "Other friction",
+    "@eicFrictionTagUnknown": {},
+    "lfcObservationBasis": "Based on observations from your last {sampleSize} study records.",
+    "@lfcObservationBasis": {
+        "placeholders": {
+            "sampleSize": { "type": "int" }
+        }
+    }
 }

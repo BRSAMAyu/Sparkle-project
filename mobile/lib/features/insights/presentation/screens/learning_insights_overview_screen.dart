@@ -7,6 +7,7 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/remediable_patterns_card.dart';
 import 'package:sparkle/features/insights/insights_routes.dart';
 import 'package:sparkle/features/insights/presentation/providers/weekly_growth_narrative_provider.dart';
+import 'package:sparkle/features/insights/presentation/widgets/evidence_insight_section.dart';
 import 'package:sparkle/features/insights/presentation/widgets/weekly_growth_narrative_card.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/report_routes.dart';
@@ -85,9 +86,15 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
                   onAction: () => context.push(TaskRoutes.taskCreate),
                 )
               else
-                WeeklyGrowthNarrativeCard(
-                  initialExpanded: initialPanel == panelWeeklyNarrative,
-                ),
+              WeeklyGrowthNarrativeCard(
+                initialExpanded: initialPanel == panelWeeklyNarrative,
+              ),
+              const SizedBox(height: DS.spacing16),
+              // D-07 证据洞察：fact/interpretation/uncertainty/evidence/
+              // implication 五要素卡，三类洞察（阻力模式/有帮助的应对/目标
+              // 进展），证据可点深链；无数据整区隐藏。
+              const EvidenceInsightSection(),
+              const SizedBox(height: DS.spacing16),
               const RemediablePatternsCard(),
               const SizedBox(height: DS.spacing16),
               _InsightModuleCard(

@@ -219,6 +219,8 @@ class ApiEndpoints {
   static const String growthWeeklyNarrativeGenerate =
       '/growth/weekly-narrative/generate';
   static const String insightsRecentDirectives = '/insights/recent-directives';
+  // D-07: evidence-driven insight cards (fact/interpretation/uncertainty/evidence/implication)
+  static const String insightsEvidenceCards = '/insights/evidence-cards';
   // GOAL-011: ReturnCaseFile endpoint (returning-user pickup)
   static const String growthReturnCaseFile = '/growth/return-case-file';
   static const String experienceUnderstandingSnapshot =
