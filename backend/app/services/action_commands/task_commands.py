@@ -150,6 +150,10 @@ class TaskUpdateStatusCommand:
     """``task.update_status`` —— 状态迁移提案（Aurora/chat/task 入口共用）."""
 
     command_type = ActionCommandType.TASK_UPDATE_STATUS.value
+    # P-04 预授权 allowlist 资格：软目标（start/pause/resume/stuck）低风险可逆，
+    # 允许用户按类别授予 auto；终态目标（COMPLETED/ABANDONED）由 per-op 风险门
+    # （medium/不可逆）继续拦截——类别授予永不压过操作级风险判定。
+    auto_eligible = True
 
     async def prepare(self, db: AsyncSession, *, payload: dict[str, Any], user_id: Any) -> PreparedCommand:
         target_status = _resolve_status(payload.get("to_status"))
@@ -265,6 +269,8 @@ class TaskUpdateFieldsCommand:
     """``task.update_fields`` —— 白名单字段批量修改提案（diff 可渲染）."""
 
     command_type = ActionCommandType.TASK_UPDATE_FIELDS.value
+    # P-04：白名单字段均为可逆编辑（可再改回）→ 允许类别级预授权
+    auto_eligible = True
 
     async def prepare(self, db: AsyncSession, *, payload: dict[str, Any], user_id: Any) -> PreparedCommand:
         fields = payload.get("fields")
@@ -345,6 +351,9 @@ class TaskCreateBatchCommand:
     """``task.create_batch`` —— 批量建任务提案（milestone 式推荐；无 subject）."""
 
     command_type = ActionCommandType.TASK_CREATE_BATCH.value
+    # P-04：建出的任务需显式清理（reversible=False）——按卡面红线「不可逆操作
+    # 永远是 proposal」，本类别**不可被授予** auto（授权面入口即拒，非仅风险门）。
+    auto_eligible = False
 
     async def prepare(self, db: AsyncSession, *, payload: dict[str, Any], user_id: Any) -> PreparedCommand:
         tasks = payload.get("tasks")

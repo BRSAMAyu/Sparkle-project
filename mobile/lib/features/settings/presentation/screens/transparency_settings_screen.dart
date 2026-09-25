@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/user_preferences_service.dart';
+import 'package:sparkle/features/settings/presentation/widgets/action_auto_execute_section.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
 part 'transparency_settings_screen.g.dart';
@@ -76,6 +77,11 @@ class TransparencySettingsScreen extends ConsumerWidget {
                   },
                 ),
               ),
+              const SizedBox(height: DS.md),
+
+              // P-04 授权设置面：低风险 auto-execute 预授权（grant/revoke；
+              // 授权判定/revoke 时序在引擎，本面只做投影与转发）
+              const ActionAutoExecuteSection(),
               const SizedBox(height: DS.md),
 
               // Detailed options

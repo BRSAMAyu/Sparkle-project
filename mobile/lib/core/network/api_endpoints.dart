@@ -81,6 +81,12 @@ class ApiEndpoints {
       '/action-proposals/$id/cancel';
   static String actionProposalReject(String id) =>
       '/action-proposals/$id/reject';
+  // P-04: 低风险 auto-execute 预授权面（grant/revoke/状态投影）
+  static const String actionPermissions = '/action-permissions';
+  static String actionPermissionGrant(String category) =>
+      '/action-permissions/$category/grant';
+  static String actionPermissionRevoke(String category) =>
+      '/action-permissions/$category/revoke';
   // J-04: First Meaningful Action 链路入口（Goal→Context→Aurora→Proposal→
   // confirm→Task；网关纯代理 → Python 引擎，proposal 生命周期仍归 X-03）
   static const String journeyFirstAction = '/journey/first-action';

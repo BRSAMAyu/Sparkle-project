@@ -18510,5 +18510,19 @@
     "firstActionEditSave": "Save and re-propose",
     "firstActionEvidenceArtifact": "A visible artifact",
     "firstActionEvidenceSelfReport": "Your honest self-report",
-    "firstActionEvidenceOther": "Checkable completion evidence"
+    "firstActionEvidenceOther": "Checkable completion evidence",
+    "firstActionEvidenceArtifact": "A visible artifact",
+    "firstActionEvidenceSelfReport": "Your honest self-report",
+    "firstActionEvidenceOther": "Checkable completion evidence",
+    "actionAutoSectionTitle": "Auto-execution permissions",
+    "actionAutoSectionDesc": "Once pre-authorized, Sparkle can directly carry out low-risk reversible operations in these categories. High-risk and irreversible operations always ask for confirmation first and are never run automatically.",
+    "actionAutoMasterOffHint": "The auto-execution master switch is off: nothing runs automatically right now.",
+    "actionAutoReceiptHint": "Every auto execution comes with a receipt; revoke here anytime",
+    "actionAutoIneligibleHint": "Irreversible operations (e.g. batch task creation, completing a task) cannot be pre-authorized",
+    "actionAutoCategoryTaskUpdateStatus": "Task status changes (start/pause/resume/stuck)",
+    "actionAutoCategoryTaskUpdateFields": "Task detail edits (title/priority etc.)",
+    "actionAutoNotGrantable": "This category cannot be pre-authorized",
+    "actionAutoChangeFailed": "Failed to update permission, please retry",
+    "actionAutoLoadFailed": "Failed to load permission state",
+    "actionAutoRetry": "Retry"
 }

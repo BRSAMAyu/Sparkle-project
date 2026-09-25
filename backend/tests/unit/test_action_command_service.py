@@ -113,10 +113,22 @@ async def _make_task(db_session, user: User, *, status: TaskStatus = TaskStatus.
 
 
 async def _grant_low_risk_auto(db_session, user: User, *, enabled: bool = True) -> None:
-    """服务端真源写入：UserSettings.low_risk_auto_execute（R2 P2-3 返修后唯一的授权面）."""
+    """服务端真源写入：UserSettings.low_risk_auto_execute（R2 P2-3 返修后的总开关）.
+
+    P-04 起完整预授权 = 总开关 ∧ 类别级 allowlist（UserPreferencesCenter.explicit
+    的 grant/revoke 面）。本 helper 同时授予全部 auto-eligible 类别，保持「总开关
+    即授权」的既有用例语义；类别维度本身由 test_p04_auto_execution_permissions.py
+    单独验收（未授予类别 → confirmation）。
+    """
+    from app.services.action_permission_service import ActionPermissionService
+
     settings = UserSettings(user_id=user.id, low_risk_auto_execute=enabled)
     db_session.add(settings)
     await db_session.commit()
+    if enabled:
+        permissions = ActionPermissionService(db_session)
+        for category in ("task.update_status", "task.update_fields"):
+            await permissions.grant_category(user.id, category)
 
 
 async def _outbox_count(db_session, event_type: str) -> int:

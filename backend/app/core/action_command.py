@@ -140,13 +140,18 @@ class AuthorizationMode(StrEnum):
 
 
 class AuthorizationReason(StrEnum):
-    """授权决策 reason codes（封闭词表，确定性规则输出，非 LLM）."""
+    """授权决策 reason codes（封闭词表，确定性规则输出，非 LLM）.
+
+    P-04 新增 ``auto_forbidden_category_not_allowlisted``：操作类别不在用户
+    预授权 allowlist（grant/revoke 面）——总开关之外的第二道用户授权维度。
+    """
 
     RISK_LOW_REVERSIBLE_AUTO_GRANT = "risk_low_reversible_auto_grant"
     AUTO_FORBIDDEN_RISK_NOT_LOW = "auto_forbidden_risk_not_low"
     AUTO_FORBIDDEN_IRREVERSIBLE = "auto_forbidden_irreversible"
     AUTO_FORBIDDEN_HUMAN_APPROVAL_REQUIRED = "auto_forbidden_human_approval_required"
     AUTO_FORBIDDEN_GRANT_ABSENT = "auto_forbidden_grant_absent"
+    AUTO_FORBIDDEN_CATEGORY_NOT_ALLOWLISTED = "auto_forbidden_category_not_allowlisted"
     AWAITING_USER_CONFIRMATION = "awaiting_user_confirmation"
     USER_CONFIRMATION_PRESENT = "user_confirmation_present"
     DENIED_NO_CONFIRMATION = "denied_no_confirmation"

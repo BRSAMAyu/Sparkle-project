@@ -44,6 +44,7 @@ from app.core.action_command import (
     MAX_PROPOSAL_TTL_SECONDS,
     TERMINAL_PROPOSAL_STATUSES,
     ActionCommandError,
+    AuthorizationMode,
     ProposalExpiredError,
     ProposalNotFoundError,
     ProposalNotPendingError,
@@ -58,6 +59,7 @@ from app.services.action_authorization import (
     decide_authorization_mode,
     record_confirmation,
 )
+from app.services.action_permission_service import ActionPermissionService
 
 # 直接从定义模块导入（而非包再导出）：依赖图对静态守卫（Rule AT）可见，
 # 运行时同一对象，语义零变化。
@@ -135,9 +137,11 @@ class ActionCommandService:
 
         授权输入的服务端真源（R2 P2-3 返修，客户端/调用方零自授面）：
         - ``user_auto_grant`` ← ``UserSettings.low_risk_auto_execute``（本方法自查）；
+        - ``category_allowed`` ← P-04 预授权 allowlist（``UserPreferencesCenter.
+          explicit`` 的 grant/revoke 面，本方法自查；授权不缓存，revoke 即时生效）；
         - ``requires_human_approval`` ← X-02 rule 层 R1 语义在命令风险分级上的
           服务端投影（``_requires_human_approval``）。
-        两者均**不是**本方法的参数——任何调用路径都无法传入授权值。
+        三者均**不是**本方法的参数——任何调用路径都无法传入授权值。
         """
         user_uuid = UUID(str(user_id))
         key = (str(idempotency_key).strip() if idempotency_key else None) or None
@@ -152,11 +156,16 @@ class ActionCommandService:
         handler = get_command_handler(command_type)
         prepared = await handler.prepare(self.db, payload=payload, user_id=user_uuid)
 
+        # P-04：类别级预授权判定（每次创建读真源——不缓存授权状态）
+        category_allowed, category_granted_at = await self._category_grant(user_uuid, prepared.command_type)
         authorization = decide_authorization_mode(
             risk_class=prepared.risk_class,
             reversible=prepared.reversible,
             requires_human_approval=_requires_human_approval(prepared),
             user_auto_grant=await self._user_auto_grant(user_uuid),
+            category_allowed=category_allowed,
+            category=prepared.command_type,
+            category_granted_at=category_granted_at,
         )
 
         now = _utcnow()
@@ -618,11 +627,12 @@ class ActionCommandService:
     # ------------------------------------------------------------------
 
     async def _user_auto_grant(self, user_uuid: UUID) -> bool:
-        """用户低风险自动授权的**服务端真源**（R2 P2-3 返修）.
+        """用户低风险自动授权**总开关**的服务端真源（R2 P2-3 返修）.
 
         只读 ``UserSettings.low_risk_auto_execute``（用户显式授予；默认 False 保守，
         FV-02 opt-out 同款先例）。无 settings 行 / 未授予 → False。
         授权值不经过任何调用方参数——客户端自授在本路径上不存在。
+        P-04 起这是 auto 的必要条件之一（与类别级预授权 allowlist 取与）。
         """
         granted = (
             await self.db.execute(
@@ -633,6 +643,22 @@ class ActionCommandService:
             )
         ).scalar_one_or_none()
         return bool(granted)
+
+    async def _category_grant(self, user_uuid: UUID, command_type: str) -> tuple[bool, str | None]:
+        """P-04 类别级预授权判定（服务端真源，fail-closed）.
+
+        读 ``UserPreferencesCenter.explicit`` 的 grant/revoke 面（P-03 同款存储）：
+        类别被授予且未 revoke → ``(True, granted_at)``；未授予/已撤销/读取异常 →
+        ``(False, None)``（宁可保守——存储层故障绝不放大成 auto）。
+        """
+        return await ActionPermissionService(self.db).is_category_granted(user_uuid, command_type)
+
+    async def _auto_grant_active(self, user_uuid: UUID, command_type: str) -> bool:
+        """auto 直通的完整授权前置（总开关 ∧ 类别授予）——resume 复核用."""
+        if not await self._user_auto_grant(user_uuid):
+            return False
+        allowed, _granted_at = await self._category_grant(user_uuid, command_type)
+        return allowed
 
     async def _resume_or_replay(
         self, existing: ActionProposal, *, execute_if_authorized: bool
@@ -646,11 +672,16 @@ class ActionCommandService:
         执行意图 → 重入 approve 恢复执行。恰一次不变（approve 重放
         already_committed 零新写），过期/终态守卫原样生效；mode 非 auto 或未
         携带执行意图 → 维持原早退语义（重放响应，零新写）。
+
+        P-04：重入前**复核当前授权**（总开关 ∧ 类别授予，逐次读真源）——revoke
+        对已创建未落账的 auto proposal 即时生效（撤销不靠创建时点授权存续）；
+        失效 → 维持 PENDING（用户仍可显式确认执行）。
         """
         if (
             execute_if_authorized
             and ProposalStatus(existing.status) is ProposalStatus.PENDING
             and str((existing.authorization or {}).get("mode", "")) == "auto"
+            and await self._auto_grant_active(existing.user_id, existing.command_type)
         ):
             return await self.approve(existing.id, user_id=existing.user_id, actor="system", _called_internally=True)
         return ProposalMutationResult(
@@ -730,8 +761,23 @@ class ActionCommandService:
 
         ``effects=None`` → 守卫版 receipt（effects 由 execute 落账后富化；其前
         diff 已携带 before/after 对照）。守卫版与领域写同 commit——崩溃安全。
+
+        P-04：auto 执行的 receipt 额外携带 ``revoke_entry``（操作内容/依据之外
+        的撤销入口——用户可从 receipt 一键关掉该类别的自动执行，可纠正）；
+        依据本体在 ``authorization``（mode/reason_codes/grant_basis，P-04 起
+        由 decide 阶段固化 granted_at）。确认路径 commit 的 ``revoke_entry``
+        为 None（无存续授权可撤）。
         """
         diff = proposal.diff or {}
+        authorization = dict(proposal.authorization or {})
+        revoke_entry: dict[str, Any] | None = None
+        if authorization.get("mode") == AuthorizationMode.AUTO.value:
+            revoke_entry = {
+                "kind": "action_permission_revoke",
+                "category": proposal.command_type,
+                "method": "POST",
+                "path": f"/api/v1/action-permissions/{proposal.command_type}/revoke",
+            }
         return {
             "receipt_id": receipt_id,
             "proposal_id": str(proposal.id),
@@ -747,7 +793,8 @@ class ActionCommandService:
             "diff": diff,
             "effects": list(effects.effects) if effects is not None else [],
             "subject_after": effects.subject_after if effects is not None else diff.get("after"),
-            "authorization": proposal.authorization,
+            "authorization": authorization,
+            "revoke_entry": revoke_entry,
             "confirmed_by": actor,
             "committed_at": now.isoformat(timespec="milliseconds"),
             "idempotency_key": proposal.idempotency_key,

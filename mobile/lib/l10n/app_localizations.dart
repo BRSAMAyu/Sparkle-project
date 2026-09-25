@@ -69126,6 +69126,72 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'可检查的完成证据'**
   String get firstActionEvidenceOther;
+
+  /// No description provided for @actionAutoSectionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'自动执行预授权'**
+  String get actionAutoSectionTitle;
+
+  /// No description provided for @actionAutoSectionDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'预授权后，Sparkle 可以直接执行这些类别的低风险可逆操作。高风险与不可逆操作永远先征求确认，不会自动执行。'**
+  String get actionAutoSectionDesc;
+
+  /// No description provided for @actionAutoMasterOffHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'自动执行总开关未开启：当前任何类别都不会自动执行。'**
+  String get actionAutoMasterOffHint;
+
+  /// No description provided for @actionAutoReceiptHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'每次自动执行都有回执，可随时在此撤销'**
+  String get actionAutoReceiptHint;
+
+  /// No description provided for @actionAutoIneligibleHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'不可逆操作（如批量建任务、完成任务）不支持预授权'**
+  String get actionAutoIneligibleHint;
+
+  /// No description provided for @actionAutoCategoryTaskUpdateStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务状态调整（开始/暂停/恢复/卡住）'**
+  String get actionAutoCategoryTaskUpdateStatus;
+
+  /// No description provided for @actionAutoCategoryTaskUpdateFields.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务信息修改（标题/优先级等）'**
+  String get actionAutoCategoryTaskUpdateFields;
+
+  /// No description provided for @actionAutoNotGrantable.
+  ///
+  /// In zh, this message translates to:
+  /// **'该类别不支持预授权'**
+  String get actionAutoNotGrantable;
+
+  /// No description provided for @actionAutoChangeFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'授权更新失败，请重试'**
+  String get actionAutoChangeFailed;
+
+  /// No description provided for @actionAutoLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'授权状态加载失败'**
+  String get actionAutoLoadFailed;
+
+  /// No description provided for @actionAutoRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get actionAutoRetry;
 }
 
 class _AppLocalizationsDelegate

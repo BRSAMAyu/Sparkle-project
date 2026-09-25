@@ -12,6 +12,10 @@ ACTION_AND_INTERVENTION_ENGINE.md §3：
   ``action_commands/task_commands.py`` 的 per-command 映射）；「需人工审批」取
   X-02 R1 语义的**服务端投影**（``action_command_service._requires_human_approval``，
   R2 P2-3 返修后调用方/客户端零传入面——授权输入不由任何请求方供给）；
+- **P-04 预授权 allowlist 维度**：类别级 grant/revoke（用户可控预授权面）与
+  总开关（UserSettings.low_risk_auto_execute）取**与**关系——两者齐备且风险门
+  通过才 auto；类别未授予/被 revoke → confirmation（新 reason code）。判定
+  每次创建 proposal 时读真源，不缓存授权状态（revoke 即时生效）；
 - 纯函数、封闭 reason codes、无 I/O 无 LLM——守卫由代码强制，不信任提示词。
 
 两个检查点：
@@ -72,6 +76,9 @@ def decide_authorization_mode(
     reversible: bool | None,
     requires_human_approval: bool = False,
     user_auto_grant: bool = False,
+    category_allowed: bool = True,
+    category: str | None = None,
+    category_granted_at: str | None = None,
 ) -> ActionAuthorizationDecision:
     """proposal 创建时的 mode 决策（确定性规则，封闭 reason codes）.
 
@@ -79,10 +86,17 @@ def decide_authorization_mode(
     - 风险为 low（或未分级——未分级不视为高风险，但可逆性必须明确为真）；
     - 可逆（reversible 不为 False；None 时要求显式 risk=low 才放行）；
     - X-02 分配策略未标记 requires_human_approval；
-    - 用户已授予低风险自动权限（user_auto_grant；真源=UserSettings.
-      low_risk_auto_execute，由 command path 服务端自查，R2 P2-3 返修后非调用方输入）。
+    - 用户已授予低风险自动权限总开关（user_auto_grant；真源=UserSettings.
+      low_risk_auto_execute，由 command path 服务端自查，R2 P2-3 返修后非调用方输入）；
+    - 操作类别在用户预授权 allowlist（P-04：category_allowed；真源=
+      UserPreferencesCenter.explicit 的 grant/revoke 面，同样服务端自查）。
 
     任何一条不满足 → confirmation（proposal → 用户确认 → …）。
+
+    ``category_allowed`` 缺省 True 的语义：本函数只裁决**传入的**维度，allowlist
+    维度由 command path 每次创建proposal 时读真源传入（授权不缓存，revoke 即时
+    生效）。auto 通过时把依据固化进 ``grant_basis``（master ∧ category +
+    granted_at）——随 proposal.authorization 落库、随 receipt 出示，依据可追溯。
     """
     reasons: list[str] = []
     auto = True
@@ -103,6 +117,9 @@ def decide_authorization_mode(
     if not user_auto_grant:
         auto = False
         reasons.append(AuthorizationReason.AUTO_FORBIDDEN_GRANT_ABSENT.value)
+    if not category_allowed:
+        auto = False
+        reasons.append(AuthorizationReason.AUTO_FORBIDDEN_CATEGORY_NOT_ALLOWLISTED.value)
 
     mode = AuthorizationMode.AUTO if auto else AuthorizationMode.CONFIRMATION
     if auto:
@@ -110,11 +127,20 @@ def decide_authorization_mode(
     else:
         reasons.insert(0, AuthorizationReason.AWAITING_USER_CONFIRMATION.value)
 
+    grant_basis: dict[str, Any] | None = None
+    if auto:
+        grant_basis = {
+            "master_grant": True,
+            "category": category,
+            "category_granted_at": category_granted_at,
+        }
+
     return ActionAuthorizationDecision(
         {
             "mode": mode.value,
             "decided_at": _utcnow().isoformat(timespec="seconds"),
             "reason_codes": reasons,
+            "grant_basis": grant_basis,
             "confirmed_by": None,
             "confirmed_at": None,
         }

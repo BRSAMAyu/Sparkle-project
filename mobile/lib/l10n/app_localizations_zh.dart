@@ -38040,4 +38040,38 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get firstActionEvidenceOther => '可检查的完成证据';
+
+  @override
+  String get actionAutoSectionTitle => '自动执行预授权';
+
+  @override
+  String get actionAutoSectionDesc =>
+      '预授权后，Sparkle 可以直接执行这些类别的低风险可逆操作。高风险与不可逆操作永远先征求确认，不会自动执行。';
+
+  @override
+  String get actionAutoMasterOffHint => '自动执行总开关未开启：当前任何类别都不会自动执行。';
+
+  @override
+  String get actionAutoReceiptHint => '每次自动执行都有回执，可随时在此撤销';
+
+  @override
+  String get actionAutoIneligibleHint => '不可逆操作（如批量建任务、完成任务）不支持预授权';
+
+  @override
+  String get actionAutoCategoryTaskUpdateStatus => '任务状态调整（开始/暂停/恢复/卡住）';
+
+  @override
+  String get actionAutoCategoryTaskUpdateFields => '任务信息修改（标题/优先级等）';
+
+  @override
+  String get actionAutoNotGrantable => '该类别不支持预授权';
+
+  @override
+  String get actionAutoChangeFailed => '授权更新失败，请重试';
+
+  @override
+  String get actionAutoLoadFailed => '授权状态加载失败';
+
+  @override
+  String get actionAutoRetry => '重试';
 }

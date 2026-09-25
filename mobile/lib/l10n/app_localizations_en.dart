@@ -39707,4 +39707,43 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get firstActionEvidenceOther => 'Checkable completion evidence';
+
+  @override
+  String get actionAutoSectionTitle => 'Auto-execution permissions';
+
+  @override
+  String get actionAutoSectionDesc =>
+      'Once pre-authorized, Sparkle can directly carry out low-risk reversible operations in these categories. High-risk and irreversible operations always ask for confirmation first and are never run automatically.';
+
+  @override
+  String get actionAutoMasterOffHint =>
+      'The auto-execution master switch is off: nothing runs automatically right now.';
+
+  @override
+  String get actionAutoReceiptHint =>
+      'Every auto execution comes with a receipt; revoke here anytime';
+
+  @override
+  String get actionAutoIneligibleHint =>
+      'Irreversible operations (e.g. batch task creation, completing a task) cannot be pre-authorized';
+
+  @override
+  String get actionAutoCategoryTaskUpdateStatus =>
+      'Task status changes (start/pause/resume/stuck)';
+
+  @override
+  String get actionAutoCategoryTaskUpdateFields =>
+      'Task detail edits (title/priority etc.)';
+
+  @override
+  String get actionAutoNotGrantable => 'This category cannot be pre-authorized';
+
+  @override
+  String get actionAutoChangeFailed => 'Failed to update permission, please retry';
+
+  @override
+  String get actionAutoLoadFailed => 'Failed to load permission state';
+
+  @override
+  String get actionAutoRetry => 'Retry';
 }

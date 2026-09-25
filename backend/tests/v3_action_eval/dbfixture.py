@@ -207,7 +207,14 @@ class ScenarioDB:
         return async_sessionmaker(self._engine, class_=AsyncSession, expire_on_commit=False)
 
     async def new_context(self, *, auto_grant: bool = False) -> ScenarioContext:
-        """建主用户（可选授予低风险自动权限）→ 返回场景上下文。"""
+        """建主用户（可选授予低风险自动权限）→ 返回场景上下文。
+
+        P-04 起完整预授权 = 总开关（UserSettings.low_risk_auto_execute）∧ 类别级
+        allowlist（UserPreferencesCenter.explicit 的 grant/revoke 面）。auto_grant
+        语义随授权模型升级：同时授予全部 auto-eligible 类别，保持场景
+        auth_z01「用户已授予自动权限 → 低风险可逆操作 inline 执行」的判题口径
+        不变（auth_z02 无授权/auth_z03 不可逆目标仍照原样走 confirmation）。
+        """
         factory = self.session_factory()
         session = factory()
         user_id = uuid4()
@@ -221,6 +228,12 @@ class ScenarioDB:
         if auto_grant:
             session.add(UserSettings(user_id=user_id, low_risk_auto_execute=True))
         await session.commit()
+        if auto_grant:
+            from app.services.action_permission_service import ActionPermissionService
+
+            permissions = ActionPermissionService(session)
+            for category in ("task.update_status", "task.update_fields"):
+                await permissions.grant_category(user_id, category)
         await session.refresh(user)
         return ScenarioContext(session=session, user=user, session_factory=factory)
 

@@ -1143,6 +1143,16 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered action proposals proxy routes")
 
+	// ==================== Action Permissions Routes (P-04 low-risk auto-execute grant surface) ====================
+	// route-tier: authed
+	actionPermissions := api.Group("/action-permissions")
+	actionPermissions.Use(authMiddleware)
+	{
+		// route-tier: authed
+		h.registerREST(actionPermissions, "/*path")
+	}
+	h.logger.Info("Registered action permissions proxy routes")
+
 	// ==================== Journey First Action Routes (J-04 chain entry) ====================
 	// route-tier: authed
 	journey := api.Group("/journey")

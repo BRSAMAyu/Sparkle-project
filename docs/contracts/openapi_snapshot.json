@@ -26273,6 +26273,82 @@
         "title": "PendingCommitmentOut",
         "type": "object"
       },
+      "PermissionMutationResponse": {
+        "description": "grant/revoke 的响应（类别 + 时间戳 + 幂等标志）.",
+        "properties": {
+          "applied": {
+            "default": true,
+            "title": "Applied",
+            "type": "boolean"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "granted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Granted At"
+          },
+          "revoked": {
+            "default": false,
+            "title": "Revoked",
+            "type": "boolean"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          }
+        },
+        "required": [
+          "category"
+        ],
+        "title": "PermissionMutationResponse",
+        "type": "object"
+      },
+      "PermissionStateResponse": {
+        "properties": {
+          "categories": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "eligible_categories": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Eligible Categories",
+            "type": "array"
+          },
+          "master_grant": {
+            "title": "Master Grant",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "master_grant",
+          "categories",
+          "eligible_categories"
+        ],
+        "title": "PermissionStateResponse",
+        "type": "object"
+      },
       "PhaseCreateRequest": {
         "properties": {
           "entry_criteria": {
@@ -44436,6 +44512,129 @@
         "summary": "Share Achievement Canonical",
         "tags": [
           "achievements"
+        ]
+      }
+    },
+    "/api/v1/action-permissions": {
+      "get": {
+        "description": "授权面全量投影（本人；无跨用户面——权限是每用户自己的预授权）.",
+        "operationId": "get_permission_state_api_v1_action_permissions_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionStateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Permission State",
+        "tags": [
+          "action-permissions"
+        ]
+      }
+    },
+    "/api/v1/action-permissions/{category}/grant": {
+      "post": {
+        "description": "授予类别：允许 Sparkle 对该类别低风险可逆操作 proactive auto execute.",
+        "operationId": "grant_category_api_v1_action_permissions__category__grant_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "category",
+            "required": true,
+            "schema": {
+              "title": "Category",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionMutationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Grant Category",
+        "tags": [
+          "action-permissions"
+        ]
+      }
+    },
+    "/api/v1/action-permissions/{category}/revoke": {
+      "post": {
+        "description": "撤销类别：同类操作即时回退 proposal（幂等；未授予 → revoked=False）.",
+        "operationId": "revoke_category_api_v1_action_permissions__category__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "category",
+            "required": true,
+            "schema": {
+              "title": "Category",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PermissionMutationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoke Category",
+        "tags": [
+          "action-permissions"
         ]
       }
     },

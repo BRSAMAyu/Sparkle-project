@@ -16,6 +16,7 @@ from fastapi import APIRouter
 from app.api.v1 import (
     accountability,
     achievements,
+    action_permissions,  # P-04 低风险 auto-execute 预授权面（grant/revoke/状态投影）
     action_proposals,  # X-03 Action Proposal 统一 command path（proposal/receipt 单一权威端点）
     admin_dashboard,
     agent_stats,
@@ -209,6 +210,7 @@ api_router.include_router(executions.router)
 api_router.include_router(executions_admin.router)
 api_router.include_router(runs.router)  # X-05：/runs 前缀（run 状态单一权威端点）
 api_router.include_router(action_proposals.router)  # X-03：/action-proposals 前缀（proposal→approve→commit→receipt 统一 command path）
+api_router.include_router(action_permissions.router)  # P-04：/action-permissions 前缀（低风险 auto-execute 预授权面：grant/revoke/状态投影）
 api_router.include_router(journey.router)  # J-04：/journey 前缀（first-action 链路入口：生成/状态/编辑，proposal 生命周期仍归 X-03）
 api_router.include_router(subtasks.router, tags=["subtasks"])
 api_router.include_router(plans.router, prefix="/plans", tags=["plans"])
