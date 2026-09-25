@@ -36,7 +36,7 @@ def low_energy_aurora(monkeypatch):
             )
 
     monkeypatch.setattr(
-        "app.services.daily_task_selection_service.AuroraRuntimeStore",
+        "app.services.daily_task_selection_service.AuroraEnergyStore",
         _FakeAuroraStore,
     )
 
