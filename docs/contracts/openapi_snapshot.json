@@ -18858,6 +18858,118 @@
         "title": "HelpfulFeature",
         "type": "string"
       },
+      "HybridJourneyStartRequest": {
+        "additionalProperties": false,
+        "description": "启动 Hybrid 旅程（task 缺省时解析最近在飞任务；幂等键建议携带）.",
+        "properties": {
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotency Key"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "task_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Id"
+          }
+        },
+        "title": "HybridJourneyStartRequest",
+        "type": "object"
+      },
+      "HybridJudgmentRequest": {
+        "additionalProperties": false,
+        "description": "用户判断：选择进入交付的材料引用（空选择 = 服务层结构性拒绝代决）.",
+        "properties": {
+          "focus_note": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Focus Note"
+          },
+          "idempotency_key": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "selected_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 16,
+            "minItems": 0,
+            "title": "Selected Refs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "selected_refs",
+          "idempotency_key"
+        ],
+        "title": "HybridJudgmentRequest",
+        "type": "object"
+      },
+      "HybridOutcomeConfirmRequest": {
+        "additionalProperties": false,
+        "description": "确认交付：确认后任务经既有完成路径落终态并记录 outcome.",
+        "properties": {
+          "idempotency_key": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "idempotency_key"
+        ],
+        "title": "HybridOutcomeConfirmRequest",
+        "type": "object"
+      },
       "ImpactRequest": {
         "properties": {
           "after_snapshot": {
@@ -71833,6 +71945,235 @@
           }
         ],
         "summary": "Edit First Action",
+        "tags": [
+          "journey"
+        ]
+      }
+    },
+    "/api/v1/journey/hybrid": {
+      "post": {
+        "description": "启动 Hybrid 旗舰旅程：Agent prep（真实材料检索）→ 轮到你判断。",
+        "operationId": "start_hybrid_journey_api_v1_journey_hybrid_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/HybridJourneyStartRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Request"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Start Hybrid Journey Api V1 Journey Hybrid Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Start Hybrid Journey",
+        "tags": [
+          "journey"
+        ]
+      }
+    },
+    "/api/v1/journey/hybrid/{run_id}": {
+      "get": {
+        "description": "旅程状态读面（重开 App 持久化回放：run + 分段产物 + 判断面）。",
+        "operationId": "get_hybrid_journey_api_v1_journey_hybrid__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Hybrid Journey Api V1 Journey Hybrid  Run Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Hybrid Journey",
+        "tags": [
+          "journey"
+        ]
+      }
+    },
+    "/api/v1/journey/hybrid/{run_id}/judgment": {
+      "post": {
+        "description": "判断段提交（AI 不代决）：选择材料引用 → Agent 起草并核对 → 等你确认。",
+        "operationId": "submit_hybrid_judgment_api_v1_journey_hybrid__run_id__judgment_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HybridJudgmentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Submit Hybrid Judgment Api V1 Journey Hybrid  Run Id  Judgment Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Submit Hybrid Judgment",
+        "tags": [
+          "journey"
+        ]
+      }
+    },
+    "/api/v1/journey/hybrid/{run_id}/outcome/confirm": {
+      "post": {
+        "description": "确认交付（幂等）：任务完成 + outcome 记录 + run SUCCEEDED。",
+        "operationId": "confirm_hybrid_outcome_api_v1_journey_hybrid__run_id__outcome_confirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HybridOutcomeConfirmRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Confirm Hybrid Outcome Api V1 Journey Hybrid  Run Id  Outcome Confirm Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Confirm Hybrid Outcome",
         "tags": [
           "journey"
         ]

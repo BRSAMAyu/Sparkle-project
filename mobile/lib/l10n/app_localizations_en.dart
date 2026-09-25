@@ -39747,4 +39747,56 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get actionAutoRetry => 'Retry';
+
+  @override
+  String get hybridJourneySheetTitle =>
+      'Do it together: prep · your call · delivery';
+
+  @override
+  String get hybridJourneyStagePrep => 'Prep';
+
+  @override
+  String get hybridJourneyStageJudgment => 'Your call';
+
+  @override
+  String get hybridJourneyStageExecuteCheck => 'Draft & check';
+
+  @override
+  String get hybridJourneyStageOutcome => 'Confirm delivery';
+
+  @override
+  String get hybridJourneyWhyHumanHeader => 'This step needs your call';
+
+  @override
+  String get hybridJourneyJudgmentWhyHuman =>
+      'Which materials to use and where to focus define your own direction — this call is yours. Sparkle only prepares and checks.';
+
+  @override
+  String get hybridJourneySelectPrompt =>
+      'Choose which retrieved sources go into your outline (at least one)';
+
+  @override
+  String get hybridJourneySubmitJudgment => 'Go with these';
+
+  @override
+  String get hybridJourneyFocusHint => 'Focus direction (optional)';
+
+  @override
+  String hybridJourneyCheckPassed(int count) {
+    return 'Checked: all $count citations come from your selection';
+  }
+
+  @override
+  String get hybridJourneyOutcomeHeader => 'Last step: confirm delivery';
+
+  @override
+  String hybridJourneyDone(int count) {
+    return 'Done: your delivery is recorded in your growth map ($count source citations)';
+  }
+
+  @override
+  String get hybridJourneyLoadFailed => 'Couldn\'t load the journey';
+
+  @override
+  String get hybridJourneyRetry => 'Retry';
 }

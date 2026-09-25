@@ -159,6 +159,7 @@ from app.models.galaxy import (
 )
 from app.models.goal import Goal
 from app.models.group_files import GroupFile, GroupFileTrustLevel
+from app.models.hybrid_journey import HybridJourneyArtifact
 from app.models.idempotency_key import IdempotencyKey
 from app.models.intervention import (
     InterventionAuditLog,

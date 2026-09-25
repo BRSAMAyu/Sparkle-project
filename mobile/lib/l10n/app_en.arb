@@ -18511,9 +18511,6 @@
     "firstActionEvidenceArtifact": "A visible artifact",
     "firstActionEvidenceSelfReport": "Your honest self-report",
     "firstActionEvidenceOther": "Checkable completion evidence",
-    "firstActionEvidenceArtifact": "A visible artifact",
-    "firstActionEvidenceSelfReport": "Your honest self-report",
-    "firstActionEvidenceOther": "Checkable completion evidence",
     "actionAutoSectionTitle": "Auto-execution permissions",
     "actionAutoSectionDesc": "Once pre-authorized, Sparkle can directly carry out low-risk reversible operations in these categories. High-risk and irreversible operations always ask for confirmation first and are never run automatically.",
     "actionAutoMasterOffHint": "The auto-execution master switch is off: nothing runs automatically right now.",
@@ -18524,5 +18521,34 @@
     "actionAutoNotGrantable": "This category cannot be pre-authorized",
     "actionAutoChangeFailed": "Failed to update permission, please retry",
     "actionAutoLoadFailed": "Failed to load permission state",
-    "actionAutoRetry": "Retry"
+    "actionAutoRetry": "Retry",
+    "hybridJourneySheetTitle": "Do it together: prep · your call · delivery",
+    "hybridJourneyStagePrep": "Prep",
+    "hybridJourneyStageJudgment": "Your call",
+    "hybridJourneyStageExecuteCheck": "Draft & check",
+    "hybridJourneyStageOutcome": "Confirm delivery",
+    "hybridJourneyWhyHumanHeader": "This step needs your call",
+    "hybridJourneyJudgmentWhyHuman": "Which materials to use and where to focus define your own direction — this call is yours. Sparkle only prepares and checks.",
+    "hybridJourneySelectPrompt": "Choose which retrieved sources go into your outline (at least one)",
+    "hybridJourneySubmitJudgment": "Go with these",
+    "hybridJourneyFocusHint": "Focus direction (optional)",
+    "hybridJourneyCheckPassed": "Checked: all {count} citations come from your selection",
+    "@hybridJourneyCheckPassed": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "hybridJourneyOutcomeHeader": "Last step: confirm delivery",
+    "hybridJourneyDone": "Done: your delivery is recorded in your growth map ({count} source citations)",
+    "@hybridJourneyDone": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "hybridJourneyLoadFailed": "Couldn't load the journey",
+    "hybridJourneyRetry": "Retry"
 }

@@ -10,10 +10,14 @@
 - ``POST /journey/first-action/{proposal_id}/edit``：编辑 = 拒绝旧提案（编辑
   delta 进 feedback 审计）+ 同链路重提案（统一 path，不旁路）。
 
-分层边界：本 router 只做参数/错误映射，链路语义在
-``app.services.first_action_service``；proposal 生命周期权威仍是 X-03
-``ActionCommandService``。网关侧由 proxy_routes.go 的 ``/journey`` 代理组
-转发（Go 纯 proxy，无业务逻辑）。
+J-06 · ``/journey/hybrid``：Hybrid 旗舰旅程（Agent prep → Human judgment →
+Agent execute/check → Outcome）——与 first-action 同一 ``/journey`` 面、同一
+X-03 trace 惯例、同一鉴权；handoff 全部走 X-07 run 步骤机制（统一 Runtime/UI，
+零第二交接面）。语义在 ``app.services.hybrid_journey_service``。
+
+分层边界：本 router 只做参数/错误映射，链路语义在 service 层；proposal 生命
+周期权威仍是 X-03 ``ActionCommandService``。网关侧由 proxy_routes.go 的
+``/journey`` 代理组转发（Go 纯 proxy，无业务逻辑）。
 """
 
 from __future__ import annotations
@@ -29,7 +33,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_db
 from app.core.action_command import ActionCommandError
 from app.models.user import User
-from app.services import first_action_service
+from app.services import first_action_service, hybrid_journey_service
 from app.services.action_command_service import ActionCommandService
 from app.services.first_action_service import (
     EDITABLE_FIRST_ACTION_FIELDS,
@@ -37,6 +41,15 @@ from app.services.first_action_service import (
     FirstActionError,
     FirstActionGenerationError,
     NoActiveGoalError,
+)
+from app.services.hybrid_journey_service import (
+    HybridJourneyStateError,
+    JourneyCheckError,
+    JourneyGenerationError,
+    JudgmentRequiredError,
+    JudgmentUnknownSourceError,
+    NoMaterialError,
+    NoTaskAnchorError,
 )
 
 logger = logging.getLogger(__name__)
@@ -153,3 +166,173 @@ async def edit_first_action(
         "created": result.created,
         "applied": result.applied,
     }
+
+
+# ===========================================================================
+# J-06 · Hybrid Flagship Journey（Agent prep → Human judgment →
+# Agent execute/check → Outcome；handoff 全走 X-07 run 机制）
+# ===========================================================================
+
+
+class HybridJourneyStartRequest(BaseModel):
+    """启动 Hybrid 旅程（task 缺省时解析最近在飞任务；幂等键建议携带）."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    task_id: UUID | None = None
+    idempotency_key: str | None = Field(default=None, max_length=255)
+    session_id: str | None = Field(default=None, max_length=64)
+
+
+class HybridJudgmentRequest(BaseModel):
+    """用户判断：选择进入交付的材料引用（空选择 = 服务层结构性拒绝代决）."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    selected_refs: list[str] = Field(min_length=0, max_length=16)
+    focus_note: str | None = Field(default=None, max_length=200)
+    idempotency_key: str = Field(min_length=1, max_length=255)
+
+
+class HybridOutcomeConfirmRequest(BaseModel):
+    """确认交付：确认后任务经既有完成路径落终态并记录 outcome."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    note: str | None = Field(default=None, max_length=200)
+    idempotency_key: str = Field(min_length=1, max_length=255)
+
+
+def _hybrid_http_error(exc: Exception) -> HTTPException:
+    """J-06 错误面 → 诚实 HTTP 码（422 判断/材料缺失、409 状态、503 生成失败）。"""
+    if isinstance(exc, (NoActiveGoalError, NoTaskAnchorError, NoMaterialError)):
+        detail_by_type = {
+            NoActiveGoalError: "no_active_goal",
+            NoTaskAnchorError: "no_task_anchor",
+            NoMaterialError: "no_materials",
+        }
+        return HTTPException(
+            status_code=422, detail={"error": detail_by_type[type(exc)], "message": str(exc)}
+        )
+    if isinstance(exc, JudgmentRequiredError):
+        return HTTPException(
+            status_code=422,
+            detail={"error": "judgment_required", "message": "这一步需要你决定：选择哪些材料、聚焦什么方向。"},
+        )
+    if isinstance(exc, JudgmentUnknownSourceError):
+        return HTTPException(status_code=422, detail={"error": "unknown_sources", "message": str(exc)})
+    if isinstance(exc, HybridJourneyStateError):
+        return HTTPException(status_code=409, detail={"error": "journey_state", "message": str(exc)})
+    if isinstance(exc, JourneyCheckError):
+        return HTTPException(
+            status_code=503,
+            detail={
+                "error": "journey_check_failed",
+                "reason": exc.reason,
+                "retryable": exc.retryable,
+                "message": "草稿引用核对未通过，请重试或调整选择。",
+            },
+        )
+    if isinstance(exc, JourneyGenerationError):
+        return HTTPException(
+            status_code=503,
+            detail={
+                "error": "journey_generation_failed",
+                "retryable": exc.retryable,
+                "message": "起草暂时失败，请重试。",
+            },
+        )
+    raise exc
+
+
+# route-tier: authed
+@router.post("/hybrid", status_code=201)
+async def start_hybrid_journey(
+    request: HybridJourneyStartRequest | None = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """启动 Hybrid 旗舰旅程：Agent prep（真实材料检索）→ 轮到你判断。"""
+    body = request or HybridJourneyStartRequest()
+    try:
+        return await hybrid_journey_service.start_hybrid_journey(
+            db,
+            user_id=current_user.id,
+            task_id=body.task_id,
+            idempotency_key=body.idempotency_key,
+            session_id=body.session_id,
+        )
+    except (
+        NoActiveGoalError,
+        NoTaskAnchorError,
+        NoMaterialError,
+        HybridJourneyStateError,
+    ) as exc:
+        raise _hybrid_http_error(exc) from None
+
+
+# route-tier: authed
+@router.post("/hybrid/{run_id}/judgment")
+async def submit_hybrid_judgment(
+    run_id: UUID,
+    request: HybridJudgmentRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """判断段提交（AI 不代决）：选择材料引用 → Agent 起草并核对 → 等你确认。"""
+    try:
+        return await hybrid_journey_service.submit_judgment(
+            db,
+            user_id=current_user.id,
+            run_id=run_id,
+            selected_refs=request.selected_refs,
+            focus_note=request.focus_note,
+            idempotency_key=request.idempotency_key,
+        )
+    except (
+        JudgmentRequiredError,
+        JudgmentUnknownSourceError,
+        HybridJourneyStateError,
+        JourneyCheckError,
+        JourneyGenerationError,
+    ) as exc:
+        raise _hybrid_http_error(exc) from None
+
+
+# route-tier: authed
+@router.post("/hybrid/{run_id}/outcome/confirm")
+async def confirm_hybrid_outcome(
+    run_id: UUID,
+    request: HybridOutcomeConfirmRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """确认交付（幂等）：任务完成 + outcome 记录 + run SUCCEEDED。"""
+    try:
+        return await hybrid_journey_service.confirm_outcome(
+            db,
+            user_id=current_user.id,
+            run_id=run_id,
+            idempotency_key=request.idempotency_key,
+            note=request.note,
+        )
+    except HybridJourneyStateError as exc:
+        raise _hybrid_http_error(exc) from None
+
+
+# route-tier: authed
+@router.get("/hybrid/{run_id}")
+async def get_hybrid_journey(
+    run_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """旅程状态读面（重开 App 持久化回放：run + 分段产物 + 判断面）。"""
+    try:
+        return await hybrid_journey_service.get_hybrid_journey_state(
+            db,
+            user_id=current_user.id,
+            run_id=run_id,
+        )
+    except HybridJourneyStateError as exc:
+        raise _hybrid_http_error(exc) from None

@@ -92,6 +92,14 @@ class ApiEndpoints {
   static const String journeyFirstAction = '/journey/first-action';
   static String journeyFirstActionEdit(String proposalId) =>
       '/journey/first-action/$proposalId/edit';
+  // J-06: Hybrid 旗舰旅程（Agent prep→Human judgment→Agent execute/check→
+  // Outcome；handoff 走 X-07 run 步骤机制，网关纯代理）
+  static const String journeyHybridStart = '/journey/hybrid';
+  static String journeyHybridJudgment(String runId) =>
+      '/journey/hybrid/$runId/judgment';
+  static String journeyHybridOutcomeConfirm(String runId) =>
+      '/journey/hybrid/$runId/outcome/confirm';
+  static String journeyHybridState(String runId) => '/journey/hybrid/$runId';
   static String snoozeTask(String id) => '/tasks/$id/snooze';
   static String taskStuck(String id) => '/tasks/$id/stuck';
   static String taskTooHard(String id) => '/tasks/$id/too-hard';

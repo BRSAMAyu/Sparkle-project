@@ -18128,9 +18128,6 @@
     "firstActionEvidenceArtifact": "产出一件可见的东西",
     "firstActionEvidenceSelfReport": "你的真实自评",
     "firstActionEvidenceOther": "可检查的完成证据",
-    "firstActionEvidenceArtifact": "产出一件可见的东西",
-    "firstActionEvidenceSelfReport": "你的真实自评",
-    "firstActionEvidenceOther": "可检查的完成证据",
     "actionAutoSectionTitle": "自动执行预授权",
     "actionAutoSectionDesc": "预授权后，Sparkle 可以直接执行这些类别的低风险可逆操作。高风险与不可逆操作永远先征求确认，不会自动执行。",
     "actionAutoMasterOffHint": "自动执行总开关未开启：当前任何类别都不会自动执行。",
@@ -18141,5 +18138,34 @@
     "actionAutoNotGrantable": "该类别不支持预授权",
     "actionAutoChangeFailed": "授权更新失败，请重试",
     "actionAutoLoadFailed": "授权状态加载失败",
-    "actionAutoRetry": "重试"
+    "actionAutoRetry": "重试",
+    "hybridJourneySheetTitle": "一起推进：备料 · 你研判 · 交付",
+    "hybridJourneyStagePrep": "备料",
+    "hybridJourneyStageJudgment": "你研判",
+    "hybridJourneyStageExecuteCheck": "起草核对",
+    "hybridJourneyStageOutcome": "确认交付",
+    "hybridJourneyWhyHumanHeader": "这一步需要你决定",
+    "hybridJourneyJudgmentWhyHuman": "选哪些材料、把综述聚焦到哪里，定义的是你自己的方向——这一步由你决定，Sparkle 只负责准备和核对。",
+    "hybridJourneySelectPrompt": "从你检索到的材料中选择要进入综述的来源（至少一项）",
+    "hybridJourneySubmitJudgment": "就按这些来",
+    "hybridJourneyFocusHint": "聚焦方向（可选）",
+    "hybridJourneyCheckPassed": "已核对：{count} 条引用全部来自你选的材料",
+    "@hybridJourneyCheckPassed": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "hybridJourneyOutcomeHeader": "最后一步：确认交付",
+    "hybridJourneyDone": "已完成：交付记入你的成长图谱（{count} 条来源引用）",
+    "@hybridJourneyDone": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "hybridJourneyLoadFailed": "暂时连不上，稍后再试",
+    "hybridJourneyRetry": "重试"
 }

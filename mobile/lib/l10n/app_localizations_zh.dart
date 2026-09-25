@@ -38074,4 +38074,54 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get actionAutoRetry => '重试';
+
+  @override
+  String get hybridJourneySheetTitle => '一起推进：备料 · 你研判 · 交付';
+
+  @override
+  String get hybridJourneyStagePrep => '备料';
+
+  @override
+  String get hybridJourneyStageJudgment => '你研判';
+
+  @override
+  String get hybridJourneyStageExecuteCheck => '起草核对';
+
+  @override
+  String get hybridJourneyStageOutcome => '确认交付';
+
+  @override
+  String get hybridJourneyWhyHumanHeader => '这一步需要你决定';
+
+  @override
+  String get hybridJourneyJudgmentWhyHuman =>
+      '选哪些材料、把综述聚焦到哪里，定义的是你自己的方向——这一步由你决定，Sparkle 只负责准备和核对。';
+
+  @override
+  String get hybridJourneySelectPrompt => '从你检索到的材料中选择要进入综述的来源（至少一项）';
+
+  @override
+  String get hybridJourneySubmitJudgment => '就按这些来';
+
+  @override
+  String get hybridJourneyFocusHint => '聚焦方向（可选）';
+
+  @override
+  String hybridJourneyCheckPassed(int count) {
+    return '已核对：$count 条引用全部来自你选的材料';
+  }
+
+  @override
+  String get hybridJourneyOutcomeHeader => '最后一步：确认交付';
+
+  @override
+  String hybridJourneyDone(int count) {
+    return '已完成：交付记入你的成长图谱（$count 条来源引用）';
+  }
+
+  @override
+  String get hybridJourneyLoadFailed => '暂时连不上，稍后再试';
+
+  @override
+  String get hybridJourneyRetry => '重试';
 }

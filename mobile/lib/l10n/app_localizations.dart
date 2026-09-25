@@ -69192,6 +69192,96 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'重试'**
   String get actionAutoRetry;
+
+  /// No description provided for @hybridJourneySheetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'一起推进：备料 · 你研判 · 交付'**
+  String get hybridJourneySheetTitle;
+
+  /// No description provided for @hybridJourneyStagePrep.
+  ///
+  /// In zh, this message translates to:
+  /// **'备料'**
+  String get hybridJourneyStagePrep;
+
+  /// No description provided for @hybridJourneyStageJudgment.
+  ///
+  /// In zh, this message translates to:
+  /// **'你研判'**
+  String get hybridJourneyStageJudgment;
+
+  /// No description provided for @hybridJourneyStageExecuteCheck.
+  ///
+  /// In zh, this message translates to:
+  /// **'起草核对'**
+  String get hybridJourneyStageExecuteCheck;
+
+  /// No description provided for @hybridJourneyStageOutcome.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认交付'**
+  String get hybridJourneyStageOutcome;
+
+  /// No description provided for @hybridJourneyWhyHumanHeader.
+  ///
+  /// In zh, this message translates to:
+  /// **'这一步需要你决定'**
+  String get hybridJourneyWhyHumanHeader;
+
+  /// No description provided for @hybridJourneyJudgmentWhyHuman.
+  ///
+  /// In zh, this message translates to:
+  /// **'选哪些材料、把综述聚焦到哪里，定义的是你自己的方向——这一步由你决定，Sparkle 只负责准备和核对。'**
+  String get hybridJourneyJudgmentWhyHuman;
+
+  /// No description provided for @hybridJourneySelectPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'从你检索到的材料中选择要进入综述的来源（至少一项）'**
+  String get hybridJourneySelectPrompt;
+
+  /// No description provided for @hybridJourneySubmitJudgment.
+  ///
+  /// In zh, this message translates to:
+  /// **'就按这些来'**
+  String get hybridJourneySubmitJudgment;
+
+  /// No description provided for @hybridJourneyFocusHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'聚焦方向（可选）'**
+  String get hybridJourneyFocusHint;
+
+  /// No description provided for @hybridJourneyCheckPassed.
+  ///
+  /// In zh, this message translates to:
+  /// **'已核对：{count} 条引用全部来自你选的材料'**
+  String hybridJourneyCheckPassed(int count);
+
+  /// No description provided for @hybridJourneyOutcomeHeader.
+  ///
+  /// In zh, this message translates to:
+  /// **'最后一步：确认交付'**
+  String get hybridJourneyOutcomeHeader;
+
+  /// No description provided for @hybridJourneyDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'已完成：交付记入你的成长图谱（{count} 条来源引用）'**
+  String hybridJourneyDone(int count);
+
+  /// No description provided for @hybridJourneyLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时连不上，稍后再试'**
+  String get hybridJourneyLoadFailed;
+
+  /// No description provided for @hybridJourneyRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get hybridJourneyRetry;
 }
 
 class _AppLocalizationsDelegate
