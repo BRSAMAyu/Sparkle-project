@@ -34,8 +34,8 @@ func TestS2TicketBudgetTracksRuntimeParams(t *testing.T) {
 		name        string
 		rate        float64
 		burst       int
-		wantMin     int // budget conformance lower bound (bucket drains no faster than refill)
-		wantMax     int // budget conformance upper bound (burst + rate×window, +1 boundary)
+		wantMin     int  // budget conformance lower bound (bucket drains no faster than refill)
+		wantMax     int  // budget conformance upper bound (burst + rate×window, +1 boundary)
 		redFlagCond bool // when true, assert the count exceeds the legacy 160-model budget — reproducing WSQ-6's observation
 	}{
 		{
