@@ -83,8 +83,14 @@ class ApiGoalRepository implements GoalRepository {
     required List<GoalMilestoneDraft> milestones,
     String? description,
   }) async {
+    // O11 (J-01 first3): the trailing slash is load-bearing. The gateway only
+    // registers POST /api/v1/goals/ (the engine-canonical face); a POST to the
+    // bare path is answered by gin's RedirectTrailingSlash with 307, and
+    // dart:io does not auto-follow redirects for POST — dio raises and the
+    // wizard degraded to 创建失败 even though the payload was valid (5/5 J-01
+    // personas). POST the canonical face directly.
     final response = await _apiClient.post<dynamic>(
-      '/goals',
+      '/goals/',
       data: {
         'goal_type': resolveType(goalType),
         'title': title,

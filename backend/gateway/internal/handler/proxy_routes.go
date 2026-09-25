@@ -469,6 +469,13 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		goals.GET("/", h.proxyWithHeaders)
 		goals.POST("/", h.proxyWithHeaders)
 		goals.POST("/decompose-preview", h.proxyWithHeaders)
+		// O10 (J-01 first3): FME intent analysis was mounted engine-side
+		// (goal_intent.py, same /goals prefix) but never proxied here — the
+		// gateway answered 404 route-not-found and the wizard's flagship
+		// "analyze my intent" entry silently fell back to the legacy form
+		// 5/5 personas. Same authed group and proxy chain as the siblings.
+		// route-tier: authed
+		goals.POST("/analyze-intent", h.proxyWithHeaders)
 		// R2 fix (schema-route-tail): GET /:id removed — the engine has no
 		// GET-by-id on goals (only PUT/DELETE /{goal_id}); the GET face here
 		// proxied to engine 404. Mobile reads goal detail from list payloads.
