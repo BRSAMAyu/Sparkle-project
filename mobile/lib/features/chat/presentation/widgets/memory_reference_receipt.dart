@@ -9,6 +9,8 @@ import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/memory/data/memory_provenance_models.dart';
+import 'package:sparkle/features/memory/presentation/widgets/why_this_receipt_sheet.dart';
 
 class MemoryReferenceReceipt extends ConsumerWidget {
   const MemoryReferenceReceipt({
@@ -217,13 +219,54 @@ class _MemoryReceiptRow extends ConsumerStatefulWidget {
 class _MemoryReceiptRowState extends ConsumerState<_MemoryReceiptRow> {
   bool _submitting = false;
 
+  /// M-10 深链：从 chat 引用回执进入这条记忆对应的理解条目。
+  ///
+  /// 打开的是 U-03 why-this receipt（M-08 真实 API
+  /// POST /memory/provenance/why-this）：来源/被选原因/治理历史 +
+  /// 「这不对」真实纠正环（supersede → 失效链 → 全部个性化面重算）。
+  /// 引用行只带 kind+id，按 C-01 `memory://<kind>/<id>` 方案构造最小
+  /// 真源指针；条目已不存在时后端 404，sheet 显示诚实的加载失败态。
+  void _openUnderstanding() {
+    final navigator = Navigator.of(context);
+    final kind = _memoryKind();
+    final id = widget.memory['id']?.toString().trim() ?? '';
+    if (id.isEmpty) {
+      return;
+    }
+    final item = ProvenanceMemoryItem(
+      kind: kind,
+      id: id,
+      ref: 'memory://$kind/$id',
+      bucket: UnderstandingBucket.uncertain,
+      bucketLabel: '',
+      content: widget.memory['content']?.toString().trim() ?? '',
+      status: 'active',
+      scope: const <String, dynamic>{},
+      correctionCount: 0,
+      evidenceMissing: false,
+      confidenceTier: 'tentative',
+      confidenceTierLabel: '',
+      sourceLabel: '',
+      sourceKnown: false,
+      actions: const <String>[],
+    );
+    if (navigator.canPop()) {
+      navigator.pop();
+    }
+    unawaited(unawaitedWhyThis(navigator.context, ref, item));
+  }
+
+  String _memoryKind() {
+    final type = widget.memory['type']?.toString().trim();
+    return type != null && type.isNotEmpty ? type : 'episodic';
+  }
+
   Future<void> _markWrong() async {
     if (_submitting) return;
     final id = widget.memory['id']?.toString().trim() ?? '';
-    final type = widget.memory['type']?.toString().trim();
     final content = widget.memory['content']?.toString().trim() ?? '';
     final prompt = S.chatMemoryNotRightPrompt(content);
-    final memoryType = type != null && type.isNotEmpty ? type : 'episodic';
+    final memoryType = _memoryKind();
 
     setState(() => _submitting = true);
     try {
@@ -291,42 +334,65 @@ class _MemoryReceiptRowState extends ConsumerState<_MemoryReceiptRow> {
             ),
           ],
           const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Semantics(
-              button: true,
-              label: S.chatMemoryNotRight,
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  foregroundColor: DS.warning,
-                  side: BorderSide(color: DS.warning.withValues(alpha: 0.45)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              // M-10 深链：为什么有这条 → 对应理解条目（why-this receipt）。
+              Semantics(
+                button: true,
+                label: S.understandingActionWhy,
+                child: TextButton.icon(
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor: DS.textSecondary,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                   ),
+                  onPressed: _openUnderstanding,
+                  icon: const Icon(Icons.help_outline_rounded, size: 14),
+                  label: Text(S.understandingActionWhy),
                 ),
-                onPressed: _submitting ? null : _markWrong,
-                icon: _submitting
-                    ? LoadingIndicator.circular(
-                        size: 12,
-                        strokeWidth: 2,
-                        color: DS.warning,
-                        liveRegion: false,
-                    )
-                    : const Icon(Icons.flag_outlined, size: 14),
-                label: Text(S.chatMemoryNotRightShort),
               ),
-            ),
+              const SizedBox(width: 4),
+              Semantics(
+                button: true,
+                label: S.chatMemoryNotRight,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor: DS.warning,
+                    side:
+                        BorderSide(color: DS.warning.withValues(alpha: 0.45)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onPressed: _submitting ? null : _markWrong,
+                  icon: _submitting
+                      ? LoadingIndicator.circular(
+                          size: 12,
+                          strokeWidth: 2,
+                          color: DS.warning,
+                          liveRegion: false,
+                      )
+                      : const Icon(Icons.flag_outlined, size: 14),
+                  label: Text(S.chatMemoryNotRightShort),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
+  /// M-10 copy 终审：回执行不再展示无来源出处的精确百分比（内部参数），
+  /// 与理解面同一套定性层级词，阈值与后端 `_confidence_label` 同口径。
   String _confidenceLabel(Object? raw) {
     final value = raw is num ? raw.toDouble() : double.tryParse('$raw');
     if (value == null) return '';
-    return S.chatMemoryConfidencePercent((value * 100).round());
+    if (value >= 0.75) return S.understandingConfidenceHigh;
+    if (value >= 0.45) return S.understandingConfidenceMedium;
+    return S.understandingConfidenceLow;
   }
 }
 
@@ -348,4 +414,3 @@ class _CountBadge extends StatelessWidget {
         ),
       );
 }
-

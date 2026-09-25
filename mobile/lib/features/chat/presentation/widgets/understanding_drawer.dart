@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/understanding_snapshot_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/understanding_panel.dart';
+import 'package:sparkle/features/memory/memory_routes.dart';
 
 class ChatUnderstandingDrawerButton extends ConsumerWidget {
   const ChatUnderstandingDrawerButton({super.key});
@@ -84,11 +86,20 @@ class ChatUnderstandingDrawerButton extends ConsumerWidget {
               right: 16,
               bottom: MediaQuery.viewInsetsOf(sheetContext).bottom + 16,
             ),
-            child: const SingleChildScrollView(
+            child: SingleChildScrollView(
+              // M-10 深链：chat 内的理解面板同样可以进入完整理解视图；
+              // 面板嵌在模态 sheet 里，先关 sheet 再走根路由导航。
               child: UnderstandingPanel(
                 compact: true,
                 initiallyExpanded: true,
                 surface: 'chat',
+                onOpenFullUnderstanding: () {
+                  final navigator = Navigator.of(sheetContext);
+                  if (navigator.canPop()) {
+                    navigator.pop();
+                  }
+                  unawaited(context.push(MemoryRoutes.understanding));
+                },
               ),
             ),
           ),

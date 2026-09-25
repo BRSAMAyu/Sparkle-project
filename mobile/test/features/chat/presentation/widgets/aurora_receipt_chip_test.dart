@@ -115,6 +115,25 @@ void main() {
     expect(find.text('删除'), findsOneWidget);
   });
 
+  testWidgets('M-10 copy: receipt memory row shows qualitative tier only',
+      (tester) async {
+    final service = _FakeReceiptApiService();
+    await tester.pumpWidget(
+      _buildChip(
+        service: service,
+        receipt: _receipt(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(AuroraReceiptChip));
+    await tester.pumpAndSettle();
+
+    // 置信 0.4 → 「低置信」定性词；内部百分比参数不再出现在用户面。
+    expect(find.textContaining('%'), findsNothing);
+    expect(find.textContaining('低置信'), findsWidgets);
+  });
+
   testWidgets('not_relevant action posts to receipt endpoint once',
       (tester) async {
     final service = _FakeReceiptApiService();

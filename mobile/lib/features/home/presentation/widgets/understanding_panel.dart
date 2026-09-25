@@ -2,24 +2,32 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/understanding_snapshot_provider.dart';
+import 'package:sparkle/features/memory/memory_routes.dart';
 
 class UnderstandingPanel extends ConsumerStatefulWidget {
   const UnderstandingPanel({
     this.compact = false,
     this.initiallyExpanded = false,
     this.surface = 'home',
+    this.onOpenFullUnderstanding,
     super.key,
   });
 
   final bool compact;
   final bool initiallyExpanded;
   final String surface;
+
+  /// M-10 深链：从理解面板进入完整「Sparkle 对我的理解」视图。
+  /// 缺省直接 push 路由；嵌在模态 sheet（chat 理解抽屉）里时由调用方
+  /// 传「先关 sheet 再导航」的闭包。
+  final VoidCallback? onOpenFullUnderstanding;
 
   @override
   ConsumerState<UnderstandingPanel> createState() => _UnderstandingPanelState();
@@ -131,6 +139,20 @@ class _UnderstandingPanelState extends ConsumerState<UnderstandingPanel> {
                 ),
           ],
         ],
+        // M-10 深链：从这里可进入完整理解视图（来源/范围/操作齐全），
+        // 用户无需知道 Memory 内部结构——入口语义就是「看全部/去管理」。
+        const SizedBox(height: 4),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: widget.onOpenFullUnderstanding ??
+                () => unawaited(
+                      context.push(MemoryRoutes.understanding),
+                    ),
+            icon: const Icon(Icons.arrow_outward_rounded, size: 16),
+            label: Text(context.l10n.understandingPanelOpenFull),
+          ),
+        ),
       ],
     );
   }

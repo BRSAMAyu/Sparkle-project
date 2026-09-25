@@ -15742,14 +15742,6 @@
             }
         }
     },
-    "chatMemoryConfidencePercent": "置信度 {percent}%",
-    "@chatMemoryConfidencePercent": {
-        "placeholders": {
-            "percent": {
-                "type": "int"
-            }
-        }
-    },
     "chatReceiptDismiss": "关闭收据",
     "chatReceiptAuroraChangedNext": "Aurora 调整了下一步",
     "chatReceiptAuroraAdjustedExperience": "Aurora 调整了体验",
@@ -17262,6 +17254,7 @@
     "@understandingTaskSheetTitle": {},
     "understandingScopeNoTasks": "还没有可选的任务",
     "@understandingScopeNoTasks": {},
+    "understandingPanelOpenFull": "查看完整理解",
     "understandingToastUpdated": "已更新。Sparkle 下一次判断会使用新内容。",
     "@understandingToastUpdated": {},
     "understandingToastDeleted": "已删除。Sparkle 不会再使用这条内容。",

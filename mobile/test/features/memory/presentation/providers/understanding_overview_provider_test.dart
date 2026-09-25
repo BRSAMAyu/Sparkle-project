@@ -2,10 +2,14 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/features/experience/presentation/providers/experience_provider.dart'
+    as experience;
 import 'package:sparkle/features/home/presentation/providers/understanding_snapshot_provider.dart';
 import 'package:sparkle/features/memory/data/memory_provenance_models.dart';
 import 'package:sparkle/features/memory/data/memory_provenance_repository.dart';
 import 'package:sparkle/features/memory/presentation/providers/understanding_overview_provider.dart';
+import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
+import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
 
 /// U-03 provider 级测试：四组分组 + 纠正/删除/scope 后界面与下一次
 /// decision 数据源同步（acceptance ②）。
@@ -175,9 +179,12 @@ class _FakeProvenanceRepository implements MemoryProvenanceRepository {
       throw UnimplementedError();
 }
 
-/// 计数型 ApiClient：验证纠正后 understandingSnapshotProvider 被失效重取。
+/// 计数型 ApiClient：验证纠正后理解快照与全部个性化读出面被失效重取。
 class _CountingSnapshotApiClient implements ApiClient {
   int snapshotGets = 0;
+  int profileContextGets = 0;
+  int transparentProfileGets = 0;
+  int inferredPreferencesGets = 0;
 
   @override
   Future<Response<T>> get<T>(
@@ -186,6 +193,21 @@ class _CountingSnapshotApiClient implements ApiClient {
   }) async {
     if (path == '/experience/understanding-snapshot') {
       snapshotGets++;
+    }
+    if (path == '/profile/context') {
+      profileContextGets++;
+    }
+    if (path == '/profile/transparent') {
+      transparentProfileGets++;
+    }
+    if (path == '/profile/inferred-preferences') {
+      inferredPreferencesGets++;
+    }
+    if (path.startsWith('/profile/')) {
+      return Response<T>(
+        requestOptions: RequestOptions(path: path),
+        data: <String, dynamic>{} as T,
+      );
     }
     return Response<T>(
       requestOptions: RequestOptions(path: path),
@@ -432,5 +454,56 @@ void main() {
     // 使用新数据）。
     await container.read(understandingSnapshotProvider.future);
     expect(api.snapshotGets, greaterThan(getsBefore));
+  });
+
+  test(
+      'M-10: mutation resyncs every current-personalization read surface',
+      () async {
+    // 诚实性红线（删除后当前个性化正确变化）：mutation 成功后，客户端所有
+    // 消费记忆派生数据的读出面都必须失效重取——home/chat 面板、dashboard
+    // 理解快照卡、persona 画像与透明档案/推断偏好。任何一个不清缓存都会
+    // 把已被删除/纠正的个性化当现状展示。
+    final repo = _FakeProvenanceRepository()
+      ..items = [_entry(id: 'd1', bucket: 'told')];
+    final api = _CountingSnapshotApiClient();
+    final container = ProviderContainer(
+      overrides: [
+        memoryProvenanceRepositoryProvider.overrideWithValue(repo),
+        apiClientProvider.overrideWithValue(api),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    // 预热全部五个读出面（home/chat 面板与 dashboard 快照卡共用同一
+    // GET 路径，各计 1 次 → snapshotGets=2；profile 三面各 1 次）。
+    await container.read(understandingSnapshotProvider.future);
+    await container.read(experience.understandingSnapshotProvider.future);
+    await container.read(profileContextProvider.future);
+    await container.read(transparentProfileProvider.future);
+    await container.read(inferredPreferencesProvider.future);
+    final snapshotGetsBefore = api.snapshotGets;
+    final contextGetsBefore = api.profileContextGets;
+    final transparentGetsBefore = api.transparentProfileGets;
+    final inferredGetsBefore = api.inferredPreferencesGets;
+    expect(snapshotGetsBefore, 2);
+    expect(contextGetsBefore, 1);
+    expect(transparentGetsBefore, 1);
+    expect(inferredGetsBefore, 1);
+
+    await container
+        .read(understandingOverviewProvider.notifier)
+        .revokeItem(repo.items.single, reason: 'user_deleted');
+
+    // 删除后五个面全部重取（invalidate 后再读 = 重新 GET，计数各 +1 面）。
+    await container.read(understandingSnapshotProvider.future);
+    await container.read(experience.understandingSnapshotProvider.future);
+    await container.read(profileContextProvider.future);
+    await container.read(transparentProfileProvider.future);
+    await container.read(inferredPreferencesProvider.future);
+
+    expect(api.snapshotGets, snapshotGetsBefore + 2);
+    expect(api.profileContextGets, greaterThan(contextGetsBefore));
+    expect(api.transparentProfileGets, greaterThan(transparentGetsBefore));
+    expect(api.inferredPreferencesGets, greaterThan(inferredGetsBefore));
   });
 }

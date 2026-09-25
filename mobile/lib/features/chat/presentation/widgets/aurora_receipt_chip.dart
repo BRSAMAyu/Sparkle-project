@@ -870,10 +870,14 @@ class _MemoryReceiptRowState extends ConsumerState<_MemoryReceiptRow> {
     );
   }
 
+  /// M-10 copy 终审：A-06 回执行同样不再展示精确置信百分比，
+  /// 与理解面同一套定性层级词（阈值与后端 `_confidence_label` 同口径）。
   String _confidenceLabel(Object? raw) {
     final value = raw is num ? raw.toDouble() : double.tryParse('$raw');
     if (value == null) return '';
-    return S.chatMemoryConfidencePercent((value * 100).round());
+    if (value >= 0.75) return S.understandingConfidenceHigh;
+    if (value >= 0.45) return S.understandingConfidenceMedium;
+    return S.understandingConfidenceLow;
   }
 }
 

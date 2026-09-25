@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/home/presentation/widgets/understanding_panel.dart';
 import '../shared/i18n_test_helper.dart';
@@ -119,5 +120,73 @@ void main() {
     expect(find.textContaining('你在晚上更容易专注'), findsOneWidget);
     expect(find.text('高置信'), findsOneWidget);
     expect(find.textContaining('80%'), findsNothing);
+    // M-10 深链入口：面板底部固定提供「查看完整理解」。
+    expect(find.text('查看完整理解'), findsOneWidget);
+  });
+
+  testWidgets('M-10: full-understanding entry invokes the injected callback',
+      (tester) async {
+    var openCalls = 0;
+    // 回调注入版：模态 sheet 场景（chat 理解抽屉）由调用方先关 sheet。
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          apiClientProvider.overrideWithValue(_SnapshotApiClient()),
+        ],
+        child: testMaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: UnderstandingPanel(
+                initiallyExpanded: true,
+                onOpenFullUnderstanding: () => openCalls++,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    await tester.tap(find.text('查看完整理解'));
+    await tester.pump();
+    expect(openCalls, 1);
+  });
+
+  testWidgets('M-10: default entry pushes /memory/understanding route',
+      (tester) async {
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => const Scaffold(
+            body: SingleChildScrollView(
+              child: UnderstandingPanel(initiallyExpanded: true),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: '/memory/understanding',
+          builder: (context, state) =>
+              const Scaffold(body: Text('UNDERSTANDING_SCREEN_PROBE')),
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          apiClientProvider.overrideWithValue(_SnapshotApiClient()),
+        ],
+        child: testMaterialApp(routerConfig: router),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    await tester.tap(find.text('查看完整理解'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('UNDERSTANDING_SCREEN_PROBE'), findsOneWidget);
   });
 }

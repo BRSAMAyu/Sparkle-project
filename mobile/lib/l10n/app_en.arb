@@ -15726,14 +15726,6 @@
             }
         }
     },
-    "chatMemoryConfidencePercent": "confidence {percent}%",
-    "@chatMemoryConfidencePercent": {
-        "placeholders": {
-            "percent": {
-                "type": "int"
-            }
-        }
-    },
     "chatReceiptDismiss": "Dismiss receipt",
     "chatReceiptAuroraChangedNext": "Aurora changed the next action",
     "chatReceiptAuroraAdjustedExperience": "Aurora adjusted the experience",
@@ -17702,6 +17694,7 @@
     "understandingActionLinkTask": "Link a task",
     "understandingTaskSheetTitle": "Use only for one task",
     "understandingScopeNoTasks": "No tasks to pick from yet",
+    "understandingPanelOpenFull": "See the full understanding",
     "understandingToastUpdated": "Updated. Sparkle will use the new content next time.",
     "understandingToastDeleted": "Deleted. Sparkle will no longer use this.",
     "understandingToastPaused": "Paused. Sparkle won't use this for now.",

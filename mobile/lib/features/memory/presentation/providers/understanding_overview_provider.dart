@@ -2,9 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/features/experience/presentation/providers/experience_provider.dart'
+    as experience;
 import 'package:sparkle/features/home/presentation/providers/understanding_snapshot_provider.dart';
 import 'package:sparkle/features/memory/data/memory_provenance_models.dart';
 import 'package:sparkle/features/memory/data/memory_provenance_repository.dart';
+import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
+import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
 
 /// 「Sparkle 对我的理解」总览状态（U-03 四组视图）。
 @immutable
@@ -311,9 +315,25 @@ class UnderstandingOverviewNotifier
     }
   }
 
-  /// 验收②的同步面：重取列表 + 失效理解快照（home/chat 面板随之刷新）。
+  /// 验收②的同步面：重取列表 + 失效全部「当前个性化」读出面。
+  ///
+  /// M-10 诚实性红线（删除/修改后当前个性化正确变化）：任何成功 mutation
+  /// 都必须让所有消费记忆派生数据的客户端读出面失效重取——它们缓存的是
+  /// 旧个性化的快照，不清掉就会向用户展示已被删除/纠正的内容。
+  /// 服务端对应保证是 M-07 链（epoch bump + memory.invalidated + derived
+  /// cache DEL）；客户端这五个 provider 是各自 surface 的读缓存，语义上
+  /// 与服务端 DEL 一一对应：
+  /// - understandingSnapshotProvider（home/chat「Sparkle 懂我」面板，U-03）
+  /// - experience 理解快照（dashboard UnderstandingSnapshotCard）
+  /// - profileContext / transparentProfile / inferredPreferences
+  ///   （persona 与透明档案面：「Sparkle 现在怎么看你」）
   Future<void> _syncAfterMutation() async {
-    _ref.invalidate(understandingSnapshotProvider);
+    _ref
+      ..invalidate(understandingSnapshotProvider)
+      ..invalidate(experience.understandingSnapshotProvider)
+      ..invalidate(profileContextProvider)
+      ..invalidate(transparentProfileProvider)
+      ..invalidate(inferredPreferencesProvider);
     try {
       final result = await _repository.listItems();
       if (!mounted) {
