@@ -1895,6 +1895,29 @@ CREATE TABLE community_aggregate_signals (
 ALTER TABLE community_aggregate_signals OWNER TO postgres;
 
 --
+-- Name: community_outcome_evidence; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE community_outcome_evidence (
+    id uuid NOT NULL,
+    goal_id uuid NOT NULL,
+    feedback_id uuid NOT NULL,
+    shared_resource_id uuid NOT NULL,
+    owner_id uuid NOT NULL,
+    verdict character varying(20) NOT NULL,
+    peer_alias character varying(100),
+    status character varying(16) DEFAULT 'adopted'::character varying NOT NULL,
+    adopted_at timestamp without time zone NOT NULL,
+    retracted_at timestamp without time zone,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE community_outcome_evidence OWNER TO postgres;
+
+--
 -- Name: community_strategy_outcomes; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -5670,6 +5693,30 @@ CREATE TABLE strategy_nodes (
 ALTER TABLE strategy_nodes OWNER TO postgres;
 
 --
+-- Name: stuck_journey_corrections; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE stuck_journey_corrections (
+    user_id uuid NOT NULL,
+    surface character varying(16) NOT NULL,
+    friction_type character varying(32) NOT NULL,
+    intervention_key character varying(32),
+    task_id uuid,
+    goal_id uuid,
+    reason_text character varying(500),
+    context_snapshot json NOT NULL,
+    schema_version character varying(32) NOT NULL,
+    corrected_at timestamp without time zone NOT NULL,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE stuck_journey_corrections OWNER TO postgres;
+
+--
 -- Name: study_buddies; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -7675,6 +7722,14 @@ ALTER TABLE ONLY community_aggregate_signals
 
 
 --
+-- Name: community_outcome_evidence community_outcome_evidence_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY community_outcome_evidence
+    ADD CONSTRAINT community_outcome_evidence_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: community_strategy_outcomes community_strategy_outcomes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -8891,6 +8946,14 @@ ALTER TABLE ONLY strategy_nodes
 
 
 --
+-- Name: stuck_journey_corrections stuck_journey_corrections_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY stuck_journey_corrections
+    ADD CONSTRAINT stuck_journey_corrections_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: study_buddies study_buddies_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -9112,6 +9175,14 @@ ALTER TABLE ONLY capsule_favorites
 
 ALTER TABLE ONLY card_edges
     ADD CONSTRAINT uq_card_edge_unique UNIQUE (from_card_id, to_card_id, edge_type);
+
+
+--
+-- Name: community_outcome_evidence uq_coe_feedback_once; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY community_outcome_evidence
+    ADD CONSTRAINT uq_coe_feedback_once UNIQUE (feedback_id);
 
 
 --
@@ -10009,6 +10080,20 @@ CREATE INDEX idx_claim_task ON group_task_claims USING btree (group_task_id);
 --
 
 CREATE INDEX idx_claim_user ON group_task_claims USING btree (user_id);
+
+
+--
+-- Name: idx_coe_goal_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_coe_goal_status ON community_outcome_evidence USING btree (goal_id, status);
+
+
+--
+-- Name: idx_coe_owner_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_coe_owner_status ON community_outcome_evidence USING btree (owner_id, status);
 
 
 --
@@ -11318,6 +11403,20 @@ CREATE INDEX idx_sr_feedback_resource_active ON shared_resource_feedbacks USING 
 --
 
 CREATE INDEX idx_strategy_belief_user_score_inputs ON strategy_belief_snapshots USING btree (user_id, strategy_key, evidence_count);
+
+
+--
+-- Name: idx_stuck_journey_corr_ftype; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_stuck_journey_corr_ftype ON stuck_journey_corrections USING btree (friction_type);
+
+
+--
+-- Name: idx_stuck_journey_corr_user; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_stuck_journey_corr_user ON stuck_journey_corrections USING btree (user_id);
 
 
 --
@@ -13082,6 +13181,27 @@ CREATE INDEX ix_community_aggregate_signals_stat_name ON community_aggregate_sig
 --
 
 CREATE INDEX ix_community_aggregate_signals_status ON community_aggregate_signals USING btree (status);
+
+
+--
+-- Name: ix_community_outcome_evidence_goal_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_community_outcome_evidence_goal_id ON community_outcome_evidence USING btree (goal_id);
+
+
+--
+-- Name: ix_community_outcome_evidence_owner_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_community_outcome_evidence_owner_id ON community_outcome_evidence USING btree (owner_id);
+
+
+--
+-- Name: ix_community_outcome_evidence_shared_resource_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_community_outcome_evidence_shared_resource_id ON community_outcome_evidence USING btree (shared_resource_id);
 
 
 --
@@ -18307,6 +18427,38 @@ ALTER TABLE ONLY commitments
 
 
 --
+-- Name: community_outcome_evidence community_outcome_evidence_feedback_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY community_outcome_evidence
+    ADD CONSTRAINT community_outcome_evidence_feedback_id_fkey FOREIGN KEY (feedback_id) REFERENCES shared_resource_feedbacks(id) ON DELETE CASCADE;
+
+
+--
+-- Name: community_outcome_evidence community_outcome_evidence_goal_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY community_outcome_evidence
+    ADD CONSTRAINT community_outcome_evidence_goal_id_fkey FOREIGN KEY (goal_id) REFERENCES goals(id) ON DELETE CASCADE;
+
+
+--
+-- Name: community_outcome_evidence community_outcome_evidence_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY community_outcome_evidence
+    ADD CONSTRAINT community_outcome_evidence_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: community_outcome_evidence community_outcome_evidence_shared_resource_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY community_outcome_evidence
+    ADD CONSTRAINT community_outcome_evidence_shared_resource_id_fkey FOREIGN KEY (shared_resource_id) REFERENCES shared_resources(id) ON DELETE CASCADE;
+
+
+--
 -- Name: community_strategy_outcomes community_strategy_outcomes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -19939,6 +20091,14 @@ ALTER TABLE ONLY strategy_nodes
 
 
 --
+-- Name: stuck_journey_corrections stuck_journey_corrections_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY stuck_journey_corrections
+    ADD CONSTRAINT stuck_journey_corrections_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: study_buddies study_buddies_user1_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -20972,6 +21132,13 @@ GRANT SELECT ON TABLE commitments TO sparkle_readonly;
 --
 
 GRANT SELECT ON TABLE community_aggregate_signals TO sparkle_readonly;
+
+
+--
+-- Name: TABLE community_outcome_evidence; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE community_outcome_evidence TO sparkle_readonly;
 
 
 --
@@ -22194,6 +22361,13 @@ GRANT SELECT ON TABLE strategy_belief_snapshots TO sparkle_readonly;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE strategy_nodes TO sparkle_engine;
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE strategy_nodes TO sparkle_celery;
 GRANT SELECT ON TABLE strategy_nodes TO sparkle_readonly;
+
+
+--
+-- Name: TABLE stuck_journey_corrections; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE stuck_journey_corrections TO sparkle_readonly;
 
 
 --

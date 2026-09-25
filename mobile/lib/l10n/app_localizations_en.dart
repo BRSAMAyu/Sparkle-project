@@ -39739,7 +39739,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionAutoNotGrantable => 'This category cannot be pre-authorized';
 
   @override
-  String get actionAutoChangeFailed => 'Failed to update permission, please retry';
+  String get actionAutoChangeFailed =>
+      'Failed to update permission, please retry';
 
   @override
   String get actionAutoLoadFailed => 'Failed to load permission state';

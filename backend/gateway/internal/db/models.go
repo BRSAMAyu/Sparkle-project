@@ -2675,6 +2675,22 @@ type CommunityAggregateSignal struct {
 	Metadata           []byte           `json:"metadata"`
 }
 
+type CommunityOutcomeEvidence struct {
+	ID               pgtype.UUID      `json:"id"`
+	GoalID           pgtype.UUID      `json:"goal_id"`
+	FeedbackID       pgtype.UUID      `json:"feedback_id"`
+	SharedResourceID pgtype.UUID      `json:"shared_resource_id"`
+	OwnerID          pgtype.UUID      `json:"owner_id"`
+	Verdict          string           `json:"verdict"`
+	PeerAlias        pgtype.Text      `json:"peer_alias"`
+	Status           string           `json:"status"`
+	AdoptedAt        pgtype.Timestamp `json:"adopted_at"`
+	RetractedAt      pgtype.Timestamp `json:"retracted_at"`
+	CreatedAt        pgtype.Timestamp `json:"created_at"`
+	UpdatedAt        pgtype.Timestamp `json:"updated_at"`
+	DeletedAt        pgtype.Timestamp `json:"deleted_at"`
+}
+
 type CommunityStrategyOutcome struct {
 	ID          pgtype.UUID `json:"id"`
 	UserID      pgtype.UUID `json:"user_id"`
@@ -5188,6 +5204,23 @@ type StrategyNode struct {
 	CreatedAt    pgtype.Timestamp `json:"created_at"`
 	UpdatedAt    pgtype.Timestamp `json:"updated_at"`
 	DeletedAt    pgtype.Timestamp `json:"deleted_at"`
+}
+
+type StuckJourneyCorrection struct {
+	UserID          pgtype.UUID      `json:"user_id"`
+	Surface         string           `json:"surface"`
+	FrictionType    string           `json:"friction_type"`
+	InterventionKey pgtype.Text      `json:"intervention_key"`
+	TaskID          pgtype.UUID      `json:"task_id"`
+	GoalID          pgtype.UUID      `json:"goal_id"`
+	ReasonText      pgtype.Text      `json:"reason_text"`
+	ContextSnapshot []byte           `json:"context_snapshot"`
+	SchemaVersion   string           `json:"schema_version"`
+	CorrectedAt     pgtype.Timestamp `json:"corrected_at"`
+	ID              pgtype.UUID      `json:"id"`
+	CreatedAt       pgtype.Timestamp `json:"created_at"`
+	UpdatedAt       pgtype.Timestamp `json:"updated_at"`
+	DeletedAt       pgtype.Timestamp `json:"deleted_at"`
 }
 
 type StudyBuddy struct {
