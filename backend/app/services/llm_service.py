@@ -2144,15 +2144,11 @@ async def build_prompt_with_seed_examples(
         )
 
         if examples:
-            # 添加 few-shot 示例到消息中
-            few_shot_section = "以下是参考示例：\n\n"
-            for i, example in enumerate(examples, 1):
-                few_shot_section += f"### 示例 {i}\n"
-                few_shot_section += f"**问题：** {example.get('input', '')}\n"
-                few_shot_section += f"**解答：** {example.get('output', '')}\n"
-                if example.get('explanation'):
-                    few_shot_section += f"**说明：** {example['explanation']}\n"
-                few_shot_section += "\n"
+            # V3-FIX-68：few-shot 段围栏化组装（数据围栏+来源标注，种子库发布
+            # 内容不以上下文指令形态到达 prompt）。
+            from app.services.seed_library_service import format_seed_few_shot_section
+
+            few_shot_section = format_seed_few_shot_section(examples)
 
             # 将示例添加到系统提示后
             messages[0]["content"] = f"{system_prompt}\n\n{few_shot_section}"

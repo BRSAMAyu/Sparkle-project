@@ -84,7 +84,11 @@ from app.services.memory_retrieval_prefilter import (
     build_retrieval_context,
     prefilter_candidates,
 )
-from app.services.memory_service import MemoryService
+from app.services.memory_service import (
+    PREFERENCE_DENY_QUIET_WINDOW_HOURS,
+    MemoryService,
+    preference_in_deny_quiet_window,
+)
 from app.services.memory_use_selfcheck import (
     MemoryUseCandidate,
     SelfCheckContext,
@@ -1539,6 +1543,24 @@ class ContextPackBuilder:
             if ranking_enabled
             else _normalized_ranked(resolved_pref_records)
         )
+
+        # V3-FIX-70 · deny quiet gate（记忆「变安静」闭环）：被用户 deny 的偏好
+        # 在冷却窗（72h，对齐 D-08 PROBE_DAY=3）内不进 prompt 偏好面——一次
+        # deny 不再同位复活。只作用于 prompt/排序面：结构化面（resolved/
+        # conflict resolver）保留该行，抑制事实经 metadata 保持可见（不静默）。
+        deny_quieted_keys: list[str] = []
+        kept_preferences: list[RankedItem[Any]] = []
+        for entry in ranked_preferences:
+            if preference_in_deny_quiet_window(entry.item):
+                deny_quieted_keys.append(str(entry.item.pref_key))
+            else:
+                kept_preferences.append(entry)
+        if deny_quieted_keys:
+            ranked_preferences = kept_preferences
+            metadata["preference_deny_quiet"] = {
+                "quieted_keys": sorted(deny_quieted_keys),
+                "window_hours": PREFERENCE_DENY_QUIET_WINDOW_HOURS,
+            }
         ranked_goals = (
             rank_items(resolved_goals, kind="goals", weights=weights, query_text=query_text)
             if ranking_enabled

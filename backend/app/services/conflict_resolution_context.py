@@ -293,8 +293,11 @@ def _resolved_fact_line(entry: dict[str, Any]) -> str:
     winner_display = entry.get("winner_display")
     if not winner_display:
         return ""
-    losers = "、".join(f"「{display}」" for display in entry.get("loser_displays", [])[:2])
-    loser_clause = f"；{losers}为已知分歧，不再采用" if losers else ""
+    # V3-FIX-69：prompt 面不回灌 loser 值原文——被抑制旧值只以 id 归因
+    # （原文仍留在进程内结构化面 loser_displays 供审计）；抑制事实本身保持
+    # 可见（「不再采用」从句保留，不静默）。
+    loser_refs = "、".join(f"#{loser_id[:8]}" for loser_id in entry.get("loser_ids", [])[:2])
+    loser_clause = f"；另有{len(entry.get('loser_ids', []))}条被取代旧值（{loser_refs}）不再采用" if loser_refs else ""
     return (
         f"- {_kind_label(entry['kind'])}「{_display_key(entry['kind'], entry['key'])}」："
         f"以「{winner_display}」为准（{entry['attribution']}）{loser_clause}。"

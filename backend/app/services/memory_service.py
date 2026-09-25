@@ -64,6 +64,13 @@ CONFIDENCE_DECREMENT = 0.1
 # memory-governance-mvp: 用户"这就是对的"确认路径的置信度增益（与 DECREMENT 对称的小步长）。
 CONFIDENCE_CONFIRM_INCREMENT = 0.05
 MEMORY_REFERENCE_OUTCOMES = {"accepted", "corrected", "ignored", "denied"}
+# V3-FIX-70 · deny「变安静」闭环：denied 落在偏好 evidence_refs 上的确定性
+# 标记（与 episodic 的 evidence_snapshot.reference_denied_at 分支同构），读侧
+# （context_pack deny quiet gate）据此做同 key 冷却窗。窗口 72h 与 D-08
+# flywheel 探针日历（PROBE_DAYS=0/3/7，事件后首个探针在 Day3）对齐——
+# 冷却期内不进 prompt 偏好面，窗口过期后以已衰减置信度自然回流。
+MEMORY_REFERENCE_DENIED_MARKER_TYPE = "memory_reference_denied"
+PREFERENCE_DENY_QUIET_WINDOW_HOURS = 72.0
 SUMMARY_MAX_LEN = 48
 SESSION_MOOD_TTL_SECONDS = 7 * 24 * 60 * 60
 SESSION_MOOD_LAST_KEY_TEMPLATE = "memory:session_mood:{user_id}:last"
@@ -87,6 +94,49 @@ def _truncate_summary(value: str) -> str:
     if len(value) <= SUMMARY_MAX_LEN:
         return value
     return f"{value[:SUMMARY_MAX_LEN - 1]}…"
+
+
+def latest_preference_denial(record: Any) -> dict[str, Any] | None:
+    """读 V3-FIX-70 deny 标记：该偏好行最近一次**有效** denial marker。
+
+    有效 = type 匹配且 denied_at 可解析。纯函数、fail-soft：evidence_refs
+    形态异常一律视为无标记。
+    """
+    refs = getattr(record, "evidence_refs", None)
+    if not isinstance(refs, list):
+        return None
+    latest: dict[str, Any] | None = None
+    latest_key: str = ""
+    for ref in refs:
+        if not isinstance(ref, dict) or str(ref.get("type") or "") != MEMORY_REFERENCE_DENIED_MARKER_TYPE:
+            continue
+        denied_at = str(ref.get("denied_at") or "")
+        try:
+            datetime.fromisoformat(denied_at)
+        except (TypeError, ValueError):
+            continue
+        if denied_at >= latest_key:
+            latest_key = denied_at
+            latest = ref
+    return latest
+
+
+def preference_in_deny_quiet_window(record: Any, *, now: datetime | None = None) -> bool:
+    """该偏好是否处于 deny 冷却窗内（冷却期内不进 prompt 偏好面）。
+
+    同 key 的重复 deny 会刷新标记时间（窗口续期）；accepted/upsert 不落标记。
+    """
+    marker = latest_preference_denial(record)
+    if marker is None:
+        return False
+    try:
+        denied_at = datetime.fromisoformat(str(marker.get("denied_at")))
+    except (TypeError, ValueError):
+        return False
+    moment = now or utcnow()
+    if denied_at.tzinfo is not None:
+        denied_at = denied_at.replace(tzinfo=None)
+    return (moment - denied_at).total_seconds() <= PREFERENCE_DENY_QUIET_WINDOW_HOURS * 3600
 
 
 class MemoryService:
@@ -1630,6 +1680,15 @@ class MemoryService:
                 snapshot["reference_denied_at"] = now.isoformat()
                 snapshot["reference_denial_reason"] = reason or "memory_reference_denied"
                 record.evidence_snapshot = snapshot
+            elif normalized_outcome == "denied" and isinstance(record, MemoryPreference):
+                # V3-FIX-70：偏好域 deny 落确定性标记（读侧冷却窗依据）。
+                record.evidence_refs = list(record.evidence_refs or []) + [
+                    {
+                        "type": MEMORY_REFERENCE_DENIED_MARKER_TYPE,
+                        "denied_at": now.isoformat(),
+                        "reason": reason or "memory_reference_denied",
+                    }
+                ]
         record.updated_at = now
 
         trace_reason = reason or normalized_outcome

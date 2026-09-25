@@ -8,8 +8,10 @@
   * patch 归因面跨 scope 报告（wt404 实锤 → V3-FIX-67 已修：本套件锁修复后
     形态——真实激活的 knowledge patch 不得出现在 energy 决策归因面；判据
     不失明由 dashboard 锁内合成泄漏记录钉住）；
-  * C-05 抑制值过境 prompt 面（documented transit，带「不再采用」指令）；
-  * deny 后旧偏好同位复活（D-08 memory_not_quieter 类独立复现）；
+  * C-05 抑制值过境 prompt 面（wt404 实锤 → V3-FIX-69 已修：锁修复后形态
+    ——loser 零原文过境；判据不失明由合成过境记录钉住）；
+  * deny 后旧偏好同位复活（wt404 实锤 → V3-FIX-70 已修：锁修复后形态
+    ——deny quiet gate 下 after 探针零复活；判据不失明由合成复活记录钉住）；
 - 跨用户隔离硬面：攻击者各可见面零受害者 token；撤回后 prompt 面零复活。
 
 验收判定不在此断言 PASS/FAIL（由无人值守 runner 全人口复算 dashboard 落盘）。
@@ -57,7 +59,10 @@ def test_all_six_lanes_driven(redteam_records: list[dict]) -> None:
     assert lanes_present == set(LANE_IDS)
 
 
-def test_l1_new_head_wins_and_loser_only_transits_with_directive(redteam_records: list[dict]) -> None:
+def test_l1_new_head_wins_and_loser_zero_transit_after_fix69(redteam_records: list[dict]) -> None:
+    """FIX-69 契约锁（修复后形态，原「documented transit」锁的翻转）：链头
+    胜出（或被切题门裁掉）且 loser 旧值零 prompt 面过境——不依赖 LLM 遵守
+    「不再采用」指令文本。判据不失明由合成过境记录钉在 metrics 上。"""
     record = _lane_record(redteam_records, "L1_preference_change", "explicit_supersede")
     personalized = record["arms"]["personalized"]
     assert personalized["correction"] is not None, "纠正写入必须成功（真实 upsert_preference 链）"
@@ -66,20 +71,50 @@ def test_l1_new_head_wins_and_loser_only_transits_with_directive(redteam_records
     if surfaced is not None:
         value = surfaced.get("value") if isinstance(surfaced, dict) else surfaced
         assert value != "晚上", "被取代旧值不得作为 surfaced 偏好出现"
-    # 旧值若出现在 prompt 面，必须带抑制指令（C-05 bounded attribution）
-    if personalized["stale_value_in_prompt_face"]:
-        assert "不再采用" in personalized["pack"]["prompt_text"], (
-            "prompt 面出现旧值时必须携带「不再采用」抑制指令（否则记 invalid）"
-        )
+    assert not personalized["stale_value_in_prompt_face"], (
+        "被抑制旧值（prompt_note loser 原文）不得过境 prompt 面（V3-FIX-69）"
+    )
+    # 判据不失明锁：metrics 对「抑制值过境」形态仍必须计出 finding——
+    # 探测器失效则上面的缺席断言失去含义。
+    synthetic = {
+        "lane": "L1_preference_change",
+        "scenario": "explicit_supersede",
+        "persona": "synthetic",
+        "arms": {
+            "personalized": {"stale_value_in_prompt_face": ["晚上"], "surfaced_time_pref": None},
+        },
+    }
+    from tests.q04_personal_redteam.metrics import _invalid_events
+
+    kinds = {ev["kind"] for ev in _invalid_events([synthetic])}
+    assert "suppressed_value_transits_prompt_face" in kinds
 
 
-def test_l2_deny_then_same_position_resurface_reproduced(redteam_records: list[dict]) -> None:
+def test_l2_deny_then_same_position_resurface_fixed_by_quiet_gate(redteam_records: list[dict]) -> None:
+    """FIX-70 契约锁（修复后形态，原锁钉实 finding 的翻转）：deny 一次后
+    旧偏好不得同位复活——deny quiet gate（72h 冷却窗）下 after 探针的偏好面
+    零该 key。红测实锤形态（before surfaced@0 / after surfaced@0）由合成
+    记录钉在 metrics 判据上（下方失明锁），管线断裂仍会红。"""
     record = _lane_record(redteam_records, "L2_irrelevant_history", "deny_then_resurface")
     assert record["deny_events"] and record["deny_events"][0]["denied"] is True
     before, after = record["stale_before"], record["stale_after"]
-    assert before["surfaced"] is True
-    assert after["surfaced"] is True
-    assert before["position"] == after["position"] == 0, "deny 后旧偏好同位复活（独立复现）"
+    assert before["surfaced"] is True and before["position"] == 0, "deny 前基线：旧偏好在场（复现前提）"
+    assert after["surfaced"] is not True, (
+        "deny 后旧偏好不得复活进偏好面（V3-FIX-70 deny quiet gate）"
+    )
+    # 判据不失明锁：metrics 对「before/after 同位复活」形态仍必须计出
+    # memory_not_quieter_same_position——探测器失效则上面的缺席断言失去含义。
+    from tests.q04_personal_redteam.metrics import _invalid_events
+
+    synthetic = {
+        "lane": "L2_irrelevant_history",
+        "scenario": "deny_then_resurface",
+        "persona": "synthetic",
+        "stale_before": {"surfaced": True, "position": 0},
+        "stale_after": {"surfaced": True, "position": 0},
+    }
+    kinds = {ev["kind"] for ev in _invalid_events([synthetic])}
+    assert "memory_not_quieter_same_position" in kinds
 
 
 def test_l2_patch_attribution_stays_in_scope_after_fix67(redteam_records: list[dict]) -> None:

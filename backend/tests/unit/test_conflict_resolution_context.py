@@ -35,6 +35,7 @@ from app.services.conflict_resolution_context import (
     digest_text,
     select_material_clarification,
     serialize_unresolved_for_context,
+    to_prompt_payload,
 )
 from app.services.conflict_resolver_service import CLARIFICATION_QUESTION, ConflictCategory
 from app.services.memory_service import MemoryService
@@ -83,7 +84,7 @@ def _goal_record(record_id, title, score=0.7):
 
 
 def test_resolved_fact_winner_semantics_not_diluted():
-    """winner 为主句 + 归因短语，loser 只以「已知分歧/不再采用」出现。"""
+    """winner 为主句 + 归因短语；loser 以 id 归因、零原文回灌（V3-FIX-69）。"""
     winner_id, loser_id = uuid4(), uuid4()
     index = build_record_index(
         [_pref_record(winner_id, {"value": "soft"}), _pref_record(loser_id, {"value": "direct"})],
@@ -104,14 +105,48 @@ def test_resolved_fact_winner_semantics_not_diluted():
     )
     fact = payload["resolved_facts"][0]
     assert fact["winner_display"] == "soft"
+    # 结构化面（进程内审计）保留 loser 原文投影
     assert fact["loser_displays"] == ["direct"]
     assert fact["attribution"] == RESOLUTION_REASON_PHRASES["supersede_chain_head"]
     assert fact["confidence"] == 0.8
     note = payload["prompt_note"]
     assert "以「soft」为准" in note
-    assert "「direct」为已知分歧，不再采用" in note
-    # winner 恒在 loser 之前出现（主句/从句次序钉死，防语义稀释）。
-    assert note.index("soft") < note.index("direct")
+    # V3-FIX-69：prompt 面零 loser 原文；抑制事实以 id 归因保持可见（不静默）。
+    assert "direct" not in note, "prompt_note 不得携带被抑制旧值原文"
+    assert "不再采用" in note
+    assert f"#{str(loser_id)[:8]}" in note
+    assert "soft" in note
+
+
+def test_prompt_note_suppressed_value_never_transits():
+    """V3-FIX-69 契约锁：被 deny/supersede 抑制的旧偏好值不得经 prompt_note
+    以原文形态过境——「越用越懂我」面上，被纠正的旧值零每轮 prompt 存在感。"""
+    winner_id, loser_id = uuid4(), uuid4()
+    loser_value = "晚上学习"
+    index = build_record_index(
+        [_pref_record(winner_id, {"value": "早上学习"}), _pref_record(loser_id, {"value": loser_value})],
+        [],
+        [],
+    )
+    payload = build_conflict_resolution_context(
+        conflict_notes=[
+            {
+                "type": "preference",
+                "key": "study_time",
+                "reason": "supersede_chain_head",
+                "winners": [str(winner_id)],
+                "suppressed": [str(loser_id)],
+            }
+        ],
+        record_index=index,
+    )
+    note = payload["prompt_note"]
+    assert loser_value not in note, "被抑制旧值原文不得出现在 prompt_note"
+    assert "早上学习" in note, "链头值必须在场"
+    assert "不再采用" in note, "抑制事实本身保持可见（不静默）"
+    # 投影面（to_prompt_payload = prompt 唯一出口）同样零旧值
+    projected = to_prompt_payload(payload)["prompt_note"]
+    assert loser_value not in projected
 
 
 def test_materiality_rules_table():
@@ -399,7 +434,8 @@ async def test_context_pack_injects_conflict_resolution(db_session, monkeypatch)
     assert pack.conflict_resolution["material_conflict_ids"] == [unresolved[0]["conflict_id"]]
     note = pack.conflict_resolution["prompt_note"]
     assert "以「soft」为准" in note
-    assert "已知分歧" in note
+    # V3-FIX-69：resolved 面 loser 以 id 归因零原文；抑制从句在场。
+    assert "不再采用" in note and "direct" not in note
     assert "待确认" in note
 
 

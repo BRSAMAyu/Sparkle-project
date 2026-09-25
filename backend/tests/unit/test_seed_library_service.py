@@ -352,6 +352,8 @@ class TestSeedLibraryAccessAndPromptContext:
                 "explanation": "基础加法",
                 "subject": "math",
                 "difficulty_level": "beginner",
+                # V3-FIX-68：prompt 面注入筛查标注（新契约面）。
+                "prompt_safety": {"screened": True, "injection_markers": []},
             }
         ]
 
