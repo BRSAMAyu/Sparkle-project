@@ -6,6 +6,7 @@ Seed Library Service
 from __future__ import annotations
 
 import re
+import unicodedata
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -61,14 +62,24 @@ SEED_PROMPT_FENCE_CLOSE = "</seed_reference_data>"
 _FENCE_OPEN_NEUTRAL = "＜seed_reference_data＞"
 _FENCE_CLOSE_NEUTRAL = "＜/seed_reference_data＞"
 
-#: 注入探针封闭词表（中英），命中即标注 injection_markers（观测面）——
+# V3-FIX-112：中和必须变体容忍——伪开/伪闭标签的空白变形（`</... >`、`</ ...>`、
+# 制表/换行）与大小写变形在宽松解析的 LLM 眼里同样是围栏边界，只中和精确形态
+# 等于留逃逸面。开闭标签同族覆盖（IGNORECASE + 标签名两侧 \s*）。
+_FENCE_CLOSE_VARIANT_RE = re.compile(r"<\s*/\s*seed_reference_data\s*>", re.IGNORECASE)
+_FENCE_OPEN_VARIANT_RE = re.compile(r"<\s*seed_reference_data\s*>", re.IGNORECASE)
+
+#: 注入探针封闭词表（中英+混合），命中即标注 injection_markers（观测面）——
 #: 内容仍按围栏投递（授权数据，不截改），但绝不以未围栏形态拼进 prompt。
+#: V3-FIX-113：英文补冠词/物主槽位（Disregard your X / ignore the ...），
+#: 中文补指代词族（上面/以前/前方）与「所有/全部」中缀，混合双语双向独立模式。
 _PROMPT_INJECTION_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
         "en_ignore_previous_instructions",
         re.compile(
-            r"(?i)\b(?:ignore|disregard|forget)\s+(?:all\s+)?(?:previous|prior|above|earlier)\s+"
-            r"(?:instructions?|prompts?|rules?)"
+            r"(?i)\b(?:ignore|disregard|forget)\b"
+            r"(?:\s+(?:all|your|the|my|our|their|these|those|above))*\s+"
+            r"(?:previous|prior|above|earlier|preceding)\s+"
+            r"(?:instructions?|prompts?|rules?|directives?)"
         ),
     ),
     (
@@ -81,7 +92,19 @@ _PROMPT_INJECTION_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ),
     (
         "zh_ignore_previous_instructions",
-        re.compile(r"(?:忽略|无视|忘记)(?:之前|以上|前面|先前)(?:的)?(?:指令|提示|规则|设定)"),
+        re.compile(
+            r"(?:忽略|无视|忘记)(?:你|您)?(?:之前|以前|以上|上面|前方|前面|先前)"
+            r"(?:的)?(?:所有|全部)?(?:指令|提示|规则|设定|要求)"
+        ),
+    ),
+    (
+        "mix_ignore_previous_instructions",
+        re.compile(
+            r"(?i)(?:(?:ignore|disregard|forget)\s*(?:all\s+|the\s+|your\s+|所有|全部)?"
+            r"(?:之前|以前|以上|上面|前方|前面|先前)(?:的)?(?:所有|全部)?(?:指令|提示|规则|设定)"
+            r"|(?:忽略|无视|忘记)\s*(?:所有\s+|全部\s+|all\s+|the\s+|your\s+)?"
+            r"(?:previous|prior|earlier|above)\s+(?:instructions?|prompts?|rules?))"
+        ),
     ),
     (
         "zh_reveal_memory",
@@ -91,8 +114,12 @@ _PROMPT_INJECTION_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
 
 
 def screen_seed_prompt_text(text: str) -> list[str]:
-    """注入探针标记扫描（封闭词表，确定性）。返回命中的 marker 标签名列表。"""
-    value = str(text or "")
+    """注入探针标记扫描（封闭词表，确定性）。返回命中的 marker 标签名列表。
+
+    V3-FIX-113：扫描前做 NFKC 归一——全角拉丁/全角空格变形
+    （ｉｇｎｏｒｅ ａｌｌ ...）折算为 ASCII 后再过词表，避免审计面全漏标。
+    """
+    value = unicodedata.normalize("NFKC", str(text or ""))
     if not value:
         return []
     return [name for name, pattern in _PROMPT_INJECTION_PATTERNS if pattern.search(value)]
@@ -101,15 +128,15 @@ def screen_seed_prompt_text(text: str) -> list[str]:
 def fence_seed_prompt_text(text: str) -> str:
     """数据围栏：内容以字面数据形态投递（模板字面化 + 占位符包裹）。
 
-    - 围栏逃逸中和：内容中的围栏标签替换为全角形态，无法提前闭合数据块；
+    - 围栏逃逸中和（V3-FIX-112 变体容忍）：内容中的围栏标签——含空白/大小写
+      变体——一律替换为全角形态，无法提前闭合或重复打开数据块；
     - 换行保留（学习内容可含排版），但整体被 OPEN/CLOSE 包住。
     """
     value = str(text or "")
     if not value:
         return ""
-    value = value.replace(SEED_PROMPT_FENCE_CLOSE, _FENCE_CLOSE_NEUTRAL).replace(
-        SEED_PROMPT_FENCE_OPEN, _FENCE_OPEN_NEUTRAL
-    )
+    value = _FENCE_CLOSE_VARIANT_RE.sub(_FENCE_CLOSE_NEUTRAL, value)
+    value = _FENCE_OPEN_VARIANT_RE.sub(_FENCE_OPEN_NEUTRAL, value)
     return f"{SEED_PROMPT_FENCE_OPEN}\n{value}\n{SEED_PROMPT_FENCE_CLOSE}"
 
 
