@@ -603,6 +603,60 @@ class SharedResourceFeedback(BaseModel):
     )
 
 
+class CommunityOutcomeEvidence(BaseModel):
+    """
+    结构化社群 outcome 证据表（S-04）
+
+    定位（与既有真源的关系，不重建）：
+    - 学习飞轮数据面的**结构化**证据行：资源主人把一条同伴反馈**显式采纳**
+      为 Goal outcome evidence 时落一行。Goal.metadata_payload['community_evidence']
+      轨迹回执（S-03）与 services/evidence 信念面（best-effort）保持不变——
+      本表是它们旁边可查询、全真实外键的结构化面，不是第三真源。
+    - 反馈**永不**自动成为证据：本表唯一写入路径是采纳（adopted 状态），
+      撤回传播把行置 retracted（保留审计，不物理抹除）。
+    - mastery/progress 与本表零耦合（卡魂：采纳是显式动作，不自动成长）。
+
+    字段口径：
+    - feedback_id 全表唯一（一条反馈至多一条证据行——采纳幂等锚点）；
+    - peer_alias 只存采纳时刻的展示别名（不存 giver id——giver 身份留在
+      反馈行，证据行是 goal 主人的个人轨迹数据）；
+    - status：adopted | retracted（撤回传播由服务层落值）。
+    """
+    __tablename__ = "community_outcome_evidence"
+
+    goal_id: Mapped[Any] = mapped_column(
+        GUID(), ForeignKey("goals.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    feedback_id: Mapped[Any] = mapped_column(
+        GUID(), ForeignKey("shared_resource_feedbacks.id", ondelete="CASCADE"), nullable=False
+    )
+    shared_resource_id: Mapped[Any] = mapped_column(
+        GUID(), ForeignKey("shared_resources.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    owner_id: Mapped[Any] = mapped_column(
+        GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
+    verdict: Mapped[str] = mapped_column(
+        String(20), nullable=False,
+        comment="采纳时刻的反馈词表值：helpful | insightful | applied（schemas.FeedbackVerdict）",
+    )
+    peer_alias: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="adopted",
+        comment="adopted | retracted（撤回传播置 retracted，行保留审计）",
+    )
+    adopted_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=_utcnow)
+    retracted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint("feedback_id", name="uq_coe_feedback_once"),
+        Index("idx_coe_goal_status", "goal_id", "status"),
+        Index("idx_coe_owner_status", "owner_id", "status"),
+    )
+
+
 # ============ 私聊消息系统 ============
 
 class PrivateMessage(BaseModel):

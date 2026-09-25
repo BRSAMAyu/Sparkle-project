@@ -390,6 +390,27 @@ EVENT_REGISTRY: dict[str, RegisteredEvent] = {
             ),
             status="live",
         ),
+        RegisteredEvent(
+            # S-04 (2026-09-25): community peer-feedback adoption → structured
+            # Goal outcome evidence. The durable truth is the
+            # community_outcome_evidence table (S-04; one row per adopted
+            # feedback, real FKs to goal/feedback/shared_resource); this outbox
+            # name carries the integration notification only — same split as
+            # D-05 (outbox rows are cleanup-deleted after 7 days and are NOT
+            # the analysis store). Feedback that is NOT explicitly adopted by
+            # the resource owner never produces this event (and never touches
+            # mastery/progress). Payload is ids + closed verdict vocabulary
+            # only (no comments, no peer aliases — audit-without-exposure).
+            # feedback_id/goal_id/evidence_id ride payload/metadata extra:
+            # feedback_id and goal_id are not in CORRELATION_KEYS (D-01 froze
+            # that set), task_id/plan_id correlation rides when the shared
+            # artifact carries them.
+            name="community.feedback_adopted",
+            stage=EventStage.OUTCOME,
+            aggregate_type="community_outcome_evidence",
+            producers=("app/services/community_feedback_service.py",),
+            status="live",
+        ),
         # --- STATE UPDATE ---------------------------------------------------
         RegisteredEvent(
             name="galaxy.node.mastery_updated",

@@ -60,7 +60,12 @@ BACKEND_DIR = Path(__file__).resolve().parents[2]
 #   由 observed_unregistered → live，producer =
 #   app/services/agent_run_service.py)。→ 36 names；hash 显式 re-freeze（X-05
 #   交付，待 Leader 复核后归档）。
-_FROZEN_VOCABULARY_SHA256 = "ef0db85a247379cf7a4946c69de8acf66348320a71d1e588f5a4e4ad8a2602cb"
+# - S-04 (2026-09-25): + "community.feedback_adopted" (stage=OUTCOME,
+#   aggregate=community_outcome_evidence; peer-feedback adoption → structured
+#   Goal outcome evidence 的集成通知，durable truth 在 community_outcome_evidence
+#   表，producer = app/services/community_feedback_service.py)。→ 40 names；
+#   hash 显式 re-freeze（S-04 交付，待 Leader 复核后归档）。
+_FROZEN_VOCABULARY_SHA256 = "3444257e9ffb1f4b26f2a5a02047b59575b381af15b048926dd70f994cd2e0a0"
 
 # Observed distinct event_type values in the live dev DB event_outbox
 # (sparkle_readonly, 2026-09-19; 106 rows). run.* / task.status_changed are

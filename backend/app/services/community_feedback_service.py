@@ -18,22 +18,37 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.datetime_utils import _utcnow
 from app.core.event_bus import event_bus
-from app.models.community import GroupMember, SharedResource, SharedResourceFeedback
+from app.models.community import (
+    CommunityOutcomeEvidence,
+    GroupMember,
+    SharedResource,
+    SharedResourceFeedback,
+)
 from app.models.goal import Goal
 from app.models.plan import Plan
 from app.models.task import Task
 from app.models.user import User
 from app.schemas.community import FeedbackVerdict
 from app.services.community_service import UserBlockService
+
+#: S-04 flywheel 事件（D-01 词表 S-04 扩展，registry status=live）。
+COMMUNITY_FEEDBACK_ADOPTED_EVENT = "community.feedback_adopted"
+
+#: 事件 payload schema 版本（与 D-05 lifecycle / X-08 outcome.capture 同约定）。
+COMMUNITY_OUTCOME_EVIDENCE_SCHEMA_VERSION = "community.outcome_evidence.v1"
+
+#: aggregate_type（event_outbox / event_sequence_counters 同名域）。
+_COMMUNITY_EVIDENCE_AGGREGATE_TYPE = "community_outcome_evidence"
 
 
 class SharedResourceFeedbackService:
@@ -202,7 +217,11 @@ class SharedResourceFeedbackService:
         """资源主人把一条活跃反馈采纳为 Goal 的 outcome evidence。
 
         - 只改：反馈行 adopted_at/adopted_into_goal_id + Goal.metadata 回执
+          + 结构化证据行 ``community_outcome_evidence``（S-04，同事务落库）
           + services/evidence 信念面（best-effort）。
+        - flywheel：采纳产生 ``community.feedback_adopted`` outbox 事件
+          （D-01 V3 envelope，参照 D-05 lifecycle 事件形状；下游可消费，
+          outbox 行不是证据真源——真源在本表+Goal 轨迹）。
         - 永不改：GALAXY mastery / Goal.mastery / Goal.progress。
         """
         shared_result = await db.execute(
@@ -263,6 +282,17 @@ class SharedResourceFeedbackService:
         SharedResourceFeedbackService._append_goal_receipt(goal, receipt)
         db.add(goal)
 
+        # 结构化证据行（S-04 学习飞轮数据面）：与采纳同事务，唯一 feedback_id
+        # 锚点保证采纳幂等（重复采纳已在上方早退，这里是防御性兜底）。
+        evidence = await SharedResourceFeedbackService._get_or_create_evidence(
+            db,
+            goal=goal,
+            feedback=feedback,
+            shared=shared,
+            owner_id=owner.id,
+            giver_alias=giver_alias,
+        )
+
         evidence_count = await SharedResourceFeedbackService._fuse_belief_evidence(
             owner_id=owner.id,
             feedback_id=feedback.id,
@@ -274,6 +304,16 @@ class SharedResourceFeedbackService:
         )
         await db.flush()
 
+        await SharedResourceFeedbackService._emit_flywheel_event(
+            db,
+            owner_id=owner.id,
+            feedback_id=feedback.id,
+            shared_resource_id=shared.id,
+            goal_id=goal.id,
+            evidence=evidence,
+            verdict=feedback.verdict,
+            occurred_at=feedback.adopted_at or _utcnow(),
+        )
         await event_bus.publish(
             "community.feedback_adopted",
             SharedResourceFeedbackService._event(
@@ -282,6 +322,7 @@ class SharedResourceFeedbackService:
                 shared_resource_id=str(shared.id),
                 feedback_id=str(feedback.id),
                 goal_id=str(goal.id),
+                evidence_id=str(evidence.id),
                 verdict=feedback.verdict,
                 evidence_count=evidence_count,
             ),
@@ -339,6 +380,21 @@ class SharedResourceFeedbackService:
             feedback.retracted_at = now
             db.add(feedback)
 
+        # 派生引用更新（S-04 结构化证据面）：已采纳的证据行置 retracted，
+        # 行保留审计（不物理抹除），与 Goal 轨迹回执同语义。
+        evidence_result = await db.execute(
+            select(CommunityOutcomeEvidence).where(
+                CommunityOutcomeEvidence.shared_resource_id == resource_id,
+                CommunityOutcomeEvidence.not_deleted_filter(),
+                CommunityOutcomeEvidence.status == "adopted",
+            )
+        )
+        evidences = list(evidence_result.scalars().all())
+        for evidence in evidences:
+            evidence.status = "retracted"
+            evidence.retracted_at = now
+            db.add(evidence)
+
         goal_receipt_count = await SharedResourceFeedbackService._retract_goal_receipts(
             db, owner_id=owner.id, resource_id=resource_id, retracted_at=now
         )
@@ -352,12 +408,14 @@ class SharedResourceFeedbackService:
                 target_group_id=str(shared.group_id) if shared.group_id else None,
                 target_user_id=str(shared.target_user_id) if shared.target_user_id else None,
                 retracted_feedback_count=len(feedbacks),
+                updated_evidence_count=len(evidences),
                 updated_goal_receipt_count=goal_receipt_count,
             ),
         )
         return {
             "shared": shared,
             "retracted_feedback_count": len(feedbacks),
+            "updated_evidence_count": len(evidences),
             "updated_goal_receipt_count": goal_receipt_count,
         }
 
@@ -466,7 +524,11 @@ class SharedResourceFeedbackService:
     async def _retract_goal_receipts(
         db: AsyncSession, *, owner_id: UUID, resource_id: UUID, retracted_at: datetime
     ) -> int:
-        """撤回传播的另一半：主人所有 Goal 轨迹里引用该共享的回执标 retracted。"""
+        """撤回传播的另一半：主人所有 Goal 轨迹里引用该共享的回执标 retracted。
+
+        注意必须重建容器（新 list + 新 dict）再赋回 ``metadata_payload``：
+        JSON 列对就地变更无脏检测，原对象赋回不会发 UPDATE（S-04 红测实证）。
+        """
         result = await db.execute(
             select(Goal).where(Goal.user_id == owner_id, Goal.not_deleted_filter())
         )
@@ -476,6 +538,7 @@ class SharedResourceFeedbackService:
             receipts = metadata.get(SharedResourceFeedbackService.COMMUNITY_EVIDENCE_KEY)
             if not isinstance(receipts, list):
                 continue
+            new_receipts: list[dict] = []
             changed = False
             for receipt in receipts:
                 if (
@@ -483,15 +546,217 @@ class SharedResourceFeedbackService:
                     and receipt.get("shared_resource_id") == str(resource_id)
                     and receipt.get("status") == "adopted"
                 ):
-                    receipt["status"] = "retracted"
-                    receipt["retracted_at"] = retracted_at.isoformat()
+                    new_receipt = {
+                        **receipt,
+                        "status": "retracted",
+                        "retracted_at": retracted_at.isoformat(),
+                    }
+                    new_receipts.append(new_receipt)
                     changed = True
+                else:
+                    new_receipts.append(receipt)
             if changed:
-                metadata[SharedResourceFeedbackService.COMMUNITY_EVIDENCE_KEY] = receipts
-                goal.metadata_payload = metadata
+                goal.metadata_payload = {
+                    **metadata,
+                    SharedResourceFeedbackService.COMMUNITY_EVIDENCE_KEY: new_receipts,
+                }
                 db.add(goal)
                 updated += 1
         return updated
+
+    # ---------- 结构化证据（S-04 学习飞轮数据面）+ flywheel 事件 ----------
+
+    @staticmethod
+    async def _get_or_create_evidence(
+        db: AsyncSession,
+        *,
+        goal: Goal,
+        feedback: SharedResourceFeedback,
+        shared: SharedResource,
+        owner_id: UUID,
+        giver_alias: str,
+    ) -> CommunityOutcomeEvidence:
+        """采纳落一条结构化证据行（唯一 feedback_id 锚点；同事务、非 best-effort）。"""
+        existing = (
+            await db.execute(
+                select(CommunityOutcomeEvidence).where(
+                    CommunityOutcomeEvidence.feedback_id == feedback.id,
+                    CommunityOutcomeEvidence.not_deleted_filter(),
+                )
+            )
+        ).scalar_one_or_none()
+        if existing is not None:
+            return existing
+        evidence = CommunityOutcomeEvidence(
+            goal_id=goal.id,
+            feedback_id=feedback.id,
+            shared_resource_id=shared.id,
+            owner_id=owner_id,
+            verdict=feedback.verdict,
+            peer_alias=giver_alias or None,
+            status="adopted",
+            adopted_at=feedback.adopted_at or _utcnow(),
+        )
+        db.add(evidence)
+        await db.flush()
+        return evidence
+
+    @staticmethod
+    async def _emit_flywheel_event(
+        db: AsyncSession,
+        *,
+        owner_id: UUID,
+        feedback_id: UUID,
+        shared_resource_id: UUID,
+        goal_id: UUID,
+        evidence: CommunityOutcomeEvidence,
+        verdict: str,
+        occurred_at: datetime,
+    ) -> bool:
+        """写 ``community.feedback_adopted`` outbox 行（D-01 V3 envelope）。
+
+        参照 D-05 lifecycle 事件形状：真源在 community_outcome_evidence 表 +
+        Goal 轨迹，outbox 只承载集成通知（下游可消费；7 天清理不丢真相）。
+        表缺席（旧库/sqlite 未建 outbox 夹具）诚实跳过——集成通知不阻塞
+        证据真源落库，与 D-05/galaxy/M-07 writer 同语义。
+        """
+        if not await SharedResourceFeedbackService._outbox_tables_exist(db):
+            logger.debug("community flywheel outbox emit skipped: event_outbox tables unavailable")
+            return False
+        try:
+            sequence_number = await SharedResourceFeedbackService._next_outbox_sequence(db, owner_id)
+            payload: dict[str, object] = {
+                "schema_version": COMMUNITY_OUTCOME_EVIDENCE_SCHEMA_VERSION,
+                "feedback_id": str(feedback_id),
+                "shared_resource_id": str(shared_resource_id),
+                "goal_id": str(goal_id),
+                "evidence_id": str(evidence.id),
+                "verdict": verdict,
+                "evidence_status": evidence.status,
+            }
+            from app.core.event_registry import EventSource, build_event_metadata
+
+            # correlation 只带 canonical UUID 词表键（task_id/plan_id，共享
+            # artifact 挂链时存在）；feedback/goal/evidence id 走 payload+extra
+            # （D-01 词表冻结，与 D-05 decision_id 同款已知限制）。
+            correlation = await SharedResourceFeedbackService._shared_correlation_ids(
+                db, shared_resource_id=shared_resource_id
+            )
+            metadata = build_event_metadata(
+                user_id=owner_id,
+                source=EventSource.SERVER_SERVICE,
+                service="community_feedback_service",
+                event_name=COMMUNITY_FEEDBACK_ADOPTED_EVENT,
+                aggregate_type=_COMMUNITY_EVIDENCE_AGGREGATE_TYPE,
+                aggregate_id=evidence.id,
+                sequence_number=sequence_number,
+                occurred_at=occurred_at,
+                correlation=correlation or None,
+                extra={
+                    "feedback_id": str(feedback_id),
+                    "goal_id": str(goal_id),
+                    "evidence_id": str(evidence.id),
+                },
+            )
+            await db.execute(
+                text("""
+                    INSERT INTO event_outbox
+                    (aggregate_type, aggregate_id, event_type, event_version, sequence_number, payload, metadata)
+                    VALUES (:aggregate_type, :aggregate_id, :event_type, 1, :sequence_number, :payload, :metadata)
+                    """),
+                {
+                    "aggregate_type": _COMMUNITY_EVIDENCE_AGGREGATE_TYPE,
+                    "aggregate_id": str(evidence.id),
+                    "event_type": COMMUNITY_FEEDBACK_ADOPTED_EVENT,
+                    "sequence_number": sequence_number,
+                    "payload": json.dumps(payload, ensure_ascii=False),
+                    "metadata": json.dumps(metadata, ensure_ascii=False),
+                },
+            )
+            return True
+        except Exception as exc:  # noqa: BLE001 — outbox 是集成通知，失败不阻塞证据真源
+            logger.warning("community flywheel outbox emit failed (feedback_id={}): {}", feedback_id, exc)
+            return False
+
+    @staticmethod
+    async def _shared_correlation_ids(db: AsyncSession, *, shared_resource_id: UUID) -> dict[str, str]:
+        """共享 artifact 的 task/plan 挂链（canonical UUID，GJ trace 用）。"""
+        result = await db.execute(
+            select(SharedResource.task_id, SharedResource.plan_id).where(
+                SharedResource.id == shared_resource_id
+            )
+        )
+        row = result.first()
+        if row is None:
+            return {}
+        correlation: dict[str, str] = {}
+        if row.task_id is not None:
+            correlation["task_id"] = str(row.task_id)
+        if row.plan_id is not None:
+            correlation["plan_id"] = str(row.plan_id)
+        return correlation
+
+    # outbox 辅助（D-05/galaxy/M-07 writer pattern，standalone 复制面）。
+
+    @staticmethod
+    async def _outbox_tables_exist(db: AsyncSession) -> bool:
+        from sqlalchemy import inspect
+
+        try:
+            connection = await db.connection()
+        except Exception:  # noqa: BLE001
+            return False
+
+        def _has(sync_conn) -> bool:
+            try:
+                return bool(inspect(sync_conn).has_table("event_outbox"))
+            except Exception:  # noqa: BLE001
+                return False
+
+        return await connection.run_sync(_has)
+
+    @staticmethod
+    async def _next_outbox_sequence(db: AsyncSession, aggregate_id: UUID) -> int:
+        try:
+            result = await db.execute(
+                text("""
+                    INSERT INTO event_sequence_counters (aggregate_type, aggregate_id, next_sequence)
+                    VALUES (:aggregate_type, :aggregate_id, 1)
+                    ON CONFLICT (aggregate_type, aggregate_id)
+                    DO UPDATE SET next_sequence = event_sequence_counters.next_sequence + 1
+                    RETURNING next_sequence
+                    """),
+                {"aggregate_type": _COMMUNITY_EVIDENCE_AGGREGATE_TYPE, "aggregate_id": str(aggregate_id)},
+            )
+            return int(result.scalar_one())
+        except Exception as exc:  # noqa: BLE001 — dialect without upsert/returning
+            logger.debug("community outbox sequence upsert fallback ({})", exc)
+            current_result = await db.execute(
+                text(
+                    "SELECT next_sequence FROM event_sequence_counters "
+                    "WHERE aggregate_type = :t AND aggregate_id = :a"
+                ),
+                {"t": _COMMUNITY_EVIDENCE_AGGREGATE_TYPE, "a": str(aggregate_id)},
+            )
+            current = current_result.scalar_one_or_none()
+            if current is None:
+                await db.execute(
+                    text(
+                        "INSERT INTO event_sequence_counters (aggregate_type, aggregate_id, next_sequence) "
+                        "VALUES (:t, :a, 1)"
+                    ),
+                    {"t": _COMMUNITY_EVIDENCE_AGGREGATE_TYPE, "a": str(aggregate_id)},
+                )
+                return 1
+            nxt = int(current) + 1
+            await db.execute(
+                text(
+                    "UPDATE event_sequence_counters SET next_sequence = :n "
+                    "WHERE aggregate_type = :t AND aggregate_id = :a"
+                ),
+                {"n": nxt, "t": _COMMUNITY_EVIDENCE_AGGREGATE_TYPE, "a": str(aggregate_id)},
+            )
+            return nxt
 
     # ---------- 信念面（services/evidence 既有链，best-effort） ----------
 
