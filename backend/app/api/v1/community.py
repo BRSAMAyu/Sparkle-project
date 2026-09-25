@@ -1574,10 +1574,14 @@ async def block_user(
     - 拉黑后自动解除好友关系
     - 拉黑后对方无法发送消息或好友请求
     """
-    await UserBlockService.block_user(
-        db=db, blocker_id=current_user.id, blocked_id=data.target_user_id, reason=data.reason
-    )
-    await db.commit()
+    # S-05：用户输入类错误（自拉黑/重复拉黑）显式 400，不再裸 ValueError → 500
+    try:
+        await UserBlockService.block_user(
+            db=db, blocker_id=current_user.id, blocked_id=data.target_user_id, reason=data.reason
+        )
+        await db.commit()
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     return {"success": True, "message": "已拉黑该用户"}
 
@@ -1589,8 +1593,12 @@ async def unblock_user(
     request: Request, user_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """解除拉黑用户"""
-    await UserBlockService.unblock_user(db=db, blocker_id=current_user.id, blocked_id=user_id)
-    await db.commit()
+    # S-05：未拉黑时解除 → 显式 400（同 block 的 ValueError 映射口径）
+    try:
+        await UserBlockService.unblock_user(db=db, blocker_id=current_user.id, blocked_id=user_id)
+        await db.commit()
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
     return {"success": True, "message": "已解除拉黑"}
 
@@ -2055,7 +2063,9 @@ async def join_group(
 async def leave_group(
     group_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
-    """退出群组"""
+    """
+    退出群组
+    """
     try:
         await GroupService.leave_group(db, group_id, current_user.id)
         await db.commit()
@@ -2070,6 +2080,11 @@ async def leave_group(
             },
             str(group_id),
         )
+
+        # S-05：离群失效（实时面）——主动关闭退群成员的存活 WS 连接。
+        # 此前只改成员行，已退群连接仍挂在 ConnectionManager 上继续收群广播
+        # （非成员持续接收群实时消息，权限/隐私缺口）。
+        await manager.kick_user_from_group(str(group_id), str(current_user.id), "left group")
 
         return {"success": True}
     except ValueError as e:
@@ -2157,6 +2172,8 @@ async def kick_group_member(
             },
             str(group_id),
         )
+        # S-05：踢出失效（实时面）——主动关闭被踢成员的存活 WS 连接（同 leave）。
+        await manager.kick_user_from_group(str(group_id), str(user_id), "kicked")
         return {"success": True}
     except ValueError as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
