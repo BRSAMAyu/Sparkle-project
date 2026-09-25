@@ -10,6 +10,7 @@ import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/insights/insights_routes.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/report_routes.dart';
+import 'package:sparkle/features/simulation/presentation/providers/simulation_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 
 /// U-07 导航减负：洞察枢纽卡收敛为「学习报告」单一 CONTEXTUAL 动作 +
@@ -49,7 +50,10 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
             ),
           )
         : null;
-    final hasRefreshError = systemUpdatesAsync.hasError;
+    // 洞察刷新失败感知双源：systemUpdates 流与 insights/simulation 源任一
+    // 出错都要诚实亮横幅（U-07 收敛后曾丢掉 simulation 源的失败感知）。
+    final hasRefreshError = systemUpdatesAsync.hasError ||
+        ref.watch(simulationProvider.select((state) => state.error != null));
 
     if (widget.compact) {
       return _CompactInsightHubCard(
@@ -75,7 +79,9 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              _heroSummary(context, latestReportPayload),
+              // 报告上下文只在「学习报告」入口副题出现一次；hero 行保持
+              // 常驻摘要，不与入口副题重复渲染同一段掌握度文案。
+              context.l10n.insightHubFallbackSummary,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: DS.textSecondary,
                     height: 1.45,
@@ -109,6 +115,7 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
               _InsightHubStatusBanner(
                 onRetry: () {
                   ref.invalidate(systemUpdatesProvider);
+                  ref.invalidate(simulationProvider);
                 },
               ),
             ],
@@ -116,13 +123,6 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
         ),
       ),
     );
-  }
-
-  String _heroSummary(BuildContext context, LearningReport? report) {
-    if (report != null && report.mastery.isNotEmpty) {
-      return _reportSubtitle(report);
-    }
-    return context.l10n.insightHubFallbackSummary;
   }
 
   void _openOverview(BuildContext context, {String? initialPanel}) {
@@ -152,7 +152,9 @@ class _CompactInsightHubCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final contentPadding = dense ? DS.spacing10 : DS.spacing12;
-    final summary = _heroSummary(context, latestReportPayload);
+    // 与标准卡同口径：compact hero 保持常驻摘要，报告上下文只在
+    // 「学习报告」动作 tile 副题渲染一次。
+    final summary = context.l10n.insightHubCompactFallback;
 
     return ClipRRect(
       borderRadius: DS.borderRadius20,
@@ -319,13 +321,6 @@ class _CompactInsightHubCard extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  String _heroSummary(BuildContext context, LearningReport? report) {
-    if (report != null && report.mastery.isNotEmpty) {
-      return _reportSubtitle(report);
-    }
-    return context.l10n.insightHubCompactFallback;
   }
 }
 
