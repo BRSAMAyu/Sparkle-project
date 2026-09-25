@@ -204,9 +204,14 @@ class _CountingSnapshotApiClient implements ApiClient {
       inferredPreferencesGets++;
     }
     if (path.startsWith('/profile/')) {
+      // inferred-preferences 后端返回 list[dict]（profile_transparency.py），
+      // 仓库层按 List<dynamic> 解；其余 /profile/* 返回 map。
+      final data = path == '/profile/inferred-preferences'
+          ? <dynamic>[]
+          : <String, dynamic>{};
       return Response<T>(
         requestOptions: RequestOptions(path: path),
-        data: <String, dynamic>{} as T,
+        data: data as T,
       );
     }
     return Response<T>(
