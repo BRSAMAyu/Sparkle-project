@@ -54,7 +54,7 @@ import 'package:sparkle/main.dart' as app;
 ///    a failure.
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized()
-    ..framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
+    .framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
 
   const route = String.fromEnvironment('J01_ROUTE', defaultValue: 'own_goal');
   const shotDestEnv = String.fromEnvironment('J01_SHOT_DEST');
@@ -268,7 +268,7 @@ void main() {
             passData['auto_login_after_wipe'] = true;
             // ignore: avoid_print
             print(
-                'J01_FINDING pass=$passId auto-login after secure-storage+prefs wipe');
+                'J01_FINDING pass=$passId auto-login after secure-storage+prefs wipe',);
             try {
               final container = ProviderScope.containerOf(
                 tester.element(find.byType(MaterialApp).first),
@@ -280,7 +280,6 @@ void main() {
             final backAtLogin = await waitUntil(
               tester,
               () => find.byType(LoginScreen).evaluate().isNotEmpty,
-              timeout: const Duration(seconds: 30),
             );
             if (!backAtLogin) {
               failures.add(
@@ -421,7 +420,7 @@ void main() {
       print('J01_SUMMARY_WRITE_FAIL $e');
     }
     expect(failures, isEmpty, reason: 'J01 journey soft failures: $failures');
-  }, timeout: const Timeout(Duration(minutes: 40)));
+  }, timeout: const Timeout(Duration(minutes: 40)),);
 }
 
 // ─────────────────────────── shared helpers ───────────────────────────
@@ -657,7 +656,6 @@ Future<void> _ownGoalRoute({
   final backAtLogin = await waitUntil(
     tester,
     () => find.byType(LoginScreen).evaluate().isNotEmpty,
-    timeout: const Duration(seconds: 30),
   );
   if (!backAtLogin) {
     failures.add('pass $passId: leg B did not return to login');
@@ -764,7 +762,7 @@ Future<void> _ownGoalRoute({
       print('J01_DEBUG pass=$passId register submit attempt=$attempt stayed=$landed');
     }
   }
-  final registered = await waitUntil(
+  await waitUntil(
     tester,
     () =>
         find.byType(DashboardScreen).evaluate().isNotEmpty ||
@@ -822,7 +820,7 @@ Future<void> _ownGoalRoute({
           'accepted_tos': true,
           'accepted_privacy': true,
           'agreed_locale': 'zh-CN',
-        }));
+        }),);
         final res = await req.close();
         final body = await res.transform(utf8.decoder).join();
         passData['api_register_status'] = res.statusCode;
@@ -869,7 +867,7 @@ Future<void> _ownGoalRoute({
       await tester.enterText(loginFields.at(0), username);
       await tester.enterText(loginFields.at(1), 'J01-Passw0rd!');
       await tester.pump(const Duration(milliseconds: 300));
-      var loginBtn = textAnySmart(['登录'], last: true);
+      final loginBtn = textAnySmart(['登录'], last: true);
       if (loginBtn == null) {
         failures.add('pass $passId: login button not findable (rich text?)');
         await dumpTexts(tester, 'login-button-missing');
@@ -891,7 +889,6 @@ Future<void> _ownGoalRoute({
     var logged = await waitUntil(
       tester,
       () => find.byType(DashboardScreen).evaluate().isNotEmpty,
-      timeout: const Duration(seconds: 30),
     );
     passData['fallback_login_to_dashboard'] = logged;
     mark(passId, 'own_goal', 't_fallback_logged_in', legT0);
@@ -901,7 +898,7 @@ Future<void> _ownGoalRoute({
       // goal-wizard leg still runs on a real fresh registered account.
       // ignore: avoid_print
       print(
-          'J01_FINDING pass=$passId UI login tap also ineffective — using provider login (instrumented)');
+          'J01_FINDING pass=$passId UI login tap also ineffective — using provider login (instrumented)',);
       try {
         final container = ProviderScope.containerOf(
           tester.element(find.byType(MaterialApp).first),
@@ -912,7 +909,6 @@ Future<void> _ownGoalRoute({
         logged = await waitUntil(
           tester,
           () => find.byType(DashboardScreen).evaluate().isNotEmpty,
-          timeout: const Duration(seconds: 30),
         );
         passData['provider_login_to_dashboard'] = logged;
       } catch (e) {
@@ -1128,7 +1124,7 @@ Future<void> _ownGoalRoute({
     await tester.tap(cont, warnIfMissed: false);
     // Goal creation is a real backend POST — give it room and watch for
     // the success dialog or a visible failure message.
-    final created = await waitUntil(
+    await waitUntil(
       tester,
       () =>
           find.byType(GoalCreationWizardScreen).evaluate().isEmpty ||

@@ -124,9 +124,7 @@ class _FakeRepository implements AchievementRepository {
   final List<StreakDayRecord> days;
 
   @override
-  Future<List<StreakDayRecord>> getStreakHistory({int days = 90}) async {
-    return this.days;
-  }
+  Future<List<StreakDayRecord>> getStreakHistory({int days = 90}) async => this.days;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
