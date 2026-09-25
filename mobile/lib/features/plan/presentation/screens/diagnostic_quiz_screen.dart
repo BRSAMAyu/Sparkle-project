@@ -7,6 +7,8 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/state/surface_state.dart';
+import 'package:sparkle/core/state/surface_state_view.dart';
 import 'package:sparkle/features/plan/data/models/exam_sprint_models.dart';
 import 'package:sparkle/features/plan/data/repositories/exam_sprint_repository.dart';
 
@@ -142,28 +144,26 @@ class _DiagnosticQuizScreenState extends ConsumerState<DiagnosticQuizScreen> {
       );
 
   Widget _buildBody(BuildContext context) {
+    // U-06：加载/错误相位收敛到状态矩阵闸门——loading 走分阶加载
+    // （>500ms 有 stage feedback，替代原无界裸 spinner）；error 走统一
+    // 错误语义（重试下一步）；成功/表单分支原样保留。
+    final SurfaceState phase;
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      phase = const SurfaceState(SurfacePhase.loading);
+    } else if (_error != null) {
+      phase = SurfaceState(SurfacePhase.errorRecoverable, message: _error);
+    } else {
+      phase = const SurfaceState(SurfacePhase.success);
     }
-    if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              _error!,
-              style: context.typo.bodyMedium.copyWith(color: DS.textSecondary),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: DS.spacing12),
-            FilledButton.tonal(
-              onPressed: () => unawaited(_load()),
-              child: Text(context.l10n.examDiagnosticRetry),
-            ),
-          ],
-        ),
-      );
-    }
+    return SurfaceStateGate(
+      surfaceId: 'plan.diagnosticQuiz',
+      state: phase,
+      content: (_) => _buildContentLoaded(context),
+      onRetry: () => unawaited(_load()),
+    );
+  }
+
+  Widget _buildContentLoaded(BuildContext context) {
     final result = _result;
     if (result != null) {
       return _ResultView(

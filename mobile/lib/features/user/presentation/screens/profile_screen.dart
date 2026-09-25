@@ -5,10 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/user_state_models.dart';
+import 'package:sparkle/core/state/surface_state.dart';
+import 'package:sparkle/core/state/surface_state_view.dart';
 import 'package:sparkle/features/achievement/achievement_routes.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/auth/auth.dart';
@@ -67,16 +68,20 @@ class ProfileScreen extends ConsumerWidget {
                 children: [
                   const StatisticsCard(),
                   const SizedBox(height: DS.spacing12),
-                  profileContextAsync.when(
-                    data: (profileContext) =>
-                        _buildTraitsSection(context, ref, profileContext),
-                    loading: () => const SizedBox.shrink(),
-                    // A-4: the profile data error card must offer an exit
-                    // (tap-to-retry) — the logout entry lives on this tab, a
-                    // dead-end error state locks the user out of it.
-                    error: (_, __) => CompactErrorCard(
-                      onRetry: () => ref.invalidate(profileContextProvider),
+                  // U-06：画像上下文接状态矩阵闸门——loading 从静默
+                  // SizedBox.shrink 升格为分阶骨架（>500ms 有 stage
+                  // feedback）；error 从 CompactErrorCard 升格为统一错误
+                  // 语义（重试下一步保留，A-4 死胡同禁令不回退）。
+                  SurfaceStateGate(
+                    surfaceId: 'profile.context',
+                    state: surfaceStateFromAsync(profileContextAsync),
+                    content: (_) => _buildTraitsSection(
+                      context,
+                      ref,
+                      profileContextAsync.requireValue,
                     ),
+                    emptyBuilder: (_) => const SizedBox.shrink(),
+                    onRetry: () => ref.invalidate(profileContextProvider),
                   ),
                   const SizedBox(height: DS.spacing12),
                   if (profileContext != null)

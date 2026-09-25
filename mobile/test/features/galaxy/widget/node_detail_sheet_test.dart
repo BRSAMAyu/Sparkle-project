@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/retry_strategy.dart';
+import 'package:sparkle/core/state/staged_loading.dart';
 import 'package:sparkle/features/galaxy/data/models/node_history_model.dart';
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/node_detail_sheet.dart';
@@ -141,7 +142,10 @@ void main() {
     await tester.pump();
 
     expect(find.text('TCP流量控制'), findsOneWidget);
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    // U-06：历史加载位由统一分阶加载承接（>500ms 升格 stage feedback），
+    // 不再是无界裸 spinner——终结态 spinner 清除是本卡验收项。
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(StagedSurfaceLoader), findsOneWidget);
     // 明细未返回前，动作区不应出现（避免对半成品做决策）。
     expect(find.text('开始复习'), findsNothing);
   });

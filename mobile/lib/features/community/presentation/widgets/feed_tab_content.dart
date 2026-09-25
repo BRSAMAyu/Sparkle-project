@@ -7,10 +7,11 @@ import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
-import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/offline/widgets/stale_snapshot_banner.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/state/surface_state.dart';
+import 'package:sparkle/core/state/surface_state_view.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/presentation/providers/community_providers.dart';
 import 'package:sparkle/features/community/presentation/widgets/comment_bottom_sheet.dart';
@@ -57,71 +58,62 @@ class _FeedTabContentState extends ConsumerState<FeedTabContent> {
   Widget build(BuildContext context) {
     final feedState = ref.watch(feedProvider);
 
+    // U-06：加载/错误相位收敛到状态矩阵闸门——error 走统一错误语义
+    // （词典类别 → 相位 → 下一步动作，替代原手写 Column）；loading 保留
+    // 骨架（快路径），>500ms 升格 stage feedback；data/空态逻辑原样。
     return ContentConstraint(
       child: SparkleRefreshIndicator(
         onRefresh: () => ref.read(feedProvider.notifier).refresh(),
-        child: feedState.when(
-          data: (page) {
-            final posts = page.posts;
-            if (posts.isEmpty) {
-              return _buildEmptyState(context, ref);
-            }
-            return ScrollEdgeHaptics(
-              child: ListView.builder(
-                controller: _scrollController,
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.only(bottom: 80),
-                itemCount: posts.length + 1,
-                itemBuilder: (context, index) {
-                  if (index == 0) {
-                    // N34/N36：本地快照读（离线兜底）时在筛选头下挂
-                    // 「截至 X」时点标记。
-                    return Column(
-                      children: [
-                        _buildFilterHeader(context, ref),
-                        if (page.fromCache && page.asOf != null)
-                          StaleSnapshotBanner(fetchedAt: page.asOf!),
-                      ],
-                    );
-                  }
-                  final post = posts[index - 1];
-                  return SparkleStaggerItem(
-                    index: index - 1,
-                    child: FeedPostCard(
-                      post: post,
-                      onLike: () =>
-                          ref.read(feedProvider.notifier).toggleLike(post.id),
-                      onComment: () => showCommentSheet(
-                        context,
-                        ref,
-                        post.id,
-                        postContent: post.content,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            );
-          },
-          error: (err, stack) => Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.error_outline, size: 48, color: DS.error),
-                const SizedBox(height: DS.lg),
-                Text(
-                  context.l10n.communityLoadFailedTitle,
-                  style: TextStyle(color: DS.brandPrimary300),
-                ),
-                SparkleButton.ghost(
-                  label: context.l10n.communityRetry,
-                  onPressed: () => ref.read(feedProvider.notifier).refresh(),
-                ),
-              ],
-            ),
-          ),
-          loading: () => const SparkleListSkeleton(count: 5),
+        child: SurfaceStateGate(
+          surfaceId: 'community.feed',
+          state: surfaceStateFromAsync(feedState),
+          content: (_) => _buildFeedData(context, feedState.requireValue),
+          emptyBuilder: (_) => _buildEmptyState(context, ref),
+          onRetry: () => ref.read(feedProvider.notifier).refresh(),
         ),
+      ),
+    );
+  }
+
+  Widget _buildFeedData(BuildContext context, FeedPageData page) {
+    final posts = page.posts;
+    if (posts.isEmpty) {
+      return _buildEmptyState(context, ref);
+    }
+    return ScrollEdgeHaptics(
+      child: ListView.builder(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: 80),
+        itemCount: posts.length + 1,
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            // N34/N36：本地快照读（离线兜底）时在筛选头下挂
+            // 「截至 X」时点标记。
+            return Column(
+              children: [
+                _buildFilterHeader(context, ref),
+                if (page.fromCache && page.asOf != null)
+                  StaleSnapshotBanner(fetchedAt: page.asOf!),
+              ],
+            );
+          }
+          final post = posts[index - 1];
+          return SparkleStaggerItem(
+            index: index - 1,
+            child: FeedPostCard(
+              post: post,
+              onLike: () =>
+                  ref.read(feedProvider.notifier).toggleLike(post.id),
+              onComment: () => showCommentSheet(
+                context,
+                ref,
+                post.id,
+                postContent: post.content,
+              ),
+            ),
+          );
+        },
       ),
     );
   }

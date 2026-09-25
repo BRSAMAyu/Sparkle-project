@@ -7,6 +7,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/state/staged_loading.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/file/presentation/widgets/file_picker_with_presigned.dart';
 import 'package:sparkle/features/galaxy/data/models/node_history_model.dart';
@@ -1403,7 +1404,9 @@ class _HistoryLoadingState extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SizedBox(
         height: height,
-        child: const Center(child: CircularProgressIndicator()),
+        // U-06：裸 spinner → 统一分阶加载（>500ms 升格 stage feedback，
+        // 消除卡内终结态转圈）。
+        child: const StagedSurfaceLoader(compact: true),
       );
 }
 

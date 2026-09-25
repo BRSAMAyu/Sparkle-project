@@ -37777,4 +37777,70 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get goalDetailCommunityEvidenceRetracted => '该证据对应的共享已撤回';
+
+  @override
+  String get stateStagePreparing => '正在准备…';
+
+  @override
+  String get stateStageLoading => '正在加载，内容马上就绪';
+
+  @override
+  String get stateStageAlmost => '快好了，再稍等一下';
+
+  @override
+  String get stateLongWaitHint => '仍在处理中——你可以先离开，回来后进度会保留';
+
+  @override
+  String get stateNextRefresh => '重新加载';
+
+  @override
+  String get stateNextRelogin => '重新登录';
+
+  @override
+  String get stateNextOpenSettings => '去开启权限';
+
+  @override
+  String get stateNextRespond => '去处理';
+
+  @override
+  String get stateNextDismiss => '知道了';
+
+  @override
+  String get stateNextReport => '反馈问题';
+
+  @override
+  String get statePhasePartial => '部分内容没有加载出来';
+
+  @override
+  String get statePhaseOffline => '当前离线，展示的是最近一次缓存';
+
+  @override
+  String get statePhaseReconnecting => '连接中断，正在自动重连…';
+
+  @override
+  String get statePhasePermissionDenied => '缺少必要权限，无法继续';
+
+  @override
+  String get statePhaseAuthExpired => '登录已过期，请重新登录';
+
+  @override
+  String get statePhaseModelUnavailable => 'AI 服务暂时不可用，稍后再试';
+
+  @override
+  String get statePhaseToolUnavailable => '所依赖的工具暂时不可用';
+
+  @override
+  String get statePhaseConflict => '内容已在其他地方更新，请刷新后查看最新版';
+
+  @override
+  String get statePhaseUnknownOutcome => '本次操作结果未知，请核实后再试';
+
+  @override
+  String get statePhaseTerminal => '这一步无法完成';
+
+  @override
+  String get statePhaseCancelled => '已取消';
+
+  @override
+  String get statePhaseRevoked => '内容已不存在或已被移除';
 }

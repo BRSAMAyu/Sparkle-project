@@ -39414,4 +39414,78 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get goalDetailCommunityEvidenceRetracted =>
       'The underlying share was retracted';
+
+  @override
+  String get stateStagePreparing => 'Getting things ready…';
+
+  @override
+  String get stateStageLoading => 'Loading — almost there';
+
+  @override
+  String get stateStageAlmost => 'Nearly done, one more moment';
+
+  @override
+  String get stateLongWaitHint =>
+      'Still working — you can leave and come back, progress will be kept';
+
+  @override
+  String get stateNextRefresh => 'Reload';
+
+  @override
+  String get stateNextRelogin => 'Sign in again';
+
+  @override
+  String get stateNextOpenSettings => 'Open settings';
+
+  @override
+  String get stateNextRespond => 'Take action';
+
+  @override
+  String get stateNextDismiss => 'Got it';
+
+  @override
+  String get stateNextReport => 'Report issue';
+
+  @override
+  String get statePhasePartial => 'Some content failed to load';
+
+  @override
+  String get statePhaseOffline =>
+      'You\'re offline — showing the latest cached snapshot';
+
+  @override
+  String get statePhaseReconnecting => 'Connection lost — reconnecting…';
+
+  @override
+  String get statePhasePermissionDenied => 'Required permission is missing';
+
+  @override
+  String get statePhaseAuthExpired =>
+      'Your session expired — please sign in again';
+
+  @override
+  String get statePhaseModelUnavailable =>
+      'The AI service is temporarily unavailable';
+
+  @override
+  String get statePhaseToolUnavailable =>
+      'A required tool is temporarily unavailable';
+
+  @override
+  String get statePhaseConflict =>
+      'Content changed elsewhere — refresh to see the latest version';
+
+  @override
+  String get statePhaseUnknownOutcome =>
+      'The result is unknown — please verify before retrying';
+
+  @override
+  String get statePhaseTerminal => 'This step can\'t be completed';
+
+  @override
+  String get statePhaseCancelled => 'Cancelled';
+
+  @override
+  String get statePhaseRevoked =>
+      'This content no longer exists or was removed';
 }

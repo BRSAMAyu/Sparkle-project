@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/error_widget.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/state/staged_loading.dart';
 
 /// 加载状态枚举
 enum LoadingState {
@@ -110,12 +113,18 @@ final _i18n = I18nService.instance;
 /// 便捷扩展方法
 extension LoadingStateExtension<T> on LoadingStateManager<T> {
   /// 根据状态构建Widget
+  ///
+  /// U-06：默认分支收敛到统一状态体系——loading 默认渲染分阶加载
+  /// （>500ms 升格 stage feedback，不再是无界裸 spinner）；error 默认
+  /// 给人话文案 + 可选重试（传入 [onRetry] 即有下一步，不留死胡同）；
+  /// empty 默认统一 EmptyState。
   Widget build({
     required Widget Function(T data) successBuilder,
     Widget Function()? loadingBuilder,
     Widget Function(String error)? errorBuilder,
     Widget Function()? emptyBuilder,
     Widget Function()? idleBuilder,
+    VoidCallback? onRetry,
   }) {
     switch (state) {
       case LoadingState.idle:
@@ -131,23 +140,31 @@ extension LoadingStateExtension<T> on LoadingStateManager<T> {
         }
       case LoadingState.error:
         final msg = error ?? (_i18n.isChinese ? '未知错误' : 'Unknown error');
-        return errorBuilder?.call(msg) ?? _defaultErrorWidget(msg);
+        return errorBuilder?.call(msg) ?? _defaultErrorWidget(msg, onRetry);
       case LoadingState.empty:
         return emptyBuilder?.call() ?? _defaultEmptyWidget();
     }
   }
 
-  Widget _defaultLoadingWidget() => const Center(
-        child: CircularProgressIndicator(),
-      );
+  /// U-06：分阶加载默认渲染（替代原裸 CircularProgressIndicator——
+  /// 加载悬死时用户至少看到阶段说明，而不是无解释的转圈）。
+  Widget _defaultLoadingWidget() =>
+      const StagedSurfaceLoader(compact: true, height: 96);
 
-  Widget _defaultErrorWidget(String error) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+  Widget _defaultErrorWidget(String error, [VoidCallback? onRetry]) =>
+      Builder(
+        builder: (context) => Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline, size: 48, color: DS.error),
-            const SizedBox(height: DS.lg),
-            Text(_i18n.isChinese ? '加载失败: $error' : 'Load failed: $error', textAlign: TextAlign.center),
+            CustomErrorWidget.inline(message: error, context: context),
+            if (onRetry != null) ...[
+              const SizedBox(height: DS.spacing8),
+              TextButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: Text(context.l10n.retry),
+              ),
+            ],
           ],
         ),
       );

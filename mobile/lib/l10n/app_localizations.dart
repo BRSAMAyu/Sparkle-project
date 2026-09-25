@@ -68604,6 +68604,138 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'该证据对应的共享已撤回'**
   String get goalDetailCommunityEvidenceRetracted;
+
+  /// No description provided for @stateStagePreparing.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在准备…'**
+  String get stateStagePreparing;
+
+  /// No description provided for @stateStageLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在加载，内容马上就绪'**
+  String get stateStageLoading;
+
+  /// No description provided for @stateStageAlmost.
+  ///
+  /// In zh, this message translates to:
+  /// **'快好了，再稍等一下'**
+  String get stateStageAlmost;
+
+  /// No description provided for @stateLongWaitHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'仍在处理中——你可以先离开，回来后进度会保留'**
+  String get stateLongWaitHint;
+
+  /// No description provided for @stateNextRefresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新加载'**
+  String get stateNextRefresh;
+
+  /// No description provided for @stateNextRelogin.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新登录'**
+  String get stateNextRelogin;
+
+  /// No description provided for @stateNextOpenSettings.
+  ///
+  /// In zh, this message translates to:
+  /// **'去开启权限'**
+  String get stateNextOpenSettings;
+
+  /// No description provided for @stateNextRespond.
+  ///
+  /// In zh, this message translates to:
+  /// **'去处理'**
+  String get stateNextRespond;
+
+  /// No description provided for @stateNextDismiss.
+  ///
+  /// In zh, this message translates to:
+  /// **'知道了'**
+  String get stateNextDismiss;
+
+  /// No description provided for @stateNextReport.
+  ///
+  /// In zh, this message translates to:
+  /// **'反馈问题'**
+  String get stateNextReport;
+
+  /// No description provided for @statePhasePartial.
+  ///
+  /// In zh, this message translates to:
+  /// **'部分内容没有加载出来'**
+  String get statePhasePartial;
+
+  /// No description provided for @statePhaseOffline.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前离线，展示的是最近一次缓存'**
+  String get statePhaseOffline;
+
+  /// No description provided for @statePhaseReconnecting.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接中断，正在自动重连…'**
+  String get statePhaseReconnecting;
+
+  /// No description provided for @statePhasePermissionDenied.
+  ///
+  /// In zh, this message translates to:
+  /// **'缺少必要权限，无法继续'**
+  String get statePhasePermissionDenied;
+
+  /// No description provided for @statePhaseAuthExpired.
+  ///
+  /// In zh, this message translates to:
+  /// **'登录已过期，请重新登录'**
+  String get statePhaseAuthExpired;
+
+  /// No description provided for @statePhaseModelUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 服务暂时不可用，稍后再试'**
+  String get statePhaseModelUnavailable;
+
+  /// No description provided for @statePhaseToolUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'所依赖的工具暂时不可用'**
+  String get statePhaseToolUnavailable;
+
+  /// No description provided for @statePhaseConflict.
+  ///
+  /// In zh, this message translates to:
+  /// **'内容已在其他地方更新，请刷新后查看最新版'**
+  String get statePhaseConflict;
+
+  /// No description provided for @statePhaseUnknownOutcome.
+  ///
+  /// In zh, this message translates to:
+  /// **'本次操作结果未知，请核实后再试'**
+  String get statePhaseUnknownOutcome;
+
+  /// No description provided for @statePhaseTerminal.
+  ///
+  /// In zh, this message translates to:
+  /// **'这一步无法完成'**
+  String get statePhaseTerminal;
+
+  /// No description provided for @statePhaseCancelled.
+  ///
+  /// In zh, this message translates to:
+  /// **'已取消'**
+  String get statePhaseCancelled;
+
+  /// No description provided for @statePhaseRevoked.
+  ///
+  /// In zh, this message translates to:
+  /// **'内容已不存在或已被移除'**
+  String get statePhaseRevoked;
 }
 
 class _AppLocalizationsDelegate

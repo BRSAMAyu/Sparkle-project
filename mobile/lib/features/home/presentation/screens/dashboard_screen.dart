@@ -16,6 +16,7 @@ import 'package:sparkle/core/models/aurora_correction_payload.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/state/staged_loading.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_progress_card.dart';
 import 'package:sparkle/features/aurora/data/services/aurora_telemetry_service.dart';
 import 'package:sparkle/features/aurora/presentation/widgets/aurora_calibration_strip.dart';
@@ -1093,6 +1094,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
         );
     } else if (dashboardState.isLoading) {
+      // U-06：骨架照旧（<500ms 快路径），其上叠加分阶提示——超过 500ms
+      // 未决即升格 stage feedback（STATE_MATRIX「long-running stage」行），
+      // 首屏加载不再是无解释的骨架悬置。
+      dashboardSections.add(
+        _staggeredSection(
+          index: sectionIndex++,
+          child: const StagedStageHint(),
+        ),
+      );
       for (final skeleton in _buildDashboardSkeletonSections()) {
         dashboardSections.add(
           _staggeredSection(
