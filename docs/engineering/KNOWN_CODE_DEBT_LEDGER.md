@@ -14,6 +14,7 @@
 | 2026-09-08 | 网关死代码：`internal/event/event_bus.go`（`internal/event` 包零外部导入，与活跃的 `internal/cqrs/event` 是两套） | 已删除 |
 | 2026-09-08 | 仓库根空目录/孤儿：`integration_test/`、`test_driver/`、`tests/`（根级空占位，真实测试在 `mobile/integration_test`、`backend/tests`、`tests_e2e`） | 已删除 |
 | 2026-09-08 | 根目录孤儿 gitlink `flutter/`（无 .gitmodules 的悬空子模块指针） | 已移除 |
+| 2026-09-25 | C-01：`plan_context ↔ prompts` 循环 import（含 `context_pack` 本体，三入口干净进程全炸；2026-09-19 R2-F5 复核升格 H3） | **CLOSED WITH EVIDENCE**（wt364 卡 R2-B）：prompts.py 对 `merge_plan_context` 改函数内延迟导入，打断环中唯一模块级边 prompts→plan_context；函数行为/签名零变更。证据 = `backend/tests/unit/test_wt364_r2b_import_cycles_smoke.py` 三入口 subprocess 干净进程 import 全绿（修复前同测 3/3 红，可证伪）+ 相关面回归全绿 + 冷 mypy ≤ 基线 |
 
 ## ⚠️ 本地测试环境已知阻塞（非代码债务）
 
@@ -78,3 +79,4 @@
 ## 2026-09-19 C-01 复核补充登记（R2-F5）
 
 - **plan_context ↔ prompts 循环 import（含 context_pack 本体）**：环 = plan_context:27 → models.__init__:103 → aurora runtime → chat_adapter:20 → prompts:44 → 回 plan_context；单独 import `app.core.plan_context` / `app.orchestration.prompts` / `app.core.context_pack` 皆炸（双 worktree 复现）。正常入口（conftest/main 先载 app.models）不触发；但 C-01 把 context_pack 变成会被直接 import 的契约模块后，新脚本/Celery 入口/健康检查首 import 即炸的概率上升。处置：接线卡前做一次 import 拓扑整理（把 prompts 对 models 的传递依赖打断或延迟导入）。
+- **✅ 已闭合（CLOSED WITH EVIDENCE，2026-09-25，wt364 卡 R2-B）**：prompts.py 的 `from app.core.plan_context import merge_plan_context` 下沉为 `build_system_prompt` 内延迟导入（唯一调用点，环中唯一模块级边），打破上述环；无 try/except 掩盖、无 API 签名变更。冒烟判据 `backend/tests/unit/test_wt364_r2b_import_cycles_smoke.py`（三入口 subprocess 干净进程 import，修复前 3/3 红、修复后 3/3 绿）。

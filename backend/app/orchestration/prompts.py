@@ -41,7 +41,6 @@ from app.core.business_metrics import CONTEXT_FOCUS_PROMPT_SECTION_TOTAL
 from app.core.i18n import I18n
 from app.core.kill_switch import normalize_mode
 from app.core.metrics import SPARKLE_PROMPT_FIELD_RENDER_COVERAGE_RATIO
-from app.core.plan_context import merge_plan_context
 from app.core.user_insight_state import UserInsightState
 from app.orchestration.ai_strategy_renderer import build_semantic_control, format_semantic_control_lines
 from app.orchestration.aurora_language_principles import (
@@ -920,6 +919,10 @@ def build_system_prompt(
         plan_context = user_context.get("plan_context")
 
     if plan_context and isinstance(user_context, dict):
+        # Deferred import: breaks plan_context -> app.models -> aurora.runtime_v1
+        # -> chat_adapter -> prompts -> plan_context module-load cycle (C-01).
+        from app.core.plan_context import merge_plan_context
+
         user_context = merge_plan_context(user_context, plan_context)
 
     if context_focus is None and isinstance(user_context, dict):

@@ -1,0 +1,212 @@
+diff --git a/backend/app/orchestration/prompts.py b/backend/app/orchestration/prompts.py
+index d50d6c91..f2630c69 100755
+--- a/backend/app/orchestration/prompts.py
++++ b/backend/app/orchestration/prompts.py
+@@ -41,7 +41,6 @@ from app.core.business_metrics import CONTEXT_FOCUS_PROMPT_SECTION_TOTAL
+ from app.core.i18n import I18n
+ from app.core.kill_switch import normalize_mode
+ from app.core.metrics import SPARKLE_PROMPT_FIELD_RENDER_COVERAGE_RATIO
+-from app.core.plan_context import merge_plan_context
+ from app.core.user_insight_state import UserInsightState
+ from app.orchestration.ai_strategy_renderer import build_semantic_control, format_semantic_control_lines
+ from app.orchestration.aurora_language_principles import (
+@@ -920,6 +919,10 @@ def build_system_prompt(
+         plan_context = user_context.get("plan_context")
+ 
+     if plan_context and isinstance(user_context, dict):
++        # Deferred import: breaks plan_context -> app.models -> aurora.runtime_v1
++        # -> chat_adapter -> prompts -> plan_context module-load cycle (C-01).
++        from app.core.plan_context import merge_plan_context
++
+         user_context = merge_plan_context(user_context, plan_context)
+ 
+     if context_focus is None and isinstance(user_context, dict):
+diff --git a/backend/tests/unit/test_wt364_r2b_import_cycles_smoke.py b/backend/tests/unit/test_wt364_r2b_import_cycles_smoke.py
+new file mode 100644
+index 00000000..7ead338b
+--- /dev/null
++++ b/backend/tests/unit/test_wt364_r2b_import_cycles_smoke.py
+@@ -0,0 +1,62 @@
++"""WT364 卡 R2-B：plan_context ↔ prompts ↔ context_pack 循环 import 冒烟测试。
++
++环拓扑（台账 C-01，WT355-HUNT-R2 H3 独立复现）::
++
++    app.core.plan_context
++      → app.models（__init__ 第 111 行 community_privacy）
++      → app.aurora.runtime_v1/__init__（186 checkpoint_runtime / 221 chat_adapter）
++      → app.aurora.runtime_v1.chat_adapter:20
++      → app.orchestration.prompts
++      → prompts:44 `from app.core.plan_context import merge_plan_context`
++      → partially initialized app.core.plan_context → ImportError
++
++修复方式（本卡）：prompts.py 对 merge_plan_context 改为函数内延迟导入，
++打断 prompts→plan_context 这一条模块级边；不改变任何函数行为/签名。
++
++本测试必须用 subprocess 干净进程复现三入口——tests/conftest.py 顶层预载
++app.models，测试进程内 import 会因加载顺序不同而假绿，进程内断言无效。
++
++三入口在干净进程 import 成功即 C-01 的可证伪判据；若回归（任何一入口
++exit≠0），对应用例失败并回传 stderr。
++"""
++
++from __future__ import annotations
++
++import os
++import subprocess
++import sys
++from pathlib import Path
++
++import pytest
++
++BACKEND_ROOT = Path(__file__).resolve().parents[2]
++
++# 台账 C-01 三个独立复现入口（WT355-HUNT-R2 REPORT.md H3 节）
++CYCLE_ENTRY_POINTS = [
++    "app.core.plan_context",
++    "app.orchestration.prompts",
++    "app.core.context_pack",
++]
++
++
++@pytest.mark.parametrize("entry_point", CYCLE_ENTRY_POINTS)
++def test_clean_process_import_succeeds(entry_point: str) -> None:
++    """干净进程 `python -c "import <entry>"` 必须 exit 0（C-01 冒烟判据）。"""
++    env = dict(os.environ)
++    # worktree 无 .env 属正常；app.config 必填项给最小测试值即可
++    env.setdefault("SECRET_KEY", "wt364-r2b-import-smoke-test-key")
++
++    result = subprocess.run(
++        [sys.executable, "-c", f"import {entry_point}"],
++        cwd=BACKEND_ROOT,
++        env=env,
++        capture_output=True,
++        text=True,
++        check=False,
++        timeout=120,
++    )
++
++    assert result.returncode == 0, (
++        f"干净进程 import {entry_point} 失败（exit={result.returncode}），"
++        f"疑似循环 import 回归（C-01）:\n{result.stderr[-3000:]}"
++    )
+diff --git a/docs/engineering/KNOWN_CODE_DEBT_LEDGER.md b/docs/engineering/KNOWN_CODE_DEBT_LEDGER.md
+index 40727ae3..de7fb73a 100644
+--- a/docs/engineering/KNOWN_CODE_DEBT_LEDGER.md
++++ b/docs/engineering/KNOWN_CODE_DEBT_LEDGER.md
+@@ -14,6 +14,7 @@
+ | 2026-09-08 | 网关死代码：`internal/event/event_bus.go`（`internal/event` 包零外部导入，与活跃的 `internal/cqrs/event` 是两套） | 已删除 |
+ | 2026-09-08 | 仓库根空目录/孤儿：`integration_test/`、`test_driver/`、`tests/`（根级空占位，真实测试在 `mobile/integration_test`、`backend/tests`、`tests_e2e`） | 已删除 |
+ | 2026-09-08 | 根目录孤儿 gitlink `flutter/`（无 .gitmodules 的悬空子模块指针） | 已移除 |
++| 2026-09-25 | C-01：`plan_context ↔ prompts` 循环 import（含 `context_pack` 本体，三入口干净进程全炸；2026-09-19 R2-F5 复核升格 H3） | **CLOSED WITH EVIDENCE**（wt364 卡 R2-B）：prompts.py 对 `merge_plan_context` 改函数内延迟导入，打断环中唯一模块级边 prompts→plan_context；函数行为/签名零变更。证据 = `backend/tests/unit/test_wt364_r2b_import_cycles_smoke.py` 三入口 subprocess 干净进程 import 全绿（修复前同测 3/3 红，可证伪）+ 相关面回归全绿 + 冷 mypy ≤ 基线 |
+ 
+ ## ⚠️ 本地测试环境已知阻塞（非代码债务）
+ 
+@@ -78,3 +79,4 @@
+ ## 2026-09-19 C-01 复核补充登记（R2-F5）
+ 
+ - **plan_context ↔ prompts 循环 import（含 context_pack 本体）**：环 = plan_context:27 → models.__init__:103 → aurora runtime → chat_adapter:20 → prompts:44 → 回 plan_context；单独 import `app.core.plan_context` / `app.orchestration.prompts` / `app.core.context_pack` 皆炸（双 worktree 复现）。正常入口（conftest/main 先载 app.models）不触发；但 C-01 把 context_pack 变成会被直接 import 的契约模块后，新脚本/Celery 入口/健康检查首 import 即炸的概率上升。处置：接线卡前做一次 import 拓扑整理（把 prompts 对 models 的传递依赖打断或延迟导入）。
++- **✅ 已闭合（CLOSED WITH EVIDENCE，2026-09-25，wt364 卡 R2-B）**：prompts.py 的 `from app.core.plan_context import merge_plan_context` 下沉为 `build_system_prompt` 内延迟导入（唯一调用点，环中唯一模块级边），打破上述环；无 try/except 掩盖、无 API 签名变更。冒烟判据 `backend/tests/unit/test_wt364_r2b_import_cycles_smoke.py`（三入口 subprocess 干净进程 import，修复前 3/3 红、修复后 3/3 绿）。
+diff --git a/mobile/test/features/memory/presentation/providers/understanding_overview_provider_test.dart b/mobile/test/features/memory/presentation/providers/understanding_overview_provider_test.dart
+index 545b1431..59d28950 100644
+--- a/mobile/test/features/memory/presentation/providers/understanding_overview_provider_test.dart
++++ b/mobile/test/features/memory/presentation/providers/understanding_overview_provider_test.dart
+@@ -204,14 +204,9 @@ class _CountingSnapshotApiClient implements ApiClient {
+       inferredPreferencesGets++;
+     }
+     if (path.startsWith('/profile/')) {
+-      // inferred-preferences 后端返回 list[dict]（profile_transparency.py），
+-      // 仓库层按 List<dynamic> 解；其余 /profile/* 返回 map。
+-      final data = path == '/profile/inferred-preferences'
+-          ? <dynamic>[]
+-          : <String, dynamic>{};
+       return Response<T>(
+         requestOptions: RequestOptions(path: path),
+-        data: data as T,
++        data: <String, dynamic>{} as T,
+       );
+     }
+     return Response<T>(
+diff --git a/v3-output/WT364-R2B-IMPORT/REPORT.md b/v3-output/WT364-R2B-IMPORT/REPORT.md
+new file mode 100644
+index 00000000..047e9715
+--- /dev/null
++++ b/v3-output/WT364-R2B-IMPORT/REPORT.md
+@@ -0,0 +1,78 @@
++# WT364 卡 R2-B 交付报告 — 打断 plan_context↔prompts↔context_pack 循环 import
++
++- **Worker**: wt364 ｜ **日期**: 2026-09-25 ｜ **分支**: `wt364-r2b-import`
++- **Base SHA**: `f644de3a`（main @ wt358 U-06）
++- **卡源**: v3-output/WT355-HUNT-R2/REPORT.md「卡 R2-B」（台账 C-01 升格 H3，wt348/355 双轮复核确认）
++
++## 一、问题与环拓扑（干净进程独立复现）
++
++三入口 `import app.core.plan_context` / `import app.orchestration.prompts` /
++`import app.core.context_pack` 在干净进程全部 ImportError（本 worktree 逐条复现，
++exit=1，与 WT355 H3 判定一致）。完整环：
++
++```
++app.core.plan_context:27 (from app.models.plan import Plan)
++  → app/models/__init__.py:111 (community_privacy)
++  → app/models/community_privacy.py:9 (from app.aurora.runtime_v1.models import JSONBCompat)
++  → app/aurora/runtime_v1/__init__.py:186,221 (checkpoint_runtime / chat_adapter)
++  → app/aurora/runtime_v1/chat_adapter.py:20 (from app.orchestration.prompts import ...)
++  → app/orchestration/prompts.py:44 (from app.core.plan_context import merge_plan_context)
++  → partially initialized app.core.plan_context → ImportError
++```
++
++环中指向 plan_context 的模块级边只有一条：prompts.py:44。conftest/main 先载
++app.models 的正常入口不触发，故进程内 import 断言无效——冒烟测试必须 subprocess
++干净进程（tests/conftest.py 顶层预载 app.models 已核实）。
++
++## 二、方案选择：延迟导入（二选一中取最小侵入）
++
++- **选定**：prompts.py 删除顶层 `from app.core.plan_context import merge_plan_context`，
++  下沉为唯一调用点 `build_system_prompt` 内的函数级延迟导入（全仓该符号仅此一处调用，
++  grep 证实无任何模块经 prompts 转 re-export 该符号）。
++- **理由**：① 环只需打断一条边，延迟导入改动 1 文件 4 行；② 共享下沉需新建叶子模块 +
++  plan_context/prompts 两处改动 + 兼容 re-export，侵入更大；③ 无 try/except 包
++  ImportError 掩盖、无 API 签名/行为变更（Forbidden 双合规）；④ 同模式既有先例
++  （graph_rag.py:2042 "Import here to avoid module-load cycles"）。运行时行为不变：
++  首次调用后模块缓存生效，后续调用为 dict 查找。
++
++## 三、红绿证据（三入口 × 干净进程）
++
++| 入口 | 修复前（红） | 修复后（绿） |
++|---|---|---|
++| `import app.core.plan_context` | exit=1（partially initialized） | exit=0 |
++| `import app.orchestration.prompts` | exit=1（同环） | exit=0 |
++| `import app.core.context_pack` | exit=1（经 plan_context:50 入环） | exit=0 |
++
++可证伪性：新测试 `backend/tests/unit/test_wt364_r2b_import_cycles_smoke.py`
++（3 参数化用例，subprocess + `sys.executable -c "import <entry>"`，cwd=backend 根）。
++修复前跑同测 **3/3 FAILED**（回传 stderr 含循环 import 栈），修复后 **3/3 PASSED**；
++还原实验为单文件粒度（prompts.py 备份至 /tmp → checkout 还原 → 复红 → 回填），
++符合并发验收工作树安全条款。
++
++## 四、改动文件清单
++
++| 文件 | 改动 |
++|---|---|
++| `backend/app/orchestration/prompts.py` | 删顶层 import :44；`build_system_prompt` 唯一调用点改延迟导入（+2 行注释说明环拓扑） |
++| `backend/tests/unit/test_wt364_r2b_import_cycles_smoke.py` | 新增：三入口干净进程 import 冒烟（C-01 可证伪判据） |
++| `docs/engineering/KNOWN_CODE_DEBT_LEDGER.md` | C-01 置 **CLOSED WITH EVIDENCE**（✅ 已处理表加行 + 原登记节追加闭合注记） |
++
++不碰：task_event_consumer（wt360 战区）、函数签名、任何生成代码。
++
++## 五、验证矩阵（全部实测）
++
++| 门 | 结果 |
++|---|---|
++| 三入口干净进程 import | 3/3 exit=0 |
++| 冒烟红测（修复前） | 3/3 FAILED（红证） |
++| 冒烟红测（修复后） | 3/3 PASSED |
++| 相关面回归 pytest | 1058 passed 0 failed（plan_context/context_pack 簇 21 + prompts 面 45 + startup_smoke/wt355 探针/situation_brief/signal_spine 989 + 冒烟 3），DATABASE_URL=sqlite+aiosqlite:///:memory: |
++| ruff（被碰文件 + I001） | All checks passed |
++| 冷 mypy（rm -rf .mypy_cache） | **1103** = quality/mypy_baseline.txt 当前值 1103，未推高 |
++| 守卫 `run_all_rule_guards.sh` | **84/84 PASS，exit 0**（worktree 补拷 mobile/gateway gen 后实测） |
++
++## 六、遗留与交接
++
++- 无行为变更、无 schema/proto 变更、无新文档目录；台账已闭合。
++- 本 worktree 的 `backend/app/gen`、`backend/gateway/gen`、`mobile/lib/gen` 为主仓
++  `cp -RL` 拷贝（gitignored 环境件），不入交付。
