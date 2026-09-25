@@ -186,8 +186,12 @@ class _TaskListWidgetState extends State<TaskListWidget> {
       );
     }
 
-    final type = taskData['type'] as String? ?? 'learning';
-    final status = taskData['status'] as String? ?? 'pending';
+    // 后端经 task_query_tool.py `.value` 原样下发大写枚举串，chip/icon
+    // 入口统一 toLowerCase() 归一化后再进下方小写 case。
+    final type =
+        (taskData['type'] as String?)?.trim().toLowerCase() ?? 'learning';
+    final status =
+        (taskData['status'] as String?)?.trim().toLowerCase() ?? 'pending';
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -307,6 +311,13 @@ class _TaskListWidgetState extends State<TaskListWidget> {
       case 'restore':
         color = DS.info;
         label = l10n.taskStatusRestore;
+      case 'paused':
+        // 用色沿用 calendar_stats_screen 既有映射（stuck/paused => warning）。
+        color = DS.warning;
+        label = l10n.taskStatusPaused;
+      case 'stuck':
+        color = DS.warning;
+        label = l10n.taskStatusStuck;
       default:
         color = DS.brandPrimary;
         label = status;
