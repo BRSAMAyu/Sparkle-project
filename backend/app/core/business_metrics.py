@@ -346,6 +346,18 @@ KNOWLEDGE_PREFILTER_REJECTIONS_TOTAL = get_or_create_metric(
     ['dimension', 'reason']
 )
 
+# S-02 community context privacy boundary (app/services/community_context_
+# boundary): candidates cut from group prompt/tool assembly, by dimension
+# (identity/type/share/lifecycle) and frozen reason (group_context:
+# no_group_surface / requester_not_member / unknown_item_type / not_in_allowlist
+# / owner_mismatch / share_revoked / sharer_left_group).
+COMMUNITY_GROUP_CONTEXT_REJECTIONS_TOTAL = get_or_create_metric(
+    Counter,
+    'sparkle_community_group_context_rejections_total',
+    'Group prompt context candidates rejected by the S-02 privacy boundary',
+    ['dimension', 'reason']
+)
+
 # M-04 conflict arbitration: live resolution outcomes by action and conflict
 # category (TEMPORAL_CHANGE / SCOPE_DIFFERENCE / SOURCE_DISAGREEMENT /
 # INFERENCE_CONTRADICTION / UNSAFE_AMBIGUITY). Counted at application time

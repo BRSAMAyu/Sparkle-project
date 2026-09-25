@@ -36,3 +36,4 @@
 - `backend/app/services/stt_grpc_service.py` — imported by `backend/grpc_server.py` (outside scanner scope)
 - `backend/app/services/inference_grpc_service.py` — imported by `backend/grpc_server.py` (outside scanner scope)
 - `backend/app/services/routing_parameter_proposal_service.py` — dead module, only referenced in tests
+- `backend/app/services/community_context_boundary.py` — S-02 群上下文隐私边界守卫库（orphan-by-design）：生产消费方是后续群 AI prompt/tool 面（当前全仓无 group prompt 组装点，本卡交付该面唯一合法入口 + 纯函数滤芯 + 契约测试钉死）；接入时移除本条
