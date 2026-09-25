@@ -320,12 +320,17 @@ class AuroraRuntimeV1Service:
         user_id: str | UUID,
         inactive_threshold_days: int = 3,
         include_short_gaps: bool = False,
+        reference_time: datetime | None = None,
     ) -> dict[str, Any] | None:
         """Build cross-session comeback context.
 
         ``include_short_gaps`` is used by the foreground app-open endpoint. The
         default stays conservative for push jobs, which should still only wake
         users after the long-absence threshold.
+
+        J-07: ``reference_time`` is the controllable test clock — the whole
+        1/3/7/14-day tier ladder is driven from this single parameter (wall
+        clock only when omitted, so existing callers keep their behavior).
         """
         from sqlalchemy import and_, select
 
@@ -339,7 +344,10 @@ class AuroraRuntimeV1Service:
         if user is None or not user.is_active:
             return None
 
-        now = datetime.now(UTC).replace(tzinfo=None)
+        if reference_time is not None:
+            now = reference_time.replace(tzinfo=None) if reference_time.tzinfo else reference_time
+        else:
+            now = datetime.now(UTC).replace(tzinfo=None)
         last_activity_at = await UserActivityService(active_db).get_last_real_activity_at(user_uuid)
         if last_activity_at is None:
             return None
@@ -468,6 +476,33 @@ class AuroraRuntimeV1Service:
         goal_state = await self._comeback_goal_state(
             active_db=active_db, user_id=user_uuid, plan=plan
         )
+        # J-07: plan drift / deadline-change 检测 + 差异化 rationale。
+        # 真实变化依据三源：time_passed（离开本身）/ deadline_changed（wt313
+        # replan 回执晚于最后活动 = 终点真的变过）/ progress_drifted（窗口
+        # 时间进度与任务账本拉开 ≥ plan health 同源阈值）。
+        rationale = await self._comeback_change_rationale(
+            active_db=active_db,
+            now=now,
+            last_activity_at=last_activity_at,
+            days_away=days_away,
+            plan=plan,
+            plan_expired=plan_expired,
+        )
+        # J-07: Aurora rescope 入口——复用 wt313 `POST /plans/{id}/replan`
+        # 既有执行端点（不重建），陈旧窗口时推荐重校准而非复用陈旧建议。
+        rescope = self._comeback_rescope(
+            plan=plan,
+            has_pending_tasks=next_task is not None,
+            plan_expired=plan_expired,
+            stale_focus=stale_focus,
+        )
+        # J-07: ≤2 actions 量化——回来主路径到「下一个可执行动作」的交互步数。
+        primary_action = self._comeback_primary_action(
+            rescope=rescope,
+            plan=plan,
+            next_task=next_task,
+            active_core_session=active_core_session,
+        )
         calendar_note = ""
         if include_short_gaps:
             with contextlib.suppress(Exception):
@@ -492,6 +527,7 @@ class AuroraRuntimeV1Service:
                 plan_expired=plan_expired,
                 stale_focus=stale_focus,
                 next_task_overdue_days=next_task_overdue_days,
+                rationale=rationale,
             )
         elif include_short_gaps:
             kind = "personalized_return"
@@ -530,6 +566,9 @@ class AuroraRuntimeV1Service:
             stale_focus=stale_focus,
             next_task_overdue_days=next_task_overdue_days,
             goal_state=goal_state,
+            rationale=rationale,
+            rescope=rescope,
+            primary_action=primary_action,
         )
 
     async def plan_turn(
@@ -2346,6 +2385,9 @@ class AuroraRuntimeV1Service:
         stale_focus: bool = False,
         next_task_overdue_days: int = 0,
         goal_state: dict[str, Any] | None = None,
+        rationale: dict[str, Any] | None = None,
+        rescope: dict[str, Any] | None = None,
+        primary_action: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         del user_id
         chat = latest_chat or {}
@@ -2381,6 +2423,10 @@ class AuroraRuntimeV1Service:
             "plan_expired": plan_expired,
             "stale_focus": stale_focus,
             "next_task_overdue_days": next_task_overdue_days,
+            # J-07: drift rationale + rescope（wt313 replan 复用）+ ≤2 actions 主步。
+            "rationale": rationale or {},
+            "rescope": rescope or {},
+            "primary_action": primary_action or {},
         }
 
     def _comeback_unfinished_items(
@@ -2472,6 +2518,7 @@ class AuroraRuntimeV1Service:
         plan_expired: bool = False,
         stale_focus: bool = False,
         next_task_overdue_days: int = 0,
+        rationale: dict[str, Any] | None = None,
     ) -> str:
         plan_label = subject if subject.endswith("冲刺") else f"{subject}冲刺"
         focus = recent_task_summary or _strip(next_task_title) or subject or "最简单的一步"
@@ -2484,6 +2531,9 @@ class AuroraRuntimeV1Service:
                 f"上次停在「{focus}」。要不要花一分钟重新校准计划，我按新的窗口帮你排；"
                 f"暂时不想动整盘的话，{light_restart_suggestion}"
             )
+        # J-07: 差异化驱动子句——deadline 变化 / 进度漂移各有真实依据，
+        # 只陈述事实（不做人身评价，零 guilt 词表）。
+        driver_note = self._comeback_driver_note(rationale=rationale, plan_label=plan_label)
         days_str = f"{days_remaining} 天" if days_remaining > 0 else "最后一点收尾窗口"
         if stale_focus:
             overdue_note = (
@@ -2491,16 +2541,266 @@ class AuroraRuntimeV1Service:
             )
             return (
                 f"你已经 {days_away} 天没来了，我保留着上次的进度。"
-                f"你的{plan_label}还剩 {days_str}。上次停在「{focus}」{overdue_note}——"
+                f"{driver_note}你的{plan_label}还剩 {days_str}。上次停在「{focus}」{overdue_note}——"
                 f"可以从它继续，也可以先挑今天最顺的一小步。"
                 f"如果累了，{light_restart_suggestion}"
             )
         still_time = "现在回来还来得及" if days_remaining > 0 else "现在回来也还能先追回一点节奏"
         return (
             f"你已经 {days_away} 天没来了，我保留着上次的进度。"
-            f"你的{plan_label}还剩 {days_str}，最近最适合重新捡起来的是「{focus}」。"
+            f"{driver_note}你的{plan_label}还剩 {days_str}，最近最适合重新捡起来的是「{focus}」。"
             f"{still_time}——如果累了，{light_restart_suggestion}"
         )
+
+    def _comeback_driver_note(
+        self,
+        *,
+        rationale: dict[str, Any] | None,
+        plan_label: str,
+    ) -> str:
+        """J-07: rationale 驱动子句——至少两类源（deadline/进度/时间）差异化文案。
+
+        只陈述真源事实（回执日期、账本计数、窗口比例），不指向人、不做
+        心理推断；无 rationale 或纯 time_passed 时为空串（A-07 原文案不动）。
+        """
+        if not isinstance(rationale, Mapping):
+            return ""
+        sources = rationale.get("sources")
+        evidence = rationale.get("evidence")
+        if not isinstance(sources, list) or not isinstance(evidence, Mapping):
+            return ""
+        if "deadline_changed" in sources:
+            deadline = evidence.get("deadline_changed")
+            new_target = _strip(deadline.get("new_target_date")) if isinstance(deadline, Mapping) else ""
+            tail = f"新终点是 {new_target}，" if new_target else ""
+            return f"你的{plan_label}在你离开期间重新校准过了——{tail}接着新窗口走就好。"
+        if "progress_drifted" in sources:
+            progress = evidence.get("progress_drifted")
+            if not isinstance(progress, Mapping):
+                return ""
+            total = progress.get("ledger_total")
+            completed = progress.get("ledger_completed")
+            time_progress = progress.get("time_progress")
+            ledger = ""
+            if isinstance(total, (int, float)) and total > 0 and isinstance(completed, (int, float)):
+                ledger = f"、任务账本完成 {int(completed)}/{int(total)}"
+            pct = (
+                f"{int(round(float(time_progress) * 100))}%"
+                if isinstance(time_progress, (int, float))
+                else "更多"
+            )
+            return f"窗口时间走了 {pct}{ledger}——这就是现在的位置，从这接着走就好。"
+        return ""
+
+    async def _comeback_change_rationale(
+        self,
+        *,
+        active_db: AsyncSession,
+        now: datetime,
+        last_activity_at: datetime,
+        days_away: int,
+        plan: Plan | None,
+        plan_expired: bool,
+    ) -> dict[str, Any]:
+        """J-07: comeback rationale 的真实变化依据（三源封闭词表）。
+
+        - ``time_passed``：离开天数本身（checkpoint 面恒有）；
+        - ``deadline_changed``：wt313 replan 回执（``source_metadata.last_replan``）
+          的时间晚于最后真实活动 = 终点在离开期间真的被重锚过；
+        - ``progress_drifted``：窗口时间进度与任务账本完成率的拉开量达到
+          plan health 同源阈值（PlanProgressService.PROGRESS_LAG_WARN），即
+          计划在离开期间发生了漂移。
+
+        全部只读真源推导，不建第二套口径；摘要零 guilt（P-03/J-05 词表同源）。
+        """
+        from sqlalchemy import and_, func
+
+        from app.services.plan_progress_service import PlanProgressService
+
+        sources: list[str] = ["time_passed"]
+        evidence: dict[str, Any] = {
+            "time_passed": {
+                "days_away": days_away,
+                "window_status": "expired" if plan_expired else "open",
+            }
+        }
+
+        ledger_completed = 0
+        ledger_total = 0
+        if plan is not None:
+            total_result = await active_db.execute(
+                select(func.count())
+                .select_from(Task)
+                .where(and_(Task.plan_id == plan.id, Task.deleted_at.is_(None)))
+            )
+            done_result = await active_db.execute(
+                select(func.count())
+                .select_from(Task)
+                .where(
+                    and_(
+                        Task.plan_id == plan.id,
+                        Task.deleted_at.is_(None),
+                        Task.status == TaskStatus.COMPLETED,
+                    )
+                )
+            )
+            ledger_total = int(total_result.scalar() or 0)
+            ledger_completed = int(done_result.scalar() or 0)
+
+        # deadline_changed：wt313 replan 回执晚于最后活动（离开期间真变过）。
+        if plan is not None and isinstance(plan.source_metadata, Mapping):
+            receipt = plan.source_metadata.get("last_replan")
+            if isinstance(receipt, Mapping):
+                raw_at = receipt.get("at")
+                replanned_at: datetime | None = None
+                if isinstance(raw_at, str) and raw_at:
+                    try:
+                        replanned_at = datetime.fromisoformat(raw_at)
+                    except ValueError:
+                        replanned_at = None
+                if replanned_at is not None and replanned_at >= last_activity_at:
+                    sources.append("deadline_changed")
+                    evidence["deadline_changed"] = {
+                        "kind": "replanned_during_absence",
+                        "previous_target_date": str(receipt.get("previous_target_date") or ""),
+                        "new_target_date": str(receipt.get("new_target_date") or ""),
+                        "at": raw_at,
+                    }
+
+        # progress_drifted：窗口时间进度 vs 账本完成率（plan health 同源阈值）。
+        completion_rate = (ledger_completed / ledger_total) if ledger_total else None
+        time_progress: float | None = None
+        if plan is not None and plan.target_date is not None and plan.created_at is not None:
+            total_days = (plan.target_date - plan.created_at.date()).days
+            if total_days > 0:
+                time_progress = min(1.0, max(0.0, (now.date() - plan.created_at.date()).days / total_days))
+        if completion_rate is not None and time_progress is not None:
+            lag = round(time_progress - completion_rate, 4)
+            if lag >= PlanProgressService.PROGRESS_LAG_WARN:
+                sources.append("progress_drifted")
+                evidence["progress_drifted"] = {
+                    "completion_rate": completion_rate,
+                    "time_progress": time_progress,
+                    "lag": lag,
+                    "ledger_completed": ledger_completed,
+                    "ledger_total": ledger_total,
+                }
+
+        if "deadline_changed" in sources:
+            primary = "deadline_changed"
+        elif "progress_drifted" in sources:
+            primary = "progress_drifted"
+        else:
+            primary = "time_passed"
+
+        return {
+            "sources": sources,
+            "primary": primary,
+            "evidence": evidence,
+            "summary": self._comeback_rationale_summary(
+                primary=primary,
+                evidence=evidence,
+                days_away=days_away,
+                plan_expired=plan_expired,
+            ),
+        }
+
+    def _comeback_rationale_summary(
+        self,
+        *,
+        primary: str,
+        evidence: Mapping[str, Any],
+        days_away: int,
+        plan_expired: bool,
+    ) -> str:
+        """一句话事实摘要（零 guilt：只说计划与账本，不评价人）。"""
+        if primary == "deadline_changed":
+            deadline = evidence.get("deadline_changed")
+            if isinstance(deadline, Mapping):
+                previous = _strip(deadline.get("previous_target_date"))
+                new = _strip(deadline.get("new_target_date"))
+                if previous and new:
+                    return f"计划的终点在你离开期间重新校准过了（{previous} → {new}）。"
+            return "计划的终点在你离开期间重新校准过了。"
+        if primary == "progress_drifted":
+            progress = evidence.get("progress_drifted")
+            if isinstance(progress, Mapping):
+                total = progress.get("ledger_total")
+                completed = progress.get("ledger_completed")
+                time_progress = progress.get("time_progress")
+                if isinstance(total, (int, float)) and isinstance(completed, (int, float)):
+                    pct = (
+                        f"{int(round(float(time_progress) * 100))}%"
+                        if isinstance(time_progress, (int, float))
+                        else ""
+                    )
+                    prefix = f"窗口时间走了 {pct}、" if pct else ""
+                    return f"{prefix}任务账本完成 {int(completed)}/{int(total)}。"
+            return "计划的时间进度和任务账本拉开了差距。"
+        window = "原定窗口已结束" if plan_expired else "计划保持原样"
+        return f"离开 {days_away} 天，{window}。"
+
+    def _comeback_rescope(
+        self,
+        *,
+        plan: Plan | None,
+        has_pending_tasks: bool,
+        plan_expired: bool,
+        stale_focus: bool,
+    ) -> dict[str, Any]:
+        """J-07: Aurora rescope 入口（复用 wt313 replan 端点，reason 封闭词表）。"""
+        if plan is None:
+            return {
+                "available": False,
+                "recommended": False,
+                "endpoint": "",
+                "reason": "no_active_plan",
+            }
+        available = bool(has_pending_tasks)
+        if not available:
+            reason = "no_pending_tasks"
+        elif plan_expired:
+            reason = "plan_window_expired"
+        elif stale_focus:
+            reason = "stale_focus"
+        else:
+            reason = "window_open"
+        recommended = available and (plan_expired or stale_focus)
+        return {
+            "available": available,
+            "recommended": recommended,
+            "endpoint": f"/api/v1/plans/{plan.id}/replan" if available else "",
+            "reason": reason,
+        }
+
+    def _comeback_primary_action(
+        self,
+        *,
+        rescope: Mapping[str, Any],
+        plan: Plan | None,
+        next_task: Task | None,
+        active_core_session: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        """J-07: ≤2 actions 量化——回来主路径到「下一个可执行动作」。
+
+        陈旧窗口时主步 = rescope（先重估建议，再继续任务）；其余情况直达
+        任务/会话。``within_actions`` 是交互步数上界（banner 单击 = 1）。
+        """
+        if rescope.get("recommended") and plan is not None:
+            return {
+                "kind": "rescope_plan",
+                "route": f"/plans/{plan.id}/edit",
+                "within_actions": 2,
+            }
+        if next_task is not None:
+            return {
+                "kind": "open_task",
+                "route": f"/tasks/{next_task.id}/execute",
+                "within_actions": 1,
+            }
+        if _strip((active_core_session or {}).get("resume_token")):
+            return {"kind": "resume_core_session", "route": "", "within_actions": 1}
+        return {"kind": "open_conversation", "route": "/chat?entry=comeback", "within_actions": 1}
 
     def _personalized_return_message(
         self,

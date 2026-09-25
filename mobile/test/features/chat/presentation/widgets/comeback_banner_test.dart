@@ -195,6 +195,66 @@ void main() {
     expect(find.text('期末计算机网络冲 85 分'), findsOneWidget);
     expect(find.text('1/2'), findsOneWidget);
   });
+
+  // ── J-07: stale plan → rescope entry（≤2 actions 到 meaningful next step）──
+
+  testWidgets('rescope-recommended stale plan shows recalibrate entry', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      testMaterialApp(
+        home: Scaffold(
+          body: ComebackBanner(
+            contextData: _contextWithRescope(),
+            onRescope: () {},
+          ),
+        ),
+      ),
+    );
+
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // rescope 入口可见（复用计划域「重新校准计划」词表，零 guilt）。
+    expect(
+      find.byKey(const ValueKey('comeback-banner-rescope')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('tapping rescope entry once invokes callback (1 action)', (
+    tester,
+  ) async {
+    var rescopeTaps = 0;
+    await tester.pumpWidget(
+      testMaterialApp(
+        home: Scaffold(
+          body: ComebackBanner(
+            contextData: _contextWithRescope(),
+            onRescope: () => rescopeTaps++,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const ValueKey('comeback-banner-rescope')));
+    await tester.pump();
+
+    // ≤2 actions 量化断言：单次点击即触发 rescope 导航（1 action）。
+    expect(rescopeTaps, 1);
+  });
+
+  testWidgets('fresh context does not render rescope entry', (tester) async {
+    await tester.pumpWidget(
+      testMaterialApp(
+        home: Scaffold(body: ComebackBanner(contextData: _context())),
+      ),
+    );
+
+    expect(
+      find.byKey(const ValueKey('comeback-banner-rescope')),
+      findsNothing,
+    );
+  });
 }
 
 AuroraComebackContext _contextWithGoalState() {
@@ -228,6 +288,53 @@ AuroraComebackContext _contextWithGoalState() {
       progress: 0,
       ledgerCompleted: 1,
       ledgerTotal: 2,
+    ),
+  );
+}
+
+/// J-07：窗口过期 + rescope 推荐的陈旧计划上下文。
+AuroraComebackContext _contextWithRescope() {
+  final base = _contextWithGoalState();
+  return AuroraComebackContext(
+    comebackKind: 'checkpoint_debrief',
+    title: base.title,
+    message: base.message,
+    shouldShowMessage: base.shouldShowMessage,
+    lastActiveAt: base.lastActiveAt,
+    inactiveMinutes: base.inactiveMinutes,
+    daysAway: 7,
+    daysRemaining: 0,
+    subject: base.subject,
+    nextTaskTitle: base.nextTaskTitle,
+    recentTaskSummary: base.recentTaskSummary,
+    lightRestartSuggestion: base.lightRestartSuggestion,
+    planId: base.planId,
+    conversationId: base.conversationId,
+    lastMessageId: base.lastMessageId,
+    topicSummary: base.topicSummary,
+    pendingQuestion: base.pendingQuestion,
+    activeCoreSession: base.activeCoreSession,
+    resumeToken: base.resumeToken,
+    unfinishedItems: base.unfinishedItems,
+    calendarNote: base.calendarNote,
+    goalState: base.goalState,
+    planExpired: true,
+    staleFocus: true,
+    rationale: const AuroraComebackRationale(
+      sources: ['time_passed', 'progress_drifted'],
+      primary: 'progress_drifted',
+      summary: '窗口时间走了 100%、任务账本完成 1/2。',
+    ),
+    rescope: const AuroraComebackRescope(
+      available: true,
+      recommended: true,
+      endpoint: '/api/v1/plans/plan-1/replan',
+      reason: 'plan_window_expired',
+    ),
+    primaryAction: const AuroraComebackPrimaryAction(
+      kind: 'rescope_plan',
+      route: '/plans/plan-1/edit',
+      withinActions: 2,
     ),
   );
 }

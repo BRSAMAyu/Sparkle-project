@@ -25,6 +25,9 @@ class AuroraComebackContext {
     this.planExpired = false,
     this.staleFocus = false,
     this.nextTaskOverdueDays = 0,
+    this.rationale = const AuroraComebackRationale.empty(),
+    this.rescope = const AuroraComebackRescope.empty(),
+    this.primaryAction = const AuroraComebackPrimaryAction.empty(),
   });
 
   const AuroraComebackContext.empty()
@@ -52,7 +55,10 @@ class AuroraComebackContext {
         goalState = const AuroraComebackGoalState.empty(),
         planExpired = false,
         staleFocus = false,
-        nextTaskOverdueDays = 0;
+        nextTaskOverdueDays = 0,
+        rationale = const AuroraComebackRationale.empty(),
+        rescope = const AuroraComebackRescope.empty(),
+        primaryAction = const AuroraComebackPrimaryAction.empty();
 
   factory AuroraComebackContext.fromJson(Map<String, dynamic> json) =>
       AuroraComebackContext(
@@ -81,6 +87,9 @@ class AuroraComebackContext {
         planExpired: _asBool(json['plan_expired']),
         staleFocus: _asBool(json['stale_focus']),
         nextTaskOverdueDays: _asInt(json['next_task_overdue_days']),
+        rationale: AuroraComebackRationale.fromJson(json['rationale']),
+        rescope: AuroraComebackRescope.fromJson(json['rescope']),
+        primaryAction: AuroraComebackPrimaryAction.fromJson(json['primary_action']),
       );
 
   final String comebackKind;
@@ -114,6 +123,15 @@ class AuroraComebackContext {
   /// 焦点任务已陈旧（逾期 ≥3 天或计划过期）——不得呈现为"当前最优步"。
   final bool staleFocus;
   final int nextTaskOverdueDays;
+
+  /// J-07：comeback rationale（真实变化依据：deadline 变化/进度漂移/时间流逝）。
+  final AuroraComebackRationale rationale;
+
+  /// J-07：Aurora rescope 入口（复用 wt313 replan 端点，仅透传入口不重建）。
+  final AuroraComebackRescope rescope;
+
+  /// J-07：≤2 actions 量化——回来主路径到「下一个可执行动作」。
+  final AuroraComebackPrimaryAction primaryAction;
 
   bool get hasContent =>
       message.isNotEmpty ||
@@ -210,6 +228,114 @@ class AuroraComebackItem {
   final String actionLabel;
   final String route;
   final String resumeToken;
+}
+
+/// J-07：comeback rationale——回来时给出的建议必须带有真实变化依据。
+///
+/// sources 取值 = 引擎侧封闭词表（time_passed / deadline_changed /
+/// progress_drifted）；summary 是引擎生成的一句话事实摘要（零 guilt 词表）。
+class AuroraComebackRationale {
+  const AuroraComebackRationale({
+    required this.sources,
+    required this.primary,
+    required this.summary,
+  });
+
+  const AuroraComebackRationale.empty()
+      : sources = const [],
+        primary = '',
+        summary = '';
+
+  factory AuroraComebackRationale.fromJson(dynamic raw) {
+    if (raw is! Map) {
+      return const AuroraComebackRationale.empty();
+    }
+    final json = Map<String, dynamic>.from(raw);
+    final rawSources = json['sources'];
+    return AuroraComebackRationale(
+      sources: rawSources is List
+          ? rawSources.map((item) => item.toString().trim()).toList(growable: false)
+          : const [],
+      primary: _asString(json['primary']),
+      summary: _asString(json['summary']),
+    );
+  }
+
+  final List<String> sources;
+  final String primary;
+  final String summary;
+
+  bool get hasContent => sources.isNotEmpty || summary.isNotEmpty;
+}
+
+/// J-07：Aurora rescope 入口——复用 wt313 `POST /plans/{id}/replan` 端点，
+/// 客户端只透传入口信息，不重建第二套重校准机制。
+class AuroraComebackRescope {
+  const AuroraComebackRescope({
+    required this.available,
+    required this.recommended,
+    required this.endpoint,
+    required this.reason,
+  });
+
+  const AuroraComebackRescope.empty()
+      : available = false,
+        recommended = false,
+        endpoint = '',
+        reason = '';
+
+  factory AuroraComebackRescope.fromJson(dynamic raw) {
+    if (raw is! Map) {
+      return const AuroraComebackRescope.empty();
+    }
+    final json = Map<String, dynamic>.from(raw);
+    return AuroraComebackRescope(
+      available: _asBool(json['available']),
+      recommended: _asBool(json['recommended']),
+      endpoint: _asString(json['endpoint']),
+      reason: _asString(json['reason']),
+    );
+  }
+
+  final bool available;
+  final bool recommended;
+  final String endpoint;
+  final String reason;
+
+  /// 陈旧计划推荐重校准（UI 据此给出「重新校准」入口）。
+  bool get hasRecommendation => available && recommended;
+}
+
+/// J-07：≤2 actions 量化——回来主路径到「下一个可执行动作」的交互步数。
+class AuroraComebackPrimaryAction {
+  const AuroraComebackPrimaryAction({
+    required this.kind,
+    required this.route,
+    required this.withinActions,
+  });
+
+  const AuroraComebackPrimaryAction.empty()
+      : kind = '',
+        route = '',
+        withinActions = 0;
+
+  factory AuroraComebackPrimaryAction.fromJson(dynamic raw) {
+    if (raw is! Map) {
+      return const AuroraComebackPrimaryAction.empty();
+    }
+    final json = Map<String, dynamic>.from(raw);
+    return AuroraComebackPrimaryAction(
+      kind: _asString(json['kind']),
+      route: _asString(json['route']),
+      withinActions: _asInt(json['within_actions']),
+    );
+  }
+
+  final String kind;
+  final String route;
+  final int withinActions;
+
+  bool get hasContent => kind.isNotEmpty;
 }
 
 String _asString(dynamic value) {

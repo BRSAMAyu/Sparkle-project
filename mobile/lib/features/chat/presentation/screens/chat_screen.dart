@@ -997,6 +997,26 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _continueFromComebackBanner();
   }
 
+  /// J-07：陈旧计划 rescope 入口——单击（≤2 actions 量化内的第 1 步）进入
+  /// 重校准面。路由优先取引擎 primary_action.route（同源不二次推导），
+  /// 缺省按 planId 落到计划编辑面（编辑面即可重锚 targetDate）。
+  void _rescopeFromComebackBanner() {
+    final comeback = _comebackContext;
+    if (comeback == null) {
+      return;
+    }
+    var route = comeback.primaryAction.route.trim();
+    if (route.isEmpty || !route.startsWith('/')) {
+      final planId = comeback.planId.trim();
+      if (planId.isEmpty) {
+        return;
+      }
+      route = '/plans/$planId/edit';
+    }
+    _dismissComebackBanner();
+    unawaited(_navigateFromAction(route));
+  }
+
   Future<void> _submitFreeformAuroraCorrection(String text) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty) {
@@ -1694,6 +1714,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                         ? () => unawaited(_resumeComebackCoreSession())
                                         : null,
                                 onItemSelected: _handleComebackItemSelected,
+                                onRescope: _comebackContext!.rescope.hasRecommendation
+                                    ? _rescopeFromComebackBanner
+                                    : null,
                               ),
                             // N47（A-SPEC8B §4）· 转化卡 chat 落点：挂在
                             // chatHeaderPanels 事件横幅槽（出现即有实际事件、

@@ -17,7 +17,10 @@ from app.aurora.runtime_v1.state import AuroraEnergyStore
 from app.aurora.runtime_v1.telemetry import AuroraDecisionTelemetryService
 from app.core.cache import cache_service
 from app.core.metrics import AURORA_CORRECTION_FAILURE_TOTAL, record_product_loop_event
-from app.core.request_coalescing import EndpointShield
+from app.core.request_coalescing import (
+    EndpointShield,
+    register_read_view_invalidation_hook,
+)
 from app.models.user import User
 from app.services.aurora_calibration_card_service import AuroraCalibrationCardService
 from app.services.aurora_control_surface_service import (
@@ -31,6 +34,21 @@ router = APIRouter(prefix="/aurora", tags=["aurora"])
 # 恢复风暴防护（engine-restore-storm）：恢复期 aurora 三连拉的重端点守卫
 _comeback_context_shield = EndpointShield(name="aurora_comeback_context", max_concurrency=8, ttl=8.0, wait_timeout=8.0)
 _core_session_shield = EndpointShield(name="aurora_core_session", max_concurrency=8, ttl=5.0, wait_timeout=8.0)
+
+
+def _invalidate_comeback_context_shield(user_id: str) -> int:
+    """J-07 · SHIELD-INVAL：deadline 变化写路径（wt313 replan / 计划重锚编辑）
+    宣告 comeback 读面失效——TTL 窗口内陈旧建议不允许穿透复用。
+
+    前缀用裸 user_id：读侧 run() 以裸 user_id 为键（无参数变体），带冒号
+    前缀 startswith 永不命中、失效会静默落空（合并态 API 负测实证）。裸
+    前缀同时覆盖假想的 "user_id:variant" 变体键。"""
+    return _comeback_context_shield.invalidate_prefix(user_id)
+
+
+register_read_view_invalidation_hook(
+    "aurora_comeback_context", _invalidate_comeback_context_shield
+)
 
 
 # ── Request / Response models ──────────────────────────────────────────────────
@@ -71,6 +89,16 @@ class ComebackContextResponse(BaseModel):
     resume_token: str = ""
     unfinished_items: list[dict[str, Any]] = Field(default_factory=list)
     calendar_note: str = ""
+    # A-07 读侧投影（此前 service 已返回但被本模型静默丢弃，J-07 补齐透出）。
+    goal_state: dict[str, Any] = Field(default_factory=dict)
+    plan_expired: bool = False
+    stale_focus: bool = False
+    next_task_overdue_days: int = 0
+    # J-07：drift rationale（真实变化依据）+ rescope（wt313 replan 复用）+
+    # ≤2 actions 主步量化。
+    rationale: dict[str, Any] = Field(default_factory=dict)
+    rescope: dict[str, Any] = Field(default_factory=dict)
+    primary_action: dict[str, Any] = Field(default_factory=dict)
 
 
 class CoreSessionStartRequest(BaseModel):

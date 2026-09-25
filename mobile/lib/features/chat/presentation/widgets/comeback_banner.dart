@@ -12,6 +12,7 @@ class ComebackBanner extends StatefulWidget {
     this.onContinue,
     this.onResumeCoreSession,
     this.onItemSelected,
+    this.onRescope,
   });
 
   final AuroraComebackContext contextData;
@@ -19,6 +20,10 @@ class ComebackBanner extends StatefulWidget {
   final VoidCallback? onContinue;
   final VoidCallback? onResumeCoreSession;
   final ValueChanged<AuroraComebackItem>? onItemSelected;
+
+  /// J-07：陈旧计划 rescope 入口（≤2 actions 到 meaningful next step——
+  /// 单击即进入重校准面）。复用计划域「重新校准计划」词表，零 guilt。
+  final VoidCallback? onRescope;
 
   @override
   State<ComebackBanner> createState() => _ComebackBannerState();
@@ -178,10 +183,27 @@ class _ComebackBannerState extends State<ComebackBanner> {
                       ),
                   ],
                 ),
+                if (contextData.rescope.hasRecommendation &&
+                    widget.onRescope != null) ...[
+                  const SizedBox(height: DS.spacing12),
+                  _staggered(
+                    index: 2,
+                    child: Semantics(
+                      button: true,
+                      label: context.l10n.planComebackRecalibrate,
+                      child: OutlinedButton.icon(
+                        key: const ValueKey('comeback-banner-rescope'),
+                        onPressed: widget.onRescope,
+                        icon: const Icon(Icons.refresh_rounded, size: 18),
+                        label: Text(context.l10n.planComebackRecalibrate),
+                      ),
+                    ),
+                  ),
+                ],
                 if (items.isNotEmpty) ...[
                   const SizedBox(height: DS.spacing10),
                   _staggered(
-                    index: 2,
+                    index: contextData.rescope.hasRecommendation ? 3 : 2,
                     child: Wrap(
                       spacing: DS.spacing8,
                       runSpacing: DS.spacing8,
@@ -200,7 +222,7 @@ class _ComebackBannerState extends State<ComebackBanner> {
                 if (contextData.goalState.hasContent) ...[
                   const SizedBox(height: DS.spacing12),
                   _staggered(
-                    index: 3,
+                    index: contextData.rescope.hasRecommendation ? 4 : 3,
                     child: _ComebackGoalStateLine(
                       goalState: contextData.goalState,
                     ),

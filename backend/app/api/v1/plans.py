@@ -24,6 +24,7 @@ from app.api.deps import get_current_user
 from app.core.cache import cache_service
 from app.core.event_bus import event_bus
 from app.core.exceptions import QuotaExceededError
+from app.core.request_coalescing import notify_read_view_invalidated
 from app.db.session import get_db
 from app.models.card_protocol import ArtifactType
 from app.models.focus import FocusSession, FocusStatus
@@ -1258,7 +1259,17 @@ async def update_plan(
     if not plan:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Plan {plan_id} not found")
 
+    # J-07 · SHIELD-INVAL：编辑重锚 target_date 也是 deadline 变化写路径，
+    # 同样宣告 comeback 读面失效（与 wt313 replan 同一失效域）。
+    previous_target_date = plan.target_date
     plan = await PlanService.update(db=db, db_obj=plan, obj_in=plan_in)
+
+    if (
+        plan_in is not None
+        and getattr(plan_in, "target_date", None) is not None
+        and plan_in.target_date != previous_target_date
+    ):
+        notify_read_view_invalidated("aurora_comeback_context", str(current_user.id))
 
     # Get task counts
     task_query = select(func.count(Task.id)).where(Task.plan_id == plan.id)
@@ -1381,6 +1392,10 @@ async def replan_plan(
     plan.source_metadata = metadata
 
     plan = await PlanService.update(db=db, db_obj=plan, obj_in=PlanUpdate(target_date=new_target))
+
+    # J-07 · SHIELD-INVAL：deadline 变化写路径宣告 comeback 读面失效，
+    # TTL 窗口内陈旧建议（重锚前的"窗口已结束"）不允许穿透复用。
+    notify_read_view_invalidated("aurora_comeback_context", str(current_user.id))
 
     return {
         "plan_id": str(plan.id),
