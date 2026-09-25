@@ -35,8 +35,9 @@ SURFACES = frozenset(
     }
 )
 
-# 采集平台：Android 为本机 canonical 端；web 可选补充；iOS 本机不可采（平台限制，登记不采）。
-PLATFORMS = frozenset({"android", "web", "ios"})
+# 采集平台：Android 为本机 canonical 端；web/macOS 为 U-09 三端成员；
+# iOS 本机不可采（平台限制，登记不采）。
+PLATFORMS = frozenset({"android", "web", "ios", "macos"})
 
 # 演示 persona：demo_data=演示账号（只读）；new_user=新注册号（onboarding/空态）。
 PERSONAS = frozenset({"demo_data", "new_user", "guest"})

@@ -7,6 +7,9 @@
     verify     复验截图目录与 manifest 一致性（缺失/多余/篡改，失败非零退出）
     coverage   对照 canonical states 注册表输出覆盖缺口
     diff       对比两张截图（轻量指纹，不要求像素一致）或两份 manifest
+    matrix     U-09 三端（android/web/macos）截图矩阵可执行清单（markdown）
+    report-template
+               U-09 A/B diff report 模板（真机批次后逐状态填写）
 
 示例：
     python3 visual_baseline.py plan
@@ -18,6 +21,8 @@
     python3 visual_baseline.py coverage v3-output/B-04/screenshots
     python3 visual_baseline.py diff shots/a.png shots/b.png
     python3 visual_baseline.py diff-manifest old.json new.json
+    python3 visual_baseline.py matrix --build-sha8 $(git rev-parse --short=8 HEAD)
+    python3 visual_baseline.py report-template -o v3-output/U-09/DIFF_REPORT.md
 """
 
 from __future__ import annotations
@@ -30,6 +35,7 @@ from pathlib import Path
 try:  # 包内执行（python -m visual_baseline.visual_baseline）
     from .diffing import compare, diff_manifests
     from .manifest import build_manifest, load_manifest, verify_screens, write_manifest
+    from .matrix import diff_report_template, iter_matrix_rows, render_matrix_markdown
     from .states import CANONICAL_STATES, iter_state_rows
 except ImportError:  # 直接脚本执行（python visual_baseline.py ...）
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -39,6 +45,11 @@ except ImportError:  # 直接脚本执行（python visual_baseline.py ...）
         load_manifest,
         verify_screens,
         write_manifest,
+    )
+    from visual_baseline.matrix import (
+        diff_report_template,
+        iter_matrix_rows,
+        render_matrix_markdown,
     )
     from visual_baseline.states import CANONICAL_STATES, iter_state_rows
 
@@ -120,6 +131,36 @@ def cmd_diff_manifest(args: argparse.Namespace) -> int:
     return 0
 
 
+def _write_or_print(text: str, out: str | None) -> int:
+    if out:
+        Path(out).parent.mkdir(parents=True, exist_ok=True)
+        Path(out).write_text(text, encoding="utf-8")
+        print(f"写入 {out}")
+    else:
+        print(text)
+    return 0
+
+
+def cmd_matrix(args: argparse.Namespace) -> int:
+    """U-09 三端截图矩阵可执行清单（state×platform×viewport 全展开）。"""
+    sha8 = (args.build_sha8 or "").strip()
+    if sha8 in {"", "<BUILD_SHA8>"}:
+        rows = iter_matrix_rows()
+        preview = "\n".join(
+            f"  {r.platform:<8}{r.viewport:<16}{r.surface}/{r.state_id}"
+            for r in rows[:5]
+        )
+        print(
+            f"U-09 矩阵共 {len(rows)} 行（未给 --build-sha8，文件名以 <SHA8> 模板输出）\n{preview}\n  ..."
+        )
+    return _write_or_print(render_matrix_markdown(build_sha8=sha8 or "<BUILD_SHA8>"), args.out)
+
+
+def cmd_report_template(args: argparse.Namespace) -> int:
+    """U-09 A/B diff report 模板。"""
+    return _write_or_print(diff_report_template(), args.out)
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="visual_baseline", description=__doc__)
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -129,7 +170,7 @@ def build_parser() -> argparse.ArgumentParser:
     m = sub.add_parser("manifest", help="生成 manifest.json")
     m.add_argument("screens_dir")
     m.add_argument("--build-sha", required=True, help="完整 git SHA")
-    m.add_argument("--platform", required=True, choices=sorted({"android", "web", "ios"}))
+    m.add_argument("--platform", required=True, choices=sorted({"android", "web", "ios", "macos"}))
     m.add_argument("--viewport", required=True, help="如 412x916@2.6")
     m.add_argument("--model", default="")
     m.add_argument("--gateway-url", default="")
@@ -156,6 +197,21 @@ def build_parser() -> argparse.ArgumentParser:
     dm.add_argument("a")
     dm.add_argument("b")
     dm.set_defaults(func=cmd_diff_manifest)
+
+    mx = sub.add_parser(
+        "matrix", help="U-09 三端截图矩阵可执行清单（android/web/macos）"
+    )
+    mx.add_argument(
+        "--build-sha8",
+        default="",
+        help="构建 SHA 前 8 位（缺省输出 <SHA8> 模板，采集时再定型）",
+    )
+    mx.add_argument("-o", "--out", default=None, help="输出文件（缺省打印）")
+    mx.set_defaults(func=cmd_matrix)
+
+    rt = sub.add_parser("report-template", help="U-09 A/B diff report 模板")
+    rt.add_argument("-o", "--out", default=None, help="输出文件（缺省打印）")
+    rt.set_defaults(func=cmd_report_template)
     return p
 
 

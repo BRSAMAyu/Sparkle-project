@@ -1,6 +1,4 @@
-import 'dart:io' show Platform;
-
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 
@@ -29,15 +27,24 @@ class ResponsiveUtils {
       ResponsiveSystem.height(context);
 
   /// Returns true if the current platform is mobile (iOS or Android)
+  ///
+  /// U-09 平台判定接缝契约：与 app 其余平台分支（api_constants 等）
+  /// 同源 `defaultTargetPlatform`，而非 dart:io Platform——Platform 读
+  /// 的是**宿主机器**（测试宿主=macOS 时 android 目标也会判成桌面），
+  /// 与框架目标平台可相互矛盾且无法被平台覆盖测试钉住。交付平台集上
+  /// 两者取值一致，故此修复零生产行为变化，只恢复同源与可测性。
   static bool get isMobilePlatform {
     if (kIsWeb) return false;
-    return Platform.isIOS || Platform.isAndroid;
+    return defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.android;
   }
 
   /// Returns true if the current platform is desktop (macOS, Windows, Linux)
   static bool get isDesktopPlatform {
     if (kIsWeb) return false;
-    return Platform.isMacOS || Platform.isWindows || Platform.isLinux;
+    return defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux;
   }
 
   /// Returns true if running on web
