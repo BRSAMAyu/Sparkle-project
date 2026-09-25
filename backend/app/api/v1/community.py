@@ -2670,8 +2670,16 @@ async def share_file_to_user(
 
         await db.commit()
         message_info = _build_private_message_info(message)
-        await manager.send_personal_message(message_info.model_dump(mode="json"), str(user_id))
-        await manager.send_personal_message(message_info.model_dump(mode="json"), str(current_user.id))
+        # V3-FIX-87（F6 同族收口·share 面）：文件拷贝与私信行已提交=权威事实，
+        # 提交后的 WS 推送 best-effort——publish 瞬断不得把成功变成 500。
+        try:
+            await manager.send_personal_message(message_info.model_dump(mode="json"), str(user_id))
+            await manager.send_personal_message(message_info.model_dump(mode="json"), str(current_user.id))
+        except Exception:
+            logger.opt(exception=True).warning(
+                "post-commit ws push failed after share-file commit (best-effort), target_user_id={}",
+                user_id,
+            )
 
         return _build_file_copy_response(
             file_id=result.stored_file.id,
@@ -3120,7 +3128,15 @@ async def _update_user_status(user_id: str, status: UserStatus):
 
         # 广播 (分布式优化版：PUBLISH ONCE)
         broadcast_status = status.value
-        await manager.notify_status_change(str(user.id), broadcast_status)
+        # V3-FIX-87（F6 同族收口·status 面）：状态行已提交，presence 通知
+        # best-effort——WS 连接/断开路径的通知失败不得向连接面抛异常。
+        try:
+            await manager.notify_status_change(str(user.id), broadcast_status)
+        except Exception:
+            logger.opt(exception=True).warning(
+                "presence notify failed after status commit (best-effort), user_id={}",
+                user.id,
+            )
 
 
 # route-tier: authed
@@ -3143,7 +3159,15 @@ async def update_status(
     if data.status == UserStatus.INVISIBLE:
         broadcast_status = UserStatus.OFFLINE.value
 
-    await manager.notify_status_change(str(user.id), broadcast_status)
+    # V3-FIX-87（F6 同族收口·status 面）：状态行已提交，presence 通知
+    # best-effort——publish 瞬断不得把成功变成 500（WS 连接路径同享）。
+    try:
+        await manager.notify_status_change(str(user.id), broadcast_status)
+    except Exception:
+        logger.opt(exception=True).warning(
+            "post-commit presence notify failed after status commit (best-effort), user_id={}",
+            user.id,
+        )
 
     return {"success": True, "status": data.status}
 
@@ -3620,12 +3644,20 @@ async def share_resource(
 
         await db.commit()
 
+        # V3-FIX-87（F6 同族收口·share 面）：共享资源行与分享消息已提交=权威事实，
+        # 提交后的 WS 广播/推送 best-effort——publish 瞬断不得把成功变成 500。
         if message_info:
-            if data.target_group_id:
-                await manager.broadcast(message_info.model_dump(mode="json"), str(data.target_group_id))
-            elif data.target_user_id:
-                await manager.send_personal_message(message_info.model_dump(mode="json"), str(data.target_user_id))
-                await manager.send_personal_message(message_info.model_dump(mode="json"), str(current_user.id))
+            try:
+                if data.target_group_id:
+                    await manager.broadcast(message_info.model_dump(mode="json"), str(data.target_group_id))
+                elif data.target_user_id:
+                    await manager.send_personal_message(message_info.model_dump(mode="json"), str(data.target_user_id))
+                    await manager.send_personal_message(message_info.model_dump(mode="json"), str(current_user.id))
+            except Exception:
+                logger.opt(exception=True).warning(
+                    "post-commit share broadcast failed (best-effort), shared_resource_id={}",
+                    shared.id,
+                )
 
         # Construct response
         return SharedResourceInfo(
@@ -4540,11 +4572,19 @@ async def retract_shared_resource(
         "retracted_by": str(current_user.id),
         "timestamp": datetime.now(UTC).isoformat(),
     }
-    if shared.group_id is not None:
-        await manager.broadcast(broadcast_payload, str(shared.group_id))
-    if shared.target_user_id is not None:
-        await manager.send_personal_message(broadcast_payload, str(shared.target_user_id))
-        await manager.send_personal_message(broadcast_payload, str(current_user.id))
+    # V3-FIX-87（F6 同族收口·share 面）：撤回已提交且不可重试（重试即 404），
+    # 撤回事件广播 best-effort——publish 瞬断不得把成功变成 500。
+    try:
+        if shared.group_id is not None:
+            await manager.broadcast(broadcast_payload, str(shared.group_id))
+        if shared.target_user_id is not None:
+            await manager.send_personal_message(broadcast_payload, str(shared.target_user_id))
+            await manager.send_personal_message(broadcast_payload, str(current_user.id))
+    except Exception:
+        logger.opt(exception=True).warning(
+            "post-commit retract broadcast failed (best-effort), shared_resource_id={}",
+            shared_resource_id,
+        )
 
     return SharedResourceRetractResponse(
         success=True,
@@ -4731,15 +4771,24 @@ async def mute_group_member(
         await db.commit()
 
         # 通知被禁言用户
-        await manager.send_personal_message(
-            {
-                "type": "muted",
-                "group_id": str(group_id),
-                "mute_until": member.mute_until.isoformat() if member.mute_until else None,
-                "reason": data.reason,
-            },
-            str(user_id),
-        )
+        # V3-FIX-87（F6 同族收口·mute 面）：禁言成员行已提交，通知 best-effort
+        # ——publish 瞬断不得把成功变成 500（重试即重复禁言写）。
+        try:
+            await manager.send_personal_message(
+                {
+                    "type": "muted",
+                    "group_id": str(group_id),
+                    "mute_until": member.mute_until.isoformat() if member.mute_until else None,
+                    "reason": data.reason,
+                },
+                str(user_id),
+            )
+        except Exception:
+            logger.opt(exception=True).warning(
+                "post-commit muted notify failed (best-effort), group_id={} user_id={}",
+                group_id,
+                user_id,
+            )
 
         return {"success": True, "mute_until": member.mute_until}
     except ValueError as e:
@@ -4757,7 +4806,15 @@ async def unmute_group_member(
         await db.commit()
 
         # 通知用户
-        await manager.send_personal_message({"type": "unmuted", "group_id": str(group_id)}, str(user_id))
+        # V3-FIX-87（F6 同族收口·mute 面）：同 mute_group_member，best-effort。
+        try:
+            await manager.send_personal_message({"type": "unmuted", "group_id": str(group_id)}, str(user_id))
+        except Exception:
+            logger.opt(exception=True).warning(
+                "post-commit unmuted notify failed (best-effort), group_id={} user_id={}",
+                group_id,
+                user_id,
+            )
 
         return {"success": True}
     except ValueError as e:
@@ -4780,10 +4837,18 @@ async def warn_group_member(
         await db.commit()
 
         # 通知被警告用户
-        await manager.send_personal_message(
-            {"type": "warned", "group_id": str(group_id), "reason": data.reason, "warn_count": member.warn_count},
-            str(user_id),
-        )
+        # V3-FIX-87（F6 同族收口·mute 面）：同 mute_group_member，best-effort。
+        try:
+            await manager.send_personal_message(
+                {"type": "warned", "group_id": str(group_id), "reason": data.reason, "warn_count": member.warn_count},
+                str(user_id),
+            )
+        except Exception:
+            logger.opt(exception=True).warning(
+                "post-commit warned notify failed (best-effort), group_id={} user_id={}",
+                group_id,
+                user_id,
+            )
 
         return {"success": True, "warn_count": member.warn_count}
     except ValueError as e:

@@ -303,14 +303,25 @@ class ConnectionManager:
         关闭通知是 best-effort；降级 ``_kick_local`` 保证本节点扇出仍生效。
         否则 publish 异常穿透成 500，而重试 leave/kick 已被「不是群组成员」
         400 挡死，已退成员的存活连接会永久滞留 active_connections 持续收群广播。
+
+        V3-FIX-66 勘误（wt420，wt410 审查发现）：本方法**没有**跨节点重试或
+        对账机制——``_kick_local`` 只及本节点内存连接。多节点部署下 publish
+        瞬断时，他节点上的存量连接会保持到客户端自行断开为止（重连时连接面
+        S-01 membership 校验会拒，风险限于「已开连接的残余广播」）；单节点
+        部署零影响。他节点存活 WS 的关闭依赖 publish 成功，失败面只能靠人工
+        kick 对账补偿。
         """
         if self.redis:
             msg = {"type": "kick_group", "user_id": user_id, "reason": reason}
             try:
                 await self.redis.publish(f"group:{group_id}", json.dumps(msg))
             except Exception:
+                # V3-FIX-66 锚点：出现本日志即存在跨节点残余广播缺口（他节点无
+                # 重试/对账，需人工 kick 对账）；TODO(kick-crossnode-account)。
                 logger.warning(
-                    "kick_group publish failed; falling back to local kick (group=%s user=%s reason=%s)",
+                    "kick_group publish failed; falling back to local kick; "
+                    "cross-node residual connections unaccounted (V3-FIX-66) "
+                    "(group=%s user=%s reason=%s)",
                     group_id,
                     user_id,
                     reason,
