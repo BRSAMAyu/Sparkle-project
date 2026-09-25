@@ -83,6 +83,7 @@ from app.api.v1 import (
     multi_agent,
     multi_intent,
     nightly_reviews,
+    north_star_wvpl,  # D-06/G7：WVPL 北极星只读暴露端点（frozen schema north_star.wvpl.fact.v1）
     notification_center,
     notifications,
     observability,
@@ -252,6 +253,7 @@ api_router.include_router(memory.router, tags=["memory"])
 api_router.include_router(memory_provenance.router, tags=["memory"])
 api_router.include_router(memory_settings.router, tags=["memory"])
 api_router.include_router(memory_admin.router)
+api_router.include_router(north_star_wvpl.router)  # G7：/admin/north-star 前缀（router 自带，superuser 依赖）
 api_router.include_router(skills.router)
 api_router.include_router(preferences.router)
 api_router.include_router(research.router)
