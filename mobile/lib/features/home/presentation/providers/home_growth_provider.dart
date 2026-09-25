@@ -13,6 +13,7 @@ class HomeActivePlanStatus {
     required this.name,
     required this.healthScore,
     this.currentPhase,
+    this.isExample = false,
   });
 
   factory HomeActivePlanStatus.fromJson(Map<String, dynamic> json) {
@@ -42,6 +43,12 @@ class HomeActivePlanStatus {
             planMap['phase'] ??
             planMap['plan_stage'],
       ),
+      // O1：示例（种子）计划声明——首屏必须能区分演示上下文与真实数据。
+      isExample: _asBool(
+            json['is_example'] ?? json['isExample'] ?? planMap['is_example'] ?? planMap['isExample'],
+          ) ||
+          planMap['source'] == 'example' ||
+          json['source'] == 'example',
     );
   }
 
@@ -49,6 +56,9 @@ class HomeActivePlanStatus {
   final String name;
   final double healthScore;
   final String? currentPhase;
+
+  /// O1：True = 演示（种子示例）计划，UI 需带「示例」标识。
+  final bool isExample;
 
   String get phaseLabel {
     final value = currentPhase?.trim();

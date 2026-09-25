@@ -69745,6 +69745,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'这一天没有形成有效打卡记录。'**
   String get taskPreviewMissedSubtitle;
+
+  /// No description provided for @todayCockpitExampleBadge.
+  ///
+  /// In zh, this message translates to:
+  /// **'示例'**
+  String get todayCockpitExampleBadge;
 }
 
 class _AppLocalizationsDelegate

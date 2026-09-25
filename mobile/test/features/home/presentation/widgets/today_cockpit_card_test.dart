@@ -264,6 +264,72 @@ void main() {
       expect(primaries.first.label, 'Unblock it');
     });
 
+    testWidgets(
+        'O1: example-plan context shows the example badge next to goal chip',
+        (tester) async {
+      // O1（J-01 实测红线）：种子（示例）上下文必须带声明，不可与真实数据
+      // 混淆。示例计划 → 目标 chip 旁渲染「Example」badge。
+      await pumpCockpit(
+        tester,
+        goals: MultiGoalOverview(
+          goals: [goal('Data Structures Sprint')],
+          selectedGoalId: 'goal-1',
+        ),
+        growthState: buildGrowth(
+          plan: const HomeActivePlanStatus(
+            id: 'plan-1',
+            name: 'Data Structures Sprint',
+            healthScore: 0.8,
+            isExample: true,
+          ),
+          total: 2,
+          completed: 1,
+          bottleneck: const HomeBottleneck(
+            id: 'b1',
+            topic: 'Binary tree traversal',
+            severity: 'high',
+          ),
+          nextAction: const HomeGrowthTask(
+            id: 't1',
+            title: 'Binary tree traversal',
+            priority: 4,
+            isCompleted: false,
+          ),
+        ),
+      );
+
+      // badge 存在（base 红：无任何示例标识）。
+      expect(find.text('Example'), findsOneWidget);
+      // 非示例上下文不渲染 badge —— 见下方分组中的对照测试。
+    });
+
+    testWidgets('O1: real-plan context renders no example badge',
+        (tester) async {
+      await pumpCockpit(
+        tester,
+        goals: MultiGoalOverview(
+          goals: [goal('Pass the exam')],
+          selectedGoalId: 'goal-1',
+        ),
+        growthState: buildGrowth(
+          plan: const HomeActivePlanStatus(
+            id: 'plan-1',
+            name: 'Final Sprint',
+            healthScore: 0.8,
+          ),
+          total: 2,
+          completed: 1,
+          bottleneck: const HomeBottleneck(
+            id: 'b1',
+            topic: 'TCP congestion control',
+            severity: 'high',
+          ),
+        ),
+      );
+
+      expect(find.text('Example'), findsNothing);
+    });
+
     testWidgets('loading: renders skeleton before data lands', (tester) async {
       await initializeDashboardTestEnvironment();
       final goalsCompleter = Completer<MultiGoalOverview>();

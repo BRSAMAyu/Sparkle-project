@@ -18374,5 +18374,6 @@
     "taskPreviewProtectedLabel": "保护中",
     "taskPreviewProtectedSubtitle": "这一天使用了连击保护，没有直接断签。",
     "taskPreviewMissedLabel": "未打卡",
-    "taskPreviewMissedSubtitle": "这一天没有形成有效打卡记录。"
+    "taskPreviewMissedSubtitle": "这一天没有形成有效打卡记录。",
+    "todayCockpitExampleBadge": "示例"
 }

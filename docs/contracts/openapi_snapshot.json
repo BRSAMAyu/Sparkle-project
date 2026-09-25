@@ -16518,6 +16518,11 @@
             "title": "Id",
             "type": "string"
           },
+          "is_example": {
+            "default": false,
+            "title": "Is Example",
+            "type": "boolean"
+          },
           "metadata": {
             "anyOf": [
               {
@@ -37146,6 +37151,12 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "is_example": {
+            "default": false,
+            "description": "True when the task belongs to an example (seeded demo) plan — declared so demo content is never mistaken for real user data",
+            "title": "Is Example",
+            "type": "boolean"
           },
           "knowledge_node_id": {
             "anyOf": [

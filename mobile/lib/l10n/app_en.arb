@@ -18677,5 +18677,6 @@
     "taskPreviewProtectedLabel": "Protected",
     "taskPreviewProtectedSubtitle": "Streak protection used, no streak break.",
     "taskPreviewMissedLabel": "Missed",
-    "taskPreviewMissedSubtitle": "No valid check-in recorded on this day."
+    "taskPreviewMissedSubtitle": "No valid check-in recorded on this day.",
+    "todayCockpitExampleBadge": "Example"
 }

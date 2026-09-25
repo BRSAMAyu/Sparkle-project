@@ -326,6 +326,16 @@ class _GoalContextRow extends StatelessWidget {
       spacing: DS.spacing8,
       runSpacing: DS.spacing8,
       children: [
+        // O1（诚实性声明）：示例（种子演示）上下文必须先于目标 chip 声明，
+        // 不可与真实数据混淆——「不可 miss」但不喧宾夺主（中性 tone）。
+        if (vm.isExample)
+          SemanticPill(
+            key: const ValueKey('today-cockpit-example-badge'),
+            label: l10n.todayCockpitExampleBadge,
+            tone: PillTone.neutral,
+            icon: Icons.lightbulb_outline_rounded,
+            dense: true,
+          ),
         if (goalLabel != null && goalLabel.isNotEmpty)
           SemanticPill(
             label: goalLabel,

@@ -25,6 +25,7 @@ from app.core.exceptions import NotFoundError
 from app.core.metrics import observe_product_loop_latency, record_product_loop_event
 from app.db.session import get_db
 from app.models.file_storage import StoredFile
+from app.models.plan import Plan
 from app.models.task import Task, TaskStatus, TaskType
 from app.models.task_document import TaskDocument
 from app.models.task_resources import TaskResourceLink, TaskResourceType
@@ -197,13 +198,36 @@ async def _load_bound_sources_for_task(
     return (await _load_bound_sources_for_tasks(db, task_ids=[task_id], user_id=user_id)).get(task_id, [])
 
 
+async def _load_example_flags_for_tasks(
+    db: AsyncSession,
+    *,
+    task_ids: list[UUID],
+) -> dict[UUID, bool]:
+    """O1（诚实性声明）：批量派生任务的「示例」标记。
+
+    种子演示内容挂在 source="example" 的演示计划下（guest_seed_service）；
+    任务本身不加列，读侧由所属 plan 的 source 派生——无 plan 或 plan 无
+    example 来源的任务一律不是示例内容。
+    """
+    if not task_ids:
+        return {}
+    rows = (
+        await db.execute(
+            select(Task.id, Plan.source).join(Plan, Plan.id == Task.plan_id).where(Task.id.in_(task_ids))
+        )
+    ).all()
+    return {task_id: source == "example" for task_id, source in rows}
+
+
 def _serialize_task_detail(
     task: Task,
     *,
     bound_sources: list[TaskBoundSourceInfo] | None = None,
+    is_example: bool = False,
 ) -> dict[str, Any]:
     payload = TaskDetail.model_validate(task).model_dump(mode="json")
     payload["bound_sources"] = [source.model_dump(mode="json") for source in (bound_sources or [])]
+    payload["is_example"] = bool(is_example)
     return payload
 
 
@@ -357,9 +381,17 @@ async def list_tasks(
         task_ids=[task.id for task in tasks],
         user_id=current_user.id,
     )
+    example_flags = await _load_example_flags_for_tasks(db, task_ids=[task.id for task in tasks])
 
     return {
-        "data": [_serialize_task_detail(t, bound_sources=bound_sources.get(t.id, [])) for t in tasks],
+        "data": [
+            _serialize_task_detail(
+                t,
+                bound_sources=bound_sources.get(t.id, []),
+                is_example=example_flags.get(t.id, False),
+            )
+            for t in tasks
+        ],
         "meta": {
             "total": total,
             "page": page,
@@ -421,6 +453,9 @@ async def create_task(
         "data": _serialize_task_detail(
             task,
             bound_sources=await _load_bound_sources_for_task(db, task_id=task.id, user_id=current_user.id),
+            is_example=(
+                await _load_example_flags_for_tasks(db, task_ids=[task.id])
+            ).get(task.id, False),
         ),
         "nudges": nudges,
         "linked_documents": linked_documents,
@@ -510,7 +545,15 @@ async def get_today_tasks(
         task_ids=[task.id for task in tasks],
         user_id=current_user.id,
     )
-    return [_serialize_task_detail(task, bound_sources=bound_sources.get(task.id, [])) for task in tasks]
+    example_flags = await _load_example_flags_for_tasks(db, task_ids=[task.id for task in tasks])
+    return [
+        _serialize_task_detail(
+            task,
+            bound_sources=bound_sources.get(task.id, []),
+            is_example=example_flags.get(task.id, False),
+        )
+        for task in tasks
+    ]
 
 
 # route-tier: authed
@@ -532,7 +575,15 @@ async def get_recommended_tasks(
         task_ids=[task.id for task in tasks],
         user_id=current_user.id,
     )
-    return [_serialize_task_detail(task, bound_sources=bound_sources.get(task.id, [])) for task in tasks]
+    example_flags = await _load_example_flags_for_tasks(db, task_ids=[task.id for task in tasks])
+    return [
+        _serialize_task_detail(
+            task,
+            bound_sources=bound_sources.get(task.id, []),
+            is_example=example_flags.get(task.id, False),
+        )
+        for task in tasks
+    ]
 
 
 # route-tier: authed
@@ -551,6 +602,7 @@ async def get_task(
         "data": _serialize_task_detail(
             task,
             bound_sources=await _load_bound_sources_for_task(db, task_id=task_id, user_id=current_user.id),
+            is_example=(await _load_example_flags_for_tasks(db, task_ids=[task_id])).get(task_id, False),
         )
     }
 

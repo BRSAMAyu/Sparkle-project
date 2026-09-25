@@ -874,6 +874,9 @@ class GrowthDashboardService:
         return {
             "id": str(plan.id),
             "name": plan.name,
+            # O1（J-01 实测诚实性红线）：首屏 plan chip 的数据源必须声明
+            # 「示例」上下文，避免种子演示计划被当作真实数据。
+            "is_example": plan.source == "example",
             "type": getattr(plan.type, "value", str(plan.type or "")),
             "phase": getattr(plan.plan_stage, "value", str(plan.plan_stage or "")),
             "progress": float(plan.progress or 0.0),

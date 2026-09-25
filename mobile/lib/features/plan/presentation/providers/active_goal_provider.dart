@@ -69,6 +69,7 @@ class ActiveGoalSnapshot {
     this.timeFraction,
     this.priorityScore,
     this.conflictReasons = const [],
+    this.isExample = false,
   });
 
   factory ActiveGoalSnapshot.fromSpine(
@@ -104,6 +105,10 @@ class ActiveGoalSnapshot {
       timeFraction: timeFraction,
       priorityScore: priorityScore,
       conflictReasons: conflictReasons,
+      // O1：spine 目标若带示例声明则透传（演示上下文不可与真实数据混淆）。
+      isExample: json['is_example'] == true ||
+          json['isExample'] == true ||
+          json['source'] == 'example',
     );
   }
 
@@ -124,6 +129,8 @@ class ActiveGoalSnapshot {
         timeFraction: timeFraction,
         priorityScore: priorityScore,
         conflictReasons: conflictReasons,
+        // O1：计划兜底路径——种子示例计划（source=example）带示例声明。
+        isExample: plan.source == 'example',
       );
 
   final String id;
@@ -136,6 +143,9 @@ class ActiveGoalSnapshot {
   final double? timeFraction;
   final double? priorityScore;
   final List<String> conflictReasons;
+
+  /// O1：True = 示例（种子演示）目标，UI 需带「示例」标识。
+  final bool isExample;
 }
 
 @immutable

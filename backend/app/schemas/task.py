@@ -434,6 +434,11 @@ class TaskDetail(TaskBase):
         default_factory=list,
         description="Lifecycle-aware source assets currently bound to the task",
     )
+    is_example: bool = Field(
+        default=False,
+        description="True when the task belongs to an example (seeded demo) plan — "
+        "declared so demo content is never mistaken for real user data",
+    )
 
 
 class TaskReorderRequest(BaseModel):

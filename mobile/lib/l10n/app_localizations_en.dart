@@ -40138,4 +40138,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get taskPreviewMissedSubtitle =>
       'No valid check-in recorded on this day.';
+
+  @override
+  String get todayCockpitExampleBadge => 'Example';
 }

@@ -38447,4 +38447,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get taskPreviewMissedSubtitle => '这一天没有形成有效打卡记录。';
+
+  @override
+  String get todayCockpitExampleBadge => '示例';
 }

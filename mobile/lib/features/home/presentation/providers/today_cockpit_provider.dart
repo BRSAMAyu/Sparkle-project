@@ -71,6 +71,7 @@ class TodayCockpitVm {
     this.staleGuard = false,
     this.runIsActive = false,
     this.runLabel,
+    this.isExample = false,
   });
 
   /// growth / goals 尚在首次加载（展示骨架，不做状态判定）。
@@ -114,6 +115,9 @@ class TodayCockpitVm {
   /// run 的摘要文案素材（details 或 agentName），无则展示通用进行中。
   final String? runLabel;
 
+  /// O1：当前目标/计划上下文是示例（种子演示）内容，UI 必须带「示例」标识。
+  final bool isExample;
+
   bool get hasGoalContext => goalTitle != null || planName != null;
 }
 
@@ -145,6 +149,9 @@ final todayCockpitProvider = Provider<TodayCockpitVm>((ref) {
   final planName = _nonEmpty(growth.activePlan?.name) ??
       _nonEmpty(dashboardState.activePlanProgress?.name);
   final hasGoals = goals == null ? planName != null : goals.goals.isNotEmpty;
+  // O1：示例（种子演示）上下文声明——任一来源命中即带「示例」标识。
+  final isExample = (growth.activePlan?.isExample ?? false) ||
+      (selectedGoal?.isExample ?? false);
 
   // 选中目标的账本进度：目标名下有任务用目标口径，否则回落全账本
   // （目标 id 与任务 plan_id 同一 id 空间：goal 行/cockpit 的 goal 即 plan）。
@@ -162,6 +169,7 @@ final todayCockpitProvider = Provider<TodayCockpitVm>((ref) {
       isLoading: true,
       goalTitle: goalTitle,
       planName: planName,
+      isExample: isExample,
     );
   }
 
@@ -172,6 +180,7 @@ final todayCockpitProvider = Provider<TodayCockpitVm>((ref) {
       action: TodayCockpitAction.setGoal,
       goalTitle: goalTitle,
       planName: planName,
+      isExample: isExample,
       runIsActive: chatState.runPhase.isActive,
       runLabel: chatState.activeRunSummary?.details ??
           chatState.activeRunSummary?.agentName,
@@ -207,6 +216,7 @@ final todayCockpitProvider = Provider<TodayCockpitVm>((ref) {
       deadlineDays: deadlineDays,
       staleGuard: band?.staleGuard ?? false,
       chatState: chatState,
+      isExample: isExample,
     );
   }
 
@@ -234,6 +244,7 @@ final todayCockpitProvider = Provider<TodayCockpitVm>((ref) {
     deadlineDays: deadlineDays,
     staleGuard: band?.staleGuard ?? false,
     chatState: chatState,
+    isExample: isExample,
   );
 }, dependencies: [
   multiGoalOverviewProvider,
@@ -258,6 +269,7 @@ TodayCockpitVm _buildVm({
   required int? deadlineDays,
   required bool staleGuard,
   required ChatState chatState,
+  required bool isExample,
 }) =>
     TodayCockpitVm(
       mode: mode,
@@ -277,6 +289,7 @@ TodayCockpitVm _buildVm({
       runIsActive: chatState.runPhase.isActive,
       runLabel: chatState.activeRunSummary?.details ??
           chatState.activeRunSummary?.agentName,
+      isExample: isExample,
     );
 
 bool _isOverdue(HomeGrowthTask? task) {

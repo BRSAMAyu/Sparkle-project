@@ -82,6 +82,8 @@ class GoalResponse(BaseModel):
     minimum_acceptance_criteria: list[dict[str, Any]] | None = None
     first_task_id: str | None = None
     warning: str | None = None
+    # O1（诚实性声明）：示例（种子）目标必须可被客户端识别，不与真实目标混淆。
+    is_example: bool = False
 
 
 # route-tier: authed
@@ -105,6 +107,7 @@ async def list_goals(
             target_date=g.target_date,
             metadata=g.metadata_payload,
             minimum_acceptance_criteria=g.minimum_acceptance_criteria,
+            is_example=g.source == "example",
         )
         for g in goals
     ]
@@ -300,6 +303,7 @@ async def create_goal(
         minimum_acceptance_criteria=goal.minimum_acceptance_criteria,
         first_task_id=first_task_id,
         warning=warning,
+        is_example=goal.source == "example",
     )
 
 
@@ -334,6 +338,7 @@ async def update_goal(
         target_date=goal.target_date,
         metadata=goal.metadata_payload,
         minimum_acceptance_criteria=goal.minimum_acceptance_criteria,
+        is_example=goal.source == "example",
     )
 
 

@@ -1850,6 +1850,10 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
         )
 
     # Plans
+    # O1（J-01 实测诚实性红线）：种子产出的演示计划必须自带「示例」来源标记
+    # （Plan.source="example"，既有列），经 PlanDetail/active_plan_progress/
+    # TaskDetail 派生透传到首屏，demo 与真实数据不可再无声明混淆。
+    # 存量访客行（source=NULL）在幂等重播时顺带补标；不覆盖其他来源值。
     sprint_plan = (await session.execute(
         select(Plan).where(Plan.user_id == user.id, Plan.name == "数据结构期中冲刺")
     )).scalar_one_or_none()
@@ -1866,9 +1870,13 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
             progress=0.7,
             is_active=True,
             is_primary=True,
+            source="example",
         )
         session.add(sprint_plan)
         await session.flush()
+    elif sprint_plan.source is None:
+        sprint_plan.source = "example"
+        session.add(sprint_plan)
 
     growth_plan = (await session.execute(
         select(Plan).where(Plan.user_id == user.id, Plan.name == "计算机科学基础巩固")
@@ -1885,9 +1893,13 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
             mastery_level=0.3,
             progress=0.45,
             is_active=True,
+            source="example",
         )
         session.add(growth_plan)
         await session.flush()
+    elif growth_plan.source is None:
+        growth_plan.source = "example"
+        session.add(growth_plan)
 
     # Tasks
     for task_data in [
