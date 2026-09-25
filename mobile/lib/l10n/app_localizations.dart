@@ -68706,6 +68706,288 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'基于最近 {sampleSize} 条学习记录的观察。'**
   String lfcObservationBasis(int sampleSize);
+
+  /// No description provided for @insPredictNext.
+  ///
+  /// In zh, this message translates to:
+  /// **'预测下次学习时间'**
+  String get insPredictNext;
+
+  /// No description provided for @insUnknownType.
+  ///
+  /// In zh, this message translates to:
+  /// **'未知类型'**
+  String get insUnknownType;
+
+  /// No description provided for @insEngagementForecast.
+  ///
+  /// In zh, this message translates to:
+  /// **'活跃度预测'**
+  String get insEngagementForecast;
+
+  /// No description provided for @insEngagementSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 基于学习习惯的预测'**
+  String get insEngagementSubtitle;
+
+  /// No description provided for @insDifficultyForecast.
+  ///
+  /// In zh, this message translates to:
+  /// **'难度预测'**
+  String get insDifficultyForecast;
+
+  /// No description provided for @insDifficultySubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 基于前置知识的评估'**
+  String get insDifficultySubtitle;
+
+  /// No description provided for @insPredictedDifficulty.
+  ///
+  /// In zh, this message translates to:
+  /// **'预测难度'**
+  String get insPredictedDifficulty;
+
+  /// No description provided for @insPrerequisitesWarning.
+  ///
+  /// In zh, this message translates to:
+  /// **'建议先学习 {count} 个前置知识'**
+  String insPrerequisitesWarning(int count);
+
+  /// No description provided for @insDifficultyEasy.
+  ///
+  /// In zh, this message translates to:
+  /// **'简单'**
+  String get insDifficultyEasy;
+
+  /// No description provided for @insDifficultyMedium.
+  ///
+  /// In zh, this message translates to:
+  /// **'中等'**
+  String get insDifficultyMedium;
+
+  /// No description provided for @insDifficultyHard.
+  ///
+  /// In zh, this message translates to:
+  /// **'困难'**
+  String get insDifficultyHard;
+
+  /// No description provided for @picEstimatedHours.
+  ///
+  /// In zh, this message translates to:
+  /// **'预计学习时长: {hours} 小时'**
+  String picEstimatedHours(String hours);
+
+  /// No description provided for @picRiskScore.
+  ///
+  /// In zh, this message translates to:
+  /// **'风险指数: {score}/100'**
+  String picRiskScore(String score);
+
+  /// No description provided for @picChurnRisk.
+  ///
+  /// In zh, this message translates to:
+  /// **'流失风险: {level}'**
+  String picChurnRisk(String level);
+
+  /// No description provided for @picMinutesLater.
+  ///
+  /// In zh, this message translates to:
+  /// **'约 {minutes} 分钟后'**
+  String picMinutesLater(int minutes);
+
+  /// No description provided for @picTodayTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天 {time}'**
+  String picTodayTime(String time);
+
+  /// No description provided for @picTomorrowTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'明天 {time}'**
+  String picTomorrowTime(String time);
+
+  /// No description provided for @lfcConfidence.
+  ///
+  /// In zh, this message translates to:
+  /// **'基于 {sampleSize} 条学习记录，当前推荐置信度 {confidence}%。'**
+  String lfcConfidence(int sampleSize, String confidence);
+
+  /// No description provided for @firstActionCardTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'你的第一步'**
+  String get firstActionCardTitle;
+
+  /// No description provided for @firstActionGenerateCta.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成我的第一步'**
+  String get firstActionGenerateCta;
+
+  /// No description provided for @firstActionGenerateHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'根据你的真实目标，给出一个今天就能完成的最小有用第一步。'**
+  String get firstActionGenerateHint;
+
+  /// No description provided for @firstActionStartCta.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始这一步'**
+  String get firstActionStartCta;
+
+  /// No description provided for @firstActionRejectCta.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个不合适'**
+  String get firstActionRejectCta;
+
+  /// No description provided for @firstActionEditCta.
+  ///
+  /// In zh, this message translates to:
+  /// **'编辑'**
+  String get firstActionEditCta;
+
+  /// No description provided for @firstActionOutcomeLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'产出'**
+  String get firstActionOutcomeLabel;
+
+  /// No description provided for @firstActionEvidenceLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成证据'**
+  String get firstActionEvidenceLabel;
+
+  /// No description provided for @firstActionModeLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'轮到谁'**
+  String get firstActionModeLabel;
+
+  /// No description provided for @firstActionMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'约 {minutes} 分钟'**
+  String firstActionMinutes(int minutes);
+
+  /// No description provided for @firstActionModeHuman.
+  ///
+  /// In zh, this message translates to:
+  /// **'你做'**
+  String get firstActionModeHuman;
+
+  /// No description provided for @firstActionModeAgent.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sparkle 做'**
+  String get firstActionModeAgent;
+
+  /// No description provided for @firstActionModeHybrid.
+  ///
+  /// In zh, this message translates to:
+  /// **'一起做'**
+  String get firstActionModeHybrid;
+
+  /// No description provided for @firstActionCommittedTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'第一步已在任务账本里'**
+  String get firstActionCommittedTitle;
+
+  /// No description provided for @firstActionTaskCreated.
+  ///
+  /// In zh, this message translates to:
+  /// **'已创建任务：{title}'**
+  String firstActionTaskCreated(String title);
+
+  /// No description provided for @firstActionErrorTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'第一步生成失败'**
+  String get firstActionErrorTitle;
+
+  /// No description provided for @firstActionErrorRetryHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'这是暂时性问题（生成服务暂不可用），不会假装成功——可以直接重试。'**
+  String get firstActionErrorRetryHint;
+
+  /// No description provided for @firstActionRetryCta.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get firstActionRetryCta;
+
+  /// No description provided for @firstActionSkipCta.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时跳过'**
+  String get firstActionSkipCta;
+
+  /// No description provided for @firstActionRejectReasonLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'告诉 Sparkle 为什么不合适（可选）'**
+  String get firstActionRejectReasonLabel;
+
+  /// No description provided for @firstActionRejectConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'拒绝并记录原因'**
+  String get firstActionRejectConfirm;
+
+  /// No description provided for @firstActionEditTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整这一步'**
+  String get firstActionEditTitle;
+
+  /// No description provided for @firstActionEditStepLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'第一步标题'**
+  String get firstActionEditStepLabel;
+
+  /// No description provided for @firstActionEditMinutesLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'预计分钟数'**
+  String get firstActionEditMinutesLabel;
+
+  /// No description provided for @firstActionEditReasonHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'为什么调整（可选，会记入反馈）'**
+  String get firstActionEditReasonHint;
+
+  /// No description provided for @firstActionEditSave.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存并重新提案'**
+  String get firstActionEditSave;
+
+  /// No description provided for @firstActionEvidenceArtifact.
+  ///
+  /// In zh, this message translates to:
+  /// **'产出一件可见的东西'**
+  String get firstActionEvidenceArtifact;
+
+  /// No description provided for @firstActionEvidenceSelfReport.
+  ///
+  /// In zh, this message translates to:
+  /// **'你的真实自评'**
+  String get firstActionEvidenceSelfReport;
+
+  /// No description provided for @firstActionEvidenceOther.
+  ///
+  /// In zh, this message translates to:
+  /// **'可检查的完成证据'**
+  String get firstActionEvidenceOther;
 }
 
 class _AppLocalizationsDelegate

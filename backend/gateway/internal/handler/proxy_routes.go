@@ -1143,6 +1143,16 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered action proposals proxy routes")
 
+	// ==================== Journey First Action Routes (J-04 chain entry) ====================
+	// route-tier: authed
+	journey := api.Group("/journey")
+	journey.Use(authMiddleware)
+	{
+		// route-tier: authed
+		h.registerREST(journey, "/*path")
+	}
+	h.logger.Info("Registered journey first-action proxy routes")
+
 	// ==================== Learning Reports Routes ====================
 	learningReports := api.Group("/learning-reports")
 	learningReports.Use(authMiddleware)

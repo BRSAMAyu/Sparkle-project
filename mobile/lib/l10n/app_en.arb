@@ -14867,7 +14867,13 @@
     "sprintLoadErrorTitle": "Couldn't load your sprint",
     "sprintLoadErrorImpact": "Tasks and progress are hidden right now. Your data is safe — tap retry to reload.",
     "sprintEndsOn": "Ends {date}",
-    "@sprintEndsOn": {"placeholders": {"date": {"type": "String"}}},
+    "@sprintEndsOn": {
+        "placeholders": {
+            "date": {
+                "type": "String"
+            }
+        }
+    },
     "sprintProgressScope": "Source: server-side task completion ratio",
     "sprintProgress": "Progress",
     "sprintDaysLeft": "{days} days left",
@@ -15672,7 +15678,13 @@
     "goalDetailComplete": "Complete",
     "goalStepCelebrationTitle": "Step done",
     "goalStepCelebrationTrajectory": "From idea to outcome: “{goalTitle}” just moved forward.",
-    "@goalStepCelebrationTrajectory": {"placeholders": {"goalTitle": {"type": "String"}}},
+    "@goalStepCelebrationTrajectory": {
+        "placeholders": {
+            "goalTitle": {
+                "type": "String"
+            }
+        }
+    },
     "goalStepReflectionQuestion": "How did this step feel? (optional, one tap)",
     "goalStepReflectionSaved": "Noted — it will shape what comes next",
     "goalStepReflectionFailed": "Couldn't save — you can add it later from the task",
@@ -17658,31 +17670,121 @@
     "memoryRecordStatusPaused": "Paused",
     "@memoryRecordStatusPaused": {},
     "displayCriterionCompleteTemplate": "Complete \"{title}\" to meet the bar",
-    "@displayCriterionCompleteTemplate": {"placeholders": {"title": {"type": "String"}}},
+    "@displayCriterionCompleteTemplate": {
+        "placeholders": {
+            "title": {
+                "type": "String"
+            }
+        }
+    },
     "displayCriterionAtLeastUnitTemplate": "{title}: at least {threshold} {unit}",
-    "@displayCriterionAtLeastUnitTemplate": {"placeholders": {"title": {"type": "String"}, "threshold": {"type": "String"}, "unit": {"type": "String"}}},
+    "@displayCriterionAtLeastUnitTemplate": {
+        "placeholders": {
+            "title": {
+                "type": "String"
+            },
+            "threshold": {
+                "type": "String"
+            },
+            "unit": {
+                "type": "String"
+            }
+        }
+    },
     "displayCriterionAtLeastTemplate": "{title}: at least {threshold}",
-    "@displayCriterionAtLeastTemplate": {"placeholders": {"title": {"type": "String"}, "threshold": {"type": "String"}}},
+    "@displayCriterionAtLeastTemplate": {
+        "placeholders": {
+            "title": {
+                "type": "String"
+            },
+            "threshold": {
+                "type": "String"
+            }
+        }
+    },
     "displayUnitTimes": "times",
     "@displayUnitTimes": {},
     "displayUnitDays": "days",
     "@displayUnitDays": {},
     "displayDateToday": "Today {time}",
-    "@displayDateToday": {"placeholders": {"time": {"type": "String"}}},
+    "@displayDateToday": {
+        "placeholders": {
+            "time": {
+                "type": "String"
+            }
+        }
+    },
     "displayDateTomorrow": "Tomorrow {time}",
-    "@displayDateTomorrow": {"placeholders": {"time": {"type": "String"}}},
+    "@displayDateTomorrow": {
+        "placeholders": {
+            "time": {
+                "type": "String"
+            }
+        }
+    },
     "displayDateYesterday": "Yesterday {time}",
-    "@displayDateYesterday": {"placeholders": {"time": {"type": "String"}}},
+    "@displayDateYesterday": {
+        "placeholders": {
+            "time": {
+                "type": "String"
+            }
+        }
+    },
     "displayDateInDays": "In {days} days {time}",
-    "@displayDateInDays": {"placeholders": {"days": {"type": "int"}, "time": {"type": "String"}}},
+    "@displayDateInDays": {
+        "placeholders": {
+            "days": {
+                "type": "int"
+            },
+            "time": {
+                "type": "String"
+            }
+        }
+    },
     "displayDateDaysAgo": "{days} days ago {time}",
-    "@displayDateDaysAgo": {"placeholders": {"days": {"type": "int"}, "time": {"type": "String"}}},
+    "@displayDateDaysAgo": {
+        "placeholders": {
+            "days": {
+                "type": "int"
+            },
+            "time": {
+                "type": "String"
+            }
+        }
+    },
     "displayDateAbsolute": "{month}/{day} {time}",
-    "@displayDateAbsolute": {"placeholders": {"month": {"type": "int"}, "day": {"type": "int"}, "time": {"type": "String"}}},
+    "@displayDateAbsolute": {
+        "placeholders": {
+            "month": {
+                "type": "int"
+            },
+            "day": {
+                "type": "int"
+            },
+            "time": {
+                "type": "String"
+            }
+        }
+    },
     "displayDateOnly": "{month}/{day}",
-    "@displayDateOnly": {"placeholders": {"month": {"type": "int"}, "day": {"type": "int"}}},
+    "@displayDateOnly": {
+        "placeholders": {
+            "month": {
+                "type": "int"
+            },
+            "day": {
+                "type": "int"
+            }
+        }
+    },
     "displayDateDaysAgoOnly": "{days} days ago",
-    "@displayDateDaysAgoOnly": {"placeholders": {"days": {"type": "int"}}},
+    "@displayDateDaysAgoOnly": {
+        "placeholders": {
+            "days": {
+                "type": "int"
+            }
+        }
+    },
     "displayDueLabel": "Due",
     "@displayDueLabel": {},
     "displaySceneQualityHigh": "High quality",
@@ -17698,30 +17800,83 @@
     "displayForesightUnsure": "Not sure about this part",
     "@displayForesightUnsure": {},
     "memoryEventCompleted": "Completed \"{title}\"",
-    "@memoryEventCompleted": {"placeholders": {"title": {"type": "String"}}},
+    "@memoryEventCompleted": {
+        "placeholders": {
+            "title": {
+                "type": "String"
+            }
+        }
+    },
     "memoryEventFinished": "Finished \"{title}\"",
-    "@memoryEventFinished": {"placeholders": {"title": {"type": "String"}}},
+    "@memoryEventFinished": {
+        "placeholders": {
+            "title": {
+                "type": "String"
+            }
+        }
+    },
     "memoryEventReviewed": "Reviewed \"{title}\"",
-    "@memoryEventReviewed": {"placeholders": {"title": {"type": "String"}}},
+    "@memoryEventReviewed": {
+        "placeholders": {
+            "title": {
+                "type": "String"
+            }
+        }
+    },
     "memoryEventPracticed": "Practiced \"{title}\"",
-    "@memoryEventPracticed": {"placeholders": {"title": {"type": "String"}}},
+    "@memoryEventPracticed": {
+        "placeholders": {
+            "title": {
+                "type": "String"
+            }
+        }
+    },
     "memoryEventMastered": "Mastered \"{title}\"",
-    "@memoryEventMastered": {"placeholders": {"title": {"type": "String"}}},
+    "@memoryEventMastered": {
+        "placeholders": {
+            "title": {
+                "type": "String"
+            }
+        }
+    },
     "@goalDetailStatus": {},
     "goalDetailMasteryPercent": "{percent}% mastery",
-    "@goalDetailMasteryPercent": {"placeholders": {"percent": {"type": "int"}}},
+    "@goalDetailMasteryPercent": {
+        "placeholders": {
+            "percent": {
+                "type": "int"
+            }
+        }
+    },
     "goalDetailNoTargetDate": "No date set",
     "@goalDetailNoTargetDate": {},
     "goalDetailDue": "Due",
     "@goalDetailDue": {},
     "@goalDetailEstimated": {},
-    "@goalDetailMinutes": {"placeholders": {"minutes": {"type": "int"}}},
     "goalDetailPartners": "{count} partners",
-    "@goalDetailPartners": {"placeholders": {"count": {"type": "int"}}},
+    "@goalDetailPartners": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "goalDetailCommitments": "{count} active commitments",
-    "@goalDetailCommitments": {"placeholders": {"count": {"type": "int"}}},
+    "@goalDetailCommitments": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "goalDetailRelevance": "{percent}% relevant",
-    "@goalDetailRelevance": {"placeholders": {"percent": {"type": "int"}}},
+    "@goalDetailRelevance": {
+        "placeholders": {
+            "percent": {
+                "type": "int"
+            }
+        }
+    },
     "goalDetailSuggestedMinimum": "Sparkle suggested this minimum standard",
     "@goalDetailSuggestedMinimum": {},
     "goalDetailConfirmedMinimum": "Confirmed minimum standard",
@@ -17798,7 +17953,16 @@
     "redeemCodeAction": "Redeem",
     "@redeemCodeAction": {},
     "redeemCodeSuccess": "Redeemed! {tier} active until {date}",
-    "@redeemCodeSuccess": {"placeholders": {"tier": {"type": "String"}, "date": {"type": "String"}}},
+    "@redeemCodeSuccess": {
+        "placeholders": {
+            "tier": {
+                "type": "String"
+            },
+            "date": {
+                "type": "String"
+            }
+        }
+    },
     "redeemCodeInvalid": "Code not found or invalid",
     "@redeemCodeInvalid": {},
     "redeemCodeExpired": "This code has expired",
@@ -17815,11 +17979,11 @@
     "@galaxyErrorHumanService": {},
     "galaxyWorkViewNextTouch": "Next up: {name}",
     "@galaxyWorkViewNextTouch": {
-      "placeholders": {
-        "name": {
-          "type": "String"
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
         }
-      }
     },
     "userOnboardingSubmitFailed": "This step didn't finish in time — your settings may already be saved. You can retry once, or skip ahead for now.",
     "@userOnboardingSubmitFailed": {},
@@ -17967,7 +18131,6 @@
     "@commonSearchClear": {},
     "visualElementsFilter": "Filter",
     "@visualElementsFilter": {},
-    "visualElementsFilter": "Filter",
     "communityCheckinGoalLabel": "Link a goal (optional)",
     "@communityCheckinGoalLabel": {},
     "communityCheckinGoalHint": "Link to revisit your goal trajectory from this check-in",
@@ -18119,38 +18282,62 @@
     "eicFrictionFact": "{count} “{tag}” signals recorded in the last {days} days",
     "@eicFrictionFact": {
         "placeholders": {
-            "days": { "type": "int" },
-            "count": { "type": "int" },
-            "tag": { "type": "String" }
+            "days": {
+                "type": "int"
+            },
+            "count": {
+                "type": "int"
+            },
+            "tag": {
+                "type": "String"
+            }
         }
     },
     "eicFrictionResponses": "Of these: {accepted} accepted, {edited} edited, {rejected} rejected",
     "@eicFrictionResponses": {
         "placeholders": {
-            "accepted": { "type": "int" },
-            "edited": { "type": "int" },
-            "rejected": { "type": "int" }
+            "accepted": {
+                "type": "int"
+            },
+            "edited": {
+                "type": "int"
+            },
+            "rejected": {
+                "type": "int"
+            }
         }
     },
     "eicHelpedFact": "In {observed} observed cases, {positive} came with a positive outcome",
     "@eicHelpedFact": {
         "placeholders": {
-            "observed": { "type": "int" },
-            "positive": { "type": "int" }
+            "observed": {
+                "type": "int"
+            },
+            "positive": {
+                "type": "int"
+            }
         }
     },
     "eicHelpedAgainst": "addressing “{tag}”",
     "@eicHelpedAgainst": {
         "placeholders": {
-            "tag": { "type": "String" }
+            "tag": {
+                "type": "String"
+            }
         }
     },
     "eicGoalFact": "Goal “{title}” task ledger: {completed} of {total} tasks completed",
     "@eicGoalFact": {
         "placeholders": {
-            "title": { "type": "String" },
-            "completed": { "type": "int" },
-            "total": { "type": "int" }
+            "title": {
+                "type": "String"
+            },
+            "completed": {
+                "type": "int"
+            },
+            "total": {
+                "type": "int"
+            }
         }
     },
     "eicFrictionRoleMostFrequent": "This is the most frequent friction pattern recently",
@@ -18188,7 +18375,9 @@
     "eicUniqNotYetObserved": "{count} still within the observation window; outcomes not yet due",
     "@eicUniqNotYetObserved": {
         "placeholders": {
-            "count": { "type": "int" }
+            "count": {
+                "type": "int"
+            }
         }
     },
     "eicEvidenceDirectiveLog": "Open decision log",
@@ -18226,7 +18415,56 @@
     "lfcObservationBasis": "Based on observations from your last {sampleSize} study records.",
     "@lfcObservationBasis": {
         "placeholders": {
-            "sampleSize": { "type": "int" }
+            "sampleSize": {
+                "type": "int"
+            }
         }
-    }
+    },
+    "insPredictNext": "Predict next study time",
+    "insUnknownType": "Unknown type",
+    "insEngagementForecast": "Engagement Forecast",
+    "insEngagementSubtitle": "AI prediction based on learning habits",
+    "insDifficultyForecast": "Difficulty Forecast",
+    "insDifficultySubtitle": "AI assessment based on prerequisites",
+    "insPredictedDifficulty": "Predicted Difficulty",
+    "insPrerequisitesWarning": "Complete {count} prerequisite(s) first",
+    "insDifficultyEasy": "Easy",
+    "insDifficultyMedium": "Medium",
+    "insDifficultyHard": "Hard",
+    "picEstimatedHours": "Estimated study time: {hours} hours",
+    "picRiskScore": "Risk index: {score}/100",
+    "picChurnRisk": "Churn risk: {level}",
+    "picMinutesLater": "In about {minutes} minutes",
+    "picTodayTime": "Today {time}",
+    "picTomorrowTime": "Tomorrow {time}",
+    "lfcConfidence": "Based on {sampleSize} learning records, current recommendation confidence is {confidence}%.",
+    "firstActionCardTitle": "Your first step",
+    "firstActionGenerateCta": "Generate my first step",
+    "firstActionGenerateHint": "One smallest useful step you can finish today, derived from your real goal.",
+    "firstActionStartCta": "Start this step",
+    "firstActionRejectCta": "Not right for me",
+    "firstActionEditCta": "Edit",
+    "firstActionOutcomeLabel": "Outcome",
+    "firstActionEvidenceLabel": "Completion evidence",
+    "firstActionModeLabel": "Whose turn",
+    "firstActionMinutes": "~{minutes} min",
+    "firstActionModeHuman": "You do it",
+    "firstActionModeAgent": "Sparkle does it",
+    "firstActionModeHybrid": "Do it together",
+    "firstActionCommittedTitle": "First step is in your task ledger",
+    "firstActionTaskCreated": "Task created: {title}",
+    "firstActionErrorTitle": "Couldn't generate the first step",
+    "firstActionErrorRetryHint": "This is temporary (the generation service is unavailable). We won't fake it — you can retry.",
+    "firstActionRetryCta": "Retry",
+    "firstActionSkipCta": "Skip for now",
+    "firstActionRejectReasonLabel": "Tell Sparkle why it doesn't fit (optional)",
+    "firstActionRejectConfirm": "Reject and record reason",
+    "firstActionEditTitle": "Adjust this step",
+    "firstActionEditStepLabel": "Step title",
+    "firstActionEditMinutesLabel": "Estimated minutes",
+    "firstActionEditReasonHint": "Why adjust (optional, recorded as feedback)",
+    "firstActionEditSave": "Save and re-propose",
+    "firstActionEvidenceArtifact": "A visible artifact",
+    "firstActionEvidenceSelfReport": "Your honest self-report",
+    "firstActionEvidenceOther": "Checkable completion evidence"
 }

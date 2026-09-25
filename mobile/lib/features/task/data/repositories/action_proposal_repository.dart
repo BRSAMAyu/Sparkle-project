@@ -66,19 +66,34 @@ class ActionProposalRepository {
       _mutate(ApiEndpoints.actionProposalCancel(proposalId), idempotencyKey);
 
   /// 拒绝（终态封闭，幂等 no-op）。
+  ///
+  /// J-04 feedback 面：[reason]（用户"这个不合适"的自由文本）随请求下发，
+  /// 服务端持久进 append-only 审计（transition.details + event payload）——
+  /// 拒绝理由不再被静默丢弃；省略则行为与旧契约完全一致。
   Future<Map<String, dynamic>?> reject(
     String proposalId,
-    String idempotencyKey,
-  ) =>
-      _mutate(ApiEndpoints.actionProposalReject(proposalId), idempotencyKey);
+    String idempotencyKey, {
+    String? reason,
+  }) =>
+      _mutate(
+        ApiEndpoints.actionProposalReject(proposalId),
+        idempotencyKey,
+        body: reason == null || reason.trim().isEmpty
+            ? null
+            : <String, dynamic>{'reason': reason.trim()},
+      );
 
   Future<Map<String, dynamic>?> _mutate(
     String path,
-    String idempotencyKey,
-  ) async {
+    String idempotencyKey, {
+    Map<String, dynamic>? body,
+  }) async {
     final response = await _apiClient.post<dynamic>(
       path,
-      data: <String, dynamic>{'idempotency_key': idempotencyKey},
+      data: <String, dynamic>{
+        'idempotency_key': idempotencyKey,
+        ...?body,
+      },
     );
     final data = ApiResponseParser.unwrapMap(
       response.data,

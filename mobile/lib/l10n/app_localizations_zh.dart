@@ -37804,4 +37804,165 @@ class AppLocalizationsZh extends AppLocalizations {
   String lfcObservationBasis(int sampleSize) {
     return '基于最近 $sampleSize 条学习记录的观察。';
   }
+
+  @override
+  String get insPredictNext => '预测下次学习时间';
+
+  @override
+  String get insUnknownType => '未知类型';
+
+  @override
+  String get insEngagementForecast => '活跃度预测';
+
+  @override
+  String get insEngagementSubtitle => 'AI 基于学习习惯的预测';
+
+  @override
+  String get insDifficultyForecast => '难度预测';
+
+  @override
+  String get insDifficultySubtitle => 'AI 基于前置知识的评估';
+
+  @override
+  String get insPredictedDifficulty => '预测难度';
+
+  @override
+  String insPrerequisitesWarning(int count) {
+    return '建议先学习 $count 个前置知识';
+  }
+
+  @override
+  String get insDifficultyEasy => '简单';
+
+  @override
+  String get insDifficultyMedium => '中等';
+
+  @override
+  String get insDifficultyHard => '困难';
+
+  @override
+  String picEstimatedHours(String hours) {
+    return '预计学习时长: $hours 小时';
+  }
+
+  @override
+  String picRiskScore(String score) {
+    return '风险指数: $score/100';
+  }
+
+  @override
+  String picChurnRisk(String level) {
+    return '流失风险: $level';
+  }
+
+  @override
+  String picMinutesLater(int minutes) {
+    return '约 $minutes 分钟后';
+  }
+
+  @override
+  String picTodayTime(String time) {
+    return '今天 $time';
+  }
+
+  @override
+  String picTomorrowTime(String time) {
+    return '明天 $time';
+  }
+
+  @override
+  String lfcConfidence(int sampleSize, String confidence) {
+    return '基于 $sampleSize 条学习记录，当前推荐置信度 $confidence%。';
+  }
+
+  @override
+  String get firstActionCardTitle => '你的第一步';
+
+  @override
+  String get firstActionGenerateCta => '生成我的第一步';
+
+  @override
+  String get firstActionGenerateHint => '根据你的真实目标，给出一个今天就能完成的最小有用第一步。';
+
+  @override
+  String get firstActionStartCta => '开始这一步';
+
+  @override
+  String get firstActionRejectCta => '这个不合适';
+
+  @override
+  String get firstActionEditCta => '编辑';
+
+  @override
+  String get firstActionOutcomeLabel => '产出';
+
+  @override
+  String get firstActionEvidenceLabel => '完成证据';
+
+  @override
+  String get firstActionModeLabel => '轮到谁';
+
+  @override
+  String firstActionMinutes(int minutes) {
+    return '约 $minutes 分钟';
+  }
+
+  @override
+  String get firstActionModeHuman => '你做';
+
+  @override
+  String get firstActionModeAgent => 'Sparkle 做';
+
+  @override
+  String get firstActionModeHybrid => '一起做';
+
+  @override
+  String get firstActionCommittedTitle => '第一步已在任务账本里';
+
+  @override
+  String firstActionTaskCreated(String title) {
+    return '已创建任务：$title';
+  }
+
+  @override
+  String get firstActionErrorTitle => '第一步生成失败';
+
+  @override
+  String get firstActionErrorRetryHint => '这是暂时性问题（生成服务暂不可用），不会假装成功——可以直接重试。';
+
+  @override
+  String get firstActionRetryCta => '重试';
+
+  @override
+  String get firstActionSkipCta => '暂时跳过';
+
+  @override
+  String get firstActionRejectReasonLabel => '告诉 Sparkle 为什么不合适（可选）';
+
+  @override
+  String get firstActionRejectConfirm => '拒绝并记录原因';
+
+  @override
+  String get firstActionEditTitle => '调整这一步';
+
+  @override
+  String get firstActionEditStepLabel => '第一步标题';
+
+  @override
+  String get firstActionEditMinutesLabel => '预计分钟数';
+
+  @override
+  String get firstActionEditReasonHint => '为什么调整（可选，会记入反馈）';
+
+  @override
+  String get firstActionEditSave => '保存并重新提案';
+
+  @override
+  String get firstActionEvidenceArtifact => '产出一件可见的东西';
+
+  @override
+  String get firstActionEvidenceSelfReport => '你的真实自评';
+
+  @override
+  String get firstActionEvidenceOther => '可检查的完成证据';
 }

@@ -3894,14 +3894,14 @@
     "galaxyA11yActionUnlockNode": "解锁节点",
     "galaxyA11yCanvasSummary": "知识星图：{nodeCount} 个知识点，覆盖 {domainCount} 个领域",
     "@galaxyA11yCanvasSummary": {
-      "placeholders": {
-        "nodeCount": {
-          "type": "int"
-        },
-        "domainCount": {
-          "type": "int"
+        "placeholders": {
+            "nodeCount": {
+                "type": "int"
+            },
+            "domainCount": {
+                "type": "int"
+            }
         }
-      }
     },
     "galaxyA11yClusterLabel": "{arg0} {arg1} {arg2}",
     "galaxyA11yHintStartLearning": "点击开始学习此知识点",
@@ -14883,7 +14883,13 @@
     "sprintLoadErrorTitle": "冲刺面板加载失败",
     "sprintLoadErrorImpact": "任务和进度暂时看不到；你的数据没有丢，点重试即可恢复。",
     "sprintEndsOn": "{date} 结束",
-    "@sprintEndsOn": {"placeholders": {"date": {"type": "String"}}},
+    "@sprintEndsOn": {
+        "placeholders": {
+            "date": {
+                "type": "String"
+            }
+        }
+    },
     "sprintProgressScope": "口径：服务端按冲刺任务完成比结算",
     "sprintProgress": "进度",
     "sprintDaysLeft": "剩余 {days} 天",
@@ -15688,7 +15694,13 @@
     "goalDetailComplete": "完成",
     "goalStepCelebrationTitle": "这一步，做到了",
     "goalStepCelebrationTrajectory": "从想法到成果：「{goalTitle}」又向前推进了一步。",
-    "@goalStepCelebrationTrajectory": {"placeholders": {"goalTitle": {"type": "String"}}},
+    "@goalStepCelebrationTrajectory": {
+        "placeholders": {
+            "goalTitle": {
+                "type": "String"
+            }
+        }
+    },
     "goalStepReflectionQuestion": "这一步做得感觉如何？（可选，点一下就好）",
     "goalStepReflectionSaved": "已记入反思，会参与调整后续计划",
     "goalStepReflectionFailed": "没存上——稍后可在任务里补记",
@@ -17261,31 +17273,121 @@
     "memoryRecordStatusPaused": "已暂停",
     "@memoryRecordStatusPaused": {},
     "displayCriterionCompleteTemplate": "完成「{title}」即达标",
-    "@displayCriterionCompleteTemplate": {"placeholders": {"title": {"type": "String"}}},
+    "@displayCriterionCompleteTemplate": {
+        "placeholders": {
+            "title": {
+                "type": "String"
+            }
+        }
+    },
     "displayCriterionAtLeastUnitTemplate": "{title} ≥ {threshold} {unit}",
-    "@displayCriterionAtLeastUnitTemplate": {"placeholders": {"title": {"type": "String"}, "threshold": {"type": "String"}, "unit": {"type": "String"}}},
+    "@displayCriterionAtLeastUnitTemplate": {
+        "placeholders": {
+            "title": {
+                "type": "String"
+            },
+            "threshold": {
+                "type": "String"
+            },
+            "unit": {
+                "type": "String"
+            }
+        }
+    },
     "displayCriterionAtLeastTemplate": "{title} ≥ {threshold}",
-    "@displayCriterionAtLeastTemplate": {"placeholders": {"title": {"type": "String"}, "threshold": {"type": "String"}}},
+    "@displayCriterionAtLeastTemplate": {
+        "placeholders": {
+            "title": {
+                "type": "String"
+            },
+            "threshold": {
+                "type": "String"
+            }
+        }
+    },
     "displayUnitTimes": "次",
     "@displayUnitTimes": {},
     "displayUnitDays": "天",
     "@displayUnitDays": {},
     "displayDateToday": "今天 {time}",
-    "@displayDateToday": {"placeholders": {"time": {"type": "String"}}},
+    "@displayDateToday": {
+        "placeholders": {
+            "time": {
+                "type": "String"
+            }
+        }
+    },
     "displayDateTomorrow": "明天 {time}",
-    "@displayDateTomorrow": {"placeholders": {"time": {"type": "String"}}},
+    "@displayDateTomorrow": {
+        "placeholders": {
+            "time": {
+                "type": "String"
+            }
+        }
+    },
     "displayDateYesterday": "昨天 {time}",
-    "@displayDateYesterday": {"placeholders": {"time": {"type": "String"}}},
+    "@displayDateYesterday": {
+        "placeholders": {
+            "time": {
+                "type": "String"
+            }
+        }
+    },
     "displayDateInDays": "{days}天后 {time}",
-    "@displayDateInDays": {"placeholders": {"days": {"type": "int"}, "time": {"type": "String"}}},
+    "@displayDateInDays": {
+        "placeholders": {
+            "days": {
+                "type": "int"
+            },
+            "time": {
+                "type": "String"
+            }
+        }
+    },
     "displayDateDaysAgo": "{days}天前 {time}",
-    "@displayDateDaysAgo": {"placeholders": {"days": {"type": "int"}, "time": {"type": "String"}}},
+    "@displayDateDaysAgo": {
+        "placeholders": {
+            "days": {
+                "type": "int"
+            },
+            "time": {
+                "type": "String"
+            }
+        }
+    },
     "displayDateAbsolute": "{month}月{day}日 {time}",
-    "@displayDateAbsolute": {"placeholders": {"month": {"type": "int"}, "day": {"type": "int"}, "time": {"type": "String"}}},
+    "@displayDateAbsolute": {
+        "placeholders": {
+            "month": {
+                "type": "int"
+            },
+            "day": {
+                "type": "int"
+            },
+            "time": {
+                "type": "String"
+            }
+        }
+    },
     "displayDateOnly": "{month}月{day}日",
-    "@displayDateOnly": {"placeholders": {"month": {"type": "int"}, "day": {"type": "int"}}},
+    "@displayDateOnly": {
+        "placeholders": {
+            "month": {
+                "type": "int"
+            },
+            "day": {
+                "type": "int"
+            }
+        }
+    },
     "displayDateDaysAgoOnly": "{days}天前",
-    "@displayDateDaysAgoOnly": {"placeholders": {"days": {"type": "int"}}},
+    "@displayDateDaysAgoOnly": {
+        "placeholders": {
+            "days": {
+                "type": "int"
+            }
+        }
+    },
     "displayDueLabel": "截止",
     "@displayDueLabel": {},
     "displaySceneQualityHigh": "高质量",
@@ -17301,30 +17403,83 @@
     "displayForesightUnsure": "这部分我不确定",
     "@displayForesightUnsure": {},
     "memoryEventCompleted": "已完成「{title}」",
-    "@memoryEventCompleted": {"placeholders": {"title": {"type": "String"}}},
+    "@memoryEventCompleted": {
+        "placeholders": {
+            "title": {
+                "type": "String"
+            }
+        }
+    },
     "memoryEventFinished": "已完成「{title}」",
-    "@memoryEventFinished": {"placeholders": {"title": {"type": "String"}}},
+    "@memoryEventFinished": {
+        "placeholders": {
+            "title": {
+                "type": "String"
+            }
+        }
+    },
     "memoryEventReviewed": "已复盘「{title}」",
-    "@memoryEventReviewed": {"placeholders": {"title": {"type": "String"}}},
+    "@memoryEventReviewed": {
+        "placeholders": {
+            "title": {
+                "type": "String"
+            }
+        }
+    },
     "memoryEventPracticed": "已练习「{title}」",
-    "@memoryEventPracticed": {"placeholders": {"title": {"type": "String"}}},
+    "@memoryEventPracticed": {
+        "placeholders": {
+            "title": {
+                "type": "String"
+            }
+        }
+    },
     "memoryEventMastered": "已掌握「{title}」",
-    "@memoryEventMastered": {"placeholders": {"title": {"type": "String"}}},
+    "@memoryEventMastered": {
+        "placeholders": {
+            "title": {
+                "type": "String"
+            }
+        }
+    },
     "@goalDetailStatus": {},
     "goalDetailMasteryPercent": "掌握 {percent}%",
-    "@goalDetailMasteryPercent": {"placeholders": {"percent": {"type": "int"}}},
+    "@goalDetailMasteryPercent": {
+        "placeholders": {
+            "percent": {
+                "type": "int"
+            }
+        }
+    },
     "goalDetailNoTargetDate": "未设置日期",
     "@goalDetailNoTargetDate": {},
     "goalDetailDue": "截止日期",
     "@goalDetailDue": {},
     "@goalDetailEstimated": {},
-    "@goalDetailMinutes": {"placeholders": {"minutes": {"type": "int"}}},
     "goalDetailPartners": "{count} 位伙伴",
-    "@goalDetailPartners": {"placeholders": {"count": {"type": "int"}}},
+    "@goalDetailPartners": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "goalDetailCommitments": "{count} 个活跃承诺",
-    "@goalDetailCommitments": {"placeholders": {"count": {"type": "int"}}},
+    "@goalDetailCommitments": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "goalDetailRelevance": "相关度 {percent}%",
-    "@goalDetailRelevance": {"placeholders": {"percent": {"type": "int"}}},
+    "@goalDetailRelevance": {
+        "placeholders": {
+            "percent": {
+                "type": "int"
+            }
+        }
+    },
     "goalDetailSuggestedMinimum": "这是 Sparkle 为你建议的最低标准",
     "@goalDetailSuggestedMinimum": {},
     "goalDetailConfirmedMinimum": "已确认的最低标准",
@@ -17401,7 +17556,16 @@
     "redeemCodeAction": "兑换",
     "@redeemCodeAction": {},
     "redeemCodeSuccess": "兑换成功！已开通 {tier}，有效期至 {date}",
-    "@redeemCodeSuccess": {"placeholders": {"tier": {"type": "String"}, "date": {"type": "String"}}},
+    "@redeemCodeSuccess": {
+        "placeholders": {
+            "tier": {
+                "type": "String"
+            },
+            "date": {
+                "type": "String"
+            }
+        }
+    },
     "redeemCodeInvalid": "兑换码不存在或已失效",
     "@redeemCodeInvalid": {},
     "redeemCodeExpired": "兑换码已过期",
@@ -17418,11 +17582,11 @@
     "@galaxyErrorHumanService": {},
     "galaxyWorkViewNextTouch": "下一个建议碰：{name}",
     "@galaxyWorkViewNextTouch": {
-      "placeholders": {
-        "name": {
-          "type": "String"
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
         }
-      }
     },
     "userOnboardingSubmitFailed": "这一步暂时没有完成，你的设置可能已经保存。可以重试一次，或先跳过进入下一步。",
     "@userOnboardingSubmitFailed": {},
@@ -17721,38 +17885,62 @@
     "eicFrictionFact": "最近 {days} 天记录到 {count} 次「{tag}」",
     "@eicFrictionFact": {
         "placeholders": {
-            "days": { "type": "int" },
-            "count": { "type": "int" },
-            "tag": { "type": "String" }
+            "days": {
+                "type": "int"
+            },
+            "count": {
+                "type": "int"
+            },
+            "tag": {
+                "type": "String"
+            }
         }
     },
     "eicFrictionResponses": "其中接受 {accepted} 次，修改 {edited} 次，拒绝 {rejected} 次",
     "@eicFrictionResponses": {
         "placeholders": {
-            "accepted": { "type": "int" },
-            "edited": { "type": "int" },
-            "rejected": { "type": "int" }
+            "accepted": {
+                "type": "int"
+            },
+            "edited": {
+                "type": "int"
+            },
+            "rejected": {
+                "type": "int"
+            }
         }
     },
     "eicHelpedFact": "观察到的 {observed} 次记录中，{positive} 次伴随正向结果",
     "@eicHelpedFact": {
         "placeholders": {
-            "observed": { "type": "int" },
-            "positive": { "type": "int" }
+            "observed": {
+                "type": "int"
+            },
+            "positive": {
+                "type": "int"
+            }
         }
     },
     "eicHelpedAgainst": "针对「{tag}」",
     "@eicHelpedAgainst": {
         "placeholders": {
-            "tag": { "type": "String" }
+            "tag": {
+                "type": "String"
+            }
         }
     },
     "eicGoalFact": "目标「{title}」的任务账本：已完成 {completed} / 共 {total} 项",
     "@eicGoalFact": {
         "placeholders": {
-            "title": { "type": "String" },
-            "completed": { "type": "int" },
-            "total": { "type": "int" }
+            "title": {
+                "type": "String"
+            },
+            "completed": {
+                "type": "int"
+            },
+            "total": {
+                "type": "int"
+            }
         }
     },
     "eicFrictionRoleMostFrequent": "这是最近最常出现的阻力模式",
@@ -17790,7 +17978,9 @@
     "eicUniqNotYetObserved": "{count} 次还在观察窗口内，结果未到期",
     "@eicUniqNotYetObserved": {
         "placeholders": {
-            "count": { "type": "int" }
+            "count": {
+                "type": "int"
+            }
         }
     },
     "eicEvidenceDirectiveLog": "查看决策日志",
@@ -17828,7 +18018,70 @@
     "lfcObservationBasis": "基于最近 {sampleSize} 条学习记录的观察。",
     "@lfcObservationBasis": {
         "placeholders": {
-            "sampleSize": { "type": "int" }
+            "sampleSize": {
+                "type": "int"
+            }
         }
-    }
+    },
+    "insPredictNext": "预测下次学习时间",
+    "insUnknownType": "未知类型",
+    "insEngagementForecast": "活跃度预测",
+    "insEngagementSubtitle": "AI 基于学习习惯的预测",
+    "insDifficultyForecast": "难度预测",
+    "insDifficultySubtitle": "AI 基于前置知识的评估",
+    "insPredictedDifficulty": "预测难度",
+    "insPrerequisitesWarning": "建议先学习 {count} 个前置知识",
+    "insDifficultyEasy": "简单",
+    "insDifficultyMedium": "中等",
+    "insDifficultyHard": "困难",
+    "picEstimatedHours": "预计学习时长: {hours} 小时",
+    "picRiskScore": "风险指数: {score}/100",
+    "picChurnRisk": "流失风险: {level}",
+    "picMinutesLater": "约 {minutes} 分钟后",
+    "picTodayTime": "今天 {time}",
+    "picTomorrowTime": "明天 {time}",
+    "lfcConfidence": "基于 {sampleSize} 条学习记录，当前推荐置信度 {confidence}%。",
+    "firstActionCardTitle": "你的第一步",
+    "firstActionGenerateCta": "生成我的第一步",
+    "firstActionGenerateHint": "根据你的真实目标，给出一个今天就能完成的最小有用第一步。",
+    "firstActionStartCta": "开始这一步",
+    "firstActionRejectCta": "这个不合适",
+    "firstActionEditCta": "编辑",
+    "firstActionOutcomeLabel": "产出",
+    "firstActionEvidenceLabel": "完成证据",
+    "firstActionModeLabel": "轮到谁",
+    "firstActionMinutes": "约 {minutes} 分钟",
+    "@firstActionMinutes": {
+        "placeholders": {
+            "minutes": {
+                "type": "int"
+            }
+        }
+    },
+    "firstActionModeHuman": "你做",
+    "firstActionModeAgent": "Sparkle 做",
+    "firstActionModeHybrid": "一起做",
+    "firstActionCommittedTitle": "第一步已在任务账本里",
+    "firstActionTaskCreated": "已创建任务：{title}",
+    "@firstActionTaskCreated": {
+        "placeholders": {
+            "title": {
+                "type": "String"
+            }
+        }
+    },
+    "firstActionErrorTitle": "第一步生成失败",
+    "firstActionErrorRetryHint": "这是暂时性问题（生成服务暂不可用），不会假装成功——可以直接重试。",
+    "firstActionRetryCta": "重试",
+    "firstActionSkipCta": "暂时跳过",
+    "firstActionRejectReasonLabel": "告诉 Sparkle 为什么不合适（可选）",
+    "firstActionRejectConfirm": "拒绝并记录原因",
+    "firstActionEditTitle": "调整这一步",
+    "firstActionEditStepLabel": "第一步标题",
+    "firstActionEditMinutesLabel": "预计分钟数",
+    "firstActionEditReasonHint": "为什么调整（可选，会记入反馈）",
+    "firstActionEditSave": "保存并重新提案",
+    "firstActionEvidenceArtifact": "产出一件可见的东西",
+    "firstActionEvidenceSelfReport": "你的真实自评",
+    "firstActionEvidenceOther": "可检查的完成证据"
 }

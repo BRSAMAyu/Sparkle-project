@@ -71,6 +71,7 @@ from app.api.v1 import (
     insights,
     interventions,
     inventory,
+    journey,  # J-04 First Meaningful Action 链路入口面（/journey/first-action）
     leaderboards,
     learning_paths,
     learning_reports,
@@ -208,6 +209,7 @@ api_router.include_router(executions.router)
 api_router.include_router(executions_admin.router)
 api_router.include_router(runs.router)  # X-05：/runs 前缀（run 状态单一权威端点）
 api_router.include_router(action_proposals.router)  # X-03：/action-proposals 前缀（proposal→approve→commit→receipt 统一 command path）
+api_router.include_router(journey.router)  # J-04：/journey 前缀（first-action 链路入口：生成/状态/编辑，proposal 生命周期仍归 X-03）
 api_router.include_router(subtasks.router, tags=["subtasks"])
 api_router.include_router(plans.router, prefix="/plans", tags=["plans"])
 api_router.include_router(subjects.router, prefix="/subjects", tags=["subjects"])

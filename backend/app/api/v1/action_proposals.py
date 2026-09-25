@@ -276,10 +276,17 @@ async def reject_proposal(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    """拒绝：PENDING→REJECTED；用户理由（"这个不合适"）持久进 feedback 审计.
+
+    J-04：``request.reason`` 不再被丢弃——经 service 落 transition.details 与
+    event payload（append-only），供 Aurora 下轮推导消费；terminal_reason 仍
+    为封闭枚举（归因词表不放宽）。
+    """
     service = ActionCommandService(db)
     key = request.idempotency_key if request is not None else None
+    reason = request.reason if request is not None else None
     try:
-        result = await service.reject(proposal_id, user_id=current_user.id, idempotency_key=key)
+        result = await service.reject(proposal_id, user_id=current_user.id, reason=reason, idempotency_key=key)
     except ActionCommandError as exc:
         raise _to_http_error(exc) from None
     return ProposalMutationResponse(

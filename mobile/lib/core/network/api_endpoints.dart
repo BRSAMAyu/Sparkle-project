@@ -81,6 +81,11 @@ class ApiEndpoints {
       '/action-proposals/$id/cancel';
   static String actionProposalReject(String id) =>
       '/action-proposals/$id/reject';
+  // J-04: First Meaningful Action 链路入口（Goal→Context→Aurora→Proposal→
+  // confirm→Task；网关纯代理 → Python 引擎，proposal 生命周期仍归 X-03）
+  static const String journeyFirstAction = '/journey/first-action';
+  static String journeyFirstActionEdit(String proposalId) =>
+      '/journey/first-action/$proposalId/edit';
   static String snoozeTask(String id) => '/tasks/$id/snooze';
   static String taskStuck(String id) => '/tasks/$id/stuck';
   static String taskTooHard(String id) => '/tasks/$id/too-hard';

@@ -62,6 +62,7 @@ import 'package:sparkle/features/home/presentation/widgets/unified_omni_bar.dart
 import 'package:sparkle/features/home/presentation/widgets/weather_header.dart';
 import 'package:sparkle/features/insights/presentation/widgets/return_case_file_card.dart';
 import 'package:sparkle/features/insights/presentation/widgets/weekly_growth_narrative_card.dart';
+import 'package:sparkle/features/journey/presentation/widgets/first_action_card.dart';
 import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_center_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_goal_provider.dart';
@@ -1153,6 +1154,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           _staggeredSection(
             index: sectionIndex++,
             child: const OnboardingResumeCard(),
+          ),
+        )
+        // J-04 First Meaningful Action：onboarding 后真实目标落到 Smallest
+        // Useful Step 的确认面（生成/确认/拒绝/编辑/重开回放）。挂
+        // dashboardSections（新注册用户 hasNoGoals 分支也可见，主受众在此）；
+        // 卡内自守门——firstActionStateProvider 无 goal / 无链路状态时渲染
+        // SizedBox.shrink，零布局影响。所有按钮 outline/ghost 档，不与
+        // cockpit 的唯一 primary CTA 竞争（J-03 验收不回退）。
+        ..add(
+          _staggeredSection(
+            index: sectionIndex++,
+            child: const FirstActionCard(),
           ),
         );
 

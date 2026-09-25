@@ -39454,4 +39454,169 @@ class AppLocalizationsEn extends AppLocalizations {
   String lfcObservationBasis(int sampleSize) {
     return 'Based on observations from your last $sampleSize study records.';
   }
+
+  @override
+  String get insPredictNext => 'Predict next study time';
+
+  @override
+  String get insUnknownType => 'Unknown type';
+
+  @override
+  String get insEngagementForecast => 'Engagement Forecast';
+
+  @override
+  String get insEngagementSubtitle => 'AI prediction based on learning habits';
+
+  @override
+  String get insDifficultyForecast => 'Difficulty Forecast';
+
+  @override
+  String get insDifficultySubtitle => 'AI assessment based on prerequisites';
+
+  @override
+  String get insPredictedDifficulty => 'Predicted Difficulty';
+
+  @override
+  String insPrerequisitesWarning(int count) {
+    return 'Complete $count prerequisite(s) first';
+  }
+
+  @override
+  String get insDifficultyEasy => 'Easy';
+
+  @override
+  String get insDifficultyMedium => 'Medium';
+
+  @override
+  String get insDifficultyHard => 'Hard';
+
+  @override
+  String picEstimatedHours(String hours) {
+    return 'Estimated study time: $hours hours';
+  }
+
+  @override
+  String picRiskScore(String score) {
+    return 'Risk index: $score/100';
+  }
+
+  @override
+  String picChurnRisk(String level) {
+    return 'Churn risk: $level';
+  }
+
+  @override
+  String picMinutesLater(int minutes) {
+    return 'In about $minutes minutes';
+  }
+
+  @override
+  String picTodayTime(String time) {
+    return 'Today $time';
+  }
+
+  @override
+  String picTomorrowTime(String time) {
+    return 'Tomorrow $time';
+  }
+
+  @override
+  String lfcConfidence(int sampleSize, String confidence) {
+    return 'Based on $sampleSize learning records, current recommendation confidence is $confidence%.';
+  }
+
+  @override
+  String get firstActionCardTitle => 'Your first step';
+
+  @override
+  String get firstActionGenerateCta => 'Generate my first step';
+
+  @override
+  String get firstActionGenerateHint =>
+      'One smallest useful step you can finish today, derived from your real goal.';
+
+  @override
+  String get firstActionStartCta => 'Start this step';
+
+  @override
+  String get firstActionRejectCta => 'Not right for me';
+
+  @override
+  String get firstActionEditCta => 'Edit';
+
+  @override
+  String get firstActionOutcomeLabel => 'Outcome';
+
+  @override
+  String get firstActionEvidenceLabel => 'Completion evidence';
+
+  @override
+  String get firstActionModeLabel => 'Whose turn';
+
+  @override
+  String firstActionMinutes(int minutes) {
+    return '~$minutes min';
+  }
+
+  @override
+  String get firstActionModeHuman => 'You do it';
+
+  @override
+  String get firstActionModeAgent => 'Sparkle does it';
+
+  @override
+  String get firstActionModeHybrid => 'Do it together';
+
+  @override
+  String get firstActionCommittedTitle => 'First step is in your task ledger';
+
+  @override
+  String firstActionTaskCreated(String title) {
+    return 'Task created: $title';
+  }
+
+  @override
+  String get firstActionErrorTitle => 'Couldn\'t generate the first step';
+
+  @override
+  String get firstActionErrorRetryHint =>
+      'This is temporary (the generation service is unavailable). We won\'t fake it — you can retry.';
+
+  @override
+  String get firstActionRetryCta => 'Retry';
+
+  @override
+  String get firstActionSkipCta => 'Skip for now';
+
+  @override
+  String get firstActionRejectReasonLabel =>
+      'Tell Sparkle why it doesn\'t fit (optional)';
+
+  @override
+  String get firstActionRejectConfirm => 'Reject and record reason';
+
+  @override
+  String get firstActionEditTitle => 'Adjust this step';
+
+  @override
+  String get firstActionEditStepLabel => 'Step title';
+
+  @override
+  String get firstActionEditMinutesLabel => 'Estimated minutes';
+
+  @override
+  String get firstActionEditReasonHint =>
+      'Why adjust (optional, recorded as feedback)';
+
+  @override
+  String get firstActionEditSave => 'Save and re-propose';
+
+  @override
+  String get firstActionEvidenceArtifact => 'A visible artifact';
+
+  @override
+  String get firstActionEvidenceSelfReport => 'Your honest self-report';
+
+  @override
+  String get firstActionEvidenceOther => 'Checkable completion evidence';
 }

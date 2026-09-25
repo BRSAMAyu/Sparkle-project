@@ -177,8 +177,9 @@ class _RecordingRepository implements ActionProposalRepository {
   @override
   Future<Map<String, dynamic>?> reject(
     String proposalId,
-    String idempotencyKey,
-  ) async {
+    String idempotencyKey, {
+    String? reason,
+  }) async {
     rejectCalls.add(idempotencyKey);
     pending = const <ActionProposalCardData>[];
     return const <String, dynamic>{};

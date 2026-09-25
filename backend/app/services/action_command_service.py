@@ -406,15 +406,29 @@ class ActionCommandService:
         *,
         user_id: UUID | str,
         reason: str | None = None,
+        user_feedback: dict[str, Any] | None = None,
         idempotency_key: str | None = None,
     ) -> ProposalMutationResult:
-        """用户拒绝（确认卡「不要」）：PENDING→REJECTED，与取消语义区分."""
+        """用户拒绝（确认卡「不要」）：PENDING→REJECTED，与取消语义区分.
+
+        J-04 feedback 面：``reason``（用户自由文本）/``user_feedback``（结构化
+        反馈，如编辑 delta）持久进 append-only 审计（transition.details +
+        event payload）——用户的"这个不合适"不再被静默丢弃。``terminal_reason``
+        仍为封闭枚举 ``user_rejected``（归因词表不放宽）。
+        """
+        feedback_text = (str(reason).strip() if reason else "") or None
+        if user_feedback is not None or feedback_text is not None:
+            feedback_block: dict[str, Any] = dict(user_feedback or {})
+            if feedback_text is not None and "reason" not in feedback_block:
+                feedback_block["reason"] = feedback_text[:200]
+            user_feedback = feedback_block
         return await self._terminal_user_action(
             proposal_id,
             user_id=user_id,
             to_status=ProposalStatus.REJECTED,
             reason=TerminalReason.USER_REJECTED.value,
             idempotency_key=idempotency_key,
+            user_feedback=user_feedback,
         )
 
     async def _terminal_user_action(
@@ -425,6 +439,7 @@ class ActionCommandService:
         to_status: ProposalStatus,
         reason: str,
         idempotency_key: str | None,
+        user_feedback: dict[str, Any] | None = None,
     ) -> ProposalMutationResult:
         key = (str(idempotency_key).strip() if idempotency_key else None) or None
         proposal = await self._lock_proposal(proposal_id, user_id=user_id)
@@ -446,6 +461,7 @@ class ActionCommandService:
             actor="user",
             occurred_at=_utcnow(),
             key=key,
+            user_feedback=user_feedback,
         )
         try:
             await self.db.commit()
@@ -669,6 +685,7 @@ class ActionCommandService:
         actor: str,
         occurred_at: datetime,
         key: str | None,
+        user_feedback: dict[str, Any] | None = None,
     ) -> None:
         from_status = ProposalStatus(proposal.status)
         proposal.status = to_status
@@ -682,7 +699,8 @@ class ActionCommandService:
                 actor=actor,
                 idempotency_key=key,
                 reason=reason,
-                details=None,
+                # J-04 feedback 面：用户拒绝理由/编辑 delta 落 append-only 审计行
+                details={"user_feedback": user_feedback} if user_feedback else None,
                 occurred_at=occurred_at,
             )
         )
@@ -690,7 +708,13 @@ class ActionCommandService:
             proposal=proposal,
             event_name=EVENT_ACTION_REJECTED,
             source=EventSource.SERVER_SERVICE,
-            payload=self._proposal_payload(proposal, extra={"terminal_reason": reason}),
+            payload=self._proposal_payload(
+                proposal,
+                extra={
+                    "terminal_reason": reason,
+                    **({"user_feedback": user_feedback} if user_feedback else {}),
+                },
+            ),
         )
 
     def _build_receipt(
