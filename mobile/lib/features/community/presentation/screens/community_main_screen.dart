@@ -54,10 +54,13 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
 
   @override
   Widget build(BuildContext context) {
+    // S-03（v2）标签/内容对位锁：children 顺序 = [Groups, Partners, Feed]
+    // （v1 收敛 41d83f83 改了 children 漏改本表，首 Tab 曾挂「伙伴」标签
+    // 渲染群组内容）。顺序唯一事实源在此与下方 TabBarView 一一对应。
     final tabLabels = [
+      context.l10n.communityTabGroups,
       context.l10n.communityTabPartners,
       context.l10n.communityTabFeed,
-      context.l10n.communityTabGroups,
     ];
 
     return SparklePageScaffold(
