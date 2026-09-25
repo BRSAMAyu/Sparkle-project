@@ -1742,9 +1742,7 @@ async def get_recommendation_feedback_insights(
 
 
 @router.websocket("/groups/{group_id}/ws")
-async def websocket_endpoint(
-    websocket: WebSocket, group_id: UUID, token: str | None = Query(None), db: AsyncSession = Depends(get_db)
-):
+async def websocket_endpoint(websocket: WebSocket, group_id: UUID, token: str | None = Query(None)):
     """
     群组实时通讯 WebSocket 接口
     连接地址: ws://host/api/v1/community/groups/{group_id}/ws?token={jwt_token}
@@ -1763,12 +1761,19 @@ async def websocket_endpoint(
             await websocket.close(code=4003)
             return
 
-        membership_result = await db.execute(
-            select(GroupMember).where(
-                GroupMember.group_id == group_id, GroupMember.user_id == UUID(user_id), GroupMember.not_deleted_filter()
+        # S-01：会员校验用短生命周期会话。此前经 Depends(get_db) 注入的请求级
+        # 会话在 SELECT 后持有隐式事务连接，直到 handler 返回（= 客户端断开）
+        # 才释放——每个在线群成员都会长占一条连接池连接，池耗尽会拖垮引擎
+        # 全库访问面。会话在 manager.connect 之前关闭，连接归还池。
+        async with AsyncSessionLocal() as db:
+            membership_result = await db.execute(
+                select(GroupMember).where(
+                    GroupMember.group_id == group_id, GroupMember.user_id == UUID(user_id), GroupMember.not_deleted_filter()
+                )
             )
-        )
-        if not membership_result.scalar_one_or_none():
+            is_member = membership_result.scalar_one_or_none() is not None
+
+        if not is_member:
             await websocket.close(code=4003)
             return
 

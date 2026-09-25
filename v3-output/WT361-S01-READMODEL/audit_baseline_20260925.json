@@ -1,0 +1,178 @@
+{
+  "card": "S-01 segment-1 (community realtime/read-model truth audit)",
+  "honesty_contract": "live 失败/不可达一律如实记录，不合成假 realtime；默认零 PG 连接",
+  "projections": [
+    {
+      "name": "community.post_view_projection (gateway Redis)",
+      "source": "event_outbox → Redis stream cqrs:stream:community → CommunitySyncWorker / CommunityProjectionHandler → 键 post:view:*、feed:global、post:likes:*",
+      "freshness": "事件驱动最终一致（设计值）；实际=永为空（写侧无生产者，见 status）",
+      "consistency_risk": "致死死链（双向）：outbox Insert 零非测试调用方→流饥饿；无任何 HTTP handler 读这些键→投影即使有值也无人消费。admin /cqrs/projections 显示 status=active 属注册期 upsert，不代表有事件流过",
+      "live_testability": "Redis 只读探测（XLEN cqrs:stream:community / SCAN post:view:*）+ GET /admin/cqrs/projections（需 admin JWT）",
+      "status": "DEAD_CHAIN（登记不修——卡面 Forbidden 不重建读模）",
+      "anchors": [
+        "backend/gateway/internal/cqrs/outbox/repository.go#Insert",
+        "backend/gateway/internal/worker/community_sync.go#CommunitySyncWorker",
+        "backend/gateway/internal/cqrs/projection/handlers.go#CommunityProjectionHandler",
+        "backend/gateway/cmd/server/setup.go#initCQRS"
+      ]
+    },
+    {
+      "name": "community.feed / posts / comments / messages (engine PG 直读)",
+      "source": "PostgreSQL 直读（SQLAlchemy）：Post+PostLike+GroupMessage 等，visibility/cohort/block/软删过滤全部在 SQL 谓词内",
+      "freshness": "read-your-writes（无缓存层参与，写后立即可读）",
+      "consistency_risk": "深分页 offset 语义（并发写导致翻页漂移）；无投影参与故无投影不一致问题",
+      "live_testability": "GET /api/v1/community/feed?page=1&limit=1（需 JWT，API 级可测）",
+      "status": "ACTIVE_TRUTH_SOURCE",
+      "anchors": [
+        "backend/app/api/v1/community.py#get_feed",
+        "backend/app/api/v1/community.py#_cohort_visible_post_clause"
+      ]
+    },
+    {
+      "name": "community.post_write_event_face（帖子写路径事件面）",
+      "source": "无——create_post / toggle_like / delete_post 不发布任何事件（无 outbox、无 event_bus、无 WS 推送）",
+      "freshness": "纯拉取面：写后靠客户端主动刷新",
+      "consistency_risk": "多端视图靠轮询/重拉收敛，无推送即有陈旧窗口（如实现状）",
+      "live_testability": "API 级：POST /posts 后 GET /feed 比对（需双 JWT，段二双账号面）",
+      "status": "NO_EVENT_SOURCE（如实登记，不 mock 补齐）",
+      "anchors": [
+        "backend/app/api/v1/community.py#create_post",
+        "backend/app/api/v1/community.py#toggle_like_post"
+      ]
+    },
+    {
+      "name": "community.group_realtime (群聊 WS)",
+      "source": "mobile → gateway :8080 /api/v1/community/groups/{id}/ws（票+JWT、升级限流、双向代理）→ 引擎 FastAPI WS → 进程内 ConnectionManager + Redis pub/sub group:{id} 扇出",
+      "freshness": "推送即时（同一引擎进程内/经 pub/sub 跨进程）",
+      "consistency_risk": "Redis 不可用时 broadcast 回落本进程广播——多 worker 部署静默丢跨进程推送（回落被限定为降级而非假送达）；send_personal_message 在 Redis 开启且接收方全实例不在线时不触发离线推送（触发点仅在本进程未命中分支）",
+      "live_testability": "段二双账号 live 证据（DEFERRED）：join→chat→reconnect；段一仅可验证升级握手被鉴权面拒绝/放行",
+      "status": "ACTIVE_REALTIME",
+      "anchors": [
+        "backend/app/api/v1/community.py#websocket_endpoint",
+        "backend/app/core/websocket.py#ConnectionManager",
+        "backend/gateway/internal/handler/websocket_proxy.go#HandleCommunityWS"
+      ]
+    },
+    {
+      "name": "community.checkin (打卡)",
+      "source": "PG（squad service 结算）+ manager.broadcast 推送群 WS + event_bus 'community.checkin_recorded'（无订阅者时为纯事件流记录，不产生副作用——代码注释如实声明）",
+      "freshness": "广播即时；无投影落地",
+      "consistency_risk": "依赖群 WS 在线面，离线成员靠重连后 HTTP 读收敛",
+      "live_testability": "段二双账号（DEFERRED）：A 打卡 B 在群 WS 收推送",
+      "status": "ACTIVE_REALTIME",
+      "anchors": [
+        "backend/app/api/v1/community.py#checkin_event_publish"
+      ]
+    },
+    {
+      "name": "task_projection / galaxy_projection (gateway Redis)",
+      "source": "与 C1 同一 event_outbox → cqrs:stream:* 死链模式",
+      "freshness": "同上：永为空",
+      "consistency_risk": "同 C1；task 事件族属 wt360 在修战区（task_event_consumer），本卡只登记不触碰",
+      "live_testability": "同 C1（XLEN cqrs:stream:task / galaxy）",
+      "status": "DEAD_CHAIN（登记不修）",
+      "anchors": [
+        "backend/gateway/internal/worker/community_sync.go#CommunityStreamKey",
+        "backend/gateway/cmd/server/setup.go#startCQRSWorkers"
+      ]
+    },
+    {
+      "name": "mobile.community_read_cache (断网回落)",
+      "source": "ListReadCache 本地快照（getFeedCached：成功落快照，连接类失败回读）",
+      "freshness": "回读=陈旧快照，UI 强制挂 fromCache/asOf「截至 X」时点标记",
+      "consistency_risk": "快照与服务器态之间的窗口由时点标记如实暴露（诚实回落，非假 realtime——符合卡面验收）",
+      "live_testability": "定向 flutter test（本段 LIGHT 不执行，DEFERRED 登记命令）",
+      "status": "ACTIVE_HONEST_FALLBACK",
+      "anchors": [
+        "mobile/lib/features/community/data/repositories/community_repository.dart#getFeedCached",
+        "mobile/lib/features/community/data/repositories/community_repository.dart#communityRepositoryProvider"
+      ]
+    },
+    {
+      "name": "seed/demo 数据标记面",
+      "source": "V3-FIX-08：cohort（guest/seed）作者帖在公开 feed 与 like 面对真实用户按不存在处理（本人帖除外）；关系面 scope 不做 cohort 过滤",
+      "freshness": "随每次查询实时判定",
+      "consistency_risk": "feed 与 like 双面已对齐（同一谓词函数）；若未来新增写/读面漏用该谓词会出现可见性漂移",
+      "live_testability": "API 级：guest cohort 种子帖对真实账号 404/不可见（段二双账号）",
+      "status": "ACTIVE_SEED_MARKING",
+      "anchors": [
+        "backend/app/api/v1/community.py#_cohort_visible_post_clause",
+        "mobile/lib/core/services/demo_data_service.dart#isDemoMode"
+      ]
+    }
+  ],
+  "live_probes": [
+    {
+      "probe": "gateway_health",
+      "url": "http://127.0.0.1:8080/api/v1/health",
+      "status": "ok",
+      "http": 200,
+      "body_head": "{\"live\":\"/live\",\"ready\":\"/ready\",\"status\":\"ok\"}"
+    },
+    {
+      "probe": "engine_health",
+      "url": "http://127.0.0.1:8000/health",
+      "status": "ok",
+      "http": 200,
+      "body_head": "{\"status\":\"healthy\",\"detail\":\"For detailed health info, use /api/v1/health\"}"
+    },
+    {
+      "probe": "redis",
+      "status": "ok",
+      "readonly": true,
+      "facts": {
+        "stream_len": {
+          "cqrs:stream:community": 0,
+          "cqrs:stream:task": 0,
+          "cqrs:stream:galaxy": 0
+        },
+        "consumer_groups": {
+          "cqrs:stream:community": [
+            {
+              "name": "community_projection_group",
+              "consumers": 1,
+              "pending": 0,
+              "last-delivered-id": "0-0",
+              "entries-read": null,
+              "lag": 0
+            }
+          ],
+          "cqrs:stream:task": [
+            {
+              "name": "task_projection_group",
+              "consumers": 1,
+              "pending": 0,
+              "last-delivered-id": "0-0",
+              "entries-read": null,
+              "lag": 0
+            }
+          ],
+          "cqrs:stream:galaxy": [
+            {
+              "name": "galaxy_projection_group",
+              "consumers": 1,
+              "pending": 0,
+              "last-delivered-id": "0-0",
+              "entries-read": null,
+              "lag": 0
+            }
+          ]
+        },
+        "projection_key_counts": {
+          "post:view:*": 0,
+          "task:view:*": 0,
+          "galaxy:node:*": 0
+        },
+        "feed_global_exists": false,
+        "feed_global_members": 0
+      },
+      "interpretation": "stream_len=0 且 projection_key_counts=0 即实证 C1 死链（流饥饿、投影为空）；非零则记录实际值供段二比对——两种结果都是如实报告"
+    },
+    {
+      "probe": "admin_cqrs_projections",
+      "status": "skipped",
+      "note": "需 --admin-token（admin JWT）；该面读 PG projection_metadata，属网关自身运行元数据，不触应用业务库"
+    }
+  ],
+  "live_verdict": "全部可达探测完成（只读）"
+}
