@@ -1698,11 +1698,26 @@ class LLMService:
                     _llm_error = type(exc).__name__
                     raise
 
+                # V3-FIX-61：预扫孤儿参数桶（有参数无归属名）——存在即说明
+                # provider 续帧契约违规，空参桶按"参数丢失"处置而非"无参工具"。
+                _orphan_args_present = any(
+                    (not d["name"]) and d["args_str"]
+                    for d in collected_tool_call_chunks.values()
+                )
                 for _tc_key, data in collected_tool_call_chunks.items():
                     if not data["name"]:
                         # 无法归属工具名的增量（provider 异常帧）：显式告警，
                         # 不再静默——这是工具轮"零事件收场"的观测锚点。
                         logger.warning(f"tool_call stream incomplete (no function name), dropped: index={_tc_key}")
+                        continue
+                    # V3-FIX-61：存在带参数但无归属的孤儿桶 = provider 契约违规
+                    # （无 index 无 id 的续帧被拆桶）。此时空参桶的"空"不是无参
+                    # 工具的合法形态，而是参数丢失——禁止以空参静默执行工具。
+                    if not data["args_str"] and _orphan_args_present:
+                        logger.warning(
+                            f"tool_call args lost to unattributed chunks, suppressed empty-args execution: "
+                            f"id={data['id'] or 'tool_call_' + str(_tc_key)}, name={data['name']}"
+                        )
                         continue
                     stable_id = data["id"] or f"tool_call_{_tc_key}"
                     try:

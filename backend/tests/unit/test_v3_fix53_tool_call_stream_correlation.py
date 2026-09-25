@@ -215,7 +215,7 @@ async def test_id_echoing_provider_still_yields_single_tool_call_end(
 @pytest.mark.parametrize("raw_args", ["{}", ""])
 async def test_no_arg_tool_call_still_yields_tool_call_end(
     passthrough_fallback: _PassthroughFallbackStub, raw_args: str
-) -> None:
+):
     chunks = [
         _raw_chunk(tool_calls=[_tool_delta_chunk(index=0, call_id="call_noarg", name="get_situation_brief", arguments=raw_args)]),
     ]
@@ -237,3 +237,46 @@ async def test_no_arg_tool_call_still_yields_tool_call_end(
         "静默丢弃会让工具轮零事件收场"
     )
     assert end_events[0].full_arguments == {}
+
+
+# --- V3-FIX-61：无 index 无 id 续帧拆桶 → 禁止空参静默执行 --------------------
+#
+# wt410 审查轮 CONFIRMED（P2）：index 回退分支在「首帧有 id 有 name、续帧
+# 无 index 无 id 只带 arguments」的 provider 形态下，name 落 id 桶、
+# arguments 落 "" 孤儿桶 → tool_call_end 以 full_arguments={} 产出，工具
+# 以空参静默执行而真实参数被丢弃——比原断流更危险。修复后：孤儿参数桶
+# 存在时抑制空参 end（宁可不执行，不可错执行）。
+
+
+@pytest.mark.asyncio
+async def test_orphan_args_bucket_suppresses_empty_args_tool_call_end(
+    passthrough_fallback: _PassthroughFallbackStub,
+) -> None:
+    chunks = [
+        # 首帧：index=None 但带 id+name（非契约 provider 形态，落 id 桶）
+        _raw_chunk(tool_calls=[_tool_delta_chunk(index=None, call_id="call_a", name="create_task", arguments="")]),
+        # 续帧：index=None 且 id=None，只带 arguments（落 "" 孤儿桶）
+        _raw_chunk(tool_calls=[_tool_delta_chunk(index=None, call_id=None, name=None, arguments='{"title":"真实参数"}')]),
+    ]
+    service = _make_service(_provider_with(chunks))
+
+    end_events = []
+    async for chunk in service.chat_stream_with_tools(
+        system_prompt="sys",
+        user_message="帮我建个任务",
+        tools=[],
+        conversation_history=[],
+        user_context={"user_id": "fix61-user"},
+    ):
+        if chunk.type == "tool_call_end":
+            end_events.append(chunk)
+
+    assert not any(e.full_arguments == {} for e in end_events), (
+        "孤儿参数桶存在时，空参 tool_call_end = 参数丢失的工具以空参静默执行（V3-FIX-61），"
+        f"实际产出: {[(e.tool_call_id, e.full_arguments) for e in end_events]}"
+    )
+    # 更强：该形态下任何 end 都不该产出（name 桶空参被抑制、孤儿桶无名被弃）
+    assert end_events == [], (
+        f"无归属参数场景应抑制全部 tool_call_end（fail-loud），实际: "
+        f"{[(e.tool_call_id, e.tool_name, e.full_arguments) for e in end_events]}"
+    )

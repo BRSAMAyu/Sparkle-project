@@ -621,8 +621,7 @@ class ToolExecutor:
 
         try:
             stmt = (
-                select(AgentToolCall)
-                .where(
+                select(AgentToolCall).where(
                     AgentToolCall.user_id == uuid.UUID(str(user_id)),
                     AgentToolCall.tool_name == tool_name,
                     AgentToolCall.idempotency_key == key,
@@ -1159,10 +1158,15 @@ class ToolExecutor:
                     await history_session.commit()
                 except Exception as e:
                     await history_session.rollback()
-                    # Q-05 合并态补修：异常 str 含 [SQL]/[parameters]（内嵌用户
-                    # 正文），日志只落 DBAPI 层消息（不含绑定参数）。
+                    # Q-05 合并态补修 + V3-FIX-62 收口：异常消息文本一律不落日志
+                    # （SQLAlchemy str 含 [SQL]/[parameters]；psycopg2/asyncpg 的
+                    # str(orig) 在 DETAIL 里带列值）。只落类名 + DBAPI 错误码。
+                    _orig = getattr(e, "orig", None)
+                    _db_code = getattr(_orig, "pgcode", None) or getattr(_orig, "sqlstate", None) or ""
                     logger.warning(
-                        f"Failed to record tool execution history: {type(e).__name__}: {getattr(e, 'orig', '')}"
+                        "Failed to record tool execution history: "
+                        + type(e).__name__
+                        + (f"[{type(_orig).__name__}/{_db_code}]" if _orig else "")
                     )
             return
 

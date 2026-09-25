@@ -152,10 +152,16 @@ class ToolHistoryService:
             return record
 
         except Exception as e:
-            # Q-05 合并态补修：SQLAlchemy 异常 str 含 [SQL]/[parameters]（内嵌用户
-            # 正文），日志只落 DBAPI 层消息（sqlite/psycopg2 均不含绑定参数）。
+            # Q-05 合并态补修 + V3-FIX-62 收口：异常消息文本一律不落日志——
+            # SQLAlchemy str 含 [SQL]/[parameters]（内嵌正文），psycopg2/asyncpg
+            # 的 str(orig) 在 DETAIL 里带列值（wt410 活体 PG 证伪仅取 orig 的方案）。
+            # 只落异常类名 + DBAPI 类名/错误码，零消息文本=零泄漏。
+            _orig = getattr(e, "orig", None)
+            _db_code = getattr(_orig, "pgcode", None) or getattr(_orig, "sqlstate", None) or ""
             logger.error(
-                f"Failed to record tool execution: {type(e).__name__}: {getattr(e, 'orig', '')}"
+                "Failed to record tool execution: "
+                + type(e).__name__
+                + (f"[{type(_orig).__name__}/{_db_code}]" if _orig else "")
             )
             raise
 

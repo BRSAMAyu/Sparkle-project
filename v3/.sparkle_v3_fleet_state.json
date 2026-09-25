@@ -14,11 +14,6 @@
    "since": "16:50",
    "note": "双轮审查轮2:复核 WT378-01/02/03/04/08/09+修存活项,base c1ff62a5"
   },
-  "wt395-g05-galaxy": {
-   "stage": "IN_FLIGHT",
-   "since": "20:39",
-   "note": "G-05 Galaxy 性能/手势/视觉终验(U-09 解锁),base 60366592"
-  },
   "wt396-p23-sweep": {
    "stage": "IN_FLIGHT",
    "since": "21:58",
@@ -28,11 +23,6 @@
    "stage": "IN_FLIGHT",
    "since": "23:00",
    "note": "J-01 首三分钟实测(5 persona×2路线真计时+截图+opportunity map),双验判定:此前未做(仅must_read文档存在),base c1efd8a6"
-  },
-  "wt401-q03-visualqa": {
-   "stage": "IN_FLIGHT",
-   "since": "23:25",
-   "note": "Q-03 视觉QA最终波(12维rubric全屏+所有状态+AB修复+before/after),FIX编号从57起已嘱咐,base 61af0f0a"
   },
   "wt404-q04-personal": {
    "stage": "IN_FLIGHT",
@@ -49,6 +39,18 @@
    "stage": "IN_FLIGHT",
    "since": "00:55",
    "note": "清扫轮4:FIX-57/54/55+U-02 F1F3F4+post-commit广播同族,红测先行,FIX编号87+,base=本地main含FIX-53链"
+  },
+  "wt410-review-r4": {
+   "stage": "IN_FLIGHT",
+   "since": "01:10",
+   "note": "独立审查轮4:今晚产品码改动四簇(FIX-53 chat链/Q-03四修/主会话日志补修/wt396 F5F6),可证伪探针,FIX编号61-66",
+   "date": "2026-09-26"
+  },
+  "wt412-friction-fixes": {
+   "stage": "IN_FLIGHT",
+   "since": "01:30",
+   "note": "A-08行为缺陷组FIX-49/50/51+59修复(wiring门/B1 tie确定性/两面守卫/连胜文案),A-08主结论不回退约束,FIX编号97+",
+   "date": "2026-09-26"
   }
  },
  "done": [
@@ -318,6 +320,18 @@
    "title": "FIX-53 chat断流三层根因全修(kwarg TypeError/index关联/await优先级)+SSE error事件协议+真栈复验GJ04/09/20回暖+无熔断级联,/ws/chat同病同修,mypy 1102(倒赚1)",
    "merged": "2609fd2e→主仓(本地待CI后共推),新开FIX-57(续写空文本)",
    "date": "2026-09-26"
+  },
+  {
+   "id": "wt401",
+   "title": "Q-03 视觉QA最终波:107屏真渲染+程序化探针107/107零异常,4真缺陷红绿修(心情条溢出66px/双ticker/失活context整屏红/星图遮挡),核心A/B=0达标,7C级如实遗留,占用FIX-59/60",
+   "merged": "837f90e2→主仓(本地待CI后共推;重编号57/58→59/60因wt400已占57)",
+   "date": "2026-09-26"
+  },
+  {
+   "id": "wt395",
+   "title": "G-05 Galaxy终验:33/35阈值过(2 FAIL=5000档环境停顿如实),风暴10.3s→402ms/CRDT首连6/16→16/16,5产品修(singleflight/原子会话/BFS重构/二进制安全/降级熔断)",
+   "merged": "b4e67cfe→主仓已推b5e8dedd",
+   "date": "2026-09-26"
   }
  ],
  "blocked": [],
@@ -332,6 +346,8 @@
   "23:50 卡池终盘:Q-06(性能/成本/供应商波动终验,HEAVY,n≥100 p50/p95+429/TTFT/queue压测+token/memory增长)依赖E-08✓O-07✓Q-01✓全满足=队列头,任一在航返回即派;E-05/E-06确认已在done。非云卡全数dispatch完毕,剩余:Q-06(队列)+O-01/O-05/O-06/Q-07(等用户TCC+重开ZCode)+Q-08终门(等Q-03/Q-04/G-05/Q-06/Q-07)。本地待推:d3312968(D-08)——CI 36152157594裁决后共推",
   "00:08 例行+磁盘危机处置:df曾到0G实为19×1GB swap文件(/System/Volumes/VM 19G)随6agent构建压力持续增长吃盘——swap定性从'无害历史'改判'活跃威胁';处置:simctl shutdown all(关无人用的iOS sim VM)+docker悬空prune+清安全缓存(ts/tvapp/statsig/playwright/pip,保留SwiftPM供wt398)+wt400的/tmp日志其自行轮转回落,现稳定2.0G;若再跌破1G→SendMessage最不关键agent提前收束降并行构建。CI 36152157594:Backend Tests job 15:14Z起跑~49min/75min预算,裁决~00:15-00:40。day5门08:00预检保持绿。三问:6/6在航(wt395/398/399/400/401/404);空槽0;下张最高价值=CI完整裁决(首个过40min墙全量Python,或带未见失败即成修复卡)+队列头Q-06(性能/成本/供应商终验)等空位",
   "00:15 wt399集成(8/8绿,worktree清,DYNAMIC_ISSUES零接触无撞号);U-02终局。Q-06派wt406补位,卡池非云卡全数在航/完成。编号段:wt401=57-66,wt404=67-76,wt406=77+。本地待推×2:d3312968(D-08)+7811e484(U-02)——CI 36152157594仍in_progress(75min预算内,Backend Tests~60min处)。三问:6/6(wt395/398/400/401/404/406);空槽0;下张最高价值=CI裁决后推积压+wt400 FIX-53返回(P1压6条GJ)",
-  "00:55 wt400集成(10/10绿含golden 3/3,worktree清);FIX-53终局——wt394的6条GJ失败根因拔除,chat拍回暖实证。撞号预警:wt400占了V3-FIX-57(未给号段,派发早于分段制),wt401被告知57起→wt401集成时必查其DYNAMIC_ISSUES条目,冲突则重编号87+。CI 36152157594:Backend Tests 94min仍in_progress(75min预算未被执行,Python Test step活跃推进中未挂死)——不干预等自然完成,超~120min再议取消重跑。三问:6/6(wt395/398/401/404/406/408);空槽0;下张最高价值=CI完整裁决+wt395 G-05返回"
+  "00:55 wt400集成(10/10绿含golden 3/3,worktree清);FIX-53终局——wt394的6条GJ失败根因拔除,chat拍回暖实证。撞号预警:wt400占了V3-FIX-57(未给号段,派发早于分段制),wt401被告知57起→wt401集成时必查其DYNAMIC_ISSUES条目,冲突则重编号87+。CI 36152157594:Backend Tests 94min仍in_progress(75min预算未被执行,Python Test step活跃推进中未挂死)——不干预等自然完成,超~120min再议取消重跑。三问:6/6(wt395/398/401/404/406/408);空槽0;下张最高价值=CI完整裁决+wt395 G-05返回",
+  "01:10 wt401集成(17测绿,worktree清);撞号预警兑现并处置:wt401的57/58重编号59/60(wt400的57=chat续写空文本已在主)。Q-03完成=acceptance A/B=0达标。派wt410独立审查轮4补位(卡池非云已尽,按满编铁律转活源c)。CI仍in_progress(~102min)。三问:6/6(wt395/398/404/406/408/410);空槽0;下张最高价值=CI裁决+wt410审查发现(今晚四簇改动零独立审查,验收模型要求)",
+  "01:30 wt395集成(8+1后端/9+1mobile绿,worktree清,零DYNAMIC接触);G-05完成=Q-08的G-05依赖解除。CI真相修正:75min墙准时执行(误判为滞后是API惰性),Python step真跑69:12被杀,超时上调120已推;积压6提交(D-08/U-02/FIX-53/Q-03/G-05/CI修复)上origin=b5e8dedd,新run启动。派wt412(FIX-49/50/51+59,A-08 P1行为组)。三问:6/6(wt398/404/406/408/410/412);空槽0;下张最高价值=CI首个完整全量裁决(~03:30)+wt410审查发现复核"
  ]
 }
