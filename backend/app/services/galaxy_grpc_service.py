@@ -61,16 +61,35 @@ def _prune_inactive_collaborative_sessions() -> None:
         _active_collaborative_sessions.popitem(last=False)
 
 
-async def _get_active_collaborative_session(galaxy_id: str) -> CollaborativeGalaxyService | None:
-    """P0-5 fix: lock-protected read of collaborative session dict."""
+async def _get_or_create_collaborative_session(
+    galaxy_id: str,
+    persistence_manager: CRDTPersistenceManager,
+) -> CollaborativeGalaxyService:
+    """G-05（wt395）恢复风暴修复: 会话 get-or-create 原子化。
+
+    此前"先查字典 → miss 则 restore + 新建 + 入字典"三步在锁外交错——服务重启/
+    会话驱逐后多台设备**同时**重连（恢复风暴最典型形态）时, N 个并发请求各自
+    restore 出空文档、各挂各的会话, 后 store 者覆盖先 store 者 → 只剩最后一份
+    本地更新被持久化, 先到设备的更新全部丢失（本地复跑实证: 16 并发首连仅
+    6/16 台设备并入合并态）。restore(外部 IO)移入锁内串行化冷路径, 热路径
+    （会话已在案）不变。
+    """
     async with _sessions_lock:
         _prune_inactive_collaborative_sessions()
         entry = _active_collaborative_sessions.get(galaxy_id)
-        if entry is None:
-            return None
-        entry.last_accessed_at = _utcnow()
-        _active_collaborative_sessions.move_to_end(galaxy_id)
-        return entry.service
+        if entry is not None:
+            entry.last_accessed_at = _utcnow()
+            _active_collaborative_sessions.move_to_end(galaxy_id)
+            return entry.service
+        ydoc = await persistence_manager.restore(galaxy_id)
+        collab_service = CollaborativeGalaxyService(galaxy_id)
+        collab_service.ydoc = ydoc
+        _active_collaborative_sessions[galaxy_id] = _CollaborativeSessionEntry(
+            service=collab_service,
+            last_accessed_at=_utcnow(),
+        )
+        _prune_inactive_collaborative_sessions()
+        return collab_service
 
 
 async def _store_active_collaborative_session(galaxy_id: str, service: CollaborativeGalaxyService) -> None:
@@ -289,14 +308,8 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
         async with self.db_session_factory() as db:
             persistence_manager = CRDTPersistenceManager(cache_service.redis, db)
 
-            # 1. Get or create collaborative session
-            collab_service = await _get_active_collaborative_session(galaxy_id)
-            if collab_service is None:
-                # Restore from persistence (Redis or DB)
-                ydoc = await persistence_manager.restore(galaxy_id)
-                collab_service = CollaborativeGalaxyService(galaxy_id)
-                collab_service.ydoc = ydoc
-                await _store_active_collaborative_session(galaxy_id, collab_service)
+            # 1. Get or create collaborative session（原子, 见 _get_or_create_…）
+            collab_service = await _get_or_create_collaborative_session(galaxy_id, persistence_manager)
 
             try:
                 # 2. Apply client update
@@ -644,33 +657,43 @@ class GalaxyGrpcServiceImpl(galaxy_service_pb2_grpc.GalaxyServiceServicer if gal
                 MAX_DEPTH = 20
                 MAX_VISITED = 500
 
+                # G-05（wt395）: parent-map 重构替代"每次入队拷贝整条路径"。
+                # 旧实现的 path/edges 随队列条目复制（O(展开数×路径长) 内存churn）,
+                # 5000 档实测 p95 抬到 ~1.5s; parent-map 每节点只记 (前驱, 边)。
+                # 探索顺序/深度/上限语义与旧实现一致（FIFO + depth<=20 + visited<=500）。
                 visited: set[str] = set()
-                queue: list[tuple[str, list[str], list[tuple[str, str, str]]]] = [
-                    (str(from_id), [str(from_id)], [])
-                ]
+                parent: dict[str, tuple[str, str, str]] = {}  # node -> (prev, rel, edge_id)
+                depth_of: dict[str, int] = {str(from_id): 0}
+                queue: list[str] = [str(from_id)]
                 path_found = False
                 path_node_ids: list[str] = []
                 path_edges: list[dict] = []
-                depth = 0
 
-                while queue and depth < MAX_DEPTH and len(visited) < MAX_VISITED:
-                    current, path, edges_so_far = queue.pop(0)
+                while queue and len(visited) < MAX_VISITED:
+                    current = queue.pop(0)
                     if current == str(to_id):
-                        path_node_ids = path
-                        path_edges = [
-                            {"source_id": e[2], "target_id": e[0], "relation": e[1]}
-                            for e in edges_so_far
-                        ]
+                        # 回溯路径
+                        node = current
+                        while node != str(from_id):
+                            prev, rel, edge_id = parent[node]
+                            path_edges.append({"source_id": prev, "target_id": node, "relation": rel})
+                            path_node_ids.append(node)
+                            node = prev
+                        path_node_ids.append(str(from_id))
+                        path_node_ids.reverse()
+                        path_edges.reverse()
                         path_found = True
                         break
                     if current in visited:
                         continue
                     visited.add(current)
-                    depth = len(path) - 1
-
+                    if depth_of.get(current, 0) >= MAX_DEPTH:
+                        continue
                     for tgt, rel, edge_id in adjacency.get(current, []):
-                        if tgt not in visited:
-                            queue.append((tgt, path + [tgt], edges_so_far + [(current, rel, edge_id)]))
+                        if tgt not in visited and tgt not in parent:
+                            parent[tgt] = (current, rel, edge_id)
+                            depth_of[tgt] = depth_of[current] + 1
+                            queue.append(tgt)
 
                 edges_pb = [
                     galaxy_service_pb2.GalaxyEdge(

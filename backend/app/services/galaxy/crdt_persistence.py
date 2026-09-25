@@ -1,5 +1,6 @@
+from collections.abc import Awaitable
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 import y_py as Y
 from redis.asyncio import Redis
@@ -11,6 +12,45 @@ from app.models.galaxy import CRDTOperationLog, CRDTSnapshot
 
 def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
+
+
+# G-05（wt395）: 共享 cache_service 客户端是 ``decode_responses=True``——Yjs 二进制
+# 快照在 redis-py **响应解析层**就会 UnicodeDecodeError，restore() 里的 ``str`` 兜底
+# （encode('latin-1')）根本执行不到。表现为：引擎重启/会话 TTL 驱逐后，第一台
+# 重连设备走 ``SyncCollaborativeGalaxy → restore()`` 必失败（servicer 捕获后
+# success=False，多端恢复面断）。快照读写必须走二进制安全客户端。
+_binary_redis_client: Redis | None = None
+_binary_redis_init_failed = False
+
+
+async def _get_binary_redis(fallback: Redis | None) -> Redis | None:
+    """惰性构建/复用 ``decode_responses=False`` 的 Redis 客户端（连接口径同
+    cache_service.init_redis：同 URL、resolve_redis_password 解析口令）。
+
+    构建失败时回退到调用方传入的共享客户端（维持既有行为可观测，不静默升级）。
+    """
+    global _binary_redis_client, _binary_redis_init_failed
+    if _binary_redis_client is not None:
+        return _binary_redis_client
+    if _binary_redis_init_failed:
+        return fallback
+    try:
+        from app.config import settings
+        from app.core.redis_utils import resolve_redis_password
+
+        password, _password_source = resolve_redis_password(settings.REDIS_URL, settings.REDIS_PASSWORD)
+        kwargs: dict[str, Any] = {"decode_responses": False}
+        if password:
+            kwargs["password"] = password
+        client = Redis.from_url(settings.REDIS_URL, **kwargs)
+        # redis-py ping 重载返回 Awaitable[bool] | bool —— 显式 cast 供类型检查
+        await cast("Awaitable[bool]", client.ping())
+        _binary_redis_client = client
+        return _binary_redis_client
+    except Exception:
+        # Redis 不可达等：回退共享客户端，让上层既有错误路径如实暴露
+        _binary_redis_init_failed = True
+        return fallback
 
 
 class CRDTPersistenceManager:
@@ -33,18 +73,18 @@ class CRDTPersistenceManager:
         update_data = Y.encode_state_as_update(ydoc)
 
         # Redis 持久化 (TTL 24h)
-        # 注意: 如果 redis_client 设置了 decode_responses=True,
-        # 这里存储 bytes 可能会有问题。
-        # 建议使用独立的 redis 实例或确保可以处理 bytes。
+        # G-05（wt395）: 必须走 decode_responses=False 的二进制安全客户端——
+        # 二进制写入本身在共享客户端上可行，但对应 get 会在响应解析层炸掉，
+        # 写读两端必须同一客户端形态（详见模块头 _get_binary_redis 注释）。
+        client = await _get_binary_redis(self.redis)
+        if client is None:
+            raise RuntimeError("CRDTPersistenceManager: no redis client available for snapshot persist")
+
         key = f"crdt:snapshot:{galaxy_id}"
-        await self.redis.set(key, update_data, ex=86400)
+        await client.set(key, update_data, ex=86400)
 
         # 记录最后同步时间
-        await self.redis.set(
-            f"crdt:timestamp:{galaxy_id}",
-            _utcnow().isoformat(),
-            ex=86400
-        )
+        await client.set(f"crdt:timestamp:{galaxy_id}", _utcnow().isoformat(), ex=86400)
 
     async def persist_to_db(self, galaxy_id: str, ydoc: Y.YDoc):
         """
@@ -76,8 +116,13 @@ class CRDTPersistenceManager:
         Restore: PostgreSQL -> Redis -> Memory
         """
         # 优先从 Redis 恢复 (最新)
+        # G-05（wt395）: 二进制安全客户端读取（共享 decode_responses=True 客户端
+        # 在这里直接 UnicodeDecodeError，多端恢复面断裂——见模块头注释）。
+        client = await _get_binary_redis(self.redis)
+        if client is None:
+            raise RuntimeError("CRDTPersistenceManager: no redis client available for snapshot restore")
         key = f"crdt:snapshot:{galaxy_id}"
-        redis_data = await self.redis.get(key)
+        redis_data = await client.get(key)
 
         ydoc = Y.YDoc()
         if redis_data:

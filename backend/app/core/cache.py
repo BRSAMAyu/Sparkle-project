@@ -282,6 +282,13 @@ def cached(ttl: int = 300, key_builder: Callable = None, namespace: str = "view"
     """
 
     def decorator(func):
+        # G-05（wt395）恢复风暴修复: 同 key 的 in-flight 请求合并（singleflight）。
+        # 此前 get→miss→compute→set 之间无合并——断线重连风暴下 N 台设备同时冷缓存
+        # 取图, 各自完整重算（本地实证: 16 并发冷取 5000 节点图 p50=10.3s ≈ 单发
+        # ×16 的纯 CPU 排队）。合并后首个请求计算, 其余共享同一 Future; 异常不缓存、
+        # 传播给同批等待者与首个调用方（与未合并时首个调用方行为一致）。
+        in_flight: dict[str, asyncio.Future] = {}
+
         @wraps(func)
         async def wrapper(*args, **kwargs):
             # 1. Build Key
@@ -302,8 +309,24 @@ def cached(ttl: int = 300, key_builder: Callable = None, namespace: str = "view"
             if cached_val is not None:
                 return cached_val
 
-            # 3. Execute Function
-            result = await func(*args, **kwargs)
+            # 2.5 Singleflight: 已有同 key 请求在算 → 挂在它的 Future 上
+            existing = in_flight.get(cache_key)
+            if existing is not None:
+                return await asyncio.shield(existing)
+
+            # 3. Execute Function（标记 in-flight, 计算完成/失败都要清标记）
+            future: asyncio.Future = asyncio.get_running_loop().create_future()
+            in_flight[cache_key] = future
+            try:
+                result = await func(*args, **kwargs)
+                if not future.done():
+                    future.set_result(result)
+            except BaseException as exc:
+                if not future.done():
+                    future.set_exception(exc)
+                raise
+            finally:
+                in_flight.pop(cache_key, None)
 
             # 4. Save to Cache
             # Only cache if result is not None (optional decision)

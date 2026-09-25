@@ -10,8 +10,10 @@ from uuid import UUID
 from loguru import logger
 from redis.commands.search.query import Query
 from sqlalchemy import and_, case, false, func, or_, select
+from sqlalchemy import cast as sa_cast
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlalchemy.types import UserDefinedType
 
 from app.config import settings
 from app.core.cache import cache_service
@@ -35,6 +37,23 @@ try:
     from app.services.group_file_service import GroupFileService
 except ImportError:
     GroupFileService = None
+
+
+class _JSONPATH(UserDefinedType):
+    """PG ``jsonpath`` 类型（仅作参数类型标注, 不建列）。
+
+    G-05（wt395）: ``keyword_search`` 的 ``jsonb_path_exists(keywords, <path>)``
+    此前把路径串作为 varchar 绑定——asyncpg 按**类型化参数**预备语句发送,
+    PG 找不到 ``jsonb_path_exists(jsonb, varchar)`` 签名 → UndefinedFunctionError,
+    词法搜索面在生产驱动上必炸（psql 靠未知类型字面量隐式转 jsonpath 掩盖）。
+    显式 cast 成 jsonpath 后按正确签名解析。
+    """
+
+    def get_col_spec(self, **kw: Any) -> str:
+        return "jsonpath"
+
+    cache_ok = True  # 无状态类型: 允许 SQLAlchemy 编译缓存（消除 SAWarning）
+
 
 try:
     from app.services.semantic_cache_service import semantic_cache_service
@@ -844,7 +863,23 @@ class KnowledgeRetrievalService:
         if not await self._vector_runtime_available():
             return []
 
-        query_embedding = await embedding_service.get_embedding(query, text_type="query")
+        # G-05（wt395）: embedding 侧故障不得炸穿节点语义搜索面。此前
+        # get_embedding 的异常直接上抛 → REST POST /galaxy/search 500；同故障
+        # 在 document_hybrid_search（E-05）是显式降级。对齐口径：
+        # - EmbeddingNotConfiguredError（供应商未配置/被禁用, 持久态）→ 熔断
+        #   向量运行时（_disable_vector_runtime），显式记日志;
+        # - 其他瞬时失败 → 仅本次降级为空 + error 计数, 不烧熔断。
+        # 调用方既有 keyword_search 词法面保持可用（galaxy_service.auto_classify
+        # 已有同款回退先例）。
+        try:
+            query_embedding = await embedding_service.get_embedding(query, text_type="query")
+        except EmbeddingNotConfiguredError as e:
+            self._disable_vector_runtime(f"embedding provider unavailable: {e}")
+            return []
+        except Exception as e:
+            logger.warning(f"Semantic node search: query embedding failed, degrading to empty this call: {e}")
+            RETRIEVAL_ERROR_TOTAL.labels(source="node_semantic", stage="embed").inc()
+            return []
 
         search_query = (
             select(KnowledgeNode, KnowledgeNode.embedding.cosine_distance(query_embedding).label("distance"))
@@ -923,8 +958,11 @@ class KnowledgeRetrievalService:
                     KnowledgeNode.name.ilike(f"%{escaped_query}%"),
                     KnowledgeNode.description.ilike(f"%{escaped_query}%"),
                     KnowledgeNode.keywords.contains([query]),
+                    # G-05（wt395）: 路径串必须显式 cast 为 jsonpath（见 _JSONPATH）,
+                    # 否则 asyncpg 类型化参数按 varchar 发送 → UndefinedFunctionError。
                     func.jsonb_path_exists(
-                        KnowledgeNode.keywords, f'$[*] ? (@ like_regex "{regex_safe_query}" flag "i")'
+                        KnowledgeNode.keywords,
+                        sa_cast(f'$[*] ? (@ like_regex "{regex_safe_query}" flag "i")', _JSONPATH()),
                     ),
                 )
             )
