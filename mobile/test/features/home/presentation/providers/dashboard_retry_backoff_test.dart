@@ -8,6 +8,7 @@
 //   2. The delay is capped at the last schedule entry.
 //   3. A successful fetch resets the budget: a fresh failure retries from
 //      the first step again.
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/network/api_client.dart';
@@ -124,57 +125,55 @@ void main() {
     }
   });
 
-  test('a successful fetch resets the retry budget', () async {
-    final repo = _ScriptedDashboardRepository();
-    const schedule = <Duration>[
-      Duration(milliseconds: 80),
-      Duration(milliseconds: 400),
-      Duration(milliseconds: 400),
-      Duration(milliseconds: 400),
-    ];
-    final container = _containerWith(repo, schedule);
-    addTearDown(container.dispose);
+  test('a successful fetch resets the retry budget', () {
+    // CI 慢机三度击穿墙钟阈（250/300/380 都不够）——按本文件注释预留的
+    // 第三档判据改 fakeAsync 时钟注入：判别边界=250ms 假时钟（80 档必然
+    // 已触发、400 档必然未触发），墙钟开销彻底退出判据。
+    late _ScriptedDashboardRepository repo;
+    late ProviderContainer container;
 
-    // Lazy provider: construct the notifier to start the initial fetch.
-    container.read(dashboardProvider.notifier);
+    FakeAsync().run((async) {
+      const schedule = <Duration>[
+        Duration(milliseconds: 80),
+        Duration(milliseconds: 400),
+        Duration(milliseconds: 400),
+        Duration(milliseconds: 400),
+      ];
+      repo = _ScriptedDashboardRepository();
+      container = _containerWith(repo, schedule);
 
-    // Failure #1 → auto-retry (~80ms) fails → let a retry succeed so the
-    // budget resets.
-    await _waitFor(
-      const Duration(seconds: 4),
-      () => repo.statusCalls.length >= 2,
-    );
-    repo.failNext = false;
-    await _waitFor(
-      const Duration(seconds: 4),
-      () => container.read(dashboardProvider).error == null,
-    );
+      // 构造 notifier（惰性 provider）→ 初始 fetch 失败 → 80ms 重试入队。
+      container.read(dashboardProvider.notifier);
+      async.flushMicrotasks();
+      expect(repo.statusCalls.length, 1, reason: '初始 fetch 应立即失败一次');
 
-    // Fresh failure after success must retry from the FIRST step (~80ms),
-    // not the escalated second step (~400ms).
-    repo.failNext = true;
-    await container.read(dashboardProvider.notifier).fetchData();
-    final before = repo.statusCalls.length;
-    await _waitFor(
-      const Duration(seconds: 4),
-      () => repo.statusCalls.length >= before + 1,
-    );
+      // 250ms 假时钟内：80ms 档重试必须已发生（调度本身在工作）。
+      async.elapse(const Duration(milliseconds: 250));
+      expect(repo.statusCalls.length, 2,
+          reason: '第一档 ~80ms 重试应在 250ms 假时钟内发生');
 
-    final retryDelta = repo.statusCalls
-        .last
-        .difference(repo.statusCalls[repo.statusCalls.length - 2])
-        .inMilliseconds;
-    expect(
-      retryDelta,
-      // 判别的是第一档(~80ms)与升级档(~400ms 计时器)的区别。调度开销对两档
-      // 等量加法抬升（两次 CI 实测：250/300 阈值都被慢机开销击穿），380 允许
-      // ~300ms 开销仍严格低于 400ms 升级档定时器——判别力不丢，绝对时延不较真
-      //（CI 慢机性能阈族，同 wt296 bench 分类；第三档判据=实测再击穿就改
-      // fakeAsync 时钟注入，不再放阈）。
-      lessThan(380),
-      reason:
-          'After a success the next failure must be retried from the first '
-          'backoff step (~80ms); got ${retryDelta}ms (budget was not reset)',
-    );
+      // 让升级档（400ms）触发并成功 → 预算重置。
+      repo.failNext = false;
+      async.elapse(const Duration(milliseconds: 450));
+      expect(container.read(dashboardProvider).error, isNull,
+          reason: '重试成功后 error 应清空');
+      expect(repo.statusCalls.length, 3);
+
+      // 成功后的新失败：手动 fetch 立即失败 → 若预算已重置，重试回 80ms 档。
+      repo.failNext = true;
+      container.read(dashboardProvider.notifier).fetchData();
+      async.flushMicrotasks();
+      final before = repo.statusCalls.length;
+      expect(before, 4, reason: '手动 fetch 应立即记一次失败调用');
+
+      // 判别核心：250ms 假时钟边界。预算已重置 → 80ms 档已触发（before+1）；
+      // 未重置 → 还在等 400ms 档定时器（仍 before）。
+      async.elapse(const Duration(milliseconds: 250));
+      expect(repo.statusCalls.length, before + 1,
+          reason: '成功后的新失败必须从第一档（~80ms）重试；'
+              '250ms 内未重试说明预算未重置（仍在 400ms 升级档）');
+
+      container.dispose();
+    });
   });
 }
