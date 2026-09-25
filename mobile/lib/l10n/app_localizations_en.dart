@@ -7148,7 +7148,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memoryCorrectionMerge => 'Merge';
 
   @override
-  String get memoryMergeComingSoon => 'Merge feature coming soon';
+  String get memoryMergeComingSoon => 'Merge isn\'t available yet';
 
   @override
   String get memoryCorrectionSubmitted => 'Correction submitted';
@@ -11986,7 +11986,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get memoryExplanationInferredEpisodic =>
-      'This experience was inferred by AI from chat, with evidence tokens, confidence, and retraction path preserved.';
+      'This experience was inferred by AI from chat, with its evidence preserved and retraction supported.';
 
   @override
   String memoryCorrectionSubmittedWithAction(Object action) {
@@ -12112,10 +12112,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'View unlocked milestones and honor progress';
 
   @override
-  String get profileSubtitleVisualElements =>
-      'Manage backgrounds, particles, and visual rewards';
-
-  @override
   String get profileSubtitlePersona =>
       'View learning traits and preferences understood by the system';
 
@@ -12179,20 +12175,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Continue this step, or confirm the task and plan first.';
 
   @override
-  String get chatTheaterTitle => 'Prediction Theater';
-
-  @override
-  String get chatTheaterDesc =>
-      'See which path is worth exploring now and why it suits you better.';
-
-  @override
-  String get chatSimulationTitle => 'Learning Simulation';
-
-  @override
-  String get chatSimulationDesc =>
-      'See the key viewpoint clash first, then decide whether to enter the full simulation.';
-
-  @override
   String get chatReportTitle => 'Learning Report';
 
   @override
@@ -12209,13 +12191,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatSwipeToSwitch => 'Swipe left/right to switch entries';
 
   @override
-  String get chatViewTheaterDetails => 'View prediction details';
-
-  @override
   String get chatCurrentLearningTopic => 'Current learning topic';
-
-  @override
-  String get chatViewSimulationDetails => 'View simulation details';
 
   @override
   String get chatCollaborationProcess => 'Collaboration process';
@@ -12308,14 +12284,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatParticipantLabel => 'Participant';
 
   @override
-  String get chatPromptRefinePath => 'Continue refining this path';
-
-  @override
-  String chatPromptRefinePathMessage(Object topic) {
-    return 'Continue refining the first week\'s priority steps around \"$topic\".';
-  }
-
-  @override
   String get chatPromptComparePaths => 'Compare two paths';
 
   @override
@@ -12351,14 +12319,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String chatPromptMakePlanMessage(Object topic) {
     return 'Rewrite the \"$topic\" path into a 7-day executable mini-plan.';
-  }
-
-  @override
-  String get chatPromptSimulateRound => 'Continue simulating another round';
-
-  @override
-  String chatPromptSimulateRoundMessage(Object topic) {
-    return 'Simulate another round around \"$topic\". I want to continue this learning scenario.';
   }
 
   @override
@@ -14672,31 +14632,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insightHubTitle => 'Learning Insights';
 
   @override
-  String insightHubRecommendedSeeds(Object count) {
-    return '$count recommended scenarios ready to simulate.';
-  }
-
-  @override
   String get insightHubFallbackSummary =>
       'Reports and insights — now in one lighter learning flow.';
-
-  @override
-  String get insightHubSimulation => 'Simulation';
-
-  @override
-  String get insightHubTheater => 'What-If Theater';
 
   @override
   String get insightHubReport => 'Learning Report';
 
   @override
   String get insightHubEnterOverview => 'Enter Insight Overview';
-
-  @override
-  String get insightHubCompactSimulation => 'Simulation';
-
-  @override
-  String get insightHubCompactTheater => 'Theater';
 
   @override
   String get insightHubCompactReport => 'Report';
@@ -14706,40 +14649,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'Some insight data hasn\'t refreshed yet. Existing content will be shown.';
 
   @override
-  String insightHubSeedsToExplore(Object count) {
-    return '$count scenarios to explore';
-  }
-
-  @override
   String get insightHubCompactFallback =>
       'Reports and insights now in one card';
-
-  @override
-  String get insightHubNoRecentTheater => 'No recent theater';
-
-  @override
-  String get insightHubContinueLastTheater => 'Continue last theater';
-
-  @override
-  String insightHubContinueTopic(Object topic) {
-    return 'Continue $topic';
-  }
-
-  @override
-  String get insightHubContinueLastSimulation => 'Continue last simulation';
-
-  @override
-  String insightHubRecommendedSeedsCount(Object count) {
-    return '$count scenarios';
-  }
-
-  @override
-  String insightHubContinueSession(Object topic) {
-    return 'Continue $topic';
-  }
-
-  @override
-  String get insightHubStartSimulation => 'Start a new simulation';
 
   @override
   String get insightHubNoRecentReport => 'No recent report';
@@ -18237,18 +18148,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String reportActionExploreNode(Object nodeName) {
-    return 'Explore $nodeName';
-  }
-
-  @override
   String get reportActionWeaknessFallback => 'Weakness';
 
   @override
   String get reportActionStrengthFallback => 'Current Strength';
-
-  @override
-  String get reportActionEnterSimulation => 'Enter Simulation';
 
   @override
   String get reportTrendAutoFillTitle =>
@@ -22285,7 +22188,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationRecallDeadlinePressure => 'Time pressure';
 
   @override
-  String get notificationRecallScore => 'Recall score';
+  String get notificationRecallScore => 'Estimated retention';
 
   @override
   String get notificationRecallInaccurate => 'This reminder is inaccurate';
@@ -23697,11 +23600,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatRoundtableWritingExpert => 'Writing Expert';
 
   @override
-  String chatSettingsCurrentSeeds(Object names) {
-    return 'Currently active: $names';
-  }
-
-  @override
   String get chatSettingsEnableSeedDesc =>
       'Inject enabled seed library content and answer style into current chat.';
 
@@ -23731,28 +23629,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Keep only text messages. Hide extra cards and feedback below messages.';
 
   @override
-  String get chatSettingsSeedDisableHint =>
-      'When disabled, no seed library is injected to avoid context pollution.';
-
-  @override
-  String get chatSettingsSeedEnableHint =>
-      'After enabling, enhancement starts from the next message.';
-
-  @override
   String get chatSettingsSeedLibrary => 'Seed Library';
-
-  @override
-  String get chatSettingsSeedsDefaultOff =>
-      'Seed library enhancement is off by default';
-
-  @override
-  String chatSettingsSeedsEnabledCount(Object count) {
-    return '$count enabled seed libraries connected';
-  }
-
-  @override
-  String get chatSettingsSeedsEnabledNone =>
-      'Seed library enhancement enabled but no seed libraries available';
 
   @override
   String get chatSettingsShowAgentCollab => 'Show Agent Collaboration';
@@ -23802,9 +23679,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get chatSettingsShowTransparencyDesc =>
       'Control floating AI completion and transparency info at bottom.';
-
-  @override
-  String get chatSettingsSyncingSeeds => 'Syncing seed library status';
 
   @override
   String get chatSettingsTitle => 'Chat Settings';
@@ -26208,15 +26082,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Complete a learning task, log an error, or start a simulation first — then weekly reports and insights become useful.';
 
   @override
-  String get insSimLabel => 'Learning Simulation';
-
-  @override
-  String get insTheaterLabel => 'Simulation Theater';
-
-  @override
-  String get insOpenSim => 'Open Simulation';
-
-  @override
   String get insReportLabel => 'Learning Report';
 
   @override
@@ -26257,20 +26122,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insStartFromRecommended => 'Start from Recommended';
 
   @override
-  String get insStartSimulation => 'Start Simulation';
-
-  @override
-  String get insTheaterFallback => 'Break a goal into multiple learning paths';
-
-  @override
-  String get insSimFallback =>
-      'Bring a knowledge point into multi-role live discussion';
-
-  @override
   String get insFocusedSim => 'Focused: Learning Simulation';
-
-  @override
-  String get insFocusedTheater => 'Focused: Scenario Theater';
 
   @override
   String get insFocusedReport => 'Focused: Learning Report';
@@ -29674,7 +29526,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get communityCommentLabel => 'Comment';
 
   @override
-  String get communityCommentsComingSoon => 'Comments coming soon';
+  String get communityCommentsComingSoon => 'Comments aren\'t available yet';
 
   @override
   String get communityShowMore => 'Show more';
@@ -31979,11 +31831,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String lioRecommendedSeeds(int count) {
-    return '$count recommended scenarios';
-  }
-
-  @override
   String get lioStartNewSim => 'Start a new simulation now';
 
   @override
@@ -32002,9 +31849,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String lioRecentUpdate(String desc) {
     return 'Recently updated · $desc';
   }
-
-  @override
-  String get lioNoTheaterYet => 'No recent prediction generated yet';
 
   @override
   String get lioNoReportYet => 'No recent report generated yet';
@@ -35418,7 +35262,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String chatMemoryNotRightPrompt(String content) {
-    return 'This memory is not right: $content. Please lower confidence and avoid directly using it later.';
+    return 'This memory isn\'t right: $content. Rely on it less going forward — don\'t cite it directly.';
   }
 
   @override

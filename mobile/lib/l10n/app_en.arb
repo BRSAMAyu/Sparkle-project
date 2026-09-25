@@ -2946,7 +2946,7 @@
     "memoryCorrectionNoLongerApplies": "No longer applies",
     "memoryCorrectionLowerConfidence": "Lower confidence",
     "memoryCorrectionMerge": "Merge",
-    "memoryMergeComingSoon": "Merge feature coming soon",
+    "memoryMergeComingSoon": "Merge isn't available yet",
     "memoryCorrectionSubmitted": "Correction submitted",
     "memoryCorrectionFailed": "Correction failed",
     "memoryHistoryLoadFailed": "Failed to load history",
@@ -4736,7 +4736,7 @@
         }
     },
     "memoryAiInferredDisabledHint": "AI auto-memory is currently disabled, such inferred memories will not be recorded.",
-    "memoryExplanationInferredEpisodic": "This experience was inferred by AI from chat, with evidence tokens, confidence, and retraction path preserved.",
+    "memoryExplanationInferredEpisodic": "This experience was inferred by AI from chat, with its evidence preserved and retraction supported.",
     "memoryCorrectionSubmittedWithAction": "Correction submitted: {action}",
     "@memoryCorrectionSubmittedWithAction": {
         "placeholders": {
@@ -4984,18 +4984,12 @@
     "chatViewAccessoryContentDesc": "Temporarily expand task cards and quick actions in pure mode",
     "chatActionSuggestion": "Action suggestion",
     "chatActionSuggestionDesc": "Continue this step, or confirm the task and plan first.",
-    "chatTheaterTitle": "Prediction Theater",
-    "chatTheaterDesc": "See which path is worth exploring now and why it suits you better.",
-    "chatSimulationTitle": "Learning Simulation",
-    "chatSimulationDesc": "See the key viewpoint clash first, then decide whether to enter the full simulation.",
     "chatReportTitle": "Learning Report",
     "chatReportDesc": "See the core diagnosis and next steps first, then decide whether to enter the full report.",
     "chatAccessoryContent": "Additional content",
     "chatContinueExploring": "Continue exploring",
     "chatSwipeToSwitch": "Swipe left/right to switch entries",
-    "chatViewTheaterDetails": "View prediction details",
     "chatCurrentLearningTopic": "Current learning topic",
-    "chatViewSimulationDetails": "View simulation details",
     "chatCollaborationProcess": "Collaboration process",
     "chatPlanContext": "Plan context",
     "chatPlanStatus": "Plan status",
@@ -5022,8 +5016,6 @@
     "chatPromptPreviewCancel": "Not now",
     "chatPromptPreviewSend": "Send now",
     "chatParticipantLabel": "Participant",
-    "chatPromptRefinePath": "Continue refining this path",
-    "chatPromptRefinePathMessage": "Continue refining the first week's priority steps around \"{topic}\".",
     "chatPromptComparePaths": "Compare two paths",
     "chatPromptComparePathsMessage": "Compare the trade-offs between \"{pathA}\" and \"{pathB}\".",
     "chatPromptDefaultPathA": "Path A",
@@ -5034,8 +5026,6 @@
     "chatPromptExamFocusMessage": "Tell me the parts of \"{topic}\" most likely to be exam key points and why.",
     "chatPromptMakePlan": "Make it a plan",
     "chatPromptMakePlanMessage": "Rewrite the \"{topic}\" path into a 7-day executable mini-plan.",
-    "chatPromptSimulateRound": "Continue simulating another round",
-    "chatPromptSimulateRoundMessage": "Simulate another round around \"{topic}\". I want to continue this learning scenario.",
     "chatOneOfTheRoles": "One of the roles",
     "chatPromptLetMeAnswer": "Let me answer",
     "chatPromptLetMeAnswerMessage": "Have {speaker} ask me a follow-up question around \"{topic}\", and I'll answer.",
@@ -5092,7 +5082,6 @@
         }
     },
     "profileSubtitleAchievements": "View unlocked milestones and honor progress",
-    "profileSubtitleVisualElements": "Manage backgrounds, particles, and visual rewards",
     "profileSubtitlePersona": "View learning traits and preferences understood by the system",
     "profileSubtitlePersonalInfo": "Edit avatar, nickname, and basic info",
     "profileSubtitlePreferences": "Manage sensory feedback, learning mode, and push preferences",
@@ -6182,60 +6171,12 @@
     "examSprintStatusInProgress": "In progress",
     "examSprintStatusPending": "Pending",
     "insightHubTitle": "Learning Insights",
-    "insightHubRecommendedSeeds": "{count} recommended scenarios ready to simulate.",
-    "@insightHubRecommendedSeeds": {
-        "placeholders": {
-            "count": {
-                "type": "Object"
-            }
-        }
-    },
     "insightHubFallbackSummary": "Reports and insights — now in one lighter learning flow.",
-    "insightHubSimulation": "Simulation",
-    "insightHubTheater": "What-If Theater",
     "insightHubReport": "Learning Report",
     "insightHubEnterOverview": "Enter Insight Overview",
-    "insightHubCompactSimulation": "Simulation",
-    "insightHubCompactTheater": "Theater",
     "insightHubCompactReport": "Report",
     "insightHubRefreshWarning": "Some insight data hasn't refreshed yet. Existing content will be shown.",
-    "insightHubSeedsToExplore": "{count} scenarios to explore",
-    "@insightHubSeedsToExplore": {
-        "placeholders": {
-            "count": {
-                "type": "Object"
-            }
-        }
-    },
     "insightHubCompactFallback": "Reports and insights now in one card",
-    "insightHubNoRecentTheater": "No recent theater",
-    "insightHubContinueLastTheater": "Continue last theater",
-    "insightHubContinueTopic": "Continue {topic}",
-    "@insightHubContinueTopic": {
-        "placeholders": {
-            "topic": {
-                "type": "Object"
-            }
-        }
-    },
-    "insightHubContinueLastSimulation": "Continue last simulation",
-    "insightHubRecommendedSeedsCount": "{count} scenarios",
-    "@insightHubRecommendedSeedsCount": {
-        "placeholders": {
-            "count": {
-                "type": "Object"
-            }
-        }
-    },
-    "insightHubContinueSession": "Continue {topic}",
-    "@insightHubContinueSession": {
-        "placeholders": {
-            "topic": {
-                "type": "Object"
-            }
-        }
-    },
-    "insightHubStartSimulation": "Start a new simulation",
     "insightHubNoRecentReport": "No recent report",
     "insightHubMasteryPercent": "Mastery {percent}%",
     "@insightHubMasteryPercent": {
@@ -8152,17 +8093,8 @@
             }
         }
     },
-    "reportActionExploreNode": "Explore {nodeName}",
-    "@reportActionExploreNode": {
-        "placeholders": {
-            "nodeName": {
-                "type": "Object"
-            }
-        }
-    },
     "reportActionWeaknessFallback": "Weakness",
     "reportActionStrengthFallback": "Current Strength",
-    "reportActionEnterSimulation": "Enter Simulation",
     "reportTrendAutoFillTitle": "Trends will fill in as more reports are generated",
     "reportTrendFirstReportMessage": "Your first report is ready. Focus on weak spots based on this diagnosis. Next time, a trend line will start to form.",
     "reportTrendLoadingHistory": "Loading your learning report history. Mastery trends will appear here shortly.",
@@ -9877,7 +9809,7 @@
     "notificationRecallReason": "Why now",
     "notificationRecallEffort": "Effort",
     "notificationRecallDeadlinePressure": "Time pressure",
-    "notificationRecallScore": "Recall score",
+    "notificationRecallScore": "Estimated retention",
     "notificationRecallInaccurate": "This reminder is inaccurate",
     "notificationRecallFeedbackSaved": "Thanks. This reminder will be tuned.",
     "notificationRecallFeedbackRecorded": "Feedback recorded",
@@ -10384,7 +10316,7 @@
     "communityWelcomeToGroup": "Welcome to the group!",
     "communityLeaveGroupFailed": "Failed to leave group, please retry",
     "communityCommentLabel": "Comment",
-    "communityCommentsComingSoon": "Comments coming soon",
+    "communityCommentsComingSoon": "Comments aren't available yet",
     "communityShowMore": "Show more",
     "communityShowLess": "Show less",
     "communityShareLabel": "Share",
@@ -12131,9 +12063,6 @@
     "insOverviewTitle": "Learning Insights",
     "insOverviewEmpty": "Learning insights has no data yet",
     "insOverviewEmptyDesc": "Complete a learning task, log an error, or start a simulation first — then weekly reports and insights become useful.",
-    "insSimLabel": "Learning Simulation",
-    "insTheaterLabel": "Simulation Theater",
-    "insOpenSim": "Open Simulation",
     "insReportLabel": "Learning Report",
     "insViewReport": "View Report",
     "insBackToCockpit": "Back to Cockpit",
@@ -12147,11 +12076,7 @@
     "insDecisionLogOpen": "Open Log",
     "insContinueView": "Continue",
     "insStartFromRecommended": "Start from Recommended",
-    "insStartSimulation": "Start Simulation",
-    "insTheaterFallback": "Break a goal into multiple learning paths",
-    "insSimFallback": "Bring a knowledge point into multi-role live discussion",
     "insFocusedSim": "Focused: Learning Simulation",
-    "insFocusedTheater": "Focused: Scenario Theater",
     "insFocusedReport": "Focused: Learning Report",
     "insFocusedDefault": "Simulation, theater & reports in one place",
     "insFlowTitle": "Connect \"spot problems, simulate discussions, draw conclusions\" into one flow.",
@@ -13069,7 +12994,6 @@
     "chatRoundtableTimeCoach": "Time Coach",
     "chatRoundtableTurnCount": "{count} viewpoints",
     "chatRoundtableWritingExpert": "Writing Expert",
-    "chatSettingsCurrentSeeds": "Currently active: {names}",
     "chatSettingsEnableSeedDesc": "Inject enabled seed library content and answer style into current chat.",
     "chatSettingsEnableSeedEnhancement": "Enable Seed Library Enhancement",
     "chatSettingsExperience": "Chat Experience",
@@ -13078,12 +13002,7 @@
     "chatSettingsOpenAdvancedDesc": "Enter detailed transparency configuration page.",
     "chatSettingsPureMode": "Pure Mode",
     "chatSettingsPureModeDesc": "Keep only text messages. Hide extra cards and feedback below messages.",
-    "chatSettingsSeedDisableHint": "When disabled, no seed library is injected to avoid context pollution.",
-    "chatSettingsSeedEnableHint": "After enabling, enhancement starts from the next message.",
     "chatSettingsSeedLibrary": "Seed Library",
-    "chatSettingsSeedsDefaultOff": "Seed library enhancement is off by default",
-    "chatSettingsSeedsEnabledCount": "{count} enabled seed libraries connected",
-    "chatSettingsSeedsEnabledNone": "Seed library enhancement enabled but no seed libraries available",
     "chatSettingsShowAgentCollab": "Show Agent Collaboration",
     "chatSettingsShowAgentCollabDesc": "Show participating experts, responsibilities, and model collaboration.",
     "chatSettingsShowAiPanel": "Show AI System Panel",
@@ -13098,7 +13017,6 @@
     "chatSettingsShowTopBarDesc": "Control plan, mode, and gear entry points on chat page.",
     "chatSettingsShowTransparencyCapsule": "Show Transparency Capsule",
     "chatSettingsShowTransparencyDesc": "Control floating AI completion and transparency info at bottom.",
-    "chatSettingsSyncingSeeds": "Syncing seed library status",
     "chatSettingsTitle": "Chat Settings",
     "chatSettingsTransparencyDetails": "Transparency Details",
     "chatSettingsUiCapabilities": "UI & Capabilities",
@@ -14017,14 +13935,6 @@
             }
         }
     },
-    "lioRecommendedSeeds": "{count} recommended scenarios",
-    "@lioRecommendedSeeds": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "lioStartNewSim": "Start a new simulation now",
     "lioRecentAnalysis": "Last analysis covered {count} knowledge points",
     "@lioRecentAnalysis": {
@@ -14044,7 +13954,6 @@
             }
         }
     },
-    "lioNoTheaterYet": "No recent prediction generated yet",
     "lioNoReportYet": "No recent report generated yet",
     "lioMastery": "Mastery {percent}%",
     "@lioMastery": {
@@ -15718,7 +15627,7 @@
         }
     },
     "receiptKnowledgeRefs": "Reference materials",
-    "chatMemoryNotRightPrompt": "This memory is not right: {content}. Please lower confidence and avoid directly using it later.",
+    "chatMemoryNotRightPrompt": "This memory isn't right: {content}. Rely on it less going forward — don't cite it directly.",
     "@chatMemoryNotRightPrompt": {
         "placeholders": {
             "content": {

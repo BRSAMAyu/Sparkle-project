@@ -2960,7 +2960,7 @@
     "memoryCorrectionNoLongerApplies": "不再适用",
     "memoryCorrectionLowerConfidence": "置信度较低",
     "memoryCorrectionMerge": "合并",
-    "memoryMergeComingSoon": "合并功能即将上线",
+    "memoryMergeComingSoon": "合并功能暂未开放",
     "memoryCorrectionSubmitted": "已提交纠错",
     "memoryCorrectionFailed": "纠错失败",
     "memoryHistoryLoadFailed": "历史记录加载失败",
@@ -4954,7 +4954,7 @@
         }
     },
     "memoryAiInferredDisabledHint": "当前已关闭 AI 自动记忆，后续不会继续写入此类推断。",
-    "memoryExplanationInferredEpisodic": "这条经历由 AI 从聊天中推断，并保留了证据 token、置信度与撤销路径。",
+    "memoryExplanationInferredEpisodic": "这条经历由 AI 从聊天中推断而来，保留了依据，也支持撤销。",
     "memoryCorrectionSubmittedWithAction": "已提交纠错: {action}",
     "@memoryCorrectionSubmittedWithAction": {
         "placeholders": {
@@ -5018,7 +5018,6 @@
         }
     },
     "profileSubtitleAchievements": "查看已解锁的里程碑与荣誉进度",
-    "profileSubtitleVisualElements": "管理背景、粒子和视觉奖励",
     "profileSubtitlePersona": "查看系统理解到的学习特征与偏好",
     "profileSubtitlePersonalInfo": "编辑头像、昵称和基础资料",
     "profileSubtitlePreferences": "管理感官反馈、学习模式与推送偏好",
@@ -5036,18 +5035,12 @@
     "chatViewAccessoryContentDesc": "在纯净模式下临时展开任务卡和快捷入口",
     "chatActionSuggestion": "行动建议",
     "chatActionSuggestionDesc": "继续完成这一步，或者先确认任务和计划。",
-    "chatTheaterTitle": "推演剧场",
-    "chatTheaterDesc": "现在最值得先看的是哪条路径，以及它为什么更适合你。",
-    "chatSimulationTitle": "学习仿真",
-    "chatSimulationDesc": "先看这一轮最关键的观点碰撞，再决定要不要进入完整模拟。",
     "chatReportTitle": "学习报告",
     "chatReportDesc": "先看最核心的诊断和下一步动作，再决定是否进入完整报告页。",
     "chatAccessoryContent": "附加内容",
     "chatContinueExploring": "继续探索",
     "chatSwipeToSwitch": "左右滑动切换不同入口",
-    "chatViewTheaterDetails": "查看推演详情",
     "chatCurrentLearningTopic": "当前学习主题",
-    "chatViewSimulationDetails": "查看模拟详情",
     "chatCollaborationProcess": "协作过程",
     "chatPlanContext": "计划上下文",
     "chatPlanStatus": "计划状态",
@@ -5074,8 +5067,6 @@
     "chatPromptPreviewCancel": "先不发",
     "chatPromptPreviewSend": "直接发送",
     "chatParticipantLabel": "参与者",
-    "chatPromptRefinePath": "继续细化这条路径",
-    "chatPromptRefinePathMessage": "继续围绕「{topic}」细化第一周最该先做的步骤。",
     "chatPromptComparePaths": "比较两条路线",
     "chatPromptComparePathsMessage": "比较一下「{pathA}」和「{pathB}」的取舍。",
     "chatPromptDefaultPathA": "路线 A",
@@ -5086,8 +5077,6 @@
     "chatPromptExamFocusMessage": "围绕「{topic}」，告诉我最容易成为考试重点的部分和原因。",
     "chatPromptMakePlan": "给我排成计划",
     "chatPromptMakePlanMessage": "把「{topic}」这条路径改写成 7 天可执行的小计划。",
-    "chatPromptSimulateRound": "继续模拟一轮",
-    "chatPromptSimulateRoundMessage": "继续围绕「{topic}」模拟一轮，我想继续跟进这个学习场景。",
     "chatOneOfTheRoles": "其中一个角色",
     "chatPromptLetMeAnswer": "让我来回答",
     "chatPromptLetMeAnswerMessage": "让 {speaker} 围绕「{topic}」继续追问我一个关键问题，我来回答。",
@@ -6185,60 +6174,12 @@
     "examSprintStatusInProgress": "进行中",
     "examSprintStatusPending": "待开始",
     "insightHubTitle": "学习洞察",
-    "insightHubRecommendedSeeds": "现在有 {count} 个推荐场景可以直接开始模拟。",
-    "@insightHubRecommendedSeeds": {
-        "placeholders": {
-            "count": {
-                "type": "Object"
-            }
-        }
-    },
     "insightHubFallbackSummary": "把报告和洞察收进一条更轻量的学习动线。",
-    "insightHubSimulation": "学习仿真",
-    "insightHubTheater": "推演剧场",
     "insightHubReport": "学习报告",
     "insightHubEnterOverview": "进入洞察总览",
-    "insightHubCompactSimulation": "仿真",
-    "insightHubCompactTheater": "推演",
     "insightHubCompactReport": "报告",
     "insightHubRefreshWarning": "部分洞察数据尚未刷新，点击后会继续显示已有内容。",
-    "insightHubSeedsToExplore": "{count} 个推荐场景待探索",
-    "@insightHubSeedsToExplore": {
-        "placeholders": {
-            "count": {
-                "type": "Object"
-            }
-        }
-    },
     "insightHubCompactFallback": "报告与洞察现在收在同一张卡里",
-    "insightHubNoRecentTheater": "最近暂无推演",
-    "insightHubContinueLastTheater": "继续上次推演",
-    "insightHubContinueTopic": "继续 {topic}",
-    "@insightHubContinueTopic": {
-        "placeholders": {
-            "topic": {
-                "type": "Object"
-            }
-        }
-    },
-    "insightHubContinueLastSimulation": "继续上次仿真",
-    "insightHubRecommendedSeedsCount": "{count} 个推荐场景",
-    "@insightHubRecommendedSeedsCount": {
-        "placeholders": {
-            "count": {
-                "type": "Object"
-            }
-        }
-    },
-    "insightHubContinueSession": "继续 {topic}",
-    "@insightHubContinueSession": {
-        "placeholders": {
-            "topic": {
-                "type": "Object"
-            }
-        }
-    },
-    "insightHubStartSimulation": "开始一轮新模拟",
     "insightHubNoRecentReport": "最近暂无报告",
     "insightHubMasteryPercent": "掌握度 {percent}%",
     "@insightHubMasteryPercent": {
@@ -8155,17 +8096,8 @@
             }
         }
     },
-    "reportActionExploreNode": "推演 {nodeName}",
-    "@reportActionExploreNode": {
-        "placeholders": {
-            "nodeName": {
-                "type": "Object"
-            }
-        }
-    },
     "reportActionWeaknessFallback": "薄弱项",
     "reportActionStrengthFallback": "当前强项",
-    "reportActionEnterSimulation": "进入学习仿真",
     "reportTrendAutoFillTitle": "趋势会随着更多报告自动补全",
     "reportTrendFirstReportMessage": "第一份报告已经生成好了。先按这次诊断聚焦薄弱知识点，下一次回来这里就会开始连成趋势线。",
     "reportTrendLoadingHistory": "正在整理你的历史学习报告，稍后会把掌握度趋势补全到这里。",
@@ -9689,7 +9621,7 @@
     "notificationRecallReason": "为什么是现在",
     "notificationRecallEffort": "预计投入",
     "notificationRecallDeadlinePressure": "时间压力",
-    "notificationRecallScore": "召回评分",
+    "notificationRecallScore": "记忆保持预估",
     "notificationRecallInaccurate": "这个提醒不准确",
     "notificationRecallFeedbackSaved": "已记录，之后会调准这类提醒",
     "notificationRecallFeedbackRecorded": "反馈已记录",
@@ -10170,7 +10102,6 @@
     "chatRoundtableTimeCoach": "时间教练",
     "chatRoundtableTurnCount": "{count} 条观点",
     "chatRoundtableWritingExpert": "写作专家",
-    "chatSettingsCurrentSeeds": "当前生效：{names}",
     "chatSettingsEnableSeedDesc": "为当前聊天注入已启用的种子库内容与回答风格。",
     "chatSettingsEnableSeedEnhancement": "开启种子库增强",
     "chatSettingsExperience": "对话体验",
@@ -10179,12 +10110,7 @@
     "chatSettingsOpenAdvancedDesc": "进入透明模式的详细配置页面。",
     "chatSettingsPureMode": "纯净模式",
     "chatSettingsPureModeDesc": "聊天中只保留文字消息，隐藏消息下方的附加卡片与反馈组件。",
-    "chatSettingsSeedDisableHint": "关闭时所有对话都不会注入种子库，避免上下文污染。",
-    "chatSettingsSeedEnableHint": "开启后会从下一条消息开始按种子库增强。",
     "chatSettingsSeedLibrary": "种子库",
-    "chatSettingsSeedsDefaultOff": "种子库增强默认关闭",
-    "chatSettingsSeedsEnabledCount": "当前接入 {count} 个已启用种子库",
-    "chatSettingsSeedsEnabledNone": "已开启种子库增强，但还没有可用种子库",
     "chatSettingsShowAgentCollab": "显示 Agent 协作",
     "chatSettingsShowAgentCollabDesc": "展示参与的专家、职责分工和模型协同。",
     "chatSettingsShowAiPanel": "显示 AI 系统面板",
@@ -10199,7 +10125,6 @@
     "chatSettingsShowTopBarDesc": "控制聊天页收起/展开的计划、模式和档位入口。",
     "chatSettingsShowTransparencyCapsule": "显示透明胶囊",
     "chatSettingsShowTransparencyDesc": "控制底部悬浮的 AI 完成情况与透明化信息。",
-    "chatSettingsSyncingSeeds": "正在同步种子库状态",
     "chatSettingsTitle": "对话设置",
     "chatSettingsTransparencyDetails": "透明化细项",
     "chatSettingsUiCapabilities": "界面与能力",
@@ -11302,9 +11227,6 @@
     "insOverviewTitle": "学习洞察",
     "insOverviewEmpty": "学习洞察还没有可读数据",
     "insOverviewEmptyDesc": "先完成一次学习任务、记录一道错题，或开始一轮仿真，周报和洞察才会开始给出真正有用的反馈。",
-    "insSimLabel": "学习仿真",
-    "insTheaterLabel": "推演剧场",
-    "insOpenSim": "打开推演",
     "insReportLabel": "学习报告",
     "insViewReport": "查看报告",
     "insBackToCockpit": "回到驾驶舱",
@@ -11318,11 +11240,7 @@
     "insDecisionLogOpen": "查看日志",
     "insContinueView": "继续查看",
     "insStartFromRecommended": "从推荐开始",
-    "insStartSimulation": "开始模拟",
-    "insTheaterFallback": "把一个目标拆成多条学习路径",
-    "insSimFallback": "把一个知识点拉进多角色现场讨论",
     "insFocusedSim": "已聚焦：学习仿真",
-    "insFocusedTheater": "已聚焦：推演剧场",
     "insFocusedReport": "已聚焦：学习报告",
     "insFocusedDefault": "仿真、推演、报告统一收在这里",
     "insFlowTitle": "把学习里的“看见问题、模拟讨论、沉淀结论”放到同一条动线里。",
@@ -12673,7 +12591,7 @@
     "communityWelcomeToGroup": "欢迎加入社群！",
     "communityLeaveGroupFailed": "退出群组失败，请重试",
     "communityCommentLabel": "评论",
-    "communityCommentsComingSoon": "评论功能即将上线",
+    "communityCommentsComingSoon": "评论功能暂未开放",
     "communityShowMore": "展开全文",
     "communityShowLess": "收起",
     "communityShareLabel": "分享",
@@ -14048,14 +13966,6 @@
             }
         }
     },
-    "lioRecommendedSeeds": "{count} 个推荐场景",
-    "@lioRecommendedSeeds": {
-        "placeholders": {
-            "count": {
-                "type": "int"
-            }
-        }
-    },
     "lioStartNewSim": "可立即开始一轮新模拟",
     "lioRecentAnalysis": "最近一次共分析 {count} 个知识点",
     "@lioRecentAnalysis": {
@@ -14075,7 +13985,6 @@
             }
         }
     },
-    "lioNoTheaterYet": "暂未生成最近推演",
     "lioNoReportYet": "暂未生成最近报告",
     "lioMastery": "掌握度 {percent}%",
     "@lioMastery": {
@@ -15734,7 +15643,7 @@
         }
     },
     "receiptKnowledgeRefs": "参考材料",
-    "chatMemoryNotRightPrompt": "这条记忆不对：{content}。请降低置信度，以后不要直接引用。",
+    "chatMemoryNotRightPrompt": "这条记忆不对：{content}。之后请少参考这条，不要直接引用。",
     "@chatMemoryNotRightPrompt": {
         "placeholders": {
             "content": {

@@ -80,7 +80,11 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
               icon: const Icon(Icons.person_add),
               semanticLabel: context.l10n.groupMembersInvite,
               onPressed: () {
-                AppFeedback.info(context, 'Invite feature coming soon');
+                AppFeedback.info(
+                  context,
+                  context.l10n
+                      .toolCurrentlyUnavailable(context.l10n.groupMembersInvite),
+                );
               },
             ),
         ],

@@ -21424,12 +21424,6 @@ abstract class AppLocalizations {
   /// **'查看已解锁的里程碑与荣誉进度'**
   String get profileSubtitleAchievements;
 
-  /// No description provided for @profileSubtitleVisualElements.
-  ///
-  /// In zh, this message translates to:
-  /// **'管理背景、粒子和视觉奖励'**
-  String get profileSubtitleVisualElements;
-
   /// No description provided for @profileSubtitlePersona.
   ///
   /// In zh, this message translates to:
@@ -21532,30 +21526,6 @@ abstract class AppLocalizations {
   /// **'继续完成这一步，或者先确认任务和计划。'**
   String get chatActionSuggestionDesc;
 
-  /// No description provided for @chatTheaterTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'推演剧场'**
-  String get chatTheaterTitle;
-
-  /// No description provided for @chatTheaterDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'现在最值得先看的是哪条路径，以及它为什么更适合你。'**
-  String get chatTheaterDesc;
-
-  /// No description provided for @chatSimulationTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'学习仿真'**
-  String get chatSimulationTitle;
-
-  /// No description provided for @chatSimulationDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'先看这一轮最关键的观点碰撞，再决定要不要进入完整模拟。'**
-  String get chatSimulationDesc;
-
   /// No description provided for @chatReportTitle.
   ///
   /// In zh, this message translates to:
@@ -21586,23 +21556,11 @@ abstract class AppLocalizations {
   /// **'左右滑动切换不同入口'**
   String get chatSwipeToSwitch;
 
-  /// No description provided for @chatViewTheaterDetails.
-  ///
-  /// In zh, this message translates to:
-  /// **'查看推演详情'**
-  String get chatViewTheaterDetails;
-
   /// No description provided for @chatCurrentLearningTopic.
   ///
   /// In zh, this message translates to:
   /// **'当前学习主题'**
   String get chatCurrentLearningTopic;
-
-  /// No description provided for @chatViewSimulationDetails.
-  ///
-  /// In zh, this message translates to:
-  /// **'查看模拟详情'**
-  String get chatViewSimulationDetails;
 
   /// No description provided for @chatCollaborationProcess.
   ///
@@ -21760,18 +21718,6 @@ abstract class AppLocalizations {
   /// **'参与者'**
   String get chatParticipantLabel;
 
-  /// No description provided for @chatPromptRefinePath.
-  ///
-  /// In zh, this message translates to:
-  /// **'继续细化这条路径'**
-  String get chatPromptRefinePath;
-
-  /// No description provided for @chatPromptRefinePathMessage.
-  ///
-  /// In zh, this message translates to:
-  /// **'继续围绕「{topic}」细化第一周最该先做的步骤。'**
-  String chatPromptRefinePathMessage(Object topic);
-
   /// No description provided for @chatPromptComparePaths.
   ///
   /// In zh, this message translates to:
@@ -21831,18 +21777,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'把「{topic}」这条路径改写成 7 天可执行的小计划。'**
   String chatPromptMakePlanMessage(Object topic);
-
-  /// No description provided for @chatPromptSimulateRound.
-  ///
-  /// In zh, this message translates to:
-  /// **'继续模拟一轮'**
-  String get chatPromptSimulateRound;
-
-  /// No description provided for @chatPromptSimulateRoundMessage.
-  ///
-  /// In zh, this message translates to:
-  /// **'继续围绕「{topic}」模拟一轮，我想继续跟进这个学习场景。'**
-  String chatPromptSimulateRoundMessage(Object topic);
 
   /// No description provided for @chatOneOfTheRoles.
   ///
@@ -25718,29 +25652,11 @@ abstract class AppLocalizations {
   /// **'学习洞察'**
   String get insightHubTitle;
 
-  /// No description provided for @insightHubRecommendedSeeds.
-  ///
-  /// In zh, this message translates to:
-  /// **'现在有 {count} 个推荐场景可以直接开始模拟。'**
-  String insightHubRecommendedSeeds(Object count);
-
   /// No description provided for @insightHubFallbackSummary.
   ///
   /// In zh, this message translates to:
   /// **'把推演、仿真和报告收进一条更轻量的学习动线。'**
   String get insightHubFallbackSummary;
-
-  /// No description provided for @insightHubSimulation.
-  ///
-  /// In zh, this message translates to:
-  /// **'学习仿真'**
-  String get insightHubSimulation;
-
-  /// No description provided for @insightHubTheater.
-  ///
-  /// In zh, this message translates to:
-  /// **'推演剧场'**
-  String get insightHubTheater;
 
   /// No description provided for @insightHubReport.
   ///
@@ -25754,18 +25670,6 @@ abstract class AppLocalizations {
   /// **'进入洞察总览'**
   String get insightHubEnterOverview;
 
-  /// No description provided for @insightHubCompactSimulation.
-  ///
-  /// In zh, this message translates to:
-  /// **'仿真'**
-  String get insightHubCompactSimulation;
-
-  /// No description provided for @insightHubCompactTheater.
-  ///
-  /// In zh, this message translates to:
-  /// **'推演'**
-  String get insightHubCompactTheater;
-
   /// No description provided for @insightHubCompactReport.
   ///
   /// In zh, this message translates to:
@@ -25778,59 +25682,11 @@ abstract class AppLocalizations {
   /// **'部分洞察数据尚未刷新，点击后会继续显示已有内容。'**
   String get insightHubRefreshWarning;
 
-  /// No description provided for @insightHubSeedsToExplore.
-  ///
-  /// In zh, this message translates to:
-  /// **'{count} 个推荐场景待探索'**
-  String insightHubSeedsToExplore(Object count);
-
   /// No description provided for @insightHubCompactFallback.
   ///
   /// In zh, this message translates to:
   /// **'仿真、推演和报告现在收在同一张卡里'**
   String get insightHubCompactFallback;
-
-  /// No description provided for @insightHubNoRecentTheater.
-  ///
-  /// In zh, this message translates to:
-  /// **'最近暂无推演'**
-  String get insightHubNoRecentTheater;
-
-  /// No description provided for @insightHubContinueLastTheater.
-  ///
-  /// In zh, this message translates to:
-  /// **'继续上次推演'**
-  String get insightHubContinueLastTheater;
-
-  /// No description provided for @insightHubContinueTopic.
-  ///
-  /// In zh, this message translates to:
-  /// **'继续 {topic}'**
-  String insightHubContinueTopic(Object topic);
-
-  /// No description provided for @insightHubContinueLastSimulation.
-  ///
-  /// In zh, this message translates to:
-  /// **'继续上次仿真'**
-  String get insightHubContinueLastSimulation;
-
-  /// No description provided for @insightHubRecommendedSeedsCount.
-  ///
-  /// In zh, this message translates to:
-  /// **'{count} 个推荐场景'**
-  String insightHubRecommendedSeedsCount(Object count);
-
-  /// No description provided for @insightHubContinueSession.
-  ///
-  /// In zh, this message translates to:
-  /// **'继续 {topic}'**
-  String insightHubContinueSession(Object topic);
-
-  /// No description provided for @insightHubStartSimulation.
-  ///
-  /// In zh, this message translates to:
-  /// **'开始一轮新模拟'**
-  String get insightHubStartSimulation;
 
   /// No description provided for @insightHubNoRecentReport.
   ///
@@ -31717,12 +31573,6 @@ abstract class AppLocalizations {
   /// **'优先围绕 {weakNode} 收口，再用 {strongNode} 做迁移练习，能更快把整体掌握度拉起来。'**
   String reportActionDescWithWeakness(Object weakNode, Object strongNode);
 
-  /// No description provided for @reportActionExploreNode.
-  ///
-  /// In zh, this message translates to:
-  /// **'推演 {nodeName}'**
-  String reportActionExploreNode(Object nodeName);
-
   /// No description provided for @reportActionWeaknessFallback.
   ///
   /// In zh, this message translates to:
@@ -31734,12 +31584,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'当前强项'**
   String get reportActionStrengthFallback;
-
-  /// No description provided for @reportActionEnterSimulation.
-  ///
-  /// In zh, this message translates to:
-  /// **'进入学习仿真'**
-  String get reportActionEnterSimulation;
 
   /// No description provided for @reportTrendAutoFillTitle.
   ///
@@ -41383,12 +41227,6 @@ abstract class AppLocalizations {
   /// **'写作专家'**
   String get chatRoundtableWritingExpert;
 
-  /// No description provided for @chatSettingsCurrentSeeds.
-  ///
-  /// In zh, this message translates to:
-  /// **'当前生效：{names}'**
-  String chatSettingsCurrentSeeds(Object names);
-
   /// No description provided for @chatSettingsEnableSeedDesc.
   ///
   /// In zh, this message translates to:
@@ -41437,41 +41275,11 @@ abstract class AppLocalizations {
   /// **'聊天中只保留文字消息，隐藏消息下方的附加卡片与反馈组件。'**
   String get chatSettingsPureModeDesc;
 
-  /// No description provided for @chatSettingsSeedDisableHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'关闭时所有对话都不会注入种子库，避免上下文污染。'**
-  String get chatSettingsSeedDisableHint;
-
-  /// No description provided for @chatSettingsSeedEnableHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'开启后会从下一条消息开始按种子库增强。'**
-  String get chatSettingsSeedEnableHint;
-
   /// No description provided for @chatSettingsSeedLibrary.
   ///
   /// In zh, this message translates to:
   /// **'种子库'**
   String get chatSettingsSeedLibrary;
-
-  /// No description provided for @chatSettingsSeedsDefaultOff.
-  ///
-  /// In zh, this message translates to:
-  /// **'种子库增强默认关闭'**
-  String get chatSettingsSeedsDefaultOff;
-
-  /// No description provided for @chatSettingsSeedsEnabledCount.
-  ///
-  /// In zh, this message translates to:
-  /// **'当前接入 {count} 个已启用种子库'**
-  String chatSettingsSeedsEnabledCount(Object count);
-
-  /// No description provided for @chatSettingsSeedsEnabledNone.
-  ///
-  /// In zh, this message translates to:
-  /// **'已开启种子库增强，但还没有可用种子库'**
-  String get chatSettingsSeedsEnabledNone;
 
   /// No description provided for @chatSettingsShowAgentCollab.
   ///
@@ -41556,12 +41364,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'控制底部悬浮的 AI 完成情况与透明化信息。'**
   String get chatSettingsShowTransparencyDesc;
-
-  /// No description provided for @chatSettingsSyncingSeeds.
-  ///
-  /// In zh, this message translates to:
-  /// **'正在同步种子库状态'**
-  String get chatSettingsSyncingSeeds;
 
   /// No description provided for @chatSettingsTitle.
   ///
@@ -45829,24 +45631,6 @@ abstract class AppLocalizations {
   /// **'先完成一次学习任务、记录一道错题，或开始一轮仿真，周报和洞察才会开始给出真正有用的反馈。'**
   String get insOverviewEmptyDesc;
 
-  /// No description provided for @insSimLabel.
-  ///
-  /// In zh, this message translates to:
-  /// **'学习仿真'**
-  String get insSimLabel;
-
-  /// No description provided for @insTheaterLabel.
-  ///
-  /// In zh, this message translates to:
-  /// **'推演剧场'**
-  String get insTheaterLabel;
-
-  /// No description provided for @insOpenSim.
-  ///
-  /// In zh, this message translates to:
-  /// **'打开推演'**
-  String get insOpenSim;
-
   /// No description provided for @insReportLabel.
   ///
   /// In zh, this message translates to:
@@ -45925,35 +45709,11 @@ abstract class AppLocalizations {
   /// **'从推荐开始'**
   String get insStartFromRecommended;
 
-  /// No description provided for @insStartSimulation.
-  ///
-  /// In zh, this message translates to:
-  /// **'开始模拟'**
-  String get insStartSimulation;
-
-  /// No description provided for @insTheaterFallback.
-  ///
-  /// In zh, this message translates to:
-  /// **'把一个目标拆成多条学习路径'**
-  String get insTheaterFallback;
-
-  /// No description provided for @insSimFallback.
-  ///
-  /// In zh, this message translates to:
-  /// **'把一个知识点拉进多角色现场讨论'**
-  String get insSimFallback;
-
   /// No description provided for @insFocusedSim.
   ///
   /// In zh, this message translates to:
   /// **'已聚焦：学习仿真'**
   String get insFocusedSim;
-
-  /// No description provided for @insFocusedTheater.
-  ///
-  /// In zh, this message translates to:
-  /// **'已聚焦：推演剧场'**
-  String get insFocusedTheater;
 
   /// No description provided for @insFocusedReport.
   ///
@@ -55727,12 +55487,6 @@ abstract class AppLocalizations {
   /// **'明天 {time}'**
   String picTomorrowTime(String time);
 
-  /// No description provided for @lioRecommendedSeeds.
-  ///
-  /// In zh, this message translates to:
-  /// **'{count} 个推荐场景'**
-  String lioRecommendedSeeds(int count);
-
   /// No description provided for @lioStartNewSim.
   ///
   /// In zh, this message translates to:
@@ -55762,12 +55516,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'最近更新 · {desc}'**
   String lioRecentUpdate(String desc);
-
-  /// No description provided for @lioNoTheaterYet.
-  ///
-  /// In zh, this message translates to:
-  /// **'暂未生成最近推演'**
-  String get lioNoTheaterYet;
 
   /// No description provided for @lioNoReportYet.
   ///

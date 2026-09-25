@@ -6865,7 +6865,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memoryCorrectionMerge => '合并';
 
   @override
-  String get memoryMergeComingSoon => '合并功能即将上线';
+  String get memoryMergeComingSoon => '合并功能暂未开放';
 
   @override
   String get memoryCorrectionSubmitted => '已提交纠错';
@@ -11512,7 +11512,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get memoryExplanationInferredEpisodic =>
-      '这条经历由 AI 从聊天中推断，并保留了证据 token、置信度与撤销路径。';
+      '这条经历由 AI 从聊天中推断而来，保留了依据，也支持撤销。';
 
   @override
   String memoryCorrectionSubmittedWithAction(Object action) {
@@ -11628,9 +11628,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get profileSubtitleAchievements => '查看已解锁的里程碑与荣誉进度';
 
   @override
-  String get profileSubtitleVisualElements => '管理背景、粒子和视觉奖励';
-
-  @override
   String get profileSubtitlePersona => '查看系统理解到的学习特征与偏好';
 
   @override
@@ -11682,18 +11679,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatActionSuggestionDesc => '继续完成这一步，或者先确认任务和计划。';
 
   @override
-  String get chatTheaterTitle => '推演剧场';
-
-  @override
-  String get chatTheaterDesc => '现在最值得先看的是哪条路径，以及它为什么更适合你。';
-
-  @override
-  String get chatSimulationTitle => '学习仿真';
-
-  @override
-  String get chatSimulationDesc => '先看这一轮最关键的观点碰撞，再决定要不要进入完整模拟。';
-
-  @override
   String get chatReportTitle => '学习报告';
 
   @override
@@ -11709,13 +11694,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatSwipeToSwitch => '左右滑动切换不同入口';
 
   @override
-  String get chatViewTheaterDetails => '查看推演详情';
-
-  @override
   String get chatCurrentLearningTopic => '当前学习主题';
-
-  @override
-  String get chatViewSimulationDetails => '查看模拟详情';
 
   @override
   String get chatCollaborationProcess => '协作过程';
@@ -11806,14 +11785,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatParticipantLabel => '参与者';
 
   @override
-  String get chatPromptRefinePath => '继续细化这条路径';
-
-  @override
-  String chatPromptRefinePathMessage(Object topic) {
-    return '继续围绕「$topic」细化第一周最该先做的步骤。';
-  }
-
-  @override
   String get chatPromptComparePaths => '比较两条路线';
 
   @override
@@ -11849,14 +11820,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String chatPromptMakePlanMessage(Object topic) {
     return '把「$topic」这条路径改写成 7 天可执行的小计划。';
-  }
-
-  @override
-  String get chatPromptSimulateRound => '继续模拟一轮';
-
-  @override
-  String chatPromptSimulateRoundMessage(Object topic) {
-    return '继续围绕「$topic」模拟一轮，我想继续跟进这个学习场景。';
   }
 
   @override
@@ -14073,18 +14036,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get insightHubTitle => '学习洞察';
 
   @override
-  String insightHubRecommendedSeeds(Object count) {
-    return '现在有 $count 个推荐场景可以直接开始模拟。';
-  }
-
-  @override
   String get insightHubFallbackSummary => '把报告和洞察收进一条更轻量的学习动线。';
-
-  @override
-  String get insightHubSimulation => '学习仿真';
-
-  @override
-  String get insightHubTheater => '推演剧场';
 
   @override
   String get insightHubReport => '学习报告';
@@ -14093,51 +14045,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get insightHubEnterOverview => '进入洞察总览';
 
   @override
-  String get insightHubCompactSimulation => '仿真';
-
-  @override
-  String get insightHubCompactTheater => '推演';
-
-  @override
   String get insightHubCompactReport => '报告';
 
   @override
   String get insightHubRefreshWarning => '部分洞察数据尚未刷新，点击后会继续显示已有内容。';
 
   @override
-  String insightHubSeedsToExplore(Object count) {
-    return '$count 个推荐场景待探索';
-  }
-
-  @override
   String get insightHubCompactFallback => '报告与洞察现在收在同一张卡里';
-
-  @override
-  String get insightHubNoRecentTheater => '最近暂无推演';
-
-  @override
-  String get insightHubContinueLastTheater => '继续上次推演';
-
-  @override
-  String insightHubContinueTopic(Object topic) {
-    return '继续 $topic';
-  }
-
-  @override
-  String get insightHubContinueLastSimulation => '继续上次仿真';
-
-  @override
-  String insightHubRecommendedSeedsCount(Object count) {
-    return '$count 个推荐场景';
-  }
-
-  @override
-  String insightHubContinueSession(Object topic) {
-    return '继续 $topic';
-  }
-
-  @override
-  String get insightHubStartSimulation => '开始一轮新模拟';
 
   @override
   String get insightHubNoRecentReport => '最近暂无报告';
@@ -17456,18 +17370,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String reportActionExploreNode(Object nodeName) {
-    return '推演 $nodeName';
-  }
-
-  @override
   String get reportActionWeaknessFallback => '薄弱项';
 
   @override
   String get reportActionStrengthFallback => '当前强项';
-
-  @override
-  String get reportActionEnterSimulation => '进入学习仿真';
 
   @override
   String get reportTrendAutoFillTitle => '趋势会随着更多报告自动补全';
@@ -21381,7 +21287,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationRecallDeadlinePressure => '时间压力';
 
   @override
-  String get notificationRecallScore => '召回评分';
+  String get notificationRecallScore => '记忆保持预估';
 
   @override
   String get notificationRecallInaccurate => '这个提醒不准确';
@@ -22728,11 +22634,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatRoundtableWritingExpert => '写作专家';
 
   @override
-  String chatSettingsCurrentSeeds(Object names) {
-    return '当前生效：$names';
-  }
-
-  @override
   String get chatSettingsEnableSeedDesc => '为当前聊天注入已启用的种子库内容与回答风格。';
 
   @override
@@ -22757,24 +22658,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatSettingsPureModeDesc => '聊天中只保留文字消息，隐藏消息下方的附加卡片与反馈组件。';
 
   @override
-  String get chatSettingsSeedDisableHint => '关闭时所有对话都不会注入种子库，避免上下文污染。';
-
-  @override
-  String get chatSettingsSeedEnableHint => '开启后会从下一条消息开始按种子库增强。';
-
-  @override
   String get chatSettingsSeedLibrary => '种子库';
-
-  @override
-  String get chatSettingsSeedsDefaultOff => '种子库增强默认关闭';
-
-  @override
-  String chatSettingsSeedsEnabledCount(Object count) {
-    return '当前接入 $count 个已启用种子库';
-  }
-
-  @override
-  String get chatSettingsSeedsEnabledNone => '已开启种子库增强，但还没有可用种子库';
 
   @override
   String get chatSettingsShowAgentCollab => '显示 Agent 协作';
@@ -22817,9 +22701,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatSettingsShowTransparencyDesc => '控制底部悬浮的 AI 完成情况与透明化信息。';
-
-  @override
-  String get chatSettingsSyncingSeeds => '正在同步种子库状态';
 
   @override
   String get chatSettingsTitle => '对话设置';
@@ -25122,15 +25003,6 @@ class AppLocalizationsZh extends AppLocalizations {
       '先完成一次学习任务、记录一道错题，或开始一轮仿真，周报和洞察才会开始给出真正有用的反馈。';
 
   @override
-  String get insSimLabel => '学习仿真';
-
-  @override
-  String get insTheaterLabel => '推演剧场';
-
-  @override
-  String get insOpenSim => '打开推演';
-
-  @override
   String get insReportLabel => '学习报告';
 
   @override
@@ -25170,19 +25042,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get insStartFromRecommended => '从推荐开始';
 
   @override
-  String get insStartSimulation => '开始模拟';
-
-  @override
-  String get insTheaterFallback => '把一个目标拆成多条学习路径';
-
-  @override
-  String get insSimFallback => '把一个知识点拉进多角色现场讨论';
-
-  @override
   String get insFocusedSim => '已聚焦：学习仿真';
-
-  @override
-  String get insFocusedTheater => '已聚焦：推演剧场';
 
   @override
   String get insFocusedReport => '已聚焦：学习报告';
@@ -28435,7 +28295,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get communityCommentLabel => '评论';
 
   @override
-  String get communityCommentsComingSoon => '评论功能即将上线';
+  String get communityCommentsComingSoon => '评论功能暂未开放';
 
   @override
   String get communityShowMore => '展开全文';
@@ -30653,11 +30513,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String lioRecommendedSeeds(int count) {
-    return '$count 个推荐场景';
-  }
-
-  @override
   String get lioStartNewSim => '可立即开始一轮新模拟';
 
   @override
@@ -30675,9 +30530,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String lioRecentUpdate(String desc) {
     return '最近更新 · $desc';
   }
-
-  @override
-  String get lioNoTheaterYet => '暂未生成最近推演';
 
   @override
   String get lioNoReportYet => '暂未生成最近报告';
@@ -33950,7 +33802,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String chatMemoryNotRightPrompt(String content) {
-    return '这条记忆不对：$content。请降低置信度，以后不要直接引用。';
+    return '这条记忆不对：$content。之后请少参考这条，不要直接引用。';
   }
 
   @override
