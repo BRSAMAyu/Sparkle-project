@@ -8,6 +8,8 @@
 //   2. The delay is capped at the last schedule entry.
 //   3. A successful fetch resets the budget: a fresh failure retries from
 //      the first step again.
+import 'dart:async';
+
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -140,28 +142,27 @@ void main() {
         Duration(milliseconds: 400),
       ];
       repo = _ScriptedDashboardRepository();
-      container = _containerWith(repo, schedule);
-
       // 构造 notifier（惰性 provider）→ 初始 fetch 失败 → 80ms 重试入队。
-      container.read(dashboardProvider.notifier);
+      container = _containerWith(repo, schedule)
+        ..read(dashboardProvider.notifier);
       async.flushMicrotasks();
       expect(repo.statusCalls.length, 1, reason: '初始 fetch 应立即失败一次');
 
       // 250ms 假时钟内：80ms 档重试必须已发生（调度本身在工作）。
       async.elapse(const Duration(milliseconds: 250));
       expect(repo.statusCalls.length, 2,
-          reason: '第一档 ~80ms 重试应在 250ms 假时钟内发生');
+          reason: '第一档 ~80ms 重试应在 250ms 假时钟内发生',);
 
       // 让升级档（400ms）触发并成功 → 预算重置。
       repo.failNext = false;
       async.elapse(const Duration(milliseconds: 450));
       expect(container.read(dashboardProvider).error, isNull,
-          reason: '重试成功后 error 应清空');
+          reason: '重试成功后 error 应清空',);
       expect(repo.statusCalls.length, 3);
 
       // 成功后的新失败：手动 fetch 立即失败 → 若预算已重置，重试回 80ms 档。
       repo.failNext = true;
-      container.read(dashboardProvider.notifier).fetchData();
+      unawaited(container.read(dashboardProvider.notifier).fetchData());
       async.flushMicrotasks();
       final before = repo.statusCalls.length;
       expect(before, 4, reason: '手动 fetch 应立即记一次失败调用');
@@ -171,7 +172,7 @@ void main() {
       async.elapse(const Duration(milliseconds: 250));
       expect(repo.statusCalls.length, before + 1,
           reason: '成功后的新失败必须从第一档（~80ms）重试；'
-              '250ms 内未重试说明预算未重置（仍在 400ms 升级档）');
+              '250ms 内未重试说明预算未重置（仍在 400ms 升级档）',);
 
       container.dispose();
     });
