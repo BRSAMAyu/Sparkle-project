@@ -674,8 +674,10 @@ def reorder_nominations(
     """
     ordered = [str(n) for n in nominated if isinstance(n, str) and n.strip()]
     records = [r for r in evidence_records if r is not None]
-    pos_evidence: dict[str, tuple[str, ...]] = {}
-    neg_evidence: dict[str, tuple[str, ...]] = {}
+    # 声明为 list：下方 setdefault(..., []) 后即 append（原 tuple 声明使首次
+    # 出现正/负关联证据时必 AttributeError）；消费侧 tuple(...) 对两者等价。
+    pos_evidence: dict[str, list[str]] = {}
+    neg_evidence: dict[str, list[str]] = {}
     pos_count: dict[str, int] = {}
     neg_count: dict[str, int] = {}
     for record in records:
@@ -739,8 +741,9 @@ def reorder_nominations(
         from_rank = result.index(intervention)
         result.remove(intervention)
         result.append(intervention)
-        refs = tuple(neg_evidence.get(intervention, ()))
-        all_refs.extend(refs)
+        # 改名：`refs` 已被上方收集期 list 绑定占用，tuple 版用独立名。
+        direction_refs = tuple(neg_evidence.get(intervention, ()))
+        all_refs.extend(direction_refs)
         moves.append(
             RankingMove(
                 patch_id=patch_id,
@@ -749,7 +752,7 @@ def reorder_nominations(
                 direction="demote",
                 from_rank=from_rank,
                 to_rank=len(result) - 1,
-                evidence_refs=refs,
+                evidence_refs=direction_refs,
             )
         )
     for _, patch_id, intervention in sorted(prefers, key=lambda e: (-e[0], e[1])):
@@ -758,8 +761,8 @@ def reorder_nominations(
         from_rank = result.index(intervention)
         result.remove(intervention)
         result.insert(0, intervention)
-        refs = tuple(pos_evidence.get(intervention, ()))
-        all_refs.extend(refs)
+        direction_refs = tuple(pos_evidence.get(intervention, ()))
+        all_refs.extend(direction_refs)
         moves.append(
             RankingMove(
                 patch_id=patch_id,
@@ -768,7 +771,7 @@ def reorder_nominations(
                 direction="prefer",
                 from_rank=from_rank,
                 to_rank=0,
-                evidence_refs=refs,
+                evidence_refs=direction_refs,
             )
         )
 

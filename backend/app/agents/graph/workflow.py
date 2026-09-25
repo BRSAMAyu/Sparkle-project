@@ -59,7 +59,9 @@ def route_after_agent(state: SparkleState):
     last_message = state["messages"][-1]
 
     # 如果 Agent 想要调用工具
-    if last_message.tool_calls:
+    # BaseMessage 无 tool_calls 契约（仅 AIMessage 携带）；getattr 语义与
+    # 旧真值判断等价（缺省/空列表皆 falsy，wt340 router 同款）。
+    if getattr(last_message, "tool_calls", None):
         return "tools"
 
     # 否则任务结束
@@ -78,7 +80,9 @@ def route_after_agent_planning(state: SparkleState):
 
     # 如果 Agent 想要调用工具，在规划模式下我们直接结束
     # tool_calls 会被提取到 ExecutablePlan 中
-    if last_message.tool_calls:
+    # BaseMessage 无 tool_calls 契约（仅 AIMessage 携带）；getattr 语义与
+    # 旧真值判断等价（缺省/空列表皆 falsy，wt340 router 同款）。
+    if getattr(last_message, "tool_calls", None):
         return END
 
     # 否则任务结束

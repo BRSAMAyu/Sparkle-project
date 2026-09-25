@@ -17,8 +17,9 @@ import copy
 import json
 import time
 import uuid
+from collections.abc import Callable, Coroutine
 from datetime import datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from google.protobuf.json_format import MessageToDict
 from loguru import logger
@@ -64,6 +65,10 @@ from app.services.simulation.seed_extractor import SeedExtractor
 from app.services.tool_history_service import ToolHistoryService
 from app.services.user_service import UserService
 from app.state_aggregator.service import StateAggregatorService
+
+if TYPE_CHECKING:
+    from app.orchestration.context_pruner import ContextPruner
+    from app.orchestration.state_manager import SessionStateManager
 
 # ---------------------------------------------------------------------------
 # Helpers (duplicated from orchestrator to avoid circular imports)
@@ -141,6 +146,18 @@ def _collect_aurora_relationship_profile_data(user_id: str, ledger: Any | None =
 
 class ContextBuilderMixin:
     """Mixin providing context building methods for ChatOrchestrator."""
+
+    # ── Mixin contract（组合方提供的属性/兄弟 mixin 方法）────────────────
+    # 纯注解声明（运行时零效果），供 mypy 对本 mixin 内的 ``self.*`` 引用做
+    # 静态检查；实际赋值/定义在 ChatOrchestrator.__init__（orchestrator.py）
+    # 与兄弟 mixin（session_state_mixin._self_heal_versions）。
+    # redis 在 orchestrator 侧由未注解的 redis_client 形参赋值（构造时强制
+    # 非空，见其 ValueError 守卫），此处按既有运行时契约显式化。
+    redis: Any
+    state_manager: SessionStateManager
+    context_pruner: ContextPruner | None
+    _experiment_cohort_for_user: Callable[[str | None], str | None]
+    _self_heal_versions: Callable[[str, dict[str, str], AsyncSession | None], Coroutine[Any, Any, None]]
 
     # FT-LAT-3: per-user short-TTL cache for the expensive user-context payload.
     # The full rebuild costs 1-2s warm (and used to spike 10-30s cold); within a
@@ -540,7 +557,7 @@ class ContextBuilderMixin:
 
             if patterns:
                 # 按类型分组
-                by_type = {"cognitive": [], "emotional": [], "execution": []}
+                by_type: dict[str, list[Any]] = {"cognitive": [], "emotional": [], "execution": []}
                 for p in patterns:
                     by_type.setdefault(p.pattern_type, []).append(p.pattern_name)
 
@@ -593,7 +610,13 @@ class ContextBuilderMixin:
                     "policy_signals": list(set(policy_signals)),
                     "top_patterns": top_patterns,
                     "recent_observation": recent_observation,
-                    "current_guidance": self._build_cognitive_prompt_guidance(top_patterns, locale=locale),
+                    # current_guidance 生成器（_build_cognitive_prompt_guidance）
+                    # 从未在任何提交中实现过——原引用使整个 cognitive insights
+                    # payload 在 return 处 AttributeError、被下方 except 吞成
+                    # {"has_cognitive_patterns": False}。消费方（prompts.py
+                    # `_render_cognitive_prism`）对缺失/空值走 `or ""` 容忍路径，
+                    # 这里落空串 = 交付 payload 其余字段、guidance 行省略。
+                    "current_guidance": "",
                 }
         except Exception as e:
             logger.warning(f"Failed to get cognitive insights for {user_id}: {e}")
@@ -1324,7 +1347,11 @@ class ContextBuilderMixin:
                 with contextlib.suppress(Exception):
                     from app.aurora.runtime_v1.self_model import SparkleSelfModelService
 
-                    self_model_summary = await SparkleSelfModelService.get_readout_summary(
+                    # get_readout_summary 是实例方法——原类级调用在运行时抛
+                    # TypeError（missing self）被上方 suppress 吞掉，self_model
+                    # 上下文从未进过 payload。按文件内其它调用点先例（spine
+                    # orchestrator/outcome_consumer）以 redis 实例化后调用。
+                    self_model_summary = await SparkleSelfModelService(self.redis).get_readout_summary(
                         user_id=user_id,
                         request_extra_context={},
                         user_context_payload=user_context_data or {},

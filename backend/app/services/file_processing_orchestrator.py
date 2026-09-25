@@ -116,7 +116,9 @@ class FileProcessingOrchestrator:
                 from app.core.redis_client import get_redis
                 from app.signals.spine_orchestrator import get_spine_orchestrator
                 spine = get_spine_orchestrator(redis=get_redis())
-                summary = chunks[0].get("text", "")[:500] if chunks else ""
+                # VectorChunk 是 dataclass（字段名 content，且无 .get）——原字典取值必
+                # AttributeError，被 try 吞掉后 Spine 文件信号从未发出。
+                summary = chunks[0].content[:500] if chunks else ""
                 await spine.on_file_uploaded(
                     user_id=str(user_id),
                     file_id=str(file_id),

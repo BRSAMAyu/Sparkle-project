@@ -683,7 +683,9 @@ class IdiographicAssociationService:
             )
         }
         selected_top_pairs = {
-            item.dim_pair
+            # CorrelationResult 无 dim_pair 字段——本服务约定用 _dim_pair(dim_a,
+            # dim_b) 生成配对键（与 706 行既有用法一致）；原属性读取必 AttributeError。
+            self._dim_pair(item.dim_a, item.dim_b)
             for item in self._select_top_associations(
                 correlation_results,
                 active_days=active_days,

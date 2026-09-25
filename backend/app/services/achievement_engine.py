@@ -12,7 +12,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import inspect
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from datetime import UTC, date, datetime, timedelta
 from typing import TYPE_CHECKING, Any, cast
 from uuid import uuid4
@@ -1081,19 +1081,22 @@ class AchievementEngine:
                 target = config.get("streak", 3)
 
                 # 获取最近归档的冲刺（按archived_at降序）
-                query = (
+                # 改名：`query` 已被上方 count 查询绑成 Select[tuple[int]]，
+                # 复用会把本实体查询连通行类型一起推成 int。
+                sprint_query = (
                     select(Plan)
                     .where(and_(Plan.user_id == user_id, Plan.type == PlanType.SPRINT, Plan.is_active.is_(False)))
                     .order_by(Plan.updated_at.desc())
                 )
 
-                result = await self.db.execute(query)
-                sprints = result.scalars().all()
+                sprint_exec = await self.db.execute(sprint_query)
+                # 显式实体类型：实体查询运行时返回的就是 Plan ORM 对象。
+                sprints: Sequence[Plan] = sprint_exec.scalars().all()
 
                 # 计算连续完成的冲刺（progress >= 0.8视为完成）
                 streak = 0
-                for sprint in sprints:
-                    if sprint.progress >= 0.8:
+                for sprint_row in sprints:
+                    if sprint_row.progress >= 0.8:
                         streak += 1
                     else:
                         break  # 断开连续

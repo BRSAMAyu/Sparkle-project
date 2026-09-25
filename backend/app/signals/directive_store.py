@@ -77,12 +77,16 @@ class DirectiveStore:
         try:
             from app.core.event_bus import EventBus
             bus = EventBus()
+            # NotificationDirective 上从无 notification_type / user_visible_reason
+            # 字段——原引用使 publish 必 AttributeError、事件从未发出。按该
+            # dataclass 的真实字段发布（事件当前无订阅方，键面即真实契约）。
             await bus.publish("spine.notification_directive", {
                 "user_id": user_id,
                 "directive_id": nd.directive_id,
-                "notification_type": nd.notification_type,
+                "channel": nd.channel,
+                "trigger": nd.trigger,
+                "message_strategy": nd.message_strategy,
                 "allowed": nd.allowed,
-                "user_visible_reason": nd.user_visible_reason,
             })
         except Exception:
             logger.opt(exception=True).debug("notification_directive event publish failed")

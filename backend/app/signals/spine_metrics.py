@@ -267,3 +267,14 @@ class SpineMetricsCollector:
         await self.increment("retractions")
         if _PROM_RETRACTIONS:
             _PROM_RETRACTIONS.inc()
+
+    async def record_spine_degradation(self, surface: str, error: BaseException | str | None = None) -> None:
+        """Spine 降级计数（quality guard 调用面）。
+
+        委托给 business_metrics 里的同名权威实现（surface+reason 打标）；
+        该方法此前从未在 collector 上存在，调用点的 AttributeError 被外层
+        except 吞掉，降级事件从未被计数。
+        """
+        from app.core.business_metrics import record_spine_degradation as _record_degradation
+
+        _record_degradation(surface, error)

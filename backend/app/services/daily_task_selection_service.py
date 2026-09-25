@@ -9,7 +9,7 @@ from loguru import logger
 from sqlalchemy import and_, desc, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.aurora.runtime_v1.state import AuroraRuntimeStore
+from app.aurora.runtime_v1.state import AuroraEnergyStore
 from app.core.cache import cache_service
 from app.models.plan import Plan, PlanPriority, PlanStage
 from app.models.plan_state import PlanState, PlanStateStatus
@@ -183,7 +183,9 @@ class DailyTaskSelectionService:
 
     async def _load_aurora_energy(self, user_id: UUID) -> dict[str, Any]:
         try:
-            energy = await AuroraRuntimeStore(self.redis).load_energy(user_id)
+            # load_energy 在 AuroraEnergyStore 上（AuroraRuntimeStore 无此方法，
+            # 原调用必 AttributeError 被下方 except 吞成 fallback 能量态）。
+            energy = await AuroraEnergyStore(self.redis).load_energy(user_id)
             return {
                 "level": energy.current_level,
                 "wake_score": float(energy.wake_score or 0.0),

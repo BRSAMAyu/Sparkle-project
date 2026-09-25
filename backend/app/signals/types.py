@@ -270,6 +270,12 @@ class PolicyDecision:
             "created_at": self.created_at,
         }
 
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> PolicyDecision:
+        # 与本文件其余 dataclass 的 from_dict 约定一致：过滤未知键、
+        # 缺省字段走 dataclass 默认值（causal_trace_store 时间线读回侧依赖）。
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
 
 # ── 4. ExecutionDirective ──────────────────────────────────────────────
 # 不是 prompt 片段。下游模块必须以结构化参数消费。
@@ -714,6 +720,11 @@ class UserVisibleReceipt:
             "related_state_keys": self.related_state_keys,
             "created_at": self.created_at,
         }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> UserVisibleReceipt:
+        # 与本文件其余 dataclass 的 from_dict 约定一致（时间线读回侧依赖）。
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
 
 
 # ── 7. CausalTrace ─────────────────────────────────────────────────────

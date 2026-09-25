@@ -218,10 +218,12 @@ class InferredPreferenceDecayService:
 
         for prefs in prefs_list:
             try:
-                result = await self.apply_decay_to_user(prefs.user_id)
+                # 改名：`result` 已被上方 db.execute 的 SQLAlchemy Result 占用，
+                # 复用同名字段会令 mypy 以首绑定类型解读本 dict。
+                decay_result = await self.apply_decay_to_user(prefs.user_id)
                 total_processed += 1
-                total_changes += result.get("changes", 0)
-                total_resets += len(result.get("reset_keys", []))
+                total_changes += decay_result.get("changes", 0)
+                total_resets += len(decay_result.get("reset_keys", []))
             except Exception as e:
                 logger.error(f"Error decaying preferences for user {prefs.user_id}: {e}")
                 errors.append(str(prefs.user_id))

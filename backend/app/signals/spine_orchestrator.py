@@ -401,12 +401,18 @@ class SpineOrchestrator:
         has_active_directive = directive is not None
         directive_summary: str | None = None
         if directive is not None:
+            # 约束落在 hard_constraints dict（policy_engine 与 exam sprint overlay
+            # 的写入面）；ExecutionDirective dataclass 上从无这三个属性——原属性
+            # 读取在运行时必 AttributeError，directive_summary 永远生不出来。
             parts = []
-            if directive.max_task_duration_min is not None:
-                parts.append(f"max_duration={directive.max_task_duration_min}min")
-            if directive.required_task_type is not None:
-                parts.append(f"type={directive.required_task_type}")
-            if directive.avoid_new_chapter:
+            directive_constraints = directive.hard_constraints or {}
+            max_duration_min = directive_constraints.get("max_task_duration_min")
+            if max_duration_min is not None:
+                parts.append(f"max_duration={max_duration_min}min")
+            required_task_type = directive_constraints.get("required_task_type")
+            if required_task_type is not None:
+                parts.append(f"type={required_task_type}")
+            if directive_constraints.get("avoid_new_chapter"):
                 parts.append("avoid_new_chapter")
             directive_summary = ", ".join(parts) if parts else directive.user_visible_reason
 
@@ -3078,9 +3084,21 @@ class SpineOrchestrator:
             claim_label = "策略风险"
             risk_reason = user_visible_reason
             if active_dir:
+                # primary_strategy 在 PolicyDecision 上，不在 ExecutionDirective 上
+                #（原属性读取必 AttributeError → 整个风险卡被外层 except 吞成 None）。
+                # 按 get_rendered_timeline 的既有模式从 spine:policy:{id} 读回。
+                policy_strategy = ""
+                try:
+                    policy_raw = await self.redis.get(f"spine:policy:{active_dir.policy_decision_id}")
+                    if policy_raw:
+                        policy_strategy = PolicyDecision.from_dict(
+                            json.loads(policy_raw if isinstance(policy_raw, str) else policy_raw.decode())
+                        ).primary_strategy
+                except Exception:
+                    logger.opt(exception=True).debug("get_ux_risk_warning: policy strategy load failed")
                 # Try to match known claim labels from primary_strategy
                 for claim, label in _CLAIM_TO_LABEL.items():
-                    if claim in (active_dir.primary_strategy or ""):
+                    if claim in (policy_strategy or ""):
                         claim_label = label
                         if not risk_reason:
                             risk_reason = _RISK_REASONS.get(claim, "")
@@ -3477,8 +3495,13 @@ class SpineOrchestrator:
                 from app.signals.learning_base import StrategyBelief
                 belief_map = {b.strategy_key: b for b in beliefs}
                 for effect in recent_effects:
-                    strategy = getattr(effect, "strategy_key", None) or effect.get("strategy_key")
-                    outcome = getattr(effect, "attribution", None) or effect.get("attribution")
+                    # get_recent_policy_effects 恒返 PolicyEffectEntry dataclass；
+                    # 策略标识字段是 policy_key（写入侧 outcome_recorder 用
+                    # policy_key=record.reason 落账）。原读取的 "strategy_key"
+                    # 属性/dict 键都不存在 → strategy 恒 None → 整个 belief
+                    # 更新循环从未执行过。
+                    strategy = effect.policy_key
+                    outcome = effect.attribution
                     if strategy and outcome:
                         if strategy not in belief_map:
                             belief_map[strategy] = StrategyBelief(strategy_key=strategy)

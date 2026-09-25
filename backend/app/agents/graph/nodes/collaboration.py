@@ -63,8 +63,10 @@ class DelegationPlan(BaseModel):
 
 
 def _planning_intent_type(state: SparkleState) -> str:
-    planning_constraints = state.get("_planning_constraints") or {}
-    route_intent = planning_constraints.get("route_intent")
+    # _planning_constraints 是 SparkleState 未声明的松散键（mypy 推断值类型
+    # object）；isinstance 收窄后取值，缺失/非 dict 与旧 `or {}` 空值路径等价。
+    planning_constraints = state.get("_planning_constraints")
+    route_intent = planning_constraints.get("route_intent") if isinstance(planning_constraints, dict) else None
     if route_intent:
         return str(route_intent)
     mode_name = state.get("mode_name")
@@ -448,9 +450,11 @@ async def analyze_collaboration_plan(
     user_id = str(state.get("user_id") or "").strip()
     redis_client = (config or {}).get("configurable", {}).get("redis_client")
     intent_type = _planning_intent_type(state)
-    planning_constraints = state.get("_planning_constraints") or {}
+    planning_constraints = state.get("_planning_constraints")
     excluded_agents = {
-        str(agent).strip() for agent in (planning_constraints.get("excluded_agents") or []) if str(agent).strip()
+        str(agent).strip()
+        for agent in ((planning_constraints.get("excluded_agents") or []) if isinstance(planning_constraints, dict) else [])
+        if str(agent).strip()
     }
     scoring_service = AgentScoringService(redis_client)
     fast_result = _analyze_collaboration_needs_fast(message)

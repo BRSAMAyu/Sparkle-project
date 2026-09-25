@@ -553,7 +553,7 @@ async def _check_partner_progress(db: AsyncSession) -> dict[str, Any]:
     result = await db.execute(active_partnerships_query)
     partnerships = result.scalars().all()
 
-    stats = {
+    stats: dict[str, Any] = {
         "total_partnerships": len(partnerships),
         "streak_milestones": [],
         "perfect_days": [],
@@ -640,7 +640,7 @@ async def _evaluate_achievements(db: AsyncSession) -> dict[str, Any]:
     result = await db.execute(active_partnerships_query)
     partnerships = result.scalars().all()
 
-    stats = {
+    stats: dict[str, Any] = {
         "achievements_awarded": [],
         "total_evaluated": len(partnerships),
     }

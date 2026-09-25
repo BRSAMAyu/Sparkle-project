@@ -872,7 +872,7 @@ class ErrorReplanBridge:
         self,
         error: ErrorRecord,
         node_name_map: dict[str, str],
-    ) -> dict[str, object]:
+    ) -> dict[str, Any]:  # 松散 bundle：值混装 str/tuple，调用侧各自再收窄
         analysis = error.latest_analysis if isinstance(error.latest_analysis, dict) else {}
         db_node_ids = tuple(
             str(node_id)

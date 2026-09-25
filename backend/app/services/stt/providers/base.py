@@ -38,7 +38,11 @@ class STTProvider(ABC):
             async for text in provider.transcribe_stream(audio_stream):
                 print(f"实时识别结果: {text}")
         """
-        pass
+        # 契约是 async-generator（实现方体内均含 yield/async for，调用方直接
+        # async for 本方法返回值）——声明体必须含 yield 使该契约对类型检查
+        # 为真（wt331 LLMProvider.stream_chat 同款；此 yield 永不执行）。
+        yield ""
+        return
 
     @abstractmethod
     async def transcribe_file(

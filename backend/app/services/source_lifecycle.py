@@ -12,7 +12,7 @@ import time
 import weakref
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, TypedDict
 from uuid import UUID
 
 from loguru import logger
@@ -61,8 +61,15 @@ class _RetrievalInvalidationPlan:
 # 已排期、尚在执行的 post-commit 失效任务集合（测试可 drain；优雅关停可 await）。
 _PENDING_INVALIDATION_TASKS: set[asyncio.Task] = set()
 
+class _InvalidationReg(TypedDict):
+    """per-session 登记表值结构：plans 待执行计划 + tasks 在飞任务。"""
+
+    plans: list[_RetrievalInvalidationPlan]
+    tasks: list[asyncio.Task[Any]]
+
+
 # per-session 失效计划登记表（session 请求级生命周期，弱引用不阻止 GC）。
-_POST_COMMIT_INVALIDATION_REGS: weakref.WeakKeyDictionary[Any, dict[str, list[_RetrievalInvalidationPlan]]] = (
+_POST_COMMIT_INVALIDATION_REGS: weakref.WeakKeyDictionary[Any, _InvalidationReg] = (
     weakref.WeakKeyDictionary()
 )
 
@@ -395,7 +402,7 @@ class SourceLifecycleService:
         return 1 + len(group_ids)
 
     def _spawn_post_commit_invalidation(
-        self, plans: list[_RetrievalInvalidationPlan], reg: dict[str, Any] | None = None
+        self, plans: list[_RetrievalInvalidationPlan], reg: _InvalidationReg | None = None
     ) -> None:
         """在事件循环内 spawn 提交后失效任务（after_commit 处理器运行于循环线程）。
 

@@ -284,8 +284,11 @@ class ExpansionService:
 
             # 6. 更新队列状态
             queue_item.status = 'completed'
+            # _create_expanded_nodes 返回 ExpansionApplyResult dataclass（非
+            # list）——原直接迭代必 TypeError，expanded_nodes 落库从未成功。
+            # 记录新建节点（该处理器的产出面）；reused_nodes 不属于"拓展"。
             queue_item.expanded_nodes = json.dumps([
-                {"id": str(n.id), "name": n.name} for n in new_nodes
+                {"id": str(n.id), "name": n.name} for n in new_nodes.created_nodes
             ], ensure_ascii=False)
             queue_item.processed_at = _utcnow()
             await self.db.commit()

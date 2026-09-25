@@ -184,7 +184,9 @@ class GetSituationBriefTool(BaseTool):
                 )
 
         builder = SituationBriefBuilder()
-        brief = builder.build(
+        # build 是 async（situation_brief.SituationBriefBuilder.build）——原未
+        # await 即取 .to_dict()，运行时必 AttributeError，本工具从未成功返回。
+        brief = await builder.build(
             user_context_payload=user_context_payload if isinstance(user_context_payload, dict) else None,
             plan_context=(
                 runtime_context.get("plan_context") if isinstance(runtime_context.get("plan_context"), dict) else None

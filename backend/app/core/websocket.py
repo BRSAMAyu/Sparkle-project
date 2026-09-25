@@ -194,7 +194,9 @@ class ConnectionManager:
     async def connect(self, websocket: WebSocket, group_id: str, user_id: str):
         """Connect to a group chat channel"""
         await websocket.accept()
-        websocket.user_id = user_id
+        # starlette WebSocket 的动态属性统一挂 state（stub 无 user_id 字段，
+        # 且读侧 hasattr 判定同步到 state 上，运行时语义逐连接等价）
+        websocket.state.user_id = user_id
         if group_id not in self.active_connections:
             self.active_connections[group_id] = []
         self.active_connections[group_id].append(websocket)
@@ -213,7 +215,9 @@ class ConnectionManager:
     async def connect_user(self, websocket: WebSocket, user_id: str, friend_ids: list[str] = None):
         """Connect to personal channel and register friend map for presence"""
         await websocket.accept()
-        websocket.user_id = user_id
+        # starlette WebSocket 的动态属性统一挂 state（stub 无 user_id 字段，
+        # 且读侧 hasattr 判定同步到 state 上，运行时语义逐连接等价）
+        websocket.state.user_id = user_id
         self.user_connections[user_id] = websocket
 
         # Register friends to friend_map so we know who to notify locally
@@ -303,7 +307,7 @@ class ConnectionManager:
     async def _kick_local(self, group_id: str, user_id: str, reason: str):
         if group_id in self.active_connections:
             for ws in list(self.active_connections[group_id]):
-                if hasattr(ws, 'user_id') and ws.user_id == user_id:
+                if hasattr(ws.state, 'user_id') and ws.state.user_id == user_id:
                     try:
                         await ws.send_json({"type": "error", "message": f"Kicked: {reason}"})
                         await ws.close(code=4001)
@@ -322,7 +326,7 @@ class ConnectionManager:
             json_msg = json.dumps(message, default=str)
             for ws in list(self.active_connections[group_id]):
                 # Skip if it's the excluded user
-                if exclude_user_id and hasattr(ws, 'user_id') and ws.user_id == exclude_user_id:
+                if exclude_user_id and hasattr(ws.state, 'user_id') and ws.state.user_id == exclude_user_id:
                     continue
                 try:
                     await ws.send_text(json_msg)

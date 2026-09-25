@@ -1249,3 +1249,42 @@ PHOTON_ECONOMY_AVG_BALANCE_PER_ACTIVE_USER = get_or_create_metric(
     "sparkle_photon_economy_avg_balance_per_active_user",
     "Average photon balance across users with at least one ledger transaction in the last closed UTC day",
 )
+
+
+# 7. Document Quality Metrics
+# document_service._report_metrics 的上报面——这五个指标此前从未在本模块
+# 注册，其 `from app.core.metrics import DOC_*` 恒抛 ImportError 被静默吞掉，
+# 文档质量指标从未被上报。类型/标签以该函数的实际用法为准。
+DOC_QUALITY_CHECK_COUNT = get_or_create_metric(
+    Counter,
+    "sparkle_doc_quality_checks_total",
+    "Document quality gate checks",
+    ["doc_type", "result"],
+)
+
+DOC_QUALITY_SCORE = get_or_create_metric(
+    Histogram,
+    "sparkle_doc_quality_score",
+    "Document quality score distribution",
+    ["doc_type"],
+)
+
+DOC_GARBLED_RATIO = get_or_create_metric(
+    Histogram,
+    "sparkle_doc_garbled_ratio",
+    "Document garbled text ratio distribution",
+    ["doc_type"],
+)
+
+DOC_OCR_CONFIDENCE = get_or_create_metric(
+    Histogram,
+    "sparkle_doc_ocr_confidence",
+    "Document OCR confidence distribution",
+)
+
+DOC_QUALITY_ISSUES = get_or_create_metric(
+    Counter,
+    "sparkle_doc_quality_issues_total",
+    "Document quality issues by type",
+    ["issue_type"],
+)

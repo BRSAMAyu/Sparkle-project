@@ -241,7 +241,9 @@ async def lifespan(fastapp: FastAPI):
         except Exception as e:
             logger.warning(f"Failed to ensure Redis search index at startup (non-fatal): {e}")
 
-    event_bus = None
+    # event_bus 的 None 占位已删：下方无条件 `from app.core.event_bus import
+    # event_bus` 立即用模块级单例重绑，None 死值让后续 begin_shutdown/close
+    # 的静态类型错位成 None。
     preference_consumer_task = None
     if cache_service.redis:
         user_service = UserService(None, cache_service.redis)
@@ -655,32 +657,28 @@ async def lifespan(fastapp: FastAPI):
         with suppress(asyncio.CancelledError):
             await profile_consumer_task
 
-    cognitive_consumer_task = getattr(app.state, "cognitive_consumer_task", None)
-    if cognitive_consumer_task:
-        cognitive_consumer_task.cancel()
+    cognitive_consumer_task_stale = getattr(app.state, "cognitive_consumer_task", None)
+    if cognitive_consumer_task_stale:
+        cognitive_consumer_task_stale.cancel()
         with suppress(asyncio.CancelledError):
-            await cognitive_consumer_task
-
+            await cognitive_consumer_task_stale
     # R2-EI-17: capsule consumer was missing from the shutdown cancel list
     # (list-consistency fix; event_bus.close() already drains it since EI-04)
-    capsule_consumer_task = getattr(app.state, "capsule_consumer_task", None)
-    if capsule_consumer_task:
-        capsule_consumer_task.cancel()
+    capsule_consumer_task_stale = getattr(app.state, "capsule_consumer_task", None)
+    if capsule_consumer_task_stale:
+        capsule_consumer_task_stale.cancel()
         with suppress(asyncio.CancelledError):
-            await capsule_consumer_task
-
-    document_feedback_consumer_task = getattr(app.state, "document_feedback_consumer_task", None)
-    if document_feedback_consumer_task:
-        document_feedback_consumer_task.cancel()
+            await capsule_consumer_task_stale
+    document_feedback_consumer_task_stale = getattr(app.state, "document_feedback_consumer_task", None)
+    if document_feedback_consumer_task_stale:
+        document_feedback_consumer_task_stale.cancel()
         with suppress(asyncio.CancelledError):
-            await document_feedback_consumer_task
-
-    nudge_consumer_task = getattr(app.state, "nudge_consumer_task", None)
-    if nudge_consumer_task:
-        nudge_consumer_task.cancel()
+            await document_feedback_consumer_task_stale
+    nudge_consumer_task_stale = getattr(app.state, "nudge_consumer_task", None)
+    if nudge_consumer_task_stale:
+        nudge_consumer_task_stale.cancel()
         with suppress(asyncio.CancelledError):
-            await nudge_consumer_task
-
+            await nudge_consumer_task_stale
     # Stop plan health event consumer
     plan_health_consumer_task = getattr(app.state, "plan_health_consumer_task", None)
     if plan_health_consumer_task:
@@ -693,15 +691,14 @@ async def lifespan(fastapp: FastAPI):
         with suppress(asyncio.CancelledError):
             await intervention_consumer_task
 
-    social_signal_consumer = getattr(app.state, "social_signal_consumer", None)
-    social_signal_consumer_task = getattr(app.state, "social_signal_consumer_task", None)
-    if social_signal_consumer:
-        social_signal_consumer.stop()
-    if social_signal_consumer_task:
-        social_signal_consumer_task.cancel()
+    social_signal_consumer_stale = getattr(app.state, "social_signal_consumer", None)
+    social_signal_consumer_stale_task = getattr(app.state, "social_signal_consumer_task", None)
+    if social_signal_consumer_stale:
+        social_signal_consumer_stale.stop()
+    if social_signal_consumer_stale_task:
+        social_signal_consumer_stale_task.cancel()
         with suppress(asyncio.CancelledError):
-            await social_signal_consumer_task
-
+            await social_signal_consumer_stale_task
     main_chain_artifact_consumer_task = getattr(app.state, "main_chain_artifact_consumer_task", None)
     if main_chain_artifact_consumer_task:
         main_chain_artifact_consumer_task.cancel()
@@ -770,31 +767,31 @@ async def lifespan(fastapp: FastAPI):
             await billing_worker_task
 
     # Stop Galaxy TaskEventListener
-    task_event_listener = getattr(app.state, "task_event_listener", None)
-    task_event_listener_task = getattr(app.state, "task_event_listener_task", None)
-    if task_event_listener:
-        task_event_listener.stop()
-    if task_event_listener_task:
-        task_event_listener_task.cancel()
+    task_event_listener_stale = getattr(app.state, "task_event_listener", None)
+    task_event_listener_stale_task = getattr(app.state, "task_event_listener_task", None)
+    if task_event_listener_stale:
+        task_event_listener_stale.stop()
+    if task_event_listener_stale_task:
+        task_event_listener_stale_task.cancel()
         with suppress(asyncio.CancelledError):
-            await task_event_listener_task
+            await task_event_listener_stale_task
         logger.info("Galaxy TaskEventListener stopped")
 
     # Stop Galaxy outcome absorption consumer (G-02)
-    outcome_absorber = getattr(app.state, "outcome_absorption_consumer", None)
-    outcome_absorber_task = getattr(app.state, "outcome_absorption_consumer_task", None)
-    if outcome_absorber:
-        outcome_absorber.stop()
-    if outcome_absorber_task:
-        outcome_absorber_task.cancel()
+    outcome_absorber_stale = getattr(app.state, "outcome_absorption_consumer", None)
+    outcome_absorber_stale_task = getattr(app.state, "outcome_absorption_consumer_task", None)
+    if outcome_absorber_stale:
+        outcome_absorber_stale.stop()
+    if outcome_absorber_stale_task:
+        outcome_absorber_stale_task.cancel()
         with suppress(asyncio.CancelledError):
-            await outcome_absorber_task
+            await outcome_absorber_stale_task
         logger.info("Galaxy outcome absorption consumer stopped")
 
     # Stop Galaxy Streaming Service
-    galaxy_streaming_service = getattr(app.state, "galaxy_streaming_service", None)
-    if galaxy_streaming_service:
-        galaxy_streaming_service.stop()
+    galaxy_streaming_service_stale = getattr(app.state, "galaxy_streaming_service", None)
+    if galaxy_streaming_service_stale:
+        galaxy_streaming_service_stale.stop()
         logger.info("GalaxyStreamingService stopped")
 
     # FF-CONVERGENCE（wt310）：统一收口 fire-and-forget 后台任务——关停链在此

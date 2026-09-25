@@ -30,8 +30,10 @@ def _default_max_download_bytes() -> int:
     return max(1, raw_value)
 
 
-def _resolve_host_ips(hostname: str) -> list[ipaddress._BaseAddress]:
-    resolved: list[ipaddress._BaseAddress] = []
+def _resolve_host_ips(hostname: str) -> list[ipaddress.IPv4Address | ipaddress.IPv6Address]:
+    # ip_address() 恒返 IPv4/IPv6 具体类型；_BaseAddress 上没有 is_private 等
+    # 判别属性（它们定义在两个具体类上），收窄到联合具体类型。
+    resolved: list[ipaddress.IPv4Address | ipaddress.IPv6Address] = []
     for family, _socktype, _proto, _canonname, sockaddr in socket.getaddrinfo(hostname, None):
         host = sockaddr[0]
         address = ipaddress.ip_address(host)
@@ -60,7 +62,7 @@ def _is_trusted_host(hostname: str | None, trusted_hosts: frozenset[str] | None)
     return hostname.strip().lower() in trusted_hosts
 
 
-def _is_blocked_ip(address: ipaddress._BaseAddress) -> bool:
+def _is_blocked_ip(address: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
     return (
         str(address) in METADATA_IPS
         or address.is_private
@@ -73,7 +75,7 @@ def _is_blocked_ip(address: ipaddress._BaseAddress) -> bool:
 
 def _validate_resolved_addresses(
     hostname: str,
-    addresses: list[ipaddress._BaseAddress],
+    addresses: list[ipaddress.IPv4Address | ipaddress.IPv6Address],
     trusted_hosts: frozenset[str] | None = None,
 ) -> None:
     if _is_trusted_host(hostname, trusted_hosts):

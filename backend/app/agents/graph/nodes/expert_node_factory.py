@@ -12,6 +12,14 @@ from app.orchestration.agent_activity import emit_agent_activity, get_stream_cal
 from app.orchestration.agent_scoring import AgentScoringService
 
 
+def _route_intent_from_constraints(state: SparkleState) -> str | None:
+    """_planning_constraints 是 SparkleState 未声明的松散键（mypy 推断值类型
+    object）。isinstance 收窄后取 route_intent；键缺失或非 dict 返回 None
+    （与旧 `(state.get(...) or {}).get(...)` 在 dict/缺失两态下逐字等价）。"""
+    constraints = state.get("_planning_constraints")
+    return constraints.get("route_intent") if isinstance(constraints, dict) else None
+
+
 def create_specialist_node(
     *,
     agent_id: str,
@@ -82,7 +90,7 @@ def create_specialist_node(
                 success=True,
                 tool_calls_count=tool_calls_count,
                 result_used=tool_calls_count > 0,
-                intent_type=((state.get("_planning_constraints") or {}).get("route_intent")),
+                intent_type=_route_intent_from_constraints(state),
             )
             AGENT_PERFORMANCE_RECORDED_TOTAL.labels(
                 agent_id=agent_id,
@@ -106,7 +114,7 @@ def create_specialist_node(
                 success=False,
                 tool_calls_count=0,
                 result_used=False,
-                intent_type=((state.get("_planning_constraints") or {}).get("route_intent")),
+                intent_type=_route_intent_from_constraints(state),
             )
             AGENT_PERFORMANCE_RECORDED_TOTAL.labels(
                 agent_id=agent_id,

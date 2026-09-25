@@ -408,10 +408,15 @@ def invalidate_cache(self, cache_key: str):
     这是 route_cache 中 _invalidate_redis 的 Celery 版本
     """
 
-    from app.core.cache import redis_client
+    # cache.py 从未导出过模块级 redis_client（唯一入口是 cache_service.redis
+    # 属性）——原 import 恒 ImportError，经 retry 耗尽后任务必死。
+    from app.core.cache import cache_service
 
     async def _invalidate():
         try:
+            redis_client = cache_service.redis
+            if not redis_client:
+                raise RuntimeError("cache redis unavailable")
             await redis_client.delete(cache_key)
             return {"status": "success", "cache_key": cache_key}
         except Exception:
@@ -1784,7 +1789,7 @@ async def _run_spaced_repetition_reminders_for_user(session, user_id: str, now=N
     rows = result.all()
     notification_service = NotificationCenterService(session)
 
-    summary = {
+    summary: dict[str, Any] = {
         "status": "completed",
         "user_id": str(user_uuid),
         "evaluated": len(rows),
@@ -2467,7 +2472,10 @@ def purge_deleted_account(self, user_id: str) -> dict:
 
     from app.core.cache import cache_service
     from app.db.session import AsyncSessionLocal
-    from app.models.achievement import UserAchievement, UserStreakDays, UserStreakStats
+
+    # streak 模型名此处曾多写一个 s（真实类名见下行 import）——原名不存在
+    # 使 import 恒 ImportError，整个 GDPR 硬删除任务从未能跑到删除一步。
+    from app.models.achievement import UserAchievement, UserStreakDay, UserStreakStats
     from app.models.calendar_event import CalendarEvent
     from app.models.chat import ChatMessage, ChatSession
     from app.models.cognitive import BehaviorPattern, CognitiveFragment
@@ -2502,7 +2510,7 @@ def purge_deleted_account(self, user_id: str) -> dict:
             # R4-P0-3: Add memory tables for GDPR cascade cleanup
             from app.models.memory import EpisodicMemory, MemoryCorrection, MemoryGoal, MemoryPreference
 
-            tables: list[tuple[type, str]] = [
+            tables: list[tuple[type[Any], str]] = [
                 (ChatMessage, "user_id"),
                 (ChatSession, "user_id"),
                 (Task, "user_id"),
@@ -2512,7 +2520,7 @@ def purge_deleted_account(self, user_id: str) -> dict:
                 (CalendarEvent, "user_id"),
                 (UserAchievement, "user_id"),
                 (UserStreakStats, "user_id"),
-                (UserStreakDays, "user_id"),
+                (UserStreakDay, "user_id"),
                 (Notification, "user_id"),
                 (NotificationInteraction, "user_id"),
                 (UserNodeStatus, "user_id"),
@@ -2558,19 +2566,26 @@ def purge_deleted_account(self, user_id: str) -> dict:
         ]
 
         deleted = 0
-        redis_client = await cache_service._get_redis()
+        # CacheService 的 redis 访问面是 .redis 属性（Redis | None），从无
+        # _get_redis 方法——原调用必 AttributeError，被外层 except 捕获后
+        # 整个 GDPR 任务的 Redis 清理步从未成功过。
+        redis_client = cache_service.redis
         if not redis_client:
             return deleted
 
         for pattern in patterns:
             try:
-                # Use SCAN to avoid blocking
-                cursor = b"0"
-                while cursor:
+                # Use SCAN to avoid blocking（cursor 走 int 契约；原 bytes b"0"
+                # 起步 + `while cursor:` 真值循环对 asyncio 桩不兼容，且 int 0
+                # 为假会直接跳过循环——改为显式 break 等价形式）。
+                cursor: int = 0
+                while True:
                     cursor, keys = await redis_client.scan(cursor=cursor, match=pattern, count=100)
                     if keys:
                         await redis_client.delete(*keys)
                         deleted += len(keys)
+                    if cursor == 0:
+                        break
             except Exception as exc:
                 logger.warning(f"Failed to purge Redis pattern {pattern}: {exc}")
 

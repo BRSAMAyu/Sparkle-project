@@ -163,7 +163,9 @@ _EPISODIC_SOURCE_TYPE_LABELS: dict[str, str] = {
     "translation": "来自翻译",
 }
 
-_SUPPORTED_KINDS: dict[str, type] = {
+# 值为异构 SQLAlchemy 模型类，列访问（id/user_id/deleted_at/updated_at）走
+# 动态映射——显式 type[Any] 承接该既有松散性（同文件 record 形参同为 Any）。
+_SUPPORTED_KINDS: dict[str, type[Any]] = {
     "episodic": EpisodicMemory,
     "preference": MemoryPreference,
     "goal": MemoryGoal,

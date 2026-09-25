@@ -176,16 +176,20 @@ async def chat_with_task_context(
         # Build prior_outputs from Aurora user state
         prior_outputs: dict[str, Any] = {}
         try:
-            from app.state_aggregator.schema import UserStateFieldName
-            from app.state_aggregator.service import StateAggregator
+            # 服务类实名是 StateAggregatorService（无 StateAggregator 别名）；
+            # UserStateFieldName 是 Literal 字符串别名、无枚举成员——原
+            # `StateAggregator`/`UserStateFieldName.ENGAGEMENT_STATE` 写法恒
+            # AttributeError，被下方 except 吞成整段聚合跳过。字段名取
+            # schema Literal 的真实成员（active_skills 系 active_skills_summary）。
+            from app.state_aggregator.service import StateAggregatorService
 
-            aggregator = StateAggregator(db)
+            aggregator = StateAggregatorService(db)
             state = await aggregator.get_user_state(
                 current_user.id,
                 required_fields=(
-                    UserStateFieldName.ENGAGEMENT_STATE,
-                    UserStateFieldName.LEARNING_STATE,
-                    UserStateFieldName.ACTIVE_SKILLS,
+                    "engagement_state",
+                    "learning_state",
+                    "active_skills_summary",
                 ),
             )
             if state and hasattr(state, "engagement_state") and state.engagement_state:

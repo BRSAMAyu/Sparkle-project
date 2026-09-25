@@ -79,6 +79,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import time
+from collections.abc import Coroutine
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, Callable, Iterable, Mapping, Sequence
@@ -589,8 +590,10 @@ def _resolve_ranked_sync(raw: Any) -> Any:
     except RuntimeError:
         return asyncio.run(raw)
     # 关闭未消费的 coroutine，避免 "never awaited" RuntimeWarning（close 对
-    # 未启动的 coroutine 是安全的空操作路径）。
-    raw.close()
+    # 未启动的 coroutine 是安全的空操作路径）。Awaitable 家族中仅 coroutine
+    # 有 close，用 isinstance 收窄。
+    if isinstance(raw, Coroutine):
+        raw.close()
     raise RuntimeError(
         "run_hard_filter_pipeline called inside a running event loop with an async "
         "rerank_fn; use run_hard_filter_pipeline_async instead"

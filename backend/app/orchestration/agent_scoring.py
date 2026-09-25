@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import random
 import time
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from typing import Any, cast
@@ -100,7 +101,9 @@ class AgentScoringService:
         self,
         *,
         redis_client,
-        state: dict[str, Any],
+        # Mapping：调用方传入 LangGraph SparkleState（TypedDict）——TypedDict
+        # 对可变 dict 不协变，仅对只读 Mapping 兼容；函数体只读（get/遍历）。
+        state: Mapping[str, Any],
         agent_id: str,
         latency_ms: float,
         success: bool,

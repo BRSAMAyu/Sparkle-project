@@ -30,6 +30,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date as date_type
 from datetime import datetime, timedelta
+from typing import Any
 from uuid import UUID
 
 from loguru import logger
@@ -66,7 +67,8 @@ from app.services.understanding_depth_metric_service import (
 DEFAULT_WINDOW_DAYS = 7
 
 #: memory_type 字符串 → ORM 模型（memory_corrections.memory_type 的读侧映射）。
-_MEMORY_TYPE_MODELS: dict[str, type] = {
+# 异构 SQLAlchemy 模型列访问走动态映射——type[Any] 显式承接既有松散性。
+_MEMORY_TYPE_MODELS: dict[str, type[Any]] = {
     "preference": MemoryPreference,
     "goal": MemoryGoal,
     "episodic": EpisodicMemory,
@@ -283,7 +285,7 @@ class UnderstandingDimensionsService:
 
         # freshness lag：状态变更型纠正 → 被改记录旧状态存活天数
         if state_change_rows:
-            created_by_model: dict[type, dict[UUID, datetime]] = {}
+            created_by_model: dict[type[Any], dict[UUID, datetime]] = {}
             for model in _MEMORY_TYPE_MODELS.values():
                 ids = {
                     memory_id for m_type, memory_id, _ in state_change_rows if _MEMORY_TYPE_MODELS.get(m_type) is model
@@ -291,12 +293,15 @@ class UnderstandingDimensionsService:
                 if not ids:
                     continue
                 rows = await self.db.execute(select(model.id, model.created_at).where(model.id.in_(ids)))
-                created_by_model[model] = dict(rows.all())
+                # Row 对象可迭代取列（dict(rows.all()) 运行时成立），但静态上
+                # 用显式索引取列更诚实；第二次 `model =` 改名避免与上方
+                # for 循环变量的非 Optional 类型首绑定冲突。
+                created_by_model[model] = {row[0]: row[1] for row in rows.all()}
             for memory_type, memory_id, corrected_at in state_change_rows:
-                model = _MEMORY_TYPE_MODELS.get(memory_type)
-                if model is None:
+                memory_model = _MEMORY_TYPE_MODELS.get(memory_type)
+                if memory_model is None:
                     continue
-                record_created = created_by_model.get(model, {}).get(memory_id)
+                record_created = created_by_model.get(memory_model, {}).get(memory_id)
                 if record_created is None or corrected_at is None:
                     continue
                 lag = (corrected_at - record_created).total_seconds() / 86400.0

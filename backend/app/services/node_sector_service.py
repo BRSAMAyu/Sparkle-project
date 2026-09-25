@@ -92,10 +92,12 @@ def normalize_sector_weights(
     fallback_sector: SectorCode | None = None,
 ) -> dict[str, int]:
     parsed: dict[SectorCode, float] = {}
+    # 统一成 list[tuple]：原 dict 分支让 source 成为 dict_items（无 append），
+    # mypy 报错且两个分支类型不兼容；list(items) 对迭代语义逐字等价。
+    source: list[tuple[Any, Any]] = []
     if isinstance(raw_weights, dict):
-        source = raw_weights.items()
+        source = list(raw_weights.items())
     elif isinstance(raw_weights, list):
-        source = []
         for item in raw_weights:
             if not isinstance(item, dict):
                 continue
@@ -107,8 +109,6 @@ def normalize_sector_weights(
                     item.get("weight") or item.get("percentage") or item.get("value"),
                 )
             )
-    else:
-        source = []
 
     for raw_sector, raw_value in source:
         sector = parse_sector_code(raw_sector)

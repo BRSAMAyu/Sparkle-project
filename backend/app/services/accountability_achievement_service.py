@@ -51,7 +51,9 @@ class AccountabilityAchievementService:
     """责任伙伴成就服务"""
 
     # 责任伙伴成就定义
-    ACCOUNTABILITY_ACHIEVEMENTS = {
+    # 值混装 str/Enum/int（"type" 是 AchievementType 枚举，消费侧取 .value）——
+    # 显式 Any 承接既有松散结构，dict[str, object] 会挡住 .value 访问。
+    ACCOUNTABILITY_ACHIEVEMENTS: dict[str, dict[str, Any]] = {
         "accountability_first_partnership": {
             "id": "accountability_first_partnership",
             "name": "首次结伴",

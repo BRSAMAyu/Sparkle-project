@@ -343,14 +343,20 @@ class CognitiveService:
 
             if settings.ANALYSIS_SYNC_ON_EVENT and not batch_model_key:
                 unified_service = UnifiedAnalysisService(self.db)
-                result = await unified_service.analyze_fragment(fragment)
-                if result.status != "ok" or not result.primary_output:
+                # 改名：`result` 已被上方 db.execute 的 SQLAlchemy Result 占用，
+                # 复用同名字段会让 mypy 以首绑定类型解读 AnalysisResult。
+                analysis_result = await unified_service.analyze_fragment(fragment)
+                # 局部绑定拿 primary_output（pydantic 字段经 mypy 插件是属性，
+                # 跨语句窄化失效；先落局部再判空才能收窄非 None）。同步分支
+                # 成功后与批量路径汇流，共用 `batch_analysis` 承载结果。
+                primary_output = analysis_result.primary_output
+                if analysis_result.status != "ok" or not primary_output:
                     fragment.analysis_status = AnalysisStatus.FAILED
                     fragment.error_message = "Unified analysis failed"
                     await self.db.commit()
                     return {"error": "Unified analysis failed"}
-                analysis = result.primary_output
-                await unified_service.write_memory_from_result(result)
+                batch_analysis: dict[str, Any] = primary_output
+                await unified_service.write_memory_from_result(analysis_result)
             else:
                 # 2. RAG: Retrieve Similar Fragments (Raw + HyDE)
                 similar_fragments: list[CognitiveFragment] = []
@@ -488,9 +494,14 @@ class CognitiveService:
                 ]
 
                 # 5. Call LLM (带降级保护)
+                # json_call 可返 None：为保住 None 兜底日志路径又不让变量带上
+                # Optional，各分支用 `json_or_none` 中转局部承接 None 并就地
+                # 兜底，`batch_analysis` 本体恒为 dict。
                 if batch_model_key:
                     try:
-                        analysis = await self._run_explicit_batch_analysis(messages, batch_model_key)
+                        batch_analysis = await self._run_explicit_batch_analysis(
+                            messages, batch_model_key
+                        )
                     except RECOVERABLE_LLM_ERRORS as exc:
                         logger.warning(
                             "Explicit GLM batch analysis failed for fragment {} with {}: {}",
@@ -500,7 +511,7 @@ class CognitiveService:
                         )
                         from app.services.llm_fallback_utils import cognitive_llm
 
-                        analysis = await cognitive_llm.json_call(
+                        json_or_none = await cognitive_llm.json_call(
                             messages,
                             fallback={
                                 "pattern_name": "Unknown Pattern",
@@ -509,26 +520,31 @@ class CognitiveService:
                             },
                             temperature=0.5,
                         )
+                        if json_or_none is None:
+                            logger.error(f"Failed to parse LLM analysis for {fragment_id}")
+                            json_or_none = {
+                                "pattern_name": "Unknown Pattern",
+                                "confidence_score": 0.0,
+                            }
+                        batch_analysis = json_or_none
                 else:
-                    analysis = None
                     if llm_service.__class__.__module__.startswith("unittest.mock"):
                         try:
                             mocked_response = llm_service.chat(messages, temperature=0.5)
                             mocked_raw = await mocked_response if inspect.isawaitable(mocked_response) else mocked_response
-                            analysis = self._coerce_json_result(mocked_raw)
+                            json_or_none = self._coerce_json_result(mocked_raw)
                         except (RuntimeError, TypeError, ValueError):
-                            analysis = None
-                        if analysis is None:
-                            analysis = {
+                            json_or_none = None
+                        if json_or_none is None:
+                            json_or_none = {
                                 "pattern_name": "Unknown Pattern",
                                 "confidence_score": 0.0,
                                 "root_cause": "分析暂时不可用",
                             }
-
-                    if analysis is None:
+                    else:
                         from app.services.llm_fallback_utils import cognitive_llm
 
-                        analysis = await cognitive_llm.json_call(
+                        json_or_none = await cognitive_llm.json_call(
                             messages,
                             fallback={
                                 "pattern_name": "Unknown Pattern",
@@ -537,24 +553,31 @@ class CognitiveService:
                             },
                             temperature=0.5
                         )
+                        if json_or_none is None:
+                            logger.error(f"Failed to parse LLM analysis for {fragment_id}")
+                            json_or_none = {
+                                "pattern_name": "Unknown Pattern",
+                                "confidence_score": 0.0,
+                            }
+                    batch_analysis = json_or_none
 
-                if analysis is None:
+                if batch_analysis is None:  # pragma: no cover - 静态不可达，防御保留
                     logger.error(f"Failed to parse LLM analysis for {fragment_id}")
-                    analysis = {
+                    batch_analysis = {
                         "pattern_name": "Unknown Pattern",
                         "confidence_score": 0.0,
                     }
 
             # 6. Save/Update Pattern
-            if analysis.get("confidence_score", 0) > 0.6:
-                await self._upsert_pattern(user_id, analysis, fragment_id)
+            if batch_analysis.get("confidence_score", 0) > 0.6:
+                await self._upsert_pattern(user_id, batch_analysis, fragment_id)
 
             # Update Status to COMPLETED
             fragment.analysis_status = AnalysisStatus.COMPLETED
             await self.db.commit()
 
             # Add metadata to response
-            analysis["_meta"] = {
+            batch_analysis["_meta"] = {
                 "batch_model_key": batch_model_key,
                 "strategy_used": "raw+hyde" if use_hyde else "raw",
                 "hyde_cancelled": hyde_cancelled,
@@ -562,7 +585,7 @@ class CognitiveService:
             }
 
             logger.info(f"Successfully analyzed fragment {fragment_id}")
-            return cast("dict[Any, Any]", (analysis))
+            return cast("dict[Any, Any]", (batch_analysis))
 
         except (TimeoutError, SQLAlchemyError, ValueError, TypeError, AttributeError, KeyError) as e:
             logger.exception(f"Error during behavior analysis for {fragment_id}: {e}")

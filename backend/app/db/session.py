@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import ssl
+from collections.abc import AsyncGenerator
 
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -109,7 +110,7 @@ AsyncSessionLocal = async_sessionmaker(
 Base = declarative_base()
 
 
-async def get_db() -> AsyncSession:
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Dependency function to get database session
     用于 FastAPI 依赖注入
@@ -131,7 +132,7 @@ async def get_db() -> AsyncSession:
             await session.close()
 
 
-async def get_db_no_commit() -> AsyncSession:
+async def get_db_no_commit() -> AsyncGenerator[AsyncSession, None]:
     """
     获取数据库会话但不自动提交
     适用于只读操作或需要手动控制事务的场景

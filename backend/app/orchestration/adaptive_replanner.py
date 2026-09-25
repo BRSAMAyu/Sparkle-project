@@ -437,7 +437,7 @@ class AdaptiveReplanner:
             source_daily_spec=source_spec,
             estimated_minutes=35,
         )
-        spec = {
+        spec: dict[str, Any] = {
             "day": day_number,
             "focus": objective,
             "title_focus": "压缩保底",

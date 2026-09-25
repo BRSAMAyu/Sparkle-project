@@ -63,9 +63,11 @@ def _load_simulation_lab() -> ModuleType:
 
 
 _simulation_lab = _load_simulation_lab()
-ScenarioSimulator = _simulation_lab.ScenarioSimulator
-SparkleGoalBench = _simulation_lab.SparkleGoalBench
-TestScenario = _simulation_lab.TestScenario
+# importlib 动态加载的模块属性：mypy 无法解析这些名字（报 "TestScenario?"），
+# 显式 Any 承接其既有动态性（类的真实定义在 signals/simulation_lab.py）。
+ScenarioSimulator: Any = _simulation_lab.ScenarioSimulator
+SparkleGoalBench: Any = _simulation_lab.SparkleGoalBench
+TestScenario: Any = _simulation_lab.TestScenario
 
 
 @dataclass(frozen=True)

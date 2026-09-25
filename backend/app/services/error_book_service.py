@@ -545,9 +545,12 @@ class ErrorBookService:
         if not file_id:
             return ""
 
-        gateway_url = (settings.GATEWAY_URL or "").rstrip("/")
+        # Settings 实名是 GATEWAY_INTERNAL_URL（settings.py:1095）——原
+        # GATEWAY_URL 属性不存在，pydantic 访问必 AttributeError（被外层
+        # OCR except 吞成空串），sparkle-file 图片解析从未走通。
+        gateway_url = (settings.GATEWAY_INTERNAL_URL or "").rstrip("/")
         if not gateway_url:
-            logger.warning("Cannot resolve sparkle-file image without GATEWAY_URL")
+            logger.warning("Cannot resolve sparkle-file image without GATEWAY_INTERNAL_URL")
             return ""
         if not settings.INTERNAL_API_KEY:
             logger.warning("Cannot resolve sparkle-file image without INTERNAL_API_KEY")
