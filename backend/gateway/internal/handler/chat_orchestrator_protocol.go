@@ -306,8 +306,12 @@ func deriveUXProgress(ctx context.Context, state string, details string) map[str
 		headline = i18n.T(ctx, "chat.round_finished")
 	}
 
+	// E-03：等待用户动作（确认门/补充信息）的兜底派生不得误标为 answering——
+	// 与引擎 canonical waiting stage（is_blocked=true）对齐。
 	if isBlockedDetails(details) {
 		blocked = true
+		stage = "waiting"
+		headline = i18n.T(ctx, "chat.waiting")
 	}
 
 	return map[string]interface{}{

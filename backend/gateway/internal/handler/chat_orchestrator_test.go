@@ -275,6 +275,120 @@ func TestConvertResponseToJSONDecodesExpertMetadata(t *testing.T) {
 	assert.Equal(t, "0.82", meta["route_confidence"])
 }
 
+// E-03 实时 Stage Events：网关桥接契约。
+//  1. 引擎下发的 canonical stage 帧（ux_progress 携带 stage/ledger_event_id）
+//     必须原样透传（Go 只桥接不加推理）；
+//  2. 引擎缺 ux_progress 时的兜底派生不得把「等待用户」误标成 answering。
+func TestConvertResponseToJSONPassesThroughCanonicalStageProgress(t *testing.T) {
+	cases := []struct {
+		name    string
+		stage   string
+		state   agentv1.AgentStatus_State
+		blocked bool
+		eventID string
+	}{
+		{
+			name:    "retrieval stage (SEARCHING)",
+			stage:   "retrieval",
+			state:   agentv1.AgentStatus_SEARCHING,
+			eventID: "evt-retrieval-1",
+		},
+		{
+			name:    "decision stage (THINKING)",
+			stage:   "decision",
+			state:   agentv1.AgentStatus_THINKING,
+			eventID: "evt-decision-1",
+		},
+		{
+			name:    "waiting stage (IDLE, blocked)",
+			stage:   "waiting",
+			state:   agentv1.AgentStatus_IDLE,
+			blocked: true,
+			eventID: "evt-waiting-1",
+		},
+		{
+			name:    "context stage (THINKING)",
+			stage:   "context",
+			state:   agentv1.AgentStatus_THINKING,
+			eventID: "evt-context-1",
+		},
+		{
+			name:    "tool stage (EXECUTING_TOOL)",
+			stage:   "tool",
+			state:   agentv1.AgentStatus_EXECUTING_TOOL,
+			eventID: "evt-tool-1",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			progress := map[string]interface{}{
+				"stage":           tc.stage,
+				"headline":        "headline-" + tc.stage,
+				"detail":          "detail-" + tc.stage,
+				"is_blocked":      tc.blocked,
+				"ledger_event_id": tc.eventID,
+				"trace_id":        "trace-e03",
+			}
+			raw, err := json.Marshal(progress)
+			require.NoError(t, err)
+
+			resp := &agentv1.ChatResponse{
+				ResponseId: "resp-stage-" + tc.stage,
+				RequestId:  "req-stage",
+				TraceId:    "trace-e03",
+				Metadata: map[string]string{
+					"ux_progress": string(raw),
+				},
+				Content: &agentv1.ChatResponse_StatusUpdate{
+					StatusUpdate: &agentv1.AgentStatus{
+						State:   tc.state,
+						Details: "stage detail",
+					},
+				},
+			}
+
+			result := convertResponseToJSON(context.Background(), resp)
+
+			assert.Equal(t, "status_update", result["type"])
+			meta, ok := result["metadata"].(map[string]interface{})
+			require.True(t, ok)
+			uxProgress, ok := meta["ux_progress"].(map[string]interface{})
+			require.True(t, ok, "ux_progress must be decoded to a map for Flutter")
+			assert.Equal(t, tc.stage, uxProgress["stage"])
+			assert.Equal(t, tc.eventID, uxProgress["ledger_event_id"])
+			assert.Equal(t, tc.blocked, uxProgress["is_blocked"])
+
+			status, ok := result["status"].(map[string]interface{})
+			require.True(t, ok)
+			assert.Equal(t, tc.state.String(), status["state"])
+
+			// CoT 不外泄的桥接负向面：转发 JSON 不含 reasoning 载荷键
+			serialized, err := json.Marshal(result)
+			require.NoError(t, err)
+			assert.NotContains(t, string(serialized), "reasoning_content")
+			assert.NotContains(t, string(serialized), "reasoning")
+		})
+	}
+}
+
+func TestDeriveUXProgressBlockedDetailsIsWaitingStage(t *testing.T) {
+	ctx := i18n.WithLocale(context.Background(), "zh")
+
+	// 等待类 details（确认门/补充信息）兜底派生必须是 waiting，而非 answering
+	waiting := deriveUXProgress(ctx, "IDLE", "delete_plan: 等待你确认后执行")
+	assert.Equal(t, "waiting", waiting["stage"])
+	assert.Equal(t, true, waiting["is_blocked"])
+
+	waitingEn := deriveUXProgress(i18n.WithLocale(context.Background(), "en"), "THINKING", "awaiting your confirmation")
+	assert.Equal(t, "waiting", waitingEn["stage"])
+	assert.Equal(t, true, waitingEn["is_blocked"])
+
+	// 非等待 details 保持既有语义
+	normal := deriveUXProgress(ctx, "IDLE", "这轮处理已经完成")
+	assert.Equal(t, "answering", normal["stage"])
+	assert.Equal(t, false, normal["is_blocked"])
+}
+
 func TestConvertResponseToJSONAddsUXProgressFromStatus(t *testing.T) {
 	resp := &agentv1.ChatResponse{
 		ResponseId: "resp-status",

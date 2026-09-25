@@ -13,6 +13,7 @@
         "retrieving": "我在查找相关依据和上下文",
         "executing": "我在替你执行需要的步骤",
         "answering": "我在组织最终回答",
+        "waiting": "我在等你确认或补充信息",
         "evidence_summary_with": "本轮回答带有可展开的依据来源。",
         "evidence_summary_without": "本轮回答没有附带可展开的引用来源。",
         "message_length_exceeded": "消息长度超过 {max_length} 字符限制"

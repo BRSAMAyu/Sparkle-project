@@ -13,6 +13,7 @@
         "retrieving": "I am searching for relevant basis and context",
         "executing": "I am executing the necessary steps for you",
         "answering": "I am organizing the final answer",
+        "waiting": "I am waiting for your confirmation or input",
         "evidence_summary_with": "This response has expandable source references.",
         "evidence_summary_without": "This response has no expandable source references.",
         "message_length_exceeded": "Message length exceeds {max_length} character limit"

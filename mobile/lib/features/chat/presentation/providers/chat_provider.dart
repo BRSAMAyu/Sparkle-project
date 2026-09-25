@@ -33,10 +33,12 @@ import 'package:sparkle/features/chat/data/services/review_grpc_service.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
 import 'package:sparkle/features/chat/presentation/providers/agent_session_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
+import 'package:sparkle/features/chat/presentation/providers/chat_stage_stabilizer.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
 import 'package:sparkle/features/chat/presentation/providers/guidance_mode_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/low_yield_block_provider.dart';
 import 'package:sparkle/features/chat/presentation/widgets/causal_timeline_panel.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_run_phase_indicator.dart';
 import 'package:sparkle/features/chat/presentation/widgets/content_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_switch_confirmation_dialog.dart';
@@ -186,6 +188,12 @@ class ChatNotifier extends StateNotifier<ChatState> {
   final _Debouncer _streamDebouncer = _Debouncer(
     const Duration(milliseconds: 50),
   );
+
+  /// E-03：aiStatus 阶段稳定窗（≥300ms）——分类复用三段胶囊的 aiStatus
+  /// 划分（resolveChatRunStage），保证「稳定类 == 胶囊段」，不另立分类真源。
+  final AiStageStabilizer _aiStageStabilizer = AiStageStabilizer(
+    classify: (status) => resolveChatRunStage(ChatRunPhase.sending, status),
+  );
   bool _isDisposed = false;
   static const String _dailyUsageDateKey = 'chat_daily_usage_date';
   static const String _dailyUsageTokensKey = 'chat_daily_usage_tokens';
@@ -270,6 +278,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     bool clearCompletedLabel = false,
   }) {
     _streamGeneration++;
+    _aiStageStabilizer.clear();
     state = state.copyWith(
       isSending: false,
       streamingContent: '',
@@ -355,6 +364,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
   @override
   void dispose() {
     _streamDebouncer.cancel();
+    _aiStageStabilizer.dispose();
     _chatRepository.dispose();
     unawaited(_planReviewService?.close());
     unawaited(_reviewService?.close());
@@ -1232,6 +1242,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       }
       sawTerminalEvent = true;
       _streamDebouncer.cancel();
+      _aiStageStabilizer.clear();
       unawaited(BgmService.setThinkingActivity(false));
       _appendUxWidgets(accumulatedWidgets, accumulatedUxEnvelope);
 
@@ -1659,25 +1670,35 @@ class ChatNotifier extends StateNotifier<ChatState> {
               event.metadata?['execution_progress'],
             );
             lastAiStatus = event.state;
-            pendingAiStatus = event.state;
+            String statusDetails;
             if (executionProgress != null && executionProgress.isNotEmpty) {
-              pendingAiStatusDetails = executionProgress;
+              statusDetails = executionProgress;
             } else if (uxProgress is Map<String, dynamic>) {
               final headline = uxProgress['headline']?.toString();
               final detail = uxProgress['detail']?.toString();
-              pendingAiStatusDetails = [headline, detail]
+              statusDetails = [headline, detail]
                   .whereType<String>()
                   .where((item) => item.trim().isNotEmpty)
                   .join(' · ');
             } else {
-              pendingAiStatusDetails = event.details;
+              statusDetails = event.details;
             }
+            // E-03 阶段去抖：aiStatus 只吃稳定器提交值——首帧/同类立即提交，
+            // 跨类需 300ms 稳定窗（回摆即吞，段落高亮不闪烁）；被扣住的事件
+            // 整体跳过（status 与其 ux_progress 文案成对生效，不出现错配）。
+            _aiStageStabilizer.offer(
+              event.state,
+              apply: () {
+                pendingAiStatus = event.state;
+                pendingAiStatusDetails = statusDetails;
+              },
+            );
             state = state.copyWith(
               currentAgentName: event.currentAgentName,
               activeAgentType: event.activeAgentType,
               activeRunSummary: _buildRunSummary(
-                status: event.state,
-                details: pendingAiStatusDetails,
+                status: _aiStageStabilizer.committed ?? event.state,
+                details: statusDetails,
                 agentName: event.currentAgentName,
               ),
             );

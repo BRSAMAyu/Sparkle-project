@@ -816,6 +816,18 @@ class ExecutionEngineMixin:
                 },
                 ensure_ascii=False,
             ),
+            # E-03：OpenClaw 实时执行帧挂 canonical tool stage（网关/mobile 按
+            # ux_progress 通道消费；无 ledger 关联——OpenClaw 生命周期不在本轮
+            # RunLedger 内，不伪造 trace 关联）。
+            "ux_progress": json.dumps(
+                {
+                    "stage": "tool",
+                    "headline": self._format_openclaw_live_details(live_state).split("\n")[0],
+                    "detail": str(live_state.get("current_step") or ""),
+                    "is_blocked": False,
+                },
+                ensure_ascii=False,
+            ),
             "openclaw_live": "true",
         }
         return agent_service_pb2.ChatResponse(

@@ -149,6 +149,7 @@ from app.orchestration.session_feedback import (
 )
 from app.orchestration.session_state_mixin import SessionStateMixin
 from app.orchestration.soul_compiler import attach_shadow_soul_runtime
+from app.orchestration.stage_events import build_stage_frame, emit_stage_event
 from app.orchestration.state_manager import SessionStateManager
 from app.orchestration.state_snapshot import StateSnapshotManager
 from app.orchestration.statechart_engine import WorkflowState
@@ -1461,7 +1462,14 @@ class ChatOrchestrator(
         *,
         stream_callback,
         chat_mode: str,
+        trace_id: str = "",
+        ledger_event_id: str = "",
     ) -> None:
+        """E-03 首反馈帧（intake/handoff）。
+
+        服务可知点（校验/幂等/锁/会话态就绪）立即下发，携带 trace 关联；
+        帧构造走 stage_events 单一真源（canonical stage + 无 reasoning 面）。
+        """
         if not getattr(settings, "EARLY_ACK_PROGRESS_ENABLED", True):
             return
         if stream_callback is None:
@@ -1478,27 +1486,16 @@ class ChatOrchestrator(
             detail = "Preparing a quick response before deeper collaboration."
 
         try:
-            await stream_callback(
-                agent_service_pb2.ChatResponse(
-                    status_update=agent_service_pb2.AgentStatus(
-                        state=agent_service_pb2.AgentStatus.THINKING,
-                        details=headline,
-                        current_agent_name="Sparkle Flash",
-                    ),
-                    metadata={
-                        "ux_progress": json.dumps(
-                            {
-                                "stage": stage,
-                                "headline": headline,
-                                "detail": detail,
-                                "is_blocked": False,
-                            },
-                            ensure_ascii=False,
-                        ),
-                        "early_ack": "true",
-                    },
-                )
+            frame = build_stage_frame(
+                stage,
+                headline=headline,
+                detail=detail,
+                trace_id=trace_id,
+                ledger_event_id=ledger_event_id,
+                current_agent_name="Sparkle Flash",
             )
+            frame.metadata["early_ack"] = "true"
+            await stream_callback(frame)
         except Exception as exc:
             logger.debug(f"Failed to emit early ack progress: {exc}")
 
@@ -2270,6 +2267,63 @@ class ChatOrchestrator(
                 )
                 chat_mode = normalize_chat_mode(request.chat_mode or CHAT_MODE_STANDARD)
                 user_message = request.message or ""
+
+                # E-03 首反馈（<500ms 服务可知后）：校验/幂等/锁/会话态就绪即
+                # 建立 stream_callback + RunLedger，登记 run_started 并下发首个
+                # stage 帧（intake/handoff），随即 drain-yield——不等重上下文构建
+                # （_build_full_context 及其后的画像/RAG 前置段），更不等首个 token。
+                async def stream_callback(resp: agent_service_pb2.ChatResponse):
+                    if resp.WhichOneof("content") in ("delta", "full_text"):
+                        latency_probe.first_token()
+                    resp.response_id = response_id
+                    resp.created_at = int(datetime.now().timestamp())
+                    resp.request_id = request_id
+                    resp.session_id = resp.session_id or session_id
+                    resp.workflow_id = resp.workflow_id or workflow_id
+                    resp.prompt_version = resp.prompt_version or prompt_version
+                    resp.trace_id = resp.trace_id or trace_id
+                    try:
+                        await self._enqueue_stream_response(queue, resp)
+                    except TimeoutError:
+                        # 注：基线的 response_dropped 布尔从未被读取（写死标志），
+                        # 前移后顺手移除——计数器与错误日志语义原样保留。
+                        STREAM_RESPONSE_DROPPED.inc()
+                        logger.error(
+                            "Timed out while enqueueing critical stream response "
+                            f"(response_id={resp.response_id}, finish_reason={resp.finish_reason}, "
+                            f"content={resp.WhichOneof('content')})"
+                        )
+
+                run_ledger = RunLedgerRecorder(
+                    trace_id=trace_id,
+                    session_id=session_id,
+                    workflow_id=workflow_id,
+                    response_id=response_id,
+                    prompt_version=prompt_version,
+                    request_id=request_id,
+                    redis_client=self.redis,
+                    stream_callback=stream_callback,
+                )
+                _run_started_event = await run_ledger.record_event(
+                    event_type="run_started",
+                    label="运行开始",
+                    workflow_stage="orchestration",
+                    metadata={
+                        "chat_mode": chat_mode,
+                        "workflow_id": workflow_id,
+                        "prompt_version": prompt_version,
+                    },
+                    emit_snapshot=False,
+                )
+                await self._emit_early_ack_progress(
+                    stream_callback=stream_callback,
+                    chat_mode=chat_mode,
+                    trace_id=trace_id,
+                    ledger_event_id=str((_run_started_event or {}).get("event_id") or ""),
+                )
+                async for queued in self._drain_queue(queue):
+                    yield self._bind_response_session_id(queued, session_id, request_id=request_id)
+
                 # Extract locale early — needed for all execution paths
                 _request_locale = "en"
                 if request.HasField("user_profile") and request.user_profile.language:
@@ -2422,6 +2476,16 @@ class ChatOrchestrator(
                         return
 
                 # Step 4: Build full context
+                # E-03 context 阶段帧：重上下文整合（会话历史/用户画像/计划上下文）
+                # 是深路径静默窗的第一段——进入即告知用户。
+                await emit_stage_event(
+                    stream_callback=stream_callback,
+                    run_ledger=run_ledger,
+                    stage="context",
+                    headline="正在整合你的学习上下文",
+                    detail="会话历史 · 用户画像 · 计划上下文",
+                    trace_id=trace_id,
+                )
                 (
                     grpc_context,
                     plan_id,
@@ -2770,57 +2834,9 @@ class ChatOrchestrator(
                 )
                 latency_probe.mark("aurora_planning_sidecar")
 
-                # Bound stream buffering while preserving critical terminal/content events.
-                response_dropped = False
-
-                async def stream_callback(resp: agent_service_pb2.ChatResponse):
-                    nonlocal response_dropped
-                    if resp.WhichOneof("content") in ("delta", "full_text"):
-                        latency_probe.first_token()
-                    resp.response_id = response_id
-                    resp.created_at = int(datetime.now().timestamp())
-                    resp.request_id = request_id
-                    resp.session_id = resp.session_id or session_id
-                    resp.workflow_id = resp.workflow_id or workflow_id
-                    resp.prompt_version = resp.prompt_version or prompt_version
-                    resp.trace_id = resp.trace_id or trace_id
-                    try:
-                        await self._enqueue_stream_response(queue, resp)
-                    except TimeoutError:
-                        response_dropped = True
-                        STREAM_RESPONSE_DROPPED.inc()
-                        logger.error(
-                            "Timed out while enqueueing critical stream response "
-                            f"(response_id={resp.response_id}, finish_reason={resp.finish_reason}, "
-                            f"content={resp.WhichOneof('content')})"
-                        )
-
-                run_ledger = RunLedgerRecorder(
-                    trace_id=trace_id,
-                    session_id=session_id,
-                    workflow_id=workflow_id,
-                    response_id=response_id,
-                    prompt_version=prompt_version,
-                    request_id=request_id,
-                    redis_client=self.redis,
-                    stream_callback=stream_callback,
-                )
+                # E-03：stream_callback / run_ledger / run_started / 首个 stage 帧
+                # 已前移到服务可知点（chat_mode 确定后）——这里只补 state 注入。
                 state.context_data["run_ledger"] = run_ledger
-                await run_ledger.record_event(
-                    event_type="run_started",
-                    label="运行开始",
-                    workflow_stage="orchestration",
-                    metadata={
-                        "chat_mode": chat_mode,
-                        "workflow_id": workflow_id,
-                        "prompt_version": prompt_version,
-                    },
-                    emit_snapshot=False,
-                )
-                await self._emit_early_ack_progress(
-                    stream_callback=stream_callback,
-                    chat_mode=chat_mode,
-                )
 
                 # v2.10: Emit UXDirective metadata for Flutter status band + receipt display
                 # R5-DF4: Use 'spine_ux_warning' to match Flutter websocket_chat_service_v2 listener
@@ -3160,6 +3176,15 @@ class ChatOrchestrator(
                             user_context_payload=user_context_payload,
                             context_targets=[state.context_data],
                         )
+                    # E-03 retrieval 阶段帧：文档 RAG / 相关资料检索真实开始前告知。
+                    await emit_stage_event(
+                        stream_callback=stream_callback,
+                        run_ledger=run_ledger,
+                        stage="retrieval",
+                        headline="正在检索相关资料",
+                        detail="文档知识库 · 学习资料",
+                        trace_id=trace_id,
+                    )
                     user_context_payload = await self._hydrate_document_context(
                         active_db=active_db,
                         user_id=user_id,
@@ -3456,7 +3481,7 @@ class ChatOrchestrator(
                     orchestration_trace=orchestration_trace,
                     user_context_payload=user_context_payload,
                 )
-                await run_ledger.record_event(
+                route_selected_event = await run_ledger.record_event(
                     event_type="route_selected",
                     label="路由决策",
                     workflow_stage="routing",
@@ -3578,6 +3603,19 @@ class ChatOrchestrator(
                     orchestration_trace=orchestration_trace,
                     user_context_payload=user_context_payload,
                 )
+                # E-03 decision 阶段帧：路由 + 双核调度（E-02）落定即告知，
+                # 关联既有 route_selected ledger 事件（workflow_stage=routing）。
+                try:
+                    _decision_frame = build_stage_frame(
+                        "decision",
+                        headline="路由决策完成，开始执行",
+                        detail=f"模式：{self._dual_core_mode_label(str(dual_core_decision.get('mode') or 'balanced'))}",
+                        trace_id=trace_id,
+                        ledger_event_id=str((route_selected_event or {}).get("event_id") or ""),
+                    )
+                    await stream_callback(_decision_frame)
+                except Exception as exc:
+                    logger.debug(f"Failed to emit decision stage frame: {exc}")
 
                 user_context_payload = await self._apply_context_focus_overlay(
                     active_db=active_db,
@@ -3643,6 +3681,15 @@ class ChatOrchestrator(
                         user_context_payload=user_context_payload,
                         context_targets=[state.context_data],
                     )
+                # E-03 retrieval 阶段帧：文档 RAG / 相关资料检索真实开始前告知。
+                await emit_stage_event(
+                    stream_callback=stream_callback,
+                    run_ledger=run_ledger,
+                    stage="retrieval",
+                    headline="正在检索相关资料",
+                    detail="文档知识库 · 学习资料",
+                    trace_id=trace_id,
+                )
                 user_context_payload = await self._hydrate_document_context(
                     active_db=active_db,
                     user_id=user_id,

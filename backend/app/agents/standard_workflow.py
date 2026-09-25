@@ -71,6 +71,7 @@ from app.orchestration.graph_rag import (
     format_graph_rag_document_context,
 )
 from app.orchestration.prompts import build_system_prompt
+from app.orchestration.stage_events import build_stage_frame, record_stage_event
 from app.orchestration.statechart_engine import StateGraph, WorkflowState
 from app.services.aurora_doc_context_kill_switch_service import AuroraDocContextKillSwitchService
 from app.services.document_service import document_service
@@ -2340,6 +2341,111 @@ def render_plan_abort_notice(plan_result: Any, locale: str | None = None) -> str
     return f"\n\n⚠️ 计划执行中断: {getattr(plan_result, 'abort_reason', None) or 'required step failed'}"
 
 
+def _to_camel_case_dag_event(event: dict[str, Any]) -> dict[str, Any]:
+    key_map = {
+        "layer_index": "layerIndex",
+        "layer_number": "layerNumber",
+        "total_layers": "totalLayers",
+        "step_id": "stepId",
+        "tool_name": "toolName",
+        "duration_ms": "durationMs",
+        "completed_steps": "completedSteps",
+        "step_ids": "stepIds",
+        "tool_names": "toolNames",
+        "plan_id": "planId",
+        "layers_completed": "layersCompleted",
+        "steps_total": "stepsTotal",
+        "abort_reason": "abortReason",
+    }
+    return {key_map.get(k, k): v for k, v in event.items()}
+
+
+def build_dag_execution_observer(*, stream_callback, run_ledger):
+    """E-03：DAG 执行观察者工厂（tool stage 事件单一构造点）。
+
+    layer_start 帧升级为 canonical ``tool`` stage（ux_progress + ledger 关联），
+    其余事件保持既有 dag_execution_event metadata 透传。stream_callback 为空
+    时返回 None（与旧闭包行为一致：零回调零帧）。
+    """
+    if not stream_callback:
+        return None
+
+    async def _observer(event: dict[str, Any]) -> None:
+        payload_event = _to_camel_case_dag_event(event)
+        event_type = event.get("event")
+        if event_type == "layer_start":
+            details = (
+                f"正在执行 DAG 第 {event.get('layer_number', 0)}/{event.get('total_layers', 0)} 层，"
+                f"{len(event.get('tool_names', []))} 个步骤并行"
+            )
+            stage_event = await record_stage_event(
+                run_ledger,
+                "tool",
+                headline=details,
+                metadata={"layer_number": event.get("layer_number"), "total_layers": event.get("total_layers")},
+            )
+            frame = build_stage_frame(
+                "tool",
+                headline=details,
+                detail=f"{len(event.get('tool_names', []))} 个步骤并行",
+                ledger_event_id=str((stage_event or {}).get("event_id") or ""),
+            )
+            frame.status_update.active_agent = agent_service_pb2.ORCHESTRATOR
+            frame.metadata["dag_execution_event"] = json.dumps(payload_event, ensure_ascii=False)
+            await stream_callback(frame)
+            return
+
+        await stream_callback(
+            agent_service_pb2.ChatResponse(
+                metadata={
+                    "dag_execution_event": json.dumps(payload_event, ensure_ascii=False),
+                }
+            )
+        )
+
+    return _observer
+
+
+async def emit_tool_step_status(
+    *,
+    stream_callback,
+    run_ledger,
+    tool_name: str,
+    success: bool,
+    error_type: str,
+) -> None:
+    """E-03：工具步骤结束状态——确认门 = waiting stage（is_blocked=true）。
+
+    常规成败保持既有 IDLE + 话术（演示缺陷 ❌#4 语义不回退）。
+    """
+    if not stream_callback:
+        return
+    if (not success) and error_type == "ConfirmationRequired":
+        status_msg = f"{tool_name}: 等待你确认后执行"
+        stage_event = await record_stage_event(
+            run_ledger, "waiting", headline=status_msg, metadata={"tool_name": tool_name}
+        )
+        frame = build_stage_frame(
+            "waiting",
+            headline=status_msg,
+            detail="确认后将继续执行",
+            ledger_event_id=str((stage_event or {}).get("event_id") or ""),
+        )
+        frame.status_update.active_agent = agent_service_pb2.ORCHESTRATOR
+        await stream_callback(frame)
+        return
+    status_msg = f"{tool_name}: {'执行成功' if success else '执行失败'}"
+    await stream_callback(
+        agent_service_pb2.ChatResponse(
+            status_update=agent_service_pb2.AgentStatus(
+                state=agent_service_pb2.AgentStatus.IDLE,
+                details=status_msg,
+                active_agent=agent_service_pb2.ORCHESTRATOR,
+            )
+        )
+    )
+
+
 async def tool_execution_node(state: WorkflowState) -> WorkflowState:
     """Execute Tools with Grounding Validation (Phase 1 & Phase 2).
 
@@ -2409,56 +2515,14 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
         # Execute plan with DAG-aware executor (parallel by layer).
         start_time = time.time()
 
-        def _to_camel_case_dag_event(event: dict[str, Any]) -> dict[str, Any]:
-            key_map = {
-                "layer_index": "layerIndex",
-                "layer_number": "layerNumber",
-                "total_layers": "totalLayers",
-                "step_id": "stepId",
-                "tool_name": "toolName",
-                "duration_ms": "durationMs",
-                "completed_steps": "completedSteps",
-                "step_ids": "stepIds",
-                "tool_names": "toolNames",
-                "plan_id": "planId",
-                "layers_completed": "layersCompleted",
-                "steps_total": "stepsTotal",
-                "abort_reason": "abortReason",
-            }
-            return {key_map.get(k, k): v for k, v in event.items()}
-
         async def _execution_observer(event: dict[str, Any]) -> None:
-            if not stream_callback:
-                return
-
-            payload_event = _to_camel_case_dag_event(event)
-            event_type = event.get("event")
-            if event_type == "layer_start":
-                details = (
-                    f"正在执行 DAG 第 {event.get('layer_number', 0)}/{event.get('total_layers', 0)} 层，"
-                    f"{len(event.get('tool_names', []))} 个步骤并行"
-                )
-                await stream_callback(
-                    agent_service_pb2.ChatResponse(
-                        status_update=agent_service_pb2.AgentStatus(
-                            state=agent_service_pb2.AgentStatus.EXECUTING_TOOL,
-                            details=details,
-                            active_agent=agent_service_pb2.ORCHESTRATOR,
-                        ),
-                        metadata={
-                            "dag_execution_event": json.dumps(payload_event, ensure_ascii=False),
-                        },
-                    )
-                )
-                return
-
-            await stream_callback(
-                agent_service_pb2.ChatResponse(
-                    metadata={
-                        "dag_execution_event": json.dumps(payload_event, ensure_ascii=False),
-                    }
-                )
+            observer = build_dag_execution_observer(
+                stream_callback=stream_callback,
+                run_ledger=state.context_data.get("run_ledger"),
             )
+            if observer is None:
+                return
+            await observer(event)
 
         plan_result = await executor.execute_plan(
             plan=executable_plan,
@@ -2485,19 +2549,14 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
             )
 
             if stream_callback:
-                # 演示缺陷 ❌#4：确认门步骤不是「执行失败」——状态条话术区分等待确认。
-                if (not result.success) and (result.error_type or "") == "ConfirmationRequired":
-                    status_msg = f"{step_result.tool_name}: 等待你确认后执行"
-                else:
-                    status_msg = f"{step_result.tool_name}: {'执行成功' if result.success else '执行失败'}"
-                await stream_callback(
-                    agent_service_pb2.ChatResponse(
-                        status_update=agent_service_pb2.AgentStatus(
-                            state=agent_service_pb2.AgentStatus.IDLE,
-                            details=status_msg,
-                            active_agent=agent_service_pb2.ORCHESTRATOR,
-                        )
-                    )
+                # E-03：工具步骤状态走统一入口——确认门 = waiting stage（is_blocked），
+                # 常规成败保持既有 IDLE 话术。
+                await emit_tool_step_status(
+                    stream_callback=stream_callback,
+                    run_ledger=state.context_data.get("run_ledger"),
+                    tool_name=step_result.tool_name,
+                    success=bool(result.success),
+                    error_type=str(result.error_type or ""),
                 )
 
                 data_struct = struct_pb2.Struct()
