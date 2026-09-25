@@ -683,7 +683,129 @@ class TestFrictionWiringTriggerGate:
         assert "wiring_gate" not in replay.annotations
 
 
-class TestActDecisionPathWithPatchedInputs:
+class TestAnswerReplayFreeTextGate:
+    """V3-FIX-111 · answer_replay 自由文本回退层的置信/意图门（FIX-49 同构）。
+
+    FIX-49 声明「回答闭环不设门」的前提是**用户在回答**——branch_key 直传
+    主路径由结构保证；自由文本回退层只有词面，前提需校验：自由文本不得仅凭
+    词面直出 act。弱词面命中（单字话语标记「对了」/ 长消息低覆盖）→ 不
+    apply、pending 保持（用户可点选或改述），门原因入 annotations 可审计；
+    实质回答照常闭环。
+    """
+
+    async def _ask_first(self, db_session, fake_redis, session_id: str):
+        user = await _make_user(db_session)
+        svc = FrictionChatWiringService(db_session, fake_redis)
+        first = await svc.process_turn(
+            user_id=str(user.id),
+            session_id=session_id,
+            user_message="最近做不下去",
+            user_context_payload={},
+            request_extra_context={},
+            now=_NOW,
+        )
+        assert first.outcome == "ask" and first.question is not None
+        return user, svc, first
+
+    async def test_spurious_free_text_never_acts_and_keeps_pending(self, db_session, fake_redis):
+        """wt424 探针原样：「对了不想要了，帮我换个计划吧」（意图=换计划，非
+        回答）不得被词面解析成 tried_confident 直出 S3 act。"""
+        user, svc, first = await self._ask_first(db_session, fake_redis, "fix111-1")
+        second = await svc.process_turn(
+            user_id=str(user.id),
+            session_id="fix111-1",
+            user_message="对了不想要了，帮我换个计划吧",
+            user_context_payload={},
+            request_extra_context={},
+            now=_NOW,
+        )
+        assert second.mode == "answer_replay"
+        assert second.outcome != "act"
+        assert second.intervention is None
+        assert second.question is None  # 不 apply、不重问、不消费
+        assert second.annotations["answer_resolution"] == "unresolved_weak_free_text"
+        assert second.annotations["wiring_gate"] == "silent_weak_free_text_answer"
+        # pending 保持：用户可点选选项或改述
+        pending = await svc._load_pending(str(user.id), "fix111-1")
+        assert pending is not None and pending["question_id"] == first.question["question_id"]
+
+    async def test_substantive_free_text_still_closes_loop(self, db_session, fake_redis):
+        """实质回答不受门影响（降噪不关死——与 FIX-49 同构）。"""
+        user, svc, _first = await self._ask_first(db_session, fake_redis, "fix111-2")
+        second = await svc.process_turn(
+            user_id=str(user.id),
+            session_id="fix111-2",
+            user_message="试过了，就是不确定对不对",
+            user_context_payload={},
+            request_extra_context={},
+            now=_NOW,
+        )
+        assert second.mode == "answer_replay"
+        assert second.annotations["answer_resolution"] == "free_text_lexical"
+        assert second.annotations.get("wiring_gate") is None
+
+    async def test_branch_key_direct_never_gated_even_with_noisy_message(self, db_session, fake_redis):
+        """branch_key 直传主路径不受自由文本门影响（结构保证「用户在回答」）。"""
+        user, svc, first = await self._ask_first(db_session, fake_redis, "fix111-3")
+        second = await svc.process_turn(
+            user_id=str(user.id),
+            session_id="fix111-3",
+            user_message="对了不想要了，帮我换个计划吧",  # 消息体嘈杂不参与直传判定
+            user_context_payload={},
+            request_extra_context={
+                FRICTION_ANSWER_CONTEXT_KEY: {
+                    "question_id": first.question["question_id"],
+                    "branch_key": "not_tried",
+                }
+            },
+            now=_NOW,
+        )
+        assert second.mode == "answer_replay"
+        assert second.annotations["answer_resolution"] == "branch_key_direct"
+        assert "wiring_gate" not in second.annotations
+
+
+class TestStuckSelfReportChatSurface:
+    """V3-FIX-115 · 卡点自报「卡住」族在 chat 面有出面（只补词表不改门结构）。
+
+    wt424 探针：「我真的卡住了，帮帮我」+ stale spine → 修前门拦
+    （silent_no_utterance_wordmark）零出面。修后词牌在场 → 门自然放行。
+    旅程面通道不动（本类不涉及）。
+    """
+
+    async def test_stuck_self_report_with_stale_spine_surfaces(self, db_session, fake_redis):
+        user = await _make_user(db_session)
+        await fake_redis.sadd(f"spine:state_index:{user.id}", "knowledge_transfer")
+        svc = FrictionChatWiringService(db_session, fake_redis)
+        outcome = await svc.process_turn(
+            user_id=str(user.id),
+            session_id="fix115-1",
+            user_message="我真的卡住了，帮帮我",
+            user_context_payload={},
+            request_extra_context={},
+            now=_NOW,
+        )
+        assert "wiring_gate" not in outcome.annotations
+        assert outcome.outcome in ("ask", "act")
+        assert outcome.question is not None or outcome.intervention is not None
+
+    async def test_bare_stuck_without_spine_still_asks(self, db_session, fake_redis):
+        user = await _make_user(db_session)
+        svc = FrictionChatWiringService(db_session, fake_redis)
+        outcome = await svc.process_turn(
+            user_id=str(user.id),
+            session_id="fix115-2",
+            user_message="我卡住了",
+            user_context_payload={},
+            request_extra_context={},
+            now=_NOW,
+        )
+        assert "wiring_gate" not in outcome.annotations
+        assert outcome.outcome == "ask"
+        assert outcome.question is not None
+
+
+
     async def _service(self, db_session, fake_redis):
         return FrictionChatWiringService(db_session, fake_redis)
 
@@ -974,7 +1096,11 @@ class TestWiringCallSitesPinned:
         assert "patched_decision_inputs" in names, "A-05 patched_decision_inputs bypassed (拔接线回归)"
         assert "diagnose_friction" in names, "A-03 diagnose_friction call removed"
         assert "apply_question_answer" in names, "ask-loop apply_question_answer call removed"
-        assert "resolve_answer_branch" in names, "free-text fallback resolve_answer_branch removed"
+        # V3-FIX-111：自由文本回退走置信证据面解析（resolve_answer_branch_detail）；
+        # resolve_answer_branch* 前缀断言保持「回退层解析不被旁路」的原守卫强度。
+        assert any(name.startswith("resolve_answer_branch") for name in names), (
+            "free-text fallback resolve_answer_branch* removed"
+        )
 
     async def test_orchestrator_hook_end_to_end_with_real_service(self, db_session, fake_redis):
         """hook 行为面：ChatOrchestrator._run_friction_decision_wiring 用真实
@@ -995,10 +1121,14 @@ class TestWiringCallSitesPinned:
         assert payload["question"]["question_id"] == "q_tried_and_checked"
 
     def test_p2_fix_is_algorithm_plus_lexeme_not_revert(self):
-        """P2 修复结构钉死：最长词牌比较存在 + 「不对」词牌在场——回退即红。"""
+        """P2 修复结构钉死：最长词牌比较存在 + 「不对」词牌在场——回退即红。
+
+        V3-FIX-111 后解析实现收敛进 ``resolve_answer_branch_detail``（legacy
+        解析器委托之，单实现不分叉）——结构断言随实现迁移，守卫强度不变。
+        """
         import inspect
 
-        from app.aurora.friction_diagnosis import resolve_answer_branch as fn
+        from app.aurora.friction_diagnosis import resolve_answer_branch_detail as fn
 
         src = inspect.getsource(fn)
         assert "-len(term)" in src or "len(term)" in src, "longest-match resolution reverted"

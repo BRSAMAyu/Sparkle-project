@@ -12,6 +12,12 @@
    非空），否则静默 ``no_action``（``annotations.wiring_gate`` 记门原因）。
    降噪不关死：回答闭环不设门、带词牌诊断全链照常、旅程面（用户主动入口）
    不经过本服务——A-08 full 臂「真摩擦介入优于固定模板」的主结论依赖此通道。
+   **V3-FIX-111 修订（v3，2026-09-26）**：「回答闭环不设门」的前提「用户在
+   回答」仅由 branch_key 直传主路径**结构保证**；自由文本回退层新增
+   FIX-49 同构的置信/意图门（``resolve_answer_branch_detail`` 置信面）：
+   弱词面命中（单字话语标记「对了」/长消息低覆盖擦碰）不 apply、不 act，
+   pending 保持（``wiring_gate=silent_weak_free_text_answer`` 可审计）——
+   自由文本不得仅凭词面直出 act。
 
 1. **A-03 摩擦诊断触发（FIX-43a）**：从既有 context 装配
    ``FrictionDiagnosisInput``（utterance=用户消息、spine_state_keys=spine
@@ -64,13 +70,13 @@ from app.aurora.friction_diagnosis import (
     FrictionDiagnosis,
     apply_question_answer,
     diagnose_friction,
-    resolve_answer_branch,
+    resolve_answer_branch_detail,
 )
 from app.aurora.intervention_policy import evaluate_intervention_policy
 from app.core.policy_patch import SURFACE_PAYLOAD_KEYS
 from app.services.policy_patch_service import PolicyPatchService
 
-FRICTION_CHAT_WIRING_VERSION = "friction-chat-wiring.v2"
+FRICTION_CHAT_WIRING_VERSION = "friction-chat-wiring.v3"
 
 #: V3-FIX-49 · chat 面 fresh 出口词牌门的静默出口原因（annotations.wiring_gate）：
 #: - 无词牌 + unknown（U1 根分裂澄清问）：对零摩擦证据的普通消息发问卷 = 过度
@@ -79,6 +85,10 @@ FRICTION_CHAT_WIRING_VERSION = "friction-chat-wiring.v2"
 #:   的介入（A-08 full 臂对照侵入 21/25，含 S1 直出建议）。
 WIRING_GATE_UNKNOWN = "silent_unknown_no_friction_evidence"
 WIRING_GATE_NO_WORDMARK = "silent_no_utterance_wordmark"
+#: V3-FIX-111 · answer_replay 自由文本回退的弱词面命中静默原因（FIX-49 同构门）：
+#: 自由文本不得仅凭词面直出 act——单字话语标记（「对了」）/长消息低覆盖擦碰
+#: 不构成「用户在回答」的证据；不 apply、pending 保持（可点选或改述）。
+WIRING_GATE_WEAK_ANSWER = "silent_weak_free_text_answer"
 
 #: pending 问题 Redis 键（per user+session；TTL 一天——跨天会话按过期处理）。
 PENDING_KEY_TEMPLATE = "friction:pending:{user_id}:{session_id}"
@@ -223,12 +233,27 @@ class FrictionChatWiringService:
             if candidate in options:
                 branch_key = candidate
                 resolution = "branch_key_direct"
-        # 2) 自由文本回退（v1_1 最长词牌解析面）。
+        # 2) 自由文本回退（v1_1 最长词牌解析面）+ V3-FIX-111 置信/意图门：
+        #    自由文本不得仅凭词面直出 act——弱词面命中（单字话语标记/低覆盖
+        #    擦碰）不 apply，pending 保持；branch_key 直传不受门影响（结构
+        #    保证「用户在回答」，FIX-49 免门声明只对该主路径成立）。
         if branch_key is None and user_message.strip():
-            resolved = resolve_answer_branch(question_id, user_message)
+            resolved = resolve_answer_branch_detail(question_id, user_message)
             if resolved is not None:
-                branch_key = resolved
-                resolution = "free_text_lexical"
+                if resolved.confident:
+                    branch_key = resolved.branch_key
+                    resolution = "free_text_lexical"
+                else:
+                    return FrictionWiringOutcome(
+                        mode="answer_replay",
+                        outcome="ask",
+                        friction_type=str(pending.get("friction_type") or "unknown"),
+                        lifecycle_tag=str(pending.get("lifecycle_tag") or "unattributed"),
+                        annotations={
+                            "answer_resolution": "unresolved_weak_free_text",
+                            "wiring_gate": WIRING_GATE_WEAK_ANSWER,
+                        },
+                    )
         if branch_key is None:
             # 无解析 → 问题保持 pending（用户可稍后点选）；本轮零问句零行动。
             return FrictionWiringOutcome(

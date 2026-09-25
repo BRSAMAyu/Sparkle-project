@@ -1,4 +1,25 @@
-"""A-03 · Friction Diagnosis + Sufficiency / One Best Question（aurora_friction_diagnosis.v1_2）。
+"""A-03 · Friction Diagnosis + Sufficiency / One Best Question（aurora_friction_diagnosis.v1_3）。
+
+**v1_3（V3-FIX-110/111/115 处置，2026-09-26）**：摩擦门语义缺陷族（wt424 审查轮）——
+
+1. **FIX-110 否定感知词牌**：词牌命中若与否定标记（中：并不是/而不是/不是/
+   并非/不再是/并没有/没有/不算/不/没；英：词边界 not/no/never/don't/…）
+   同句共现且标记位于词牌之前、span 不重叠 → 降为**否定命中**
+   （``annotations.utterance_negated_matches``，零证据权重，不进
+   ``utterance_matches``）。语义选择 = **降为 unknown 观察档而非硬拦**：
+   否定证据是零权重不是否决权（「不是没时间，是太难了」的 difficulty 正向
+   证据照常驱动）——与「不假诊断」同律；chat 面出面拦截由 FIX-49 词牌门守
+   （否定-only → 正向词牌空 → 门自然静默）。修前「不是没时间，是效率低」
+   命中 time:没时间 → act（wt424 探针）。
+2. **FIX-111 answer_replay 置信证据面**：``resolve_answer_branch_detail``
+   暴露自由文本解析的词面证据强度（命中词牌长度 + 覆盖比 + confident 判定）；
+   解析语义不变（v1_1 最长词牌）。接线面据此实施 FIX-49 同构的置信/意图门
+   （自由文本不得仅凭词面直出 act；弱命中 pending 保持）。
+3. **FIX-115 卡住族词牌**：封闭词表补 chat 面最高频卡点自报
+   （卡住/卡住了/进行不下去/stuck，中英，弱权重 0.6 双列 difficulty/energy
+   ——与「做不下去」同律，先问不先动）；旅程面 sanctioned 通道不动。
+   ``FRICTION_DIAGNOSIS_VERSION`` 与 ``FROZEN_EVIDENCE_FINGERPRINT`` 随词面
+   扩展升级。
 
 **v1_2（V3-FIX-50 处置，2026-09-26）**：B1 预算出口的平权 tie 修复——
 
@@ -98,6 +119,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import re
 from dataclasses import dataclass, field, replace
 from types import MappingProxyType
 from typing import Any, Mapping
@@ -109,10 +131,11 @@ from app.core.intervention_lifecycle import INTERVENTION_FRICTION_TAGS
 from app.core.policy_patch import SURFACE_PAYLOAD_SCHEMAS
 from app.signals.policy_engine import _RULE_TABLE
 
+#: v1_3：V3-FIX-110/111/115 处置（否定感知词牌 + answer 置信证据面 + 卡住族词牌）。
 #: v1_2：V3-FIX-50 处置（B1 exact-tie 降级 B3 + argmax/后验字母序 tie-break 契约）。
 #: v1_1：FIX-43 P2 负向反转处置（解析算法最长匹配 + tried_unsure 补「不对」词牌）。
 #: 词面/算法变更纪律见模块 docstring 顶部修订记录。
-FRICTION_DIAGNOSIS_VERSION = "aurora_friction_diagnosis.v1_2"
+FRICTION_DIAGNOSIS_VERSION = "aurora_friction_diagnosis.v1_3"
 
 # ---------------------------------------------------------------------------
 # 封闭词表（冻结；扩展需 bump 版本 + reviewer）
@@ -310,6 +333,14 @@ FRICTION_UTTERANCE_LEXICON: Mapping[str, Mapping[str, float]] = MappingProxyType
                 "推不动": 0.6,
                 "搞不定": 1.0,
                 "too hard": 1.8,
+                # V3-FIX-115 · 卡住族（chat 面最高频卡点自报；弱权重 0.6 双列
+                # difficulty/energy——与「做不下去」同律：横跨推不动/状态族的
+                # 高歧义表达，先问不先动，context 证据破局）。英文 stuck 子串
+                # 匹配（无常见误命中词）。
+                "卡住": 0.6,
+                "卡住了": 0.6,
+                "进行不下去": 0.6,
+                "stuck": 0.6,
             }
         ),
         "time": MappingProxyType(
@@ -338,6 +369,11 @@ FRICTION_UTTERANCE_LEXICON: Mapping[str, Mapping[str, float]] = MappingProxyType
                 "学不进去": 1.0,
                 "做不下去": 0.6,
                 "提不起劲": 1.8,
+                # V3-FIX-115 · 卡住族第二列（difficulty 同权重——弱歧义先问）。
+                "卡住": 0.6,
+                "卡住了": 0.6,
+                "进行不下去": 0.6,
+                "stuck": 0.6,
             }
         ),
         "dependency": MappingProxyType(
@@ -435,6 +471,100 @@ FRICTION_UTTERANCE_LEXICON: Mapping[str, Mapping[str, float]] = MappingProxyType
 assert set(FRICTION_UTTERANCE_LEXICON) == set(
     FRICTION_EVIDENCE_TYPES
 ), "FRICTION_UTTERANCE_LEXICON must exactly cover the evidence taxonomy (unknown excluded)"
+
+# ---------------------------------------------------------------------------
+# V3-FIX-110 · 否定感知词牌匹配（否定式表达 ≠ 正向摩擦自报）
+# ---------------------------------------------------------------------------
+
+#: 中文否定标记（子串匹配；降序长度排列便于阅读，命中判定与长度无关——
+#: 任一标记在窗口内出现即构成否定）。选词判据：取摩擦自报语域真实出现的
+#: 否定形态；不收「别」（别/别人/别的/特别/另外碰撞率过高）、不收「无非/
+#: 无需」等书面稀有形。已知残余误报（如实登记）：「不错/没错」与词牌同句
+#: 无标点分隔时可能误判否定（如「内容不错就是太难了」）——代价是漏出面
+#: （保守方向），与对照侵入（错误出面）相比取轻。
+FRICTION_NEGATION_MARKERS_ZH: tuple[str, ...] = (
+    "并不是",
+    "而不是",
+    "不是",
+    "并非",
+    "不再是",
+    "不再",
+    "并没有",
+    "没有",
+    "不算",
+    "不",
+    "没",
+)
+
+#: 英文否定标记（**词边界**正则——防 noted/another/nothing 类子串误伤；
+#: 含缩写否定的常见形）。与中文标记同窗口语义：位于词牌之前、span 不重叠
+#: 才构成否定。
+FRICTION_NEGATION_RE_EN = re.compile(
+    r"\b(?:not|no|never|without|hardly|don't|doesn't|didn't|isn't|wasn't|aren't|weren't"
+    r"|can't|cannot|couldn't|won't)\b"
+)
+
+#: 子句切分（否定窗口的「同句」边界）：中英标点 + 换行。不按空白切——英文
+#: 否定与词牌常隔多词（"I don't think it's too hard"），空白切分会误判。
+_FRICTION_CLAUSE_SPLIT_RE = re.compile(r"[，。！？；、,.!?;:：…\n\r\t]+")
+
+
+def _clause_spans(text: str) -> list[tuple[int, int]]:
+    """子句内容 span（分隔符之间的补集段；空段跳过）。"""
+    spans: list[tuple[int, int]] = []
+    pos = 0
+    for match in _FRICTION_CLAUSE_SPLIT_RE.finditer(text):
+        if match.start() > pos:
+            spans.append((pos, match.start()))
+        pos = match.end()
+    if pos < len(text):
+        spans.append((pos, len(text)))
+    return spans
+
+
+def _negation_spans_in_clause(clause: str, clause_offset: int) -> list[tuple[int, int]]:
+    """子句内全部否定标记的全文绝对 span（中：子串；英：词边界正则）。"""
+    spans: list[tuple[int, int]] = []
+    for marker in FRICTION_NEGATION_MARKERS_ZH:
+        start = 0
+        while True:
+            idx = clause.find(marker, start)
+            if idx < 0:
+                break
+            spans.append((clause_offset + idx, clause_offset + idx + len(marker)))
+            start = idx + 1
+    for match in FRICTION_NEGATION_RE_EN.finditer(clause):
+        spans.append((clause_offset + match.start(), clause_offset + match.end()))
+    return spans
+
+
+def _is_negated_occurrence(text: str, clause_spans: list[tuple[int, int]], start: int, end: int) -> bool:
+    """词牌出现 [start, end) 是否被否定：存在**同子句**、止于词牌起点之前
+    （否定前置于被否定对象——中英同律；span 不重叠由 ``neg_end <= start``
+    结构保证——词牌内的否定字不成否定，如「完全没时间」「看不懂」）的否定
+    标记。"""
+    for clause_start, clause_end in clause_spans:
+        if clause_start <= start < clause_end:
+            for _neg_start, neg_end in _negation_spans_in_clause(text[clause_start:clause_end], clause_start):
+                if neg_end <= start:
+                    return True
+            return False
+    return False
+
+
+def _utterance_wordmark_negated(text: str, phrase: str, clause_spans: list[tuple[int, int]]) -> bool:
+    """词牌在文中的**全部**出现均被否定 → True（任一未被否定出现 = 正向命中）。"""
+    start = 0
+    occurrences = 0
+    while True:
+        idx = text.find(phrase, start)
+        if idx < 0:
+            break
+        occurrences += 1
+        if not _is_negated_occurrence(text, clause_spans, idx, idx + len(phrase)):
+            return False
+        start = idx + 1
+    return occurrences > 0
 
 # ---------------------------------------------------------------------------
 # 证据面 2：spine 状态投影（state_key → 类型权重；值域覆盖 _RULE_TABLE 全键）
@@ -1058,17 +1188,31 @@ class FrictionDiagnosis:
 
 
 def _utterance_scores(text: str, notes: dict[str, Any]) -> dict[str, float]:
+    """词牌证据（V3-FIX-110 否定感知）：命中 = 子串包含且**未被否定**。
+
+    否定命中（同子句否定标记前置于词牌）零证据权重，不进 ``utterance_matches``
+    （FIX-49 词牌门的正向判据面），只入 ``utterance_negated_matches`` 注记
+    （观察档可审计）。
+    """
     scores: dict[str, float] = {}
     if not text:
         return scores
     matched: list[str] = []
+    negated: list[str] = []
+    clause_spans = _clause_spans(text)
     for ftype in sorted(FRICTION_UTTERANCE_LEXICON):
         for phrase, weight in sorted(FRICTION_UTTERANCE_LEXICON[ftype].items()):
-            if phrase in text:
-                scores[ftype] = scores.get(ftype, 0.0) + weight
-                matched.append(f"{ftype}:{phrase}")
+            if phrase not in text:
+                continue
+            if _utterance_wordmark_negated(text, phrase, clause_spans):
+                negated.append(f"{ftype}:{phrase}")
+                continue
+            scores[ftype] = scores.get(ftype, 0.0) + weight
+            matched.append(f"{ftype}:{phrase}")
     if matched:
         notes["utterance_matches"] = matched
+    if negated:
+        notes["utterance_negated_matches"] = negated
     return scores
 
 
@@ -1311,6 +1455,66 @@ def _select_question(
     )
 
 
+#: V3-FIX-111 · answer_replay 自由文本回退的**置信面**（接线门的判据常量；
+#: 判据语义与 FIX-49 出口门同构——「用户在回答」的前提需证据支持）：
+#: - 命中词牌长度 ≥ ``FREE_TEXT_ANSWER_MIN_TERM_LENGTH`` 且覆盖比
+#:   （命中字符数 / 归一消息长度，含标点）≥ ``FREE_TEXT_ANSWER_MIN_COVERAGE``
+#:   → 置信回答；
+#: - 整条消息 ≤ 1 字时的单字命中（「对」「慢」式直答）→ 置信；
+#: - 其余（单字话语标记「对了」、长消息低覆盖词面擦碰）→ 低置信：调用方
+#:   **不得 apply、不得 act**，pending 保持（可点选或改述）。
+FREE_TEXT_ANSWER_MIN_TERM_LENGTH = 2
+FREE_TEXT_ANSWER_MIN_COVERAGE = 0.25
+
+
+@dataclass(frozen=True)
+class AnswerResolution:
+    """自由文本答案解析结果 + 词面证据强度（解析语义 = resolve_answer_branch 不变）。"""
+
+    branch_key: str
+    matched_term: str
+    matched_length: int
+    coverage: float
+    confident: bool
+
+
+def resolve_answer_branch_detail(question_id: str, answer_text: str) -> AnswerResolution | None:
+    """``resolve_answer_branch`` 的证据面版本（同解析、附置信判定；FIX-111）。
+
+    ``resolve_answer_branch`` 是本函数的键面投影（既有调用方/测试契约不变）。
+    """
+    spec = _QUESTION_BANK_INDEX.get(str(question_id).strip())
+    if spec is None:
+        return None
+    text = _normalize_text(answer_text)
+    if not text:
+        return None
+    best: tuple[int, int, str, str] | None = None  # (-词牌长, 分支序, 词牌, 分支键)
+    for branch_index, branch in enumerate(spec.branches):
+        for term in sorted(branch.match_terms):
+            if term in text:
+                candidate = (-len(term), branch_index, term, branch.key)
+                if best is None or candidate < best:
+                    best = candidate
+    if best is None:
+        return None
+    matched_term, branch_key = best[2], best[3]
+    coverage = len(matched_term) / len(text)
+    if len(text) <= 1 and len(matched_term) == 1:
+        confident = True
+    else:
+        confident = len(matched_term) >= FREE_TEXT_ANSWER_MIN_TERM_LENGTH and (
+            coverage >= FREE_TEXT_ANSWER_MIN_COVERAGE
+        )
+    return AnswerResolution(
+        branch_key=branch_key,
+        matched_term=matched_term,
+        matched_length=len(matched_term),
+        coverage=coverage,
+        confident=confident,
+    )
+
+
 def resolve_answer_branch(question_id: str, answer_text: str) -> str | None:
     """自由文本答案 → 分支键的规则优先解析（确定性第一层；模型面归 E-04）。
 
@@ -1328,20 +1532,8 @@ def resolve_answer_branch(question_id: str, answer_text: str) -> str | None:
     自由文本解析只服务无结构回退；两路共用 ``apply_question_answer`` 的
     (question_id, branch_key) 应用面。
     """
-    spec = _QUESTION_BANK_INDEX.get(str(question_id).strip())
-    if spec is None:
-        return None
-    text = _normalize_text(answer_text)
-    if not text:
-        return None
-    best: tuple[int, int, str, str] | None = None  # (-词牌长, 分支序, 词牌, 分支键)
-    for branch_index, branch in enumerate(spec.branches):
-        for term in sorted(branch.match_terms):
-            if term in text:
-                candidate = (-len(term), branch_index, term, branch.key)
-                if best is None or candidate < best:
-                    best = candidate
-    return best[3] if best is not None else None
+    resolution = resolve_answer_branch_detail(question_id, answer_text)
+    return resolution.branch_key if resolution is not None else None
 
 
 def apply_question_answer(

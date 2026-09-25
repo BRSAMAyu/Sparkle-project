@@ -58,6 +58,7 @@ from app.aurora.friction_diagnosis import (
     friction_sufficiency_fingerprint,
     friction_taxonomy_fingerprint,
     resolve_answer_branch,
+    resolve_answer_branch_detail,
 )
 from app.aurora.intervention_policy import (
     InterventionPolicyFactors,
@@ -82,8 +83,11 @@ FIXTURE_PATH = Path(__file__).resolve().parents[1] / "aurora" / "fixtures" / "fr
 #: SUFFICIENCY v1_2：V3-FIX-50 处置——新增 B3.budget_exhausted_tie_no_action
 #: reason 码 + tie_discrimination_epsilon 参数（B1 exact-tie 降级判据）；
 #: 词面/问题库/证据面指纹不变。
+#: EVIDENCE v1_3：V3-FIX-110/111/115 处置——卡住族词牌补列（difficulty/energy
+#: ×卡住/卡住了/进行不下去/stuck）；否定感知为算法面不进指纹；answer 置信面
+#: 为新导出面不进指纹。bump 依据见模块顶部修订记录。
 FROZEN_TAXONOMY_FINGERPRINT = "0ce224ab8e12139e2dbdce7092868bad7b7d0efd710de7d9f730ea46a6f6c903"
-FROZEN_EVIDENCE_FINGERPRINT = "2bff307f03cb5176e0c2f885b43ed991f3ddf19631187da94aab5661e33df238"
+FROZEN_EVIDENCE_FINGERPRINT = "bf0cea8ff9382f5b0476ace985709b043e8fd43318bfa5d6408a181288f5702c"
 FROZEN_QUESTION_BANK_FINGERPRINT = "e9da836b88f740a7222cd2f3169d58594eefe0915c6865b1004ab0c0319742ae"
 FROZEN_SUFFICIENCY_FINGERPRINT = "c1a304ce5d41187f5c4c069c35fc6f167f9b31746bc0f091083f3e30ea75b657"
 
@@ -223,8 +227,8 @@ class TestVocabularyFreeze:
         assert frozenset({"act", "ask", "no_action"}) == FRICTION_OUTCOMES
 
     def test_version_tracks_vocabulary_generation(self):
-        """版本钉死：词面/判据面扩展必须显式 bump（v1_2 = V3-FIX-50 处置）。"""
-        assert FRICTION_DIAGNOSIS_VERSION == "aurora_friction_diagnosis.v1_2"
+        """版本钉死：词面/判据面扩展必须显式 bump（v1_3 = FIX-110/111/115 处置）。"""
+        assert FRICTION_DIAGNOSIS_VERSION == "aurora_friction_diagnosis.v1_3"
 
     def test_spine_state_evidence_covers_rule_table_exactly(self):
         """spine 演进（新增/改名 state_key）→ 此测试红（投影缺项即刻暴露）。"""
@@ -869,3 +873,187 @@ class TestB1TieExitContract:
         payload = json.loads(outputs[0])
         assert payload["outcome"] == "no_action"
         assert "B3.budget_exhausted_tie_no_action" in payload["reasons"]
+
+
+# ---------------------------------------------------------------------------
+# 10. V3-FIX-110 · 否定感知词牌匹配（否定式表达不得直出 act）
+# ---------------------------------------------------------------------------
+
+
+class TestNegationAwareWordmarkMatching:
+    """FIX-110：词牌匹配的否定感知。
+
+    契约：否定标记与词牌命中**同句**（子句切分）且位于词牌之前、span 不与
+    词牌重叠 → 该命中降为**否定命中**（``annotations.utterance_negated_matches``，
+    零证据权重，不进 ``utterance_matches``）；全部词牌命中被否定且无其他证据
+    → unknown 观察档（不假诊断），绝不凭否定式表达直出 act。
+
+    语义选择（降为 unknown 观察档，非硬拦）的论证：硬拦（出现否定命中即
+    整体静默）会让别处出现的否定词否决真实摩擦证据——「不是没时间，是太难了」
+    中 difficulty 正向证据必须照常驱动。否定证据是零权重，不是否决权（与
+    「不假诊断」同律）；chat 面的出面拦截仍由 FIX-49 词牌门守（否定-only 时
+    ``utterance_matches`` 为空 → 门自然静默）。
+    """
+
+    def test_negated_time_wordmark_not_positive(self):
+        result = diagnose_friction({"utterance": "不是没时间，是效率低"})
+        matched = result.annotations.get("utterance_matches") or []
+        negated = result.annotations.get("utterance_negated_matches") or []
+        assert "time:没时间" not in matched
+        assert "time:没时间" in negated
+
+    def test_negated_difficulty_improvement_report_no_act(self):
+        result = diagnose_friction({"utterance": "这次不太难了，其实挺顺利的"})
+        assert result.outcome != "act"
+        assert "difficulty:太难了" in (result.annotations.get("utterance_negated_matches") or [])
+        assert "difficulty:太难了" not in (result.annotations.get("utterance_matches") or [])
+
+    def test_negated_knowledge_recovery_report_no_act(self):
+        result = diagnose_friction({"utterance": "不像之前那么看不懂了，好多了"})
+        assert result.outcome != "act"
+        assert "knowledge:看不懂" in (result.annotations.get("utterance_negated_matches") or [])
+
+    def test_all_negated_no_other_evidence_falls_to_unknown(self):
+        result = diagnose_friction({"utterance": "不是没时间，是效率低"})
+        assert result.friction_type == "unknown"
+        assert result.nominated_interventions == ()
+        assert result.annotations.get("utterance_matches") in (None, [])
+
+    def test_mixed_negation_keeps_positive_evidence_driving(self):
+        """观察档选择的核心论证：否定词牌不否决别处的正向证据（非硬拦）。"""
+        result = diagnose_friction({"utterance": "不是没时间，是太难了"})
+        assert "time:没时间" in (result.annotations.get("utterance_negated_matches") or [])
+        assert result.friction_type == "difficulty"
+        assert result.outcome == "act"
+        assert result.nominated_interventions[0] == "split"
+
+    def test_genuine_reports_with_clause_negation_unaffected(self):
+        """A-08 词面回归：真实强词牌（词牌内否定字 / 跨句否定）不受影响。"""
+        ok = [
+            ("完全没时间，挤不出时间", "time"),
+            ("太难了，超出我的水平", "difficulty"),
+            ("这里有点看不懂", "knowledge"),
+            ("在等导师回复，卡在等", "dependency"),
+            ("太累了，状态不好", "energy"),
+            ("我没错，是题太难了", "difficulty"),
+            ("i have no time for this", "time"),
+        ]
+        for utterance, ftype in ok:
+            result = diagnose_friction({"utterance": utterance})
+            matched = result.annotations.get("utterance_matches") or []
+            assert matched, f"{utterance!r} lost wordmark"
+            assert result.friction_type == ftype, f"{utterance!r}: {result.friction_type} != {ftype}"
+
+    def test_english_negation_word_bounded(self):
+        negated = diagnose_friction({"utterance": "it's not too hard anymore"})
+        assert "difficulty:too hard" in (negated.annotations.get("utterance_negated_matches") or [])
+        assert negated.annotations.get("utterance_matches") in (None, [])
+        positive = diagnose_friction({"utterance": "honestly it is too hard for me"})
+        assert "difficulty:too hard" in (positive.annotations.get("utterance_matches") or [])
+
+    @pytest.mark.parametrize(
+        "utterance",
+        ["不是没时间，是效率低", "这次不太难了，其实挺顺利的", "不像之前那么看不懂了，好多了"],
+    )
+    def test_negated_only_never_acts(self, utterance):
+        result = diagnose_friction({"utterance": utterance})
+        assert result.outcome != "act", utterance
+
+    def test_negation_path_deterministic(self):
+        a = diagnose_friction({"utterance": "不是没时间，是效率低"}).to_dict()
+        b = diagnose_friction({"utterance": "不是没时间，是效率低"}).to_dict()
+        assert a == b
+
+
+# ---------------------------------------------------------------------------
+# 11. V3-FIX-115 · 「卡住」族词牌覆盖
+# ---------------------------------------------------------------------------
+
+
+class TestStuckLexiconCoverage:
+    """FIX-115：chat 面最自然的卡点自报（卡住族）必须在引擎证据面在场。
+
+    只补词表不改门结构：旅程面仍是「我卡住了」的 sanctioned 通道，chat 面
+    的门契约（正向词牌才出面）不变——本族补齐后 chat 面自然有出面（弱权重
+    先问不先动，与「做不下去」同律）。
+    """
+
+    @pytest.mark.parametrize(
+        "utterance",
+        ["我卡住了", "卡住了", "我真的卡住了，帮帮我", "进行不下去", "i'm stuck", "stuck"],
+    )
+    def test_stuck_family_has_wordmark(self, utterance):
+        result = diagnose_friction({"utterance": utterance})
+        assert result.annotations.get("utterance_matches"), f"{utterance!r} still silent"
+
+    def test_stuck_self_report_surfaces_not_silent(self):
+        """自报卡点在引擎面有出口（ask/act），不是 no_action/unknown 静默。"""
+        for utterance in ("我卡住了", "我真的卡住了，帮帮我"):
+            result = diagnose_friction({"utterance": utterance})
+            assert result.outcome in ("ask", "act"), utterance
+
+    def test_stuck_is_weak_ambiguous_ask_first(self):
+        """卡住 = 最高歧义自报（横跨推不动/状态族）——弱权重不达 S1 门 →
+        先问不先动（歧义不硬猜；chat 面出面 = 问询出面）。"""
+        result = diagnose_friction({"utterance": "我卡住了"})
+        assert result.friction_type in {"difficulty", "energy"}
+        assert result.outcome == "ask"
+        assert result.nominated_interventions == ()
+
+    def test_stuck_family_spine_mix_still_surfaces(self):
+        """卡住族 + spine 证据混 合：不回退到 unknown（词牌在场）。"""
+        result = diagnose_friction(
+            {"utterance": "我真的卡住了，帮帮我", "spine_state_keys": ["knowledge_transfer"]}
+        )
+        assert result.annotations.get("utterance_matches")
+        assert result.outcome in ("ask", "act")
+
+
+# ---------------------------------------------------------------------------
+# 12. V3-FIX-111 · answer_replay 自由文本解析的词面证据面（置信判定在 wiring 门）
+# ---------------------------------------------------------------------------
+
+
+class TestAnswerResolutionConfidenceFace:
+    """FIX-111 引擎面：``resolve_answer_branch_detail`` 暴露词面证据强度。
+
+    解析结果本身不变（FIX-43 最长词牌语义保持）；新增的是**置信面**：
+    单字命中（对/慢/换/要）只有在消息极短（≤1 字直答）时才算回答证据——
+    「对了」是话语标记不是回答；长消息低覆盖命中不构成回答。
+    """
+
+    def test_spurious_discourse_marker_resolution_not_confident(self):
+        res = resolve_answer_branch_detail("q_tried_and_checked", "对了不想要了，帮我换个计划吧")
+        assert res is not None
+        assert res.branch_key == "tried_confident"  # 解析语义不变
+        assert res.confident is False  # 置信面拒绝
+
+    def test_discourse_marker_prefix_not_confident(self):
+        res = resolve_answer_branch_detail("q_tried_and_checked", "对了")
+        assert res is not None and res.confident is False
+
+    def test_bare_single_char_direct_answer_confident(self):
+        assert resolve_answer_branch_detail("q_tried_and_checked", "对").confident is True
+        assert resolve_answer_branch_detail("q_tried_and_checked", "慢").confident is True
+
+    @pytest.mark.parametrize(
+        ("question_id", "answer"),
+        [
+            ("q_tried_and_checked", "试过了，有把握，就是慢"),
+            ("q_tried_and_checked", "试过了，就是不确定对不对"),
+            ("q_tried_and_checked", "not yet"),
+            ("q_external_wait", "不等了，我自己来"),
+            ("q_external_wait", "没有，还在等"),
+            ("q_external_wait", "还没回"),
+            ("q_direction_vs_push", "完全不知道下一步做什么"),
+        ],
+    )
+    def test_substantive_answers_confident(self, question_id, answer):
+        res = resolve_answer_branch_detail(question_id, answer)
+        assert res is not None, answer
+        assert res.confident, f"{answer!r} should be a confident answer"
+
+    def test_unresolved_is_none_and_legacy_resolver_unchanged(self):
+        assert resolve_answer_branch_detail("q_external_wait", "天气不错") is None
+        assert resolve_answer_branch("q_tried_and_checked", "对了不想要了，帮我换个计划吧") == "tried_confident"
+        assert resolve_answer_branch("q_external_wait", "不在等") == "not_waiting"
