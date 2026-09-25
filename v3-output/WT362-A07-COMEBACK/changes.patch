@@ -1,0 +1,1363 @@
+diff --git a/backend/app/api/v1/aurora.py b/backend/app/api/v1/aurora.py
+index 91cf0063..3baf5648 100644
+--- a/backend/app/api/v1/aurora.py
++++ b/backend/app/api/v1/aurora.py
+@@ -1202,6 +1202,9 @@ _AURORA_PREF_KEYS = {
+     "aurora_directness": {"direct", "guided"},
+     "aurora_explanation_level": {"detailed", "brief"},
+     "aurora_pressure_style": {"gentle", "motivating"},
++    # A-07: explicit low-stimulation mode — user setting overrides any auto
++    # judgement (both directions); "auto" keeps current behavior.
++    "aurora_stimulation_mode": {"auto", "low", "standard"},
+ }
+ 
+ _DEFAULT_AURORA_PREFS: dict[str, str] = {
+@@ -1209,6 +1212,7 @@ _DEFAULT_AURORA_PREFS: dict[str, str] = {
+     "aurora_directness": "guided",
+     "aurora_explanation_level": "detailed",
+     "aurora_pressure_style": "motivating",
++    "aurora_stimulation_mode": "auto",
+ }
+ 
+ 
+@@ -1217,6 +1221,7 @@ class AuroraPreferencesRequest(BaseModel):
+     aurora_directness: str | None = None  # "direct" | "guided"
+     aurora_explanation_level: str | None = None  # "detailed" | "brief"
+     aurora_pressure_style: str | None = None  # "gentle" | "motivating"
++    aurora_stimulation_mode: str | None = None  # "auto" | "low" | "standard"
+ 
+ 
+ # route-tier: authed
+@@ -1225,7 +1230,7 @@ async def get_aurora_preferences(
+     db: AsyncSession = Depends(get_db),
+     current_user: User = Depends(get_current_user),
+ ) -> dict[str, Any]:
+-    """Get Aurora communication preferences. Returns all 4 prefs with defaults for unset values."""
++    """Get Aurora communication preferences. Returns all 5 prefs with defaults for unset values."""
+     from app.aurora.runtime_v1.user_preferences import AuroraUserPreferencesService
+ 
+     service = AuroraUserPreferencesService(db)
+diff --git a/backend/app/aurora/runtime_v1/service.py b/backend/app/aurora/runtime_v1/service.py
+index 9c5a68eb..2dad72e8 100644
+--- a/backend/app/aurora/runtime_v1/service.py
++++ b/backend/app/aurora/runtime_v1/service.py
+@@ -453,6 +453,21 @@ class AuroraRuntimeV1Service:
+             recent_task_summary=recent_task_summary,
+             next_task_title=next_task_title,
+         )
++        # A-07: staleness guard — a task overdue for days (or an expired plan
++        # window) must not be presented as the current best next step.
++        today = now.date()
++        plan_expired = bool(
++            plan is not None and plan.target_date is not None and plan.target_date < today
++        )
++        next_task_overdue_days = 0
++        if next_task is not None and next_task.due_date is not None:
++            next_task_overdue_days = max(0, (today - next_task.due_date).days)
++        stale_focus = plan_expired or next_task_overdue_days >= 3
++        # A-07: goal state restore — surface the user's real goal truth
++        # (read side only, never written) instead of a template greeting.
++        goal_state = await self._comeback_goal_state(
++            active_db=active_db, user_id=user_uuid, plan=plan
++        )
+         calendar_note = ""
+         if include_short_gaps:
+             with contextlib.suppress(Exception):
+@@ -474,6 +489,9 @@ class AuroraRuntimeV1Service:
+                 recent_task_summary=recent_task_summary,
+                 next_task_title=next_task_title,
+                 light_restart_suggestion=light_restart_suggestion,
++                plan_expired=plan_expired,
++                stale_focus=stale_focus,
++                next_task_overdue_days=next_task_overdue_days,
+             )
+         elif include_short_gaps:
+             kind = "personalized_return"
+@@ -485,6 +503,8 @@ class AuroraRuntimeV1Service:
+                 next_task_title=next_task_title,
+                 light_restart_suggestion=light_restart_suggestion,
+                 calendar_note=calendar_note,
++                plan_expired=plan_expired,
++                stale_focus=stale_focus,
+             )
+         else:
+             return None
+@@ -506,6 +526,10 @@ class AuroraRuntimeV1Service:
+             latest_chat=latest_chat,
+             active_core_session=active_core_session,
+             calendar_note=calendar_note,
++            plan_expired=plan_expired,
++            stale_focus=stale_focus,
++            next_task_overdue_days=next_task_overdue_days,
++            goal_state=goal_state,
+         )
+ 
+     async def plan_turn(
+@@ -2318,6 +2342,10 @@ class AuroraRuntimeV1Service:
+         latest_chat: dict[str, Any] | None,
+         active_core_session: dict[str, Any] | None,
+         calendar_note: str,
++        plan_expired: bool = False,
++        stale_focus: bool = False,
++        next_task_overdue_days: int = 0,
++        goal_state: dict[str, Any] | None = None,
+     ) -> dict[str, Any]:
+         del user_id
+         chat = latest_chat or {}
+@@ -2348,6 +2376,11 @@ class AuroraRuntimeV1Service:
+             "resume_token": _strip((active_core_session or {}).get("resume_token")),
+             "unfinished_items": unfinished_items,
+             "calendar_note": calendar_note,
++            # A-07: goal-state restore + staleness guard (read side only).
++            "goal_state": goal_state or {},
++            "plan_expired": plan_expired,
++            "stale_focus": stale_focus,
++            "next_task_overdue_days": next_task_overdue_days,
+         }
+ 
+     def _comeback_unfinished_items(
+@@ -2436,10 +2469,32 @@ class AuroraRuntimeV1Service:
+         recent_task_summary: str,
+         next_task_title: str | None,
+         light_restart_suggestion: str,
++        plan_expired: bool = False,
++        stale_focus: bool = False,
++        next_task_overdue_days: int = 0,
+     ) -> str:
+         plan_label = subject if subject.endswith("冲刺") else f"{subject}冲刺"
+         focus = recent_task_summary or _strip(next_task_title) or subject or "最简单的一步"
++        if plan_expired:
++            # A-07: 窗口已结束——不宣称"收尾窗口/来得及"，不把陈旧任务
++            # 包装成当前最优步；诚实呈报并指向重新校准（零羞耻、零诊断）。
++            return (
++                f"你已经 {days_away} 天没来了，我保留着上次的进度。"
++                f"你的{plan_label}原定窗口已经结束——这只是节奏变了，不是你的问题。"
++                f"上次停在「{focus}」。要不要花一分钟重新校准计划，我按新的窗口帮你排；"
++                f"暂时不想动整盘的话，{light_restart_suggestion}"
++            )
+         days_str = f"{days_remaining} 天" if days_remaining > 0 else "最后一点收尾窗口"
++        if stale_focus:
++            overdue_note = (
++                f"（原定 {next_task_overdue_days} 天前）" if next_task_overdue_days > 0 else ""
++            )
++            return (
++                f"你已经 {days_away} 天没来了，我保留着上次的进度。"
++                f"你的{plan_label}还剩 {days_str}。上次停在「{focus}」{overdue_note}——"
++                f"可以从它继续，也可以先挑今天最顺的一小步。"
++                f"如果累了，{light_restart_suggestion}"
++            )
+         still_time = "现在回来还来得及" if days_remaining > 0 else "现在回来也还能先追回一点节奏"
+         return (
+             f"你已经 {days_away} 天没来了，我保留着上次的进度。"
+@@ -2456,18 +2511,105 @@ class AuroraRuntimeV1Service:
+         next_task_title: str | None,
+         light_restart_suggestion: str,
+         calendar_note: str,
++        plan_expired: bool = False,
++        stale_focus: bool = False,
+     ) -> str:
+         focus = recent_task_summary or _strip(next_task_title) or subject or "今天最小的一步"
+         countdown = f"还剩 {days_remaining} 天，" if days_remaining > 0 else ""
+         calendar_tail = self._daily_calendar_tail(calendar_note)
+         if calendar_tail:
+             calendar_tail = f"{calendar_tail}"
++        if plan_expired:
++            # A-07: 计划已过期时不按"当前计划"口吻问候（诚实红线）。
++            return (
++                f"{self._daily_greeting()}，你之前定的「{subject}」窗口已经结束。"
++                f"要不要花一分钟重新校准，我按新的窗口帮你排。{calendar_tail}"
++                f"暂时不想动整盘的话，{light_restart_suggestion}"
++            )
++        if stale_focus:
++            return (
++                f"{self._daily_greeting()}，{countdown}我把「{subject}」和今天的时间都接上了。"
++                f"上次停在「{focus}」，可以从它继续，也可以先挑今天最轻的一小步。{calendar_tail}"
++                f"如果状态还没回来，{light_restart_suggestion}"
++            )
+         return (
+             f"{self._daily_greeting()}，{countdown}我把「{subject}」和今天的时间都接上了。"
+             f"先从「{focus}」开始会最稳。{calendar_tail}"
+             f"如果状态还没回来，{light_restart_suggestion}"
+         )
+ 
++    async def _comeback_goal_state(
++        self,
++        *,
++        active_db: AsyncSession,
++        user_id: UUID,
++        plan: Plan | None,
++    ) -> dict[str, Any]:
++        """Read-side goal state for the comeback surface (A-07).
++
++        只读消费 Goal 真源：不写任何进度。Goal.progress 可能因上游写入
++        链路未修复而停在 0（R2-A 跟踪中），因此同时给出任务账本口径的
++        诚实进度（completed/total）；两者都如实上报、互不篡改、互不覆盖。
++        """
++        from sqlalchemy import and_, func
++
++        from app.models.goal import Goal
++
++        goal = None
++        if plan is not None and getattr(plan, "goal_id", None) is not None:
++            candidate = await active_db.get(Goal, plan.goal_id)
++            if candidate is not None and candidate.user_id == user_id:
++                goal = candidate
++        if goal is None:
++            stmt = (
++                select(Goal)
++                .where(and_(Goal.user_id == user_id, Goal.status == "active"))
++                .order_by(Goal.is_primary.desc(), Goal.created_at.desc())
++                .limit(1)
++            )
++            result = await active_db.execute(stmt)
++            goal = result.scalar_one_or_none()
++        if goal is None:
++            return {}
++
++        ledger: dict[str, Any] = {}
++        ledger_plan_id = plan.id if plan is not None else getattr(goal, "plan_id", None)
++        if ledger_plan_id is not None:
++            total_result = await active_db.execute(
++                select(func.count())
++                .select_from(Task)
++                .where(and_(Task.plan_id == ledger_plan_id, Task.deleted_at.is_(None)))
++            )
++            done_result = await active_db.execute(
++                select(func.count())
++                .select_from(Task)
++                .where(
++                    and_(
++                        Task.plan_id == ledger_plan_id,
++                        Task.deleted_at.is_(None),
++                        Task.status == TaskStatus.COMPLETED,
++                    )
++                )
++            )
++            total = int(total_result.scalar() or 0)
++            done = int(done_result.scalar() or 0)
++            if total > 0:
++                ledger = {
++                    "completed": done,
++                    "total": total,
++                    "ratio": round(done / total, 4),
++                }
++
++        progress = getattr(goal, "progress", None)
++        return {
++            "goal_id": str(goal.id),
++            "title": _strip(getattr(goal, "title", None)),
++            "status": _strip(getattr(goal, "status", None)) or "active",
++            # 真源读数原样上报（可能是 0/None），不做修饰。
++            "progress": float(progress) if isinstance(progress, (int, float)) else None,
++            "ledger": ledger,
++        }
++
+     def _daily_greeting(self) -> str:
+         hour = datetime.now(CHINA_TIMEZONE).hour
+         if 5 <= hour < 12:
+diff --git a/backend/app/aurora/runtime_v1/stimulation_policy.py b/backend/app/aurora/runtime_v1/stimulation_policy.py
+new file mode 100644
+index 00000000..47131365
+--- /dev/null
++++ b/backend/app/aurora/runtime_v1/stimulation_policy.py
+@@ -0,0 +1,110 @@
++"""
++Core: relationship — Aurora low-stimulation policy (A-07 / AURORA_V3 §7).
++
++Turns the existing low-stimulation setting into a real Aurora behavior
++policy for the proactive surfaces (comeback nudge first):
++
++- 用户 explicit setting 最高优先：``aurora_stimulation_mode`` 显式偏好
++  （``low`` / ``standard``）无条件覆盖自动判定，双向覆盖——显式 ``standard``
++  时即使信号偏高也不衰减，显式 ``low`` 时即使信号平静也衰减。
++- ``auto``（默认档）行为完全保持现状（standard）：引擎侧当前不消费任何
++  情绪/负荷信号做自动降档；后续接入信号时必须走显式授权的数字预算，
++  **不做任何心理诊断**（不推断"焦虑/状态不好"，不做诊断性表述）。
++
++输出是行为面预算（推送与否/抑制窗口/文案强度），不是对用户的判断。
++"""
++
++from __future__ import annotations
++
++from dataclasses import dataclass
++
++from loguru import logger
++
++STIMULATION_STANDARD = "standard"
++STIMULATION_LOW = "low"
++
++# 显式偏好值（aurora_stimulation_mode）。auto = 不表态，交给自动判定。
++EXPLICIT_MODE_AUTO = "auto"
++EXPLICIT_MODE_LOW = "low"
++EXPLICIT_MODE_STANDARD = "standard"
++
++VALID_STIMULATION_MODES = {
++    EXPLICIT_MODE_AUTO,
++    EXPLICIT_MODE_LOW,
++    EXPLICIT_MODE_STANDARD,
++}
++
++# 默认抑制窗口（小时）——与 comeback_nudge_task 既有 _has_recent_notification 口径一致。
++DEFAULT_NUDGE_SUPPRESS_HOURS = 24
++# 低刺激档主动建议频率衰减：抑制窗口 ×3（24h → 72h）。
++LOW_STIMULATION_NUDGE_SUPPRESS_HOURS = 72
++
++
++@dataclass(slots=True, frozen=True)
++class StimulationPolicy:
++    """Behavioral budget derived from the explicit setting (never a diagnosis)."""
++
++    level: str = STIMULATION_STANDARD
++    #: 主动建议是否推送（低刺激档降为仅应用内，不主动打扰）。
++    allow_proactive_push: bool = True
++    #: 主动建议重复抑制窗口（小时）——低刺激档拉长 = 降低主动频率。
++    proactive_suppress_hours: int = DEFAULT_NUDGE_SUPPRESS_HOURS
++    #: 庆祝/敦促强度：低刺激档去压力化标题，正文保持事实性。
++    quiet_title: bool = False
++    #: 透传给客户端的档位标记（移动端据此走安静呈现）。
++    payload_tag: str = ""
++
++    def to_payload(self) -> dict[str, object]:
++        return {
++            "level": self.level,
++            "allow_proactive_push": self.allow_proactive_push,
++            "proactive_suppress_hours": self.proactive_suppress_hours,
++            "quiet_title": self.quiet_title,
++        }
++
++
++#: auto 档当前无引擎侧信号源——保守落 standard，行为与历史完全一致。
++_POLICY_STANDARD = StimulationPolicy(level=STIMULATION_STANDARD)
++_POLICY_LOW = StimulationPolicy(
++    level=STIMULATION_LOW,
++    allow_proactive_push=False,
++    proactive_suppress_hours=LOW_STIMULATION_NUDGE_SUPPRESS_HOURS,
++    quiet_title=True,
++    payload_tag=STIMULATION_LOW,
++)
++
++
++def resolve_stimulation_policy(explicit_mode: str | None) -> StimulationPolicy:
++    """Resolve the behavioral policy from the user's explicit setting.
++
++    显式档双向覆盖：``low`` → 永远衰减；``standard`` → 永不衰减；
++    ``auto``/未知/缺省 → 保持现状（standard）。绝不由内容推断心理状态。
++    """
++    mode = (explicit_mode or "").strip().lower()
++    if mode == EXPLICIT_MODE_LOW:
++        return _POLICY_LOW
++    if mode == EXPLICIT_MODE_STANDARD:
++        return _POLICY_STANDARD
++    if mode not in ("", EXPLICIT_MODE_AUTO):
++        logger.warning(
++            "Unknown aurora_stimulation_mode {!r}; falling back to standard", explicit_mode
++        )
++    return _POLICY_STANDARD
++
++
++def apply_policy_to_nudge(
++    policy: StimulationPolicy,
++    *,
++    title: str,
++    content: str,
++) -> tuple[str, str]:
++    """Return the (title, content) for a comeback nudge under the policy.
++
++    低刺激档：标题去敦促/等待压力，改中性事实性表述；正文保持引擎的
++    事实性 comeback 消息（那里已做过陈旧任务诚实化）。显式 standard 档
++    行为零变化。
++    """
++    if not policy.quiet_title:
++        return title, content
++    quiet_title = "你的学习计划状态"
++    return quiet_title, content
+diff --git a/backend/app/aurora/runtime_v1/user_preferences.py b/backend/app/aurora/runtime_v1/user_preferences.py
+index c8a72901..f5b34887 100644
+--- a/backend/app/aurora/runtime_v1/user_preferences.py
++++ b/backend/app/aurora/runtime_v1/user_preferences.py
+@@ -4,7 +4,8 @@ Phase: clarify → plan → execute
+ Stage: Aurora Runtime v1 — User Communication Preferences
+ 
+ User-facing Aurora communication preferences stored in UserPreferencesCenter.explicit JSONB.
+-Four dimensions control how Aurora interacts: analysis depth, directness, explanation, pressure style.
++Five dimensions control how Aurora interacts: analysis depth, directness, explanation,
++pressure style, and the explicit low-stimulation mode (aurora_stimulation_mode).
+ """
+ 
+ from __future__ import annotations
+@@ -16,6 +17,7 @@ from loguru import logger
+ from sqlalchemy import select
+ from sqlalchemy.ext.asyncio import AsyncSession
+ 
++from app.aurora.runtime_v1.stimulation_policy import VALID_STIMULATION_MODES
+ from app.models.user_preferences import UserPreferencesCenter
+ 
+ _VALID_VALUES: dict[str, set[str]] = {
+@@ -23,6 +25,10 @@ _VALID_VALUES: dict[str, set[str]] = {
+     "aurora_directness": {"direct", "guided"},
+     "aurora_explanation_level": {"detailed", "brief"},
+     "aurora_pressure_style": {"gentle", "motivating"},
++    # A-07: explicit low-stimulation mode. The user's explicit choice wins
++    # over any automatic judgement (both directions); "auto" = current
++    # behavior. Never used to infer or label a psychological state.
++    "aurora_stimulation_mode": set(VALID_STIMULATION_MODES),
+ }
+ 
+ _DEFAULTS: dict[str, str] = {
+@@ -30,6 +36,7 @@ _DEFAULTS: dict[str, str] = {
+     "aurora_directness": "guided",
+     "aurora_explanation_level": "detailed",
+     "aurora_pressure_style": "motivating",
++    "aurora_stimulation_mode": "auto",
+ }
+ 
+ _PREF_KEYS = frozenset(_DEFAULTS)
+diff --git a/backend/app/core/celery_tasks.py b/backend/app/core/celery_tasks.py
+index de2f0da4..bf818daa 100755
+--- a/backend/app/core/celery_tasks.py
++++ b/backend/app/core/celery_tasks.py
+@@ -2095,10 +2095,18 @@ def comeback_nudge_task(self, user_id: str):
+     G22: 当用户有活跃计划且至少 3 天未活跃时，生成 comeback 消息并推送。
+ 
+     消息包含：剩余天数、最近任务简介、轻量启动提议（"30分钟保底版"）。
++    A-07: 低刺激显式偏好下主动面衰减——不主动推送（仅入应用内通知中心）、
++    重复抑制窗口 24h→72h、标题去敦促化；用户 explicit setting 覆盖一切
++    自动判定，不做任何心理推断。
+     """
+     from uuid import UUID
+ 
+     from app.aurora.runtime_v1.service import AuroraRuntimeV1Service
++    from app.aurora.runtime_v1.stimulation_policy import (
++        apply_policy_to_nudge,
++        resolve_stimulation_policy,
++    )
++    from app.aurora.runtime_v1.user_preferences import AuroraUserPreferencesService
+     from app.db.session import AsyncSessionLocal
+     from app.schemas.notification import NotificationCreate
+     from app.services.notification_service import NotificationService
+@@ -2121,12 +2129,20 @@ def comeback_nudge_task(self, user_id: str):
+ 
+             plan_id = str(payload.get("plan_id") or "").strip()
+             destination_route = f"/plans/{plan_id}?source=comeback_nudge" if plan_id else "/chat?entry=comeback_nudge"
++            prefs = await AuroraUserPreferencesService(session).get(UUID(user_id))
++            policy = resolve_stimulation_policy(prefs.get("aurora_stimulation_mode"))
++            title, content = apply_policy_to_nudge(
++                policy,
++                title=str(payload.get("title") or "好久不见，我一直在等你"),
++                content=str(payload.get("message") or ""),
++            )
+             if await _has_recent_notification(
+                 session,
+                 user_id=UUID(user_id),
+                 notification_type="comeback_nudge",
+                 match_data={"plan_id": plan_id} if plan_id else None,
+                 now=reference_time,
++                within_hours=policy.proactive_suppress_hours,
+             ):
+                 logger.debug("comeback_nudge_task: duplicate reminder suppressed for user {}", user_id)
+                 return {
+@@ -2139,8 +2155,8 @@ def comeback_nudge_task(self, user_id: str):
+                 session,
+                 UUID(user_id),
+                 NotificationCreate(
+-                    title=str(payload.get("title") or "好久不见，我一直在等你"),
+-                    content=str(payload.get("message") or ""),
++                    title=title,
++                    content=content,
+                     type="comeback_nudge",
+                     data={
+                         "plan_id": plan_id or payload.get("plan_id"),
+@@ -2152,22 +2168,27 @@ def comeback_nudge_task(self, user_id: str):
+                         "light_restart_suggestion": payload.get("light_restart_suggestion"),
+                         "destination_route": destination_route,
+                         "deep_link": destination_route,
++                        "goal_state": payload.get("goal_state") or {},
++                        "stimulation_policy": policy.payload_tag,
+                     },
+                 ),
+-                push_via_websocket=True,
++                # 低刺激档：不主动推送，仅入应用内通知中心（用户回访时可见）。
++                push_via_websocket=policy.allow_proactive_push,
+             )
+ 
+             logger.info(
+-                "✅ Comeback nudge sent to user {} (plan {}, days_remaining={})",
++                "✅ Comeback nudge sent to user {} (plan {}, days_remaining={}, stimulation={})",
+                 user_id,
+                 payload.get("plan_id"),
+                 int(payload.get("days_remaining") or 0),
++                policy.level,
+             )
+             return {
+                 "status": "sent",
+                 "user_id": user_id,
+                 "plan_id": payload.get("plan_id"),
+                 "days_remaining": payload.get("days_remaining"),
++                "stimulation": policy.level,
+             }
+ 
+     try:
+diff --git a/backend/tests/aurora/test_comeback_context.py b/backend/tests/aurora/test_comeback_context.py
+index 06a0cb35..6e12e91c 100644
+--- a/backend/tests/aurora/test_comeback_context.py
++++ b/backend/tests/aurora/test_comeback_context.py
+@@ -8,6 +8,7 @@ import pytest
+ from app.aurora.runtime_v1.service import AuroraRuntimeV1Service
+ from app.models.chat import ChatMessage, ChatSession, MessageRole
+ from app.models.focus import FocusSession, FocusStatus, FocusType
++from app.models.goal import Goal
+ from app.models.plan import Plan, PlanStage, PlanType
+ from app.models.task import Task, TaskStatus, TaskType
+ from app.models.user import User
+@@ -362,3 +363,183 @@ async def test_get_comeback_context_triggers_when_all_real_activity_is_four_days
+     assert payload is not None
+     assert payload["plan_id"] == str(plan.id)
+     assert payload["days_away"] >= 4
++
++
++# ── A-07: 3/7/14-day test clock + goal-state restore ──────────────────────────
++
++
++async def _append_task(
++    db_session,
++    *,
++    user,
++    plan,
++    title: str,
++    status: TaskStatus,
++    due_offset_days: int | None,
++    order_index: int,
++) -> None:
++    now = datetime.now(UTC).replace(tzinfo=None)
++    db_session.add(
++        Task(
++            user_id=user.id,
++            plan_id=plan.id,
++            title=title,
++            type=TaskType.LEARNING,
++            estimated_minutes=30,
++            difficulty=1,
++            energy_cost=1,
++            status=status,
++            due_date=now.date() + timedelta(days=due_offset_days)
++            if due_offset_days is not None
++            else None,
++            order_index=order_index,
++        )
++    )
++    await db_session.commit()
++
++
++@pytest.mark.asyncio
++async def test_seven_day_clock_with_live_plan_keeps_framing_and_surfaces_goal_state(db_session):
++    """7-day clock，计划窗口未过期：正常接回框架 + goal_state 真实呈现。"""
++    user, plan = await _seed_comeback_fixture(
++        db_session,
++        inactive_days=7,
++        days_remaining=5,
++    )
++    db_session.add(
++        Goal(
++            user_id=user.id,
++            title="期末计算机网络冲 85 分",
++            goal_type="exam",
++            status="active",
++            is_primary=True,
++            plan_id=plan.id,
++            # 真源读数可能停 0（R2-A 跟踪中）：必须原样上报，不得修饰。
++            progress=0.0,
++        )
++    )
++    await db_session.commit()
++    service = AuroraRuntimeV1Service()
++
++    payload = await service.get_comeback_context(
++        active_db=db_session,
++        user_id=user.id,
++    )
++
++    assert payload is not None
++    assert payload["days_away"] == 7
++    # 窗口未过期：不宣称过期，仍按剩余天数接回（回归合理）。
++    assert payload["plan_expired"] is False
++    assert payload["stale_focus"] is False
++    assert "还剩 5 天" in payload["message"]
++    # goal_state：真源投影 + 任务账本诚实进度（1 完成 / 2 总数）。
++    goal_state = payload["goal_state"]
++    assert goal_state["title"] == "期末计算机网络冲 85 分"
++    assert goal_state["progress"] == 0.0
++    ledger = goal_state["ledger"]
++    assert ledger["completed"] == 1
++    assert ledger["total"] == 2
++    assert ledger["ratio"] == 0.5
++
++
++@pytest.mark.asyncio
++async def test_fourteen_day_clock_does_not_present_stale_task_as_current(db_session):
++    """14-day clock + 计划窗口已过：陈旧任务不得包装成当前最优步。"""
++    user, plan = await _seed_comeback_fixture(
++        db_session,
++        inactive_days=14,
++        days_remaining=-10,
++    )
++    service = AuroraRuntimeV1Service()
++
++    payload = await service.get_comeback_context(
++        active_db=db_session,
++        user_id=user.id,
++    )
++
++    assert payload is not None
++    assert payload["days_away"] == 14
++    assert payload["plan_expired"] is True
++    assert payload["stale_focus"] is True
++    message = payload["message"]
++    # 诚实红线：不宣称"还来得及/收尾窗口"，不把陈旧任务说成"最近最适合"。
++    assert "最近最适合重新捡起来" not in message
++    assert "来得及" not in message
++    assert "收尾窗口" not in message
++    # 诚实呈报 + 指向重新校准（零羞耻、零诊断表述）。
++    assert "已经结束" in message
++    assert "重新校准" in message
++    assert "焦虑" not in message and "压力" not in message
++
++
++@pytest.mark.asyncio
++async def test_three_day_clock_with_long_overdue_task_marks_stale_focus(db_session):
++    """3-day clock 阈值触发 + 焦点任务逾期 5 天：标记 stale 且不称"最适合"。"""
++    user, plan = await _seed_comeback_fixture(
++        db_session,
++        inactive_days=3,
++        days_remaining=6,
++    )
++    await _append_task(
++        db_session,
++        user=user,
++        plan=plan,
++        title="Day 1 · 很久前的欠账",
++        status=TaskStatus.PENDING,
++        due_offset_days=-5,
++        order_index=0,
++    )
++    service = AuroraRuntimeV1Service()
++
++    payload = await service.get_comeback_context(
++        active_db=db_session,
++        user_id=user.id,
++    )
++
++    assert payload is not None
++    assert payload["plan_expired"] is False
++    assert payload["stale_focus"] is True
++    assert payload["next_task_overdue_days"] == 5
++    message = payload["message"]
++    assert "最近最适合重新捡起来" not in message
++    # 陈旧任务如实标注逾期天数，给出"也可以挑一小步"的低压力出路。
++    assert "原定 5 天前" in message
++    assert "也可以先挑今天最顺的一小步" in message
++
++
++@pytest.mark.asyncio
++async def test_goal_linked_plan_prefers_linked_goal_for_state(db_session):
++    """plan.goal_id 挂接的目标优先于全局 primary 目标（读侧投影）。"""
++    user, plan = await _seed_comeback_fixture(
++        db_session,
++        inactive_days=5,
++        days_remaining=4,
++    )
++    db_session.add(
++        Goal(
++            user_id=user.id,
++            title="全局主目标",
++            status="active",
++            is_primary=True,
++        )
++    )
++    linked_goal = Goal(
++        user_id=user.id,
++        title="挂接目标",
++        status="active",
++        is_primary=False,
++    )
++    db_session.add(linked_goal)
++    await db_session.flush()
++    plan.goal_id = linked_goal.id
++    await db_session.commit()
++    service = AuroraRuntimeV1Service()
++
++    payload = await service.get_comeback_context(
++        active_db=db_session,
++        user_id=user.id,
++    )
++
++    assert payload is not None
++    assert payload["goal_state"]["goal_id"] == str(linked_goal.id)
++    assert payload["goal_state"]["title"] == "挂接目标"
+diff --git a/backend/tests/aurora/test_stimulation_policy.py b/backend/tests/aurora/test_stimulation_policy.py
+new file mode 100644
+index 00000000..103d31e1
+--- /dev/null
++++ b/backend/tests/aurora/test_stimulation_policy.py
+@@ -0,0 +1,110 @@
++from __future__ import annotations
++
++from app.aurora.runtime_v1.stimulation_policy import (
++    LOW_STIMULATION_NUDGE_SUPPRESS_HOURS,
++    DEFAULT_NUDGE_SUPPRESS_HOURS,
++    STIMULATION_LOW,
++    STIMULATION_STANDARD,
++    apply_policy_to_nudge,
++    resolve_stimulation_policy,
++)
++from app.aurora.runtime_v1.user_preferences import AuroraUserPreferencesService
++
++
++# ── explicit setting overrides everything (both directions) ───────────────────
++
++
++def test_explicit_low_mode_attenuates_proactive_surface():
++    policy = resolve_stimulation_policy("low")
++
++    assert policy.level == STIMULATION_LOW
++    # 主动建议频率衰减：不主动推送 + 重复抑制窗口拉长。
++    assert policy.allow_proactive_push is False
++    assert policy.proactive_suppress_hours == LOW_STIMULATION_NUDGE_SUPPRESS_HOURS
++    assert policy.quiet_title is True
++    assert policy.payload_tag == STIMULATION_LOW
++
++
++def test_explicit_standard_mode_overrides_any_auto_judgement():
++    # 显式 standard = 永不衰减：即使未来接入偏高信号也不得降档。
++    policy = resolve_stimulation_policy("standard")
++
++    assert policy.level == STIMULATION_STANDARD
++    assert policy.allow_proactive_push is True
++    assert policy.proactive_suppress_hours == DEFAULT_NUDGE_SUPPRESS_HOURS
++    assert policy.quiet_title is False
++
++
++def test_auto_mode_keeps_current_behavior():
++    # auto（默认档）当前无引擎侧信号源 → standard，行为与历史完全一致。
++    for raw in (None, "", "auto"):
++        policy = resolve_stimulation_policy(raw)
++        assert policy.level == STIMULATION_STANDARD
++        assert policy.allow_proactive_push is True
++
++    # 大小写/空白容错。
++    assert resolve_stimulation_policy(" LOW ").level == STIMULATION_LOW
++    assert resolve_stimulation_policy("Standard").level == STIMULATION_STANDARD
++
++
++def test_unknown_mode_falls_back_to_standard():
++    assert resolve_stimulation_policy("mystery").level == STIMULATION_STANDARD
++
++
++# ── nudge copy transform: no diagnosis, factual quiet title ──────────────────
++
++
++def test_low_stimulation_quiets_nudge_title_only():
++    title, content = apply_policy_to_nudge(
++        resolve_stimulation_policy("low"),
++        title="好久不见，我一直在等你",
++        content="你已经 6 天没来了，我保留着上次的进度。",
++    )
++    # 去敦促/等待压力，改中性事实性表述；正文保持引擎事实性消息。
++    assert title == "你的学习计划状态"
++    assert content == "你已经 6 天没来了，我保留着上次的进度。"
++
++
++def test_standard_stimulation_keeps_nudge_copy_unchanged():
++    title, content = apply_policy_to_nudge(
++        resolve_stimulation_policy("standard"),
++        title="好久不见，我一直在等你",
++        content="正文不动",
++    )
++    assert title == "好久不见，我一直在等你"
++    assert content == "正文不动"
++
++
++# ── preference persistence (explicit channel) ─────────────────────────────────
++
++
++async def test_stimulation_mode_persists_via_preferences_service(db_session):
++    from uuid import uuid4
++
++    from app.models.user import User
++
++    user = User(
++        id=uuid4(),
++        username=f"stim_{uuid4().hex[:8]}",
++        email=f"stim_{uuid4().hex[:8]}@example.com",
++        hashed_password="hashed",
++    )
++    db_session.add(user)
++    await db_session.commit()
++
++    service = AuroraUserPreferencesService(db_session)
++
++    defaults = await service.get(user.id)
++    assert defaults["aurora_stimulation_mode"] == "auto"
++
++    updated = await service.update(
++        user.id, {"aurora_stimulation_mode": "low"}
++    )
++    assert updated["aurora_stimulation_mode"] == "low"
++    assert (await service.get(user.id))["aurora_stimulation_mode"] == "low"
++
++    # 非法值被拒绝，保持既有值（显式设置不允许被静默改写为未知档）。
++    invalid = await service.update(
++        user.id, {"aurora_stimulation_mode": "diagnose_me"}
++    )
++    assert invalid["aurora_stimulation_mode"] == "low"
+diff --git a/backend/tests/unit/test_comeback_nudge_task.py b/backend/tests/unit/test_comeback_nudge_task.py
+index 95aebe35..edfa1ed2 100644
+--- a/backend/tests/unit/test_comeback_nudge_task.py
++++ b/backend/tests/unit/test_comeback_nudge_task.py
+@@ -129,3 +129,74 @@ def test_comeback_nudge_task_skips_duplicate_within_24h():
+     assert result["status"] == "skipped"
+     assert result["reason"] == "duplicate_recent"
+     mock_notif_create.assert_not_awaited()
++
++
++def test_comeback_nudge_task_low_stimulation_quiets_and_skips_push():
++    """A-07: 显式低刺激档——不主动推送、标题去敦促化、data 带档位标记。"""
++    user_id = "00000000-0000-0000-0000-000000000001"
++    payload = {
++        "title": "好久不见，我一直在等你",
++        "message": "你已经 6 天没来了，我保留着上次的进度。",
++        "days_away": 6,
++        "days_remaining": 3,
++        "subject": "计算机网络",
++        "plan_id": "00000000-0000-0000-0000-000000000002",
++        "goal_state": {"goal_id": "g1", "title": "期末目标", "ledger": {"completed": 1, "total": 2}},
++    }
++
++    fake_session_local = _FakeSessionCM()
++    mock_runtime_cls = MagicMock()
++    mock_runtime_instance = MagicMock()
++    mock_runtime_instance.get_comeback_context = AsyncMock(return_value=payload)
++    mock_runtime_cls.return_value = mock_runtime_instance
++
++    mock_prefs_cls = MagicMock()
++    mock_prefs_instance = MagicMock()
++    mock_prefs_instance.get = AsyncMock(
++        return_value={
++            "aurora_analysis_depth": "deep",
++            "aurora_directness": "guided",
++            "aurora_explanation_level": "detailed",
++            "aurora_pressure_style": "motivating",
++            "aurora_stimulation_mode": "low",
++        }
++    )
++    mock_prefs_cls.return_value = mock_prefs_instance
++
++    mock_notif_create = AsyncMock()
++    mock_notif_cls = MagicMock()
++    mock_notif_cls.create = staticmethod(mock_notif_create)
++
++    patches = [
++        patch("app.db.session.AsyncSessionLocal", return_value=fake_session_local),
++        patch("app.aurora.runtime_v1.service.AuroraRuntimeV1Service", mock_runtime_cls),
++        patch(
++            "app.aurora.runtime_v1.user_preferences.AuroraUserPreferencesService",
++            mock_prefs_cls,
++        ),
++        patch("app.services.notification_service.NotificationService", mock_notif_cls),
++    ]
++
++    for current_patch in patches:
++        current_patch.start()
++
++    try:
++        from app.core.celery_tasks import comeback_nudge_task
++
++        result = comeback_nudge_task(user_id)
++    finally:
++        for current_patch in reversed(patches):
++            current_patch.stop()
++
++    assert result["status"] == "sent"
++    assert result["stimulation"] == "low"
++    mock_notif_create.assert_awaited_once()
++
++    notif_create = mock_notif_create.call_args[0][2]
++    # 标题去敦促/等待压力，正文保持引擎事实性消息。
++    assert notif_create.title == "你的学习计划状态"
++    assert notif_create.content == payload["message"]
++    # 低刺激档不主动推送（仅入应用内通知中心）。
++    assert mock_notif_create.call_args.kwargs["push_via_websocket"] is False
++    assert notif_create.data["stimulation_policy"] == "low"
++    assert notif_create.data["goal_state"] == payload["goal_state"]
+diff --git a/mobile/lib/features/aurora/data/models/aurora_comeback_context.dart b/mobile/lib/features/aurora/data/models/aurora_comeback_context.dart
+index 64ea3fdb..d107a5c5 100644
+--- a/mobile/lib/features/aurora/data/models/aurora_comeback_context.dart
++++ b/mobile/lib/features/aurora/data/models/aurora_comeback_context.dart
+@@ -21,6 +21,10 @@ class AuroraComebackContext {
+     required this.resumeToken,
+     required this.unfinishedItems,
+     required this.calendarNote,
++    this.goalState = const AuroraComebackGoalState.empty(),
++    this.planExpired = false,
++    this.staleFocus = false,
++    this.nextTaskOverdueDays = 0,
+   });
+ 
+   const AuroraComebackContext.empty()
+@@ -44,7 +48,11 @@ class AuroraComebackContext {
+         activeCoreSession = const <String, dynamic>{},
+         resumeToken = '',
+         unfinishedItems = const [],
+-        calendarNote = '';
++        calendarNote = '',
++        goalState = const AuroraComebackGoalState.empty(),
++        planExpired = false,
++        staleFocus = false,
++        nextTaskOverdueDays = 0;
+ 
+   factory AuroraComebackContext.fromJson(Map<String, dynamic> json) =>
+       AuroraComebackContext(
+@@ -69,6 +77,10 @@ class AuroraComebackContext {
+         resumeToken: _asString(json['resume_token']),
+         unfinishedItems: _asItems(json['unfinished_items']),
+         calendarNote: _asString(json['calendar_note']),
++        goalState: AuroraComebackGoalState.fromJson(json['goal_state']),
++        planExpired: _asBool(json['plan_expired']),
++        staleFocus: _asBool(json['stale_focus']),
++        nextTaskOverdueDays: _asInt(json['next_task_overdue_days']),
+       );
+ 
+   final String comebackKind;
+@@ -93,6 +105,16 @@ class AuroraComebackContext {
+   final List<AuroraComebackItem> unfinishedItems;
+   final String calendarNote;
+ 
++  /// 用户真实目标状态（引擎读侧真源投影，A-07）。空对象 = 引擎无目标可呈报。
++  final AuroraComebackGoalState goalState;
++
++  /// 计划原定窗口已结束——UI 不得按"当前计划"口吻呈报。
++  final bool planExpired;
++
++  /// 焦点任务已陈旧（逾期 ≥3 天或计划过期）——不得呈现为"当前最优步"。
++  final bool staleFocus;
++  final int nextTaskOverdueDays;
++
+   bool get hasContent =>
+       message.isNotEmpty ||
+       conversationId.isNotEmpty ||
+@@ -106,6 +128,62 @@ class AuroraComebackContext {
+       resumeToken.isNotEmpty || activeCoreSession.isNotEmpty;
+ }
+ 
++class AuroraComebackGoalState {
++  const AuroraComebackGoalState({
++    required this.goalId,
++    required this.title,
++    required this.status,
++    required this.progress,
++    required this.ledgerCompleted,
++    required this.ledgerTotal,
++  });
++
++  const AuroraComebackGoalState.empty()
++      : goalId = '',
++        title = '',
++        status = '',
++        progress = null,
++        ledgerCompleted = 0,
++        ledgerTotal = 0;
++
++  factory AuroraComebackGoalState.fromJson(dynamic raw) {
++    if (raw is! Map) {
++      return const AuroraComebackGoalState.empty();
++    }
++    final json = Map<String, dynamic>.from(raw);
++    final ledger = json['ledger'];
++    final ledgerMap = ledger is Map<String, dynamic>
++        ? ledger
++        : ledger is Map
++            ? Map<String, dynamic>.from(ledger)
++            : const <String, dynamic>{};
++    final progress = json['progress'];
++    return AuroraComebackGoalState(
++      goalId: _asString(json['goal_id']),
++      title: _asString(json['title']),
++      status: _asString(json['status']),
++      progress: progress is num ? progress.toDouble() : null,
++      ledgerCompleted: _asInt(ledgerMap['completed']),
++      ledgerTotal: _asInt(ledgerMap['total']),
++    );
++  }
++
++  final String goalId;
++  final String title;
++  final String status;
++
++  /// 目标真源 progress 读数（可能因上游写入链路停在 0，如实呈报）。
++  final double? progress;
++
++  /// 任务账本口径的诚实进度（completed/total），与任务板同行同数。
++  final int ledgerCompleted;
++  final int ledgerTotal;
++
++  bool get hasContent => goalId.isNotEmpty || title.isNotEmpty;
++
++  bool get hasLedger => ledgerTotal > 0;
++}
++
+ class AuroraComebackItem {
+   const AuroraComebackItem({
+     required this.type,
+diff --git a/mobile/lib/features/aurora/presentation/providers/emotion_state_provider.dart b/mobile/lib/features/aurora/presentation/providers/emotion_state_provider.dart
+index 24016d07..e9a9d6ce 100644
+--- a/mobile/lib/features/aurora/presentation/providers/emotion_state_provider.dart
++++ b/mobile/lib/features/aurora/presentation/providers/emotion_state_provider.dart
+@@ -4,6 +4,9 @@ import 'package:flutter/foundation.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
+ import 'package:shared_preferences/shared_preferences.dart';
+ import 'package:sparkle/core/design/adaptive/emotion_responsive_theme.dart';
++import 'package:sparkle/core/network/api_client.dart';
++import 'package:sparkle/core/network/api_endpoints.dart';
++import 'package:sparkle/core/services/demo_data_service.dart';
+ 
+ const String kEmotionAdaptiveModeKey = 'settings_emotion_adaptive_mode';
+ 
+@@ -198,10 +201,13 @@ class EmotionState {
+ }
+ 
+ class EmotionStateNotifier extends StateNotifier<EmotionState> {
+-  EmotionStateNotifier() : super(const EmotionState()) {
++  EmotionStateNotifier({ApiClient? apiClient}) : super(const EmotionState()) {
++    _apiClient = apiClient;
+     unawaited(_loadMode());
+   }
+ 
++  ApiClient? _apiClient;
++
+   Future<void> _loadMode() async {
+     try {
+       final prefs = await SharedPreferences.getInstance();
+@@ -223,6 +229,36 @@ class EmotionStateNotifier extends StateNotifier<EmotionState> {
+     } catch (error) {
+       debugPrint('EmotionStateNotifier failed to persist mode: $error');
+     }
++    // A-07: 显式档位同步到引擎（aurora_stimulation_mode）。用户 explicit
++    // setting 是最高权威——引擎侧主动面（如 comeback nudge 推送）据此衰减。
++    // fire-and-forget：本地档位已生效，引擎侧失败不打扰用户。
++    unawaited(_syncStimulationModeToEngine(mode));
++  }
++
++  /// explicit 档位 → 引擎偏好值（auto 保持引擎侧现状行为）。
++  String _engineStimulationValue(EmotionAdaptiveMode mode) => switch (mode) {
++        EmotionAdaptiveMode.alwaysLow => 'low',
++        EmotionAdaptiveMode.alwaysNormal => 'standard',
++        EmotionAdaptiveMode.auto => 'auto',
++      };
++
++  Future<void> _syncStimulationModeToEngine(EmotionAdaptiveMode mode) async {
++    final client = _apiClient;
++    if (client == null || DemoDataService.isDemoMode) {
++      return;
++    }
++    try {
++      await client.put<Map<String, dynamic>>(
++        ApiEndpoints.auroraPreferences,
++        data: <String, String>{
++          'aurora_stimulation_mode': _engineStimulationValue(mode),
++        },
++      );
++    } catch (error) {
++      debugPrint(
++        'EmotionStateNotifier failed to sync stimulation mode: $error',
++      );
++    }
+   }
+ 
+   void updateFromAuroraStateBand(Map<String, dynamic> json) {
+@@ -235,7 +271,7 @@ class EmotionStateNotifier extends StateNotifier<EmotionState> {
+ 
+ final emotionStateProvider =
+     StateNotifierProvider<EmotionStateNotifier, EmotionState>(
+-  (ref) => EmotionStateNotifier(),
++  (ref) => EmotionStateNotifier(apiClient: ref.read(apiClientProvider)),
+ );
+ 
+ final emotionResponsiveConfigProvider = Provider<EmotionResponsiveConfig>(
+diff --git a/mobile/lib/features/chat/presentation/widgets/comeback_banner.dart b/mobile/lib/features/chat/presentation/widgets/comeback_banner.dart
+index b35e414c..960c38f0 100644
+--- a/mobile/lib/features/chat/presentation/widgets/comeback_banner.dart
++++ b/mobile/lib/features/chat/presentation/widgets/comeback_banner.dart
+@@ -197,6 +197,15 @@ class _ComebackBannerState extends State<ComebackBanner> {
+                     ),
+                   ),
+                 ],
++                if (contextData.goalState.hasContent) ...[
++                  const SizedBox(height: DS.spacing12),
++                  _staggered(
++                    index: 3,
++                    child: _ComebackGoalStateLine(
++                      goalState: contextData.goalState,
++                    ),
++                  ),
++                ],
+                 const SizedBox(height: DS.spacing10),
+                 Row(
+                   children: [
+@@ -227,6 +236,68 @@ class _ComebackBannerState extends State<ComebackBanner> {
+   }
+ }
+ 
++/// A-07：回来时看到的不是模板问候，而是自己的真实目标状态——
++/// 目标标题 + 任务账本口径进度（与任务板/多目标看板同行同数）。
++/// 只呈现引擎读侧投影，不在此做任何推断或诊断性表述。
++class _ComebackGoalStateLine extends StatelessWidget {
++  const _ComebackGoalStateLine({required this.goalState});
++
++  final AuroraComebackGoalState goalState;
++
++  @override
++  Widget build(BuildContext context) {
++    final goalTitle = goalState.title.trim();
++    final label = goalTitle.isEmpty ? context.l10n.chatContinueFromConversation : goalTitle;
++    final progressText = goalState.hasLedger
++        ? '${goalState.ledgerCompleted}/${goalState.ledgerTotal}'
++        : '';
++
++    return Row(
++      children: [
++        Icon(
++          Icons.flag_outlined,
++          size: 16,
++          color: DS.textSecondary,
++        ),
++        const SizedBox(width: DS.spacing8),
++        Expanded(
++          child: Text(
++            label,
++            maxLines: 1,
++            overflow: TextOverflow.ellipsis,
++            style: Theme.of(context).textTheme.labelMedium?.copyWith(
++                  color: DS.textPrimary,
++                  fontWeight: FontWeight.w600,
++                ),
++          ),
++        ),
++        if (progressText.isNotEmpty) ...[
++          const SizedBox(width: DS.spacing8),
++          Container(
++            padding: const EdgeInsets.symmetric(
++              horizontal: DS.spacing8,
++              vertical: DS.spacing4,
++            ),
++            decoration: BoxDecoration(
++              color: DS.surfaceSecondary.withValues(alpha: 0.72),
++              borderRadius: BorderRadius.circular(999),
++              border: Border.all(
++                color: DS.borderSubtle.withValues(alpha: 0.7),
++              ),
++            ),
++            child: Text(
++              progressText,
++              style: Theme.of(context).textTheme.labelSmall?.copyWith(
++                    color: DS.textSecondary,
++                  ),
++            ),
++          ),
++        ],
++      ],
++    );
++  }
++}
++
+ class _ComebackItemChip extends StatelessWidget {
+   const _ComebackItemChip({
+     required this.item,
+diff --git a/mobile/test/features/chat/presentation/widgets/comeback_banner_test.dart b/mobile/test/features/chat/presentation/widgets/comeback_banner_test.dart
+index ca1466d6..bad5721a 100644
+--- a/mobile/test/features/chat/presentation/widgets/comeback_banner_test.dart
++++ b/mobile/test/features/chat/presentation/widgets/comeback_banner_test.dart
+@@ -156,4 +156,78 @@ void main() {
+     await tester.tap(find.text('夹逼准则复盘'));
+     expect(selected?.route, '/tasks/task-1/execute');
+   });
++
++  // ── A-07: goal-state restore + low-stimulation interaction ────────────────
++
++  testWidgets('renders real goal state instead of template-only greeting',
++      (tester) async {
++    await tester.pumpWidget(
++      testMaterialApp(
++        home: Scaffold(
++          body: ComebackBanner(contextData: _contextWithGoalState()),
++        ),
++      ),
++    );
++
++    // 目标标题 + 任务账本口径进度（与任务板/多目标看板同行同数）。
++    expect(find.text('期末计算机网络冲 85 分'), findsOneWidget);
++    expect(find.text('1/2'), findsOneWidget);
++  });
++
++  testWidgets('low-stimulation: entrance motion attenuated, goal state stays',
++      (tester) async {
++    await tester.pumpWidget(
++      testMaterialApp(
++        // 低刺激档经 EmotionResponsiveAppWrapper 落到 MediaQuery 关动效；
++        // 这里直接模拟该运行面。
++        home: MediaQuery(
++          data: const MediaQueryData(disableAnimations: true),
++          child: Scaffold(
++            body: ComebackBanner(contextData: _contextWithGoalState()),
++          ),
++        ),
++      ),
++    );
++    await tester.pump();
++
++    // 动效减法：无分步入场动画；事实内容（真实目标状态）完整保留。
++    expect(find.byType(SparkleStaggerItem), findsNothing);
++    expect(find.text('期末计算机网络冲 85 分'), findsOneWidget);
++    expect(find.text('1/2'), findsOneWidget);
++  });
++}
++
++AuroraComebackContext _contextWithGoalState() {
++  final base = _context();
++  return AuroraComebackContext(
++    comebackKind: base.comebackKind,
++    title: base.title,
++    message: base.message,
++    shouldShowMessage: base.shouldShowMessage,
++    lastActiveAt: base.lastActiveAt,
++    inactiveMinutes: base.inactiveMinutes,
++    daysAway: base.daysAway,
++    daysRemaining: base.daysRemaining,
++    subject: base.subject,
++    nextTaskTitle: base.nextTaskTitle,
++    recentTaskSummary: base.recentTaskSummary,
++    lightRestartSuggestion: base.lightRestartSuggestion,
++    planId: base.planId,
++    conversationId: base.conversationId,
++    lastMessageId: base.lastMessageId,
++    topicSummary: base.topicSummary,
++    pendingQuestion: base.pendingQuestion,
++    activeCoreSession: base.activeCoreSession,
++    resumeToken: base.resumeToken,
++    unfinishedItems: base.unfinishedItems,
++    calendarNote: base.calendarNote,
++    goalState: const AuroraComebackGoalState(
++      goalId: 'goal-1',
++      title: '期末计算机网络冲 85 分',
++      status: 'active',
++      progress: 0,
++      ledgerCompleted: 1,
++      ledgerTotal: 2,
++    ),
++  );
+ }
+diff --git a/mobile/test/unit/aurora_comeback_context_test.dart b/mobile/test/unit/aurora_comeback_context_test.dart
+new file mode 100644
+index 00000000..d5783bf6
+--- /dev/null
++++ b/mobile/test/unit/aurora_comeback_context_test.dart
+@@ -0,0 +1,101 @@
++import 'package:flutter_test/flutter_test.dart';
++import 'package:sparkle/features/aurora/data/models/aurora_comeback_context.dart';
++
++void main() {
++  group('AuroraComebackContext A-07 goal state parsing', () {
++    test('parses goal_state block and staleness flags from engine payload', () {
++      final context = AuroraComebackContext.fromJson({
++        'comeback_kind': 'checkpoint_debrief',
++        'title': '我们先把这几天接回来',
++        'message': '你已经 14 天没来了……',
++        'should_show_message': true,
++        'last_active_at': '2026-09-11T10:00:00',
++        'inactive_minutes': 20160,
++        'days_away': 14,
++        'days_remaining': 0,
++        'subject': '计算机网络',
++        'next_task_title': 'Day 4 · TCP 流量控制',
++        'recent_task_summary': 'TCP 流量控制',
++        'light_restart_suggestion': '先开一个「30分钟保底版」。',
++        'plan_id': 'plan-1',
++        'conversation_id': '',
++        'last_message_id': '',
++        'topic_summary': '',
++        'pending_question': '',
++        'active_core_session': <String, dynamic>{},
++        'resume_token': '',
++        'unfinished_items': <Object>[],
++        'calendar_note': '',
++        'goal_state': {
++          'goal_id': 'goal-1',
++          'title': '期末计算机网络冲 85 分',
++          'status': 'active',
++          'progress': 0.0,
++          'ledger': {'completed': 3, 'total': 7, 'ratio': 0.4286},
++        },
++        'plan_expired': true,
++        'stale_focus': true,
++        'next_task_overdue_days': 14,
++      });
++
++      expect(context.goalState.goalId, 'goal-1');
++      expect(context.goalState.title, '期末计算机网络冲 85 分');
++      expect(context.goalState.status, 'active');
++      // 真源读数如实呈报（含 0），不做修饰。
++      expect(context.goalState.progress, 0.0);
++      expect(context.goalState.hasLedger, isTrue);
++      expect(context.goalState.ledgerCompleted, 3);
++      expect(context.goalState.ledgerTotal, 7);
++      expect(context.planExpired, isTrue);
++      expect(context.staleFocus, isTrue);
++      expect(context.nextTaskOverdueDays, 14);
++    });
++
++    test('missing goal_state degrades to empty without breaking hasContent',
++        () {
++      final context = AuroraComebackContext.fromJson({
++        'comeback_kind': 'light_resume',
++        'message': '继续上次的「函数极限」。',
++        'should_show_message': true,
++        'last_active_at': '2026-09-25T10:00:00',
++        'inactive_minutes': 120,
++        'days_away': 0,
++        'days_remaining': 0,
++        'subject': '',
++        'next_task_title': '',
++        'recent_task_summary': '',
++        'light_restart_suggestion': '',
++        'plan_id': '',
++        'conversation_id': 'conv-1',
++        'last_message_id': '',
++        'topic_summary': '函数极限',
++        'pending_question': '',
++        'active_core_session': <String, dynamic>{},
++        'resume_token': '',
++        'unfinished_items': <Object>[],
++        'calendar_note': '',
++      });
++
++      expect(context.goalState.hasContent, isFalse);
++      expect(context.goalState.hasLedger, isFalse);
++      expect(context.planExpired, isFalse);
++      expect(context.staleFocus, isFalse);
++      expect(context.hasContent, isTrue);
++    });
++
++    test('null progress stays null (honest read of frozen source)', () {
++      final context = AuroraComebackContext.fromJson({
++        'goal_state': {
++          'goal_id': 'goal-2',
++          'title': '目标',
++          'status': 'active',
++          'progress': null,
++          'ledger': <String, dynamic>{},
++        },
++      });
++
++      expect(context.goalState.progress, isNull);
++      expect(context.goalState.hasLedger, isFalse);
++    });
++  });
++}
