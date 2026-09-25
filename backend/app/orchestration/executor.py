@@ -1159,7 +1159,11 @@ class ToolExecutor:
                     await history_session.commit()
                 except Exception as e:
                     await history_session.rollback()
-                    logger.warning(f"Failed to record tool execution history: {e}")
+                    # Q-05 合并态补修：异常 str 含 [SQL]/[parameters]（内嵌用户
+                    # 正文），日志只落 DBAPI 层消息（不含绑定参数）。
+                    logger.warning(
+                        f"Failed to record tool execution history: {type(e).__name__}: {getattr(e, 'orig', '')}"
+                    )
             return
 
         try:
