@@ -9,7 +9,6 @@ import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/navigation/route_resilience.dart';
 import 'package:sparkle/core/services/deep_link_service.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/data/models/notification_model.dart';
 import 'package:sparkle/features/home/presentation/providers/notification_provider.dart';
 
@@ -35,7 +34,6 @@ class NotificationListScreen extends ConsumerWidget {
       child: notificationsAsync.when(
         data: (notifications) {
           if (notifications.isEmpty) {
-            final zh = I18nService.instance.isChinese;
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(DS.spacing24),
@@ -44,10 +42,10 @@ class NotificationListScreen extends ConsumerWidget {
                   children: [
                     const Icon(Icons.notifications_none_rounded, size: 48),
                     const SizedBox(height: DS.spacing12),
-                    Text(zh ? '暂无新通知' : 'No new notifications'),
+                    Text(context.l10n.notificationListEmptyTitle),
                     const SizedBox(height: DS.spacing6),
                     Text(
-                      zh ? '学习提醒和周报需要您关注时，会显示在这里。' : 'Study reminders and weekly reports will appear here when they need your attention.',
+                      context.l10n.notificationListEmptySubtitle,
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -111,9 +109,7 @@ class NotificationItem extends ConsumerWidget {
                       if (context.mounted) {
                         AppFeedback.error(
                           context,
-                          I18nService.instance.isChinese
-                              ? '标记已读失败，请重试'
-                              : 'Failed to mark as read',
+                          context.l10n.notificationMarkAsReadFailed,
                         );
                       }
                     }),

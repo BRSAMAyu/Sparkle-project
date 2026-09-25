@@ -38294,4 +38294,157 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get hybridJourneyRetry => '重试';
+
+  @override
+  String get notificationListEmptyTitle => '暂无新通知';
+
+  @override
+  String get notificationListEmptySubtitle => '学习提醒和周报需要您关注时，会显示在这里。';
+
+  @override
+  String get notificationMarkAsReadFailed => '标记已读失败，请重试';
+
+  @override
+  String get sprintCardTitle => '冲刺';
+
+  @override
+  String get sprintCardDayUnit => '天';
+
+  @override
+  String get sprintCardPercentDone => '% 完成';
+
+  @override
+  String get sprintCardEmptyTitle => '无冲刺计划';
+
+  @override
+  String get sprintCardEmptyAction => '点击创建';
+
+  @override
+  String todayGrowthTaskProgress(int done, int total) {
+    return '今天 $done/$total 项任务';
+  }
+
+  @override
+  String get todayGrowthPhaseDefault => '进行中';
+
+  @override
+  String todayGrowthPlanHealth(String dots) {
+    return '计划健康度 $dots';
+  }
+
+  @override
+  String todayGrowthStreakDays(int days) {
+    return '连续学习 $days 天 🔥';
+  }
+
+  @override
+  String get todayGrowthCreateFirstPlan => '开始制定你的第一个计划';
+
+  @override
+  String get todayGrowthCreateFirstPlanSubtitle => '我会把目标拆成今天就能迈出的一小步。';
+
+  @override
+  String get todayGrowthDoneMessage => '今天收束得很漂亮，可以带着成就感收尾。';
+
+  @override
+  String get todayGrowthKeepRhythmMessage => '保持这个节奏，下一步已经很清楚。';
+
+  @override
+  String get todayGrowthPickLightTaskMessage => '今天的第一件事是选一个轻量任务。';
+
+  @override
+  String todayGrowthFirstTaskMessage(String title) {
+    return '今天的第一件事是$title。';
+  }
+
+  @override
+  String get multiGoalDashboardTitle => '多目标仪表盘';
+
+  @override
+  String multiGoalActiveGoalCount(int count) {
+    return '$count 个活跃目标';
+  }
+
+  @override
+  String get multiGoalExpandCollapse => '展开或收起卡片';
+
+  @override
+  String get multiGoalSuggestedFirst => '今天我建议先做';
+
+  @override
+  String get multiGoalUseSuggestion => '采用建议';
+
+  @override
+  String get multiGoalManualAdjust => '手动调整';
+
+  @override
+  String get multiGoalPhaseInProgress => '进行中';
+
+  @override
+  String multiGoalWeeklyConflicts(int count) {
+    return '本周冲突 $count';
+  }
+
+  @override
+  String get multiGoalNoDeadline => '无截止日';
+
+  @override
+  String get multiGoalDueToday => '今天截止';
+
+  @override
+  String multiGoalOverdueDays(int days) {
+    return '已逾期 $days 天';
+  }
+
+  @override
+  String multiGoalDaysLeft(int days) {
+    return '剩余 $days 天';
+  }
+
+  @override
+  String get taskPreviewToday => '今天';
+
+  @override
+  String taskPreviewTaskCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 个任务',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get taskPreviewNoTasks => '今天没有任务';
+
+  @override
+  String get taskPreviewEnjoyFreeTime => '享受你的自由时间';
+
+  @override
+  String taskPreviewViewAllTasks(int count) {
+    return '查看全部 $count 个任务';
+  }
+
+  @override
+  String get taskPreviewCheckedLabel => '已打卡';
+
+  @override
+  String get taskPreviewCheckedDoneSubtitle => '这一天有实际完成记录。';
+
+  @override
+  String taskPreviewCheckedFromSource(String source) {
+    return '来源：$source';
+  }
+
+  @override
+  String get taskPreviewProtectedLabel => '保护中';
+
+  @override
+  String get taskPreviewProtectedSubtitle => '这一天使用了连击保护，没有直接断签。';
+
+  @override
+  String get taskPreviewMissedLabel => '未打卡';
+
+  @override
+  String get taskPreviewMissedSubtitle => '这一天没有形成有效打卡记录。';
 }

@@ -39971,4 +39971,171 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hybridJourneyRetry => 'Retry';
+
+  @override
+  String get notificationListEmptyTitle => 'No new notifications';
+
+  @override
+  String get notificationListEmptySubtitle =>
+      'Study reminders and weekly reports will appear here when they need your attention.';
+
+  @override
+  String get notificationMarkAsReadFailed => 'Failed to mark as read';
+
+  @override
+  String get sprintCardTitle => 'Sprint';
+
+  @override
+  String get sprintCardDayUnit => 'd';
+
+  @override
+  String get sprintCardPercentDone => '% done';
+
+  @override
+  String get sprintCardEmptyTitle => 'No Sprint';
+
+  @override
+  String get sprintCardEmptyAction => 'Tap to create';
+
+  @override
+  String todayGrowthTaskProgress(int done, int total) {
+    return 'Today $done/$total tasks';
+  }
+
+  @override
+  String get todayGrowthPhaseDefault => 'In Progress';
+
+  @override
+  String todayGrowthPlanHealth(String dots) {
+    return 'Plan Health $dots';
+  }
+
+  @override
+  String todayGrowthStreakDays(int days) {
+    return '$days day streak 🔥';
+  }
+
+  @override
+  String get todayGrowthCreateFirstPlan => 'Create Your First Plan';
+
+  @override
+  String get todayGrowthCreateFirstPlanSubtitle =>
+      'I will break down your goal into small, actionable steps for today.';
+
+  @override
+  String get todayGrowthDoneMessage =>
+      'You wrapped up beautifully today. End with a sense of accomplishment.';
+
+  @override
+  String get todayGrowthKeepRhythmMessage =>
+      'Keep this rhythm, next steps are clear.';
+
+  @override
+  String get todayGrowthPickLightTaskMessage =>
+      'Your first task today is to pick a lightweight one.';
+
+  @override
+  String todayGrowthFirstTaskMessage(String title) {
+    return 'First task today: $title.';
+  }
+
+  @override
+  String get multiGoalDashboardTitle => 'Multi-goal Dashboard';
+
+  @override
+  String multiGoalActiveGoalCount(int count) {
+    return '$count active goals';
+  }
+
+  @override
+  String get multiGoalExpandCollapse => 'Expand or collapse card';
+
+  @override
+  String get multiGoalSuggestedFirst => 'Suggested first today';
+
+  @override
+  String get multiGoalUseSuggestion => 'Use suggestion';
+
+  @override
+  String get multiGoalManualAdjust => 'Adjust';
+
+  @override
+  String get multiGoalPhaseInProgress => 'In progress';
+
+  @override
+  String multiGoalWeeklyConflicts(int count) {
+    return '$count conflicts';
+  }
+
+  @override
+  String get multiGoalNoDeadline => 'No deadline';
+
+  @override
+  String get multiGoalDueToday => 'Due today';
+
+  @override
+  String multiGoalOverdueDays(int days) {
+    return '${days}d overdue';
+  }
+
+  @override
+  String multiGoalDaysLeft(int days) {
+    return '${days}d left';
+  }
+
+  @override
+  String get taskPreviewToday => 'Today';
+
+  @override
+  String taskPreviewTaskCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tasks',
+      one: '1 task',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get taskPreviewNoTasks => 'No tasks today';
+
+  @override
+  String get taskPreviewEnjoyFreeTime => 'Enjoy your free time';
+
+  @override
+  String taskPreviewViewAllTasks(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'View all $count tasks',
+      one: 'View all 1 task',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get taskPreviewCheckedLabel => 'Checked';
+
+  @override
+  String get taskPreviewCheckedDoneSubtitle => 'Completed on this day.';
+
+  @override
+  String taskPreviewCheckedFromSource(String source) {
+    return 'From: $source';
+  }
+
+  @override
+  String get taskPreviewProtectedLabel => 'Protected';
+
+  @override
+  String get taskPreviewProtectedSubtitle =>
+      'Streak protection used, no streak break.';
+
+  @override
+  String get taskPreviewMissedLabel => 'Missed';
+
+  @override
+  String get taskPreviewMissedSubtitle =>
+      'No valid check-in recorded on this day.';
 }

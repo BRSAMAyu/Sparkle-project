@@ -69493,6 +69493,258 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'重试'**
   String get hybridJourneyRetry;
+
+  /// No description provided for @notificationListEmptyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无新通知'**
+  String get notificationListEmptyTitle;
+
+  /// No description provided for @notificationListEmptySubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习提醒和周报需要您关注时，会显示在这里。'**
+  String get notificationListEmptySubtitle;
+
+  /// No description provided for @notificationMarkAsReadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'标记已读失败，请重试'**
+  String get notificationMarkAsReadFailed;
+
+  /// No description provided for @sprintCardTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺'**
+  String get sprintCardTitle;
+
+  /// No description provided for @sprintCardDayUnit.
+  ///
+  /// In zh, this message translates to:
+  /// **'天'**
+  String get sprintCardDayUnit;
+
+  /// No description provided for @sprintCardPercentDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'% 完成'**
+  String get sprintCardPercentDone;
+
+  /// No description provided for @sprintCardEmptyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'无冲刺计划'**
+  String get sprintCardEmptyTitle;
+
+  /// No description provided for @sprintCardEmptyAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'点击创建'**
+  String get sprintCardEmptyAction;
+
+  /// No description provided for @todayGrowthTaskProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天 {done}/{total} 项任务'**
+  String todayGrowthTaskProgress(int done, int total);
+
+  /// No description provided for @todayGrowthPhaseDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'进行中'**
+  String get todayGrowthPhaseDefault;
+
+  /// No description provided for @todayGrowthPlanHealth.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划健康度 {dots}'**
+  String todayGrowthPlanHealth(String dots);
+
+  /// No description provided for @todayGrowthStreakDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'连续学习 {days} 天 🔥'**
+  String todayGrowthStreakDays(int days);
+
+  /// No description provided for @todayGrowthCreateFirstPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始制定你的第一个计划'**
+  String get todayGrowthCreateFirstPlan;
+
+  /// No description provided for @todayGrowthCreateFirstPlanSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'我会把目标拆成今天就能迈出的一小步。'**
+  String get todayGrowthCreateFirstPlanSubtitle;
+
+  /// No description provided for @todayGrowthDoneMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天收束得很漂亮，可以带着成就感收尾。'**
+  String get todayGrowthDoneMessage;
+
+  /// No description provided for @todayGrowthKeepRhythmMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'保持这个节奏，下一步已经很清楚。'**
+  String get todayGrowthKeepRhythmMessage;
+
+  /// No description provided for @todayGrowthPickLightTaskMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天的第一件事是选一个轻量任务。'**
+  String get todayGrowthPickLightTaskMessage;
+
+  /// No description provided for @todayGrowthFirstTaskMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天的第一件事是{title}。'**
+  String todayGrowthFirstTaskMessage(String title);
+
+  /// No description provided for @multiGoalDashboardTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'多目标仪表盘'**
+  String get multiGoalDashboardTitle;
+
+  /// No description provided for @multiGoalActiveGoalCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个活跃目标'**
+  String multiGoalActiveGoalCount(int count);
+
+  /// No description provided for @multiGoalExpandCollapse.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开或收起卡片'**
+  String get multiGoalExpandCollapse;
+
+  /// No description provided for @multiGoalSuggestedFirst.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天我建议先做'**
+  String get multiGoalSuggestedFirst;
+
+  /// No description provided for @multiGoalUseSuggestion.
+  ///
+  /// In zh, this message translates to:
+  /// **'采用建议'**
+  String get multiGoalUseSuggestion;
+
+  /// No description provided for @multiGoalManualAdjust.
+  ///
+  /// In zh, this message translates to:
+  /// **'手动调整'**
+  String get multiGoalManualAdjust;
+
+  /// No description provided for @multiGoalPhaseInProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'进行中'**
+  String get multiGoalPhaseInProgress;
+
+  /// No description provided for @multiGoalWeeklyConflicts.
+  ///
+  /// In zh, this message translates to:
+  /// **'本周冲突 {count}'**
+  String multiGoalWeeklyConflicts(int count);
+
+  /// No description provided for @multiGoalNoDeadline.
+  ///
+  /// In zh, this message translates to:
+  /// **'无截止日'**
+  String get multiGoalNoDeadline;
+
+  /// No description provided for @multiGoalDueToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天截止'**
+  String get multiGoalDueToday;
+
+  /// No description provided for @multiGoalOverdueDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'已逾期 {days} 天'**
+  String multiGoalOverdueDays(int days);
+
+  /// No description provided for @multiGoalDaysLeft.
+  ///
+  /// In zh, this message translates to:
+  /// **'剩余 {days} 天'**
+  String multiGoalDaysLeft(int days);
+
+  /// No description provided for @taskPreviewToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天'**
+  String get taskPreviewToday;
+
+  /// No description provided for @taskPreviewTaskCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count, plural, other{{count} 个任务}}'**
+  String taskPreviewTaskCount(int count);
+
+  /// No description provided for @taskPreviewNoTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天没有任务'**
+  String get taskPreviewNoTasks;
+
+  /// No description provided for @taskPreviewEnjoyFreeTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'享受你的自由时间'**
+  String get taskPreviewEnjoyFreeTime;
+
+  /// No description provided for @taskPreviewViewAllTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看全部 {count} 个任务'**
+  String taskPreviewViewAllTasks(int count);
+
+  /// No description provided for @taskPreviewCheckedLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'已打卡'**
+  String get taskPreviewCheckedLabel;
+
+  /// No description provided for @taskPreviewCheckedDoneSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'这一天有实际完成记录。'**
+  String get taskPreviewCheckedDoneSubtitle;
+
+  /// No description provided for @taskPreviewCheckedFromSource.
+  ///
+  /// In zh, this message translates to:
+  /// **'来源：{source}'**
+  String taskPreviewCheckedFromSource(String source);
+
+  /// No description provided for @taskPreviewProtectedLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'保护中'**
+  String get taskPreviewProtectedLabel;
+
+  /// No description provided for @taskPreviewProtectedSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'这一天使用了连击保护，没有直接断签。'**
+  String get taskPreviewProtectedSubtitle;
+
+  /// No description provided for @taskPreviewMissedLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'未打卡'**
+  String get taskPreviewMissedLabel;
+
+  /// No description provided for @taskPreviewMissedSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'这一天没有形成有效打卡记录。'**
+  String get taskPreviewMissedSubtitle;
 }
 
 class _AppLocalizationsDelegate

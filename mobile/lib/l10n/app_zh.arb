@@ -18252,5 +18252,127 @@
         }
     },
     "hybridJourneyLoadFailed": "暂时连不上，稍后再试",
-    "hybridJourneyRetry": "重试"
+    "hybridJourneyRetry": "重试",
+    "notificationListEmptyTitle": "暂无新通知",
+    "notificationListEmptySubtitle": "学习提醒和周报需要您关注时，会显示在这里。",
+    "notificationMarkAsReadFailed": "标记已读失败，请重试",
+    "sprintCardTitle": "冲刺",
+    "sprintCardDayUnit": "天",
+    "sprintCardPercentDone": "% 完成",
+    "sprintCardEmptyTitle": "无冲刺计划",
+    "sprintCardEmptyAction": "点击创建",
+    "todayGrowthTaskProgress": "今天 {done}/{total} 项任务",
+    "@todayGrowthTaskProgress": {
+        "placeholders": {
+            "done": {
+                "type": "int"
+            },
+            "total": {
+                "type": "int"
+            }
+        }
+    },
+    "todayGrowthPhaseDefault": "进行中",
+    "todayGrowthPlanHealth": "计划健康度 {dots}",
+    "@todayGrowthPlanHealth": {
+        "placeholders": {
+            "dots": {
+                "type": "String"
+            }
+        }
+    },
+    "todayGrowthStreakDays": "连续学习 {days} 天 🔥",
+    "@todayGrowthStreakDays": {
+        "placeholders": {
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "todayGrowthCreateFirstPlan": "开始制定你的第一个计划",
+    "todayGrowthCreateFirstPlanSubtitle": "我会把目标拆成今天就能迈出的一小步。",
+    "todayGrowthDoneMessage": "今天收束得很漂亮，可以带着成就感收尾。",
+    "todayGrowthKeepRhythmMessage": "保持这个节奏，下一步已经很清楚。",
+    "todayGrowthPickLightTaskMessage": "今天的第一件事是选一个轻量任务。",
+    "todayGrowthFirstTaskMessage": "今天的第一件事是{title}。",
+    "@todayGrowthFirstTaskMessage": {
+        "placeholders": {
+            "title": {
+                "type": "String"
+            }
+        }
+    },
+    "multiGoalDashboardTitle": "多目标仪表盘",
+    "multiGoalActiveGoalCount": "{count} 个活跃目标",
+    "@multiGoalActiveGoalCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "multiGoalExpandCollapse": "展开或收起卡片",
+    "multiGoalSuggestedFirst": "今天我建议先做",
+    "multiGoalUseSuggestion": "采用建议",
+    "multiGoalManualAdjust": "手动调整",
+    "multiGoalPhaseInProgress": "进行中",
+    "multiGoalWeeklyConflicts": "本周冲突 {count}",
+    "@multiGoalWeeklyConflicts": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "multiGoalNoDeadline": "无截止日",
+    "multiGoalDueToday": "今天截止",
+    "multiGoalOverdueDays": "已逾期 {days} 天",
+    "@multiGoalOverdueDays": {
+        "placeholders": {
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "multiGoalDaysLeft": "剩余 {days} 天",
+    "@multiGoalDaysLeft": {
+        "placeholders": {
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "taskPreviewToday": "今天",
+    "taskPreviewTaskCount": "{count, plural, other{{count} 个任务}}",
+    "@taskPreviewTaskCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "taskPreviewNoTasks": "今天没有任务",
+    "taskPreviewEnjoyFreeTime": "享受你的自由时间",
+    "taskPreviewViewAllTasks": "查看全部 {count} 个任务",
+    "@taskPreviewViewAllTasks": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "taskPreviewCheckedLabel": "已打卡",
+    "taskPreviewCheckedDoneSubtitle": "这一天有实际完成记录。",
+    "taskPreviewCheckedFromSource": "来源：{source}",
+    "@taskPreviewCheckedFromSource": {
+        "placeholders": {
+            "source": {
+                "type": "String"
+            }
+        }
+    },
+    "taskPreviewProtectedLabel": "保护中",
+    "taskPreviewProtectedSubtitle": "这一天使用了连击保护，没有直接断签。",
+    "taskPreviewMissedLabel": "未打卡",
+    "taskPreviewMissedSubtitle": "这一天没有形成有效打卡记录。"
 }

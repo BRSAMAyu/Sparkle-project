@@ -82,7 +82,7 @@ class TaskPreviewPanel extends ConsumerWidget {
                 children: [
                   Text(
                     isToday
-                        ? (zh ? '今天' : 'Today')
+                        ? context.l10n.taskPreviewToday
                         : (zh
                             ? DateFormat('M月d日', 'zh_CN').format(selectedDate)
                             : DateFormat('MMM d', 'en_US').format(selectedDate)),
@@ -104,7 +104,7 @@ class TaskPreviewPanel extends ConsumerWidget {
               ),
               const SizedBox(height: DS.spacing4),
               Text(
-                zh ? '$taskCount 个任务' : '$taskCount task${taskCount == 1 ? '' : 's'}',
+                context.l10n.taskPreviewTaskCount(taskCount),
                 style: context.typo.labelSmall.copyWith(
                   color: DS.textSecondary,
                 ),
@@ -175,9 +175,7 @@ class TaskPreviewPanel extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
-    return Container(
+  Widget _buildEmptyState(BuildContext context) => Container(
       padding: const EdgeInsets.symmetric(vertical: DS.spacing24),
       child: Column(
         children: [
@@ -188,22 +186,20 @@ class TaskPreviewPanel extends ConsumerWidget {
           ),
           const SizedBox(height: DS.spacing12),
           Text(
-            zh ? '今天没有任务' : 'No tasks today',
+            context.l10n.taskPreviewNoTasks,
             style: context.typo.bodyMedium.copyWith(
               color: DS.textSecondary,
             ),
           ),
           const SizedBox(height: DS.spacing4),
           Text(
-            zh ? '享受你的自由时间' : 'Enjoy your free time',
+            context.l10n.taskPreviewEnjoyFreeTime,
             style: context.typo.labelSmall.copyWith(
               color: DS.textTertiary,
             ),
           ),
         ],
-      ),
-    );
-  }
+      ),);
 
   Widget _buildLoadingState() => SizedBox(
       // U-01 Step 3：裸 CPI 迁 owner（36px/strokeWidth 4 等价）。
@@ -228,37 +224,35 @@ class TaskPreviewPanel extends ConsumerWidget {
       ),
     );
 
-  Widget _buildViewAllLink(BuildContext context, DateTime date, int totalCount) {
-    final zh = I18nService.instance.isChinese;
-    return InkWell(
-      onTap: () => context.push('/calendar?date=${date.toIso8601String()}'),
-      borderRadius: DS.borderRadius8,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing12,
-          vertical: DS.spacing8,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              zh ? '查看全部 $totalCount 个任务' : 'View all $totalCount task${totalCount == 1 ? '' : 's'}',
-              style: context.typo.labelSmall.copyWith(
-                color: DS.brandPrimaryConst,
-                fontWeight: DS.fontWeightMedium,
+  Widget _buildViewAllLink(BuildContext context, DateTime date, int totalCount) =>
+      InkWell(
+        onTap: () => context.push('/calendar?date=${date.toIso8601String()}'),
+        borderRadius: DS.borderRadius8,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing12,
+            vertical: DS.spacing8,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                context.l10n.taskPreviewViewAllTasks(totalCount),
+                style: context.typo.labelSmall.copyWith(
+                  color: DS.brandPrimaryConst,
+                  fontWeight: DS.fontWeightMedium,
+                ),
               ),
-            ),
-            const SizedBox(width: DS.spacing4),
-            Icon(
-              Icons.arrow_forward_rounded,
-              size: DS.iconSizeXs,
-              color: DS.brandPrimaryConst,
-            ),
-          ],
+              const SizedBox(width: DS.spacing4),
+              Icon(
+                Icons.arrow_forward_rounded,
+                size: DS.iconSizeXs,
+                color: DS.brandPrimaryConst,
+              ),
+            ],
+          ),
         ),
-      ),
-    );
-  }
+      );
 
   String _getWeekdayName(DateTime date) {
     final zh = I18nService.instance.isChinese;
@@ -276,27 +270,27 @@ class _StreakStatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
+    final l10n = context.l10n;
     final (label, icon, color, subtitle) = switch (record.status) {
       StreakDayStatus.active => (
-          zh ? '已打卡' : 'Checked',
+          l10n.taskPreviewCheckedLabel,
           Icons.local_fire_department_rounded,
           DS.semanticSuccess,
           record.sourceEvent == null
-              ? (zh ? '这一天有实际完成记录。' : 'Completed on this day.')
-              : (zh ? '来源：${record.sourceEvent}' : 'From: ${record.sourceEvent}'),
+              ? l10n.taskPreviewCheckedDoneSubtitle
+              : l10n.taskPreviewCheckedFromSource(record.sourceEvent!),
         ),
       StreakDayStatus.frozen => (
-          zh ? '保护中' : 'Protected',
+          l10n.taskPreviewProtectedLabel,
           Icons.ac_unit_rounded,
           DS.semanticWarning,
-          zh ? '这一天使用了连击保护，没有直接断签。' : 'Streak protection used, no streak break.',
+          l10n.taskPreviewProtectedSubtitle,
         ),
       StreakDayStatus.missed => (
-          zh ? '未打卡' : 'Missed',
+          l10n.taskPreviewMissedLabel,
           Icons.event_busy_rounded,
           DS.textSecondary,
-          zh ? '这一天没有形成有效打卡记录。' : 'No valid check-in recorded on this day.',
+          l10n.taskPreviewMissedSubtitle,
         ),
     };
 

@@ -2345,6 +2345,22 @@ def recompute_persdyn_attractors(self):
     from app.services.persdyn_attractor_service import PersDynAttractorService
 
     async def _recompute():
+        # V3-FIX-110：与 predictive 读取面同门——stage27 attractor 关闭
+        # （is_feature_enabled=off）时不做全量重算与落库；shadow/live 放行
+        # （与读取面 is_feature_enabled 的 off/shadow/live 三态语义一致）。
+        from app.services.aurora_stage27_foresight_kill_switch_service import (
+            AuroraStage27ForesightKillSwitchService,
+        )
+
+        switch = AuroraStage27ForesightKillSwitchService()
+        if not await switch.is_feature_enabled("attractor"):
+            attractor_mode = await switch.get_feature_mode("attractor")
+            logger.info(
+                "recompute_persdyn_attractors skipped: stage27 attractor mode={}",
+                attractor_mode,
+            )
+            return {"status": "skipped", "mode": attractor_mode}
+
         async with AsyncSessionLocal() as session:
             service = PersDynAttractorService(session)
             updated = await service.recompute_all_users()
@@ -3252,7 +3268,19 @@ def community_cohort_signal_task(self, user_id: str, knowledge_node_id: str):
         import json
 
         from app.core.cache import cache_service
+        from app.services.aurora_stage33_kill_switch_service import AuroraStage33KillSwitchService
         from app.signals.spine_orchestrator import get_spine_orchestrator
+
+        # V3-FIX-109：与 community_signal_bridge 同语义——社群数据进个人系统
+        # 必须 stage33 community mode=live（off/shadow 都跳过）；此处为 celery
+        # 独立派发路径的防御层（scan 入口另有省扫描的早退门）。
+        community_mode = await AuroraStage33KillSwitchService().get_feature_mode("community")
+        if community_mode != "live":
+            logger.info(
+                "community_cohort_signal_task skipped: stage33 community mode={}",
+                community_mode,
+            )
+            return {"status": "skipped", "mode": community_mode}
 
         redis = cache_service.redis
         spine = get_spine_orchestrator(redis_client=redis)
@@ -3291,6 +3319,19 @@ def scan_community_cohort_signals(self, limit: int = 200):
 
     async def _run():
         from app.core.cache import cache_service
+        from app.services.aurora_stage33_kill_switch_service import AuroraStage33KillSwitchService
+
+        # V3-FIX-109：beat 定时扫描面挂 stage33 community 门——开关未开
+        # （off/shadow）直接早退，不做全量 spine:last_seen 扫描；与
+        # run_push_policy_scheduler 的省扫描先例同构。
+        community_mode = await AuroraStage33KillSwitchService().get_feature_mode("community")
+        if community_mode != "live":
+            logger.info(
+                "scan_community_cohort_signals skipped: stage33 community mode={}",
+                community_mode,
+            )
+            return {"dispatched": 0, "mode": community_mode, "skipped": True}
+
         redis = cache_service.redis
         # Find users with active Spine state (recently interacted)
         cursor, keys = await redis.scan(match="spine:last_seen:*", count=limit)

@@ -8,7 +8,6 @@ import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/goal/presentation/widgets/goal_conflict_dialog.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
@@ -65,7 +64,6 @@ class _MultiGoalDashboardContentState
     // F-9：goal 行进度 = 任务账本口径（与 cockpit chip / 任务板头部同数）。
     final ledgerProgressByPlan = ref.watch(ledgerProgressByPlanProvider);
 
-    final zh = I18nService.instance.isChinese;
     final suggestion = overview.suggestion;
     final selectedGoalId = overview.selectedGoalId;
 
@@ -87,12 +85,10 @@ class _MultiGoalDashboardContentState
                 accentColor: DS.info,
                 title: overview.goals.length == 1
                     ? context.l10n.dashboardActivePlan
-                    : (zh ? '多目标仪表盘' : 'Multi-goal Dashboard'),
+                    : context.l10n.multiGoalDashboardTitle,
                 summary: overview.goals.length == 1
                     ? context.l10n.dashboardBriefingSummary
-                    : (zh
-                        ? '${overview.goals.length} 个活跃目标'
-                        : '${overview.goals.length} active goals'),
+                    : context.l10n.multiGoalActiveGoalCount(overview.goals.length),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -100,9 +96,7 @@ class _MultiGoalDashboardContentState
                     const SizedBox(width: DS.spacing4),
                     Semantics(
                       button: true,
-                      label: I18nService.instance.isChinese
-                          ? '展开或收起卡片'
-                          : 'Expand or collapse card',
+                      label: context.l10n.multiGoalExpandCollapse,
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
                         onTap: () {
@@ -206,9 +200,7 @@ class _SuggestionCard extends ConsumerWidget {
   final VoidCallback? onResolveConflict;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final zh = I18nService.instance.isChinese;
-    return Container(
+  Widget build(BuildContext context, WidgetRef ref) => Container(
       width: double.infinity,
       padding: const EdgeInsets.all(DS.spacing12),
       decoration: BoxDecoration(
@@ -229,7 +221,7 @@ class _SuggestionCard extends ConsumerWidget {
               const SizedBox(width: DS.spacing8),
               Expanded(
                 child: Text(
-                  zh ? '今天我建议先做' : 'Suggested first today',
+                  context.l10n.multiGoalSuggestedFirst,
                   style: context.typo.labelLarge.copyWith(
                     color: DS.textPrimary,
                     fontWeight: DS.fontWeightBold,
@@ -253,7 +245,7 @@ class _SuggestionCard extends ConsumerWidget {
             Row(
               children: [
                 SparkleButton.ghost(
-                  label: zh ? '采用建议' : 'Use suggestion',
+                  label: context.l10n.multiGoalUseSuggestion,
                   icon: const Icon(Icons.check_rounded),
                   onPressed: () {
                     unawaited(
@@ -267,7 +259,7 @@ class _SuggestionCard extends ConsumerWidget {
                 if (onResolveConflict != null) ...[
                   const SizedBox(width: DS.spacing8),
                   SparkleButton.ghost(
-                    label: zh ? '手动调整' : 'Adjust',
+                    label: context.l10n.multiGoalManualAdjust,
                     icon: const Icon(Icons.tune_rounded),
                     onPressed: onResolveConflict!,
                   ),
@@ -276,9 +268,7 @@ class _SuggestionCard extends ConsumerWidget {
             ),
           ],
         ],
-      ),
-    );
-  }
+      ),);
 }
 
 Future<void> _showConflictResolution(
@@ -324,7 +314,6 @@ class _GoalRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
     final accent =
         isSelected ? DS.brandPrimary : _healthColor(goal.healthScore);
 
@@ -391,17 +380,15 @@ class _GoalRow extends StatelessWidget {
                     ),
                   _MetaPill(
                     icon: Icons.event_rounded,
-                    label: _deadlineLabel(goal.deadlineDays, zh),
+                    label: _deadlineLabel(context, goal.deadlineDays),
                   ),
                   _MetaPill(
                     icon: Icons.timeline_rounded,
-                    label: goal.currentPhase ?? (zh ? '进行中' : 'In progress'),
+                    label: goal.currentPhase ?? context.l10n.multiGoalPhaseInProgress,
                   ),
                   _MetaPill(
                     icon: Icons.warning_amber_rounded,
-                    label: zh
-                        ? '本周冲突 ${goal.weeklyConflictCount}'
-                        : '${goal.weeklyConflictCount} conflicts',
+                    label: context.l10n.multiGoalWeeklyConflicts(goal.weeklyConflictCount),
                   ),
                   if (goal.timeFraction != null)
                     _MetaPill(
@@ -507,9 +494,10 @@ Color _healthColor(double score) {
   return DS.error;
 }
 
-String _deadlineLabel(int? days, bool zh) {
-  if (days == null) return zh ? '无截止日' : 'No deadline';
-  if (days == 0) return zh ? '今天截止' : 'Due today';
-  if (days < 0) return zh ? '已逾期 ${days.abs()} 天' : '${days.abs()}d overdue';
-  return zh ? '剩余 $days 天' : '${days}d left';
+String _deadlineLabel(BuildContext context, int? days) {
+  final l10n = context.l10n;
+  if (days == null) return l10n.multiGoalNoDeadline;
+  if (days == 0) return l10n.multiGoalDueToday;
+  if (days < 0) return l10n.multiGoalOverdueDays(days.abs());
+  return l10n.multiGoalDaysLeft(days);
 }

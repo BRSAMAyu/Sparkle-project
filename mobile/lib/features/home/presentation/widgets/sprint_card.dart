@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 
 /// SprintCard - Sprint Progress Card for v2.3 dashboard
@@ -42,7 +42,7 @@ class SprintCard extends ConsumerWidget {
     final progress = sprint.progress.clamp(0.0, 1.0);
     final daysLeft = sprint.daysLeft;
     final isUrgent = daysLeft <= 3;
-    final zh = I18nService.instance.isChinese;
+    final l10n = context.l10n;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -50,7 +50,7 @@ class SprintCard extends ConsumerWidget {
       children: [
         // Header
         Text(
-          zh ? '冲刺' : 'Sprint',
+          l10n.sprintCardTitle,
           style: context.typo.labelSmall.copyWith(
             color: DS.textSecondary,
             fontWeight: DS.fontWeightMedium,
@@ -105,7 +105,7 @@ class SprintCard extends ConsumerWidget {
                           ),
                         ),
                         Text(
-                          zh ? '天' : 'd',
+                          l10n.sprintCardDayUnit,
                           style: context.typo.labelSmall.copyWith(
                             fontSize: ringSize * 0.17,
                             color: DS.textSecondary,
@@ -136,7 +136,7 @@ class SprintCard extends ConsumerWidget {
         SparkleStaggerItem(
           index: 1,
           child: Text(
-            '${(progress * 100).toInt()}${zh ? '% 完成' : '% done'}',
+            '${(progress * 100).toInt()}${l10n.sprintCardPercentDone}',
             style: context.typo.labelSmall.copyWith(
               fontSize: 10,
               color: DS.textSecondary,
@@ -148,7 +148,7 @@ class SprintCard extends ConsumerWidget {
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
+    final l10n = context.l10n;
     return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -167,7 +167,7 @@ class SprintCard extends ConsumerWidget {
           ),
           const Expanded(child: SizedBox()),
           Text(
-            zh ? '无冲刺计划' : 'No Sprint',
+            l10n.sprintCardEmptyTitle,
             style: context.typo.labelSmall.copyWith(
               fontSize: 13,
               fontWeight: DS.fontWeightSemibold,
@@ -176,7 +176,7 @@ class SprintCard extends ConsumerWidget {
           ),
           const SizedBox(height: DS.xs),
           Text(
-            zh ? '点击创建' : 'Tap to create',
+            l10n.sprintCardEmptyAction,
             style: TextStyle(
               fontSize: 11,
               color: DS.textSecondary,
