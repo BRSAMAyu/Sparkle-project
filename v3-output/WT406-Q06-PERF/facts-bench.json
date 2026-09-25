@@ -1,0 +1,417 @@
+{
+ "generated_at": "2026-09-26T03:59:58+08:00",
+ "reps": 2,
+ "n_total": 400,
+ "by_layer": {
+  "L0": {
+   "n": 100,
+   "ok": 100,
+   "err": 0,
+   "fallback": 0,
+   "quality_pass": 70,
+   "ttft_p50": 0.90925,
+   "ttft_p95": 1.8794749999999982,
+   "content_p50": 0.90925,
+   "content_p95": 1.8794749999999982,
+   "total_p50": 9.03405,
+   "total_p95": 22.967059999999993,
+   "fb_p50": 0.024800000000000003,
+   "fb_p95": 0.043655,
+   "gap_p95": 10.09543,
+   "ptok_sum": 138396,
+   "ctok_sum": 6963,
+   "cost_sum": 0.0053036450349650335,
+   "cost_mean": 5.303645034965034e-05,
+   "_reportable": true
+  },
+  "L1": {
+   "n": 100,
+   "ok": 100,
+   "err": 0,
+   "fallback": 3,
+   "quality_pass": 71,
+   "ttft_p50": 1.5775,
+   "ttft_p95": 2.25352,
+   "content_p50": 1.5775,
+   "content_p95": 2.25352,
+   "total_p50": 22.7669,
+   "total_p95": 35.01378,
+   "fb_p50": 0.0267,
+   "fb_p95": 0.045945,
+   "gap_p95": 10.09864,
+   "ptok_sum": 304899,
+   "ctok_sum": 38073,
+   "cost_sum": 0.01478117160839161,
+   "cost_mean": 0.0001478117160839161,
+   "_reportable": true
+  },
+  "L2": {
+   "n": 100,
+   "ok": 98,
+   "err": 2,
+   "fallback": 20,
+   "quality_pass": 72,
+   "ttft_p50": 1.7989000000000002,
+   "ttft_p95": 9.356550000000007,
+   "content_p50": 1.7989000000000002,
+   "content_p95": 9.356550000000007,
+   "total_p50": 23.97335,
+   "total_p95": 48.246694999999995,
+   "fb_p50": 0.0281,
+   "fb_p95": 0.040335,
+   "gap_p95": 10.0996,
+   "ptok_sum": 281466,
+   "ctok_sum": 54724,
+   "cost_sum": 0.09340595034965038,
+   "cost_mean": 0.0009340595034965038,
+   "_reportable": true
+  },
+  "L3": {
+   "n": 100,
+   "ok": 95,
+   "err": 5,
+   "fallback": 20,
+   "quality_pass": 38,
+   "ttft_p50": 7.197749999999999,
+   "ttft_p95": 141.40175,
+   "content_p50": 7.197749999999999,
+   "content_p95": 141.40175,
+   "total_p50": 33.6117,
+   "total_p95": 215.03005499999998,
+   "fb_p50": 0.03455,
+   "fb_p95": 0.058199999999999995,
+   "gap_p95": 10.098714999999999,
+   "ptok_sum": 372014,
+   "ctok_sum": 106887,
+   "cost_sum": 0.6062681609790207,
+   "cost_mean": 0.006062681609790207,
+   "_reportable": true
+  }
+ },
+ "by_lane_layer": {
+  "L0-free": {
+   "n": 100,
+   "ok": 100,
+   "err": 0,
+   "fallback": 0,
+   "quality_pass": 70,
+   "ttft_p50": 0.90925,
+   "ttft_p95": 1.8794749999999982,
+   "content_p50": 0.90925,
+   "content_p95": 1.8794749999999982,
+   "total_p50": 9.03405,
+   "total_p95": 22.967059999999993,
+   "fb_p50": 0.024800000000000003,
+   "fb_p95": 0.043655,
+   "gap_p95": 10.09543,
+   "ptok_sum": 138396,
+   "ctok_sum": 6963,
+   "cost_sum": 0.0053036450349650335,
+   "cost_mean": 5.303645034965034e-05,
+   "_reportable": true
+  },
+  "L0-pro": {
+   "n": 0,
+   "ok": 0,
+   "err": 0,
+   "fallback": 0,
+   "quality_pass": 0,
+   "ttft_p50": null,
+   "ttft_p95": null,
+   "content_p50": null,
+   "content_p95": null,
+   "total_p50": null,
+   "total_p95": null,
+   "fb_p50": null,
+   "fb_p95": null,
+   "gap_p95": null,
+   "ptok_sum": 0,
+   "ctok_sum": 0,
+   "cost_sum": 0,
+   "cost_mean": null,
+   "_reportable": false
+  },
+  "L1-free": {
+   "n": 100,
+   "ok": 100,
+   "err": 0,
+   "fallback": 3,
+   "quality_pass": 71,
+   "ttft_p50": 1.5775,
+   "ttft_p95": 2.25352,
+   "content_p50": 1.5775,
+   "content_p95": 2.25352,
+   "total_p50": 22.7669,
+   "total_p95": 35.01378,
+   "fb_p50": 0.0267,
+   "fb_p95": 0.045945,
+   "gap_p95": 10.09864,
+   "ptok_sum": 304899,
+   "ctok_sum": 38073,
+   "cost_sum": 0.01478117160839161,
+   "cost_mean": 0.0001478117160839161,
+   "_reportable": true
+  },
+  "L1-pro": {
+   "n": 0,
+   "ok": 0,
+   "err": 0,
+   "fallback": 0,
+   "quality_pass": 0,
+   "ttft_p50": null,
+   "ttft_p95": null,
+   "content_p50": null,
+   "content_p95": null,
+   "total_p50": null,
+   "total_p95": null,
+   "fb_p50": null,
+   "fb_p95": null,
+   "gap_p95": null,
+   "ptok_sum": 0,
+   "ctok_sum": 0,
+   "cost_sum": 0,
+   "cost_mean": null,
+   "_reportable": false
+  },
+  "L2-free": {
+   "n": 38,
+   "ok": 36,
+   "err": 2,
+   "fallback": 11,
+   "quality_pass": 28,
+   "ttft_p50": null,
+   "ttft_p95": null,
+   "content_p50": null,
+   "content_p95": null,
+   "total_p50": null,
+   "total_p95": null,
+   "fb_p50": null,
+   "fb_p95": null,
+   "gap_p95": null,
+   "ptok_sum": 105725,
+   "ctok_sum": 18470,
+   "cost_sum": 0.005715712587412589,
+   "cost_mean": 0.00015041348914243655,
+   "_reportable": false
+  },
+  "L2-pro": {
+   "n": 62,
+   "ok": 62,
+   "err": 0,
+   "fallback": 9,
+   "quality_pass": 44,
+   "ttft_p50": null,
+   "ttft_p95": null,
+   "content_p50": null,
+   "content_p95": null,
+   "total_p50": null,
+   "total_p95": null,
+   "fb_p50": null,
+   "fb_p95": null,
+   "gap_p95": null,
+   "ptok_sum": 175741,
+   "ctok_sum": 36254,
+   "cost_sum": 0.08769023776223776,
+   "cost_mean": 0.00141435867358448,
+   "_reportable": false
+  },
+  "L3-free": {
+   "n": 52,
+   "ok": 52,
+   "err": 0,
+   "fallback": 13,
+   "quality_pass": 17,
+   "ttft_p50": null,
+   "ttft_p95": null,
+   "content_p50": null,
+   "content_p95": null,
+   "total_p50": null,
+   "total_p95": null,
+   "fb_p50": null,
+   "fb_p95": null,
+   "gap_p95": null,
+   "ptok_sum": 239795,
+   "ctok_sum": 22447,
+   "cost_sum": 0.010409979160839154,
+   "cost_mean": 0.0002001919069392145,
+   "_reportable": false
+  },
+  "L3-pro": {
+   "n": 48,
+   "ok": 43,
+   "err": 5,
+   "fallback": 7,
+   "quality_pass": 21,
+   "ttft_p50": null,
+   "ttft_p95": null,
+   "content_p50": null,
+   "content_p95": null,
+   "total_p50": null,
+   "total_p95": null,
+   "fb_p50": null,
+   "fb_p95": null,
+   "gap_p95": null,
+   "ptok_sum": 132219,
+   "ctok_sum": 84440,
+   "cost_sum": 0.5958581818181818,
+   "cost_mean": 0.012413712121212122,
+   "_reportable": false
+  }
+ },
+ "tier_ledger": {
+  "dashscope_fast": {
+   "n": 263,
+   "tiers": [
+    "fast"
+   ],
+   "ptok": 788513,
+   "ctok": 83665,
+   "cost": 0.03621050839160838,
+   "ttft_p50": 1.4739
+  },
+  "default": {
+   "n": 39,
+   "tiers": [
+    "?"
+   ],
+   "ptok": 302,
+   "ctok": 2288,
+   "cost": 0,
+   "ttft_p50": 104.86789999999999
+  },
+  "dashscope_standard_thinking": {
+   "n": 2,
+   "tiers": [
+    "standard"
+   ],
+   "ptok": 4440,
+   "ctok": 1736,
+   "cost": 0.0011523356643356642,
+   "ttft_p50": 1.4428
+  },
+  "dashscope_chat": {
+   "n": 67,
+   "tiers": [
+    "plus"
+   ],
+   "ptok": 239590,
+   "ctok": 46348,
+   "cost": 0.11887608391608392,
+   "ttft_p50": 2.5003
+  },
+  "qwen3_8_max": {
+   "n": 25,
+   "tiers": [
+    "max"
+   ],
+   "ptok": 63930,
+   "ctok": 72610,
+   "cost": 0.5635199999999999,
+   "ttft_p50": 50.9607
+  },
+  "None": {
+   "n": 4,
+   "tiers": [
+    "?"
+   ],
+   "ptok": 0,
+   "ctok": 0,
+   "cost": 0,
+   "ttft_p50": null
+  }
+ },
+ "slo": [
+  {
+   "slo": "L0 no-model 路径 p95<=500ms（口径：L0 TTFT p95；无 no-model 直答时为全生成链）",
+   "measured": "1879ms",
+   "target": "500ms",
+   "n": 100,
+   "verdict": "FAIL"
+  },
+  {
+   "slo": "L1 first meaningful feedback p50<=2.5s",
+   "measured": "1.58s",
+   "target": "2.5s",
+   "n": 100,
+   "verdict": "PASS"
+  },
+  {
+   "slo": "L1 p95<=5s",
+   "measured": "2.25s",
+   "target": "5s",
+   "n": 100,
+   "verdict": "PASS"
+  },
+  {
+   "slo": "L2 500ms 内阶段反馈（首事件 p95, free lane）",
+   "measured": null,
+   "target": "500ms",
+   "n": 38,
+   "verdict": "NOT_REPORTABLE"
+  },
+  {
+   "slo": "L2 500ms 内阶段反馈（首事件 p95, 全 lane 参考，语料 lane 配比非 1:1）",
+   "measured": "40ms",
+   "target": "500ms",
+   "n": 100,
+   "verdict": "PASS"
+  },
+  {
+   "slo": "L2 最终 p95<=15s",
+   "measured": "48.2s",
+   "target": "15s",
+   "n": 100,
+   "verdict": "FAIL"
+  },
+  {
+   "slo": "L3 Agent Run 创建/ACK p95<=1s（首事件口径）",
+   "measured": "0.06s",
+   "target": "1s",
+   "n": 100,
+   "verdict": "PASS"
+  }
+ ],
+ "metered_models": [
+  "dashscope_chat",
+  "dashscope_fast",
+  "dashscope_standard_thinking",
+  "qwen3_8_max"
+ ],
+ "errors": [
+  {
+   "code": "_MultiThreadedRendezvous",
+   "message": "<_MultiThreadedRendezvous of RPC that terminated with:\n\tstatus = StatusCode.DEADLINE_EXCEEDED\n\tdetails = \"Deadline Exceeded\"\n\tdebug_error_string = \"UNKNOWN:Error received from peer  {grpc_message:\"Deadline Exceeded\", grpc_status:4}\"\n>",
+   "at_s": 240.014
+  },
+  {
+   "code": "_MultiThreadedRendezvous",
+   "message": "<_MultiThreadedRendezvous of RPC that terminated with:\n\tstatus = StatusCode.DEADLINE_EXCEEDED\n\tdetails = \"Deadline Exceeded\"\n\tdebug_error_string = \"UNKNOWN:Error received from peer ipv4:127.0.0.1:50061 {grpc_message:\"Deadline Exceeded\", grpc_status:4}\"\n>",
+   "at_s": 240.004
+  },
+  {
+   "code": "_MultiThreadedRendezvous",
+   "message": "<_MultiThreadedRendezvous of RPC that terminated with:\n\tstatus = StatusCode.DEADLINE_EXCEEDED\n\tdetails = \"Deadline Exceeded\"\n\tdebug_error_string = \"UNKNOWN:Error received from peer  {grpc_message:\"Deadline Exceeded\", grpc_status:4}\"\n>",
+   "at_s": 240.009
+  },
+  {
+   "error_code": "2",
+   "message": "Message contains potentially malicious content",
+   "retryable": false
+  },
+  {
+   "error_code": "2",
+   "message": "Message contains potentially malicious content",
+   "retryable": false
+  },
+  {
+   "error_code": "2",
+   "message": "Message contains potentially malicious content",
+   "retryable": false
+  },
+  {
+   "error_code": "2",
+   "message": "Message contains potentially malicious content",
+   "retryable": false
+  }
+ ]
+}

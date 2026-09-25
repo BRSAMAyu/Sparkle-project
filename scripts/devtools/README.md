@@ -22,6 +22,11 @@
 | `p15_outcome_absorption_probe.py` | P1-5：星图 mastery 生长链活栈探针（真实库重构 outcome.recorded payload 过修复版吸收器，before/after mastery + 幂等复跑；用法见脚本 docstring；报告见 `v3-output/P1-5-MASTERY/REPORT.md`） |
 | `audit_community_readmodel.py` | S-01 段一：Community 读模真相审计（每投影一行：来源/新鲜度/一致性风险/live 可测性 + grep 锚点复核；`--live` 追加只读探测，失败如实记录不合成假 realtime；默认零 PG 连接；报告见 `v3-output/WT361-S01-READMODEL/REPORT.md`） |
 | `bench_ai_stack_l0_l3.py` | E-08：AI Stack 集成 Bench（L0-L3 四层 × 104 真实 query 经 gRPC StreamChat 真模型真路由；TTFT/total/token/cost/context/stage/fallback/quality 全字段 → `v3-output/WT372-E08-BENCH/`；`run`/`summarize` 子命令可断点续跑；DB 归因经 `docker exec sparkle_db psql`；需常驻引擎 :50051/:8000 与主仓 backend/.venv） |
+| `q06_perf_bench.py` | Q-06/wt406：分层性能/成本终验（每层 50 distinct×2 reps=100 真样本，pro 车道走 `user_profile.is_pro=true` 网关忠实形态；p50/p95 仅 n≥100 报告；复用 E-08 语料+价表保可比 → `v3-output/WT406-Q06-PERF/raw-bench.jsonl`；需 wt406 worktree 引擎 :50061 + redis db1 billing worker） |
+| `q06_growth_scaling.py` | Q-06/wt406：Context token × Memory 增长标度（ContextPackBuilder 真服务面，episodic 10/50/100/500/1000 行 + preference 版本链轴，幂律拟合指数判超线性；sqlite 隔离 + fakeredis，LLM judge 0 次、仅真实 embedding batch） |
+| `q06_provider_chaos.py` | Q-06/wt406：供应商波动注入（mock OpenAI 兼容上游 :9099 + `serve`/`run` 子命令；429/慢 TTFT/断流/队列压力/全断供七场景，用户可见面+引擎 fallback/熔断日志+上游尝试链三面观测 → `chaos_results.jsonl`；注入点=env base_url 重定向，产品代码零改动；配套 `q06_chaos_engine.sh` 管理 chaos 引擎 :50062） |
+| `q06_chaos_engine.sh` | wt406：chaos 引擎启停（:50062 + redis db2 + 上游三 base_url→mock 的 .env 段落式覆盖/恢复；stop 按端口精确杀，不触常驻 :50051） |
+| `q06_smoke_tier.py` | wt406：tier 分层 smoke 探针（free/deep/pro/提权封堵四形态 → :50061；非交付物，报告引用输出） |
 | `build_demo.sh` | Demo 版本自动打包（历史演示用途） |
 | `demo_start.sh` | Demo 演示启动脚本（历史演示用途） |
 | `TEST_INSTRUCTIONS.sh` | 全功能验收测试操作说明（历史） |

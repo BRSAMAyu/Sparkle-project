@@ -1,0 +1,186 @@
+{
+ "episodic_axis": [
+  {
+   "episodic_rows": 10,
+   "pack_token_usage": {
+    "preferences": 1,
+    "goals": 44,
+    "episodic": 211
+   },
+   "pack_tokens_total": 256,
+   "prompt_render_tokens": 7739,
+   "episodic_in_pack": 2,
+   "preferences_in_pack": 0,
+   "goals_in_pack": 2,
+   "build_ms_median": 7.8,
+   "build_ms_min": 7.8,
+   "build_ms_all": [
+    860.0,
+    7.8,
+    7.8
+   ]
+  },
+  {
+   "episodic_rows": 50,
+   "pack_token_usage": {
+    "preferences": 1,
+    "goals": 44,
+    "episodic": 211
+   },
+   "pack_tokens_total": 256,
+   "prompt_render_tokens": 7740,
+   "episodic_in_pack": 2,
+   "preferences_in_pack": 0,
+   "goals_in_pack": 2,
+   "build_ms_median": 7.3,
+   "build_ms_min": 7.2,
+   "build_ms_all": [
+    7.7,
+    7.2,
+    7.3
+   ]
+  },
+  {
+   "episodic_rows": 100,
+   "pack_token_usage": {
+    "preferences": 1,
+    "goals": 44,
+    "episodic": 211
+   },
+   "pack_tokens_total": 256,
+   "prompt_render_tokens": 7736,
+   "episodic_in_pack": 2,
+   "preferences_in_pack": 0,
+   "goals_in_pack": 2,
+   "build_ms_median": 7.2,
+   "build_ms_min": 7.1,
+   "build_ms_all": [
+    7.2,
+    7.2,
+    7.1
+   ]
+  },
+  {
+   "episodic_rows": 500,
+   "pack_token_usage": {
+    "preferences": 1,
+    "goals": 44,
+    "episodic": 211
+   },
+   "pack_tokens_total": 256,
+   "prompt_render_tokens": 7739,
+   "episodic_in_pack": 2,
+   "preferences_in_pack": 0,
+   "goals_in_pack": 2,
+   "build_ms_median": 7.1,
+   "build_ms_min": 7.0,
+   "build_ms_all": [
+    7.7,
+    7.1,
+    7.0
+   ]
+  },
+  {
+   "episodic_rows": 1000,
+   "pack_token_usage": {
+    "preferences": 1,
+    "goals": 44,
+    "episodic": 211
+   },
+   "pack_tokens_total": 256,
+   "prompt_render_tokens": 7734,
+   "episodic_in_pack": 2,
+   "preferences_in_pack": 0,
+   "goals_in_pack": 2,
+   "build_ms_median": 6.9,
+   "build_ms_min": 6.9,
+   "build_ms_all": [
+    7.0,
+    6.9,
+    6.9
+   ]
+  }
+ ],
+ "preference_axis": [
+  {
+   "pref_rows": 25,
+   "pref_keys": 25,
+   "versions_per_key": 1,
+   "pack_token_usage": {
+    "preferences": 13,
+    "goals": 1,
+    "episodic": 1
+   },
+   "pack_tokens_total": 15,
+   "preferences_in_pack": 1,
+   "build_ms_median": 8.0,
+   "build_ms_min": 7.5
+  },
+  {
+   "pref_rows": 50,
+   "pref_keys": 25,
+   "versions_per_key": 2,
+   "pack_token_usage": {
+    "preferences": 1,
+    "goals": 1,
+    "episodic": 1
+   },
+   "pack_tokens_total": 3,
+   "preferences_in_pack": 0,
+   "build_ms_median": 7.7,
+   "build_ms_min": 7.5
+  },
+  {
+   "pref_rows": 100,
+   "pref_keys": 25,
+   "versions_per_key": 4,
+   "pack_token_usage": {
+    "preferences": 13,
+    "goals": 1,
+    "episodic": 1
+   },
+   "pack_tokens_total": 15,
+   "preferences_in_pack": 1,
+   "build_ms_median": 8.7,
+   "build_ms_min": 8.0
+  },
+  {
+   "pref_rows": 200,
+   "pref_keys": 25,
+   "versions_per_key": 8,
+   "pack_token_usage": {
+    "preferences": 13,
+    "goals": 1,
+    "episodic": 1
+   },
+   "pack_tokens_total": 15,
+   "preferences_in_pack": 1,
+   "build_ms_median": 8.7,
+   "build_ms_min": 8.7
+  },
+  {
+   "pref_rows": 500,
+   "pref_keys": 25,
+   "versions_per_key": 20,
+   "pack_token_usage": {
+    "preferences": 1,
+    "goals": 1,
+    "episodic": 1
+   },
+   "pack_tokens_total": 3,
+   "preferences_in_pack": 0,
+   "build_ms_median": 12.5,
+   "build_ms_min": 12.1
+  }
+ ],
+ "generated_at": "2026-09-25T21:17:48.545856+00:00",
+ "embeddings_real": true,
+ "llm_judge_calls": 0,
+ "episodic_fit": {
+  "build_ms_exponent": -0.024,
+  "prompt_tokens_exponent": -0.0
+ },
+ "preference_fit": {
+  "build_ms_exponent": 0.142
+ }
+}
