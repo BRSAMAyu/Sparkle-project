@@ -15771,6 +15771,55 @@
     "goalStepReflectionQuestion": "这一步做得感觉如何？（可选，点一下就好）",
     "goalStepReflectionSaved": "已记入反思，会参与调整后续计划",
     "goalStepReflectionFailed": "没存上——稍后可在任务里补记",
+    "goalTrajectoryTitle": "从想法到成果",
+    "goalTrajectoryMilestoneReached": "已达成",
+    "goalTrajectoryMilestoneOngoing": "进行中",
+    "goalTrajectoryEvidenceCount": "{count} 条真实证据",
+    "@goalTrajectoryEvidenceCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "goalTrajectoryReflectionLine": "反思：{stuckPoint}",
+    "@goalTrajectoryReflectionLine": {
+        "placeholders": {
+            "stuckPoint": {
+                "type": "String"
+            }
+        }
+    },
+    "goalTrajectoryGalaxyLit": "证据点亮 {count} 个星图节点",
+    "@goalTrajectoryGalaxyLit": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "goalTrajectoryValueSummary": "{outcomes} 项成果 · {reflections} 条反思 · {candidates} 条成长记忆",
+    "@goalTrajectoryValueSummary": {
+        "placeholders": {
+            "outcomes": {
+                "type": "int"
+            },
+            "reflections": {
+                "type": "int"
+            },
+            "candidates": {
+                "type": "int"
+            }
+        }
+    },
+    "galaxyOutcomeEvidenceCount": "成果证据 · {count} 条",
+    "@galaxyOutcomeEvidenceCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "intentSuggestedActionLabel": "我建议先这样做",
     "intentCorrectionLabel": "或者我猜错了——",
     "intentConfidenceLabel": "置信度 {percent}%",

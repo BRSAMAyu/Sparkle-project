@@ -308,6 +308,7 @@ class GalaxyNodeModel {
     this.positionHint,
     this.outgoingEdgeIds,
     this.incomingEdgeIds,
+    this.graphEventSources = const [],
     this.positionX,
     this.positionY,
   });
@@ -395,6 +396,14 @@ class GalaxyNodeModel {
       incomingEdgeIds: (json['incoming_edge_ids'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList(),
+      // J-08：节点溯源行（与后端 NodeWithStatus.graph_event_sources 同形状）。
+      // 星图侧的「成果证据」呈现数据源——Goal 轨迹面（/journey/trajectory）
+      // 与星图面从这里读到同一 outcome id（同源断言见轨迹卡测试）。
+      graphEventSources: (json['graph_event_sources'] as List<dynamic>? ?? const <dynamic>[])
+          .whereType<Map<String, dynamic>>()
+          .map(_parseGraphEventSource)
+          .whereType<Map<String, dynamic>>()
+          .toList(growable: false),
       positionX: (json['position_x'] as num?)?.toDouble(),
       positionY: (json['position_y'] as num?)?.toDouble(),
     );
@@ -470,6 +479,19 @@ class GalaxyNodeModel {
   @JsonKey(name: 'incoming_edge_ids')
   final List<String>? incomingEdgeIds;
 
+  /// J-08：节点溯源行（后端 NodeWithStatus.graph_event_sources 同形状投影）。
+  /// 仅客户端呈现用，不回传服务端（toJson 沿用生成面，不含本字段）。
+  final List<Map<String, dynamic>> graphEventSources;
+
+  /// J-08：本节点被真实成果点亮/标记的证据 id 列表（outcome_ledger 溯源行）。
+  /// 与 Goal 页轨迹卡（/journey/trajectory galaxy 环）读同一批 outcome id
+  /// ——同一成果在 Goal 页与星图两面呈现数据同源。
+  List<String> get outcomeEvidenceIds => graphEventSources
+      .where((source) => source['source_type'] == 'outcome_ledger')
+      .map((source) => source['reference_id']?.toString() ?? '')
+      .where((id) => id.isNotEmpty)
+      .toList(growable: false);
+
   @JsonKey(name: 'position_x')
   final double? positionX;
 
@@ -484,6 +506,13 @@ class GalaxyNodeModel {
       return (json['user_status'] as Map)['study_count'];
     }
     return 0;
+  }
+
+  /// J-08：溯源行形状防御（后端条目缺键/类型漂移时诚实降级为空行剔除）。
+  static Map<String, dynamic>? _parseGraphEventSource(dynamic raw) {
+    if (raw is Map<String, dynamic>) return raw;
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    return null;
   }
 
   static DateTime? _readDateTime(Object? raw) {

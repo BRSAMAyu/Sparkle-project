@@ -33,6 +33,7 @@ class NodeDetailSheet extends ConsumerStatefulWidget {
     required this.nodeLabel,
     this.packId,
     this.initialHistory,
+    this.outcomeEvidenceIds = const [],
     this.onStartReview,
     this.onViewErrors,
     this.onAddMaterial,
@@ -44,6 +45,12 @@ class NodeDetailSheet extends ConsumerStatefulWidget {
   final String nodeLabel;
   final String? packId;
   final GalaxyNodeHistory? initialHistory;
+
+  /// J-08：本节点被真实成果点亮/标记的证据 id（outcome_ledger 溯源行）。
+  /// 与 Goal 页轨迹卡读同一批 outcome id（两面呈现数据同源）；空 = 无
+  /// 成果证据，不渲染证据行。
+  final List<String> outcomeEvidenceIds;
+
   final NodeReviewContextCallback? onStartReview;
   final NodeErrorFilterCallback? onViewErrors;
   final NodeAddMaterialCallback? onAddMaterial;
@@ -54,6 +61,7 @@ class NodeDetailSheet extends ConsumerStatefulWidget {
     required String nodeId,
     required String nodeLabel,
     String? packId,
+    List<String> outcomeEvidenceIds = const [],
     NodeAddMaterialCallback? onAddMaterial,
     NodeGenerateLearningPlanCallback? onGenerateLearningPlan,
   }) =>
@@ -68,6 +76,7 @@ class NodeDetailSheet extends ConsumerStatefulWidget {
           nodeId: nodeId,
           nodeLabel: nodeLabel,
           packId: packId,
+          outcomeEvidenceIds: outcomeEvidenceIds,
           onAddMaterial: onAddMaterial,
           onGenerateLearningPlan: onGenerateLearningPlan,
         ),
@@ -113,55 +122,75 @@ class _NodeDetailSheetState extends ConsumerState<NodeDetailSheet> {
           bottom: MediaQuery.viewInsetsOf(context).bottom + DS.spacing16,
         ),
         child: SingleChildScrollView(
-          child: initialHistory != null
-              ? _HistoryContent(
-                  history: initialHistory,
+          // J-08：节点被真实成果点亮时，在详情顶部呈现成果证据行——
+          // 与 Goal 页轨迹卡同源（同一批 outcome_ledger id）。
+          child: widget.outcomeEvidenceIds.isEmpty
+              ? _historyBody(initialHistory)
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _OutcomeEvidenceRow(
+                      label: context.l10n
+                          .galaxyOutcomeEvidenceCount(
+                            widget.outcomeEvidenceIds.length,
+                          ),
+                    ),
+                    const SizedBox(height: DS.spacing8),
+                    _historyBody(initialHistory),
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget _historyBody(GalaxyNodeHistory? initialHistory) =>
+      initialHistory != null
+          ? _HistoryContent(
+              history: initialHistory,
+              fallbackLabel: widget.nodeLabel,
+              nodeId: widget.nodeId,
+              onStartReview: _handleStartReview,
+              onViewErrors: _handleViewErrors,
+              onAddMaterial: _handleAddMaterial,
+              onGenerateLearningPlan: _handleGenerateLearningPlan,
+            )
+          : FutureBuilder<GalaxyNodeHistory>(
+              future: _historyFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  // G-03 详情触达减一跳：加载期不再整块让位给裸
+                  // spinner——节点身份（handle+标题行）同步渲染，
+                  // 异步明细（掌握度/素材/错题）随后填充，触达
+                  // 首帧即回答「我点的是哪个节点」。
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Center(child: _SheetHandle()),
+                      const SizedBox(height: DS.spacing16),
+                      _SheetHeader(label: widget.nodeLabel),
+                      const SizedBox(height: DS.spacing12),
+                      const _HistoryLoadingState(height: 120),
+                    ],
+                  );
+                }
+                if (snapshot.hasError || snapshot.data == null) {
+                  final errorMsg = snapshot.error?.toString();
+                  return _HistoryErrorState(onRetry: _retry, errorMessage: errorMsg);
+                }
+                return _HistoryContent(
+                  history: snapshot.data!,
                   fallbackLabel: widget.nodeLabel,
                   nodeId: widget.nodeId,
                   onStartReview: _handleStartReview,
                   onViewErrors: _handleViewErrors,
                   onAddMaterial: _handleAddMaterial,
                   onGenerateLearningPlan: _handleGenerateLearningPlan,
-                )
-              : FutureBuilder<GalaxyNodeHistory>(
-                  future: _historyFuture,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState != ConnectionState.done) {
-                      // G-03 详情触达减一跳：加载期不再整块让位给裸
-                      // spinner——节点身份（handle+标题行）同步渲染，
-                      // 异步明细（掌握度/素材/错题）随后填充，触达
-                      // 首帧即回答「我点的是哪个节点」。
-                      return Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Center(child: _SheetHandle()),
-                          const SizedBox(height: DS.spacing16),
-                          _SheetHeader(label: widget.nodeLabel),
-                          const SizedBox(height: DS.spacing12),
-                          const _HistoryLoadingState(height: 120),
-                        ],
-                      );
-                    }
-                    if (snapshot.hasError || snapshot.data == null) {
-                      final errorMsg = snapshot.error?.toString();
-                      return _HistoryErrorState(onRetry: _retry, errorMessage: errorMsg);
-                    }
-                    return _HistoryContent(
-                      history: snapshot.data!,
-                      fallbackLabel: widget.nodeLabel,
-                      nodeId: widget.nodeId,
-                      onStartReview: _handleStartReview,
-                      onViewErrors: _handleViewErrors,
-                      onAddMaterial: _handleAddMaterial,
-                      onGenerateLearningPlan: _handleGenerateLearningPlan,
-                    );
-                  },
-                ),
-        ),
-      ),
-    );
-  }
+                );
+              },
+            );
 
   void _retry() {
     setState(() {
@@ -1236,6 +1265,47 @@ class _SheetHandle extends StatelessWidget {
       );
 }
 
+/// J-08：成果证据行（节点被真实 outcome 点亮的溯源呈现；与 Goal 轨迹卡
+/// 同一数据源。类名无 Chip/Pill/Badge 后缀——parallelClass 棘轮同款纪律
+/// （wt304 先例）；间距取 4 基栅格（A-SPEC7）。
+class _OutcomeEvidenceRow extends StatelessWidget {
+  const _OutcomeEvidenceRow({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing8,
+        vertical: DS.spacing4,
+      ),
+      decoration: BoxDecoration(
+        color: DS.successLight,
+        borderRadius: DS.borderRadius8,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.verified_outlined,
+            size: DS.iconSizeXs,
+            color: DS.success,
+          ),
+          const SizedBox(width: DS.spacing4),
+          Flexible(
+            child: Text(
+              label,
+              style: DS.bodySmall.copyWith(
+                color: DS.textPrimary,
+                fontWeight: DS.fontWeightSemibold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+}
+
 /// G-03 详情触达减一跳：节点身份行（图标+标题）——加载期也即时渲染，
 /// 让用户点开面板首帧就知道「点的是哪个节点」，不必等历史明细返回。
 /// 与 [_HistoryContent] 头部同形制（同一行结构的唯一实现点）。
@@ -1299,7 +1369,7 @@ class _MetricChip extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: DS.iconSizeXs, color: DS.textSecondary),
-            const SizedBox(width: DS.spacing6),
+            const SizedBox(width: DS.spacing4),
             Text(
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
@@ -1688,7 +1758,7 @@ class _CommunityInsightContentState
               child: Row(
                 children: [
                   Icon(Icons.group_outlined, size: 14, color: DS.brandPrimary),
-                  const SizedBox(width: DS.spacing6),
+                  const SizedBox(width: DS.spacing4),
                   Expanded(
                     child: Text(
                       context.l10n.galaxyNodeCommunityPattern(

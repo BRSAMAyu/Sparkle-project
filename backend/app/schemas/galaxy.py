@@ -579,19 +579,14 @@ class NodeWithStatus(NodeBase):
 
     @staticmethod
     def _graph_event_sources(status) -> list[dict[str, Any]]:
+        # J-08 同源单点：读投影收敛到 provenance.read_graph_event_sources——
+        # 星图面与 Goal 轨迹面读同一函数（同一批行、同一截断），两面呈现
+        # 数据同源是结构性保证（行为与旧实现逐字一致，[:5] 截断保留）。
         if status is None:
             return []
-        snapshot = getattr(status, "learning_path_snapshot", None)
-        if not isinstance(snapshot, dict):
-            return []
-        raw_sources = snapshot.get("graph_event_sources") or []
-        if not isinstance(raw_sources, list):
-            return []
-        sources: list[dict[str, Any]] = []
-        for item in raw_sources[:5]:
-            if isinstance(item, dict):
-                sources.append({str(key): value for key, value in item.items() if value is not None})
-        return sources
+        from app.services.galaxy.provenance import read_graph_event_sources
+
+        return read_graph_event_sources(status)
 
     @staticmethod
     def _calculate_status(status) -> NodeStatus:

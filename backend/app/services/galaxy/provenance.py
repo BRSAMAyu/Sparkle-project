@@ -51,3 +51,26 @@ def append_graph_event_source(
     ]
     snapshot["graph_event_sources"] = [entry, *kept][:8]
     status.learning_path_snapshot = snapshot
+
+
+#: 读面单点：星图（``NodeWithStatus._graph_event_sources``）与 Goal 轨迹面
+#: （J-08 ``goal_trajectory_service``）都经本函数读同一批 provenance 行——
+#: 同一函数 = 同一数据，「Goal 页面/星图一致」是结构性保证而非口径约定。
+#: 截断上限与星图历史行为一致（最近 5 条）。
+PROVENANCE_READ_LIMIT = 5
+
+
+def read_graph_event_sources(status: object, *, limit: int = PROVENANCE_READ_LIMIT) -> list[dict[str, Any]]:
+    """读取节点溯源行（与写入端同构的只读投影；缺列/非 dict 条目诚实剔除）。"""
+    snapshot = getattr(status, "learning_path_snapshot", None)
+    if not isinstance(snapshot, dict):
+        return []
+    raw_sources = snapshot.get("graph_event_sources")
+    if not isinstance(raw_sources, list):
+        return []
+    bounded = max(0, int(limit))
+    sources: list[dict[str, Any]] = []
+    for item in raw_sources[:bounded]:
+        if isinstance(item, dict):
+            sources.append({str(key): value for key, value in item.items() if value is not None})
+    return sources

@@ -18,6 +18,7 @@ import 'package:sparkle/features/goal/data/services/scenario_pack_service.dart';
 import 'package:sparkle/features/goal/presentation/providers/goal_detail_provider.dart';
 import 'package:sparkle/features/goal/presentation/widgets/goal_bottleneck_strip.dart';
 import 'package:sparkle/features/goal/presentation/widgets/goal_step_completion_celebration.dart';
+import 'package:sparkle/features/goal/presentation/widgets/goal_trajectory_card.dart';
 import 'package:sparkle/features/goal/presentation/widgets/journey_progress_card.dart';
 import 'package:sparkle/features/goal/presentation/widgets/minimum_criteria_card.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
@@ -96,6 +97,10 @@ class GoalDetailScreen extends ConsumerWidget {
                   // 提级为紧跟 header 的独立条，desired outcome 下一眼可见。
                   _MilestoneStrip(data: data),
                   JourneyProgressFutureCard(goalId: goalId),
+                  // J-08：「想法 → 成果」轨迹卡（/journey/trajectory 只读
+                  // 投影；与星图面同一批 outcome id，两面呈现数据同源）。
+                  const SizedBox(height: DS.spacing16),
+                  GoalTrajectoryCard(goalId: goalId),
                   if (data.strategyBelief != null) ...[
                     const SizedBox(height: 14),
                     StrategyMigrationWizard(

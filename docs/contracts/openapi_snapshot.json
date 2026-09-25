@@ -72179,6 +72179,66 @@
         ]
       }
     },
+    "/api/v1/journey/trajectory": {
+      "get": {
+        "description": "「想法 → 成果」轨迹：action → outcome → milestone → reflection →\nexperience candidate → Galaxy 全环真实数据（Goal 页面与星图两面同源）。",
+        "operationId": "get_goal_trajectory_api_v1_journey_trajectory_get",
+        "parameters": [
+          {
+            "description": "目标 id；缺省解析最近活跃目标",
+            "in": "query",
+            "name": "goal_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "目标 id；缺省解析最近活跃目标",
+              "title": "Goal Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Goal Trajectory Api V1 Journey Trajectory Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Goal Trajectory",
+        "tags": [
+          "journey"
+        ]
+      }
+    },
     "/api/v1/leaderboards": {
       "get": {
         "description": "获取排行榜\n\n支持多种排行榜类型：\n- global: 全局综合排行榜\n- friends: 好友排行榜\n- group: 群组排行榜\n- subject: 学科排行榜\n- weekly: 本周学习排行榜\n- streak: 连胜排行榜\n\nArgs:\n    - type: 排行榜类型\n    - limit: 返回数量\n    - offset: 偏移量\n    - period: 统计周期\n    - subject_id: 学科ID（仅学科榜需要）\n    - group_id: 群组ID（仅群组榜需要）\n\nReturns:\n    - type: 排行榜类型\n    - title: 排行榜标题\n    - entries: 排行榜条目\n    - my_rank: 我的排名\n    - my_score: 我的分数\n    - total_participants: 总参与人数\n    - last_updated: 最后更新时间",

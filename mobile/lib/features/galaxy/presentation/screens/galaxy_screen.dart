@@ -2011,6 +2011,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       nodeId: node.id,
       nodeLabel: node.name,
       packId: widget.initialPackId,
+      // J-08：星图侧成果证据（同一 outcome id 与 Goal 页轨迹卡同源）。
+      outcomeEvidenceIds: node.outcomeEvidenceIds,
       onAddMaterial: _handleNodeMaterialUploadRequested,
       onGenerateLearningPlan: _handleNodeLearningPlanRequested,
     );

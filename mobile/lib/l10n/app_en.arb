@@ -15755,6 +15755,55 @@
     "goalStepReflectionQuestion": "How did this step feel? (optional, one tap)",
     "goalStepReflectionSaved": "Noted — it will shape what comes next",
     "goalStepReflectionFailed": "Couldn't save — you can add it later from the task",
+    "goalTrajectoryTitle": "From idea to outcome",
+    "goalTrajectoryMilestoneReached": "Reached",
+    "goalTrajectoryMilestoneOngoing": "In progress",
+    "goalTrajectoryEvidenceCount": "{count} real evidence items",
+    "@goalTrajectoryEvidenceCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "goalTrajectoryReflectionLine": "Reflection: {stuckPoint}",
+    "@goalTrajectoryReflectionLine": {
+        "placeholders": {
+            "stuckPoint": {
+                "type": "String"
+            }
+        }
+    },
+    "goalTrajectoryGalaxyLit": "Evidence lit {count} star nodes",
+    "@goalTrajectoryGalaxyLit": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "goalTrajectoryValueSummary": "{outcomes} outcomes · {reflections} reflections · {candidates} growth memories",
+    "@goalTrajectoryValueSummary": {
+        "placeholders": {
+            "outcomes": {
+                "type": "int"
+            },
+            "reflections": {
+                "type": "int"
+            },
+            "candidates": {
+                "type": "int"
+            }
+        }
+    },
+    "galaxyOutcomeEvidenceCount": "Outcome evidence · {count}",
+    "@galaxyOutcomeEvidenceCount": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
     "intentSuggestedActionLabel": "A low-cost first step",
     "intentCorrectionLabel": "Or I got it wrong —",
     "intentConfidenceLabel": "{percent}% confidence",

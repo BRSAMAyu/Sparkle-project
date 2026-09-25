@@ -15,6 +15,11 @@ Agent execute/check → Outcome）——与 first-action 同一 ``/journey`` 面
 X-03 trace 惯例、同一鉴权；handoff 全部走 X-07 run 步骤机制（统一 Runtime/UI，
 零第二交接面）。语义在 ``app.services.hybrid_journey_service``。
 
+J-08 · ``GET /journey/trajectory``：「想法 → 成果」轨迹只读投影（action →
+artifact/outcome → goal milestone → reflection → experience candidate →
+Galaxy 全环真实数据；outcome 身份与 D-02 账本/G-02 溯源同源，Galaxy 环与
+星图面同一 provenance 读函数）。语义在 ``app.services.goal_trajectory_service``。
+
 分层边界：本 router 只做参数/错误映射，链路语义在 service 层；proposal 生命
 周期权威仍是 X-03 ``ActionCommandService``。网关侧由 proxy_routes.go 的
 ``/journey`` 代理组转发（Go 纯 proxy，无业务逻辑）。
@@ -26,14 +31,14 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
 from app.core.action_command import ActionCommandError
 from app.models.user import User
-from app.services import first_action_service, hybrid_journey_service
+from app.services import first_action_service, goal_trajectory_service, hybrid_journey_service
 from app.services.action_command_service import ActionCommandService
 from app.services.first_action_service import (
     EDITABLE_FIRST_ACTION_FIELDS,
@@ -204,7 +209,12 @@ class HybridOutcomeConfirmRequest(BaseModel):
 
 
 def _hybrid_http_error(exc: Exception) -> HTTPException:
-    """J-06 错误面 → 诚实 HTTP 码（422 判断/材料缺失、409 状态、503 生成失败）。"""
+    """J-06/J-08 错误面 → 诚实 HTTP 码（422 判断/材料缺失、404 越权、409 状态、503 生成失败）。"""
+    if isinstance(exc, goal_trajectory_service.GoalNotFoundError):
+        return HTTPException(
+            status_code=404,
+            detail={"error": "goal_not_found", "message": "目标不存在或不属于当前用户。"},
+        )
     if isinstance(exc, (NoActiveGoalError, NoTaskAnchorError, NoMaterialError)):
         detail_by_type = {
             NoActiveGoalError: "no_active_goal",
@@ -335,4 +345,28 @@ async def get_hybrid_journey(
             run_id=run_id,
         )
     except HybridJourneyStateError as exc:
+        raise _hybrid_http_error(exc) from None
+
+
+# ===========================================================================
+# J-08 · Goal Trajectory（想法 → 成果全链只读投影；零新真源）
+# ===========================================================================
+
+
+# route-tier: authed
+@router.get("/trajectory")
+async def get_goal_trajectory(
+    goal_id: UUID | None = Query(None, description="目标 id；缺省解析最近活跃目标"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """「想法 → 成果」轨迹：action → outcome → milestone → reflection →
+    experience candidate → Galaxy 全环真实数据（Goal 页面与星图两面同源）。"""
+    try:
+        return await goal_trajectory_service.build_goal_trajectory(
+            db,
+            user_id=current_user.id,
+            goal_id=goal_id,
+        )
+    except (goal_trajectory_service.GoalNotFoundError, goal_trajectory_service.NoActiveGoalError) as exc:
         raise _hybrid_http_error(exc) from None
