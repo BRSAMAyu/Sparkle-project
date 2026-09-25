@@ -67,10 +67,12 @@ class IntentCache:
             cached = await self.redis.get(key)
             if cached:
                 data = json.loads(cached)
-                logger.debug(f"Intent cache HIT: '{message[:30]}...' -> {data['intent']}")
+                # Q-05 红队修复（P1）：调试日志不得携带消息原文（只留哈希键，
+                # 与缓存键同源——身份可关联，正文不可还原）。
+                logger.debug(f"Intent cache HIT: {key} -> {data['intent']}")
                 return data["intent"], data["confidence"]
             else:
-                logger.debug(f"Intent cache MISS: '{message[:30]}...'")
+                logger.debug(f"Intent cache MISS: {key}")
 
         except Exception as e:
             logger.warning(f"Intent cache lookup failed: {e}")

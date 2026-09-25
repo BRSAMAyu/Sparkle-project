@@ -191,7 +191,10 @@ class BERTIntentClassifier:
             # Run inference in thread pool to avoid blocking
             result = await asyncio.to_thread(self._infer, text)
 
-            logger.debug(f"BERT classification: '{message[:30]}...' -> {result['intent']} (conf={result['confidence']:.2f})")
+            # Q-05 红队修复（P1）：调试日志不得携带消息原文（只留长度）。
+            logger.debug(
+                f"BERT classification: len={len(message)} -> {result['intent']} (conf={result['confidence']:.2f})"
+            )
             return result
 
         except Exception as e:

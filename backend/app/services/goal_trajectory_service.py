@@ -452,7 +452,14 @@ async def _experience_candidates_face(db: AsyncSession, *, user_id: UUID, task_i
             EpisodicMemory.user_id == user_id,
             EpisodicMemory.source_type == "reflection",
             EpisodicMemory.source_id.in_([str(fid) for fid in feedback_ids]),
+            # Q-05 红队修复（P1）：轨迹是记忆的**读投影**，必须遵守 M-01 终态
+            # 召回排除口径（与 list_recent_episodic 同一真源）——用户撤回/撤销/
+            # 归档/被取代的记忆不得经轨迹面复活。
             EpisodicMemory.deleted_at.is_(None),
+            EpisodicMemory.archived_at.is_(None),
+            EpisodicMemory.retracted_at.is_(None),
+            EpisodicMemory.revoked_at.is_(None),
+            EpisodicMemory.superseded_by_id.is_(None),
         )
         .order_by(EpisodicMemory.occurred_at.asc())
         .limit(_TRAJECTORY_RING_CAP)

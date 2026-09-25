@@ -379,7 +379,11 @@ class ContextPruner:
                     if "role" in parsed and "content" in parsed:
                         history.append(parsed)
                 except json.JSONDecodeError:
-                    logger.warning(f"Failed to parse message: {msg}")
+                    # Q-05 红队修复（P1）：损坏行可能含用户正文，告警不得回显原文
+                    logger.warning(
+                        f"Failed to parse cached chat history entry for session {session_id}; "
+                        f"skipped malformed entry ({len(msg)} chars)"
+                    )
             return history
         except Exception as e:
             logger.error(f"Failed to load chat history for session {session_id}: {e}")

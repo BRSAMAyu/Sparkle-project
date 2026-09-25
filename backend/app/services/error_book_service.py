@@ -487,9 +487,10 @@ class ErrorBookService:
                 EpisodicMemory.user_id == error.user_id,
                 EpisodicMemory.source_type == "error_analysis",
                 EpisodicMemory.source_id == str(error.id),
-                EpisodicMemory.deleted_at.is_(None),
-                EpisodicMemory.archived_at.is_(None),
-                EpisodicMemory.retracted_at.is_(None),
+                # Q-05 红队修复（P1）：「已写过」探针按身份去重，不看生命周期态
+                # ——否则用户撤回（retracted_at）/撤销（revoked_at）/归档后的
+                # 记忆会被下一次再分析原样复活（撤销 bypass）。召回排除由各
+                # 读面的终态过滤负责，写入侧永不复活同 source 行。
             )
         )
         if existing.scalar_one_or_none() is not None:

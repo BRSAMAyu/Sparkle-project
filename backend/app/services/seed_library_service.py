@@ -1485,7 +1485,12 @@ class SeedLibraryService:
             (内容项列表, 总数)
         """
         # 确定查询的库范围
-        lib_ids: list[uuid.UUID] | None = None
+        # Q-05 红队修复（P0）：use_subscribed_only=False 的「扩大搜索面」不得
+        # 等于「全部库」——此前 lib_ids=None 会让 keyword/semantic 检索扫到其他
+        # 用户的私库内容（跨账号泄漏）。任何路径下 lib_ids 都收敛到该用户可及
+        # 集：官方 + 公开 + 本人拥有 + 有效订阅（与 list_libraries/get_items
+        # 的 _get_accessible_library_ids 同一真源口径）。
+        lib_ids: list[uuid.UUID] = await self._get_accessible_library_ids(db, user_id=user_id)
         if query_request.use_subscribed_only:
             subscribed_lib_ids = await db.execute(
                 select(UserLibrarySubscription.library_id).where(
@@ -1496,7 +1501,7 @@ class SeedLibraryService:
                     )
                 )
             )
-            lib_ids = [row[0] for row in subscribed_lib_ids.all()]
+            subscribed = [row[0] for row in subscribed_lib_ids.all()]
 
             own_lib_ids = await db.execute(
                 select(SeedLibrary.id).where(
@@ -1506,7 +1511,7 @@ class SeedLibraryService:
                     )
                 )
             )
-            lib_ids.extend([row[0] for row in own_lib_ids.all()])
+            subscribed.extend([row[0] for row in own_lib_ids.all()])
 
             if query_request.include_official:
                 official_libs = await db.execute(
@@ -1514,10 +1519,14 @@ class SeedLibraryService:
                         and_(SeedLibrary.is_official.is_(True), SeedLibrary.deleted_at.is_(None))
                     )
                 )
-                lib_ids.extend([row[0] for row in official_libs.all()])
+                subscribed.extend([row[0] for row in official_libs.all()])
 
-            if not lib_ids:
-                return [], 0
+            allowed = set(subscribed)
+            lib_ids = [lib_id for lib_id in lib_ids if lib_id in allowed]
+
+        # 可及集为空 → 必须空返回，不得让空 lib_ids 退化为「不过滤」全库扫描
+        if not lib_ids:
+            return [], 0
 
         # 准备类型筛选
         item_types = [t.value for t in query_request.item_types] if query_request.item_types else None

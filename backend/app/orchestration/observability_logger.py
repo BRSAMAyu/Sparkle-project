@@ -14,6 +14,7 @@ from typing import Any
 
 from loguru import logger
 
+from app.core.trace_spine import fingerprint
 from app.orchestration.schemas import ObservabilityEvent
 
 
@@ -60,7 +61,10 @@ class ObservabilityLogger:
             user_id=user_id,
             session_id=session_id,
             data={
-                "message_preview": message[:100],
+                # Q-05 红队修复（P1）：消息正文不得进入 observability 事件
+                # （trace 面隐私红线「正文不可还原」）——只留长度 + 指纹。
+                "message_length": len(message or ""),
+                "message_fingerprint": fingerprint(message)[1],
                 **decision
             }
         )
