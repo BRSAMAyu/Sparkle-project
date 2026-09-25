@@ -136,6 +136,22 @@ class TestResolveChannel:
             assert result == "push"
 
 
+
+def _make_async_db_without_prefs():
+    """AsyncMock db：execute 返回「无 UserPreferencesCenter 行」。
+
+    TestHandleNudgeTriggered 的用例真实经过 get_suppression（WT378-03 起
+    fail-closed，读路径不再吞错）；MagicMock 的同步 execute 会在该真实
+    读路径上炸出 TypeError。此 helper 提供与真库一致的「无反馈记录 →
+    未抑制」行为，测试本体仍聚焦渠道投递。
+    """
+    db = AsyncMock()
+    result = MagicMock()
+    result.scalar_one_or_none.return_value = None
+    db.execute = AsyncMock(return_value=result)
+    return db
+
+
 class TestHandleNudgeTriggered:
     """Tests for handle_nudge_triggered routing across channels."""
 
@@ -143,7 +159,7 @@ class TestHandleNudgeTriggered:
     async def test_skips_when_no_user_id(self):
         from app.services.nudge_service import NudgeService
 
-        db = MagicMock()
+        db = _make_async_db_without_prefs()
         service = NudgeService(db)
         service._create_in_app_notification = AsyncMock()
 
@@ -154,7 +170,7 @@ class TestHandleNudgeTriggered:
     async def test_skips_when_no_message(self):
         from app.services.nudge_service import NudgeService
 
-        db = MagicMock()
+        db = _make_async_db_without_prefs()
         service = NudgeService(db)
         service._create_in_app_notification = AsyncMock()
 
@@ -165,7 +181,7 @@ class TestHandleNudgeTriggered:
     async def test_push_channel_triggers_mobile_push(self):
         from app.services.nudge_service import NudgeService
 
-        db = MagicMock()
+        db = _make_async_db_without_prefs()
         service = NudgeService(db)
         service._resolve_channel = AsyncMock(return_value="push")
 
@@ -186,7 +202,7 @@ class TestHandleNudgeTriggered:
     async def test_in_app_channel_skips_mobile_push(self):
         from app.services.nudge_service import NudgeService
 
-        db = MagicMock()
+        db = _make_async_db_without_prefs()
         service = NudgeService(db)
         service._resolve_channel = AsyncMock(return_value="in_app")
 
@@ -208,7 +224,7 @@ class TestHandleNudgeTriggered:
     async def test_silent_channel_skips_notification_and_push(self):
         from app.services.nudge_service import NudgeService
 
-        db = MagicMock()
+        db = _make_async_db_without_prefs()
         service = NudgeService(db)
         service._resolve_channel = AsyncMock(return_value="silent")
         service._create_in_app_notification = AsyncMock(return_value=None)
@@ -228,7 +244,7 @@ class TestHandleNudgeTriggered:
         """When silent, _create_in_app_notification returns None (no DB record)."""
         from app.services.nudge_service import NudgeService
 
-        db = MagicMock()
+        db = _make_async_db_without_prefs()
         service = NudgeService(db)
         user_id = str(uuid.uuid4())
 
@@ -247,7 +263,7 @@ class TestHandleNudgeTriggered:
         """Notification creation receives the resolved channel string."""
         from app.services.nudge_service import NudgeService
 
-        db = MagicMock()
+        db = _make_async_db_without_prefs()
         service = NudgeService(db)
         service._resolve_channel = AsyncMock(return_value="in_app")
 

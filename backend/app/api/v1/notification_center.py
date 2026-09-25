@@ -29,7 +29,10 @@ from app.schemas.unified_notification import (
 from app.services.aurora_calibration_card_service import AuroraCalibrationCardService
 from app.services.notification_analytics_service import NotificationAnalyticsService
 from app.services.notification_center_service import NotificationCenterService
-from app.services.proactive_suggestion_service import ProactiveSuggestionFeedbackService
+from app.services.proactive_suggestion_service import (
+    ProactiveSuggestionFeedbackError,
+    ProactiveSuggestionFeedbackService,
+)
 
 router = APIRouter(prefix="/notification-center", tags=["notification-center"])
 
@@ -351,10 +354,18 @@ async def record_suggestion_action(
         )
 
     feedback = ProactiveSuggestionFeedbackService(db)
-    if request.action == "ignore_today":
-        suppression = await feedback.record_ignore_today(current_user.id, suggestion_type)
-    else:
-        suppression = await feedback.record_mute(current_user.id, suggestion_type)
+    try:
+        if request.action == "ignore_today":
+            suppression = await feedback.record_ignore_today(current_user.id, suggestion_type)
+        else:
+            suppression = await feedback.record_mute(current_user.id, suggestion_type)
+    except ProactiveSuggestionFeedbackError as exc:
+        # WT378-02 诚实性：抑制态未落库时绝不谎报成功——503 让客户端可重试，
+        # 而非 200「Suggestion feedback recorded」背后零落库、nudge 照发。
+        raise HTTPException(
+            status_code=503,
+            detail=f"Suggestion feedback not persisted, please retry: {exc}",
+        ) from exc
 
     # 反馈即已读：处理过的建议不再挂未读角标。
     await service.mark_notification_read(current_user.id, notification_id, "system")

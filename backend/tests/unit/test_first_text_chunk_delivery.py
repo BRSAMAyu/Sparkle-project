@@ -108,5 +108,16 @@ async def test_first_text_chunk_reaches_client_as_delta(monkeypatch: pytest.Monk
         f"GENERATING 状态帧仍须先行下发（网关 answering stage 转换），实际帧序列: {frame_dump}"
     )
 
+    # 契约 3（wt379 轮2复核补钉，WT378-09）：GENERATING 帧必须**先于**首条
+    # delta——「status 先行」是 wt373 修复语义的一半（网关 GENERATING→answering
+    # stage 转换不得晚于首 token）。delta-先行变异（帧都在、仅顺序翻转）在基线
+    # 契约 1/2 下曾全绿（缺口已实证），此断言钉死后必红。
+    first_delta_index = next(i for i, r in enumerate(captured) if r.WhichOneof("content") == "delta")
+    first_generating_index = next(i for i, r in enumerate(captured) if r in generating_frames)
+    assert first_generating_index < first_delta_index, (
+        f"GENERATING 帧必须先于首条 delta（网关 answering 转换不得晚于首 token），"
+        f"GEN@{first_generating_index} vs delta@{first_delta_index}，实际帧序列: {frame_dump}"
+    )
+
     # 主链不受影响：完整正文仍进入 state.messages。
     assert new_state.messages[-1]["content"] == _FIRST_CHUNK

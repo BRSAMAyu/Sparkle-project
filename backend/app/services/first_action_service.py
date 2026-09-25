@@ -28,6 +28,7 @@ Proposal→confirm→Task 持久化）.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable
 from uuid import UUID
@@ -140,6 +141,31 @@ def _unwrap_pref(value: Any) -> Any:
     return value
 
 
+def _coerce_study_minutes(value: Any) -> int | None:
+    """study_minutes 容错解析（WT378-01）：自由文本偏好绝不 500.
+
+    上游 ``profile_transparency._coerce_preference_value`` 允许自由文本落库
+    （如 ``"30分钟"`` → ``{"value": "30分钟"}``），而本值经 _unwrap_pref 原样
+    取出——直接 ``int()`` 会对非纯数字文本抛 ValueError 并打挂
+    GET/POST /journey/first-action（GET 是重开 App 回放唯一来源）。口径对齐
+    同函数其他字段：解析不出就置 None，绝不抛错。
+    """
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        return int(text)
+    except ValueError:
+        match = re.search(r"\d+", text)
+        return int(match.group()) if match else None
+
+
 async def collect_first_action_context(db: AsyncSession, *, user_id: UUID | str) -> FirstActionContext | None:
     """环1→2：读 onboarding goal 真源 + 显式偏好 + 账本计数；无 active goal → None."""
     user_uuid = UUID(str(user_id))
@@ -193,7 +219,7 @@ async def collect_first_action_context(db: AsyncSession, *, user_id: UUID | str)
         goal_type=str(metadata.get("goal_type") or "").strip(),
         knowledge_level=str(knowledge_level).strip() or None if knowledge_level is not None else None,
         learning_style=str(learning_style).strip() or None if learning_style is not None else None,
-        study_minutes=int(study_minutes) if study_minutes is not None else None,
+        study_minutes=_coerce_study_minutes(study_minutes),
         open_task_count=open_tasks,
     )
 
@@ -427,13 +453,15 @@ async def edit_first_action_proposal(
     reason: str | None = None,
     idempotency_key: str | None = None,
 ) -> Any:
-    """编辑面：拒绝旧提案（编辑即 feedback，落 append-only 审计）+ 同链路重提案.
+    """编辑面：同链路重提案 + 拒绝旧提案（编辑即 feedback，落 append-only 审计）.
 
     - 只允许编辑 PENDING 的 first-action proposal（trace 面封闭）；
     - 可改字段封闭（title / estimated_minutes）；合并后过 TaskCreate 全量校验，
       非法值 → CommandValidationError（API 422），不产生半成品；
     - 编辑 delta（edited_fields + 用户理由）作为 user_feedback 持久进旧提案的
-      transition + event——「编辑也进入 feedback（不静默丢弃）」。
+      transition + event——「编辑也进入 feedback（不静默丢弃）」；
+    - WT378-08 事务边界：门控（active goal）与 create_proposal 成功后才 reject
+      旧提案，reject 失败补偿 cancel 新提案——任何失败路径旧提案都不被先销毁。
     """
     illegal = sorted(set(edited_fields) - EDITABLE_FIRST_ACTION_FIELDS)
     if illegal or not edited_fields:
@@ -472,32 +500,52 @@ async def edit_first_action_proposal(
             raise CommandValidationError(f"invalid edited task spec: {exc.errors()[0].get('msg', 'invalid')}") from exc
         raise
 
-    await service.reject(
-        old.id,
-        user_id=user_id,
-        reason=reason,
-        user_feedback={
-            "kind": "edit",
-            "edited_fields": {key: edited_fields[key] for key in sorted(edited_fields)},
-            "reason": (reason or "")[:200] or None,
-            "superseded_by": "re-propose",
-        },
-        idempotency_key=idempotency_key or f"first_action_edit:{old.id}",
-    )
-
+    # WT378-08 事务边界：**先门控+重建，成功后才拒绝旧提案**。曾按「reject 先
+    # commit → collect/create 可失败」执行，任一失败都会把用户推入「旧提案已
+    # REJECTED 且无替代」的不可逆损毁态。现序下任一前步失败旧提案都原样
+    # PENDING（422/5xx 可重试）；仅剩 reject 失败窗口，且以 cancel 新提案补偿。
     context = await collect_first_action_context(db, user_id=user_id)
     if context is None:
         raise NoActiveGoalError()
-    payload = {"tasks": [merged_spec]}
+
     result = await service.create_proposal(
         user_id=user_id,
         command_type="task.create_batch",
-        payload=payload,
+        payload={"tasks": [merged_spec]},
         source=ProposalSource.AURORA.value,
         idempotency_key=idempotency_key,
         summary=f"第一步（已按你的编辑调整）：{merged_spec.get('title', '')[:60]}",
         trace_id=FIRST_ACTION_TRACE_ID,
     )
+
+    try:
+        await service.reject(
+            old.id,
+            user_id=user_id,
+            reason=reason,
+            user_feedback={
+                "kind": "edit",
+                "edited_fields": {key: edited_fields[key] for key in sorted(edited_fields)},
+                "reason": (reason or "")[:200] or None,
+                "superseded_by": "re-propose",
+            },
+            idempotency_key=idempotency_key or f"first_action_edit:{old.id}",
+        )
+    except Exception:
+        # 补偿：拒绝失败时撤销新提案，回到「旧提案 PENDING」的可重试态，
+        # 不留双 PENDING 悬挂面。
+        try:
+            await service.cancel(
+                result.proposal.id,
+                user_id=user_id,
+                idempotency_key=f"first_action_edit_compensate:{result.proposal.id}",
+            )
+        except Exception:  # noqa: BLE001 — 补偿失败只留痕，不掩盖原始错误
+            logger.warning(
+                "first action edit compensation failed: new proposal {} may be stranded PENDING",
+                result.proposal.id,
+            )
+        raise
     return result
 
 

@@ -21,17 +21,20 @@ A-07 stimulation policy）之上补齐**用户反馈回路**，不重建任何�
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import Any, Mapping
+from typing import Any, Mapping, cast
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import select, update
+from sqlalchemy.engine import CursorResult
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user_preferences import UserPreferencesCenter
 
 __all__ = [
     "ProactiveSuggestionFeedbackService",
+    "ProactiveSuggestionFeedbackError",
     "IGNORE_TODAY_COOLDOWN_HOURS",
     "build_suggestion_elements",
     "resolve_comeback_destination",
@@ -43,6 +46,9 @@ IGNORE_TODAY_COOLDOWN_HOURS = 24
 _MUTE_KEY = "proactive_suggestion_muted"
 _IGNORE_KEY = "proactive_suggestion_ignored_until"
 
+#: 版本守卫合并的bounded重试上限（冲突连续超限 → 诚实报错，不静默丢写）
+_MAX_MERGE_ATTEMPTS = 3
+
 
 def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
@@ -50,6 +56,14 @@ def _utcnow() -> datetime:
 
 def _iso(dt: datetime) -> str:
     return dt.isoformat()
+
+
+class ProactiveSuggestionFeedbackError(Exception):
+    """抑制态落库失败（诚实错误；API 层映射 503，不谎报成功）.
+
+    WT378-02：``_update_explicit`` 曾吞掉一切写异常并照常返回成功 payload——
+    DB 瞬断时用户看到「不再提醒」已生效而抑制态零落库。写失败必须显式抛错。
+    """
 
 
 class ProactiveSuggestionFeedbackService:
@@ -71,7 +85,10 @@ class ProactiveSuggestionFeedbackService:
         *,
         now: datetime | None = None,
     ) -> dict[str, str]:
-        """「今天不再看」：返回 ``{"reason": "cooldown", "until": iso}``。"""
+        """「今天不再看」：返回 ``{"reason": "cooldown", "until": iso}``。
+
+        落库失败抛 ``ProactiveSuggestionFeedbackError``（诚实错误，不假成功）。
+        """
         moment = now or _utcnow()
         until = moment + timedelta(hours=IGNORE_TODAY_COOLDOWN_HOURS)
         await self._update_explicit(
@@ -88,7 +105,10 @@ class ProactiveSuggestionFeedbackService:
         *,
         now: datetime | None = None,
     ) -> dict[str, str]:
-        """「不再提醒此类」：持久静音。返回 ``{"reason": "muted"}``。"""
+        """「不再提醒此类」：持久静音。返回 ``{"reason": "muted"}``。
+
+        落库失败抛 ``ProactiveSuggestionFeedbackError``（诚实错误，不假成功）。
+        """
         moment = now or _utcnow()
         await self._update_explicit(
             user_id,
@@ -140,18 +160,18 @@ class ProactiveSuggestionFeedbackService:
     # -- storage ----------------------------------------------------------
 
     async def _read_explicit(self, user_id: str | UUID) -> dict[str, Any]:
-        try:
-            result = await self.db.execute(
-                select(UserPreferencesCenter).where(UserPreferencesCenter.user_id == user_id)
-            )
-            row = result.scalar_one_or_none()
-            if row is None:
-                return {}
-            explicit = row.explicit
-            return dict(explicit) if isinstance(explicit, Mapping) else {}
-        except Exception:
-            logger.opt(exception=True).warning("proactive suggestion feedback read failed for user={}", user_id)
+        """读 explicit（WT378-03 fail-closed：读失败抛错，绝不当作「未抑制」）.
+
+        mute/cooldown 语义是「直到用户恢复/24h」——把读失败当成空 dict 会让
+        抑制态在瞬时错误窗口内静默失效（静音被击穿）。读不到 ≠ 未抑制：
+        异常向上传播，由调用方按失败处理（celery 重试 / 事件处理留痕）。
+        """
+        result = await self.db.execute(select(UserPreferencesCenter).where(UserPreferencesCenter.user_id == user_id))
+        row = result.scalar_one_or_none()
+        if row is None:
             return {}
+        explicit = row.explicit
+        return dict(explicit) if isinstance(explicit, Mapping) else {}
 
     async def _update_explicit(
         self,
@@ -159,33 +179,71 @@ class ProactiveSuggestionFeedbackService:
         key: str,
         mutate,
     ) -> None:
+        """版本守卫 CAS 合并写（WT378-02 诚实 + WT378-04 防丢更新）.
+
+        - 写失败（瞬断/约束冲突/重试超限）→ 抛 ``ProactiveSuggestionFeedbackError``，
+          绝不吞错后返回成功；
+        - 与 AuroraUserPreferencesService 同行双写：读行带 ``FOR UPDATE``
+          （PG 行锁；sqlite 忽略无害）+ ``UPDATE ... WHERE version = 读时版本``
+          原子合并 + 冲突重读重试——读改写从「旧快照整列覆写」改为「CAS 合并」，
+          杜绝先行写方的键整组蒸发。
+        """
         try:
-            result = await self.db.execute(
-                select(UserPreferencesCenter).where(UserPreferencesCenter.user_id == user_id)
-            )
-            row = result.scalar_one_or_none()
-            if row is None:
-                row = UserPreferencesCenter(
-                    user_id=user_id,
-                    explicit={key: mutate({})},
-                    last_explicit_update=_utcnow(),
+            for _attempt in range(_MAX_MERGE_ATTEMPTS):
+                result = await self.db.execute(
+                    select(UserPreferencesCenter)
+                    .where(UserPreferencesCenter.user_id == user_id)
+                    .with_for_update()
+                    .execution_options(populate_existing=True)
                 )
-                self.db.add(row)
-            else:
+                row = result.scalar_one_or_none()
+                if row is None:
+                    row = UserPreferencesCenter(
+                        user_id=user_id,
+                        explicit={key: mutate({})},
+                        last_explicit_update=_utcnow(),
+                    )
+                    self.db.add(row)
+                    try:
+                        await self.db.commit()
+                        return
+                    except IntegrityError:
+                        # 并发首写撞 user_id unique → 重读合并
+                        await self.db.rollback()
+                        continue
+
                 explicit = dict(row.explicit) if isinstance(row.explicit, Mapping) else {}
-                section = dict(explicit.get(key) or {})
-                explicit[key] = mutate(section)
-                row.explicit = explicit
-                row.last_explicit_update = _utcnow()
-                row.increment_version()
-            await self.db.commit()
-        except Exception:
+                explicit[key] = mutate(dict(explicit.get(key) or {}))
+                version_before = row.version
+                merge_result = await self.db.execute(
+                    update(UserPreferencesCenter)
+                    .where(
+                        UserPreferencesCenter.user_id == user_id,
+                        UserPreferencesCenter.version == version_before,
+                    )
+                    .values(explicit=explicit, last_explicit_update=_utcnow(), version=version_before + 1)
+                )
+                if cast(CursorResult[Any], merge_result).rowcount == 1:
+                    await self.db.commit()
+                    return
+                # 版本冲突：他人已提交 → 回滚后重读合并（保对方键）
+                await self.db.rollback()
+        except ProactiveSuggestionFeedbackError:
+            raise
+        except Exception as exc:
             await self.db.rollback()
             logger.opt(exception=True).warning(
                 "proactive suggestion feedback write failed for user={} key={}",
                 user_id,
                 key,
             )
+            raise ProactiveSuggestionFeedbackError(
+                f"suggestion feedback not persisted (user={user_id}, key={key})"
+            ) from exc
+        raise ProactiveSuggestionFeedbackError(
+            f"suggestion feedback not persisted after {_MAX_MERGE_ATTEMPTS} merge attempts "
+            f"(user={user_id}, key={key})"
+        )
 
 
 # ── 四要素 payload 构建（纯函数；事实性、零 guilt） ───────────────────────────

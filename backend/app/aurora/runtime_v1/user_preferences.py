@@ -11,14 +11,20 @@ pressure style, and the explicit low-stimulation mode (aurora_stimulation_mode).
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any, cast
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import select, update
+from sqlalchemy.engine import CursorResult
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.aurora.runtime_v1.stimulation_policy import VALID_STIMULATION_MODES
 from app.models.user_preferences import UserPreferencesCenter
+
+#: 版本守卫合并的bounded重试上限（WT378-04：冲突重读合并，杜绝整列覆写丢更新）
+_MAX_MERGE_ATTEMPTS = 3
 
 _VALID_VALUES: dict[str, set[str]] = {
     "aurora_analysis_depth": {"light", "deep"},
@@ -56,7 +62,9 @@ class AuroraUserPreferencesService:
         """Return all 4 Aurora preferences with defaults for unset values."""
         try:
             result = await self.db.execute(
-                select(UserPreferencesCenter).where(UserPreferencesCenter.user_id == user_id)
+                select(UserPreferencesCenter)
+                .where(UserPreferencesCenter.user_id == user_id)
+                .execution_options(populate_existing=True)
             )
             row = result.scalar_one_or_none()
             if row is None:
@@ -71,7 +79,13 @@ class AuroraUserPreferencesService:
             return dict(_DEFAULTS)
 
     async def update(self, user_id: str | UUID, preferences: dict[str, str]) -> dict[str, str]:
-        """Validate and persist Aurora preferences. Only recognized keys are stored."""
+        """Validate and persist Aurora preferences. Only recognized keys are stored.
+
+        WT378-04：与 P-03 同写 ``UserPreferencesCenter.explicit`` 同一行——写侧
+        读行带 ``FOR UPDATE``（PG 行锁）+ 版本守卫 CAS 合并（``UPDATE ... WHERE
+        version = 读时版本`` + 冲突重读重试），不再以旧快照整列覆写蒸发
+        P-03 的 mute/cooldown 键。外部契约不变：最终失败仍返回当前库内状态。
+        """
         cleaned: dict[str, str] = {}
         for key, value in preferences.items():
             if key not in _PREF_KEYS:
@@ -85,27 +99,63 @@ class AuroraUserPreferencesService:
             return await self.get(user_id)
 
         try:
-            result = await self.db.execute(
-                select(UserPreferencesCenter).where(UserPreferencesCenter.user_id == user_id)
-            )
-            row = result.scalar_one_or_none()
-
-            if row is None:
-                row = UserPreferencesCenter(
-                    user_id=user_id,
-                    explicit={**dict(_DEFAULTS), **cleaned},
-                    last_explicit_update=_utcnow(),
+            persisted = False
+            for _attempt in range(_MAX_MERGE_ATTEMPTS):
+                result = await self.db.execute(
+                    select(UserPreferencesCenter)
+                    .where(UserPreferencesCenter.user_id == user_id)
+                    .with_for_update()
+                    .execution_options(populate_existing=True)
                 )
-                self.db.add(row)
-            else:
+                row = result.scalar_one_or_none()
+
+                if row is None:
+                    row = UserPreferencesCenter(
+                        user_id=user_id,
+                        explicit={**dict(_DEFAULTS), **cleaned},
+                        last_explicit_update=_utcnow(),
+                    )
+                    self.db.add(row)
+                    try:
+                        await self.db.commit()
+                        persisted = True
+                        break
+                    except IntegrityError:
+                        # 并发首写撞 user_id unique → 重读合并
+                        await self.db.rollback()
+                        continue
+
                 existing = dict(row.explicit or {})
                 existing.update(cleaned)
-                row.explicit = existing
-                row.last_explicit_update = _utcnow()
-                row.increment_version()
+                version_before = row.version
+                merge_result = await self.db.execute(
+                    update(UserPreferencesCenter)
+                    .where(
+                        UserPreferencesCenter.user_id == user_id,
+                        UserPreferencesCenter.version == version_before,
+                    )
+                    .values(
+                        explicit=existing,
+                        last_explicit_update=_utcnow(),
+                        version=version_before + 1,
+                    )
+                )
+                if cast("CursorResult[Any]", merge_result).rowcount == 1:
+                    await self.db.commit()
+                    persisted = True
+                    break
+                # 版本冲突：他人已提交 → 回滚后重读合并（保对方键）
+                await self.db.rollback()
 
-            await self.db.commit()
-            logger.info("AuroraUserPreferences: updated user={} keys={}", user_id, list(cleaned))
+            if persisted:
+                logger.info("AuroraUserPreferences: updated user={} keys={}", user_id, list(cleaned))
+            else:
+                logger.warning(
+                    "AuroraUserPreferences: update lost merge race {} times for user={} keys={}",
+                    _MAX_MERGE_ATTEMPTS,
+                    user_id,
+                    list(cleaned),
+                )
         except Exception:
             await self.db.rollback()
             logger.warning("AuroraUserPreferences: update failed for user={}", user_id)

@@ -294,6 +294,33 @@ class TestUnifiedStatusBand:
 # T3.4.4: User Preferences — CRUD
 # ═══════════════════════════════════════════════════════════════════
 
+
+def _cas_mock_execute(mock_db, mock_result, mock_row):
+    """WT378-04 适配：AuroraUserPreferencesService.update 现发两条语句——
+
+    SELECT（读行，带 FOR UPDATE）+ 版本守卫 UPDATE（CAS 合并）。单一
+    ``return_value`` mock 会让 CAS 语句拿到 MagicMock.rowcount 而重试耗尽。
+    按语句类型分发：Select → 读行结果；Update → 模拟真库应用 SET 子句
+    （回写 explicit/version）并返回 rowcount=1，使后续 get() 读到已合并
+    状态（与真库行为一致）。断言本体不变。
+    """
+    from sqlalchemy.sql.dml import Update
+    from sqlalchemy.sql.selectable import Select
+
+    async def _execute(stmt, *args, **kwargs):
+        if isinstance(stmt, Update):
+            params = stmt.compile().params
+            mock_row.explicit = params["explicit"]
+            mock_row.version = params["version"]
+            cas_result = MagicMock()
+            cas_result.rowcount = 1
+            return cas_result
+        assert isinstance(stmt, Select), f"unexpected statement: {type(stmt)}"
+        return mock_result
+
+    mock_db.execute.side_effect = _execute
+
+
 class TestUserPreferencesCRUD:
     """AuroraUserPreferencesService get/update for 4 preference dimensions."""
 
@@ -342,7 +369,7 @@ class TestUserPreferencesCRUD:
         mock_row.version = 1
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = mock_row
-        mock_db.execute.return_value = mock_result
+        _cas_mock_execute(mock_db, mock_result, mock_row)
 
         service = AuroraUserPreferencesService(mock_db)
         prefs = await service.update("user_1", {
@@ -364,9 +391,10 @@ class TestUserPreferencesCRUD:
         mock_db = AsyncMock()
         mock_row = MagicMock()
         mock_row.explicit = {}
+        mock_row.version = 1
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = mock_row
-        mock_db.execute.return_value = mock_result
+        _cas_mock_execute(mock_db, mock_result, mock_row)
 
         service = AuroraUserPreferencesService(mock_db)
         prefs = await service.update("user_1", {
@@ -392,7 +420,7 @@ class TestUserPreferencesCRUD:
         mock_row.version = 1
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = mock_row
-        mock_db.execute.return_value = mock_result
+        _cas_mock_execute(mock_db, mock_result, mock_row)
 
         service = AuroraUserPreferencesService(mock_db)
         prefs = await service.update("user_1", {"aurora_directness": "guided"})
@@ -483,7 +511,7 @@ class TestUserPreferencesCRUD:
         mock_row.version = 1
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = mock_row
-        mock_db.execute.return_value = mock_result
+        _cas_mock_execute(mock_db, mock_result, mock_row)
 
         service = AuroraUserPreferencesService(mock_db)
         prefs = await service.update("user_1", {
