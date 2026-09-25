@@ -44,6 +44,14 @@ class _SparkleConfettiState extends State<SparkleConfetti> {
   bool _hasPlayed = false;
   int _registeredParticleCount = 0;
 
+  /// build 期缓存的低刺激/挑战徽章抑制位（U-02）。
+  ///
+  /// [_play] 在 initState（inherited 访问不安全）与 didUpdateWidget 两个
+  /// 时机被调用，build 先行缓存抑制位，播放路径据此整体短路——低刺激下
+  /// 不再发射庆祝触感/声效、不再启动粒子控制器（此前仅视觉层被抑制，
+  /// 属半截减法；庆祝态 celebrate × low 档预算粒子为 0、弹性撤除）。
+  bool _celebrationSuppressed = false;
+
   Duration get _duration => switch (widget.intensity) {
         SparkleCelebrationIntensity.small => const Duration(milliseconds: 900),
         SparkleCelebrationIntensity.medium => DS.durationSlow,
@@ -71,7 +79,11 @@ class _SparkleConfettiState extends State<SparkleConfetti> {
     _controller = ConfettiController(duration: _duration)
       ..addListener(_handleStateChange);
     if (widget.play) {
-      _play();
+      // 首帧 build 完成后再播：_celebrationSuppressed 由 build 缓存，
+      // 低刺激挂载即播的场景不会漏发一次庆祝刺激。
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _play();
+      });
     }
   }
 
@@ -82,6 +94,9 @@ class _SparkleConfettiState extends State<SparkleConfetti> {
   }
 
   void _play() {
+    if (_celebrationSuppressed) {
+      return;
+    }
     final desiredCount = _particleCount;
     if (_registeredParticleCount != desiredCount) {
       if (_registeredParticleCount > 0) {
@@ -103,6 +118,18 @@ class _SparkleConfettiState extends State<SparkleConfetti> {
   @override
   void didUpdateWidget(covariant SparkleConfetti oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // 低刺激可在播放中生效（设置切换）：挂载后可安全读 inherited，
+    // 即时停控制器并退回粒子预算，防止抑制生效后仍有残留庆祝刺激。
+    if (context.hideChallengeBadges || context.emotionLowStimulus) {
+      _celebrationSuppressed = true;
+      _controller.stop();
+      if (_registeredParticleCount > 0) {
+        GlobalParticleCounter.releaseParticles(_registeredParticleCount);
+        _registeredParticleCount = 0;
+      }
+      return;
+    }
+    _celebrationSuppressed = false;
     if (widget.play && !oldWidget.play) {
       _hasPlayed = false;
       _play();
@@ -128,7 +155,12 @@ class _SparkleConfettiState extends State<SparkleConfetti> {
 
   @override
   Widget build(BuildContext context) {
-    if (context.hideChallengeBadges || context.emotionLowStimulus) {
+    // U-02：低刺激/隐藏挑战徽章 = 庆祝刺激整体短路（视觉 + 触感 + 控制器），
+    // 不是空设置值。
+    final suppressed =
+        context.hideChallengeBadges || context.emotionLowStimulus;
+    _celebrationSuppressed = suppressed;
+    if (suppressed) {
       return widget.child ?? const SizedBox.shrink();
     }
 

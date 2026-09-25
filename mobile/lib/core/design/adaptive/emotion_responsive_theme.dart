@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 
 enum EmotionAdaptiveIntensity {
   normal,
@@ -102,7 +103,7 @@ class EmotionResponsiveTheme extends InheritedWidget {
       ),
     );
 
-    return baseTheme.copyWith(
+    var themed = baseTheme.copyWith(
       textTheme: textTheme,
       splashFactory: NoSplash.splashFactory,
       pageTransitionsTheme: const PageTransitionsTheme(
@@ -125,6 +126,23 @@ class EmotionResponsiveTheme extends InheritedWidget {
       ),
       visualDensity: VisualDensity.standard,
     );
+
+    // U-02 低刺激真实接线（Theme 层）：把已注册的 SparkleThemeExtension
+    // 换到 low 档——context.motion / stateTokens 消费点自此拿到减法后的
+    // 动效时长与装饰预算（两档输出真实不同，不再是空设置值）。
+    final sparkle = themed.extension<SparkleThemeExtension>();
+    if (sparkle != null && !sparkle.lowStimulation) {
+      themed = themed.copyWith(
+        extensions: <ThemeExtension<dynamic>>[
+          ...themed.extensions.values.where(
+            (extension) => extension is! SparkleThemeExtension,
+          ),
+          sparkle.copyWith(stimulationLevel: StimulationLevel.low),
+        ],
+      );
+    }
+
+    return themed;
   }
 
   @override

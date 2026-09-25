@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
+import 'package:sparkle/core/design/tokens_v2/state_tokens.dart';
 import 'package:sparkle/core/design/tokens_v2/theme_manager.dart'
     show SparkleColors, SparkleSpacing, SparkleTypography;
 
@@ -19,6 +20,16 @@ extension SparkleContextExtension on BuildContext {
   SparkleSpacing get space => sparkle.spacing;
   SparkleRadius get radius => sparkle.radius;
   SparkleMotionTokens get motion => sparkle.motion;
+
+  /// 当前刺激档位（U-02）；低刺激开关见 [lowStimulation]。
+  StimulationLevel get stimulationLevel => sparkle.stimulationLevel;
+
+  /// 低刺激档是否生效（主题级真实开关，默认关）。
+  bool get lowStimulation => sparkle.lowStimulation;
+
+  /// 按状态取当前档位的装饰预算（U-02 状态令牌访问面）。
+  SparkleStateTokens stateTokens(SparkleStateMood mood) =>
+      SparkleStateTokens.forMood(mood, level: sparkle.stimulationLevel);
 
   bool get canBlur => sparkle.enableBlur;
   bool get canGlow => sparkle.enableGlow;

@@ -4,6 +4,16 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/navigation/cold_start_motion.dart';
 
+/// 转场是否进入平静档（U-02：系统 ∨ in-app 叠加口径，N33 同源）。
+///
+/// [platformReduceMotion] 是页面构建期读到的系统档；in-app 半边
+/// （低刺激 alwaysLow / 无障碍 reduceMotion）经 `MediaQuery.disableAnimations`
+/// 叠加在 Router 子树上——页面构建期无 context，转场渲染期在此合并判定，
+/// Galaxy 等独立视觉域的导航转场与全 app 一致衰减（卡面 Work 3）。
+bool sparkleTransitionCalm(BuildContext context, bool platformReduceMotion) =>
+    platformReduceMotion ||
+    (MediaQuery.maybeOf(context)?.disableAnimations ?? false);
+
 Widget buildSharedAxisCompatibleTransition({
   required Animation<double> animation,
   required SharedAxisTransitionType type,
@@ -82,7 +92,7 @@ Page<dynamic> buildSparkleTransitionPage({
     reverseTransitionDuration: reverseDuration,
     child: child,
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      if (reduceMotion) {
+      if (sparkleTransitionCalm(context, reduceMotion)) {
         return FadeTransition(
           opacity: Tween<double>(begin: 0.92, end: 1).animate(
             CurvedAnimation(
@@ -140,7 +150,7 @@ Page<dynamic> buildColdStartTransitionPage({
         : ColdStartMotion.landingReverse,
     child: child,
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      if (reduceMotion) {
+      if (sparkleTransitionCalm(context, reduceMotion)) {
         return FadeTransition(
           opacity: Tween<double>(begin: 0.94, end: 1).animate(
             CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
