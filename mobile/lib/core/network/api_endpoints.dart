@@ -236,6 +236,10 @@ class ApiEndpoints {
       '/experience/community-accountability';
   static String experienceGoalDetail(String goalId) =>
       '/experience/goal-detail/$goalId';
+  // J-05: unified stuck recovery journey (real context + ≤1 question + correction loop)
+  static const String stuckJourneyStart = '/experience/stuck-journey/start';
+  static const String stuckJourneyAnswer = '/experience/stuck-journey/answer';
+  static const String stuckJourneyCorrect = '/experience/stuck-journey/correct';
   static const String examSprintIntake = '/exam-sprint/intake';
   static const String examSprintDashboard = '/exam-sprint/dashboard';
   static const String examSprintPostExamReview =

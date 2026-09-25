@@ -15184,6 +15184,73 @@
         }
     },
     "stuckRecoveryReconnectAck": "Done",
+    "stuckJourneySheetTitle": "Let's see where you're stuck",
+    "stuckJourneyContextTask": "Task: {title}",
+    "@stuckJourneyContextTask": {
+        "placeholders": {
+            "title": {
+                "type": "String"
+            }
+        }
+    },
+    "stuckJourneyContextGoal": "Goal: {title}",
+    "@stuckJourneyContextGoal": {
+        "placeholders": {
+            "title": {
+                "type": "String"
+            }
+        }
+    },
+    "stuckJourneyContextFailures": "{count} recent tasks hit a snag",
+    "@stuckJourneyContextFailures": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "stuckJourneyContextStalled": "This step has been waiting for {days} days",
+    "@stuckJourneyContextStalled": {
+        "placeholders": {
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "stuckJourneyQuestionHeader": "One quick thing first",
+    "stuckJourneyInterventionHeader": "Here's something to try",
+    "stuckJourneyUncertainHint": "A best guess from what's known so far — tell me if it's off",
+    "stuckJourneyNotThisReason": "That's not it",
+    "stuckJourneyTryIt": "Try this direction",
+    "stuckJourneyCorrectedAck": "Got it — this reason will rank lower from now on",
+    "stuckJourneyLoadFailed": "Can't reach it right now — try again later",
+    "stuckJourneyRetry": "Retry",
+    "stuckJourneyChatPrompt": "I'm stuck on \"{anchor}\". We just looked at \"{direction}\" — help me turn it into a next step.",
+    "@stuckJourneyChatPrompt": {
+        "placeholders": {
+            "anchor": {
+                "type": "String"
+            },
+            "direction": {
+                "type": "String"
+            }
+        }
+    },
+    "stuckJourneyInterventionRescope": "Narrow the scope so it's easier to move",
+    "stuckJourneyInterventionSplit": "Break this step into smaller pieces",
+    "stuckJourneyInterventionClarify": "Pin down what 'done' looks like first",
+    "stuckJourneyInterventionExplain": "Go over the concept behind this part first",
+    "stuckJourneyInterventionRetrieve": "Look through the materials you already have",
+    "stuckJourneyInterventionPractice": "Run the method once with a practice rep",
+    "stuckJourneyInterventionSchedule": "Reshape the time plan around this",
+    "stuckJourneyInterventionPause": "Take a break and pick this up when you're recharged",
+    "stuckJourneyInterventionRemind": "Get a nudge to come back to this step",
+    "stuckJourneyInterventionReflect": "Sort out priorities together",
+    "stuckJourneyInterventionReview": "Check over the part you've produced",
+    "stuckJourneyInterventionConnectPeer": "Bring in a peer to keep moving together",
+    "stuckJourneyInterventionDelegate": "Hand the mechanical part to a tool",
+    "stuckJourneyInterventionCoExecute": "Let Sparkle work through it with you",
+    "stuckHelpJourneyCta": "Let Sparkle walk through it with me",
     "homeSlotDailyBriefing": "Daily briefing",
     "homeSlotDailyBriefingReady": "{count} next actions · ready to start",
     "@homeSlotDailyBriefingReady": {
@@ -16534,29 +16601,6 @@
     "todayCockpitCtaArrange": "Plan today",
     "todayCockpitCtaStuck": "Unblock it",
     "todayCockpitStuckButton": "I'm stuck",
-    "todayCockpitStuckPrompt": "I'm stuck while working on \"{goal}\": {reason}Help me find the most worthwhile next step right now.",
-    "@todayCockpitStuckPrompt": {
-        "placeholders": {
-            "goal": {
-                "type": "String"
-            },
-            "reason": {
-                "type": "String"
-            }
-        }
-    },
-    "todayCockpitGoalWord": "my current goal",
-    "todayCockpitStallReasonDeadline": "the deadline is close but progress stalled, ",
-    "todayCockpitStallReasonStale": "the plan has been idle for a while, ",
-    "todayCockpitStallReasonHealth": "plan health dropped to {percent}%, ",
-    "@todayCockpitStallReasonHealth": {
-        "placeholders": {
-            "percent": {
-                "type": "int"
-            }
-        }
-    },
-    "todayCockpitStallReasonGeneric": "I'm not sure where to continue, ",
     "todayCockpitRunOngoing": "Aurora is working",
     "todayCockpitRunOngoingDetailed": "Aurora is working: {detail}",
     "@todayCockpitRunOngoingDetailed": {

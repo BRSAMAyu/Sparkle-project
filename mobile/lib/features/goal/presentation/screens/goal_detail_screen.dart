@@ -21,6 +21,7 @@ import 'package:sparkle/features/goal/presentation/widgets/goal_step_completion_
 import 'package:sparkle/features/goal/presentation/widgets/journey_progress_card.dart';
 import 'package:sparkle/features/goal/presentation/widgets/minimum_criteria_card.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
+import 'package:sparkle/features/recovery/presentation/widgets/stuck_journey_sheet.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 class GoalDetailScreen extends ConsumerWidget {
@@ -156,10 +157,13 @@ class GoalDetailScreen extends ConsumerWidget {
                   // U-05（GOAL.md 屏面契约收尾两项）：`重新规划` / `我卡住了`。
                   // 重新规划 → 有活跃计划时直达计划详情（J-07 staleness 重校准
                   // 落点在此，不另建重算通道）；无活跃计划 → 携目标上下文进
-                  // growth chat。我卡住了 → 复用 J-05 统一恢复旅程的 home 落点
-                  // 同款 prompt/chat_mode 约定（todayCockpitStuckPrompt），文案
-                  // 与首页 cockpit 完全一致。
-                  _GoalRecoveryActions(goalTitle: data.goal.title),
+                  // growth chat。
+                  // J-05：卡住入口升级为统一恢复旅程（goal 落点），携带
+                  // 当前目标真实 id（surface=goal），由后端读真源派生。
+                  _GoalRecoveryActions(
+                    goalId: goalId,
+                    goalTitle: data.goal.title,
+                  ),
                 ],
               ),
             ),
@@ -449,9 +453,11 @@ class _MilestoneStrip extends StatelessWidget {
 }
 
 /// U-05：GOAL.md 屏面契约的收尾两项——`重新规划` / `我卡住了`。
+/// J-05：我卡住了 → 统一恢复旅程（goal 落点），携带当前目标真实 id。
 class _GoalRecoveryActions extends ConsumerWidget {
-  const _GoalRecoveryActions({required this.goalTitle});
+  const _GoalRecoveryActions({required this.goalId, required this.goalTitle});
 
+  final String goalId;
   final String goalTitle;
 
   @override
@@ -493,17 +499,12 @@ class _GoalRecoveryActions extends ConsumerWidget {
             key: const ValueKey('goal-detail-stuck-action'),
             label: l10n.todayCockpitStuckButton,
             icon: const Icon(Icons.help_outline_rounded),
-            onPressed: () => context.go(
-              Uri(
-                path: '/chat',
-                queryParameters: {
-                  'prompt': l10n.todayCockpitStuckPrompt(
-                    goalTitle,
-                    l10n.todayCockpitStallReasonGeneric,
-                  ),
-                  'chat_mode': 'growth',
-                },
-              ).toString(),
+            onPressed: () => unawaited(
+              showStuckJourneySheet(
+                context,
+                surface: 'goal',
+                goalId: goalId,
+              ),
             ),
           ),
         ),

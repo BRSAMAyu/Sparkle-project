@@ -34985,6 +34985,158 @@
         "title": "StruggleEncouragementRequest",
         "type": "object"
       },
+      "StuckJourneyAnswerRequest": {
+        "properties": {
+          "branch_key": {
+            "title": "Branch Key",
+            "type": "string"
+          },
+          "goal_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Id"
+          },
+          "question_id": {
+            "title": "Question Id",
+            "type": "string"
+          },
+          "surface": {
+            "description": "Entry surface: home | goal | action",
+            "title": "Surface",
+            "type": "string"
+          },
+          "task_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Id"
+          }
+        },
+        "required": [
+          "surface",
+          "question_id",
+          "branch_key"
+        ],
+        "title": "StuckJourneyAnswerRequest",
+        "type": "object"
+      },
+      "StuckJourneyCorrectRequest": {
+        "properties": {
+          "friction_type": {
+            "title": "Friction Type",
+            "type": "string"
+          },
+          "goal_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Id"
+          },
+          "intervention_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intervention Key"
+          },
+          "reason_text": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Text"
+          },
+          "surface": {
+            "description": "Entry surface: home | goal | action",
+            "title": "Surface",
+            "type": "string"
+          },
+          "task_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Id"
+          }
+        },
+        "required": [
+          "surface",
+          "friction_type"
+        ],
+        "title": "StuckJourneyCorrectRequest",
+        "type": "object"
+      },
+      "StuckJourneyStartRequest": {
+        "properties": {
+          "goal_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Id"
+          },
+          "surface": {
+            "description": "Entry surface: home | goal | action",
+            "title": "Surface",
+            "type": "string"
+          },
+          "task_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Id"
+          }
+        },
+        "required": [
+          "surface"
+        ],
+        "title": "StuckJourneyStartRequest",
+        "type": "object"
+      },
       "StudyRoomEnterResponse": {
         "description": "进入自习室（幂等：已在场则刷新心跳并返回既有会话）。",
         "properties": {
@@ -65232,6 +65384,153 @@
           }
         ],
         "summary": "Get Streak Quality",
+        "tags": [
+          "experience"
+        ]
+      }
+    },
+    "/api/v1/experience/stuck-journey/answer": {
+      "post": {
+        "description": "单问回答（branch_key 直传）：≤2 轮收敛到主 intervention。",
+        "operationId": "answer_stuck_journey_api_v1_experience_stuck_journey_answer_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StuckJourneyAnswerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Answer Stuck Journey Api V1 Experience Stuck Journey Answer Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Answer Stuck Journey",
+        "tags": [
+          "experience"
+        ]
+      }
+    },
+    "/api/v1/experience/stuck-journey/correct": {
+      "post": {
+        "description": "「不是这个原因」：纠正落库进反馈环，返回按纠正重派生的旅程输出。",
+        "operationId": "correct_stuck_journey_api_v1_experience_stuck_journey_correct_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StuckJourneyCorrectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Correct Stuck Journey Api V1 Experience Stuck Journey Correct Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Correct Stuck Journey",
+        "tags": [
+          "experience"
+        ]
+      }
+    },
+    "/api/v1/experience/stuck-journey/start": {
+      "post": {
+        "description": "「我卡住了」统一入口：真实 context 投影 + ≤1 高价值问 / 主 intervention。",
+        "operationId": "start_stuck_journey_api_v1_experience_stuck_journey_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StuckJourneyStartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Start Stuck Journey Api V1 Experience Stuck Journey Start Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Start Stuck Journey",
         "tags": [
           "experience"
         ]

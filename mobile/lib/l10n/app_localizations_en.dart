@@ -34381,6 +34381,119 @@ class AppLocalizationsEn extends AppLocalizations {
   String get stuckRecoveryReconnectAck => 'Done';
 
   @override
+  String get stuckJourneySheetTitle => 'Let\'s see where you\'re stuck';
+
+  @override
+  String stuckJourneyContextTask(String title) {
+    return 'Task: $title';
+  }
+
+  @override
+  String stuckJourneyContextGoal(String title) {
+    return 'Goal: $title';
+  }
+
+  @override
+  String stuckJourneyContextFailures(int count) {
+    return '$count recent tasks hit a snag';
+  }
+
+  @override
+  String stuckJourneyContextStalled(int days) {
+    return 'This step has been waiting for $days days';
+  }
+
+  @override
+  String get stuckJourneyQuestionHeader => 'One quick thing first';
+
+  @override
+  String get stuckJourneyInterventionHeader => 'Here\'s something to try';
+
+  @override
+  String get stuckJourneyUncertainHint =>
+      'A best guess from what\'s known so far — tell me if it\'s off';
+
+  @override
+  String get stuckJourneyNotThisReason => 'That\'s not it';
+
+  @override
+  String get stuckJourneyTryIt => 'Try this direction';
+
+  @override
+  String get stuckJourneyCorrectedAck =>
+      'Got it — this reason will rank lower from now on';
+
+  @override
+  String get stuckJourneyLoadFailed =>
+      'Can\'t reach it right now — try again later';
+
+  @override
+  String get stuckJourneyRetry => 'Retry';
+
+  @override
+  String stuckJourneyChatPrompt(String anchor, String direction) {
+    return 'I\'m stuck on \"$anchor\". We just looked at \"$direction\" — help me turn it into a next step.';
+  }
+
+  @override
+  String get stuckJourneyInterventionRescope =>
+      'Narrow the scope so it\'s easier to move';
+
+  @override
+  String get stuckJourneyInterventionSplit =>
+      'Break this step into smaller pieces';
+
+  @override
+  String get stuckJourneyInterventionClarify =>
+      'Pin down what \'done\' looks like first';
+
+  @override
+  String get stuckJourneyInterventionExplain =>
+      'Go over the concept behind this part first';
+
+  @override
+  String get stuckJourneyInterventionRetrieve =>
+      'Look through the materials you already have';
+
+  @override
+  String get stuckJourneyInterventionPractice =>
+      'Run the method once with a practice rep';
+
+  @override
+  String get stuckJourneyInterventionSchedule =>
+      'Reshape the time plan around this';
+
+  @override
+  String get stuckJourneyInterventionPause =>
+      'Take a break and pick this up when you\'re recharged';
+
+  @override
+  String get stuckJourneyInterventionRemind =>
+      'Get a nudge to come back to this step';
+
+  @override
+  String get stuckJourneyInterventionReflect => 'Sort out priorities together';
+
+  @override
+  String get stuckJourneyInterventionReview =>
+      'Check over the part you\'ve produced';
+
+  @override
+  String get stuckJourneyInterventionConnectPeer =>
+      'Bring in a peer to keep moving together';
+
+  @override
+  String get stuckJourneyInterventionDelegate =>
+      'Hand the mechanical part to a tool';
+
+  @override
+  String get stuckJourneyInterventionCoExecute =>
+      'Let Sparkle work through it with you';
+
+  @override
+  String get stuckHelpJourneyCta => 'Let Sparkle walk through it with me';
+
+  @override
   String get homeSlotDailyBriefing => 'Daily briefing';
 
   @override
@@ -36650,31 +36763,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get todayCockpitStuckButton => 'I\'m stuck';
-
-  @override
-  String todayCockpitStuckPrompt(String goal, String reason) {
-    return 'I\'m stuck while working on \"$goal\": ${reason}Help me find the most worthwhile next step right now.';
-  }
-
-  @override
-  String get todayCockpitGoalWord => 'my current goal';
-
-  @override
-  String get todayCockpitStallReasonDeadline =>
-      'the deadline is close but progress stalled, ';
-
-  @override
-  String get todayCockpitStallReasonStale =>
-      'the plan has been idle for a while, ';
-
-  @override
-  String todayCockpitStallReasonHealth(int percent) {
-    return 'plan health dropped to $percent%, ';
-  }
-
-  @override
-  String get todayCockpitStallReasonGeneric =>
-      'I\'m not sure where to continue, ';
 
   @override
   String get todayCockpitRunOngoing => 'Aurora is working';

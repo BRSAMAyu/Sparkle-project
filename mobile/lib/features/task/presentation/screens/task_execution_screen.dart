@@ -25,6 +25,7 @@ import 'package:sparkle/features/focus/presentation/widgets/focus_agent_sheet.da
 import 'package:sparkle/features/home/home_routes.dart';
 import 'package:sparkle/features/openclaw/presentation/widgets/openclaw_primitives.dart';
 import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
+import 'package:sparkle/features/recovery/presentation/widgets/stuck_journey_sheet.dart';
 import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
 import 'package:sparkle/features/task/data/models/execution_record_model.dart';
 import 'package:sparkle/features/task/data/models/execution_template_model.dart';
@@ -521,6 +522,17 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
       isScrollControlled: true,
       builder: (sheetContext) => StuckHelpSheet(
         task: sheetTask,
+        // J-05：统一恢复旅程（action 面）——携带执行中任务真实 id。
+        onJourneyPressed: () {
+          Navigator.of(sheetContext).pop();
+          unawaited(
+            showStuckJourneySheet(
+              context,
+              surface: 'action',
+              taskId: sheetTask.id,
+            ),
+          );
+        },
         onChatPressed: () {
           Navigator.of(sheetContext).pop();
           _openStuckChat(sheetTask);

@@ -11,6 +11,7 @@ import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/today_cockpit_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
+import 'package:sparkle/features/recovery/presentation/widgets/stuck_journey_sheet.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
@@ -267,7 +268,7 @@ class _CockpitContent extends ConsumerWidget {
       case TodayCockpitAction.openTasks:
         unawaited(context.push('/tasks'));
       case TodayCockpitAction.stuckRecovery:
-        _openStuckChat(context);
+        _openStuckChat(context, ref);
     }
   }
 
@@ -276,7 +277,7 @@ class _CockpitContent extends ConsumerWidget {
       unawaited(context.push('/tasks'));
       return;
     }
-    _openStuckChat(context);
+    _openStuckChat(context, ref);
   }
 
   /// 与原 dashboard_screen._startNextAction 相同的跳转链路（来源：
@@ -296,46 +297,17 @@ class _CockpitContent extends ConsumerWidget {
     unawaited(context.push('/tasks/${growthTask.id}/execute?origin=home_growth'));
   }
 
-  /// 「我卡住了」→ 携带真实 context 进入卡点突破 chat
-  /// （沿用 dashboard_screen._openBottleneckChat 的 prompt+chat_mode 约定，
-  /// J-05 旗舰恢复旅程以此为 home 落点）。
-  void _openStuckChat(BuildContext context) {
-    final l10n = context.l10n;
-    final bottleneck = vm.bottleneckTopic;
-    final prompt = bottleneck != null
-        ? l10n.dashboardBottleneckPrompt(bottleneck)
-        : l10n.todayCockpitStuckPrompt(
-            vm.goalTitle ?? vm.planName ?? l10n.todayCockpitGoalWord,
-            _stallReason(l10n),
-          );
-    context.go(
-      Uri(
-        path: '/chat',
-        queryParameters: {
-          'prompt': prompt,
-          // F-6：'growth' 非后端支持 mode（backend chat_modes.py
-          // SUPPORTED_CHAT_MODES 无此值，normalize_chat_mode 静默回落
-          // standard，mode 条形同虚设）。卡住求助=诊断并突破当前瓶颈，
-          // 取语义最近的后端既有 mode deep_analysis。
-          'chat_mode': 'deep_analysis',
-        },
-      ).toString(),
+  /// 「我卡住了」→ J-05 统一恢复旅程（home 落点）：携带真实 context
+  /// （surface=home + cockpit 当前任务 id）进入旅程面，由后端读真源
+  /// 派生单问/主 intervention。不再客户端拼模板 prompt。
+  void _openStuckChat(BuildContext context, WidgetRef ref) {
+    unawaited(
+      showStuckJourneySheet(
+        context,
+        surface: 'home',
+        taskId: vm.taskToStart?.id,
+      ),
     );
-  }
-
-  String _stallReason(AppLocalizations l10n) {
-    final deadline = vm.deadlineDays;
-    if (deadline != null && deadline <= 0) {
-      return l10n.todayCockpitStallReasonDeadline;
-    }
-    if (vm.staleGuard) {
-      return l10n.todayCockpitStallReasonStale;
-    }
-    final health = vm.planHealthPercent;
-    if (health != null) {
-      return l10n.todayCockpitStallReasonHealth(health);
-    }
-    return l10n.todayCockpitStallReasonGeneric;
   }
 }
 

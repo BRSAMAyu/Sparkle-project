@@ -15200,6 +15200,73 @@
         }
     },
     "stuckRecoveryReconnectAck": "好的",
+    "stuckJourneySheetTitle": "我们来看看卡在哪",
+    "stuckJourneyContextTask": "任务：{title}",
+    "@stuckJourneyContextTask": {
+        "placeholders": {
+            "title": {
+                "type": "String"
+            }
+        }
+    },
+    "stuckJourneyContextGoal": "目标：{title}",
+    "@stuckJourneyContextGoal": {
+        "placeholders": {
+            "title": {
+                "type": "String"
+            }
+        }
+    },
+    "stuckJourneyContextFailures": "最近有 {count} 张任务出现卡点",
+    "@stuckJourneyContextFailures": {
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "stuckJourneyContextStalled": "这一步停了 {days} 天",
+    "@stuckJourneyContextStalled": {
+        "placeholders": {
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "stuckJourneyQuestionHeader": "先说清一件事",
+    "stuckJourneyInterventionHeader": "可以这样试",
+    "stuckJourneyUncertainHint": "这是按现有信息给的判断，不对就纠正我",
+    "stuckJourneyNotThisReason": "不是这个原因",
+    "stuckJourneyTryIt": "照这个方向试试",
+    "stuckJourneyCorrectedAck": "收到，之后这类原因会往后放",
+    "stuckJourneyLoadFailed": "暂时连不上，稍后再试",
+    "stuckJourneyRetry": "重试",
+    "stuckJourneyChatPrompt": "我在「{anchor}」上卡住了。刚看了「{direction}」这个方向，帮我把它落成下一步。",
+    "@stuckJourneyChatPrompt": {
+        "placeholders": {
+            "anchor": {
+                "type": "String"
+            },
+            "direction": {
+                "type": "String"
+            }
+        }
+    },
+    "stuckJourneyInterventionRescope": "把范围调小一点，让它更容易推进",
+    "stuckJourneyInterventionSplit": "把这一步拆成更小的几步",
+    "stuckJourneyInterventionClarify": "先把要做到的标准说清楚",
+    "stuckJourneyInterventionExplain": "先补一补这部分概念",
+    "stuckJourneyInterventionRetrieve": "先翻翻你已经有的资料",
+    "stuckJourneyInterventionPractice": "用一个练习把方法跑一遍",
+    "stuckJourneyInterventionSchedule": "把时间重新排一排",
+    "stuckJourneyInterventionPause": "先休息一下，状态回来再继续",
+    "stuckJourneyInterventionRemind": "到点提醒你回来看这一步",
+    "stuckJourneyInterventionReflect": "一起理一理优先级",
+    "stuckJourneyInterventionReview": "把做出来的部分检查一遍",
+    "stuckJourneyInterventionConnectPeer": "找个同伴一起推进",
+    "stuckJourneyInterventionDelegate": "把机械的部分交给工具",
+    "stuckJourneyInterventionCoExecute": "让 Sparkle 陪你一起做",
+    "stuckHelpJourneyCta": "让 Sparkle 一步步帮我理",
     "homeSlotDailyBriefing": "今日简报",
     "homeSlotDailyBriefingReady": "今天 {count} 件待办 · 已就绪",
     "@homeSlotDailyBriefingReady": {
@@ -16544,29 +16611,6 @@
     "todayCockpitCtaArrange": "安排今天",
     "todayCockpitCtaStuck": "解开卡点",
     "todayCockpitStuckButton": "我卡住了",
-    "todayCockpitStuckPrompt": "我在推进「{goal}」时卡住了：{reason}帮我重新找到此刻最值得做的一步。",
-    "@todayCockpitStuckPrompt": {
-        "placeholders": {
-            "goal": {
-                "type": "String"
-            },
-            "reason": {
-                "type": "String"
-            }
-        }
-    },
-    "todayCockpitGoalWord": "当前目标",
-    "todayCockpitStallReasonDeadline": "快到截止但还没推进，",
-    "todayCockpitStallReasonStale": "计划已经搁置了一段时间，",
-    "todayCockpitStallReasonHealth": "计划健康度降到 {percent}%，",
-    "@todayCockpitStallReasonHealth": {
-        "placeholders": {
-            "percent": {
-                "type": "int"
-            }
-        }
-    },
-    "todayCockpitStallReasonGeneric": "不确定下一步从哪继续，",
     "todayCockpitRunOngoing": "Aurora 正在推进",
     "todayCockpitRunOngoingDetailed": "Aurora 正在推进：{detail}",
     "@todayCockpitRunOngoingDetailed": {

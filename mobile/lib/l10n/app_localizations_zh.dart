@@ -32947,6 +32947,103 @@ class AppLocalizationsZh extends AppLocalizations {
   String get stuckRecoveryReconnectAck => '好的';
 
   @override
+  String get stuckJourneySheetTitle => '我们来看看卡在哪';
+
+  @override
+  String stuckJourneyContextTask(String title) {
+    return '任务：$title';
+  }
+
+  @override
+  String stuckJourneyContextGoal(String title) {
+    return '目标：$title';
+  }
+
+  @override
+  String stuckJourneyContextFailures(int count) {
+    return '最近有 $count 张任务出现卡点';
+  }
+
+  @override
+  String stuckJourneyContextStalled(int days) {
+    return '这一步停了 $days 天';
+  }
+
+  @override
+  String get stuckJourneyQuestionHeader => '先说清一件事';
+
+  @override
+  String get stuckJourneyInterventionHeader => '可以这样试';
+
+  @override
+  String get stuckJourneyUncertainHint => '这是按现有信息给的判断，不对就纠正我';
+
+  @override
+  String get stuckJourneyNotThisReason => '不是这个原因';
+
+  @override
+  String get stuckJourneyTryIt => '照这个方向试试';
+
+  @override
+  String get stuckJourneyCorrectedAck => '收到，之后这类原因会往后放';
+
+  @override
+  String get stuckJourneyLoadFailed => '暂时连不上，稍后再试';
+
+  @override
+  String get stuckJourneyRetry => '重试';
+
+  @override
+  String stuckJourneyChatPrompt(String anchor, String direction) {
+    return '我在「$anchor」上卡住了。刚看了「$direction」这个方向，帮我把它落成下一步。';
+  }
+
+  @override
+  String get stuckJourneyInterventionRescope => '把范围调小一点，让它更容易推进';
+
+  @override
+  String get stuckJourneyInterventionSplit => '把这一步拆成更小的几步';
+
+  @override
+  String get stuckJourneyInterventionClarify => '先把要做到的标准说清楚';
+
+  @override
+  String get stuckJourneyInterventionExplain => '先补一补这部分概念';
+
+  @override
+  String get stuckJourneyInterventionRetrieve => '先翻翻你已经有的资料';
+
+  @override
+  String get stuckJourneyInterventionPractice => '用一个练习把方法跑一遍';
+
+  @override
+  String get stuckJourneyInterventionSchedule => '把时间重新排一排';
+
+  @override
+  String get stuckJourneyInterventionPause => '先休息一下，状态回来再继续';
+
+  @override
+  String get stuckJourneyInterventionRemind => '到点提醒你回来看这一步';
+
+  @override
+  String get stuckJourneyInterventionReflect => '一起理一理优先级';
+
+  @override
+  String get stuckJourneyInterventionReview => '把做出来的部分检查一遍';
+
+  @override
+  String get stuckJourneyInterventionConnectPeer => '找个同伴一起推进';
+
+  @override
+  String get stuckJourneyInterventionDelegate => '把机械的部分交给工具';
+
+  @override
+  String get stuckJourneyInterventionCoExecute => '让 Sparkle 陪你一起做';
+
+  @override
+  String get stuckHelpJourneyCta => '让 Sparkle 一步步帮我理';
+
+  @override
   String get homeSlotDailyBriefing => '今日简报';
 
   @override
@@ -35135,28 +35232,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get todayCockpitStuckButton => '我卡住了';
-
-  @override
-  String todayCockpitStuckPrompt(String goal, String reason) {
-    return '我在推进「$goal」时卡住了：$reason帮我重新找到此刻最值得做的一步。';
-  }
-
-  @override
-  String get todayCockpitGoalWord => '当前目标';
-
-  @override
-  String get todayCockpitStallReasonDeadline => '快到截止但还没推进，';
-
-  @override
-  String get todayCockpitStallReasonStale => '计划已经搁置了一段时间，';
-
-  @override
-  String todayCockpitStallReasonHealth(int percent) {
-    return '计划健康度降到 $percent%，';
-  }
-
-  @override
-  String get todayCockpitStallReasonGeneric => '不确定下一步从哪继续，';
 
   @override
   String get todayCockpitRunOngoing => 'Aurora 正在推进';

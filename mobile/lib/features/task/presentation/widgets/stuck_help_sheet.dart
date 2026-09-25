@@ -9,12 +9,16 @@ class StuckHelpSheet extends StatelessWidget {
   const StuckHelpSheet({
     required this.task,
     super.key,
+    this.onJourneyPressed,
     this.onChatPressed,
     this.onCoreSessionPressed,
     this.onContinuePressed,
   });
 
   final TaskModel task;
+
+  /// J-05：统一恢复旅程入口（action 面）——null 时入口不渲染。
+  final VoidCallback? onJourneyPressed;
   final VoidCallback? onChatPressed;
   final VoidCallback? onCoreSessionPressed;
   final VoidCallback? onContinuePressed;
@@ -29,6 +33,7 @@ class StuckHelpSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final journeyPressed = onJourneyPressed;
     final microTeaching = _readMicroTeaching(task.guideJson);
     final fallbackLevels = _readFallbackLevels(
       task.guideJson?['fallback_if_stuck'],
@@ -86,7 +91,18 @@ class StuckHelpSheet extends StatelessWidget {
                             ],
                           ),
               ),
-              const SizedBox(height: DS.spacing20),
+              if (journeyPressed != null) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: SparkleButton.primary(
+                    key: const Key('stuck-help-journey-button'),
+                    label: context.l10n.stuckHelpJourneyCta,
+                    icon: const Icon(Icons.auto_fix_high_rounded),
+                    onPressed: journeyPressed,
+                  ),
+                ),
+                const SizedBox(height: DS.spacing20),
+              ],
               _SheetSection(
                 title: context.l10n.stuckHelpAskAi,
                 child: Column(

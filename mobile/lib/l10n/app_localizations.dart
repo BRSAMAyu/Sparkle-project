@@ -59905,6 +59905,180 @@ abstract class AppLocalizations {
   /// **'好的'**
   String get stuckRecoveryReconnectAck;
 
+  /// No description provided for @stuckJourneySheetTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'我们来看看卡在哪'**
+  String get stuckJourneySheetTitle;
+
+  /// No description provided for @stuckJourneyContextTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务：{title}'**
+  String stuckJourneyContextTask(String title);
+
+  /// No description provided for @stuckJourneyContextGoal.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标：{title}'**
+  String stuckJourneyContextGoal(String title);
+
+  /// No description provided for @stuckJourneyContextFailures.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近有 {count} 张任务出现卡点'**
+  String stuckJourneyContextFailures(int count);
+
+  /// No description provided for @stuckJourneyContextStalled.
+  ///
+  /// In zh, this message translates to:
+  /// **'这一步停了 {days} 天'**
+  String stuckJourneyContextStalled(int days);
+
+  /// No description provided for @stuckJourneyQuestionHeader.
+  ///
+  /// In zh, this message translates to:
+  /// **'先说清一件事'**
+  String get stuckJourneyQuestionHeader;
+
+  /// No description provided for @stuckJourneyInterventionHeader.
+  ///
+  /// In zh, this message translates to:
+  /// **'可以这样试'**
+  String get stuckJourneyInterventionHeader;
+
+  /// No description provided for @stuckJourneyUncertainHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'这是按现有信息给的判断，不对就纠正我'**
+  String get stuckJourneyUncertainHint;
+
+  /// No description provided for @stuckJourneyNotThisReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'不是这个原因'**
+  String get stuckJourneyNotThisReason;
+
+  /// No description provided for @stuckJourneyTryIt.
+  ///
+  /// In zh, this message translates to:
+  /// **'照这个方向试试'**
+  String get stuckJourneyTryIt;
+
+  /// No description provided for @stuckJourneyCorrectedAck.
+  ///
+  /// In zh, this message translates to:
+  /// **'收到，之后这类原因会往后放'**
+  String get stuckJourneyCorrectedAck;
+
+  /// No description provided for @stuckJourneyLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时连不上，稍后再试'**
+  String get stuckJourneyLoadFailed;
+
+  /// No description provided for @stuckJourneyRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get stuckJourneyRetry;
+
+  /// No description provided for @stuckJourneyChatPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'我在「{anchor}」上卡住了。刚看了「{direction}」这个方向，帮我把它落成下一步。'**
+  String stuckJourneyChatPrompt(String anchor, String direction);
+
+  /// No description provided for @stuckJourneyInterventionRescope.
+  ///
+  /// In zh, this message translates to:
+  /// **'把范围调小一点，让它更容易推进'**
+  String get stuckJourneyInterventionRescope;
+
+  /// No description provided for @stuckJourneyInterventionSplit.
+  ///
+  /// In zh, this message translates to:
+  /// **'把这一步拆成更小的几步'**
+  String get stuckJourneyInterventionSplit;
+
+  /// No description provided for @stuckJourneyInterventionClarify.
+  ///
+  /// In zh, this message translates to:
+  /// **'先把要做到的标准说清楚'**
+  String get stuckJourneyInterventionClarify;
+
+  /// No description provided for @stuckJourneyInterventionExplain.
+  ///
+  /// In zh, this message translates to:
+  /// **'先补一补这部分概念'**
+  String get stuckJourneyInterventionExplain;
+
+  /// No description provided for @stuckJourneyInterventionRetrieve.
+  ///
+  /// In zh, this message translates to:
+  /// **'先翻翻你已经有的资料'**
+  String get stuckJourneyInterventionRetrieve;
+
+  /// No description provided for @stuckJourneyInterventionPractice.
+  ///
+  /// In zh, this message translates to:
+  /// **'用一个练习把方法跑一遍'**
+  String get stuckJourneyInterventionPractice;
+
+  /// No description provided for @stuckJourneyInterventionSchedule.
+  ///
+  /// In zh, this message translates to:
+  /// **'把时间重新排一排'**
+  String get stuckJourneyInterventionSchedule;
+
+  /// No description provided for @stuckJourneyInterventionPause.
+  ///
+  /// In zh, this message translates to:
+  /// **'先休息一下，状态回来再继续'**
+  String get stuckJourneyInterventionPause;
+
+  /// No description provided for @stuckJourneyInterventionRemind.
+  ///
+  /// In zh, this message translates to:
+  /// **'到点提醒你回来看这一步'**
+  String get stuckJourneyInterventionRemind;
+
+  /// No description provided for @stuckJourneyInterventionReflect.
+  ///
+  /// In zh, this message translates to:
+  /// **'一起理一理优先级'**
+  String get stuckJourneyInterventionReflect;
+
+  /// No description provided for @stuckJourneyInterventionReview.
+  ///
+  /// In zh, this message translates to:
+  /// **'把做出来的部分检查一遍'**
+  String get stuckJourneyInterventionReview;
+
+  /// No description provided for @stuckJourneyInterventionConnectPeer.
+  ///
+  /// In zh, this message translates to:
+  /// **'找个同伴一起推进'**
+  String get stuckJourneyInterventionConnectPeer;
+
+  /// No description provided for @stuckJourneyInterventionDelegate.
+  ///
+  /// In zh, this message translates to:
+  /// **'把机械的部分交给工具'**
+  String get stuckJourneyInterventionDelegate;
+
+  /// No description provided for @stuckJourneyInterventionCoExecute.
+  ///
+  /// In zh, this message translates to:
+  /// **'让 Sparkle 陪你一起做'**
+  String get stuckJourneyInterventionCoExecute;
+
+  /// No description provided for @stuckHelpJourneyCta.
+  ///
+  /// In zh, this message translates to:
+  /// **'让 Sparkle 一步步帮我理'**
+  String get stuckHelpJourneyCta;
+
   /// No description provided for @homeSlotDailyBriefing.
   ///
   /// In zh, this message translates to:
@@ -63912,42 +64086,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'我卡住了'**
   String get todayCockpitStuckButton;
-
-  /// No description provided for @todayCockpitStuckPrompt.
-  ///
-  /// In zh, this message translates to:
-  /// **'我在推进「{goal}」时卡住了：{reason}帮我重新找到此刻最值得做的一步。'**
-  String todayCockpitStuckPrompt(String goal, String reason);
-
-  /// No description provided for @todayCockpitGoalWord.
-  ///
-  /// In zh, this message translates to:
-  /// **'当前目标'**
-  String get todayCockpitGoalWord;
-
-  /// No description provided for @todayCockpitStallReasonDeadline.
-  ///
-  /// In zh, this message translates to:
-  /// **'快到截止但还没推进，'**
-  String get todayCockpitStallReasonDeadline;
-
-  /// No description provided for @todayCockpitStallReasonStale.
-  ///
-  /// In zh, this message translates to:
-  /// **'计划已经搁置了一段时间，'**
-  String get todayCockpitStallReasonStale;
-
-  /// No description provided for @todayCockpitStallReasonHealth.
-  ///
-  /// In zh, this message translates to:
-  /// **'计划健康度降到 {percent}%，'**
-  String todayCockpitStallReasonHealth(int percent);
-
-  /// No description provided for @todayCockpitStallReasonGeneric.
-  ///
-  /// In zh, this message translates to:
-  /// **'不确定下一步从哪继续，'**
-  String get todayCockpitStallReasonGeneric;
 
   /// No description provided for @todayCockpitRunOngoing.
   ///
