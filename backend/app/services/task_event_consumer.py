@@ -13,7 +13,7 @@ from app.core.cache import cache_service
 from app.core.event_bus import EventBus
 from app.db.session import AsyncSessionLocal
 from app.models.goal import Goal
-from app.models.task import Task
+from app.models.task import Task, TaskStatus
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.services.behavior_signal_collector import BehaviorSignalCollector
 from app.services.cognitive.auto_fragment_collector import AutoFragmentCollector
@@ -244,22 +244,32 @@ class TaskEventConsumer:
                     async with AsyncSessionLocal() as db:
                         from sqlalchemy import func as sa_func
 
+                        # WT360-R2A: limit(1)+first() 防多 Goal 挂同一 plan 时
+                        # MultipleResultsFound（防御深度，现行 1:1 不可达）。
                         result = await db.execute(
-                            select(Goal).where(Goal.plan_id == plan_uuid, Goal.user_id == user_id)
+                            select(Goal)
+                            .where(Goal.plan_id == plan_uuid, Goal.user_id == user_id)
+                            .limit(1)
                         )
-                        goal = result.scalar_one_or_none()
+                        goal = result.scalars().first()
                         if goal:
+                            # WT360-R2A: 口径与 plan_service/plan_progress_service 对齐——
+                            # ① 枚举成员 bind 到 'COMPLETED' 标签（小写字面量在生产 PG
+                            #   原生枚举上抛 22P02 被吞，进度冻结 0.0）；
+                            # ② 分子分母均过滤软删（deleted_at），与 goal_today_view SSOT 同。
                             total = await db.scalar(
                                 select(sa_func.count(Task.id)).where(
                                     Task.plan_id == plan_uuid,
                                     Task.user_id == user_id,
+                                    Task.deleted_at.is_(None),
                                 )
                             )
                             completed = await db.scalar(
                                 select(sa_func.count(Task.id)).where(
                                     Task.plan_id == plan_uuid,
                                     Task.user_id == user_id,
-                                    Task.status == "completed",
+                                    Task.status == TaskStatus.COMPLETED,
+                                    Task.deleted_at.is_(None),
                                 )
                             )
                             goal.progress = (completed / total) if total and total > 0 else 0.0
@@ -302,25 +312,31 @@ class TaskEventConsumer:
                     try:
                         from sqlalchemy import func as sa_func
 
+                        # WT360-R2A: 口径修复同 _handle_task_completed——
+                        # limit(1)+first() 防多 Goal、枚举成员口径、软删不计入分子分母。
                         result = await db.execute(
-                            select(Goal).where(
+                            select(Goal)
+                            .where(
                                 Goal.plan_id == plan_uuid,
                                 Goal.user_id == UUID(str(user_id)),
                             )
+                            .limit(1)
                         )
-                        goal = result.scalar_one_or_none()
+                        goal = result.scalars().first()
                         if goal:
                             total = await db.scalar(
                                 select(sa_func.count(Task.id)).where(
                                     Task.plan_id == plan_uuid,
                                     Task.user_id == UUID(str(user_id)),
+                                    Task.deleted_at.is_(None),
                                 )
                             )
                             completed = await db.scalar(
                                 select(sa_func.count(Task.id)).where(
                                     Task.plan_id == plan_uuid,
                                     Task.user_id == UUID(str(user_id)),
-                                    Task.status == "completed",
+                                    Task.status == TaskStatus.COMPLETED,
+                                    Task.deleted_at.is_(None),
                                 )
                             )
                             goal.progress = (completed / total) if total and total > 0 else 0.0
