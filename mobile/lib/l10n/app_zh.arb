@@ -4685,6 +4685,39 @@
     "notificationQuietHoursSameTimeError": "开始和结束时间不能相同",
     "notificationQuietHoursStartUpdated": "免打扰开始时间已更新",
     "notificationQuietHoursEndUpdated": "免打扰结束时间已更新",
+    "notificationDailyCapTitle": "每日通知上限",
+    "notificationDailyCapSubtitle": "每天最多 {cap} 条主动通知",
+    "@notificationDailyCapSubtitle": {
+        "placeholders": {
+            "cap": {
+                "type": "int"
+            }
+        }
+    },
+    "notificationDailyCapOffSubtitle": "主动通知已停（随时可恢复）",
+    "notificationDailyCapOptionOff": "关闭",
+    "notificationDailyCapUpdated": "每日通知上限已更新",
+    "notificationStimulationModeTitle": "刺激档位",
+    "notificationStimulationModeSubtitle": "当前：{mode}",
+    "@notificationStimulationModeSubtitle": {
+        "placeholders": {
+            "mode": {
+                "type": "String"
+            }
+        }
+    },
+    "notificationStimulationModeAuto": "自动（保持现状）",
+    "notificationStimulationModeLow": "低刺激",
+    "notificationStimulationModeStandard": "标准",
+    "notificationStimulationModeUpdated": "刺激档位已设为 {mode}",
+    "@notificationStimulationModeUpdated": {
+        "placeholders": {
+            "mode": {
+                "type": "String"
+            }
+        }
+    },
+    "notificationBurdenSyncHint": "设置以服务端为准，所有设备自动保持一致。",
     "notificationUpdateFailed": "通知设置更新失败：{error}",
     "@notificationUpdateFailed": {
         "placeholders": {

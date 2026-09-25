@@ -56,6 +56,9 @@ __all__ = [
 
 DecisionSink = Callable[["ProactiveDecisionRecord"], Awaitable[None]]
 DeliveryFn = Callable[[str, TriggerClassification, str], Awaitable[bool]]
+#: P-06：per-user 统一设置提供器（异步，返回含 quiet_window/daily_cap/timezone
+#: 的映射或 None）。缺省 None = 沿用管线旋钮（行为零漂移）。
+SettingsProvider = Callable[[str], Awaitable[Any]]
 
 
 def _utcnow() -> datetime:
@@ -115,6 +118,7 @@ class ProactiveEventPipeline:
         sink: DecisionSink | None = None,
         deliver: DeliveryFn | None = None,
         relevance_store: ProactiveRelevanceStore | None = None,
+        settings_provider: SettingsProvider | None = None,
     ) -> None:
         self.store = store or ProactiveSuppressionStore(redis)
         # P-02 相关性上下文存取：默认与抑制状态共用同一 redis 客户端。
@@ -123,6 +127,8 @@ class ProactiveEventPipeline:
         self.shadow = bool(proactive_config.PROACTIVE_PIPELINE_SHADOW) if shadow is None else bool(shadow)
         self._sink = sink
         self._deliver = deliver or self._default_deliver
+        # P-06：统一通知设置（quiet 窗/daily cap/时区）的 per-user 解析入口。
+        self._settings_provider = settings_provider
         self.recent_records: deque[ProactiveDecisionRecord] = deque(maxlen=self.MAX_RECENT_RECORDS)
 
     # -- pipeline ---------------------------------------------------------
@@ -160,7 +166,12 @@ class ProactiveEventPipeline:
 
         scope = SHADOW_SCOPE if self.shadow else LIVE_SCOPE
         try:
-            snapshot = await self.store.build_snapshot(user_id, scope=scope, now=occurred_at)
+            snapshot = await self.store.build_snapshot(
+                user_id,
+                scope=scope,
+                now=occurred_at,
+                **await self._user_settings_kwargs(user_id),
+            )
         except Exception as exc:  # 快照构建失败（store 故障/redis 未配置）：fail-closed
             # R2 P1-1：宁可少发不可误发——置 state_unavailable 总闸，抑制链
             # 直接全抑制（reason=state_unavailable），绝不以零计数快照放行。
@@ -274,6 +285,32 @@ class ProactiveEventPipeline:
         )
         await self._record(record)
         return record
+
+    # -- per-user settings (P-06) -------------------------------------------
+
+    async def _user_settings_kwargs(self, user_id: str) -> dict[str, Any]:
+        """统一设置 → build_snapshot 注入参数。
+
+        解析失败回退管线旋钮（env 基线本就保守：22:00–08:00 + cap 3），并
+        告警——不因偏好读失败而放大众化抑制（快照状态本身另有 fail-closed）。
+        """
+        if self._settings_provider is None:
+            return {}
+        try:
+            settings = await self._settings_provider(user_id)
+        except Exception as exc:
+            logger.warning("proactive settings provider failed, using knobs user={}: {!r}", user_id, exc)
+            return {}
+        if not isinstance(settings, Mapping):
+            return {}
+        kwargs: dict[str, Any] = {}
+        if settings.get("quiet_window") is not None or "quiet_window" in settings:
+            kwargs["quiet_window"] = settings.get("quiet_window")
+        if settings.get("daily_cap") is not None:
+            kwargs["daily_cap"] = int(settings["daily_cap"])
+        if settings.get("timezone"):
+            kwargs["timezone"] = str(settings["timezone"])
+        return kwargs
 
     # -- relevance context（P-02）------------------------------------------
 

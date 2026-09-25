@@ -38,6 +38,12 @@ VALID_STIMULATION_MODES = {
 DEFAULT_NUDGE_SUPPRESS_HOURS = 24
 # 低刺激档主动建议频率衰减：抑制窗口 ×3（24h → 72h）。
 LOW_STIMULATION_NUDGE_SUPPRESS_HOURS = 72
+# P-06 低刺激档 quiet hours 加宽（分钟）：允许集 = 原窗允许 ∩ 加宽窗允许，
+# 即有效抑制窗 = 原窗 ∪ 各端外扩——低刺激默认更保守的交集语义。
+LOW_STIMULATION_QUIET_EXTENSION_MINUTES = 60
+# P-06 低刺激档默认日上限：仅当用户未显式设置 daily_cap 时生效
+# （用户 explicit setting 最高优先，显式值不被压低）。
+LOW_STIMULATION_DAILY_CAP = 2
 
 
 @dataclass(slots=True, frozen=True)

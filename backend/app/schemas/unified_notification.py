@@ -133,6 +133,14 @@ class NotificationPreferencesUpdate(BaseModel):
     quiet_hours_enabled: bool | None = None
     quiet_hours_start: str | None = Field(None, pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$")
     quiet_hours_end: str | None = Field(None, pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$")
+    # P-06 统一设置面：日上限（0 = 用户关停）与 A-07 刺激档共用此入口；
+    # 服务端写各自既有真源（explicit["daily_cap"] / aurora_stimulation_mode）。
+    daily_cap: int | None = Field(
+        None, ge=0, le=20, description="Daily proactive notification cap; 0 turns notifications off"
+    )
+    stimulation_mode: str | None = Field(
+        None, pattern="^(auto|low|standard)$", description="Aurora stimulation mode (A-07)"
+    )
 
 
 class NotificationPreferencesResponse(BaseModel):
@@ -146,6 +154,10 @@ class NotificationPreferencesResponse(BaseModel):
     quiet_hours_enabled: bool
     quiet_hours_start: str | None
     quiet_hours_end: str | None
+    # P-06 统一投影：服务端权威（多设备读同一状态；本地仅只读投影）。
+    daily_cap: int = 3
+    daily_cap_source: str = "default"
+    stimulation_mode: str = "auto"
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

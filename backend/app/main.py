@@ -404,7 +404,16 @@ async def lifespan(fastapp: FastAPI):
         # fail-closed：Redis 故障时全抑制（宁可少发不可误发）。
         from app.aurora.proactive import ProactiveEventPipeline
 
-        proactive_pipeline = ProactiveEventPipeline(redis=cache_service.redis)
+        # P-06：接通 per-user 统一通知设置（quiet 窗/daily cap/时区）——
+        # 用户设置不再只是展示面，事件管线抑制链据此判定（解析失败回退
+        # 管线旋钮保守基线）。
+        from app.aurora.runtime_v1.notification_settings import make_db_settings_provider
+        from app.db.session import AsyncSessionLocal
+
+        proactive_pipeline = ProactiveEventPipeline(
+            redis=cache_service.redis,
+            settings_provider=make_db_settings_provider(AsyncSessionLocal),
+        )
         fastapp.state.proactive_pipeline = proactive_pipeline
         fastapp.state.proactive_pipeline_task = asyncio.create_task(proactive_pipeline.attach(event_bus))
 

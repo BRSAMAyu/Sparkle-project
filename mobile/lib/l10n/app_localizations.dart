@@ -20418,6 +20418,78 @@ abstract class AppLocalizations {
   /// **'免打扰结束时间已更新'**
   String get notificationQuietHoursEndUpdated;
 
+  /// No description provided for @notificationDailyCapTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'每日通知上限'**
+  String get notificationDailyCapTitle;
+
+  /// No description provided for @notificationDailyCapSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'每天最多 {cap} 条主动通知'**
+  String notificationDailyCapSubtitle(int cap);
+
+  /// No description provided for @notificationDailyCapOffSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'主动通知已停（随时可恢复）'**
+  String get notificationDailyCapOffSubtitle;
+
+  /// No description provided for @notificationDailyCapOptionOff.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭'**
+  String get notificationDailyCapOptionOff;
+
+  /// No description provided for @notificationDailyCapUpdated.
+  ///
+  /// In zh, this message translates to:
+  /// **'每日通知上限已更新'**
+  String get notificationDailyCapUpdated;
+
+  /// No description provided for @notificationStimulationModeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'刺激档位'**
+  String get notificationStimulationModeTitle;
+
+  /// No description provided for @notificationStimulationModeSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前：{mode}'**
+  String notificationStimulationModeSubtitle(String mode);
+
+  /// No description provided for @notificationStimulationModeAuto.
+  ///
+  /// In zh, this message translates to:
+  /// **'自动（保持现状）'**
+  String get notificationStimulationModeAuto;
+
+  /// No description provided for @notificationStimulationModeLow.
+  ///
+  /// In zh, this message translates to:
+  /// **'低刺激'**
+  String get notificationStimulationModeLow;
+
+  /// No description provided for @notificationStimulationModeStandard.
+  ///
+  /// In zh, this message translates to:
+  /// **'标准'**
+  String get notificationStimulationModeStandard;
+
+  /// No description provided for @notificationStimulationModeUpdated.
+  ///
+  /// In zh, this message translates to:
+  /// **'刺激档位已设为 {mode}'**
+  String notificationStimulationModeUpdated(String mode);
+
+  /// No description provided for @notificationBurdenSyncHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'设置以服务端为准，所有设备自动保持一致。'**
+  String get notificationBurdenSyncHint;
+
   /// No description provided for @notificationUpdateFailed.
   ///
   /// In zh, this message translates to:

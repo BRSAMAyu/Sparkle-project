@@ -11519,6 +11519,50 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationQuietHoursEndUpdated => 'Quiet hours end time updated';
 
   @override
+  String get notificationDailyCapTitle => 'Daily Notification Limit';
+
+  @override
+  String notificationDailyCapSubtitle(int cap) {
+    return 'Up to $cap proactive notifications per day';
+  }
+
+  @override
+  String get notificationDailyCapOffSubtitle =>
+      'Notifications are paused (you can re-enable any time)';
+
+  @override
+  String get notificationDailyCapOptionOff => 'Off';
+
+  @override
+  String get notificationDailyCapUpdated => 'Daily notification limit updated';
+
+  @override
+  String get notificationStimulationModeTitle => 'Stimulation Level';
+
+  @override
+  String notificationStimulationModeSubtitle(String mode) {
+    return 'Current: $mode';
+  }
+
+  @override
+  String get notificationStimulationModeAuto => 'Auto (current behavior)';
+
+  @override
+  String get notificationStimulationModeLow => 'Low stimulation';
+
+  @override
+  String get notificationStimulationModeStandard => 'Standard';
+
+  @override
+  String notificationStimulationModeUpdated(String mode) {
+    return 'Stimulation level set to $mode';
+  }
+
+  @override
+  String get notificationBurdenSyncHint =>
+      'Settings sync from the server and apply across all your devices.';
+
+  @override
   String notificationUpdateFailed(Object error) {
     return 'Failed to update notification settings: $error';
   }

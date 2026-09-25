@@ -5,6 +5,8 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
+from loguru import logger
+
 from app.aurora.runtime_v1.control_surface import ControlSurfaceService
 from app.aurora.runtime_v1.persistence import AuroraPersistenceStore, PersistedScheduledWake
 from app.aurora.runtime_v1.state import ScheduledWake
@@ -131,6 +133,40 @@ class AuroraWakeScheduler:
         if persisted is not None:
             await self._dequeue(wake_id)
         return persisted
+
+    async def cancel_pending_wakes(
+        self,
+        user_id: UUID | str,
+        *,
+        reason: str,
+        limit: int = 200,
+    ) -> int:
+        """取消该用户全部 in-flight（pending）wake——P-06 关停即时生效面。
+
+        用户在统一设置里关停主动触达（enable_interventions=False 等）时调用；
+        返回取消数量。只碰该用户的行（user_id 过滤），不牵连他人。
+        """
+        if not self.enabled:
+            return 0
+        pending = await self.persistence_store.list_pending_wakes(user_id=user_id, limit=limit)
+        cancelled = 0
+        for item in pending:
+            persisted = await self.persistence_store.mark_wake_status(
+                item.wake.wake_id,
+                status="cancelled",
+                metadata={"cancel_reason": reason, "cancelled_at": _utcnow().isoformat()},
+            )
+            if persisted is not None:
+                await self._dequeue(item.wake.wake_id)
+                cancelled += 1
+        if cancelled:
+            logger.info(
+                "cancel_pending_wakes: cancelled {} in-flight wakes for user={} reason={}",
+                cancelled,
+                user_id,
+                reason,
+            )
+        return cancelled
 
     async def _enqueue(self, wake: PersistedScheduledWake) -> None:
         if self.redis is None:

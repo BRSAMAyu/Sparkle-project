@@ -3,6 +3,18 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _no_quiet_hours_by_default(monkeypatch: pytest.MonkeyPatch):
+    """P-06 时钟无关性约定（与 test_proactive_event_pipeline 同款）：本文件
+    只钉任务接线，quiet 窗行为由 test_notification_burden_p06 在真实 DB 上
+    确定性穷举；平台基线 quiet 在此默认关，避免挂钟时间让 sent 断言波动。"""
+    from app.aurora.proactive import config as proactive_config
+
+    monkeypatch.setattr(proactive_config, "PROACTIVE_QUIET_HOURS_ENABLED", False)
+
 
 class _FakeScalarResult:
     def __init__(self, items):

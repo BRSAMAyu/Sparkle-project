@@ -219,6 +219,36 @@ class EmotionStateNotifier extends StateNotifier<EmotionState> {
     } catch (error) {
       debugPrint('EmotionStateNotifier failed to load mode: $error');
     }
+    // P-06 多设备一致：服务端权威——启动后显式拉取引擎侧档位并采纳。
+    // 本地缓存只做首帧投影；其他设备写入的 aurora_stimulation_mode 在此
+    // 收敛（fire-and-forget：失败不打扰用户，保持本地投影）。
+    unawaited(_syncModeFromServer());
+  }
+
+  Future<void> _syncModeFromServer() async {
+    final client = _apiClient;
+    if (client == null || DemoDataService.isDemoMode) {
+      return;
+    }
+    try {
+      final response = await client.get<Map<String, dynamic>>(
+        ApiEndpoints.auroraPreferences,
+      );
+      final payload = response.data;
+      final preferences = payload?['preferences'];
+      if (preferences is Map<String, dynamic>) {
+        final serverMode = EmotionAdaptiveMode.fromStorageValue(
+          preferences['aurora_stimulation_mode'],
+        );
+        if (serverMode != state.mode) {
+          state = state.copyWith(mode: serverMode);
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString(kEmotionAdaptiveModeKey, serverMode.storageValue);
+        }
+      }
+    } catch (error) {
+      debugPrint('EmotionStateNotifier failed to load server mode: $error');
+    }
   }
 
   Future<void> setMode(EmotionAdaptiveMode mode) async {

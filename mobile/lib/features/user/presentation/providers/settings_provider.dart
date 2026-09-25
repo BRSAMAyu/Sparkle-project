@@ -40,6 +40,20 @@ const Set<String> _supportedAiReasoningModes = {
   'balanced',
   'deep',
 };
+/// P-06 统一设置：A-07 刺激档合法值（服务端权威；本地仅只读投影）。
+const Set<String> kSupportedStimulationModes = {'auto', 'low', 'standard'};
+/// P-06 统一设置：每日主动通知上限边界（0 = 关停）。
+const int kDailyCapMin = 0;
+const int kDailyCapMax = 20;
+
+String normalizeStimulationModeSetting(Object? rawValue) {
+  final value = rawValue?.toString().trim().toLowerCase();
+  return kSupportedStimulationModes.contains(value) ? value! : 'auto';
+}
+
+int normalizeDailyCapSetting(Object? rawValue, {int fallback = 3}) =>
+    parseBoundedIntSetting(rawValue, min: kDailyCapMin, max: kDailyCapMax) ??
+    fallback;
 
 String normalizeNotificationLevelSetting(Object? rawValue) {
   final value = rawValue?.toString().trim().toLowerCase();
@@ -188,6 +202,9 @@ class NotificationPreferenceSettings {
     this.quietHoursEnabled = false,
     this.quietHoursStart = '22:00',
     this.quietHoursEnd = '08:00',
+    this.dailyCap = 3,
+    this.dailyCapSource = 'default',
+    this.stimulationMode = 'auto',
     this.isLoaded = false,
   });
 
@@ -198,6 +215,12 @@ class NotificationPreferenceSettings {
   final bool quietHoursEnabled;
   final String quietHoursStart;
   final String quietHoursEnd;
+  /// P-06：每日主动通知上限（0 = 关停）。服务端权威——本地只是只读投影。
+  final int dailyCap;
+  /// 'user'（用户显式设置）| 'default'（enforcement 基线投影）。
+  final String dailyCapSource;
+  /// A-07 刺激档（auto/low/standard），服务端权威投影。
+  final String stimulationMode;
   final bool isLoaded;
 
   NotificationPreferenceSettings copyWith({
@@ -208,6 +231,9 @@ class NotificationPreferenceSettings {
     bool? quietHoursEnabled,
     String? quietHoursStart,
     String? quietHoursEnd,
+    int? dailyCap,
+    String? dailyCapSource,
+    String? stimulationMode,
     bool? isLoaded,
   }) =>
       NotificationPreferenceSettings(
@@ -218,6 +244,9 @@ class NotificationPreferenceSettings {
         quietHoursEnabled: quietHoursEnabled ?? this.quietHoursEnabled,
         quietHoursStart: quietHoursStart ?? this.quietHoursStart,
         quietHoursEnd: quietHoursEnd ?? this.quietHoursEnd,
+        dailyCap: dailyCap ?? this.dailyCap,
+        dailyCapSource: dailyCapSource ?? this.dailyCapSource,
+        stimulationMode: stimulationMode ?? this.stimulationMode,
         isLoaded: isLoaded ?? this.isLoaded,
       );
 
@@ -235,6 +264,12 @@ class NotificationPreferenceSettings {
         quietHoursEnabled: json['quiet_hours_enabled'] as bool? ?? false,
         quietHoursStart: json['quiet_hours_start'] as String? ?? '22:00',
         quietHoursEnd: json['quiet_hours_end'] as String? ?? '08:00',
+        dailyCap: normalizeDailyCapSetting(json['daily_cap']),
+        dailyCapSource:
+            json['daily_cap_source']?.toString() ?? 'default',
+        stimulationMode: normalizeStimulationModeSetting(
+          json['stimulation_mode'],
+        ),
         isLoaded: true,
       );
 
@@ -246,6 +281,8 @@ class NotificationPreferenceSettings {
         'quiet_hours_enabled': quietHoursEnabled,
         'quiet_hours_start': quietHoursStart,
         'quiet_hours_end': quietHoursEnd,
+        if (dailyCapSource == 'user') 'daily_cap': dailyCap,
+        'stimulation_mode': stimulationMode,
       };
 }
 
@@ -382,6 +419,20 @@ class NotificationPreferenceSettingsNotifier
     }
   }
 
+  /// P-06 显式同步：从服务端重读统一设置（多设备一致，服务端权威）。
+  ///
+  /// 本地 state 只是服务端状态的只读投影；显式刷新以服务端返回为准，
+  /// 失败保留当前投影并如实上抛（不伪造成功）。
+  Future<void> refresh() async {
+    final user = _ref.read(authProvider).user;
+    if (user == null) {
+      return;
+    }
+    final repo = _ref.read(notificationCenterRepositoryProvider);
+    final prefs = await repo.getPreferences();
+    state = NotificationPreferenceSettings.fromJson(prefs);
+  }
+
   Future<void> updatePreferences({
     bool? enableSystem,
     bool? enableInterventions,
@@ -390,6 +441,8 @@ class NotificationPreferenceSettingsNotifier
     bool? quietHoursEnabled,
     String? quietHoursStart,
     String? quietHoursEnd,
+    int? dailyCap,
+    String? stimulationMode,
   }) async {
     final previousState = state;
     final nextState = previousState.copyWith(
@@ -402,6 +455,11 @@ class NotificationPreferenceSettingsNotifier
       quietHoursEnabled: quietHoursEnabled,
       quietHoursStart: quietHoursStart,
       quietHoursEnd: quietHoursEnd,
+      dailyCap: dailyCap == null ? null : normalizeDailyCapSetting(dailyCap),
+      dailyCapSource: dailyCap == null ? null : 'user',
+      stimulationMode: stimulationMode == null
+          ? null
+          : normalizeStimulationModeSetting(stimulationMode),
       isLoaded: true,
     );
 

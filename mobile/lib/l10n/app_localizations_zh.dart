@@ -11082,6 +11082,48 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationQuietHoursEndUpdated => '免打扰结束时间已更新';
 
   @override
+  String get notificationDailyCapTitle => '每日通知上限';
+
+  @override
+  String notificationDailyCapSubtitle(int cap) {
+    return '每天最多 $cap 条主动通知';
+  }
+
+  @override
+  String get notificationDailyCapOffSubtitle => '主动通知已停（随时可恢复）';
+
+  @override
+  String get notificationDailyCapOptionOff => '关闭';
+
+  @override
+  String get notificationDailyCapUpdated => '每日通知上限已更新';
+
+  @override
+  String get notificationStimulationModeTitle => '刺激档位';
+
+  @override
+  String notificationStimulationModeSubtitle(String mode) {
+    return '当前：$mode';
+  }
+
+  @override
+  String get notificationStimulationModeAuto => '自动（保持现状）';
+
+  @override
+  String get notificationStimulationModeLow => '低刺激';
+
+  @override
+  String get notificationStimulationModeStandard => '标准';
+
+  @override
+  String notificationStimulationModeUpdated(String mode) {
+    return '刺激档位已设为 $mode';
+  }
+
+  @override
+  String get notificationBurdenSyncHint => '设置以服务端为准，所有设备自动保持一致。';
+
+  @override
   String notificationUpdateFailed(Object error) {
     return '通知设置更新失败：$error';
   }

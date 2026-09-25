@@ -24981,6 +24981,16 @@
       "NotificationPreferencesResponse": {
         "description": "Notification preferences response",
         "properties": {
+          "daily_cap": {
+            "default": 3,
+            "title": "Daily Cap",
+            "type": "integer"
+          },
+          "daily_cap_source": {
+            "default": "default",
+            "title": "Daily Cap Source",
+            "type": "string"
+          },
           "disabled_types": {
             "items": {
               "type": "string"
@@ -25026,6 +25036,11 @@
             ],
             "title": "Quiet Hours Start"
           },
+          "stimulation_mode": {
+            "default": "auto",
+            "title": "Stimulation Mode",
+            "type": "string"
+          },
           "updated_at": {
             "format": "date-time",
             "title": "Updated At",
@@ -25053,6 +25068,20 @@
       "NotificationPreferencesUpdate": {
         "description": "Update notification preferences",
         "properties": {
+          "daily_cap": {
+            "anyOf": [
+              {
+                "maximum": 20.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daily proactive notification cap; 0 turns notifications off",
+            "title": "Daily Cap"
+          },
           "disabled_types": {
             "anyOf": [
               {
@@ -25136,6 +25165,19 @@
               }
             ],
             "title": "Quiet Hours Start"
+          },
+          "stimulation_mode": {
+            "anyOf": [
+              {
+                "pattern": "^(auto|low|standard)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Aurora stimulation mode (A-07)",
+            "title": "Stimulation Mode"
           }
         },
         "title": "NotificationPreferencesUpdate",
@@ -76828,7 +76870,7 @@
     },
     "/api/v1/notification-center/preferences": {
       "get": {
-        "description": "Get user notification preferences.",
+        "description": "Get user notification preferences (P-06 unified projection, server authoritative).\n\nquiet hours 来自 NotificationPreferences 表；daily cap 来自\nexplicit[\"daily_cap\"]；stimulation mode 来自 A-07 aurora_stimulation_mode。\n多设备读同一服务端状态——mobile 本地只是只读投影 + 显式同步。",
         "operationId": "get_notification_preferences_api_v1_notification_center_preferences_get",
         "responses": {
           "200": {
@@ -76853,7 +76895,7 @@
         ]
       },
       "put": {
-        "description": "Update user notification preferences.\n\nFields:\n- enable_system: Enable/disable system notifications\n- enable_interventions: Enable/disable intervention notifications\n- notification_level: minimal, standard, or verbose\n- quiet_hours_enabled: Enable quiet hours\n- quiet_hours_start: Start time in HH:MM format\n- quiet_hours_end: End time in HH:MM format",
+        "description": "Update user notification preferences (P-06 unified settings surface).\n\nFields:\n- enable_system / enable_interventions: channel switches\n- notification_level: minimal, standard, or verbose\n- quiet_hours_enabled / start / end: user quiet window\n- daily_cap: daily proactive notification cap (0 turns notifications off)\n- stimulation_mode: Aurora stimulation mode (A-07: auto/low/standard)\n\n关停（enable_interventions=False）即时取消该用户全部 in-flight scheduled\nwakes——关停要真生效，不等已排通知到点。",
         "operationId": "update_notification_preferences_api_v1_notification_center_preferences_put",
         "requestBody": {
           "content": {

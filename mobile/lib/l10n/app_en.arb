@@ -4682,6 +4682,39 @@
     "notificationQuietHoursSameTimeError": "Start and end times cannot be the same",
     "notificationQuietHoursStartUpdated": "Quiet hours start time updated",
     "notificationQuietHoursEndUpdated": "Quiet hours end time updated",
+    "notificationDailyCapTitle": "Daily Notification Limit",
+    "notificationDailyCapSubtitle": "Up to {cap} proactive notifications per day",
+    "@notificationDailyCapSubtitle": {
+        "placeholders": {
+            "cap": {
+                "type": "int"
+            }
+        }
+    },
+    "notificationDailyCapOffSubtitle": "Notifications are paused (you can re-enable any time)",
+    "notificationDailyCapOptionOff": "Off",
+    "notificationDailyCapUpdated": "Daily notification limit updated",
+    "notificationStimulationModeTitle": "Stimulation Level",
+    "notificationStimulationModeSubtitle": "Current: {mode}",
+    "@notificationStimulationModeSubtitle": {
+        "placeholders": {
+            "mode": {
+                "type": "String"
+            }
+        }
+    },
+    "notificationStimulationModeAuto": "Auto (current behavior)",
+    "notificationStimulationModeLow": "Low stimulation",
+    "notificationStimulationModeStandard": "Standard",
+    "notificationStimulationModeUpdated": "Stimulation level set to {mode}",
+    "@notificationStimulationModeUpdated": {
+        "placeholders": {
+            "mode": {
+                "type": "String"
+            }
+        }
+    },
+    "notificationBurdenSyncHint": "Settings sync from the server and apply across all your devices.",
     "notificationUpdateFailed": "Failed to update notification settings: {error}",
     "@notificationUpdateFailed": {
         "placeholders": {

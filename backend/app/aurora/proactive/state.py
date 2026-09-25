@@ -95,8 +95,13 @@ class ProactiveSuppressionStore:
         now: datetime | None = None,
         quiet_window: tuple[str, str] | None | bool = True,
         muted_triggers: frozenset[str] | None = None,
+        daily_cap: int | None = None,
+        timezone: str | None = None,
     ) -> SuppressionSnapshot:
         """构建当前抑制快照（读侧完成窗口修剪）。
+
+        P-06：``daily_cap`` / ``timezone`` 可由统一设置解析器注入（per-user
+        真源）；缺省 None 时沿用管线旋钮——既有调用方行为零漂移。
 
         Raises:
             ProactiveStateUnavailable: redis 未配置 / 读失败 / 文档损坏——
@@ -126,11 +131,11 @@ class ProactiveSuppressionStore:
         return SuppressionSnapshot(
             now=now,
             quiet_window=quiet_window,  # type: ignore[arg-type]
-            timezone=knobs.PROACTIVE_QUIET_TIMEZONE,
+            timezone=timezone or knobs.PROACTIVE_QUIET_TIMEZONE,
             proactive_action_disabled=bool(doc.get("proactive_action_disabled")),
             muted_triggers=muted_triggers,
             daily_count=daily_count,
-            daily_cap=knobs.PROACTIVE_DAILY_CAP,
+            daily_cap=int(daily_cap) if daily_cap is not None else knobs.PROACTIVE_DAILY_CAP,
             last_notify_at=last_notify,
             cooldown_minutes=knobs.PROACTIVE_COOLDOWN_MINUTES,
             recent_rejections=rejections,

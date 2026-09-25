@@ -1779,6 +1779,95 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                 ),
                               ),
                             ],
+                            // P-06 统一负担面：每日上限 + 刺激档（服务端权威投影，
+                            // 与 quiet hours 同一设置入口，同一真源）。
+                            const Divider(height: DS.spacing24),
+                            ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(Icons.filter_alt_outlined),
+                              title: Text(l10n.notificationDailyCapTitle),
+                              subtitle: Text(
+                                notificationPrefs.dailyCap == 0
+                                    ? l10n.notificationDailyCapOffSubtitle
+                                    : l10n.notificationDailyCapSubtitle(
+                                        notificationPrefs.dailyCap,
+                                      ),
+                              ),
+                            ),
+                            _buildSettingsDropdownField<int>(
+                              value: notificationPrefs.dailyCap,
+                              items: [
+                                for (var i = kDailyCapMin; i <= 10; i++)
+                                  DropdownMenuItem(
+                                    value: i,
+                                    child: Text(
+                                      i == 0
+                                          ? l10n.notificationDailyCapOptionOff
+                                          : i.toString(),
+                                    ),
+                                  ),
+                              ],
+                              onChanged: (cap) {
+                                if (cap == null) {
+                                  return;
+                                }
+                                unawaited(
+                                  _updateNotificationPreferences(
+                                    context,
+                                    dailyCap: cap,
+                                    successMessage:
+                                        l10n.notificationDailyCapUpdated,
+                                  ),
+                                );
+                              },
+                            ),
+                            ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(Icons.self_improvement),
+                              title: Text(l10n.notificationStimulationModeTitle),
+                              subtitle: Text(
+                                l10n.notificationStimulationModeSubtitle(
+                                  _stimulationModeLabel(
+                                    l10n,
+                                    notificationPrefs.stimulationMode,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            _buildSettingsDropdownField<String>(
+                              value: notificationPrefs.stimulationMode,
+                              items: [
+                                for (final mode in kSupportedStimulationModes)
+                                  DropdownMenuItem(
+                                    value: mode,
+                                    child: Text(
+                                      _stimulationModeLabel(l10n, mode),
+                                    ),
+                                  ),
+                              ],
+                              onChanged: (mode) {
+                                if (mode == null) {
+                                  return;
+                                }
+                                unawaited(
+                                  _updateNotificationPreferences(
+                                    context,
+                                    stimulationMode: mode,
+                                    successMessage:
+                                        l10n.notificationStimulationModeUpdated(
+                                      _stimulationModeLabel(l10n, mode),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.only(top: DS.spacing4),
+                              child: _buildInlineStatusMessage(
+                                l10n.notificationBurdenSyncHint,
+                              ),
+                            ),
                           ],
                         ],
                       ),
@@ -2285,6 +2374,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     bool? quietHoursEnabled,
     String? quietHoursStart,
     String? quietHoursEnd,
+    int? dailyCap,
+    String? stimulationMode,
     String? successMessage,
   }) async {
     try {
@@ -2298,6 +2389,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             quietHoursEnabled: quietHoursEnabled,
             quietHoursStart: quietHoursStart,
             quietHoursEnd: quietHoursEnd,
+            dailyCap: dailyCap,
+            stimulationMode: stimulationMode,
           );
       if (!context.mounted ||
           successMessage == null ||
@@ -2314,6 +2407,17 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         AppLocalizations.of(context)!.notificationUpdateFailed(
             e.toString().replaceFirst('Exception: ', '').trim(),),
       );
+    }
+  }
+
+  String _stimulationModeLabel(AppLocalizations l10n, String mode) {
+    switch (mode) {
+      case 'low':
+        return l10n.notificationStimulationModeLow;
+      case 'standard':
+        return l10n.notificationStimulationModeStandard;
+      default:
+        return l10n.notificationStimulationModeAuto;
     }
   }
 

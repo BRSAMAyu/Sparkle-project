@@ -3,6 +3,7 @@ Notification Center API Endpoints
 
 Provides unified access to notifications and analytics.
 """
+
 from __future__ import annotations
 
 from uuid import UUID
@@ -48,7 +49,7 @@ async def get_unified_notifications(
     unread_only: bool = Query(False, description="Only return unread notifications"),
     source_type: str | None = Query(None, description="Filter by source: system, intervention"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get unified list of notifications (system + interventions).
@@ -64,16 +65,11 @@ async def get_unified_notifications(
     # Validate source_type
     if source_type and source_type not in _SOURCE_TYPES:
         raise HTTPException(
-            status_code=400,
-            detail=f"Invalid source_type: {source_type}. Must be one of {', '.join(_SOURCE_TYPES)}"
+            status_code=400, detail=f"Invalid source_type: {source_type}. Must be one of {', '.join(_SOURCE_TYPES)}"
         )
 
     notifications = await service.get_unified_notifications(
-        user_id=current_user.id,
-        skip=skip,
-        limit=limit,
-        unread_only=unread_only,
-        source_type=source_type
+        user_id=current_user.id, skip=skip, limit=limit, unread_only=unread_only, source_type=source_type
     )
 
     return notifications
@@ -85,7 +81,7 @@ async def mark_notification_read(
     notification_id: UUID,
     notification_type: str = Query(..., description="Notification type: system or intervention"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Mark a notification as read.
@@ -96,22 +92,14 @@ async def mark_notification_read(
     service = NotificationCenterService(db)
 
     if notification_type not in _NOTIFICATION_TYPES:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid notification_type: {notification_type}"
-        )
+        raise HTTPException(status_code=400, detail=f"Invalid notification_type: {notification_type}")
 
     success = await service.mark_notification_read(
-        user_id=current_user.id,
-        notification_id=notification_id,
-        notification_type=notification_type
+        user_id=current_user.id, notification_id=notification_id, notification_type=notification_type
     )
 
     if not success:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Notification not found: {notification_id}"
-        )
+        raise HTTPException(status_code=404, detail=f"Notification not found: {notification_id}")
 
     return {"message": "Notification marked as read"}
 
@@ -119,8 +107,7 @@ async def mark_notification_read(
 # route-tier: authed
 @router.put("/notifications/mark-all-read")
 async def mark_all_notifications_read(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """
     Mark all notifications as read for the current user.
@@ -131,10 +118,7 @@ async def mark_all_notifications_read(
 
     count = await service.mark_all_notifications_read(current_user.id)
 
-    return {
-        "message": f"Marked {count} notifications as read",
-        "count": count
-    }
+    return {"message": f"Marked {count} notifications as read", "count": count}
 
 
 # route-tier: authed
@@ -143,10 +127,7 @@ async def mark_all_notifications_read(
 # "/notifications/{notification_id}" below and always fails UUID validation (422).
 # route-tier: authed
 @router.delete("/notifications/clear-read")
-async def clear_read_notifications(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
+async def clear_read_notifications(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """
     Clear all read notifications for the current user.
 
@@ -156,10 +137,7 @@ async def clear_read_notifications(
 
     count = await service.clear_read_notifications(current_user.id)
 
-    return {
-        "message": f"Cleared {count} read notifications",
-        "count": count
-    }
+    return {"message": f"Cleared {count} read notifications", "count": count}
 
 
 # route-tier: authed
@@ -168,7 +146,7 @@ async def delete_notification(
     notification_id: UUID,
     notification_type: str = Query(..., description="Notification type: system or intervention"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Delete a notification.
@@ -179,22 +157,14 @@ async def delete_notification(
     service = NotificationCenterService(db)
 
     if notification_type not in _NOTIFICATION_TYPES:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid notification_type: {notification_type}"
-        )
+        raise HTTPException(status_code=400, detail=f"Invalid notification_type: {notification_type}")
 
     success = await service.delete_notification(
-        user_id=current_user.id,
-        notification_id=notification_id,
-        notification_type=notification_type
+        user_id=current_user.id, notification_id=notification_id, notification_type=notification_type
     )
 
     if not success:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Notification not found: {notification_id}"
-        )
+        raise HTTPException(status_code=404, detail=f"Notification not found: {notification_id}")
 
     return {"message": "Notification deleted"}
 
@@ -372,7 +342,9 @@ async def record_suggestion_action(
 
     logger.info(
         "Suggestion feedback recorded: user={} type={} action={}",
-        current_user.id, suggestion_type, request.action,
+        current_user.id,
+        suggestion_type,
+        request.action,
     )
     return {
         "message": f"Suggestion feedback recorded: {request.action}",
@@ -421,7 +393,7 @@ async def get_notification_history(
     end_date: str | None = Query(None, description="End date (ISO format)"),
     search: str | None = Query(None, description="Search in title/content"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get paginated notification history with filters.
@@ -436,18 +408,16 @@ async def get_notification_history(
 
     # Parse filters
     from datetime import datetime
+
     filters = NotificationHistoryFilters(
         type=type,
         start_date=datetime.fromisoformat(start_date) if start_date else None,
         end_date=datetime.fromisoformat(end_date) if end_date else None,
-        search=search
+        search=search,
     )
 
     result = await service.get_notification_history(
-        user_id=current_user.id,
-        page=page,
-        page_size=page_size,
-        filters=filters
+        user_id=current_user.id, page=page, page_size=page_size, filters=filters
     )
 
     return result
@@ -458,7 +428,7 @@ async def get_notification_history(
 async def get_notification_analytics(
     period: str = Query("7d", description="Time period: 1d, 7d, 30d, all"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get notification analytics and usage statistics.
@@ -474,17 +444,11 @@ async def get_notification_analytics(
     service = NotificationAnalyticsService(db)
 
     # Validate period
-    valid_periods = ['1d', '7d', '30d', 'all']
+    valid_periods = ["1d", "7d", "30d", "all"]
     if period not in valid_periods:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid period: {period}. Must be one of {valid_periods}"
-        )
+        raise HTTPException(status_code=400, detail=f"Invalid period: {period}. Must be one of {valid_periods}")
 
-    analytics = await service.get_analytics(
-        user_id=current_user.id,
-        period=period
-    )
+    analytics = await service.get_analytics(user_id=current_user.id, period=period)
 
     return analytics
 
@@ -492,15 +456,20 @@ async def get_notification_analytics(
 # route-tier: authed
 @router.get("/preferences", response_model=NotificationPreferencesResponse)
 async def get_notification_preferences(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """
-    Get user notification preferences.
+    Get user notification preferences (P-06 unified projection, server authoritative).
+
+    quiet hours 来自 NotificationPreferences 表；daily cap 来自
+    explicit["daily_cap"]；stimulation mode 来自 A-07 aurora_stimulation_mode。
+    多设备读同一服务端状态——mobile 本地只是只读投影 + 显式同步。
     """
     service = NotificationCenterService(db)
-
     prefs = await service.get_or_create_preferences(current_user.id)
+
+    daily_cap, daily_cap_source = await _read_daily_cap(db, current_user.id)
+    stimulation_mode = await _read_stimulation_mode(db, current_user.id)
 
     return NotificationPreferencesResponse(
         user_id=prefs.user_id,
@@ -511,7 +480,10 @@ async def get_notification_preferences(
         quiet_hours_enabled=prefs.quiet_hours_enabled,
         quiet_hours_start=prefs.quiet_hours_start,
         quiet_hours_end=prefs.quiet_hours_end,
-        updated_at=prefs.updated_at
+        daily_cap=daily_cap,
+        daily_cap_source=daily_cap_source,
+        stimulation_mode=stimulation_mode,
+        updated_at=prefs.updated_at,
     )
 
 
@@ -520,26 +492,33 @@ async def get_notification_preferences(
 async def update_notification_preferences(
     update: NotificationPreferencesUpdate,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
-    Update user notification preferences.
+    Update user notification preferences (P-06 unified settings surface).
 
     Fields:
-    - enable_system: Enable/disable system notifications
-    - enable_interventions: Enable/disable intervention notifications
+    - enable_system / enable_interventions: channel switches
     - notification_level: minimal, standard, or verbose
-    - quiet_hours_enabled: Enable quiet hours
-    - quiet_hours_start: Start time in HH:MM format
-    - quiet_hours_end: End time in HH:MM format
+    - quiet_hours_enabled / start / end: user quiet window
+    - daily_cap: daily proactive notification cap (0 turns notifications off)
+    - stimulation_mode: Aurora stimulation mode (A-07: auto/low/standard)
+
+    关停（enable_interventions=False）即时取消该用户全部 in-flight scheduled
+    wakes——关停要真生效，不等已排通知到点。
     """
     service = NotificationCenterService(db)
+    was_interventions_disabled = False
+    if update.enable_interventions is not None:
+        existing = await service.get_or_create_preferences(current_user.id)
+        was_interventions_disabled = not existing.enable_interventions
 
     prefs = await service.update_preferences(current_user.id, update)
 
     # Sync to UserPreferencesCenter for PreferenceConsumptionService
     try:
         from app.services.personalization.preference_service import PreferenceService
+
         pref_service = PreferenceService(db, cache_service.redis)
         notif_prefs = {
             "notification_level": prefs.notification_level or "standard",
@@ -550,11 +529,41 @@ async def update_notification_preferences(
             "quiet_hours_start": prefs.quiet_hours_start or "22:00",
             "quiet_hours_end": prefs.quiet_hours_end or "08:00",
         }
-        await pref_service.update_explicit(current_user.id, {
-            "notification_preferences": notif_prefs,
-        })
+        center_updates: dict = {"notification_preferences": notif_prefs}
+        if update.daily_cap is not None:
+            center_updates["daily_cap"] = int(update.daily_cap)
+        await pref_service.update_explicit(current_user.id, center_updates)
     except Exception as e:
         logger.warning(f"Failed to sync notification preferences to UserPreferencesCenter: {e}")
+
+    # A-07 刺激档：写同一真源键（aurora_stimulation_mode），统一入口扇出。
+    if update.stimulation_mode is not None:
+        from app.aurora.runtime_v1.user_preferences import AuroraUserPreferencesService
+
+        await AuroraUserPreferencesService(db).update(
+            current_user.id, {"aurora_stimulation_mode": update.stimulation_mode}
+        )
+
+    # P-06 关停即时取消 in-flight scheduled wakes（新关停才取消，勿重复打扰审计）。
+    if prefs.enable_interventions is False and not was_interventions_disabled:
+        try:
+            from app.aurora.runtime_v1.wake_scheduler import AuroraWakeScheduler
+
+            cancelled = await AuroraWakeScheduler(db).cancel_pending_wakes(
+                current_user.id, reason="interventions_disabled"
+            )
+            logger.info(
+                "Notification preferences disabled interventions: cancelled {} in-flight wakes for user {}",
+                cancelled,
+                current_user.id,
+            )
+        except Exception as e:
+            # 取消面失败不阻断设置写入：投递任务执行时仍会复核统一策略
+            # （deliver_aurora_wake 抑制面兜底），关停语义不被绕过。
+            logger.warning(f"Failed to cancel in-flight wakes after disable: {e}")
+
+    daily_cap, daily_cap_source = await _read_daily_cap(db, current_user.id)
+    stimulation_mode = await _read_stimulation_mode(db, current_user.id)
 
     return NotificationPreferencesResponse(
         user_id=prefs.user_id,
@@ -565,5 +574,42 @@ async def update_notification_preferences(
         quiet_hours_enabled=prefs.quiet_hours_enabled,
         quiet_hours_start=prefs.quiet_hours_start,
         quiet_hours_end=prefs.quiet_hours_end,
-        updated_at=prefs.updated_at
+        daily_cap=daily_cap,
+        daily_cap_source=daily_cap_source,
+        stimulation_mode=stimulation_mode,
+        updated_at=prefs.updated_at,
     )
+
+
+async def _read_daily_cap(db: AsyncSession, user_id) -> tuple[int, str]:
+    """daily cap 服务端真值：explicit["daily_cap"] 显式值，缺省投影 enforcement 基线。"""
+    from sqlalchemy import select
+
+    from app.aurora.proactive import config as proactive_config
+    from app.models.user_preferences import UserPreferencesCenter
+
+    try:
+        row = (
+            await db.execute(select(UserPreferencesCenter).where(UserPreferencesCenter.user_id == user_id))
+        ).scalar_one_or_none()
+        raw = (row.explicit or {}).get("daily_cap") if row is not None else None
+        if raw is None:
+            return int(proactive_config.PROACTIVE_DAILY_CAP), "default"
+        return max(0, int(raw)), "user"
+    except Exception as e:
+        logger.warning(f"Failed to read daily cap for user {user_id}: {e}")
+        from app.aurora.proactive import config as proactive_config
+
+        return int(proactive_config.PROACTIVE_DAILY_CAP), "default"
+
+
+async def _read_stimulation_mode(db: AsyncSession, user_id) -> str:
+    """A-07 刺激档服务端真值（同一键 aurora_stimulation_mode）。"""
+    from app.aurora.runtime_v1.user_preferences import AuroraUserPreferencesService
+
+    try:
+        prefs = await AuroraUserPreferencesService(db).get(user_id)
+        return str(prefs.get("aurora_stimulation_mode") or "auto")
+    except Exception as e:
+        logger.warning(f"Failed to read stimulation mode for user {user_id}: {e}")
+        return "auto"

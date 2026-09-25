@@ -146,7 +146,8 @@ def _minutes_of(hhmm: str) -> int | None:
     return hour * 60 + minute
 
 
-def _in_quiet_window(now: datetime, window: tuple[str, str], timezone_name: str) -> bool:
+def in_quiet_window(now: datetime, window: tuple[str, str], timezone_name: str) -> bool:
+    """quiet 窗口判定（公开助手；P-06 统一设置解析复用同一实现）。"""
     current, _ = _local_minutes(now, timezone_name)
     start = _minutes_of(window[0])
     end = _minutes_of(window[1])
@@ -156,6 +157,10 @@ def _in_quiet_window(now: datetime, window: tuple[str, str], timezone_name: str)
         return start <= current <= end
     # 跨午夜窗口（22:00–08:00）。
     return current >= start or current <= end
+
+
+# 兼容别名：既有内部调用点保持不变。
+_in_quiet_window = in_quiet_window
 
 
 def _cooldown_remaining(now: datetime, last: datetime | None, cooldown_minutes: int) -> int:

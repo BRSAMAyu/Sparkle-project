@@ -2167,6 +2167,41 @@ def comeback_nudge_task(self, user_id: str):
                     "plan_id": plan_id or None,
                 }
 
+            # P-06: 统一通知负担闸门（quiet hours / daily cap）——一处真源
+            # 解析（用户 quiet 窗 + daily cap + 低刺激档交集语义），在生成
+            # 源头抑制；读失败 fail-closed（宁可少发不可误发）。
+            from app.aurora.runtime_v1.notification_settings import (
+                NotificationSettingsResolver,
+                NotificationSettingsUnavailable,
+            )
+
+            resolver = NotificationSettingsResolver(session)
+            try:
+                burden = await resolver.evaluate_burden(UUID(user_id), now=reference_time)
+            except NotificationSettingsUnavailable as exc:
+                logger.warning(
+                    "comeback_nudge_task: notification settings unavailable, fail-closed user={} ({!r})",
+                    user_id,
+                    exc,
+                )
+                return {
+                    "status": "skipped",
+                    "reason": "notification_settings_unavailable",
+                    "plan_id": plan_id or None,
+                }
+            if not burden.allowed:
+                logger.debug(
+                    "comeback_nudge_task: notification burden suppressed for user {} ({})",
+                    user_id,
+                    burden.reason,
+                )
+                return {
+                    "status": "skipped",
+                    "reason": "notification_burden",
+                    "burden": burden.to_dict(),
+                    "plan_id": plan_id or None,
+                }
+
             if await _has_recent_notification(
                 session,
                 user_id=UUID(user_id),
@@ -2655,74 +2690,142 @@ def purge_deleted_account(self, user_id: str) -> dict:
 # ── Aurora Scheduled Wake Executor ────────────────────────────────────────────
 
 
-@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.aurora_wake_deliver_task")
-def aurora_wake_deliver_task(self, wake_id: str, user_id: str):
-    """Deliver a single Aurora scheduled wake as a notification to the user."""
+async def deliver_aurora_wake(
+    session,
+    *,
+    wake_id: str,
+    user_id: str,
+    push_via_websocket: bool = True,
+) -> dict:
+    """投递单个已排 wake——P-06 in-flight 抑制面（关停要真生效）。
+
+    取消面（``AuroraWakeScheduler.cancel_pending_wakes``，由统一偏好 PUT 触发）
+    只能覆盖尚未派发的 wake；已经派发、正在执行的投递任务在此**执行时复核**
+    统一策略（defense in depth）：
+
+        关停（interventions disabled）→ quiet hours → daily cap
+          → 低刺激档仅应用内（不主动推送）
+
+    前三档命中时 wake 被**取消**（不是留在队列里反复重试）；设置真源读失败
+    按 fail-closed 跳过（宁可少发不可误发），且不取消——留下次恢复后重试。
+    """
     from uuid import UUID
 
+    from app.aurora.runtime_v1.notification_settings import (
+        NotificationSettingsResolver,
+        NotificationSettingsUnavailable,
+    )
     from app.aurora.runtime_v1.wake_scheduler import AuroraWakeScheduler
-    from app.db.session import AsyncSessionLocal
     from app.schemas.notification import NotificationCreate
     from app.services.notification_service import NotificationService
 
+    scheduler = AuroraWakeScheduler(db=session)
+    due_wakes = await scheduler.list_due_wakes(user_id=user_id, limit=50)
+    target = None
+    for w in due_wakes:
+        if w.wake.wake_id == wake_id:
+            target = w
+            break
+    if target is None:
+        return {"status": "skipped", "reason": "wake_not_found_or_not_due"}
+
+    # ---- P-06 统一策略复核（真源：统一设置解析器）----
+    resolver = NotificationSettingsResolver(session)
+    try:
+        policy = await resolver.resolve(UUID(user_id))
+    except NotificationSettingsUnavailable as exc:
+        logger.warning(
+            "deliver_aurora_wake: settings unavailable, fail-closed wake={} ({!r})",
+            wake_id,
+            exc,
+        )
+        return {"status": "skipped", "reason": "notification_settings_unavailable"}
+
+    async def _cancel(reason: str) -> dict:
+        await scheduler.cancel_wake(wake_id, metadata={"cancel_reason": reason})
+        logger.info("deliver_aurora_wake: in-flight wake cancelled wake={} reason={}", wake_id, reason)
+        return {"status": "cancelled", "reason": reason, "wake_id": wake_id}
+
+    if not policy.interventions_enabled:
+        return await _cancel("interventions_disabled")
+
+    burden = await resolver.evaluate_burden(UUID(user_id))
+    if not burden.allowed:
+        return await _cancel(str(burden.reason))
+
+    surface = target.surface or "aurora_modeling"
+    conversation_id = target.conversation_id or ""
+    # ScheduledWake schema 无 message 字段、PersistedScheduledWake 的载荷键是
+    # metadata_payload（既有潜在 AttributeError 隐患，P-06 投递测试首次真跑
+    # 暴露）：文案只从持久化载荷取，缺省兜底。
+    target_payload = dict(target.metadata_payload or {})
+    message = str(
+        getattr(target.wake, "message", None)
+        or target_payload.get("message")
+        or "Aurora 有新的发现想和你分享。"
+    )
+    title = str(target_payload.get("title") or "Aurora 想和你聊聊")
+
+    if await _has_recent_notification(
+        session,
+        user_id=UUID(user_id),
+        notification_type="aurora_wake",
+        match_data={"wake_id": wake_id},
+        within_hours=2,
+    ):
+        await scheduler.mark_executed(wake_id, metadata={"status": "duplicate_suppressed"})
+        return {"status": "skipped", "reason": "duplicate_recent"}
+
+    destination_route = f"/chat?aurora_surface={surface}"
+    if conversation_id:
+        destination_route += f"&conversation_id={conversation_id}"
+
+    # 低刺激档（A-07）：不主动推送，仅入应用内通知中心。
+    effective_push = bool(push_via_websocket and policy.allow_proactive_push)
+    await NotificationService.create(
+        session,
+        UUID(user_id),
+        NotificationCreate(
+            title=title,
+            content=message,
+            type="aurora_wake",
+            data={
+                "wake_id": wake_id,
+                "surface": surface,
+                "conversation_id": conversation_id,
+                "destination_route": destination_route,
+                "deep_link": destination_route,
+                "stimulation_policy": policy.stimulation_mode,
+            },
+        ),
+        push_via_websocket=effective_push,
+    )
+
+    await scheduler.mark_executed(wake_id)
+
+    logger.info(
+        "Aurora wake delivered: user={} wake={} surface={} stimulation={}",
+        user_id,
+        wake_id,
+        surface,
+        policy.stimulation_mode,
+    )
+    return {
+        "status": "delivered",
+        "wake_id": wake_id,
+        "user_id": user_id,
+        "push_via_websocket": effective_push,
+    }
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.aurora_wake_deliver_task")
+def aurora_wake_deliver_task(self, wake_id: str, user_id: str):
+    """Deliver a single Aurora scheduled wake as a notification to the user."""
+    from app.db.session import AsyncSessionLocal
+
     async def _run():
         async with AsyncSessionLocal() as session:
-            scheduler = AuroraWakeScheduler(db=session)
-            due_wakes = await scheduler.list_due_wakes(user_id=user_id, limit=50)
-            target = None
-            for w in due_wakes:
-                if w.wake.wake_id == wake_id:
-                    target = w
-                    break
-            if target is None:
-                return {"status": "skipped", "reason": "wake_not_found_or_not_due"}
-
-            surface = target.surface or "aurora_modeling"
-            conversation_id = target.conversation_id or ""
-            message = str(target.wake.message or target.metadata.get("message") or "Aurora 有新的发现想和你分享。")
-            title = str(target.metadata.get("title") or "Aurora 想和你聊聊")
-
-            if await _has_recent_notification(
-                session,
-                user_id=UUID(user_id),
-                notification_type="aurora_wake",
-                match_data={"wake_id": wake_id},
-                within_hours=2,
-            ):
-                await scheduler.mark_executed(wake_id, metadata={"status": "duplicate_suppressed"})
-                return {"status": "skipped", "reason": "duplicate_recent"}
-
-            destination_route = f"/chat?aurora_surface={surface}"
-            if conversation_id:
-                destination_route += f"&conversation_id={conversation_id}"
-
-            await NotificationService.create(
-                session,
-                UUID(user_id),
-                NotificationCreate(
-                    title=title,
-                    content=message,
-                    type="aurora_wake",
-                    data={
-                        "wake_id": wake_id,
-                        "surface": surface,
-                        "conversation_id": conversation_id,
-                        "destination_route": destination_route,
-                        "deep_link": destination_route,
-                    },
-                ),
-                push_via_websocket=True,
-            )
-
-            await scheduler.mark_executed(wake_id)
-
-            logger.info(
-                "Aurora wake delivered: user={} wake={} surface={}",
-                user_id,
-                wake_id,
-                surface,
-            )
-            return {"status": "delivered", "wake_id": wake_id, "user_id": user_id}
+            return await deliver_aurora_wake(session, wake_id=wake_id, user_id=user_id)
 
     try:
         return _run_async(_run())
