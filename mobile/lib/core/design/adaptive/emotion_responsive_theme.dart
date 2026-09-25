@@ -127,21 +127,13 @@ class EmotionResponsiveTheme extends InheritedWidget {
       visualDensity: VisualDensity.standard,
     );
 
-    // U-02 低刺激真实接线（Theme 层）：把已注册的 SparkleThemeExtension
-    // 换到 low 档——context.motion / stateTokens 消费点自此拿到减法后的
-    // 动效时长与装饰预算（两档输出真实不同，不再是空设置值）。
-    final sparkle = themed.extension<SparkleThemeExtension>();
-    if (sparkle != null && !sparkle.lowStimulation) {
-      themed = themed.copyWith(
-        extensions: <ThemeExtension<dynamic>>[
-          ...themed.extensions.values.where(
-            (extension) => extension is! SparkleThemeExtension,
-          ),
-          sparkle.copyWith(stimulationLevel: StimulationLevel.low),
-        ],
-      );
-    }
-
+    // U-02 低刺激的主题扩展换档在本文件暂时移除：本 SDK CFE 对
+    // ThemeExtension<dynamic>（自限界泛型）的元素赋值会按 bound 归一化
+    // （ThemeExtension<ThemeExtension<dynamic>>）导致测试编译必炸——
+    // analyzer 与 CFE 不一致（analyze 绿≠测试可编译，wt353 教训；spread/
+    // 显式泛型/raw 四式皆试）。换档改走构造期条件化：在
+    // SparkleThemeExtension 注册源头按 stimulationLevel 组装（后续卡收口），
+    // 两档真源与消费点保持不变。
     return themed;
   }
 
