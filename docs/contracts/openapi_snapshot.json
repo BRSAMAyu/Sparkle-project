@@ -15125,6 +15125,78 @@
         "title": "FileProcessRequest",
         "type": "object"
       },
+      "FirstActionEditRequest": {
+        "additionalProperties": false,
+        "description": "编辑 first-action 提案（封闭可改字段；编辑 delta 进 feedback 审计）.",
+        "properties": {
+          "edited_fields": {
+            "additionalProperties": true,
+            "title": "Edited Fields",
+            "type": "object"
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotency Key"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "edited_fields"
+        ],
+        "title": "FirstActionEditRequest",
+        "type": "object"
+      },
+      "FirstActionRequest": {
+        "additionalProperties": false,
+        "description": "生成 first-action proposal（幂等键建议携带：重复提交恰一次）.",
+        "properties": {
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotency Key"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          }
+        },
+        "title": "FirstActionRequest",
+        "type": "object"
+      },
       "FlameStatus": {
         "description": "火苗状态（用于可视化）",
         "properties": {
@@ -35985,6 +36057,27 @@
         "title": "SuggestedNodeSimilarity",
         "type": "object"
       },
+      "SuggestionActionRequest": {
+        "description": "P-03: user feedback on a proactive suggestion card (four-element UX).\n\n- ``ignore_today``: 「今天不再看」→ 24h cooldown on this suggestion type.\n- ``mute_type``: 「不再提醒此类」→ persistent mute of this suggestion type.",
+        "properties": {
+          "action": {
+            "description": "Desired suggestion feedback action",
+            "pattern": "^(ignore_today|mute_type)$",
+            "title": "Action",
+            "type": "string"
+          },
+          "action_payload": {
+            "additionalProperties": true,
+            "title": "Action Payload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "SuggestionActionRequest",
+        "type": "object"
+      },
       "SuggestionFeedbackRequest": {
         "description": "Request to record feedback on a suggestion",
         "properties": {
@@ -44603,6 +44696,7 @@
     },
     "/api/v1/action-proposals/{proposal_id}/reject": {
       "post": {
+        "description": "拒绝：PENDING→REJECTED；用户理由（\"这个不合适\"）持久进 feedback 审计.\n\nJ-04：``request.reason`` 不再被丢弃——经 service 落 transition.details 与\nevent payload（append-only），供 Aurora 下轮推导消费；terminal_reason 仍\n为封闭枚举（归因词表不放宽）。",
         "operationId": "reject_proposal_api_v1_action_proposals__proposal_id__reject_post",
         "parameters": [
           {
@@ -71105,6 +71199,147 @@
         ]
       }
     },
+    "/api/v1/journey/first-action": {
+      "get": {
+        "operationId": "get_first_action_api_v1_journey_first_action_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get First Action Api V1 Journey First Action Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get First Action",
+        "tags": [
+          "journey"
+        ]
+      },
+      "post": {
+        "operationId": "create_first_action_api_v1_journey_first_action_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/FirstActionRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Request"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create First Action Api V1 Journey First Action Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create First Action",
+        "tags": [
+          "journey"
+        ]
+      }
+    },
+    "/api/v1/journey/first-action/{proposal_id}/edit": {
+      "post": {
+        "operationId": "edit_first_action_api_v1_journey_first_action__proposal_id__edit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FirstActionEditRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Edit First Action Api V1 Journey First Action  Proposal Id  Edit Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Edit First Action",
+        "tags": [
+          "journey"
+        ]
+      }
+    },
     "/api/v1/leaderboards": {
       "get": {
         "description": "获取排行榜\n\n支持多种排行榜类型：\n- global: 全局综合排行榜\n- friends: 好友排行榜\n- group: 群组排行榜\n- subject: 学科排行榜\n- weekly: 本周学习排行榜\n- streak: 连胜排行榜\n\nArgs:\n    - type: 排行榜类型\n    - limit: 返回数量\n    - offset: 偏移量\n    - period: 统计周期\n    - subject_id: 学科ID（仅学科榜需要）\n    - group_id: 群组ID（仅群组榜需要）\n\nReturns:\n    - type: 排行榜类型\n    - title: 排行榜标题\n    - entries: 排行榜条目\n    - my_rank: 我的排名\n    - my_score: 我的分数\n    - total_participants: 总参与人数\n    - last_updated: 最后更新时间",
@@ -75630,6 +75865,63 @@
           }
         ],
         "summary": "Record Recall Notification Feedback",
+        "tags": [
+          "notification-center"
+        ]
+      }
+    },
+    "/api/v1/notification-center/notifications/{notification_id}/suggestion-action": {
+      "post": {
+        "description": "P-03: record user feedback on a proactive suggestion card.\n\n四要素的两个「可忽略」入口：\n- ``ignore_today``（今天不再看）→ 该建议类型 24h 冷却（拒绝后 cooldown）。\n- ``mute_type``（不再提醒此类）→ 持久静音该建议类型。\n\n校验通知归属；反馈即已读；抑制态真实落库，nudge 生成路径据此抑制。",
+        "operationId": "record_suggestion_action_api_v1_notification_center_notifications__notification_id__suggestion_action_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notification_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Notification Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestionActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Record Suggestion Action",
         "tags": [
           "notification-center"
         ]
