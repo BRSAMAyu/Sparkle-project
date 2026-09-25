@@ -460,7 +460,7 @@ class AuroraRuntimeV1Service:
             plan is not None and plan.target_date is not None and plan.target_date < today
         )
         next_task_overdue_days = 0
-        if next_task is not None and getattr(next_task, "due_date", None) is not None:
+        if next_task is not None and next_task.due_date is not None:
             next_task_overdue_days = max(0, (today - next_task.due_date).days)
         stale_focus = plan_expired or next_task_overdue_days >= 3
         # A-07: goal state restore — surface the user's real goal truth
