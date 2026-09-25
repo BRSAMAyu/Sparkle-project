@@ -29,6 +29,7 @@
 from __future__ import annotations
 
 import ast
+import json
 from datetime import datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
@@ -39,6 +40,8 @@ import pytest
 from app.aurora.friction_diagnosis import (
     _QUESTION_BANK_INDEX,
     FRICTION_QUESTION_BANK,
+    FrictionDiagnosis,
+    OneBestQuestion,
     apply_question_answer,
     diagnose_friction,
     resolve_answer_branch,
@@ -60,8 +63,10 @@ from app.orchestration.context_builder import ContextBuilderMixin
 from app.orchestration.orchestrator import ChatOrchestrator
 from app.services.experience_memory_projector import ExperienceMemoryProjector
 from app.services.friction_chat_wiring import (
+    _GATE_CLARIFY_QUESTION_REF,
     FRICTION_ANSWER_CONTEXT_KEY,
     FrictionChatWiringService,
+    _gate_silent_diagnosis_payload,
 )
 from app.services.intervention_lifecycle_service import InterventionLifecycleService
 from app.services.memory_use_selfcheck import SelfCheckContext, evaluate_memory_use_gate
@@ -618,6 +623,69 @@ class TestFrictionWiringTriggerGate:
         # 零证据 → 引擎 U1 unknown-ask 出口被门拦下（专用门原因可审计）
         assert outcome.annotations.get("wiring_gate") == "silent_unknown_no_friction_evidence"
         assert outcome.friction_type == "unknown"
+
+    async def test_gate_silent_payload_carries_no_blocked_question_text(self, db_session, fake_redis):
+        """V3-FIX-114 · 门拦静默出口的载荷面一致：被拦问句全文不出 metadata。
+
+        门拦出口顶层 outcome=no_action、question=None，但 diagnosis.to_dict()
+        曾内嵌完整 question 对象（渲染问句全文+分支选项标签）——潜在消费方按
+        顶层 outcome 判静默、按 diagnosis 渲染问句即翻车。修后载荷面：
+        diagnosis.question 置 None（与顶层一致），出口序列化全文零残留。
+        """
+        user = await _make_user(db_session)
+        svc = FrictionChatWiringService(db_session, fake_redis)
+        outcome = await svc.process_turn(
+            user_id=str(user.id),
+            session_id="gate-114",
+            user_message=self.CONTROL_MESSAGE,
+            user_context_payload={},
+            request_extra_context={},
+            now=_NOW,
+        )
+        assert outcome.outcome == "no_action"
+        assert outcome.question is None
+        assert outcome.annotations.get("wiring_gate") == "silent_unknown_no_friction_evidence"
+        payload = outcome.to_dict()
+        # 可证伪判据（FIX-114 登记面）：门拦出口 diagnosis.question 非 None 而顶层 question 为 None
+        assert payload["diagnosis"]["question"] is None
+        assert payload["diagnosis"]["suggested_clarifying_question"] is None
+        # 出口序列化全文零残留：被拦问句（U1 根分裂问）的渲染文本与分支标签
+        # 不得出现在任何载荷面（response metadata 即 outcome.to_dict() 序列化）。
+        entry_spec = _QUESTION_BANK_INDEX["q_direction_vs_push"]
+        serialized = json.dumps(payload, ensure_ascii=False)
+        assert entry_spec.render(None) not in serialized
+        for branch in entry_spec.branches:
+            assert branch.label not in serialized
+        # 审计身份保留：门原因 + 引擎 reason 码照常（脱敏 ≠ 抹审计）
+        assert "U1.unknown_ask_entry_question" in payload["diagnosis"]["reasons"]
+
+    async def test_gate_silent_payload_suggested_clarify_identity_only(self):
+        """V3-FIX-114 · 单元面：被拦 clarify 问句全文以封闭库 question_id 身份替代。
+
+        suggested_clarifying_question 是渲染全文（嵌 task_anchor 用户内容）；
+        门拦出口只留身份（FIX-62 类名/指纹同律：留身份不留文本）。
+        """
+        spec = _QUESTION_BANK_INDEX["q_standard_clarity"]
+        diagnosis = FrictionDiagnosis(
+            outcome="act",
+            friction_type="clarity",
+            nominated_interventions=("clarify",),
+            suggested_clarifying_question=spec.render("考研数学"),
+            question=OneBestQuestion(
+                question_id="q_direction_vs_push",
+                text="这步，是不知道下一步该做什么，还是知道做什么但推不动？",
+                branch_options=(("dont_know_what", "不知道做什么"), ("know_but_stuck", "知道但推不动")),
+                information_gain_bits=0.5,
+            ),
+        )
+        payload = _gate_silent_diagnosis_payload(diagnosis)
+        assert payload["question"] is None
+        assert payload["suggested_clarifying_question"] == "q_standard_clarity"
+        # 身份替身与封闭库双钉：库里 clarify 问句改 id 即红（防替身漂移）
+        assert spec.question_id == _GATE_CLARIFY_QUESTION_REF
+        serialized = json.dumps(payload, ensure_ascii=False)
+        assert spec.render("考研数学") not in serialized
+        assert "推不动" not in serialized
 
     async def test_wordmark_message_still_full_pipeline(self, db_session, fake_redis):
         """降噪不关死：带词牌的真卡点表达照常问（U1/Q1 面不受门影响）。"""

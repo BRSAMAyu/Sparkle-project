@@ -90,6 +90,11 @@ WIRING_GATE_NO_WORDMARK = "silent_no_utterance_wordmark"
 #: 不构成「用户在回答」的证据；不 apply、pending 保持（可点选或改述）。
 WIRING_GATE_WEAK_ANSWER = "silent_weak_free_text_answer"
 
+#: V3-FIX-114 · 门拦静默出口的 clarify 问句身份替身（封闭问题库 question_id；
+#: 渲染全文不出口——与 friction_diagnosis ``_act`` 的单点渲染出处对齐，测试
+#: 以 ``_QUESTION_BANK_INDEX["q_standard_clarity"].question_id`` 双钉防漂移）。
+_GATE_CLARIFY_QUESTION_REF = "q_standard_clarity"
+
 #: pending 问题 Redis 键（per user+session；TTL 一天——跨天会话按过期处理）。
 PENDING_KEY_TEMPLATE = "friction:pending:{user_id}:{session_id}"
 PENDING_TTL_SECONDS = 24 * 3600
@@ -155,6 +160,32 @@ def _fresh_turn_gate_reason(diagnosis: FrictionDiagnosis) -> str | None:
     if diagnosis.outcome == "ask" and diagnosis.friction_type == "unknown":
         return WIRING_GATE_UNKNOWN
     return WIRING_GATE_NO_WORDMARK
+
+
+def _gate_silent_diagnosis_payload(diagnosis: FrictionDiagnosis) -> dict[str, Any]:
+    """V3-FIX-114 · 门拦静默出口的 diagnosis 载荷脱敏投影（纯函数）。
+
+    门拦即「问句未出面」：顶层 outcome=no_action、question=None，但引擎的
+    ``diagnosis.to_dict()`` 仍内嵌完整 question 对象（渲染问句全文 + 分支
+    选项标签，含 task_anchor 用户内容）与 clarify 渲染全文——潜在消费方按
+    顶层 outcome 判静默、按 diagnosis 渲染问句即翻车（wt424 /tmp 探针实证）。
+    出口载荷与静默语义对齐：
+
+    - ``question`` 置 None（与顶层 ``outcome.question`` 一致——载荷一致性即
+      本卡验收判据；问句身份仍可由 ``reasons`` 的 U1/Q1 reason 码审计）；
+    - ``suggested_clarifying_question`` 渲染全文 → 封闭问题库 question_id
+      身份（FIX-62 类名/指纹同律：留身份不留文本；出处唯一——
+      friction_diagnosis ``_act`` 的 ``q_standard_clarity`` 单点渲染）。
+
+    其余判定量（friction_type/reasons/posterior/evidence_refs 等）原样保留
+    ——脱敏不抹审计。只动出口载荷构造，门判定（``_fresh_turn_gate_reason``）
+    零接触。
+    """
+    payload = diagnosis.to_dict()
+    payload["question"] = None
+    if payload.get("suggested_clarifying_question"):
+        payload["suggested_clarifying_question"] = _GATE_CLARIFY_QUESTION_REF
+    return payload
 
 
 class FrictionChatWiringService:
@@ -317,12 +348,14 @@ class FrictionChatWiringService:
         # （用户主动「我卡住了」）不受门影响——真摩擦介入通道保持全通。
         gate_reason = _fresh_turn_gate_reason(diagnosis)
         if gate_reason is not None:
+            # V3-FIX-114 · 静默出口载荷脱敏：被拦问句全文（question 对象/
+            # clarify 渲染文本）不进 metadata——只动载荷构造，门判定不变。
             return FrictionWiringOutcome(
                 mode="fresh",
                 outcome="no_action",
                 friction_type=diagnosis.friction_type,
                 lifecycle_tag=diagnosis.lifecycle_tag,
-                diagnosis=diagnosis.to_dict(),
+                diagnosis=_gate_silent_diagnosis_payload(diagnosis),
                 annotations={"wiring_gate": gate_reason},
             )
         return await self._emit(
