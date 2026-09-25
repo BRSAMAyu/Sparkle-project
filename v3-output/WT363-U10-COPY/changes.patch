@@ -1,0 +1,1682 @@
+diff --git a/mobile/lib/features/community/presentation/screens/group_members_screen.dart b/mobile/lib/features/community/presentation/screens/group_members_screen.dart
+index 89c28110..28e59418 100644
+--- a/mobile/lib/features/community/presentation/screens/group_members_screen.dart
++++ b/mobile/lib/features/community/presentation/screens/group_members_screen.dart
+@@ -80,7 +80,11 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
+               icon: const Icon(Icons.person_add),
+               semanticLabel: context.l10n.groupMembersInvite,
+               onPressed: () {
+-                AppFeedback.info(context, 'Invite feature coming soon');
++                AppFeedback.info(
++                  context,
++                  context.l10n
++                      .toolCurrentlyUnavailable(context.l10n.groupMembersInvite),
++                );
+               },
+             ),
+         ],
+diff --git a/mobile/lib/l10n/app_en.arb b/mobile/lib/l10n/app_en.arb
+index efe3be42..f58b81db 100755
+--- a/mobile/lib/l10n/app_en.arb
++++ b/mobile/lib/l10n/app_en.arb
+@@ -2946,7 +2946,7 @@
+     "memoryCorrectionNoLongerApplies": "No longer applies",
+     "memoryCorrectionLowerConfidence": "Lower confidence",
+     "memoryCorrectionMerge": "Merge",
+-    "memoryMergeComingSoon": "Merge feature coming soon",
++    "memoryMergeComingSoon": "Merge isn't available yet",
+     "memoryCorrectionSubmitted": "Correction submitted",
+     "memoryCorrectionFailed": "Correction failed",
+     "memoryHistoryLoadFailed": "Failed to load history",
+@@ -4736,7 +4736,7 @@
+         }
+     },
+     "memoryAiInferredDisabledHint": "AI auto-memory is currently disabled, such inferred memories will not be recorded.",
+-    "memoryExplanationInferredEpisodic": "This experience was inferred by AI from chat, with evidence tokens, confidence, and retraction path preserved.",
++    "memoryExplanationInferredEpisodic": "This experience was inferred by AI from chat, with its evidence preserved and retraction supported.",
+     "memoryCorrectionSubmittedWithAction": "Correction submitted: {action}",
+     "@memoryCorrectionSubmittedWithAction": {
+         "placeholders": {
+@@ -4984,18 +4984,12 @@
+     "chatViewAccessoryContentDesc": "Temporarily expand task cards and quick actions in pure mode",
+     "chatActionSuggestion": "Action suggestion",
+     "chatActionSuggestionDesc": "Continue this step, or confirm the task and plan first.",
+-    "chatTheaterTitle": "Prediction Theater",
+-    "chatTheaterDesc": "See which path is worth exploring now and why it suits you better.",
+-    "chatSimulationTitle": "Learning Simulation",
+-    "chatSimulationDesc": "See the key viewpoint clash first, then decide whether to enter the full simulation.",
+     "chatReportTitle": "Learning Report",
+     "chatReportDesc": "See the core diagnosis and next steps first, then decide whether to enter the full report.",
+     "chatAccessoryContent": "Additional content",
+     "chatContinueExploring": "Continue exploring",
+     "chatSwipeToSwitch": "Swipe left/right to switch entries",
+-    "chatViewTheaterDetails": "View prediction details",
+     "chatCurrentLearningTopic": "Current learning topic",
+-    "chatViewSimulationDetails": "View simulation details",
+     "chatCollaborationProcess": "Collaboration process",
+     "chatPlanContext": "Plan context",
+     "chatPlanStatus": "Plan status",
+@@ -5022,8 +5016,6 @@
+     "chatPromptPreviewCancel": "Not now",
+     "chatPromptPreviewSend": "Send now",
+     "chatParticipantLabel": "Participant",
+-    "chatPromptRefinePath": "Continue refining this path",
+-    "chatPromptRefinePathMessage": "Continue refining the first week's priority steps around \"{topic}\".",
+     "chatPromptComparePaths": "Compare two paths",
+     "chatPromptComparePathsMessage": "Compare the trade-offs between \"{pathA}\" and \"{pathB}\".",
+     "chatPromptDefaultPathA": "Path A",
+@@ -5034,8 +5026,6 @@
+     "chatPromptExamFocusMessage": "Tell me the parts of \"{topic}\" most likely to be exam key points and why.",
+     "chatPromptMakePlan": "Make it a plan",
+     "chatPromptMakePlanMessage": "Rewrite the \"{topic}\" path into a 7-day executable mini-plan.",
+-    "chatPromptSimulateRound": "Continue simulating another round",
+-    "chatPromptSimulateRoundMessage": "Simulate another round around \"{topic}\". I want to continue this learning scenario.",
+     "chatOneOfTheRoles": "One of the roles",
+     "chatPromptLetMeAnswer": "Let me answer",
+     "chatPromptLetMeAnswerMessage": "Have {speaker} ask me a follow-up question around \"{topic}\", and I'll answer.",
+@@ -5092,7 +5082,6 @@
+         }
+     },
+     "profileSubtitleAchievements": "View unlocked milestones and honor progress",
+-    "profileSubtitleVisualElements": "Manage backgrounds, particles, and visual rewards",
+     "profileSubtitlePersona": "View learning traits and preferences understood by the system",
+     "profileSubtitlePersonalInfo": "Edit avatar, nickname, and basic info",
+     "profileSubtitlePreferences": "Manage sensory feedback, learning mode, and push preferences",
+@@ -6182,60 +6171,12 @@
+     "examSprintStatusInProgress": "In progress",
+     "examSprintStatusPending": "Pending",
+     "insightHubTitle": "Learning Insights",
+-    "insightHubRecommendedSeeds": "{count} recommended scenarios ready to simulate.",
+-    "@insightHubRecommendedSeeds": {
+-        "placeholders": {
+-            "count": {
+-                "type": "Object"
+-            }
+-        }
+-    },
+     "insightHubFallbackSummary": "Reports and insights — now in one lighter learning flow.",
+-    "insightHubSimulation": "Simulation",
+-    "insightHubTheater": "What-If Theater",
+     "insightHubReport": "Learning Report",
+     "insightHubEnterOverview": "Enter Insight Overview",
+-    "insightHubCompactSimulation": "Simulation",
+-    "insightHubCompactTheater": "Theater",
+     "insightHubCompactReport": "Report",
+     "insightHubRefreshWarning": "Some insight data hasn't refreshed yet. Existing content will be shown.",
+-    "insightHubSeedsToExplore": "{count} scenarios to explore",
+-    "@insightHubSeedsToExplore": {
+-        "placeholders": {
+-            "count": {
+-                "type": "Object"
+-            }
+-        }
+-    },
+     "insightHubCompactFallback": "Reports and insights now in one card",
+-    "insightHubNoRecentTheater": "No recent theater",
+-    "insightHubContinueLastTheater": "Continue last theater",
+-    "insightHubContinueTopic": "Continue {topic}",
+-    "@insightHubContinueTopic": {
+-        "placeholders": {
+-            "topic": {
+-                "type": "Object"
+-            }
+-        }
+-    },
+-    "insightHubContinueLastSimulation": "Continue last simulation",
+-    "insightHubRecommendedSeedsCount": "{count} scenarios",
+-    "@insightHubRecommendedSeedsCount": {
+-        "placeholders": {
+-            "count": {
+-                "type": "Object"
+-            }
+-        }
+-    },
+-    "insightHubContinueSession": "Continue {topic}",
+-    "@insightHubContinueSession": {
+-        "placeholders": {
+-            "topic": {
+-                "type": "Object"
+-            }
+-        }
+-    },
+-    "insightHubStartSimulation": "Start a new simulation",
+     "insightHubNoRecentReport": "No recent report",
+     "insightHubMasteryPercent": "Mastery {percent}%",
+     "@insightHubMasteryPercent": {
+@@ -8152,17 +8093,8 @@
+             }
+         }
+     },
+-    "reportActionExploreNode": "Explore {nodeName}",
+-    "@reportActionExploreNode": {
+-        "placeholders": {
+-            "nodeName": {
+-                "type": "Object"
+-            }
+-        }
+-    },
+     "reportActionWeaknessFallback": "Weakness",
+     "reportActionStrengthFallback": "Current Strength",
+-    "reportActionEnterSimulation": "Enter Simulation",
+     "reportTrendAutoFillTitle": "Trends will fill in as more reports are generated",
+     "reportTrendFirstReportMessage": "Your first report is ready. Focus on weak spots based on this diagnosis. Next time, a trend line will start to form.",
+     "reportTrendLoadingHistory": "Loading your learning report history. Mastery trends will appear here shortly.",
+@@ -9877,7 +9809,7 @@
+     "notificationRecallReason": "Why now",
+     "notificationRecallEffort": "Effort",
+     "notificationRecallDeadlinePressure": "Time pressure",
+-    "notificationRecallScore": "Recall score",
++    "notificationRecallScore": "Estimated retention",
+     "notificationRecallInaccurate": "This reminder is inaccurate",
+     "notificationRecallFeedbackSaved": "Thanks. This reminder will be tuned.",
+     "notificationRecallFeedbackRecorded": "Feedback recorded",
+@@ -10384,7 +10316,7 @@
+     "communityWelcomeToGroup": "Welcome to the group!",
+     "communityLeaveGroupFailed": "Failed to leave group, please retry",
+     "communityCommentLabel": "Comment",
+-    "communityCommentsComingSoon": "Comments coming soon",
++    "communityCommentsComingSoon": "Comments aren't available yet",
+     "communityShowMore": "Show more",
+     "communityShowLess": "Show less",
+     "communityShareLabel": "Share",
+@@ -12131,9 +12063,6 @@
+     "insOverviewTitle": "Learning Insights",
+     "insOverviewEmpty": "Learning insights has no data yet",
+     "insOverviewEmptyDesc": "Complete a learning task, log an error, or start a simulation first — then weekly reports and insights become useful.",
+-    "insSimLabel": "Learning Simulation",
+-    "insTheaterLabel": "Simulation Theater",
+-    "insOpenSim": "Open Simulation",
+     "insReportLabel": "Learning Report",
+     "insViewReport": "View Report",
+     "insBackToCockpit": "Back to Cockpit",
+@@ -12147,11 +12076,7 @@
+     "insDecisionLogOpen": "Open Log",
+     "insContinueView": "Continue",
+     "insStartFromRecommended": "Start from Recommended",
+-    "insStartSimulation": "Start Simulation",
+-    "insTheaterFallback": "Break a goal into multiple learning paths",
+-    "insSimFallback": "Bring a knowledge point into multi-role live discussion",
+     "insFocusedSim": "Focused: Learning Simulation",
+-    "insFocusedTheater": "Focused: Scenario Theater",
+     "insFocusedReport": "Focused: Learning Report",
+     "insFocusedDefault": "Simulation, theater & reports in one place",
+     "insFlowTitle": "Connect \"spot problems, simulate discussions, draw conclusions\" into one flow.",
+@@ -13069,7 +12994,6 @@
+     "chatRoundtableTimeCoach": "Time Coach",
+     "chatRoundtableTurnCount": "{count} viewpoints",
+     "chatRoundtableWritingExpert": "Writing Expert",
+-    "chatSettingsCurrentSeeds": "Currently active: {names}",
+     "chatSettingsEnableSeedDesc": "Inject enabled seed library content and answer style into current chat.",
+     "chatSettingsEnableSeedEnhancement": "Enable Seed Library Enhancement",
+     "chatSettingsExperience": "Chat Experience",
+@@ -13078,12 +13002,7 @@
+     "chatSettingsOpenAdvancedDesc": "Enter detailed transparency configuration page.",
+     "chatSettingsPureMode": "Pure Mode",
+     "chatSettingsPureModeDesc": "Keep only text messages. Hide extra cards and feedback below messages.",
+-    "chatSettingsSeedDisableHint": "When disabled, no seed library is injected to avoid context pollution.",
+-    "chatSettingsSeedEnableHint": "After enabling, enhancement starts from the next message.",
+     "chatSettingsSeedLibrary": "Seed Library",
+-    "chatSettingsSeedsDefaultOff": "Seed library enhancement is off by default",
+-    "chatSettingsSeedsEnabledCount": "{count} enabled seed libraries connected",
+-    "chatSettingsSeedsEnabledNone": "Seed library enhancement enabled but no seed libraries available",
+     "chatSettingsShowAgentCollab": "Show Agent Collaboration",
+     "chatSettingsShowAgentCollabDesc": "Show participating experts, responsibilities, and model collaboration.",
+     "chatSettingsShowAiPanel": "Show AI System Panel",
+@@ -13098,7 +13017,6 @@
+     "chatSettingsShowTopBarDesc": "Control plan, mode, and gear entry points on chat page.",
+     "chatSettingsShowTransparencyCapsule": "Show Transparency Capsule",
+     "chatSettingsShowTransparencyDesc": "Control floating AI completion and transparency info at bottom.",
+-    "chatSettingsSyncingSeeds": "Syncing seed library status",
+     "chatSettingsTitle": "Chat Settings",
+     "chatSettingsTransparencyDetails": "Transparency Details",
+     "chatSettingsUiCapabilities": "UI & Capabilities",
+@@ -14017,14 +13935,6 @@
+             }
+         }
+     },
+-    "lioRecommendedSeeds": "{count} recommended scenarios",
+-    "@lioRecommendedSeeds": {
+-        "placeholders": {
+-            "count": {
+-                "type": "int"
+-            }
+-        }
+-    },
+     "lioStartNewSim": "Start a new simulation now",
+     "lioRecentAnalysis": "Last analysis covered {count} knowledge points",
+     "@lioRecentAnalysis": {
+@@ -14044,7 +13954,6 @@
+             }
+         }
+     },
+-    "lioNoTheaterYet": "No recent prediction generated yet",
+     "lioNoReportYet": "No recent report generated yet",
+     "lioMastery": "Mastery {percent}%",
+     "@lioMastery": {
+@@ -15718,7 +15627,7 @@
+         }
+     },
+     "receiptKnowledgeRefs": "Reference materials",
+-    "chatMemoryNotRightPrompt": "This memory is not right: {content}. Please lower confidence and avoid directly using it later.",
++    "chatMemoryNotRightPrompt": "This memory isn't right: {content}. Rely on it less going forward — don't cite it directly.",
+     "@chatMemoryNotRightPrompt": {
+         "placeholders": {
+             "content": {
+diff --git a/mobile/lib/l10n/app_localizations.dart b/mobile/lib/l10n/app_localizations.dart
+index 64b20856..38fcf6ee 100644
+--- a/mobile/lib/l10n/app_localizations.dart
++++ b/mobile/lib/l10n/app_localizations.dart
+@@ -21424,12 +21424,6 @@ abstract class AppLocalizations {
+   /// **'查看已解锁的里程碑与荣誉进度'**
+   String get profileSubtitleAchievements;
+ 
+-  /// No description provided for @profileSubtitleVisualElements.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'管理背景、粒子和视觉奖励'**
+-  String get profileSubtitleVisualElements;
+-
+   /// No description provided for @profileSubtitlePersona.
+   ///
+   /// In zh, this message translates to:
+@@ -21532,30 +21526,6 @@ abstract class AppLocalizations {
+   /// **'继续完成这一步，或者先确认任务和计划。'**
+   String get chatActionSuggestionDesc;
+ 
+-  /// No description provided for @chatTheaterTitle.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'推演剧场'**
+-  String get chatTheaterTitle;
+-
+-  /// No description provided for @chatTheaterDesc.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'现在最值得先看的是哪条路径，以及它为什么更适合你。'**
+-  String get chatTheaterDesc;
+-
+-  /// No description provided for @chatSimulationTitle.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'学习仿真'**
+-  String get chatSimulationTitle;
+-
+-  /// No description provided for @chatSimulationDesc.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'先看这一轮最关键的观点碰撞，再决定要不要进入完整模拟。'**
+-  String get chatSimulationDesc;
+-
+   /// No description provided for @chatReportTitle.
+   ///
+   /// In zh, this message translates to:
+@@ -21586,24 +21556,12 @@ abstract class AppLocalizations {
+   /// **'左右滑动切换不同入口'**
+   String get chatSwipeToSwitch;
+ 
+-  /// No description provided for @chatViewTheaterDetails.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'查看推演详情'**
+-  String get chatViewTheaterDetails;
+-
+   /// No description provided for @chatCurrentLearningTopic.
+   ///
+   /// In zh, this message translates to:
+   /// **'当前学习主题'**
+   String get chatCurrentLearningTopic;
+ 
+-  /// No description provided for @chatViewSimulationDetails.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'查看模拟详情'**
+-  String get chatViewSimulationDetails;
+-
+   /// No description provided for @chatCollaborationProcess.
+   ///
+   /// In zh, this message translates to:
+@@ -21760,18 +21718,6 @@ abstract class AppLocalizations {
+   /// **'参与者'**
+   String get chatParticipantLabel;
+ 
+-  /// No description provided for @chatPromptRefinePath.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'继续细化这条路径'**
+-  String get chatPromptRefinePath;
+-
+-  /// No description provided for @chatPromptRefinePathMessage.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'继续围绕「{topic}」细化第一周最该先做的步骤。'**
+-  String chatPromptRefinePathMessage(Object topic);
+-
+   /// No description provided for @chatPromptComparePaths.
+   ///
+   /// In zh, this message translates to:
+@@ -21832,18 +21778,6 @@ abstract class AppLocalizations {
+   /// **'把「{topic}」这条路径改写成 7 天可执行的小计划。'**
+   String chatPromptMakePlanMessage(Object topic);
+ 
+-  /// No description provided for @chatPromptSimulateRound.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'继续模拟一轮'**
+-  String get chatPromptSimulateRound;
+-
+-  /// No description provided for @chatPromptSimulateRoundMessage.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'继续围绕「{topic}」模拟一轮，我想继续跟进这个学习场景。'**
+-  String chatPromptSimulateRoundMessage(Object topic);
+-
+   /// No description provided for @chatOneOfTheRoles.
+   ///
+   /// In zh, this message translates to:
+@@ -25718,30 +25652,12 @@ abstract class AppLocalizations {
+   /// **'学习洞察'**
+   String get insightHubTitle;
+ 
+-  /// No description provided for @insightHubRecommendedSeeds.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'现在有 {count} 个推荐场景可以直接开始模拟。'**
+-  String insightHubRecommendedSeeds(Object count);
+-
+   /// No description provided for @insightHubFallbackSummary.
+   ///
+   /// In zh, this message translates to:
+   /// **'把推演、仿真和报告收进一条更轻量的学习动线。'**
+   String get insightHubFallbackSummary;
+ 
+-  /// No description provided for @insightHubSimulation.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'学习仿真'**
+-  String get insightHubSimulation;
+-
+-  /// No description provided for @insightHubTheater.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'推演剧场'**
+-  String get insightHubTheater;
+-
+   /// No description provided for @insightHubReport.
+   ///
+   /// In zh, this message translates to:
+@@ -25754,18 +25670,6 @@ abstract class AppLocalizations {
+   /// **'进入洞察总览'**
+   String get insightHubEnterOverview;
+ 
+-  /// No description provided for @insightHubCompactSimulation.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'仿真'**
+-  String get insightHubCompactSimulation;
+-
+-  /// No description provided for @insightHubCompactTheater.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'推演'**
+-  String get insightHubCompactTheater;
+-
+   /// No description provided for @insightHubCompactReport.
+   ///
+   /// In zh, this message translates to:
+@@ -25778,60 +25682,12 @@ abstract class AppLocalizations {
+   /// **'部分洞察数据尚未刷新，点击后会继续显示已有内容。'**
+   String get insightHubRefreshWarning;
+ 
+-  /// No description provided for @insightHubSeedsToExplore.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'{count} 个推荐场景待探索'**
+-  String insightHubSeedsToExplore(Object count);
+-
+   /// No description provided for @insightHubCompactFallback.
+   ///
+   /// In zh, this message translates to:
+   /// **'仿真、推演和报告现在收在同一张卡里'**
+   String get insightHubCompactFallback;
+ 
+-  /// No description provided for @insightHubNoRecentTheater.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'最近暂无推演'**
+-  String get insightHubNoRecentTheater;
+-
+-  /// No description provided for @insightHubContinueLastTheater.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'继续上次推演'**
+-  String get insightHubContinueLastTheater;
+-
+-  /// No description provided for @insightHubContinueTopic.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'继续 {topic}'**
+-  String insightHubContinueTopic(Object topic);
+-
+-  /// No description provided for @insightHubContinueLastSimulation.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'继续上次仿真'**
+-  String get insightHubContinueLastSimulation;
+-
+-  /// No description provided for @insightHubRecommendedSeedsCount.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'{count} 个推荐场景'**
+-  String insightHubRecommendedSeedsCount(Object count);
+-
+-  /// No description provided for @insightHubContinueSession.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'继续 {topic}'**
+-  String insightHubContinueSession(Object topic);
+-
+-  /// No description provided for @insightHubStartSimulation.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'开始一轮新模拟'**
+-  String get insightHubStartSimulation;
+-
+   /// No description provided for @insightHubNoRecentReport.
+   ///
+   /// In zh, this message translates to:
+@@ -31717,12 +31573,6 @@ abstract class AppLocalizations {
+   /// **'优先围绕 {weakNode} 收口，再用 {strongNode} 做迁移练习，能更快把整体掌握度拉起来。'**
+   String reportActionDescWithWeakness(Object weakNode, Object strongNode);
+ 
+-  /// No description provided for @reportActionExploreNode.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'推演 {nodeName}'**
+-  String reportActionExploreNode(Object nodeName);
+-
+   /// No description provided for @reportActionWeaknessFallback.
+   ///
+   /// In zh, this message translates to:
+@@ -31735,12 +31585,6 @@ abstract class AppLocalizations {
+   /// **'当前强项'**
+   String get reportActionStrengthFallback;
+ 
+-  /// No description provided for @reportActionEnterSimulation.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'进入学习仿真'**
+-  String get reportActionEnterSimulation;
+-
+   /// No description provided for @reportTrendAutoFillTitle.
+   ///
+   /// In zh, this message translates to:
+@@ -41383,12 +41227,6 @@ abstract class AppLocalizations {
+   /// **'写作专家'**
+   String get chatRoundtableWritingExpert;
+ 
+-  /// No description provided for @chatSettingsCurrentSeeds.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'当前生效：{names}'**
+-  String chatSettingsCurrentSeeds(Object names);
+-
+   /// No description provided for @chatSettingsEnableSeedDesc.
+   ///
+   /// In zh, this message translates to:
+@@ -41437,42 +41275,12 @@ abstract class AppLocalizations {
+   /// **'聊天中只保留文字消息，隐藏消息下方的附加卡片与反馈组件。'**
+   String get chatSettingsPureModeDesc;
+ 
+-  /// No description provided for @chatSettingsSeedDisableHint.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'关闭时所有对话都不会注入种子库，避免上下文污染。'**
+-  String get chatSettingsSeedDisableHint;
+-
+-  /// No description provided for @chatSettingsSeedEnableHint.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'开启后会从下一条消息开始按种子库增强。'**
+-  String get chatSettingsSeedEnableHint;
+-
+   /// No description provided for @chatSettingsSeedLibrary.
+   ///
+   /// In zh, this message translates to:
+   /// **'种子库'**
+   String get chatSettingsSeedLibrary;
+ 
+-  /// No description provided for @chatSettingsSeedsDefaultOff.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'种子库增强默认关闭'**
+-  String get chatSettingsSeedsDefaultOff;
+-
+-  /// No description provided for @chatSettingsSeedsEnabledCount.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'当前接入 {count} 个已启用种子库'**
+-  String chatSettingsSeedsEnabledCount(Object count);
+-
+-  /// No description provided for @chatSettingsSeedsEnabledNone.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'已开启种子库增强，但还没有可用种子库'**
+-  String get chatSettingsSeedsEnabledNone;
+-
+   /// No description provided for @chatSettingsShowAgentCollab.
+   ///
+   /// In zh, this message translates to:
+@@ -41557,12 +41365,6 @@ abstract class AppLocalizations {
+   /// **'控制底部悬浮的 AI 完成情况与透明化信息。'**
+   String get chatSettingsShowTransparencyDesc;
+ 
+-  /// No description provided for @chatSettingsSyncingSeeds.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'正在同步种子库状态'**
+-  String get chatSettingsSyncingSeeds;
+-
+   /// No description provided for @chatSettingsTitle.
+   ///
+   /// In zh, this message translates to:
+@@ -45829,24 +45631,6 @@ abstract class AppLocalizations {
+   /// **'先完成一次学习任务、记录一道错题，或开始一轮仿真，周报和洞察才会开始给出真正有用的反馈。'**
+   String get insOverviewEmptyDesc;
+ 
+-  /// No description provided for @insSimLabel.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'学习仿真'**
+-  String get insSimLabel;
+-
+-  /// No description provided for @insTheaterLabel.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'推演剧场'**
+-  String get insTheaterLabel;
+-
+-  /// No description provided for @insOpenSim.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'打开推演'**
+-  String get insOpenSim;
+-
+   /// No description provided for @insReportLabel.
+   ///
+   /// In zh, this message translates to:
+@@ -45925,36 +45709,12 @@ abstract class AppLocalizations {
+   /// **'从推荐开始'**
+   String get insStartFromRecommended;
+ 
+-  /// No description provided for @insStartSimulation.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'开始模拟'**
+-  String get insStartSimulation;
+-
+-  /// No description provided for @insTheaterFallback.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'把一个目标拆成多条学习路径'**
+-  String get insTheaterFallback;
+-
+-  /// No description provided for @insSimFallback.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'把一个知识点拉进多角色现场讨论'**
+-  String get insSimFallback;
+-
+   /// No description provided for @insFocusedSim.
+   ///
+   /// In zh, this message translates to:
+   /// **'已聚焦：学习仿真'**
+   String get insFocusedSim;
+ 
+-  /// No description provided for @insFocusedTheater.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'已聚焦：推演剧场'**
+-  String get insFocusedTheater;
+-
+   /// No description provided for @insFocusedReport.
+   ///
+   /// In zh, this message translates to:
+@@ -55727,12 +55487,6 @@ abstract class AppLocalizations {
+   /// **'明天 {time}'**
+   String picTomorrowTime(String time);
+ 
+-  /// No description provided for @lioRecommendedSeeds.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'{count} 个推荐场景'**
+-  String lioRecommendedSeeds(int count);
+-
+   /// No description provided for @lioStartNewSim.
+   ///
+   /// In zh, this message translates to:
+@@ -55763,12 +55517,6 @@ abstract class AppLocalizations {
+   /// **'最近更新 · {desc}'**
+   String lioRecentUpdate(String desc);
+ 
+-  /// No description provided for @lioNoTheaterYet.
+-  ///
+-  /// In zh, this message translates to:
+-  /// **'暂未生成最近推演'**
+-  String get lioNoTheaterYet;
+-
+   /// No description provided for @lioNoReportYet.
+   ///
+   /// In zh, this message translates to:
+diff --git a/mobile/lib/l10n/app_localizations_en.dart b/mobile/lib/l10n/app_localizations_en.dart
+index 1ff5bb8c..1622c5b5 100644
+--- a/mobile/lib/l10n/app_localizations_en.dart
++++ b/mobile/lib/l10n/app_localizations_en.dart
+@@ -7148,7 +7148,7 @@ class AppLocalizationsEn extends AppLocalizations {
+   String get memoryCorrectionMerge => 'Merge';
+ 
+   @override
+-  String get memoryMergeComingSoon => 'Merge feature coming soon';
++  String get memoryMergeComingSoon => 'Merge isn\'t available yet';
+ 
+   @override
+   String get memoryCorrectionSubmitted => 'Correction submitted';
+@@ -11986,7 +11986,7 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String get memoryExplanationInferredEpisodic =>
+-      'This experience was inferred by AI from chat, with evidence tokens, confidence, and retraction path preserved.';
++      'This experience was inferred by AI from chat, with its evidence preserved and retraction supported.';
+ 
+   @override
+   String memoryCorrectionSubmittedWithAction(Object action) {
+@@ -12111,10 +12111,6 @@ class AppLocalizationsEn extends AppLocalizations {
+   String get profileSubtitleAchievements =>
+       'View unlocked milestones and honor progress';
+ 
+-  @override
+-  String get profileSubtitleVisualElements =>
+-      'Manage backgrounds, particles, and visual rewards';
+-
+   @override
+   String get profileSubtitlePersona =>
+       'View learning traits and preferences understood by the system';
+@@ -12178,20 +12174,6 @@ class AppLocalizationsEn extends AppLocalizations {
+   String get chatActionSuggestionDesc =>
+       'Continue this step, or confirm the task and plan first.';
+ 
+-  @override
+-  String get chatTheaterTitle => 'Prediction Theater';
+-
+-  @override
+-  String get chatTheaterDesc =>
+-      'See which path is worth exploring now and why it suits you better.';
+-
+-  @override
+-  String get chatSimulationTitle => 'Learning Simulation';
+-
+-  @override
+-  String get chatSimulationDesc =>
+-      'See the key viewpoint clash first, then decide whether to enter the full simulation.';
+-
+   @override
+   String get chatReportTitle => 'Learning Report';
+ 
+@@ -12208,15 +12190,9 @@ class AppLocalizationsEn extends AppLocalizations {
+   @override
+   String get chatSwipeToSwitch => 'Swipe left/right to switch entries';
+ 
+-  @override
+-  String get chatViewTheaterDetails => 'View prediction details';
+-
+   @override
+   String get chatCurrentLearningTopic => 'Current learning topic';
+ 
+-  @override
+-  String get chatViewSimulationDetails => 'View simulation details';
+-
+   @override
+   String get chatCollaborationProcess => 'Collaboration process';
+ 
+@@ -12307,14 +12283,6 @@ class AppLocalizationsEn extends AppLocalizations {
+   @override
+   String get chatParticipantLabel => 'Participant';
+ 
+-  @override
+-  String get chatPromptRefinePath => 'Continue refining this path';
+-
+-  @override
+-  String chatPromptRefinePathMessage(Object topic) {
+-    return 'Continue refining the first week\'s priority steps around \"$topic\".';
+-  }
+-
+   @override
+   String get chatPromptComparePaths => 'Compare two paths';
+ 
+@@ -12353,14 +12321,6 @@ class AppLocalizationsEn extends AppLocalizations {
+     return 'Rewrite the \"$topic\" path into a 7-day executable mini-plan.';
+   }
+ 
+-  @override
+-  String get chatPromptSimulateRound => 'Continue simulating another round';
+-
+-  @override
+-  String chatPromptSimulateRoundMessage(Object topic) {
+-    return 'Simulate another round around \"$topic\". I want to continue this learning scenario.';
+-  }
+-
+   @override
+   String get chatOneOfTheRoles => 'One of the roles';
+ 
+@@ -14671,33 +14631,16 @@ class AppLocalizationsEn extends AppLocalizations {
+   @override
+   String get insightHubTitle => 'Learning Insights';
+ 
+-  @override
+-  String insightHubRecommendedSeeds(Object count) {
+-    return '$count recommended scenarios ready to simulate.';
+-  }
+-
+   @override
+   String get insightHubFallbackSummary =>
+       'Reports and insights — now in one lighter learning flow.';
+ 
+-  @override
+-  String get insightHubSimulation => 'Simulation';
+-
+-  @override
+-  String get insightHubTheater => 'What-If Theater';
+-
+   @override
+   String get insightHubReport => 'Learning Report';
+ 
+   @override
+   String get insightHubEnterOverview => 'Enter Insight Overview';
+ 
+-  @override
+-  String get insightHubCompactSimulation => 'Simulation';
+-
+-  @override
+-  String get insightHubCompactTheater => 'Theater';
+-
+   @override
+   String get insightHubCompactReport => 'Report';
+ 
+@@ -14705,42 +14648,10 @@ class AppLocalizationsEn extends AppLocalizations {
+   String get insightHubRefreshWarning =>
+       'Some insight data hasn\'t refreshed yet. Existing content will be shown.';
+ 
+-  @override
+-  String insightHubSeedsToExplore(Object count) {
+-    return '$count scenarios to explore';
+-  }
+-
+   @override
+   String get insightHubCompactFallback =>
+       'Reports and insights now in one card';
+ 
+-  @override
+-  String get insightHubNoRecentTheater => 'No recent theater';
+-
+-  @override
+-  String get insightHubContinueLastTheater => 'Continue last theater';
+-
+-  @override
+-  String insightHubContinueTopic(Object topic) {
+-    return 'Continue $topic';
+-  }
+-
+-  @override
+-  String get insightHubContinueLastSimulation => 'Continue last simulation';
+-
+-  @override
+-  String insightHubRecommendedSeedsCount(Object count) {
+-    return '$count scenarios';
+-  }
+-
+-  @override
+-  String insightHubContinueSession(Object topic) {
+-    return 'Continue $topic';
+-  }
+-
+-  @override
+-  String get insightHubStartSimulation => 'Start a new simulation';
+-
+   @override
+   String get insightHubNoRecentReport => 'No recent report';
+ 
+@@ -18236,20 +18147,12 @@ class AppLocalizationsEn extends AppLocalizations {
+     return 'Close out $weakNode first, then use $strongNode for transfer practice to raise overall mastery faster.';
+   }
+ 
+-  @override
+-  String reportActionExploreNode(Object nodeName) {
+-    return 'Explore $nodeName';
+-  }
+-
+   @override
+   String get reportActionWeaknessFallback => 'Weakness';
+ 
+   @override
+   String get reportActionStrengthFallback => 'Current Strength';
+ 
+-  @override
+-  String get reportActionEnterSimulation => 'Enter Simulation';
+-
+   @override
+   String get reportTrendAutoFillTitle =>
+       'Trends will fill in as more reports are generated';
+@@ -22285,7 +22188,7 @@ class AppLocalizationsEn extends AppLocalizations {
+   String get notificationRecallDeadlinePressure => 'Time pressure';
+ 
+   @override
+-  String get notificationRecallScore => 'Recall score';
++  String get notificationRecallScore => 'Estimated retention';
+ 
+   @override
+   String get notificationRecallInaccurate => 'This reminder is inaccurate';
+@@ -23696,11 +23599,6 @@ class AppLocalizationsEn extends AppLocalizations {
+   @override
+   String get chatRoundtableWritingExpert => 'Writing Expert';
+ 
+-  @override
+-  String chatSettingsCurrentSeeds(Object names) {
+-    return 'Currently active: $names';
+-  }
+-
+   @override
+   String get chatSettingsEnableSeedDesc =>
+       'Inject enabled seed library content and answer style into current chat.';
+@@ -23730,30 +23628,9 @@ class AppLocalizationsEn extends AppLocalizations {
+   String get chatSettingsPureModeDesc =>
+       'Keep only text messages. Hide extra cards and feedback below messages.';
+ 
+-  @override
+-  String get chatSettingsSeedDisableHint =>
+-      'When disabled, no seed library is injected to avoid context pollution.';
+-
+-  @override
+-  String get chatSettingsSeedEnableHint =>
+-      'After enabling, enhancement starts from the next message.';
+-
+   @override
+   String get chatSettingsSeedLibrary => 'Seed Library';
+ 
+-  @override
+-  String get chatSettingsSeedsDefaultOff =>
+-      'Seed library enhancement is off by default';
+-
+-  @override
+-  String chatSettingsSeedsEnabledCount(Object count) {
+-    return '$count enabled seed libraries connected';
+-  }
+-
+-  @override
+-  String get chatSettingsSeedsEnabledNone =>
+-      'Seed library enhancement enabled but no seed libraries available';
+-
+   @override
+   String get chatSettingsShowAgentCollab => 'Show Agent Collaboration';
+ 
+@@ -23803,9 +23680,6 @@ class AppLocalizationsEn extends AppLocalizations {
+   String get chatSettingsShowTransparencyDesc =>
+       'Control floating AI completion and transparency info at bottom.';
+ 
+-  @override
+-  String get chatSettingsSyncingSeeds => 'Syncing seed library status';
+-
+   @override
+   String get chatSettingsTitle => 'Chat Settings';
+ 
+@@ -26207,15 +26081,6 @@ class AppLocalizationsEn extends AppLocalizations {
+   String get insOverviewEmptyDesc =>
+       'Complete a learning task, log an error, or start a simulation first — then weekly reports and insights become useful.';
+ 
+-  @override
+-  String get insSimLabel => 'Learning Simulation';
+-
+-  @override
+-  String get insTheaterLabel => 'Simulation Theater';
+-
+-  @override
+-  String get insOpenSim => 'Open Simulation';
+-
+   @override
+   String get insReportLabel => 'Learning Report';
+ 
+@@ -26256,22 +26121,9 @@ class AppLocalizationsEn extends AppLocalizations {
+   @override
+   String get insStartFromRecommended => 'Start from Recommended';
+ 
+-  @override
+-  String get insStartSimulation => 'Start Simulation';
+-
+-  @override
+-  String get insTheaterFallback => 'Break a goal into multiple learning paths';
+-
+-  @override
+-  String get insSimFallback =>
+-      'Bring a knowledge point into multi-role live discussion';
+-
+   @override
+   String get insFocusedSim => 'Focused: Learning Simulation';
+ 
+-  @override
+-  String get insFocusedTheater => 'Focused: Scenario Theater';
+-
+   @override
+   String get insFocusedReport => 'Focused: Learning Report';
+ 
+@@ -29674,7 +29526,7 @@ class AppLocalizationsEn extends AppLocalizations {
+   String get communityCommentLabel => 'Comment';
+ 
+   @override
+-  String get communityCommentsComingSoon => 'Comments coming soon';
++  String get communityCommentsComingSoon => 'Comments aren\'t available yet';
+ 
+   @override
+   String get communityShowMore => 'Show more';
+@@ -31978,11 +31830,6 @@ class AppLocalizationsEn extends AppLocalizations {
+     return 'Tomorrow $time';
+   }
+ 
+-  @override
+-  String lioRecommendedSeeds(int count) {
+-    return '$count recommended scenarios';
+-  }
+-
+   @override
+   String get lioStartNewSim => 'Start a new simulation now';
+ 
+@@ -32003,9 +31850,6 @@ class AppLocalizationsEn extends AppLocalizations {
+     return 'Recently updated · $desc';
+   }
+ 
+-  @override
+-  String get lioNoTheaterYet => 'No recent prediction generated yet';
+-
+   @override
+   String get lioNoReportYet => 'No recent report generated yet';
+ 
+@@ -35418,7 +35262,7 @@ class AppLocalizationsEn extends AppLocalizations {
+ 
+   @override
+   String chatMemoryNotRightPrompt(String content) {
+-    return 'This memory is not right: $content. Please lower confidence and avoid directly using it later.';
++    return 'This memory isn\'t right: $content. Rely on it less going forward — don\'t cite it directly.';
+   }
+ 
+   @override
+diff --git a/mobile/lib/l10n/app_localizations_zh.dart b/mobile/lib/l10n/app_localizations_zh.dart
+index a5b19479..fca6f700 100644
+--- a/mobile/lib/l10n/app_localizations_zh.dart
++++ b/mobile/lib/l10n/app_localizations_zh.dart
+@@ -6865,7 +6865,7 @@ class AppLocalizationsZh extends AppLocalizations {
+   String get memoryCorrectionMerge => '合并';
+ 
+   @override
+-  String get memoryMergeComingSoon => '合并功能即将上线';
++  String get memoryMergeComingSoon => '合并功能暂未开放';
+ 
+   @override
+   String get memoryCorrectionSubmitted => '已提交纠错';
+@@ -11512,7 +11512,7 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String get memoryExplanationInferredEpisodic =>
+-      '这条经历由 AI 从聊天中推断，并保留了证据 token、置信度与撤销路径。';
++      '这条经历由 AI 从聊天中推断而来，保留了依据，也支持撤销。';
+ 
+   @override
+   String memoryCorrectionSubmittedWithAction(Object action) {
+@@ -11627,9 +11627,6 @@ class AppLocalizationsZh extends AppLocalizations {
+   @override
+   String get profileSubtitleAchievements => '查看已解锁的里程碑与荣誉进度';
+ 
+-  @override
+-  String get profileSubtitleVisualElements => '管理背景、粒子和视觉奖励';
+-
+   @override
+   String get profileSubtitlePersona => '查看系统理解到的学习特征与偏好';
+ 
+@@ -11681,18 +11678,6 @@ class AppLocalizationsZh extends AppLocalizations {
+   @override
+   String get chatActionSuggestionDesc => '继续完成这一步，或者先确认任务和计划。';
+ 
+-  @override
+-  String get chatTheaterTitle => '推演剧场';
+-
+-  @override
+-  String get chatTheaterDesc => '现在最值得先看的是哪条路径，以及它为什么更适合你。';
+-
+-  @override
+-  String get chatSimulationTitle => '学习仿真';
+-
+-  @override
+-  String get chatSimulationDesc => '先看这一轮最关键的观点碰撞，再决定要不要进入完整模拟。';
+-
+   @override
+   String get chatReportTitle => '学习报告';
+ 
+@@ -11708,15 +11693,9 @@ class AppLocalizationsZh extends AppLocalizations {
+   @override
+   String get chatSwipeToSwitch => '左右滑动切换不同入口';
+ 
+-  @override
+-  String get chatViewTheaterDetails => '查看推演详情';
+-
+   @override
+   String get chatCurrentLearningTopic => '当前学习主题';
+ 
+-  @override
+-  String get chatViewSimulationDetails => '查看模拟详情';
+-
+   @override
+   String get chatCollaborationProcess => '协作过程';
+ 
+@@ -11805,14 +11784,6 @@ class AppLocalizationsZh extends AppLocalizations {
+   @override
+   String get chatParticipantLabel => '参与者';
+ 
+-  @override
+-  String get chatPromptRefinePath => '继续细化这条路径';
+-
+-  @override
+-  String chatPromptRefinePathMessage(Object topic) {
+-    return '继续围绕「$topic」细化第一周最该先做的步骤。';
+-  }
+-
+   @override
+   String get chatPromptComparePaths => '比较两条路线';
+ 
+@@ -11851,14 +11822,6 @@ class AppLocalizationsZh extends AppLocalizations {
+     return '把「$topic」这条路径改写成 7 天可执行的小计划。';
+   }
+ 
+-  @override
+-  String get chatPromptSimulateRound => '继续模拟一轮';
+-
+-  @override
+-  String chatPromptSimulateRoundMessage(Object topic) {
+-    return '继续围绕「$topic」模拟一轮，我想继续跟进这个学习场景。';
+-  }
+-
+   @override
+   String get chatOneOfTheRoles => '其中一个角色';
+ 
+@@ -14072,73 +14035,24 @@ class AppLocalizationsZh extends AppLocalizations {
+   @override
+   String get insightHubTitle => '学习洞察';
+ 
+-  @override
+-  String insightHubRecommendedSeeds(Object count) {
+-    return '现在有 $count 个推荐场景可以直接开始模拟。';
+-  }
+-
+   @override
+   String get insightHubFallbackSummary => '把报告和洞察收进一条更轻量的学习动线。';
+ 
+-  @override
+-  String get insightHubSimulation => '学习仿真';
+-
+-  @override
+-  String get insightHubTheater => '推演剧场';
+-
+   @override
+   String get insightHubReport => '学习报告';
+ 
+   @override
+   String get insightHubEnterOverview => '进入洞察总览';
+ 
+-  @override
+-  String get insightHubCompactSimulation => '仿真';
+-
+-  @override
+-  String get insightHubCompactTheater => '推演';
+-
+   @override
+   String get insightHubCompactReport => '报告';
+ 
+   @override
+   String get insightHubRefreshWarning => '部分洞察数据尚未刷新，点击后会继续显示已有内容。';
+ 
+-  @override
+-  String insightHubSeedsToExplore(Object count) {
+-    return '$count 个推荐场景待探索';
+-  }
+-
+   @override
+   String get insightHubCompactFallback => '报告与洞察现在收在同一张卡里';
+ 
+-  @override
+-  String get insightHubNoRecentTheater => '最近暂无推演';
+-
+-  @override
+-  String get insightHubContinueLastTheater => '继续上次推演';
+-
+-  @override
+-  String insightHubContinueTopic(Object topic) {
+-    return '继续 $topic';
+-  }
+-
+-  @override
+-  String get insightHubContinueLastSimulation => '继续上次仿真';
+-
+-  @override
+-  String insightHubRecommendedSeedsCount(Object count) {
+-    return '$count 个推荐场景';
+-  }
+-
+-  @override
+-  String insightHubContinueSession(Object topic) {
+-    return '继续 $topic';
+-  }
+-
+-  @override
+-  String get insightHubStartSimulation => '开始一轮新模拟';
+-
+   @override
+   String get insightHubNoRecentReport => '最近暂无报告';
+ 
+@@ -17455,20 +17369,12 @@ class AppLocalizationsZh extends AppLocalizations {
+     return '优先围绕 $weakNode 收口，再用 $strongNode 做迁移练习，能更快把整体掌握度拉起来。';
+   }
+ 
+-  @override
+-  String reportActionExploreNode(Object nodeName) {
+-    return '推演 $nodeName';
+-  }
+-
+   @override
+   String get reportActionWeaknessFallback => '薄弱项';
+ 
+   @override
+   String get reportActionStrengthFallback => '当前强项';
+ 
+-  @override
+-  String get reportActionEnterSimulation => '进入学习仿真';
+-
+   @override
+   String get reportTrendAutoFillTitle => '趋势会随着更多报告自动补全';
+ 
+@@ -21381,7 +21287,7 @@ class AppLocalizationsZh extends AppLocalizations {
+   String get notificationRecallDeadlinePressure => '时间压力';
+ 
+   @override
+-  String get notificationRecallScore => '召回评分';
++  String get notificationRecallScore => '记忆保持预估';
+ 
+   @override
+   String get notificationRecallInaccurate => '这个提醒不准确';
+@@ -22727,11 +22633,6 @@ class AppLocalizationsZh extends AppLocalizations {
+   @override
+   String get chatRoundtableWritingExpert => '写作专家';
+ 
+-  @override
+-  String chatSettingsCurrentSeeds(Object names) {
+-    return '当前生效：$names';
+-  }
+-
+   @override
+   String get chatSettingsEnableSeedDesc => '为当前聊天注入已启用的种子库内容与回答风格。';
+ 
+@@ -22756,26 +22657,9 @@ class AppLocalizationsZh extends AppLocalizations {
+   @override
+   String get chatSettingsPureModeDesc => '聊天中只保留文字消息，隐藏消息下方的附加卡片与反馈组件。';
+ 
+-  @override
+-  String get chatSettingsSeedDisableHint => '关闭时所有对话都不会注入种子库，避免上下文污染。';
+-
+-  @override
+-  String get chatSettingsSeedEnableHint => '开启后会从下一条消息开始按种子库增强。';
+-
+   @override
+   String get chatSettingsSeedLibrary => '种子库';
+ 
+-  @override
+-  String get chatSettingsSeedsDefaultOff => '种子库增强默认关闭';
+-
+-  @override
+-  String chatSettingsSeedsEnabledCount(Object count) {
+-    return '当前接入 $count 个已启用种子库';
+-  }
+-
+-  @override
+-  String get chatSettingsSeedsEnabledNone => '已开启种子库增强，但还没有可用种子库';
+-
+   @override
+   String get chatSettingsShowAgentCollab => '显示 Agent 协作';
+ 
+@@ -22818,9 +22702,6 @@ class AppLocalizationsZh extends AppLocalizations {
+   @override
+   String get chatSettingsShowTransparencyDesc => '控制底部悬浮的 AI 完成情况与透明化信息。';
+ 
+-  @override
+-  String get chatSettingsSyncingSeeds => '正在同步种子库状态';
+-
+   @override
+   String get chatSettingsTitle => '对话设置';
+ 
+@@ -25121,15 +25002,6 @@ class AppLocalizationsZh extends AppLocalizations {
+   String get insOverviewEmptyDesc =>
+       '先完成一次学习任务、记录一道错题，或开始一轮仿真，周报和洞察才会开始给出真正有用的反馈。';
+ 
+-  @override
+-  String get insSimLabel => '学习仿真';
+-
+-  @override
+-  String get insTheaterLabel => '推演剧场';
+-
+-  @override
+-  String get insOpenSim => '打开推演';
+-
+   @override
+   String get insReportLabel => '学习报告';
+ 
+@@ -25169,21 +25041,9 @@ class AppLocalizationsZh extends AppLocalizations {
+   @override
+   String get insStartFromRecommended => '从推荐开始';
+ 
+-  @override
+-  String get insStartSimulation => '开始模拟';
+-
+-  @override
+-  String get insTheaterFallback => '把一个目标拆成多条学习路径';
+-
+-  @override
+-  String get insSimFallback => '把一个知识点拉进多角色现场讨论';
+-
+   @override
+   String get insFocusedSim => '已聚焦：学习仿真';
+ 
+-  @override
+-  String get insFocusedTheater => '已聚焦：推演剧场';
+-
+   @override
+   String get insFocusedReport => '已聚焦：学习报告';
+ 
+@@ -28435,7 +28295,7 @@ class AppLocalizationsZh extends AppLocalizations {
+   String get communityCommentLabel => '评论';
+ 
+   @override
+-  String get communityCommentsComingSoon => '评论功能即将上线';
++  String get communityCommentsComingSoon => '评论功能暂未开放';
+ 
+   @override
+   String get communityShowMore => '展开全文';
+@@ -30652,11 +30512,6 @@ class AppLocalizationsZh extends AppLocalizations {
+     return '明天 $time';
+   }
+ 
+-  @override
+-  String lioRecommendedSeeds(int count) {
+-    return '$count 个推荐场景';
+-  }
+-
+   @override
+   String get lioStartNewSim => '可立即开始一轮新模拟';
+ 
+@@ -30676,9 +30531,6 @@ class AppLocalizationsZh extends AppLocalizations {
+     return '最近更新 · $desc';
+   }
+ 
+-  @override
+-  String get lioNoTheaterYet => '暂未生成最近推演';
+-
+   @override
+   String get lioNoReportYet => '暂未生成最近报告';
+ 
+@@ -33950,7 +33802,7 @@ class AppLocalizationsZh extends AppLocalizations {
+ 
+   @override
+   String chatMemoryNotRightPrompt(String content) {
+-    return '这条记忆不对：$content。请降低置信度，以后不要直接引用。';
++    return '这条记忆不对：$content。之后请少参考这条，不要直接引用。';
+   }
+ 
+   @override
+diff --git a/mobile/lib/l10n/app_zh.arb b/mobile/lib/l10n/app_zh.arb
+index 7f739ffe..453819ba 100755
+--- a/mobile/lib/l10n/app_zh.arb
++++ b/mobile/lib/l10n/app_zh.arb
+@@ -2960,7 +2960,7 @@
+     "memoryCorrectionNoLongerApplies": "不再适用",
+     "memoryCorrectionLowerConfidence": "置信度较低",
+     "memoryCorrectionMerge": "合并",
+-    "memoryMergeComingSoon": "合并功能即将上线",
++    "memoryMergeComingSoon": "合并功能暂未开放",
+     "memoryCorrectionSubmitted": "已提交纠错",
+     "memoryCorrectionFailed": "纠错失败",
+     "memoryHistoryLoadFailed": "历史记录加载失败",
+@@ -4954,7 +4954,7 @@
+         }
+     },
+     "memoryAiInferredDisabledHint": "当前已关闭 AI 自动记忆，后续不会继续写入此类推断。",
+-    "memoryExplanationInferredEpisodic": "这条经历由 AI 从聊天中推断，并保留了证据 token、置信度与撤销路径。",
++    "memoryExplanationInferredEpisodic": "这条经历由 AI 从聊天中推断而来，保留了依据，也支持撤销。",
+     "memoryCorrectionSubmittedWithAction": "已提交纠错: {action}",
+     "@memoryCorrectionSubmittedWithAction": {
+         "placeholders": {
+@@ -5018,7 +5018,6 @@
+         }
+     },
+     "profileSubtitleAchievements": "查看已解锁的里程碑与荣誉进度",
+-    "profileSubtitleVisualElements": "管理背景、粒子和视觉奖励",
+     "profileSubtitlePersona": "查看系统理解到的学习特征与偏好",
+     "profileSubtitlePersonalInfo": "编辑头像、昵称和基础资料",
+     "profileSubtitlePreferences": "管理感官反馈、学习模式与推送偏好",
+@@ -5036,18 +5035,12 @@
+     "chatViewAccessoryContentDesc": "在纯净模式下临时展开任务卡和快捷入口",
+     "chatActionSuggestion": "行动建议",
+     "chatActionSuggestionDesc": "继续完成这一步，或者先确认任务和计划。",
+-    "chatTheaterTitle": "推演剧场",
+-    "chatTheaterDesc": "现在最值得先看的是哪条路径，以及它为什么更适合你。",
+-    "chatSimulationTitle": "学习仿真",
+-    "chatSimulationDesc": "先看这一轮最关键的观点碰撞，再决定要不要进入完整模拟。",
+     "chatReportTitle": "学习报告",
+     "chatReportDesc": "先看最核心的诊断和下一步动作，再决定是否进入完整报告页。",
+     "chatAccessoryContent": "附加内容",
+     "chatContinueExploring": "继续探索",
+     "chatSwipeToSwitch": "左右滑动切换不同入口",
+-    "chatViewTheaterDetails": "查看推演详情",
+     "chatCurrentLearningTopic": "当前学习主题",
+-    "chatViewSimulationDetails": "查看模拟详情",
+     "chatCollaborationProcess": "协作过程",
+     "chatPlanContext": "计划上下文",
+     "chatPlanStatus": "计划状态",
+@@ -5074,8 +5067,6 @@
+     "chatPromptPreviewCancel": "先不发",
+     "chatPromptPreviewSend": "直接发送",
+     "chatParticipantLabel": "参与者",
+-    "chatPromptRefinePath": "继续细化这条路径",
+-    "chatPromptRefinePathMessage": "继续围绕「{topic}」细化第一周最该先做的步骤。",
+     "chatPromptComparePaths": "比较两条路线",
+     "chatPromptComparePathsMessage": "比较一下「{pathA}」和「{pathB}」的取舍。",
+     "chatPromptDefaultPathA": "路线 A",
+@@ -5086,8 +5077,6 @@
+     "chatPromptExamFocusMessage": "围绕「{topic}」，告诉我最容易成为考试重点的部分和原因。",
+     "chatPromptMakePlan": "给我排成计划",
+     "chatPromptMakePlanMessage": "把「{topic}」这条路径改写成 7 天可执行的小计划。",
+-    "chatPromptSimulateRound": "继续模拟一轮",
+-    "chatPromptSimulateRoundMessage": "继续围绕「{topic}」模拟一轮，我想继续跟进这个学习场景。",
+     "chatOneOfTheRoles": "其中一个角色",
+     "chatPromptLetMeAnswer": "让我来回答",
+     "chatPromptLetMeAnswerMessage": "让 {speaker} 围绕「{topic}」继续追问我一个关键问题，我来回答。",
+@@ -6185,60 +6174,12 @@
+     "examSprintStatusInProgress": "进行中",
+     "examSprintStatusPending": "待开始",
+     "insightHubTitle": "学习洞察",
+-    "insightHubRecommendedSeeds": "现在有 {count} 个推荐场景可以直接开始模拟。",
+-    "@insightHubRecommendedSeeds": {
+-        "placeholders": {
+-            "count": {
+-                "type": "Object"
+-            }
+-        }
+-    },
+     "insightHubFallbackSummary": "把报告和洞察收进一条更轻量的学习动线。",
+-    "insightHubSimulation": "学习仿真",
+-    "insightHubTheater": "推演剧场",
+     "insightHubReport": "学习报告",
+     "insightHubEnterOverview": "进入洞察总览",
+-    "insightHubCompactSimulation": "仿真",
+-    "insightHubCompactTheater": "推演",
+     "insightHubCompactReport": "报告",
+     "insightHubRefreshWarning": "部分洞察数据尚未刷新，点击后会继续显示已有内容。",
+-    "insightHubSeedsToExplore": "{count} 个推荐场景待探索",
+-    "@insightHubSeedsToExplore": {
+-        "placeholders": {
+-            "count": {
+-                "type": "Object"
+-            }
+-        }
+-    },
+     "insightHubCompactFallback": "报告与洞察现在收在同一张卡里",
+-    "insightHubNoRecentTheater": "最近暂无推演",
+-    "insightHubContinueLastTheater": "继续上次推演",
+-    "insightHubContinueTopic": "继续 {topic}",
+-    "@insightHubContinueTopic": {
+-        "placeholders": {
+-            "topic": {
+-                "type": "Object"
+-            }
+-        }
+-    },
+-    "insightHubContinueLastSimulation": "继续上次仿真",
+-    "insightHubRecommendedSeedsCount": "{count} 个推荐场景",
+-    "@insightHubRecommendedSeedsCount": {
+-        "placeholders": {
+-            "count": {
+-                "type": "Object"
+-            }
+-        }
+-    },
+-    "insightHubContinueSession": "继续 {topic}",
+-    "@insightHubContinueSession": {
+-        "placeholders": {
+-            "topic": {
+-                "type": "Object"
+-            }
+-        }
+-    },
+-    "insightHubStartSimulation": "开始一轮新模拟",
+     "insightHubNoRecentReport": "最近暂无报告",
+     "insightHubMasteryPercent": "掌握度 {percent}%",
+     "@insightHubMasteryPercent": {
+@@ -8155,17 +8096,8 @@
+             }
+         }
+     },
+-    "reportActionExploreNode": "推演 {nodeName}",
+-    "@reportActionExploreNode": {
+-        "placeholders": {
+-            "nodeName": {
+-                "type": "Object"
+-            }
+-        }
+-    },
+     "reportActionWeaknessFallback": "薄弱项",
+     "reportActionStrengthFallback": "当前强项",
+-    "reportActionEnterSimulation": "进入学习仿真",
+     "reportTrendAutoFillTitle": "趋势会随着更多报告自动补全",
+     "reportTrendFirstReportMessage": "第一份报告已经生成好了。先按这次诊断聚焦薄弱知识点，下一次回来这里就会开始连成趋势线。",
+     "reportTrendLoadingHistory": "正在整理你的历史学习报告，稍后会把掌握度趋势补全到这里。",
+@@ -9689,7 +9621,7 @@
+     "notificationRecallReason": "为什么是现在",
+     "notificationRecallEffort": "预计投入",
+     "notificationRecallDeadlinePressure": "时间压力",
+-    "notificationRecallScore": "召回评分",
++    "notificationRecallScore": "记忆保持预估",
+     "notificationRecallInaccurate": "这个提醒不准确",
+     "notificationRecallFeedbackSaved": "已记录，之后会调准这类提醒",
+     "notificationRecallFeedbackRecorded": "反馈已记录",
+@@ -10170,7 +10102,6 @@
+     "chatRoundtableTimeCoach": "时间教练",
+     "chatRoundtableTurnCount": "{count} 条观点",
+     "chatRoundtableWritingExpert": "写作专家",
+-    "chatSettingsCurrentSeeds": "当前生效：{names}",
+     "chatSettingsEnableSeedDesc": "为当前聊天注入已启用的种子库内容与回答风格。",
+     "chatSettingsEnableSeedEnhancement": "开启种子库增强",
+     "chatSettingsExperience": "对话体验",
+@@ -10179,12 +10110,7 @@
+     "chatSettingsOpenAdvancedDesc": "进入透明模式的详细配置页面。",
+     "chatSettingsPureMode": "纯净模式",
+     "chatSettingsPureModeDesc": "聊天中只保留文字消息，隐藏消息下方的附加卡片与反馈组件。",
+-    "chatSettingsSeedDisableHint": "关闭时所有对话都不会注入种子库，避免上下文污染。",
+-    "chatSettingsSeedEnableHint": "开启后会从下一条消息开始按种子库增强。",
+     "chatSettingsSeedLibrary": "种子库",
+-    "chatSettingsSeedsDefaultOff": "种子库增强默认关闭",
+-    "chatSettingsSeedsEnabledCount": "当前接入 {count} 个已启用种子库",
+-    "chatSettingsSeedsEnabledNone": "已开启种子库增强，但还没有可用种子库",
+     "chatSettingsShowAgentCollab": "显示 Agent 协作",
+     "chatSettingsShowAgentCollabDesc": "展示参与的专家、职责分工和模型协同。",
+     "chatSettingsShowAiPanel": "显示 AI 系统面板",
+@@ -10199,7 +10125,6 @@
+     "chatSettingsShowTopBarDesc": "控制聊天页收起/展开的计划、模式和档位入口。",
+     "chatSettingsShowTransparencyCapsule": "显示透明胶囊",
+     "chatSettingsShowTransparencyDesc": "控制底部悬浮的 AI 完成情况与透明化信息。",
+-    "chatSettingsSyncingSeeds": "正在同步种子库状态",
+     "chatSettingsTitle": "对话设置",
+     "chatSettingsTransparencyDetails": "透明化细项",
+     "chatSettingsUiCapabilities": "界面与能力",
+@@ -11302,9 +11227,6 @@
+     "insOverviewTitle": "学习洞察",
+     "insOverviewEmpty": "学习洞察还没有可读数据",
+     "insOverviewEmptyDesc": "先完成一次学习任务、记录一道错题，或开始一轮仿真，周报和洞察才会开始给出真正有用的反馈。",
+-    "insSimLabel": "学习仿真",
+-    "insTheaterLabel": "推演剧场",
+-    "insOpenSim": "打开推演",
+     "insReportLabel": "学习报告",
+     "insViewReport": "查看报告",
+     "insBackToCockpit": "回到驾驶舱",
+@@ -11318,11 +11240,7 @@
+     "insDecisionLogOpen": "查看日志",
+     "insContinueView": "继续查看",
+     "insStartFromRecommended": "从推荐开始",
+-    "insStartSimulation": "开始模拟",
+-    "insTheaterFallback": "把一个目标拆成多条学习路径",
+-    "insSimFallback": "把一个知识点拉进多角色现场讨论",
+     "insFocusedSim": "已聚焦：学习仿真",
+-    "insFocusedTheater": "已聚焦：推演剧场",
+     "insFocusedReport": "已聚焦：学习报告",
+     "insFocusedDefault": "仿真、推演、报告统一收在这里",
+     "insFlowTitle": "把学习里的“看见问题、模拟讨论、沉淀结论”放到同一条动线里。",
+@@ -12673,7 +12591,7 @@
+     "communityWelcomeToGroup": "欢迎加入社群！",
+     "communityLeaveGroupFailed": "退出群组失败，请重试",
+     "communityCommentLabel": "评论",
+-    "communityCommentsComingSoon": "评论功能即将上线",
++    "communityCommentsComingSoon": "评论功能暂未开放",
+     "communityShowMore": "展开全文",
+     "communityShowLess": "收起",
+     "communityShareLabel": "分享",
+@@ -14048,14 +13966,6 @@
+             }
+         }
+     },
+-    "lioRecommendedSeeds": "{count} 个推荐场景",
+-    "@lioRecommendedSeeds": {
+-        "placeholders": {
+-            "count": {
+-                "type": "int"
+-            }
+-        }
+-    },
+     "lioStartNewSim": "可立即开始一轮新模拟",
+     "lioRecentAnalysis": "最近一次共分析 {count} 个知识点",
+     "@lioRecentAnalysis": {
+@@ -14075,7 +13985,6 @@
+             }
+         }
+     },
+-    "lioNoTheaterYet": "暂未生成最近推演",
+     "lioNoReportYet": "暂未生成最近报告",
+     "lioMastery": "掌握度 {percent}%",
+     "@lioMastery": {
+@@ -15734,7 +15643,7 @@
+         }
+     },
+     "receiptKnowledgeRefs": "参考材料",
+-    "chatMemoryNotRightPrompt": "这条记忆不对：{content}。请降低置信度，以后不要直接引用。",
++    "chatMemoryNotRightPrompt": "这条记忆不对：{content}。之后请少参考这条，不要直接引用。",
+     "@chatMemoryNotRightPrompt": {
+         "placeholders": {
+             "content": {
+diff --git a/v3-output/WT363-U10-COPY/REPORT.md b/v3-output/WT363-U10-COPY/REPORT.md
+new file mode 100644
+index 00000000..a5dad237
+--- /dev/null
++++ b/v3-output/WT363-U10-COPY/REPORT.md
+@@ -0,0 +1,93 @@
++# WT363-U10 — 全产品文案与术语终审 + 死键收割（U-10）
++
++- 工号：wt363（wt356 卡 U-07 done 解锁）
++- worktree：`/Users/brsama/code/GitHub/Sparkle-sysrev/wt363-u10-copy`（分支 `wt363-u10-copy`）
++- base SHA：`4451bb1a`（分支点 main，含 wt359 搜索定位修复）
++- final SHA：见分支 HEAD（交付 commit message）
++- 卡面：`v3/07_tasks/cards/U-10.md`（权威）；Must read `01_product/PRODUCT_LANGUAGE.md`、`04_ux/COPY_TONE.md` 已读并作为裁定口径
++- 协作约束遵守：未动 wt358（U-06 状态面）在改的任何文件（其 worktree 变更清单已核对：state* 新键/profile_screen 等，与本卡 6 文件零交集）
++
++---
++
++## 一、死键收割（42 键，wt356 登记批）
++
++### 零引用确认方法
++对 wt356 REPORT §五.1 登记的各族键逐一展开为 42 个具体键名，`grep -rE '\b<key>\b' lib test --include=*.dart`（排除 `lib/l10n/` 生成物）逐键全零命中后删除。`chatSettingsSeedLibrary` 经查仍有 1 处真实引用（chat_settings_screen 种子增强开关）→ **保留未删**（诚实裁定，不硬凑数字）。
++
++### 删除清单（42 键）
++- insightHub 族 13：`insightHubSimulation/Theater/CompactSimulation/CompactTheater/RecommendedSeeds/RecommendedSeedsCount/SeedsToExplore/ContinueLastSimulation/ContinueLastTheater/NoRecentTheater/StartSimulation/ContinueSession/ContinueTopic`
++- ins 族 7：`insSimLabel/insTheaterLabel/insOpenSim/insTheaterFallback/insSimFallback/insStartSimulation/insFocusedTheater`（后 3 键为同族旁支，同法零引用确认）
++- chatPrompt 族 4：`chatPromptRefinePath/RefinePathMessage/SimulateRound/SimulateRoundMessage`
++- report 行动卡 2：`reportActionExploreNode/EnterSimulation`
++- chat_bubble 预览 6：`chatViewTheaterDetails/SimulationDetails`、`chatSimulationTitle/Desc`、`chatTheaterTitle/Desc`
++- chatSettings seed 计数族 7：`chatSettingsCurrentSeeds/SeedsEnabledCount/SeedsEnabledNone/SeedDisableHint/SeedEnableHint/SyncingSeeds/SeedsDefaultOff`
++- insights overview 2：`lioNoTheaterYet/lioRecommendedSeeds`
++- profile 1：`profileSubtitleVisualElements`
++
++### 外科同步与卫生验证（wt350 判例形制）
++- arb ×2 删 42 键 + 7 个含 placeholder 的 `@meta` 块；gen ×3 外科删成员（abstract doc 块+声明行 / impl `@override`+成员块）。
++- diff 全量自查：**+0 / -738，纯删除零插入**；非键名行均为 placeholder @meta 块内部行（属键变更本体）。
++- `flutter gen-l10n` 实跑 exit 0（arb 与生成器契约无断裂）；实跑产物与本机 3.41.3 全量格式重排噪声确认与 wt339/wt350 发现一致 → **弃用其产物，保留外科态**（gen-l10n 仅作契约互证）。
++- arb JSON 合法性 python 校验通过（各 11370 键）。
++
++## 二、文案红线修复（终审口径：不捏造、不诊断、不空诺；双语一致）
++
++全部为 **arb 值级外科替换 + gen 值同步**，零业务逻辑改动、零新键（Forbidden 合规）：
++
++| # | 键 | 面 | 修复 |
++|---|---|---|---|
++| 1 | `memoryMergeComingSoon` | 记忆详情合并 snackbar | zh「合并功能即将上线→**暂未开放**」/ en "coming soon→**isn't available yet**"（去空诺，改当下事实陈述） |
++| 2 | `communityCommentsComingSoon` | 社群 Feed 评论 snackbar | 同上口径：zh「暂未开放」/ en "aren't available yet" |
++| 3 | `memoryExplanationInferredEpisodic` | 记忆详情 why-this | 删内部黑话「证据 **token**、置信度与撤销路径」→「保留了依据，也支持撤销」；en 同步去 "evidence tokens, confidence"（USER_LANGUAGE：说用户可感知的事，不说系统内部对象；依据与撤销均为真实存在能力，无捏造） |
++| 4 | `notificationRecallScore` | 通知中心详情行 | 「召回评分→**记忆保持预估**」/ "Recall score→**Estimated retention**"（去 RAG 味「召回」黑话；「预估」如实标注为估计值，配合既有「标记不准」可纠正入口） |
++| 5 | `chatMemoryNotRightPrompt` | 聊天记忆回执纠正 | 「请降低置信度（机器口吻）→**之后请少参考这条，不要直接引用**」；en 同步去 "lower confidence" |
++| 6 | `group_members_screen.dart:83` | 社群成员页邀请按钮 | **硬编码英文空诺** `'Invite feature coming soon'`（绕过 l10n，zh 用户看英文）→ 复用既有键 `toolCurrentlyUnavailable(groupMembersInvite)`＝zh「邀请成员暂不可用」/ en "Invite members is currently unavailable"（1 行展示层修复，复用键不引新键） |
++
++过程修正（自查发现并修复）：en 生成 dart 串内撇号未转义曾致 analyze E30，已转义修复（`isn\'t` 等 3 处）；zh gen 4 值曾因脚本早退未落盘，已补齐并做 arb↔gen 逐键一致终验（5 键 en/zh 全 OK）。
++
++## 三、验收对照（卡面 Acceptance）
++
++- [x] **核心 journey 无未解释内部术语/placeholder/raw l10n key**：zh 全量 11370 键规则扫描（黑话/诊断/空诺/placeholder/raw-key/玄学分数六类）+ gen-l10n 契约实跑；raw-key 零命中；zh 默认体验的黑话/空诺可达面已修（上表 6 处）。残余见 §四登记。
++- [x] **Why/失败/不确定表达符合 PRODUCT_LANGUAGE**：memory why-this（#3）、纠正提示（#5）、不可用提示（#1/2/6）均改为事实陈述+可纠正路径，无诊断式语言、无空诺；`personaLearningStyle`（用户自选 chip 的步骤标题，非 AI 断言）与 `communityMatchReasonStyleDiff`（匹配理由中性解释）裁定合规不动。
++- 交付状态：**READY_FOR_REVIEW**（worker 不自 DONE；Reviewer 独立执行 arb↔gen 一致性抽查与 diff 自查）。
++
++## 四、发现登记（不阻塞交付，移交后续卡）
++
++1. **en 占位翻译批量债（~110 键）**：en arb 值为开发草稿占位（如 "Plan Archive Title"、"Sprint Info Title"、"Password Set Hint"），zh（模板/默认体验）完好。逐键清点见本卡扫描产物特征：值以 Title/Desc/Label/Subtitle/Hint/Message 结尾或与键名雷同，全部 USED。修复需按 Aurora tone 逐键人工翻译（LIGHT 卡不宜机翻批量改），建议独立 i18n 卡承接。
++2. **置信度百分比族（12 键 USED）**：`personaConfidence/systemUpdatesConfidence/memoryConfidence(Value)/memoryCorrectionLowerConfidence/planReviewConfidenceTitle/intentConfidenceLabel/sourceExplanationConfidence/lfcConfidence/goalIntentConfidence/memoryPanelConfidenceValue(dead)/chatMemoryNotRightPrompt(已修口吻)`——PRODUCT_LANGUAGE 明令禁「0.73 confidence」式表达，定性词改写需动调用点逻辑（M-10 先例只清了 2 面），本卡 Forbidden 禁业务逻辑 → 整族移交逻辑卡。
++3. **死键积压二批（5 键零引用已确认未删）**：`stayTuned/errorBookEditInProgress/errorBookReviewInProgress`（值含空诺）、`dataUsageAiCardDesc/dataUsageTagLearningStyle`（值含诊断式表述）——不在 wt356 登记范围，按卡边界只登记不删，可并入下轮收割。
++4. U-07 遗留「金测试 env 门差异」未属本卡，维持其 REPORT 登记。
++
++## 五、测试与证据
++
++- **base/final SHA**：base `4451bb1a`；final 见分支 HEAD 交付 commit。
++- **analyze 门**：`python3 scripts/check_flutter_analyze_gate.py` → **ERROR=0 / WARNING=16 / INFO=588**，与开工基线（本树实测同值，容差内）**逐位零漂移**；E0 同时证明 gen 外科编辑后类编译完整（漏删/错删必爆编译错）。
++- **守卫**：`bash scripts/run_all_rule_guards.sh` exit 0（**84 rules**，worktree 内实测；AQ/BG 环境红已按 §4 协议补拷 backend/gateway/mobile gen 三件套后转绿）。
++- **mypy**：零 Python 改动（diff 全 .dart/.arb），棘轮天然不推高。
++- **定向 flutter test：DEFERRED** —— 开工/收工两次实测 swap free 1136M/925M < 1.2G 硬门，按内存纪律不执行。变更回归面分析：42 删键 + 5 改值 + 1 展示层修复在 `test/` **零引用**（逐键 grep 实证），analyze E0 背书编译完整。补跑命令（swap≥1.2G 窗口，串行）：
++  ```bash
++  cd mobile && flutter test --concurrency=1 \
++    test/widget/nav_decontextualization_contract_test.dart \
++    test/widget/insights_frontend_smoke_test.dart \
++    test/widget/learning_insights_navigation_test.dart
++  ```
++- **simulator/integration 证据：DEFERRED**（LIGHT 纪律禁模拟器）。卡面 Forbidden「不得只通过静态代码阅读宣称用户体验通过」——如实声明：本交付动态证据 = analyze E0 + 守卫 84 + 上述补跑钉测试（swap 窗口执行），真机 journey 截图证据缺口移交主会话 HEAVY 窗口。
++- **gen-l10n 契约**：实跑 exit 0（后按 wt350 判例弃用其格式噪声产物，保留外科态）。
++
++## 六、Forbidden 遵守
++
++- 未重建既有权威真源（arb 单一事实源未移位；routes/portfolio 等未触碰）。
++- 无 mock/seed 冒充；未只凭静态阅读宣称体验通过（DEFERRED 如实标注）。
++- 未弱化安全/幂等/隔离/审计守卫；守卫 84 全绿通过。
++- 零新 l10n 键；唯一代码改动为 1 行展示层字符串源替换（硬编码→既有键），非业务逻辑。
++- 未动 wt358 在改文件（逐文件核对零交集）。
++
++## 七、收工清单
++
++- [x] 守卫 84 exit 0（commit 前置门已过）
++- [x] analyze E0/W16/I588 零漂移
++- [x] mypy 天然满足（零 py 改动）
++- [x] 交付物（本 REPORT + changes.patch）commit 进分支
++- [x] `git diff --binary main...HEAD` 生成 changes.patch（--binary）
++- [x] 定向 flutter test：DEFERRED（swap 925M<1.2G，补跑命令见 §五）
++- [ ] mobile/build、.dart_tool、/tmp 自产物清理（收尾执行）
