@@ -240,11 +240,13 @@ async def create_goal(
             first_task_id = str(task.id)
         except Exception:
             first_task_id = None
-            failed_milestone_titles.append(str(milestones[0].get("title") or "第一个里程碑"))
+            failed_title = str(milestones[0].get("title") or "第一个里程碑")
+            failed_milestone_titles.append(failed_title)
             logger.warning(
-                "Milestone task creation failed (goal=%s milestone_index=%s); surfaced via warning",
+                "Milestone task creation failed (goal=%s milestone_index=%s title=%r); surfaced via warning",
                 goal.id,
                 0,
+                failed_title,
                 exc_info=True,
             )
 
@@ -267,16 +269,23 @@ async def create_goal(
                 )
             except Exception:
                 # non-blocking; the failure is surfaced via the warning compensation list
-                failed_milestone_titles.append(str(milestone.get("title") or f"第{i}个里程碑"))
+                failed_title = str(milestone.get("title") or f"第{i}个里程碑")
+                failed_milestone_titles.append(failed_title)
                 logger.warning(
-                    "Milestone task creation failed (goal=%s milestone_index=%s); surfaced via warning",
+                    "Milestone task creation failed (goal=%s milestone_index=%s title=%r); surfaced via warning",
                     goal.id,
                     i - 1,
+                    failed_title,
                     exc_info=True,
                 )
 
     if failed_milestone_titles:
-        compensation = "milestone_task_creation_failed"
+        # V3-FIX-64：补偿清单必须可定位——失败里程碑标题 join 进 warning 串
+        # （flag 前缀 ``milestone_task_creation_failed`` 保持 wt396 F5 面不变），
+        # 不再只给单值 flag 迫使翻 exc_info 找失败位次。
+        compensation = (
+            f"milestone_task_creation_failed({'|'.join(failed_milestone_titles)})"
+        )
         warning = f"{warning};{compensation}" if warning else compensation
 
     await db.commit()

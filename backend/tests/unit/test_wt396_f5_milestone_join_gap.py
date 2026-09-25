@@ -269,6 +269,90 @@ async def test_goal_creation_task_failure_surfaces_warning_and_persists_mileston
     assert "goal_milestone:m3" in (rows[1].tags or []), "里程碑任务必须携带里程碑 id 标签"
 
 
+async def test_goal_creation_warning_carries_failed_milestone_titles(
+    db_session, monkeypatch, caplog
+):
+    """V3-FIX-64：失败里程碑的**具体标题**必须被消费——进响应 warning 串和失败日志.
+
+    修前：``failed_milestone_titles`` 三处 append 后只在 :278 判空拼固定 flag
+    ``milestone_task_creation_failed``——哪个里程碑失败既不进响应也不进日志
+    （日志只有 milestone_index），定位失败位次要翻 exc_info 堆栈。
+    """
+    import logging as _logging
+
+    from fastapi import FastAPI
+
+    import app.api.v1.goals as goals_api
+    from app.schemas.task import TaskCreate
+    from app.services.task_service import TaskService
+
+    user = User(
+        username=f"wt418fix64_{uuid4().hex[:10]}",
+        email=f"wt418fix64_{uuid4().hex[:10]}@t.example",
+        hashed_password="x",
+    )
+    db_session.add(user)
+    await db_session.commit()
+
+    app = FastAPI()
+    app.include_router(goals_api.router, prefix="/api/v1/goals")
+
+    async def _override_get_db():
+        yield db_session
+
+    async def _override_get_current_user():
+        return user
+
+    app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[get_current_user] = _override_get_current_user
+
+    real_create = TaskService.create
+    calls: list[str] = []
+
+    async def _spying_create(db, obj_in: TaskCreate, *, user_id):
+        calls.append(str(obj_in.title))
+        if len(calls) >= 2:
+            # 第 2、3 个里程碑任务均失败 → 补偿清单语义（多失败位）
+            raise RuntimeError("simulated milestone task creation failure (V3-FIX-64 red)")
+        return await real_create(db, obj_in, user_id)
+
+    monkeypatch.setattr(TaskService, "create", _spying_create)
+
+    with caplog.at_level(_logging.WARNING, logger="app.api.v1.goals"):
+        async with AsyncClient(
+            transport=ASGITransport(app=app, raise_app_exceptions=False), base_url="http://test"
+        ) as ac:
+            resp = await ac.post(
+                "/api/v1/goals",
+                json={
+                    "goal_type": "skill",
+                    "title": "wt418 FIX-64 补偿清单目标",
+                    "motivation": "失败标题透出红测",
+                    "milestones": [
+                        {"id": "m1", "title": "里程碑一"},
+                        {"id": "m2", "title": "里程碑二"},
+                        {"id": "m3", "title": "里程碑三"},
+                    ],
+                },
+            )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+
+    # 响应面：flag 前缀（wt396 F5 面不回归）+ 具体失败标题 join 进串
+    warning = body["warning"] or ""
+    assert "milestone_task_creation_failed" in warning, "补偿 flag 前缀不得回归"
+    assert "里程碑二" in warning, "失败里程碑标题必须透出（修前只进不了 warning）"
+    assert "里程碑三" in warning, "第二个失败里程碑标题也必须透出"
+    assert "里程碑一" not in warning, "成功位不得误报进补偿清单"
+
+    # 日志面：失败日志携带标题（修前只有 milestone_index，标题不可定位）
+    failure_logs = [r for r in caplog.records if "Milestone task creation failed" in r.getMessage()]
+    assert len(failure_logs) >= 2, "两次失败各记一条 warning 日志"
+    logged_titles = " ".join(r.getMessage() for r in failure_logs)
+    assert "里程碑二" in logged_titles, "失败日志必须携带里程碑标题"
+    assert "里程碑三" in logged_titles, "失败日志必须携带里程碑标题"
+
+
 async def test_goal_creation_happy_path_persists_milestone_ids(db_session):
     """无失败时全部任务携带 ``goal_milestone:<id>`` 标签（存量 join 兼容的根基面）."""
     from fastapi import FastAPI
