@@ -7,7 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/design/adaptive/emotion_responsive_theme.dart';
 import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
+import 'package:sparkle/core/utils/text_rendering.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/task_notification_id_mapper.dart';
@@ -90,12 +92,16 @@ Widget buildDashboardTestHarness({
   Locale? locale = const Locale('en'),
   DashboardState? dashboardState,
   List<Override> extraOverrides = const [],
+  EmotionResponsiveConfig? emotionConfig,
+  bool tickerEnabled = false,
 }) => _buildDashboardProviderHarness(
     theme: theme,
     size: size,
     locale: locale,
     dashboardState: dashboardState,
     extraOverrides: extraOverrides,
+    emotionConfig: emotionConfig,
+    tickerEnabled: tickerEnabled,
     child: const DashboardScreen(),
   );
 
@@ -106,12 +112,14 @@ Widget buildDashboardWidgetHarness({
   Locale? locale = const Locale('en'),
   DashboardState? dashboardState,
   List<Override> extraOverrides = const [],
+  EmotionResponsiveConfig? emotionConfig,
 }) => _buildDashboardProviderHarness(
     theme: theme,
     size: size,
     locale: locale,
     dashboardState: dashboardState,
     extraOverrides: extraOverrides,
+    emotionConfig: emotionConfig,
     child: Material(
       child: SingleChildScrollView(
         child: Padding(
@@ -129,6 +137,8 @@ Widget _buildDashboardProviderHarness({
   Locale? locale = const Locale('en'),
   DashboardState? dashboardState,
   List<Override> extraOverrides = const [],
+  EmotionResponsiveConfig? emotionConfig,
+  bool tickerEnabled = false,
 }) {
   final effectiveDashboardState = dashboardState ?? _sampleDashboardState();
   final tasks = _sampleTasks();
@@ -139,8 +149,7 @@ Widget _buildDashboardProviderHarness({
       // 测试内所有经 authRepositoryProvider 的读路径都落在这里。
       tokenStorageProvider.overrideWithValue(
         SecureTokenStorage(storage: _MemorySecureStorage()),
-      ),
-      flutterSecureStorageProvider.overrideWithValue(_MemorySecureStorage()),
+      ),      flutterSecureStorageProvider.overrideWithValue(_MemorySecureStorage()),
       sharedPreferencesProvider.overrideWithValue(_dashboardPrefs),
       authProvider.overrideWith((ref) => _StaticAuthNotifier()),
       // J-02：OnboardingResumeCard 挂入 home 后，引导完成态必须有确定值，
@@ -202,6 +211,7 @@ Widget _buildDashboardProviderHarness({
     ],
     child: MaterialApp(
       locale: locale,
+      debugShowCheckedModeBanner: false,
       // 与 test/shared/i18n_test_helper.dart 的 testMaterialApp 同款：
       // owner 组件（含 PredictedIntentCard）构建即读 context.sparkle，
       // 未注册扩展直接断言失败。
@@ -221,8 +231,19 @@ Widget _buildDashboardProviderHarness({
       home: MediaQuery(
         data: MediaQueryData(size: size),
         child: TickerMode(
-          enabled: false,
-          child: child,
+          // 默认冻结动画（存量行为）；U-02 证据截图传 true 并以足帧
+          // pump 让入场动画落定，否则标准档截图停在动画初帧（空白）。
+          enabled: tickerEnabled,
+          child: DefaultTextStyle.merge(
+            // app.dart 根部同款：全局 CJK 字体 fallback（真实装配链路）。
+            style: const TextStyle(fontFamilyFallback: sparkleFontFallback),
+            child: emotionConfig == null
+                ? child
+                : EmotionResponsiveAppWrapper(
+                    config: emotionConfig,
+                    child: child,
+                  ),
+          ),
         ),
       ),
     ),
