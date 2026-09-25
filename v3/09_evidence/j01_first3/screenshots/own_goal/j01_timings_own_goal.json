@@ -1,0 +1,55 @@
+{
+  "route": "own_goal",
+  "harness_t0": "2026-09-26T04:15:28.957913",
+  "finished_at": "2026-09-26T04:20:25.997272",
+  "passes": [
+    {
+      "persona": {
+        "id": "PX5",
+        "name": "Creator",
+        "arc": "completion",
+        "goal": "持续产出学习类播客，第一个月先发出 2 期。"
+      },
+      "route": "own_goal",
+      "warm_process": false,
+      "t_first_surface_ms": 10075,
+      "saw_login": false,
+      "auto_login_after_wipe": true,
+      "example_entry_on_login": false,
+      "guest_leg": {
+        "t_dashboard_visible_ms": 12294,
+        "reached": true,
+        "seeded_goal_visible": true,
+        "declared_example_marker": false,
+        "set_first_goal_cta_visible": false,
+        "stuck_recovery_cta_visible": true
+      },
+      "register_fields_to_fill": 4,
+      "register_tos_tiles": 2,
+      "t_register_done_ms": 36809,
+      "registered_to_dashboard": false,
+      "register_error_markers": [],
+      "auth_provider_error": null,
+      "api_register_status": 200,
+      "fallback_login_to_dashboard": false,
+      "provider_login_to_dashboard": true,
+      "t_goal_cta_visible_ms": 97043,
+      "goal_cta_found": true,
+      "t_wizard_visible_ms": 97885,
+      "wizard_reached": true,
+      "t_intent_submitted_ms": 105470,
+      "t_intent_analyzed_ms": 105586,
+      "intent_analyzed": true,
+      "intent_outcome": "legacy_type_chooser",
+      "create_failed_marker": true,
+      "t_route_done_ms": 288287,
+      "wizard_exited": false,
+      "clicks": 18
+    }
+  ],
+  "failures": [
+    "pass PX5: UI register did not reach dashboard (silent bounce)",
+    "pass PX5: wizard stalled at step \"confirm\" after 3 taps (likely backend preview/intent dependency or disabled CTA)",
+    "pass PX5: wizard did not finish"
+  ]
+}

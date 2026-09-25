@@ -1,0 +1,96 @@
+{
+  "route": "example",
+  "harness_t0": "2026-09-26T04:22:35.431006",
+  "finished_at": "2026-09-26T04:29:33.075855",
+  "passes": [
+    {
+      "persona": {
+        "id": "PX1",
+        "name": "比赛 Builder",
+        "arc": "deadline",
+        "goal": "两周内做出一个可展示的算法可视化比赛作品，至少能完整跑起来给评委演示。"
+      },
+      "route": "example",
+      "warm_process": false,
+      "t_first_surface_ms": 10438,
+      "saw_login": false,
+      "auto_login_after_wipe": true,
+      "example_entry_on_login": false,
+      "t_dashboard_visible_ms": 12540,
+      "example_scan_dashboard": {
+        "seeded_goal_words": true,
+        "declared_example_marker": false,
+        "onboarding_resume_hint": false,
+        "seed_library_word": false
+      },
+      "example_scan_tabs": {
+        "星图": "none",
+        "对话": "none",
+        "社群": "none",
+        "我的": "none"
+      },
+      "clicks": 7
+    },
+    {
+      "persona": {
+        "id": "PX2",
+        "name": "科研 Builder",
+        "arc": "stalled",
+        "goal": "推进毕业论文：两周内跑完实验并写出前三节初稿。"
+      },
+      "route": "example",
+      "warm_process": true,
+      "t_first_surface_ms": 1163,
+      "saw_login": true,
+      "example_entry_on_login": false,
+      "t_dashboard_visible_ms": 62675,
+      "clicks": 3
+    },
+    {
+      "persona": {
+        "id": "PX3",
+        "name": "作品集 Builder",
+        "arc": "stalled",
+        "goal": "边学 React 边做出 3 个能放进作品集的前端项目。"
+      },
+      "route": "example",
+      "warm_process": true,
+      "t_first_surface_ms": 375,
+      "saw_login": true,
+      "example_entry_on_login": false,
+      "t_dashboard_visible_ms": 61728,
+      "clicks": 3
+    },
+    {
+      "persona": {
+        "id": "PX4",
+        "name": "课程 Builder",
+        "arc": "deadline",
+        "goal": "7天后《计算机网络》期末考试，目前基本没学，目标是别挂科。"
+      },
+      "route": "example",
+      "warm_process": true,
+      "t_first_surface_ms": 382,
+      "saw_login": true,
+      "example_entry_on_login": false,
+      "t_dashboard_visible_ms": 61789,
+      "clicks": 3
+    },
+    {
+      "persona": {
+        "id": "PX5",
+        "name": "Creator",
+        "arc": "completion",
+        "goal": "持续产出学习类播客，第一个月先发出 2 期。"
+      },
+      "route": "example",
+      "warm_process": true,
+      "t_first_surface_ms": 367,
+      "saw_login": true,
+      "example_entry_on_login": false,
+      "t_dashboard_visible_ms": 61748,
+      "clicks": 1
+    }
+  ],
+  "failures": []
+}
