@@ -21,6 +21,7 @@
 | `x10_run_action_e2e_eval.py` | X-10：Action Engine E2E 无人值守评测（77 场景真实服务层+真实 DB，六元组+独立判定 → `v3-output/X-10/`；acceptance 不绿 exit≠0；零 LLM/零模拟器/零 gradle） |
 | `p15_outcome_absorption_probe.py` | P1-5：星图 mastery 生长链活栈探针（真实库重构 outcome.recorded payload 过修复版吸收器，before/after mastery + 幂等复跑；用法见脚本 docstring；报告见 `v3-output/P1-5-MASTERY/REPORT.md`） |
 | `audit_community_readmodel.py` | S-01 段一：Community 读模真相审计（每投影一行：来源/新鲜度/一致性风险/live 可测性 + grep 锚点复核；`--live` 追加只读探测，失败如实记录不合成假 realtime；默认零 PG 连接；报告见 `v3-output/WT361-S01-READMODEL/REPORT.md`） |
+| `bench_ai_stack_l0_l3.py` | E-08：AI Stack 集成 Bench（L0-L3 四层 × 104 真实 query 经 gRPC StreamChat 真模型真路由；TTFT/total/token/cost/context/stage/fallback/quality 全字段 → `v3-output/WT372-E08-BENCH/`；`run`/`summarize` 子命令可断点续跑；DB 归因经 `docker exec sparkle_db psql`；需常驻引擎 :50051/:8000 与主仓 backend/.venv） |
 | `build_demo.sh` | Demo 版本自动打包（历史演示用途） |
 | `demo_start.sh` | Demo 演示启动脚本（历史演示用途） |
 | `TEST_INSTRUCTIONS.sh` | 全功能验收测试操作说明（历史） |

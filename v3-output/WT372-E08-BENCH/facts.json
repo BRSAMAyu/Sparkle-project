@@ -1,0 +1,269 @@
+{
+  "generated_at": "2026-09-25T16:46:56+08:00",
+  "run_tag": "run",
+  "n_total": 104,
+  "n_ok": 103,
+  "n_error": 1,
+  "n_fallback": 19,
+  "n_quality_pass": 65,
+  "tokens_total": 294768,
+  "cost_total_usd": 0.011688,
+  "cost_mean_usd": 0.000112,
+  "by_layer": {
+    "L0": {
+      "n": 26,
+      "ok": 25,
+      "err": 1,
+      "fallback": 1,
+      "quality_pass": 20,
+      "ttft_p50": 1.1063,
+      "ttft_p95": 2.033,
+      "content_p50": 1.1063,
+      "content_p95": 2.033,
+      "total_p50": 2.1942,
+      "total_p95": 65.2698,
+      "fb_p50": 0.3522,
+      "fb_p95": 0.8976,
+      "ptok_sum": 33750,
+      "ctok_sum": 1041,
+      "cost_sum": 0.0012,
+      "cost_mean": 0.0
+    },
+    "L1": {
+      "n": 26,
+      "ok": 26,
+      "err": 0,
+      "fallback": 2,
+      "quality_pass": 19,
+      "ttft_p50": 1.9513,
+      "ttft_p95": 2.9472,
+      "content_p50": 1.9898,
+      "content_p95": 3.3752,
+      "total_p50": 22.1902,
+      "total_p95": 32.9207,
+      "fb_p50": 1.0192,
+      "fb_p95": 3.0631,
+      "ptok_sum": 89970,
+      "ctok_sum": 7495,
+      "cost_sum": 0.0039,
+      "cost_mean": 0.0001
+    },
+    "L2": {
+      "n": 26,
+      "ok": 26,
+      "err": 0,
+      "fallback": 7,
+      "quality_pass": 18,
+      "ttft_p50": 2.4981,
+      "ttft_p95": 14.925,
+      "content_p50": 2.9673,
+      "content_p95": 10.9621,
+      "total_p50": 22.6767,
+      "total_p95": 49.4575,
+      "fb_p50": 1.4997,
+      "fb_p95": 5.4466,
+      "ptok_sum": 62347,
+      "ctok_sum": 8632,
+      "cost_sum": 0.0031,
+      "cost_mean": 0.0001
+    },
+    "L3": {
+      "n": 26,
+      "ok": 26,
+      "err": 0,
+      "fallback": 9,
+      "quality_pass": 8,
+      "ttft_p50": 7.2599,
+      "ttft_p95": 113.3639,
+      "content_p50": 6.7889,
+      "content_p95": 112.8401,
+      "total_p50": 28.8094,
+      "total_p95": 113.0315,
+      "fb_p50": 1.5832,
+      "fb_p95": 7.0264,
+      "ptok_sum": 81118,
+      "ctok_sum": 10415,
+      "cost_sum": 0.0035,
+      "cost_mean": 0.0001
+    }
+  },
+  "by_lane": {
+    "free": {
+      "n": 78,
+      "ok": 77,
+      "err": 1,
+      "fallback": 11,
+      "quality_pass": 51,
+      "ttft_p50": 1.8897,
+      "ttft_p95": 10.5337,
+      "content_p50": 1.9448,
+      "content_p95": 8.7439,
+      "total_p50": 18.7718,
+      "total_p95": 60.8003,
+      "fb_p50": 0.8913,
+      "fb_p95": 5.008,
+      "ptok_sum": 208288,
+      "ctok_sum": 17359,
+      "cost_sum": 0.0089,
+      "cost_mean": 0.0001
+    },
+    "pro": {
+      "n": 26,
+      "ok": 26,
+      "err": 0,
+      "fallback": 8,
+      "quality_pass": 14,
+      "ttft_p50": 6.1432,
+      "ttft_p95": 113.6258,
+      "content_p50": 5.4669,
+      "content_p95": 112.8401,
+      "total_p50": 27.9753,
+      "total_p95": 113.0315,
+      "fb_p50": 1.5557,
+      "fb_p95": 7.6342,
+      "ptok_sum": 58897,
+      "ctok_sum": 10224,
+      "cost_sum": 0.0028,
+      "cost_mean": 0.0001
+    }
+  },
+  "slo_results": {
+    "L0 no-model p95≤500ms": "FAIL",
+    "L1 首个有意义反馈 p50≤2.5s": "PASS",
+    "L1 p95≤5s": "PASS",
+    "L2 500ms 内阶段反馈（首事件 p95）": "FAIL",
+    "L2 最终 p95≤15s": "FAIL",
+    "L3 创建/ACK p95≤1s": "FAIL"
+  },
+  "issues": [
+    {
+      "id": "E08-ISS-L0-TTFT",
+      "severity": "high",
+      "description": "L0 快答路径 TTFT p95=2033ms > 目标 500ms（Gate V3-8）。问候/确认/快问仍走完整生成链（对应 E-01 W-2：TRIVIAL 不跳过生成），L0 no-model 直答未生效。",
+      "evidence": {
+        "layer": "L0",
+        "n": 26,
+        "ttft_p95_s": 2.033025
+      }
+    },
+    {
+      "id": "E08-ISS-L2-FEEDBACK",
+      "severity": "high",
+      "description": "L2 免费层首反馈 p95=4282ms > 目标 500ms（Gate V3-8 阶段反馈）。E-03 stage 前置已生效部分场景，但免费层 deep 档仍存在前置静默。",
+      "evidence": {
+        "layer": "L2",
+        "lane": "free",
+        "n": 13,
+        "first_event_p95_s": 4.2823400000000005
+      }
+    },
+    {
+      "id": "E08-ISS-L2-TOTAL",
+      "severity": "medium",
+      "description": "L2 最终回复 p95=49.5s > 目标 15s（思考档总时长超预算）。",
+      "evidence": {
+        "layer": "L2",
+        "n": 26,
+        "total_p95_s": 49.457525000000004
+      }
+    },
+    {
+      "id": "E08-ISS-L3-ACK",
+      "severity": "high",
+      "description": "L3 Agent Run 首帧/ACK p95=7.03s > 目标 1s（Gate V3-8 创建/ACK）。编排轮首个用户可见反馈仍有秒级前置。",
+      "evidence": {
+        "layer": "L3",
+        "n": 26,
+        "first_event_p95_s": 7.0264
+      }
+    },
+    {
+      "id": "E08-ISS-FALLBACK",
+      "severity": "high",
+      "description": "19 条 token_usage.model='default'（生成模型 key 未写入 response_builder/response_builder.py:948）：12 条 0 token=前置链澄清门/模板直出未进生成（无流式 delta，成本盲区）；7 条带 token=多代理（cognitive_prism）流的计量错挂 default，费用无法按模型定价（计 0，成本被低估）：",
+      "evidence": {
+        "request_ids_zero_tok": [
+          "wt372-e08-run-l0-21-194d71",
+          "wt372-e08-run-l1-03-0fc3eb",
+          "wt372-e08-run-l1-17-96d729",
+          "wt372-e08-run-l2-08-1575e0",
+          "wt372-e08-run-l2-09-d3feb5",
+          "wt372-e08-run-l2-10-b2bca0",
+          "wt372-e08-run-l2-11-2b2ffb",
+          "wt372-e08-run-l2-20-ab58f9",
+          "wt372-e08-run-l2-21-b3ebb9",
+          "wt372-e08-run-l2-25-68a0f6",
+          "wt372-e08-run-l3-04-1b6300",
+          "wt372-e08-run-l3-09-aa09c8"
+        ],
+        "request_ids_metered": [
+          "wt372-e08-run-l3-06-221e94",
+          "wt372-e08-run-l3-08-a9c468",
+          "wt372-e08-run-l3-15-104147",
+          "wt372-e08-run-l3-18-a24123",
+          "wt372-e08-run-l3-21-d00bcc",
+          "wt372-e08-run-l3-23-a1e2cc",
+          "wt372-e08-run-l3-26-e378d5"
+        ]
+      }
+    },
+    {
+      "id": "E08-ISS-ERROR",
+      "severity": "high",
+      "description": "1 条查询出错（gRPC/引擎错误，全部如实记录，未重试掩盖）：",
+      "evidence": {
+        "request_ids": [
+          "wt372-e08-run-l0-21-194d71"
+        ],
+        "codes": [
+          "_MultiThreadedRendezvous"
+        ]
+      }
+    },
+    {
+      "id": "E08-ISS-TIER-COLLAPSE",
+      "severity": "high",
+      "description": "全部计量生成塌缩到单一模型车道 ['dashscope_fast']——85/85 条带 token 的生成行均为该模型，pro 车道与 deep 档无一到达 standard/plus/max。控制探针（user_profile.is_pro=true+deep，request_id 见 evidence）仍被 adaptive_routing_engine.reorder_candidates 重排：[AdaptiveRouting] reorder head dashscope_standard_thinking -> dashscope_fast (samples>=8)（bench 窗口内该日志 90 次）。当前构建中 L1/L2/L3 的 tier 差异不存在，Gate V3-8 的分层成本/质量账本失效——深档请求实际按 fast 车道计延迟/成本/质量。",
+      "evidence": {
+        "metered_models": [
+          "dashscope_fast"
+        ],
+        "metered_generation_rows": 85,
+        "control_probe_request_id": "wt372-e08-probe-ispro-84715b"
+      }
+    },
+    {
+      "id": "E08-ISS-QUALITY",
+      "severity": "medium",
+      "description": "39 条未过启发式 quality 粗筛（空答/弃答/语言不符/低相关；粗筛口径声明于报告）：",
+      "evidence": {
+        "request_ids": [
+          "wt372-e08-run-l0-02-c78f7e",
+          "wt372-e08-run-l0-05-bb4354",
+          "wt372-e08-run-l0-07-1c1ec8",
+          "wt372-e08-run-l0-10-2cffdc",
+          "wt372-e08-run-l0-12-5aad48",
+          "wt372-e08-run-l0-14-bbc216",
+          "wt372-e08-run-l1-02-312db5",
+          "wt372-e08-run-l1-03-0fc3eb",
+          "wt372-e08-run-l1-04-a19209",
+          "wt372-e08-run-l1-07-dc14a0",
+          "wt372-e08-run-l1-16-0ecaf6",
+          "wt372-e08-run-l1-19-d97eff",
+          "wt372-e08-run-l1-22-4c0918",
+          "wt372-e08-run-l2-08-1575e0",
+          "wt372-e08-run-l2-10-b2bca0",
+          "wt372-e08-run-l2-11-2b2ffb",
+          "wt372-e08-run-l2-12-1aacb8",
+          "wt372-e08-run-l2-17-aa4063",
+          "wt372-e08-run-l2-20-ab58f9",
+          "wt372-e08-run-l2-23-7114c2"
+        ]
+      }
+    }
+  ],
+  "models": {
+    "dashscope_fast": 85,
+    "default": 19
+  }
+}
