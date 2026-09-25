@@ -1,0 +1,5860 @@
+{
+  "spec_version": "d08_flywheel_spec.v1",
+  "metrics_version": "d08_flywheel_metrics.v1",
+  "population": [
+    "p01_experience_reinforce",
+    "p02_experience_hysteresis",
+    "p03_explicit_difficulty",
+    "p04_ambiguous_weak",
+    "p05_correction_loop",
+    "p06_structural_gap",
+    "p07_plan_drift_entry",
+    "p08_skill_repeat",
+    "p09_choice_feedback",
+    "p10_quiet_then_tooling"
+  ],
+  "acceptance": {
+    "personas_passed": 10,
+    "personas_total": 10,
+    "passed_ids": [
+      "p01_experience_reinforce",
+      "p02_experience_hysteresis",
+      "p03_explicit_difficulty",
+      "p04_ambiguous_weak",
+      "p05_correction_loop",
+      "p06_structural_gap",
+      "p07_plan_drift_entry",
+      "p08_skill_repeat",
+      "p09_choice_feedback",
+      "p10_quiet_then_tooling"
+    ],
+    "chain_type_counts": {
+      "journey_correction": 14,
+      "memory_quieter": 10
+    }
+  },
+  "invalid_personalization_total": 25,
+  "fleet": {
+    "understanding_dim_status_transitions_day0_to_day7": {
+      "coverage": {
+        "unknown->ok": 10
+      },
+      "correctness": {
+        "ok->ok": 10
+      },
+      "scope_precision": {
+        "unknown->ok": 10
+      },
+      "freshness": {
+        "unknown->ok": 10
+      },
+      "utility": {
+        "unknown->ok": 10
+      }
+    },
+    "followed_match_mean_day0": 0.6,
+    "followed_match_mean_day7": 0.45
+  },
+  "per_persona": {
+    "p01_experience_reinforce": {
+      "persona_id": "p01_experience_reinforce",
+      "faces": {
+        "understanding": {
+          "coverage": {
+            "day0": {
+              "dimension": "coverage",
+              "status": "unknown",
+              "value": null,
+              "samples": 1,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "unknown_reason": "judgment samples 1 < 3"
+              }
+            },
+            "day3": {
+              "dimension": "coverage",
+              "status": "unknown",
+              "value": null,
+              "samples": 2,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "unknown_reason": "judgment samples 2 < 3"
+              }
+            },
+            "day7": {
+              "dimension": "coverage",
+              "status": "ok",
+              "value": 0.3333,
+              "samples": 3,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "context_score_mean": 0.3333,
+                "task_score_mean": 0.75,
+                "missing_dimension_freq": {
+                  "constraint_explicit": 3,
+                  "relevant_memory_present": 3,
+                  "recent_user_state_known": 3,
+                  "social_context_loaded": 3
+                },
+                "top_missing": [
+                  "constraint_explicit",
+                  "recent_user_state_known",
+                  "relevant_memory_present"
+                ]
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.3333)"
+          },
+          "correctness": {
+            "day0": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 1.0,
+              "samples": 1,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 0,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 1,
+                "correction_conflict_rate": 0.0
+              }
+            },
+            "day3": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 1.0,
+              "samples": 2,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 0,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 2,
+                "correction_conflict_rate": 0.0
+              }
+            },
+            "day7": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 0.3333,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 1,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 3,
+                "correction_conflict_rate": 0.3333
+              }
+            },
+            "delta_day7_vs_day0": "ok->ok(0.3333)"
+          },
+          "scope_precision": {
+            "day0": {
+              "dimension": "scope_precision",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "scope feedback channel dark in window"
+              }
+            },
+            "day3": {
+              "dimension": "scope_precision",
+              "status": "ok",
+              "value": 0.0,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "scope_feedback_total": 3,
+                "scope_negative": 1,
+                "scope_misuse_rate": 0.3333
+              }
+            },
+            "day7": {
+              "dimension": "scope_precision",
+              "status": "ok",
+              "value": 0.0,
+              "samples": 6,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "scope_feedback_total": 6,
+                "scope_negative": 2,
+                "scope_misuse_rate": 0.3333
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.0)"
+          },
+          "freshness": {
+            "day0": {
+              "dimension": "freshness",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "no state-changing corrections in window"
+              }
+            },
+            "day3": {
+              "dimension": "freshness",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "no state-changing corrections in window"
+              }
+            },
+            "day7": {
+              "dimension": "freshness",
+              "status": "ok",
+              "value": 0.2,
+              "samples": 1,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "lag_sample_count": 1,
+                "mean_lag_days": 24.0,
+                "max_lag_days": 24.0
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.2)"
+          },
+          "utility": {
+            "day0": {
+              "dimension": "utility",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "decisive feedback 0 < 3"
+              }
+            },
+            "day3": {
+              "dimension": "utility",
+              "status": "ok",
+              "value": 0.6667,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "accepted": 2,
+                "corrected": 0,
+                "denied": 1,
+                "decisive_total": 3,
+                "boundary": "immediate-loop acceptance; outcome-linked utility reserved (D-05/D-02)"
+              }
+            },
+            "day7": {
+              "dimension": "utility",
+              "status": "ok",
+              "value": 0.6667,
+              "samples": 6,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "accepted": 4,
+                "corrected": 0,
+                "denied": 2,
+                "decisive_total": 6,
+                "boundary": "immediate-loop acceptance; outcome-linked utility reserved (D-05/D-02)"
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.6667)"
+          }
+        },
+        "memory": {
+          "day0": {
+            "surfaced_count": 3,
+            "stale_surfaced": true,
+            "stale_position": 0,
+            "stale_confidence": 0.9,
+            "reference_denied_total": 0,
+            "retractions": 0
+          },
+          "day3": {
+            "surfaced_count": 3,
+            "stale_surfaced": true,
+            "stale_position": 0,
+            "stale_confidence": 0.8,
+            "reference_denied_total": 1,
+            "retractions": 0
+          },
+          "day7": {
+            "surfaced_count": 2,
+            "stale_surfaced": false,
+            "stale_position": null,
+            "stale_confidence": null,
+            "reference_denied_total": 2,
+            "retractions": 1
+          },
+          "delta_day7_vs_day0": {
+            "stale_surfaced": "True->False",
+            "stale_confidence": null
+          }
+        },
+        "intervention": {
+          "day0": {
+            "chat_selected": "explain",
+            "journey_friction": "dependency",
+            "journey_intervention": "remind",
+            "followed": "explain",
+            "followed_surface": "chat",
+            "match_class": "primary",
+            "journey_adjusted_by_correction": false,
+            "chat_applied_patch_ids": []
+          },
+          "day3": {
+            "chat_selected": "explain",
+            "journey_friction": "difficulty",
+            "journey_intervention": "split",
+            "followed": "explain",
+            "followed_surface": "chat",
+            "match_class": "primary",
+            "journey_adjusted_by_correction": true,
+            "chat_applied_patch_ids": [
+              "polpatch_35ecea95c2d8754961e8327eb9491925"
+            ]
+          },
+          "day7": {
+            "chat_selected": "explain",
+            "journey_friction": "energy",
+            "journey_intervention": "pause",
+            "followed": "explain",
+            "followed_surface": "chat",
+            "match_class": "primary",
+            "journey_adjusted_by_correction": true,
+            "chat_applied_patch_ids": [
+              "polpatch_35ecea95c2d8754961e8327eb9491925",
+              "polpatch_7130923a1ef4c8519057843c5d026553"
+            ]
+          },
+          "delta_day7_vs_day0": {
+            "match_class": "primary->primary",
+            "followed": "explain->explain"
+          }
+        },
+        "outcome": {
+          "day0": {
+            "associations_total": 0
+          },
+          "day3": {
+            "associations_total": 1
+          },
+          "day7": {
+            "associations_total": 2
+          },
+          "delta_day7_vs_day0": 2
+        },
+        "personalization": {
+          "day0": {
+            "active_patches": 0,
+            "corrections_filed": 0,
+            "journey_active_corrections": 0
+          },
+          "day3": {
+            "active_patches": 1,
+            "corrections_filed": 1,
+            "journey_active_corrections": 1
+          },
+          "day7": {
+            "active_patches": 2,
+            "corrections_filed": 2,
+            "journey_active_corrections": 2
+          },
+          "delta_day7_vs_day0": {
+            "active_patches": 2,
+            "corrections_filed": 2
+          }
+        }
+      },
+      "adaptation_chains": [
+        {
+          "chain_type": "journey_correction",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p01_experience_reinforce",
+            "sim_day": 1,
+            "event_type": "journey_correction",
+            "diagnosed_friction_type": "dependency",
+            "truth": "knowledge",
+            "correction_id": "0ef2a936-b684-4158-a5f5-f8c4c31ad6d9",
+            "corrected_friction_type": "dependency",
+            "post_correction_friction_type": "entry",
+            "post_correction_intervention": "rescope"
+          },
+          "read_evidence": {
+            "probe_day": 3,
+            "applied_correction_ids": [
+              "0ef2a936-b684-4158-a5f5-f8c4c31ad6d9"
+            ],
+            "adjusted_by_correction": true,
+            "active_corrections": 1
+          },
+          "established": true,
+          "behavior_changed": true,
+          "behavior_before_no_feedback": "dependency",
+          "behavior_after_flywheel": "difficulty",
+          "probe_day": 3
+        },
+        {
+          "chain_type": "policy_patch",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p01_experience_reinforce",
+            "sim_day": 1,
+            "event_type": "patch_proposal",
+            "prefer_intervention": "explain",
+            "scope_friction_tag": "knowledge_bottleneck",
+            "evidence_refs": [
+              "decision://aurora_3833ef0a9e82a4d169411170410f126e"
+            ],
+            "proposal": {
+              "ok": true,
+              "idempotent": false,
+              "violations": []
+            },
+            "patch_id": "polpatch_35ecea95c2d8754961e8327eb9491925",
+            "admission": {
+              "ok": true,
+              "state": "evidenced"
+            },
+            "confirmation": {
+              "ok": true,
+              "state": "active"
+            }
+          },
+          "confirmed_active": true,
+          "read_evidence": {
+            "probe_day": 3,
+            "applied_patch_ids": [
+              "polpatch_35ecea95c2d8754961e8327eb9491925"
+            ],
+            "patch_moves": [
+              {
+                "patch_id": "polpatch_35ecea95c2d8754961e8327eb9491925",
+                "surface": "intervention_preference",
+                "intervention": "explain",
+                "direction": "prefer",
+                "from_rank": 0,
+                "to_rank": 0
+              }
+            ]
+          },
+          "established": true,
+          "behavior_changed": false,
+          "behavior_before_no_feedback": "explain",
+          "behavior_after_flywheel": "explain",
+          "probe_day": 3
+        },
+        {
+          "chain_type": "memory_quieter",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p01_experience_reinforce",
+            "sim_day": 1,
+            "event_type": "memory_reference_outcome",
+            "pref_key": "old_coping_p01",
+            "outcome": "denied",
+            "confidence_after": 0.8,
+            "evidence_score_after": 0.75
+          },
+          "read_evidence": {
+            "probe_day": 3,
+            "flywheel_stale_surfaced": true,
+            "no_feedback_stale_surfaced": true,
+            "flywheel_stale_row": {
+              "memory_id": "ab9886d3-5efb-4c26-b966-4699d4ecf0b8",
+              "version": 1,
+              "confidence": 0.8,
+              "evidence_score": 0.75,
+              "correction_count": 1,
+              "retracted_at": null
+            }
+          },
+          "established": true,
+          "behavior_changed": false,
+          "behavior_before_no_feedback": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "behavior_after_flywheel": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "probe_day": 3
+        },
+        {
+          "chain_type": "journey_correction",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p01_experience_reinforce",
+            "sim_day": 4,
+            "event_type": "journey_correction",
+            "diagnosed_friction_type": "difficulty",
+            "truth": "knowledge",
+            "correction_id": "5bf8d37b-484c-427a-b53b-150f554f5304",
+            "corrected_friction_type": "difficulty",
+            "post_correction_friction_type": "entry",
+            "post_correction_intervention": "rescope"
+          },
+          "read_evidence": {
+            "probe_day": 7,
+            "applied_correction_ids": [
+              "5bf8d37b-484c-427a-b53b-150f554f5304",
+              "0ef2a936-b684-4158-a5f5-f8c4c31ad6d9"
+            ],
+            "adjusted_by_correction": true,
+            "active_corrections": 2
+          },
+          "established": true,
+          "behavior_changed": true,
+          "behavior_before_no_feedback": "dependency",
+          "behavior_after_flywheel": "energy",
+          "probe_day": 7
+        },
+        {
+          "chain_type": "policy_patch",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p01_experience_reinforce",
+            "sim_day": 4,
+            "event_type": "patch_proposal",
+            "prefer_intervention": "explain",
+            "scope_friction_tag": "knowledge_bottleneck",
+            "evidence_refs": [
+              "decision://aurora_3833ef0a9e82a4d169411170410f126e",
+              "decision://aurora_f4bea78e76da4ecb42ea95606f569bab"
+            ],
+            "proposal": {
+              "ok": true,
+              "idempotent": false,
+              "violations": []
+            },
+            "patch_id": "polpatch_7130923a1ef4c8519057843c5d026553",
+            "admission": {
+              "ok": true,
+              "state": "active"
+            }
+          },
+          "confirmed_active": false,
+          "read_evidence": {
+            "probe_day": 7,
+            "applied_patch_ids": [
+              "polpatch_35ecea95c2d8754961e8327eb9491925",
+              "polpatch_7130923a1ef4c8519057843c5d026553"
+            ],
+            "patch_moves": [
+              {
+                "patch_id": "polpatch_35ecea95c2d8754961e8327eb9491925",
+                "surface": "intervention_preference",
+                "intervention": "explain",
+                "direction": "prefer",
+                "from_rank": 0,
+                "to_rank": 0
+              },
+              {
+                "patch_id": "polpatch_7130923a1ef4c8519057843c5d026553",
+                "surface": "intervention_preference",
+                "intervention": "explain",
+                "direction": "prefer",
+                "from_rank": 0,
+                "to_rank": 0
+              }
+            ]
+          },
+          "established": true,
+          "behavior_changed": false,
+          "behavior_before_no_feedback": "explain",
+          "behavior_after_flywheel": "explain",
+          "probe_day": 7
+        },
+        {
+          "chain_type": "memory_quieter",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p01_experience_reinforce",
+            "sim_day": 4,
+            "event_type": "memory_reference_outcome",
+            "pref_key": "old_coping_p01",
+            "outcome": "denied",
+            "confidence_after": 0.7000000000000001,
+            "evidence_score_after": 0.65
+          },
+          "read_evidence": {
+            "probe_day": 7,
+            "flywheel_stale_surfaced": false,
+            "no_feedback_stale_surfaced": true,
+            "flywheel_stale_row": null
+          },
+          "established": true,
+          "behavior_changed": true,
+          "behavior_before_no_feedback": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "behavior_after_flywheel": {
+            "stale_surfaced": false,
+            "stale_position": null
+          },
+          "probe_day": 7
+        }
+      ],
+      "acceptance": {
+        "passed": true,
+        "via": [
+          "journey_correction",
+          "journey_correction",
+          "memory_quieter"
+        ],
+        "established_count": 6
+      },
+      "invalid_personalization": [
+        {
+          "kind": "ineffective_patch",
+          "patch_id": "polpatch_35ecea95c2d8754961e8327eb9491925",
+          "probe_day": 3,
+          "note": "patch 已激活并被决策输入读取，但被选干预与无反馈对照相同（改序不改局）"
+        },
+        {
+          "kind": "memory_not_quieter",
+          "pref_key": "old_coping",
+          "probe_day": 3,
+          "note": "旧偏好被否认后仍以同位注入——记忆未变安静"
+        },
+        {
+          "kind": "ineffective_patch",
+          "patch_id": "polpatch_7130923a1ef4c8519057843c5d026553",
+          "probe_day": 7,
+          "note": "patch 已激活并被决策输入读取，但被选干预与无反馈对照相同（改序不改局）"
+        }
+      ],
+      "control_intrusions": {
+        "flywheel": [
+          5
+        ],
+        "no_feedback": [
+          5
+        ]
+      }
+    },
+    "p02_experience_hysteresis": {
+      "persona_id": "p02_experience_hysteresis",
+      "faces": {
+        "understanding": {
+          "coverage": {
+            "day0": {
+              "dimension": "coverage",
+              "status": "unknown",
+              "value": null,
+              "samples": 1,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "unknown_reason": "judgment samples 1 < 3"
+              }
+            },
+            "day3": {
+              "dimension": "coverage",
+              "status": "unknown",
+              "value": null,
+              "samples": 2,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "unknown_reason": "judgment samples 2 < 3"
+              }
+            },
+            "day7": {
+              "dimension": "coverage",
+              "status": "ok",
+              "value": 0.3333,
+              "samples": 3,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "context_score_mean": 0.3333,
+                "task_score_mean": 0.75,
+                "missing_dimension_freq": {
+                  "constraint_explicit": 3,
+                  "relevant_memory_present": 3,
+                  "recent_user_state_known": 3,
+                  "social_context_loaded": 3
+                },
+                "top_missing": [
+                  "constraint_explicit",
+                  "recent_user_state_known",
+                  "relevant_memory_present"
+                ]
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.3333)"
+          },
+          "correctness": {
+            "day0": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 1.0,
+              "samples": 1,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 0,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 1,
+                "correction_conflict_rate": 0.0
+              }
+            },
+            "day3": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 1.0,
+              "samples": 2,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 0,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 2,
+                "correction_conflict_rate": 0.0
+              }
+            },
+            "day7": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 0.3333,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 1,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 3,
+                "correction_conflict_rate": 0.3333
+              }
+            },
+            "delta_day7_vs_day0": "ok->ok(0.3333)"
+          },
+          "scope_precision": {
+            "day0": {
+              "dimension": "scope_precision",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "scope feedback channel dark in window"
+              }
+            },
+            "day3": {
+              "dimension": "scope_precision",
+              "status": "ok",
+              "value": 0.0,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "scope_feedback_total": 3,
+                "scope_negative": 1,
+                "scope_misuse_rate": 0.3333
+              }
+            },
+            "day7": {
+              "dimension": "scope_precision",
+              "status": "ok",
+              "value": 0.0,
+              "samples": 6,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "scope_feedback_total": 6,
+                "scope_negative": 2,
+                "scope_misuse_rate": 0.3333
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.0)"
+          },
+          "freshness": {
+            "day0": {
+              "dimension": "freshness",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "no state-changing corrections in window"
+              }
+            },
+            "day3": {
+              "dimension": "freshness",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "no state-changing corrections in window"
+              }
+            },
+            "day7": {
+              "dimension": "freshness",
+              "status": "ok",
+              "value": 0.2,
+              "samples": 1,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "lag_sample_count": 1,
+                "mean_lag_days": 24.0,
+                "max_lag_days": 24.0
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.2)"
+          },
+          "utility": {
+            "day0": {
+              "dimension": "utility",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "decisive feedback 0 < 3"
+              }
+            },
+            "day3": {
+              "dimension": "utility",
+              "status": "ok",
+              "value": 0.6667,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "accepted": 2,
+                "corrected": 0,
+                "denied": 1,
+                "decisive_total": 3,
+                "boundary": "immediate-loop acceptance; outcome-linked utility reserved (D-05/D-02)"
+              }
+            },
+            "day7": {
+              "dimension": "utility",
+              "status": "ok",
+              "value": 0.6667,
+              "samples": 6,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "accepted": 4,
+                "corrected": 0,
+                "denied": 2,
+                "decisive_total": 6,
+                "boundary": "immediate-loop acceptance; outcome-linked utility reserved (D-05/D-02)"
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.6667)"
+          }
+        },
+        "memory": {
+          "day0": {
+            "surfaced_count": 3,
+            "stale_surfaced": true,
+            "stale_position": 0,
+            "stale_confidence": 0.9,
+            "reference_denied_total": 0,
+            "retractions": 0
+          },
+          "day3": {
+            "surfaced_count": 3,
+            "stale_surfaced": true,
+            "stale_position": 0,
+            "stale_confidence": 0.8,
+            "reference_denied_total": 1,
+            "retractions": 0
+          },
+          "day7": {
+            "surfaced_count": 2,
+            "stale_surfaced": false,
+            "stale_position": null,
+            "stale_confidence": null,
+            "reference_denied_total": 2,
+            "retractions": 1
+          },
+          "delta_day7_vs_day0": {
+            "stale_surfaced": "True->False",
+            "stale_confidence": null
+          }
+        },
+        "intervention": {
+          "day0": {
+            "chat_selected": "explain",
+            "journey_friction": "skill",
+            "journey_intervention": "practice",
+            "followed": "practice",
+            "followed_surface": "journey",
+            "match_class": "wrong",
+            "journey_adjusted_by_correction": false,
+            "chat_applied_patch_ids": []
+          },
+          "day3": {
+            "chat_selected": "explain",
+            "journey_friction": "difficulty",
+            "journey_intervention": "split",
+            "followed": "split",
+            "followed_surface": "journey",
+            "match_class": "wrong",
+            "journey_adjusted_by_correction": true,
+            "chat_applied_patch_ids": []
+          },
+          "day7": {
+            "chat_selected": "explain",
+            "journey_friction": "dependency",
+            "journey_intervention": "remind",
+            "followed": "remind",
+            "followed_surface": "journey",
+            "match_class": "wrong",
+            "journey_adjusted_by_correction": true,
+            "chat_applied_patch_ids": []
+          },
+          "delta_day7_vs_day0": {
+            "match_class": "wrong->wrong",
+            "followed": "practice->remind"
+          }
+        },
+        "outcome": {
+          "day0": {
+            "associations_total": 0
+          },
+          "day3": {
+            "associations_total": 1
+          },
+          "day7": {
+            "associations_total": 2
+          },
+          "delta_day7_vs_day0": 2
+        },
+        "personalization": {
+          "day0": {
+            "active_patches": 0,
+            "corrections_filed": 0,
+            "journey_active_corrections": 0
+          },
+          "day3": {
+            "active_patches": 0,
+            "corrections_filed": 1,
+            "journey_active_corrections": 1
+          },
+          "day7": {
+            "active_patches": 0,
+            "corrections_filed": 2,
+            "journey_active_corrections": 2
+          },
+          "delta_day7_vs_day0": {
+            "active_patches": 0,
+            "corrections_filed": 2
+          }
+        }
+      },
+      "adaptation_chains": [
+        {
+          "chain_type": "journey_correction",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p02_experience_hysteresis",
+            "sim_day": 1,
+            "event_type": "journey_correction",
+            "diagnosed_friction_type": "skill",
+            "truth": "knowledge",
+            "correction_id": "b587151b-dc01-4b9d-8931-db8c6dd3aac3",
+            "corrected_friction_type": "skill",
+            "post_correction_friction_type": "entry",
+            "post_correction_intervention": "rescope"
+          },
+          "read_evidence": {
+            "probe_day": 3,
+            "applied_correction_ids": [
+              "b587151b-dc01-4b9d-8931-db8c6dd3aac3"
+            ],
+            "adjusted_by_correction": true,
+            "active_corrections": 1
+          },
+          "established": true,
+          "behavior_changed": true,
+          "behavior_before_no_feedback": "skill",
+          "behavior_after_flywheel": "difficulty",
+          "probe_day": 3
+        },
+        {
+          "chain_type": "policy_patch",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p02_experience_hysteresis",
+            "sim_day": 1,
+            "event_type": "patch_proposal",
+            "prefer_intervention": "explain",
+            "scope_friction_tag": "knowledge_bottleneck",
+            "evidence_refs": [
+              "decision://aurora_d0ecd35d39cc16c4fe693485c2d16a26"
+            ],
+            "proposal": {
+              "ok": true,
+              "idempotent": false,
+              "violations": []
+            },
+            "patch_id": "polpatch_c3f5de22cf5c21884a8a8ab99cd909cc",
+            "admission": {
+              "ok": true,
+              "state": "rejected"
+            }
+          },
+          "confirmed_active": false,
+          "read_evidence": null,
+          "established": false,
+          "behavior_changed": false
+        },
+        {
+          "chain_type": "memory_quieter",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p02_experience_hysteresis",
+            "sim_day": 1,
+            "event_type": "memory_reference_outcome",
+            "pref_key": "old_coping_p02",
+            "outcome": "denied",
+            "confidence_after": 0.8,
+            "evidence_score_after": 0.75
+          },
+          "read_evidence": {
+            "probe_day": 3,
+            "flywheel_stale_surfaced": true,
+            "no_feedback_stale_surfaced": true,
+            "flywheel_stale_row": {
+              "memory_id": "5c4049fb-92b3-4c56-bc36-67e72473e09c",
+              "version": 1,
+              "confidence": 0.8,
+              "evidence_score": 0.75,
+              "correction_count": 1,
+              "retracted_at": null
+            }
+          },
+          "established": true,
+          "behavior_changed": false,
+          "behavior_before_no_feedback": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "behavior_after_flywheel": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "probe_day": 3
+        },
+        {
+          "chain_type": "journey_correction",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p02_experience_hysteresis",
+            "sim_day": 4,
+            "event_type": "journey_correction",
+            "diagnosed_friction_type": "difficulty",
+            "truth": "knowledge",
+            "correction_id": "f2382cd3-b932-47f4-8c33-e2eb668e844f",
+            "corrected_friction_type": "difficulty",
+            "post_correction_friction_type": "entry",
+            "post_correction_intervention": "rescope"
+          },
+          "read_evidence": {
+            "probe_day": 7,
+            "applied_correction_ids": [
+              "f2382cd3-b932-47f4-8c33-e2eb668e844f",
+              "b587151b-dc01-4b9d-8931-db8c6dd3aac3"
+            ],
+            "adjusted_by_correction": true,
+            "active_corrections": 2
+          },
+          "established": true,
+          "behavior_changed": true,
+          "behavior_before_no_feedback": "skill",
+          "behavior_after_flywheel": "dependency",
+          "probe_day": 7
+        },
+        {
+          "chain_type": "policy_patch",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p02_experience_hysteresis",
+            "sim_day": 4,
+            "event_type": "patch_proposal",
+            "prefer_intervention": "explain",
+            "scope_friction_tag": "knowledge_bottleneck",
+            "evidence_refs": [
+              "decision://aurora_d0ecd35d39cc16c4fe693485c2d16a26",
+              "decision://aurora_bcc0c2f4fca8748ae9ad3dbd560b554a"
+            ],
+            "proposal": {
+              "ok": true,
+              "idempotent": false,
+              "violations": []
+            },
+            "patch_id": "polpatch_a429ae95251070d96baf6b074bb4ad59",
+            "admission": {
+              "ok": true,
+              "state": "rejected"
+            }
+          },
+          "confirmed_active": false,
+          "read_evidence": null,
+          "established": false,
+          "behavior_changed": false
+        },
+        {
+          "chain_type": "memory_quieter",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p02_experience_hysteresis",
+            "sim_day": 4,
+            "event_type": "memory_reference_outcome",
+            "pref_key": "old_coping_p02",
+            "outcome": "denied",
+            "confidence_after": 0.7000000000000001,
+            "evidence_score_after": 0.65
+          },
+          "read_evidence": {
+            "probe_day": 7,
+            "flywheel_stale_surfaced": false,
+            "no_feedback_stale_surfaced": true,
+            "flywheel_stale_row": null
+          },
+          "established": true,
+          "behavior_changed": true,
+          "behavior_before_no_feedback": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "behavior_after_flywheel": {
+            "stale_surfaced": false,
+            "stale_position": null
+          },
+          "probe_day": 7
+        }
+      ],
+      "acceptance": {
+        "passed": true,
+        "via": [
+          "journey_correction",
+          "journey_correction",
+          "memory_quieter"
+        ],
+        "established_count": 4
+      },
+      "invalid_personalization": [
+        {
+          "kind": "memory_not_quieter",
+          "pref_key": "old_coping",
+          "probe_day": 3,
+          "note": "旧偏好被否认后仍以同位注入——记忆未变安静"
+        }
+      ],
+      "control_intrusions": {
+        "flywheel": [
+          5
+        ],
+        "no_feedback": [
+          5
+        ]
+      }
+    },
+    "p03_explicit_difficulty": {
+      "persona_id": "p03_explicit_difficulty",
+      "faces": {
+        "understanding": {
+          "coverage": {
+            "day0": {
+              "dimension": "coverage",
+              "status": "unknown",
+              "value": null,
+              "samples": 1,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "unknown_reason": "judgment samples 1 < 3"
+              }
+            },
+            "day3": {
+              "dimension": "coverage",
+              "status": "unknown",
+              "value": null,
+              "samples": 2,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "unknown_reason": "judgment samples 2 < 3"
+              }
+            },
+            "day7": {
+              "dimension": "coverage",
+              "status": "ok",
+              "value": 0.3333,
+              "samples": 3,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "context_score_mean": 0.3333,
+                "task_score_mean": 0.75,
+                "missing_dimension_freq": {
+                  "constraint_explicit": 3,
+                  "relevant_memory_present": 3,
+                  "recent_user_state_known": 3,
+                  "social_context_loaded": 3
+                },
+                "top_missing": [
+                  "constraint_explicit",
+                  "recent_user_state_known",
+                  "relevant_memory_present"
+                ]
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.3333)"
+          },
+          "correctness": {
+            "day0": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 1.0,
+              "samples": 1,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 0,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 1,
+                "correction_conflict_rate": 0.0
+              }
+            },
+            "day3": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 1.0,
+              "samples": 2,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 0,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 2,
+                "correction_conflict_rate": 0.0
+              }
+            },
+            "day7": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 0.3333,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 1,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 3,
+                "correction_conflict_rate": 0.3333
+              }
+            },
+            "delta_day7_vs_day0": "ok->ok(0.3333)"
+          },
+          "scope_precision": {
+            "day0": {
+              "dimension": "scope_precision",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "scope feedback channel dark in window"
+              }
+            },
+            "day3": {
+              "dimension": "scope_precision",
+              "status": "ok",
+              "value": 0.0,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "scope_feedback_total": 3,
+                "scope_negative": 1,
+                "scope_misuse_rate": 0.3333
+              }
+            },
+            "day7": {
+              "dimension": "scope_precision",
+              "status": "ok",
+              "value": 0.0,
+              "samples": 6,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "scope_feedback_total": 6,
+                "scope_negative": 2,
+                "scope_misuse_rate": 0.3333
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.0)"
+          },
+          "freshness": {
+            "day0": {
+              "dimension": "freshness",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "no state-changing corrections in window"
+              }
+            },
+            "day3": {
+              "dimension": "freshness",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "no state-changing corrections in window"
+              }
+            },
+            "day7": {
+              "dimension": "freshness",
+              "status": "ok",
+              "value": 0.2,
+              "samples": 1,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "lag_sample_count": 1,
+                "mean_lag_days": 24.0,
+                "max_lag_days": 24.0
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.2)"
+          },
+          "utility": {
+            "day0": {
+              "dimension": "utility",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "decisive feedback 0 < 3"
+              }
+            },
+            "day3": {
+              "dimension": "utility",
+              "status": "ok",
+              "value": 0.6667,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "accepted": 2,
+                "corrected": 0,
+                "denied": 1,
+                "decisive_total": 3,
+                "boundary": "immediate-loop acceptance; outcome-linked utility reserved (D-05/D-02)"
+              }
+            },
+            "day7": {
+              "dimension": "utility",
+              "status": "ok",
+              "value": 0.6667,
+              "samples": 6,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "accepted": 4,
+                "corrected": 0,
+                "denied": 2,
+                "decisive_total": 6,
+                "boundary": "immediate-loop acceptance; outcome-linked utility reserved (D-05/D-02)"
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.6667)"
+          }
+        },
+        "memory": {
+          "day0": {
+            "surfaced_count": 3,
+            "stale_surfaced": true,
+            "stale_position": 0,
+            "stale_confidence": 0.9,
+            "reference_denied_total": 0,
+            "retractions": 0
+          },
+          "day3": {
+            "surfaced_count": 3,
+            "stale_surfaced": true,
+            "stale_position": 0,
+            "stale_confidence": 0.8,
+            "reference_denied_total": 1,
+            "retractions": 0
+          },
+          "day7": {
+            "surfaced_count": 2,
+            "stale_surfaced": false,
+            "stale_position": null,
+            "stale_confidence": null,
+            "reference_denied_total": 2,
+            "retractions": 1
+          },
+          "delta_day7_vs_day0": {
+            "stale_surfaced": "True->False",
+            "stale_confidence": null
+          }
+        },
+        "intervention": {
+          "day0": {
+            "chat_selected": "practice",
+            "journey_friction": "skill",
+            "journey_intervention": "practice",
+            "followed": "practice",
+            "followed_surface": "chat",
+            "match_class": "secondary",
+            "journey_adjusted_by_correction": false,
+            "chat_applied_patch_ids": []
+          },
+          "day3": {
+            "chat_selected": "practice",
+            "journey_friction": "difficulty",
+            "journey_intervention": "split",
+            "followed": "practice",
+            "followed_surface": "chat",
+            "match_class": "secondary",
+            "journey_adjusted_by_correction": true,
+            "chat_applied_patch_ids": []
+          },
+          "day7": {
+            "chat_selected": "practice",
+            "journey_friction": "difficulty",
+            "journey_intervention": "split",
+            "followed": "practice",
+            "followed_surface": "chat",
+            "match_class": "secondary",
+            "journey_adjusted_by_correction": true,
+            "chat_applied_patch_ids": []
+          },
+          "delta_day7_vs_day0": {
+            "match_class": "secondary->secondary",
+            "followed": "practice->practice"
+          }
+        },
+        "outcome": {
+          "day0": {
+            "associations_total": 0
+          },
+          "day3": {
+            "associations_total": 1
+          },
+          "day7": {
+            "associations_total": 2
+          },
+          "delta_day7_vs_day0": 2
+        },
+        "personalization": {
+          "day0": {
+            "active_patches": 0,
+            "corrections_filed": 0,
+            "journey_active_corrections": 0
+          },
+          "day3": {
+            "active_patches": 0,
+            "corrections_filed": 1,
+            "journey_active_corrections": 1
+          },
+          "day7": {
+            "active_patches": 0,
+            "corrections_filed": 1,
+            "journey_active_corrections": 1
+          },
+          "delta_day7_vs_day0": {
+            "active_patches": 0,
+            "corrections_filed": 1
+          }
+        }
+      },
+      "adaptation_chains": [
+        {
+          "chain_type": "journey_correction",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p03_explicit_difficulty",
+            "sim_day": 1,
+            "event_type": "journey_correction",
+            "diagnosed_friction_type": "skill",
+            "truth": "difficulty",
+            "correction_id": "8c95d199-c49f-48b7-93bd-77bc3eed6cd6",
+            "corrected_friction_type": "skill",
+            "post_correction_friction_type": "skill",
+            "post_correction_intervention": null
+          },
+          "read_evidence": {
+            "probe_day": 3,
+            "applied_correction_ids": [
+              "8c95d199-c49f-48b7-93bd-77bc3eed6cd6"
+            ],
+            "adjusted_by_correction": true,
+            "active_corrections": 1
+          },
+          "established": true,
+          "behavior_changed": true,
+          "behavior_before_no_feedback": "skill",
+          "behavior_after_flywheel": "difficulty",
+          "probe_day": 3
+        },
+        {
+          "chain_type": "policy_patch",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p03_explicit_difficulty",
+            "sim_day": 1,
+            "event_type": "patch_proposal",
+            "prefer_intervention": "split",
+            "scope_friction_tag": "execution_friction",
+            "evidence_refs": [
+              "decision://aurora_01d563ed4d0e75b0d4167df02a7b2405"
+            ],
+            "proposal": {
+              "ok": true,
+              "idempotent": false,
+              "violations": []
+            },
+            "patch_id": "polpatch_ce46ada2cb362c15538102fe9fa50459",
+            "admission": {
+              "ok": true,
+              "state": "rejected"
+            }
+          },
+          "confirmed_active": false,
+          "read_evidence": null,
+          "established": false,
+          "behavior_changed": false
+        },
+        {
+          "chain_type": "memory_quieter",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p03_explicit_difficulty",
+            "sim_day": 1,
+            "event_type": "memory_reference_outcome",
+            "pref_key": "old_coping_p03",
+            "outcome": "denied",
+            "confidence_after": 0.8,
+            "evidence_score_after": 0.75
+          },
+          "read_evidence": {
+            "probe_day": 3,
+            "flywheel_stale_surfaced": true,
+            "no_feedback_stale_surfaced": true,
+            "flywheel_stale_row": {
+              "memory_id": "edd6dfe3-1489-4d13-adee-fe7f2200de9a",
+              "version": 1,
+              "confidence": 0.8,
+              "evidence_score": 0.75,
+              "correction_count": 1,
+              "retracted_at": null
+            }
+          },
+          "established": true,
+          "behavior_changed": false,
+          "behavior_before_no_feedback": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "behavior_after_flywheel": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "probe_day": 3
+        },
+        {
+          "chain_type": "policy_patch",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p03_explicit_difficulty",
+            "sim_day": 4,
+            "event_type": "patch_proposal",
+            "prefer_intervention": "split",
+            "scope_friction_tag": "execution_friction",
+            "evidence_refs": [
+              "decision://aurora_01d563ed4d0e75b0d4167df02a7b2405",
+              "decision://aurora_5860c14a1d0c42d8c7b0c6f5bb482880"
+            ],
+            "proposal": {
+              "ok": true,
+              "idempotent": false,
+              "violations": []
+            },
+            "patch_id": "polpatch_4ec2904dbc59f64b09606bc3d9082ee4",
+            "admission": {
+              "ok": true,
+              "state": "rejected"
+            }
+          },
+          "confirmed_active": false,
+          "read_evidence": null,
+          "established": false,
+          "behavior_changed": false
+        },
+        {
+          "chain_type": "memory_quieter",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p03_explicit_difficulty",
+            "sim_day": 4,
+            "event_type": "memory_reference_outcome",
+            "pref_key": "old_coping_p03",
+            "outcome": "denied",
+            "confidence_after": 0.7000000000000001,
+            "evidence_score_after": 0.65
+          },
+          "read_evidence": {
+            "probe_day": 7,
+            "flywheel_stale_surfaced": false,
+            "no_feedback_stale_surfaced": true,
+            "flywheel_stale_row": null
+          },
+          "established": true,
+          "behavior_changed": true,
+          "behavior_before_no_feedback": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "behavior_after_flywheel": {
+            "stale_surfaced": false,
+            "stale_position": null
+          },
+          "probe_day": 7
+        }
+      ],
+      "acceptance": {
+        "passed": true,
+        "via": [
+          "journey_correction",
+          "memory_quieter"
+        ],
+        "established_count": 3
+      },
+      "invalid_personalization": [
+        {
+          "kind": "memory_not_quieter",
+          "pref_key": "old_coping",
+          "probe_day": 3,
+          "note": "旧偏好被否认后仍以同位注入——记忆未变安静"
+        }
+      ],
+      "control_intrusions": {
+        "flywheel": [
+          5
+        ],
+        "no_feedback": [
+          5
+        ]
+      }
+    },
+    "p04_ambiguous_weak": {
+      "persona_id": "p04_ambiguous_weak",
+      "faces": {
+        "understanding": {
+          "coverage": {
+            "day0": {
+              "dimension": "coverage",
+              "status": "unknown",
+              "value": null,
+              "samples": 1,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "unknown_reason": "judgment samples 1 < 3"
+              }
+            },
+            "day3": {
+              "dimension": "coverage",
+              "status": "unknown",
+              "value": null,
+              "samples": 2,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "unknown_reason": "judgment samples 2 < 3"
+              }
+            },
+            "day7": {
+              "dimension": "coverage",
+              "status": "ok",
+              "value": 0.3333,
+              "samples": 3,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "context_score_mean": 0.3333,
+                "task_score_mean": 0.75,
+                "missing_dimension_freq": {
+                  "constraint_explicit": 3,
+                  "relevant_memory_present": 3,
+                  "recent_user_state_known": 3,
+                  "social_context_loaded": 3
+                },
+                "top_missing": [
+                  "constraint_explicit",
+                  "recent_user_state_known",
+                  "relevant_memory_present"
+                ]
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.3333)"
+          },
+          "correctness": {
+            "day0": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 1.0,
+              "samples": 1,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 0,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 1,
+                "correction_conflict_rate": 0.0
+              }
+            },
+            "day3": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 1.0,
+              "samples": 2,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 0,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 2,
+                "correction_conflict_rate": 0.0
+              }
+            },
+            "day7": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 0.3333,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 1,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 3,
+                "correction_conflict_rate": 0.3333
+              }
+            },
+            "delta_day7_vs_day0": "ok->ok(0.3333)"
+          },
+          "scope_precision": {
+            "day0": {
+              "dimension": "scope_precision",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "scope feedback channel dark in window"
+              }
+            },
+            "day3": {
+              "dimension": "scope_precision",
+              "status": "ok",
+              "value": 0.0,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "scope_feedback_total": 3,
+                "scope_negative": 1,
+                "scope_misuse_rate": 0.3333
+              }
+            },
+            "day7": {
+              "dimension": "scope_precision",
+              "status": "ok",
+              "value": 0.0,
+              "samples": 6,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "scope_feedback_total": 6,
+                "scope_negative": 2,
+                "scope_misuse_rate": 0.3333
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.0)"
+          },
+          "freshness": {
+            "day0": {
+              "dimension": "freshness",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "no state-changing corrections in window"
+              }
+            },
+            "day3": {
+              "dimension": "freshness",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "no state-changing corrections in window"
+              }
+            },
+            "day7": {
+              "dimension": "freshness",
+              "status": "ok",
+              "value": 0.2,
+              "samples": 1,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "lag_sample_count": 1,
+                "mean_lag_days": 24.0,
+                "max_lag_days": 24.0
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.2)"
+          },
+          "utility": {
+            "day0": {
+              "dimension": "utility",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "decisive feedback 0 < 3"
+              }
+            },
+            "day3": {
+              "dimension": "utility",
+              "status": "ok",
+              "value": 0.6667,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "accepted": 2,
+                "corrected": 0,
+                "denied": 1,
+                "decisive_total": 3,
+                "boundary": "immediate-loop acceptance; outcome-linked utility reserved (D-05/D-02)"
+              }
+            },
+            "day7": {
+              "dimension": "utility",
+              "status": "ok",
+              "value": 0.6667,
+              "samples": 6,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "accepted": 4,
+                "corrected": 0,
+                "denied": 2,
+                "decisive_total": 6,
+                "boundary": "immediate-loop acceptance; outcome-linked utility reserved (D-05/D-02)"
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.6667)"
+          }
+        },
+        "memory": {
+          "day0": {
+            "surfaced_count": 3,
+            "stale_surfaced": true,
+            "stale_position": 0,
+            "stale_confidence": 0.9,
+            "reference_denied_total": 0,
+            "retractions": 0
+          },
+          "day3": {
+            "surfaced_count": 3,
+            "stale_surfaced": true,
+            "stale_position": 0,
+            "stale_confidence": 0.8,
+            "reference_denied_total": 1,
+            "retractions": 0
+          },
+          "day7": {
+            "surfaced_count": 2,
+            "stale_surfaced": false,
+            "stale_position": null,
+            "stale_confidence": null,
+            "reference_denied_total": 2,
+            "retractions": 1
+          },
+          "delta_day7_vs_day0": {
+            "stale_surfaced": "True->False",
+            "stale_confidence": null
+          }
+        },
+        "intervention": {
+          "day0": {
+            "chat_selected": "practice",
+            "journey_friction": "skill",
+            "journey_intervention": "practice",
+            "followed": "practice",
+            "followed_surface": "journey",
+            "match_class": "secondary",
+            "journey_adjusted_by_correction": false,
+            "chat_applied_patch_ids": []
+          },
+          "day3": {
+            "chat_selected": "practice",
+            "journey_friction": "difficulty",
+            "journey_intervention": "split",
+            "followed": "split",
+            "followed_surface": "journey",
+            "match_class": "primary",
+            "journey_adjusted_by_correction": true,
+            "chat_applied_patch_ids": []
+          },
+          "day7": {
+            "chat_selected": "practice",
+            "journey_friction": "difficulty",
+            "journey_intervention": "split",
+            "followed": "split",
+            "followed_surface": "journey",
+            "match_class": "primary",
+            "journey_adjusted_by_correction": true,
+            "chat_applied_patch_ids": [
+              "polpatch_b53c8a7ef1858083735bb2e0b4014e7d"
+            ]
+          },
+          "delta_day7_vs_day0": {
+            "match_class": "secondary->primary",
+            "followed": "practice->split"
+          }
+        },
+        "outcome": {
+          "day0": {
+            "associations_total": 0
+          },
+          "day3": {
+            "associations_total": 1
+          },
+          "day7": {
+            "associations_total": 2
+          },
+          "delta_day7_vs_day0": 2
+        },
+        "personalization": {
+          "day0": {
+            "active_patches": 0,
+            "corrections_filed": 0,
+            "journey_active_corrections": 0
+          },
+          "day3": {
+            "active_patches": 0,
+            "corrections_filed": 1,
+            "journey_active_corrections": 1
+          },
+          "day7": {
+            "active_patches": 1,
+            "corrections_filed": 1,
+            "journey_active_corrections": 1
+          },
+          "delta_day7_vs_day0": {
+            "active_patches": 1,
+            "corrections_filed": 1
+          }
+        }
+      },
+      "adaptation_chains": [
+        {
+          "chain_type": "journey_correction",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p04_ambiguous_weak",
+            "sim_day": 1,
+            "event_type": "journey_correction",
+            "diagnosed_friction_type": "skill",
+            "truth": "difficulty",
+            "correction_id": "b0a7fdae-02ca-4ce5-84e7-fc5f5fb25be1",
+            "corrected_friction_type": "skill",
+            "post_correction_friction_type": "skill",
+            "post_correction_intervention": null
+          },
+          "read_evidence": {
+            "probe_day": 3,
+            "applied_correction_ids": [
+              "b0a7fdae-02ca-4ce5-84e7-fc5f5fb25be1"
+            ],
+            "adjusted_by_correction": true,
+            "active_corrections": 1
+          },
+          "established": true,
+          "behavior_changed": true,
+          "behavior_before_no_feedback": "skill",
+          "behavior_after_flywheel": "difficulty",
+          "probe_day": 3
+        },
+        {
+          "chain_type": "policy_patch",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p04_ambiguous_weak",
+            "sim_day": 1,
+            "event_type": "patch_proposal",
+            "prefer_intervention": "split",
+            "scope_friction_tag": "execution_friction",
+            "evidence_refs": [
+              "decision://aurora_ff25c2b24ff7b4b63275c72c46366c58"
+            ],
+            "proposal": {
+              "ok": true,
+              "idempotent": false,
+              "violations": []
+            },
+            "patch_id": "polpatch_79d873326277487dde76a0cfdc34ab9f",
+            "admission": {
+              "ok": true,
+              "state": "rejected"
+            }
+          },
+          "confirmed_active": false,
+          "read_evidence": null,
+          "established": false,
+          "behavior_changed": false
+        },
+        {
+          "chain_type": "memory_quieter",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p04_ambiguous_weak",
+            "sim_day": 1,
+            "event_type": "memory_reference_outcome",
+            "pref_key": "old_coping_p04",
+            "outcome": "denied",
+            "confidence_after": 0.8,
+            "evidence_score_after": 0.75
+          },
+          "read_evidence": {
+            "probe_day": 3,
+            "flywheel_stale_surfaced": true,
+            "no_feedback_stale_surfaced": true,
+            "flywheel_stale_row": {
+              "memory_id": "f05f1e11-a5ea-4c4d-9397-2f1f75c4d097",
+              "version": 1,
+              "confidence": 0.8,
+              "evidence_score": 0.75,
+              "correction_count": 1,
+              "retracted_at": null
+            }
+          },
+          "established": true,
+          "behavior_changed": false,
+          "behavior_before_no_feedback": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "behavior_after_flywheel": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "probe_day": 3
+        },
+        {
+          "chain_type": "policy_patch",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p04_ambiguous_weak",
+            "sim_day": 4,
+            "event_type": "patch_proposal",
+            "prefer_intervention": "split",
+            "scope_friction_tag": "execution_friction",
+            "evidence_refs": [
+              "decision://aurora_ff25c2b24ff7b4b63275c72c46366c58",
+              "decision://aurora_6897095946788ee7158d35993ea086ac"
+            ],
+            "proposal": {
+              "ok": true,
+              "idempotent": false,
+              "violations": []
+            },
+            "patch_id": "polpatch_b53c8a7ef1858083735bb2e0b4014e7d",
+            "admission": {
+              "ok": true,
+              "state": "evidenced"
+            },
+            "confirmation": {
+              "ok": true,
+              "state": "active"
+            }
+          },
+          "confirmed_active": true,
+          "read_evidence": {
+            "probe_day": 7,
+            "applied_patch_ids": [
+              "polpatch_b53c8a7ef1858083735bb2e0b4014e7d"
+            ],
+            "patch_moves": [
+              {
+                "patch_id": "polpatch_b53c8a7ef1858083735bb2e0b4014e7d",
+                "surface": "intervention_preference",
+                "intervention": "split",
+                "direction": "prefer",
+                "from_rank": 0,
+                "to_rank": 0
+              }
+            ]
+          },
+          "established": true,
+          "behavior_changed": false,
+          "behavior_before_no_feedback": "practice",
+          "behavior_after_flywheel": "practice",
+          "probe_day": 7
+        },
+        {
+          "chain_type": "memory_quieter",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p04_ambiguous_weak",
+            "sim_day": 4,
+            "event_type": "memory_reference_outcome",
+            "pref_key": "old_coping_p04",
+            "outcome": "denied",
+            "confidence_after": 0.7000000000000001,
+            "evidence_score_after": 0.65
+          },
+          "read_evidence": {
+            "probe_day": 7,
+            "flywheel_stale_surfaced": false,
+            "no_feedback_stale_surfaced": true,
+            "flywheel_stale_row": null
+          },
+          "established": true,
+          "behavior_changed": true,
+          "behavior_before_no_feedback": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "behavior_after_flywheel": {
+            "stale_surfaced": false,
+            "stale_position": null
+          },
+          "probe_day": 7
+        }
+      ],
+      "acceptance": {
+        "passed": true,
+        "via": [
+          "journey_correction",
+          "memory_quieter"
+        ],
+        "established_count": 4
+      },
+      "invalid_personalization": [
+        {
+          "kind": "memory_not_quieter",
+          "pref_key": "old_coping",
+          "probe_day": 3,
+          "note": "旧偏好被否认后仍以同位注入——记忆未变安静"
+        },
+        {
+          "kind": "ineffective_patch",
+          "patch_id": "polpatch_b53c8a7ef1858083735bb2e0b4014e7d",
+          "probe_day": 7,
+          "note": "patch 已激活并被决策输入读取，但被选干预与无反馈对照相同（改序不改局）"
+        }
+      ],
+      "control_intrusions": {
+        "flywheel": [
+          5
+        ],
+        "no_feedback": [
+          5
+        ]
+      }
+    },
+    "p05_correction_loop": {
+      "persona_id": "p05_correction_loop",
+      "faces": {
+        "understanding": {
+          "coverage": {
+            "day0": {
+              "dimension": "coverage",
+              "status": "unknown",
+              "value": null,
+              "samples": 1,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "unknown_reason": "judgment samples 1 < 3"
+              }
+            },
+            "day3": {
+              "dimension": "coverage",
+              "status": "unknown",
+              "value": null,
+              "samples": 2,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "unknown_reason": "judgment samples 2 < 3"
+              }
+            },
+            "day7": {
+              "dimension": "coverage",
+              "status": "ok",
+              "value": 0.3333,
+              "samples": 3,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "context_score_mean": 0.3333,
+                "task_score_mean": 0.75,
+                "missing_dimension_freq": {
+                  "constraint_explicit": 3,
+                  "relevant_memory_present": 3,
+                  "recent_user_state_known": 3,
+                  "social_context_loaded": 3
+                },
+                "top_missing": [
+                  "constraint_explicit",
+                  "recent_user_state_known",
+                  "relevant_memory_present"
+                ]
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.3333)"
+          },
+          "correctness": {
+            "day0": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 1.0,
+              "samples": 1,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 0,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 1,
+                "correction_conflict_rate": 0.0
+              }
+            },
+            "day3": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 1.0,
+              "samples": 2,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 0,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 2,
+                "correction_conflict_rate": 0.0
+              }
+            },
+            "day7": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 0.3333,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 1,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 3,
+                "correction_conflict_rate": 0.3333
+              }
+            },
+            "delta_day7_vs_day0": "ok->ok(0.3333)"
+          },
+          "scope_precision": {
+            "day0": {
+              "dimension": "scope_precision",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "scope feedback channel dark in window"
+              }
+            },
+            "day3": {
+              "dimension": "scope_precision",
+              "status": "ok",
+              "value": 0.0,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "scope_feedback_total": 3,
+                "scope_negative": 1,
+                "scope_misuse_rate": 0.3333
+              }
+            },
+            "day7": {
+              "dimension": "scope_precision",
+              "status": "ok",
+              "value": 0.0,
+              "samples": 6,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "scope_feedback_total": 6,
+                "scope_negative": 2,
+                "scope_misuse_rate": 0.3333
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.0)"
+          },
+          "freshness": {
+            "day0": {
+              "dimension": "freshness",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "no state-changing corrections in window"
+              }
+            },
+            "day3": {
+              "dimension": "freshness",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "no state-changing corrections in window"
+              }
+            },
+            "day7": {
+              "dimension": "freshness",
+              "status": "ok",
+              "value": 0.2,
+              "samples": 1,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "lag_sample_count": 1,
+                "mean_lag_days": 24.0,
+                "max_lag_days": 24.0
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.2)"
+          },
+          "utility": {
+            "day0": {
+              "dimension": "utility",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "decisive feedback 0 < 3"
+              }
+            },
+            "day3": {
+              "dimension": "utility",
+              "status": "ok",
+              "value": 0.6667,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "accepted": 2,
+                "corrected": 0,
+                "denied": 1,
+                "decisive_total": 3,
+                "boundary": "immediate-loop acceptance; outcome-linked utility reserved (D-05/D-02)"
+              }
+            },
+            "day7": {
+              "dimension": "utility",
+              "status": "ok",
+              "value": 0.6667,
+              "samples": 6,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "accepted": 4,
+                "corrected": 0,
+                "denied": 2,
+                "decisive_total": 6,
+                "boundary": "immediate-loop acceptance; outcome-linked utility reserved (D-05/D-02)"
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.6667)"
+          }
+        },
+        "memory": {
+          "day0": {
+            "surfaced_count": 3,
+            "stale_surfaced": true,
+            "stale_position": 0,
+            "stale_confidence": 0.9,
+            "reference_denied_total": 0,
+            "retractions": 0
+          },
+          "day3": {
+            "surfaced_count": 3,
+            "stale_surfaced": true,
+            "stale_position": 0,
+            "stale_confidence": 0.8,
+            "reference_denied_total": 1,
+            "retractions": 0
+          },
+          "day7": {
+            "surfaced_count": 2,
+            "stale_surfaced": false,
+            "stale_position": null,
+            "stale_confidence": null,
+            "reference_denied_total": 2,
+            "retractions": 1
+          },
+          "delta_day7_vs_day0": {
+            "stale_surfaced": "True->False",
+            "stale_confidence": null
+          }
+        },
+        "intervention": {
+          "day0": {
+            "chat_selected": "no_action",
+            "journey_friction": "choice",
+            "journey_intervention": "reflect",
+            "followed": "reflect",
+            "followed_surface": "journey",
+            "match_class": "primary",
+            "journey_adjusted_by_correction": false,
+            "chat_applied_patch_ids": []
+          },
+          "day3": {
+            "chat_selected": "no_action",
+            "journey_friction": "clarity",
+            "journey_intervention": "clarify",
+            "followed": "clarify",
+            "followed_surface": "journey",
+            "match_class": "wrong",
+            "journey_adjusted_by_correction": true,
+            "chat_applied_patch_ids": [
+              "polpatch_c37f5beaa012c24573d6b45667890406"
+            ]
+          },
+          "day7": {
+            "chat_selected": "no_action",
+            "journey_friction": "entry",
+            "journey_intervention": "rescope",
+            "followed": "rescope",
+            "followed_surface": "journey",
+            "match_class": "wrong",
+            "journey_adjusted_by_correction": true,
+            "chat_applied_patch_ids": [
+              "polpatch_c37f5beaa012c24573d6b45667890406"
+            ]
+          },
+          "delta_day7_vs_day0": {
+            "match_class": "primary->wrong",
+            "followed": "reflect->rescope"
+          }
+        },
+        "outcome": {
+          "day0": {
+            "associations_total": 0
+          },
+          "day3": {
+            "associations_total": 1
+          },
+          "day7": {
+            "associations_total": 1
+          },
+          "delta_day7_vs_day0": 1
+        },
+        "personalization": {
+          "day0": {
+            "active_patches": 0,
+            "corrections_filed": 0,
+            "journey_active_corrections": 0
+          },
+          "day3": {
+            "active_patches": 1,
+            "corrections_filed": 1,
+            "journey_active_corrections": 1
+          },
+          "day7": {
+            "active_patches": 1,
+            "corrections_filed": 2,
+            "journey_active_corrections": 2
+          },
+          "delta_day7_vs_day0": {
+            "active_patches": 1,
+            "corrections_filed": 2
+          }
+        }
+      },
+      "adaptation_chains": [
+        {
+          "chain_type": "journey_correction",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p05_correction_loop",
+            "sim_day": 1,
+            "event_type": "journey_correction",
+            "diagnosed_friction_type": "choice",
+            "truth": "goal_drift",
+            "correction_id": "e374d05b-adcf-46a2-8e9f-e66dfd0dabc2",
+            "corrected_friction_type": "choice",
+            "post_correction_friction_type": "entry",
+            "post_correction_intervention": "rescope"
+          },
+          "read_evidence": {
+            "probe_day": 3,
+            "applied_correction_ids": [
+              "e374d05b-adcf-46a2-8e9f-e66dfd0dabc2"
+            ],
+            "adjusted_by_correction": true,
+            "active_corrections": 1
+          },
+          "established": true,
+          "behavior_changed": true,
+          "behavior_before_no_feedback": "choice",
+          "behavior_after_flywheel": "clarity",
+          "probe_day": 3
+        },
+        {
+          "chain_type": "policy_patch",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p05_correction_loop",
+            "sim_day": 1,
+            "event_type": "patch_proposal",
+            "prefer_intervention": "reflect",
+            "scope_friction_tag": "engagement_momentum",
+            "evidence_refs": [
+              "decision://aurora_6860240f0ffb5eeac6e7672cae7e3b02"
+            ],
+            "proposal": {
+              "ok": true,
+              "idempotent": false,
+              "violations": []
+            },
+            "patch_id": "polpatch_c37f5beaa012c24573d6b45667890406",
+            "admission": {
+              "ok": true,
+              "state": "evidenced"
+            },
+            "confirmation": {
+              "ok": true,
+              "state": "active"
+            }
+          },
+          "confirmed_active": true,
+          "read_evidence": {
+            "probe_day": 3,
+            "applied_patch_ids": [
+              "polpatch_c37f5beaa012c24573d6b45667890406"
+            ],
+            "patch_moves": [
+              {
+                "patch_id": "polpatch_c37f5beaa012c24573d6b45667890406",
+                "surface": "intervention_preference",
+                "intervention": "reflect",
+                "direction": "prefer",
+                "from_rank": 0,
+                "to_rank": 0
+              }
+            ]
+          },
+          "established": true,
+          "behavior_changed": false,
+          "behavior_before_no_feedback": "no_action",
+          "behavior_after_flywheel": "no_action",
+          "probe_day": 3
+        },
+        {
+          "chain_type": "memory_quieter",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p05_correction_loop",
+            "sim_day": 1,
+            "event_type": "memory_reference_outcome",
+            "pref_key": "old_coping_p05",
+            "outcome": "denied",
+            "confidence_after": 0.8,
+            "evidence_score_after": 0.75
+          },
+          "read_evidence": {
+            "probe_day": 3,
+            "flywheel_stale_surfaced": true,
+            "no_feedback_stale_surfaced": true,
+            "flywheel_stale_row": {
+              "memory_id": "ae0b77bf-56b7-4e88-8e65-4ecbc97b4a9e",
+              "version": 1,
+              "confidence": 0.8,
+              "evidence_score": 0.75,
+              "correction_count": 1,
+              "retracted_at": null
+            }
+          },
+          "established": true,
+          "behavior_changed": false,
+          "behavior_before_no_feedback": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "behavior_after_flywheel": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "probe_day": 3
+        },
+        {
+          "chain_type": "journey_correction",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p05_correction_loop",
+            "sim_day": 4,
+            "event_type": "journey_correction",
+            "diagnosed_friction_type": "clarity",
+            "truth": "goal_drift",
+            "correction_id": "1d8b006c-eef1-4e89-bfb4-0e84c6e34692",
+            "corrected_friction_type": "clarity",
+            "post_correction_friction_type": "entry",
+            "post_correction_intervention": "rescope"
+          },
+          "read_evidence": {
+            "probe_day": 7,
+            "applied_correction_ids": [
+              "1d8b006c-eef1-4e89-bfb4-0e84c6e34692",
+              "e374d05b-adcf-46a2-8e9f-e66dfd0dabc2"
+            ],
+            "adjusted_by_correction": true,
+            "active_corrections": 2
+          },
+          "established": true,
+          "behavior_changed": true,
+          "behavior_before_no_feedback": "choice",
+          "behavior_after_flywheel": "entry",
+          "probe_day": 7
+        },
+        {
+          "chain_type": "policy_patch",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p05_correction_loop",
+            "sim_day": 4,
+            "event_type": "patch_proposal",
+            "prefer_intervention": "reflect",
+            "scope_friction_tag": "engagement_momentum",
+            "evidence_refs": [
+              "decision://aurora_6860240f0ffb5eeac6e7672cae7e3b02"
+            ],
+            "proposal": {
+              "ok": true,
+              "idempotent": true,
+              "violations": []
+            },
+            "patch_id": "polpatch_c37f5beaa012c24573d6b45667890406",
+            "admission": {
+              "ok": true,
+              "state": "active"
+            }
+          },
+          "confirmed_active": false,
+          "read_evidence": {
+            "probe_day": 7,
+            "applied_patch_ids": [
+              "polpatch_c37f5beaa012c24573d6b45667890406"
+            ],
+            "patch_moves": [
+              {
+                "patch_id": "polpatch_c37f5beaa012c24573d6b45667890406",
+                "surface": "intervention_preference",
+                "intervention": "reflect",
+                "direction": "prefer",
+                "from_rank": 0,
+                "to_rank": 0
+              }
+            ]
+          },
+          "established": true,
+          "behavior_changed": false,
+          "behavior_before_no_feedback": "no_action",
+          "behavior_after_flywheel": "no_action",
+          "probe_day": 7
+        },
+        {
+          "chain_type": "memory_quieter",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p05_correction_loop",
+            "sim_day": 4,
+            "event_type": "memory_reference_outcome",
+            "pref_key": "old_coping_p05",
+            "outcome": "denied",
+            "confidence_after": 0.7000000000000001,
+            "evidence_score_after": 0.65
+          },
+          "read_evidence": {
+            "probe_day": 7,
+            "flywheel_stale_surfaced": false,
+            "no_feedback_stale_surfaced": true,
+            "flywheel_stale_row": null
+          },
+          "established": true,
+          "behavior_changed": true,
+          "behavior_before_no_feedback": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "behavior_after_flywheel": {
+            "stale_surfaced": false,
+            "stale_position": null
+          },
+          "probe_day": 7
+        }
+      ],
+      "acceptance": {
+        "passed": true,
+        "via": [
+          "journey_correction",
+          "journey_correction",
+          "memory_quieter"
+        ],
+        "established_count": 6
+      },
+      "invalid_personalization": [
+        {
+          "kind": "harmful_correction_differential",
+          "probe_day": 3,
+          "flywheel_match": 0.0,
+          "no_feedback_match": 1.0,
+          "note": "纠正垫后使旅程面匹配分低于无反馈对照（有害适应，保留）"
+        },
+        {
+          "kind": "ineffective_patch",
+          "patch_id": "polpatch_c37f5beaa012c24573d6b45667890406",
+          "probe_day": 3,
+          "note": "patch 已激活并被决策输入读取，但被选干预与无反馈对照相同（改序不改局）"
+        },
+        {
+          "kind": "memory_not_quieter",
+          "pref_key": "old_coping",
+          "probe_day": 3,
+          "note": "旧偏好被否认后仍以同位注入——记忆未变安静"
+        },
+        {
+          "kind": "harmful_correction_differential",
+          "probe_day": 7,
+          "flywheel_match": 0.0,
+          "no_feedback_match": 1.0,
+          "note": "纠正垫后使旅程面匹配分低于无反馈对照（有害适应，保留）"
+        },
+        {
+          "kind": "ineffective_patch",
+          "patch_id": "polpatch_c37f5beaa012c24573d6b45667890406",
+          "probe_day": 7,
+          "note": "patch 已激活并被决策输入读取，但被选干预与无反馈对照相同（改序不改局）"
+        }
+      ],
+      "control_intrusions": {
+        "flywheel": [],
+        "no_feedback": []
+      }
+    },
+    "p06_structural_gap": {
+      "persona_id": "p06_structural_gap",
+      "faces": {
+        "understanding": {
+          "coverage": {
+            "day0": {
+              "dimension": "coverage",
+              "status": "unknown",
+              "value": null,
+              "samples": 1,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "unknown_reason": "judgment samples 1 < 3"
+              }
+            },
+            "day3": {
+              "dimension": "coverage",
+              "status": "unknown",
+              "value": null,
+              "samples": 2,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "unknown_reason": "judgment samples 2 < 3"
+              }
+            },
+            "day7": {
+              "dimension": "coverage",
+              "status": "ok",
+              "value": 0.3333,
+              "samples": 3,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "context_score_mean": 0.3333,
+                "task_score_mean": 0.75,
+                "missing_dimension_freq": {
+                  "constraint_explicit": 3,
+                  "relevant_memory_present": 3,
+                  "recent_user_state_known": 3,
+                  "social_context_loaded": 3
+                },
+                "top_missing": [
+                  "constraint_explicit",
+                  "recent_user_state_known",
+                  "relevant_memory_present"
+                ]
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.3333)"
+          },
+          "correctness": {
+            "day0": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 1.0,
+              "samples": 1,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 0,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 1,
+                "correction_conflict_rate": 0.0
+              }
+            },
+            "day3": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 1.0,
+              "samples": 2,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 0,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 2,
+                "correction_conflict_rate": 0.0
+              }
+            },
+            "day7": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 0.3333,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 1,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 3,
+                "correction_conflict_rate": 0.3333
+              }
+            },
+            "delta_day7_vs_day0": "ok->ok(0.3333)"
+          },
+          "scope_precision": {
+            "day0": {
+              "dimension": "scope_precision",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "scope feedback channel dark in window"
+              }
+            },
+            "day3": {
+              "dimension": "scope_precision",
+              "status": "ok",
+              "value": 0.0,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "scope_feedback_total": 3,
+                "scope_negative": 1,
+                "scope_misuse_rate": 0.3333
+              }
+            },
+            "day7": {
+              "dimension": "scope_precision",
+              "status": "ok",
+              "value": 0.0,
+              "samples": 6,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "scope_feedback_total": 6,
+                "scope_negative": 2,
+                "scope_misuse_rate": 0.3333
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.0)"
+          },
+          "freshness": {
+            "day0": {
+              "dimension": "freshness",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "no state-changing corrections in window"
+              }
+            },
+            "day3": {
+              "dimension": "freshness",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "no state-changing corrections in window"
+              }
+            },
+            "day7": {
+              "dimension": "freshness",
+              "status": "ok",
+              "value": 0.2,
+              "samples": 1,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "lag_sample_count": 1,
+                "mean_lag_days": 24.0,
+                "max_lag_days": 24.0
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.2)"
+          },
+          "utility": {
+            "day0": {
+              "dimension": "utility",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "decisive feedback 0 < 3"
+              }
+            },
+            "day3": {
+              "dimension": "utility",
+              "status": "ok",
+              "value": 0.6667,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "accepted": 2,
+                "corrected": 0,
+                "denied": 1,
+                "decisive_total": 3,
+                "boundary": "immediate-loop acceptance; outcome-linked utility reserved (D-05/D-02)"
+              }
+            },
+            "day7": {
+              "dimension": "utility",
+              "status": "ok",
+              "value": 0.6667,
+              "samples": 6,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "accepted": 4,
+                "corrected": 0,
+                "denied": 2,
+                "decisive_total": 6,
+                "boundary": "immediate-loop acceptance; outcome-linked utility reserved (D-05/D-02)"
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.6667)"
+          }
+        },
+        "memory": {
+          "day0": {
+            "surfaced_count": 3,
+            "stale_surfaced": true,
+            "stale_position": 0,
+            "stale_confidence": 0.9,
+            "reference_denied_total": 0,
+            "retractions": 0
+          },
+          "day3": {
+            "surfaced_count": 3,
+            "stale_surfaced": true,
+            "stale_position": 0,
+            "stale_confidence": 0.8,
+            "reference_denied_total": 1,
+            "retractions": 0
+          },
+          "day7": {
+            "surfaced_count": 2,
+            "stale_surfaced": false,
+            "stale_position": null,
+            "stale_confidence": null,
+            "reference_denied_total": 2,
+            "retractions": 1
+          },
+          "delta_day7_vs_day0": {
+            "stale_surfaced": "True->False",
+            "stale_confidence": null
+          }
+        },
+        "intervention": {
+          "day0": {
+            "chat_selected": "no_action",
+            "journey_friction": "dependency",
+            "journey_intervention": "remind",
+            "followed": "remind",
+            "followed_surface": "journey",
+            "match_class": "wrong",
+            "journey_adjusted_by_correction": false,
+            "chat_applied_patch_ids": []
+          },
+          "day3": {
+            "chat_selected": "no_action",
+            "journey_friction": "difficulty",
+            "journey_intervention": "split",
+            "followed": "split",
+            "followed_surface": "journey",
+            "match_class": "secondary",
+            "journey_adjusted_by_correction": true,
+            "chat_applied_patch_ids": []
+          },
+          "day7": {
+            "chat_selected": "no_action",
+            "journey_friction": "energy",
+            "journey_intervention": "pause",
+            "followed": "pause",
+            "followed_surface": "journey",
+            "match_class": "wrong",
+            "journey_adjusted_by_correction": true,
+            "chat_applied_patch_ids": []
+          },
+          "delta_day7_vs_day0": {
+            "match_class": "wrong->wrong",
+            "followed": "remind->pause"
+          }
+        },
+        "outcome": {
+          "day0": {
+            "associations_total": 0
+          },
+          "day3": {
+            "associations_total": 1
+          },
+          "day7": {
+            "associations_total": 2
+          },
+          "delta_day7_vs_day0": 2
+        },
+        "personalization": {
+          "day0": {
+            "active_patches": 0,
+            "corrections_filed": 0,
+            "journey_active_corrections": 0
+          },
+          "day3": {
+            "active_patches": 0,
+            "corrections_filed": 1,
+            "journey_active_corrections": 1
+          },
+          "day7": {
+            "active_patches": 0,
+            "corrections_filed": 2,
+            "journey_active_corrections": 2
+          },
+          "delta_day7_vs_day0": {
+            "active_patches": 0,
+            "corrections_filed": 2
+          }
+        }
+      },
+      "adaptation_chains": [
+        {
+          "chain_type": "journey_correction",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p06_structural_gap",
+            "sim_day": 1,
+            "event_type": "journey_correction",
+            "diagnosed_friction_type": "dependency",
+            "truth": "time",
+            "correction_id": "3092fff7-aad8-42b3-b0d3-a8e0b2891c8c",
+            "corrected_friction_type": "dependency",
+            "post_correction_friction_type": "entry",
+            "post_correction_intervention": "rescope"
+          },
+          "read_evidence": {
+            "probe_day": 3,
+            "applied_correction_ids": [
+              "3092fff7-aad8-42b3-b0d3-a8e0b2891c8c"
+            ],
+            "adjusted_by_correction": true,
+            "active_corrections": 1
+          },
+          "established": true,
+          "behavior_changed": true,
+          "behavior_before_no_feedback": "dependency",
+          "behavior_after_flywheel": "difficulty",
+          "probe_day": 3
+        },
+        {
+          "chain_type": "policy_patch",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p06_structural_gap",
+            "sim_day": 1,
+            "event_type": "patch_proposal",
+            "prefer_intervention": "schedule",
+            "scope_friction_tag": "deadline_pressure",
+            "evidence_refs": [
+              "decision://aurora_4e3a54e94b205c0e58658041d9109ae8"
+            ],
+            "proposal": {
+              "ok": true,
+              "idempotent": false,
+              "violations": []
+            },
+            "patch_id": "polpatch_1625ec9e9ff796fdce98f566d5280dff",
+            "admission": {
+              "ok": true,
+              "state": "rejected"
+            }
+          },
+          "confirmed_active": false,
+          "read_evidence": null,
+          "established": false,
+          "behavior_changed": false
+        },
+        {
+          "chain_type": "memory_quieter",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p06_structural_gap",
+            "sim_day": 1,
+            "event_type": "memory_reference_outcome",
+            "pref_key": "old_coping_p06",
+            "outcome": "denied",
+            "confidence_after": 0.8,
+            "evidence_score_after": 0.75
+          },
+          "read_evidence": {
+            "probe_day": 3,
+            "flywheel_stale_surfaced": true,
+            "no_feedback_stale_surfaced": true,
+            "flywheel_stale_row": {
+              "memory_id": "fe8f0ee5-ca70-4aa9-a60f-7f3be95826ca",
+              "version": 1,
+              "confidence": 0.8,
+              "evidence_score": 0.75,
+              "correction_count": 1,
+              "retracted_at": null
+            }
+          },
+          "established": true,
+          "behavior_changed": false,
+          "behavior_before_no_feedback": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "behavior_after_flywheel": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "probe_day": 3
+        },
+        {
+          "chain_type": "journey_correction",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p06_structural_gap",
+            "sim_day": 4,
+            "event_type": "journey_correction",
+            "diagnosed_friction_type": "difficulty",
+            "truth": "time",
+            "correction_id": "b1c01ce0-f1f9-426a-8cf9-4064cbec038a",
+            "corrected_friction_type": "difficulty",
+            "post_correction_friction_type": "entry",
+            "post_correction_intervention": "rescope"
+          },
+          "read_evidence": {
+            "probe_day": 7,
+            "applied_correction_ids": [
+              "b1c01ce0-f1f9-426a-8cf9-4064cbec038a",
+              "3092fff7-aad8-42b3-b0d3-a8e0b2891c8c"
+            ],
+            "adjusted_by_correction": true,
+            "active_corrections": 2
+          },
+          "established": true,
+          "behavior_changed": true,
+          "behavior_before_no_feedback": "dependency",
+          "behavior_after_flywheel": "energy",
+          "probe_day": 7
+        },
+        {
+          "chain_type": "policy_patch",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p06_structural_gap",
+            "sim_day": 4,
+            "event_type": "patch_proposal",
+            "prefer_intervention": "schedule",
+            "scope_friction_tag": "deadline_pressure",
+            "evidence_refs": [
+              "decision://aurora_4e3a54e94b205c0e58658041d9109ae8",
+              "decision://aurora_7d4b0e11f3d1546d33795740d0aa11ac"
+            ],
+            "proposal": {
+              "ok": true,
+              "idempotent": false,
+              "violations": []
+            },
+            "patch_id": "polpatch_a28edca136ff53e7f6673b0e887ec26f",
+            "admission": {
+              "ok": true,
+              "state": "rejected"
+            }
+          },
+          "confirmed_active": false,
+          "read_evidence": null,
+          "established": false,
+          "behavior_changed": false
+        },
+        {
+          "chain_type": "memory_quieter",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p06_structural_gap",
+            "sim_day": 4,
+            "event_type": "memory_reference_outcome",
+            "pref_key": "old_coping_p06",
+            "outcome": "denied",
+            "confidence_after": 0.7000000000000001,
+            "evidence_score_after": 0.65
+          },
+          "read_evidence": {
+            "probe_day": 7,
+            "flywheel_stale_surfaced": false,
+            "no_feedback_stale_surfaced": true,
+            "flywheel_stale_row": null
+          },
+          "established": true,
+          "behavior_changed": true,
+          "behavior_before_no_feedback": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "behavior_after_flywheel": {
+            "stale_surfaced": false,
+            "stale_position": null
+          },
+          "probe_day": 7
+        }
+      ],
+      "acceptance": {
+        "passed": true,
+        "via": [
+          "journey_correction",
+          "journey_correction",
+          "memory_quieter"
+        ],
+        "established_count": 4
+      },
+      "invalid_personalization": [
+        {
+          "kind": "memory_not_quieter",
+          "pref_key": "old_coping",
+          "probe_day": 3,
+          "note": "旧偏好被否认后仍以同位注入——记忆未变安静"
+        }
+      ],
+      "control_intrusions": {
+        "flywheel": [],
+        "no_feedback": []
+      }
+    },
+    "p07_plan_drift_entry": {
+      "persona_id": "p07_plan_drift_entry",
+      "faces": {
+        "understanding": {
+          "coverage": {
+            "day0": {
+              "dimension": "coverage",
+              "status": "unknown",
+              "value": null,
+              "samples": 1,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "unknown_reason": "judgment samples 1 < 3"
+              }
+            },
+            "day3": {
+              "dimension": "coverage",
+              "status": "unknown",
+              "value": null,
+              "samples": 2,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "unknown_reason": "judgment samples 2 < 3"
+              }
+            },
+            "day7": {
+              "dimension": "coverage",
+              "status": "ok",
+              "value": 0.3333,
+              "samples": 3,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "context_score_mean": 0.3333,
+                "task_score_mean": 0.75,
+                "missing_dimension_freq": {
+                  "constraint_explicit": 3,
+                  "relevant_memory_present": 3,
+                  "recent_user_state_known": 3,
+                  "social_context_loaded": 3
+                },
+                "top_missing": [
+                  "constraint_explicit",
+                  "recent_user_state_known",
+                  "relevant_memory_present"
+                ]
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.3333)"
+          },
+          "correctness": {
+            "day0": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 1.0,
+              "samples": 1,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 0,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 1,
+                "correction_conflict_rate": 0.0
+              }
+            },
+            "day3": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 1.0,
+              "samples": 2,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 0,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 2,
+                "correction_conflict_rate": 0.0
+              }
+            },
+            "day7": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 0.3333,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 1,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 3,
+                "correction_conflict_rate": 0.3333
+              }
+            },
+            "delta_day7_vs_day0": "ok->ok(0.3333)"
+          },
+          "scope_precision": {
+            "day0": {
+              "dimension": "scope_precision",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "scope feedback channel dark in window"
+              }
+            },
+            "day3": {
+              "dimension": "scope_precision",
+              "status": "ok",
+              "value": 0.0,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "scope_feedback_total": 3,
+                "scope_negative": 1,
+                "scope_misuse_rate": 0.3333
+              }
+            },
+            "day7": {
+              "dimension": "scope_precision",
+              "status": "ok",
+              "value": 0.0,
+              "samples": 6,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "scope_feedback_total": 6,
+                "scope_negative": 2,
+                "scope_misuse_rate": 0.3333
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.0)"
+          },
+          "freshness": {
+            "day0": {
+              "dimension": "freshness",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "no state-changing corrections in window"
+              }
+            },
+            "day3": {
+              "dimension": "freshness",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "no state-changing corrections in window"
+              }
+            },
+            "day7": {
+              "dimension": "freshness",
+              "status": "ok",
+              "value": 0.2,
+              "samples": 1,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "lag_sample_count": 1,
+                "mean_lag_days": 24.0,
+                "max_lag_days": 24.0
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.2)"
+          },
+          "utility": {
+            "day0": {
+              "dimension": "utility",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "decisive feedback 0 < 3"
+              }
+            },
+            "day3": {
+              "dimension": "utility",
+              "status": "ok",
+              "value": 0.6667,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "accepted": 2,
+                "corrected": 0,
+                "denied": 1,
+                "decisive_total": 3,
+                "boundary": "immediate-loop acceptance; outcome-linked utility reserved (D-05/D-02)"
+              }
+            },
+            "day7": {
+              "dimension": "utility",
+              "status": "ok",
+              "value": 0.6667,
+              "samples": 6,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "accepted": 4,
+                "corrected": 0,
+                "denied": 2,
+                "decisive_total": 6,
+                "boundary": "immediate-loop acceptance; outcome-linked utility reserved (D-05/D-02)"
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.6667)"
+          }
+        },
+        "memory": {
+          "day0": {
+            "surfaced_count": 3,
+            "stale_surfaced": true,
+            "stale_position": 0,
+            "stale_confidence": 0.9,
+            "reference_denied_total": 0,
+            "retractions": 0
+          },
+          "day3": {
+            "surfaced_count": 3,
+            "stale_surfaced": true,
+            "stale_position": 0,
+            "stale_confidence": 0.8,
+            "reference_denied_total": 1,
+            "retractions": 0
+          },
+          "day7": {
+            "surfaced_count": 2,
+            "stale_surfaced": false,
+            "stale_position": null,
+            "stale_confidence": null,
+            "reference_denied_total": 2,
+            "retractions": 1
+          },
+          "delta_day7_vs_day0": {
+            "stale_surfaced": "True->False",
+            "stale_confidence": null
+          }
+        },
+        "intervention": {
+          "day0": {
+            "chat_selected": "practice",
+            "journey_friction": "dependency",
+            "journey_intervention": "remind",
+            "followed": "practice",
+            "followed_surface": "chat",
+            "match_class": "wrong",
+            "journey_adjusted_by_correction": false,
+            "chat_applied_patch_ids": []
+          },
+          "day3": {
+            "chat_selected": "practice",
+            "journey_friction": "difficulty",
+            "journey_intervention": "split",
+            "followed": "practice",
+            "followed_surface": "chat",
+            "match_class": "wrong",
+            "journey_adjusted_by_correction": true,
+            "chat_applied_patch_ids": []
+          },
+          "day7": {
+            "chat_selected": "practice",
+            "journey_friction": "energy",
+            "journey_intervention": "pause",
+            "followed": "practice",
+            "followed_surface": "chat",
+            "match_class": "wrong",
+            "journey_adjusted_by_correction": true,
+            "chat_applied_patch_ids": []
+          },
+          "delta_day7_vs_day0": {
+            "match_class": "wrong->wrong",
+            "followed": "practice->practice"
+          }
+        },
+        "outcome": {
+          "day0": {
+            "associations_total": 0
+          },
+          "day3": {
+            "associations_total": 1
+          },
+          "day7": {
+            "associations_total": 2
+          },
+          "delta_day7_vs_day0": 2
+        },
+        "personalization": {
+          "day0": {
+            "active_patches": 0,
+            "corrections_filed": 0,
+            "journey_active_corrections": 0
+          },
+          "day3": {
+            "active_patches": 0,
+            "corrections_filed": 1,
+            "journey_active_corrections": 1
+          },
+          "day7": {
+            "active_patches": 0,
+            "corrections_filed": 2,
+            "journey_active_corrections": 2
+          },
+          "delta_day7_vs_day0": {
+            "active_patches": 0,
+            "corrections_filed": 2
+          }
+        }
+      },
+      "adaptation_chains": [
+        {
+          "chain_type": "journey_correction",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p07_plan_drift_entry",
+            "sim_day": 1,
+            "event_type": "journey_correction",
+            "diagnosed_friction_type": "dependency",
+            "truth": "plan_drift",
+            "correction_id": "539ed57f-bbe7-4936-84b5-65ca869e853e",
+            "corrected_friction_type": "dependency",
+            "post_correction_friction_type": "entry",
+            "post_correction_intervention": "rescope"
+          },
+          "read_evidence": {
+            "probe_day": 3,
+            "applied_correction_ids": [
+              "539ed57f-bbe7-4936-84b5-65ca869e853e"
+            ],
+            "adjusted_by_correction": true,
+            "active_corrections": 1
+          },
+          "established": true,
+          "behavior_changed": true,
+          "behavior_before_no_feedback": "dependency",
+          "behavior_after_flywheel": "difficulty",
+          "probe_day": 3
+        },
+        {
+          "chain_type": "policy_patch",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p07_plan_drift_entry",
+            "sim_day": 1,
+            "event_type": "patch_proposal",
+            "prefer_intervention": "rescope",
+            "scope_friction_tag": "execution_friction",
+            "evidence_refs": [
+              "decision://aurora_e5d1b270276e8299500a2d8e4df8ea80"
+            ],
+            "proposal": {
+              "ok": true,
+              "idempotent": false,
+              "violations": []
+            },
+            "patch_id": "polpatch_16c3d85747161650c20c346088fd474d",
+            "admission": {
+              "ok": true,
+              "state": "rejected"
+            }
+          },
+          "confirmed_active": false,
+          "read_evidence": null,
+          "established": false,
+          "behavior_changed": false
+        },
+        {
+          "chain_type": "memory_quieter",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p07_plan_drift_entry",
+            "sim_day": 1,
+            "event_type": "memory_reference_outcome",
+            "pref_key": "old_coping_p07",
+            "outcome": "denied",
+            "confidence_after": 0.8,
+            "evidence_score_after": 0.75
+          },
+          "read_evidence": {
+            "probe_day": 3,
+            "flywheel_stale_surfaced": true,
+            "no_feedback_stale_surfaced": true,
+            "flywheel_stale_row": {
+              "memory_id": "644ae15b-83e0-40c2-93cc-115dd6405b7c",
+              "version": 1,
+              "confidence": 0.8,
+              "evidence_score": 0.75,
+              "correction_count": 1,
+              "retracted_at": null
+            }
+          },
+          "established": true,
+          "behavior_changed": false,
+          "behavior_before_no_feedback": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "behavior_after_flywheel": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "probe_day": 3
+        },
+        {
+          "chain_type": "journey_correction",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p07_plan_drift_entry",
+            "sim_day": 4,
+            "event_type": "journey_correction",
+            "diagnosed_friction_type": "difficulty",
+            "truth": "plan_drift",
+            "correction_id": "b4fe4a22-4c22-49b8-b27c-2dc5ff1216df",
+            "corrected_friction_type": "difficulty",
+            "post_correction_friction_type": "entry",
+            "post_correction_intervention": "rescope"
+          },
+          "read_evidence": {
+            "probe_day": 7,
+            "applied_correction_ids": [
+              "b4fe4a22-4c22-49b8-b27c-2dc5ff1216df",
+              "539ed57f-bbe7-4936-84b5-65ca869e853e"
+            ],
+            "adjusted_by_correction": true,
+            "active_corrections": 2
+          },
+          "established": true,
+          "behavior_changed": true,
+          "behavior_before_no_feedback": "dependency",
+          "behavior_after_flywheel": "energy",
+          "probe_day": 7
+        },
+        {
+          "chain_type": "policy_patch",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p07_plan_drift_entry",
+            "sim_day": 4,
+            "event_type": "patch_proposal",
+            "prefer_intervention": "rescope",
+            "scope_friction_tag": "execution_friction",
+            "evidence_refs": [
+              "decision://aurora_e5d1b270276e8299500a2d8e4df8ea80",
+              "decision://aurora_3b40f4470d9978a97fad8b012028f63f"
+            ],
+            "proposal": {
+              "ok": true,
+              "idempotent": false,
+              "violations": []
+            },
+            "patch_id": "polpatch_a7ccf434a6fbb65eea4e69516ec8e5cd",
+            "admission": {
+              "ok": true,
+              "state": "rejected"
+            }
+          },
+          "confirmed_active": false,
+          "read_evidence": null,
+          "established": false,
+          "behavior_changed": false
+        },
+        {
+          "chain_type": "memory_quieter",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p07_plan_drift_entry",
+            "sim_day": 4,
+            "event_type": "memory_reference_outcome",
+            "pref_key": "old_coping_p07",
+            "outcome": "denied",
+            "confidence_after": 0.7000000000000001,
+            "evidence_score_after": 0.65
+          },
+          "read_evidence": {
+            "probe_day": 7,
+            "flywheel_stale_surfaced": false,
+            "no_feedback_stale_surfaced": true,
+            "flywheel_stale_row": null
+          },
+          "established": true,
+          "behavior_changed": true,
+          "behavior_before_no_feedback": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "behavior_after_flywheel": {
+            "stale_surfaced": false,
+            "stale_position": null
+          },
+          "probe_day": 7
+        }
+      ],
+      "acceptance": {
+        "passed": true,
+        "via": [
+          "journey_correction",
+          "journey_correction",
+          "memory_quieter"
+        ],
+        "established_count": 4
+      },
+      "invalid_personalization": [
+        {
+          "kind": "memory_not_quieter",
+          "pref_key": "old_coping",
+          "probe_day": 3,
+          "note": "旧偏好被否认后仍以同位注入——记忆未变安静"
+        }
+      ],
+      "control_intrusions": {
+        "flywheel": [
+          5
+        ],
+        "no_feedback": [
+          5
+        ]
+      }
+    },
+    "p08_skill_repeat": {
+      "persona_id": "p08_skill_repeat",
+      "faces": {
+        "understanding": {
+          "coverage": {
+            "day0": {
+              "dimension": "coverage",
+              "status": "unknown",
+              "value": null,
+              "samples": 1,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "unknown_reason": "judgment samples 1 < 3"
+              }
+            },
+            "day3": {
+              "dimension": "coverage",
+              "status": "unknown",
+              "value": null,
+              "samples": 2,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "unknown_reason": "judgment samples 2 < 3"
+              }
+            },
+            "day7": {
+              "dimension": "coverage",
+              "status": "ok",
+              "value": 0.3333,
+              "samples": 3,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "context_score_mean": 0.3333,
+                "task_score_mean": 0.75,
+                "missing_dimension_freq": {
+                  "constraint_explicit": 3,
+                  "relevant_memory_present": 3,
+                  "recent_user_state_known": 3,
+                  "social_context_loaded": 3
+                },
+                "top_missing": [
+                  "constraint_explicit",
+                  "recent_user_state_known",
+                  "relevant_memory_present"
+                ]
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.3333)"
+          },
+          "correctness": {
+            "day0": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 1.0,
+              "samples": 1,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 0,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 1,
+                "correction_conflict_rate": 0.0
+              }
+            },
+            "day3": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 1.0,
+              "samples": 2,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 0,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 2,
+                "correction_conflict_rate": 0.0
+              }
+            },
+            "day7": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 0.3333,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 1,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 3,
+                "correction_conflict_rate": 0.3333
+              }
+            },
+            "delta_day7_vs_day0": "ok->ok(0.3333)"
+          },
+          "scope_precision": {
+            "day0": {
+              "dimension": "scope_precision",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "scope feedback channel dark in window"
+              }
+            },
+            "day3": {
+              "dimension": "scope_precision",
+              "status": "ok",
+              "value": 0.0,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "scope_feedback_total": 3,
+                "scope_negative": 1,
+                "scope_misuse_rate": 0.3333
+              }
+            },
+            "day7": {
+              "dimension": "scope_precision",
+              "status": "ok",
+              "value": 0.0,
+              "samples": 6,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "scope_feedback_total": 6,
+                "scope_negative": 2,
+                "scope_misuse_rate": 0.3333
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.0)"
+          },
+          "freshness": {
+            "day0": {
+              "dimension": "freshness",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "no state-changing corrections in window"
+              }
+            },
+            "day3": {
+              "dimension": "freshness",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "no state-changing corrections in window"
+              }
+            },
+            "day7": {
+              "dimension": "freshness",
+              "status": "ok",
+              "value": 0.2,
+              "samples": 1,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "lag_sample_count": 1,
+                "mean_lag_days": 24.0,
+                "max_lag_days": 24.0
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.2)"
+          },
+          "utility": {
+            "day0": {
+              "dimension": "utility",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "decisive feedback 0 < 3"
+              }
+            },
+            "day3": {
+              "dimension": "utility",
+              "status": "ok",
+              "value": 0.6667,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "accepted": 2,
+                "corrected": 0,
+                "denied": 1,
+                "decisive_total": 3,
+                "boundary": "immediate-loop acceptance; outcome-linked utility reserved (D-05/D-02)"
+              }
+            },
+            "day7": {
+              "dimension": "utility",
+              "status": "ok",
+              "value": 0.6667,
+              "samples": 6,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "accepted": 4,
+                "corrected": 0,
+                "denied": 2,
+                "decisive_total": 6,
+                "boundary": "immediate-loop acceptance; outcome-linked utility reserved (D-05/D-02)"
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.6667)"
+          }
+        },
+        "memory": {
+          "day0": {
+            "surfaced_count": 3,
+            "stale_surfaced": true,
+            "stale_position": 0,
+            "stale_confidence": 0.9,
+            "reference_denied_total": 0,
+            "retractions": 0
+          },
+          "day3": {
+            "surfaced_count": 3,
+            "stale_surfaced": true,
+            "stale_position": 0,
+            "stale_confidence": 0.8,
+            "reference_denied_total": 1,
+            "retractions": 0
+          },
+          "day7": {
+            "surfaced_count": 2,
+            "stale_surfaced": false,
+            "stale_position": null,
+            "stale_confidence": null,
+            "reference_denied_total": 2,
+            "retractions": 1
+          },
+          "delta_day7_vs_day0": {
+            "stale_surfaced": "True->False",
+            "stale_confidence": null
+          }
+        },
+        "intervention": {
+          "day0": {
+            "chat_selected": "practice",
+            "journey_friction": "skill",
+            "journey_intervention": "practice",
+            "followed": "practice",
+            "followed_surface": "chat",
+            "match_class": "primary",
+            "journey_adjusted_by_correction": false,
+            "chat_applied_patch_ids": []
+          },
+          "day3": {
+            "chat_selected": "practice",
+            "journey_friction": "skill",
+            "journey_intervention": "practice",
+            "followed": "practice",
+            "followed_surface": "chat",
+            "match_class": "primary",
+            "journey_adjusted_by_correction": false,
+            "chat_applied_patch_ids": [
+              "polpatch_5316b5cfbb9843b0dfeb51b78dfd4f36"
+            ]
+          },
+          "day7": {
+            "chat_selected": "practice",
+            "journey_friction": "skill",
+            "journey_intervention": "practice",
+            "followed": "practice",
+            "followed_surface": "chat",
+            "match_class": "primary",
+            "journey_adjusted_by_correction": false,
+            "chat_applied_patch_ids": [
+              "polpatch_5316b5cfbb9843b0dfeb51b78dfd4f36",
+              "polpatch_7e4c7dd1552b4dc194d7c52755b224ec"
+            ]
+          },
+          "delta_day7_vs_day0": {
+            "match_class": "primary->primary",
+            "followed": "practice->practice"
+          }
+        },
+        "outcome": {
+          "day0": {
+            "associations_total": 0
+          },
+          "day3": {
+            "associations_total": 1
+          },
+          "day7": {
+            "associations_total": 2
+          },
+          "delta_day7_vs_day0": 2
+        },
+        "personalization": {
+          "day0": {
+            "active_patches": 0,
+            "corrections_filed": 0,
+            "journey_active_corrections": 0
+          },
+          "day3": {
+            "active_patches": 1,
+            "corrections_filed": 0,
+            "journey_active_corrections": 0
+          },
+          "day7": {
+            "active_patches": 2,
+            "corrections_filed": 0,
+            "journey_active_corrections": 0
+          },
+          "delta_day7_vs_day0": {
+            "active_patches": 2,
+            "corrections_filed": 0
+          }
+        }
+      },
+      "adaptation_chains": [
+        {
+          "chain_type": "policy_patch",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p08_skill_repeat",
+            "sim_day": 1,
+            "event_type": "patch_proposal",
+            "prefer_intervention": "practice",
+            "scope_friction_tag": "knowledge_bottleneck",
+            "evidence_refs": [
+              "decision://aurora_73dab67288c4fa9714a1242fa341eb4d"
+            ],
+            "proposal": {
+              "ok": true,
+              "idempotent": false,
+              "violations": []
+            },
+            "patch_id": "polpatch_5316b5cfbb9843b0dfeb51b78dfd4f36",
+            "admission": {
+              "ok": true,
+              "state": "evidenced"
+            },
+            "confirmation": {
+              "ok": true,
+              "state": "active"
+            }
+          },
+          "confirmed_active": true,
+          "read_evidence": {
+            "probe_day": 3,
+            "applied_patch_ids": [
+              "polpatch_5316b5cfbb9843b0dfeb51b78dfd4f36"
+            ],
+            "patch_moves": [
+              {
+                "patch_id": "polpatch_5316b5cfbb9843b0dfeb51b78dfd4f36",
+                "surface": "intervention_preference",
+                "intervention": "practice",
+                "direction": "prefer",
+                "from_rank": 0,
+                "to_rank": 0
+              }
+            ]
+          },
+          "established": true,
+          "behavior_changed": false,
+          "behavior_before_no_feedback": "practice",
+          "behavior_after_flywheel": "practice",
+          "probe_day": 3
+        },
+        {
+          "chain_type": "memory_quieter",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p08_skill_repeat",
+            "sim_day": 1,
+            "event_type": "memory_reference_outcome",
+            "pref_key": "old_coping_p08",
+            "outcome": "denied",
+            "confidence_after": 0.8,
+            "evidence_score_after": 0.75
+          },
+          "read_evidence": {
+            "probe_day": 3,
+            "flywheel_stale_surfaced": true,
+            "no_feedback_stale_surfaced": true,
+            "flywheel_stale_row": {
+              "memory_id": "c9b79c79-488a-4b4f-92f6-d819d838b0fa",
+              "version": 1,
+              "confidence": 0.8,
+              "evidence_score": 0.75,
+              "correction_count": 1,
+              "retracted_at": null
+            }
+          },
+          "established": true,
+          "behavior_changed": false,
+          "behavior_before_no_feedback": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "behavior_after_flywheel": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "probe_day": 3
+        },
+        {
+          "chain_type": "policy_patch",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p08_skill_repeat",
+            "sim_day": 4,
+            "event_type": "patch_proposal",
+            "prefer_intervention": "practice",
+            "scope_friction_tag": "knowledge_bottleneck",
+            "evidence_refs": [
+              "decision://aurora_73dab67288c4fa9714a1242fa341eb4d",
+              "decision://aurora_b6ecee4e8d70df5ecdf2e9c773a04458"
+            ],
+            "proposal": {
+              "ok": true,
+              "idempotent": false,
+              "violations": []
+            },
+            "patch_id": "polpatch_7e4c7dd1552b4dc194d7c52755b224ec",
+            "admission": {
+              "ok": true,
+              "state": "active"
+            }
+          },
+          "confirmed_active": false,
+          "read_evidence": {
+            "probe_day": 7,
+            "applied_patch_ids": [
+              "polpatch_5316b5cfbb9843b0dfeb51b78dfd4f36",
+              "polpatch_7e4c7dd1552b4dc194d7c52755b224ec"
+            ],
+            "patch_moves": [
+              {
+                "patch_id": "polpatch_5316b5cfbb9843b0dfeb51b78dfd4f36",
+                "surface": "intervention_preference",
+                "intervention": "practice",
+                "direction": "prefer",
+                "from_rank": 0,
+                "to_rank": 0
+              },
+              {
+                "patch_id": "polpatch_7e4c7dd1552b4dc194d7c52755b224ec",
+                "surface": "intervention_preference",
+                "intervention": "practice",
+                "direction": "prefer",
+                "from_rank": 0,
+                "to_rank": 0
+              }
+            ]
+          },
+          "established": true,
+          "behavior_changed": false,
+          "behavior_before_no_feedback": "practice",
+          "behavior_after_flywheel": "practice",
+          "probe_day": 7
+        },
+        {
+          "chain_type": "memory_quieter",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p08_skill_repeat",
+            "sim_day": 4,
+            "event_type": "memory_reference_outcome",
+            "pref_key": "old_coping_p08",
+            "outcome": "denied",
+            "confidence_after": 0.7000000000000001,
+            "evidence_score_after": 0.65
+          },
+          "read_evidence": {
+            "probe_day": 7,
+            "flywheel_stale_surfaced": false,
+            "no_feedback_stale_surfaced": true,
+            "flywheel_stale_row": null
+          },
+          "established": true,
+          "behavior_changed": true,
+          "behavior_before_no_feedback": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "behavior_after_flywheel": {
+            "stale_surfaced": false,
+            "stale_position": null
+          },
+          "probe_day": 7
+        }
+      ],
+      "acceptance": {
+        "passed": true,
+        "via": [
+          "memory_quieter"
+        ],
+        "established_count": 4
+      },
+      "invalid_personalization": [
+        {
+          "kind": "ineffective_patch",
+          "patch_id": "polpatch_5316b5cfbb9843b0dfeb51b78dfd4f36",
+          "probe_day": 3,
+          "note": "patch 已激活并被决策输入读取，但被选干预与无反馈对照相同（改序不改局）"
+        },
+        {
+          "kind": "memory_not_quieter",
+          "pref_key": "old_coping",
+          "probe_day": 3,
+          "note": "旧偏好被否认后仍以同位注入——记忆未变安静"
+        },
+        {
+          "kind": "ineffective_patch",
+          "patch_id": "polpatch_7e4c7dd1552b4dc194d7c52755b224ec",
+          "probe_day": 7,
+          "note": "patch 已激活并被决策输入读取，但被选干预与无反馈对照相同（改序不改局）"
+        }
+      ],
+      "control_intrusions": {
+        "flywheel": [
+          5
+        ],
+        "no_feedback": [
+          5
+        ]
+      }
+    },
+    "p09_choice_feedback": {
+      "persona_id": "p09_choice_feedback",
+      "faces": {
+        "understanding": {
+          "coverage": {
+            "day0": {
+              "dimension": "coverage",
+              "status": "unknown",
+              "value": null,
+              "samples": 1,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "unknown_reason": "judgment samples 1 < 3"
+              }
+            },
+            "day3": {
+              "dimension": "coverage",
+              "status": "unknown",
+              "value": null,
+              "samples": 2,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "unknown_reason": "judgment samples 2 < 3"
+              }
+            },
+            "day7": {
+              "dimension": "coverage",
+              "status": "ok",
+              "value": 0.3333,
+              "samples": 3,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "context_score_mean": 0.3333,
+                "task_score_mean": 0.75,
+                "missing_dimension_freq": {
+                  "constraint_explicit": 3,
+                  "relevant_memory_present": 3,
+                  "recent_user_state_known": 3,
+                  "social_context_loaded": 3
+                },
+                "top_missing": [
+                  "constraint_explicit",
+                  "recent_user_state_known",
+                  "relevant_memory_present"
+                ]
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.3333)"
+          },
+          "correctness": {
+            "day0": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 1.0,
+              "samples": 1,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 0,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 1,
+                "correction_conflict_rate": 0.0
+              }
+            },
+            "day3": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 1.0,
+              "samples": 2,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 0,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 2,
+                "correction_conflict_rate": 0.0
+              }
+            },
+            "day7": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 0.3333,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 1,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 3,
+                "correction_conflict_rate": 0.3333
+              }
+            },
+            "delta_day7_vs_day0": "ok->ok(0.3333)"
+          },
+          "scope_precision": {
+            "day0": {
+              "dimension": "scope_precision",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "scope feedback channel dark in window"
+              }
+            },
+            "day3": {
+              "dimension": "scope_precision",
+              "status": "ok",
+              "value": 0.0,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "scope_feedback_total": 3,
+                "scope_negative": 1,
+                "scope_misuse_rate": 0.3333
+              }
+            },
+            "day7": {
+              "dimension": "scope_precision",
+              "status": "ok",
+              "value": 0.0,
+              "samples": 6,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "scope_feedback_total": 6,
+                "scope_negative": 2,
+                "scope_misuse_rate": 0.3333
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.0)"
+          },
+          "freshness": {
+            "day0": {
+              "dimension": "freshness",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "no state-changing corrections in window"
+              }
+            },
+            "day3": {
+              "dimension": "freshness",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "no state-changing corrections in window"
+              }
+            },
+            "day7": {
+              "dimension": "freshness",
+              "status": "ok",
+              "value": 0.2,
+              "samples": 1,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "lag_sample_count": 1,
+                "mean_lag_days": 24.0,
+                "max_lag_days": 24.0
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.2)"
+          },
+          "utility": {
+            "day0": {
+              "dimension": "utility",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "decisive feedback 0 < 3"
+              }
+            },
+            "day3": {
+              "dimension": "utility",
+              "status": "ok",
+              "value": 0.6667,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "accepted": 2,
+                "corrected": 0,
+                "denied": 1,
+                "decisive_total": 3,
+                "boundary": "immediate-loop acceptance; outcome-linked utility reserved (D-05/D-02)"
+              }
+            },
+            "day7": {
+              "dimension": "utility",
+              "status": "ok",
+              "value": 0.6667,
+              "samples": 6,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "accepted": 4,
+                "corrected": 0,
+                "denied": 2,
+                "decisive_total": 6,
+                "boundary": "immediate-loop acceptance; outcome-linked utility reserved (D-05/D-02)"
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.6667)"
+          }
+        },
+        "memory": {
+          "day0": {
+            "surfaced_count": 3,
+            "stale_surfaced": true,
+            "stale_position": 0,
+            "stale_confidence": 0.9,
+            "reference_denied_total": 0,
+            "retractions": 0
+          },
+          "day3": {
+            "surfaced_count": 3,
+            "stale_surfaced": true,
+            "stale_position": 0,
+            "stale_confidence": 0.8,
+            "reference_denied_total": 1,
+            "retractions": 0
+          },
+          "day7": {
+            "surfaced_count": 2,
+            "stale_surfaced": false,
+            "stale_position": null,
+            "stale_confidence": null,
+            "reference_denied_total": 2,
+            "retractions": 1
+          },
+          "delta_day7_vs_day0": {
+            "stale_surfaced": "True->False",
+            "stale_confidence": null
+          }
+        },
+        "intervention": {
+          "day0": {
+            "chat_selected": "no_action",
+            "journey_friction": "choice",
+            "journey_intervention": "reflect",
+            "followed": "reflect",
+            "followed_surface": "journey",
+            "match_class": "primary",
+            "journey_adjusted_by_correction": false,
+            "chat_applied_patch_ids": []
+          },
+          "day3": {
+            "chat_selected": "no_action",
+            "journey_friction": "choice",
+            "journey_intervention": "reflect",
+            "followed": "reflect",
+            "followed_surface": "journey",
+            "match_class": "primary",
+            "journey_adjusted_by_correction": false,
+            "chat_applied_patch_ids": [
+              "polpatch_67b211a3c02f9da882f6e34303b4f3b4"
+            ]
+          },
+          "day7": {
+            "chat_selected": "no_action",
+            "journey_friction": "choice",
+            "journey_intervention": "reflect",
+            "followed": "reflect",
+            "followed_surface": "journey",
+            "match_class": "primary",
+            "journey_adjusted_by_correction": false,
+            "chat_applied_patch_ids": [
+              "polpatch_2833cfed13781158f167bf20dccd6e18",
+              "polpatch_67b211a3c02f9da882f6e34303b4f3b4"
+            ]
+          },
+          "delta_day7_vs_day0": {
+            "match_class": "primary->primary",
+            "followed": "reflect->reflect"
+          }
+        },
+        "outcome": {
+          "day0": {
+            "associations_total": 0
+          },
+          "day3": {
+            "associations_total": 1
+          },
+          "day7": {
+            "associations_total": 2
+          },
+          "delta_day7_vs_day0": 2
+        },
+        "personalization": {
+          "day0": {
+            "active_patches": 0,
+            "corrections_filed": 0,
+            "journey_active_corrections": 0
+          },
+          "day3": {
+            "active_patches": 1,
+            "corrections_filed": 0,
+            "journey_active_corrections": 0
+          },
+          "day7": {
+            "active_patches": 2,
+            "corrections_filed": 0,
+            "journey_active_corrections": 0
+          },
+          "delta_day7_vs_day0": {
+            "active_patches": 2,
+            "corrections_filed": 0
+          }
+        }
+      },
+      "adaptation_chains": [
+        {
+          "chain_type": "policy_patch",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p09_choice_feedback",
+            "sim_day": 1,
+            "event_type": "patch_proposal",
+            "prefer_intervention": "reflect",
+            "scope_friction_tag": "engagement_momentum",
+            "evidence_refs": [
+              "decision://aurora_11d3d56e5864c41b0ee7fbf77f53db42"
+            ],
+            "proposal": {
+              "ok": true,
+              "idempotent": false,
+              "violations": []
+            },
+            "patch_id": "polpatch_67b211a3c02f9da882f6e34303b4f3b4",
+            "admission": {
+              "ok": true,
+              "state": "evidenced"
+            },
+            "confirmation": {
+              "ok": true,
+              "state": "active"
+            }
+          },
+          "confirmed_active": true,
+          "read_evidence": {
+            "probe_day": 3,
+            "applied_patch_ids": [
+              "polpatch_67b211a3c02f9da882f6e34303b4f3b4"
+            ],
+            "patch_moves": [
+              {
+                "patch_id": "polpatch_67b211a3c02f9da882f6e34303b4f3b4",
+                "surface": "intervention_preference",
+                "intervention": "reflect",
+                "direction": "prefer",
+                "from_rank": 0,
+                "to_rank": 0
+              }
+            ]
+          },
+          "established": true,
+          "behavior_changed": false,
+          "behavior_before_no_feedback": "no_action",
+          "behavior_after_flywheel": "no_action",
+          "probe_day": 3
+        },
+        {
+          "chain_type": "memory_quieter",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p09_choice_feedback",
+            "sim_day": 1,
+            "event_type": "memory_reference_outcome",
+            "pref_key": "old_coping_p09",
+            "outcome": "denied",
+            "confidence_after": 0.8,
+            "evidence_score_after": 0.75
+          },
+          "read_evidence": {
+            "probe_day": 3,
+            "flywheel_stale_surfaced": true,
+            "no_feedback_stale_surfaced": true,
+            "flywheel_stale_row": {
+              "memory_id": "7326a678-0c6c-4c79-8897-a6d0462f7080",
+              "version": 1,
+              "confidence": 0.8,
+              "evidence_score": 0.75,
+              "correction_count": 1,
+              "retracted_at": null
+            }
+          },
+          "established": true,
+          "behavior_changed": false,
+          "behavior_before_no_feedback": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "behavior_after_flywheel": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "probe_day": 3
+        },
+        {
+          "chain_type": "policy_patch",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p09_choice_feedback",
+            "sim_day": 4,
+            "event_type": "patch_proposal",
+            "prefer_intervention": "reflect",
+            "scope_friction_tag": "engagement_momentum",
+            "evidence_refs": [
+              "decision://aurora_11d3d56e5864c41b0ee7fbf77f53db42",
+              "decision://aurora_3d71511d09c171f5477b72fb25bd2fe8"
+            ],
+            "proposal": {
+              "ok": true,
+              "idempotent": false,
+              "violations": []
+            },
+            "patch_id": "polpatch_2833cfed13781158f167bf20dccd6e18",
+            "admission": {
+              "ok": true,
+              "state": "active"
+            }
+          },
+          "confirmed_active": false,
+          "read_evidence": {
+            "probe_day": 7,
+            "applied_patch_ids": [
+              "polpatch_2833cfed13781158f167bf20dccd6e18",
+              "polpatch_67b211a3c02f9da882f6e34303b4f3b4"
+            ],
+            "patch_moves": [
+              {
+                "patch_id": "polpatch_2833cfed13781158f167bf20dccd6e18",
+                "surface": "intervention_preference",
+                "intervention": "reflect",
+                "direction": "prefer",
+                "from_rank": 0,
+                "to_rank": 0
+              },
+              {
+                "patch_id": "polpatch_67b211a3c02f9da882f6e34303b4f3b4",
+                "surface": "intervention_preference",
+                "intervention": "reflect",
+                "direction": "prefer",
+                "from_rank": 0,
+                "to_rank": 0
+              }
+            ]
+          },
+          "established": true,
+          "behavior_changed": false,
+          "behavior_before_no_feedback": "no_action",
+          "behavior_after_flywheel": "no_action",
+          "probe_day": 7
+        },
+        {
+          "chain_type": "memory_quieter",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p09_choice_feedback",
+            "sim_day": 4,
+            "event_type": "memory_reference_outcome",
+            "pref_key": "old_coping_p09",
+            "outcome": "denied",
+            "confidence_after": 0.7000000000000001,
+            "evidence_score_after": 0.65
+          },
+          "read_evidence": {
+            "probe_day": 7,
+            "flywheel_stale_surfaced": false,
+            "no_feedback_stale_surfaced": true,
+            "flywheel_stale_row": null
+          },
+          "established": true,
+          "behavior_changed": true,
+          "behavior_before_no_feedback": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "behavior_after_flywheel": {
+            "stale_surfaced": false,
+            "stale_position": null
+          },
+          "probe_day": 7
+        }
+      ],
+      "acceptance": {
+        "passed": true,
+        "via": [
+          "memory_quieter"
+        ],
+        "established_count": 4
+      },
+      "invalid_personalization": [
+        {
+          "kind": "ineffective_patch",
+          "patch_id": "polpatch_67b211a3c02f9da882f6e34303b4f3b4",
+          "probe_day": 3,
+          "note": "patch 已激活并被决策输入读取，但被选干预与无反馈对照相同（改序不改局）"
+        },
+        {
+          "kind": "memory_not_quieter",
+          "pref_key": "old_coping",
+          "probe_day": 3,
+          "note": "旧偏好被否认后仍以同位注入——记忆未变安静"
+        },
+        {
+          "kind": "ineffective_patch",
+          "patch_id": "polpatch_2833cfed13781158f167bf20dccd6e18",
+          "probe_day": 7,
+          "note": "patch 已激活并被决策输入读取，但被选干预与无反馈对照相同（改序不改局）"
+        }
+      ],
+      "control_intrusions": {
+        "flywheel": [],
+        "no_feedback": []
+      }
+    },
+    "p10_quiet_then_tooling": {
+      "persona_id": "p10_quiet_then_tooling",
+      "faces": {
+        "understanding": {
+          "coverage": {
+            "day0": {
+              "dimension": "coverage",
+              "status": "unknown",
+              "value": null,
+              "samples": 1,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "unknown_reason": "judgment samples 1 < 3"
+              }
+            },
+            "day3": {
+              "dimension": "coverage",
+              "status": "unknown",
+              "value": null,
+              "samples": 2,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "unknown_reason": "judgment samples 2 < 3"
+              }
+            },
+            "day7": {
+              "dimension": "coverage",
+              "status": "ok",
+              "value": 0.3333,
+              "samples": 3,
+              "provenance": [
+                "aurora_judgment_records"
+              ],
+              "detail": {
+                "context_score_mean": 0.3333,
+                "task_score_mean": 0.75,
+                "missing_dimension_freq": {
+                  "constraint_explicit": 3,
+                  "relevant_memory_present": 3,
+                  "recent_user_state_known": 3,
+                  "social_context_loaded": 3
+                },
+                "top_missing": [
+                  "constraint_explicit",
+                  "recent_user_state_known",
+                  "relevant_memory_present"
+                ]
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.3333)"
+          },
+          "correctness": {
+            "day0": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 1.0,
+              "samples": 1,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 0,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 1,
+                "correction_conflict_rate": 0.0
+              }
+            },
+            "day3": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 1.0,
+              "samples": 2,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 0,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 2,
+                "correction_conflict_rate": 0.0
+              }
+            },
+            "day7": {
+              "dimension": "correctness",
+              "status": "ok",
+              "value": 0.3333,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections",
+                "unresolved_conflicts",
+                "context_pack_runs"
+              ],
+              "detail": {
+                "negative_corrections": 1,
+                "unresolved_conflicts": 0,
+                "usage_opportunities": 3,
+                "correction_conflict_rate": 0.3333
+              }
+            },
+            "delta_day7_vs_day0": "ok->ok(0.3333)"
+          },
+          "scope_precision": {
+            "day0": {
+              "dimension": "scope_precision",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "scope feedback channel dark in window"
+              }
+            },
+            "day3": {
+              "dimension": "scope_precision",
+              "status": "ok",
+              "value": 0.0,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "scope_feedback_total": 3,
+                "scope_negative": 1,
+                "scope_misuse_rate": 0.3333
+              }
+            },
+            "day7": {
+              "dimension": "scope_precision",
+              "status": "ok",
+              "value": 0.0,
+              "samples": 6,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "scope_feedback_total": 6,
+                "scope_negative": 2,
+                "scope_misuse_rate": 0.3333
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.0)"
+          },
+          "freshness": {
+            "day0": {
+              "dimension": "freshness",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "no state-changing corrections in window"
+              }
+            },
+            "day3": {
+              "dimension": "freshness",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "no state-changing corrections in window"
+              }
+            },
+            "day7": {
+              "dimension": "freshness",
+              "status": "ok",
+              "value": 0.2,
+              "samples": 1,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "lag_sample_count": 1,
+                "mean_lag_days": 24.0,
+                "max_lag_days": 24.0
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.2)"
+          },
+          "utility": {
+            "day0": {
+              "dimension": "utility",
+              "status": "unknown",
+              "value": null,
+              "samples": 0,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "unknown_reason": "decisive feedback 0 < 3"
+              }
+            },
+            "day3": {
+              "dimension": "utility",
+              "status": "ok",
+              "value": 0.6667,
+              "samples": 3,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "accepted": 2,
+                "corrected": 0,
+                "denied": 1,
+                "decisive_total": 3,
+                "boundary": "immediate-loop acceptance; outcome-linked utility reserved (D-05/D-02)"
+              }
+            },
+            "day7": {
+              "dimension": "utility",
+              "status": "ok",
+              "value": 0.6667,
+              "samples": 6,
+              "provenance": [
+                "memory_corrections"
+              ],
+              "detail": {
+                "accepted": 4,
+                "corrected": 0,
+                "denied": 2,
+                "decisive_total": 6,
+                "boundary": "immediate-loop acceptance; outcome-linked utility reserved (D-05/D-02)"
+              }
+            },
+            "delta_day7_vs_day0": "unknown->ok(0.6667)"
+          }
+        },
+        "memory": {
+          "day0": {
+            "surfaced_count": 3,
+            "stale_surfaced": true,
+            "stale_position": 0,
+            "stale_confidence": 0.9,
+            "reference_denied_total": 0,
+            "retractions": 0
+          },
+          "day3": {
+            "surfaced_count": 3,
+            "stale_surfaced": true,
+            "stale_position": 0,
+            "stale_confidence": 0.8,
+            "reference_denied_total": 1,
+            "retractions": 0
+          },
+          "day7": {
+            "surfaced_count": 2,
+            "stale_surfaced": false,
+            "stale_position": null,
+            "stale_confidence": null,
+            "reference_denied_total": 2,
+            "retractions": 1
+          },
+          "delta_day7_vs_day0": {
+            "stale_surfaced": "True->False",
+            "stale_confidence": null
+          }
+        },
+        "intervention": {
+          "day0": {
+            "chat_selected": "no_action",
+            "journey_friction": "choice",
+            "journey_intervention": "reflect",
+            "followed": "reflect",
+            "followed_surface": "journey",
+            "match_class": "primary",
+            "journey_adjusted_by_correction": false,
+            "chat_applied_patch_ids": []
+          },
+          "day3": {
+            "chat_selected": "no_action",
+            "journey_friction": "clarity",
+            "journey_intervention": "clarify",
+            "followed": "clarify",
+            "followed_surface": "journey",
+            "match_class": "wrong",
+            "journey_adjusted_by_correction": true,
+            "chat_applied_patch_ids": [
+              "polpatch_de88b607d6456d2dc8494fc965c387f4"
+            ]
+          },
+          "day7": {
+            "chat_selected": "no_action",
+            "journey_friction": "entry",
+            "journey_intervention": "rescope",
+            "followed": "rescope",
+            "followed_surface": "journey",
+            "match_class": "wrong",
+            "journey_adjusted_by_correction": true,
+            "chat_applied_patch_ids": [
+              "polpatch_de88b607d6456d2dc8494fc965c387f4"
+            ]
+          },
+          "delta_day7_vs_day0": {
+            "match_class": "primary->wrong",
+            "followed": "reflect->rescope"
+          }
+        },
+        "outcome": {
+          "day0": {
+            "associations_total": 0
+          },
+          "day3": {
+            "associations_total": 1
+          },
+          "day7": {
+            "associations_total": 1
+          },
+          "delta_day7_vs_day0": 1
+        },
+        "personalization": {
+          "day0": {
+            "active_patches": 0,
+            "corrections_filed": 0,
+            "journey_active_corrections": 0
+          },
+          "day3": {
+            "active_patches": 1,
+            "corrections_filed": 1,
+            "journey_active_corrections": 1
+          },
+          "day7": {
+            "active_patches": 1,
+            "corrections_filed": 2,
+            "journey_active_corrections": 2
+          },
+          "delta_day7_vs_day0": {
+            "active_patches": 1,
+            "corrections_filed": 2
+          }
+        }
+      },
+      "adaptation_chains": [
+        {
+          "chain_type": "journey_correction",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p10_quiet_then_tooling",
+            "sim_day": 1,
+            "event_type": "journey_correction",
+            "diagnosed_friction_type": "choice",
+            "truth": "goal_drift",
+            "correction_id": "ed3927ad-d98d-42b4-a68b-341a3a954e63",
+            "corrected_friction_type": "choice",
+            "post_correction_friction_type": "entry",
+            "post_correction_intervention": "rescope"
+          },
+          "read_evidence": {
+            "probe_day": 3,
+            "applied_correction_ids": [
+              "ed3927ad-d98d-42b4-a68b-341a3a954e63"
+            ],
+            "adjusted_by_correction": true,
+            "active_corrections": 1
+          },
+          "established": true,
+          "behavior_changed": true,
+          "behavior_before_no_feedback": "choice",
+          "behavior_after_flywheel": "clarity",
+          "probe_day": 3
+        },
+        {
+          "chain_type": "policy_patch",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p10_quiet_then_tooling",
+            "sim_day": 1,
+            "event_type": "patch_proposal",
+            "prefer_intervention": "reflect",
+            "scope_friction_tag": "engagement_momentum",
+            "evidence_refs": [
+              "decision://aurora_3b85b18bdb82333b245168b0512bf783"
+            ],
+            "proposal": {
+              "ok": true,
+              "idempotent": false,
+              "violations": []
+            },
+            "patch_id": "polpatch_de88b607d6456d2dc8494fc965c387f4",
+            "admission": {
+              "ok": true,
+              "state": "evidenced"
+            },
+            "confirmation": {
+              "ok": true,
+              "state": "active"
+            }
+          },
+          "confirmed_active": true,
+          "read_evidence": {
+            "probe_day": 3,
+            "applied_patch_ids": [
+              "polpatch_de88b607d6456d2dc8494fc965c387f4"
+            ],
+            "patch_moves": [
+              {
+                "patch_id": "polpatch_de88b607d6456d2dc8494fc965c387f4",
+                "surface": "intervention_preference",
+                "intervention": "reflect",
+                "direction": "prefer",
+                "from_rank": 0,
+                "to_rank": 0
+              }
+            ]
+          },
+          "established": true,
+          "behavior_changed": false,
+          "behavior_before_no_feedback": "no_action",
+          "behavior_after_flywheel": "no_action",
+          "probe_day": 3
+        },
+        {
+          "chain_type": "memory_quieter",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p10_quiet_then_tooling",
+            "sim_day": 1,
+            "event_type": "memory_reference_outcome",
+            "pref_key": "old_coping_p10",
+            "outcome": "denied",
+            "confidence_after": 0.8,
+            "evidence_score_after": 0.75
+          },
+          "read_evidence": {
+            "probe_day": 3,
+            "flywheel_stale_surfaced": true,
+            "no_feedback_stale_surfaced": true,
+            "flywheel_stale_row": {
+              "memory_id": "9719a780-10b7-4e37-ae6c-f8d2f05e4e81",
+              "version": 1,
+              "confidence": 0.8,
+              "evidence_score": 0.75,
+              "correction_count": 1,
+              "retracted_at": null
+            }
+          },
+          "established": true,
+          "behavior_changed": false,
+          "behavior_before_no_feedback": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "behavior_after_flywheel": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "probe_day": 3
+        },
+        {
+          "chain_type": "journey_correction",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p10_quiet_then_tooling",
+            "sim_day": 4,
+            "event_type": "journey_correction",
+            "diagnosed_friction_type": "clarity",
+            "truth": "goal_drift",
+            "correction_id": "9c51f974-016f-444d-ac5e-fbdfbd2fe262",
+            "corrected_friction_type": "clarity",
+            "post_correction_friction_type": "entry",
+            "post_correction_intervention": "rescope"
+          },
+          "read_evidence": {
+            "probe_day": 7,
+            "applied_correction_ids": [
+              "9c51f974-016f-444d-ac5e-fbdfbd2fe262",
+              "ed3927ad-d98d-42b4-a68b-341a3a954e63"
+            ],
+            "adjusted_by_correction": true,
+            "active_corrections": 2
+          },
+          "established": true,
+          "behavior_changed": true,
+          "behavior_before_no_feedback": "choice",
+          "behavior_after_flywheel": "entry",
+          "probe_day": 7
+        },
+        {
+          "chain_type": "policy_patch",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p10_quiet_then_tooling",
+            "sim_day": 4,
+            "event_type": "patch_proposal",
+            "prefer_intervention": "reflect",
+            "scope_friction_tag": "engagement_momentum",
+            "evidence_refs": [
+              "decision://aurora_3b85b18bdb82333b245168b0512bf783"
+            ],
+            "proposal": {
+              "ok": true,
+              "idempotent": true,
+              "violations": []
+            },
+            "patch_id": "polpatch_de88b607d6456d2dc8494fc965c387f4",
+            "admission": {
+              "ok": true,
+              "state": "active"
+            }
+          },
+          "confirmed_active": false,
+          "read_evidence": {
+            "probe_day": 7,
+            "applied_patch_ids": [
+              "polpatch_de88b607d6456d2dc8494fc965c387f4"
+            ],
+            "patch_moves": [
+              {
+                "patch_id": "polpatch_de88b607d6456d2dc8494fc965c387f4",
+                "surface": "intervention_preference",
+                "intervention": "reflect",
+                "direction": "prefer",
+                "from_rank": 0,
+                "to_rank": 0
+              }
+            ]
+          },
+          "established": true,
+          "behavior_changed": false,
+          "behavior_before_no_feedback": "no_action",
+          "behavior_after_flywheel": "no_action",
+          "probe_day": 7
+        },
+        {
+          "chain_type": "memory_quieter",
+          "event": {
+            "kind": "event",
+            "spec_version": "d08_flywheel_spec.v1",
+            "arm": "flywheel",
+            "persona": "p10_quiet_then_tooling",
+            "sim_day": 4,
+            "event_type": "memory_reference_outcome",
+            "pref_key": "old_coping_p10",
+            "outcome": "denied",
+            "confidence_after": 0.7000000000000001,
+            "evidence_score_after": 0.65
+          },
+          "read_evidence": {
+            "probe_day": 7,
+            "flywheel_stale_surfaced": false,
+            "no_feedback_stale_surfaced": true,
+            "flywheel_stale_row": null
+          },
+          "established": true,
+          "behavior_changed": true,
+          "behavior_before_no_feedback": {
+            "stale_surfaced": true,
+            "stale_position": 0
+          },
+          "behavior_after_flywheel": {
+            "stale_surfaced": false,
+            "stale_position": null
+          },
+          "probe_day": 7
+        }
+      ],
+      "acceptance": {
+        "passed": true,
+        "via": [
+          "journey_correction",
+          "journey_correction",
+          "memory_quieter"
+        ],
+        "established_count": 6
+      },
+      "invalid_personalization": [
+        {
+          "kind": "harmful_correction_differential",
+          "probe_day": 3,
+          "flywheel_match": 0.0,
+          "no_feedback_match": 1.0,
+          "note": "纠正垫后使旅程面匹配分低于无反馈对照（有害适应，保留）"
+        },
+        {
+          "kind": "ineffective_patch",
+          "patch_id": "polpatch_de88b607d6456d2dc8494fc965c387f4",
+          "probe_day": 3,
+          "note": "patch 已激活并被决策输入读取，但被选干预与无反馈对照相同（改序不改局）"
+        },
+        {
+          "kind": "memory_not_quieter",
+          "pref_key": "old_coping",
+          "probe_day": 3,
+          "note": "旧偏好被否认后仍以同位注入——记忆未变安静"
+        },
+        {
+          "kind": "harmful_correction_differential",
+          "probe_day": 7,
+          "flywheel_match": 0.0,
+          "no_feedback_match": 1.0,
+          "note": "纠正垫后使旅程面匹配分低于无反馈对照（有害适应，保留）"
+        },
+        {
+          "kind": "ineffective_patch",
+          "patch_id": "polpatch_de88b607d6456d2dc8494fc965c387f4",
+          "probe_day": 7,
+          "note": "patch 已激活并被决策输入读取，但被选干预与无反馈对照相同（改序不改局）"
+        }
+      ],
+      "control_intrusions": {
+        "flywheel": [],
+        "no_feedback": []
+      }
+    }
+  },
+  "notes": {
+    "determinism": "全部数字由 raw 程序化复算；模型 judge 0 次",
+    "invalid_kept": "无效/有害个性化保留在 per_persona.invalid_personalization，不筛除"
+  },
+  "generated_at": "2026-09-25T15:46:37.652043+00:00",
+  "git_sha": "2d2336ea",
+  "counts": {
+    "flywheel": {
+      "records": 180,
+      "probes": 30,
+      "events": 130,
+      "controls": 10
+    },
+    "no_feedback": {
+      "records": 70,
+      "probes": 30,
+      "events": 20,
+      "controls": 10
+    }
+  }
+}
