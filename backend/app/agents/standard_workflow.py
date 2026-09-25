@@ -1535,16 +1535,18 @@ async def generation_node(state: WorkflowState) -> WorkflowState:
 
     if memory_answer:
         if stream_callback:
+            # WT373 缺陷扫雷#1：同 content oneof 顶字——拆两帧，状态先行、
+            # 记忆补全答案文本必达（原合并帧的 delta 曾被 status 顶掉）。
             await stream_callback(
                 agent_service_pb2.ChatResponse(
-                    delta=memory_answer,
                     status_update=agent_service_pb2.AgentStatus(
                         state=agent_service_pb2.AgentStatus.GENERATING,
                         details="正在根据最近对话补全答案...",
                         current_agent_name="Sparkle AI",
-                    ),
+                    )
                 )
             )
+            await stream_callback(agent_service_pb2.ChatResponse(delta=memory_answer))
         state.context_data["generation_shortcut"] = "recent_memory"
         state.append_message("assistant", memory_answer)
         state.next_step = "__end__"
@@ -2094,9 +2096,10 @@ Ask about their available time and current tasks if needed.
             if rescued_response:
                 full_response = rescued_response
                 if stream_callback:
+                    # WT373 缺陷扫雷#1：同 content oneof 顶字——拆两帧，
+                    # 状态+rescue metadata 先行，备援文本随后必达。
                     await stream_callback(
                         agent_service_pb2.ChatResponse(
-                            delta=rescued_response,
                             status_update=agent_service_pb2.AgentStatus(
                                 state=agent_service_pb2.AgentStatus.GENERATING,
                                 details="主生成链波动，已切到快速备援回复...",
@@ -2108,6 +2111,7 @@ Ask about their available time and current tasks if needed.
                             },
                         )
                     )
+                    await stream_callback(agent_service_pb2.ChatResponse(delta=rescued_response))
         except Exception as rescue_error:
             logger.warning(f"Fast rescue response also failed, using retrieval fallback: {rescue_error}")
 
@@ -2197,16 +2201,18 @@ Ask about their available time and current tasks if needed.
         full_response = fallback_response
         if stream_callback:
             if not first_chunk_sent:
+                # WT373 缺陷扫雷#1：同 content oneof 顶字——拆两帧，状态先行、
+                # 检索兜底文本必达。
                 await stream_callback(
                     agent_service_pb2.ChatResponse(
-                        delta=fallback_response,
                         status_update=agent_service_pb2.AgentStatus(
                             state=agent_service_pb2.AgentStatus.GENERATING,
                             details="正在返回检索结果（生成模型暂时繁忙）...",
                             current_agent_name="Sparkle AI",
-                        ),
+                        )
                     )
                 )
+                await stream_callback(agent_service_pb2.ChatResponse(delta=fallback_response))
             else:
                 await stream_callback(agent_service_pb2.ChatResponse(delta=fallback_response))
     elif stream_callback:
@@ -3136,16 +3142,20 @@ async def _flush_stream_text_buffer(
         return first_chunk_sent
 
     if not first_chunk_sent:
+        # WT373 缺陷扫雷#1：delta 与 status 同置一个 content oneof 时后写者
+        # 顶掉先写者，首块文本曾被静默丢失（客户端收不到第一个文字块）。
+        # 拆两帧下发：status 先行保住网关 GENERATING→answering stage 转换，
+        # delta 随后保证首 token 必达。
         await stream_callback(
             agent_service_pb2.ChatResponse(
-                delta=content,
                 status_update=agent_service_pb2.AgentStatus(
                     state=agent_service_pb2.AgentStatus.GENERATING,
                     details="正在生成回复...",
                     current_agent_name="Sparkle AI",
-                ),
+                )
             )
         )
+        await stream_callback(agent_service_pb2.ChatResponse(delta=content))
         return True
 
     await stream_callback(agent_service_pb2.ChatResponse(delta=content))

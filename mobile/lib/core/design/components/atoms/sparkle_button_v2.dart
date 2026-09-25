@@ -261,12 +261,19 @@ class SparkleButton extends StatelessWidget {
 
     children.add(
       Flexible(
-        child: Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          softWrap: false,
-          style: _getTextStyle(theme, info),
+        // WT373 缺陷扫雷#2（a11y）：可见文案已由外层 Semantics(label) 作为
+        // 唯一语义名承载，内部 Text 再入合并语义树会同串重复播报（wt365
+        // U-08 探针 G：合并节点 label=「重试\n重试」）。ExcludeSemantics 让
+        // 视觉文案退出语义树——读屏单播报；按钮角色/激活动作仍由外层
+        // Semantics 与 InkWell 语义承载，辅助技术激活路径不变。
+        child: ExcludeSemantics(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            softWrap: false,
+            style: _getTextStyle(theme, info),
+          ),
         ),
       ),
     );

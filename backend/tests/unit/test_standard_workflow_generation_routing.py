@@ -615,8 +615,11 @@ async def test_generation_node_batches_stream_deltas(monkeypatch):
 
     new_state = await generation_node(state)
 
-    # 首 delta 立即 flush（首 token 优化 73eab280 语义）+ 余量批量 flush = 2 次回调
-    assert stream_callback.await_count == 2
+    # 首 delta 立即 flush（首 token 优化 73eab280 语义）+ 余量批量 flush。
+    # WT373 缺陷扫雷#1：首 flush 帧原把 delta 与 GENERATING status 同置一个
+    # content oneof（后写者顶掉先写者、首块文本静默丢失），修复后拆两帧
+    # （status 先行 + delta 随后）——故回调数 = 状态帧 + 首 delta + 批量 flush = 3。
+    assert stream_callback.await_count == 3
     assert new_state.messages[-1]["content"] == "这是一段被拆成很多碎片的流式输出文本。"
 
 
