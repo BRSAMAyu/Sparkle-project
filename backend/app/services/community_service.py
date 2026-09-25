@@ -1637,7 +1637,12 @@ class GroupMessageService:
             await manager.kick_user_from_group(str(group_id), str(sender_id), "Not a member")
             raise ValueError("不是群组成员")
 
-        if member.is_muted:
+        # V3-FIX-117（wt424 审查轮）：mute_until 到期比较——历史上只读 is_muted
+        # bool、mute_until 只写不比且无到期 job，禁言实际永久，与 mute 推送载荷
+        # 「禁言至 X」语义相反。最诚实最小修：读取面
+        # is_muted = muted AND (mute_until IS NULL OR mute_until > now)；
+        # mute_until 为 NULL 表示永久禁言。无周期清理 job，读面判定即懒解除。
+        if member.is_muted and (member.mute_until is None or member.mute_until > _utcnow()):
             # 如果被禁言，可以在此处显式断开其群组 WS
             # await manager.kick_user_from_group(str(group_id), str(sender_id), "Muted")
             raise ValueError("您已被禁言")

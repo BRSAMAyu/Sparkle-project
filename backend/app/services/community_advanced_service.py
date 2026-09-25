@@ -47,6 +47,7 @@ from app.models.community import (
     ReportStatus,
     UserEncryptionKey,
 )
+from app.models.notification import Notification
 from app.schemas.community import (
     BroadcastMessageCreate,
     EncryptionKeyCreate,
@@ -384,6 +385,26 @@ class ModerationService:
             raise ValueError("目标用户不是群成员")
 
         target.warn_count += 1
+
+        # V3-FIX-116（wt424 审查轮）：「warned」WS 推送（路由层 best-effort）不能是
+        # 被警告用户的唯一告知通道——推送失败=警告静默丢失且不可补偿。落一条
+        # notifications 通知中心行（仓内既有通知真源，可经 /notifications 查询），
+        # 与警告计数同事务提交（不提前 commit，路由层统一 commit），不引入第二真源；
+        # 推送保持 best-effort，持久化与推送成败解耦。
+        db.add(
+            Notification(
+                user_id=target.user_id,
+                title="收到群警告",
+                content=f"你在群组中收到管理员警告：{data.reason}"[:1000],
+                type="community_warn",
+                data={
+                    "group_id": str(group_id),
+                    "warned_user_id": str(data.user_id),
+                    "reason": data.reason,
+                    "warn_count": target.warn_count,
+                },
+            )
+        )
         await db.flush()
         return target
 
