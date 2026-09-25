@@ -21,6 +21,10 @@ class AuroraComebackContext {
     required this.resumeToken,
     required this.unfinishedItems,
     required this.calendarNote,
+    this.goalState = const AuroraComebackGoalState.empty(),
+    this.planExpired = false,
+    this.staleFocus = false,
+    this.nextTaskOverdueDays = 0,
   });
 
   const AuroraComebackContext.empty()
@@ -44,7 +48,11 @@ class AuroraComebackContext {
         activeCoreSession = const <String, dynamic>{},
         resumeToken = '',
         unfinishedItems = const [],
-        calendarNote = '';
+        calendarNote = '',
+        goalState = const AuroraComebackGoalState.empty(),
+        planExpired = false,
+        staleFocus = false,
+        nextTaskOverdueDays = 0;
 
   factory AuroraComebackContext.fromJson(Map<String, dynamic> json) =>
       AuroraComebackContext(
@@ -69,6 +77,10 @@ class AuroraComebackContext {
         resumeToken: _asString(json['resume_token']),
         unfinishedItems: _asItems(json['unfinished_items']),
         calendarNote: _asString(json['calendar_note']),
+        goalState: AuroraComebackGoalState.fromJson(json['goal_state']),
+        planExpired: _asBool(json['plan_expired']),
+        staleFocus: _asBool(json['stale_focus']),
+        nextTaskOverdueDays: _asInt(json['next_task_overdue_days']),
       );
 
   final String comebackKind;
@@ -93,6 +105,16 @@ class AuroraComebackContext {
   final List<AuroraComebackItem> unfinishedItems;
   final String calendarNote;
 
+  /// 用户真实目标状态（引擎读侧真源投影，A-07）。空对象 = 引擎无目标可呈报。
+  final AuroraComebackGoalState goalState;
+
+  /// 计划原定窗口已结束——UI 不得按"当前计划"口吻呈报。
+  final bool planExpired;
+
+  /// 焦点任务已陈旧（逾期 ≥3 天或计划过期）——不得呈现为"当前最优步"。
+  final bool staleFocus;
+  final int nextTaskOverdueDays;
+
   bool get hasContent =>
       message.isNotEmpty ||
       conversationId.isNotEmpty ||
@@ -104,6 +126,62 @@ class AuroraComebackContext {
 
   bool get hasActiveCoreSession =>
       resumeToken.isNotEmpty || activeCoreSession.isNotEmpty;
+}
+
+class AuroraComebackGoalState {
+  const AuroraComebackGoalState({
+    required this.goalId,
+    required this.title,
+    required this.status,
+    required this.progress,
+    required this.ledgerCompleted,
+    required this.ledgerTotal,
+  });
+
+  const AuroraComebackGoalState.empty()
+      : goalId = '',
+        title = '',
+        status = '',
+        progress = null,
+        ledgerCompleted = 0,
+        ledgerTotal = 0;
+
+  factory AuroraComebackGoalState.fromJson(dynamic raw) {
+    if (raw is! Map) {
+      return const AuroraComebackGoalState.empty();
+    }
+    final json = Map<String, dynamic>.from(raw);
+    final ledger = json['ledger'];
+    final ledgerMap = ledger is Map<String, dynamic>
+        ? ledger
+        : ledger is Map
+            ? Map<String, dynamic>.from(ledger)
+            : const <String, dynamic>{};
+    final progress = json['progress'];
+    return AuroraComebackGoalState(
+      goalId: _asString(json['goal_id']),
+      title: _asString(json['title']),
+      status: _asString(json['status']),
+      progress: progress is num ? progress.toDouble() : null,
+      ledgerCompleted: _asInt(ledgerMap['completed']),
+      ledgerTotal: _asInt(ledgerMap['total']),
+    );
+  }
+
+  final String goalId;
+  final String title;
+  final String status;
+
+  /// 目标真源 progress 读数（可能因上游写入链路停在 0，如实呈报）。
+  final double? progress;
+
+  /// 任务账本口径的诚实进度（completed/total），与任务板同行同数。
+  final int ledgerCompleted;
+  final int ledgerTotal;
+
+  bool get hasContent => goalId.isNotEmpty || title.isNotEmpty;
+
+  bool get hasLedger => ledgerTotal > 0;
 }
 
 class AuroraComebackItem {

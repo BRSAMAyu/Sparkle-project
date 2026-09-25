@@ -453,6 +453,21 @@ class AuroraRuntimeV1Service:
             recent_task_summary=recent_task_summary,
             next_task_title=next_task_title,
         )
+        # A-07: staleness guard — a task overdue for days (or an expired plan
+        # window) must not be presented as the current best next step.
+        today = now.date()
+        plan_expired = bool(
+            plan is not None and plan.target_date is not None and plan.target_date < today
+        )
+        next_task_overdue_days = 0
+        if next_task is not None and getattr(next_task, "due_date", None) is not None:
+            next_task_overdue_days = max(0, (today - next_task.due_date).days)
+        stale_focus = plan_expired or next_task_overdue_days >= 3
+        # A-07: goal state restore — surface the user's real goal truth
+        # (read side only, never written) instead of a template greeting.
+        goal_state = await self._comeback_goal_state(
+            active_db=active_db, user_id=user_uuid, plan=plan
+        )
         calendar_note = ""
         if include_short_gaps:
             with contextlib.suppress(Exception):
@@ -474,6 +489,9 @@ class AuroraRuntimeV1Service:
                 recent_task_summary=recent_task_summary,
                 next_task_title=next_task_title,
                 light_restart_suggestion=light_restart_suggestion,
+                plan_expired=plan_expired,
+                stale_focus=stale_focus,
+                next_task_overdue_days=next_task_overdue_days,
             )
         elif include_short_gaps:
             kind = "personalized_return"
@@ -485,6 +503,8 @@ class AuroraRuntimeV1Service:
                 next_task_title=next_task_title,
                 light_restart_suggestion=light_restart_suggestion,
                 calendar_note=calendar_note,
+                plan_expired=plan_expired,
+                stale_focus=stale_focus,
             )
         else:
             return None
@@ -506,6 +526,10 @@ class AuroraRuntimeV1Service:
             latest_chat=latest_chat,
             active_core_session=active_core_session,
             calendar_note=calendar_note,
+            plan_expired=plan_expired,
+            stale_focus=stale_focus,
+            next_task_overdue_days=next_task_overdue_days,
+            goal_state=goal_state,
         )
 
     async def plan_turn(
@@ -2318,6 +2342,10 @@ class AuroraRuntimeV1Service:
         latest_chat: dict[str, Any] | None,
         active_core_session: dict[str, Any] | None,
         calendar_note: str,
+        plan_expired: bool = False,
+        stale_focus: bool = False,
+        next_task_overdue_days: int = 0,
+        goal_state: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         del user_id
         chat = latest_chat or {}
@@ -2348,6 +2376,11 @@ class AuroraRuntimeV1Service:
             "resume_token": _strip((active_core_session or {}).get("resume_token")),
             "unfinished_items": unfinished_items,
             "calendar_note": calendar_note,
+            # A-07: goal-state restore + staleness guard (read side only).
+            "goal_state": goal_state or {},
+            "plan_expired": plan_expired,
+            "stale_focus": stale_focus,
+            "next_task_overdue_days": next_task_overdue_days,
         }
 
     def _comeback_unfinished_items(
@@ -2436,10 +2469,32 @@ class AuroraRuntimeV1Service:
         recent_task_summary: str,
         next_task_title: str | None,
         light_restart_suggestion: str,
+        plan_expired: bool = False,
+        stale_focus: bool = False,
+        next_task_overdue_days: int = 0,
     ) -> str:
         plan_label = subject if subject.endswith("冲刺") else f"{subject}冲刺"
         focus = recent_task_summary or _strip(next_task_title) or subject or "最简单的一步"
+        if plan_expired:
+            # A-07: 窗口已结束——不宣称"收尾窗口/来得及"，不把陈旧任务
+            # 包装成当前最优步；诚实呈报并指向重新校准（零羞耻、零诊断）。
+            return (
+                f"你已经 {days_away} 天没来了，我保留着上次的进度。"
+                f"你的{plan_label}原定窗口已经结束——这只是节奏变了，不是你的问题。"
+                f"上次停在「{focus}」。要不要花一分钟重新校准计划，我按新的窗口帮你排；"
+                f"暂时不想动整盘的话，{light_restart_suggestion}"
+            )
         days_str = f"{days_remaining} 天" if days_remaining > 0 else "最后一点收尾窗口"
+        if stale_focus:
+            overdue_note = (
+                f"（原定 {next_task_overdue_days} 天前）" if next_task_overdue_days > 0 else ""
+            )
+            return (
+                f"你已经 {days_away} 天没来了，我保留着上次的进度。"
+                f"你的{plan_label}还剩 {days_str}。上次停在「{focus}」{overdue_note}——"
+                f"可以从它继续，也可以先挑今天最顺的一小步。"
+                f"如果累了，{light_restart_suggestion}"
+            )
         still_time = "现在回来还来得及" if days_remaining > 0 else "现在回来也还能先追回一点节奏"
         return (
             f"你已经 {days_away} 天没来了，我保留着上次的进度。"
@@ -2456,17 +2511,104 @@ class AuroraRuntimeV1Service:
         next_task_title: str | None,
         light_restart_suggestion: str,
         calendar_note: str,
+        plan_expired: bool = False,
+        stale_focus: bool = False,
     ) -> str:
         focus = recent_task_summary or _strip(next_task_title) or subject or "今天最小的一步"
         countdown = f"还剩 {days_remaining} 天，" if days_remaining > 0 else ""
         calendar_tail = self._daily_calendar_tail(calendar_note)
         if calendar_tail:
             calendar_tail = f"{calendar_tail}"
+        if plan_expired:
+            # A-07: 计划已过期时不按"当前计划"口吻问候（诚实红线）。
+            return (
+                f"{self._daily_greeting()}，你之前定的「{subject}」窗口已经结束。"
+                f"要不要花一分钟重新校准，我按新的窗口帮你排。{calendar_tail}"
+                f"暂时不想动整盘的话，{light_restart_suggestion}"
+            )
+        if stale_focus:
+            return (
+                f"{self._daily_greeting()}，{countdown}我把「{subject}」和今天的时间都接上了。"
+                f"上次停在「{focus}」，可以从它继续，也可以先挑今天最轻的一小步。{calendar_tail}"
+                f"如果状态还没回来，{light_restart_suggestion}"
+            )
         return (
             f"{self._daily_greeting()}，{countdown}我把「{subject}」和今天的时间都接上了。"
             f"先从「{focus}」开始会最稳。{calendar_tail}"
             f"如果状态还没回来，{light_restart_suggestion}"
         )
+
+    async def _comeback_goal_state(
+        self,
+        *,
+        active_db: AsyncSession,
+        user_id: UUID,
+        plan: Plan | None,
+    ) -> dict[str, Any]:
+        """Read-side goal state for the comeback surface (A-07).
+
+        只读消费 Goal 真源：不写任何进度。Goal.progress 可能因上游写入
+        链路未修复而停在 0（R2-A 跟踪中），因此同时给出任务账本口径的
+        诚实进度（completed/total）；两者都如实上报、互不篡改、互不覆盖。
+        """
+        from sqlalchemy import and_, func
+
+        from app.models.goal import Goal
+
+        goal = None
+        if plan is not None and getattr(plan, "goal_id", None) is not None:
+            candidate = await active_db.get(Goal, plan.goal_id)
+            if candidate is not None and candidate.user_id == user_id:
+                goal = candidate
+        if goal is None:
+            stmt = (
+                select(Goal)
+                .where(and_(Goal.user_id == user_id, Goal.status == "active"))
+                .order_by(Goal.is_primary.desc(), Goal.created_at.desc())
+                .limit(1)
+            )
+            result = await active_db.execute(stmt)
+            goal = result.scalar_one_or_none()
+        if goal is None:
+            return {}
+
+        ledger: dict[str, Any] = {}
+        ledger_plan_id = plan.id if plan is not None else getattr(goal, "plan_id", None)
+        if ledger_plan_id is not None:
+            total_result = await active_db.execute(
+                select(func.count())
+                .select_from(Task)
+                .where(and_(Task.plan_id == ledger_plan_id, Task.deleted_at.is_(None)))
+            )
+            done_result = await active_db.execute(
+                select(func.count())
+                .select_from(Task)
+                .where(
+                    and_(
+                        Task.plan_id == ledger_plan_id,
+                        Task.deleted_at.is_(None),
+                        Task.status == TaskStatus.COMPLETED,
+                    )
+                )
+            )
+            total = int(total_result.scalar() or 0)
+            done = int(done_result.scalar() or 0)
+            if total > 0:
+                ledger = {
+                    "completed": done,
+                    "total": total,
+                    "ratio": round(done / total, 4),
+                }
+
+        progress = getattr(goal, "progress", None)
+        return {
+            "goal_id": str(goal.id),
+            "title": _strip(getattr(goal, "title", None)),
+            "status": _strip(getattr(goal, "status", None)) or "active",
+            # 真源读数原样上报（可能是 0/None），不做修饰。
+            "progress": float(progress) if isinstance(progress, (int, float)) else None,
+            "ledger": ledger,
+        }
 
     def _daily_greeting(self) -> str:
         hour = datetime.now(CHINA_TIMEZONE).hour

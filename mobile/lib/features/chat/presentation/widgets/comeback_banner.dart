@@ -197,6 +197,15 @@ class _ComebackBannerState extends State<ComebackBanner> {
                     ),
                   ),
                 ],
+                if (contextData.goalState.hasContent) ...[
+                  const SizedBox(height: DS.spacing12),
+                  _staggered(
+                    index: 3,
+                    child: _ComebackGoalStateLine(
+                      goalState: contextData.goalState,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: DS.spacing10),
                 Row(
                   children: [
@@ -223,6 +232,68 @@ class _ComebackBannerState extends State<ComebackBanner> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// A-07：回来时看到的不是模板问候，而是自己的真实目标状态——
+/// 目标标题 + 任务账本口径进度（与任务板/多目标看板同行同数）。
+/// 只呈现引擎读侧投影，不在此做任何推断或诊断性表述。
+class _ComebackGoalStateLine extends StatelessWidget {
+  const _ComebackGoalStateLine({required this.goalState});
+
+  final AuroraComebackGoalState goalState;
+
+  @override
+  Widget build(BuildContext context) {
+    final goalTitle = goalState.title.trim();
+    final label = goalTitle.isEmpty ? context.l10n.chatContinueFromConversation : goalTitle;
+    final progressText = goalState.hasLedger
+        ? '${goalState.ledgerCompleted}/${goalState.ledgerTotal}'
+        : '';
+
+    return Row(
+      children: [
+        Icon(
+          Icons.flag_outlined,
+          size: 16,
+          color: DS.textSecondary,
+        ),
+        const SizedBox(width: DS.spacing8),
+        Expanded(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: DS.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ),
+        if (progressText.isNotEmpty) ...[
+          const SizedBox(width: DS.spacing8),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing8,
+              vertical: DS.spacing4,
+            ),
+            decoration: BoxDecoration(
+              color: DS.surfaceSecondary.withValues(alpha: 0.72),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: DS.borderSubtle.withValues(alpha: 0.7),
+              ),
+            ),
+            child: Text(
+              progressText,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: DS.textSecondary,
+                  ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

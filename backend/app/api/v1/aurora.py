@@ -1202,6 +1202,9 @@ _AURORA_PREF_KEYS = {
     "aurora_directness": {"direct", "guided"},
     "aurora_explanation_level": {"detailed", "brief"},
     "aurora_pressure_style": {"gentle", "motivating"},
+    # A-07: explicit low-stimulation mode — user setting overrides any auto
+    # judgement (both directions); "auto" keeps current behavior.
+    "aurora_stimulation_mode": {"auto", "low", "standard"},
 }
 
 _DEFAULT_AURORA_PREFS: dict[str, str] = {
@@ -1209,6 +1212,7 @@ _DEFAULT_AURORA_PREFS: dict[str, str] = {
     "aurora_directness": "guided",
     "aurora_explanation_level": "detailed",
     "aurora_pressure_style": "motivating",
+    "aurora_stimulation_mode": "auto",
 }
 
 
@@ -1217,6 +1221,7 @@ class AuroraPreferencesRequest(BaseModel):
     aurora_directness: str | None = None  # "direct" | "guided"
     aurora_explanation_level: str | None = None  # "detailed" | "brief"
     aurora_pressure_style: str | None = None  # "gentle" | "motivating"
+    aurora_stimulation_mode: str | None = None  # "auto" | "low" | "standard"
 
 
 # route-tier: authed
@@ -1225,7 +1230,7 @@ async def get_aurora_preferences(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
-    """Get Aurora communication preferences. Returns all 4 prefs with defaults for unset values."""
+    """Get Aurora communication preferences. Returns all 5 prefs with defaults for unset values."""
     from app.aurora.runtime_v1.user_preferences import AuroraUserPreferencesService
 
     service = AuroraUserPreferencesService(db)

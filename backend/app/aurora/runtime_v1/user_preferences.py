@@ -4,7 +4,8 @@ Phase: clarify → plan → execute
 Stage: Aurora Runtime v1 — User Communication Preferences
 
 User-facing Aurora communication preferences stored in UserPreferencesCenter.explicit JSONB.
-Four dimensions control how Aurora interacts: analysis depth, directness, explanation, pressure style.
+Five dimensions control how Aurora interacts: analysis depth, directness, explanation,
+pressure style, and the explicit low-stimulation mode (aurora_stimulation_mode).
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.aurora.runtime_v1.stimulation_policy import VALID_STIMULATION_MODES
 from app.models.user_preferences import UserPreferencesCenter
 
 _VALID_VALUES: dict[str, set[str]] = {
@@ -23,6 +25,10 @@ _VALID_VALUES: dict[str, set[str]] = {
     "aurora_directness": {"direct", "guided"},
     "aurora_explanation_level": {"detailed", "brief"},
     "aurora_pressure_style": {"gentle", "motivating"},
+    # A-07: explicit low-stimulation mode. The user's explicit choice wins
+    # over any automatic judgement (both directions); "auto" = current
+    # behavior. Never used to infer or label a psychological state.
+    "aurora_stimulation_mode": set(VALID_STIMULATION_MODES),
 }
 
 _DEFAULTS: dict[str, str] = {
@@ -30,6 +36,7 @@ _DEFAULTS: dict[str, str] = {
     "aurora_directness": "guided",
     "aurora_explanation_level": "detailed",
     "aurora_pressure_style": "motivating",
+    "aurora_stimulation_mode": "auto",
 }
 
 _PREF_KEYS = frozenset(_DEFAULTS)

@@ -4,6 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/adaptive/emotion_responsive_theme.dart';
+import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/services/demo_data_service.dart';
 
 const String kEmotionAdaptiveModeKey = 'settings_emotion_adaptive_mode';
 
@@ -198,9 +201,12 @@ class EmotionState {
 }
 
 class EmotionStateNotifier extends StateNotifier<EmotionState> {
-  EmotionStateNotifier() : super(const EmotionState()) {
+  EmotionStateNotifier({ApiClient? apiClient}) : super(const EmotionState()) {
+    _apiClient = apiClient;
     unawaited(_loadMode());
   }
+
+  ApiClient? _apiClient;
 
   Future<void> _loadMode() async {
     try {
@@ -223,6 +229,36 @@ class EmotionStateNotifier extends StateNotifier<EmotionState> {
     } catch (error) {
       debugPrint('EmotionStateNotifier failed to persist mode: $error');
     }
+    // A-07: 显式档位同步到引擎（aurora_stimulation_mode）。用户 explicit
+    // setting 是最高权威——引擎侧主动面（如 comeback nudge 推送）据此衰减。
+    // fire-and-forget：本地档位已生效，引擎侧失败不打扰用户。
+    unawaited(_syncStimulationModeToEngine(mode));
+  }
+
+  /// explicit 档位 → 引擎偏好值（auto 保持引擎侧现状行为）。
+  String _engineStimulationValue(EmotionAdaptiveMode mode) => switch (mode) {
+        EmotionAdaptiveMode.alwaysLow => 'low',
+        EmotionAdaptiveMode.alwaysNormal => 'standard',
+        EmotionAdaptiveMode.auto => 'auto',
+      };
+
+  Future<void> _syncStimulationModeToEngine(EmotionAdaptiveMode mode) async {
+    final client = _apiClient;
+    if (client == null || DemoDataService.isDemoMode) {
+      return;
+    }
+    try {
+      await client.put<Map<String, dynamic>>(
+        ApiEndpoints.auroraPreferences,
+        data: <String, String>{
+          'aurora_stimulation_mode': _engineStimulationValue(mode),
+        },
+      );
+    } catch (error) {
+      debugPrint(
+        'EmotionStateNotifier failed to sync stimulation mode: $error',
+      );
+    }
   }
 
   void updateFromAuroraStateBand(Map<String, dynamic> json) {
@@ -235,7 +271,7 @@ class EmotionStateNotifier extends StateNotifier<EmotionState> {
 
 final emotionStateProvider =
     StateNotifierProvider<EmotionStateNotifier, EmotionState>(
-  (ref) => EmotionStateNotifier(),
+  (ref) => EmotionStateNotifier(apiClient: ref.read(apiClientProvider)),
 );
 
 final emotionResponsiveConfigProvider = Provider<EmotionResponsiveConfig>(

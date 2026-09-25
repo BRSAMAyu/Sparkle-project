@@ -2100,10 +2100,18 @@ def comeback_nudge_task(self, user_id: str):
     G22: 当用户有活跃计划且至少 3 天未活跃时，生成 comeback 消息并推送。
 
     消息包含：剩余天数、最近任务简介、轻量启动提议（"30分钟保底版"）。
+    A-07: 低刺激显式偏好下主动面衰减——不主动推送（仅入应用内通知中心）、
+    重复抑制窗口 24h→72h、标题去敦促化；用户 explicit setting 覆盖一切
+    自动判定，不做任何心理推断。
     """
     from uuid import UUID
 
     from app.aurora.runtime_v1.service import AuroraRuntimeV1Service
+    from app.aurora.runtime_v1.stimulation_policy import (
+        apply_policy_to_nudge,
+        resolve_stimulation_policy,
+    )
+    from app.aurora.runtime_v1.user_preferences import AuroraUserPreferencesService
     from app.db.session import AsyncSessionLocal
     from app.schemas.notification import NotificationCreate
     from app.services.notification_service import NotificationService
@@ -2126,12 +2134,20 @@ def comeback_nudge_task(self, user_id: str):
 
             plan_id = str(payload.get("plan_id") or "").strip()
             destination_route = f"/plans/{plan_id}?source=comeback_nudge" if plan_id else "/chat?entry=comeback_nudge"
+            prefs = await AuroraUserPreferencesService(session).get(UUID(user_id))
+            policy = resolve_stimulation_policy(prefs.get("aurora_stimulation_mode"))
+            title, content = apply_policy_to_nudge(
+                policy,
+                title=str(payload.get("title") or "好久不见，我一直在等你"),
+                content=str(payload.get("message") or ""),
+            )
             if await _has_recent_notification(
                 session,
                 user_id=UUID(user_id),
                 notification_type="comeback_nudge",
                 match_data={"plan_id": plan_id} if plan_id else None,
                 now=reference_time,
+                within_hours=policy.proactive_suppress_hours,
             ):
                 logger.debug("comeback_nudge_task: duplicate reminder suppressed for user {}", user_id)
                 return {
@@ -2144,8 +2160,8 @@ def comeback_nudge_task(self, user_id: str):
                 session,
                 UUID(user_id),
                 NotificationCreate(
-                    title=str(payload.get("title") or "好久不见，我一直在等你"),
-                    content=str(payload.get("message") or ""),
+                    title=title,
+                    content=content,
                     type="comeback_nudge",
                     data={
                         "plan_id": plan_id or payload.get("plan_id"),
@@ -2157,22 +2173,27 @@ def comeback_nudge_task(self, user_id: str):
                         "light_restart_suggestion": payload.get("light_restart_suggestion"),
                         "destination_route": destination_route,
                         "deep_link": destination_route,
+                        "goal_state": payload.get("goal_state") or {},
+                        "stimulation_policy": policy.payload_tag,
                     },
                 ),
-                push_via_websocket=True,
+                # 低刺激档：不主动推送，仅入应用内通知中心（用户回访时可见）。
+                push_via_websocket=policy.allow_proactive_push,
             )
 
             logger.info(
-                "✅ Comeback nudge sent to user {} (plan {}, days_remaining={})",
+                "✅ Comeback nudge sent to user {} (plan {}, days_remaining={}, stimulation={})",
                 user_id,
                 payload.get("plan_id"),
                 int(payload.get("days_remaining") or 0),
+                policy.level,
             )
             return {
                 "status": "sent",
                 "user_id": user_id,
                 "plan_id": payload.get("plan_id"),
                 "days_remaining": payload.get("days_remaining"),
+                "stimulation": policy.level,
             }
 
     try:

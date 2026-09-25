@@ -156,4 +156,78 @@ void main() {
     await tester.tap(find.text('夹逼准则复盘'));
     expect(selected?.route, '/tasks/task-1/execute');
   });
+
+  // ── A-07: goal-state restore + low-stimulation interaction ────────────────
+
+  testWidgets('renders real goal state instead of template-only greeting',
+      (tester) async {
+    await tester.pumpWidget(
+      testMaterialApp(
+        home: Scaffold(
+          body: ComebackBanner(contextData: _contextWithGoalState()),
+        ),
+      ),
+    );
+
+    // 目标标题 + 任务账本口径进度（与任务板/多目标看板同行同数）。
+    expect(find.text('期末计算机网络冲 85 分'), findsOneWidget);
+    expect(find.text('1/2'), findsOneWidget);
+  });
+
+  testWidgets('low-stimulation: entrance motion attenuated, goal state stays',
+      (tester) async {
+    await tester.pumpWidget(
+      testMaterialApp(
+        // 低刺激档经 EmotionResponsiveAppWrapper 落到 MediaQuery 关动效；
+        // 这里直接模拟该运行面。
+        home: MediaQuery(
+          data: const MediaQueryData(disableAnimations: true),
+          child: Scaffold(
+            body: ComebackBanner(contextData: _contextWithGoalState()),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    // 动效减法：无分步入场动画；事实内容（真实目标状态）完整保留。
+    expect(find.byType(SparkleStaggerItem), findsNothing);
+    expect(find.text('期末计算机网络冲 85 分'), findsOneWidget);
+    expect(find.text('1/2'), findsOneWidget);
+  });
+}
+
+AuroraComebackContext _contextWithGoalState() {
+  final base = _context();
+  return AuroraComebackContext(
+    comebackKind: base.comebackKind,
+    title: base.title,
+    message: base.message,
+    shouldShowMessage: base.shouldShowMessage,
+    lastActiveAt: base.lastActiveAt,
+    inactiveMinutes: base.inactiveMinutes,
+    daysAway: base.daysAway,
+    daysRemaining: base.daysRemaining,
+    subject: base.subject,
+    nextTaskTitle: base.nextTaskTitle,
+    recentTaskSummary: base.recentTaskSummary,
+    lightRestartSuggestion: base.lightRestartSuggestion,
+    planId: base.planId,
+    conversationId: base.conversationId,
+    lastMessageId: base.lastMessageId,
+    topicSummary: base.topicSummary,
+    pendingQuestion: base.pendingQuestion,
+    activeCoreSession: base.activeCoreSession,
+    resumeToken: base.resumeToken,
+    unfinishedItems: base.unfinishedItems,
+    calendarNote: base.calendarNote,
+    goalState: const AuroraComebackGoalState(
+      goalId: 'goal-1',
+      title: '期末计算机网络冲 85 分',
+      status: 'active',
+      progress: 0,
+      ledgerCompleted: 1,
+      ledgerTotal: 2,
+    ),
+  );
 }
