@@ -1,0 +1,128 @@
+{
+  "meta": {
+    "git_sha": "322988ce",
+    "ran_at": "2026-09-25 10:50 UTC",
+    "seed": 20260925,
+    "per_arc": 8,
+    "days": 14,
+    "groups": [
+      "proactive",
+      "baseline"
+    ],
+    "raw_dir": "v3-output/WT384-P05-EVAL/raw"
+  },
+  "proactive": {
+    "group": "proactive",
+    "days": 14,
+    "personas": 24,
+    "arc_counts": {
+      "stalled": 8,
+      "deadline": 8,
+      "completion": 8
+    },
+    "recovery": {
+      "stalled_personas": 24,
+      "restarted_personas": 21,
+      "restart_rate": 0.875,
+      "median_days_to_restart": 2,
+      "deadline_achieved_personas": 10,
+      "deadline_achievement_rate": 0.4167,
+      "mean_final_ledger_progress": 0.7726
+    },
+    "burden": {
+      "generation_attempts": 366,
+      "suggestions_issued": 112,
+      "suggestions_per_persona_mean": 4.667,
+      "suggestions_per_persona_max": 14,
+      "interruptions_per_restarted_persona": 5.333,
+      "dispositions": {
+        "accept": 51,
+        "silent": 22,
+        "dismiss": 30,
+        "mute": 9
+      },
+      "accept_rate": 0.4554,
+      "silent_ignore_rate": 0.1964,
+      "dismiss_rate": 0.2679,
+      "mute_rate": 0.0804,
+      "skip_reasons": {
+        "not_eligible": 165,
+        "suggestion_suppressed:cooldown": 30,
+        "suggestion_suppressed:muted": 59
+      },
+      "pm_probes": 30,
+      "pm_probes_cooldown_blocked": 30,
+      "correctness": {
+        "post_mute_deliveries": 0,
+        "next_day_redeliveries_after_accept": 0,
+        "sub_threshold_deliveries": 0,
+        "post_auto_revoke_auto_steps": 0,
+        "executed_steps_by_mode": {
+          "confirmation": 92,
+          "auto": 10
+        },
+        "post_ledger_complete_deliveries": 0,
+        "deliveries_while_plan_expired": 4
+      }
+    }
+  },
+  "baseline": {
+    "group": "baseline",
+    "days": 14,
+    "personas": 24,
+    "arc_counts": {
+      "stalled": 8,
+      "deadline": 8,
+      "completion": 8
+    },
+    "recovery": {
+      "stalled_personas": 24,
+      "restarted_personas": 13,
+      "restart_rate": 0.5417,
+      "median_days_to_restart": 7,
+      "deadline_achieved_personas": 0,
+      "deadline_achievement_rate": 0.0,
+      "mean_final_ledger_progress": 0.4115
+    },
+    "burden": {
+      "generation_attempts": 0,
+      "suggestions_issued": 0,
+      "suggestions_per_persona_mean": 0,
+      "suggestions_per_persona_max": 0,
+      "interruptions_per_restarted_persona": 0.0,
+      "dispositions": {},
+      "accept_rate": null,
+      "silent_ignore_rate": null,
+      "dismiss_rate": null,
+      "mute_rate": null,
+      "skip_reasons": {},
+      "pm_probes": 0,
+      "pm_probes_cooldown_blocked": 0,
+      "correctness": {
+        "post_mute_deliveries": 0,
+        "next_day_redeliveries_after_accept": 0,
+        "sub_threshold_deliveries": 0,
+        "post_auto_revoke_auto_steps": 0,
+        "executed_steps_by_mode": {},
+        "post_ledger_complete_deliveries": 0,
+        "deliveries_while_plan_expired": 0
+      }
+    }
+  },
+  "compare": {
+    "restart_rate_delta": 0.3333,
+    "deadline_achievement_rate_delta": 0.4167,
+    "mean_final_ledger_progress_delta": 0.3611,
+    "median_days_to_restart": {
+      "proactive": 2,
+      "baseline": 7
+    }
+  },
+  "invariant_violations": {
+    "mute 后跨天复发投放": 0,
+    "沉默 <3 天即投放（eligibility 违例）": 0,
+    "revoke 后 auto 直通（P-04 时序违例）": 0,
+    "accept 次日复发投放": 0
+  },
+  "acceptance_invariants_pass": true
+}
