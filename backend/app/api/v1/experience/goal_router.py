@@ -310,8 +310,24 @@ def _plan_summary(plan: Plan | None) -> dict[str, Any] | None:
     }
 
 
+def _projected_progress(*, goal: Goal | None, plan: Plan | None) -> float | None:
+    """进度单一投影（H6）：goal.progress 优先，为 None 才回退 plan.progress。
+
+    优先级依据：goal-detail 响应的主实体是 goal（见 ``_resolve_goal``——home 卡
+    仅在无目标时才以活跃计划兜底），「进度走到哪」语义归属于 goal；plan 只作
+    缺值回退。显式 ``is not None`` 判空而非 ``or``：0.0 是合法进度（刚建目标），
+    ``or`` 会把 0.0 误判为缺失而静默塌缩到另一实体。
+    """
+    if goal is not None and goal.progress is not None:
+        return goal.progress
+    if plan is not None and plan.progress is not None:
+        return plan.progress
+    return None
+
+
 def _progress_payload(*, goal: Goal | None, plan: Plan | None, task_counts: dict[str, int]) -> dict[str, Any]:
-    overall = _clamp_unit((goal.progress if goal else None) or (plan.progress if plan else None) or 0)
+    projected = _projected_progress(goal=goal, plan=plan)
+    overall = _clamp_unit(projected) if projected is not None else 0.0
     return {
         "overall": overall,
         "tasks_total": task_counts["total"],
@@ -605,7 +621,9 @@ def _criteria_payload(raw: Any) -> MinimumAcceptanceCriteriaPayload:
 
 
 def _plan_health_payload(*, goal: Goal | None, plan: Plan | None, task_counts: dict[str, int]) -> PlanHealthPayload:
-    progress = _safe_ratio((plan.progress if plan else None) or (goal.progress if goal else None))
+    # H6：与 _progress_payload 同源（_projected_progress，goal 优先）——
+    # 修前此处 plan 优先且用 or，0.0 塌缩 + 两处异源；mastery 未在 H6 范围，维持原样。
+    progress = _safe_ratio(_projected_progress(goal=goal, plan=plan))
     mastery = _safe_ratio((plan.mastery_level if plan else None) or (goal.mastery if goal else None))
     total = task_counts["total"]
     task_completion_rate = task_counts["completed"] / total if total else progress

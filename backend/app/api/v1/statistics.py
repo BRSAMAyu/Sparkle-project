@@ -47,35 +47,34 @@ async def get_daily_stats(
     user_id = current_user.id
     today_start = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
 
-    # Tasks completed today
+    # ── H7 口径声明（对齐 SSOT app/services/goal_today_view.py 的「今日任务」基座）──
+    # 基座：due_date == today 且 deleted_at IS NULL；
+    # 状态：ABANDONED 已被 SSOT 排除出「今日任务」→ 不计分母；COMPLETED 保留（分子母集）；
+    # 时间轴：分子分母统一到 due_date（修前分子按 completed_at 异轴，逾期补完成
+    # 计入分子却不在分母，完成率可 >1）——逾期任务补完成计入其实际到期日。
+    today_scope = and_(
+        Task.user_id == user_id,
+        Task.deleted_at.is_(None),
+        Task.due_date == today_start.date(),
+        Task.status != "ABANDONED",
+    )
+
+    # Tasks completed today：分母同基座上的已完成子集（分子 ⊆ 分母）
     completed_query = select(func.count(Task.id)).where(
-        and_(
-            Task.user_id == user_id,
-            Task.status == "COMPLETED",
-            Task.completed_at >= today_start
-        )
+        and_(today_scope, Task.status == "COMPLETED")
     )
     completed_result = await db.execute(completed_query)
     tasks_completed = completed_result.scalar() or 0
 
-    # Study minutes today (based on estimated_minutes of completed tasks)
+    # Study minutes today：与分子同集合（今日到期且已完成任务的预计时长），避免同屏两口径
     time_query = select(func.sum(Task.estimated_minutes)).where(
-        and_(
-            Task.user_id == user_id,
-            Task.status == "COMPLETED",
-            Task.completed_at >= today_start
-        )
+        and_(today_scope, Task.status == "COMPLETED")
     )
     time_result = await db.execute(time_query)
     study_minutes = time_result.scalar() or 0
 
-    # Total tasks today (created or due)
-    total_today_query = select(func.count(Task.id)).where(
-        and_(
-            Task.user_id == user_id,
-            Task.due_date == today_start.date()
-        )
-    )
+    # Total tasks today：今日到期 + 未软删 + 未放弃（声明口径见上）
+    total_today_query = select(func.count(Task.id)).where(today_scope)
     total_today_result = await db.execute(total_today_query)
     total_today = total_today_result.scalar() or 0
 

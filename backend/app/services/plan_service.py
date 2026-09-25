@@ -210,14 +210,16 @@ class PlanService:
         except Exception as exc:
             logger.warning("Weighted phase progress fallback for {} failed: {}", plan_id, exc)
 
-        # Count total tasks for this plan
-        total_query = select(func.count(Task.id)).where(Task.plan_id == plan_id)
+        # Count total tasks for this plan（S1：软删任务不计入兜底分子分母）
+        total_query = select(func.count(Task.id)).where(
+            and_(Task.plan_id == plan_id, Task.deleted_at.is_(None))
+        )
         total_result = await db.execute(total_query)
         total_tasks = total_result.scalar_one()
 
-        # Count completed tasks
+        # Count completed tasks（S1：同上，软删完成不计分子）
         completed_query = select(func.count(Task.id)).where(
-            and_(Task.plan_id == plan_id, Task.status == TaskStatus.COMPLETED)
+            and_(Task.plan_id == plan_id, Task.deleted_at.is_(None), Task.status == TaskStatus.COMPLETED)
         )
         completed_result = await db.execute(completed_query)
         completed_tasks = completed_result.scalar_one()

@@ -1078,14 +1078,17 @@ class EventBus:
         Returns:
             Message ID if successful, None otherwise
         """
-        # P1-12: Inject schema_version for all events
-        if "schema_version" not in payload:
-            payload["schema_version"] = "1.0"
+        # P1-12 / H8: Inject schema_version for all events — into the outbound
+        # ``message`` copy, never by mutating the caller's ``payload`` dict
+        # （修前就地写 payload["schema_version"] 把注入副作用泄漏给调用方）。
+        # 调用方自带 schema_version 时仍以调用方为准（等价修前 not-in 语义）；
+        # wire 格式不变：注入默认值仍为 "1.0"。
+        message: dict = {"schema_version": "1.0", **payload}
 
         last_error: Exception | None = None
         for attempt in range(self.max_retries + 1):
             try:
-                msg_id = await self._publish_once(event_type, payload, stream)
+                msg_id = await self._publish_once(event_type, message, stream)
                 logger.debug(f"Published event {event_type} to {stream} with ID {msg_id}")
                 return msg_id
             except Exception as exc:
@@ -1113,7 +1116,7 @@ class EventBus:
                     group_name="publisher",
                     consumer_name="event_bus.publish",
                     message_id="publish-failure",
-                    parsed_data=dict(payload or {}, event_type=payload.get("event_type") or event_type),
+                    parsed_data=dict(message, event_type=message.get("event_type") or event_type),
                     error=last_error or RuntimeError("unknown_publish_error"),
                     retry_count=self.max_retries,
                     failure_stage="publish",
