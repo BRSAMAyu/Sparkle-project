@@ -79,9 +79,7 @@ void main() {
 
       // 草稿批经 notifier.refresh() 异步装入；入场编排（建图回放/相机动画）
       // 期间加载覆盖层常驻——轮询泵到 CTA 上树（上限 40s），不做死等。
-      for (var i = 0;
-          i < 80 && find.text('现在审核').evaluate().isEmpty;
-          i++) {
+      for (var i = 0; i < 80 && find.text('现在审核').evaluate().isEmpty; i++) {
         await tester.pump(const Duration(milliseconds: 500));
       }
       // 冲刷剩余 timer（贡献榜 provider 的重试/退避等），避免终局 pending-timer。
@@ -206,8 +204,7 @@ class _MockGalaxyNotifier extends StateNotifier<GalaxyState>
   }
 
   @override
-  Stream<MasteryMilestoneEvent> get masteryMilestones =>
-      const Stream.empty();
+  Stream<MasteryMilestoneEvent> get masteryMilestones => const Stream.empty();
 
   @override
   Future<void> loadGalaxy({

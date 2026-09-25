@@ -14,6 +14,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/share_poster_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
@@ -51,6 +52,53 @@ void main() {
         tester.takeException(),
         isNull,
         reason: '心情选择条在 390w 标准档溢出（base 记录 RenderFlex +63px）',
+      );
+
+      // V3-FIX-65（wt410 审查）：零溢出≠可达——chip 被裁剪/不可滚容器吞掉时
+      // takeException 照样为 null。守卫升格为行为可达锁：第 5 chip 必须可滚
+      // 入视口、完整落位、且 tap 真实命中（选中态生效）。
+      const fifthMoodLabel = '📚';
+      final fifthChip = find.text(fifthMoodLabel);
+      expect(fifthChip, findsOneWidget, reason: '第 5 心情 chip 必须在树内');
+
+      final horizontalScrollable = find
+          .byWidgetPredicate(
+            (widget) =>
+                widget is Scrollable &&
+                (widget.axisDirection == AxisDirection.left ||
+                    widget.axisDirection == AxisDirection.right),
+          )
+          .first;
+      await tester.scrollUntilVisible(
+        fifthChip,
+        50,
+        scrollable: horizontalScrollable,
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final chipRect = tester.getRect(fifthChip);
+      final screenSize = tester.getSize(find.byType(CreatePostScreen));
+      expect(
+        chipRect.left >= 0 &&
+            chipRect.right <= screenSize.width &&
+            chipRect.top >= 0 &&
+            chipRect.bottom <= screenSize.height,
+        isTrue,
+        reason: '滚动后第 5 心情 chip($chipRect) 必须完整落在视口'
+            '(${screenSize.width}x${screenSize.height})内——被裁剪容器吞掉即红',
+      );
+
+      await tester.tap(fifthChip);
+      await tester.pump(const Duration(milliseconds: 300));
+      final chipContainer = tester.widget<AnimatedContainer>(
+        find
+            .ancestor(of: fifthChip, matching: find.byType(AnimatedContainer))
+            .first,
+      );
+      expect(
+        (chipContainer.decoration as BoxDecoration?)?.color,
+        DS.brandPrimary.withValues(alpha: 0.12),
+        reason: '第 5 心情 chip 点选后必须呈现选中态——tap 被 rail/裁剪面截获即红',
       );
     });
 
@@ -147,6 +195,25 @@ void main() {
         isTrue,
         reason: '星图模式面板($panelRect)与贡献横幅($bannerRect)重叠 '
             '(${overlap.width}x${overlap.height})，顶部控件互相遮挡',
+      );
+
+      // V3-FIX-65（wt410 审查）：wt401 修后面板/横幅已同为 Column 兄弟——
+      // flow 布局下「不相交」构造性恒真，仅对改回兄弟 Positioned 的回归有效。
+      // 把修复设计本身锁进守卫：两者必须共享同一个 Column 祖先（同一条纵向
+      // 流），有人拆出兄弟 Positioned 即红。
+      final panelColumns = find
+          .ancestor(of: panelFinder, matching: find.byType(Column))
+          .evaluate()
+          .toSet();
+      final bannerColumns = find
+          .ancestor(of: bannerFinder, matching: find.byType(Column))
+          .evaluate()
+          .toSet();
+      expect(
+        panelColumns.intersection(bannerColumns).isNotEmpty,
+        isTrue,
+        reason: '模式面板与统计/横幅必须同挂一条纵向流（wt401 修复设计）——'
+            '拆回兄弟 Positioned 即回归',
       );
       await harness.dispose(tester);
     });
