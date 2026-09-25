@@ -3797,32 +3797,57 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                                           ],
                                           if (draftPromptBatch != null) ...[
                                             const SizedBox(height: 12),
-                                            _GalaxyDraftPromptCard(
-                                              batch: draftPromptBatch,
-                                              onReview: () => _openDraftReview(
-                                                batchId: draftPromptBatch.id,
+                                            // V3-FIX-60（Q-03）：右缘相机控制
+                                            // rail（Positioned right:16，实测
+                                            // 外盒左缘 ≈ W-99）与全宽提示卡
+                                            // 右缘重叠——「现在审核」主 CTA 热
+                                            // 区被 rail 压住（C02 证据 ~70px
+                                            // 视觉侵占）。最小避让：卡片在流
+                                            // 式列内右侧缩进给 rail 让出无遮
+                                            // 挡通道；rail 与卡片组件语义均不
+                                            // 动。几何锁见
+                                            // galaxy_rail_cta_clearance_test。
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                right:
+                                                    _kGalaxyRailClearanceInset,
                                               ),
-                                              onDismiss: () => ref
-                                                  .read(
-                                                    galaxyDraftReviewProvider
-                                                        .notifier,
-                                                  )
-                                                  .dismissPrompt(
-                                                    draftPromptBatch.id,
-                                                  ),
+                                              child: _GalaxyDraftPromptCard(
+                                                batch: draftPromptBatch,
+                                                onReview: () =>
+                                                    _openDraftReview(
+                                                  batchId:
+                                                      draftPromptBatch.id,
+                                                ),
+                                                onDismiss: () => ref
+                                                    .read(
+                                                      galaxyDraftReviewProvider
+                                                          .notifier,
+                                                    )
+                                                    .dismissPrompt(
+                                                      draftPromptBatch.id,
+                                                    ),
+                                              ),
                                             ),
                                           ],
                                           if (showDraftPendingIndicator) ...[
                                             const SizedBox(height: 12),
                                             Align(
                                               alignment: Alignment.centerRight,
-                                              child:
-                                                  _GalaxyDraftPendingIndicator(
-                                                batchCount: draftReviewState
-                                                    .pendingBatchCount,
-                                                draftCount: draftReviewState
-                                                    .pendingDraftCount,
-                                                onTap: _openDraftReview,
+                                              child: Padding(
+                                                padding: const EdgeInsets
+                                                    .only(
+                                                  right:
+                                                      _kGalaxyRailClearanceInset,
+                                                ),
+                                                child:
+                                                    _GalaxyDraftPendingIndicator(
+                                                  batchCount: draftReviewState
+                                                      .pendingBatchCount,
+                                                  draftCount: draftReviewState
+                                                      .pendingDraftCount,
+                                                  onTap: _openDraftReview,
+                                                ),
                                               ),
                                             ),
                                           ],
@@ -3977,6 +4002,14 @@ class _DraftArrivalCelebration {
   final List<String> labels;
   final String summary;
 }
+
+/// V3-FIX-60（Q-03）：草稿族卡片对右缘相机控制 rail 的避让缩进。
+///
+/// rail：``Positioned(right:16)`` 竖排工具栏，按钮 44 + 组内边距 8 + 容器
+/// 水平边距 20 → 外盒宽 ~72，实测含描边左缘 ≈ W-99；列本体 right:16 已吃掉
+/// 16 → 对卡片补 88 缩进后，内容右缘距 rail 左缘仍留 ~21px 无遮挡通道
+/// （任何屏宽下两端均右锚定，间隙恒定）。
+const double _kGalaxyRailClearanceInset = 88;
 
 class _GalaxyDraftPromptCard extends StatelessWidget {
   const _GalaxyDraftPromptCard({
