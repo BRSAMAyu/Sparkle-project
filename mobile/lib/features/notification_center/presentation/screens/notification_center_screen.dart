@@ -246,6 +246,12 @@ class _NotificationCenterScreenState
               onAuroraMute: notification.canRespondAuroraConfirm
                   ? () => _respondAurora(notification, 'mute')
                   : null,
+              onSuggestionIgnoreToday: notification.canIgnoreTodaySuggestion
+                  ? () => _ignoreSuggestionToday(notification)
+                  : null,
+              onSuggestionMuteType: notification.canMuteSuggestionType
+                  ? () => _muteSuggestionType(notification)
+                  : null,
             ),
           );
         },
@@ -505,6 +511,40 @@ class _NotificationCenterScreenState
     AppFeedback.success(context, message);
     unawaited(
       SensoryFeedbackService.emit(SensoryFeedbackEvent.success),
+    );
+  }
+
+  /// P-03 四要素之三：「今天不再看」→ 引擎侧 24h 冷却该建议类型。
+  Future<void> _ignoreSuggestionToday(UnifiedNotification notification) async {
+    await ref
+        .read(notificationCenterProvider.notifier)
+        .ignoreSuggestionToday(notification);
+    if (!mounted) {
+      return;
+    }
+    AppFeedback.success(
+      context,
+      context.l10n.notificationSuggestionIgnoredToast,
+    );
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+    );
+  }
+
+  /// P-03 四要素之四：「不再提醒此类」→ 引擎侧持久静音该建议类型。
+  Future<void> _muteSuggestionType(UnifiedNotification notification) async {
+    await ref
+        .read(notificationCenterProvider.notifier)
+        .muteSuggestionType(notification);
+    if (!mounted) {
+      return;
+    }
+    AppFeedback.success(
+      context,
+      context.l10n.notificationSuggestionMutedToast,
+    );
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
     );
   }
 

@@ -193,6 +193,28 @@ class NotificationCenterRepository {
     }
   }
 
+  /// P-03: 建议卡四要素的两个「可忽略」入口。
+  ///
+  /// [action] 为 `ignore_today`（今天不再看，24h 冷却）或
+  /// `mute_type`（不再提醒此类，持久静音）；抑制态由引擎真实落库。
+  Future<void> sendSuggestionAction(
+    String notificationId,
+    String action, {
+    Map<String, dynamic>? actionPayload,
+  }) async {
+    try {
+      await _client.post<Map<String, dynamic>>(
+        '/notification-center/notifications/$notificationId/suggestion-action',
+        data: {
+          'action': action,
+          'action_payload': actionPayload ?? <String, dynamic>{},
+        },
+      );
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   Future<void> sendRecallFeedback(
     String notificationId, {
     required bool isAccurate,

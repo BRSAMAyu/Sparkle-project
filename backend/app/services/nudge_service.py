@@ -5,6 +5,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.notification import Notification
+from app.services.proactive_suggestion_service import ProactiveSuggestionFeedbackService
 from app.services.push_service import PushService
 
 
@@ -33,6 +34,19 @@ class NudgeService:
 
         if not user_id or not message:
             return
+
+        # P-03: 用户拒绝回路——该 nudge 类型处于「不再提醒此类」静音或
+        # 「今天不再看」冷却窗口内时，投递源头直接抑制（不落任何通知）。
+        if nudge_type:
+            suppression = await ProactiveSuggestionFeedbackService(
+                self.db
+            ).get_suppression(user_id, str(nudge_type))
+            if suppression is not None:
+                logger.info(
+                    "NudgeService: user={} nudge_type={} suppressed ({})",
+                    user_id, nudge_type, suppression["reason"],
+                )
+                return {"status": "suppressed", "suppression": suppression}
 
         # Resolve delivery channel from Spine directive (default: push)
         channel = await self._resolve_channel(user_id)

@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/goal_value_chip.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/navigation/route_resilience.dart';
 
 import 'package:sparkle/core/utils/formatters.dart';
+import 'package:sparkle/features/notification_center/data/models/proactive_suggestion_navigation.dart';
 import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
 
 /// Unified Notification Card Widget
@@ -24,6 +26,8 @@ class UnifiedNotificationCard extends StatelessWidget {
     this.onAuroraConfirm,
     this.onAuroraIncorrect,
     this.onAuroraMute,
+    this.onSuggestionIgnoreToday,
+    this.onSuggestionMuteType,
     super.key,
   });
 
@@ -40,6 +44,12 @@ class UnifiedNotificationCard extends StatelessWidget {
   final VoidCallback? onAuroraConfirm;
   final VoidCallback? onAuroraIncorrect;
   final VoidCallback? onAuroraMute;
+
+  /// P-03 四要素之三：「今天不再看」→ 引擎侧 24h 冷却。
+  final VoidCallback? onSuggestionIgnoreToday;
+
+  /// P-03 四要素之四：「不再提醒此类」→ 引擎侧持久静音该类型。
+  final VoidCallback? onSuggestionMuteType;
 
   @override
   Widget build(BuildContext context) {
@@ -159,6 +169,13 @@ class UnifiedNotificationCard extends StatelessWidget {
                         _hasText(notification.suggestedStep)) ...[
                       const SizedBox(height: DS.sm),
                       _buildNextStepHint(context),
+                    ],
+
+                    // P-03: 主动建议四要素——why now / suggested action /
+                    // today ignore / mute this type（可忽略、可解释、可 mute）。
+                    if (notification.isProactiveSuggestion) ...[
+                      const SizedBox(height: DS.sm),
+                      _buildSuggestionElements(context),
                     ],
 
                     const SizedBox(height: DS.sm),
@@ -457,6 +474,17 @@ class UnifiedNotificationCard extends StatelessWidget {
   }
 
   void _handleNavigation(BuildContext context) {
+    // P-03: 主动建议 → deep link 到正确的 Goal/Proposal 页；目标失效
+    // （离线/过期/已删除）时经 RouteResilience 兜底回退到可退回落点。
+    if (notification.isProactiveSuggestion) {
+      final nav = resolveSuggestionNavigation(notification);
+      if (nav != null) {
+        unawaited(
+          RouteResilience.openExternalRoute(context, nav.route, fallbackRoute: nav.fallbackRoute),
+        );
+        return;
+      }
+    }
     switch (notification.type) {
       case 'intervention':
       case 'intervention_push':
@@ -655,6 +683,83 @@ class UnifiedNotificationCard extends StatelessWidget {
         child: GoalValueChip(text: notification.valueReason!),
       ),
     );
+
+  /// P-03 四要素：why now / suggested action / today ignore / mute this type。
+  /// 文案口径：事实性解释 + 中性动作入口，零 guilt（PRODUCT_LANGUAGE 红线，
+  /// 沿 wt362 A-07 零羞耻先例）。
+  Widget _buildSuggestionElements(BuildContext context) {
+    final whyNow = notification.whyNow;
+    final suggestedAction = notification.suggestedAction;
+    final ignoreAction = onSuggestionIgnoreToday;
+    final muteAction = onSuggestionMuteType;
+
+    return Container(
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        color: DS.surfaceSecondary,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: DS.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_hasText(whyNow)) ...[
+            Text(
+              context.l10n.notificationSuggestionWhyNowTitle,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: DS.textSecondary,
+                    fontWeight: DS.fontWeightSemibold,
+                  ),
+            ),
+            const SizedBox(height: DS.spacing4),
+            Text(
+              whyNow!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.textSecondary,
+                  ),
+            ),
+          ],
+          if (_hasText(suggestedAction)) ...[
+            const SizedBox(height: DS.spacing8),
+            Text(
+              context.l10n.notificationSuggestionActionTitle,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: DS.success,
+                    fontWeight: DS.fontWeightSemibold,
+                  ),
+            ),
+            const SizedBox(height: DS.spacing4),
+            Text(
+              suggestedAction!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.textPrimary,
+                  ),
+            ),
+          ],
+          if ((notification.canIgnoreTodaySuggestion && ignoreAction != null) ||
+              (notification.canMuteSuggestionType && muteAction != null)) ...[
+            const SizedBox(height: DS.spacing8),
+            Wrap(
+              spacing: DS.spacing8,
+              runSpacing: DS.spacing8,
+              children: [
+                if (notification.canIgnoreTodaySuggestion && ignoreAction != null)
+                  SparkleButton.ghost(
+                    onPressed: ignoreAction,
+                    label: context.l10n.notificationSuggestionIgnoreToday,
+                  ),
+                if (notification.canMuteSuggestionType && muteAction != null)
+                  SparkleButton.ghost(
+                    onPressed: muteAction,
+                    label: context.l10n.notificationSuggestionMuteType,
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 
   Widget _buildNextStepHint(BuildContext context) => Semantics(
       container: true,

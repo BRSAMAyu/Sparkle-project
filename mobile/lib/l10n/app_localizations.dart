@@ -38600,6 +38600,42 @@ abstract class AppLocalizations {
   /// **'不再提醒这类'**
   String get notificationDisablePushCategory;
 
+  /// No description provided for @notificationSuggestionWhyNowTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'为什么是现在'**
+  String get notificationSuggestionWhyNowTitle;
+
+  /// No description provided for @notificationSuggestionActionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'建议的一步'**
+  String get notificationSuggestionActionTitle;
+
+  /// No description provided for @notificationSuggestionIgnoreToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天不再看'**
+  String get notificationSuggestionIgnoreToday;
+
+  /// No description provided for @notificationSuggestionMuteType.
+  ///
+  /// In zh, this message translates to:
+  /// **'不再提醒此类建议'**
+  String get notificationSuggestionMuteType;
+
+  /// No description provided for @notificationSuggestionIgnoredToast.
+  ///
+  /// In zh, this message translates to:
+  /// **'好的，今天先不打扰'**
+  String get notificationSuggestionIgnoredToast;
+
+  /// No description provided for @notificationSuggestionMutedToast.
+  ///
+  /// In zh, this message translates to:
+  /// **'已关闭此类建议'**
+  String get notificationSuggestionMutedToast;
+
   /// No description provided for @notificationEncouraged.
   ///
   /// In zh, this message translates to:

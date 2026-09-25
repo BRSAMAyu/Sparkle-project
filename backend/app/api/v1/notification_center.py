@@ -23,11 +23,13 @@ from app.schemas.unified_notification import (
     NotificationPreferencesUpdate,
     PushNotificationActionRequest,
     RecallNotificationFeedbackRequest,
+    SuggestionActionRequest,
     UnifiedNotificationResponse,
 )
 from app.services.aurora_calibration_card_service import AuroraCalibrationCardService
 from app.services.notification_analytics_service import NotificationAnalyticsService
 from app.services.notification_center_service import NotificationCenterService
+from app.services.proactive_suggestion_service import ProactiveSuggestionFeedbackService
 
 router = APIRouter(prefix="/notification-center", tags=["notification-center"])
 
@@ -308,6 +310,63 @@ async def transition_aurora_confirm_notification(
         raise HTTPException(status_code=404, detail=f"Aurora confirm item not found: {notification_id}") from exc
 
     return {"message": f"Aurora confirm action applied: {request.action}", "card": result.get("card")}
+
+
+# route-tier: authed
+@router.post("/notifications/{notification_id}/suggestion-action")
+async def record_suggestion_action(
+    notification_id: UUID,
+    request: SuggestionActionRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """P-03: record user feedback on a proactive suggestion card.
+
+    四要素的两个「可忽略」入口：
+    - ``ignore_today``（今天不再看）→ 该建议类型 24h 冷却（拒绝后 cooldown）。
+    - ``mute_type``（不再提醒此类）→ 持久静音该建议类型。
+
+    校验通知归属；反馈即已读；抑制态真实落库，nudge 生成路径据此抑制。
+    """
+    service = NotificationCenterService(db)
+    notification = await service.get_system_notification(current_user.id, notification_id)
+    if notification is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Notification not found: {notification_id}",
+        )
+
+    suggestion_type = (notification.type or "").strip()
+    if not suggestion_type:
+        raise HTTPException(
+            status_code=400,
+            detail="Notification has no suggestion type to act on",
+        )
+
+    if request.action not in ("ignore_today", "mute_type"):
+        # 双保险：schema pattern 之外，handler 层显式拒绝未知动作。
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid suggestion action: {request.action}",
+        )
+
+    feedback = ProactiveSuggestionFeedbackService(db)
+    if request.action == "ignore_today":
+        suppression = await feedback.record_ignore_today(current_user.id, suggestion_type)
+    else:
+        suppression = await feedback.record_mute(current_user.id, suggestion_type)
+
+    # 反馈即已读：处理过的建议不再挂未读角标。
+    await service.mark_notification_read(current_user.id, notification_id, "system")
+
+    logger.info(
+        "Suggestion feedback recorded: user={} type={} action={}",
+        current_user.id, suggestion_type, request.action,
+    )
+    return {
+        "message": f"Suggestion feedback recorded: {request.action}",
+        "suppression": suppression,
+    }
 
 
 # route-tier: internal

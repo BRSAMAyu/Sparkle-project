@@ -87,6 +87,21 @@ class RecallNotificationFeedbackRequest(BaseModel):
     action_payload: dict[str, Any] = Field(default_factory=dict)
 
 
+class SuggestionActionRequest(BaseModel):
+    """P-03: user feedback on a proactive suggestion card (four-element UX).
+
+    - ``ignore_today``: 「今天不再看」→ 24h cooldown on this suggestion type.
+    - ``mute_type``: 「不再提醒此类」→ persistent mute of this suggestion type.
+    """
+
+    action: str = Field(
+        ...,
+        pattern="^(ignore_today|mute_type)$",
+        description="Desired suggestion feedback action",
+    )
+    action_payload: dict[str, Any] = Field(default_factory=dict)
+
+
 class AuroraConfirmActionRequest(BaseModel):
     """User response to an Aurora confirmation queue item (B4-INBOX).
 

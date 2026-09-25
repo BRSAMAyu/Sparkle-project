@@ -267,6 +267,38 @@ class UnifiedNotification {
       metadata['acceptance_status'] as String? ??
       metadata['status'] as String?;
 
+  // ── P-03: proactive suggestion（四要素 UX）─────────────────────────────
+
+  /// 「为什么是现在」——引擎侧事实性解释（零 guilt 口径）。
+  String? get whyNow => _stringValue(metadata['why_now']);
+
+  /// 「建议的一步」——引擎建议的下一个具体动作。
+  String? get suggestedAction => _stringValue(metadata['suggested_action']);
+
+  /// 建议类型（mute 的作用域），如 `comeback_nudge`。
+  String? get suggestionType {
+    final explicit = _stringValue(metadata['suggestion_type']);
+    if (explicit != null) {
+      return explicit;
+    }
+    return isProactiveSuggestion ? type : null;
+  }
+
+  /// 是否为主动建议卡（四要素渲染的对象）。
+  bool get isProactiveSuggestion =>
+      _hasText(whyNow) ||
+      _hasText(_stringValue(metadata['suggested_action'])) ||
+      _hasText(_stringValue(metadata['suggestion_type']));
+
+  /// 用户对该建议已有的反馈（`ignored_today` / `muted`），无反馈为 null。
+  String? get suggestionFeedback => _stringValue(metadata['suggestion_feedback']);
+
+  bool get canIgnoreTodaySuggestion =>
+      isProactiveSuggestion && suggestionFeedback == null;
+
+  bool get canMuteSuggestionType =>
+      isProactiveSuggestion && suggestionFeedback != 'muted';
+
   String? get outcomeStatus => metadata['outcome_status'] as String?;
 
   Map<String, dynamic> get outcomeEvidence {

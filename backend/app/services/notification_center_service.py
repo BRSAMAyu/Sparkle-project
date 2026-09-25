@@ -335,6 +335,26 @@ class NotificationCenterService:
             logger.warning("Failed to load aurora confirm notifications: {}", exc)
             return []
 
+    async def get_system_notification(self, user_id: UUID, notification_id: UUID):
+        """Fetch a system-source Notification owned by the user (P-03 suggestion feedback).
+
+        Returns the row or ``None`` when missing / not owned (ownership check —
+        never leak other users' notifications).
+        """
+        stmt = (
+            select(Notification)
+            .where(
+                and_(
+                    Notification.id == notification_id,
+                    Notification.user_id == user_id,
+                    Notification.deleted_at.is_(None),
+                )
+            )
+            .limit(1)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
     async def mark_notification_read(self, user_id: UUID, notification_id: UUID, notification_type: str) -> bool:
         """
         Mark a notification as read.

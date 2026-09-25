@@ -237,6 +237,74 @@ class NotificationCenter extends _$NotificationCenter {
     }
   }
 
+  /// P-03 四要素之三：「今天不再看」——引擎侧为该建议类型记录 24h 冷却
+  /// （拒绝后 cooldown 在生成源头抑制重复建议，非渲染遮蔽）。
+  Future<void> ignoreSuggestionToday(UnifiedNotification notification) async {
+    if (!notification.canIgnoreTodaySuggestion) {
+      return;
+    }
+    try {
+      await _repository.sendSuggestionAction(
+        notification.id,
+        'ignore_today',
+        actionPayload: {
+          'source': 'notification_center_card',
+          'surface': 'notification_center',
+          'suggestion_type': notification.suggestionType,
+        },
+      );
+      _updateSuggestionFeedbackLocalState(notification.id, 'ignored_today');
+    } catch (e) {
+      // N15：原始异常只进日志；错误字段存类型化类别。
+      debugPrint('[notification_center] op failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
+    }
+  }
+
+  /// P-03 四要素之四：「不再提醒此类」——引擎侧持久静音该类型，
+  /// 卡片随即从列表移除（aurora_confirm mute 同款交互语义）。
+  Future<void> muteSuggestionType(UnifiedNotification notification) async {
+    if (!notification.canMuteSuggestionType) {
+      return;
+    }
+    try {
+      await _repository.sendSuggestionAction(
+        notification.id,
+        'mute_type',
+        actionPayload: {
+          'source': 'notification_center_card',
+          'surface': 'notification_center',
+          'suggestion_type': notification.suggestionType,
+        },
+      );
+      removeNotification(notification.id);
+    } catch (e) {
+      // N15：原始异常只进日志；错误字段存类型化类别。
+      debugPrint('[notification_center] op failed: $e');
+      state = state.copyWith(error: categorizeUiError(e));
+    }
+  }
+
+  void _updateSuggestionFeedbackLocalState(String notificationId, String status) {
+    final updatedNotifications = state.notifications.map((n) {
+      if (n.id != notificationId) {
+        return n;
+      }
+      final metadata = Map<String, dynamic>.from(n.metadata)
+        ..['suggestion_feedback'] = status;
+      return n.copyWith(
+        isRead: true,
+        metadata: metadata,
+      );
+    }).toList();
+
+    final unreadCount = updatedNotifications.where((n) => !n.isRead).length;
+    state = state.copyWith(
+      notifications: updatedNotifications,
+      unreadCount: unreadCount,
+    );
+  }
+
   Future<void> markRecallInaccurate(UnifiedNotification notification) async {
     if (!notification.hasRecallValueDetails) {
       return;

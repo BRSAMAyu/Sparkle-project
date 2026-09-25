@@ -21164,6 +21164,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationDisablePushCategory => '不再提醒这类';
 
   @override
+  String get notificationSuggestionWhyNowTitle => '为什么是现在';
+
+  @override
+  String get notificationSuggestionActionTitle => '建议的一步';
+
+  @override
+  String get notificationSuggestionIgnoreToday => '今天不再看';
+
+  @override
+  String get notificationSuggestionMuteType => '不再提醒此类建议';
+
+  @override
+  String get notificationSuggestionIgnoredToast => '好的，今天先不打扰';
+
+  @override
+  String get notificationSuggestionMutedToast => '已关闭此类建议';
+
+  @override
   String get notificationEncouraged => '已鼓励';
 
   @override

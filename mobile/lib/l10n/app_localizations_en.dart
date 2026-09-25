@@ -22058,6 +22058,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationDisablePushCategory => 'Don\'t remind this type';
 
   @override
+  String get notificationSuggestionWhyNowTitle => 'Why now';
+
+  @override
+  String get notificationSuggestionActionTitle => 'Suggested step';
+
+  @override
+  String get notificationSuggestionIgnoreToday => 'Not today';
+
+  @override
+  String get notificationSuggestionMuteType => 'Mute this type of suggestion';
+
+  @override
+  String get notificationSuggestionIgnoredToast =>
+      'Okay, we won\'t bring this up again today';
+
+  @override
+  String get notificationSuggestionMutedToast =>
+      'Suggestions like this are muted now';
+
+  @override
   String get notificationEncouraged => 'Encouraged';
 
   @override

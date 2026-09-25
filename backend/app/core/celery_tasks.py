@@ -2115,6 +2115,11 @@ def comeback_nudge_task(self, user_id: str):
     from app.db.session import AsyncSessionLocal
     from app.schemas.notification import NotificationCreate
     from app.services.notification_service import NotificationService
+    from app.services.proactive_suggestion_service import (
+        ProactiveSuggestionFeedbackService,
+        build_suggestion_elements,
+        resolve_comeback_destination,
+    )
 
     COMEBACK_THRESHOLD_DAYS = 3
 
@@ -2133,7 +2138,9 @@ def comeback_nudge_task(self, user_id: str):
                 return {"status": "skipped", "reason": "not_eligible"}
 
             plan_id = str(payload.get("plan_id") or "").strip()
-            destination_route = f"/plans/{plan_id}?source=comeback_nudge" if plan_id else "/chat?entry=comeback_nudge"
+            # P-03: deep link 指向正确的 Goal 页（goal_state.goal_id 读侧真源，
+            # 不误用 plan_id——F-7 判例），无 goal 回退 Plan 页，再回退 chat。
+            destination_route = resolve_comeback_destination(payload)
             prefs = await AuroraUserPreferencesService(session).get(UUID(user_id))
             policy = resolve_stimulation_policy(prefs.get("aurora_stimulation_mode"))
             title, content = apply_policy_to_nudge(
@@ -2141,6 +2148,25 @@ def comeback_nudge_task(self, user_id: str):
                 title=str(payload.get("title") or "好久不见，我一直在等你"),
                 content=str(payload.get("message") or ""),
             )
+
+            # P-03: 用户拒绝回路——「今天不再看」冷却窗口内 / 「不再提醒此类」
+            # 静音中的类型，直接在生成源头抑制（真源不产新通知，非渲染遮蔽）。
+            suppression = await ProactiveSuggestionFeedbackService(
+                session
+            ).get_suppression(UUID(user_id), "comeback_nudge", now=reference_time)
+            if suppression is not None:
+                logger.debug(
+                    "comeback_nudge_task: suggestion suppressed for user {} ({})",
+                    user_id,
+                    suppression["reason"],
+                )
+                return {
+                    "status": "skipped",
+                    "reason": "suggestion_suppressed",
+                    "suppression": suppression,
+                    "plan_id": plan_id or None,
+                }
+
             if await _has_recent_notification(
                 session,
                 user_id=UUID(user_id),
@@ -2155,6 +2181,9 @@ def comeback_nudge_task(self, user_id: str):
                     "reason": "duplicate_recent",
                     "plan_id": plan_id or None,
                 }
+
+            # P-03 四要素：why_now / suggested_action 引擎侧事实构建（零 guilt）。
+            suggestion_elements = build_suggestion_elements(payload)
 
             await NotificationService.create(
                 session,
@@ -2171,6 +2200,9 @@ def comeback_nudge_task(self, user_id: str):
                         "next_task_title": payload.get("next_task_title"),
                         "recent_task_summary": payload.get("recent_task_summary"),
                         "light_restart_suggestion": payload.get("light_restart_suggestion"),
+                        "suggestion_type": "comeback_nudge",
+                        "why_now": suggestion_elements["why_now"],
+                        "suggested_action": suggestion_elements["suggested_action"],
                         "destination_route": destination_route,
                         "deep_link": destination_route,
                         "goal_state": payload.get("goal_state") or {},
