@@ -3332,7 +3332,10 @@ class ExecutionService:
         # failure chain in _recent_consecutive_failure_count, but clearing the cache
         # ensures the next classification call re-evaluates degradation status.
         now = time.time()
-        cutoff = now - self.__class__._classify_cache_ttl
+        # V3-FIX-118：类属性实名是 _classify_cache_ttl_seconds（__init__ 里的
+        # self._classify_cache_ttl 只是实例别名），此处误引类级旧名导致 handback
+        # 必然 AttributeError——CI run 36178015150 由 openclaw phase1/4 用例暴露。
+        cutoff = now - self.__class__._classify_cache_ttl_seconds
         try:
             # Use the lock to safely modify the shared cache
             loop = asyncio.get_event_loop()

@@ -182,7 +182,7 @@ async def test_recommended_tasks_balance_deadline_priority_and_aurora_energy(
             )
 
     monkeypatch.setattr(
-        "app.services.daily_task_selection_service.AuroraRuntimeStore",
+        "app.services.daily_task_selection_service.AuroraEnergyStore",
         _FakeAuroraStore,
     )
 

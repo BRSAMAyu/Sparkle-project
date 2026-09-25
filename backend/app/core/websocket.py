@@ -318,14 +318,15 @@ class ConnectionManager:
             except Exception:
                 # V3-FIX-66 锚点：出现本日志即存在跨节点残余广播缺口（他节点无
                 # 重试/对账，需人工 kick 对账）；TODO(kick-crossnode-account)。
-                logger.warning(
+                # EXC-TRACEBACK：loguru 无 exc_info kwarg（会静默吞栈），
+                # 统一走 logger.opt(exception=True)。
+                logger.opt(exception=True).warning(
                     "kick_group publish failed; falling back to local kick; "
                     "cross-node residual connections unaccounted (V3-FIX-66) "
                     "(group=%s user=%s reason=%s)",
                     group_id,
                     user_id,
                     reason,
-                    exc_info=True,
                 )
                 await self._kick_local(group_id, user_id, reason)
         else:

@@ -55,7 +55,8 @@ async def test_record_intervention_writes_db_and_publishes_event(db_session, tra
 
     publish.assert_awaited_once()
     event_type, payload = publish.await_args.args[:2]
-    assert event_type == "intervention_recorded"
+    # 事件名已统一为 event_bus 颁布的领域事件名（intervention_event_consumer 同闸）
+    assert event_type == "intervention_record.created"
     assert payload["intervention_id"] == intervention_id
     assert payload["intervention_type"] == "replan"
 

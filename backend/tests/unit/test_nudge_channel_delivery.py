@@ -42,7 +42,13 @@ def _patch_cache_and_spine(directive=None, has_redis=True, spine_exc=None):
                 self.mock_spine_cls = MagicMock(side_effect=spine_exc)
 
             self.cache_patcher = patch("app.core.cache.cache_service", self.mock_cache)
-            self.spine_patcher = patch("app.signals.spine_orchestrator.SpineOrchestrator", self.mock_spine_cls)
+            # nudge_service 现经 get_spine_orchestrator() 单例访问器取 Spine
+            # （不再直接构造 SpineOrchestrator(...)），patch 必须落在访问器上，
+            # 否则 directive 永远到不了 mock，_resolve_channel 恒回退 "push"。
+            self.spine_patcher = patch(
+                "app.signals.spine_orchestrator.get_spine_orchestrator",
+                self.mock_spine_cls,
+            )
 
             self.cache_patcher.start()
             self.spine_patcher.start()

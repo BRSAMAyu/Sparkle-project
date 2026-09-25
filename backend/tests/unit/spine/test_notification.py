@@ -785,7 +785,7 @@ def test_user_simulator_compare():
 
 
 def test_domain_pack_validate():
-    from app.signals.research_grade import DomainPack  # noqa: DEPRECATED v1, DomainPackMarketplace  # noqa: DEPRECATED v1
+    from app.signals.research_grade import DomainPack, DomainPackMarketplace  # noqa: DEPRECATED v1
 
     redis = MagicMock()
     marketplace = DomainPackMarketplace(redis)
@@ -820,7 +820,7 @@ def test_domain_pack_validate():
 
 
 def test_domain_pack_score():
-    from app.signals.research_grade import DomainPack  # noqa: DEPRECATED v1, DomainPackMarketplace  # noqa: DEPRECATED v1
+    from app.signals.research_grade import DomainPack, DomainPackMarketplace  # noqa: DEPRECATED v1
 
     redis = MagicMock()
     marketplace = DomainPackMarketplace(redis)
@@ -854,7 +854,7 @@ def test_domain_pack_score():
 
 
 def test_domain_pack_filter():
-    from app.signals.research_grade import DomainPack  # noqa: DEPRECATED v1, DomainPackMarketplace  # noqa: DEPRECATED v1
+    from app.signals.research_grade import DomainPack, DomainPackMarketplace  # noqa: DEPRECATED v1
 
     redis = MagicMock()
     marketplace = DomainPackMarketplace(redis)

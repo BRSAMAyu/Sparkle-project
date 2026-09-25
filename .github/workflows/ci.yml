@@ -256,6 +256,18 @@ jobs:
           TESTING: 'true'
         run: python backend/scripts/init_age_extension.py
 
+      # 与 e2e-tests.yml 同序（先图谱后迁移）：integration 侧 db_session 契约是
+      # 「表来自迁移、fixture 不建表」（tests/integration/conftest.py），首次完整
+      # 全量跑（run 36178015150）暴露 ~70 例 relation "users" does not exist——
+      # 非测试或产品回归，是 ci.yml 缺迁移步骤的环境面缺口。此步补齐。
+      - name: Apply database migrations (test schema parity)
+        run: |
+          cd backend
+          DATABASE_URL=postgresql://postgres:password@localhost:5432/sparkle_test \
+          SECRET_KEY=ci-workflow-default-secret-0123456789abcdef \
+          ENVIRONMENT=development \
+          alembic upgrade head
+
       - name: Generate Python Proto Code
         run: |
           sudo chown -R "$(id -u):$(id -g)" backend/app/gen

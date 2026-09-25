@@ -30,6 +30,11 @@ from app.orchestration.orchestrator import (
 )
 from app.tools.base import BaseTool, ToolResult, ToolCategory
 
+# X-06 执行器账本要求 UUID user_id 与真实 async session（MagicMock 上的
+# flush/UUID 解析会触发 fail-closed IdempotencyConflict），故执行链测试
+# 统一走顶层 conftest 的 db_session（sqlite 内存 + create_all）。
+from uuid import uuid4
+
 
 # ── Test doubles ──────────────────────────────────────────────────────
 
@@ -43,6 +48,12 @@ class _EchoTool(BaseTool):
     description = "Echoes the input message back."
     category = ToolCategory.QUERY
     parameters_schema = _EchoParams
+    # X-06 fail-closed 注册：测试替身与产品工具同受五元数据校验约束
+    effect = "read"
+    risk = "low"
+    reversible = True
+    required_permission = "llm.use"
+    cost_usd = 0.0
 
     async def execute(self, params, user_id, db_session, tool_call_id=None, locale="en"):
         return ToolResult(success=True, tool_name=self.name, data={"echo": params.message})
@@ -57,6 +68,11 @@ class _FailTool(BaseTool):
     description = "Always fails for testing."
     category = ToolCategory.TASK
     parameters_schema = _FailParams
+    effect = "read"
+    risk = "low"
+    reversible = True
+    required_permission = "llm.use"
+    cost_usd = 0.0
 
     async def execute(self, params, user_id, db_session, tool_call_id=None, locale="en"):
         return ToolResult(
@@ -78,6 +94,11 @@ class _WidgetTool(BaseTool):
     description = "Returns a widget result."
     category = ToolCategory.KNOWLEDGE
     parameters_schema = _WidgetParams
+    effect = "read"
+    risk = "low"
+    reversible = True
+    required_permission = "llm.use"
+    cost_usd = 0.0
 
     async def execute(self, params, user_id, db_session, tool_call_id=None, locale="en"):
         return ToolResult(
@@ -263,62 +284,62 @@ class TestToolExecutor_RealChain:
         )
 
     @pytest.mark.asyncio
-    async def test_execute_echo_tool_success(self):
+    async def test_execute_echo_tool_success(self, db_session):
         with patch("app.orchestration.executor.tool_registry", self.registry):
             executor = ToolExecutor()
             result = await executor.execute_tool_call(
                 tool_name="echo",
                 arguments={"message": "hello"},
-                user_id="u1",
-                db_session=MagicMock(),
+                user_id=str(uuid4()),
+                db_session=db_session,
             )
         assert result.success is True
         assert result.data["echo"] == "hello"
         assert result.tool_name == "echo"
 
     @pytest.mark.asyncio
-    async def test_execute_fail_tool_returns_error(self):
+    async def test_execute_fail_tool_returns_error(self, db_session):
         with patch("app.orchestration.executor.tool_registry", self.registry):
             executor = ToolExecutor()
             result = await executor.execute_tool_call(
                 tool_name="fail_tool",
                 arguments={"reason": "test error"},
-                user_id="u1",
-                db_session=MagicMock(),
+                user_id=str(uuid4()),
+                db_session=db_session,
             )
         assert result.success is False
         assert result.error_message == "test error"
         assert result.error_type == "test_failure"
 
     @pytest.mark.asyncio
-    async def test_execute_widget_tool_returns_widget_data(self):
+    async def test_execute_widget_tool_returns_widget_data(self, db_session):
         with patch("app.orchestration.executor.tool_registry", self.registry):
             executor = ToolExecutor()
             result = await executor.execute_tool_call(
                 tool_name="widget_tool",
                 arguments={"title": "Summary", "body": "Key findings"},
-                user_id="u1",
-                db_session=MagicMock(),
+                user_id=str(uuid4()),
+                db_session=db_session,
             )
         assert result.success is True
         assert result.widget_type == "card"
         assert result.widget_data["title"] == "Summary"
 
     @pytest.mark.asyncio
-    async def test_execute_unknown_tool_returns_failure(self):
+    async def test_execute_unknown_tool_returns_failure(self, db_session):
         with patch("app.orchestration.executor.tool_registry", self.registry):
             executor = ToolExecutor()
             result = await executor.execute_tool_call(
                 tool_name="nonexistent_tool",
                 arguments={},
-                user_id="u1",
-                db_session=MagicMock(),
+                user_id=str(uuid4()),
+                db_session=db_session,
             )
         assert result.success is False
         assert "未知工具" in result.error_message or "not_found" in (result.error_type or "")
 
     @pytest.mark.asyncio
-    async def test_execute_batch_tool_calls(self):
+    async def test_execute_batch_tool_calls(self, db_session):
         with patch("app.orchestration.executor.tool_registry", self.registry):
             executor = ToolExecutor()
             calls = [
@@ -333,22 +354,22 @@ class TestToolExecutor_RealChain:
             ]
             results = await executor.execute_tool_calls(
                 tool_calls=calls,
-                user_id="u1",
-                db_session=MagicMock(),
+                user_id=str(uuid4()),
+                db_session=db_session,
             )
         assert len(results) == 2
         assert results[0].data["echo"] == "first"
         assert results[1].data["echo"] == "second"
 
     @pytest.mark.asyncio
-    async def test_execute_with_invalid_arguments_returns_validation_error(self):
+    async def test_execute_with_invalid_arguments_returns_validation_error(self, db_session):
         with patch("app.orchestration.executor.tool_registry", self.registry):
             executor = ToolExecutor()
             result = await executor.execute_tool_call(
                 tool_name="echo",
                 arguments={"wrong_field": "value"},
-                user_id="u1",
-                db_session=MagicMock(),
+                user_id=str(uuid4()),
+                db_session=db_session,
             )
         assert result.success is False
         assert "参数验证" in result.error_message or "validation" in (result.error_type or "")
@@ -472,7 +493,7 @@ class TestE2E_Chain:
         assert decision.mode in ("execution_first", "balanced")
 
     @pytest.mark.asyncio
-    async def test_tool_chain_echo_flow(self):
+    async def test_tool_chain_echo_flow(self, db_session):
         registry = _make_registry_with_tools(_EchoTool())
         composer = ResponseComposer()
 
@@ -481,8 +502,8 @@ class TestE2E_Chain:
             result = await executor.execute_tool_call(
                 tool_name="echo",
                 arguments={"message": "chain test"},
-                user_id="u1",
-                db_session=MagicMock(),
+                user_id=str(uuid4()),
+                db_session=db_session,
             )
 
         response = composer.compose_response(

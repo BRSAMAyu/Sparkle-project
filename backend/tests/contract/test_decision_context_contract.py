@@ -540,15 +540,29 @@ async def test_builder_populates_decision_context(db_session, monkeypatch):
     assert len(decision.query_text_hash) == 16
     assert decision.validate() == (), f"契约违规: {decision.validate()}"
 
-    # items manifest 精确覆盖被注入的 section 内容（不多不少）
+    # items manifest 覆盖被注入的 section 内容——C-01（manifest=pack 面）×
+    # M-05（selfcheck 降档条目保留在内部决策档）合成后的不变量：
+    # ① pack 面（实际进 prompt）必须全部出现在 manifest（召回不删档）；
+    # ② manifest 中未进 pack 的条目必须可归因于 selfcheck 降档
+    #   （metadata.memory_selfcheck.internal_only，ids+封闭 reason）。
+    selfcheck_internal = {
+        (entry.get("section"), entry.get("id"))
+        for entry in ((pack.metadata or {}).get("memory_selfcheck", {}).get("internal_only") or [])
+    }
     pref_items = decision.items_of_type("preference")
     included_goal_ids = {item.ref.split("/")[-1] for item in decision.items_of_type("goal")}
     included_episodic_ids = {item.ref.split("/")[-1] for item in decision.items_of_type("episodic_memory")}
+    surfaced_goal_ids = {payload["id"] for payload in pack.goals}
+    surfaced_episodic_ids = {payload["id"] for payload in pack.episodic_memories}
     assert len(pref_items) == len(pack.preferences)
     assert all(item.ref.startswith("memory://preference/") for item in pref_items)
     assert all(item.epoch is not None for item in pref_items)
-    assert included_goal_ids == {payload["id"] for payload in pack.goals}
-    assert included_episodic_ids == {payload["id"] for payload in pack.episodic_memories}
+    assert surfaced_goal_ids <= included_goal_ids
+    assert included_goal_ids - surfaced_goal_ids <= {gid for section, gid in selfcheck_internal if section == "goals"}
+    assert surfaced_episodic_ids <= included_episodic_ids
+    assert included_episodic_ids - surfaced_episodic_ids <= {
+        eid for section, eid in selfcheck_internal if section == "episodic"
+    }
 
     for item in decision.items:
         assert item.ref.startswith("memory://")

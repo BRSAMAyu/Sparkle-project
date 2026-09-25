@@ -68,6 +68,12 @@ async def test_dynamic_tool_registry():
         description = "A test tool"
         category = ToolCategory.TASK
         parameters_schema = TestParams
+        # X-06 fail-closed 注册：测试替身同样需要五元数据
+        effect = "read"
+        risk = "low"
+        reversible = True
+        required_permission = "llm.use"
+        cost_usd = 0.0
         
         async def execute(self, params, user_id, db_session):
             from app.tools.base import ToolResult

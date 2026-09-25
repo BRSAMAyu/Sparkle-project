@@ -225,6 +225,13 @@ async def test_tool_registry_concurrent_access():
     import asyncio
 
     class TestTool(BaseTool):
+        # X-06 fail-closed 注册：测试替身同样需要五元数据
+        effect = "read"
+        risk = "low"
+        reversible = True
+        required_permission = "llm.use"
+        cost_usd = 0.0
+
         def __init__(self, name):
             self._name = name
             self._category = ToolCategory.TASK
