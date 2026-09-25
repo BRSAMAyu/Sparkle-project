@@ -169,7 +169,7 @@ jobs:
   backend-test:
     name: Backend Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 120
     needs: lint
     services:
       redis:
@@ -205,7 +205,7 @@ jobs:
         working-directory: backend/gateway
         # -race needs cgo (default enabled on ubuntu runners). -timeout is an
         # explicit per-package budget so race-mode slowdowns (2-20x) cannot hit
-        # the 10m go-test default; the 75m job timeout still bounds the step.
+        # the 10m go-test default; the 120m job timeout still bounds the step.
         run: |
           go test -v -race -timeout=20m -coverprofile=coverage.out ./...
           go tool cover -func=coverage.out | tee coverage.txt
