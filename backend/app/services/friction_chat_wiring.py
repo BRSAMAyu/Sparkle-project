@@ -162,6 +162,21 @@ def _fresh_turn_gate_reason(diagnosis: FrictionDiagnosis) -> str | None:
     return WIRING_GATE_NO_WORDMARK
 
 
+def _strip_input_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
+    """V3-FIX-142 · 出口载荷剔除 ``annotations.input_snapshot`` 副本（纯函数投影）。
+
+    ``input_snapshot``（utterance/task_anchor 用户内容全文）只服务闭环节点：
+    Redis pending 重放源（``_save_pending`` 写 / ``_answer_turn`` 读）与预算
+    计数——诊断对象本体上的它原样保留；response metadata 出面副本零消费方
+    （仅 response_builder json 序列化出面），整体剔除零损失（FIX-62 零消息
+    文本同律；FIX-114 门拦投影的同构扩展到全出口）。
+    """
+    annotations = payload.get("annotations")
+    if isinstance(annotations, Mapping) and "input_snapshot" in annotations:
+        payload["annotations"] = {key: value for key, value in annotations.items() if key != "input_snapshot"}
+    return payload
+
+
 def _gate_silent_diagnosis_payload(diagnosis: FrictionDiagnosis) -> dict[str, Any]:
     """V3-FIX-114 · 门拦静默出口的 diagnosis 载荷脱敏投影（纯函数）。
 
@@ -175,7 +190,9 @@ def _gate_silent_diagnosis_payload(diagnosis: FrictionDiagnosis) -> dict[str, An
       本卡验收判据；问句身份仍可由 ``reasons`` 的 U1/Q1 reason 码审计）；
     - ``suggested_clarifying_question`` 渲染全文 → 封闭问题库 question_id
       身份（FIX-62 类名/指纹同律：留身份不留文本；出处唯一——
-      friction_diagnosis ``_act`` 的 ``q_standard_clarity`` 单点渲染）。
+      friction_diagnosis ``_act`` 的 ``q_standard_clarity`` 单点渲染）；
+    - ``annotations.input_snapshot`` 整体剔除（V3-FIX-142，经
+      ``_strip_input_snapshot``——全出口统一投影）。
 
     其余判定量（friction_type/reasons/posterior/evidence_refs 等）原样保留
     ——脱敏不抹审计。只动出口载荷构造，门判定（``_fresh_turn_gate_reason``）
@@ -185,7 +202,7 @@ def _gate_silent_diagnosis_payload(diagnosis: FrictionDiagnosis) -> dict[str, An
     payload["question"] = None
     if payload.get("suggested_clarifying_question"):
         payload["suggested_clarifying_question"] = _GATE_CLARIFY_QUESTION_REF
-    return payload
+    return _strip_input_snapshot(payload)
 
 
 class FrictionChatWiringService:
@@ -388,7 +405,10 @@ class FrictionChatWiringService:
             outcome=diagnosis.outcome,
             friction_type=diagnosis.friction_type,
             lifecycle_tag=diagnosis.lifecycle_tag,
-            diagnosis=diagnosis.to_dict(),
+            # V3-FIX-142 · 全出口载荷剔除 input_snapshot 副本（utterance 用户
+            # 原话全文不进 response metadata；诊断对象本体零接触——下方预算
+            # 计数与 _save_pending 重放源读的仍是对象 annotations）。
+            diagnosis=_strip_input_snapshot(diagnosis.to_dict()),
             annotations=dict(annotations),
         )
         if diagnosis.outcome == "ask" and diagnosis.question is not None:

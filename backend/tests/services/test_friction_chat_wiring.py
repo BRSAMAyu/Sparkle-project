@@ -67,6 +67,7 @@ from app.services.friction_chat_wiring import (
     FRICTION_ANSWER_CONTEXT_KEY,
     FrictionChatWiringService,
     _gate_silent_diagnosis_payload,
+    _strip_input_snapshot,
 )
 from app.services.intervention_lifecycle_service import InterventionLifecycleService
 from app.services.memory_use_selfcheck import SelfCheckContext, evaluate_memory_use_gate
@@ -749,6 +750,141 @@ class TestFrictionWiringTriggerGate:
         )
         assert replay.mode == "answer_replay"
         assert "wiring_gate" not in replay.annotations
+
+
+class TestDiagnosisPayloadNoInputSnapshot:
+    """V3-FIX-142 · friction 全出口 payload 不携输入快照副本（用户原话零残留）。
+
+    ``diagnose_friction`` 各出口 annotations 恒嵌 ``_input_snapshot``
+    （utterance + task_anchor 用户内容全文）；``FrictionWiringOutcome.diagnosis``
+    曾以 ``diagnosis.to_dict()`` 原样带出 → response metadata json 序列化即
+    用户原话全文随 friction_decision 出面。闭环节点重放真源在 Redis pending
+    （``_save_pending`` 写 / ``_answer_turn`` 读），metadata 副本零消费方——
+    整体剔除零损失（FIX-62 零消息文本同律；FIX-114 门拦投影同构扩展到全出口）。
+
+    剔除面只在出口载荷：FrictionDiagnosis 对象本体零接触——pending 重放源与
+    预算计数读的仍是对象 annotations（本类对照断言钉死）。
+    """
+
+    async def test_fresh_ask_exit_payload_carries_no_input_snapshot(self, db_session, fake_redis):
+        """ask 出口（Q1 问询链）：payload annotations 无 input_snapshot、原话零残留。"""
+        user = await _make_user(db_session)
+        svc = FrictionChatWiringService(db_session, fake_redis)
+        utterance = "最近做不下去"
+        outcome = await svc.process_turn(
+            user_id=str(user.id),
+            session_id="fix142-ask",
+            user_message=utterance,
+            user_context_payload={},
+            request_extra_context={},
+            now=_NOW,
+        )
+        assert outcome.outcome == "ask"
+        payload = outcome.to_dict()
+        assert "input_snapshot" not in payload["diagnosis"]["annotations"]
+        assert utterance not in json.dumps(payload, ensure_ascii=False)
+        # 审计面保留：reasons 判定量原样（脱敏 ≠ 抹审计）
+        assert payload["diagnosis"]["reasons"]
+        # 重放真源不受影响：Redis pending 里 input_snapshot 原样在册
+        pending = await svc._load_pending(str(user.id), "fix142-ask")
+        assert pending is not None
+        assert pending["input_snapshot"]["utterance"] == utterance
+
+    async def test_fresh_act_exit_payload_carries_no_input_snapshot(self, db_session, fake_redis):
+        """act 出口（S1 词牌 + spine）：payload 无 input_snapshot、task_anchor 零残留。"""
+        user = await _make_user(db_session)
+        await fake_redis.sadd(f"spine:state_index:{user.id}", "knowledge_transfer")
+        svc = FrictionChatWiringService(db_session, fake_redis)
+        utterance = "这里有点看不懂"
+        outcome = await svc.process_turn(
+            user_id=str(user.id),
+            session_id="fix142-act",
+            user_message=utterance,
+            user_context_payload={},
+            request_extra_context={},
+            now=_NOW,
+        )
+        assert outcome.outcome == "act"
+        payload = outcome.to_dict()
+        assert "input_snapshot" not in payload["diagnosis"]["annotations"]
+        assert utterance not in json.dumps(payload, ensure_ascii=False)
+        assert outcome.intervention is not None
+
+    async def test_gate_silent_exit_payload_carries_no_input_snapshot(self, db_session, fake_redis):
+        """静默门拦出口（FIX-114 投影面）：input_snapshot 连同被拦问句一起零残留。"""
+        user = await _make_user(db_session)
+        svc = FrictionChatWiringService(db_session, fake_redis)
+        control = TestFrictionWiringTriggerGate.CONTROL_MESSAGE
+        outcome = await svc.process_turn(
+            user_id=str(user.id),
+            session_id="fix142-gate",
+            user_message=control,
+            user_context_payload={},
+            request_extra_context={},
+            now=_NOW,
+        )
+        assert outcome.annotations.get("wiring_gate") == "silent_unknown_no_friction_evidence"
+        payload = outcome.to_dict()
+        assert "input_snapshot" not in payload["diagnosis"]["annotations"]
+        assert control not in json.dumps(payload, ensure_ascii=False)
+
+    async def test_answer_replay_exit_payload_carries_no_input_snapshot(self, db_session, fake_redis):
+        """answer_replay 闭环出口：重放快照（上一问的 utterance）不随重诊断出面。"""
+        user = await _make_user(db_session)
+        svc = FrictionChatWiringService(db_session, fake_redis)
+        first_utterance = "最近做不下去"
+        first = await svc.process_turn(
+            user_id=str(user.id),
+            session_id="fix142-replay",
+            user_message=first_utterance,
+            user_context_payload={},
+            request_extra_context={},
+            now=_NOW,
+        )
+        assert first.outcome == "ask"
+        second = await svc.process_turn(
+            user_id=str(user.id),
+            session_id="fix142-replay",
+            user_message="",
+            user_context_payload={},
+            request_extra_context={
+                FRICTION_ANSWER_CONTEXT_KEY: {
+                    "question_id": first.question["question_id"],
+                    "branch_key": "tried_unsure",
+                }
+            },
+            now=_NOW,
+        )
+        assert second.mode == "answer_replay"
+        assert second.outcome in {"act", "ask"}
+        payload = second.to_dict()
+        assert "input_snapshot" not in payload["diagnosis"]["annotations"]
+        # 上一问的用户原话（重放快照源）不随本轮载荷出面
+        assert first_utterance not in json.dumps(payload, ensure_ascii=False)
+        # 预算计数链路不受剔除影响：第二轮 pending 计数在第一轮 +1 之上
+        if second.outcome == "ask":
+            pending = await svc._load_pending(str(user.id), "fix142-replay")
+            assert pending is not None
+            assert pending["questions_asked_session"] == 2
+
+    def test_strip_is_pure_projection_object_body_untouched(self):
+        """单元面：剔除是载荷投影纯函数；诊断对象 annotations 原样（重放源零接触）。"""
+        diagnosis = FrictionDiagnosis(
+            outcome="ask",
+            friction_type="clarity",
+            annotations={
+                "input_snapshot": {"utterance": "我做不下去了", "questions_asked_session": 2},
+                "utterance_matches": ["做不下去"],
+            },
+        )
+        payload = _strip_input_snapshot(diagnosis.to_dict())
+        assert "input_snapshot" not in payload["annotations"]
+        # 对象本体零接触：_save_pending 重放源 / _emit 计数读取面不受影响
+        assert diagnosis.annotations["input_snapshot"]["utterance"] == "我做不下去了"
+        assert diagnosis.annotations["input_snapshot"]["questions_asked_session"] == 2
+        # 门拦投影同样剔除（FIX-114 面与 142 面正交叠加）
+        gate_payload = _gate_silent_diagnosis_payload(diagnosis)
+        assert "input_snapshot" not in gate_payload["annotations"]
 
 
 class TestAnswerReplayFreeTextGate:
