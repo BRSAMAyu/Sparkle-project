@@ -114,8 +114,9 @@ class _InsightHubCardState extends ConsumerState<InsightHubCard> {
               const SizedBox(height: DS.spacing12),
               _InsightHubStatusBanner(
                 onRetry: () {
-                  ref.invalidate(systemUpdatesProvider);
-                  ref.invalidate(simulationProvider);
+                  ref
+                    ..invalidate(systemUpdatesProvider)
+                    ..invalidate(simulationProvider);
                 },
               ),
             ],
