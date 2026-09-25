@@ -216,3 +216,57 @@ async def test_upstream_failure_emits_error_event(
 
     assert "error" in types, f"客户端必须收到 error 事件（本轮失败可见），实际事件链: {types}"
     assert types and types[-1] == "done", f"error 后仍需 done 帧收尾让客户端收束，实际事件链: {types}"
+
+
+# --- V3-FIX-63：SSE 帧协议在路由 docstring（=OpenAPI description）契约化声明 ----
+
+
+def _declared_frame_contract(doc: str) -> tuple[dict[str, str], bool]:
+    """从 docstring 提取 `type 枚举` 契约块：{帧型: 描述行}；块是否存在."""
+    lines = doc.splitlines()
+    declared: dict[str, str] = {}
+    in_block = False
+    for line in lines:
+        stripped = line.strip()
+        if "type 枚举" in stripped:
+            in_block = True
+            continue
+        if in_block:
+            if stripped.startswith("- "):
+                entry = stripped[2:]
+                name, _, desc = entry.partition(":")
+                declared[name.strip()] = desc.strip()
+            elif stripped:
+                break  # 契约块结束
+    return declared, bool(declared) or in_block
+
+
+def test_stream_route_docstring_declares_sse_frame_contract() -> None:
+    """V3-FIX-63 契约锁：error 事件的协议面必须在 docstring 声明（类型枚举+字段）.
+
+    修前：/stream docstring 无帧协议枚举——error 事件仓内唯一"解析器"是本文件
+    测试，外部消费者无从得知帧型与字段（wt410 独立审查发现）。FastAPI 把
+    docstring 冻结进 OpenAPI description，声明即对外契约。
+    """
+    import inspect
+    import re
+
+    from app.api.v1.chat import chat_stream
+
+    doc = inspect.getdoc(chat_stream) or ""
+    declared, block_exists = _declared_frame_contract(doc)
+    assert block_exists, "路由 docstring 必须声明 SSE 帧协议 type 枚举（V3-FIX-63 契约块）"
+
+    # 枚举完备：与源码 /stream 面实际 emit 的 type 值一一对应
+    source = inspect.getsource(chat_stream)
+    emitted = set(re.findall(r"\{'type': '(\w+)'", source))
+    assert emitted == set(declared), (
+        f"docstring 契约 {sorted(declared)} 与源码 emit {sorted(emitted)} 不一致——"
+        "新增帧型必须同步契约声明"
+    )
+
+    # error 帧：message 字段 + done 收束语义（客户端可见失败面的最小契约）
+    assert "message" in declared.get("error", ""), "error 帧契约必须声明 message 字段"
+    assert "done" in declared.get("error", ""), "error 帧契约必须声明 done 收束语义"
+    # done 帧：终止语义可查
+    assert "终止" in declared.get("done", ""), "done 帧契约必须声明终止语义"

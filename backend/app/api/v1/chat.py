@@ -648,6 +648,16 @@ async def chat_stream(
     流式聊天接口（SSE）
     适合长回复场景，实时展示 LLM 生成内容
 
+    SSE 帧协议（V3-FIX-63 契约声明）：``text/event-stream``，data 载荷为单行
+    JSON，以空行（``\\n\\n``）成帧；新增帧型必须同步本枚举与契约锁测试。
+    type 枚举：
+    - text: {"content": str} LLM 文本增量
+    - tool_start: {"tool": str} 工具调用开始宣布（每个调用恰一次）
+    - tool_result: {"result": object} 工具执行结果（ToolResult 序列化）
+    - widget: {"widget_type": str, "widget_data": object} 结构化卡片
+    - error: {"message": str} 本轮处理失败的客户端可见失败面（不裸断连），恒以 done 收束
+    - done: 终止帧（无字段），流正常结束的唯一标记
+
     V3-FIX-53：生成器内任何异常都不得静默断流——统一经 `error` 事件下行
     （客户端可见"本轮失败"），并以 done 帧收束；异常本身 log.exception 落地。
     """
