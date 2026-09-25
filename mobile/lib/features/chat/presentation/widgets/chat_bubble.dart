@@ -1414,7 +1414,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                 const SizedBox(width: DS.xs),
                 Text(
                   timeStr,
-                  style: TextStyle(fontSize: 10, color: DS.neutral500),
+                  // U-02 F1 修复（RUBRIC_VERDICT 建议）：neutral500(#958A80)
+                  // 最优背景 3.91:1 < AA 4.5，时间戳改用 textTertiary
+                  // （校准 token，scaffold 上 ≥4.5，双档 rubric 锁验证）。
+                  style: TextStyle(fontSize: 10, color: DS.textTertiary),
                 ),
               ],
             ),

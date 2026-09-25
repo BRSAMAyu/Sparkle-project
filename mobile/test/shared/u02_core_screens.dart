@@ -58,20 +58,19 @@ const double u02ViewportDpr = 3.0;
 const Map<U02Surface, Set<String>> registeredU02Findings =
     <U02Surface, Set<String>>{
   U02Surface.home: {},
-  // F1 消息时间戳 neutral500(#958A80) 10px w400 最优背景 3.91:1 < AA 4.5:1；
-  // F4 chat_accessory_pill.dart:63 Row 在 360 逻辑宽溢出（实测 48-118px）；
+  // 清扫轮4（wt408）已修复并清空棘轮键：
+  // - F1 contrast:958a80 → chat_bubble.dart 时间戳改 textTertiary（AA 达标）；
+  // - F4 layout:chat_accessory_pill.dart:63 → label Flexible 收缩；
+  // - F3 layout:first_action_card.dart:367 → 三按钮 Row 改 Wrap。
+  // 仍在册（未修，见 RUBRIC_VERDICT.md）：
   // F5 低刺激档 disableAnimations × AnimatedSize 触发框架断言
   //   （RenderAnimatedSize mutated in its own performLayout）。
   U02Surface.chat: {
-    'contrast:958a80',
-    'layout:features/chat/presentation/widgets/chat_accessory_pill.dart:63',
     'flutteranim:RenderAnimatedSize',
   },
-  // F2 卡内无标题层（全部渲染文本为正文/辅助级）；
-  // F3 first_action_card.dart:367 Row 同视口溢出 21px。
+  // 仍在册：F2 卡内无标题层（全部渲染文本为正文/辅助级）。
   U02Surface.journeyFirstAction: {
     'hierarchy:no-heading',
-    'layout:features/journey/presentation/widgets/first_action_card.dart:367',
   },
   U02Surface.settings: {},
 };

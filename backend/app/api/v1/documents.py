@@ -27,6 +27,11 @@ from app.models.user import User
 from app.services.document_service import document_service
 from app.services.document_upload_storage import document_upload_storage
 from app.services.group_file_service import GroupFileService
+from app.services.source_lifecycle import (
+    drain_session_retrieval_invalidations,
+    source_lifecycle_payload,
+    source_lifecycle_service,
+)
 
 router = APIRouter()
 
@@ -386,6 +391,42 @@ async def confirm_document_upload(
         job_id=task.id,
     )
     return ConfirmUploadResponse(job_id=task.id, estimated_seconds=60)
+
+
+# route-tier: authed
+@router.delete(
+    "/{file_id}",
+    summary="Delete an uploaded document (soft delete + recall exclusion + storage erase)",
+    status_code=status.HTTP_200_OK,
+)
+async def delete_document(
+    file_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    用户删除已上传资料（V3-FIX-54：/documents 面此前无删除 HTTP 出口——
+    上传链完整但 DELETE 404，wt394 GJ10 delete 拍不可达）。
+
+    语义复用权威实现 ``SourceLifecycleService.delete``（与
+    ``DELETE /api/v1/sources/{source_id}`` 同源，不复制实现）：
+
+    - 软删：记录、文档 chunks（RAG 召回排除）、群组链接软删；
+      lifecycle → REVOKED，提交后检索失效（E-05：commit 发起方 drain）。
+    - 存储清理对齐：MinIO 对象擦除 best-effort——失败不阻塞删除语义，
+      ``erasure_receipt`` 落 ``:object_delete_pending`` 收据（一致性边界
+      由服务层定义，残留对象可由后续清理补偿）。
+    - 归属校验：非属主/已删 → 404（不暴露存在性）。
+    """
+    source = await source_lifecycle_service.get_owned_source(db, source_id=file_id, user_id=current_user.id)
+    if not source:
+        raise HTTPException(status_code=404, detail="File not found")
+    result = await source_lifecycle_service.delete(db, source=source, reason="user_delete")
+    await db.commit()
+    await drain_session_retrieval_invalidations(db)
+    body = source_lifecycle_payload(result.source, invalidated_keys=result.invalidated_keys)
+    body["deleted"] = True
+    return body
 
 
 @router.get("/{file_id}/status", response_model=DocumentStatusResponse, summary="Get document processing status")

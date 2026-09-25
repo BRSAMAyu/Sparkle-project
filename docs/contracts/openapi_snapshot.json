@@ -62476,6 +62476,53 @@
         ]
       }
     },
+    "/api/v1/documents/{file_id}": {
+      "delete": {
+        "description": "用户删除已上传资料（V3-FIX-54：/documents 面此前无删除 HTTP 出口——\n上传链完整但 DELETE 404，wt394 GJ10 delete 拍不可达）。\n\n语义复用权威实现 ``SourceLifecycleService.delete``（与\n``DELETE /api/v1/sources/{source_id}`` 同源，不复制实现）：\n\n- 软删：记录、文档 chunks（RAG 召回排除）、群组链接软删；\n  lifecycle → REVOKED，提交后检索失效（E-05：commit 发起方 drain）。\n- 存储清理对齐：MinIO 对象擦除 best-effort——失败不阻塞删除语义，\n  ``erasure_receipt`` 落 ``:object_delete_pending`` 收据（一致性边界\n  由服务层定义，残留对象可由后续清理补偿）。\n- 归属校验：非属主/已删 → 404（不暴露存在性）。",
+        "operationId": "delete_document_api_v1_documents__file_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "file_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "File Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete an uploaded document (soft delete + recall exclusion + storage erase)",
+        "tags": [
+          "documents"
+        ]
+      }
+    },
     "/api/v1/documents/{file_id}/confirm-upload": {
       "post": {
         "operationId": "confirm_document_upload_api_v1_documents__file_id__confirm_upload_post",

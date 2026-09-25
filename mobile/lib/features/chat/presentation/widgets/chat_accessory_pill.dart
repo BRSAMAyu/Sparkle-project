@@ -66,15 +66,22 @@ class ChatAccessoryPill extends StatelessWidget {
           Icon(icon, size: iconSize, color: foreground),
           if (showLabel && (label?.trim().isNotEmpty ?? false)) ...[
             const SizedBox(width: DS.spacing6),
-            Text(
-              label!,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    fontSize: DS.fontSizeXs,
-                    color: foreground,
-                    fontWeight:
-                        selected ? DS.fontWeightSemibold : DS.fontWeightMedium,
-                  ),
+            // U-02 F4 修复：Label 此前无宽度约束，在紧宽父级（360 逻辑宽
+            // 多 pill 并排）下整行溢出（实测 48-118px）。Flexible + ellipsis
+            // 让 pill 在可用宽度内收缩，不再撑破父级。
+            Flexible(
+              child: Text(
+                label!,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+                softWrap: false,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontSize: DS.fontSizeXs,
+                      color: foreground,
+                      fontWeight:
+                          selected ? DS.fontWeightSemibold : DS.fontWeightMedium,
+                    ),
+              ),
             ),
           ],
           if (trailing != null) ...[

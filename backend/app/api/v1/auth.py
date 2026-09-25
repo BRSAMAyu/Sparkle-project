@@ -27,6 +27,7 @@ from app.core.account_lockout import account_lockout_service
 from app.core.auth_audit_service import auth_audit_service
 from app.core.cache import cache_service
 from app.core.event_bus import UserRegisteredEvent
+from app.core.metrics import GUEST_SEED_TOTAL
 from app.core.rate_limiting import limiter
 from app.core.security import (
     blacklist_token,
@@ -974,11 +975,16 @@ async def guest_login(
 
         # 为新游客播种演示数据，确保完整体验
         # 先 commit 用户保证用户存在，再 seed 演示数据
+        # V3-FIX-55：播种结果落观测面——GUEST_SEED_TOTAL 计数 + seed_status 回传，
+        # 失败不再只留日志静默（客户端/运维可见「演示数据未种上」）。
+        seed_status = "failed"
         try:
             from app.services.guest_seed_service import seed_guest_user_data
             await seed_guest_user_data(db, user)
             await db.commit()
             await db.refresh(user)
+            GUEST_SEED_TOTAL.labels(outcome="success").inc()
+            seed_status = "seeded"
         except Exception as e:
             logger.warning(f"Guest seed failed on first attempt, committing user and retrying: {e}")
             # Rollback everything (including failed seed data), then save user alone
@@ -992,18 +998,26 @@ async def guest_login(
                 await seed_guest_user_data(db, user)
                 await db.commit()
                 await db.refresh(user)
+                GUEST_SEED_TOTAL.labels(outcome="success").inc()
+                seed_status = "seeded"
             except Exception as retry_err:
                 logger.error(f"Guest seed retry also failed (non-fatal, user exists): {retry_err}")
                 # Don't raise — user can still use the app without demo data
+                GUEST_SEED_TOTAL.labels(outcome="failure").inc()
+                seed_status = "failed"
     else:
         # 已有访客账户 — 检查数据是否完整（seed 可能之前失败过）
         from app.services.guest_seed_service import seed_guest_user_data
+        seed_status = "failed"
         try:
             await seed_guest_user_data(db, user)  # 幂等，已有数据会跳过
             await db.commit()
             await db.refresh(user)
+            GUEST_SEED_TOTAL.labels(outcome="success").inc()
+            seed_status = "reseeded"
         except Exception as e:
             logger.warning(f"Guest re-seed failed (non-fatal, user can still proceed): {e}")
+            GUEST_SEED_TOTAL.labels(outcome="failure").inc()
             try:
                 await db.rollback()
             except Exception:
@@ -1014,7 +1028,7 @@ async def guest_login(
             if not user:
                 raise HTTPException(status_code=500, detail="访客账号异常，请稍后重试" if _zh(request) else "Guest account error. Please try again later.") from e
 
-    logger.info("Guest login: user_id={}, new={}", logsafe.user_id_hash(str(user.id)), is_new_guest)
+    logger.info("Guest login: user_id={}, new={}, seed_status={}", logsafe.user_id_hash(str(user.id)), is_new_guest, seed_status)
 
     return {
         **await _issue_auth_tokens(
@@ -1028,6 +1042,7 @@ async def guest_login(
             **_build_user_profile(user).model_dump(mode="json"),
             "is_guest": True,
         },
+        "seed_status": seed_status,
     }
 
 

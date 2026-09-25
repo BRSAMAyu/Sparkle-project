@@ -23,6 +23,7 @@ from app.api.deps import get_current_user
 from app.config import settings
 from app.core.business_metrics import HITL_APPROVED, HITL_REJECTED
 from app.core.cache import cache_service
+from app.core.metrics import RESPONSE_FALLBACK_GENERATED_TOTAL
 from app.core.pending_actions import pending_actions_store
 from app.db.session import get_db
 from app.models.chat import ChatMessage, MessageRole
@@ -76,6 +77,62 @@ def _build_task_chat_tools_schema() -> list[dict[str, Any]]:
             continue
         schemas.append(tool.to_openai_schema())
     return schemas
+
+
+_TOOL_CONTINUATION_MAX_ATTEMPTS = 2
+_TOOL_CONTINUATION_TIMEOUT_SECONDS = 30
+_TOOL_CONTINUATION_FALLBACK_TEMPLATE = (
+    "工具 {tool_names} 已执行完成，但没有生成补充说明。请继续告诉我下一步需要处理什么。"
+)
+
+
+async def _continue_with_tool_results_resilient(
+    *,
+    conversation_history: list[dict[str, Any]],
+    tool_results: list[dict[str, Any]],
+) -> LLMResponse:
+    """
+    工具轮续写（``continue_with_tool_results``）的韧性封装。
+
+    V3-FIX-57（wt400 FIX-53 复验暴露，GJ15/GJ20 chat 拍残留）：续写 LLM
+    偶发返回 ``content=""``（finish 正常、非异常非超时）——用户看到工具卡片
+    后无 assistant 文本。分三层：
+
+    1. **单次重试**：首轮空 content 再调一次（上游空回复方差，重试即回暖）。
+    2. **摘要兜底**：两轮皆空时以 tool_result 摘要文案代答——与 gRPC/WS 面
+       （``execution_engine._continue_after_tool_result`` 的
+       ``tool_result_empty_final`` 先例）同族语义，工具已执行的事实不下沉。
+    3. **观测**：重试与兜底各落一条 warning + ``RESPONSE_FALLBACK_GENERATED_TOTAL``
+       指标，空回复方差从此可计数。
+    """
+    final_response: LLMResponse | None = None
+    for attempt in range(1, _TOOL_CONTINUATION_MAX_ATTEMPTS + 1):
+        async with asyncio.timeout(_TOOL_CONTINUATION_TIMEOUT_SECONDS):
+            final_response = await llm_service.continue_with_tool_results(
+                conversation_history=conversation_history,
+                tool_results=tool_results,
+            )
+        if (final_response.content or "").strip():
+            return final_response
+        logger.warning(
+            "tool continuation returned empty content (attempt {}/{}, tools={})",
+            attempt,
+            _TOOL_CONTINUATION_MAX_ATTEMPTS,
+            [tr.get("tool_name") for tr in tool_results if isinstance(tr, dict)],
+        )
+
+    # 重试耗尽仍空：tool_result 摘要兜底（权威事实=工具已执行，不容许空回合）。
+    RESPONSE_FALLBACK_GENERATED_TOTAL.labels(source="tool_result_empty_final").inc()
+    assert final_response is not None  # 循环至少执行一次
+    tool_names = "、".join(
+        str(tr.get("tool_name") or "") for tr in tool_results if isinstance(tr, dict) and tr.get("tool_name")
+    )
+    fallback_text = _TOOL_CONTINUATION_FALLBACK_TEMPLATE.format(tool_names=tool_names or "工具")
+    return LLMResponse(
+        content=fallback_text,
+        tool_calls=final_response.tool_calls,
+        finish_reason=final_response.finish_reason,
+    )
 
 
 class ChatRequest(BaseModel):
@@ -292,10 +349,10 @@ async def chat_with_task_context(
                 llm_conversation_history + [{"role": "user", "content": request.message}] + [llm_response_for_history]
             )
 
-            async with asyncio.timeout(30):
-                final_llm_response = await llm_service.continue_with_tool_results(
-                    conversation_history=updated_history, tool_results=[tr.model_dump() for tr in tool_results]
-                )
+            # V3-FIX-57：续写空文本单次重试 + 摘要兜底（含 30s 超时封装）
+            final_llm_response = await _continue_with_tool_results_resilient(
+                conversation_history=updated_history, tool_results=[tr.model_dump() for tr in tool_results]
+            )
             llm_text = final_llm_response.content
 
     # 5. Save Message (linked to task? Schema doesn't have task_id on ChatMessage yet,
@@ -550,11 +607,11 @@ async def chat(
                 + [llm_response_for_history]
             )
 
-            async with asyncio.timeout(30):
-                final_llm_response = await llm_service.continue_with_tool_results(
-                    conversation_history=updated_conversation_history,
-                    tool_results=[tr.model_dump() for tr in tool_results],
-                )
+            # V3-FIX-57：续写空文本单次重试 + 摘要兜底（含 30s 超时封装）
+            final_llm_response = await _continue_with_tool_results_resilient(
+                conversation_history=updated_conversation_history,
+                tool_results=[tr.model_dump() for tr in tool_results],
+            )
             llm_text = final_llm_response.content
         else:
             llm_text = llm_response.content
@@ -734,10 +791,12 @@ async def chat_stream(
                 )
 
                 # Call LLM again to get final text
-                async with asyncio.timeout(30):
-                    final_llm_response = await llm_service.continue_with_tool_results(
-                        conversation_history=message_history_for_llm_callback, tool_results=[result.model_dump()]
-                    )
+                # V3-FIX-57：续写空文本单次重试 + tool_result 摘要兜底
+                # （wt400 GJ15/GJ20：tool_result 后续写偶发 content=""，
+                # text 帧空 → 用户只见工具卡片无 assistant 文本）。
+                final_llm_response = await _continue_with_tool_results_resilient(
+                    conversation_history=message_history_for_llm_callback, tool_results=[result.model_dump()]
+                )
                 final_text = final_llm_response.content
                 yield f"data: {json.dumps({'type': 'text', 'content': final_text})}\n\n"
                 collected_text_content += final_text

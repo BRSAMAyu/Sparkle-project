@@ -1044,6 +1044,13 @@ RESPONSE_FALLBACK_GENERATED_TOTAL = get_or_create_metric(
     ["source"],
 )
 
+GUEST_SEED_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_guest_seed_total",
+    "Guest demo-data seed outcomes (V3-FIX-55: failures were previously silent)",
+    ["outcome"],  # success | failure
+)
+
 # ============ Phase 4: Preference Inference Metrics ============
 
 PREFERENCE_INFERENCE_TOTAL = get_or_create_metric(

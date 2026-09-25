@@ -2309,30 +2309,39 @@ async def send_message(
 
         is_self_only = _is_self_only_visibility(data.content_data, current_user.id)
 
-        # 广播消息到 WebSocket
-        if not is_self_only:
-            await manager.broadcast(message_info.model_dump(mode="json"), str(group_id))
+        # 清扫轮4（wt396 F6 同族收口）：消息已提交=权威事实，提交后的 WS 广播/
+        # 提及通知/ACK 整体 best-effort——Redis publish 瞬断不得把成功变成 500
+        # （重试即重复消息）。失败记日志，不回滚语义。
+        try:
+            # 广播消息到 WebSocket
+            if not is_self_only:
+                await manager.broadcast(message_info.model_dump(mode="json"), str(group_id))
 
-        # 提及通知
-        if message.mention_user_ids and not is_self_only:
-            for mentioned_id in message.mention_user_ids:
-                if str(mentioned_id) == str(current_user.id):
-                    continue
+            # 提及通知
+            if message.mention_user_ids and not is_self_only:
+                for mentioned_id in message.mention_user_ids:
+                    if str(mentioned_id) == str(current_user.id):
+                        continue
+                    await manager.send_personal_message(
+                        {"type": "mention", "group_id": str(group_id), "message": message_info.model_dump(mode="json")},
+                        str(mentioned_id),
+                    )
+
+            # 回传 ACK 给发送者
+            if data.nonce:
                 await manager.send_personal_message(
-                    {"type": "mention", "group_id": str(group_id), "message": message_info.model_dump(mode="json")},
-                    str(mentioned_id),
+                    {
+                        "type": "ack",
+                        "nonce": data.nonce,
+                        "message_id": str(message.id),
+                        "timestamp": message.created_at.isoformat(),
+                    },
+                    str(current_user.id),
                 )
-
-        # 回传 ACK 给发送者
-        if data.nonce:
-            await manager.send_personal_message(
-                {
-                    "type": "ack",
-                    "nonce": data.nonce,
-                    "message_id": str(message.id),
-                    "timestamp": message.created_at.isoformat(),
-                },
-                str(current_user.id),
+        except Exception:
+            logger.opt(exception=True).warning(
+                "post-commit ws broadcast failed after group message commit (best-effort), group_id={}",
+                group_id,
             )
 
         return message_info
@@ -2382,18 +2391,25 @@ async def mark_group_messages_read(
             up_to_message_id=data.up_to_message_id,
         )
         await db.commit()
-        await manager.broadcast(
-            {
-                "type": "read_receipt",
-                "group_id": str(group_id),
-                "up_to_message_id": str(target_message.id),
-                "reader_id": str(current_user.id),
-                "reader": UserBrief.model_validate(current_user).model_dump(mode="json"),
-                "read_at": _utcnow().isoformat(),
-                "updated_count": updated_count,
-            },
-            str(group_id),
-        )
+        # 清扫轮4（F6 同族）：已读回执广播 best-effort——已读状态已提交。
+        try:
+            await manager.broadcast(
+                {
+                    "type": "read_receipt",
+                    "group_id": str(group_id),
+                    "up_to_message_id": str(target_message.id),
+                    "reader_id": str(current_user.id),
+                    "reader": UserBrief.model_validate(current_user).model_dump(mode="json"),
+                    "read_at": _utcnow().isoformat(),
+                    "updated_count": updated_count,
+                },
+                str(group_id),
+            )
+        except Exception:
+            logger.opt(exception=True).warning(
+                "post-commit read_receipt broadcast failed (best-effort), group_id={}",
+                group_id,
+            )
         return GroupMessageReadResponse(
             updated_count=updated_count,
             up_to_message_id=target_message.id,
@@ -2839,7 +2855,15 @@ async def revoke_group_message(
         await db.commit()
         message_info = _build_message_info(message)
         if not is_self_only:
-            await manager.broadcast({"type": "message_revoke", "message_id": str(message.id)}, str(group_id))
+            # 清扫轮4（F6 同族）：撤回已提交，广播失败不回滚语义。
+            try:
+                await manager.broadcast({"type": "message_revoke", "message_id": str(message.id)}, str(group_id))
+            except Exception:
+                logger.opt(exception=True).warning(
+                    "post-commit message_revoke broadcast failed (best-effort), group_id={} message_id={}",
+                    group_id,
+                    message.id,
+                )
         return message_info
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -2934,21 +2958,29 @@ async def send_private_message(
 
         is_self_only = _is_self_only_visibility(data.content_data, current_user.id)
 
-        # 推送 WebSocket
-        if not is_self_only:
-            await manager.send_personal_message(msg_info.model_dump(mode="json"), str(data.target_user_id))
-        await manager.send_personal_message(msg_info.model_dump(mode="json"), str(current_user.id))
+        # 清扫轮4（wt396 F6 同族收口）：私信已提交=权威事实，提交后的推送/ACK
+        # 整体 best-effort——失败记日志不 500（重试即重复私信）。
+        try:
+            # 推送 WebSocket
+            if not is_self_only:
+                await manager.send_personal_message(msg_info.model_dump(mode="json"), str(data.target_user_id))
+            await manager.send_personal_message(msg_info.model_dump(mode="json"), str(current_user.id))
 
-        # 回传 ACK 给发送者
-        if data.nonce:
-            await manager.send_personal_message(
-                {
-                    "type": "ack",
-                    "nonce": data.nonce,
-                    "message_id": str(message.id),
-                    "timestamp": message.created_at.isoformat(),
-                },
-                str(current_user.id),
+            # 回传 ACK 给发送者
+            if data.nonce:
+                await manager.send_personal_message(
+                    {
+                        "type": "ack",
+                        "nonce": data.nonce,
+                        "message_id": str(message.id),
+                        "timestamp": message.created_at.isoformat(),
+                    },
+                    str(current_user.id),
+                )
+        except Exception:
+            logger.opt(exception=True).warning(
+                "post-commit ws push failed after private message commit (best-effort), target_user_id={}",
+                data.target_user_id,
             )
 
         return msg_info
@@ -4973,14 +5005,21 @@ async def forward_message(
 
         # 构建消息信息并广播
         # wt297: 两分支返回类型不同（Group/Private 两种 Info），显式联合注解。
+        # 清扫轮4（F6 同族）：转发已提交，广播/推送 best-effort。
         msg_info: MessageInfo | PrivateMessageInfo
-        if data.target_group_id:
-            msg_info = _build_message_info(forwarded)
-            await manager.broadcast(msg_info.model_dump(mode="json"), str(data.target_group_id))
-        elif data.target_user_id:
-            msg_info = _build_private_message_info(forwarded)
-            await manager.send_personal_message(msg_info.model_dump(mode="json"), str(data.target_user_id))
-            await manager.send_personal_message(msg_info.model_dump(mode="json"), str(current_user.id))
+        try:
+            if data.target_group_id:
+                msg_info = _build_message_info(forwarded)
+                await manager.broadcast(msg_info.model_dump(mode="json"), str(data.target_group_id))
+            elif data.target_user_id:
+                msg_info = _build_private_message_info(forwarded)
+                await manager.send_personal_message(msg_info.model_dump(mode="json"), str(data.target_user_id))
+                await manager.send_personal_message(msg_info.model_dump(mode="json"), str(current_user.id))
+        except Exception:
+            logger.opt(exception=True).warning(
+                "post-commit forward broadcast failed (best-effort), message_id={}",
+                forwarded.id,
+            )
 
         return {"success": True, "message_id": str(forwarded.id)}
     except ValueError as e:

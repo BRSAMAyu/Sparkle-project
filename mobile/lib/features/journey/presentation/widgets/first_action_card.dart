@@ -364,7 +364,11 @@ class _FirstActionCardState extends ConsumerState<FirstActionCard> {
                 : _modeLabel(step.executionMode),
           ),
           const SizedBox(height: 12),
-          Row(
+          // U-02 F3 修复：三按钮固定行在 360 逻辑宽（卡内 328 可用）溢出
+          // 21px。Wrap 让「编辑」在窄宽换行而非溢出，三个动作全部可达。
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
               SparkleButton(
                 label: l10n.firstActionStartCta,
@@ -372,12 +376,10 @@ class _FirstActionCardState extends ConsumerState<FirstActionCard> {
                 onPressed: _mutating ? () {} : () => _approve(proposalId),
                 loading: _mutating,
               ),
-              const SizedBox(width: 8),
               SparkleButton.ghost(
                 label: l10n.firstActionRejectCta,
                 onPressed: _mutating ? () {} : () => _reject(proposalId),
               ),
-              const SizedBox(width: 8),
               SparkleButton.ghost(
                 label: l10n.firstActionEditCta,
                 onPressed: _mutating ? () {} : () => _edit(proposalId, step),
