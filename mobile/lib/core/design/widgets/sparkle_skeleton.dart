@@ -58,36 +58,42 @@ class _SparkleSkeletonState extends State<SparkleSkeleton>
       ),
     );
 
+    // U-08 a11y：骨架是非信息性占位（"这里是骨架条"对读屏是噪音节点，
+    // 且会把真实内容的焦点序推后）。加载中的可感知语义由等待族 owner
+    // （StagedSurfaceLoader / LoadingIndicator 的 liveRegion「加载中」播报）
+    // 承担，骨架本身整体退出语义树——视觉渲染两分支逐字不变。
     if (reduceMotion) {
-      return child;
+      return ExcludeSemantics(child: child);
     }
 
-    return RepaintBoundary(
-      child: AnimatedBuilder(
-        animation: _controller,
-        child: child,
-        builder: (context, skeletonChild) {
-          final t = _controller.value;
-          final breathingScale =
-              0.995 + (math.sin(t * math.pi * 2) + 1) * 0.0025;
-          return Transform.scale(
-            scale: breathingScale,
-            child: ShaderMask(
-              shaderCallback: (bounds) => LinearGradient(
-                begin: Alignment(-1.5 + t * 2.5, -0.5),
-                end: Alignment(-0.5 + t * 2.5, 0.5),
-                colors: [
-                  baseColor,
-                  highlightColor,
-                  baseColor,
-                ],
-                stops: const [0.1, 0.5, 0.9],
-              ).createShader(bounds),
-              blendMode: BlendMode.srcATop,
-              child: skeletonChild,
-            ),
-          );
-        },
+    return ExcludeSemantics(
+      child: RepaintBoundary(
+        child: AnimatedBuilder(
+          animation: _controller,
+          child: child,
+          builder: (context, skeletonChild) {
+            final t = _controller.value;
+            final breathingScale =
+                0.995 + (math.sin(t * math.pi * 2) + 1) * 0.0025;
+            return Transform.scale(
+              scale: breathingScale,
+              child: ShaderMask(
+                shaderCallback: (bounds) => LinearGradient(
+                  begin: Alignment(-1.5 + t * 2.5, -0.5),
+                  end: Alignment(-0.5 + t * 2.5, 0.5),
+                  colors: [
+                    baseColor,
+                    highlightColor,
+                    baseColor,
+                  ],
+                  stops: const [0.1, 0.5, 0.9],
+                ).createShader(bounds),
+                blendMode: BlendMode.srcATop,
+                child: skeletonChild,
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -283,14 +289,18 @@ class _SkeletonBox extends StatelessWidget {
   final BorderRadius? borderRadius;
 
   @override
-  Widget build(BuildContext context) => Container(
-        width: width,
-        height: height,
-        decoration: BoxDecoration(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? DS.neutral700
-              : DS.neutral300,
-          borderRadius: borderRadius ?? DS.borderRadius8,
+  Widget build(BuildContext context) => ExcludeSemantics(
+        // U-08 a11y：与 SparkleSkeleton 同口径——遗留 shimmer 骨架同为
+        // 非信息性占位，退出语义树。
+        child: Container(
+          width: width,
+          height: height,
+          decoration: BoxDecoration(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? DS.neutral700
+                : DS.neutral300,
+            borderRadius: borderRadius ?? DS.borderRadius8,
+          ),
         ),
       );
 }

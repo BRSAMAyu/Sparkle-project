@@ -396,40 +396,61 @@ class _CurrentRunStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return InkWell(
+    // U-08 a11y：整条是可点控件——单语义节点（button + 名字 = 可见文案 +
+    // tap 动作），子树（进度指示/文字/箭头）退出语义树避免重复播报与
+    // tap 动作分裂。48 触控下限只增高到触控档，不改版式。
+    final runText = runLabel == null || runLabel!.trim().isEmpty
+        ? l10n.todayCockpitRunOngoing
+        : l10n.todayCockpitRunOngoingDetailed(runLabel!);
+    return Semantics(
+      button: true,
+      container: true,
+      excludeSemantics: true,
+      label: runText,
       onTap: () => unawaited(context.push('/chat')),
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing12,
-          vertical: DS.spacing8,
-        ),
-        decoration: BoxDecoration(
-          color: DS.brandPrimary.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.16)),
-        ),
-        child: Row(
-          children: [
-            // U-01 Step 3：进度/加载一律走 owner LoadingIndicator。
-            LoadingIndicator.circular(size: 14, strokeWidth: 2),
-            const SizedBox(width: DS.spacing8),
-            Expanded(
-              child: Text(
-                runLabel == null || runLabel!.trim().isEmpty
-                    ? l10n.todayCockpitRunOngoing
-                    : l10n.todayCockpitRunOngoingDetailed(runLabel!),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: context.typo.bodySmall.copyWith(
-                  color: DS.textSecondary,
-                  fontWeight: DS.fontWeightMedium,
+      child: InkWell(
+        onTap: () => unawaited(context.push('/chat')),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          width: double.infinity,
+          constraints: const BoxConstraints(
+            minHeight: DS.touchTargetMinSize,
+          ),
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing12,
+            vertical: DS.spacing8,
+          ),
+          decoration: BoxDecoration(
+            color: DS.brandPrimary.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.16)),
+          ),
+          child: Row(
+            children: [
+              // U-01 Step 3：进度/加载一律走 owner LoadingIndicator。
+              ExcludeSemantics(
+                child: LoadingIndicator.circular(size: 14, strokeWidth: 2),
+              ),
+              const SizedBox(width: DS.spacing8),
+              Expanded(
+                child: Text(
+                  runText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.typo.bodySmall.copyWith(
+                    color: DS.textSecondary,
+                    fontWeight: DS.fontWeightMedium,
+                  ),
                 ),
               ),
-            ),
-            Icon(Icons.chevron_right_rounded, size: 16, color: DS.textSecondary),
-          ],
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 16,
+                color: DS.textSecondary,
+              ),
+            ],
+          ),
         ),
       ),
     );

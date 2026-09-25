@@ -108,11 +108,19 @@ class SurfaceStateView extends StatelessWidget {
     if (phase == SurfacePhase.success) {
       return contentBelow ?? const SizedBox.shrink();
     }
-    return _failureBody(context, phase);
+    // U-08 a11y：失败族是状态突变（success→error 的整面切换），读屏
+    // 用户扫焦到新内容前就要听到「出错了/下一步做什么」。整块 liveRegion
+    // 使「标题+说明+下一步动作」进入视野即播报（WCAG 4.1.3 status
+    // messages；ACCESSIBILITY.md「error 与 validation 可被辅助技术读出」）。
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      child: _failureBodyInner(context, phase),
+    );
   }
 
   /// 失败族渲染：图标 + 标题 + 说明 + 保证非空的下一步动作行。
-  Widget _failureBody(BuildContext context, SurfacePhase phase) {
+  Widget _failureBodyInner(BuildContext context, SurfacePhase phase) {
     final copy = _copy(context, state);
     final steps = SurfaceStateMatrix.defaultNextSteps(phase);
     final actions = _actionsFor(context, steps);
@@ -315,28 +323,37 @@ class _StateBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = tone == _StateTone.error ? DS.error : DS.warning;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: DS.spacing16,
-        vertical: DS.spacing8,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        border: Border(bottom: BorderSide(color: color.withValues(alpha: 0.3))),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: DS.iconSizeSm, color: color),
-          const SizedBox(width: DS.spacing8),
-          Expanded(
-            child: Text(
-              state.title,
-              style: TextStyle(fontSize: DS.fontSizeSm, color: DS.textPrimary),
+    // U-08 a11y：offline/reconnecting/partial 是非阻断状态条，视觉上不
+    // 抢占主内容，但读屏不能漏——liveRegion 让降级/重连/部分数据的出现
+    // 与解除都被自动播报（不靠颜色单独传达，条内自带图标+文字）。
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing16,
+          vertical: DS.spacing8,
+        ),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.10),
+          border:
+              Border(bottom: BorderSide(color: color.withValues(alpha: 0.3))),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: DS.iconSizeSm, color: color),
+            const SizedBox(width: DS.spacing8),
+            Expanded(
+              child: Text(
+                state.title,
+                style:
+                    TextStyle(fontSize: DS.fontSizeSm, color: DS.textPrimary),
+              ),
             ),
-          ),
-          ...actions,
-        ],
+            ...actions,
+          ],
+        ),
       ),
     );
   }

@@ -135,37 +135,48 @@ class _StagedSurfaceLoaderState extends State<StagedSurfaceLoader> {
         _stageVisible && (widget.longWaitHint ?? l10n?.stateLongWaitHint) != null;
 
     if (widget.compact) {
-      return SizedBox(
-        height: widget.height,
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: DS.spacing16,
-              vertical: DS.spacing12,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(DS.radius8),
-                  child: LinearProgressIndicator(
-                    minHeight: 3,
-                    backgroundColor: DS.brandPrimary200,
-                    valueColor: AlwaysStoppedAnimation(DS.brandPrimary),
-                  ),
-                ),
-                if (stageText != null) ...[
-                  const SizedBox(height: DS.spacing8),
-                  Text(
-                    stageText,
-                    style: TextStyle(
-                      fontSize: DS.fontSizeSm,
-                      color: DS.textSecondary,
+      // U-08 a11y：等待族全程对读屏可感知——快路径（零视觉文案噪音的
+      // 产品契约不变）也要有「加载中」语义 label；stage 文案出现后该
+      // 节点转为 liveRegion，阶段推进自动播报。单节点形态（exclude）：
+      // 容器 label 即全部信息，进度条/重复文案不进语义树。label 回退串
+      // 与 loading_indicator.dart 的 l10n 缺失容错同惯例。
+      return Semantics(
+        container: true,
+        excludeSemantics: true,
+        liveRegion: stageText != null,
+        label: stageText ?? l10n?.commonLoading ?? 'Loading',
+        child: SizedBox(
+          height: widget.height,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: DS.spacing16,
+                vertical: DS.spacing12,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(DS.radius8),
+                    child: LinearProgressIndicator(
+                      minHeight: 3,
+                      backgroundColor: DS.brandPrimary200,
+                      valueColor: AlwaysStoppedAnimation(DS.brandPrimary),
                     ),
-                    textAlign: TextAlign.center,
                   ),
+                  if (stageText != null) ...[
+                    const SizedBox(height: DS.spacing8),
+                    Text(
+                      stageText,
+                      style: TextStyle(
+                        fontSize: DS.fontSizeSm,
+                        color: DS.textSecondary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
@@ -182,43 +193,56 @@ class _StagedSurfaceLoaderState extends State<StagedSurfaceLoader> {
     );
 
     if (!_stageVisible) {
-      return skeleton;
+      // U-08 a11y：骨架行自身已在 SparkleSkeleton 内退出语义树（装饰性），
+      // 这里补「加载中」label，等待期读屏用户不会得到空树。
+      return Semantics(
+        container: true,
+        liveRegion: false,
+        label: l10n?.commonLoading ?? 'Loading',
+        child: skeleton,
+      );
     }
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        skeleton,
-        const SizedBox(height: DS.spacing16),
-        if (stageText != null)
-          Text(
-            stageText,
-            style: TextStyle(
-              fontSize: DS.fontSizeSm,
-              color: DS.textSecondary,
+    // U-08 a11y：升格后整块是 liveRegion——阶段推进（准备中→加载中→
+    // 快好了）与长等待提示的变化会被读屏自动播报，无需用户主动扫焦。
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          skeleton,
+          const SizedBox(height: DS.spacing16),
+          if (stageText != null)
+            Text(
+              stageText,
+              style: TextStyle(
+                fontSize: DS.fontSizeSm,
+                color: DS.textSecondary,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
-        if (showLongWaitHint) ...[
-          const SizedBox(height: DS.spacing4),
-          Text(
-            widget.longWaitHint ?? l10n!.stateLongWaitHint,
-            style: TextStyle(
-              fontSize: DS.fontSizeXs,
-              color: DS.textTertiary,
+          if (showLongWaitHint) ...[
+            const SizedBox(height: DS.spacing4),
+            Text(
+              widget.longWaitHint ?? l10n!.stateLongWaitHint,
+              style: TextStyle(
+                fontSize: DS.fontSizeXs,
+                color: DS.textTertiary,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
+          ],
+          if (widget.onLeave != null && l10n != null) ...[
+            const SizedBox(height: DS.spacing4),
+            TextButton.icon(
+              onPressed: widget.onLeave,
+              icon: const Icon(Icons.arrow_back_rounded, size: 16),
+              label: Text(l10n.back),
+            ),
+          ],
         ],
-        if (widget.onLeave != null && l10n != null) ...[
-          const SizedBox(height: DS.spacing4),
-          TextButton.icon(
-            onPressed: widget.onLeave,
-            icon: const Icon(Icons.arrow_back_rounded, size: 16),
-            label: Text(l10n.back),
-          ),
-        ],
-      ],
+      ),
     );
   }
 }
