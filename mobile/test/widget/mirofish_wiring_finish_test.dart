@@ -124,22 +124,28 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // The prediction / simulation / report cards are wrapped in
-      // CollapsibleWidgetWrapper chips. Expand them first.
-      await tester.tap(find.text('查看推演详情'));
+      // U-07（wt356）：theater/simulation 属 LABS（hidden by default），
+      // CORE 聊天面不再渲染这两路预览披露与深链入口——桥卡只保留
+      // CONTEXTUAL 报告面与行动链。
+      expect(find.text('查看推演详情'), findsNothing);
+      expect(find.text('查看模拟详情'), findsNothing);
+      expect(find.text('推演剧场'), findsNothing);
+      expect(find.text('学习仿真'), findsNothing);
+      expect(find.textContaining('两周掌握特征值'), findsNothing);
+      expect(find.textContaining('矩阵特征值'), findsNothing);
+
+      // 报告桥卡仍在：展开披露（label=chatViewLearningReport）。
+      final reportDisclosure = find.text('查看学习报告');
+      expect(reportDisclosure, findsWidgets);
+      await tester.tap(reportDisclosure.first);
       await tester.pump(const Duration(milliseconds: 300));
 
-      await tester.tap(find.text('查看模拟详情'));
-      await tester.pump(const Duration(milliseconds: 300));
+      // 报告摘要/亮点/行动钮来自 payload 真实渲染，不是占位文案
+      // （亮点 bullet 格式为「重点关注: <项>」，行动钮取 action_cards 的 cta_label）。
+      expect(find.textContaining('优先关注行列式'), findsWidgets);
+      expect(find.textContaining('重点关注'), findsWidgets);
+      expect(find.text('开始练习'), findsWidgets);
 
-      await tester.tap(find.text('查看学习报告'));
-      await tester.pump(const Duration(milliseconds: 300));
-
-      expect(find.text('推演剧场'), findsOneWidget);
-      expect(find.text('学习仿真'), findsOneWidget);
-      expect(find.text('查看学习报告'), findsWidgets);
-      expect(find.textContaining('两周掌握特征值'), findsOneWidget);
-      expect(find.textContaining('矩阵特征值'), findsOneWidget);
       expect(find.text('继续在对话里'), findsWidgets);
       expect(find.text('排今天行动顺序'), findsOneWidget);
       expect(tester.takeException(), isNull);
