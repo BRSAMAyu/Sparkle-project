@@ -20,7 +20,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
-from app.aurora.friction_diagnosis import FRICTION_TYPES, _QUESTION_BANK_INDEX
+from app.aurora.friction_diagnosis import _QUESTION_BANK_INDEX, FRICTION_TYPES
 from app.models.user import User
 from app.services.stuck_journey_service import (
     STUCK_JOURNEY_SURFACES,

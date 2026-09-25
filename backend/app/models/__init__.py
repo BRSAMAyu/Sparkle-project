@@ -229,8 +229,8 @@ from app.models.session_completion import SessionCompletion
 from app.models.shop import PhotonTransactionHistory, ShopItem, ShopPurchase, UserConsumable
 from app.models.simulation_run import SimulationRun
 from app.models.squad_shared_error import SquadSharedError
-from app.models.study_room import StudyRoomSession
 from app.models.stuck_journey import StuckJourneyCorrection
+from app.models.study_room import StudyRoomSession
 from app.models.subject import Subject
 from app.models.task import CognitiveOwnership, RiskClass, Task, TaskStatus, TaskType
 from app.models.task_document import TaskDocument
