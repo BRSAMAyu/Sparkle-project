@@ -731,16 +731,22 @@ Future<void> _ownGoalRoute({
     await tester.pump(const Duration(milliseconds: 250));
   }
   await shot('$passId/07-register-filled.png');
-  // Locate the submit BUTTON component (the AppBar title is also 注册 and a
-  // plain-text tap can land on the adjacent ghost button).
-  final submitText = textAnySmart(['注册'], last: true);
-  if (submitText != null) {
-    final btn = find
-        .ancestor(of: submitText, matching: find.byType(SparkleButton))
-        .evaluate()
-        .isNotEmpty
-        ? find.ancestor(of: submitText, matching: find.byType(SparkleButton)).first
-        : submitText;
+  // Locate the submit BUTTON component. O3 复盘（wt436）：此处曾用
+  // `textAnySmart(['注册'], last: true)` —— 注册屏遍历顺序里 AppBar 标题
+  // 「注册」排在 body 之后，last 命中的是标题而非按钮（误触 ×7 runs 无
+  // 手势无反馈）。必须用 SparkleButton 祖先过滤：AppBar 标题天然无按钮
+  // 祖先，命中唯一真实提交按钮。
+  var btn = find.widgetWithText(SparkleButton, '注册');
+  if (btn.evaluate().isEmpty) {
+    final submitText = textAnySmart(['注册'], last: true);
+    if (submitText != null) {
+      final ancestor = find
+          .ancestor(of: submitText, matching: find.byType(SparkleButton))
+          .first;
+      btn = ancestor.evaluate().isNotEmpty ? ancestor : submitText;
+    }
+  }
+  if (btn.evaluate().isNotEmpty) {
     try {
       await tester.ensureVisible(btn);
       await tester.pump(const Duration(milliseconds: 400));
@@ -836,15 +842,19 @@ Future<void> _ownGoalRoute({
     await dumpTexts(tester, 'before-fallback-login');
     // If still on the register screen, walk the REAL user path back to
     // login via the 已有账号？ ghost button.
+    // O3 复盘（wt436）：同款 finder 陷阱——用 SparkleButton 祖先过滤。
     if (find.text('确认密码').evaluate().isNotEmpty) {
-      final backLink = textAnySmart(['已有账号？', '已有账号']);
-      if (backLink != null) {
-        final backBtn = find
-            .ancestor(of: backLink, matching: find.byType(SparkleButton))
-            .evaluate()
-            .isNotEmpty
-            ? find.ancestor(of: backLink, matching: find.byType(SparkleButton)).first
-            : backLink;
+      var backBtn = find.widgetWithText(SparkleButton, '已有账号？');
+      if (backBtn.evaluate().isEmpty) {
+        final backLink = textAnySmart(['已有账号？', '已有账号']);
+        if (backLink != null) {
+          final ancestor = find
+              .ancestor(of: backLink, matching: find.byType(SparkleButton))
+              .first;
+          backBtn = ancestor.evaluate().isNotEmpty ? ancestor : backLink;
+        }
+      }
+      if (backBtn.evaluate().isNotEmpty) {
         try {
           await tester.ensureVisible(backBtn);
           await tester.pump(const Duration(milliseconds: 400));
@@ -862,23 +872,26 @@ Future<void> _ownGoalRoute({
       }
     }
     // UI login with the fresh account (smart finder: rich-text safe).
+    // O3 复盘（wt436）：登录提交按钮同款陷阱——AppBar 标题「登录」在遍历
+    // 序中排最后，last-text 误触标题；改用 SparkleButton 祖先过滤。
     final loginFields = find.byType(TextFormField);
     if (loginFields.evaluate().length >= 2) {
       await tester.enterText(loginFields.at(0), username);
       await tester.enterText(loginFields.at(1), 'J01-Passw0rd!');
       await tester.pump(const Duration(milliseconds: 300));
-      final loginBtn = textAnySmart(['登录'], last: true);
-      if (loginBtn == null) {
-        failures.add('pass $passId: login button not findable (rich text?)');
-        await dumpTexts(tester, 'login-button-missing');
-        return;
+      var loginBtnWidget = find.widgetWithText(SparkleButton, '登录');
+      if (loginBtnWidget.evaluate().isEmpty) {
+        final loginBtn = textAnySmart(['登录'], last: true);
+        if (loginBtn == null) {
+          failures.add('pass $passId: login button not findable (rich text?)');
+          await dumpTexts(tester, 'login-button-missing');
+          return;
+        }
+        final ancestor = find
+            .ancestor(of: loginBtn, matching: find.byType(SparkleButton))
+            .first;
+        loginBtnWidget = ancestor.evaluate().isNotEmpty ? ancestor : loginBtn;
       }
-      final loginBtnWidget = find
-          .ancestor(of: loginBtn, matching: find.byType(SparkleButton))
-          .evaluate()
-          .isNotEmpty
-          ? find.ancestor(of: loginBtn, matching: find.byType(SparkleButton)).first
-          : loginBtn;
       try {
         await tester.ensureVisible(loginBtnWidget);
         await tester.pump(const Duration(milliseconds: 400));

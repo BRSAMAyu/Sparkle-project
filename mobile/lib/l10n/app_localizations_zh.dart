@@ -10719,10 +10719,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String taskDetailCandidatesApplied(
-    Object count,
-    Object created,
-    Object reused,
-  ) {
+      Object count, Object created, Object reused) {
     return '已处理 $count 个候选节点，新增 $created 个，复用 $reused 个已有节点。';
   }
 
@@ -11518,11 +11515,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String aiOpsPredictionSummary(
-    Object days,
-    Object topAction,
-    Object promptUtil,
-    Object inferenceUtil,
-  ) {
+      Object days, Object topAction, Object promptUtil, Object inferenceUtil) {
     return '近 $days 天里，当前最值得继续盯的预测动作是「$topAction」；同时 prompt / inference 命中率分别是 $promptUtil%/$inferenceUtil%。';
   }
 
@@ -12781,11 +12774,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String planDetailPhaseStats(
-    Object progress,
-    Object completed,
-    Object occurrences,
-    Object tasks,
-  ) {
+      Object progress, Object completed, Object occurrences, Object tasks) {
     return '$progress% · $completed/$occurrences 次发生 · $tasks 个任务';
   }
 
@@ -13194,10 +13183,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String theaterTimelinePhaseWithSteps(
-    Object compare,
-    Object label,
-    Object step,
-  ) {
+      Object compare, Object label, Object step) {
     return '当前阶段：$label · $step · $compare';
   }
 
@@ -13335,12 +13321,8 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String theaterRouteRangePrediction(
-    Object completionHigh,
-    Object completionLow,
-    Object masteryHigh,
-    Object masteryLow,
-  ) {
+  String theaterRouteRangePrediction(Object completionHigh,
+      Object completionLow, Object masteryHigh, Object masteryLow) {
     return '区间预测：完成率 $completionLow%-$completionHigh%， 掌握度 $masteryLow%-$masteryHigh%';
   }
 
@@ -13777,10 +13759,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String planCreateReviewSummary(
-    Object dailyMinutes,
-    Object hours,
-    Object type,
-  ) {
+      Object dailyMinutes, Object hours, Object type) {
     return '$type · $dailyMinutes 分钟/天 · $hours 小时';
   }
 
@@ -14383,21 +14362,16 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String theaterWhatIfCombinedResult(
-    Object originalMastery,
-    Object originalCompletion,
-    Object predictedMastery,
-    Object predictedCompletion,
-  ) {
+      Object originalMastery,
+      Object originalCompletion,
+      Object predictedMastery,
+      Object predictedCompletion) {
     return '原始 $originalMastery% / $originalCompletion%  →  调整后 $predictedMastery% / $predictedCompletion%';
   }
 
   @override
-  String theaterAccuracyPredictedActual(
-    Object predictedCompletion,
-    Object predictedMastery,
-    Object actualCompletion,
-    Object actualMastery,
-  ) {
+  String theaterAccuracyPredictedActual(Object predictedCompletion,
+      Object predictedMastery, Object actualCompletion, Object actualMastery) {
     return '预测 $predictedCompletion% / $predictedMastery%， 实际 $actualCompletion% / $actualMastery%';
   }
 
@@ -20930,13 +20904,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String achievementMilestoneShareText(
-    Object completedSprints,
-    Object errorCount,
-    Object hashtag,
-    Object headline,
-    Object masteredNodes,
-    Object studyDays,
-  ) {
+      Object completedSprints,
+      Object errorCount,
+      Object hashtag,
+      Object headline,
+      Object masteredNodes,
+      Object studyDays) {
     return '$hashtag 我在 Sparkle 达成了「$headline」里程碑。累计学习 $studyDays 天，掌握 $masteredNodes 个知识节点，完成 $completedSprints 次冲刺，记录 $errorCount 道错题。';
   }
 
@@ -21176,11 +21149,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String achievementUnlockTimeDate(
-    Object day,
-    Object hour,
-    Object minute,
-    Object month,
-  ) {
+      Object day, Object hour, Object minute, Object month) {
     return '$month月$day日 $hour:$minute';
   }
 
@@ -21301,11 +21270,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String notificationCompilationSummary(
-    Object affected,
-    Object hidden,
-    Object inserted,
-    Object result,
-  ) {
+      Object affected, Object hidden, Object inserted, Object result) {
     return '结果：$result，影响任务 $affected 个，新增 $inserted 个，收起 $hidden 个';
   }
 
@@ -21424,9 +21389,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String notificationAnalyticsAcceptanceActionRate(
-    Object acceptanceRate,
-    Object actionRate,
-  ) {
+      Object acceptanceRate, Object actionRate) {
     return '接受率 $acceptanceRate% · 行动率 $actionRate%';
   }
 
@@ -21456,9 +21419,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String notificationAnalyticsActedEffectiveRate(
-    Object actedRate,
-    Object effectiveRate,
-  ) {
+      Object actedRate, Object effectiveRate) {
     return '行动率 $actedRate% · 有效率 $effectiveRate%';
   }
 
@@ -21494,9 +21455,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String notificationAnalyticsRateSuffix(
-    Object acceptanceRate,
-    Object actionRate,
-  ) {
+      Object acceptanceRate, Object actionRate) {
     return '接受率: $acceptanceRate% · 行动率: $actionRate%';
   }
 
@@ -21524,10 +21483,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String focusSessionMasteryUpdate(
-    String nodeName,
-    int oldMastery,
-    int newMastery,
-  ) {
+      String nodeName, int oldMastery, int newMastery) {
     return '今天的专注让你的 $nodeName 掌握度从 $oldMastery 提升到了 $newMastery 分';
   }
 
@@ -27188,12 +27144,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get planSprintShareOpened => '分享已打开';
 
   @override
-  String planSprintShareText(
-    int masteredNodes,
-    int repairedErrors,
-    int completedTasks,
-    String strongestArea,
-  ) {
+  String planSprintShareText(int masteredNodes, int repairedErrors,
+      int completedTasks, String strongestArea) {
     return '我的 7 天备考冲刺完成：掌握 $masteredNodes 个知识节点，修复 $repairedErrors 个错误模式，完成 $completedTasks 个任务。最强项：$strongestArea。#Sparkle备考';
   }
 
@@ -27217,10 +27169,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String planSprintResultSummary(
-    Object completedTasks,
-    Object masteredNodes,
-    Object repairedErrors,
-  ) {
+      Object completedTasks, Object masteredNodes, Object repairedErrors) {
     return '掌握了 $masteredNodes 个知识节点，修复了 $repairedErrors 个错误模式，完成了 $completedTasks 个任务。';
   }
 
@@ -27364,10 +27313,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String planPortfolioActiveDay(
-    Object currentDay,
-    Object mode,
-    Object remainingDays,
-  ) {
+      Object currentDay, Object mode, Object remainingDays) {
     return '$mode · 进行中（第 $currentDay 天，还剩 $remainingDays 天）';
   }
 
@@ -30478,11 +30424,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String aiopsPromptHit(
-    String prompt,
-    String inference,
-    int promptCount,
-    int inferenceCount,
-  ) {
+      String prompt, String inference, int promptCount, int inferenceCount) {
     return 'prompt 命中 $prompt% · 推理命中 $inference% · known $promptCount/$inferenceCount';
   }
 
@@ -31243,10 +31185,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String lowYieldCardMessage(
-    String activity,
-    String reason,
-    String suggestion,
-  ) {
+      String activity, String reason, String suggestion) {
     return '我注意到你正在做 $activity。考虑到 $reason，现在更值得做的可能是 $suggestion。';
   }
 
@@ -31306,10 +31245,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String understandingStyleSummary(
-    String tone,
-    String verbosity,
-    String reason,
-  ) {
+      String tone, String verbosity, String reason) {
     return '$tone · $verbosity。$reason';
   }
 
@@ -31858,10 +31794,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String personaGoalStatusChangeContent(
-    Object nextStatus,
-    Object status,
-    Object title,
-  ) {
+      Object nextStatus, Object status, Object title) {
     return '将「$title」的状态从「$status」改为「$nextStatus」。\\n\\n这会影响相关计划、任务和提醒，且不会自动撤销。';
   }
 
@@ -34086,10 +34019,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String goalTrajectoryValueSummary(
-    int outcomes,
-    int reflections,
-    int candidates,
-  ) {
+      int outcomes, int reflections, int candidates) {
     return '$outcomes 项成果 · $reflections 条反思 · $candidates 条成长记忆';
   }
 
@@ -34649,10 +34579,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String streakInsightBanner(
-    int windowDays,
-    int totalCheckins,
-    int currentStreak,
-  ) {
+      int windowDays, int totalCheckins, int currentStreak) {
     return '过去$windowDays天你有$totalCheckins天完成了任务。当前连续打卡$currentStreak天。';
   }
 
@@ -35838,19 +35765,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String communityAgentGroupPromptZh(
-    Object contextLines,
-    Object input,
-    Object name,
-  ) {
+      Object contextLines, Object input, Object name) {
     return '你是Sparkle内置的群聊AI助手，正在协助群聊「$name」。\n你的任务是产出一条最终可直接发送到群里的中文消息。\n只输出消息正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样发”“建议发送”，不要使用项目符号或备注，不要冒充系统说明。\n语气自然、简洁、友好，像群成员会直接发出去的话。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用 `•`、`◦`、emoji 项目符号、半残 Markdown。\n\n最近对话:\n$contextLines\n\n用户问题:\n$input';
   }
 
   @override
   String communityAgentGroupPromptEn(
-    Object contextLines,
-    Object input,
-    Object name,
-  ) {
+      Object contextLines, Object input, Object name) {
     return 'You are Sparkle\'s built-in group chat AI assistant, helping in the group \"$name\".\nYour task is to produce a single message ready to send directly in the group.\nOutput only the message body — no explanations, no preambles, no \"I can help\" or \"You could say\" or \"Suggested reply\", no bullet points or notes, no system impersonation.\nTone: natural, concise, friendly — like something a group member would actually send.\nIf you need to list items, only use `1. ` or `- `. No `•`, `◦`, emoji bullets, or broken Markdown.\n\nRecent conversation:\n$contextLines\n\nUser question:\n$input';
   }
 
@@ -35859,19 +35780,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String communityAgentPrivatePromptZh(
-    Object contextLines,
-    Object input,
-    Object name,
-  ) {
+      Object contextLines, Object input, Object name) {
     return '你是Sparkle内置的私聊AI助手，正在协助我与「$name」的对话。\n你的任务是产出一条最终可直接发送给对方的中文私聊回复。\n只输出回复正文本身，不要解释，不要加前言，不要写“我来帮你”“你可以这样回”“建议回复”，不要附带分析或备注。\n语气自然、礼貌、克制，像我会直接按下发送的内容。\n如果需要列点，只允许使用 `1. ` 或 `- `，不要使用特殊项目符号或半残 Markdown。\n\n最近对话:\n$contextLines\n\n用户问题:\n$input';
   }
 
   @override
   String communityAgentPrivatePromptEn(
-    Object contextLines,
-    Object input,
-    Object name,
-  ) {
+      Object contextLines, Object input, Object name) {
     return 'You are Sparkle\'s built-in private chat AI assistant, helping with my conversation with \"$name\".\nYour task is to produce a single private reply ready to send directly.\nOutput only the reply body — no explanations, no preambles, no \"I can help\" or \"You could reply\" or \"Suggested reply\", no analysis or notes.\nTone: natural, polite, restrained — like something I would actually hit send on.\nIf you need to list items, only use `1. ` or `- `. No special bullets or broken Markdown.\n\nRecent conversation:\n$contextLines\n\nUser question:\n$input';
   }
 
@@ -36149,12 +36064,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskProtocolMaterialsNeeded => '需要的资料';
 
   @override
-  String taskProtocolMaterialsCount(
-    Object attached,
-    Object mustLoad,
-    Object optional,
-    Object retrievalLabel,
-  ) {
+  String taskProtocolMaterialsCount(Object attached, Object mustLoad,
+      Object optional, Object retrievalLabel) {
     return '必读 $mustLoad · 选读 $optional · 附件 $attached$retrievalLabel';
   }
 
@@ -37244,10 +37155,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String displayCriterionAtLeastUnitTemplate(
-    String title,
-    String threshold,
-    String unit,
-  ) {
+      String title, String threshold, String unit) {
     return '$title ≥ $threshold $unit';
   }
 
@@ -38450,4 +38358,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get todayCockpitExampleBadge => '示例';
+
+  @override
+  String get authTryExample => '体验一个示例';
 }

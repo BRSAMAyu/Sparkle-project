@@ -42,6 +42,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   void _submit() {
+    // O3（J-01 桌面实测）：键盘 done 与按钮双通道同帧触发时，register 已
+    // 把 isLoading 置真（provider 内同步置位），此处直接吞掉第二次提交，
+    // 防 W-4 同款双 POST。
+    if (ref.read(authProvider).isLoading) return;
     if (_formKey.currentState!.validate()) {
       if (!_acceptedTos || !_acceptedPrivacy) {
         AppFeedback.info(
@@ -157,6 +161,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     child: TextFormField(
                       controller: _usernameController,
                       autofillHints: const [AutofillHints.username],
+                      // O3：与登录屏 W-4 同款键盘链——前置字段 next 逐段推进，
+                      // 末字段 done 显式提交；桌面 Enter 不再零响应。
+                      textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) =>
+                          FocusScope.of(context).nextFocus(),
                       decoration: InputDecoration(
                         labelText: l10n.username,
                         border: const OutlineInputBorder(),
@@ -179,6 +188,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     child: TextFormField(
                       controller: _emailController,
                       autofillHints: const [AutofillHints.email],
+                      textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) =>
+                          FocusScope.of(context).nextFocus(),
                       decoration: InputDecoration(
                         labelText: l10n.email,
                         border: const OutlineInputBorder(),
@@ -203,6 +215,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       obscureText: !_isPasswordVisible,
                       obscuringCharacter: '●',
                       style: const TextStyle(letterSpacing: 0),
+                      textInputAction: TextInputAction.next,
+                      onFieldSubmitted: (_) =>
+                          FocusScope.of(context).nextFocus(),
                       decoration: InputDecoration(
                         labelText: l10n.password,
                         border: const OutlineInputBorder(),
@@ -288,6 +303,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       obscureText: !_isPasswordVisible,
                       obscuringCharacter: '●',
                       style: const TextStyle(letterSpacing: 0),
+                      // O3：末字段 done 显式提交（桌面 Enter 主手势），
+                      // 零响应零反馈即缺陷。
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => _submit(),
                       decoration: InputDecoration(
                         labelText: l10n.confirmPassword,
                         border: const OutlineInputBorder(),

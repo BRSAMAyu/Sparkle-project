@@ -106,6 +106,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     unawaited(ref.read(authProvider.notifier).loginAsGuest());
   }
 
+  /// O5：「体验一个示例」入口——与访客链路同源（loginAsGuest，后端预置
+  /// 种子数据 + GJ02 upgrade-guest 真转正路径），仅补用户可见的分叉声明。
+  void _submitTryExample() {
+    if (!_consumeButtonSubmitTicket()) return;
+    unawaited(ref.read(authProvider.notifier).loginAsGuest());
+  }
+
   Future<void> _handleSocialLogin(
     Future<SocialAuthResult?> Function() loginMethod,
   ) async {
@@ -278,6 +285,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         disabled: authState.isLoading,
                         variant: ButtonVariant.ghost,
                         expand: true,
+                      ),
+                      // O5（J-01 机会图）：FIRST_3_MINUTES Screen 1 分叉点——
+                      // 「体验一个示例」次级入口（可见但不喧宾夺主），走既有
+                      // guest/example 链路（GJ02 已验证的 upgrade-guest 同源
+                      // 路径），不造新链路。
+                      const SizedBox(height: DS.xs),
+                      TextButton(
+                        onPressed:
+                            authState.isLoading ? null : _submitTryExample,
+                        child: Text(l10n.authTryExample),
                       ),
                       const SizedBox(height: DS.xxxl),
                       Row(
