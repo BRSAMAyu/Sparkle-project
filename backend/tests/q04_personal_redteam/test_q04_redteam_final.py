@@ -5,7 +5,9 @@
   FrictionChatWiring/PolicyPatch/Squad/SeedLibrary/StateRegister 驱动）；
 - 盲评机制不变量：pairs 无臂标识、映射 seeded 确定、评审记录可解盲 join；
 - 独立红队实锤 finding 的契约锁（防回归 / 防误修）：
-  * patch 归因面跨 scope 报告（invalid 事件，硬门红——修复卡须以此红测为准）；
+  * patch 归因面跨 scope 报告（wt404 实锤 → V3-FIX-67 已修：本套件锁修复后
+    形态——真实激活的 knowledge patch 不得出现在 energy 决策归因面；判据
+    不失明由 dashboard 锁内合成泄漏记录钉住）；
   * C-05 抑制值过境 prompt 面（documented transit，带「不再采用」指令）；
   * deny 后旧偏好同位复活（D-08 memory_not_quieter 类独立复现）；
 - 跨用户隔离硬面：攻击者各可见面零受害者 token；撤回后 prompt 面零复活。
@@ -24,6 +26,7 @@ os_env = pytest.importorskip("os")  # noqa: F841 — 占位防误删；真实环
 from tests.d08_flywheel.protocol import build_population  # noqa: E402
 from tests.q04_personal_redteam.engine import run_persona_redteam  # noqa: E402
 from tests.q04_personal_redteam.metrics import (  # noqa: E402
+    _invalid_events,
     build_blind_pairs,
     judge_blind_pairs,
     summarize_redteam,
@@ -79,12 +82,25 @@ def test_l2_deny_then_same_position_resurface_reproduced(redteam_records: list[d
     assert before["position"] == after["position"] == 0, "deny 后旧偏好同位复活（独立复现）"
 
 
-def test_l2_patch_attribution_cross_scope_is_real(redteam_records: list[dict]) -> None:
+def test_l2_patch_attribution_stays_in_scope_after_fix67(redteam_records: list[dict]) -> None:
+    """FIX-67 契约锁（wt404 Q-04 实锤缺陷的修复后形态）：归因面逐 scope。
+
+    原锁（修复前）断言跨域报告「存在」以钉实 finding；修复（applied_patch_ids
+    与 situation_patches 同一 scope 谓词）后翻转为「缺席」。patch 链与探针
+    真值断言保留防虚过：管线断裂（patch_id=None）同样得到空清单——那是失明
+    不是修复，必须在此变红。
+    """
     record = _lane_record(redteam_records, "L2_irrelevant_history", "patch_scope_leakage")
     assert record["patch_id"], "knowledge patch 必须真实 propose/admit/confirm 成功"
     assert record["probe_friction_truth"] == "energy"
-    assert record["patch_applied_out_of_scope"], (
-        "归因面 applied_patch_ids 在 affective_pressure 决策上报告 knowledge_bottleneck patch"
+    # 归因面结构在场（修复的是清单内容，不是把面拆掉）
+    applied = record["chat"].get("applied_patch_ids")
+    assert isinstance(applied, list)
+    assert record["patch_id"] not in applied, (
+        "energy 决策的 applied_patch_ids 不得包含 knowledge_bottleneck patch（FIX-67）"
+    )
+    assert record["patch_applied_out_of_scope"] == [], (
+        "归因面 applied_patch_ids 不得在 affective_pressure 决策上报告 knowledge_bottleneck patch（FIX-67）"
     )
 
 
@@ -146,8 +162,20 @@ def test_summary_dashboard_shape_and_honest_gates(redteam_records: list[dict]) -
     assert payload["acceptance"] in ("PASS", "FAIL")
     gates = payload["gates"]
     assert set(gates) == {"precision_met", "invalid_zero", "overpersonalization_met", "uplift_met"}
-    # 单 persona 契约锁：本卡实锤的 invalid 类必须被计出（否则判据失明）
+    # FIX-67 修复后契约锁：本卡实锤的 invalid 类在本 fleet 必须**缺席**
+    # （修复前原锁断言其被计出；翻转为零跨域 + 硬门过）。
     kinds = {ev["kind"] for ev in payload["fleet"]["invalid_events"]}
-    assert "patch_attribution_cross_scope" in kinds
+    assert "patch_attribution_cross_scope" not in kinds
+    assert payload["gates"]["invalid_zero"] is True
+    # 判据不失明锁：合成泄漏记录仍必须被 _invalid_events 计为 gate=True
+    # invalid——探测器若失效，上面的缺席断言将失去含义。
+    synthetic_leak = {
+        "lane": "L2_irrelevant_history",
+        "scenario": "patch_scope_leakage",
+        "persona": "synthetic",
+        "patch_applied_out_of_scope": ["polpatch_synthetic"],
+    }
+    leak_events = [ev for ev in _invalid_events([synthetic_leak]) if ev["kind"] == "patch_attribution_cross_scope"]
+    assert len(leak_events) == 1 and leak_events[0]["gate"] is True
     per_persona_row = payload["per_persona"][LOCK_PERSONA]
     assert set(per_persona_row["lanes_present"]) == set(LANE_IDS)

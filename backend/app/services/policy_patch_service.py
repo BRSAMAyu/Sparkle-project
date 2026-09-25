@@ -570,10 +570,17 @@ class PolicyPatchService:
             now=now_naive,
             evidence_records=evidence_records,
         )
+        # FIX-67（wt404 Q-04 红队实锤）：归因面（applied_patch_ids →
+        # policy_patch_refs）与 situation_patches 同一 scope 谓词——曾用未过滤
+        # 全量 effective 集，knowledge-scoped patch 在 affective_pressure 决策
+        # 的「已应用」清单被跨域报告（决策影响面本身已正确过滤，行为不变，
+        # 是纯归因/可观测面缺陷）。语义按服务既有口径：applied = 本情境
+        # scope 内生效并被消费的 patch（存在但非本情境 = 不进清单；其存在性
+        # 由 policy_version / effective_patches 面承载）。
         inputs = PatchedDecisionInputs(
             nominated=ranking.nominated,
             policy_patch_version=version,
-            applied_patch_ids=tuple(p.patch_id for p in patches),
+            applied_patch_ids=tuple(p.patch_id for p in situation_patches),
             moves=ranking.moves,
             evidence_refs=ranking.evidence_refs,
             allocation_user_preference=_allocation_preference_value(situation_patches),

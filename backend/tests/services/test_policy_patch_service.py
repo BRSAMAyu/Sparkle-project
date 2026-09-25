@@ -40,7 +40,7 @@ from app.models.policy_patch import PolicyPatchRecord
 from app.models.user import User
 from app.services.experience_memory_projector import ExperienceMemoryProjector
 from app.services.intervention_lifecycle_service import InterventionLifecycleService
-from app.services.policy_patch_service import PolicyPatchService
+from app.services.policy_patch_service import POLICY_PATCH_EMPTY_VERSION, PolicyPatchService
 
 _T0 = datetime(2026, 9, 19, 10, 0, 0)
 _NOW = _T0 + timedelta(hours=80)  # 72h 观察窗已关
@@ -1258,3 +1258,114 @@ class TestApplyConcurrencyGuard:
         assert fresh.activated_at is None
         assert fresh.confirmed_at is None
         assert list(fresh.transition_history) == [concurrent_t4]
+
+
+# ---------------------------------------------------------------------------
+# 12. FIX-67（wt404 Q-04）：applied_patch_ids 归因面与 situation_patches
+#     同一 scope 谓词（多域混布逐域正确 / 无 patch 空清单）
+# ---------------------------------------------------------------------------
+
+
+class TestAppliedPatchIdsScopeBinding:
+    """归因面（applied_patch_ids → policy_patch_refs）不得跨域报告。
+
+    wt404 Q-04 红队实锤：``applied_patch_ids`` 曾取未过滤全量 effective 集，
+    knowledge-scoped patch 在 affective_pressure 决策的「已应用」清单被报告
+    （10/10 persona 复现；决策影响面本身已正确过滤——纯归因/可观测面缺陷，
+    invalid=10 硬门红的唯一来源）。修复后与因子投影/提名重排共用同一
+    ``scope_matches`` 谓词；语义按服务既有口径 = 本情境 scope 内生效并被消费
+    的 patch（存在但非本情境 = 不进清单，其存在性由 policy_version /
+    effective_patches 面承载，不新增「存在未应用」桶——冻结形状不扩）。
+    """
+
+    async def _friction_scoped_active_patch(
+        self,
+        db_session,
+        user,
+        *,
+        surface: str,
+        payload: dict,
+        intervention_type: str,
+        friction_signal: str,
+        friction_tag: str,
+        mode: ExecutionMode = ExecutionMode.AGENT,
+    ):
+        """激活一条 friction-scoped patch（证据同切片：P3-4 门要求同切片支撑）。"""
+        await _expose_and_link(
+            db_session,
+            user,
+            intervention_type=intervention_type,
+            mode=mode,
+            n_positive=2,
+            evidence=(f"signal://{friction_signal}",),
+        )
+        record_id = await _experience_record_id(
+            db_session, user, intervention_type=intervention_type, friction=friction_tag
+        )
+        svc = PolicyPatchService(db_session)
+        result = await svc.propose_patch(
+            user.id,
+            surface=surface,
+            payload=payload,
+            evidence_refs=[f"memory://experience/{record_id}"],
+            scope_friction_tag=friction_tag,
+        )
+        assert result.record is not None, result.reasons
+        admitted = await svc.admit_evidence(user.id, result.record.patch_id, now=_NOW)
+        assert admitted.record.state == "active", admitted.reasons
+        return svc, admitted.record.patch_id
+
+    async def test_multi_domain_patches_report_per_domain(self, db_session):
+        """knowledge + affective 两域 patch 混布：applied 清单逐域精确正确。
+
+        变异（回退为全量 effective 集）时两域清单并集互渗，== 单域精确断言红。
+        """
+        user = await _make_user(db_session)
+        svc, knowledge_pid = await self._friction_scoped_active_patch(
+            db_session,
+            user,
+            surface="explanation",
+            payload={"style": "examples_first"},
+            intervention_type="explain",
+            friction_signal="knowledge_transfer",
+            friction_tag="knowledge_bottleneck",
+        )
+        svc, affective_pid = await self._friction_scoped_active_patch(
+            db_session,
+            user,
+            surface="allocation_preference",
+            payload={"preference": "prefer_agent"},
+            intervention_type="execute",
+            friction_signal="affective_pressure",
+            friction_tag="affective_pressure",
+        )
+        in_knowledge = await svc.patched_decision_inputs(
+            user.id, ("explain", "practice"), friction_tag="knowledge_bottleneck", now=_NOW
+        )
+        assert in_knowledge.applied_patch_ids == (knowledge_pid,)
+        assert in_knowledge.explanation_style == "examples_first"
+        assert in_knowledge.allocation_user_preference is None
+        # 跨域 patch 不以任何形态（applied/moves/skipped）出现在本域决策面
+        assert affective_pid not in in_knowledge.applied_patch_ids
+        assert all(move.patch_id != affective_pid for move in in_knowledge.moves)
+        assert all(pid != affective_pid for pid, _ in in_knowledge.skipped)
+
+        in_affective = await svc.patched_decision_inputs(
+            user.id, ("explain", "practice"), friction_tag="affective_pressure", now=_NOW
+        )
+        assert in_affective.applied_patch_ids == (affective_pid,)
+        assert in_affective.allocation_user_preference == "prefer_agent"
+        assert in_affective.explanation_style is None
+        assert knowledge_pid not in in_affective.applied_patch_ids
+        assert all(move.patch_id != knowledge_pid for move in in_affective.moves)
+        assert all(pid != knowledge_pid for pid, _ in in_affective.skipped)
+
+    async def test_applied_patch_ids_empty_without_patches(self, db_session):
+        """零 effective patch：applied 清单为空、版本为空集常量（面在场非缺省）。"""
+        user = await _make_user(db_session)
+        svc = PolicyPatchService(db_session)
+        inputs = await svc.patched_decision_inputs(
+            user.id, ("explain", "practice"), friction_tag="knowledge_bottleneck", now=_NOW
+        )
+        assert inputs.applied_patch_ids == ()
+        assert inputs.policy_patch_version == POLICY_PATCH_EMPTY_VERSION
