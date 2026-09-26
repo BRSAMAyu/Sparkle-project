@@ -198,7 +198,7 @@ def decode_token_sync(token: str, expected_type: str | None = None) -> dict:
     raise RuntimeError("decode_token_sync cannot be used inside a running event loop")
 
 
-async def is_token_revoked(jti: str) -> bool:
+async def is_token_revoked(jti: str | None) -> bool:
     """
     Check whether token jti exists in blacklist.
     """
