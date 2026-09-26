@@ -977,6 +977,19 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		}
 	}
 
+	// V3-FIX-155: an upstream stream that ended (io.EOF) without any terminal
+	// finish_reason frame did not complete its turn — the accumulated text may
+	// be a truncated partial. The synthetic STOP done below still goes out
+	// (clients hang without a terminal frame; see shouldEmitSyntheticDone),
+	// but the turn is observably marked: the persisted history row carries
+	// truncated=true (same key as the R2-GW-1 recv-error path) and the text
+	// is kept out of the semantic cache so it is never re-served as a
+	// complete cached answer.
+	possiblyTruncated := !sawUpstreamFinishReason
+	if possiblyTruncated {
+		log.Printf("Upstream chat stream ended without finish_reason request=%s user=%s (possible truncation)", reqID, hashUserIDForLog(userID))
+	}
+
 	// Persist completed message to database and cache (async)
 	if fullText != "" && input.SessionID != "" {
 		// Multi-turn chat depends on the assistant turn being visible in Redis
@@ -1002,19 +1015,24 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			"trace_id":       traceID,
 			"response_id":    doneResp.ResponseId,
 		}
+		if possiblyTruncated {
+			saveExtra["truncated"] = true
+		}
 		attachTurnCitationsToSave(ctx, saveExtra, turnCitations)
 		h.saveMessage(saveCtx, userID, sessionID, "assistant", result, saveExtra)
 
-		cacheCtx, cancelCache := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-		go func() {
-			defer cancelCache()
-			// Update Semantic Cache
-			if h.semantic != nil {
-				if err := h.semantic.SetExact(cacheCtx, cacheScope, queryText, result); err != nil {
-					log.Printf("Failed to update cache: %v", err)
+		if !possiblyTruncated {
+			cacheCtx, cancelCache := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+			go func() {
+				defer cancelCache()
+				// Update Semantic Cache
+				if h.semantic != nil {
+					if err := h.semantic.SetExact(cacheCtx, cacheScope, queryText, result); err != nil {
+						log.Printf("Failed to update cache: %v", err)
+					}
 				}
-			}
-		}()
+			}()
+		}
 	}
 
 	return clientGone

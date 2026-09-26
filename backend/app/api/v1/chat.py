@@ -656,10 +656,15 @@ async def chat_stream(
     - tool_result: {"result": object} 工具执行结果（ToolResult 序列化）
     - widget: {"widget_type": str, "widget_data": object} 结构化卡片
     - error: {"message": str} 本轮处理失败的客户端可见失败面（不裸断连），恒以 done 收束
-    - done: 终止帧（无字段），流正常结束的唯一标记
+    - done: 终止帧，流结束的唯一标记。completed=true 为正常完成；completed=false
+      为中断轮（reason: upstream_stream_truncated=上游流缺 [DONE]/finish_reason
+      哨兵截断，已下行内容不完整且不落库；turn_failed=本轮处理失败，随 error 帧）。
+      客户端不得把 completed=false 轮当作完整答案渲染/入历史。
 
     V3-FIX-53：生成器内任何异常都不得静默断流——统一经 `error` 事件下行
     （客户端可见"本轮失败"），并以 done 帧收束；异常本身 log.exception 落地。
+    V3-FIX-155：上游优雅断连（无哨兵）不是正常收尾——done 帧必须显式
+    completed=false（中断哨兵），部分内容不落库为完整助手消息。
     """
 
     async def event_generator():
@@ -670,7 +675,7 @@ async def chat_stream(
             # asyncio.CancelledError 是 BaseException，客户端断连自然穿透。
             logger.exception("chat stream failed for user {}", current_user.id)
             yield f"data: {json.dumps({'type': 'error', 'message': '本轮处理失败，请重试'})}\n\n"
-            yield f"data: {json.dumps({'type': 'done'})}\n\n"
+            yield f"data: {json.dumps({'type': 'done', 'completed': False, 'reason': 'turn_failed'})}\n\n"
 
     async def _chat_stream_frames():
         tool_executor = ToolExecutor()
@@ -695,6 +700,7 @@ async def chat_stream(
         collected_text_content = ""
         collected_tool_calls_raw = []  # Raw tool calls from LLM (function_call format)
         announced_tool_ids: set[str] = set()  # V3-FIX-53：已宣布 tool_start 的调用 id
+        stream_interrupted = False  # V3-FIX-155：上游流截断（缺 finish_reason/[DONE] 哨兵）
 
         def _tool_start_frame(tool_call_id: str | None, tool_name: str | None) -> str | None:
             """每个新 tool call 恰宣布一次 tool_start（首个调用也不例外）。"""
@@ -719,6 +725,16 @@ async def chat_stream(
             if chunk.type == "text":
                 collected_text_content += chunk.content
                 yield f"data: {json.dumps({'type': 'text', 'content': chunk.content})}\n\n"
+
+            elif chunk.type == "stream_truncated":
+                # V3-FIX-155：上游优雅断连（无 finish_reason/[DONE] 哨兵）——
+                # 已下行内容不完整：置中断旗标（收尾 done.completed=false 且
+                # 不落库），不得把部分文本冒充完整答案交付。
+                stream_interrupted = True
+                logger.warning(
+                    "chat stream truncated by upstream (no finish_reason/[DONE] sentinel), user={}",
+                    current_user.id,
+                )
 
             elif chunk.type == "tool_call_chunk":
                 # V3-FIX-53：首个工具调用也必须宣布 tool_start（原条件要求
@@ -816,6 +832,17 @@ async def chat_stream(
             # Already yielded content above, but ensuring consistency
             pass
 
+        if stream_interrupted:
+            # V3-FIX-155：中断哨兵——已下行内容不完整，不落库为完整助手消息
+            # （落库即把部分文本冒充完整轮并污染后续轮历史），done 帧显式
+            # completed=false 让客户端进入中断态而非完成态。
+            yield (
+                "data: "
+                + json.dumps({"type": "done", "completed": False, "reason": "upstream_stream_truncated"})
+                + "\n\n"
+            )
+            return
+
         # Save message to database after all is done
         # V3-FIX-53 根因修复：此处原为 save_chat_message(conversation_id=...)
         # —— 函数签名只收 session_id，每次流式轮收尾必抛 TypeError 打断流
@@ -830,7 +857,7 @@ async def chat_stream(
             tool_results=[],
         )
 
-        yield f"data: {json.dumps({'type': 'done'})}\n\n"
+        yield f"data: {json.dumps({'type': 'done', 'completed': True})}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 

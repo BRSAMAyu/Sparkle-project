@@ -229,7 +229,7 @@ class LLMResponse:
 
 @dataclass
 class StreamChunk:
-    type: str  # "text" | "tool_call_chunk" | "tool_call_end" | "usage" | "reasoning" | "annotation"
+    type: str  # "text" | "tool_call_chunk" | "tool_call_end" | "usage" | "reasoning" | "annotation" | "stream_truncated"
     content: str | None = None
     tool_call_id: str | None = None
     tool_name: str | None = None
@@ -1574,6 +1574,13 @@ class LLMService:
     ) -> AsyncIterator[StreamChunk]:
         """
         流式聊天（支持工具调用）
+
+        V3-FIX-155（哨兵校验）：OpenAI 兼容流经 SDK 抽象后，「收到 [DONE] 正常
+        收尾」与「连接被上游优雅掐断」坍缩为同一种「迭代正常结束」；本层以流末
+        ``finish_reason`` 闭环为完成判据——迭代正常结束但全程未见 finish_reason
+        即截断：yield ``StreamChunk(type="stream_truncated")`` 终止标记，且截断轮
+        不产出 ``tool_call_end``（部分指令不执行，对齐 V3-FIX-61 保守语义）。
+        异常断开（迭代中 raise）不受影响，仍原样上抛（路由层 error 帧链）。
         """
         await refresh_llm_safety_mode()
         user_id = self._resolve_user_id(user_context=user_context)
@@ -1629,6 +1636,8 @@ class LLMService:
                 usage_data = None
                 _llm_t0 = time.perf_counter()
                 _llm_error: str | None = None
+                # V3-FIX-155：完成判据=流末 finish_reason 闭环（[DONE] 的 SDK 可见等价物）
+                _saw_finish_reason = False
 
                 selection = self._current_selection
                 if selection:
@@ -1655,7 +1664,11 @@ class LLMService:
                             usage_data = chunk.usage
 
                         if chunk.choices:
-                            delta = chunk.choices[0].delta
+                            first_choice = chunk.choices[0]
+                            # V3-FIX-155：哨兵观测（getattr 防御非标准 provider 帧型）
+                            if getattr(first_choice, "finish_reason", None):
+                                _saw_finish_reason = True
+                            delta = first_choice.delta
                             if delta.content:
                                 yield StreamChunk(type="text", content=delta.content)
 
@@ -1698,40 +1711,49 @@ class LLMService:
                     _llm_error = type(exc).__name__
                     raise
 
-                # V3-FIX-61：预扫孤儿参数桶（有参数无归属名）——存在即说明
-                # provider 续帧契约违规，空参桶按"参数丢失"处置而非"无参工具"。
-                _orphan_args_present = any(
-                    (not d["name"]) and d["args_str"]
-                    for d in collected_tool_call_chunks.values()
-                )
-                for _tc_key, data in collected_tool_call_chunks.items():
-                    if not data["name"]:
-                        # 无法归属工具名的增量（provider 异常帧）：显式告警，
-                        # 不再静默——这是工具轮"零事件收场"的观测锚点。
-                        logger.warning(f"tool_call stream incomplete (no function name), dropped: index={_tc_key}")
-                        continue
-                    # V3-FIX-61：存在带参数但无归属的孤儿桶 = provider 契约违规
-                    # （无 index 无 id 的续帧被拆桶）。此时空参桶的"空"不是无参
-                    # 工具的合法形态，而是参数丢失——禁止以空参静默执行工具。
-                    if not data["args_str"] and _orphan_args_present:
+                # V3-FIX-155：截断轮（无 finish_reason 闭环）不产出 tool_call_end
+                # ——部分指令不得静默执行（对齐 V3-FIX-61 保守语义），只告警观测。
+                if not _saw_finish_reason:
+                    if collected_tool_call_chunks:
                         logger.warning(
-                            f"tool_call args lost to unattributed chunks, suppressed empty-args execution: "
-                            f"id={data['id'] or 'tool_call_' + str(_tc_key)}, name={data['name']}"
+                            "truncated LLM stream: suppressing tool_call_end for "
+                            f"{len(collected_tool_call_chunks)} bucket(s) (upstream ended without finish_reason/[DONE])"
                         )
-                        continue
-                    stable_id = data["id"] or f"tool_call_{_tc_key}"
-                    try:
-                        # 无参工具的合法形态：arguments 为空 → 按 {} 解析
-                        full_arguments = json.loads(data["args_str"] or "{}")
-                    except json.JSONDecodeError:
-                        logger.error(f"Failed to decode tool arguments for {stable_id}: {data['args_str']}")
-                        continue
-                    yield StreamChunk(
-                        type="tool_call_end",
-                        tool_call_id=stable_id,
-                        tool_name=data["name"],
-                        full_arguments=full_arguments
+                else:
+                    # V3-FIX-61：预扫孤儿参数桶（有参数无归属名）——存在即说明
+                    # provider 续帧契约违规，空参桶按"参数丢失"处置而非"无参工具"。
+                    _orphan_args_present = any(
+                        (not d["name"]) and d["args_str"]
+                        for d in collected_tool_call_chunks.values()
                     )
+                    for _tc_key, data in collected_tool_call_chunks.items():
+                        if not data["name"]:
+                            # 无法归属工具名的增量（provider 异常帧）：显式告警，
+                            # 不再静默——这是工具轮"零事件收场"的观测锚点。
+                            logger.warning(f"tool_call stream incomplete (no function name), dropped: index={_tc_key}")
+                            continue
+                        # V3-FIX-61：存在带参数但无归属的孤儿桶 = provider 契约违规
+                        # （无 index 无 id 的续帧被拆桶）。此时空参桶的"空"不是无参
+                        # 工具的合法形态，而是参数丢失——禁止以空参静默执行工具。
+                        if not data["args_str"] and _orphan_args_present:
+                            logger.warning(
+                                f"tool_call args lost to unattributed chunks, suppressed empty-args execution: "
+                                f"id={data['id'] or 'tool_call_' + str(_tc_key)}, name={data['name']}"
+                            )
+                            continue
+                        stable_id = data["id"] or f"tool_call_{_tc_key}"
+                        try:
+                            # 无参工具的合法形态：arguments 为空 → 按 {} 解析
+                            full_arguments = json.loads(data["args_str"] or "{}")
+                        except json.JSONDecodeError:
+                            logger.error(f"Failed to decode tool arguments for {stable_id}: {data['args_str']}")
+                            continue
+                        yield StreamChunk(
+                            type="tool_call_end",
+                            tool_call_id=stable_id,
+                            tool_name=data["name"],
+                            full_arguments=full_arguments
+                        )
 
                 if usage_data:
                     span.set_attribute("llm.usage.prompt_tokens", usage_data.prompt_tokens)
@@ -1790,6 +1812,16 @@ class LLMService:
                             "model": str(selection.model_key if selection else self.default_model),
                             "cost_usd": 0.0,
                         },
+                    )
+
+                if not _saw_finish_reason:
+                    # V3-FIX-155：迭代正常结束但全程无 finish_reason —— 上游优雅
+                    # 断连（无 [DONE] 哨兵）。部分内容不得冒充完整答案：显式截断
+                    # 标记收尾（路由 /stream 映射 done.completed=false；
+                    # /ws/chat 面映射可见 error 帧，见 generation_node）。
+                    yield StreamChunk(
+                        type="stream_truncated",
+                        content="upstream stream ended without finish_reason/[DONE] sentinel",
                     )
         else:
             raise NotImplementedError("Current LLM provider does not support streamed tool calling directly.")

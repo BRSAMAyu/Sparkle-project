@@ -2069,6 +2069,31 @@ Ask about their available time and current tasks if needed.
                                 )
                             )
                         )
+                elif chunk.type == "stream_truncated":
+                    # V3-FIX-155（/ws/chat 面定界·同病修）：上游流缺
+                    # finish_reason/[DONE] 哨兵即截断——本轮不是完整回答，不得
+                    # 静默吞掉后照常以 STOP 收尾。置审计旗标（response_builder
+                    # 透传 metadata）+ error 帧下行（复用既有 WS error 事件族，
+                    # 移动端渲染为失败态而非把部分文本当完整答案）。
+                    state.context_data["generation_stream_truncated"] = True
+                    logger.warning(
+                        "generation stream truncated by upstream (no finish_reason/[DONE]); "
+                        "session={}, delivered_chars={}",
+                        state.context_data.get("session_id", ""),
+                        len(full_response),
+                    )
+                    if stream_callback:
+                        with contextlib.suppress(Exception):
+                            await stream_callback(
+                                agent_service_pb2.ChatResponse(
+                                    error=agent_service_pb2.Error(
+                                        message="回复生成中断，内容可能不完整，请重试。",
+                                        retryable=True,
+                                        error_code=agent_service_pb2.ERROR_CODE_UNAVAILABLE,
+                                    ),
+                                    finish_reason=agent_service_pb2.ERROR,
+                                )
+                            )
                 elif chunk.type == "usage":
                     usage_prompt_tokens = chunk.prompt_tokens or 0
                     usage_completion_tokens = chunk.completion_tokens or 0

@@ -72,9 +72,11 @@ def _tool_delta_chunk(
     )
 
 
-def _raw_chunk(*, content: str | None = None, tool_calls=None):
+def _raw_chunk(*, content: str | None = None, tool_calls=None, finish_reason: str | None = None):
+    """V3-FIX-155：完整 provider 轮的脚本流必须带 finish_reason 终帧——
+    缺哨兵的流在哨兵校验语义下是截断轮（tool_call_end 被抑制）。"""
     delta = SimpleNamespace(content=content, tool_calls=tool_calls)
-    return SimpleNamespace(choices=[SimpleNamespace(delta=delta)])
+    return SimpleNamespace(choices=[SimpleNamespace(delta=delta, finish_reason=finish_reason)])
 
 
 class _ScriptedRawStreamProvider(LLMProvider):
@@ -139,6 +141,8 @@ async def test_index_correlated_tool_call_yields_single_tool_call_end(
         # 后续增量帧：id=None、name=None、只带 arguments（OpenAI 流式契约）
         _raw_chunk(tool_calls=[_tool_delta_chunk(index=0, call_id=None, name=None, arguments='{"include_actions"')]),
         _raw_chunk(tool_calls=[_tool_delta_chunk(index=0, call_id=None, name=None, arguments=": true}")]),
+        # V3-FIX-155：完整轮终帧（finish_reason 闭环，非截断流）
+        _raw_chunk(finish_reason="tool_calls"),
     ]
     service = _make_service(_provider_with(chunks))
 
@@ -188,6 +192,8 @@ async def test_id_echoing_provider_still_yields_single_tool_call_end(
     chunks = [
         _raw_chunk(tool_calls=[_tool_delta_chunk(index=0, call_id="call_echo", name="suggest_quick_task", arguments='{"t')]),
         _raw_chunk(tool_calls=[_tool_delta_chunk(index=0, call_id="call_echo", name="suggest_quick_task", arguments='itle":"复习"}')]),
+        # V3-FIX-155：完整轮终帧
+        _raw_chunk(finish_reason="tool_calls"),
     ]
     service = _make_service(_provider_with(chunks))
 
@@ -218,6 +224,8 @@ async def test_no_arg_tool_call_still_yields_tool_call_end(
 ):
     chunks = [
         _raw_chunk(tool_calls=[_tool_delta_chunk(index=0, call_id="call_noarg", name="get_situation_brief", arguments=raw_args)]),
+        # V3-FIX-155：完整轮终帧
+        _raw_chunk(finish_reason="tool_calls"),
     ]
     service = _make_service(_provider_with(chunks))
 
@@ -257,6 +265,8 @@ async def test_orphan_args_bucket_suppresses_empty_args_tool_call_end(
         _raw_chunk(tool_calls=[_tool_delta_chunk(index=None, call_id="call_a", name="create_task", arguments="")]),
         # 续帧：index=None 且 id=None，只带 arguments（落 "" 孤儿桶）
         _raw_chunk(tool_calls=[_tool_delta_chunk(index=None, call_id=None, name=None, arguments='{"title":"真实参数"}')]),
+        # V3-FIX-155：完整轮终帧（本测锁 FIX-61 孤儿桶抑制，非截断抑制）
+        _raw_chunk(finish_reason="tool_calls"),
     ]
     service = _make_service(_provider_with(chunks))
 

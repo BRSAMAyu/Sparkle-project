@@ -65,6 +65,11 @@ part 'chat_provider_wiring.dart';
 /// when no stream event arrives within the guard window.
 const String kChatFirstEventTimeoutCode = 'FIRST_EVENT_TIMEOUT';
 
+/// V3-FIX-155: error code for a stream that closed without any terminal event
+/// (no DoneEvent/ErrorEvent) — the turn was interrupted mid-flight, and the
+/// partial content must not be silently presented as a complete answer.
+const String kChatStreamInterruptedCode = 'STREAM_INTERRUPTED';
+
 /// M-2 stream variance: wrap a chat event stream with a first-event guard.
 ///
 /// Diagnosis (round2/m2-stream-variance.md): provider TTFT tails (58s
@@ -2233,7 +2238,17 @@ class ChatNotifier extends StateNotifier<ChatState> {
       if (!isCurrentRequest() || sawTerminalEvent) {
         return;
       }
-      finalizeRun(phase: ChatRunPhase.completed);
+      // V3-FIX-155：流在没有 DoneEvent/ErrorEvent 的情况下关闭（网关/引擎
+      // 中断、socket 静默断开）= 本轮被中断。错误态非静默：不再把已流的
+      // 部分文本当作完整答案收尾（finalizeRun 的 failed 语义按既有注释
+      // 只保留结构化内容，裸部分文本不渲染，用户重试拿完整回复）。
+      finalizeRun(
+        phase: ChatRunPhase.failed,
+        errorMessage: I18nService.instance.l10n.chatInterrupted,
+        errorCode: kChatStreamInterruptedCode,
+        isRetryable: true,
+        restoreAttachments: hasQueuedAttachments,
+      );
     } catch (e) {
       if (!isCurrentRequest()) {
         return;

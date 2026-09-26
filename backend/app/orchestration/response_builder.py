@@ -991,6 +991,11 @@ class ResponseBuilderMixin:
         response_metadata["chat_mode"] = chat_mode
         if used_fallback_response:
             response_metadata["response_fallback"] = "generated"
+        if final_state.context_data.get("generation_stream_truncated"):
+            # V3-FIX-155：/ws/chat 面截断审计透传——客户端以 error 帧为中断
+            # 判据，此处为机器可读审计面（终帧仍走既有 STOP done 契约，
+            # 网关/middleware 不因本字段改变终止语义）。
+            response_metadata["generation_stream_truncated"] = True
         final_state.context_data["response_fallback_used"] = used_fallback_response
         final_state.context_data["response_outcome_stats"] = self._extract_response_outcome_stats(final_state)
         if route_decision and "sprint" in route_decision.reason.lower():
