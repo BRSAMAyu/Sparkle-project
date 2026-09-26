@@ -62,13 +62,15 @@ class SecurityValidator:
     @staticmethod
     def contains_sensitive_data(output: str) -> bool:
         """Check if output contains sensitive data patterns"""
+        # wt597 F4：键名容忍引号包裹（JSON 形态 "password": "..."）。
+        # 此处为测试侧保守存在性检测，不做占位符豁免（与生产检测器分工不同）。
         sensitive_patterns = [
-            r"password\s*[:=]",
-            r"api[_-]?key\s*[:=]",
-            r"secret\s*[:=]",
-            r"token\s*[:=]",
+            r"[\"']?password[\"']?\s*[:=]",
+            r"[\"']?api[_-]?key[\"']?\s*[:=]",
+            r"[\"']?secret[\"']?\s*[:=]",
+            r"[\"']?token[\"']?\s*[:=]",
             r"credit[_-]?card",
-            r"ssn\s*[:=]",
+            r"[\"']?ssn[\"']?\s*[:=]",
         ]
         return any(re.search(pattern, output, re.IGNORECASE) for pattern in sensitive_patterns)
 
@@ -528,12 +530,10 @@ class TestSensitiveDataHandling:
     @pytest.mark.asyncio
     async def test_password_in_response_detected(self, security_validator):
         """Test that password in response is detected"""
+        # wt597 F4：原 assert True 恒真断言掩盖了 JSON 形态漏检，改造为真断言。
         response = '{"username": "user", "password": "secret123"}'
-        security_validator.contains_sensitive_data(response)
-        # Note: JSON format with : might not match password\s*[:=] pattern
-        # This is acceptable - the important thing is we detect password in logs
-        # where it's formatted differently
-        assert True  # Password detection is context-dependent
+        contains_sensitive = security_validator.contains_sensitive_data(response)
+        assert contains_sensitive is True, f"JSON-shaped password leak not detected: {response}"
 
     @pytest.mark.asyncio
     async def test_api_key_not_logged(self, security_validator):

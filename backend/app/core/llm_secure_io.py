@@ -6,7 +6,7 @@ from typing import Any
 
 from app.aurora.privacy import redact_pii
 from app.core.llm_output_validator import LLMOutputValidator
-from app.core.llm_safety import LLMSafetyService
+from app.core.llm_safety import SECRET_VALUE_PLACEHOLDER_EXEMPT, LLMSafetyService
 from app.core.metrics import LLM_SAFETY_BYPASS_TOTAL
 from app.services.aurora_stage37_llm_safety_kill_switch_service import (
     aurora_stage37_llm_safety_kill_switch_service,
@@ -22,7 +22,13 @@ _output_validator = LLMOutputValidator(strict_mode=True)
 
 _OPENAI_KEY_RE = re.compile(r"\bsk-[A-Za-z0-9][A-Za-z0-9._-]{8,}\b")
 _BEARER_RE = re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._-]{8,}")
-_ASSIGNMENT_SECRET_RE = re.compile(r"(?i)\b(api[_ -]?key|secret|token|password|authorization)\b\s*[:=]\s*([^\s,;]+)")
+# wt597 F4：键名/值容忍引号包裹（JSON 形态 "password": "..."），值经占位符豁免，
+# 避免示例/Schema 值（"***"、"<your-password>"、{"type": "string"} 等）被误改写。
+_ASSIGNMENT_SECRET_RE = re.compile(
+    r"(?i)[\"']?\b(api[_ -]?key|secret|token|password|authorization)\b[\"']?\s*[:=]\s*[\"']?"
+    + SECRET_VALUE_PLACEHOLDER_EXEMPT
+    + r"([^\s,;]+)"
+)
 _URL_CREDENTIAL_RE = re.compile(r"([A-Za-z][A-Za-z0-9+.-]*://)([^/\s:@]+):([^@\s/]+)@")
 _TRACEBACK_RE = re.compile(r"Traceback \(most recent call last\):", re.IGNORECASE)
 _INTERNAL_ERROR_MARKERS = (

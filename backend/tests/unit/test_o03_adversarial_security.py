@@ -504,6 +504,35 @@ class TestSecretRedaction:
         assert "user:p4ss@" not in out
         assert "[REDACTED" in out
 
+    def test_redact_secrets_covers_json_shape(self):
+        """wt597 F4：JSON 键值形态凭据必须被 redact（主出口消毒器 sanitize_llm_output 同病面收口）"""
+        out = redact_secrets('{"username": "user", "password": "secret123", "api_key": "abcd1234efgh5678"}')
+        assert "secret123" not in out
+        assert "abcd1234efgh5678" not in out
+        assert "[REDACTED]" in out
+
+    def test_sanitize_llm_output_redacts_json_secret(self):
+        """wt597 F4：主聊天出口不得放行 JSON 形态明文密码"""
+        out = sanitize_llm_output('配置如下 {"password": "secret123"} 请查收')
+        assert "secret123" not in out
+
+    def test_redact_secrets_leaves_placeholders_and_schema(self):
+        """wt597 F4 豁免规则：占位符/字面量/Schema 结构值不被 redact 误改写"""
+        for text in (
+            '{"password": "***"}',
+            '{"password": "<your-password>"}',
+            '{"api_key": "${OPENAI_API_KEY}"}',
+            '{"password": null}',
+            '{"properties": {"password": {"type": "string"}}}',
+        ):
+            out = redact_secrets(text)
+            assert "[REDACTED]" not in out, text
+
+    def test_redact_secrets_normalizes_already_redacted_marker(self):
+        """wt597 F4：豁免规则不得吞掉已脱敏标记的二次归一（SEC-1 floor 行为保留）"""
+        out = redact_secrets("api_key: [REDACTED_API_KEY]")
+        assert "api_key=[REDACTED]" in out
+
     def test_logsafe_hashes_do_not_leak_raw(self):
         hashed = user_id_hash("user-abc-123")
         assert hashed != "user-abc-123" and len(hashed) > 8

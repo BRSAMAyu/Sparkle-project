@@ -186,6 +186,36 @@ class TestLLMSafetyService:
             assert result.is_safe is False
             assert "*" in result.sanitized_text
 
+    def test_password_leak_json_shape(self, safety_service):
+        """wt597 F4：JSON 键值形态（"password": "..."）必须被敏感信息层检测"""
+        test_cases = [
+            '{"username": "user", "password": "secret123"}',
+            '{"api_key": "abcd1234efgh"}',
+            '{"token": "tok_en-987654"}',
+        ]
+
+        for text in test_cases:
+            result = safety_service.sanitize_input(text)
+            assert result.is_safe is False, text
+            assert any("敏感信息泄露" in v for v in result.violations), text
+
+    def test_password_placeholder_values_not_flagged(self, safety_service):
+        """wt597 F4 豁免规则：占位符/字面量/Schema 结构值不得被敏感信息层误杀"""
+        safe_samples = [
+            '{"password": "***"}',  # 掩码占位
+            '{"password": "<your-password>"}',  # 尖括号占位
+            '{"password": "${DB_PASSWORD}"}',  # 模板变量
+            '{"password": "{{ password }}"}',  # 模板变量
+            '{"password": null}',  # JSON 字面量
+            '{"password": "xxxxxxxx"}',  # 占位串
+            '{"properties": {"password": {"type": "string"}}}',  # JSON Schema 属性定义
+            "password: your-password-here",  # 文档占位词
+        ]
+
+        for text in safe_samples:
+            result = safety_service.sanitize_input(text)
+            assert not any("敏感信息泄露" in v for v in result.violations), text
+
     def test_credit_card_leak(self, safety_service):
         """测试信用卡号泄露"""
         test_cases = [

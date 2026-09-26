@@ -19,6 +19,30 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
+# wt597 F4：凭据键值的占位符豁免（负向先行断言），供 SENSITIVE_PATTERNS 与
+# llm_secure_io._ASSIGNMENT_SECRET_RE 共用。值为以下形态时不视为真实泄露：
+#   1. 掩码/占位串：*** / xxxxxxxx / ......
+#   2. 尖括号占位符：<your-password> / <PASSWORD>
+#   3. 模板变量：${DB_PASSWORD} / {{ password }}
+#   4. JSON/Python 字面量：null / true / false / none（忽略大小写）
+#   5. JSON 结构值：以 { 或 [ 开头（JSON Schema 属性定义、配置对象/数组）；
+#      但 [REDACTED 开头除外——它自身就是已脱敏标记，需允许被二次归一为
+#      key=[REDACTED]（SEC-1 floor 契约依赖该行为，见 test_stage37_llm_safety_kill_switch）
+#   6. 文档占位词前缀：your* / changeme / placeholder / example* / sample / redacted / dummy
+# 豁免按值前缀判定（容忍前置引号）；真实口令以上述形态开头的概率可忽略，
+# 换取文档/Schema 示例不被误杀（误杀会遮蔽用户可见回答并推高风险分）。
+SECRET_VALUE_PLACEHOLDER_EXEMPT = (
+    r"(?!(?:[\"']?(?:"
+    r"\*+|x{3,}|\.{6,}"
+    r"|<[^>]{0,80}>"
+    r"|\$\{[^}]{0,120}\}"
+    r"|\{\{[^}]{0,120}\}\}"
+    r"|(?:null|true|false|none)\b"
+    r"|\{|\[(?!REDACTED)"
+    r"|change[\s_-]?me|placeholder|examples?|sample|redacted|dummy|your"
+    r")))"
+)
+
 
 @dataclass
 class SafetyCheckResult:
@@ -106,13 +130,15 @@ class LLMSafetyService:
     ]
 
     # 敏感信息泄露模式
+    # wt597 F4：键名与值均容忍引号包裹（JSON 形态 "password": "..."、单引号、无空格），
+    # 值经 SECRET_VALUE_PLACEHOLDER_EXEMPT 豁免占位符/Schema 结构值。
     SENSITIVE_PATTERNS = [
         # 密钥类
-        r"api[_-]?\s*key\s*(?:[:：]|是)\s*\S{5,}",
-        r"secret\s*[:：]\s*\S{5,}",
-        r"token\s*[:：]\s*\S{5,}",
-        r"password\s*[:：]\s*\S{8,}",
-        r"密码\s*[:：]\s*\S{6,}",
+        rf"[\"']?api[_-]?\s*key[\"']?\s*(?:[:：]|是)\s*[\"']?{SECRET_VALUE_PLACEHOLDER_EXEMPT}\S{{5,}}",
+        rf"[\"']?secret[\"']?\s*[:：]\s*[\"']?{SECRET_VALUE_PLACEHOLDER_EXEMPT}\S{{5,}}",
+        rf"[\"']?token[\"']?\s*[:：]\s*[\"']?{SECRET_VALUE_PLACEHOLDER_EXEMPT}\S{{5,}}",
+        rf"[\"']?password[\"']?\s*[:：]\s*[\"']?{SECRET_VALUE_PLACEHOLDER_EXEMPT}\S{{8,}}",
+        rf"[\"']?密码[\"']?\s*[:：]\s*[\"']?{SECRET_VALUE_PLACEHOLDER_EXEMPT}\S{{6,}}",
 
         # 金融类
         r"\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b",  # 信用卡
