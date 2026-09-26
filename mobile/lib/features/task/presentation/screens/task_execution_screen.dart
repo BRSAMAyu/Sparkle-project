@@ -10,6 +10,7 @@ import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/providers/release_flags_provider.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/guest_conversion_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -378,6 +379,18 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
 
   Future<void> _processAchievementUnlocks(TaskCompletionResult result) async {
     if (result.unlockedAchievements.isEmpty) return;
+    // V3-FIX-190：release flag off/unavailable（fail-closed）期短路解锁调用——
+    // 核心动线不发注定 403 的请求（backend /visual-elements 组注册级闸
+    // RELEASE_ENABLE_VISUAL_ELEMENTS 默认 False）。旗开时行为不变。
+    final releaseFlags =
+        await ref.read(releaseFlagsProvider.notifier).ensureLoaded();
+    if (!releaseFlags.visualElements) {
+      debugPrint(
+        'Visual element unlock skipped: release flag visual_elements '
+        'off/unavailable',
+      );
+      return;
+    }
     final notifier = ref.read(visualElementsNotifierProvider.notifier);
     for (final achievement in result.unlockedAchievements) {
       final id = (achievement is Map<String, dynamic>)

@@ -724,6 +724,11 @@ class ApiEndpoints {
   static const String registerDevice = '/devices/register';
   static const String unregisterDevice = '/devices/unregister';
 
+  // Release Flags（V3-FIX-190：五旗契约只读端点，无鉴权；键集冻结权威在
+  // backend release_flags_response()，移动端解码面见
+  // core/providers/release_flags_provider.dart）
+  static const String releaseFlags = '/release-flags';
+
   // Accountability Partners (Phase 3)
   static const String accountabilityMine = '/accountability/mine';
   static const String accountabilityOverview = '/accountability/overview';

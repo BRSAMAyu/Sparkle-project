@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/providers/release_flags_provider.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/prediction_attribution_service.dart';
@@ -358,19 +359,30 @@ class MindfulnessNotifier extends StateNotifier<MindfulnessState> {
             },
           );
 
-          for (final achievement in response.unlockedAchievements) {
-            final achievementId =
-                (achievement['id'] ?? achievement['achievement_id'])
-                    ?.toString();
-            if (achievementId != null && achievementId.isNotEmpty) {
-              try {
-                await _visualElementRepository.unlockByAchievement(
-                  achievementId,
-                );
-              } catch (e) {
-                debugPrint(
-                  'Visual element unlock failed for $achievementId: $e',
-                );
+          // V3-FIX-190：release flag off/unavailable（fail-closed）期短路解锁
+          // 调用——正念完成动线不发注定 403 的请求（与任务完成动线同闸）。
+          final releaseFlags =
+              await _ref.read(releaseFlagsProvider.notifier).ensureLoaded();
+          if (!releaseFlags.visualElements) {
+            debugPrint(
+              'Visual element unlock skipped: release flag visual_elements '
+              'off/unavailable',
+            );
+          } else {
+            for (final achievement in response.unlockedAchievements) {
+              final achievementId =
+                  (achievement['id'] ?? achievement['achievement_id'])
+                      ?.toString();
+              if (achievementId != null && achievementId.isNotEmpty) {
+                try {
+                  await _visualElementRepository.unlockByAchievement(
+                    achievementId,
+                  );
+                } catch (e) {
+                  debugPrint(
+                    'Visual element unlock failed for $achievementId: $e',
+                  );
+                }
               }
             }
           }
