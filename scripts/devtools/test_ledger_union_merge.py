@@ -10,7 +10,9 @@
 ⑥ 257 吞行事故形态重建——ID 仍在场（粘连进邻行）时行数对账兜底报警；
 ⑦ 263 并行回退形态——回退长行胜出后 8 裸管形态校验点名；
 ⑧ 8 管畸形检出——多数行容差与 --expect-pipes/--strict-pipes 阈值；
-⑨ --verify 独立体检——合成台账全绿 + 畸形四类点名 + 真台账只读自检。
+⑨ --verify 独立体检——合成台账全绿 + 畸形四类点名 + 真台账只读自检；
+⑩ 转义管感知（wt578）——\\| 是格内字符、裸 | 才是列界：状态格不误报、
+ID 提取不受损、含转义管行 union-merge 正确合成、真措辞项仍被点名。
 
 用构造的最小台账样本为主，真台账只读跑 verify（自适配 wt561 存量收口）。
 运行：
@@ -432,6 +434,15 @@ def test_verify_real_ledger_readonly_and_reports_known_stock():
         assert not dup, f"R2 收口后仍有重号：{dup[:3]}"
         assert not glue, f"R2 收口后仍有一行双 ID 粘连：{glue[:2]}"
 
+    # wt578 转义管感知：状态格含 \| 且裸管口径下状态合法的行不得被点名
+    # （回归守卫——若退回全管切分，行尾碎片会重新被误报为状态非法）
+    for lineno, line in enumerate(text.splitlines(), 1):
+        if lum.row_id(line) is None or "\\|" not in line:
+            continue
+        if lum.status_cell(line).startswith(lum.LEGAL_STATUS_PREFIXES):
+            offenders = [p for p in problems if f"第 {lineno} 行" in p and "状态格非法" in p]
+            assert not offenders, f"第 {lineno} 行转义管状态格被误报：{offenders}"
+
 
 def test_cli_verify_mode(tmp_path):
     green = tmp_path / "green.md"
@@ -449,3 +460,94 @@ def test_cli_verify_mode(tmp_path):
     # --verify 与位置输入互斥 → 用法错误
     proc = _run_cli(["--verify", str(green), str(dirty)], "")
     assert proc.returncode == 2
+
+
+# ---------------------------------------------------------------------------
+# ⑩ 转义管感知（wt578）：\| 是格内字符、裸 | 才是列界
+# ---------------------------------------------------------------------------
+def escaped_row(num, status="OPEN"):
+    """台账实录形态的转义管行：状态格含 ``\\|`` 分诊注记 + 描述格含类型注记。"""
+    return (
+        f"| V3-FIX-{num} | P3 | journey-{num} | 描述含类型注记 str\\|None | ev-{num}"
+        f" | T-task | {status} [wt474分诊:备忘型\\|抽查仍存活，随评测迭代] |\n"
+    )
+
+
+def test_status_cell_keeps_escaped_pipe_whole_not_misreported():
+    """状态格含转义管（\\|）时不按转义管误断：整格提取、状态合法、不进 verify FAIL。"""
+    line = escaped_row(310).rstrip("\n")
+    cell = lum.status_cell(line)
+    assert cell.startswith("OPEN [wt474分诊:备忘型\\|")
+    assert "抽查仍存活" in cell
+    # 与形态计数同口径：裸管 8（转义管不计），verify 全绿
+    assert lum.bare_pipe_count(line) == 8
+    problems, stats = lum.verify_ledger_file(HEADER + escaped_row(310))
+    assert problems == []
+    assert stats["checked"] == 1 and stats["majority"] == 8
+
+
+def test_id_extraction_unbroken_by_in_cell_escaped_pipes():
+    """格内转义管不破坏 ID 提取与重号检测（str\\|None 类注记行）。"""
+    line = escaped_row(311).rstrip("\n")
+    assert lum.row_id(line) == "V3-FIX-311"
+    dup_text = HEADER + escaped_row(311) + escaped_row(311)
+    problems = lum.check_duplicate_ids(dup_text)
+    assert any("V3-FIX-311" in p and "重号" in p for p in problems)
+
+
+def test_union_merge_escaped_pipe_rows_synthesized_correctly():
+    """两侧均含转义管的冲突块：进化裁决、转义格原样存活、全链检测绿。"""
+    ours = escaped_row(320, "OPEN")
+    theirs = (
+        "| V3-FIX-320 | P3 | journey-320 | 集成侧净版（str\\|None 注记改写） | ev-320"
+        " | T-task | FIXED@beefcafe（分诊收口） |\n"
+    )
+    outcome = lum.merge_text(HEADER + conflict(ours, theirs))
+    # 同 ID 进化裁决取 theirs FIXED，ours 转义长行让位（非纯长度）
+    assert "FIXED@beefcafe（分诊收口）" in outcome.text
+    assert "wt474分诊:备忘型" not in outcome.text
+    assert "集成侧净版（str\\|None 注记改写）" in outcome.text
+    assert lum.verify_merge(outcome.text, outcome.ours_ids, outcome.theirs_ids) == []
+    assert lum.verify_line_accounting(outcome) == []
+    shape_problems, _ = lum.check_row_shapes(outcome.text)
+    assert shape_problems == []
+    assert lum.check_status_enum(outcome.text) == []
+
+
+def test_renumber_note_lands_in_third_column_despite_escaped_pipes():
+    """撞号重编号注记落位按裸管列口径：格含转义管（\\|）时不错位进格中。"""
+    theirs_row = (
+        "| V3-FIX-265 | P3 | journey-265 | 描述含 str\\|None 注记的撞号行 | ev | T-worker | OPEN |\n"
+    )
+    ours_row = row(265, "OPEN", desc="集成侧先到先得行")
+    outcome = lum.merge_text(HEADER + conflict(ours_row, theirs_row), renumber={"265": "267"})
+    # 注记置于第三个实际列（Journey 格）开头（转义管不构成列界、不错位进格中）
+    assert (
+        "| V3-FIX-267 | P3 |（集成重编号：原登记 V3-FIX-265，撞号顺延 V3-FIX-267） journey-265"
+        " | 描述含 str\\|None 注记的撞号行 |" in outcome.text
+    )
+    assert "str\\|None 注记的撞号行 | ev |" in outcome.text  # 描述格原样未被注记劈开
+    # 重排后行仍 8 裸管、状态枚举合法
+    shape_problems, _ = lum.check_row_shapes(outcome.text)
+    assert shape_problems == []
+    assert lum.check_status_enum(outcome.text) == []
+
+
+def test_cli_verify_escaped_rows_pass_but_real_wording_still_fails(tmp_path):
+    """--verify 对转义行不再 FAIL，对真措辞项（裸 FIXED 无 @sha）仍 FAIL。"""
+    ledger = HEADER + escaped_row(330) + escaped_row(331, "WONTFIX") + row(332, "OPEN")
+
+    green = tmp_path / "escaped.md"
+    green.write_text(ledger, encoding="utf-8")
+    proc = _run_cli(["--verify", str(green)], "")
+    assert proc.returncode == 0, proc.stderr
+    assert "verify 通过" in proc.stderr
+
+    dirty = tmp_path / "real_wording.md"
+    dirty.write_text(ledger + row(333, "FIXED"), encoding="utf-8")
+    proc = _run_cli(["--verify", str(dirty)], "")
+    assert proc.returncode == 1
+    fail_lines = proc.stderr.splitlines()
+    assert any("V3-FIX-333" in ln and "状态格非法" in ln for ln in fail_lines)
+    # 转义行不被点名（升级不把误报换个地方留下）
+    assert not any("V3-FIX-330" in ln or "V3-FIX-331" in ln for ln in fail_lines)

@@ -35,6 +35,10 @@
 - 新增 ``--verify FILE``：对任一台账文件独立体检——零冲突标记残留 +
   8 裸管形态 + 行首锚定 ID 无重号 + 行尾状态枚举合法
   （OPEN/FIXED@/CLOSED@/WONTFIX 前缀；仅对形态合法行检查）。
+- **转义管全链感知**：格切分统一按裸管口径（``\\|`` 是格内字面竖线、
+  裸 ``|`` 才是列界）——status_cell 提取、重编号注记落位与形态计数
+  同源，状态格含 ``\\|`` 注记（如 ``OPEN [wt474分诊:备忘型\\|…]``、
+  ``str\\|None`` 类注记）不再被行尾碎片误报为状态非法。
 
 用法::
 
@@ -184,12 +188,13 @@ def apply_renumber(line: str, old: str, new: str) -> str:
     只替换首个出现（ID 格本位）；行内描述引用的其他/自身 FIX ID 不动。
     注记落位仿台账实录形态（重编号注记置于第三个单元格开头；
     参见 V3-FIX-259/260/263/267 行），列数不足时回退到 ID 后或行尾。
+    列界按裸管口径（``\\|`` 是格内字符），格含转义管时注记不错位进格中。
     """
     token_old, token_new = f"V3-FIX-{old}", f"V3-FIX-{new}"
     pat = re.compile(re.escape(token_old) + r"(?!\d)")
     new_line = pat.sub(token_new, line, count=1)
     note = f"（集成重编号：原登记 {token_old}，撞号顺延 {token_new}）"
-    cells = new_line.split("|")
+    cells = split_bare_pipes(new_line)
     if len(cells) >= 5:
         cells[3] = note + cells[3]
         return "|".join(cells)
@@ -357,6 +362,15 @@ def bare_pipe_count(line: str) -> int:
     return len(BARE_PIPE_RE.findall(line))
 
 
+def split_bare_pipes(line: str) -> list[str]:
+    """按裸管切分单元格：裸 ``|`` 才是列界，``\\|`` 原样留在格内。
+
+    与 bare_pipe_count 同一口径（形态计数/格提取/注记落位同源）；
+    ``"|".join`` 回拼无损还原原行（转义管保留在段内不被消费）。
+    """
+    return BARE_PIPE_RE.split(line)
+
+
 def check_row_shapes(
     text: str, expect_pipes: int = DEFAULT_EXPECT_PIPES, majority_tolerance: bool = True
 ) -> tuple[list[str], dict]:
@@ -413,8 +427,13 @@ def check_duplicate_ids(text: str) -> list[str]:
 
 
 def status_cell(line: str) -> str:
-    """行尾状态格：最后一个非空裸管格（容忍缺尾管形态）。"""
-    for seg in reversed(line.split("|")):
+    """行尾状态格：最后一个非空裸管格（容忍缺尾管形态）。
+
+    裸管切分：``\\|`` 是格内字面竖线，状态格含转义注记（如
+    ``OPEN [wt474分诊:备忘型\\|…]``）时整格保留——不按转义管误断、
+    不把行尾碎片当状态格误报状态非法。
+    """
+    for seg in reversed(split_bare_pipes(line)):
         seg = seg.strip()
         if seg:
             return seg
