@@ -4,11 +4,11 @@
  "baseline_head": "fedd27e35e305502ba727ba8c3fb46eae33a1eb9",
  "slots": 6,
  "active": {
-  "wt510": "mypy 批二",
-  "wt512": "FIX-226 CASCADE 批二",
   "wt513": "FIX-221 due_date 族",
   "wt515": "231/232 双P3 修复",
-  "wt516": "FIX-234 black 微卡"
+  "wt516": "FIX-234 black 微卡",
+  "wt517": "FIX-237 缓存泛型",
+  "wt518": "FIX-238 json_call"
  },
  "done": [
   "A-01",
@@ -515,7 +515,9 @@
   "wt507: FIX-211 混钟收口（67b4e9c8）",
   "wt509: FIX-217 身份闸门+mypy 1039（d19162ad）",
   "wt511: 审查轮8 fix-required 窄+231/232（bdcce97f）",
-  "wt514: FIX-223 归因分流（976070c6）"
+  "wt514: FIX-223 归因分流（976070c6）",
+  "wt510: mypy 批二 →930（合并基线 928）",
+  "wt512: CASCADE 批二 306→219（f872d33d）"
  ],
  "blocked": [],
  "notes": [
@@ -619,6 +621,7 @@
   "R(18:5x 心跳): 三问——①满编 5+1（wt509 身份参数/wt510 mypy 批二/wt511 审查轮8/wt512 CASCADE 批二/wt513 due_date 族）；②无空槽；③下一张最高价值=36235767634 裁决（Backend 在跑，若绿=首个全量真绿里程碑+推送本地 10 commit）→随后集成返航五卡→睡前定稿 day6 runbook（栈升级最终头→gate_day6.py→state 备份）。例行：swap 回落 15.7G/disk 3G/3 容器/双端 200/7 worktree 在位（5 在航+清点余量）。云端 O 线仍阻塞用户 TCC。",
   "R(19:1x): wt509 集成（d19162ad/202dac1e→2a5c7ee0+docs）：FIX-217 身份闸门（None 拒绝自修正+诚实上报文案，executor 保持非 Optional 源头消除）；危害定性=不越权但自修正链恒死且归因说谎（伪造并发冲突）；合并态 8/8 绿+mypy 基线再下移 1041→1039。新登记 223（账本 catch-all 归因分型）——补位 wt514=FIX-223 归因分流小卡（234 号段）。在航 5+1：wt510/511/512/513/514。零推送 hold（本地 12 commit）。",
   "R(19:3x): wt511 审查轮8 集成（bdcce97f）：125 commit 大窗终审=fix-required 窄——仅 2×P3（231 双旗脑裂/232 content_filter 截断缺口）全探针红；四域其余 approve 带证据（cohort 7/7/闸 403-before-401/时区三列钟锚/stamp 8/8/收编 8/8/烧减抽验 10/10 零 await 漂移）——今日 30+ 卡质量面过关。补位 wt515=231+232 双 P3 打包（235 号段）。在航 5+1：wt510/512/513/514/515。CI 36235767634 Backend 仍在跑。零推送 hold（本地 14 commit）。",
-  "R(19:5x): wt514 集成（59e7db61/976070c6/32830e4f→6fe1861c/f9d3ef82+docs）：FIX-223 归因分流三类（InvalidUserIdentity 参数类不可重试/LedgerUnavailable 基建类可重试/真并发保留）+双判据护栏；红 8→绿 10/10+FIX-217 演进零回退；合并态 18 绿+mypy 1039。新登记 234（error_handler black 不洁微卡）。补位 wt516=FIX-234 微卡（236 号段）。在航 5+1：wt510/512/513/515/516。CI Backend 仍跑。零推送 hold（本地 17 commit）。"
+  "R(19:5x): wt514 集成（59e7db61/976070c6/32830e4f→6fe1861c/f9d3ef82+docs）：FIX-223 归因分流三类（InvalidUserIdentity 参数类不可重试/LedgerUnavailable 基建类可重试/真并发保留）+双判据护栏；红 8→绿 10/10+FIX-217 演进零回退；合并态 18 绿+mypy 1039。新登记 234（error_handler black 不洁微卡）。补位 wt516=FIX-234 微卡（236 号段）。在航 5+1：wt510/512/513/515/516。CI Backend 仍跑。零推送 hold（本地 17 commit）。",
+  "R(20:4x): wt510+wt512 双集成。wt510（e6ba6b6b/541ab669）：mypy 批二 1041→930，合并态叠加 wt509 -2→**基线 928**（Field(default=) 31+路由 DI 实证 10+return 诚实化 64，含 expansion_worker 潜伏 TypeError）；其 226/227 撞 wt505→重编 237/238，227 行曾被 union 吞→取回复录 238（同 ID 吞行第三次）。wt512（f872d33d/2af1a5da→c0405560+docs）：CASCADE 306→219+INFO 557→458+六漂移码以 0 入 allowlist（FIX-227 盲区系统性收口）；await 红线三要点（pump 不并段/lambda 体括号陷阱实证/仅同步并段）；其顺手 232 撞 wt511→重编 239。质量面累计：mypy 1095→928（-167）、analyze INFO 595→458（-137）、CASCADE 306→219。补位 wt517=FIX-237 缓存泛型（240）/wt518=FIX-238 json_call 契约（242）。在航 5+1：wt513/515/516/517/518。CI Backend 仍跑。零推送 hold（本地 22 commit）。"
  ]
 }
