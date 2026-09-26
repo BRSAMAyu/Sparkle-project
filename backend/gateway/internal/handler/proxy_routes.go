@@ -1240,6 +1240,9 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		// 由 /admin catch-all 组（RequireAdmin）覆盖，本组只会 404。
 		// Engine mounts /api/v1/release_approvals (underscore); the path must match or every proxied request 404s.
 		{"/release_approvals", "release_approvals"},
+		// wt483 PLAN 卡 A：/release-flags 是 release scope 五旗契约读面（引擎 GET-only，
+		// release_flags.py 薄视图）。与上面的 /release_approvals（admin 审批面）无关，勿接错。
+		{"/release-flags", "release-flags"},
 		{"/research", "research"},
 		{"/safe-experiments", "safe-experiments"},
 		{"/scenario-packs", "scenario-packs"},

@@ -81673,6 +81673,32 @@
         ]
       }
     },
+    "/api/v1/release-flags": {
+      "get": {
+        "description": "Release scope 五旗契约读面（移动端将来经网关拉取；fail-closed 语义在客户端侧）。",
+        "operationId": "get_release_flags_api_v1_release_flags_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Get Release Flags Api V1 Release Flags Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Release Flags",
+        "tags": [
+          "release-flags"
+        ]
+      }
+    },
     "/api/v1/release_approvals": {
       "get": {
         "operationId": "list_release_approvals_api_v1_release_approvals_get",

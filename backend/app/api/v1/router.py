@@ -130,6 +130,7 @@ from app.api.v1 import (
     vocabulary,
 )
 from app.config import settings
+from app.config.release_flags import release_flags_response
 
 api_router = APIRouter()
 
@@ -356,6 +357,18 @@ async def api_root():
             "/shop",
             "/photons",
             "/inventory",
+            "/release-flags",
             "/ws",
         ],
     }
+
+
+# ── Release scope flags 契约端点（wt483 PLAN 卡 A §2.8；v3-output/wt483-t36-align/PLAN.md）──
+# 单一响应形 {"shop": bool, ...}（小写 snake_case，键集=移动端解码面）。生产暴露面经
+# 网关显式组注册（authMiddleware）认证；引擎直连面仅 dev/test 用。旗权威在
+# app/config/settings.py 的 RELEASE_ENABLE_* 分节，本端点只读（release_flags.py 薄视图）。
+# 注意：与 /release_approvals（admin 审批面）无关。
+@api_router.get("/release-flags", tags=["release-flags"])
+async def get_release_flags() -> dict[str, bool]:
+    """Release scope 五旗契约读面（移动端将来经网关拉取；fail-closed 语义在客户端侧）。"""
+    return release_flags_response()

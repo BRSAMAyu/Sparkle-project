@@ -134,6 +134,18 @@ class Settings(BaseSettings):
     DEBUG: bool | None = None
     SERVICE_ROLE: str = "api"  # api | grpc
 
+    # ── Release scope flags（T36 对齐 wt483 PLAN §2.1/§3；v3-output/wt483-t36-align/PLAN.md）──
+    # 用户可见功能面的发布域闸，默认全 False（安全默认）；与既有 ENABLE_* 内部实验旋钮
+    # 不共用命名空间与判据，但共用本 Settings 唯一权威与 env 管道——禁止另立
+    # BaseSettings（V3-FIX-21 同族禁令，双权威脑裂）。只读视图与 FastAPI 依赖工厂见
+    # app/config/release_flags.py；挂旗在卡 B/C（本卡=零行为变化，唯一消费面是
+    # GET /api/v1/release-flags 契约端点）。
+    RELEASE_ENABLE_SHOP: bool = False
+    RELEASE_ENABLE_PHOTON_TRANSFER: bool = False
+    RELEASE_ENABLE_PUBLIC_LEADERBOARDS: bool = False
+    RELEASE_ENABLE_PUBLIC_COMMUNITY: bool = False
+    RELEASE_ENABLE_VISUAL_ELEMENTS: bool = False
+
     # Security
     # Prefer JWT_SECRET to keep Python-issued JWT fully compatible with Gateway verification.
     SECRET_KEY: str = Field("", validation_alias=AliasChoices("JWT_SECRET", "SECRET_KEY"))
