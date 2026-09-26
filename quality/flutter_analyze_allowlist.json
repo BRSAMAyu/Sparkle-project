@@ -1,11 +1,11 @@
 {
-  "_comment": "Honest ratchet baseline after wt288-dartfix-burn (mechanical INFO) and wt300-flutter-semantic1 (all 359 DISCARDED_FUTURES made explicit with unawaited()/await-split; zero new lints introduced, verified by per-code delta vs baseline clone). Ratchet only-down; refreshed 2026-09-22. wt505-analyzeburn batch-1 (2026-09-25): UNAWAITED_FUTURES 34->0 (all fire-and-forget calls wrapped in unawaited(), semantic no-op) + NO_LEADING_UNDERSCORES 3->0 + UNNECESSARY_IMPORT 1->0 (unlisted drift codes); measured INFO 595->557, max_info 594->557; untouched budgets kept as-is.",
+  "_comment": "Honest ratchet baseline after wt288-dartfix-burn (mechanical INFO) and wt300-flutter-semantic1 (all 359 DISCARDED_FUTURES made explicit with unawaited()/await-split; zero new lints introduced, verified by per-code delta vs baseline clone). Ratchet only-down; refreshed 2026-09-22. wt505-analyzeburn batch-1 (2026-09-25): UNAWAITED_FUTURES 34->0 (all fire-and-forget calls wrapped in unawaited(), semantic no-op) + NO_LEADING_UNDERSCORES 3->0 + UNNECESSARY_IMPORT 1->0 (unlisted drift codes); measured INFO 595->557, max_info 594->557; untouched budgets kept as-is. wt512-cascade2 batch-2 (2026-09-25, V3-FIX-226/-227): CASCADE_INVOCATIONS 306->219 (receiver-duplication sequences merged into cascades; await statements never folded in; lib top files statistics_export_service_impl 27->0 / user_persona_screen 17->0 / galaxy_render_engine 12->0 / statistics_report_generator 10->0 + test surface 59->4, full flutter test on touched files green) + drift codes zeroed and now registered for ratchet coverage: DIRECTIVES_ORDERING 6->0, OMIT_LOCAL_VARIABLE_TYPES 1->0, REQUIRE_TRAILING_COMMAS 1->0, UNNECESSARY_NULL_COMPARISON 1->0, AVOID_SINGLE_CASCADE_IN_EXPRESSION_STATEMENTS 1->0; new unlisted drift code found by post-run coverage grep and cleared same-batch (wt505 precedent): UNUSED_IMPORT 1->0 (streak_details_screen_test.dart:6, pre-existing); measured INFO 557->458, max_info 557->458. DEPEND_ON_REFERENCED_PACKAGES measured 0 this run (context drift, not code change) so budget kept at 3.",
   "max_error": 42,
   "max_warning": 16,
-  "max_info": 557,
+  "max_info": 458,
   "info_code_budgets": {
     "DISCARDED_FUTURES": 0,
-    "CASCADE_INVOCATIONS": 306,
+    "CASCADE_INVOCATIONS": 219,
     "USE_BUILD_CONTEXT_SYNCHRONOUSLY": 86,
     "UNAWAITED_FUTURES": 0,
     "UNRELATED_TYPE_EQUALITY_CHECKS": 31,
@@ -21,6 +21,7 @@
     "USE_NAMED_CONSTANTS": 8,
     "URI_DOES_NOT_EXIST": 6,
     "PREFER_FOREACH": 6,
+    "DIRECTIVES_ORDERING": 0,
     "LIBRARY_PRIVATE_TYPES_IN_PUBLIC_API": 5,
     "DEPRECATED_MEMBER_USE": 4,
     "UNUSED_LOCAL_VARIABLE": 4,
@@ -38,6 +39,11 @@
     "PREFER_INITIALIZING_FORMALS": 1,
     "DANGLING_LIBRARY_DOC_COMMENTS": 1,
     "PREFER_CONST_LITERALS_TO_CREATE_IMMUTABLES": 1,
-    "LIBRARY_ANNOTATIONS": 1
+    "LIBRARY_ANNOTATIONS": 1,
+    "OMIT_LOCAL_VARIABLE_TYPES": 0,
+    "REQUIRE_TRAILING_COMMAS": 0,
+    "UNNECESSARY_NULL_COMPARISON": 0,
+    "AVOID_SINGLE_CASCADE_IN_EXPRESSION_STATEMENTS": 0,
+    "UNUSED_IMPORT": 0
   }
 }

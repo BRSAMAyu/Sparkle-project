@@ -79,7 +79,7 @@ class AudioRecordingService {
         (message) {
           _handleWebSocketMessage(
               message,
-                  onTranscription, onError, onCompleted);
+                  onTranscription, onError, onCompleted,);
         },
         onError: (Object error) {
           _logger.e('WebSocket error: $error');

@@ -158,11 +158,12 @@ class StatisticsReportGenerator {
       ),
       textDirection: TextDirection.ltr,
     );
-    titlePainter.layout(maxWidth: size.width - horizontalInset * 2);
-    titlePainter.paint(
-      canvas,
-      Offset(horizontalInset, size.height * 0.1),
-    );
+    titlePainter
+      ..layout(maxWidth: size.width - horizontalInset * 2)
+      ..paint(
+        canvas,
+        Offset(horizontalInset, size.height * 0.1),
+      );
 
     // Draw period
     final periodPainter = TextPainter(
@@ -176,14 +177,15 @@ class StatisticsReportGenerator {
       ),
       textDirection: TextDirection.ltr,
     );
-    periodPainter.layout();
-    periodPainter.paint(
-      canvas,
-      Offset(
-        horizontalInset,
-        size.height * 0.1 + titlePainter.height + 20 * config.pixelRatio,
-      ),
-    );
+    periodPainter
+      ..layout()
+      ..paint(
+        canvas,
+        Offset(
+          horizontalInset,
+          size.height * 0.1 + titlePainter.height + 20 * config.pixelRatio,
+        ),
+      );
 
     // Draw date
     final datePainter = TextPainter(
@@ -197,17 +199,18 @@ class StatisticsReportGenerator {
       ),
       textDirection: TextDirection.ltr,
     );
-    datePainter.layout();
-    datePainter.paint(
-      canvas,
-      Offset(
-        horizontalInset,
-        size.height * 0.1 +
-            titlePainter.height +
-            periodPainter.height +
-            40 * config.pixelRatio,
-      ),
-    );
+    datePainter
+      ..layout()
+      ..paint(
+        canvas,
+        Offset(
+          horizontalInset,
+          size.height * 0.1 +
+              titlePainter.height +
+              periodPainter.height +
+              40 * config.pixelRatio,
+        ),
+      );
   }
 
   /// Draw the content sections
@@ -240,11 +243,12 @@ class StatisticsReportGenerator {
         ),
         textDirection: TextDirection.ltr,
       );
-      titlePainter.layout(maxWidth: size.width - size.width * 0.16);
-      titlePainter.paint(
-        canvas,
-        Offset(size.width * 0.08, sectionY),
-      );
+      titlePainter
+        ..layout(maxWidth: size.width - size.width * 0.16)
+        ..paint(
+          canvas,
+          Offset(size.width * 0.08, sectionY),
+        );
 
       // Draw section background card
       final cardRect = Rect.fromLTWH(
@@ -289,14 +293,15 @@ class StatisticsReportGenerator {
       ),
       textDirection: TextDirection.ltr,
     );
-    watermarkPainter.layout();
-    watermarkPainter.paint(
-      canvas,
-      Offset(
-        (size.width - watermarkPainter.width) / 2,
-        footerY,
-      ),
-    );
+    watermarkPainter
+      ..layout()
+      ..paint(
+        canvas,
+        Offset(
+          (size.width - watermarkPainter.width) / 2,
+          footerY,
+        ),
+      );
   }
 
   /// Format date for display

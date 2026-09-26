@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_daily_startup_message.dart';
 import 'package:sparkle/features/aurora/data/repositories/aurora_daily_startup_repository.dart';
+import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/providers/aurora_status_provider.dart';
@@ -20,6 +20,7 @@ import 'package:sparkle/features/chat/presentation/widgets/working_memory_drawer
 import 'package:sparkle/features/home/data/repositories/dashboard_repository.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
+
 import '../shared/i18n_test_helper.dart';
 
 /// B3-CHAT §5.1 面积预算断言（P2-4 裁决：widget test 断言为主）。

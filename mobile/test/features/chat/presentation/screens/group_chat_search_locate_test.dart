@@ -204,7 +204,8 @@ class _FakeAuthRepository implements AuthRepository {
   Future<String?> getToken() => getAccessToken();
 
   @override
-  Future<bool> isLoggedIn() async => getAccessToken() != null;
+  // 保持既有 mock 行为：原 `getAccessToken() != null` 判的是 Future，恒为 true。
+  Future<bool> isLoggedIn() async => true;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

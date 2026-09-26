@@ -1296,10 +1296,11 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                   prefKey: prefKey,
                   value: parsedValue,
                 );
-                ref.invalidate(transparentProfileProvider);
-                ref.invalidate(profileContextProvider);
-                ref.invalidate(inferredPreferencesProvider);
-                ref.invalidate(activePoliciesProvider);
+                ref
+                  ..invalidate(transparentProfileProvider)
+                  ..invalidate(profileContextProvider)
+                  ..invalidate(inferredPreferencesProvider)
+                  ..invalidate(activePoliciesProvider);
                 if (context.mounted) {
                   AppFeedback.success(context, l10n.personaPreferenceUpdated);
                   Navigator.of(context).pop();
@@ -1347,10 +1348,11 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
     if (result ?? false) {
       try {
         await repo.rollbackTransparentPreference(prefKey);
-        ref.invalidate(transparentProfileProvider);
-        ref.invalidate(profileContextProvider);
-        ref.invalidate(inferredPreferencesProvider);
-        ref.invalidate(activePoliciesProvider);
+        ref
+          ..invalidate(transparentProfileProvider)
+          ..invalidate(profileContextProvider)
+          ..invalidate(inferredPreferencesProvider)
+          ..invalidate(activePoliciesProvider);
         if (context.mounted) {
           AppFeedback.success(context, l10n.personaRollbackSuccess);
         }
@@ -1474,9 +1476,10 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                     title: nextTitle,
                     status: nextStatus,
                   );
-                  ref.invalidate(transparentProfileProvider);
-                  ref.invalidate(profileContextProvider);
-                  ref.invalidate(activePoliciesProvider);
+                  ref
+                    ..invalidate(transparentProfileProvider)
+                    ..invalidate(profileContextProvider)
+                    ..invalidate(activePoliciesProvider);
                   if (context.mounted) {
                     AppFeedback.success(context, l10n.personaGoalUpdated);
                     Navigator.of(context).pop();
@@ -1577,10 +1580,11 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                   key: key,
                   value: nextValue,
                 );
-                ref.invalidate(transparentProfileProvider);
-                ref.invalidate(profileContextProvider);
-                ref.invalidate(inferredPreferencesProvider);
-                ref.invalidate(activePoliciesProvider);
+                ref
+                  ..invalidate(transparentProfileProvider)
+                  ..invalidate(profileContextProvider)
+                  ..invalidate(inferredPreferencesProvider)
+                  ..invalidate(activePoliciesProvider);
                 if (context.mounted) {
                   AppFeedback.success(
                       context, context.l10n.personaInferredAdjusted,);
@@ -1610,10 +1614,11 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
     final repo = ref.read(userRepositoryProvider);
     try {
       await repo.resetInferredOverride(key);
-      ref.invalidate(transparentProfileProvider);
-      ref.invalidate(profileContextProvider);
-      ref.invalidate(inferredPreferencesProvider);
-      ref.invalidate(activePoliciesProvider);
+      ref
+        ..invalidate(transparentProfileProvider)
+        ..invalidate(profileContextProvider)
+        ..invalidate(inferredPreferencesProvider)
+        ..invalidate(activePoliciesProvider);
       if (context.mounted) {
         AppFeedback.success(context, context.l10n.personaRestoredSystemValue);
       }
@@ -1628,10 +1633,11 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
   }
 
   Future<void> _refreshPersona(WidgetRef ref) async {
-    ref.invalidate(transparentProfileProvider);
-    ref.invalidate(profileContextProvider);
-    ref.invalidate(inferredPreferencesProvider);
-    ref.invalidate(activePoliciesProvider);
+    ref
+      ..invalidate(transparentProfileProvider)
+      ..invalidate(profileContextProvider)
+      ..invalidate(inferredPreferencesProvider)
+      ..invalidate(activePoliciesProvider);
 
     for (final future in <Future<dynamic>>[
       ref.read(transparentProfileProvider.future),

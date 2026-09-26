@@ -121,8 +121,9 @@ void main() {
       ];
 
       for (final error in cases) {
-        authRepository.refreshError = error;
-        authRepository.refreshCalls = 0;
+        authRepository
+          ..refreshError = error
+          ..refreshCalls = 0;
         final err = await _catchTokenError(coordinator.refreshOnce());
         expect(err, isNotNull, reason: '$error 应抛 TokenRefreshException');
         expect(err!.isRetryable, isTrue, reason: '$error 应分级为 retryable');
@@ -135,10 +136,11 @@ void main() {
     });
 
     test('getValidAccessToken：有效 JWT 直接返回，不触发刷新', () async {
-      authRepository.storedAccessToken = _jwtWithExp(
-        DateTime.now().add(const Duration(hours: 1)),
-      );
-      authRepository.storedRefreshToken = 'refresh-token';
+      authRepository
+        ..storedAccessToken = _jwtWithExp(
+          DateTime.now().add(const Duration(hours: 1)),
+        )
+        ..storedRefreshToken = 'refresh-token';
 
       final token = await coordinator.getValidAccessToken();
 
@@ -147,10 +149,11 @@ void main() {
     });
 
     test('getValidAccessToken：过期 JWT 触发单次刷新并返回新 token', () async {
-      authRepository.storedAccessToken = _jwtWithExp(
-        DateTime.now().subtract(const Duration(minutes: 5)),
-      );
-      authRepository.storedRefreshToken = 'refresh-token';
+      authRepository
+        ..storedAccessToken = _jwtWithExp(
+          DateTime.now().subtract(const Duration(minutes: 5)),
+        )
+        ..storedRefreshToken = 'refresh-token';
 
       final token = await coordinator.getValidAccessToken();
 
@@ -159,8 +162,9 @@ void main() {
     });
 
     test('getValidAccessToken：无会话返回 null，不抛错不刷新', () async {
-      authRepository.storedAccessToken = null;
-      authRepository.storedRefreshToken = null;
+      authRepository
+        ..storedAccessToken = null
+        ..storedRefreshToken = null;
 
       final token = await coordinator.getValidAccessToken();
 
@@ -169,8 +173,9 @@ void main() {
     });
 
     test('非 JWT 形态 token（demo）按有效处理，不触发刷新', () async {
-      authRepository.storedAccessToken = 'demo_token';
-      authRepository.storedRefreshToken = 'demo_refresh_token';
+      authRepository
+        ..storedAccessToken = 'demo_token'
+        ..storedRefreshToken = 'demo_refresh_token';
 
       final token = await coordinator.getValidAccessToken();
 
@@ -211,8 +216,9 @@ void main() {
     tearDown(() => container.dispose());
 
     test('并发 3 个 401 请求只触发一次 refreshToken，各自带新 token 重放', () async {
-      authRepository.storedAccessToken = 'stale-access';
-      authRepository.storedRefreshToken = 'refresh-token';
+      authRepository
+        ..storedAccessToken = 'stale-access'
+        ..storedRefreshToken = 'refresh-token';
       final gate = Completer<void>();
       authRepository.refreshGate = gate;
 
@@ -253,15 +259,16 @@ void main() {
     });
 
     test('可重试刷新失败（5xx）：不清 token、不登出（B-3 分级善后）', () async {
-      authRepository.storedAccessToken = 'stale-access';
-      authRepository.storedRefreshToken = 'refresh-token';
-      authRepository.refreshError = DioException(
-        requestOptions: RequestOptions(path: '/auth/refresh'),
-        response: Response<dynamic>(
+      authRepository
+        ..storedAccessToken = 'stale-access'
+        ..storedRefreshToken = 'refresh-token'
+        ..refreshError = DioException(
           requestOptions: RequestOptions(path: '/auth/refresh'),
-          statusCode: 503,
-        ),
-      );
+          response: Response<dynamic>(
+            requestOptions: RequestOptions(path: '/auth/refresh'),
+            statusCode: 503,
+          ),
+        );
       adapter.enqueue(statusCode: 401, data: const <String, dynamic>{});
 
       await expectLater(
@@ -276,15 +283,16 @@ void main() {
     });
 
     test('会话终局刷新失败（401 被拒）：登出善后', () async {
-      authRepository.storedAccessToken = 'stale-access';
-      authRepository.storedRefreshToken = 'refresh-token';
-      authRepository.refreshError = DioException(
-        requestOptions: RequestOptions(path: '/auth/refresh'),
-        response: Response<dynamic>(
+      authRepository
+        ..storedAccessToken = 'stale-access'
+        ..storedRefreshToken = 'refresh-token'
+        ..refreshError = DioException(
           requestOptions: RequestOptions(path: '/auth/refresh'),
-          statusCode: 401,
-        ),
-      );
+          response: Response<dynamic>(
+            requestOptions: RequestOptions(path: '/auth/refresh'),
+            statusCode: 401,
+          ),
+        );
       adapter.enqueue(statusCode: 401, data: const <String, dynamic>{});
 
       await expectLater(
@@ -303,9 +311,9 @@ void main() {
     late WebSocketChatServiceV2 service;
 
     setUp(() {
-      authRepository = _FakeAuthRepository();
-      // 预算分支按「refresh token 是否还在」判断会话死活。
-      authRepository.storedRefreshToken = 'refresh-token';
+      authRepository = _FakeAuthRepository()
+        // 预算分支按「refresh token 是否还在」判断会话死活。
+        ..storedRefreshToken = 'refresh-token';
       container = ProviderContainer(
         overrides: [
           authRepositoryProvider.overrideWithValue(authRepository),
@@ -488,9 +496,10 @@ void main() {
 
     test('终局失败：恰一次登出（等待者不重复善后）', () async {
       final gate = Completer<void>();
-      authRepository.refreshGate = gate;
-      authRepository.refreshError =
-          const AuthFailure(message: 'rejected', code: 'TOKEN_EXPIRED');
+      authRepository
+        ..refreshGate = gate
+        ..refreshError =
+            const AuthFailure(message: 'rejected', code: 'TOKEN_EXPIRED');
 
       final f1 = notifier.debugHandle401Error();
       await _settle();

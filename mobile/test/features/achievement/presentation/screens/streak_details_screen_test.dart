@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/achievement/data/repositories/achievement_repository.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/achievement/presentation/screens/streak_details_screen.dart';

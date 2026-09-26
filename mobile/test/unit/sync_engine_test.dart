@@ -47,8 +47,7 @@ void main() {
       ],
       directory: tempDir.path,
     );
-    localDb = LocalDatabase();
-    localDb.isar = isar;
+    localDb = LocalDatabase()..isar = isar;
   });
 
   tearDown(() async {
@@ -136,8 +135,7 @@ void main() {
       mockWs,
       mockApi,
       connectivity: _FakeConnectivity(),
-    );
-    engine.stop();
+    )..stop();
 
     await engine.enqueue(
       topic: 'task',
@@ -169,8 +167,7 @@ void main() {
       mockWs,
       mockApi,
       connectivity: _FakeConnectivity(),
-    );
-    engine.stop();
+    )..stop();
 
     await engine.enqueueLegacy('mastery_update', {'nodeId': 'n1'});
 

@@ -25,7 +25,7 @@ class U02TestFonts {
       debugPrint('U02TestFonts FONT MISS: $path');
       return;
     }
-    final Uint8List bytes = file.readAsBytesSync();
+    final bytes = file.readAsBytesSync();
     final loader = FontLoader(family)
       ..addFont(Future.value(bytes.buffer.asByteData()));
     await loader.load();

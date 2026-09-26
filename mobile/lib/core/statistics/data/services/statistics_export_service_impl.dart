@@ -74,13 +74,13 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
         ? (zh ? '本地缓存（最近同步于 ${_formatDateTime(statistics.lastRefreshedAt)}）' : 'local cache (last synced ${_formatDateTime(statistics.lastRefreshedAt)})')
         : (zh ? '服务端实时统计' : 'live server statistics');
 
-    final buffer = StringBuffer();
-    buffer.writeln(zh ? '📊 我的$type数据' : '📊 My $type Data');
-    buffer.writeln(zh ? '📅 统计周期: $period' : '📅 Period: $period');
-    buffer.writeln(zh ? '🕐 导出时间: ${_formatDateTime(date)}' : '🕐 Exported: ${_formatDateTime(date)}');
-    buffer.writeln(zh ? '🧾 数据来源: $source' : '🧾 Data source: $source');
-    buffer.writeln();
-    buffer.writeln(zh ? '📈 数据来自 星火AI学习助手' : '📈 Data from Sparkle AI');
+    final buffer = StringBuffer()
+      ..writeln(zh ? '📊 我的$type数据' : '📊 My $type Data')
+      ..writeln(zh ? '📅 统计周期: $period' : '📅 Period: $period')
+      ..writeln(zh ? '🕐 导出时间: ${_formatDateTime(date)}' : '🕐 Exported: ${_formatDateTime(date)}')
+      ..writeln(zh ? '🧾 数据来源: $source' : '🧾 Data source: $source')
+      ..writeln()
+      ..writeln(zh ? '📈 数据来自 星火AI学习助手' : '📈 Data from Sparkle AI');
 
     return buffer.toString();
   }
@@ -145,14 +145,15 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
         ),
         textDirection: TextDirection.ltr,
       );
-      textPainter.layout();
-      textPainter.paint(
-        canvas,
-        Offset(
-          (size.width - textPainter.width) / 2,
-          (size.height - textPainter.height) / 2,
-        ),
-      );
+      textPainter
+        ..layout()
+        ..paint(
+          canvas,
+          Offset(
+            (size.width - textPainter.width) / 2,
+            (size.height - textPainter.height) / 2,
+          ),
+        );
 
       final picture = recorder.endRecording();
       final image = await picture.toImage(
@@ -211,18 +212,19 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
 
     // Add metadata if enabled
     if (config.includeMetadata && includeMetadata) {
-      buffer.writeln();
-      buffer.writeln('# Metadata');
-      buffer.writeln('# App Version: $appVersion');
-      buffer.writeln('# Exported At: ${DateTime.now().toIso8601String()}');
-      buffer.writeln('# Format: csv');
-      // Data provenance (D-04)
-      buffer.writeln(
-        '# Data Source: ${statistics.isFromCache ? 'local-cache' : 'server-api'}',
-      );
-      buffer.writeln(
-        '# Last Synced At: ${statistics.lastRefreshedAt.toIso8601String()}',
-      );
+      buffer
+        ..writeln()
+        ..writeln('# Metadata')
+        ..writeln('# App Version: $appVersion')
+        ..writeln('# Exported At: ${DateTime.now().toIso8601String()}')
+        ..writeln('# Format: csv')
+        // Data provenance (D-04)
+        ..writeln(
+          '# Data Source: ${statistics.isFromCache ? 'local-cache' : 'server-api'}',
+        )
+        ..writeln(
+          '# Last Synced At: ${statistics.lastRefreshedAt.toIso8601String()}',
+        );
     }
 
     final bytes = utf8.encode(buffer.toString());
@@ -281,14 +283,15 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
       ),
       textDirection: TextDirection.ltr,
     );
-    titlePainter.layout();
-    titlePainter.paint(
-      canvas,
-      Offset(
-        (scaledSize.width - titlePainter.width) / 2,
-        100 * config.pngScale,
-      ),
-    );
+    titlePainter
+      ..layout()
+      ..paint(
+        canvas,
+        Offset(
+          (scaledSize.width - titlePainter.width) / 2,
+          100 * config.pngScale,
+        ),
+      );
 
     // Draw period
     final periodStyle = TextStyle(
@@ -303,14 +306,15 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
       ),
       textDirection: TextDirection.ltr,
     );
-    periodPainter.layout();
-    periodPainter.paint(
-      canvas,
-      Offset(
-        (scaledSize.width - periodPainter.width) / 2,
-        180 * config.pngScale,
-      ),
-    );
+    periodPainter
+      ..layout()
+      ..paint(
+        canvas,
+        Offset(
+          (scaledSize.width - periodPainter.width) / 2,
+          180 * config.pngScale,
+        ),
+      );
 
     // Draw date
     final dateStyle = TextStyle(
@@ -325,14 +329,15 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
       ),
       textDirection: TextDirection.ltr,
     );
-    datePainter.layout();
-    datePainter.paint(
-      canvas,
-      Offset(
-        (scaledSize.width - datePainter.width) / 2,
-        240 * config.pngScale,
-      ),
-    );
+    datePainter
+      ..layout()
+      ..paint(
+        canvas,
+        Offset(
+          (scaledSize.width - datePainter.width) / 2,
+          240 * config.pngScale,
+        ),
+      );
 
     // Add entity-specific visual data
     await _drawPngReportData(canvas, statistics, scaledSize, config);
@@ -352,14 +357,15 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
       ),
       textDirection: TextDirection.ltr,
     );
-    footerPainter.layout();
-    footerPainter.paint(
-      canvas,
-      Offset(
-        (scaledSize.width - footerPainter.width) / 2,
-        scaledSize.height - 100 * config.pngScale,
-      ),
-    );
+    footerPainter
+      ..layout()
+      ..paint(
+        canvas,
+        Offset(
+          (scaledSize.width - footerPainter.width) / 2,
+          scaledSize.height - 100 * config.pngScale,
+        ),
+      );
 
     final picture = recorder.endRecording();
     final image = await picture.toImage(
@@ -398,11 +404,11 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
   ///
   /// Subclasses should override this for custom data
   void _writeCsvData(StringBuffer buffer, T statistics) {
-    buffer.writeln('Type,${statistics.type.code}');
-    buffer.writeln('Period,${statistics.period.name}');
-    buffer.writeln(
-        'Last Refreshed,${statistics.lastRefreshedAt.toIso8601String()}',);
-    buffer.writeln('From Cache,${statistics.isFromCache}');
+    buffer
+      ..writeln('Type,${statistics.type.code}')
+      ..writeln('Period,${statistics.period.name}')
+      ..writeln('Last Refreshed,${statistics.lastRefreshedAt.toIso8601String()}')
+      ..writeln('From Cache,${statistics.isFromCache}');
   }
 
   /// Draw entity-specific data on PNG report
@@ -429,14 +435,15 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
       textAlign: TextAlign.center,
       textDirection: TextDirection.ltr,
     );
-    msgPainter.layout(maxWidth: size.width - 100 * config.pngScale);
-    msgPainter.paint(
-      canvas,
-      Offset(
-        50 * config.pngScale,
-        size.height / 2 - 100 * config.pngScale,
-      ),
-    );
+    msgPainter
+      ..layout(maxWidth: size.width - 100 * config.pngScale)
+      ..paint(
+        canvas,
+        Offset(
+          50 * config.pngScale,
+          size.height / 2 - 100 * config.pngScale,
+        ),
+      );
   }
 
   // ============================================

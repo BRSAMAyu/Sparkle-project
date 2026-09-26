@@ -181,32 +181,36 @@ class GalaxyRenderEngine {
   }
 
   void _setFieldUniforms(FragmentShader shader, Size size, double time) {
-    shader.setFloat(0, size.width);
-    shader.setFloat(1, size.height);
-    shader.setFloat(2, time);
-    shader.setFloat(3, settings.value.fieldStrength);
-    shader.setFloat(4, settings.value.noiseScale);
+    shader
+      ..setFloat(0, size.width)
+      ..setFloat(1, size.height)
+      ..setFloat(2, time)
+      ..setFloat(3, settings.value.fieldStrength)
+      ..setFloat(4, settings.value.noiseScale);
   }
 
   void _setBurstUniforms(FragmentShader shader, Size size, double time) {
-    shader.setFloat(0, size.width);
-    shader.setFloat(1, size.height);
-    shader.setFloat(2, time);
+    shader
+      ..setFloat(0, size.width)
+      ..setFloat(1, size.height)
+      ..setFloat(2, time);
 
     var index = 3;
     for (var i = 0; i < _bursts.length; i++) {
       final burst = _bursts[i];
       if (burst == null) {
-        shader.setFloat(index++, 0.0);
-        shader.setFloat(index++, 0.0);
-        shader.setFloat(index++, 0.0);
-        shader.setFloat(index++, 0.0);
+        shader
+          ..setFloat(index++, 0.0)
+          ..setFloat(index++, 0.0)
+          ..setFloat(index++, 0.0)
+          ..setFloat(index++, 0.0);
         continue;
       }
-      shader.setFloat(index++, burst.origin.dx);
-      shader.setFloat(index++, burst.origin.dy);
-      shader.setFloat(index++, burst.startTime);
-      shader.setFloat(index++, burst.strength);
+      shader
+        ..setFloat(index++, burst.origin.dx)
+        ..setFloat(index++, burst.origin.dy)
+        ..setFloat(index++, burst.startTime)
+        ..setFloat(index++, burst.strength);
     }
   }
 

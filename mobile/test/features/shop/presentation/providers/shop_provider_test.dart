@@ -300,15 +300,16 @@ void main() {
         ),
       ];
 
-      mockRepository.getShopItemsHandler = ({
-        String? itemType,
-        String? category,
-        String? rarity,
-        bool onlyAvailable = true,
-      }) async =>
-          items;
-
-      mockRepository.purchaseItemHandler = (itemId) async => {'success': true};
+      mockRepository
+        // 括号防级联吞段：链中段的表达式体 lambda 必须括起。
+        ..getShopItemsHandler = (({
+          String? itemType,
+          String? category,
+          String? rarity,
+          bool onlyAvailable = true,
+        }) async =>
+            items)
+        ..purchaseItemHandler = (itemId) async => {'success': true};
 
       // Initial load
       container.read(shopItemsProvider);
@@ -336,17 +337,17 @@ void main() {
         ),
       ];
 
-      mockRepository.getShopItemsHandler = ({
-        String? itemType,
-        String? category,
-        String? rarity,
-        bool onlyAvailable = true,
-      }) async =>
-          items;
-
-      mockRepository.purchaseItemHandler = (itemId) async {
-        throw Exception('Insufficient balance');
-      };
+      mockRepository
+        ..getShopItemsHandler = (({
+          String? itemType,
+          String? category,
+          String? rarity,
+          bool onlyAvailable = true,
+        }) async =>
+            items)
+        ..purchaseItemHandler = (itemId) async {
+          throw Exception('Insufficient balance');
+        };
 
       container.read(shopItemsProvider);
       await Future<void>.delayed(Duration.zero);
@@ -381,14 +382,15 @@ void main() {
       container.read(shopItemsProvider);
       await Future<void>.delayed(Duration.zero);
 
-      mockRepository.getShopItemsCalls = 0;
-      mockRepository.getShopItemsHandler = ({
-        String? itemType,
-        String? category,
-        String? rarity,
-        bool onlyAvailable = true,
-      }) async =>
-          items;
+      mockRepository
+        ..getShopItemsCalls = 0
+        ..getShopItemsHandler = ({
+          String? itemType,
+          String? category,
+          String? rarity,
+          bool onlyAvailable = true,
+        }) async =>
+            items;
 
       final notifier = container.read(shopItemsProvider.notifier);
       await notifier.refresh();
@@ -527,12 +529,13 @@ void main() {
       final notifier = container.read(purchaseHistoryProvider.notifier);
       await notifier.loadPurchaseHistory();
 
-      mockRepository.getPurchaseHistoryCalls = 0;
-      mockRepository.getPurchaseHistoryHandler = ({
-        int limit = 20,
-        int offset = 0,
-      }) async =>
-          purchases;
+      mockRepository
+        ..getPurchaseHistoryCalls = 0
+        ..getPurchaseHistoryHandler = ({
+          int limit = 20,
+          int offset = 0,
+        }) async =>
+            purchases;
 
       await notifier.refresh();
 
@@ -597,12 +600,13 @@ void main() {
         'boosts': [],
       };
 
-      mockRepository.getInventoryHandler = () async => inventory;
-      mockRepository.equipItemHandler = ({
-        required String itemType,
-        String? itemId,
-      }) async =>
-          {'success': true};
+      mockRepository
+        ..getInventoryHandler = (() async => inventory)
+        ..equipItemHandler = ({
+          required String itemType,
+          String? itemId,
+        }) async =>
+            {'success': true};
 
       container.read(inventoryProvider);
       await Future<void>.delayed(Duration.zero);
@@ -626,13 +630,14 @@ void main() {
         'boosts': [],
       };
 
-      mockRepository.getInventoryHandler = () async => inventory;
-      mockRepository.equipItemHandler = ({
-        required String itemType,
-        String? itemId,
-      }) async {
-        throw Exception('Item not owned');
-      };
+      mockRepository
+        ..getInventoryHandler = (() async => inventory)
+        ..equipItemHandler = ({
+          required String itemType,
+          String? itemId,
+        }) async {
+          throw Exception('Item not owned');
+        };
 
       container.read(inventoryProvider);
       await Future<void>.delayed(Duration.zero);
@@ -917,10 +922,11 @@ void main() {
       );
 
       // Initialize all providers
-      testContainer.read(shopItemsProvider);
-      testContainer.read(purchaseHistoryProvider);
-      testContainer.read(inventoryProvider);
-      testContainer.read(ownedItemsProvider);
+      testContainer
+        ..read(shopItemsProvider)
+        ..read(purchaseHistoryProvider)
+        ..read(inventoryProvider)
+        ..read(ownedItemsProvider);
 
       await Future<void>.delayed(Duration.zero);
 

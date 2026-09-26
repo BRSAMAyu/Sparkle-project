@@ -14,19 +14,20 @@ void main() {
       final commands = <GalaxyGestureCommand>[];
       final handler = _handler(commands);
 
-      handler.handlePointerDown(
-        const PointerDownEvent(
-          pointer: 1,
-          position: Offset(20, 20),
-        ),
-      );
-      handler.handlePointerUp(
-        const PointerUpEvent(
-          pointer: 1,
-          timeStamp: Duration(milliseconds: 80),
-          position: Offset(20, 20),
-        ),
-      );
+      handler
+        ..handlePointerDown(
+          const PointerDownEvent(
+            pointer: 1,
+            position: Offset(20, 20),
+          ),
+        )
+        ..handlePointerUp(
+          const PointerUpEvent(
+            pointer: 1,
+            timeStamp: Duration(milliseconds: 80),
+            position: Offset(20, 20),
+          ),
+        );
 
       expect(commands, isEmpty);
       await tester.pump(const Duration(milliseconds: 320));
@@ -40,34 +41,36 @@ void main() {
       final commands = <GalaxyGestureCommand>[];
       final handler = _handler(commands);
 
-      handler.handlePointerDown(
-        const PointerDownEvent(
-          pointer: 1,
-          position: Offset(30, 30),
-        ),
-      );
-      handler.handlePointerUp(
-        const PointerUpEvent(
-          pointer: 1,
-          timeStamp: Duration(milliseconds: 70),
-          position: Offset(30, 30),
-        ),
-      );
+      handler
+        ..handlePointerDown(
+          const PointerDownEvent(
+            pointer: 1,
+            position: Offset(30, 30),
+          ),
+        )
+        ..handlePointerUp(
+          const PointerUpEvent(
+            pointer: 1,
+            timeStamp: Duration(milliseconds: 70),
+            position: Offset(30, 30),
+          ),
+        );
       await tester.pump(const Duration(milliseconds: 160));
-      handler.handlePointerDown(
-        const PointerDownEvent(
-          pointer: 2,
-          timeStamp: Duration(milliseconds: 180),
-          position: Offset(34, 32),
-        ),
-      );
-      handler.handlePointerUp(
-        const PointerUpEvent(
-          pointer: 2,
-          timeStamp: Duration(milliseconds: 240),
-          position: Offset(34, 32),
-        ),
-      );
+      handler
+        ..handlePointerDown(
+          const PointerDownEvent(
+            pointer: 2,
+            timeStamp: Duration(milliseconds: 180),
+            position: Offset(34, 32),
+          ),
+        )
+        ..handlePointerUp(
+          const PointerUpEvent(
+            pointer: 2,
+            timeStamp: Duration(milliseconds: 240),
+            position: Offset(34, 32),
+          ),
+        );
 
       expect(commands.single, isA<DoubleTapCommand>());
       await tester.pump(const Duration(milliseconds: 320));
