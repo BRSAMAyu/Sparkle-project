@@ -241,9 +241,24 @@ async def lifespan(fastapp: FastAPI):
         except Exception as e:
             logger.warning(f"Failed to ensure Redis search index at startup (non-fatal): {e}")
 
-    # event_bus 的 None 占位已删：下方无条件 `from app.core.event_bus import
-    # event_bus` 立即用模块级单例重绑，None 死值让后续 begin_shutdown/close
-    # 的静态类型错位成 None。
+    # V3-FIX-150：event_bus 无条件绑定模块级单例。EventBus.__init__ 纯内存、
+    # Redis 连接惰性（构造零 I/O），无 Redis 时它天然就是 fail-soft 本地桩
+    # （publish 失败记 DLQ 后返回 None、subscribe 显式 RuntimeError）——不另造
+    # 第二套总线/新真源。此前 import 只在 `if cache_service.redis:` 分支内执行，
+    # 而函数内 import 是局部赋值：Redis 不可用（连不上/NOAUTH）时该分支整体
+    # 跳过、名字未绑定，下方 intervention_outcome_verifier 等分支无条件求值
+    # `event_bus is not None` → UnboundLocalError，"降级启动"变"启动即崩"
+    # （uvicorn 退出码 3，与 FIX-78 快速诚实失败意图相悖）。None 占位方案仍
+    # 不可取：死值让关停段 begin_shutdown/close 静态类型错位成 None。Redis
+    # 可用时绑定的仍是同一个模块级单例，行为零变化。
+    from app.core.event_bus import event_bus
+
+    if not cache_service.redis:
+        logger.warning(
+            "Redis unavailable at startup — event consumers degraded to "
+            "in-process event bus (publish fail-soft); Redis Streams "
+            "consumers disabled"
+        )
     preference_consumer_task = None
     if cache_service.redis:
         user_service = UserService(None, cache_service.redis)
@@ -254,8 +269,6 @@ async def lifespan(fastapp: FastAPI):
     # Start Galaxy event consumer
     galaxy_consumer_task = None
     if cache_service.redis:
-        from app.core.event_bus import event_bus
-
         galaxy_consumer = GalaxyEventConsumer(event_bus=event_bus)
         galaxy_consumer_task = asyncio.create_task(galaxy_consumer.start())
         fastapp.state.galaxy_consumer_task = galaxy_consumer_task
@@ -407,8 +420,13 @@ async def lifespan(fastapp: FastAPI):
         # P-06：接通 per-user 统一通知设置（quiet 窗/daily cap/时区）——
         # 用户设置不再只是展示面，事件管线抑制链据此判定（解析失败回退
         # 管线旋钮保守基线）。
+        #
+        # V3-FIX-150 同族：此处不得函数级 `from app.db.session import
+        # AsyncSessionLocal`——模块顶部已全局导入（main.py L50），函数内
+        # import 会把名字变成 lifespan 局部变量，Redis 不可用跳过本分支后
+        # 下方 DB 段 `async with AsyncSessionLocal()` 同样 UnboundLocalError
+        # （修 event_bus 后红测随即暴露的第二个隐藏崩溃点，修前被前者挡住）。
         from app.aurora.runtime_v1.notification_settings import make_db_settings_provider
-        from app.db.session import AsyncSessionLocal
 
         proactive_pipeline = ProactiveEventPipeline(
             redis=cache_service.redis,
