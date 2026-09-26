@@ -6,7 +6,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/display/lexicon/error_lexicon.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/seed_library/presentation/providers/seed_library_provider.dart';
-import 'package:sparkle/features/settings/presentation/screens/transparency_settings_screen.dart';
+import 'package:sparkle/features/settings/presentation/providers/transparency_preferences.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
 const _defaultAiSystemPreferences = TransparencyPreferences(

@@ -4300,47 +4300,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reviewAppealOtherIssue => 'Other issue';
 
   @override
-  String get transparencySettingsTitle => 'Transparency Settings';
-
-  @override
-  String get transparencyEnable => 'Enable transparency mode';
-
-  @override
-  String get transparencyEnableDesc =>
-      'Show AI processing steps, agent switches, and token usage.';
-
-  @override
-  String get transparencyDisplayOptions => 'Display options';
-
-  @override
-  String get transparencyTokenUsage => 'Token usage';
-
-  @override
-  String get transparencyTokenUsageDesc =>
-      'Show token consumption and estimated cost for each conversation.';
-
-  @override
-  String get transparencyAgentSwitching => 'Agent switching';
-
-  @override
-  String get transparencyAgentSwitchingDesc =>
-      'Show how the system switches between different agents.';
-
-  @override
-  String get transparencyReasoningSteps => 'Reasoning steps';
-
-  @override
-  String get transparencyReasoningStepsDesc =>
-      'Show the model\'s detailed reasoning steps.';
-
-  @override
-  String get transparencyWarning =>
-      'Detailed transparency may slightly increase response latency.';
-
-  @override
-  String get transparencyLoadFailed => 'Failed to load settings';
-
-  @override
   String get nightlyReviewPending => 'Tonight\'s review is still waiting';
 
   @override
@@ -27301,24 +27260,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsRetryQueue => 'Retry Queue';
 
   @override
-  String get settingsPureMode => 'Pure Mode';
-
-  @override
-  String get settingsCollapseFloating => 'Collapse Floating Capsule';
-
-  @override
-  String get settingsBottomDrawer => 'Bottom Drawer';
-
-  @override
-  String get settingsDetailOnly => 'Detail Only';
-
-  @override
-  String get settingsAutoCollapse => 'Auto-collapse on completion';
-
-  @override
-  String get settingsAllowSingleClose => 'Allow single-turn close';
-
-  @override
   String get settingsConfirm => 'Confirm';
 
   @override
@@ -33544,50 +33485,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settOpenclawClearQueue => 'Clear Queue';
-
-  @override
-  String get settTranspPureModeDesc =>
-      'In chat, keep only text messages. Hide info cards, task cards, and feedback widgets below messages.';
-
-  @override
-  String get settTranspDisplayDesc =>
-      'Choose how transparency mode is displayed in the main conversation';
-
-  @override
-  String get settTranspAutoCollapseDesc =>
-      'After a response is generated, collapse transparency mode into a lightweight summary';
-
-  @override
-  String get settTranspAllowCloseDesc =>
-      'During this generation, you can manually close transparency mode without affecting the response';
-
-  @override
-  String get settTranspAuroraReceiptTitle => 'Aurora experience receipts';
-
-  @override
-  String get settTranspAuroraReceiptDesc =>
-      'Show why Aurora changed tone, state, or deep calibration entry.';
-
-  @override
-  String get settTranspMemoryReceiptTitle => 'Memory reference receipts';
-
-  @override
-  String get settTranspMemoryReceiptDesc =>
-      'Show which memories Aurora used and allow corrections.';
-
-  @override
-  String get settTranspSourceReceiptTitle => 'Source and tool receipts';
-
-  @override
-  String get settTranspSourceReceiptDesc =>
-      'Show which materials, tools, or social context Aurora used.';
-
-  @override
-  String get settTranspNextActionTitle => 'Next-action change receipts';
-
-  @override
-  String get settTranspNextActionDesc =>
-      'Show why Aurora changed a plan or task.';
 
   @override
   String secLogTotalRecords(Object count) {

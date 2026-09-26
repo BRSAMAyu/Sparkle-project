@@ -7724,78 +7724,6 @@ abstract class AppLocalizations {
   /// **'其他问题'**
   String get reviewAppealOtherIssue;
 
-  /// No description provided for @transparencySettingsTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'透明模式设置'**
-  String get transparencySettingsTitle;
-
-  /// No description provided for @transparencyEnable.
-  ///
-  /// In zh, this message translates to:
-  /// **'启用透明模式'**
-  String get transparencyEnable;
-
-  /// No description provided for @transparencyEnableDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'显示 AI 处理步骤、Agent 切换和 Token 使用情况。'**
-  String get transparencyEnableDesc;
-
-  /// No description provided for @transparencyDisplayOptions.
-  ///
-  /// In zh, this message translates to:
-  /// **'显示选项'**
-  String get transparencyDisplayOptions;
-
-  /// No description provided for @transparencyTokenUsage.
-  ///
-  /// In zh, this message translates to:
-  /// **'Token 使用情况'**
-  String get transparencyTokenUsage;
-
-  /// No description provided for @transparencyTokenUsageDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'显示每次对话的 Token 消耗和成本估算。'**
-  String get transparencyTokenUsageDesc;
-
-  /// No description provided for @transparencyAgentSwitching.
-  ///
-  /// In zh, this message translates to:
-  /// **'Agent 切换'**
-  String get transparencyAgentSwitching;
-
-  /// No description provided for @transparencyAgentSwitchingDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'显示不同 Agent 之间的切换过程。'**
-  String get transparencyAgentSwitchingDesc;
-
-  /// No description provided for @transparencyReasoningSteps.
-  ///
-  /// In zh, this message translates to:
-  /// **'推理步骤'**
-  String get transparencyReasoningSteps;
-
-  /// No description provided for @transparencyReasoningStepsDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'显示模型的详细推理过程。'**
-  String get transparencyReasoningStepsDesc;
-
-  /// No description provided for @transparencyWarning.
-  ///
-  /// In zh, this message translates to:
-  /// **'启用详细透明选项可能会略微增加响应延迟。'**
-  String get transparencyWarning;
-
-  /// No description provided for @transparencyLoadFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'加载设置失败'**
-  String get transparencyLoadFailed;
-
   /// No description provided for @nightlyReviewPending.
   ///
   /// In zh, this message translates to:
@@ -47869,42 +47797,6 @@ abstract class AppLocalizations {
   /// **'重试队列'**
   String get settingsRetryQueue;
 
-  /// No description provided for @settingsPureMode.
-  ///
-  /// In zh, this message translates to:
-  /// **'纯净模式'**
-  String get settingsPureMode;
-
-  /// No description provided for @settingsCollapseFloating.
-  ///
-  /// In zh, this message translates to:
-  /// **'折叠悬浮胶囊'**
-  String get settingsCollapseFloating;
-
-  /// No description provided for @settingsBottomDrawer.
-  ///
-  /// In zh, this message translates to:
-  /// **'底部抽屉'**
-  String get settingsBottomDrawer;
-
-  /// No description provided for @settingsDetailOnly.
-  ///
-  /// In zh, this message translates to:
-  /// **'仅详情页'**
-  String get settingsDetailOnly;
-
-  /// No description provided for @settingsAutoCollapse.
-  ///
-  /// In zh, this message translates to:
-  /// **'完成后自动折叠'**
-  String get settingsAutoCollapse;
-
-  /// No description provided for @settingsAllowSingleClose.
-  ///
-  /// In zh, this message translates to:
-  /// **'允许单轮关闭'**
-  String get settingsAllowSingleClose;
-
   /// No description provided for @settingsConfirm.
   ///
   /// In zh, this message translates to:
@@ -58488,78 +58380,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'清空队列'**
   String get settOpenclawClearQueue;
-
-  /// No description provided for @settTranspPureModeDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'聊天中仅保留文字消息，隐藏消息下方的附加信息卡片、任务卡和反馈组件。'**
-  String get settTranspPureModeDesc;
-
-  /// No description provided for @settTranspDisplayDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'选择主对话里的透明模式展示方式'**
-  String get settTranspDisplayDesc;
-
-  /// No description provided for @settTranspAutoCollapseDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'回答完成后，将透明模式收起成轻量摘要'**
-  String get settTranspAutoCollapseDesc;
-
-  /// No description provided for @settTranspAllowCloseDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'本轮生成时可手动关闭透明模式，不影响回答继续生成'**
-  String get settTranspAllowCloseDesc;
-
-  /// No description provided for @settTranspAuroraReceiptTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'Aurora 体验回执'**
-  String get settTranspAuroraReceiptTitle;
-
-  /// No description provided for @settTranspAuroraReceiptDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'显示 Aurora 为什么改变语气、状态或深度校准入口。'**
-  String get settTranspAuroraReceiptDesc;
-
-  /// No description provided for @settTranspMemoryReceiptTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'记忆引用回执'**
-  String get settTranspMemoryReceiptTitle;
-
-  /// No description provided for @settTranspMemoryReceiptDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'显示 Aurora 引用了哪些相关记忆，并允许纠正。'**
-  String get settTranspMemoryReceiptDesc;
-
-  /// No description provided for @settTranspSourceReceiptTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'资料与工具回执'**
-  String get settTranspSourceReceiptTitle;
-
-  /// No description provided for @settTranspSourceReceiptDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'显示 Aurora 参考了哪些资料、工具或社群上下文。'**
-  String get settTranspSourceReceiptDesc;
-
-  /// No description provided for @settTranspNextActionTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'下一步变更回执'**
-  String get settTranspNextActionTitle;
-
-  /// No description provided for @settTranspNextActionDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'显示计划或任务被 Aurora 调整的原因。'**
-  String get settTranspNextActionDesc;
 
   /// No description provided for @secLogTotalRecords.
   ///

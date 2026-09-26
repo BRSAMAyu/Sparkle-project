@@ -1,33 +1,13 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'transparency_settings_screen.dart';
+part of 'transparency_preferences.dart';
 
 // **************************************************************************
 // RiverpodGenerator
 // **************************************************************************
 
-String _$transparencyPreferencesHash() =>
-    r'e25ca7d83a60d9e7e2709d42abd6a9470abe9a0f';
-
-/// Provider for transparency preferences
-///
-/// Copied from [transparencyPreferences].
-@ProviderFor(transparencyPreferences)
-final transparencyPreferencesProvider =
-    AutoDisposeFutureProvider<TransparencyPreferences>.internal(
-  transparencyPreferences,
-  name: r'transparencyPreferencesProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$transparencyPreferencesHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
-
-typedef TransparencyPreferencesRef
-    = AutoDisposeFutureProviderRef<TransparencyPreferences>;
 String _$transparencyPreferencesNotifierHash() =>
-    r'a431b2c81d8f2485d56519d95951e368982b13c5';
+    r'a5a5232148832c5bd27c78912cbd0577a0c4e7ca';
 
 /// Notifier for transparency preferences
 ///

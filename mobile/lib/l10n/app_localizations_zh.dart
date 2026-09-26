@@ -4120,42 +4120,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reviewAppealOtherIssue => '其他问题';
 
   @override
-  String get transparencySettingsTitle => '透明模式设置';
-
-  @override
-  String get transparencyEnable => '启用透明模式';
-
-  @override
-  String get transparencyEnableDesc => '显示 AI 处理步骤、Agent 切换和 Token 使用情况。';
-
-  @override
-  String get transparencyDisplayOptions => '显示选项';
-
-  @override
-  String get transparencyTokenUsage => 'Token 使用情况';
-
-  @override
-  String get transparencyTokenUsageDesc => '显示每次对话的 Token 消耗和成本估算。';
-
-  @override
-  String get transparencyAgentSwitching => 'Agent 切换';
-
-  @override
-  String get transparencyAgentSwitchingDesc => '显示不同 Agent 之间的切换过程。';
-
-  @override
-  String get transparencyReasoningSteps => '推理步骤';
-
-  @override
-  String get transparencyReasoningStepsDesc => '显示模型的详细推理过程。';
-
-  @override
-  String get transparencyWarning => '启用详细透明选项可能会略微增加响应延迟。';
-
-  @override
-  String get transparencyLoadFailed => '加载设置失败';
-
-  @override
   String get nightlyReviewPending => '今日复盘待完成';
 
   @override
@@ -26180,24 +26144,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsRetryQueue => '重试队列';
 
   @override
-  String get settingsPureMode => '纯净模式';
-
-  @override
-  String get settingsCollapseFloating => '折叠悬浮胶囊';
-
-  @override
-  String get settingsBottomDrawer => '底部抽屉';
-
-  @override
-  String get settingsDetailOnly => '仅详情页';
-
-  @override
-  String get settingsAutoCollapse => '完成后自动折叠';
-
-  @override
-  String get settingsAllowSingleClose => '允许单轮关闭';
-
-  @override
   String get settingsConfirm => '确认';
 
   @override
@@ -32159,42 +32105,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settOpenclawClearQueue => '清空队列';
-
-  @override
-  String get settTranspPureModeDesc => '聊天中仅保留文字消息，隐藏消息下方的附加信息卡片、任务卡和反馈组件。';
-
-  @override
-  String get settTranspDisplayDesc => '选择主对话里的透明模式展示方式';
-
-  @override
-  String get settTranspAutoCollapseDesc => '回答完成后，将透明模式收起成轻量摘要';
-
-  @override
-  String get settTranspAllowCloseDesc => '本轮生成时可手动关闭透明模式，不影响回答继续生成';
-
-  @override
-  String get settTranspAuroraReceiptTitle => 'Aurora 体验回执';
-
-  @override
-  String get settTranspAuroraReceiptDesc => '显示 Aurora 为什么改变语气、状态或深度校准入口。';
-
-  @override
-  String get settTranspMemoryReceiptTitle => '记忆引用回执';
-
-  @override
-  String get settTranspMemoryReceiptDesc => '显示 Aurora 引用了哪些相关记忆，并允许纠正。';
-
-  @override
-  String get settTranspSourceReceiptTitle => '资料与工具回执';
-
-  @override
-  String get settTranspSourceReceiptDesc => '显示 Aurora 参考了哪些资料、工具或社群上下文。';
-
-  @override
-  String get settTranspNextActionTitle => '下一步变更回执';
-
-  @override
-  String get settTranspNextActionDesc => '显示计划或任务被 Aurora 调整的原因。';
 
   @override
   String secLogTotalRecords(Object count) {

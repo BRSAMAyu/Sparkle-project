@@ -81,7 +81,7 @@ import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboa
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
-import 'package:sparkle/features/settings/presentation/screens/transparency_settings_screen.dart';
+import 'package:sparkle/features/settings/presentation/providers/transparency_preferences.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';

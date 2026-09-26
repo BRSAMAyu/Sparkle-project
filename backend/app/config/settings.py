@@ -1150,6 +1150,11 @@ class Settings(BaseSettings):
     # .env.example 声明的 Aurora 开关总默认（managed key，Rule AURORA-CONFIG 校验两侧一致）
     AURORA_DEFAULT_MODE: str = "live"
     ENABLE_EXPERT_ENTRY: bool = True
+    # V3-FIX-182：visual-elements LABS 孤儿链发布闸（独立显式开关，默认关）。
+    # 闸只挂本组注册级（api/v1/router.py），不做 router 前缀级一刀切（T36 教训：
+    # 前缀级旗子会误杀同 router 的合法子面，如 leaderboards/self-anchor）。
+    # 关闭时语义与 T36 release flags 对齐：403 FEATURE_DISABLED。
+    ENABLE_VISUAL_ELEMENTS: bool = False
     ENABLE_UNIFIED_GRAPH_ROUTING: bool = True
     ENABLE_EXPERT_STRATEGY_V1: bool = True
     ENABLE_SESSION_FEEDBACK_ADAPTATION: bool = True

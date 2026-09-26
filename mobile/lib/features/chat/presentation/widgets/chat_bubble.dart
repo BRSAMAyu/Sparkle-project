@@ -47,7 +47,7 @@ import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart'
 import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/report_routes.dart';
-import 'package:sparkle/features/settings/presentation/screens/transparency_settings_screen.dart';
+import 'package:sparkle/features/settings/presentation/providers/transparency_preferences.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
