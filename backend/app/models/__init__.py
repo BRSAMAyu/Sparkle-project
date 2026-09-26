@@ -89,7 +89,7 @@ from app.models.card_protocol import (
     ShareScope,
     TaskOccurrence,
 )
-from app.models.chat import ChatMessage, ChatSession, MessageRole
+from app.models.chat import ChatMessage, ChatSession, MessageOrigin, MessageRole
 from app.models.cognitive import BehaviorPattern, CognitiveFragment
 from app.models.community import (
     Friendship,
@@ -375,6 +375,7 @@ __all__ = [
     # Chat
     "ChatMessage",
     "ChatSession",
+    "MessageOrigin",
     "MessageRole",
     # Cognitive
     "BehaviorPattern",

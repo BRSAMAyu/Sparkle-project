@@ -97,6 +97,9 @@ class LLMSecurityWrapper:
 
     #: 仅这两类路由元属性允许经 __getattr__ 透传到内层服务（只读，无调用面）。
     #: default_model 供 persistence_layer 等读取路由模型名做元数据记录。
+    #: demo_mode 供 V3-FIX-258 的落库 origin 标记与记忆推断 demo 轮过滤读取
+    #: （只读 bool：演示模式置位时内层一切回复均为脚本短路，读侧据此判别
+    #: 文本来源；不含任何调用面，不构成配额/筛查旁路）。
     _FORWARDABLE_META_ATTRS = frozenset(
         {
             "chat_model",
@@ -106,6 +109,7 @@ class LLMSecurityWrapper:
             "agent_role",
             "get_current_selection",
             "is_thinking_mode",
+            "demo_mode",
         }
     )
 

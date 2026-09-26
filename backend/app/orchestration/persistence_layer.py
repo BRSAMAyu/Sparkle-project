@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.time_utils import utcnow
 from app.gen.agent.v1 import agent_service_pb2
-from app.models.chat import ChatMessage, ChatSession, MessageRole
+from app.models.chat import ChatMessage, ChatSession, MessageOrigin, MessageRole
 from app.orchestration.schemas import ExecutablePlan
 from app.services.llm_service import llm_service
 from app.services.memory_inferred_write_lane import MemoryInferredWriteLaneService
@@ -89,6 +89,16 @@ class PersistenceLayerMixin:
                     role=MessageRole.ASSISTANT,
                     content=full_response,
                     model_name=getattr(llm_service, "default_model", None),
+                    # V3-FIX-258：demo 产出落库必须带持久 origin 标记（此前
+                    # 唯一标记是瞬态 OTel span llm.demo_mode）。demo_mode
+                    # 置位时 llm_service 一切回复均为 provider 调用前的脚本
+                    # 短路（DEMO_MOCK_RESPONSES/通用演示回复），故「落库时刻
+                    # demo_mode」是该行文本来源的充分判据；显式 provider 切换
+                    # 仅发生在 switch_specific_model 管理面操作，mid-turn 翻转
+                    # 误标是已记录的可接受边缘。
+                    origin=(
+                        MessageOrigin.DEMO if bool(getattr(llm_service, "demo_mode", False)) else MessageOrigin.LLM
+                    ),
                 )
                 persist_session.add(assistant_msg)
                 await persist_session.flush()

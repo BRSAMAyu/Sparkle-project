@@ -46,6 +46,7 @@ from app.models import (
     InterventionFeedback,
     InterventionRequest,
     KnowledgeNode,
+    MessageOrigin,
     MessageRole,
     MessageType,
     Notification,
@@ -3849,6 +3850,10 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
                 session_id=chat_session.id,
                 role=MessageRole.ASSISTANT,
                 content="理解你的感受。这种焦虑和自责其实是恶性循环的一部分。可以从一个小任务开始找回节奏，比如先把二叉树遍历的代码手写一遍，15分钟完成，给自己一个小成就感。",
+                # V3-FIX-258：种子脚本回复与 llm demo 模式产出同属「脚本假
+                # 数据」家族（B-02 F1），落库即带 origin 标记与真实模型产出
+                # 区分（内容保留按 257 裁决：演示内容面不清洗）。
+                origin=MessageOrigin.DEMO,
             ),
             ChatMessage(
                 user_id=user.id,

@@ -270,6 +270,22 @@ class MemoryInferredWriteLaneService:
     ) -> InferredEpisodicCandidate | None:
         del assistant_message_id
 
+        # V3-FIX-258：demo 轮整轮跳过记忆推断（台账裁决「demo 轮不进记忆
+        # lane」）。demo 模式下 assistant 文本是 DEMO_MOCK_RESPONSES/通用演示
+        # 回复（含捏造学习分析），经本管线会产出伪事实记忆（B-02 F1 污染链：
+        # _persist_assistant_message 把同一 mock 文本交本服务）。全部生产调用
+        # 方（orchestrator persist 收尾、快交互 turn_capture、REST
+        # save_chat_message、enqueue_from_session DB 回捞）都汇入本入口，此处
+        # 单点过滤；user 侧原文同轮一并跳过。判据读 llm_service.demo_mode——
+        # demo 置位期间不存在真实模型产出；显式 provider 切换仅发生在
+        # switch_specific_model 管理面操作，mid-turn 翻转误跳是已记录的可接受
+        # 边缘（与写侧 origin 标记同一判据，见 llm_security_wrapper 转发面）。
+        from app.services.llm_service import llm_service
+
+        if bool(getattr(llm_service, "demo_mode", False)):
+            MEMORY_INFERRED_EXTRACT_TOTAL.labels(mode="chat", status="demo_skipped").inc()
+            return None
+
         resolved_user_message = (user_message or "").strip()
         resolved_user_message_id = user_message_id
         if not resolved_user_message:

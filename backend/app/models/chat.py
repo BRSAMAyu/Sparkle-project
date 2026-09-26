@@ -22,6 +22,26 @@ class MessageRole(enum.StrEnum):
     SYSTEM = "system"  # 系统消息
 
 
+class MessageOrigin(enum.StrEnum):
+    """消息内容产出来源枚举（V3-FIX-258：demo 产出落库持久标记）。
+
+    缺陷背景：demo 模式（DEMO_MODE 显式或 API key 缺失自动激活）的脚本回复
+    落库后与真实模型产出在 schema 层不可区分，唯一标记是瞬态 OTel span
+    ``llm.demo_mode``。取值语义：
+
+    - ``llm``：常规管线产出（真实模型回复、user 行与系统模板行的默认值，
+      以及 origin 列引入前的全部存量行——存量不做启发式回填，历史 demo 行
+      不可考，本列仅对迁移上线后的新写入有区分力）；
+    - ``demo``：演示模式脚本产出（llm_service demo 短路的
+      DEMO_MOCK_RESPONSES/通用演示回复、guest 种子演示聊天的脚本回复）。
+      注意 demo 行的 model_name 仍是「配置了但从未运行」的模型名，lineage
+      查询以本列为准。
+    """
+
+    LLM = "llm"  # 常规管线产出（默认）
+    DEMO = "demo"  # 演示模式脚本产出
+
+
 class ChatMessage(BaseModel):
     """
     聊天消息模型
@@ -35,6 +55,7 @@ class ChatMessage(BaseModel):
         actions: AI执行的动作列表(JSON)
         tokens_used: 消耗的token数量
         model_name: 使用的模型名称
+        origin: 内容产出来源(llm=常规管线默认; demo=演示模式脚本产出, V3-FIX-258)
 
     关系:
         user: 所属用户
@@ -69,6 +90,15 @@ class ChatMessage(BaseModel):
 
     tokens_used: Mapped[int] = mapped_column(Integer, nullable=True)
     model_name: Mapped[str] = mapped_column(String(100), nullable=True)
+
+    # V3-FIX-258: 内容产出来源持久标记（此前唯一标记是瞬态 OTel span
+    # llm.demo_mode，demo 脚本回复落库后与真实模型产出在 schema 层不可区分）。
+    # 取值见 MessageOrigin；server_default 让存量行统一落 'llm'（不做启发式
+    # 回填——历史 demo 行不可考，本列仅对迁移上线后的新写入有区分力）。
+    # 判别查询低频且非热点谓词，不建索引（需要时可后补）。
+    origin: Mapped[str] = mapped_column(
+        String(20), nullable=False, default=MessageOrigin.LLM.value, server_default=MessageOrigin.LLM.value
+    )
 
     # 关系定义
     user = relationship("User", back_populates="chat_messages")

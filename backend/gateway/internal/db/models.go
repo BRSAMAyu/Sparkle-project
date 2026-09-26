@@ -2576,6 +2576,7 @@ type ChatMessage struct {
 	ModelName     pgtype.Text      `json:"model_name"`
 	UpdatedAt     pgtype.Timestamp `json:"updated_at"`
 	DeletedAt     pgtype.Timestamp `json:"deleted_at"`
+	Origin        string           `json:"origin"`
 }
 
 type ChatSession struct {

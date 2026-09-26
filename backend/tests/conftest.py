@@ -181,6 +181,21 @@ def _reset_srl_kill_switch_singleton_state():
     cache_service._local_cache.clear()
 
 
+# V3-FIX-258：测试环境（无 LLM_API_KEY）会让 llm_service_impl.demo_mode 在
+# import 时自动置位（demo 激活判据之一，llm_service._init_with_router）。记忆
+# 推断的 demo 轮过滤与落库 origin 标记是生产行为，既有套件全部按「真实模式」
+# 语义编写——本 autouse fixture 每用例强制真实模式（demo_mode=False），demo
+# 语义用例（test_v3_fix258_demo_origin_marker 等）在用例体内显式覆盖。
+@pytest.fixture(autouse=True)
+def _force_real_llm_mode():
+    from app.services.llm_service import llm_service_impl
+
+    snapshot = llm_service_impl.demo_mode
+    llm_service_impl.demo_mode = False
+    yield
+    llm_service_impl.demo_mode = snapshot
+
+
 # V3-FIX-120（同卡第二单例）：DynamicToolRegistry 是进程级单例（__new__ 恒返
 # _instance），而 phase2_core/x06 等用例对它 clear_all + monkeypatch 假注册——
 # CI 全量序实证：tests/test_phase2_core.py 的 registers_package_only_once 用假

@@ -1756,7 +1756,8 @@ CREATE TABLE chat_messages (
     tokens_used integer,
     model_name character varying(100),
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    origin character varying(20) DEFAULT 'llm'::character varying NOT NULL
 );
 
 

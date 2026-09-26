@@ -26,7 +26,7 @@ from app.core.cache import cache_service
 from app.core.metrics import RESPONSE_FALLBACK_GENERATED_TOTAL
 from app.core.pending_actions import pending_actions_store
 from app.db.session import get_db
-from app.models.chat import ChatMessage, MessageRole
+from app.models.chat import ChatMessage, MessageOrigin, MessageRole
 from app.models.user import User
 from app.orchestration.composer import ResponseComposer
 from app.orchestration.error_handler import AgentErrorHandler
@@ -1264,6 +1264,10 @@ async def save_chat_message(
         content=assistant_message,
         task_id=task_id,
         actions=tool_results if tool_results else None,  # Store tool results as actions
+        # V3-FIX-258：与 orchestrator _persist_assistant_message 同判据——
+        # demo_mode 置位时 llm_service 一切回复均为脚本短路，落库行带持久
+        # origin 标记（user 行是真实输入，保持默认 'llm'）。
+        origin=(MessageOrigin.DEMO if bool(getattr(llm_service, "demo_mode", False)) else MessageOrigin.LLM),
     )
     db.add(assistant_msg_db)
 
