@@ -56,16 +56,19 @@ class _ProtocolBody extends StatelessWidget {
       sections.add(_WhySection(why: protocol.whyThisTask));
     }
     if (protocol.materialsProtocol.hasContent) {
-      sections.add(const SizedBox(height: 8));
-      sections.add(_MaterialsSection(materials: protocol.materialsProtocol));
+      sections
+        ..add(const SizedBox(height: 8))
+        ..add(_MaterialsSection(materials: protocol.materialsProtocol));
     }
     if (protocol.updatesAfterCompletion.isNotEmpty) {
-      sections.add(const SizedBox(height: 8));
-      sections.add(_UpdatesSection(updates: protocol.updatesAfterCompletion));
+      sections
+        ..add(const SizedBox(height: 8))
+        ..add(_UpdatesSection(updates: protocol.updatesAfterCompletion));
     }
     if (protocol.fallbackIfFailed.isNotEmpty) {
-      sections.add(const SizedBox(height: 8));
-      sections.add(_FallbackSection(fallbacks: protocol.fallbackIfFailed));
+      sections
+        ..add(const SizedBox(height: 8))
+        ..add(_FallbackSection(fallbacks: protocol.fallbackIfFailed));
     }
 
     if (sections.isEmpty) return const SizedBox.shrink();

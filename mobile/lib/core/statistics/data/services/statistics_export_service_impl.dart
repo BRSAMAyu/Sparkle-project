@@ -421,7 +421,7 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
     StatisticsExportConfig config,
   ) async {
     // Default: draw a placeholder message
-    final msgPainter = TextPainter(
+    TextPainter(
       text: TextSpan(
         text: I18nService.instance.isChinese
             ? '数据图表区域\n(子类需实现具体绘制)'
@@ -434,8 +434,7 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
       ),
       textAlign: TextAlign.center,
       textDirection: TextDirection.ltr,
-    );
-    msgPainter
+    )
       ..layout(maxWidth: size.width - 100 * config.pngScale)
       ..paint(
         canvas,

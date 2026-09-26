@@ -516,8 +516,9 @@ class _RadarPainter extends CustomPainter {
       }
     }
     path.close();
-    canvas.drawPath(path, fillPaint);
-    canvas.drawPath(path, strokePaint);
+    canvas
+      ..drawPath(path, fillPaint)
+      ..drawPath(path, strokePaint);
   }
 
   @override

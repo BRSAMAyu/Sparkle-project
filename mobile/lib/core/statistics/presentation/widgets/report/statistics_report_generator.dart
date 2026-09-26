@@ -157,8 +157,7 @@ class StatisticsReportGenerator {
         ),
       ),
       textDirection: TextDirection.ltr,
-    );
-    titlePainter
+    )
       ..layout(maxWidth: size.width - horizontalInset * 2)
       ..paint(
         canvas,
@@ -176,8 +175,7 @@ class StatisticsReportGenerator {
         ),
       ),
       textDirection: TextDirection.ltr,
-    );
-    periodPainter
+    )
       ..layout()
       ..paint(
         canvas,
@@ -188,7 +186,7 @@ class StatisticsReportGenerator {
       );
 
     // Draw date
-    final datePainter = TextPainter(
+    TextPainter(
       text: TextSpan(
         text: _formatDate(DateTime.now()),
         style: TextStyle(
@@ -198,8 +196,7 @@ class StatisticsReportGenerator {
         ),
       ),
       textDirection: TextDirection.ltr,
-    );
-    datePainter
+    )
       ..layout()
       ..paint(
         canvas,
@@ -242,8 +239,7 @@ class StatisticsReportGenerator {
           ),
         ),
         textDirection: TextDirection.ltr,
-      );
-      titlePainter
+      )
         ..layout(maxWidth: size.width - size.width * 0.16)
         ..paint(
           canvas,

@@ -28,8 +28,9 @@ class ProfileTransparentScreen extends ConsumerWidget {
         'action': action,
         if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
       });
-      ref.invalidate(profileContextProvider);
-      ref.invalidate(ws6TransparentProfileViewProvider);
+      ref
+        ..invalidate(profileContextProvider)
+        ..invalidate(ws6TransparentProfileViewProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SparkleSnackBar.success(

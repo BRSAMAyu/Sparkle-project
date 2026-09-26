@@ -88,36 +88,36 @@ class JPushService extends AsyncNotifier<void> {
     }
 
     try {
-      // Configure JPush
-      _jpush.addEventHandler(
-        onReceiveNotification: (Map<String, dynamic> message) async {
-          _logger.i('JPush onReceiveNotification: $message');
-          final jpushMessage = JPushMessage.fromMap(message);
-          onMessageReceived?.call(jpushMessage);
-        },
-        onOpenNotification: (Map<String, dynamic> message) async {
-          _logger.i('JPush onOpenNotification: $message');
-          final jpushMessage = JPushMessage.fromMap(message);
-          onNotificationOpened?.call(jpushMessage);
-        },
-        onReceiveMessage: (Map<String, dynamic> message) async {
-          _logger.i('JPush onReceiveMessage: $message');
-          // Custom message (not notification)
-          final jpushMessage = JPushMessage.fromMap(message);
-          onMessageReceived?.call(jpushMessage);
-        },
-        onReceiveNotificationAuthorization:
-            (Map<String, dynamic> message) async {
-          _logger.i('JPush onReceiveNotificationAuthorization: $message');
-        },
-      );
-
-      // Initialize JPush
-      _jpush.setup(
-        channel: PushConfig.jpushChannel,
-        production: production,
-        debug: debug,
-      );
+      // Configure JPush / Initialize JPush
+      _jpush
+        ..addEventHandler(
+          onReceiveNotification: (Map<String, dynamic> message) async {
+            _logger.i('JPush onReceiveNotification: $message');
+            final jpushMessage = JPushMessage.fromMap(message);
+            onMessageReceived?.call(jpushMessage);
+          },
+          onOpenNotification: (Map<String, dynamic> message) async {
+            _logger.i('JPush onOpenNotification: $message');
+            final jpushMessage = JPushMessage.fromMap(message);
+            onNotificationOpened?.call(jpushMessage);
+          },
+          onReceiveMessage: (Map<String, dynamic> message) async {
+            _logger.i('JPush onReceiveMessage: $message');
+            // Custom message (not notification)
+            final jpushMessage = JPushMessage.fromMap(message);
+            onMessageReceived?.call(jpushMessage);
+          },
+          onReceiveNotificationAuthorization:
+              (Map<String, dynamic> message) async {
+            _logger.i('JPush onReceiveNotificationAuthorization: $message');
+          },
+        )
+        // Initialize JPush
+        ..setup(
+          channel: PushConfig.jpushChannel,
+          production: production,
+          debug: debug,
+        );
 
       // Get registration ID
       unawaited(
@@ -140,8 +140,9 @@ class JPushService extends AsyncNotifier<void> {
       _logger.i('JPush initialized successfully');
       return true;
     } catch (e, stack) {
-      _logger.e('Failed to initialize JPush: $e');
-      _logger.d(stack.toString());
+      _logger
+        ..e('Failed to initialize JPush: $e')
+        ..d(stack.toString());
       return false;
     }
   }

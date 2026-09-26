@@ -214,8 +214,9 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
       _taskBlueprintController,
       _guideController,
     ]) {
-      controller.removeListener(_onFormEdited);
-      controller.dispose();
+      controller
+        ..removeListener(_onFormEdited)
+        ..dispose();
     }
     super.dispose();
   }

@@ -163,8 +163,9 @@ class PushTokenManager extends AsyncNotifier<void> {
 
       return false;
     } catch (e, stack) {
-      _logger.e('Failed to register push token: $e');
-      _logger.d(stack.toString());
+      _logger
+        ..e('Failed to register push token: $e')
+        ..d(stack.toString());
       return false;
     }
   }

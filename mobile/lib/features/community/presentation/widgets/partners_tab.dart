@@ -35,10 +35,11 @@ class PartnersTab extends ConsumerWidget {
     // and back does not revalidate") and the retry tap produced no request.
     ref.listen<bool>(isOnlineProvider, (previous, next) {
       if (previous == false && next) {
-        ref.invalidate(myPartnershipsProvider);
-        ref.invalidate(accountabilityHubProvider);
-        ref.invalidate(accountabilityOverviewProvider);
-        ref.invalidate(friendsProvider);
+        ref
+          ..invalidate(myPartnershipsProvider)
+          ..invalidate(accountabilityHubProvider)
+          ..invalidate(accountabilityOverviewProvider)
+          ..invalidate(friendsProvider);
       }
     });
     final partnershipsAsync = ref.watch(myPartnershipsProvider);
@@ -49,8 +50,9 @@ class PartnersTab extends ConsumerWidget {
       child: SparkleRefreshIndicator(
         onRefresh: () async {
           await ref.read(myPartnershipsProvider.notifier).load();
-          ref.invalidate(accountabilityHubProvider);
-          ref.invalidate(accountabilityOverviewProvider);
+          ref
+            ..invalidate(accountabilityHubProvider)
+            ..invalidate(accountabilityOverviewProvider);
           await ref.read(friendsProvider.notifier).refresh();
         },
         child: CustomScrollView(

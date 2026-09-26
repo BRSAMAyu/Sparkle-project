@@ -257,9 +257,10 @@ final achievementEventConsumerProvider = Provider.autoDispose<void>((ref) {
     if (payload == null || payload['type'] != 'achievement_unlock') {
       return;
     }
-    ref.invalidate(achievementProvider);
-    ref.invalidate(streakHistoryProvider);
-    ref.invalidate(dashboardProvider);
+    ref
+      ..invalidate(achievementProvider)
+      ..invalidate(streakHistoryProvider)
+      ..invalidate(dashboardProvider);
   });
 
   ref.onDispose(() {

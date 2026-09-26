@@ -700,13 +700,15 @@ class _OrbitalParticlesPainter extends CustomPainter {
       final py = center.dy + math.sin(angle) * orbitRadius;
 
       // Outer glow
-      paint.color = rarityColor.withValues(alpha: 0.25);
-      paint.maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+      paint
+        ..color = rarityColor.withValues(alpha: 0.25)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
       canvas.drawCircle(Offset(px, py), 2.5, paint);
 
       // Core
-      paint.color = rarityColor.withValues(alpha: 0.7);
-      paint.maskFilter = null;
+      paint
+        ..color = rarityColor.withValues(alpha: 0.7)
+        ..maskFilter = null;
       canvas.drawCircle(Offset(px, py), 1.2, paint);
     }
   }

@@ -124,11 +124,11 @@ class OfflineMessageQueueService {
               msg.status == OfflineMessageStatus.sent ||
               msg.canRetry,
         )
-        .toList();
-    retryable.sort(
-      (OfflineChatMessage a, OfflineChatMessage b) =>
-          a.createdAt.compareTo(b.createdAt),
-    );
+        .toList()
+          ..sort(
+            (OfflineChatMessage a, OfflineChatMessage b) =>
+                a.createdAt.compareTo(b.createdAt),
+          );
     return retryable;
   }
 

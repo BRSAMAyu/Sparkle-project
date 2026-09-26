@@ -69,8 +69,9 @@ class _VisualElementCardState extends State<VisualElementCard>
       if (widget.element.isEquipped) {
         unawaited(_breathingController.repeat(reverse: true));
       } else {
-        _breathingController.stop();
-        _breathingController.reset();
+        _breathingController
+          ..stop()
+          ..reset();
       }
     }
   }
@@ -984,22 +985,23 @@ class _ElementPreviewPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.6;
 
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: center,
-        width: size.width * 0.46,
-        height: size.height * 0.18,
-      ),
-      paint,
-    );
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: center.translate(-10, 12),
-        width: size.width * 0.3,
-        height: size.height * 0.12,
-      ),
-      paint..color = color.withValues(alpha: 0.14),
-    );
+    canvas
+      ..drawOval(
+        Rect.fromCenter(
+          center: center,
+          width: size.width * 0.46,
+          height: size.height * 0.18,
+        ),
+        paint,
+      )
+      ..drawOval(
+        Rect.fromCenter(
+          center: center.translate(-10, 12),
+          width: size.width * 0.3,
+          height: size.height * 0.12,
+        ),
+        paint..color = color.withValues(alpha: 0.14),
+      );
   }
 
   Color _parseColor(String hexColor) {

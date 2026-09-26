@@ -767,11 +767,12 @@ class _CloudPainter extends CustomPainter {
   }
 
   void _drawCloudShape(Canvas canvas, Paint paint, Offset center, double size) {
-    canvas.drawCircle(center, size, paint);
-    canvas.drawCircle(Offset(center.dx - size * 0.6, center.dy + size * 0.2),
-        size * 0.7, paint,);
-    canvas.drawCircle(Offset(center.dx + size * 0.5, center.dy + size * 0.1),
-        size * 0.6, paint,);
+    canvas
+      ..drawCircle(center, size, paint)
+      ..drawCircle(Offset(center.dx - size * 0.6, center.dy + size * 0.2),
+          size * 0.7, paint,)
+      ..drawCircle(Offset(center.dx + size * 0.5, center.dy + size * 0.1),
+          size * 0.6, paint,);
   }
 
   @override
@@ -883,9 +884,10 @@ class _MeteorPainter extends CustomPainter {
         final segmentStartX = tailX + (endX - tailX) * (t + 0.2);
         final segmentStartY = tailY + (endY - tailY) * (t + 0.2);
 
-        paint.strokeWidth = 1.5 * (1 - t * 0.5);
-        paint.color =
-            accentColor.withValues(alpha: 0.3 * (1 - t) * (1 - progress));
+        paint
+          ..strokeWidth = 1.5 * (1 - t * 0.5)
+          ..color =
+              accentColor.withValues(alpha: 0.3 * (1 - t) * (1 - progress));
 
         canvas.drawLine(
           Offset(segmentStartX, segmentStartY),
@@ -895,8 +897,9 @@ class _MeteorPainter extends CustomPainter {
       }
 
       // Bright head of meteor
-      paint.style = PaintingStyle.fill;
-      paint.color = accentColor.withValues(alpha: 0.4 * (1 - progress));
+      paint
+        ..style = PaintingStyle.fill
+        ..color = accentColor.withValues(alpha: 0.4 * (1 - progress));
       canvas.drawCircle(Offset(endX, endY), 2, paint);
       paint.style = PaintingStyle.stroke;
     }

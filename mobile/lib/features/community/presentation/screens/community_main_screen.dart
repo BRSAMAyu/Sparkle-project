@@ -47,8 +47,9 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
 
   @override
   void dispose() {
-    _tabController.removeListener(_onTabChanged);
-    _tabController.dispose();
+    _tabController
+      ..removeListener(_onTabChanged)
+      ..dispose();
     super.dispose();
   }
 

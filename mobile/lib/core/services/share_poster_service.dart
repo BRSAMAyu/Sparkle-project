@@ -154,8 +154,9 @@ class SharePosterService {
     }
 
     if (!settings.showProgressPercentage) {
-      metadata.remove('progress');
-      metadata.remove('mastery');
+      metadata
+        ..remove('progress')
+        ..remove('mastery');
     }
 
     return payload.copyWith(metadata: metadata);

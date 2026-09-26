@@ -374,19 +374,20 @@ class _ParticlePainter extends CustomPainter {
     final angle = rotation;
 
     // 绘制花瓣形状
-    path.moveTo(center.dx, center.dy);
-    path.quadraticBezierTo(
-      center.dx + cos(angle) * size * 0.5 + cos(angle + pi / 2) * size * 0.3,
-      center.dy + sin(angle) * size * 0.5 + sin(angle + pi / 2) * size * 0.3,
-      center.dx + cos(angle) * size,
-      center.dy + sin(angle) * size,
-    );
-    path.quadraticBezierTo(
-      center.dx + cos(angle) * size * 0.5 - cos(angle + pi / 2) * size * 0.3,
-      center.dy + sin(angle) * size * 0.5 - sin(angle + pi / 2) * size * 0.3,
-      center.dx,
-      center.dy,
-    );
+    path
+      ..moveTo(center.dx, center.dy)
+      ..quadraticBezierTo(
+        center.dx + cos(angle) * size * 0.5 + cos(angle + pi / 2) * size * 0.3,
+        center.dy + sin(angle) * size * 0.5 + sin(angle + pi / 2) * size * 0.3,
+        center.dx + cos(angle) * size,
+        center.dy + sin(angle) * size,
+      )
+      ..quadraticBezierTo(
+        center.dx + cos(angle) * size * 0.5 - cos(angle + pi / 2) * size * 0.3,
+        center.dy + sin(angle) * size * 0.5 - sin(angle + pi / 2) * size * 0.3,
+        center.dx,
+        center.dy,
+      );
 
     canvas.drawPath(path, paint);
   }
@@ -421,8 +422,9 @@ class _ParticlePainter extends CustomPainter {
       ..strokeWidth = size
       ..strokeCap = StrokeCap.round;
 
-    canvas.drawLine(center, end, trailPaint);
-    canvas.drawCircle(center, size * 0.75, paint);
+    canvas
+      ..drawLine(center, end, trailPaint)
+      ..drawCircle(center, size * 0.75, paint);
   }
 
   void _drawEmber(Canvas canvas, Offset center, double size, Paint paint) {

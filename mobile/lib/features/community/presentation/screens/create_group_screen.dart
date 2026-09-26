@@ -62,8 +62,9 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
       _tagsController,
       _goalController,
     ]) {
-      controller.removeListener(_onFormEdited);
-      controller.dispose();
+      controller
+        ..removeListener(_onFormEdited)
+        ..dispose();
     }
     super.dispose();
   }

@@ -153,8 +153,9 @@ class _SprintCompletionScreenState
       );
 
   void _invalidateLinkedViews() {
-    ref.invalidate(learningPortfolioProvider);
-    ref.invalidate(weeklyGrowthNarrativeProvider);
+    ref
+      ..invalidate(learningPortfolioProvider)
+      ..invalidate(weeklyGrowthNarrativeProvider);
     final planId = widget.planId.trim();
     if (planId.isNotEmpty) {
       ref.invalidate(planDetailProvider(planId));

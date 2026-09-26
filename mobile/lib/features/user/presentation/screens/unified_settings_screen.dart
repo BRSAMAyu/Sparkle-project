@@ -471,8 +471,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     required double depth,
     required double curiosity,
   }) {
-    final notifier = ref.read(learningPreferencesProvider.notifier);
-    notifier.previewPreferences(depth: depth, curiosity: curiosity);
+    final notifier = ref.read(learningPreferencesProvider.notifier)
+      ..previewPreferences(depth: depth, curiosity: curiosity);
     if (mounted) {
       setState(() {
         _learningPreferenceStatus =

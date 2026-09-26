@@ -65,9 +65,10 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
   @override
   void initState() {
     super.initState();
-    _titleController.addListener(_onTitleChanged);
-    // N27：监听输入变化并重建，保证 UnsavedChangesGuard 的 canPop 实时生效。
-    _titleController.addListener(_onFormEdited);
+    _titleController
+        ..addListener(_onTitleChanged)
+        // N27：监听输入变化并重建，保证 UnsavedChangesGuard 的 canPop 实时生效。
+        ..addListener(_onFormEdited);
     _tagsController.addListener(_onFormEdited);
     _userNoteController.addListener(_onFormEdited);
   }
@@ -174,10 +175,12 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
       ..removeListener(_onTitleChanged)
       ..removeListener(_onFormEdited)
       ..dispose();
-    _tagsController.removeListener(_onFormEdited);
-    _tagsController.dispose();
-    _userNoteController.removeListener(_onFormEdited);
-    _userNoteController.dispose();
+    _tagsController
+      ..removeListener(_onFormEdited)
+      ..dispose();
+    _userNoteController
+      ..removeListener(_onFormEdited)
+      ..dispose();
     super.dispose();
   }
 

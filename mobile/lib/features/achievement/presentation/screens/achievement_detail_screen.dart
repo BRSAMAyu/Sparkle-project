@@ -1727,10 +1727,11 @@ class _EnergyFieldPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.shortestSide * 0.45;
 
-    canvas.save();
-    canvas.translate(center.dx, center.dy);
-    canvas.rotate(rotation);
-    canvas.translate(-center.dx, -center.dy);
+    canvas
+      ..save()
+      ..translate(center.dx, center.dy)
+      ..rotate(rotation)
+      ..translate(-center.dx, -center.dy);
 
     // Draw a swept gradient that rotates slowly
     final sweepGradient = SweepGradient(
@@ -1749,8 +1750,9 @@ class _EnergyFieldPainter extends CustomPainter {
       ..shader = sweepGradient.createShader(rect)
       ..style = PaintingStyle.fill;
 
-    canvas.drawCircle(center, radius, paint);
-    canvas.restore();
+    canvas
+      ..drawCircle(center, radius, paint)
+      ..restore();
   }
 
   @override

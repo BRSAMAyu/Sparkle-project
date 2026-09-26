@@ -219,8 +219,9 @@ class _AnimatedIconState extends State<_AnimatedIcon>
       unawaited(_controller.repeat());
       return;
     }
-    _controller.stop();
-    _controller.value = 0;
+    _controller
+      ..stop()
+      ..value = 0;
   }
 
   @override
@@ -280,8 +281,9 @@ class _AgentTypingIndicatorState extends State<AgentTypingIndicator>
     if (_shouldAnimate) {
       unawaited(_controller.repeat());
     } else {
-      _controller.stop();
-      _controller.value = 0;
+      _controller
+        ..stop()
+        ..value = 0;
     }
   }
 

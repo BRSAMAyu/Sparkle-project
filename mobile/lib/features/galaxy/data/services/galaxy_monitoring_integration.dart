@@ -39,11 +39,11 @@ class GalaxyMonitoringIntegration {
   void _initialize() {
     _performanceMonitor = GalaxyPerformanceMonitor.instance;
 
-    // 开始监控
-    _performanceMonitor.startMonitoring();
-
-    // 添加事件监听
-    _performanceMonitor.addEventListener(_handlePerformanceEvent);
+    _performanceMonitor
+        // 开始监控
+        ..startMonitoring()
+        // 添加事件监听
+        ..addEventListener(_handlePerformanceEvent);
 
     // 定期调整质量
     if (enableAdaptiveQuality) {
@@ -211,8 +211,9 @@ class GalaxyMonitoringIntegration {
     final recommendations = <String>[];
 
     if (report.averageFps < 30) {
-      recommendations.add(l10n.galaxyPerfRecommendationReduceNodes);
-      recommendations.add(l10n.galaxyPerfRecommendationDisableParticles);
+      recommendations
+        ..add(l10n.galaxyPerfRecommendationReduceNodes)
+        ..add(l10n.galaxyPerfRecommendationDisableParticles);
     }
 
     if (report.jankRate > 0.1) {

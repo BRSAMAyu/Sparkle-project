@@ -183,8 +183,9 @@ class LocalVocabularyRepository {
     final word = await _vocabWordCollection.get(id);
     if (word == null) return false;
 
-    word.importance = importance.clamp(1, 5);
-    word.updatedAt = DateTime.now();
+    word
+      ..importance = importance.clamp(1, 5)
+      ..updatedAt = DateTime.now();
 
     // Recalculate next review if not currently reviewing
     if (word.nextReviewAt == null || !word.isDueForReview) {

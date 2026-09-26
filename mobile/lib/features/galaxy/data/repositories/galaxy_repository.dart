@@ -100,8 +100,9 @@ class GalaxyRepository {
           final content = buffer.toString();
           final idx = content.indexOf('\n\n');
           final raw = content.substring(0, idx);
-          buffer.clear();
-          buffer.write(content.substring(idx + 2));
+          buffer
+            ..clear()
+            ..write(content.substring(idx + 2));
           final event = _parseSSE(raw);
           if (event != null) yield event;
         }

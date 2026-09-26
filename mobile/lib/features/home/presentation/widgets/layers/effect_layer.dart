@@ -327,9 +327,10 @@ class _DualRingPainter extends CustomPainter {
       ).createShader(
           Rect.fromCircle(center: center, radius: outerRadius * 1.2),);
 
-    canvas.drawCircle(center, outerRadius, outerPaint);
-    canvas.drawCircle(center, innerRadius, innerPaint);
-    canvas.drawRect(Offset.zero & size, bloomPaint);
+    canvas
+      ..drawCircle(center, outerRadius, outerPaint)
+      ..drawCircle(center, innerRadius, innerPaint)
+      ..drawRect(Offset.zero & size, bloomPaint);
   }
 
   Offset _getPosition(Size size) => switch (position) {

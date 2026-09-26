@@ -162,8 +162,9 @@ class _TaskReminderSettingsScreenState
                         final newReminders = List<int>.from(config.reminders);
                         if (value ?? false) {
                           if (!newReminders.contains(minutes)) {
-                            newReminders.add(minutes);
-                            newReminders.sort();
+                            newReminders
+                              ..add(minutes)
+                              ..sort();
                           }
                         } else {
                           newReminders.remove(minutes);

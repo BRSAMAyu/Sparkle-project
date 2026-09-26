@@ -933,11 +933,10 @@ class StarMapPainter extends CustomPainter {
       ..strokeWidth = 0.8
       ..strokeCap = StrokeCap.round;
 
-    canvas.save();
-    canvas.translate(center.dx, center.dy);
-    canvas.rotate(rotation);
-
     canvas
+      ..save()
+      ..translate(center.dx, center.dy)
+      ..rotate(rotation)
       ..drawLine(
         Offset(-radius, 0),
         Offset(radius, 0),
@@ -947,9 +946,8 @@ class StarMapPainter extends CustomPainter {
         Offset(0, -radius),
         Offset(0, radius),
         paint,
-      );
-
-    canvas.restore();
+      )
+      ..restore();
   }
 
   /// F-3「锚定可感知」：锚定指示环——节点自身派生色（[color] 由调用方

@@ -366,8 +366,8 @@ class ErrorOperations extends _$ErrorOperations {
       // 刷新相关列表 + Galaxy（后端同步扣减掌握度）
       ref
         ..invalidate(errorListProvider)
-        ..invalidate(errorStatsProvider);
-      ref.invalidate(galaxyProvider);
+        ..invalidate(errorStatsProvider)
+        ..invalidate(galaxyProvider);
       ref.read(galaxyRefreshTriggerProvider.notifier).state++;
 
       state = state.copyWith(isLoading: false);

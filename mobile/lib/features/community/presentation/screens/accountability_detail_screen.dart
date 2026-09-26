@@ -191,10 +191,11 @@ class _AccountabilityDetailScreenState
         builder: (ctx) => AccountabilityCheckinSheet(
           partnershipId: widget.partnershipId,
           onDone: () {
-            ref.invalidate(myPartnershipsProvider);
-            ref.invalidate(accountabilityOverviewProvider);
-            ref.invalidate(
-                accountabilityDashboardProvider(widget.partnershipId),);
+            ref
+              ..invalidate(myPartnershipsProvider)
+              ..invalidate(accountabilityOverviewProvider)
+              ..invalidate(
+                  accountabilityDashboardProvider(widget.partnershipId),);
           },
         ),
       ),
@@ -252,8 +253,9 @@ class _AccountabilityDetailScreenState
         await ref
             .read(myPartnershipsProvider.notifier)
             .endPartnership(widget.partnershipId);
-        ref.invalidate(accountabilityOverviewProvider);
-        ref.invalidate(accountabilityDashboardProvider(widget.partnershipId));
+        ref
+          ..invalidate(accountabilityOverviewProvider)
+          ..invalidate(accountabilityDashboardProvider(widget.partnershipId));
         if (mounted) {
           context.pop();
           AppFeedback.success(

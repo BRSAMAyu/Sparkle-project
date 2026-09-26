@@ -159,10 +159,9 @@ class SprintHistoryNotifier extends StateNotifier<SprintHistoryState> {
         }
 
         return SprintHistoryItem.fromPlan(plan, status);
-      }).toList();
-
-      // Sort by start date descending
-      historyItems.sort((a, b) => b.startDate.compareTo(a.startDate));
+      }).toList()
+        // Sort by start date descending
+        ..sort((a, b) => b.startDate.compareTo(a.startDate));
 
       state = state.copyWith(items: historyItems, isLoading: false);
     } catch (e) {

@@ -835,9 +835,10 @@ class _RecommendationsTab extends ConsumerWidget {
             selectedStrengths: draft.selectedStrengths,
             freeText: draft.freeText,
           );
-      ref.invalidate(recommendationFeedbackPromptsProvider);
-      ref.invalidate(recommendationFeedbackInsightsProvider);
-      ref.invalidate(friendRecommendationsProvider);
+      ref
+        ..invalidate(recommendationFeedbackPromptsProvider)
+        ..invalidate(recommendationFeedbackInsightsProvider)
+        ..invalidate(friendRecommendationsProvider);
       if (context.mounted) {
         AppFeedback.success(context, context.l10n.friendFeedbackSubmitted);
       }

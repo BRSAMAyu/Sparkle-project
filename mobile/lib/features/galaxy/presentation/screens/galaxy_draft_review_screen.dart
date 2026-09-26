@@ -443,11 +443,12 @@ class _GalaxyDraftReviewScreenState
     }
 
     setState(() {
-      current.currentName =
-          nextName.isEmpty ? current.draft.proposedName : nextName;
-      current.currentDescription = nextDescription.isEmpty
-          ? current.draft.proposedDescription
-          : nextDescription;
+      current
+        ..currentName =
+            nextName.isEmpty ? current.draft.proposedName : nextName
+        ..currentDescription = nextDescription.isEmpty
+            ? current.draft.proposedDescription
+            : nextDescription;
     });
   }
 

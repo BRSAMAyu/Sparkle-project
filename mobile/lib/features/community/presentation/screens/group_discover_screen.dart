@@ -368,10 +368,11 @@ class _GroupDiscoverScreenState extends ConsumerState<GroupDiscoverScreen> {
             selectedStrengths: selectedStrengths,
             freeText: freeText,
           );
-      ref.invalidate(recommendationFeedbackPromptsProvider);
-      ref.invalidate(recommendationFeedbackInsightsProvider);
-      ref.invalidate(groupDiscoverProvider);
-      ref.invalidate(groupRecommendationsProvider);
+      ref
+        ..invalidate(recommendationFeedbackPromptsProvider)
+        ..invalidate(recommendationFeedbackInsightsProvider)
+        ..invalidate(groupDiscoverProvider)
+        ..invalidate(groupRecommendationsProvider);
       if (context.mounted) {
         AppFeedback.success(context, context.l10n.gdFeedbackSuccess);
       }

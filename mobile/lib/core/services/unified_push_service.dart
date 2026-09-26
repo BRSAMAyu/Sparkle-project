@@ -95,8 +95,9 @@ class UnifiedPushService {
       _isInitialized = true;
       _logger.i('UnifiedPushService initialized successfully');
     } catch (e, stack) {
-      _logger.e('Failed to initialize UnifiedPushService: $e');
-      _logger.d(stack.toString());
+      _logger
+        ..e('Failed to initialize UnifiedPushService: $e')
+        ..d(stack.toString());
     }
   }
 
@@ -177,11 +178,10 @@ class UnifiedPushService {
   /// Initialize JPush service
   Future<void> _initializeJPush({bool production = false}) async {
     try {
-      final jpushService = _ref.read(jpushServiceProvider.notifier);
-
-      // Set up message handlers
-      jpushService.onMessageReceived = _handleJPushMessage;
-      jpushService.onNotificationOpened = _handleJPushNotificationOpened;
+      final jpushService = _ref.read(jpushServiceProvider.notifier)
+        // Set up message handlers
+        ..onMessageReceived = _handleJPushMessage
+        ..onNotificationOpened = _handleJPushNotificationOpened;
 
       await jpushService.initialize(
         production: production,

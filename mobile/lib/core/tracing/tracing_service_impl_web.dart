@@ -21,9 +21,8 @@ class TracingServiceImpl implements TracingServiceBase {
     if (!_initialized) {
       return _uuid.v4();
     }
-    final span = startSpan(spanName);
     // For simplified implementation, just generate a UUID
-    span.end();
+    startSpan(spanName).end();
     return _uuid.v4();
   }
 

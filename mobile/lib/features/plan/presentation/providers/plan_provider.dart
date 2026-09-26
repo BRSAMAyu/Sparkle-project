@@ -125,8 +125,9 @@ class PlanNotifier extends StateNotifier<PlanListState> {
       // Also refresh the tasks list
       unawaited(_ref.read(taskListProvider.notifier).refreshTasks());
       // Invalidate the plan details to show the new tasks
-      _ref.invalidate(planDetailProvider(planId));
-      _ref.invalidate(dashboardProvider);
+      _ref
+        ..invalidate(planDetailProvider(planId))
+        ..invalidate(dashboardProvider);
     });
   }
 

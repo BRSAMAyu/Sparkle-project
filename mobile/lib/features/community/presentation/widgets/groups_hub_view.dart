@@ -39,9 +39,10 @@ class GroupsHubView extends ConsumerWidget {
 
     return SparkleRefreshIndicator(
       onRefresh: () async {
-        ref.invalidate(myGroupsProvider);
-        ref.invalidate(groupRecommendationsProvider);
-        ref.invalidate(groupDiscoverProvider);
+        ref
+          ..invalidate(myGroupsProvider)
+          ..invalidate(groupRecommendationsProvider)
+          ..invalidate(groupDiscoverProvider);
       },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),

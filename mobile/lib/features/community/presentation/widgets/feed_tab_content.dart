@@ -42,8 +42,9 @@ class _FeedTabContentState extends ConsumerState<FeedTabContent> {
 
   @override
   void dispose() {
-    _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
     super.dispose();
   }
 

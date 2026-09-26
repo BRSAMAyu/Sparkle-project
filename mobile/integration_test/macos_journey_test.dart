@@ -26,8 +26,8 @@ import 'package:sparkle/main.dart' as app;
 /// (POST http://127.0.0.1:8765/shot {pid, dest}) because the app is
 /// sandboxed and the test session runs at a locked console.
 void main() {
-  final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-  binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized()
+      .framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
 
   final failures = <String>[];
 

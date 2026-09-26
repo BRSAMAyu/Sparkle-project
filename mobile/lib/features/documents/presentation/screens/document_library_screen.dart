@@ -220,11 +220,11 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
                 onUpload: _openUploadSheet,
                 onResetFilters: () {
                   _searchController.clear();
-                  final notifier = ref.read(documentLibraryProvider.notifier);
-                  notifier.setSearchQuery('');
-                  notifier.setStatusFilter(null);
-                  notifier.setSubjectFilter(null);
-                  notifier.clearNodeFilter();
+                  final notifier = ref.read(documentLibraryProvider.notifier)
+                    ..setSearchQuery('')
+                    ..setStatusFilter(null)
+                    ..setSubjectFilter(null)
+                    ..clearNodeFilter();
                   if (state.highlyCitedOnly) {
                     notifier.toggleHighlyCitedOnly();
                   }

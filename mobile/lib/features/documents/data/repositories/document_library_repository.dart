@@ -228,14 +228,14 @@ class DocumentLibraryRepository {
                 citation['source_file_id']?.toString() ??
                 '';
             if (fileId.isEmpty) continue;
-            final aggregate =
-                aggregates.putIfAbsent(fileId, _CitationAggregate.new);
-            aggregate.addCitation(
-              sessionId: session.sessionId,
-              citation: citation,
-              referencedAt: messageTime,
-              isWithinWeek: !messageTime.isBefore(weekBoundary),
-            );
+            aggregates
+                .putIfAbsent(fileId, _CitationAggregate.new)
+                .addCitation(
+                  sessionId: session.sessionId,
+                  citation: citation,
+                  referencedAt: messageTime,
+                  isWithinWeek: !messageTime.isBefore(weekBoundary),
+                );
           }
         }
       }
@@ -352,20 +352,21 @@ class _CitationAggregate {
       content,
     ].join('|');
 
-    final aggregate = chunkAggregates.putIfAbsent(
-      key,
-      () => _CitationChunkAggregate(
-        label: title.isNotEmpty
-            ? title
-            : (sectionTitle?.isNotEmpty ?? false)
-                ? sectionTitle!
-                : 'Chunk ${chunkIndex ?? '?'}',
-        preview: content.isNotEmpty ? content : title,
-        chunkIndex: chunkIndex,
-        sectionTitle: sectionTitle,
-      ),
-    );
-    aggregate.addReference(referencedAt);
+    chunkAggregates
+        .putIfAbsent(
+          key,
+          () => _CitationChunkAggregate(
+            label: title.isNotEmpty
+                ? title
+                : (sectionTitle?.isNotEmpty ?? false)
+                    ? sectionTitle!
+                    : 'Chunk ${chunkIndex ?? '?'}',
+            preview: content.isNotEmpty ? content : title,
+            chunkIndex: chunkIndex,
+            sectionTitle: sectionTitle,
+          ),
+        )
+        .addReference(referencedAt);
   }
 
   DocumentCitationInsight toInsight() {

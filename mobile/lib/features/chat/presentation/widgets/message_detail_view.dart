@@ -40,8 +40,9 @@ class _MessageDetailViewState extends State<MessageDetailView> {
 
   @override
   void dispose() {
-    _scrollController.removeListener(_updateScrollAffordance);
-    _scrollController.dispose();
+    _scrollController
+      ..removeListener(_updateScrollAffordance)
+      ..dispose();
     super.dispose();
   }
 

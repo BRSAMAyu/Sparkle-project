@@ -586,8 +586,7 @@ class StringSetPersistentNotifier extends StateNotifier<Set<String>> {
 
   /// Remove an item from the set
   void remove(String item) {
-    final newState = Set<String>.from(state);
-    newState.remove(item);
+    final newState = Set<String>.from(state)..remove(item);
     state = newState;
   }
 
