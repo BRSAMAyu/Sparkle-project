@@ -27,6 +27,7 @@ from app.schemas.community import (
     GroupTypeEnum,
     RecommendationItemTypeEnum,
 )
+from app.services.community_service import GroupService
 from app.services.personalization.preference_service import PreferenceService
 
 
@@ -388,6 +389,10 @@ class GroupRecommendationService:
             select(Group).where(
                 Group.is_public.is_(True),
                 Group.not_deleted_filter(),
+                # V3-FIX-20：guest/seed cohort 群不进推荐召回（与
+                # 搜索/目录面共用 GroupService._seed_cohort_group_clause，
+                # 推荐本身已排除 user_group_ids，成员豁免天然成立）。
+                GroupService._seed_cohort_group_clause(),
             ),
         )
         groups = list(result.scalars().all())

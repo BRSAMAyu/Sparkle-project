@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 
 from loguru import logger
-from sqlalchemy import and_, case, desc, func, or_, select, update
+from sqlalchemy import ColumnElement, and_, case, desc, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -458,6 +458,32 @@ class GroupService:
         return False
 
     @staticmethod
+    def _seed_cohort_group_clause() -> ColumnElement[bool]:
+        """V3-FIX-20（FIX-08 相邻面）：群组发现面 cohort 隔离谓词。
+
+        种子群判定：活跃 OWNER 成员的 registration_source 落在共享词表
+        ``EXCLUDED_COHORT_REGISTRATION_SOURCES``（V3-FIX-01/07/08 同词表）内，
+        即群归属 guest/seed cohort（种子库公开群群主全为 guest/seed），不进
+        真实用户的发现面（搜索/目录/推荐/公开计数/标签云）。
+
+        边界（与 FIX-08 同形，不过滤）：群内关系面（群消息/成员列表）与 feed
+        关系 scope（squad/goal_mates/following）维持显式关系语义；调用方对
+        本人所在群需以 my_role/membership 存在性豁免（「本人帖始终可见」同款）。
+        """
+        seed_owner_exists = (
+            select(GroupMember.id)
+            .join(User, User.id == GroupMember.user_id)
+            .where(
+                GroupMember.group_id == Group.id,
+                GroupMember.role == GroupRole.OWNER,
+                GroupMember.not_deleted_filter(),
+                User.registration_source.in_(EXCLUDED_COHORT_REGISTRATION_SOURCES),
+            )
+            .exists()
+        )
+        return ~seed_owner_exists
+
+    @staticmethod
     async def search_groups(
         db: AsyncSession,
         keyword: str | None = None,
@@ -528,6 +554,15 @@ class GroupService:
                 membership_subquery,
                 membership_subquery.c.group_id == Group.id,
             )
+            # V3-FIX-20：guest/seed 群不进发现面；本人所在群豁免（my_role 非空）。
+            stmt = stmt.where(
+                or_(
+                    membership_subquery.c.my_role.is_not(None),
+                    GroupService._seed_cohort_group_clause(),
+                )
+            )
+        else:
+            stmt = stmt.where(GroupService._seed_cohort_group_clause())
 
         if keyword:
             pattern = f"%{_escape_like(keyword)}%"
@@ -587,11 +622,31 @@ class GroupService:
         keyword: str | None = None,
         group_type: Any | None = None,
         tags: list[str] | None = None,
+        user_id: UUID | None = None,
     ) -> int:
         stmt = select(func.count(Group.id)).where(
             Group.is_public.is_(True),
             Group.not_deleted_filter(),
         )
+        # V3-FIX-20：计数与列表同谓词同豁免，避免目录分页总数与列表错位。
+        if user_id is not None:
+            own_membership_exists = (
+                select(GroupMember.id)
+                .where(
+                    GroupMember.group_id == Group.id,
+                    GroupMember.user_id == user_id,
+                    GroupMember.not_deleted_filter(),
+                )
+                .exists()
+            )
+            stmt = stmt.where(
+                or_(
+                    own_membership_exists,
+                    GroupService._seed_cohort_group_clause(),
+                )
+            )
+        else:
+            stmt = stmt.where(GroupService._seed_cohort_group_clause())
 
         if keyword:
             pattern = f"%{_escape_like(keyword)}%"
@@ -619,6 +674,9 @@ class GroupService:
             select(Group.focus_tags).where(
                 Group.is_public.is_(True),
                 Group.not_deleted_filter(),
+                # V3-FIX-20：标签云只来自非 cohort 群（无豁免——种子群标签
+                # 不得借成员身份回流发现面）。
+                GroupService._seed_cohort_group_clause(),
             )
         )
         tag_counts: dict[str, int] = {}

@@ -1940,6 +1940,8 @@ async def get_group_directory(
         keyword=keyword,
         group_type=model_type,
         tags=tags,
+        # V3-FIX-20：与列表同谓词同豁免，成员所在 cohort 群不造成总数错位。
+        user_id=current_user.id,
     )
     available_tags = await GroupService.get_public_group_tags(db)
     recommendations: list[GroupRecommendationItem] = []
