@@ -3,7 +3,12 @@ from __future__ import annotations
 import asyncio
 from http import HTTPStatus
 
-from app.core.exceptions import LLMServiceError, ValidationError
+from app.core.exceptions import (
+    LLMOverloadedError,
+    LLMProvidersExhaustedError,
+    LLMServiceError,
+    ValidationError,
+)
 from app.gen.agent.v1 import agent_service_pb2
 
 _GENERIC_INTERNAL_ERROR_MESSAGE = "系统暂时不可用，请稍后重试。"
@@ -12,6 +17,12 @@ _GENERIC_UNAVAILABLE_ERROR_MESSAGE = "服务暂时不可用，请稍后重试。
 _GENERIC_INVALID_ARGUMENT_MESSAGE = "输入内容有误，请检查后重试。"
 _GENERIC_LLM_PROVIDER_ERROR_MESSAGE = "AI 服务暂时不可用，请稍后重试。"
 _ACTIONABLE_LLM_WARMUP_MESSAGE = "AI 服务正在启动中，请等待 30 秒后重试。"
+
+# V3-FIX-78/79（wt448）：引擎侧快速诚实失败的可见错误事件文案。
+# 全断供（所有候选不可用/重试预算耗尽）与引擎过载（并发池排队超 admission cap）
+# 各自给出可理解、可行动的最小诚实形态——发生了什么 + 能做什么。措辞留产品确认。
+_LLM_PROVIDERS_EXHAUSTED_USER_MESSAGE = "AI 服务暂时全部不可用，请稍后重试。"
+_LLM_OVERLOADED_USER_MESSAGE = "当前使用人数较多，服务繁忙，请稍后再试。"
 
 # O-07 · 额度/预算耗尽的可理解 UX（acceptance：用户能看懂发生了什么、怎么办）。
 # 专指**平台侧**额度/预算耗尽（网关日额度、run 预算终态）；措辞必须回答两个
@@ -128,6 +139,23 @@ def build_safe_chat_error(exc: Exception) -> tuple[str, agent_service_pb2.ErrorC
             _GENERIC_INVALID_ARGUMENT_MESSAGE,
             agent_service_pb2.ERROR_CODE_INVALID_ARGUMENT,
             False,
+        )
+
+    # V3-FIX-78/79：引擎侧快速诚实失败的封闭类型，先于 provider 分支——
+    # exhausted（503）/overloaded（429）各有专属文案与错误码，不得落进泛化的
+    # 「AI 服务不可用」/内部错误分支（Gate V3-6：timeout/retry 有明确用户语义）。
+    if isinstance(exc, LLMProvidersExhaustedError):
+        return (
+            _LLM_PROVIDERS_EXHAUSTED_USER_MESSAGE,
+            agent_service_pb2.ERROR_CODE_UNAVAILABLE,
+            True,
+        )
+
+    if isinstance(exc, LLMOverloadedError):
+        return (
+            _LLM_OVERLOADED_USER_MESSAGE,
+            agent_service_pb2.ERROR_CODE_RATE_LIMITED,
+            True,
         )
 
     if isinstance(exc, LLMServiceError) or _is_llm_provider_exception(exc):

@@ -831,6 +831,19 @@ class Settings(BaseSettings):
     LLM_HEALTH_PROBE_SUCCESS_THRESHOLD: int = 3
     LLM_HEALTH_COOLDOWN_MAX_SECONDS: float = 1800.0
 
+    # V3-FIX-78/79（wt448）：provider 断供/过载的快速诚实失败（Q-06 波动注入实锤）。
+    # LLM_FALLBACK_TOTAL_BUDGET_SECONDS：单次 LLM 调用 fallback 链的总时延预算。
+    # 首个尝试不受预算限制（走既有 first-chunk/整体超时窗）；预算到点后拒绝发起新的
+    # 上游尝试，以 LLMProvidersExhaustedError 快速收场——S2 实锤 86 连败/180s 静默
+    # 的重试预算上界。默认 45s 与流式 first-chunk 窗对齐：慢面（S3b 65s TTFT）在
+    # 一个完整窗口后即诚实失败，而不是继续换道烧满客户端超时。
+    LLM_FALLBACK_TOTAL_BUDGET_SECONDS: float = 45.0
+    # LLM_POOL_MAX_WAITING：单 provider 并发池排队深度 admission cap。超限的新到
+    # 请求立即以 LLMOverloadedError 拒绝（429 语义优先于等满 queue_timeout）——
+    # S5 实锤 22/30 静默烧满 150s 的背压出口；等槽者数量有界，拒绝者毫秒级拿到
+    # 繁忙语义。<=0 视为不设 cap（旧行为）。
+    LLM_POOL_MAX_WAITING: int = 20
+
     # E-07: 三维自适应路由（quality/latency/cost 反馈环）。
     # 真实调用结果回流打分；候选链内稳定重排，不跨 tier 提升（自适应是 E-02 路由的
     # 反馈维度扩展，不是新决策真源）。冷启动（样本 < MIN_SAMPLES）不介入 = E-02 既有策略。

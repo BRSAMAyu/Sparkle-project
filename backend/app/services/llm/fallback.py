@@ -24,9 +24,11 @@ from typing import Any, cast
 
 from loguru import logger
 
+from app.config import settings
 from app.core import routing_audit
 from app.core.agent_profiles import ModelTier
 from app.core.cache import cache_service
+from app.core.exceptions import LLMProvidersExhaustedError
 from app.core.llm_router import LLMSelection, llm_router
 
 
@@ -385,6 +387,35 @@ class LLMModelFallbackManager:
         # 基础延迟 100ms，指数增长，最大 2 秒
         return cast("float", (min(0.1 * (2 ** attempt), 2.0)))
 
+    async def _model_tryable(self, model_key: str) -> bool:
+        """V3-FIX-78：模型当前是否值得发起上游尝试（双健康源任一判不健康即不可试）。
+
+        对齐仓内既有熔断设施：redis tracker（ModelHealthTracker，embedding 熔断
+        同源先例）+ router 内存三相状态机（E-07，ModelHealthState）。此前流式链对
+        原选型不做任何健康预检、chat 链 attempt 0 无条件打上游——全断供时每次新
+        调用都重复全候选扫描（Q-06 S2 实锤 record_failure 连续计数至 86）。
+        """
+        if not await self.health_tracker.is_healthy(model_key):
+            return False
+        return llm_router._is_model_healthy(model_key)
+
+    async def _preflight_all_unhealthy(self, original_selection: LLMSelection, require_tools: bool) -> bool:
+        """V3-FIX-78：全候选（含原选型）不健康 → True（应快速诚实失败，零上游尝试）。"""
+        original_key = self._get_model_key_from_selection(original_selection)
+        if await self._model_tryable(original_key):
+            return False
+        candidates = self._get_fallback_candidates(
+            original_selection, {original_key}, require_tools=require_tools
+        )
+        for candidate in candidates:
+            if await self._model_tryable(self._get_model_key_from_selection(candidate)):
+                return False
+        return True
+
+    def _total_budget_seconds(self) -> float:
+        """fallback 链总时延预算（首个尝试不受限；到点拒绝发起新的上游尝试）。"""
+        return float(getattr(settings, "LLM_FALLBACK_TOTAL_BUDGET_SECONDS", 45.0) or 45.0)
+
     async def execute_with_fallback(
         self,
         original_selection: LLMSelection,
@@ -411,6 +442,18 @@ class LLMModelFallbackManager:
         exclude_models: set[str] = set()
 
         current_selection = original_selection
+        # V3-FIX-78：全候选不健康预检（零上游尝试快速诚实失败）+ 链总时延预算。
+        if await self._preflight_all_unhealthy(original_selection, require_tools=require_tools):
+            original_key = self._get_model_key_from_selection(original_selection)
+            logger.warning(
+                f"[LLMFallback] All candidates unhealthy (primary={original_key}); "
+                "failing fast without upstream attempts (V3-FIX-78)"
+            )
+            raise LLMProvidersExhaustedError(
+                f"All LLM candidates unhealthy (primary={original_key}); failing fast without upstream attempts"
+            )
+        chain_started = time.monotonic()
+        budget_seconds = self._total_budget_seconds()
 
         for attempt in range(self.max_fallback_attempts):
             model_key = self._get_model_key_from_selection(current_selection)
@@ -456,7 +499,24 @@ class LLMModelFallbackManager:
                     continue
                 else:
                     # 没有更多候选，抛出异常
-                    raise Exception(f"No healthy fallback models available after {attempt} attempts")
+                    raise LLMProvidersExhaustedError(
+                        f"No healthy fallback models available after {attempt} attempts"
+                    )
+
+            # V3-FIX-78：预算到点后不再发起新的上游尝试（首个尝试不受限）。
+            # 置于 try 之外——typed error 不进 fallback 归类，直接快速上抛。
+            if attempt > 0:
+                elapsed = time.monotonic() - chain_started
+                if elapsed > budget_seconds:
+                    logger.warning(
+                        f"[LLMFallback] Total fallback budget {budget_seconds:.1f}s exceeded "
+                        f"(elapsed={elapsed:.1f}s, attempt={attempt + 1}); failing fast (V3-FIX-78)"
+                    )
+                    session.end_time = time.time()
+                    raise LLMProvidersExhaustedError(
+                        f"LLM fallback chain exceeded total budget {budget_seconds:.1f}s "
+                        f"after {attempt} attempts; failing fast"
+                    )
 
             try:
                 logger.info(
@@ -531,7 +591,14 @@ class LLMModelFallbackManager:
                     logger.error(f"[LLMFallback] No more fallback candidates after {attempt + 1} attempts")
                     # 最后一次尝试也失败了，抛出异常
                     session.end_time = time.time()
-                    raise e
+                    # V3-FIX-78：链扫尽仍失败 → typed error，明确 error 事件下行
+                    # （原样上抛会把原始 429/超时静默落进泛化内部分支）。
+                    # 只附类型名不附原文——typed error 的 str 不得含 429/timeout 等
+                    # 可重试关键词，防外层链误判为可换道继续烧预算。
+                    raise LLMProvidersExhaustedError(
+                        f"No fallback candidates left after {attempt + 1} attempts; "
+                        f"last error type: {type(e).__name__}"
+                    ) from e
 
                 # E-07 可观测：实际切换留痕
                 self._record_switch(current_selection, candidates[0], fallback_reason)
@@ -546,7 +613,9 @@ class LLMModelFallbackManager:
 
         # 理论上不会到达这里
         session.end_time = time.time()
-        raise Exception(f"Max fallback attempts ({self.max_fallback_attempts}) exceeded")
+        raise LLMProvidersExhaustedError(
+            f"Max fallback attempts ({self.max_fallback_attempts}) exceeded"
+        )
 
     async def execute_stream_with_fallback(
         self,
@@ -622,6 +691,21 @@ class LLMModelFallbackManager:
         # 非回退模式下的流式处理
         handler = StreamingFallbackHandler(self)
 
+        # V3-FIX-78：全候选不健康预检——原选型与全部候选都不健康时零上游尝试快速
+        # 诚实失败（此前原选型无条件打上游，全断供时每次新调用都重复全候选扫描，
+        # Q-06 S2 实锤 86 连败/180s 静默）。预算到点后同样拒绝发起新尝试。
+        if await self._preflight_all_unhealthy(original_selection, require_tools=require_tools):
+            original_key = self._get_model_key_from_selection(original_selection)
+            logger.warning(
+                f"[LLMFallback] Stream: all candidates unhealthy (primary={original_key}); "
+                "failing fast without upstream attempts (V3-FIX-78)"
+            )
+            raise LLMProvidersExhaustedError(
+                f"All LLM candidates unhealthy (primary={original_key}); failing fast without upstream attempts"
+            )
+        chain_started = time.monotonic()
+        budget_seconds = self._total_budget_seconds()
+
         try:
             async for chunk in handler.execute(original_selection, stream_fn):
                 yield chunk
@@ -648,6 +732,17 @@ class LLMModelFallbackManager:
                 if not await self.health_tracker.is_healthy(model_key):
                     logger.warning(f"[LLMFallback] Skipping unhealthy stream fallback model: {selection.config.model_name}")
                     continue
+                if not llm_router._is_model_healthy(model_key):
+                    logger.warning(f"[LLMFallback] Skipping router-unhealthy stream fallback model: {selection.config.model_name}")
+                    continue
+                # V3-FIX-78：预算到点不再发起新的上游尝试（快速诚实收场）。
+                elapsed = time.monotonic() - chain_started
+                if elapsed > budget_seconds:
+                    logger.warning(
+                        f"[LLMFallback] Stream fallback budget {budget_seconds:.1f}s exceeded "
+                        f"(elapsed={elapsed:.1f}s); failing fast (V3-FIX-78)"
+                    )
+                    break
                 self._record_switch(original_selection, selection, fallback_reason)
                 try:
                     logger.info(f"[LLMFallback] Trying fallback model: {selection.config.model_name}")
@@ -662,8 +757,13 @@ class LLMModelFallbackManager:
                     logger.warning(f"[LLMFallback] Fallback to {selection.config.model_name} also failed: {fallback_error}")
                     exclude_models.add(model_key)
 
-            # 所有回退都失败
-            raise e
+            # 所有回退都失败（含预算到点/全不健康零尝试）→ typed error 明确 error
+            # 事件下行，不再把原始 429/超时静默上抛（V3-FIX-78：明确 error 事件）。
+            # 只附类型名——typed error 的 str 不得含可重试关键词。
+            raise LLMProvidersExhaustedError(
+                "Stream fallback chain exhausted; "
+                f"last error type: {type(e).__name__}"
+            ) from e
 
     def _get_model_key_from_selection(self, selection: LLMSelection) -> str:
         if selection.model_key and selection.model_key in llm_router._available_models:

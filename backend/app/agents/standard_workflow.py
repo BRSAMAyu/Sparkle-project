@@ -50,6 +50,7 @@ from app.core.agent_profiles import AgentRole, ModelTier, TaskType, agent_profil
 from app.core.business_metrics import HITL_REQUESTED, TASK_LOOP_COMPLETED
 from app.core.citation_markers import build_citation_outcome
 from app.core.context_pack import ContextBudgetManager, estimate_tokens, format_document_chunks_for_prompt
+from app.core.exceptions import LLMOverloadedError, LLMProvidersExhaustedError
 from app.core.metrics import DOCUMENT_CONTEXT_CHUNKS_INJECTED_TOTAL, DOCUMENT_CONTEXT_TOKENS_USED
 from app.core.pending_actions import pending_actions_store
 from app.gen.agent.v1 import agent_service_pb2
@@ -822,6 +823,19 @@ def _build_mode_rescue_instruction(task_type: TaskType) -> str:
         "不要暴露内部错误、工具失败、检索过程或“我来帮你查一下”这类过程性话术。\n"
         "优先给结论、步骤和关键提醒，保持短段落。"
     )
+
+
+def _should_fast_fail_generation(exc: Exception) -> bool:
+    """V3-FIX-78/79（wt448）：生成链只对「全断供/引擎过载」typed error 快速失败放行。
+
+    - LLMProvidersExhaustedError：全候选不健康或 fallback 链总时延预算耗尽——rescue
+      LLM 链必然再烧一轮同型失败（S2 实锤 86 连败），模板兜底则是话术静默顶替；
+      放行到 process_stream 既有 ERROR 帧路径才是明确 error 事件下行。
+    - LLMOverloadedError：并发池排队超 admission cap——429 语义优先于超时（S5 实锤
+      22/30 烧满 150s）。
+    其余异常（单 provider 失败、可换道超时等）保持既有 rescue/模板降级语义不变。
+    """
+    return isinstance(exc, (LLMProvidersExhaustedError, LLMOverloadedError))
 
 
 async def _build_mode_rescue_response(
@@ -2079,6 +2093,12 @@ Ask about their available time and current tasks if needed.
             with contextlib.suppress(Exception):
                 await generation_stream.aclose()
     except Exception as e:
+        # V3-FIX-78/79（wt448）：全断供/引擎过载的 typed error 快速放行——不再进
+        # rescue LLM 链（全断供下 rescue 必然再烧一轮同型失败）也不落模板兜底
+        # （模板话术静默顶替），让错误沿 process_stream 既有 ERROR 帧路径
+        # （build_safe_chat_error）下行，用户拿到明确 error 事件。
+        if _should_fast_fail_generation(e):
+            raise
         logger.warning(f"Generation streaming failed, attempting fast rescue response: {e}")
         state.context_data["generation_fallback_reason"] = str(e)
         usage_prompt_tokens = 0

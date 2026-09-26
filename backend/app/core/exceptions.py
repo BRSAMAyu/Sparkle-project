@@ -57,6 +57,38 @@ class LLMServiceError(SparkleException):
         super().__init__(message=message, status_code=500, detail=detail)
 
 
+class LLMProvidersExhaustedError(LLMServiceError):
+    """V3-FIX-78（wt448）：全部 LLM 候选不可用且重试预算耗尽——快速诚实失败。
+
+    Q-06 波动注入实锤（wt406 chaos S2）：全 provider 断供时 fallback/重试链无总
+    预算，record_failure 连续计数至 86、用户静默烧满客户端 180s 超时且无 error 帧。
+    本异常在全候选不健康预检或 fallback 链总时延预算到点时抛出，携带非空诊断消息
+    （含候选/尝试面），经 build_safe_chat_error 映射为 ERROR_CODE_UNAVAILABLE 的
+    用户可见错误事件——不再静默重试。
+    注意：消息不得含 "429"/"rate limit"/"timeout"/"connection"/"503"/"quota" 等
+    fallback 可重试关键词，否则会被 _detect_fallback_reason 误判为可换道重试。
+    """
+
+    def __init__(self, message: str = "All LLM providers exhausted, failing fast", detail: Any | None = None):
+        super().__init__(message=message, detail=detail)
+        self.status_code = 503
+
+
+class LLMOverloadedError(LLMServiceError):
+    """V3-FIX-79（wt448）：引擎并发池过载——admission control 快速拒绝（429 优先于超时）。
+
+    Q-06 队列压力实锤（wt406 chaos S5）：上游 5s 延迟 × 30 并发，22/30 请求静默
+    烧满 150s 客户端超时（等槽），排队期间用户无任何「繁忙」提示。本异常在并发池
+    排队深度超 admission cap（LLM_POOL_MAX_WAITING）时抛出，映射为
+    ERROR_CODE_RATE_LIMITED 的繁忙文案——等槽者不再无限堆积。
+    消息关键词约束同 LLMProvidersExhaustedError（不得被误判为可换道重试）。
+    """
+
+    def __init__(self, message: str = "LLM engine is overloaded, please retry later", detail: Any | None = None):
+        super().__init__(message=message, detail=detail)
+        self.status_code = 429
+
+
 # ============ 数据库相关异常 ============
 
 

@@ -22,6 +22,7 @@ from loguru import logger
 
 from app.config import settings
 from app.core.cache import cache_service
+from app.core.exceptions import LLMOverloadedError
 from app.services.llm.minimax_rpm_gate import get_minimax_rpm_gate
 
 
@@ -295,11 +296,22 @@ class LLMConcurrencyManager:
         await self._maybe_roll_bucket(provider_type)
         loop = asyncio.get_running_loop()
         deadline = loop.time() + timeout
+        # V3-FIX-79（wt448）：排队深度 admission cap。上限内照常等槽；超限的新到
+        # 请求立即以 LLMOverloadedError 拒绝（429 语义优先于等满 queue_timeout），
+        # 等槽者数量有界、拒绝者毫秒级拿到繁忙语义——Q-06 S5 实锤 22/30 静默烧满
+        # 150s 的背压出口。<=0 视为不设 cap（旧行为）。
+        max_waiting = int(getattr(settings, "LLM_POOL_MAX_WAITING", 20) or 0)
 
         async with state.condition:
             state.waiting += 1
             try:
                 while state.active >= state.current_limit:
+                    if max_waiting > 0 and state.waiting > max_waiting:
+                        raise LLMOverloadedError(
+                            f"LLM API {provider_type.value} is overloaded: queue depth "
+                            f"{state.waiting} exceeds admission cap {max_waiting} "
+                            f"(limit={state.current_limit}, active={state.active}). Please retry later."
+                        )
                     remaining = deadline - loop.time()
                     if remaining <= 0:
                         raise TimeoutError(self._slot_timeout_message(provider_type, state, timeout))
