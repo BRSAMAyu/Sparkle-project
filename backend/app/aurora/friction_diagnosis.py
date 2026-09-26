@@ -497,11 +497,11 @@ FRICTION_NEGATION_MARKERS_ZH: tuple[str, ...] = (
 )
 
 #: 英文否定标记（**词边界**正则——防 noted/another/nothing 类子串误伤；
-#: 含缩写否定的常见形）。与中文标记同窗口语义：位于词牌之前、span 不重叠
-#: 才构成否定。
+#: 含缩写否定的常见形，撇号/无撇号两形同覆盖——V3-FIX-147：dont/cant/wont
+#: 等高频口语拼写与 don't/can't/won't 同判）。与中文标记同窗口语义：位于
+#: 词牌之前、span 不重叠才构成否定。
 FRICTION_NEGATION_RE_EN = re.compile(
-    r"\b(?:not|no|never|without|hardly|don't|doesn't|didn't|isn't|wasn't|aren't|weren't"
-    r"|can't|cannot|couldn't|won't)\b"
+    r"\b(?:not|no|never|without|hardly|(?:do|does|did|is|was|are|were|ca|could|should|wo)n'?t|cannot)\b"
 )
 
 #: 子句切分（否定窗口的「同句」边界）：中英标点 + 换行。不按空白切——英文
@@ -538,22 +538,67 @@ def _negation_spans_in_clause(clause: str, clause_offset: int) -> list[tuple[int
     return spans
 
 
-def _is_negated_occurrence(text: str, clause_spans: list[tuple[int, int]], start: int, end: int) -> bool:
-    """词牌出现 [start, end) 是否被否定：存在**同子句**、止于词牌起点之前
-    （否定前置于被否定对象——中英同律；span 不重叠由 ``neg_end <= start``
-    结构保证——词牌内的否定字不成否定，如「完全没时间」「看不懂」）的否定
-    标记。"""
+def _wordmark_occurrences(text: str) -> list[tuple[int, int]]:
+    """全部词牌出现的全文 span（跨类型同形去重；升序）。
+
+    V3-FIX-146 前置：否定作用域按「最近后继词牌」裁决，需要全词牌出现
+    布局而非逐词牌孤立判定（否定的最近受害者可能是另一类型的词牌）。
+    """
+    spans: set[tuple[int, int]] = set()
+    for phrases in FRICTION_UTTERANCE_LEXICON.values():
+        for phrase in phrases:
+            start = 0
+            while True:
+                idx = text.find(phrase, start)
+                if idx < 0:
+                    break
+                spans.add((idx, idx + len(phrase)))
+                start = idx + 1
+    return sorted(spans)
+
+
+def _negated_wordmark_spans(
+    text: str, clause_spans: list[tuple[int, int]], occurrences: list[tuple[int, int]]
+) -> set[tuple[int, int]]:
+    """被否定的词牌出现 span 集（V3-FIX-146 无标点串染修复；子句级裁决）。
+
+    语义（每子句独立、中英同律）：
+    - 否定标记只作用于其**最近的一个**后继词牌出现（``neg_end <= occ_start``
+      中的最近者）——无标点长句的首个否定标记不再毒化其后全部词牌；
+    - 与最近受害 span **重叠**的词牌出现同判否定（嵌套子词牌「看不懂/不懂」
+      是同一表面报告，不因作用域收紧而逃逸）；
+    - 落在任一词牌出现内部的否定标记是**内容不是算子**（「完全没时间」的
+      「没」、「看不懂」的「不」、wordmark-internal "no time" 的 "no"），
+      整段出局，亦不得跨词牌外溢；
+    - 否定必须前置于被否定对象（span 不重叠结构保证，不变）。
+    """
+    negated: set[tuple[int, int]] = set()
     for clause_start, clause_end in clause_spans:
-        if clause_start <= start < clause_end:
-            for _neg_start, neg_end in _negation_spans_in_clause(text[clause_start:clause_end], clause_start):
-                if neg_end <= start:
-                    return True
-            return False
-    return False
+        clause_occs = [occ for occ in occurrences if clause_start <= occ[0] < clause_end]
+        if not clause_occs:
+            continue
+        operator_negs = [
+            (neg_start, neg_end)
+            for neg_start, neg_end in _negation_spans_in_clause(text[clause_start:clause_end], clause_start)
+            if not any(neg_start < occ_end and occ_start < neg_end for occ_start, occ_end in clause_occs)
+        ]
+        for _neg_start, neg_end in operator_negs:
+            followers = [occ for occ in clause_occs if occ[0] >= neg_end]
+            if not followers:
+                continue
+            victim = min(followers, key=lambda occ: occ[0])
+            negated.update(
+                occ for occ in clause_occs if occ[0] < victim[1] and victim[0] < occ[1]
+            )
+    return negated
 
 
-def _utterance_wordmark_negated(text: str, phrase: str, clause_spans: list[tuple[int, int]]) -> bool:
-    """词牌在文中的**全部**出现均被否定 → True（任一未被否定出现 = 正向命中）。"""
+def _utterance_wordmark_negated(text: str, phrase: str, negated_spans: set[tuple[int, int]]) -> bool:
+    """词牌在文中的**全部**出现均被否定 → True（任一未被否定出现 = 正向命中）。
+
+    ``negated_spans`` 来自 ``_negated_wordmark_spans``（全文一次性裁决，
+    V3-FIX-146 作用域语义）。
+    """
     start = 0
     occurrences = 0
     while True:
@@ -561,7 +606,7 @@ def _utterance_wordmark_negated(text: str, phrase: str, clause_spans: list[tuple
         if idx < 0:
             break
         occurrences += 1
-        if not _is_negated_occurrence(text, clause_spans, idx, idx + len(phrase)):
+        if (idx, idx + len(phrase)) not in negated_spans:
             return False
         start = idx + 1
     return occurrences > 0
@@ -1190,9 +1235,9 @@ class FrictionDiagnosis:
 def _utterance_scores(text: str, notes: dict[str, Any]) -> dict[str, float]:
     """词牌证据（V3-FIX-110 否定感知）：命中 = 子串包含且**未被否定**。
 
-    否定命中（同子句否定标记前置于词牌）零证据权重，不进 ``utterance_matches``
-    （FIX-49 词牌门的正向判据面），只入 ``utterance_negated_matches`` 注记
-    （观察档可审计）。
+    否定命中（同子句否定标记前置于词牌，V3-FIX-146 起按「最近后继词牌」
+    作用域裁决）零证据权重，不进 ``utterance_matches``（FIX-49 词牌门的
+    正向判据面），只入 ``utterance_negated_matches`` 注记（观察档可审计）。
     """
     scores: dict[str, float] = {}
     if not text:
@@ -1200,11 +1245,12 @@ def _utterance_scores(text: str, notes: dict[str, Any]) -> dict[str, float]:
     matched: list[str] = []
     negated: list[str] = []
     clause_spans = _clause_spans(text)
+    negated_spans = _negated_wordmark_spans(text, clause_spans, _wordmark_occurrences(text))
     for ftype in sorted(FRICTION_UTTERANCE_LEXICON):
         for phrase, weight in sorted(FRICTION_UTTERANCE_LEXICON[ftype].items()):
             if phrase not in text:
                 continue
-            if _utterance_wordmark_negated(text, phrase, clause_spans):
+            if _utterance_wordmark_negated(text, phrase, negated_spans):
                 negated.append(f"{ftype}:{phrase}")
                 continue
             scores[ftype] = scores.get(ftype, 0.0) + weight

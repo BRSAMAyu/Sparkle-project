@@ -68,6 +68,41 @@ _FENCE_CLOSE_NEUTRAL = "＜/seed_reference_data＞"
 _FENCE_CLOSE_VARIANT_RE = re.compile(r"<\s*/\s*seed_reference_data\s*>", re.IGNORECASE)
 _FENCE_OPEN_VARIANT_RE = re.compile(r"<\s*seed_reference_data\s*>", re.IGNORECASE)
 
+# V3-FIX-148：Unicode 容差对齐——零宽族（零宽空格/非连字/连接符、BOM、软连
+# 字符）插入标签或探针词内、全角括号混拼，在宽松解析的下游 LLM 眼里与 ASCII
+# 原形同罪。中和/筛查匹配在「投影串」上进行：逐字符 NFKC 折算 + 剥不可见族，
+# 命中 span 经索引映射回原文执行替换（原文其余内容零改动，字面保真不破）。
+_SEED_PROMPT_INVISIBLE_RE = re.compile(r"[\u200b\u200c\u200d\ufeff\xad]")
+
+
+def _seed_prompt_match_projection(text: str) -> tuple[str, list[int]]:
+    """匹配投影串 + 投影索引 → 原文索引映射（逐字符 NFKC + 剥零宽族）。
+
+    投影串第 i 字符来自原文 ``index_map[i]``；NFKC 展开的多字符同指原字符。
+    """
+    proj_chars: list[str] = []
+    index_map: list[int] = []
+    for orig_idx, ch in enumerate(text):
+        if _SEED_PROMPT_INVISIBLE_RE.fullmatch(ch):
+            continue
+        folded = unicodedata.normalize("NFKC", ch)
+        proj_chars.append(folded)
+        index_map.extend([orig_idx] * len(folded))
+    return "".join(proj_chars), index_map
+
+
+def _neutralize_fence_variants(value: str, pattern: re.Pattern[str], neutral: str) -> str:
+    """变体容忍中和：投影串上匹配、原文 span 上替换（自后向前，索引稳定）。"""
+    projection, index_map = _seed_prompt_match_projection(value)
+    if not projection:
+        return value
+    out = value
+    for match in reversed(list(pattern.finditer(projection))):
+        start = index_map[match.start()]
+        end = index_map[match.end() - 1] + 1
+        out = out[:start] + neutral + out[end:]
+    return out
+
 #: 注入探针封闭词表（中英+混合），命中即标注 injection_markers（观测面）——
 #: 内容仍按围栏投递（授权数据，不截改），但绝不以未围栏形态拼进 prompt。
 #: V3-FIX-113：英文补冠词/物主槽位（Disregard your X / ignore the ...），
@@ -118,25 +153,38 @@ def screen_seed_prompt_text(text: str) -> list[str]:
 
     V3-FIX-113：扫描前做 NFKC 归一——全角拉丁/全角空格变形
     （ｉｇｎｏｒｅ ａｌｌ ...）折算为 ASCII 后再过词表，避免审计面全漏标。
+    V3-FIX-148：同口径补零宽族——词内插字（``ig\u200bnore``）剥除投影，
+    夹词分隔（``ignore\ufeffall``，宽松解析视作空白）空格替代投影，
+    双投影并集命中（零宽字符本身不构成探针，仅观测面标注，不改投递内容）。
     """
-    value = unicodedata.normalize("NFKC", str(text or ""))
-    if not value:
+    raw = unicodedata.normalize("NFKC", str(text or ""))
+    if not raw:
         return []
-    return [name for name, pattern in _PROMPT_INJECTION_PATTERNS if pattern.search(value)]
+    projections = (
+        _SEED_PROMPT_INVISIBLE_RE.sub("", raw),
+        _SEED_PROMPT_INVISIBLE_RE.sub(" ", raw),
+    )
+    return [
+        name
+        for name, pattern in _PROMPT_INJECTION_PATTERNS
+        if any(pattern.search(value) for value in projections)
+    ]
 
 
 def fence_seed_prompt_text(text: str) -> str:
     """数据围栏：内容以字面数据形态投递（模板字面化 + 占位符包裹）。
 
-    - 围栏逃逸中和（V3-FIX-112 变体容忍）：内容中的围栏标签——含空白/大小写
-      变体——一律替换为全角形态，无法提前闭合或重复打开数据块；
+    - 围栏逃逸中和（V3-FIX-112 变体容忍 + V3-FIX-148 Unicode 容差对齐）：
+      内容中的围栏标签——含空白/大小写/零宽族插入/全角混拼变体——一律替换为
+      全角形态，无法提前闭合或重复打开数据块；命中经投影映射回原文替换，
+      未命中内容字面保真；
     - 换行保留（学习内容可含排版），但整体被 OPEN/CLOSE 包住。
     """
     value = str(text or "")
     if not value:
         return ""
-    value = _FENCE_CLOSE_VARIANT_RE.sub(_FENCE_CLOSE_NEUTRAL, value)
-    value = _FENCE_OPEN_VARIANT_RE.sub(_FENCE_OPEN_NEUTRAL, value)
+    value = _neutralize_fence_variants(value, _FENCE_CLOSE_VARIANT_RE, _FENCE_CLOSE_NEUTRAL)
+    value = _neutralize_fence_variants(value, _FENCE_OPEN_VARIANT_RE, _FENCE_OPEN_NEUTRAL)
     return f"{SEED_PROMPT_FENCE_OPEN}\n{value}\n{SEED_PROMPT_FENCE_CLOSE}"
 
 
