@@ -7,13 +7,16 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from loguru import logger
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
 from app.core.event_bus import EventBus
+from app.core.time_utils import DEFAULT_USER_TIMEZONE, local_date, utcnow, valid_timezone_name
 from app.event_publishers.srl_events import publish_srl_event
 from app.models.card_protocol import ArtifactType, Card, CardCreatedBy
 from app.models.plan import PlanType
+from app.models.user import PushPreference
 from app.schemas.plan import PlanCreate
 from app.services.card_protocol.global_compass_manager import GlobalCompassManager
 from app.services.card_protocol.phase_service import PhaseService
@@ -95,7 +98,13 @@ class DiscoveryManager:
         if state.sufficiency_score < self.SUFFICIENCY_THRESHOLD or state.collected_data_points < self.MIN_DATA_POINTS:
             raise ValueError("Discovery is not yet sufficient to finalize")
 
-        plan_in = self._build_plan_create(state, plan_overrides or {})
+        # V3-FIX-251（行为变化点）：target_date 起点网格与 SPRINT/GROWTH 推断
+        # 按用户本地日——PushPreference.timezone 标量直查（缺省
+        # Asia/Shanghai）换算后显式传入，修前读宿主机 date.today()。
+        tz_name = valid_timezone_name(
+            await self.db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+        )
+        plan_in = self._build_plan_create(state, plan_overrides or {}, today=local_date(utcnow(), tz_name))
         plan = await PlanService.create(
             db=self.db,
             obj_in=plan_in,
@@ -376,9 +385,19 @@ class DiscoveryManager:
         points += min(len(state.prior_attempts), 2)
         return points
 
-    def _build_plan_create(self, state: DiscoveryState, overrides: dict[str, Any]) -> PlanCreate:
-        timeline = self._extract_timeline_date(state.timeline)
-        inferred_type = PlanType.SPRINT if timeline and timeline <= (date.today() + timedelta(days=120)) else PlanType.GROWTH
+    def _build_plan_create(
+        self, state: DiscoveryState, overrides: dict[str, Any], *, today: date | None = None
+    ) -> PlanCreate:
+        """Build PlanCreate from discovery state.
+
+        口径（V3-FIX-251）：``today`` 由调用方按用户 tz 换算后显式传入；
+        未传时回落主市场 Asia/Shanghai 本地日（``local_date(utcnow(), …)``），
+        不读宿主机 ``date.today()``——相对时长 target_date 起点网格与
+        SPRINT/GROWTH 推断 cutoff 都以此为基准。
+        """
+        today = today if today is not None else local_date(utcnow(), DEFAULT_USER_TIMEZONE)
+        timeline = self._extract_timeline_date(state.timeline, today=today)
+        inferred_type = PlanType.SPRINT if timeline and timeline <= (today + timedelta(days=120)) else PlanType.GROWTH
         daily_available_minutes = overrides.get("daily_available_minutes")
         if daily_available_minutes is None:
             daily_available_minutes = self._derive_daily_minutes(state.available_time)
@@ -462,7 +481,15 @@ class DiscoveryManager:
                 return match.group(1)
         return None
 
-    def _extract_timeline_date(self, timeline: str | None) -> date | None:
+    def _extract_timeline_date(self, timeline: str | None, *, today: date | None = None) -> date | None:
+        """Resolve a timeline phrase to an absolute target date.
+
+        口径（V3-FIX-251）：相对时长（"30天"/"2周"/"3个月"/"1年"）按
+        ``today``（调用方用户本地日，缺省主市场 Asia/Shanghai 本地日）
+        起格派生用户可见 target_date，不读宿主机 ``date.today()``；
+        ISO 日期字面量原样解析与时区无关。
+        """
+        today = today if today is not None else local_date(utcnow(), DEFAULT_USER_TIMEZONE)
         if not timeline:
             return None
         iso_match = re.search(r"(\d{4}-\d{2}-\d{2})", timeline)
@@ -477,13 +504,13 @@ class DiscoveryManager:
         amount = int(count_match.group(1))
         unit = count_match.group(2).lower()
         if unit in {"天", "days"}:
-            return date.today() + timedelta(days=amount)
+            return today + timedelta(days=amount)
         if unit in {"周", "weeks"}:
-            return date.today() + timedelta(weeks=amount)
+            return today + timedelta(weeks=amount)
         if unit in {"个月", "月", "months"}:
-            return date.today() + timedelta(days=amount * 30)
+            return today + timedelta(days=amount * 30)
         if unit in {"年", "years"}:
-            return date.today() + timedelta(days=amount * 365)
+            return today + timedelta(days=amount * 365)
         return None
 
     def _extract_available_time(self, message: str) -> str | None:

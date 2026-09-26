@@ -10,6 +10,7 @@ from datetime import UTC, datetime, timedelta, timezone
 from datetime import date as date_type
 from typing import Any, cast
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from loguru import logger
 from sqlalchemy import select
@@ -40,11 +41,12 @@ from app.aurora.runtime_v1.state import (
 from app.aurora.runtime_v1.telemetry import AuroraDecisionTelemetryService
 from app.aurora.runtime_v1.wake_policy import AuroraWakePolicyService
 from app.aurora.runtime_v1.write_pipeline import InferenceClaim
+from app.core.time_utils import DEFAULT_USER_TIMEZONE, valid_timezone_name
 from app.models.calendar_event import CalendarEvent
 from app.models.chat import ChatMessage, ChatSession, MessageRole
 from app.models.plan import Plan, PlanType
 from app.models.task import Task, TaskStatus
-from app.models.user import User
+from app.models.user import PushPreference, User
 from app.models.user_preferences import UserPreferencesCenter
 from app.services.aurora_stage38_kill_switch_service import AuroraStage38KillSwitchService
 from app.services.calendar_service import CalendarService
@@ -630,10 +632,14 @@ class AuroraRuntimeV1Service:
             request_extra_context=request_extra_context,
             user_context_payload=user_context_payload,
         )
+        # V3-FIX-251：兜底合成钟按用户 tz（PushPreference 标量直查，缺省
+        # Asia/Shanghai）——仅合成时间戳的时区口径，客户端时间戳协议不变。
+        user_timezone_name = await self._resolve_user_timezone_name(active_db=active_db, user_id=user_id)
         request_extra_context = self._with_sleep_guard_context(
             request_extra_context=request_extra_context,
             conversation_context=conversation_context,
             user_context_payload=user_context_payload,
+            timezone_name=user_timezone_name,
         )
 
         if not request_extra_context.get("galaxy_baseline") and active_db is not None:
@@ -1251,16 +1257,18 @@ class AuroraRuntimeV1Service:
         request_extra_context: dict[str, Any],
         conversation_context: dict[str, Any],
         user_context_payload: dict[str, Any],
+        timezone_name: str = DEFAULT_USER_TIMEZONE,
     ) -> dict[str, Any]:
         enriched = dict(request_extra_context)
         enriched.pop("sleep_guard_active", None)
         enriched.pop("sleep_guard_hint", None)
 
-        observed_at = self._request_timestamp_in_china_time(
+        observed_at = self._resolve_request_timestamp(
             request_extra_context=request_extra_context,
             conversation_context=conversation_context,
+            timezone_name=timezone_name,
         )
-        if not self._is_sleep_guard_window(observed_at):
+        if not self._is_sleep_guard_window(observed_at, timezone_name=timezone_name):
             return enriched
 
         enriched["sleep_guard_active"] = True
@@ -1269,17 +1277,38 @@ class AuroraRuntimeV1Service:
             enriched["sleep_guard_hint"] = hint
         return enriched
 
-    def _request_timestamp_in_china_time(
+    async def _resolve_user_timezone_name(self, *, active_db: AsyncSession | None, user_id: str | UUID) -> str:
+        """PushPreference.timezone 标量直查；无 db 语境或查询失败回落主市场缺省。"""
+        if active_db is None:
+            return DEFAULT_USER_TIMEZONE
+        try:
+            return valid_timezone_name(
+                await active_db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+            )
+        except Exception as exc:
+            logger.warning("Aurora runtime v1 failed to resolve user timezone: {}", exc)
+            return DEFAULT_USER_TIMEZONE
+
+    def _resolve_request_timestamp(
         self,
         *,
         request_extra_context: dict[str, Any],
         conversation_context: dict[str, Any],
+        timezone_name: str = DEFAULT_USER_TIMEZONE,
     ) -> datetime:
+        """合成「观察时刻」：无候选时按用户 tz 的当前墙上时刻兜底。
+
+        V3-FIX-251（行为变化点）：兜底合成钟修前硬编码 +8h；现在按
+        ``timezone_name``（用户 tz，缺省 Asia/Shanghai）合成。客户端提供
+        时间戳时的协议口径不变（naive 仍按 +8h 墙钟挂 tz，见
+        ``_coerce_china_datetime``；aware/epoch 照常换算为绝对瞬间）。
+        """
+        tz = ZoneInfo(valid_timezone_name(timezone_name))
         for value in self._request_timestamp_candidates(request_extra_context, conversation_context):
             parsed = self._coerce_china_datetime(value)
             if parsed is not None:
                 return parsed
-        return datetime.now(timezone(timedelta(hours=8)))
+        return datetime.now(tz)
 
     def _request_timestamp_candidates(
         self,
@@ -1376,10 +1405,11 @@ class AuroraRuntimeV1Service:
                 continue
         return None
 
-    def _is_sleep_guard_window(self, observed_at: datetime) -> bool:
-        local_time = (
-            observed_at.astimezone(CHINA_TIMEZONE) if observed_at.tzinfo else observed_at.replace(tzinfo=CHINA_TIMEZONE)
-        )
+    def _is_sleep_guard_window(self, observed_at: datetime, timezone_name: str = DEFAULT_USER_TIMEZONE) -> bool:
+        # V3-FIX-251（行为变化点）：睡眠窗（23-06）按用户 tz 本地墙钟读数，
+        # 修前固定 +8h 视角；兜底钟同 tz（客户端时间戳协议口径不变）。
+        tz = ZoneInfo(valid_timezone_name(timezone_name))
+        local_time = observed_at.astimezone(tz) if observed_at.tzinfo else observed_at.replace(tzinfo=tz)
         return local_time.hour >= SLEEP_GUARD_START_HOUR or local_time.hour < SLEEP_GUARD_END_HOUR
 
     def _extract_sleep_guard_hint(

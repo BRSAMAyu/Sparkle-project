@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import timedelta
 from typing import Any
 from uuid import UUID
 
@@ -8,7 +8,9 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.time_utils import local_date, utcnow, valid_timezone_name
 from app.models.card_protocol import ArtifactStatus, ArtifactType, Card, CardCreatedBy, CardType, PlanningArtifact
+from app.models.user import PushPreference
 from app.services.card_protocol.phase_service import PhaseService
 from app.services.card_protocol.strategy_map_manager import StrategyMapManager
 from app.services.planning_artifact_service import PlanningArtifactService
@@ -102,7 +104,13 @@ class PhaseSketchService:
             raise ValueError("Plan already has real phases; refusing to rematerialize phase sketch")
 
         created_phases: list[Card] = []
-        cursor = date.today()
+        # V3-FIX-251（行为变化点）：phase 排程游标按用户本地日——
+        # PushPreference.timezone 标量直查（缺省 Asia/Shanghai）后
+        # local_date(utcnow(), tz)，修前读宿主机 date.today()。
+        tz_name = valid_timezone_name(
+            await self.db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+        )
+        cursor = local_date(utcnow(), tz_name)
         for index, phase_def in enumerate(sketch_payload.get("phases") or [], start=1):
             duration_weeks = max(1, int(phase_def.get("estimated_duration_weeks") or 2))
             estimated_start = cursor
