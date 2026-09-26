@@ -18,9 +18,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get community => 'Community';
 
   @override
-  String get knowledgeGalaxy => 'Knowledge Galaxy';
-
-  @override
   String get profile => 'Profile';
 
   @override
@@ -9498,10 +9495,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxyControlZoomOut => 'Zoom out';
 
   @override
-  String get galaxyEmptyMessage =>
-      'Unlock a few knowledge nodes or reload the map to let the constellation begin to grow.';
-
-  @override
   String get galaxyEmptyTitle => 'Your galaxy is still waiting to be charted';
 
   @override
@@ -9707,12 +9700,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get galaxySectorWisdom => 'Wisdom';
-
-  @override
-  String get galaxySimulationCenterGravity => 'Center gravity';
-
-  @override
-  String get galaxySimulationGravity => 'Gravity';
 
   @override
   String get galaxySimulationReplaySpeed => 'Replay speed';
@@ -11104,11 +11091,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String taskDetailCandidatesAccepted(Object count) {
     return '$count nodes added to galaxy.';
-  }
-
-  @override
-  String taskDetailNodeExpansionDescription(Object name) {
-    return 'Generate 3 candidate nodes around \"$name\", then you decide which ones to write into the galaxy.';
   }
 
   @override
@@ -18903,9 +18885,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Mark this point and continue with other parts';
 
   @override
-  String get stuckHelpAuroraSteps => 'Aurora Two-Step Help';
-
-  @override
   String get stuckHelpFallbackOrder => 'Fallback order when stuck';
 
   @override
@@ -20321,18 +20300,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get emptyStateTitleNone => 'Empty';
 
   @override
-  String get auroraStatusReady => 'Aurora aligned';
-
-  @override
-  String get auroraStatusRecalibrating => 'Aurora recalibrating';
-
-  @override
-  String get auroraStatusPartial => 'Aurora building understanding';
-
-  @override
-  String get auroraStatusMissing => 'Aurora initializing';
-
-  @override
   String get auroraStatusInactive => 'Aurora standby';
 
   @override
@@ -20392,12 +20359,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get auroraNeedsConfirm => 'Aurora · Confirmation Needed';
-
-  @override
-  String get auroraStrategyRisk => 'Aurora strategy risk elevated';
-
-  @override
-  String get auroraBackground => 'Aurora in background';
 
   @override
   String get auroraCalibrationTitle => 'Aurora recalibrating';
@@ -20576,22 +20537,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get auroraInputHint => 'Tell Sparkle anything...';
 
   @override
-  String get auroraBandSensing => 'Aurora sensing';
-
-  @override
-  String get auroraBandCalibrated => 'Aurora calibrated';
-
-  @override
-  String get auroraBandRiskFound => 'Aurora risk detected';
-
-  @override
-  String get auroraBandNeedsConfirm => 'Aurora needs confirmation';
-
-  @override
   String get auroraBandCalibrationAvailable => 'Deep calibration available';
-
-  @override
-  String get auroraBandCoolingDown => 'Aurora cooling down';
 
   @override
   String get auroraBandShortSensing => 'Sensing now';
@@ -23178,11 +23124,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatMemoryReferenceNotRight => 'Not right';
 
   @override
-  String chatMemoryReferenceReceiptLabel(Object count) {
-    return 'Aurora used $count related memories';
-  }
-
-  @override
   String chatMemoryReferenceUsed(Object count) {
     return 'Used $count related memories';
   }
@@ -24832,20 +24773,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get visualInkBlue => 'Ink Blue';
 
   @override
-  String get visualAuroraDesc =>
-      'Green aurora on dark blue, quiet and mysterious';
-
-  @override
-  String get visualNightAurora => 'Night Aurora';
-
-  @override
   String get visualAmberDesc => 'Warm amber blended into deep blue';
 
   @override
   String get visualAmberEcho => 'Amber Echo';
-
-  @override
-  String get visualNebulaDesc => 'Purple nebula flowing through deep blue';
 
   @override
   String get visualGalaxy => 'Galaxy Conquest';
@@ -24867,13 +24798,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get visualStarDefault => 'Default twinkling stars';
 
   @override
-  String get visualStarTrack => 'Star Trail';
-
-  @override
   String get visualPetalDesc => 'Pink petals falling';
-
-  @override
-  String get visualAuroraShard => 'Aurora Shard';
 
   @override
   String get visualGlowDesc => 'Yellow-green floating glow';
@@ -24909,25 +24834,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get visualRippleDesc => 'Ripple spread';
 
   @override
-  String get visualGravity => 'Gravity Conquest';
-
-  @override
-  String get visualScholarDesc =>
-      'Deep ink-blue base with star trails and soft glow. A timeless learner backdrop.';
-
-  @override
   String get visualScholar => 'Ink Scholar';
-
-  @override
-  String get visualSilentAuroraDesc =>
-      'Restrained teal glow, floating fireflies, and pulse ring. Focus made visible in the night.';
-
-  @override
-  String get visualSilentNightAurora => 'Silent Aurora Set';
-
-  @override
-  String get visualGalaxyConquerorDesc =>
-      'Legendary galaxy theme. Golden gravity waves, star-core particles, and deep-space nebula react to milestones.';
 
   @override
   String get visualGalaxyConqueror => 'Galaxy Conqueror';
@@ -27131,9 +27038,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get transTranslationFailed => 'Translation failed';
 
   @override
-  String get auroraObserving => 'Aurora · Observing';
-
-  @override
   String auroraFeedbackFailed(String error) {
     return 'Calibration feedback failed: $error';
   }
@@ -27956,10 +27860,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get galaxyPreviewUnstable =>
       'Current mastery is unstable. Reinforce while the memory is still fresh.';
-
-  @override
-  String get galaxyPreviewReLight =>
-      'Reinforce now to relight it more smoothly.';
 
   @override
   String get galaxyUnknownError => 'Unknown error';
@@ -31908,9 +31808,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galaxySectorInspiration => 'Inspiration';
 
   @override
-  String get galaxySectorDarkMatter => 'Dark Matter';
-
-  @override
   String get planSprintSubmitFailed =>
       'Sprint submission failed, please try again';
 
@@ -34050,9 +33947,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeNoTasksToday => 'No tasks today';
 
   @override
-  String get homeAskAurora => 'Ask Aurora';
-
-  @override
   String get homeTodayMapped => 'Today is mapped out';
 
   @override
@@ -34271,9 +34165,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get homeOnboardingChatSubtitle =>
       'Share your thoughts, get personalized guidance';
-
-  @override
-  String get homeOnboardingExploreGalaxy => 'Explore knowledge map';
 
   @override
   String get homeOnboardingExploreSubtitle =>
@@ -34636,10 +34527,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get homeCompletingUpdatesProgress =>
       'Completing it updates your plan progress';
-
-  @override
-  String get homeNoUrgentAction =>
-      'No urgent action is queued. Review, add context, or let Aurora reprioritize.';
 
   @override
   String get homeSparkleWillTurn =>
@@ -36672,9 +36559,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get dashboardCommandCenterAskAurora => 'Ask Aurora';
-
-  @override
   String get todayCockpitEyebrowFresh => 'Most worth doing today';
 
   @override
@@ -36764,10 +36648,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get dashboardCcPlanProgress =>
       'Completing it updates your plan progress';
-
-  @override
-  String get dashboardCcNoUrgentAction =>
-      'No urgent action is queued. Review, add context, or let Aurora reprioritize.';
 
   @override
   String get dashboardCcWillBreakDown =>
@@ -38288,9 +38168,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get auto_photonbalance => 'Photon Balance';
-
-  @override
   String get auto_loadfailed => 'Load Failed';
 
   @override
@@ -38837,9 +38714,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get goalDetailNoBottlenecks => 'No bottleneck nodes detected yet.';
-
-  @override
-  String get goalDetailOpenGalaxy => 'Open galaxy';
 
   @override
   String get goalDetailPhaseHealth => 'Phase health';

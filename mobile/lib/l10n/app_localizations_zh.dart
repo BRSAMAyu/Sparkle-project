@@ -18,9 +18,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get community => '社群';
 
   @override
-  String get knowledgeGalaxy => '知识星图';
-
-  @override
   String get profile => '我的';
 
   @override
@@ -9144,9 +9141,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get galaxyControlZoomOut => '缩小';
 
   @override
-  String get galaxyEmptyMessage => '开始探索，点亮你的知识星图';
-
-  @override
   String get galaxyEmptyTitle => '星图空空如也';
 
   @override
@@ -9348,12 +9342,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get galaxySectorWisdom => '智慧';
-
-  @override
-  String get galaxySimulationCenterGravity => '中心引力';
-
-  @override
-  String get galaxySimulationGravity => '引力';
 
   @override
   String get galaxySimulationReplaySpeed => '回放速度';
@@ -10695,11 +10683,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String taskDetailCandidatesAccepted(Object count) {
     return '已将 $count 个节点纳入星图。';
-  }
-
-  @override
-  String taskDetailNodeExpansionDescription(Object name) {
-    return '围绕「$name」生成 3 个候选节点，再由你决定哪些真正写入知识星图。';
   }
 
   @override
@@ -18102,9 +18085,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get stuckHelpSuggestion5 => '标记这个点，继续其他部分';
 
   @override
-  String get stuckHelpAuroraSteps => 'Aurora 两步帮扶';
-
-  @override
   String get stuckHelpFallbackOrder => '卡住时按这个顺序救火';
 
   @override
@@ -19468,18 +19448,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get emptyStateTitleNone => '数据为空';
 
   @override
-  String get auroraStatusReady => 'Aurora 已校准';
-
-  @override
-  String get auroraStatusRecalibrating => 'Aurora 正在校准';
-
-  @override
-  String get auroraStatusPartial => 'Aurora 正在理解';
-
-  @override
-  String get auroraStatusMissing => 'Aurora 初始化中';
-
-  @override
   String get auroraStatusInactive => 'Aurora 待激活';
 
   @override
@@ -19539,12 +19507,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get auroraNeedsConfirm => 'Aurora · 需要确认一个判断';
-
-  @override
-  String get auroraStrategyRisk => 'Aurora 策略风险升高';
-
-  @override
-  String get auroraBackground => 'Aurora 已退回后台';
 
   @override
   String get auroraCalibrationTitle => 'Aurora 正在校准';
@@ -19720,22 +19682,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get auroraInputHint => '告诉 Sparkle 任何想法...';
 
   @override
-  String get auroraBandSensing => 'Aurora 轻量感知中';
-
-  @override
-  String get auroraBandCalibrated => 'Aurora 已校准';
-
-  @override
-  String get auroraBandRiskFound => 'Aurora 发现策略风险';
-
-  @override
-  String get auroraBandNeedsConfirm => 'Aurora 需要确认一个判断';
-
-  @override
   String get auroraBandCalibrationAvailable => '深度校准可用';
-
-  @override
-  String get auroraBandCoolingDown => 'Aurora 校准冷却中';
 
   @override
   String get auroraBandShortSensing => '在感知';
@@ -22231,11 +22178,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatMemoryReferenceNotRight => '不对';
 
   @override
-  String chatMemoryReferenceReceiptLabel(Object count) {
-    return 'Aurora 引用了 $count 条相关记忆';
-  }
-
-  @override
   String chatMemoryReferenceUsed(Object count) {
     return '引用了 $count 条相关记忆';
   }
@@ -23806,19 +23748,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get visualInkBlue => '墨兰基底';
 
   @override
-  String get visualAuroraDesc => '墨蓝底色上的幽绿极光，静谧而神秘';
-
-  @override
-  String get visualNightAurora => '静夜极光';
-
-  @override
   String get visualAmberDesc => '温暖的琥珀色调融入深蓝底色';
 
   @override
   String get visualAmberEcho => '暮金回声';
-
-  @override
-  String get visualNebulaDesc => '深邃墨蓝中的幽紫星云流转';
 
   @override
   String get visualGalaxy => '星河征服';
@@ -23839,13 +23772,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get visualStarDefault => '默认闪烁星星粒子';
 
   @override
-  String get visualStarTrack => '静星轨迹';
-
-  @override
   String get visualPetalDesc => '粉色花瓣下落效果';
-
-  @override
-  String get visualAuroraShard => '极光碎片';
 
   @override
   String get visualGlowDesc => '黄绿色闪烁漂浮效果';
@@ -23881,22 +23808,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get visualRippleDesc => '涟漪扩散效果';
 
   @override
-  String get visualGravity => '征服引力';
-
-  @override
-  String get visualScholarDesc => '深沉墨兰基底、静星轨迹与柔光组合，适合作为长期学习身份底色。';
-
-  @override
   String get visualScholar => '墨兰学者';
-
-  @override
-  String get visualSilentAuroraDesc => '克制的青金光晕、漂浮萤辉和脉动光环，像把专注状态点亮在深夜。';
-
-  @override
-  String get visualSilentNightAurora => '静夜极光套装';
-
-  @override
-  String get visualGalaxyConquerorDesc => '传奇级星图主题，金色引力波、星核粒子和深空星云会一起响应学习里程碑。';
 
   @override
   String get visualGalaxyConqueror => '星河征服者';
@@ -26023,9 +25935,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get transTranslationFailed => '翻译失败';
 
   @override
-  String get auroraObserving => 'Aurora · 观察中';
-
-  @override
   String auroraFeedbackFailed(String error) {
     return '提交校准反馈失败：$error';
   }
@@ -26810,9 +26719,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get galaxyPreviewUnstable => '当前掌握度还不稳，趁记忆还在时再加固一次。';
-
-  @override
-  String get galaxyPreviewReLight => '现在补一次，能更顺手地把它重新点亮。';
 
   @override
   String get galaxyUnknownError => '未知错误';
@@ -30585,9 +30491,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get galaxySectorInspiration => '灵感';
 
   @override
-  String get galaxySectorDarkMatter => '暗物质';
-
-  @override
   String get planSprintSubmitFailed => '冲刺提交失败，请重试';
 
   @override
@@ -32633,9 +32536,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeNoTasksToday => '今天未排任务';
 
   @override
-  String get homeAskAurora => '问 Aurora';
-
-  @override
   String get homeTodayMapped => '今天的任务已经清楚了';
 
   @override
@@ -32850,9 +32750,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get homeOnboardingChatSubtitle => '聊聊你的想法，获得个性化建议';
-
-  @override
-  String get homeOnboardingExploreGalaxy => '探索知识星图';
 
   @override
   String get homeOnboardingExploreSubtitle => '发现你的知识结构，找到提升方向';
@@ -33194,9 +33091,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get homeCompletingUpdatesProgress => '完成后会更新计划进度';
-
-  @override
-  String get homeNoUrgentAction => '今天没有更急的动作。可以复盘、补资料，或让 Aurora 重新排一下。';
 
   @override
   String get homeSparkleWillTurn => 'Sparkle 会把目标拆成下一步、进度和风险提醒。';
@@ -35152,9 +35046,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get dashboardCommandCenterAskAurora => '问 Aurora';
-
-  @override
   String get todayCockpitEyebrowFresh => '今天最值得做';
 
   @override
@@ -35243,9 +35134,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get dashboardCcPlanProgress => '完成后会更新计划进度';
-
-  @override
-  String get dashboardCcNoUrgentAction => '今天没有更急的动作。可以复盘、补资料，或让 Aurora 重新排一下。';
 
   @override
   String get dashboardCcWillBreakDown => 'Sparkle 会把目标拆成下一步、进度和风险提醒。';
@@ -36686,9 +36574,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get auto_photonbalance => '光子积分';
-
-  @override
   String get auto_loadfailed => '加载失败';
 
   @override
@@ -37215,9 +37100,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get goalDetailNoBottlenecks => '暂时没有检测到瓶颈节点。';
-
-  @override
-  String get goalDetailOpenGalaxy => '打开星图';
 
   @override
   String get goalDetailPhaseHealth => '阶段健康';

@@ -116,12 +116,6 @@ abstract class AppLocalizations {
   /// **'社群'**
   String get community;
 
-  /// No description provided for @knowledgeGalaxy.
-  ///
-  /// In zh, this message translates to:
-  /// **'知识星图'**
-  String get knowledgeGalaxy;
-
   /// No description provided for @profile.
   ///
   /// In zh, this message translates to:
@@ -16874,12 +16868,6 @@ abstract class AppLocalizations {
   /// **'缩小'**
   String get galaxyControlZoomOut;
 
-  /// No description provided for @galaxyEmptyMessage.
-  ///
-  /// In zh, this message translates to:
-  /// **'开始探索，点亮你的知识星图'**
-  String get galaxyEmptyMessage;
-
   /// No description provided for @galaxyEmptyTitle.
   ///
   /// In zh, this message translates to:
@@ -17257,18 +17245,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'智慧'**
   String get galaxySectorWisdom;
-
-  /// No description provided for @galaxySimulationCenterGravity.
-  ///
-  /// In zh, this message translates to:
-  /// **'中心引力'**
-  String get galaxySimulationCenterGravity;
-
-  /// No description provided for @galaxySimulationGravity.
-  ///
-  /// In zh, this message translates to:
-  /// **'引力'**
-  String get galaxySimulationGravity;
 
   /// No description provided for @galaxySimulationReplaySpeed.
   ///
@@ -19724,12 +19700,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'已将 {count} 个节点纳入星图。'**
   String taskDetailCandidatesAccepted(Object count);
-
-  /// No description provided for @taskDetailNodeExpansionDescription.
-  ///
-  /// In zh, this message translates to:
-  /// **'围绕「{name}」生成 3 个候选节点，再由你决定哪些真正写入知识星图。'**
-  String taskDetailNodeExpansionDescription(Object name);
 
   /// No description provided for @taskDetailGenerateThreeCandidates.
   ///
@@ -32911,12 +32881,6 @@ abstract class AppLocalizations {
   /// **'标记这个点，继续其他部分'**
   String get stuckHelpSuggestion5;
 
-  /// No description provided for @stuckHelpAuroraSteps.
-  ///
-  /// In zh, this message translates to:
-  /// **'Aurora 两步帮扶'**
-  String get stuckHelpAuroraSteps;
-
   /// No description provided for @stuckHelpFallbackOrder.
   ///
   /// In zh, this message translates to:
@@ -35437,30 +35401,6 @@ abstract class AppLocalizations {
   /// **'数据为空'**
   String get emptyStateTitleNone;
 
-  /// No description provided for @auroraStatusReady.
-  ///
-  /// In zh, this message translates to:
-  /// **'Aurora 已校准'**
-  String get auroraStatusReady;
-
-  /// No description provided for @auroraStatusRecalibrating.
-  ///
-  /// In zh, this message translates to:
-  /// **'Aurora 正在校准'**
-  String get auroraStatusRecalibrating;
-
-  /// No description provided for @auroraStatusPartial.
-  ///
-  /// In zh, this message translates to:
-  /// **'Aurora 正在理解'**
-  String get auroraStatusPartial;
-
-  /// No description provided for @auroraStatusMissing.
-  ///
-  /// In zh, this message translates to:
-  /// **'Aurora 初始化中'**
-  String get auroraStatusMissing;
-
   /// No description provided for @auroraStatusInactive.
   ///
   /// In zh, this message translates to:
@@ -35574,18 +35514,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'Aurora · 需要确认一个判断'**
   String get auroraNeedsConfirm;
-
-  /// No description provided for @auroraStrategyRisk.
-  ///
-  /// In zh, this message translates to:
-  /// **'Aurora 策略风险升高'**
-  String get auroraStrategyRisk;
-
-  /// No description provided for @auroraBackground.
-  ///
-  /// In zh, this message translates to:
-  /// **'Aurora 已退回后台'**
-  String get auroraBackground;
 
   /// No description provided for @auroraCalibrationTitle.
   ///
@@ -35929,41 +35857,11 @@ abstract class AppLocalizations {
   /// **'告诉 Sparkle 任何想法...'**
   String get auroraInputHint;
 
-  /// No description provided for @auroraBandSensing.
-  ///
-  /// In zh, this message translates to:
-  /// **'Aurora 轻量感知中'**
-  String get auroraBandSensing;
-
-  /// No description provided for @auroraBandCalibrated.
-  ///
-  /// In zh, this message translates to:
-  /// **'Aurora 已校准'**
-  String get auroraBandCalibrated;
-
-  /// No description provided for @auroraBandRiskFound.
-  ///
-  /// In zh, this message translates to:
-  /// **'Aurora 发现策略风险'**
-  String get auroraBandRiskFound;
-
-  /// No description provided for @auroraBandNeedsConfirm.
-  ///
-  /// In zh, this message translates to:
-  /// **'Aurora 需要确认一个判断'**
-  String get auroraBandNeedsConfirm;
-
   /// No description provided for @auroraBandCalibrationAvailable.
   ///
   /// In zh, this message translates to:
   /// **'深度校准可用'**
   String get auroraBandCalibrationAvailable;
-
-  /// No description provided for @auroraBandCoolingDown.
-  ///
-  /// In zh, this message translates to:
-  /// **'Aurora 校准冷却中'**
-  String get auroraBandCoolingDown;
 
   /// No description provided for @auroraBandShortSensing.
   ///
@@ -40495,12 +40393,6 @@ abstract class AppLocalizations {
   /// **'不对'**
   String get chatMemoryReferenceNotRight;
 
-  /// No description provided for @chatMemoryReferenceReceiptLabel.
-  ///
-  /// In zh, this message translates to:
-  /// **'Aurora 引用了 {count} 条相关记忆'**
-  String chatMemoryReferenceReceiptLabel(Object count);
-
   /// No description provided for @chatMemoryReferenceUsed.
   ///
   /// In zh, this message translates to:
@@ -43357,18 +43249,6 @@ abstract class AppLocalizations {
   /// **'墨兰基底'**
   String get visualInkBlue;
 
-  /// No description provided for @visualAuroraDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'墨蓝底色上的幽绿极光，静谧而神秘'**
-  String get visualAuroraDesc;
-
-  /// No description provided for @visualNightAurora.
-  ///
-  /// In zh, this message translates to:
-  /// **'静夜极光'**
-  String get visualNightAurora;
-
   /// No description provided for @visualAmberDesc.
   ///
   /// In zh, this message translates to:
@@ -43380,12 +43260,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'暮金回声'**
   String get visualAmberEcho;
-
-  /// No description provided for @visualNebulaDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'深邃墨蓝中的幽紫星云流转'**
-  String get visualNebulaDesc;
 
   /// No description provided for @visualGalaxy.
   ///
@@ -43423,23 +43297,11 @@ abstract class AppLocalizations {
   /// **'默认闪烁星星粒子'**
   String get visualStarDefault;
 
-  /// No description provided for @visualStarTrack.
-  ///
-  /// In zh, this message translates to:
-  /// **'静星轨迹'**
-  String get visualStarTrack;
-
   /// No description provided for @visualPetalDesc.
   ///
   /// In zh, this message translates to:
   /// **'粉色花瓣下落效果'**
   String get visualPetalDesc;
-
-  /// No description provided for @visualAuroraShard.
-  ///
-  /// In zh, this message translates to:
-  /// **'极光碎片'**
-  String get visualAuroraShard;
 
   /// No description provided for @visualGlowDesc.
   ///
@@ -43507,41 +43369,11 @@ abstract class AppLocalizations {
   /// **'涟漪扩散效果'**
   String get visualRippleDesc;
 
-  /// No description provided for @visualGravity.
-  ///
-  /// In zh, this message translates to:
-  /// **'征服引力'**
-  String get visualGravity;
-
-  /// No description provided for @visualScholarDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'深沉墨兰基底、静星轨迹与柔光组合，适合作为长期学习身份底色。'**
-  String get visualScholarDesc;
-
   /// No description provided for @visualScholar.
   ///
   /// In zh, this message translates to:
   /// **'墨兰学者'**
   String get visualScholar;
-
-  /// No description provided for @visualSilentAuroraDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'克制的青金光晕、漂浮萤辉和脉动光环，像把专注状态点亮在深夜。'**
-  String get visualSilentAuroraDesc;
-
-  /// No description provided for @visualSilentNightAurora.
-  ///
-  /// In zh, this message translates to:
-  /// **'静夜极光套装'**
-  String get visualSilentNightAurora;
-
-  /// No description provided for @visualGalaxyConquerorDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'传奇级星图主题，金色引力波、星核粒子和深空星云会一起响应学习里程碑。'**
-  String get visualGalaxyConquerorDesc;
 
   /// No description provided for @visualGalaxyConqueror.
   ///
@@ -47563,12 +47395,6 @@ abstract class AppLocalizations {
   /// **'翻译失败'**
   String get transTranslationFailed;
 
-  /// No description provided for @auroraObserving.
-  ///
-  /// In zh, this message translates to:
-  /// **'Aurora · 观察中'**
-  String get auroraObserving;
-
   /// No description provided for @auroraFeedbackFailed.
   ///
   /// In zh, this message translates to:
@@ -48960,12 +48786,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'当前掌握度还不稳，趁记忆还在时再加固一次。'**
   String get galaxyPreviewUnstable;
-
-  /// No description provided for @galaxyPreviewReLight.
-  ///
-  /// In zh, this message translates to:
-  /// **'现在补一次，能更顺手地把它重新点亮。'**
-  String get galaxyPreviewReLight;
 
   /// No description provided for @galaxyUnknownError.
   ///
@@ -55607,12 +55427,6 @@ abstract class AppLocalizations {
   /// **'灵感'**
   String get galaxySectorInspiration;
 
-  /// No description provided for @galaxySectorDarkMatter.
-  ///
-  /// In zh, this message translates to:
-  /// **'暗物质'**
-  String get galaxySectorDarkMatter;
-
   /// No description provided for @planSprintSubmitFailed.
   ///
   /// In zh, this message translates to:
@@ -59323,12 +59137,6 @@ abstract class AppLocalizations {
   /// **'今天未排任务'**
   String get homeNoTasksToday;
 
-  /// No description provided for @homeAskAurora.
-  ///
-  /// In zh, this message translates to:
-  /// **'问 Aurora'**
-  String get homeAskAurora;
-
   /// No description provided for @homeTodayMapped.
   ///
   /// In zh, this message translates to:
@@ -59724,12 +59532,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'聊聊你的想法，获得个性化建议'**
   String get homeOnboardingChatSubtitle;
-
-  /// No description provided for @homeOnboardingExploreGalaxy.
-  ///
-  /// In zh, this message translates to:
-  /// **'探索知识星图'**
-  String get homeOnboardingExploreGalaxy;
 
   /// No description provided for @homeOnboardingExploreSubtitle.
   ///
@@ -60330,12 +60132,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'完成后会更新计划进度'**
   String get homeCompletingUpdatesProgress;
-
-  /// No description provided for @homeNoUrgentAction.
-  ///
-  /// In zh, this message translates to:
-  /// **'今天没有更急的动作。可以复盘、补资料，或让 Aurora 重新排一下。'**
-  String get homeNoUrgentAction;
 
   /// No description provided for @homeSparkleWillTurn.
   ///
@@ -63909,12 +63705,6 @@ abstract class AppLocalizations {
   /// **'健康度 {percent}%'**
   String dashboardCommandCenterHealth(int percent);
 
-  /// No description provided for @dashboardCommandCenterAskAurora.
-  ///
-  /// In zh, this message translates to:
-  /// **'问 Aurora'**
-  String get dashboardCommandCenterAskAurora;
-
   /// No description provided for @todayCockpitEyebrowFresh.
   ///
   /// In zh, this message translates to:
@@ -64070,12 +63860,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'完成后会更新计划进度'**
   String get dashboardCcPlanProgress;
-
-  /// No description provided for @dashboardCcNoUrgentAction.
-  ///
-  /// In zh, this message translates to:
-  /// **'今天没有更急的动作。可以复盘、补资料，或让 Aurora 重新排一下。'**
-  String get dashboardCcNoUrgentAction;
 
   /// No description provided for @dashboardCcWillBreakDown.
   ///
@@ -66590,12 +66374,6 @@ abstract class AppLocalizations {
   /// **'删除失败: {e}'**
   String auto_deletefailed(Object e);
 
-  /// No description provided for @auto_photonbalance.
-  ///
-  /// In zh, this message translates to:
-  /// **'光子积分'**
-  String get auto_photonbalance;
-
   /// No description provided for @auto_loadfailed.
   ///
   /// In zh, this message translates to:
@@ -67550,12 +67328,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'暂时没有检测到瓶颈节点。'**
   String get goalDetailNoBottlenecks;
-
-  /// No description provided for @goalDetailOpenGalaxy.
-  ///
-  /// In zh, this message translates to:
-  /// **'打开星图'**
-  String get goalDetailOpenGalaxy;
 
   /// No description provided for @goalDetailPhaseHealth.
   ///
