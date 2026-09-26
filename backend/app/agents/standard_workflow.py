@@ -2075,8 +2075,8 @@ Ask about their available time and current tasks if needed.
                     # 静默吞掉后照常以 STOP 收尾。置审计旗标（response_builder
                     # 透传 metadata）+ error 帧下行（复用既有 WS error 事件族，
                     # 移动端渲染为失败态而非把部分文本当完整答案）。
-                    # V3-FIX-166：finish_reason='length'（provider max_tokens 授权
-                    # 截断）同为截断族，进入本分支。
+                    # V3-FIX-166/V3-FIX-232：provider 授权截断（finish_reason=
+                    # 'length'/'content_filter'）同为截断族，进入本分支。
                     state.context_data["generation_stream_truncated"] = True
                     logger.warning(
                         "generation stream truncated by upstream (truncation_reason={!r}); "

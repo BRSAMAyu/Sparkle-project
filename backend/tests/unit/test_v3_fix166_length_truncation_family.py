@@ -23,6 +23,11 @@ service 层照发 ``stream_truncated`` 终止标记（新增结构化字段
    且本轮不落库——base 上 clean done(completed=true)+照常落库（红）。
 4. 回归守卫：finish_reason="stop" 不误标（既有 155 锁同向）；缺哨兵亚型 reason
    保持 "upstream_stream_truncated" 不变。
+
+V3-FIX-232 增量（wt511 审查轮8 探针实录红）：截断族值面从 ∪{"length"} 扩为
+∪{"length","content_filter"}（provider 内容审查掐断同族），路由层 reason 新增
+``content_filter_blocked`` 亚型；本文件尾部同收编 wt511 探针 P2（usage 尾帧不
+作完成哨兵）/P3（usage+stop 不误标）两边界守卫（base 上即绿）。
 """
 
 from __future__ import annotations
@@ -358,3 +363,163 @@ def test_stream_route_docstring_declares_length_truncated_reason() -> None:
     assert (
         "length_truncated" in done_decl
     ), f"done 帧 docstring 契约必须声明 length_truncated 亚型（FIX-166），实际: {done_decl}"
+
+
+# --- V3-FIX-232：截断族缺口收口 —— finish_reason="content_filter" 同族 ------------
+# wt511 审查轮8 探针实录红（P4）：脚本化 provider 流 [text, finish_reason=
+# "content_filter"]（provider 内容审查掐断，DeepSeek/Qwen/GLM/MiMo 部署内会
+# 发射）与 "stop" 同判完成——无 stream_truncated 产出、REST /stream 面 done
+# completed=true、部分（被审查掐断的）回答照常落库完整轮；/ws/chat 轨道共用
+# 同一生产者一并受影响。修法=截断族值面单值等值改集合判定
+# {"length","content_filter"}，路由层 reason 亚型=content_filter_blocked。
+
+
+@pytest.mark.asyncio
+async def test_content_filter_finish_reason_yields_truncation_marker(
+    passthrough_fallback: _PassthroughFallbackStub,
+) -> None:
+    """content_filter（provider 内容审查截断）是截断族：部分回答不得冒充完整答案。
+
+    base 红：单值等值只认 'length'——content_filter 与 'stop' 同判完成，
+    无任何截断标记（wt511 探针 P4 实录）。
+    """
+    chunks = [
+        _raw_chunk(content="这个话题我可以从几个方面来说，首先"),
+        _raw_chunk(content="", finish_reason="content_filter"),  # 内容审查掐断
+    ]
+    service = _make_service(_ScriptedRawStreamProvider(chunks))
+
+    events = await _collect(service)
+    markers = [e for e in events if e.type == "stream_truncated"]
+
+    assert markers, (
+        "finish_reason='content_filter' 是 provider 授权截断（截断族），必须产出 "
+        f"stream_truncated 标记，实际事件链: {[e.type for e in events]}"
+    )
+    assert (
+        markers[0].truncation_reason == "content_filter"
+    ), f"content_filter 截断亚型必须经结构化字段 truncation_reason 区分，实际: {markers[0]}"
+
+
+@pytest.mark.asyncio
+async def test_content_filter_finish_reason_suppresses_tool_call_end(
+    passthrough_fallback: _PassthroughFallbackStub,
+) -> None:
+    """截断族同族保守语义：content_filter 轮的完整 tool_call 桶不产出 tool_call_end。
+
+    base 红：content_filter 被当作完整收尾，tool_call_end 照常产出。
+    """
+    chunks = [
+        _raw_chunk(
+            tool_calls=[_tool_delta_chunk(index=0, call_id="call_cf", name="get_situation_brief", arguments="{}")]
+        ),
+        _raw_chunk(content="", finish_reason="content_filter"),
+    ]
+    service = _make_service(_ScriptedRawStreamProvider(chunks))
+
+    events = await _collect(service)
+    types = [e.type for e in events]
+
+    assert "stream_truncated" in types, f"content_filter 轮必须带截断标记，实际: {types}"
+    assert "tool_call_end" not in types, f"content_filter 截断轮不得触发工具执行，实际: {types}"
+
+
+@pytest.mark.asyncio
+async def test_content_filter_truncated_stream_yields_done_completed_false_and_skips_persistence(
+    sse_app: FastAPI, db_session: AsyncSession, test_user: User, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """content_filter 截断流 → done 帧 completed=false + reason=content_filter_blocked
+    且不落库（对齐 FIX-166 length 亚形）。
+
+    base 红：无 content_filter 感知——clean done(completed=true) + 部分回答
+    照常落库为完整助手消息（wt511 探针 P4 路由面实录）。
+    """
+    _script_llm_stream(
+        monkeypatch,
+        [
+            StreamChunk(type="text", content="这个话题我可以从几个方面来说，首先"),
+            StreamChunk(type="stream_truncated", truncation_reason="content_filter"),
+        ],
+    )
+
+    async with AsyncClient(
+        transport=ASGITransport(app=sse_app, raise_app_exceptions=False), base_url="http://test"
+    ) as client:
+        resp = await client.post("/api/v1/chat/stream", json={"message": "讲讲方法"})
+
+    frames = _parse_sse_frames(resp.text)
+    done_frame = next((f for f in frames if f.get("type") == "done"), None)
+
+    assert done_frame is not None, "流必须以 done 帧收尾"
+    assert (
+        done_frame.get("completed") is False
+    ), f"content_filter 截断轮 done 帧必须 completed=false（截断族哨兵），实际: {done_frame}"
+    assert (
+        done_frame.get("reason") == "content_filter_blocked"
+    ), f"content_filter 截断轮 done 帧 reason 必须为 content_filter_blocked（亚型可观测），实际: {done_frame}"
+
+    result = await db_session.execute(select(ChatMessage).where(ChatMessage.user_id == test_user.id))
+    assert result.scalars().all() == [], "content_filter 截断轮不得把部分文本落库为完整助手消息"
+
+
+# --- wt511 探针 P2/P3 收编（base 上即绿，钉住截断判定的边界不回退）----------------
+
+
+@pytest.mark.asyncio
+async def test_usage_tail_frame_without_choices_is_not_completion_sentinel(
+    passthrough_fallback: _PassthroughFallbackStub,
+) -> None:
+    """wt511 探针 P2 收编：usage 尾帧（choices 空）不作完成哨兵——缺 finish_reason
+    闭环仍判截断，usage 帧不得把流洗成完整轮。"""
+    usage_frame = SimpleNamespace(
+        choices=[],
+        usage=SimpleNamespace(prompt_tokens=1, completion_tokens=1, total_tokens=2),
+    )
+    chunks = [
+        _raw_chunk(content="部分回答"),
+        usage_frame,  # usage 尾帧：无 finish_reason 哨兵
+    ]
+    service = _make_service(_ScriptedRawStreamProvider(chunks))
+
+    events = await _collect(service)
+    markers = [e for e in events if e.type == "stream_truncated"]
+
+    assert markers, (
+        "usage 尾帧（choices 空）不是完成哨兵——缺 finish_reason 闭环必须仍判截断，"
+        f"实际事件链: {[e.type for e in events]}"
+    )
+    assert markers[0].truncation_reason is None, "usage 尾帧轮=缺哨兵亚型，truncation_reason 应为 None"
+
+
+@pytest.mark.asyncio
+async def test_usage_plus_stop_stream_not_mislabeled_truncated(
+    passthrough_fallback: _PassthroughFallbackStub,
+) -> None:
+    """wt511 探针 P3 收编：usage 尾帧 + finish_reason=stop 是正常收尾，不误标截断。"""
+    usage_frame = SimpleNamespace(
+        choices=[],
+        usage=SimpleNamespace(prompt_tokens=1, completion_tokens=1, total_tokens=2),
+    )
+    chunks = [
+        _raw_chunk(content="完整回答。"),
+        usage_frame,
+        _raw_chunk(content="", finish_reason="stop"),
+    ]
+    service = _make_service(_ScriptedRawStreamProvider(chunks))
+
+    events = await _collect(service)
+
+    assert not [
+        e for e in events if e.type == "stream_truncated"
+    ], f"usage+stop 正常收尾不得误标截断，实际事件链: {[e.type for e in events]}"
+
+
+def test_stream_route_docstring_declares_content_filter_blocked_reason() -> None:
+    """V3-FIX-232 契约锁：done 帧 reason 枚举必须在 docstring 契约块声明
+    content_filter_blocked 亚型。"""
+    import inspect
+
+    from app.api.v1.chat import chat_stream
+
+    doc = inspect.getdoc(chat_stream) or ""
+    assert "content_filter_blocked" in doc, "done 帧 docstring 契约必须声明 content_filter_blocked 亚型（V3-FIX-232）"

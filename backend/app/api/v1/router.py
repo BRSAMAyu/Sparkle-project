@@ -11,7 +11,7 @@ import importlib.util
 import sys
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 
 from app.api.v1 import (
     accountability,
@@ -133,22 +133,6 @@ from app.config import settings
 from app.config.release_flags import release_flags_response, require_release_flag
 
 api_router = APIRouter()
-
-
-def _require_visual_elements_enabled() -> None:
-    """V3-FIX-182：visual-elements LABS 孤儿链发布闸（组注册级，独立开关）。
-
-    T36 教训：不用 router 前缀级一刀切——前缀级旗子会误杀同一 router 的合法
-    子面（如 leaderboards 的 self-anchor）。此闸只挂 visual-elements 组注册级，
-    组内 8 条路由关闭时统一 403 FEATURE_DISABLED（与 T36 release flags 语义
-    对齐），先于端点鉴权依赖生效；其他组不受影响。
-    开关：settings.ENABLE_VISUAL_ELEMENTS（默认 False）。
-    """
-    if not settings.ENABLE_VISUAL_ELEMENTS:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="FEATURE_DISABLED",
-        )
 
 
 def _route_key(route: object) -> tuple[str, frozenset[str]]:
@@ -317,12 +301,14 @@ api_router.include_router(
     tags=["inventory"],
     dependencies=[Depends(require_release_flag("RELEASE_ENABLE_SHOP"))],
 )
-# Visual Element System（V3-FIX-182：LABS 孤儿链发布闸，默认关；见 ENABLE_VISUAL_ELEMENTS）
+# Visual Element System（V3-FIX-182 组注册级发布闸，默认关；V3-FIX-231 起
+# 闸唯一权威=五旗 RELEASE 权威 RELEASE_ENABLE_VISUAL_ELEMENTS——与 shop/inventory
+# 同形、/release-flags 契约同源，双权威脑裂禁绝；组注册级而非前缀级=T36 教训）
 api_router.include_router(
     visual_elements.router,
     prefix="/visual-elements",
     tags=["visual-elements"],
-    dependencies=[Depends(_require_visual_elements_enabled)],
+    dependencies=[Depends(require_release_flag("RELEASE_ENABLE_VISUAL_ELEMENTS"))],
 )
 # Device Registration (Push Notifications)
 api_router.include_router(devices.router, tags=["devices"])

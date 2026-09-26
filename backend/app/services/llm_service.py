@@ -242,9 +242,16 @@ class StreamChunk:
     # MIMO 特有字段
     reasoning_content: str | None = None
     annotations: list[dict] | None = None
-    # V3-FIX-166：stream_truncated 截断亚型（None=缺 finish_reason/[DONE] 哨兵；
-    # "length"=provider max_tokens 授权截断）——不进消息面，供下游 reason 映射。
+    # V3-FIX-166/V3-FIX-232：stream_truncated 截断亚型（None=缺 finish_reason/
+    # [DONE] 哨兵；其余=provider 授权截断的 finish_reason 原值，见
+    # _TRUNCATION_FINISH_REASONS 值集）——不进消息面，供下游 reason 映射。
     truncation_reason: str | None = None
+
+
+# V3-FIX-232：截断族 finish_reason 值集（V3-FIX-166 起 'length'=provider
+# max_tokens 上限截断；V3-FIX-232 起 'content_filter'=provider 内容审查掐断）。
+# 二者均为 provider 授权的不完整收尾：部分回答/部分工具指令不得冒充完整轮。
+_TRUNCATION_FINISH_REASONS: frozenset[str] = frozenset({"length", "content_filter"})
 
 tracer = trace.get_tracer(__name__)
 _llm_monitor = LLMMonitor()
@@ -1721,9 +1728,11 @@ class LLMService:
 
                 # V3-FIX-155：截断轮（无 finish_reason 闭环）不产出 tool_call_end
                 # ——部分指令不得静默执行（对齐 V3-FIX-61 保守语义），只告警观测。
-                # V3-FIX-166：截断族扩为 缺哨兵 ∪ finish_reason='length'——
-                # provider 授权截断同样可能把工具参数掐半，同族保守抑制。
-                _stream_truncated = (not _saw_finish_reason) or _finish_reason_value == "length"
+                # V3-FIX-166/V3-FIX-232：截断族= 缺哨兵 ∪ _TRUNCATION_FINISH_
+                # REASONS（'length'=max_tokens 上限、'content_filter'=内容审查
+                # 掐断）——provider 授权截断同样可能把回答/工具参数掐半，
+                # 同族保守抑制（单点收口：REST /stream 与 /ws/chat 双轨道共用）。
+                _stream_truncated = (not _saw_finish_reason) or _finish_reason_value in _TRUNCATION_FINISH_REASONS
                 if _stream_truncated:
                     if collected_tool_call_chunks:
                         logger.warning(
@@ -1831,15 +1840,16 @@ class LLMService:
                     # 断连（无 [DONE] 哨兵）。部分内容不得冒充完整答案：显式截断
                     # 标记收尾（路由 /stream 映射 done.completed=false；
                     # /ws/chat 面映射可见 error 帧，见 generation_node）。
-                    # V3-FIX-166：finish_reason='length'（provider max_tokens 上限
-                    # 截断）同判截断族，truncation_reason 结构化区分亚型。
+                    # V3-FIX-166/V3-FIX-232：provider 授权截断（'length'=max_tokens
+                    # 上限、'content_filter'=内容审查掐断）同判截断族，
+                    # truncation_reason 结构化区分亚型。
                     yield StreamChunk(
                         type="stream_truncated",
                         content=(
                             "upstream stream ended without finish_reason/[DONE] sentinel"
                             if not _saw_finish_reason
-                            else "upstream stream ended with finish_reason=length "
-                            "(provider max_tokens truncation)"
+                            else f"upstream stream ended with finish_reason={_finish_reason_value} "
+                            "(provider authorized truncation)"
                         ),
                         truncation_reason=None if not _saw_finish_reason else _finish_reason_value,
                     )

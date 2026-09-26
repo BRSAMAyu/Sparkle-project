@@ -163,13 +163,15 @@ class TestCardAZeroBehaviorRedLine:
     """release-flag 消费面守卫（卡 A 红线的阶段化演进）。
 
     卡 A 落地时是零行为红线（无任何路由消费）；V3-FIX-05（wt483 PLAN §2.2
-    卡 C shop 提前量）起 /shop、/inventory 两组合法消费 RELEASE_ENABLE_SHOP。
+    卡 C shop 提前量）起 /shop、/inventory 两组合法消费 RELEASE_ENABLE_SHOP；
+    V3-FIX-231 起 /visual-elements 组合法消费 RELEASE_ENABLE_VISUAL_ELEMENTS
+    （闸唯一权威收编进五旗 RELEASE 权威，原独立开关 ENABLE_VISUAL_ELEMENTS 删）。
     本守卫钉住：消费面只能停在已裁决的组上，任何其他组偷挂 release-flag
     依赖即红（挂旗必须走卡片裁决，不允许顺手扩散）。
     """
 
     # 已裁决的 release-flag 消费组（api_router 相对前缀 → 消费卡片）
-    ALLOWED_FLAG_CONSUMING_PREFIXES = frozenset({"/shop", "/inventory"})
+    ALLOWED_FLAG_CONSUMING_PREFIXES = frozenset({"/shop", "/inventory", "/visual-elements"})
 
     def test_release_flag_dependency_only_on_adjudicated_groups(self):
         scanned = 0
@@ -191,8 +193,8 @@ class TestCardAZeroBehaviorRedLine:
             f"routes outside adjudicated groups consume release-flag dependencies: {sorted(unexpected)} — "
             "mounting a flag requires a card adjudication (wt483 PLAN), not a drive-by"
         )
-        # 本卡裁决面非空：shop/inventory 两组在场（否则守卫退化为空许可）
-        assert consuming, "shop/inventory must consume require_release_flag (V3-FIX-05 gate)"
+        # 裁决面非空：shop/inventory/visual-elements 三组在场（否则守卫退化为空许可）
+        assert consuming, "adjudicated groups must consume require_release_flag (V3-FIX-05/V3-FIX-231 gates)"
 
     def test_release_flags_module_exposes_no_router(self):
         """薄视图不自带 APIRouter——端点注册唯一入口在 api/v1/router.py。"""

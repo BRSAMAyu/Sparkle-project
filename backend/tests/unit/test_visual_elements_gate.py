@@ -3,8 +3,10 @@
 背景：U-07 摘除「我的」页入口后 /visual-elements 全组（8 条路由）0 应用内
 入边、可深链直达且后端无闸（证伪实录：带鉴权深链 4 路 200）。
 
-本闸（settings.ENABLE_VISUAL_ELEMENTS，默认 False）挂在 api/v1/router.py 的
-visual-elements 组注册级依赖上：
+本闸挂在 api/v1/router.py 的 visual-elements 组注册级依赖上，唯一权威=
+``settings.RELEASE_ENABLE_VISUAL_ELEMENTS``（wt483 卡 A 五旗权威，
+V3-FIX-231 起与 /release-flags 契约同源，原独立开关 ENABLE_VISUAL_ELEMENTS
+已删——双权威脑裂禁绝）：
 - 关（默认）：组内全部路由 403 FEATURE_DISABLED，且先于端点鉴权依赖生效；
 - 开：深链可达 200；
 - 闸只作用于本组（T36 教训：router 前缀级旗子会误杀同 router 合法子面，
@@ -49,7 +51,7 @@ async def test_gate_off_returns_403_feature_disabled_before_auth(gate_app, monke
 
     不覆盖 get_current_user：若闸缺失，请求会先撞鉴权得 401 而非 403。
     """
-    monkeypatch.setattr(settings, "ENABLE_VISUAL_ELEMENTS", False)
+    monkeypatch.setattr(settings, "RELEASE_ENABLE_VISUAL_ELEMENTS", False)
     with TestClient(gate_app, raise_server_exceptions=False) as client:
         for path in DISABLED_PATHS:
             response = client.get(path)
@@ -64,7 +66,7 @@ async def test_gate_off_returns_403_feature_disabled_before_auth(gate_app, monke
 @pytest.mark.asyncio
 async def test_gate_on_deep_link_reachable(gate_app, db_session, monkeypatch):
     """开：深链可达 200（组闸放行后走端点自身鉴权/业务逻辑）。"""
-    monkeypatch.setattr(settings, "ENABLE_VISUAL_ELEMENTS", True)
+    monkeypatch.setattr(settings, "RELEASE_ENABLE_VISUAL_ELEMENTS", True)
     user = User(username="wt482_gate_on", email="wt482_gate_on@example.com", hashed_password="x")
     db_session.add(user)
     await db_session.commit()
@@ -88,7 +90,7 @@ async def test_gate_scoped_to_visual_elements_group_only(gate_app, db_session, m
     leaderboards/self-anchor 是 D-COMM-1 唯一在册产品面；若此闸被误做成
     router 级/前缀级一刀切，此用例即红。
     """
-    monkeypatch.setattr(settings, "ENABLE_VISUAL_ELEMENTS", False)
+    monkeypatch.setattr(settings, "RELEASE_ENABLE_VISUAL_ELEMENTS", False)
     user = User(username="wt482_gate_scope", email="wt482_gate_scope@example.com", hashed_password="x")
     db_session.add(user)
     await db_session.commit()

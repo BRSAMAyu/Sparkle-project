@@ -53885,7 +53885,7 @@
     },
     "/api/v1/chat/stream": {
       "post": {
-        "description": "流式聊天接口（SSE）\n适合长回复场景，实时展示 LLM 生成内容\n\nSSE 帧协议（V3-FIX-63 契约声明）：``text/event-stream``，data 载荷为单行\nJSON，以空行（``\\n\\n``）成帧；新增帧型必须同步本枚举与契约锁测试。\ntype 枚举：\n- text: {\"content\": str} LLM 文本增量\n- tool_start: {\"tool\": str} 工具调用开始宣布（每个调用恰一次）\n- tool_result: {\"result\": object} 工具执行结果（ToolResult 序列化）\n- widget: {\"widget_type\": str, \"widget_data\": object} 结构化卡片\n- error: {\"message\": str} 本轮处理失败的客户端可见失败面（不裸断连），恒以 done 收束\n- done: 终止帧，流结束的唯一标记。completed=true 为正常完成；completed=false\n  为中断轮（reason: upstream_stream_truncated=上游流缺 [DONE]/finish_reason\n  哨兵截断，已下行内容不完整且不落库；length_truncated=provider 侧 max_tokens\n  上限截断（finish_reason=length，V3-FIX-166），同为截断族不落库；\n  turn_failed=本轮处理失败，随 error 帧）。\n  客户端不得把 completed=false 轮当作完整答案渲染/入历史。\n\nV3-FIX-53：生成器内任何异常都不得静默断流——统一经 `error` 事件下行\n（客户端可见\"本轮失败\"），并以 done 帧收束；异常本身 log.exception 落地。\nV3-FIX-155：上游优雅断连（无哨兵）不是正常收尾——done 帧必须显式\ncompleted=false（中断哨兵），部分内容不落库为完整助手消息。\nV3-FIX-166：provider 授权截断（finish_reason=length）同判截断族，\ndone 帧 reason=length_truncated 显式可观测。",
+        "description": "流式聊天接口（SSE）\n适合长回复场景，实时展示 LLM 生成内容\n\nSSE 帧协议（V3-FIX-63 契约声明）：``text/event-stream``，data 载荷为单行\nJSON，以空行（``\\n\\n``）成帧；新增帧型必须同步本枚举与契约锁测试。\ntype 枚举：\n- text: {\"content\": str} LLM 文本增量\n- tool_start: {\"tool\": str} 工具调用开始宣布（每个调用恰一次）\n- tool_result: {\"result\": object} 工具执行结果（ToolResult 序列化）\n- widget: {\"widget_type\": str, \"widget_data\": object} 结构化卡片\n- error: {\"message\": str} 本轮处理失败的客户端可见失败面（不裸断连），恒以 done 收束\n- done: 终止帧，流结束的唯一标记。completed=true 为正常完成；completed=false\n  为中断轮（reason: upstream_stream_truncated=上游流缺 [DONE]/finish_reason\n  哨兵截断，已下行内容不完整且不落库；length_truncated=provider 侧 max_tokens\n  上限截断（finish_reason=length，V3-FIX-166）；content_filter_blocked=\n  provider 内容审查掐断（finish_reason=content_filter，V3-FIX-232），同为\n  截断族不落库；turn_failed=本轮处理失败，随 error 帧）。\n  客户端不得把 completed=false 轮当作完整答案渲染/入历史。\n\nV3-FIX-53：生成器内任何异常都不得静默断流——统一经 `error` 事件下行\n（客户端可见\"本轮失败\"），并以 done 帧收束；异常本身 log.exception 落地。\nV3-FIX-155：上游优雅断连（无哨兵）不是正常收尾——done 帧必须显式\ncompleted=false（中断哨兵），部分内容不落库为完整助手消息。\nV3-FIX-166/V3-FIX-232：provider 授权截断（finish_reason=length/\ncontent_filter）同判截断族，done 帧 reason=length_truncated/\ncontent_filter_blocked 显式可观测。",
         "operationId": "chat_stream_api_v1_chat_stream_post",
         "requestBody": {
           "content": {
@@ -87435,7 +87435,7 @@
     },
     "/api/v1/stats/activity/heatmap": {
       "get": {
-        "description": "学习热力图（GitHub 风格贡献图）\nReturns one entry per day, including today.\n\nMinutes are sourced from:\n1. `study_records` written by galaxy/task learning updates\n2. completed tasks without a linked study record as a fallback\n\nResponse: [{date: \"2026-04-01\", minutes: 45, tasks_completed: 3}, ...]",
+        "description": "学习热力图（GitHub 风格贡献图）\nReturns one entry per user-local day, including today.\n\nMinutes are sourced from:\n1. `study_records` written by galaxy/task learning updates\n2. completed tasks without a linked study record as a fallback\n\nResponse: [{date: \"2026-04-01\", minutes: 45, tasks_completed: 3}, ...]\n\n时区口径（V3-FIX-37）：两源列均存 naive-UTC（服务端 utcnow），但日界与\n标注按用户本地日切——窗口边界由本地零点换算回 UTC naive 瞬间，归属在\n应用层把 UTC 瞬时转回用户本地日（修前窗口与 func.date 分桶都用 UTC 日，\nUTC+8 本地 00:00–08:00 的记录被上界整段排除/错标到前一日）。",
         "operationId": "get_learning_heatmap_api_v1_stats_activity_heatmap_get",
         "parameters": [
           {
