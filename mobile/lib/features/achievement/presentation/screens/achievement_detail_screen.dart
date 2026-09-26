@@ -1442,6 +1442,10 @@ class _AchievementDetailScreenState
         return Icons.description;
       case AchievementType.sprint:
         return Icons.directions_run;
+      case AchievementType.planning:
+        return Icons.event_note;
+      case AchievementType.unknown:
+        return Icons.question_mark;
     }
   }
 
@@ -1467,6 +1471,10 @@ class _AchievementDetailScreenState
         return l10n.achievementTypeContract;
       case AchievementType.sprint:
         return l10n.achievementTypeSprint;
+      case AchievementType.planning:
+        return l10n.taskTypePlanning;
+      case AchievementType.unknown:
+        return l10n.intentTypeUnknown;
     }
   }
 

@@ -1131,6 +1131,10 @@ class AchievementCard extends StatelessWidget {
         return context.l10n.achievementCardCategoryContract;
       case AchievementType.sprint:
         return context.l10n.achievementCardCategorySprint;
+      case AchievementType.planning:
+        return context.l10n.taskTypePlanning;
+      case AchievementType.unknown:
+        return context.l10n.intentTypeUnknown;
     }
   }
 
@@ -1156,6 +1160,10 @@ class AchievementCard extends StatelessWidget {
         return Icons.description_rounded;
       case AchievementType.sprint:
         return Icons.bolt_rounded;
+      case AchievementType.planning:
+        return Icons.event_note_rounded;
+      case AchievementType.unknown:
+        return Icons.question_mark_rounded;
     }
   }
 
@@ -1182,6 +1190,10 @@ class AchievementCard extends StatelessWidget {
         return Icons.description;
       case AchievementType.sprint:
         return Icons.directions_run;
+      case AchievementType.planning:
+        return Icons.event_note;
+      case AchievementType.unknown:
+        return Icons.question_mark;
     }
   }
 }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'achievement_model.g.dart';
@@ -15,6 +16,10 @@ enum AchievementRarity {
 }
 
 /// 成就类型
+///
+/// 值串与后端 `backend/app/models/achievement.py` AchievementType 逐值对齐
+/// （11 值，含 planning）；末位 unknown 为 mobile 侧哨兵，后端新增值先行
+/// 下发时降级于此，不崩解析（V3-FIX-260）。
 enum AchievementType {
   @JsonValue('milestone')
   milestone,
@@ -36,6 +41,10 @@ enum AchievementType {
   nodeExplore,
   @JsonValue('sprint')
   sprint,
+  @JsonValue('planning')
+  planning,
+  @JsonValue('unknown')
+  unknown,
 }
 
 /// 视觉特效类型
@@ -109,14 +118,26 @@ class AchievementModel {
     this.totalUnlocked = 0,
   });
 
-  factory AchievementModel.fromJson(Map<String, dynamic> json) =>
-      _$AchievementModelFromJson(json);
+  factory AchievementModel.fromJson(Map<String, dynamic> json) {
+    final decoded = _$AchievementModelFromJson(json);
+    final rawType = json['type'];
+    if (rawType != null &&
+        rawType != AchievementType.unknown.name &&
+        decoded.type == AchievementType.unknown) {
+      debugPrint(
+        '[AchievementModel] 未知成就类型 "$rawType"，已降级 unknown 哨兵'
+        '（V3-FIX-260）',
+      );
+    }
+    return decoded;
+  }
 
   final String id;
   final String name;
   final String? description;
   @JsonKey(name: 'icon_url')
   final String? iconUrl;
+  @JsonKey(unknownEnumValue: AchievementType.unknown)
   final AchievementType type;
   final AchievementRarity rarity;
   final String? category;

@@ -10,7 +10,8 @@ AchievementModel _$AchievementModelFromJson(Map<String, dynamic> json) =>
     AchievementModel(
       id: json['id'] as String,
       name: json['name'] as String,
-      type: $enumDecode(_$AchievementTypeEnumMap, json['type']),
+      type: $enumDecode(_$AchievementTypeEnumMap, json['type'],
+          unknownValue: AchievementType.unknown),
       rarity: $enumDecode(_$AchievementRarityEnumMap, json['rarity']),
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
@@ -84,6 +85,8 @@ const _$AchievementTypeEnumMap = {
   AchievementType.studyTime: 'study_time',
   AchievementType.nodeExplore: 'node_explore',
   AchievementType.sprint: 'sprint',
+  AchievementType.planning: 'planning',
+  AchievementType.unknown: 'unknown',
 };
 
 const _$AchievementRarityEnumMap = {
@@ -366,12 +369,12 @@ AchievementMapNode _$AchievementMapNodeFromJson(Map<String, dynamic> json) =>
       name: json['name'] as String,
       rarity: $enumDecode(_$AchievementRarityEnumMap, json['rarity']),
       category: json['category'] as String,
-      lane: json['lane'] as String? ?? 'prestige_lane',
-      laneLabel: json['lane_label'] as String? ?? 'Prestige Lane',
       position: (json['position'] as Map<String, dynamic>).map(
         (k, e) => MapEntry(k, (e as num).toDouble()),
       ),
       isUnlocked: json['is_unlocked'] as bool,
+      lane: json['lane'] as String? ?? 'prestige_lane',
+      laneLabel: json['lane_label'] as String? ?? 'Prestige Lane',
       isHidden: json['is_hidden'] as bool? ?? false,
       prerequisites: (json['prerequisites'] as List<dynamic>?)
               ?.map((e) => e as String)
