@@ -456,9 +456,6 @@
   "streakStatusMissed": "中断",
   "streakRiskNoFreeze": "冻结卡已用完，断签将中断连胜。",
   "streakRiskLowFreeze": "仅剩1次冻结卡，建议及时补充。",
-  "streakShopTitle": "需要冻结卡保护？",
-  "streakShopSubtitle": "前往光子商城获取补给",
-  "streakShopAction": "打开商城",
   "streakDetails": "连胜详情",
   "dashboardCustomizeCards": "可定制卡片区",
   "dashboardEmptyHint": "至少保留一张卡片，编辑后会立即保存到本地配置。",
@@ -568,7 +565,6 @@
   "streakMaxLabel": "最高",
   "streakMax": "最高{count}",
   "streakTotalLabel": "累计",
-  "streakTotal": "累计{count}",
   "streakStartChallenge": "开始",
   "streakChallenge": "挑战",
   "streakFreezeCharges": "冻结次数",
@@ -586,22 +582,15 @@
   "timeMinutesAgo": "{count}分钟前",
   "timeHoursAgo": "{count}小时前",
   "timeDaysAgo": "{count}天前",
-  "timeWeeksAgo": "{count}周前",
   "timeMonthsAgo": "{count}个月前",
   "timeYearsAgo": "{count}年前",
   "timeInMinutes": "{count}分钟后",
   "timeInHours": "{count}小时后",
   "timeInDays": "{count}天后",
-  "timeInWeeks": "{count}周后",
   "timeInMonths": "{count}个月后",
   "timeInYears": "{count}年后",
   "timeToday": "今天",
   "timeYesterday": "昨天",
-  "timeTomorrow": "明天",
-  "timeThisWeek": "本周",
-  "timeNextWeek": "下周",
-  "timeThisMonth": "本月",
-  "timeLastMonth": "上月",
   "durationHours": "{count}小时",
   "durationMinutes": "{count}分钟",
   "durationSeconds": "{count}秒",
@@ -890,15 +879,12 @@
   "syncCenterLoadFailed": "加载失败：{error}",
   "syncCenterCopyDiagnostics": "复制诊断信息",
   "syncCenterDiagnosticsCopied": "已复制诊断信息",
-  "syncCenterDisplayLimit": "最多展示 {limit} 条",
   "syncCenterRetryFailedTriggered": "已触发失败重试",
   "syncCenterRetryFailed": "重试失败项",
   "syncCenterNeverSynced": "未同步",
   "syncCenterTotalPending": "待同步总数：{count}",
   "syncCenterLastSync": "最近同步：{value}",
-  "syncCenterByTopic": "按主题统计",
   "syncCenterNoPendingItems": "暂无待同步项",
-  "syncCenterTopicLabel": "主题",
   "syncCenterTopicAll": "全部",
   "syncCenterTopicCognitive": "认知碎片",
   "syncCenterTopicKnowledge": "知识图谱",
@@ -924,7 +910,6 @@
   "saveToGallery": "保存到相册",
   "close": "关闭",
   "shareCardGenerateFailed": "分享卡生成失败，请稍后重试",
-  "shareCardPrepareFailed": "分享卡准备失败: {error}",
   "shareFailed": "分享失败: {error}",
   "saveFailed": "保存失败: {error}",
   "savedToGallery": "已保存到相册",
@@ -1676,8 +1661,6 @@
   "onboardingPersonalizationSubtitle": "让 Sparkle 更懂你",
   "onboardingSettingReminders": "学习提醒",
   "onboardingSettingRemindersDesc": "在最佳时间推送学习建议",
-  "onboardingSettingAnalytics": "学习分析",
-  "onboardingSettingAnalyticsDesc": "生成个性化学习报告",
   "onboardingSettingAssistant": "AI 助手",
   "onboardingSettingAssistantDesc": "自动创建学习任务",
   "onboardingArchitectureStep1Title": "移动端",
@@ -2719,19 +2702,7 @@
   "sharePrivacyShowFirstBadge": "首位解锁者徽章",
   "sharePrivacyShowFirstBadgeDesc": "如您是首位解锁者，显示专属徽章",
   "sharePreviewLoading": "正在生成预览...",
-  "sharePreviewError": "预览生成失败",
   "shareRegenerateCard": "重新生成",
-  "shareCaptionStyleFlex": "高光炫耀",
-  "shareCaptionStyleCinematic": "氛围感",
-  "shareCaptionStyleHumble": "低调分享",
-  "shareCaptionStyleInvite": "邀请同行",
-  "shareContentAchievement": "成就分享",
-  "shareContentTaskCompletion": "任务完成",
-  "shareContentPlanProgress": "学习计划",
-  "shareContentCapsule": "时光胶囊",
-  "shareContentKnowledgeNode": "知识节点",
-  "shareContentLearningReport": "学习报告",
-  "shareContentCognitivePrism": "认知棱镜",
   "dashboardPlanName": "计算机网络考前冲刺",
   "dashboardSubject": "计算机网络",
   "dashboardLoadError": "无法加载仪表盘。",
@@ -2751,11 +2722,6 @@
   "reflectionWhatHelped": "帮助",
   "reflectionChangeNextTime": "改进",
   "notificationPermissionStatus": "通知权限状态",
-  "notificationPermissionGranted": "已授权",
-  "notificationPermissionDenied": "通知权限被拒绝，请在系统设置中开启",
-  "notificationPermissionPartial": "部分通知功能受限，建议开启完整权限",
-  "notificationPermissionRequest": "请求权限",
-  "notificationPermissionOpenSettings": "打开设置",
   "notificationPermissionDeniedHint": "通知权限被拒绝，请在系统设置中开启",
   "notificationPermissionPartialHint": "部分通知功能受限，建议开启完整权限",
   "visualElementsTitle": "视觉元素",
@@ -5246,7 +5212,6 @@
   "theaterSettingsContinuity": "这次推演仍然承接你刚才的对话上下文。",
   "theaterSettingsCurrentTarget": "当前目标：{name}",
   "theaterSettingsLabel": "重新设定推演目标",
-  "theaterSettingsHint": "例如：两周内掌握线性代数的特征值部分",
   "theaterSettingsGenerate": "生成新推演",
   "theaterSettingsSuggestions": "建议起点",
   "theaterTabGraph": "图谱",
@@ -5342,8 +5307,6 @@
   "theaterRouteRiskLevel": "风险数",
   "theaterRouteOverallScore": "综合分",
   "theaterRouteDataNote": "数据说明",
-  "theaterRouteCompletionRange": "完成率区间 {low}%-{high}%",
-  "theaterRouteMasteryRange": "掌握度区间 {low}%-{high}%",
   "theaterRouteSimulateFromCurrent": "带去模拟",
   "theaterRouteSimulateAfterSwitch": "切换后模拟",
   "theaterRouteSwitchToThis": "切换到此路径",
@@ -5379,8 +5342,6 @@
   "theaterWhatIfNodesSkipped": "你已标记跳过 {nodes}。",
   "theaterWhatIfSelectFirst": "先选择一个节点",
   "theaterWhatIfGenerateFull": "生成完整假设推演结果",
-  "theaterWhatIfOriginal": "原始 {original}",
-  "theaterWhatIfAdjusted": "调整后 {adjusted}",
   "theaterWhatIfRemainingPath": "分支剩余路径：{path}",
   "theaterDiscussionTitle": "专家圆桌",
   "theaterSnapshotSaving": "保存中",
@@ -7474,9 +7435,7 @@
   "executionResultArtifactType": "类型：{type}",
   "executionResultArtifactFallback": "附件",
   "onboardingVoiceInput": "语音输入",
-  "onboardingVoiceInputEn": "英语语音输入",
   "onboardingVoiceInputDesc": "开启麦克风权限，支持语音指令与听写输入",
-  "onboardingVoiceInputDescEn": "开启英语语音输入，支持语音指令与听写",
   "onboardingPermissionEnable": "启用",
   "onboardingPermissionEnabled": "已启用",
   "onboardingPermissionReady": "就绪 — 已全部设置好",
@@ -8495,7 +8454,6 @@
   "notificationEncouraged": "已鼓励",
   "notificationPushDismissed": "这条主动提醒已收起",
   "notificationPushCategoryDisabled": "这类主动提醒已关闭",
-  "notificationEncouragementSent": "他收到了你的鼓励",
   "notificationEncouragementSentFallback": "他收到了你的鼓励",
   "notificationInteractionSeen": "已看到",
   "notificationInteractionAccepted": "已接受建议",
@@ -8534,9 +8492,6 @@
   "notificationRecallInaccurate": "这个提醒不准确",
   "notificationRecallFeedbackSaved": "已记录，之后会调准这类提醒",
   "notificationRecallFeedbackRecorded": "反馈已记录",
-  "notificationSendEncouragement": "发个鼓励",
-  "notificationPreviewWithStep": "{content}\n建议动作：{step}",
-  "notificationUnknownError": "未知错误",
   "notificationAnalyticsFunnelTitle": "干预漏斗（按触发类型）",
   "notificationAnalyticsCreated": "创建",
   "notificationAnalyticsDelivered": "送达",
@@ -8557,10 +8512,6 @@
   "notificationAnalyticsActionRate": "行动率",
   "notificationAnalyticsAcceptedLabel": "已接受",
   "notificationAnalyticsStartedLabel": "已开始",
-  "notificationAnalyticsTrendView": "查看",
-  "notificationAnalyticsTrendAccept": "接受",
-  "notificationAnalyticsTrendStart": "开始",
-  "notificationAnalyticsRateSuffix": "接受率: {acceptanceRate}% · 行动率: {actionRate}%",
   "focusNoTaskHint": "先选一个任务开始，或直接进入自由专注。",
   "focusCompletionHint": "完成后会生成专注结算与今日累计",
   "focusSessionComplete": "专注完成",
@@ -8866,10 +8817,6 @@
   "chatMemoryMentionCount": "提及 {count} 次 · {type}",
   "chatMemoryOriginalTurn": "原 turn",
   "chatMemoryReferenceDetailTitle": "相关记忆",
-  "chatMemoryReferenceNeedsConfirmation": "待确认",
-  "chatMemoryReferenceNotRight": "不对",
-  "chatMemoryReferenceUsed": "引用了 {count} 条相关记忆",
-  "chatMemoryReferenceReceiptLabel": "Aurora 引用了 {count} 条相关记忆",
   "chatMemorySessionCount": "{count} 条当前 session 记忆",
   "chatMemorySyncing": "正在同步当前 session 记忆",
   "chatMemoryUnavailable": "记忆抽屉暂时不可用",
@@ -12293,14 +12240,6 @@
       }
     }
   },
-  "skillLoadFailed": "我的方式加载失败: {error}",
-  "@skillLoadFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "skillTitle": "我的方式",
   "skillFromDraft": "从草稿生成",
   "skillNewSkill": "新建方式",
@@ -12316,22 +12255,6 @@
   "skillUnshare": "撤回共享",
   "skillForkToMy": "Fork 到我的方式",
   "skillSaved": "已保存我的方式",
-  "skillSaveFailed": "保存失败: {error}",
-  "@skillSaveFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "skillActionFailed": "操作失败: {error}",
-  "@skillActionFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "skillEditorNew": "新建方式",
   "skillEditorEdit": "编辑方式",
   "skillEditorName": "名称",
@@ -12346,14 +12269,6 @@
   "skillDraftAiReply": "AI 回复",
   "skillDraftGenerating": "生成中...",
   "skillDraftGenerate": "生成草稿",
-  "skillDraftFailed": "草稿生成失败: {error}",
-  "@skillDraftFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "gdTitle": "社群广场",
   "gdCalibrate": "待你校准",
   "gdCalibrateDesc": "告诉我们这些推荐社群是否真的对口，系统会继续优化发现结果。",
@@ -12696,8 +12611,6 @@
       }
     }
   },
-  "planSprintSubmitFailed": "冲刺提交失败，请重试",
-  "planPortfolioLoadFailedMsg": "加载学习组合失败",
   "planPortfolioRetry": "重试",
   "planViewDetails": "查看详情",
   "toolsPlanLinked": "计划结束时间",
@@ -12737,7 +12650,6 @@
   "streakQualityTitle": "高质量连胜",
   "streakQualitySubtitle": "连胜会参考有效时长、核心任务、难点突破和计划一致性。",
   "streakQualityDaysShort": "质量日",
-  "streakQualityTodayBreakdown": "今日质量拆解",
   "streakQualityEffectiveMinutes": "有效时长",
   "streakQualityCoreTasks": "核心任务",
   "streakQualityBreakthroughs": "难点突破",
@@ -13893,7 +13805,6 @@
   "envelopeDimComplexity": "复杂度",
   "taskDetailSemanticsTitle": "任务详情",
   "streakQualityRecoveryScore": "恢复力",
-  "streakQualitySuggestedAction": "建议行动",
   "envelopeEngagementSummary": "{streak}天连续 · 本周{sessions}次会话",
   "@envelopeEngagementSummary": {
     "placeholders": {
@@ -14211,7 +14122,6 @@
   "sprintCompletionLoading": "加载中...",
   "learningPortfolioLoading": "加载中...",
   "sprintActionLoading": "加载中...",
-  "syncCenterLoading": "加载中...",
   "securityLogLoading": "加载中...",
   "socialAccountsLoading": "加载中...",
   "sessionManagementLoading": "加载中...",

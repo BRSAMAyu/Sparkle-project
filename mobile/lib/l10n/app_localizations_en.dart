@@ -1290,15 +1290,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Only 1 freeze charge left. Consider refilling.';
 
   @override
-  String get streakShopTitle => 'Need more freeze charges?';
-
-  @override
-  String get streakShopSubtitle => 'Visit the Photon Shop to stock up.';
-
-  @override
-  String get streakShopAction => 'Open Shop';
-
-  @override
   String get streakDetails => 'Streak Details';
 
   @override
@@ -1628,11 +1619,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get streakTotalLabel => 'Total';
 
   @override
-  String streakTotal(Object count) {
-    return 'Total $count';
-  }
-
-  @override
   String get streakStartChallenge => 'Start';
 
   @override
@@ -1711,17 +1697,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String timeWeeksAgo(num count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count weeks ago',
-      one: '1 week ago',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String timeMonthsAgo(num count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -1777,17 +1752,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String timeInWeeks(num count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count weeks',
-      one: '1 week',
-    );
-    return 'In $_temp0';
-  }
-
-  @override
   String timeInMonths(num count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -1814,21 +1778,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get timeYesterday => 'Yesterday';
-
-  @override
-  String get timeTomorrow => 'Tomorrow';
-
-  @override
-  String get timeThisWeek => 'This week';
-
-  @override
-  String get timeNextWeek => 'Next week';
-
-  @override
-  String get timeThisMonth => 'This month';
-
-  @override
-  String get timeLastMonth => 'Last month';
 
   @override
   String durationHours(Object count) {
@@ -2759,11 +2708,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get syncCenterDiagnosticsCopied => 'Diagnostics copied';
 
   @override
-  String syncCenterDisplayLimit(Object limit) {
-    return 'Showing up to $limit items';
-  }
-
-  @override
   String get syncCenterRetryFailedTriggered =>
       'Triggered retry for failed items';
 
@@ -2784,13 +2728,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get syncCenterByTopic => 'By topic';
-
-  @override
   String get syncCenterNoPendingItems => 'No pending items';
-
-  @override
-  String get syncCenterTopicLabel => 'Topic';
 
   @override
   String get syncCenterTopicAll => 'All';
@@ -2877,11 +2815,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get shareCardGenerateFailed =>
       'Failed to generate share card, please try again later';
-
-  @override
-  String shareCardPrepareFailed(Object error) {
-    return 'Failed to prepare share card: $error';
-  }
 
   @override
   String shareFailed(Object error) {
@@ -4592,13 +4525,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get onboardingSettingRemindersDesc =>
       'Get helpful nudges at the right moment';
-
-  @override
-  String get onboardingSettingAnalytics => 'Learning insights';
-
-  @override
-  String get onboardingSettingAnalyticsDesc =>
-      'Generate reports tailored to your learning patterns';
 
   @override
   String get onboardingSettingAssistant => 'AI assistant';
@@ -6525,43 +6451,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sharePreviewLoading => 'Generating preview...';
 
   @override
-  String get sharePreviewError => 'Preview generation failed';
-
-  @override
   String get shareRegenerateCard => 'Regenerate';
-
-  @override
-  String get shareCaptionStyleFlex => 'Flex';
-
-  @override
-  String get shareCaptionStyleCinematic => 'Cinematic';
-
-  @override
-  String get shareCaptionStyleHumble => 'Low-key';
-
-  @override
-  String get shareCaptionStyleInvite => 'Invite';
-
-  @override
-  String get shareContentAchievement => 'Achievement';
-
-  @override
-  String get shareContentTaskCompletion => 'Task Done';
-
-  @override
-  String get shareContentPlanProgress => 'Study Plan';
-
-  @override
-  String get shareContentCapsule => 'Time Capsule';
-
-  @override
-  String get shareContentKnowledgeNode => 'Knowledge Node';
-
-  @override
-  String get shareContentLearningReport => 'Learning Report';
-
-  @override
-  String get shareContentCognitivePrism => 'Cognitive Prism';
 
   @override
   String get dashboardPlanName => 'Computer Networks Exam Sprint';
@@ -6622,23 +6512,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notificationPermissionStatus => 'Notification Permission';
-
-  @override
-  String get notificationPermissionGranted => 'Granted';
-
-  @override
-  String get notificationPermissionDenied =>
-      'Notification permission denied, please enable in system settings';
-
-  @override
-  String get notificationPermissionPartial =>
-      'Some notification features are restricted, recommend enabling full permissions';
-
-  @override
-  String get notificationPermissionRequest => 'Request Permission';
-
-  @override
-  String get notificationPermissionOpenSettings => 'Open Settings';
 
   @override
   String get notificationPermissionDeniedHint =>
@@ -12309,10 +12182,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get theaterSettingsLabel => 'Reset deduction target';
 
   @override
-  String get theaterSettingsHint =>
-      'e.g., Master eigenvalues in linear algebra within two weeks';
-
-  @override
   String get theaterSettingsGenerate => 'Generate new deduction';
 
   @override
@@ -12649,16 +12518,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get theaterRouteDataNote => 'Data note';
 
   @override
-  String theaterRouteCompletionRange(Object high, Object low) {
-    return 'Completion range $low%-$high%';
-  }
-
-  @override
-  String theaterRouteMasteryRange(Object high, Object low) {
-    return 'Mastery range $low%-$high%';
-  }
-
-  @override
   String get theaterRouteSimulateFromCurrent => 'Take to simulation';
 
   @override
@@ -12783,16 +12642,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get theaterWhatIfGenerateFull => 'Generate full what-if result';
-
-  @override
-  String theaterWhatIfOriginal(Object original) {
-    return 'Original $original';
-  }
-
-  @override
-  String theaterWhatIfAdjusted(Object adjusted) {
-    return 'Adjusted $adjusted';
-  }
 
   @override
   String theaterWhatIfRemainingPath(Object path) {
@@ -16812,15 +16661,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get onboardingVoiceInput => 'Voice Input';
 
   @override
-  String get onboardingVoiceInputEn => 'Voice Input (English)';
-
-  @override
   String get onboardingVoiceInputDesc =>
       'Enable microphone for voice commands and dictation';
-
-  @override
-  String get onboardingVoiceInputDescEn =>
-      'Enable English voice input for voice commands and dictation';
 
   @override
   String get onboardingPermissionEnable => 'Enable';
@@ -19640,10 +19482,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'This type of smart reminder has been disabled';
 
   @override
-  String get notificationEncouragementSent =>
-      'They received your encouragement';
-
-  @override
   String get notificationEncouragementSentFallback =>
       'They received your encouragement';
 
@@ -19772,17 +19610,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationRecallFeedbackRecorded => 'Feedback recorded';
 
   @override
-  String get notificationSendEncouragement => 'Send encouragement';
-
-  @override
-  String notificationPreviewWithStep(Object content, Object step) {
-    return '$content\nSuggested action: $step';
-  }
-
-  @override
-  String get notificationUnknownError => 'Unknown error';
-
-  @override
   String get notificationAnalyticsFunnelTitle =>
       'Intervention funnel (by trigger type)';
 
@@ -19858,21 +19685,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notificationAnalyticsStartedLabel => 'Started';
-
-  @override
-  String get notificationAnalyticsTrendView => 'Viewed';
-
-  @override
-  String get notificationAnalyticsTrendAccept => 'Accepted';
-
-  @override
-  String get notificationAnalyticsTrendStart => 'Started';
-
-  @override
-  String notificationAnalyticsRateSuffix(
-      Object acceptanceRate, Object actionRate) {
-    return 'Acceptance rate: $acceptanceRate% · Action rate: $actionRate%';
-  }
 
   @override
   String get focusNoTaskHint =>
@@ -20659,22 +20471,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatMemoryReferenceDetailTitle => 'Related memories';
-
-  @override
-  String get chatMemoryReferenceNeedsConfirmation => 'needs confirmation';
-
-  @override
-  String get chatMemoryReferenceNotRight => 'Not right';
-
-  @override
-  String chatMemoryReferenceUsed(Object count) {
-    return 'Used $count related memories';
-  }
-
-  @override
-  String chatMemoryReferenceReceiptLabel(Object count) {
-    return 'Aurora used $count related memories';
-  }
 
   @override
   String chatMemorySessionCount(Object count) {
@@ -28298,11 +28094,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String skillLoadFailed(String error) {
-    return 'Skills load failed: $error';
-  }
-
-  @override
   String get skillTitle => 'My Skills';
 
   @override
@@ -28349,16 +28140,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get skillSaved => 'Skill saved';
 
   @override
-  String skillSaveFailed(String error) {
-    return 'Save failed: $error';
-  }
-
-  @override
-  String skillActionFailed(String error) {
-    return 'Action failed: $error';
-  }
-
-  @override
   String get skillEditorNew => 'New Skill';
 
   @override
@@ -28400,11 +28181,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get skillDraftGenerate => 'Generate Draft';
-
-  @override
-  String skillDraftFailed(String error) {
-    return 'Draft generation failed: $error';
-  }
 
   @override
   String get gdTitle => 'Community Square';
@@ -28737,13 +28513,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get planSprintSubmitFailed =>
-      'Sprint submission failed, please try again';
-
-  @override
-  String get planPortfolioLoadFailedMsg => 'Failed to load learning portfolio';
-
-  @override
   String get planPortfolioRetry => 'Retry';
 
   @override
@@ -28795,9 +28564,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get streakQualityDaysShort => 'quality';
-
-  @override
-  String get streakQualityTodayBreakdown => 'Today\'s quality breakdown';
 
   @override
   String get streakQualityEffectiveMinutes => 'Effective time';
@@ -31298,9 +31064,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get streakQualityRecoveryScore => 'Recovery';
 
   @override
-  String get streakQualitySuggestedAction => 'Suggested action';
-
-  @override
   String envelopeEngagementSummary(int streak, int sessions) {
     return '${streak}d streak · $sessions sessions this week';
   }
@@ -31853,9 +31616,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sprintActionLoading => 'Loading...';
-
-  @override
-  String get syncCenterLoading => 'Loading...';
 
   @override
   String get securityLogLoading => 'Loading...';

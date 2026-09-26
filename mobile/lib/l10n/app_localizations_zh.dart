@@ -1258,15 +1258,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get streakRiskLowFreeze => '仅剩1次冻结卡，建议及时补充。';
 
   @override
-  String get streakShopTitle => '需要冻结卡保护？';
-
-  @override
-  String get streakShopSubtitle => '前往光子商城获取补给';
-
-  @override
-  String get streakShopAction => '打开商城';
-
-  @override
   String get streakDetails => '连胜详情';
 
   @override
@@ -1586,11 +1577,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get streakTotalLabel => '累计';
 
   @override
-  String streakTotal(Object count) {
-    return '累计$count';
-  }
-
-  @override
   String get streakStartChallenge => '开始';
 
   @override
@@ -1650,11 +1636,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String timeWeeksAgo(num count) {
-    return '$count周前';
-  }
-
-  @override
   String timeMonthsAgo(num count) {
     return '$count个月前';
   }
@@ -1680,11 +1661,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String timeInWeeks(num count) {
-    return '$count周后';
-  }
-
-  @override
   String timeInMonths(num count) {
     return '$count个月后';
   }
@@ -1699,21 +1675,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get timeYesterday => '昨天';
-
-  @override
-  String get timeTomorrow => '明天';
-
-  @override
-  String get timeThisWeek => '本周';
-
-  @override
-  String get timeNextWeek => '下周';
-
-  @override
-  String get timeThisMonth => '本月';
-
-  @override
-  String get timeLastMonth => '上月';
 
   @override
   String durationHours(Object count) {
@@ -2619,11 +2580,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get syncCenterDiagnosticsCopied => '已复制诊断信息';
 
   @override
-  String syncCenterDisplayLimit(Object limit) {
-    return '最多展示 $limit 条';
-  }
-
-  @override
   String get syncCenterRetryFailedTriggered => '已触发失败重试';
 
   @override
@@ -2643,13 +2599,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get syncCenterByTopic => '按主题统计';
-
-  @override
   String get syncCenterNoPendingItems => '暂无待同步项';
-
-  @override
-  String get syncCenterTopicLabel => '主题';
 
   @override
   String get syncCenterTopicAll => '全部';
@@ -2735,11 +2685,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get shareCardGenerateFailed => '分享卡生成失败，请稍后重试';
-
-  @override
-  String shareCardPrepareFailed(Object error) {
-    return '分享卡准备失败: $error';
-  }
 
   @override
   String shareFailed(Object error) {
@@ -4387,12 +4332,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get onboardingSettingRemindersDesc => '在最佳时间推送学习建议';
-
-  @override
-  String get onboardingSettingAnalytics => '学习分析';
-
-  @override
-  String get onboardingSettingAnalyticsDesc => '生成个性化学习报告';
 
   @override
   String get onboardingSettingAssistant => 'AI 助手';
@@ -6258,43 +6197,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sharePreviewLoading => '正在生成预览...';
 
   @override
-  String get sharePreviewError => '预览生成失败';
-
-  @override
   String get shareRegenerateCard => '重新生成';
-
-  @override
-  String get shareCaptionStyleFlex => '高光炫耀';
-
-  @override
-  String get shareCaptionStyleCinematic => '氛围感';
-
-  @override
-  String get shareCaptionStyleHumble => '低调分享';
-
-  @override
-  String get shareCaptionStyleInvite => '邀请同行';
-
-  @override
-  String get shareContentAchievement => '成就分享';
-
-  @override
-  String get shareContentTaskCompletion => '任务完成';
-
-  @override
-  String get shareContentPlanProgress => '学习计划';
-
-  @override
-  String get shareContentCapsule => '时光胶囊';
-
-  @override
-  String get shareContentKnowledgeNode => '知识节点';
-
-  @override
-  String get shareContentLearningReport => '学习报告';
-
-  @override
-  String get shareContentCognitivePrism => '认知棱镜';
 
   @override
   String get dashboardPlanName => '计算机网络考前冲刺';
@@ -6352,21 +6255,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get notificationPermissionStatus => '通知权限状态';
-
-  @override
-  String get notificationPermissionGranted => '已授权';
-
-  @override
-  String get notificationPermissionDenied => '通知权限被拒绝，请在系统设置中开启';
-
-  @override
-  String get notificationPermissionPartial => '部分通知功能受限，建议开启完整权限';
-
-  @override
-  String get notificationPermissionRequest => '请求权限';
-
-  @override
-  String get notificationPermissionOpenSettings => '打开设置';
 
   @override
   String get notificationPermissionDeniedHint => '通知权限被拒绝，请在系统设置中开启';
@@ -11794,9 +11682,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get theaterSettingsLabel => '重新设定推演目标';
 
   @override
-  String get theaterSettingsHint => '例如：两周内掌握线性代数的特征值部分';
-
-  @override
   String get theaterSettingsGenerate => '生成新推演';
 
   @override
@@ -12123,16 +12008,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get theaterRouteDataNote => '数据说明';
 
   @override
-  String theaterRouteCompletionRange(Object high, Object low) {
-    return '完成率区间 $low%-$high%';
-  }
-
-  @override
-  String theaterRouteMasteryRange(Object high, Object low) {
-    return '掌握度区间 $low%-$high%';
-  }
-
-  @override
   String get theaterRouteSimulateFromCurrent => '带去模拟';
 
   @override
@@ -12255,16 +12130,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get theaterWhatIfGenerateFull => '生成完整假设推演结果';
-
-  @override
-  String theaterWhatIfOriginal(Object original) {
-    return '原始 $original';
-  }
-
-  @override
-  String theaterWhatIfAdjusted(Object adjusted) {
-    return '调整后 $adjusted';
-  }
 
   @override
   String theaterWhatIfRemainingPath(Object path) {
@@ -16089,13 +15954,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get onboardingVoiceInput => '语音输入';
 
   @override
-  String get onboardingVoiceInputEn => '英语语音输入';
-
-  @override
   String get onboardingVoiceInputDesc => '开启麦克风权限，支持语音指令与听写输入';
-
-  @override
-  String get onboardingVoiceInputDescEn => '开启英语语音输入，支持语音指令与听写';
 
   @override
   String get onboardingPermissionEnable => '启用';
@@ -18832,9 +18691,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationPushCategoryDisabled => '这类主动提醒已关闭';
 
   @override
-  String get notificationEncouragementSent => '他收到了你的鼓励';
-
-  @override
   String get notificationEncouragementSentFallback => '他收到了你的鼓励';
 
   @override
@@ -18958,17 +18814,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationRecallFeedbackRecorded => '反馈已记录';
 
   @override
-  String get notificationSendEncouragement => '发个鼓励';
-
-  @override
-  String notificationPreviewWithStep(Object content, Object step) {
-    return '$content\n建议动作：$step';
-  }
-
-  @override
-  String get notificationUnknownError => '未知错误';
-
-  @override
   String get notificationAnalyticsFunnelTitle => '干预漏斗（按触发类型）';
 
   @override
@@ -19042,21 +18887,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get notificationAnalyticsStartedLabel => '已开始';
-
-  @override
-  String get notificationAnalyticsTrendView => '查看';
-
-  @override
-  String get notificationAnalyticsTrendAccept => '接受';
-
-  @override
-  String get notificationAnalyticsTrendStart => '开始';
-
-  @override
-  String notificationAnalyticsRateSuffix(
-      Object acceptanceRate, Object actionRate) {
-    return '接受率: $acceptanceRate% · 行动率: $actionRate%';
-  }
 
   @override
   String get focusNoTaskHint => '先选一个任务开始，或直接进入自由专注。';
@@ -19806,22 +19636,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatMemoryReferenceDetailTitle => '相关记忆';
-
-  @override
-  String get chatMemoryReferenceNeedsConfirmation => '待确认';
-
-  @override
-  String get chatMemoryReferenceNotRight => '不对';
-
-  @override
-  String chatMemoryReferenceUsed(Object count) {
-    return '引用了 $count 条相关记忆';
-  }
-
-  @override
-  String chatMemoryReferenceReceiptLabel(Object count) {
-    return 'Aurora 引用了 $count 条相关记忆';
-  }
 
   @override
   String chatMemorySessionCount(Object count) {
@@ -27104,11 +26918,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String skillLoadFailed(String error) {
-    return '我的方式加载失败: $error';
-  }
-
-  @override
   String get skillTitle => '我的方式';
 
   @override
@@ -27154,16 +26963,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get skillSaved => '已保存我的方式';
 
   @override
-  String skillSaveFailed(String error) {
-    return '保存失败: $error';
-  }
-
-  @override
-  String skillActionFailed(String error) {
-    return '操作失败: $error';
-  }
-
-  @override
   String get skillEditorNew => '新建方式';
 
   @override
@@ -27204,11 +27003,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get skillDraftGenerate => '生成草稿';
-
-  @override
-  String skillDraftFailed(String error) {
-    return '草稿生成失败: $error';
-  }
 
   @override
   String get gdTitle => '社群广场';
@@ -27529,12 +27323,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get planSprintSubmitFailed => '冲刺提交失败，请重试';
-
-  @override
-  String get planPortfolioLoadFailedMsg => '加载学习组合失败';
-
-  @override
   String get planPortfolioRetry => '重试';
 
   @override
@@ -27584,9 +27372,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get streakQualityDaysShort => '质量日';
-
-  @override
-  String get streakQualityTodayBreakdown => '今日质量拆解';
 
   @override
   String get streakQualityEffectiveMinutes => '有效时长';
@@ -29978,9 +29763,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get streakQualityRecoveryScore => '恢复力';
 
   @override
-  String get streakQualitySuggestedAction => '建议行动';
-
-  @override
   String envelopeEngagementSummary(int streak, int sessions) {
     return '$streak天连续 · 本周$sessions次会话';
   }
@@ -30509,9 +30291,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get sprintActionLoading => '加载中...';
-
-  @override
-  String get syncCenterLoading => '加载中...';
 
   @override
   String get securityLogLoading => '加载中...';
