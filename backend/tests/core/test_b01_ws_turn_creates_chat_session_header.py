@@ -62,9 +62,10 @@ def _bare_persistence_layer_mixin() -> PersistenceLayerMixin:
     """裸 PersistenceLayerMixin，绑定 ChatOrchestrator 的 _coerce_session_uuid
     语义（uuid5 fallback），与生产组合一致。"""
     mixin = object.__new__(PersistenceLayerMixin)
-    mixin._coerce_session_uuid = staticmethod(  # type: ignore[method-assign]
-        lambda sid: ChatOrchestrator._coerce_session_uuid(mixin, sid)
-    )
+    # `_coerce_session_uuid` 已是 @staticmethod（单参）：旧双参 lambda
+    # `_coerce(mixin, sid)` 触发 TypeError，被 _persist_assistant_message 宽
+    # except 吞成 persist 全失败。对齐判例直绑 staticmethod 契约。
+    mixin._coerce_session_uuid = staticmethod(ChatOrchestrator._coerce_session_uuid)  # type: ignore[method-assign]
     return mixin
 
 

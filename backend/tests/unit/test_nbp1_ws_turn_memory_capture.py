@@ -178,7 +178,11 @@ class MinimalPersistenceOrchestrator(PersistenceLayerMixin):
     def __init__(self):
         self.redis = MagicMock()
 
-    _coerce_session_uuid = ChatOrchestrator._coerce_session_uuid
+    # `_coerce_session_uuid` 已是 @staticmethod（单参）：类体裸赋值普通函数会经
+    # 描述符协议变实例方法（self 抢占首位参），TypeError 被 _persist_assistant_message
+    # 宽 except 吞成 persist 全失败。对齐判例（test_persistence_layer_mixin）用
+    # staticmethod 包裹保持静态契约。
+    _coerce_session_uuid = staticmethod(ChatOrchestrator._coerce_session_uuid)
 
 
 @pytest.fixture
