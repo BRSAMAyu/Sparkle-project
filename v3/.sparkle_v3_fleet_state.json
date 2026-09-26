@@ -6,9 +6,9 @@
  "active": {
   "wt536": "mypy 批四烧减 869→≤829（避开 FIX-253 四点位专卡保留面）@c50c5aa5",
   "wt537": "FIX-257 guest 转正清洗种子数据（防伪造统计进生产榜）@30e14329",
-  "wt538": "FIX-253 四真缺陷修复（aurora service×3+orchestrator×1，红测先行可证伪）@30e14329",
   "wt539": "FIX-259(P2) StreakDayStatus.WEAK 四层断链修复（迁移/engine写面/mobile哨兵/docstring）@f46b60d7",
-  "wt540": "FIX-210 批五死键收割（share/notification/chat/time/streak 等小族 ~67）@644765d2"
+  "wt540": "FIX-210 批五死键收割（share/notification/chat/time/streak 等小族 ~67）@644765d2",
+  "wt541": "枚举值集守卫脚本卡（B-06 首推，封堵 259/260 类断链再发，含豁免清单机制）@cfaefe63"
  },
  "done": [
   "A-01",
@@ -538,7 +538,8 @@
   "wt531",
   "wt533",
   "wt534",
-  "wt535"
+  "wt535",
+  "wt538"
  ],
  "blocked": [],
  "notes": [
@@ -663,6 +664,7 @@
   "2026-09-26 23:5x 轮：wt530 analyze 批三集成完毕（c3bb7e03+73777024，union-merge 1 块 254 行存活；尾逗号双修（其基线含同一违例也烧了）git 自动并轨零冲突；合并态 gate PASS ERROR=0/W=4/INFO=412 allowlist 降档全落地；触达样例 56 绿+1 设计跳过；树清）——INFO 462→412（-50 真修：setters 转真 setter 11/表达式体 11/named constants 8/foreach 6 等族），WARNING 14→4（余 4 条 DEPRECATED_MEMBER_USE 刻意保留待真机卡），AVOID_PRINT 14 刻意不动（纯 Dart CLI debugPrint 断直跑属行为变更）。wt536 立即补位=mypy 批四（869→≤829，避开 FIX-253 四点位）。CI run 36251648705 在航（de44e5da）。三问：在航 5 槽（wt531/533/534/535/536）；空槽 0；下一卡=CI 裁决→wt531 返航→FIX-253 四缺陷专卡。",
   "2026-09-27 00:0x 轮：①wt531 时区层四收官集成（47e58a88+5518d95d+efb1e263 三 commit 全自动并轨——aurora service 与 wt528 类型烧减同文件重叠 git 零冲突，合并态 ratchet 869=869、时区族 73 绿、aurora+discovery 163 绿，树清）——FIX-243 checkpoint 触发日游标+FIX-251 计划排程网格/aurora 兜底钟，时区债务四面（读侧/写侧/触发游标/排程网格）全清；②wt533 B-02 审计集成（32133878，B02_DATA_TRUTH_BASELINE.md 报告+两 P3：FIX-257 guest 转正不清洗种子/FIX-258→原 256 重编号 demo 落库无 origin 标记；256 撞号第 10 次集成侧收口）——总体健康度中上，隔离网主体成体系，两缺口同属数据 origin 持久层缺标记列；③wt537/wt538 立即补位：FIX-257 修复卡（catalog 可识别才清、宁保守勿误删）+FIX-253 四真缺陷卡（wt531 已返航解除文件封锁）；④mypy 869 / analyze INFO 412 双棘轮并行烧减中（wt536 批四在航）。三问：在航 5 槽（wt535/536/537/538+协调者）；空槽 0；下一卡=CI 36251648705 裁决→FIX-258 demo origin 标记设计卡（与 257 修法共用设计）→l10n 批五。",
   "2026-09-27 00:2x 轮：wt534 B-06 审计集成（972f72c0 docs-only，union-merge+双撞号重编号 256→259(P2 StreakDayStatus.WEAK 四层断链)/257→260(P3 AchievementType.PLANNING)，B06 报告入库，树清）。核心结论：单源治理骨架成立（proto gen 不入库+三层守卫/DB 迁移唯一入口/身份 SEC-3 单链），真源漂移全聚集在 backend StrEnum↔Dart enum 手工镜像零守卫空档——首推枚举值集守卫进 rule_guard。wt539 立即补位=259 P2 修复卡（四层：Alembic 补值/engine 吞错/mobile unknown 哨兵范式/wire docstring）。撞号累计 11 次全部集成侧收口；wt537/wt538 派单时预留号 259 已被 259 实占，其新发现将顺延（dispatch 注记已含）。三问：在航 5 槽（wt535/536/537/538/539）；空槽 0；下一卡=CI 36251648705 裁决（de44e5da 在航>50min）→260 AchievementType 单面值对齐小卡→枚举守卫脚本卡（B-06 首推）。",
-  "2026-09-27 00:4x 轮：wt535 批四集成完毕（b98c7ca1+07edad93，union-merge 257→261 重编号第 12 次撞号收口；合并态 gate PASS INFO 412+触达 12 绿，树清）——156 键 2631 行纯删除（home91/error23/galaxy23/knowledge19），五批累计 873 键~-25400 行；新发现 FIX-261（批一 e720416f 伪纯删除 77 行插入复活 6 死键，本批顺收 4）。wt540 立即补位=批五（小族 ~67，singles 长尾 358 留批六）。三问：在航 5 槽（wt536/537/538/539/540）；空槽 0；下一卡=CI 36251648705 裁决（>75min 上沿，下轮必查）→260 AchievementType 小卡→枚举守卫脚本卡。"
+  "2026-09-27 00:4x 轮：wt535 批四集成完毕（b98c7ca1+07edad93，union-merge 257→261 重编号第 12 次撞号收口；合并态 gate PASS INFO 412+触达 12 绿，树清）——156 键 2631 行纯删除（home91/error23/galaxy23/knowledge19），五批累计 873 键~-25400 行；新发现 FIX-261（批一 e720416f 伪纯删除 77 行插入复活 6 死键，本批顺收 4）。wt540 立即补位=批五（小族 ~67，singles 长尾 358 留批六）。三问：在航 5 槽（wt536/537/538/539/540）；空槽 0；下一卡=CI 36251648705 裁决（>75min 上沿，下轮必查）→260 AchievementType 小卡→枚举守卫脚本卡。",
+  "2026-09-27 01:0x 轮：①wt538 集成（48598701+77bfc581+b3e9ed44，union-merge 259→262 重编号第 13 次撞号；四真缺陷全红→绿：kill-switch off 分支 TypeError（不可达性双重根因实录）/str.isoformat 透传/drop_thread 扩 Literal 有据/None filename 滤后排序；mypy 869→861 顺带降；aurora+kill-switch 157 绿+orchestrator 125 绿，树清）；②★又抓一个真测试门回归：wt538 复跑暴露 test_persistence_layer_mixin 4 红——wt528 批三 _coerce_session_uuid @staticmethod 化后测试桩裸赋值退化普通函数多绑 self（同 rb10 判例修桩 staticmethod() 包裹，10/10 绿）——在航 run 36251648705 含 wt528 必红此 4 测，第二次 doomed run 止损推送（de44e5da..cfaefe63：wt534/535/538 三集成+双测试修），新 run 36253679384 起跑；③wt541 补位=枚举值集守卫卡（B-06 首推，259/260 断链的结构性封堵，豁免清单机制让守卫可先行落地）。教训沉淀：mypy 重构类卡（批次烧减）验证矩阵必须含『同文件全部测试套件』而非仅类型邻域——rb10 与本次两案同源。三问：在航 5 槽（wt536/537/539/540/541）；空槽 0；下一卡=CI 裁决→wt537 返航→FIX-258 设计卡→260 AchievementType 小卡。"
  ]
 }
