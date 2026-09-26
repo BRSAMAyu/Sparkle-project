@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from typing import Any
 
+from app.core.time_utils import DEFAULT_USER_TIMEZONE, local_date
 from app.orchestration.plan_quality_contract import (
     PLAN_MODE_FULL,
     PLAN_MODE_NEXT_STEP_ONLY,
@@ -139,6 +140,7 @@ class PlanningStrategyCompiler:
         user_context_payload: dict[str, Any] | None = None,
         plan_context: dict[str, Any] | None = None,
         planning_constraints: dict[str, Any] | None = None,
+        today: date | None = None,
     ) -> CompiledPlanningStrategy:
         brief = _as_dict(situation_brief)
         user_context = _as_dict(user_context_payload)
@@ -193,7 +195,7 @@ class PlanningStrategyCompiler:
         readiness_level = _strip(decision_context.get("planning_readiness") or insight_state.get("readiness_level"))
         plan_mode = self.contract.classify_mode(readiness_action=readiness_action)
 
-        deadline_days = self._derive_deadline_days(vision=vision, plan_context=plan_context)
+        deadline_days = self._derive_deadline_days(vision=vision, plan_context=plan_context, today=today)
         overload_signal = self._detect_overload(
             decision_context=decision_context,
             current_state=current_state,
@@ -531,11 +533,19 @@ class PlanningStrategyCompiler:
             return 1
         return 3
 
-    def _derive_deadline_days(self, *, vision: dict[str, Any], plan_context: dict[str, Any]) -> int | None:
+    def _derive_deadline_days(
+        self, *, vision: dict[str, Any], plan_context: dict[str, Any], today: date | None = None
+    ) -> int | None:
         target = _parse_date(vision.get("target_date") or plan_context.get("target_date"))
         if target is None:
             return None
-        delta = (target - _utcnow().date()).days
+        # V3-FIX-221（209 同族 days_left）：target 是日界语义，右值须用「今
+        # 天」的同一网格——修前 ``_utcnow().date()`` 是 UTC date，上海晨间
+        # （UTC 尚在前日）deadline_days 偏一日。编译器无 db 通道：today 形
+        # 参供有 tz 通路的调用方显式传入，缺省回落主市场 Asia/Shanghai 本地
+        # 日（与族先例缺省一致，去 UTC/宿主机钟依赖）。
+        today = today if today is not None else local_date(_utcnow(), DEFAULT_USER_TIMEZONE)
+        delta = (target - today).days
         return max(delta, 0)
 
     @staticmethod

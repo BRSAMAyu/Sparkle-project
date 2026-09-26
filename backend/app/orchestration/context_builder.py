@@ -523,11 +523,25 @@ class ContextBuilderMixin:
             in_progress = result.scalar() or 0
 
             # Overdue count (pending/in_progress and due_date < now)
+            # V3-FIX-221：Task.due_date 是客户端给到的到期日（无时刻成分，
+            # 墙上钟日界语义），overdue 右值须用用户本地日——修前
+            # ``due_date < utcnow()`` 把 Date 列与 UTC datetime 瞬间在 SQL
+            # 里直比（date 升为当日零点），UTC+8 晚间把「本地今日到期」
+            # 任务计 overdue（同文件 :1704 207 修面之外的第二处）。tz 解析
+            # 沿 207 先例（PushPreference.timezone 标量直查，缺省
+            # Asia/Shanghai）。
+            tz_name = valid_timezone_name(
+                await db_session.scalar(
+                    select(PushPreference.timezone).where(PushPreference.user_id == uuid.UUID(user_id))
+                )
+            )
+            local_today = local_date(utcnow(), tz_name)
             result = await db_session.execute(
                 select(func.count(Task.id)).where(
                     Task.user_id == uuid.UUID(user_id),
                     Task.status.in_([ModelTaskStatus.PENDING, ModelTaskStatus.IN_PROGRESS]),
-                    Task.due_date < utcnow(),
+                    Task.due_date.is_not(None),
+                    Task.due_date < local_today,
                 )
             )
             overdue = result.scalar() or 0

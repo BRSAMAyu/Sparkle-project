@@ -17,11 +17,13 @@ from app.config import settings
 from app.core.event_bus import event_bus
 from app.core.event_types import ATTRACTOR_UPDATED
 from app.core.metrics import get_or_create_metric
+from app.core.time_utils import local_date, local_midnight_as_utc_naive, valid_timezone_name
 from app.models.aurora_stage27 import PersDynAttractor
 from app.models.focus import FocusSession, FocusStatus
 from app.models.galaxy import StudyRecord
 from app.models.memory import EpisodicMemory, Scene
 from app.models.task import Task
+from app.models.user import PushPreference
 from app.schemas.foresight import AttractorState
 
 PERSDYN_ATTRACTOR_UPDATED_TOTAL = get_or_create_metric(
@@ -45,12 +47,26 @@ def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
-def _start_of_day(day: date) -> datetime:
-    return datetime.combine(day, datetime.min.time())
+def _day_start_utc(day: date, tz_name: str) -> datetime:
+    """V3-FIX-221：本地日界的 UTC naive 瞬间（对 UTC 存储列切「用户日」窗）。
+
+    tz="UTC" 时与旧 ``_start_of_day`` 逐位一致（直接调用方零漂移）；
+    用户时区下由 local_midnight_as_utc_naive 换算，DB 预过滤与内存窗两侧
+    同钟。日窗终点由 ``_day_start_utc(day + 1d)`` 表达（替代旧
+    ``_end_exclusive``）。
+    """
+    return local_midnight_as_utc_naive(day, tz_name)
 
 
-def _end_exclusive(day: date) -> datetime:
-    return _start_of_day(day) + timedelta(days=1)
+def _reference_day(reference_time: datetime, tz_name: str) -> date:
+    """reference_time 的「用户本地日」（V3-FIX-221）：墙上语义 due_date 的比对网格。"""
+    return local_date(reference_time, tz_name)
+
+
+async def _resolve_timezone_name(db: AsyncSession, user_id: UUID) -> str:
+    """用户时区名（V3-FIX-221）：PushPreference.timezone 标量直查，缺省 Asia/Shanghai。"""
+    tz_name = await db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+    return valid_timezone_name(tz_name)
 
 
 def _linear_regression_slope(values: Iterable[float]) -> float:
@@ -141,9 +157,14 @@ class PersDynAttractorService:
     ) -> dict[str, float]:
         normalized_user_id = self._require_user_id(user_id)
         reference_time = now or _utcnow()
-        rows = await self._load_signal_rows(normalized_user_id, reference_time)
+        # V3-FIX-221：reference_day 与日窗端点切用户本地日（修前 UTC date，
+        # 墙上语义 due_date 落 UTC 日网格）。
+        tz_name = await _resolve_timezone_name(self.db, normalized_user_id)
+        rows = await self._load_signal_rows(normalized_user_id, reference_time, tz_name=tz_name)
         return self._build_observation_for_day(
-            rows=rows, reference_day=reference_time.date()
+            rows=rows,
+            reference_day=_reference_day(reference_time, tz_name),
+            tz_name=tz_name,
         )
 
     async def build_daily_observations(
@@ -155,18 +176,21 @@ class PersDynAttractorService:
     ) -> dict[date, dict[str, float]]:
         normalized_user_id = self._require_user_id(user_id)
         reference_time = now or _utcnow()
+        tz_name = await _resolve_timezone_name(self.db, normalized_user_id)
         lookback_days = max(1, int(days or self.HISTORY_DAYS))
         rows = await self._load_signal_rows(
             normalized_user_id,
             reference_time,
             lookback_days=lookback_days,
+            tz_name=tz_name,
         )
         observations: dict[date, dict[str, float]] = {}
         for offset in range(lookback_days - 1, -1, -1):
-            reference_day = reference_time.date() - timedelta(days=offset)
+            reference_day = _reference_day(reference_time, tz_name) - timedelta(days=offset)
             observations[reference_day] = self._build_observation_for_day(
                 rows=rows,
                 reference_day=reference_day,
+                tz_name=tz_name,
             )
         return observations
 
@@ -178,9 +202,10 @@ class PersDynAttractorService:
     ) -> dict[str, AttractorState]:
         normalized_user_id = self._require_user_id(user_id)
         reference_time = now or _utcnow()
-        rows = await self._load_signal_rows(normalized_user_id, reference_time)
+        tz_name = await _resolve_timezone_name(self.db, normalized_user_id)
+        rows = await self._load_signal_rows(normalized_user_id, reference_time, tz_name=tz_name)
         active_days = self._count_active_days(rows=rows, reference_time=reference_time)
-        series = self._build_series(rows=rows, reference_time=reference_time)
+        series = self._build_series(rows=rows, reference_time=reference_time, tz_name=tz_name)
         states = {
             dim: self._estimate_state(
                 dim=dim,
@@ -256,10 +281,14 @@ class PersDynAttractorService:
         reference_time: datetime,
         *,
         lookback_days: int | None = None,
+        tz_name: str = "UTC",
     ) -> _SignalRows:
         requested_days = max(1, int(lookback_days or self.CONFIDENCE_LOOKBACK_DAYS))
-        earliest_start = _start_of_day(
-            reference_time.date() - timedelta(days=requested_days - 1)
+        # V3-FIX-221：回看窗起点按用户本地日切、换算回 UTC 瞬间（对 UTC
+        # 存储列过滤；tz 缺省 "UTC" 与旧 UTC 零点逐位一致）。
+        earliest_start = _day_start_utc(
+            _reference_day(reference_time, tz_name) - timedelta(days=requested_days - 1),
+            tz_name,
         )
 
         study_records = tuple(
@@ -352,24 +381,26 @@ class PersDynAttractorService:
         rows: _SignalRows,
         reference_time: datetime,
         days: int | None = None,
+        tz_name: str = "UTC",
     ) -> dict[str, list[float]]:
         window_days = max(1, int(days or self.HISTORY_DAYS))
         series: dict[str, list[Any]] = {dim: [] for dim in self.DIMENSIONS}
         for offset in range(window_days - 1, -1, -1):
-            reference_day = reference_time.date() - timedelta(days=offset)
-            observation = self._build_observation_for_day(
-                rows=rows, reference_day=reference_day
-            )
+            reference_day = _reference_day(reference_time, tz_name) - timedelta(days=offset)
+            observation = self._build_observation_for_day(rows=rows, reference_day=reference_day, tz_name=tz_name)
             for dim in self.DIMENSIONS:
                 series[dim].append(float(observation[dim]))
         return series
 
     def _build_observation_for_day(
-        self, *, rows: _SignalRows, reference_day: date
+        self, *, rows: _SignalRows, reference_day: date, tz_name: str = "UTC"
     ) -> dict[str, float]:
-        day_end = _end_exclusive(reference_day)
-        start_3d = _start_of_day(reference_day - timedelta(days=2))
-        start_7d = _start_of_day(reference_day - timedelta(days=6))
+        # V3-FIX-221：日窗端点按用户本地日切、换算回 UTC 瞬间（created_at/
+        # completed_at/end_time/time_end/occurred_at 均为 UTC 存储列；
+        # tz 缺省 "UTC" 与旧 UTC 日网格逐位一致）。
+        day_end = _day_start_utc(reference_day + timedelta(days=1), tz_name)
+        start_3d = _day_start_utc(reference_day - timedelta(days=2), tz_name)
+        start_7d = _day_start_utc(reference_day - timedelta(days=6), tz_name)
 
         study_minutes = sum(
             int(record.study_minutes or 0)
@@ -463,6 +494,9 @@ class PersDynAttractorService:
         }
 
     def _count_active_days(self, *, rows: _SignalRows, reference_time: datetime) -> int:
+        # 钟源定界（V3-FIX-221 顺带核）：置信度活跃日计数两端同用 UTC date
+        # 网格（reference_time.date() 与各 UTC 存储列 .date()），自洽无跨
+        # 钟，非本卡登记面，保持不动。
         window_start = reference_time.date() - timedelta(
             days=self.CONFIDENCE_LOOKBACK_DAYS - 1
         )

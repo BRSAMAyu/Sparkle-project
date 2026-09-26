@@ -11,9 +11,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.aurora.runtime_v1.state import AuroraEnergyStore
 from app.core.cache import cache_service
+from app.core.time_utils import (
+    DEFAULT_USER_TIMEZONE,
+    local_date,
+    utcnow,
+    valid_timezone_name,
+)
 from app.models.plan import Plan, PlanPriority, PlanStage
 from app.models.plan_state import PlanState, PlanStateStatus
 from app.models.task import Task, TaskStatus
+from app.models.user import PushPreference
 
 
 @dataclass(frozen=True)
@@ -33,11 +40,14 @@ class _TaskCandidate:
     plan_state: PlanState | None = None
 
 
-def _is_today_relevant(task: Task, today: date, plan: Plan | None = None) -> bool:
+def _is_today_relevant(task: Task, today: date, plan: Plan | None = None, tz_name: str = "UTC") -> bool:
+    # V3-FIX-221：today 由调用方传用户本地日；completed_at/created_at 是
+    # UTC 存储列，比本地日一律先 local_date 换算（tz 缺省 "UTC" 与旧
+    # .date() 逐位一致，直接调用方零漂移）。
     if task.status in {TaskStatus.IN_PROGRESS, TaskStatus.STUCK}:
         return True
     if task.status == TaskStatus.COMPLETED:
-        return task.completed_at is not None and task.completed_at.date() == today
+        return task.completed_at is not None and _as_local_date(task.completed_at, tz_name) == today
     if task.due_date is not None:
         return task.due_date <= today
     # P2-G (daily-flow R2): undated open tasks used to be unconditionally
@@ -52,10 +62,10 @@ def _is_today_relevant(task: Task, today: date, plan: Plan | None = None) -> boo
     #     tasks stay reachable via GET /tasks and /tasks/recommended.
     day_index = _task_day_index(task)
     if day_index is not None and plan is not None:
-        current_day = _plan_current_day(plan, today)
+        current_day = _plan_current_day(plan, today, tz_name)
         if current_day is not None:
             return day_index <= current_day
-    created = _as_date(task.created_at)
+    created = _as_local_date(task.created_at, tz_name)
     return created is not None and created == today
 
 
@@ -84,10 +94,25 @@ def _as_date(value: date | datetime | None) -> date | None:
     return None
 
 
-def _plan_current_day(plan: Plan, today: date) -> int | None:
-    """1-based day a sprint plan has progressed to, or None when unknown."""
+def _as_local_date(value: date | datetime | None, tz_name: str) -> date | None:
+    """UTC 存储列（created_at/completed_at）取「用户本地日」的统一入口。
+
+    naive-UTC 瞬间先按 tz 换算本地日（time_utils.local_date）；date 值
+    （已是日界语义）原样透传。tz 缺省 "UTC" 时与旧 ``.date()`` 逐位一致。
+    """
+    if isinstance(value, datetime):
+        return local_date(value, tz_name)
+    return _as_date(value)
+
+
+def _plan_current_day(plan: Plan, today: date, tz_name: str = "UTC") -> int | None:
+    """1-based day a sprint plan has progressed to, or None when unknown.
+
+    plan.target_date 是日界语义（透传）；plan.created_at 是 UTC 存储列，
+    按用户本地日换算（V3-FIX-221）后与 today 同钟相减。
+    """
     target_date = getattr(plan, "target_date", None)
-    created = _as_date(getattr(plan, "created_at", None))
+    created = _as_local_date(getattr(plan, "created_at", None), tz_name)
     if target_date is None or created is None:
         return None
     total_days = (target_date - created).days
@@ -114,7 +139,13 @@ class DailyTaskSelectionService:
         include_completed_today: bool = False,
         only_today_relevant: bool = False,
     ) -> list[DailyTaskSelection]:
-        today = date.today()
+        # V3-FIX-221：「今日」取用户本地日（修前 date.today() 是宿主机本地
+        # 日，既非 UTC 亦非用户时区）。tz 沿 207/211 先例——
+        # PushPreference.timezone 标量直查，缺省 Asia/Shanghai。
+        tz_name = valid_timezone_name(
+            await self.db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+        )
+        today = local_date(utcnow(), tz_name)
         statuses = list(self.ACTIVE_STATUSES)
         if include_completed_today:
             statuses.append(TaskStatus.COMPLETED)
@@ -149,14 +180,14 @@ class DailyTaskSelectionService:
                 if candidate.task.status != TaskStatus.COMPLETED
                 or (
                     candidate.task.completed_at is not None
-                    and candidate.task.completed_at.date() == today
+                    and _as_local_date(candidate.task.completed_at, tz_name) == today
                 )
             ]
         if only_today_relevant:
             candidates = [
                 candidate
                 for candidate in candidates
-                if _is_today_relevant(candidate.task, today, plan=candidate.plan)
+                if _is_today_relevant(candidate.task, today, plan=candidate.plan, tz_name=tz_name)
             ]
 
         aurora = await self._load_aurora_energy(user_id)
@@ -205,7 +236,10 @@ class DailyTaskSelectionService:
         aurora: dict[str, Any] | None = None,
         today: date | None = None,
     ) -> DailyTaskSelection:
-        today = today or date.today()
+        # V3-FIX-221：缺省 today 回落主市场本地日（修前 date.today() 是宿主
+        # 机钟）。本类方法无 db 通道，缺省与族先例「缺省 Asia/Shanghai」
+        # 一致；select_tasks 主链路显式传用户本地日。
+        today = today or local_date(utcnow(), DEFAULT_USER_TIMEZONE)
         aurora = aurora or {}
         score = 0.0
         reasons: list[str] = []
