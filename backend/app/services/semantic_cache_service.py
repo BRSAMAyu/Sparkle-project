@@ -541,6 +541,8 @@ class SemanticCacheService:
                 logger.warning(f"Failed to acquire lock for {cache_key} (Timeout). Waiting...")
                 # 稍微等待一下再尝试获取（降级策略）
                 await asyncio.sleep(0.1)
+                # V3-FIX-255：降级路径与主路径同源阈值——effective_threshold
+                # 缺省 0.95 比主路径（调用方传入/未传收敛 1.0）更严，两路口径须一致
                 # 保持旧 ``or`` 语义：truthy 命中直接用，falsy/None 命中仍走工厂
                 fallback_hit = cast(
                     "_T | None",
@@ -548,6 +550,7 @@ class SemanticCacheService:
                         await self.get(
                             query,
                             user_id,
+                            effective_threshold,
                             knowledge_version=knowledge_version,
                             embedding_version=embedding_version,
                         )
