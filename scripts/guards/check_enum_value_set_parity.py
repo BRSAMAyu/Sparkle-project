@@ -10,7 +10,8 @@
 机制：
 - 对「双面都存在」的枚举族做值集 diff（FAMILIES 显式映射表，家族真源以 backend
   app/models/ 与 app/core/run_state_machine.py 的 StrEnum 为准；wt548 扩表后 65 族
-  = dual 44 + passthrough 21，逐族判定证据见映射表内注释）：
+  = dual 44 + passthrough 21，V3-FIX-291（wt585）再入管 models 外 11 族 → 76 族
+  = dual 55 + passthrough 21，逐族判定证据见映射表内注释）：
   * backend 值集 ⊄ mobile 可解析 wire 值集，且 mobile 无 unknown 哨兵兜底 → FAIL
     （EP001，列出差集）；
   * mobile 有 unknown 哨兵兜底 → 解析不崩，降级 WARN（EP001T，仍应尽快对齐）；
@@ -26,6 +27,14 @@
   命中豁免的 FAIL 照常打印（KNOWN-DRIFT 行，绝不静默跳过）；到期后豁免自动失效
   重新变红，提示删豁免或续期。映射完整性问题（EP004）不适用豁免——守卫必须始终
   指向真实代码。
+- V3-FIX-291（wt585）扩射程：FAMILIES 不再限 app/models/ 真源——路径显式即管
+  （schemas/services/orchestration/aurora 等 models 外族 11 族入表）；Python 解析器
+  放开 `(enum.Enum)` 基类（models 内 FeedbackCategory/GenerationType 这类非 StrEnum
+  枚举原是「盘点盲区中的盲区」）。形态分裂族（backend SCREAMING/snake wire ↔ mobile
+  lower/camel 标识符）以 wire_map 显式钉死「backend 值 → mobile 已接受字面量」映射：
+  每个真源值必须有 ≥1 个已接受字面量（缺失 = EP001 FAIL，可豁免）——单边加值、
+  有损 default 降级立即暴露；StrEnum 同值别名成员（如 StepStatus.RUNNING）以
+  value_aliases 显式声明后不触发 EP004 重复值检查，未声明的重复值照旧 FAIL。
 - backend-only 族（BACKEND_ONLY 清单）：无 wire 下发面/纯服务端状态的 StrEnum 不进
   映射表，从 INFO 扩表候选中分离单列展示（判定证据逐族在清单内，file:line 可复核）；
   一旦接线下发 mobile 须改判 passthrough 挪入 FAMILIES。
@@ -481,6 +490,139 @@ FAMILIES: dict[str, dict] = {
         "backend": ("app/models/learning_assets.py", "AssetStatus"),
         "mode": "passthrough",
     },
+    # -----------------------------------------------------------------------
+    # V3-FIX-291（wt585）扩表：models 外族入管（wt574-ARCHMAP B 批逐条核实后收编，
+    # 审计证据 v3-output/WT574-ARCHMAP/report.md B1-B5/B7）。真源不再限 app/models/
+    # ——schemas/services/orchestration/aurora 的族路径显式即管；(enum.Enum) 非
+    # StrEnum 族同批入管（原「盘点盲区中的盲区」）。形态分裂族以 wire_map 钉死映射。
+    # -----------------------------------------------------------------------
+    # ===== dual：plan-review（wt574 B1）=====
+    "ReviewDecision": {
+        # 核实结论：backend 三处同名异义、非同概念——不互检（互检=永久假 FAIL）：
+        #   · agents/reviewer_agent.py:67 ReviewDecision(StrEnum) {passed, needs_refinement,
+        #     failed} 是内容审查词表，wire 走 run metadata「decision」+ review widget metadata
+        #     （review_nodes.py:521/:584），mobile 以裸字符串消费（chat_stream_events.dart:648
+        #     default 'needs_refinement'、content_review_card.dart:212 case），无镜像 enum；
+        #   · agents/graph/state.py:27 ReviewDecisionType(StrEnum) {approve, reject, modify}
+        #     仅 LangGraph state 类型注解引用（state.py:72），休眠。
+        # 本族映射真实双面 wire 对：orchestration/plan_review_service.py:60（计划复审 API，
+        # execution_engine.py:1247+ 消费）↔ mobile plan_review_card.dart:14 ReviewDecision
+        # （_parseDecision 四 case + 有损 default→requiresConfirmation）。
+        "backend": ("app/orchestration/plan_review_service.py", "ReviewDecision"),
+        "mobile": ("lib/features/chat/presentation/widgets/plan_review_card.dart", "ReviewDecision"),
+        "mode": "dual",
+    },
+    # ===== dual：intervention（wt574 B2，形态分裂；在册漂移见 KNOWN_DRIFT V3-FIX-300）=====
+    "InterventionLevel": {
+        # backend SCREAMING（schemas/intervention.py:13，intervention_service.py:649/:825
+        # 下发）↔ mobile lower 标识符 + parse 合并 full_screen_modal→modal
+        # （core/models/intervention.dart:80 parseInterventionLevel，default→silent 有损）。
+        # wire_map =「backend 值 → mobile parse 已接受字面量」实证映射；SILENT_MARKER
+        # 无显式 case（落 default→silent）＝在册漂移，修复需读消费面裁决（V3-FIX-300）。
+        "backend": ("app/schemas/intervention.py", "InterventionLevel"),
+        "mobile": ("lib/core/models/intervention.dart", "InterventionLevel"),
+        "mode": "dual",
+        "wire_map": {
+            "SILENT_MARKER": [],
+            "TOAST": ["toast"],
+            "CARD": ["card"],
+            "FULL_SCREEN_MODAL": ["full_screen_modal", "modal"],
+        },
+    },
+    # ===== dual：next_step（wt574 B3，snake wire ↔ camel 标识符）=====
+    "NextActionType": {
+        # backend snake 5 值（schemas/task.py:602，next_step_service.py:185+ 下发）↔ mobile
+        # camel 标识符（features/task/data/models/next_action.dart:113）；_parseType（:31）
+        # 五 case 全量显式覆盖、_typeToString（:72）反序同值——当前无有损。注：mobile parse
+        # 函数前置于 enum 声明，Dart 解析器只收 enum 之后的 parse 函数 case 字面量，故以
+        # wire_map 钉死 snake wire → camel 标识符映射（证据 :31-45）；单边加值即 EP001/EP002。
+        "backend": ("app/schemas/task.py", "NextActionType"),
+        "mobile": ("lib/features/task/data/models/next_action.dart", "NextActionType"),
+        "mode": "dual",
+        "wire_map": {
+            "quick_review": ["quickReview"],
+            "light_expand": ["lightExpand"],
+            "practice_apply": ["practiceApply"],
+            "rest_break": ["restBreak"],
+            "continue_plan": ["continuePlan"],
+        },
+    },
+    # ===== dual：review appeal（wt574 B4）=====
+    "AppealStatus": {
+        # services 层 StrEnum（review_history_service.py:126）↔ mobile
+        # review_appeal_card.dart:21 _parseStatus 五 case 全量覆盖（default→pending 有损，
+        # 当前 5=5 无漂移）；wire 面 = appeal 响应 json['status'] 直读。
+        "backend": ("app/services/review_history_service.py", "AppealStatus"),
+        "mobile": ("lib/features/chat/presentation/widgets/review_appeal_card.dart", "AppealStatus"),
+        "mode": "dual",
+    },
+    # ===== dual：transparency 流（wt574 B5）=====
+    "StepStatus": {
+        # orchestration/transparency_data_generator.py:32（透明化流下发）↔ mobile
+        # reasoning_step_model.dart:6（@JsonValue 四值）。backend RUNNING="in_progress" 为
+        # 向后兼容别名成员（仓内零消费点，grep StepStatus.RUNNING 0 命中），以 value_aliases
+        # 显式声明后不计 EP004 重复值；mobile 值集与去别名真源四值对齐。
+        "backend": ("app/orchestration/transparency_data_generator.py", "StepStatus"),
+        "mobile": ("lib/features/chat/data/models/reasoning_step_model.dart", "StepStatus"),
+        "mode": "dual",
+        "value_aliases": {"RUNNING": "in_progress"},
+    },
+    # ===== dual：task_guidance（wt574 B5，上行族）=====
+    "TaskGuidanceAudience": {
+        # task_guidance/schemas.py:12（上行族：mobile 经 wireValue 扩展发送 audience，
+        # task_repository.dart:44 单行 enum + :49 wireValue 扩展）。
+        "backend": ("app/task_guidance/schemas.py", "TaskGuidanceAudience"),
+        "mobile": ("lib/features/task/data/repositories/task_repository.dart", "TaskGuidanceAudience"),
+        "mode": "dual",
+    },
+    # ===== dual：cognitive capsule（wt574 B5，(enum.Enum) 非 StrEnum——原盘点盲区中的盲区）=====
+    "FeedbackCategory": {
+        # models/capsule_feedback.py:15 (enum.Enum) 七值 ↔ mobile
+        # capsule_feedback_model.dart:7 双实参构造器（value+label）七值，fromValue 有损
+        # default→other（当前 7=7 无漂移）。
+        "backend": ("app/models/capsule_feedback.py", "FeedbackCategory"),
+        "mobile": ("lib/features/cognitive/data/models/capsule_feedback_model.dart", "FeedbackCategory"),
+        "mode": "dual",
+    },
+    "GenerationType": {
+        # models/capsule_generation_job.py:26 (enum.Enum) 四值 ↔ mobile
+        # capsule_generation_job_model.dart:26 四值（push_triggered 经构造器首实参为 wire 值）。
+        "backend": ("app/models/capsule_generation_job.py", "GenerationType"),
+        "mobile": ("lib/features/cognitive/data/models/capsule_generation_job_model.dart", "GenerationType"),
+        "mode": "dual",
+    },
+    # ===== dual：smart_schedule（wt574 B5）=====
+    "TimeSlotQuality": {
+        # schemas/smart_schedule.py:10 四值 ↔ mobile smart_schedule_service.dart:65 标识符
+        # 即 wire 值（4=4 对齐）。
+        "backend": ("app/schemas/smart_schedule.py", "TimeSlotQuality"),
+        "mobile": ("lib/features/calendar/data/services/smart_schedule_service.dart", "TimeSlotQuality"),
+        "mode": "dual",
+    },
+    # ===== dual：regeneration（wt574 B5）=====
+    "RegenerationType": {
+        # services/feedback_driven_generation.py:49 六值 ↔ mobile
+        # regeneration_prompt.dart:11 双实参构造器（value+icon）六值。
+        "backend": ("app/services/feedback_driven_generation.py", "RegenerationType"),
+        "mobile": ("lib/features/chat/presentation/widgets/regeneration_prompt.dart", "RegenerationType"),
+        "mode": "dual",
+    },
+    # ===== dual：aurora（wt574 B7，snake wire ↔ camel 标识符）=====
+    "AuroraPresenceLevel": {
+        # aurora/schemas/enums.py:134（primitives.py:91 aurora_presence 下发）↔ mobile
+        # aurora_indicator.dart:5 camel 标识符（纯 presentation；实际 wire 通路是
+        # task_chat_provider.dart:109 裸字符串 `?? 'ambient'` 直读，无 parse 崩溃面）。
+        # wire_map 钉死 snake wire → camel 标识符；直通面无 unknown 兜底，单边加值的
+        # 及时暴露即唯一防线。
+        "backend": ("app/aurora/schemas/enums.py", "AuroraPresenceLevel"),
+        "mobile": ("lib/features/chat/presentation/widgets/aurora_indicator.dart", "AuroraPresenceLevel"),
+        "mode": "dual",
+        "wire_map": {
+            "active": ["active"],
+            "ambient": ["ambient"],
+            "meta_surface": ["metaSurface"],
+        },
+    },
 }
 
 # ---------------------------------------------------------------------------
@@ -499,6 +641,18 @@ KNOWN_DRIFT: dict[str, dict] = {
     # official、MessageType 补 broadcast、PhotonTransactionType 补
     # grant_bonus/contract_escrow/guest_seed，三族均加 unknown 哨兵 +
     # unknownEnumValue 兜底 + 消费面穷举 switch/l10n），豁免即删保持棘轮纯净。
+    # ---------------------------------------------------------------------
+    # V3-FIX-291（wt585 登记 2026-09-25）：models 外族入管后暴露的在册漂移。
+    # ---------------------------------------------------------------------
+    "InterventionLevel": {
+        "fix": "V3-FIX-300",
+        "owner": "待派（wt585 登记）",
+        "expiry": _dt.date(2026, 10, 7),
+        "note": "SILENT_MARKER 在 mobile parse 无显式接受面（intervention.dart:88 "
+        "parseInterventionLevel 落 default→silent 有损降级）；修复=统一值集需读消费面"
+        "裁决（backend SCREAMING vs mobile lower 形态分裂，动值集牵发面>3 文件），"
+        "本卡（V3-FIX-291）只扩射程不修值",
+    },
 }
 
 # ---------------------------------------------------------------------------
@@ -513,7 +667,9 @@ BACKEND_ONLY: dict[str, str] = {
     "CardSourceType": "card_snapshot_service.py:150/:433 同 CardVisibility 面，mobile 无调用",
     "CardCreatedBy": "服务端归属标注（card_snapshot_service.py:357），无下发面",
     "EdgeType": "cards.py:44 /cards/{id}/link 请求面存在但 mobile 无 linkCard 调用方"
-    "（api_endpoints.dart:198 定义未接线、值 0 命中）",
+    "（api_endpoints.dart:198 定义未接线、值 0 命中）；另 models/graph_models.py:21 同名"
+    " Enum（知识图服务端，graph_knowledge_service/graph_sync_worker 内部）同样无 mobile"
+    " 镜像与 API 下发面——同名同判 backend-only（V3-FIX-291 盘点可见后补记）",
     "BindingMode": "同 EdgeType（cards.py:45，默认 REFERENCE 服务端兜底）",
     "ArtifactType": "plans.py:535/:804 服务端 artifact 流（mobile api_endpoints 无 artifact 面、"
     "GLOBAL_COMPASS/DISCOVERY_DOSSIER 等 0 命中）；接线时改判 passthrough",
@@ -530,9 +686,11 @@ BACKEND_ONLY: dict[str, str] = {
     "MetricType": "实验框架服务端（profile_transparency 命中为 NorthStarMetricType 子串误报）",
     "JobType": "models/job.py 服务端异步任务（job_service 未挂任何 API 路由，grep api/v1 零命中）",
     "JobStatus": "同 JobType（models/job.py）。注意 mobile capsule_generation_job_model.dart:7 有"
-    "同名 enum JobStatus，但对应的是 capsule_generation_job.py 的 enum.Enum（非 StrEnum、不在本"
-    "守卫盘点且值集 pending/generating/completed/failed 已对齐）——故本族不能判 passthrough"
-    "（会误触 EP003），只能 backend-only",
+    "同名 enum JobStatus，但对应的是 capsule_generation_job.py:18 的 enum.Enum——值集 "
+    "pending/generating/completed/failed 已对齐；该 (enum.Enum) 类自 V3-FIX-291 起入盘点，"
+    "判定不变仍 backend-only（生成任务状态经任务轮询面流转，mobile enum 为本地镜像展示；"
+    "如后续判定 dual 应以 capsule_generation_job.py 为真源挪入 FAMILIES，与本条 models/"
+    "job.py 的服务端异步任务 JobStatus 属同名异域）",
     "AssetKind": "assets.py:111 请求校验 + vocabulary.py:331 服务端创建（AssetKind.WORD），"
     "不下发 mobile（learning_loop 摘要只含 asset status 不含 kind）",
     "MatchStrength": "core/fuzzy_match.py 服务端匹配打分，无 API 面",
@@ -553,7 +711,10 @@ BACKEND_ONLY: dict[str, str] = {
 # 解析器
 # ---------------------------------------------------------------------------
 
-PY_CLASS_RE = re.compile(r"^class\s+(?P<name>\w+)\s*\(\s*(?:enum\.)?StrEnum\s*\)\s*:", re.MULTILINE)
+# V3-FIX-291 后解析器同时认 (enum.StrEnum) 与 (enum.Enum)——capsule_feedback.py 等
+# 非 StrEnum 枚举（wt574 所谓「盘点盲区中的盲区」）由此可见可管。注意不认
+# `class X(str, Enum)` 双基类形态（仓内现无此形态，出现时再扩）。
+PY_CLASS_RE = re.compile(r"^class\s+(?P<name>\w+)\s*\(\s*(?:enum\.)?(?:StrEnum|Enum)\s*\)\s*:", re.MULTILINE)
 PY_MEMBER_RE = re.compile(
     r"^\s+(?P<member>[A-Z][A-Z0-9_]*)\s*(?::\s*[\w\.]+\s*)?=\s*[\"'](?P<value>[^\"']*)[\"']",
     re.MULTILINE,
@@ -598,9 +759,13 @@ class DartEnum:
 
 _DART_ENUM_HEAD_RE = r"\benum\s+{name}\s*\{{"
 _DART_JSON_VALUE_RE = re.compile(r"@JsonValue\s*\(\s*['\"]([^'\"]+)['\"]\s*\)")
-_DART_CTOR_ARG_RE = re.compile(r"^\s*(\w+)\s*\(\s*['\"]([^'\"]+)['\"]\s*\)", re.MULTILINE)
+# V3-FIX-291：构造器首实参后允许 `,`（多实参形态，如 RegenerationType('x', Icons.x)）
+# 或 `)`（单实参形态）——旧正则只认单实参，多实参 ctor 族的 wire 值会整体漏采。
+_DART_CTOR_ARG_RE = re.compile(r"^\s*(\w+)\s*\(\s*['\"]([^'\"]+)['\"]\s*[,)]", re.MULTILINE)
 _DART_CASE_RE = re.compile(r"case\s+['\"]([^'\"]+)['\"]")
 _DART_FUNC_RET_RE = r"\b{name}\s+\w+\s*\([^)]*\)\s*(?:async\s*)?\{{"
+# V3-FIX-291：单行多标识符常量（如 `enum TaskGuidanceAudience { human, ai }`）。
+_DART_CONST_LINE_RE = re.compile(r"^\s*([a-zA-Z_]\w*(?:\s*,\s*[a-zA-Z_]\w*)*)\s*,?\s*$")
 
 
 def _brace_span(text: str, open_idx: int) -> tuple[int, int]:
@@ -642,13 +807,16 @@ def extract_dart_enum(root: Path, rel_path: str, enum_name: str) -> DartEnum | N
     result.wire_values.update(_DART_JSON_VALUE_RE.findall(constants))
     result.wire_values.update(m2.group(2) for m2 in _DART_CTOR_ARG_RE.finditer(constants_no_comments))
 
-    # 标识符：剥掉注解与构造器实参后按行取行首词。
+    # 标识符：剥掉注解与构造器实参后按行取行首词（单行多标识符按逗号拆分，
+    # V3-FIX-291：`{ human, ai }` 单行形态此前整体漏采）。
     stripped = _DART_JSON_VALUE_RE.sub("", constants_no_comments)
     stripped = _DART_CTOR_ARG_RE.sub("", stripped)
     for line in stripped.splitlines():
-        lm = re.match(r"^\s*([a-zA-Z_]\w*)\s*,?\s*$", line)
-        if lm and lm.group(1) not in {"const", "final", "static"}:
-            result.identifiers.add(lm.group(1))
+        lm = _DART_CONST_LINE_RE.match(line)
+        if lm:
+            for ident in re.split(r"\s*,\s*", lm.group(1).strip().rstrip(",")):
+                if ident not in {"const", "final", "static"}:
+                    result.identifiers.add(ident)
 
     # 解析函数 case 字面量（_parseExecutionStatus 范式；跳过 enum 体内的非常规命中）。
     for fm in re.finditer(_DART_FUNC_RET_RE.format(name=re.escape(enum_name)), text):
@@ -664,7 +832,13 @@ def extract_dart_enum(root: Path, rel_path: str, enum_name: str) -> DartEnum | N
 
 
 def inventory_unmapped_backend_enums(backend_root: Path) -> list[tuple[str, str]]:
-    """盘点 app/models/ 下未进映射表的 StrEnum 类（供 main 按 BACKEND_ONLY 分流展示）。"""
+    """盘点 app/models/ 下未进映射表的 StrEnum/Enum 类（供 main 按 BACKEND_ONLY 分流展示）。
+
+    V3-FIX-291 起 PY_CLASS_RE 同时认 (enum.Enum)——capsule_feedback 等非 StrEnum 族
+    由此可见（原「盘点盲区中的盲区」）。models 之外的族不进本盘点（全 backend/app
+    枚举 200+，「被 wire 引用族」半径判定属独立扩表投资卡）；models 外已判定族的
+    收编走 FAMILIES 显式映射。
+    """
     known = {spec["backend"][1] for spec in FAMILIES.values() if "backend" in spec}
     found: list[tuple[str, str]] = []
     if not (backend_root / "app" / "models").exists():
@@ -728,15 +902,34 @@ def _family_check(
             )
         )
         return findings
+    # V3-FIX-291：显式声明的同值别名成员（如 StepStatus.RUNNING = "in_progress"，StrEnum
+    # 合法别名语义）不参与 EP004 重复值判定；声明与实际不符仍属映射完整性 FAIL。
+    value_aliases: dict[str, str] = spec.get("value_aliases", {})
+    for alias_member, alias_value in sorted(value_aliases.items()):
+        actual = py_members.get(alias_member)
+        if actual != alias_value:
+            findings.append(
+                Finding(
+                    family,
+                    "EP004",
+                    "FAIL",
+                    f"映射完整性：value_aliases 声明 {be_class}.{alias_member} = {alias_value!r}，"
+                    f"但实际为 {actual!r}（或缺成员）——映射表必须指向真实代码，不得豁免",
+                )
+            )
+    non_alias_members = {m: v for m, v in py_members.items() if m not in value_aliases}
     be_values = set(py_members.values())
-    if len(py_members) != len(be_values):
-        dupes = sorted(v for v in be_values if list(py_members.values()).count(v) > 1)
+    if len(non_alias_members) != len(set(non_alias_members.values())):
+        dupes = sorted(
+            v for v in set(non_alias_members.values()) if list(non_alias_members.values()).count(v) > 1
+        )
         findings.append(
             Finding(
                 family,
                 "EP004",
                 "FAIL",
-                f"映射完整性：backend {be_class} 存在重复值 {dupes}——StrEnum 值必须唯一",
+                f"映射完整性：backend {be_class} 存在重复值 {dupes}——StrEnum 值必须唯一"
+                f"（同值别名属例外，须经映射表 value_aliases 显式声明）",
             )
         )
 
@@ -832,41 +1025,87 @@ def _family_check(
             )
         )
 
-    missing = sorted(be_values - dart.wire_values)
-    if missing:
-        if has_sentinel:
+    # V3-FIX-291：形态分裂族（backend SCREAMING/snake wire ↔ mobile lower/camel 标识符）
+    # 以 wire_map 钉死「backend 值 → mobile 已接受字面量」实证映射：
+    # * 真源值无任何已接受字面量 → EP001 FAIL（parse 落 default 有损降级，可豁免）；
+    # * 声明的字面量不在 mobile 实际 wire 值集 → EP004（映射表必须指向真实代码）；
+    # * mobile wire 值集出现任何映射未声明的字面量 → EP002 WARN（单边加值即暴露）。
+    wire_map: dict[str, list[str]] | None = spec.get("wire_map")
+    if wire_map is not None:
+        claimed: set[str] = set()
+        for be_value in sorted(be_values):
+            accepted = wire_map.get(be_value, [])
+            if not accepted:
+                findings.append(
+                    _exempt_if_allowed(
+                        Finding(
+                            family,
+                            "EP001",
+                            "FAIL",
+                            f"backend {be_class} 值 {be_value!r} 在 mobile {mo_class} 无显式接受面"
+                            f"（wire_map 未声明任何已接受字面量——parse 落 default 有损降级）",
+                        )
+                    )
+                )
+                continue
+            for lit in accepted:
+                if lit not in dart.wire_values:
+                    findings.append(
+                        Finding(
+                            family,
+                            "EP004",
+                            "FAIL",
+                            f"映射完整性：wire_map 声明 {be_value!r} → {lit!r}，"
+                            f"但 mobile {mo_class} 实际 wire 值集不含 {lit!r}——映射表必须指向真实代码，不得豁免",
+                        )
+                    )
+                claimed.add(lit)
+        extra = sorted(dart.wire_values - claimed)
+        if extra:
             findings.append(
                 Finding(
                     family,
-                    "EP001T",
+                    "EP002",
                     "WARN",
-                    f"backend {be_class} 值集 ⊄ mobile {mo_class}：缺 {missing}"
-                    f"——mobile unknown 哨兵兜底解析不崩，降级 WARN，仍应尽快对齐",
+                    f"mobile {mo_class} 有 wire_map 之外的 wire 值 {extra}",
                 )
             )
-        else:
-            findings.append(
-                _exempt_if_allowed(
+    else:
+        missing = sorted(be_values - dart.wire_values)
+        if missing:
+            if has_sentinel:
+                findings.append(
                     Finding(
                         family,
-                        "EP001",
-                        "FAIL",
+                        "EP001T",
+                        "WARN",
                         f"backend {be_class} 值集 ⊄ mobile {mo_class}：缺 {missing}"
-                        f"（mobile 无 unknown 哨兵兜底，下发即解析崩）",
+                        f"——mobile unknown 哨兵兜底解析不崩，降级 WARN，仍应尽快对齐",
                     )
                 )
-            )
+            else:
+                findings.append(
+                    _exempt_if_allowed(
+                        Finding(
+                            family,
+                            "EP001",
+                            "FAIL",
+                            f"backend {be_class} 值集 ⊄ mobile {mo_class}：缺 {missing}"
+                            f"（mobile 无 unknown 哨兵兜底，下发即解析崩）",
+                        )
+                    )
+                )
 
-    extra = sorted(dart.wire_values - be_values)
-    if extra:
-        findings.append(
-            Finding(
-                family,
-                "EP002",
-                "WARN",
-                f"mobile {mo_class} 有 backend {be_class} 之外的 wire 值 {extra}",
+        extra = sorted(dart.wire_values - be_values)
+        if extra:
+            findings.append(
+                Finding(
+                    family,
+                    "EP002",
+                    "WARN",
+                    f"mobile {mo_class} 有 backend {be_class} 之外的 wire 值 {extra}",
+                )
             )
-        )
 
     if not any(f.code != "OK" for f in findings):
         findings.append(
@@ -914,13 +1153,19 @@ def run_checks(
 # ---------------------------------------------------------------------------
 
 
-def _write_python_enum(root: Path, rel: str, cls: str, members: list[tuple[str, str]]) -> None:
+def _write_python_enum(
+    root: Path,
+    rel: str,
+    cls: str,
+    members: list[tuple[str, str]],
+    base: str = "enum.StrEnum",
+) -> None:
     p = root / rel
     p.parent.mkdir(parents=True, exist_ok=True)
     body = "\n".join(f'    {m} = "{v}"' for m, v in members)
     # 同文件多类：追加而非覆盖（fixture 各族共用 a.py）
     with p.open("a", encoding="utf-8") as fh:
-        fh.write(f"import enum\n\n\nclass {cls}(enum.StrEnum):\n{body}\n")
+        fh.write(f"import enum\n\n\nclass {cls}({base}):\n{body}\n")
 
 
 def _write_dart_enum(
@@ -1044,6 +1289,52 @@ def self_test() -> int:
                 "mode": "dual",
                 "backend_extra": [("app/schemas/c.py", "NoSuchCopyClass")],
             },
+            # 用例 15（V3-FIX-291）：wire_map 形态分裂族——映射齐全 → PASS
+            "FormSplit": {
+                "backend": ("app/models/a.py", "FormSplit"),
+                "mobile": ("lib/j.dart", "FormSplit"),
+                "mode": "dual",
+                "wire_map": {"F_A": ["fa"], "F_B": ["fb"]},
+            },
+            # 用例 16（V3-FIX-291）：wire_map 有真源值无接受面 → EP001 FAIL（可豁免）
+            "FormSplitDrift": {
+                "backend": ("app/models/a.py", "FormSplitDrift"),
+                "mobile": ("lib/k.dart", "FormSplitDrift"),
+                "mode": "dual",
+                "wire_map": {"G_A": ["ga"], "G_B": []},
+            },
+            # 用例 17（V3-FIX-291）：wire_map 声明字面量 mobile 不存在 → EP004
+            "FormSplitGhost": {
+                "backend": ("app/models/a.py", "FormSplitGhost"),
+                "mobile": ("lib/l.dart", "FormSplitGhost"),
+                "mode": "dual",
+                "wire_map": {"H_A": ["nope"]},
+            },
+            # 用例 18（V3-FIX-291）：value_aliases 声明同值别名 → 不触发 EP004 → PASS
+            "Aliased": {
+                "backend": ("app/models/a.py", "Aliased"),
+                "mobile": ("lib/m.dart", "Aliased"),
+                "mode": "dual",
+                "value_aliases": {"ALIAS_B": "b1"},
+            },
+            # 用例 18b：未声明别名重复值 → EP004；18c：别名声明与实际不符 → EP004
+            "DupVals": {
+                "backend": ("app/models/a.py", "DupVals"),
+                "mobile": ("lib/n.dart", "DupVals"),
+                "mode": "dual",
+            },
+            "AliasedBad": {
+                "backend": ("app/models/a.py", "AliasedBad"),
+                "mobile": ("lib/p.dart", "AliasedBad"),
+                "mode": "dual",
+                "value_aliases": {"ALIAS_X": "wrong"},
+            },
+            # 用例 19（V3-FIX-291）：(enum.Enum) 非 StrEnum 族可解析可对账
+            "PlainEnum": {
+                "backend": ("app/models/a.py", "PlainEnum"),
+                "mobile": ("lib/o.dart", "PlainEnum"),
+                "mode": "dual",
+            },
         }
 
         def members(prefix: str, values: list[str]) -> list[tuple[str, str]]:
@@ -1078,6 +1369,26 @@ def self_test() -> int:
         _write_python_enum(be, "app/models/a.py", "HasCopyGhost", [("K1", "k1")])
         _write_dart_enum(mo, "lib/i.dart", "HasCopyGhost", json_values=["k1"])
         # HasCopyGhost 的副本 app/schemas/c.py 故意不创建 → 映射完整性 EP004
+
+        # 用例 15-19 fixture（V3-FIX-291：wire_map / value_aliases / (enum.Enum) / 单行 enum）
+        _write_python_enum(be, "app/models/a.py", "FormSplit", [("F_A", "F_A"), ("F_B", "F_B")])
+        _write_dart_enum(mo, "lib/j.dart", "FormSplit", parse_cases=["fa", "fb"])
+        _write_python_enum(be, "app/models/a.py", "FormSplitDrift", [("G_A", "G_A"), ("G_B", "G_B")])
+        _write_dart_enum(mo, "lib/k.dart", "FormSplitDrift", parse_cases=["ga"])
+        _write_python_enum(be, "app/models/a.py", "FormSplitGhost", [("H_A", "H_A")])
+        _write_dart_enum(mo, "lib/l.dart", "FormSplitGhost", json_values=["ha"])
+        _write_python_enum(
+            be, "app/models/a.py", "Aliased", [("A1", "a1"), ("B1", "b1"), ("ALIAS_B", "b1")]
+        )
+        _write_dart_enum(mo, "lib/m.dart", "Aliased", json_values=["a1", "b1"])
+        _write_python_enum(
+            be, "app/models/a.py", "DupVals", [("A1", "a1"), ("B1", "b1"), ("B2", "b1")]
+        )
+        _write_dart_enum(mo, "lib/n.dart", "DupVals", json_values=["a1", "b1"])
+        _write_python_enum(be, "app/models/a.py", "AliasedBad", [("X1", "x1"), ("ALIAS_X", "x1")])
+        _write_dart_enum(mo, "lib/p.dart", "AliasedBad", json_values=["x1"])
+        _write_python_enum(be, "app/models/a.py", "PlainEnum", [("P1", "p1")], base="enum.Enum")
+        _write_dart_enum(mo, "lib/o.dart", "PlainEnum", json_values=["p1"])
 
         # Ghost：backend 类不存在，映射完整性 FAIL；同时挂一份（无效的）豁免验证豁免不覆盖 EP004
         expired_allow["Ghost"] = expired_allow["Alpha"]
@@ -1130,6 +1441,13 @@ def self_test() -> int:
                 "expiry": _dt.date(2027, 1, 1),
                 "note": "live",
             },
+            # 用例 16b：wire_map EP001 在期豁免同样生效（KNOWN-DRIFT 行打印、不进 FAIL）
+            "FormSplitDrift": {
+                "fix": "V3-FIX-ZZZ",
+                "owner": "test",
+                "expiry": _dt.date(2027, 1, 1),
+                "note": "live wire_map drift",
+            },
         }
         live_findings = run_checks(be, mo, families, live_allow, today=today)
         d = next(f for f in live_findings if f.family == "Delta" and f.code == "EP001")
@@ -1160,6 +1478,42 @@ def self_test() -> int:
         s, ex = sev_of(all_findings, "HasCopyGhost", "EP004")
         checks.append(("case14c 副本类缺失 FAIL EP004", s == "FAIL"))
         checks.append(("case14c EP004 不受豁免", ex is None))
+
+        # 用例 15-19：V3-FIX-291（wire_map 形态分裂 / value_aliases 同值别名 / (enum.Enum) 族）
+        s, _ = sev_of(all_findings, "FormSplit", "OK")
+        checks.append(("case15 wire_map 映射齐全 PASS", s == "PASS"))
+
+        s, _ = sev_of(all_findings, "FormSplitDrift", "EP001")
+        checks.append(("case16 wire_map 无接受面 FAIL EP001", s == "FAIL"))
+        checks.append(
+            (
+                "case16 报文点名漂移值与有损降级",
+                "G_B" in next(f.message for f in all_findings if f.family == "FormSplitDrift" and f.code == "EP001")
+                and "有损降级" in next(f.message for f in all_findings if f.family == "FormSplitDrift" and f.code == "EP001"),
+            )
+        )
+        d_live = next(f for f in live_findings if f.family == "FormSplitDrift" and f.code == "EP001")
+        checks.append(("case16b wire_map EP001 在期豁免标注 exempt", d_live.exempt is not None))
+        checks.append(
+            (
+                "case16c wire_map EP002 不误报（已接受字面量全被声明覆盖）",
+                all(f.code != "EP002" for f in all_findings if f.family == "FormSplitDrift"),
+            )
+        )
+
+        s, ex = sev_of(all_findings, "FormSplitGhost", "EP004")
+        checks.append(("case17 wire_map 声明字面量不存在 FAIL EP004", s == "FAIL"))
+        checks.append(("case17 EP004 不受豁免", ex is None))
+
+        s, _ = sev_of(all_findings, "Aliased", "OK")
+        checks.append(("case18a 声明别名同值 PASS（不触 EP004）", s == "PASS"))
+        s, _ = sev_of(all_findings, "DupVals", "EP004")
+        checks.append(("case18b 未声明重复值 FAIL EP004", s == "FAIL"))
+        s, _ = sev_of(all_findings, "AliasedBad", "EP004")
+        checks.append(("case18c 别名声明与实际不符 FAIL EP004", s == "FAIL"))
+
+        s, _ = sev_of(all_findings, "PlainEnum", "OK")
+        checks.append(("case19 (enum.Enum) 族对账 PASS", s == "PASS"))
 
         # 用例 9：哨兵声明但缺失 → FAIL EP005
         _write_dart_enum(mo, "lib/c.dart", "Beta", json_values=["beta", "y1", "y2"])
@@ -1203,6 +1557,49 @@ def self_test() -> int:
         )
         checks.append(("case12 Python 解析器", py_real == {"RED": "red", "GREEN": "green"}))
 
+        # 用例 11b（V3-FIX-291）：Dart 解析器补口——多实参构造器 / 单行多标识符 enum
+        (mo / "lib/ctor2.dart").write_text(
+            "\n".join(
+                [
+                    "enum Ctor2 {",
+                    "  alphaOne('alpha_one', 'Alpha'),",
+                    "  betaTwo('beta_two', 'Beta');",
+                    "",
+                    "  const Ctor2(this.value, this.label);",
+                    "  final String value;",
+                    "  final String label;",
+                    "}",
+                    "",
+                    "enum SingleLine { red, green, blue }",
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        ctor2_parsed = extract_dart_enum(mo, "lib/ctor2.dart", "Ctor2")
+        checks.append(
+            (
+                "case11b 多实参构造器 wire 值",
+                ctor2_parsed is not None and ctor2_parsed.wire_values == {"alpha_one", "beta_two"},
+            )
+        )
+        single_line = extract_dart_enum(mo, "lib/ctor2.dart", "SingleLine")
+        checks.append(
+            (
+                "case11c 单行多标识符 enum",
+                single_line is not None
+                and single_line.identifiers == {"red", "green", "blue"}
+                and single_line.wire_values == {"red", "green", "blue"},
+            )
+        )
+        # 用例 11d（V3-FIX-291）：PY_CLASS_RE 认 (enum.Enum) 基类
+        checks.append(
+            (
+                "case11d (enum.Enum) 基类可解析",
+                extract_python_str_enum(be, "app/models/a.py", "PlainEnum") == {"P1": "p1"},
+            )
+        )
+
         # 用例 13：inventory 盘点 + BACKEND_ONLY 分流（backend-only 判定的输出契约）
         _write_python_enum(be, "app/models/a.py", "InteractionType", [("I1", "i1")])
         inv = inventory_unmapped_backend_enums(be)
@@ -1216,6 +1613,8 @@ def self_test() -> int:
         checks.append(
             ("case13 未判定候选不含已判定族", "InteractionType" not in undecided and "Aligned" in undecided)
         )
+        # 用例 13b（V3-FIX-291）：(enum.Enum) 族同样入盘点
+        checks.append(("case13b Enum 基类族入盘点", "PlainEnum" in inv_names))
 
         print("[Rule ENUM-PARITY] SELF-TEST 实录：")
         for label, ok in checks:
@@ -1286,7 +1685,7 @@ def main() -> int:
             )
         if undecided:
             print(
-                f"[Rule ENUM-PARITY] INFO 未进映射表的 backend StrEnum（不判失败，扩表候选"
+                f"[Rule ENUM-PARITY] INFO 未进映射表的 backend StrEnum/Enum（不判失败，扩表候选"
                 f"——需逐族判定 dual/passthrough/backend-only）: {undecided}"
             )
 
