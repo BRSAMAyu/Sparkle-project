@@ -277,9 +277,12 @@ class MemoryInferredWriteLaneService:
         # 方（orchestrator persist 收尾、快交互 turn_capture、REST
         # save_chat_message、enqueue_from_session DB 回捞）都汇入本入口，此处
         # 单点过滤；user 侧原文同轮一并跳过。判据读 llm_service.demo_mode——
-        # demo 置位期间不存在真实模型产出；显式 provider 切换仅发生在
-        # switch_specific_model 管理面操作，mid-turn 翻转误跳是已记录的可接受
-        # 边缘（与写侧 origin 标记同一判据，见 llm_security_wrapper 转发面）。
+        # demo 置位期间不存在真实模型产出（不变式由 _check_demo_match 单点
+        # 保证：V3-FIX-287 起无 user 角色消息形状亦脚本短路，此前该形状会
+        # 落穿真实 provider 调用并被本判据整轮丢弃）；显式 provider 切换仅
+        # 发生在 switch_specific_model 管理面操作，mid-turn 翻转误跳是已
+        # 记录的可接受边缘（与写侧 origin 标记同一判据，见 llm_security_wrapper
+        # 转发面）。
         from app.services.llm_service import llm_service
 
         if bool(getattr(llm_service, "demo_mode", False)):

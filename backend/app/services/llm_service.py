@@ -622,12 +622,26 @@ class LLMService:
                 return AgentRole.GENERATION
         return AgentRole.GENERATION
 
+    @staticmethod
+    def _generic_demo_response() -> str:
+        """demo_mode 下无法按关键词命中时的通用演示兜底文案。"""
+        return (
+            "已收到你的请求。当前处于演示模式，我先给出一个可执行的通用建议：\n"
+            "1) 先列出目标与截止时间；2) 拆分为每日/每周可完成的小步骤；"
+            "3) 设定复盘节点并记录问题；4) 适当安排巩固与练习。\n"
+            "如果你愿意，可以提供更多上下文（目标、时间、基础），我会给出更细的计划。"
+        )
+
     def _check_demo_match(self, messages: list[dict[str, str]]) -> str | None:
         """
         检查是否匹配演示关键词
 
         Returns:
-            匹配的预设响应，如果不匹配则返回 None
+            demo_mode 未置位时返回 None；置位时恒返回脚本回复
+            （关键词命中或通用演示兜底）——V3-FIX-287 起无 user 角色消息
+            （工具续写类形状）同样短路，保证「demo_mode 置位 ⇒ 一切回复均为
+            provider 调用前的脚本产出」这一 origin 落库判据与记忆推断跳过
+            判据所依赖的不变式。
         """
         if not self.demo_mode:
             return None
@@ -640,7 +654,17 @@ class LLMService:
                 break
 
         if not user_content:
-            return None
+            # V3-FIX-287：无 user 角色行（工具续写类形状）也必须脚本短路。
+            # 此前返回 None 会让 chat/reason 落穿 budget 与 provider 判空走
+            # 真实调用（stream 的 `demo_mode and not provider` 兜底只覆盖无
+            # provider 面），产出随后被落库时刻的全局 demo_mode 误标
+            # origin=DEMO（persistence_layer/_persist_assistant_message、
+            # api/v1/chat.py save_chat_message）并被记忆推断整轮丢弃
+            # （memory_inferred_write_lane.process_chat_turn）——内容损失。
+            logger.info(
+                "⚡ [DEMO MODE] No user message in request (tool-continuation shape), returning generic response"
+            )
+            return self._generic_demo_response()
 
         # 精确匹配
         if user_content in DEMO_MOCK_RESPONSES:
@@ -654,12 +678,7 @@ class LLMService:
                     logger.info(f"⚡ [DEMO MODE] Fuzzy match for: {user_content} -> {key}")
                     return response
         logger.info("⚡ [DEMO MODE] No match found, returning generic response")
-        return (
-            "已收到你的请求。当前处于演示模式，我先给出一个可执行的通用建议：\n"
-            "1) 先列出目标与截止时间；2) 拆分为每日/每周可完成的小步骤；"
-            "3) 设定复盘节点并记录问题；4) 适当安排巩固与练习。\n"
-            "如果你愿意，可以提供更多上下文（目标、时间、基础），我会给出更细的计划。"
-        )
+        return self._generic_demo_response()
 
     @staticmethod
     def _resolve_user_id(**kwargs: Any) -> str | None:
@@ -1244,6 +1263,8 @@ class LLMService:
                     await asyncio.sleep(0.03)
                 return
 
+            # V3-FIX-287 起 _check_demo_match 在 demo_mode 置位时恒返回脚本
+            # 回复（含无 user 角色形状），此分支正常不可达，保留作纵深防御。
             if self.demo_mode and not self.provider:
                 span.set_attribute("llm.demo_mode", True)
                 fallback = "（演示模式）当前未配置可用的 LLM 服务，请稍后再试。"

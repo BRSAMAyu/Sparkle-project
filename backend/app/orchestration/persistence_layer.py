@@ -92,9 +92,11 @@ class PersistenceLayerMixin:
                     # V3-FIX-258：demo 产出落库必须带持久 origin 标记（此前
                     # 唯一标记是瞬态 OTel span llm.demo_mode）。demo_mode
                     # 置位时 llm_service 一切回复均为 provider 调用前的脚本
-                    # 短路（DEMO_MOCK_RESPONSES/通用演示回复），故「落库时刻
-                    # demo_mode」是该行文本来源的充分判据；显式 provider 切换
-                    # 仅发生在 switch_specific_model 管理面操作，mid-turn 翻转
+                    # 短路（DEMO_MOCK_RESPONSES/通用演示回复；V3-FIX-287 起
+                    # 无 user 角色消息形状亦短路，不变式由 _check_demo_match
+                    # 单点保证），故「落库时刻 demo_mode」是该行文本来源的
+                    # 充分判据；显式 provider 切换仅发生在
+                    # switch_specific_model 管理面操作，mid-turn 翻转
                     # 误标是已记录的可接受边缘。
                     origin=(
                         MessageOrigin.DEMO if bool(getattr(llm_service, "demo_mode", False)) else MessageOrigin.LLM
