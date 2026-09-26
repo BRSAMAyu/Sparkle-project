@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""舰队台账 union-merge 固化工具（V3-FIX-268）。
+"""舰队台账 union-merge 固化工具（V3-FIX-268；V3-FIX-278/282 防再发强化）。
 
 针对 ``v3/06_agent_fleet/DYNAMIC_ISSUES.md`` 集成冲突的 union-merge：
 按 V3-FIX-N 行 ID 做 ours/theirs 并集。固化前主会话使用临时件
@@ -22,6 +22,20 @@
   在前、theirs 独有行按原序追加；theirs 行与已保留行完全相同者去重
   （防 git 冲突块边界共享行双写），除此之外零丢失。
 
+防再发强化（V3-FIX-278/282，事故形态：3896a1b5 吞 257 行、62f20b0b
+并行回退 263 行、4 处历史粘连）：
+
+- ``--check`` 扩展一：合并输出每行 V3-FIX 行做 **8 裸管形态校验**
+  （``\\|`` 转义管不计；期望值 ``--expect-pipes`` 可配，默认 8=表头 7 列；
+  多数行形态容差——与多数行一致的裸管数不 FAIL，``--strict-pipes`` 关闭
+  容差），畸形行 FAIL 并列出行号。
+- ``--check`` 扩展二：**行数对账**——输出行数 ≥ max(ours, theirs) 行数
+  − 冲突块合法重叠数（跨侧同文去重、同 ID 折叠、侧内重号折叠的保守
+  下界），低于下界即吞行报警（ID 差集法之外的整行级兜底）。
+- 新增 ``--verify FILE``：对任一台账文件独立体检——零冲突标记残留 +
+  8 裸管形态 + 行首锚定 ID 无重号 + 行尾状态枚举合法
+  （OPEN/FIXED@/CLOSED@/WONTFIX 前缀；仅对形态合法行检查）。
+
 用法::
 
     # 合并（结果到 stdout 或 -o 指定文件）
@@ -31,10 +45,14 @@
     # 撞号重编号：theirs 侧 V3-FIX-265 整行改为 V3-FIX-267 并自动追加注记
     python3 scripts/devtools/ledger_union_merge.py f.md --renumber 265=267 --renumber 266=268
 
-    # 合并后验证：零冲突标记残留 + ours/theirs 侧所有 ID 在输出中均存在（吞行检测）
+    # 合并后验证：零冲突标记残留 + 双侧 ID 全在场（吞行检测）
+    #             + 8 裸管形态 + 行数对账
     python3 scripts/devtools/ledger_union_merge.py f.md --check
 
-退出码：0 成功/验证通过；1 --check 验证失败；2 输入/用法错误
+    # 独立体检任一台账文件（只读，不改文件）
+    python3 scripts/devtools/ledger_union_merge.py --verify v3/06_agent_fleet/DYNAMIC_ISSUES.md
+
+退出码：0 成功/验证通过；1 --check/--verify 验证失败；2 输入/用法错误
 （如未闭合冲突块、非法 --renumber）。
 """
 
@@ -43,6 +61,7 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+from collections import Counter
 from dataclasses import dataclass, field
 
 # 表格行 ID：以 | 开头且含 V3-FIX-N
@@ -50,6 +69,13 @@ FIX_ID_TOKEN_RE = re.compile(r"(?<![A-Za-z0-9-])V3-FIX-\d+(?!\d)")
 # 已收口状态标记：进化于 OPEN（台账实录形态：FIXED@sha / CLOSED@tag / WONTFIX，
 # 含「OPEN 补记FIXED@...」扫陈补记形态）
 RESOLVED_MARK_RE = re.compile(r"FIXED@|CLOSED@|WONTFIX")
+# 行首锚定 ID（状态列/重号检测用）：行首 | V3-FIX-N |
+ROW_ANCHOR_RE = re.compile(r"^\|\s*(V3-FIX-\d+)\s*\|")
+# 裸管：非转义 |（\| 是格内字面竖线，不构成列边界）
+BARE_PIPE_RE = re.compile(r"(?<!\\)\|")
+# 表头 7 列 → 行须 8 裸管；行尾状态枚举合法前缀
+DEFAULT_EXPECT_PIPES = 8
+LEGAL_STATUS_PREFIXES = ("OPEN", "FIXED@", "CLOSED@", "WONTFIX")
 
 START_RE = re.compile(r"^<{7}(?: .*)?$")
 SEP_RE = re.compile(r"^={7}\s*$")
@@ -79,6 +105,12 @@ class MergeOutcome:
     ours_ids: set = field(default_factory=set)
     theirs_ids: set = field(default_factory=set)
     applied_renumbers: list = field(default_factory=list)
+    # 行数对账（V3-FIX-282）：ours/theirs 全文行数与冲突块合法重叠数
+    ours_lines: int = 0
+    theirs_lines: int = 0
+    overlap_lines: int = 0
+    # 分轨算法输出行数的精确期望（共享段 + 逐块出账），低于即吞行
+    expected_lines: int = 0
 
 
 def row_id(line: str) -> str | None:
@@ -170,10 +202,13 @@ def apply_renumber(line: str, old: str, new: str) -> str:
 
 
 def merge_block(block: ConflictBlock, renumber: dict[str, str] | None = None):
-    """合并单个冲突块，返回 (merged_lines, ours_ids, theirs_ids, applied)。
+    """合并单个冲突块，返回 (merged_lines, ours_ids, theirs_ids, applied, overlap, expected)。
 
     ours_ids/theirs_ids 为合并后仍应存在于输出的双侧 ID 集（theirs 按
-    重编号后计），供 --check 吞行检测。
+    重编号后计），供 --check 吞行检测。overlap 为该块合法重叠行数的
+    保守上界（跨侧同文行去重 + 同 ID 跨侧折叠 + 侧内重号折叠）；
+    expected 为本块输出行数的精确期望（分轨算法逐行出账）。二者供
+    行数对账下界使用——只放宽不收紧，宁可漏报不误报。
     """
     renumber = renumber or {}
     applied: list[str] = []
@@ -207,6 +242,26 @@ def merge_block(block: ConflictBlock, renumber: dict[str, str] | None = None):
     theirs_order, theirs_fold = fold(theirs_lines)
     ours_ids = set(ours_order)
     theirs_ids = set(theirs_order)
+
+    # 合法重叠（保守上界）：
+    # ① 跨侧同文行（含非表格行与同 ID 同文表格行）去重 → 各折 1 行
+    ours_content = Counter(line.rstrip("\r\n") for line in block.ours)
+    theirs_content = Counter(line.rstrip("\r\n") for line in theirs_lines)
+    overlap = sum((ours_content & theirs_content).values())
+    # ② 同 ID 跨侧异文折叠（2 行取 1 胜者）→ 各折 1 行（同文已在 ① 计）
+    overlap += sum(1 for rid in ours_ids & theirs_ids if ours_fold[rid] != theirs_fold[rid])
+    # ③ 侧内重号折叠（同 ID 同侧多行只出胜者）→ 各重号行折 1
+    for lines in (block.ours, theirs_lines):
+        id_counts = Counter(rid for line in lines if (rid := row_id(line)) is not None)
+        overlap += sum(count - 1 for count in id_counts.values() if count > 1)
+
+    # 本块输出行数的精确期望：ours 非表格行全保留 + ours 表格行按
+    # 去重 ID + theirs 独有非表格行 + theirs 独有 ID 行。合并输出少于
+    # 此值即吞行（含 ID 仍在场但整行被粘连进邻行的形态——257 事故）。
+    ours_nt_contents = {line.rstrip("\r\n") for line in block.ours if row_id(line) is None}
+    theirs_nt_contents = {line.rstrip("\r\n") for line in theirs_lines if row_id(line) is None}
+    ours_nt_count = sum(1 for line in block.ours if row_id(line) is None)
+    expected = ours_nt_count + len(ours_ids) + len(theirs_nt_contents - ours_nt_contents) + len(theirs_ids - ours_ids)
 
     out: list[str] = []
     emitted_nt: set[str] = set()
@@ -242,7 +297,7 @@ def merge_block(block: ConflictBlock, renumber: dict[str, str] | None = None):
                 emitted_at[rid] = len(out)
                 out.append(theirs_fold[rid])
 
-    return out, ours_ids, theirs_ids, applied
+    return out, ours_ids, theirs_ids, applied, overlap, expected
 
 
 def merge_text(text: str, renumber: dict[str, str] | None = None) -> MergeOutcome:
@@ -252,12 +307,21 @@ def merge_text(text: str, renumber: dict[str, str] | None = None) -> MergeOutcom
     for kind, payload in parsed.segments:
         if kind == "text":
             parts.append("".join(payload))
+            # 共享段两侧各计一次（对账公式用全文行数口径）
+            shared = len(payload)
+            outcome.ours_lines += shared
+            outcome.theirs_lines += shared
+            outcome.expected_lines += shared
         else:
-            merged, ours_ids, theirs_ids, applied = merge_block(payload, renumber)
+            merged, ours_ids, theirs_ids, applied, overlap, expected = merge_block(payload, renumber)
             parts.append("".join(merged))
             outcome.ours_ids |= ours_ids
             outcome.theirs_ids |= theirs_ids
             outcome.applied_renumbers.extend(applied)
+            outcome.ours_lines += len(payload.ours)
+            outcome.theirs_lines += len(payload.theirs)
+            outcome.overlap_lines += overlap
+            outcome.expected_lines += expected
     outcome.text = "".join(parts)
     return outcome
 
@@ -270,14 +334,153 @@ def verify_merge(merged_text: str, ours_ids: set, theirs_ids: set) -> list[str]:
     """合并后验证：零冲突标记残留 + 双侧所有 ID 在场（吞行检测）。"""
     problems: list[str] = []
     present = ids_in_text(merged_text)
-    for lineno, line in enumerate(merged_text.splitlines(), 1):
-        stripped = line.rstrip("\r\n")
-        if START_RE.match(stripped) or SEP_RE.match(stripped) or END_RE.match(stripped):
-            problems.append(f"第 {lineno} 行冲突标记残留：{stripped!r}")
+    problems.extend(check_conflict_markers(merged_text))
     for rid in sorted(ours_ids - present, key=lambda t: int(t.rsplit("-", 1)[1])):
         problems.append(f"ours 侧 {rid} 未在合并输出中（疑似吞行）")
     for rid in sorted(theirs_ids - present, key=lambda t: int(t.rsplit("-", 1)[1])):
         problems.append(f"theirs 侧 {rid} 未在合并输出中（疑似吞行）")
+    return problems
+
+
+def check_conflict_markers(text: str) -> list[str]:
+    """冲突标记残留检测（<<<<<<< / ======= / >>>>>>> 行首形态）。"""
+    problems: list[str] = []
+    for lineno, line in enumerate(text.splitlines(), 1):
+        stripped = line.rstrip("\r\n")
+        if START_RE.match(stripped) or SEP_RE.match(stripped) or END_RE.match(stripped):
+            problems.append(f"第 {lineno} 行冲突标记残留：{stripped!r}")
+    return problems
+
+
+def bare_pipe_count(line: str) -> int:
+    """裸管数：非转义 | 计数（转义管为格内字面竖线，不构成列边界）。"""
+    return len(BARE_PIPE_RE.findall(line))
+
+
+def check_row_shapes(
+    text: str, expect_pipes: int = DEFAULT_EXPECT_PIPES, majority_tolerance: bool = True
+) -> tuple[list[str], dict]:
+    """每行 V3-FIX 行的 8 裸管形态校验（V3-FIX-278/282）。
+
+    期望值 expect_pipes（默认 8=表头 7 列）；majority_tolerance 开启时
+    与多数行裸管数一致的行不 FAIL（「真实列数与多数行一致」的容差，
+    防历史同形存量被整体误报）——``--strict-pipes`` 可关闭。
+
+    返回 (problems, stats)；stats 含 majority/expect/distribution/checked，
+    problems 每项带行号与实际裸管数。
+    """
+    rows = [
+        (lineno, line.rstrip("\r\n")) for lineno, line in enumerate(text.splitlines(), 1) if row_id(line) is not None
+    ]
+    distribution = Counter(bare_pipe_count(line) for _, line in rows)
+    stats = {
+        "majority": distribution.most_common(1)[0][0] if distribution else expect_pipes,
+        "expect": expect_pipes,
+        "distribution": dict(sorted(distribution.items())),
+        "checked": len(rows),
+    }
+    allowed = {expect_pipes}
+    if majority_tolerance:
+        allowed.add(stats["majority"])
+    problems: list[str] = []
+    failed_lines: set[int] = set()
+    for lineno, line in rows:
+        count = bare_pipe_count(line)
+        if count not in allowed:
+            failed_lines.add(lineno)
+            rid = row_id(line)
+            problems.append(
+                f"第 {lineno} 行 {rid} 裸管数 {count}（合法形态 {sorted(allowed)}，"
+                f"多数行形态 {stats['majority']}）——列错位/粘连/幻影列"
+            )
+    stats["failed_lines"] = failed_lines
+    return problems, stats
+
+
+def check_duplicate_ids(text: str) -> list[str]:
+    """行首锚定 ID 重号检测（V3-FIX-279 双行形态：陈旧行+权威行并存）。"""
+    seen: dict[str, int] = {}
+    problems: list[str] = []
+    for lineno, line in enumerate(text.splitlines(), 1):
+        m = ROW_ANCHOR_RE.match(line)
+        if m:
+            rid = m.group(1)
+            if rid in seen:
+                problems.append(f"{rid} 行首锚定重号：第 {seen[rid]} 行与第 {lineno} 行并存")
+            else:
+                seen[rid] = lineno
+    return problems
+
+
+def status_cell(line: str) -> str:
+    """行尾状态格：最后一个非空裸管格（容忍缺尾管形态）。"""
+    for seg in reversed(line.split("|")):
+        seg = seg.strip()
+        if seg:
+            return seg
+    return ""
+
+
+def check_status_enum(text: str, skip_lines: set[int] | None = None) -> list[str]:
+    """行尾状态枚举前缀扫描（V3-FIX-282）。
+
+    合法前缀：OPEN / FIXED@ / CLOSED@ / WONTFIX。skip_lines 中的行号
+    （形态校验已 FAIL 的行）跳过，避免对粘连/错位行双重报警。
+    """
+    skip = skip_lines or set()
+    problems: list[str] = []
+    for lineno, line in enumerate(text.splitlines(), 1):
+        if lineno in skip or row_id(line) is None:
+            continue
+        cell = status_cell(line)
+        if cell and not cell.startswith(LEGAL_STATUS_PREFIXES):
+            problems.append(
+                f"第 {lineno} 行 {row_id(line)} 行尾状态格非法：{cell[:40]!r}"
+                f"（合法前缀 {list(LEGAL_STATUS_PREFIXES)}）"
+            )
+    return problems
+
+
+def verify_ledger_file(
+    text: str, expect_pipes: int = DEFAULT_EXPECT_PIPES, majority_tolerance: bool = True
+) -> tuple[list[str], dict]:
+    """独立体检任一台账文件（--verify 模式，V3-FIX-282）。
+
+    四项：零冲突标记残留 + 8 裸管形态（多数容差）+ 行首锚定 ID 无重号
+    + 行尾状态枚举合法。返回 (problems, stats)。
+    """
+    problems: list[str] = []
+    problems.extend(check_conflict_markers(text))
+    shape_problems, stats = check_row_shapes(text, expect_pipes, majority_tolerance)
+    problems.extend(shape_problems)
+    problems.extend(check_duplicate_ids(text))
+    # 形态已 FAIL 的行不再做状态扫描（粘连/错位行尾格无意义）
+    problems.extend(check_status_enum(text, skip_lines=stats["failed_lines"]))
+    return problems, stats
+
+
+def verify_line_accounting(outcome: MergeOutcome) -> list[str]:
+    """行数对账（V3-FIX-282 吞行检测扩展）。
+
+    双下界：
+    - 精确期望：输出行数 ≥ 共享段 + 逐块出账（分轨算法的逐行期望，
+      ID 仍在场但整行被粘连吞失的形态也必破此界——257 事故形态）；
+    - 卡面公式：输出行数 ≥ max(ours, theirs) 行数 − 冲突块合法重叠数。
+    """
+    problems: list[str] = []
+    output_lines = len(outcome.text.splitlines())
+    if output_lines < outcome.expected_lines:
+        problems.append(
+            f"行数对账失败：输出 {output_lines} 行 < 精确期望 {outcome.expected_lines} 行"
+            "——疑似整行吞失/粘连（含 ID 仍在场的粘连形态）"
+        )
+    bound = max(outcome.ours_lines, outcome.theirs_lines) - outcome.overlap_lines
+    if output_lines < bound:
+        problems.append(
+            f"行数对账失败：输出 {output_lines} 行 < 下界 {bound}"
+            f"（max(ours {outcome.ours_lines}, theirs {outcome.theirs_lines})"
+            f" − 合法重叠 {outcome.overlap_lines}）——疑似整行吞失"
+        )
     return problems
 
 
@@ -299,13 +502,13 @@ def parse_renumber(specs: list[str]) -> dict[str, str]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="舰队台账 union-merge（V3-FIX-N 分轨并集，吞行根修+撞号辅助）",
+        description="舰队台账 union-merge（V3-FIX-N 分轨并集，吞行根修+撞号辅助+8 管体检）",
     )
     parser.add_argument(
         "input",
         nargs="?",
         default="-",
-        help="含冲突标记的台账文件路径（缺省 stdin，可传 '-' 显式指 stdin）",
+        help="含冲突标记的台账文件路径（缺省 stdin，可传 '-' 显式指 stdin；--verify 模式下不可用）",
     )
     parser.add_argument("-o", "--output", help="合并结果输出路径（缺省 stdout；--check 失败时不写）")
     parser.add_argument(
@@ -318,15 +521,64 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--check",
         action="store_true",
-        help="合并后验证（零冲突标记残留+双侧 ID 全在场），失败 exit 1",
+        help="合并后验证（零冲突标记残留+双侧 ID 全在场+8 裸管形态+行数对账），失败 exit 1",
+    )
+    parser.add_argument(
+        "--verify",
+        metavar="FILE",
+        default=None,
+        help="独立体检模式：对台账 FILE 体检（零冲突标记+8 裸管形态+ID 无重号+状态枚举），只读",
+    )
+    parser.add_argument(
+        "--expect-pipes",
+        type=int,
+        default=DEFAULT_EXPECT_PIPES,
+        metavar="N",
+        help=f"表格行期望裸管数（默认 {DEFAULT_EXPECT_PIPES}=表头 7 列）",
+    )
+    parser.add_argument(
+        "--strict-pipes",
+        action="store_true",
+        help="关闭多数行形态容差：裸管数凡非期望值即 FAIL",
     )
     args = parser.parse_args(argv)
+
+    if args.verify is not None and args.input != "-":
+        parser.error("--verify 与位置参数 input 互斥（体检文件由 --verify FILE 给出）")
 
     try:
         renumber = parse_renumber(args.renumber)
     except ValueError as exc:
         print(f"错误：{exc}", file=sys.stderr)
         return 2
+
+    verify_path = args.verify
+    if verify_path is not None:
+        try:
+            with open(verify_path, encoding="utf-8") as fh:
+                text = fh.read()
+        except OSError as exc:
+            print(f"错误：读取 {verify_path} 失败：{exc}", file=sys.stderr)
+            return 2
+        problems, stats = verify_ledger_file(
+            text, expect_pipes=args.expect_pipes, majority_tolerance=not args.strict_pipes
+        )
+        print(
+            f"verify：{stats['checked']} 行 V3-FIX 行，"
+            f"裸管分布 {stats['distribution']}，多数形态 {stats['majority']}",
+            file=sys.stderr,
+        )
+        if problems:
+            for problem in problems:
+                print(f"FAIL：{problem}", file=sys.stderr)
+            print(f"verify 失败：{len(problems)} 项", file=sys.stderr)
+            return 1
+        print(
+            "verify 通过：零冲突标记残留，8 裸管形态合法（多数容差"
+            f"{'开' if not args.strict_pipes else '关'}），ID 无重号，状态枚举合法",
+            file=sys.stderr,
+        )
+        return 0
 
     if args.input == "-":
         text = sys.stdin.read()
@@ -353,9 +605,19 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.check:
         problems = verify_merge(outcome.text, outcome.ours_ids, outcome.theirs_ids)
+        problems.extend(verify_line_accounting(outcome))
+        shape_problems, shape_stats = check_row_shapes(
+            outcome.text,
+            expect_pipes=args.expect_pipes,
+            majority_tolerance=not args.strict_pipes,
+        )
+        problems.extend(shape_problems)
         print(
             f"check：{outcome.blocks} 个冲突块，"
-            f"ours ID {len(outcome.ours_ids)} 个 / theirs ID {len(outcome.theirs_ids)} 个",
+            f"ours ID {len(outcome.ours_ids)} 个 / theirs ID {len(outcome.theirs_ids)} 个，"
+            f"行数对账输出 {len(outcome.text.splitlines())} / 精确期望 "
+            f"{outcome.expected_lines} / 卡面下界 "
+            f"{max(outcome.ours_lines, outcome.theirs_lines) - outcome.overlap_lines}",
             file=sys.stderr,
         )
         if outcome.blocks == 0:
@@ -368,7 +630,12 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"FAIL：{problem}", file=sys.stderr)
             print(f"check 失败：{len(problems)} 项", file=sys.stderr)
             return 1
-        print("check 通过：零冲突标记残留，双侧 ID 全在场（无吞行）", file=sys.stderr)
+        print(
+            "check 通过：零冲突标记残留，双侧 ID 全在场（无吞行），行数对账达标，"
+            f"V3-FIX 行 {shape_stats['checked']} 行裸管形态合法（多数形态 "
+            f"{shape_stats['majority']}）",
+            file=sys.stderr,
+        )
         if args.output:
             with open(args.output, "w", encoding="utf-8") as fh:
                 fh.write(outcome.text)
