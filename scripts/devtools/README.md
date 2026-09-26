@@ -29,6 +29,7 @@
 | `q06_provider_chaos.py` | Q-06/wt406：供应商波动注入（mock OpenAI 兼容上游 :9099 + `serve`/`run` 子命令；429/慢 TTFT/断流/队列压力/全断供七场景，用户可见面+引擎 fallback/熔断日志+上游尝试链三面观测 → `chaos_results.jsonl`；注入点=env base_url 重定向，产品代码零改动；配套 `q06_chaos_engine.sh` 管理 chaos 引擎 :50062） |
 | `q06_chaos_engine.sh` | wt406：chaos 引擎启停（:50062 + redis db2 + 上游三 base_url→mock 的 .env 段落式覆盖/恢复；stop 按端口精确杀，不触常驻 :50051） |
 | `q06_smoke_tier.py` | wt406：tier 分层 smoke 探针（free/deep/pro/提权封堵四形态 → :50061；非交付物，报告引用输出） |
+| `ci_suite_profile.py` | wt577：CI 套件时长画像（解析 GH Actions `pytest -v` job 终态日志，逐测试估时 → Top 慢测试/文件/目录占比 + 文件粒度 LPT 分片模拟，Markdown 输出；只读不连网；用法见脚本 docstring；报告见 `v3-output/WT577-PROFILE/report.md`） |
 | `build_demo.sh` | Demo 版本自动打包（历史演示用途） |
 | `demo_start.sh` | Demo 演示启动脚本（历史演示用途） |
 | `TEST_INSTRUCTIONS.sh` | 全功能验收测试操作说明（历史） |
