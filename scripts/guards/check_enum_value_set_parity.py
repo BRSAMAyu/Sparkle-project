@@ -487,33 +487,10 @@ KNOWN_DRIFT: dict[str, dict] = {
     # mobile weak+unknown 哨兵），守卫实测对齐，豁免即删保持棘轮纯净。
     # V3-FIX-260 豁免已删：wt542 修复落地（mobile 补 planning+unknown 哨兵，
     # 守卫实测对齐仅剩 EP002 unknown WARN），豁免即删保持棘轮纯净。
-    # ---- wt548 扩表新发现漂移（台账 v3/06_agent_fleet/DYNAMIC_ISSUES.md 266-268）----
-    "GroupType": {
-        "fix": "V3-FIX-269",
-        "owner": "待派",
-        "expiry": _dt.date(2026, 10, 7),
-        "note": "mobile GroupType 缺 'official'（community_model.dart:11-16 仅 squad/sprint）；"
-        "models 层真源含 official（models/community.py）。API 面 schemas/community.py:29 "
-        "GroupTypeEnum 现仅 squad/sprint，漂移暂为模型单面潜伏——一旦 schema 放开即 mobile "
-        "$enumDecode 崩",
-    },
-    "MessageType": {
-        "fix": "V3-FIX-270",
-        "owner": "待派",
-        "expiry": _dt.date(2026, 10, 7),
-        "note": "mobile MessageType 缺 'broadcast'（community_model.dart:37-66 共 11 值）；"
-        "wt297 实录广播为真实落库值（community_advanced_service.py:751 写入，"
-        "schemas/community.py:58-60 曾因 schema 缺成员致列表 ValidationError 500）",
-    },
-    "PhotonTransactionType": {
-        "fix": "V3-FIX-271",
-        "owner": "待派",
-        "expiry": _dt.date(2026, 10, 7),
-        "note": "mobile PhotonTransactionType 缺 contract_escrow/grant_bonus/guest_seed "
-        "（photon_model.dart:19-47 共 12 值；shop.py:26/35/36 MINT-FIX/PHOTON-STREAM 落账值，"
-        "photons.py:63 /transactions 下发；mobile $enumDecode 硬解码无兜底，行内 D-COMM-2 "
-        "注释自证同型崩溃先例）",
-    },
+    # V3-FIX-269/270/271 豁免已删：wt553 修复落地（mobile GroupType 补
+    # official、MessageType 补 broadcast、PhotonTransactionType 补
+    # grant_bonus/contract_escrow/guest_seed，三族均加 unknown 哨兵 +
+    # unknownEnumValue 兜底 + 消费面穷举 switch/l10n），豁免即删保持棘轮纯净。
 }
 
 # ---------------------------------------------------------------------------
