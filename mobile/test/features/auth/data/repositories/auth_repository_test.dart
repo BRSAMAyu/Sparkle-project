@@ -331,4 +331,233 @@ void main() {
       expect(await storage.read('accessToken'), isNull);
     });
   });
+
+  /// V3-FIX-205：upgradeGuest/upgradeGuestWithSocial 与 register 同款
+  /// post-2xx token 回滚家族（wt490 同族 grep 扫描全仓三处余二）。
+  /// 修法形制对齐 V3-FIX-17 auth_repository_test 先例。
+  group('V3-FIX-205 upgradeGuest post-2xx token rollback', () {
+    final userBody = <String, dynamic>{
+      'id': 'guest-upgraded',
+      'username': 'upgraded_guest',
+      'email': 'upgraded@example.com',
+      'nickname': 'Upgraded',
+      'avatar_status': 'approved',
+      'flame_level': 1,
+      'flame_brightness': 0.5,
+      'depth_preference': 0.5,
+      'curiosity_preference': 0.5,
+      'is_active': true,
+      'status': 'offline',
+      'created_at': '2026-01-01T00:00:00Z',
+      'updated_at': '2026-01-01T00:00:00Z',
+    };
+
+    void stubUpgradeGuestSuccess({
+      Object? token,
+      bool includeToken = true,
+    }) {
+      apiClient.postHandler = (path, data, queryParameters) async {
+        expect(path, ApiEndpoints.upgradeGuest);
+        return Response(
+          requestOptions: RequestOptions(path: ApiEndpoints.upgradeGuest),
+          statusCode: 200,
+          data: <String, dynamic>{
+            if (includeToken) 'token': token,
+            'user': userBody,
+          },
+        );
+      };
+    }
+
+    Future<UserModel> submitUpgrade(AuthRepository repo) => repo.upgradeGuest(
+          username: 'upgraded_guest',
+          email: 'upgraded@example.com',
+          password: 'password',
+          acceptedTos: true,
+          acceptedPrivacy: true,
+        );
+
+    test('upgrade success stores tokens and returns user (baseline)', () async {
+      stubUpgradeGuestSuccess(
+        token: <String, dynamic>{
+          'access_token': 'upgrade-access-token',
+          'refresh_token': 'upgrade-refresh-token',
+          'token_type': 'bearer',
+          'expires_in': 3600,
+        },
+      );
+
+      final user = await submitUpgrade(repository);
+
+      expect(user.username, 'upgraded_guest');
+      expect(await storage.read('accessToken'), 'upgrade-access-token');
+      expect(await storage.read('refreshToken'), 'upgrade-refresh-token');
+    });
+
+    test(
+        'token persistence failure after 2xx does not roll back an upgraded '
+        'account into an upgrade failure', () async {
+      stubUpgradeGuestSuccess(
+        token: <String, dynamic>{
+          'access_token': 'upgrade-access-token',
+          'refresh_token': 'upgrade-refresh-token',
+        },
+      );
+      final degradedRepo = AuthRepository(apiClient, ThrowingTokenStorage());
+
+      // 网关 200 + 访号已在服务端转换为正式账号：升级语义必须成功，
+      // token 块故障只降级本地会话，否则用户被留在升级页重试、必撞
+      // 「用户名已存在」类状态冲突（同 B-03 §4.1 家族）。
+      final user = await submitUpgrade(degradedRepo);
+
+      expect(user.username, 'upgraded_guest');
+    });
+
+    test(
+        'response without a parsable token block still keeps the upgrade '
+        'successful (contract drift does not fake-fail an upgraded account)',
+        () async {
+      stubUpgradeGuestSuccess(includeToken: false);
+
+      // token 缺失 → TokenResponse.fromJson(access_token 必填) 必抛；
+      // 旧代码把该异常穿透出仓库、上层按升级失败回滚 UI。
+      final user = await submitUpgrade(repository);
+
+      expect(user.username, 'upgraded_guest');
+    });
+
+    test('2xx without a user body surfaces a real failure, not silent success',
+        () async {
+      apiClient.postHandler = (path, data, queryParameters) async => Response(
+            requestOptions: RequestOptions(path: ApiEndpoints.upgradeGuest),
+            statusCode: 200,
+            data: <String, dynamic>{
+              'token': <String, dynamic>{
+                'access_token': 'upgrade-access-token',
+              },
+            },
+          );
+
+      await expectLater(
+        submitUpgrade(repository),
+        throwsA(isA<ServerFailure>()),
+      );
+      expect(await storage.read('accessToken'), isNull);
+    });
+  });
+
+  group('V3-FIX-205 upgradeGuestWithSocial post-2xx token rollback', () {
+    final userBody = <String, dynamic>{
+      'id': 'guest-social-upgraded',
+      'username': 'upgraded_social_guest',
+      'email': 'social-upgraded@example.com',
+      'nickname': 'SocialUpgraded',
+      'avatar_status': 'approved',
+      'flame_level': 1,
+      'flame_brightness': 0.5,
+      'depth_preference': 0.5,
+      'curiosity_preference': 0.5,
+      'is_active': true,
+      'status': 'offline',
+      'created_at': '2026-01-01T00:00:00Z',
+      'updated_at': '2026-01-01T00:00:00Z',
+    };
+
+    void stubUpgradeSocialSuccess({
+      Object? token,
+      bool includeToken = true,
+    }) {
+      apiClient.postHandler = (path, data, queryParameters) async {
+        expect(path, ApiEndpoints.upgradeGuestSocial);
+        return Response(
+          requestOptions:
+              RequestOptions(path: ApiEndpoints.upgradeGuestSocial),
+          statusCode: 200,
+          data: <String, dynamic>{
+            if (includeToken) 'token': token,
+            'user': userBody,
+          },
+        );
+      };
+    }
+
+    Future<UserModel> submitUpgradeSocial(AuthRepository repo) =>
+        repo.upgradeGuestWithSocial(
+          provider: 'google',
+          token: 'social-id-token',
+          acceptedTos: true,
+          acceptedPrivacy: true,
+        );
+
+    test('social upgrade success stores tokens and returns user (baseline)',
+        () async {
+      stubUpgradeSocialSuccess(
+        token: <String, dynamic>{
+          'access_token': 'social-upgrade-access-token',
+          'refresh_token': 'social-upgrade-refresh-token',
+          'token_type': 'bearer',
+          'expires_in': 3600,
+        },
+      );
+
+      final user = await submitUpgradeSocial(repository);
+
+      expect(user.username, 'upgraded_social_guest');
+      expect(
+        await storage.read('accessToken'),
+        'social-upgrade-access-token',
+      );
+      expect(
+        await storage.read('refreshToken'),
+        'social-upgrade-refresh-token',
+      );
+    });
+
+    test(
+        'token persistence failure after 2xx does not roll back an upgraded '
+        'account into an upgrade failure', () async {
+      stubUpgradeSocialSuccess(
+        token: <String, dynamic>{
+          'access_token': 'social-upgrade-access-token',
+          'refresh_token': 'social-upgrade-refresh-token',
+        },
+      );
+      final degradedRepo = AuthRepository(apiClient, ThrowingTokenStorage());
+
+      final user = await submitUpgradeSocial(degradedRepo);
+
+      expect(user.username, 'upgraded_social_guest');
+    });
+
+    test(
+        'response without a parsable token block still keeps the upgrade '
+        'successful (contract drift does not fake-fail an upgraded account)',
+        () async {
+      stubUpgradeSocialSuccess(includeToken: false);
+
+      final user = await submitUpgradeSocial(repository);
+
+      expect(user.username, 'upgraded_social_guest');
+    });
+
+    test('2xx without a user body surfaces a real failure, not silent success',
+        () async {
+      apiClient.postHandler = (path, data, queryParameters) async => Response(
+            requestOptions:
+                RequestOptions(path: ApiEndpoints.upgradeGuestSocial),
+            statusCode: 200,
+            data: <String, dynamic>{
+              'token': <String, dynamic>{
+                'access_token': 'social-upgrade-access-token',
+              },
+            },
+          );
+
+      await expectLater(
+        submitUpgradeSocial(repository),
+        throwsA(isA<ServerFailure>()),
+      );
+      expect(await storage.read('accessToken'), isNull);
+    });
+  });
 }

@@ -611,9 +611,29 @@ class AuthRepository {
           'agreed_locale': agreedLocale,
         },
       );
-      final data = response.data!;
-      final tokenData = data['token'] as Map<String, dynamic>? ?? data;
-      await saveTokens(TokenResponse.fromJson(tokenData));
+      // V3-FIX-205：升级成功判定 = HTTP 2xx + user 体可解析（对齐 V3-FIX-17
+      // register 形制）；2xx 却无 user 体属于真正异常（防御分支），以真实
+      // 失败反馈而非类型错误穿透。
+      final data = response.data;
+      if (data == null || data['user'] is! Map<String, dynamic>) {
+        throw ServerFailure(
+          message: I18nService.instance.l10n.authErrorUpgradeGuest,
+          code: 'UPGRADE_EMPTY_RESPONSE',
+          statusCode: response.statusCode,
+        );
+      }
+      // V3-FIX-205 UX 语义修正：token 解析/持久化失败（web localStorage 配额/
+      // 隐私模式、响应缺 token 块等）只降级为「升级成功但本地会话未建立」，
+      // 绝不把已在服务端转换为正式账号的访号回滚成升级失败 —— 否则用户重试
+      // 必撞「用户名已存在」类状态冲突（V3-FIX-17 同族 B-03 §4.1）。失败可凭
+      // 真实账号走登录/恢复，成功可验。
+      try {
+        final tokenData = data['token'] as Map<String, dynamic>? ?? data;
+        await saveTokens(TokenResponse.fromJson(tokenData));
+      } catch (e) {
+        debugPrint('[V3-FIX-205] token persistence degraded after successful '
+            'guest upgrade: $e');
+      }
       return UserModel.fromJson(data['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
       throw Exception(
@@ -647,9 +667,22 @@ class AuthRepository {
           'agreed_locale': agreedLocale,
         },
       );
-      final data = response.data!;
-      final tokenData = data['token'] as Map<String, dynamic>? ?? data;
-      await saveTokens(TokenResponse.fromJson(tokenData));
+      // V3-FIX-205：成功判定与 token 降级语义同 upgradeGuest（V3-FIX-17 形制）。
+      final data = response.data;
+      if (data == null || data['user'] is! Map<String, dynamic>) {
+        throw ServerFailure(
+          message: I18nService.instance.l10n.authErrorUpgradeGuest,
+          code: 'UPGRADE_EMPTY_RESPONSE',
+          statusCode: response.statusCode,
+        );
+      }
+      try {
+        final tokenData = data['token'] as Map<String, dynamic>? ?? data;
+        await saveTokens(TokenResponse.fromJson(tokenData));
+      } catch (e) {
+        debugPrint('[V3-FIX-205] token persistence degraded after successful '
+            'guest upgrade: $e');
+      }
       return UserModel.fromJson(data['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
       throw Exception(
