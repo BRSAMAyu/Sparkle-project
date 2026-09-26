@@ -22,7 +22,8 @@ from app.aurora.migration import (
 )
 from app.aurora.runtime_v1.user_preferences import AuroraUserPreferencesService
 from app.aurora.schemas import SignalSnapshot
-from app.config import aurora_flags, settings
+from app.config import aurora_flags
+from app.core.kill_switch import is_live_mode, resolve_settings_mode
 from app.core.metrics import (
     ADAPTIVE_ROUTING_ADJUSTMENTS_TOTAL,
     AURORA_STAGE33_FALLBACK_TOTAL,
@@ -1152,7 +1153,20 @@ class RoutingEngineMixin:
     ) -> tuple[str | None, str]:
         service = FollowUpQuestionService()
         follow_up_question = None
-        if settings.SPARKLE_ROUTER_SUFFICIENCY_BRANCH_ENABLED and task_summary is not None and task_summary.score < 0.6:
+        # V3-FIX-187：follow-up 判据走 V3-FIX-21 统一入口 resolve_settings_mode——
+        # tri-state 设置 AURORA_STAGE20_SUFFICIENCY_JUDGE_MODE 在场即唯一判据，
+        # legacy bool SPARKLE_ROUTER_SUFFICIENCY_BRANCH_ENABLED 只在设置缺席时兜底；
+        # 直读 legacy bool 会让 stage20 off/shadow 仍生成 follow-up（治理面与
+        # 行为面分叉）。shadow 裁决（test_router_sufficiency_branch.py 文件头）：
+        # follow-up 是用户可见 prompt 行为指令，按 kill_switch 既有模式为
+        # live-only（同 stage21 prompt 注入闸）；shadow 的观察通道是 sufficiency
+        # judge 本身（_collect_stage20_sufficiency 以 is_enabled=shadow|live 放行
+        # 运行并持久化 judgment）。
+        if (
+            is_live_mode(resolve_settings_mode(AuroraStage20KillSwitchService.BINDINGS["sufficiency_judge"]))
+            and task_summary is not None
+            and task_summary.score < 0.6
+        ):
             follow_up_question = service.select_question(task_summary)
 
         context_caveat = ""
