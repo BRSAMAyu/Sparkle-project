@@ -23,11 +23,11 @@ from app.core.cache import cache_service
 from app.core.security import get_password_hash, set_user_revoked_before, verify_password
 from app.db.session import get_db
 from app.models.auth_security import AuthAuditAction, AuthAuditLog
+from app.models.user import AvatarStatus as ModelAvatarStatus
 from app.models.user import PushPreference, User, UserStatus
 from app.models.user_settings import UserSettings
 from app.schemas.user import (
     AuthAuditLogInfo,
-    AvatarStatus,
     DeleteAccountRequest,
     LinkSocialRequest,
     PasswordChange,
@@ -199,7 +199,7 @@ async def update_me(
     if obj_in.avatar_url is not None:
         current_user.avatar_url = obj_in.avatar_url
         current_user.pending_avatar_url = None
-        current_user.avatar_status = AvatarStatus.APPROVED
+        current_user.avatar_status = ModelAvatarStatus.APPROVED
 
     pref_updates = {}
     if obj_in.depth_preference is not None:

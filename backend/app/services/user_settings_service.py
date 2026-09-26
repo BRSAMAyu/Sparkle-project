@@ -28,7 +28,8 @@ class UserSettingsService:
         self.db = db
         self.redis = redis
 
-    async def get_or_create(self, user_id: UUID) -> UserSettings:
+    async def get_or_create(self, user_id: UUID | str) -> UserSettings:
+        # 调用方（API 层）传的是鉴权后的 str user_id，where/模型列均按 UUID 语义等值处理。
         record = await self._get_settings(user_id)
         if record:
             return record
@@ -488,7 +489,7 @@ class UserSettingsService:
             self.redis = None
         return self.redis
 
-    async def _get_settings(self, user_id: UUID) -> UserSettings | None:
+    async def _get_settings(self, user_id: UUID | str) -> UserSettings | None:
         result = await self.db.execute(
             select(UserSettings).where(
                 UserSettings.user_id == user_id,

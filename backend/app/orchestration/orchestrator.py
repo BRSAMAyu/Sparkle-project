@@ -1319,7 +1319,7 @@ class ChatOrchestrator(
         prompt_version: str,
         request_extra_context: dict[str, Any],
         conversation_context: dict[str, Any],
-        user_context_payload: dict[str, Any],
+        user_context_payload: dict[str, Any] | None,
     ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
         surface = self._resolve_aurora_runtime_surface(request_extra_context)
         if surface is None:
@@ -1499,7 +1499,8 @@ class ChatOrchestrator(
         except Exception as exc:
             logger.debug(f"Failed to emit early ack progress: {exc}")
 
-    def _coerce_session_uuid(self, session_id: str) -> uuid.UUID:
+    @staticmethod
+    def _coerce_session_uuid(session_id: str) -> uuid.UUID:
         raw = str(session_id).strip()
         try:
             return uuid.UUID(raw)
@@ -2841,7 +2842,7 @@ class ChatOrchestrator(
                 # v2.10: Emit UXDirective metadata for Flutter status band + receipt display
                 # R5-DF4: Use 'spine_ux_warning' to match Flutter websocket_chat_service_v2 listener
                 _spine_ux_data = (request_extra_context or {}).get("spine_ux_directive")
-                if _spine_ux_data and stream_callback:
+                if _spine_ux_data and stream_callback is not None:
                     try:
                         await stream_callback(
                             agent_service_pb2.ChatResponse(
@@ -2854,7 +2855,7 @@ class ChatOrchestrator(
                         logger.debug(f"Spine UX directive emission skipped: {_ux_err}")
 
                 _spine_trace_id = (request_extra_context or {}).get("spine_causal_trace_id")
-                if _spine_trace_id and stream_callback:
+                if _spine_trace_id and stream_callback is not None:
                     try:
                         await stream_callback(
                             agent_service_pb2.ChatResponse(
@@ -2865,7 +2866,7 @@ class ChatOrchestrator(
                         logger.debug("stream_callback failed for spine_causal_trace_id, stream may be closed")
 
                 _aurora_l1 = (request_extra_context or {}).get("aurora_l1")
-                if _aurora_l1 and stream_callback:
+                if _aurora_l1 and stream_callback is not None:
                     try:
                         await stream_callback(
                             agent_service_pb2.ChatResponse(
@@ -2876,7 +2877,7 @@ class ChatOrchestrator(
                         logger.debug("stream_callback failed for aurora_l1, stream may be closed")
 
                 # v2.11: Emit growth card metadata for Flutter (divine moment #1 看见坚持)
-                if stream_callback:
+                if stream_callback is not None:
                     try:
                         _growth_raw = await self.redis.get(f"spine:card:growth:{user_id}:latest")
                         if _growth_raw:
@@ -2892,7 +2893,7 @@ class ChatOrchestrator(
                         logger.debug("stream_callback failed for spine_growth_card, stream may be closed")
 
                 # MAGIC-002~006: Emit unified divine moment card metadata for Flutter
-                if stream_callback:
+                if stream_callback is not None:
                     _divine_card_keys = [
                         ("correction_impact", "spine:card:correction_impact:{user_id}:latest"),
                         ("material_non_use", "spine:card:material_non_use:{user_id}:latest"),
@@ -2920,7 +2921,7 @@ class ChatOrchestrator(
 
                 # STAB-012: Emit spine degraded flag when Spine pipeline failed
                 if request_extra_context and request_extra_context.get("spine_degraded"):
-                    if stream_callback:
+                    if stream_callback is not None:
                         try:
                             await stream_callback(
                                 agent_service_pb2.ChatResponse(

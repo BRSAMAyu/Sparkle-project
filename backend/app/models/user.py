@@ -100,12 +100,13 @@ class User(BaseModel):
     status: Mapped[UserStatus] = mapped_column(Enum(UserStatus), default=UserStatus.OFFLINE, nullable=False)
 
     # 🆕 社交登录 ID (encrypted at rest via pii_encryption_listeners)
-    google_id: Mapped[str] = mapped_column(String(512), unique=True, nullable=True, index=True)
-    google_id_hash: Mapped[str] = mapped_column(String(64), nullable=True, index=True)
-    apple_id: Mapped[str] = mapped_column(String(512), unique=True, nullable=True, index=True)
-    apple_id_hash: Mapped[str] = mapped_column(String(64), nullable=True, index=True)
-    wechat_unionid: Mapped[str] = mapped_column(String(512), unique=True, nullable=True, index=True)
-    wechat_unionid_hash: Mapped[str] = mapped_column(String(64), nullable=True, index=True)
+    # 列可空且解绑路径会写 None（api/v1/users.py unlink/delete），注解对齐可空性。
+    google_id: Mapped[str | None] = mapped_column(String(512), unique=True, nullable=True, index=True)
+    google_id_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    apple_id: Mapped[str | None] = mapped_column(String(512), unique=True, nullable=True, index=True)
+    apple_id_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    wechat_unionid: Mapped[str | None] = mapped_column(String(512), unique=True, nullable=True, index=True)
+    wechat_unionid_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
 
     # Hash columns for deterministic lookup (P1-1: field-level encryption)
     username_hash: Mapped[str] = mapped_column(String(64), nullable=True, index=True)

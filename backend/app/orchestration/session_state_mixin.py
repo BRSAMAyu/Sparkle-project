@@ -562,7 +562,7 @@ class SessionStateMixin:
         user_id: str,
         user_message: str,
         user_context_payload: dict[str, Any] | None,
-        plan_id: str | None,
+        plan_id: uuid.UUID | None,
         session_feedback_signal: dict[str, Any] | None = None,
         session_id: str | None = None,
     ) -> None:

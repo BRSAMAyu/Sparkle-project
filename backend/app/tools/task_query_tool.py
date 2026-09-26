@@ -60,6 +60,7 @@ class QueryPlanTasksTool(BaseTool):
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
@@ -232,6 +233,7 @@ class ModifyPlanTaskTool(BaseTool):
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
@@ -248,7 +250,7 @@ class ModifyPlanTaskTool(BaseTool):
                 )
 
             # Build update payload
-            update_fields = {}
+            update_fields: dict[str, Any] = {}
 
             if params.title is not None:
                 update_fields["title"] = params.title
@@ -366,6 +368,7 @@ class GetTaskDetailsTool(BaseTool):
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)
@@ -667,6 +670,7 @@ class QueryAllTasksTool(BaseTool):
         user_id: str,
         db_session: Any,
         tool_call_id: str | None = None,
+        locale: str = "en",
     ) -> ToolResult:
         try:
             user_uuid = UUID(user_id)

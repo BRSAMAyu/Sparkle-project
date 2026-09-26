@@ -6,6 +6,7 @@ the full app with realistic pre-populated content.
 import math
 import uuid
 from datetime import UTC, date, datetime, timedelta
+from typing import Any, NotRequired, TypedDict
 
 from loguru import logger
 from sqlalchemy import func, select
@@ -79,6 +80,29 @@ from app.models.galaxy import NodeRelation
 from app.models.shop import PhotonTransactionHistory, PhotonTransactionType
 from app.models.user import UserStatus
 from app.services.node_sector_service import build_sector_visuals
+
+
+class _DemoFriendSpec(TypedDict):
+    """好友种子的静态规格（username/status 等字段的编译期形状）。"""
+
+    username: str
+    email: str
+    nickname: str
+    flame_level: int
+    flame_brightness: float
+    depth_preference: float
+    curiosity_preference: float
+    status: UserStatus
+    match_reason: NotRequired[dict[str, Any]]
+    note: NotRequired[str]
+
+
+class _FriendLearningProfile(TypedDict):
+    """好友学习档案的静态规格（streak/成就/节点三元组形状）。"""
+
+    streak: tuple[int, int, int]
+    achievements: list[tuple[str, float, int, int, datetime]]
+    nodes: list[tuple[str, int, int]]
 
 
 async def _ensure_achievements(session: AsyncSession):
@@ -1787,19 +1811,19 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
         name, _, _, _, _, unlocked, mastery, study_count = node_tuple
         if not unlocked:
             continue
-        node = created_nodes.get(name)
-        if not node:
+        seeded_node = created_nodes.get(name)
+        if not seeded_node:
             continue
         status_exists = (await session.execute(
             select(UserNodeStatus).where(
                 UserNodeStatus.user_id == user.id,
-                UserNodeStatus.node_id == node.id,
+                UserNodeStatus.node_id == seeded_node.id,
             )
         )).scalar_one_or_none()
         if not status_exists:
             session.add(UserNodeStatus(
                 user_id=user.id,
-                node_id=node.id,
+                node_id=seeded_node.id,
                 is_unlocked=True,
                 mastery_score=mastery,
                 bkt_mastery_prob=max(0.0, min(float(mastery) / 100.0, 1.0)),
@@ -2275,7 +2299,7 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
 
     # Community: seed a richer guest social graph, shared resources, task boards,
     # favorites, and accountability history so the simulator has realistic data.
-    friend_specs = [
+    friend_specs: list[_DemoFriendSpec] = [
         {
             "username": "spark_friend_1",
             "email": "friend1@sparkle.demo",
@@ -2343,7 +2367,7 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
             "match_reason": {"courses": ["英语", "共学打卡"], "scene": "晨读搭子"},
         },
     ]
-    pending_specs = [
+    pending_specs: list[_DemoFriendSpec] = [
         {
             "username": "spark_friend_pending_1",
             "email": "pending1@sparkle.demo",
@@ -2361,16 +2385,17 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
     friend_by_name: dict[str, User] = {}
     friendship_by_name: dict[str, Friendship] = {}
     for spec in friend_specs:
-        friend = await _ensure_demo_user(session, **{k: spec[k] for k in (
-            "username",
-            "email",
-            "nickname",
-            "flame_level",
-            "flame_brightness",
-            "depth_preference",
-            "curiosity_preference",
-            "status",
-        )})
+        friend = await _ensure_demo_user(
+            session,
+            username=spec["username"],
+            email=spec["email"],
+            nickname=spec["nickname"],
+            flame_level=spec["flame_level"],
+            flame_brightness=spec["flame_brightness"],
+            depth_preference=spec["depth_preference"],
+            curiosity_preference=spec["curiosity_preference"],
+            status=spec["status"],
+        )
         friends.append(friend)
         friend_by_name[spec["nickname"]] = friend
         friendship_by_name[spec["nickname"]] = await _ensure_friendship(
@@ -2383,16 +2408,17 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
         )
 
     for spec in pending_specs:
-        pending_user = await _ensure_demo_user(session, **{k: spec[k] for k in (
-            "username",
-            "email",
-            "nickname",
-            "flame_level",
-            "flame_brightness",
-            "depth_preference",
-            "curiosity_preference",
-            "status",
-        )})
+        pending_user = await _ensure_demo_user(
+            session,
+            username=spec["username"],
+            email=spec["email"],
+            nickname=spec["nickname"],
+            flame_level=spec["flame_level"],
+            flame_brightness=spec["flame_brightness"],
+            depth_preference=spec["depth_preference"],
+            curiosity_preference=spec["curiosity_preference"],
+            status=spec["status"],
+        )
         await _ensure_friendship(
             session,
             left_user_id=user.id,
@@ -2409,7 +2435,7 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
     ethan = friend_by_name["Ethan"]
     susu = friend_by_name["苏苏"]
 
-    friend_learning_profiles = [
+    friend_learning_profiles: list[tuple[User, _FriendLearningProfile]] = [
         (
             aze,
             {
@@ -2513,13 +2539,13 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
                 is_pinned=True,
             )
         for idx, (node_name, mastery, study_count) in enumerate(profile["nodes"]):
-            node = created_nodes.get(node_name)
-            if not node:
+            profile_node = created_nodes.get(node_name)
+            if not profile_node:
                 continue
             await _ensure_user_node_status(
                 session,
                 user_id=friend.id,
-                node_id=node.id,
+                node_id=profile_node.id,
                 mastery_score=mastery,
                 total_study_minutes=study_count * 18,
                 study_count=study_count,

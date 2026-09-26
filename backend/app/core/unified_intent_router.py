@@ -17,6 +17,7 @@ from uuid import UUID
 
 from loguru import logger
 
+from app.core.llm_security_wrapper import LLMSecurityWrapper
 from app.services.llm_fallback_utils import router_llm
 from app.services.llm_service import LLMService
 
@@ -194,7 +195,7 @@ class UnifiedIntentRouter:
     def __init__(
         self,
         redis_client=None,
-        llm_service: LLMService | None = None,
+        llm_service: LLMService | LLMSecurityWrapper | None = None,
         context_window_size: int = 5
     ):
         """

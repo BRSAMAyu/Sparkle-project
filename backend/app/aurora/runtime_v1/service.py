@@ -886,8 +886,9 @@ class AuroraRuntimeV1Service:
         return enriched
 
     def _merge_context_items(
-        self, prior_items: list[dict[str, Any]], current_value: Any, *, key_field: str
+        self, prior_items: Any, current_value: Any, *, key_field: str
     ) -> list[dict[str, Any]]:
+        # prior_items 来自外部上下文载荷，可能是任意值；函数内部自行判定非 list 即置空。
         if not isinstance(prior_items, list):
             prior_items = []
         current_items = (
@@ -1313,6 +1314,7 @@ class AuroraRuntimeV1Service:
     def _coerce_china_datetime(self, value: Any) -> datetime | None:
         if value in (None, ""):
             return None
+        parsed: datetime | None
         if isinstance(value, datetime):
             parsed = value
         elif isinstance(value, (int, float)):
@@ -2295,13 +2297,12 @@ class AuroraRuntimeV1Service:
         topic_summary = self._chat_topic_summary(messages_desc)
         pending_question = self._latest_unanswered_assistant_question(messages_desc)
         latest_message = messages_desc[0] if messages_desc else None
+        latest_created_at = getattr(latest_message, "created_at", None)
         return {
             "conversation_id": str(session_id),
             "last_message_id": str(getattr(latest_message, "id", "") or ""),
             "last_message_at": (
-                getattr(latest_message, "created_at", None).isoformat()
-                if getattr(latest_message, "created_at", None)
-                else None
+                latest_created_at.isoformat() if latest_created_at else None
             ),
             "topic_summary": topic_summary,
             "pending_question": pending_question,
