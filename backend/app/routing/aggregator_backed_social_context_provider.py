@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.core.kill_switch import is_enabled_mode, resolve_settings_mode
 from app.routing.social_context_provider import FrozenSocialMention, FrozenSocialSnapshot, SocialContextProvider
 from app.services.aurora_stage18_kill_switch_service import AuroraStage18KillSwitchService
 from app.state_aggregator.service import StateAggregatorService
@@ -44,7 +45,14 @@ class AggregatorBackedSocialContextProvider(SocialContextProvider):
 
 
 def build_social_context_provider(db: AsyncSession) -> SocialContextProvider:
-    if settings.SPARKLE_AGGREGATOR_ENABLED and settings.SPARKLE_ROUTER_USE_AGGREGATOR_PROVIDER:
+    # V3-FIX-186：选型判据走 V3-FIX-21 统一入口 resolve_settings_mode——
+    # tri-state 设置 AURORA_STAGE18_AGGREGATOR_MODE 在场即唯一判据（off/shadow/live），
+    # legacy bool SPARKLE_AGGREGATOR_ENABLED 只在设置缺席时兜底；
+    # 直读 legacy bool 会让 stage18 off 仍选中本 provider（治理面与行为面分叉）。
+    # builder 为同步面，按卡片口径读 settings 层三态（Redis 覆盖由 fetch 内
+    # is_enabled 二道闸承接），与 AuroraStage18KillSwitchService 共用同一 binding。
+    aggregator_mode = resolve_settings_mode(AuroraStage18KillSwitchService.BINDINGS["aggregator_enabled"])
+    if is_enabled_mode(aggregator_mode) and settings.SPARKLE_ROUTER_USE_AGGREGATOR_PROVIDER:
         return AggregatorBackedSocialContextProvider(db)
 
     from app.routing.router_context_reader import RouterContextReader
