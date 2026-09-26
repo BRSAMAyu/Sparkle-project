@@ -6,6 +6,7 @@ and support 6 task types across all goal domains.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
 
@@ -60,6 +61,7 @@ class TaskCardBuilder:
         bound_nodes: list[str],
         why: WhyThisTask | None = None,
         steps: list[str] | None = None,
+        stuck_protocol: StuckProtocol | None = None,
     ) -> TaskCardProtocol:
         return TaskCardProtocol(
             task_id=TaskCardBuilder._new_id(),
@@ -72,7 +74,8 @@ class TaskCardBuilder:
                 must_load_node_ids=bound_nodes,
             ),
             steps=steps or [],
-            stuck_protocol=StuckProtocol(
+            stuck_protocol=stuck_protocol
+            or StuckProtocol(
                 escalation_after_min=10,
                 hint_strategy="simplify",
                 aurora_wake_on_stuck=True,
@@ -205,7 +208,7 @@ class TaskCardBuilder:
         cfg = defaults.get(goal_type, defaults["general"])
         task_type = overrides.get("task_type", cfg["task_type"])
 
-        builder_map = {
+        builder_map: dict[str, Callable[..., TaskCardProtocol]] = {
             "study": TaskCardBuilder.for_study,
             "practice": TaskCardBuilder.for_practice,
             "artifact_build": TaskCardBuilder.for_artifact_build,

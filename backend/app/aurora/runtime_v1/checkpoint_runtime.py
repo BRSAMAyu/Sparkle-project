@@ -5,7 +5,7 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import UTC, datetime, time, timedelta
-from typing import Any
+from typing import Any, overload
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -114,10 +114,23 @@ def _naive_utc(value: datetime | None) -> datetime | None:
     return value.astimezone(UTC).replace(tzinfo=None)
 
 
+@overload
+def _naive_utc_strict(value: datetime) -> datetime: ...
+
+
+@overload
+def _naive_utc_strict(value: None) -> None: ...
+
+
+def _naive_utc_strict(value: datetime | None) -> datetime | None:
+    """入参非 None 则返回值必非 None（重载把这一事实告诉调用方）。"""
+    return _naive_utc(value)
+
+
 def _isoformat(value: datetime | None) -> str | None:
     if value is None:
         return None
-    return _naive_utc(value).isoformat()
+    return _naive_utc_strict(value).isoformat()
 
 
 def _coerce_datetime(value: Any) -> datetime | None:
@@ -687,7 +700,7 @@ class AuroraCheckpointRuntimeService:
             )
         minutes_overdue = max(
             0.0,
-            round((now - _naive_utc(wake.scheduled_at)).total_seconds() / 60.0, 1),
+            round((now - _naive_utc_strict(wake.scheduled_at)).total_seconds() / 60.0, 1),
         )
         return DashboardReadout(
             surface=AURORA_CHECKPOINT_SURFACE,
@@ -730,10 +743,12 @@ class AuroraCheckpointRuntimeService:
         timezone_name: str,
     ) -> tuple[FollowUpTimingDecision, dict[str, Any], dict[str, Any]]:
         payload = dict(wake.payload or {})
-        blocker = {
+        raw_agenda_priority = payload.get("agenda_priority")
+        blocker: dict[str, Any] = {
             "summary": str(payload.get("blocker_summary") or ""),
             "urgency_score": float(wake.urgency_score or 0.0),
-            "agenda_priority": payload.get("agenda_priority"),
+            # is_privacy_blocked 契约是 str|None（内部 _normalize_text 本就 str 化，语义不变）
+            "agenda_priority": str(raw_agenda_priority) if raw_agenda_priority is not None else None,
             "time_pressure": bool(payload.get("time_pressure")),
             "understanding_gap": bool(payload.get("understanding_gap")),
         }
@@ -932,7 +947,7 @@ class AuroraCheckpointRuntimeService:
     ) -> dict[str, Any]:
         payload = dict(wake.payload or {})
         keywords = [str(item) for item in payload.get("blocker_keywords") or [] if str(item).strip()]
-        since = max(_naive_utc(wake.created_at), now - timedelta(days=3))
+        since = max(_naive_utc_strict(wake.created_at), now - timedelta(days=3))
         result = await self.db.execute(
             select(ChatMessage)
             .where(
@@ -970,7 +985,7 @@ class AuroraCheckpointRuntimeService:
         minutes_since_last = None
         if last_message_at is not None:
             minutes_since_last = round(
-                max(0.0, (now - _naive_utc(last_message_at)).total_seconds() / 60.0),
+                max(0.0, (now - _naive_utc_strict(last_message_at)).total_seconds() / 60.0),
                 1,
             )
         return {
@@ -1119,7 +1134,7 @@ class AuroraCheckpointRuntimeService:
         user = await self.db.get(User, user_id)
         timezone_name = "Asia/Shanghai"
         push_preference = getattr(user, "push_preference", None) if user is not None else None
-        if getattr(push_preference, "timezone", None):
+        if push_preference is not None and getattr(push_preference, "timezone", None):
             timezone_name = str(push_preference.timezone)
         return aurora_prefs, timezone_name
 
@@ -1161,7 +1176,7 @@ class AuroraCheckpointRuntimeService:
         if next_task_title:
             urgency_score += 0.07
         urgency_score = max(0.1, min(0.95, round(urgency_score, 2)))
-        agenda_priority = "time_management" if time_pressure and not understanding_gap else "knowledge_gap"
+        agenda_priority: str | None = "time_management" if time_pressure and not understanding_gap else "knowledge_gap"
         if goal_met:
             agenda_priority = None
         keywords = self._extract_keywords(candidate, checkpoint_description)
@@ -1277,8 +1292,11 @@ class AuroraCheckpointRuntimeService:
         ]
 
     def _follow_up_narrative_variant(self, payload: dict[str, Any]) -> int:
-        state = payload.get("follow_up_state") if isinstance(payload.get("follow_up_state"), dict) else {}
-        history = state.get("timing_history") if isinstance(state.get("timing_history"), list) else []
+        # 先绑定再 isinstance 收窄（原两次 .get 分别判断，mypy 无法关联且重复取值）
+        raw_state = payload.get("follow_up_state")
+        state = raw_state if isinstance(raw_state, dict) else {}
+        raw_history = state.get("timing_history")
+        history = raw_history if isinstance(raw_history, list) else []
         try:
             checkpoint_day = int(payload.get("checkpoint_day") or 0)
         except (TypeError, ValueError):

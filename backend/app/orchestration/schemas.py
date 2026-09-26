@@ -35,6 +35,12 @@ from typing import Any, Literal
 
 from app.core.user_insight_state import UserInsightState
 
+# 协作模式契约（Phase 3）——ExecutablePlan.collaboration_mode 的合法取值
+CollaborationMode = Literal["single", "sequential", "parallel", "debate", "delegation"]
+COLLABORATION_MODE_VALUES: frozenset[str] = frozenset(
+    {"single", "sequential", "parallel", "debate", "delegation"}
+)
+
 
 def _utcnow_iso() -> str:
     return datetime.now(UTC).replace(tzinfo=None).isoformat()
@@ -131,7 +137,7 @@ class ExecutablePlan:
 
     # Phase 3: Multi-Agent Collaboration metadata
     agents_involved: list[str] = field(default_factory=list)  # NEW
-    collaboration_mode: Literal["single", "sequential", "parallel", "debate", "delegation"] = "single"  # NEW
+    collaboration_mode: CollaborationMode = "single"  # NEW
     collaboration_order: list[dict[str, str]] = field(default_factory=list)  # NEW
     collaboration_narrative: str | None = None  # Phase 3: Collaboration narrative
 
@@ -298,12 +304,13 @@ class ValidationResult:
     """
     is_valid: bool
     failure_reason: str | None = None
-    risk_flags: list[str] = None
-    warnings: list[dict[str, Any]] = None
+    risk_flags: list[str] = field(default_factory=list)
+    warnings: list[dict[str, Any]] = field(default_factory=list)
     requires_confirmation: bool = False
     requires_hitl: bool = False
 
     def __post_init__(self):
+        # 兼容显式传入 None 的旧调用：归位空表
         if self.risk_flags is None:
             self.risk_flags = []
         if self.warnings is None:

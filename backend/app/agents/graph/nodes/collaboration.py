@@ -852,6 +852,7 @@ async def collaboration_node(state: SparkleState, config: dict | None = None) ->
     collaboration_mode = str(state.get("collaboration_mode") or "")
     collaboration_order = state.get("collaboration_order")
     collaboration_agents = state.get("collaboration_agents")
+    collaboration_plan: dict[str, Any]
     if collaboration_mode in COLLABORATION_MODES - {"single"} and collaboration_order:
         normalized_order = _normalize_order(collaboration_order, default_task=user_message)
         collaboration_plan = {
@@ -883,7 +884,7 @@ async def collaboration_node(state: SparkleState, config: dict | None = None) ->
     logger.info(f"Multi-agent collaboration: mode={mode}, agents={agents}")
 
     # Build a local state view with collaboration config for sub-functions
-    local_state = {**state, "collaboration_mode": mode, "collaboration_agents": agents, "collaboration_order": order}
+    local_state: SparkleState = {**state, "collaboration_mode": mode, "collaboration_agents": agents, "collaboration_order": order}
 
     if mode in {"parallel", "debate", "delegation"}:
         await _emit_initial_agent_states(agents, stream_cb=stream_cb, mode=mode)
@@ -910,7 +911,8 @@ async def collaboration_node(state: SparkleState, config: dict | None = None) ->
         result["collaboration_order"] = order
         return result
 
-    collaboration_index = state.get("collaboration_index", 0)
+    # state 里显式存的 None 视作未开始（None >= len(order) 会直接 TypeError）
+    collaboration_index = state.get("collaboration_index") or 0
     if collaboration_index == 0 and agents:
         await _emit_initial_agent_states(agents, stream_cb=stream_cb, mode=mode)
     if collaboration_index >= len(order):
@@ -937,7 +939,7 @@ async def collaboration_node(state: SparkleState, config: dict | None = None) ->
     }
 
 
-async def collaboration_aggregator_node(state: SparkleState) -> SparkleState:
+async def collaboration_aggregator_node(state: SparkleState) -> dict[str, Any]:
     def _normalize_tool_call(tc) -> dict:
         if isinstance(tc, dict):
             name = tc.get("name") or tc.get("tool") or tc.get("function", {}).get("name")

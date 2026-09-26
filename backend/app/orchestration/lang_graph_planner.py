@@ -12,7 +12,7 @@ from __future__ import annotations
 import uuid
 from typing import Any, cast
 
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from loguru import logger
 
 from app.agents.graph.state import SparkleState
@@ -20,7 +20,14 @@ from app.agents.graph.workflow import get_planning_graph  # Phase 2: Use plannin
 from app.core.i18n import I18n
 from app.orchestration.ai_strategy_renderer import build_semantic_control, format_semantic_control_lines
 from app.orchestration.rendered_plan_artifact import parse_rendered_plan_artifact
-from app.orchestration.schemas import ExecutablePlan, StateSnapshot, StepCriteria, ToolCallSpec
+from app.orchestration.schemas import (
+    COLLABORATION_MODE_VALUES,
+    CollaborationMode,
+    ExecutablePlan,
+    StateSnapshot,
+    StepCriteria,
+    ToolCallSpec,
+)
 
 
 class LangGraphPlanner:
@@ -108,7 +115,8 @@ class LangGraphPlanner:
             plan_version = await self._get_plan_version(user_id, plan_id)
 
         # Build initial state
-        messages = [HumanMessage(content=message)]
+        # 历史注入会插入 AIMessage，列表实为 BaseMessage 混合序列
+        messages: list[BaseMessage] = [HumanMessage(content=message)]
         if planning_constraints:
             messages.insert(0, HumanMessage(content=self._build_constraints_context(planning_constraints, locale=locale)))
         if persona_constraints:
@@ -371,18 +379,28 @@ class LangGraphPlanner:
             ExecutablePlan: Converted plan
         """
         tool_calls = []
-        active_agent = "unknown"
+        # （原 active_agent="unknown" 哨兵在 462 行 get() 处被无条件覆写，从未可观测，删除）
         rationale = "Generated via LangGraph"
 
         # Phase 3: Extract collaboration metadata
-        agents_involved = langgraph_state.get("collaboration_agents", [])
-        collaboration_mode = langgraph_state.get("collaboration_mode", "single")
-        collaboration_order = langgraph_state.get("collaboration_order", [])
-        collaboration_narrative = langgraph_state.get("collaboration_narrative")
+        # 边界处按 ExecutablePlan 契约收窄：非法模式回退 single，None 列表回退空表。
+        # cast 由 COLLABORATION_MODE_VALUES 成员守卫背书（运行时真实校验，非抑制）。
+        agents_involved = list(langgraph_state.get("collaboration_agents") or [])
+        raw_collaboration_mode = langgraph_state.get("collaboration_mode")
+        collaboration_mode = (
+            cast(CollaborationMode, raw_collaboration_mode)
+            if raw_collaboration_mode in COLLABORATION_MODE_VALUES
+            else "single"
+        )
+        collaboration_order = list(langgraph_state.get("collaboration_order") or [])
+        raw_narrative = langgraph_state.get("collaboration_narrative")
+        collaboration_narrative = str(raw_narrative) if raw_narrative is not None else None
 
-        # Phase 4: Extract plan_version and plan_id
-        plan_version = langgraph_state.get("_plan_version", 1)
-        plan_id = langgraph_state.get("_plan_id")
+        # Phase 4: Extract plan_version and plan_id（未知键 .get 返回 object，边界处按契约收窄）
+        raw_plan_version = langgraph_state.get("_plan_version", 1)
+        plan_version = raw_plan_version if isinstance(raw_plan_version, int) else 1
+        raw_plan_id = langgraph_state.get("_plan_id")
+        plan_id = str(raw_plan_id) if raw_plan_id else None
 
         def _normalize_tool_call(tc) -> dict[str, Any] | None:
             if isinstance(tc, dict):
@@ -441,7 +459,7 @@ class LangGraphPlanner:
         tool_calls = self._infer_dependencies(tool_calls)
         execution_order = self._build_execution_order(tool_calls)
 
-        # Get active_agent for rationale
+        # Get active_agent for rationale（首次绑定即 state 值，str|None）
         active_agent = langgraph_state.get("active_agent")
         if active_agent:
             if collaboration_mode == "single" and not agents_involved:
@@ -575,6 +593,11 @@ class LangGraphPlanner:
             "require_approval": False,
             "approval_context": None,
             "approval_result": None,
+            "error": None,
+            "review_context": None,
+            "review_history": [],
+            "enable_deep_review": False,
+            "review_config": None,
         }
         fallback_plan = self._convert_to_plan(fallback_state, snapshot, user_id, session_id)
         # Keep fallback plans on the same executable lane as native LangGraph plans

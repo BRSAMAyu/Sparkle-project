@@ -370,7 +370,7 @@ class SubscriptionListResponse(BaseModel):
     success: bool = Field(default=True)
     message: str = Field(default="Success")
     data: list[SubscriptionInfo] = Field(default_factory=list)
-    meta: PaginationMeta | None = Field(None)
+    meta: PaginationMeta | None = Field(default=None)
 
 
 class SubscriptionResponse(BaseModel):

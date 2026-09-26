@@ -4,6 +4,7 @@ Seed Libraries API Endpoints
 """
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -16,6 +17,7 @@ from app.schemas.common import PaginationMeta
 from app.schemas.seed_content import (
     BatchItemImportRequest,
     BatchItemImportResponse,
+    DifficultyLevelEnum,
     FewShotExample,
     ItemCreate,
     ItemInfo,
@@ -24,15 +26,19 @@ from app.schemas.seed_content import (
     ItemQueryRequest,
     ItemQueryResponse,
     ItemResponse,
+    ItemTypeEnum,
     ItemUpdate,
+    LibraryCategoryEnum,
     LibraryCreate,
     LibraryInfo,
     LibraryListParams,
     LibraryListResponse,
     LibraryResponse,
     LibraryUpdate,
+    LibraryVisibilityEnum,
     PromoteToOfficialRequest,
     RatingUpsertRequest,
+    SeedAdoptionAction,
     SubscriptionCreate,
     SubscriptionInfo,
     SubscriptionListResponse,
@@ -43,6 +49,11 @@ from app.services.seed_library_service import SeedLibraryService
 
 router = APIRouter()
 service = SeedLibraryService()
+
+
+def _to_adoption_actions(actions: list[dict[str, Any]]) -> list[SeedAdoptionAction]:
+    """service 层产出 dict 动作，边界处按 schema 契约转模型。"""
+    return [SeedAdoptionAction.model_validate(a) for a in actions]
 
 
 async def _enrich_library_info(
@@ -68,14 +79,14 @@ async def _enrich_library_info(
         rating_summary["user_rating_count"],
     )
     if include_item_actions:
-        lib_info.adoption_next_actions = await service.get_library_adoption_actions(db, library)
+        lib_info.adoption_next_actions = _to_adoption_actions(await service.get_library_adoption_actions(db, library))
     else:
-        lib_info.adoption_next_actions = service.build_library_adoption_actions(library)
+        lib_info.adoption_next_actions = _to_adoption_actions(service.build_library_adoption_actions(library))
     return lib_info
 
 
 async def _subscription_info(db: AsyncSession, subscription, library) -> SubscriptionInfo:
-    actions = await service.get_library_adoption_actions(db, library) if library else []
+    actions = _to_adoption_actions(await service.get_library_adoption_actions(db, library)) if library else []
     return SubscriptionInfo(
         id=subscription.id,
         adoption_id=subscription.id,
@@ -132,8 +143,8 @@ async def create_library(
     description="浏览可用的种子内容库，支持分类、标签、可见性筛选"
 )
 async def list_libraries(
-    category: str | None = Query(None, description="库分类"),
-    visibility: str | None = Query(None, description="可见性"),
+    category: LibraryCategoryEnum | None = Query(None, description="库分类"),
+    visibility: LibraryVisibilityEnum | None = Query(None, description="可见性"),
     language: str | None = Query(None, description="语言代码"),
     is_official: bool | None = Query(None, description="仅官方库"),
     is_featured: bool | None = Query(None, description="仅精选库"),
@@ -195,7 +206,7 @@ async def list_libraries(
             rating_summary["user_rating_avg"],
             rating_summary["user_rating_count"],
         )
-        lib_info.adoption_next_actions = service.build_library_adoption_actions(lib)
+        lib_info.adoption_next_actions = _to_adoption_actions(service.build_library_adoption_actions(lib))
         data.append(lib_info)
 
     total_pages = (total + page_size - 1) // page_size if total > 0 else 0
@@ -386,9 +397,9 @@ async def import_items(
 )
 async def get_items(
     library_id: UUID,
-    item_type: str | None = Query(None, description="内容类型"),
+    item_type: ItemTypeEnum | None = Query(None, description="内容类型"),
     subject: str | None = Query(None, description="学科"),
-    difficulty_level: str | None = Query(None, description="难度等级"),
+    difficulty_level: DifficultyLevelEnum | None = Query(None, description="难度等级"),
     tags: list[str] | None = Query(None, description="标签筛选"),
     is_active: bool | None = Query(True, description="仅启用的项"),
     search: str | None = Query(None, description="搜索关键词"),
@@ -433,7 +444,7 @@ async def get_items(
     data = []
     for item in items:
         item_info = ItemInfo.model_validate(item)
-        item_info.adoption_next_actions = service.build_item_adoption_actions(item)
+        item_info.adoption_next_actions = _to_adoption_actions(service.build_item_adoption_actions(item))
         data.append(item_info)
     return ItemListResponse(data=data, meta=meta)
 

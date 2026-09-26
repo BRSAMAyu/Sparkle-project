@@ -32,6 +32,7 @@ from app.models.task_document import TaskDocument
 from app.models.task_resources import TaskResourceLink, TaskResourceType
 from app.models.user import PushPreference, User
 from app.schemas.task import (
+    NextActionSuggestion,
     SubTaskDetail,
     TaskAbandon,
     TaskBoundSourceInfo,
@@ -58,6 +59,7 @@ from app.schemas.task import (
 )
 from app.schemas.task_feedback import (
     NextActionSelectionCreate,
+    PreferenceUpdateDetail,
     ReflectionAnswerCreate,
     ReflectionAnswerResponse,
     TaskFeedbackCreate,
@@ -88,11 +90,11 @@ def _serialize_task_guidance(guidance: TaskGuidance) -> dict[str, Any]:
 
 
 def _serialize_task_document(link, file_record) -> TaskDocumentInfo:
+    # TaskDocumentInfo 未声明 deleted_at 字段（pydantic extra=ignore 静默丢弃），不再传入
     return TaskDocumentInfo(
         id=link.id,
         created_at=link.created_at,
         updated_at=link.updated_at,
-        deleted_at=link.deleted_at,
         task_id=link.task_id,
         file_id=file_record.id,
         file_name=file_record.file_name,
@@ -670,10 +672,9 @@ async def get_task_card_protocol(
     protocol = builder(
         goal_id=str(task.plan_id) if task.plan_id else "",
         bound_nodes=bound_nodes,
-        why=WhyThisTask(
-            primary_signal=(task.description or task.title)[:200],
-            user_visible_reason=task.title,
-        ),
+        # WhyThisTask 契约只有 signal_ids/policy_decision_id/bottleneck_node_id/reasoning_summary
+        # （原 primary_signal/user_visible_reason 不是其字段，运行时直接 TypeError）
+        why=WhyThisTask(reasoning_summary=(task.description or task.title)[:200]),
         steps=[],
         stuck_protocol=StuckProtocol(
             escalation_after_min=15,
@@ -1458,7 +1459,8 @@ async def complete_task(
             logger.warning(f"Failed to get galaxy update: {e}")
 
     # Generate Next Steps
-    next_actions = []
+    next_actions: list[NextActionSuggestion] = []
+    achievement_actions: list[dict[str, Any]] = []
     try:
         from app.services.next_step_service import next_step_service
 
@@ -1483,7 +1485,7 @@ async def complete_task(
 
         if unlocked:
             unlocked_achievements = unlocked
-            next_actions.append({"type": "achievement_unlocked", "achievements": unlocked})
+            achievement_actions.append({"type": "achievement_unlocked", "achievements": unlocked})
             logger.info(f"User {current_user.id} unlocked {len(unlocked)} achievements on task completion")
     except Exception as e:
         logger.warning(f"Achievement processing failed: {e}")
@@ -1522,7 +1524,10 @@ async def complete_task(
             "galaxy_update": galaxy_update or feedback.get("galaxy_update"),
             "unlocked_achievements": unlocked_achievements,
         },
-        "next_actions": [action.model_dump() if hasattr(action, "model_dump") else action for action in next_actions],
+        "next_actions": [
+            action.model_dump() if hasattr(action, "model_dump") else action
+            for action in [*next_actions, *achievement_actions]
+        ],
         # 🆕 v2.1: 重试令牌 (在这里简单返回 key 或 生成一个新的 token)
         "retry_token": x_idempotency_key or "generated-token",
     }
@@ -1586,12 +1591,12 @@ async def submit_task_feedback(
         )
 
         # 构建偏好更新详情
-        preference_updates = None
+        preference_updates: PreferenceUpdateDetail | None = None
         if feedback.inferred_depth_delta is not None or feedback.inferred_difficulty_delta is not None:
-            preference_updates = {
-                "depth_preference": feedback.inferred_depth_delta,
-                "difficulty_preference": feedback.inferred_difficulty_delta,
-            }
+            preference_updates = PreferenceUpdateDetail(
+                depth_preference=feedback.inferred_depth_delta,
+                difficulty_preference=feedback.inferred_difficulty_delta,
+            )
 
         return TaskFeedbackSubmitResponse(
             success=True,
@@ -1636,13 +1641,19 @@ async def submit_task_reflection_answer(
             adjustment_intention=reflection_in.adjustment_intention,
         )
         await db.commit()
+        # submit_reflection_answer 返回 dict[str, object]，边界处按 schema 契约收窄
+        ai_response = reflection_payload.get("ai_response")
+        memory_id = reflection_payload.get("memory_id")
+        linked_nodes = reflection_payload.get("linked_knowledge_nodes")
         return ReflectionAnswerResponse(
             success=True,
-            message=reflection_payload.get("ai_response") or "谢谢你的反馈，我会据此优化后续计划。",
+            message=(
+                ai_response if isinstance(ai_response, str) and ai_response else "谢谢你的反馈，我会据此优化后续计划。"
+            ),
             reflection_payload=reflection_payload,
-            ai_response=reflection_payload.get("ai_response"),
-            memory_id=reflection_payload.get("memory_id"),
-            linked_knowledge_nodes=reflection_payload.get("linked_knowledge_nodes"),
+            ai_response=ai_response if isinstance(ai_response, str) else None,
+            memory_id=memory_id if isinstance(memory_id, str) else None,
+            linked_knowledge_nodes=linked_nodes if isinstance(linked_nodes, list) else None,
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
