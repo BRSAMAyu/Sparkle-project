@@ -147,12 +147,8 @@ FAMILIES: dict[str, dict] = {
 # 只对 EP001（mobile 缺值）生效；映射完整性（EP004）不适用豁免。
 # ---------------------------------------------------------------------------
 KNOWN_DRIFT: dict[str, dict] = {
-    "StreakDayStatus": {
-        "fix": "V3-FIX-259",
-        "owner": "wt539 在航",
-        "expiry": _dt.date(2026, 10, 7),
-        "note": "mobile StreakDayStatus 缺 weak（四层断链，台账 V3-FIX-259）",
-    },
+    # V3-FIX-259 豁免已删：wt539 修复落地（迁移补 weak 四值/engine savepoint/
+    # mobile weak+unknown 哨兵），守卫实测对齐，豁免即删保持棘轮纯净。
     # V3-FIX-260 豁免已删：wt542 修复落地（mobile 补 planning+unknown 哨兵，
     # 守卫实测对齐仅剩 EP002 unknown WARN），豁免即删保持棘轮纯净。
 }
