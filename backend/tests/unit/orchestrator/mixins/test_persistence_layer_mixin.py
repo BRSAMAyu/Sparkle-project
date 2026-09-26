@@ -20,7 +20,10 @@ class MinimalOrchestrator(PersistenceLayerMixin):
     def __init__(self):
         self.redis = MagicMock()
 
-    _coerce_session_uuid = ChatOrchestrator._coerce_session_uuid
+    # 对齐真实契约：ChatOrchestrator._coerce_session_uuid 是 @staticmethod（对齐
+    # ContextBuilderMixin 超签）。类访问后裸赋值会退化为普通函数、实例调用多绑
+    # self——包 staticmethod 保持原语义。
+    _coerce_session_uuid = staticmethod(ChatOrchestrator._coerce_session_uuid)
 
 
 @pytest.fixture
