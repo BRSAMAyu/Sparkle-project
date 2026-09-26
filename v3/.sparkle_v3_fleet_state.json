@@ -5,10 +5,10 @@
  "slots": 6,
  "active": {
   "wt477": "merged rehearsal",
-  "wt482": "FIX-182/183 visual",
   "wt485": "T36 卡A 旗权威",
   "wt486": "FIX-186 bypass",
-  "wt487": "FIX-37 stats tz"
+  "wt487": "FIX-37 stats tz",
+  "wt488": "Aurora 黑话重设计案"
  },
  "done": [
   "A-01",
@@ -487,7 +487,8 @@
   "wt483: T36 对齐方案（0dd0404a）",
   "wt484: FIX-14 telemetry（e9f5629f）",
   "wt481: FIX-40 同事务收编（6c50662a）",
-  "主线直修: CI Flutter 2 旧语义测（3013a7d3）"
+  "主线直修: CI Flutter 2 旧语义测（3013a7d3）",
+  "wt482: FIX-182 视觉闸+183 孤儿屏（471ab19a）"
  ],
  "blocked": [],
  "notes": [
@@ -563,6 +564,7 @@
   "R(16:5x): CI 教训定账——36226324838(9aa1e7ab) 与 36226364018(b9b0c58a) 均被后续推送的并发取消杀掉（ci.yml 同分支 cancel-in-progress），根因=我 15:3x 的违规推送连锁。当前全绿候选=36226500977(3c936876，含快照重冻结+wt475)，窗至 ~17:20。**纪律硬执行：候选 run 裁决前零推送**（本地已攒 11+ commit：wt476/478/480 产品修复+wt479 核验报告+FIX-181 台账同步+全部台账）。",
   "R(15:5x 心跳): 三问——①满编 5+1（wt477 预演/481 FIX-40/482 视觉面/483 T36 方案/484 FIX-14）；②无空槽；③最高价值=36226500977 裁决（窗 ~17:20）——Flutter Tests 已红（91cf83e7 绿→3c936876 红，嫌疑=wt466 mobile 面，但本地嫌疑面 13/13 绿，定位等 run 终态日志+wt477 全量交叉）；Backend 仍跑。例行：swap 16.2G 高位观察（大户=正当载荷）、disk 4G、3 容器、栈 200、5 worktree 在位。CI 纪律零推送执行中（本地 12+ commit）。",
   "R(16:1x): wt483 集成（0dd0404a 干净落地）：T36 对齐=0 采纳/8 改造/4 否决+四卡落地序+组员建议切主线冻结 cosmos WIP；新登记 190/191/192（wt484 在途可能撞 191/192，集成时顺延）。wt477 收到磁盘红线指令跳过 flutter 全量（disk 2G/swap 顶满）。派 wt485=T36 卡 A 旗权威（195 号段，零行为变化基建）。在航：wt477/481/482/484/485。hold push。",
-  "R(16:3x): wt484 集成（e9f5629f/2106aac7；其新登记 191 与 wt483 撞号→重编 193；合并态 13 绿）——期间发生协调事故：wt481 的 FIX-40 改动一度散落 wt484 worktree 未提交区（wt484 精确 path 暂存未受染，救援补丁 /tmp/wt481_stray_fix40.patch 留档）。wt481 集成（6c50662a/165034d4：8 处内部 commit 收编+真实服务红测 3→6 绿+mypy 1095+守卫 84/84）；其 stash 被 pytest 期间 git reset 清掉的事故已自恢复（e6cc8e3a），教训入账：测试运行窗口勿持 stash。CI Flutter 红根因=wt477 预演定位的 2 条 B-01 旧语义测→我亲手 test-only 修（DoneEvent 正常收束，3013a7d3，8/8 绿）——下个 run 应全绿。wt477 已回信（flutter 段处置确认+analyze 门 PASS）。补位 wt486=FIX-186 旁路（196 号段）+wt487=FIX-37 stats 时区（197 号段）。在航：wt477/482/485/486/487。磁盘回升 3G。hold push（本地 17+ commit）。"
+  "R(16:3x): wt484 集成（e9f5629f/2106aac7；其新登记 191 与 wt483 撞号→重编 193；合并态 13 绿）——期间发生协调事故：wt481 的 FIX-40 改动一度散落 wt484 worktree 未提交区（wt484 精确 path 暂存未受染，救援补丁 /tmp/wt481_stray_fix40.patch 留档）。wt481 集成（6c50662a/165034d4：8 处内部 commit 收编+真实服务红测 3→6 绿+mypy 1095+守卫 84/84）；其 stash 被 pytest 期间 git reset 清掉的事故已自恢复（e6cc8e3a），教训入账：测试运行窗口勿持 stash。CI Flutter 红根因=wt477 预演定位的 2 条 B-01 旧语义测→我亲手 test-only 修（DoneEvent 正常收束，3013a7d3，8/8 绿）——下个 run 应全绿。wt477 已回信（flutter 段处置确认+analyze 门 PASS）。补位 wt486=FIX-186 旁路（196 号段）+wt487=FIX-37 stats 时区（197 号段）。在航：wt477/482/485/486/487。磁盘回升 3G。hold push（本地 17+ commit）。",
+  "R(16:5x): wt482 集成（471ab19a/717377fb→aa6a9667+docs）：182 视觉面独立闸（ENABLE_VISUAL_ELEMENTS 组级依赖 403 FEATURE_DISABLED，self-anchor 零波及有测）+183 孤儿屏删（并修正 wt479 两处失准：状态层四方消费非整文件孤儿/import 非死——状态层拆至 settings providers，30 死 l10n 键清）；合并态闸测 3/3+mypy 1095；184 号未占用。注意：wt482 改 settings.py/router.py，与在航 wt485（也在 settings.py 加 RELEASE_* 段）集成时将冲突——届时双侧字段并留。补位 wt488=Aurora 黑话重设计提案（纯文档，198 号段，服务组员⑦意图）。在航：wt477/485/486/487/488。hold push（本地 20+ commit）。"
  ]
 }
