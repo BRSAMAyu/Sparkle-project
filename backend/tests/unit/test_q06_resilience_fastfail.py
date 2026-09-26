@@ -477,3 +477,115 @@ async def test_statechart_still_wraps_generic_node_errors():
     graph = _graph_whose_node_raises(ValueError("boom"))
     with pytest.raises(RuntimeError):
         await graph.invoke(_fresh_workflow_state())
+
+
+# ---------------------------------------------------------------------------
+# V3-FIX-165：typed error 消息面关键词消毒（docstring 约束落地）
+#
+# wt468 审查轮7A 探针实锤：链扫尽收场消息把上游异常**类名**拼进 str
+# （`last error type: APITimeoutError`），而 APITimeoutError/APIConnectionError/
+# TimeoutError 等类名逐字含 timeout/connection——违反两个 typed error docstring
+# 明文约束「消息不得含 429/rate limit/timeout/connection/503/quota 等可重试关键词，
+# 否则会被 _detect_fallback_reason 误判为可换道重试」。实测
+# _detect_fallback_reason(typed_err) 重归类 TIMEOUT / CONNECTION_ERROR。
+# 当前下游全 isinstance 判类故 latent（P3），但任何未来外层字符串分类重试循环
+# 都会把「快速诚实失败」变回换道烧预算。修后判据：
+# - 链扫尽抛出的 typed error 喂回 _detect_fallback_reason 必须得 None（约束自洽）；
+# - 真实上游类名经结构化字段 last_error_type 留痕（诊断价值不损失）。
+# ---------------------------------------------------------------------------
+
+
+class _APIConnectionError(Exception):
+    """模拟 openai.APIConnectionError：类名+str 均含 connection 关键词。"""
+
+
+@pytest.mark.asyncio
+async def test_chat_chain_exhausted_typed_error_message_stays_keyword_clean(outage_router):
+    """V3-FIX-165（chat 链）：末次异常类名含关键词 → typed error str 不得可再归类。
+
+    base 红：`last error type: _APIConnectionError` 逐字含 connection，
+    _detect_fallback_reason 重归类 CONNECTION_ERROR（可换道重试语义复活）。
+    """
+    manager = LLMModelFallbackManager(health_tracker=_AlwaysHealthyTracker())
+
+    async def _connection_error_fn(selection: LLMSelection) -> str:  # noqa: ARG001
+        raise _APIConnectionError("Connection error.")
+
+    with pytest.raises(Exception) as exc_info:
+        await manager.execute_with_fallback(_selection("primary_standard"), _connection_error_fn, operation_type="chat")
+
+    typed_err = exc_info.value
+    assert type(typed_err).__name__ == "LLMProvidersExhaustedError"
+    from app.services.llm.fallback import llm_fallback_manager  # noqa: PLC0415
+
+    assert (
+        llm_fallback_manager._detect_fallback_reason(typed_err) is None
+    ), f"typed error str 不得含可重试关键词（docstring 约束），实际: {typed_err!s}"
+    # 结构化诊断字段留痕：消毒不丢真实类名
+    assert getattr(typed_err, "last_error_type", None) == "_APIConnectionError"
+
+
+@pytest.mark.asyncio
+async def test_stream_chain_exhausted_typed_error_message_stays_keyword_clean(outage_router):
+    """V3-FIX-165（stream 链）：同判据——TimeoutError 族（空 str，isinstance 归类）
+    收场后 typed error str 也不得被 _detect_fallback_reason 重归类。"""
+    manager = LLMModelFallbackManager(health_tracker=_AlwaysHealthyTracker())
+
+    def _timeout_stream_fn(selection: LLMSelection):  # noqa: ARG001
+        async def _gen():
+            raise TimeoutError()
+            yield ""  # pragma: no cover
+
+        return _gen()
+
+    with pytest.raises(Exception) as exc_info:
+        async for _ in manager.execute_stream_with_fallback(
+            _selection("primary_standard"),
+            _timeout_stream_fn,
+            operation_type="stream_chat",
+        ):
+            pass
+
+    typed_err = exc_info.value
+    assert type(typed_err).__name__ == "LLMProvidersExhaustedError"
+    from app.services.llm.fallback import llm_fallback_manager  # noqa: PLC0415
+
+    assert (
+        llm_fallback_manager._detect_fallback_reason(typed_err) is None
+    ), f"typed error str 不得含可重试关键词（docstring 约束），实际: {typed_err!s}"
+    assert getattr(typed_err, "last_error_type", None) == "TimeoutError"
+
+
+def test_typed_error_class_label_sterilization_mapping():
+    """直测探针转正（wt468 审查轮7A 实录红形态）：关键词类名必须被消毒映射折叠。
+
+    base 红：映射不存在/未启用时，`last error type: APITimeoutError` 形态消息
+    喂回 _detect_fallback_reason 得 TIMEOUT（wt468 探针实录）。
+    """
+    from app.core.exceptions import LLMProvidersExhaustedError  # noqa: PLC0415
+    from app.services.llm.fallback import (  # noqa: PLC0415
+        _sterilized_error_class_label,
+        llm_fallback_manager,
+    )
+
+    # 消毒映射单元面：关键词类名折叠为中性终结码（upstream_terminal 不含任何词表词）
+    assert _sterilized_error_class_label(TimeoutError()) == "upstream_terminal"
+
+    class _APITimeoutError(Exception):
+        """模拟 openai.APITimeoutError 类名形态。"""
+
+    assert _sterilized_error_class_label(_APITimeoutError()) == "upstream_terminal"
+
+    class _APIStatusError(Exception):
+        """良性类名：不含词表词，原样保留（诊断价值不损失）。"""
+
+    assert _sterilized_error_class_label(_APIStatusError()) == "_APIStatusError"
+
+    # 消毒后的标签拼进消息，喂回分类器必须不可再归类（约束自洽闭环）
+    neutral_err = LLMProvidersExhaustedError(
+        "No fallback candidates left after 2 attempts; "
+        f"last error type: {_sterilized_error_class_label(_APITimeoutError())}"
+    )
+    assert (
+        llm_fallback_manager._detect_fallback_reason(neutral_err) is None
+    ), f"消毒后消息仍被归类为可换道重试，实际: {neutral_err!s}"

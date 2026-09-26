@@ -218,6 +218,44 @@ class ModelHealthTracker:
         return deleted
 
 
+# V3-FIX-165：typed error 消息面关键词消毒词表——与 _detect_fallback_reason 的
+# str 关键词分类面（及 LLMProvidersExhaustedError docstring 约束）逐项对齐。
+# 命中任一词的类名不得进入 typed error 的 str（小写比较）。
+_FALLBACK_MSG_KEYWORDS: tuple[str, ...] = (
+    "429",
+    "rate limit",
+    "ratelimit",
+    "too many request",
+    "quota",
+    "timeout",
+    "timed out",
+    "503",
+    "service unavailable",
+    "connection",
+    "network",
+)
+
+# 中性终结码：不含词表任何词，语义=「上游已终结，不构成换道重试信号」。
+_NEUTRAL_TERMINAL_LABEL = "upstream_terminal"
+
+
+def _sterilized_error_class_label(error: BaseException) -> str:
+    """V3-FIX-165：上游异常类名的消息面消毒映射。
+
+    typed error（LLMProvidersExhaustedError）的 docstring 约束：str 不得含
+    429/rate limit/timeout/connection/503/quota 等可重试关键词，否则会被
+    _detect_fallback_reason 误判为可换道重试。上游异常类名（APITimeoutError/
+    APIConnectionError/TimeoutError 等）逐字含这些词，不得原样拼进消息——
+    命中词表即折叠为中性终结码 ``upstream_terminal``；未命中的类名原样保留
+    （诊断价值不损失）。真实类名另经结构化字段 ``last_error_type`` 留痕。
+    """
+    name = type(error).__name__
+    lowered = name.lower()
+    if any(keyword in lowered for keyword in _FALLBACK_MSG_KEYWORDS):
+        return _NEUTRAL_TERMINAL_LABEL
+    return name
+
+
 class LLMModelFallbackManager:
     """
     LLM 模型回退管理器
@@ -637,12 +675,17 @@ class LLMModelFallbackManager:
                     session.end_time = time.time()
                     # V3-FIX-78：链扫尽仍失败 → typed error，明确 error 事件下行
                     # （原样上抛会把原始 429/超时静默落进泛化内部分支）。
-                    # 只附类型名不附原文——typed error 的 str 不得含 429/timeout 等
-                    # 可重试关键词，防外层链误判为可换道继续烧预算。
-                    raise LLMProvidersExhaustedError(
+                    # 消息只附消毒后的类型标签，不附异常原文——typed error 的 str
+                    # 不得含 429/timeout/connection 等可重试关键词，防外层字符串
+                    # 分类链误判为可换道继续烧预算（V3-FIX-165：上游类名
+                    # APITimeoutError/APIConnectionError 等逐字含关键词，不得原样
+                    # 拼进消息；真实类名经结构化字段 last_error_type 留痕）。
+                    exhausted_error = LLMProvidersExhaustedError(
                         f"No fallback candidates left after {attempt + 1} attempts; "
-                        f"last error type: {type(e).__name__}"
-                    ) from e
+                        f"last error type: {_sterilized_error_class_label(e)}"
+                    )
+                    exhausted_error.last_error_type = type(e).__name__
+                    raise exhausted_error from e
 
                 # E-07 可观测：实际切换留痕
                 self._record_switch(current_selection, candidates[0], fallback_reason)
@@ -803,11 +846,13 @@ class LLMModelFallbackManager:
 
             # 所有回退都失败（含预算到点/全不健康零尝试）→ typed error 明确 error
             # 事件下行，不再把原始 429/超时静默上抛（V3-FIX-78：明确 error 事件）。
-            # 只附类型名——typed error 的 str 不得含可重试关键词。
-            raise LLMProvidersExhaustedError(
-                "Stream fallback chain exhausted; "
-                f"last error type: {type(e).__name__}"
-            ) from e
+            # 消息只附消毒后的类型标签——typed error 的 str 不得含可重试关键词
+            # （V3-FIX-165 同 chat 链，真实类名走 last_error_type 结构化字段）。
+            exhausted_error = LLMProvidersExhaustedError(
+                "Stream fallback chain exhausted; " f"last error type: {_sterilized_error_class_label(e)}"
+            )
+            exhausted_error.last_error_type = type(e).__name__
+            raise exhausted_error from e
 
     def _get_model_key_from_selection(self, selection: LLMSelection) -> str:
         if selection.model_key and selection.model_key in llm_router._available_models:

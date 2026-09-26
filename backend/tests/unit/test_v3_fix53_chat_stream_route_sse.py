@@ -258,8 +258,12 @@ def test_stream_route_docstring_declares_sse_frame_contract() -> None:
     assert block_exists, "路由 docstring 必须声明 SSE 帧协议 type 枚举（V3-FIX-63 契约块）"
 
     # 枚举完备：与源码 /stream 面实际 emit 的 type 值一一对应
+    # V3-FIX-167：提取面=单/双引号两种字典字面量风格并集——stream_interrupted
+    # 分支的 done 帧经 json.dumps 双引号风格发射，单引号锁对其完全失明。
     source = inspect.getsource(chat_stream)
-    emitted = set(re.findall(r"\{'type': '(\w+)'", source))
+    emitted: set[str] = set()
+    for pattern in (re.compile(r"\{'type': '(\w+)'"), re.compile(r'\{"type": "(\w+)"')):
+        emitted.update(pattern.findall(source))
     assert emitted == set(declared), (
         f"docstring 契约 {sorted(declared)} 与源码 emit {sorted(emitted)} 不一致——"
         "新增帧型必须同步契约声明"

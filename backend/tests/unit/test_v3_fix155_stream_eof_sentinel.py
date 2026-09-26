@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import inspect
 import json
+import re
 from collections.abc import AsyncIterator
 from types import SimpleNamespace
 
@@ -339,6 +340,38 @@ async def test_normal_llm_stream_yields_done_completed_true(
 
 # --- 红测 3：契约锁（docstring/OpenAPI + /ws/chat 面处理） ---------------------
 
+# 六帧契约锁的帧型提取（V3-FIX-167：单/双引号两种字典字面量风格的并集——
+# stream_interrupted 分支的 done 帧经 json.dumps 双引号风格发射，单引号锁对
+# 其完全失明，未来新增帧型若用双引号风格将绕过「六帧枚举冻结」门禁）。
+_FRAME_TYPE_PATTERNS = (
+    re.compile(r"\{'type': '(\w+)'"),  # 单引号字典字面量（f-string 内联发射）
+    re.compile(r'\{"type": "(\w+)"'),  # 双引号字典字面量（json.dumps 发射，V3-FIX-167）
+)
+
+
+def _extract_emitted_frame_types(source: str) -> set[str]:
+    """从 /stream 源码提取全部发射帧型（单/双引号字面量风格并集）。"""
+    found: set[str] = set()
+    for pattern in _FRAME_TYPE_PATTERNS:
+        found.update(pattern.findall(source))
+    return found
+
+
+def test_lock_extraction_catches_double_quoted_frame_emission() -> None:
+    """V3-FIX-167 红锁：双引号风格发射的帧必须被契约锁提取捕获。
+
+    base 红：提取只认单引号字面量——对 ``json.dumps({"type": "done", ...})``
+    形态返回空集（wt468 审查轮7A 探针实录：双引号正则另捕获 {'done'} 而锁零感知）。
+    """
+    double_quoted_emission = 'yield ("data: " + json.dumps({"type": "done", "completed": False}) + "\\n\\n")'
+    assert _extract_emitted_frame_types(double_quoted_emission) == {"done"}, (
+        "契约锁提取必须捕获双引号风格的帧发射（否则六帧冻结对双引号帧失明），"
+        f"实际: {_extract_emitted_frame_types(double_quoted_emission)}"
+    )
+    # 单引号风格照常捕获（不弱化既有面）
+    single_quoted_emission = "yield f\"data: {json.dumps({'type': 'error'})}\\n\\n\""
+    assert "error" in _extract_emitted_frame_types(single_quoted_emission)
+
 
 def test_stream_route_docstring_declares_done_completed_contract() -> None:
     """done 帧 completed/reason 语义必须在 docstring 契约块声明（=OpenAPI）。"""
@@ -352,10 +385,11 @@ def test_stream_route_docstring_declares_done_completed_contract() -> None:
     assert "终止" in done_decl, "done 帧契约必须声明终止语义（V3-FIX-63 契约锁不回归）"
 
     # 契约锁：帧型枚举仍为六帧（本修复不新增帧型）
+    # V3-FIX-167：提取面=单/双引号两种字面量风格并集——双引号发射的帧
+    # （json.dumps 形态）不再绕过枚举冻结。
     source = inspect.getsource(chat_stream)
-    import re
 
-    emitted = set(re.findall(r"\{'type': '(\w+)'", source))
+    emitted = _extract_emitted_frame_types(source)
     assert emitted == {
         "text",
         "tool_start",

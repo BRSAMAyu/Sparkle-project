@@ -658,13 +658,17 @@ async def chat_stream(
     - error: {"message": str} 本轮处理失败的客户端可见失败面（不裸断连），恒以 done 收束
     - done: 终止帧，流结束的唯一标记。completed=true 为正常完成；completed=false
       为中断轮（reason: upstream_stream_truncated=上游流缺 [DONE]/finish_reason
-      哨兵截断，已下行内容不完整且不落库；turn_failed=本轮处理失败，随 error 帧）。
+      哨兵截断，已下行内容不完整且不落库；length_truncated=provider 侧 max_tokens
+      上限截断（finish_reason=length，V3-FIX-166），同为截断族不落库；
+      turn_failed=本轮处理失败，随 error 帧）。
       客户端不得把 completed=false 轮当作完整答案渲染/入历史。
 
     V3-FIX-53：生成器内任何异常都不得静默断流——统一经 `error` 事件下行
     （客户端可见"本轮失败"），并以 done 帧收束；异常本身 log.exception 落地。
     V3-FIX-155：上游优雅断连（无哨兵）不是正常收尾——done 帧必须显式
     completed=false（中断哨兵），部分内容不落库为完整助手消息。
+    V3-FIX-166：provider 授权截断（finish_reason=length）同判截断族，
+    done 帧 reason=length_truncated 显式可观测。
     """
 
     async def event_generator():
@@ -701,6 +705,8 @@ async def chat_stream(
         collected_tool_calls_raw = []  # Raw tool calls from LLM (function_call format)
         announced_tool_ids: set[str] = set()  # V3-FIX-53：已宣布 tool_start 的调用 id
         stream_interrupted = False  # V3-FIX-155：上游流截断（缺 finish_reason/[DONE] 哨兵）
+        # V3-FIX-166：截断亚型（None=缺哨兵；"length_truncated"=provider max_tokens）
+        stream_truncation_reason: str | None = None
 
         def _tool_start_frame(tool_call_id: str | None, tool_name: str | None) -> str | None:
             """每个新 tool call 恰宣布一次 tool_start（首个调用也不例外）。"""
@@ -730,9 +736,14 @@ async def chat_stream(
                 # V3-FIX-155：上游优雅断连（无 finish_reason/[DONE] 哨兵）——
                 # 已下行内容不完整：置中断旗标（收尾 done.completed=false 且
                 # 不落库），不得把部分文本冒充完整答案交付。
+                # V3-FIX-166：finish_reason=length（provider max_tokens 授权截断）
+                # 同为截断族，reason 亚型区分（length_truncated）。
                 stream_interrupted = True
+                if getattr(chunk, "truncation_reason", None) == "length":
+                    stream_truncation_reason = "length_truncated"
                 logger.warning(
-                    "chat stream truncated by upstream (no finish_reason/[DONE] sentinel), user={}",
+                    "chat stream truncated by upstream (finish_reason={!r}/missing sentinel), user={}",
+                    getattr(chunk, "truncation_reason", None),
                     current_user.id,
                 )
 
@@ -836,11 +847,9 @@ async def chat_stream(
             # V3-FIX-155：中断哨兵——已下行内容不完整，不落库为完整助手消息
             # （落库即把部分文本冒充完整轮并污染后续轮历史），done 帧显式
             # completed=false 让客户端进入中断态而非完成态。
-            yield (
-                "data: "
-                + json.dumps({"type": "done", "completed": False, "reason": "upstream_stream_truncated"})
-                + "\n\n"
-            )
+            # V3-FIX-166：length 截断亚型 reason=length_truncated 显式可观测。
+            truncation_reason = stream_truncation_reason or "upstream_stream_truncated"
+            yield ("data: " + json.dumps({"type": "done", "completed": False, "reason": truncation_reason}) + "\n\n")
             return
 
         # Save message to database after all is done

@@ -67,11 +67,17 @@ class LLMProvidersExhaustedError(LLMServiceError):
     用户可见错误事件——不再静默重试。
     注意：消息不得含 "429"/"rate limit"/"timeout"/"connection"/"503"/"quota" 等
     fallback 可重试关键词，否则会被 _detect_fallback_reason 误判为可换道重试。
+    V3-FIX-165（wt478）：该约束同样覆盖上游异常**类名**（APITimeoutError/
+    APIConnectionError/TimeoutError 等逐字含关键词）——消息面只允许经
+    fallback._sterilized_error_class_label 消毒后的标签；真实类名经结构化字段
+    ``last_error_type`` 留痕（不进 str 消息面）。
     """
 
     def __init__(self, message: str = "All LLM providers exhausted, failing fast", detail: Any | None = None):
         super().__init__(message=message, detail=detail)
         self.status_code = 503
+        # V3-FIX-165：末次上游异常类名的结构化诊断字段（str 消息面只带消毒标签）。
+        self.last_error_type: str | None = None
 
 
 class LLMOverloadedError(LLMServiceError):

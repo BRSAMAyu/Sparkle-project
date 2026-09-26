@@ -242,6 +242,9 @@ class StreamChunk:
     # MIMO 特有字段
     reasoning_content: str | None = None
     annotations: list[dict] | None = None
+    # V3-FIX-166：stream_truncated 截断亚型（None=缺 finish_reason/[DONE] 哨兵；
+    # "length"=provider max_tokens 授权截断）——不进消息面，供下游 reason 映射。
+    truncation_reason: str | None = None
 
 tracer = trace.get_tracer(__name__)
 _llm_monitor = LLMMonitor()
@@ -1638,6 +1641,9 @@ class LLMService:
                 _llm_error: str | None = None
                 # V3-FIX-155：完成判据=流末 finish_reason 闭环（[DONE] 的 SDK 可见等价物）
                 _saw_finish_reason = False
+                # V3-FIX-166：finish_reason 值面观测——'length'（provider max_tokens
+                # 上限截断）与缺哨兵同判截断族，不再冒充完整收尾。
+                _finish_reason_value: str | None = None
 
                 selection = self._current_selection
                 if selection:
@@ -1668,6 +1674,8 @@ class LLMService:
                             # V3-FIX-155：哨兵观测（getattr 防御非标准 provider 帧型）
                             if getattr(first_choice, "finish_reason", None):
                                 _saw_finish_reason = True
+                                # V3-FIX-166：值面留痕（'length'=provider 授权截断亚型）
+                                _finish_reason_value = str(first_choice.finish_reason)
                             delta = first_choice.delta
                             if delta.content:
                                 yield StreamChunk(type="text", content=delta.content)
@@ -1713,11 +1721,15 @@ class LLMService:
 
                 # V3-FIX-155：截断轮（无 finish_reason 闭环）不产出 tool_call_end
                 # ——部分指令不得静默执行（对齐 V3-FIX-61 保守语义），只告警观测。
-                if not _saw_finish_reason:
+                # V3-FIX-166：截断族扩为 缺哨兵 ∪ finish_reason='length'——
+                # provider 授权截断同样可能把工具参数掐半，同族保守抑制。
+                _stream_truncated = (not _saw_finish_reason) or _finish_reason_value == "length"
+                if _stream_truncated:
                     if collected_tool_call_chunks:
                         logger.warning(
                             "truncated LLM stream: suppressing tool_call_end for "
-                            f"{len(collected_tool_call_chunks)} bucket(s) (upstream ended without finish_reason/[DONE])"
+                            f"{len(collected_tool_call_chunks)} bucket(s) "
+                            f"(finish_reason={_finish_reason_value!r} or missing sentinel)"
                         )
                 else:
                     # V3-FIX-61：预扫孤儿参数桶（有参数无归属名）——存在即说明
@@ -1814,14 +1826,22 @@ class LLMService:
                         },
                     )
 
-                if not _saw_finish_reason:
+                if _stream_truncated:
                     # V3-FIX-155：迭代正常结束但全程无 finish_reason —— 上游优雅
                     # 断连（无 [DONE] 哨兵）。部分内容不得冒充完整答案：显式截断
                     # 标记收尾（路由 /stream 映射 done.completed=false；
                     # /ws/chat 面映射可见 error 帧，见 generation_node）。
+                    # V3-FIX-166：finish_reason='length'（provider max_tokens 上限
+                    # 截断）同判截断族，truncation_reason 结构化区分亚型。
                     yield StreamChunk(
                         type="stream_truncated",
-                        content="upstream stream ended without finish_reason/[DONE] sentinel",
+                        content=(
+                            "upstream stream ended without finish_reason/[DONE] sentinel"
+                            if not _saw_finish_reason
+                            else "upstream stream ended with finish_reason=length "
+                            "(provider max_tokens truncation)"
+                        ),
+                        truncation_reason=None if not _saw_finish_reason else _finish_reason_value,
                     )
         else:
             raise NotImplementedError("Current LLM provider does not support streamed tool calling directly.")
