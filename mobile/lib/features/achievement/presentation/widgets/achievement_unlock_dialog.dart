@@ -2,11 +2,13 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/providers/release_flags_provider.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -27,7 +29,10 @@ enum _AchievementUnlockActionState {
 /// 成就解锁弹窗
 ///
 /// 显示成就解锁动画，根据稀有度显示不同视觉效果
-class AchievementUnlockDialog extends StatefulWidget {
+///
+/// ConsumerStatefulWidget（V3-FIX-190）：build 时 watch releaseFlagsProvider，
+/// flag off/unavailable（fail-closed）期裁剪「解锁视觉元素」奖励叙事。
+class AchievementUnlockDialog extends ConsumerStatefulWidget {
   const AchievementUnlockDialog({
     required this.event,
     super.key,
@@ -87,7 +92,7 @@ class AchievementUnlockDialog extends StatefulWidget {
   }
 
   @override
-  State<AchievementUnlockDialog> createState() =>
+  ConsumerState<AchievementUnlockDialog> createState() =>
       _AchievementUnlockDialogState();
 
   /// 显示成就解锁弹窗
@@ -123,7 +128,8 @@ class AchievementUnlockDialog extends StatefulWidget {
       );
 }
 
-class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
+class _AchievementUnlockDialogState
+    extends ConsumerState<AchievementUnlockDialog>
     with TickerProviderStateMixin {
   static const _actionCooldown = Duration(milliseconds: 180);
 
@@ -142,6 +148,8 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
   void initState() {
     super.initState();
     _initAnimations();
+    // V3-FIX-190：弹窗打开即幂等拉取五旗（已加载则零请求），供下方叙事裁剪判定。
+    unawaited(ref.read(releaseFlagsProvider.notifier).ensureLoaded());
   }
 
   @override
@@ -520,8 +528,11 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                     _buildSurfacePreviewSection(),
                   ],
 
-                  // 视觉元素奖励预览
-                  if (_hasVisualElementRewards())
+                  // 视觉元素奖励预览（V3-FIX-190：release flag
+                  // off/unavailable（fail-closed）期裁剪——旗关时元素不可用，
+                  // 展示即空头支票）
+                  if (_hasVisualElementRewards() &&
+                      ref.watch(releaseFlagsProvider).visualElements)
                     _VisualElementPreviewSection(
                       rewards: widget.event.rewards!,
                       glowAnimation: _glowAnimation,
@@ -762,52 +773,53 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
       child: GestureDetector(
         onTap: isBusy ? null : onPressed,
         child: Container(
-        padding: const EdgeInsets.symmetric(
-          vertical: DS.spacing12,
-        ),
-        decoration: BoxDecoration(
-          color: isPrimary
-              ? colors.primary.withValues(alpha: isBusy ? 0.48 : 0.8)
-              : null,
-          border: Border.all(
-            color: colors.border.withValues(alpha: isBusy ? 0.6 : 1),
-            width: 1.5,
+          padding: const EdgeInsets.symmetric(
+            vertical: DS.spacing12,
           ),
-          borderRadius: DS.borderRadius12,
-        ),
-        child: Wrap(
-          alignment: WrapAlignment.center,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          spacing: DS.spacing6,
-          runSpacing: DS.spacing4,
-          children: [
-            Icon(
-              icon,
-              size: DS.iconSizeSm,
-              color: colors.text,
+          decoration: BoxDecoration(
+            color: isPrimary
+                ? colors.primary.withValues(alpha: isBusy ? 0.48 : 0.8)
+                : null,
+            border: Border.all(
+              color: colors.border.withValues(alpha: isBusy ? 0.6 : 1),
+              width: 1.5,
             ),
-            Text(
-              isBusy &&
-                      ((label == context.l10n.achievementUnlockClose &&
-                              _actionState ==
-                                  _AchievementUnlockActionState.closing) ||
-                          (label == context.l10n.achievementUnlockShare &&
-                              _actionState ==
-                                  _AchievementUnlockActionState.sharing) ||
-                          (label == context.l10n.achievementUnlockViewRewards &&
-                              _actionState ==
-                                  _AchievementUnlockActionState.navigating))
-                  ? context.l10n.achievementUnlockProcessing
-                  : label,
-              style: TextStyle(
-                fontSize: DS.fontSizeSm,
-                fontWeight: DS.fontWeightMedium,
-                color: colors.text.withValues(alpha: isBusy ? 0.82 : 1),
+            borderRadius: DS.borderRadius12,
+          ),
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: DS.spacing6,
+            runSpacing: DS.spacing4,
+            children: [
+              Icon(
+                icon,
+                size: DS.iconSizeSm,
+                color: colors.text,
               ),
-            ),
-          ],
+              Text(
+                isBusy &&
+                        ((label == context.l10n.achievementUnlockClose &&
+                                _actionState ==
+                                    _AchievementUnlockActionState.closing) ||
+                            (label == context.l10n.achievementUnlockShare &&
+                                _actionState ==
+                                    _AchievementUnlockActionState.sharing) ||
+                            (label ==
+                                    context.l10n.achievementUnlockViewRewards &&
+                                _actionState ==
+                                    _AchievementUnlockActionState.navigating))
+                    ? context.l10n.achievementUnlockProcessing
+                    : label,
+                style: TextStyle(
+                  fontSize: DS.fontSizeSm,
+                  fontWeight: DS.fontWeightMedium,
+                  color: colors.text.withValues(alpha: isBusy ? 0.82 : 1),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
