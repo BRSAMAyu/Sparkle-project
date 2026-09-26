@@ -9,7 +9,7 @@ import asyncio
 import hashlib
 import json
 from datetime import UTC, datetime
-from typing import Any, cast
+from typing import Any, Awaitable, Callable, TypeVar, cast
 
 import numpy as np
 from loguru import logger
@@ -26,6 +26,10 @@ from app.services.embedding_service import embedding_service
 
 def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
+
+
+# V3-FIX-225: get_with_lock 的工厂泛型——返回类型随 factory_func 的 await 结果走
+_T = TypeVar("_T")
 
 
 class SemanticCacheService:
@@ -307,23 +311,29 @@ class SemanticCacheService:
     async def get_with_lock(
         self,
         query: str,
-        factory_func,
+        factory_func: Callable[..., Awaitable[_T]],
         user_id: str | None = None,
         ttl: int | None = None,
         similarity_threshold: float | None = None,
         knowledge_version: str | None = None,
         embedding_version: str | None = None,
         factory_meta: dict[str, Any] | None = None,
-        *args,
-        **kwargs
-    ) -> dict[str, Any] | None:
+        *args: Any,
+        **kwargs: Any,
+    ) -> _T:
         """
         获取缓存，如果未命中则使用 factory_func 生成并缓存
         使用互斥锁防止缓存击穿 (Cache Stampede)
 
         Args:
             query: 查询字符串
-            factory_func: 如果缓存未命中，用于生成数据的异步函数
+            factory_func: 如果缓存未命中，用于生成数据的异步函数。
+                类型契约（V3-FIX-225）：返回类型 _T 随 factory_func 泛型——
+                工厂可返回 list 等任意异型（如 galaxy/retrieval_service 把
+                返回 ``list[SearchResultItem]`` 的实现传入），不再被静态
+                谎称 ``dict | None``。仅当工厂自身产出 None 时本方法才为
+                None（命中路径有 ``is not None`` 守卫，其余路径一律透传
+                工厂结果）。
             user_id: 用户 ID
             ttl: 过期时间
             factory_meta: E-05 D3 降级标记通道。传入的 dict 会以 ``exec_meta``
@@ -334,20 +344,26 @@ class SemanticCacheService:
             *args, **kwargs: 传递给 factory_func 的参数
 
         Returns:
-            数据
+            数据：未命中/异常降级路径返回工厂原返回值（原对象透传）；命中路径
+            返回缓存载荷的 JSON 反序列化形态——保形契约以「JSON 稳定形态」为界
+            （dict/list/标量同型同值，证据见
+            ``tests/services/test_semantic_cache_generic_factory.py``）；
+            tuple 等往返变型与不可 JSON 序列化载荷（如 Pydantic 模型，写入会
+            静默失败，见台账 V3-FIX-240）不在本层保形范围内。
         """
         if not self.redis:
             SEMANTIC_CACHE_BYPASS_TOTAL.inc()
-            return cast("dict[str, Any] | None", (await self._call_factory(factory_func, factory_meta, *args, **kwargs)))
+            return await self._call_factory(factory_func, factory_meta, *args, **kwargs)
         if not settings.SEMANTIC_CACHE_ENABLED:
             SEMANTIC_CACHE_BYPASS_TOTAL.inc()
-            return cast("dict[str, Any] | None", (await self._call_factory(factory_func, factory_meta, *args, **kwargs)))
+            return await self._call_factory(factory_func, factory_meta, *args, **kwargs)
 
         # 1. 尝试获取缓存
         effective_threshold = similarity_threshold if similarity_threshold is not None else 1.0
         data = await self.get(query, user_id, effective_threshold, knowledge_version, embedding_version)
         if data is not None:
-            return data
+            # 命中载荷是工厂结果的 JSON 往返形态（保形契约见 docstring 与保形证据测试）
+            return cast("_T", data)
 
         cache_key = self._generate_cache_key(query, user_id, knowledge_version, embedding_version)
         lock_key = self._generate_lock_key(cache_key)
@@ -367,7 +383,7 @@ class SemanticCacheService:
                 # 双重检查 (Double-Checked Locking)
                 data = await self.get(query, user_id, effective_threshold, knowledge_version, embedding_version)
                 if data is not None:
-                    return data
+                    return cast("_T", data)
 
                 # 3. 生成数据
                 logger.info(f"Cache MISS & Lock Acquired. Generating data for query='{query[:30]}...'")
@@ -384,30 +400,41 @@ class SemanticCacheService:
                         "(transient degradation must not be cached; E-05 D3)"
                     )
 
-                return cast("dict[str, Any] | None", (result))
+                return result
 
         except Exception as e:
             # redis.exceptions.LockError 可能会在锁获取超时抛出
             if type(e).__name__ == "LockError":
-                 logger.warning(f"Failed to acquire lock for {cache_key} (Timeout). Waiting...")
-                 # 稍微等待一下再尝试获取（降级策略）
-                 await asyncio.sleep(0.1)
-                 return (
-                     await self.get(
-                         query,
-                         user_id,
-                         knowledge_version=knowledge_version,
-                         embedding_version=embedding_version,
-                     )
-                     or await self._call_factory(factory_func, factory_meta, *args, **kwargs)
-                 )
+                logger.warning(f"Failed to acquire lock for {cache_key} (Timeout). Waiting...")
+                # 稍微等待一下再尝试获取（降级策略）
+                await asyncio.sleep(0.1)
+                # 保持旧 ``or`` 语义：truthy 命中直接用，falsy/None 命中仍走工厂
+                fallback_hit = cast(
+                    "_T | None",
+                    (
+                        await self.get(
+                            query,
+                            user_id,
+                            knowledge_version=knowledge_version,
+                            embedding_version=embedding_version,
+                        )
+                    ),
+                )
+                if fallback_hit:
+                    return fallback_hit
+                return await self._call_factory(factory_func, factory_meta, *args, **kwargs)
 
             logger.error(f"Cache Mutex Error: {e}")
             # 出错时降级为直接调用
-            return cast("dict[str, Any] | None", (await self._call_factory(factory_func, factory_meta, *args, **kwargs)))
+            return await self._call_factory(factory_func, factory_meta, *args, **kwargs)
 
     @staticmethod
-    async def _call_factory(factory_func, factory_meta: dict[str, Any] | None, *args, **kwargs):
+    async def _call_factory(
+        factory_func: Callable[..., Awaitable[_T]],
+        factory_meta: dict[str, Any] | None,
+        *args: Any,
+        **kwargs: Any,
+    ) -> _T:
         """调用 factory；提供 factory_meta 时以 ``exec_meta`` 关键字注入（D3 通道）。"""
         if factory_meta is None:
             return await factory_func(*args, **kwargs)
@@ -416,7 +443,7 @@ class SemanticCacheService:
     async def set(
         self,
         query: str,
-        data: dict[str, Any],
+        data: Any,
         user_id: str | None = None,
         ttl: int | None = None,
         knowledge_version: str | None = None,
@@ -427,7 +454,11 @@ class SemanticCacheService:
 
         Args:
             query: 查询文本
-            data: 要缓存的数据
+            data: 要缓存的数据。V3-FIX-225 泛型工厂契约：get_with_lock 会把
+                工厂返回值（任意异型）原样传入，故此处不再谎称仅收 dict；
+                真实边界是「JSON 可序列化」——不可序列化载荷（如 Pydantic
+                模型）使 json.dumps 失败、本次写入静默放弃（返回 False），
+                见台账 V3-FIX-240。
             user_id: 用户ID（可选）
             ttl: 过期时间（秒），None 使用默认值
 
