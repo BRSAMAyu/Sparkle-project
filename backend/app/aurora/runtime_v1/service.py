@@ -30,6 +30,7 @@ from app.aurora.runtime_v1.skills import AuroraSkillRegistry
 from app.aurora.runtime_v1.state import (
     ActivityProfile,
     AuroraIntent,
+    AuroraIntentType,
     AuroraRuntimeStore,
     AuroraState,
     AuroraTeachingStrategy,
@@ -596,10 +597,11 @@ class AuroraRuntimeV1Service:
         if kill_switch_mode == "off":
             # Return minimal turn plan with no messages when Aurora is disabled
             return AuroraRuntimeTurnPlan(
+                surface=surface,
                 messages=[],
-                telemetry={},
-                next_action=None,
-                source="aurora_disabled",
+                surface_complete=False,
+                modeling_complete=False,
+                action="wait",
             )
 
         request_extra_context = dict(request_extra_context or {})
@@ -2389,8 +2391,9 @@ class AuroraRuntimeV1Service:
             "stage": session.stage,
             "resume_token": session.resume_token or session.session_id,
             "conversation_id": session.conversation_id or "",
-            "last_activity_at": session.last_activity_at.isoformat(),
-            "expires_at": session.expires_at.isoformat(),
+            # AuroraCoreSession 的时间字段是 ISO 8601 str（非 datetime），直接透传。
+            "last_activity_at": session.last_activity_at,
+            "expires_at": session.expires_at,
         }
 
     def _base_comeback_payload(
@@ -3253,7 +3256,7 @@ class AuroraRuntimeV1Service:
                         exc,
                     )
 
-    def _intent_type_from_decision(self, decision: AuroraDecision, plan: AuroraRuntimeTurnPlan) -> str:
+    def _intent_type_from_decision(self, decision: AuroraDecision, plan: AuroraRuntimeTurnPlan) -> AuroraIntentType:
         if decision.action == "drop_thread":
             return "drop_thread"
         if decision.action == "soft_return_topic":

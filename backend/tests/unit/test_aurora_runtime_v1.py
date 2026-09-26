@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import uuid
 from datetime import datetime
 
 import pytest
 
+from app.aurora.core_session import AuroraCoreSession, AuroraCoreSessionService
 from app.aurora.runtime_v1.control_surface import ControlSurfaceService, HarnessUpdateRejectedError
 from app.aurora.runtime_v1.persistence import AuroraPersistenceStore
 from app.aurora.runtime_v1.planning import AuroraRuntimePlanningAdapter, get_tension_prompt
@@ -19,6 +21,7 @@ from app.aurora.runtime_v1.state import (
     ScheduledWake,
 )
 from app.aurora.runtime_v1.wake_scheduler import AuroraWakeScheduler
+from app.services.aurora_stage38_kill_switch_service import AuroraStage38KillSwitchService
 from app.services.personalization.preference_service import PreferenceService
 
 
@@ -95,6 +98,17 @@ class _RecordingDecisionLoop:
 class _StaticChatAdapter:
     async def render(self, decision, readout):
         return ["checkpoint runtime message"]
+
+
+class _DropThreadDecisionLoop:
+    async def decide(self, readout):
+        from app.aurora.runtime_v1.decision_loop import AuroraDecision
+
+        return AuroraDecision(
+            action="drop_thread",
+            state_updates={},
+            chat_directive={"intent": "drop_thread", "target_domain": "传输层"},
+        )
 
 
 def _make_state(*, user_id, surface: str, conversation_id: str, session_suffix: str) -> AuroraState:
@@ -422,3 +436,116 @@ async def test_planning_detour_marks_surface_state_without_sidecar_prompt() -> N
     assert scaffold["surface_state"]["in_detour"] is True
     assert scaffold["recent_detours"] == ["先帮我查一下这个任务完成没有"]
     assert adapter.build_detour_prompt(state) == ""
+
+
+# ---------------------------------------------------------------------------
+# V3-FIX-253 行内四缺陷回归（wt538）
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_plan_turn_kill_switch_off_returns_minimal_plan(monkeypatch: pytest.MonkeyPatch) -> None:
+    """kill-switch off 分支必须返回合法 AuroraRuntimeTurnPlan（零消息）。
+
+    修前该分支以不存在的 telemetry/next_action/source 字段构造 TurnPlan
+    且缺 surface/surface_complete/modeling_complete 必填字段，一触发即 TypeError。
+    注：当前 AuroraStage38KillSwitchService 未注册 aurora_runtime binding，
+    get_feature_mode("aurora_runtime") 恒 ValueError → 缺省 "shadow"，故本测
+    直接桩掉 get_feature_mode 以到达分支（binding 接线属后续开关接入工作）。
+    """
+
+    async def _mode_off(self, feature: str) -> str:
+        return "off"
+
+    monkeypatch.setattr(AuroraStage38KillSwitchService, "get_feature_mode", _mode_off)
+    decision_loop = _RecordingDecisionLoop()
+    service = AuroraRuntimeV1Service(
+        redis_client=_FakeRedis(),
+        decision_loop=decision_loop,
+        chat_adapter=_StaticChatAdapter(),
+    )
+
+    plan = await service.plan_turn(
+        active_db=None,
+        user_id="user-off",
+        surface="aurora_modeling",
+        conversation_id="conv-off",
+        request_id="req-off",
+        user_message="继续",
+        request_extra_context=None,
+        conversation_context=None,
+        user_context_payload=None,
+    )
+
+    # off 分支短路：决策管线不应执行
+    assert decision_loop.readouts == []
+    assert plan.messages == []
+    assert plan.surface == "aurora_modeling"
+    assert plan.surface_complete is False
+    assert plan.modeling_complete is False
+    assert plan.action == "wait"
+
+
+@pytest.mark.asyncio
+async def test_active_core_session_payload_formats_iso_strings(monkeypatch: pytest.MonkeyPatch) -> None:
+    """AuroraCoreSession.last_activity_at/.expires_at 是 ISO str（非 datetime），
+    payload 必须直接透传而非调 .isoformat()（修前 AttributeError）。"""
+
+    async def _fake_get_active_session(self, user_id: str) -> AuroraCoreSession:
+        return AuroraCoreSession(
+            session_id="core-1",
+            user_id=user_id,
+            conversation_id="conv-core",
+            surface="aurora_modeling",
+            status="active",
+            stage="declare",
+            scope="传输层校准",
+            session_type="strategy_recalibration",
+        )
+
+    monkeypatch.setattr(AuroraCoreSessionService, "get_active_session", _fake_get_active_session)
+    service = AuroraRuntimeV1Service(redis_client=_FakeRedis())
+
+    payload = await service._active_core_session_payload(uuid.UUID("b9a9e0a0-2956-47de-86dc-002ee8b835ad"))
+
+    assert payload is not None
+    assert payload["session_id"] == "core-1"
+    assert payload["status"] == "active"
+    # 两者本就是 ISO 8601 串，透传后必须仍可解析
+    datetime.fromisoformat(str(payload["last_activity_at"]))
+    datetime.fromisoformat(str(payload["expires_at"]))
+
+
+@pytest.mark.asyncio
+async def test_plan_turn_drop_thread_decision_persists_valid_intent() -> None:
+    """decision.action == "drop_thread" 时 _persist_runtime_state 构造的
+    AuroraIntent.intent_type 必须是合法 AuroraIntentType（修前 ValidationError
+    使整个 plan_turn 崩溃，且带 drop_thread intent 的存量状态读回即被静默丢弃）。"""
+
+    redis = _FakeRedis()
+    service = AuroraRuntimeV1Service(
+        redis_client=redis,
+        decision_loop=_DropThreadDecisionLoop(),
+        chat_adapter=_StaticChatAdapter(),
+    )
+
+    await service.plan_turn(
+        active_db=None,
+        user_id="user-drop",
+        surface="aurora_modeling",
+        conversation_id="conv-drop",
+        request_id="req-drop",
+        user_message="这个线索不用再追了",
+        request_extra_context=None,
+        conversation_context=None,
+        user_context_payload={},
+    )
+
+    state = await AuroraRuntimeStore(redis, enabled=True).load_runtime_state(
+        user_id="user-drop",
+        surface="aurora_modeling",
+        conversation_id="conv-drop",
+    )
+    assert state is not None
+    assert state.current_intent is not None
+    assert state.current_intent.intent_type == "drop_thread"

@@ -14,6 +14,9 @@ from app.config import settings
 
 AuroraSurface = Literal["aurora_modeling", "aurora_planning", "aurora_checkpoint"]
 TensionStatus = Literal["open", "partially_resolved", "resolved", "dropped"]
+# drop_thread 属既有持久化词表：planning.apply_detour_decision 与
+# decision_loop._stabilize_drop_thread 都已写 drop_thread intent，缺它则
+# AuroraIntent 构造/读回（_runtime_threads 的 model_validate）即 ValidationError。
 AuroraIntentType = Literal[
     "pursue_tension",
     "confirm_understanding",
@@ -22,6 +25,7 @@ AuroraIntentType = Literal[
     "encourage",
     "schedule_follow_up",
     "wait",
+    "drop_thread",
 ]
 ConversationStyle = Literal["warm", "structured", "exploratory"]
 WakeStatus = Literal["pending", "executed", "cancelled", "suppressed"]
