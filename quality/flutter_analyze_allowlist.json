@@ -1,13 +1,13 @@
 {
-  "_comment": "Honest ratchet baseline after wt288-dartfix-burn (mechanical INFO) and wt300-flutter-semantic1 (all 359 DISCARDED_FUTURES made explicit with unawaited()/await-split; zero new lints introduced, verified by per-code delta vs baseline clone). Ratchet only-down; refreshed 2026-09-22.",
+  "_comment": "Honest ratchet baseline after wt288-dartfix-burn (mechanical INFO) and wt300-flutter-semantic1 (all 359 DISCARDED_FUTURES made explicit with unawaited()/await-split; zero new lints introduced, verified by per-code delta vs baseline clone). Ratchet only-down; refreshed 2026-09-22. wt505-analyzeburn batch-1 (2026-09-25): UNAWAITED_FUTURES 34->0 (all fire-and-forget calls wrapped in unawaited(), semantic no-op) + NO_LEADING_UNDERSCORES 3->0 + UNNECESSARY_IMPORT 1->0 (unlisted drift codes); measured INFO 595->557, max_info 594->557; untouched budgets kept as-is.",
   "max_error": 42,
   "max_warning": 16,
-  "max_info": 594,
+  "max_info": 557,
   "info_code_budgets": {
     "DISCARDED_FUTURES": 0,
     "CASCADE_INVOCATIONS": 306,
     "USE_BUILD_CONTEXT_SYNCHRONOUSLY": 86,
-    "UNAWAITED_FUTURES": 34,
+    "UNAWAITED_FUTURES": 0,
     "UNRELATED_TYPE_EQUALITY_CHECKS": 31,
     "AVOID_DYNAMIC_CALLS": 29,
     "UNDEFINED_FUNCTION": 26,
