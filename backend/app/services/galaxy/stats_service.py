@@ -38,6 +38,24 @@ def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+def _as_naive_datetime(value: object) -> datetime | None:
+    """Normalize a raw-SQL timestamp to a naive datetime.
+
+    V3-FIX-292: the ledger replay subtracts ``created_at`` between rows, but
+    the raw SELECT bypasses ORM type coercion — postgres (asyncpg) returns
+    datetime objects while sqlite (aiosqlite, the test discipline dialect)
+    returns strings. Unparseable values degrade to None (no decay contribution),
+    matching how a missing timestamp already behaves in the replay.
+    """
+    if value is None or isinstance(value, datetime):
+        return value
+    try:
+        parsed = datetime.fromisoformat(str(value))
+    except ValueError:
+        return None
+    return parsed.replace(tzinfo=None) if parsed.tzinfo else parsed
+
+
 # --- Spark outbox SQL (module-level so the exact statements are unit-testable) ---
 # P1-A: never write ":param::type" PG casts inside sa_text() — the TextClause
 # regex backtracks ":payload::jsonb" into a bogus "payloa" bind param and the
@@ -186,6 +204,9 @@ class GalaxyStatsService:
             )
             # G-01: outcome evidence gets its own audit row so the evidence
             # ledger (replayed by _load_prior_belief) stays append-only.
+            # old_mastery here is the stored value before this fusion: for the
+            # first evidence row of a node it doubles as the frozen replay
+            # anchor (V3-FIX-292) — keep recording the honest pre-fusion value.
             if outcome is not None:
                 await self.db.execute(
                     sa_text(
@@ -528,17 +549,39 @@ class GalaxyStatsService:
         (error book / exam sprint) are recognized via classify_audit_reason.
         Falls back to the stored mastery as an unvalidated legacy prior when
         the ledger is unreadable.
+
+        V3-FIX-292: the replay baseline is the *frozen pre-evidence legacy
+        anchor* — the ``old_mastery`` recorded on the first payload-bearing
+        evidence row — never the current stored mastery. The stored value
+        already contains the effect of the whole ledger, so replaying from it
+        double-counts every historical event (mastery inflated toward the
+        observations; under the defect the 7th same-type quiz event pinned
+        80.0 and crossed the mastered threshold that single-pass semantics can
+        never reach). The anchor is read from the append-only ledger itself,
+        so recompute is a pure function of the ledger: replaying at any time
+        from any stored value yields the identical belief (idempotent).
         """
+        from sqlalchemy import bindparam
         from sqlalchemy import text as sa_text
 
+        from app.models.base import GUID
+
         try:
-            result = await self.db.execute(
+            # GUID-typed bindparams (same discipline as the outcome absorber):
+            # asyncpg binds UUID natively, aiosqlite binds str — without them
+            # the sqlite dialect raises on UUID params and the read degrades
+            # to the legacy-prior fallback silently.
+            stmt = (
                 sa_text(
-                    "SELECT reason, request_id, created_at FROM mastery_audit_log "
+                    "SELECT reason, request_id, created_at, old_mastery FROM mastery_audit_log "
                     "WHERE user_id = :user_id AND node_id = :node_id ORDER BY created_at ASC"
-                ),
-                {"user_id": user_id, "node_id": node_id},
+                )
+                .bindparams(
+                    bindparam("user_id", type_=GUID),
+                    bindparam("node_id", type_=GUID),
+                )
             )
+            result = await self.db.execute(stmt, {"user_id": user_id, "node_id": node_id})
             fetched = result.fetchall()
             if inspect.iscoroutine(fetched):
                 fetched = await fetched
@@ -552,30 +595,44 @@ class GalaxyStatsService:
 
         history: list[EvidenceHistoryEntry] = []
         presence_only: list[MasteryEvidenceType] = []
-        for reason, request_id, created_at in rows:
+        frozen_anchor: float | None = None
+        for reason, request_id, created_at, old_mastery in rows:
             evidence_type = classify_audit_reason(reason)
             if evidence_type is None:
                 continue
             parsed = parse_observation_payload(request_id)
             if parsed is None:
                 # Quiz-grade rows from other flows (error book / exam sprint)
-                # carry no observation payload; their effect is already baked
-                # into the stored mastery, so they count as evidence presence
-                # (they clear the legacy flag) but are not re-fused.
+                # carry no observation payload; they count as evidence
+                # presence (they clear the legacy flag) but are not re-fused.
+                # Rows preceding the first payload row are baked into the
+                # frozen anchor below; later ones stay presence-only exactly
+                # as before this fix.
                 presence_only.append(evidence_type)
                 continue
+            if frozen_anchor is None:
+                # V3-FIX-292: freeze the pre-evidence legacy baseline from the
+                # ledger itself. The first payload row's old_mastery is the
+                # stored value before any evidence fusion touched this node
+                # (the baseline corruption only ever appears from the second
+                # event on), and the log is append-only, so the anchor is
+                # stable across recomputes.
+                frozen_anchor = None if old_mastery is None else float(old_mastery)
             value, confidence = parsed
             history.append(
                 EvidenceHistoryEntry(
                     evidence_type=evidence_type,
                     value=float(value),
                     confidence=float(confidence),
-                    observed_at=created_at,
+                    observed_at=_as_naive_datetime(created_at),
                 )
             )
         if not history and not presence_only:
             return MasteryBelief(mean=current_mastery)
-        belief = recompute_evidence_state(current_mastery, history)
+        # Anchor fallback (no payload row / anchor column unreadable) keeps the
+        # stored value, i.e. the pre-fix behavior for those shapes only.
+        anchor = frozen_anchor if frozen_anchor is not None else current_mastery
+        belief = recompute_evidence_state(anchor, history)
         for evidence_type in presence_only:
             belief.breakdown[evidence_type.value] = belief.breakdown.get(evidence_type.value, 0) + 1
         return belief

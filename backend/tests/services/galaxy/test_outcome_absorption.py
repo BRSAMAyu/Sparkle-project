@@ -256,6 +256,51 @@ async def test_distinct_task_outcomes_each_fuse(absorber_env):
     assert len(await _audit_rows(db, user.id, node.id)) == 2
 
 
+async def test_v3_fix_292_consecutive_absorptions_single_pass_replay_idempotent(absorber_env):
+    """V3-FIX-292（真实 DB）：连续 POSITIVE 吸收 = 单遍融合语义。
+
+    缺陷语义：每次吸收把「已含全部历史效果的当前存储值」当 legacy 先验传给
+    ``recompute_evidence_state``，全账本重放 = 历史重复计入（第二次吸收
+    40 → 56.67 而非 46.67）。修后期望：重放锚 = 账本首条 payload 证据行的
+    ``old_mastery``（证据前 legacy 锚，append-only ⇒ 冻结），任意时点重算恒等。
+    """
+    db, user, node = absorber_env
+    absorber = GalaxyOutcomeAbsorber(db)
+
+    # seed：证据前 legacy 存量 20（锚点）
+    status = await absorber._get_or_create_status(user.id, node.id)
+    status.mastery_score = 20.0
+    status.is_unlocked = True
+    await db.commit()
+
+    task_a = await _make_task(db, user, node, title="V3-FIX-292 任务A")
+    task_b = await _make_task(db, user, node, title="V3-FIX-292 任务B")
+
+    first = await absorber.absorb_outcome(_task_payload(task_a))
+    assert first.action == "lit"
+    mastery_a = (await _status(db, user.id, node.id)).mastery_score
+    # 单遍第一遍：prior(20, var=.25) ⊕ task_outcome(60, conf=.8, w=.6)
+    # → eff_conf=.48 → obs_var=.25 → gain=.5 → 40.0（与吸收前 legacy 语义无关）
+    assert mastery_a == pytest.approx(40.0)
+
+    second = await absorber.absorb_outcome(_task_payload(task_b))
+    assert second.action == "lit"
+    mastery_b = (await _status(db, user.id, node.id)).mastery_score
+    # 单遍第二遍：prior(40, var=.125) ⊕ obs → gain=1/3 → 46.6667
+    # （缺陷语义把 40 当先验再重放一遍 row1 → 50/56.67）
+    assert mastery_b == pytest.approx(46.666666666666664), "wt576 F1：历史重复计入必须消除"
+
+    # 幂等：同账本下重算与传入的当前存储值无关（任意时点重算恒等）
+    from app.services.galaxy.stats_service import GalaxyStatsService
+
+    stats = GalaxyStatsService(db)
+    belief_drifted = await stats._load_prior_belief(user.id, node.id, 100.0)
+    belief_honest = await stats._load_prior_belief(user.id, node.id, float(mastery_b))
+    assert belief_drifted.mean == pytest.approx(belief_honest.mean), "重算不得依赖存量漂移"
+    assert belief_drifted.variance == pytest.approx(belief_honest.variance)
+    assert belief_drifted.mean == pytest.approx(float(mastery_b)), "全量重放 = 单遍链最后后验"
+
+
 # ---------------------------------------------------------------------------
 # 失败/撤销：NEGATIVE 永不点亮、NEUTRAL 只记录、极性翻转防御
 # ---------------------------------------------------------------------------

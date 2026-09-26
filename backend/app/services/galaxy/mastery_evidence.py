@@ -291,6 +291,13 @@ def recompute_evidence_state(
     order, applying decay over the gap between consecutive events. Starts from
     the legacy value at max uncertainty. Deterministic, so tests pin numbers.
 
+    Caller contract (V3-FIX-292): ``legacy_mastery`` must be a *frozen
+    pre-evidence baseline* (e.g. the first ledger row's ``old_mastery``), NOT
+    the current stored mastery — the stored value already contains the effect
+    of the whole ledger, and replaying it from there double-counts history.
+    Because the baseline is stable, replaying the same ledger always yields
+    the same belief (idempotent).
+
     Terminal decay (last event -> now) is intentionally NOT applied here: the
     stored mastery_score is maintained by DecayService (daily Ebbinghaus job),
     and replay must not double-count that time dimension.

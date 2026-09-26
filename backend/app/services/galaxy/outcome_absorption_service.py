@@ -223,7 +223,10 @@ class GalaxyOutcomeAbsorber:
         self.db.add(status)
 
         # append-only evidence row: replay gate + ledger persistence in one
-        # (GUID-typed bindparams: asyncpg binds UUID natively, aiosqlite binds str)
+        # (GUID-typed bindparams: asyncpg binds UUID natively, aiosqlite binds str).
+        # old_mastery is the stored value before this fusion: for the first
+        # evidence row of a node it doubles as the frozen replay anchor
+        # (V3-FIX-292) — keep recording the honest pre-fusion value.
         try:
             from sqlalchemy import text as sa_text
 

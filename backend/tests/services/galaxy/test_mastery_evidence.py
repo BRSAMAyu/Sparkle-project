@@ -308,7 +308,7 @@ class TestSparkEvidenceIntegration:
     async def test_prior_belief_replays_ledger(self):
         now = _utcnow_naive()
         service, _ = _make_service_with_ledger(
-            [("evidence:quiz", "obs=80;conf=0.9", now), ("task_complete", None, now)]
+            [("evidence:quiz", "obs=80;conf=0.9", now, 40), ("task_complete", None, now, 40)]
         )
         belief = await service._load_prior_belief(uuid4(), uuid4(), 40.0)
         assert belief.is_legacy_estimate is False
@@ -318,7 +318,7 @@ class TestSparkEvidenceIntegration:
     @pytest.mark.asyncio
     async def test_prior_belief_payload_less_quiz_rows_count_as_presence(self):
         now = _utcnow_naive()
-        service, _ = _make_service_with_ledger([("error_diagnosis", None, now)])
+        service, _ = _make_service_with_ledger([("error_diagnosis", None, now, 40)])
         belief = await service._load_prior_belief(uuid4(), uuid4(), 40.0)
         assert belief.is_legacy_estimate is False  # quiz evidence exists
         assert belief.evidence_count == 0  # but nothing was re-fused
@@ -420,6 +420,110 @@ class TestSparkEvidenceIntegration:
             # 39 + legacy delta (10) would be 49 under the old formula; capped at 40
             assert result.updated_status.mastery_score == pytest.approx(LEGACY_TIME_MASTERY_CAP)
             assert result.updated_status.mastery_evidence.is_legacy_estimate is True
+
+
+# ---------------------------------------------------------------------------
+# V3-FIX-292: replay baseline must be the frozen pre-evidence legacy anchor
+# ---------------------------------------------------------------------------
+
+
+class TestReplayBaselineFrozenAnchor:
+    """V3-FIX-292 红测：重放融合基准不得使用当前存储掌握度。
+
+    wt576 复现数字（legacy 锚 20，quiz(80, 0.9) 连续同类事件）：
+
+    - 单遍语义：event2 stored = 78.84615384615385；
+      缺陷语义（recompute(当前存储值, 账本)）= 79.95562130177515；
+    - 缺陷语义第 7 个同类事件 stored 恰为 float64 的 80.0，
+      ``calculate_user_stats`` 的 SQL ``mastery_score >= 80``（Float 列直比）
+      判真、提前跨 mastered 阈值；单遍语义 30 事件也永不跨。
+
+    修后期望（主会话裁决：确定性全量重放，账本即真源）：重放锚点 = 账本内
+    **首条 payload 证据行的 ``old_mastery``**（append-only ⇒ 冻结不变），
+    任意时点重算恒等（结果与传入的当前存储值无关）。
+    """
+
+    LEGACY_ANCHOR = 20.0
+
+    @staticmethod
+    def _quiz_row(old_mastery: float, when: datetime) -> tuple:
+        """Ledger row shape AFTER the fix: (reason, request_id, created_at, old_mastery)."""
+        return ("evidence:quiz", "obs=80;conf=0.9", when, int(old_mastery))
+
+    def test_single_pass_target_numbers_pinned(self):
+        """wt576 F1 单遍语义目标值钉桩（重放锚=冻结 legacy 值时逐位复现）。"""
+        now = _utcnow_naive()
+        expected = [77.69230769230771, 78.84615384615385, 79.42307692307693, 79.71153846153847, 79.85576923076924]
+        for i, want in enumerate(expected, start=1):
+            belief = recompute_evidence_state(
+                self.LEGACY_ANCHOR,
+                [EvidenceHistoryEntry(MasteryEvidenceType.QUIZ, 80, 0.9, now) for _ in range(i)],
+            )
+            assert belief.mean == pytest.approx(want), f"event {i}"
+
+    @pytest.mark.asyncio
+    async def test_two_consecutive_quiz_events_follow_single_pass(self):
+        """连续两次 quiz 证据：第二次的先验必须是单遍重放值（= 第一次后验），
+        而不是「当前存储值 ⊕ 整段历史再融合一遍」。"""
+        now = _utcnow_naive()
+        # event 1: 空账本 → 先验 = 存量 legacy 值
+        service0, _ = _make_service_with_ledger([])
+        prior1 = await service0._load_prior_belief(uuid4(), uuid4(), self.LEGACY_ANCHOR)
+        fused1 = fuse_mastery(prior1.mean, prior1.variance, [EvidenceObservation(MasteryEvidenceType.QUIZ, 80, 0.9)])
+        assert fused1.mean == pytest.approx(77.69230769230771)
+
+        # event 2: 账本已有 event-1 的证据行（old_mastery=20 = 证据前 legacy 值）
+        service, _ = _make_service_with_ledger([self._quiz_row(self.LEGACY_ANCHOR, now)])
+        prior2 = await service._load_prior_belief(uuid4(), uuid4(), fused1.mean)
+        assert prior2.mean == pytest.approx(fused1.mean), "重放先验必须等于单遍后验（不得叠加历史）"
+        fused2 = fuse_mastery(prior2.mean, prior2.variance, [EvidenceObservation(MasteryEvidenceType.QUIZ, 80, 0.9)])
+        assert fused2.mean == pytest.approx(78.84615384615385), "wt576: 缺陷语义给 79.9556"
+
+    @pytest.mark.asyncio
+    async def test_prior_belief_is_pure_function_of_ledger_idempotent(self):
+        """幂等：同一账本下任意时点重算恒等——结果与传入的当前存储值无关。"""
+        # 同一 created_at（gap=0 ⇒ 零衰减）：钉住纯单遍链数值；行间衰减由
+        # TestDecay.test_replay_applies_inter_event_decay 单独覆盖。
+        now = _utcnow_naive()
+        rows = [
+            self._quiz_row(20.0, now),
+            self._quiz_row(77.0, now),
+            self._quiz_row(78.0, now),
+        ]
+        drifted = 79.95562130177515  # 缺陷期间被历史重复计入抬高的存量值
+        belief_drifted = await _make_service_with_ledger(rows)[0]._load_prior_belief(uuid4(), uuid4(), drifted)
+        belief_fresh = await _make_service_with_ledger(rows)[0]._load_prior_belief(uuid4(), uuid4(), self.LEGACY_ANCHOR)
+        assert belief_drifted.mean == pytest.approx(belief_fresh.mean), "重算必须与存量漂移无关（幂等）"
+        assert belief_drifted.variance == pytest.approx(belief_fresh.variance)
+        assert belief_drifted.evidence_count == belief_fresh.evidence_count
+        # 且等于纯函数从冻结锚点的全量重放
+        pure = recompute_evidence_state(
+            self.LEGACY_ANCHOR,
+            [
+                EvidenceHistoryEntry(MasteryEvidenceType.QUIZ, 80, 0.9, now),
+                EvidenceHistoryEntry(MasteryEvidenceType.QUIZ, 80, 0.9, now),
+                EvidenceHistoryEntry(MasteryEvidenceType.QUIZ, 80, 0.9, now),
+            ],
+        )
+        assert belief_drifted.mean == pytest.approx(pure.mean)
+        assert belief_drifted.mean == pytest.approx(79.42307692307693), "wt576: 3 事件单遍语义目标值"
+
+    @pytest.mark.asyncio
+    async def test_seven_quiz_events_never_cross_mastered_threshold(self):
+        """7 个同类事件内 stored 严格 < 80.0（与 calculate_user_stats 的 SQL
+        ``mastery_score >= 80`` 同一 float64 谓词）；缺陷语义第 7 事件钉死 80.0。"""
+        frozen_at = _utcnow_naive()  # 零衰减口径（gap=0）：钉住纯单遍收敛值
+        stored = self.LEGACY_ANCHOR
+        ledger: list[tuple] = []
+        for i in range(1, 8):
+            pre_event_mastery = stored  # 生产语义：old_mastery = 本事件融合前存量
+            service, _ = _make_service_with_ledger(list(ledger))  # event i 前已有 i-1 条证据行
+            prior = await service._load_prior_belief(uuid4(), uuid4(), stored)
+            fused = fuse_mastery(prior.mean, prior.variance, [EvidenceObservation(MasteryEvidenceType.QUIZ, 80, 0.9)])
+            stored = fused.mean
+            assert stored < 80.0, f"event {i} 提前跨 mastered 阈值: {stored!r}"
+            ledger.append(self._quiz_row(pre_event_mastery, frozen_at))
+        assert stored == pytest.approx(79.96394230769232), "7 事件单遍语义收敛值"
 
 
 class TestEvidenceInfoPayload:
