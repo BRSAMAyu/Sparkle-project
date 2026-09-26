@@ -143,10 +143,11 @@ GET /api/v1/release-flags ──网关显式组注册（auth）──> 移动端
 
 ## 4. 落地顺序（4 张执行卡，建议派卡顺序 = 编号序）
 
-### 卡 A（先行）`T-release-flag-authority`：后端旗权威 + 契约端点（零行为变化）
+### 卡 A（先行）`T-release-flag-authority`：后端旗权威 + 契约端点（零行为变化）✅ 已执行（wt485）
 内容：settings.py `RELEASE_*` 分节（默认 False）；release_flags.py 薄视图 + 工厂；`GET /release-flags`（单一形）；api_root 补行；网关 proxy 注册；移植改造 T36 单元测试（§2.1）。
 - 验证点：新测试绿（默认值/403 工厂/端点形/网关路由存在）；`make sync-db` 无涉；OpenAPI 契约快照重刷（新端点入快照）；`go test ./...`（网关）；ruff/black/mypy 棘轮零漂移。
 - 回滚面：revert 整卡 = 零产品行为变化（旗未挂任何路由）。风险最低，先行无争议。
+- ✅ **执行注记（wt485，分支 `wt485-flagauth`，基 04b62940）**：内容全项落地。测试红→绿（先红=模块缺失；终绿 15/15，`backend/tests/unit/test_release_flag_authority.py`，含单一权威 AST 守卫与「卡 A 红线：api_router 无任何路由消费 release-flag 依赖」扫描守卫）。OpenAPI 快照重冻结增量 +26/−0（仅 `/api/v1/release-flags` path 条目，既有漂移未碰；干净 base 重生成零 diff 实证快照冻结态稳定）；`check_openapi_contract.py` exit 0。mypy 恰 1095=基线零漂移；ruff 触达文件全绿；black 触达行合规（base 与 work hunk 数相等 router 3=3 / settings 19=19，纯位移零新增，存量漂移未碰）；网关 `go build`+`go test ./...` 12 包全 ok、gofmt 净。台账新发现：无（未登记新 V3-FIX 号）。
 
 ### 卡 B `T-release-gate-public-surfaces`：leaderboards 双 router + community 公共闸 + transfer 窄旗
 内容：§2.4 双 router（self-anchor 豁免）+ §2.6 scope 级公共闸（读分支 + POST /posts 写侧，写侧处置若产品未拍板先按 403 落并在 PR 描述标「可改 friends 语义」）+ §2.3 transfer 窄旗。
