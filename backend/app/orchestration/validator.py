@@ -2,6 +2,7 @@
 Request Validator
 请求验证器，负责输入验证和清理
 """
+
 from __future__ import annotations
 
 import re
@@ -16,6 +17,7 @@ from app.orchestration.token_tracker import TokenTracker
 @dataclass
 class ValidationResult:
     """验证结果"""
+
     is_valid: bool
     error_message: str | None = None
     sanitized_data: dict | None = None
@@ -37,29 +39,36 @@ class RequestValidator:
     MIN_MESSAGE_LENGTH = 1
 
     # 正则模式
-    PATTERN_SESSION_ID = re.compile(r'^[a-zA-Z0-9_-]{1,100}$')
-    PATTERN_USER_ID = re.compile(r'^[a-zA-Z0-9_-]{1,100}$')
-    PATTERN_REQUEST_ID = re.compile(r'^[a-zA-Z0-9_-]{1,100}$')
+    PATTERN_SESSION_ID = re.compile(r"^[a-zA-Z0-9_-]{1,100}$")
+    PATTERN_USER_ID = re.compile(r"^[a-zA-Z0-9_-]{1,100}$")
+    PATTERN_REQUEST_ID = re.compile(r"^[a-zA-Z0-9_-]{1,100}$")
 
     # 敏感词过滤（简单示例）
     SENSITIVE_PATTERNS = [
-        re.compile(r'<script.*?>', re.IGNORECASE),
-        re.compile(r'javascript:', re.IGNORECASE),
-        re.compile(r'onclick=', re.IGNORECASE),
-        re.compile(r'onerror=', re.IGNORECASE),
+        re.compile(r"<script.*?>", re.IGNORECASE),
+        re.compile(r"javascript:", re.IGNORECASE),
+        re.compile(r"onclick=", re.IGNORECASE),
+        re.compile(r"onerror=", re.IGNORECASE),
     ]
 
-    # SQL 注入结构特征（V3-FIX-77：误判面消歧）。
+    # SQL 注入结构特征（V3-FIX-77：误判面消歧；V3-FIX-164：恒真式语境约束）。
     # 历史规则为 `select `/`insert `/`update ` 等子串命中 + `\bkw\b.*?from\b`
     # 跨任意距离匹配——英文学习材料普通词序（"update or weaken the memory
     # ... from"、SQL 教学示例 "SELECT * FROM orders"）即触发拒答
     # （Q-06 分层 bench 400 样本 4 条误判）。现改为「注入载荷的结构信号」
-    # 校验：恒真条件、注释截断、union select、高危 DDL 紧邻、引号后堆叠
+    # 校验：注释截断、union select、高危 DDL 紧邻、引号后堆叠
     # 语句、盲注利用函数。SQL 教学是学习域合法内容，裸 SQL 词序不再是
     # 拒答依据；安全语义面以本结构集为准（不回退为关键词子串匹配）。
+    #
+    # V3-FIX-164（wt468 审查轮 7A 探针实锤）：恒真条件不再按裸
+    # `or|and + 数字=数字` 判定——数学真值问句（"Is 1 = 1 and 2 = 2 always
+    # true?"、"Which is true: 2 = 2 or 3 = 3?"）是学习域合法核心内容，曾被
+    # 该恒真式正则硬拒（/ws/chat 主链 validate_message non-retryable）。
+    # 恒真式只在携带 SQL 载荷语境时判注入（SQL_TAUTOLOGY_PATTERNS：引号
+    # 包裹比较、引号逃逸、语句分隔符堆叠、WHERE 列赋值延续）；无任何自然
+    # 语言包裹的纯符号布尔片段（`1 OR 1=1`）按载荷片段处理
+    # （_is_bare_boolean_fragment）。
     SQL_INJECTION_PATTERNS = [
-        # 恒真条件（认证绕过经典形态）：OR 1=1 / AND '1'='1
-        re.compile(r"\b(?:or|and)\s+['\"]?\d+['\"]?\s*=\s*['\"]?\d+\b", re.IGNORECASE),
         # 引号后注释截断：admin'-- / '); /*
         re.compile(r"['\"`]\s*(?:--|/\*)"),
         # UNION SELECT 紧邻（联合查询注入）
@@ -71,6 +80,25 @@ class RequestValidator:
         re.compile(r"['\"`]\s*;\s*(?:select|insert|update|delete|drop|union)\b", re.IGNORECASE),
         # 盲注/带外利用函数
         re.compile(r"\b(?:xp_cmdshell|sleep\s*\(|benchmark\s*\(|load_file\s*\()", re.IGNORECASE),
+    ]
+
+    # 数字/引号相等比较（恒真式载荷与数学等式共用的原子形态）
+    TAUTOLOGY_COMPARISON = re.compile(r"['\"]?\d+['\"]?\s*=\s*['\"]?\d+")
+
+    # 恒真式 + SQL 载荷语境信号（V3-FIX-164）：裸 `数字=数字` 不再是拒答
+    # 依据，恒真式仅在携带下列注入语境之一时判恶意。
+    SQL_TAUTOLOGY_PATTERNS = [
+        # 引号包裹的相等比较：'1'='1 / "1"="1"（数学文本不给数字对称加引号）
+        re.compile(r"['\"]\s*\d+\s*['\"]\s*=\s*['\"]\s*\d+\s*['\"]?"),
+        # 引号逃逸后接恒真条件（认证绕过经典形态）：admin' OR 1=1 / 1' OR '1'='1
+        re.compile(r"['\"]\s*(?:or|and)\s+['\"]?\d+['\"]?\s*=\s*['\"]?\d+", re.IGNORECASE),
+        # 语句分隔符后堆叠恒真条件（WHERE 语句断点续接形态）：...; OR 1=1
+        re.compile(r";\s*(?:or|and)\s+['\"]?\d+['\"]?\s*=\s*['\"]?\d+", re.IGNORECASE),
+        # WHERE 片段签名（列赋值 + 恒真延续）：id=7 AND 2=2 / x=1 OR 1=1
+        re.compile(
+            r"\b[a-zA-Z_]\w*\s*=\s*\d+\s+(?:and|or)\s+['\"]?\d+['\"]?\s*=\s*['\"]?\d+",
+            re.IGNORECASE,
+        ),
     ]
 
     def __init__(self, redis_client=None, daily_quota: int = 100000, enable_quota_check: bool = True):
@@ -87,8 +115,7 @@ class RequestValidator:
         self.enable_quota_check = enable_quota_check
         self.token_tracker = TokenTracker(redis_client) if redis_client and enable_quota_check else None
         logger.info(
-            f"RequestValidator initialized with daily_quota={daily_quota}, "
-            f"enable_quota_check={enable_quota_check}"
+            f"RequestValidator initialized with daily_quota={daily_quota}, " f"enable_quota_check={enable_quota_check}"
         )
 
     async def validate_chat_request(self, request: agent_service_pb2.ChatRequest) -> ValidationResult:
@@ -157,8 +184,7 @@ class RequestValidator:
             # 6. 配额检查（如果启用了 Redis）
             if self.token_tracker:
                 quota_check = await self.token_tracker.check_quota(
-                    user_id=request.user_id,
-                    daily_limit=self.daily_quota
+                    user_id=request.user_id, daily_limit=self.daily_quota
                 )
 
                 if not quota_check["within_quota"]:
@@ -169,8 +195,7 @@ class RequestValidator:
                         f"Please try again tomorrow or upgrade your plan."
                     )
                     logger.warning(
-                        f"Quota exceeded for user {request.user_id}: "
-                        f"{quota_check['used']}/{quota_check['limit']}"
+                        f"Quota exceeded for user {request.user_id}: " f"{quota_check['used']}/{quota_check['limit']}"
                     )
                     return ValidationResult(False, error_msg)
 
@@ -181,11 +206,14 @@ class RequestValidator:
                     f"({quota_check['percentage']})"
                 )
 
-            return ValidationResult(True, sanitized_data={
-                "user_id": request.user_id,
-                "session_id": request.session_id,
-                "request_id": request.request_id,
-            })
+            return ValidationResult(
+                True,
+                sanitized_data={
+                    "user_id": request.user_id,
+                    "session_id": request.session_id,
+                    "request_id": request.request_id,
+                },
+            )
 
         except Exception as e:
             logger.error(f"Error validating request: {e}")
@@ -252,19 +280,23 @@ class RequestValidator:
         # 尝试解析 JSON 以验证格式
         try:
             import json
+
             json.loads(tool_result.result_json)
 
             # 限制 JSON 大小
             if len(tool_result.result_json) > 10000:
                 return ValidationResult(False, "result_json too large")
 
-            return ValidationResult(True, sanitized_data={
-                "tool_call_id": tool_result.tool_call_id,
-                "tool_name": tool_result.tool_name,
-                "result_json": tool_result.result_json,
-                "is_error": tool_result.is_error,
-                "error_message": tool_result.error_message if tool_result.error_message else None
-            })
+            return ValidationResult(
+                True,
+                sanitized_data={
+                    "tool_call_id": tool_result.tool_call_id,
+                    "tool_name": tool_result.tool_name,
+                    "result_json": tool_result.result_json,
+                    "is_error": tool_result.is_error,
+                    "error_message": tool_result.error_message if tool_result.error_message else None,
+                },
+            )
 
         except json.JSONDecodeError:
             return ValidationResult(False, "result_json is not valid JSON")
@@ -310,7 +342,9 @@ class RequestValidator:
             return ValidationResult(False, f"session_id exceeds max length {self.MAX_SESSION_ID_LENGTH}")
 
         if not self.PATTERN_SESSION_ID.match(session_id):
-            return ValidationResult(False, "session_id contains invalid characters, use only alphanumeric, hyphen, underscore")
+            return ValidationResult(
+                False, "session_id contains invalid characters, use only alphanumeric, hyphen, underscore"
+            )
 
         return ValidationResult(True)
 
@@ -346,10 +380,10 @@ class RequestValidator:
             str: 清理后的文本
         """
         # 移除控制字符
-        text = re.sub(r'[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]', '', text)
+        text = re.sub(r"[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]", "", text)
 
         # 移除多余的空白字符
-        text = re.sub(r'\s+', ' ', text)
+        text = re.sub(r"\s+", " ", text)
 
         return text.strip()
 
@@ -376,7 +410,33 @@ class RequestValidator:
                 logger.warning(f"Detected SQL injection structural pattern: {pattern.pattern}")
                 return True
 
+        # 恒真式语境校验（V3-FIX-164）：数学真值问句（"Is 1 = 1 and 2 = 2
+        # always true?"）是学习域合法内容，放行；携带 SQL 载荷语境的恒真式
+        # 与无自然语言包裹的纯符号布尔片段（`1 OR 1=1`）仍拒绝。
+        if self.TAUTOLOGY_COMPARISON.search(text):
+            if any(p.search(text) for p in self.SQL_TAUTOLOGY_PATTERNS) or self._is_bare_boolean_fragment(text):
+                logger.warning("Detected SQL injection tautology payload (context-qualified)")
+                return True
+
         return False
+
+    def _is_bare_boolean_fragment(self, text: str) -> bool:
+        """纯符号布尔片段判定（V3-FIX-164）。
+
+        整条消息去掉 or/and 连接词后不含任何词字（字母与 CJK 词字均算），
+        只剩数字、数学/比较符号、引号与标点——即没有自然语言包裹的恒真
+        表达式。注入载荷以裸片段形态粘贴（`1 OR 1=1`、`1=1 OR 1=1`、
+        `1 OR 1=1 --`），而数学真值问句必有自然语言结构（"Is ... true?"
+        或中文词字）。注意必须排除 CJK：中文数学句可能混用英文 and/or
+        （"已知 1 = 1 and 2 = 2，请判断真假"），仅查 [a-zA-Z] 会误判。
+        """
+        stripped = text.strip()
+        if not re.search(r"\b(?:or|and)\b", stripped, re.IGNORECASE):
+            return False
+        if not self.TAUTOLOGY_COMPARISON.search(stripped):
+            return False
+        without_keywords = re.sub(r"\b(?:or|and)\b", " ", stripped, flags=re.IGNORECASE)
+        return re.fullmatch(r"[\W\d_]+", without_keywords) is not None
 
     def sanitize_for_log(self, text: str) -> str:
         """
