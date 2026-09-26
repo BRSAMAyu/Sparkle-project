@@ -28,8 +28,8 @@ class AgentErrorHandler:
         tool_result: ToolResult,
         original_request: dict[str, Any],
         retry_count: int = 0,
-        user_id: str = None,
-        db_session: Any = None
+        user_id: str | None = None,
+        db_session: Any = None,
     ) -> ToolResult:
         """
         处理工具执行错误，尝试自我修正
@@ -39,7 +39,7 @@ class AgentErrorHandler:
             tool_result: 失败的工具执行结果
             original_request: 原始工具调用请求
             retry_count: 当前重试次数
-            user_id: 用户 ID
+            user_id: 用户 ID（身份面红线：缺失时拒绝自修正并诚实上报，见下）
             db_session: 数据库会话
 
         Returns:
@@ -48,6 +48,18 @@ class AgentErrorHandler:
         await refresh_llm_safety_mode()
         # 超过最大重试次数，返回原始错误
         if retry_count >= self.MAX_RETRY_COUNT:
+            return tool_result
+
+        # V3-FIX-217 · 身份面红线：自修正必须锚定真实用户身份。身份缺失（None/空白）
+        # 时拒绝自修正并诚实上报——不调 LLM，更不把 None 顶替进 execute_tool_call
+        # 的身份参数（契约 user_id: str）。历史行为：None 到达账本闸门后被 fail-closed
+        # 拒绝，但以伪造的 IdempotencyConflict（"并发重复调用"）归因说谎；带幂等键
+        # 路径则 uuid 解析 ValueError 裸抛。实录见
+        # tests/unit/test_v3_fix217_error_handler_uid.py（危害面探针）。
+        if user_id is None or not str(user_id).strip():
+            tool_result.suggestion = (
+                f"{tool_result.suggestion or ''}\n自动修正已跳过：本次请求缺少用户身份，无法安全重试工具调用。"
+            ).strip()
             return tool_result
 
         # 构建修正提示
@@ -182,8 +194,8 @@ class AgentErrorHandler:
         llm_service: Any,
         tool_results: list[ToolResult],
         original_requests: list[dict[str, Any]],
-        user_id: str = None,
-        db_session: Any = None
+        user_id: str | None = None,
+        db_session: Any = None,
     ) -> list[ToolResult]:
         """
         批量处理工具执行错误
@@ -192,7 +204,7 @@ class AgentErrorHandler:
             llm_service: LLM 服务实例
             tool_results: 工具执行结果列表
             original_requests: 原始请求列表
-            user_id: 用户 ID
+            user_id: 用户 ID（身份面红线同 handle_tool_error：缺失时逐项诚实跳过）
             db_session: 数据库会话
 
         Returns:
