@@ -68,7 +68,6 @@
   "showChatPredictionDockSubtitle": "控制输入框上方的用户行为预测与快捷建议",
   "showChatTransparencyCapsuleTitle": "显示 AI 透明胶囊",
   "showChatTransparencyCapsuleSubtitle": "控制聊天页底部的 AI 系统完成情况与透明化浮层",
-  "taskCard": "任务卡片",
   "startTask": "开始任务",
   "viewDetails": "查看详情",
   "finishTask": "完成任务",
@@ -489,9 +488,7 @@
   "taskActionPause": "暂停",
   "taskActionResume": "继续",
   "taskActionComplete": "完成",
-  "taskActionAbandon": "放弃",
   "taskActionEdit": "编辑",
-  "taskActionDelete": "删除",
   "taskPriorityHigh": "高优先级",
   "taskPriorityHighShort": "高",
   "taskPriorityMediumShort": "中",
@@ -507,53 +504,14 @@
   "taskNoTasks": "暂无任务",
   "taskAddNew": "添加任务",
   "taskDueDate": "截止 {date}",
-  "taskOverdue": "已逾期",
   "taskDueToday": "今天",
   "taskDueTomorrow": "明天",
-  "taskDueThisWeek": "本周截止",
-  "taskCategoryWork": "工作",
-  "taskCategoryStudy": "学习",
-  "taskCategoryPersonal": "个人",
-  "taskCategoryHealth": "健康",
-  "taskCategoryOther": "其他",
   "taskFilterAll": "全部",
-  "taskFilterToday": "今天",
-  "taskFilterWeek": "本周",
-  "taskFilterCompleted": "已完成",
-  "taskSortByDate": "按日期排序",
-  "taskSortByPriority": "按优先级排序",
-  "taskSortByName": "按名称排序",
   "taskCount": "{count, plural, =0{无任务} =1{1个任务} other{{count}个任务}}",
-  "focusTimerTitle": "专注计时",
-  "focusTimerStart": "开始专注",
-  "focusTimerPause": "暂停",
-  "focusTimerResume": "继续",
-  "focusTimerStop": "停止",
-  "focusTimerReset": "重置",
-  "focusTimerComplete": "会话完成！",
-  "focusTimerRemaining": "剩余时间",
-  "focusTimerElapsed": "已用时间",
-  "focusTimerSession": "第 {current}/{total} 节",
-  "focusTimerBreak": "休息时间",
-  "focusTimerShortBreak": "短休息",
-  "focusTimerLongBreak": "长休息",
-  "focusTimerNextSession": "{time}后开始下一节",
-  "focusTimerAutoStart": "自动开始下一节",
-  "focusTimerSound": "提示音",
-  "focusTimerVolume": "音量",
-  "focusTimerDuration": "时长",
-  "focusTimerPreset25": "25分钟（番茄钟）",
-  "focusTimerPreset45": "45分钟（深度专注）",
-  "focusTimerPreset60": "60分钟（延长）",
-  "focusTimerCustom": "自定义",
   "focusStatsToday": "今天",
   "focusStatsWeek": "本周",
   "focusStatsMonth": "本月",
-  "focusStatsTotal": "总计",
-  "focusStatsSessions": "{count} 次会话",
   "focusStatsMinutes": "{count} 分钟",
-  "focusStatsHours": "{count} 小时",
-  "focusStatsStreak": "连续 {count} 天",
   "focusCore": "专注核心",
   "focusTasksDone": "{count}完成",
   "@focusTasksDone": {
@@ -563,7 +521,6 @@
       }
     }
   },
-  "focusStatsBestDay": "最佳：{time}",
   "focusStatsScreenTitle": "专注统计",
   "focusStatsTrendTitle": "专注趋势",
   "focusStatsHeatmapRange": "活跃热力图（{days}天）",
@@ -612,33 +569,14 @@
   "focusInterruptionDetected": "检测到分心行为（第 {count} 次）",
   "focusMindfulnessTitle": "正念模式",
   "focusLoadFailed": "加载失败：{error}",
-  "focusReturnToTask": "返回任务",
-  "focusReturnToTaskTitle": "返回任务执行",
-  "focusReturnToTaskMessage": "专注记录会暂停，并返回任务执行页面。",
-  "focusReturnToTaskConfirm": "确认返回",
   "focusExitMindfulness": "退出正念模式",
   "focusDockMindfulness": "正念模式",
   "focusDockToolbox": "工具箱",
   "focusReflectionTitle": "专注结束",
-  "focusReflectionPrompt": "这次专注的感觉如何？",
-  "focusReflectionNoteHint": "有什么值得记录的吗？（可选）",
   "focusReflectionSaved": "复盘已保存到 Cognitive Prism",
   "focusReflectionSaveFailed": "保存失败：{error}",
-  "focusReflectionSummary": "专注复盘：本次状态 {feeling}。\n{note}",
-  "focusReflectionMoodFlow": "🔥 心流",
-  "focusReflectionMoodFocused": "🙂 专注",
-  "focusReflectionMoodOkay": "😐 一般",
-  "focusReflectionMoodDistracted": "😖 分心",
-  "focusReflectionMoodTired": "😫 疲惫",
   "focusExitTitleStep1": "确定要退出正念模式吗？",
-  "focusExitTitleStep2": "即将退出",
-  "focusExitTitleStep3": "最后确认",
-  "focusExitMessageStep1": "你正处于专注状态，退出可能会影响专注效果。",
   "focusExitMessageStep2": "你已经专注了 {minutes} 分钟，确定要离开吗？",
-  "focusExitMessageStep3": "再坚持一下！放弃会中断你的专注记录。",
-  "focusExitCancelStep1": "继续专注",
-  "focusExitConfirmStep1": "确认退出",
-  "focusExitConfirmStep2": "继续退出",
   "focusExitConfirmStep3": "确定退出",
   "streakTitle": "连续学习",
   "streakDays": "{count, plural, =1{1天} other{{count}天}}",
@@ -1593,7 +1531,6 @@
   "subtaskEmpty": "暂无子任务",
   "subtaskTitle": "子任务",
   "taskFeedbackSubmitted": "反馈已提交",
-  "taskFeedbackPreferenceUpdated": "偏好已更新",
   "taskFeedbackView": "查看",
   "taskFeedbackPreferenceDialogTitle": "偏好更新",
   "taskFeedbackDepthPreference": "深度偏好：{value}",
@@ -1614,24 +1551,13 @@
   "taskFeedbackCompletedSubtitle": "任务已完成，继续保持。",
   "taskFeedbackBrightness": "亮度",
   "taskFeedbackStreak": "连胜",
-  "taskFeedbackStreakDays": "{count}天",
-  "@taskFeedbackStreakDays": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
   "taskFeedbackOptionalRating": "满意度评分（选填）",
   "taskFeedbackDifficultyQuestion": "这次的难度感觉怎么样？",
   "taskFeedbackCategoryJustRight": "刚好",
   "taskFeedbackCategoryStillHard": "还是难",
   "taskFeedbackCategoryTooEasy": "太简单",
-  "taskFeedbackOptionalComment": "有什么想说的？（选填）",
-  "taskFeedbackCommentHint": "记录一些心得...",
   "taskFeedbackNextSteps": "下一步建议",
   "taskFeedbackSkip": "跳过",
-  "taskFeedbackComplete": "完成",
   "taskFeedbackReason": "理由：{reason}",
   "@taskFeedbackReason": {
     "placeholders": {
@@ -4311,7 +4237,6 @@
   "taskChatEmptyPrompt": "有什么可以帮你的？",
   "taskChatInputHint": "输入消息...",
   "taskCreateAction": "创建任务",
-  "taskCreateFailed": "{arg0}",
   "taskCreateSuccess": "任务创建成功",
   "taskCreateTitle": "创建任务",
   "taskCreatedWithSuggestions": "已根据建议创建任务",
@@ -4333,11 +4258,9 @@
   "taskEstimatedDurationLabel": "预计时长",
   "taskExecutionAbandon": "放弃执行",
   "taskExecutionCompleteTitle": "完成任务",
-  "taskExecutionCompletedTitle": "任务已完成",
   "taskConfirmCompleteTitle": "确认完成任务？",
   "taskConfirmCompleteBody": "将「{title}」标记为已完成。",
   "taskEstimatedMinutesValue": "{minutes} 分钟",
-  "taskExecutionConfirmComplete": "确认完成",
   "@taskConfirmCompleteBody": {
     "placeholders": {
       "title": {
@@ -4354,24 +4277,19 @@
   },
   "taskExecutionElapsedMinutes": "{arg0}",
   "taskExecutionEnterFocus": "进入专注模式",
-  "taskExecutionExpGained": "{arg0}",
   "taskExecutionFeatureCoach": "专注教练",
   "taskExecutionFeatureDistraction": "分心检测",
   "taskExecutionFeatureFlipClock": "翻页时钟",
   "taskExecutionFeatureFullscreen": "全屏模式",
   "taskExecutionFeatureReward": "完成奖励",
   "taskExecutionFeatureStarfield": "星空背景",
-  "taskExecutionGuideEmpty": "暂无执行指南",
-  "taskExecutionGuideTitle": "执行指南",
   "taskExecutionNoTask": "当前没有执行中的任务",
   "taskExecutionNoteHint": "添加执行笔记...",
   "taskExecutionNoteLabel": "执行笔记",
-  "taskExecutionSkipAnimation": "跳过动画",
   "taskExecutionStartFailed": "{arg0}",
   "taskExecutionStartNow": "立即开始",
   "taskExecutionSyncFailed": "同步失败",
   "taskExecutionFreeFocusCompleted": "自由专注已完成",
-  "taskExecutionTapToContinue": "点击继续",
   "taskExecutionTimerLabel": "计时器",
   "taskExitCancelStep1": "取消退出",
   "taskExitCancelStep2": "继续取消",
@@ -4400,7 +4318,6 @@
   "taskDetailFullPath": "当前为完整学习计划路径。",
   "taskDetailGeneratedTasks": "已生成任务",
   "taskDetailPlanContext": "所属计划",
-  "taskDetailPlanContextLoading": "正在加载所属计划...",
   "taskDetailCopyAiPromptSuccess": "AI 提示词已复制",
   "taskDetailGuideGenerated": "任务指南已生成",
   "taskDetailGuideGenerateFailed": "生成失败: {error}",
@@ -5828,118 +5745,6 @@
   "predictedToolReviewProgress": "复盘进度",
   "predictedToolGenerateSummary": "生成总结",
   "predictedToolSuggestSchedule": "建议排期",
-  "examSprintHighFreqCoverage": "高频考点覆盖率",
-  "examSprintMistakeRepair": "错题修复率",
-  "examSprintStudyStreak": "连续学习天数",
-  "examSprintStreakDays": "{days} 天",
-  "@examSprintStreakDays": {
-    "placeholders": {
-      "days": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintKeepRhythm": "保持节奏",
-  "examSprintHighYieldWeak": "高收益低掌握：{topics}",
-  "@examSprintHighYieldWeak": {
-    "placeholders": {
-      "topics": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintNoTasksToday": "今天还没有排入冲刺任务。",
-  "examSprintExamDayReady": "今天考试 · 你已经准备好了 🎓",
-  "examSprintExamTips": "考场建议",
-  "examSprintRecordResult": "记录考试结果",
-  "examSprintDashboardTitle": "考试冲刺仪表盘",
-  "examSprintModeHighScore": "冲高模式",
-  "examSprintModeHold": "稳分模式",
-  "examSprintModePass": "保过模式",
-  "examSprintModeDefault": "冲刺模式",
-  "examSprintExamDay": "今天考试",
-  "examSprintCountdown": "距考试还有 {days} 天",
-  "@examSprintCountdown": {
-    "placeholders": {
-      "days": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintTodayTasks": "今天已完成 {completed}/{total} 项任务",
-  "@examSprintTodayTasks": {
-    "placeholders": {
-      "completed": {
-        "type": "Object"
-      },
-      "total": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintDaysLeft": "离考试还有 {days}",
-  "@examSprintDaysLeft": {
-    "placeholders": {
-      "days": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintTodayDone": "今日 {completed}/{total} 完成",
-  "@examSprintTodayDone": {
-    "placeholders": {
-      "completed": {
-        "type": "Object"
-      },
-      "total": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintTodaySprintTasks": "今日冲刺任务",
-  "examSprintHideLater": "收起后续天",
-  "examSprintShowLater": "展开后续 {count} 天",
-  "@examSprintShowLater": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintDayIndex": "第 {index} 天",
-  "@examSprintDayIndex": {
-    "placeholders": {
-      "index": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintDateFormat": "{month}月{day}日",
-  "@examSprintDateFormat": {
-    "placeholders": {
-      "month": {
-        "type": "Object"
-      },
-      "day": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintNoSprintTasks": "今天还没有排入任务",
-  "examSprintMinLabel": "{minutes} 分钟 · {status}",
-  "@examSprintMinLabel": {
-    "placeholders": {
-      "minutes": {
-        "type": "Object"
-      },
-      "status": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintStatusDone": "已完成",
-  "examSprintStatusInProgress": "进行中",
-  "examSprintStatusPending": "待开始",
   "insightHubTitle": "学习洞察",
   "insightHubFallbackSummary": "把报告和洞察收进一条更轻量的学习动线。",
   "insightHubReport": "学习报告",
@@ -6173,11 +5978,7 @@
   "simulationBackToTheater": "回到剧场",
   "simulationRunning": "模拟进行中...",
   "simulationStartSimulation": "开始这场模拟",
-  "simulationAwaitingInput": "等待输入",
   "simulationClearTopic": "清空主题",
-  "simulationRecommendedScenarios": "推荐场景",
-  "simulationGenerate": "生成",
-  "simulationRefresh": "刷新",
   "simulationStartSimButton": "开始模拟",
   "simulationGoToTheater": "去推演",
   "simulationContinueSim": "继续模拟",
@@ -6188,9 +5989,6 @@
   "simulationSimSettings": "模拟设置",
   "simulationYourTurnTitle": "轮到你回应",
   "simulationYourResponseArea": "你的回应区",
-  "simulationCollapse": "收起",
-  "simulationJoinDiscussion": "轮到你加入这场讨论",
-  "simulationOrInputJudgment": "或者输入你的判断",
   "simulationSubmitting": "提交中...",
   "simulationSubmitJudgment": "提交我的判断",
   "simulationContinueInChat": "带回聊天继续",
@@ -6211,7 +6009,6 @@
   "simulationGeneratingInBackground": "后台仍在继续生成",
   "simulationPausedForeground": "前台已暂停播放",
   "simulationImmersiveDiscussion": "沉浸讨论流",
-  "simulationCurrentDiscussion": "当前讨论流",
   "simulationWillAppearLive": "开始后会实时出现每一轮讨论。",
   "simulationNoInsightYet": "暂未生成洞察总结。",
   "simulationInsightSummaryTitle": "洞察总结",
@@ -6225,12 +6022,9 @@
   "simulationExposedKnowledgeGaps": "暴露的知识盲区",
   "simulationSuggestedNextSteps": "建议下一步",
   "simulationStructuredInsightGenerated": "已生成结构化洞察总结。",
-  "simulationEmptyGenerating": "模拟正在生成中...",
-  "simulationEmptyStartPrompt": "开始一次学习场景模拟，让角色逐轮讨论这个主题。",
   "simulationCurrentScene": "当前场景",
   "simulationCurrentGoal": "当前目标",
   "simulationInteractionStyle": "互动方式",
-  "simulationRoleDiscussionUserJoin": "角色讨论 + 你来接话",
   "simulationTopicHint": "输入一个知识点或主题",
   "simulationTopicHintExample": "例如：特征值与特征向量",
   "simulationStartSimulationTopicAction": "开始围绕这个问题模拟",
@@ -6248,9 +6042,6 @@
   "simulationScenarioTitle": "开始这场学习模拟",
   "simulationScenarioSubtitle": "先选讨论场景，再输入一个你想推开的主题。开始后会自动收束成沉浸式讨论界面。",
   "simulationRoleDiscussionValue": "角色讨论 + 你来接话",
-  "simulationJudgeExampleHint": "例如：我会先补几何直觉，再回来刷一道题验证",
-  "simulationInteractionExplain": "先给出你的判断，下一轮才会真正围绕你的想法继续展开。",
-  "simulationInteractionHint": "建议先在这里接住一轮，让角色回应你的判断；如果你想回到主对话，也可以把这一步带回聊天继续。",
   "simulationContinuitySubtitle": "这一轮模拟承接了你刚才的探索流程。你可以随时带着上下文回到原对话，继续追问判断和下一步行动。",
   "simulationBridgeCurrentlyVerifyingFormat": "正在验证路径「{routeTitle}」",
   "@simulationBridgeCurrentlyVerifyingFormat": {
@@ -6270,49 +6061,10 @@
     }
   },
   "simulationBridgeVerificationContext": "这轮模拟来自知识剧场，当前上下文会和原推演保持关联。",
-  "simulationInteractionModeFormat": "互动模式：{mode}",
-  "@simulationInteractionModeFormat": {
-    "placeholders": {
-      "mode": {
-        "type": "Object"
-      }
-    }
-  },
-  "simulationInteractionOpenQuestion": "开放追问",
-  "simulationInteractionViewpointChallenge": "观点挑战",
-  "simulationInteractionBinaryChoice": "二选一判断",
-  "simulationInteractionChoice": "选择判断",
-  "simulationCurrentFocusFormat": "当前焦点：{speaker}",
-  "@simulationCurrentFocusFormat": {
-    "placeholders": {
-      "speaker": {
-        "type": "Object"
-      }
-    }
-  },
   "simulationTopicFormat": "主题：{topic}",
   "@simulationTopicFormat": {
     "placeholders": {
       "topic": {
-        "type": "Object"
-      }
-    }
-  },
-  "simulationTopicAndSpeakerFormat": "主题：{topic} · 当前发言 {speaker}",
-  "@simulationTopicAndSpeakerFormat": {
-    "placeholders": {
-      "topic": {
-        "type": "Object"
-      },
-      "speaker": {
-        "type": "Object"
-      }
-    }
-  },
-  "simulationRoundN": "第 {round} 轮",
-  "@simulationRoundN": {
-    "placeholders": {
-      "round": {
         "type": "Object"
       }
     }
@@ -6396,14 +6148,6 @@
       }
     }
   },
-  "simulationBulletOpening": "开场重点：{message}",
-  "@simulationBulletOpening": {
-    "placeholders": {
-      "message": {
-        "type": "Object"
-      }
-    }
-  },
   "simulationRoundFormatShort": "{current}/{total} 轮",
   "@simulationRoundFormatShort": {
     "placeholders": {
@@ -6449,9 +6193,6 @@
     }
   },
   "simulationBalancedPush": "平衡推进",
-  "simulationDebateClash": "分歧碰撞",
-  "simulationGuidedBreakdown": "引导拆解",
-  "simulationPracticalApply": "应用落地",
   "simulationReportReturnException": "学习报告返回格式异常",
   "simulationReportGenerationFailed": "生成学习报告失败：{error}",
   "@simulationReportGenerationFailed": {
@@ -6531,56 +6272,10 @@
     }
   },
   "simulationWaitingInput": "等待输入",
-  "simulationScenarioDescStudyGroup": "围绕一个主题做多角色共学，适合把概念、例题和误区一起讲透。",
-  "simulationScenarioDescKnowledgeDebate": "让不同立场直接碰撞，适合验证观点、证据和边界条件。",
-  "simulationScenarioDescHistoricalRoleplay": "带入人物与时代约束，让讨论像真实历史现场一样推进。",
-  "simulationScenarioDescSocraticDialogue": "通过连续追问拆解前提，适合澄清模糊概念与推理漏洞。",
-  "simulationScenarioDescCaseAnalysis": "围绕具体案例做拆解、诊断和决策，适合实务型主题。",
-  "simulationScenarioDescWhatIfPath": "比较不同学习或行动路线，适合规划、取舍与资源分配。",
-  "simulationScenarioDescConceptMapBuild": "把知识点织成结构图，适合建立全局框架与连接关系。",
-  "simulationScenarioDescErrorDiagnosis": "专注识别错因、纠偏路径与验证方式，适合查漏补缺。",
-  "simulationFacilitationDescBalanced": "适合大多数主题，强调多角色平衡推进，不让任何一方压住全场。",
-  "simulationFacilitationDescDebate": "主动放大争议和证据冲突，更适合需要碰撞观点的主题。",
-  "simulationFacilitationDescGuided": "更像导师带讨论，强调澄清前提、逐步拆解和用户可跟上。",
-  "simulationFacilitationDescPractical": "优先讨论行动、验证和现实约束，适合技能与方案推演。",
-  "simulationRoleHonorsStudent": "优等生",
-  "simulationRoleMidStudent": "中等生",
   "simulationRoleQuestioner": "追问者",
-  "simulationRoleSummarizer": "总结者",
-  "simulationRolePracticeCoach": "练习教练",
-  "simulationRoleProExpert": "正方专家",
-  "simulationRoleConExpert": "反方专家",
   "simulationRoleModerator": "主持协调",
-  "simulationRoleEvidenceReviewer": "证据审查员",
-  "simulationRolePursuer": "追问者",
-  "simulationRoleHistoryMentor": "历史导师",
-  "simulationRoleKeyFigure": "关键人物",
-  "simulationRoleEraObserver": "时代观察者",
-  "simulationRoleStrategyAdvisor": "策略顾问",
-  "simulationRoleRecorder": "记录官",
-  "simulationRoleSocrates": "苏格拉底",
-  "simulationRoleSkeptic": "怀疑者",
-  "simulationRoleDeconstructor": "拆解者",
-  "simulationRoleApplier": "应用者",
-  "simulationRoleCaseMentor": "案例导师",
-  "simulationRoleDiagnostician": "诊断官",
   "simulationRolePractitioner": "实践派",
-  "simulationRoleCounterExample": "反例提出者",
-  "simulationRoleDecisionRecorder": "决策记录官",
-  "simulationRoleCurrentRoute": "当前路线",
-  "simulationRoleRadicalRoute": "激进路线",
-  "simulationRoleRiskObserver": "风险观察者",
-  "simulationRoleResourceScheduler": "资源调度者",
-  "simulationRoleVerifier": "验证者",
-  "simulationRoleStructurer": "结构师",
   "simulationRoleConnector": "连接者",
-  "simulationRoleCounterExampleChecker": "反例检查员",
-  "simulationRoleBridgeBuilder": "桥梁构建者",
-  "simulationRoleErrorAnalyst": "错因分析师",
-  "simulationRoleCorrectionCoach": "纠偏教练",
-  "simulationRoleQuestionDeconstructor": "题面解构者",
-  "simulationRoleMigrationCoach": "迁移教练",
-  "simulationRoleStudyBuddy": "学习伙伴",
   "simulationRoleCurrentDiscussionTitle": "当前讨论流",
   "simulationBulletOpeningFormat": "开场重点：{message}",
   "@simulationBulletOpeningFormat": {
@@ -6590,17 +6285,6 @@
       }
     }
   },
-  "simulationScenarioParticipantOptionsDefault0": "学习伙伴",
-  "simulationScenarioParticipantOptionsDefault1": "提问者",
-  "simulationScenarioParticipantOptionsDefault2": "总结者",
-  "simulationScenarioLabelStudyGroup": "学习小组",
-  "simulationScenarioLabelKnowledgeDebate": "知识辩论",
-  "simulationScenarioLabelHistoricalRoleplay": "历史角色扮演",
-  "simulationScenarioLabelSocraticDialogue": "苏格拉底对话",
-  "simulationScenarioLabelCaseAnalysis": "案例分析",
-  "simulationScenarioLabelWhatIfPath": "如果路径",
-  "simulationScenarioLabelConceptMapBuild": "概念图构建",
-  "simulationScenarioLabelErrorDiagnosis": "错误诊断",
   "openclawPairImportedSaved": "已导入并保存 OpenClaw 配对配置",
   "openclawPairImportedVerifyFailed": "配对配置已导入，但当前连接验证失败",
   "openclawClipboardNoPairingPayload": "剪贴板里没有识别到 OpenClaw 配对串或二维码 JSON",
@@ -7487,97 +7171,6 @@
   "personaHintStudyMinutes": "请输入学习时长（分钟）",
   "personaHintPositiveMinutes": "请输入大于 0 的分钟数",
   "personaHintValidPreference": "请输入有效的偏好值",
-  "examSprintTitle": "考试冲刺设置",
-  "examSprintMinutesPerDay": "{minutes} 分钟/天",
-  "@examSprintMinutesPerDay": {
-    "placeholders": {
-      "minutes": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintStep1Subject": "1. 哪门课？",
-  "examSprintSubjectHint": "例如：计算机网络 / 高数 / 英语四级",
-  "examSprintSubjectRequired": "先告诉我你要冲刺哪门课",
-  "examSprintStep2Date": "2. 考试哪天？",
-  "examSprintSelectDate": "选择考试日期",
-  "examSprintDateHint": "日期会决定冲刺天数和节奏",
-  "examSprintStep3Target": "3. 目标是通过、保分还是冲高分？",
-  "examSprintStep4Scope": "4. 考试范围 / 老师重点有吗？",
-  "examSprintStep4Subtitle": "可以直接粘贴重点，也可以上传 PDF / DOCX / PPT / TXT。",
-  "examSprintScopeHint": "例如：重点看传输层、网络层；老师说会考简答和计算题。",
-  "examSprintUpload": "上传资料",
-  "examSprintNoUpload": "还没上传资料",
-  "examSprintUploadedCount": "已上传 {count} 份资料",
-  "@examSprintUploadedCount": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintStep5Baseline": "5. 你现在大概会多少？最怕哪几章？",
-  "examSprintWeakChapters": "最怕哪几章？",
-  "examSprintStep6Daily": "6. 每天真实能学多久？",
-  "examSprintMinutesPerDayLabel": "{minutes} 分钟 / 天",
-  "@examSprintMinutesPerDayLabel": {
-    "placeholders": {
-      "minutes": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintMinutesLabel": "{minutes} 分钟",
-  "@examSprintMinutesLabel": {
-    "placeholders": {
-      "minutes": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintDailyHint": "用「你大概率能坚持」的时间，不用理想状态。",
-  "examSprintGenerate": "生成我的第一天任务",
-  "examSprintSubmitHint": "提交后会在 3 秒内给出初评，并直接带你进入计划或第一天任务。",
-  "examSprintHeroTitle": "不是填问卷，是一起确定起点",
-  "examSprintHeroSubtitle": "填完这 6 个问题，我会直接给你初始评估、推荐策略和第一天任务。",
-  "examSprintUploadSuccess": "资料已上传",
-  "examSprintSelectDateFirst": "先选择考试日期",
-  "examSprintAssessmentComplete": "初步评估已完成",
-  "examSprintPassProbability": "通过概率 {percent}%",
-  "@examSprintPassProbability": {
-    "placeholders": {
-      "percent": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintRecommendedMode": "建议模式 {mode}",
-  "@examSprintRecommendedMode": {
-    "placeholders": {
-      "mode": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintFirstDayFocus": "第一天先做什么",
-  "examSprintStartFirstDay": "开始第一天任务",
-  "examSprintViewPlan": "查看计划",
-  "examSprintViewFullPlan": "查看整个计划",
-  "examSprintBaselineAlmostZero": "几乎要从零开始",
-  "examSprintBaselineUnstable": "上过课，但基础还不稳",
-  "examSprintBaselinePartial": "有一部分基础，可以边补边冲",
-  "examSprintBaselineSolid": "基础不错，重点是提分校准",
-  "examSprintDayCount": "{count} 天",
-  "@examSprintDayCount": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintTargetPass": "通过",
-  "examSprintTargetHold": "保分",
-  "examSprintTargetHighScore": "冲高分",
   "memorySettingsSocialPersonMention": "人物提及",
   "reportLearningAnalysisReport": "学习分析报告",
   "reportContinuationSubtitle": "继续查看本次学习旅程的分析报告",
@@ -8837,7 +8430,6 @@
   "examConfidenceGuess": "凭感觉",
   "examDiagnosticShortAnswerHint": "输入你的答案",
   "examDiagnosticSubmit": "交卷并查看结果",
-  "examDiagnosticResultTitle": "诊断结果",
   "examDiagnosticScore": "当前估分 {score} 分",
   "examDiagnosticPassProbability": "过考概率 {probability}",
   "examDiagnosticPathMinimumPass": "补强策略：先保及格",
@@ -8920,7 +8512,6 @@
   "examShowNextDays": "展开后续 {count} 天",
   "examStreakDays": "{count} 天",
   "examTaskMinutes": "{minutes} 分钟",
-  "examPlanSubject": "{planName}",
   "examPassProbabilityEstimate": "按当前进度估算",
   "examPassProbabilityLowAction": "还来得及，先攻高频考点",
   "openclawAutomationScheduleCount": "{count} 条自动化",
@@ -9333,21 +8924,8 @@
       }
     }
   },
-  "focusReflectionTitleLabel": "专注复盘",
-  "focusReflectionStuckLabel": "卡点：{content}",
-  "focusReflectionMethodLabel": "有效方法：{content}",
-  "focusReflectionAdjustmentLabel": "下次调整：{content}",
-  "focusReflectionPromptHint": "花半分钟记一下这次卡点，我会把它留给之后的你。",
-  "focusReflectionStuckQuestion": "这个任务中你卡在哪里了？",
-  "focusReflectionStuckHint": "例如：刚坐下还行，但一写题就不知道从哪里下手",
-  "focusReflectionMethodQuestion": "哪个方法让你觉得有进展？",
-  "focusReflectionMethodHint": "例如：先把题目条件圈出来，再动笔",
-  "focusReflectionAdjustmentQuestion": "下次会换什么做法？",
-  "focusReflectionAdjustmentHint": "例如：先做 5 分钟预热，再开始正式专注",
   "focusOfflineSaved": "专注记录已离线保存，稍后会自动重试同步",
   "focusSaveFailed": "专注记录保存失败：{error}",
-  "focusMockLlmGuidance": "建议使用番茄工作法，将任务分解为25分钟的专注块，每块之间休息5分钟。保持环境安静，关闭手机通知。",
-  "focusMockSubtasks": "创建项目大纲,编写核心功能代码,添加测试用例,完善文档",
   "chatAchievementProgress": "{name} 进度达到 {percent}%",
   "chatActionAiExecutionSuggestion": "AI 执行建议",
   "chatActionAiGeneratedPlan": "由 AI 生成的任务计划",
@@ -11471,18 +11049,10 @@
   "taskHelpPromptCriteria": "完成标准：{criteria}",
   "taskHelpPromptGuide": "任务指南：{guide}",
   "taskHelpPromptSuffix": "请先问我一个最关键的澄清问题，然后给我一个5分钟内能开始的下一步。",
-  "taskModeHuman": "人工",
-  "taskModeHybrid": "协作",
-  "taskModeUnknown": "未知",
   "taskOpFailed": "操作失败",
   "taskNetworkError": "网络错误",
   "taskRetryFailed": "重试失败",
-  "taskLocalNoAiExec": "本地任务暂不支持 AI 执行",
-  "taskQueued": "{message}，已加入等待队列。",
-  "taskNoExecRecord": "没有可处理的 AI 执行记录",
-  "taskExecRecordUnavailable": "执行记录暂不可用",
   "taskFreeFocus": "自由专注",
-  "taskLoadFailed": "加载任务失败：{error}",
   "taskUpdated": "任务已更新",
   "taskEditTitle": "编辑任务",
   "taskEditHint": "这里调整的是已有任务的安排信息，例如预计时长、难度、截止时间和标签。",
@@ -12014,7 +11584,6 @@
   "userTimeEstimation": "时间预估",
   "userTimeEstimationBias": "你过去 10 次对完成时间估得偏乐观 {hours} 小时。",
   "userTrendStabilizing": "最近几周正在变稳。",
-  "userWorkingMemorySnapshot": "工作记忆快照",
   "userRecentForegroundItems": "英语长难句拆解还卡在倒装句，下一次练习先回看第 3 题。",
   "userWeeklyGoal": "这周要把概率论错题本整理成 2 页复盘卡片。",
   "userWeeklyStreakAchievement": "七日连学",
@@ -12034,12 +11603,6 @@
   "taskSnoozeMessage": "已推迟到明天，今天先把节奏放轻一点。",
   "taskTooHardMessage": "我把它拆成 3 小步了，先做「{title}」。",
   "taskSkipMessage": "已跳过，这张卡不会再挤在今天了。",
-  "taskTooHardStep1": "先找出最卡的一点",
-  "taskTooHardStep2": "把这个卡点讲成一句人话",
-  "taskTooHardStep3": "做一个最小验证动作",
-  "taskTooHardGuidance1": "只定位卡点，不解决整张任务卡。",
-  "taskTooHardGuidance2": "先讲清楚，再决定下一步。",
-  "taskTooHardGuidance3": "只验证刚拆出来的这一步。",
   "taskDiagnosisStuck": "你现在最像卡在哪一步？",
   "taskDiagnosisFix": "先只做一个 5 分钟内能完成的小动作。",
   "taskDiagnosisCheck": "下一步你能先写下哪一句？",
@@ -12267,19 +11830,11 @@
   "communityShareDepthLevel": "深度 Lv.{level}",
   "communityShareCorePosters": "4 种核心海报",
   "userEngagementState": "参与状态",
-  "userSessionCount7d": "7日会话 {count}",
-  "userStreakDays": "连续 {count} 天",
-  "userLastActiveDate": "最近 {date}",
   "userNoRecentActivity": "最近暂无记录",
   "userForesightHint": "前瞻提示",
   "userForesightEmpty": "暂时还没有可展示的前瞻提示，后端会继续观察。",
-  "userDeviationCount": "偏离 {count} 个",
-  "userStabilityScore": "执行稳定度",
-  "userRhythmFit": "节奏贴合",
-  "userOverloadRisk": "过载风险",
   "userIdiographicObservations": "近期关联观察",
   "userAchievementSummary": "成就摘要",
-  "userTotalAchievementScore": "总成就分 {score}",
   "userNoRecentHighlights": "近期还没有新的高光或进度变化，继续推进会在这里留下痕迹。",
   "userLatestUnlock": "最近解锁",
   "userCurrentProgress": "当前推进",
@@ -12297,7 +11852,6 @@
   "userSRLEnforcing": "SRL · 执行中",
   "userSRLReflecting": "SRL · 复盘中",
   "userSRLUnknown": "SRL · 未知",
-  "userTraitsPriorHint": "基于历史观察，可随时调整",
   "userTraitsLongTerm": "长期倾向",
   "userTraitOpenness": "开放性",
   "userTraitConscientiousness": "尽责性",
@@ -12310,14 +11864,9 @@
   "userWorkingMemory": "工作记忆快照",
   "userWorkingMemoryHint": "把最近还在脑海前台的事项收紧成一个短视图。",
   "userWorkingMemoryEmpty": "最近没有需要继续挂在前台的工作记忆，先按当前节奏推进就好。",
-  "userMentionCount": "提及 {count} 次",
-  "userConsolidated": "已整合",
-  "userStillInForeground": "仍在前台",
   "userMetacognition": "自我认识",
   "userMetacognitionHint": "这里只展示过去样本里的判断偏差，不给你贴标签。",
-  "userMetacognitionDimensions": "已观察 {count} 个元认知维度",
   "userHidePanel": "隐藏此面板",
-  "userUpdatedAt": "更新于 {time}",
   "userActiveSkills": "当前激活技能",
   "userActiveSkillsEmpty": "这一轮还没有明显命中的技能摘要，先保持默认支持方式。",
   "userAvatarPickerHint": "挑一个更贴近你气质的形象，默认就能直接应用。",
@@ -12339,7 +11888,6 @@
   "userOnboardingGenerating": "正在生成第一版理解与建议...",
   "userSignOutOtherDevices": "确认注销其他设备",
   "userSignOutOtherConfirm": "这会让你在所有其他设备上退出登录，是否继续？",
-  "userTotalDevices": "共 {count} 台设备",
   "userCurrentDeviceProtected": "当前设备已保护",
   "userAiOpsAnalysis": "AI 运营分析",
   "userAiOpsCopyExport": "复制导出",
@@ -12347,7 +11895,6 @@
   "userAiOpsPredictFailed": "预测转化分析加载失败",
   "userAiOpsAnalysisWindow": "分析窗口",
   "userAiOpsWindowHint": "切换 7 / 14 / 30 天窗口，观察速度、成本、fallback 和执行转化的趋势变化。",
-  "userAiOpsDays": "{days}天",
   "userAiOpsDevOps": "开发运营视角",
   "userAiOpsDevOpsHint": "重点看模型链路是否稳定、是否值得继续烧成本，以及哪些模式正在真正产生执行结果。",
   "userAiOpsSuccessRate": "成功率",
@@ -12365,22 +11912,15 @@
   "userAiOpsAcceptToExec": "接受后执行",
   "userAiOpsBySurface": "按入口看效果",
   "userAiOpsWorthOptimizing": "最值得优化的动作",
-  "userAiOpsLatestRequests": "最新请求量",
-  "userAiOpsLatestFallback": "最新 fallback",
-  "userAiOpsLatestCost": "最新成本",
   "userAiOpsExportCopied": "AI 运营导出已复制到剪贴板",
   "userAiOpsDashboard": "驾驶舱",
   "userAiOpsChatInput": "聊天输入",
   "userAiOpsChat": "聊天",
-  "userAiOpsTrendHint": "看耗时是否稳定下降，同时确认成功率和执行转化没有被成本优化拖垮。",
-  "userAiOpsTotalTime": "总耗时",
   "userAiOpsStandardChat": "标准对话",
   "userAiOpsStudyPlanning": "学习规划",
   "userAiOpsDeepAnalysis": "深度分析",
   "userAiOpsDiagnosisCorrection": "诊断纠错",
   "userAiOpsExpertCollaboration": "专家协作",
-  "userAiOpsFirstTokenTotal": "首包 {first}ms · 总耗时 {total}ms · 成功率 {rate}%",
-  "userAiOpsPromptInferenceHit": "prompt 命中 {prompt}% · 推理命中 {inference}%",
   "userThemeMode": "主题模式",
   "userThemeModeHint": "控制页面亮暗模式，让视觉节奏和使用环境保持一致。",
   "userBrandPresets": "品牌预设",
@@ -12401,12 +11941,8 @@
   "userCurrentStatus": "当前状态",
   "userNotGeneratedYet": "尚未生成导出文件",
   "userAlreadyGenerated": "已生成导出文件，可再次点击重新分享",
-  "userExporting": "导出中...",
-  "userSecurityLogCount": "共 {count} 条记录",
-  "userSecurityLogAnomalies": "异常 {count} 条",
   "userLoadMoreRecords": "加载更多记录",
   "userLoading": "加载中…",
-  "userProfileAdjustmentRecorded": "已记录「{targetId}」的画像调整。",
   "userVisibleProfile": "可见画像",
   "userVisibleProfileHint": "open_editable / open_discussable 条目会在这里直接呈现。",
   "userMediatedProfile": "中介画像",
@@ -12414,7 +11950,6 @@
   "userTransparentProfile": "透明画像",
   "userSummary": "概要",
   "userCurrentUnknowns": "当前未知项",
-  "userHiddenItemsCount": "隐藏条目 {count} 条，未进入透明面板。",
   "userNoContent": "暂无内容。",
   "userRevertibleChanges": "可回退更改",
   "userRevertibleHint": "这里只展示 Aurora 介入过的变化，不做静默覆盖。",
@@ -12427,7 +11962,6 @@
   "userTransparentNotEnabledHint": "WS6 目前保持 inert，等后续路由或后端绑定补齐后再启用。",
   "userExamModeOnly": "仅考试模式",
   "userMarkInaccurate": "标记不准确",
-  "userSuggestedSummary": "建议：{summary}",
   "userMarkNeedsRecalibration": "标记需重校",
   "userDownloadDataSubtitle": "下载账号、学习与记忆相关数据",
   "userModelingChatTitle": "让我更了解你（约2分钟）",
@@ -12436,12 +11970,9 @@
   "userTyping": "输入中…",
   "userAuroraMultiHint": "Aurora 可能会连续发几条，你也可以直接插话。",
   "userInputPlaceholder": "输入你的回答…",
-  "userModelingFailed": "建模对话暂时失败：{error}",
-  "userCannotSkipNow": "暂时无法跳过：{error}",
   "userStartPlanning": "开始规划",
   "userPlanTimeoutMessage": "计划生成超时了，请重试一次。",
   "userPlanNotReady": "计划还在准备入口，请稍后重试一次。",
-  "userPlanGenerationError": "计划生成遇到问题：{error}",
   "userGeneratingSprintPlan": "正在生成你的第一份冲刺计划",
   "userSprintPlanHint": "马上就会带你进入任务页，不需要再点下一步。",
   "userPlanGenerationFailed": "计划生成没成功",
@@ -12454,22 +11985,12 @@
   "userAdminClientLoadFailed": "客户端观测加载失败",
   "userAdminWindow": "管理员窗口",
   "userAdminWindowHint": "把客户端异常、网关/后端容量和当前 Prometheus 告警放在一起看，快速判断是前端退化还是基础设施抖动。",
-  "userAdminDays": "{days}天",
   "userAdminCapacityHealth": "容量与健康",
   "userAdminDBProbe": "DB 探针",
   "userAdminRedisConn": "Redis 连接",
   "userAdminQueueBacklog": "队列积压",
   "userAdminDiskUsage": "磁盘使用",
   "userAdminServiceDrilldown": "服务级 drill-down",
-  "userAdminProbeLatency": "探针延迟 {latency}ms",
-  "userAdminConnPool": "连接池 {size} / 溢出 {overflow}",
-  "userAdminTimeout": "超时 {seconds}s",
-  "userAdminRedisStatus": "状态 {status}",
-  "userAdminRedisMemory": "内存 {used} / 峰值 {peak}",
-  "userAdminRedisClients": "客户端 {count}",
-  "userAdminDiskDetail": "已用 {used} GB / 空闲 {free} GB",
-  "userAdminDiskTotal": "总量 {total} GB",
-  "userAdminDiskRatio": "使用率 {ratio}%",
   "userAdminCurrentAlerts": "当前告警",
   "userAdminNoAlerts": "当前没有触发中的 Prometheus 告警。",
   "userAdminClientObservability": "客户端观测",
@@ -12479,10 +12000,6 @@
   "userAdminAvgDuration": "平均耗时",
   "userAdminTrendDays": "7/14/30 天趋势",
   "userAdminEventTypeDrilldown": "事件类型 drill-down",
-  "userAdminTotalCount": "总量 {count}",
-  "userAdminErrorsCrashes": "错误 {errors} / 崩溃 {crashes}",
-  "userAdminSuccessRate": "成功率 {rate}%",
-  "userAdminAvgDurationMs": "平均耗时 {duration}ms",
   "@flashCapsuleSubjectCount": {
     "placeholders": {
       "count": {
@@ -13913,7 +13430,6 @@
   "goalGraphToggleGoal": "目标",
   "goalGraphGapAnalysis": "差距分析",
   "goalGraphCoverage": "覆盖率",
-  "taskPausedPanelTitle": "暂停上下文",
   "taskPausedPanelSemantics": "{title} 的暂停任务详情",
   "@taskPausedPanelSemantics": {
     "placeholders": {
@@ -15910,7 +15426,6 @@
   "taskDiagnosisOption1": "概念没想清",
   "taskDiagnosisOption2": "步骤顺序乱了",
   "taskDiagnosisOption3": "题目条件不会用",
-  "taskOpQueuedSuffix": "，已加入等待队列。",
   "seedLibLoadFailed": "种子库详情加载失败，请稍后再试",
   "seedLibStatusFailed": "种子库状态加载失败，请稍后再试",
   "communitySquad": "小队",

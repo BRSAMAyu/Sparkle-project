@@ -226,9 +226,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Control the AI completion and transparency capsule at the bottom of chat';
 
   @override
-  String get taskCard => 'Task Card';
-
-  @override
   String get startTask => 'Start Task';
 
   @override
@@ -1396,13 +1393,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskActionComplete => 'Complete';
 
   @override
-  String get taskActionAbandon => 'Abandon';
-
-  @override
   String get taskActionEdit => 'Edit';
-
-  @override
-  String get taskActionDelete => 'Delete';
 
   @override
   String get taskPriorityHigh => 'High Priority';
@@ -1455,52 +1446,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get taskOverdue => 'Overdue';
-
-  @override
   String get taskDueToday => 'Today';
 
   @override
   String get taskDueTomorrow => 'Tomorrow';
 
   @override
-  String get taskDueThisWeek => 'Due this week';
-
-  @override
-  String get taskCategoryWork => 'Work';
-
-  @override
-  String get taskCategoryStudy => 'Study';
-
-  @override
-  String get taskCategoryPersonal => 'Personal';
-
-  @override
-  String get taskCategoryHealth => 'Health';
-
-  @override
-  String get taskCategoryOther => 'Other';
-
-  @override
   String get taskFilterAll => 'All';
-
-  @override
-  String get taskFilterToday => 'Today';
-
-  @override
-  String get taskFilterWeek => 'This Week';
-
-  @override
-  String get taskFilterCompleted => 'Completed';
-
-  @override
-  String get taskSortByDate => 'Sort by Date';
-
-  @override
-  String get taskSortByPriority => 'Sort by Priority';
-
-  @override
-  String get taskSortByName => 'Sort by Name';
 
   @override
   String taskCount(num count) {
@@ -1515,76 +1467,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get focusTimerTitle => 'Focus Timer';
-
-  @override
-  String get focusTimerStart => 'Start Focus';
-
-  @override
-  String get focusTimerPause => 'Pause';
-
-  @override
-  String get focusTimerResume => 'Resume';
-
-  @override
-  String get focusTimerStop => 'Stop';
-
-  @override
-  String get focusTimerReset => 'Reset';
-
-  @override
-  String get focusTimerComplete => 'Session Complete!';
-
-  @override
-  String get focusTimerRemaining => 'Remaining';
-
-  @override
-  String get focusTimerElapsed => 'Elapsed';
-
-  @override
-  String focusTimerSession(Object current, Object total) {
-    return 'Session $current/$total';
-  }
-
-  @override
-  String get focusTimerBreak => 'Break Time';
-
-  @override
-  String get focusTimerShortBreak => 'Short Break';
-
-  @override
-  String get focusTimerLongBreak => 'Long Break';
-
-  @override
-  String focusTimerNextSession(Object time) {
-    return 'Next session in $time';
-  }
-
-  @override
-  String get focusTimerAutoStart => 'Auto-start next session';
-
-  @override
-  String get focusTimerSound => 'Notification Sound';
-
-  @override
-  String get focusTimerVolume => 'Volume';
-
-  @override
-  String get focusTimerDuration => 'Duration';
-
-  @override
-  String get focusTimerPreset25 => '25 min (Pomodoro)';
-
-  @override
-  String get focusTimerPreset45 => '45 min (Deep Focus)';
-
-  @override
-  String get focusTimerPreset60 => '60 min (Extended)';
-
-  @override
-  String get focusTimerCustom => 'Custom';
-
-  @override
   String get focusStatsToday => 'Today';
 
   @override
@@ -1594,26 +1476,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get focusStatsMonth => 'This Month';
 
   @override
-  String get focusStatsTotal => 'Total';
-
-  @override
-  String focusStatsSessions(Object count) {
-    return '$count sessions';
-  }
-
-  @override
   String focusStatsMinutes(Object count) {
     return '$count minutes';
-  }
-
-  @override
-  String focusStatsHours(Object count) {
-    return '$count hours';
-  }
-
-  @override
-  String focusStatsStreak(Object count) {
-    return '$count day streak';
   }
 
   @override
@@ -1622,11 +1486,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String focusTasksDone(int count) {
     return '$count done';
-  }
-
-  @override
-  String focusStatsBestDay(Object time) {
-    return 'Best: $time';
   }
 
   @override
@@ -1763,19 +1622,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get focusReturnToTask => 'Back to Task';
-
-  @override
-  String get focusReturnToTaskTitle => 'Return to Task';
-
-  @override
-  String get focusReturnToTaskMessage =>
-      'Your focus record will pause and you\'ll return to the task execution screen.';
-
-  @override
-  String get focusReturnToTaskConfirm => 'Return';
-
-  @override
   String get focusExitMindfulness => 'Exit Mindfulness';
 
   @override
@@ -1788,12 +1634,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get focusReflectionTitle => 'Focus Complete';
 
   @override
-  String get focusReflectionPrompt => 'How did this focus session feel?';
-
-  @override
-  String get focusReflectionNoteHint => 'Anything worth noting? (Optional)';
-
-  @override
   String get focusReflectionSaved => 'Reflection saved to Cognitive Prism';
 
   @override
@@ -1802,55 +1642,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String focusReflectionSummary(Object feeling, Object note) {
-    return 'Focus reflection: status $feeling.\n$note';
-  }
-
-  @override
-  String get focusReflectionMoodFlow => '🔥 Flow';
-
-  @override
-  String get focusReflectionMoodFocused => '🙂 Focused';
-
-  @override
-  String get focusReflectionMoodOkay => '😐 Okay';
-
-  @override
-  String get focusReflectionMoodDistracted => '😖 Distracted';
-
-  @override
-  String get focusReflectionMoodTired => '😫 Tired';
-
-  @override
   String get focusExitTitleStep1 => 'Exit mindfulness mode?';
-
-  @override
-  String get focusExitTitleStep2 => 'About to leave';
-
-  @override
-  String get focusExitTitleStep3 => 'Final confirmation';
-
-  @override
-  String get focusExitMessageStep1 =>
-      'You\'re in a focus state. Exiting now may break your momentum.';
 
   @override
   String focusExitMessageStep2(Object minutes) {
     return 'You\'ve focused for $minutes minutes. Are you sure you want to leave?';
   }
-
-  @override
-  String get focusExitMessageStep3 =>
-      'Try to stay with it a bit longer. Leaving now will interrupt your focus record.';
-
-  @override
-  String get focusExitCancelStep1 => 'Keep focusing';
-
-  @override
-  String get focusExitConfirmStep1 => 'Exit';
-
-  @override
-  String get focusExitConfirmStep2 => 'Continue exit';
 
   @override
   String get focusExitConfirmStep3 => 'Confirm exit';
@@ -4542,9 +4339,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskFeedbackSubmitted => 'Feedback submitted';
 
   @override
-  String get taskFeedbackPreferenceUpdated => 'Preferences updated';
-
-  @override
   String get taskFeedbackView => 'View';
 
   @override
@@ -4581,11 +4375,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskFeedbackStreak => 'Streak';
 
   @override
-  String taskFeedbackStreakDays(Object count) {
-    return '$count days';
-  }
-
-  @override
   String get taskFeedbackOptionalRating => 'Satisfaction rating (optional)';
 
   @override
@@ -4602,19 +4391,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskFeedbackCategoryTooEasy => 'Too easy';
 
   @override
-  String get taskFeedbackOptionalComment => 'Anything else to add? (optional)';
-
-  @override
-  String get taskFeedbackCommentHint => 'Write down a quick reflection...';
-
-  @override
   String get taskFeedbackNextSteps => 'Suggested next steps';
 
   @override
   String get taskFeedbackSkip => 'Skip';
-
-  @override
-  String get taskFeedbackComplete => 'Done';
 
   @override
   String taskFeedbackReason(Object reason) {
@@ -10476,11 +10256,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskCreateAction => 'Task Create Action';
 
   @override
-  String taskCreateFailed(Object arg0) {
-    return '$arg0';
-  }
-
-  @override
   String get taskCreateSuccess => 'Task Create Success';
 
   @override
@@ -10550,9 +10325,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExecutionCompleteTitle => 'Task Execution Complete Title';
 
   @override
-  String get taskExecutionCompletedTitle => 'Task Execution Completed Title';
-
-  @override
   String get taskConfirmCompleteTitle => 'Confirm completion?';
 
   @override
@@ -10566,20 +10338,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get taskExecutionConfirmComplete => 'Task Execution Confirm Complete';
-
-  @override
   String taskExecutionElapsedMinutes(Object arg0) {
     return '$arg0';
   }
 
   @override
   String get taskExecutionEnterFocus => 'Task Execution Enter Focus';
-
-  @override
-  String taskExecutionExpGained(Object arg0) {
-    return '$arg0';
-  }
 
   @override
   String get taskExecutionFeatureCoach => 'Task Execution Feature Coach';
@@ -10604,12 +10368,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Task Execution Feature Starfield';
 
   @override
-  String get taskExecutionGuideEmpty => 'Task Execution Guide Empty';
-
-  @override
-  String get taskExecutionGuideTitle => 'Task Execution Guide Title';
-
-  @override
   String get taskExecutionNoTask => 'Task Execution No Task';
 
   @override
@@ -10617,9 +10375,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get taskExecutionNoteLabel => 'Task Execution Note Label';
-
-  @override
-  String get taskExecutionSkipAnimation => 'Task Execution Skip Animation';
 
   @override
   String taskExecutionStartFailed(Object arg0) {
@@ -10634,9 +10389,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get taskExecutionFreeFocusCompleted => 'Free focus completed';
-
-  @override
-  String get taskExecutionTapToContinue => 'Task Execution Tap To Continue';
 
   @override
   String get taskExecutionTimerLabel => 'Task Execution Timer Label';
@@ -10730,9 +10482,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get taskDetailPlanContext => 'Belongs to Plan';
-
-  @override
-  String get taskDetailPlanContextLoading => 'Loading plan...';
 
   @override
   String get taskDetailCopyAiPromptSuccess => 'AI prompt copied';
@@ -13888,116 +13637,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get predictedToolSuggestSchedule => 'Suggest Schedule';
 
   @override
-  String get examSprintHighFreqCoverage => 'High-Freq Coverage';
-
-  @override
-  String get examSprintMistakeRepair => 'Mistake Repair';
-
-  @override
-  String get examSprintStudyStreak => 'Study Streak';
-
-  @override
-  String examSprintStreakDays(Object days) {
-    return '$days d';
-  }
-
-  @override
-  String get examSprintKeepRhythm => 'Keep the rhythm';
-
-  @override
-  String examSprintHighYieldWeak(Object topics) {
-    return 'High-yield weak spots: $topics';
-  }
-
-  @override
-  String get examSprintNoTasksToday => 'No sprint tasks scheduled today.';
-
-  @override
-  String get examSprintExamDayReady => 'Exam Day · You\'re Ready 🎓';
-
-  @override
-  String get examSprintExamTips => 'Exam Tips';
-
-  @override
-  String get examSprintRecordResult => 'Record Exam Result';
-
-  @override
-  String get examSprintDashboardTitle => 'Exam Sprint Dashboard';
-
-  @override
-  String get examSprintModeHighScore => 'High Score';
-
-  @override
-  String get examSprintModeHold => 'Hold';
-
-  @override
-  String get examSprintModePass => 'Pass';
-
-  @override
-  String get examSprintModeDefault => 'Sprint';
-
-  @override
-  String get examSprintExamDay => 'Exam day';
-
-  @override
-  String examSprintCountdown(Object days) {
-    return '$days days until exam';
-  }
-
-  @override
-  String examSprintTodayTasks(Object completed, Object total) {
-    return 'Today: $completed/$total tasks';
-  }
-
-  @override
-  String examSprintDaysLeft(Object days) {
-    return '$days left until the exam';
-  }
-
-  @override
-  String examSprintTodayDone(Object completed, Object total) {
-    return 'Today $completed/$total done';
-  }
-
-  @override
-  String get examSprintTodaySprintTasks => 'Today Sprint Tasks';
-
-  @override
-  String get examSprintHideLater => 'Hide later days';
-
-  @override
-  String examSprintShowLater(Object count) {
-    return 'Show next $count days';
-  }
-
-  @override
-  String examSprintDayIndex(Object index) {
-    return 'Day $index';
-  }
-
-  @override
-  String examSprintDateFormat(Object month, Object day) {
-    return '$month/$day';
-  }
-
-  @override
-  String get examSprintNoSprintTasks => 'No sprint tasks yet';
-
-  @override
-  String examSprintMinLabel(Object minutes, Object status) {
-    return '$minutes min · $status';
-  }
-
-  @override
-  String get examSprintStatusDone => 'Done';
-
-  @override
-  String get examSprintStatusInProgress => 'In progress';
-
-  @override
-  String get examSprintStatusPending => 'Pending';
-
-  @override
   String get insightHubTitle => 'Learning Insights';
 
   @override
@@ -14286,19 +13925,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get simulationStartSimulation => 'Start This Simulation';
 
   @override
-  String get simulationAwaitingInput => 'Awaiting Input';
-
-  @override
   String get simulationClearTopic => 'Clear Topic';
-
-  @override
-  String get simulationRecommendedScenarios => 'Recommended Scenarios';
-
-  @override
-  String get simulationGenerate => 'Generate';
-
-  @override
-  String get simulationRefresh => 'Refresh';
 
   @override
   String get simulationStartSimButton => 'Start Simulation';
@@ -14329,15 +13956,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get simulationYourResponseArea => 'Your Response Area';
-
-  @override
-  String get simulationCollapse => 'Collapse';
-
-  @override
-  String get simulationJoinDiscussion => 'Join the Discussion';
-
-  @override
-  String get simulationOrInputJudgment => 'Or enter your judgment';
 
   @override
   String get simulationSubmitting => 'Submitting...';
@@ -14401,9 +14019,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get simulationImmersiveDiscussion => 'Immersive Discussion';
 
   @override
-  String get simulationCurrentDiscussion => 'Current Discussion';
-
-  @override
   String get simulationWillAppearLive =>
       'Rounds will appear live once started.';
 
@@ -14445,13 +14060,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Structured insight summary generated.';
 
   @override
-  String get simulationEmptyGenerating => 'Simulation is generating...';
-
-  @override
-  String get simulationEmptyStartPrompt =>
-      'Start a learning scenario simulation and let roles discuss the topic round by round.';
-
-  @override
   String get simulationCurrentScene => 'Current Scene';
 
   @override
@@ -14459,10 +14067,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get simulationInteractionStyle => 'Interaction Style';
-
-  @override
-  String get simulationRoleDiscussionUserJoin =>
-      'Role Discussion + You Respond';
 
   @override
   String get simulationTopicHint => 'Enter a topic or knowledge point';
@@ -14528,18 +14132,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get simulationRoleDiscussionValue => 'Role Discussion + You Respond';
 
   @override
-  String get simulationJudgeExampleHint =>
-      'e.g. I\'ll strengthen my geometric intuition first, then verify with a problem';
-
-  @override
-  String get simulationInteractionExplain =>
-      'Give your judgment first, and the next round will truly build around your input.';
-
-  @override
-  String get simulationInteractionHint =>
-      'Try catching one round here first and let the roles respond to your judgment. You can also bring this step back to the main chat to continue.';
-
-  @override
   String get simulationContinuitySubtitle =>
       'This simulation continues from your previous exploration. You can bring the context back to the original conversation anytime to continue questioning and deciding.';
 
@@ -14562,40 +14154,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'This simulation comes from the Knowledge Theater. The current context remains linked to the original deduction.';
 
   @override
-  String simulationInteractionModeFormat(Object mode) {
-    return 'Interaction mode: $mode';
-  }
-
-  @override
-  String get simulationInteractionOpenQuestion => 'Open Question';
-
-  @override
-  String get simulationInteractionViewpointChallenge => 'Viewpoint Challenge';
-
-  @override
-  String get simulationInteractionBinaryChoice => 'Binary Choice';
-
-  @override
-  String get simulationInteractionChoice => 'Choice';
-
-  @override
-  String simulationCurrentFocusFormat(Object speaker) {
-    return 'Current focus: $speaker';
-  }
-
-  @override
   String simulationTopicFormat(Object topic) {
     return 'Topic: $topic';
-  }
-
-  @override
-  String simulationTopicAndSpeakerFormat(Object topic, Object speaker) {
-    return 'Topic: $topic · Speaking: $speaker';
-  }
-
-  @override
-  String simulationRoundN(Object round) {
-    return 'Round $round';
   }
 
   @override
@@ -14648,11 +14208,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String simulationBulletOpening(Object message) {
-    return 'Opening highlight: $message';
-  }
-
-  @override
   String simulationRoundFormatShort(Object current, Object total) {
     return '$current/$total rds';
   }
@@ -14683,15 +14238,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get simulationBalancedPush => 'Balanced';
-
-  @override
-  String get simulationDebateClash => 'Debate Clash';
-
-  @override
-  String get simulationGuidedBreakdown => 'Guided Breakdown';
-
-  @override
-  String get simulationPracticalApply => 'Practical Application';
 
   @override
   String get simulationReportReturnException =>
@@ -14747,166 +14293,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get simulationWaitingInput => 'Awaiting Input';
 
   @override
-  String get simulationScenarioDescStudyGroup =>
-      'Multi-role collaborative learning around a topic, ideal for explaining concepts, examples, and misconceptions together.';
-
-  @override
-  String get simulationScenarioDescKnowledgeDebate =>
-      'Let opposing viewpoints clash directly, ideal for verifying opinions, evidence, and boundary conditions.';
-
-  @override
-  String get simulationScenarioDescHistoricalRoleplay =>
-      'Bring in characters and era constraints, advancing the discussion like a real historical scene.';
-
-  @override
-  String get simulationScenarioDescSocraticDialogue =>
-      'Deconstruct premises through persistent questioning, ideal for clarifying vague concepts and reasoning gaps.';
-
-  @override
-  String get simulationScenarioDescCaseAnalysis =>
-      'Deconstruct, diagnose, and decide around specific cases, ideal for practical topics.';
-
-  @override
-  String get simulationScenarioDescWhatIfPath =>
-      'Compare different learning or action routes, ideal for planning, trade-offs, and resource allocation.';
-
-  @override
-  String get simulationScenarioDescConceptMapBuild =>
-      'Weave knowledge points into a structural diagram, ideal for establishing the global framework and connections.';
-
-  @override
-  String get simulationScenarioDescErrorDiagnosis =>
-      'Focus on identifying error causes, correction paths, and verification methods, ideal for filling gaps.';
-
-  @override
-  String get simulationFacilitationDescBalanced =>
-      'Fits most topics, emphasizing balanced multi-role progression without any party dominating the field.';
-
-  @override
-  String get simulationFacilitationDescDebate =>
-      'Actively amplifies controversy and evidence conflicts, better for topics that need viewpoint collision.';
-
-  @override
-  String get simulationFacilitationDescGuided =>
-      'More like a mentor-led discussion, emphasizing clarification of premises, step-by-step deconstruction, and keeping the user on track.';
-
-  @override
-  String get simulationFacilitationDescPractical =>
-      'Prioritizes action, verification, and real-world constraints, ideal for skill and solution planning.';
-
-  @override
-  String get simulationRoleHonorsStudent => 'Honors Student';
-
-  @override
-  String get simulationRoleMidStudent => 'Mid-level Student';
-
-  @override
   String get simulationRoleQuestioner => 'Questioner';
-
-  @override
-  String get simulationRoleSummarizer => 'Summarizer';
-
-  @override
-  String get simulationRolePracticeCoach => 'Practice Coach';
-
-  @override
-  String get simulationRoleProExpert => 'Pro Expert';
-
-  @override
-  String get simulationRoleConExpert => 'Con Expert';
 
   @override
   String get simulationRoleModerator => 'Moderator';
 
   @override
-  String get simulationRoleEvidenceReviewer => 'Evidence Reviewer';
-
-  @override
-  String get simulationRolePursuer => 'Pursuer';
-
-  @override
-  String get simulationRoleHistoryMentor => 'History Mentor';
-
-  @override
-  String get simulationRoleKeyFigure => 'Key Figure';
-
-  @override
-  String get simulationRoleEraObserver => 'Era Observer';
-
-  @override
-  String get simulationRoleStrategyAdvisor => 'Strategy Advisor';
-
-  @override
-  String get simulationRoleRecorder => 'Recorder';
-
-  @override
-  String get simulationRoleSocrates => 'Socrates';
-
-  @override
-  String get simulationRoleSkeptic => 'Skeptic';
-
-  @override
-  String get simulationRoleDeconstructor => 'Deconstructor';
-
-  @override
-  String get simulationRoleApplier => 'Applier';
-
-  @override
-  String get simulationRoleCaseMentor => 'Case Mentor';
-
-  @override
-  String get simulationRoleDiagnostician => 'Diagnostician';
-
-  @override
   String get simulationRolePractitioner => 'Practitioner';
 
   @override
-  String get simulationRoleCounterExample => 'Counter-Example Provider';
-
-  @override
-  String get simulationRoleDecisionRecorder => 'Decision Recorder';
-
-  @override
-  String get simulationRoleCurrentRoute => 'Current Route';
-
-  @override
-  String get simulationRoleRadicalRoute => 'Radical Route';
-
-  @override
-  String get simulationRoleRiskObserver => 'Risk Observer';
-
-  @override
-  String get simulationRoleResourceScheduler => 'Resource Scheduler';
-
-  @override
-  String get simulationRoleVerifier => 'Verifier';
-
-  @override
-  String get simulationRoleStructurer => 'Structurer';
-
-  @override
   String get simulationRoleConnector => 'Connector';
-
-  @override
-  String get simulationRoleCounterExampleChecker => 'Counter-Example Checker';
-
-  @override
-  String get simulationRoleBridgeBuilder => 'Bridge Builder';
-
-  @override
-  String get simulationRoleErrorAnalyst => 'Error Analyst';
-
-  @override
-  String get simulationRoleCorrectionCoach => 'Correction Coach';
-
-  @override
-  String get simulationRoleQuestionDeconstructor => 'Question Deconstructor';
-
-  @override
-  String get simulationRoleMigrationCoach => 'Migration Coach';
-
-  @override
-  String get simulationRoleStudyBuddy => 'Study Buddy';
 
   @override
   String get simulationRoleCurrentDiscussionTitle => 'Current Discussion';
@@ -14915,39 +14311,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String simulationBulletOpeningFormat(Object message) {
     return 'Opening focus: $message';
   }
-
-  @override
-  String get simulationScenarioParticipantOptionsDefault0 => 'Study Buddy';
-
-  @override
-  String get simulationScenarioParticipantOptionsDefault1 => 'Questioner';
-
-  @override
-  String get simulationScenarioParticipantOptionsDefault2 => 'Summarizer';
-
-  @override
-  String get simulationScenarioLabelStudyGroup => 'Study Group';
-
-  @override
-  String get simulationScenarioLabelKnowledgeDebate => 'Knowledge Debate';
-
-  @override
-  String get simulationScenarioLabelHistoricalRoleplay => 'Historical Roleplay';
-
-  @override
-  String get simulationScenarioLabelSocraticDialogue => 'Socratic Dialogue';
-
-  @override
-  String get simulationScenarioLabelCaseAnalysis => 'Case Analysis';
-
-  @override
-  String get simulationScenarioLabelWhatIfPath => 'What-If Path';
-
-  @override
-  String get simulationScenarioLabelConceptMapBuild => 'Concept Map Building';
-
-  @override
-  String get simulationScenarioLabelErrorDiagnosis => 'Error Diagnosis';
 
   @override
   String get openclawPairImportedSaved =>
@@ -16814,160 +16177,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get personaHintValidPreference => 'Enter a valid preference value';
-
-  @override
-  String get examSprintTitle => 'Exam Sprint Setup';
-
-  @override
-  String examSprintMinutesPerDay(Object minutes) {
-    return '$minutes min/day';
-  }
-
-  @override
-  String get examSprintStep1Subject => '1. Which course?';
-
-  @override
-  String get examSprintSubjectHint =>
-      'e.g., Computer Networks / Calculus / CET-4';
-
-  @override
-  String get examSprintSubjectRequired =>
-      'Tell me which course you\'re sprinting for';
-
-  @override
-  String get examSprintStep2Date => '2. When is the exam?';
-
-  @override
-  String get examSprintSelectDate => 'Select exam date';
-
-  @override
-  String get examSprintDateHint =>
-      'The date determines sprint duration and pace';
-
-  @override
-  String get examSprintStep3Target => '3. Pass, maintain, or aim high?';
-
-  @override
-  String get examSprintStep4Scope => '4. Any exam scope or teacher highlights?';
-
-  @override
-  String get examSprintStep4Subtitle =>
-      'Paste key points or upload PDF / DOCX / PPT / TXT.';
-
-  @override
-  String get examSprintScopeHint =>
-      'e.g., Focus on transport layer and network layer; teacher said short answer and calculation questions.';
-
-  @override
-  String get examSprintUpload => 'Upload Materials';
-
-  @override
-  String get examSprintNoUpload => 'No materials uploaded yet';
-
-  @override
-  String examSprintUploadedCount(Object count) {
-    return '$count materials uploaded';
-  }
-
-  @override
-  String get examSprintStep5Baseline =>
-      '5. How much do you know? Which chapters worry you?';
-
-  @override
-  String get examSprintWeakChapters => 'Which chapters worry you most?';
-
-  @override
-  String get examSprintStep6Daily =>
-      '6. How long can you realistically study each day?';
-
-  @override
-  String examSprintMinutesPerDayLabel(Object minutes) {
-    return '$minutes min / day';
-  }
-
-  @override
-  String examSprintMinutesLabel(Object minutes) {
-    return '$minutes min';
-  }
-
-  @override
-  String get examSprintDailyHint =>
-      'Use the time you can realistically stick to, not the ideal.';
-
-  @override
-  String get examSprintGenerate => 'Generate My First Day Tasks';
-
-  @override
-  String get examSprintSubmitHint =>
-      'After submission, you\'ll get an initial assessment within 3 seconds and be taken to the plan or first day tasks.';
-
-  @override
-  String get examSprintHeroTitle =>
-      'Not a survey — let\'s find your starting point together';
-
-  @override
-  String get examSprintHeroSubtitle =>
-      'Answer these 6 questions and I\'ll give you an initial assessment, recommended strategy, and first day tasks.';
-
-  @override
-  String get examSprintUploadSuccess => 'Material uploaded';
-
-  @override
-  String get examSprintSelectDateFirst => 'Please select the exam date first';
-
-  @override
-  String get examSprintAssessmentComplete => 'Initial assessment complete';
-
-  @override
-  String examSprintPassProbability(Object percent) {
-    return 'Pass probability $percent%';
-  }
-
-  @override
-  String examSprintRecommendedMode(Object mode) {
-    return 'Recommended mode $mode';
-  }
-
-  @override
-  String get examSprintFirstDayFocus => 'What to do on day one';
-
-  @override
-  String get examSprintStartFirstDay => 'Start first day tasks';
-
-  @override
-  String get examSprintViewPlan => 'View plan';
-
-  @override
-  String get examSprintViewFullPlan => 'View full plan';
-
-  @override
-  String get examSprintBaselineAlmostZero => 'Starting almost from scratch';
-
-  @override
-  String get examSprintBaselineUnstable =>
-      'Attended class, but foundation is shaky';
-
-  @override
-  String get examSprintBaselinePartial =>
-      'Have some basics, can patch and push simultaneously';
-
-  @override
-  String get examSprintBaselineSolid =>
-      'Solid foundation, focus on score optimization';
-
-  @override
-  String examSprintDayCount(Object count) {
-    return '$count days';
-  }
-
-  @override
-  String get examSprintTargetPass => 'Pass';
-
-  @override
-  String get examSprintTargetHold => 'Maintain';
-
-  @override
-  String get examSprintTargetHighScore => 'Aim high';
 
   @override
   String get memorySettingsSocialPersonMention => 'Person mentions';
@@ -19922,9 +19131,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get examDiagnosticSubmit => 'Submit and see results';
 
   @override
-  String get examDiagnosticResultTitle => 'Diagnostic Result';
-
-  @override
   String examDiagnosticScore(Object score) {
     return 'Estimated score: $score';
   }
@@ -20168,11 +19374,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String examTaskMinutes(Object minutes) {
     return '$minutes min';
-  }
-
-  @override
-  String examPlanSubject(Object planName) {
-    return '$planName';
   }
 
   @override
@@ -21464,51 +20665,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get focusReflectionTitleLabel => 'Focus review';
-
-  @override
-  String focusReflectionStuckLabel(Object content) {
-    return 'Stuck point: $content';
-  }
-
-  @override
-  String focusReflectionMethodLabel(Object content) {
-    return 'Effective method: $content';
-  }
-
-  @override
-  String focusReflectionAdjustmentLabel(Object content) {
-    return 'Next adjustment: $content';
-  }
-
-  @override
-  String get focusReflectionPromptHint =>
-      'Take half a minute to capture the friction so future-you can use it.';
-
-  @override
-  String get focusReflectionStuckQuestion =>
-      'Where did you get stuck in this session?';
-
-  @override
-  String get focusReflectionStuckHint =>
-      'Example: once I started, I did not know how to begin.';
-
-  @override
-  String get focusReflectionMethodQuestion => 'What helped you feel progress?';
-
-  @override
-  String get focusReflectionMethodHint =>
-      'Example: marking the givens before solving.';
-
-  @override
-  String get focusReflectionAdjustmentQuestion =>
-      'What would you change next time?';
-
-  @override
-  String get focusReflectionAdjustmentHint =>
-      'Example: do a five-minute warm-up before deep focus.';
-
-  @override
   String get focusOfflineSaved =>
       'Focus record saved offline, will auto-sync later';
 
@@ -21516,14 +20672,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String focusSaveFailed(Object error) {
     return 'Focus record save failed: $error';
   }
-
-  @override
-  String get focusMockLlmGuidance =>
-      'Try the Pomodoro technique: break tasks into 25-minute focus blocks with 5-minute breaks. Keep your environment quiet and notifications off.';
-
-  @override
-  String get focusMockSubtasks =>
-      'Create project outline,Write core feature code,Add test cases,Improve documentation';
 
   @override
   String chatAchievementProgress(Object name, Object percent) {
@@ -26595,15 +25743,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'First ask me one key clarifying question, then give me a next step I can start within 5 minutes.';
 
   @override
-  String get taskModeHuman => 'Manual';
-
-  @override
-  String get taskModeHybrid => 'Collaborative';
-
-  @override
-  String get taskModeUnknown => 'Unknown';
-
-  @override
   String get taskOpFailed => 'Operation failed';
 
   @override
@@ -26613,27 +25752,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskRetryFailed => 'Retry failed';
 
   @override
-  String get taskLocalNoAiExec => 'Local tasks do not support AI execution';
-
-  @override
-  String taskQueued(Object message) {
-    return '$message, added to waiting queue.';
-  }
-
-  @override
-  String get taskNoExecRecord => 'No AI execution record to process';
-
-  @override
-  String get taskExecRecordUnavailable =>
-      'Execution record temporarily unavailable';
-
-  @override
   String get taskFreeFocus => 'Free Focus';
-
-  @override
-  String taskLoadFailed(Object error) {
-    return 'Failed to load task: $error';
-  }
 
   @override
   String get taskUpdated => 'Task updated';
@@ -28124,9 +27243,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userTrendStabilizing => 'Stabilizing in recent weeks.';
 
   @override
-  String get userWorkingMemorySnapshot => 'Working Memory Snapshot';
-
-  @override
   String get userRecentForegroundItems =>
       'Still stuck on inverted sentences in complex English sentence breakdown; review question 3 in next practice.';
 
@@ -28195,27 +27311,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get taskSkipMessage =>
       'Skipped — this card won\'t crowd your day anymore.';
-
-  @override
-  String get taskTooHardStep1 => 'Find the single point that blocks you';
-
-  @override
-  String get taskTooHardStep2 => 'Describe the block in one plain sentence';
-
-  @override
-  String get taskTooHardStep3 => 'Do one smallest verification action';
-
-  @override
-  String get taskTooHardGuidance1 =>
-      'Just locate the block — don\'t solve the whole task.';
-
-  @override
-  String get taskTooHardGuidance2 =>
-      'Explain it clearly first, then decide next steps.';
-
-  @override
-  String get taskTooHardGuidance3 =>
-      'Only verify this one sub-step you just broke out.';
 
   @override
   String get taskDiagnosisStuck => 'Which step feels most stuck right now?';
@@ -28734,21 +27829,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userEngagementState => 'Engagement State';
 
   @override
-  String userSessionCount7d(Object count) {
-    return '7d sessions $count';
-  }
-
-  @override
-  String userStreakDays(Object count) {
-    return '${count}d streak';
-  }
-
-  @override
-  String userLastActiveDate(Object date) {
-    return 'Last active $date';
-  }
-
-  @override
   String get userNoRecentActivity => 'No recent activity';
 
   @override
@@ -28759,29 +27839,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'No foresight hints to display yet. The backend will continue observing.';
 
   @override
-  String userDeviationCount(Object count) {
-    return '$count deviations';
-  }
-
-  @override
-  String get userStabilityScore => 'Execution Stability';
-
-  @override
-  String get userRhythmFit => 'Rhythm Fit';
-
-  @override
-  String get userOverloadRisk => 'Overload Risk';
-
-  @override
   String get userIdiographicObservations => 'Recent Association Observations';
 
   @override
   String get userAchievementSummary => 'Achievement Summary';
-
-  @override
-  String userTotalAchievementScore(Object score) {
-    return 'Total achievement score $score';
-  }
 
   @override
   String get userNoRecentHighlights =>
@@ -28841,10 +27902,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userSRLUnknown => 'SRL · Unknown';
 
   @override
-  String get userTraitsPriorHint =>
-      'Based on historical observations, adjustable anytime';
-
-  @override
   String get userTraitsLongTerm => 'Long-term tendencies';
 
   @override
@@ -28883,17 +27940,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'No working memory in the foreground. Continue at your current pace.';
 
   @override
-  String userMentionCount(Object count) {
-    return 'Mentioned $count times';
-  }
-
-  @override
-  String get userConsolidated => 'Consolidated';
-
-  @override
-  String get userStillInForeground => 'In foreground';
-
-  @override
   String get userMetacognition => 'Self-awareness';
 
   @override
@@ -28901,17 +27947,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Showing judgment bias from past samples only, not labeling you.';
 
   @override
-  String userMetacognitionDimensions(Object count) {
-    return '$count metacognitive dimensions observed';
-  }
-
-  @override
   String get userHidePanel => 'Hide this panel';
-
-  @override
-  String userUpdatedAt(Object time) {
-    return 'Updated at $time';
-  }
 
   @override
   String get userActiveSkills => 'Active Skills';
@@ -28990,11 +28026,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'This will sign you out on all other devices. Continue?';
 
   @override
-  String userTotalDevices(Object count) {
-    return '$count devices';
-  }
-
-  @override
   String get userCurrentDeviceProtected => 'Current device protected';
 
   @override
@@ -29016,11 +28047,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get userAiOpsWindowHint =>
       'Switch between 7 / 14 / 30 day windows to observe trends in speed, cost, fallback, and execution conversion.';
-
-  @override
-  String userAiOpsDays(Object days) {
-    return '${days}d';
-  }
 
   @override
   String get userAiOpsDevOps => 'Dev Ops Perspective';
@@ -29075,15 +28101,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userAiOpsWorthOptimizing => 'Worth optimizing';
 
   @override
-  String get userAiOpsLatestRequests => 'Latest requests';
-
-  @override
-  String get userAiOpsLatestFallback => 'Latest fallback';
-
-  @override
-  String get userAiOpsLatestCost => 'Latest cost';
-
-  @override
   String get userAiOpsExportCopied => 'AI ops export copied to clipboard';
 
   @override
@@ -29094,13 +28111,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get userAiOpsChat => 'Chat';
-
-  @override
-  String get userAiOpsTrendHint =>
-      'Check if latency is decreasing steadily while confirming success rate and execution conversion aren\'t hurt by cost optimization.';
-
-  @override
-  String get userAiOpsTotalTime => 'Total Time';
 
   @override
   String get userAiOpsStandardChat => 'Standard Chat';
@@ -29116,16 +28126,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get userAiOpsExpertCollaboration => 'Expert Collaboration';
-
-  @override
-  String userAiOpsFirstTokenTotal(Object first, Object rate, Object total) {
-    return 'First token ${first}ms · Total ${total}ms · Success $rate%';
-  }
-
-  @override
-  String userAiOpsPromptInferenceHit(Object inference, Object prompt) {
-    return 'Prompt hit $prompt% · Inference hit $inference%';
-  }
 
   @override
   String get userThemeMode => 'Theme Mode';
@@ -29197,28 +28197,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Export file generated. Tap again to re-share';
 
   @override
-  String get userExporting => 'Exporting...';
-
-  @override
-  String userSecurityLogCount(Object count) {
-    return '$count records';
-  }
-
-  @override
-  String userSecurityLogAnomalies(Object count) {
-    return '$count anomalies';
-  }
-
-  @override
   String get userLoadMoreRecords => 'Load more records';
 
   @override
   String get userLoading => 'Loading...';
-
-  @override
-  String userProfileAdjustmentRecorded(Object targetId) {
-    return 'Recorded profile adjustment for \"$targetId\"';
-  }
 
   @override
   String get userVisibleProfile => 'Visible Profile';
@@ -29242,11 +28224,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get userCurrentUnknowns => 'Current unknowns';
-
-  @override
-  String userHiddenItemsCount(Object count) {
-    return '$count hidden items, not shown in transparency panel.';
-  }
 
   @override
   String get userNoContent => 'No content.';
@@ -29288,11 +28265,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userMarkInaccurate => 'Mark Inaccurate';
 
   @override
-  String userSuggestedSummary(Object summary) {
-    return 'Suggestion: $summary';
-  }
-
-  @override
   String get userMarkNeedsRecalibration => 'Mark for recalibration';
 
   @override
@@ -29319,16 +28291,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userInputPlaceholder => 'Type your answer...';
 
   @override
-  String userModelingFailed(Object error) {
-    return 'Modeling chat temporarily failed: $error';
-  }
-
-  @override
-  String userCannotSkipNow(Object error) {
-    return 'Cannot skip right now: $error';
-  }
-
-  @override
   String get userStartPlanning => 'Start Planning';
 
   @override
@@ -29338,11 +28300,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get userPlanNotReady =>
       'Plan is still being prepared. Please try again shortly.';
-
-  @override
-  String userPlanGenerationError(Object error) {
-    return 'Plan generation encountered an issue: $error';
-  }
 
   @override
   String get userGeneratingSprintPlan => 'Generating your first sprint plan';
@@ -29384,11 +28341,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'View client anomalies, gateway/backend capacity, and Prometheus alerts together to quickly determine if it\'s a frontend degradation or infrastructure jitter.';
 
   @override
-  String userAdminDays(Object days) {
-    return '${days}d';
-  }
-
-  @override
   String get userAdminCapacityHealth => 'Capacity & Health';
 
   @override
@@ -29405,51 +28357,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get userAdminServiceDrilldown => 'Service drill-down';
-
-  @override
-  String userAdminProbeLatency(Object latency) {
-    return 'Probe latency ${latency}ms';
-  }
-
-  @override
-  String userAdminConnPool(Object overflow, Object size) {
-    return 'Pool $size / overflow $overflow';
-  }
-
-  @override
-  String userAdminTimeout(Object seconds) {
-    return 'Timeout ${seconds}s';
-  }
-
-  @override
-  String userAdminRedisStatus(Object status) {
-    return 'Status $status';
-  }
-
-  @override
-  String userAdminRedisMemory(Object peak, Object used) {
-    return 'Memory $used / Peak $peak';
-  }
-
-  @override
-  String userAdminRedisClients(Object count) {
-    return 'Clients $count';
-  }
-
-  @override
-  String userAdminDiskDetail(Object free, Object used) {
-    return 'Used $used GB / Free $free GB';
-  }
-
-  @override
-  String userAdminDiskTotal(Object total) {
-    return 'Total $total GB';
-  }
-
-  @override
-  String userAdminDiskRatio(Object ratio) {
-    return 'Usage $ratio%';
-  }
 
   @override
   String get userAdminCurrentAlerts => 'Current Alerts';
@@ -29477,26 +28384,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get userAdminEventTypeDrilldown => 'Event type drill-down';
-
-  @override
-  String userAdminTotalCount(Object count) {
-    return 'Total $count';
-  }
-
-  @override
-  String userAdminErrorsCrashes(Object crashes, Object errors) {
-    return 'Errors $errors / Crashes $crashes';
-  }
-
-  @override
-  String userAdminSuccessRate(Object rate) {
-    return 'Success rate $rate%';
-  }
-
-  @override
-  String userAdminAvgDurationMs(Object duration) {
-    return 'Avg duration ${duration}ms';
-  }
 
   @override
   String get planViewCurrentPlan => 'Current Plan';
@@ -31134,9 +30021,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get goalGraphCoverage => 'Coverage';
-
-  @override
-  String get taskPausedPanelTitle => 'Paused with context';
 
   @override
   String taskPausedPanelSemantics(String title) {
@@ -35125,9 +34009,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get taskDiagnosisOption3 => 'Can\'t use given conditions';
-
-  @override
-  String get taskOpQueuedSuffix => ', added to wait queue.';
 
   @override
   String get seedLibLoadFailed =>

@@ -213,9 +213,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get showChatTransparencyCapsuleSubtitle => '控制聊天页底部的 AI 系统完成情况与透明化浮层';
 
   @override
-  String get taskCard => '任务卡片';
-
-  @override
   String get startTask => '开始任务';
 
   @override
@@ -1361,13 +1358,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskActionComplete => '完成';
 
   @override
-  String get taskActionAbandon => '放弃';
-
-  @override
   String get taskActionEdit => '编辑';
-
-  @override
-  String get taskActionDelete => '删除';
 
   @override
   String get taskPriorityHigh => '高优先级';
@@ -1417,52 +1408,13 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get taskOverdue => '已逾期';
-
-  @override
   String get taskDueToday => '今天';
 
   @override
   String get taskDueTomorrow => '明天';
 
   @override
-  String get taskDueThisWeek => '本周截止';
-
-  @override
-  String get taskCategoryWork => '工作';
-
-  @override
-  String get taskCategoryStudy => '学习';
-
-  @override
-  String get taskCategoryPersonal => '个人';
-
-  @override
-  String get taskCategoryHealth => '健康';
-
-  @override
-  String get taskCategoryOther => '其他';
-
-  @override
   String get taskFilterAll => '全部';
-
-  @override
-  String get taskFilterToday => '今天';
-
-  @override
-  String get taskFilterWeek => '本周';
-
-  @override
-  String get taskFilterCompleted => '已完成';
-
-  @override
-  String get taskSortByDate => '按日期排序';
-
-  @override
-  String get taskSortByPriority => '按优先级排序';
-
-  @override
-  String get taskSortByName => '按名称排序';
 
   @override
   String taskCount(num count) {
@@ -1477,76 +1429,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get focusTimerTitle => '专注计时';
-
-  @override
-  String get focusTimerStart => '开始专注';
-
-  @override
-  String get focusTimerPause => '暂停';
-
-  @override
-  String get focusTimerResume => '继续';
-
-  @override
-  String get focusTimerStop => '停止';
-
-  @override
-  String get focusTimerReset => '重置';
-
-  @override
-  String get focusTimerComplete => '会话完成！';
-
-  @override
-  String get focusTimerRemaining => '剩余时间';
-
-  @override
-  String get focusTimerElapsed => '已用时间';
-
-  @override
-  String focusTimerSession(Object current, Object total) {
-    return '第 $current/$total 节';
-  }
-
-  @override
-  String get focusTimerBreak => '休息时间';
-
-  @override
-  String get focusTimerShortBreak => '短休息';
-
-  @override
-  String get focusTimerLongBreak => '长休息';
-
-  @override
-  String focusTimerNextSession(Object time) {
-    return '$time后开始下一节';
-  }
-
-  @override
-  String get focusTimerAutoStart => '自动开始下一节';
-
-  @override
-  String get focusTimerSound => '提示音';
-
-  @override
-  String get focusTimerVolume => '音量';
-
-  @override
-  String get focusTimerDuration => '时长';
-
-  @override
-  String get focusTimerPreset25 => '25分钟（番茄钟）';
-
-  @override
-  String get focusTimerPreset45 => '45分钟（深度专注）';
-
-  @override
-  String get focusTimerPreset60 => '60分钟（延长）';
-
-  @override
-  String get focusTimerCustom => '自定义';
-
-  @override
   String get focusStatsToday => '今天';
 
   @override
@@ -1556,26 +1438,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get focusStatsMonth => '本月';
 
   @override
-  String get focusStatsTotal => '总计';
-
-  @override
-  String focusStatsSessions(Object count) {
-    return '$count 次会话';
-  }
-
-  @override
   String focusStatsMinutes(Object count) {
     return '$count 分钟';
-  }
-
-  @override
-  String focusStatsHours(Object count) {
-    return '$count 小时';
-  }
-
-  @override
-  String focusStatsStreak(Object count) {
-    return '连续 $count 天';
   }
 
   @override
@@ -1584,11 +1448,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String focusTasksDone(int count) {
     return '$count完成';
-  }
-
-  @override
-  String focusStatsBestDay(Object time) {
-    return '最佳：$time';
   }
 
   @override
@@ -1720,18 +1579,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get focusReturnToTask => '返回任务';
-
-  @override
-  String get focusReturnToTaskTitle => '返回任务执行';
-
-  @override
-  String get focusReturnToTaskMessage => '专注记录会暂停，并返回任务执行页面。';
-
-  @override
-  String get focusReturnToTaskConfirm => '确认返回';
-
-  @override
   String get focusExitMindfulness => '退出正念模式';
 
   @override
@@ -1744,12 +1591,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get focusReflectionTitle => '专注结束';
 
   @override
-  String get focusReflectionPrompt => '这次专注的感觉如何？';
-
-  @override
-  String get focusReflectionNoteHint => '有什么值得记录的吗？（可选）';
-
-  @override
   String get focusReflectionSaved => '复盘已保存到 Cognitive Prism';
 
   @override
@@ -1758,53 +1599,12 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String focusReflectionSummary(Object feeling, Object note) {
-    return '专注复盘：本次状态 $feeling。\n$note';
-  }
-
-  @override
-  String get focusReflectionMoodFlow => '🔥 心流';
-
-  @override
-  String get focusReflectionMoodFocused => '🙂 专注';
-
-  @override
-  String get focusReflectionMoodOkay => '😐 一般';
-
-  @override
-  String get focusReflectionMoodDistracted => '😖 分心';
-
-  @override
-  String get focusReflectionMoodTired => '😫 疲惫';
-
-  @override
   String get focusExitTitleStep1 => '确定要退出正念模式吗？';
-
-  @override
-  String get focusExitTitleStep2 => '即将退出';
-
-  @override
-  String get focusExitTitleStep3 => '最后确认';
-
-  @override
-  String get focusExitMessageStep1 => '你正处于专注状态，退出可能会影响专注效果。';
 
   @override
   String focusExitMessageStep2(Object minutes) {
     return '你已经专注了 $minutes 分钟，确定要离开吗？';
   }
-
-  @override
-  String get focusExitMessageStep3 => '再坚持一下！放弃会中断你的专注记录。';
-
-  @override
-  String get focusExitCancelStep1 => '继续专注';
-
-  @override
-  String get focusExitConfirmStep1 => '确认退出';
-
-  @override
-  String get focusExitConfirmStep2 => '继续退出';
 
   @override
   String get focusExitConfirmStep3 => '确定退出';
@@ -4347,9 +4147,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskFeedbackSubmitted => '反馈已提交';
 
   @override
-  String get taskFeedbackPreferenceUpdated => '偏好已更新';
-
-  @override
   String get taskFeedbackView => '查看';
 
   @override
@@ -4384,11 +4181,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskFeedbackStreak => '连胜';
 
   @override
-  String taskFeedbackStreakDays(Object count) {
-    return '$count天';
-  }
-
-  @override
   String get taskFeedbackOptionalRating => '满意度评分（选填）';
 
   @override
@@ -4404,19 +4196,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskFeedbackCategoryTooEasy => '太简单';
 
   @override
-  String get taskFeedbackOptionalComment => '有什么想说的？（选填）';
-
-  @override
-  String get taskFeedbackCommentHint => '记录一些心得...';
-
-  @override
   String get taskFeedbackNextSteps => '下一步建议';
 
   @override
   String get taskFeedbackSkip => '跳过';
-
-  @override
-  String get taskFeedbackComplete => '完成';
 
   @override
   String taskFeedbackReason(Object reason) {
@@ -10083,11 +9866,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskCreateAction => '创建任务';
 
   @override
-  String taskCreateFailed(Object arg0) {
-    return '$arg0';
-  }
-
-  @override
   String get taskCreateSuccess => '任务创建成功';
 
   @override
@@ -10157,9 +9935,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskExecutionCompleteTitle => '完成任务';
 
   @override
-  String get taskExecutionCompletedTitle => '任务已完成';
-
-  @override
   String get taskConfirmCompleteTitle => '确认完成任务？';
 
   @override
@@ -10173,20 +9948,12 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get taskExecutionConfirmComplete => '确认完成';
-
-  @override
   String taskExecutionElapsedMinutes(Object arg0) {
     return '$arg0';
   }
 
   @override
   String get taskExecutionEnterFocus => '进入专注模式';
-
-  @override
-  String taskExecutionExpGained(Object arg0) {
-    return '$arg0';
-  }
 
   @override
   String get taskExecutionFeatureCoach => '专注教练';
@@ -10207,12 +9974,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskExecutionFeatureStarfield => '星空背景';
 
   @override
-  String get taskExecutionGuideEmpty => '暂无执行指南';
-
-  @override
-  String get taskExecutionGuideTitle => '执行指南';
-
-  @override
   String get taskExecutionNoTask => '当前没有执行中的任务';
 
   @override
@@ -10220,9 +9981,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get taskExecutionNoteLabel => '执行笔记';
-
-  @override
-  String get taskExecutionSkipAnimation => '跳过动画';
 
   @override
   String taskExecutionStartFailed(Object arg0) {
@@ -10237,9 +9995,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get taskExecutionFreeFocusCompleted => '自由专注已完成';
-
-  @override
-  String get taskExecutionTapToContinue => '点击继续';
 
   @override
   String get taskExecutionTimerLabel => '计时器';
@@ -10331,9 +10086,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get taskDetailPlanContext => '所属计划';
-
-  @override
-  String get taskDetailPlanContextLoading => '正在加载所属计划...';
 
   @override
   String get taskDetailCopyAiPromptSuccess => 'AI 提示词已复制';
@@ -13322,116 +13074,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get predictedToolSuggestSchedule => '建议排期';
 
   @override
-  String get examSprintHighFreqCoverage => '高频考点覆盖率';
-
-  @override
-  String get examSprintMistakeRepair => '错题修复率';
-
-  @override
-  String get examSprintStudyStreak => '连续学习天数';
-
-  @override
-  String examSprintStreakDays(Object days) {
-    return '$days 天';
-  }
-
-  @override
-  String get examSprintKeepRhythm => '保持节奏';
-
-  @override
-  String examSprintHighYieldWeak(Object topics) {
-    return '高收益低掌握：$topics';
-  }
-
-  @override
-  String get examSprintNoTasksToday => '今天还没有排入冲刺任务。';
-
-  @override
-  String get examSprintExamDayReady => '今天考试 · 你已经准备好了 🎓';
-
-  @override
-  String get examSprintExamTips => '考场建议';
-
-  @override
-  String get examSprintRecordResult => '记录考试结果';
-
-  @override
-  String get examSprintDashboardTitle => '考试冲刺仪表盘';
-
-  @override
-  String get examSprintModeHighScore => '冲高模式';
-
-  @override
-  String get examSprintModeHold => '稳分模式';
-
-  @override
-  String get examSprintModePass => '保过模式';
-
-  @override
-  String get examSprintModeDefault => '冲刺模式';
-
-  @override
-  String get examSprintExamDay => '今天考试';
-
-  @override
-  String examSprintCountdown(Object days) {
-    return '距考试还有 $days 天';
-  }
-
-  @override
-  String examSprintTodayTasks(Object completed, Object total) {
-    return '今天已完成 $completed/$total 项任务';
-  }
-
-  @override
-  String examSprintDaysLeft(Object days) {
-    return '离考试还有 $days';
-  }
-
-  @override
-  String examSprintTodayDone(Object completed, Object total) {
-    return '今日 $completed/$total 完成';
-  }
-
-  @override
-  String get examSprintTodaySprintTasks => '今日冲刺任务';
-
-  @override
-  String get examSprintHideLater => '收起后续天';
-
-  @override
-  String examSprintShowLater(Object count) {
-    return '展开后续 $count 天';
-  }
-
-  @override
-  String examSprintDayIndex(Object index) {
-    return '第 $index 天';
-  }
-
-  @override
-  String examSprintDateFormat(Object month, Object day) {
-    return '$month月$day日';
-  }
-
-  @override
-  String get examSprintNoSprintTasks => '今天还没有排入任务';
-
-  @override
-  String examSprintMinLabel(Object minutes, Object status) {
-    return '$minutes 分钟 · $status';
-  }
-
-  @override
-  String get examSprintStatusDone => '已完成';
-
-  @override
-  String get examSprintStatusInProgress => '进行中';
-
-  @override
-  String get examSprintStatusPending => '待开始';
-
-  @override
   String get insightHubTitle => '学习洞察';
 
   @override
@@ -13713,19 +13355,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get simulationStartSimulation => '开始这场模拟';
 
   @override
-  String get simulationAwaitingInput => '等待输入';
-
-  @override
   String get simulationClearTopic => '清空主题';
-
-  @override
-  String get simulationRecommendedScenarios => '推荐场景';
-
-  @override
-  String get simulationGenerate => '生成';
-
-  @override
-  String get simulationRefresh => '刷新';
 
   @override
   String get simulationStartSimButton => '开始模拟';
@@ -13756,15 +13386,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get simulationYourResponseArea => '你的回应区';
-
-  @override
-  String get simulationCollapse => '收起';
-
-  @override
-  String get simulationJoinDiscussion => '轮到你加入这场讨论';
-
-  @override
-  String get simulationOrInputJudgment => '或者输入你的判断';
 
   @override
   String get simulationSubmitting => '提交中...';
@@ -13827,9 +13448,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get simulationImmersiveDiscussion => '沉浸讨论流';
 
   @override
-  String get simulationCurrentDiscussion => '当前讨论流';
-
-  @override
   String get simulationWillAppearLive => '开始后会实时出现每一轮讨论。';
 
   @override
@@ -13869,12 +13487,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get simulationStructuredInsightGenerated => '已生成结构化洞察总结。';
 
   @override
-  String get simulationEmptyGenerating => '模拟正在生成中...';
-
-  @override
-  String get simulationEmptyStartPrompt => '开始一次学习场景模拟，让角色逐轮讨论这个主题。';
-
-  @override
   String get simulationCurrentScene => '当前场景';
 
   @override
@@ -13882,9 +13494,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get simulationInteractionStyle => '互动方式';
-
-  @override
-  String get simulationRoleDiscussionUserJoin => '角色讨论 + 你来接话';
 
   @override
   String get simulationTopicHint => '输入一个知识点或主题';
@@ -13942,16 +13551,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get simulationRoleDiscussionValue => '角色讨论 + 你来接话';
 
   @override
-  String get simulationJudgeExampleHint => '例如：我会先补几何直觉，再回来刷一道题验证';
-
-  @override
-  String get simulationInteractionExplain => '先给出你的判断，下一轮才会真正围绕你的想法继续展开。';
-
-  @override
-  String get simulationInteractionHint =>
-      '建议先在这里接住一轮，让角色回应你的判断；如果你想回到主对话，也可以把这一步带回聊天继续。';
-
-  @override
   String get simulationContinuitySubtitle =>
       '这一轮模拟承接了你刚才的探索流程。你可以随时带着上下文回到原对话，继续追问判断和下一步行动。';
 
@@ -13973,40 +13572,8 @@ class AppLocalizationsZh extends AppLocalizations {
       '这轮模拟来自知识剧场，当前上下文会和原推演保持关联。';
 
   @override
-  String simulationInteractionModeFormat(Object mode) {
-    return '互动模式：$mode';
-  }
-
-  @override
-  String get simulationInteractionOpenQuestion => '开放追问';
-
-  @override
-  String get simulationInteractionViewpointChallenge => '观点挑战';
-
-  @override
-  String get simulationInteractionBinaryChoice => '二选一判断';
-
-  @override
-  String get simulationInteractionChoice => '选择判断';
-
-  @override
-  String simulationCurrentFocusFormat(Object speaker) {
-    return '当前焦点：$speaker';
-  }
-
-  @override
   String simulationTopicFormat(Object topic) {
     return '主题：$topic';
-  }
-
-  @override
-  String simulationTopicAndSpeakerFormat(Object topic, Object speaker) {
-    return '主题：$topic · 当前发言 $speaker';
-  }
-
-  @override
-  String simulationRoundN(Object round) {
-    return '第 $round 轮';
   }
 
   @override
@@ -14058,11 +13625,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String simulationBulletOpening(Object message) {
-    return '开场重点：$message';
-  }
-
-  @override
   String simulationRoundFormatShort(Object current, Object total) {
     return '$current/$total 轮';
   }
@@ -14092,15 +13654,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get simulationBalancedPush => '平衡推进';
-
-  @override
-  String get simulationDebateClash => '分歧碰撞';
-
-  @override
-  String get simulationGuidedBreakdown => '引导拆解';
-
-  @override
-  String get simulationPracticalApply => '应用落地';
 
   @override
   String get simulationReportReturnException => '学习报告返回格式异常';
@@ -14153,160 +13706,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get simulationWaitingInput => '等待输入';
 
   @override
-  String get simulationScenarioDescStudyGroup =>
-      '围绕一个主题做多角色共学，适合把概念、例题和误区一起讲透。';
-
-  @override
-  String get simulationScenarioDescKnowledgeDebate =>
-      '让不同立场直接碰撞，适合验证观点、证据和边界条件。';
-
-  @override
-  String get simulationScenarioDescHistoricalRoleplay =>
-      '带入人物与时代约束，让讨论像真实历史现场一样推进。';
-
-  @override
-  String get simulationScenarioDescSocraticDialogue =>
-      '通过连续追问拆解前提，适合澄清模糊概念与推理漏洞。';
-
-  @override
-  String get simulationScenarioDescCaseAnalysis => '围绕具体案例做拆解、诊断和决策，适合实务型主题。';
-
-  @override
-  String get simulationScenarioDescWhatIfPath => '比较不同学习或行动路线，适合规划、取舍与资源分配。';
-
-  @override
-  String get simulationScenarioDescConceptMapBuild =>
-      '把知识点织成结构图，适合建立全局框架与连接关系。';
-
-  @override
-  String get simulationScenarioDescErrorDiagnosis => '专注识别错因、纠偏路径与验证方式，适合查漏补缺。';
-
-  @override
-  String get simulationFacilitationDescBalanced =>
-      '适合大多数主题，强调多角色平衡推进，不让任何一方压住全场。';
-
-  @override
-  String get simulationFacilitationDescDebate => '主动放大争议和证据冲突，更适合需要碰撞观点的主题。';
-
-  @override
-  String get simulationFacilitationDescGuided => '更像导师带讨论，强调澄清前提、逐步拆解和用户可跟上。';
-
-  @override
-  String get simulationFacilitationDescPractical => '优先讨论行动、验证和现实约束，适合技能与方案推演。';
-
-  @override
-  String get simulationRoleHonorsStudent => '优等生';
-
-  @override
-  String get simulationRoleMidStudent => '中等生';
-
-  @override
   String get simulationRoleQuestioner => '追问者';
-
-  @override
-  String get simulationRoleSummarizer => '总结者';
-
-  @override
-  String get simulationRolePracticeCoach => '练习教练';
-
-  @override
-  String get simulationRoleProExpert => '正方专家';
-
-  @override
-  String get simulationRoleConExpert => '反方专家';
 
   @override
   String get simulationRoleModerator => '主持协调';
 
   @override
-  String get simulationRoleEvidenceReviewer => '证据审查员';
-
-  @override
-  String get simulationRolePursuer => '追问者';
-
-  @override
-  String get simulationRoleHistoryMentor => '历史导师';
-
-  @override
-  String get simulationRoleKeyFigure => '关键人物';
-
-  @override
-  String get simulationRoleEraObserver => '时代观察者';
-
-  @override
-  String get simulationRoleStrategyAdvisor => '策略顾问';
-
-  @override
-  String get simulationRoleRecorder => '记录官';
-
-  @override
-  String get simulationRoleSocrates => '苏格拉底';
-
-  @override
-  String get simulationRoleSkeptic => '怀疑者';
-
-  @override
-  String get simulationRoleDeconstructor => '拆解者';
-
-  @override
-  String get simulationRoleApplier => '应用者';
-
-  @override
-  String get simulationRoleCaseMentor => '案例导师';
-
-  @override
-  String get simulationRoleDiagnostician => '诊断官';
-
-  @override
   String get simulationRolePractitioner => '实践派';
 
   @override
-  String get simulationRoleCounterExample => '反例提出者';
-
-  @override
-  String get simulationRoleDecisionRecorder => '决策记录官';
-
-  @override
-  String get simulationRoleCurrentRoute => '当前路线';
-
-  @override
-  String get simulationRoleRadicalRoute => '激进路线';
-
-  @override
-  String get simulationRoleRiskObserver => '风险观察者';
-
-  @override
-  String get simulationRoleResourceScheduler => '资源调度者';
-
-  @override
-  String get simulationRoleVerifier => '验证者';
-
-  @override
-  String get simulationRoleStructurer => '结构师';
-
-  @override
   String get simulationRoleConnector => '连接者';
-
-  @override
-  String get simulationRoleCounterExampleChecker => '反例检查员';
-
-  @override
-  String get simulationRoleBridgeBuilder => '桥梁构建者';
-
-  @override
-  String get simulationRoleErrorAnalyst => '错因分析师';
-
-  @override
-  String get simulationRoleCorrectionCoach => '纠偏教练';
-
-  @override
-  String get simulationRoleQuestionDeconstructor => '题面解构者';
-
-  @override
-  String get simulationRoleMigrationCoach => '迁移教练';
-
-  @override
-  String get simulationRoleStudyBuddy => '学习伙伴';
 
   @override
   String get simulationRoleCurrentDiscussionTitle => '当前讨论流';
@@ -14315,39 +13724,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String simulationBulletOpeningFormat(Object message) {
     return '开场重点：$message';
   }
-
-  @override
-  String get simulationScenarioParticipantOptionsDefault0 => '学习伙伴';
-
-  @override
-  String get simulationScenarioParticipantOptionsDefault1 => '提问者';
-
-  @override
-  String get simulationScenarioParticipantOptionsDefault2 => '总结者';
-
-  @override
-  String get simulationScenarioLabelStudyGroup => '学习小组';
-
-  @override
-  String get simulationScenarioLabelKnowledgeDebate => '知识辩论';
-
-  @override
-  String get simulationScenarioLabelHistoricalRoleplay => '历史角色扮演';
-
-  @override
-  String get simulationScenarioLabelSocraticDialogue => '苏格拉底对话';
-
-  @override
-  String get simulationScenarioLabelCaseAnalysis => '案例分析';
-
-  @override
-  String get simulationScenarioLabelWhatIfPath => '如果路径';
-
-  @override
-  String get simulationScenarioLabelConceptMapBuild => '概念图构建';
-
-  @override
-  String get simulationScenarioLabelErrorDiagnosis => '错误诊断';
 
   @override
   String get openclawPairImportedSaved => '已导入并保存 OpenClaw 配对配置';
@@ -16113,147 +15489,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get personaHintValidPreference => '请输入有效的偏好值';
-
-  @override
-  String get examSprintTitle => '考试冲刺设置';
-
-  @override
-  String examSprintMinutesPerDay(Object minutes) {
-    return '$minutes 分钟/天';
-  }
-
-  @override
-  String get examSprintStep1Subject => '1. 哪门课？';
-
-  @override
-  String get examSprintSubjectHint => '例如：计算机网络 / 高数 / 英语四级';
-
-  @override
-  String get examSprintSubjectRequired => '先告诉我你要冲刺哪门课';
-
-  @override
-  String get examSprintStep2Date => '2. 考试哪天？';
-
-  @override
-  String get examSprintSelectDate => '选择考试日期';
-
-  @override
-  String get examSprintDateHint => '日期会决定冲刺天数和节奏';
-
-  @override
-  String get examSprintStep3Target => '3. 目标是通过、保分还是冲高分？';
-
-  @override
-  String get examSprintStep4Scope => '4. 考试范围 / 老师重点有吗？';
-
-  @override
-  String get examSprintStep4Subtitle =>
-      '可以直接粘贴重点，也可以上传 PDF / DOCX / PPT / TXT。';
-
-  @override
-  String get examSprintScopeHint => '例如：重点看传输层、网络层；老师说会考简答和计算题。';
-
-  @override
-  String get examSprintUpload => '上传资料';
-
-  @override
-  String get examSprintNoUpload => '还没上传资料';
-
-  @override
-  String examSprintUploadedCount(Object count) {
-    return '已上传 $count 份资料';
-  }
-
-  @override
-  String get examSprintStep5Baseline => '5. 你现在大概会多少？最怕哪几章？';
-
-  @override
-  String get examSprintWeakChapters => '最怕哪几章？';
-
-  @override
-  String get examSprintStep6Daily => '6. 每天真实能学多久？';
-
-  @override
-  String examSprintMinutesPerDayLabel(Object minutes) {
-    return '$minutes 分钟 / 天';
-  }
-
-  @override
-  String examSprintMinutesLabel(Object minutes) {
-    return '$minutes 分钟';
-  }
-
-  @override
-  String get examSprintDailyHint => '用「你大概率能坚持」的时间，不用理想状态。';
-
-  @override
-  String get examSprintGenerate => '生成我的第一天任务';
-
-  @override
-  String get examSprintSubmitHint => '提交后会在 3 秒内给出初评，并直接带你进入计划或第一天任务。';
-
-  @override
-  String get examSprintHeroTitle => '不是填问卷，是一起确定起点';
-
-  @override
-  String get examSprintHeroSubtitle => '填完这 6 个问题，我会直接给你初始评估、推荐策略和第一天任务。';
-
-  @override
-  String get examSprintUploadSuccess => '资料已上传';
-
-  @override
-  String get examSprintSelectDateFirst => '先选择考试日期';
-
-  @override
-  String get examSprintAssessmentComplete => '初步评估已完成';
-
-  @override
-  String examSprintPassProbability(Object percent) {
-    return '通过概率 $percent%';
-  }
-
-  @override
-  String examSprintRecommendedMode(Object mode) {
-    return '建议模式 $mode';
-  }
-
-  @override
-  String get examSprintFirstDayFocus => '第一天先做什么';
-
-  @override
-  String get examSprintStartFirstDay => '开始第一天任务';
-
-  @override
-  String get examSprintViewPlan => '查看计划';
-
-  @override
-  String get examSprintViewFullPlan => '查看整个计划';
-
-  @override
-  String get examSprintBaselineAlmostZero => '几乎要从零开始';
-
-  @override
-  String get examSprintBaselineUnstable => '上过课，但基础还不稳';
-
-  @override
-  String get examSprintBaselinePartial => '有一部分基础，可以边补边冲';
-
-  @override
-  String get examSprintBaselineSolid => '基础不错，重点是提分校准';
-
-  @override
-  String examSprintDayCount(Object count) {
-    return '$count 天';
-  }
-
-  @override
-  String get examSprintTargetPass => '通过';
-
-  @override
-  String get examSprintTargetHold => '保分';
-
-  @override
-  String get examSprintTargetHighScore => '冲高分';
 
   @override
   String get memorySettingsSocialPersonMention => '人物提及';
@@ -19101,9 +18336,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get examDiagnosticSubmit => '交卷并查看结果';
 
   @override
-  String get examDiagnosticResultTitle => '诊断结果';
-
-  @override
   String examDiagnosticScore(Object score) {
     return '当前估分 $score 分';
   }
@@ -19341,11 +18573,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String examTaskMinutes(Object minutes) {
     return '$minutes 分钟';
-  }
-
-  @override
-  String examPlanSubject(Object planName) {
-    return '$planName';
   }
 
   @override
@@ -20600,58 +19827,12 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get focusReflectionTitleLabel => '专注复盘';
-
-  @override
-  String focusReflectionStuckLabel(Object content) {
-    return '卡点：$content';
-  }
-
-  @override
-  String focusReflectionMethodLabel(Object content) {
-    return '有效方法：$content';
-  }
-
-  @override
-  String focusReflectionAdjustmentLabel(Object content) {
-    return '下次调整：$content';
-  }
-
-  @override
-  String get focusReflectionPromptHint => '花半分钟记一下这次卡点，我会把它留给之后的你。';
-
-  @override
-  String get focusReflectionStuckQuestion => '这个任务中你卡在哪里了？';
-
-  @override
-  String get focusReflectionStuckHint => '例如：刚坐下还行，但一写题就不知道从哪里下手';
-
-  @override
-  String get focusReflectionMethodQuestion => '哪个方法让你觉得有进展？';
-
-  @override
-  String get focusReflectionMethodHint => '例如：先把题目条件圈出来，再动笔';
-
-  @override
-  String get focusReflectionAdjustmentQuestion => '下次会换什么做法？';
-
-  @override
-  String get focusReflectionAdjustmentHint => '例如：先做 5 分钟预热，再开始正式专注';
-
-  @override
   String get focusOfflineSaved => '专注记录已离线保存，稍后会自动重试同步';
 
   @override
   String focusSaveFailed(Object error) {
     return '专注记录保存失败：$error';
   }
-
-  @override
-  String get focusMockLlmGuidance =>
-      '建议使用番茄工作法，将任务分解为25分钟的专注块，每块之间休息5分钟。保持环境安静，关闭手机通知。';
-
-  @override
-  String get focusMockSubtasks => '创建项目大纲,编写核心功能代码,添加测试用例,完善文档';
 
   @override
   String chatAchievementProgress(Object name, Object percent) {
@@ -25515,15 +24696,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskHelpPromptSuffix => '请先问我一个最关键的澄清问题，然后给我一个5分钟内能开始的下一步。';
 
   @override
-  String get taskModeHuman => '人工';
-
-  @override
-  String get taskModeHybrid => '协作';
-
-  @override
-  String get taskModeUnknown => '未知';
-
-  @override
   String get taskOpFailed => '操作失败';
 
   @override
@@ -25533,26 +24705,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskRetryFailed => '重试失败';
 
   @override
-  String get taskLocalNoAiExec => '本地任务暂不支持 AI 执行';
-
-  @override
-  String taskQueued(Object message) {
-    return '$message，已加入等待队列。';
-  }
-
-  @override
-  String get taskNoExecRecord => '没有可处理的 AI 执行记录';
-
-  @override
-  String get taskExecRecordUnavailable => '执行记录暂不可用';
-
-  @override
   String get taskFreeFocus => '自由专注';
-
-  @override
-  String taskLoadFailed(Object error) {
-    return '加载任务失败：$error';
-  }
 
   @override
   String get taskUpdated => '任务已更新';
@@ -26972,9 +26125,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get userTrendStabilizing => '最近几周正在变稳。';
 
   @override
-  String get userWorkingMemorySnapshot => '工作记忆快照';
-
-  @override
   String get userRecentForegroundItems => '英语长难句拆解还卡在倒装句，下一次练习先回看第 3 题。';
 
   @override
@@ -27035,24 +26185,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get taskSkipMessage => '已跳过，这张卡不会再挤在今天了。';
-
-  @override
-  String get taskTooHardStep1 => '先找出最卡的一点';
-
-  @override
-  String get taskTooHardStep2 => '把这个卡点讲成一句人话';
-
-  @override
-  String get taskTooHardStep3 => '做一个最小验证动作';
-
-  @override
-  String get taskTooHardGuidance1 => '只定位卡点，不解决整张任务卡。';
-
-  @override
-  String get taskTooHardGuidance2 => '先讲清楚，再决定下一步。';
-
-  @override
-  String get taskTooHardGuidance3 => '只验证刚拆出来的这一步。';
 
   @override
   String get taskDiagnosisStuck => '你现在最像卡在哪一步？';
@@ -27548,21 +26680,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get userEngagementState => '参与状态';
 
   @override
-  String userSessionCount7d(Object count) {
-    return '7日会话 $count';
-  }
-
-  @override
-  String userStreakDays(Object count) {
-    return '连续 $count 天';
-  }
-
-  @override
-  String userLastActiveDate(Object date) {
-    return '最近 $date';
-  }
-
-  @override
   String get userNoRecentActivity => '最近暂无记录';
 
   @override
@@ -27572,29 +26689,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get userForesightEmpty => '暂时还没有可展示的前瞻提示，后端会继续观察。';
 
   @override
-  String userDeviationCount(Object count) {
-    return '偏离 $count 个';
-  }
-
-  @override
-  String get userStabilityScore => '执行稳定度';
-
-  @override
-  String get userRhythmFit => '节奏贴合';
-
-  @override
-  String get userOverloadRisk => '过载风险';
-
-  @override
   String get userIdiographicObservations => '近期关联观察';
 
   @override
   String get userAchievementSummary => '成就摘要';
-
-  @override
-  String userTotalAchievementScore(Object score) {
-    return '总成就分 $score';
-  }
 
   @override
   String get userNoRecentHighlights => '近期还没有新的高光或进度变化，继续推进会在这里留下痕迹。';
@@ -27648,9 +26746,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get userSRLUnknown => 'SRL · 未知';
 
   @override
-  String get userTraitsPriorHint => '基于历史观察，可随时调整';
-
-  @override
   String get userTraitsLongTerm => '长期倾向';
 
   @override
@@ -27687,34 +26782,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get userWorkingMemoryEmpty => '最近没有需要继续挂在前台的工作记忆，先按当前节奏推进就好。';
 
   @override
-  String userMentionCount(Object count) {
-    return '提及 $count 次';
-  }
-
-  @override
-  String get userConsolidated => '已整合';
-
-  @override
-  String get userStillInForeground => '仍在前台';
-
-  @override
   String get userMetacognition => '自我认识';
 
   @override
   String get userMetacognitionHint => '这里只展示过去样本里的判断偏差，不给你贴标签。';
 
   @override
-  String userMetacognitionDimensions(Object count) {
-    return '已观察 $count 个元认知维度';
-  }
-
-  @override
   String get userHidePanel => '隐藏此面板';
-
-  @override
-  String userUpdatedAt(Object time) {
-    return '更新于 $time';
-  }
 
   @override
   String get userActiveSkills => '当前激活技能';
@@ -27782,11 +26856,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get userSignOutOtherConfirm => '这会让你在所有其他设备上退出登录，是否继续？';
 
   @override
-  String userTotalDevices(Object count) {
-    return '共 $count 台设备';
-  }
-
-  @override
   String get userCurrentDeviceProtected => '当前设备已保护';
 
   @override
@@ -27807,11 +26876,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get userAiOpsWindowHint =>
       '切换 7 / 14 / 30 天窗口，观察速度、成本、fallback 和执行转化的趋势变化。';
-
-  @override
-  String userAiOpsDays(Object days) {
-    return '$days天';
-  }
 
   @override
   String get userAiOpsDevOps => '开发运营视角';
@@ -27865,15 +26929,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get userAiOpsWorthOptimizing => '最值得优化的动作';
 
   @override
-  String get userAiOpsLatestRequests => '最新请求量';
-
-  @override
-  String get userAiOpsLatestFallback => '最新 fallback';
-
-  @override
-  String get userAiOpsLatestCost => '最新成本';
-
-  @override
   String get userAiOpsExportCopied => 'AI 运营导出已复制到剪贴板';
 
   @override
@@ -27884,12 +26939,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get userAiOpsChat => '聊天';
-
-  @override
-  String get userAiOpsTrendHint => '看耗时是否稳定下降，同时确认成功率和执行转化没有被成本优化拖垮。';
-
-  @override
-  String get userAiOpsTotalTime => '总耗时';
 
   @override
   String get userAiOpsStandardChat => '标准对话';
@@ -27905,16 +26954,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get userAiOpsExpertCollaboration => '专家协作';
-
-  @override
-  String userAiOpsFirstTokenTotal(Object first, Object rate, Object total) {
-    return '首包 ${first}ms · 总耗时 ${total}ms · 成功率 $rate%';
-  }
-
-  @override
-  String userAiOpsPromptInferenceHit(Object inference, Object prompt) {
-    return 'prompt 命中 $prompt% · 推理命中 $inference%';
-  }
 
   @override
   String get userThemeMode => '主题模式';
@@ -27979,28 +27018,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get userAlreadyGenerated => '已生成导出文件，可再次点击重新分享';
 
   @override
-  String get userExporting => '导出中...';
-
-  @override
-  String userSecurityLogCount(Object count) {
-    return '共 $count 条记录';
-  }
-
-  @override
-  String userSecurityLogAnomalies(Object count) {
-    return '异常 $count 条';
-  }
-
-  @override
   String get userLoadMoreRecords => '加载更多记录';
 
   @override
   String get userLoading => '加载中…';
-
-  @override
-  String userProfileAdjustmentRecorded(Object targetId) {
-    return '已记录「$targetId」的画像调整。';
-  }
 
   @override
   String get userVisibleProfile => '可见画像';
@@ -28023,11 +27044,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get userCurrentUnknowns => '当前未知项';
-
-  @override
-  String userHiddenItemsCount(Object count) {
-    return '隐藏条目 $count 条，未进入透明面板。';
-  }
 
   @override
   String get userNoContent => '暂无内容。';
@@ -28067,11 +27083,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get userMarkInaccurate => '标记不准确';
 
   @override
-  String userSuggestedSummary(Object summary) {
-    return '建议：$summary';
-  }
-
-  @override
   String get userMarkNeedsRecalibration => '标记需重校';
 
   @override
@@ -28096,16 +27107,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get userInputPlaceholder => '输入你的回答…';
 
   @override
-  String userModelingFailed(Object error) {
-    return '建模对话暂时失败：$error';
-  }
-
-  @override
-  String userCannotSkipNow(Object error) {
-    return '暂时无法跳过：$error';
-  }
-
-  @override
   String get userStartPlanning => '开始规划';
 
   @override
@@ -28113,11 +27114,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get userPlanNotReady => '计划还在准备入口，请稍后重试一次。';
-
-  @override
-  String userPlanGenerationError(Object error) {
-    return '计划生成遇到问题：$error';
-  }
 
   @override
   String get userGeneratingSprintPlan => '正在生成你的第一份冲刺计划';
@@ -28157,11 +27153,6 @@ class AppLocalizationsZh extends AppLocalizations {
       '把客户端异常、网关/后端容量和当前 Prometheus 告警放在一起看，快速判断是前端退化还是基础设施抖动。';
 
   @override
-  String userAdminDays(Object days) {
-    return '$days天';
-  }
-
-  @override
   String get userAdminCapacityHealth => '容量与健康';
 
   @override
@@ -28178,51 +27169,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get userAdminServiceDrilldown => '服务级 drill-down';
-
-  @override
-  String userAdminProbeLatency(Object latency) {
-    return '探针延迟 ${latency}ms';
-  }
-
-  @override
-  String userAdminConnPool(Object overflow, Object size) {
-    return '连接池 $size / 溢出 $overflow';
-  }
-
-  @override
-  String userAdminTimeout(Object seconds) {
-    return '超时 ${seconds}s';
-  }
-
-  @override
-  String userAdminRedisStatus(Object status) {
-    return '状态 $status';
-  }
-
-  @override
-  String userAdminRedisMemory(Object peak, Object used) {
-    return '内存 $used / 峰值 $peak';
-  }
-
-  @override
-  String userAdminRedisClients(Object count) {
-    return '客户端 $count';
-  }
-
-  @override
-  String userAdminDiskDetail(Object free, Object used) {
-    return '已用 $used GB / 空闲 $free GB';
-  }
-
-  @override
-  String userAdminDiskTotal(Object total) {
-    return '总量 $total GB';
-  }
-
-  @override
-  String userAdminDiskRatio(Object ratio) {
-    return '使用率 $ratio%';
-  }
 
   @override
   String get userAdminCurrentAlerts => '当前告警';
@@ -28250,26 +27196,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get userAdminEventTypeDrilldown => '事件类型 drill-down';
-
-  @override
-  String userAdminTotalCount(Object count) {
-    return '总量 $count';
-  }
-
-  @override
-  String userAdminErrorsCrashes(Object crashes, Object errors) {
-    return '错误 $errors / 崩溃 $crashes';
-  }
-
-  @override
-  String userAdminSuccessRate(Object rate) {
-    return '成功率 $rate%';
-  }
-
-  @override
-  String userAdminAvgDurationMs(Object duration) {
-    return '平均耗时 ${duration}ms';
-  }
 
   @override
   String get planViewCurrentPlan => '当前计划';
@@ -29853,9 +28779,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get goalGraphCoverage => '覆盖率';
-
-  @override
-  String get taskPausedPanelTitle => '暂停上下文';
 
   @override
   String taskPausedPanelSemantics(String title) {
@@ -33663,9 +32586,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get taskDiagnosisOption3 => '题目条件不会用';
-
-  @override
-  String get taskOpQueuedSuffix => '，已加入等待队列。';
 
   @override
   String get seedLibLoadFailed => '种子库详情加载失败，请稍后再试';

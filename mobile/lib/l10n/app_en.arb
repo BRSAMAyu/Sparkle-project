@@ -68,7 +68,6 @@
   "showChatPredictionDockSubtitle": "Control behavior predictions and quick suggestions above the input",
   "showChatTransparencyCapsuleTitle": "Show AI transparency capsule",
   "showChatTransparencyCapsuleSubtitle": "Control the AI completion and transparency capsule at the bottom of chat",
-  "taskCard": "Task Card",
   "startTask": "Start Task",
   "viewDetails": "View Details",
   "finishTask": "Finish Task",
@@ -489,9 +488,7 @@
   "taskActionPause": "Pause",
   "taskActionResume": "Resume",
   "taskActionComplete": "Complete",
-  "taskActionAbandon": "Abandon",
   "taskActionEdit": "Edit",
-  "taskActionDelete": "Delete",
   "taskPriorityHigh": "High Priority",
   "taskPriorityHighShort": "High",
   "taskPriorityMediumShort": "Med",
@@ -507,53 +504,14 @@
   "taskNoTasks": "No tasks",
   "taskAddNew": "Add Task",
   "taskDueDate": "Due {date}",
-  "taskOverdue": "Overdue",
   "taskDueToday": "Today",
   "taskDueTomorrow": "Tomorrow",
-  "taskDueThisWeek": "Due this week",
-  "taskCategoryWork": "Work",
-  "taskCategoryStudy": "Study",
-  "taskCategoryPersonal": "Personal",
-  "taskCategoryHealth": "Health",
-  "taskCategoryOther": "Other",
   "taskFilterAll": "All",
-  "taskFilterToday": "Today",
-  "taskFilterWeek": "This Week",
-  "taskFilterCompleted": "Completed",
-  "taskSortByDate": "Sort by Date",
-  "taskSortByPriority": "Sort by Priority",
-  "taskSortByName": "Sort by Name",
   "taskCount": "{count, plural, =0{No tasks} =1{1 task} other{{count} tasks}}",
-  "focusTimerTitle": "Focus Timer",
-  "focusTimerStart": "Start Focus",
-  "focusTimerPause": "Pause",
-  "focusTimerResume": "Resume",
-  "focusTimerStop": "Stop",
-  "focusTimerReset": "Reset",
-  "focusTimerComplete": "Session Complete!",
-  "focusTimerRemaining": "Remaining",
-  "focusTimerElapsed": "Elapsed",
-  "focusTimerSession": "Session {current}/{total}",
-  "focusTimerBreak": "Break Time",
-  "focusTimerShortBreak": "Short Break",
-  "focusTimerLongBreak": "Long Break",
-  "focusTimerNextSession": "Next session in {time}",
-  "focusTimerAutoStart": "Auto-start next session",
-  "focusTimerSound": "Notification Sound",
-  "focusTimerVolume": "Volume",
-  "focusTimerDuration": "Duration",
-  "focusTimerPreset25": "25 min (Pomodoro)",
-  "focusTimerPreset45": "45 min (Deep Focus)",
-  "focusTimerPreset60": "60 min (Extended)",
-  "focusTimerCustom": "Custom",
   "focusStatsToday": "Today",
   "focusStatsWeek": "This Week",
   "focusStatsMonth": "This Month",
-  "focusStatsTotal": "Total",
-  "focusStatsSessions": "{count} sessions",
   "focusStatsMinutes": "{count} minutes",
-  "focusStatsHours": "{count} hours",
-  "focusStatsStreak": "{count} day streak",
   "focusCore": "Focus Core",
   "focusTasksDone": "{count} done",
   "@focusTasksDone": {
@@ -563,7 +521,6 @@
       }
     }
   },
-  "focusStatsBestDay": "Best: {time}",
   "focusStatsScreenTitle": "Focus Statistics",
   "focusStatsTrendTitle": "Focus Trend",
   "focusStatsHeatmapRange": "Activity Heatmap ({days} days)",
@@ -612,33 +569,14 @@
   "focusInterruptionDetected": "Distraction detected (#{count})",
   "focusMindfulnessTitle": "Mindfulness",
   "focusLoadFailed": "Failed to load: {error}",
-  "focusReturnToTask": "Back to Task",
-  "focusReturnToTaskTitle": "Return to Task",
-  "focusReturnToTaskMessage": "Your focus record will pause and you'll return to the task execution screen.",
-  "focusReturnToTaskConfirm": "Return",
   "focusExitMindfulness": "Exit Mindfulness",
   "focusDockMindfulness": "Mindfulness",
   "focusDockToolbox": "Toolbox",
   "focusReflectionTitle": "Focus Complete",
-  "focusReflectionPrompt": "How did this focus session feel?",
-  "focusReflectionNoteHint": "Anything worth noting? (Optional)",
   "focusReflectionSaved": "Reflection saved to Cognitive Prism",
   "focusReflectionSaveFailed": "Failed to save: {error}",
-  "focusReflectionSummary": "Focus reflection: status {feeling}.\n{note}",
-  "focusReflectionMoodFlow": "🔥 Flow",
-  "focusReflectionMoodFocused": "🙂 Focused",
-  "focusReflectionMoodOkay": "😐 Okay",
-  "focusReflectionMoodDistracted": "😖 Distracted",
-  "focusReflectionMoodTired": "😫 Tired",
   "focusExitTitleStep1": "Exit mindfulness mode?",
-  "focusExitTitleStep2": "About to leave",
-  "focusExitTitleStep3": "Final confirmation",
-  "focusExitMessageStep1": "You're in a focus state. Exiting now may break your momentum.",
   "focusExitMessageStep2": "You've focused for {minutes} minutes. Are you sure you want to leave?",
-  "focusExitMessageStep3": "Try to stay with it a bit longer. Leaving now will interrupt your focus record.",
-  "focusExitCancelStep1": "Keep focusing",
-  "focusExitConfirmStep1": "Exit",
-  "focusExitConfirmStep2": "Continue exit",
   "focusExitConfirmStep3": "Confirm exit",
   "streakTitle": "Learning Streak",
   "streakDays": "{count, plural, =1{1 day} other{{count} days}}",
@@ -1593,7 +1531,6 @@
   "subtaskEmpty": "No subtasks yet",
   "subtaskTitle": "Subtasks",
   "taskFeedbackSubmitted": "Feedback submitted",
-  "taskFeedbackPreferenceUpdated": "Preferences updated",
   "taskFeedbackView": "View",
   "taskFeedbackPreferenceDialogTitle": "Preference updates",
   "taskFeedbackDepthPreference": "Depth preference: {value}",
@@ -1614,24 +1551,13 @@
   "taskFeedbackCompletedSubtitle": "Nice work. Keep the momentum going.",
   "taskFeedbackBrightness": "Glow",
   "taskFeedbackStreak": "Streak",
-  "taskFeedbackStreakDays": "{count} days",
-  "@taskFeedbackStreakDays": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
   "taskFeedbackOptionalRating": "Satisfaction rating (optional)",
   "taskFeedbackDifficultyQuestion": "How did the difficulty feel this time?",
   "taskFeedbackCategoryJustRight": "Just right",
   "taskFeedbackCategoryStillHard": "Still hard",
   "taskFeedbackCategoryTooEasy": "Too easy",
-  "taskFeedbackOptionalComment": "Anything else to add? (optional)",
-  "taskFeedbackCommentHint": "Write down a quick reflection...",
   "taskFeedbackNextSteps": "Suggested next steps",
   "taskFeedbackSkip": "Skip",
-  "taskFeedbackComplete": "Done",
   "taskFeedbackReason": "Why: {reason}",
   "@taskFeedbackReason": {
     "placeholders": {
@@ -4315,7 +4241,6 @@
   "taskChatEmptyPrompt": "Task Chat Empty Prompt",
   "taskChatInputHint": "Task Chat Input Hint",
   "taskCreateAction": "Task Create Action",
-  "taskCreateFailed": "{arg0}",
   "taskCreateSuccess": "Task Create Success",
   "taskCreateTitle": "Task Create Title",
   "taskCreatedWithSuggestions": "Task Created With Suggestions",
@@ -4337,7 +4262,6 @@
   "taskEstimatedDurationLabel": "Task Estimated Duration Label",
   "taskExecutionAbandon": "Task Execution Abandon",
   "taskExecutionCompleteTitle": "Task Execution Complete Title",
-  "taskExecutionCompletedTitle": "Task Execution Completed Title",
   "taskConfirmCompleteTitle": "Confirm completion?",
   "taskConfirmCompleteBody": "Mark \"{title}\" as completed.",
   "@taskConfirmCompleteBody": {
@@ -4355,27 +4279,21 @@
       }
     }
   },
-  "taskExecutionConfirmComplete": "Task Execution Confirm Complete",
   "taskExecutionElapsedMinutes": "{arg0}",
   "taskExecutionEnterFocus": "Task Execution Enter Focus",
-  "taskExecutionExpGained": "{arg0}",
   "taskExecutionFeatureCoach": "Task Execution Feature Coach",
   "taskExecutionFeatureDistraction": "Task Execution Feature Distraction",
   "taskExecutionFeatureFlipClock": "Task Execution Feature Flip Clock",
   "taskExecutionFeatureFullscreen": "Task Execution Feature Fullscreen",
   "taskExecutionFeatureReward": "Task Execution Feature Reward",
   "taskExecutionFeatureStarfield": "Task Execution Feature Starfield",
-  "taskExecutionGuideEmpty": "Task Execution Guide Empty",
-  "taskExecutionGuideTitle": "Task Execution Guide Title",
   "taskExecutionNoTask": "Task Execution No Task",
   "taskExecutionNoteHint": "Task Execution Note Hint",
   "taskExecutionNoteLabel": "Task Execution Note Label",
-  "taskExecutionSkipAnimation": "Task Execution Skip Animation",
   "taskExecutionStartFailed": "{arg0}",
   "taskExecutionStartNow": "Task Execution Start Now",
   "taskExecutionSyncFailed": "Task Execution Sync Failed",
   "taskExecutionFreeFocusCompleted": "Free focus completed",
-  "taskExecutionTapToContinue": "Task Execution Tap To Continue",
   "taskExecutionTimerLabel": "Task Execution Timer Label",
   "taskExitCancelStep1": "Task Exit Cancel Step1",
   "taskExitCancelStep2": "Task Exit Cancel Step2",
@@ -4404,7 +4322,6 @@
   "taskDetailFullPath": "Full learning plan path.",
   "taskDetailGeneratedTasks": "Generated Tasks",
   "taskDetailPlanContext": "Belongs to Plan",
-  "taskDetailPlanContextLoading": "Loading plan...",
   "taskDetailCopyAiPromptSuccess": "AI prompt copied",
   "taskDetailGuideGenerated": "Guide generated",
   "taskDetailGuideGenerateFailed": "Guide generation failed: {error}",
@@ -5833,118 +5750,6 @@
   "predictedToolReviewProgress": "Review Progress",
   "predictedToolGenerateSummary": "Generate Summary",
   "predictedToolSuggestSchedule": "Suggest Schedule",
-  "examSprintHighFreqCoverage": "High-Freq Coverage",
-  "examSprintMistakeRepair": "Mistake Repair",
-  "examSprintStudyStreak": "Study Streak",
-  "examSprintStreakDays": "{days} d",
-  "@examSprintStreakDays": {
-    "placeholders": {
-      "days": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintKeepRhythm": "Keep the rhythm",
-  "examSprintHighYieldWeak": "High-yield weak spots: {topics}",
-  "@examSprintHighYieldWeak": {
-    "placeholders": {
-      "topics": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintNoTasksToday": "No sprint tasks scheduled today.",
-  "examSprintExamDayReady": "Exam Day · You're Ready 🎓",
-  "examSprintExamTips": "Exam Tips",
-  "examSprintRecordResult": "Record Exam Result",
-  "examSprintDashboardTitle": "Exam Sprint Dashboard",
-  "examSprintModeHighScore": "High Score",
-  "examSprintModeHold": "Hold",
-  "examSprintModePass": "Pass",
-  "examSprintModeDefault": "Sprint",
-  "examSprintExamDay": "Exam day",
-  "examSprintCountdown": "{days} days until exam",
-  "@examSprintCountdown": {
-    "placeholders": {
-      "days": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintTodayTasks": "Today: {completed}/{total} tasks",
-  "@examSprintTodayTasks": {
-    "placeholders": {
-      "completed": {
-        "type": "Object"
-      },
-      "total": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintDaysLeft": "{days} left until the exam",
-  "@examSprintDaysLeft": {
-    "placeholders": {
-      "days": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintTodayDone": "Today {completed}/{total} done",
-  "@examSprintTodayDone": {
-    "placeholders": {
-      "completed": {
-        "type": "Object"
-      },
-      "total": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintTodaySprintTasks": "Today Sprint Tasks",
-  "examSprintHideLater": "Hide later days",
-  "examSprintShowLater": "Show next {count} days",
-  "@examSprintShowLater": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintDayIndex": "Day {index}",
-  "@examSprintDayIndex": {
-    "placeholders": {
-      "index": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintDateFormat": "{month}/{day}",
-  "@examSprintDateFormat": {
-    "placeholders": {
-      "month": {
-        "type": "Object"
-      },
-      "day": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintNoSprintTasks": "No sprint tasks yet",
-  "examSprintMinLabel": "{minutes} min · {status}",
-  "@examSprintMinLabel": {
-    "placeholders": {
-      "minutes": {
-        "type": "Object"
-      },
-      "status": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintStatusDone": "Done",
-  "examSprintStatusInProgress": "In progress",
-  "examSprintStatusPending": "Pending",
   "insightHubTitle": "Learning Insights",
   "insightHubFallbackSummary": "Reports and insights — now in one lighter learning flow.",
   "insightHubReport": "Learning Report",
@@ -6178,11 +5983,7 @@
   "simulationBackToTheater": "Back to Theater",
   "simulationRunning": "Simulating...",
   "simulationStartSimulation": "Start This Simulation",
-  "simulationAwaitingInput": "Awaiting Input",
   "simulationClearTopic": "Clear Topic",
-  "simulationRecommendedScenarios": "Recommended Scenarios",
-  "simulationGenerate": "Generate",
-  "simulationRefresh": "Refresh",
   "simulationStartSimButton": "Start Simulation",
   "simulationGoToTheater": "Go to Theater",
   "simulationContinueSim": "Continue Simulation",
@@ -6193,9 +5994,6 @@
   "simulationSimSettings": "Simulation Settings",
   "simulationYourTurnTitle": "Your Turn to Reply",
   "simulationYourResponseArea": "Your Response Area",
-  "simulationCollapse": "Collapse",
-  "simulationJoinDiscussion": "Join the Discussion",
-  "simulationOrInputJudgment": "Or enter your judgment",
   "simulationSubmitting": "Submitting...",
   "simulationSubmitJudgment": "Submit My Judgment",
   "simulationContinueInChat": "Continue in Chat",
@@ -6216,7 +6014,6 @@
   "simulationGeneratingInBackground": "Still Generating in Background",
   "simulationPausedForeground": "Paused in Foreground",
   "simulationImmersiveDiscussion": "Immersive Discussion",
-  "simulationCurrentDiscussion": "Current Discussion",
   "simulationWillAppearLive": "Rounds will appear live once started.",
   "simulationNoInsightYet": "No insight summary yet.",
   "simulationInsightSummaryTitle": "Insight Summary",
@@ -6230,12 +6027,9 @@
   "simulationExposedKnowledgeGaps": "Exposed Knowledge Gaps",
   "simulationSuggestedNextSteps": "Suggested Next Steps",
   "simulationStructuredInsightGenerated": "Structured insight summary generated.",
-  "simulationEmptyGenerating": "Simulation is generating...",
-  "simulationEmptyStartPrompt": "Start a learning scenario simulation and let roles discuss the topic round by round.",
   "simulationCurrentScene": "Current Scene",
   "simulationCurrentGoal": "Current Goal",
   "simulationInteractionStyle": "Interaction Style",
-  "simulationRoleDiscussionUserJoin": "Role Discussion + You Respond",
   "simulationTopicHint": "Enter a topic or knowledge point",
   "simulationTopicHintExample": "e.g. Eigenvalues and eigenvectors",
   "simulationStartSimulationTopicAction": "Start Simulation About This Topic",
@@ -6253,9 +6047,6 @@
   "simulationScenarioTitle": "Start This Scenario Simulation",
   "simulationScenarioSubtitle": "Choose a discussion scenario, then enter a topic you want to explore. The interface will automatically switch to an immersive discussion view once started.",
   "simulationRoleDiscussionValue": "Role Discussion + You Respond",
-  "simulationJudgeExampleHint": "e.g. I'll strengthen my geometric intuition first, then verify with a problem",
-  "simulationInteractionExplain": "Give your judgment first, and the next round will truly build around your input.",
-  "simulationInteractionHint": "Try catching one round here first and let the roles respond to your judgment. You can also bring this step back to the main chat to continue.",
   "simulationContinuitySubtitle": "This simulation continues from your previous exploration. You can bring the context back to the original conversation anytime to continue questioning and deciding.",
   "simulationBridgeCurrentlyVerifyingFormat": "Currently verifying path \"{routeTitle}\"",
   "@simulationBridgeCurrentlyVerifyingFormat": {
@@ -6275,49 +6066,10 @@
     }
   },
   "simulationBridgeVerificationContext": "This simulation comes from the Knowledge Theater. The current context remains linked to the original deduction.",
-  "simulationInteractionModeFormat": "Interaction mode: {mode}",
-  "@simulationInteractionModeFormat": {
-    "placeholders": {
-      "mode": {
-        "type": "Object"
-      }
-    }
-  },
-  "simulationInteractionOpenQuestion": "Open Question",
-  "simulationInteractionViewpointChallenge": "Viewpoint Challenge",
-  "simulationInteractionBinaryChoice": "Binary Choice",
-  "simulationInteractionChoice": "Choice",
-  "simulationCurrentFocusFormat": "Current focus: {speaker}",
-  "@simulationCurrentFocusFormat": {
-    "placeholders": {
-      "speaker": {
-        "type": "Object"
-      }
-    }
-  },
   "simulationTopicFormat": "Topic: {topic}",
   "@simulationTopicFormat": {
     "placeholders": {
       "topic": {
-        "type": "Object"
-      }
-    }
-  },
-  "simulationTopicAndSpeakerFormat": "Topic: {topic} · Speaking: {speaker}",
-  "@simulationTopicAndSpeakerFormat": {
-    "placeholders": {
-      "topic": {
-        "type": "Object"
-      },
-      "speaker": {
-        "type": "Object"
-      }
-    }
-  },
-  "simulationRoundN": "Round {round}",
-  "@simulationRoundN": {
-    "placeholders": {
-      "round": {
         "type": "Object"
       }
     }
@@ -6401,14 +6153,6 @@
       }
     }
   },
-  "simulationBulletOpening": "Opening highlight: {message}",
-  "@simulationBulletOpening": {
-    "placeholders": {
-      "message": {
-        "type": "Object"
-      }
-    }
-  },
   "simulationRoundFormatShort": "{current}/{total} rds",
   "@simulationRoundFormatShort": {
     "placeholders": {
@@ -6454,9 +6198,6 @@
     }
   },
   "simulationBalancedPush": "Balanced",
-  "simulationDebateClash": "Debate Clash",
-  "simulationGuidedBreakdown": "Guided Breakdown",
-  "simulationPracticalApply": "Practical Application",
   "simulationReportReturnException": "Learning report returned invalid format",
   "simulationReportGenerationFailed": "Failed to generate learning report: {error}",
   "@simulationReportGenerationFailed": {
@@ -6536,56 +6277,10 @@
     }
   },
   "simulationWaitingInput": "Awaiting Input",
-  "simulationScenarioDescStudyGroup": "Multi-role collaborative learning around a topic, ideal for explaining concepts, examples, and misconceptions together.",
-  "simulationScenarioDescKnowledgeDebate": "Let opposing viewpoints clash directly, ideal for verifying opinions, evidence, and boundary conditions.",
-  "simulationScenarioDescHistoricalRoleplay": "Bring in characters and era constraints, advancing the discussion like a real historical scene.",
-  "simulationScenarioDescSocraticDialogue": "Deconstruct premises through persistent questioning, ideal for clarifying vague concepts and reasoning gaps.",
-  "simulationScenarioDescCaseAnalysis": "Deconstruct, diagnose, and decide around specific cases, ideal for practical topics.",
-  "simulationScenarioDescWhatIfPath": "Compare different learning or action routes, ideal for planning, trade-offs, and resource allocation.",
-  "simulationScenarioDescConceptMapBuild": "Weave knowledge points into a structural diagram, ideal for establishing the global framework and connections.",
-  "simulationScenarioDescErrorDiagnosis": "Focus on identifying error causes, correction paths, and verification methods, ideal for filling gaps.",
-  "simulationFacilitationDescBalanced": "Fits most topics, emphasizing balanced multi-role progression without any party dominating the field.",
-  "simulationFacilitationDescDebate": "Actively amplifies controversy and evidence conflicts, better for topics that need viewpoint collision.",
-  "simulationFacilitationDescGuided": "More like a mentor-led discussion, emphasizing clarification of premises, step-by-step deconstruction, and keeping the user on track.",
-  "simulationFacilitationDescPractical": "Prioritizes action, verification, and real-world constraints, ideal for skill and solution planning.",
-  "simulationRoleHonorsStudent": "Honors Student",
-  "simulationRoleMidStudent": "Mid-level Student",
   "simulationRoleQuestioner": "Questioner",
-  "simulationRoleSummarizer": "Summarizer",
-  "simulationRolePracticeCoach": "Practice Coach",
-  "simulationRoleProExpert": "Pro Expert",
-  "simulationRoleConExpert": "Con Expert",
   "simulationRoleModerator": "Moderator",
-  "simulationRoleEvidenceReviewer": "Evidence Reviewer",
-  "simulationRolePursuer": "Pursuer",
-  "simulationRoleHistoryMentor": "History Mentor",
-  "simulationRoleKeyFigure": "Key Figure",
-  "simulationRoleEraObserver": "Era Observer",
-  "simulationRoleStrategyAdvisor": "Strategy Advisor",
-  "simulationRoleRecorder": "Recorder",
-  "simulationRoleSocrates": "Socrates",
-  "simulationRoleSkeptic": "Skeptic",
-  "simulationRoleDeconstructor": "Deconstructor",
-  "simulationRoleApplier": "Applier",
-  "simulationRoleCaseMentor": "Case Mentor",
-  "simulationRoleDiagnostician": "Diagnostician",
   "simulationRolePractitioner": "Practitioner",
-  "simulationRoleCounterExample": "Counter-Example Provider",
-  "simulationRoleDecisionRecorder": "Decision Recorder",
-  "simulationRoleCurrentRoute": "Current Route",
-  "simulationRoleRadicalRoute": "Radical Route",
-  "simulationRoleRiskObserver": "Risk Observer",
-  "simulationRoleResourceScheduler": "Resource Scheduler",
-  "simulationRoleVerifier": "Verifier",
-  "simulationRoleStructurer": "Structurer",
   "simulationRoleConnector": "Connector",
-  "simulationRoleCounterExampleChecker": "Counter-Example Checker",
-  "simulationRoleBridgeBuilder": "Bridge Builder",
-  "simulationRoleErrorAnalyst": "Error Analyst",
-  "simulationRoleCorrectionCoach": "Correction Coach",
-  "simulationRoleQuestionDeconstructor": "Question Deconstructor",
-  "simulationRoleMigrationCoach": "Migration Coach",
-  "simulationRoleStudyBuddy": "Study Buddy",
   "simulationRoleCurrentDiscussionTitle": "Current Discussion",
   "simulationBulletOpeningFormat": "Opening focus: {message}",
   "@simulationBulletOpeningFormat": {
@@ -6595,17 +6290,6 @@
       }
     }
   },
-  "simulationScenarioParticipantOptionsDefault0": "Study Buddy",
-  "simulationScenarioParticipantOptionsDefault1": "Questioner",
-  "simulationScenarioParticipantOptionsDefault2": "Summarizer",
-  "simulationScenarioLabelStudyGroup": "Study Group",
-  "simulationScenarioLabelKnowledgeDebate": "Knowledge Debate",
-  "simulationScenarioLabelHistoricalRoleplay": "Historical Roleplay",
-  "simulationScenarioLabelSocraticDialogue": "Socratic Dialogue",
-  "simulationScenarioLabelCaseAnalysis": "Case Analysis",
-  "simulationScenarioLabelWhatIfPath": "What-If Path",
-  "simulationScenarioLabelConceptMapBuild": "Concept Map Building",
-  "simulationScenarioLabelErrorDiagnosis": "Error Diagnosis",
   "openclawPairImportedSaved": "OpenClaw pairing config imported and saved",
   "openclawPairImportedVerifyFailed": "Pairing config imported, but connection verification failed",
   "openclawClipboardNoPairingPayload": "No OpenClaw pairing string or QR JSON found in clipboard",
@@ -7492,97 +7176,6 @@
   "personaHintStudyMinutes": "Enter study duration (minutes)",
   "personaHintPositiveMinutes": "Enter a positive number of minutes",
   "personaHintValidPreference": "Enter a valid preference value",
-  "examSprintTitle": "Exam Sprint Setup",
-  "examSprintMinutesPerDay": "{minutes} min/day",
-  "@examSprintMinutesPerDay": {
-    "placeholders": {
-      "minutes": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintStep1Subject": "1. Which course?",
-  "examSprintSubjectHint": "e.g., Computer Networks / Calculus / CET-4",
-  "examSprintSubjectRequired": "Tell me which course you're sprinting for",
-  "examSprintStep2Date": "2. When is the exam?",
-  "examSprintSelectDate": "Select exam date",
-  "examSprintDateHint": "The date determines sprint duration and pace",
-  "examSprintStep3Target": "3. Pass, maintain, or aim high?",
-  "examSprintStep4Scope": "4. Any exam scope or teacher highlights?",
-  "examSprintStep4Subtitle": "Paste key points or upload PDF / DOCX / PPT / TXT.",
-  "examSprintScopeHint": "e.g., Focus on transport layer and network layer; teacher said short answer and calculation questions.",
-  "examSprintUpload": "Upload Materials",
-  "examSprintNoUpload": "No materials uploaded yet",
-  "examSprintUploadedCount": "{count} materials uploaded",
-  "@examSprintUploadedCount": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintStep5Baseline": "5. How much do you know? Which chapters worry you?",
-  "examSprintWeakChapters": "Which chapters worry you most?",
-  "examSprintStep6Daily": "6. How long can you realistically study each day?",
-  "examSprintMinutesPerDayLabel": "{minutes} min / day",
-  "@examSprintMinutesPerDayLabel": {
-    "placeholders": {
-      "minutes": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintMinutesLabel": "{minutes} min",
-  "@examSprintMinutesLabel": {
-    "placeholders": {
-      "minutes": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintDailyHint": "Use the time you can realistically stick to, not the ideal.",
-  "examSprintGenerate": "Generate My First Day Tasks",
-  "examSprintSubmitHint": "After submission, you'll get an initial assessment within 3 seconds and be taken to the plan or first day tasks.",
-  "examSprintHeroTitle": "Not a survey — let's find your starting point together",
-  "examSprintHeroSubtitle": "Answer these 6 questions and I'll give you an initial assessment, recommended strategy, and first day tasks.",
-  "examSprintUploadSuccess": "Material uploaded",
-  "examSprintSelectDateFirst": "Please select the exam date first",
-  "examSprintAssessmentComplete": "Initial assessment complete",
-  "examSprintPassProbability": "Pass probability {percent}%",
-  "@examSprintPassProbability": {
-    "placeholders": {
-      "percent": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintRecommendedMode": "Recommended mode {mode}",
-  "@examSprintRecommendedMode": {
-    "placeholders": {
-      "mode": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintFirstDayFocus": "What to do on day one",
-  "examSprintStartFirstDay": "Start first day tasks",
-  "examSprintViewPlan": "View plan",
-  "examSprintViewFullPlan": "View full plan",
-  "examSprintBaselineAlmostZero": "Starting almost from scratch",
-  "examSprintBaselineUnstable": "Attended class, but foundation is shaky",
-  "examSprintBaselinePartial": "Have some basics, can patch and push simultaneously",
-  "examSprintBaselineSolid": "Solid foundation, focus on score optimization",
-  "examSprintDayCount": "{count} days",
-  "@examSprintDayCount": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
-  "examSprintTargetPass": "Pass",
-  "examSprintTargetHold": "Maintain",
-  "examSprintTargetHighScore": "Aim high",
   "memorySettingsSocialPersonMention": "Person mentions",
   "reportLearningAnalysisReport": "Learning Analysis Report",
   "reportContinuationSubtitle": "Continue viewing the analysis report for this learning journey",
@@ -9033,7 +8626,6 @@
   "examConfidenceGuess": "Just a guess",
   "examDiagnosticShortAnswerHint": "Type your answer",
   "examDiagnosticSubmit": "Submit and see results",
-  "examDiagnosticResultTitle": "Diagnostic Result",
   "examDiagnosticScore": "Estimated score: {score}",
   "examDiagnosticPassProbability": "Pass probability: {probability}",
   "examDiagnosticPathMinimumPass": "Strategy: secure a pass first",
@@ -9116,7 +8708,6 @@
   "examShowNextDays": "Show next {count} days",
   "examStreakDays": "{count} d",
   "examTaskMinutes": "{minutes} min",
-  "examPlanSubject": "{planName}",
   "examPassProbabilityEstimate": "Estimated from your current progress",
   "examPassProbabilityLowAction": "Still time — focus on high-yield topics first",
   "openclawAutomationScheduleCount": "{count} automations",
@@ -9529,21 +9120,8 @@
       }
     }
   },
-  "focusReflectionTitleLabel": "Focus review",
-  "focusReflectionStuckLabel": "Stuck point: {content}",
-  "focusReflectionMethodLabel": "Effective method: {content}",
-  "focusReflectionAdjustmentLabel": "Next adjustment: {content}",
-  "focusReflectionPromptHint": "Take half a minute to capture the friction so future-you can use it.",
-  "focusReflectionStuckQuestion": "Where did you get stuck in this session?",
-  "focusReflectionStuckHint": "Example: once I started, I did not know how to begin.",
-  "focusReflectionMethodQuestion": "What helped you feel progress?",
-  "focusReflectionMethodHint": "Example: marking the givens before solving.",
-  "focusReflectionAdjustmentQuestion": "What would you change next time?",
-  "focusReflectionAdjustmentHint": "Example: do a five-minute warm-up before deep focus.",
   "focusOfflineSaved": "Focus record saved offline, will auto-sync later",
   "focusSaveFailed": "Focus record save failed: {error}",
-  "focusMockLlmGuidance": "Try the Pomodoro technique: break tasks into 25-minute focus blocks with 5-minute breaks. Keep your environment quiet and notifications off.",
-  "focusMockSubtasks": "Create project outline,Write core feature code,Add test cases,Improve documentation",
   "communityMonthLabel1": "Jan",
   "communityMonthLabel2": "Feb",
   "communityMonthLabel3": "Mar",
@@ -9796,7 +9374,6 @@
   "userTimeEstimation": "Time Estimation",
   "userTimeEstimationBias": "You were {hours} hours too optimistic in your last 10 completion time estimates.",
   "userTrendStabilizing": "Stabilizing in recent weeks.",
-  "userWorkingMemorySnapshot": "Working Memory Snapshot",
   "userRecentForegroundItems": "Still stuck on inverted sentences in complex English sentence breakdown; review question 3 in next practice.",
   "userWeeklyGoal": "Organize probability theory error book into 2 review cards this week.",
   "userWeeklyStreakAchievement": "7-Day Learning Streak",
@@ -9816,12 +9393,6 @@
   "taskSnoozeMessage": "Snoozed until tomorrow — take it easy today.",
   "taskTooHardMessage": "Broke it into 3 small steps — start with \"{title}\".",
   "taskSkipMessage": "Skipped — this card won't crowd your day anymore.",
-  "taskTooHardStep1": "Find the single point that blocks you",
-  "taskTooHardStep2": "Describe the block in one plain sentence",
-  "taskTooHardStep3": "Do one smallest verification action",
-  "taskTooHardGuidance1": "Just locate the block — don't solve the whole task.",
-  "taskTooHardGuidance2": "Explain it clearly first, then decide next steps.",
-  "taskTooHardGuidance3": "Only verify this one sub-step you just broke out.",
   "taskDiagnosisStuck": "Which step feels most stuck right now?",
   "taskDiagnosisFix": "Just do one small action you can finish in 5 minutes.",
   "taskDiagnosisCheck": "What can you write down first for the next step?",
@@ -10049,19 +9620,11 @@
   "communityShareDepthLevel": "Depth Lv.{level}",
   "communityShareCorePosters": "4 Core Posters",
   "userEngagementState": "Engagement State",
-  "userSessionCount7d": "7d sessions {count}",
-  "userStreakDays": "{count}d streak",
-  "userLastActiveDate": "Last active {date}",
   "userNoRecentActivity": "No recent activity",
   "userForesightHint": "Foresight Hint",
   "userForesightEmpty": "No foresight hints to display yet. The backend will continue observing.",
-  "userDeviationCount": "{count} deviations",
-  "userStabilityScore": "Execution Stability",
-  "userRhythmFit": "Rhythm Fit",
-  "userOverloadRisk": "Overload Risk",
   "userIdiographicObservations": "Recent Association Observations",
   "userAchievementSummary": "Achievement Summary",
-  "userTotalAchievementScore": "Total achievement score {score}",
   "userNoRecentHighlights": "No recent highlights or progress changes. Keep going and milestones will show here.",
   "userLatestUnlock": "Latest Unlock",
   "userCurrentProgress": "Current Progress",
@@ -10079,7 +9642,6 @@
   "userSRLEnforcing": "SRL · Executing",
   "userSRLReflecting": "SRL · Reflecting",
   "userSRLUnknown": "SRL · Unknown",
-  "userTraitsPriorHint": "Based on historical observations, adjustable anytime",
   "userTraitsLongTerm": "Long-term tendencies",
   "userTraitOpenness": "Openness",
   "userTraitConscientiousness": "Conscientiousness",
@@ -10092,14 +9654,9 @@
   "userWorkingMemory": "Working Memory Snapshot",
   "userWorkingMemoryHint": "Keep recent foreground items in a compact view.",
   "userWorkingMemoryEmpty": "No working memory in the foreground. Continue at your current pace.",
-  "userMentionCount": "Mentioned {count} times",
-  "userConsolidated": "Consolidated",
-  "userStillInForeground": "In foreground",
   "userMetacognition": "Self-awareness",
   "userMetacognitionHint": "Showing judgment bias from past samples only, not labeling you.",
-  "userMetacognitionDimensions": "{count} metacognitive dimensions observed",
   "userHidePanel": "Hide this panel",
-  "userUpdatedAt": "Updated at {time}",
   "userActiveSkills": "Active Skills",
   "userActiveSkillsEmpty": "No skill matches detected this round. Default support will continue.",
   "userAvatarPickerHint": "Pick an avatar that matches your style. The default one works too.",
@@ -10121,7 +9678,6 @@
   "userOnboardingGenerating": "Generating your first insight and suggestions...",
   "userSignOutOtherDevices": "Sign out other devices",
   "userSignOutOtherConfirm": "This will sign you out on all other devices. Continue?",
-  "userTotalDevices": "{count} devices",
   "userCurrentDeviceProtected": "Current device protected",
   "userAiOpsAnalysis": "AI Ops Analysis",
   "userAiOpsCopyExport": "Copy Export",
@@ -10129,7 +9685,6 @@
   "userAiOpsPredictFailed": "Predict conversion analysis failed to load",
   "userAiOpsAnalysisWindow": "Analysis Window",
   "userAiOpsWindowHint": "Switch between 7 / 14 / 30 day windows to observe trends in speed, cost, fallback, and execution conversion.",
-  "userAiOpsDays": "{days}d",
   "userAiOpsDevOps": "Dev Ops Perspective",
   "userAiOpsDevOpsHint": "Focus on model chain stability, cost efficiency, and which patterns are producing real execution results.",
   "userAiOpsSuccessRate": "Success Rate",
@@ -10147,22 +9702,15 @@
   "userAiOpsAcceptToExec": "Accept→Exec",
   "userAiOpsBySurface": "By Surface",
   "userAiOpsWorthOptimizing": "Worth optimizing",
-  "userAiOpsLatestRequests": "Latest requests",
-  "userAiOpsLatestFallback": "Latest fallback",
-  "userAiOpsLatestCost": "Latest cost",
   "userAiOpsExportCopied": "AI ops export copied to clipboard",
   "userAiOpsDashboard": "Dashboard",
   "userAiOpsChatInput": "Chat Input",
   "userAiOpsChat": "Chat",
-  "userAiOpsTrendHint": "Check if latency is decreasing steadily while confirming success rate and execution conversion aren't hurt by cost optimization.",
-  "userAiOpsTotalTime": "Total Time",
   "userAiOpsStandardChat": "Standard Chat",
   "userAiOpsStudyPlanning": "Study Planning",
   "userAiOpsDeepAnalysis": "Deep Analysis",
   "userAiOpsDiagnosisCorrection": "Diagnosis & Correction",
   "userAiOpsExpertCollaboration": "Expert Collaboration",
-  "userAiOpsFirstTokenTotal": "First token {first}ms · Total {total}ms · Success {rate}%",
-  "userAiOpsPromptInferenceHit": "Prompt hit {prompt}% · Inference hit {inference}%",
   "userThemeMode": "Theme Mode",
   "userThemeModeHint": "Control light/dark mode to match your visual rhythm and environment.",
   "userBrandPresets": "Brand Presets",
@@ -10183,12 +9731,8 @@
   "userCurrentStatus": "Current Status",
   "userNotGeneratedYet": "No export file generated yet",
   "userAlreadyGenerated": "Export file generated. Tap again to re-share",
-  "userExporting": "Exporting...",
-  "userSecurityLogCount": "{count} records",
-  "userSecurityLogAnomalies": "{count} anomalies",
   "userLoadMoreRecords": "Load more records",
   "userLoading": "Loading...",
-  "userProfileAdjustmentRecorded": "Recorded profile adjustment for \"{targetId}\"",
   "userVisibleProfile": "Visible Profile",
   "userVisibleProfileHint": "open_editable / open_discussable items are displayed here directly.",
   "userMediatedProfile": "Mediated Profile",
@@ -10196,7 +9740,6 @@
   "userTransparentProfile": "Transparent Profile",
   "userSummary": "Summary",
   "userCurrentUnknowns": "Current unknowns",
-  "userHiddenItemsCount": "{count} hidden items, not shown in transparency panel.",
   "userNoContent": "No content.",
   "userRevertibleChanges": "Revertible Changes",
   "userRevertibleHint": "Only showing Aurora-intervened changes, no silent overrides.",
@@ -10209,7 +9752,6 @@
   "userTransparentNotEnabledHint": "WS6 remains inert until routing or backend bindings are complete.",
   "userExamModeOnly": "Exam Mode Only",
   "userMarkInaccurate": "Mark Inaccurate",
-  "userSuggestedSummary": "Suggestion: {summary}",
   "userMarkNeedsRecalibration": "Mark for recalibration",
   "userDownloadDataSubtitle": "Download account, learning, and memory data",
   "userModelingChatTitle": "Let me know you better (about 2 min)",
@@ -10218,12 +9760,9 @@
   "userTyping": "Typing...",
   "userAuroraMultiHint": "Aurora may send several messages. You can also interrupt anytime.",
   "userInputPlaceholder": "Type your answer...",
-  "userModelingFailed": "Modeling chat temporarily failed: {error}",
-  "userCannotSkipNow": "Cannot skip right now: {error}",
   "userStartPlanning": "Start Planning",
   "userPlanTimeoutMessage": "Plan generation timed out. Please try again.",
   "userPlanNotReady": "Plan is still being prepared. Please try again shortly.",
-  "userPlanGenerationError": "Plan generation encountered an issue: {error}",
   "userGeneratingSprintPlan": "Generating your first sprint plan",
   "userSprintPlanHint": "You'll be taken to the tasks page shortly. No need to click next.",
   "userPlanGenerationFailed": "Plan generation didn't succeed",
@@ -10236,22 +9775,12 @@
   "userAdminClientLoadFailed": "Client observability failed to load",
   "userAdminWindow": "Admin Window",
   "userAdminWindowHint": "View client anomalies, gateway/backend capacity, and Prometheus alerts together to quickly determine if it's a frontend degradation or infrastructure jitter.",
-  "userAdminDays": "{days}d",
   "userAdminCapacityHealth": "Capacity & Health",
   "userAdminDBProbe": "DB Probe",
   "userAdminRedisConn": "Redis Conn",
   "userAdminQueueBacklog": "Queue Backlog",
   "userAdminDiskUsage": "Disk Usage",
   "userAdminServiceDrilldown": "Service drill-down",
-  "userAdminProbeLatency": "Probe latency {latency}ms",
-  "userAdminConnPool": "Pool {size} / overflow {overflow}",
-  "userAdminTimeout": "Timeout {seconds}s",
-  "userAdminRedisStatus": "Status {status}",
-  "userAdminRedisMemory": "Memory {used} / Peak {peak}",
-  "userAdminRedisClients": "Clients {count}",
-  "userAdminDiskDetail": "Used {used} GB / Free {free} GB",
-  "userAdminDiskTotal": "Total {total} GB",
-  "userAdminDiskRatio": "Usage {ratio}%",
   "userAdminCurrentAlerts": "Current Alerts",
   "userAdminNoAlerts": "No active Prometheus alerts.",
   "userAdminClientObservability": "Client Observability",
@@ -10261,10 +9790,6 @@
   "userAdminAvgDuration": "Avg duration",
   "userAdminTrendDays": "7/14/30 day trend",
   "userAdminEventTypeDrilldown": "Event type drill-down",
-  "userAdminTotalCount": "Total {count}",
-  "userAdminErrorsCrashes": "Errors {errors} / Crashes {crashes}",
-  "userAdminSuccessRate": "Success rate {rate}%",
-  "userAdminAvgDurationMs": "Avg duration {duration}ms",
   "taskMinutesUnit": "{minutes} min",
   "taskCompletedToday": "Done for today!",
   "taskDone": "Done it!",
@@ -10352,18 +9877,10 @@
   "taskHelpPromptCriteria": "Completion criteria: {criteria}",
   "taskHelpPromptGuide": "Task guide: {guide}",
   "taskHelpPromptSuffix": "First ask me one key clarifying question, then give me a next step I can start within 5 minutes.",
-  "taskModeHuman": "Manual",
-  "taskModeHybrid": "Collaborative",
-  "taskModeUnknown": "Unknown",
   "taskOpFailed": "Operation failed",
   "taskNetworkError": "Network error",
   "taskRetryFailed": "Retry failed",
-  "taskLocalNoAiExec": "Local tasks do not support AI execution",
-  "taskQueued": "{message}, added to waiting queue.",
-  "taskNoExecRecord": "No AI execution record to process",
-  "taskExecRecordUnavailable": "Execution record temporarily unavailable",
   "taskFreeFocus": "Free Focus",
-  "taskLoadFailed": "Failed to load task: {error}",
   "taskUpdated": "Task updated",
   "taskEditTitle": "Edit Task",
   "taskEditHint": "Here you adjust the scheduling info of an existing task, such as estimated duration, difficulty, deadline, and tags.",
@@ -13892,7 +13409,6 @@
   "goalGraphToggleGoal": "Goal",
   "goalGraphGapAnalysis": "Gap Analysis",
   "goalGraphCoverage": "Coverage",
-  "taskPausedPanelTitle": "Paused with context",
   "taskPausedPanelSemantics": "Paused task details for {title}",
   "@taskPausedPanelSemantics": {
     "placeholders": {
@@ -15904,7 +15420,6 @@
   "taskDiagnosisOption1": "Concept not clear",
   "taskDiagnosisOption2": "Step order confused",
   "taskDiagnosisOption3": "Can't use given conditions",
-  "taskOpQueuedSuffix": ", added to wait queue.",
   "seedLibLoadFailed": "Failed to load library details. Please try again later.",
   "seedLibStatusFailed": "Failed to load library status. Please try again later.",
   "communitySquad": "Squad",
