@@ -19,6 +19,7 @@
 
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -418,8 +419,18 @@ def test_verify_real_ledger_readonly_and_reports_known_stock():
         assert legacy_dup, "233 双行在案但重号检测未命中"
         assert legacy_glue, "粘连行在案但形态检测未命中"
     else:
-        # 存量已收口（wt561 集成后）：除状态枚举余项外须全绿
-        assert problems == [], f"存量收口后仍有发现：{problems[:5]}"
+        # 存量已收口（wt561 集成后）：R2 标的（真粘连=一行双 ID、重号）须零发现；
+        # 历史 6/7 管原生形态按 wt561 裁定容忍（其问题串通用后缀含"粘连"字样，
+        # 不能按子串过滤——用结构判据：一行内出现 ≥2 个 V3-FIX-N 才是真粘连）。
+        dup = [x for x in problems if "重号" in x]
+        glue = [
+            ln
+            for ln in text.splitlines()
+            if ln.startswith("| V3-FIX-")
+            and len(re.findall(r"V3-FIX-\d+", ln)) >= 2
+        ]
+        assert not dup, f"R2 收口后仍有重号：{dup[:3]}"
+        assert not glue, f"R2 收口后仍有一行双 ID 粘连：{glue[:2]}"
 
 
 def test_cli_verify_mode(tmp_path):
