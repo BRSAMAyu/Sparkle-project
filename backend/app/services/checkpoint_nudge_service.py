@@ -1217,10 +1217,19 @@ def extract_strategy_checkpoints(plan: Plan) -> list[dict[str, Any]]:
     return normalized
 
 
-def plan_day_number(plan: Plan, *, today: date | None = None) -> int:
-    local_today = today or (datetime.now(UTC) + timedelta(hours=8)).date()
+def plan_day_number(plan: Plan, *, today: date | None = None, timezone_name: str | None = None) -> int:
+    """Plan 的 checkpoint 日游标，按用户本地日口径。
+
+    V3-FIX-243（行为变化点）：「今日」缺省 ``local_date(utcnow(), tz)``、
+    created_at 起始日 ``local_date(created_at, tz)``（created_at 是 UTC 存储
+    列）——修前两者均硬编码 +8h 偏移，非 +8 用户 checkpoint 提前/错后一整天
+    触发。显式 ``today`` 视为用户本地日覆盖（调用方已按用户 tz 换算）；
+    ``timezone_name`` 缺省经 :func:`valid_timezone_name` 回落 Asia/Shanghai。
+    """
+    tz_name = valid_timezone_name(timezone_name)
+    local_today = today if today is not None else local_date(_utcnow(), tz_name)
     created_at = plan.created_at or _utcnow()
-    local_start = (created_at.replace(tzinfo=UTC) + timedelta(hours=8)).date()
+    local_start = local_date(created_at, tz_name)
     return (local_today - local_start).days + 1
 
 
@@ -1239,7 +1248,14 @@ async def scan_and_send_checkpoint_nudges(
     service = CheckpointNudgeService(db, redis)
     for plan in plans:
         scanned += 1
-        today_day = plan_day_number(plan, today=today)
+        # V3-FIX-243（行为变化点）：触发日游标按 plan.user_id 的
+        # PushPreference.timezone 标量直查（缺省 Asia/Shanghai）传给
+        # plan_day_number——修前其内部硬编码 +8h 偏移，非 +8 用户
+        # checkpoint 提前/错后一整天触发。
+        tz_name = valid_timezone_name(
+            await db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == plan.user_id))
+        )
+        today_day = plan_day_number(plan, today=today, timezone_name=tz_name)
         for checkpoint in extract_strategy_checkpoints(plan):
             if int(checkpoint["day"]) != today_day:
                 continue
