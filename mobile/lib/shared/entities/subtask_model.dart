@@ -6,8 +6,9 @@ enum SubTaskStatus {
   inProgress('IN_PROGRESS'),
   completed('COMPLETED');
 
-  final String value;
   const SubTaskStatus(this.value);
+
+  final String value;
 
   static SubTaskStatus fromString(String value) =>
       SubTaskStatus.values.firstWhere(

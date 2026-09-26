@@ -68,7 +68,7 @@ class GalaxyDraftRepository {
     }
 
     final normalized = items
-        .whereType<Map>()
+        .whereType<Map<dynamic, dynamic>>()
         .map(Map<String, dynamic>.from)
         .toList(growable: false);
 

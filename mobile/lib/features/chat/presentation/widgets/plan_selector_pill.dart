@@ -430,7 +430,7 @@ class _PlanListTile extends ConsumerWidget {
       label: plan.name,
       child: InkWell(
         onTap: () {
-          ref.read(activePlanProvider.notifier).selectPlan(plan.id);
+          ref.read(activePlanProvider.notifier).selectedPlanId = plan.id;
           unawaited(
               SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen),);
           Navigator.pop(context);

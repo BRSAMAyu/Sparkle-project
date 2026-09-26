@@ -156,51 +156,49 @@ class CalendarHeatmapCard extends ConsumerWidget {
             _buildHeader(context, dense: dense),
             SizedBox(height: headerSpacing),
             Expanded(
+              // Always use 2/3 + 1/3 layout with flex
               child: LayoutBuilder(
-                builder: (context, constraints) {
-                  // Always use 2/3 + 1/3 layout with flex
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Left 2/3: Calendar grid
-                      Expanded(
-                        flex: 2,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildWeekdayStrip(context),
-                            const SizedBox(height: DS.spacing4),
-                            Expanded(
-                              child: LayoutBuilder(
-                                builder: (context, gridConstraints) =>
-                                    _buildMonthGrid(
-                                  context,
-                                  ref,
-                                  gridConstraints,
-                                  calendarState,
-                                ),
+                builder: (context, constraints) => Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Left 2/3: Calendar grid
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildWeekdayStrip(context),
+                          const SizedBox(height: DS.spacing4),
+                          Expanded(
+                            child: LayoutBuilder(
+                              builder: (context, gridConstraints) =>
+                                  _buildMonthGrid(
+                                context,
+                                ref,
+                                gridConstraints,
+                                calendarState,
                               ),
                             ),
-                            const SizedBox(height: DS.spacing4),
-                            _buildLegend(context),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: DS.spacing4),
+                          _buildLegend(context),
+                        ],
                       ),
-                      SizedBox(width: dense ? DS.spacing8 : DS.spacing10),
-                      // Right 1/3: Stats sidebar
-                      Expanded(
-                        child: _CompactCalendarSidebar(
-                          activeDays: activeDays,
-                          totalTasks: totalTasks,
-                          pendingTasks: pendingTasks,
-                          completedTasks: completedTasks,
-                          selectedLabel: selectedLabel,
-                          dense: dense,
-                        ),
+                    ),
+                    SizedBox(width: dense ? DS.spacing8 : DS.spacing10),
+                    // Right 1/3: Stats sidebar
+                    Expanded(
+                      child: _CompactCalendarSidebar(
+                        activeDays: activeDays,
+                        totalTasks: totalTasks,
+                        pendingTasks: pendingTasks,
+                        completedTasks: completedTasks,
+                        selectedLabel: selectedLabel,
+                        dense: dense,
                       ),
-                    ],
-                  );
-                },
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

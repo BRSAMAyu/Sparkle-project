@@ -1807,8 +1807,8 @@ class PrivateChatNotifier
   final Set<String> _pendingNonces = {};
   Set<String> get pendingNonces => _pendingNonces;
 
-  PrivateMessageInfo? _quotedMessage;
-  PrivateMessageInfo? get quotedMessage => _quotedMessage;
+  /// 当前引用回复的消息；直接赋值即设置（经 UI 回传 ChatInput，不进 state 流）。
+  PrivateMessageInfo? quotedMessage;
 
   Future<void> _initialize(Stream<dynamic> events) async {
     final cached = await _cacheService.getCachedPrivateMessages(_friendId);
@@ -2035,13 +2035,8 @@ class PrivateChatNotifier
     }
   }
 
-  void setQuote(PrivateMessageInfo? message) {
-    _quotedMessage = message;
-    // We trigger a state update to the same list to notify listeners of notifier itself
-    // Actually, simple getter is fine if we call it from UI, but for reactive UI
-    // we might need a separate StateProvider for quotedMessage.
-    // Let's keep it simple for now as it's passed back to ChatInput.
-  }
+  // 引用消息直接落公开字段 quotedMessage：赋值即设置，UI 侧自行重建，
+  // 不额外触发 state 流（保持既有行为：ChatInput 通过读字段拿引用）。
 
   Future<void> sendMessage({
     required String content,
@@ -2106,7 +2101,7 @@ class PrivateChatNotifier
           state = AsyncValue.data(filtered);
         }
       });
-      _quotedMessage = null; // Clear quote after sending
+      quotedMessage = null; // Clear quote after sending
       await _cacheService.removePendingPrivateMessage(_friendId, nonce);
       _pendingNonces.remove(nonce);
     } catch (e) {

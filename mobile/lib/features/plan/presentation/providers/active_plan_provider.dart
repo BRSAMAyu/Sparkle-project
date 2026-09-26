@@ -11,7 +11,7 @@ import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart'
 /// Usage:
 /// ```dart
 /// final selectedPlanId = ref.read(activePlanProvider);
-/// ref.read(activePlanProvider.notifier).selectPlan('plan_id');
+/// ref.read(activePlanProvider.notifier).selectedPlanId = 'plan_id';
 /// ref.read(activePlanProvider.notifier).clearSelection();
 /// ```
 class ActivePlanNotifier extends PersistentNotifier<String?> {
@@ -26,8 +26,8 @@ class ActivePlanNotifier extends PersistentNotifier<String?> {
 
   final Ref _ref;
 
-  /// Select a plan as the active chat context
-  void selectPlan(String? planId) {
+  /// The plan selected as the active chat context (assignment selects it)
+  set selectedPlanId(String? planId) {
     state = planId;
   }
 

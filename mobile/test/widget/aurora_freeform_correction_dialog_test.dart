@@ -51,33 +51,31 @@ class _DialogHarness extends StatelessWidget {
 
   final ValueChanged<String?> onResult;
 
+  // U-03 harness repair：挂 l10n delegates——对话框源码用
+  // AppLocalizations.of(context)!，无 delegates 时构建即空指针。
   @override
-  Widget build(BuildContext context) {
-    // U-03 harness repair：挂 l10n delegates——对话框源码用
-    // AppLocalizations.of(context)!，无 delegates 时构建即空指针。
-    return MaterialApp(
-      locale: const Locale('en'),
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Builder(
-        builder: (context) => Scaffold(
-          body: Center(
-            child: ElevatedButton(
-              onPressed: () async {
-                final result =
-                    await showAuroraFreeformCorrectionInputDialog(context);
-                onResult(result);
-              },
-              child: const Text('Open'),
+  Widget build(BuildContext context) => MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () async {
+                  final result =
+                      await showAuroraFreeformCorrectionInputDialog(context);
+                  onResult(result);
+                },
+                child: const Text('Open'),
+              ),
             ),
           ),
         ),
-      ),
-    );
-  }
+      );
 }

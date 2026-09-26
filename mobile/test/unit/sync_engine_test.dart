@@ -1,5 +1,6 @@
 // ignore_for_file: discarded_futures
 @Skip('IsarCore segfault — pre-existing binary issue, needs IsarCore update')
+library;
 
 import 'dart:async';
 import 'dart:convert';

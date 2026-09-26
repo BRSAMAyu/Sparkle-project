@@ -13,16 +13,14 @@ class AchievementCardGenerator extends StatelessWidget {
   final String type;
   final Map<String, dynamic> data;
 
+  // TRACKED(TD-010): Implement actual image generation logic
+  // This typically requires wrapping the widget in a RepaintBoundary,
+  // rendering it to an image, and converting to byte data.
+  // For now, returning null to allow compilation.
   static Future<Uint8List?> generateCard({
     required String achievementType,
     required Map<String, dynamic> data,
-  }) async {
-    // TRACKED(TD-010): Implement actual image generation logic
-    // This typically requires wrapping the widget in a RepaintBoundary,
-    // rendering it to an image, and converting to byte data.
-    // For now, returning null to allow compilation.
-    return null;
-  }
+  }) async => null;
 
   @override
   Widget build(BuildContext context) {

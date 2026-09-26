@@ -182,7 +182,7 @@ class IntentTypeMetadata {
 ///
 /// Matches backend IntentExecuteResponse structure:
 /// - success: bool
-/// - results: List<Dict>
+/// - results: `List<Dict>`
 /// - errors: List[str] (not error_message)
 /// - total_time: float
 class IntentExecuteResult {

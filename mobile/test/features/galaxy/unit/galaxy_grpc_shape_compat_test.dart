@@ -110,7 +110,8 @@ void main() {
             reason: '声明了节点却解析出 0 个可用节点属于契约破坏，'
                 '不得当作"空星图成功"吞掉（V24 的直接死因）',);
 
-        final second = await repo.getGraph();
+        // 第二次调用必须真实发出（断言 client.getCalls == 2），仅绑定会被丢弃
+        await repo.getGraph();
         expect(client.getCalls, 2,
             reason: '坏载荷不得进入 _graphCache，否则 10 分钟内所有非 force 刷新'
                 '都会复用同一空图（会话内不可自愈的根因）',);

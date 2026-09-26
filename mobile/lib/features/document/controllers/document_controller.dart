@@ -11,11 +11,9 @@ part 'document_controller.g.dart';
 class DocumentController extends _$DocumentController {
   Timer? _timer;
 
+  // Initial state is null (no task started)
   @override
-  AsyncValue<CleaningTaskStatus?> build() {
-    // Initial state is null (no task started)
-    return const AsyncValue.data(null);
-  }
+  AsyncValue<CleaningTaskStatus?> build() => const AsyncValue.data(null);
 
   Future<void> startCleaning(
     File file, {

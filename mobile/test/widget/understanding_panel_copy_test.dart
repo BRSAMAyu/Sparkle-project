@@ -28,8 +28,8 @@ class _SnapshotApiClient implements ApiClient {
             'user_can_correct': true,
           },
         ],
-        'recently_corrected': [],
-        'memory_declarations': [],
+        'recently_corrected': <dynamic>[],
+        'memory_declarations': <dynamic>[],
         'envelope_style': const <String, String>{
           'current_tone': '温和直接',
           'current_verbosity': '中等简洁',

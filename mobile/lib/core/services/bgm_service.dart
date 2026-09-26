@@ -1526,7 +1526,7 @@ class BgmService {
   }
 
   @visibleForTesting
-  static void debugSetNowProvider(DateTime Function() provider) {
+  static set debugNowProvider(DateTime Function() provider) {
     _nowProvider = provider;
   }
 
@@ -1557,7 +1557,7 @@ class BgmService {
   }
 
   @visibleForTesting
-  static void debugSetPreferBundledPlayback(bool? value) {
+  static set debugPreferBundledPlayback(bool? value) {
     _preferBundledPlaybackOverride = value;
   }
 

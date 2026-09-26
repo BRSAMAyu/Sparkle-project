@@ -137,7 +137,8 @@ class SharePosterService {
     final settings = payload.privacySettings;
 
     if (!settings.showDetailedStats) {
-      const detailedKeys = [
+      // 内联字面量：避免「声明 + 唯一使用」被 cascade_invocations 判为可级联序列
+      const <String>[
         'completed_tasks',
         'total_tasks',
         'milestones',
@@ -149,10 +150,7 @@ class SharePosterService {
         'subtasks_completed',
         'subtasks_total',
         'quality_score',
-      ];
-      for (final key in detailedKeys) {
-        metadata.remove(key);
-      }
+      ].forEach(metadata.remove);
     }
 
     if (!settings.showProgressPercentage) {

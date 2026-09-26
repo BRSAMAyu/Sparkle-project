@@ -26,10 +26,6 @@ class _LayerStatusNotifier extends AuroraStatusNotifier {
     state = snapshot;
   }
 
-  void setSnapshot(AuroraControlSurfaceSnapshot snapshot) {
-    state = snapshot;
-  }
-
   @override
   Future<void> refresh({String? conversationId}) async {}
 
@@ -211,10 +207,10 @@ void main() {
     expect(find.byType(AnimatedContainer), findsWidgets);
     expect(find.text('可能卡住'), findsOneWidget);
 
-    notifier.setSnapshot(_snapshot(
+    notifier.state = _snapshot(
       status: 'calibrated',
       summary: 'Aurora 认为当前节奏稳定。',
-    ),);
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));
 

@@ -14,7 +14,7 @@ class ContextService {
   ///   unknownTermsSaved: Number of unknown terms saved to vocabulary
   ///
   /// Returns:
-  ///   Map<String, dynamic> representing ContextEnvelope
+  ///   `Map<String, dynamic>` representing ContextEnvelope
   Future<Map<String, dynamic>> generateContextEnvelope({
     required MindfulnessState focusState,
     required int translationRequests,

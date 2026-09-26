@@ -33,12 +33,8 @@ class GalaxyOptimizationConfig {
           targetFps: 60,
         );
       case PerformanceTier.medium:
-        return const GalaxyOptimizationConfig(
-          shaderQuality: ShaderQuality.medium,
-          maxNodes: 500,
-          enablePhysics: false,
-          targetFps: 30,
-        );
+        // 与 standard 常量同值，const 规范化后是同一对象
+        return GalaxyOptimizationConfig.standard;
       case PerformanceTier.low:
         return const GalaxyOptimizationConfig(
           shaderQuality: ShaderQuality.low,

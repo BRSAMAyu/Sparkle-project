@@ -1003,16 +1003,15 @@ class _AnimatedSection extends StatelessWidget {
         tween: Tween(begin: 0.0, end: 1.0),
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeOutCubic,
-        builder: (context, value, child) {
-          // Apply the delay by clamping based on elapsed time
-          return Opacity(
-            opacity: value,
-            child: Transform.translate(
-              offset: Offset(0, 12 * (1 - value)),
-              child: child,
-            ),
-          );
-        },
+        builder: (context, value, child) =>
+            // Apply the delay by clamping based on elapsed time
+            Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 12 * (1 - value)),
+            child: child,
+          ),
+        ),
         child: child,
       );
 }

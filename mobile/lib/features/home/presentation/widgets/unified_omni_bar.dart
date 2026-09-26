@@ -633,7 +633,7 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
 
   Future<void> _selectMode(ChatMode mode) async {
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
-    ref.read(chatModeNotifierProvider.notifier).setMode(mode);
+    ref.read(chatModeNotifierProvider.notifier).mode = mode;
     ref.read(lastMultiAgentModeProvider.notifier).setMode(mode);
 
     if (_agentPanelExpanded) {

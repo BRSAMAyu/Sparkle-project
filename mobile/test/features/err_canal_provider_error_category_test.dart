@@ -28,10 +28,6 @@ import 'package:sparkle/shared/entities/subtask_model.dart';
 void main() {
   final zh = AppLocalizationsZh();
 
-  // 万能抛异常假仓库：任何方法调用即抛网络类异常（noSuchMethod 兜底）。
-  Object noSuchRepo(Invocation invocation) =>
-      throw Exception('SocketException: fake connection refused');
-
   group('N15 赋值面：五域 provider error 位 = UiErrorCategory', () {
     test('subtask: load/add 异常 → error = network 类别', () async {
       final notifier = SubtaskNotifier(_FakeSubtaskRepo(), 'task-1');

@@ -406,7 +406,7 @@ class _ActivePlanSlot extends ConsumerWidget {
     }
 
     Future<void> setChatContext() async {
-      ref.read(activePlanProvider.notifier).selectPlan(plan.id);
+      ref.read(activePlanProvider.notifier).selectedPlanId = plan.id;
       if (!context.mounted) return;
       AppFeedback.success(context, context.l10n.planViewSwitchedContext(plan.name));
     }

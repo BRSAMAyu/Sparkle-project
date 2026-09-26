@@ -8,8 +8,9 @@ enum BackgroundTaskType {
   galaxyExpansion('GALAXY_EXPANSION'),
   taskBatch('TASK_BATCH');
 
-  final String value;
   const BackgroundTaskType(this.value);
+
+  final String value;
 
   static BackgroundTaskType fromString(String value) => BackgroundTaskType.values.firstWhere(
       (e) => e.value == value,
@@ -25,8 +26,9 @@ enum BackgroundTaskStatus {
   failed('FAILED'),
   cancelled('CANCELLED');
 
-  final String value;
   const BackgroundTaskStatus(this.value);
+
+  final String value;
 
   static BackgroundTaskStatus fromString(String value) => BackgroundTaskStatus.values.firstWhere(
       (e) => e.value == value,

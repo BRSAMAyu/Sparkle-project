@@ -70,11 +70,10 @@ class _ExpandableSectionState extends State<ExpandableSection>
   }
 
   /// 检查是否有实际内容（用于智能展开）
-  bool _hasContent() {
-    // 简单的启发式检查：如果子组件不是空的 SizedBox，认为有内容
-    // 调用方可以通过 smartExpand 参数让组件自动判断
-    return true;
-  }
+  ///
+  /// 简单的启发式检查：如果子组件不是空的 SizedBox，认为有内容
+  /// 调用方可以通过 smartExpand 参数让组件自动判断
+  bool _hasContent() => true;
 
   void _toggle() {
     setState(() {

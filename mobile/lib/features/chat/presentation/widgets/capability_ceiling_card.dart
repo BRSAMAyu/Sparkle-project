@@ -23,7 +23,7 @@ class CapabilityCeilingCard extends ConsumerStatefulWidget {
   /// Data payload from the backend or local detection.
   /// Expected keys:
   /// - `reason`: String — what the AI couldn't do
-  /// - `suggested_modes`: List<String> — API values of suggested modes
+  /// - `suggested_modes`: `List<String>` — API values of suggested modes
   /// - `fallback_message`: String — message when no alternatives available
   final Map<String, dynamic> ceilingData;
 

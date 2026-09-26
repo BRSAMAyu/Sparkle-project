@@ -86,9 +86,9 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
   }
 
   @override
-  bool isFormatSupported(ExportFormat format) {
-    return format != ExportFormat.pdfReport; // PDF not implemented
-  }
+  bool isFormatSupported(ExportFormat format) =>
+      // PDF not implemented
+      format != ExportFormat.pdfReport;
 
   @override
   List<ExportFormat> getSupportedFormats() => [

@@ -584,7 +584,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           !_canShowAuroraOpenerOver(ref.read(chatProvider).messages)) {
         return false;
       }
-      ref.read(activePlanProvider.notifier).selectPlan(sprintPlanId);
+      ref.read(activePlanProvider.notifier).selectedPlanId = sprintPlanId;
     }
 
     final todayKey = _dateKey(DateTime.now());
@@ -796,7 +796,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     if ((selectedPlanId == null || selectedPlanId.isEmpty) &&
         comebackPlanId.isNotEmpty) {
-      ref.read(activePlanProvider.notifier).selectPlan(comebackPlanId);
+      ref.read(activePlanProvider.notifier).selectedPlanId = comebackPlanId;
     }
 
     if (comeback.shouldShowBanner) {

@@ -103,7 +103,7 @@ class MultiAgentBar extends ConsumerWidget {
   ) {
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     // Set the mode before navigating
-    ref.read(chatModeNotifierProvider.notifier).setMode(mode);
+    ref.read(chatModeNotifierProvider.notifier).mode = mode;
     ref.read(lastMultiAgentModeProvider.notifier).state = mode;
     // Navigate to chat
     context.go('/chat');

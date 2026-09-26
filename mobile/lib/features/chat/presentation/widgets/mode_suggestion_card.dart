@@ -54,7 +54,7 @@ class _ModeSuggestionCardState extends ConsumerState<ModeSuggestionCard> {
                   label: context.l10n.chatModeSwitch,
                   onPressed: () {
                     final mode = ChatMode.fromApiValue(suggestedMode);
-                    ref.read(chatModeProvider.notifier).setMode(mode);
+                    ref.read(chatModeProvider.notifier).mode = mode;
                     ref.read(lastMultiAgentModeProvider.notifier).setMode(mode);
                     setState(() => _dismissed = true);
                   },

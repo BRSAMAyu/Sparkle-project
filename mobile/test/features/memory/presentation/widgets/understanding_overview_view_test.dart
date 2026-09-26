@@ -18,9 +18,6 @@ import '../../../../shared/i18n_test_helper.dart';
 /// - Why-this receipt 渲染（含 honest-unknown）；
 /// - 修改/删除/暂停操作调用真实 repository 契约。
 class _FakeProvenanceRepository implements MemoryProvenanceRepository {
-  _FakeProvenanceRepository({this.withSource = false});
-
-  final bool withSource;
   List<ProvenanceMemoryItem> items = [];
   String? updatedContent;
   String? revokedId;

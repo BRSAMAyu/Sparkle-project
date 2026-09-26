@@ -291,8 +291,8 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                           onQuote: isPrivateAgentMessage(message)
                               ? null
                               : (msg) => setState(
-                                    () => notifier
-                                        .setQuote(msg as PrivateMessageInfo?),
+                                    () => notifier.quotedMessage =
+                                        msg as PrivateMessageInfo?,
                                   ),
                           onRevoke: isPrivateAgentMessage(message)
                               ? (msg) => ref
@@ -458,7 +458,8 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
               controller: _composerController,
               focusNode: _composerFocusNode,
               quotedMessage: notifier.quotedMessage,
-              onCancelQuote: () => setState(() => notifier.setQuote(null)),
+              onCancelQuote: () =>
+                  setState(() => notifier.quotedMessage = null),
               onSend: (text, {replyToId}) {
                 setState(() => _assistantOriginalDraft = null);
                 unawaited(

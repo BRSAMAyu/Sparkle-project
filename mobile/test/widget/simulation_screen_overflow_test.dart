@@ -101,10 +101,6 @@ class _ControllableSimulationNotifier extends SimulationNotifier {
     state = initialState;
   }
 
-  void setSimulationState(SimulationState nextState) {
-    state = nextState;
-  }
-
   @override
   Future<void> loadRecommendedSeeds({
     String? scenarioKey,
@@ -241,9 +237,8 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    notifier.setSimulationState(
-      SimulationState(
-        session: SimulationSessionModel(
+    notifier.state = SimulationState(
+      session: SimulationSessionModel(
           id: 'live-session-1',
           scenarioKey: 'study_group',
           state: 'RUNNING',
@@ -260,14 +255,13 @@ void main() {
           ),
           insightSummary: '这轮重点是把先序、中序、后序和层序放回同一个结构图里理解。',
         ),
-        liveRounds: List<SimulationRoundModel>.generate(
-          18,
-          (index) => SimulationRoundModel(
-            round: index + 1,
-            speaker: index.isEven ? '数学专家' : '学习伙伴',
-            message: '第 ${index + 1} 轮讨论，围绕遍历顺序、递归心智模型和易错点继续展开。',
-            turnGoal: index == 0 ? 'open' : 'refine',
-          ),
+      liveRounds: List<SimulationRoundModel>.generate(
+        18,
+        (index) => SimulationRoundModel(
+          round: index + 1,
+          speaker: index.isEven ? '数学专家' : '学习伙伴',
+          message: '第 ${index + 1} 轮讨论，围绕遍历顺序、递归心智模型和易错点继续展开。',
+          turnGoal: index == 0 ? 'open' : 'refine',
         ),
       ),
     );

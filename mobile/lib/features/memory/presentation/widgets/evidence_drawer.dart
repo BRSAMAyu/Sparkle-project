@@ -323,9 +323,7 @@ class _EvidenceDrawerSheetState extends State<_EvidenceDrawerSheet> {
 
   List<Map<String, dynamic>> _resolveItems() {
     final resolved = <Map<String, dynamic>>[];
-    for (final item in widget.items) {
-      resolved.add(item);
-    }
+    widget.items.forEach(resolved.add);
     return resolved;
   }
 

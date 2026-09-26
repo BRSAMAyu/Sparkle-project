@@ -194,39 +194,38 @@ class AgentAvatarSwitcher extends StatelessWidget {
     );
   }
 
-  Widget _buildAgentIcon(AgentConfig config) {
-    // 必须给唯一Key，否则AnimatedSwitcher认为没有变化
-    return Container(
-      key: ValueKey(agentType),
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: config.color.withValues(alpha: 0.2), // 背景色
-        border: Border.all(
-          color: config.color,
-          width: 2,
-        ),
-        // 添加微妙的阴影效果
-        boxShadow: [
-          BoxShadow(
-            color: config.color.withValues(alpha: 0.3),
-            blurRadius: 8,
+  Widget _buildAgentIcon(AgentConfig config) =>
+      // 必须给唯一Key，否则AnimatedSwitcher认为没有变化
+      Container(
+        key: ValueKey(agentType),
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: config.color.withValues(alpha: 0.2), // 背景色
+          border: Border.all(
+            color: config.color,
+            width: 2,
           ),
-        ],
-      ),
-      child: showPulseAnimation
-          ? _PulsingIcon(
-              icon: config.icon,
-              color: config.color,
-            )
-          : Icon(
-              config.icon,
-              color: config.color,
-              size: size * 0.5,
+          // 添加微妙的阴影效果
+          boxShadow: [
+            BoxShadow(
+              color: config.color.withValues(alpha: 0.3),
+              blurRadius: 8,
             ),
-    );
-  }
+          ],
+        ),
+        child: showPulseAnimation
+            ? _PulsingIcon(
+                icon: config.icon,
+                color: config.color,
+              )
+            : Icon(
+                config.icon,
+                color: config.color,
+                size: size * 0.5,
+              ),
+      );
 }
 
 /// 脉冲动画图标 - 用于Orchestrator思考时的呼吸效果

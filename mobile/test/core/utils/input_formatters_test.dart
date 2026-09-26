@@ -10,7 +10,7 @@ void main() {
       final formatter = SparkleInputFormatters.digitsOnly.first
           as FilteringTextInputFormatter;
       return formatter.formatEditUpdate(
-        const TextEditingValue(),
+        TextEditingValue.empty,
         value,
       );
     }

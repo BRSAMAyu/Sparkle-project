@@ -93,11 +93,9 @@ class _TranslatableTextState extends ConsumerState<TranslatableText> {
       domain: widget.domain,
       onSaved: () {
         Navigator.of(context).pop();
-        if (widget.onSaveToKnowledge != null) {
-          // Note: Translation result is not available in callback
-          // In a real implementation, we'd need to pass the translation result
-          widget.onSaveToKnowledge!(selectedText, '');
-        }
+        // Note: Translation result is not available in callback
+        // In a real implementation, we'd need to pass the translation result
+        widget.onSaveToKnowledge?.call(selectedText, '');
       },
     );
   }
@@ -124,9 +122,7 @@ class _TranslatableTextState extends ConsumerState<TranslatableText> {
                 initiallyExpanded: true,
                 onSaveToKnowledge: () {
                   Navigator.of(context).pop();
-                  if (widget.onSaveToKnowledge != null) {
-                    widget.onSaveToKnowledge!(selectedText, '');
-                  }
+                  widget.onSaveToKnowledge?.call(selectedText, '');
                 },
               ),
             ),
@@ -209,20 +205,14 @@ class _TranslatableTextState extends ConsumerState<TranslatableText> {
 
 /// Helper class for text selection management
 class TextSelectionController {
-  TextSelection? _currentSelection;
-
-  TextSelection? get currentSelection => _currentSelection;
-
-  void updateSelection(TextSelection selection) {
-    _currentSelection = selection;
-  }
+  TextSelection? currentSelection;
 
   void clearSelection() {
-    _currentSelection = null;
+    currentSelection = null;
   }
 
   void dispose() {
-    _currentSelection = null;
+    currentSelection = null;
   }
 }
 

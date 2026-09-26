@@ -112,7 +112,7 @@ class GalaxyDraftBatch {
         json['drafts'] ?? json['nodes'] ?? json['items'] ?? json['entries'];
     final drafts = switch (rawDrafts) {
       final List<dynamic> values => values
-          .whereType<Map>()
+          .whereType<Map<dynamic, dynamic>>()
           .map(
             (value) => GalaxyDraftNode.fromJson(
               Map<String, dynamic>.from(value),

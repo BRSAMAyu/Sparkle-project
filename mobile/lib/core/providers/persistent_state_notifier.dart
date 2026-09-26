@@ -448,7 +448,7 @@ class EnumPersistentNotifier<T extends Enum> extends PersistentNotifier<T> {
   T get currentValue => state;
 
   /// Set a new enum value
-  void setValue(T value) {
+  set currentValue(T value) {
     state = value;
   }
 }

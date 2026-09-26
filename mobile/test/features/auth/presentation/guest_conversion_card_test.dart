@@ -118,7 +118,7 @@ void main() {
   });
 
   testWidgets('点「注册并同步进度」→ 落 /register 路由，且本会话硬关', (tester) async {
-    final (router, _) = await pumpCard(tester, isGuest: true, seedSignal: true);
+    final (_, _) = await pumpCard(tester, isGuest: true, seedSignal: true);
 
     await tester.tap(find.text('注册并同步进度'));
     await tester.pumpAndSettle();

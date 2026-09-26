@@ -213,7 +213,7 @@ class FocusStatistics extends _$FocusStatistics {
   /// Set the view period
   void setPeriod(StatsViewPeriod newPeriod) {
     // Update the persisted period
-    ref.read(statsViewPeriodProvider.notifier).setValue(newPeriod);
+    ref.read(statsViewPeriodProvider.notifier).currentValue = newPeriod;
 
     state = state.copyWith(period: newPeriod);
 

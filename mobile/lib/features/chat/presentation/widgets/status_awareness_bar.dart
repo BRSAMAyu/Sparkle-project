@@ -868,9 +868,7 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
       evidence.add(normalized);
     }
 
-    for (final item in snapshot.statusEvidenceChain) {
-      add(item);
-    }
+    snapshot.statusEvidenceChain.forEach(add);
     if (snapshot.timeContext.visible && snapshot.timeContext.label.isNotEmpty) {
       add(snapshot.timeContext.subtitle.trim().isEmpty
           ? snapshot.timeContext.label
@@ -882,9 +880,7 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
           : '${snapshot.taskHealth.label} · ${snapshot.taskHealth.subtitle}',);
     }
     for (final facet in snapshot.facets) {
-      for (final signal in facet.signals) {
-        add(signal);
-      }
+      facet.signals.forEach(add);
       if (evidence.length >= 5) {
         break;
       }

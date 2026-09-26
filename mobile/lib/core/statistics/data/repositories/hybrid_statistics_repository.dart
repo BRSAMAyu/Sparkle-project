@@ -195,6 +195,8 @@ abstract class HybridStatisticsRepository<T extends StatisticsEntity>
     }
   }
 
+  // Default implementation: return empty list
+  // Subclasses should override this with actual data
   @override
   Future<List<StatisticsDataPoint>> getTimeSeriesData(
     StatisticsPeriod period, {
@@ -202,22 +204,16 @@ abstract class HybridStatisticsRepository<T extends StatisticsEntity>
     int? limit,
     DateTime? customStart,
     DateTime? customEnd,
-  }) async {
-    // Default implementation: return empty list
-    // Subclasses should override this with actual data
-    return [];
-  }
+  }) async => [];
 
+  // Default implementation: return empty map
+  // Subclasses should override this with actual metrics
   @override
   Future<Map<String, double>> getOverviewMetrics(
     StatisticsPeriod period, {
     DateTime? customStart,
     DateTime? customEnd,
-  }) async {
-    // Default implementation: return empty map
-    // Subclasses should override this with actual metrics
-    return {};
-  }
+  }) async => {};
 
   @override
   Future<void> clearCache() async {

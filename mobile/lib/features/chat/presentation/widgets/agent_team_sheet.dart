@@ -220,7 +220,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
  final mode = _buildMode();
  ref
  .read(chatModeNotifierProvider.notifier)
- .setMode(mode);
+ .mode = mode;
  if (mode.apiValue != 'standard') {
  ref
  .read(lastMultiAgentModeProvider.notifier)

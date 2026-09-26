@@ -42,7 +42,6 @@ void main() {
     var guard = 0;
     while (currentStep() < 4 && guard < 24) {
       final candidates = find.text('下一步');
-      final count = tester.widgetList(candidates).length;
       final before = currentStep();
       final tappable = candidates.hitTestable();
       final tappableCount = tester.widgetList(tappable).length;

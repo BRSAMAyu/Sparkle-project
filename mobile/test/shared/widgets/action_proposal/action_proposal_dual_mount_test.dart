@@ -48,10 +48,15 @@ void main() {
   /// task 挂载的假收件箱：记录命令调用（测试夹具，非生产行为）。
   late _RecordingRepository repository;
 
-  ActionProposalCardData projectionData() => ActionProposalCardData.fromChatPayload(
-        // 非 const：proposalPayload 已含 'status'，const 下重复键为编译错误。
-        <String, dynamic>{...proposalPayload, 'status': 'awaiting_user'},
-      );
+  // 非 const：proposalPayload 已含 'status'，const 下重复键为编译错误；
+  // 先落局部变量再传参，保持强制覆盖 status 的夹具语义不变。
+  ActionProposalCardData projectionData() {
+    final payload = <String, dynamic>{
+      ...proposalPayload,
+      'status': 'awaiting_user',
+    };
+    return ActionProposalCardData.fromChatPayload(payload);
+  }
 
   testWidgets('chat 挂载：action_proposal payload 渲染统一卡片，确认经 onWidgetAction 透传幂等键',
       (tester) async {

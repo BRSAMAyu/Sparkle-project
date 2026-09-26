@@ -269,9 +269,7 @@ class _AuroraCalibrationPanelState extends State<AuroraCalibrationPanel>
     );
 
   void _handleConfirm(String option) {
-    if (widget.onConfirm != null) {
-      widget.onConfirm!(option);
-    }
+    widget.onConfirm?.call(option);
     setState(() => _phase = _CalibrationPhase.confirmed);
   }
 

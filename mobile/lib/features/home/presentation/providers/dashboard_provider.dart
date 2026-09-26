@@ -47,7 +47,7 @@ class DashboardState {
         error = null,
         failure = null;
 
-  DashboardState.error(String errorMessage, {AppFailure? failure})
+  DashboardState.error(String errorMessage, {this.failure})
       : weather = WeatherData(type: 'sunny', condition: ''),
         flame = FlameData(level: 1, brightness: 0.0, todayFocusMinutes: 0),
         sprint = null,
@@ -62,8 +62,7 @@ class DashboardState {
         whatChangedCard = null,
         nextMoveCard = null,
         isLoading = false,
-        error = errorMessage,
-        failure = failure;
+        error = errorMessage;
   final WeatherData weather;
   final FlameData flame;
   final SprintData? sprint;

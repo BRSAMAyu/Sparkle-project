@@ -69,7 +69,7 @@ class _StreakDetailsScreenState extends ConsumerState<StreakDetailsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const _AnimatedSection(
-                    delay: Duration(),
+                    delay: Duration.zero,
                     child: StreakIndicator(
                       style: StreakIndicatorStyle.full,
                     ),

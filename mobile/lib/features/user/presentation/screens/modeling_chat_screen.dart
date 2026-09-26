@@ -888,7 +888,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
       if (!mounted) return;
       try {
         if (resolvedPlanId != null && resolvedPlanId.isNotEmpty) {
-          ref.read(activePlanProvider.notifier).selectPlan(resolvedPlanId);
+          ref.read(activePlanProvider.notifier).selectedPlanId = resolvedPlanId;
           ref.invalidate(planDetailProvider(resolvedPlanId));
         }
         ref
@@ -982,7 +982,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
     if (sprint == null) {
       return null;
     }
-    ref.read(activePlanProvider.notifier).selectPlan(sprint.id);
+    ref.read(activePlanProvider.notifier).selectedPlanId = sprint.id;
     return '/plans/${sprint.id}';
   }
 

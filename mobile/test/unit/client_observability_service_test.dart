@@ -69,9 +69,7 @@ class _RecordingAdapter implements HttpClientAdapter {
   ) async {
     final chunks = <int>[];
     if (requestStream != null) {
-      await for (final chunk in requestStream) {
-        chunks.addAll(chunk);
-      }
+      await requestStream.forEach(chunks.addAll);
     }
     final payload = chunks.isEmpty
         ? <String, dynamic>{}

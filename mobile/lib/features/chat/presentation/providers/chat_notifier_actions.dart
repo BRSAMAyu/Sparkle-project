@@ -134,7 +134,7 @@ extension ChatNotifierActions on ChatNotifier {
         if (planId.isEmpty) {
           return;
         }
-        _ref.read(activePlanProvider.notifier).selectPlan(planId);
+        _ref.read(activePlanProvider.notifier).selectedPlanId = planId;
         await switchPlanSession(planId);
         state = state.copyWith(
           lastActionStatus: 'plan_switched',

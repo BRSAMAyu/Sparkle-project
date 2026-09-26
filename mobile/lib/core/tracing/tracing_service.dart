@@ -28,7 +28,7 @@ class TracingService {
   static TracingServiceBase get instance => _instance;
 
   @visibleForTesting
-  static void overrideForTest(TracingServiceBase service) {
+  static set overrideForTest(TracingServiceBase service) {
     _instance = service;
   }
 }

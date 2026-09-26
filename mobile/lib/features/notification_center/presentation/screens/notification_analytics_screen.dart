@@ -609,7 +609,7 @@ class _NotificationAnalyticsScreenState
         trends.map((t) => t.sent).reduce((a, b) => a > b ? a : b).toDouble();
 
     return CustomPaint(
-      size: const Size(double.infinity, double.infinity),
+      size: Size.infinite,
       painter: _TrendChartPainter(trends, maxValue, DS.info),
     );
   }

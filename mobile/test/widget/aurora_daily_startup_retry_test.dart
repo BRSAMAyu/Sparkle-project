@@ -187,7 +187,7 @@ void main() {
             startupRepository,
           ),
           activePlanProvider.overrideWith(
-            (ref) => ActivePlanNotifier(ref)..selectPlan('plan-1'),
+            (ref) => ActivePlanNotifier(ref)..selectedPlanId = 'plan-1',
           ),
           chatProvider.overrideWith(
             (ref) => _StartupChatNotifier(_FakeChatRepository(), ref),
@@ -240,7 +240,7 @@ void main() {
             startupRepository,
           ),
           activePlanProvider.overrideWith(
-            (ref) => ActivePlanNotifier(ref)..selectPlan('plan-1'),
+            (ref) => ActivePlanNotifier(ref)..selectedPlanId = 'plan-1',
           ),
           chatProvider.overrideWith(
             (ref) => _StartupChatNotifier(_FakeChatRepository(), ref),

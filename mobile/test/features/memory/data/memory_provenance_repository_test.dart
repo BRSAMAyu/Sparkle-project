@@ -11,8 +11,6 @@ class _RecordingApiClient implements ApiClient {
 
   Map<String, dynamic> response = {};
 
-  void reply(Map<String, dynamic> json) => response = json;
-
   @override
   Future<Response<T>> get<T>(
     String path, {
@@ -107,7 +105,7 @@ void main() {
   group('MemoryProvenanceRepository request shapes (M-08 contract)', () {
     test('listItems hits GET /memory/provenance/items with bucket filter', () async {
       final api = _RecordingApiClient()
-        ..reply({
+        ..response = ({
           'items': [
             {
               'kind': 'episodic',
@@ -151,7 +149,7 @@ void main() {
 
     test('updateItem POSTs corrected content to the update endpoint', () async {
       final api = _RecordingApiClient()
-        ..reply({
+        ..response = ({
           ..._item().toJsonLike(),
           'superseded_id': '11111111-1111-1111-1111-111111111111',
           'memory_epoch': 7,
@@ -176,7 +174,7 @@ void main() {
     });
 
     test('updateScope PUTs pause/resume/link_plan actions', () async {
-      final api = _RecordingApiClient()..reply({'changed': true});
+      final api = _RecordingApiClient()..response = ({'changed': true});
       final repo = MemoryProvenanceRepository(api);
       const id = '11111111-1111-1111-1111-111111111111';
 
@@ -201,7 +199,7 @@ void main() {
 
     test('updateScope PUTs link_task with task_id (U-03 contract)', () async {
       final api = _RecordingApiClient()
-        ..reply({'changed': true, 'memory_epoch': 5});
+        ..response = ({'changed': true, 'memory_epoch': 5});
       final repo = MemoryProvenanceRepository(api);
       const id = '11111111-1111-1111-1111-111111111111';
 
@@ -223,7 +221,7 @@ void main() {
 
     test('revokeItem POSTs to the revoke endpoint with reason', () async {
       final api = _RecordingApiClient()
-        ..reply({'status': 'revoked', 'revoked': true});
+        ..response = ({'status': 'revoked', 'revoked': true});
       final repo = MemoryProvenanceRepository(api);
       const id = '11111111-1111-1111-1111-111111111111';
 
@@ -241,7 +239,7 @@ void main() {
 
     test('whyThis POSTs the memory_use_receipt structure', () async {
       final api = _RecordingApiClient()
-        ..reply({
+        ..response = ({
           'memory': {
             'kind': 'episodic',
             'id': '11111111-1111-1111-1111-111111111111',

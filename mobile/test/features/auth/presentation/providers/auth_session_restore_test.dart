@@ -160,7 +160,6 @@ void main() {
         () => container.read(authProvider).isLoading == false,
       );
 
-      final authState = container.read(authProvider);
       expect(authRepo.clearTokensCallCount, 0);
       expect(await authRepo.getAccessToken(), isNotNull);
     });

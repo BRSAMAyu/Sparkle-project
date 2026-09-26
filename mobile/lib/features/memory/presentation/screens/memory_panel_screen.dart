@@ -1110,10 +1110,9 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
     return '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
   }
 
-  String _formatSceneTime(DateTime start, DateTime end) {
-    // S2 例2/X8：时间 Range 走唯一格式化入口；起止相同折叠为单点，禁毫秒。
-    return formatSparkleSceneRange(start, end, context.l10n);
-  }
+  // S2 例2/X8：时间 Range 走唯一格式化入口；起止相同折叠为单点，禁毫秒。
+  String _formatSceneTime(DateTime start, DateTime end) =>
+      formatSparkleSceneRange(start, end, context.l10n);
 
   String _labelForForesightDim(String dim) {
     switch (dim) {

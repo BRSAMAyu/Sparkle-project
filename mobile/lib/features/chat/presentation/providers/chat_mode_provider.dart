@@ -33,8 +33,8 @@ class ChatModeNotifier extends PersistentNotifier<ChatMode> {
               value != null ? ChatMode.fromApiValue(value) : standard,
         );
 
-  /// Set the chat mode
-  void setMode(ChatMode mode) {
+  /// The current chat mode (assignment persists the value)
+  set mode(ChatMode mode) {
     state = mode;
   }
 

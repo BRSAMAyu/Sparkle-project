@@ -32,7 +32,7 @@ void main() {
         ),
       ];
       final positions = <String, Offset>{
-        'root': const Offset(0, 0),
+        'root': Offset.zero,
         'child': const Offset(100, 0),
         'locked': const Offset(200, 0),
       };
@@ -65,7 +65,7 @@ void main() {
         _node(id: 'b', unlocked: true),
       ];
       final positions = <String, Offset>{
-        'a': const Offset(0, 0),
+        'a': Offset.zero,
         'b': const Offset(800, 200),
       };
       final adjacency = <String, Set<String>>{
@@ -106,7 +106,7 @@ void main() {
         strength: 0.8,
       );
       final positions = <String, Offset>{
-        'root': const Offset(0, 0),
+        'root': Offset.zero,
         'child': const Offset(120, 0),
       };
       final adjacency = <String, Set<String>>{
@@ -152,7 +152,7 @@ void main() {
             id: 'left-leaf', sourceId: 'left', targetId: 'leaf',),
       ];
       final positions = <String, Offset>{
-        'hub': const Offset(0, 0),
+        'hub': Offset.zero,
         'left': const Offset(-120, 0),
         'right': const Offset(120, 0),
         'leaf': const Offset(-220, 30),

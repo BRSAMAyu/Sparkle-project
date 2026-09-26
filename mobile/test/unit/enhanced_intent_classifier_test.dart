@@ -326,9 +326,7 @@ void main() {
       test('handles bulk classification efficiently', () {
         final texts = List.generate(100, (i) => '学习$i');
         final stopwatch = Stopwatch()..start();
-        for (final text in texts) {
-          EnhancedIntentClassifier.classify(text);
-        }
+        texts.forEach(EnhancedIntentClassifier.classify);
         stopwatch.stop();
         expect(stopwatch.elapsedMilliseconds, lessThan(200));
       });
