@@ -5,10 +5,10 @@
  "slots": 6,
  "active": {
   "wt522": "FIX-210 批三死键收割（1308 阵亡 20:04 复活 22:36，脏进度保留）",
-  "wt526": "FIX-250 写侧钟 tasks.py snooze/plans（1308 阵亡复活 22:36）",
   "wt528": "mypy 批三烧减 922→≤880 棘轮 @8f858bc4",
   "wt529": "FIX-247 启动期 VE warm refresh 403 噪声（wt523 新发现同族卡，复用 releaseFlagsProvider）@42fc3ffd",
-  "wt530": "flutter analyze 批三烧减 INFO 458→≤418/CASCADE 219 续烧 @eac44bc3"
+  "wt530": "flutter analyze 批三烧减 INFO 458→≤418/CASCADE 219 续烧 @eac44bc3",
+  "wt531": "时区层四收官 FIX-243+251（checkpoint 游标/计划排程网格/aurora 兜底钟）@a1af1a57"
  },
  "done": [
   "A-01",
@@ -528,7 +528,8 @@
   "wt519: FIX-233 宿主机钟六面（5caa5355）",
   "wt524",
   "wt523",
-  "wt527"
+  "wt527",
+  "wt526"
  ],
  "blocked": [],
  "notes": [
@@ -644,6 +645,7 @@
   "R(21:0x): wt519 集成（5caa5355/6a7a2665→b8e2e976+docs）：FIX-233 宿主机钟六面（+8h 硬编码→真 tz，上海用户逐位不变）；合并态 922 持平。号段事故四步复位终态（wt519 写侧行 250/发现 251/phase5 244 归位去重）。补位 wt526=FIX-250 写侧钟（252 号段）。在航 5+1：wt522/523/524/525/526。CI Backend 仍跑（~100min 窗尾）。零推送 hold（本地 43 commit）。",
   "2026-09-26 22:40 轮：①run 36235767634 裁决=契约门（唯一红层 OpenAPI，diff 仅 heatmap description 被 FIX-37 文档更新快照未随刷）——非产品问题，修复已在本地 92e418ba（19:34 重刷先于诊断确认），本地导出+check 双过逐字节一致实证；②wt524 FIX-240 集成完毕（cherry-pick 284df9e3+8fbd1fe9→60e6e1d2/8f858bc4，union-merge 1 块零吞行，合并态 4 套件 22 绿+mypy 922=922，worktree 已清）；③62 commit 已推（4a25235e..8f858bc4，两步纪律：gh run list 确认零在航后独立 push）——新 run 首次同栈带齐五绿条件（Python 12851 先例/Flutter B-01/风格门 306/flaky 钉死/快照重刷），全绿裁决前零推送；④1308 三阵亡（wt522/523/526，20:04 死）21:50:39 重置后 22:36 全部 SendMessage 复活；⑤补位 wt527(FIX-249 真行为差)/wt528(mypy 批三)满编 6 槽；⑥swap 15.5G≥1.2G：DEFERRED 测试账以在航全层 CI run（8f858bc4 全量后端+flutter）+ 本轮本地 semantic 22 绿/mypy 922 复验清账。三问：在航 5 槽（wt522/523/526/527/528）；空槽 0；下一卡=CI 全绿裁决后→wt523 若归 FIX-190 集成、analyze 批三（INFO 458/CASCADE 219 继续烧）、FIX-243/251 时区层四余项（wt526 返航后串行派）。",
   "2026-09-26 23:0x 轮：wt523 FIX-190 集成完毕（cherry-pick 82ce8214+b6e69de7→a1ff051f/42fc3ffd，union-merge 1 块零吞行且 190 FIXED 行+247 新行俱存；合并态 flutter 触达 13 绿含 flag-on 双守卫、mypy 922=922 零漂移（其分支基线 928 系旧 main 口径，零 Python diff 合并后无冲突面）、worktree 已清）——移动端消费面 403 噪声主族收口（unlock 两动线+弹窗叙事），新登记 FIX-247（shell_navigation 启动期 VE warm refresh 同族）。wt529 立即补位（基线 42fc3ffd 含 releaseFlagsProvider 可复用）。CI run 36249150918 在航（8f858bc4，五绿条件同栈首跑），裁决前零推送——wt523/wt529 集成 commit 留本地待 run 裁决后随推。三问：在航 5 槽（wt522/526/527/528/529）；空槽 0；下一卡=CI 裁决→wt522 批三集成→analyze 批三或 FIX-243 时区（wt526 返航后）。",
-  "2026-09-26 23:1x 轮：wt527 FIX-249 集成完毕（cherry-pick e239d86b+bf656bf0 零冲突，合并态 11/11 绿+mypy 922=922，台账 FIXED 行在，树已清）——字符串 fallback 哨兵判空落 call/chat 两处，vocabulary 词联想失败从假词['词典服务暂时不可用']改为 []、definitions 面从假定义行改为占位句，同型 3 处核验零行为变更；wt530 立即补位（analyze 批三，基线 eac44bc3）。CI run 36249150918 仍在航。三问：在航 5 槽（wt522/526/528/529/530）；空槽 0；下一卡=CI 裁决→wt526 返航后 FIX-243/251 时区层四串行→l10n 批四。"
+  "2026-09-26 23:1x 轮：wt527 FIX-249 集成完毕（cherry-pick e239d86b+bf656bf0 零冲突，合并态 11/11 绿+mypy 922=922，台账 FIXED 行在，树已清）——字符串 fallback 哨兵判空落 call/chat 两处，vocabulary 词联想失败从假词['词典服务暂时不可用']改为 []、definitions 面从假定义行改为占位句，同型 3 处核验零行为变更；wt530 立即补位（analyze 批三，基线 eac44bc3）。CI run 36249150918 仍在航。三问：在航 5 槽（wt522/526/528/529/530）；空槽 0；下一卡=CI 裁决→wt526 返航后 FIX-243/251 时区层四串行→l10n 批四。",
+  "2026-09-26 23:3x 轮：wt526 FIX-250 集成完毕（cherry-pick 0905200c+44a8fad1，union-merge 1 块零吞行 FIXED 行在；合并态新 8 测+全时区族 66 绿、mypy 922=922，树已清）——due_date/target_date 写侧三面（snooze 落库/replan today 三同源/archive days_ahead）切用户本地日，tasks.py/plans.py 活体 date.today() 清零。wt531 立即补位=时区层四收官卡（FIX-243 checkpoint 游标 + FIX-251 计划排程网格/aurora 兜底钟，两行 OPEN 合一卡，基线 a1af1a57）。CI run 36249150918 仍在航（>55min）。三问：在航 5 槽（wt522/528/529/530/531）；空槽 0；下一卡=CI 裁决→wt531 返航即层四全清→l10n 批四/mypy 批四。"
  ]
 }
