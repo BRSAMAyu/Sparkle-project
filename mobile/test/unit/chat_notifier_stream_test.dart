@@ -314,8 +314,9 @@ void main() {
       // 现为截断（failed+STREAM_INTERRUPTED，裸文本不落地，见
       // chat_provider_test 的 STREAM_INTERRUPTED 专项测）。本测守卫面，
       // 用 DoneEvent 正常收尾。
-      firstController.add(TextEvent(content: 'stale'));
-      firstController.add(DoneEvent(finishReason: 'STOP'));
+      firstController
+        ..add(TextEvent(content: 'stale'))
+        ..add(DoneEvent(finishReason: 'STOP'));
       await firstController.close();
       await firstFuture;
       await _settleChat();
@@ -378,8 +379,9 @@ void main() {
 
       // 旧流继续正常收束（wt466 V3-FIX-155：正常收束需显式终态帧），
       // 已生成部分完整落地。
-      firstController.add(TextEvent(content: ' MORE'));
-      firstController.add(DoneEvent(finishReason: 'STOP'));
+      firstController
+        ..add(TextEvent(content: ' MORE'))
+        ..add(DoneEvent(finishReason: 'STOP'));
       await firstController.close();
       await firstFuture;
       await _settleChat();
