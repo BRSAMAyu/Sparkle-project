@@ -4,45 +4,11 @@
  "baseline_head": "fedd27e35e305502ba727ba8c3fb46eae33a1eb9",
  "slots": 6,
  "active": {
-  "B-02": {
-   "stage": "DONE",
-   "note": "R1+R2 双路 CHANGES 全处置(C1-C6+P3), 20行lineage 13列解析验证, 验收SQL双路复算一致",
-   "since": "2026-09-19T13:10"
-  },
-  "wt379-r2verify-fix": {
-   "stage": "IN_FLIGHT",
-   "since": "16:50",
-   "note": "双轮审查轮2:复核 WT378-01/02/03/04/08/09+修存活项,base c1ff62a5"
-  },
-  "wt396-p23-sweep": {
-   "stage": "IN_FLIGHT",
-   "since": "21:58",
-   "note": "轮3存活 P2/P3 清扫(F5 里程碑错位/F6 kick 补偿/F7 评估事件隔离)"
-  },
-  "wt406-q06-perf": {
-   "stage": "IN_FLIGHT",
-   "since": "00:15",
-   "note": "Q-06 性能/成本/供应商波动终验(三路:分层100样本p50p95+429/TTFT/queue注入+token-memory增长曲线),FIX编号77起,带磁盘纪律嘱咐(2.4G余量)",
-   "date": "2026-09-26"
-  },
-  "wt410-review-r4": {
-   "stage": "IN_FLIGHT",
-   "since": "01:10",
-   "note": "独立审查轮4:今晚产品码改动四簇(FIX-53 chat链/Q-03四修/主会话日志补修/wt396 F5F6),可证伪探针,FIX编号61-66",
-   "date": "2026-09-26"
-  },
-  "wt460-chaos": {
-   "stage": "IN_FLIGHT",
-   "since": "10:02",
-   "note": "wt448遗留集成验证:真引擎chaos复跑S2/S5+参数敏感性+S4b结论,独立端口栈不碰常驻",
-   "date": "2026-09-26"
-  },
-  "wt464-tail": {
-   "stage": "IN_FLIGHT",
-   "since": "10:34",
-   "note": "FIX-151 CI-only环境分歧2例/152 fixture钉中文词面,最后CI红族扫尾,空闲号153起",
-   "date": "2026-09-26"
-  }
+  "wt467": "FIX-156 pool",
+  "wt468": "review R7A backend",
+  "wt469": "review R7B gw+mobile",
+  "wt470": "FIX-147 EN negation",
+  "wt471": "FIX-160 memo"
  },
  "done": [
   "A-01",
@@ -491,7 +457,20 @@
    "title": "FIX-150双崩溃点(event_bus无条件绑模块级fail-soft单例+AsyncSessionLocal遮蔽同型第二点顺手修),真栈三形态验证降级运行",
    "merged": "f32575a0+ed7add48→主仓(本地,pick同SHA复现序列器残留已清),2测绿+ratchet 1099",
    "date": "2026-09-26"
-  }
+  },
+  {
+   "id": "wt460",
+   "title": "弹性真栈复验:S2成立(86→5连败/13.7s诚实UNAVAILABLE)+抓修集成残留(statechart包装致降级INTERNAL);S5改善但cap真栈不可达(pre-LLM连接顶);S4b模板消失但EOF半内容静默交付新形态;敏感性:45s在拐点下方;新发现FIX-155/156(撞号第七次重编号)",
+   "merged": "8b02ef43→主仓(本地,union+renumber),14测绿+ratchet 1099",
+   "date": "2026-09-26"
+  },
+  {
+   "id": "wt464",
+   "title": "终局CI卡:151根因=alembic env.py disable_existing_loggers杀app logger(PG门CI才触发,9轮二分实锤,推翻环境差假设)/152 fixture自始即错blame实证;增补七族全处置(priority改名漏扫/墙钟腐烂/g05池loop/Flutter prefs/evidence_cards),backend CI形状12719零红+mobile 2498零红;新发现153/154/158/159(155/156第八次撞号顺延)",
+   "merged": "aaca01bd+4ad78b88→主仓91cf83e7已推,验证7/7+45/45+ratchet 1099",
+   "date": "2026-09-26"
+  },
+  "wt466: FIX-155 SSE EOF 哨兵三轨修（0a322dff/60bb567e，集成于932073e4+310d6b22）"
  ],
  "blocked": [],
  "notes": [
@@ -543,6 +522,14 @@
   "10:09 wt456死于1301(内容过滤,注入样式载荷嫌疑),WIP保留;wt456b重派(载荷短小化纪律)。舰队:wt456b/458/460=3在航。CI冲绿run 36210706955在途(裁决~11:55)。三问:3在航;空3=CI裁决观察+预备;下张最高价值=CI裁决(绿=里程碑)",
   "10:28 wt456b+wt458集成(38测绿+PG门skip符合设计,worktree清);派wt462修FIX-150。CI冲绿run在途(裁决~11:55)。本地积压3提交待裁决后推。三问:2在航(wt460/462);空4=CI裁决观察+整合预备+额度余量;下张最高价值=CI裁决",
   "10:34 心跳:栈双200/盘7G,CI冲绿run在途(Backend Tests进行中)。派wt464扫尾151/152。三问:3在航(wt460/462/464);空3=CI裁决观察+整合预备+额度余量;下张最高价值=CI裁决(~11:55)",
-  "10:55 wt462集成(分支基于main头致pick复现同SHA,sequencer残留--quit清理,状态干净);worktree清。三问:2在航(wt460/464);空4=CI裁决观察(~11:55)+额度余量(窗~12:49)+预备;下张最高价值=CI裁决:绿=首个全量真绿里程碑→推6积压,红=残余分类"
+  "10:55 wt462集成(分支基于main头致pick复现同SHA,sequencer残留--quit清理,状态干净);worktree清。三问:2在航(wt460/464);空4=CI裁决观察(~11:55)+额度余量(窗~12:49)+预备;下张最高价值=CI裁决:绿=首个全量真绿里程碑→推6积压,红=残余分类",
+  "11:08 wt460集成(14测绿,worktree清);验证卡抓出真集成缺陷并修(statechart包装面单测测不到)——真栈复验的价值实证。舰剩wt464在航。CI冲绿run在途(裁决~11:55)。三问:1在航;空5=CI裁决观察+额度余量+预备(本窗将尽~12:49,新卡待新窗);下张最高价值=CI裁决",
+  "11:18 心跳:全绿,CI在途(~50min处,裁决~11:45-12:15)。day6门脚本预置/tmp/gate_day6.py(门5克隆改day6)。三问:1在航(wt464);空5=CI裁决观察+额度窗将尽(~12:49,新卡待新窗)+预备;下张最高价值=CI裁决",
+  "12:07 CI 36210706955裁决:★Backend Tests 88→4failed/12684passed(+124,双卡83例兑现兑现)+Flutter Tests新2failed(2484过)。Flutter失败#1定位:core_provider_keep_alive_test session refresh用例——容器缺auth三件套覆写(SPA mock+prefs+sessionBound),CI并行时序下warmUpConnection读真SPA抛错(本地绿=时序幸存)。#2未知待查。处置:SendMessage并入wt464扫尾范围(它在飞正理151/152族=后端4红大概率)。真绿冲刺=wt464一卡定音。三问:1在航(wt464,范围已扩);空5=CI裁决已消化+wt464收口预备+额度窗末端;下张最高价值=wt464落地→推→run复核→真绿登记",
+  "12:09 wt464中程进展回报:151两例已CI形状全量1:1复现=全量会话污染(非环境差),二分中(轮2:207-412文件);152已修(钉旧值纪律,初版即错三处词面改真值,双绿);Flutter双失败+后端4红名单核对进行中。方向健康无需干预。三问:1在航(wt464);空5=收口预备+额度窗末端;下张最高价值=wt464落地→大推送→真绿登记",
+  "12:50 CI 36218535747早段红(18min):router.py I001(wt456b的admin路由import未过isort)——ruff --fix秒修0bd1fc56已推,新run 36218978920开跑;教训并入管线:路由注册类改动提交前跑ruff check单文件。wt464仍在航(151二分中,load 3.3系其全量跑)。三问:1在航;空5=CI观察+收口预备+额度窗末端;下张最高价值=wt464落地→终局推送→真绿登记",
+  "13:30 wt464集成完毕+终局推送91cf83e7(首次push瞬态网络失败重试成);旧run合法取消,★真绿冲刺run开跑(全部最后六例修复在内)——裁决~14:45。舰队0在航(本轮全清)。若绿:登记首个全量真绿里程碑;若红:残余即最后名单。三问:0在航;空6=真绿裁决观察+新窗(12:49后)待派FIX-155(SSE EOF哨兵)+审查轮7;下张最高价值=CI裁决",
+  "13:34 心跳:全绿,真绿冲刺run在途(裁决~14:45)。派wt466修FIX-155(EOF哨兵)。审查轮7待下轮派(等真绿裁决后一起看wt444..464面)。三问:1在航(wt466);空5=真绿裁决观察+审查轮7预备+整合预备;下张最高价值=CI裁决",
+  "R(2026-09-25T15:0x): wt466(FIX-155 EOF哨兵)集成完成 cherry-pick 0a322dff+60bb567e 干净落地；台账大扫除——EOF行归位155/pool行归位156/删union双落重复13行（含78/79 wt448旧文），全表零重复ID；合并态三门绿（backend 9/9+mypy 1099+mobile chat_provider 9绿）；卫生commit 310d6b22；worktree/branch已清。CI真绿尝试 run 36220960164（91cf83e7）仍在跑→继续hold push。新窗满编派5：wt467=FIX-156 pre-pool瓶颈(P2真修) / wt468=审查轮7A(backend wt444..466流与编排) / wt469=审查轮7B(gateway+mobile wt444..466) / wt470=FIX-147 EN否定无撇号形 / wt471=FIX-160三轨持久化决策备忘(不动产品码)。FIX新号段：467→161-163,468→164-167,469→168-171,470→172-173,471→174。"
  ]
 }
