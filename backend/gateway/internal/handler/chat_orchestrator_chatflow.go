@@ -477,6 +477,17 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	if input.UseDocumentContext != nil && (h.chatHistory == nil || input.SessionID == "") {
 		useDocumentContext = *input.UseDocumentContext
 	}
+	// V3-FIX-169 (gate 1): snapshot the CALLER-provided extra context before
+	// the gateway injects its own conversation-settings keys below. The
+	// shouldSkipCache emptiness check must keep its original meaning — "the
+	// caller sent orchestration-bearing extra_context" — because the
+	// injection here is unconditional (it runs on every turn). Judging the
+	// post-injection map made the semantic-cache query face unreachable:
+	// every turn looked orchestration-bearing, is_cache_hit was always false
+	// and the engine was billed for answers already in the cache. The scope
+	// computation and the engine payload keep consuming the injected map, so
+	// the cache key/value contract is unchanged.
+	callerExtraContextCount := len(input.ExtraContext)
 	extraContext := ensureChatExtraContext(input)
 	extraContext["use_document_context"] = useDocumentContext
 	extraContext["document_filter"] = documentFilter
@@ -502,7 +513,22 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 					Content: m.Content,
 				})
 			}
-			sessionHasHistory = len(historyMessages) > 0
+			// V3-FIX-169 (gate 2): the user message for THIS turn was
+			// persisted before this load, so (when the save landed) it is the
+			// tail of the loaded window. sessionHasHistory must describe the
+			// view as it was BEFORE that write — the "首轮可缓存" intent of
+			// the skip rule — otherwise every session turn looks like a
+			// multi-turn conversation and the query face stays dead. The
+			// engine payload below keeps the full window including this
+			// turn's message; only the predicate trims it.
+			priorTurns := historyMessages
+			if n := len(priorTurns); n > 0 {
+				last := priorTurns[n-1]
+				if last.Role == "user" && last.Content == input.Message {
+					priorTurns = priorTurns[:n-1]
+				}
+			}
+			sessionHasHistory = len(priorTurns) > 0
 		} else {
 			log.Printf("[chatflow] history load failed for session=%s user=%s: %v", input.SessionID, hashUserIDForLog(userID), histErr)
 		}
@@ -518,13 +544,15 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		input.ExtraContext,
 	)
 	// Skip cache when request carries orchestration-bearing fields
-	// (active_tools, tool results, or extra_context) — these must hit
-	// the Python orchestrator to preserve graph/tool/HITL behavior.
+	// (active_tools, tool results, or caller-provided extra_context) — these
+	// must hit the Python orchestrator to preserve graph/tool/HITL behavior.
 	// Also skip when session has existing history: in a multi-turn
 	// conversation, the same words mean different things depending on
 	// what was said before, so cached responses from earlier turns are
-	// stale and incorrect.
-	shouldSkipCache := len(input.ActiveTools) > 0 || input.IsToolResult || len(input.ExtraContext) > 0 || sessionHasHistory
+	// stale and incorrect. V3-FIX-169: both counts describe the request as
+	// the caller sent it — the gateway-injected conversation-settings keys
+	// and this turn's own persisted user message must not qualify.
+	shouldSkipCache := len(input.ActiveTools) > 0 || input.IsToolResult || callerExtraContextCount > 0 || sessionHasHistory
 	if h.semantic != nil && !shouldSkipCache {
 		cacheCtx, cacheSpan := tracer.Start(ctx, "semantic_cache.search")
 		cachedResp, err := h.semantic.SearchExact(cacheCtx, cacheScope, input.Message)
