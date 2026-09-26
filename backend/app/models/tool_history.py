@@ -91,7 +91,7 @@ class ToolSuccessRateView:
     """工具成功率统计视图（用于查询）"""
 
     def __init__(self, tool_name: str, success_rate: float, usage_count: int,
-                 avg_time_ms: float, last_used_at: datetime = None):
+                 avg_time_ms: float, last_used_at: datetime | None = None):
         self.tool_name = tool_name
         self.success_rate = success_rate  # 0-100
         self.usage_count = usage_count

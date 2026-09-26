@@ -1695,7 +1695,7 @@ def get_system_prompt_for_role(
     agent_role: AgentRole,
     user_context: dict,
     query: str = "",
-    conversation_history: dict = None,
+    conversation_history: dict | None = None,
     context_level: str = "full",
     chat_mode: str = "standard",
 ) -> str:
@@ -1732,7 +1732,7 @@ def get_system_prompt_for_role(
 
 def get_system_prompt(
     user_context: dict,
-    conversation_history: dict = None,
+    conversation_history: dict | None = None,
     prompt_version: str = "v1",
     context_level: str = "full",
     chat_mode: str = "standard",
@@ -1913,7 +1913,7 @@ def build_conversation_memory_fragment(conversation_context: Any) -> str:
     return "\n".join(lines) if len(lines) > 2 else ""
 
 
-def _format_conversation_history(conversation_history: dict = None) -> str:
+def _format_conversation_history(conversation_history: dict | None = None) -> str:
     """
     格式化对话历史
 

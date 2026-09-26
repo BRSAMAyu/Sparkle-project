@@ -111,7 +111,7 @@ class UserIntentProfiler:
         self,
         user_id: str,
         intent: str,
-        metadata: dict = None
+        metadata: dict | None = None
     ):
         """Update user's intent profile after classification
 

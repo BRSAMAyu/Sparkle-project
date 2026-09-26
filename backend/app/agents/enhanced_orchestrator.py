@@ -9,6 +9,7 @@ Enhanced Orchestrator Agent - 增强版协调者
 """
 
 import json
+from typing import Any
 
 from loguru import logger
 from opentelemetry import trace
@@ -254,8 +255,8 @@ class EnhancedOrchestratorAgent(BaseAgent):
                 {"concept": "线代-矩阵", "last_review": "10天前", "predicted_retention": 0.35, "risk_level": "high"},
             ]
 
-            active_tasks = []
-            active_plans = []
+            active_tasks: list[dict[str, Any]] = []
+            active_plans: list[dict[str, Any]] = []
 
             return EnhancedAgentContext(
                 user_id=context.user_id,

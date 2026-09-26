@@ -58,7 +58,7 @@ class IngestionService:
     Handles PDF, DOCX, PPTX with advanced cleaning and metadata extraction.
     """
 
-    def process_file(self, file_path: str, options: dict[str, Any] = None) -> list[ExtractedChunk]:
+    def process_file(self, file_path: str, options: dict[str, Any] | None = None) -> list[ExtractedChunk]:
         """
         Main entry point. Dispatches to specific handlers based on extension.
         Includes Magic Byte validation.
@@ -373,7 +373,7 @@ class IngestionService:
             ))
         return chunks
 
-    def _process_image(self, path: str, options: dict[str, Any] = None) -> list[ExtractedChunk]:
+    def _process_image(self, path: str, options: dict[str, Any] | None = None) -> list[ExtractedChunk]:
         """
         处理图片文件，直接进行 OCR。
         支持格式: JPG, JPEG, PNG, WebP, GIF

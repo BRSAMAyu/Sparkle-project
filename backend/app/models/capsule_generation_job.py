@@ -72,7 +72,7 @@ class CapsuleGenerationJob(BaseModel):
         self.started_at = _utcnow()
         self.progress = 0.1
 
-    def mark_completed(self, capsule_ids: list = None):
+    def mark_completed(self, capsule_ids: list | None = None):
         """标记任务为完成"""
         self.status = JobStatus.COMPLETED.value
         self.completed_at = _utcnow()

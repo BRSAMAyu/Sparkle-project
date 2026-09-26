@@ -19,7 +19,7 @@ class ABTestFramework:
         name: str,
         variants: list[str],
         traffic_split: dict[str, float],
-        metrics: list[str] = None
+        metrics: list[str] | None = None
     ) -> str:
         """Create new experiment."""
         exp_id = f"exp:{name}:{datetime.now().strftime('%Y%m%d')}"
@@ -148,7 +148,7 @@ class ExperimentManager:
         self.framework = ABTestFramework(redis_client)
         self.active_experiments = {}
 
-    async def register_experiment(self, name: str, variants: list[str], metrics: list[str] = None):
+    async def register_experiment(self, name: str, variants: list[str], metrics: list[str] | None = None):
         """Register/Create an experiment."""
         exp_id = await self.framework.create_experiment(name, variants, {'control': 0.5, 'treatment': 0.5}, metrics=metrics)
         self.active_experiments[name] = exp_id

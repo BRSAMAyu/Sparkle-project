@@ -3900,7 +3900,7 @@ class ChatOrchestrator(
                         l1_override_applied = False
                         active_probe_target = None
                         try:
-                            dual_core_context = {}
+                            dual_core_context: dict[str, Any] = {}
                             if final_state is not None and isinstance(getattr(final_state, "context_data", None), dict):
                                 dual_core_context = final_state.context_data.get("dual_core_decision") or {}
                             if not dual_core_context and isinstance(getattr(state, "context_data", None), dict):

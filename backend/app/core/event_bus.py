@@ -80,7 +80,7 @@ class NodeMasteryUpdatedEvent(Event):
 
 
 class ErrorCreated(Event):
-    def __init__(self, user_id: str, error_id: str, linked_node_ids: list[str] = None):
+    def __init__(self, user_id: str, error_id: str, linked_node_ids: list[str] | None = None):
         self.user_id = user_id
         self.error_id = error_id
         self.linked_node_ids = linked_node_ids or []

@@ -212,7 +212,7 @@ class ConnectionManager:
         self.active_connections[group_id].append(websocket)
         logger.info(f"Client connected to visualization for session {session_id}")
 
-    async def connect_user(self, websocket: WebSocket, user_id: str, friend_ids: list[str] = None):
+    async def connect_user(self, websocket: WebSocket, user_id: str, friend_ids: list[str] | None = None):
         """Connect to personal channel and register friend map for presence"""
         await websocket.accept()
         # starlette WebSocket 的动态属性统一挂 state（stub 无 user_id 字段，
@@ -349,7 +349,7 @@ class ConnectionManager:
         else:
             await self._broadcast_local(message, group_id)
 
-    async def _broadcast_local(self, message: dict, group_id: str, exclude_user_id: str = None):
+    async def _broadcast_local(self, message: dict, group_id: str, exclude_user_id: str | None = None):
         if group_id in self.active_connections:
             json_msg = json.dumps(message, default=str)
             for ws in list(self.active_connections[group_id]):

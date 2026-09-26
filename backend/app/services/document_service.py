@@ -512,7 +512,7 @@ class DocumentService:
         preview = " ".join(lines)[:400]
         return f"文档摘要:\n- 内容长度: {len(stripped)} 字符\n- 预览: {preview}"
 
-    async def _run_map_reduce(self, sections: list[str], task_id: str = None) -> str:
+    async def _run_map_reduce(self, sections: list[str], task_id: str | None = None) -> str:
         """Summarize large documents section by section."""
         if not sections:
             return "# 📂 Document Structure (Compressed)\n\n(No sections found)"
@@ -1078,7 +1078,7 @@ class DocumentService:
     - Concept Extraction
     """
 
-    async def update_progress(self, task_id: str, status: str, percent: int, result: Any = None):
+    async def update_progress(self, task_id: str | None, status: str, percent: int, result: Any = None):
         """Helper to update task status in Redis"""
         if not task_id:
             return
@@ -1108,7 +1108,9 @@ class DocumentService:
             return "queued"
         return "processing"
 
-    async def clean_and_summarize(self, file_path: str, task_id: str = None, options: dict[str, Any] = None) -> dict[str, Any]:
+    async def clean_and_summarize(
+        self, file_path: str, task_id: str | None = None, options: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """
         Main entry point for "Document Cleaning".
         Returns a structured summary designed for both UI display and Agent context.

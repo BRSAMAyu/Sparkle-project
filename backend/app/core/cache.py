@@ -173,7 +173,7 @@ end
         except json.JSONDecodeError:
             return data
 
-    async def set(self, key: str, value: Any, ttl: int = None, ex: int = None):
+    async def set(self, key: str, value: Any, ttl: int | None = None, ex: int | None = None):
         # Support both 'ttl' and 'ex' parameter names (standard Redis naming)
         ttl_value = ttl or ex
         if not self.redis:
@@ -272,7 +272,7 @@ def _json_default(value: Any) -> Any:
     return str(value)
 
 
-def cached(ttl: int = 300, key_builder: Callable = None, namespace: str = "view"):
+def cached(ttl: int = 300, key_builder: Callable | None = None, namespace: str = "view"):
     """
     Cache Decorator for Async Functions
 

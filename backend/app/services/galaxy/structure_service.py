@@ -68,7 +68,7 @@ class GraphStructureService:
         title: str,
         summary: str,
         subject_id: int | None = None,
-        tags: list[str] = None,
+        tags: list[str] | None = None,
         parent_node_id: UUID | None = None,
     ) -> KnowledgeNode:
         """Create a new knowledge node (Structure)"""

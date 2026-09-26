@@ -16,7 +16,7 @@ class ExplorationRouter:
         self.adaptive = adaptive
         self.attempts: dict[str, Any] = {}
 
-    async def select_route(self, source: str, targets: list[str], user_id: str = None) -> str | None:
+    async def select_route(self, source: str, targets: list[str], user_id: str | None = None) -> str | None:
         """Epsilon-Greedy Selection"""
         if not targets:
             return None
@@ -39,7 +39,7 @@ class ExplorationRouter:
             logger.debug(f"🎯 Exploitation: selected {selected} (score={scores[selected]:.2f})")
             return selected
 
-    def _get_adaptive_epsilon(self, user_id: str) -> float:
+    def _get_adaptive_epsilon(self, user_id: str | None) -> float:
         """Adaptive epsilon based on user attempts"""
         if not user_id:
             return self.epsilon
@@ -122,7 +122,7 @@ class UCBRouter:
 class HybridExplorationRouter:
     """Hybrid Strategy Router"""
 
-    def __init__(self, learner, user_id: str = None):
+    def __init__(self, learner, user_id: str | None = None):
         self.learner = learner
         self.user_id = user_id
 
@@ -130,7 +130,7 @@ class HybridExplorationRouter:
         self.thompson = ThompsonSamplingRouter(learner)
         self.ucb = UCBRouter(learner)
 
-    async def select_route(self, source: str, targets: list[str], context: dict = None) -> str | None:
+    async def select_route(self, source: str, targets: list[str], context: dict | None = None) -> str | None:
         """Smart strategy selection"""
         if not targets:
             return None

@@ -31,7 +31,7 @@ class SummarizationWorker:
         redis_client: redis.Redis,
         batch_size: int = 10,
         max_retries: int = 3,
-        worker_id: str = None
+        worker_id: str | None = None
     ):
         """
         初始化 SummarizationWorker
@@ -347,7 +347,7 @@ class SummarizationWorker:
 # 工厂函数
 def create_summarization_worker(
     redis_url: str | redis.Redis,
-    worker_id: str = None,
+    worker_id: str | None = None,
     **kwargs
 ) -> SummarizationWorker:
     """

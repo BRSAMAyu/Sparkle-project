@@ -192,7 +192,7 @@ class AgeClient:
             await self.pool.close()
             logger.info("AGE 连接池已关闭")
 
-    async def execute_cypher(self, cypher: str, params: dict[str, Any] = None) -> list[dict[str, Any]]:
+    async def execute_cypher(self, cypher: str, params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
         """
         执行 Cypher 查询
 
@@ -262,7 +262,7 @@ class AgeClient:
             raise self._map_acquire_timeout(exc) from exc
         logger.info(f"图谱已创建: {graph_name}")
 
-    async def create_vertex_label(self, label_name: str, properties: list[str] = None):
+    async def create_vertex_label(self, label_name: str, properties: list[str] | None = None):
         """创建顶点标签"""
         safe_label = self._validate_identifier(label_name)
         await self.create_graph(self.config.graph_name)
@@ -278,7 +278,7 @@ class AgeClient:
             """)
         logger.info(f"顶点标签已创建: {label_name}")
 
-    async def create_edge_label(self, label_name: str, properties: list[str] = None):
+    async def create_edge_label(self, label_name: str, properties: list[str] | None = None):
         """创建边标签"""
         safe_label = self._validate_identifier(label_name)
         await self.create_graph(self.config.graph_name)
@@ -331,7 +331,7 @@ class AgeClient:
         to_label: str,
         to_props: dict[str, Any],
         edge_label: str,
-        edge_props: dict[str, Any] = None,
+        edge_props: dict[str, Any] | None = None,
     ):
         """添加边"""
         safe_from_label = self._validate_identifier(from_label)

@@ -89,7 +89,7 @@ class DynamicToolRegistry:
                 self._registered_packages.add(package_path)
             return registered
 
-    def register_from_module(self, module_path: str, class_name: str = None) -> bool:
+    def register_from_module(self, module_path: str, class_name: str | None = None) -> bool:
         """
         从模块动态注册工具
 

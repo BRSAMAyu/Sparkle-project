@@ -84,7 +84,7 @@ def health_check_task(self):
 
 
 @celery_app.task(bind=True, max_retries=3, name="generate_node_embedding")
-def generate_node_embedding(self, node_id: str, title: str, summary: str, user_id: str = None):
+def generate_node_embedding(self, node_id: str, title: str, summary: str, user_id: str | None = None):
     """
     生成节点 Embedding (完整版本)
 
@@ -184,7 +184,7 @@ def process_stored_file(
     download_url: str,
     file_name: str,
     mime_type: str,
-    thumbnail_upload_url: str = None,
+    thumbnail_upload_url: str | None = None,
 ):
     """
     Process uploaded file: chunking, embeddings, optional thumbnail.

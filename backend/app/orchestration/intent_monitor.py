@@ -153,7 +153,7 @@ class IntentMonitor:
         source: str,
         tier: str = "tier1",
         latency_ms: float = 0,
-        user_id: str = None
+        user_id: str | None = None
     ):
         """Record a classification event
 

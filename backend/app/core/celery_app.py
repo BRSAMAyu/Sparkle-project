@@ -1442,7 +1442,7 @@ def get_celery_queue_status(queue_name: str):
     return status
 
 
-def schedule_long_task(task_name: str, args: tuple = (), kwargs: dict = None, queue: str = "default"):
+def schedule_long_task(task_name: str, args: tuple = (), kwargs: dict | None = None, queue: str = "default"):
     """
     调度长时任务
 

@@ -37,7 +37,9 @@ class ExecutionTracer:
         await self.redis.zadd(index_key, {trace_key: event.timestamp})
         await self.redis.expire(index_key, 86400)
 
-    async def replay(self, session_id: str, start_time: float = None, end_time: float = None) -> list[dict]:
+    async def replay(
+        self, session_id: str, start_time: float | None = None, end_time: float | None = None
+    ) -> list[dict]:
         """Replay execution process."""
         index_key = f"trace_index:{session_id}"
 

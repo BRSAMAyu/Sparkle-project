@@ -183,7 +183,7 @@ class GalaxyFeedbackService:
         implicit_score: float,
         source: str,
         rating: int | None = None,
-        metadata: dict[str, Any] = None
+        metadata: dict[str, Any] | None = None
     ):
         """记录反馈到数据库"""
         try:

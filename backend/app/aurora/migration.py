@@ -276,7 +276,7 @@ def _build_projected_decision(
         cognitive_adjustments = [
             "先降低当前心理或理解摩擦，再进入任务推进。",
         ]
-        execution_constraints = []
+        execution_constraints: list[str] = []
     elif projected_mode == "execution_first":
         reason = "Aurora 判断当前目标与约束已足够清晰，优先推进执行路径。"
         cognitive_adjustments = []

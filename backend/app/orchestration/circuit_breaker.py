@@ -68,7 +68,7 @@ class CircuitBreaker:
         self._opened_count = 0
 
         # Sliding window (for failure rate calculation)
-        self._result_window = []  # list of (timestamp, success)
+        self._result_window: list[tuple[datetime, bool]] = []  # list of (timestamp, success)
 
         # Redis key for persistence
         self._redis_key = f"circuit_breaker:{name}"

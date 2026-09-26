@@ -33,7 +33,7 @@ class MultiDimensionalLearner:
     Tracks success, latency, cost, and satisfaction separately.
     """
 
-    def __init__(self, redis_client, user_id: str, weights: DimensionWeights = None):
+    def __init__(self, redis_client, user_id: str, weights: DimensionWeights | None = None):
         self.redis = redis_client
         self.user_id = user_id
         self.weights = weights or DimensionWeights()
@@ -63,7 +63,7 @@ class MultiDimensionalLearner:
         self._schedule_save()
         logger.debug(f"Multi-dimension update: {source}->{target}, metrics={metrics}")
 
-    async def get_combined_score(self, source: str, target: str, user_pref: dict = None) -> float:
+    async def get_combined_score(self, source: str, target: str, user_pref: dict | None = None) -> float:
         """Get weighted score."""
         await self._load()
         weights = user_pref.get('weights', asdict(self.weights)) if user_pref else asdict(self.weights)

@@ -160,7 +160,7 @@ class GraphKnowledgeService:
         description: str,
         sector_code: str = "VOID",
         importance_level: int = 1,
-        keywords: list[str] = None,
+        keywords: list[str] | None = None,
         source_type: str = "user_created",
         source_task_id: uuid.UUID | None = None,
         user_id: uuid.UUID | None = None,

@@ -351,7 +351,7 @@ class TaskDecompositionWorkflow:
 
     def _categorize_concepts(self, concepts: list[str]) -> dict[str, list[str]]:
         """将知识点分类到不同领域"""
-        categorization = {"math": [], "code": [], "writing": [], "science": []}
+        categorization: dict[str, list[str]] = {"math": [], "code": [], "writing": [], "science": []}
 
         for concept in concepts:
             concept_lower = concept.lower()

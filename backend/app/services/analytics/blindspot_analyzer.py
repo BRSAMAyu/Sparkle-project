@@ -18,7 +18,9 @@ class BlindspotAnalyzer:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def analyze_blindspots(self, user_id: str, subject_id: int = None, limit: int = 5) -> list[dict[str, Any]]:
+    async def analyze_blindspots(
+        self, user_id: str, subject_id: int | None = None, limit: int = 5
+    ) -> list[dict[str, Any]]:
         """
         Identify blindspots: high-importance nodes with low mastery or missing prerequisites.
         """
