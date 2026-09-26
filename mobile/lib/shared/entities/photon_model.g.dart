@@ -25,8 +25,9 @@ Map<String, dynamic> _$PhotonBalanceToJson(PhotonBalance instance) =>
 PhotonTransaction _$PhotonTransactionFromJson(Map<String, dynamic> json) =>
     PhotonTransaction(
       id: json['id'] as String,
-      transactionType:
-          $enumDecode(_$PhotonTransactionTypeEnumMap, json['transaction_type']),
+      transactionType: $enumDecode(
+          _$PhotonTransactionTypeEnumMap, json['transaction_type'],
+          unknownValue: PhotonTransactionType.unknown),
       amount: (json['amount'] as num).toInt(),
       balanceBefore: (json['balance_before'] as num).toInt(),
       balanceAfter: (json['balance_after'] as num).toInt(),
@@ -55,6 +56,7 @@ const _$PhotonTransactionTypeEnumMap = {
   PhotonTransactionType.grantDailyFirst: 'grant_daily_first',
   PhotonTransactionType.grantContract: 'grant_contract',
   PhotonTransactionType.grantContractBonus: 'grant_contract_bonus',
+  PhotonTransactionType.grantBonus: 'grant_bonus',
   PhotonTransactionType.deductContractStake: 'deduct_contract_stake',
   PhotonTransactionType.purchase: 'purchase',
   PhotonTransactionType.transferOut: 'transfer_out',
@@ -63,6 +65,9 @@ const _$PhotonTransactionTypeEnumMap = {
   PhotonTransactionType.penalty: 'penalty',
   PhotonTransactionType.adminAdjustment: 'admin_adjustment',
   PhotonTransactionType.redeemPro: 'redeem_pro',
+  PhotonTransactionType.contractEscrow: 'contract_escrow',
+  PhotonTransactionType.guestSeed: 'guest_seed',
+  PhotonTransactionType.unknown: 'unknown',
 };
 
 TransactionSummary _$TransactionSummaryFromJson(Map<String, dynamic> json) =>

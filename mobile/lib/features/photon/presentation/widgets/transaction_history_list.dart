@@ -275,6 +275,15 @@ class _TransactionItem extends StatelessWidget {
       case PhotonTransactionType.grantContract:
       case PhotonTransactionType.grantContractBonus:
         return Icons.task_alt_outlined;
+      // V3-FIX-271：补值族图标（grant_bonus/contract_escrow/guest_seed/unknown）。
+      case PhotonTransactionType.grantBonus:
+        return Icons.bolt_outlined;
+      case PhotonTransactionType.contractEscrow:
+        return Icons.lock_outline;
+      case PhotonTransactionType.guestSeed:
+        return Icons.card_giftcard;
+      case PhotonTransactionType.unknown:
+        return Icons.help_outline;
       case PhotonTransactionType.deductContractStake:
         return Icons.warning_outlined;
       case PhotonTransactionType.purchase:

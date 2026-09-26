@@ -1142,6 +1142,12 @@ class CommunityRepository {
         return 'checkin';
       case MessageType.system:
         return 'system';
+      // V3-FIX-270：broadcast 为服务端广播下发值；unknown 哨兵按 FIX-259
+      // 先例原样回传 wire 串（服务端 422 拒绝，诚实失败优于伪造语义）。
+      case MessageType.broadcast:
+        return 'broadcast';
+      case MessageType.unknown:
+        return 'unknown';
     }
   }
 

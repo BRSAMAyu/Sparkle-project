@@ -6493,6 +6493,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get photonTransactionRedeemPro => 'Photon redeem Pro';
 
   @override
+  String get photonTransactionGrantBonus => 'Combo bonus';
+
+  @override
+  String get photonTransactionContractEscrow => 'Contract escrow';
+
+  @override
+  String get photonTransactionGuestSeed => 'Guest seed';
+
+  @override
+  String get photonTransactionUnknown => 'Unknown';
+
+  @override
   String get photonTransactionsEmpty => 'No transaction records';
 
   @override

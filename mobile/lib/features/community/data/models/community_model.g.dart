@@ -196,6 +196,10 @@ class MessageTypeAdapter extends TypeAdapter<MessageType> {
         return MessageType.checkin;
       case 5:
         return MessageType.system;
+      case 11:
+        return MessageType.broadcast;
+      case 12:
+        return MessageType.unknown;
       default:
         return MessageType.text;
     }
@@ -236,6 +240,12 @@ class MessageTypeAdapter extends TypeAdapter<MessageType> {
         break;
       case MessageType.system:
         writer.writeByte(5);
+        break;
+      case MessageType.broadcast:
+        writer.writeByte(11);
+        break;
+      case MessageType.unknown:
+        writer.writeByte(12);
         break;
     }
   }
@@ -483,7 +493,8 @@ Map<String, dynamic> _$RecommendationFeedbackInsightToJson(
 GroupInfo _$GroupInfoFromJson(Map<String, dynamic> json) => GroupInfo(
       id: json['id'] as String,
       name: json['name'] as String,
-      type: $enumDecode(_$GroupTypeEnumMap, json['type']),
+      type: $enumDecode(_$GroupTypeEnumMap, json['type'],
+          unknownValue: GroupType.unknown),
       focusTags: (json['focus_tags'] as List<dynamic>)
           .map((e) => e as String)
           .toList(),
@@ -533,6 +544,8 @@ Map<String, dynamic> _$GroupInfoToJson(GroupInfo instance) => <String, dynamic>{
 const _$GroupTypeEnumMap = {
   GroupType.squad: 'squad',
   GroupType.sprint: 'sprint',
+  GroupType.official: 'official',
+  GroupType.unknown: 'unknown',
 };
 
 const _$GroupRoleEnumMap = {
@@ -545,7 +558,8 @@ GroupListItem _$GroupListItemFromJson(Map<String, dynamic> json) =>
     GroupListItem(
       id: json['id'] as String,
       name: json['name'] as String,
-      type: $enumDecode(_$GroupTypeEnumMap, json['type']),
+      type: $enumDecode(_$GroupTypeEnumMap, json['type'],
+          unknownValue: GroupType.unknown),
       memberCount: (json['member_count'] as num).toInt(),
       totalFlamePower: (json['total_flame_power'] as num).toInt(),
       focusTags: (json['focus_tags'] as List<dynamic>)
@@ -710,7 +724,8 @@ Map<String, dynamic> _$GroupMemberInfoToJson(GroupMemberInfo instance) =>
 
 MessageInfo _$MessageInfoFromJson(Map<String, dynamic> json) => MessageInfo(
       id: json['id'] as String,
-      messageType: $enumDecode(_$MessageTypeEnumMap, json['message_type']),
+      messageType: $enumDecode(_$MessageTypeEnumMap, json['message_type'],
+          unknownValue: MessageType.unknown),
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
       sender: json['sender'] == null
@@ -775,6 +790,8 @@ const _$MessageTypeEnumMap = {
   MessageType.achievement: 'achievement',
   MessageType.checkin: 'checkin',
   MessageType.system: 'system',
+  MessageType.broadcast: 'broadcast',
+  MessageType.unknown: 'unknown',
 };
 
 PrivateMessageInfo _$PrivateMessageInfoFromJson(Map<String, dynamic> json) =>
@@ -782,7 +799,8 @@ PrivateMessageInfo _$PrivateMessageInfoFromJson(Map<String, dynamic> json) =>
       id: json['id'] as String,
       sender: UserBrief.fromJson(json['sender'] as Map<String, dynamic>),
       receiver: UserBrief.fromJson(json['receiver'] as Map<String, dynamic>),
-      messageType: $enumDecode(_$MessageTypeEnumMap, json['message_type']),
+      messageType: $enumDecode(_$MessageTypeEnumMap, json['message_type'],
+          unknownValue: MessageType.unknown),
       isRead: json['is_read'] as bool,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),

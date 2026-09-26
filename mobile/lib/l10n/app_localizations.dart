@@ -11648,6 +11648,30 @@ abstract class AppLocalizations {
   /// **'光子兑 Pro'**
   String get photonTransactionRedeemPro;
 
+  /// No description provided for @photonTransactionGrantBonus.
+  ///
+  /// In zh, this message translates to:
+  /// **'连击加成'**
+  String get photonTransactionGrantBonus;
+
+  /// No description provided for @photonTransactionContractEscrow.
+  ///
+  /// In zh, this message translates to:
+  /// **'契约押金托管'**
+  String get photonTransactionContractEscrow;
+
+  /// No description provided for @photonTransactionGuestSeed.
+  ///
+  /// In zh, this message translates to:
+  /// **'访客体验种子'**
+  String get photonTransactionGuestSeed;
+
+  /// No description provided for @photonTransactionUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'未知类型'**
+  String get photonTransactionUnknown;
+
   /// No description provided for @photonTransactionsEmpty.
   ///
   /// In zh, this message translates to:

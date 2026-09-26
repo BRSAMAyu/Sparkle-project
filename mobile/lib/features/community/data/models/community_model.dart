@@ -8,11 +8,19 @@ part 'community_model.g.dart';
 
 // ============ 枚举类型 ============
 
+/// 群组类型：与后端 `backend/app/models/community.py` GroupType 逐值对齐
+/// （3 值，含 official）；末位 unknown 为 mobile 侧哨兵（V3-FIX-269）——
+/// API 面 schemas GroupTypeEnum 现仅下发 squad/sprint，official 为模型单面
+/// 潜伏值，schema 放开后不崩解析。
 enum GroupType {
   @JsonValue('squad')
   squad,
   @JsonValue('sprint')
   sprint,
+  @JsonValue('official')
+  official,
+  @JsonValue('unknown')
+  unknown,
 }
 
 enum GroupRole {
@@ -68,6 +76,15 @@ enum MessageType {
   @JsonValue('system')
   @HiveField(5)
   system,
+  // V3-FIX-270：跨群广播（community_advanced_service 真实落库并经群消息列表
+  // 下发，wt297 实录活体崩溃面）。HiveField 11/12 为新追加索引，历史数据兼容。
+  @JsonValue('broadcast')
+  @HiveField(11)
+  broadcast,
+  // 末位 unknown 为 mobile 侧哨兵：后端新增值先行下发时降级于此，不崩解析。
+  @JsonValue('unknown')
+  @HiveField(12)
+  unknown,
 }
 
 enum FriendshipStatus {
@@ -425,6 +442,8 @@ class GroupInfo {
   final String? description;
   @JsonKey(name: 'avatar_url')
   final String? avatarUrl;
+  // V3-FIX-269：未知群组类型降级 unknown 哨兵，替代 $enumDecode 硬失败。
+  @JsonKey(unknownEnumValue: GroupType.unknown)
   final GroupType type;
   @JsonKey(name: 'focus_tags')
   final List<String> focusTags;
@@ -486,6 +505,8 @@ class GroupListItem {
   final String id;
   final String name;
   final String? description;
+  // V3-FIX-269：未知群组类型降级 unknown 哨兵（目录/列表面同 GroupInfo）。
+  @JsonKey(unknownEnumValue: GroupType.unknown)
   final GroupType type;
   @JsonKey(name: 'member_count')
   final int memberCount;
@@ -672,7 +693,8 @@ class MessageInfo {
   final String id;
   @HiveField(1)
   final UserBrief? sender;
-  @JsonKey(name: 'message_type')
+  // V3-FIX-270：未知消息类型（含 broadcast 补值前的旧版本缓存）降级 unknown 哨兵。
+  @JsonKey(name: 'message_type', unknownEnumValue: MessageType.unknown)
   @HiveField(2)
   final MessageType messageType;
   @HiveField(3)
@@ -764,7 +786,8 @@ class PrivateMessageInfo {
   final UserBrief sender;
   @HiveField(2)
   final UserBrief receiver;
-  @JsonKey(name: 'message_type')
+  // V3-FIX-270：未知消息类型降级 unknown 哨兵（私聊表面同 MessageInfo）。
+  @JsonKey(name: 'message_type', unknownEnumValue: MessageType.unknown)
   @HiveField(3)
   final MessageType messageType;
   @HiveField(4)

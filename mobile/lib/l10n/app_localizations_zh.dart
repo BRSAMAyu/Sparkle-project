@@ -6237,6 +6237,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get photonTransactionRedeemPro => '光子兑 Pro';
 
   @override
+  String get photonTransactionGrantBonus => '连击加成';
+
+  @override
+  String get photonTransactionContractEscrow => '契约押金托管';
+
+  @override
+  String get photonTransactionGuestSeed => '访客体验种子';
+
+  @override
+  String get photonTransactionUnknown => '未知类型';
+
+  @override
   String get photonTransactionsEmpty => '暂无交易记录';
 
   @override

@@ -16,6 +16,11 @@ part 'photon_model.g.dart';
 // ==========
 
 /// 光子交易类型
+///
+/// 与后端 `backend/app/models/shop.py` PhotonTransactionType 逐值对齐
+/// （15 值，含 grant_bonus/contract_escrow/guest_seed）；末位 unknown 为
+/// mobile 侧哨兵（V3-FIX-271）：后端新增值先行经 /photons/transactions 下发时
+/// 降级于此，不崩解析（D-COMM-2 redeem_pro 同型崩溃先例）。
 enum PhotonTransactionType {
   @JsonValue('grant_achievement')
   grantAchievement,
@@ -25,6 +30,9 @@ enum PhotonTransactionType {
   grantContract,
   @JsonValue('grant_contract_bonus')
   grantContractBonus,
+  // V3-FIX-271：combo 加成（PHOTON-STREAM 补录审计流水，杜绝 admin_adjustment 兜底误标）。
+  @JsonValue('grant_bonus')
+  grantBonus,
   @JsonValue('deduct_contract_stake')
   deductContractStake,
   @JsonValue('purchase')
@@ -44,6 +52,14 @@ enum PhotonTransactionType {
   // 缺成员会让交易历史解析在兑换发生后直接崩溃。
   @JsonValue('redeem_pro')
   redeemPro,
+  // V3-FIX-271：契约押金托管预扣（MINT-FIX：创建时扣，完成结算含还本，失败即没收）。
+  @JsonValue('contract_escrow')
+  contractEscrow,
+  // V3-FIX-271：访客体验种子（MINT-FIX：访客首启播种即写，触达面最宽）。
+  @JsonValue('guest_seed')
+  guestSeed,
+  @JsonValue('unknown')
+  unknown,
 }
 
 // ========== 光子余额实体 ==========
@@ -98,6 +114,8 @@ class PhotonTransaction {
   factory PhotonTransaction.fromJson(Map<String, dynamic> json) =>
       _$PhotonTransactionFromJson(json);
   final String id;
+  // V3-FIX-271：未知 wire 值降级 unknown 哨兵，替代 $enumDecode 硬失败。
+  @JsonKey(unknownEnumValue: PhotonTransactionType.unknown)
   final PhotonTransactionType transactionType;
   final int amount;
   final int balanceBefore;
@@ -131,6 +149,14 @@ class PhotonTransaction {
         return l10n.photonTransactionGrantContract;
       case PhotonTransactionType.grantContractBonus:
         return l10n.photonTransactionGrantContractBonus;
+      case PhotonTransactionType.grantBonus:
+        return l10n.photonTransactionGrantBonus;
+      case PhotonTransactionType.contractEscrow:
+        return l10n.photonTransactionContractEscrow;
+      case PhotonTransactionType.guestSeed:
+        return l10n.photonTransactionGuestSeed;
+      case PhotonTransactionType.unknown:
+        return l10n.photonTransactionUnknown;
       case PhotonTransactionType.deductContractStake:
         return l10n.photonTransactionDeductContractStake;
       case PhotonTransactionType.purchase:
