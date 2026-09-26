@@ -128,3 +128,19 @@ def wall_clock_to_utc_naive(value: datetime, timezone_name: str) -> datetime:
     if value.tzinfo is not None:
         return value.astimezone(UTC).replace(tzinfo=None)
     return value.replace(tzinfo=ZoneInfo(timezone_name)).astimezone(UTC).replace(tzinfo=None)
+
+
+def utc_naive_to_wall_clock(value: datetime, timezone_name: str) -> datetime:
+    """Absolute naive-UTC instant -> user wall-clock naive value (V3-FIX-300).
+
+    :func:`wall_clock_to_utc_naive` 的逆向（双射）。窗口端点是 UTC 瞬间
+    （``now-7d``/``now+7d``）而过滤列是墙上钟 naive（FocusSession.end_time、
+    CalendarEvent.start_time，V3-FIX-37 定界）时，把端点按用户时区换算成
+    墙上钟再入 SQL WHERE 同钟比较——与 297 calendar「今日」窗口的
+    ``local_midnight_wall`` 边界同向；双射换算下选中集合与「列值先
+    wall_clock_to_utc_naive 再比 UTC 端点」等价。tz-aware 入参先收敛
+    naive-UTC。
+    """
+    if value.tzinfo is not None:
+        value = value.astimezone(UTC).replace(tzinfo=None)
+    return value.replace(tzinfo=UTC).astimezone(ZoneInfo(timezone_name)).replace(tzinfo=None)

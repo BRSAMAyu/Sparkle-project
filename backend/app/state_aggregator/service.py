@@ -20,6 +20,7 @@ from app.core.telemetry_boundary import (
 from app.core.time_utils import (
     local_date,
     local_midnight_wall,
+    utc_naive_to_wall_clock,
     utcnow,
     valid_timezone_name,
     wall_clock_to_utc_naive,
@@ -513,11 +514,16 @@ class StateAggregatorService:
         now: datetime,
         current_turn_parse: CurrentTurnParseResult | None = None,
     ) -> StateFieldEnvelope[EngagementStateValue]:
-        last_7d = now - timedelta(days=7)
+        tz_name = await self._user_timezone(user_id)
+        # V3-FIX-300：end_time 存客户端本地墙上时间 naive（V3-FIX-37 定界），
+        # now-7d 是 UTC 瞬间——naive 直比下界松 8 小时（UTC+8 本地 7 天前傍晚
+        # 的会话绝对已超 7 天仍被计入 7d 计数）。端点经 utc_naive_to_wall_clock
+        # 换成用户墙上钟入 SQL 同钟比（wall_clock_to_utc_naive 的逆向，双射等价）。
+        last_7d_wall = utc_naive_to_wall_clock(now - timedelta(days=7), tz_name)
         focus_count_stmt = select(func.count(FocusSession.id)).where(
             FocusSession.user_id == user_id,
             FocusSession.status == FocusStatus.COMPLETED,
-            FocusSession.end_time >= last_7d,
+            FocusSession.end_time >= last_7d_wall,
         )
         focus_count = int((await self.db.execute(focus_count_stmt)).scalar() or 0)
 
@@ -544,7 +550,6 @@ class StateAggregatorService:
         # 用户时区换算成绝对 UTC naive 同钟再 max；返回值同为绝对 UTC naive——
         # wake_policy._extract_hours_since_last_active（_utcnow() 差值）与
         # push_policy_compiler（>= now-72h）均按绝对时刻消费该值，无墙钟语义面。
-        tz_name = await self._user_timezone(user_id)
         latest_focus_absolute = (
             wall_clock_to_utc_naive(latest_focus_at, tz_name) if latest_focus_at is not None else None
         )
@@ -975,7 +980,11 @@ class StateAggregatorService:
         local_today = local_date(now, tz_name)
         today_start = local_midnight_wall(local_today)
         today_end = today_start + timedelta(days=1)
-        week_end = now + timedelta(days=7)
+        # V3-FIX-300：week 窗口端点同族——now/now+7d 是 UTC 瞬间，start_time 是
+        # 墙上钟列，naive 直比下界松 8h（已过去的本地今晚事件错进「未来一周」）、
+        # 上界紧 8h（第 7 天本地晚间事件错漏）。端点换用户墙上钟同钟比。
+        week_start_wall = utc_naive_to_wall_clock(now, tz_name)
+        week_end_wall = utc_naive_to_wall_clock(now + timedelta(days=7), tz_name)
         today_events = list(
             (
                 await self.db.execute(
@@ -999,8 +1008,8 @@ class StateAggregatorService:
                     .where(
                         CalendarEvent.user_id == user_id,
                         CalendarEvent.deleted_at.is_(None),
-                        CalendarEvent.start_time >= now,
-                        CalendarEvent.start_time <= week_end,
+                        CalendarEvent.start_time >= week_start_wall,
+                        CalendarEvent.start_time <= week_end_wall,
                     )
                     .order_by(CalendarEvent.start_time)
                 )
