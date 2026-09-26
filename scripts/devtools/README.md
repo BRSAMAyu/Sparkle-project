@@ -13,6 +13,8 @@
 | `db_debris_cleanup.py` | dev 库 schema 碎片清理（29 张会话遗留表 + tasks 三列 db-only 残留；默认 dry-run，`--apply` 实删；演练验证与 runbook 见 `docs/engineering/DB_DEBRIS_CLEANUP.md`） |
 | `test_job_service.py` | 手动验证任务服务 |
 | `test_llm_parser.py` | 手动验证 LLM 解析器 |
+| `ledger_union_merge.py` | 舰队台账 union-merge 固化（V3-FIX-268，吞行 ≥4 次事故根修）：`v3/06_agent_fleet/DYNAMIC_ISSUES.md` 冲突按 V3-FIX-N 分轨并集——表格行取状态更进化者（OPEN<FIXED@/CLOSED@/WONTFIX，同状态才比长度，非纯长度启发）、非表格行按出现序零丢失；`--renumber OLD=NEW` 可重复（theirs 侧整行重编号+自动注记）；`--check` 零标记残留+双侧 ID 全在场吞行检测。`pytest scripts/devtools/test_ledger_union_merge.py` |
+| `test_ledger_union_merge.py` | 上者 pytest 套件（15 测：246/247 吞行事故复现/OPEN→FIXED 进化非纯长度/非表格零丢失/renumber/check 检测+CLI 端到端） |
 | `rebuild_embedding_index.py` | E-05：embedding 索引重建/版本迁移/回滚（默认 dry-run；`--execute` 真实重嵌并打标 `embedding_model/dim`、重建 Redis 版本化 key；回滚=改回旧 EMBEDDING_* 配置后重跑） |
 | `bench_hybrid_retrieval.py` | E-05：hybrid lexical+vector 检索基准（12 chunk 真实语料 × 6 查询，vector/lexical/hybrid 三策略 hit@5/MRR@5/时延；跑完自动清理基准数据） |
 | `c03_pipeline_perf_profile.py` | C-03：context 硬过滤→rerank 管道延迟剖面（合成 memory+knowledge 候选 × 规模轴；纯函数滤芯 + 合成向量 rerank，真实 LLM/embedding 0 次；`--scales` 可调） |
