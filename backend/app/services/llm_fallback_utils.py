@@ -252,10 +252,15 @@ class LLMFallbackWrapper:
         service: Any = None,
         **kwargs
     ) -> str:
-        """安全调用LLM"""
+        """安全调用LLM
+
+        契约（V3-FIX-249）：``fallback`` 以 ``is None`` 哨兵判定是否提供——
+        显式 falsy fallback（``""``）原样生效，不会被单例默认静默替换；未提供
+        （None）时才落 ``default_fallback``。与 json_call 的 V3-FIX-242 哨兵判空同型。
+        """
         return await safe_llm_call(
             messages,
-            fallback=fallback or self.default_fallback,
+            fallback=fallback if fallback is not None else self.default_fallback,
             timeout=self.timeout,
             retry_count=self.retry_count,
             service=service,
@@ -296,11 +301,15 @@ class LLMFallbackWrapper:
         fallback: str | None = None,
         **kwargs
     ) -> str:
-        """简化的聊天接口"""
+        """简化的聊天接口
+
+        契约（V3-FIX-249）：``fallback`` 以 ``is None`` 哨兵判定是否提供——显式
+        ``""`` 原样生效；未提供（None）时才落 ``default_fallback``。
+        """
         return await safe_llm_chat(
             prompt,
             system_prompt=system_prompt,
-            fallback=fallback or self.default_fallback,
+            fallback=fallback if fallback is not None else self.default_fallback,
             timeout=self.timeout,
             **kwargs
         )

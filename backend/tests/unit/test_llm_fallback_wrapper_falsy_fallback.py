@@ -97,3 +97,57 @@ async def test_explicit_fallback_wins_over_wrapper_default_on_parse_failure():
 
     result = await safe_llm_json_call(_MSGS, fallback=[], service=_GarbageService())
     assert result == []
+
+
+# ---------------------------------------------------------------------------
+# V3-FIX-249：字符串侧 call/chat 的 ``fallback or default_fallback`` 真值链——
+# 与 242 的 json 侧同型面。修后语义：``is None`` 哨兵判空，显式 "" 原样生效。
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_explicit_empty_string_call_fallback_preserved_on_llm_failure():
+    """台账同型判据（call 侧）：显式 fallback="" 失败路径必须返回 ""，不得换默认。"""
+    wrapper = LLMFallbackWrapper(service_name="T", default_fallback="默认句")
+    result = await wrapper.call(_MSGS, fallback="", service=_FAILING)
+    assert result == "", f"显式空串 fallback 被静默换成 {result!r}"
+
+
+@pytest.mark.asyncio
+async def test_explicit_empty_string_chat_fallback_preserved_on_llm_failure():
+    """台账可证伪判据（chat 侧）：``chat("p", fallback="")`` 失败必须返回 ""。
+
+    旧实现 ``fallback or self.default_fallback`` 把显式 "" 真值收敛成单例默认句。
+    """
+    wrapper = LLMFallbackWrapper(service_name="T", default_fallback="默认句")
+    result = await wrapper.chat("p", fallback="", service=_FAILING)
+    assert result == "", f"显式空串 fallback 被静默换成 {result!r}"
+
+
+@pytest.mark.asyncio
+async def test_string_fallback_not_provided_still_uses_default():
+    """防过修：字符串侧未提供 fallback（None）时仍落 default_fallback。"""
+    wrapper = LLMFallbackWrapper(service_name="T", default_fallback="默认句")
+    assert await wrapper.call(_MSGS, service=_FAILING) == "默认句"
+    assert await wrapper.chat("p", service=_FAILING) == "默认句"
+
+
+@pytest.mark.asyncio
+async def test_vocabulary_word_associations_failure_returns_empty_list_not_fake_word(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """现网实证面：vocabulary_service.get_word_associations LLM 失败 → []。
+
+    旧实现实际返回 vocabulary_llm.default_fallback 整句「词典服务暂时不可用」，
+    下游 ``response.split(',')`` 把整句当一个联想词返回 ``["词典服务暂时不可用"]``
+    ——失败时向用户展示假词。修后钉死新语义：response="" → ``if not response``
+    → 返回空联想列表。
+    """
+    from app.services import llm_fallback_utils
+    from app.services.vocabulary_service import VocabularyService
+
+    assert llm_fallback_utils.vocabulary_llm.default_fallback == "词典服务暂时不可用"
+    monkeypatch.setattr(llm_fallback_utils, "llm_service", _FAILING)
+    result = await VocabularyService.get_word_associations("serendipity")
+    assert result == [], f"失败路径返回了假联想词 {result!r} 而非空列表"
+    assert "词典服务暂时不可用" not in result
