@@ -712,19 +712,25 @@ class _CalendarCellState extends State<_CalendarCell>
 
     final baseColor = switch (record.status) {
       StreakDayStatus.active => DS.semanticSuccess,
+      // V3-FIX-259: weak=活动日但低于质量阈，色相介于有效与保护之间。
+      StreakDayStatus.weak => Color.lerp(DS.semanticSuccess, DS.semanticWarning, 0.5)!,
       StreakDayStatus.frozen => DS.semanticWarning,
       StreakDayStatus.missed => DS.neutral300,
+      StreakDayStatus.unknown => DS.neutral300,
     };
 
-    final textColor = record.status == StreakDayStatus.missed
+    final textColor = record.status == StreakDayStatus.missed ||
+            record.status == StreakDayStatus.unknown
         ? DS.textSecondary
         : DS.textOnPrimary;
 
     // Overlay icon for active / frozen days
     final overlayIcon = switch (record.status) {
       StreakDayStatus.active => Icons.local_fire_department,
+      StreakDayStatus.weak => Icons.local_fire_department,
       StreakDayStatus.frozen => Icons.ac_unit,
       StreakDayStatus.missed => null,
+      StreakDayStatus.unknown => Icons.help_outline,
     };
 
     return FadeTransition(

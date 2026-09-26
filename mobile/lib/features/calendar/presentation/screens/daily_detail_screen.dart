@@ -275,6 +275,19 @@ class DailyDetailScreen extends ConsumerWidget {
           DS.textSecondary,
           Icons.event_busy_rounded,
         ),
+      // V3-FIX-259: weak=活动日但低于质量阈。
+      StreakDayStatus.weak => (
+          context.l10n.calCheckinWeakTitle,
+          context.l10n.calCheckinWeakDesc,
+          Color.lerp(DS.semanticSuccess, DS.semanticWarning, 0.5)!,
+          Icons.local_fire_department_rounded,
+        ),
+      StreakDayStatus.unknown => (
+          context.l10n.calCheckinUnknownTitle,
+          context.l10n.calCheckinUnknownDesc,
+          DS.textSecondary,
+          Icons.help_outline_rounded,
+        ),
     };
 
     return Container(

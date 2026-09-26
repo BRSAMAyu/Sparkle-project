@@ -16537,6 +16537,14 @@
   "taskPreviewProtectedSubtitle": "这一天使用了连击保护，没有直接断签。",
   "taskPreviewMissedLabel": "未打卡",
   "taskPreviewMissedSubtitle": "这一天没有形成有效打卡记录。",
+  "taskPreviewWeakLabel": "已打卡 · 低质量",
+  "taskPreviewWeakSubtitle": "已记录活动，但未达质量阈值。",
+  "taskPreviewUnknownLabel": "未知状态",
+  "taskPreviewUnknownSubtitle": "无法识别的当日状态，已按中性样式显示。",
+  "calCheckinWeakTitle": "今日为低质量打卡",
+  "calCheckinWeakDesc": "当日有活动记录，但未达质量阈值。",
+  "calCheckinUnknownTitle": "当日状态未知",
+  "calCheckinUnknownDesc": "无法识别的当日状态，已按中性样式显示。",
   "todayCockpitExampleBadge": "示例",
   "authTryExample": "体验一个示例"
 }

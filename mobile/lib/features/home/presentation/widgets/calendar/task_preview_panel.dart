@@ -292,6 +292,19 @@ class _StreakStatusCard extends StatelessWidget {
           DS.textSecondary,
           l10n.taskPreviewMissedSubtitle,
         ),
+      // V3-FIX-259: weak=活动日但低于质量阈（介于有效打卡与保护之间的视觉）。
+      StreakDayStatus.weak => (
+          l10n.taskPreviewWeakLabel,
+          Icons.local_fire_department_rounded,
+          Color.lerp(DS.semanticSuccess, DS.semanticWarning, 0.5)!,
+          l10n.taskPreviewWeakSubtitle,
+        ),
+      StreakDayStatus.unknown => (
+          l10n.taskPreviewUnknownLabel,
+          Icons.help_outline_rounded,
+          DS.textSecondary,
+          l10n.taskPreviewUnknownSubtitle,
+        ),
     };
 
     return Container(

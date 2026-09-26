@@ -195,28 +195,6 @@ Map<String, dynamic> _$StreakStatsToJson(StreakStats instance) =>
       'longest_streak_end': instance.longestStreakEnd?.toIso8601String(),
     };
 
-StreakDayRecord _$StreakDayRecordFromJson(Map<String, dynamic> json) =>
-    StreakDayRecord(
-      day: DateTime.parse(json['day'] as String),
-      status: $enumDecode(_$StreakDayStatusEnumMap, json['status']),
-      usedFreeze: json['used_freeze'] as bool? ?? false,
-      sourceEvent: json['source_event'] as String?,
-    );
-
-Map<String, dynamic> _$StreakDayRecordToJson(StreakDayRecord instance) =>
-    <String, dynamic>{
-      'day': instance.day.toIso8601String(),
-      'status': _$StreakDayStatusEnumMap[instance.status]!,
-      'used_freeze': instance.usedFreeze,
-      'source_event': instance.sourceEvent,
-    };
-
-const _$StreakDayStatusEnumMap = {
-  StreakDayStatus.active: 'active',
-  StreakDayStatus.frozen: 'frozen',
-  StreakDayStatus.missed: 'missed',
-};
-
 StreakHistoryResponse _$StreakHistoryResponseFromJson(
         Map<String, dynamic> json) =>
     StreakHistoryResponse(

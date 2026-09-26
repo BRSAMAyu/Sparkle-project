@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:json_annotation/json_annotation.dart';
+import 'package:logger/logger.dart';
 
 part 'achievement_model.g.dart';
 
@@ -78,13 +79,21 @@ enum ContractStatus {
 }
 
 /// 连胜日历状态
+///
+/// V3-FIX-259：与后端 StrEnum StreakDayStatus 精确对齐（4 值 + unknown 哨兵）。
+/// weak = 活动日但低于质量阈值；unknown = 未知值兜底哨兵
+/// （execution_intent_model 范式），防后端再增值时端上解析崩。
 enum StreakDayStatus {
   @JsonValue('active')
   active,
+  @JsonValue('weak')
+  weak,
   @JsonValue('frozen')
   frozen,
   @JsonValue('missed')
   missed,
+  @JsonValue('unknown')
+  unknown,
 }
 
 // ========== 成就实体 ==========
@@ -383,7 +392,30 @@ class StreakStats {
 
 // ========== 连胜日历历史 ==========
 
-@JsonSerializable()
+final Logger _streakStatusLogger = Logger();
+
+/// V3-FIX-259：手写解析（execution_intent unknown 哨兵范式）——未知值不崩、
+/// 降级 unknown 并记 log，替代 json_serializable $enumDecode 的硬失败。
+StreakDayStatus _parseStreakDayStatus(String? value) {
+  switch (value) {
+    case 'active':
+      return StreakDayStatus.active;
+    case 'weak':
+      return StreakDayStatus.weak;
+    case 'frozen':
+      return StreakDayStatus.frozen;
+    case 'missed':
+      return StreakDayStatus.missed;
+    default:
+      if (value != null) {
+        _streakStatusLogger.w(
+          'StreakDayStatus: unknown wire value "$value", degrading to unknown',
+        );
+      }
+      return StreakDayStatus.unknown;
+  }
+}
+
 class StreakDayRecord {
   StreakDayRecord({
     required this.day,
@@ -392,17 +424,34 @@ class StreakDayRecord {
     this.sourceEvent,
   });
 
-  factory StreakDayRecord.fromJson(Map<String, dynamic> json) =>
-      _$StreakDayRecordFromJson(json);
+  factory StreakDayRecord.fromJson(Map<String, dynamic> json) => StreakDayRecord(
+        day: DateTime.parse(json['day'] as String),
+        status: _parseStreakDayStatus(json['status'] as String?),
+        usedFreeze: json['used_freeze'] as bool? ?? false,
+        sourceEvent: json['source_event'] as String?,
+      );
 
   final DateTime day;
   final StreakDayStatus status;
+
   @JsonKey(name: 'used_freeze')
   final bool usedFreeze;
+
   @JsonKey(name: 'source_event')
   final String? sourceEvent;
 
-  Map<String, dynamic> toJson() => _$StreakDayRecordToJson(this);
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'day': day.toIso8601String(),
+        'status': switch (status) {
+          StreakDayStatus.active => 'active',
+          StreakDayStatus.weak => 'weak',
+          StreakDayStatus.frozen => 'frozen',
+          StreakDayStatus.missed => 'missed',
+          StreakDayStatus.unknown => 'unknown',
+        },
+        'used_freeze': usedFreeze,
+        'source_event': sourceEvent,
+      };
 }
 
 @JsonSerializable()

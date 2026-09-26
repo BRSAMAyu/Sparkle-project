@@ -16841,6 +16841,14 @@
   "taskPreviewProtectedSubtitle": "Streak protection used, no streak break.",
   "taskPreviewMissedLabel": "Missed",
   "taskPreviewMissedSubtitle": "No valid check-in recorded on this day.",
+  "taskPreviewWeakLabel": "Checked · Low quality",
+  "taskPreviewWeakSubtitle": "Activity recorded, but below the quality threshold.",
+  "taskPreviewUnknownLabel": "Unknown status",
+  "taskPreviewUnknownSubtitle": "Unrecognized day status; displayed neutrally.",
+  "calCheckinWeakTitle": "Low-quality check-in",
+  "calCheckinWeakDesc": "Activity recorded on this day, below the quality threshold.",
+  "calCheckinUnknownTitle": "Unknown day status",
+  "calCheckinUnknownDesc": "Unrecognized day status; displayed neutrally.",
   "todayCockpitExampleBadge": "Example",
   "authTryExample": "Try an example"
 }

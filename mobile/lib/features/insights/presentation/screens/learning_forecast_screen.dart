@@ -84,8 +84,11 @@ class _LearningForecastScreenState
         DateTime(record.day.year, record.day.month, record.day.day): switch (
             record.status) {
           StreakDayStatus.active => 1.0,
+          // V3-FIX-259: weak=活动日但低于质量阈，强度介于有效打卡与保护之间。
+          StreakDayStatus.weak => 0.7,
           StreakDayStatus.frozen => 0.55,
           StreakDayStatus.missed => 0.0,
+          StreakDayStatus.unknown => 0.0,
         },
     };
   }

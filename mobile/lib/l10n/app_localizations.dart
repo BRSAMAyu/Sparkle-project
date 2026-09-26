@@ -62606,6 +62606,54 @@ abstract class AppLocalizations {
   /// **'这一天没有形成有效打卡记录。'**
   String get taskPreviewMissedSubtitle;
 
+  /// No description provided for @taskPreviewWeakLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'已打卡 · 低质量'**
+  String get taskPreviewWeakLabel;
+
+  /// No description provided for @taskPreviewWeakSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'已记录活动，但未达质量阈值。'**
+  String get taskPreviewWeakSubtitle;
+
+  /// No description provided for @taskPreviewUnknownLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'未知状态'**
+  String get taskPreviewUnknownLabel;
+
+  /// No description provided for @taskPreviewUnknownSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法识别的当日状态，已按中性样式显示。'**
+  String get taskPreviewUnknownSubtitle;
+
+  /// No description provided for @calCheckinWeakTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日为低质量打卡'**
+  String get calCheckinWeakTitle;
+
+  /// No description provided for @calCheckinWeakDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'当日有活动记录，但未达质量阈值。'**
+  String get calCheckinWeakDesc;
+
+  /// No description provided for @calCheckinUnknownTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'当日状态未知'**
+  String get calCheckinUnknownTitle;
+
+  /// No description provided for @calCheckinUnknownDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法识别的当日状态，已按中性样式显示。'**
+  String get calCheckinUnknownDesc;
+
   /// No description provided for @todayCockpitExampleBadge.
   ///
   /// In zh, this message translates to:

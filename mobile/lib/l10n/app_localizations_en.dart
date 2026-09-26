@@ -35921,6 +35921,34 @@ class AppLocalizationsEn extends AppLocalizations {
       'No valid check-in recorded on this day.';
 
   @override
+  String get taskPreviewWeakLabel => 'Checked · Low quality';
+
+  @override
+  String get taskPreviewWeakSubtitle =>
+      'Activity recorded, but below the quality threshold.';
+
+  @override
+  String get taskPreviewUnknownLabel => 'Unknown status';
+
+  @override
+  String get taskPreviewUnknownSubtitle =>
+      'Unrecognized day status; displayed neutrally.';
+
+  @override
+  String get calCheckinWeakTitle => 'Low-quality check-in';
+
+  @override
+  String get calCheckinWeakDesc =>
+      'Activity recorded on this day, below the quality threshold.';
+
+  @override
+  String get calCheckinUnknownTitle => 'Unknown day status';
+
+  @override
+  String get calCheckinUnknownDesc =>
+      'Unrecognized day status; displayed neutrally.';
+
+  @override
   String get todayCockpitExampleBadge => 'Example';
 
   @override

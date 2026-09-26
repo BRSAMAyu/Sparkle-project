@@ -34408,6 +34408,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskPreviewMissedSubtitle => '这一天没有形成有效打卡记录。';
 
   @override
+  String get taskPreviewWeakLabel => '已打卡 · 低质量';
+
+  @override
+  String get taskPreviewWeakSubtitle => '已记录活动，但未达质量阈值。';
+
+  @override
+  String get taskPreviewUnknownLabel => '未知状态';
+
+  @override
+  String get taskPreviewUnknownSubtitle => '无法识别的当日状态，已按中性样式显示。';
+
+  @override
+  String get calCheckinWeakTitle => '今日为低质量打卡';
+
+  @override
+  String get calCheckinWeakDesc => '当日有活动记录，但未达质量阈值。';
+
+  @override
+  String get calCheckinUnknownTitle => '当日状态未知';
+
+  @override
+  String get calCheckinUnknownDesc => '无法识别的当日状态，已按中性样式显示。';
+
+  @override
   String get todayCockpitExampleBadge => '示例';
 
   @override
