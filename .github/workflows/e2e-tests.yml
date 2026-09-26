@@ -94,7 +94,7 @@ jobs:
             --junitxml=test-results/python-e2e.xml
 
       - name: Upload coverage reports
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           files: backend/coverage.xml
           flags: python-e2e
@@ -150,7 +150,7 @@ jobs:
           go tool cover -html=coverage.out -o coverage.html
 
       - name: Upload coverage reports
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           files: backend/gateway/coverage.out
           flags: go-e2e
@@ -195,7 +195,7 @@ jobs:
             --coverage-path=coverage/lcov.info
 
       - name: Upload coverage reports
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           files: mobile/coverage/lcov.info
           flags: flutter-e2e
