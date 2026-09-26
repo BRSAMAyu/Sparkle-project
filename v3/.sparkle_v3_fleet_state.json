@@ -4,10 +4,10 @@
  "baseline_head": "fedd27e35e305502ba727ba8c3fb46eae33a1eb9",
  "slots": 6,
  "active": {
-  "wt530": "flutter analyze 批三烧减 INFO 458→≤418/CASCADE 219 续烧 @eac44bc3",
   "wt531": "时区层四收官 FIX-243+251（checkpoint 游标/计划排程网格/aurora 兜底钟）@a1af1a57",
   "wt533": "B-02 数据真实性/Mock 污染/指标 Lineage 基线审计（猎缺，产报告+台账）@3ed32a4f",
-  "wt535": "FIX-210 批四死键收割（home91/error23/galaxy22/knowledge19）@f51cce2c"
+  "wt535": "FIX-210 批四死键收割（home91/error23/galaxy22/knowledge19）@f51cce2c",
+  "wt536": "mypy 批四烧减 869→≤829（避开 FIX-253 四点位专卡保留面）@c50c5aa5"
  },
  "done": [
   "A-01",
@@ -532,7 +532,8 @@
   "wt529",
   "wt528",
   "wt532",
-  "wt522"
+  "wt522",
+  "wt530"
  ],
  "blocked": [],
  "notes": [
@@ -653,6 +654,7 @@
   "2026-09-26 23:5x 轮：wt529 FIX-247 集成完毕（cherry-pick 76285de0+3af5e208，union-merge 1 块零吞行；合并态触达 3 套件 11 绿（shell warm refresh 旗闸 3 例含 flag-on 照发+缓存兜底回归守卫），纯移动端无 mypy 面，树已清）——启动期 VE warm refresh 403 噪声收口，移动端消费面 403 噪声族（190 主族+247 启动残余）全清。wt532 立即补位（FIX-241 black 收正 + FIX-255 wt524 顺带观察的 LockError 降级阈值 0.95/0.9 口径差，同文件双卡）。CI run 36249150918 仍在航（>80min，常规区间上沿）。三问：在航 5 槽（wt522/528/530/531/532）；空槽 0；下一卡=CI 裁决（若超 100min 关注）→wt522 l10n 批三集成→l10n 批四。",
   "2026-09-26 23:2x 轮（本窗第三次收轮）：①wt532 双卡集成（74f6520c+ce75d50e+d4458d77 零冲突，合并态 semantic_cache 5 套件 24 绿+mypy 922=922，ast.dump 等值证纯格式化，树清）——FIX-241 black 15 hunk 收正+FIX-255 LockError 降级阈值同源收口；②wt528 mypy 批三集成（61622e6c+b3ed8a1f，union-merge 1 块，合并态 ratchet 869=869 基线正式降 922→869，guest_seed+aurora runtime 158 绿复验，树清）；③**抓到并修掉一个真测试门回归**：wt510 批二 8d38ebae 把 _param 改单参 .get(key)，test_rb10 桩 default 位置必传→确定性 TypeError（集成验证当日漏网，wt528 复跑暴露，git log 双文件定位 8d38ebae，真实契约核验 default 本可选→修桩对齐零产品改动，18/18+orchestration 199/199 绿，246ad15c）；④在航 run 36249150918 含 8d38ebae 已知必红——判定「可能全绿」失效，即推止损（8f858bc4..246ad15c 16 commit：六卡集成+rb10 修复+mypy 869 基线），doomed run 取消新 run 起跑；⑤wt528 另报 4 个真缺陷候选（service.py:596 kill-switch off 分支 TurnPlan 缺字段/:2363 str.isoformat()/:2946 drop_thread 不在 Literal/orchestrator.py:2060 None filename sorted）已入账 253 行——文件面与在航 wt531 重叠，待其返航再派修卡；⑥wt533 补位（B-02 审计）。三问：在航 5 槽（wt522/530/531/533+协调者）；空槽 0；下一卡=新 run 裁决→wt531 返航→253 行四缺陷修卡。",
   "2026-09-26 23:4x 轮：wt522 批三集成完毕（fix 359623d6 谱系互斥但 hunk 不重叠干净落地 3884 行纯删除；编译门 analyze E0=误删探测器零命中+触达 18 绿；docs 253a6de4 union-merge 又现吞行——246/247 新行被吞，从 worker commit 恢复 246、247 重编号 256 落位（wt529 已占 247，今天第 9 次撞号）；树已清）。累计四批 l10n 死键收割：38+436+243=717 键 -12000+6937+3884 行。wt535 立即补位=批四（home/error/galaxy/knowledge 四族）。CI run 36251059248 在航（246ad15c）。三问：在航 5 槽（wt530/531/533/534/535）；空槽 0；下一卡=CI 裁决→wt531 返航→FIX-253 四缺陷修卡→l10n 批五（singles 长尾 308）。",
-  "2026-09-26 23:30 唤醒轮：①run 36251059248 裁决=红·唯一层 Code Quality/Flutter Analyze Gate：REQUIRE_TRAILING_COMMAS 1>0——wt523 新测试文件 release_flags_provider_test.dart 缺尾逗号；成因=卡验证跑 flutter analyze 而 CI gate 用 dart analyze 机器格式逐码核预算（覆盖差异），裸 analyze grep 零命中而 gate 脚本本地复现 1>0；dart fix 机械修 1 处→gate PASS（INFO 461）→3 测绿（de44e5da 随推，run 36251648705 起跑）；处置纪律：mobile 卡验证命令今后统一加 dart fix --dry-run 预检；②陈旧 worktree wt507-clockfam 三清点（树净、FIX-211 台账 FIXED@67b4e9c8 在案、cherry-pick 谱系非 merge 故 --merged 不匹配属预期）→移除+删支，现存 5 worktree 与 5 在航 agent 一一对应；③例行：盘 3G/swap 16.3G（高位，5 agent 并行正常负担）/load 2.1/3 容器/双端健康；④JOURNEY state 复核 day5_done=true（5/7），day6=明 08:00（/tmp/gate_day6.py 已备），晨门前常驻栈升级到最终头。三问：在航 5 槽（wt530/531/533/534/535）；空槽 0；下一卡=run 36251648705 裁决（本栈六绿条件：前五+REQUIRE_TRAILING_COMMAS 修复）→wt531 返航→FIX-253 四缺陷修卡。"
+  "2026-09-26 23:30 唤醒轮：①run 36251059248 裁决=红·唯一层 Code Quality/Flutter Analyze Gate：REQUIRE_TRAILING_COMMAS 1>0——wt523 新测试文件 release_flags_provider_test.dart 缺尾逗号；成因=卡验证跑 flutter analyze 而 CI gate 用 dart analyze 机器格式逐码核预算（覆盖差异），裸 analyze grep 零命中而 gate 脚本本地复现 1>0；dart fix 机械修 1 处→gate PASS（INFO 461）→3 测绿（de44e5da 随推，run 36251648705 起跑）；处置纪律：mobile 卡验证命令今后统一加 dart fix --dry-run 预检；②陈旧 worktree wt507-clockfam 三清点（树净、FIX-211 台账 FIXED@67b4e9c8 在案、cherry-pick 谱系非 merge 故 --merged 不匹配属预期）→移除+删支，现存 5 worktree 与 5 在航 agent 一一对应；③例行：盘 3G/swap 16.3G（高位，5 agent 并行正常负担）/load 2.1/3 容器/双端健康；④JOURNEY state 复核 day5_done=true（5/7），day6=明 08:00（/tmp/gate_day6.py 已备），晨门前常驻栈升级到最终头。三问：在航 5 槽（wt530/531/533/534/535）；空槽 0；下一卡=run 36251648705 裁决（本栈六绿条件：前五+REQUIRE_TRAILING_COMMAS 修复）→wt531 返航→FIX-253 四缺陷修卡。",
+  "2026-09-26 23:5x 轮：wt530 analyze 批三集成完毕（c3bb7e03+73777024，union-merge 1 块 254 行存活；尾逗号双修（其基线含同一违例也烧了）git 自动并轨零冲突；合并态 gate PASS ERROR=0/W=4/INFO=412 allowlist 降档全落地；触达样例 56 绿+1 设计跳过；树清）——INFO 462→412（-50 真修：setters 转真 setter 11/表达式体 11/named constants 8/foreach 6 等族），WARNING 14→4（余 4 条 DEPRECATED_MEMBER_USE 刻意保留待真机卡），AVOID_PRINT 14 刻意不动（纯 Dart CLI debugPrint 断直跑属行为变更）。wt536 立即补位=mypy 批四（869→≤829，避开 FIX-253 四点位）。CI run 36251648705 在航（de44e5da）。三问：在航 5 槽（wt531/533/534/535/536）；空槽 0；下一卡=CI 裁决→wt531 返航→FIX-253 四缺陷专卡。"
  ]
 }
