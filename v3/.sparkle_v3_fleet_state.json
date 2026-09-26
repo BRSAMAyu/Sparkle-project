@@ -6,9 +6,9 @@
  "active": {
   "wt544": "FIX-258 demo 落库 origin 标记（迁移+写侧+记忆推断过滤）@a9fb6360",
   "wt545": "FIX-210 批六 singles 长尾 357 收割（宁漏勿错纪律加强）+246 尾项销账@7db1bc3f",
-  "wt546": "flutter analyze 批四烧减 INFO 412→≤372（dart analyze 机器格式同款验证）@f5bf292a",
   "wt547": "mypy 批五烧减 684→≤649（含同文件全套件验证矩阵纪律）@7f466be5",
-  "wt548": "ENUM-PARITY 扩表（~75 候选三分类判定 dual/passthrough/backend-only）@d79354e9"
+  "wt548": "ENUM-PARITY 扩表（~75 候选三分类判定 dual/passthrough/backend-only）@d79354e9",
+  "wt549": "CASCADE 保留族第一刀（限 test/ 纯等价子集，串行自证）@ff6df0ee"
  },
  "done": [
   "A-01",
@@ -546,7 +546,8 @@
   "wt541",
   "wt543",
   "wt542",
-  "wt539"
+  "wt539",
+  "wt546"
  ],
  "blocked": [],
  "notes": [
@@ -680,6 +681,7 @@
   "2026-09-27 01:3x 轮：wt541 枚举守卫集成完毕（ca68b9fa+bf4e3e8e，union-merge 263→264 重编号第 15 次撞号；合并态守卫自跑 PASS（15 族 FAIL=0 豁免=2）+全量守卫 85/85 绿（BG 红仅 worktree 缺 gateway/gen 环境态，主线过），树清）——ENUM-PARITY 常驻守卫落地：15 族映射（14 dual+RunStatus passthrough 防 mobile 镜像）、三形态 Dart 解析（@JsonValue/enhanced-enum/parse-switch）、KNOWN_DRIFT 显式豁免带 2026-10-07 到期自动重红、--self-test 18 断言、~75 未进表 StrEnum 列为扩表候选。B-06 空档结构性封堵完成；259/260 修复落地后删豁免即闭环。wt545 立即补位=l10n 批六（singles 长尾 357 宁漏勿错+246 尾项顺收）。CI 36253679384 仍在航（>95min 上沿，若超 110min 下轮主动 gh api 查 job 级状态）。三问：在航 5 槽（wt539/542/543/544/545）；空槽 0；下一卡=CI 裁决→wt539 集成后删守卫豁免→批七或收池评估。",
   "2026-09-27 01:5x 轮：wt543 双潜伏 bug 集成完毕（91f8e579+88f3f5bf，union-merge 264→265 重编号第 16 次撞号；合并态 routing 守卫+mixin 套件 115 绿、mypy 684=684 基线自动校准，树清）——①await 同步纯函数去 await（提案链路 unblock，celery 重试死循环修复）②proto metadata 全值 str 化缺省策略（里程碑通知不再静默丢失，stream_callback 0 次调用实录修前）。mypy 今日累计 922→684（-238）。wt546 立即补位=analyze 批四（含 dart analyze 机器格式同款验证纪律）。CI run 36253679384 在航超 2h——已 gh api 下钻 job 级状态核实（本轮输出）。三问：在航 5 槽（wt539/542/544/545/546）；空槽 0；下一卡=CI 裁决（超长需关注）→wt539 集成删守卫豁免→收池评估（l10n 批六后长尾跳过率定去留）。",
   "2026-09-27 02:1x 轮：wt542 FIX-260 集成完毕（1447686c+62bb105c+3ffe4e36 三 commit 干净落地；合并态解码 5/5 绿；**守卫联动闭环**：ENUM-PARITY 的 260 豁免即删（7f466be5），实测对齐仅剩 unknown 哨兵 EP002 WARN，守卫 PASS exit 0；树清）——mobile 补 planning 值+unknown 哨兵治本式（@JsonKey(unknownEnumValue)+build_runner 重生成+降级 log），5 处穷举 switch 补 case，wire 面本已对齐零快照变更。wt547 立即补位=mypy 批五（684→≤649，派单含验证矩阵教训）。B-06 断链两缺陷 260 已闭环/259 待 wt539 返航。三问：在航 5 槽（wt539/544/545/546/547）；空槽 0；下一卡=CI Backend Tests 裁决（其余 4 job 已绿）→wt539 集成删最后豁免→守卫扩表候选评估。",
-  "2026-09-27 02:3x 轮：wt539 FIX-259(P2) 集成完毕（42adc7ad+03fbd999+ad141772 三 commit，台账 union-merge 259 FIXED 行存活；**四快照联动验证**：OpenAPI 合并态重导逐字节一致+契约过、mypy 684=684、migrations+streak 28 绿 5 skip；**守卫豁免二次联动**：259 豁免即删（d79354e9）豁免清单归零 WARN=2 全是设计内 unknown 哨兵——B-06 断链双缺陷全闭环。wt548 立即补位=守卫扩表（~75 候选三分类，新漂移照 259/260 先例登记+豁免）。CI Backend Tests 仍在航（>150min 超历史区间，其余 4 job 绿；若再 30min 无结论按卡死处理重跑并记录）。三问：在航 5 槽（wt544/545/546/547/548）；空槽 0；下一卡=CI 裁决或卡死处置→day6 晨门前栈升级（08:00 门）。"
+  "2026-09-27 02:3x 轮：wt539 FIX-259(P2) 集成完毕（42adc7ad+03fbd999+ad141772 三 commit，台账 union-merge 259 FIXED 行存活；**四快照联动验证**：OpenAPI 合并态重导逐字节一致+契约过、mypy 684=684、migrations+streak 28 绿 5 skip；**守卫豁免二次联动**：259 豁免即删（d79354e9）豁免清单归零 WARN=2 全是设计内 unknown 哨兵——B-06 断链双缺陷全闭环。wt548 立即补位=守卫扩表（~75 候选三分类，新漂移照 259/260 先例登记+豁免）。CI Backend Tests 仍在航（>150min 超历史区间，其余 4 job 绿；若再 30min 无结论按卡死处理重跑并记录）。三问：在航 5 槽（wt544/545/546/547/548）；空槽 0；下一卡=CI 裁决或卡死处置→day6 晨门前栈升级（08:00 门）。",
+  "2026-09-27 02:5x 轮：wt546 analyze 批四集成完毕（10a36e97+e87b9dab，266 行直落无撞号；**诚实缺口披露采纳**：412→409 仅 3 条真修+409 条全为批三保留族的可烧面普查实证——烧减面已尽；其台账误替换 265 行事故已复核恢复完好（集成侧 grep 265/266 双行在）；gate PASS 409+触达 79 绿，树清）——DEPEND_ON_REFERENCED_PACKAGES 3→0 清零。协调者授权保留族分层拆解第一刀：wt549=CASCADE 限 test/ 纯等价子集（判例：chat_notifier cascade 转换先例；lib/ 面留第二批评估）。CI Backend Tests 仍在航（~170min，30min 卡死处置窗剩余 ~15min）。三问：在航 5 槽（wt544/545/547/548/549）；空槽 0；下一卡=CI 卡死处置或裁决→day6 晨门栈升级。"
  ]
 }
