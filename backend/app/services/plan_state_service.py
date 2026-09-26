@@ -32,6 +32,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.models.plan_state import PlanState, PlanStateStatus
+from app.tools.base import in_tool_managed_transaction
 
 # R2-P3-06（sysrev round2）：feedback_log 追加窗口上限。零任务级变更的健康
 # 信号轮也会追加条目（曾无节流），无界增长会拖垮 plan_state 行与深合并开销；
@@ -199,7 +200,13 @@ class PlanStateService:
             status=PlanStateStatus.ACTIVE.value,
         )
         self.db.add(state)
-        await self.db.commit()
+        if in_tool_managed_transaction(self.db):
+            # V3-FIX-40 · 账本同事务收编：executor 工具路径不内部 commit——
+            # 业务写与账本行同事务提交（失败一起回滚）；提交时机移交给调用方
+            # （chat 流结束 / executor owned 会话）。独立调用方保持自带 commit。
+            await self.db.flush()
+        else:
+            await self.db.commit()
         await self.db.refresh(state)
 
         # Update cache
@@ -312,7 +319,10 @@ class PlanStateService:
 
         state.updated_at = _utcnow()
 
-        await self.db.commit()
+        if in_tool_managed_transaction(self.db):
+            await self.db.flush()  # V3-FIX-40 · 账本同事务收编（同 get_or_create）
+        else:
+            await self.db.commit()
         await self.db.refresh(state)
 
         # Update cache
@@ -350,7 +360,10 @@ class PlanStateService:
         state.archived_at = _utcnow()
         state.updated_at = _utcnow()
 
-        await self.db.commit()
+        if in_tool_managed_transaction(self.db):
+            await self.db.flush()  # V3-FIX-40 · 账本同事务收编（同 get_or_create）
+        else:
+            await self.db.commit()
         await self.db.refresh(state)
 
         # Invalidate cache (archived states shouldn't be cached)
@@ -383,7 +396,10 @@ class PlanStateService:
         state.task_summaries = summaries
         state.updated_at = _utcnow()
 
-        await self.db.commit()
+        if in_tool_managed_transaction(self.db):
+            await self.db.flush()  # V3-FIX-40 · 账本同事务收编（同 get_or_create）
+        else:
+            await self.db.commit()
         await self.db.refresh(state)
         await self._set_cache(state)
 
@@ -602,7 +618,10 @@ class PlanStateService:
             state.version = (state.version or 0) + 1
         state.updated_at = _utcnow()
 
-        await self.db.commit()
+        if in_tool_managed_transaction(self.db):
+            await self.db.flush()  # V3-FIX-40 · 账本同事务收编（同 get_or_create）
+        else:
+            await self.db.commit()
         await self.db.refresh(state)
         await self._set_cache(state)
         return state

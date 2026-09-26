@@ -37,7 +37,7 @@ from app.core.metrics import TOOL_EXECUTION_COUNT
 from app.db.session import AsyncSessionLocal
 from app.models.agent_tool_call import AgentToolCall
 from app.services.tool_history_service import ToolHistoryService
-from app.tools.base import TOOL_RUNTIME_CONTEXT_KEY, ToolResult
+from app.tools.base import TOOL_RUNTIME_CONTEXT_KEY, TOOL_TX_GUARD_KEY, ToolResult
 from app.tools.metadata import (
     PermissionDecision,
     ToolMetadata,
@@ -726,6 +726,14 @@ class ToolExecutor:
         previous_runtime_context = session_info.get(TOOL_RUNTIME_CONTEXT_KEY) if session_info is not None else None
         if session_info is not None and runtime_context:
             session_info[TOOL_RUNTIME_CONTEXT_KEY] = dict(runtime_context)
+        # V3-FIX-40 · 账本同事务打点：工具执行期间，带内部 commit 的服务
+        # （notification/plan_state/persona 等）把 commit 收编为本事务 flush
+        # ——业务写与账本 in_progress 行同生共死（失败一起回滚：无半状态
+        # 可见、无 key 中毒；X-09 两阶段收敛降级为纯兜底）。owned 会话同样
+        # 打点：其最终 commit 在工具完成之后，同事务语义不变。
+        previous_tx_guard = session_info.get(TOOL_TX_GUARD_KEY) if session_info is not None else None
+        if session_info is not None:
+            session_info[TOOL_TX_GUARD_KEY] = True
 
         try:
             if not tool:
@@ -1103,6 +1111,10 @@ class ToolExecutor:
                     session_info.pop(TOOL_RUNTIME_CONTEXT_KEY, None)
                 else:
                     session_info[TOOL_RUNTIME_CONTEXT_KEY] = previous_runtime_context
+                if previous_tx_guard is None:
+                    session_info.pop(TOOL_TX_GUARD_KEY, None)
+                else:
+                    session_info[TOOL_TX_GUARD_KEY] = previous_tx_guard
 
     async def _record_tool_execution(
         self,

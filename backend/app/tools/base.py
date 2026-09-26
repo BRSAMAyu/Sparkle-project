@@ -8,6 +8,12 @@ from pydantic import BaseModel
 
 TOOL_RUNTIME_CONTEXT_KEY = "tool_runtime_context"
 
+#: V3-FIX-40 · 账本同事务打点键。executor 在每次工具执行前后以 session.info
+#: 打点（见 orchestration/executor.py ``_execute_tool_call_with_session``）；
+#: 服务层据此把内部 ``db.commit()`` 收编为本事务 flush——工具业务写与账本行
+#: （AgentToolCall）同事务提交、失败一起回滚（无半状态可见、无账本残留）。
+TOOL_TX_GUARD_KEY = "tool_tx_guard"
+
 
 class ToolCategory(StrEnum):
     """工具分类"""
@@ -55,6 +61,20 @@ def get_tool_runtime_context(db_session: Any) -> dict[str, Any]:
         return {}
     payload = info.get(TOOL_RUNTIME_CONTEXT_KEY)
     return dict(payload) if isinstance(payload, dict) else {}
+
+
+def in_tool_managed_transaction(db_session: Any) -> bool:
+    """V3-FIX-40 · 该会话是否正处于 executor 管理的工具调用中.
+
+    True ⇒ 服务层内部 commit 收编为 flush（业务写与账本行同事务提交，由
+    调用方——chat 流结束 / executor owned 会话——统一提交）；False ⇒ 独立
+    调用（Celery/路由/消费者），服务保持自带 commit，行为与收编前一致。
+    """
+    sync_session = getattr(db_session, "sync_session", None)
+    info = getattr(sync_session, "info", None)
+    if not isinstance(info, dict):
+        info = getattr(db_session, "info", None)
+    return isinstance(info, dict) and bool(info.get(TOOL_TX_GUARD_KEY))
 
 
 class BaseTool(ABC):

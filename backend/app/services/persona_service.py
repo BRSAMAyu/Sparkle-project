@@ -14,6 +14,7 @@ from app.core.profile_context import ProfileContext
 from app.models.cognitive import BehaviorPattern, CognitiveFragment
 from app.models.compliance import PersonaSnapshot
 from app.models.galaxy import UserNodeStatus
+from app.tools.base import in_tool_managed_transaction
 
 
 class ProfileSnapshotService:
@@ -194,7 +195,13 @@ class ProfileSnapshotService:
             snapshot_data=snapshot
         )
         self.db.add(record)
-        await self.db.commit()
+        if in_tool_managed_transaction(self.db):
+            # V3-FIX-40 · 账本同事务收编：executor 工具路径不内部 commit——
+            # 快照写与账本行同事务提交（失败一起回滚）；提交时机移交给调用方
+            # （chat 流结束 / executor owned 会话）。独立调用方保持自带 commit。
+            await self.db.flush()
+        else:
+            await self.db.commit()
 
 
 # Backward-compatible alias

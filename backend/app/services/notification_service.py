@@ -13,6 +13,7 @@ from app.models.notification import Notification
 from app.models.notification_interaction import NotificationInteraction, NotificationPreferences
 from app.models.user import PushPreference
 from app.schemas.notification import NotificationCreate
+from app.tools.base import in_tool_managed_transaction
 
 PER_TYPE_NOTIFICATION_ALIASES: dict[str, set[str]] = {
     "reminder": {
@@ -276,7 +277,14 @@ class NotificationService:
             data=obj_in.data,
         )
         db.add(db_obj)
-        await db.commit()
+        if in_tool_managed_transaction(db):
+            # V3-FIX-40 · 账本同事务收编：executor 工具路径不内部 commit——
+            # 业务写与账本行同事务提交（失败一起回滚，无半状态/无 key 中毒）。
+            # 提交时机移交给调用方（chat 流结束 / executor owned 会话）；
+            # WS 推送本就 best-effort（失败仅记日志），提前于外层提交无新害。
+            await db.flush()
+        else:
+            await db.commit()
         await db.refresh(db_obj)
 
         logger.info(f"Created notification {db_obj.id} for user {user_id}: {obj_in.title}")
@@ -384,7 +392,10 @@ class NotificationService:
         if notification:
             notification.is_read = True
             notification.read_at = _utcnow()
-            await db.commit()
+            if in_tool_managed_transaction(db):
+                await db.flush()  # V3-FIX-40 · 账本同事务收编（同 create）
+            else:
+                await db.commit()
             await db.refresh(notification)
         return notification
 
