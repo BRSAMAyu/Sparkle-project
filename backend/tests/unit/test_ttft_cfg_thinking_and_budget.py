@@ -256,7 +256,10 @@ def test_planner_budget_is_used_at_wait_for_site():
     """wait_for 调用点必须引用收敛后的常量（防有人回填裸数字）。"""
     from pathlib import Path
 
-    source = Path("app/orchestration/execution_engine.py").read_text()
+    from app.orchestration import execution_engine
+
+    # V3-FIX-120：锚定模块真实路径（原相对 cwd 路径在 CI 从仓库根跑全量时 FileNotFoundError）
+    source = Path(execution_engine.__file__).read_text()
     assert "timeout=_LANGGRAPH_PLANNER_TIMEOUT_SECONDS" in source
 
 
@@ -411,8 +414,12 @@ def test_budget_wraps_use_async_with_form_not_dead_code():
     不得回退到 `asyncio.timeout(N)(fn)(...)` 死码（上一卡 TTFT-PROBE 修过的陷阱）。"""
     from pathlib import Path
 
-    gqe_source = Path("app/orchestration/goal_quality_evaluator.py").read_text()
-    ve_source = Path("app/orchestration/validation_engine.py").read_text()
+    import app.orchestration.goal_quality_evaluator as gqe_module
+    import app.orchestration.validation_engine as ve_module
+
+    # V3-FIX-120：锚定模块真实路径（原相对 cwd 路径在 CI 从仓库根跑全量时 FileNotFoundError）
+    gqe_source = Path(gqe_module.__file__).read_text()
+    ve_source = Path(ve_module.__file__).read_text()
 
     assert "async with asyncio.timeout(GOAL_QUALITY_LLM_BUDGET_SECONDS):" in gqe_source
     assert "async with asyncio.timeout(SUFFICIENCY_CHECK_BUDGET_SECONDS):" in ve_source

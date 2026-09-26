@@ -11,6 +11,7 @@ import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart
 import 'package:sparkle/features/auth/presentation/screens/register_screen.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 import '../../shared/i18n_test_helper.dart';
+import '../../shared/no_network_http_overrides.dart';
 
 /// O3（wt436）红绿测试：注册提交必须有真实反馈路径，且桌面主手势
 /// （键盘 Enter / IME done）必须能触发提交。
@@ -33,6 +34,9 @@ import '../../shared/i18n_test_helper.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  // V3-FIX-120：transport 层禁网——屏内未覆盖的 provider（userRepository 等）
+  // 不得真发 GET /user/settings 到常驻网关（双测合并跑互扰根因）。
+  setUp(installNoNetworkHttpOverrides);
   setUp(setUpI18nForTesting);
   tearDown(tearDownI18n);
 

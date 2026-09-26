@@ -851,13 +851,18 @@ class TestB1TieExitContract:
             "print('PROBE=' + json.dumps(r.to_dict(), ensure_ascii=False, sort_keys=True))\n"
         )
         outputs = []
+        # V3-FIX-120：锚定 backend 目录（原 parents[1]=backend/tests 是错层，本地
+        # 靠 cwd=backend 的隐式 sys.path 兜住；CI 从仓库根跑全量时子进程 import
+        # app.* 失败 CalledProcessError）——PYTHONPATH 指向 backend 且 cwd 对齐，
+        # 与本地单文件行为完全一致
+        backend_dir = Path(__file__).resolve().parents[2]
         for run_seed in (seed, "31337"):
             env = {
                 **os.environ,
                 "PYTHONHASHSEED": run_seed,
                 "DATABASE_URL": "sqlite+aiosqlite:///:memory:",
                 "SECRET_KEY": "v" * 32,
-                "PYTHONPATH": str(Path(__file__).resolve().parents[1]),
+                "PYTHONPATH": str(backend_dir),
             }
             proc = subprocess.run(
                 [sys.executable, "-c", snippet],
@@ -866,6 +871,7 @@ class TestB1TieExitContract:
                 text=True,
                 timeout=120,
                 check=True,
+                cwd=backend_dir,
             )
             line = next(l for l in proc.stdout.splitlines() if l.startswith("PROBE="))
             outputs.append(line[len("PROBE=") :])

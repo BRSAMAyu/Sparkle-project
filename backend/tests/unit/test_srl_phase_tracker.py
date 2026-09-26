@@ -283,7 +283,8 @@ async def test_tracker_handle_transition_event_p95_under_budget(
     db_session, test_user, monkeypatch
 ) -> None:
     await _enable_live_modes(monkeypatch)
-    settings.AURORA_SRL_TRACKER_P95_MS_BUDGET = 20
+    # V3-FIX-120：经 monkeypatch 注入，不残留 settings 单例
+    monkeypatch.setattr(settings, "AURORA_SRL_TRACKER_P95_MS_BUDGET", 20)
     tracker = SRLPhaseTrackerService(db_session)
     latencies_ms: list[float] = []
 

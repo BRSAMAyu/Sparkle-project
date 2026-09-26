@@ -29,17 +29,17 @@ canonical insight（画像编译态）的 goals 在注入面 active_goals 为空
 from __future__ import annotations
 
 import ast
-import pathlib
 from pathlib import Path
 
+import app.services.user_insight_compiler as _compiler_mod
 from app.core.profile_context import CognitiveSummary, KnowledgeSummary, ProfileContext
 from app.core.user_insight_state import UserInsightState
 from app.orchestration.prompts import _normalize_user_context, build_system_prompt
 from app.services.user_insight_compiler import UserInsightCompiler
 
-COMPILER_MODULE_PATH = Path(UserInsightCompiler.__module__.replace(".", "/")).with_suffix(".py")
-if not COMPILER_MODULE_PATH.exists():  # 兜底：非源码布局（zip 等）时按仓内路径解析
-    COMPILER_MODULE_PATH = pathlib.Path(__file__).resolve().parents[1] / "app" / "services" / "user_insight_compiler.py"
+# V3-FIX-120：锚定模块真实文件（原 cwd 相对路径 + parents[1] 兜底在 CI 从仓库根
+# 跑全量时解析成 backend/tests/app/... FileNotFoundError）
+COMPILER_MODULE_PATH = Path(_compiler_mod.__file__).resolve()
 
 #: 封闭真实事实出处词表（=编译器全部合法 goal 来源）。扩展必须先过裁决：
 #: 新 source 必须能证明「来自真实用户记录」而非推断/默认值，并同步本词表。

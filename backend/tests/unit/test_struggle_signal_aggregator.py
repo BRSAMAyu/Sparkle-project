@@ -74,6 +74,9 @@ async def test_compute_struggle_score_skip_rate_0_7_triggers_even_before_other_s
 async def test_compute_struggle_score_high_skip_rate_crosses_trigger_threshold(db_session) -> None:
     user, plan = await _create_user_and_plan(db_session)
     now = datetime.utcnow()
+    # V3-FIX-120：锚定当日正午——原 now-1h/now-30min 在 UTC 00:00-00:30 段会跨过
+    # 午夜（aggregator 按 UTC 当日窗口聚合），skip_rate 掉成 0.0 的墙钟翻红
+    today_noon = datetime.combine(now.date(), time.min) + timedelta(hours=12)
 
     today_tasks = []
     for index in range(10):
@@ -88,8 +91,8 @@ async def test_compute_struggle_score_high_skip_rate_crosses_trigger_threshold(d
                 estimated_minutes=20,
                 difficulty=2,
                 energy_cost=2,
-                created_at=now - timedelta(hours=1),
-                updated_at=now - timedelta(minutes=30),
+                created_at=today_noon - timedelta(hours=1),
+                updated_at=today_noon - timedelta(minutes=30),
             )
         )
 
@@ -119,8 +122,8 @@ async def test_compute_struggle_score_high_skip_rate_crosses_trigger_threshold(d
             FocusSession(
                 user_id=user.id,
                 task_id=today_tasks[index].id,
-                start_time=now - timedelta(minutes=60 - index),
-                end_time=now - timedelta(minutes=60 - index - duration),
+                start_time=today_noon - timedelta(minutes=60 - index),
+                end_time=today_noon - timedelta(minutes=60 - index - duration),
                 duration_minutes=duration,
                 focus_type=FocusType.POMODORO,
                 status=FocusStatus.COMPLETED,

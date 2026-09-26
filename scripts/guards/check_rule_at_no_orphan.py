@@ -63,16 +63,38 @@ def _changed_python_files(repo_root: Path) -> set[Path] | None:
         if env_base:
             diff_spec = f"{env_base}...HEAD"
         else:
-            default_ref = (
-                subprocess.run(
-                    ["git", "symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"],
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                    cwd=repo_root,
+            default_ref = None
+            try:
+                default_ref = (
+                    subprocess.run(
+                        ["git", "symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"],
+                        check=True,
+                        capture_output=True,
+                        text=True,
+                        cwd=repo_root,
+                    )
+                    .stdout.strip()
                 )
-                .stdout.strip()
-            )
+            except subprocess.CalledProcessError:
+                # V3-FIX-120：actions/checkout 不建 origin/HEAD 符号引用，而 CI
+                # backend-test 的内嵌守卫用例不带 lint job 的 RULE_GUARD_DIFF_BASE
+                # ——此前此处直接跌进 None=全量回落翻历史账（run 36198488067 的
+                # 14 条存量 AT001 即此环境误报）。回落 origin/main → origin/master：
+                # push 已落 main 时 merge-base == HEAD → scope-empty PASS，与 lint
+                # job 的圈定语义一致；真 git 缺席仍走 None=全量回落。
+                for fallback in ("refs/remotes/origin/main", "refs/remotes/origin/master"):
+                    probe = subprocess.run(
+                        ["git", "rev-parse", "--verify", "--quiet", fallback],
+                        check=False,
+                        capture_output=True,
+                        text=True,
+                        cwd=repo_root,
+                    )
+                    if probe.returncode == 0:
+                        default_ref = fallback
+                        break
+            if default_ref is None:
+                raise subprocess.CalledProcessError(1, "git symbolic-ref refs/remotes/origin/HEAD")
             merge_base = (
                 subprocess.run(
                     ["git", "merge-base", "HEAD", default_ref],

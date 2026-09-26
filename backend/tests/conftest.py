@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import StaticPool
 
 from app.config import settings
+from app.core.cache import cache_service
 from app.core.redis_utils import resolve_redis_password
 
 APP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app"))
@@ -144,6 +145,78 @@ settings.REDIS_URL = _runtime_redis_url
 # 本地兜底（AUTH-DEEP A-2 P1），豁免判据读 settings.ENVIRONMENT（见 cache.py
 # _TESTING_ENVIRONMENTS）；测试进程在此显式置为 "test" 以保持既有单测行为。
 settings.ENVIRONMENT = "test"
+
+# V3-FIX-120（测试顺序/共享态隔离审计）：settings 是进程级单例，kill_switch 在
+# Redis 缺席时 read_mode 回落 settings.AURORA_SRL_*——任何用例裸赋值这些属性都
+# 会跨文件污染整个 SRL 族（CI 全量序实证：一处 mode=off 残留 → 24 例
+# UNKNOWN/DID NOT RAISE）。此 autouse fixture 在每个用例后复位该族属性 +
+# 清 cache_service 进程内本地缓存，作为单例治理兜底（对齐 fakeredis 注入+
+# 哨兵恢复先例）；泄漏源本身已在对应用例内改为 monkeypatch 注入。
+_SRL_KILL_SWITCH_SETTINGS_ATTRS = (
+    "AURORA_SRL_MODE",
+    "AURORA_SRL_TRACKER_MODE",
+    "AURORA_SRL_BRIDGE_MODE",
+    "AURORA_SRL_SCAFFOLDING_CONSUME_MODE",
+    "AURORA_SRL_EVENT_LAG_P95_THRESHOLD_SECONDS",
+    "AURORA_SRL_MISJUDGMENT_THRESHOLD",
+    "AURORA_SRL_TRACKER_P95_MS_BUDGET",
+    "AURORA_SRL_AGGREGATOR_TTL_SECONDS",
+)
+_ABSENT = object()
+
+
+@pytest.fixture(autouse=True)
+def _reset_srl_kill_switch_singleton_state():
+    snapshot = {name: getattr(settings, name, _ABSENT) for name in _SRL_KILL_SWITCH_SETTINGS_ATTRS}
+    cache_service._local_cache.clear()
+    yield
+    for name, value in snapshot.items():
+        if value is _ABSENT:
+            try:
+                delattr(settings, name)
+            except AttributeError:
+                pass
+        else:
+            setattr(settings, name, value)
+    cache_service._local_cache.clear()
+
+
+# V3-FIX-120（同卡第二单例）：DynamicToolRegistry 是进程级单例（__new__ 恒返
+# _instance），而 phase2_core/x06 等用例对它 clear_all + monkeypatch 假注册——
+# CI 全量序实证：tests/test_phase2_core.py 的 registers_package_only_once 用假
+# register_from_package 把 "app.tools" 记入 _registered_packages 但零真工具入册，
+# 此后全进程 get_tool 恒 None（wt392_r2v3 5 例 "未知工具: retrieve_user_material"
+# 即此）。此 autouse fixture 每用例前后对四份注册态做快照/原位恢复，治愈一切
+# 注册表污染（工具实例是模块级对象，浅拷贝足够）。
+@pytest.fixture(autouse=True)
+def _restore_dynamic_tool_registry_singleton():
+    from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
+
+    registry = dynamic_tool_registry
+    snapshot = (
+        dict(registry._tools),
+        dict(registry._tool_info),
+        dict(registry._tool_metadata),
+        set(registry._registered_packages),
+    )
+    yield
+    tools, tool_info, tool_metadata, registered_packages = snapshot
+    registry._tools.clear()
+    registry._tools.update(tools)
+    registry._tool_info.clear()
+    registry._tool_info.update(tool_info)
+    registry._tool_metadata.clear()
+    registry._tool_metadata.update(tool_metadata)
+    registry._registered_packages.clear()
+    registry._registered_packages.update(registered_packages)
+    # 关键配套：ToolRegistry 包装层的 _dynamic_registry 是**实例属性**（首次
+    # _get_dynamic_registry 时 self.xxx= 落在单例上），一旦置位就不再 ensure——
+    # 若快照是"首次注册前"的空态（首注册发生在某用例体内），只还原数据会把
+    # 后续用例留在空注册表 + 记忆位已置的死局（probe 实证：f1_swept 过后
+    # f1_active 恒 未知工具）。复位单例记忆位，下次访问按需重注册。
+    from app.tools.registry import tool_registry as _tool_registry_wrapper
+
+    _tool_registry_wrapper._dynamic_registry = None
 
 
 @pytest_asyncio.fixture(name="db_session")

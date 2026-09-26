@@ -54,7 +54,12 @@ async def test_analyze_behavior_creates_pattern():
     ]
     
     # Mock external services
+    # V3-FIX-120：显式关掉 HyDE 子策略——该分支依赖 embedding 服务可达性（CI
+    # 环境里 embedding 命中后 HyDE 检索多消费一个 db.execute 桩位，侧效为
+    # StopAsyncIteration；本用例契约是「LLM JSON → 建pattern」，HyDE 属正交基建。
+    # 关断后全环境路径同一：fragment→RAG→upsert 三桩）。断言零改动。
     with patch("app.services.cognitive_service.settings.ANALYSIS_SYNC_ON_EVENT", False), \
+         patch("app.services.cognitive_service.phase5_config.HYDE_ENABLED", False), \
          patch("app.services.llm_fallback_utils.cognitive_llm.json_call", new_callable=AsyncMock) as mock_llm, \
          patch("app.services.cognitive_service.AnalyticsService.get_user_profile_summary", new_callable=AsyncMock) as mock_analytics, \
          patch("app.services.cognitive_service.SystemUpdateService.enqueue", new_callable=AsyncMock), \

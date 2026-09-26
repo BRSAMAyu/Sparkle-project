@@ -11,6 +11,7 @@ import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart
 import 'package:sparkle/features/auth/presentation/screens/login_screen.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 import '../../../../shared/i18n_test_helper.dart';
+import '../../../../shared/no_network_http_overrides.dart';
 
 /// W-4 红绿测试：登录页提交防重入。
 ///
@@ -33,6 +34,9 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
   }
 
+  // V3-FIX-120：transport 层禁网——屏内未覆盖的 provider（userRepository 等）
+  // 不得真发 GET /user/settings 到常驻网关（双测合并跑互扰根因）。
+  setUp(installNoNetworkHttpOverrides);
   setUp(setUpI18nForTesting);
 
   tearDown(tearDownI18n);
