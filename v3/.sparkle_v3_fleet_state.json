@@ -4,8 +4,7 @@
  "baseline_head": "fedd27e35e305502ba727ba8c3fb46eae33a1eb9",
  "slots": 6,
  "active": {
-  "wt553": "三族枚举漂移修复 269/270/271（两 P2：MessageType broadcast 活体崩面+PhotonTransactionType 触达最宽）@cb3a80a7",
-  "wt568": "FIX-286 seed_status 观测盲区（吞异常函数挂观测面，失败恒报成功）@6ab18205"
+  "wt553": "三族枚举漂移修复 269/270/271（两 P2：MessageType broadcast 活体崩面+PhotonTransactionType 触达最宽）@cb3a80a7"
  },
  "done": [
   "A-01",
@@ -566,7 +565,8 @@
   "wt565",
   "wt564",
   "wt567",
-  "wt566"
+  "wt566",
+  "wt568"
  ],
  "blocked": [],
  "notes": [
@@ -727,6 +727,7 @@
   "2026-09-27 04:5x 轮：wt565 l10n 收池闭账集成（cfc245eb 干净落地；210 行 FIXED@346e15f9 销账在案；树清）——**总账纠错**：我此前的 1237 系四处错账（漏批二 309/漏批五 67/误并 FIX-200 的 38/批六应为 298），核对后六批实收 1509 键（三方互证 11559→10117→10129 精确闭合）；留池 11 全可词边界精割解锁（0 改名 0 永留）、冻结 49 判定'随葬文案池'非现货（开旗不复活，FIX-182 拍板后 30 分钟终扫卡可收）——l10n 收割战役正式闭账。wt567 立即补位=并发/数据正确性猎缺（今日大改面的针对性一轮：SAVEPOINT 原子性/ensure_awaitable 边界/origin 竞态/时区写侧幂等/协议真修后遗）。三问：在航 4 槽（CI run+wt564/566/567）；空槽 1 预留；下一卡=run 裁决→day6 晨门 07:40（余量 3h）。",
   "2026-09-27 05:4x 轮：wt564 台账工具强化集成（b5c4034f+8bf002ac，union-merge 三块+主会话专项核对）——①工具升级三件套（8 管自检含多数容差/行数对账双下界（精确期望=257 吞行形态的 ID 差集盲区补上）/--verify 体检）测试 15→22；②**263 第三次钉住 8 管好形**（前两次重建分别被 62f20b0b 和我自己的 wt560 集成'长者胜'回退——本次 theirs 8 管重建落位实证）；③278/282 闭账、279 随 wt561 fabbd7ec 闭账、285 交接行落地；④**工具严格模式的口径教训**：8 管全表标准化与历史 6/7 管原生形态冲突（wt564 自检断言过严红）——集成侧两轮修断言：R2 标的用结构判据（'\\| V3-FIX-N \\|' 双模式=真粘连；子串'粘连'是通用后缀不可过滤；正文合法引用不误伤），历史形态容忍留规范化专卡；⑤22/22 绿。三问：在航 3 槽（CI run+wt566/567）；空槽 2=预留 run 裁决+day6 晨门；下一卡=run 裁决（>100min 关键窗）→day6 晨门 07:40。",
   "2026-09-27 05:5x 轮：wt567 并发猎缺集成（c843115a，union-merge 1 块零吞行 286/287 双行落位；树清）——**五轴全 PASS：今日 40+ 卡大改面零并发/原子性回归**（SAVEPOINT 原子性=内层零独立 commit 随外层统一落库/ensure_awaitable 双分支保守+零 pipeline 误路由/origin 单点判据无分片漂移/时区写侧单快照三同源自洽/协议构造无第三同型）。新登记：FIX-286（P3 seed_status 观测盲区——FIX-55 观测面挂在 FIX-13 吞异常函数外，失败恒报成功）+FIX-287（P4 origin 判据窄缝 config-gated）。wt568 立即补位=286 修复卡（观测面修非控制流——吞异常的 guest_login 不阻断设计保持）。CI 活性核对：Python 步骤 20:29Z 起 27min 输出期正常（attempt#1 死于 34min 无输出，下轮核）。三问：在航 3 槽（CI+wt566/568）；空槽 2 预留 run 裁决+day6 晨门；下一卡=CI 裁决→day6 晨门 07:40。",
-  "2026-09-27 06:2x 轮：wt566 mypy 批八集成（ad40a883+6a7a0aab，union-merge 285→288 重编号第 26 次撞号；代际差 1 例补齐=is_token_revoked 注解放宽至实契约 str|None，482→481=481；36 测绿；树清）——542→482（-60 九族），含 2 个真运行 bug（RegenerationResponse 未知 kwarg 必 ValueError/pending 更新谎报成功改显式拒绝+测试更名）；planning_workflow 6 错留随 401 族同批。mypy 今日累计 922→481（-441，-48%）。三问：在航 2 槽（CI run Backend Tests 在航+wt568）；空槽 3=预留 run 裁决/day6 晨门（07:40 起手）/quota 保守；下一卡=CI 裁决（Python 步骤>50min 盯活性）→day6 晨门流程。"
+  "2026-09-27 06:2x 轮：wt566 mypy 批八集成（ad40a883+6a7a0aab，union-merge 285→288 重编号第 26 次撞号；代际差 1 例补齐=is_token_revoked 注解放宽至实契约 str|None，482→481=481；36 测绿；树清）——542→482（-60 九族），含 2 个真运行 bug（RegenerationResponse 未知 kwarg 必 ValueError/pending 更新谎报成功改显式拒绝+测试更名）；planning_workflow 6 错留随 401 族同批。mypy 今日累计 922→481（-441，-48%）。三问：在航 2 槽（CI run Backend Tests 在航+wt568）；空槽 3=预留 run 裁决/day6 晨门（07:40 起手）/quota 保守；下一卡=CI 裁决（Python 步骤>50min 盯活性）→day6 晨门流程。",
+  "2026-09-27 06:5x 轮：wt568 FIX-286 集成（c5f705f9+412ea25f 零冲突；合并态 ratchet 481=481+红绿 3/3+savepoint 契约 8 绿；树清）——seed 失败可见性收口：吞光改 SAVEPOINT 回滚+上抛 GuestSeedError（FIX-13 隔离语义保持），auth 三 except 分支如实化（failed+原因+failure 计数+新客重试一次），死注释清除；顺带实录 FIX-55 测试经 json body 传 query 参数从未生效的测试缺陷（本卡红测改 params 修复覆盖面）。CI Backend Tests 仍在航（Python 步骤>80min 超健康区间，下轮拉日志尾部定性）。三问：在航 1 槽（CI）+0 agent；空槽 4=day6 晨门临近（07:40 栈升级起手）+CI 裁决预留+quota 保守；下一卡=CI 活性定性→day6 门执行（08:00）。"
  ]
 }
