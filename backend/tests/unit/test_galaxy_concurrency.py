@@ -68,6 +68,9 @@ if _backend != "postgresql":
 
 
 async def _probe_live_pg() -> None:
+    # wt589：同会话多 PG 门控模块防串台——import 期探针若复用上一个探针 loop
+    # 留在池里的 asyncpg 连接会撞 "attached to a different loop"，先弃池再探活。
+    await engine.dispose()
     async with AsyncSessionLocal() as session:
         await session.execute(text("SELECT 1"))
 
