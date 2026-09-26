@@ -5,10 +5,10 @@
  "slots": 6,
  "active": {
   "wt539": "FIX-259(P2) StreakDayStatus.WEAK 四层断链修复（迁移/engine写面/mobile哨兵/docstring）@f46b60d7",
-  "wt541": "枚举值集守卫脚本卡（B-06 首推，封堵 259/260 类断链再发，含豁免清单机制）@cfaefe63",
   "wt542": "FIX-260 AchievementType.PLANNING 单面值对齐（mobile 值集+unknown 哨兵+wire 对齐）@3c8f8bb6",
   "wt543": "两潜伏运行期 bug（263 行跳过项：await 同步函数/proto metadata 缺省）@991cabad",
-  "wt544": "FIX-258 demo 落库 origin 标记（迁移+写侧+记忆推断过滤）@a9fb6360"
+  "wt544": "FIX-258 demo 落库 origin 标记（迁移+写侧+记忆推断过滤）@a9fb6360",
+  "wt545": "FIX-210 批六 singles 长尾 357 收割（宁漏勿错纪律加强）+246 尾项销账@7db1bc3f"
  },
  "done": [
   "A-01",
@@ -542,7 +542,8 @@
   "wt538",
   "wt540",
   "wt536",
-  "wt537"
+  "wt537",
+  "wt541"
  ],
  "blocked": [],
  "notes": [
@@ -672,6 +673,7 @@
   "2026-09-27 00:1x 轮：wt540 批五集成完毕（d8366f80+8537b431 干净落地零撞号——本批零新发现；合并态 gate PASS INFO 412+smoke 5 绿，树清）——67 键 1019 行纯删除（share13/notification13/chat9 含 5 en-only 孤儿/time7/streak6/theater5/sync4/onboarding4/skill4/plan2），六批累计 940 键~-26400 行；FIX-246 孤儿 6→1；剩余 singles 长尾 357。wt542 立即补位=FIX-260（AchievementType 对齐小卡，与 259 同范式，守卫豁免待 wt541 集成时联动删）。三问：在航 5 槽（wt536/537/539/541/542）；空槽 0；下一卡=CI 36253679384 裁决（cfaefe63 在航）→wt537 返航→FIX-258 设计卡→l10n 批六。",
   "2026-09-27 00:05 唤醒轮：例行全绿（盘 3G/swap 16.1G 负载正常/3 容器/双端健康/5 worktree=5 agent 对应无陈旧）。CI run 36253679384 在航（cfaefe63，条件最齐栈），本地领先 4 commit（wt540 批五+台账）等裁决随推。时间线核对：day6 门 08:00（7h55m 余量），晨门前常驻栈升级到最终头（gRPC 先行/uvicorn/网关 rebuild，watch :50051 双占位，状态文件勿入清理单）。三问：在航 5 槽（wt536 mypy 批四/wt537 FIX-257/wt539 FIX-259 P2/wt541 枚举守卫/wt542 FIX-260）；空槽 0；下一卡=CI 裁决（若绿即史首全绿里程碑登记）→五 agent 返航逐一集成→FIX-258 设计卡→l10n 批六。",
   "2026-09-27 00:4x 轮：wt536 mypy 批四集成完毕（c9cf78f8+0eb7530e，baseline 冲突取 694→合并态实测 686 校准（694-8=wt538 恰合推算）只降不升；union-merge 257→263 重编号第 14 次撞号；**厚验证矩阵**：历史烧伤双文件 28 绿+executor/websocket/quota/redis 触达 49 绿——今日两起 mypy 重构破测教训落地执行；树清）——869→694（-175 五族：BaseTool locale 参数×69/redis awaitable 收窄×61 含新 ensure_awaitable 泛型/max key×19/dict 注解×22/可选依赖回退×13），mypy 今日累计 922→686（-236）；两个潜伏 bug 留裁决已由 wt543 补位修（await 同步纯函数/proto metadata 缺省）。CI run 36253679384 仍在航。三问：在航 5 槽（wt537/539/541/542/543）；空槽 0；下一卡=CI 裁决→wt537 返航→FIX-258 设计卡→l10n 批六（singles 357）。",
-  "2026-09-27 01:1x 轮：wt537 FIX-257 集成完毕（afbfdef2+af1212a3，guest_seed_service 与 wt536 类型建模重叠 git 自动并轨零冲突；合并态 cleanup 6+guest_seed 族 16 绿、mypy 686=686，树清）——guest 转正清洗：四表伪造统计（UserStreakStats/catalog 成就 6/FocusSession 13=515min/UserNodeStatus 51 行）双闸识别（catalog 指纹+种子窗+专注窗三闸宁漏勿误删）、SAVEPOINT 原子 best-effort、双端点接线（upgrade_guest+social）、幂等、7 类防误删除守卫；演示内容面沿 J-01/GJ02 既有裁决保留。B-02 双缺口前一半（guest 种子污染）收口。wt544 立即补位=FIX-258（后一半：demo origin 标记+记忆推断过滤，数据级显式列方案）。三问：在航 5 槽（wt539/541/542/543/544）；空槽 0；下一卡=CI 36253679384 裁决（在航>75min 下轮必查）→l10n 批六。"
+  "2026-09-27 01:1x 轮：wt537 FIX-257 集成完毕（afbfdef2+af1212a3，guest_seed_service 与 wt536 类型建模重叠 git 自动并轨零冲突；合并态 cleanup 6+guest_seed 族 16 绿、mypy 686=686，树清）——guest 转正清洗：四表伪造统计（UserStreakStats/catalog 成就 6/FocusSession 13=515min/UserNodeStatus 51 行）双闸识别（catalog 指纹+种子窗+专注窗三闸宁漏勿误删）、SAVEPOINT 原子 best-effort、双端点接线（upgrade_guest+social）、幂等、7 类防误删除守卫；演示内容面沿 J-01/GJ02 既有裁决保留。B-02 双缺口前一半（guest 种子污染）收口。wt544 立即补位=FIX-258（后一半：demo origin 标记+记忆推断过滤，数据级显式列方案）。三问：在航 5 槽（wt539/541/542/543/544）；空槽 0；下一卡=CI 36253679384 裁决（在航>75min 下轮必查）→l10n 批六。",
+  "2026-09-27 01:3x 轮：wt541 枚举守卫集成完毕（ca68b9fa+bf4e3e8e，union-merge 263→264 重编号第 15 次撞号；合并态守卫自跑 PASS（15 族 FAIL=0 豁免=2）+全量守卫 85/85 绿（BG 红仅 worktree 缺 gateway/gen 环境态，主线过），树清）——ENUM-PARITY 常驻守卫落地：15 族映射（14 dual+RunStatus passthrough 防 mobile 镜像）、三形态 Dart 解析（@JsonValue/enhanced-enum/parse-switch）、KNOWN_DRIFT 显式豁免带 2026-10-07 到期自动重红、--self-test 18 断言、~75 未进表 StrEnum 列为扩表候选。B-06 空档结构性封堵完成；259/260 修复落地后删豁免即闭环。wt545 立即补位=l10n 批六（singles 长尾 357 宁漏勿错+246 尾项顺收）。CI 36253679384 仍在航（>95min 上沿，若超 110min 下轮主动 gh api 查 job 级状态）。三问：在航 5 槽（wt539/542/543/544/545）；空槽 0；下一卡=CI 裁决→wt539 集成后删守卫豁免→批七或收池评估。"
  ]
 }
