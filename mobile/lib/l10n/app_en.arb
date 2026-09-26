@@ -16,8 +16,6 @@
   "nickname": "Nickname",
   "noAccount": "Don't have an account?",
   "hasAccount": "Already have an account?",
-  "loginFailed": "Login Failed",
-  "registerFailed": "Registration Failed",
   "weeklyAgenda": "Weekly Agenda",
   "agendaBusy": "Busy",
   "agendaFragmented": "Fragmented",
@@ -35,7 +33,6 @@
   "darkMode": "Dark Mode",
   "lightMode": "Light Mode",
   "followSystem": "System",
-  "interactionSettings": "Interaction Settings",
   "enterToSend": "Press Enter to Send",
   "enterToSendDescription": "Press the Enter key in the chat box to send messages directly",
   "refresh": "Refresh",
@@ -70,7 +67,6 @@
   "showChatTransparencyCapsuleSubtitle": "Control the AI completion and transparency capsule at the bottom of chat",
   "startTask": "Start Task",
   "viewDetails": "View Details",
-  "finishTask": "Finish Task",
   "abandonTask": "Abandon Task",
   "estimatedTime": "Estimated Time",
   "difficulty": "Difficulty",
@@ -78,7 +74,6 @@
   "searchNodes": "Search Nodes",
   "sparkNode": "Spark Node",
   "masteryScore": "Mastery",
-  "aiTutor": "AI Tutor",
   "send": "Send",
   "typeMessage": "Type a message...",
   "logout": "Logout",
@@ -121,11 +116,6 @@
   "planPriorityNormal": "Normal",
   "planPriorityLow": "Low",
   "planCreateAction": "Create Plan",
-  "featureComingSoon": "Exciting features are coming soon",
-  "stayTuned": "Stay tuned~",
-  "aiNudgeGentle": "Take a break, you'll be more productive",
-  "aiNudgeFocus": "Stay focused, you're in the zone!",
-  "qwen3CognitiveStatus": "Qwen3 Cognitive Status",
   "winStreak": "Win Streak",
   "myPersona": "My Persona",
   "systemActivity": "System Activity",
@@ -133,7 +123,6 @@
   "brightness": "Brightness",
   "dragToAdjust": "Drag the control points to adjust your AI tutoring style",
   "capsuleGeneration": "Capsule Generation",
-  "adjustAndGenerate": "Adjust preferences and generate exclusive curiosity capsules",
   "generateNow": "Generate Capsule Now",
   "generating": "Generating...",
   "selectTimeSlots": "Select time slots: Red for busy, Green for fragmented (AI reminders), Blue for rest",
@@ -155,13 +144,11 @@
   "sync": "Sync",
   "syncCenter": "Sync Center",
   "viewOfflineQueue": "View offline queue status and retry",
-  "capsuleTaskCreated": "✨ Capsule generation task created",
   "generationFailed": "Generation failed, please try again later",
   "generationFailedWithDetail": "Generation failed: {error}",
   "version": "Sparkle v2.1.0-stable\n© 2025 Sparkle Team",
   "editPlan": "Edit Plan",
   "planId": "Plan ID",
-  "featureInDevelopment": "Coming soon...",
   "sprintHistory": "Sprint History",
   "noSprintHistory": "No sprint history yet",
   "loadingFailed": "Load failed: {error}",
@@ -171,11 +158,8 @@
   "sprintCompleted": "✅ Sprint completed and archived",
   "sprintExtended": "Sprint extended by {days} days",
   "sprintAbandoned": "Sprint abandoned",
-  "noActiveSprint": "No active sprint",
   "networkErrorRetry": "Network error, please retry",
   "submitFailed": "Submission failed, please retry",
-  "loadHistoryFailed": "Failed to load history",
-  "loadMoreFailed": "Failed to load more messages",
   "sendFailed": "Failed to send, please retry",
   "view": "View",
   "ongoing": "Ongoing",
@@ -226,7 +210,6 @@
   "toolsCuriosityCapsuleDesc": "AI-generated curiosity content",
   "toolsCognitiveHubTitle": "Cognitive Tools",
   "toolsCognitiveHubDesc": "Explore cognitive tools",
-  "toolsSearchPlaceholder": "Search tools...",
   "toolsFocusModeTitle": "Focus Mode",
   "toolsFocusModeDesc": "Enter task focus interface",
   "toolsPomodoroTitle": "Pomodoro Timer",
@@ -422,7 +405,6 @@
   "contractCancelAction": "Cancel Contract",
   "contractInputInvalid": "Please enter valid contract values",
   "contractCreateFailed": "Failed to create contract",
-  "contractCreateSuccess": "Contract created",
   "contractCancelSuccess": "Contract canceled",
   "contractCancelFailed": "Failed to cancel contract",
   "contractCountdown": "Countdown",
@@ -594,17 +576,8 @@
   "durationHours": "{count}h",
   "durationMinutes": "{count}m",
   "durationSeconds": "{count}s",
-  "durationHoursMinutes": "{hours}h {minutes}m",
-  "durationMinutesSeconds": "{minutes}m {seconds}s",
-  "numberCount": "{count, plural, =0{None} =1{1 item} other{{count} items}}",
-  "numberSelected": "{count} selected",
-  "numberTotal": "{current} of {total}",
   "numberPercent": "{value}%",
   "numberProgress": "{value}% complete",
-  "numberK": "{value}K",
-  "numberM": "{value}M",
-  "numberB": "{value}B",
-  "commonYes": "Yes",
   "commonNo": "No",
   "commonOk": "OK",
   "commonCancel": "Cancel",
@@ -621,7 +594,6 @@
   "commonSort": "Sort",
   "commonClose": "Close",
   "commonDismiss": "Dismiss",
-  "commonApply": "Apply",
   "commonSubmit": "Submit",
   "commonContinue": "Continue",
   "commonSkip": "Skip",
@@ -631,38 +603,18 @@
   "commonLoading": "Loading...",
   "commonSaving": "Saving...",
   "commonProcessing": "Processing...",
-  "commonSuccess": "Success",
-  "commonError": "Error",
   "commonWarning": "Warning",
-  "commonInfo": "Info",
   "commonNoData": "No data",
-  "commonNoResults": "No results found",
-  "commonTryAgain": "Try again",
   "commonLearnMore": "Learn more",
-  "commonSeeAll": "See all",
   "operationPreview": "Operation preview:",
-  "commonShowLess": "Show less",
   "commonShowMore": "Show more",
   "commonCollapse": "Collapse",
   "commonExpand": "Expand",
-  "commonRequired": "Required",
-  "commonOptional": "Optional",
   "formUnsavedTitle": "Discard changes?",
   "formUnsavedMessage": "You have unsaved input. Leaving now will lose it.",
   "formUnsavedKeepEditing": "Keep editing",
   "formUnsavedDiscard": "Discard changes",
-  "commonEnabled": "Enabled",
-  "commonDisabled": "Disabled",
-  "commonOn": "On",
-  "commonOff": "Off",
-  "commonActive": "Active",
-  "commonInactive": "Inactive",
-  "commonConnected": "Connected",
-  "commonDisconnected": "Disconnected",
-  "commonSyncing": "Syncing...",
   "commonSynced": "Synced",
-  "commonOffline": "Offline",
-  "commonOnline": "Online",
   "offlineBannerMessage": "You're offline. Some features may be unavailable.",
   "commonOperationWarning": "Operation may not have succeeded",
   "emptyStateNoTasksTitle": "No tasks yet",
@@ -833,7 +785,6 @@
   "avatarPresetPet": "Buddy",
   "statisticsWeeklyGrowthTrend": "Weekly growth trend",
   "statisticsTrendAwaitingDataHint": "Visible once data connects",
-  "statisticsLearningIndex": "Learning index {value}",
   "statisticsAggregationNone": "Original Data",
   "statisticsAggregationHourly": "Hourly",
   "statisticsAggregationDaily": "Daily",
@@ -916,7 +867,6 @@
   "shareCardUrlEmpty": "Share card URL is empty",
   "shareCardDownloadFailed": "Failed to download share card ({statusCode})",
   "noGalleryPermission": "No gallery write permission",
-  "saveResultEmpty": "Save result is empty",
   "gallerySaveFailed": "Failed to save to gallery",
   "shareUnlockMessage": "I unlocked \"{achievementName}\" in Sparkle!",
   "achievementMilestone": "Learning Milestone",
@@ -1024,7 +974,6 @@
   "editProfileChooseFromGallery": "Choose from gallery",
   "editProfileAvatarUpdated": "Avatar updated successfully",
   "editProfileUpdateFailed": "Update failed: {error}",
-  "editProfileUploadFailed": "Upload failed: {error}",
   "editProfileNicknameLabel": "Nickname",
   "editProfileNicknameHint": "Enter your nickname",
   "editProfileNicknameEmpty": "Nickname cannot be empty",
@@ -1054,7 +1003,6 @@
   "passwordResetConfirmMismatch": "Passwords do not match",
   "passwordResetButton": "Update Password",
   "passwordResetSuccess": "Password changed successfully",
-  "passwordResetFailed": "Change failed: {error}",
   "smartPushSettings": "Smart Push Settings",
   "smartPushPersonaSection": "Persona Settings",
   "smartPushToneDesc": "Choose the tone and style for push notifications.",
@@ -1071,17 +1019,13 @@
   "smartPushFrequencyLabel": "{count} per day",
   "smartPushNoSlots": "No slots set, suggest adding active times",
   "smartPushSettingsSaved": "Settings saved",
-  "smartPushSaveFailed": "Save failed: {error}",
   "themeSettings": "Theme Settings",
-  "themeModeSection": "Theme Mode",
   "themeModeLight": "Light",
   "themeModeDark": "Dark",
   "themeModeSystem": "System",
-  "brandPresetSection": "Brand Preset",
   "highContrastSection": "High Contrast Mode",
   "highContrastDesc": "Enhance text and background contrast",
   "resetDefaults": "Reset to Defaults",
-  "colorPreviewSection": "Color Preview",
   "colorPrimary": "Primary",
   "colorSecondary": "Secondary",
   "colorSuccess": "Success",
@@ -1108,46 +1052,19 @@
   "systemUpdatesBeforeLabel": "Before",
   "systemUpdatesAfterLabel": "Now",
   "systemUpdatesAlignmentScore": "Persona alignment {value}%",
-  "contentReviewCardTitle": "Content Review",
   "contentReviewPassed": "Content Passed Review",
   "contentReviewFailed": "Content Failed Review",
   "contentReviewNeedsRefinement": "Content Needs Refinement",
-  "contentReviewScoreLabel": "Score",
   "contentReviewOverallScore": "Overall Score",
   "contentReviewMetrics": "Evaluation Metrics",
-  "contentReviewIssues": "Issues Found",
   "contentReviewSuggestions": "Improvement Suggestions",
   "contentReviewCriticalIssues": "Critical Issues",
   "contentReviewWarnings": "Warnings",
-  "contentReviewTips": "Tips",
   "contentReviewAccept": "Accept",
-  "contentReviewReject": "Reject",
-  "contentReviewRequestManual": "Request Manual Review",
   "contentReviewRegenerate": "Regenerate",
-  "contentReviewWaitOptimization": "Waiting for optimization...",
-  "contentReviewOptimizing": "Optimizing content...",
-  "contentReviewOptimized": "Optimization complete",
-  "contentReviewOptimizationFailed": "Optimization failed",
-  "contentReviewProcessing": "Processing...",
-  "contentReviewAgreePassed": "I agree it should pass",
-  "contentReviewDisagreePassed": "I disagree with this result",
-  "contentReviewReportProblem": "Report Review Problem",
-  "contentReviewOverrideDialogTitle": "Override Review Decision",
-  "contentReviewDisagreeWithResult": "I disagree with this review result",
-  "contentReviewAgreeShouldPass": "I think the content should pass review",
   "contentReviewReasonHint": "Enter your reason...",
   "contentReviewReasonRequired": "Please provide a reason",
   "contentReviewAppealDialogTitle": "Report Review Problem",
-  "contentReviewSelectIssuesHint": "Select issue types (multiple allowed)",
-  "contentReviewDetailHint": "Detailed explanation:",
-  "contentReviewDetailPlaceholder": "Please describe what's wrong with the review...",
-  "contentReviewDetailRequired": "Please provide a detailed explanation",
-  "contentReviewSelectAtLeastOne": "Please select at least one issue type",
-  "contentReviewIssueUnfairStandards": "Review standards are unfair",
-  "contentReviewIssueScoreCalculation": "Score calculation is incorrect",
-  "contentReviewIssueMissingContext": "Important context was missed",
-  "contentReviewIssueInaccurateDescription": "Description is inaccurate",
-  "contentReviewIssueUnfeasibleSuggestion": "Suggestion is not feasible",
   "contentReviewMetricAccuracy": "Accuracy",
   "contentReviewMetricCompleteness": "Completeness",
   "contentReviewMetricRelevance": "Relevance",
@@ -1166,7 +1083,6 @@
   "contentReviewSeverityInfo": "Info",
   "contentReviewHints": "Hints",
   "contentReviewSuggestion": "Suggestion: {suggestion}",
-  "contentReviewSuggestionDesc": "Suggestion",
   "contentReviewReflectionPending": "Waiting for optimization...",
   "contentReviewReflectionInProgress": "Optimizing content...",
   "contentReviewReflectionCompleted": "Optimization completed",
@@ -1256,14 +1172,6 @@
   "leaderboardSelfAnchorRetry": "Retry",
   "leaderboardSelfAnchorSeriesTitle": "Daily completions (last 7 days)",
   "leaderboardSelfAnchorSubtitle": "Compared only with your own history",
-  "leaderboardSelfAnchorTasksCount": "{count} tasks",
-  "@leaderboardSelfAnchorTasksCount": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
   "leaderboardSelfAnchorTasksUnit": "sprint tasks",
   "leaderboardSelfAnchorTitle": "Self Anchor",
   "leaderboardSelfAnchorWindowTotal": "Completed in last 7 days",
@@ -1579,7 +1487,6 @@
   },
   "calendarTitle": "Calendar",
   "calendarMonthView": "Month",
-  "calendarTwoWeekView": "2 weeks",
   "calendarYearView": "Year",
   "calendarDayScheduleTitle": "{date} schedule",
   "@calendarDayScheduleTitle": {
@@ -1812,19 +1719,10 @@
     }
   },
   "capsuleDetailTitle": "Capsule Details",
-  "capsuleMissing": "Capsule not found",
   "capsuleLoadFailed": "Failed to load: {error}",
   "@capsuleLoadFailed": {
     "placeholders": {
       "error": {
-        "type": "Object"
-      }
-    }
-  },
-  "capsuleQualityLabel": "Quality: {rating}",
-  "@capsuleQualityLabel": {
-    "placeholders": {
-      "rating": {
         "type": "Object"
       }
     }
@@ -1847,9 +1745,6 @@
   },
   "capsuleSubmitFeedback": "Send feedback",
   "capsuleShare": "Share capsule",
-  "capsuleCopyLink": "Copy link",
-  "capsuleShareToGroup": "Share to group",
-  "capsuleRateFirst": "Please rate it first",
   "capsuleFeedbackThanks": "Thanks for the feedback",
   "capsuleSubmitFailed": "Submit failed: {error}",
   "@capsuleSubmitFailed": {
@@ -2133,10 +2028,7 @@
   "chatAppealSubmitted": "Appeal submitted, processing...",
   "commonBack": "Back",
   "noData": "No Data",
-  "operationSuccess": "Success",
   "operationFailed": "Failed",
-  "confirmDeleteTitle": "Confirm Delete",
-  "confirmDeleteMessage": "This cannot be undone",
   "errorBookTitle": "Error Archive",
   "errorBookTabAll": "All",
   "errorBookTabNeedReview": "Need Review",
@@ -2343,12 +2235,9 @@
   "authPrivacyPolicy": "Privacy Policy",
   "authLoginAgreement": "By logging in, you agree to",
   "authAnd": "and",
-  "authDemoLogin": "Demo Account Login",
   "authResetPassword": "Reset Password",
-  "authResetPasswordHint": "Enter your email and we'll send you a reset link",
   "authSendResetEmail": "Send Reset Email",
   "authResetEmailSent": "Reset email sent",
-  "authBackToLogin": "Back to Login",
   "authForgotPasswordTitle": "Forgot Password",
   "authForgotPasswordHint": "Enter your registered email and we'll send you a reset code.",
   "authInvalidEmail": "Invalid email format. Use a format like name@example.com",
@@ -2363,8 +2252,6 @@
   "toolsCategoryStudy": "Study Aids",
   "toolsCategoryEfficiency": "Efficiency",
   "toolsCategoryCognition": "Cognitive Insights",
-  "toolsNoTools": "No tools available",
-  "toolsPinnedEmpty": "No pinned tools yet",
   "toolsManageHint": "Home screen shows top 4, expanded shows top 8. Drag to reorder.",
   "toolsBackToBrowse": "Back to Browse",
   "toolsPositionFirstScreen": "First Screen",
@@ -2409,9 +2296,6 @@
   "seedLibraryNotFound": "Seed library not found",
   "seedLibraryDeleteConfirm": "Delete this seed library? This action cannot be undone.",
   "seedLibraryEmpty": "No seed libraries yet",
-  "seedLibraryCreateFirst": "Create a new seed library to get started",
-  "seedLibraryItemCount": "{count} items",
-  "seedLibraryLastUpdated": "Last updated: {date}",
   "seedLibraryDetail": "Seed Library Details",
   "seedLibraryFilter": "Filter",
   "seedLibraryCategory": "Category",
@@ -2438,37 +2322,8 @@
   "seedLibraryNoContent": "No content yet",
   "seedLibraryContent": "Content",
   "seedMarketplaceTitle": "Skill Marketplace",
-  "seedMarketplaceSkills": "Skills",
-  "seedMarketplacePacks": "Packs",
   "seedMarketplaceNoSkills": "No active marketplace skills yet.",
   "seedMarketplaceNoPacks": "No active domain packs yet.",
-  "seedMarketplaceAdoptSkill": "Adopt skill",
-  "seedMarketplaceSkillAdopted": "{name} adopted",
-  "@seedMarketplaceSkillAdopted": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "seedMarketplaceAdoptPack": "Adopt pack",
-  "seedMarketplacePackAdopted": "{name} adopted",
-  "@seedMarketplacePackAdopted": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "seedMarketplaceQuality": "Quality {score}",
-  "@seedMarketplaceQuality": {
-    "placeholders": {
-      "score": {
-        "type": "String"
-      }
-    }
-  },
-  "seedMarketplaceCancel": "Cancel",
   "seedLibrarySubscribers": "Subscribers",
   "seedLibraryUsage": "Usage",
   "seedLibraryQualityScore": "Quality Score",
@@ -2482,16 +2337,11 @@
     }
   },
   "translationHistoryTitle": "Translation History",
-  "translationClearHistory": "Clear History",
-  "translationTranslating": "Translating...",
   "translationSaveToVocabulary": "Save to Vocabulary",
-  "translationCopy": "Copy",
-  "translationCopied": "Copied",
   "translationSearchHint": "Search translation records...",
   "translationNoHistory": "No translation records",
   "translationStartTranslate": "Translations will appear here after you start",
   "translationClearConfirm": "Are you sure you want to clear all translation history?",
-  "translationClearConfirmDetail": "This action cannot be undone",
   "translationClearAll": "Clear History",
   "translationFilterAll": "All",
   "translationFilterFavorites": "Favorites",
@@ -2538,11 +2388,6 @@
       }
     }
   },
-  "translationSourceLanguage": "Source Language",
-  "translationTargetLanguage": "Target Language",
-  "translationSwapLanguages": "Swap Languages",
-  "translationDetectLanguage": "Detect Language",
-  "translationHistoryEmpty": "No translation history",
   "memoryCurrentVersion": "Current Version",
   "memoryVersionHistory": "Version History",
   "memoryStatus": "Status",
@@ -3253,21 +3098,7 @@
   "communitySave": "Save",
   "groupKnowledgeBase": "Group Knowledge Base",
   "groupFiles": "Study Materials",
-  "saveToMyLibrary": "Save to My Library",
-  "savedToLibrary": "Saved to your library",
-  "markAsOfficial": "Mark as Official",
-  "officialResource": "Official",
-  "noGroupFiles": "No study materials yet",
-  "noGroupFilesSubtitle": "Share your notes to help the group!",
   "shareFile": "Share File",
-  "groupFilesCount": "{count} files",
-  "@groupFilesCount": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
   "studyMaterialsTitle": "Study Materials",
   "studyMaterialsEntrySubtitle": "Browse uploads, track processing, and manage your knowledge sources",
   "studyMaterialsHeroEyebrow": "Personal Knowledge Library",
@@ -4114,7 +3945,6 @@
   "taskDetailCandidatesApplied": "Processed {count} candidates, created {created} new, reused {reused} existing.",
   "taskDetailCandidatesReused": "Processed {count} candidates, reused {reused} existing.",
   "taskDetailCandidatesAccepted": "{count} nodes added to the star map.",
-  "taskDetailNodeExpansionDescription": "Generate 3 candidate nodes around \"{name}\", then you decide which ones to write into the galaxy.",
   "taskDetailGenerateThreeCandidates": "Generate 3 candidate nodes",
   "taskDetailSelectedCount": "Selected {selected} / {total} candidates",
   "taskDetailImportanceLevel": "Importance {level}",
@@ -4170,8 +4000,6 @@
     }
   },
   "personaAdjustInferredPreference": "Adjust inferred preference",
-  "personaNewValue": "New value",
-  "personaAdjustInferredPreferenceTitle": "Adjust Inferred Preference",
   "languageDialogDescription": "Choose your preferred reading and interaction language. The interface and system copy will switch together.",
   "languageChineseDescription": "Better suited for Chinese reading and localized expressions.",
   "languageEnglishDescription": "Suited for English interface and a more international content environment.",
@@ -6142,7 +5970,6 @@
   "favoritesClose": "Close",
   "accountabilityEndPartnership": "End partnership",
   "accountabilityDashboardLoadFailed": "Partner dashboard failed to load",
-  "accountabilityDashboardLoadFailedDetail": "Please try again or contact support if the problem persists.",
   "accountabilityNudgeSentDefault": "Sent as an in-app reminder. They will see it in real time when online.",
   "accountabilityNudgeCooldown": "Already nudged recently. The reminder was delivered as an in-app notification. They will see it in real time when online.",
   "accountabilityNudgeFailed": "Failed to send nudge. Please try again later.",
@@ -6427,7 +6254,6 @@
       }
     }
   },
-  "seedLibraryDetailFriendlyError": "The system couldn't complete this operation right now. Please try again later.",
   "seedLibraryDetailUserRatings": "User Ratings",
   "seedLibraryDetailQualityBreakdown": "Quality Score Breakdown",
   "seedLibraryDetailQualityBreakdownDesc": "The list shows the composite quality score. Here you can also see the system base score and average user rating to help you decide if this seed library is worth keeping active long-term.",
@@ -6825,7 +6651,6 @@
       }
     }
   },
-  "personaRolledBack": "Rolled back to previous version",
   "personaRollbackFailed": "Rollback failed: {error}",
   "@personaRollbackFailed": {
     "placeholders": {
@@ -6844,15 +6669,6 @@
     }
   },
   "personaInferredAdjusted": "Inferred preference adjusted",
-  "personaAdjustFailed": "Adjustment failed: {error}",
-  "@personaAdjustFailed": {
-    "placeholders": {
-      "error": {
-        "type": "Object"
-      }
-    }
-  },
-  "personaInferredReset": "Restored to system inferred value",
   "personaRestoreFailed": "Restore failed: {error}",
   "@personaRestoreFailed": {
     "placeholders": {
@@ -6862,9 +6678,6 @@
     }
   },
   "personaUnknownError": "Unknown error",
-  "personaHintDecimalRange": "Enter a number between 0.0 and 1.0",
-  "personaHintStudyMinutes": "Enter study duration (minutes)",
-  "personaHintPositiveMinutes": "Enter a positive number of minutes",
   "personaHintValidPreference": "Enter a valid preference value",
   "memorySettingsSocialPersonMention": "Person mentions",
   "reportLearningAnalysisReport": "Learning Analysis Report",
@@ -6884,7 +6697,6 @@
   "reportRangeWeek": "This Week",
   "reportRangeMonth": "This Month",
   "reportRangeAll": "All",
-  "reportCurrentLearningTopic": "Current learning topic",
   "reportMasteryTrendTitle": "Mastery Trend",
   "reportPartialDataPill": "Partial data, for reference only",
   "reportTrendEmptyTitle": "Trend analysis will appear after more learning",
@@ -7419,8 +7231,6 @@
   "stuckHelpSuggestion3": "Complete what you do know first",
   "stuckHelpSuggestion4": "Give yourself a 5-minute timer",
   "stuckHelpSuggestion5": "Mark this point and continue with other parts",
-  "stuckHelpFallbackOrder": "Fallback order when stuck",
-  "stuckHelpWhatToDo": "What to do",
   "stuckHelpDiagnose": "Diagnose",
   "stuckHelpFix": "Precise Fix",
   "executionResultNoText": "No text result available.",
@@ -7430,7 +7240,6 @@
   "executionResultArtifacts": "Artifacts",
   "executionResultMoreFields": "{count} more fields",
   "executionResultNoPreview": "Current artifact type is {type}. No detailed preview available yet.",
-  "executionResultLinkCopied": "Link copied",
   "executionResultCopyLink": "Copy Link",
   "executionResultArtifactType": "Type: {type}",
   "executionResultArtifactFallback": "Attachment",
@@ -7628,7 +7437,6 @@
   "statisticsShareSaveImage": "Save Image",
   "statisticsShareCopyLink": "Copy Link",
   "statisticsShareMore": "More",
-  "statisticsWatermark": "Sparkle AI",
   "statisticsDateFormat": "{year}/{month}/{day}",
   "statisticsTypeFocus": "Focus",
   "statisticsTypeAgent": "Agent",
@@ -7659,14 +7467,6 @@
   "statisticsChartMonth11": "Nov",
   "statisticsChartMonth12": "Dec",
   "statisticsNoDataYet": "No statistics data yet",
-  "statisticsLoadingFailed": "Failed to load: {error}",
-  "@statisticsLoadingFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "statisticsRetry": "Retry",
   "statisticsVsLast": "vs last",
   "statisticsEmptyFocus": "No focus records",
@@ -7791,7 +7591,6 @@
   "weatherGuideConditionPrefix": "Current condition: {condition}",
   "weatherGuideDisclaimer": "This page helps you understand the weather system's visuals and logic. Real weather still follows your actual tasks, sprints, and state.",
   "weatherGuideTriggerPrefix": "Real trigger: {trigger}",
-  "intentPredictionSprintSprint": "Sprint!",
   "intentPredictionContinue": "Continue",
   "intentPredictionCreateTask": "Create Task",
   "intentPredictionStartFocus": "Start Focus",
@@ -7799,20 +7598,6 @@
   "intentPredictionCuriosityCapsule": "Curiosity Capsule",
   "intentPredictionSendToAI": "Send to AI",
   "intentPredictionNoteIdea": "Note Idea",
-  "intentPredictionSetReminder": "Set Reminder",
-  "intentPredictionCognitivePrism": "Cognitive Prism",
-  "intentPredictionTranslate": "Translate",
-  "intentPredictionLearnLanguage": "Learn Language",
-  "intentPredictionViewPrism": "View Cognitive Prism",
-  "intentPredictionBehaviorAnalysis": "Behavior Analysis",
-  "intentPredictionStartSprint": "Start Sprint",
-  "intentPredictionFocusMode": "Focus Mode",
-  "intentPredictionStartLearning": "Start Learning",
-  "intentPredictionCreateStudyPlan": "Create Study Plan",
-  "intentPredictionStartReview": "Start Review",
-  "intentPredictionViewErrorBook": "View Error Book",
-  "intentPredictionContinuePriority": "Continue Priority Task",
-  "intentPrediction25Min": "25 min Focus",
   "flashCapsuleTitle": "Flash Capsule",
   "flashCapsuleHistory": "History Capsules",
   "flashCapsuleHistoryEmpty": "No flash capsules saved yet.",
@@ -7834,14 +7619,6 @@
   "vocabularyLookupOfflineRemoved": "Offline dictionary package removed",
   "vocabularyLookupOfflineRemoveFailed": "Failed to remove offline dictionary package: {error}",
   "vocabularyLookupNoPackage": "No downloadable offline dictionary packages available",
-  "entityCardActionLabel": "Execute",
-  "entityCardTitleFallback": "Unnamed Card",
-  "entityCardEntityFallback": "Unnamed Entity",
-  "entityCardTaskFallback": "Unnamed Task",
-  "entityCardPlanFallback": "Study Plan",
-  "entityCardKnowledgeFallback": "Knowledge Node",
-  "entityCardTaskListFallback": "{count} executable tasks",
-  "entityCardTaskListSummary": "AI has organized the task list",
   "visualSlotAvatarBorder": "Avatar Border",
   "visualSlotTitleBar": "Title Bar",
   "visualSlotProfileBanner": "Profile Banner",
@@ -7879,8 +7656,6 @@
   "warningDefaultTitle": "Friendly Reminder",
   "infoDefaultTitle": "Quick Tip",
   "retryLabel": "Retry",
-  "emptyStateTitle": "No Data",
-  "emptyStateTitleNone": "Empty",
   "@loadingFailed": {
     "placeholders": {
       "error": {
@@ -7991,13 +7766,6 @@
   "@simulationBubbleRound": {
     "placeholders": {
       "round": {
-        "type": "Object"
-      }
-    }
-  },
-  "@entityCardTaskListFallback": {
-    "placeholders": {
-      "count": {
         "type": "Object"
       }
     }
@@ -8298,7 +8066,6 @@
   "openclawConditionTriggerLabel": "Condition poll: {condition}",
   "openclawCronTriggerLabel": "Daily schedule: {cron}",
   "openclawNotFilled": "Not filled",
-  "openclawNoDate": "N/A",
   "openclawNodeCount": "{count} devices",
   "openclawOnlineCount": "{count} online",
   "openclawUnsavedPreference": "Unsaved device preferences",
@@ -8753,16 +8520,6 @@
   "@accountabilityUnlockedOn": {
     "placeholders": {
       "date": {
-        "type": "String"
-      }
-    }
-  },
-  "accountabilityRequestFailed": "Failed to request partnership",
-  "accountabilityPartnerNudged": "Partner nudged to check today's goals",
-  "accountabilityPartnerNudgedWithMessage": "Partner nudged: {message}",
-  "@accountabilityPartnerNudgedWithMessage": {
-    "placeholders": {
-      "message": {
         "type": "String"
       }
     }
@@ -9714,7 +9471,6 @@
   "toolsReset": "Reset",
   "toolsSwitchToCountdown": "Switch to Countdown",
   "toolsSwitchToStopwatch": "Switch to Stopwatch",
-  "toolsFocusSaveFailed": "Failed to save focus session: {e}",
   "toolsFocusNotificationBody": "Focus session ended. Come back to wrap up and log your effort.",
   "toolsPomodoroCompleteEmoji": "Pomodoro session complete!",
   "toolsCountdownEnded": "Countdown ended",
@@ -9725,7 +9481,6 @@
   "toolsTrackEffort": "Tracks total effort time",
   "toolsNoLimit": "No limit",
   "toolsPauseManually": "Pause whenever you like",
-  "toolsPlanChainNext": "Easy to chain into your next block",
   "toolsBreathQuickDesc": "Quick calm-down for anxiety or pre-sleep wind-down.",
   "toolsBreathBox": "Box Breathing",
   "toolsBreathBoxDesc": "Even and steady. Good for calibrating rhythm before focus.",
@@ -9754,38 +9509,6 @@
   "toolsBreathStart": "Start",
   "toolsBreathStop": "Stop",
   "toolsBreathReset": "Reset",
-  "toolsBreathReady": "Ready",
-  "toolsBreathPracticeComplete": "Practice Complete",
-  "toolsBreathPausedRounds": "Paused · {completed} / {total} rounds",
-  "@toolsBreathPausedRounds": {
-    "placeholders": {
-      "completed": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
-  "toolsBreathRoundsProgress": "{completed} / {total} rounds",
-  "@toolsBreathRoundsProgress": {
-    "placeholders": {
-      "completed": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
-  "toolsBreathDurationLabel": "{duration} min",
-  "@toolsBreathDurationLabel": {
-    "placeholders": {
-      "duration": {
-        "type": "int"
-      }
-    }
-  },
   "toolsBreathStageDescPaused": "Practice paused, will resume from current phase with voice guidance.",
   "toolsBreathStageDescActive": "Follow the central instruction to inhale, hold, and exhale.",
   "toolsBreathCaptionRhythm": "Inhale / Hold / Exhale / Hold",
@@ -9824,11 +9547,9 @@
       }
     }
   },
-  "brtReady": "Ready",
   "toolsCalcTitle": "Calculator",
   "toolsCalcSubtitle": "Quick math for task execution, expression checks, and multi-step derivations. Recent history kept.",
   "toolsCalcNoHistory": "No history",
-  "toolsCalcHistoryCount": "{count} entries",
   "toolsCalcWaiting": "Waiting",
   "toolsCalcResultReady": "Result Ready",
   "toolsCalcExpression": "Expression",
@@ -9945,7 +9666,6 @@
   "toolsNotesSyncFailed": "Sync failed, please try again",
   "toolsNotesSubtitle": "Capture ideas, meeting notes, and task snippets. Auto-saved for use as a short-term external brain.",
   "toolsNotesWaiting": "Waiting",
-  "toolsNotesCharCount": "{_charCount} chars",
   "toolsNotesCharLabel": "Characters",
   "toolsNotesLineLabel": "Lines",
   "toolsNotesContent": "Note Content",
@@ -9992,7 +9712,6 @@
   "toolsFlashDescLen": "Description length",
   "toolsFlashCognitiveDim": "Cognitive Dimension",
   "toolsFlashViewHistory": "View History",
-  "toolsFlashRecording": "Saving...",
   "toolsFlashSaveCapsule": "Save Capsule",
   "toolsFlashSelectSubject": "Select Subject",
   "toolsVocabEntryCount": "{count} entries",
@@ -10026,35 +9745,9 @@
   "toolsVocabOfflinePackagesDesc": "Prefer local Oxford dictionary to reduce network dependency and cloud server load.",
   "toolsVocabInstalledBadge": "Installed",
   "toolsVocabDefaultPackageDesc": "Oxford Preferred Offline Dictionary Package",
-  "toolsVocabInstalledAtPrefix": "Installed",
-  "toolsVocabRedownload": "Re-download",
   "toolsVocabDownloadLocally": "Download Locally",
   "toolsVocabWaitingAssociations": "Waiting for associations",
-  "toolsVocabAssocCount": "{count} associations",
-  "@toolsVocabAssocCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "toolsVocabOfflineDictCount": "{count} offline dictionaries",
-  "@toolsVocabOfflineDictCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "toolsVocabNoOfflineDict": "No offline dictionary",
-  "toolsVocabPartOfSpeech": "Part of Speech · {pos}",
-  "@toolsVocabPartOfSpeech": {
-    "placeholders": {
-      "pos": {
-        "type": "String"
-      }
-    }
-  },
   "toolsVocabDefinitionsLabel": "Definitions",
   "toolsVocabDictExamplesLabel": "Dictionary Examples",
   "toolsVocabModelExampleLabel": "Model Generated Example",
@@ -10070,7 +9763,6 @@
     }
   },
   "toolsStatsWaitingData": "Waiting for data",
-  "toolsStatsRecentCount": "{totalSessions} recent sessions",
   "toolsStatsTodayFocus": "Today's Focus",
   "toolsStatsWeekTotal": "This Week",
   "toolsStatsDailyAvg": "Daily Average",
@@ -10216,7 +9908,6 @@
       }
     }
   },
-  "lpTitle": "Learning Path",
   "lpMainPath": "Main Path",
   "lpLoadFailed": "Load failed: {error}",
   "@lpLoadFailed": {
@@ -10508,11 +10199,6 @@
   "simSummarizer": "Summarizer",
   "simGenerate": "Generate",
   "simRefresh": "Refresh",
-  "simSocraticCopy": "Socratic Dialogue",
-  "simErrorDiagCopy": "Error Diagnosis",
-  "simGenFailed": "Simulation generation failed",
-  "simRealtimeConnectionRecovered": "The live connection was interrupted. Restored to your most recently saved simulation progress.",
-  "simInteractionStreamRecovered": "The interaction stream was interrupted, but I restored the latest round state for you.",
   "simRoundProgressSummary": "Discussion has reached round {round}. Summarizing key disagreements and consensus now.",
   "@simRoundProgressSummary": {
     "placeholders": {
@@ -10638,21 +10324,12 @@
   "seedDiffAdvanced": "Advanced",
   "seedDiffExpert": "Expert",
   "seedCatFewShotFull": "Few-shot Example",
-  "cogMockPattern1": "Whenever I hit a tough problem I instinctively reach for my phone — it seems like an avoidance mechanism.",
-  "cogMockPattern2": "Finishing advanced math homework gives a real sense of achievement. This positive feedback matters.",
-  "cogMockPattern3": "Planned to memorize vocab today but club activities got in the way. Need more schedule flexibility.",
-  "cogMockPattern4": "When facing hard or uncertain tasks (like physics projects), I tend to stall with busywork (tidying up, replying to messages).",
-  "cogMockPattern5": "I habitually start the hardest study tasks after 10 pm, which delays sleep and drains the next day's energy.",
-  "cogMockPattern6": "I overthink layout and wording when making slides or writing reports, hurting core content output.",
   "cogCapsuleUnavailable": "This capsule is currently unavailable",
   "cogCapsuleUnavailableDesc": "It may have been removed or is still generating.",
   "cogCapsuleOpenFailed": "Failed to open capsule",
   "cogJobsLoadFailed": "Failed to load generation jobs",
   "cogCapsuleListFailed": "Failed to load capsule list",
   "cogPatternFreq": "Appeared {count} times",
-  "insLearnBasic": "Learn basic concepts",
-  "insQuickCore": "Quickly grasp core concepts",
-  "insSmallPractice": "Complete a round of practice",
   "insLoadFailed": "Load failed: {e}",
   "@insLoadFailed": {
     "placeholders": {
@@ -10675,25 +10352,16 @@
   "insReportLabel": "Learning Report",
   "insViewReport": "View Report",
   "insBackToCockpit": "Back to Cockpit",
-  "insContinueSim": "Continue Simulation",
-  "insContinueLearnSim": "Continue Learning Simulation",
-  "insHasContinue": "Content available to continue",
   "insCreateTask": "Create Learning Task",
   "insDecisionLogTitle": "AI Decision Log",
   "insDecisionLogSubtitle": "Review recent notify, skip, downgrade, and replan decisions",
   "insDecisionLogStatus": "Causal Control OS Audit",
   "insDecisionLogOpen": "Open Log",
-  "insContinueView": "Continue",
-  "insStartFromRecommended": "Start from Recommended",
-  "insFocusedSim": "Focused: Learning Simulation",
-  "insFocusedReport": "Focused: Learning Report",
-  "insFocusedDefault": "Simulation, theater & reports in one place",
   "insFlowTitle": "Connect \"spot problems, simulate discussions, draw conclusions\" into one flow.",
   "insFlowSubtitle": "Only the entries you actually need next — no clutter.",
   "insSwipeHint": "Learning Insights is in the customizable card area on the home screen. Default: calendar, swipe left for insights, right for tools.",
   "insRecommended": "Recommended",
   "insNoPrereq": "No prerequisites needed — dive right in!",
-  "insGenerating": "Generating...",
   "insQuickPath": "Quick Task Path",
   "insFullPlan": "Full Plan",
   "insViewDetail": "View Details",
@@ -10742,13 +10410,6 @@
   },
   "insFirstWeek": "Week 1",
   "insRetry": "Retry",
-  "@insPrerequisitesWarning": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "insRiskAssessment": "Learning status observations",
   "insRiskSubtitle": "Based on observations from your recent study records",
   "insAiSuggestions": "AI Suggestions:",
@@ -10822,25 +10483,8 @@
   "calTotalExecutions": "Total Executions",
   "calAvgDuration": "Avg Duration",
   "calSessionCount": "Sessions",
-  "ebCreateFailed": "Failed to create error record",
-  "ebListFailed": "Failed to fetch error list",
-  "ebDetailFailed": "Failed to fetch error detail",
   "ebUpdateFailed": "Update failed: {e}",
-  "ebDeleteFailed": "Failed to delete error record",
-  "ebAnalysisFailed": "Re-analysis failed",
   "ebReviewFailed": "Failed to submit review record",
-  "ebTodayReviewFailed": "Failed to fetch today's review list",
-  "ebStatsFailed": "Failed to fetch statistics",
-  "ebSummaryFailed": "Failed to fetch semantic summary",
-  "ebBadParams": "Invalid request parameters",
-  "ebImageUploadFailed": "Image upload failed: {e}",
-  "@ebImageUploadFailed": {
-    "placeholders": {
-      "e": {
-        "type": "String"
-      }
-    }
-  },
   "ebRemove": "Remove",
   "ebReuploadImage": "Re-upload Image",
   "ebUploadImage": "Upload Question Image",
@@ -10875,7 +10519,6 @@
   "ebHide": "Hide",
   "ebViewAnswer": "View Answer",
   "ebViewAnalysis": "View AI Analysis",
-  "ebSubmitFailed": "Submit failed: {e}",
   "ebBack": "Back",
   "ebBackToList": "Back to List",
   "ebAnotherRound": "Another Round",
@@ -11042,16 +10685,6 @@
   "memCaptureHigh": "High",
   "memBlockingPrefs": "Blocking Preferences",
   "memBlockedSources": "Blocked Sources",
-  "seedDetailFailed": "Failed to load seed library details. Please try again.",
-  "seedStateFailed": "Failed to load seed library state. Please try again.",
-  "seedCreateFailed": "Create failed: {e}",
-  "@seedCreateFailed": {
-    "placeholders": {
-      "e": {
-        "type": "String"
-      }
-    }
-  },
   "seedCreateTitle": "Create Seed Library",
   "seedNameLabel": "Name",
   "seedNameHint": "Enter seed library name",
@@ -11694,20 +11327,6 @@
   "chatWidgetPlanStatus": "Plan status",
   "chatWidgetPlanSummary": "Plan summary",
   "chatWsUnknownError": "Unknown error",
-  "@seedLibraryItemCount": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
-  "@seedLibraryLastUpdated": {
-    "placeholders": {
-      "date": {
-        "type": "Object"
-      }
-    }
-  },
   "planViewCurrentPlan": "Current Plan",
   "planViewNoPlanTasks": "No Plan Tasks",
   "planViewAllPlanTasks": "View All Plan Tasks",
@@ -12428,49 +12047,6 @@
   "calEventCreated": "Event created",
   "calSavedLocally": "Saved locally, will sync to cloud automatically.",
   "calEditEvent": "Edit Event",
-  "@picEstimatedHours": {
-    "placeholders": {
-      "hours": {
-        "type": "String"
-      }
-    }
-  },
-  "@picRiskScore": {
-    "placeholders": {
-      "score": {
-        "type": "String"
-      }
-    }
-  },
-  "@picChurnRisk": {
-    "placeholders": {
-      "level": {
-        "type": "String"
-      }
-    }
-  },
-  "@picMinutesLater": {
-    "placeholders": {
-      "minutes": {
-        "type": "int"
-      }
-    }
-  },
-  "@picTodayTime": {
-    "placeholders": {
-      "time": {
-        "type": "String"
-      }
-    }
-  },
-  "@picTomorrowTime": {
-    "placeholders": {
-      "time": {
-        "type": "String"
-      }
-    }
-  },
-  "lioStartNewSim": "Start a new simulation now",
   "lioRecentAnalysis": "Last analysis covered {count} knowledge points",
   "@lioRecentAnalysis": {
     "placeholders": {
@@ -12480,30 +12056,11 @@
     }
   },
   "lioBuildConclusion": "Summarize key takeaways after a learning round",
-  "lioNoSimYet": "No recent simulation generated yet",
-  "lioRecentUpdate": "Recently updated · {desc}",
-  "@lioRecentUpdate": {
-    "placeholders": {
-      "desc": {
-        "type": "String"
-      }
-    }
-  },
   "lioNoReportYet": "No recent report generated yet",
   "lioMastery": "Mastery {percent}%",
   "@lioMastery": {
     "placeholders": {
       "percent": {
-        "type": "String"
-      }
-    }
-  },
-  "@lfcConfidence": {
-    "placeholders": {
-      "sampleSize": {
-        "type": "int"
-      },
-      "confidence": {
         "type": "String"
       }
     }
@@ -12760,17 +12317,6 @@
   "@gdGap": {
     "placeholders": {
       "percent": {
-        "type": "String"
-      }
-    }
-  },
-  "gdCurrentTarget": "Current {current}% · Target {target}%",
-  "@gdCurrentTarget": {
-    "placeholders": {
-      "current": {
-        "type": "String"
-      },
-      "target": {
         "type": "String"
       }
     }
@@ -13103,7 +12649,6 @@
   "cahMilestones": "Milestones",
   "cahEvidence": "Evidence",
   "cahNoEvidence": "No evidence yet",
-  "cahProgress": "Progress",
   "cahWitnesses": "Witnesses",
   "cahDueSoon": "Due soon",
   "cahActive": "Active",
@@ -13121,7 +12666,6 @@
   "partnersEmptyDesc": "Pair up with someone pursuing similar goals. Accountability doubles consistency.",
   "partnersEmptyAction": "Discover partners",
   "partnersMyPartners": "My Partners",
-  "partnersEmptyState": "Empty state",
   "partnersViewAll": "View all",
   "partnersMoreFriends": "{count} more friends",
   "@partnersMoreFriends": {
@@ -13451,7 +12995,6 @@
       }
     }
   },
-  "sprintBottleneckLabel": "{name}: {reason}",
   "sprintAlertSignificantlyBehindDetail": "Task completion rate significantly below expectations. Consider re-evaluating daily workload or adjusting sprint scope.",
   "sprintAlertSlowerDetail": "Progress is being made but slower than expected. Consider adjusting study strategies or time allocation.",
   "sprintAlertEndingDetail": "Sprint is ending soon with many tasks remaining. Focus on completing critical tasks.",
@@ -14107,14 +13650,7 @@
   "intentHabit": "Habit",
   "intentKeepGoing": "Keep going",
   "intentDaysLeft": "{days} days left",
-  "sprintCompletionLoading": "Loading...",
-  "learningPortfolioLoading": "Loading...",
-  "sprintActionLoading": "Loading...",
-  "securityLogLoading": "Loading...",
-  "socialAccountsLoading": "Loading...",
-  "sessionManagementLoading": "Loading...",
   "intentPredictionSprint": "Sprint!",
-  "intentPredictionNoteThought": "Note Thought",
   "intentPredictionContinueTask": "Continue \"{taskTitle}\"",
   "@intentPredictionContinueTask": {
     "placeholders": {
@@ -14642,8 +14178,6 @@
   "taskDiagnosisOption1": "Concept not clear",
   "taskDiagnosisOption2": "Step order confused",
   "taskDiagnosisOption3": "Can't use given conditions",
-  "seedLibLoadFailed": "Failed to load library details. Please try again later.",
-  "seedLibStatusFailed": "Failed to load library status. Please try again later.",
   "communitySquad": "Squad",
   "communityGroupStats": "{memberCount} members | {flamePower} flame",
   "@communityGroupStats": {
@@ -14935,22 +14469,6 @@
   "homeActivePlanPhaseInProgress": "In Progress",
   "homeBottleneckTopicFallback": "This topic",
   "homeDailyContextMorningFallback": "Good morning. Start with a small step today and find your rhythm.",
-  "agreeTermsFirst": "Please agree to the Terms of Service and Privacy Policy first",
-  "passwordStrengthWeak": "Weak",
-  "passwordStrengthFair": "Fair",
-  "passwordStrengthStrong": "Strong",
-  "resetInstructions": "Enter the reset code from the email and set a new password.",
-  "resetCodeRequired": "Enter the reset code",
-  "resetPasswordMinLength": "Password must be at least 6 characters",
-  "resetPasswordsNoMatch": "Passwords do not match",
-  "loginFailedWithError": "Login Failed: {error}",
-  "@loginFailedWithError": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "legalCurrentVersion": "Current version: v1",
   "legalLastUpdated": "Last updated: May 1, 2026. This privacy policy explains how Sparkle collects, uses, and protects your personal information. Please read carefully.",
   "legalTermsServiceTitle": "1. Service Description",
@@ -15239,10 +14757,6 @@
       }
     }
   },
-  "chaosBrandPrimaryLabel": "brandPrimary",
-  "@chaosBrandPrimaryLabel": {
-    "description": "brandPrimary"
-  },
   "chaosClose": "Close",
   "@chaosClose": {
     "description": "Close"
@@ -15331,60 +14845,13 @@
   "@engagementVeryActive": {
     "description": "Very Active"
   },
-  "utilLoadingFailed": "Load failed: {error}",
-  "@utilLoadingFailed": {
-    "placeholders": {
-      "error": {
-        "type": "Object"
-      }
-    }
-  },
-  "utilNoData": "No data yet",
-  "@utilNoData": {
-    "description": "No data yet"
-  },
-  "utilUnknownError": "Unknown error",
-  "@utilUnknownError": {
-    "description": "Unknown error"
-  },
-  "utilDataEmpty": "Data is empty",
-  "@utilDataEmpty": {
-    "description": "Data is empty"
-  },
-  "auto_firstsecond": "{first} {second}",
-  "@auto_firstsecond": {
-    "placeholders": {
-      "first": {
-        "type": "Object"
-      },
-      "second": {
-        "type": "Object"
-      }
-    }
-  },
   "auto_": "%",
   "@auto_": {
     "description": "%"
   },
-  "auto_dataisempty": "Data is empty",
-  "@auto_dataisempty": {
-    "description": "Data is empty"
-  },
   "auto_unknownerror": "Unknown error",
   "@auto_unknownerror": {
     "description": "Unknown error"
-  },
-  "auto_loadfailedrror": "Load failed: {error}",
-  "@auto_loadfailedrror": {
-    "placeholders": {
-      "error": {
-        "type": "Object"
-      }
-    }
-  },
-  "auto_nodatayet": "No data yet",
-  "@auto_nodatayet": {
-    "description": "No data yet"
   },
   "auto_flex": "Flex",
   "@auto_flex": {
@@ -15441,14 +14908,6 @@
   "auto_makingsteadyprogresslatelyjust": "Making steady progress lately, just logging it.",
   "@auto_makingsteadyprogresslatelyjust": {
     "description": "Making steady progress lately, just logging it."
-  },
-  "auto_ifyou": "If you\\",
-  "@auto_ifyou": {
-    "description": "If you\\"
-  },
-  "auto_thisweek": "This Week",
-  "@auto_thisweek": {
-    "description": "This Week"
   },
   "auto_notifications": "Notifications",
   "@auto_notifications": {
@@ -15598,10 +15057,6 @@
   "@auto_pendingcommitments": {
     "description": "Pending Commitments"
   },
-  "auto_en": "_en",
-  "@auto_en": {
-    "description": "_en"
-  },
   "auto_unknownerrorpleaseretry": "Unknown error, please retry",
   "@auto_unknownerrorpleaseretry": {
     "description": "Unknown error, please retry"
@@ -15746,78 +15201,6 @@
   "@auto_younowhavethefirstreviewablele": {
     "description": "You now have the first reviewable learning insight archive."
   },
-  "auto_wordnotfound": "Word not found",
-  "@auto_wordnotfound": {
-    "description": "Word not found"
-  },
-  "auto_lookupfailed": "Lookup failed: {e}",
-  "@auto_lookupfailed": {
-    "placeholders": {
-      "e": {
-        "type": "Object"
-      }
-    }
-  },
-  "auto_addfailed": "Add failed: {e}",
-  "@auto_addfailed": {
-    "placeholders": {
-      "e": {
-        "type": "Object"
-      }
-    }
-  },
-  "auto_failedtoloadwordbook": "Failed to load wordbook: {e}",
-  "@auto_failedtoloadwordbook": {
-    "placeholders": {
-      "e": {
-        "type": "Object"
-      }
-    }
-  },
-  "auto_failedtoloadreviewlist": "Failed to load review list: {e}",
-  "@auto_failedtoloadreviewlist": {
-    "placeholders": {
-      "e": {
-        "type": "Object"
-      }
-    }
-  },
-  "auto_failedtoloadstats": "Failed to load stats: {e}",
-  "@auto_failedtoloadstats": {
-    "placeholders": {
-      "e": {
-        "type": "Object"
-      }
-    }
-  },
-  "auto_recordfailed": "Record failed: {e}",
-  "@auto_recordfailed": {
-    "placeholders": {
-      "e": {
-        "type": "Object"
-      }
-    }
-  },
-  "auto_updatefailed": "Update failed: {e}",
-  "@auto_updatefailed": {
-    "placeholders": {
-      "e": {
-        "type": "Object"
-      }
-    }
-  },
-  "auto_deletefailed": "Delete failed: {e}",
-  "@auto_deletefailed": {
-    "placeholders": {
-      "e": {
-        "type": "Object"
-      }
-    }
-  },
-  "auto_loadfailed": "Load Failed",
-  "@auto_loadfailed": {
-    "description": "Load Failed"
-  },
   "auto_transactionhistory": "Transaction History",
   "@auto_transactionhistory": {
     "description": "Transaction History"
@@ -15855,7 +15238,6 @@
   "proposalDiffTitle": "What will change",
   "proposalDiffBefore": "Now",
   "proposalDiffAfter": "Changed to",
-  "proposalUntitled": "An action to confirm",
   "proposalTurnA11y": "It is now {owner}'s turn",
   "@proposalTurnA11y": {
     "placeholders": {
@@ -15871,7 +15253,6 @@
   "understandingViewIntro": "What Sparkle remembers and assumes right now. Every item shows where it came from, and can be edited or deleted.",
   "understandingEmptyTitle": "Sparkle doesn't know you yet",
   "understandingEmptyBody": "After you chat, plan, or finish tasks, Sparkle will put what it remembers here — you can correct anything, anytime.",
-  "understandingBucketEmpty": "Nothing in this group yet",
   "understandingViewAll": "View all",
   "understandingLoadMore": "Load more",
   "understandingScanCapped": "There is a lot here — showing recently updated items first.",
@@ -15889,14 +15270,11 @@
   "understandingActionWhy": "Why do I have this",
   "understandingEditTitle": "Edit this item",
   "understandingEditLabel": "Change to",
-  "understandingEditReasonHint": "Why (optional)",
   "understandingDeleteTitle": "Delete this item?",
   "understandingDeleteBody": "Sparkle will stop using it, and its next decisions will reflect the change.",
   "understandingPauseTitle": "Pause this item?",
   "understandingPauseBody": "While paused, Sparkle won't use it. You can resume anytime.",
   "understandingScopeSheetTitle": "Use only for one goal",
-  "understandingScopePickPlan": "Pick a study plan",
-  "understandingScopeApply": "Use only in this plan",
   "understandingScopeNoPlans": "No study plans to pick from yet",
   "understandingActionLinkTask": "Link a task",
   "understandingTaskSheetTitle": "Use only for one task",
@@ -16712,24 +16090,6 @@
       }
     }
   },
-  "insPredictNext": "Predict next study time",
-  "insUnknownType": "Unknown type",
-  "insEngagementForecast": "Engagement Forecast",
-  "insEngagementSubtitle": "AI prediction based on learning habits",
-  "insDifficultyForecast": "Difficulty Forecast",
-  "insDifficultySubtitle": "AI assessment based on prerequisites",
-  "insPredictedDifficulty": "Predicted Difficulty",
-  "insPrerequisitesWarning": "Complete {count} prerequisite(s) first",
-  "insDifficultyEasy": "Easy",
-  "insDifficultyMedium": "Medium",
-  "insDifficultyHard": "Hard",
-  "picEstimatedHours": "Estimated study time: {hours} hours",
-  "picRiskScore": "Risk index: {score}/100",
-  "picChurnRisk": "Churn risk: {level}",
-  "picMinutesLater": "In about {minutes} minutes",
-  "picTodayTime": "Today {time}",
-  "picTomorrowTime": "Tomorrow {time}",
-  "lfcConfidence": "Based on {sampleSize} learning records, current recommendation confidence is {confidence}%.",
   "firstActionCardTitle": "Your first step",
   "firstActionGenerateCta": "Generate my first step",
   "firstActionGenerateHint": "One smallest useful step you can finish today, derived from your real goal.",

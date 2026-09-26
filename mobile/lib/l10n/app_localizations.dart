@@ -194,18 +194,6 @@ abstract class AppLocalizations {
   /// **'已有账号？'**
   String get hasAccount;
 
-  /// No description provided for @loginFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'登录失败'**
-  String get loginFailed;
-
-  /// No description provided for @registerFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'注册失败'**
-  String get registerFailed;
-
   /// No description provided for @weeklyAgenda.
   ///
   /// In zh, this message translates to:
@@ -307,12 +295,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'跟随系统'**
   String get followSystem;
-
-  /// No description provided for @interactionSettings.
-  ///
-  /// In zh, this message translates to:
-  /// **'交互设置'**
-  String get interactionSettings;
 
   /// No description provided for @enterToSend.
   ///
@@ -518,12 +500,6 @@ abstract class AppLocalizations {
   /// **'查看详情'**
   String get viewDetails;
 
-  /// No description provided for @finishTask.
-  ///
-  /// In zh, this message translates to:
-  /// **'完成任务'**
-  String get finishTask;
-
   /// No description provided for @abandonTask.
   ///
   /// In zh, this message translates to:
@@ -565,12 +541,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'掌握度'**
   String get masteryScore;
-
-  /// No description provided for @aiTutor.
-  ///
-  /// In zh, this message translates to:
-  /// **'AI 导师'**
-  String get aiTutor;
 
   /// No description provided for @send.
   ///
@@ -824,36 +794,6 @@ abstract class AppLocalizations {
   /// **'创建计划'**
   String get planCreateAction;
 
-  /// No description provided for @featureComingSoon.
-  ///
-  /// In zh, this message translates to:
-  /// **'精彩功能即将登场'**
-  String get featureComingSoon;
-
-  /// No description provided for @stayTuned.
-  ///
-  /// In zh, this message translates to:
-  /// **'敬请期待~'**
-  String get stayTuned;
-
-  /// No description provided for @aiNudgeGentle.
-  ///
-  /// In zh, this message translates to:
-  /// **'休息一下吧，效率会更高哦'**
-  String get aiNudgeGentle;
-
-  /// No description provided for @aiNudgeFocus.
-  ///
-  /// In zh, this message translates to:
-  /// **'保持专注，你正在状态！'**
-  String get aiNudgeFocus;
-
-  /// No description provided for @qwen3CognitiveStatus.
-  ///
-  /// In zh, this message translates to:
-  /// **'Qwen3 认知状态'**
-  String get qwen3CognitiveStatus;
-
   /// No description provided for @winStreak.
   ///
   /// In zh, this message translates to:
@@ -895,12 +835,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'胶囊生成'**
   String get capsuleGeneration;
-
-  /// No description provided for @adjustAndGenerate.
-  ///
-  /// In zh, this message translates to:
-  /// **'调整偏好并生成专属好奇心胶囊'**
-  String get adjustAndGenerate;
 
   /// No description provided for @generateNow.
   ///
@@ -1028,12 +962,6 @@ abstract class AppLocalizations {
   /// **'查看离线队列状态与重试'**
   String get viewOfflineQueue;
 
-  /// No description provided for @capsuleTaskCreated.
-  ///
-  /// In zh, this message translates to:
-  /// **'✨ 胶囊生成任务已创建'**
-  String get capsuleTaskCreated;
-
   /// No description provided for @generationFailed.
   ///
   /// In zh, this message translates to:
@@ -1063,12 +991,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'计划ID'**
   String get planId;
-
-  /// No description provided for @featureInDevelopment.
-  ///
-  /// In zh, this message translates to:
-  /// **'功能开发中...'**
-  String get featureInDevelopment;
 
   /// No description provided for @sprintHistory.
   ///
@@ -1124,12 +1046,6 @@ abstract class AppLocalizations {
   /// **'冲刺已放弃'**
   String get sprintAbandoned;
 
-  /// No description provided for @noActiveSprint.
-  ///
-  /// In zh, this message translates to:
-  /// **'没有活跃的冲刺'**
-  String get noActiveSprint;
-
   /// No description provided for @networkErrorRetry.
   ///
   /// In zh, this message translates to:
@@ -1141,18 +1057,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'提交失败，请重试'**
   String get submitFailed;
-
-  /// No description provided for @loadHistoryFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'加载历史失败'**
-  String get loadHistoryFailed;
-
-  /// No description provided for @loadMoreFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'加载更多消息失败'**
-  String get loadMoreFailed;
 
   /// No description provided for @sendFailed.
   ///
@@ -1453,12 +1357,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'探索认知工具'**
   String get toolsCognitiveHubDesc;
-
-  /// No description provided for @toolsSearchPlaceholder.
-  ///
-  /// In zh, this message translates to:
-  /// **'搜索工具...'**
-  String get toolsSearchPlaceholder;
 
   /// No description provided for @toolsFocusModeTitle.
   ///
@@ -2384,12 +2282,6 @@ abstract class AppLocalizations {
   /// **'创建契约失败'**
   String get contractCreateFailed;
 
-  /// No description provided for @contractCreateSuccess.
-  ///
-  /// In zh, this message translates to:
-  /// **'契约创建成功'**
-  String get contractCreateSuccess;
-
   /// No description provided for @contractCancelSuccess.
   ///
   /// In zh, this message translates to:
@@ -3230,36 +3122,6 @@ abstract class AppLocalizations {
   /// **'{count}秒'**
   String durationSeconds(Object count);
 
-  /// No description provided for @durationHoursMinutes.
-  ///
-  /// In zh, this message translates to:
-  /// **'{hours}小时{minutes}分钟'**
-  String durationHoursMinutes(Object hours, Object minutes);
-
-  /// No description provided for @durationMinutesSeconds.
-  ///
-  /// In zh, this message translates to:
-  /// **'{minutes}分{seconds}秒'**
-  String durationMinutesSeconds(Object minutes, Object seconds);
-
-  /// No description provided for @numberCount.
-  ///
-  /// In zh, this message translates to:
-  /// **'{count, plural, =0{无} =1{1项} other{{count}项}}'**
-  String numberCount(num count);
-
-  /// No description provided for @numberSelected.
-  ///
-  /// In zh, this message translates to:
-  /// **'已选择 {count} 项'**
-  String numberSelected(Object count);
-
-  /// No description provided for @numberTotal.
-  ///
-  /// In zh, this message translates to:
-  /// **'{current}/{total}'**
-  String numberTotal(Object current, Object total);
-
   /// No description provided for @numberPercent.
   ///
   /// In zh, this message translates to:
@@ -3271,30 +3133,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'完成 {value}%'**
   String numberProgress(Object value);
-
-  /// No description provided for @numberK.
-  ///
-  /// In zh, this message translates to:
-  /// **'{value}K'**
-  String numberK(Object value);
-
-  /// No description provided for @numberM.
-  ///
-  /// In zh, this message translates to:
-  /// **'{value}M'**
-  String numberM(Object value);
-
-  /// No description provided for @numberB.
-  ///
-  /// In zh, this message translates to:
-  /// **'{value}B'**
-  String numberB(Object value);
-
-  /// No description provided for @commonYes.
-  ///
-  /// In zh, this message translates to:
-  /// **'是'**
-  String get commonYes;
 
   /// No description provided for @commonNo.
   ///
@@ -3392,12 +3230,6 @@ abstract class AppLocalizations {
   /// **'忽略'**
   String get commonDismiss;
 
-  /// No description provided for @commonApply.
-  ///
-  /// In zh, this message translates to:
-  /// **'应用'**
-  String get commonApply;
-
   /// No description provided for @commonSubmit.
   ///
   /// In zh, this message translates to:
@@ -3452,29 +3284,11 @@ abstract class AppLocalizations {
   /// **'处理中...'**
   String get commonProcessing;
 
-  /// No description provided for @commonSuccess.
-  ///
-  /// In zh, this message translates to:
-  /// **'成功'**
-  String get commonSuccess;
-
-  /// No description provided for @commonError.
-  ///
-  /// In zh, this message translates to:
-  /// **'错误'**
-  String get commonError;
-
   /// No description provided for @commonWarning.
   ///
   /// In zh, this message translates to:
   /// **'警告'**
   String get commonWarning;
-
-  /// No description provided for @commonInfo.
-  ///
-  /// In zh, this message translates to:
-  /// **'信息'**
-  String get commonInfo;
 
   /// No description provided for @commonNoData.
   ///
@@ -3482,41 +3296,17 @@ abstract class AppLocalizations {
   /// **'暂无数据'**
   String get commonNoData;
 
-  /// No description provided for @commonNoResults.
-  ///
-  /// In zh, this message translates to:
-  /// **'未找到结果'**
-  String get commonNoResults;
-
-  /// No description provided for @commonTryAgain.
-  ///
-  /// In zh, this message translates to:
-  /// **'重试'**
-  String get commonTryAgain;
-
   /// No description provided for @commonLearnMore.
   ///
   /// In zh, this message translates to:
   /// **'了解更多'**
   String get commonLearnMore;
 
-  /// No description provided for @commonSeeAll.
-  ///
-  /// In zh, this message translates to:
-  /// **'查看全部'**
-  String get commonSeeAll;
-
   /// No description provided for @operationPreview.
   ///
   /// In zh, this message translates to:
   /// **'操作预览：'**
   String get operationPreview;
-
-  /// No description provided for @commonShowLess.
-  ///
-  /// In zh, this message translates to:
-  /// **'收起'**
-  String get commonShowLess;
 
   /// No description provided for @commonShowMore.
   ///
@@ -3535,18 +3325,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'展开'**
   String get commonExpand;
-
-  /// No description provided for @commonRequired.
-  ///
-  /// In zh, this message translates to:
-  /// **'必填'**
-  String get commonRequired;
-
-  /// No description provided for @commonOptional.
-  ///
-  /// In zh, this message translates to:
-  /// **'可选'**
-  String get commonOptional;
 
   /// No description provided for @formUnsavedTitle.
   ///
@@ -3572,77 +3350,11 @@ abstract class AppLocalizations {
   /// **'放弃更改'**
   String get formUnsavedDiscard;
 
-  /// No description provided for @commonEnabled.
-  ///
-  /// In zh, this message translates to:
-  /// **'已启用'**
-  String get commonEnabled;
-
-  /// No description provided for @commonDisabled.
-  ///
-  /// In zh, this message translates to:
-  /// **'已禁用'**
-  String get commonDisabled;
-
-  /// No description provided for @commonOn.
-  ///
-  /// In zh, this message translates to:
-  /// **'开'**
-  String get commonOn;
-
-  /// No description provided for @commonOff.
-  ///
-  /// In zh, this message translates to:
-  /// **'关'**
-  String get commonOff;
-
-  /// No description provided for @commonActive.
-  ///
-  /// In zh, this message translates to:
-  /// **'活跃'**
-  String get commonActive;
-
-  /// No description provided for @commonInactive.
-  ///
-  /// In zh, this message translates to:
-  /// **'未激活'**
-  String get commonInactive;
-
-  /// No description provided for @commonConnected.
-  ///
-  /// In zh, this message translates to:
-  /// **'已连接'**
-  String get commonConnected;
-
-  /// No description provided for @commonDisconnected.
-  ///
-  /// In zh, this message translates to:
-  /// **'已断开'**
-  String get commonDisconnected;
-
-  /// No description provided for @commonSyncing.
-  ///
-  /// In zh, this message translates to:
-  /// **'同步中...'**
-  String get commonSyncing;
-
   /// No description provided for @commonSynced.
   ///
   /// In zh, this message translates to:
   /// **'已同步'**
   String get commonSynced;
-
-  /// No description provided for @commonOffline.
-  ///
-  /// In zh, this message translates to:
-  /// **'离线'**
-  String get commonOffline;
-
-  /// No description provided for @commonOnline.
-  ///
-  /// In zh, this message translates to:
-  /// **'在线'**
-  String get commonOnline;
 
   /// No description provided for @offlineBannerMessage.
   ///
@@ -4580,12 +4292,6 @@ abstract class AppLocalizations {
   /// **'接入后可见'**
   String get statisticsTrendAwaitingDataHint;
 
-  /// No description provided for @statisticsLearningIndex.
-  ///
-  /// In zh, this message translates to:
-  /// **'学习指数 {value}'**
-  String statisticsLearningIndex(Object value);
-
   /// No description provided for @statisticsAggregationNone.
   ///
   /// In zh, this message translates to:
@@ -5077,12 +4783,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'没有相册写入权限'**
   String get noGalleryPermission;
-
-  /// No description provided for @saveResultEmpty.
-  ///
-  /// In zh, this message translates to:
-  /// **'保存结果为空'**
-  String get saveResultEmpty;
 
   /// No description provided for @gallerySaveFailed.
   ///
@@ -5606,12 +5306,6 @@ abstract class AppLocalizations {
   /// **'更新失败: {error}'**
   String editProfileUpdateFailed(Object error);
 
-  /// No description provided for @editProfileUploadFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'上传失败: {error}'**
-  String editProfileUploadFailed(Object error);
-
   /// No description provided for @editProfileNicknameLabel.
   ///
   /// In zh, this message translates to:
@@ -5786,12 +5480,6 @@ abstract class AppLocalizations {
   /// **'密码修改成功'**
   String get passwordResetSuccess;
 
-  /// No description provided for @passwordResetFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'修改失败: {error}'**
-  String passwordResetFailed(Object error);
-
   /// No description provided for @smartPushSettings.
   ///
   /// In zh, this message translates to:
@@ -5888,23 +5576,11 @@ abstract class AppLocalizations {
   /// **'设置已保存'**
   String get smartPushSettingsSaved;
 
-  /// No description provided for @smartPushSaveFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'保存失败: {error}'**
-  String smartPushSaveFailed(Object error);
-
   /// No description provided for @themeSettings.
   ///
   /// In zh, this message translates to:
   /// **'主题设置'**
   String get themeSettings;
-
-  /// No description provided for @themeModeSection.
-  ///
-  /// In zh, this message translates to:
-  /// **'主题模式'**
-  String get themeModeSection;
 
   /// No description provided for @themeModeLight.
   ///
@@ -5924,12 +5600,6 @@ abstract class AppLocalizations {
   /// **'跟随系统'**
   String get themeModeSystem;
 
-  /// No description provided for @brandPresetSection.
-  ///
-  /// In zh, this message translates to:
-  /// **'品牌预设'**
-  String get brandPresetSection;
-
   /// No description provided for @highContrastSection.
   ///
   /// In zh, this message translates to:
@@ -5947,12 +5617,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'恢复默认设置'**
   String get resetDefaults;
-
-  /// No description provided for @colorPreviewSection.
-  ///
-  /// In zh, this message translates to:
-  /// **'颜色预览'**
-  String get colorPreviewSection;
 
   /// No description provided for @colorPrimary.
   ///
@@ -6110,12 +5774,6 @@ abstract class AppLocalizations {
   /// **'画像对齐度 {value}%'**
   String systemUpdatesAlignmentScore(Object value);
 
-  /// No description provided for @contentReviewCardTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'内容审查'**
-  String get contentReviewCardTitle;
-
   /// No description provided for @contentReviewPassed.
   ///
   /// In zh, this message translates to:
@@ -6134,12 +5792,6 @@ abstract class AppLocalizations {
   /// **'内容需要优化'**
   String get contentReviewNeedsRefinement;
 
-  /// No description provided for @contentReviewScoreLabel.
-  ///
-  /// In zh, this message translates to:
-  /// **'评分'**
-  String get contentReviewScoreLabel;
-
   /// No description provided for @contentReviewOverallScore.
   ///
   /// In zh, this message translates to:
@@ -6151,12 +5803,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'评估指标'**
   String get contentReviewMetrics;
-
-  /// No description provided for @contentReviewIssues.
-  ///
-  /// In zh, this message translates to:
-  /// **'发现问题'**
-  String get contentReviewIssues;
 
   /// No description provided for @contentReviewSuggestions.
   ///
@@ -6176,101 +5822,17 @@ abstract class AppLocalizations {
   /// **'警告'**
   String get contentReviewWarnings;
 
-  /// No description provided for @contentReviewTips.
-  ///
-  /// In zh, this message translates to:
-  /// **'提示'**
-  String get contentReviewTips;
-
   /// No description provided for @contentReviewAccept.
   ///
   /// In zh, this message translates to:
   /// **'接受'**
   String get contentReviewAccept;
 
-  /// No description provided for @contentReviewReject.
-  ///
-  /// In zh, this message translates to:
-  /// **'拒绝'**
-  String get contentReviewReject;
-
-  /// No description provided for @contentReviewRequestManual.
-  ///
-  /// In zh, this message translates to:
-  /// **'人工审查'**
-  String get contentReviewRequestManual;
-
   /// No description provided for @contentReviewRegenerate.
   ///
   /// In zh, this message translates to:
   /// **'重新生成'**
   String get contentReviewRegenerate;
-
-  /// No description provided for @contentReviewWaitOptimization.
-  ///
-  /// In zh, this message translates to:
-  /// **'等待优化...'**
-  String get contentReviewWaitOptimization;
-
-  /// No description provided for @contentReviewOptimizing.
-  ///
-  /// In zh, this message translates to:
-  /// **'正在优化内容...'**
-  String get contentReviewOptimizing;
-
-  /// No description provided for @contentReviewOptimized.
-  ///
-  /// In zh, this message translates to:
-  /// **'优化完成'**
-  String get contentReviewOptimized;
-
-  /// No description provided for @contentReviewOptimizationFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'优化失败'**
-  String get contentReviewOptimizationFailed;
-
-  /// No description provided for @contentReviewProcessing.
-  ///
-  /// In zh, this message translates to:
-  /// **'处理中...'**
-  String get contentReviewProcessing;
-
-  /// No description provided for @contentReviewAgreePassed.
-  ///
-  /// In zh, this message translates to:
-  /// **'我认为应该通过'**
-  String get contentReviewAgreePassed;
-
-  /// No description provided for @contentReviewDisagreePassed.
-  ///
-  /// In zh, this message translates to:
-  /// **'我不同意这个结果'**
-  String get contentReviewDisagreePassed;
-
-  /// No description provided for @contentReviewReportProblem.
-  ///
-  /// In zh, this message translates to:
-  /// **'报告审查问题'**
-  String get contentReviewReportProblem;
-
-  /// No description provided for @contentReviewOverrideDialogTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'覆盖审查决策'**
-  String get contentReviewOverrideDialogTitle;
-
-  /// No description provided for @contentReviewDisagreeWithResult.
-  ///
-  /// In zh, this message translates to:
-  /// **'我不同意这个审查结果'**
-  String get contentReviewDisagreeWithResult;
-
-  /// No description provided for @contentReviewAgreeShouldPass.
-  ///
-  /// In zh, this message translates to:
-  /// **'我认为内容应该通过审查'**
-  String get contentReviewAgreeShouldPass;
 
   /// No description provided for @contentReviewReasonHint.
   ///
@@ -6289,66 +5851,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'报告审查问题'**
   String get contentReviewAppealDialogTitle;
-
-  /// No description provided for @contentReviewSelectIssuesHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'选择问题类型（可多选）'**
-  String get contentReviewSelectIssuesHint;
-
-  /// No description provided for @contentReviewDetailHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'详细说明： '**
-  String get contentReviewDetailHint;
-
-  /// No description provided for @contentReviewDetailPlaceholder.
-  ///
-  /// In zh, this message translates to:
-  /// **'请描述审查结果存在的问题...'**
-  String get contentReviewDetailPlaceholder;
-
-  /// No description provided for @contentReviewDetailRequired.
-  ///
-  /// In zh, this message translates to:
-  /// **'请填写详细说明'**
-  String get contentReviewDetailRequired;
-
-  /// No description provided for @contentReviewSelectAtLeastOne.
-  ///
-  /// In zh, this message translates to:
-  /// **'请至少选择一个问题类型'**
-  String get contentReviewSelectAtLeastOne;
-
-  /// No description provided for @contentReviewIssueUnfairStandards.
-  ///
-  /// In zh, this message translates to:
-  /// **'审查标准不合理'**
-  String get contentReviewIssueUnfairStandards;
-
-  /// No description provided for @contentReviewIssueScoreCalculation.
-  ///
-  /// In zh, this message translates to:
-  /// **'评分计算有误'**
-  String get contentReviewIssueScoreCalculation;
-
-  /// No description provided for @contentReviewIssueMissingContext.
-  ///
-  /// In zh, this message translates to:
-  /// **'忽略了重要上下文'**
-  String get contentReviewIssueMissingContext;
-
-  /// No description provided for @contentReviewIssueInaccurateDescription.
-  ///
-  /// In zh, this message translates to:
-  /// **'问题描述不准确'**
-  String get contentReviewIssueInaccurateDescription;
-
-  /// No description provided for @contentReviewIssueUnfeasibleSuggestion.
-  ///
-  /// In zh, this message translates to:
-  /// **'建议不可行'**
-  String get contentReviewIssueUnfeasibleSuggestion;
 
   /// No description provided for @contentReviewMetricAccuracy.
   ///
@@ -6457,12 +5959,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'建议: {suggestion}'**
   String contentReviewSuggestion(Object suggestion);
-
-  /// No description provided for @contentReviewSuggestionDesc.
-  ///
-  /// In zh, this message translates to:
-  /// **'建议'**
-  String get contentReviewSuggestionDesc;
 
   /// No description provided for @contentReviewReflectionPending.
   ///
@@ -6883,12 +6379,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'只跟自己的历史比'**
   String get leaderboardSelfAnchorSubtitle;
-
-  /// No description provided for @leaderboardSelfAnchorTasksCount.
-  ///
-  /// In zh, this message translates to:
-  /// **'{count} 项'**
-  String leaderboardSelfAnchorTasksCount(Object count);
 
   /// No description provided for @leaderboardSelfAnchorTasksUnit.
   ///
@@ -7742,12 +7232,6 @@ abstract class AppLocalizations {
   /// **'月视图'**
   String get calendarMonthView;
 
-  /// No description provided for @calendarTwoWeekView.
-  ///
-  /// In zh, this message translates to:
-  /// **'双周'**
-  String get calendarTwoWeekView;
-
   /// No description provided for @calendarYearView.
   ///
   /// In zh, this message translates to:
@@ -8522,23 +8006,11 @@ abstract class AppLocalizations {
   /// **'胶囊详情'**
   String get capsuleDetailTitle;
 
-  /// No description provided for @capsuleMissing.
-  ///
-  /// In zh, this message translates to:
-  /// **'胶囊不存在'**
-  String get capsuleMissing;
-
   /// No description provided for @capsuleLoadFailed.
   ///
   /// In zh, this message translates to:
   /// **'加载失败：{error}'**
   String capsuleLoadFailed(Object error);
-
-  /// No description provided for @capsuleQualityLabel.
-  ///
-  /// In zh, this message translates to:
-  /// **'质量评分：{rating}'**
-  String capsuleQualityLabel(Object rating);
 
   /// No description provided for @capsuleFeedbackCount.
   ///
@@ -8563,24 +8035,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'分享胶囊'**
   String get capsuleShare;
-
-  /// No description provided for @capsuleCopyLink.
-  ///
-  /// In zh, this message translates to:
-  /// **'复制链接'**
-  String get capsuleCopyLink;
-
-  /// No description provided for @capsuleShareToGroup.
-  ///
-  /// In zh, this message translates to:
-  /// **'分享到群组'**
-  String get capsuleShareToGroup;
-
-  /// No description provided for @capsuleRateFirst.
-  ///
-  /// In zh, this message translates to:
-  /// **'请先评分'**
-  String get capsuleRateFirst;
 
   /// No description provided for @capsuleFeedbackThanks.
   ///
@@ -9500,29 +8954,11 @@ abstract class AppLocalizations {
   /// **'暂无数据'**
   String get noData;
 
-  /// No description provided for @operationSuccess.
-  ///
-  /// In zh, this message translates to:
-  /// **'操作成功'**
-  String get operationSuccess;
-
   /// No description provided for @operationFailed.
   ///
   /// In zh, this message translates to:
   /// **'操作失败'**
   String get operationFailed;
-
-  /// No description provided for @confirmDeleteTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'确认删除'**
-  String get confirmDeleteTitle;
-
-  /// No description provided for @confirmDeleteMessage.
-  ///
-  /// In zh, this message translates to:
-  /// **'此操作无法撤销'**
-  String get confirmDeleteMessage;
 
   /// No description provided for @errorBookTitle.
   ///
@@ -10130,23 +9566,11 @@ abstract class AppLocalizations {
   /// **'和'**
   String get authAnd;
 
-  /// No description provided for @authDemoLogin.
-  ///
-  /// In zh, this message translates to:
-  /// **'演示账号登录'**
-  String get authDemoLogin;
-
   /// No description provided for @authResetPassword.
   ///
   /// In zh, this message translates to:
   /// **'重置密码'**
   String get authResetPassword;
-
-  /// No description provided for @authResetPasswordHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'请输入您的邮箱，我们将发送重置密码链接'**
-  String get authResetPasswordHint;
 
   /// No description provided for @authSendResetEmail.
   ///
@@ -10159,12 +9583,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'重置邮件已发送'**
   String get authResetEmailSent;
-
-  /// No description provided for @authBackToLogin.
-  ///
-  /// In zh, this message translates to:
-  /// **'返回登录'**
-  String get authBackToLogin;
 
   /// No description provided for @authForgotPasswordTitle.
   ///
@@ -10249,18 +9667,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'认知洞察'**
   String get toolsCategoryCognition;
-
-  /// No description provided for @toolsNoTools.
-  ///
-  /// In zh, this message translates to:
-  /// **'暂无工具'**
-  String get toolsNoTools;
-
-  /// No description provided for @toolsPinnedEmpty.
-  ///
-  /// In zh, this message translates to:
-  /// **'还没有固定的工具'**
-  String get toolsPinnedEmpty;
 
   /// No description provided for @toolsManageHint.
   ///
@@ -10442,24 +9848,6 @@ abstract class AppLocalizations {
   /// **'还没有创建种子库'**
   String get seedLibraryEmpty;
 
-  /// No description provided for @seedLibraryCreateFirst.
-  ///
-  /// In zh, this message translates to:
-  /// **'创建一个新的种子库开始使用'**
-  String get seedLibraryCreateFirst;
-
-  /// No description provided for @seedLibraryItemCount.
-  ///
-  /// In zh, this message translates to:
-  /// **'{count} 个条目'**
-  String seedLibraryItemCount(Object count);
-
-  /// No description provided for @seedLibraryLastUpdated.
-  ///
-  /// In zh, this message translates to:
-  /// **'最后更新: {date}'**
-  String seedLibraryLastUpdated(Object date);
-
   /// No description provided for @seedLibraryDetail.
   ///
   /// In zh, this message translates to:
@@ -10574,18 +9962,6 @@ abstract class AppLocalizations {
   /// **'技能市场'**
   String get seedMarketplaceTitle;
 
-  /// No description provided for @seedMarketplaceSkills.
-  ///
-  /// In zh, this message translates to:
-  /// **'技能'**
-  String get seedMarketplaceSkills;
-
-  /// No description provided for @seedMarketplacePacks.
-  ///
-  /// In zh, this message translates to:
-  /// **'技能包'**
-  String get seedMarketplacePacks;
-
   /// No description provided for @seedMarketplaceNoSkills.
   ///
   /// In zh, this message translates to:
@@ -10597,42 +9973,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'暂无上线技能包'**
   String get seedMarketplaceNoPacks;
-
-  /// No description provided for @seedMarketplaceAdoptSkill.
-  ///
-  /// In zh, this message translates to:
-  /// **'采纳技能'**
-  String get seedMarketplaceAdoptSkill;
-
-  /// No description provided for @seedMarketplaceSkillAdopted.
-  ///
-  /// In zh, this message translates to:
-  /// **'已采纳 {name}'**
-  String seedMarketplaceSkillAdopted(String name);
-
-  /// No description provided for @seedMarketplaceAdoptPack.
-  ///
-  /// In zh, this message translates to:
-  /// **'采纳技能包'**
-  String get seedMarketplaceAdoptPack;
-
-  /// No description provided for @seedMarketplacePackAdopted.
-  ///
-  /// In zh, this message translates to:
-  /// **'已采纳 {name}'**
-  String seedMarketplacePackAdopted(String name);
-
-  /// No description provided for @seedMarketplaceQuality.
-  ///
-  /// In zh, this message translates to:
-  /// **'质量 {score}'**
-  String seedMarketplaceQuality(String score);
-
-  /// No description provided for @seedMarketplaceCancel.
-  ///
-  /// In zh, this message translates to:
-  /// **'取消'**
-  String get seedMarketplaceCancel;
 
   /// No description provided for @seedLibrarySubscribers.
   ///
@@ -10670,35 +10010,11 @@ abstract class AppLocalizations {
   /// **'翻译历史'**
   String get translationHistoryTitle;
 
-  /// No description provided for @translationClearHistory.
-  ///
-  /// In zh, this message translates to:
-  /// **'清空历史'**
-  String get translationClearHistory;
-
-  /// No description provided for @translationTranslating.
-  ///
-  /// In zh, this message translates to:
-  /// **'翻译中...'**
-  String get translationTranslating;
-
   /// No description provided for @translationSaveToVocabulary.
   ///
   /// In zh, this message translates to:
   /// **'保存到生词卡'**
   String get translationSaveToVocabulary;
-
-  /// No description provided for @translationCopy.
-  ///
-  /// In zh, this message translates to:
-  /// **'复制'**
-  String get translationCopy;
-
-  /// No description provided for @translationCopied.
-  ///
-  /// In zh, this message translates to:
-  /// **'已复制'**
-  String get translationCopied;
 
   /// No description provided for @translationSearchHint.
   ///
@@ -10723,12 +10039,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'确定要清空所有翻译历史吗？'**
   String get translationClearConfirm;
-
-  /// No description provided for @translationClearConfirmDetail.
-  ///
-  /// In zh, this message translates to:
-  /// **'此操作不可撤销'**
-  String get translationClearConfirmDetail;
 
   /// No description provided for @translationClearAll.
   ///
@@ -10879,36 +10189,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{days}天前'**
   String translationDaysAgo(Object days);
-
-  /// No description provided for @translationSourceLanguage.
-  ///
-  /// In zh, this message translates to:
-  /// **'源语言'**
-  String get translationSourceLanguage;
-
-  /// No description provided for @translationTargetLanguage.
-  ///
-  /// In zh, this message translates to:
-  /// **'目标语言'**
-  String get translationTargetLanguage;
-
-  /// No description provided for @translationSwapLanguages.
-  ///
-  /// In zh, this message translates to:
-  /// **'交换语言'**
-  String get translationSwapLanguages;
-
-  /// No description provided for @translationDetectLanguage.
-  ///
-  /// In zh, this message translates to:
-  /// **'检测语言'**
-  String get translationDetectLanguage;
-
-  /// No description provided for @translationHistoryEmpty.
-  ///
-  /// In zh, this message translates to:
-  /// **'暂无翻译历史'**
-  String get translationHistoryEmpty;
 
   /// No description provided for @memoryCurrentVersion.
   ///
@@ -14210,53 +13490,11 @@ abstract class AppLocalizations {
   /// **'学习资料'**
   String get groupFiles;
 
-  /// No description provided for @saveToMyLibrary.
-  ///
-  /// In zh, this message translates to:
-  /// **'保存到我的库'**
-  String get saveToMyLibrary;
-
-  /// No description provided for @savedToLibrary.
-  ///
-  /// In zh, this message translates to:
-  /// **'已保存到你的库'**
-  String get savedToLibrary;
-
-  /// No description provided for @markAsOfficial.
-  ///
-  /// In zh, this message translates to:
-  /// **'标记为官方'**
-  String get markAsOfficial;
-
-  /// No description provided for @officialResource.
-  ///
-  /// In zh, this message translates to:
-  /// **'官方'**
-  String get officialResource;
-
-  /// No description provided for @noGroupFiles.
-  ///
-  /// In zh, this message translates to:
-  /// **'暂无学习资料'**
-  String get noGroupFiles;
-
-  /// No description provided for @noGroupFilesSubtitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'分享你的笔记，帮助群组成员！'**
-  String get noGroupFilesSubtitle;
-
   /// No description provided for @shareFile.
   ///
   /// In zh, this message translates to:
   /// **'分享文件'**
   String get shareFile;
-
-  /// No description provided for @groupFilesCount.
-  ///
-  /// In zh, this message translates to:
-  /// **'{count} 个文件'**
-  String groupFilesCount(Object count);
 
   /// No description provided for @studyMaterialsTitle.
   ///
@@ -18140,18 +17378,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'调整推断偏好'**
   String get personaAdjustInferredPreference;
-
-  /// No description provided for @personaNewValue.
-  ///
-  /// In zh, this message translates to:
-  /// **'新值'**
-  String get personaNewValue;
-
-  /// No description provided for @personaAdjustInferredPreferenceTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'调整推断偏好'**
-  String get personaAdjustInferredPreferenceTitle;
 
   /// No description provided for @languageDialogDescription.
   ///
@@ -24649,12 +23875,6 @@ abstract class AppLocalizations {
   /// **'伙伴工作台加载失败'**
   String get accountabilityDashboardLoadFailed;
 
-  /// No description provided for @accountabilityDashboardLoadFailedDetail.
-  ///
-  /// In zh, this message translates to:
-  /// **'请重试，如问题持续存在请联系支持'**
-  String get accountabilityDashboardLoadFailedDetail;
-
   /// No description provided for @accountabilityNudgeSentDefault.
   ///
   /// In zh, this message translates to:
@@ -25795,12 +25015,6 @@ abstract class AppLocalizations {
   /// **'来源 {source}'**
   String openclawHubTaskLabelSource(Object source);
 
-  /// No description provided for @seedLibraryDetailFriendlyError.
-  ///
-  /// In zh, this message translates to:
-  /// **'系统暂时没能完成这次应用，请稍后再试'**
-  String get seedLibraryDetailFriendlyError;
-
   /// No description provided for @seedLibraryDetailUserRatings.
   ///
   /// In zh, this message translates to:
@@ -26917,12 +26131,6 @@ abstract class AppLocalizations {
   /// **'偏好更新失败：{error}'**
   String personaPreferenceUpdateFailed(Object error);
 
-  /// No description provided for @personaRolledBack.
-  ///
-  /// In zh, this message translates to:
-  /// **'已回滚到上一版本'**
-  String get personaRolledBack;
-
   /// No description provided for @personaRollbackFailed.
   ///
   /// In zh, this message translates to:
@@ -26947,18 +26155,6 @@ abstract class AppLocalizations {
   /// **'推断偏好已调整'**
   String get personaInferredAdjusted;
 
-  /// No description provided for @personaAdjustFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'调整失败：{error}'**
-  String personaAdjustFailed(Object error);
-
-  /// No description provided for @personaInferredReset.
-  ///
-  /// In zh, this message translates to:
-  /// **'已恢复系统推断值'**
-  String get personaInferredReset;
-
   /// No description provided for @personaRestoreFailed.
   ///
   /// In zh, this message translates to:
@@ -26970,24 +26166,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'未知错误'**
   String get personaUnknownError;
-
-  /// No description provided for @personaHintDecimalRange.
-  ///
-  /// In zh, this message translates to:
-  /// **'请输入 0.0 到 1.0 之间的数字'**
-  String get personaHintDecimalRange;
-
-  /// No description provided for @personaHintStudyMinutes.
-  ///
-  /// In zh, this message translates to:
-  /// **'请输入学习时长（分钟）'**
-  String get personaHintStudyMinutes;
-
-  /// No description provided for @personaHintPositiveMinutes.
-  ///
-  /// In zh, this message translates to:
-  /// **'请输入大于 0 的分钟数'**
-  String get personaHintPositiveMinutes;
 
   /// No description provided for @personaHintValidPreference.
   ///
@@ -27060,12 +26238,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'全部'**
   String get reportRangeAll;
-
-  /// No description provided for @reportCurrentLearningTopic.
-  ///
-  /// In zh, this message translates to:
-  /// **'当前学习主题'**
-  String get reportCurrentLearningTopic;
 
   /// No description provided for @reportMasteryTrendTitle.
   ///
@@ -28873,18 +28045,6 @@ abstract class AppLocalizations {
   /// **'标记这个点，继续其他部分'**
   String get stuckHelpSuggestion5;
 
-  /// No description provided for @stuckHelpFallbackOrder.
-  ///
-  /// In zh, this message translates to:
-  /// **'卡住时按这个顺序救火'**
-  String get stuckHelpFallbackOrder;
-
-  /// No description provided for @stuckHelpWhatToDo.
-  ///
-  /// In zh, this message translates to:
-  /// **'具体该怎么做'**
-  String get stuckHelpWhatToDo;
-
   /// No description provided for @stuckHelpDiagnose.
   ///
   /// In zh, this message translates to:
@@ -28938,12 +28098,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'当前附件类型为 {type}，还没有更详细的预览内容。'**
   String executionResultNoPreview(Object type);
-
-  /// No description provided for @executionResultLinkCopied.
-  ///
-  /// In zh, this message translates to:
-  /// **'链接已复制'**
-  String get executionResultLinkCopied;
 
   /// No description provided for @executionResultCopyLink.
   ///
@@ -29449,12 +28603,6 @@ abstract class AppLocalizations {
   /// **'更多'**
   String get statisticsShareMore;
 
-  /// No description provided for @statisticsWatermark.
-  ///
-  /// In zh, this message translates to:
-  /// **'星火AI学习助手'**
-  String get statisticsWatermark;
-
   /// No description provided for @statisticsDateFormat.
   ///
   /// In zh, this message translates to:
@@ -29634,12 +28782,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'暂无统计数据'**
   String get statisticsNoDataYet;
-
-  /// No description provided for @statisticsLoadingFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'加载失败: {error}'**
-  String statisticsLoadingFailed(String error);
 
   /// No description provided for @statisticsRetry.
   ///
@@ -30385,12 +29527,6 @@ abstract class AppLocalizations {
   /// **'真实触发参考：{trigger}'**
   String weatherGuideTriggerPrefix(Object trigger);
 
-  /// No description provided for @intentPredictionSprintSprint.
-  ///
-  /// In zh, this message translates to:
-  /// **'冲刺冲刺'**
-  String get intentPredictionSprintSprint;
-
   /// No description provided for @intentPredictionContinue.
   ///
   /// In zh, this message translates to:
@@ -30432,90 +29568,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'记录想法'**
   String get intentPredictionNoteIdea;
-
-  /// No description provided for @intentPredictionSetReminder.
-  ///
-  /// In zh, this message translates to:
-  /// **'设置提醒'**
-  String get intentPredictionSetReminder;
-
-  /// No description provided for @intentPredictionCognitivePrism.
-  ///
-  /// In zh, this message translates to:
-  /// **'认知棱镜'**
-  String get intentPredictionCognitivePrism;
-
-  /// No description provided for @intentPredictionTranslate.
-  ///
-  /// In zh, this message translates to:
-  /// **'翻译'**
-  String get intentPredictionTranslate;
-
-  /// No description provided for @intentPredictionLearnLanguage.
-  ///
-  /// In zh, this message translates to:
-  /// **'学习语言'**
-  String get intentPredictionLearnLanguage;
-
-  /// No description provided for @intentPredictionViewPrism.
-  ///
-  /// In zh, this message translates to:
-  /// **'查看认知棱镜'**
-  String get intentPredictionViewPrism;
-
-  /// No description provided for @intentPredictionBehaviorAnalysis.
-  ///
-  /// In zh, this message translates to:
-  /// **'行为分析'**
-  String get intentPredictionBehaviorAnalysis;
-
-  /// No description provided for @intentPredictionStartSprint.
-  ///
-  /// In zh, this message translates to:
-  /// **'开始冲刺'**
-  String get intentPredictionStartSprint;
-
-  /// No description provided for @intentPredictionFocusMode.
-  ///
-  /// In zh, this message translates to:
-  /// **'专注模式'**
-  String get intentPredictionFocusMode;
-
-  /// No description provided for @intentPredictionStartLearning.
-  ///
-  /// In zh, this message translates to:
-  /// **'开始学习'**
-  String get intentPredictionStartLearning;
-
-  /// No description provided for @intentPredictionCreateStudyPlan.
-  ///
-  /// In zh, this message translates to:
-  /// **'创建学习计划'**
-  String get intentPredictionCreateStudyPlan;
-
-  /// No description provided for @intentPredictionStartReview.
-  ///
-  /// In zh, this message translates to:
-  /// **'开始复习'**
-  String get intentPredictionStartReview;
-
-  /// No description provided for @intentPredictionViewErrorBook.
-  ///
-  /// In zh, this message translates to:
-  /// **'查看错题本'**
-  String get intentPredictionViewErrorBook;
-
-  /// No description provided for @intentPredictionContinuePriority.
-  ///
-  /// In zh, this message translates to:
-  /// **'继续重点任务'**
-  String get intentPredictionContinuePriority;
-
-  /// No description provided for @intentPrediction25Min.
-  ///
-  /// In zh, this message translates to:
-  /// **'先做 25 分钟'**
-  String get intentPrediction25Min;
 
   /// No description provided for @flashCapsuleTitle.
   ///
@@ -30642,54 +29694,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'暂无可下载的离线词典包'**
   String get vocabularyLookupNoPackage;
-
-  /// No description provided for @entityCardActionLabel.
-  ///
-  /// In zh, this message translates to:
-  /// **'执行'**
-  String get entityCardActionLabel;
-
-  /// No description provided for @entityCardTitleFallback.
-  ///
-  /// In zh, this message translates to:
-  /// **'未命名卡片'**
-  String get entityCardTitleFallback;
-
-  /// No description provided for @entityCardEntityFallback.
-  ///
-  /// In zh, this message translates to:
-  /// **'未命名实体'**
-  String get entityCardEntityFallback;
-
-  /// No description provided for @entityCardTaskFallback.
-  ///
-  /// In zh, this message translates to:
-  /// **'未命名任务'**
-  String get entityCardTaskFallback;
-
-  /// No description provided for @entityCardPlanFallback.
-  ///
-  /// In zh, this message translates to:
-  /// **'学习计划'**
-  String get entityCardPlanFallback;
-
-  /// No description provided for @entityCardKnowledgeFallback.
-  ///
-  /// In zh, this message translates to:
-  /// **'知识节点'**
-  String get entityCardKnowledgeFallback;
-
-  /// No description provided for @entityCardTaskListFallback.
-  ///
-  /// In zh, this message translates to:
-  /// **'{count} 个可执行任务'**
-  String entityCardTaskListFallback(Object count);
-
-  /// No description provided for @entityCardTaskListSummary.
-  ///
-  /// In zh, this message translates to:
-  /// **'AI 已整理任务列表'**
-  String get entityCardTaskListSummary;
 
   /// No description provided for @visualSlotAvatarBorder.
   ///
@@ -30912,18 +29916,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'重试'**
   String get retryLabel;
-
-  /// No description provided for @emptyStateTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'暂无数据'**
-  String get emptyStateTitle;
-
-  /// No description provided for @emptyStateTitleNone.
-  ///
-  /// In zh, this message translates to:
-  /// **'数据为空'**
-  String get emptyStateTitleNone;
 
   /// No description provided for @auroraStatusInactive.
   ///
@@ -32514,12 +31506,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'未填写'**
   String get openclawNotFilled;
-
-  /// No description provided for @openclawNoDate.
-  ///
-  /// In zh, this message translates to:
-  /// **'暂无'**
-  String get openclawNoDate;
 
   /// No description provided for @openclawNodeCount.
   ///
@@ -37200,12 +36186,6 @@ abstract class AppLocalizations {
   /// **'切到正计时'**
   String get toolsSwitchToStopwatch;
 
-  /// No description provided for @toolsFocusSaveFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'专注记录保存失败：{e}'**
-  String toolsFocusSaveFailed(Object e);
-
   /// No description provided for @toolsFocusNotificationBody.
   ///
   /// In zh, this message translates to:
@@ -37265,12 +36245,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'由你主动暂停'**
   String get toolsPauseManually;
-
-  /// No description provided for @toolsPlanChainNext.
-  ///
-  /// In zh, this message translates to:
-  /// **'方便衔接下一段计划'**
-  String get toolsPlanChainNext;
 
   /// No description provided for @toolsBreathQuickDesc.
   ///
@@ -37398,36 +36372,6 @@ abstract class AppLocalizations {
   /// **'重置'**
   String get toolsBreathReset;
 
-  /// No description provided for @toolsBreathReady.
-  ///
-  /// In zh, this message translates to:
-  /// **'准备'**
-  String get toolsBreathReady;
-
-  /// No description provided for @toolsBreathPracticeComplete.
-  ///
-  /// In zh, this message translates to:
-  /// **'练习完成'**
-  String get toolsBreathPracticeComplete;
-
-  /// No description provided for @toolsBreathPausedRounds.
-  ///
-  /// In zh, this message translates to:
-  /// **'已暂停 · {completed} / {total} 轮'**
-  String toolsBreathPausedRounds(int completed, int total);
-
-  /// No description provided for @toolsBreathRoundsProgress.
-  ///
-  /// In zh, this message translates to:
-  /// **'{completed} / {total} 轮'**
-  String toolsBreathRoundsProgress(int completed, int total);
-
-  /// No description provided for @toolsBreathDurationLabel.
-  ///
-  /// In zh, this message translates to:
-  /// **'{duration} 分钟'**
-  String toolsBreathDurationLabel(int duration);
-
   /// No description provided for @toolsBreathStageDescPaused.
   ///
   /// In zh, this message translates to:
@@ -37494,12 +36438,6 @@ abstract class AppLocalizations {
   /// **'{minutes} 分钟'**
   String brtDurationMin(int minutes);
 
-  /// No description provided for @brtReady.
-  ///
-  /// In zh, this message translates to:
-  /// **'准备'**
-  String get brtReady;
-
   /// No description provided for @toolsCalcTitle.
   ///
   /// In zh, this message translates to:
@@ -37517,12 +36455,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'无历史'**
   String get toolsCalcNoHistory;
-
-  /// No description provided for @toolsCalcHistoryCount.
-  ///
-  /// In zh, this message translates to:
-  /// **'{count} 条历史'**
-  String toolsCalcHistoryCount(Object count);
 
   /// No description provided for @toolsCalcWaiting.
   ///
@@ -38052,12 +36984,6 @@ abstract class AppLocalizations {
   /// **'等待记录'**
   String get toolsNotesWaiting;
 
-  /// No description provided for @toolsNotesCharCount.
-  ///
-  /// In zh, this message translates to:
-  /// **'{_charCount} 字'**
-  String toolsNotesCharCount(Object _charCount);
-
   /// No description provided for @toolsNotesCharLabel.
   ///
   /// In zh, this message translates to:
@@ -38207,12 +37133,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'查看历史'**
   String get toolsFlashViewHistory;
-
-  /// No description provided for @toolsFlashRecording.
-  ///
-  /// In zh, this message translates to:
-  /// **'记录中...'**
-  String get toolsFlashRecording;
 
   /// No description provided for @toolsFlashSaveCapsule.
   ///
@@ -38370,18 +37290,6 @@ abstract class AppLocalizations {
   /// **'Oxford 优先离线词典包'**
   String get toolsVocabDefaultPackageDesc;
 
-  /// No description provided for @toolsVocabInstalledAtPrefix.
-  ///
-  /// In zh, this message translates to:
-  /// **'安装于'**
-  String get toolsVocabInstalledAtPrefix;
-
-  /// No description provided for @toolsVocabRedownload.
-  ///
-  /// In zh, this message translates to:
-  /// **'重新下载'**
-  String get toolsVocabRedownload;
-
   /// No description provided for @toolsVocabDownloadLocally.
   ///
   /// In zh, this message translates to:
@@ -38394,29 +37302,11 @@ abstract class AppLocalizations {
   /// **'等待关联词'**
   String get toolsVocabWaitingAssociations;
 
-  /// No description provided for @toolsVocabAssocCount.
-  ///
-  /// In zh, this message translates to:
-  /// **'{count} 个关联词'**
-  String toolsVocabAssocCount(int count);
-
-  /// No description provided for @toolsVocabOfflineDictCount.
-  ///
-  /// In zh, this message translates to:
-  /// **'{count} 个离线词典包'**
-  String toolsVocabOfflineDictCount(int count);
-
   /// No description provided for @toolsVocabNoOfflineDict.
   ///
   /// In zh, this message translates to:
   /// **'未下载离线词典'**
   String get toolsVocabNoOfflineDict;
-
-  /// No description provided for @toolsVocabPartOfSpeech.
-  ///
-  /// In zh, this message translates to:
-  /// **'词性 · {pos}'**
-  String toolsVocabPartOfSpeech(String pos);
 
   /// No description provided for @toolsVocabDefinitionsLabel.
   ///
@@ -38465,12 +37355,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'等待数据'**
   String get toolsStatsWaitingData;
-
-  /// No description provided for @toolsStatsRecentCount.
-  ///
-  /// In zh, this message translates to:
-  /// **'{totalSessions} 条最近记录'**
-  String toolsStatsRecentCount(Object totalSessions);
 
   /// No description provided for @toolsStatsTodayFocus.
   ///
@@ -39011,12 +37895,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'目标：{name}'**
   String lpTarget(String name);
-
-  /// No description provided for @lpTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'学习路径'**
-  String get lpTitle;
 
   /// No description provided for @lpMainPath.
   ///
@@ -39930,36 +38808,6 @@ abstract class AppLocalizations {
   /// **'刷新'**
   String get simRefresh;
 
-  /// No description provided for @simSocraticCopy.
-  ///
-  /// In zh, this message translates to:
-  /// **'苏格拉底式对话'**
-  String get simSocraticCopy;
-
-  /// No description provided for @simErrorDiagCopy.
-  ///
-  /// In zh, this message translates to:
-  /// **'错因诊断'**
-  String get simErrorDiagCopy;
-
-  /// No description provided for @simGenFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'模拟生成失败'**
-  String get simGenFailed;
-
-  /// No description provided for @simRealtimeConnectionRecovered.
-  ///
-  /// In zh, this message translates to:
-  /// **'实时连接中断，已恢复到最近一次保存的模拟进度。'**
-  String get simRealtimeConnectionRecovered;
-
-  /// No description provided for @simInteractionStreamRecovered.
-  ///
-  /// In zh, this message translates to:
-  /// **'互动流中断了，但我已经帮你恢复到最近一轮状态。'**
-  String get simInteractionStreamRecovered;
-
   /// No description provided for @simRoundProgressSummary.
   ///
   /// In zh, this message translates to:
@@ -40626,42 +39474,6 @@ abstract class AppLocalizations {
   /// **'Few-shot示例'**
   String get seedCatFewShotFull;
 
-  /// No description provided for @cogMockPattern1.
-  ///
-  /// In zh, this message translates to:
-  /// **'每次遇到难题就会想要刷手机，这似乎是一种逃避机制。'**
-  String get cogMockPattern1;
-
-  /// No description provided for @cogMockPattern2.
-  ///
-  /// In zh, this message translates to:
-  /// **'完成高数作业后感到非常有成就感，这种正反馈很重要。'**
-  String get cogMockPattern2;
-
-  /// No description provided for @cogMockPattern3.
-  ///
-  /// In zh, this message translates to:
-  /// **'今天原本计划背单词，但是被社团活动打断了，需要调整计划弹性。'**
-  String get cogMockPattern3;
-
-  /// No description provided for @cogMockPattern4.
-  ///
-  /// In zh, this message translates to:
-  /// **'当面对难度较大或不确定的任务（如物理大作业）时，倾向于通过处理琐事（如整理桌面、回消息）来推迟开始时间。'**
-  String get cogMockPattern4;
-
-  /// No description provided for @cogMockPattern5.
-  ///
-  /// In zh, this message translates to:
-  /// **'习惯在晚上10点后才开始处理最重要、最烧脑的学习任务，导致睡眠延迟和次日精力不足。'**
-  String get cogMockPattern5;
-
-  /// No description provided for @cogMockPattern6.
-  ///
-  /// In zh, this message translates to:
-  /// **'在做PPT或写报告时，过度纠结于排版和措辞，导致核心内容产出效率低下。'**
-  String get cogMockPattern6;
-
   /// No description provided for @cogCapsuleUnavailable.
   ///
   /// In zh, this message translates to:
@@ -40697,24 +39509,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'出现 {count} 次'**
   String cogPatternFreq(Object count);
-
-  /// No description provided for @insLearnBasic.
-  ///
-  /// In zh, this message translates to:
-  /// **'学习基础概念'**
-  String get insLearnBasic;
-
-  /// No description provided for @insQuickCore.
-  ///
-  /// In zh, this message translates to:
-  /// **'快速理解核心概念'**
-  String get insQuickCore;
-
-  /// No description provided for @insSmallPractice.
-  ///
-  /// In zh, this message translates to:
-  /// **'完成一轮小练习'**
-  String get insSmallPractice;
 
   /// No description provided for @insLoadFailed.
   ///
@@ -40806,24 +39600,6 @@ abstract class AppLocalizations {
   /// **'回到驾驶舱'**
   String get insBackToCockpit;
 
-  /// No description provided for @insContinueSim.
-  ///
-  /// In zh, this message translates to:
-  /// **'继续上次推演'**
-  String get insContinueSim;
-
-  /// No description provided for @insContinueLearnSim.
-  ///
-  /// In zh, this message translates to:
-  /// **'继续上次学习仿真'**
-  String get insContinueLearnSim;
-
-  /// No description provided for @insHasContinue.
-  ///
-  /// In zh, this message translates to:
-  /// **'已有可继续内容'**
-  String get insHasContinue;
-
   /// No description provided for @insCreateTask.
   ///
   /// In zh, this message translates to:
@@ -40854,36 +39630,6 @@ abstract class AppLocalizations {
   /// **'查看日志'**
   String get insDecisionLogOpen;
 
-  /// No description provided for @insContinueView.
-  ///
-  /// In zh, this message translates to:
-  /// **'继续查看'**
-  String get insContinueView;
-
-  /// No description provided for @insStartFromRecommended.
-  ///
-  /// In zh, this message translates to:
-  /// **'从推荐开始'**
-  String get insStartFromRecommended;
-
-  /// No description provided for @insFocusedSim.
-  ///
-  /// In zh, this message translates to:
-  /// **'已聚焦：学习仿真'**
-  String get insFocusedSim;
-
-  /// No description provided for @insFocusedReport.
-  ///
-  /// In zh, this message translates to:
-  /// **'已聚焦：学习报告'**
-  String get insFocusedReport;
-
-  /// No description provided for @insFocusedDefault.
-  ///
-  /// In zh, this message translates to:
-  /// **'仿真、推演、报告统一收在这里'**
-  String get insFocusedDefault;
-
   /// No description provided for @insFlowTitle.
   ///
   /// In zh, this message translates to:
@@ -40913,12 +39659,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'无需前置知识，可以直接开始学习！'**
   String get insNoPrereq;
-
-  /// No description provided for @insGenerating.
-  ///
-  /// In zh, this message translates to:
-  /// **'正在生成...'**
-  String get insGenerating;
 
   /// No description provided for @insQuickPath.
   ///
@@ -41394,77 +40134,17 @@ abstract class AppLocalizations {
   /// **'会话数'**
   String get calSessionCount;
 
-  /// No description provided for @ebCreateFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'创建错题失败'**
-  String get ebCreateFailed;
-
-  /// No description provided for @ebListFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'获取错题列表失败'**
-  String get ebListFailed;
-
-  /// No description provided for @ebDetailFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'获取错题详情失败'**
-  String get ebDetailFailed;
-
   /// No description provided for @ebUpdateFailed.
   ///
   /// In zh, this message translates to:
   /// **'更新失败: {e}'**
   String ebUpdateFailed(String e);
 
-  /// No description provided for @ebDeleteFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'删除错题失败'**
-  String get ebDeleteFailed;
-
-  /// No description provided for @ebAnalysisFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'重新分析失败'**
-  String get ebAnalysisFailed;
-
   /// No description provided for @ebReviewFailed.
   ///
   /// In zh, this message translates to:
   /// **'提交复习记录失败'**
   String get ebReviewFailed;
-
-  /// No description provided for @ebTodayReviewFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'获取今日复习列表失败'**
-  String get ebTodayReviewFailed;
-
-  /// No description provided for @ebStatsFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'获取统计数据失败'**
-  String get ebStatsFailed;
-
-  /// No description provided for @ebSummaryFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'获取语义摘要失败'**
-  String get ebSummaryFailed;
-
-  /// No description provided for @ebBadParams.
-  ///
-  /// In zh, this message translates to:
-  /// **'请求参数错误'**
-  String get ebBadParams;
-
-  /// No description provided for @ebImageUploadFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'图片上传失败: {e}'**
-  String ebImageUploadFailed(String e);
 
   /// No description provided for @ebRemove.
   ///
@@ -41627,12 +40307,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'查看 AI 分析'**
   String get ebViewAnalysis;
-
-  /// No description provided for @ebSubmitFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'提交失败: {e}'**
-  String ebSubmitFailed(Object e);
 
   /// No description provided for @ebBack.
   ///
@@ -42377,24 +41051,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'屏蔽来源'**
   String get memBlockedSources;
-
-  /// No description provided for @seedDetailFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'种子库详情加载失败，请稍后再试'**
-  String get seedDetailFailed;
-
-  /// No description provided for @seedStateFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'种子库状态加载失败，请稍后再试'**
-  String get seedStateFailed;
-
-  /// No description provided for @seedCreateFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'创建失败：{e}'**
-  String seedCreateFailed(String e);
 
   /// No description provided for @seedCreateTitle.
   ///
@@ -45230,24 +43886,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'在 {date} 解锁'**
   String accountabilityUnlockedOn(String date);
-
-  /// No description provided for @accountabilityRequestFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'请求失败'**
-  String get accountabilityRequestFailed;
-
-  /// No description provided for @accountabilityPartnerNudged.
-  ///
-  /// In zh, this message translates to:
-  /// **'已提醒伙伴查看今天的目标'**
-  String get accountabilityPartnerNudged;
-
-  /// No description provided for @accountabilityPartnerNudgedWithMessage.
-  ///
-  /// In zh, this message translates to:
-  /// **'已提醒伙伴：{message}'**
-  String accountabilityPartnerNudgedWithMessage(String message);
 
   /// No description provided for @communityTotalCheckins.
   ///
@@ -49624,12 +48262,6 @@ abstract class AppLocalizations {
   /// **'编辑日程'**
   String get calEditEvent;
 
-  /// No description provided for @lioStartNewSim.
-  ///
-  /// In zh, this message translates to:
-  /// **'可立即开始一轮新模拟'**
-  String get lioStartNewSim;
-
   /// No description provided for @lioRecentAnalysis.
   ///
   /// In zh, this message translates to:
@@ -49641,18 +48273,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'沉淀一轮学习后的关键结论'**
   String get lioBuildConclusion;
-
-  /// No description provided for @lioNoSimYet.
-  ///
-  /// In zh, this message translates to:
-  /// **'暂未生成最近仿真'**
-  String get lioNoSimYet;
-
-  /// No description provided for @lioRecentUpdate.
-  ///
-  /// In zh, this message translates to:
-  /// **'最近更新 · {desc}'**
-  String lioRecentUpdate(String desc);
 
   /// No description provided for @lioNoReportYet.
   ///
@@ -50367,12 +48987,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'差距 {percent}%'**
   String gdGap(String percent);
-
-  /// No description provided for @gdCurrentTarget.
-  ///
-  /// In zh, this message translates to:
-  /// **'当前 {current}% · 目标 {target}%'**
-  String gdCurrentTarget(String current, String target);
 
   /// No description provided for @gdRetry.
   ///
@@ -51238,12 +49852,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'还没有证据'**
   String get cahNoEvidence;
-
-  /// No description provided for @cahProgress.
-  ///
-  /// In zh, this message translates to:
-  /// **'进度'**
-  String get cahProgress;
 
   /// No description provided for @cahWitnesses.
   ///
@@ -52865,12 +51473,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{name}：已完成 {percent}%，还剩 {daysLeft} 天'**
   String sprintProgressLabel(String name, int percent, int daysLeft);
-
-  /// No description provided for @sprintBottleneckLabel.
-  ///
-  /// In zh, this message translates to:
-  /// **'{name}：{reason}'**
-  String sprintBottleneckLabel(Object name, Object reason);
 
   /// No description provided for @sprintAlertSignificantlyBehindDetail.
   ///
@@ -55207,53 +53809,11 @@ abstract class AppLocalizations {
   /// **'剩 {days} 天'**
   String intentDaysLeft(Object days);
 
-  /// No description provided for @sprintCompletionLoading.
-  ///
-  /// In zh, this message translates to:
-  /// **'加载中...'**
-  String get sprintCompletionLoading;
-
-  /// No description provided for @learningPortfolioLoading.
-  ///
-  /// In zh, this message translates to:
-  /// **'加载中...'**
-  String get learningPortfolioLoading;
-
-  /// No description provided for @sprintActionLoading.
-  ///
-  /// In zh, this message translates to:
-  /// **'加载中...'**
-  String get sprintActionLoading;
-
-  /// No description provided for @securityLogLoading.
-  ///
-  /// In zh, this message translates to:
-  /// **'加载中...'**
-  String get securityLogLoading;
-
-  /// No description provided for @socialAccountsLoading.
-  ///
-  /// In zh, this message translates to:
-  /// **'加载中...'**
-  String get socialAccountsLoading;
-
-  /// No description provided for @sessionManagementLoading.
-  ///
-  /// In zh, this message translates to:
-  /// **'加载中...'**
-  String get sessionManagementLoading;
-
   /// No description provided for @intentPredictionSprint.
   ///
   /// In zh, this message translates to:
   /// **'冲刺！'**
   String get intentPredictionSprint;
-
-  /// No description provided for @intentPredictionNoteThought.
-  ///
-  /// In zh, this message translates to:
-  /// **'记录想法'**
-  String get intentPredictionNoteThought;
 
   /// No description provided for @intentPredictionContinueTask.
   ///
@@ -56696,18 +55256,6 @@ abstract class AppLocalizations {
   /// **'题目条件不会用'**
   String get taskDiagnosisOption3;
 
-  /// No description provided for @seedLibLoadFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'种子库详情加载失败，请稍后再试'**
-  String get seedLibLoadFailed;
-
-  /// No description provided for @seedLibStatusFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'种子库状态加载失败，请稍后再试'**
-  String get seedLibStatusFailed;
-
   /// No description provided for @communitySquad.
   ///
   /// In zh, this message translates to:
@@ -56773,12 +55321,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'已读'**
   String get chatReadReceipt;
-
-  /// No description provided for @partnersEmptyState.
-  ///
-  /// In zh, this message translates to:
-  /// **'暂无伙伴'**
-  String get partnersEmptyState;
 
   /// No description provided for @communityDateMonthDay.
   ///
@@ -57427,60 +55969,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'早上好，今天先从一小步开始，把节奏找回来就很好。'**
   String get homeDailyContextMorningFallback;
-
-  /// No description provided for @agreeTermsFirst.
-  ///
-  /// In zh, this message translates to:
-  /// **'请先同意用户协议与隐私政策'**
-  String get agreeTermsFirst;
-
-  /// No description provided for @passwordStrengthWeak.
-  ///
-  /// In zh, this message translates to:
-  /// **'弱'**
-  String get passwordStrengthWeak;
-
-  /// No description provided for @passwordStrengthFair.
-  ///
-  /// In zh, this message translates to:
-  /// **'中等'**
-  String get passwordStrengthFair;
-
-  /// No description provided for @passwordStrengthStrong.
-  ///
-  /// In zh, this message translates to:
-  /// **'强'**
-  String get passwordStrengthStrong;
-
-  /// No description provided for @resetInstructions.
-  ///
-  /// In zh, this message translates to:
-  /// **'请输入邮件中的重置码，并设置一个新的登录密码。'**
-  String get resetInstructions;
-
-  /// No description provided for @resetCodeRequired.
-  ///
-  /// In zh, this message translates to:
-  /// **'请输入重置码'**
-  String get resetCodeRequired;
-
-  /// No description provided for @resetPasswordMinLength.
-  ///
-  /// In zh, this message translates to:
-  /// **'密码至少需要 6 位'**
-  String get resetPasswordMinLength;
-
-  /// No description provided for @resetPasswordsNoMatch.
-  ///
-  /// In zh, this message translates to:
-  /// **'两次输入的密码不一致'**
-  String get resetPasswordsNoMatch;
-
-  /// No description provided for @loginFailedWithError.
-  ///
-  /// In zh, this message translates to:
-  /// **'登录失败：{error}'**
-  String loginFailedWithError(String error);
 
   /// No description provided for @legalCurrentVersion.
   ///
@@ -58963,12 +57451,6 @@ abstract class AppLocalizations {
   /// **'切换失败: {error}'**
   String chaosModeSwitchFailed(Object error);
 
-  /// No description provided for @chaosBrandPrimaryLabel.
-  ///
-  /// In zh, this message translates to:
-  /// **'brandPrimary'**
-  String get chaosBrandPrimaryLabel;
-
   /// No description provided for @chaosClose.
   ///
   /// In zh, this message translates to:
@@ -59089,65 +57571,17 @@ abstract class AppLocalizations {
   /// **'非常活跃'**
   String get engagementVeryActive;
 
-  /// No description provided for @utilLoadingFailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'加载失败: {error}'**
-  String utilLoadingFailed(Object error);
-
-  /// No description provided for @utilNoData.
-  ///
-  /// In zh, this message translates to:
-  /// **'暂无数据'**
-  String get utilNoData;
-
-  /// No description provided for @utilUnknownError.
-  ///
-  /// In zh, this message translates to:
-  /// **'未知错误'**
-  String get utilUnknownError;
-
-  /// No description provided for @utilDataEmpty.
-  ///
-  /// In zh, this message translates to:
-  /// **'数据为空'**
-  String get utilDataEmpty;
-
-  /// No description provided for @auto_firstsecond.
-  ///
-  /// In zh, this message translates to:
-  /// **'{first}{second}'**
-  String auto_firstsecond(Object first, Object second);
-
   /// No description provided for @auto_.
   ///
   /// In zh, this message translates to:
   /// **'%'**
   String get auto_;
 
-  /// No description provided for @auto_dataisempty.
-  ///
-  /// In zh, this message translates to:
-  /// **'数据为空'**
-  String get auto_dataisempty;
-
   /// No description provided for @auto_unknownerror.
   ///
   /// In zh, this message translates to:
   /// **'未知错误'**
   String get auto_unknownerror;
-
-  /// No description provided for @auto_loadfailedrror.
-  ///
-  /// In zh, this message translates to:
-  /// **'加载失败: {error}'**
-  String auto_loadfailedrror(Object error);
-
-  /// No description provided for @auto_nodatayet.
-  ///
-  /// In zh, this message translates to:
-  /// **'暂无数据'**
-  String get auto_nodatayet;
 
   /// No description provided for @auto_flex.
   ///
@@ -59232,18 +57666,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'最近在慢慢推进，记录一下。'**
   String get auto_makingsteadyprogresslatelyjust;
-
-  /// No description provided for @auto_ifyou.
-  ///
-  /// In zh, this message translates to:
-  /// **'如果你也在做类似的事，欢迎一起交流。'**
-  String get auto_ifyou;
-
-  /// No description provided for @auto_thisweek.
-  ///
-  /// In zh, this message translates to:
-  /// **'这一周'**
-  String get auto_thisweek;
 
   /// No description provided for @auto_notifications.
   ///
@@ -59467,12 +57889,6 @@ abstract class AppLocalizations {
   /// **'待处理承诺'**
   String get auto_pendingcommitments;
 
-  /// No description provided for @auto_en.
-  ///
-  /// In zh, this message translates to:
-  /// **'_zh'**
-  String get auto_en;
-
   /// No description provided for @auto_unknownerrorpleaseretry.
   ///
   /// In zh, this message translates to:
@@ -59689,66 +58105,6 @@ abstract class AppLocalizations {
   /// **'你已经拥有第一份可回看的学习洞察档案。'**
   String get auto_younowhavethefirstreviewablele;
 
-  /// No description provided for @auto_wordnotfound.
-  ///
-  /// In zh, this message translates to:
-  /// **'未找到该单词'**
-  String get auto_wordnotfound;
-
-  /// No description provided for @auto_lookupfailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'查询失败: {e}'**
-  String auto_lookupfailed(Object e);
-
-  /// No description provided for @auto_addfailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'添加失败: {e}'**
-  String auto_addfailed(Object e);
-
-  /// No description provided for @auto_failedtoloadwordbook.
-  ///
-  /// In zh, this message translates to:
-  /// **'获取生词本失败: {e}'**
-  String auto_failedtoloadwordbook(Object e);
-
-  /// No description provided for @auto_failedtoloadreviewlist.
-  ///
-  /// In zh, this message translates to:
-  /// **'获取复习列表失败: {e}'**
-  String auto_failedtoloadreviewlist(Object e);
-
-  /// No description provided for @auto_failedtoloadstats.
-  ///
-  /// In zh, this message translates to:
-  /// **'获取词汇统计失败: {e}'**
-  String auto_failedtoloadstats(Object e);
-
-  /// No description provided for @auto_recordfailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'记录失败: {e}'**
-  String auto_recordfailed(Object e);
-
-  /// No description provided for @auto_updatefailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'更新重要度失败: {e}'**
-  String auto_updatefailed(Object e);
-
-  /// No description provided for @auto_deletefailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'删除失败: {e}'**
-  String auto_deletefailed(Object e);
-
-  /// No description provided for @auto_loadfailed.
-  ///
-  /// In zh, this message translates to:
-  /// **'加载失败'**
-  String get auto_loadfailed;
-
   /// No description provided for @auto_transactionhistory.
   ///
   /// In zh, this message translates to:
@@ -59953,12 +58309,6 @@ abstract class AppLocalizations {
   /// **'改成'**
   String get proposalDiffAfter;
 
-  /// No description provided for @proposalUntitled.
-  ///
-  /// In zh, this message translates to:
-  /// **'一个待确认的动作'**
-  String get proposalUntitled;
-
   /// No description provided for @proposalTurnA11y.
   ///
   /// In zh, this message translates to:
@@ -60006,12 +58356,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'聊聊天、制定计划或完成任务之后，Sparkle 会把记住的内容和判断放在这里，你可以随时纠正。'**
   String get understandingEmptyBody;
-
-  /// No description provided for @understandingBucketEmpty.
-  ///
-  /// In zh, this message translates to:
-  /// **'这一组暂时没有内容'**
-  String get understandingBucketEmpty;
 
   /// No description provided for @understandingViewAll.
   ///
@@ -60115,12 +58459,6 @@ abstract class AppLocalizations {
   /// **'改成'**
   String get understandingEditLabel;
 
-  /// No description provided for @understandingEditReasonHint.
-  ///
-  /// In zh, this message translates to:
-  /// **'为什么改（可以不填）'**
-  String get understandingEditReasonHint;
-
   /// No description provided for @understandingDeleteTitle.
   ///
   /// In zh, this message translates to:
@@ -60150,18 +58488,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'只在某个目标中使用'**
   String get understandingScopeSheetTitle;
-
-  /// No description provided for @understandingScopePickPlan.
-  ///
-  /// In zh, this message translates to:
-  /// **'选择学习计划'**
-  String get understandingScopePickPlan;
-
-  /// No description provided for @understandingScopeApply.
-  ///
-  /// In zh, this message translates to:
-  /// **'仅在此计划中使用'**
-  String get understandingScopeApply;
 
   /// No description provided for @understandingScopeNoPlans.
   ///
@@ -61915,114 +60241,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'基于最近 {sampleSize} 条学习记录的观察。'**
   String lfcObservationBasis(int sampleSize);
-
-  /// No description provided for @insPredictNext.
-  ///
-  /// In zh, this message translates to:
-  /// **'预测下次学习时间'**
-  String get insPredictNext;
-
-  /// No description provided for @insUnknownType.
-  ///
-  /// In zh, this message translates to:
-  /// **'未知类型'**
-  String get insUnknownType;
-
-  /// No description provided for @insEngagementForecast.
-  ///
-  /// In zh, this message translates to:
-  /// **'活跃度预测'**
-  String get insEngagementForecast;
-
-  /// No description provided for @insEngagementSubtitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'AI 基于学习习惯的预测'**
-  String get insEngagementSubtitle;
-
-  /// No description provided for @insDifficultyForecast.
-  ///
-  /// In zh, this message translates to:
-  /// **'难度预测'**
-  String get insDifficultyForecast;
-
-  /// No description provided for @insDifficultySubtitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'AI 基于前置知识的评估'**
-  String get insDifficultySubtitle;
-
-  /// No description provided for @insPredictedDifficulty.
-  ///
-  /// In zh, this message translates to:
-  /// **'预测难度'**
-  String get insPredictedDifficulty;
-
-  /// No description provided for @insPrerequisitesWarning.
-  ///
-  /// In zh, this message translates to:
-  /// **'建议先学习 {count} 个前置知识'**
-  String insPrerequisitesWarning(int count);
-
-  /// No description provided for @insDifficultyEasy.
-  ///
-  /// In zh, this message translates to:
-  /// **'简单'**
-  String get insDifficultyEasy;
-
-  /// No description provided for @insDifficultyMedium.
-  ///
-  /// In zh, this message translates to:
-  /// **'中等'**
-  String get insDifficultyMedium;
-
-  /// No description provided for @insDifficultyHard.
-  ///
-  /// In zh, this message translates to:
-  /// **'困难'**
-  String get insDifficultyHard;
-
-  /// No description provided for @picEstimatedHours.
-  ///
-  /// In zh, this message translates to:
-  /// **'预计学习时长: {hours} 小时'**
-  String picEstimatedHours(String hours);
-
-  /// No description provided for @picRiskScore.
-  ///
-  /// In zh, this message translates to:
-  /// **'风险指数: {score}/100'**
-  String picRiskScore(String score);
-
-  /// No description provided for @picChurnRisk.
-  ///
-  /// In zh, this message translates to:
-  /// **'流失风险: {level}'**
-  String picChurnRisk(String level);
-
-  /// No description provided for @picMinutesLater.
-  ///
-  /// In zh, this message translates to:
-  /// **'约 {minutes} 分钟后'**
-  String picMinutesLater(int minutes);
-
-  /// No description provided for @picTodayTime.
-  ///
-  /// In zh, this message translates to:
-  /// **'今天 {time}'**
-  String picTodayTime(String time);
-
-  /// No description provided for @picTomorrowTime.
-  ///
-  /// In zh, this message translates to:
-  /// **'明天 {time}'**
-  String picTomorrowTime(String time);
-
-  /// No description provided for @lfcConfidence.
-  ///
-  /// In zh, this message translates to:
-  /// **'基于 {sampleSize} 条学习记录，当前推荐置信度 {confidence}%。'**
-  String lfcConfidence(int sampleSize, String confidence);
 
   /// No description provided for @firstActionCardTitle.
   ///

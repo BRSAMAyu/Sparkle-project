@@ -57,12 +57,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hasAccount => 'Already have an account?';
 
   @override
-  String get loginFailed => 'Login Failed';
-
-  @override
-  String get registerFailed => 'Registration Failed';
-
-  @override
   String get weeklyAgenda => 'Weekly Agenda';
 
   @override
@@ -112,9 +106,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get followSystem => 'System';
-
-  @override
-  String get interactionSettings => 'Interaction Settings';
 
   @override
   String get enterToSend => 'Press Enter to Send';
@@ -232,9 +223,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get viewDetails => 'View Details';
 
   @override
-  String get finishTask => 'Finish Task';
-
-  @override
   String get abandonTask => 'Abandon Task';
 
   @override
@@ -254,9 +242,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get masteryScore => 'Mastery';
-
-  @override
-  String get aiTutor => 'AI Tutor';
 
   @override
   String get send => 'Send';
@@ -393,21 +378,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get planCreateAction => 'Create Plan';
 
   @override
-  String get featureComingSoon => 'Exciting features are coming soon';
-
-  @override
-  String get stayTuned => 'Stay tuned~';
-
-  @override
-  String get aiNudgeGentle => 'Take a break, you\'ll be more productive';
-
-  @override
-  String get aiNudgeFocus => 'Stay focused, you\'re in the zone!';
-
-  @override
-  String get qwen3CognitiveStatus => 'Qwen3 Cognitive Status';
-
-  @override
   String get winStreak => 'Win Streak';
 
   @override
@@ -428,10 +398,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get capsuleGeneration => 'Capsule Generation';
-
-  @override
-  String get adjustAndGenerate =>
-      'Adjust preferences and generate exclusive curiosity capsules';
 
   @override
   String get generateNow => 'Generate Capsule Now';
@@ -500,9 +466,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get viewOfflineQueue => 'View offline queue status and retry';
 
   @override
-  String get capsuleTaskCreated => '✨ Capsule generation task created';
-
-  @override
   String get generationFailed => 'Generation failed, please try again later';
 
   @override
@@ -518,9 +481,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get planId => 'Plan ID';
-
-  @override
-  String get featureInDevelopment => 'Coming soon...';
 
   @override
   String get sprintHistory => 'Sprint History';
@@ -556,19 +516,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sprintAbandoned => 'Sprint abandoned';
 
   @override
-  String get noActiveSprint => 'No active sprint';
-
-  @override
   String get networkErrorRetry => 'Network error, please retry';
 
   @override
   String get submitFailed => 'Submission failed, please retry';
-
-  @override
-  String get loadHistoryFailed => 'Failed to load history';
-
-  @override
-  String get loadMoreFailed => 'Failed to load more messages';
 
   @override
   String get sendFailed => 'Failed to send, please retry';
@@ -719,9 +670,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get toolsCognitiveHubDesc => 'Explore cognitive tools';
-
-  @override
-  String get toolsSearchPlaceholder => 'Search tools...';
 
   @override
   String get toolsFocusModeTitle => 'Focus Mode';
@@ -1222,9 +1170,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get contractCreateFailed => 'Failed to create contract';
-
-  @override
-  String get contractCreateSuccess => 'Contract created';
 
   @override
   String get contractCancelSuccess => 'Contract canceled';
@@ -1795,38 +1740,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String durationHoursMinutes(Object hours, Object minutes) {
-    return '${hours}h ${minutes}m';
-  }
-
-  @override
-  String durationMinutesSeconds(Object minutes, Object seconds) {
-    return '${minutes}m ${seconds}s';
-  }
-
-  @override
-  String numberCount(num count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count items',
-      one: '1 item',
-      zero: 'None',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String numberSelected(Object count) {
-    return '$count selected';
-  }
-
-  @override
-  String numberTotal(Object current, Object total) {
-    return '$current of $total';
-  }
-
-  @override
   String numberPercent(Object value) {
     return '$value%';
   }
@@ -1835,24 +1748,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String numberProgress(Object value) {
     return '$value% complete';
   }
-
-  @override
-  String numberK(Object value) {
-    return '${value}K';
-  }
-
-  @override
-  String numberM(Object value) {
-    return '${value}M';
-  }
-
-  @override
-  String numberB(Object value) {
-    return '${value}B';
-  }
-
-  @override
-  String get commonYes => 'Yes';
 
   @override
   String get commonNo => 'No';
@@ -1903,9 +1798,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonDismiss => 'Dismiss';
 
   @override
-  String get commonApply => 'Apply';
-
-  @override
   String get commonSubmit => 'Submit';
 
   @override
@@ -1933,37 +1825,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonProcessing => 'Processing...';
 
   @override
-  String get commonSuccess => 'Success';
-
-  @override
-  String get commonError => 'Error';
-
-  @override
   String get commonWarning => 'Warning';
-
-  @override
-  String get commonInfo => 'Info';
 
   @override
   String get commonNoData => 'No data';
 
   @override
-  String get commonNoResults => 'No results found';
-
-  @override
-  String get commonTryAgain => 'Try again';
-
-  @override
   String get commonLearnMore => 'Learn more';
 
   @override
-  String get commonSeeAll => 'See all';
-
-  @override
   String get operationPreview => 'Operation preview:';
-
-  @override
-  String get commonShowLess => 'Show less';
 
   @override
   String get commonShowMore => 'Show more';
@@ -1973,12 +1844,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get commonExpand => 'Expand';
-
-  @override
-  String get commonRequired => 'Required';
-
-  @override
-  String get commonOptional => 'Optional';
 
   @override
   String get formUnsavedTitle => 'Discard changes?';
@@ -1994,40 +1859,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get formUnsavedDiscard => 'Discard changes';
 
   @override
-  String get commonEnabled => 'Enabled';
-
-  @override
-  String get commonDisabled => 'Disabled';
-
-  @override
-  String get commonOn => 'On';
-
-  @override
-  String get commonOff => 'Off';
-
-  @override
-  String get commonActive => 'Active';
-
-  @override
-  String get commonInactive => 'Inactive';
-
-  @override
-  String get commonConnected => 'Connected';
-
-  @override
-  String get commonDisconnected => 'Disconnected';
-
-  @override
-  String get commonSyncing => 'Syncing...';
-
-  @override
   String get commonSynced => 'Synced';
-
-  @override
-  String get commonOffline => 'Offline';
-
-  @override
-  String get commonOnline => 'Online';
 
   @override
   String get offlineBannerMessage =>
@@ -2545,11 +2377,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statisticsTrendAwaitingDataHint => 'Visible once data connects';
 
   @override
-  String statisticsLearningIndex(Object value) {
-    return 'Learning index $value';
-  }
-
-  @override
   String get statisticsAggregationNone => 'Original Data';
 
   @override
@@ -2839,9 +2666,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noGalleryPermission => 'No gallery write permission';
-
-  @override
-  String get saveResultEmpty => 'Save result is empty';
 
   @override
   String get gallerySaveFailed => 'Failed to save to gallery';
@@ -3135,11 +2959,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String editProfileUploadFailed(Object error) {
-    return 'Upload failed: $error';
-  }
-
-  @override
   String get editProfileNicknameLabel => 'Nickname';
 
   @override
@@ -3229,11 +3048,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get passwordResetSuccess => 'Password changed successfully';
 
   @override
-  String passwordResetFailed(Object error) {
-    return 'Change failed: $error';
-  }
-
-  @override
   String get smartPushSettings => 'Smart Push Settings';
 
   @override
@@ -3287,15 +3101,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get smartPushSettingsSaved => 'Settings saved';
 
   @override
-  String smartPushSaveFailed(Object error) {
-    return 'Save failed: $error';
-  }
-
-  @override
   String get themeSettings => 'Theme Settings';
-
-  @override
-  String get themeModeSection => 'Theme Mode';
 
   @override
   String get themeModeLight => 'Light';
@@ -3307,9 +3113,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeModeSystem => 'System';
 
   @override
-  String get brandPresetSection => 'Brand Preset';
-
-  @override
   String get highContrastSection => 'High Contrast Mode';
 
   @override
@@ -3317,9 +3120,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get resetDefaults => 'Reset to Defaults';
-
-  @override
-  String get colorPreviewSection => 'Color Preview';
 
   @override
   String get colorPrimary => 'Primary';
@@ -3410,9 +3210,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get contentReviewCardTitle => 'Content Review';
-
-  @override
   String get contentReviewPassed => 'Content Passed Review';
 
   @override
@@ -3422,16 +3219,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contentReviewNeedsRefinement => 'Content Needs Refinement';
 
   @override
-  String get contentReviewScoreLabel => 'Score';
-
-  @override
   String get contentReviewOverallScore => 'Overall Score';
 
   @override
   String get contentReviewMetrics => 'Evaluation Metrics';
-
-  @override
-  String get contentReviewIssues => 'Issues Found';
 
   @override
   String get contentReviewSuggestions => 'Improvement Suggestions';
@@ -3443,54 +3234,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contentReviewWarnings => 'Warnings';
 
   @override
-  String get contentReviewTips => 'Tips';
-
-  @override
   String get contentReviewAccept => 'Accept';
 
   @override
-  String get contentReviewReject => 'Reject';
-
-  @override
-  String get contentReviewRequestManual => 'Request Manual Review';
-
-  @override
   String get contentReviewRegenerate => 'Regenerate';
-
-  @override
-  String get contentReviewWaitOptimization => 'Waiting for optimization...';
-
-  @override
-  String get contentReviewOptimizing => 'Optimizing content...';
-
-  @override
-  String get contentReviewOptimized => 'Optimization complete';
-
-  @override
-  String get contentReviewOptimizationFailed => 'Optimization failed';
-
-  @override
-  String get contentReviewProcessing => 'Processing...';
-
-  @override
-  String get contentReviewAgreePassed => 'I agree it should pass';
-
-  @override
-  String get contentReviewDisagreePassed => 'I disagree with this result';
-
-  @override
-  String get contentReviewReportProblem => 'Report Review Problem';
-
-  @override
-  String get contentReviewOverrideDialogTitle => 'Override Review Decision';
-
-  @override
-  String get contentReviewDisagreeWithResult =>
-      'I disagree with this review result';
-
-  @override
-  String get contentReviewAgreeShouldPass =>
-      'I think the content should pass review';
 
   @override
   String get contentReviewReasonHint => 'Enter your reason...';
@@ -3500,43 +3247,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get contentReviewAppealDialogTitle => 'Report Review Problem';
-
-  @override
-  String get contentReviewSelectIssuesHint =>
-      'Select issue types (multiple allowed)';
-
-  @override
-  String get contentReviewDetailHint => 'Detailed explanation:';
-
-  @override
-  String get contentReviewDetailPlaceholder =>
-      'Please describe what\'s wrong with the review...';
-
-  @override
-  String get contentReviewDetailRequired =>
-      'Please provide a detailed explanation';
-
-  @override
-  String get contentReviewSelectAtLeastOne =>
-      'Please select at least one issue type';
-
-  @override
-  String get contentReviewIssueUnfairStandards => 'Review standards are unfair';
-
-  @override
-  String get contentReviewIssueScoreCalculation =>
-      'Score calculation is incorrect';
-
-  @override
-  String get contentReviewIssueMissingContext => 'Important context was missed';
-
-  @override
-  String get contentReviewIssueInaccurateDescription =>
-      'Description is inaccurate';
-
-  @override
-  String get contentReviewIssueUnfeasibleSuggestion =>
-      'Suggestion is not feasible';
 
   @override
   String get contentReviewMetricAccuracy => 'Accuracy';
@@ -3593,9 +3303,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String contentReviewSuggestion(Object suggestion) {
     return 'Suggestion: $suggestion';
   }
-
-  @override
-  String get contentReviewSuggestionDesc => 'Suggestion';
 
   @override
   String get contentReviewReflectionPending => 'Waiting for optimization...';
@@ -3836,11 +3543,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get leaderboardSelfAnchorSubtitle =>
       'Compared only with your own history';
-
-  @override
-  String leaderboardSelfAnchorTasksCount(Object count) {
-    return '$count tasks';
-  }
 
   @override
   String get leaderboardSelfAnchorTasksUnit => 'sprint tasks';
@@ -4339,9 +4041,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calendarMonthView => 'Month';
 
   @override
-  String get calendarTwoWeekView => '2 weeks';
-
-  @override
   String get calendarYearView => 'Year';
 
   @override
@@ -4780,16 +4479,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get capsuleDetailTitle => 'Capsule Details';
 
   @override
-  String get capsuleMissing => 'Capsule not found';
-
-  @override
   String capsuleLoadFailed(Object error) {
     return 'Failed to load: $error';
-  }
-
-  @override
-  String capsuleQualityLabel(Object rating) {
-    return 'Quality: $rating';
   }
 
   @override
@@ -4807,15 +4498,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get capsuleShare => 'Share capsule';
-
-  @override
-  String get capsuleCopyLink => 'Copy link';
-
-  @override
-  String get capsuleShareToGroup => 'Share to group';
-
-  @override
-  String get capsuleRateFirst => 'Please rate it first';
 
   @override
   String get capsuleFeedbackThanks => 'Thanks for the feedback';
@@ -5336,16 +5018,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noData => 'No Data';
 
   @override
-  String get operationSuccess => 'Success';
-
-  @override
   String get operationFailed => 'Failed';
-
-  @override
-  String get confirmDeleteTitle => 'Confirm Delete';
-
-  @override
-  String get confirmDeleteMessage => 'This cannot be undone';
 
   @override
   String get errorBookTitle => 'Error Archive';
@@ -5686,23 +5359,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authAnd => 'and';
 
   @override
-  String get authDemoLogin => 'Demo Account Login';
-
-  @override
   String get authResetPassword => 'Reset Password';
-
-  @override
-  String get authResetPasswordHint =>
-      'Enter your email and we\'ll send you a reset link';
 
   @override
   String get authSendResetEmail => 'Send Reset Email';
 
   @override
   String get authResetEmailSent => 'Reset email sent';
-
-  @override
-  String get authBackToLogin => 'Back to Login';
 
   @override
   String get authForgotPasswordTitle => 'Forgot Password';
@@ -5747,12 +5410,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get toolsCategoryCognition => 'Cognitive Insights';
-
-  @override
-  String get toolsNoTools => 'No tools available';
-
-  @override
-  String get toolsPinnedEmpty => 'No pinned tools yet';
 
   @override
   String get toolsManageHint =>
@@ -5851,20 +5508,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get seedLibraryEmpty => 'No seed libraries yet';
 
   @override
-  String get seedLibraryCreateFirst =>
-      'Create a new seed library to get started';
-
-  @override
-  String seedLibraryItemCount(Object count) {
-    return '$count items';
-  }
-
-  @override
-  String seedLibraryLastUpdated(Object date) {
-    return 'Last updated: $date';
-  }
-
-  @override
   String get seedLibraryDetail => 'Seed Library Details';
 
   @override
@@ -5926,40 +5569,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get seedMarketplaceTitle => 'Skill Marketplace';
 
   @override
-  String get seedMarketplaceSkills => 'Skills';
-
-  @override
-  String get seedMarketplacePacks => 'Packs';
-
-  @override
   String get seedMarketplaceNoSkills => 'No active marketplace skills yet.';
 
   @override
   String get seedMarketplaceNoPacks => 'No active domain packs yet.';
-
-  @override
-  String get seedMarketplaceAdoptSkill => 'Adopt skill';
-
-  @override
-  String seedMarketplaceSkillAdopted(String name) {
-    return '$name adopted';
-  }
-
-  @override
-  String get seedMarketplaceAdoptPack => 'Adopt pack';
-
-  @override
-  String seedMarketplacePackAdopted(String name) {
-    return '$name adopted';
-  }
-
-  @override
-  String seedMarketplaceQuality(String score) {
-    return 'Quality $score';
-  }
-
-  @override
-  String get seedMarketplaceCancel => 'Cancel';
 
   @override
   String get seedLibrarySubscribers => 'Subscribers';
@@ -5982,19 +5595,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get translationHistoryTitle => 'Translation History';
 
   @override
-  String get translationClearHistory => 'Clear History';
-
-  @override
-  String get translationTranslating => 'Translating...';
-
-  @override
   String get translationSaveToVocabulary => 'Save to Vocabulary';
-
-  @override
-  String get translationCopy => 'Copy';
-
-  @override
-  String get translationCopied => 'Copied';
 
   @override
   String get translationSearchHint => 'Search translation records...';
@@ -6009,9 +5610,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get translationClearConfirm =>
       'Are you sure you want to clear all translation history?';
-
-  @override
-  String get translationClearConfirmDetail => 'This action cannot be undone';
 
   @override
   String get translationClearAll => 'Clear History';
@@ -6097,21 +5695,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String translationDaysAgo(Object days) {
     return '${days}d ago';
   }
-
-  @override
-  String get translationSourceLanguage => 'Source Language';
-
-  @override
-  String get translationTargetLanguage => 'Target Language';
-
-  @override
-  String get translationSwapLanguages => 'Swap Languages';
-
-  @override
-  String get translationDetectLanguage => 'Detect Language';
-
-  @override
-  String get translationHistoryEmpty => 'No translation history';
 
   @override
   String get memoryCurrentVersion => 'Current Version';
@@ -7988,30 +7571,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get groupFiles => 'Study Materials';
 
   @override
-  String get saveToMyLibrary => 'Save to My Library';
-
-  @override
-  String get savedToLibrary => 'Saved to your library';
-
-  @override
-  String get markAsOfficial => 'Mark as Official';
-
-  @override
-  String get officialResource => 'Official';
-
-  @override
-  String get noGroupFiles => 'No study materials yet';
-
-  @override
-  String get noGroupFilesSubtitle => 'Share your notes to help the group!';
-
-  @override
   String get shareFile => 'Share File';
-
-  @override
-  String groupFilesCount(Object count) {
-    return '$count files';
-  }
 
   @override
   String get studyMaterialsTitle => 'Study Materials';
@@ -10228,13 +9788,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get personaAdjustInferredPreference => 'Adjust inferred preference';
-
-  @override
-  String get personaNewValue => 'New value';
-
-  @override
-  String get personaAdjustInferredPreferenceTitle =>
-      'Adjust Inferred Preference';
 
   @override
   String get languageDialogDescription =>
@@ -14133,10 +13686,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Partner dashboard failed to load';
 
   @override
-  String get accountabilityDashboardLoadFailedDetail =>
-      'Please try again or contact support if the problem persists.';
-
-  @override
   String get accountabilityNudgeSentDefault =>
       'Sent as an in-app reminder. They will see it in real time when online.';
 
@@ -14832,10 +14381,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get seedLibraryDetailFriendlyError =>
-      'The system couldn\'t complete this operation right now. Please try again later.';
-
-  @override
   String get seedLibraryDetailUserRatings => 'User Ratings';
 
   @override
@@ -15488,9 +15033,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get personaRolledBack => 'Rolled back to previous version';
-
-  @override
   String personaRollbackFailed(Object error) {
     return 'Rollback failed: $error';
   }
@@ -15507,29 +15049,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get personaInferredAdjusted => 'Inferred preference adjusted';
 
   @override
-  String personaAdjustFailed(Object error) {
-    return 'Adjustment failed: $error';
-  }
-
-  @override
-  String get personaInferredReset => 'Restored to system inferred value';
-
-  @override
   String personaRestoreFailed(Object error) {
     return 'Restore failed: $error';
   }
 
   @override
   String get personaUnknownError => 'Unknown error';
-
-  @override
-  String get personaHintDecimalRange => 'Enter a number between 0.0 and 1.0';
-
-  @override
-  String get personaHintStudyMinutes => 'Enter study duration (minutes)';
-
-  @override
-  String get personaHintPositiveMinutes => 'Enter a positive number of minutes';
 
   @override
   String get personaHintValidPreference => 'Enter a valid preference value';
@@ -15570,9 +15095,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reportRangeAll => 'All';
-
-  @override
-  String get reportCurrentLearningTopic => 'Current learning topic';
 
   @override
   String get reportMasteryTrendTitle => 'Mastery Trend';
@@ -16607,12 +16129,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Mark this point and continue with other parts';
 
   @override
-  String get stuckHelpFallbackOrder => 'Fallback order when stuck';
-
-  @override
-  String get stuckHelpWhatToDo => 'What to do';
-
-  @override
   String get stuckHelpDiagnose => 'Diagnose';
 
   @override
@@ -16642,9 +16158,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String executionResultNoPreview(Object type) {
     return 'Current artifact type is $type. No detailed preview available yet.';
   }
-
-  @override
-  String get executionResultLinkCopied => 'Link copied';
 
   @override
   String get executionResultCopyLink => 'Copy Link';
@@ -16950,9 +16463,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statisticsShareMore => 'More';
 
   @override
-  String get statisticsWatermark => 'Sparkle AI';
-
-  @override
   String statisticsDateFormat(Object year, Object month, Object day) {
     return '$year/$month/$day';
   }
@@ -17043,11 +16553,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get statisticsNoDataYet => 'No statistics data yet';
-
-  @override
-  String statisticsLoadingFailed(String error) {
-    return 'Failed to load: $error';
-  }
 
   @override
   String get statisticsRetry => 'Retry';
@@ -17464,9 +16969,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get intentPredictionSprintSprint => 'Sprint!';
-
-  @override
   String intentPredictionContinue(Object title) {
     return 'Continue';
   }
@@ -17488,48 +16990,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get intentPredictionNoteIdea => 'Note Idea';
-
-  @override
-  String get intentPredictionSetReminder => 'Set Reminder';
-
-  @override
-  String get intentPredictionCognitivePrism => 'Cognitive Prism';
-
-  @override
-  String get intentPredictionTranslate => 'Translate';
-
-  @override
-  String get intentPredictionLearnLanguage => 'Learn Language';
-
-  @override
-  String get intentPredictionViewPrism => 'View Cognitive Prism';
-
-  @override
-  String get intentPredictionBehaviorAnalysis => 'Behavior Analysis';
-
-  @override
-  String get intentPredictionStartSprint => 'Start Sprint';
-
-  @override
-  String get intentPredictionFocusMode => 'Focus Mode';
-
-  @override
-  String get intentPredictionStartLearning => 'Start Learning';
-
-  @override
-  String get intentPredictionCreateStudyPlan => 'Create Study Plan';
-
-  @override
-  String get intentPredictionStartReview => 'Start Review';
-
-  @override
-  String get intentPredictionViewErrorBook => 'View Error Book';
-
-  @override
-  String get intentPredictionContinuePriority => 'Continue Priority Task';
-
-  @override
-  String get intentPrediction25Min => '25 min Focus';
 
   @override
   String get flashCapsuleTitle => 'Flash Capsule';
@@ -17607,32 +17067,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get vocabularyLookupNoPackage =>
       'No downloadable offline dictionary packages available';
-
-  @override
-  String get entityCardActionLabel => 'Execute';
-
-  @override
-  String get entityCardTitleFallback => 'Unnamed Card';
-
-  @override
-  String get entityCardEntityFallback => 'Unnamed Entity';
-
-  @override
-  String get entityCardTaskFallback => 'Unnamed Task';
-
-  @override
-  String get entityCardPlanFallback => 'Study Plan';
-
-  @override
-  String get entityCardKnowledgeFallback => 'Knowledge Node';
-
-  @override
-  String entityCardTaskListFallback(Object count) {
-    return '$count executable tasks';
-  }
-
-  @override
-  String get entityCardTaskListSummary => 'AI has organized the task list';
 
   @override
   String get visualSlotAvatarBorder => 'Avatar Border';
@@ -17744,12 +17178,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get retryLabel => 'Retry';
-
-  @override
-  String get emptyStateTitle => 'No Data';
-
-  @override
-  String get emptyStateTitleNone => 'Empty';
 
   @override
   String get auroraStatusInactive => 'Aurora standby';
@@ -18632,9 +18060,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get openclawNotFilled => 'Not filled';
-
-  @override
-  String get openclawNoDate => 'N/A';
 
   @override
   String openclawNodeCount(Object count) {
@@ -21313,11 +20738,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toolsSwitchToStopwatch => 'Switch to Stopwatch';
 
   @override
-  String toolsFocusSaveFailed(Object e) {
-    return 'Failed to save focus session: $e';
-  }
-
-  @override
   String get toolsFocusNotificationBody =>
       'Focus session ended. Come back to wrap up and log your effort.';
 
@@ -21351,9 +20771,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get toolsPauseManually => 'Pause whenever you like';
-
-  @override
-  String get toolsPlanChainNext => 'Easy to chain into your next block';
 
   @override
   String get toolsBreathQuickDesc =>
@@ -21425,27 +20842,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toolsBreathReset => 'Reset';
 
   @override
-  String get toolsBreathReady => 'Ready';
-
-  @override
-  String get toolsBreathPracticeComplete => 'Practice Complete';
-
-  @override
-  String toolsBreathPausedRounds(int completed, int total) {
-    return 'Paused · $completed / $total rounds';
-  }
-
-  @override
-  String toolsBreathRoundsProgress(int completed, int total) {
-    return '$completed / $total rounds';
-  }
-
-  @override
-  String toolsBreathDurationLabel(int duration) {
-    return '$duration min';
-  }
-
-  @override
   String get toolsBreathStageDescPaused =>
       'Practice paused, will resume from current phase with voice guidance.';
 
@@ -21490,9 +20886,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get brtReady => 'Ready';
-
-  @override
   String get toolsCalcTitle => 'Calculator';
 
   @override
@@ -21501,11 +20894,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get toolsCalcNoHistory => 'No history';
-
-  @override
-  String toolsCalcHistoryCount(Object count) {
-    return '$count entries';
-  }
 
   @override
   String get toolsCalcWaiting => 'Waiting';
@@ -21803,11 +21191,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toolsNotesWaiting => 'Waiting';
 
   @override
-  String toolsNotesCharCount(Object _charCount) {
-    return '$_charCount chars';
-  }
-
-  @override
   String get toolsNotesCharLabel => 'Characters';
 
   @override
@@ -21892,9 +21275,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get toolsFlashViewHistory => 'View History';
-
-  @override
-  String get toolsFlashRecording => 'Saving...';
 
   @override
   String get toolsFlashSaveCapsule => 'Save Capsule';
@@ -21983,34 +21363,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Oxford Preferred Offline Dictionary Package';
 
   @override
-  String get toolsVocabInstalledAtPrefix => 'Installed';
-
-  @override
-  String get toolsVocabRedownload => 'Re-download';
-
-  @override
   String get toolsVocabDownloadLocally => 'Download Locally';
 
   @override
   String get toolsVocabWaitingAssociations => 'Waiting for associations';
 
   @override
-  String toolsVocabAssocCount(int count) {
-    return '$count associations';
-  }
-
-  @override
-  String toolsVocabOfflineDictCount(int count) {
-    return '$count offline dictionaries';
-  }
-
-  @override
   String get toolsVocabNoOfflineDict => 'No offline dictionary';
-
-  @override
-  String toolsVocabPartOfSpeech(String pos) {
-    return 'Part of Speech · $pos';
-  }
 
   @override
   String get toolsVocabDefinitionsLabel => 'Definitions';
@@ -22038,11 +21397,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get toolsStatsWaitingData => 'Waiting for data';
-
-  @override
-  String toolsStatsRecentCount(Object totalSessions) {
-    return '$totalSessions recent sessions';
-  }
 
   @override
   String get toolsStatsTodayFocus => 'Today\'s Focus';
@@ -22341,9 +21695,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String lpTarget(String name) {
     return 'Target: $name';
   }
-
-  @override
-  String get lpTitle => 'Learning Path';
 
   @override
   String get lpMainPath => 'Main Path';
@@ -22851,23 +22202,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get simRefresh => 'Refresh';
 
   @override
-  String get simSocraticCopy => 'Socratic Dialogue';
-
-  @override
-  String get simErrorDiagCopy => 'Error Diagnosis';
-
-  @override
-  String get simGenFailed => 'Simulation generation failed';
-
-  @override
-  String get simRealtimeConnectionRecovered =>
-      'The live connection was interrupted. Restored to your most recently saved simulation progress.';
-
-  @override
-  String get simInteractionStreamRecovered =>
-      'The interaction stream was interrupted, but I restored the latest round state for you.';
-
-  @override
   String simRoundProgressSummary(int round) {
     return 'Discussion has reached round $round. Summarizing key disagreements and consensus now.';
   }
@@ -23225,30 +22559,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get seedCatFewShotFull => 'Few-shot Example';
 
   @override
-  String get cogMockPattern1 =>
-      'Whenever I hit a tough problem I instinctively reach for my phone — it seems like an avoidance mechanism.';
-
-  @override
-  String get cogMockPattern2 =>
-      'Finishing advanced math homework gives a real sense of achievement. This positive feedback matters.';
-
-  @override
-  String get cogMockPattern3 =>
-      'Planned to memorize vocab today but club activities got in the way. Need more schedule flexibility.';
-
-  @override
-  String get cogMockPattern4 =>
-      'When facing hard or uncertain tasks (like physics projects), I tend to stall with busywork (tidying up, replying to messages).';
-
-  @override
-  String get cogMockPattern5 =>
-      'I habitually start the hardest study tasks after 10 pm, which delays sleep and drains the next day\'s energy.';
-
-  @override
-  String get cogMockPattern6 =>
-      'I overthink layout and wording when making slides or writing reports, hurting core content output.';
-
-  @override
   String get cogCapsuleUnavailable => 'This capsule is currently unavailable';
 
   @override
@@ -23268,15 +22578,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String cogPatternFreq(Object count) {
     return 'Appeared $count times';
   }
-
-  @override
-  String get insLearnBasic => 'Learn basic concepts';
-
-  @override
-  String get insQuickCore => 'Quickly grasp core concepts';
-
-  @override
-  String get insSmallPractice => 'Complete a round of practice';
 
   @override
   String insLoadFailed(String e) {
@@ -23329,15 +22630,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insBackToCockpit => 'Back to Cockpit';
 
   @override
-  String get insContinueSim => 'Continue Simulation';
-
-  @override
-  String get insContinueLearnSim => 'Continue Learning Simulation';
-
-  @override
-  String get insHasContinue => 'Content available to continue';
-
-  @override
   String get insCreateTask => 'Create Learning Task';
 
   @override
@@ -23352,21 +22644,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get insDecisionLogOpen => 'Open Log';
-
-  @override
-  String get insContinueView => 'Continue';
-
-  @override
-  String get insStartFromRecommended => 'Start from Recommended';
-
-  @override
-  String get insFocusedSim => 'Focused: Learning Simulation';
-
-  @override
-  String get insFocusedReport => 'Focused: Learning Report';
-
-  @override
-  String get insFocusedDefault => 'Simulation, theater & reports in one place';
 
   @override
   String get insFlowTitle =>
@@ -23385,9 +22662,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get insNoPrereq => 'No prerequisites needed — dive right in!';
-
-  @override
-  String get insGenerating => 'Generating...';
 
   @override
   String get insQuickPath => 'Quick Task Path';
@@ -23651,44 +22925,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calSessionCount => 'Sessions';
 
   @override
-  String get ebCreateFailed => 'Failed to create error record';
-
-  @override
-  String get ebListFailed => 'Failed to fetch error list';
-
-  @override
-  String get ebDetailFailed => 'Failed to fetch error detail';
-
-  @override
   String ebUpdateFailed(String e) {
     return 'Update failed: $e';
   }
 
   @override
-  String get ebDeleteFailed => 'Failed to delete error record';
-
-  @override
-  String get ebAnalysisFailed => 'Re-analysis failed';
-
-  @override
   String get ebReviewFailed => 'Failed to submit review record';
-
-  @override
-  String get ebTodayReviewFailed => 'Failed to fetch today\'s review list';
-
-  @override
-  String get ebStatsFailed => 'Failed to fetch statistics';
-
-  @override
-  String get ebSummaryFailed => 'Failed to fetch semantic summary';
-
-  @override
-  String get ebBadParams => 'Invalid request parameters';
-
-  @override
-  String ebImageUploadFailed(String e) {
-    return 'Image upload failed: $e';
-  }
 
   @override
   String get ebRemove => 'Remove';
@@ -23774,11 +23016,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ebViewAnalysis => 'View AI Analysis';
-
-  @override
-  String ebSubmitFailed(Object e) {
-    return 'Submit failed: $e';
-  }
 
   @override
   String get ebBack => 'Back';
@@ -24181,19 +23418,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get memBlockedSources => 'Blocked Sources';
-
-  @override
-  String get seedDetailFailed =>
-      'Failed to load seed library details. Please try again.';
-
-  @override
-  String get seedStateFailed =>
-      'Failed to load seed library state. Please try again.';
-
-  @override
-  String seedCreateFailed(String e) {
-    return 'Create failed: $e';
-  }
 
   @override
   String get seedCreateTitle => 'Create Seed Library';
@@ -25852,18 +25076,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String accountabilityUnlockedOn(String date) {
     return 'Unlocked on $date';
-  }
-
-  @override
-  String get accountabilityRequestFailed => 'Failed to request partnership';
-
-  @override
-  String get accountabilityPartnerNudged =>
-      'Partner nudged to check today\'s goals';
-
-  @override
-  String accountabilityPartnerNudgedWithMessage(String message) {
-    return 'Partner nudged: $message';
   }
 
   @override
@@ -28386,9 +27598,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calEditEvent => 'Edit Event';
 
   @override
-  String get lioStartNewSim => 'Start a new simulation now';
-
-  @override
   String lioRecentAnalysis(int count) {
     return 'Last analysis covered $count knowledge points';
   }
@@ -28396,14 +27605,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get lioBuildConclusion =>
       'Summarize key takeaways after a learning round';
-
-  @override
-  String get lioNoSimYet => 'No recent simulation generated yet';
-
-  @override
-  String lioRecentUpdate(String desc) {
-    return 'Recently updated · $desc';
-  }
 
   @override
   String get lioNoReportYet => 'No recent report generated yet';
@@ -28818,11 +28019,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String gdGap(String percent) {
     return 'Gap $percent%';
-  }
-
-  @override
-  String gdCurrentTarget(String current, String target) {
-    return 'Current $current% · Target $target%';
   }
 
   @override
@@ -29327,9 +28523,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cahNoEvidence => 'No evidence yet';
-
-  @override
-  String get cahProgress => 'Progress';
 
   @override
   String get cahWitnesses => 'Witnesses';
@@ -30246,11 +29439,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String sprintProgressLabel(String name, int percent, int daysLeft) {
     return '$name: $percent% complete, $daysLeft days left';
-  }
-
-  @override
-  String sprintBottleneckLabel(Object name, Object reason) {
-    return '$name: $reason';
   }
 
   @override
@@ -31609,28 +30797,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get sprintCompletionLoading => 'Loading...';
-
-  @override
-  String get learningPortfolioLoading => 'Loading...';
-
-  @override
-  String get sprintActionLoading => 'Loading...';
-
-  @override
-  String get securityLogLoading => 'Loading...';
-
-  @override
-  String get socialAccountsLoading => 'Loading...';
-
-  @override
-  String get sessionManagementLoading => 'Loading...';
-
-  @override
   String get intentPredictionSprint => 'Sprint!';
-
-  @override
-  String get intentPredictionNoteThought => 'Note Thought';
 
   @override
   String intentPredictionContinueTask(String taskTitle) {
@@ -32457,14 +31624,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskDiagnosisOption3 => 'Can\'t use given conditions';
 
   @override
-  String get seedLibLoadFailed =>
-      'Failed to load library details. Please try again later.';
-
-  @override
-  String get seedLibStatusFailed =>
-      'Failed to load library status. Please try again later.';
-
-  @override
   String get communitySquad => 'Squad';
 
   @override
@@ -32502,9 +31661,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatReadReceipt => 'Read';
-
-  @override
-  String get partnersEmptyState => 'Empty state';
 
   @override
   String communityDateMonthDay(int month, int day) {
@@ -32867,37 +32023,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get homeDailyContextMorningFallback =>
       'Good morning. Start with a small step today and find your rhythm.';
-
-  @override
-  String get agreeTermsFirst =>
-      'Please agree to the Terms of Service and Privacy Policy first';
-
-  @override
-  String get passwordStrengthWeak => 'Weak';
-
-  @override
-  String get passwordStrengthFair => 'Fair';
-
-  @override
-  String get passwordStrengthStrong => 'Strong';
-
-  @override
-  String get resetInstructions =>
-      'Enter the reset code from the email and set a new password.';
-
-  @override
-  String get resetCodeRequired => 'Enter the reset code';
-
-  @override
-  String get resetPasswordMinLength => 'Password must be at least 6 characters';
-
-  @override
-  String get resetPasswordsNoMatch => 'Passwords do not match';
-
-  @override
-  String loginFailedWithError(String error) {
-    return 'Login Failed: $error';
-  }
 
   @override
   String get legalCurrentVersion => 'Current version: v1';
@@ -33832,9 +32957,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get chaosBrandPrimaryLabel => 'brandPrimary';
-
-  @override
   String get chaosClose => 'Close';
 
   @override
@@ -33902,40 +33024,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get engagementVeryActive => 'Very Active';
 
   @override
-  String utilLoadingFailed(Object error) {
-    return 'Load failed: $error';
-  }
-
-  @override
-  String get utilNoData => 'No data yet';
-
-  @override
-  String get utilUnknownError => 'Unknown error';
-
-  @override
-  String get utilDataEmpty => 'Data is empty';
-
-  @override
-  String auto_firstsecond(Object first, Object second) {
-    return '$first $second';
-  }
-
-  @override
   String get auto_ => '%';
 
   @override
-  String get auto_dataisempty => 'Data is empty';
-
-  @override
   String get auto_unknownerror => 'Unknown error';
-
-  @override
-  String auto_loadfailedrror(Object error) {
-    return 'Load failed: $error';
-  }
-
-  @override
-  String get auto_nodatayet => 'No data yet';
 
   @override
   String get auto_flex => 'Flex';
@@ -33981,12 +33073,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get auto_makingsteadyprogresslatelyjust =>
       'Making steady progress lately, just logging it.';
-
-  @override
-  String get auto_ifyou => 'If you\\';
-
-  @override
-  String get auto_thisweek => 'This Week';
 
   @override
   String get auto_notifications => 'Notifications';
@@ -34111,9 +33197,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get auto_pendingcommitments => 'Pending Commitments';
 
   @override
-  String get auto_en => '_en';
-
-  @override
   String get auto_unknownerrorpleaseretry => 'Unknown error, please retry';
 
   @override
@@ -34234,52 +33317,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'You now have the first reviewable learning insight archive.';
 
   @override
-  String get auto_wordnotfound => 'Word not found';
-
-  @override
-  String auto_lookupfailed(Object e) {
-    return 'Lookup failed: $e';
-  }
-
-  @override
-  String auto_addfailed(Object e) {
-    return 'Add failed: $e';
-  }
-
-  @override
-  String auto_failedtoloadwordbook(Object e) {
-    return 'Failed to load wordbook: $e';
-  }
-
-  @override
-  String auto_failedtoloadreviewlist(Object e) {
-    return 'Failed to load review list: $e';
-  }
-
-  @override
-  String auto_failedtoloadstats(Object e) {
-    return 'Failed to load stats: $e';
-  }
-
-  @override
-  String auto_recordfailed(Object e) {
-    return 'Record failed: $e';
-  }
-
-  @override
-  String auto_updatefailed(Object e) {
-    return 'Update failed: $e';
-  }
-
-  @override
-  String auto_deletefailed(Object e) {
-    return 'Delete failed: $e';
-  }
-
-  @override
-  String get auto_loadfailed => 'Load Failed';
-
-  @override
   String get auto_transactionhistory => 'Transaction History';
 
   @override
@@ -34389,9 +33426,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get proposalDiffAfter => 'Changed to';
 
   @override
-  String get proposalUntitled => 'An action to confirm';
-
-  @override
   String proposalTurnA11y(String owner) {
     return 'It is now $owner\'s turn';
   }
@@ -34419,9 +33453,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get understandingEmptyBody =>
       'After you chat, plan, or finish tasks, Sparkle will put what it remembers here — you can correct anything, anytime.';
-
-  @override
-  String get understandingBucketEmpty => 'Nothing in this group yet';
 
   @override
   String get understandingViewAll => 'View all';
@@ -34476,9 +33507,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get understandingEditLabel => 'Change to';
 
   @override
-  String get understandingEditReasonHint => 'Why (optional)';
-
-  @override
   String get understandingDeleteTitle => 'Delete this item?';
 
   @override
@@ -34494,12 +33522,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get understandingScopeSheetTitle => 'Use only for one goal';
-
-  @override
-  String get understandingScopePickPlan => 'Pick a study plan';
-
-  @override
-  String get understandingScopeApply => 'Use only in this plan';
 
   @override
   String get understandingScopeNoPlans => 'No study plans to pick from yet';
@@ -35494,76 +34516,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String lfcObservationBasis(int sampleSize) {
     return 'Based on observations from your last $sampleSize study records.';
-  }
-
-  @override
-  String get insPredictNext => 'Predict next study time';
-
-  @override
-  String get insUnknownType => 'Unknown type';
-
-  @override
-  String get insEngagementForecast => 'Engagement Forecast';
-
-  @override
-  String get insEngagementSubtitle => 'AI prediction based on learning habits';
-
-  @override
-  String get insDifficultyForecast => 'Difficulty Forecast';
-
-  @override
-  String get insDifficultySubtitle => 'AI assessment based on prerequisites';
-
-  @override
-  String get insPredictedDifficulty => 'Predicted Difficulty';
-
-  @override
-  String insPrerequisitesWarning(int count) {
-    return 'Complete $count prerequisite(s) first';
-  }
-
-  @override
-  String get insDifficultyEasy => 'Easy';
-
-  @override
-  String get insDifficultyMedium => 'Medium';
-
-  @override
-  String get insDifficultyHard => 'Hard';
-
-  @override
-  String picEstimatedHours(String hours) {
-    return 'Estimated study time: $hours hours';
-  }
-
-  @override
-  String picRiskScore(String score) {
-    return 'Risk index: $score/100';
-  }
-
-  @override
-  String picChurnRisk(String level) {
-    return 'Churn risk: $level';
-  }
-
-  @override
-  String picMinutesLater(int minutes) {
-    return 'In about $minutes minutes';
-  }
-
-  @override
-  String picTodayTime(String time) {
-    return 'Today $time';
-  }
-
-  @override
-  String picTomorrowTime(String time) {
-    return 'Tomorrow $time';
-  }
-
-  @override
-  String lfcConfidence(int sampleSize, String confidence) {
-    return 'Based on $sampleSize learning records, current recommendation confidence is $confidence%.';
   }
 
   @override

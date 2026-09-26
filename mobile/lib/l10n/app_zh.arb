@@ -16,8 +16,6 @@
   "nickname": "昵称",
   "noAccount": "还没有账号？",
   "hasAccount": "已有账号？",
-  "loginFailed": "登录失败",
-  "registerFailed": "注册失败",
   "weeklyAgenda": "每周日程",
   "agendaBusy": "繁忙",
   "agendaFragmented": "碎片",
@@ -35,7 +33,6 @@
   "darkMode": "深色模式",
   "lightMode": "浅色模式",
   "followSystem": "跟随系统",
-  "interactionSettings": "交互设置",
   "enterToSend": "回车发送消息",
   "enterToSendDescription": "在对话框中按回车键直接发送",
   "refresh": "刷新",
@@ -70,7 +67,6 @@
   "showChatTransparencyCapsuleSubtitle": "控制聊天页底部的 AI 系统完成情况与透明化浮层",
   "startTask": "开始任务",
   "viewDetails": "查看详情",
-  "finishTask": "完成任务",
   "abandonTask": "放弃任务",
   "estimatedTime": "预计耗时",
   "difficulty": "难度",
@@ -78,7 +74,6 @@
   "searchNodes": "搜索知识节点",
   "sparkNode": "点燃星火",
   "masteryScore": "掌握度",
-  "aiTutor": "AI 导师",
   "send": "发送",
   "typeMessage": "输入消息...",
   "logout": "退出登录",
@@ -121,11 +116,6 @@
   "planPriorityNormal": "普通",
   "planPriorityLow": "低",
   "planCreateAction": "创建计划",
-  "featureComingSoon": "精彩功能即将登场",
-  "stayTuned": "敬请期待~",
-  "aiNudgeGentle": "休息一下吧，效率会更高哦",
-  "aiNudgeFocus": "保持专注，你正在状态！",
-  "qwen3CognitiveStatus": "Qwen3 认知状态",
   "winStreak": "连胜",
   "myPersona": "我的画像",
   "systemActivity": "系统活动",
@@ -133,7 +123,6 @@
   "brightness": "亮度",
   "dragToAdjust": "拖动控制点，调整你的AI辅导风格",
   "capsuleGeneration": "胶囊生成",
-  "adjustAndGenerate": "调整偏好并生成专属好奇心胶囊",
   "generateNow": "立即生成胶囊",
   "generating": "生成中...",
   "selectTimeSlots": "框选时间段：红色繁忙，绿色碎片(AI提醒)，蓝色休息",
@@ -155,13 +144,11 @@
   "sync": "同步",
   "syncCenter": "同步中心",
   "viewOfflineQueue": "查看离线队列状态与重试",
-  "capsuleTaskCreated": "✨ 胶囊生成任务已创建",
   "generationFailed": "生成失败，请稍后重试",
   "generationFailedWithDetail": "生成失败: {error}",
   "version": "Sparkle v2.1.0-stable\n© 2025 Sparkle Team",
   "editPlan": "编辑计划",
   "planId": "计划ID",
-  "featureInDevelopment": "功能开发中...",
   "sprintHistory": "冲刺历史",
   "noSprintHistory": "暂无冲刺历史",
   "loadingFailed": "加载失败: {error}",
@@ -171,11 +158,8 @@
   "sprintCompleted": "✅ 冲刺已完成并归档",
   "sprintExtended": "冲刺已延长 {days} 天",
   "sprintAbandoned": "冲刺已放弃",
-  "noActiveSprint": "没有活跃的冲刺",
   "networkErrorRetry": "网络错误，请重试",
   "submitFailed": "提交失败，请重试",
-  "loadHistoryFailed": "加载历史失败",
-  "loadMoreFailed": "加载更多消息失败",
   "sendFailed": "发送失败，请重试",
   "view": "查看",
   "ongoing": "进行中",
@@ -226,7 +210,6 @@
   "toolsCuriosityCapsuleDesc": "AI生成的好奇心内容",
   "toolsCognitiveHubTitle": "认知工具",
   "toolsCognitiveHubDesc": "探索认知工具",
-  "toolsSearchPlaceholder": "搜索工具...",
   "toolsFocusModeTitle": "专注模式",
   "toolsFocusModeDesc": "进入任务专注主界面",
   "toolsPomodoroTitle": "番茄钟",
@@ -422,7 +405,6 @@
   "contractCancelAction": "取消契约",
   "contractInputInvalid": "请输入有效的契约数值",
   "contractCreateFailed": "创建契约失败",
-  "contractCreateSuccess": "契约创建成功",
   "contractCancelSuccess": "契约已取消",
   "contractCancelFailed": "取消契约失败",
   "contractCountdown": "倒计时",
@@ -594,17 +576,8 @@
   "durationHours": "{count}小时",
   "durationMinutes": "{count}分钟",
   "durationSeconds": "{count}秒",
-  "durationHoursMinutes": "{hours}小时{minutes}分钟",
-  "durationMinutesSeconds": "{minutes}分{seconds}秒",
-  "numberCount": "{count, plural, =0{无} =1{1项} other{{count}项}}",
-  "numberSelected": "已选择 {count} 项",
-  "numberTotal": "{current}/{total}",
   "numberPercent": "{value}%",
   "numberProgress": "完成 {value}%",
-  "numberK": "{value}K",
-  "numberM": "{value}M",
-  "numberB": "{value}B",
-  "commonYes": "是",
   "commonNo": "否",
   "commonOk": "确定",
   "commonCancel": "取消",
@@ -621,7 +594,6 @@
   "commonSort": "排序",
   "commonClose": "关闭",
   "commonDismiss": "忽略",
-  "commonApply": "应用",
   "commonSubmit": "提交",
   "commonContinue": "继续",
   "commonSkip": "跳过",
@@ -631,38 +603,18 @@
   "commonLoading": "加载中...",
   "commonSaving": "保存中...",
   "commonProcessing": "处理中...",
-  "commonSuccess": "成功",
-  "commonError": "错误",
   "commonWarning": "警告",
-  "commonInfo": "信息",
   "commonNoData": "暂无数据",
-  "commonNoResults": "未找到结果",
-  "commonTryAgain": "重试",
   "commonLearnMore": "了解更多",
-  "commonSeeAll": "查看全部",
   "operationPreview": "操作预览：",
-  "commonShowLess": "收起",
   "commonShowMore": "展开更多",
   "commonCollapse": "折叠",
   "commonExpand": "展开",
-  "commonRequired": "必填",
-  "commonOptional": "可选",
   "formUnsavedTitle": "放弃更改？",
   "formUnsavedMessage": "你有未保存的输入，离开后将丢失。",
   "formUnsavedKeepEditing": "继续编辑",
   "formUnsavedDiscard": "放弃更改",
-  "commonEnabled": "已启用",
-  "commonDisabled": "已禁用",
-  "commonOn": "开",
-  "commonOff": "关",
-  "commonActive": "活跃",
-  "commonInactive": "未激活",
-  "commonConnected": "已连接",
-  "commonDisconnected": "已断开",
-  "commonSyncing": "同步中...",
   "commonSynced": "已同步",
-  "commonOffline": "离线",
-  "commonOnline": "在线",
   "offlineBannerMessage": "你已离线，部分功能可能不可用。",
   "commonOperationWarning": "操作可能未成功",
   "emptyStateNoTasksTitle": "还没有任务",
@@ -833,7 +785,6 @@
   "avatarPresetPet": "萌友",
   "statisticsWeeklyGrowthTrend": "本周成长趋势",
   "statisticsTrendAwaitingDataHint": "接入后可见",
-  "statisticsLearningIndex": "学习指数 {value}",
   "statisticsAggregationNone": "原始数据",
   "statisticsAggregationHourly": "按小时",
   "statisticsAggregationDaily": "按天",
@@ -916,7 +867,6 @@
   "shareCardUrlEmpty": "分享卡地址为空",
   "shareCardDownloadFailed": "下载分享卡失败 ({statusCode})",
   "noGalleryPermission": "没有相册写入权限",
-  "saveResultEmpty": "保存结果为空",
   "gallerySaveFailed": "保存到相册失败",
   "shareUnlockMessage": "我在 Sparkle 解锁了「{achievementName}」",
   "achievementMilestone": "学习里程碑",
@@ -1024,7 +974,6 @@
   "editProfileChooseFromGallery": "从相册选择",
   "editProfileAvatarUpdated": "头像更新成功",
   "editProfileUpdateFailed": "更新失败: {error}",
-  "editProfileUploadFailed": "上传失败: {error}",
   "editProfileNicknameLabel": "昵称",
   "editProfileNicknameHint": "请输入昵称",
   "editProfileNicknameEmpty": "昵称不能为空",
@@ -1054,7 +1003,6 @@
   "passwordResetConfirmMismatch": "两次输入的密码不一致",
   "passwordResetButton": "更新密码",
   "passwordResetSuccess": "密码修改成功",
-  "passwordResetFailed": "修改失败: {error}",
   "smartPushSettings": "智能推送设置",
   "smartPushPersonaSection": "角色设定 (Persona)",
   "smartPushToneDesc": "选择推送通知的语气和风格。",
@@ -1071,17 +1019,13 @@
   "smartPushFrequencyLabel": "{count} 条/天",
   "smartPushNoSlots": "暂无设置，建议添加活跃时间",
   "smartPushSettingsSaved": "设置已保存",
-  "smartPushSaveFailed": "保存失败: {error}",
   "themeSettings": "主题设置",
-  "themeModeSection": "主题模式",
   "themeModeLight": "浅色",
   "themeModeDark": "深色",
   "themeModeSystem": "跟随系统",
-  "brandPresetSection": "品牌预设",
   "highContrastSection": "高对比度模式",
   "highContrastDesc": "增强文字和背景的对比度",
   "resetDefaults": "恢复默认设置",
-  "colorPreviewSection": "颜色预览",
   "colorPrimary": "主色",
   "colorSecondary": "次色",
   "colorSuccess": "成功",
@@ -1108,46 +1052,19 @@
   "systemUpdatesBeforeLabel": "之前",
   "systemUpdatesAfterLabel": "现在",
   "systemUpdatesAlignmentScore": "画像对齐度 {value}%",
-  "contentReviewCardTitle": "内容审查",
   "contentReviewPassed": "内容已通过审查",
   "contentReviewFailed": "内容未通过审查",
   "contentReviewNeedsRefinement": "内容需要优化",
-  "contentReviewScoreLabel": "评分",
   "contentReviewOverallScore": "综合评分",
   "contentReviewMetrics": "评估指标",
-  "contentReviewIssues": "发现问题",
   "contentReviewSuggestions": "改进建议",
   "contentReviewCriticalIssues": "严重问题",
   "contentReviewWarnings": "警告",
-  "contentReviewTips": "提示",
   "contentReviewAccept": "接受",
-  "contentReviewReject": "拒绝",
-  "contentReviewRequestManual": "人工审查",
   "contentReviewRegenerate": "重新生成",
-  "contentReviewWaitOptimization": "等待优化...",
-  "contentReviewOptimizing": "正在优化内容...",
-  "contentReviewOptimized": "优化完成",
-  "contentReviewOptimizationFailed": "优化失败",
-  "contentReviewProcessing": "处理中...",
-  "contentReviewAgreePassed": "我认为应该通过",
-  "contentReviewDisagreePassed": "我不同意这个结果",
-  "contentReviewReportProblem": "报告审查问题",
-  "contentReviewOverrideDialogTitle": "覆盖审查决策",
-  "contentReviewDisagreeWithResult": "我不同意这个审查结果",
-  "contentReviewAgreeShouldPass": "我认为内容应该通过审查",
   "contentReviewReasonHint": "输入您的理由...",
   "contentReviewReasonRequired": "请填写理由",
   "contentReviewAppealDialogTitle": "报告审查问题",
-  "contentReviewSelectIssuesHint": "选择问题类型（可多选）",
-  "contentReviewDetailHint": "详细说明： ",
-  "contentReviewDetailPlaceholder": "请描述审查结果存在的问题...",
-  "contentReviewDetailRequired": "请填写详细说明",
-  "contentReviewSelectAtLeastOne": "请至少选择一个问题类型",
-  "contentReviewIssueUnfairStandards": "审查标准不合理",
-  "contentReviewIssueScoreCalculation": "评分计算有误",
-  "contentReviewIssueMissingContext": "忽略了重要上下文",
-  "contentReviewIssueInaccurateDescription": "问题描述不准确",
-  "contentReviewIssueUnfeasibleSuggestion": "建议不可行",
   "contentReviewMetricAccuracy": "准确性",
   "contentReviewMetricCompleteness": "完整性",
   "contentReviewMetricRelevance": "相关性",
@@ -1166,7 +1083,6 @@
   "contentReviewSeverityInfo": "提示",
   "contentReviewHints": "提示",
   "contentReviewSuggestion": "建议: {suggestion}",
-  "contentReviewSuggestionDesc": "建议",
   "contentReviewReflectionPending": "等待优化...",
   "contentReviewReflectionInProgress": "正在优化内容...",
   "contentReviewReflectionCompleted": "优化完成",
@@ -1256,14 +1172,6 @@
   "leaderboardSelfAnchorRetry": "重试",
   "leaderboardSelfAnchorSeriesTitle": "每日完成（近 7 天）",
   "leaderboardSelfAnchorSubtitle": "只跟自己的历史比",
-  "leaderboardSelfAnchorTasksCount": "{count} 项",
-  "@leaderboardSelfAnchorTasksCount": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
   "leaderboardSelfAnchorTasksUnit": "冲刺任务",
   "leaderboardSelfAnchorTitle": "自我锚",
   "leaderboardSelfAnchorWindowTotal": "近 7 天完成",
@@ -1579,7 +1487,6 @@
   },
   "calendarTitle": "日程与日历",
   "calendarMonthView": "月视图",
-  "calendarTwoWeekView": "双周",
   "calendarYearView": "年视图",
   "calendarDayScheduleTitle": "{date} 日程",
   "@calendarDayScheduleTitle": {
@@ -1812,19 +1719,10 @@
     }
   },
   "capsuleDetailTitle": "胶囊详情",
-  "capsuleMissing": "胶囊不存在",
   "capsuleLoadFailed": "加载失败：{error}",
   "@capsuleLoadFailed": {
     "placeholders": {
       "error": {
-        "type": "Object"
-      }
-    }
-  },
-  "capsuleQualityLabel": "质量评分：{rating}",
-  "@capsuleQualityLabel": {
-    "placeholders": {
-      "rating": {
         "type": "Object"
       }
     }
@@ -1847,9 +1745,6 @@
   },
   "capsuleSubmitFeedback": "提交反馈",
   "capsuleShare": "分享胶囊",
-  "capsuleCopyLink": "复制链接",
-  "capsuleShareToGroup": "分享到群组",
-  "capsuleRateFirst": "请先评分",
   "capsuleFeedbackThanks": "感谢你的反馈",
   "capsuleSubmitFailed": "提交失败：{error}",
   "@capsuleSubmitFailed": {
@@ -2132,10 +2027,7 @@
   "chatAppealSubmitted": "申诉已提交，正在处理...",
   "commonBack": "返回",
   "noData": "暂无数据",
-  "operationSuccess": "操作成功",
   "operationFailed": "操作失败",
-  "confirmDeleteTitle": "确认删除",
-  "confirmDeleteMessage": "此操作无法撤销",
   "errorBookTitle": "错题档案",
   "errorBookTabAll": "全部",
   "errorBookTabNeedReview": "待复习",
@@ -2342,12 +2234,9 @@
   "authPrivacyPolicy": "隐私政策",
   "authLoginAgreement": "登录即表示你同意",
   "authAnd": "和",
-  "authDemoLogin": "演示账号登录",
   "authResetPassword": "重置密码",
-  "authResetPasswordHint": "请输入您的邮箱，我们将发送重置密码链接",
   "authSendResetEmail": "发送重置邮件",
   "authResetEmailSent": "重置邮件已发送",
-  "authBackToLogin": "返回登录",
   "authForgotPasswordTitle": "忘记密码",
   "authForgotPasswordHint": "输入注册邮箱，我们会发送一封包含重置码的邮件给你。",
   "authInvalidEmail": "邮箱格式不正确，请按 name@example.com 的格式填写",
@@ -2362,8 +2251,6 @@
   "toolsCategoryStudy": "学习辅助",
   "toolsCategoryEfficiency": "效率辅助",
   "toolsCategoryCognition": "认知洞察",
-  "toolsNoTools": "暂无工具",
-  "toolsPinnedEmpty": "还没有固定的工具",
   "toolsManageHint": "首页首屏显示前 4 个，展开显示前 8 个。拖动可调整顺序。",
   "toolsBackToBrowse": "回到浏览",
   "toolsPositionFirstScreen": "首屏",
@@ -2408,16 +2295,6 @@
   "seedLibraryNotFound": "种子库不存在",
   "seedLibraryDeleteConfirm": "确定要删除这个种子库吗？此操作不可撤销。",
   "seedLibraryEmpty": "还没有创建种子库",
-  "seedLibraryCreateFirst": "创建一个新的种子库开始使用",
-  "seedLibraryItemCount": "{count} 个条目",
-  "@seedLibraryItemCount": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
-  "seedLibraryLastUpdated": "最后更新: {date}",
   "seedLibraryDetail": "种子库详情",
   "seedLibraryFilter": "筛选",
   "seedLibraryCategory": "分类",
@@ -2444,37 +2321,8 @@
   "seedLibraryNoContent": "暂无内容",
   "seedLibraryContent": "内容",
   "seedMarketplaceTitle": "技能市场",
-  "seedMarketplaceSkills": "技能",
-  "seedMarketplacePacks": "技能包",
   "seedMarketplaceNoSkills": "暂无上线技能",
   "seedMarketplaceNoPacks": "暂无上线技能包",
-  "seedMarketplaceAdoptSkill": "采纳技能",
-  "seedMarketplaceSkillAdopted": "已采纳 {name}",
-  "@seedMarketplaceSkillAdopted": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "seedMarketplaceAdoptPack": "采纳技能包",
-  "seedMarketplacePackAdopted": "已采纳 {name}",
-  "@seedMarketplacePackAdopted": {
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "seedMarketplaceQuality": "质量 {score}",
-  "@seedMarketplaceQuality": {
-    "placeholders": {
-      "score": {
-        "type": "String"
-      }
-    }
-  },
-  "seedMarketplaceCancel": "取消",
   "seedLibrarySubscribers": "订阅者",
   "seedLibraryUsage": "使用",
   "seedLibraryQualityScore": "质量分",
@@ -2487,24 +2335,12 @@
       }
     }
   },
-  "@seedLibraryLastUpdated": {
-    "placeholders": {
-      "date": {
-        "type": "Object"
-      }
-    }
-  },
   "translationHistoryTitle": "翻译历史",
-  "translationClearHistory": "清空历史",
-  "translationTranslating": "翻译中...",
   "translationSaveToVocabulary": "保存到生词卡",
-  "translationCopy": "复制",
-  "translationCopied": "已复制",
   "translationSearchHint": "搜索翻译记录...",
   "translationNoHistory": "暂无翻译记录",
   "translationStartTranslate": "开始翻译文本后会显示在这里",
   "translationClearConfirm": "确定要清空所有翻译历史吗？",
-  "translationClearConfirmDetail": "此操作不可撤销",
   "translationClearAll": "清空历史",
   "translationFilterAll": "全部",
   "translationFilterFavorites": "收藏",
@@ -2551,11 +2387,6 @@
       }
     }
   },
-  "translationSourceLanguage": "源语言",
-  "translationTargetLanguage": "目标语言",
-  "translationSwapLanguages": "交换语言",
-  "translationDetectLanguage": "检测语言",
-  "translationHistoryEmpty": "暂无翻译历史",
   "memoryCurrentVersion": "当前版本",
   "memoryVersionHistory": "版本历史",
   "memoryStatus": "状态",
@@ -3245,21 +3076,7 @@
   "communitySave": "保存",
   "groupKnowledgeBase": "群知识库",
   "groupFiles": "学习资料",
-  "saveToMyLibrary": "保存到我的库",
-  "savedToLibrary": "已保存到你的库",
-  "markAsOfficial": "标记为官方",
-  "officialResource": "官方",
-  "noGroupFiles": "暂无学习资料",
-  "noGroupFilesSubtitle": "分享你的笔记，帮助群组成员！",
   "shareFile": "分享文件",
-  "groupFilesCount": "{count} 个文件",
-  "@groupFilesCount": {
-    "placeholders": {
-      "count": {
-        "type": "Object"
-      }
-    }
-  },
   "studyMaterialsTitle": "学习资料库",
   "studyMaterialsEntrySubtitle": "查看上传资料、处理进度，并管理知识来源",
   "studyMaterialsHeroEyebrow": "个人知识资料馆",
@@ -4170,8 +3987,6 @@
     }
   },
   "personaAdjustInferredPreference": "调整推断偏好",
-  "personaNewValue": "新值",
-  "personaAdjustInferredPreferenceTitle": "调整推断偏好",
   "languageDialogDescription": "选择你更习惯的阅读与交互语言，界面与系统文案会一起切换。",
   "languageChineseDescription": "更适合中文阅读与本地化表达。",
   "languageEnglishDescription": "适合英文界面与更国际化的内容环境。",
@@ -6142,7 +5957,6 @@
   "favoritesClose": "关闭",
   "accountabilityEndPartnership": "结束伙伴关系",
   "accountabilityDashboardLoadFailed": "伙伴工作台加载失败",
-  "accountabilityDashboardLoadFailedDetail": "请重试，如问题持续存在请联系支持",
   "accountabilityNudgeSentDefault": "已通过站内提醒发送，对方在线时会实时看到",
   "accountabilityNudgeCooldown": "刚提醒过，冷却期内不会重复发送。提醒会以站内提示的形式送达，对方在线时会实时看到。",
   "accountabilityNudgeFailed": "提醒发送失败，请稍后再试",
@@ -6427,7 +6241,6 @@
       }
     }
   },
-  "seedLibraryDetailFriendlyError": "系统暂时没能完成这次应用，请稍后再试",
   "seedLibraryDetailUserRatings": "用户评分",
   "seedLibraryDetailQualityBreakdown": "质量评分拆解",
   "seedLibraryDetailQualityBreakdownDesc": "列表中展示的是综合质量分，这里会同时展示系统基础分和用户评分均值，帮助你判断这个种子库是否值得长期启用。",
@@ -6825,7 +6638,6 @@
       }
     }
   },
-  "personaRolledBack": "已回滚到上一版本",
   "personaRollbackFailed": "回滚失败：{error}",
   "@personaRollbackFailed": {
     "placeholders": {
@@ -6844,15 +6656,6 @@
     }
   },
   "personaInferredAdjusted": "推断偏好已调整",
-  "personaAdjustFailed": "调整失败：{error}",
-  "@personaAdjustFailed": {
-    "placeholders": {
-      "error": {
-        "type": "Object"
-      }
-    }
-  },
-  "personaInferredReset": "已恢复系统推断值",
   "personaRestoreFailed": "恢复失败：{error}",
   "@personaRestoreFailed": {
     "placeholders": {
@@ -6862,9 +6665,6 @@
     }
   },
   "personaUnknownError": "未知错误",
-  "personaHintDecimalRange": "请输入 0.0 到 1.0 之间的数字",
-  "personaHintStudyMinutes": "请输入学习时长（分钟）",
-  "personaHintPositiveMinutes": "请输入大于 0 的分钟数",
   "personaHintValidPreference": "请输入有效的偏好值",
   "memorySettingsSocialPersonMention": "人物提及",
   "reportLearningAnalysisReport": "学习分析报告",
@@ -6884,7 +6684,6 @@
   "reportRangeWeek": "本周",
   "reportRangeMonth": "本月",
   "reportRangeAll": "全部",
-  "reportCurrentLearningTopic": "当前学习主题",
   "reportMasteryTrendTitle": "掌握度趋势",
   "reportPartialDataPill": "部分数据，仅供参考",
   "reportTrendEmptyTitle": "完成更多学习后将在此展示趋势分析",
@@ -7419,8 +7218,6 @@
   "stuckHelpSuggestion3": "先完成你确实会的部分",
   "stuckHelpSuggestion4": "给自己限时5分钟",
   "stuckHelpSuggestion5": "标记这个点，继续其他部分",
-  "stuckHelpFallbackOrder": "卡住时按这个顺序救火",
-  "stuckHelpWhatToDo": "具体该怎么做",
   "stuckHelpDiagnose": "诊断问题",
   "stuckHelpFix": "精准修复",
   "executionResultNoText": "暂无文本结果。",
@@ -7430,7 +7227,6 @@
   "executionResultArtifacts": "附件产物",
   "executionResultMoreFields": "还有 {count} 个字段",
   "executionResultNoPreview": "当前附件类型为 {type}，还没有更详细的预览内容。",
-  "executionResultLinkCopied": "链接已复制",
   "executionResultCopyLink": "复制链接",
   "executionResultArtifactType": "类型：{type}",
   "executionResultArtifactFallback": "附件",
@@ -7628,7 +7424,6 @@
   "statisticsShareSaveImage": "保存图片",
   "statisticsShareCopyLink": "复制链接",
   "statisticsShareMore": "更多",
-  "statisticsWatermark": "星火AI学习助手",
   "statisticsDateFormat": "{year}年{month}月{day}日",
   "statisticsTypeFocus": "专注",
   "statisticsTypeAgent": "智能体",
@@ -7659,14 +7454,6 @@
   "statisticsChartMonth11": "十一月",
   "statisticsChartMonth12": "十二月",
   "statisticsNoDataYet": "暂无统计数据",
-  "statisticsLoadingFailed": "加载失败: {error}",
-  "@statisticsLoadingFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "statisticsRetry": "重试",
   "statisticsVsLast": "较上期",
   "statisticsEmptyFocus": "暂无专注记录",
@@ -7791,7 +7578,6 @@
   "weatherGuideConditionPrefix": "当前判定：{condition}",
   "weatherGuideDisclaimer": "这个页面用于理解天气系统的视觉效果与判定逻辑。真正显示给你的天气，仍然会跟随你的真实任务、冲刺和状态数据动态更新。",
   "weatherGuideTriggerPrefix": "真实触发参考：{trigger}",
-  "intentPredictionSprintSprint": "冲刺冲刺",
   "intentPredictionContinue": "继续",
   "intentPredictionCreateTask": "创建任务",
   "intentPredictionStartFocus": "开始专注",
@@ -7799,20 +7585,6 @@
   "intentPredictionCuriosityCapsule": "好奇心胶囊",
   "intentPredictionSendToAI": "发送给AI",
   "intentPredictionNoteIdea": "记录想法",
-  "intentPredictionSetReminder": "设置提醒",
-  "intentPredictionCognitivePrism": "认知棱镜",
-  "intentPredictionTranslate": "翻译",
-  "intentPredictionLearnLanguage": "学习语言",
-  "intentPredictionViewPrism": "查看认知棱镜",
-  "intentPredictionBehaviorAnalysis": "行为分析",
-  "intentPredictionStartSprint": "开始冲刺",
-  "intentPredictionFocusMode": "专注模式",
-  "intentPredictionStartLearning": "开始学习",
-  "intentPredictionCreateStudyPlan": "创建学习计划",
-  "intentPredictionStartReview": "开始复习",
-  "intentPredictionViewErrorBook": "查看错题本",
-  "intentPredictionContinuePriority": "继续重点任务",
-  "intentPrediction25Min": "先做 25 分钟",
   "flashCapsuleTitle": "闪念胶囊",
   "flashCapsuleHistory": "历史胶囊",
   "flashCapsuleHistoryEmpty": "还没有保存过闪念胶囊。",
@@ -7834,14 +7606,6 @@
   "vocabularyLookupOfflineRemoved": "已移除离线词典包",
   "vocabularyLookupOfflineRemoveFailed": "移除离线词典包失败: {error}",
   "vocabularyLookupNoPackage": "暂无可下载的离线词典包",
-  "entityCardActionLabel": "执行",
-  "entityCardTitleFallback": "未命名卡片",
-  "entityCardEntityFallback": "未命名实体",
-  "entityCardTaskFallback": "未命名任务",
-  "entityCardPlanFallback": "学习计划",
-  "entityCardKnowledgeFallback": "知识节点",
-  "entityCardTaskListFallback": "{count} 个可执行任务",
-  "entityCardTaskListSummary": "AI 已整理任务列表",
   "visualSlotAvatarBorder": "头像边框",
   "visualSlotTitleBar": "称号条",
   "visualSlotProfileBanner": "主页横幅",
@@ -7879,8 +7643,6 @@
   "warningDefaultTitle": "温馨提示",
   "infoDefaultTitle": "小提示",
   "retryLabel": "重试",
-  "emptyStateTitle": "暂无数据",
-  "emptyStateTitleNone": "数据为空",
   "auroraStatusInactive": "Aurora 待激活",
   "auroraFacetAboutYou": "关于你",
   "auroraFacetAboutGoal": "关于目标",
@@ -8177,7 +7939,6 @@
   "openclawConditionTriggerLabel": "条件轮询：{condition}",
   "openclawCronTriggerLabel": "每天定时：{cron}",
   "openclawNotFilled": "未填写",
-  "openclawNoDate": "暂无",
   "openclawNodeCount": "{count} 台设备",
   "openclawOnlineCount": "{count} 台在线",
   "openclawUnsavedPreference": "有未保存设备偏好",
@@ -9089,7 +8850,6 @@
   "toolsReset": "重置",
   "toolsSwitchToCountdown": "切到倒计时",
   "toolsSwitchToStopwatch": "切到正计时",
-  "toolsFocusSaveFailed": "专注记录保存失败：{e}",
   "toolsFocusNotificationBody": "专注时段已经结束，回来收尾并记录这次投入。",
   "toolsPomodoroCompleteEmoji": "番茄时段已完成 🎉",
   "toolsCountdownEnded": "倒计时已结束",
@@ -9100,7 +8860,6 @@
   "toolsTrackEffort": "适合追踪投入长度",
   "toolsNoLimit": "不限",
   "toolsPauseManually": "由你主动暂停",
-  "toolsPlanChainNext": "方便衔接下一段计划",
   "toolsBreathQuickDesc": "快速降噪，适合焦躁和睡前收束。",
   "toolsBreathBox": "方块呼吸",
   "toolsBreathBoxDesc": "均衡稳定，适合进入专注前校准节奏。",
@@ -9129,38 +8888,6 @@
   "toolsBreathStart": "开始练习",
   "toolsBreathStop": "停止练习",
   "toolsBreathReset": "重置",
-  "toolsBreathReady": "准备",
-  "toolsBreathPracticeComplete": "练习完成",
-  "toolsBreathPausedRounds": "已暂停 · {completed} / {total} 轮",
-  "@toolsBreathPausedRounds": {
-    "placeholders": {
-      "completed": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
-  "toolsBreathRoundsProgress": "{completed} / {total} 轮",
-  "@toolsBreathRoundsProgress": {
-    "placeholders": {
-      "completed": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
-      }
-    }
-  },
-  "toolsBreathDurationLabel": "{duration} 分钟",
-  "@toolsBreathDurationLabel": {
-    "placeholders": {
-      "duration": {
-        "type": "int"
-      }
-    }
-  },
   "toolsBreathStageDescPaused": "练习已暂停，恢复后会从当前阶段继续，并继续语音提示。",
   "toolsBreathStageDescActive": "跟着中央指令吸气、停留和呼气。",
   "toolsBreathCaptionRhythm": "吸 / 停 / 呼 / 停",
@@ -9199,11 +8926,9 @@
       }
     }
   },
-  "brtReady": "准备",
   "toolsCalcTitle": "计算器",
   "toolsCalcSubtitle": "适合任务执行中的快算、表达式验算和连贯多步推导，结果会保留最近记录。",
   "toolsCalcNoHistory": "无历史",
-  "toolsCalcHistoryCount": "{count} 条历史",
   "toolsCalcWaiting": "等待计算",
   "toolsCalcResultReady": "结果已就绪",
   "toolsCalcExpression": "表达式",
@@ -9320,7 +9045,6 @@
   "toolsNotesSyncFailed": "同步失败，请稍后再试",
   "toolsNotesSubtitle": "用于快速承接灵感、会议碎片和任务切片。内容会自动保存，适合做短时外脑。",
   "toolsNotesWaiting": "等待记录",
-  "toolsNotesCharCount": "{_charCount} 字",
   "toolsNotesCharLabel": "字数",
   "toolsNotesLineLabel": "行数",
   "toolsNotesContent": "笔记内容",
@@ -9367,7 +9091,6 @@
   "toolsFlashDescLen": "描述长度",
   "toolsFlashCognitiveDim": "认知维度",
   "toolsFlashViewHistory": "查看历史",
-  "toolsFlashRecording": "记录中...",
   "toolsFlashSaveCapsule": "保存胶囊",
   "toolsFlashSelectSubject": "选择科目",
   "toolsVocabEntryCount": "{count} 词条",
@@ -9401,35 +9124,9 @@
   "toolsVocabOfflinePackagesDesc": "优先使用本地 Oxford 词典，减少网络依赖，也能减轻云端服务器压力。",
   "toolsVocabInstalledBadge": "已安装",
   "toolsVocabDefaultPackageDesc": "Oxford 优先离线词典包",
-  "toolsVocabInstalledAtPrefix": "安装于",
-  "toolsVocabRedownload": "重新下载",
   "toolsVocabDownloadLocally": "下载到本地",
   "toolsVocabWaitingAssociations": "等待关联词",
-  "toolsVocabAssocCount": "{count} 个关联词",
-  "@toolsVocabAssocCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "toolsVocabOfflineDictCount": "{count} 个离线词典包",
-  "@toolsVocabOfflineDictCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "toolsVocabNoOfflineDict": "未下载离线词典",
-  "toolsVocabPartOfSpeech": "词性 · {pos}",
-  "@toolsVocabPartOfSpeech": {
-    "placeholders": {
-      "pos": {
-        "type": "String"
-      }
-    }
-  },
   "toolsVocabDefinitionsLabel": "释义",
   "toolsVocabDictExamplesLabel": "词典例句",
   "toolsVocabModelExampleLabel": "模型生成例句",
@@ -9445,7 +9142,6 @@
     }
   },
   "toolsStatsWaitingData": "等待数据",
-  "toolsStatsRecentCount": "{totalSessions} 条最近记录",
   "toolsStatsTodayFocus": "今日专注",
   "toolsStatsWeekTotal": "本周累计",
   "toolsStatsDailyAvg": "日均专注",
@@ -9591,7 +9287,6 @@
       }
     }
   },
-  "lpTitle": "学习路径",
   "lpMainPath": "主干路径",
   "lpLoadFailed": "加载失败：{error}",
   "@lpLoadFailed": {
@@ -9883,11 +9578,6 @@
   "simSummarizer": "总结者",
   "simGenerate": "生成",
   "simRefresh": "刷新",
-  "simSocraticCopy": "苏格拉底式对话",
-  "simErrorDiagCopy": "错因诊断",
-  "simGenFailed": "模拟生成失败",
-  "simRealtimeConnectionRecovered": "实时连接中断，已恢复到最近一次保存的模拟进度。",
-  "simInteractionStreamRecovered": "互动流中断了，但我已经帮你恢复到最近一轮状态。",
   "simRoundProgressSummary": "讨论已推进到第 {round} 轮，正在汇总关键分歧与共识。",
   "@simRoundProgressSummary": {
     "placeholders": {
@@ -10013,21 +9703,12 @@
   "seedDiffAdvanced": "高级",
   "seedDiffExpert": "专家",
   "seedCatFewShotFull": "Few-shot示例",
-  "cogMockPattern1": "每次遇到难题就会想要刷手机，这似乎是一种逃避机制。",
-  "cogMockPattern2": "完成高数作业后感到非常有成就感，这种正反馈很重要。",
-  "cogMockPattern3": "今天原本计划背单词，但是被社团活动打断了，需要调整计划弹性。",
-  "cogMockPattern4": "当面对难度较大或不确定的任务（如物理大作业）时，倾向于通过处理琐事（如整理桌面、回消息）来推迟开始时间。",
-  "cogMockPattern5": "习惯在晚上10点后才开始处理最重要、最烧脑的学习任务，导致睡眠延迟和次日精力不足。",
-  "cogMockPattern6": "在做PPT或写报告时，过度纠结于排版和措辞，导致核心内容产出效率低下。",
   "cogCapsuleUnavailable": "这枚胶囊暂时不可用",
   "cogCapsuleUnavailableDesc": "它可能已经被移除，或者还没有完成生成。",
   "cogCapsuleOpenFailed": "胶囊打开失败",
   "cogJobsLoadFailed": "生成任务加载失败",
   "cogCapsuleListFailed": "胶囊列表加载失败",
   "cogPatternFreq": "出现 {count} 次",
-  "insLearnBasic": "学习基础概念",
-  "insQuickCore": "快速理解核心概念",
-  "insSmallPractice": "完成一轮小练习",
   "insLoadFailed": "加载失败: {e}",
   "@insLoadFailed": {
     "placeholders": {
@@ -10050,25 +9731,16 @@
   "insReportLabel": "学习报告",
   "insViewReport": "查看报告",
   "insBackToCockpit": "回到驾驶舱",
-  "insContinueSim": "继续上次推演",
-  "insContinueLearnSim": "继续上次学习仿真",
-  "insHasContinue": "已有可继续内容",
   "insCreateTask": "去创建学习任务",
   "insDecisionLogTitle": "AI 决策日志",
   "insDecisionLogSubtitle": "查看最近的提醒、跳过、降级和重规划依据",
   "insDecisionLogStatus": "Causal Control OS 审计",
   "insDecisionLogOpen": "查看日志",
-  "insContinueView": "继续查看",
-  "insStartFromRecommended": "从推荐开始",
-  "insFocusedSim": "已聚焦：学习仿真",
-  "insFocusedReport": "已聚焦：学习报告",
-  "insFocusedDefault": "仿真、推演、报告统一收在这里",
   "insFlowTitle": "把学习里的“看见问题、模拟讨论、沉淀结论”放到同一条动线里。",
   "insFlowSubtitle": "这里只保留你下一步真正需要的入口，不再堆叠多余说明。",
   "insSwipeHint": "首页已经把学习洞察放进可定制卡牌区。默认先看日历，左滑就是洞察，右滑是工具快捷。",
   "insRecommended": "推荐先看",
   "insNoPrereq": "无需前置知识，可以直接开始学习！",
-  "insGenerating": "正在生成...",
   "insQuickPath": "快速生成任务路径",
   "insFullPlan": "生成完整计划",
   "insViewDetail": "查看详情",
@@ -10138,13 +9810,6 @@
   },
   "insFirstWeek": "第一周",
   "insRetry": "重试",
-  "@insPrerequisitesWarning": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "insRiskAssessment": "学习状态观察",
   "insRiskSubtitle": "基于最近学习记录的观察",
   "insAiSuggestions": "AI 建议：",
@@ -10218,25 +9883,8 @@
   "calTotalExecutions": "总执行次数",
   "calAvgDuration": "平均耗时",
   "calSessionCount": "会话数",
-  "ebCreateFailed": "创建错题失败",
-  "ebListFailed": "获取错题列表失败",
-  "ebDetailFailed": "获取错题详情失败",
   "ebUpdateFailed": "更新失败: {e}",
-  "ebDeleteFailed": "删除错题失败",
-  "ebAnalysisFailed": "重新分析失败",
   "ebReviewFailed": "提交复习记录失败",
-  "ebTodayReviewFailed": "获取今日复习列表失败",
-  "ebStatsFailed": "获取统计数据失败",
-  "ebSummaryFailed": "获取语义摘要失败",
-  "ebBadParams": "请求参数错误",
-  "ebImageUploadFailed": "图片上传失败: {e}",
-  "@ebImageUploadFailed": {
-    "placeholders": {
-      "e": {
-        "type": "String"
-      }
-    }
-  },
   "ebRemove": "移除",
   "ebReuploadImage": "重新上传图片",
   "ebUploadImage": "上传题目图片",
@@ -10271,7 +9919,6 @@
   "ebHide": "隐藏",
   "ebViewAnswer": "查看答案",
   "ebViewAnalysis": "查看 AI 分析",
-  "ebSubmitFailed": "提交失败: {e}",
   "ebBack": "返回",
   "ebBackToList": "返回列表",
   "ebAnotherRound": "再来一轮",
@@ -10438,16 +10085,6 @@
   "memCaptureHigh": "高",
   "memBlockingPrefs": "屏蔽偏好",
   "memBlockedSources": "屏蔽来源",
-  "seedDetailFailed": "种子库详情加载失败，请稍后再试",
-  "seedStateFailed": "种子库状态加载失败，请稍后再试",
-  "seedCreateFailed": "创建失败：{e}",
-  "@seedCreateFailed": {
-    "placeholders": {
-      "e": {
-        "type": "String"
-      }
-    }
-  },
   "seedCreateTitle": "创建种子库",
   "seedNameLabel": "名称",
   "seedNameHint": "输入种子库名称",
@@ -11027,16 +10664,6 @@
       }
     }
   },
-  "accountabilityRequestFailed": "请求失败",
-  "accountabilityPartnerNudged": "已提醒伙伴查看今天的目标",
-  "accountabilityPartnerNudgedWithMessage": "已提醒伙伴：{message}",
-  "@accountabilityPartnerNudgedWithMessage": {
-    "placeholders": {
-      "message": {
-        "type": "String"
-      }
-    }
-  },
   "communityTotalCheckins": "{count} 次",
   "@communityTotalCheckins": {
     "placeholders": {
@@ -11606,13 +11233,6 @@
   "@fileUploadProgress": {
     "placeholders": {
       "percent": {
-        "type": "Object"
-      }
-    }
-  },
-  "@entityCardTaskListFallback": {
-    "placeholders": {
-      "count": {
         "type": "Object"
       }
     }
@@ -12455,49 +12075,6 @@
   "calEventCreated": "日程已创建",
   "calSavedLocally": "已保存到本地，稍后会自动同步到云端。",
   "calEditEvent": "编辑日程",
-  "@picEstimatedHours": {
-    "placeholders": {
-      "hours": {
-        "type": "String"
-      }
-    }
-  },
-  "@picRiskScore": {
-    "placeholders": {
-      "score": {
-        "type": "String"
-      }
-    }
-  },
-  "@picChurnRisk": {
-    "placeholders": {
-      "level": {
-        "type": "String"
-      }
-    }
-  },
-  "@picMinutesLater": {
-    "placeholders": {
-      "minutes": {
-        "type": "int"
-      }
-    }
-  },
-  "@picTodayTime": {
-    "placeholders": {
-      "time": {
-        "type": "String"
-      }
-    }
-  },
-  "@picTomorrowTime": {
-    "placeholders": {
-      "time": {
-        "type": "String"
-      }
-    }
-  },
-  "lioStartNewSim": "可立即开始一轮新模拟",
   "lioRecentAnalysis": "最近一次共分析 {count} 个知识点",
   "@lioRecentAnalysis": {
     "placeholders": {
@@ -12507,30 +12084,11 @@
     }
   },
   "lioBuildConclusion": "沉淀一轮学习后的关键结论",
-  "lioNoSimYet": "暂未生成最近仿真",
-  "lioRecentUpdate": "最近更新 · {desc}",
-  "@lioRecentUpdate": {
-    "placeholders": {
-      "desc": {
-        "type": "String"
-      }
-    }
-  },
   "lioNoReportYet": "暂未生成最近报告",
   "lioMastery": "掌握度 {percent}%",
   "@lioMastery": {
     "placeholders": {
       "percent": {
-        "type": "String"
-      }
-    }
-  },
-  "@lfcConfidence": {
-    "placeholders": {
-      "sampleSize": {
-        "type": "int"
-      },
-      "confidence": {
         "type": "String"
       }
     }
@@ -12787,17 +12345,6 @@
   "@gdGap": {
     "placeholders": {
       "percent": {
-        "type": "String"
-      }
-    }
-  },
-  "gdCurrentTarget": "当前 {current}% · 目标 {target}%",
-  "@gdCurrentTarget": {
-    "placeholders": {
-      "current": {
-        "type": "String"
-      },
-      "target": {
         "type": "String"
       }
     }
@@ -13123,7 +12670,6 @@
   "cahMilestones": "里程碑",
   "cahEvidence": "证据链",
   "cahNoEvidence": "还没有证据",
-  "cahProgress": "进度",
   "cahWitnesses": "见证人",
   "cahDueSoon": "即将到期",
   "cahActive": "进行中",
@@ -13463,7 +13009,6 @@
       }
     }
   },
-  "sprintBottleneckLabel": "{name}：{reason}",
   "sprintAlertSignificantlyBehindDetail": "任务完成率显著低于预期。建议重新评估每日任务量或调整冲刺范围。",
   "sprintAlertSlowerDetail": "虽然仍有进展，但速度不如预期。可能需要调整学习策略或时间分配。",
   "sprintAlertEndingDetail": "冲刺即将结束，但还有较多任务未完成。建议集中精力完成关键任务。",
@@ -14119,14 +13664,7 @@
   "intentHabit": "习惯养成",
   "intentKeepGoing": "继续了解",
   "intentDaysLeft": "剩 {days} 天",
-  "sprintCompletionLoading": "加载中...",
-  "learningPortfolioLoading": "加载中...",
-  "sprintActionLoading": "加载中...",
-  "securityLogLoading": "加载中...",
-  "socialAccountsLoading": "加载中...",
-  "sessionManagementLoading": "加载中...",
   "intentPredictionSprint": "冲刺！",
-  "intentPredictionNoteThought": "记录想法",
   "intentPredictionContinueTask": "继续「{taskTitle}」",
   "@intentPredictionContinueTask": {
     "placeholders": {
@@ -14654,8 +14192,6 @@
   "taskDiagnosisOption1": "概念没想清",
   "taskDiagnosisOption2": "步骤顺序乱了",
   "taskDiagnosisOption3": "题目条件不会用",
-  "seedLibLoadFailed": "种子库详情加载失败，请稍后再试",
-  "seedLibStatusFailed": "种子库状态加载失败，请稍后再试",
   "communitySquad": "小队",
   "communityGroupStats": "{memberCount} 成员 | {flamePower} 火力",
   "@communityGroupStats": {
@@ -14691,7 +14227,6 @@
       }
     }
   },
-  "partnersEmptyState": "暂无伙伴",
   "communityDateMonthDay": "{month}-{day}",
   "@communityDateMonthDay": {
     "placeholders": {
@@ -14941,22 +14476,6 @@
   "homeActivePlanPhaseInProgress": "进行中",
   "homeBottleneckTopicFallback": "这个知识点",
   "homeDailyContextMorningFallback": "早上好，今天先从一小步开始，把节奏找回来就很好。",
-  "agreeTermsFirst": "请先同意用户协议与隐私政策",
-  "passwordStrengthWeak": "弱",
-  "passwordStrengthFair": "中等",
-  "passwordStrengthStrong": "强",
-  "resetInstructions": "请输入邮件中的重置码，并设置一个新的登录密码。",
-  "resetCodeRequired": "请输入重置码",
-  "resetPasswordMinLength": "密码至少需要 6 位",
-  "resetPasswordsNoMatch": "两次输入的密码不一致",
-  "loginFailedWithError": "登录失败：{error}",
-  "@loginFailedWithError": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "legalCurrentVersion": "当前版本：v1",
   "legalLastUpdated": "最后更新：2026年5月1日。本隐私政策说明了 Sparkle 如何收集、使用和保护你的个人信息。请仔细阅读。",
   "legalTermsServiceTitle": "1. 服务说明",
@@ -15215,7 +14734,6 @@
   "chaosStressMode": "施压模式",
   "chaosModeSwitched": "模式已切换: {value}",
   "chaosModeSwitchFailed": "切换失败: {error}",
-  "chaosBrandPrimaryLabel": "brandPrimary",
   "chaosClose": "关闭",
   "chatContinuityChatTitle": "承接刚才的对话",
   "chatContinuityJourneyTitle": "承接刚才的探索流程",
@@ -15236,16 +14754,8 @@
   "engagementModerate": "中度",
   "engagementHighIntensity": "高度",
   "engagementVeryActive": "非常活跃",
-  "utilLoadingFailed": "加载失败: {error}",
-  "utilNoData": "暂无数据",
-  "utilUnknownError": "未知错误",
-  "utilDataEmpty": "数据为空",
-  "auto_firstsecond": "{first}{second}",
   "auto_": "%",
-  "auto_dataisempty": "数据为空",
   "auto_unknownerror": "未知错误",
-  "auto_loadfailedrror": "加载失败: {error}",
-  "auto_nodatayet": "暂无数据",
   "auto_flex": "高光炫耀",
   "auto_cinematic": "氛围感",
   "auto_lowkey": "低调分享",
@@ -15260,8 +14770,6 @@
   "auto_honestlyprettyproudofthisonesh": "这次真的有点满意，先晒一下。",
   "auto_turnedachapterofgrowthintoanim": "把一段成长留成了一张图，也留给未来的自己。",
   "auto_makingsteadyprogresslatelyjust": "最近在慢慢推进，记录一下。",
-  "auto_ifyou": "如果你也在做类似的事，欢迎一起交流。",
-  "auto_thisweek": "这一周",
   "auto_notifications": "通知",
   "auto_createlongtermplan": "创建长期计划",
   "auto_view": "查看",
@@ -15299,7 +14807,6 @@
   "auto_sources": "条证据",
   "auto_longpressforall": "长按查看全部",
   "auto_pendingcommitments": "待处理承诺",
-  "auto_en": "_zh",
   "auto_unknownerrorpleaseretry": "未知错误，请重试",
   "auto_retryafter": "重试间隔",
   "auto_s": "秒",
@@ -15336,16 +14843,6 @@
   "auto_learninganalysisreport": "学习分析报告",
   "auto_trendcomparisonandactionsugges": "趋势对比与行动建议",
   "auto_younowhavethefirstreviewablele": "你已经拥有第一份可回看的学习洞察档案。",
-  "auto_wordnotfound": "未找到该单词",
-  "auto_lookupfailed": "查询失败: {e}",
-  "auto_addfailed": "添加失败: {e}",
-  "auto_failedtoloadwordbook": "获取生词本失败: {e}",
-  "auto_failedtoloadreviewlist": "获取复习列表失败: {e}",
-  "auto_failedtoloadstats": "获取词汇统计失败: {e}",
-  "auto_recordfailed": "记录失败: {e}",
-  "auto_updatefailed": "更新重要度失败: {e}",
-  "auto_deletefailed": "删除失败: {e}",
-  "auto_loadfailed": "加载失败",
   "auto_transactionhistory": "交易历史",
   "proposalOwnershipHuman": "你做",
   "proposalOwnershipAgent": "Sparkle做",
@@ -15380,7 +14877,6 @@
   "proposalDiffTitle": "会改动什么",
   "proposalDiffBefore": "现在",
   "proposalDiffAfter": "改成",
-  "proposalUntitled": "一个待确认的动作",
   "proposalTurnA11y": "当前轮到：{owner}",
   "@proposalTurnA11y": {
     "placeholders": {
@@ -15400,8 +14896,6 @@
   "@understandingEmptyTitle": {},
   "understandingEmptyBody": "聊聊天、制定计划或完成任务之后，Sparkle 会把记住的内容和判断放在这里，你可以随时纠正。",
   "@understandingEmptyBody": {},
-  "understandingBucketEmpty": "这一组暂时没有内容",
-  "@understandingBucketEmpty": {},
   "understandingViewAll": "查看全部",
   "@understandingViewAll": {},
   "understandingLoadMore": "加载更多",
@@ -15436,8 +14930,6 @@
   "@understandingEditTitle": {},
   "understandingEditLabel": "改成",
   "@understandingEditLabel": {},
-  "understandingEditReasonHint": "为什么改（可以不填）",
-  "@understandingEditReasonHint": {},
   "understandingDeleteTitle": "删除这条内容？",
   "@understandingDeleteTitle": {},
   "understandingDeleteBody": "删除后 Sparkle 不会再使用它，下一次判断也会随之更新。",
@@ -15448,10 +14940,6 @@
   "@understandingPauseBody": {},
   "understandingScopeSheetTitle": "只在某个目标中使用",
   "@understandingScopeSheetTitle": {},
-  "understandingScopePickPlan": "选择学习计划",
-  "@understandingScopePickPlan": {},
-  "understandingScopeApply": "仅在此计划中使用",
-  "@understandingScopeApply": {},
   "understandingScopeNoPlans": "还没有可选的学习计划",
   "@understandingScopeNoPlans": {},
   "understandingActionLinkTask": "关联任务",
@@ -16314,24 +15802,6 @@
       }
     }
   },
-  "insPredictNext": "预测下次学习时间",
-  "insUnknownType": "未知类型",
-  "insEngagementForecast": "活跃度预测",
-  "insEngagementSubtitle": "AI 基于学习习惯的预测",
-  "insDifficultyForecast": "难度预测",
-  "insDifficultySubtitle": "AI 基于前置知识的评估",
-  "insPredictedDifficulty": "预测难度",
-  "insPrerequisitesWarning": "建议先学习 {count} 个前置知识",
-  "insDifficultyEasy": "简单",
-  "insDifficultyMedium": "中等",
-  "insDifficultyHard": "困难",
-  "picEstimatedHours": "预计学习时长: {hours} 小时",
-  "picRiskScore": "风险指数: {score}/100",
-  "picChurnRisk": "流失风险: {level}",
-  "picMinutesLater": "约 {minutes} 分钟后",
-  "picTodayTime": "今天 {time}",
-  "picTomorrowTime": "明天 {time}",
-  "lfcConfidence": "基于 {sampleSize} 条学习记录，当前推荐置信度 {confidence}%。",
   "firstActionCardTitle": "你的第一步",
   "firstActionGenerateCta": "生成我的第一步",
   "firstActionGenerateHint": "根据你的真实目标，给出一个今天就能完成的最小有用第一步。",

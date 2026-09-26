@@ -57,12 +57,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get hasAccount => '已有账号？';
 
   @override
-  String get loginFailed => '登录失败';
-
-  @override
-  String get registerFailed => '注册失败';
-
-  @override
   String get weeklyAgenda => '每周日程';
 
   @override
@@ -112,9 +106,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get followSystem => '跟随系统';
-
-  @override
-  String get interactionSettings => '交互设置';
 
   @override
   String get enterToSend => '回车发送消息';
@@ -219,9 +210,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get viewDetails => '查看详情';
 
   @override
-  String get finishTask => '完成任务';
-
-  @override
   String get abandonTask => '放弃任务';
 
   @override
@@ -241,9 +229,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get masteryScore => '掌握度';
-
-  @override
-  String get aiTutor => 'AI 导师';
 
   @override
   String get send => '发送';
@@ -372,21 +357,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get planCreateAction => '创建计划';
 
   @override
-  String get featureComingSoon => '精彩功能即将登场';
-
-  @override
-  String get stayTuned => '敬请期待~';
-
-  @override
-  String get aiNudgeGentle => '休息一下吧，效率会更高哦';
-
-  @override
-  String get aiNudgeFocus => '保持专注，你正在状态！';
-
-  @override
-  String get qwen3CognitiveStatus => 'Qwen3 认知状态';
-
-  @override
   String get winStreak => '连胜';
 
   @override
@@ -406,9 +376,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get capsuleGeneration => '胶囊生成';
-
-  @override
-  String get adjustAndGenerate => '调整偏好并生成专属好奇心胶囊';
 
   @override
   String get generateNow => '立即生成胶囊';
@@ -474,9 +441,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get viewOfflineQueue => '查看离线队列状态与重试';
 
   @override
-  String get capsuleTaskCreated => '✨ 胶囊生成任务已创建';
-
-  @override
   String get generationFailed => '生成失败，请稍后重试';
 
   @override
@@ -492,9 +456,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get planId => '计划ID';
-
-  @override
-  String get featureInDevelopment => '功能开发中...';
 
   @override
   String get sprintHistory => '冲刺历史';
@@ -530,19 +491,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sprintAbandoned => '冲刺已放弃';
 
   @override
-  String get noActiveSprint => '没有活跃的冲刺';
-
-  @override
   String get networkErrorRetry => '网络错误，请重试';
 
   @override
   String get submitFailed => '提交失败，请重试';
-
-  @override
-  String get loadHistoryFailed => '加载历史失败';
-
-  @override
-  String get loadMoreFailed => '加载更多消息失败';
 
   @override
   String get sendFailed => '发送失败，请重试';
@@ -693,9 +645,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get toolsCognitiveHubDesc => '探索认知工具';
-
-  @override
-  String get toolsSearchPlaceholder => '搜索工具...';
 
   @override
   String get toolsFocusModeTitle => '专注模式';
@@ -1194,9 +1143,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get contractCreateFailed => '创建契约失败';
 
   @override
-  String get contractCreateSuccess => '契约创建成功';
-
-  @override
   String get contractCancelSuccess => '契约已取消';
 
   @override
@@ -1692,38 +1638,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String durationHoursMinutes(Object hours, Object minutes) {
-    return '$hours小时$minutes分钟';
-  }
-
-  @override
-  String durationMinutesSeconds(Object minutes, Object seconds) {
-    return '$minutes分$seconds秒';
-  }
-
-  @override
-  String numberCount(num count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count项',
-      one: '1项',
-      zero: '无',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String numberSelected(Object count) {
-    return '已选择 $count 项';
-  }
-
-  @override
-  String numberTotal(Object current, Object total) {
-    return '$current/$total';
-  }
-
-  @override
   String numberPercent(Object value) {
     return '$value%';
   }
@@ -1732,24 +1646,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String numberProgress(Object value) {
     return '完成 $value%';
   }
-
-  @override
-  String numberK(Object value) {
-    return '${value}K';
-  }
-
-  @override
-  String numberM(Object value) {
-    return '${value}M';
-  }
-
-  @override
-  String numberB(Object value) {
-    return '${value}B';
-  }
-
-  @override
-  String get commonYes => '是';
 
   @override
   String get commonNo => '否';
@@ -1800,9 +1696,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commonDismiss => '忽略';
 
   @override
-  String get commonApply => '应用';
-
-  @override
   String get commonSubmit => '提交';
 
   @override
@@ -1830,37 +1723,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commonProcessing => '处理中...';
 
   @override
-  String get commonSuccess => '成功';
-
-  @override
-  String get commonError => '错误';
-
-  @override
   String get commonWarning => '警告';
-
-  @override
-  String get commonInfo => '信息';
 
   @override
   String get commonNoData => '暂无数据';
 
   @override
-  String get commonNoResults => '未找到结果';
-
-  @override
-  String get commonTryAgain => '重试';
-
-  @override
   String get commonLearnMore => '了解更多';
 
   @override
-  String get commonSeeAll => '查看全部';
-
-  @override
   String get operationPreview => '操作预览：';
-
-  @override
-  String get commonShowLess => '收起';
 
   @override
   String get commonShowMore => '展开更多';
@@ -1870,12 +1742,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get commonExpand => '展开';
-
-  @override
-  String get commonRequired => '必填';
-
-  @override
-  String get commonOptional => '可选';
 
   @override
   String get formUnsavedTitle => '放弃更改？';
@@ -1890,40 +1756,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get formUnsavedDiscard => '放弃更改';
 
   @override
-  String get commonEnabled => '已启用';
-
-  @override
-  String get commonDisabled => '已禁用';
-
-  @override
-  String get commonOn => '开';
-
-  @override
-  String get commonOff => '关';
-
-  @override
-  String get commonActive => '活跃';
-
-  @override
-  String get commonInactive => '未激活';
-
-  @override
-  String get commonConnected => '已连接';
-
-  @override
-  String get commonDisconnected => '已断开';
-
-  @override
-  String get commonSyncing => '同步中...';
-
-  @override
   String get commonSynced => '已同步';
-
-  @override
-  String get commonOffline => '离线';
-
-  @override
-  String get commonOnline => '在线';
 
   @override
   String get offlineBannerMessage => '你已离线，部分功能可能不可用。';
@@ -2422,11 +2255,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get statisticsTrendAwaitingDataHint => '接入后可见';
 
   @override
-  String statisticsLearningIndex(Object value) {
-    return '学习指数 $value';
-  }
-
-  @override
   String get statisticsAggregationNone => '原始数据';
 
   @override
@@ -2709,9 +2537,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get noGalleryPermission => '没有相册写入权限';
-
-  @override
-  String get saveResultEmpty => '保存结果为空';
 
   @override
   String get gallerySaveFailed => '保存到相册失败';
@@ -3001,11 +2826,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String editProfileUploadFailed(Object error) {
-    return '上传失败: $error';
-  }
-
-  @override
   String get editProfileNicknameLabel => '昵称';
 
   @override
@@ -3093,11 +2913,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get passwordResetSuccess => '密码修改成功';
 
   @override
-  String passwordResetFailed(Object error) {
-    return '修改失败: $error';
-  }
-
-  @override
   String get smartPushSettings => '智能推送设置';
 
   @override
@@ -3148,15 +2963,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get smartPushSettingsSaved => '设置已保存';
 
   @override
-  String smartPushSaveFailed(Object error) {
-    return '保存失败: $error';
-  }
-
-  @override
   String get themeSettings => '主题设置';
-
-  @override
-  String get themeModeSection => '主题模式';
 
   @override
   String get themeModeLight => '浅色';
@@ -3168,9 +2975,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get themeModeSystem => '跟随系统';
 
   @override
-  String get brandPresetSection => '品牌预设';
-
-  @override
   String get highContrastSection => '高对比度模式';
 
   @override
@@ -3178,9 +2982,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get resetDefaults => '恢复默认设置';
-
-  @override
-  String get colorPreviewSection => '颜色预览';
 
   @override
   String get colorPrimary => '主色';
@@ -3271,9 +3072,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get contentReviewCardTitle => '内容审查';
-
-  @override
   String get contentReviewPassed => '内容已通过审查';
 
   @override
@@ -3283,16 +3081,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get contentReviewNeedsRefinement => '内容需要优化';
 
   @override
-  String get contentReviewScoreLabel => '评分';
-
-  @override
   String get contentReviewOverallScore => '综合评分';
 
   @override
   String get contentReviewMetrics => '评估指标';
-
-  @override
-  String get contentReviewIssues => '发现问题';
 
   @override
   String get contentReviewSuggestions => '改进建议';
@@ -3304,52 +3096,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get contentReviewWarnings => '警告';
 
   @override
-  String get contentReviewTips => '提示';
-
-  @override
   String get contentReviewAccept => '接受';
 
   @override
-  String get contentReviewReject => '拒绝';
-
-  @override
-  String get contentReviewRequestManual => '人工审查';
-
-  @override
   String get contentReviewRegenerate => '重新生成';
-
-  @override
-  String get contentReviewWaitOptimization => '等待优化...';
-
-  @override
-  String get contentReviewOptimizing => '正在优化内容...';
-
-  @override
-  String get contentReviewOptimized => '优化完成';
-
-  @override
-  String get contentReviewOptimizationFailed => '优化失败';
-
-  @override
-  String get contentReviewProcessing => '处理中...';
-
-  @override
-  String get contentReviewAgreePassed => '我认为应该通过';
-
-  @override
-  String get contentReviewDisagreePassed => '我不同意这个结果';
-
-  @override
-  String get contentReviewReportProblem => '报告审查问题';
-
-  @override
-  String get contentReviewOverrideDialogTitle => '覆盖审查决策';
-
-  @override
-  String get contentReviewDisagreeWithResult => '我不同意这个审查结果';
-
-  @override
-  String get contentReviewAgreeShouldPass => '我认为内容应该通过审查';
 
   @override
   String get contentReviewReasonHint => '输入您的理由...';
@@ -3359,36 +3109,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get contentReviewAppealDialogTitle => '报告审查问题';
-
-  @override
-  String get contentReviewSelectIssuesHint => '选择问题类型（可多选）';
-
-  @override
-  String get contentReviewDetailHint => '详细说明： ';
-
-  @override
-  String get contentReviewDetailPlaceholder => '请描述审查结果存在的问题...';
-
-  @override
-  String get contentReviewDetailRequired => '请填写详细说明';
-
-  @override
-  String get contentReviewSelectAtLeastOne => '请至少选择一个问题类型';
-
-  @override
-  String get contentReviewIssueUnfairStandards => '审查标准不合理';
-
-  @override
-  String get contentReviewIssueScoreCalculation => '评分计算有误';
-
-  @override
-  String get contentReviewIssueMissingContext => '忽略了重要上下文';
-
-  @override
-  String get contentReviewIssueInaccurateDescription => '问题描述不准确';
-
-  @override
-  String get contentReviewIssueUnfeasibleSuggestion => '建议不可行';
 
   @override
   String get contentReviewMetricAccuracy => '准确性';
@@ -3445,9 +3165,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String contentReviewSuggestion(Object suggestion) {
     return '建议: $suggestion';
   }
-
-  @override
-  String get contentReviewSuggestionDesc => '建议';
 
   @override
   String get contentReviewReflectionPending => '等待优化...';
@@ -3671,11 +3388,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get leaderboardSelfAnchorSubtitle => '只跟自己的历史比';
-
-  @override
-  String leaderboardSelfAnchorTasksCount(Object count) {
-    return '$count 项';
-  }
 
   @override
   String get leaderboardSelfAnchorTasksUnit => '冲刺任务';
@@ -4158,9 +3870,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get calendarMonthView => '月视图';
 
   @override
-  String get calendarTwoWeekView => '双周';
-
-  @override
   String get calendarYearView => '年视图';
 
   @override
@@ -4580,16 +4289,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get capsuleDetailTitle => '胶囊详情';
 
   @override
-  String get capsuleMissing => '胶囊不存在';
-
-  @override
   String capsuleLoadFailed(Object error) {
     return '加载失败：$error';
-  }
-
-  @override
-  String capsuleQualityLabel(Object rating) {
-    return '质量评分：$rating';
   }
 
   @override
@@ -4607,15 +4308,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get capsuleShare => '分享胶囊';
-
-  @override
-  String get capsuleCopyLink => '复制链接';
-
-  @override
-  String get capsuleShareToGroup => '分享到群组';
-
-  @override
-  String get capsuleRateFirst => '请先评分';
 
   @override
   String get capsuleFeedbackThanks => '感谢你的反馈';
@@ -5114,16 +4806,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get noData => '暂无数据';
 
   @override
-  String get operationSuccess => '操作成功';
-
-  @override
   String get operationFailed => '操作失败';
-
-  @override
-  String get confirmDeleteTitle => '确认删除';
-
-  @override
-  String get confirmDeleteMessage => '此操作无法撤销';
 
   @override
   String get errorBookTitle => '错题档案';
@@ -5459,22 +5142,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authAnd => '和';
 
   @override
-  String get authDemoLogin => '演示账号登录';
-
-  @override
   String get authResetPassword => '重置密码';
-
-  @override
-  String get authResetPasswordHint => '请输入您的邮箱，我们将发送重置密码链接';
 
   @override
   String get authSendResetEmail => '发送重置邮件';
 
   @override
   String get authResetEmailSent => '重置邮件已发送';
-
-  @override
-  String get authBackToLogin => '返回登录';
 
   @override
   String get authForgotPasswordTitle => '忘记密码';
@@ -5517,12 +5191,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get toolsCategoryCognition => '认知洞察';
-
-  @override
-  String get toolsNoTools => '暂无工具';
-
-  @override
-  String get toolsPinnedEmpty => '还没有固定的工具';
 
   @override
   String get toolsManageHint => '首页首屏显示前 4 个，展开显示前 8 个。拖动可调整顺序。';
@@ -5619,19 +5287,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get seedLibraryEmpty => '还没有创建种子库';
 
   @override
-  String get seedLibraryCreateFirst => '创建一个新的种子库开始使用';
-
-  @override
-  String seedLibraryItemCount(Object count) {
-    return '$count 个条目';
-  }
-
-  @override
-  String seedLibraryLastUpdated(Object date) {
-    return '最后更新: $date';
-  }
-
-  @override
   String get seedLibraryDetail => '种子库详情';
 
   @override
@@ -5691,40 +5346,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get seedMarketplaceTitle => '技能市场';
 
   @override
-  String get seedMarketplaceSkills => '技能';
-
-  @override
-  String get seedMarketplacePacks => '技能包';
-
-  @override
   String get seedMarketplaceNoSkills => '暂无上线技能';
 
   @override
   String get seedMarketplaceNoPacks => '暂无上线技能包';
-
-  @override
-  String get seedMarketplaceAdoptSkill => '采纳技能';
-
-  @override
-  String seedMarketplaceSkillAdopted(String name) {
-    return '已采纳 $name';
-  }
-
-  @override
-  String get seedMarketplaceAdoptPack => '采纳技能包';
-
-  @override
-  String seedMarketplacePackAdopted(String name) {
-    return '已采纳 $name';
-  }
-
-  @override
-  String seedMarketplaceQuality(String score) {
-    return '质量 $score';
-  }
-
-  @override
-  String get seedMarketplaceCancel => '取消';
 
   @override
   String get seedLibrarySubscribers => '订阅者';
@@ -5747,19 +5372,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get translationHistoryTitle => '翻译历史';
 
   @override
-  String get translationClearHistory => '清空历史';
-
-  @override
-  String get translationTranslating => '翻译中...';
-
-  @override
   String get translationSaveToVocabulary => '保存到生词卡';
-
-  @override
-  String get translationCopy => '复制';
-
-  @override
-  String get translationCopied => '已复制';
 
   @override
   String get translationSearchHint => '搜索翻译记录...';
@@ -5772,9 +5385,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get translationClearConfirm => '确定要清空所有翻译历史吗？';
-
-  @override
-  String get translationClearConfirmDetail => '此操作不可撤销';
 
   @override
   String get translationClearAll => '清空历史';
@@ -5856,21 +5466,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String translationDaysAgo(Object days) {
     return '$days天前';
   }
-
-  @override
-  String get translationSourceLanguage => '源语言';
-
-  @override
-  String get translationTargetLanguage => '目标语言';
-
-  @override
-  String get translationSwapLanguages => '交换语言';
-
-  @override
-  String get translationDetectLanguage => '检测语言';
-
-  @override
-  String get translationHistoryEmpty => '暂无翻译历史';
 
   @override
   String get memoryCurrentVersion => '当前版本';
@@ -7692,30 +7287,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get groupFiles => '学习资料';
 
   @override
-  String get saveToMyLibrary => '保存到我的库';
-
-  @override
-  String get savedToLibrary => '已保存到你的库';
-
-  @override
-  String get markAsOfficial => '标记为官方';
-
-  @override
-  String get officialResource => '官方';
-
-  @override
-  String get noGroupFiles => '暂无学习资料';
-
-  @override
-  String get noGroupFilesSubtitle => '分享你的笔记，帮助群组成员！';
-
-  @override
   String get shareFile => '分享文件';
-
-  @override
-  String groupFilesCount(Object count) {
-    return '$count 个文件';
-  }
 
   @override
   String get studyMaterialsTitle => '学习资料库';
@@ -9856,12 +9428,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get personaAdjustInferredPreference => '调整推断偏好';
-
-  @override
-  String get personaNewValue => '新值';
-
-  @override
-  String get personaAdjustInferredPreferenceTitle => '调整推断偏好';
 
   @override
   String get languageDialogDescription => '选择你更习惯的阅读与交互语言，界面与系统文案会一起切换。';
@@ -13543,9 +13109,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get accountabilityDashboardLoadFailed => '伙伴工作台加载失败';
 
   @override
-  String get accountabilityDashboardLoadFailedDetail => '请重试，如问题持续存在请联系支持';
-
-  @override
   String get accountabilityNudgeSentDefault => '已通过站内提醒发送，对方在线时会实时看到';
 
   @override
@@ -14204,9 +13767,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get seedLibraryDetailFriendlyError => '系统暂时没能完成这次应用，请稍后再试';
-
-  @override
   String get seedLibraryDetailUserRatings => '用户评分';
 
   @override
@@ -14826,9 +14386,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get personaRolledBack => '已回滚到上一版本';
-
-  @override
   String personaRollbackFailed(Object error) {
     return '回滚失败：$error';
   }
@@ -14845,29 +14402,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get personaInferredAdjusted => '推断偏好已调整';
 
   @override
-  String personaAdjustFailed(Object error) {
-    return '调整失败：$error';
-  }
-
-  @override
-  String get personaInferredReset => '已恢复系统推断值';
-
-  @override
   String personaRestoreFailed(Object error) {
     return '恢复失败：$error';
   }
 
   @override
   String get personaUnknownError => '未知错误';
-
-  @override
-  String get personaHintDecimalRange => '请输入 0.0 到 1.0 之间的数字';
-
-  @override
-  String get personaHintStudyMinutes => '请输入学习时长（分钟）';
-
-  @override
-  String get personaHintPositiveMinutes => '请输入大于 0 的分钟数';
 
   @override
   String get personaHintValidPreference => '请输入有效的偏好值';
@@ -14906,9 +14446,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get reportRangeAll => '全部';
-
-  @override
-  String get reportCurrentLearningTopic => '当前学习主题';
 
   @override
   String get reportMasteryTrendTitle => '掌握度趋势';
@@ -15900,12 +15437,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get stuckHelpSuggestion5 => '标记这个点，继续其他部分';
 
   @override
-  String get stuckHelpFallbackOrder => '卡住时按这个顺序救火';
-
-  @override
-  String get stuckHelpWhatToDo => '具体该怎么做';
-
-  @override
   String get stuckHelpDiagnose => '诊断问题';
 
   @override
@@ -15935,9 +15466,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String executionResultNoPreview(Object type) {
     return '当前附件类型为 $type，还没有更详细的预览内容。';
   }
-
-  @override
-  String get executionResultLinkCopied => '链接已复制';
 
   @override
   String get executionResultCopyLink => '复制链接';
@@ -16226,9 +15754,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get statisticsShareMore => '更多';
 
   @override
-  String get statisticsWatermark => '星火AI学习助手';
-
-  @override
   String statisticsDateFormat(Object year, Object month, Object day) {
     return '$year年$month月$day日';
   }
@@ -16319,11 +15844,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get statisticsNoDataYet => '暂无统计数据';
-
-  @override
-  String statisticsLoadingFailed(String error) {
-    return '加载失败: $error';
-  }
 
   @override
   String get statisticsRetry => '重试';
@@ -16720,9 +16240,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get intentPredictionSprintSprint => '冲刺冲刺';
-
-  @override
   String intentPredictionContinue(Object title) {
     return '继续';
   }
@@ -16744,48 +16261,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get intentPredictionNoteIdea => '记录想法';
-
-  @override
-  String get intentPredictionSetReminder => '设置提醒';
-
-  @override
-  String get intentPredictionCognitivePrism => '认知棱镜';
-
-  @override
-  String get intentPredictionTranslate => '翻译';
-
-  @override
-  String get intentPredictionLearnLanguage => '学习语言';
-
-  @override
-  String get intentPredictionViewPrism => '查看认知棱镜';
-
-  @override
-  String get intentPredictionBehaviorAnalysis => '行为分析';
-
-  @override
-  String get intentPredictionStartSprint => '开始冲刺';
-
-  @override
-  String get intentPredictionFocusMode => '专注模式';
-
-  @override
-  String get intentPredictionStartLearning => '开始学习';
-
-  @override
-  String get intentPredictionCreateStudyPlan => '创建学习计划';
-
-  @override
-  String get intentPredictionStartReview => '开始复习';
-
-  @override
-  String get intentPredictionViewErrorBook => '查看错题本';
-
-  @override
-  String get intentPredictionContinuePriority => '继续重点任务';
-
-  @override
-  String get intentPrediction25Min => '先做 25 分钟';
 
   @override
   String get flashCapsuleTitle => '闪念胶囊';
@@ -16858,32 +16333,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get vocabularyLookupNoPackage => '暂无可下载的离线词典包';
-
-  @override
-  String get entityCardActionLabel => '执行';
-
-  @override
-  String get entityCardTitleFallback => '未命名卡片';
-
-  @override
-  String get entityCardEntityFallback => '未命名实体';
-
-  @override
-  String get entityCardTaskFallback => '未命名任务';
-
-  @override
-  String get entityCardPlanFallback => '学习计划';
-
-  @override
-  String get entityCardKnowledgeFallback => '知识节点';
-
-  @override
-  String entityCardTaskListFallback(Object count) {
-    return '$count 个可执行任务';
-  }
-
-  @override
-  String get entityCardTaskListSummary => 'AI 已整理任务列表';
 
   @override
   String get visualSlotAvatarBorder => '头像边框';
@@ -16995,12 +16444,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get retryLabel => '重试';
-
-  @override
-  String get emptyStateTitle => '暂无数据';
-
-  @override
-  String get emptyStateTitleNone => '数据为空';
 
   @override
   String get auroraStatusInactive => 'Aurora 待激活';
@@ -17864,9 +17307,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get openclawNotFilled => '未填写';
-
-  @override
-  String get openclawNoDate => '暂无';
 
   @override
   String openclawNodeCount(Object count) {
@@ -20440,11 +19880,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolsSwitchToStopwatch => '切到正计时';
 
   @override
-  String toolsFocusSaveFailed(Object e) {
-    return '专注记录保存失败：$e';
-  }
-
-  @override
   String get toolsFocusNotificationBody => '专注时段已经结束，回来收尾并记录这次投入。';
 
   @override
@@ -20477,9 +19912,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get toolsPauseManually => '由你主动暂停';
-
-  @override
-  String get toolsPlanChainNext => '方便衔接下一段计划';
 
   @override
   String get toolsBreathQuickDesc => '快速降噪，适合焦躁和睡前收束。';
@@ -20548,27 +19980,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolsBreathReset => '重置';
 
   @override
-  String get toolsBreathReady => '准备';
-
-  @override
-  String get toolsBreathPracticeComplete => '练习完成';
-
-  @override
-  String toolsBreathPausedRounds(int completed, int total) {
-    return '已暂停 · $completed / $total 轮';
-  }
-
-  @override
-  String toolsBreathRoundsProgress(int completed, int total) {
-    return '$completed / $total 轮';
-  }
-
-  @override
-  String toolsBreathDurationLabel(int duration) {
-    return '$duration 分钟';
-  }
-
-  @override
   String get toolsBreathStageDescPaused => '练习已暂停，恢复后会从当前阶段继续，并继续语音提示。';
 
   @override
@@ -20608,9 +20019,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get brtReady => '准备';
-
-  @override
   String get toolsCalcTitle => '计算器';
 
   @override
@@ -20618,11 +20026,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get toolsCalcNoHistory => '无历史';
-
-  @override
-  String toolsCalcHistoryCount(Object count) {
-    return '$count 条历史';
-  }
 
   @override
   String get toolsCalcWaiting => '等待计算';
@@ -20904,11 +20307,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolsNotesWaiting => '等待记录';
 
   @override
-  String toolsNotesCharCount(Object _charCount) {
-    return '$_charCount 字';
-  }
-
-  @override
   String get toolsNotesCharLabel => '字数';
 
   @override
@@ -20988,9 +20386,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get toolsFlashViewHistory => '查看历史';
-
-  @override
-  String get toolsFlashRecording => '记录中...';
 
   @override
   String get toolsFlashSaveCapsule => '保存胶囊';
@@ -21074,34 +20469,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolsVocabDefaultPackageDesc => 'Oxford 优先离线词典包';
 
   @override
-  String get toolsVocabInstalledAtPrefix => '安装于';
-
-  @override
-  String get toolsVocabRedownload => '重新下载';
-
-  @override
   String get toolsVocabDownloadLocally => '下载到本地';
 
   @override
   String get toolsVocabWaitingAssociations => '等待关联词';
 
   @override
-  String toolsVocabAssocCount(int count) {
-    return '$count 个关联词';
-  }
-
-  @override
-  String toolsVocabOfflineDictCount(int count) {
-    return '$count 个离线词典包';
-  }
-
-  @override
   String get toolsVocabNoOfflineDict => '未下载离线词典';
-
-  @override
-  String toolsVocabPartOfSpeech(String pos) {
-    return '词性 · $pos';
-  }
 
   @override
   String get toolsVocabDefinitionsLabel => '释义';
@@ -21128,11 +20502,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get toolsStatsWaitingData => '等待数据';
-
-  @override
-  String toolsStatsRecentCount(Object totalSessions) {
-    return '$totalSessions 条最近记录';
-  }
 
   @override
   String get toolsStatsTodayFocus => '今日专注';
@@ -21418,9 +20787,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String lpTarget(String name) {
     return '目标：$name';
   }
-
-  @override
-  String get lpTitle => '学习路径';
 
   @override
   String get lpMainPath => '主干路径';
@@ -21917,21 +21283,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get simRefresh => '刷新';
 
   @override
-  String get simSocraticCopy => '苏格拉底式对话';
-
-  @override
-  String get simErrorDiagCopy => '错因诊断';
-
-  @override
-  String get simGenFailed => '模拟生成失败';
-
-  @override
-  String get simRealtimeConnectionRecovered => '实时连接中断，已恢复到最近一次保存的模拟进度。';
-
-  @override
-  String get simInteractionStreamRecovered => '互动流中断了，但我已经帮你恢复到最近一轮状态。';
-
-  @override
   String simRoundProgressSummary(int round) {
     return '讨论已推进到第 $round 轮，正在汇总关键分歧与共识。';
   }
@@ -22272,25 +21623,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get seedCatFewShotFull => 'Few-shot示例';
 
   @override
-  String get cogMockPattern1 => '每次遇到难题就会想要刷手机，这似乎是一种逃避机制。';
-
-  @override
-  String get cogMockPattern2 => '完成高数作业后感到非常有成就感，这种正反馈很重要。';
-
-  @override
-  String get cogMockPattern3 => '今天原本计划背单词，但是被社团活动打断了，需要调整计划弹性。';
-
-  @override
-  String get cogMockPattern4 =>
-      '当面对难度较大或不确定的任务（如物理大作业）时，倾向于通过处理琐事（如整理桌面、回消息）来推迟开始时间。';
-
-  @override
-  String get cogMockPattern5 => '习惯在晚上10点后才开始处理最重要、最烧脑的学习任务，导致睡眠延迟和次日精力不足。';
-
-  @override
-  String get cogMockPattern6 => '在做PPT或写报告时，过度纠结于排版和措辞，导致核心内容产出效率低下。';
-
-  @override
   String get cogCapsuleUnavailable => '这枚胶囊暂时不可用';
 
   @override
@@ -22309,15 +21641,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String cogPatternFreq(Object count) {
     return '出现 $count 次';
   }
-
-  @override
-  String get insLearnBasic => '学习基础概念';
-
-  @override
-  String get insQuickCore => '快速理解核心概念';
-
-  @override
-  String get insSmallPractice => '完成一轮小练习';
 
   @override
   String insLoadFailed(String e) {
@@ -22368,15 +21691,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get insBackToCockpit => '回到驾驶舱';
 
   @override
-  String get insContinueSim => '继续上次推演';
-
-  @override
-  String get insContinueLearnSim => '继续上次学习仿真';
-
-  @override
-  String get insHasContinue => '已有可继续内容';
-
-  @override
   String get insCreateTask => '去创建学习任务';
 
   @override
@@ -22392,21 +21706,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get insDecisionLogOpen => '查看日志';
 
   @override
-  String get insContinueView => '继续查看';
-
-  @override
-  String get insStartFromRecommended => '从推荐开始';
-
-  @override
-  String get insFocusedSim => '已聚焦：学习仿真';
-
-  @override
-  String get insFocusedReport => '已聚焦：学习报告';
-
-  @override
-  String get insFocusedDefault => '仿真、推演、报告统一收在这里';
-
-  @override
   String get insFlowTitle => '把学习里的“看见问题、模拟讨论、沉淀结论”放到同一条动线里。';
 
   @override
@@ -22420,9 +21719,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get insNoPrereq => '无需前置知识，可以直接开始学习！';
-
-  @override
-  String get insGenerating => '正在生成...';
 
   @override
   String get insQuickPath => '快速生成任务路径';
@@ -22684,44 +21980,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get calSessionCount => '会话数';
 
   @override
-  String get ebCreateFailed => '创建错题失败';
-
-  @override
-  String get ebListFailed => '获取错题列表失败';
-
-  @override
-  String get ebDetailFailed => '获取错题详情失败';
-
-  @override
   String ebUpdateFailed(String e) {
     return '更新失败: $e';
   }
 
   @override
-  String get ebDeleteFailed => '删除错题失败';
-
-  @override
-  String get ebAnalysisFailed => '重新分析失败';
-
-  @override
   String get ebReviewFailed => '提交复习记录失败';
-
-  @override
-  String get ebTodayReviewFailed => '获取今日复习列表失败';
-
-  @override
-  String get ebStatsFailed => '获取统计数据失败';
-
-  @override
-  String get ebSummaryFailed => '获取语义摘要失败';
-
-  @override
-  String get ebBadParams => '请求参数错误';
-
-  @override
-  String ebImageUploadFailed(String e) {
-    return '图片上传失败: $e';
-  }
 
   @override
   String get ebRemove => '移除';
@@ -22805,11 +22069,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ebViewAnalysis => '查看 AI 分析';
-
-  @override
-  String ebSubmitFailed(Object e) {
-    return '提交失败: $e';
-  }
 
   @override
   String get ebBack => '返回';
@@ -23196,17 +22455,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get memBlockedSources => '屏蔽来源';
-
-  @override
-  String get seedDetailFailed => '种子库详情加载失败，请稍后再试';
-
-  @override
-  String get seedStateFailed => '种子库状态加载失败，请稍后再试';
-
-  @override
-  String seedCreateFailed(String e) {
-    return '创建失败：$e';
-  }
 
   @override
   String get seedCreateTitle => '创建种子库';
@@ -24787,17 +24035,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String accountabilityUnlockedOn(String date) {
     return '在 $date 解锁';
-  }
-
-  @override
-  String get accountabilityRequestFailed => '请求失败';
-
-  @override
-  String get accountabilityPartnerNudged => '已提醒伙伴查看今天的目标';
-
-  @override
-  String accountabilityPartnerNudgedWithMessage(String message) {
-    return '已提醒伙伴：$message';
   }
 
   @override
@@ -27201,23 +26438,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get calEditEvent => '编辑日程';
 
   @override
-  String get lioStartNewSim => '可立即开始一轮新模拟';
-
-  @override
   String lioRecentAnalysis(int count) {
     return '最近一次共分析 $count 个知识点';
   }
 
   @override
   String get lioBuildConclusion => '沉淀一轮学习后的关键结论';
-
-  @override
-  String get lioNoSimYet => '暂未生成最近仿真';
-
-  @override
-  String lioRecentUpdate(String desc) {
-    return '最近更新 · $desc';
-  }
 
   @override
   String get lioNoReportYet => '暂未生成最近报告';
@@ -27621,11 +26847,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String gdGap(String percent) {
     return '差距 $percent%';
-  }
-
-  @override
-  String gdCurrentTarget(String current, String target) {
-    return '当前 $current% · 目标 $target%';
   }
 
   @override
@@ -28110,9 +27331,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get cahNoEvidence => '还没有证据';
-
-  @override
-  String get cahProgress => '进度';
 
   @override
   String get cahWitnesses => '见证人';
@@ -28998,11 +28216,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String sprintProgressLabel(String name, int percent, int daysLeft) {
     return '$name：已完成 $percent%，还剩 $daysLeft 天';
-  }
-
-  @override
-  String sprintBottleneckLabel(Object name, Object reason) {
-    return '$name：$reason';
   }
 
   @override
@@ -30284,28 +29497,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get sprintCompletionLoading => '加载中...';
-
-  @override
-  String get learningPortfolioLoading => '加载中...';
-
-  @override
-  String get sprintActionLoading => '加载中...';
-
-  @override
-  String get securityLogLoading => '加载中...';
-
-  @override
-  String get socialAccountsLoading => '加载中...';
-
-  @override
-  String get sessionManagementLoading => '加载中...';
-
-  @override
   String get intentPredictionSprint => '冲刺！';
-
-  @override
-  String get intentPredictionNoteThought => '记录想法';
 
   @override
   String intentPredictionContinueTask(String taskTitle) {
@@ -31100,12 +30292,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskDiagnosisOption3 => '题目条件不会用';
 
   @override
-  String get seedLibLoadFailed => '种子库详情加载失败，请稍后再试';
-
-  @override
-  String get seedLibStatusFailed => '种子库状态加载失败，请稍后再试';
-
-  @override
   String get communitySquad => '小队';
 
   @override
@@ -31143,9 +30329,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatReadReceipt => '已读';
-
-  @override
-  String get partnersEmptyState => '暂无伙伴';
 
   @override
   String communityDateMonthDay(int month, int day) {
@@ -31506,35 +30689,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get homeDailyContextMorningFallback => '早上好，今天先从一小步开始，把节奏找回来就很好。';
-
-  @override
-  String get agreeTermsFirst => '请先同意用户协议与隐私政策';
-
-  @override
-  String get passwordStrengthWeak => '弱';
-
-  @override
-  String get passwordStrengthFair => '中等';
-
-  @override
-  String get passwordStrengthStrong => '强';
-
-  @override
-  String get resetInstructions => '请输入邮件中的重置码，并设置一个新的登录密码。';
-
-  @override
-  String get resetCodeRequired => '请输入重置码';
-
-  @override
-  String get resetPasswordMinLength => '密码至少需要 6 位';
-
-  @override
-  String get resetPasswordsNoMatch => '两次输入的密码不一致';
-
-  @override
-  String loginFailedWithError(String error) {
-    return '登录失败：$error';
-  }
 
   @override
   String get legalCurrentVersion => '当前版本：v1';
@@ -32422,9 +31576,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get chaosBrandPrimaryLabel => 'brandPrimary';
-
-  @override
   String get chaosClose => '关闭';
 
   @override
@@ -32490,40 +31641,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get engagementVeryActive => '非常活跃';
 
   @override
-  String utilLoadingFailed(Object error) {
-    return '加载失败: $error';
-  }
-
-  @override
-  String get utilNoData => '暂无数据';
-
-  @override
-  String get utilUnknownError => '未知错误';
-
-  @override
-  String get utilDataEmpty => '数据为空';
-
-  @override
-  String auto_firstsecond(Object first, Object second) {
-    return '$first$second';
-  }
-
-  @override
   String get auto_ => '%';
 
   @override
-  String get auto_dataisempty => '数据为空';
-
-  @override
   String get auto_unknownerror => '未知错误';
-
-  @override
-  String auto_loadfailedrror(Object error) {
-    return '加载失败: $error';
-  }
-
-  @override
-  String get auto_nodatayet => '暂无数据';
 
   @override
   String get auto_flex => '高光炫耀';
@@ -32566,12 +31687,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get auto_makingsteadyprogresslatelyjust => '最近在慢慢推进，记录一下。';
-
-  @override
-  String get auto_ifyou => '如果你也在做类似的事，欢迎一起交流。';
-
-  @override
-  String get auto_thisweek => '这一周';
 
   @override
   String get auto_notifications => '通知';
@@ -32685,9 +31800,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get auto_pendingcommitments => '待处理承诺';
 
   @override
-  String get auto_en => '_zh';
-
-  @override
   String get auto_unknownerrorpleaseretry => '未知错误，请重试';
 
   @override
@@ -32796,52 +31908,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get auto_younowhavethefirstreviewablele => '你已经拥有第一份可回看的学习洞察档案。';
 
   @override
-  String get auto_wordnotfound => '未找到该单词';
-
-  @override
-  String auto_lookupfailed(Object e) {
-    return '查询失败: $e';
-  }
-
-  @override
-  String auto_addfailed(Object e) {
-    return '添加失败: $e';
-  }
-
-  @override
-  String auto_failedtoloadwordbook(Object e) {
-    return '获取生词本失败: $e';
-  }
-
-  @override
-  String auto_failedtoloadreviewlist(Object e) {
-    return '获取复习列表失败: $e';
-  }
-
-  @override
-  String auto_failedtoloadstats(Object e) {
-    return '获取词汇统计失败: $e';
-  }
-
-  @override
-  String auto_recordfailed(Object e) {
-    return '记录失败: $e';
-  }
-
-  @override
-  String auto_updatefailed(Object e) {
-    return '更新重要度失败: $e';
-  }
-
-  @override
-  String auto_deletefailed(Object e) {
-    return '删除失败: $e';
-  }
-
-  @override
-  String get auto_loadfailed => '加载失败';
-
-  @override
   String get auto_transactionhistory => '交易历史';
 
   @override
@@ -32944,9 +32010,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get proposalDiffAfter => '改成';
 
   @override
-  String get proposalUntitled => '一个待确认的动作';
-
-  @override
   String proposalTurnA11y(String owner) {
     return '当前轮到：$owner';
   }
@@ -32973,9 +32036,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get understandingEmptyBody =>
       '聊聊天、制定计划或完成任务之后，Sparkle 会把记住的内容和判断放在这里，你可以随时纠正。';
-
-  @override
-  String get understandingBucketEmpty => '这一组暂时没有内容';
 
   @override
   String get understandingViewAll => '查看全部';
@@ -33029,9 +32089,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get understandingEditLabel => '改成';
 
   @override
-  String get understandingEditReasonHint => '为什么改（可以不填）';
-
-  @override
   String get understandingDeleteTitle => '删除这条内容？';
 
   @override
@@ -33045,12 +32102,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get understandingScopeSheetTitle => '只在某个目标中使用';
-
-  @override
-  String get understandingScopePickPlan => '选择学习计划';
-
-  @override
-  String get understandingScopeApply => '仅在此计划中使用';
 
   @override
   String get understandingScopeNoPlans => '还没有可选的学习计划';
@@ -34007,76 +33058,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String lfcObservationBasis(int sampleSize) {
     return '基于最近 $sampleSize 条学习记录的观察。';
-  }
-
-  @override
-  String get insPredictNext => '预测下次学习时间';
-
-  @override
-  String get insUnknownType => '未知类型';
-
-  @override
-  String get insEngagementForecast => '活跃度预测';
-
-  @override
-  String get insEngagementSubtitle => 'AI 基于学习习惯的预测';
-
-  @override
-  String get insDifficultyForecast => '难度预测';
-
-  @override
-  String get insDifficultySubtitle => 'AI 基于前置知识的评估';
-
-  @override
-  String get insPredictedDifficulty => '预测难度';
-
-  @override
-  String insPrerequisitesWarning(int count) {
-    return '建议先学习 $count 个前置知识';
-  }
-
-  @override
-  String get insDifficultyEasy => '简单';
-
-  @override
-  String get insDifficultyMedium => '中等';
-
-  @override
-  String get insDifficultyHard => '困难';
-
-  @override
-  String picEstimatedHours(String hours) {
-    return '预计学习时长: $hours 小时';
-  }
-
-  @override
-  String picRiskScore(String score) {
-    return '风险指数: $score/100';
-  }
-
-  @override
-  String picChurnRisk(String level) {
-    return '流失风险: $level';
-  }
-
-  @override
-  String picMinutesLater(int minutes) {
-    return '约 $minutes 分钟后';
-  }
-
-  @override
-  String picTodayTime(String time) {
-    return '今天 $time';
-  }
-
-  @override
-  String picTomorrowTime(String time) {
-    return '明天 $time';
-  }
-
-  @override
-  String lfcConfidence(int sampleSize, String confidence) {
-    return '基于 $sampleSize 条学习记录，当前推荐置信度 $confidence%。';
   }
 
   @override
