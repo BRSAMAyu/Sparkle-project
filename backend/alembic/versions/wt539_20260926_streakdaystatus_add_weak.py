@@ -29,7 +29,7 @@ from typing import Sequence, Union
 from alembic import op
 
 revision: str = "wt539_20260926"
-down_revision: Union[str, None] = "j06_20260925"
+down_revision: Union[str, None] = "f258_20260925"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
