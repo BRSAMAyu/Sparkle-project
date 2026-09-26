@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/providers/release_flags_provider.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/achievement/presentation/providers/home_close_to_unlock_provider.dart';
@@ -168,6 +169,23 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
       if (state.isLoading ||
           state.allElements.isNotEmpty ||
           state.unlockedElements.isNotEmpty) {
+        return;
+      }
+      // V3-FIX-247：release flag off/unavailable（fail-closed）期短路启动期
+      // warm refresh——不发注定 403 的 /visual-elements 组请求（V3-FIX-190
+      // 同族消费面收口：unlock 调用已闸，此处收启动期预热）。旗开时行为不变。
+      // ensureLoaded 在延迟回调内 await：零启动首帧阻塞；失败保 fail-closed
+      // 且幂等可重试；await 后复检 mounted 防 dispose 后用 ref 的竞态。
+      final releaseFlags =
+          await ref.read(releaseFlagsProvider.notifier).ensureLoaded();
+      if (!mounted) {
+        return;
+      }
+      if (!releaseFlags.visualElements) {
+        debugPrint(
+          'Visual element warm refresh skipped: release flag visual_elements '
+          'off/unavailable',
+        );
         return;
       }
       await ref.read(visualElementProvider.notifier).refresh();
