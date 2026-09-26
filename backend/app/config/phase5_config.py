@@ -2,6 +2,7 @@
 Phase 5 Configuration - Stability & Evolution
 稳定性护栏和文档引擎的配置参数
 """
+
 import os
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -15,10 +16,10 @@ class Phase5Config(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_file=env_path,
-        env_file_encoding='utf-8',
+        env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore",
-        env_prefix="PHASE5_"  # 所有配置项都以 PHASE5_ 开头
+        env_prefix="PHASE5_",  # 所有配置项都以 PHASE5_ 开头
     )
 
     # ==========================================
@@ -170,6 +171,7 @@ phase5_config = Phase5Config()
 # 便利函数：获取文档类型特定配置
 # ==========================================
 
+
 def get_quality_threshold_for_doc_type(doc_type: str) -> float:
     """
     根据文档类型返回适当的质量阈值
@@ -182,9 +184,9 @@ def get_quality_threshold_for_doc_type(doc_type: str) -> float:
     """
     thresholds = {
         "academic": 0.08,  # 学术论文允许更多数学符号
-        "invoice": 0.02,   # 发票要求严格
-        "general": 0.05,   # 通用文档
-        "code": 0.15,      # 代码文件允许更多特殊字符
+        "invoice": 0.02,  # 发票要求严格
+        "general": 0.05,  # 通用文档
+        "code": 0.15,  # 代码文件允许更多特殊字符
     }
     return thresholds.get(doc_type, phase5_config.DOC_QUALITY_GARBLED_THRESHOLD)
 
