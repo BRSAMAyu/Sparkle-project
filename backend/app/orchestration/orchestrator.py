@@ -2055,8 +2055,10 @@ class ChatOrchestrator(
                 for c in filtered_rag.chunks
                 if c.relevance_score >= 0.3
             ]
-            used_filenames = {c["filename"] for c in used_chunks}
-            all_filenames = {c.filename for c in filtered_rag.chunks}
+            # filename 是 str|None（Redis 密集检索可不投影 file_name），先滤 None 再排序，
+            # 否则 sorted() 混排 None/str 即 TypeError，整个文档水合被 except 吞掉。
+            used_filenames = {c["filename"] for c in used_chunks if c["filename"]}
+            all_filenames = {c.filename for c in filtered_rag.chunks if c.filename}
             excluded_names = sorted(all_filenames - used_filenames)
             excluded_count = filtered_rag.total_retrieved - len(used_chunks)
             context_receipt = {

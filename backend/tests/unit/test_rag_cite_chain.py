@@ -203,6 +203,57 @@ async def test_hydrate_document_context_injects_chunk_content(monkeypatch: pytes
     assert payload is not None and payload.get("document_context") == document_context
 
 
+async def test_context_receipt_tolerates_chunks_without_filename(monkeypatch: pytest.MonkeyPatch) -> None:
+    """V3-FIX-253 行内缺陷（wt538）：FilteredChunk.filename 是 str|None，
+    chunk 无 filename（如 Redis 密集检索未投影 file_name）时 context_receipt
+    的 sorted() 混排 None/str 即 TypeError，整个文档水合被 except 吞掉。"""
+    decision = build_retrieval_decision(
+        message=MESSAGE,
+        route_intent="chat",
+        context={"use_document_context": True},
+    )
+    state = WorkflowState()
+    state.context_data["use_document_context"] = True
+    state.context_data["document_retrieval_decision"] = decision.to_dict()
+    state.context_data["retrieval_decision"] = decision.to_dict()
+
+    unnamed = {
+        # 无 file_name/filename 键 → FilteredChunk.filename 为 None
+        "name": "节点描述 chunk",
+        "description": CHUNK_CONTENT,
+        "similarity": 0.75,
+        "chunk_id": "chunk-mrv-7749-1",
+        "chunk": {"id": "chunk-mrv-7749-1", "chunk_index": 1, "content": CHUNK_CONTENT},
+    }
+    rag_result = GraphRAGResult(
+        query=MESSAGE,
+        entities=["MRV-7749"],
+        vector_results=[_vector_item(), unnamed],
+        graph_results=[],
+        fused_context="",
+        metadata={},
+    )
+    _patch_rag_stack(monkeypatch, orchestrator_module, rag_result)
+
+    payload = await orchestrator_module.ChatOrchestrator._hydrate_document_context(
+        SimpleNamespace(),
+        active_db=object(),
+        user_id=USER_ID,
+        user_message=MESSAGE,
+        route_intent="chat",
+        user_context_payload={"use_document_context": True},
+        state=state,
+    )
+
+    retrieval_meta = state.context_data.get("document_context_retrieval") or {}
+    receipt = retrieval_meta.get("context_receipt") or {}
+    used_names = receipt.get("used_names") or []
+    assert "实验记录.md" in used_names
+    assert None not in used_names
+    assert None not in (receipt.get("excluded_names") or [])
+    assert "MRV-7749" in str(payload.get("document_context") or "")
+
+
 # ---------------------------------------------------------------------------
 # 3. 引用段：retrieval_node 必须产出携带 chunk 内容的 CitationBlock
 # ---------------------------------------------------------------------------
