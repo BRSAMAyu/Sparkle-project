@@ -742,7 +742,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build Gateway Image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./backend/gateway
           push: true
@@ -762,7 +762,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build Backend Image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./backend
           push: true
