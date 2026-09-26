@@ -30,12 +30,11 @@ from loguru import logger
 
 from app.config import settings
 from app.core.i18n import I18n
-from app.core.redis_utils import format_redis_url_for_log, resolve_redis_password
+from app.core.redis_utils import ensure_awaitable, format_redis_url_for_log, resolve_redis_password
 from app.db.session import AsyncSessionLocal
 from app.schemas.notification import NotificationCreate
 from app.services.notification_service import NotificationService
 from app.services.system_update_service import SystemUpdateService, build_system_update
-from app.core.redis_utils import ensure_awaitable
 
 # 延迟导入设备服务（避免循环依赖）
 _device_service = None

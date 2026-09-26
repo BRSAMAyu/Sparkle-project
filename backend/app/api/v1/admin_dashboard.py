@@ -21,9 +21,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_active_superuser, get_db
 from app.config import settings
 from app.core.cache import cache_service
+from app.core.redis_utils import ensure_awaitable
 from app.middleware.admin_audit import audit_admin_action
 from app.models.user import User
-from app.core.redis_utils import ensure_awaitable
 
 router = APIRouter(
     prefix="/admin",

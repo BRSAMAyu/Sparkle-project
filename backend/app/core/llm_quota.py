@@ -31,8 +31,7 @@ from typing import cast
 import redis.asyncio as redis
 
 from app.config import settings
-from app.core.redis_utils import resolve_redis_password
-from app.core.redis_utils import ensure_awaitable
+from app.core.redis_utils import ensure_awaitable, resolve_redis_password
 
 logger = logging.getLogger(__name__)
 

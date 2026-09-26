@@ -22,7 +22,9 @@ Counter: Any
 Gauge: Any
 Histogram: Any
 try:
-    from prometheus_client import Counter as _Counter, Gauge as _Gauge, Histogram as _Histogram
+    from prometheus_client import Counter as _Counter
+    from prometheus_client import Gauge as _Gauge
+    from prometheus_client import Histogram as _Histogram
 
     Counter, Gauge, Histogram = _Counter, _Gauge, _Histogram
 except Exception:  # pragma: no cover - prometheus is optional in local scripts

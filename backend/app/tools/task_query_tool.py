@@ -9,10 +9,9 @@ Tools:
 from __future__ import annotations
 
 from typing import Any, cast
-
-from pydantic import BaseModel
 from uuid import UUID
 
+from pydantic import BaseModel
 from sqlalchemy import and_, select
 
 from app.models.plan import Plan

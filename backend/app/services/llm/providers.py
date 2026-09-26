@@ -10,7 +10,8 @@ AsyncOpenAI: Any
 APIError: Any
 OpenAITimeout: Any
 try:
-    from openai import APIError as _APIError, AsyncOpenAI as _AsyncOpenAI
+    from openai import APIError as _APIError
+    from openai import AsyncOpenAI as _AsyncOpenAI
     from openai import Timeout as _OpenAITimeout
     from openai.types.chat import ChatCompletionChunk
 

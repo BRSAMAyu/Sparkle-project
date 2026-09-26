@@ -14,7 +14,6 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 
-
 class SLOSeverity(StrEnum):
     CRITICAL = "critical"
     WARNING = "warning"

@@ -14,8 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_active_superuser
 from app.core.cache import cache_service
-from app.db.session import get_db
 from app.core.redis_utils import ensure_awaitable
+from app.db.session import get_db
 
 try:
     from app.services.graph_knowledge_service import GraphKnowledgeService

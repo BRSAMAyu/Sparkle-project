@@ -33,7 +33,8 @@ BeautifulSoup: Any = None
 if ENABLE_MDX_DICTIONARY:
     try:
         from bs4 import BeautifulSoup as _BeautifulSoup
-        from readmdict import MDD as _MDD, MDX as _MDX
+        from readmdict import MDD as _MDD
+        from readmdict import MDX as _MDX
 
         MDX = _MDX
         MDD = _MDD

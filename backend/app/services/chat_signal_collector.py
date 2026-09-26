@@ -14,11 +14,11 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
+from app.core.redis_utils import ensure_awaitable
 from app.db.session import AsyncSessionLocal
 from app.services.cognitive_service import CognitiveService
 from app.services.profile_write_service import ProfileWriteService
 from app.services.signal_adaptation import recency_weight, weighted_average
-from app.core.redis_utils import ensure_awaitable
 
 
 def _utcnow() -> datetime:

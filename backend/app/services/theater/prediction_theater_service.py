@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.cache import cache_service
 from app.core.event_bus import event_bus_reliable
 from app.core.exceptions import AuthorizationError, NotFoundError, SparkleException
+from app.core.redis_utils import ensure_awaitable
 from app.models.chat import ChatMessage, ChatSession, MessageRole
 from app.models.cognitive import BehaviorPattern
 from app.models.error_book import ErrorRecord
@@ -39,7 +40,6 @@ from app.services.llm_fallback_utils import analysis_llm
 from app.services.plan_service import PlanService
 from app.services.system_update_service import SystemUpdateService, build_system_update
 from app.services.task_service import TaskService
-from app.core.redis_utils import ensure_awaitable
 
 logger = logging.getLogger(__name__)
 

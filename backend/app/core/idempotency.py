@@ -15,10 +15,9 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.config import settings
-from app.core.redis_utils import resolve_redis_password
+from app.core.redis_utils import ensure_awaitable, resolve_redis_password
 from app.db.session import AsyncSessionLocal
 from app.models.idempotency_key import IdempotencyKey
-from app.core.redis_utils import ensure_awaitable
 
 
 def _utcnow() -> datetime:

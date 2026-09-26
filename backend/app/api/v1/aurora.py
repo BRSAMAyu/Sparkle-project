@@ -17,6 +17,7 @@ from app.aurora.runtime_v1.state import AuroraEnergyStore
 from app.aurora.runtime_v1.telemetry import AuroraDecisionTelemetryService
 from app.core.cache import cache_service
 from app.core.metrics import AURORA_CORRECTION_FAILURE_TOTAL, record_product_loop_event
+from app.core.redis_utils import ensure_awaitable
 from app.core.request_coalescing import (
     EndpointShield,
     register_read_view_invalidation_hook,
@@ -26,7 +27,6 @@ from app.services.aurora_calibration_card_service import AuroraCalibrationCardSe
 from app.services.aurora_control_surface_service import (
     AuroraControlSurfaceService,  # noqa: F401 (used in predicted-options)
 )
-from app.core.redis_utils import ensure_awaitable
 
 logger = logging.getLogger(__name__)
 

@@ -12,8 +12,8 @@ from app.api.deps import (
     get_optional_current_user,
 )
 from app.core.cache import cache_service
-from app.models.user import User
 from app.core.redis_utils import ensure_awaitable
+from app.models.user import User
 
 router = APIRouter(prefix="/client-telemetry", tags=["client-telemetry"])
 

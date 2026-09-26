@@ -9,7 +9,8 @@ from typing import Any
 Environment: Any
 FileSystemLoader: Any
 try:
-    from jinja2 import Environment as _Environment, FileSystemLoader as _FileSystemLoader
+    from jinja2 import Environment as _Environment
+    from jinja2 import FileSystemLoader as _FileSystemLoader
 
     HAS_JINJA2 = True
     Environment, FileSystemLoader = _Environment, _FileSystemLoader

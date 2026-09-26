@@ -29,6 +29,7 @@ from app.core.business_metrics import (
 from app.core.cache import cache_service
 from app.core.celery_app import get_celery_status
 from app.core.context_budget import DEFAULT_BUDGETS, _apply_min_budget, _normalize_budget
+from app.core.redis_utils import ensure_awaitable
 from app.middleware.admin_audit import audit_admin_action
 from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference
 from app.models.user import User
@@ -59,7 +60,6 @@ from app.services.self_evolution_service import (
     MetricBaselineService,
     StrategyCalibrationService,
 )
-from app.core.redis_utils import ensure_awaitable
 
 router = APIRouter(
     prefix="/admin/memory",

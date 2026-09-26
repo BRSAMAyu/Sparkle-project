@@ -22,12 +22,12 @@ if TYPE_CHECKING:
 
 
 from loguru import logger
+from prometheus_client import Counter
 from sqlalchemy import and_, desc, event, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from prometheus_client import Counter
 
 from app.config import settings
 from app.core.background_tasks import spawn_tracked

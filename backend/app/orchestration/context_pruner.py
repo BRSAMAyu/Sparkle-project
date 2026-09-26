@@ -22,12 +22,12 @@ import redis.asyncio as redis
 from loguru import logger
 
 from app.config import settings
+from app.core.redis_utils import ensure_awaitable
 from app.orchestration.conversation_compaction import (
     KEY_SALIENCE,
     classify_message,
     compact_history,
 )
-from app.core.redis_utils import ensure_awaitable
 
 
 class ContextPruner:

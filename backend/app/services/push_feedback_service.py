@@ -13,10 +13,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
+from app.core.redis_utils import ensure_awaitable
 from app.models.notification import PushHistory
 from app.models.user import PushPreference
 from app.services.profile_write_service import ProfileWriteService
-from app.core.redis_utils import ensure_awaitable
 
 
 def _utcnow() -> datetime:

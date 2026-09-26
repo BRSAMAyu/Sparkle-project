@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from typing import Any, cast
+from uuid import UUID
 
 from pydantic import BaseModel
-from uuid import UUID
 
 from app.core.i18n import I18n
 from app.schemas.error_book import (

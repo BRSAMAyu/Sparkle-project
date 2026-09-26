@@ -19,6 +19,7 @@ from uuid import UUID
 from loguru import logger
 from redis.asyncio import Redis
 
+from app.core.redis_utils import ensure_awaitable
 from app.orchestration.schemas import (
     MAX_REPLAN_ATTEMPTS,
     REPLAN_MAX_PER_WINDOW,
@@ -28,7 +29,6 @@ from app.orchestration.schemas import (
     ExecutablePlan,
     StateSnapshot,
 )
-from app.core.redis_utils import ensure_awaitable
 
 
 @dataclass

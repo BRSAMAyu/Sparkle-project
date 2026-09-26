@@ -22,8 +22,7 @@ from loguru import logger
 from pydantic import BaseModel
 
 from app.config import settings
-from app.core.redis_utils import format_redis_url_for_log, resolve_redis_password
-from app.core.redis_utils import ensure_awaitable
+from app.core.redis_utils import ensure_awaitable, format_redis_url_for_log, resolve_redis_password
 
 # AUTH-DEEP A-2 专项（P1）：安全键前缀。Redis 缺席（init_redis 失败 → redis=None）
 # 时这些键绝不允许落进程内 dict——多 worker/多实例互不可见（实例 A 拉黑的 token

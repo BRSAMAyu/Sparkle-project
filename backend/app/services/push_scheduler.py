@@ -22,12 +22,12 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
+from app.core.redis_utils import ensure_awaitable
 from app.models.user import User
 from app.services.personalization import get_personalization_engine
 from app.services.push_service import PushService
 from app.signals.recall_notification import RecallNotificationBuilder
 from app.signals.recall_opportunity import RecallOpportunityDetector
-from app.core.redis_utils import ensure_awaitable
 
 _RECALL_QUEUE_PREFIX = "push_scheduler:recall_queue:"
 _MAX_QUEUE_SIZE = 10

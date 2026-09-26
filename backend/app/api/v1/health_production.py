@@ -23,9 +23,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_active_superuser, get_current_user
 from app.config import settings
 from app.core.cache import cache_service
+from app.core.redis_utils import ensure_awaitable
 from app.db.session import get_db
 from app.models.user import User
-from app.core.redis_utils import ensure_awaitable
 
 # Prometheus metrics
 try:

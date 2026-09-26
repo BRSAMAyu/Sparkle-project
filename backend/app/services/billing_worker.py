@@ -19,10 +19,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.config import settings
-from app.core.redis_utils import resolve_redis_password
+from app.core.redis_utils import ensure_awaitable, resolve_redis_password
 from app.db.url import to_async_database_url
 from app.models.chat import TokenUsage
-from app.core.redis_utils import ensure_awaitable
 
 
 def _utcnow() -> datetime:
