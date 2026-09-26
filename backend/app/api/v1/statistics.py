@@ -53,25 +53,26 @@ async def get_daily_stats(current_user: User = Depends(get_current_user), db: As
     Get daily statistics for current user
     """
     user_id = current_user.id
-    # ── 「今日」双钟现实（V3-FIX-37 定界）──
-    # - due_date 口径：沿 goal_today_view SSOT 既有 today（UTC date，SSOT 调用方
-    #   传 _utcnow().date()）；SSOT 自身的本地化另立 V3-FIX-197，不属本卡最小面。
+    # ── 「今日」口径（V3-FIX-37 定界 + V3-FIX-197 收口）──
+    # - due_date 口径：沿 goal_today_view SSOT 的「今日任务」基座；SSOT 调用方
+    #   （experience_readouts._next_task / goal_router._todays_next_task）已随
+    #   V3-FIX-197 切用户本地日，本分母同步用本地日，三面同钟。
     # - FocusSession.start_time：存客户端本地墙上时间 naive（mobile 发本地 ISO 串、
     #   无时区后缀）→ 窗口必须用同一墙钟的本地日界；修前用 naive-UTC 日界，
     #   UTC+8 本地 00:00–08:00 的晨间会话被切进「昨天」（focus_sessions 计 0）。
     tz_name = time_utils.user_timezone_name(current_user)
-    focus_today_start = time_utils.local_midnight_wall(time_utils.local_date(_utcnow(), tz_name))
-    utc_today = _utcnow().date()
+    today = time_utils.local_date(_utcnow(), tz_name)
+    focus_today_start = time_utils.local_midnight_wall(today)
 
     # ── H7 口径声明（对齐 SSOT app/services/goal_today_view.py 的「今日任务」基座）──
-    # 基座：due_date == today 且 deleted_at IS NULL；
+    # 基座：due_date == today（用户本地日，V3-FIX-197）且 deleted_at IS NULL；
     # 状态：ABANDONED 已被 SSOT 排除出「今日任务」→ 不计分母；COMPLETED 保留（分子母集）；
     # 时间轴：分子分母统一到 due_date（修前分子按 completed_at 异轴，逾期补完成
     # 计入分子却不在分母，完成率可 >1）——逾期任务补完成计入其实际到期日。
     today_scope = and_(
         Task.user_id == user_id,
         Task.deleted_at.is_(None),
-        Task.due_date == utc_today,
+        Task.due_date == today,
         Task.status != "ABANDONED",
     )
 

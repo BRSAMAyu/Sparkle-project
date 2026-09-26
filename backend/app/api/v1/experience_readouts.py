@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any, Literal, cast
 from uuid import UUID, uuid4
 
@@ -13,13 +13,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
 from app.aurora.runtime_v1.self_model import SparkleSelfModelService
+from app.core import time_utils
 from app.core.cache import cache_service
 from app.models.achievement import UserStreakStats
 from app.models.focus import FocusSession, FocusStatus
 from app.models.goal import Goal
 from app.models.plan import Plan
 from app.models.task import Task, TaskStatus
-from app.models.user import User
+from app.models.user import PushPreference, User
 from app.services.aurora_control_surface_service import AuroraControlSurfaceService
 from app.services.goal_today_view import fetch_todays_next_task, todays_task_payload
 from app.services.growth_dashboard_service import GrowthDashboardService
@@ -259,7 +260,9 @@ async def _active_plan(db: AsyncSession, user_id: UUID) -> Plan | None:
 
 
 async def _active_goal(db: AsyncSession, user_id: UUID, goal_id: str | None = None) -> Goal | None:
-    stmt = select(Goal).where(Goal.user_id == user_id, Goal.deleted_at.is_(None), Goal.status.in_(["active", "draft", "paused"]))
+    stmt = select(Goal).where(
+        Goal.user_id == user_id, Goal.deleted_at.is_(None), Goal.status.in_(["active", "draft", "paused"])
+    )
     if goal_id and goal_id not in {"current", "active"}:
         try:
             stmt = stmt.where(Goal.id == UUID(goal_id))
@@ -291,6 +294,21 @@ async def _task_counts(db: AsyncSession, user_id: UUID, *, plan_id: UUID | None 
     }
 
 
+async def _user_local_today(db: AsyncSession, user_id: UUID) -> date:
+    """「今日任务」的用户本地日（V3-FIX-197）。
+
+    时区沿 push_preference.timezone（``PushPreference.timezone`` 标量直查，
+    focus_service._local_today 先例——规避 db.get 身份映射命中未加载关系的
+    async lazy-load），缺省/非法回落主市场 Asia/Shanghai。home 快照
+    （experience_readouts._next_task）与 goal 详情（experience/goal_router.
+    _todays_next_task）两个 SSOT 调用方共用本函数，保证同一时刻必得同一
+    today（H7 SSOT 字面一致）；goal_today_view 本体仍只收 today 参数，签名
+    与判定不动。
+    """
+    tz_name = await db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+    return time_utils.local_date(_utcnow(), time_utils.valid_timezone_name(tz_name))
+
+
 async def _next_task(db: AsyncSession, user_id: UUID, *, plan_id: UUID | None = None) -> dict[str, Any] | None:
     """home 快照/指挥台的「今日下一步」。
 
@@ -298,12 +316,14 @@ async def _next_task(db: AsyncSession, user_id: UUID, *, plan_id: UUID | None = 
     与 goal 详情（experience/goal_router）口径字面一致；本函数不再自带任何
     「下一步」判定（历史实现无 today 过滤且状态集含 PAUSED，曾与 goal 详情
     互斥）。plan_id 为 None 时按用户全局取（保留既有计划回退语义）。
+    today 为用户本地日（V3-FIX-197）：修前传 ``_utcnow().date()``（UTC date），
+    UTC+8 晨间 00:00–08:00 到期日=本地今日的任务被按「昨日」排除。
     """
     task = await fetch_todays_next_task(
         db,
         user_id=user_id,
         plan_id=plan_id,
-        today=_utcnow().date(),
+        today=await _user_local_today(db, user_id),
     )
     return todays_task_payload(task)
 

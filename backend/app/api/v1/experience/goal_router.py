@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -409,9 +409,7 @@ async def _strategy_belief_payload(
     result = await db.execute(query.order_by(StrategyBeliefSnapshot.updated_at.desc()))
     beliefs = list(result.scalars().all())
     candidates = [
-        belief
-        for belief in beliefs
-        if belief.belief_score < 0.4 and _counter_evidence_payload(belief.counter_evidence)
+        belief for belief in beliefs if belief.belief_score < 0.4 and _counter_evidence_payload(belief.counter_evidence)
     ]
     if not candidates:
         return None
@@ -484,13 +482,16 @@ async def _todays_next_task(db: AsyncSession, *, user_id: UUID, plan_id: UUID | 
     S7 单一事实源：「今日任务」判定与取数统一走 app/services/goal_today_view.py，
     与 home 快照（experience_readouts goal-detail next_task）口径字面一致；
     本函数不再自带查询定义（历史实现无 today 过滤且排除 PAUSED，曾与 home
-    快照对同一目标状态给出相反结论）。
+    快照对同一目标状态给出相反结论）。today 为用户本地日（V3-FIX-197），
+    与 home 快照共用 experience_readouts._user_local_today（同一时刻必得同一
+    today）；修前传 ``datetime.now(UTC).date()``（UTC date），UTC+8 晨间
+    00:00–08:00 的今日任务被按「昨日」排除。
     """
     return await fetch_todays_next_task(
         db,
         user_id=user_id,
         plan_id=plan_id,
-        today=datetime.now(UTC).date(),
+        today=await _readouts._user_local_today(db, user_id),
     )
 
 
