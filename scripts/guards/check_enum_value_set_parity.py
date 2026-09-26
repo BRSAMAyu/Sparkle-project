@@ -9,7 +9,8 @@
 
 机制：
 - 对「双面都存在」的枚举族做值集 diff（FAMILIES 显式映射表，家族真源以 backend
-  app/models/ 与 app/core/run_state_machine.py 的 StrEnum 为准）：
+  app/models/ 与 app/core/run_state_machine.py 的 StrEnum 为准；wt548 扩表后 65 族
+  = dual 44 + passthrough 21，逐族判定证据见映射表内注释）：
   * backend 值集 ⊄ mobile 可解析 wire 值集，且 mobile 无 unknown 哨兵兜底 → FAIL
     （EP001，列出差集）；
   * mobile 有 unknown 哨兵兜底 → 解析不崩，降级 WARN（EP001T，仍应尽快对齐）；
@@ -21,6 +22,9 @@
   命中豁免的 FAIL 照常打印（KNOWN-DRIFT 行，绝不静默跳过）；到期后豁免自动失效
   重新变红，提示删豁免或续期。映射完整性问题（EP004）不适用豁免——守卫必须始终
   指向真实代码。
+- backend-only 族（BACKEND_ONLY 清单）：无 wire 下发面/纯服务端状态的 StrEnum 不进
+  映射表，从 INFO 扩表候选中分离单列展示（判定证据逐族在清单内，file:line 可复核）；
+  一旦接线下发 mobile 须改判 passthrough 挪入 FAMILIES。
 - --self-test：构造临时双面样本红绿自证全部判定路径。
 
 登记：scripts/rule_guard_manifest.tsv（Rule ENUM-PARITY）。
@@ -137,6 +141,338 @@ FAMILIES: dict[str, dict] = {
         "backend": ("app/core/run_state_machine.py", "RunStatus"),
         "mode": "passthrough",
     },
+    # -----------------------------------------------------------------------
+    # wt548 扩表（ENUM-PARITY 守卫扩表卡）：15 → 65 族（dual 44 + passthrough 21），
+    # 另 24 族判定 backend-only 进 BACKEND_ONLY 清单（不进表、从 INFO 候选分离）。
+    # 判定方法：grep mobile/lib 找同名 Dart enum（dual）；无镜像则按 wire 面证据
+    # 分 passthrough（值达 mobile 的字符串直通，RunStatus 判例）与 backend-only
+    # （无 wire 下发面）。证据逐族 file:line 注释如下，可 grep 复核。
+    # -----------------------------------------------------------------------
+    # ===== dual：accountability / background_task =====
+    "AccountabilityStatus": {
+        # mobile 镜像 accountability_model.dart:8 enum AccountabilityStatus（4 值对齐）
+        "backend": ("app/models/accountability.py", "AccountabilityStatus"),
+        "mobile": ("lib/features/community/data/models/accountability_model.dart", "AccountabilityStatus"),
+        "mode": "dual",
+    },
+    "BackgroundTaskType": {
+        # mobile 镜像 background_task_model.dart:4 enhanced enum 构造器形态（5 值对齐）
+        "backend": ("app/models/background_task.py", "BackgroundTaskType"),
+        "mobile": ("lib/shared/entities/background_task_model.dart", "BackgroundTaskType"),
+        "mode": "dual",
+    },
+    "BackgroundTaskStatus": {
+        # mobile 镜像 background_task_model.dart:22（5 值对齐）
+        "backend": ("app/models/background_task.py", "BackgroundTaskStatus"),
+        "mobile": ("lib/shared/entities/background_task_model.dart", "BackgroundTaskStatus"),
+        "mode": "dual",
+    },
+    # ===== dual：cognitive =====
+    "PatternType": {
+        # mobile 镜像 behavior_pattern_model.dart:1（ctor wire + unknown 哨兵 parse 兜底）；
+        # mobile 多 'unknown' wire 值属哨兵族 EP002 WARN（StreakDayStatus 先例）。
+        # 注：不声明 unknown_sentinel——ctor 形态下 identifiers 为空，声明会误触 EP005。
+        "backend": ("app/models/cognitive.py", "PatternType"),
+        "mobile": ("lib/features/cognitive/data/models/behavior_pattern_model.dart", "PatternType"),
+        "mode": "dual",
+    },
+    # ===== dual：community（9 族）=====
+    "FriendshipStatus": {
+        # mobile 镜像 community_model.dart:73（@JsonValue，3 值对齐；proto 侧 FriendshipStatus 另有生成物不在本表）
+        "backend": ("app/models/community.py", "FriendshipStatus"),
+        "mobile": ("lib/features/community/data/models/community_model.dart", "FriendshipStatus"),
+        "mode": "dual",
+    },
+    "GroupType": {
+        # mobile 镜像 community_model.dart:11 仅 squad/sprint，缺 'official'（V3-FIX-266 豁免）；
+        # models 层真源含 official（community.py），API 面 schemas GroupTypeEnum 现仅 squad/sprint。
+        "backend": ("app/models/community.py", "GroupType"),
+        "mobile": ("lib/features/community/data/models/community_model.dart", "GroupType"),
+        "mode": "dual",
+    },
+    "GroupRole": {
+        # mobile 镜像 community_model.dart:18（3 值对齐）
+        "backend": ("app/models/community.py", "GroupRole"),
+        "mobile": ("lib/features/community/data/models/community_model.dart", "GroupRole"),
+        "mode": "dual",
+    },
+    "MessageType": {
+        # mobile 镜像 community_model.dart:37（@JsonValue+@HiveField 叠注）11 值缺 'broadcast'
+        # （V3-FIX-267 豁免；wt297 实录广播真实落库并经列表下发，schemas/community.py:58-60）
+        "backend": ("app/models/community.py", "MessageType"),
+        "mobile": ("lib/features/community/data/models/community_model.dart", "MessageType"),
+        "mode": "dual",
+    },
+    "SharedResourceType": {
+        # mobile 镜像 community_model.dart:1713；mobile 多 fragment/capsule/achievement/file
+        # 4 个旧 wire 值（EP002 WARN 实录，不做豁免——WARN 不挡提交）
+        "backend": ("app/models/community.py", "SharedResourceType"),
+        "mobile": ("lib/features/community/data/models/community_model.dart", "SharedResourceType"),
+        "mode": "dual",
+    },
+    "ReportReason": {
+        # mobile 镜像 community_model.dart:114（7 值对齐，hateSpeech 大小写映射经 @JsonValue）
+        "backend": ("app/models/community.py", "ReportReason"),
+        "mobile": ("lib/features/community/data/models/community_model.dart", "ReportReason"),
+        "mode": "dual",
+    },
+    "ReportStatus": {
+        # mobile 镜像 community_model.dart:131（4 值对齐）
+        "backend": ("app/models/community.py", "ReportStatus"),
+        "mobile": ("lib/features/community/data/models/community_model.dart", "ReportStatus"),
+        "mode": "dual",
+    },
+    "ModerationAction": {
+        # mobile 镜像 community_model.dart:142（4 值对齐）
+        "backend": ("app/models/community.py", "ModerationAction"),
+        "mobile": ("lib/features/community/data/models/community_model.dart", "ModerationAction"),
+        "mode": "dual",
+    },
+    "OfflineMessageStatus": {
+        # mobile wire 镜像 community_model.dart:155（4 值对齐）。注意 core/offline/models/
+        # offline_chat_message.dart:6 有同名本地队列枚举（pending/sent/acked/failed，含 acked
+        # 无 expired）——语义为离线发送队列生命周期非 backend 镜像，不进映射（本表映射 wire 面）。
+        "backend": ("app/models/community.py", "OfflineMessageStatus"),
+        "mobile": ("lib/features/community/data/models/community_model.dart", "OfflineMessageStatus"),
+        "mode": "dual",
+    },
+    # ===== dual：execution_intent / file_storage =====
+    "ExecutionMode": {
+        # mobile 镜像 execution_intent_model.dart:3（标识符即 wire 值，3 值对齐）
+        "backend": ("app/models/execution_intent.py", "ExecutionMode"),
+        "mobile": ("lib/features/task/data/models/execution_intent_model.dart", "ExecutionMode"),
+        "mode": "dual",
+    },
+    "SourceLifecycleStatus": {
+        # mobile 镜像 task_model.dart:45（4 值对齐，source_lifecycle_badge.dart:152+ 消费）；
+        # document_library_models.dart:21 第二镜像同值集（fromRaw parse 形态），同源同值。
+        "backend": ("app/models/file_storage.py", "SourceLifecycleStatus"),
+        "mobile": ("lib/shared/entities/task_model.dart", "SourceLifecycleStatus"),
+        "mode": "dual",
+    },
+    # ===== dual：seed_content（4 族）=====
+    "LibraryCategory": {
+        # mobile 镜像 seed_library_model.dart:11（4 值对齐）
+        "backend": ("app/models/seed_content.py", "LibraryCategory"),
+        "mobile": ("lib/features/seed_library/data/models/seed_library_model.dart", "LibraryCategory"),
+        "mode": "dual",
+    },
+    "LibraryVisibility": {
+        # mobile 镜像 seed_library_model.dart:23（3 值对齐）
+        "backend": ("app/models/seed_content.py", "LibraryVisibility"),
+        "mobile": ("lib/features/seed_library/data/models/seed_library_model.dart", "LibraryVisibility"),
+        "mode": "dual",
+    },
+    "ItemType": {
+        # mobile 镜像 seed_library_model.dart:33（5 值对齐）
+        "backend": ("app/models/seed_content.py", "ItemType"),
+        "mobile": ("lib/features/seed_library/data/models/seed_library_model.dart", "ItemType"),
+        "mode": "dual",
+    },
+    "DifficultyLevel": {
+        # mobile 镜像 seed_library_model.dart:47（4 值对齐）
+        "backend": ("app/models/seed_content.py", "DifficultyLevel"),
+        "mobile": ("lib/features/seed_library/data/models/seed_library_model.dart", "DifficultyLevel"),
+        "mode": "dual",
+    },
+    # ===== dual：shop（4 族；PhotonTransactionType 漂移见 V3-FIX-268）=====
+    "PhotonTransactionType": {
+        # mobile 镜像 photon_model.dart:19（@JsonValue + $enumDecode 硬解码，见行内 D-COMM-2
+        # 注释：缺成员即交易历史解析崩）缺 contract_escrow/grant_bonus/guest_seed（V3-FIX-268 豁免）
+        "backend": ("app/models/shop.py", "PhotonTransactionType"),
+        "mobile": ("lib/shared/entities/photon_model.dart", "PhotonTransactionType"),
+        "mode": "dual",
+    },
+    "ShopItemType": {
+        # mobile 镜像 shop_model.dart:7（5 值对齐）
+        "backend": ("app/models/shop.py", "ShopItemType"),
+        "mobile": ("lib/shared/entities/shop_model.dart", "ShopItemType"),
+        "mode": "dual",
+    },
+    "ItemRarity": {
+        # mobile 镜像 shop_model.dart:21（4 值对齐）
+        "backend": ("app/models/shop.py", "ItemRarity"),
+        "mobile": ("lib/shared/entities/shop_model.dart", "ItemRarity"),
+        "mode": "dual",
+    },
+    "ConsumableEffectType": {
+        # mobile 镜像 shop_model.dart:42（6 值对齐）
+        "backend": ("app/models/shop.py", "ConsumableEffectType"),
+        "mobile": ("lib/shared/entities/shop_model.dart", "ConsumableEffectType"),
+        "mode": "dual",
+    },
+    # ===== dual：user / visual_element =====
+    "UserStatus": {
+        # mobile 镜像 user_brief.dart:7（3 值对齐）
+        "backend": ("app/models/user.py", "UserStatus"),
+        "mobile": ("lib/shared/entities/user_brief.dart", "UserStatus"),
+        "mode": "dual",
+    },
+    "AvatarStatus": {
+        # mobile 镜像 user_model.dart:6（3 值对齐）
+        "backend": ("app/models/user.py", "AvatarStatus"),
+        "mobile": ("lib/shared/entities/user_model.dart", "AvatarStatus"),
+        "mode": "dual",
+    },
+    "SearchVisibility": {
+        # mobile 镜像 community_model.dart:1570（3 值对齐；proto UserPrivacySettings 同面）
+        "backend": ("app/models/user.py", "SearchVisibility"),
+        "mobile": ("lib/features/community/data/models/community_model.dart", "SearchVisibility"),
+        "mode": "dual",
+    },
+    "VisualElementType": {
+        # mobile 镜像 visual_element_model.dart:8（4 值对齐）
+        "backend": ("app/models/visual_element.py", "VisualElementType"),
+        "mobile": ("lib/shared/entities/visual_element_model.dart", "VisualElementType"),
+        "mode": "dual",
+    },
+    "VisualElementRarity": {
+        # mobile 镜像 visual_element_model.dart:20（4 值对齐）
+        "backend": ("app/models/visual_element.py", "VisualElementRarity"),
+        "mobile": ("lib/shared/entities/visual_element_model.dart", "VisualElementRarity"),
+        "mode": "dual",
+    },
+    "VisualElementUnlockSource": {
+        # mobile 镜像 visual_element_model.dart:32（5 值对齐）
+        "backend": ("app/models/visual_element.py", "VisualElementUnlockSource"),
+        "mobile": ("lib/shared/entities/visual_element_model.dart", "VisualElementUnlockSource"),
+        "mode": "dual",
+    },
+    "SectorCode": {
+        # 名异形镜像（TrustLevel→ExecutionTrustLevel 判例）：backend SectorCode 7 值 ↔
+        # mobile galaxy_model.dart:127 SectorEnum（@JsonValue COSMOS..VOID 全对齐）；
+        # wire 面 schemas/galaxy.py:274 sector_code + knowledge_detail_model.dart:89 parse-switch
+        "backend": ("app/models/sector.py", "SectorCode"),
+        "mobile": ("lib/shared/entities/galaxy_model.dart", "SectorEnum"),
+        "mode": "dual",
+    },
+    # ===== passthrough：值达 mobile 的字符串直通族（出现同名 Dart enum 即 EP003 FAIL）=====
+    "AccountabilitySlotType": {
+        # backend accountability.py 'core' → community API slot_type 字符串
+        # （accountability_model.dart:57-58 @JsonKey slot_type String 直读）
+        "backend": ("app/models/accountability.py", "AccountabilitySlotType"),
+        "mode": "passthrough",
+    },
+    "AgentRunKind": {
+        # backend agent_run.py → runs.py:79 kind 字段往返（mobile agent_run_read_service.dart:152
+        # 读 json['kind'] 字符串）
+        "backend": ("app/models/agent_run.py", "AgentRunKind"),
+        "mode": "passthrough",
+    },
+    "AuthAuditAction": {
+        # backend auth_security.py → users.py:528 /users/me/security-log 下发 action 字符串
+        # （mobile security_log_screen.dart:90/110/140 case parse-switch 直读）
+        "backend": ("app/models/auth_security.py", "AuthAuditAction"),
+        "mode": "passthrough",
+    },
+    "CardType": {
+        # backend card_protocol.py → card_service.py:80-81 card_type 载荷（mobile
+        # entity_card_payloads.dart:20-21 CardProtocolRef 直读 card_type、:52 case 'KNOWLEDGE'）
+        "backend": ("app/models/card_protocol.py", "CardType"),
+        "mode": "passthrough",
+    },
+    "CardLifecycleStatus": {
+        # backend card_protocol.py → cards.py:244 / plans.py:1211 lifecycle_status 下发
+        # （mobile plan_phase_model.dart:42 直读默认 'DRAFT'、plan_repository.dart:343）
+        "backend": ("app/models/card_protocol.py", "CardLifecycleStatus"),
+        "mode": "passthrough",
+    },
+    "OccurrenceStatus": {
+        # backend card_protocol.py → cards.py:314 defer occurrence 响应 status 字符串
+        # （mobile api_endpoints.dart:201 deferCardOccurrence 调用面）
+        "backend": ("app/models/card_protocol.py", "OccurrenceStatus"),
+        "mode": "passthrough",
+    },
+    "InterventionTriggerType": {
+        # backend card_protocol.py → intervention_event_consumer.py:122 通知 metadata trigger_type
+        # （mobile notification_center_provider.dart:320 直读）
+        "backend": ("app/models/card_protocol.py", "InterventionTriggerType"),
+        "mode": "passthrough",
+    },
+    "DeliveryChannel": {
+        # backend card_protocol.py → intervention_event_consumer.py:145 metadata delivery_channel
+        # （mobile unified_notification_model.dart:218 直读）
+        "backend": ("app/models/card_protocol.py", "DeliveryChannel"),
+        "mode": "passthrough",
+    },
+    "InterventionAcceptanceStatus": {
+        # backend card_protocol.py → 通知 metadata acceptance_status
+        # （mobile unified_notification_model.dart:267 直读）
+        "backend": ("app/models/card_protocol.py", "InterventionAcceptanceStatus"),
+        "mode": "passthrough",
+    },
+    "InterventionOutcomeStatus": {
+        # backend card_protocol.py → 通知 metadata outcome_status
+        # （mobile unified_notification_model.dart:302 直读、unified_notification_card.dart:817
+        # case 'EFFECTIVE' 标签映射）
+        "backend": ("app/models/card_protocol.py", "InterventionOutcomeStatus"),
+        "mode": "passthrough",
+    },
+    "SharePermission": {
+        # backend card_protocol.py → community.py:1174-1182 legacy permission 字符串映射、
+        # schemas/community.py:772 permission 下发（mobile community_share_repository.dart:75
+        # 发送 'permission'、community_model.dart:1831 解析）
+        "backend": ("app/models/card_protocol.py", "SharePermission"),
+        "mode": "passthrough",
+    },
+    "AnalysisStatus": {
+        # backend cognitive.py → schemas/cognitive.py:45 analysis_status（cognitive.py:302
+        # /cognitive/fragments 下发；mobile api_endpoints.dart:554 调用面）
+        "backend": ("app/models/cognitive.py", "AnalysisStatus"),
+        "mode": "passthrough",
+    },
+    "ExecutorType": {
+        # backend execution_intent.py → executions.py:66/366 executor 字段（mobile
+        # task_repository.dart:526/646 发 'executor':'openclaw'、execution_intent_model.dart:124
+        # 读 ?? 'manual'）
+        "backend": ("app/models/execution_intent.py", "ExecutorType"),
+        "mode": "passthrough",
+    },
+    "ExecutionTargetEnv": {
+        # backend execution_intent.py → execution_service.py:870 target_env 进 chat suggestion
+        # metadata（mobile chat_provider.dart:729 直读；executions.py:67/92 请求面 str 字段）
+        "backend": ("app/models/execution_intent.py", "ExecutionTargetEnv"),
+        "mode": "passthrough",
+    },
+    "ExecutionScheduleTriggerType": {
+        # backend execution_schedule.py → executions.py:303/653 schedules 响应
+        # （execution_schedule.py:62 to_dict trigger_type；mobile openclaw_automation_service.dart:
+        # 108 读 trigger_type、:297 调 ApiEndpoints.executionSchedules）
+        "backend": ("app/models/execution_schedule.py", "ExecutionScheduleTriggerType"),
+        "mode": "passthrough",
+    },
+    "FocusType": {
+        # backend focus.py → focus.py:29/65 focus_type 字符串校验（mobile
+        # focus_session_record.dart:26 'pomodoro'/'stopwatch' 本地记录 + /focus/sessions 同步
+        # api_endpoints.dart:574）
+        "backend": ("app/models/focus.py", "FocusType"),
+        "mode": "passthrough",
+    },
+    "FocusStatus": {
+        # backend focus.py → focus.py:66 status 校验（mobile focus_session_record.dart:29/108
+        # 'completed'/'interrupted'）
+        "backend": ("app/models/focus.py", "FocusStatus"),
+        "mode": "passthrough",
+    },
+    "GroupFileTrustLevel": {
+        # backend group_files.py → proto/community_service.proto:33 + schemas/community.py:40
+        # trust_level 字符串（mobile file_models.dart:243 直读、file_repository.dart:223 发送）
+        "backend": ("app/models/group_files.py", "GroupFileTrustLevel"),
+        "mode": "passthrough",
+    },
+    "PlanStateStatus": {
+        # backend plan_state.py → plans.py:1677/1729/1750 plan-state status 下发
+        # （mobile planArchive /plans/{id}/archive 调用面 api_endpoints.dart:178）
+        "backend": ("app/models/plan_state.py", "PlanStateStatus"),
+        "mode": "passthrough",
+    },
+    "AssetStatus": {
+        # backend learning_assets.py → vocabulary_service.py learning_loop 摘要
+        # "learning_asset".status 下发（vocabulary.py:336/366 装配；mobile
+        # vocabulary_repository.dart:41 调用面）
+        "backend": ("app/models/learning_assets.py", "AssetStatus"),
+        "mode": "passthrough",
+    },
 }
 
 # ---------------------------------------------------------------------------
@@ -151,6 +487,81 @@ KNOWN_DRIFT: dict[str, dict] = {
     # mobile weak+unknown 哨兵），守卫实测对齐，豁免即删保持棘轮纯净。
     # V3-FIX-260 豁免已删：wt542 修复落地（mobile 补 planning+unknown 哨兵，
     # 守卫实测对齐仅剩 EP002 unknown WARN），豁免即删保持棘轮纯净。
+    # ---- wt548 扩表新发现漂移（台账 v3/06_agent_fleet/DYNAMIC_ISSUES.md 266-268）----
+    "GroupType": {
+        "fix": "V3-FIX-266",
+        "owner": "待派",
+        "expiry": _dt.date(2026, 10, 7),
+        "note": "mobile GroupType 缺 'official'（community_model.dart:11-16 仅 squad/sprint）；"
+        "models 层真源含 official（models/community.py）。API 面 schemas/community.py:29 "
+        "GroupTypeEnum 现仅 squad/sprint，漂移暂为模型单面潜伏——一旦 schema 放开即 mobile "
+        "$enumDecode 崩",
+    },
+    "MessageType": {
+        "fix": "V3-FIX-267",
+        "owner": "待派",
+        "expiry": _dt.date(2026, 10, 7),
+        "note": "mobile MessageType 缺 'broadcast'（community_model.dart:37-66 共 11 值）；"
+        "wt297 实录广播为真实落库值（community_advanced_service.py:751 写入，"
+        "schemas/community.py:58-60 曾因 schema 缺成员致列表 ValidationError 500）",
+    },
+    "PhotonTransactionType": {
+        "fix": "V3-FIX-268",
+        "owner": "待派",
+        "expiry": _dt.date(2026, 10, 7),
+        "note": "mobile PhotonTransactionType 缺 contract_escrow/grant_bonus/guest_seed "
+        "（photon_model.dart:19-47 共 12 值；shop.py:26/35/36 MINT-FIX/PHOTON-STREAM 落账值，"
+        "photons.py:63 /transactions 下发；mobile $enumDecode 硬解码无兜底，行内 D-COMM-2 "
+        "注释自证同型崩溃先例）",
+    },
+}
+
+# ---------------------------------------------------------------------------
+# 已判定 backend-only 清单（wt548 扩表卡逐族判定，证据 file:line 可 grep 复核）：
+# 无 wire 下发面/纯服务端状态——不进 FAMILIES 对账（mobile 无镜像也无直通消费面），
+# 从 INFO 扩表候选中分离以消噪声。族名 → 判定证据摘要。
+# 注意：这些族一旦接线下发 mobile，必须改判 passthrough 并挪入 FAMILIES。
+# ---------------------------------------------------------------------------
+BACKEND_ONLY: dict[str, str] = {
+    "CardVisibility": "card_snapshot_service.py:149 仅进 POST /cards/{id}/snapshot 载荷"
+    "（cards.py:325，mobile api_endpoints 无对应调用、值 0 命中）",
+    "CardSourceType": "card_snapshot_service.py:150/:433 同 CardVisibility 面，mobile 无调用",
+    "CardCreatedBy": "服务端归属标注（card_snapshot_service.py:357），无下发面",
+    "EdgeType": "cards.py:44 /cards/{id}/link 请求面存在但 mobile 无 linkCard 调用方"
+    "（api_endpoints.dart:198 定义未接线、值 0 命中）",
+    "BindingMode": "同 EdgeType（cards.py:45，默认 REFERENCE 服务端兜底）",
+    "ArtifactType": "plans.py:535/:804 服务端 artifact 流（mobile api_endpoints 无 artifact 面、"
+    "GLOBAL_COMPASS/DISCOVERY_DOSSIER 等 0 命中）；接线时改判 passthrough",
+    "ArtifactStatus": "planning_artifact_service 服务端状态机（weekly_digest_service 同），无下发面",
+    "DeliveryStrategy": "intervention_event_consumer.py:136 仅服务端 title 构建，通知 metadata"
+    " 只含 trigger_type/delivery_channel/acceptance_status/outcome_status",
+    "ImportMode": "community.py:4008 服务端从 permission 推导（'fork'→FORK 否则 ADOPT），"
+    "cards.py:87 请求面 mobile 无调用",
+    "ShareScope": "community.py:3536 服务端按 target 设定 GROUP/USER；SharedResourceInfo 响应"
+    "（schemas/community.py:752-772）无 scope 字段，mobile repository 的 'scope' 参数为 feed "
+    "scope 非本族",
+    "CustomExpertSource": "仅 models/custom_expert.py 定义，无 API/schema/服务引用（休眠面）",
+    "ExperimentStatus": "experiments.py:375 服务端实验框架；mobile api_endpoints 无 experiments",
+    "MetricType": "实验框架服务端（profile_transparency 命中为 NorthStarMetricType 子串误报）",
+    "JobType": "models/job.py 服务端异步任务（job_service 未挂任何 API 路由，grep api/v1 零命中）",
+    "JobStatus": "同 JobType（models/job.py）。注意 mobile capsule_generation_job_model.dart:7 有"
+    "同名 enum JobStatus，但对应的是 capsule_generation_job.py 的 enum.Enum（非 StrEnum、不在本"
+    "守卫盘点且值集 pending/generating/completed/failed 已对齐）——故本族不能判 passthrough"
+    "（会误触 EP003），只能 backend-only",
+    "AssetKind": "assets.py:111 请求校验 + vocabulary.py:331 服务端创建（AssetKind.WORD），"
+    "不下发 mobile（learning_loop 摘要只含 asset status 不含 kind）",
+    "MatchStrength": "core/fuzzy_match.py 服务端匹配打分，无 API 面",
+    "SuggestionDecision": "learning_asset_service 服务端建议引擎决策记录，无下发面",
+    "UserSuggestionResponse": "assets.py 建议反馈端点 mobile 无调用（mobile 仅 /tasks/suggestions"
+    " 属他域）",
+    "PlanStatus": "models/plan.py:57 无列引用（plan_service.py:512 注释自证「PlanStatus 枚举无列"
+    "引用」），plans.py 无下发；agents/graph/state.py:20 另有同名 LangGraph 内部类均服务端",
+    "InteractionType": "仅 models/recommendation.py 定义，无 API/schema/服务引用（休眠面）",
+    "CognitiveOwnership": "action_authorization/allocation_policy 等服务端动作分配，无 api/schema 面",
+    "RiskClass": "同 CognitiveOwnership（服务端风险分级），无下发面",
+    "TaskResourceType": "tasks.py:297-328/:852 请求面 + schemas/task.py:471 响应字段存在，但 "
+    "mobile api_endpoints 无 task resources 调用（仅 community shared-resources 属他域）、"
+    "值 0 命中；接线时改判 passthrough",
 }
 
 # ---------------------------------------------------------------------------
@@ -267,10 +678,10 @@ def extract_dart_enum(root: Path, rel_path: str, enum_name: str) -> DartEnum | N
     return result
 
 
-def inventory_unmapped_backend_enums(backend_root: Path) -> list[str]:
-    """盘点 app/models/ 下未进映射表的 StrEnum 类（INFO 展示，便于后续扩表）。"""
+def inventory_unmapped_backend_enums(backend_root: Path) -> list[tuple[str, str]]:
+    """盘点 app/models/ 下未进映射表的 StrEnum 类（供 main 按 BACKEND_ONLY 分流展示）。"""
     known = {spec["backend"][1] for spec in FAMILIES.values() if "backend" in spec}
-    found: list[str] = []
+    found: list[tuple[str, str]] = []
     if not (backend_root / "app" / "models").exists():
         return found
     for py in sorted((backend_root / "app" / "models").rglob("*.py")):
@@ -279,7 +690,7 @@ def inventory_unmapped_backend_enums(backend_root: Path) -> list[str]:
             # 名为 StrEnum 的是项目内基类定义本身，不是业务枚举族
             if m.group("name") not in known and m.group("name") != "StrEnum":
                 rel = py.relative_to(backend_root)
-                found.append(f"{m.group('name')} ({rel})")
+                found.append((m.group("name"), str(rel)))
     return found
 
 
@@ -708,6 +1119,20 @@ def self_test() -> int:
         )
         checks.append(("case12 Python 解析器", py_real == {"RED": "red", "GREEN": "green"}))
 
+        # 用例 13：inventory 盘点 + BACKEND_ONLY 分流（backend-only 判定的输出契约）
+        _write_python_enum(be, "app/models/a.py", "InteractionType", [("I1", "i1")])
+        inv = inventory_unmapped_backend_enums(be)
+        inv_names = {name for name, _ in inv}
+        checks.append(
+            ("case13 盘点含未映射 fixture 族", {"Aligned", "RunLike", "InteractionType"} <= inv_names)
+        )
+        judged = [x for x in inv if x[0] in BACKEND_ONLY]
+        checks.append(("case13 BACKEND_ONLY 分流命中", ("InteractionType", "app/models/a.py") in judged))
+        undecided = [name for name, _ in inv if name not in BACKEND_ONLY]
+        checks.append(
+            ("case13 未判定候选不含已判定族", "InteractionType" not in undecided and "Aligned" in undecided)
+        )
+
         print("[Rule ENUM-PARITY] SELF-TEST 实录：")
         for label, ok in checks:
             mark = "PASS" if ok else "FAIL"
@@ -767,7 +1192,19 @@ def main() -> int:
 
     unmapped = inventory_unmapped_backend_enums(BACKEND_ROOT)
     if unmapped and not args.family:
-        print(f"[Rule ENUM-PARITY] INFO 未进映射表的 backend StrEnum（不判失败，扩表候选）: {unmapped}")
+        judged = [x for x in unmapped if x[0] in BACKEND_ONLY]
+        undecided = [f"{name} ({rel})" for name, rel in unmapped if name not in BACKEND_ONLY]
+        if judged:
+            print(
+                f"[Rule ENUM-PARITY] INFO 已判定 backend-only（无 wire 下发面，不进映射表"
+                f"——判定证据见脚本 BACKEND_ONLY 清单）: {len(judged)} 族 "
+                f"{[name for name, _ in judged]}"
+            )
+        if undecided:
+            print(
+                f"[Rule ENUM-PARITY] INFO 未进映射表的 backend StrEnum（不判失败，扩表候选"
+                f"——需逐族判定 dual/passthrough/backend-only）: {undecided}"
+            )
 
     total = len(findings)
     if fail:
