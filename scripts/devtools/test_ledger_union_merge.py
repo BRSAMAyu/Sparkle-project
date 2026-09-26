@@ -427,7 +427,7 @@ def test_verify_real_ledger_readonly_and_reports_known_stock():
             ln
             for ln in text.splitlines()
             if ln.startswith("| V3-FIX-")
-            and len(re.findall(r"V3-FIX-\d+", ln)) >= 2
+            and len(re.findall(r"\| V3-FIX-\d+ \|", ln)) >= 2
         ]
         assert not dup, f"R2 收口后仍有重号：{dup[:3]}"
         assert not glue, f"R2 收口后仍有一行双 ID 粘连：{glue[:2]}"
