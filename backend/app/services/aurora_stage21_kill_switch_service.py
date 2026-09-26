@@ -28,7 +28,6 @@ class AuroraStage21KillSwitchService:
             redis_key="skill_selection_mode",
             settings_attr="AURORA_STAGE21_SKILL_SELECTION_MODE",
             legacy_bool_attr="SPARKLE_SKILL_SELECTION_ENABLED",
-            enabled_legacy_modes=frozenset({"live"}),
         ),
         "skill_share_enabled": KillSwitchBinding(
             stage="21",
@@ -36,7 +35,6 @@ class AuroraStage21KillSwitchService:
             redis_key="skill_share_mode",
             settings_attr="AURORA_STAGE21_SKILL_SHARE_MODE",
             legacy_bool_attr="SPARKLE_SKILL_SHARE_ENABLED",
-            enabled_legacy_modes=frozenset({"live"}),
         ),
     }
 

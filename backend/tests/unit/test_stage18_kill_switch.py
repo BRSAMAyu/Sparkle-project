@@ -14,8 +14,8 @@ async def test_stage18_kill_switch_defaults_follow_settings(monkeypatch) -> None
     monkeypatch.setattr(settings, "AURORA_STAGE18_AGGREGATOR_MODE", "shadow", raising=False)
     monkeypatch.setattr(settings, "AURORA_STAGE18_PUSH_POLICY_MODE", "live", raising=False)
     monkeypatch.setattr(settings, "AURORA_STAGE18_PUSH_DELIVERY_MODE", "off", raising=False)
-    # Legacy bools override an explicit fallback-mode setting; pin them off so
-    # the mode attrs are authoritative here.
+    # V3-FIX-21 后 legacy bool 不再劫持显式 fallback 档位；此处仍钉 off 保持
+    # 测试对 settings 默认值的封闭性（不随环境变量漂移）。
     monkeypatch.setattr(settings, "SPARKLE_AGGREGATOR_ENABLED", False, raising=False)
     monkeypatch.setattr(settings, "SPARKLE_PUSH_POLICY_ENABLED", False, raising=False)
     monkeypatch.setattr(settings, "SPARKLE_PUSH_DELIVERY_ENABLED", False, raising=False)

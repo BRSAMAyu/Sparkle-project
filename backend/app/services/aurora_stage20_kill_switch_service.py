@@ -28,7 +28,6 @@ class AuroraStage20KillSwitchService:
             redis_key="conflict_resolver_mode",
             settings_attr="AURORA_STAGE20_CONFLICT_RESOLVER_MODE",
             legacy_bool_attr="SPARKLE_CONFLICT_RESOLVER_SHADOW_MODE",
-            enabled_legacy_modes=frozenset({"shadow", "live"}),
         ),
     }
 

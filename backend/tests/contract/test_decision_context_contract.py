@@ -634,7 +634,7 @@ async def test_builder_signals_governance_shadow_mode_observable(db_session, mon
     且降级可观测（结构化日志路径 + 降级计数器）。"""
     monkeypatch.setattr(cache_service, "redis", None, raising=False)
     monkeypatch.setattr(settings, "AURORA_STAGE18_AGGREGATOR_MODE", "shadow", raising=False)
-    # legacy bool 会把 fallback("off") 劫持回 live；显式关闭保证 shadow 解析的测试封闭性
+    # V3-FIX-21 后 legacy bool 不再劫持 fallback 档位；钉 off 保持测试封闭性
     monkeypatch.setattr(settings, "SPARKLE_AGGREGATOR_ENABLED", False, raising=False)
     user_id = await _seed_user_with_memories(db_session)
 
@@ -661,8 +661,8 @@ async def test_builder_signals_governance_off_mode_skips_fetch(db_session, monke
     """V3-FIX-09/F1：kill-switch=off 时跳过取数（不做无效查询），原因编码为 governance_off。"""
     monkeypatch.setattr(cache_service, "redis", None, raising=False)
     monkeypatch.setattr(settings, "AURORA_STAGE18_AGGREGATOR_MODE", "off", raising=False)
-    # legacy bool SPARKLE_AGGREGATOR_ENABLED=True 会把 "off" 配置劫持回 "live"
-    # （resolve_settings_mode: configured==fallback 且 legacy 开启 → enabled_mode），必须一并关闭
+    # V3-FIX-21 后 resolve_settings_mode 以 tri-state 设置为唯一判据，"off" 不再
+    # 被默认 True 的 legacy bool 劫持回 "live"；钉 off 保持测试封闭性
     monkeypatch.setattr(settings, "SPARKLE_AGGREGATOR_ENABLED", False, raising=False)
     user_id = await _seed_user_with_memories(db_session)
 

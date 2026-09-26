@@ -35,7 +35,8 @@ class KillSwitchBinding:
     fallback_mode: str = "off"
     enabled_mode: str = "live"
     allowed_modes: frozenset[str] = TRI_STATE_MODES
-    enabled_legacy_modes: frozenset[str] = frozenset({"shadow", "live"})
+    # V3-FIX-21：曾有的 enabled_legacy_modes 守卫字段全仓零读取点（死代码），
+    # 已随判据唯一化移除——legacy bool 只作 tri-state 设置缺席时的兜底。
 
 
 def normalize_mode(
@@ -75,17 +76,17 @@ def record_mode_gauge(stage: str, feature: str, mode: str) -> None:
 def resolve_settings_mode(binding: KillSwitchBinding) -> str:
     if binding.settings_attr:
         raw_setting = getattr(settings, binding.settings_attr, None)
-        configured = normalize_mode(
-            raw_setting,
-            allowed_modes=binding.allowed_modes,
-            fallback=binding.fallback_mode,
-        )
-        if binding.legacy_bool_attr and configured == binding.fallback_mode:
-            if bool(getattr(settings, binding.legacy_bool_attr, False)):
-                return binding.enabled_mode
-        if configured in binding.allowed_modes:
-            return configured
+        if raw_setting is not None:
+            # V3-FIX-21：tri-state 设置在场即为唯一判据——解析结果（含显式
+            # "off"/解析落在 fallback）不得被 legacy bool 劫持回 enabled_mode，
+            # 否则真实部署下 governance_off 原因码不可达。
+            return normalize_mode(
+                raw_setting,
+                allowed_modes=binding.allowed_modes,
+                fallback=binding.fallback_mode,
+            )
 
+    # legacy bool 只在未声明 tri-state 设置（或属性缺席）时兜底。
     if binding.legacy_bool_attr:
         if bool(getattr(settings, binding.legacy_bool_attr, False)):
             return binding.enabled_mode
@@ -113,8 +114,7 @@ async def read_mode(
                 )
         except Exception:
             _logger.warning(
-                "kill_switch read_mode Redis error for %s/%s, "
-                "falling back to settings mode %r",
+                "kill_switch read_mode Redis error for %s/%s, " "falling back to settings mode %r",
                 binding.stage,
                 binding.feature,
                 mode,
@@ -140,8 +140,7 @@ async def write_mode(
     )
     if redis_client is None:
         _logger.warning(
-            "kill_switch write_mode called without Redis for %s/%s; "
-            "write ignored (mode=%s)",
+            "kill_switch write_mode called without Redis for %s/%s; " "write ignored (mode=%s)",
             binding.stage,
             binding.feature,
             normalized,

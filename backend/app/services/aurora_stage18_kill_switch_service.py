@@ -35,7 +35,6 @@ class AuroraStage18KillSwitchService:
             redis_key="push_delivery_mode",
             settings_attr="AURORA_STAGE18_PUSH_DELIVERY_MODE",
             legacy_bool_attr="SPARKLE_PUSH_DELIVERY_ENABLED",
-            enabled_legacy_modes=frozenset({"live"}),
         ),
     }
 
