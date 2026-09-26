@@ -14,6 +14,12 @@ Usage:
 
     # With UserScope cognitive profile injection
     enriched_context = await builder.build_enriched(user_id, plan_id)
+
+Telemetry note (V3-FIX-14, TELEMETRY_DERIVED_READ_WAIVER): build_enriched
+performs two bounded second-hop reads of telemetry-derived tables for the
+user's OWN prompt context; both reads are strictly per-user (user_id
+filter), registered in
+tests/contract/test_telemetry_boundary_contract.py WAIVED_MODULES.
 """
 
 from datetime import UTC, datetime, timedelta
@@ -284,6 +290,14 @@ class PlanContextBuilder:
             try:
                 from app.models.user_state import UserStateSnapshot
 
+                # TELEMETRY_DERIVED_READ_WAIVER(V3-FIX-14): user_state_snapshots is
+                # telemetry-derived (state_estimator computes it from tracking_events).
+                # Bound: strictly per-user read (user_id filter) with a 24h recency
+                # window for the user's own prompt context; snapshot writes are
+                # debounce-gated (STATE_ESTIMATOR_MIN_INTERVAL_SECONDS) and the
+                # telemetry-derived cognitive_load/strain_index are capped
+                # (TELEMETRY_DERIVED_*_CAP) in state_estimator_service. Guarded by
+                # tests/contract/test_telemetry_boundary_contract.py (WAIVED_MODULES).
                 # Get the most recent snapshot from the last 24 hours
                 cutoff = _utcnow() - timedelta(hours=24)
                 result = await self.db.execute(
@@ -317,6 +331,13 @@ class PlanContextBuilder:
             try:
                 from app.models.cognitive import BehaviorPattern
 
+                # TELEMETRY_DERIVED_READ_WAIVER(V3-FIX-14): behavior_patterns is a
+                # telemetry-derived table (V3-FIX-11 T2 chain). Bound: strictly
+                # per-user read (user_id filter, is_archived gate, confidence
+                # ordering, limit) feeding only the user's own plan prompt — no
+                # cross-user truth path (V3-FIX-11 REVIEW_RECEIPT §5 per-user
+                # audit). Guarded by
+                # tests/contract/test_telemetry_boundary_contract.py (WAIVED_MODULES).
                 # Get active (non-archived) behavior patterns with high confidence
                 result = await self.db.execute(
                     select(BehaviorPattern)

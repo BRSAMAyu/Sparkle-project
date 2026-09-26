@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
@@ -12,6 +14,7 @@ from app.core.business_metrics import STATE_ESTIMATOR_LATENCY, STATE_ESTIMATOR_R
 from app.core.telemetry_boundary import (
     STATE_ESTIMATOR_MIN_INTERVAL_SECONDS,
     TELEMETRY_DERIVED_LOAD_CAP,
+    TELEMETRY_DERIVED_STRAIN_CAP,
 )
 from app.models.event import TrackingEvent
 from app.models.user_state import UserStateSnapshot
@@ -19,6 +22,16 @@ from app.models.user_state import UserStateSnapshot
 
 def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
+
+
+#: V3-FIX-14: one lock per user so the debounce check-then-act below is a
+#: single critical section (check freshness -> compute -> commit). Without
+#: it, two concurrent telemetry-triggered calls both pass the freshness
+#: check and both mint a snapshot. Process-local scope: cross-process
+#: duplicates remain theoretically possible but are bounded harm (both
+#: writers apply the same cap/debounce bounds; reads take the latest row),
+#: matching the V3-FIX-11 receipt's hazard assessment.
+_DEBOUNCE_LOCKS: defaultdict[UUID, asyncio.Lock] = defaultdict(asyncio.Lock)
 
 
 @dataclass
@@ -55,25 +68,33 @@ class StateEstimatorService:
 
         ``force=True`` bypasses the debounce for server-side schedulers
         (nightly review etc.) that own their cadence.
-        """
-        if not force:
-            latest = await self.get_latest_snapshot(user_id)
-            if latest is not None and (
-                _utcnow() - latest.snapshot_at
-            ) < timedelta(seconds=STATE_ESTIMATOR_MIN_INTERVAL_SECONDS):
-                STATE_ESTIMATOR_RUNS.labels(result="debounced").inc()
-                return latest
 
-        start_time = _utcnow()
-        window = self._default_window()
-        events = await self._fetch_recent_events(user_id, window)
-        snapshot = self._compute_state(user_id, events, window, timezone_name)
-        self.db.add(snapshot)
-        await self.db.commit()
-        await self.db.refresh(snapshot)
-        STATE_ESTIMATOR_RUNS.labels(result="success").inc()
-        STATE_ESTIMATOR_LATENCY.observe((_utcnow() - start_time).total_seconds())
-        return snapshot
+        V3-FIX-14: the freshness check and the snapshot write run inside a
+        per-user lock (``_DEBOUNCE_LOCKS``), so concurrent telemetry-triggered
+        calls serialize: the second caller re-checks freshness after the
+        first one committed and gets the existing snapshot instead of minting
+        a duplicate. ``force`` still skips the freshness *check*, but its
+        write is serialized against the same lock.
+        """
+        async with _DEBOUNCE_LOCKS[user_id]:
+            if not force:
+                latest = await self.get_latest_snapshot(user_id)
+                if latest is not None and (_utcnow() - latest.snapshot_at) < timedelta(
+                    seconds=STATE_ESTIMATOR_MIN_INTERVAL_SECONDS
+                ):
+                    STATE_ESTIMATOR_RUNS.labels(result="debounced").inc()
+                    return latest
+
+            start_time = _utcnow()
+            window = self._default_window()
+            events = await self._fetch_recent_events(user_id, window)
+            snapshot = self._compute_state(user_id, events, window, timezone_name)
+            self.db.add(snapshot)
+            await self.db.commit()
+            await self.db.refresh(snapshot)
+            STATE_ESTIMATOR_RUNS.labels(result="success").inc()
+            STATE_ESTIMATOR_LATENCY.observe((_utcnow() - start_time).total_seconds())
+            return snapshot
 
     async def get_latest_snapshot(self, user_id: UUID) -> UserStateSnapshot | None:
         result = await self.db.execute(
@@ -152,7 +173,17 @@ class StateEstimatorService:
         # may later add on top of this cap.
         telemetry_load = (wrong_events * 0.15) + (total_events * 0.02)
         cognitive_load = min(min(1.0, telemetry_load), TELEMETRY_DERIVED_LOAD_CAP)
-        strain_index = min(1.0, wrong_ratio + (0.2 if wrong_events >= 3 else 0.0))
+        # V3-FIX-14: strain_index is likewise 100% client-telemetry-derived
+        # (wrong-event counts are client-asserted rows) and is consumed on a
+        # decision-adjacent surface (plan_context prompt injection), so the
+        # forged quiz_wrong flood must not saturate it either. The estimator
+        # is the only writer of the column, so this producer-side cap bounds
+        # every reader (events API readback, chat prior_outputs, evidence
+        # health). Direction preserved, only the ceiling is bounded.
+        strain_index = min(
+            min(1.0, wrong_ratio + (0.2 if wrong_events >= 3 else 0.0)),
+            TELEMETRY_DERIVED_STRAIN_CAP,
+        )
         interruptibility = max(0.0, 1.0 - cognitive_load - (0.2 if focus_mode else 0.0))
 
         tz = None

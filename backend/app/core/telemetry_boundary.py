@@ -69,6 +69,14 @@ TELEMETRY_DERIVED_FRAGMENT_SOURCE_TYPES: frozenset[str] = frozenset({"behavior"}
 #: push interruptibility toward 0 on its own.
 TELEMETRY_DERIVED_LOAD_CAP: float = 0.3
 
+#: Hard ceiling on ``strain_index`` (V3-FIX-14). Like cognitive_load, strain
+#: is computed exclusively from client-asserted rows (wrong-event counts), so
+#: a forged quiz_wrong flood can saturate it to 1.0. The estimator is the
+#: only writer of the column, so this producer-side cap bounds every reader
+#: (plan_context prompt injection, events API readback, chat prior_outputs,
+#: evidence health). Direction preserved, only the ceiling is bounded.
+TELEMETRY_DERIVED_STRAIN_CAP: float = 0.3
+
 #: Minimum wall-clock interval between telemetry-triggered estimator
 #: recomputes for the same user. Telemetry paths (events ingest endpoint,
 #: cognitive stream worker) call ``update_state`` on every request/event;

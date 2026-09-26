@@ -59,6 +59,12 @@ TRUTH_PATH_FILES = (
     "app/services/nightly_review_service.py",
     "app/orchestration/adaptive_replanner.py",
     "app/services/personalization/runtime_context_service.py",
+    # V3-FIX-14: plan_context.build_enriched reads the latest per-user
+    # user_state_snapshots row (strain_index consumer) and per-user
+    # behavior_patterns for the user's own plan prompt — decision-adjacent
+    # surface named in V3-FIX-11 REVIEW_RECEIPT §5; incorporated into the
+    # scan set so its read stays waiver-gated like the consumers above.
+    "app/core/plan_context.py",
 )
 
 DIRECT_TELEMETRY_IDENTIFIERS = ("TrackingEvent", "tracking_events")
@@ -94,6 +100,15 @@ WAIVED_MODULES: dict[str, str] = {
     "app/orchestration/adaptive_replanner.py": (
         "V3-FIX-11 T2: reads behavior_patterns with registration_source NOT "
         "IN guest/seed cohort filter at the 0.7 confidence gate"
+    ),
+    "app/core/plan_context.py": (
+        "V3-FIX-14: build_enriched second-hop reads for the user's own plan "
+        "prompt, both strictly per-user (user_id filter): latest "
+        "user_state_snapshots row under a 24h recency filter, whose writes "
+        "are debounce-gated and whose telemetry-derived cognitive_load/"
+        "strain_index are capped by TELEMETRY_DERIVED_*_CAP; behavior_patterns "
+        "read is per-user with an is_archived gate and confidence ordering — "
+        "no cross-user truth path (V3-FIX-11 REVIEW_RECEIPT §5 per-user audit)"
     ),
 }
 
