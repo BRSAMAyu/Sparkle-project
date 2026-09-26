@@ -14,9 +14,17 @@ from app.api.v1.chat import router as chat_router
 from app.api.v1.tasks import router as tasks_router
 from app.core.cache import cache_service
 from app.models.task import SubTask, SubTaskStatus, Task, TaskStatus, TaskType
-from app.models.user import User
+from app.models.user import PushPreference, User
 from app.services.llm_service import LLMResponse
 from app.services.task_service import TaskService
+
+# wt559 · UTC 钟对齐（V3-FIX-250 snooze 写侧语义）：冻结服务器 UTC 钟
+# 2026-09-25 20:00 naive UTC → 上海本地 2026-09-26 04:00（日界已跨，与 UTC
+# 宿主日 09-25 可区分）；用户显式钉 Asia/Shanghai → 产品 snooze 的「今天」
+# 恒为 USER_LOCAL_TODAY = 09-26，期望按「用户本地日 + N」手工推导，与宿主
+# 机 TZ 无关（判例：tests/unit/test_task_snooze_due_date_local_day.py）。
+FROZEN_UTC_NOW = datetime(2026, 9, 25, 20, 0)
+USER_LOCAL_TODAY = date(2026, 9, 26)
 
 
 @pytest.fixture
@@ -110,20 +118,30 @@ async def _create_task(
 
 
 @pytest.mark.asyncio
-async def test_snooze_task_moves_due_date_without_replanning(tasks_client, db_session):
+async def test_snooze_task_moves_due_date_without_replanning(tasks_client, db_session, monkeypatch):
+    """snooze 把 due_date 推后一天、只动 due + snoozed tag，不触发 replan。
+
+    wt559 UTC 钟对齐：冻结 09-25 20:00Z + 显式 Asia/Shanghai → 产品「今天」
+    = 用户本地日 09-26（V3-FIX-250 写侧派生通道）。期望推导：
+    due 播种 = 09-26（用户本地今天）→ snooze(days=1) 写 09-26 + 1 = 09-27
+    （修前宿主机日语义在 UTC 宿主下会写 09-26，落错日网格）。
+    """
+    monkeypatch.setattr("app.api.v1.tasks.utcnow", lambda: FROZEN_UTC_NOW, raising=False)
     client, state = tasks_client
     user = await _create_user(db_session)
+    db_session.add(PushPreference(user_id=user.id, timezone="Asia/Shanghai"))
+    await db_session.commit()
     primary_task = await _create_task(
         db_session,
         user_id=user.id,
         title="复习线性代数",
-        due_date=date.today(),
+        due_date=USER_LOCAL_TODAY,  # 用户本地今天 09-26
     )
     await _create_task(
         db_session,
         user_id=user.id,
         title="写错题总结",
-        due_date=date.today(),
+        due_date=USER_LOCAL_TODAY,
     )
     state["current_user"] = user
 
@@ -133,10 +151,11 @@ async def test_snooze_task_moves_due_date_without_replanning(tasks_client, db_se
     payload = response.json()
     assert payload["action"] == "snooze"
     assert "推迟" in payload["message"]
-    assert payload["data"]["task"]["due_date"] == (date.today() + timedelta(days=1)).isoformat()
+    # 用户本地今天 09-26 + 1 天 = 09-27
+    assert payload["data"]["task"]["due_date"] == (USER_LOCAL_TODAY + timedelta(days=1)).isoformat()
 
     await db_session.refresh(primary_task)
-    assert primary_task.due_date == date.today() + timedelta(days=1)
+    assert primary_task.due_date == USER_LOCAL_TODAY + timedelta(days=1)
     assert "snoozed" in (primary_task.tags or [])
 
 

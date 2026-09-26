@@ -7,7 +7,7 @@ now count only up to the plan's current day; plan-less undated tasks count
 only on their creation day.
 """
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from uuid import uuid4
 
 import pytest
@@ -82,27 +82,44 @@ def test_due_and_active_tasks_keep_existing_semantics():
 
 
 @pytest.mark.asyncio
-async def test_select_tasks_today_excludes_later_sprint_days(db_session):
+async def test_select_tasks_today_excludes_later_sprint_days(db_session, monkeypatch):
     """End-to-end over select_tasks: the 32-day template collapses to the
-    current frontier days instead of returning everything."""
-    from app.models.user import User
+    current frontier days instead of returning everything.
+
+    wt559 UTC 钟对齐（V3-FIX-221/243 网格语义）：select_tasks 的「今天」走
+    用户本地日（PushPreference.timezone 直查，缺省 Asia/Shanghai）。冻结服务
+    钟 2026-09-25 20:00 naive UTC（上海本地 09-26 04:00，日界已跨）+ 用户显式
+    钉 Asia/Shanghai → 今天 = 09-26。网格推导：
+    created 本地日 = 09-24（今天前 2 天）、target = 10-25 →
+    total = (10-25 − 09-24) = 31 天、days_remaining = (10-25 − 09-26) = 29
+    → current_day = 31 − 29 + 1 = 3 → 只有 day ≤ 3 入选。
+    """
+    from app.models.user import PushPreference, User
+
+    # 冻结 daily_task_selection_service 的 utcnow（select_tasks「今天」的唯一时刻来源）。
+    monkeypatch.setattr(
+        "app.services.daily_task_selection_service.utcnow",
+        lambda: datetime(2026, 9, 25, 20, 0),
+        raising=False,
+    )
 
     user = User(username="p2g_user", email="p2g_user@example.com", hashed_password="hashed")
     db_session.add(user)
     await db_session.flush()
+    db_session.add(PushPreference(user_id=user.id, timezone="Asia/Shanghai"))
 
-    today = date.today()
     plan = Plan(
         user_id=user.id,
         name="32天冲刺",
         type=PlanType.SPRINT,
         plan_stage=PlanStage.SPRINT,
         priority=PlanPriority.HIGH,
-        target_date=today + timedelta(days=29),
+        target_date=date(2026, 10, 25),  # 今天(09-26) + 29
     )
     db_session.add(plan)
     await db_session.flush()
-    plan.created_at = today - timedelta(days=2)  # 31-day window, day 3 of it today
+    # 31 天窗口的第 3 天（naive UTC 零点按上海 +8h 换算后本地日仍 09-24）
+    plan.created_at = datetime(2026, 9, 24, 0, 0)
 
     # A 32-day intake-style template: only day 1-3 may surface for today.
     for day in range(1, 33):
@@ -118,13 +135,14 @@ async def test_select_tasks_today_excludes_later_sprint_days(db_session):
             )
         )
     # Plus a stale plan-less undated self-created task: not today's.
+    # created 本地日 = 09-21（上海 09-21 08:00）≠ 今天 09-26。
     db_session.add(
         Task(
             user_id=user.id,
             title="旧的自建任务",
             type=TaskType.LEARNING,
             estimated_minutes=30,
-            created_at=today - timedelta(days=5),
+            created_at=datetime(2026, 9, 21, 0, 0),
         )
     )
     await db_session.commit()

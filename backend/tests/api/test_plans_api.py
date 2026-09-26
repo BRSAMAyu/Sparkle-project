@@ -11,7 +11,7 @@ from app.db.session import get_db
 from app.models.plan import Plan, PlanPriority, PlanStage, PlanType
 from app.models.plan_state import PlanState, PlanStateStatus
 from app.models.task import Task, TaskStatus, TaskType
-from app.models.user import User
+from app.models.user import PushPreference, User
 
 
 @pytest.fixture
@@ -292,6 +292,26 @@ def _utcnow_naive() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+# ---------------------------------------------------------------------------
+# wt559 · UTC 钟对齐（V3-FIX-233/250/251 既有测试收口）：产品「今天」已切
+# 用户本地日（PushPreference.timezone 标量直查，缺省 Asia/Shanghai）。测试
+# 若继续用宿主机 date.today() 播种/推导，UTC 宿主钟下与用户本地日错位一天
+# （CI run 36253679384 attempt#2 六红层）。沿双冻结钟族判例
+# （tests/unit/test_task_snooze_due_date_local_day.py）：冻结服务器 UTC 钟
+# 到日界已跨的位置——
+#   FROZEN_UTC_NOW = 2026-09-25 20:00 naive UTC → 上海本地 2026-09-26 04:00，
+#   与 UTC 宿主日 09-25 可区分；用户显式钉 Asia/Shanghai，产品「今天」恒为
+#   USER_LOCAL_TODAY = 09-26，期望值一律按 09-26 手工推导，与宿主机 TZ 无关。
+# ---------------------------------------------------------------------------
+FROZEN_UTC_NOW = datetime(2026, 9, 25, 20, 0)
+USER_LOCAL_TODAY = date(2026, 9, 26)  # FROZEN_UTC_NOW + 8h 落在上海 09-26 日界
+
+
+def _pin_shanghai_user_local_clock(monkeypatch: pytest.MonkeyPatch) -> None:
+    """冻结 plans 模块的 utcnow（_user_local_today 的唯一时刻来源）。"""
+    monkeypatch.setattr("app.api.v1.plans.utcnow", lambda: FROZEN_UTC_NOW, raising=False)
+
+
 async def _make_comeback_plan(
     db_session,
     *,
@@ -350,19 +370,26 @@ def _add_day_task(db_session, user, plan, *, day: int, completed: bool = False, 
 
 
 @pytest.mark.asyncio
-async def test_day_highlights_follow_plan_start_date_not_day_one(db_session, plans_client):
+async def test_day_highlights_follow_plan_start_date_not_day_one(db_session, plans_client, monkeypatch):
     """缺陷 1 复现钉：计划 5 天前开始、7 天跨度（剩 2 天），任务在 Day 1/2/6。
 
     当天日次按「开始日 + 今天」推 = Day 6，重点必须跟日期走；main 上恒推 Day 1 → 红。
+
+    wt559 UTC 钟对齐：冻结服务器 UTC 钟 09-25 20:00Z（上海本地 09-26 04:00），
+    用户显式钉 Asia/Shanghai → 产品「今天」= 09-26。期望推导：
+    target = 09-26 + 2 = 09-28（剩 2 天）；initial_days = 7（strategy.total_days）
+    → today_day = 7 − 2 + 1 = 6（派生日落在任务网格内 → today 档）。
     """
+    _pin_shanghai_user_local_clock(monkeypatch)
     client, state = plans_client
     user, plan = await _make_comeback_plan(
         db_session,
         username="wt313_dateaware_user",
         description='{"strategy": {"total_days": 7}}',
-        target_date=date.today() + timedelta(days=2),
+        target_date=USER_LOCAL_TODAY + timedelta(days=2),  # 09-28：剩 2 天
         created_days_ago=5,
     )
+    db_session.add(PushPreference(user_id=user.id, timezone="Asia/Shanghai"))
     for day in (1, 2, 6):
         _add_day_task(db_session, user, plan, day=day)
     await db_session.commit()
@@ -380,20 +407,26 @@ async def test_day_highlights_follow_plan_start_date_not_day_one(db_session, pla
 
 
 @pytest.mark.asyncio
-async def test_day_highlights_resume_first_pending_day_when_today_done(db_session, plans_client):
+async def test_day_highlights_resume_first_pending_day_when_today_done(db_session, plans_client, monkeypatch):
     """诚实降级 A：派生日（Day 6）任务已全部完成、Day 5 仍未完成。
 
     焦点应「接上」第一个未完成日 Day 5，degraded=True，文案不得冒充「今天」；
     main 上恒推 Day 1 且无 degraded/today_day 字段 → 红。
+
+    wt559 UTC 钟对齐：同上冻结 09-25 20:00Z + 显式 Asia/Shanghai →
+    「今天」= 09-26；target = 09-26 + 2 = 09-28 → today_day = 7 − 2 + 1 = 6，
+    Day 6 全完成 → 降级接 Day 5。
     """
+    _pin_shanghai_user_local_clock(monkeypatch)
     client, state = plans_client
     user, plan = await _make_comeback_plan(
         db_session,
         username="wt313_resume_user",
         description='{"strategy": {"total_days": 7}}',
-        target_date=date.today() + timedelta(days=2),
+        target_date=USER_LOCAL_TODAY + timedelta(days=2),  # 09-28：剩 2 天
         created_days_ago=5,
     )
+    db_session.add(PushPreference(user_id=user.id, timezone="Asia/Shanghai"))
     _add_day_task(db_session, user, plan, day=5)
     _add_day_task(db_session, user, plan, day=6, completed=True, completed_days_ago=1)
     await db_session.commit()
@@ -440,21 +473,28 @@ async def test_day_highlights_all_completed_report_completion_honestly(db_sessio
 
 
 @pytest.mark.asyncio
-async def test_replan_reanchors_expired_plan_target(db_session, plans_client):
+async def test_replan_reanchors_expired_plan_target(db_session, plans_client, monkeypatch):
     """缺陷 3 复现钉：超期计划的 replan 执行端点。main 上 POST /plans/{id}/replan 404。
 
     语义 = 基于现状重校准：未完成日 1..7 全未完成 → 7 天跨度，
     重锚 target = 今天 + 7，落 last_replan 回执进 source_metadata，
     不删任务、不重建计划。
+
+    wt559 UTC 钟对齐：冻结 09-25 20:00Z + 显式 Asia/Shanghai → replan 的
+    「今天」= 09-26（V3-FIX-250 replan 写侧同源）。期望推导：
+    previous = 09-26 − 4 = 09-22（< 今天，判定超期）；未完成日 1..7 跨度 7
+    → new_target = 09-26 + 7 = 10-03；days_shifted = 10-03 − 09-22 = 11。
     """
+    _pin_shanghai_user_local_clock(monkeypatch)
     client, state = plans_client
     user, plan = await _make_comeback_plan(
         db_session,
         username="wt313_replan_user",
         description='{"strategy": {"total_days": 7}}',
-        target_date=date.today() - timedelta(days=4),
+        target_date=USER_LOCAL_TODAY - timedelta(days=4),  # 09-22：已超期
         created_days_ago=5,
     )
+    db_session.add(PushPreference(user_id=user.id, timezone="Asia/Shanghai"))
     for day in (1, 2, 3, 4, 5, 6, 7):
         _add_day_task(db_session, user, plan, day=day)
     await db_session.commit()
@@ -464,10 +504,11 @@ async def test_replan_reanchors_expired_plan_target(db_session, plans_client):
     assert response.status_code == 200, response.text
     payload = response.json()
     assert payload["replanned"] is True
-    expected_target = date.today() + timedelta(days=7)
+    previous_target = USER_LOCAL_TODAY - timedelta(days=4)  # 09-22
+    expected_target = USER_LOCAL_TODAY + timedelta(days=7)  # 09-26 + 7 = 10-03
     assert date.fromisoformat(payload["new_target_date"]) == expected_target
-    assert date.fromisoformat(payload["previous_target_date"]) == date.today() - timedelta(days=4)
-    assert payload["days_shifted"] == 11
+    assert date.fromisoformat(payload["previous_target_date"]) == previous_target
+    assert payload["days_shifted"] == (expected_target - previous_target).days  # 11
 
     await db_session.refresh(plan)
     assert plan.target_date == expected_target
@@ -477,7 +518,7 @@ async def test_replan_reanchors_expired_plan_target(db_session, plans_client):
     receipt = (plan.source_metadata or {}).get("last_replan")
     assert receipt is not None
     assert receipt["new_target_date"] == expected_target.isoformat()
-    assert receipt["previous_target_date"] == (date.today() - timedelta(days=4)).isoformat()
+    assert receipt["previous_target_date"] == previous_target.isoformat()
 
 
 @pytest.mark.asyncio
@@ -689,7 +730,17 @@ async def test_plan_detail_scrubs_internal_token_from_subject_surfaces(db_sessio
 
 
 @pytest.mark.asyncio
-async def test_plan_detail_normal_subject_zero_rewrite(db_session, plans_client):
+async def test_plan_detail_normal_subject_zero_rewrite(db_session, plans_client, monkeypatch):
+    """正常科目「离散数学」在详情 subject / day_highlights 文案 / why_now 零改写。
+
+    wt559 UTC 钟对齐：subject_tail 文案只在派生日 = Day 1「today」档出现，
+    而派生日由用户本地日驱动（V3-FIX-233）——宿主机 date.today() 播种在
+    UTC 钟下会漂到 resume 档、文案丢失科目（CI 红层）。冻结 09-25 20:00Z
+    + 显式 Asia/Shanghai → 「今天」= 09-26。期望推导：
+    started = 09-26 00:00（用户本地日开始）、target = 09-26 + 5 = 10-01
+    → initial_days = (10-01 − 09-26) = 5、days_left = 5 → today_day = 1。
+    """
+    _pin_shanghai_user_local_clock(monkeypatch)
     client, state = plans_client
     user = User(
         username="wt334_clean_user",
@@ -705,7 +756,7 @@ async def test_plan_detail_normal_subject_zero_rewrite(db_session, plans_client)
         type=PlanType.SPRINT,
         description="正常科目零改写",
         plan_stage=PlanStage.SPRINT,
-        target_date=date.today() + timedelta(days=5),
+        target_date=USER_LOCAL_TODAY + timedelta(days=5),  # 10-01
         daily_available_minutes=60,
         subject="离散数学",
         is_active=True,
@@ -713,7 +764,8 @@ async def test_plan_detail_normal_subject_zero_rewrite(db_session, plans_client)
     )
     db_session.add(plan)
     await db_session.flush()
-    started_at = datetime.combine(date.today(), datetime.min.time())
+    db_session.add(PushPreference(user_id=user.id, timezone="Asia/Shanghai"))
+    started_at = datetime.combine(USER_LOCAL_TODAY, datetime.min.time())  # 09-26 00:00
     plan.created_at = started_at
     plan.updated_at = started_at
     await db_session.flush()
