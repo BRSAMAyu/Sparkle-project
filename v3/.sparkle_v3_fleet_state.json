@@ -5,10 +5,10 @@
  "slots": 6,
  "active": {
   "wt477": "merged rehearsal",
-  "wt478": "165/166/167 bundle",
-  "wt480": "FIX-21 kill-switch",
   "wt481": "FIX-40 tx gap",
-  "wt482": "FIX-182/183 visual"
+  "wt482": "FIX-182/183 visual",
+  "wt483": "T36 align plan",
+  "wt484": "FIX-14 telemetry"
  },
  "done": [
   "A-01",
@@ -481,7 +481,9 @@
   "wt474: OPEN 池扫陈（a29760c9）",
   "wt475: FIX-164 数学误拒双向 bench（6563313b）",
   "wt476: FIX-169 语义缓存门复活（fe3846b2）",
-  "wt479: 组员7主张核验（80593a56）+FIX-181 台账同步（dd7b7486）"
+  "wt479: 组员7主张核验（80593a56）+FIX-181 台账同步（dd7b7486）",
+  "wt478: 165/166/167 三 P3（cb30ec63）",
+  "wt480: FIX-21 kill-switch 唯一判据+186-189 同族（9ce0064f）"
  ],
  "blocked": [],
  "notes": [
@@ -552,6 +554,7 @@
   "R(15:20): CI 裁决=Backend Tests 红但**Python 全量+Go 全家+迁移+AGE+golden 首次全过**，唯一红=OpenAPI 快照漂移（admin/llm-health/reset，wt456b 面，wt466 留记的 107 行既有漂移）→导出物过期非产品错→重冻结+check exit 0→已推送 91cf83e7..9aa1e7ab（26 commit），新 run=首个全绿候选。用户指令：核验组员 7 主张——初判：③排行榜主线已裁决已删(D-COMM-1/4+守卫)；④统计 mock 真实且进 Isar 缓存(债#1/2)；⑤数据层已拆 entitlement+flame_level(D17 冻结)，UI 残留待查；②cosmos T36 release_flags 即该机制(4 flag 默认 False)；①⑥⑦深查中(wt479：半成品清单/Aurora 黑话/特效盘点/T36 diff 对照)。",
   "R(15:3x): wt475 集成（6563313b+dc810b44 干净落地；合并态 bench 59 绿+mypy 1095=1095；worktree 清）。CI 新 run 36226324838（9aa1e7ab）在跑=首个全绿候选。补位 wt480=FIX-21 kill-switch 劫持（wt474 扫陈队列第 2 位，182 号段）。在航：wt476/477/478/479/480。",
   "R(15:5x): wt476 集成（fe3846b2+73741e6b；合并态 TestChatflowSemanticCache 3 测绿+vet 净+worktree 清；169 复活=引擎调用计数 2→1/1→0 实证；168 交接点两不变量钉死）。补位 wt481=FIX-40 账本同事务缺口（183 号段）。**纪律恢复：hold 一切推送至 run 36226324838 裁决**（本条与后续集成只本地 commit）。在航：wt477/478/479/480/481。",
-  "R(16:1x): wt479 集成（80593a56 superset-union 落地；报告 v3-output/wt479-claims-verify/REPORT.md）。核验终判：③⑤已做完+**④也已修**（D-04/5ed3d20d，组员读的是陈旧 KNOWN_CODE_DEBT_LEDGER——台账陈旧本身登记 FIX-181，我已就地销账注记 dd7b7486）；②部分真实但归因错位（T36 面不依赖 key，真裸奔=visual-elements→182）；⑥真实 9 项清单；⑦部分真实（aurora 文案已白话，黑话在 galaxy 隐喻+onboarding 缺介绍；删特效三圈层定义：可删 LABS≈9.6k 行，严禁碰 confetti/state_tokens）。关键：两仓=同产品断裂历史（cosmos 停在 v3 前基线，is_pro=flame_level>=3 还在）——T36 直接移植会误杀 self-anchor+双旗脑裂+shop 双机制冲突，需协调。新登记 181/182/183（wt480/481 撞号风险挂账，集成时 dedup 顺延 184+）。wt482 已派=182 视觉面独立闸（带 T36 教训）+183 死屏清理。在航：wt477/478/480/481/482。hold push 至 36226324838 裁决。"
+  "R(16:1x): wt479 集成（80593a56 superset-union 落地；报告 v3-output/wt479-claims-verify/REPORT.md）。核验终判：③⑤已做完+**④也已修**（D-04/5ed3d20d，组员读的是陈旧 KNOWN_CODE_DEBT_LEDGER——台账陈旧本身登记 FIX-181，我已就地销账注记 dd7b7486）；②部分真实但归因错位（T36 面不依赖 key，真裸奔=visual-elements→182）；⑥真实 9 项清单；⑦部分真实（aurora 文案已白话，黑话在 galaxy 隐喻+onboarding 缺介绍；删特效三圈层定义：可删 LABS≈9.6k 行，严禁碰 confetti/state_tokens）。关键：两仓=同产品断裂历史（cosmos 停在 v3 前基线，is_pro=flame_level>=3 还在）——T36 直接移植会误杀 self-anchor+双旗脑裂+shop 双机制冲突，需协调。新登记 181/182/183（wt480/481 撞号风险挂账，集成时 dedup 顺延 184+）。wt482 已派=182 视觉面独立闸（带 T36 教训）+183 死屏清理。在航：wt477/478/480/481/482。hold push 至 36226324838 裁决。",
+  "R(16:4x): wt478+wt480 双集成。wt478（cb30ec63/34dc1b7f→0e44092e/f29cb206）：165 消毒词表+166 length 入截断族+167 锁引号并集；快照冲突取我方全量冻结+重导出折入其描述行（check exit 0）；合并态 13 测绿。wt480（9ce0064f/b29dd6dc→c074b512/55bd666b）：21 行 tri-state 唯一判据 12 红→15/15 绿；其新登记 182-185 与 wt479 撞号→集成重编号 186-189（union 曾吞其 182/183 两行，已从其提交取回复录 186/187——**union 同 ID 就地更新仍需逐行核对，已两次踩坑**）；kill_switch 15/15+mypy 1095。补位 wt483=T36 移植对齐方案（防误杀 self-anchor，190 号段）+wt484=FIX-14 telemetry（191 号段）。在航：wt477/481/482/483/484。hold push 至 36226324838 裁决。"
  ]
 }
