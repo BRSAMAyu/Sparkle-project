@@ -87,6 +87,12 @@ enum InterventionLevel {
 
 InterventionLevel parseInterventionLevel(String? raw) {
   switch (raw?.toLowerCase()) {
+    // SILENT_MARKER 显式接受面（V3-FIX-301）：backend SCREAMING wire 值
+    // （schemas/intervention.py InterventionLevel）逐值显式归一，不再落
+    // default 有损降级——语义不变（silent=不渲染 UI），消费面
+    // InterventionOverlay 对 silent 本就 SizedBox.shrink。
+    case 'silent_marker':
+      return InterventionLevel.silent;
     case 'toast':
       return InterventionLevel.toast;
     case 'card':

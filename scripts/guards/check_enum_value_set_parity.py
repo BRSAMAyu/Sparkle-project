@@ -512,18 +512,20 @@ FAMILIES: dict[str, dict] = {
         "mobile": ("lib/features/chat/presentation/widgets/plan_review_card.dart", "ReviewDecision"),
         "mode": "dual",
     },
-    # ===== dual：intervention（wt574 B2，形态分裂；在册漂移见 KNOWN_DRIFT V3-FIX-301）=====
+    # ===== dual：intervention（wt574 B2，形态分裂；V3-FIX-301 已修，wire_map 全值钉死）=====
     "InterventionLevel": {
         # backend SCREAMING（schemas/intervention.py:13，intervention_service.py:649/:825
         # 下发）↔ mobile lower 标识符 + parse 合并 full_screen_modal→modal
-        # （core/models/intervention.dart:80 parseInterventionLevel，default→silent 有损）。
-        # wire_map =「backend 值 → mobile parse 已接受字面量」实证映射；SILENT_MARKER
-        # 无显式 case（落 default→silent）＝在册漂移，修复需读消费面裁决（V3-FIX-301）。
+        # （core/models/intervention.dart:88 parseInterventionLevel）。V3-FIX-301
+        # （wt593）补 SILENT_MARKER 显式 case（'silent_marker'→silent 同值显式声明，
+        # 消 default 有损降级；消费面 InterventionOverlay 对 silent 本就 shrink，
+        # 零 UI 差异）；wire_map =「backend 值 → mobile parse 已接受字面量」实证映射，
+        # 单边加值即 EP001/EP002。
         "backend": ("app/schemas/intervention.py", "InterventionLevel"),
         "mobile": ("lib/core/models/intervention.dart", "InterventionLevel"),
         "mode": "dual",
         "wire_map": {
-            "SILENT_MARKER": [],
+            "SILENT_MARKER": ["silent_marker"],
             "TOAST": ["toast"],
             "CARD": ["card"],
             "FULL_SCREEN_MODAL": ["full_screen_modal", "modal"],
@@ -641,18 +643,13 @@ KNOWN_DRIFT: dict[str, dict] = {
     # official、MessageType 补 broadcast、PhotonTransactionType 补
     # grant_bonus/contract_escrow/guest_seed，三族均加 unknown 哨兵 +
     # unknownEnumValue 兜底 + 消费面穷举 switch/l10n），豁免即删保持棘轮纯净。
+    # V3-FIX-301 豁免已删：wt593 修复落地（mobile parseInterventionLevel 补
+    # 'silent_marker' 显式 case，wire_map 同步钉死 SILENT_MARKER→silent_marker；
+    # 大小写形态分裂不追字面统一，由 wire_map 继续钉住），守卫实测对齐，
+    # 豁免即删保持棘轮纯净。
     # ---------------------------------------------------------------------
     # V3-FIX-291（wt585 登记 2026-09-25）：models 外族入管后暴露的在册漂移。
     # ---------------------------------------------------------------------
-    "InterventionLevel": {
-        "fix": "V3-FIX-301",
-        "owner": "待派（wt585 登记）",
-        "expiry": _dt.date(2026, 10, 7),
-        "note": "SILENT_MARKER 在 mobile parse 无显式接受面（intervention.dart:88 "
-        "parseInterventionLevel 落 default→silent 有损降级）；修复=统一值集需读消费面"
-        "裁决（backend SCREAMING vs mobile lower 形态分裂，动值集牵发面>3 文件），"
-        "本卡（V3-FIX-291）只扩射程不修值",
-    },
 }
 
 # ---------------------------------------------------------------------------
