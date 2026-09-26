@@ -919,10 +919,8 @@ void main() {
         overrides: [
           shopRepositoryProvider.overrideWithValue(mockRepository),
         ],
-      );
-
-      // Initialize all providers
-      testContainer
+      )
+        // Initialize all providers
         ..read(shopItemsProvider)
         ..read(purchaseHistoryProvider)
         ..read(inventoryProvider)

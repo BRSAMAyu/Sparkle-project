@@ -99,9 +99,7 @@ Future<void> initializeU02SurfaceEnvironment() async {
   // 平台插件桩（测试宿主无原生通道；环境隔离，非设计行为替换）：
   // 通知插件 initialize 返回 false、path_provider 返回临时目录，
   // 供 NotificationService/BgmService 的异步初始化 fail-soft 落定。
-  final messenger = TestDefaultBinaryMessengerBinding
-      .instance.defaultBinaryMessenger;
-  messenger
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
     ..setMockMethodCallHandler(
       const MethodChannel('dexterous.com/flutter/local_notifications'),
       (call) async => call.method == 'initialize' ? false : null,

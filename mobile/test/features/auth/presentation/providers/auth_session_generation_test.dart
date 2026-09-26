@@ -116,8 +116,9 @@ void main() {
   test('logout 作废在途 login 的写入', () async {
     final repo = _GatedAuthRepository(user);
     final staleGate = Completer<bool>()..complete(false);
-    repo.queueIsLoggedInGate(staleGate);
-    repo.loginGate = Completer<void>();
+    repo
+      ..queueIsLoggedInGate(staleGate)
+      ..loginGate = Completer<void>();
 
     final container = await buildContainer(repo);
     addTearDown(container.dispose);

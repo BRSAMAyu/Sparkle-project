@@ -136,8 +136,8 @@ void main() {
     });
 
     test('link distance maps to force engine spring rest length', () {
-      final engine = GalaxyForceEngine();
-      engine.updateParameters(springRestLength: 144);
+      final engine = GalaxyForceEngine()
+        ..updateParameters(springRestLength: 144);
 
       expect(engine.springRestLength, 144);
     });

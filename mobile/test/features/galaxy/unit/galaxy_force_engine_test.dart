@@ -37,8 +37,9 @@ void main() {
       };
       final index = GalaxySpatialIndex()..build(positions, nodes);
 
-      engine.anchorNode('b', adjacency);
-      engine.releaseAnchor();
+      engine
+        ..anchorNode('b', adjacency)
+        ..releaseAnchor();
 
       var settled = false;
       for (var i = 0; i < 600; i++) {

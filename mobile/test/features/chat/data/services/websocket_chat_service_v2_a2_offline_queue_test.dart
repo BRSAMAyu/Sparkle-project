@@ -161,12 +161,13 @@ void main() {
     // Establish identity first (as the app does), but leave the handshake
     // pending so sendMessage takes the offline-queue path.
     await sender.ensureConnected(userId: 'u1');
-    sender.sendMessage(
-      message: 'hello from guest',
-      userId: 'u1',
-      extraContext: const {'source': 'galaxy', 'node_id': 'n1'},
-    );
-    sender.dispose();
+    sender
+      ..sendMessage(
+        message: 'hello from guest',
+        userId: 'u1',
+        extraContext: const {'source': 'galaxy', 'node_id': 'n1'},
+      )
+      ..dispose();
 
     OfflineChatMessage? row;
     await waitFor(const Duration(seconds: 2), () async {

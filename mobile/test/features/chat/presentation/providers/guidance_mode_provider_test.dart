@@ -16,8 +16,8 @@ void main() {
     });
 
     test('mode setter changes mode', () {
-      final notifier = GuidanceModeNotifier();
-      notifier.mode = GuidanceMode.selfGuide;
+      final notifier = GuidanceModeNotifier()
+        ..mode = GuidanceMode.selfGuide;
       expect(notifier.state, GuidanceMode.selfGuide);
 
       notifier.mode = GuidanceMode.aiGuide;

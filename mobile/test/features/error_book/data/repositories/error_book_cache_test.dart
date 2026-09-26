@@ -35,8 +35,7 @@ void main() {
       [CachedListSnapshotSchema],
       directory: tempDir.path,
     );
-    localDb = LocalDatabase();
-    localDb.isar = isar;
+    localDb = LocalDatabase()..isar = isar;
     cache = ListReadCache(localDb);
     mockDio = MockDio();
   });

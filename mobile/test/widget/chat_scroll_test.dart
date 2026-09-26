@@ -151,19 +151,21 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     }
 
-    final chatNotifier = tester.state<ConsumerState>(find.byType(ChatScreen))
-        .ref.read(chatProvider.notifier) as _ScrollChatNotifier;
-
-    // Seed one message so the ListView is rendered (not the quick action panel).
-    chatNotifier.addMessage(
-      ChatMessageModel(
-        id: 'seed',
-        conversationId: 'test-session',
-        content: 'Seed Message',
-        role: MessageRole.user,
-        createdAt: DateTime.now(),
-      ),
-    );
+    final chatNotifier = tester
+        .state<ConsumerState>(find.byType(ChatScreen))
+        .ref
+        .read(chatProvider.notifier) as _ScrollChatNotifier
+      // Seed one message so the ListView is rendered (not the quick action
+      // panel).
+      ..addMessage(
+        ChatMessageModel(
+          id: 'seed',
+          conversationId: 'test-session',
+          content: 'Seed Message',
+          role: MessageRole.user,
+          createdAt: DateTime.now(),
+        ),
+      );
     for (var i = 0; i < 10; i++) {
       await tester.pump(const Duration(milliseconds: 50));
     }

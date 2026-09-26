@@ -50,8 +50,7 @@ void main() {
       [CachedStatisticsModelSchema],
       directory: tempDir.path,
     );
-    localDb = LocalDatabase();
-    localDb.isar = isar;
+    localDb = LocalDatabase()..isar = isar;
   });
 
   tearDown(() async {

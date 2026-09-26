@@ -480,11 +480,10 @@ void main() {
         overrides: [
           photonRepositoryProvider.overrideWithValue(mockRepository),
         ],
-      );
-
-      // Read providers to initialize them
-      container.read(photonBalanceProvider);
-      container.read(photonTransactionsProvider);
+      )
+        // Read providers to initialize them
+        ..read(photonBalanceProvider)
+        ..read(photonTransactionsProvider);
 
       await Future<void>.delayed(Duration.zero);
 

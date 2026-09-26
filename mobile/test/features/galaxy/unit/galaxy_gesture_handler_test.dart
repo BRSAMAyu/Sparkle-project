@@ -12,9 +12,7 @@ void main() {
       tester,
     ) async {
       final commands = <GalaxyGestureCommand>[];
-      final handler = _handler(commands);
-
-      handler
+      final handler = _handler(commands)
         ..handlePointerDown(
           const PointerDownEvent(
             pointer: 1,
@@ -39,9 +37,7 @@ void main() {
       tester,
     ) async {
       final commands = <GalaxyGestureCommand>[];
-      final handler = _handler(commands);
-
-      handler
+      final handler = _handler(commands)
         ..handlePointerDown(
           const PointerDownEvent(
             pointer: 1,
@@ -87,14 +83,13 @@ void main() {
         worldPosition: Offset.zero,
         distance: 0,
       );
-      final handler = _handler(commands, hit: hit);
-
-      handler.handlePointerDown(
-        const PointerDownEvent(
-          pointer: 1,
-          position: Offset(50, 50),
-        ),
-      );
+      final handler = _handler(commands, hit: hit)
+        ..handlePointerDown(
+          const PointerDownEvent(
+            pointer: 1,
+            position: Offset(50, 50),
+          ),
+        );
       await tester.pump(const Duration(milliseconds: 520));
       handler.handlePointerMove(
         const PointerMoveEvent(

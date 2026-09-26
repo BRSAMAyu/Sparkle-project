@@ -45,8 +45,7 @@ void main() {
       ],
       directory: tempDir.path,
     );
-    localDb = LocalDatabase();
-    localDb.isar = isar;
+    localDb = LocalDatabase()..isar = isar;
     cache = ListReadCache(localDb);
     mockApi = MockApiClient();
     mockEngine = MockSyncEngine();

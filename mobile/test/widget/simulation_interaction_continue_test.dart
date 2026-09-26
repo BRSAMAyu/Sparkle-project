@@ -440,25 +440,24 @@ void main() {
     final notifier = SimulationNotifier(
       _AbruptContinueSimulationRepository(),
       _FakeRef(),
-    );
-    notifier.state = const SimulationState(
-      sessionId: 'sim-continue-1',
-      session: SimulationSessionModel(
-        id: 'sim-continue-1',
-        scenarioKey: 'study_group',
-        state: 'WAITING_FOR_USER',
-        topic: '特征值',
-        participants: <SimulationParticipantModel>[],
-        rounds: <SimulationRoundModel>[],
-        insightSummary: '等待用户继续',
-        pendingInteraction: SimulationInteractionModel(
-          id: 'interaction-1',
-          interactionType: 'prompt',
-          prompt: '你准备先做什么？',
+    )..state = const SimulationState(
+        sessionId: 'sim-continue-1',
+        session: SimulationSessionModel(
+          id: 'sim-continue-1',
+          scenarioKey: 'study_group',
+          state: 'WAITING_FOR_USER',
+          topic: '特征值',
+          participants: <SimulationParticipantModel>[],
+          rounds: <SimulationRoundModel>[],
+          insightSummary: '等待用户继续',
+          pendingInteraction: SimulationInteractionModel(
+            id: 'interaction-1',
+            interactionType: 'prompt',
+            prompt: '你准备先做什么？',
+          ),
         ),
-      ),
-      engineState: 'WAITING_FOR_USER',
-    );
+        engineState: 'WAITING_FOR_USER',
+      );
 
     final ok = await notifier.continueSimulation('我先做一道题');
 

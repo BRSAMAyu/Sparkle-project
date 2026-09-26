@@ -17,8 +17,8 @@ List<_MsgStub> paginate(
   String? beforeId,
   int limit = 50,
 }) {
-  final messages = List<_MsgStub>.from(allMessages);
-  messages.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  final messages = List<_MsgStub>.from(allMessages)
+    ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
   if (beforeId != null) {
     final index = messages.indexWhere((m) => m.id == beforeId);

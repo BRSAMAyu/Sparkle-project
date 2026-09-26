@@ -185,9 +185,10 @@ void main() {
       final server = await _startServer((client) {
         // Bytes that are not a valid WebSocketMessage protobuf frame
         // (leading 0x00 is an invalid protobuf tag).
-        client.add(<int>[0x00, 0xFF, 0x13, 0x37, 0xDE, 0xAD]);
-        // A valid JSON text frame must still be delivered.
-        client.add('{"type":"pong"}');
+        client
+          // A valid JSON text frame must still be delivered.
+          ..add(<int>[0x00, 0xFF, 0x13, 0x37, 0xDE, 0xAD])
+          ..add('{"type":"pong"}');
       });
       final service = WebSocketService();
       addTearDown(service.disconnect);

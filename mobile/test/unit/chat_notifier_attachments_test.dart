@@ -37,14 +37,17 @@ void main() {
     final notifier = container.read(chatProvider.notifier);
 
     final f1 = _file('f1');
-    notifier.addAttachment(f1);
-    notifier.addAttachment(f1); // duplicate should be ignored
+    notifier
+      ..addAttachment(f1)
+      // duplicate should be ignored
+      ..addAttachment(f1);
 
     var state = container.read(chatProvider);
     expect(state.attachedFiles.length, 1);
 
-    notifier.addAttachment(_file('f2'));
-    notifier.removeAttachment('f1');
+    notifier
+      ..addAttachment(_file('f2'))
+      ..removeAttachment('f1');
 
     state = container.read(chatProvider);
     expect(state.attachedFiles.length, 1);

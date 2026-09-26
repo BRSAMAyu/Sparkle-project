@@ -27,24 +27,23 @@ void main() {
 
   test('start skips backend task start for local-only focus tasks', () async {
     final taskRepository = _RecordingTaskRepository();
-    final notifier = _buildNotifier(taskRepository);
-
-    notifier.start(
-      TaskModel(
-        id: 'quick_focus_local',
-        userId: '',
-        title: '自由专注',
-        type: TaskType.learning,
-        estimatedMinutes: 25,
-        difficulty: 1,
-        energyCost: 1,
-        priority: 1,
-        tags: const [],
-        status: TaskStatus.pending,
-        createdAt: DateTime(2026, 4),
-        updatedAt: DateTime(2026, 4),
-      ),
-    );
+    final notifier = _buildNotifier(taskRepository)
+      ..start(
+        TaskModel(
+          id: 'quick_focus_local',
+          userId: '',
+          title: '自由专注',
+          type: TaskType.learning,
+          estimatedMinutes: 25,
+          difficulty: 1,
+          energyCost: 1,
+          priority: 1,
+          tags: const [],
+          status: TaskStatus.pending,
+          createdAt: DateTime(2026, 4),
+          updatedAt: DateTime(2026, 4),
+        ),
+      );
     await Future<void>.delayed(Duration.zero);
 
     expect(taskRepository.startedTaskIds, isEmpty);
@@ -53,24 +52,23 @@ void main() {
 
   test('start still syncs real server tasks to backend', () async {
     final taskRepository = _RecordingTaskRepository();
-    final notifier = _buildNotifier(taskRepository);
-
-    notifier.start(
-      TaskModel(
-        id: '00000000-0000-0000-0000-000000000123',
-        userId: '00000000-0000-0000-0000-000000000001',
-        title: '真实任务',
-        type: TaskType.learning,
-        estimatedMinutes: 25,
-        difficulty: 1,
-        energyCost: 1,
-        priority: 1,
-        tags: const [],
-        status: TaskStatus.pending,
-        createdAt: DateTime(2026, 4),
-        updatedAt: DateTime(2026, 4),
-      ),
-    );
+    final notifier = _buildNotifier(taskRepository)
+      ..start(
+        TaskModel(
+          id: '00000000-0000-0000-0000-000000000123',
+          userId: '00000000-0000-0000-0000-000000000001',
+          title: '真实任务',
+          type: TaskType.learning,
+          estimatedMinutes: 25,
+          difficulty: 1,
+          energyCost: 1,
+          priority: 1,
+          tags: const [],
+          status: TaskStatus.pending,
+          createdAt: DateTime(2026, 4),
+          updatedAt: DateTime(2026, 4),
+        ),
+      );
     await Future<void>.delayed(Duration.zero);
 
     expect(

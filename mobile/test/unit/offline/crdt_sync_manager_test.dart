@@ -45,8 +45,7 @@ void main() {
       ],
       directory: tempDir.path,
     );
-    localDb = LocalDatabase();
-    localDb.isar = isar;
+    localDb = LocalDatabase()..isar = isar;
     mockEngine = MockSyncEngine();
   });
 
@@ -203,8 +202,8 @@ void main() {
   });
 
   test('initialize and dispose delegate to SyncEngine', () {
-    final manager = CRDTSyncManager(localDb, mockEngine, actorId: 'actor-1');
-    manager.initialize();
+    final manager = CRDTSyncManager(localDb, mockEngine, actorId: 'actor-1')
+      ..initialize();
     verify(mockEngine.start()).called(1);
 
     manager.dispose();

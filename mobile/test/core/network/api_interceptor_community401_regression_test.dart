@@ -122,8 +122,9 @@ void main() {
 
   test('refresh failure still surfaces as DioException (no silent success)',
       () async {
-    authRepository.storedRefreshToken = 'refresh-token';
-    authRepository.failRefresh = true;
+    authRepository
+      ..storedRefreshToken = 'refresh-token'
+      ..failRefresh = true;
     adapter.enqueue(statusCode: 401, data: const <String, dynamic>{});
     retryAdapter.enqueue(statusCode: 401, data: const <String, dynamic>{});
 

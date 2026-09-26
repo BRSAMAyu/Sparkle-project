@@ -94,8 +94,9 @@ void main() {
       );
 
       // 重试可达数据态。
-      repository.failure = null;
-      repository.view = _dataView();
+      repository
+        ..failure = null
+        ..view = _dataView();
       await tester.tap(find.byKey(const ValueKey('self-anchor-retry-button')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
