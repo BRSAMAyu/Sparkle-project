@@ -188,9 +188,6 @@ Legend:
 - `seed_library_detail_screen.dart`
 - `seed_library_list_screen.dart`
 
-### settings
-- `transparency_settings_screen.dart`
-
 ### shop
 - `shop_screen.dart`
 
