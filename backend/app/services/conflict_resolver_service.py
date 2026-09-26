@@ -221,6 +221,8 @@ class ConflictResolverService:
     PRIORITY_BY_TIER = {
         # D2（审计 round2）：未登记 lane 的保守兜底档位——低于一切已知 lane，
         # 防止未来新 lane（如 aurora_calibration_receipt）静默压过 direct_capture。
+        # V3-FIX-06 后该 lane 的 live 写入点已迁移到登记 lane working_memory，
+        # 本 lane 保留为未登记红线样例（RESERVED_UNREGISTERED_LANES）。
         "unknown": 0,
         "working_memory": 1,
         "llm": 2,

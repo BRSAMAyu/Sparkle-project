@@ -424,7 +424,15 @@ class CorrectionFeedbackProcessor:
                 evidence_token=str(receipt.get("correction_id") or ""),
                 occurred_at=_utcnow(),
                 source_turn_id=str(receipt.get("correction_id") or ""),
-                source_lane="aurora_calibration_receipt",
+                # V3-FIX-06（行内二选一之「迁移写入点」）：source_lane 必须取
+                # ConflictResolverService.KNOWN_SOURCE_LANES 已登记值——未登记
+                # lane 会在仲裁侧静默回退 unknown(0) 最低档。回执是机器合成的
+                # 校准说明（非用户陈述），按契约停留 working memory、不进长时
+                # 仲裁面；写入者身份由 subject_type="aurora_correction" 与
+                # semantic_key 前缀 calibration_receipt: 承载。
+                # aurora_calibration_receipt 保留为未登记红线样例
+                # （memory_epistemic_contract.RESERVED_UNREGISTERED_LANES）。
+                source_lane="working_memory",
             )
         except Exception:
             logger.opt(exception=True).debug("CorrectionFeedback: working memory receipt write failed")

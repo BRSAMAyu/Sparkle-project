@@ -498,7 +498,9 @@ async def test_known_lanes_keep_registered_priorities(db_session):
 @pytest.mark.asyncio
 async def test_unknown_lane_falls_to_lowest_priority_and_loses_to_direct_capture(db_session):
     service = ConflictResolverService(db_session)
-    # aurora_calibration_receipt 是代码库中真实存在的未登记 lane（correction_feedback）
+    # aurora_calibration_receipt：保留位红线样例（曾由 correction_feedback 写入，
+    # V3-FIX-06 裁决=迁移写入点后保留为未登记 lane，登记完备性守卫见
+    # test_memory_epistemic_contract.test_all_app_source_lane_literals_are_registered）
     assert service._priority("aurora_calibration_receipt") == 0
     assert service._priority("") == 0
     assert service._priority("some_future_lane") == 0

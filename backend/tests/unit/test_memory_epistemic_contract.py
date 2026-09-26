@@ -2,11 +2,14 @@
 
 验证契约与既有资产的一致性：
 - lane 注册表与 ConflictResolverService.KNOWN_SOURCE_LANES 同源；
-- aurora_calibration_receipt 保留位存在但未被登记（不替产品裁决，V3-FIX-06）；
+- aurora_calibration_receipt 保留位存在但未被登记（V3-FIX-06 裁决=迁移写入点：
+  本 lane 保留为未登记红线样例，live 写入点已改用登记 lane 并加守卫）；
 - 状态机优先级、类型派生、provenance 分类、守卫谓词真值表。
 """
 
+import re
 from datetime import datetime
+from pathlib import Path
 from types import SimpleNamespace
 
 from app.services.conflict_resolver_service import ConflictResolverService
@@ -48,11 +51,43 @@ def test_lane_priority_ordering_matches_resolver_tiers():
 
 
 def test_aurora_calibration_receipt_reserved_but_not_registered():
-    """红线用例：给位置、不裁决 —— 登记权在 V3-FIX-06。"""
+    """红线用例：给位置、不裁决。
+
+    V3-FIX-06 裁决=迁移写入点：correction_feedback 的 live 写入已改用登记 lane
+    working_memory（test_calibration_receipt 回归锁），本 lane 保留在
+    RESERVED_UNREGISTERED_LANES 作为未登记回退（unknown 档）的红线样例；
+    若未来任何写方要复用该 lane，必须先在 KNOWN_SOURCE_LANES 登记位次。
+    """
     assert "aurora_calibration_receipt" in RESERVED_UNREGISTERED_LANES
     assert "aurora_calibration_receipt" not in ConflictResolverService.KNOWN_SOURCE_LANES
     # 未登记 lane 在 epistemic 分类上保守落 HYPOTHESIS
     assert classify_episodic_class("aurora_calibration_receipt") == EpistemicClass.HYPOTHESIS.value
+
+
+def test_all_app_source_lane_literals_are_registered():
+    """V3-FIX-06 回归锁（登记完备性守卫）：app 代码中所有 source_lane 字面量
+    必须已在仲裁登记表登记。
+
+    未登记 lane 静默回退 unknown(0) 最低档（D2 契约）——写侧新引入未登记
+    lane 字面量即令仲裁位次未定义。本守卫为字面量级扫描（动态拼接的 lane
+    不在扫描面），与 write-point 回归锁（test_calibration_receipt）互补。
+    """
+    app_root = Path(__file__).resolve().parents[2] / "app"
+    # 匹配 kwargs/赋值/带注解默认值三种形态；== 比较与 .get("source_lane") 不匹配
+    pattern = re.compile(r'source_lane(?::\s*[A-Za-z\[\]| ,.]+?)?\s*=\s*"([a-z0-9_]+)"')
+    offenders: list[str] = []
+    scanned = 0
+    for path in sorted(app_root.rglob("*.py")):
+        if "__pycache__" in path.parts or "gen" in path.parts:
+            continue
+        text = path.read_text(encoding="utf-8")
+        for match in pattern.finditer(text):
+            scanned += 1
+            lane = match.group(1)
+            if lane not in ConflictResolverService.KNOWN_SOURCE_LANES:
+                offenders.append(f"{path.relative_to(app_root)}: {lane}")
+    assert scanned > 0, "扫描面意外为空（守卫自检失败）"
+    assert not offenders, f"未登记 lane 字面量（先登记位次或改用登记 lane）: {offenders}"
 
 
 def test_classify_episodic_class_rules():

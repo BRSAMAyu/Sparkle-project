@@ -145,3 +145,47 @@ def test_grpc_metadata_carries_calibration_receipt_as_json() -> None:
     unified = json.loads(response.metadata["aurora_receipts"])
     assert decoded["correction_id"] == "corr_1"
     assert unified[0]["receipt_type"] == "calibration_receipt"
+
+
+@pytest.mark.asyncio
+async def test_calibration_receipt_working_memory_write_uses_registered_lane(monkeypatch) -> None:
+    """V3-FIX-06 回归锁（write-point）：校准回执 working-memory 写入点的
+    source_lane 必须是仲裁登记表已知 lane。
+
+    裁决（行内二选一之「迁移写入点」）：回执是机器合成的校准说明（非用户
+    陈述），按契约停留 working memory；未登记 lane 会静默回退 unknown(0)
+    最低档（D2 契约），写入者身份由 subject_type / semantic_key 前缀承载。
+    V3-FIX-06 前此处写入未登记的 aurora_calibration_receipt。
+    """
+    from app.services.conflict_resolver_service import ConflictResolverService
+    from app.working_memory.service import WorkingMemoryService
+
+    captured: list[dict] = []
+
+    async def fake_upsert_entry(self, **kwargs):
+        captured.append(kwargs)
+        return None
+
+    monkeypatch.setattr(WorkingMemoryService, "upsert_entry", fake_upsert_entry)
+
+    # redis 传真值占位：越过「self.redis is None」早退，触达 working-memory 写入分支
+    # （前置的 MemoryService.record_calibration_receipt 对占位对象失败，被调用方
+    # try/except 吞掉，与本写入分支无关）。
+    processor = CorrectionFeedbackProcessor(object())
+    await processor._persist_calibration_receipt(
+        user_id="user_1",
+        receipt={
+            "correction_id": "corr_wm",
+            "what_changed": "我下调了判断",
+            "next_time": "下次先确认",
+        },
+        session_id="session_1",
+    )
+
+    assert len(captured) == 1, "回执必须恰好落一条 working-memory 写入"
+    write = captured[0]
+    # 契约硬门：写入 lane 必须已登记（否则仲裁位次未定义/静默最低档）
+    assert write["source_lane"] in ConflictResolverService.KNOWN_SOURCE_LANES
+    # 身份不变：写入者与回执链路由 subject_type / semantic_key 前缀承载
+    assert write["subject_type"] == "aurora_correction"
+    assert str(write["semantic_key"]).startswith("calibration_receipt:")

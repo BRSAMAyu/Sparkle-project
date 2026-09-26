@@ -149,15 +149,25 @@ EXPLICIT_SOURCE_LANES: frozenset[str] = frozenset({"direct_capture", "user_confi
 USER_STATEMENT_SOURCE_TYPES: frozenset[str] = frozenset({"user_registered"})
 
 # Lanes deliberately NOT registered in ConflictResolverService.KNOWN_SOURCE_LANES.
-# ``aurora_calibration_receipt`` is a live red-line case (see V3-FIX-06):
-# correction_feedback.py writes it to working memory; whether it should
-# arbitrate above direct_capture is a product decision this card must NOT
-# make. It is documented here so the epistemic contract has a reserved slot
-# while conflict arbitration continues to treat it as lowest tier ("unknown").
+# ``aurora_calibration_receipt`` is the canonical red-line case (V3-FIX-06,
+# RESOLVED — ruling: migrate the write point). The receipt is machine-composed
+# calibration prose (not a user statement): its live writer
+# (correction_feedback._persist_calibration_receipt) now emits the registered
+# ``working_memory`` lane and keeps writer identity via
+# subject_type="aurora_correction" / semantic_key prefix "calibration_receipt:".
+# This slot stays as the documented unknown-tier fixture: any future writer
+# that wants to reuse this lane MUST register its arbitration tier in
+# ConflictResolverService.KNOWN_SOURCE_LANES first (registry-completeness
+# guard: test_memory_epistemic_contract.test_all_app_source_lane_literals_are_registered).
+# Boundary note: working-memory entries that consolidate to L1 land under the
+# consolidation lane (``inferred_extraction``, rule tier) by design — see
+# WorkingMemoryConsolidationService._consolidate_entry.
 RESERVED_UNREGISTERED_LANES: dict[str, str] = {
     "aurora_calibration_receipt": (
-        "correction receipt lane (working-memory scoped, V3-FIX-06 pending); "
-        "deliberately NOT registered in ConflictResolverService.KNOWN_SOURCE_LANES"
+        "correction receipt lane (working-memory scoped; V3-FIX-06 resolved: "
+        "write point migrated to registered working_memory lane); kept "
+        "deliberately NOT registered in ConflictResolverService.KNOWN_SOURCE_LANES "
+        "as the unknown-tier red-line fixture — register first before reuse"
     ),
 }
 
