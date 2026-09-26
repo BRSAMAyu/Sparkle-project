@@ -1500,6 +1500,157 @@ async def _ensure_user_visual_config(
     return config
 
 
+# V3-FIX-257：demo 节点目录上移为模块级常量——转正清洗的掌握度指纹与种子
+# 写入面单一来源、同文件维护：改这里的节点形状必须同步改下方
+# _SEED_NODE_MASTERY_SIGNATURES 指纹（方向宁漏勿误删）。
+_SEED_DEMO_NODES = [
+    # === COSMOS 星域 - 自然科学基础 ===
+    ("高等数学", "微积分、极限、导数、积分等基础数学知识", 5, ["数学", "基础"], "COSMOS", True, 85, 12),
+    ("线性代数", "矩阵、向量空间、线性变换", 4, ["数学", "线性代数"], "COSMOS", True, 70, 8),
+    ("概率论与数理统计", "概率、随机变量、统计推断", 4, ["数学", "统计"], "COSMOS", True, 60, 6),
+    ("离散数学", "集合论、图论、组合数学、数理逻辑", 4, ["数学", "离散"], "COSMOS", True, 55, 5),
+    ("大学物理", "力学、电磁学、热学、光学基础", 4, ["物理", "基础"], "COSMOS", True, 65, 7),
+    ("经典力学", "牛顿力学、动量、能量", 3, ["物理", "力学"], "COSMOS", True, 70, 5),
+    ("电磁学基础", "电场、磁场、电磁感应", 3, ["物理", "电磁"], "COSMOS", True, 50, 4),
+    ("普通化学", "化学反应、元素周期表、化学键", 3, ["化学", "基础"], "COSMOS", True, 45, 3),
+    ("有机化学", "有机物结构、反应机理", 2, ["化学", "有机"], "COSMOS", False, 0, 0),
+    # === TECH 星域 - 科技与工程 ===
+    ("程序设计基础", "变量、控制流、函数、基本算法", 5, ["编程", "基础"], "TECH", True, 90, 15),
+    ("Python编程", "Python语法、数据结构、面向对象", 4, ["Python", "编程"], "TECH", True, 80, 10),
+    ("C/C++编程", "C语言基础、指针、C++面向对象", 4, ["C++", "编程"], "TECH", True, 75, 9),
+    ("Java编程", "Java语法、OOP、集合框架", 4, ["Java", "编程"], "TECH", True, 70, 8),
+    ("数据结构", "线性表、栈、队列、树、图", 5, ["数据结构", "算法"], "TECH", True, 85, 12),
+    ("算法设计与分析", "排序、搜索、动态规划、贪心算法", 5, ["算法", "优化"], "TECH", True, 70, 8),
+    ("计算机组成原理", "CPU、内存、I/O系统", 4, ["计算机系统", "硬件"], "TECH", True, 65, 7),
+    ("操作系统", "进程、内存管理、文件系统", 5, ["操作系统", "OS"], "TECH", True, 60, 6),
+    ("计算机网络", "TCP/IP、HTTP、网络协议", 4, ["网络", "协议"], "TECH", True, 55, 5),
+    ("数据库系统", "SQL、关系模型、事务处理", 4, ["数据库", "SQL"], "TECH", True, 70, 8),
+    ("Web前端开发", "HTML、CSS、JavaScript基础", 3, ["Web", "前端"], "TECH", True, 60, 6),
+    ("Web后端开发", "RESTful API、服务器开发", 3, ["Web", "后端"], "TECH", True, 50, 4),
+    ("人工智能基础", "机器学习、神经网络入门", 4, ["AI", "机器学习"], "TECH", True, 40, 3),
+    ("机器学习", "监督学习、非监督学习、模型评估", 4, ["机器学习", "ML"], "TECH", False, 0, 0),
+    # === ART 星域 - 艺术与人文 ===
+    ("中国文学", "古代文学、现代文学、诗词赏析", 4, ["文学", "中国"], "ART", True, 75, 9),
+    ("外国文学", "西方文学、世界文学经典", 3, ["文学", "外国"], "ART", True, 60, 6),
+    ("写作技巧", "议论文、说明文、创意写作", 3, ["写作", "技巧"], "ART", True, 65, 7),
+    ("美术基础", "素描、色彩、构图", 2, ["美术", "绘画"], "ART", True, 45, 4),
+    ("音乐欣赏", "音乐史、乐理、作品欣赏", 2, ["音乐", "欣赏"], "ART", True, 50, 5),
+    ("设计思维", "UI/UX设计、平面设计原理", 3, ["设计", "UI"], "ART", True, 55, 5),
+    ("摄影基础", "构图、光影、后期处理", 2, ["摄影", "艺术"], "ART", True, 60, 6),
+    ("影视制作", "视频拍摄、剪辑、叙事技巧", 2, ["影视", "制作"], "ART", False, 0, 0),
+    # === CIVILIZATION 星域 - 社会与文明 ===
+    ("中国近现代史", "辛亥革命、新中国成立、改革开放", 4, ["历史", "中国"], "CIVILIZATION", True, 80, 10),
+    ("世界历史", "文艺复兴、工业革命、两次世界大战", 4, ["历史", "世界"], "CIVILIZATION", True, 70, 8),
+    ("马克思主义基本原理", "唯物辩证法、政治经济学", 4, ["政治", "马克思主义"], "CIVILIZATION", True, 75, 9),
+    ("经济学原理", "微观经济、宏观经济、市场机制", 4, ["经济", "市场"], "CIVILIZATION", True, 60, 6),
+    ("管理学基础", "组织管理、领导力、战略规划", 3, ["管理", "组织"], "CIVILIZATION", True, 55, 5),
+    ("法律基础", "宪法、民法、刑法基础知识", 3, ["法律", "权利"], "CIVILIZATION", True, 50, 4),
+    ("社会学导论", "社会结构、群体行为、社会问题", 3, ["社会", "群体"], "CIVILIZATION", True, 45, 3),
+    # === LIFE 星域 - 生命科学 ===
+    ("普通生物学", "细胞、遗传、进化、生态", 4, ["生物", "基础"], "LIFE", True, 70, 8),
+    ("人体生理学", "循环系统、消化系统、神经系统", 3, ["生理", "人体"], "LIFE", True, 60, 6),
+    ("基因与遗传", "DNA、基因表达、遗传规律", 3, ["遗传", "基因"], "LIFE", True, 55, 5),
+    ("健康与养生", "营养、运动、睡眠、疾病预防", 3, ["健康", "养生"], "LIFE", True, 75, 9),
+    ("急救与安全", "CPR、止血、常见急症处理", 3, ["急救", "安全"], "LIFE", True, 65, 7),
+    ("心理学导论", "认知、情绪、人格、行为", 4, ["心理", "认知"], "LIFE", True, 70, 8),
+    ("发展心理学", "儿童、青少年、成人心理发展", 3, ["心理", "发展"], "LIFE", True, 50, 4),
+    ("社会心理学", "态度、说服、群体影响", 3, ["心理", "社会"], "LIFE", True, 45, 3),
+    # === WISDOM 星域 - 智慧与思考 ===
+    ("哲学导论", "形而上学、认识论、伦理学", 4, ["哲学", "思考"], "WISDOM", True, 65, 7),
+    ("中国哲学", "儒家、道家、佛家思想", 3, ["哲学", "中国"], "WISDOM", True, 60, 6),
+    ("西方哲学", "古希腊哲学、近代哲学、现代哲学", 3, ["哲学", "西方"], "WISDOM", True, 55, 5),
+    ("批判性思维", "逻辑推理、论证分析、谬误识别", 5, ["思维", "逻辑"], "WISDOM", True, 70, 8),
+    ("创新思维", "发散思维、联想、头脑风暴", 4, ["思维", "创新"], "WISDOM", True, 60, 6),
+    ("系统思维", "整体观、反馈循环、涌现特性", 4, ["思维", "系统"], "WISDOM", True, 50, 4),
+    ("学习科学", "记忆原理、遗忘曲线、刻意练习", 5, ["学习", "方法"], "WISDOM", True, 80, 10),
+    ("时间管理", "四象限法则、番茄钟、GTD", 4, ["效率", "时间"], "WISDOM", True, 75, 9),
+]
+
+# ── V3-FIX-257：guest 转正清洗的种子 catalog 指纹 ─────────────────────────
+# 缺陷（wt533 B-02 审计 F2 面）：upgrade_guest 原位翻转 registration_source
+# 后，FIX-01/08/20 的 guest/seed cohort 排除词表对本用户失效，种子伪造的
+# 行为统计（streak 7/30/45、6 成就、13 条 FocusSession、demo 节点掌握）随
+# 用户进入全局榜/telemetry/adaptive_replanner 等生产统计面。
+#
+# 裁决 A（清洗面）：只清「伪造行为统计」——UserStreakStats / 6 条 catalog
+# 成就 / 13 条 catalog FocusSession / demo 节点 UserNodeStatus 掌握行，它们是
+# 全局榜四因子（知识点数×1.0 + 打卡天数×0.5 + 成就数×2.0 + 最长连胜×1.5）
+# 与 telemetry 的直接数据源。演示内容面（计划/任务/胶囊/日历/聊天/社群）按
+# J-01 ``Plan.source="example"`` 标记与 GJ02 demo→own 升级路径的既有裁决
+# 保留，本修不触碰。
+#
+# 识别判据（双闸，宁漏勿误删）：
+#   闸 1 catalog 指纹：字段值组合必须与种子写入面逐字段一致（改种子形状必须
+#       同步改指纹，漏判方向是保留而非误删）；
+#   闸 2 种子写入窗：种子与用户行在同一登录事务内落库（created_at ≈
+#       user.created_at；首登种子失败、重登补种时取 guest_seed 光子流水
+#       created_at 为锚）。凡写入晚于窗口的行一律视为用户 guest 期自建的
+#       真实数据，保留。
+#
+# 裁决 B（事务语境）：auth 端点经 get_db 成功路径统一 commit——清洗在转正
+# 事务内以 SAVEPOINT（begin_nested）隔离 best-effort 执行，与
+# seed_guest_user_data 同型；失败仅告警，转正不受影响，无后置任务窗口。
+#
+# 裁决 C（好友侧）：spark_friend_* 是跨访客共享的全局 catalog
+# （_ensure_demo_user 复用同一批行），删除会破坏其他在途访客的演示体验；
+# 其生产面由 'seed' 词表永久排除——保持 FIX-01/08/20 现口径，不随转正删除。
+
+# UserStreakStats 种子原值：current/max/longest/days/freeze/max_freeze
+_SEED_STREAK_STATS_SIGNATURE = (7, 30, 30, 45, 2, 3)
+
+# 6 条种子成就：achievement_id -> (progress, value, target, is_pinned, unlocked)
+_SEED_ACHIEVEMENT_SIGNATURES: dict[str, tuple[float, int, int, bool, bool]] = {
+    "streak_7": (1.0, 7, 7, True, True),
+    "streak_30": (0.23, 7, 30, False, False),
+    "nodes_100": (0.45, 45, 100, False, False),
+    "study_100hours": (0.62, 62, 100, False, False),
+    "sprint_first": (1.0, 1, 1, True, True),
+    "night_owl": (1.0, 10, 10, True, True),
+}
+
+# 13 条种子专注会话（duration, type, status, white_noise_type），
+# 与 _seed_guest_user_data 的 focus_seed_rows 逐行一致
+_SEED_FOCUS_SIGNATURES: frozenset[tuple[int, FocusType, FocusStatus, int | None]] = frozenset(
+    {
+        (50, FocusType.POMODORO, FocusStatus.COMPLETED, 1),
+        (35, FocusType.STOPWATCH, FocusStatus.INTERRUPTED, 2),
+        (40, FocusType.POMODORO, FocusStatus.COMPLETED, 1),
+        (65, FocusType.STOPWATCH, FocusStatus.COMPLETED, 3),
+        (25, FocusType.POMODORO, FocusStatus.COMPLETED, 1),
+        (30, FocusType.POMODORO, FocusStatus.COMPLETED, 2),
+        (55, FocusType.STOPWATCH, FocusStatus.COMPLETED, 3),
+        (20, FocusType.POMODORO, FocusStatus.INTERRUPTED, None),
+        (45, FocusType.POMODORO, FocusStatus.COMPLETED, 1),
+        (60, FocusType.STOPWATCH, FocusStatus.COMPLETED, 2),
+        (35, FocusType.POMODORO, FocusStatus.COMPLETED, 1),
+        (25, FocusType.POMODORO, FocusStatus.COMPLETED, 1),
+        (30, FocusType.STOPWATCH, FocusStatus.COMPLETED, 2),
+    }
+)
+
+# 种子专注会话挂靠的演示任务标题（4 条任务 + 2 条 _ensure_task 补建行）
+_SEED_FOCUS_TASK_TITLES: frozenset[str] = frozenset(
+    {
+        "数据结构 - 二叉树遍历算法",
+        "操作系统 - 死锁处理机制",
+        "离散数学 - 图论着色问题",
+        "计算机网络 - TCP协议分析",
+        "操作系统 - 线程同步错题回顾",
+        "英语口语 - 晨读复述 15 分钟",
+    }
+)
+
+# demo 节点掌握指纹：name -> (mastery_score, total_study_minutes, study_count)；
+# 只含 unlocked 行（locked 行不产 UserNodeStatus）
+_SEED_NODE_MASTERY_SIGNATURES: dict[str, tuple[int, int, int]] = {
+    row[0]: (row[6], row[7] * 15, row[7]) for row in _SEED_DEMO_NODES if row[5]
+}
+
+# 种子写入窗：种子与用户行同一登录事务落库；上限覆盖种子事务时长
+# （登录请求内完成，远小于 10 分钟）。窗口内且 catalog 命中才判种子。
+_SEED_WRITE_WINDOW = timedelta(minutes=10)
+
+
 async def seed_guest_user_data(session: AsyncSession, user: User) -> None:
     """
     Seed demo data for a new guest user.
@@ -1619,68 +1770,8 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
     # Mirrors the 6-sector structure from DemoDataService (COSMOS/TECH/ART/CIVILIZATION/LIFE/WISDOM)
 
     # Define nodes: (name, description, importance, keywords, sector_label, unlocked, mastery, study_count)
-    _DEMO_NODES = [
-        # === COSMOS 星域 - 自然科学基础 ===
-        ("高等数学", "微积分、极限、导数、积分等基础数学知识", 5, ["数学", "基础"], "COSMOS", True, 85, 12),
-        ("线性代数", "矩阵、向量空间、线性变换", 4, ["数学", "线性代数"], "COSMOS", True, 70, 8),
-        ("概率论与数理统计", "概率、随机变量、统计推断", 4, ["数学", "统计"], "COSMOS", True, 60, 6),
-        ("离散数学", "集合论、图论、组合数学、数理逻辑", 4, ["数学", "离散"], "COSMOS", True, 55, 5),
-        ("大学物理", "力学、电磁学、热学、光学基础", 4, ["物理", "基础"], "COSMOS", True, 65, 7),
-        ("经典力学", "牛顿力学、动量、能量", 3, ["物理", "力学"], "COSMOS", True, 70, 5),
-        ("电磁学基础", "电场、磁场、电磁感应", 3, ["物理", "电磁"], "COSMOS", True, 50, 4),
-        ("普通化学", "化学反应、元素周期表、化学键", 3, ["化学", "基础"], "COSMOS", True, 45, 3),
-        ("有机化学", "有机物结构、反应机理", 2, ["化学", "有机"], "COSMOS", False, 0, 0),
-        # === TECH 星域 - 科技与工程 ===
-        ("程序设计基础", "变量、控制流、函数、基本算法", 5, ["编程", "基础"], "TECH", True, 90, 15),
-        ("Python编程", "Python语法、数据结构、面向对象", 4, ["Python", "编程"], "TECH", True, 80, 10),
-        ("C/C++编程", "C语言基础、指针、C++面向对象", 4, ["C++", "编程"], "TECH", True, 75, 9),
-        ("Java编程", "Java语法、OOP、集合框架", 4, ["Java", "编程"], "TECH", True, 70, 8),
-        ("数据结构", "线性表、栈、队列、树、图", 5, ["数据结构", "算法"], "TECH", True, 85, 12),
-        ("算法设计与分析", "排序、搜索、动态规划、贪心算法", 5, ["算法", "优化"], "TECH", True, 70, 8),
-        ("计算机组成原理", "CPU、内存、I/O系统", 4, ["计算机系统", "硬件"], "TECH", True, 65, 7),
-        ("操作系统", "进程、内存管理、文件系统", 5, ["操作系统", "OS"], "TECH", True, 60, 6),
-        ("计算机网络", "TCP/IP、HTTP、网络协议", 4, ["网络", "协议"], "TECH", True, 55, 5),
-        ("数据库系统", "SQL、关系模型、事务处理", 4, ["数据库", "SQL"], "TECH", True, 70, 8),
-        ("Web前端开发", "HTML、CSS、JavaScript基础", 3, ["Web", "前端"], "TECH", True, 60, 6),
-        ("Web后端开发", "RESTful API、服务器开发", 3, ["Web", "后端"], "TECH", True, 50, 4),
-        ("人工智能基础", "机器学习、神经网络入门", 4, ["AI", "机器学习"], "TECH", True, 40, 3),
-        ("机器学习", "监督学习、非监督学习、模型评估", 4, ["机器学习", "ML"], "TECH", False, 0, 0),
-        # === ART 星域 - 艺术与人文 ===
-        ("中国文学", "古代文学、现代文学、诗词赏析", 4, ["文学", "中国"], "ART", True, 75, 9),
-        ("外国文学", "西方文学、世界文学经典", 3, ["文学", "外国"], "ART", True, 60, 6),
-        ("写作技巧", "议论文、说明文、创意写作", 3, ["写作", "技巧"], "ART", True, 65, 7),
-        ("美术基础", "素描、色彩、构图", 2, ["美术", "绘画"], "ART", True, 45, 4),
-        ("音乐欣赏", "音乐史、乐理、作品欣赏", 2, ["音乐", "欣赏"], "ART", True, 50, 5),
-        ("设计思维", "UI/UX设计、平面设计原理", 3, ["设计", "UI"], "ART", True, 55, 5),
-        ("摄影基础", "构图、光影、后期处理", 2, ["摄影", "艺术"], "ART", True, 60, 6),
-        ("影视制作", "视频拍摄、剪辑、叙事技巧", 2, ["影视", "制作"], "ART", False, 0, 0),
-        # === CIVILIZATION 星域 - 社会与文明 ===
-        ("中国近现代史", "辛亥革命、新中国成立、改革开放", 4, ["历史", "中国"], "CIVILIZATION", True, 80, 10),
-        ("世界历史", "文艺复兴、工业革命、两次世界大战", 4, ["历史", "世界"], "CIVILIZATION", True, 70, 8),
-        ("马克思主义基本原理", "唯物辩证法、政治经济学", 4, ["政治", "马克思主义"], "CIVILIZATION", True, 75, 9),
-        ("经济学原理", "微观经济、宏观经济、市场机制", 4, ["经济", "市场"], "CIVILIZATION", True, 60, 6),
-        ("管理学基础", "组织管理、领导力、战略规划", 3, ["管理", "组织"], "CIVILIZATION", True, 55, 5),
-        ("法律基础", "宪法、民法、刑法基础知识", 3, ["法律", "权利"], "CIVILIZATION", True, 50, 4),
-        ("社会学导论", "社会结构、群体行为、社会问题", 3, ["社会", "群体"], "CIVILIZATION", True, 45, 3),
-        # === LIFE 星域 - 生命科学 ===
-        ("普通生物学", "细胞、遗传、进化、生态", 4, ["生物", "基础"], "LIFE", True, 70, 8),
-        ("人体生理学", "循环系统、消化系统、神经系统", 3, ["生理", "人体"], "LIFE", True, 60, 6),
-        ("基因与遗传", "DNA、基因表达、遗传规律", 3, ["遗传", "基因"], "LIFE", True, 55, 5),
-        ("健康与养生", "营养、运动、睡眠、疾病预防", 3, ["健康", "养生"], "LIFE", True, 75, 9),
-        ("急救与安全", "CPR、止血、常见急症处理", 3, ["急救", "安全"], "LIFE", True, 65, 7),
-        ("心理学导论", "认知、情绪、人格、行为", 4, ["心理", "认知"], "LIFE", True, 70, 8),
-        ("发展心理学", "儿童、青少年、成人心理发展", 3, ["心理", "发展"], "LIFE", True, 50, 4),
-        ("社会心理学", "态度、说服、群体影响", 3, ["心理", "社会"], "LIFE", True, 45, 3),
-        # === WISDOM 星域 - 智慧与思考 ===
-        ("哲学导论", "形而上学、认识论、伦理学", 4, ["哲学", "思考"], "WISDOM", True, 65, 7),
-        ("中国哲学", "儒家、道家、佛家思想", 3, ["哲学", "中国"], "WISDOM", True, 60, 6),
-        ("西方哲学", "古希腊哲学、近代哲学、现代哲学", 3, ["哲学", "西方"], "WISDOM", True, 55, 5),
-        ("批判性思维", "逻辑推理、论证分析、谬误识别", 5, ["思维", "逻辑"], "WISDOM", True, 70, 8),
-        ("创新思维", "发散思维、联想、头脑风暴", 4, ["思维", "创新"], "WISDOM", True, 60, 6),
-        ("系统思维", "整体观、反馈循环、涌现特性", 4, ["思维", "系统"], "WISDOM", True, 50, 4),
-        ("学习科学", "记忆原理、遗忘曲线、刻意练习", 5, ["学习", "方法"], "WISDOM", True, 80, 10),
-        ("时间管理", "四象限法则、番茄钟、GTD", 4, ["效率", "时间"], "WISDOM", True, 75, 9),
-    ]
+    # V3-FIX-257：节点目录上移为模块级 _SEED_DEMO_NODES（与转正清洗指纹同源）。
+    _DEMO_NODES = _SEED_DEMO_NODES
 
     # Sector layout: each sector occupies a 60° arc, nodes spread within it
     _SECTOR_ANGLES = {
@@ -3770,3 +3861,188 @@ async def _seed_guest_user_data(session: AsyncSession, user: User) -> None:
 
     await session.flush()
     logger.info(f"Guest data seeded for user_id={user.id} username={user.username}")
+
+
+async def cleanup_guest_seed_statistics_for_upgrade(session: AsyncSession, user: User) -> dict[str, int]:
+    """V3-FIX-257：guest 转正时清洗种子 catalog 覆盖的伪造行为统计。
+
+    在转正事务内以 SAVEPOINT 隔离 best-effort 执行（裁决 B，见上方指纹块
+    注释）：任一步失败只回滚到 SAVEPOINT 并降级为告警，转正本身不受影响。
+    幂等：清过的行不再命中指纹，重复调用安全。
+
+    Returns:
+        各表清除行数（streak_stats/achievements/focus_sessions/node_status/total），
+        失败时全 0。
+    """
+    user_id = user.id
+    try:
+        async with session.begin_nested():
+            removed = await _cleanup_guest_seed_statistics(session, user)
+    except Exception as exc:
+        logger.warning(
+            f"Guest upgrade seed-statistics cleanup failed (non-fatal, upgrade " f"unaffected) user_id={user_id}: {exc}"
+        )
+        return {
+            "streak_stats": 0,
+            "achievements": 0,
+            "focus_sessions": 0,
+            "node_status": 0,
+            "total": 0,
+        }
+    total = sum(removed.values())
+    if total:
+        logger.info(f"Guest upgrade seed cleanup user_id={user_id}: {removed}")
+    return {**removed, "total": total}
+
+
+async def _cleanup_guest_seed_statistics(session: AsyncSession, user: User) -> dict[str, int]:
+    """清洗主用户名下 catalog 可识别的伪造统计行（见裁决 A/C：不动演示好友
+    与演示内容面）。识别 = catalog 指纹命中 ∧ 种子写入窗内（双闸）。"""
+    anchor = user.created_at
+    seed_tx_created_at = await session.scalar(
+        select(PhotonTransactionHistory.created_at)
+        .where(
+            PhotonTransactionHistory.user_id == user.id,
+            PhotonTransactionHistory.transaction_type == PhotonTransactionType.GUEST_SEED.value,
+        )
+        .order_by(PhotonTransactionHistory.created_at.asc())
+        .limit(1)
+    )
+    if seed_tx_created_at is not None:
+        # 首登种子失败、重登补种时以实际种子事务为锚（MINT-FIX 专有类型行）
+        anchor = max(anchor, seed_tx_created_at)
+    window_lo = anchor - timedelta(minutes=1)
+    window_hi = anchor + _SEED_WRITE_WINDOW
+    removed = {"streak_stats": 0, "achievements": 0, "focus_sessions": 0, "node_status": 0}
+
+    # 1) UserStreakStats：单行指纹（7/30/30/45/2/3）且未被真实打卡更新
+    stats = (
+        await session.execute(select(UserStreakStats).where(UserStreakStats.user_id == user.id))
+    ).scalar_one_or_none()
+    if (
+        stats is not None
+        and (
+            stats.current_streak,
+            stats.max_streak,
+            stats.longest_streak,
+            stats.total_checkin_days,
+            stats.freeze_charges,
+            stats.max_freeze_charges,
+        )
+        == _SEED_STREAK_STATS_SIGNATURE
+        and (stats.last_activity_date is None or stats.last_activity_date <= window_hi)
+    ):
+        await session.delete(stats)
+        removed["streak_stats"] = 1
+
+    # 2) UserAchievement：6 条 catalog 指纹 + 解锁/写入时间在种子窗内
+    achievements = (
+        (await session.execute(select(UserAchievement).where(UserAchievement.user_id == user.id))).scalars().all()
+    )
+    for achievement in achievements:
+        signature = _SEED_ACHIEVEMENT_SIGNATURES.get(achievement.achievement_id)
+        if signature is None:
+            continue
+        progress, value, target, pinned, unlocked = signature
+        if (
+            achievement.progress,
+            achievement.progress_value,
+            achievement.progress_target,
+            bool(achievement.is_pinned),
+        ) != (progress, value, target, pinned):
+            continue
+        if unlocked:
+            # 种子解锁时间回溯到种子 instant 之前；真实解锁必然晚于种子窗
+            if achievement.unlocked_at is None or achievement.unlocked_at > window_hi:
+                continue
+        elif achievement.unlocked_at is not None:
+            continue
+        if not window_lo <= achievement.created_at <= window_hi:
+            continue
+        await session.delete(achievement)
+        removed["achievements"] += 1
+
+    # 3) FocusSession：种子任务挂靠 + 签名 + 时间窗三重闸
+    seeded_task_ids = set(
+        (
+            await session.execute(
+                select(Task.id).where(
+                    Task.user_id == user.id,
+                    Task.title.in_(_SEED_FOCUS_TASK_TITLES),
+                    Task.created_at >= window_lo,
+                    Task.created_at <= window_hi,
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    focus_sessions = (
+        (
+            await session.execute(
+                select(FocusSession).where(
+                    FocusSession.user_id == user.id,
+                    FocusSession.created_at >= window_lo,
+                    FocusSession.created_at <= window_hi,
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    for focus_session in focus_sessions:
+        if (
+            focus_session.duration_minutes,
+            focus_session.focus_type,
+            focus_session.status,
+            focus_session.white_noise_type,
+        ) not in _SEED_FOCUS_SIGNATURES:
+            continue
+        if focus_session.task_id is not None and focus_session.task_id not in seeded_task_ids:
+            continue
+        # 真实专注的 end_time 必然晚于种子窗（catalog 最短 20 分钟 > 窗口 10
+        # 分钟），显式再闸一道，窗口边缘的物理误删不可能发生
+        if focus_session.end_time > window_hi:
+            continue
+        await session.delete(focus_session)
+        removed["focus_sessions"] += 1
+
+    # 4) UserNodeStatus：demo 节点掌握指纹 + 未被真实学习改写
+    #    （KnowledgeNode 是全局共享 catalog，只清本用户的掌握行，不动节点本身）
+    node_rows = (
+        await session.execute(
+            select(KnowledgeNode.id, KnowledgeNode.name).where(KnowledgeNode.name.in_(_SEED_NODE_MASTERY_SIGNATURES))
+        )
+    ).all()
+    expected_by_node_id = {node_id: _SEED_NODE_MASTERY_SIGNATURES[name] for node_id, name in node_rows}
+    if expected_by_node_id:
+        node_statuses = (
+            (
+                await session.execute(
+                    select(UserNodeStatus).where(
+                        UserNodeStatus.user_id == user.id,
+                        UserNodeStatus.node_id.in_(expected_by_node_id),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        for node_status in node_statuses:
+            expected = expected_by_node_id.get(node_status.node_id)
+            if expected is None:
+                continue
+            if (
+                node_status.mastery_score,
+                node_status.total_study_minutes,
+                node_status.study_count,
+            ) != expected:
+                continue
+            if node_status.last_study_at is not None and node_status.last_study_at > window_hi:
+                continue
+            if not window_lo <= node_status.created_at <= window_hi:
+                continue
+            await session.delete(node_status)
+            removed["node_status"] += 1
+
+    return removed

@@ -1089,6 +1089,15 @@ async def upgrade_guest(
         await db.rollback()
         raise HTTPException(status_code=409, detail="用户名或邮箱已被占用，请更换后重试" if _zh(request) else "Username or email already taken. Please try a different one.")
 
+    # V3-FIX-257：转正清洗种子伪造行为统计（streak/成就/专注分钟/demo 节点掌握）。
+    # registration_source 原位翻转后 FIX-01/08/20 的 guest/seed 排除词表对本用户
+    # 失效，伪造统计会进入全局榜/telemetry/adaptive_replanner 等生产统计面。
+    # 同一转正事务内 SAVEPOINT 隔离清洗，失败仅告警不阻塞转正（裁决 A/B 详见
+    # guest_seed_service.cleanup_guest_seed_statistics_for_upgrade）。
+    from app.services.guest_seed_service import cleanup_guest_seed_statistics_for_upgrade
+
+    await cleanup_guest_seed_statistics_for_upgrade(db, current_user)
+
     try:
         verify_token = uuid.uuid4().hex
         await cache_service.set(f"email_verify:{verify_token}", str(current_user.id), ttl=EMAIL_VERIFY_TTL_SECONDS)
@@ -1181,6 +1190,12 @@ async def upgrade_guest_social(
     except IntegrityError:
         await db.rollback()
         raise HTTPException(status_code=409, detail="该社交账号已绑定其他用户" if _zh(request) else "This social account is already linked to another user.")
+
+    # V3-FIX-257：同 upgrade_guest——social 转正翻转 registration_source 后同样
+    # 脱离 guest/seed 排除词表，需在同一转正事务内清洗种子伪造统计。
+    from app.services.guest_seed_service import cleanup_guest_seed_statistics_for_upgrade
+
+    await cleanup_guest_seed_statistics_for_upgrade(db, current_user)
 
     auth_audit_service.schedule_log(
         AuthAuditAction.GUEST_UPGRADE,
