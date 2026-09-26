@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from uuid import uuid4
+
 import pytest
 
 from app.adapters.openclaw.client import OpenClawError
 from app.models.user import User
-from app.services.openclaw_connection_profile_service import OpenClawConnectionProfileService
 from app.services.execution_service import ExecutionService
+from app.services.openclaw_connection_profile_service import OpenClawConnectionProfileService
 
 
 @pytest.fixture
@@ -152,3 +154,20 @@ async def test_get_health_prefers_user_profile_over_global_settings(
     settings.OPENCLAW_GATEWAY_URL = original["OPENCLAW_GATEWAY_URL"]
     settings.OPENCLAW_TRANSPORT = original["OPENCLAW_TRANSPORT"]
     settings.OPENCLAW_WS_URL = original["OPENCLAW_WS_URL"]
+
+
+def test_classify_cache_ttl_class_attr_regression_lock():
+    """V3-FIX-118 / V3-FIX-25 回归锁：类属性实名是 ``_classify_cache_ttl_seconds``。
+
+    ``_clear_failure_state`` 曾误引类级旧名 ``_classify_cache_ttl``（CI run
+    36178015150：``AttributeError: type object 'ExecutionService' has no
+    attribute '_classify_cache_ttl'``），handback/confirm/cancel 路径必然
+    AttributeError。实例别名 ``self._classify_cache_ttl`` 只在 ``__init__``
+    挂 self（execution_service.py:113），类上并不存在。
+    """
+    service = object.__new__(ExecutionService)  # _clear_failure_state 仅触类属性，无需完整初始化
+
+    assert hasattr(ExecutionService, "_classify_cache_ttl_seconds"), "实名类属性缺失"
+    assert not hasattr(ExecutionService, "_classify_cache_ttl"), "类级不得存在旧名（实例别名不属于类）"
+    # 修复前该调用在 handback/confirm/cancel 路径必然 AttributeError
+    service._clear_failure_state(uuid4())

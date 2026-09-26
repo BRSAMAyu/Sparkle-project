@@ -6,7 +6,6 @@ from uuid import uuid4
 
 import pytest
 
-from app.models.user_settings import UserSettings
 from app.signals.privacy_community_intelligence import PrivacyBudget, PrivacyPreservingCommunityEngine
 
 _evidence_module = types.ModuleType("evidence_pb2")
@@ -46,14 +45,24 @@ def test_privacy_budget_exhaustion_blocks_more_queries():
 
 
 class _ScalarResult:
+    """SQLAlchemy Result 语义：Result 是单次消费对象——.all() 取尽后再次调用返回 []。
+
+    V3-FIX-26 红测锁：真实 SQLAlchemy 下 `result.all()` 两次消费，第二次恒空。
+    之前的 fake 允许 .all() 重复读取（buffered），恰好掩盖了产品代码对同一
+    Result 消费两次的缺陷（opted_out 恒空 → 显式 opt-out 用户被并入 opted_in）。
+    """
+
     def __init__(self, value=None):
-        self._value = value
+        self._value = list(value) if isinstance(value, list) else value
+        self._consumed = False
 
     def scalar_one_or_none(self):
         return self._value
 
     def all(self):
-        # Batch queries consume rows via .all(); buffered results are re-readable.
+        if self._consumed:
+            return []
+        self._consumed = True
         return list(self._value) if isinstance(self._value, list) else []
 
 
@@ -69,14 +78,6 @@ class _FakeSession:
 async def test_opt_out_removes_contributor_from_aggregate_values():
     enabled_user = uuid4()
     disabled_user = uuid4()
-    disabled_settings = UserSettings(
-        user_id=disabled_user,
-        transparency_level=0,
-        system_update_level=1,
-        ai_reasoning_mode="balanced",
-        task_reminders_enabled=True,
-        community_intelligence_enabled=False,
-    )
     # The bridge now batch-queries settings as (user_id, enabled) rows.
     db = _FakeSession([[(str(enabled_user), True), (str(disabled_user), False)]])
     bridge = CommunitySignalBridge(db)

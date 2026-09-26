@@ -437,8 +437,12 @@ class CommunitySignalBridge:
                 UserSettings.user_id.in_(contributor_ids)
             )
         )
-        opted_in = {row[0] for row in settings_result.all() if row[1]}
-        opted_out = {row[0] for row in settings_result.all() if not row[1]}
+        # V3-FIX-26：SQLAlchemy Result 是单次消费对象，对同一 Result 调两次
+        # .all() 第二次恒空——opted_out 恒为空集，显式 opt-out 用户经
+        # unknown_ids 兜底被并回 opted_in（隐私行为错误）。改为缓存首次结果。
+        settings_rows = settings_result.all()
+        opted_in = {row[0] for row in settings_rows if row[1]}
+        opted_out = {row[0] for row in settings_rows if not row[1]}
         # Default to opted-in for users without settings row
         all_ids_set = set(contributor_ids)
         unknown_ids = all_ids_set - opted_in - opted_out
