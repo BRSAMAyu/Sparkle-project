@@ -17,7 +17,13 @@ from app.core.telemetry_boundary import (
     EMOTIONAL_BLOCK_SENTIMENTS,
     TELEMETRY_DERIVED_FRAGMENT_SOURCE_TYPES,
 )
-from app.core.time_utils import utcnow
+from app.core.time_utils import (
+    local_date,
+    local_midnight_wall,
+    utcnow,
+    valid_timezone_name,
+    wall_clock_to_utc_naive,
+)
 from app.core.user_insight_state import BigFiveTraits
 from app.models.achievement import (
     Achievement,
@@ -31,6 +37,7 @@ from app.models.cognitive import CognitiveFragment
 from app.models.focus import FocusSession, FocusStatus
 from app.models.memory import EpisodicMemory
 from app.models.srl_phase_state import SRLPhaseStateRecord
+from app.models.user import PushPreference
 from app.models.user_preferences import UserPreferencesCenter
 from app.services.aurora_stage18_kill_switch_service import AuroraStage18KillSwitchService
 from app.services.aurora_stage33_kill_switch_service import AuroraStage33KillSwitchService
@@ -131,6 +138,16 @@ class StateAggregatorService:
         ] = {}
         # P0-2: Cap in-memory cache to prevent unbounded growth
         self._cache_max_size = 500
+
+    async def _user_timezone(self, user_id: UUID) -> str:
+        """用户 IANA 时区名——push_preference.timezone 标量直查，缺省 Asia/Shanghai。
+
+        focus_service._local_today / experience_readouts._user_local_today 先例
+        （V3-FIX-37 族）：标量直查规避 db.get 身份映射命中未加载关系的 async
+        lazy-load；缺省/非法回落主市场 Asia/Shanghai（time_utils 口径）。
+        """
+        tz_name = await self.db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+        return valid_timezone_name(tz_name)
 
     async def get_user_state(
         self,
@@ -520,10 +537,21 @@ class StateAggregatorService:
         streak_stmt = select(UserStreakStats).where(UserStreakStats.user_id == user_id)
         streak_row = (await self.db.execute(streak_stmt)).scalar_one_or_none()
         streak = int(streak_row.current_streak or 0) if streak_row is not None else 0
+        # V3-FIX-297：end_time 存客户端本地墙上时间 naive（V3-FIX-37 定界），
+        # last_activity_date 存 UTC 日界（achievement_engine 写 _utcnow().date()）
+        # ——两种 naive 钟直比 max() 会选出绝对时刻更旧的值（UTC+8 墙上 01:00
+        # 绝对只到前日 17:00Z，比 streak 的 00:00Z 旧 7h）。比较前把墙上钟列经
+        # 用户时区换算成绝对 UTC naive 同钟再 max；返回值同为绝对 UTC naive——
+        # wake_policy._extract_hours_since_last_active（_utcnow() 差值）与
+        # push_policy_compiler（>= now-72h）均按绝对时刻消费该值，无墙钟语义面。
+        tz_name = await self._user_timezone(user_id)
+        latest_focus_absolute = (
+            wall_clock_to_utc_naive(latest_focus_at, tz_name) if latest_focus_at is not None else None
+        )
         last_active_candidates = [
             value
             for value in [
-                latest_focus_at,
+                latest_focus_absolute,
                 getattr(streak_row, "last_activity_date", None),
             ]
             if value
@@ -937,7 +965,15 @@ class StateAggregatorService:
         now: datetime,
         current_turn_parse: CurrentTurnParseResult | None = None,
     ) -> StateFieldEnvelope[CalendarContextValue]:
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        # V3-FIX-297：CalendarEvent.start_time/end_time 存客户端本地墙上时间
+        # naive（mobile calendar_event_model.dart toIso8601String 本地 ISO 无
+        # 时区后缀，V3-FIX-37 同族定界）→「今日」窗口按用户本地日界的墙上
+        # 零点切（local_midnight_wall——墙上钟列勿用 local_midnight_as_utc_naive）。
+        # 修前用 naive-UTC now.replace(hour=0)：UTC+8 02:30 时参照日=用户昨日，
+        # 昨日午后事件被切开「今日」空闲格、本地今日上午忙碌整段缺席。
+        tz_name = await self._user_timezone(user_id)
+        local_today = local_date(now, tz_name)
+        today_start = local_midnight_wall(local_today)
         today_end = today_start + timedelta(days=1)
         week_end = now + timedelta(days=7)
         today_events = list(
@@ -998,7 +1034,7 @@ class StateAggregatorService:
             time_blocks_today=tuple(
                 CalendarTimeBlockItemValue(start=item["start"], end=item["end"])
                 for item in self._derive_available_time_blocks(
-                    today_events, reference_day=today_start.date()
+                    today_events, reference_day=local_today
                 )
             ),
             workload_density=self._derive_workload_density(week_events),

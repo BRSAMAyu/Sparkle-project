@@ -113,3 +113,18 @@ def local_midnight_wall(day: date) -> datetime:
     过滤窗口必须用同一墙钟的零点 naive，而非换算成 UTC 瞬间。
     """
     return datetime.combine(day, time.min)
+
+
+def wall_clock_to_utc_naive(value: datetime, timezone_name: str) -> datetime:
+    """User wall-clock naive value -> absolute naive-UTC instant (V3-FIX-297).
+
+    墙上时间存储列（FocusSession.end_time 等，V3-FIX-37 定界）与 UTC 存储
+    列（UserStreakStats.last_activity_date 等）同为 naive 却是两种钟：直接
+    ``max()``/比较会选出绝对时刻更旧的值（UTC+8 墙上 01:00 绝对只到前日
+    17:00Z）。先按用户时区把墙上时间解释成绝对瞬间，再与 UTC 存储值同钟
+    比较。tz-aware 入参直接收敛为 naive-UTC（``ensure_naive_utc`` 同义，
+    此处签名收窄为必返 datetime）。
+    """
+    if value.tzinfo is not None:
+        return value.astimezone(UTC).replace(tzinfo=None)
+    return value.replace(tzinfo=ZoneInfo(timezone_name)).astimezone(UTC).replace(tzinfo=None)
