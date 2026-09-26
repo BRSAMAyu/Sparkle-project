@@ -512,13 +512,13 @@ FAMILIES: dict[str, dict] = {
         "mobile": ("lib/features/chat/presentation/widgets/plan_review_card.dart", "ReviewDecision"),
         "mode": "dual",
     },
-    # ===== dual：intervention（wt574 B2，形态分裂；在册漂移见 KNOWN_DRIFT V3-FIX-300）=====
+    # ===== dual：intervention（wt574 B2，形态分裂；在册漂移见 KNOWN_DRIFT V3-FIX-301）=====
     "InterventionLevel": {
         # backend SCREAMING（schemas/intervention.py:13，intervention_service.py:649/:825
         # 下发）↔ mobile lower 标识符 + parse 合并 full_screen_modal→modal
         # （core/models/intervention.dart:80 parseInterventionLevel，default→silent 有损）。
         # wire_map =「backend 值 → mobile parse 已接受字面量」实证映射；SILENT_MARKER
-        # 无显式 case（落 default→silent）＝在册漂移，修复需读消费面裁决（V3-FIX-300）。
+        # 无显式 case（落 default→silent）＝在册漂移，修复需读消费面裁决（V3-FIX-301）。
         "backend": ("app/schemas/intervention.py", "InterventionLevel"),
         "mobile": ("lib/core/models/intervention.dart", "InterventionLevel"),
         "mode": "dual",
@@ -645,7 +645,7 @@ KNOWN_DRIFT: dict[str, dict] = {
     # V3-FIX-291（wt585 登记 2026-09-25）：models 外族入管后暴露的在册漂移。
     # ---------------------------------------------------------------------
     "InterventionLevel": {
-        "fix": "V3-FIX-300",
+        "fix": "V3-FIX-301",
         "owner": "待派（wt585 登记）",
         "expiry": _dt.date(2026, 10, 7),
         "note": "SILENT_MARKER 在 mobile parse 无显式接受面（intervention.dart:88 "
