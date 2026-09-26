@@ -30,6 +30,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.core import time_utils
 from app.core.background_tasks import spawn_tracked
 from app.core.cache import cache_service
 from app.core.event_bus import event_bus
@@ -51,6 +52,7 @@ from app.models.galaxy import KnowledgeNode, StudyRecord, UserNodeStatus
 from app.models.session_completion import SessionCompletion
 from app.models.shop import PhotonTransactionHistory
 from app.models.subject import Subject
+from app.models.user import PushPreference
 from app.services.achievement_reward_observability import AchievementRewardObservability
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
@@ -2028,10 +2030,25 @@ class AchievementEngine:
 
         await self.db.flush()
 
+    async def _resolve_streak_activity_date(self, user_id: str, **kwargs) -> date:
+        """连胜语义「今日」：调用方显式 activity_date 优先，回退用户本地日（V3-FIX-293）.
+
+        - 显式传入（accountability.py 打卡口径 = ``_day_range_for_timezone(
+          _user_timezone(user)).date()``，即用户本地打卡日）原样采用；
+        - 无传参时不静默回 UTC 日：沿 V3-FIX-37/wt559 已裁决的「用户本地日」契约，
+          经 push_preference.timezone（缺省 Asia/Shanghai）解析——标量直查而非 ORM
+          关系，规避身份映射命中未加载关系时 async lazy-load 炸裂（focus_service.
+          _local_today 同款先例）。
+        """
+        explicit = self._coerce_activity_date(kwargs.get("activity_date"))
+        if explicit is not None:
+            return explicit
+        tz_name = await self.db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+        return time_utils.local_date(_utcnow(), time_utils.valid_timezone_name(tz_name))
+
     async def _update_streak_stats(self, user_id: str, event_type: str, **kwargs):
         """更新连胜统计"""
         stats = await self._get_or_create_streak_stats(user_id)
-        today = _utcnow().date()
         last_activity_date = self._coerce_activity_date(stats.last_activity_date)
         if last_activity_date != stats.last_activity_date:
             stats.last_activity_date = last_activity_date
@@ -2044,6 +2061,13 @@ class AchievementEngine:
             AchievementEvent.NODE_MASTERED,
         ]:
             return
+
+        # V3-FIX-293: 连胜日界 = 用户本地日（显式 activity_date 优先，缺省经
+        # push_preference.timezone 解析），today/last_activity_date/user_streak_days
+        # 三处同钟；修前 _utcnow().date() 的 UTC 日界丢弃调用方透传的本地
+        # activity_date，上海本地连续日被误判断档（误烧冻结卡+假 FROZEN 行）、
+        # 本地整缺一日被 UTC delta=1 白嫖续签（wt576 F2 双场景实录）。
+        today = await self._resolve_streak_activity_date(user_id, **kwargs)
 
         if not last_activity_date:
             stats.current_streak = 1
@@ -2100,6 +2124,16 @@ class AchievementEngine:
                 stats.freeze_charges -= days_missed
                 stats.last_freeze_used_at = _utcnow()
                 stats.current_streak += 1  # 今天也算
+                # V3-FIX-294: 冻结续签与正常路径（delta==1）同口径簿记——修前只推
+                # current_streak，冻结桥接出的新纪录（如 31 天）在 current 断签
+                # 归 1 时永久丢失（max/longest 恒旧值），排行榜
+                # longest_streak × WEIGHT_STREAK、streak_signal_processor 消费失真。
+                stats.max_streak = max(stats.current_streak, stats.max_streak)
+                stats.total_checkin_days += 1
+                if stats.current_streak > stats.longest_streak:
+                    stats.longest_streak = stats.current_streak
+                    stats.longest_streak_start = stats.longest_streak_start or today
+                    stats.longest_streak_end = today
                 logger.info(f"User {user_id} used {days_missed} freeze charges")
 
                 for offset in range(1, days_missed + 1):

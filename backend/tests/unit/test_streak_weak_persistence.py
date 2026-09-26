@@ -30,11 +30,12 @@ from loguru import logger
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from app.core import time_utils
 from app.core.cache import cache_service
 from app.core.metrics import REGISTRY
 from app.models.achievement import StreakDayStatus, UserStreakDay, UserStreakStats
 from app.models.base import Base
-from app.models.user import User
+from app.models.user import PushPreference, User
 from app.schemas.achievement import StreakDayRecord
 from app.services.achievement_engine import AchievementEngine, AchievementEvent, _utcnow
 from app.services.streak_quality import StreakQualityService
@@ -106,7 +107,9 @@ async def migrated_shape_db_fixture():
         await conn.run_sync(
             lambda sync_conn: Base.metadata.create_all(
                 sync_conn,
-                tables=[User.__table__, UserStreakStats.__table__],
+                # V3-FIX-293：引擎连胜回退口径读 push_preferences.timezone
+                # （缺省 Asia/Shanghai），本镜像库须含该表。
+                tables=[User.__table__, UserStreakStats.__table__, PushPreference.__table__],
             )
         )
         await conn.execute(text(STREAK_DAYS_3_VALUE_DDL))
@@ -136,8 +139,10 @@ async def test_engine_weak_write_failure_not_silent_and_session_survives(
         user = User(username="weakuser", email="weak@example.com", hashed_password="hashed", photon_balance=0)
         session.add(user)
         await session.flush()  # 先取 user.id（无 Python 侧默认值）
-        # 锚定引擎 UTC 时钟（本地 date.today() 跨午夜会与引擎 today 错位成 delta=0）
-        yesterday = _utcnow().date() - timedelta(days=1)
+        # 锚定引擎「今日」时钟源（V3-FIX-293 起=用户本地日，本测试无
+        # PushPreference 行 → 缺省 Asia/Shanghai；与引擎同源换算，宿主机钟/
+        # UTC 深夜跨日界都不会与引擎 today 错位）。
+        yesterday = time_utils.local_date(_utcnow(), time_utils.DEFAULT_USER_TIMEZONE) - timedelta(days=1)
         # 昨日已活跃（delta==1 连续路径）——首日/当日分支会提前 return，
         # 只有连续路径会走到质量块（WEAK 落库点）。
         session.add(
