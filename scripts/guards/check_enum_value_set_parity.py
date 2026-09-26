@@ -489,7 +489,7 @@ KNOWN_DRIFT: dict[str, dict] = {
     # 守卫实测对齐仅剩 EP002 unknown WARN），豁免即删保持棘轮纯净。
     # ---- wt548 扩表新发现漂移（台账 v3/06_agent_fleet/DYNAMIC_ISSUES.md 266-268）----
     "GroupType": {
-        "fix": "V3-FIX-266",
+        "fix": "V3-FIX-269",
         "owner": "待派",
         "expiry": _dt.date(2026, 10, 7),
         "note": "mobile GroupType 缺 'official'（community_model.dart:11-16 仅 squad/sprint）；"
@@ -498,7 +498,7 @@ KNOWN_DRIFT: dict[str, dict] = {
         "$enumDecode 崩",
     },
     "MessageType": {
-        "fix": "V3-FIX-267",
+        "fix": "V3-FIX-270",
         "owner": "待派",
         "expiry": _dt.date(2026, 10, 7),
         "note": "mobile MessageType 缺 'broadcast'（community_model.dart:37-66 共 11 值）；"
@@ -506,7 +506,7 @@ KNOWN_DRIFT: dict[str, dict] = {
         "schemas/community.py:58-60 曾因 schema 缺成员致列表 ValidationError 500）",
     },
     "PhotonTransactionType": {
-        "fix": "V3-FIX-268",
+        "fix": "V3-FIX-271",
         "owner": "待派",
         "expiry": _dt.date(2026, 10, 7),
         "note": "mobile PhotonTransactionType 缺 contract_escrow/grant_bonus/guest_seed "
