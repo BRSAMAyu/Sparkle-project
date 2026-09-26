@@ -2,6 +2,7 @@
 Agent 错误处理器
 实现自我修正和人机协作
 """
+
 import json
 from typing import Any
 
@@ -66,22 +67,20 @@ class AgentErrorHandler:
             return tool_result
 
         # 构建修正提示
-        correction_prompt = self._build_correction_prompt(
-            tool_result,
-            original_request
-        )
+        correction_prompt = self._build_correction_prompt(tool_result, original_request)
 
         try:
             # 让 LLM 分析错误并生成修正后的调用
             retry_response = await llm_service.chat_with_tools(
                 system_prompt=self._get_correction_system_prompt(),
                 user_message=correction_prompt,
-                tools=tool_registry.get_openai_tools_schema()
+                tools=tool_registry.get_openai_tools_schema(),
             )
 
             # 如果 LLM 提供了修正后的工具调用
             if retry_response.tool_calls:
                 from app.orchestration.executor import ToolExecutor
+
                 executor = ToolExecutor()
 
                 # 执行修正后的调用
@@ -101,7 +100,7 @@ class AgentErrorHandler:
                         original_request=retry_response.tool_calls[0],
                         retry_count=retry_count + 1,
                         user_id=user_id,
-                        db_session=db_session
+                        db_session=db_session,
                     )
 
                 return corrected_result
@@ -115,11 +114,7 @@ class AgentErrorHandler:
             tool_result.suggestion = f"{tool_result.suggestion or ''}\n{safe_failure}".strip()
             return tool_result
 
-    def _build_correction_prompt(
-        self,
-        tool_result: ToolResult,
-        original_request: dict[str, Any]
-    ) -> str:
+    def _build_correction_prompt(self, tool_result: ToolResult, original_request: dict[str, Any]) -> str:
         """
         构建错误修正提示
 
@@ -133,9 +128,7 @@ class AgentErrorHandler:
         original_params = {}
         if "function" in original_request:
             try:
-                original_params = json.loads(
-                    original_request["function"].get("arguments", "{}")
-                )
+                original_params = json.loads(original_request["function"].get("arguments", "{}"))
             except (json.JSONDecodeError, KeyError):
                 original_params = original_request.get("function", {}).get("arguments", {})
         original_params = sanitize_tool_payload(original_params)
@@ -145,7 +138,8 @@ class AgentErrorHandler:
                 tool_result.suggestion,
                 fallback="请检查参数后重试。",
             )
-            if tool_result.suggestion else "无"
+            if tool_result.suggestion
+            else "无"
         )
 
         prompt = f"""工具调用失败，需要你分析错误原因并修正参数后重新调用。
@@ -224,7 +218,7 @@ class AgentErrorHandler:
                     original_request=original_requests[i],
                     retry_count=0,
                     user_id=user_id,
-                    db_session=db_session
+                    db_session=db_session,
                 )
                 corrected_results.append(corrected)
             else:
@@ -254,15 +248,15 @@ class AgentErrorHandler:
         error_msg = tool_result.error_message.lower()
 
         # 权限错误不重试
-        if any(keyword in error_msg for keyword in ['permission', 'unauthorized', '权限', '未授权']):
+        if any(keyword in error_msg for keyword in ["permission", "unauthorized", "权限", "未授权"]):
             return False
 
         # 参数验证错误可以重试
-        if any(keyword in error_msg for keyword in ['validation', 'invalid', '验证失败', '无效']):
+        if any(keyword in error_msg for keyword in ["validation", "invalid", "验证失败", "无效"]):
             return True
 
         # 资源不存在可以重试（可能是 ID 错误）
-        if any(keyword in error_msg for keyword in ['not found', 'does not exist', '不存在', '未找到']):
+        if any(keyword in error_msg for keyword in ["not found", "does not exist", "不存在", "未找到"]):
             return True
 
         # 默认尝试重试
