@@ -60,7 +60,10 @@ async def test_profile_context_service_compiles_canonical_user_insight_state_wit
         )
     )
 
-    base_day = datetime(2026, 4, 13, 18, 0)
+    # 墙钟腐烂修复（V3-FIX-151 增补）：CALENDAR_WINDOW_DAYS=28 是相对 now 的
+    # 滚动窗，种子日期钉死 2026-04-13 会在 2026-05-11 后全部滑出窗外，
+    # recurring_windows 恒空。锚定 now-7d（7 天倍数保 weekday/小时对齐）。
+    base_day = datetime.utcnow() - timedelta(days=7)
     db_session.add_all(
         [
             CalendarEvent(

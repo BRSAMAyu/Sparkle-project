@@ -69,8 +69,13 @@ database_url = database_url.replace("%", "%%")
 config.set_main_option("sqlalchemy.url", database_url)
 
 # Interpret the config file for Python logging.
+# disable_existing_loggers=False（V3-FIX-151 根因修复）：fileConfig 默认
+# True 会把进程内一切存量 logger 置 disabled——同一 pytest 会话里先跑过
+# 本迁移测试（PG 门开启）后，app.* 全部 logger 的后续 warning 被静默丢弃
+# （caplog 存在性断言全灭：o03 敏感违规日志、wt396_f5 里程碑失败日志）。
+# alembic.ini 的 [logger_alembic]* 仍正常生效。
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # Model's MetaData object
 target_metadata = Base.metadata

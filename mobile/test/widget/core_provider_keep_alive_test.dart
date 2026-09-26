@@ -4,8 +4,10 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/providers/core_keep_alive_provider.dart';
 import 'package:sparkle/core/services/session_refresh_service.dart';
+import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/repositories/chat_repository.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
@@ -71,10 +73,19 @@ void main() {
 
   testWidgets('session refresh clears user-scoped keepAlive providers',
       (tester) async {
+    // CI 时序面（run 36210706955）：refreshSessionBoundProviders →
+    // _ensureWebSocketReconnect → chatProvider.warmUpConnection → authProvider
+    // 构造即 checkAuthStatus → sharedPreferencesProvider 未覆写时同步抛
+    // UnimplementedError，异步链在 CI 并行时序下逃逸为用例红。mock prefs +
+    // provider 覆写门住（auth 测试同款）；session 清单保持真值——本用例
+    // 钉的就是真清单失效面（dispose+清态），钉空即失语义。
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final prefs = await SharedPreferences.getInstance();
     final chatRepository = _FakeChatRepository();
     final container = ProviderContainer(
       overrides: [
         chatRepositoryProvider.overrideWithValue(chatRepository),
+        sharedPreferencesProvider.overrideWithValue(prefs),
       ],
     );
     addTearDown(container.dispose);

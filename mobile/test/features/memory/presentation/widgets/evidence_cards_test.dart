@@ -703,7 +703,7 @@ void main() {
       expect(result.first.status, equals('ok'));
 
       verify(mockApiClient.post<Map<String, dynamic>>(
-        '/api/v1/events/evidence/resolve',
+        '/events/evidence/resolve',
         data: {
           'items': [refs.first.toJson()],
         },
@@ -789,7 +789,7 @@ void main() {
       await service.resolveEvidence(refs);
 
       final captured = verify(mockApiClient.post<Map<String, dynamic>>(
-        '/api/v1/events/evidence/resolve',
+        '/events/evidence/resolve',
         data: captureAnyNamed('data'),
       ),).captured.single as Map<String, dynamic>;
 

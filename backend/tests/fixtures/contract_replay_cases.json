@@ -134,8 +134,8 @@
       "mode": "cognitive_first",
       "ux_mode": "cognitive",
       "contains_reason": "信息",
-      "contains_adjustment": "情绪阻力",
-      "contains_constraint": "25 分钟",
+      "contains_adjustment": "emotional resistance",
+      "contains_constraint": "25 minutes",
       "prompt_contains": "双核心认知调制"
     }
   },
@@ -190,7 +190,7 @@
       "mode": "cognitive_first",
       "ux_mode": "cognitive",
       "contains_reason": "执行反馈显示阻力在累积",
-      "contains_constraint": "更短",
+      "contains_constraint": "shorter",
       "prompt_contains": "双核心执行约束"
     }
   },

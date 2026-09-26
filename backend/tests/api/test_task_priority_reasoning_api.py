@@ -39,7 +39,7 @@ def tasks_client(db_session, monkeypatch):
             )
 
     monkeypatch.setattr(
-        "app.services.daily_task_selection_service.AuroraRuntimeStore",
+        "app.services.daily_task_selection_service.AuroraEnergyStore",
         _FakeAuroraStore,
     )
     app.dependency_overrides[get_db] = _override_get_db
