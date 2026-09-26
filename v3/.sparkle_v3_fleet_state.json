@@ -4,11 +4,11 @@
  "baseline_head": "fedd27e35e305502ba727ba8c3fb46eae33a1eb9",
  "slots": 6,
  "active": {
-  "wt467": "FIX-156 pool",
-  "wt468": "review R7A backend",
-  "wt469": "review R7B gw+mobile",
-  "wt472": "FIX-118+25/26 attr cluster",
-  "wt474": "OPEN pool sweep"
+  "wt474": "OPEN pool sweep",
+  "wt475": "FIX-164 math guard",
+  "wt476": "FIX-169 cache gates",
+  "wt477": "merged rehearsal",
+  "wt478": "165/166/167 bundle"
  },
  "done": [
   "A-01",
@@ -473,7 +473,11 @@
   "wt466: FIX-155 SSE EOF 哨兵三轨修（0a322dff/60bb567e，集成于932073e4+310d6b22）",
   "wt471: FIX-160 决策备忘+FIX-174 登记（b36c1af2）",
   "wt470: FIX-147 验而不改+指针纠正（074838a0）",
-  "wt473: FIX-24 验而不改+收口（a7a1ac93）"
+  "wt473: FIX-24 验而不改+收口（a7a1ac93）",
+  "wt467: FIX-156 池治理（2edbd64b）",
+  "wt468: 审查7A+164-167（54a63dde）",
+  "wt469: 审查7B+168/169（627f22aa）",
+  "wt472: FIX-26 真修+118/25/27 闭账（9aec29c4/6b3f9597）"
  ],
  "blocked": [],
  "notes": [
@@ -536,6 +540,7 @@
   "R(2026-09-25T15:0x): wt466(FIX-155 EOF哨兵)集成完成 cherry-pick 0a322dff+60bb567e 干净落地；台账大扫除——EOF行归位155/pool行归位156/删union双落重复13行（含78/79 wt448旧文），全表零重复ID；合并态三门绿（backend 9/9+mypy 1099+mobile chat_provider 9绿）；卫生commit 310d6b22；worktree/branch已清。CI真绿尝试 run 36220960164（91cf83e7）仍在跑→继续hold push。新窗满编派5：wt467=FIX-156 pre-pool瓶颈(P2真修) / wt468=审查轮7A(backend wt444..466流与编排) / wt469=审查轮7B(gateway+mobile wt444..466) / wt470=FIX-147 EN否定无撇号形 / wt471=FIX-160三轨持久化决策备忘(不动产品码)。FIX新号段：467→161-163,468→164-167,469→168-171,470→172-173,471→174。",
   "R(+1h): wt471 返航集成 b36c1af2 干净落地——FIX160_DECISION_MEMO.md 产出（三轨对照/勘误原表述/推荐A>B>C/两问待拍板）+新登记 V3-FIX-174 P2（网关 FIX-155 防线对 T1 引擎哨兵截断不可达+语义缓存照写重投）。wt471 worktree已清。OPEN池扫陈：FIX-53/61/62/119 四行实已修行状态漏更→补记FIXED@（fb80422a），真开放 39。补位 wt472=FIX-118(P1 ExecutionService 引用不存在类属性)+25/26 同族扫雷（FIX-19 实锤残留簇），新号 175+。CI run 36220960164 仍 in_progress（6/7 绿只剩 Backend Tests）。满编 5+1：wt467/468/469/470/472。",
   "R(+2h): wt470 返航=重复派发（FIX-147 已在基线 9f4c9f71 修好；我派卡时未对当前台账校验——教训：派卡前必须 grep 行状态）。agent 验而不改处置正确：146/147/148 三行 FIXED@ 指向纠正（714f474b 不可达异父重复提交→9f4c9f71）+147 行独立复验实录（180 邻域绿/mypy 1099）；集成 074838a0 干净落地，worktree 已清。操作知识入账：新 worktree 缺 backend/app/gen 会致 mypy 假阳性 1102。补位 wt473=FIX-24 P1（orchestrator L415/L710 get_active_session 缺 user 键，绕路引导+冷启动 fast-track 失效；派前已核行仍 OPEN）。CI 36220960164 仍 in_progress（Backend Tests 马拉松）。在航：wt467/468/469/472/473。",
-  "R(+3h): wt473 返航=第二张陈旧卡（FIX-24 已修于 wt190 bef7ae07，行号漂移 L415/710→L429/733）；先证伪预案生效：临时回退 2 红+还原 5 绿实录，行收口 FIXED@bef7ae07，集成 a7a1ac93 干净。连续两陈旧卡→派 wt474=OPEN 池批扫陈+三分类分诊（已修未记/可派发/待拍板），产出可派发队列，杀掉陈旧派发问题。CI：Backend Tests 05:37Z 起跑已 76min（120min 窗，最迟 15:37 本地裁决），其余 6 职位绿。在航：wt467/468/469/472/474。"
+  "R(+3h): wt473 返航=第二张陈旧卡（FIX-24 已修于 wt190 bef7ae07，行号漂移 L415/710→L429/733）；先证伪预案生效：临时回退 2 红+还原 5 绿实录，行收口 FIXED@bef7ae07，集成 a7a1ac93 干净。连续两陈旧卡→派 wt474=OPEN 池批扫陈+三分类分诊（已修未记/可派发/待拍板），产出可派发队列，杀掉陈旧派发问题。CI：Backend Tests 05:37Z 起跑已 76min（120min 窗，最迟 15:37 本地裁决），其余 6 职位绿。在航：wt467/468/469/472/474。",
+  "R(15:05): 三卡返航齐集成——wt467（FIX-156 池治理真修 2edbd64b：预算权威 44/进程+AGE acquire 5s 有界，真 PG A/B 10s 挂起→0.2s 诚实错；mypy 基线 1099→1095 同步）/wt468（审查7A fix-required 窄：主线交付成立，4 项发现 164-167）/wt469（审查7B ACCEPT：168 T1 截断绕缓存退出+169 语义缓存查询面死亡两 P2）/wt472（118/25/27 闭账已修+26 真修 9aec29c4 二次 .all() 缓存+新 175）。union 修正：wt472 四行就地状态更新曾被 union 去重吞掉→从其提交整行复原。llm_router 4 红归因完成=本地 .env LLM_TIER_PRO 触发（双盲 A/B：基线+.env 红/基线+wt467 全文件绿），wt467 无辜，登记 V3-FIX-176（测试隔离缺陷，CI 无 .env 不受影响）。worktree 全清。补位满编 5+1：wt475=FIX-164 数学误拒双向 bench / wt476=FIX-169 缓存门恢复（168 留待 160 拍板，交接点已嘱）/ wt477=合并态全量预演（无 .env CI 形状，push 前除雷）/ wt478=165/166/167 三 P3 打包。号段：475→177+,476→178+,477→179+,478→180+。CI 36220960164 仍 in_progress（窗至 15:37）。"
  ]
 }
