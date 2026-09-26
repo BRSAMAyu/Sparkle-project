@@ -342,6 +342,8 @@ class UserStrategyStateService:
         history = (audit_entries + history)[: self.HISTORY_LIMIT]
 
         if normalized_layer == self.SESSION_LAYER:
+            if not session_id:
+                raise ValueError("session_id is required for session-layer strategy writes")
             await self._persist_session_layer(
                 session_id=session_id,
                 state=current_state,
@@ -350,6 +352,8 @@ class UserStrategyStateService:
                 ttl_seconds=self._session_cache_ttl(current_meta),
             )
         elif normalized_layer == self.EPISODE_LAYER:
+            if plan_id is None:
+                raise ValueError("plan_id is required for episode-layer strategy writes")
             await self._persist_episode_layer(
                 user_id=user_id,
                 plan_id=plan_id,
@@ -383,6 +387,7 @@ class UserStrategyStateService:
 
     def _normalize_field_value(self, field: str, value: Any) -> Any:
         spec = self.FIELD_SPECS[field]
+        numeric: float
         if spec.value_type == "int":
             numeric = int(round(float(value)))
             numeric = int(max(spec.min_value or numeric, min(spec.max_value or numeric, numeric)))

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from enum import Enum, StrEnum
-from typing import Literal
+from typing import Any, Literal, overload
 from uuid import UUID
 
 from pydantic import AliasChoices, BaseModel, Field, field_validator
@@ -167,6 +167,18 @@ TASK_TYPE_ALIAS_MAP = {
     "worked_example_then_drill": "TRAINING",
     "other": "LEARNING",
 }
+
+
+@overload
+def coerce_task_type(value: Any, *, default: TaskType) -> TaskType: ...
+
+
+@overload
+def coerce_task_type(
+    value: TaskType | str | Enum | None,
+    *,
+    default: None = ...,
+) -> TaskType | None: ...
 
 
 def coerce_task_type(

@@ -306,9 +306,12 @@ async def set_user_revoked_before(user_id: str, revoked_before: datetime) -> Non
         return
 
 
-async def blacklist_token(jti: str, exp: int | float | datetime | None) -> None:
+async def blacklist_token(jti: str | None, exp: int | float | datetime | None) -> None:
     """
     Add token jti to blacklist with TTL based on exp claim.
+
+    ``jti`` 缺失（payload 无该 claim）时直接跳过——实现本就按
+    ``if not jti`` 兜底，签名如实接受 None。
     """
     if not jti or exp is None:
         return

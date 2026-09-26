@@ -29,11 +29,13 @@ def _thread_key(thread_id: str, checkpoint_ns: str) -> str:
     return f"lg_chk:{thread_id}:{checkpoint_ns}"
 
 
-def _blob_key(thread_id: str, checkpoint_ns: str, channel: str, version: str) -> str:
+def _blob_key(thread_id: str, checkpoint_ns: str, channel: str, version: str | int | float) -> str:
+    # version 来自 ChannelVersions（str | int | float），仅进 f-string，按实际类型放宽
     return f"lg_blob:{thread_id}:{checkpoint_ns}:{channel}:{version}"
 
 
-def _writes_key(thread_id: str, checkpoint_ns: str, checkpoint_id: str) -> str:
+def _writes_key(thread_id: str, checkpoint_ns: str, checkpoint_id: str | None) -> str:
+    # checkpoint_id 可能来自 config.get(...) 缺省 None，仅进 f-string，按实际类型放宽
     return f"lg_writes:{thread_id}:{checkpoint_ns}:{checkpoint_id}"
 
 
@@ -146,6 +148,8 @@ class LangGraphRedisCheckpointer(BaseCheckpointSaver):
             "channel_values": channel_values,
             "channel_versions": channel_versions,
             "versions_seen": cp_data[4] if len(cp_data) > 4 else {},
+            # 本后端不持久化 updated_channels，如实落 None（避免消费方 KeyError）
+            "updated_channels": None,
         }
 
         writes_raw = await self.redis.hgetall(_writes_key(thread_id, checkpoint_ns, checkpoint_id))
@@ -240,6 +244,8 @@ class LangGraphRedisCheckpointer(BaseCheckpointSaver):
                 "channel_values": channel_values,
                 "channel_versions": channel_versions,
                 "versions_seen": cp_data[4] if len(cp_data) > 4 else {},
+                # 本后端不持久化 updated_channels，如实落 None（避免消费方 KeyError）
+                "updated_channels": None,
             }
 
             yield CheckpointTuple(

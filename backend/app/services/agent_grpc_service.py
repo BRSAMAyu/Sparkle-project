@@ -56,7 +56,8 @@ def _utcnow() -> datetime:
 
 
 def _grpc_status_for_chat_error(error_code: int) -> grpc.StatusCode:
-    _MAP = {
+    # ErrorCode 是 int 枚举（EnumTypeWrapper），运行时键即 int 值，显式按 int 键标注
+    _MAP: dict[int, grpc.StatusCode] = {
         agent_service_pb2.ERROR_CODE_INVALID_ARGUMENT: grpc.StatusCode.INVALID_ARGUMENT,
         agent_service_pb2.ERROR_CODE_UNAUTHORIZED: grpc.StatusCode.UNAUTHENTICATED,
         agent_service_pb2.ERROR_CODE_FORBIDDEN: grpc.StatusCode.PERMISSION_DENIED,
@@ -491,10 +492,14 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
                     async with self.db_session_factory() as recall_db:
                         push_scheduler = PushScheduler(recall_db)
+                        raw_file_ids = request_extra_context.get("file_ids")
+                        uploaded_files_count = (
+                            len(raw_file_ids) if isinstance(raw_file_ids, (list, tuple, set)) else 0
+                        )
                         await push_scheduler.enqueue_session_end_recall(
                             user_id=user_id,
                             session_context={
-                                "uploaded_files_count": len(request_extra_context.get("file_ids") or []),
+                                "uploaded_files_count": uploaded_files_count,
                                 "diagnosed_files_count": 0,
                             },
                         )
@@ -1491,16 +1496,14 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 context.set_details("user_id is required")
                 return agent_service_pb2.RegenerationResponse(
                     success=False,
-                    message="Authentication required",
-                )
+                                    )
 
             if not request.original_content_id:
                 context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
                 context.set_details("original_content_id is required")
                 return agent_service_pb2.RegenerationResponse(
                     success=False,
-                    message="original_content_id is required",
-                )
+                                    )
 
             logger.info(
                 f"RequestRegeneration - user={user_id}, content={request.original_content_id}, "
@@ -1561,16 +1564,14 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             context.set_details("Internal error")
             return agent_service_pb2.RegenerationResponse(
                 success=False,
-                message="Internal error processing request",
-            )
+                            )
         except Exception as e:
             logger.opt(exception=True).error(f"RequestRegeneration error: {e}")
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details("Internal error")
             return agent_service_pb2.RegenerationResponse(
                 success=False,
-                message="Internal error processing regeneration",
-            )
+                            )
 
     async def GetFeedbackStatistics(
         self,

@@ -11,7 +11,7 @@ from app.models.task import Task
 from app.models.task import TaskStatus as ModelTaskStatus
 from app.models.task import TaskType as ModelTaskType
 from app.orchestration.persona_aware_planner import PersonaAwarePlanner
-from app.schemas.task import TaskCreate, TaskStatus, TaskUpdate, coerce_task_type
+from app.schemas.task import TaskCreate, coerce_task_type
 from app.services.focus_service import focus_service
 from app.services.task_service import TaskService
 
@@ -166,7 +166,10 @@ class UpdateTaskStatusTool(BaseTool):
                 raise ValueError("Task not found")
 
             new_status = params.status
-            _VALID_STATUSES = {"in_progress", "completed", "abandoned", "pending"}
+            # FSM（task_service._VALID_TRANSITIONS）不存在任何 →PENDING 迁移，
+            # 且 TaskUpdate 无 status 字段——旧实现静默丢弃 status，谎报成功。
+            # 这里显式拒绝，不再伪装。
+            _VALID_STATUSES = {"in_progress", "completed", "abandoned"}
             if new_status not in _VALID_STATUSES:
                 raise ValueError(f"不支持的状态: {new_status}。可选: {', '.join(sorted(_VALID_STATUSES))}")
 
@@ -177,9 +180,6 @@ class UpdateTaskStatusTool(BaseTool):
                 task = await TaskService.complete(db_session, task, actual_minutes=actual_minutes)
             elif new_status == "abandoned":
                 task = await TaskService.abandon(db_session, task, reason="User requested via chat")
-            elif new_status == "pending":
-                task_update = TaskUpdate(status=TaskStatus.PENDING)
-                task = await TaskService.update(db_session, task, task_update)
 
             task_payload: dict[str, Any] = {
                 "id": str(task.id),

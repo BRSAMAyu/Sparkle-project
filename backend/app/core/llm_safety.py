@@ -154,13 +154,14 @@ class LLMSafetyService:
         logger.info(f"LLMSafetyService initialized (deep_analysis={enable_deep_analysis})")
 
     @staticmethod
-    def _mask_match(matched: str) -> str:
+    def _mask_match(matched: str | None) -> str:
         """遮蔽违规命中文本（O-03 HIGH#1 修复）。
 
         ``violations`` 会进入结构化日志（logger.warning）与
         SecurityViolationError 异常消息——两者都是泄漏面。命中文本
         （match.group(0)）可能就是密钥/密码/手机号本身，因此进 violations
         前必须遮蔽；遮蔽风格与 LLMOutputValidator._mask_sensitive 对齐。
+        实现本就按 ``matched or ""`` 兜底，故签名如实接受 None。
         """
         text = str(matched or "")
         length = len(text)
@@ -203,7 +204,7 @@ class LLMSafetyService:
             # 原始 match 仅保留在 RiskResult.pattern 供角色扮演子判定使用。
             violations.append(f"提示注入风险: {self._mask_match(injection_risk.pattern)}")
             risk_score += 0.4
-            if re.search(r"(你是|你被赋予|角色|扮演|act\s+as|pretend|you\s+are)", injection_risk.pattern, re.IGNORECASE):
+            if re.search(r"(你是|你被赋予|角色|扮演|act\s+as|pretend|you\s+are)", injection_risk.pattern or "", re.IGNORECASE):
                 violations.append("角色扮演风险: 注入模式包含角色指令")
                 risk_score += 0.2
             text = injection_risk.sanitized_text

@@ -29,26 +29,31 @@ from app.tools.plan_tools import (
     _LearningPathNodeRef,
 )
 from app.tools.schemas import (
+    BatchCreateTasksParams,
+    BreakdownTaskParams,
     CreatePlanParams,
     CreateTaskParams,
     GenerateTasksForPlanParams,
-    PlanStage as SchemaPlanStage,
-    PlanType as SchemaPlanType,
-    TaskType as SchemaTaskType,
-    UpdateTaskStatusParams,
-    BatchCreateTasksParams,
-    BreakdownTaskParams,
     SuggestQuickTaskParams,
+    UpdateTaskStatusParams,
+)
+from app.tools.schemas import (
+    PlanStage as SchemaPlanStage,
+)
+from app.tools.schemas import (
+    PlanType as SchemaPlanType,
+)
+from app.tools.schemas import (
+    TaskType as SchemaTaskType,
 )
 from app.tools.task_tools import (
-    CreateTaskTool,
-    UpdateTaskStatusTool,
     BatchCreateTasksTool,
-    SuggestQuickTaskTool,
     BreakdownTaskTool,
+    CreateTaskTool,
+    SuggestQuickTaskTool,
+    UpdateTaskStatusTool,
     _BreakdownSubtaskSchema,
 )
-
 
 # ─── Fixtures ────────────────────────────────────────────────
 
@@ -570,16 +575,18 @@ class TestUpdateTaskStatusTool:
             mock_abandon.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_routes_pending_to_update(self, db_session, user_id):
+    async def test_pending_status_rejected(self, db_session, user_id):
+        # FSM（task_service._VALID_TRANSITIONS）不存在任何 →PENDING 迁移，且 TaskUpdate
+        # 无 status 字段（旧实现静默丢弃并谎报成功）——现在显式拒绝。
         task = _make_task()
         with (
             patch("app.tools.task_tools.TaskService.get_by_id", new_callable=AsyncMock, return_value=task),
-            patch("app.tools.task_tools.TaskService.update", new_callable=AsyncMock, return_value=_make_task(status=TaskStatus.PENDING)) as mock_update,
         ):
             tool = UpdateTaskStatusTool()
             params = UpdateTaskStatusParams(task_id=str(task.id), status="pending")
-            await tool.execute(params, user_id, db_session)
-            mock_update.assert_called_once()
+            result = await tool.execute(params, user_id, db_session)
+            assert result.success is False
+            assert "不支持的状态" in result.error_message
 
     @pytest.mark.asyncio
     async def test_task_not_found_returns_error(self, db_session, user_id):

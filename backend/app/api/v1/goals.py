@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_db
 from app.core.cache import cache_service
 from app.core.exceptions import NotFoundError
+from app.models.task import TaskType as ModelTaskType
 from app.models.user import User
 from app.schemas.task import TaskCreate, coerce_task_type
 from app.services.goal_decomposition_service import goal_decomposition_service
@@ -229,7 +230,7 @@ async def create_goal(
                 db,
                 TaskCreate(
                     title=first.get("title", f"{payload.title} — 第一步"),
-                    type=coerce_task_type("learning"),
+                    type=coerce_task_type("learning", default=ModelTaskType.LEARNING),
                     estimated_minutes=25,
                     energy_cost=2,
                     tags=["goal_first_step", f"goal_milestone:{first_milestone_id}"],
@@ -261,7 +262,7 @@ async def create_goal(
                     db,
                     TaskCreate(
                         title=milestone.get("title", f"{payload.title} — 第{i}步"),
-                        type=coerce_task_type("learning"),
+                        type=coerce_task_type("learning", default=ModelTaskType.LEARNING),
                         estimated_minutes=25,
                         energy_cost=2,
                         tags=["goal_milestone", f"goal_milestone:{milestone_id}"],
@@ -466,15 +467,17 @@ def _auto_assign_scenario_pack(goal: Any, goal_type: str, user_id: str) -> None:
             first_node = manifest.backbone_nodes[0].node_id if manifest.backbone_nodes else ""
             state_key = f"spine:scenario_journey:{user_id}:{goal.id}"
             import asyncio
-            asyncio.ensure_future(cache_service.redis.set(
-                state_key,
-                json.dumps({
-                    "pack_id": pack_id,
-                    "current_node": first_node,
-                    "started_at": datetime.now(UTC).isoformat(),
-                    "is_on_backbone": True,
-                }),
-                ex=90 * 24 * 3600,
-            ))
+            redis_client = cache_service.redis
+            if redis_client is not None:
+                asyncio.ensure_future(redis_client.set(
+                    state_key,
+                    json.dumps({
+                        "pack_id": pack_id,
+                        "current_node": first_node,
+                        "started_at": datetime.now(UTC).isoformat(),
+                        "is_on_backbone": True,
+                    }),
+                    ex=90 * 24 * 3600,
+                ))
     except Exception:
         pass

@@ -137,6 +137,8 @@ def _access_delta_from_payload(payload: dict[str, Any]) -> timedelta | None:
     上界钳到 refresh 寿命，异常 claim（非正数/不可解析）同样走默认。
     """
     raw = payload.get("access_ttl") if payload else None
+    if raw is None:
+        return None
     try:
         ttl_seconds = int(raw)
     except (TypeError, ValueError):

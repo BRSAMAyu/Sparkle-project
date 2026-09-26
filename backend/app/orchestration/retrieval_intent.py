@@ -354,7 +354,7 @@ class RetrievalIntentClassifier:
         linked_docs = _has_linked_documents(context)
 
         # Map Flutter scope to ContextPlan source_scope
-        scope_map: dict[str, str] = {
+        scope_map: dict[str, Literal["auto", "user_selected", "task_bound", "goal_bound"]] = {
             "auto": "auto",
             "userselected": "user_selected",
             "taskscope": "task_bound",

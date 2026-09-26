@@ -120,7 +120,7 @@ class User(BaseModel):
     agreed_to_privacy_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     tos_version: Mapped[str] = mapped_column(String(50), nullable=True)
     privacy_version: Mapped[str] = mapped_column(String(50), nullable=True)
-    agreed_locale: Mapped[str] = mapped_column(String(20), nullable=True)
+    agreed_locale: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     # 🆕 年龄校验 (V3.1)
     is_minor: Mapped[bool] = mapped_column(Boolean, nullable=True)  # None = unknown, True/False = verified

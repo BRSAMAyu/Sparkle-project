@@ -63,7 +63,7 @@ def _get_engine_kwargs(db_url: str, sslmode: str | None, sslrootcert: str | None
     else:
         # PostgreSQL 使用连接池配置
         # asyncpg requires 'ssl' parameter (bool or SSLContext), NOT 'sslmode'
-        connect_args = {}
+        connect_args: dict[str, bool | ssl.SSLContext] = {}
 
         if sslrootcert:
             # With certificate, create SSL context for verification

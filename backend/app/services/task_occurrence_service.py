@@ -217,7 +217,7 @@ class TaskOccurrenceService:
         self,
         occurrence: TaskOccurrence,
         *,
-        old_status: OccurrenceStatus,
+        old_status: OccurrenceStatus | None,
         extra_payload: dict | None = None,
     ) -> None:
         if not self.event_bus:
@@ -226,8 +226,8 @@ class TaskOccurrenceService:
         payload = {
             "occurrence_id": str(occurrence.id),
             "series_card_id": str(occurrence.series_card_id),
-            "old_status": old_status.value,
-            # 状态列可空（nullable）：缺席落 None 而非 AttributeError 打断事件发布。
+            # 状态列可空（nullable）：新旧状态缺席均落 None，而非 AttributeError 打断事件发布。
+            "old_status": old_status.value if old_status else None,
             "new_status": occurrence.occurrence_status.value if occurrence.occurrence_status else None,
         }
         if extra_payload:

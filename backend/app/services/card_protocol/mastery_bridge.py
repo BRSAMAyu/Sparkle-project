@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from loguru import logger
 from sqlalchemy import select
@@ -70,7 +71,7 @@ class ErrorMasteryBridge:
 
         Returns a summary of what was created.
         """
-        summary = {"knowledge_cards": 0, "evidence_edges": 0, "metadata_writebacks": 0, "errors": []}
+        summary: dict[str, Any] = {"knowledge_cards": 0, "evidence_edges": 0, "metadata_writebacks": 0, "errors": []}
 
         if not linked_node_ids:
             return summary

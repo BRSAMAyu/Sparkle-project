@@ -2358,11 +2358,15 @@ def _format_planning_strategy_section(*, user_context: dict) -> str:
     situation_brief = user_context.get("situation_brief") if isinstance(user_context, dict) else None
     strategy: dict[str, Any] = {}
     semantic_control: dict[str, Any] = {}
-    if isinstance(situation_brief, dict) and isinstance(situation_brief.get("planning_strategy"), dict):
-        strategy = situation_brief.get("planning_strategy")
-        semantic_control = situation_brief.get("semantic_control") or {}
-    elif isinstance(user_context, dict) and isinstance(user_context.get("planning_strategy"), dict):
-        strategy = user_context.get("planning_strategy")
+    if isinstance(situation_brief, dict):
+        raw_strategy = situation_brief.get("planning_strategy")
+        if isinstance(raw_strategy, dict):
+            strategy = raw_strategy
+            semantic_control = situation_brief.get("semantic_control") or {}
+    elif isinstance(user_context, dict):
+        raw_strategy = user_context.get("planning_strategy")
+        if isinstance(raw_strategy, dict):
+            strategy = raw_strategy
     if not strategy:
         return ""
 
@@ -4372,12 +4376,12 @@ def _normalize_user_context(context: dict) -> dict:
     if context.get("preferences") and "preferences" not in normalized:
         normalized["preferences"] = context["preferences"]
 
-    profile_context = context.get("profile_context")
-    if profile_context:
-        if hasattr(profile_context, "model_dump"):
-            profile_context = profile_context.model_dump()
-        if isinstance(profile_context, dict):
-            knowledge_summary = profile_context.get("knowledge_summary")
+    raw_profile_context = context.get("profile_context")
+    if raw_profile_context:
+        if hasattr(raw_profile_context, "model_dump"):
+            raw_profile_context = raw_profile_context.model_dump()
+        if isinstance(raw_profile_context, dict):
+            knowledge_summary = raw_profile_context.get("knowledge_summary")
             if isinstance(knowledge_summary, dict):
                 normalized["knowledge_summary"] = knowledge_summary
 
