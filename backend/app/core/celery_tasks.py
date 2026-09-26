@@ -2345,9 +2345,12 @@ def recompute_persdyn_attractors(self):
     from app.services.persdyn_attractor_service import PersDynAttractorService
 
     async def _recompute():
-        # V3-FIX-110：与 predictive 读取面同门——stage27 attractor 关闭
+        # V3-FIX-108：与 predictive 读取面同门——stage27 attractor 关闭
         # （is_feature_enabled=off）时不做全量重算与落库；shadow/live 放行
         # （与读取面 is_feature_enabled 的 off/shadow/live 三态语义一致）。
+        # 判据锚点=任务启动时读（worker 侧）：beat crontab 是静态注册表，
+        # 只有执行时刻读开关才能拦住「调度后、执行前翻 off」的窗口
+        # （同族先例 run_push_policy_scheduler / run_smart_push_cycle）。
         from app.services.aurora_stage27_foresight_kill_switch_service import (
             AuroraStage27ForesightKillSwitchService,
         )
@@ -3273,7 +3276,9 @@ def community_cohort_signal_task(self, user_id: str, knowledge_node_id: str):
 
         # V3-FIX-109：与 community_signal_bridge 同语义——社群数据进个人系统
         # 必须 stage33 community mode=live（off/shadow 都跳过）；此处为 celery
-        # 独立派发路径的防御层（scan 入口另有省扫描的早退门）。
+        # 独立派发路径的防御层（scan 入口另有省扫描的早退门）。判据锚点=
+        # 任务启动时读：scan（beat 每 8h）与 task 执行之间开关翻 off，
+        # 由本层拦住——双层读同一开关，不继承 scan 时刻的裁决。
         community_mode = await AuroraStage33KillSwitchService().get_feature_mode("community")
         if community_mode != "live":
             logger.info(
@@ -3323,7 +3328,9 @@ def scan_community_cohort_signals(self, limit: int = 200):
 
         # V3-FIX-109：beat 定时扫描面挂 stage33 community 门——开关未开
         # （off/shadow）直接早退，不做全量 spine:last_seen 扫描；与
-        # run_push_policy_scheduler 的省扫描先例同构。
+        # run_push_policy_scheduler 的省扫描先例同构。判据锚点=扫描任务
+        # 启动时读（非 beat 注册期）：crontab 静态、开关动态，执行时刻读
+        # 才是最新裁决。
         community_mode = await AuroraStage33KillSwitchService().get_feature_mode("community")
         if community_mode != "live":
             logger.info(

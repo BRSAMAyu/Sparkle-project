@@ -1,4 +1,4 @@
-"""wt422 kill_switch 邻批扫雷：Celery/定时唤醒面补挂矩阵（V3-FIX-109/110）。
+"""wt422 kill_switch 邻批扫雷：Celery/定时唤醒面补挂矩阵（V3-FIX-108/109）。
 
 扫雷结论（base 实录红→绿）：
 - V3-FIX-109：stage33 community 模式在 bridge 面（community_signal_bridge
@@ -11,6 +11,9 @@
   is_feature_enabled("attractor") 门，但 celery beat 面
   recompute_persdyn_attractors → PersDynAttractorService.recompute_all_users
   无门——attractor 关闭后仍全量重算并落库。
+  （编号沿革：本项在 wt422 落地时曾按登记号 V3-FIX-110 提交，与 wt424 已
+  占的 110 撞号，集成时重编为 V3-FIX-108；wt500 闭账时校正本文件与
+  celery_tasks.py 注释中的旧编号残留。）
 
 修法与既有开关门先例对齐（run_push_policy_scheduler / run_smart_push_cycle）：
 - community 面：门 = get_feature_mode("community") != "live" 即跳过
@@ -19,6 +22,13 @@
 - attractor 面：门 = is_feature_enabled("attractor")（off 跳过；
   shadow/live 与 predictive 读取面同语义放行）。
 
+判据锚点（V3-FIX-108/109 闭账时由 wt500 记录）：两类 beat 周期任务的
+kill 判据均锚在**任务启动时读**（worker 侧执行时刻），而非 beat 注册/调度期——
+crontab 注册表是静态配置，开关是动态状态；只有执行时刻读才能拦住
+「调度后、执行前翻 off」的窗口。scan→task 双层各读一次同一开关，
+task 不继承 scan 时刻的裁决（test_cohort_chain_rechecks_gate_at_task_start
+锁定该锚点语义）。
+
 其余面（HTTP/WS/定时唤醒主链）既有覆盖矩阵：
 - HTTP：predictive/jitai/idiographic/metacognition/traits/task_reflection/
   policy/skills/scene 等服务入口自门控（各自 stage 开关单测锁定）。
@@ -26,7 +36,8 @@
   7 个 consumer 全部继承同一基类门（test_stage34_kill_switch.py）。
 - 定时唤醒：run_smart_push_cycle 挂 stage38 push_scheduler 门
   （test_scheduler_push_kill_switch.py 三态矩阵）。
-本文件补齐 Celery/beat 面矩阵。
+本文件补齐 Celery/beat 面矩阵。wt500 闭账：摘门突变检查实录
+5 红（三处门各摘→对应 skip 测试全红、4 守卫放行测试不误伤）→复门全绿。
 """
 
 from __future__ import annotations
@@ -213,13 +224,57 @@ def test_cohort_scan_dispatches_when_community_mode_live(monkeypatch):
     assert result["dispatched"] == 1
 
 
+def test_cohort_chain_rechecks_gate_at_task_start(monkeypatch):
+    """锚点语义锁（wt500 V3-FIX-109 闭账）：scan 与 task 各自在任务启动时
+    读开关，task 不继承 scan 时刻的裁决。
+
+    beat 链 scan（每 8h tick）→ 派发 → task 执行之间存在时间窗：开关在
+    scan 之后翻 off 时，task 层必须在执行时刻再读一次并早退。若 task 层
+    门被摘（回归形态=只留 scan 层门），本测试红。
+    """
+    spine = SimpleNamespaceLike()
+    spine.on_community_cohort_data = AsyncMock(return_value=object())
+    monkeypatch.setattr(
+        spine_orchestrator_module, "get_spine_orchestrator", lambda redis_client=None: spine
+    )
+    dispatch = AsyncMock(return_value=True)
+    monkeypatch.setattr(celery_tasks_module, "dispatch_task_async", dispatch)
+    # 第一次读=scan 启动时刻（live 放行），第二次读=task 启动时刻（已翻 off）。
+    monkeypatch.setattr(
+        Stage33Switch,
+        "get_feature_mode",
+        AsyncMock(side_effect=["live", "off"]),
+    )
+    _patch_redis(
+        monkeypatch,
+        _FakeRedis(
+            last_seen_keys=[b"spine:last_seen:u1"],
+            node_keys=[b"galaxy:user_nodes:u1:n1"],
+            signal_payload=_SIGNAL,
+        ),
+    )
+
+    scan_result = scan_community_cohort_signals(limit=10)
+    assert scan_result["dispatched"] == 1  # scan 时刻开关仍 live，正常派发
+    dispatch.assert_awaited_once()
+
+    task_result = community_cohort_signal_task("u1", "n1")
+
+    spine.on_community_cohort_data.assert_not_called()  # task 时刻开关已翻 off
+    assert task_result["status"] == "skipped"
+
+
 # ---------------------------------------------------------------------------
 # V3-FIX-108：stage27 attractor Celery 面
 # ---------------------------------------------------------------------------
 
 
 def test_persdyn_recompute_skips_when_attractor_off(monkeypatch):
-    """attractor off → 不全量重算不落库（predictive 读取面已关，写面不得空转）。"""
+    """attractor off → 不全量重算不落库（predictive 读取面已关，写面不得空转）。
+
+    判据锚点=任务启动时读（worker 执行时刻，非 beat 注册期）：beat crontab
+    静态、开关动态，执行时刻读才能拦住「调度后、执行前翻 off」窗口。
+    """
     service = SimpleNamespaceLike()
     service.recompute_all_users = AsyncMock(return_value=3)
     monkeypatch.setattr(persdyn_module, "PersDynAttractorService", lambda session: service)
