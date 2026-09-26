@@ -4,11 +4,12 @@
  "baseline_head": "fedd27e35e305502ba727ba8c3fb46eae33a1eb9",
  "slots": 6,
  "active": {
-  "wt552": "mypy 批六烧减 642→≤607@1dd4d401",
+  "wt552": "mypy 批六 642→≤607（复活 03:04，脏进度保留）",
   "wt553": "三族枚举漂移修复 269/270/271（两 P2：MessageType broadcast 活体崩面+PhotonTransactionType 触达最宽）@cb3a80a7",
-  "wt555": "CARD-DUAL-WRITE 守卫停用债处置（考古→复活/修/退役三选一）@44f8924b",
-  "wt556": "CASCADE 第二批 lib/ 面 186 条（加严：求值次数/初始化序/拿不准即跳）@3506802c",
-  "wt557": "entitlement Python/Go 双实现等价测试（B-06 在册观察收口，向量单源双端消费）@9a927192"
+  "wt555": "CARD-DUAL-WRITE 守卫债（复活 03:04）",
+  "wt556": "CASCADE lib 面第二批（复活 03:04）",
+  "wt557": "entitlement 等价测试（复活 03:04）",
+  "wt558": "本地集成栈独立审计轮（~50 commit 五面审计，可推/需修裁决）@cbba2133"
  },
  "done": [
   "A-01",
@@ -702,6 +703,7 @@
   "2026-09-27 02:4x 轮：wt554 FIX-272 集成完毕（934b076b+e945562e，新工具 union-merge 第二战 check 通过；合并态 13/13 绿零吞错 warning+mypy 642=642，树清）——staticmethod 化三波漏网全收口（rb10/桩包裹/本波四用例）；修法亮点：变异负控（临时断言 >=999 失败实录）证明链路真实到达入库断言非裸奔绿。wt557 立即补位=entitlement 双实现等价测试（B-06「注释互认无等价测试」观察收口：测试向量单源 JSON 双端消费）。三问：在航 5 槽（wt552/553/555/556/557）；空槽 0；下一卡=CI 裁决（在航 ~2h 又超区间——本轮核 job 步骤活性后定夺）→day6 晨门栈升级。",
   "2026-09-27 03:1x 轮（CI 挂起诊断专轮）：run 36253679384 Backend Tests 判定**疑似 infra 抖动**——证据链：①Python 步骤 16:42:19Z 起零输出 30+min（此前 ~2 行/秒），冻结点=spine/test_specialized_features.py 37% 4688 passed 后；②疑似挂起测试 test_crdt_mastery_merge_max_wins 本地同文件 59 passed 1.72s（含 y_py 导入链完整）；③crdt_persistence 最近变更 47898b9f（wt395 远早于本栈）；④此前 CI run 全绿过同测试。结论倾向 runner 失联（Actions 已知故障模式：stuck in_progress 直到 timeout）。处置：job timeout-minutes:120 于 17:57Z 自动判死→gh run rerun --failed 同 SHA 重跑验证；若重跑绿=infra 抖动结案。后续加固项（verdict 后落卡）：pytest 调用加 pytest-timeout --timeout=300（真挂起 5min 快死不烧 2h）。本轮零推送（run 在航纪律维持——挂起 run 非可能全绿）。三问：在航 5 槽（wt552/553/555/556/557）；空槽 0；下一卡=CI 超时后 rerun 裁决→day6 晨门栈升级（08:00）。",
   "2026-09-27 01:34 唤醒轮：①run 36253679384 裁决=Backend Tests 120min 超时判死（Python 步骤 16:42Z 起零输出 115min，infra 抖动证据链如前轮）——**rerun --failed 已发起**（同 SHA cfaefe63 attempt#2，仅重 Backend Tests；其余 4 job attempt#1 已绿，若过=史首全绿+坐实抖动）；②四 agent（wt552/555/556/557）01:18 阵亡 1308（重置 02:51:31），工作树全部保全（wt552-mypy6/wt555-cardguard/wt556-cascade2/wt557-entitle+未派发 wt558-audit9），到点 SendMessage 复活+补派 wt558 审计轮；③CI 加固已落（cbba2133：pytest --timeout=300 thread 法，requirements 本有 pytest-timeout 零新依赖）；④wt553 三漂移集成完毕（守卫豁免归零 WARN=7 全哨兵、16 漂移测绿）——守卫扩表→漂移发现→修复→豁免清零全链路当日闭环。三问：在航 1 槽（CI rerun）+0 agent（配额窗口）；空槽原因=1308 窗口将尽纪律（02:51 复活）；下一卡=rerun 裁决→复活四 agent+派 wt558→day6 晨门栈升级（08:00）。",
-  "2026-09-27 02:19 唤醒轮：CI attempt#2 Backend Tests 在航 45min（正常区间；Python 步骤长杆）。例行：盘 X/swap/容器/双端健康（本行数值见 shell 输出，异常才追记）。配额重置 02:51 还有 32min——窗口内零新派发，四 agent 复活弹药就绪（wt552/555/556/557 SendMessage 文案备好）+wt558 审计轮待派。day6 门 08:00 余量 5h40m，07:40 起手栈升级。三问：在航 1 槽（CI attempt#2）+0 agent（配额窗口将尽纪律执行中）；空槽原因=1308 窗口；下一卡=02:51 复活四 agent+派 wt558→CI attempt#2 裁决（若绿=史首全绿：cfaefe63 栈验证后随推本地 ~50 commit）→day6 晨门。"
+  "2026-09-27 02:19 唤醒轮：CI attempt#2 Backend Tests 在航 45min（正常区间；Python 步骤长杆）。例行：盘 X/swap/容器/双端健康（本行数值见 shell 输出，异常才追记）。配额重置 02:51 还有 32min——窗口内零新派发，四 agent 复活弹药就绪（wt552/555/556/557 SendMessage 文案备好）+wt558 审计轮待派。day6 门 08:00 余量 5h40m，07:40 起手栈升级。三问：在航 1 槽（CI attempt#2）+0 agent（配额窗口将尽纪律执行中）；空槽原因=1308 窗口；下一卡=02:51 复活四 agent+派 wt558→CI attempt#2 裁决（若绿=史首全绿：cfaefe63 栈验证后随推本地 ~50 commit）→day6 晨门。",
+  "2026-09-27 03:04 唤醒轮：①02:51:31 配额重置已过，四 agent（wt552/555/556/557）03:04 SendMessage 全部复活（脏进度保留，各自基线漂移提示已随附）；②wt558 补位=本地集成栈独立审计轮（双轮审查机制第一轮：~50 未推 commit 五面审计——跨卡交互/台账完整性/遗留物/守卫口径/诚实性抽查，产可推/需修后推裁决）；满编 5+1 恢复；③CI attempt#2 Python 步骤在航 ~90min（attempt#1 达 37% 用 34min，全量预期 90-110min，正常下沿观察）；④day6 门 08:00 余量 ~5h。三问：在航 5 槽+CI；空槽 0；下一卡=CI attempt#2 裁决（绿=史首全绿→wt558 审计可推结论后随推）→day6 晨门 07:40 栈升级。"
  ]
 }
