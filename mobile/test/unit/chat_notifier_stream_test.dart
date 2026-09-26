@@ -310,7 +310,12 @@ void main() {
         ['first'],
       );
 
+      // wt466 V3-FIX-155 语义更新：流必须带终态帧正常收束——无终态关闭
+      // 现为截断（failed+STREAM_INTERRUPTED，裸文本不落地，见
+      // chat_provider_test 的 STREAM_INTERRUPTED 专项测）。本测守卫面，
+      // 用 DoneEvent 正常收尾。
       firstController.add(TextEvent(content: 'stale'));
+      firstController.add(DoneEvent(finishReason: 'STOP'));
       await firstController.close();
       await firstFuture;
       await _settleChat();
@@ -371,8 +376,10 @@ void main() {
         isEmpty,
       );
 
-      // 旧流继续正常收束，已生成部分完整落地。
+      // 旧流继续正常收束（wt466 V3-FIX-155：正常收束需显式终态帧），
+      // 已生成部分完整落地。
       firstController.add(TextEvent(content: ' MORE'));
+      firstController.add(DoneEvent(finishReason: 'STOP'));
       await firstController.close();
       await firstFuture;
       await _settleChat();
