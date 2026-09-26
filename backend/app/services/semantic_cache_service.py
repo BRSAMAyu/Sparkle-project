@@ -3,6 +3,7 @@ Redis Semantic Cache Service - 语义缓存服务
 
 用于缓存 GraphRAG 查询结果，基于语义相似度检索缓存
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -191,11 +192,9 @@ class SemanticCacheService:
                 "total_misses": 0,
                 "total_sets": 0,
                 "semantic_hits": 0,
-                "start_time": _utcnow().isoformat()
+                "start_time": _utcnow().isoformat(),
             }
-            await self.redis.hset(self.STATS_KEY, mapping={
-                k: json.dumps(v) for k, v in stats.items()
-            })
+            await self.redis.hset(self.STATS_KEY, mapping={k: json.dumps(v) for k, v in stats.items()})
 
     def _normalize_query(self, query: str) -> str:
         """Normalize query for stable cache keys."""
@@ -274,7 +273,7 @@ class SemanticCacheService:
             "normalized_query": normalized_query,
             "knowledge_version": knowledge_version,
             "embedding_version": embedding_version,
-            "updated_at": _utcnow().isoformat()
+            "updated_at": _utcnow().isoformat(),
         }
         await self.redis.setex(emb_key, ttl, json.dumps(payload))
         await self.redis.sadd(self.KEY_SET, cache_key)
@@ -284,7 +283,7 @@ class SemanticCacheService:
             return 0.0
         vec_a = np.array(a, dtype=np.float32)
         vec_b = np.array(b, dtype=np.float32)
-        denom = (np.linalg.norm(vec_a) * np.linalg.norm(vec_b))
+        denom = np.linalg.norm(vec_a) * np.linalg.norm(vec_b)
         if denom == 0:
             return 0.0
         return float(np.dot(vec_a, vec_b) / denom)
@@ -378,10 +377,7 @@ class SemanticCacheService:
                 SEMANTIC_CACHE_HIT_TOTAL.inc()
                 result = json.loads(cached_data)
 
-                logger.debug(
-                    f"Cache HIT: query='{query[:30]}...', "
-                    f"cached_at={result.get('cached_at')}"
-                )
+                logger.debug(f"Cache HIT: query='{query[:30]}...', " f"cached_at={result.get('cached_at')}")
 
                 return self._payload_data(result)
             # 语义相似检索
@@ -405,9 +401,7 @@ class SemanticCacheService:
                         await self.redis.hincrby(self.STATS_KEY, "semantic_hits", 1)
                         SEMANTIC_CACHE_HIT_TOTAL.inc()
                         result = json.loads(cached_similar)
-                        logger.debug(
-                            f"Cache SEMANTIC HIT: query='{query[:30]}...', score={score:.3f}"
-                        )
+                        logger.debug(f"Cache SEMANTIC HIT: query='{query[:30]}...', score={score:.3f}")
                         return self._payload_data(result)
 
             # 未命中
@@ -503,11 +497,7 @@ class SemanticCacheService:
 
         # 2. 获取分布式锁 (Async)
         try:
-            lock = self.redis.lock(
-                lock_key,
-                timeout=self.lock_timeout,
-                blocking_timeout=2.0
-            )
+            lock = self.redis.lock(lock_key, timeout=self.lock_timeout, blocking_timeout=2.0)
 
             # 使用 async context manager 自动处理 acquire/release
             # acquire 内部默认是阻塞的 (blocking=True)，但它是 async 的，
@@ -627,11 +617,7 @@ class SemanticCacheService:
 
             # 序列化并存储
             ttl_value = ttl or self.default_ttl
-            await self.redis.setex(
-                cache_key,
-                ttl_value,
-                json.dumps(cache_value)
-            )
+            await self.redis.setex(cache_key, ttl_value, json.dumps(cache_value))
             # E-05: embedding 未配置或调用失败时跳过语义载荷（exact-match
             # 缓存仍写入），缓存写路径绝不因 embedding 失败而整体失败
             if embedding_service.is_configured():
@@ -652,9 +638,7 @@ class SemanticCacheService:
             # 更新统计
             await self.redis.hincrby(self.STATS_KEY, "total_sets", 1)
 
-            logger.debug(
-                f"Cache SET: query='{query[:30]}...', ttl={ttl_value}s"
-            )
+            logger.debug(f"Cache SET: query='{query[:30]}...', ttl={ttl_value}s")
 
             return True
 
@@ -666,12 +650,7 @@ class SemanticCacheService:
             logger.error(f"Cache SET error ({reason}): {e}")
             return False
 
-    async def invalidate(
-        self,
-        query: str,
-        user_id: str | None = None,
-        knowledge_version: str | None = None
-    ) -> bool:
+    async def invalidate(self, query: str, user_id: str | None = None, knowledge_version: str | None = None) -> bool:
         """
         失效特定缓存
 
@@ -739,18 +718,11 @@ class SemanticCacheService:
 
         try:
             stats_raw = await self.redis.hgetall(self.STATS_KEY)
-            stats = {
-                k.decode(): json.loads(v.decode())
-                for k, v in stats_raw.items()
-            }
+            stats = {k.decode(): json.loads(v.decode()) for k, v in stats_raw.items()}
 
             # 计算命中率
             total_requests = stats.get("total_hits", 0) + stats.get("total_misses", 0)
-            hit_rate = (
-                stats.get("total_hits", 0) / total_requests * 100
-                if total_requests > 0
-                else 0
-            )
+            hit_rate = stats.get("total_hits", 0) / total_requests * 100 if total_requests > 0 else 0
 
             stats["hit_rate_percent"] = round(hit_rate, 2)
             stats["total_requests"] = total_requests
@@ -779,11 +751,7 @@ class SemanticCacheService:
     # --- High-level methods for KnowledgeRetrievalService ---
 
     async def get_cached_result(
-        self,
-        query: str,
-        user_id: str | None = None,
-        threshold: float = 0.9,
-        knowledge_version: str | None = None
+        self, query: str, user_id: str | None = None, threshold: float = 0.9, knowledge_version: str | None = None
     ) -> list[Any] | None:
         """获取缓存的知识节点列表"""
         # Note: Currently uses exact query match (threshold ignored for now)
@@ -793,6 +761,7 @@ class SemanticCacheService:
 
         # Rehydrate from JSON
         from app.models.galaxy import KnowledgeNode
+
         nodes = []
         for node_dict in data["nodes"]:
             # Basic rehydration (just for the fields we need in SearchResultItem)
@@ -811,7 +780,7 @@ class SemanticCacheService:
         nodes: list[Any],
         user_id: str | None = None,
         ttl: int | None = None,
-        knowledge_version: str | None = None
+        knowledge_version: str | None = None,
     ):
         """缓存知识节点列表"""
         # Serialize nodes to dict
@@ -839,11 +808,8 @@ class SemanticCacheService:
 # 便捷函数：创建服务实例
 def create_semantic_cache(redis_client: Redis) -> SemanticCacheService:
     """创建语义缓存服务实例"""
-    return SemanticCacheService(
-        redis_client=redis_client,
-        default_ttl=3600,  # 1小时
-        max_cache_size=10000
-    )
+    return SemanticCacheService(redis_client=redis_client, default_ttl=3600, max_cache_size=10000)  # 1小时
+
 
 # 全局实例，使用核心缓存模块的 Redis 客户端
 from app.core.cache import cache_service
