@@ -58,7 +58,22 @@ class BillingWorker:
         self.redis = redis.from_url(redis_url, password=resolved_password)
 
         # 初始化数据库引擎和会话工厂
-        self.engine = create_async_engine(to_async_database_url(db_url))
+        # V3-FIX-156：修前裸 create_async_engine 用 SQLAlchemy 默认池（5+10=15），
+        # 绕过统一池治理；修后从预算权威取数（2+3=5）。sqlite 测试态走 NullPool/
+        # StaticPool，不收池参数。
+        resolved_db_url = to_async_database_url(db_url)
+        engine_kwargs: dict[str, Any] = {}
+        if not resolved_db_url.startswith("sqlite"):
+            from app.core.database_pool_config import resolve_pool_caps
+
+            caps = resolve_pool_caps()
+            engine_kwargs = {
+                "pool_size": caps.billing_pool_size,
+                "max_overflow": caps.billing_max_overflow,
+                "pool_pre_ping": True,
+                "pool_timeout": settings.DB_POOL_TIMEOUT,
+            }
+        self.engine = create_async_engine(resolved_db_url, **engine_kwargs)
         self.async_session_factory = sessionmaker(self.engine, expire_on_commit=False, class_=AsyncSession)
 
         self.is_running = False

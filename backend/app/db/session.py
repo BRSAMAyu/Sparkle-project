@@ -3,6 +3,7 @@ Database Session Management
 使用 SQLAlchemy 2.0 异步接口
 支持 PostgreSQL 连接池配置和 SQLite 开发模式
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -78,12 +79,12 @@ def _get_engine_kwargs(db_url: str, sslmode: str | None, sslrootcert: str | None
             # Development: disable SSL for local connections
             connect_args["ssl"] = False
 
+        # V3-FIX-156：池参数统一从预算权威取数（修前裸 settings 默认 20+40=60/进程，
+        # 双进程+AGE+lane 之和 165 > PG max_connections=100 → too many clients already）。
+        from app.core.database_pool_config import get_engine_pool_kwargs
+
         return {
-            "pool_size": settings.DB_POOL_SIZE,
-            "max_overflow": settings.DB_MAX_OVERFLOW,
-            "pool_recycle": settings.DB_POOL_RECYCLE,
-            "pool_timeout": settings.DB_POOL_TIMEOUT,
-            "pool_pre_ping": True,  # 连接前健康检查
+            **get_engine_pool_kwargs(),
             "echo": settings.DB_ECHO,
             "future": True,
             "connect_args": connect_args,

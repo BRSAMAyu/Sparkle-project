@@ -1,10 +1,46 @@
-"""
-PostgreSQL Connection Pool Configuration - 连接池优化
+"""统一连接池预算权威（V3-FIX-156，2026-09 wt467）
 
-优化数据库连接池配置以提升性能
+背景（wt460 n=60 深载探针 + 修前普查）：backend 曾有多个服务各自建池、互不知情——
+主引擎（settings.DB_POOL_SIZE=20 + DB_MAX_OVERFLOW=40 → 60/进程）、AGE asyncpg 池
+（max_size=10/进程）、推断写通道引擎（5/进程）、BillingWorker 引擎（SQLAlchemy 默认
+5+10=15/FastAPI 进程）。FastAPI + gRPC 双进程理论上限 165 > 共享 PostgreSQL
+max_connections=100：n=60 深载时 PG 报 "sorry, too many clients already"
+（age_client init_pool / graph_rag 连接获取失败），且 AGE 池 acquire 无超时导致
+请求静默排队 102-128s——LLM 池之前的 pre-pool 瓶颈（DYNAMIC_ISSUES #156）。
+
+治理模型（本模块是唯一取数口）：
+
+- ``PG_MAX_CONNECTIONS``：共享 PostgreSQL 的 max_connections（部署事实=100，
+  ``SHOW max_connections`` 核验）；
+- ``DB_CONNECTION_BUDGET``：单进程所有自建池上限之和的顶（默认 80 ≤ 100−预留）；
+- ``DB_CONNECTION_RESERVE``：给迁移/运维/超级用户留的余量（默认 20）；
+- ``resolve_pool_caps()``：算出各池上限；之和超预算或预算超 PG 上限减预留 →
+  启动即 ValueError（快速失败，不允许带病运行）。
+
+修后分配（单进程上限之和 = 44 ≤ 预算 80）：
+
+============ ==================== ========== ====================================
+池           参数                  上限       消费方
+============ ==================== ========== ====================================
+主引擎       15 + overflow 15     30         FastAPI / gRPC / Celery 各自进程
+AGE asyncpg  max_size 6 (min 2)  6          graph_rag / graph_sync / 图谱服务
+推断写通道    pool_size 3          3          memory_inferred_write_lane
+Billing      2 + overflow 3        5          FastAPI lifespan 内 BillingWorker
+============ ==================== ========== ====================================
+
+双进程同时满载 = 88 ≤ 100，预留 12 给 Celery 空闲/运维连接。多机部署应按
+``PG_MAX_CONNECTIONS`` 与进程倍数下调 ``DB_CONNECTION_BUDGET``（每池均可经
+settings 单独覆盖，误配会被 ``resolve_pool_caps`` 在启动时拦下）。
+
+诚实失败语义（配套）：AGE 池 acquire 带超时（``AGE_POOL_ACQUIRE_TIMEOUT``，默认
+5s；修前为 asyncpg 默认无限等待），超时抛 ``DatabaseTimeoutError``——拿不到连接
+快速可见报错，而非静默排队 100s+。主引擎 SQLAlchemy 池本就有界（pool_timeout）。
 """
+
+from __future__ import annotations
 
 import ssl
+from dataclasses import dataclass
 from typing import cast
 
 from loguru import logger
@@ -13,115 +49,166 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlalchemy.pool import QueuePool
 
 from app.config import settings
-from app.db.url import to_async_database_url
+
+
+@dataclass(frozen=True)
+class PoolCaps:
+    """单进程各池上限（全部自建池的取数唯一来源）。"""
+
+    main_pool_size: int
+    main_max_overflow: int
+    age_min_size: int
+    age_max_size: int
+    inferred_pool_size: int
+    billing_pool_size: int
+    billing_max_overflow: int
+
+    @property
+    def total(self) -> int:
+        return (
+            self.main_pool_size
+            + self.main_max_overflow
+            + self.age_max_size
+            + self.inferred_pool_size
+            + self.billing_pool_size
+            + self.billing_max_overflow
+        )
+
+
+def resolve_pool_caps(
+    *,
+    pg_max_connections: int | None = None,
+    db_connection_budget: int | None = None,
+) -> PoolCaps:
+    """解析并校验各池上限；误配启动即抛（快速失败）。
+
+    供 db/session（主引擎）、age_client（AGE 池）、memory_inferred_write_lane
+    （推断写通道）、billing_worker（计费引擎）统一取数，保证单进程上限之和
+    ≤ DB_CONNECTION_BUDGET ≤ PG_MAX_CONNECTIONS − DB_CONNECTION_RESERVE。
+    """
+    pg_max = pg_max_connections if pg_max_connections is not None else settings.PG_MAX_CONNECTIONS
+    budget = db_connection_budget if db_connection_budget is not None else settings.DB_CONNECTION_BUDGET
+    reserve = settings.DB_CONNECTION_RESERVE
+
+    if budget > pg_max - reserve:
+        raise ValueError(
+            f"DB_CONNECTION_BUDGET({budget}) exceeds PG_MAX_CONNECTIONS({pg_max}) "
+            f"minus reserve({reserve}) — pools would exhaust shared PostgreSQL "
+            f"(V3-FIX-156 governance)"
+        )
+
+    caps = PoolCaps(
+        main_pool_size=settings.DB_POOL_SIZE,
+        main_max_overflow=settings.DB_MAX_OVERFLOW,
+        age_min_size=2,
+        age_max_size=settings.AGE_POOL_MAX_SIZE,
+        inferred_pool_size=3,
+        billing_pool_size=2,
+        billing_max_overflow=3,
+    )
+    if caps.total > budget:
+        raise ValueError(
+            f"pool caps sum {caps.total} exceeds DB_CONNECTION_BUDGET({budget}): "
+            f"{caps!r} — lower DB_POOL_SIZE/DB_MAX_OVERFLOW/AGE_POOL_MAX_SIZE "
+            f"(V3-FIX-156 governance)"
+        )
+    return caps
+
+
+def get_engine_pool_kwargs() -> dict[str, object]:
+    """主引擎（db/session）的池参数——统一权威取数口。"""
+    caps = resolve_pool_caps()
+    return {
+        "pool_size": caps.main_pool_size,
+        "max_overflow": caps.main_max_overflow,
+        "pool_recycle": settings.DB_POOL_RECYCLE,
+        "pool_timeout": settings.DB_POOL_TIMEOUT,
+        "pool_pre_ping": True,
+    }
 
 
 def create_optimized_engine() -> AsyncEngine:
+    """创建受预算治理的数据库引擎（V3-FIX-156 修前为裸 40+60，超 PG 上限）。
+
+    优化点：连接池大小受 ``resolve_pool_caps`` 预算约束、连接超时、
+    回收策略、pre-ping 检查。
     """
-    创建优化后的数据库引擎
+    pool_config = get_engine_pool_kwargs()
+    pool_config.update(
+        {
+            "pool_use_lifo": False,  # FIFO，避免连接饥饿
+            "poolclass": QueuePool,
+        }
+    )
 
-    优化点：
-    1. 连接池大小调整（基于负载）
-    2. 连接超时配置
-    3. 连接回收策略
-    4. 预ping检查
-    """
-
-    # 连接池配置
-    pool_config = {
-        # 1. 连接池大小 (R5 audit: increased for 60+ concurrent users)
-        "pool_size": 40,  # 常驻连接数（生产环境建议 30-50）
-        "max_overflow": 60,  # 超出pool_size的最大额外连接数（总计100）
-
-        # 2. 连接回收策略
-        "pool_recycle": 3600,  # 1小时后回收连接（防止MySQL gone away）
-        "pool_pre_ping": True,  # 每次取连接前先ping，确保连接有效
-
-        # 3. 连接超时
-        "pool_timeout": 30,  # 等待连接的超时时间（秒）
-
-        # 4. 连接验证
-        "pool_use_lifo": False,  # 使用FIFO（先进先出），避免连接饥饿
-
-        # 5. 连接类
-        "poolclass": QueuePool,  # 使用队列池（默认）
-    }
-
-    # Engine 配置
-    engine_config = {
-        # 1. 连接参数
+    engine_config: dict[str, object] = {
         "connect_args": {
             "timeout": 10,  # 连接超时
             "command_timeout": 30,  # 命令执行超时
             "server_settings": {
-                "application_name": "sparkle_backend",  # 便于在pg_stat_activity中识别
-                "jit": "off",  # 关闭JIT（某些查询可能更快）
-            }
+                "application_name": "sparkle_backend",
+                "jit": "off",
+            },
         },
-
-        # 2. Echo SQL（开发环境）
-        "echo": settings.DEBUG,  # 生产环境关闭
-
-        # 3. 连接池日志
+        "echo": settings.DEBUG,
         "echo_pool": settings.DEBUG,
-
-        # 4. 执行选项
-        "execution_options": {
-            "isolation_level": "READ COMMITTED",  # 事务隔离级别
-        },
-
-        # 5. 合并连接池配置
-        **pool_config
+        "execution_options": {"isolation_level": "READ COMMITTED"},
+        **pool_config,
     }
 
-    db_url = to_async_database_url(settings.DATABASE_URL)
-    parsed = make_url(db_url)
-    if parsed.drivername.startswith("postgresql+asyncpg"):
-        query = dict(parsed.query)
-        sslmode = query.pop("sslmode", None)
-        sslrootcert = query.pop("sslrootcert", None)
-        if sslrootcert:
-            engine_config["connect_args"]["ssl"] = ssl.create_default_context(cafile=sslrootcert)
-        elif sslmode == "disable":
-            engine_config["connect_args"]["ssl"] = False
-        elif sslmode in ("require", "verify-ca", "verify-full"):
-            engine_config["connect_args"]["ssl"] = True
-        db_url = parsed.set(query=query).render_as_string(hide_password=False)
+    db_url = _async_url_with_ssl(engine_config)
 
-    # 创建引擎
-    engine = create_async_engine(
-        db_url,
-        **engine_config
-    )
+    engine = create_async_engine(db_url, **engine_config)  # type: ignore[arg-type]
 
     logger.info(
-        f"Database engine created with optimized pool: "
+        f"Database engine created with governed pool: "
         f"pool_size={pool_config['pool_size']}, "
         f"max_overflow={pool_config['max_overflow']}, "
-        f"recycle={pool_config['pool_recycle']}s"
+        f"recycle={pool_config['pool_recycle']}s "
+        f"(budget={settings.DB_CONNECTION_BUDGET}/{settings.PG_MAX_CONNECTIONS})"
     )
 
     return engine
 
 
-def get_pool_status(engine: AsyncEngine) -> dict:
+def _async_url_with_ssl(engine_config: dict[str, object]) -> str:
+    """把 DATABASE_URL 转成 async URL 并把 sslmode 映射进 connect_args。"""
+    from app.db.url import to_async_database_url
+
+    db_url = to_async_database_url(settings.DATABASE_URL)
+    parsed = make_url(db_url)
+    if not parsed.drivername.startswith("postgresql+asyncpg"):
+        return db_url
+    query = dict(parsed.query)
+    sslmode = query.pop("sslmode", None)
+    sslrootcert_raw = query.pop("sslrootcert", None)
+    sslrootcert = sslrootcert_raw[0] if isinstance(sslrootcert_raw, tuple) else sslrootcert_raw
+    connect_args = cast("dict[str, object]", engine_config["connect_args"])
+    if sslrootcert:
+        connect_args["ssl"] = ssl.create_default_context(cafile=sslrootcert)
+    elif sslmode == "disable":
+        connect_args["ssl"] = False
+    elif sslmode in ("require", "verify-ca", "verify-full"):
+        connect_args["ssl"] = True
+    engine_config["connect_args"] = connect_args
+    return parsed.set(query=query).render_as_string(hide_password=False)
+
+
+def get_pool_status(engine: AsyncEngine) -> dict[str, object]:
     """
     获取连接池状态
-
-    Returns:
-        dict: 连接池统计信息
     """
     pool = cast("QueuePool", engine.pool)
 
     return {
-        "pool_size": pool.size(),  # 当前池大小
-        "checked_in": pool.checkedin(),  # 可用连接数
-        "checked_out": pool.checkedout(),  # 已使用连接数
-        "overflow": pool.overflow(),  # 溢出连接数（超出pool_size的部分）
-        "max_overflow": pool._max_overflow,  # 最大允许溢出连接数
+        "pool_size": pool.size(),
+        "checked_in": pool.checkedin(),
+        "checked_out": pool.checkedout(),
+        "overflow": pool.overflow(),
+        "max_overflow": pool._max_overflow,
         "total_connections": pool.size() + pool.overflow(),
-        "pool_recycle": pool._recycle,  # 回收时间
-        "pool_timeout": pool._timeout,  # 超时时间
+        "pool_recycle": pool._recycle,
+        "pool_timeout": pool._timeout,
     }
 
 
@@ -129,71 +216,43 @@ def get_pool_status(engine: AsyncEngine) -> dict:
 try:
     from prometheus_client import Gauge
 
-    # Prometheus 指标
-    DB_POOL_SIZE = Gauge(
-        'db_pool_connections_total',
-        'Total database pool connections'
-    )
+    DB_POOL_SIZE = Gauge("db_pool_connections_total", "Total database pool connections")
+    DB_POOL_CHECKED_IN = Gauge("db_pool_connections_available", "Available database pool connections")
+    DB_POOL_CHECKED_OUT = Gauge("db_pool_connections_in_use", "Database pool connections in use")
+    DB_POOL_OVERFLOW = Gauge("db_pool_connections_overflow", "Database pool overflow connections")
 
-    DB_POOL_CHECKED_IN = Gauge(
-        'db_pool_connections_available',
-        'Available database pool connections'
-    )
-
-    DB_POOL_CHECKED_OUT = Gauge(
-        'db_pool_connections_in_use',
-        'Database pool connections in use'
-    )
-
-    DB_POOL_OVERFLOW = Gauge(
-        'db_pool_connections_overflow',
-        'Database pool overflow connections'
-    )
-
-    def update_pool_metrics(engine: AsyncEngine):
+    def update_pool_metrics(engine: AsyncEngine) -> None:
         """更新连接池Prometheus指标"""
         status = get_pool_status(engine)
-        DB_POOL_SIZE.set(status["pool_size"])
-        DB_POOL_CHECKED_IN.set(status["checked_in"])
-        DB_POOL_CHECKED_OUT.set(status["checked_out"])
-        DB_POOL_OVERFLOW.set(status["overflow"])
+        DB_POOL_SIZE.set(status["pool_size"])  # type: ignore[arg-type]
+        DB_POOL_CHECKED_IN.set(status["checked_in"])  # type: ignore[arg-type]
+        DB_POOL_CHECKED_OUT.set(status["checked_out"])  # type: ignore[arg-type]
+        DB_POOL_OVERFLOW.set(status["overflow"])  # type: ignore[arg-type]
 
 except ImportError:
     logger.warning("Prometheus not available, pool metrics disabled")
 
-    def update_pool_metrics(engine: AsyncEngine):
+    def update_pool_metrics(engine: AsyncEngine) -> None:
         """空实现"""
         pass
 
 
-# 连接池健康检查
 async def check_pool_health(engine: AsyncEngine) -> bool:
     """
     检查连接池健康状态
-
-    Args:
-        engine: 数据库引擎
-
-    Returns:
-        bool: 是否健康
     """
     try:
         status = get_pool_status(engine)
 
-        # Health check: consider overflow capacity in addition to base pool size
-        effective_capacity = status["pool_size"] + status["max_overflow"]
-        is_healthy = (
-            status["checked_in"] > 0 or status.get("overflow", 0) == 0
-        ) and (
-            status["checked_out"] < effective_capacity * 0.9
+        effective_capacity = cast("int", status["pool_size"]) + cast("int", status["max_overflow"])
+        is_healthy = (cast("int", status["checked_in"]) > 0 or cast("int", status.get("overflow", 0)) == 0) and (
+            cast("int", status["checked_out"]) < effective_capacity * 0.9
         )
 
         if not is_healthy:
-            logger.warning(
-                f"Database pool unhealthy: {status}"
-            )
+            logger.warning(f"Database pool unhealthy: {status}")
 
-        return cast("bool", (is_healthy))
+        return cast("bool", is_healthy)
 
     except Exception as e:
         logger.error(f"Pool health check failed: {e}")
@@ -202,65 +261,28 @@ async def check_pool_health(engine: AsyncEngine) -> bool:
 
 # 使用建议文档
 USAGE_GUIDE = """
-## 连接池使用建议
+## 连接池使用建议（V3-FIX-156 统一治理后）
 
-### 1. 创建引擎
+### 池上限取数唯一入口
+
 ```python
-from app.core.database_pool_config import create_optimized_engine
+from app.core.database_pool_config import resolve_pool_caps, get_engine_pool_kwargs
 
-engine = create_optimized_engine()
+caps = resolve_pool_caps()          # 各池上限（总和受 DB_CONNECTION_BUDGET 约束）
+kwargs = get_engine_pool_kwargs()   # 主引擎池参数
 ```
 
-### 2. 监控连接池
-```python
-from app.core.database_pool_config import get_pool_status, update_pool_metrics
+**禁止**新服务自建池时绕过 ``resolve_pool_caps`` 写死池参数——单进程池上限之和
+超过 ``DB_CONNECTION_BUDGET``（默认 80 < PG max_connections 100 − 预留 20）会
+在启动时被 ``ValueError`` 拦下（快速失败，不允许带病运行）。
 
-# 获取状态
-status = get_pool_status(engine)
-print(f"可用连接: {status['checked_in']}")
+### 常见问题
 
-# 更新Prometheus指标（如果启用）
-update_pool_metrics(engine)
-```
+**连接耗尽 / "too many clients already"**
+- 症状: PG 报 too many clients already，或 QueuePool TimeoutError
+- 处置: 检查是否有服务绕过预算权威自建池；下调 DB_CONNECTION_BUDGET 或对应池参数
 
-### 3. 健康检查
-```python
-from app.core.database_pool_config import check_pool_health
-
-is_healthy = await check_pool_health(engine)
-```
-
-### 4. 调优参数
-
-**小型应用** (< 100 并发)
-- pool_size: 10
-- max_overflow: 10
-
-**中型应用** (100-1000 并发)
-- pool_size: 20
-- max_overflow: 30
-
-**大型应用** (> 1000 并发)
-- pool_size: 50
-- max_overflow: 50
-
-**注意**:
-- 总连接数 = pool_size + max_overflow
-- PostgreSQL 默认最大连接数: 100
-- 建议: max_connections(PG) = (pool_size + max_overflow) * instances + 20
-
-### 5. 常见问题
-
-**连接耗尽**
-- 症状: `QueuePool limit exceeded`
-- 解决: 增加 max_overflow 或检查连接泄漏
-
-**连接超时**
-- 症状: `TimeoutError: QueuePool limit of size X overflow Y reached`
-- 解决: 增加 pool_timeout 或优化慢查询
-
-**连接回收**
-- 原因: pool_recycle 时间到达
-- 影响: 短暂性能下降
-- 建议: 设置为 3600s (1小时)
+**获取超时**
+- 症状: SQLAlchemy ``sqlalchemy.exc.TimeoutError`` / AGE ``DatabaseTimeoutError``
+- 语义: 诚实快速失败（有界等待），用户侧可见繁忙而非静默排队 100s+
 """

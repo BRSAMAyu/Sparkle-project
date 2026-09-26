@@ -3,6 +3,7 @@ Apache AGE 客户端封装
 
 提供异步 AGE 连接池和便捷的 Cypher 查询接口
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -18,17 +19,27 @@ from asyncpg.pool import Pool
 from loguru import logger
 
 from app.config import settings
+from app.core.exceptions import DatabaseTimeoutError
 
 
 @dataclass
 class AgeConfig:
-    """AGE 配置"""
+    """AGE 配置
+
+    V3-FIX-156：``acquire_timeout`` 为 acquire 有界等待预算（秒）。修前
+    ``pool.acquire()`` 无超时——asyncpg ``Pool.acquire(timeout=None)`` 语义为
+    无限等待，池满时请求静默排队 102-128s（pre-pool 瓶颈、零可见错误）。
+    修后超时抛 ``DatabaseTimeoutError``（诚实快速失败）。
+    """
+
     host: str = "localhost"
     port: int = 5432
     user: str = "postgres"
     password: str = ""
     database: str = "sparkle"
     pool_size: int = 10
+    min_size: int = 2
+    acquire_timeout: float = 5.0
     graph_name: str = "sparkle_galaxy"
 
 
@@ -145,7 +156,7 @@ class AgeClient:
                     user=self.config.user,
                     password=self.config.password,
                     database=self.config.database,
-                    min_size=2,
+                    min_size=self.config.min_size,
                     max_size=self.config.pool_size,
                     init=self._prepare_connection,
                 )
@@ -153,6 +164,27 @@ class AgeClient:
             except Exception as e:
                 logger.error(f"初始化 AGE 连接池失败: {e}")
                 raise
+
+    def _map_acquire_timeout(self, exc: asyncio.TimeoutError) -> DatabaseTimeoutError:
+        """把 acquire 超时映射为诚实可见的池繁忙错误（V3-FIX-156）。"""
+        logger.warning(
+            "AGE 连接池获取连接超时: acquire_timeout={:.1f}s max_size={} database={} — "
+            "池已满（pre-pool 排队面快速失败，不再静默等待）",
+            self.config.acquire_timeout,
+            self.config.pool_size,
+            self.config.database,
+        )
+        err = DatabaseTimeoutError(
+            "图数据库繁忙，请稍后再试",
+            detail={
+                "pool": "age",
+                "database": self.config.database,
+                "max_size": self.config.pool_size,
+                "acquire_timeout": self.config.acquire_timeout,
+            },
+        )
+        err.__cause__ = exc
+        return err
 
     async def close(self):
         """关闭连接池"""
@@ -180,7 +212,9 @@ class AgeClient:
             raise RuntimeError("AGE connection pool unavailable after init_pool")
 
         try:
-            async with pool.acquire() as conn:
+            # V3-FIX-156：acquire 带超时——修前无超时（asyncpg 默认无限等待），
+            # 池满时请求静默排队 100s+；超时映射 DatabaseTimeoutError 诚实失败。
+            async with pool.acquire(timeout=self.config.acquire_timeout) as conn:
                 await self._prepare_connection(conn)
                 rendered_cypher = self._inline_cypher_params(cypher, params)
                 sql = (
@@ -199,6 +233,8 @@ class AgeClient:
                 logger.debug(f"AGE 查询执行成功: {len(results)} 条结果")
                 return results
 
+        except TimeoutError as exc:
+            raise self._map_acquire_timeout(exc) from exc
         except Exception as e:
             logger.error(f"AGE 查询失败: {e}\nCypher: {cypher}\nParams: {params}")
             raise
@@ -212,14 +248,18 @@ class AgeClient:
         if pool is None:
             raise RuntimeError("AGE connection pool unavailable after init_pool")
 
-        async with pool.acquire() as conn:
-            await self._prepare_connection(conn)
-            exists = await conn.fetchval(
-                "SELECT 1 FROM ag_catalog.ag_graph WHERE name = $1",
-                graph_name,
-            )
-            if not exists:
-                await conn.execute("SELECT ag_catalog.create_graph($1)", graph_name)
+        try:
+            # V3-FIX-156：同 execute_cypher，acquire 有界等待。
+            async with pool.acquire(timeout=self.config.acquire_timeout) as conn:
+                await self._prepare_connection(conn)
+                exists = await conn.fetchval(
+                    "SELECT 1 FROM ag_catalog.ag_graph WHERE name = $1",
+                    graph_name,
+                )
+                if not exists:
+                    await conn.execute("SELECT ag_catalog.create_graph($1)", graph_name)
+        except TimeoutError as exc:
+            raise self._map_acquire_timeout(exc) from exc
         logger.info(f"图谱已创建: {graph_name}")
 
     async def create_vertex_label(self, label_name: str, properties: list[str] = None):
@@ -227,19 +267,15 @@ class AgeClient:
         safe_label = self._validate_identifier(label_name)
         await self.create_graph(self.config.graph_name)
         seed_value = f"schema:{safe_label}:{uuid.uuid4().hex}"
-        await self.execute_cypher(
-            f"""
+        await self.execute_cypher(f"""
             CREATE (n:{safe_label} {{__schema_seed__: "{seed_value}"}})
             RETURN {{label: "{safe_label}"}} as result
-            """
-        )
-        await self.execute_cypher(
-            f"""
+            """)
+        await self.execute_cypher(f"""
             MATCH (n:{safe_label} {{__schema_seed__: "{seed_value}"}})
             DELETE n
             RETURN {{label: "{safe_label}"}} as result
-            """
-        )
+            """)
         logger.info(f"顶点标签已创建: {label_name}")
 
     async def create_edge_label(self, label_name: str, properties: list[str] = None):
@@ -247,21 +283,17 @@ class AgeClient:
         safe_label = self._validate_identifier(label_name)
         await self.create_graph(self.config.graph_name)
         seed_value = f"schema:{safe_label}:{uuid.uuid4().hex}"
-        await self.execute_cypher(
-            f"""
+        await self.execute_cypher(f"""
             CREATE (a:__SchemaSeed {{seed: "{seed_value}"}})
             CREATE (b:__SchemaSeed {{seed: "{seed_value}"}})
             CREATE (a)-[r:{safe_label} {{__schema_seed__: "{seed_value}"}}]->(b)
             RETURN {{label: "{safe_label}"}} as result
-            """
-        )
-        await self.execute_cypher(
-            f"""
+            """)
+        await self.execute_cypher(f"""
             MATCH (a:__SchemaSeed {{seed: "{seed_value}"}})-[r:{safe_label}]->(b:__SchemaSeed {{seed: "{seed_value}"}})
             DELETE r, a, b
             RETURN {{label: "{safe_label}"}} as result
-            """
-        )
+            """)
         logger.info(f"边标签已创建: {label_name}")
 
     async def add_vertex(self, label: str, properties: dict[str, Any]) -> str:
@@ -292,9 +324,15 @@ class AgeClient:
             return cast("str", (result[0]["vertex_id"]))
         return None
 
-    async def add_edge(self, from_label: str, from_props: dict[str, Any],
-                       to_label: str, to_props: dict[str, Any],
-                       edge_label: str, edge_props: dict[str, Any] = None):
+    async def add_edge(
+        self,
+        from_label: str,
+        from_props: dict[str, Any],
+        to_label: str,
+        to_props: dict[str, Any],
+        edge_label: str,
+        edge_props: dict[str, Any] = None,
+    ):
         """添加边"""
         safe_from_label = self._validate_identifier(from_label)
         safe_to_label = self._validate_identifier(to_label)
@@ -313,8 +351,9 @@ class AgeClient:
 
         await self.execute_cypher(cypher)
 
-    async def get_neighbors(self, label: str, properties: dict[str, Any],
-                           depth: int = 1, edge_filter: str | None = None) -> list[dict[str, Any]]:
+    async def get_neighbors(
+        self, label: str, properties: dict[str, Any], depth: int = 1, edge_filter: str | None = None
+    ) -> list[dict[str, Any]]:
         """
         获取邻居节点
 
@@ -343,8 +382,9 @@ class AgeClient:
 
         return await self.execute_cypher(cypher)
 
-    async def find_path(self, from_props: dict[str, Any], to_props: dict[str, Any],
-                       max_depth: int = 5) -> list[dict[str, Any]]:
+    async def find_path(
+        self, from_props: dict[str, Any], to_props: dict[str, Any], max_depth: int = 5
+    ) -> list[dict[str, Any]]:
         """
         查找最短路径
 
@@ -383,13 +423,20 @@ def get_age_client() -> AgeClient:
         # Parse connection details from DATABASE_URL
         # Format: postgresql://user:password@host:port/dbname
         parsed = urlparse(settings.DATABASE_URL)
+        # V3-FIX-156：池上限/有界等待统一从预算权威取数（修前写死 10 且无超时）。
+        from app.core.database_pool_config import resolve_pool_caps
+
+        caps = resolve_pool_caps()
         config = AgeConfig(
             host=parsed.hostname or "localhost",
             port=parsed.port or 5432,
             user=parsed.username or "postgres",
             password=parsed.password or "",
             database=parsed.path.lstrip("/") or "sparkle",
-            graph_name="sparkle_galaxy"
+            pool_size=caps.age_max_size,
+            min_size=caps.age_min_size,
+            acquire_timeout=settings.AGE_POOL_ACQUIRE_TIMEOUT,
+            graph_name="sparkle_galaxy",
         )
         _age_client = AgeClient(config)
 

@@ -148,9 +148,13 @@ def _build_inferred_write_session_factory():
     if db_url.startswith("sqlite"):
         return AsyncSessionLocal
 
+    # V3-FIX-156：池上限从预算权威取数（修前写死 5，绕过统一池治理）。
+    from app.core.database_pool_config import resolve_pool_caps
+
+    caps = resolve_pool_caps()
     engine = create_async_engine(
         db_url,
-        **_get_engine_kwargs(db_url, sslmode, sslrootcert) | {"pool_size": 5, "max_overflow": 0},
+        **_get_engine_kwargs(db_url, sslmode, sslrootcert) | {"pool_size": caps.inferred_pool_size, "max_overflow": 0},
     )
     return async_sessionmaker(
         engine,

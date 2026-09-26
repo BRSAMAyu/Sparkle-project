@@ -251,10 +251,19 @@ class Settings(BaseSettings):
         return self.POSTGRES_DB
 
     # Database Pool Settings (for PostgreSQL)
-    DB_POOL_SIZE: int = 20  # 连接池大小
-    DB_MAX_OVERFLOW: int = 40  # 最大溢出连接数
+    # V3-FIX-156 统一池治理：所有自建池上限经 app/core/database_pool_config.
+    # resolve_pool_caps() 统一取数与校验，单进程上限之和 ≤ DB_CONNECTION_BUDGET
+    # ≤ PG_MAX_CONNECTIONS − DB_CONNECTION_RESERVE（修前主引擎 20+40=60/进程，
+    # 双进程+AGE+lane 之和 165 > PG 100 → "too many clients already"）。
+    PG_MAX_CONNECTIONS: int = 100  # 共享 PostgreSQL max_connections（部署事实核验值）
+    DB_CONNECTION_BUDGET: int = 80  # 单进程所有自建池上限之和的顶
+    DB_CONNECTION_RESERVE: int = 20  # 给迁移/运维/超级用户的预留
+    DB_POOL_SIZE: int = 15  # 主引擎常驻连接数（修前 20）
+    DB_MAX_OVERFLOW: int = 15  # 主引擎最大溢出（修前 40，60 上限超预算已下调）
     DB_POOL_RECYCLE: int = 3600  # 连接回收时间（秒）
-    DB_POOL_TIMEOUT: int = 30  # 获取连接超时时间（秒）
+    DB_POOL_TIMEOUT: int = 30  # 获取连接超时时间（秒，有界获取）
+    AGE_POOL_MAX_SIZE: int = 6  # AGE asyncpg 池上限（修前 10）
+    AGE_POOL_ACQUIRE_TIMEOUT: float = 5.0  # AGE acquire 超时（修前无超时=无限排队）
     DB_ECHO: bool = False  # 是否打印SQL语句（生产环境应为False）
 
     # CORS
