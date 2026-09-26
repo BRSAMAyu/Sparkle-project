@@ -102,6 +102,27 @@ def test_alembic_head_matches_models():
         engine.dispose()
 
 
+def test_streakdaystatus_enum_contains_weak():
+    """V3-FIX-259：迁移链终态的 streakdaystatus 必须含 'weak'.
+
+    引擎 achievement_engine._update_streak_stats 活体写 StreakDayStatus.WEAK
+    （低质量日 is_quality=False），而 f2b3c4d5e6f7 建的 PG 原生枚举只有
+    active/frozen/missed 三值——迁移库上 WEAK 写入触发 enum DataError。
+    修复前实录（红）：fresh 迁移库枚举仅 3 值。
+    """
+    engine, _ = _upgrade_to_head()
+    try:
+        with engine.connect() as connection:
+            values = set(
+                connection.execute(sa.text("SELECT unnest(enum_range(NULL::streakdaystatus))")).scalars()
+            )
+    finally:
+        engine.dispose()
+    assert {"active", "weak", "frozen", "missed"} <= values, (
+        f"streakdaystatus enum missing 'weak' (engine writes it live): {sorted(values)}"
+    )
+
+
 def test_migration_idempotent_upgrade():
     command, _, _ = _require_alembic()
     config = _make_alembic_config()

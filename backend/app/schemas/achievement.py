@@ -9,7 +9,13 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from app.models.achievement import AchievementRarity, AchievementType, ContractStatus, VisualEffectType
+from app.models.achievement import (
+    AchievementRarity,
+    AchievementType,
+    ContractStatus,
+    StreakDayStatus,
+    VisualEffectType,
+)
 from app.schemas.common import BaseSchema
 
 # ========== Achievement Schemas ==========
@@ -167,7 +173,11 @@ class StreakDayRecord(BaseModel):
     """Single streak day record"""
 
     day: date = Field(description="Calendar day")
-    status: str = Field(description="active | frozen | missed")
+    # V3-FIX-259: 收敛为 StreakDayStatus 枚举（4 值，含 weak），docstring/值集
+    # 与实现一致；值集外的状态在 wire 出口被拒，不再无约束透传到端上。
+    status: StreakDayStatus = Field(
+        description="Calendar day status: active | weak | frozen | missed (weak = activity day below quality threshold)"
+    )
     used_freeze: bool = Field(default=False, description="Whether freeze was used")
     source_event: str | None = Field(default=None, description="Source event type")
 

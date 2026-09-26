@@ -502,7 +502,8 @@ ALTER TYPE searchvisibility OWNER TO postgres;
 CREATE TYPE streakdaystatus AS ENUM (
     'active',
     'frozen',
-    'missed'
+    'missed',
+    'weak'
 );
 
 

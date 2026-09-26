@@ -27,11 +27,13 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from prometheus_client import Counter
 
 from app.config import settings
 from app.core.background_tasks import spawn_tracked
 from app.core.cache import cache_service
 from app.core.event_bus import event_bus
+from app.core.metrics import get_or_create_metric
 from app.models.achievement import (
     Achievement,
     AchievementRarity,
@@ -59,6 +61,14 @@ def _utcnow() -> datetime:
 
 _EXTERNAL_TRANSACTION_MANAGED_KEY = "external_transaction_managed"
 _AFTER_COMMIT_TASKS_KEY = "achievement_after_commit_tasks"
+
+# V3-FIX-259: 质量日状态（active/weak）落库失败计数——典型根因是 DB 的
+# streakdaystatus 枚举缺 'weak'（迁移 wt539_20260926 之前建的库）。
+STREAK_QUALITY_STATUS_PERSIST_FAILURES = get_or_create_metric(
+    Counter,
+    "sparkle_streak_quality_status_persist_failures_total",
+    "Streak day quality status (active/weak) persist failures, e.g. DB enum missing 'weak'",
+)
 
 
 @event.listens_for(AsyncSession.sync_session_class, "after_commit")
@@ -2134,12 +2144,27 @@ class AchievementEngine:
                     )
                 # Mark streak day with quality status for downstream consumers
                 is_quality = quality.is_quality_day if quality else (quality_score is not None and quality_score >= 0.4)
-                await self._upsert_streak_day(
-                    user_id,
-                    today,
-                    StreakDayStatus.ACTIVE if is_quality else StreakDayStatus.WEAK,
-                    source_event=event_type,
-                )
+                # V3-FIX-259: 质量状态（含 WEAK）在此活体落库。若 DB 的
+                # streakdaystatus 枚举缺 'weak'（未跑 wt539_20260926 迁移的库），
+                # flush 会抛 DBAPI DataError——用 SAVEPOINT 隔离，外层连胜事务
+                # （stats + ACTIVE 行）不受牵连，会话不再投毒；失败以 WARNING +
+                # Prometheus 计数器上浮，不再 debug 级静默。
+                try:
+                    async with self.db.begin_nested():
+                        await self._upsert_streak_day(
+                            user_id,
+                            today,
+                            StreakDayStatus.ACTIVE if is_quality else StreakDayStatus.WEAK,
+                            source_event=event_type,
+                        )
+                except Exception:
+                    STREAK_QUALITY_STATUS_PERSIST_FAILURES.inc()
+                    logger.opt(exception=True).warning(
+                        "Streak day quality status persist failed for user={} day={}; "
+                        "quality status (active/weak) not recorded for this day",
+                        user_id,
+                        today,
+                    )
             # Compute quality-gated streak for milestone checks without
             # overwriting the binary streak counter. The binary counter
             # tracks every active day; quality streak is a derived metric.
@@ -2152,7 +2177,10 @@ class AchievementEngine:
                     streak_days=quality_streak,
                 )
         except Exception:
-            logger.opt(exception=True).debug(
+            # V3-FIX-259: 质量块内非落库类异常（质量计算/质量连胜读）上浮到
+            # WARNING——静默 debug 曾把 WEAK 落库死亡一并掩盖。WEAK 落库本身
+            # 已在上方 savepoint 内单独隔离，不会走到这里。
+            logger.opt(exception=True).warning(
                 "Quality streak calculation skipped for user={}",
                 user_id,
             )
@@ -2552,11 +2580,11 @@ class AchievementEngine:
             day = start_day + timedelta(days=offset)
             record = record_map.get(day)
             if record:
-                status = record.status.value if hasattr(record.status, "value") else str(record.status)
+                # V3-FIX-259: wire 收敛为 StreakDayStatus 枚举，直接传成员。
                 days_data.append(
                     StreakDayRecord(
                         day=day,
-                        status=status,
+                        status=record.status,
                         used_freeze=record.used_freeze,
                         source_event=record.source_event,
                     )
@@ -2565,7 +2593,7 @@ class AchievementEngine:
                 days_data.append(
                     StreakDayRecord(
                         day=day,
-                        status=StreakDayStatus.MISSED.value,
+                        status=StreakDayStatus.MISSED,
                         used_freeze=False,
                         source_event=None,
                     )

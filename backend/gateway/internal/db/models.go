@@ -1389,6 +1389,7 @@ const (
 	StreakdaystatusActive Streakdaystatus = "active"
 	StreakdaystatusFrozen Streakdaystatus = "frozen"
 	StreakdaystatusMissed Streakdaystatus = "missed"
+	StreakdaystatusWeak   Streakdaystatus = "weak"
 )
 
 func (e *Streakdaystatus) Scan(src interface{}) error {

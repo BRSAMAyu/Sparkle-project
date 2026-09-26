@@ -35173,9 +35173,8 @@
             "title": "Source Event"
           },
           "status": {
-            "description": "active | frozen | missed",
-            "title": "Status",
-            "type": "string"
+            "$ref": "#/components/schemas/StreakDayStatus",
+            "description": "Calendar day status: active | weak | frozen | missed (weak = activity day below quality threshold)"
           },
           "used_freeze": {
             "default": false,
@@ -35190,6 +35189,17 @@
         ],
         "title": "StreakDayRecord",
         "type": "object"
+      },
+      "StreakDayStatus": {
+        "description": "连胜日历状态",
+        "enum": [
+          "active",
+          "weak",
+          "frozen",
+          "missed"
+        ],
+        "title": "StreakDayStatus",
+        "type": "string"
       },
       "StreakHistoryResponse": {
         "description": "Streak history response for calendar view",
