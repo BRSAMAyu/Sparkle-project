@@ -84,6 +84,11 @@ logger.add(
     sys.stderr,
     level=settings.LOG_LEVEL,
     serialize=not settings.DEBUG,  # JSON format in production
+    # diagnose=False：loguru 默认 diagnose=True 会在异常渲染时对 frame local
+    # 逐个 repr——ORM 实例的 repr 触发懒加载即在 greenlet 上下文外做 DB IO
+    # （MissingGreenlet 毒化 AsyncSession），且把内存里的敏感值（PII/凭据）
+    # 倾倒进日志。loguru 官方即要求生产关闭 diagnose。
+    diagnose=False,
 )
 # ENGINE-LOGROT: 可选轮转文件 sink——仅在显式配置 LOG_FILE_PATH 时挂载（默认
 # 关闭，未配置时引擎行为与本段之前逐位一致）；失败只降级告警，不拖垮启动。

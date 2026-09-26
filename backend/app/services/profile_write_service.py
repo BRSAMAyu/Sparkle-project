@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.event_bus import ProfilePreferenceDeleted, ProfilePreferenceUpdated, event_bus
+from app.core.memory_constants import PREFERENCE_KEYS
 from app.models.user import PushPreference, User
 from app.models.user_preferences import UserPreferencesCenter
 from app.services.memory_policy_evaluator import MemoryPolicyEvaluator
@@ -87,6 +88,21 @@ class ProfileWriteService:
         confidence_by_key = confidence_by_key or {}
 
         for pref_key, pref_value in updates.items():
+            if pref_key not in PREFERENCE_KEYS:
+                # memory_preferences 历史域只建模白名单键；组合快照类载荷
+                # （planning 的 cold_start_context / onboarding_modeling_state）
+                # 只落 user_preferences live 表，不落历史。此前这类键会走到
+                # upsert_preference 的 ValueError（任何 DB IO 之前抛出），再被
+                # 下方 except 对调用方共享会话整体 rollback——过期全部已加载
+                # ORM 对象；调用方后续任何懒加载（包括 loguru diagnose 渲染
+                # 异常 frame local 的 repr）都在 greenlet 上下文外做 DB IO，
+                # MissingGreenlet 直接毒化会话（PendingRollbackError），
+                # modeling-bridge 首回合生成计划即因此失败。
+                logger.debug(
+                    "Preference history append skipped for unsupported pref_key={} (live write kept)",
+                    pref_key,
+                )
+                continue
             refs = evidence_refs_by_key.get(pref_key) or []
             try:
                 record = await self.memory_service.upsert_preference(
