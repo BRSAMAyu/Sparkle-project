@@ -50816,8 +50816,15 @@
             "name": "guest_id",
             "required": false,
             "schema": {
-              "title": "Guest Id",
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Guest Id"
             }
           }
         ],
@@ -78796,7 +78803,8 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PlanUpdate"
+                "$ref": "#/components/schemas/PlanUpdate",
+                "default": {}
               }
             }
           }
@@ -78854,7 +78862,8 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PlanUpdate"
+                "$ref": "#/components/schemas/PlanUpdate",
+                "default": {}
               }
             }
           }
@@ -79609,7 +79618,15 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PlanPriorityUpdate"
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PlanPriorityUpdate"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Request"
               }
             }
           }
