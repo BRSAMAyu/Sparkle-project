@@ -139,8 +139,8 @@ class EnhancedOrchestratorAgent(BaseAgent):
         基于关键词和意图分析，选择最合适的工作流
         """
         with tracer.start_as_current_span("select_workflow"):
-            # 定义模式特征
-            patterns = {
+            # 定义模式特征（value 混合 list[str]/float，需显式 Any 口径，否则 join 成 object）
+            patterns: dict[str, dict[str, Any]] = {
                 "task_decomposition": {
                     "keywords": [
                         "计划",

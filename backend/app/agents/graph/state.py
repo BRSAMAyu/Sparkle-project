@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import operator
 from enum import StrEnum
-from typing import Annotated, Any, TypedDict
+from typing import Annotated, Any, NotRequired, TypedDict
 
 from langchain_core.messages import BaseMessage
 
@@ -87,6 +87,17 @@ class ReviewContext(TypedDict, total=False):
     # R2-fix: 主生成最终组装的 system_prompt（含检索材料/跨会话记忆/画像），
     # reflection_node 重写时必须继承，否则重写回复会丢失材料与记忆
     generation_system_prompt: str | None
+    # Phase 2d 模型降级与审查画像（review_nodes 运行时实际写入的键）
+    reviewer_model_key: str                 # reviewer 模型 key（getattr model_key）
+    reviewer_provider: str                  # reviewer provider 名
+    review_profile_id: str                  # 审查画像 ID
+    workflow_context: dict[str, Any] | None  # 工作流上下文（review profile 解析用）
+    fallback_model: str | None              # 建议降级的生成模型
+    # 反思产物（reflection_node 构建更新上下文时写入）
+    best_review_score: float                # 反思后最优审查分
+    best_content: str                       # 反思后最优内容
+    early_stop_reason: str | None           # 提前停止原因
+    reflection_profile_id: str              # 反思使用的审查画像 ID
 
 
 class ReviewHistoryEntry(TypedDict, total=False):
@@ -142,6 +153,9 @@ class SparkleState(TypedDict):
     collaboration_agents: list[str] | None
     collaboration_order: list[dict[str, str]] | None
     collaboration_index: int | None
+    # 当前 agent 的协作任务文本（collaboration_node 写入，专家节点拼 HumanMessage）；
+    # 仅协作模式存在，故为 NotRequired，与运行时键的可选性一致
+    collaboration_context: NotRequired[str | None]
     mode_name: str | None
     mode_constraints: dict[str, Any] | None
     synthesis_policy: dict[str, Any] | None

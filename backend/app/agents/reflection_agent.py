@@ -304,7 +304,11 @@ class ReflectionAgent:
         review_profile_id: str | None = None,
         workflow_context: dict[str, Any] | None = None,
     ) -> ReflectionResult | TriggeredReflectionResult:
-        assert str(user_id or "").strip(), "ReflectionAgent.reflect requires a non-empty user_id"
+        # 显式 None 收窄：下游 _reflect_review_fix/_reflect_trigger 契约为 str；
+        # 运行时语义不变（None/空白 user_id 在此断言即失败）。
+        assert user_id is not None and str(user_id).strip(), (
+            "ReflectionAgent.reflect requires a non-empty user_id"
+        )
         if review_result is not None:
             assert user_query is not None and original_content is not None, (
                 "Review-mode reflection requires user_query and original_content"

@@ -72,9 +72,9 @@ def create_specialist_node(
             messages = list(messages)
             messages.insert(0, SystemMessage(content=_build_prompt(system_prompt)))
 
-        llm = LLMFactory.get_llm(agent_id)
-        if toolset:
-            llm = llm.bind_tools(toolset)
+        # bind_tools 返回 Runnable 而非 BaseChatModel，避免向模型变量回赋可调用链
+        llm_base = LLMFactory.get_llm(agent_id)
+        llm = llm_base.bind_tools(toolset) if toolset else llm_base
         try:
             response = await llm.ainvoke(messages)
             duration_ms = (time.time() - started_at) * 1000

@@ -247,12 +247,12 @@ class SpineOrchestrator:
             return trace
 
         # Step 2: Delegate pipeline to _run_signal_pipeline (handles lock)
-        trace = await self._run_signal_pipeline(
+        pipeline_trace = await self._run_signal_pipeline(
             user_id=user_id,
             signal=signal,
             event_ids=[task_id],
         )
-        if trace is None:
+        if pipeline_trace is None:
             return None
 
         # Step 3: Task-completed-specific post-processing
@@ -264,7 +264,7 @@ class SpineOrchestrator:
         except Exception as exc:
             logger.warning("Task-completed post lock acquisition failed for user={}: {}", user_id, exc)
 
-        # Step 3a: Record Aurora energy level decision in trace (T3.1.6)
+        # Step 3a: Record Aurora energy level decision in pipeline_trace (T3.1.6)
         try:
             active_states_dicts = await self._get_active_states_dicts(user_id)
             from app.aurora.runtime_v1.state import AuroraEnergyStore
@@ -275,20 +275,20 @@ class SpineOrchestrator:
                 energy=energy,
                 active_states=active_states_dicts,
             )
-            trace.aurora_energy_level = energy_decision.current_level
-            trace.aurora_upgrade_reason = energy_decision.upgrade_reason
+            pipeline_trace.aurora_energy_level = energy_decision.current_level
+            pipeline_trace.aurora_upgrade_reason = energy_decision.upgrade_reason
         except Exception:
             logger.opt(exception=True).warning("on_task_completed: energy decision failed for user={}", user_id)
 
         # Step 3b: Register expected outcome for verification loop
         try:
             recent_effects = await self.outcome_recorder.get_recent_policy_effects(user_id, limit=10)
-            primary_strategy = getattr(trace, 'primary_strategy', 'task_completed')
+            primary_strategy = getattr(pipeline_trace, 'primary_strategy', 'task_completed')
             expected_outcome_type = "task_started_and_completed" if primary_strategy != "timeout_warning" else "behavioral_change"
             await self.outcome_tracker.register_expected(
                 user_id=user_id,
                 directive_type=primary_strategy,
-                trace=trace,
+                trace=pipeline_trace,
                 expected_outcome=expected_outcome_type,
                 verification_window_hours=48,
                 context={
@@ -304,7 +304,7 @@ class SpineOrchestrator:
         # Step 3c: Check Aurora wake eligibility for high-risk signals
         try:
             recent_effects = await self.outcome_recorder.get_recent_policy_effects(user_id, limit=10)
-            risk_level = getattr(trace, 'risk_level', None)
+            risk_level = getattr(pipeline_trace, 'risk_level', None)
             if risk_level in ("critical", "high"):
                 neg_outcomes = sum(
                     1 for pe in recent_effects
@@ -330,7 +330,7 @@ class SpineOrchestrator:
         except Exception:
             logger.opt(exception=True).warning("on_task_completed: aurora wake check failed")
 
-        await self.trace_store._save_trace(trace)
+        await self.trace_store._save_trace(pipeline_trace)
 
         # Release task-completed lock
         try:
@@ -338,7 +338,7 @@ class SpineOrchestrator:
         except Exception as exc:
             logger.warning("Task-completed post lock release failed for user={}: {}", user_id, exc)
 
-        return trace
+        return pipeline_trace
 
     async def get_active_directive(self, user_id: str) -> ExecutionDirective | None:
         """供 planning_workflow 调用——获取当前用户的活跃 directive。"""
@@ -2041,14 +2041,17 @@ class SpineOrchestrator:
 
         logger.info("Spine stale: user={} elapsed={}min", user_id, tc.elapsed_since_last_interaction_min)
 
-        # P2: Build recovery card for returning user (divine moment 4)
-        try:
-            await self.build_recovery_card(
-                user_id=user_id,
-                elapsed_minutes=tc.elapsed_since_last_interaction_min,
-            )
-        except Exception as exc:
-            logger.debug("build_recovery_card skipped: {}", exc)
+        # P2: Build recovery card for returning user (divine moment 4).
+        # elapsed 未知（无上次交互时间）时不产出恢复卡——卡片文案依赖离开时长，
+        # 编造 0.0 会给出"你离开了 0 分钟"的失真卡片。
+        if tc.elapsed_since_last_interaction_min is not None:
+            try:
+                await self.build_recovery_card(
+                    user_id=user_id,
+                    elapsed_minutes=tc.elapsed_since_last_interaction_min,
+                )
+            except Exception as exc:
+                logger.debug("build_recovery_card skipped: {}", exc)
 
         # P2: Try to recover state from snapshot if states are empty (TTL expired)
         try:
@@ -2336,8 +2339,8 @@ class SpineOrchestrator:
     ) -> CausalTrace | None:
         """External event entry gate — all external data enters Spine as ExternalRawEvent.
 
-        Dispatches to ExternalIntegrationGateway which translates to ActionableSignal.
-        Iron Rule: external signals cannot bypass the Spine.
+        Routes through ExternalIntegrationGateway.route_to_spine (single Iron Rule
+        entry, receipted). Iron Rule: external signals cannot bypass the Spine.
         Supports sources: 'calendar', 'file', 'email', 'github', 'tool'.
         """
         try:
@@ -2355,15 +2358,14 @@ class SpineOrchestrator:
                 integration_id=integration_id,
             )
             gateway = ExternalIntegrationGateway()
-            signal = gateway.dispatch(raw_event)
-            if signal is None:
-                return None
-
-            return await self._run_signal_pipeline(
-                user_id=user_id,
-                signal=signal,
-                event_ids=[raw_event.event_id],
-            )
+            # Iron Rule 唯一入口：ExternalRawEvent 先过 route_to_spine 拿 routing
+            # receipt（此前调用的 gateway.dispatch 在 ExternalIntegrationGateway
+            # 上从未存在，恒 AttributeError → 本函数恒走 except 降级返回 None）。
+            gateway.route_to_spine(raw_event)
+            # ExternalRawEvent → ActionableSignal 的通用翻译尚未接线（按源的翻译
+            # 在各 bridge 的解析点完成，如 CalendarSignalBridge）；此处无信号可跑
+            # 管线，按既有降级契约返回 None。
+            return None
         except Exception:
             logger.debug("on_external_event degraded: source={}, user={}", source, user_id)
             return None
@@ -4200,7 +4202,7 @@ class SpineOrchestrator:
                 current_plan_summary=current_plan_summary,
                 wake_reason=wake_reason,
                 active_states=state_dicts,
-                recent_outcomes=recent_effects,
+                recent_outcomes=[e.to_dict() for e in recent_effects],
             )
 
             agenda = self.aurora_core.build_agenda_from_case_file(case_file, resolved_type)
@@ -4548,7 +4550,7 @@ class SpineOrchestrator:
             "critical": "forced_break_suggestion",
         }
 
-        constraints = {}
+        constraints: dict[str, Any] = {}
         if level in ("high", "critical"):
             constraints["avoid_new_chapter"] = True
             constraints["max_task_duration_min"] = 15 if level == "critical" else 25

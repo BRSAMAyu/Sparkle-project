@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from langchain_core.prompts import ChatPromptTemplate
 from loguru import logger
@@ -128,12 +128,18 @@ async def router_node(state: SparkleState, config: dict | None = None):
 
     chain = prompt | structured_llm
     try:
-        decision: RouteDecision = await chain.ainvoke(
-            {
-                "query": user_query,
-                "target_list": target_list_text,
-                "quality_context": quality_context,
-            }
+        # with_structured_output(RouteDecision) 以 pydantic schema 调用，运行时
+        # 返回 RouteDecision 实例；langchain 类型面只能给到 dict | BaseModel，
+        # 按既有批次惯例用显式 cast 收窄到真实契约。
+        decision = cast(
+            RouteDecision,
+            await chain.ainvoke(
+                {
+                    "query": user_query,
+                    "target_list": target_list_text,
+                    "quality_context": quality_context,
+                }
+            ),
         )
     except Exception as exc:
         logger.warning(f"Router LLM failed, falling back to study_buddy: {exc}")

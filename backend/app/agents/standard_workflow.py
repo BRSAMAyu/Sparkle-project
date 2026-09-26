@@ -14,7 +14,10 @@ import re
 import time
 import uuid
 from datetime import datetime
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, cast
+
+if TYPE_CHECKING:
+    from app.tools.base import ToolResult
 
 from google.protobuf import struct_pb2
 from loguru import logger
@@ -2690,13 +2693,15 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
     if validator:
         from app.orchestration.schemas import ExecutablePlan, ToolCallSpec
 
-        def _prepare_params(tc) -> dict:
+        def _prepare_params(tc: Any) -> dict[str, Any]:
             """准备参数用于验证和执行"""
             if isinstance(tc.full_arguments, dict):
                 return tc.full_arguments
             if isinstance(tc.full_arguments, str):
                 try:
-                    return json.loads(tc.full_arguments)
+                    # ToolCallSpec.params 契约即 dict[str, Any]；json.loads 静态返回 Any，
+                    # JSON 对象输入在此收敛（类型断言，零运行时行为变化）
+                    return cast("dict[str, Any]", json.loads(tc.full_arguments))
                 except (json.JSONDecodeError, TypeError):
                     return {"_raw": tc.full_arguments}
             return {}
@@ -2763,7 +2768,7 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
             except (json.JSONDecodeError, TypeError):
                 args = {}
 
-        step_result = await _execute_single_tool(
+        exec_result = await _execute_single_tool(
             tool_name=tc.tool_name,
             tool_args=args,
             tool_call_id=tc.tool_call_id or str(uuid.uuid4()),
@@ -2778,7 +2783,7 @@ async def tool_execution_node(state: WorkflowState) -> WorkflowState:
         # X-09 · budget 终态切断 agent 循环（FIX-40 P3-6）：run 已 BUDGET_EXCEEDED
         # 时不再发起剩余工具调用，也不再回 generation 规划下一轮工具——终态即
         # 结论（此前仅靠 _MAX_TOOL_LOOPS_PER_TURN 硬顶兜底）。
-        if step_result is not None and getattr(step_result, "error_type", None) == "BudgetExceeded":
+        if exec_result is not None and getattr(exec_result, "error_type", None) == "BudgetExceeded":
             budget_exceeded = True
             logger.warning(
                 "tool execution loop cut at {}/{} after run budget exceeded (tool={})",
@@ -3643,7 +3648,8 @@ def create_standard_chat_graph() -> StateGraph:
             return "generation"
 
         if decision in ["generation", "tool_execution"]:
-            return decision
+            # context_data 值静态为 Any；router_decision 运行时恒为节点名字符串
+            return str(decision)
 
         return "collaboration"
 
@@ -3815,13 +3821,17 @@ async def _execute_single_tool(
     compensation_call: dict[str, Any] | None = None,
     tool_index: int = 0,
     total_tools: int = 1,
-) -> None:
+) -> ToolResult:
     """Execute a single tool call and stream results.
 
     Used by tool_execution_node for both LLM tool_calls and LangGraph executable_plan.
 
     P2 Improvement: Added progress feedback with tool index and total count.
     P1 Improvement: Added fallback handling when tool execution fails.
+
+    X-09（FIX-40 P3-6）契约：恒返回真实 ToolResult（失败/异常路径为降级包装），
+    供调用方按 error_type==BudgetExceeded 切断工具循环——签名此前仍是
+    -> None，与实现不符。
     """
     redis_client = state.context_data.get("redis_client")
 
@@ -3838,7 +3848,7 @@ async def _execute_single_tool(
             )
         )
 
-    result: Any = None
+    result: Any = None  # executor 未注解；成功路径为 ToolResult，失败/异常路径由下方降级包装保证
     try:
         result = await executor.execute_tool_call(
             tool_name=tool_name,
@@ -4005,7 +4015,7 @@ async def _execute_single_tool(
     )
     # X-09：返回真实结果（BudgetExceeded 等终态信号供 tool_execution_node 切断
     # agent 循环——FIX-40 P3-6；此前函数返回 None，循环层无法感知预算终态）。
-    return result
+    return cast("ToolResult", result)
 
 
 def _update_feedback_binding_runtime_state(state: WorkflowState, result_data: dict[str, Any]) -> None:

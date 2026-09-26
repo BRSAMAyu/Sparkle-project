@@ -115,7 +115,7 @@ class SpineAuroraBridge:
         归因下钻（occurrence_id/decision_id 可追）。
         """
         try:
-            event = {
+            event: dict[str, Any] = {
                 "source": "aurora_decision",
                 "user_id": user_id,
                 "action": action,

@@ -1,4 +1,5 @@
 import threading
+from collections.abc import Hashable
 from typing import Any, cast
 
 from langgraph.checkpoint.memory import MemorySaver
@@ -141,7 +142,9 @@ workflow.add_node("human_node", human_node)
 workflow.set_entry_point("router")
 
 # Router -> Agents
-router_edge_map = {name: name for name in RUNTIME_NODE_NAMES}
+# dict 对 key 型不变：add_conditional_edges 形参为 dict[Hashable, str]（含 END），
+# 显式按形参口径标注，避免 dict[str, str] 不变性问题。
+router_edge_map: dict[Hashable, str] = {name: name for name in RUNTIME_NODE_NAMES}
 router_edge_map["human_node"] = "human_node"
 router_edge_map[END] = END
 workflow.add_conditional_edges("router", route_after_router, router_edge_map)
@@ -353,7 +356,9 @@ def route_after_agent_in_collaboration(state: SparkleState):
     """Agent 执行后的路由（协作模式） (Phase 3)"""
     collaboration_mode = state.get("collaboration_mode", "single")
     collaboration_order = state.get("collaboration_order") or []
-    collaboration_index = state.get("collaboration_index", 0)
+    # 键声明为 int | None：键存在但值为 None 时 .get(key, 0) 仍返回 None，
+    # 直接比较会在运行时 TypeError——按默认语义归零。
+    collaboration_index = state.get("collaboration_index") or 0
 
     # Safety guard: prevent infinite collaboration loops
     max_iterations = len(collaboration_order) * 2 if collaboration_order else 10
