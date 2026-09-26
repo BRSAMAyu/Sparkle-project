@@ -2,7 +2,8 @@
 统计数据 API
 Statistics API
 """
-from datetime import UTC, date, datetime, timedelta
+
+from datetime import datetime, timedelta
 from typing import cast
 from uuid import UUID
 
@@ -11,6 +12,7 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
+from app.core import time_utils
 from app.models.achievement import UserAchievement
 from app.models.focus import FocusSession, FocusStatus
 from app.models.galaxy import StudyRecord, UserNodeStatus
@@ -20,8 +22,17 @@ from app.models.user import User
 router = APIRouter()
 
 
+def _utcnow() -> datetime:
+    """Canonical naive-UTC clock (app.core.time_utils); module-level so tests can freeze it."""
+    return time_utils.utcnow()
+
+
 async def _count_today_focus_sessions(db: AsyncSession, user_id: UUID, today_start: datetime) -> int:
-    """Count completed focus sessions started today."""
+    """Count completed focus sessions started today.
+
+    ``today_start`` 必须与 FocusSession.start_time 的存储钟同源——该列存客户端
+    本地墙上时间 naive（V3-FIX-37 定界），故传入本地墙上零点 naive。
+    """
     tomorrow_start = today_start + timedelta(days=1)
     query = select(func.count(FocusSession.id)).where(
         and_(
@@ -36,16 +47,21 @@ async def _count_today_focus_sessions(db: AsyncSession, user_id: UUID, today_sta
 
 
 @router.get("/daily")
-async def get_daily_stats(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
+async def get_daily_stats(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """
     获取今日统计数据
     Get daily statistics for current user
     """
     user_id = current_user.id
-    today_start = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=None)
+    # ── 「今日」双钟现实（V3-FIX-37 定界）──
+    # - due_date 口径：沿 goal_today_view SSOT 既有 today（UTC date，SSOT 调用方
+    #   传 _utcnow().date()）；SSOT 自身的本地化另立 V3-FIX-197，不属本卡最小面。
+    # - FocusSession.start_time：存客户端本地墙上时间 naive（mobile 发本地 ISO 串、
+    #   无时区后缀）→ 窗口必须用同一墙钟的本地日界；修前用 naive-UTC 日界，
+    #   UTC+8 本地 00:00–08:00 的晨间会话被切进「昨天」（focus_sessions 计 0）。
+    tz_name = time_utils.user_timezone_name(current_user)
+    focus_today_start = time_utils.local_midnight_wall(time_utils.local_date(_utcnow(), tz_name))
+    utc_today = _utcnow().date()
 
     # ── H7 口径声明（对齐 SSOT app/services/goal_today_view.py 的「今日任务」基座）──
     # 基座：due_date == today 且 deleted_at IS NULL；
@@ -55,21 +71,17 @@ async def get_daily_stats(
     today_scope = and_(
         Task.user_id == user_id,
         Task.deleted_at.is_(None),
-        Task.due_date == today_start.date(),
+        Task.due_date == utc_today,
         Task.status != "ABANDONED",
     )
 
     # Tasks completed today：分母同基座上的已完成子集（分子 ⊆ 分母）
-    completed_query = select(func.count(Task.id)).where(
-        and_(today_scope, Task.status == "COMPLETED")
-    )
+    completed_query = select(func.count(Task.id)).where(and_(today_scope, Task.status == "COMPLETED"))
     completed_result = await db.execute(completed_query)
     tasks_completed = completed_result.scalar() or 0
 
     # Study minutes today：与分子同集合（今日到期且已完成任务的预计时长），避免同屏两口径
-    time_query = select(func.sum(Task.estimated_minutes)).where(
-        and_(today_scope, Task.status == "COMPLETED")
-    )
+    time_query = select(func.sum(Task.estimated_minutes)).where(and_(today_scope, Task.status == "COMPLETED"))
     time_result = await db.execute(time_query)
     study_minutes = time_result.scalar() or 0
 
@@ -82,15 +94,12 @@ async def get_daily_stats(
         "tasks_completed": tasks_completed,
         "study_minutes": study_minutes,
         "total_tasks_today": total_today,
-        "focus_sessions": await _count_today_focus_sessions(db, user_id, today_start),
+        "focus_sessions": await _count_today_focus_sessions(db, user_id, focus_today_start),
     }
 
 
 @router.get("/overview")
-async def get_stats_overview(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
+async def get_stats_overview(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """
     获取用户统计概览
     Get user statistics overview
@@ -98,46 +107,33 @@ async def get_stats_overview(
     user_id = current_user.id
 
     # 获取任务统计
-    total_tasks_query = select(func.count(Task.id)).where(
-        Task.user_id == user_id
-    )
+    total_tasks_query = select(func.count(Task.id)).where(Task.user_id == user_id)
     total_result = await db.execute(total_tasks_query)
     total_tasks = total_result.scalar() or 0
 
-    completed_tasks_query = select(func.count(Task.id)).where(
-        and_(
-            Task.user_id == user_id,
-            Task.status == "COMPLETED"
-        )
-    )
+    completed_tasks_query = select(func.count(Task.id)).where(and_(Task.user_id == user_id, Task.status == "COMPLETED"))
     completed_result = await db.execute(completed_tasks_query)
     completed_tasks = completed_result.scalar() or 0
 
     # 获取成就统计
-    achievements_query = select(func.count(UserAchievement.id)).where(
-        UserAchievement.user_id == user_id
-    )
+    achievements_query = select(func.count(UserAchievement.id)).where(UserAchievement.user_id == user_id)
     achievements_result = await db.execute(achievements_query)
     total_achievements = achievements_result.scalar() or 0
 
     # 获取知识节点统计
-    nodes_query = select(func.count(UserNodeStatus.node_id)).where(
-        UserNodeStatus.user_id == user_id
-    )
+    nodes_query = select(func.count(UserNodeStatus.node_id)).where(UserNodeStatus.user_id == user_id)
     nodes_result = await db.execute(nodes_query)
     knowledge_nodes = nodes_result.scalar() or 0
 
     # 计算学习天数
-    first_task_query = select(Task.created_at).where(
-        Task.user_id == user_id
-    ).order_by(Task.created_at.asc()).limit(1)
+    first_task_query = select(Task.created_at).where(Task.user_id == user_id).order_by(Task.created_at.asc()).limit(1)
     first_task_result = await db.execute(first_task_query)
     first_task_date = first_task_result.scalar_one_or_none()
 
     study_days = 0
     if first_task_date:
         # Use naive UTC to match DB TIMESTAMP WITHOUT TIME ZONE
-        now_naive = datetime.now(UTC).replace(tzinfo=None)
+        now_naive = _utcnow()
         first_naive = first_task_date.replace(tzinfo=None) if first_task_date.tzinfo else first_task_date
         delta = now_naive - first_naive
         study_days = delta.days + 1
@@ -171,36 +167,25 @@ async def get_learning_summary(
 
 
 @router.get("/weekly")
-async def get_weekly_stats(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
+async def get_weekly_stats(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """
     获取周统计数据
     Get weekly statistics
     """
     user_id = current_user.id
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = _utcnow()
     week_ago = now - timedelta(days=7)
 
     # 周内完成任务
     completed_query = select(func.count(Task.id)).where(
-        and_(
-            Task.user_id == user_id,
-            Task.status == "COMPLETED",
-            Task.completed_at >= week_ago
-        )
+        and_(Task.user_id == user_id, Task.status == "COMPLETED", Task.completed_at >= week_ago)
     )
     completed_result = await db.execute(completed_query)
     weekly_completed = completed_result.scalar() or 0
 
     # 周内学习时间（基于任务预估）
     time_query = select(func.sum(Task.estimated_minutes)).where(
-        and_(
-            Task.user_id == user_id,
-            Task.status == "COMPLETED",
-            Task.completed_at >= week_ago
-        )
+        and_(Task.user_id == user_id, Task.status == "COMPLETED", Task.completed_at >= week_ago)
     )
     time_result = await db.execute(time_query)
     weekly_minutes = time_result.scalar() or 0
@@ -212,14 +197,6 @@ async def get_weekly_stats(
         "total_study_minutes": weekly_minutes,
         "average_daily_minutes": round(weekly_minutes / 7, 1) if weekly_minutes else 0,
     }
-
-
-def _day_key(value: date | str | datetime) -> str:
-    if isinstance(value, datetime):
-        return value.date().isoformat()
-    if isinstance(value, date):
-        return value.isoformat()
-    return str(value)
 
 
 def _resolve_heatmap_user_id(current_user: User, requested_user_id: UUID | None) -> UUID:
@@ -239,82 +216,66 @@ async def get_learning_heatmap(
 ):
     """
     学习热力图（GitHub 风格贡献图）
-    Returns one entry per day, including today.
+    Returns one entry per user-local day, including today.
 
     Minutes are sourced from:
     1. `study_records` written by galaxy/task learning updates
     2. completed tasks without a linked study record as a fallback
 
     Response: [{date: "2026-04-01", minutes: 45, tasks_completed: 3}, ...]
+
+    时区口径（V3-FIX-37）：两源列均存 naive-UTC（服务端 utcnow），但日界与
+    标注按用户本地日切——窗口边界由本地零点换算回 UTC naive 瞬间，归属在
+    应用层把 UTC 瞬时转回用户本地日（修前窗口与 func.date 分桶都用 UTC 日，
+    UTC+8 本地 00:00–08:00 的记录被上界整段排除/错标到前一日）。
     """
     target_user_id = _resolve_heatmap_user_id(current_user, user_id)
-    today = datetime.now(UTC).replace(tzinfo=None).date()
+    tz_name = time_utils.user_timezone_name(current_user)
+    today = time_utils.local_date(_utcnow(), tz_name)
     start_day = today - timedelta(days=days - 1)
-    range_start = datetime.combine(start_day, datetime.min.time())
-    range_end = datetime.combine(today + timedelta(days=1), datetime.min.time())
+    range_start = time_utils.local_midnight_as_utc_naive(start_day, tz_name)
+    range_end = time_utils.local_midnight_as_utc_naive(today + timedelta(days=1), tz_name)
 
-    study_query = (
-        select(
-            func.date(StudyRecord.created_at).label("day"),
-            func.coalesce(func.sum(StudyRecord.study_minutes), 0).label("study_minutes"),
-        )
-        .where(
-            StudyRecord.user_id == target_user_id,
-            StudyRecord.created_at >= range_start,
-            StudyRecord.created_at < range_end,
-        )
-        .group_by(func.date(StudyRecord.created_at))
+    # 按行取回后在应用层按用户本地日分桶（SQL func.date 只能取 UTC 日，
+    # 跨方言的可移植本地日偏移无统一表达式；单用户 ≤365 天行数量级可接受）。
+    study_query = select(StudyRecord.created_at, StudyRecord.study_minutes).where(
+        StudyRecord.user_id == target_user_id,
+        StudyRecord.created_at >= range_start,
+        StudyRecord.created_at < range_end,
     )
     study_result = await db.execute(study_query)
-    study_minutes_by_day = {
-        _day_key(row.day): float(row.study_minutes or 0)
-        for row in study_result
-    }
+    study_minutes_by_day: dict[str, float] = {}
+    for created_at, row_minutes in study_result:
+        day_key = time_utils.local_date(created_at, tz_name).isoformat()
+        study_minutes_by_day[day_key] = study_minutes_by_day.get(day_key, 0.0) + float(row_minutes or 0)
 
     task_has_study_record = select(StudyRecord.id).where(StudyRecord.task_id == Task.id).exists()
-    task_minutes_query = (
-        select(
-            func.date(Task.completed_at).label("day"),
-            func.coalesce(
-                func.sum(func.coalesce(Task.actual_minutes, Task.estimated_minutes, 0)),
-                0,
-            ).label("task_minutes"),
-        )
-        .where(
-            Task.user_id == target_user_id,
-            Task.status == TaskStatus.COMPLETED,
-            Task.completed_at.is_not(None),
-            Task.completed_at >= range_start,
-            Task.completed_at < range_end,
-            ~task_has_study_record,
-        )
-        .group_by(func.date(Task.completed_at))
+    task_minutes_query = select(Task.completed_at, func.coalesce(Task.actual_minutes, Task.estimated_minutes, 0)).where(
+        Task.user_id == target_user_id,
+        Task.status == TaskStatus.COMPLETED,
+        Task.completed_at.is_not(None),
+        Task.completed_at >= range_start,
+        Task.completed_at < range_end,
+        ~task_has_study_record,
     )
     task_minutes_result = await db.execute(task_minutes_query)
-    fallback_task_minutes_by_day = {
-        _day_key(row.day): float(row.task_minutes or 0)
-        for row in task_minutes_result
-    }
+    fallback_task_minutes_by_day: dict[str, float] = {}
+    for completed_at, row_minutes in task_minutes_result:
+        day_key = time_utils.local_date(completed_at, tz_name).isoformat()
+        fallback_task_minutes_by_day[day_key] = fallback_task_minutes_by_day.get(day_key, 0.0) + float(row_minutes or 0)
 
-    task_count_query = (
-        select(
-            func.date(Task.completed_at).label("day"),
-            func.count(Task.id).label("task_count"),
-        )
-        .where(
-            Task.user_id == target_user_id,
-            Task.status == TaskStatus.COMPLETED,
-            Task.completed_at.is_not(None),
-            Task.completed_at >= range_start,
-            Task.completed_at < range_end,
-        )
-        .group_by(func.date(Task.completed_at))
+    task_count_query = select(Task.completed_at).where(
+        Task.user_id == target_user_id,
+        Task.status == TaskStatus.COMPLETED,
+        Task.completed_at.is_not(None),
+        Task.completed_at >= range_start,
+        Task.completed_at < range_end,
     )
     task_count_result = await db.execute(task_count_query)
-    tasks_completed_by_day = {
-        _day_key(row.day): int(row.task_count or 0)
-        for row in task_count_result
-    }
+    tasks_completed_by_day: dict[str, int] = {}
+    for (completed_at,) in task_count_result:
+        day_key = time_utils.local_date(completed_at, tz_name).isoformat()
+        tasks_completed_by_day[day_key] = tasks_completed_by_day.get(day_key, 0) + 1
 
     result: list[dict[str, str | int | float]] = []
     for offset in range(days):
@@ -333,10 +294,7 @@ async def get_learning_heatmap(
 
 
 @router.get("/flame")
-async def get_flame_stats(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
+async def get_flame_stats(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """
     获取火花等级统计
     Get flame level statistics

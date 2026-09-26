@@ -1,24 +1,30 @@
-from datetime import UTC, datetime, timedelta
 import sys
 import types
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
 from sqlalchemy import select
 
-_gen_pkg = types.ModuleType("app.gen")
-_sparkle_pkg = types.ModuleType("app.gen.sparkle")
-_rag_pkg = types.ModuleType("app.gen.sparkle.rag")
-_rag_v1_pkg = types.ModuleType("app.gen.sparkle.rag.v1")
-_gen_pkg.__path__ = []
-_sparkle_pkg.__path__ = []
-_rag_pkg.__path__ = []
-_rag_v1_pkg.evidence_pb2 = types.SimpleNamespace()
-sys.modules.setdefault("app.gen", _gen_pkg)
-sys.modules.setdefault("app.gen.sparkle", _sparkle_pkg)
-sys.modules.setdefault("app.gen.sparkle.rag", _rag_pkg)
-sys.modules.setdefault("app.gen.sparkle.rag.v1", _rag_v1_pkg)
+# gen/sparkle 生成物在 canonical gen（主仓 cp -RL）已齐，优先用真模块；
+# 仅当环境缺 gen 时才兜底注入空 stub——无条件 setdefault 会以空 __path__
+# 毒化同进程后续所有 app.gen.sparkle.* 导入（V3-FIX-37 邻域实录）。
+try:
+    import app.gen.sparkle.rag.v1.evidence_pb2  # noqa: F401
+except ModuleNotFoundError:
+    _gen_pkg = types.ModuleType("app.gen")
+    _sparkle_pkg = types.ModuleType("app.gen.sparkle")
+    _rag_pkg = types.ModuleType("app.gen.sparkle.rag")
+    _rag_v1_pkg = types.ModuleType("app.gen.sparkle.rag.v1")
+    _gen_pkg.__path__ = []
+    _sparkle_pkg.__path__ = []
+    _rag_pkg.__path__ = []
+    _rag_v1_pkg.evidence_pb2 = types.SimpleNamespace()
+    sys.modules.setdefault("app.gen", _gen_pkg)
+    sys.modules.setdefault("app.gen.sparkle", _sparkle_pkg)
+    sys.modules.setdefault("app.gen.sparkle.rag", _rag_pkg)
+    sys.modules.setdefault("app.gen.sparkle.rag.v1", _rag_v1_pkg)
 
 from app.api.v1.plans import get_plan_progress
 from app.models.document_chunks import DocumentChunk
@@ -441,7 +447,9 @@ async def test_focus_guidance_uses_task_document_context_pool(db_session, monkey
     )
     await db_session.commit()
 
-    llm_call = AsyncMock(return_value="Based on your notes in OS.pdf, start by comparing the time quantum tradeoff on page 47.")
+    llm_call = AsyncMock(
+        return_value="Based on your notes in OS.pdf, start by comparing the time quantum tradeoff on page 47."
+    )
     monkeypatch.setattr("app.services.focus_service.focus_llm.call", llm_call)
 
     response = await FocusService.get_methodological_guidance(

@@ -15,6 +15,7 @@ from loguru import logger
 from sqlalchemy import desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import time_utils
 from app.core.event_bus import FocusSessionCompletedEvent, event_bus
 from app.models.focus import FocusSession, FocusStatus, FocusType
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
@@ -22,7 +23,7 @@ from app.models.plan import Plan
 from app.models.subject import Subject
 from app.models.task import Task
 from app.models.task_resources import TaskKnowledgeLink
-from app.models.user import User
+from app.models.user import PushPreference, User
 from app.services.cognitive.auto_fragment_collector import AutoFragmentCollector
 from app.services.focus_context_service import focus_context_service
 from app.services.llm_fallback_utils import focus_llm
@@ -44,6 +45,21 @@ class FocusService:
         if ts.tzinfo is None:
             return ts
         return ts.astimezone(datetime.UTC).replace(tzinfo=None)
+
+    @staticmethod
+    async def _local_today(db: AsyncSession, user_id: UUID) -> datetime.date:
+        """用户本地「今日」（date）——focus 统计窗口的对齐基准。
+
+        FocusSession.start_time 存客户端本地墙上时间 naive（mobile 发本地 ISO 串、
+        无时区后缀，V3-FIX-37 定界）→ 「今天/本周/本月/heatmap/streak」窗口必须
+        用同一墙钟的本地日界切；修前用 _utcnow() 的 naive-UTC 日界，UTC+8 本地
+        00:00–08:00 的会话被切进「昨天」，晨间专注被 heatmap 上界整段排除、
+        streak 误报 0。用户时区取 push_preference.timezone（缺省 Asia/Shanghai，
+        与 accountability 口径一致）——标量直查而非 ORM 关系：db.get 命中身份
+        映射时该关系可能未加载，async 下触发 lazy load 会炸。
+        """
+        tz_name = await db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+        return time_utils.local_date(_utcnow(), time_utils.valid_timezone_name(tz_name))
 
     @staticmethod
     async def log_session(
@@ -453,14 +469,16 @@ class FocusService:
 
     @staticmethod
     async def get_today_stats(db: AsyncSession, user_id: UUID) -> dict[str, Any]:
-        """Get focus stats for today"""
-        now = _utcnow()
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        """Get focus stats for today (user-local day; V3-FIX-37 墙钟对齐见 _local_today)"""
+        today = await FocusService._local_today(db, user_id)
+        today_start = time_utils.local_midnight_wall(today)
+        today_end = today_start + datetime.timedelta(days=1)
 
         # Total duration
         stmt_duration = select(func.sum(FocusSession.duration_minutes)).where(
             FocusSession.user_id == user_id,
             FocusSession.start_time >= today_start,
+            FocusSession.start_time < today_end,
             FocusSession.status == FocusStatus.COMPLETED,
         )
         result_duration = await db.execute(stmt_duration)
@@ -470,6 +488,7 @@ class FocusService:
         stmt_count = select(func.count(FocusSession.id)).where(
             FocusSession.user_id == user_id,
             FocusSession.start_time >= today_start,
+            FocusSession.start_time < today_end,
             FocusSession.status == FocusStatus.COMPLETED,
         )
         result_count = await db.execute(stmt_count)
@@ -578,9 +597,9 @@ class FocusService:
 
     @staticmethod
     async def get_weekly_stats(db: AsyncSession, user_id: UUID) -> dict[str, Any]:
-        """Get focus stats for the current week (Monday to Sunday)"""
-        now = _utcnow()
-        week_start = (now - datetime.timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+        """Get focus stats for the current week (Monday to Sunday, user-local; V3-FIX-37)"""
+        today = await FocusService._local_today(db, user_id)
+        week_start = time_utils.local_midnight_wall(today) - datetime.timedelta(days=today.weekday())
         week_end = week_start + datetime.timedelta(days=7)
 
         # Get all sessions for this week
@@ -639,16 +658,16 @@ class FocusService:
 
     @staticmethod
     async def get_monthly_stats(db: AsyncSession, user_id: UUID) -> dict[str, Any]:
-        """Get focus stats for the current month"""
-        now = _utcnow()
-        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        """Get focus stats for the current month (user-local; V3-FIX-37)"""
+        today = await FocusService._local_today(db, user_id)
+        month_start = time_utils.local_midnight_wall(today.replace(day=1))
 
         # Calculate first day of next month
-        if now.month == 12:
-            next_month = now.replace(year=now.year + 1, month=1, day=1)
+        if today.month == 12:
+            next_month = today.replace(year=today.year + 1, month=1, day=1)
         else:
-            next_month = now.replace(month=now.month + 1, day=1)
-        month_end = next_month
+            next_month = today.replace(month=today.month + 1, day=1)
+        month_end = time_utils.local_midnight_wall(next_month)
 
         # Get all sessions for this month
         stmt = (
@@ -755,9 +774,16 @@ class FocusService:
 
     @staticmethod
     async def get_heatmap_data(db: AsyncSession, user_id: UUID, days: int = 90) -> dict[str, float]:
-        """Get heatmap data for the last N days"""
-        end_date = _utcnow()
-        start_date = end_date - datetime.timedelta(days=days)
+        """Get heatmap data for the last N user-local days (inclusive of today; V3-FIX-37).
+
+        键 = FocusSession.start_time 的存储墙上日期（客户端本地日），窗口用同一
+        墙钟的本地零点切——mobile 以本地 ``DateTime.now()`` 日键取「今日」分钟，
+        两侧同钟后 today 查找才命中（修前 UTC 窗口上界把 UTC+8 晨间会话整段排除）。
+        """
+        today = await FocusService._local_today(db, user_id)
+        today_start = time_utils.local_midnight_wall(today)
+        start_date = today_start - datetime.timedelta(days=days - 1)
+        end_date = today_start + datetime.timedelta(days=1)
 
         stmt = select(FocusSession).where(
             FocusSession.user_id == user_id,
@@ -774,15 +800,15 @@ class FocusService:
             heatmap_data[date_key] = heatmap_data.get(date_key, 0.0) + session.duration_minutes
 
         if not heatmap_data:
-            heatmap_data[end_date.strftime("%Y-%m-%d")] = 0.0
+            heatmap_data[today.isoformat()] = 0.0
 
         return heatmap_data
 
     @staticmethod
     async def _calculate_current_streak(db: AsyncSession, user_id: UUID) -> int:
-        """Calculate current consecutive days streak"""
-        today = _utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-        check_date = today
+        """Calculate current consecutive days streak (user-local days; V3-FIX-37)"""
+        today = await FocusService._local_today(db, user_id)
+        check_date = time_utils.local_midnight_wall(today)
         streak = 0
 
         # Check up to 365 days back
@@ -806,7 +832,7 @@ class FocusService:
                 check_date = day_start - datetime.timedelta(days=1)
             else:
                 # If checking today and no sessions, check yesterday
-                if check_date == today:
+                if check_date.date() == today:
                     check_date = day_start - datetime.timedelta(days=1)
                     continue
                 break

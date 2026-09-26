@@ -1,9 +1,10 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+import app.api.v1.statistics as statistics_module
 from app.api.deps import get_current_user, get_db
 from app.api.v1.statistics import router as statistics_router
 from app.models.galaxy import KnowledgeNode, StudyRecord
@@ -35,6 +36,7 @@ def statistics_client(db_session):
 async def test_activity_heatmap_returns_90_days_with_learning_minutes_and_task_counts(
     statistics_client,
     db_session,
+    monkeypatch,
 ):
     client, state = statistics_client
 
@@ -61,9 +63,12 @@ async def test_activity_heatmap_returns_90_days_with_learning_minutes_and_task_c
     await db_session.refresh(node)
     await db_session.refresh(other_node)
 
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = datetime.now(UTC).replace(tzinfo=None)
     today_at_noon = now.replace(hour=12, minute=0, second=0, microsecond=0)
     yesterday_at_noon = today_at_noon - timedelta(days=1)
+    # V3-FIX-37 后 heatmap 日界=用户本地日；冻结时钟在 UTC 正午（上海同日），
+    # 使「本地今日 == UTC 今日」恒成立，用例与运行时刻解耦。
+    monkeypatch.setattr(statistics_module, "_utcnow", lambda: today_at_noon)
 
     linked_task = Task(
         user_id=user.id,
