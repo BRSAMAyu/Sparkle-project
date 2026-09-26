@@ -16,14 +16,16 @@ Four patch types supported (Phase 1):
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
 from loguru import logger
 from sqlalchemy import select
 
+from app.core.time_utils import local_date, utcnow, valid_timezone_name
 from app.models.task import Task, TaskStatus, TaskType
+from app.models.user import PushPreference
 from app.services.plan_state_service import PlanStateService
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
@@ -653,7 +655,13 @@ class PlanAdjustmentApplier:
         plan_id: UUID,
     ) -> list[Task]:
         """Fetch pending, uncompleted tasks due within the lookahead window."""
-        cutoff = date.today() + timedelta(days=LOOKAHEAD_DAYS)
+        # V3-FIX-233：窗口基准取用户本地日（修前 date.today() 是宿主机本地
+        # 日）。tz 沿 207/211/221 先例——PushPreference.timezone 标量直查，
+        # 缺省 Asia/Shanghai。
+        tz_name = valid_timezone_name(
+            await self.db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+        )
+        cutoff = local_date(utcnow(), tz_name) + timedelta(days=LOOKAHEAD_DAYS)
         stmt = (
             select(Task)
             .where(

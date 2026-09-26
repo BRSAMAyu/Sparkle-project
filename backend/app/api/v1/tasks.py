@@ -23,13 +23,14 @@ from app.api.deps import _zh, get_current_user
 from app.core.cache import cache_service
 from app.core.exceptions import NotFoundError
 from app.core.metrics import observe_product_loop_latency, record_product_loop_event
+from app.core.time_utils import local_date, utcnow, valid_timezone_name
 from app.db.session import get_db
 from app.models.file_storage import StoredFile
 from app.models.plan import Plan
 from app.models.task import Task, TaskStatus, TaskType
 from app.models.task_document import TaskDocument
 from app.models.task_resources import TaskResourceLink, TaskResourceType
-from app.models.user import User
+from app.models.user import PushPreference, User
 from app.schemas.task import (
     SubTaskDetail,
     TaskAbandon,
@@ -244,7 +245,13 @@ async def _find_today_focus_task(
     user_id: UUID,
     exclude_task_id: UUID,
 ) -> Task | None:
-    today = date.today()
+    # V3-FIX-233：「今日」取用户本地日（修前 date.today() 是宿主机本地日，
+    # 直切墙上语义 due_date）。tz 沿 207/211/221 先例——PushPreference
+    # .timezone 标量直查，缺省 Asia/Shanghai。
+    tz_name = valid_timezone_name(
+        await db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+    )
+    today = local_date(utcnow(), tz_name)
     result = await db.execute(
         select(Task)
         .where(

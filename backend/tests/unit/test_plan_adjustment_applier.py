@@ -67,6 +67,11 @@ def _make_applier(
     redis = MagicMock()
     applier = PlanAdjustmentApplier(db, redis)
 
+    # --- tz 通道 mock（V3-FIX-233：_fetch_upcoming_tasks 增 PushPreference
+    # .timezone 标量直查；None → valid_timezone_name 缺省 Asia/Shanghai，
+    # 与旧 +8h 行为一致）---
+    db.scalar = AsyncMock(return_value=None)
+
     # --- plan state mock ---
     plan_state = MagicMock()
     plan_state.facts = facts or {}

@@ -25,13 +25,14 @@ from app.core.cache import cache_service
 from app.core.event_bus import event_bus
 from app.core.exceptions import QuotaExceededError
 from app.core.request_coalescing import notify_read_view_invalidated
+from app.core.time_utils import DEFAULT_USER_TIMEZONE, local_date, utcnow, valid_timezone_name
 from app.db.session import get_db
 from app.models.card_protocol import ArtifactType
 from app.models.focus import FocusSession, FocusStatus
 from app.models.plan import Plan, PlanType
 from app.models.plan_state import PlanStateStatus
 from app.models.task import Task, TaskStatus
-from app.models.user import User
+from app.models.user import PushPreference, User
 from app.orchestration.discovery_manager import (
     PHASE_DESIGN_WORKFLOW_STATE,
     PHASE_SKETCH_REVIEW_WORKFLOW_STATE,
@@ -147,6 +148,14 @@ def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+async def _user_local_today(db: AsyncSession, user_id: UUID) -> date:
+    """V3-FIX-233：用户本地日（PushPreference.timezone 标量直查，缺省主市场）。"""
+    tz_name = valid_timezone_name(
+        await db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+    )
+    return local_date(utcnow(), tz_name)
+
+
 def _plan_display_name(plan: Plan) -> str:
     """WT337：plan.name 展示名——「TOUR 冲刺 {run}」token 名按创建日兜底
     「冲刺计划·M月D日」（name 是列表/详情主标题，无「无名词」文案链可回退）；
@@ -162,6 +171,7 @@ def _serialize_plan(
     tasks: list[Task] | None = None,
     user_display_name: str | None = None,
     health: dict[str, Any] | None = None,
+    today: date | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "id": plan.id,
@@ -202,6 +212,7 @@ def _serialize_plan(
             task_payloads=task_payloads,
             user_display_name=user_display_name,
             tasks=list(tasks),
+            today=today,
         )
     return payload
 
@@ -370,19 +381,24 @@ def _build_day_recommendation(
     return f"{name_prefix}今天先看 Day {day} 的{thing_label}，把节奏稳稳接上。"
 
 
-def _derived_today_day(plan: Plan, tasks: list[Task], pending_payload_days: list[int]) -> int:
+def _derived_today_day(
+    plan: Plan, tasks: list[Task], pending_payload_days: list[int], today: date | None = None
+) -> int:
     """以 plan 开始日 + 今天推「当天」日次（日期感知核心）。
 
     与 `_today_day_index`（/today 端点用）同源但**不做 max_task_day 截断**：
     超期回归者按日历真实推到日程之外（如 7 天计划拖到第 9 天），
     让 `_build_day_highlights` 的降级逻辑接管，而不是把日程最后一天冒充今天。
+
+    V3-FIX-233：today 增形参（有 tz 通路的调用方显式传入用户本地日），
+    缺省回落主市场本地日（修前 date.today() 是宿主机钟）。
     """
     if plan.target_date is None:
         # 无终点计划：当天 = 第一个未完成日（与 /today 无终点分支同语义）；
         # 全部完成时呈现最后一个任务日。
         return pending_payload_days[0] if pending_payload_days else 1
     initial_days = _initial_days_for_today(plan, tasks)
-    days_left = max((plan.target_date - date.today()).days, 0)
+    days_left = max((plan.target_date - (today or local_date(utcnow(), DEFAULT_USER_TIMEZONE))).days, 0)
     return max(initial_days - days_left + 1, 1)
 
 
@@ -392,6 +408,7 @@ def _build_day_highlights(
     task_payloads: list[dict[str, Any]],
     user_display_name: str | None,
     tasks: list[Task] | None = None,
+    today: date | None = None,
 ) -> dict[str, Any] | None:
     if not task_payloads:
         return None
@@ -405,7 +422,7 @@ def _build_day_highlights(
     # 当天无未完成任务时诚实降级（接上第一个未完成日 / 呈现完成事实），
     # 不再恒推 Day 1、不冒充"今天"（wt303 J-07 审计的双端陈旧建议根因）。
     pending_days = sorted(day for day, payloads in day_groups.items() if any(_payload_is_pending(p) for p in payloads))
-    today_day = _derived_today_day(plan, tasks or [], pending_days)
+    today_day = _derived_today_day(plan, tasks or [], pending_days, today)
 
     today_group = day_groups.get(today_day)
     if today_group is not None and any(_payload_is_pending(p) for p in today_group):
@@ -486,7 +503,7 @@ def _initial_days_for_today(plan: Plan, tasks: list[Task]) -> int:
     return max((_task_day_from_model(task) for task in tasks), default=1)
 
 
-def _today_day_index(plan: Plan, tasks: list[Task]) -> int:
+def _today_day_index(plan: Plan, tasks: list[Task], today: date | None = None) -> int:
     initial_days = _initial_days_for_today(plan, tasks)
     max_task_day = max((_task_day_from_model(task) for task in tasks), default=initial_days)
     if plan.target_date is None:
@@ -496,7 +513,8 @@ def _today_day_index(plan: Plan, tasks: list[Task]) -> int:
             if getattr(task.status, "value", task.status) != TaskStatus.COMPLETED.value
         ]
         return min(pending_days) if pending_days else max(1, max_task_day)
-    days_left = max((plan.target_date - date.today()).days, 0)
+    # V3-FIX-233：缺省回落主市场本地日（修前 date.today() 是宿主机钟）。
+    days_left = max((plan.target_date - (today or local_date(utcnow(), DEFAULT_USER_TIMEZONE))).days, 0)
     derived = max(initial_days - days_left + 1, 1)
     return min(derived, max(max_task_day, 1))
 
@@ -963,7 +981,8 @@ async def get_plan_today(
         .order_by(Task.order_index.asc(), Task.created_at.asc())
     )
     tasks = list(tasks_result.scalars().all())
-    today_day = _today_day_index(plan, tasks)
+    # V3-FIX-233：day 游标「今天」用用户本地日（端点有 db 通路，显式传入）。
+    today_day = _today_day_index(plan, tasks, today=await _user_local_today(db, current_user.id))
     today_tasks = [
         task
         for task in tasks
@@ -1076,6 +1095,8 @@ async def get_plan(
             user_id=current_user.id,
             plan_id=plan.id,
         ),
+        # V3-FIX-233：day_highlights 游标「今天」用用户本地日（显式传入）。
+        today=await _user_local_today(db, current_user.id),
     )
 
 

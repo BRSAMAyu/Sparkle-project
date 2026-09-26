@@ -9,10 +9,12 @@ from sqlalchemy import and_, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import CacheService, cache_service
+from app.core.time_utils import local_date, utcnow, valid_timezone_name
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.plan import Plan
 from app.models.plan_state import PlanState, PlanStateStatus
 from app.models.task import Task, TaskStatus, TaskType
+from app.models.user import PushPreference
 from app.services.daily_task_selection_service import DailyTaskSelectionService
 
 
@@ -100,7 +102,13 @@ class TaskPriorityService:
         task, plan, plan_state = await self._load_task_context(user_id=user_id, task_id=task_id)
         selector = DailyTaskSelectionService(self.db, self.redis)
         aurora = await selector._load_aurora_energy(user_id)
-        today = date.today()
+        # V3-FIX-233：「今日」取用户本地日（修前 date.today() 是宿主机本地
+        # 日，既非 UTC 亦非用户时区）。tz 沿 207/211/221 先例——
+        # PushPreference.timezone 标量直查，缺省 Asia/Shanghai。
+        tz_name = valid_timezone_name(
+            await self.db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+        )
+        today = local_date(utcnow(), tz_name)
         selected = DailyTaskSelectionService.score_candidate(
             task,
             plan=plan,
@@ -118,6 +126,7 @@ class TaskPriorityService:
             ranking_signals=selected.signals,
             aurora=aurora,
             today=today,
+            tz_name=tz_name,
         )
         alternatives = await self._build_alternative_options(
             user_id=user_id,
@@ -139,6 +148,7 @@ class TaskPriorityService:
                 node=node,
                 node_status=node_status,
                 today=today,
+                tz_name=tz_name,
             ),
             supporting_signals=signals,
             alternative_options_skipped=alternatives,
@@ -206,12 +216,13 @@ class TaskPriorityService:
         ranking_signals: dict[str, Any],
         aurora: dict[str, Any],
         today: date,
+        tz_name: str,
     ) -> list[PrioritySignal]:
         raw_signals = [
             (
                 "spaced_repetition",
                 self._spaced_repetition_raw_score(task, node, node_status, ranking_signals),
-                self._spaced_repetition_detail(task, node, node_status, today),
+                self._spaced_repetition_detail(task, node, node_status, today, tz_name),
             ),
             (
                 "goal_progress",
@@ -357,11 +368,14 @@ class TaskPriorityService:
         node: KnowledgeNode | None,
         node_status: UserNodeStatus | None,
         today: date,
+        tz_name: str,
     ) -> str:
         if node is not None:
             mastery = f"{float(node_status.mastery_score or 0.0):.0f}%" if node_status is not None else "unknown"
             if node_status is not None and node_status.next_review_at is not None:
-                days = (node_status.next_review_at.date() - today).days
+                # V3-FIX-233：next_review_at 是 UTC 存储列，比本地日先换算
+                # （221 _as_local_date 同款，两侧同钟）。
+                days = (local_date(node_status.next_review_at, tz_name) - today).days
                 if days <= 0:
                     return f"{node.name} is due for spaced repetition; current mastery is {mastery}."
                 return f"{node.name} is linked to this task; next review window opens in {days} days."
@@ -424,9 +438,11 @@ class TaskPriorityService:
         node: KnowledgeNode | None,
         node_status: UserNodeStatus | None,
         today: date,
+        tz_name: str,
     ) -> str:
         if node is not None and node_status is not None and node_status.next_review_at is not None:
-            if node_status.next_review_at.date() <= today:
+            # V3-FIX-233：next_review_at 是 UTC 存储列，比本地日先换算。
+            if local_date(node_status.next_review_at, tz_name) <= today:
                 return f"{node.name} is due for spaced repetition today."
         if task.due_date is not None and task.due_date <= today:
             return f"{task.title} is time-sensitive for today."

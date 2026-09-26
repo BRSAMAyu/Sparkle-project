@@ -10,10 +10,12 @@ from uuid import UUID
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.time_utils import DEFAULT_USER_TIMEZONE, local_date, utcnow, valid_timezone_name
 from app.models.achievement import UserStreakStats
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.plan import Plan, PlanType
 from app.models.task import Task, TaskStatus
+from app.models.user import PushPreference
 from app.models.user_preferences import UserPreferencesCenter
 from app.schemas.exam_sprint import (
     ExamSprintDashboardProgress,
@@ -53,7 +55,13 @@ class ExamSprintDashboardService:
 
         tasks = await self._list_plan_tasks(plan.id)
         initial_days_left = self._derive_initial_days_left(plan=plan, goal_model=goal_model, tasks=tasks)
-        days_left = self._days_left(plan.target_date, fallback=initial_days_left)
+        # V3-FIX-233：「今日」取用户本地日（修前 date.today() 是宿主机钟，
+        # daily_task_selection._plan_current_day 沿其约定）。tz 沿 207/211/221
+        # 先例——PushPreference.timezone 标量直查，缺省 Asia/Shanghai。
+        tz_name = valid_timezone_name(
+            await self.db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == user_id))
+        )
+        days_left = self._days_left(plan.target_date, fallback=initial_days_left, today=local_date(utcnow(), tz_name))
         current_day_index = self._current_day_index(
             initial_days_left=initial_days_left,
             days_left=days_left,
@@ -369,10 +377,13 @@ class ExamSprintDashboardService:
         derived = max(initial_days_left - days_left + 1, 1)
         return min(derived, max(max_task_day, 1))
 
-    def _days_left(self, target_date: date | None, *, fallback: int) -> int:
+    def _days_left(self, target_date: date | None, *, fallback: int, today: date | None = None) -> int:
+        # V3-FIX-233：today 增形参（get_dashboard 有 db 通路显式传用户本地
+        # 日），缺省回落主市场本地日（修前 date.today() 是宿主机钟）。
+        today = today or local_date(utcnow(), DEFAULT_USER_TIMEZONE)
         if target_date is None:
             return max(fallback, 0)
-        return max((target_date - date.today()).days, 0)
+        return max((target_date - today).days, 0)
 
     def _task_group_date(
         self,

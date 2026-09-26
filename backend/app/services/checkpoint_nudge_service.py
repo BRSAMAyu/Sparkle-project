@@ -21,9 +21,11 @@ from app.aurora.runtime_v1 import (
     build_aurora_surface_metadata,
 )
 from app.aurora.runtime_v1.models import AuroraStateSnapshot
+from app.core.time_utils import DEFAULT_USER_TIMEZONE, local_date, utcnow, valid_timezone_name
 from app.models.chat import ChatMessage, ChatSession, MessageRole
 from app.models.plan import Plan
 from app.models.task import Task, TaskStatus
+from app.models.user import PushPreference
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
 
 CHECKPOINT_TRIGGER_TTL_SECONDS = 7 * 24 * 60 * 60
@@ -290,8 +292,18 @@ class CheckpointNudgeService:
         completed_tasks = [task for task in tasks if task.status == TaskStatus.COMPLETED]
         pending_tasks = [task for task in tasks if task.status != TaskStatus.COMPLETED]
         completion_rate = (len(completed_tasks) / total_tasks) if total_tasks else float(plan.progress or 0.0)
-        expected_rate = self._expected_completion_rate(plan=plan, checkpoint_day=checkpoint_day, tasks=tasks)
-        lagging_tasks = self._lagging_tasks(tasks=tasks, checkpoint_day=checkpoint_day)
+        # V3-FIX-233（行为变化点）：tz 沿 207/211/221 先例——PushPreference
+        # .timezone 解析（缺省 Asia/Shanghai），_lagging_tasks 的「今日」与
+        # _plan_total_days 的 created_at 起始日由硬编码 +8h 偏移切真实 tz
+        # （Asia/Shanghai 用户逐位不变；其他时区用户 lagging/expected 语义
+        # 随真实时区修正）。
+        tz_name = valid_timezone_name(
+            await self.db.scalar(select(PushPreference.timezone).where(PushPreference.user_id == plan.user_id))
+        )
+        expected_rate = self._expected_completion_rate(
+            plan=plan, checkpoint_day=checkpoint_day, tasks=tasks, tz_name=tz_name
+        )
+        lagging_tasks = self._lagging_tasks(tasks=tasks, checkpoint_day=checkpoint_day, tz_name=tz_name)
         if not lagging_tasks and completion_rate < expected_rate:
             lagging_tasks = pending_tasks[:5]
         lagging_domains = self._task_domains(lagging_tasks)
@@ -726,20 +738,36 @@ class CheckpointNudgeService:
                 return text
         return fallback
 
-    def _expected_completion_rate(self, *, plan: Plan, checkpoint_day: int, tasks: list[Task]) -> float:
-        total_days = self._plan_total_days(plan=plan, tasks=tasks)
+    def _expected_completion_rate(
+        self, *, plan: Plan, checkpoint_day: int, tasks: list[Task], tz_name: str = DEFAULT_USER_TIMEZONE
+    ) -> float:
+        total_days = self._plan_total_days(plan=plan, tasks=tasks, tz_name=tz_name)
         if total_days <= 0:
             return min(1.0, max(0.0, float(plan.progress or 0.0)))
         return min(1.0, max(0.0, checkpoint_day / total_days))
 
-    def _plan_total_days(self, *, plan: Plan, tasks: list[Task]) -> int:
+    def _plan_total_days(
+        self, *, plan: Plan, tasks: list[Task], tz_name: str = DEFAULT_USER_TIMEZONE
+    ) -> int:
         if plan.created_at and plan.target_date:
-            local_start = (plan.created_at.replace(tzinfo=UTC) + timedelta(hours=8)).date()
+            # V3-FIX-233（行为变化点）：created_at 是 UTC 存储列，起始日按
+            # 用户 tz 换算（修前硬编码 +8h 偏移，非 push_preference 口径）。
+            local_start = local_date(plan.created_at, tz_name)
             return max(1, (plan.target_date - local_start).days + 1)
         phase_indices = [int(task.phase_index) for task in tasks if task.phase_index is not None]
         return max(phase_indices, default=1)
 
-    def _lagging_tasks(self, *, tasks: list[Task], checkpoint_day: int) -> list[Task]:
+    def _lagging_tasks(
+        self,
+        *,
+        tasks: list[Task],
+        checkpoint_day: int,
+        tz_name: str = DEFAULT_USER_TIMEZONE,
+        today: date | None = None,
+    ) -> list[Task]:
+        # V3-FIX-233（行为变化点）：「今日」按用户 tz 解析（修前硬编码
+        # now+8h 偏移，非 push_preference 口径，非 +8 用户错切）。
+        today = today or local_date(utcnow(), tz_name)
         lagging: list[Task] = []
         for task in tasks:
             if task.status == TaskStatus.COMPLETED:
@@ -747,7 +775,7 @@ class CheckpointNudgeService:
             if task.phase_index is not None and int(task.phase_index) <= checkpoint_day:
                 lagging.append(task)
                 continue
-            if task.due_date is not None and task.due_date <= (datetime.now(UTC) + timedelta(hours=8)).date():
+            if task.due_date is not None and task.due_date <= today:
                 lagging.append(task)
         return lagging
 
