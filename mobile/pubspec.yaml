@@ -111,6 +111,10 @@ dev_dependencies:
     sdk: flutter
   # Q-03 visual QA：widget test 静音 audioplayers（audioplayers 的平台接口层）
   audioplayers_platform_interface: ^7.1.1
+  # focus_save_r2_03_test 直接 mock ConnectivityPlatform.instance（connectivity_plus
+  # 仅 re-export ConnectivityResult，不含平台接口本体），显式声明 dev 依赖消
+  # DEPEND_ON_REFERENCED_PACKAGES；版本与 pubspec.lock 既有传递解析一致
+  connectivity_plus_platform_interface: ^2.0.1
 
   # Code Generation
   build_runner: ^2.4.7
