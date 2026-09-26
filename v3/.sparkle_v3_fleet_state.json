@@ -5,10 +5,10 @@
  "slots": 6,
  "active": {
   "wt544": "FIX-258 demo 落库 origin 标记（迁移+写侧+记忆推断过滤）@a9fb6360",
-  "wt547": "mypy 批五烧减 684→≤649（含同文件全套件验证矩阵纪律）@7f466be5",
   "wt548": "ENUM-PARITY 扩表（~75 候选三分类判定 dual/passthrough/backend-only）@d79354e9",
   "wt549": "CASCADE 保留族第一刀（限 test/ 纯等价子集，串行自证）@ff6df0ee",
-  "wt551": "union-merge 工具固化（吞行缺陷根修+撞号 --renumber 辅助+pytest）@6806297a"
+  "wt551": "union-merge 工具固化（吞行缺陷根修+撞号 --renumber 辅助+pytest）@6806297a",
+  "wt552": "mypy 批六烧减 642→≤607@1dd4d401"
  },
  "done": [
   "A-01",
@@ -549,7 +549,8 @@
   "wt539",
   "wt546",
   "wt545",
-  "wt550"
+  "wt550",
+  "wt547"
  ],
  "blocked": [],
  "notes": [
@@ -687,6 +688,7 @@
   "2026-09-27 02:5x 轮：wt546 analyze 批四集成完毕（10a36e97+e87b9dab，266 行直落无撞号；**诚实缺口披露采纳**：412→409 仅 3 条真修+409 条全为批三保留族的可烧面普查实证——烧减面已尽；其台账误替换 265 行事故已复核恢复完好（集成侧 grep 265/266 双行在）；gate PASS 409+触达 79 绿，树清）——DEPEND_ON_REFERENCED_PACKAGES 3→0 清零。协调者授权保留族分层拆解第一刀：wt549=CASCADE 限 test/ 纯等价子集（判例：chat_notifier cascade 转换先例；lib/ 面留第二批评估）。CI Backend Tests 仍在航（~170min，30min 卡死处置窗剩余 ~15min）。三问：在航 5 槽（wt544/545/547/548/549）；空槽 0；下一卡=CI 卡死处置或裁决→day6 晨门栈升级。",
   "2026-09-27 03:1x 轮：wt545 l10n 批六集成完毕（346e15f9+e45b0732，union-merge 265→267 重编号第 17 次撞号；gate PASS 409+smoke 12 绿，树清）——**l10n 收割主体完成**：singles 长尾 297/308（11 键前缀碰撞留池宁漏勿错），六批累计 1237 键 ~-31400 行；FIX-246 en-only 孤儿销账；剩余 60=visual30/aurora19 冻结（随 182 闸）+11 留池。210 行维持 OPEN（冻结区释出前不销）。wt550 立即补位=267 陈旧镜像处置（批六新发现：i18n_batch_replace.py 引 10 死键，顺收 214 同病灶）。CI Backend Tests 仍在航（Python 全量步骤在跑非挂起，~03:30 仍无结论则拉步骤日志尾部定位）。三问：在航 5 槽（wt544/547/548/549/550）；空槽 0；下一卡=CI 裁决→day6 晨门栈升级（08:00）→l10n 210 收池评估（冻结区与 182 联动）。",
   "2026-09-27 03:3x 轮：wt550 FIX-267 集成完毕（ef4957f7+19d6d2c9 零冲突；脚本删除实证文件不存在+台账 FIXED 行在+i18n 触达由其树内 13 绿背书，树清）——陈旧镜像删除裁决（耗尽性/危险性（死键实为 19 个）/零消费面三点依据），214 核查已在册闭账零动作。wt551 立即补位=**union-merge 工具固化**（本窗 17 次撞号+4 次吞行事故的根修：devtools 固化+状态进化算法替代长度启发+--renumber+--check 吞行检测+pytest——还清舰队自身管线债）。CI Backend Tests 仍在航（Python 全量步骤在跑非挂起，~03:30 仍无结论则拉步骤日志尾部定位）。三问：在航 5 槽（wt544/547/548/549/551）；空槽 0；下一卡=CI 裁决→day6 晨门栈升级（08:00）。",
-  "2026-09-27 00:49 唤醒轮（时间线校准：实际 00:49，此前部分 notes 的 02:xx/03:xx 为估算误差；day6 门余量 7h）：例行全绿（盘 2G 盯防——阈值 1.2G 若破 flutter 批等待；swap 15.9G/load 3.0 五 agent 并行正常；3 容器/双端健康/5 worktree=5 agent/本地领先 37 commit）。CI run 36253679384 在航 52min（Python 步骤 ~40min）——历史区间内正常，时间线恐慌解除（此前两轮把本地墙钟当 UTC 对比连续误报超时）。三问：在航 5 槽（wt544 FIX-258/wt547 mypy 批五/wt548 守卫扩表/wt549 CASCADE 第一刀/wt551 union-merge 根修）；空槽 0；下一卡=CI 裁决（预期 ~30min 内）→若绿史首全绿+随推 37 commit→day6 晨门栈升级（07:40 起手）。"
+  "2026-09-27 00:49 唤醒轮（时间线校准：实际 00:49，此前部分 notes 的 02:xx/03:xx 为估算误差；day6 门余量 7h）：例行全绿（盘 2G 盯防——阈值 1.2G 若破 flutter 批等待；swap 15.9G/load 3.0 五 agent 并行正常；3 容器/双端健康/5 worktree=5 agent/本地领先 37 commit）。CI run 36253679384 在航 52min（Python 步骤 ~40min）——历史区间内正常，时间线恐慌解除（此前两轮把本地墙钟当 UTC 对比连续误报超时）。三问：在航 5 槽（wt544 FIX-258/wt547 mypy 批五/wt548 守卫扩表/wt549 CASCADE 第一刀/wt551 union-merge 根修）；空槽 0；下一卡=CI 裁决（预期 ~30min 内）→若绿史首全绿+随推 37 commit→day6 晨门栈升级（07:40 起手）。",
+  "2026-09-27 01:0x 轮：wt547 mypy 批五集成完毕（cc8f18c5+0c7c3849，union-merge 266→268 重编号第 18 次撞号；合并态 ratchet 642=642+spine 960 绿抽验，树清）——684→642（-42 四族：spine_metrics Optional+TypedDict/rec-feedback 真值守卫/feedback_learning 契约键/achievement_engine 协程契约），mypy 今日累计 922→642（-280）。其报告的 photon 3 例既有失败（stash 基线可复现，wt539 亦见）——本地红 CI 待裁决：若在航 run Python 步骤过则为 .env 族本地假红，若红则 62-commit 栈内有真回归需定位（两 agent 均在 7f466be5 后基线复现，早于该栈的 4a25235e CI 曾全绿）。wt552 立即补位=mypy 批六（642→≤607）。三问：在航 5 槽（wt544/548/549/551/552）；空槽 0；下一卡=CI 裁决→day6 晨门栈升级。"
  ]
 }
