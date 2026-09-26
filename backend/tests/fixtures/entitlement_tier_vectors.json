@@ -1,0 +1,77 @@
+{
+  "anchor": "v3/06_agent_fleet/B06_ENTITY_TRUTH_BASELINE.md §2.2-4（观察：entitlement 判级语义双实现，注释互认无跨语言等价守卫）+ §4 建议 5",
+  "frozen_decision": "V3-FIX-02 / D17（users.entitlement 唯一权益真源，flame 永久禁作判据）+ D-REDEEM（users.entitlement_expires_at，NULL = 永久，宁降不升）",
+  "contract": {
+    "python_side": [
+      "backend/app/core/entitlement.py normalize_entitlement / entitlement_grants_pro（无 expiry 面）",
+      "backend/app/core/entitlement.py entitlement_effective / entitlement_effective_grants_pro（到期面）"
+    ],
+    "go_side": [
+      "backend/gateway/internal/service/user_context.go IsProEntitlement（无 expiry 面）",
+      "backend/gateway/internal/service/user_context.go IsProEntitlementEffective（到期面）"
+    ],
+    "equivalence": "expected_no_expiry=='pro' ⟺ normalize_entitlement(raw)=='pro' ⟺ IsProEntitlement(raw)；expected_effective=='pro' ⟺ entitlement_effective(raw, expires_at)=='pro' ⟺ IsProEntitlementEffective(raw, expiresAt)",
+    "value_domain": "存储值 'free' | 'pro'；未知/缺失/空白/值域外一律降级 'free'（宁降不升，成本 fail-safe）",
+    "expiry_semantics": "expires_at NULL = 永久；判级 = expiry > now 严格大于（相等即降 free，降级方向恒 pro→free）",
+    "sync_rule": "两侧任一判级实现改动必须同卡同步另一侧并更新本向量文件（两侧注释互认锚点：entitlement.py 模块 docstring / user_context.go IsProEntitlementEffective 注释）",
+    "consumers": {
+      "python": "backend/tests/unit/test_b06_entitlement_tier_parity.py",
+      "go": "backend/gateway/internal/service/entitlement_tier_parity_test.go"
+    },
+    "sections": {
+      "cases": "双端共享向量（Go 调用面内：raw 为 string、now 取真实时钟，故到期只用远过去/远未来绝对时刻，含偏移量形式各一）",
+      "python_only_cases": "Python 调用面独有能力，Go 侧不消费：raw=null/0/false（normalize 的 object|None 假值坍缩面，Go string 无 null）、expires_at==now 精确边界与 1µs 邻域（Go IsProEntitlementEffective 内取 time.Now() 无注入钟）、tz-aware/naive expiry 的 ensure_naive_utc 归一语义"
+    }
+  },
+  "cases": [
+    { "id": "N01", "raw": "free", "expires_at": null, "expected_no_expiry": "free", "expected_effective": "free", "note": "存储值典型值 free" },
+    { "id": "N02", "raw": "pro", "expires_at": null, "expected_no_expiry": "pro", "expected_effective": "pro", "note": "存储值典型值 pro" },
+    { "id": "N03", "raw": "PRO", "expires_at": null, "expected_no_expiry": "pro", "expected_effective": "pro", "note": "全大写归一（Python lower / Go EqualFold）" },
+    { "id": "N04", "raw": "Pro", "expires_at": null, "expected_no_expiry": "pro", "expected_effective": "pro", "note": "首字母大写" },
+    { "id": "N05", "raw": "pRo", "expires_at": null, "expected_no_expiry": "pro", "expected_effective": "pro", "note": "混合大小写" },
+    { "id": "N06", "raw": " pro", "expires_at": null, "expected_no_expiry": "pro", "expected_effective": "pro", "note": "前导空格 strip" },
+    { "id": "N07", "raw": "pro ", "expires_at": null, "expected_no_expiry": "pro", "expected_effective": "pro", "note": "尾随空格 strip" },
+    { "id": "N08", "raw": "  PRO  ", "expires_at": null, "expected_no_expiry": "pro", "expected_effective": "pro", "note": "两侧空格 strip+大小写" },
+    { "id": "N09", "raw": "\tPro\n", "expires_at": null, "expected_no_expiry": "pro", "expected_effective": "pro", "note": "制表/换行 strip（两侧空白定义一致）" },
+    { "id": "N10", "raw": "\u00a0PRO\u00a0", "expires_at": null, "expected_no_expiry": "pro", "expected_effective": "pro", "note": "NBSP U+00A0 两侧同判空白被剥（Python str.isspace / Go unicode.IsSpace 均含 U+00A0）" },
+    { "id": "N11", "raw": "\u200bpro", "expires_at": null, "expected_no_expiry": "free", "expected_effective": "free", "note": "零宽空格 U+200B 两侧均非空白不剥（Python str.isspace / Go unicode.IsSpace 均不含）→ 非精确等于 pro" },
+    { "id": "N12", "raw": "", "expires_at": null, "expected_no_expiry": "free", "expected_effective": "free", "note": "空串缺失降 free" },
+    { "id": "N13", "raw": "   ", "expires_at": null, "expected_no_expiry": "free", "expected_effective": "free", "note": "纯空白降 free" },
+    { "id": "N14", "raw": "premium", "expires_at": null, "expected_no_expiry": "free", "expected_effective": "free", "note": "值域外典型（历史 premium 不得入列）宁降不升" },
+    { "id": "N15", "raw": "paid", "expires_at": null, "expected_no_expiry": "free", "expected_effective": "free", "note": "值域外" },
+    { "id": "N16", "raw": "enterprise", "expires_at": null, "expected_no_expiry": "free", "expected_effective": "free", "note": "值域外" },
+    { "id": "N17", "raw": "pro free", "expires_at": null, "expected_no_expiry": "free", "expected_effective": "free", "note": "含空格非精确等于" },
+    { "id": "N18", "raw": "freepro", "expires_at": null, "expected_no_expiry": "free", "expected_effective": "free", "note": "拼接非精确等于" },
+    { "id": "N19", "raw": "0", "expires_at": null, "expected_no_expiry": "free", "expected_effective": "free", "note": "字符串 0 非假值坍缩面（有内容）仍 free" },
+    { "id": "N20", "raw": "true", "expires_at": null, "expected_no_expiry": "free", "expected_effective": "free", "note": "字符串 true 非 pro" },
+    { "id": "N21", "raw": "ＰＲＯ", "expires_at": null, "expected_no_expiry": "free", "expected_effective": "free", "note": "全角 ＰＲＯ 两侧均不折叠到 ASCII pro（fold orbit 不相交）" },
+    { "id": "N22", "raw": "pro\t", "expires_at": null, "expected_no_expiry": "pro", "expected_effective": "pro", "note": "尾制表 strip" },
+    { "id": "N23", "raw": "\npro", "expires_at": null, "expected_no_expiry": "pro", "expected_effective": "pro", "note": "前换行 strip" },
+    { "id": "N24", "raw": "pro\u00ad", "expires_at": null, "expected_no_expiry": "free", "expected_effective": "free", "note": "软连字符 U+00AD 两侧均非空白不剥" },
+    { "id": "N25", "raw": "pr\u043e", "expires_at": null, "expected_no_expiry": "free", "expected_effective": "free", "note": "同形异码 Cyrillic о（U+043E）两侧均不折叠到 ASCII o" },
+    { "id": "E01", "raw": "pro", "expires_at": null, "expected_no_expiry": "pro", "expected_effective": "pro", "note": "永久 pro（D-REDEEM：NULL = 永久，存量授予不受影响）" },
+    { "id": "E02", "raw": "pro", "expires_at": "2000-01-01T00:00:00Z", "expected_no_expiry": "pro", "expected_effective": "free", "note": "已过到期降 free（宁降不升）" },
+    { "id": "E03", "raw": "pro", "expires_at": "2099-01-01T00:00:00Z", "expected_no_expiry": "pro", "expected_effective": "pro", "note": "远未来到期仍 pro" },
+    { "id": "E04", "raw": "pro", "expires_at": "1970-01-01T00:00:00Z", "expected_no_expiry": "pro", "expected_effective": "free", "note": "epoch 远过去降 free" },
+    { "id": "E05", "raw": " PRO ", "expires_at": "2099-01-01T00:00:00Z", "expected_no_expiry": "pro", "expected_effective": "pro", "note": "归一面与到期面正交：归一 pro + 未到期 = pro" },
+    { "id": "E06", "raw": "Pro", "expires_at": "2000-01-01T00:00:00Z", "expected_no_expiry": "pro", "expected_effective": "free", "note": "归一 pro + 已到期 = free" },
+    { "id": "E07", "raw": "free", "expires_at": "2099-01-01T00:00:00Z", "expected_no_expiry": "free", "expected_effective": "free", "note": "free 永不因到期升 pro" },
+    { "id": "E08", "raw": "free", "expires_at": "2000-01-01T00:00:00Z", "expected_no_expiry": "free", "expected_effective": "free", "note": "free+过期双降" },
+    { "id": "E09", "raw": "", "expires_at": null, "expected_no_expiry": "free", "expected_effective": "free", "note": "空串+永久" },
+    { "id": "E10", "raw": "premium", "expires_at": "2099-01-01T00:00:00Z", "expected_no_expiry": "free", "expected_effective": "free", "note": "值域外+未到期仍 free（先归一后到期）" },
+    { "id": "E11", "raw": "pro", "expires_at": "2030-01-01T08:00:00+08:00", "expected_no_expiry": "pro", "expected_effective": "pro", "note": "偏移量形式（=2030-01-01T00:00:00Z，未来）两侧同按绝对瞬间判" },
+    { "id": "E12", "raw": "pro", "expires_at": "2020-06-30T14:00:00+08:00", "expected_no_expiry": "pro", "expected_effective": "free", "note": "偏移量形式（=2020-06-30T06:00:00Z，过去）降 free" },
+    { "id": "E13", "raw": "\tpro\t", "expires_at": "2099-01-01T00:00:00Z", "expected_no_expiry": "pro", "expected_effective": "pro", "note": "strip+到期组合" }
+  ],
+  "python_only_cases": [
+    { "id": "P01", "raw": null, "expires_at": null, "now": null, "expected_no_expiry": "free", "expected_effective": "free", "note": "normalize 的 object|None 缺失面 → free（Go string 无 null 面）" },
+    { "id": "P02", "raw": 0, "expires_at": null, "now": null, "expected_no_expiry": "free", "expected_effective": "free", "note": "raw or \"\" 假值坍缩：数字 0 → \"\" → free" },
+    { "id": "P03", "raw": false, "expires_at": null, "now": null, "expected_no_expiry": "free", "expected_effective": "free", "note": "raw or \"\" 假值坍缩：False → \"\" → free" },
+    { "id": "P04", "raw": "pro", "expires_at": "2030-01-01T00:00:00Z", "now": "2030-01-01T00:00:00Z", "expected_no_expiry": "pro", "expected_effective": "free", "note": "边界相等即降 free（expiry > now 严格大于；Go 无注入钟不共享）" },
+    { "id": "P05", "raw": "pro", "expires_at": "2030-01-01T00:00:00Z", "now": "2029-12-31T23:59:59.999999Z", "expected_no_expiry": "pro", "expected_effective": "pro", "note": "边界前 1µs 仍 pro" },
+    { "id": "P06", "raw": "pro", "expires_at": "2030-01-01T00:00:00Z", "now": "2030-01-01T00:00:01Z", "expected_no_expiry": "pro", "expected_effective": "free", "note": "边界后 1s 降 free" },
+    { "id": "P07", "raw": "pro", "expires_at": "2030-01-01T08:00:00+08:00", "now": "2029-12-31T23:59:59Z", "expected_no_expiry": "pro", "expected_effective": "pro", "note": "tz-aware expiry 经 ensure_naive_utc 换算（→2030-01-01T00:00:00Z）后边界前 1s 仍 pro" },
+    { "id": "P08", "raw": "pro", "expires_at": "2030-01-01T08:00:00+08:00", "now": "2030-01-01T00:00:00Z", "expected_no_expiry": "pro", "expected_effective": "free", "note": "换算后边界相等即降 free（时区换算不改严格大于判据）" },
+    { "id": "P09", "raw": "pro", "expires_at": "2030-01-01T00:00:00", "now": "2029-12-31T23:59:59", "expected_no_expiry": "pro", "expected_effective": "pro", "note": "naive expiry 按 UTC 原样（canonical 存储钟）边界前仍 pro" }
+  ]
+}
