@@ -144,6 +144,17 @@ SEMANTIC_CACHE_BYPASS_TOTAL = get_or_create_metric(
     Counter, "sparkle_semantic_cache_bypass_total", "Total semantic cache bypasses"
 )
 
+# V3-FIX-240：语义缓存写失败显式计数。此前写路径异常被 except 吞成一行 error
+# 日志（返回 False，无指标无告警）——galaxy hybrid_search 的 Pydantic 载荷
+# （list[SearchResultItem]）json.dumps TypeError 静默死亡，语义缓存对该调用方
+# 零命中、每次全量检索却无任何可观测信号。reason: serialization | redis | unknown
+SEMANTIC_CACHE_WRITE_FAILURE_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_semantic_cache_write_failure_total",
+    "Total semantic cache write failures by reason (serialization/redis/unknown)",
+    ["reason"],
+)
+
 # C-07：context cache 版本键决策面（hit/miss + bypass 归因）。
 # 既有 cache hit 指标全部保留，此处只增不改。
 CONTEXT_CACHE_VERSION_DECISIONS = get_or_create_metric(

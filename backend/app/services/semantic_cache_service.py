@@ -7,19 +7,23 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import importlib
 import json
 from datetime import UTC, datetime
 from typing import Any, Awaitable, Callable, TypeVar, cast
 
 import numpy as np
 from loguru import logger
+from pydantic import BaseModel
 from redis.asyncio import Redis
+from redis.exceptions import RedisError
 
 from app.config import settings
 from app.core.metrics import (
     SEMANTIC_CACHE_BYPASS_TOTAL,
     SEMANTIC_CACHE_HIT_TOTAL,
     SEMANTIC_CACHE_MISS_TOTAL,
+    SEMANTIC_CACHE_WRITE_FAILURE_TOTAL,
 )
 from app.services.embedding_service import embedding_service
 
@@ -30,6 +34,112 @@ def _utcnow() -> datetime:
 
 # V3-FIX-225: get_with_lock 的工厂泛型——返回类型随 factory_func 的 await 结果走
 _T = TypeVar("_T")
+
+
+# ------------------------------------------------------------------ #
+# V3-FIX-240：写侧序列化保形——Pydantic 模型归一为 JSON 安全形态并记录
+# 重水化骨架；命中侧按骨架重建原模型（真保形，杜绝「未命中 list[Model] /
+# 命中 list[dict]」两形态真分裂）。骨架只标记「裸容器里的模型位」，纯 JSON
+# 原生载荷不产出骨架，存储形态与旧格式完全一致（向后兼容）。
+# ------------------------------------------------------------------ #
+
+
+def _model_type_path(model: BaseModel) -> str:
+    cls = type(model)
+    return f"{cls.__module__}:{cls.__qualname__}"
+
+
+def _load_model_class(type_path: str) -> type[BaseModel] | None:
+    """从骨架类型路径还原模型类。
+
+    安全边界（缓存内容驱动 import，必须收敛）：仅接受 ``app.*`` 命名空间
+    下的模块，且解析结果必须是 pydantic BaseModel 子类；其余一律拒绝
+    （返回 None，调用侧降级为 JSON 形态并留日志）。
+    """
+    module_name, _, qualname = type_path.partition(":")
+    if not module_name.startswith("app.") or not qualname:
+        return None
+    try:
+        obj: Any = importlib.import_module(module_name)
+        for part in qualname.split("."):
+            obj = getattr(obj, part)
+    except (ImportError, AttributeError, ValueError):
+        return None
+    if isinstance(obj, type) and issubclass(obj, BaseModel):
+        return cast("type[BaseModel]", obj)
+    return None
+
+
+def _normalize_for_cache(value: Any) -> tuple[Any, Any]:
+    """递归归一：Pydantic 模型 → ``model_dump(mode="json")``，同时产出骨架。
+
+    返回 ``(json 安全值, 骨架)``；子树无模型时原样返回并记骨架 None
+    （不重建容器，保证纯 JSON 载荷存储形态与旧格式一致）。tuple 视作
+    list（JSON 稳定形态边界，V3-FIX-225 契约不变）。
+    """
+    if isinstance(value, BaseModel):
+        return value.model_dump(mode="json"), {"m": _model_type_path(value)}
+    if isinstance(value, (list, tuple)):
+        items: list[Any] = []
+        skeletons: list[Any] = []
+        saw_model = False
+        for item in value:
+            safe, skeleton = _normalize_for_cache(item)
+            items.append(safe)
+            skeletons.append(skeleton)
+            saw_model = saw_model or skeleton is not None
+        if not saw_model:
+            return value, None
+        return items, {"l": skeletons}
+    if isinstance(value, dict):
+        normalized: dict[Any, Any] = {}
+        inner: dict[Any, Any] = {}
+        saw_model = False
+        for key, item in value.items():
+            safe, skeleton = _normalize_for_cache(item)
+            normalized[key] = safe
+            inner[key] = skeleton
+            saw_model = saw_model or skeleton is not None
+        if not saw_model:
+            return value, None
+        return normalized, {"d": inner}
+    return value, None
+
+
+def _rehydrate_from_skeleton(value: Any, skeleton: Any) -> Any:
+    """按骨架把 JSON 形态重建为原形态（模型位经 pydantic 校验重建）。
+
+    骨架与数据形态不匹配（缓存被外写/版本漂移）时抛 ValueError，由命中侧
+    统一降级为 JSON 形态并留 warning 日志——降级可观测，不静默。
+    """
+    if skeleton is None or value is None:
+        return value
+    if not isinstance(skeleton, dict):
+        return value
+    if "m" in skeleton:
+        cls = _load_model_class(str(skeleton["m"]))
+        if cls is None:
+            raise ValueError(f"semantic cache skeleton references unrehydrable model: {skeleton['m']!r}")
+        return cls.model_validate(value)
+    if "l" in skeleton:
+        if not isinstance(value, list):
+            raise ValueError("semantic cache skeleton/list shape mismatch")
+        return [_rehydrate_from_skeleton(item, skel) for item, skel in zip(value, skeleton["l"], strict=True)]
+    if "d" in skeleton:
+        if not isinstance(value, dict):
+            raise ValueError("semantic cache skeleton/dict shape mismatch")
+        inner = skeleton["d"]
+        return {key: _rehydrate_from_skeleton(item, inner.get(key)) for key, item in value.items()}
+    return value
+
+
+def _write_failure_reason(exc: BaseException) -> str:
+    """写失败归因：序列化（json/pydantic）与传输（redis/网络）分开计数。"""
+    if isinstance(exc, (TypeError, ValueError)):
+        return "serialization"
+    if isinstance(exc, (OSError, RedisError)):
+        return "redis"
+    return "unknown"
 
 
 class SemanticCacheService:
@@ -239,7 +349,7 @@ class SemanticCacheService:
         similarity_threshold: float = 0.95,
         knowledge_version: str | None = None,
         embedding_version: str | None = None,
-    ) -> dict[str, Any] | None:
+    ) -> Any | None:
         """
         从缓存获取查询结果
         包含缓存击穿保护 (Mutex Lock)
@@ -250,7 +360,9 @@ class SemanticCacheService:
             similarity_threshold: 相似度阈值（暂未实现向量相似度，使用精确匹配）
 
         Returns:
-            缓存的结果，如果未命中则返回 None
+            缓存的结果（V3-FIX-240：写入侧含 Pydantic 模型的载荷按骨架重水化
+            回原模型形态，真保形；其余为 JSON 反序列化形态），如果未命中则
+            返回 None。不再谎称仅 dict。
         """
         if not self.redis:
             return None
@@ -271,7 +383,7 @@ class SemanticCacheService:
                     f"cached_at={result.get('cached_at')}"
                 )
 
-                return cast("dict[str, Any] | None", (result.get("data")))
+                return self._payload_data(result)
             # 语义相似检索
             # E-05: embedding 供应商未配置时跳过（避免每次未命中都触发
             # 3 次重试 x 2 供应商的失败风暴）；exact-match 缓存仍可用
@@ -296,7 +408,7 @@ class SemanticCacheService:
                         logger.debug(
                             f"Cache SEMANTIC HIT: query='{query[:30]}...', score={score:.3f}"
                         )
-                        return cast("dict[str, Any] | None", (result.get("data")))
+                        return self._payload_data(result)
 
             # 未命中
             await self.redis.hincrby(self.STATS_KEY, "total_misses", 1)
@@ -307,6 +419,24 @@ class SemanticCacheService:
         except Exception as e:
             logger.error(f"Cache GET error: {e}")
             return None
+
+    @staticmethod
+    def _payload_data(result: dict[str, Any]) -> Any:
+        """取缓存载荷 data 并按骨架重水化（V3-FIX-240）。
+
+        骨架缺失（旧条目/纯 JSON 载荷）原样返回；重水化失败（模型类漂移、
+        缓存被外写导致骨架/数据形态错位）降级为 JSON 形态并留 warning——
+        降级可观测，不静默，绝不让命中路径因重水化失败而炸穿。
+        """
+        data = result.get("data")
+        skeleton = result.get("data_skeleton")
+        if skeleton is None:
+            return data
+        try:
+            return _rehydrate_from_skeleton(data, skeleton)
+        except Exception as exc:
+            logger.warning(f"Cache HIT rehydration degraded to JSON form: {exc}")
+            return data
 
     async def get_with_lock(
         self,
@@ -345,11 +475,14 @@ class SemanticCacheService:
 
         Returns:
             数据：未命中/异常降级路径返回工厂原返回值（原对象透传）；命中路径
-            返回缓存载荷的 JSON 反序列化形态——保形契约以「JSON 稳定形态」为界
-            （dict/list/标量同型同值，证据见
-            ``tests/services/test_semantic_cache_generic_factory.py``）；
-            tuple 等往返变型与不可 JSON 序列化载荷（如 Pydantic 模型，写入会
-            静默失败，见台账 V3-FIX-240）不在本层保形范围内。
+            返回缓存载荷的反序列化形态——V3-FIX-240 起写侧对 Pydantic 模型
+            归一并记录骨架、命中侧按骨架重建模型（真保形：``list[SearchResultItem]``
+            等形态往返同型同值，证据见
+            ``tests/services/test_semantic_cache_pydantic_payload.py``）；JSON
+            稳定形态（dict/list/标量）保持 json 往返同型同值（证据见
+            ``tests/services/test_semantic_cache_generic_factory.py``）。
+            tuple 往返变型维持 JSON 稳定形态边界；真异型载荷写入失败按
+            reason 落 ``SEMANTIC_CACHE_WRITE_FAILURE_TOTAL``（不再静默）。
         """
         if not self.redis:
             SEMANTIC_CACHE_BYPASS_TOTAL.inc()
@@ -454,11 +587,13 @@ class SemanticCacheService:
 
         Args:
             query: 查询文本
-            data: 要缓存的数据。V3-FIX-225 泛型工厂契约：get_with_lock 会把
-                工厂返回值（任意异型）原样传入，故此处不再谎称仅收 dict；
-                真实边界是「JSON 可序列化」——不可序列化载荷（如 Pydantic
-                模型）使 json.dumps 失败、本次写入静默放弃（返回 False），
-                见台账 V3-FIX-240。
+            data: 要缓存的数据。V3-FIX-240：Pydantic 模型（含嵌在 list/dict
+                里的模型位）在写侧归一为 JSON 安全形态并记录重水化骨架，命中
+                侧经骨架重建原模型（真保形，杜绝「未命中 list[SearchResultItem]
+                / 命中 list[dict]」两形态真分裂——此前该形态 json.dumps
+                TypeError 被静默吞掉，galaxy hybrid_search 载荷零命中）。真异型
+                （不可序列化且非模型）仍会失败，但失败按 reason 落
+                ``SEMANTIC_CACHE_WRITE_FAILURE_TOTAL``，不再静默。
             user_id: 用户ID（可选）
             ttl: 过期时间（秒），None 使用默认值
 
@@ -473,14 +608,19 @@ class SemanticCacheService:
             normalized_query = self._normalize_query(query)
             cache_key = self._generate_cache_key(query, user_id, knowledge_version, embedding_version)
 
+            # V3-FIX-240：写侧归一（模型→dict + 骨架），纯 JSON 载荷原样
+            json_safe_data, data_skeleton = _normalize_for_cache(data)
+
             # 包装数据，添加元信息
             cache_value = {
-                "data": data,
+                "data": json_safe_data,
                 "query": query,
                 "normalized_query": normalized_query,
                 "user_id": user_id,
                 "cached_at": _utcnow().isoformat(),
             }
+            if data_skeleton is not None:
+                cache_value["data_skeleton"] = data_skeleton
 
             # 序列化并存储
             ttl_value = ttl or self.default_ttl
@@ -516,7 +656,11 @@ class SemanticCacheService:
             return True
 
         except Exception as e:
-            logger.error(f"Cache SET error: {e}")
+            # V3-FIX-240：写失败必须可观测——按归因落指标（序列化/传输），
+            # 不允许只留一行 error 日志静默返回 False
+            reason = _write_failure_reason(e)
+            SEMANTIC_CACHE_WRITE_FAILURE_TOTAL.labels(reason=reason).inc()
+            logger.error(f"Cache SET error ({reason}): {e}")
             return False
 
     async def invalidate(
